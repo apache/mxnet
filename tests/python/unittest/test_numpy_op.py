@@ -160,7 +160,6 @@ def test_np_mean():
             for axis in ([i for i in range(in_data_dim)] + [(), None]):
                 for itype in ['float16', 'float32', 'float64']:
                     for dtype in ['float16', 'float32', 'float64']:
-                        print(itype, dtype)
                         if is_int(dtype) and not is_int(itype):
                             continue
                         # test gluon
@@ -438,7 +437,7 @@ def test_np_unary_funcs():
 
             if ref_grad:
                 y.backward()
-                assert_almost_equal(mx_test_data.grad.asnumpy(), ref_grad(np_test_data), rtol=1e-5, atol=1e-6, equal_nan=True)
+                assert_almost_equal(mx_test_data.grad.asnumpy(), ref_grad(np_test_data), rtol=1e-4, atol=1e-6, equal_nan=True)
 
     funcs = {
         'absolute' : (lambda x: -1. * (x < 0) + (x > 0), -1.0, 1.0),
