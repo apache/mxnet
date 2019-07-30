@@ -1461,84 +1461,14 @@ build_c_docs() {
 }
 
 
-build_clojure_docs() {
-    set -ex
-    pushd .
-
-    build_setup
-
-    clojure_path='contrib/clojure-package'
-    clojure_doc_path='contrib/clojure-package/target/doc'
-    clojure_doc_artifact='docs/_build/artifacts-clojure.tgz'
-
-    pushd $clojure_path
-    lein codox
-    popd
-
-    tar -zcvf $clojure_doc_artifact $clojure_doc_path
-
-    popd
-}
-
-
-build_julia_docs() {
+build_scala() {
    set -ex
    pushd .
-   build_setup
-   # Setup environment for Julia docs
-   export PATH="/work/julia10/bin:$PATH"
-   export MXNET_HOME='/work/mxnet'
-   export JULIA_DEPOT_PATH='/work/julia-depot'
-   julia_doc_path='julia/docs/site/'
-   julia_doc_artifact='docs/_build/artifacts-julia.tgz'
 
-   export MXNET_HOME=$(pwd)
-   echo "Julia will check for MXNet in $MXNET_HOME/lib"
-
-   make -C julia/docs
-
-   tar -zcvf $julia_doc_artifact $julia_doc_path
+   cd scala-package
+   mvn -B install -DskipTests
 
    popd
-}
-
-
-build_java_docs() {
-    set -ex
-    pushd .
-    build_setup
-    # Build scala library
-    publish_scala_build
-
-    # Re-use scala-package build artifacts.
-    java_path='scala-package'
-    docs_build_path='docs/_build/scala-docs'
-    artifacts_path='docs/_build/java-artifacts.tgz'
-
-    java_doc_sources = `find . -type f -name "*.scala" | egrep \"\.\/core|\.\/infer\" | egrep -v \"\/javaapi\"  | egrep -v \"Suite\"`
-
-    jar_native=`find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `
-    jar_macros=`find macros -name "*.jar" | tr "\\n" ":" `
-    jar_core=`find core -name "*.jar" | tr "\\n" ":" `
-    jar_infer=`find infer -name "*.jar" | tr "\\n" ":" `
-    java_doc_classpath=$(jar_native):$(jar_macros):$(jar_core):$(jar_infer)
-
-    pushd .
-    cd $scala_path
-    scaladoc $java_doc_sources -classpath $java_doc_classpath -feature -deprecation
-    popd
-
-    # Clean-up old artifacts
-    rm -rf $(docs_build_path)
-    mkdir -p $(docs_build_path)
-
-    for doc_file in 'index', 'index.html', 'org', 'lib', 'index.js', 'package.html'; do
-        mv $java_path/$doc_file $docs_build_path
-    done
-
-    tar -zcvf $artifacts_path $docs_build_path
-
-    popd
 }
 
 
@@ -1546,8 +1476,7 @@ build_scala_docs() {
     set -ex
     pushd .
     build_setup
-    # Build scala library
-    publish_scala_build
+    build_scala
 
     scala_path='scala-package'
     docs_build_path='docs/_build/scala-docs'
@@ -1585,6 +1514,89 @@ build_scala_docs() {
     done
 
     tar -zcvf $artifacts_path $docs_build_path
+
+    popd
+}
+
+
+build_julia_docs() {
+   set -ex
+   pushd .
+
+   build_setup
+
+   # Setup environment for Julia docs
+   export PATH="/work/julia10/bin:$PATH"
+   export MXNET_HOME='/work/mxnet'
+   export JULIA_DEPOT_PATH='/work/julia-depot'
+   julia_doc_path='julia/docs/site/'
+   julia_doc_artifact='docs/_build/artifacts-julia.tgz'
+
+   echo "Julia will check for MXNet in $MXNET_HOME/lib"
+
+   make -C julia/docs
+
+   tar -zcvf $julia_doc_artifact $julia_doc_path
+
+   popd
+}
+
+
+build_java_docs() {
+    set -ex
+    pushd .
+
+    build_setup
+    build_scala
+
+    # Re-use scala-package build artifacts.
+    java_path='scala-package'
+    docs_build_path='docs/_build/scala-docs'
+    artifacts_path='docs/_build/java-artifacts.tgz'
+
+    java_doc_sources = `find . -type f -name "*.scala" | egrep \"\.\/core|\.\/infer\" | egrep -v \"\/javaapi\"  | egrep -v \"Suite\"`
+
+    jar_native=`find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `
+    jar_macros=`find macros -name "*.jar" | tr "\\n" ":" `
+    jar_core=`find core -name "*.jar" | tr "\\n" ":" `
+    jar_infer=`find infer -name "*.jar" | tr "\\n" ":" `
+    java_doc_classpath=$(jar_native):$(jar_macros):$(jar_core):$(jar_infer)
+
+    pushd .
+    cd $scala_path
+    scaladoc $java_doc_sources -classpath $java_doc_classpath -feature -deprecation
+    popd
+
+    # Clean-up old artifacts
+    rm -rf $(docs_build_path)
+    mkdir -p $(docs_build_path)
+
+    for doc_file in 'index', 'index.html', 'org', 'lib', 'index.js', 'package.html'; do
+        mv $java_path/$doc_file $docs_build_path
+    done
+
+    tar -zcvf $artifacts_path $docs_build_path
+
+    popd
+}
+
+
+build_clojure_docs() {
+    set -ex
+    pushd .
+
+    build_setup
+    build_scala
+
+    clojure_path='contrib/clojure-package'
+    clojure_doc_path='contrib/clojure-package/target/doc'
+    clojure_doc_artifact='docs/_build/artifacts-clojure.tgz'
+
+    pushd $clojure_path
+    lein codox
+    popd
+
+    tar -zcvf $clojure_doc_artifact $clojure_doc_path
 
     popd
 }
