@@ -21,7 +21,7 @@ import tempfile
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
-from mxnet.test_utils import assert_almost_equal, same
+from mxnet.test_utils import assert_almost_equal
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from common import (setup_module, with_seed, assertRaises, teardown,
                     assert_raises_cudnn_not_satisfied)

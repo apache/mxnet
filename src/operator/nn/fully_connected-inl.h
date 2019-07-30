@@ -48,23 +48,10 @@ namespace fullc {
 enum FullyConnectedOpInputs {kData, kWeight, kBias};
 enum FullyConnectedOpResource {kTempSpace};
 enum FullyConnectedOpOutputs {kOut};
-enum FullyConnectedGradGradOutputs {
-  kOyGrad,
-  kXGradGrad,
-  kWGradGrad,
-  kBGradGrad
-};
-enum Inputs {
-  kOxGrad,
-  kOwGrad,
-};
-enum InputsBias {
-  kObGrad = 2,
-  kOyBias,
-};
-enum InputsNoBias {
-  kOy = 2,
-};
+enum FullyConnectedGradGradOutputs { kOyGrad, kXGradGrad, kWGradGrad, kBGradGrad };
+enum GradGradInputs { kOxGrad, kOwGrad, };
+enum GradGradInputsBias { kObGrad = 2, kOyBias, };
+enum GradGradInputsNoBias { kOy = 2, };
 }  // namespace fullc
 
 namespace quantized_fullc {
@@ -363,8 +350,8 @@ void FullyConnectedGradGradCompute(const nnvm::NodeAttrs& attrs,
     x_grad_grad = FlattenAs2DTail<xpu, DType>(outputs[kXGradGrad], ctx);
     w_grad_grad = FlattenAs2DTail<xpu, DType>(outputs[kWGradGrad], ctx);
   }
-  linalg_gemm(o_y, o_w_grad, x_grad_grad, false, false, stream);
-  linalg_gemm(o_y, o_x_grad, w_grad_grad, true, false, stream);
+  linalg_gemm(o_y, o_w_grad, x_grad_grad, false, false, stream, req[kXGradGrad]);
+  linalg_gemm(o_y, o_x_grad, w_grad_grad, true, false, stream, req[kWGradGrad]);
   // 3rd order not supported
   Fill(stream, o_y_grad_blob, kWriteTo, static_cast<DType>(0));
   /* TODO(larroy) bias is not supported yet as there's no bias input to backward. Bias grad grad is
