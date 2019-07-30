@@ -26,8 +26,11 @@ import warnings
 
 import numpy as np
 
-from ....metric import EvalMetric, Loss
+from ....metric import EvalMetric
+from ....metric import Loss as metric_loss
 
+__all__ = ['StoppingHandler', 'MetricHandler', 'ValidationHandler',
+           'LoggingHandler', 'CheckpointHandler', 'EarlyStoppingHandler']
 
 class TrainBegin(object):
     def train_begin(self, estimator, *args, **kwargs):
@@ -127,7 +130,7 @@ class MetricHandler(EpochBegin, BatchEnd):
         label = kwargs['label']
         loss = kwargs['loss']
         for metric in self.train_metrics:
-            if isinstance(metric, Loss):
+            if isinstance(metric, metric_loss):
                 # metric wrapper for loss values
                 metric.update(0, loss)
             else:
