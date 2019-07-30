@@ -1428,8 +1428,8 @@ build_python_docs() {
    set -ex
    pushd .
 
-   python_doc_path='build/_build/html'
-   python_doc_artifact='docs/_build/python-artifacts.tgz'
+   doc_path='build/_build/html'
+   doc_artifact='docs/_build/python-artifacts.tgz'
 
    build_setup
 
@@ -1442,7 +1442,31 @@ build_python_docs() {
    rm -rf build/_build/
    make html EVAL=0
 
-   tar zcvf $python_doc_artifact $python_doc_path
+   tar zcvf $doc_artifact $doc_path
+
+   popd
+}
+
+
+build_r_docs() {
+   set -ex
+   pushd .
+
+   doc_path='build/_build/html'
+   doc_artifact='docs/_build/r-artifacts.tgz'
+
+   build_setup
+
+   repo="new_docs_r"
+   fetch_new_docs_repo $repo
+   cd $repo/Rsite
+
+   conda activate mxnet-docs
+
+   rm -rf build/_build/
+   make html EVAL=0
+
+   tar zcvf $doc_artifact $doc_path
 
    popd
 }
@@ -1482,6 +1506,8 @@ build_scala_docs() {
     docs_build_path='docs/_build/scala-docs'
     artifacts_path='docs/_build/scala-artifacts.tgz'
 
+    cd $scala_path
+
     scala_doc_sources=`find . -type f -name "*.scala" | egrep \"\.\/core|\.\/infer\" | egrep -v \"\/javaapi\"  | egrep -v \"Suite\"`
 
     jar_native=`find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `
@@ -1492,6 +1518,7 @@ build_scala_docs() {
 
     scala_ignore_errors=''
     legacy_ver=".*1.2|1.3.*"
+    # BUILD_VER needs to be pull from environment vars
     if [[ $_BUILD_VER =~ $legacy_ver ]]
     then
       # There are unresolvable errors on mxnet 1.2.x. We are ignoring those
@@ -1501,13 +1528,13 @@ build_scala_docs() {
     fi
 
     pushd .
-    cd $(scala_path)
-    scaladoc $(scala_doc_sources) -classpath $(scala_doc_classpath) $(scala_ignore_errors)
+
+    scaladoc $scala_doc_sources -classpath $scala_doc_classpath $scala_ignore_errors
     popd
 
     # Clean-up old artifacts
-    rm -rf $(docs_build_path)
-    mkdir -p $(docs_build_path)
+    rm -rf $docs_build_path
+    mkdir -p $docs_build_path
 
     for doc_file in 'index', 'index.html', 'org', 'lib', 'index.js', 'package.html'; do
         mv $scala_path/$doc_file $docs_build_path
@@ -1554,22 +1581,24 @@ build_java_docs() {
     docs_build_path='docs/_build/scala-docs'
     artifacts_path='docs/_build/java-artifacts.tgz'
 
+    cd $scala_path
+
     java_doc_sources = `find . -type f -name "*.scala" | egrep \"\.\/core|\.\/infer\" | egrep -v \"\/javaapi\"  | egrep -v \"Suite\"`
 
     jar_native=`find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `
     jar_macros=`find macros -name "*.jar" | tr "\\n" ":" `
     jar_core=`find core -name "*.jar" | tr "\\n" ":" `
     jar_infer=`find infer -name "*.jar" | tr "\\n" ":" `
-    java_doc_classpath=$(jar_native):$(jar_macros):$(jar_core):$(jar_infer)
+    java_doc_classpath=$jar_native:$jar_macros:$jar_core:$jar_infer
 
     pushd .
-    cd $scala_path
+
     scaladoc $java_doc_sources -classpath $java_doc_classpath -feature -deprecation
     popd
 
     # Clean-up old artifacts
-    rm -rf $(docs_build_path)
-    mkdir -p $(docs_build_path)
+    rm -rf $docs_build_path
+    mkdir -p $docs_build_path
 
     for doc_file in 'index', 'index.html', 'org', 'lib', 'index.js', 'package.html'; do
         mv $java_path/$doc_file $docs_build_path

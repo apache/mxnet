@@ -39,8 +39,9 @@ core_logic: {
 
   utils.parallel_stage('1st Phase Docs', [
     custom_steps.docs_c(),
-    custom_steps.docs_scala(),
-    custom_steps.docs_julia()
+    custom_steps.docs_julia(),
+    custom_steps.docs_r(),
+    custom_steps.docs_scala()
   ])
 
   utils.parallel_stage('2nd Phase Docs', [
