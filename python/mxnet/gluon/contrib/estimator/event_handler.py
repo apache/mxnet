@@ -138,7 +138,7 @@ class MetricHandler(EpochBegin, BatchEnd):
 
 
 class ValidationHandler(TrainBegin, BatchEnd, EpochEnd):
-    """"Validation Handler that evaluate model on validation dataset
+    """Validation Handler that evaluate model on validation dataset
 
     :py:class:`ValidationHandler` takes validation dataset, an evaluation function,
     metrics to be evaluated, and how often to run the validation. You can provide custom
