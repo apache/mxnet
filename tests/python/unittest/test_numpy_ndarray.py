@@ -149,7 +149,7 @@ def test_ones():
 
 
 @with_seed()
-@npx.use_np_shape
+@use_np
 def test_identity():
     class TestIdentity(HybridBlock):
         def __init__(self, shape, dtype=None):
