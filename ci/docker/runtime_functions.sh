@@ -1531,7 +1531,7 @@ build_scala_docs() {
     jar_macros=`find macros -name "*.jar" | tr "\\n" ":" `
     jar_core=`find core -name "*.jar" | tr "\\n" ":" `
     jar_infer=`find infer -name "*.jar" | tr "\\n" ":" `
-    scala_doc_classpath=$(jar_native):$(jar_macros):$(jar_core):$(jar_infer)
+    scala_doc_classpath=$jar_native:$jar_macros:$jar_core:$jar_infer
 
     scala_ignore_errors=''
     legacy_ver=".*1.2|1.3.*"

@@ -45,11 +45,11 @@ core_logic: {
 
   ])
 
-  utils.parallel_stage('2nd Phase Docs', [
-    custom_steps.docs_scala(),
-    custom_steps.docs_java(),
-    custom_steps.docs_clojure()
-  ])
+  //utils.parallel_stage('2nd Phase Docs', [
+   // custom_steps.docs_scala(),
+   // custom_steps.docs_java(),
+   // custom_steps.docs_clojure()
+  //])
 
 }
 ,

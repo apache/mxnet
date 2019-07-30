@@ -1442,8 +1442,13 @@ def docs_julia() {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('cpu', mx_lib, false)
-            utils.docker_run('ubuntu_cpu_julia', 'build_julia_docs', false)
-            archiveArtifacts 'docs/_build/julia-artifacts.tgz'
+            try {
+               utils.docker_run('ubuntu_cpu_julia', 'build_julia_docs', false)
+               archiveArtifacts 'docs/_build/julia-artifacts.tgz'
+            }
+            catch (Exception e) {
+               println(e.getMessage())
+            }
           }
         }
       }
