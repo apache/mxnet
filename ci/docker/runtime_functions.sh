@@ -1524,10 +1524,9 @@ build_scala_docs() {
     docs_build_path='docs/_build/scala-docs'
     artifacts_path='docs/_build/scala-artifacts.tgz'
 
-    cd $scala_path
+    pushd $scala_path
 
-    scala_doc_sources=`find . -type f -name "*.scala" | egrep \"\.\/core|\.\/infer\" | egrep -v \"\/javaapi\"  | egrep -v \"Suite\"`
-
+    scala_doc_sources=`find . -type f -name "*.scala" | egrep "./core|./infer" | egrep -v "/javaapi"  | egrep -v "Suite"`
     jar_native=`find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `
     jar_macros=`find macros -name "*.jar" | tr "\\n" ":" `
     jar_core=`find core -name "*.jar" | tr "\\n" ":" `
@@ -1544,8 +1543,6 @@ build_scala_docs() {
       echo "We will ignoring unresolvable errors on MXNet 1.2/1.3."
       scala_ignore_errors='; exit 0'
     fi
-
-    pushd .
 
     scaladoc $scala_doc_sources -classpath $scala_doc_classpath $scala_ignore_errors
     popd
@@ -1599,17 +1596,14 @@ build_java_docs() {
     docs_build_path='docs/_build/scala-docs'
     artifacts_path='docs/_build/java-artifacts.tgz'
 
-    cd $scala_path
+    pushd $java_path
 
-    java_doc_sources = `find . -type f -name "*.scala" | egrep \"\.\/core|\.\/infer\" | egrep -v \"\/javaapi\"  | egrep -v \"Suite\"`
-
+    java_doc_sources=`find . -type f -name "*.scala" | egrep "./core|./infer" | egrep -v "/javaapi"  | egrep -v "Suite"`
     jar_native=`find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `
     jar_macros=`find macros -name "*.jar" | tr "\\n" ":" `
     jar_core=`find core -name "*.jar" | tr "\\n" ":" `
     jar_infer=`find infer -name "*.jar" | tr "\\n" ":" `
     java_doc_classpath=$jar_native:$jar_macros:$jar_core:$jar_infer
-
-    pushd .
 
     scaladoc $java_doc_sources -classpath $java_doc_classpath -feature -deprecation
     popd
