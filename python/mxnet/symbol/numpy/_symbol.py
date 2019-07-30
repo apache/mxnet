@@ -1160,23 +1160,7 @@ def lcm(x1, x2, out=None):
     >>> np.lcm(np.arange(6, dtype=int), 20)
     array([ 0, 20, 20, 60, 20, 20], dtype=int64)
     """
-    if isinstance(x1, numeric_types):
-        if isinstance(x2, numeric_types):
-            return _np.lcm(x1, x2, out=out)
-        else:
-            if x2.dtype in (_np.int8, _np.int32, _np.int64):
-                return _npi.lcm_scalar(x2, x1, out=out)
-            else:
-                raise TypeError('dtype {} not supported'.format(str(x2.dtype)))
-    elif isinstance(x2, numeric_types):
-        if x1.dtype in (_np.int8, _np.int32, _np.int64):
-            return _npi.lcm_scalar(x1, x2, out=out)
-        else:
-            raise TypeError('dtype {} not supported'.format(str(x1.dtype)))
-    elif isinstance(x2, Symbol):
-        return _npi.lcm(x1, x2, out=out)
-    else:
-        raise TypeError('type {} not supported'.format(str(type(x2))))
+    return _ufunc_helper(x1, x2, _npi.lcm, _np.lcm, _npi.lcm_scalar, None, out)
 
 
 @set_module('mxnet.symbol.numpy')

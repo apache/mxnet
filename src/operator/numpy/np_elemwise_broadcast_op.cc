@@ -39,6 +39,33 @@ bool NumpyBinaryScalarType(const nnvm::NodeAttrs& attrs,
   return in_attrs->at(0) != -1;
 }
 
+bool NumpyBinaryScalarIntType(const nnvm::NodeAttrs& attrs,
+                           std::vector<int>* in_attrs,
+                           std::vector<int>* out_attrs) {
+  CHECK(in_attrs->at(0) == mshadow::kInt64 ||
+        in_attrs->at(0) == mshadow::kInt32 ||
+        in_attrs->at(0) == mshadow::kInt8 ||
+        in_attrs->at(0) == mshadow::kUint8) << "Only support integral type.";
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+  return in_attrs->at(0) != -1;
+}
+
+inline bool NumpyBinaryIntType(const NodeAttrs& attrs,
+                         std::vector<int> *in_attrs,
+                         std::vector<int> *out_attrs) {
+  CHECK(in_attrs->at(0) == mshadow::kInt64 ||
+        in_attrs->at(0) == mshadow::kInt32 ||
+        in_attrs->at(0) == mshadow::kInt8 ||
+        in_attrs->at(0) == mshadow::kUint8) << "Only support integral type.";
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  return ElemwiseAttr<int, type_is_none, type_assign, true, type_string>(
+    attrs, in_attrs, out_attrs, -1);
+}
+
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(name)              \
   NNVM_REGISTER_OP(name)                                            \
   .set_num_inputs(1)                                                \
@@ -150,9 +177,23 @@ Example::
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::power>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_power"});
 
-MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_lcm)
+NNVM_REGISTER_OP(_npi_lcm)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+[](const NodeAttrs& attrs) {
+     return std::vector<std::string>{"lhs", "rhs"};
+})
+.set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
+.set_attr<nnvm::FInferType>("FInferType", NumpyBinaryIntType)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+[](const NodeAttrs& attrs){
+     return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};
+})
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::lcm>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.add_argument("lhs", "NDArray-or-Symbol", "First input to the function")
+.add_argument("rhs", "NDArray-or-Symbol", "Second input to the function");
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_maximum)
 .describe(R"code()code" ADD_FILELINE)
@@ -209,7 +250,7 @@ NNVM_REGISTER_OP(_npi_lcm_scalar)
     attrs->parsed = std::stod(attrs->dict["scalar"]);
   })
 .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
-.set_attr<nnvm::FInferType>("FInferType", NumpyBinaryScalarType)
+.set_attr<nnvm::FInferType>("FInferType", NumpyBinaryScalarIntType)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}};
