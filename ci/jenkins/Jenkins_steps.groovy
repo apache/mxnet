@@ -1398,7 +1398,7 @@ def docs_python() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.unpack_and_init('cpu', mx_lib, true)
-            utils.docker_run('ubuntu_cpu', 'build_python_docs', false)
+            utils.docker_run('ubuntu_cpu_python', 'build_python_docs', false)
             archiveArtifacts 'docs/_build/python-artifacts.tgz'
           }
         }
@@ -1414,7 +1414,7 @@ def docs_c() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.unpack_and_init('cpu', mx_lib, true)
-            utils.docker_run('ubuntu_cpu', 'build_c_docs', false)
+            utils.docker_run('ubuntu_cpu_c', 'build_c_docs', false)
             archiveArtifacts 'docs/_build/c-artifacts.tgz'
           }
         }
@@ -1430,7 +1430,7 @@ def docs_julia() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.unpack_and_init('cpu', mx_lib, true)
-            utils.docker_run('ubuntu_cpu', 'build_julia_docs', false)
+            utils.docker_run('ubuntu_cpu_julia', 'build_julia_docs', false)
             archiveArtifacts 'docs/_build/julia-artifacts.tgz'
           }
         }
@@ -1446,7 +1446,7 @@ def docs_scala() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.unpack_and_init('cpu', mx_lib, true)
-            utils.docker_run('ubuntu_cpu', 'build_scala_docs', false)
+            utils.docker_run('ubuntu_cpu_scala', 'build_scala_docs', false)
             archiveArtifacts 'docs/_build/scala-artifacts.tgz'
           }
         }
@@ -1462,7 +1462,7 @@ def docs_java() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.unpack_and_init('cpu', mx_lib, true)
-            utils.docker_run('ubuntu_cpu', 'build_java_docs', false)
+            utils.docker_run('ubuntu_cpu_scala', 'build_java_docs', false)
             archiveArtifacts 'docs/_build/java-artifacts.tgz'
           }
         }
@@ -1478,7 +1478,7 @@ def docs_clojure() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.unpack_and_init('cpu', mx_lib, true)
-            utils.docker_run('ubuntu_cpu', 'build_clojure_docs', false)
+            utils.docker_run('ubuntu_cpu_scala', 'build_clojure_docs', false)
             archiveArtifacts 'docs/_build/clojure-artifacts.tgz'
           }
         }
@@ -1494,7 +1494,7 @@ def docs_r() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.unpack_and_init('cpu', mx_lib, true)
-            utils.docker_run('ubuntu_cpu', 'build_r_docs', false)
+            utils.docker_run('ubuntu_cpu_r', 'build_r_docs', false)
             archiveArtifacts 'docs/_build/r-artifacts.tgz'
           }
         }
