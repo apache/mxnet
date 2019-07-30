@@ -1413,6 +1413,22 @@ deploy_docs() {
     popd
 }
 
+build_ubuntu_cpu_docs() {
+    set -ex
+    export CC="gcc"
+    export CXX="g++"
+    build_ccache_wrappers
+    make \
+        DEV=1                         \
+        USE_CPP_PACKAGE=1             \
+        USE_BLAS=openblas             \
+        USE_MKLDNN=0                  \
+        USE_DIST_KVSTORE=1            \
+        USE_LIBJPEG_TURBO=1           \
+        USE_SIGNAL_HANDLER=1          \
+        -j$(nproc)
+}
+
 build_setup() {
     build_folder="docs/_build"
     if [ ! -d $build_folder ]; then
