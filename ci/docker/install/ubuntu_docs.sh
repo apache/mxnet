@@ -33,8 +33,8 @@ apt-get install -y \
 # pip2 install -r /work/docs_requirements
 wget https://repo.anaconda.com/miniconda/Miniconda2-latest-Linux-x86_64.sh
 chmod +x Miniconda2-latest-Linux-x86_64.sh
-./Miniconda2-latest-Linux-x86_64.sh
-
+./Miniconda2-latest-Linux-x86_64.sh -b -p $HOME/miniconda
+eval "$($HOME/miniconda/bin/conda shell.bash hook)"
 conda env create -f docs_environment.yml
 
 echo 'Dependency installation complete.'
