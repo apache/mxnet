@@ -31,13 +31,13 @@
 typedef int (*initialize_t)(int);
 
 extern "C" {
-    /*
-    Function: initialize
-    Parameters:
-    - int : MXNet version passed to library
-    Returns:
-    - int : Non-zero value on error i.e. library incompatible with passed MXNet version
-    */
+    /*!
+     * \brief Checks if the MXNet version is supported by the library.
+     * If supported, initializes the library.
+     * \param version MXNet version number passed to library and defined as:
+     *                MXNET_VERSION = (MXNET_MAJOR*10000 + MXNET_MINOR*100 + MXNET_PATCH)
+     * \return Non-zero value on error i.e. library incompatible with passed MXNet version
+     */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
     __declspec(dllexport) int __cdecl initialize(int);
 #else

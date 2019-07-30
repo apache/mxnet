@@ -18,6 +18,8 @@
 # coding: utf-8
 # pylint: disable=arguments-differ
 
+# This test checks if dynamic loading of library into MXNet is successful
+
 import mxnet as mx
 import os
 

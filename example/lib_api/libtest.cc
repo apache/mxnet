@@ -20,7 +20,9 @@
 /*!
  * Copyright (c) 2015 by Contributors
  * \file libtest.cc
- * \brief Tests if the library is implemented correctly
+ * \brief This test checks if the library is implemented correctly
+ * and does not involve dynamic loading of library into MXNet
+ * This test is supposed to be run before test.py
  */
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
@@ -44,12 +46,12 @@ int main(void) {
   handle = dlopen("mylib.so", RTLD_LAZY);
 #endif
 
-  // If the handle is valid, try to get the function address.
   if (!handle) {
     printf("Unable to load library\n");
     return 1;
   }
 
+  // get initialize function address from the library
   initialize_t func;
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   func = (initialize_t) GetProcAddress(handle, INITIALIZE_STR);
@@ -57,7 +59,6 @@ int main(void) {
   func = (initialize_t) dlsym(handle, INITIALIZE_STR);
 #endif
 
-  // If the function address is valid, call the function.
   if (!func) {
     printf("Unable to get function 'intialize' from library\n");
     return 1;

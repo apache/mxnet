@@ -31,18 +31,14 @@
 void* load_lib(const char* path);
 void get_sym(void* handle, void** func, char* name);
 
-/*
-get_func - a templated function that fetches from the library
-a function pointer of any given datatype and name
-
-Template parameter
-- T : data type of function pointer
-Input parameter
-- lib : library handle
-- func_name : function name to search for in the library
-Returns
-- func : function pointer
-*/
+/*!
+ * \brief a templated function that fetches from the library
+ * a function pointer of any given datatype and name
+ * \param T a template parameter for data type of function pointer
+ * \param lib library handle
+ * \param func_name function name to search for in the library
+ * \return func a function pointer
+ */
 template<typename T>
 T get_func(void *lib, char *func_name) {
   T func;

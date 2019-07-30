@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# This test checks if dynamic loading of library into MXNet is successful
+
 import mxnet as mx
 import os
 from mxnet.test_utils import download

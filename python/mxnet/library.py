@@ -20,15 +20,14 @@
 from __future__ import absolute_import
 import ctypes
 import os
-from .base import _LIB
-from .base import check_call
+from .base import _LIB, check_call, MXNetError
 
 def load(path):
     """Loads library dynamically.
 
     Parameters
     ---------
-    path : Path to library .so file
+    path : Path to library .so/.dll file
 
     Returns
     ---------
@@ -36,20 +35,15 @@ def load(path):
     """
     #check if path exists
     if not os.path.exists(path):
-        print('load path "%s" does NOT exist' % path)
-        return
+        raise MXNetError("load path %s does NOT exist" % path)
     #check if path is an absolute path
     if not os.path.isabs(path):
-        print('load path "%s" is not an absolute path' % path)
-        return
+        raise MXNetError("load path %s is not an absolute path" % path)
     #check if path is to a library file
     _, file_ext = os.path.splitext(path)
     if not file_ext in ['.so', '.dll']:
-        print('load path "%s" is NOT a library file' % path)
-        return
+        raise MXNetError("load path %s is NOT a library file" % path)
 
     byt_obj = path.encode('utf-8')
     chararr = ctypes.c_char_p(byt_obj)
     check_call(_LIB.MXLoadLib(chararr))
-
-    return
