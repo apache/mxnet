@@ -51,6 +51,11 @@ core_logic: {
    // custom_steps.docs_clojure()
   //])
 
+  utils.parallel_stage('Publish', [
+    build 'test-website-publish'
+
+  ])
+
 }
 ,
 failure_handler: {

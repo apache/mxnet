@@ -1444,9 +1444,6 @@ build_python_docs() {
    set -ex
    pushd .
 
-   doc_path='build/_build/html'
-   doc_artifact='docs/_build/python-artifacts.tgz'
-
    build_setup
 
    repo="new_docs_python"
@@ -1457,8 +1454,12 @@ build_python_docs() {
 
    rm -rf build/_build/
    make html EVAL=0
+   popd
 
-   tar zcvf $doc_artifact $doc_path
+   doc_path='build/_build/html'
+   doc_artifact='docs/_build/python-artifacts.tgz'
+   pushd $doc_path
+   tar zcvf $doc_artifact .
 
    popd
 }
@@ -1469,22 +1470,19 @@ build_r_docs() {
     pushd .
 
     build_setup
-
     repo="new_docs_r"
     fetch_new_docs_repo $repo
-
-    doc_path="$repo/Rsite/build"
-    doc_artifact='docs/_build/r-artifacts.tgz'
 
     pushd $repo/Rsite
     eval "$(/work/miniconda/bin/conda shell.bash hook)"
     conda activate mxnet-docs
-
     make html EVAL=0
-
     popd
 
-    tar zcvf $doc_artifact $doc_path
+    doc_path="$repo/Rsite/build"
+    doc_artifact='r-artifacts.tgz'
+    pushd $doc_path
+    tar zcvf $doc_artifact .
 
     popd
 }
@@ -1495,11 +1493,13 @@ build_c_docs() {
     pushd .
 
     build_setup
-
     make doxygen
-    tar zcvf docs/_build/c-artifacts.tgz docs/doxygen/html
-
+    doc_path="docs/doxygen/html"
+    doc_artifact="c-artifacts.tgz"
+    pushd $doc_path
+    tar zcvf $doc_artifact .
     popd
+    mv $doc_path/$doc_artifact docs/_build/
 }
 
 
