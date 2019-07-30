@@ -55,6 +55,8 @@ del test_support_vector_machine_l1_svm  # noqa
 del test_support_vector_machine_l2_svm  # noqa
 del test_custom_op_fork  #noqa
 
+import unittest
+
 
 def check_countsketch(in_dim,out_dim,n):
     data = mx.sym.Variable("data")
@@ -88,6 +90,7 @@ def check_countsketch(in_dim,out_dim,n):
 
 
 @with_seed()
+@unittest("skip unit testing countsketch")
 def test_countsketch():
     minindim = 40
     maxindim = 100
