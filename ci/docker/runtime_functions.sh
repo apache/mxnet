@@ -1465,26 +1465,28 @@ build_python_docs() {
 
 
 build_r_docs() {
-   set -ex
-   pushd .
+    set -ex
+    pushd .
 
-   doc_path='build/_build/html'
-   doc_artifact='docs/_build/r-artifacts.tgz'
+    build_setup
 
-   build_setup
+    repo="new_docs_r"
+    fetch_new_docs_repo $repo
 
-   repo="new_docs_r"
-   fetch_new_docs_repo $repo
-   cd $repo/Rsite
-   eval "$(/work/miniconda/bin/conda shell.bash hook)"
-   conda activate mxnet-docs
+    doc_path="$repo/Rsite/build"
+    doc_artifact='docs/_build/r-artifacts.tgz'
 
-   rm -rf build/_build/
-   make html EVAL=0
+    pushd $repo/Rsite
+    eval "$(/work/miniconda/bin/conda shell.bash hook)"
+    conda activate mxnet-docs
 
-   tar zcvf $doc_artifact $doc_path
+    make html EVAL=0
 
-   popd
+    popd
+
+    tar zcvf $doc_artifact $doc_path
+
+    popd
 }
 
 
