@@ -1412,6 +1412,7 @@ def docs_c() {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
+            utils.unpack_and_init('cpu', mx_lib, true)
             utils.docker_run('ubuntu_cpu', 'build_c_docs', false)
             archiveArtifacts 'docs/_build/c-artifacts.tgz'
           }
@@ -1427,6 +1428,7 @@ def docs_julia() {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
+            utils.unpack_and_init('cpu', mx_lib, true)
             utils.docker_run('ubuntu_cpu', 'build_julia_docs', false)
             archiveArtifacts 'docs/_build/julia-artifacts.tgz'
           }
@@ -1442,6 +1444,7 @@ def docs_scala() {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
+            utils.unpack_and_init('cpu', mx_lib, true)
             utils.docker_run('ubuntu_cpu', 'build_scala_docs', false)
             archiveArtifacts 'docs/_build/scala-artifacts.tgz'
           }
@@ -1457,6 +1460,7 @@ def docs_java() {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
+            utils.unpack_and_init('cpu', mx_lib, true)
             utils.docker_run('ubuntu_cpu', 'build_java_docs', false)
             archiveArtifacts 'docs/_build/java-artifacts.tgz'
           }
@@ -1472,6 +1476,7 @@ def docs_clojure() {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
+            utils.unpack_and_init('cpu', mx_lib, true)
             utils.docker_run('ubuntu_cpu', 'build_clojure_docs', false)
             archiveArtifacts 'docs/_build/clojure-artifacts.tgz'
           }
@@ -1487,6 +1492,7 @@ def docs_r() {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
+            utils.unpack_and_init('cpu', mx_lib, true)
             utils.docker_run('ubuntu_cpu', 'build_r_docs', false)
             archiveArtifacts 'docs/_build/r-artifacts.tgz'
           }
