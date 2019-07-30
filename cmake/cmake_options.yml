@@ -39,6 +39,7 @@ USE_MXNET_LIB_NAMING: "ON" # Use MXNet library naming conventions.
 USE_GPROF: "OFF" # Compile with gprof (profiling) flag
 USE_CXX14_IF_AVAILABLE: "OFF" # Build with C++14 if the compiler supports it
 USE_VTUNE: "OFF" # Enable use of Intel Amplifier XE (VTune)) # one could set VTUNE_ROOT for search path
+USE_INT64_TENSOR_SIZE: "OFF" # Build with int64 (large tensor) support
 ENABLE_CUDA_RTC: "ON" # Build with CUDA runtime compilation support
 BUILD_CPP_EXAMPLES: "ON" # Build cpp examples
 INSTALL_EXAMPLES: "OFF" # Install the example source files.
@@ -50,3 +51,8 @@ CMAKE_BUILD_TYPE: "Release"
 CMAKE_CUDA_COMPILER_LAUNCHER: "ccache"
 CMAKE_C_COMPILER_LAUNCHER: "ccache"
 CMAKE_CXX_COMPILER_LAUNCHER: "ccache"
+# Use a specific blas library
+# USE_BLAS: "blas"
+# USE_BLAS: "openblas"
+# USE_BLAS: "mkl"
+# USE_BLAS: "atlas"

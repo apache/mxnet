@@ -95,6 +95,11 @@
 #define MXNET_USE_BLAS_APPLE 0
 #endif
 
+#ifndef MXNET_USE_BLAS_GENERIC
+#define MXNET_USE_BLAS_GENERIC 0
+#endif
+
+
 #ifndef MXNET_USE_LAPACK
 #define MXNET_USE_LAPACK 0
 #endif
@@ -164,6 +169,7 @@ enum : unsigned {
 
   // Math libraries & BLAS
   // Flavour of BLAS
+  BLAS_GENERIC,
   BLAS_OPEN,
   BLAS_ATLAS,
   // Intel(R) Math Kernel Library

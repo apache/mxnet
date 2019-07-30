@@ -125,6 +125,7 @@ USE_BLAS = apple
 else
 USE_BLAS = atlas
 endif
+# Supported blas libraries are [blas, openblas, atlas, mkl]
 
 # whether use lapack during compilation
 # only effective when compiled with blas versions openblas/apple/atlas/mkl

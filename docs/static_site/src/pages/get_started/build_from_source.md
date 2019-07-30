@@ -102,6 +102,7 @@ MXNet supports multiple mathematical backends for computations on the CPU:
 * [MKL](https://software.intel.com/en-us/intel-mkl) (MKL, MKLML)
 * [MKL-DNN](https://github.com/intel/mkl-dnn)
 * [OpenBLAS](https://www.openblas.net/)
+* [Netlib](http://www.netlib.org/blas/)
 
 The default order of choice for the libraries if found follows the path from the most
 (recommended) to less performant backends.
@@ -113,21 +114,18 @@ For desktop platforms (x86_64):
 2. MKL | `USE_MKL_IF_AVAILABLE`
 3. MKLML (downloaded) | `USE_MKLML`
 4. Apple Accelerate | `USE_APPLE_ACCELERATE_IF_AVAILABLE` | Mac only
-5. OpenBLAS | `BLAS` | Options: Atlas, Open, MKL, Apple
+5. OpenBLAS | `USE_BLAS` | Options: atlas, openblas, mkl, apple, blas
 
 Note: If `USE_MKL_IF_AVAILABLE` is set to False then MKLML and MKL-DNN will be disabled as well for configuration
 backwards compatibility.
 
-For embedded platforms (all other and if cross compiled):
+You can set the BLAS library explicitly by setting the USE_BLAS variable to:
 
-1. OpenBLAS | `BLAS` | Options: Atlas, Open, MKL, Apple
-
-You can set the BLAS library explicitly by setting the BLAS variable to:
-
-* Atlas
-* Open
-* MKL
-* Apple
+* atlas
+* openblas (links with -lopenblas)
+* mkl
+* apple
+* blas (Netlib / generic, will link with -lblas)
 
 See the [cmake/ChooseBLAS.cmake](https://github.com/apache/incubator-mxnet/blob/master/cmake/ChooseBlas.cmake) file for the options.
 

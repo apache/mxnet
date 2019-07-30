@@ -74,6 +74,7 @@ class FeatureSet {
 
     // Math
     feature_bits.set(BLAS_OPEN, MXNET_USE_BLAS_OPEN);
+    feature_bits.set(BLAS_GENERIC, MXNET_USE_BLAS_GENERIC);
     feature_bits.set(BLAS_ATLAS, MXNET_USE_BLAS_ATLAS);
     feature_bits.set(BLAS_MKL, MXNET_USE_BLAS_MKL);
     feature_bits.set(BLAS_APPLE, MXNET_USE_BLAS_APPLE);

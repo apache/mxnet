@@ -264,6 +264,8 @@ else ifeq ($(USE_BLAS), mkl)
 	CFLAGS += -DMXNET_USE_BLAS_MKL=1
 else ifeq ($(USE_BLAS), apple)
 	CFLAGS += -DMXNET_USE_BLAS_APPLE=1
+else ifeq ($(USE_BLAS), blas)
+	CFLAGS += -DMXNET_USE_BLAS_GENERIC=1
 endif
 
 # whether to use F16C instruction set extension for fast fp16 compute on CPU

@@ -83,7 +83,7 @@ class CMake(object):
         cmd_lst.extend(self._cmdlineflags())
         return cmd_lst
 
-    def __call__(self, build_dir='build', generator='Ninja', build_cmd='ninja'):
+    def __call__(self, build_dir='build', generator='Ninja', build_cmd='ninja -v'):
         logging.info("CMake / {} build in directory {}".format(
             generator, os.path.abspath(build_dir)))
         cmd_lst = self.cmake_command()
