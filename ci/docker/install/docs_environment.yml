@@ -10,8 +10,6 @@ dependencies:
 - matplotlib
 - pandas
 - notebook
-- pytorch-cpu
-- torchvision-cpu
 - pip:
   # using nbconvert master until v5.5 comes out
   - git+https://github.com/jupyter/nbconvert@master
