@@ -118,7 +118,7 @@ for i in range(0, 10000):
 end = time.time()
 print(time.process_time() - start)
 ```
-We run timing with a warmup once more, and on the same machine, run in **18.99s**. A 1.8x speed improvement!  Speed improvements when using libraries like TensorRT can come from a variety of optimizations, but in this case our speedups are coming from a technique known as [operator fusion](http://dmlc.ml/2016/11/21/fusion-and-runtime-compilation-for-nnvm-and-tinyflow.html).
+We run timing with a warmup once more, and on the same machine, run in **18.99s**. A 1.8x speed improvement!  Speed improvements when using libraries like TensorRT can come from a variety of optimizations, but in this case our speedups are coming from a technique known as [operator fusion](#).
 
 ## Operators and Subgraph Fusion
 
