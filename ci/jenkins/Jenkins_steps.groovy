@@ -1398,7 +1398,7 @@ def compile_unix_lite() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu_lite', 'build_ubuntu_cpu_docs', false)
-            utils.pack_lib('cpu', mx_lib, false)
+            utils.pack_lib('libmxnet', 'lib/libmxnet.so', false)
             archiveArtifacts 'docs/_build/mxnet-artifact.tgz'
           }
         }
@@ -1427,7 +1427,7 @@ def docs_c() {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib, false)
+            utils.unpack_and_init('libmxnet', 'lib/libmxnet.so', false)
             utils.docker_run('ubuntu_cpu_c', 'build_c_docs', false)
             archiveArtifacts 'docs/_build/c-artifacts.tgz'
           }
