@@ -16,9 +16,9 @@
 # under the License.
 
 import mxnet as mx
-from mxnet import nd
 from benchmark.opperf.utils.benchmark_utils import run_performance_test
 from benchmark.opperf.utils.common_utils import merge_map_list
+from benchmark.opperf.rules.default_params import MX_OP_MODULE
 
 """Performance benchmark tests for MXNet NDArray Activation Operators.
 
@@ -35,7 +35,7 @@ from benchmark.opperf.utils.common_utils import merge_map_list
 """
 
 
-def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10, runs=50):
+def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype)for all the activation
     operators (relu, sigmoid, softmax) in MXNet.
 
@@ -45,9 +45,9 @@ def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10
         Context to run benchmarks
     dtype: str, default 'float32'
         Precision to use for benchmarks
-    warmup: int, default 10
+    warmup: int, default 25
         Number of times to run for warmup
-    runs: int, default 50
+    runs: int, default 100
         Number of runs to capture benchmark results
 
     Returns
@@ -56,7 +56,7 @@ def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10
 
     """
     # Relu and its variation
-    relu_benchmark_res = run_performance_test([nd.LeakyReLU],
+    relu_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "LeakyReLU")],
                                               run_backward=True,
                                               dtype=dtype,
                                               ctx=ctx,
@@ -78,7 +78,7 @@ def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10
 
     # Sigmoid => Covered as part of Unary ops
     # Hard_Sigmoid
-    hard_sigmoid_benchmark_res = run_performance_test([nd.hard_sigmoid],
+    hard_sigmoid_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "hard_sigmoid")],
                                                       run_backward=True,
                                                       dtype=dtype,
                                                       ctx=ctx,
@@ -90,7 +90,8 @@ def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10
                                                       runs=runs)
 
     # Softmax, LogSoftmax
-    softmax_benchmark_res = run_performance_test([nd.softmax, nd.log_softmax],
+    softmax_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "softmax"),
+                                                  getattr(MX_OP_MODULE, "log_softmax")],
                                                  run_backward=True,
                                                  dtype=dtype,
                                                  ctx=ctx,

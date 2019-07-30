@@ -29,8 +29,7 @@ You also must download the glove word embeddings. The suggested one to use is th
 ## Usage
 
 You can run through the repl with
-`(train-convnet {:embedding-size 50 :batch-size 100 :test-size 100 :num-epoch 10 :max-examples 1000 :pretrained-embedding :glove})`
-
+`(train-convnet {:devs [(context/default-context)] :embedding-size 50 :batch-size 100 :test-size 100 :num-epoch 10 :max-examples 1000 :pretrained-embedding :glove})`
 or
 `JVM_OPTS="-Xmx1g" lein run` (cpu)
 
@@ -49,6 +48,21 @@ and then run
 - `lein uberjar`
 - `java -Xms1024m -Xmx2048m -jar target/cnn-text-classification-0.1.0-SNAPSHOT-standalone.jar`
 
+## Usage with fastText
+
+Using fastText instead of glove is fairly straightforward, as the pretrained embedding format is very similar.
+
+Download the 'Simple English' pretrained wiki word vectors (text) from the fastText
+[site](https://fasttext.cc/docs/en/pretrained-vectors.html) and place them in the
+`data/fasttext` directory. Alternatively just run `./get_fasttext_data.sh`.
+
+Then you can run training on a subset of examples through the repl using:
+```
+(train-convnet {:devs [(context/default-context)] :embedding-size 300 :batch-size 100 :test-size 100 :num-epoch 10 :max-examples 1000 :pretrained-embedding :fasttext})
+```
+
+Expect a validation accuracy of `~0.67` with the above parameters.
+
 ## Usage with word2vec
 
 You can also use word2vec embeddings in order to train the text classification model.
@@ -58,7 +72,7 @@ you'll need to unzip them and place them in the `contrib/clojure-package/data` d
 
 Then you can run training on a subset of examples through the repl using:
 ```
-(train-convnet {:embedding-size 300 :batch-size 100 :test-size 100 :num-epoch 10 :max-examples 1000 :pretrained-embedding :word2vec})
+(train-convnet {:devs [(context/default-context)] :embedding-size 300 :batch-size 100 :test-size 100 :num-epoch 10 :max-examples 1000 :pretrained-embedding :word2vec})
 ```
 Note that loading word2vec embeddings consumes memory and takes some time.
 
@@ -66,7 +80,7 @@ You can also train them using `JVM_OPTS="-Xmx8g" lein run` once you've modified
 the parameters to `train-convnet` (see above) in `src/cnn_text_classification/classifier.clj`.
 In order to run training with word2vec on the complete data set, you will need to run:
 ```
-(train-convnet {:embedding-size 300 :batch-size 100 :test-size 1000 :num-epoch 10 :pretrained-embedding :word2vec})
+(train-convnet {:devs [(context/default-context)] :embedding-size 300 :batch-size 100 :test-size 1000 :num-epoch 10 :pretrained-embedding :word2vec})
 ```
 You should be able to achieve an accuracy of `~0.78` using the parameters above.
 

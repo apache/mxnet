@@ -27,15 +27,15 @@ The following models have been tested on Linux systems.
 
 | Model | Source | Dataset | FP32 Accuracy (top-1/top-5)| INT8 Accuracy (top-1/top-5)|
 |:---|:---|---|:---:|:---:|
-| [ResNet18-V1](#3)  | [Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  |70.07%/89.30%|69.85%/89.23%|
-| [ResNet50-V1](#3)  | [Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  | 75.87%/92.72%  |  75.71%/92.65% |
-| [ResNet101-V1](#3)  | [Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  | 77.3%/93.58%  | 77.09%/93.41%  |
-|[Squeezenet 1.0](#4)|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|57.01%/79.71%|56.62%/79.55%|
-|[MobileNet 1.0](#5)|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|69.76%/89.32%|69.61%/89.09%|
-|[MobileNetV2 1.0](#6)|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|70.14%/89.60%|69.53%/89.24%|
-|[Inception V3](#7)|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|76.49%/93.10% |76.38%/93% |
-|[ResNet152-V2](#8)|[MXNet ModelZoo](http://data.mxnet.io/models/imagenet/resnet/152-layers/)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|76.76%/93.03%|76.48%/92.96%|
-|[Inception-BN](#9)|[MXNet ModelZoo](http://data.mxnet.io/models/imagenet/inception-bn/)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|72.09%/90.60%|72.00%/90.53%|
+| [ResNet18-V1](#3)  | [Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  |70.15%/89.38%|69.92%/89.26%|
+| [ResNet50-V1](#3)  | [Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  | 76.34%/93.13%  |  75.91%/92.95% |
+| [ResNet101-V1](#3)  | [Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  | 77.33%/93.59%  | 77.05%/93.43%  |
+|[Squeezenet 1.0](#4)|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|56.98%/79.20%|52.98%/77.21%|
+|[MobileNet 1.0](#5)|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|72.23%/90.64%|72.03%/90.42%|
+|[MobileNetV2 1.0](#6)|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|70.27%/89.62%|69.70%/89.26%|
+|[Inception V3](#7)|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|77.76%/93.83% |77.87%/93.78% |
+|[ResNet152-V2](#8)|[MXNet ModelZoo](http://data.mxnet.io/models/imagenet/resnet/152-layers/)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|76.65%/93.07%|76.36%/92.89%|
+|[Inception-BN](#9)|[MXNet ModelZoo](http://data.mxnet.io/models/imagenet/inception-bn/)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|72.28%/90.63%|72.20%/90.56%|
 | [SSD-VGG16](#10) | [example/ssd](https://github.com/apache/incubator-mxnet/tree/master/example/ssd)  | VOC2007/2012  | 0.8366 mAP  | 0.8364 mAP  |
 | [SSD-VGG16](#10) | [example/ssd](https://github.com/apache/incubator-mxnet/tree/master/example/ssd)  | COCO2014  | 0.2552 mAP  | 0.253 mAP  |
 
@@ -50,10 +50,7 @@ python imagenet_gen_qsym_mkldnn.py --model=resnet50_v1 --num-calib-batches=5 --c
 The model would be automatically replaced in fusion and quantization format. It is then saved as the quantized symbol and parameter files in the `./model` directory. The following command is to launch inference.
 
 ```
-# USE MKLDNN AS SUBGRAPH BACKEND
-export MXNET_SUBGRAPH_BACKEND=MKLDNN
-
-# Launch FP32 Inference 
+# Launch FP32 Inference
 python imagenet_inference.py --symbol-file=./model/resnet50_v1-symbol.json --param-file=./model/resnet50_v1-0000.params --rgb-mean=123.68,116.779,103.939 --rgb-std=58.393,57.12,57.375 --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu
 
 # Launch INT8 Inference
@@ -74,8 +71,6 @@ python imagenet_gen_qsym_mkldnn.py --model=squeezenet1.0 --num-calib-batches=5 -
 The model would be automatically replaced in fusion and quantization format. It is then saved as the quantized symbol and parameter files in the `./model` directory. The following command is to launch inference.
 
 ```
-# USE MKLDNN AS SUBGRAPH BACKEND
-export MXNET_SUBGRAPH_BACKEND=MKLDNN
 
 # Launch FP32 Inference
 python imagenet_inference.py --symbol-file=./model/squeezenet1.0-symbol.json --param-file=./model/squeezenet1.0-0000.params --rgb-mean=123.68,116.779,103.939 --rgb-std=58.393,57.12,57.375 --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu
@@ -98,8 +93,6 @@ python imagenet_gen_qsym_mkldnn.py --model=mobilenet1.0 --num-calib-batches=5 --
 The model would be automatically replaced in fusion and quantization format. It is then saved as the quantized symbol and parameter files in the `./model` directory. The following command is to launch inference.
 
 ```
-# USE MKLDNN AS SUBGRAPH BACKEND
-export MXNET_SUBGRAPH_BACKEND=MKLDNN
 
 # Launch FP32 Inference
 python imagenet_inference.py --symbol-file=./model/mobilenet1.0-symbol.json --param-file=./model/mobilenet1.0-0000.params --rgb-mean=123.68,116.779,103.939 --rgb-std=58.393,57.12,57.375 --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu
@@ -122,8 +115,6 @@ python imagenet_gen_qsym_mkldnn.py --model=mobilenetv2_1.0 --num-calib-batches=5
 The model would be automatically replaced in fusion and quantization format. It is then saved as the quantized symbol and parameter files in the `./model` directory. The following command is to launch inference.
 
 ```
-# USE MKLDNN AS SUBGRAPH BACKEND
-export MXNET_SUBGRAPH_BACKEND=MKLDNN
 
 # Launch FP32 Inference
 python imagenet_inference.py --symbol-file=./model/mobilenetv2_1.0-symbol.json --param-file=./model/mobilenetv2_1.0-0000.params --rgb-mean=123.68,116.779,103.939 --rgb-std=58.393,57.12,57.375 --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu
@@ -146,8 +137,6 @@ python imagenet_gen_qsym_mkldnn.py --model=inceptionv3 --image-shape=3,299,299 -
 The model would be automatically replaced in fusion and quantization format. It is then saved as the quantized symbol and parameter files in the `./model` directory. The following command is to launch inference.
 
 ```
-# USE MKLDNN AS SUBGRAPH BACKEND
-export MXNET_SUBGRAPH_BACKEND=MKLDNN
 
 # Launch FP32 Inference
 python imagenet_inference.py --symbol-file=./model/inceptionv3-symbol.json --param-file=./model/inceptionv3-0000.params --image-shape=3,299,299 --rgb-mean=123.68,116.779,103.939 --rgb-std=58.393,57.12,57.375 --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu
@@ -171,10 +160,8 @@ python imagenet_gen_qsym_mkldnn.py --model=imagenet1k-resnet-152 --num-calib-bat
 The model would be automatically replaced in fusion and quantization format. It is then saved as the quantized symbol and parameter files in the `./model` directory. The following command is to launch inference.
 
 ```
-# USE MKLDNN AS SUBGRAPH BACKEND
-export MXNET_SUBGRAPH_BACKEND=MKLDNN
 
-# Launch FP32 Inference 
+# Launch FP32 Inference
 python imagenet_inference.py --symbol-file=./model/imagenet1k-resnet-152-symbol.json --param-file=./model/imagenet1k-resnet-152-0000.params --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu
 
 # Launch INT8 Inference
@@ -196,10 +183,8 @@ python imagenet_gen_qsym_mkldnn.py --model=imagenet1k-inception-bn --num-calib-b
 The model would be automatically replaced in fusion and quantization format. It is then saved as the quantized symbol and parameter files in the `./model` directory. The following command is to launch inference.
 
 ```
-# USE MKLDNN AS SUBGRAPH BACKEND
-export MXNET_SUBGRAPH_BACKEND=MKLDNN
 
-# Launch FP32 Inference 
+# Launch FP32 Inference
 python imagenet_inference.py --symbol-file=./model/imagenet1k-inception-bn-symbol.json --param-file=./model/imagenet1k-inception-bn-0000.params --rgb-mean=123.68,116.779,103.939 --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu
 
 # Launch INT8 Inference
@@ -240,10 +225,8 @@ Some tips on quantization configs:
 2. Then, you should run the following command and verify that your fp32 symbolic model runs inference as expected.
 
 ```
-# USE MKLDNN AS SUBGRAPH BACKEND
-export MXNET_SUBGRAPH_BACKEND=MKLDNN
 
-# Launch FP32 Inference 
+# Launch FP32 Inference
 python imagenet_inference.py --symbol-file=./model/custom-symbol.json --param-file=./model/custom-0000.params --rgb-mean=* --rgb-std=* --num-skipped-batches=* --batch-size=* --num-inference-batches=*--dataset=./data/* --ctx=cpu
 ```
 
@@ -260,7 +243,7 @@ python imagenet_gen_qsym_mkldnn.py --model=custom --num-calib-batches=5 --calib-
 6. Finally, you can run INT8 inference:
 
 ```
-# Launch INT8 Inference 
+# Launch INT8 Inference
 python imagenet_inference.py --symbol-file=./model/*.json --param-file=./model/*.params --rgb-mean=* --rgb-std=* --num-skipped-batches=* --batch-size=* --num-inference-batches=*--dataset=./data/* --ctx=cpu
 
 # Launch dummy data Inference
@@ -289,6 +272,6 @@ the console to run model quantization for a specific configuration.
 - `launch_inference.sh` This is a shell script that calculate the accuracies of all the quantized models generated
 by invoking `launch_quantize.sh`.
 
-**NOTE**: 
+**NOTE**:
 - This example has only been tested on Linux systems.
 - Performance is expected to decrease with GPU, however the memory footprint of a quantized model is smaller. The purpose of the quantization implementation is to minimize accuracy loss when converting FP32 models to INT8. MXNet community is working on improving the performance.

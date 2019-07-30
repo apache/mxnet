@@ -26,6 +26,7 @@
    c_plus_plus.md
    centos_setup.md
    download.md
+   install-jetson.md
    java_setup.md
    osx_setup.md
    scala_setup.md
@@ -37,10 +38,11 @@
 Indicate your preferred configuration. Then, follow the customized commands to install MXNet.
 
 <div class="dropdown">
-  <button class="btn current-version btn-primary dropdown-toggle" type="button" data-toggle="dropdown">v1.4.1
+  <button class="btn current-version btn-primary dropdown-toggle" type="button" data-toggle="dropdown">v1.5.0
   <span class="caret"></span></button>
   <ul class="dropdown-menu opt-group">
-    <li class="opt active versions"><a href="#">v1.4.1</a></li>
+    <li class="opt active versions"><a href="#">v1.5.0</a></li>
+    <li class="opt versions"><a href="#">v1.4.1</a></li>
     <li class="opt versions"><a href="#">v1.3.1</a></li>
     <li class="opt versions"><a href="#">v1.2.1</a></li>
     <li class="opt versions"><a href="#">v1.1.0</a></li>
@@ -116,22 +118,32 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <div class="python">
 <div class="cpu">
 <div class="pip">
-<div class="v1-4-1">
-
-MKL-DNN enabled pip packages are optimized for Intel hardware. You can find performance numbers in the <a href="http://mxnet.io/faq/perf.html#intel-cpu">MXNet tuning guide</a>.
+<div class="v1-5-0">
 
 ```
 $ pip install mxnet
 ```
 
+MKL-DNN enabled pip packages are optimized for Intel hardware. You can find performance numbers in the <a href="http://mxnet.io/faq/perf.html#intel-cpu">MXNet tuning guide</a>.
+
+```
+$ pip install mxnet-mkl
+```
+
+</div> <!-- End of v1-5-0 -->
+<div class="v1-4-1">
+
+```
+$ pip install mxnet==1.4.1
+```
+
+MKL-DNN enabled pip packages are optimized for Intel hardware. You can find performance numbers in the <a href="http://mxnet.io/faq/perf.html#intel-cpu">MXNet tuning guide</a>.
+
+```
+$ pip install mxnet-mkl==1.4.1
+```
+
 </div> <!-- End of v1-4-1 -->
-<div class="v1-4-0">
-
-```
-$ pip install mxnet==1.4.0
-```
-
-</div> <!-- End of v1-4-0 -->
 <div class="v1-3-1">
 
 ```
@@ -219,7 +231,7 @@ Check the chart below for other options, refer to <a href="https://pypi.org/proj
 
 **NOTES:**
 
-*mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
+*mxnet-cu101mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 10.1.
 
 All MKL pip packages are experimental prior to version 1.3.0.
 
@@ -284,17 +296,24 @@ To build from source, refer to the <a href="ubuntu_setup.html">MXNet Ubuntu inst
 
 <div class="gpu">
 <div class="pip">
-<div class="v1-4-0">
+<div class="v1-5-0">
 
 ```
-$ pip install mxnet-cu92
+$ pip install mxnet-cu101
 ```
 
-</div> <!-- End of v1-4-0 -->
+</div> <!-- End of v1-5-0 -->
+<div class="v1-4-1">
+
+```
+$ pip install mxnet-cu101==1.4.1
+```
+
+</div> <!-- End of v1-4-1 -->
 <div class="v1-3-1">
 
 ```
-$ pip install mxnet==1.3.1
+$ pip install mxnet-cu92==1.3.1
 ```
 
 </div> <!-- End of v1-3-1-->
@@ -341,7 +360,7 @@ $ pip install mxnet-cu80==0.11.0
 <div class="master">
 
 ```
-$ pip install mxnet-cu92 --pre
+$ pip install mxnet-cu101 --pre
 ```
 
 </div> <!-- End of master-->
@@ -353,7 +372,7 @@ Check the chart below for other options, refer to <a href="https://pypi.org/proj
 
 **NOTES:**
 
-*mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
+*mxnet-cu101mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 10.1.
 
 All MKL pip packages are experimental prior to version 1.3.0.
 
@@ -530,13 +549,13 @@ You can use the Maven packages defined in the following dependency to include MX
 <br/>
 You can use the Maven packages defined in the following dependency to include MXNet in your Java project. The Java API is provided as a subset of the Scala API and is intended for inference only. Please refer to the <a href="java_setup.html">MXNet-Java setup guide</a> for a detailed set of instructions to help you with the setup process.
 
-<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.4.1~~"><img src="https://img.shields.io/badge/org.apache.mxnet-linux gpu-green.svg" alt="maven badge"/></a>
+<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.5.0~~"><img src="https://img.shields.io/badge/org.apache.mxnet-linux gpu-green.svg" alt="maven badge"/></a>
 
 ```html
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
-    <version>[1.4.1, )</version>
+    <version>[1.5.0, )</version>
 </dependency>
 ```
 
@@ -547,13 +566,13 @@ You can use the Maven packages defined in the following dependency to include MX
 <br/>
 You can use the Maven packages defined in the following dependency to include MXNet in your Java project. The Java API is provided as a subset of the Scala API and is intended for inference only. Please refer to the <a href="java_setup.html">MXNet-Java setup guide</a> for a detailed set of instructions to help you with the setup process.
 
-<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.4.1~~"><img src="https://img.shields.io/badge/org.apache.mxnet-linux cpu-green.svg" alt="maven badge"/></a>
+<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.5.0~~"><img src="https://img.shields.io/badge/org.apache.mxnet-linux cpu-green.svg" alt="maven badge"/></a>
 
 ```html
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
-    <version>[1.4.1, )</version>
+    <version>[1.5.0, )</version>
 </dependency>
 ```
 <br>
@@ -598,12 +617,18 @@ Refer to the <a href="ubuntu_setup.html#install-the-mxnet-package-for-perl">Perl
 <div class="python">
 <div class="cpu">
 <div class="pip">
-<div class="v1-4-0">
+<div class="v1-5-0">
 
 ```
 $ pip install mxnet
 ```
-</div> <!-- End of v1-4-0 -->
+</div> <!-- End of v1-5-0 -->
+<div class="v1-4-1">
+
+```
+$ pip install mxnet==1.4.1
+```
+</div> <!-- End of v1-4-1 -->
 <div class="v1-3-1">
 
 ```
@@ -669,7 +694,7 @@ Check the chart below for other options, refer to <a href="https://pypi.org/proj
 
 **NOTES:**
 
-*mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
+*mxnet-cu101mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 10.1.
 
 All MKL pip packages are experimental prior to version 1.3.0.
 
@@ -838,13 +863,13 @@ Not available at this time. <br>
 </br>
 You can use the Maven packages defined in the following dependency to include MXNet in your Java project. The Java API is provided as a subset of the Scala API and is intended for inference only. Please refer to the <a href="java_setup.html">MXNet-Java setup guide</a> for a detailed set of instructions to help you with the setup process.
 
-<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.4.1~~"><img src="https://img.shields.io/badge/org.apache.mxnet-mac cpu-green.svg" alt="maven badge"/></a>
+<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.5.0~~"><img src="https://img.shields.io/badge/org.apache.mxnet-mac cpu-green.svg" alt="maven badge"/></a>
 
 ```html
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
-    <version>[1.4.1, )</version>
+    <version>[1.5.0, )</version>
 </dependency>
 ```
 <br>
@@ -891,13 +916,20 @@ For more installation options, refer to the <a href="osx_setup.html">MXNet macOS
 <div class="python">
 <div class="cpu">
 <div class="pip">
-<div class="v1-4-0">
+<div class="v1-5-0">
 
 ```
 $ pip install mxnet
 ```
 
-</div> <!-- End of v1-4-0 -->
+</div> <!-- End of v1-5-0 -->
+<div class="v1-4-1">
+
+```
+$ pip install mxnet==1.4.1
+```
+
+</div> <!-- End of v1-4-1 -->
 <div class="v1-3-1">
 
 ```
@@ -960,7 +992,7 @@ Check the chart below for other options, refer to <a href="https://pypi.org/proj
 
 **NOTES:**
 
-*mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
+*mxnet-cu101mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 10.1.
 
 All MKL pip packages are experimental prior to version 1.3.0.
 
@@ -1022,17 +1054,24 @@ Refer to the <a href="windows_setup.html">MXNet Windows installation guide</a>
 
 <div class="gpu">
 <div class="pip">
-<div class="v1-4-0">
+<div class="v1-5-0">
 
 ```
-$ pip install mxnet-cu92
+$ pip install mxnet-cu101
 ```
 
-</div> <!-- End of v1-4-0 -->
+</div> <!-- End of v1-5-0 -->
+<div class="v1-4-1">
+
+```
+$ pip install mxnet-cu101==1.4.1
+```
+
+</div> <!-- End of v1-4-1 -->
 <div class="v1-3-1">
 
 ```
-$ pip install mxnet==1.3.1
+$ pip install mxnet-cu92==1.3.1
 ```
 
 </div> <!-- End of v1-3-1 -->
@@ -1079,7 +1118,7 @@ $ pip install mxnet-cu80==0.11.0
 <div class="master">
 
 ```
-$ pip install mxnet-cu92 --pre
+$ pip install mxnet-cu101 --pre
 ```
 
 </div> <!-- End of master-->
@@ -1091,7 +1130,7 @@ Check the chart below for other options, refer to <a href="https://pypi.org/proj
 
 **NOTES:**
 
-*mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
+*mxnet-cu101mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 10.1.
 
 All MKL pip packages are experimental prior to version 1.3.0.
 
@@ -1447,89 +1486,9 @@ You are now ready to run MXNet on your Raspberry Pi device. You can get started 
 
 <div class="nvidia-jetson">
 
-# Nvidia Jetson TX family
+# NVIDIA Jetson Devices
 
-MXNet supports the Ubuntu Arch64 based operating system so you can run MXNet on NVIDIA Jetson Devices.
-
-These instructions will walk through how to build MXNet for the Pascal based [NVIDIA Jetson TX2](http://www.nvidia.com/object/embedded-systems-dev-kits-modules.html) and install the corresponding python language bindings.
-
-For the purposes of this install guide we will assume that CUDA is already installed on your Jetson device.
-
-**Install MXNet**
-
-Installing MXNet is a two-step process:
-
-1. Build the shared library from the MXNet C++ source code.
-2. Install the supported language-specific packages for MXNet.
-
-**Step 1** Build the Shared Library
-
-You need the following additional dependencies:
-
-- Git (to pull code from GitHub)
-
-- libatlas (for linear algebraic operations)
-
-- libopencv (for computer vision operations)
-
-- python pip (to load relevant python packages for our language bindings)
-
-Install these dependencies using the following commands in any directory:
-
-```
-    sudo apt-get update
-    sudo apt-get -y install git build-essential libatlas-base-dev libopencv-dev graphviz python-pip
-    sudo pip install pip --upgrade
-    sudo pip install setuptools numpy --upgrade
-    sudo pip install graphviz==0.8.4 \
-                     jupyter
-```
-
-Clone the MXNet source code repository using the following `git` command in your home directory:
-```
-    git clone https://github.com/apache/incubator-mxnet.git --recursive
-    cd incubator-mxnet
-```
-
-Edit the Makefile to install the MXNet with CUDA bindings to leverage the GPU on the Jetson:
-```
-    cp make/crosscompile.jetson.mk config.mk
-```
-
-Edit the Mshadow Makefile to ensure MXNet builds with Pascal's hardware level low precision acceleration by editing 3rdparty/mshadow/make/mshadow.mk and adding the following after line 122:
-```
-MSHADOW_CFLAGS += -DMSHADOW_USE_PASCAL=1
-```
-
-Now you can build the complete MXNet library with the following command:
-```
-    make -j $(nproc)
-```
-
-Executing this command creates a file called `libmxnet.so` in the mxnet/lib directory.
-
-**Step 2** Install MXNet Python Bindings
-
-To install Python bindings run the following commands in the MXNet directory:
-
-```
-    cd python
-    pip install --upgrade pip
-    pip install -e .
-```
-
-Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
-
-Add the mxnet folder to the path:
-
-```
-    cd ..
-    export MXNET_HOME=$(pwd)
-    echo "export PYTHONPATH=$MXNET_HOME/python:$PYTHONPATH" >> ~/.rc
-    source ~/.rc
-```
-
-You are now ready to run MXNet on your NVIDIA Jetson TX2 device.
+To install MXNet on a Jetson TX or Nano, please refer to the [Jetson installation guide](install-jetson.html).
 
 </div> <!-- End of jetson -->
 </div> <!-- End of devices -->

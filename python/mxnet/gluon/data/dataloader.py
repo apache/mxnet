@@ -268,7 +268,7 @@ class _MultiWorkerIterV1(object):
         if not self._shutdown:
             # send shutdown signal to the fetcher and join data queue first
             # Remark:   loop_fetcher need to be joined prior to the workers.
-            #           otherwise, the the fetcher may fail at getting data
+            #           otherwise, the fetcher may fail at getting data
             self._data_queue.put((None, None))
             self._fetcher.join()
             # send shutdown signal to all worker processes

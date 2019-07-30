@@ -17,7 +17,7 @@
 
 # Using AMP (Automatic Mixed Precision) in MXNet
 
-Training Deep Learning networks is a very computationally intensive task. Novel model architectures tend to have increasing number of layers and parameters, which slows down training. Fortunately, new generations of training hardware as well as software optimizations, make it a feasible task. 
+Training Deep Learning networks is a very computationally intensive task. Novel model architectures tend to have increasing number of layers and parameters, which slows down training. Fortunately, new generations of training hardware as well as software optimizations, make it a feasible task.
 
 However, where most of the (both hardware and software) optimization opportunities exists is in exploiting lower precision (like FP16) to, for example, utilize Tensor Cores available on new Volta and Turing GPUs. While training in FP16 showed great success in image classification tasks, other more complicated neural networks typically stayed in FP32 due to difficulties in applying the FP16 training guidelines.
 
@@ -31,12 +31,15 @@ For demonstration purposes we will use synthetic data loader.
 
 
 ```python
+import os
 import logging
 import warnings
 import time
+import numpy as np
 import mxnet as mx
 import mxnet.gluon as gluon
 from mxnet import autograd
+from mxnet.test_utils import download_model
 import gluoncv as gcv
 from gluoncv.model_zoo import get_model
 
@@ -248,6 +251,91 @@ for epoch in range(1):
 
 
 We got 60% speed increase from 3 additional lines of code!
+
+## Inference with AMP
+
+To do inference with mixed precision for a trained model in FP32, you can use the conversion APIs: `amp.convert_model` for symbolic model and `amp.convert_hybrid_block` for gluon models. The conversion APIs will take the FP32 model as input and will return a mixed precision model, which can be used to run inference.
+Below, we demonstrate for a gluon model and a symbolic model:
+- Conversion from FP32 model to mixed precision model.
+- Run inference on the mixed precision model.
+
+```python
+with mx.Context(mx.gpu(0)):
+    # Below is an example of converting a gluon hybrid block to a mixed precision block
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("ignore")
+        model = get_model("resnet50_v1")
+        model.collect_params().initialize(ctx=mx.current_context())
+        model.hybridize()
+        model(mx.nd.zeros((1, 3, 224, 224)))
+        converted_model = amp.convert_hybrid_block(model)
+
+    # Run dummy inference with the converted gluon model
+    result = converted_model.forward(mx.nd.random.uniform(shape=(1, 3, 224, 224),
+                                                          dtype=np.float32))
+
+    # Below is an example of converting a symbolic model to a mixed precision model
+    model_path = "model"
+    if not os.path.isdir(model_path):
+        os.mkdir(model_path)
+    prefix, epoch = mx.test_utils.download_model("imagenet1k-resnet-18", dst_dir=model_path)
+    sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
+    result_sym, result_arg_params, result_aux_params = amp.convert_model(sym,
+                                                                         arg_params,
+                                                                         aux_params)
+
+    # Run dummy inference with the converted symbolic model
+    mod = mx.mod.Module(result_sym, data_names=["data"], label_names=["softmax_label"], context=mx.current_context())
+    mod.bind(data_shapes=[['data', (1, 3, 224, 224)]], label_shapes=[['softmax_label', (1,)]])
+    mod.set_params(result_arg_params, result_aux_params)
+    mod.forward(mx.io.DataBatch(data=[mx.nd.ones((1, 3, 224, 224))],
+                                label=[mx.nd.ones((1,))]))
+    mod.get_outputs()[0].wait_to_read()
+    print("Conversion and Inference completed successfully")
+```
+
+You can also customize the operators to run in FP16 versus the operator to run in FP32 or to conditionally run in FP32.
+Also, you can force cast the params wherever possible to FP16. Below is an example which demonstrates both these use cases
+for symbolic model. You can do the same for gluon hybrid block with `amp.convert_hybrid_block` API, `cast_optional_params` flag.
+
+```python
+with mx.Context(mx.gpu(0)):
+    # Below is an example of converting a symbolic model to a mixed precision model
+    # with only Convolution op being force casted to FP16.
+    model_path = "model"
+    if not os.path.isdir(model_path):
+        os.mkdir(model_path)
+    prefix, epoch = mx.test_utils.download_model("imagenet1k-resnet-18", dst_dir=model_path)
+    sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
+
+    # All Convolution ops should run in FP16, SoftmaxOutput and FullyConnected should run in FP32
+    # cast_optional_params=True: Force cast params to FP16 wherever possible
+    result_sym, result_arg_params, result_aux_params = amp.convert_model(sym,
+                                                                         arg_params,
+                                                                         aux_params,
+                                                                         target_dtype_ops=["Convolution"],
+                                                                         fp32_ops=["SoftmaxOutput", "FullyConnected"],
+                                                                         cast_optional_params=True)
+
+    # Run dummy inference with the converted symbolic model
+    mod = mx.mod.Module(result_sym, data_names=["data"], label_names=["softmax_label"], context=mx.current_context())
+    mod.bind(data_shapes=[['data', (1, 3, 224, 224)]], label_shapes=[['softmax_label', (1,)]])
+    mod.set_params(result_arg_params, result_aux_params)
+    mod.forward(mx.io.DataBatch(data=[mx.nd.ones((1, 3, 224, 224))],
+                                label=[mx.nd.ones((1,))]))
+    mod.get_outputs()[0].wait_to_read()
+
+    # Assert that the params for conv are in FP16, this is because cast_optional_params is set to True
+    assert mod._arg_params["conv0_weight"].dtype == np.float16
+    # FullyConnected params stay in FP32
+    assert mod._arg_params["fc1_bias"].dtype == np.float32
+
+    print("Conversion and Inference completed successfully")
+
+    # Serialize AMP model and save to disk
+    mod.save_checkpoint("amp_tutorial_model", 0, remove_amp_cast=False)
+```
+
 
 ## Current limitations of AMP
 
