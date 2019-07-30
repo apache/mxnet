@@ -70,8 +70,10 @@ inline bool NumpyTakeOpShape(const nnvm::NodeAttrs& attrs,
   const NumpyTakeParam& param = nnvm::get<NumpyTakeParam>(attrs.parsed);
   out_attrs->clear();
   if (param.axis.has_value()) {
-    CHECK(param.axis.value() >= -1 * arrshape.ndim() && param.axis.value() < arrshape.ndim())
-      << "If axis is not None, axis should be in the range of [-r, r-1] where r is the rank of input tensor";
+    CHECK(param.axis.value() >= -1 * arrshape.ndim() &&
+      param.axis.value() < arrshape.ndim())
+      << "If axis is not None, axis should be in "\
+      "the range of [-r, r-1] where r is the rank of input tensor";
     const index_t actual_axis = param.axis.value() + ((param.axis.value() < 0) ? arrshape.ndim() : 0);
     mxnet::TShape oshape(idxshape.ndim() + arrshape.ndim() - 1, -1);
     for (index_t i = 0; i < idxshape.ndim(); ++i) {
@@ -154,7 +156,8 @@ void NumpyTakeOpBackward(const nnvm::NodeAttrs& attrs,
         if (!param.axis.has_value()) {
           grad_in = outputs[0].get_with_shape<xpu, 2, DType>(Shape2(arrshape.Size(), 1), s);
         } else {
-          grad_in = outputs[0].get_with_shape<xpu, 2, DType>(Shape2(arrshape[0], arrshape.ProdShape(1, arrshape.ndim())), s);
+          grad_in = outputs[0].get_with_shape<xpu, 2, DType>(
+              Shape2(arrshape[0], arrshape.ProdShape(1, arrshape.ndim())), s);
         }
         Tensor<xpu, 2, DType> grad_out = inputs[0].get_with_shape<xpu, 2, DType>(
             Shape2(oshape.ProdShape(0, idxndim), oshape.ProdShape(idxndim, oshape.ndim())), s);
@@ -172,7 +175,8 @@ void NumpyTakeOpBackward(const nnvm::NodeAttrs& attrs,
           LOG(FATAL) << "wrong req";
         }
       } else {
-        const int actual_axis = param.axis.value() + ((param.axis.value() < 0) ? arrshape.ndim() : 0);
+        const int actual_axis = param.axis.value() +
+                                ((param.axis.value() < 0) ? arrshape.ndim() : 0);
 
         const TBlob& idx = inputs[1];
         const TBlob& arr = outputs[0];

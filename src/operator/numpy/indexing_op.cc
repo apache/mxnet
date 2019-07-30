@@ -108,13 +108,13 @@ void NumpyTakeOpForward<cpu>(const nnvm::NodeAttrs& attrs,
                                              outputs[take_::kOut].dptr<DType>(),
                                              inputs[take_::kArr].dptr<DType>(),
                                              inputs[take_::kIdx].dptr<IType>(),
-                                             static_cast<size_t>(1), static_cast<int64_t>(arrshape.Size()));
+                                             1, arrshape.Size());
         } else {
           Kernel<TakeCPU<false>, cpu>::Launch(s, idxshape.Size(),
                                               outputs[take_::kOut].dptr<DType>(),
                                               inputs[take_::kArr].dptr<DType>(),
                                               inputs[take_::kIdx].dptr<IType>(),
-                                              static_cast<size_t>(1), static_cast<int64_t>(arrshape.Size()));
+                                              1, arrshape.Size());
         }
       });
     });

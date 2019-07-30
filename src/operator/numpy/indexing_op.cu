@@ -92,7 +92,8 @@ void NumpyTakeOpForward<gpu>(const nnvm::NodeAttrs& attrs,
                                              outputs[take_::kOut].dptr<DType>(),
                                              inputs[take_::kArr].dptr<DType>(),
                                              inputs[take_::kIdx].dptr<IType>(),
-                                             in_strides, out_strides, arrshape.ndim(), oshape.ndim(),
+                                             in_strides, out_strides,
+                                             arrshape.ndim(), oshape.ndim(),
                                              idxshape.ndim(), arrshape[actual_axis], actual_axis);
           }
         }
@@ -106,13 +107,13 @@ void NumpyTakeOpForward<gpu>(const nnvm::NodeAttrs& attrs,
                                              outputs[take_::kOut].dptr<DType>(),
                                              inputs[take_::kArr].dptr<DType>(),
                                              inputs[take_::kIdx].dptr<IType>(),
-                                             static_cast<size_t>(1), static_cast<int64_t>(arrshape.Size()));
+                                             1, arrshape.Size());
         } else {
           Kernel<TakeGPU<false>, gpu>::Launch(s, oshape.Size(),
                                               outputs[take_::kOut].dptr<DType>(),
                                               inputs[take_::kArr].dptr<DType>(),
                                               inputs[take_::kIdx].dptr<IType>(),
-                                              static_cast<size_t>(1), static_cast<int64_t>(arrshape.Size()));
+                                              1, arrshape.Size());
         }
       });
     });
