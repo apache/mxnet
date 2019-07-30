@@ -1482,20 +1482,24 @@ build_clojure_docs() {
 
 
 build_julia_docs() {
-    set -ex
-    pushd .
-    build_setup
-    julia_doc_path='julia/docs/site/'
-    julia_doc_artifact='docs/_build/artifacts-julia.tgz'
+   set -ex
+   pushd .
+   build_setup
+   # Setup environment for Julia docs
+   export PATH="/work/julia10/bin:$PATH"
+   export MXNET_HOME='/work/mxnet'
+   export JULIA_DEPOT_PATH='/work/julia-depot'
+   julia_doc_path='julia/docs/site/'
+   julia_doc_artifact='docs/_build/artifacts-julia.tgz'
 
-    export MXNET_HOME=$(pwd)
-    echo "Julia will check for MXNet in $MXNET_HOME/lib"
+   export MXNET_HOME=$(pwd)
+   echo "Julia will check for MXNet in $MXNET_HOME/lib"
 
-    make -C julia/docs
+   make -C julia/docs
 
-    tar -zcvf $julia_doc_artifact $julia_doc_path
+   tar -zcvf $julia_doc_artifact $julia_doc_path
 
-    popd
+   popd
 }
 
 
