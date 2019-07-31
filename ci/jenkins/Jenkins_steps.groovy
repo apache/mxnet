@@ -1412,7 +1412,8 @@ def docs_python() {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib, false)
+            utils.init_git()
+            //utils.unpack_and_init('cpu', mx_lib, false)
             utils.docker_run('ubuntu_cpu_python', 'build_python_docs', false)
             archiveArtifacts 'docs/_build/python-artifacts.tgz'
           }
