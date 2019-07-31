@@ -19,11 +19,13 @@
 
 import sys
 import unittest
+import warnings
 
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.gluon.contrib.estimator import *
+from mxnet.gluon.contrib.estimator.event_handler import *
 from nose.tools import assert_raises
 
 

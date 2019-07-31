@@ -137,8 +137,12 @@ est = estimator.Estimator(net=resnet_18_v1,
                           trainer=trainer, 
                           context=ctx)
 
-# Magic line
-est.fit(train_data=train_data_loader,
+# ignore warnings for nightly test on CI only
+import warnings
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    # Magic line
+    est.fit(train_data=train_data_loader,
         epochs=num_epochs)
 ```
 
@@ -224,11 +228,15 @@ checkpoint_handler = CheckpointHandler(model_dir='./',
                                        save_best=True)  # Save the best model in terms of
 # Let's instantiate another handler which we defined above 
 loss_record_handler = LossRecordHandler()
-# Magic line
-est.fit(train_data=train_data_loader,
-        val_data=val_data_loader,
-        epochs=num_epochs,
-        event_handlers=[checkpoint_handler, loss_record_handler]) # Add the event handlers
+# ignore warnings for nightly test on CI only
+import warnings
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    # Magic line
+    est.fit(train_data=train_data_loader,
+            val_data=val_data_loader,
+            epochs=num_epochs,
+            event_handlers=[checkpoint_handler, loss_record_handler]) # Add the event handlers
 ```
 
     Training begin: using optimizer SGD with current learning rate 0.0400 <!--notebook-skip-line-->
