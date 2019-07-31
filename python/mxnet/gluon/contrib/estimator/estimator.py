@@ -153,7 +153,7 @@ class Estimator(object):
             warnings.warn("No trainer specified, default SGD optimizer "
                           "with learning rate 0.001 is used.")
             trainer = Trainer(self.net.collect_params(),
-                                    'sgd', {'learning_rate': 0.001})
+                              'sgd', {'learning_rate': 0.001})
         elif not isinstance(trainer, Trainer):
             raise ValueError("Trainer must be a Gluon Trainer instance, refer to "
                              "gluon.Trainer:{}".format(trainer))
@@ -363,7 +363,7 @@ class Estimator(object):
 
         # if there is a mix of user defined event handlers and default event handlers
         # they should have the same set of loss and metrics
-        if default_handlers and len(event_handlers) > len(default_handlers):
+        if default_handlers and len(event_handlers) != len(default_handlers):
             msg = "You are training with the following default event handlers: %s. " \
                   "They use loss and metrics from estimator.prepare_loss_and_metrics(). " \
                   "Please use the same set of metrics for all your other handlers." % \
