@@ -1453,9 +1453,21 @@ fetch_new_docs_repo() {
 }
 
 
-build_jekyll_docs() {
-   echo "This is where jekyll docs are built."
+fetch_jekyll_repo() {
+   git clone https://github.com/ThomasDelteil/mxnet.io-v2.git $1 || exit 0
+}
 
+
+build_jekyll_docs() {
+   repo=mxnet.io-v2
+   fetch_jekyll_repo($repo)
+   pushd $repo/src
+   JEKYLL_ENV=production bundle exec jekyll build --config _config_prod.yml -d ../release
+   popd
+   pushd $repo
+   tar zcvf jekyll-artifacts.tgz release
+   popd
+   mv $repo/jekyll-artifacts.tgz docs/_build
 }
 
 
