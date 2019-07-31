@@ -389,7 +389,7 @@ def compile_unix_clang_6_mkldnn_cpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang60_mkldnn', false)
-            utils.pack_lib('mkldnn_cpu_clang6', mx_mkldnn_lib, false)
+            utils.pack_lib('mkldnn_cpu_clang6', mx_mkldnn_lib, true)
           }
         }
       }
