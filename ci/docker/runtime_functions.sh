@@ -1419,6 +1419,15 @@ build_setup() {
     if [ ! -d $build_folder ]; then
       mkdir $build_folder
     fi
+    mxnetlib_folder="/work/mxnet/lib"
+    if [ ! -d $mxnetlib_folder ]; then
+      mkdir $mxnetlib_folder
+    fi
+}
+
+
+fetch_latest_mxnet() {
+   wget -q http://jenkins.mxnet-ci.amazon-ml.com/job/docs-pipelines/job/test-mxnet-build/lastSuccessfulBuild/artifact/lib/libmxnet.so -O /work/mxnet/lib
 }
 
 
@@ -1494,7 +1503,7 @@ build_r_docs() {
 build_c_docs() {
     set -ex
     pushd .
-    
+
     build_setup
     make doxygen
     doc_path="docs/doxygen"
@@ -1569,7 +1578,7 @@ build_julia_docs() {
    pushd .
 
    build_setup
-
+   fetch_latest_mxnet
    # Setup environment for Julia docs
    export PATH="/work/julia10/bin:$PATH"
    export MXNET_HOME='/work/mxnet'
