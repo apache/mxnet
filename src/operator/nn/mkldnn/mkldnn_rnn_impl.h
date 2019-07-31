@@ -508,7 +508,7 @@ static void MKLDNNRNNForwardUnidi(bool state_outputs,
   std::vector<mkldnn::memory::dims> src_l_dim_h;
 
   bool has_adjusted = false;
-  if (!initialized) {
+  if (!initialized || is_train) {
     if (L == 1) {
       DType* wx = w_ptr;
       DType* wh = wx + I * H * ngates;
