@@ -6844,7 +6844,7 @@ def test_laop_6():
     atol_fw = 1e-9
     num_eps = 1e-6
     rtol_bw = 1e-4
-    atol_bw = 1e-6
+    atol_bw = 5e-5
 
     data = mx.symbol.Variable('data')
 
@@ -6853,7 +6853,7 @@ def test_laop_6():
                                atol=atol_fw, dtype=dtype)
     check_grad = lambda sym, location:\
         check_numeric_gradient(sym, location, numeric_eps=num_eps, rtol=rtol_bw,
-                               atol=atol_bw, dtype=dtype)
+                               atol=atol_bw, dtype=dtype, use_approx_grad=False)
 
     ## det(I + dot(v, v.T)) = 1 + dot(v.T, v) >= 1, so it's always invertible;
     ## det is away from zero, so the value of logdet is stable
