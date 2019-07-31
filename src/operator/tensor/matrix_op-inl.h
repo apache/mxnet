@@ -348,15 +348,15 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
   CHECK_LE(shp.ndim(), 6) << "Transpose support at most 6 dimensions";
   CHECK_NE(shp.ndim(), 0) << "Number of dimensions cannot be 0";
   CHECK_NE(out_shp.ndim(), 0) << "Number of dimensions cannot be 0";
-  if (shp.ndim() == -1 and out_shp.ndim() == -1)
-    return false; // none of the shapes is known
-  if (out_shp.ndim() > 0 and shp.ndim() > 0)
+  if (shp.ndim() == -1 && out_shp.ndim() == -1)
+    return false;  // none of the shapes is known
+  if (out_shp.ndim() > 0 && shp.ndim() > 0)
     CHECK_EQ(out_shp.ndim(), shp.ndim());
   mxnet::TShape get(std::max(shp.ndim(), out_shp.ndim()), -1);
   mxnet::TShape ret(std::max(shp.ndim(), out_shp.ndim()), -1);
   auto ifUnknownAssignElseCheck = [](mxnet::TShape& arr, int i, int val) {
-                                     if (arr[i] == -1) arr[i] = val;
-                                     else CHECK_EQ(arr[i], val); };
+                                     if (arr[i] == -1) { arr[i] = val;
+                                     } else { CHECK_EQ(arr[i], val); } };
   if (param.axes.ndim() == 0) {
     for (int i = 0; i < shp.ndim(); ++i) {
       get[i] = shp[i];
