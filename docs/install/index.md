@@ -108,7 +108,22 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 </div>
 </div>
 </div>
+
+<!-- Linux Julia Options -->
+
+<div class="linux macos windows">
+<div class="julia">
+<div class="cpu gpu">
+<div class="btn-group opt-group" role="group">
+  <button type="button" class="btn btn-default environs opt active">Pkg</button>
+  <button type="button" class="btn btn-default environs opt">Build from Source</button>
+</div>
+</div>
+</div>
+</div>
+
 <hr>
+
 <!-- END - Main Menu -->
 
 <!-- START - Linux Python CPU Installation Instructions -->
@@ -582,8 +597,23 @@ You can use the Maven packages defined in the following dependency to include MX
 <div class="julia">
 <div class="cpu gpu">
 </br>
+<div class="pkg">
+
+```
+]add MXNet#v1.5.0
+```
+
+Install the latest release:
+
+```
+]add MXNet
+```
+
+</div>
+<div class="build-from-source">
 Refer to the <a href="ubuntu_setup.html#install-the-mxnet-package-for-julia">Julia section of the MXNet Ubuntu installation guide</a>.
 
+</div>
 </div> <!-- End of cpu gpu -->
 </div> <!-- End of julia -->
 
@@ -593,7 +623,7 @@ Refer to the <a href="ubuntu_setup.html#install-the-mxnet-package-for-julia">Jul
 Refer to the <a href="ubuntu_setup.html#install-the-mxnet-package-for-perl">Perl section of the MXNet Ubuntu installation guide</a>.
 
 </div> <!-- End of cpu gpu -->
-</div> <!-- End of julia -->
+</div> <!-- End of perl -->
 
 
 
@@ -884,8 +914,23 @@ Not available at this time. <br>
 <div class="julia">
 <div class="cpu gpu">
 </br>
+<div class="pkg">
+
+```
+]add MXNet#v1.5.0
+```
+
+Install the latest release:
+
+```
+]add MXNet
+```
+
+</div>
+<div class="build-from-source">
 Refer to the <a href="osx_setup.html#install-the-mxnet-package-for-julia">Julia section of the MXNet macOS installation guide</a>.
 
+</div>
 </div> <!-- End of cpu gpu -->
 </div> <!-- End of julia -->
 
@@ -1226,8 +1271,23 @@ MXNet-Java for Windows is not yet available.
 <div class="julia">
 <div class="cpu gpu">
 </br>
+<div class="pkg">
+
+```
+]add MXNet#v1.5.0
+```
+
+Install the latest release:
+
+```
+]add MXNet
+```
+
+</div>
+<div class="build-from-source">
 Refer to the <a href="windows_setup.html#install-the-mxnet-package-for-julia">Julia section of the MXNet Windows installation guide</a>.
 
+</div>
 </div> <!-- End of cpu gpu -->
 </div> <!-- End of julia -->
 
@@ -1237,7 +1297,7 @@ Refer to the <a href="windows_setup.html#install-the-mxnet-package-for-julia">Ju
 Refer to the <a href="windows_setup.html#install-the-mxnet-package-for-perl">Perl section of the MXNet Windows installation guide</a>.
 
 </div> <!-- End of cpu gpu -->
-</div> <!-- End of julia -->
+</div> <!-- End of perl -->
 
 <div class="cpp">
 <div class="cpu gpu">
