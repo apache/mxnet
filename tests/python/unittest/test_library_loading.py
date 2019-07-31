@@ -17,10 +17,16 @@
 
 # This test checks if dynamic loading of library into MXNet is successful
 
-import mxnet as mx
 import os
+import platform
+import unittest
+import mxnet as mx
 from mxnet.test_utils import download
 
+def check_platform():
+    return platform.machine() not in ['x86_64', 'AMD64']
+
+@unittest.skipIf(check_platform(), "not all machine types supported")
 def test_library_loading():
     if (os.name=='posix'):
         lib = 'mylib.so'
