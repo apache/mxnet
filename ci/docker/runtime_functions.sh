@@ -1468,9 +1468,9 @@ build_python_docs() {
    make html EVAL=0
 
    cd build/_build
-   tar zcvf docs/_build/python-artifacts.tgz html
-
+   tar zcvf python-artifacts.tgz html
    popd
+   mv $repo/python/build/_build/python-artifacts.tgz docs/_build
 }
 
 

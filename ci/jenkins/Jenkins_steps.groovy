@@ -1465,7 +1465,8 @@ def docs_scala() {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib, false)
+            utils.init_git()
+            //utils.unpack_and_init('cpu', mx_lib, false)
             utils.docker_run('ubuntu_cpu_scala', 'build_scala_docs', false)
             archiveArtifacts 'docs/_build/scala-artifacts.tgz'
           }
@@ -1480,7 +1481,8 @@ def docs_java() {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib, false)
+            utils.init_git()
+            //utils.unpack_and_init('cpu', mx_lib, false)
             utils.docker_run('ubuntu_cpu_scala', 'build_java_docs', false)
             archiveArtifacts 'docs/_build/java-artifacts.tgz'
           }
@@ -1495,7 +1497,8 @@ def docs_clojure() {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib, false)
+            utils.init_git()
+            //utils.unpack_and_init('cpu', mx_lib, false)
             utils.docker_run('ubuntu_cpu_scala', 'build_clojure_docs', false)
             archiveArtifacts 'docs/_build/clojure-artifacts.tgz'
           }
