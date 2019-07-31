@@ -90,7 +90,7 @@ def check_countsketch(in_dim,out_dim,n):
 
 
 @with_seed()
-@unittest("skip unit testing countsketch")
+@unittest.skip("skip unit testing countsketch")
 def test_countsketch():
     minindim = 40
     maxindim = 100
