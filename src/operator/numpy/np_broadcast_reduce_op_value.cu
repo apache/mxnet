@@ -39,12 +39,6 @@ NNVM_REGISTER_OP(_np_mean)
 NNVM_REGISTER_OP(_backward_np_mean)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseNone<gpu, true>);
 
-NNVM_REGISTER_OP(_np_max)
-.set_attr<FCompute>("FCompute<gpu>", NumpyMaxCompute<gpu, mshadow::red::maximum>);
-
-NNVM_REGISTER_OP(_backward_np_max)
-.set_attr<FCompute>("FCompute<gpu>", NumpyMaxBackward<gpu, mshadow_op::eq>);
-
 NNVM_REGISTER_OP(_np_prod)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesCompute<gpu, mshadow_op::product, true>);
 

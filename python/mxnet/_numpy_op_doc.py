@@ -114,54 +114,6 @@ def _np_repeat(a, repeats, axis=None):
     pass
 
 
-def _np_cumsum(a, axis=None, dtype=None, out=None):
-    """cumsum(a, axis=None, dtype=None, out=None)
-
-    Return the cumulative sum of the elements along a given axis.
-
-    Parameters
-    ----------
-    a : ndarray
-        Input array.
-    axis : int, optional
-        Axis along which the cumulative sum is computed. The default
-        (None) is to compute the cumsum over the flattened array.
-    dtype : dtype, optional
-        Type of the returned array and of the accumulator in which the
-        elements are summed.  If `dtype` is not specified, it defaults
-        to the dtype of `a`.
-    out : ndarray, optional
-        Alternative output array in which to place the result. It must
-        have the same shape, type and buffer length as the expected output.
-
-    Returns
-    -------
-    cumsum_along_axis : ndarray.
-        A new array holding the result is returned unless `out` is
-        specified, in which case a reference to `out` is returned. The
-        result has the same size as `a`, and the same shape as `a` if
-        `axis` is not None or `a` is a 1-d array.
-
-    Examples
-    --------
-    >>> a = np.array([[1,2,3], [4,5,6]])
-    >>> a
-    array([[1., 2., 3.],
-           [4., 5., 6.]])
-    >>> np.cumsum(a)
-    array([ 1.,  3.,  6., 10., 15., 21.])
-    >>> np.cumsum(a, dtype=float)     
-    array([ 1.,  3.,  6., 10., 15., 21.], dtype=float64)
-    >>> np.cumsum(a,axis=0)      
-    array([[1., 2., 3.],
-           [5., 7., 9.]])
-    >>> np.cumsum(a,axis=1)      
-    array([[ 1.,  3.,  6.],
-           [ 4.,  9., 15.]])
-    """
-    pass
-
-
 def _np_dot(a, b, out=None):
     """dot(a, b, out=None)
 
