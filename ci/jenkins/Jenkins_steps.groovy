@@ -1444,7 +1444,8 @@ def docs_julia() {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib, false)
+            utils.init_git()
+            //utils.unpack_and_init('cpu', mx_lib, false)
             try {
                utils.docker_run('ubuntu_cpu_julia', 'build_julia_docs', false)
                archiveArtifacts 'docs/_build/julia-artifacts.tgz'
