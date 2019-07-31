@@ -1523,6 +1523,22 @@ def docs_r() {
     }]
 }
 
+
+def docs_jekyll() {
+    return ['Main Jekyll Website': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu_jekyll', 'build_r_docs', false)
+            //archiveArtifacts 'docs/_build/jekyll-artifacts.tgz'
+          }
+        }
+      }
+    }]
+}
+
+
 def docs_publish() {
     return ['R Docs': {
       node(NODE_LINUX_CPU) {

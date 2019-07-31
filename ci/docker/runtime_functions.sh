@@ -1452,6 +1452,13 @@ fetch_new_docs_repo() {
    git clone https://github.com/mli/new-docs.git $1 || exit 0
 }
 
+
+build_jekyll_docs() {
+   echo "This is where jekyll docs are built."
+
+}
+
+
 build_python_docs() {
    set -ex
    pushd .
