@@ -31,4 +31,4 @@ computing and the state-of-art deep learning to Julia.
 * Mac / Windows guides are not available (contributions welcome!)
 
 ## Docs
-To build your own copy of the [MXNet Julia Site](site/index.html), run `make -C julia/docs` from the MXNet source root directory. You can also generate it with Docker by using `dev_menu.py` from the root directory and choosing to build the entire website. The Julia site will be located in `api/julia/site/`.
+To build your own copy of the [MXNet Julia Site](site/index.html), run `make -C julia/docs` from the MXNet source root directory. You can also generate it with Docker by using `dev_menu.py` from the root directory and choosing to build the entire website. The Julia site will be located in `api/julia/site/`. 
