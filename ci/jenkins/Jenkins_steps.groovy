@@ -1427,6 +1427,7 @@ def docs_c() {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
             //utils.unpack_and_init('libmxnet', 'lib/libmxnet.so', false)
             utils.docker_run('ubuntu_cpu_c', 'build_c_docs', false)
             archiveArtifacts 'docs/_build/c-artifacts.tgz'
@@ -1507,7 +1508,7 @@ def docs_r() {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib, false)
+            //utils.unpack_and_init('cpu', mx_lib, false)
             utils.docker_run('ubuntu_cpu_r', 'build_r_docs', false)
             archiveArtifacts 'docs/_build/r-artifacts.tgz'
           }
