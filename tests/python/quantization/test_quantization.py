@@ -690,7 +690,8 @@ def test_quantize_params():
     params = {}
     for name in offline_params:
         params[name] = mx.nd.uniform(shape=(2, 2))
-    qsym = mx.contrib.quant._quantize_symbol(sym, ctx=mx.current_context(), offline_params=offline_params)
+    qsym = mx.contrib.quant._quantize_symbol(sym, ctx=mx.current_context(),
+                                             offline_params=offline_params, quantize_mode='full')
     qparams = mx.contrib.quant._quantize_params(qsym, params, th_dict = {})
     param_names = params.keys()
     qparam_names = qparams.keys()
@@ -806,7 +807,8 @@ def test_quantize_model():
                                                                              aux_params=aux_params,
                                                                              ctx=mx.current_context(),
                                                                              quantized_dtype=qdtype,
-                                                                             calib_mode='none')
+                                                                             calib_mode='none',
+                                                                             quantize_mode='full')
             check_params(arg_params, qarg_params, qsym)
             check_params(aux_params, qaux_params)
 
@@ -820,7 +822,8 @@ def test_quantize_model():
                                                                              quantized_dtype=qdtype,
                                                                              calib_mode='naive',
                                                                              calib_data=calib_data,
-                                                                             num_calib_examples=20)
+                                                                             num_calib_examples=20,
+                                                                             quantize_mode='full')
             check_params(arg_params, qarg_params, qsym)
             check_params(aux_params, qaux_params)
             check_qsym_calibrated(qsym)
@@ -966,7 +969,8 @@ def test_quantize_model_with_forward():
                                                                              excluded_op_names=excluded_op_names,
                                                                              ctx=mx.current_context(),
                                                                              quantized_dtype=qdtype,
-                                                                             calib_mode='none')
+                                                                             calib_mode='none',
+                                                                             quantize_model='full')
             check_params(arg_params, qarg_params, qsym)
             check_params(aux_params, qaux_params)
             check_qsym_forward(qsym, qarg_params, qaux_params, dshape, lshape)
@@ -983,7 +987,8 @@ def test_quantize_model_with_forward():
                                                                              quantized_dtype=qdtype,
                                                                              calib_mode='naive',
                                                                              calib_data=calib_data,
-                                                                             num_calib_examples=20)
+                                                                             num_calib_examples=20,
+                                                                             quantize_model='full')
             check_params(arg_params, qarg_params, qsym)
             check_params(aux_params, qaux_params)
             check_qsym_calibrated(qsym)
@@ -1050,7 +1055,8 @@ def test_quantize_sym_with_calib():
     sym = get_fp32_sym()
     offline_params = [name for name in sym.list_arguments()
                       if not name.startswith('data') and not name.endswith('label')]
-    qsym = mx.contrib.quant._quantize_symbol(sym, ctx=mx.current_context(), offline_params=offline_params)
+    qsym = mx.contrib.quant._quantize_symbol(sym, ctx=mx.current_context(),
+                                             offline_params=offline_params, quantize_mode='full')
     requantize_op_names = ['requantize_conv', 'requantize_fc']
     th_dict = {'conv_output': (np.random.uniform(low=100.0, high=200.0), np.random.uniform(low=100.0, high=200.0)),
                'fc_output': (np.random.uniform(low=100.0, high=200.0), np.random.uniform(low=100.0, high=200.0))}

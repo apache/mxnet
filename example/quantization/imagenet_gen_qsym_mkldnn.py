@@ -199,49 +199,43 @@ if __name__ == '__main__':
         logger.info('quantized dtype is set to uint8, will exclude first conv.')
         exclude_first_conv = True
     excluded_sym_names = []
-    if not args.no_pretrained:
-        if args.model == 'imagenet1k-resnet-152':
-            rgb_mean = '0,0,0'
-            rgb_std = '1,1,1'
-            excluded_sym_names += ['flatten0']
-            if exclude_first_conv:
-                excluded_sym_names += ['conv0']
-        elif args.model == 'imagenet1k-inception-bn':
-            rgb_mean = '123.68,116.779,103.939'
-            rgb_std = '1,1,1'
-            excluded_sym_names += ['flatten']
-            if exclude_first_conv:
-                excluded_sym_names += ['conv_1']
-        elif args.model.find('resnet') != -1 and args.model.find('v1') != -1:
-            if exclude_first_conv:
-                excluded_sym_names += ['resnetv10_conv0_fwd']
-        elif args.model.find('resnet') != -1 and args.model.find('v2') != -1:
-            excluded_sym_names += ['resnetv20_flatten0_flatten0']
-            if exclude_first_conv:
-                excluded_sym_names += ['resnetv20_conv0_fwd']
-        elif args.model.find('vgg') != -1:
-            if exclude_first_conv:
-                excluded_sym_names += ['vgg0_conv0_fwd']
-        elif args.model.find('squeezenet1') != -1:
-            excluded_sym_names += ['squeezenet0_flatten0_flatten0']
-            if exclude_first_conv:
-                excluded_sym_names += ['squeezenet0_conv0_fwd']
-        elif args.model.find('mobilenet') != -1 and args.model.find('v2') == -1:
-            excluded_sym_names += ['mobilenet0_flatten0_flatten0',
-                                'mobilenet0_pool0_fwd']
-            if exclude_first_conv:
-                excluded_sym_names += ['mobilenet0_conv0_fwd']
-        elif args.model.find('mobilenet') != -1 and args.model.find('v2') != -1:
-            excluded_sym_names += ['mobilenetv20_output_flatten0_flatten0']
-            if exclude_first_conv:
-                excluded_sym_names += ['mobilenetv20_conv0_fwd']
-        elif args.model == 'inceptionv3':
-            if exclude_first_conv:
-                excluded_sym_names += ['inception30_conv0_fwd']
-        else:
-            raise ValueError('Currently, model %s is not supported in this script' % args.model)
-    else:
-        logger.info('Please set proper RGB configs for model %s' % args.model)
+    if args.model == 'imagenet1k-resnet-152':
+        rgb_mean = '0,0,0'
+        rgb_std = '1,1,1'
+        if exclude_first_conv:
+            excluded_sym_names += ['conv0']
+    elif args.model == 'imagenet1k-inception-bn':
+        rgb_mean = '123.68,116.779,103.939'
+        rgb_std = '1,1,1'
+        if exclude_first_conv:
+            excluded_sym_names += ['conv_1']
+    elif args.model in ['resnet18_v1', 'resnet50_v1', 'resnet101_v1']:
+        rgb_mean = '123.68,116.779,103.939'
+        rgb_std = '58.393, 57.12, 57.375'
+        if exclude_first_conv:
+            excluded_sym_names += ['resnetv10_conv0_fwd']
+    elif args.model == 'squeezenet1.0':
+        rgb_mean = '123.68,116.779,103.939'
+        rgb_std = '58.393, 57.12, 57.375'
+        if exclude_first_conv:
+            excluded_sym_names += ['squeezenet0_conv0_fwd']
+    elif args.model == 'mobilenet1.0':
+        rgb_mean = '123.68,116.779,103.939'
+        rgb_std = '58.393, 57.12, 57.375'
+        excluded_sym_names += ['mobilenet0_pool0_fwd']
+        if exclude_first_conv:
+            excluded_sym_names += ['mobilenet0_conv0_fwd']
+    elif args.model == 'mobilenetv2_1.0':
+        rgb_mean = '123.68,116.779,103.939'
+        rgb_std = '58.393, 57.12, 57.375'
+        if exclude_first_conv:
+            excluded_sym_names += ['mobilenetv20_conv0_fwd']
+    elif args.model == 'inceptionv3':
+        rgb_mean = '123.68,116.779,103.939'
+        rgb_std = '58.393, 57.12, 57.375'
+        if exclude_first_conv:
+            excluded_sym_names += ['inception30_conv0_fwd']
+    elif args.model == 'custom':
         # add rgb mean/std of your model.
         rgb_mean = '0,0,0'
         rgb_std = '0,0,0'

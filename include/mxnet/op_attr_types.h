@@ -131,6 +131,16 @@ enum class DispatchMode {
   kVariable,
 };
 
+/*! \brief the quantization type of the operator */
+enum class QuantizeType {
+  // This operator doesn't support quantization
+  kNone = 0,
+  // This operator can get huge benefit from quantization, thus must be quantized
+  kMust,
+  // This operator support quantization, but will be decided depending on the connection
+  kSupport,
+};
+
 /*!
  * \brief Operator state. This is a pointer type, its content is mutable
  *  even if OpStatePtr is const.
@@ -296,6 +306,12 @@ using FInferStorageType = std::function<bool (const NodeAttrs& attrs,
                                               DispatchMode* dispatch_mode,
                                               std::vector<int>* in_attrs,
                                               std::vector<int>* out_attrs)>;
+
+/*!
+ * \brief Register a quantized node creation function based on the attrs of the node
+ * \note Register under "FQuantizedOp" for non-quantized operators
+ */
+using FQuantizable = std::function<QuantizeType (const NodeAttrs& attrs)>;
 
 /*!
  * \brief Register a quantized node creation function based on the attrs of the node

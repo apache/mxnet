@@ -439,6 +439,9 @@ NNVM_REGISTER_OP(_sg_mkldnn_fully_connected)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
                                DefaultSubgraphOpMutableInputs)
 .set_attr<std::string>("key_var_num_args", "num_args")
+.set_attr<FQuantizable>("FQuantizable", [](const NodeAttrs& attrs) {
+    return QuantizeType::kMust;
+})
 .set_attr<FQuantizedOp>("FQuantizedOp", SgMKLDNNFCQuantizedOp)
 .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; });
 

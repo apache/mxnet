@@ -123,11 +123,6 @@ if __name__ == '__main__':
     exclude_first_conv = args.exclude_first_conv
     excluded_sym_names = []
     rgb_mean = '123,117,104'
-    for i in range(1,19):
-        excluded_sym_names += ['flatten'+str(i)]
-    excluded_sym_names += ['multibox_loc_pred',
-                           'concat0',
-                           'concat1']
     if exclude_first_conv:
         excluded_sym_names += ['conv1_1']
 

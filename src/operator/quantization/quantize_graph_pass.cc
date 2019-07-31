@@ -22,10 +22,14 @@
  * \file quantization.cc
  * \brief
  */
+
+#include <mxnet/op_attr_types.h>
 #include <nnvm/graph.h>
 #include <nnvm/pass.h>
-#include <mxnet/op_attr_types.h>
+#include <queue>
+#include <unordered_map>
 #include <unordered_set>
+#include <vector>
 #include "quantize_v2-inl.h"
 
 namespace mxnet {
@@ -116,17 +120,17 @@ bool isRegistered(NodePtr node, const int& dev_type) {
           fcomputestateful != nullptr || fcomputestateful_ex != nullptr);
 }
 
-inline NodePtr NeedQuantize(
-    NodePtr node, const std::unordered_set<std::string>& excluded_nodes,
-    const std::unordered_set<std::string>& excluded_ops,
-    const int& dev_type) {
+inline NodePtr NeedQuantize(NodePtr node, const std::unordered_set<std::string>& excluded_nodes,
+                            const std::unordered_set<std::string>& excluded_ops,
+                            const int& dev_type,
+                            std::unordered_map<NodePtr, NodePtr>* quantized_node_map) {
   std::unordered_map<NodePtr, NodePtr> quantized_node;
   static auto& quantized_op_map = Op::GetAttr<mxnet::FQuantizedOp>("FQuantizedOp");
   static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
   const auto& op = node->op();
-
+  bool need = false;
   if (op && quantized_op_map.count(op)) {
-    bool need = true;
+    need = true;
     // If the quantized node is not registered with a computation function, the node
     // will be excluded automatically.
     auto q_ptr = quantized_op_map[node->op()];
@@ -154,20 +158,99 @@ inline NodePtr NeedQuantize(
         }
       }
     }
-
     if (need) {
-      auto n_ptr = quantized_op_map[node->op()];
-      auto tmp_node = n_ptr(node->attrs);
-      if (tmp_node->op()) {
-        quantized_node[node] = tmp_node;
-      } else {
-        quantized_node[node] = nullptr;
+      auto quantized_node = quantized_op_map[op](node->attrs);
+      if (!quantized_node->op()) need = false;
+      if (need) {
+        quantized_node_map->insert(std::make_pair(node, quantized_node));
       }
-    } else {
-      quantized_node[node] = nullptr;
+      if (quantizable_map.count(op)) {
+        return quantizable_map[op](node->attrs);
+      }
+      else {
+        return QuantizeType::kSupport;
+      }
     }
   }
-  return quantized_node[node];
+  CHECK(!need);
+  return QuantizeType::kNone;
+}
+
+enum quantize_bit {
+  kFromInput = 1,
+  kFromOutput = 2,
+};
+
+static void MarkQuantizedNodes(const Graph& src,
+                               std::unordered_map<NodePtr, NodePtr>& quantized_node_map) {
+  const auto excluded_nodes = src.GetAttr<std::unordered_set<std::string>>("excluded_nodes");
+  const auto quantize_mode = src.GetAttr<std::string>("quantize_mode");
+
+  std::unordered_map<NodePtr, std::vector<NodePtr>> node_output_map;
+  std::unordered_set<NodePtr> must_quantize_nodes;
+  std::unordered_map<NodePtr, int> support_quantize_nodes;
+  // Build node_output_map, must_quantize_nodes and support_quantize_nodes;
+  DFSVisit(src.outputs, [&](const NodePtr& node) {
+    auto quantize_type = NeedQuantize(node, excluded_nodes, &quantized_node_map);
+    if (quantize_type == QuantizeType::kMust) {
+      must_quantize_nodes.insert(node);
+    } else if (quantize_type == QuantizeType::kSupport) {
+      support_quantize_nodes[node] = 0;
+    }
+    for (size_t i = 0; i < node->inputs.size(); ++i) {
+      node_output_map[node->inputs[i].node].push_back(node);
+    }
+  });
+
+  if (quantize_mode == "full") {
+    return;
+  } else if (quantize_mode == "smart") {
+    // Mark quantized nodes from input
+    std::queue<NodePtr> task_queue;
+    for (const auto& node : must_quantize_nodes) {
+      task_queue.push(node);
+    }
+    while (!task_queue.empty()) {
+      const auto& node = task_queue.front();
+      task_queue.pop();
+      for (size_t i = 0; i < node->inputs.size(); ++i) {
+        const auto& input = node->inputs[i].node;
+        auto it = support_quantize_nodes.find(input);
+        if (it != support_quantize_nodes.end()) {
+          it->second = it->second | kFromInput;
+          task_queue.push(input);
+        }
+      }
+    }
+
+    // Mark quantized nodes from output
+    for (const auto& node : must_quantize_nodes) {
+      task_queue.push(node);
+    }
+    while (!task_queue.empty()) {
+      const auto& node = task_queue.front();
+      task_queue.pop();
+      const auto& outputs = node_output_map[node];
+      for (size_t i = 0; i < outputs.size(); ++i) {
+        const auto& output = outputs[i];
+        auto it = support_quantize_nodes.find(output);
+        if (it != support_quantize_nodes.end()) {
+          it->second = it->second | kFromOutput;
+          task_queue.push(output);
+        }
+      }
+    }
+
+    // Summarize the result
+    for (const auto& node : support_quantize_nodes) {
+      CHECK(quantized_node_map.count(node.first));
+      if (node.second != (kFromInput | kFromOutput)) {
+        quantized_node_map.erase(node.first);
+      }
+    }
+  } else {
+    LOG(FATAL) << "unrecognized quantize mode: " << quantize_mode;
+  }
 }
 
 Graph QuantizeGraph(Graph &&src) {
@@ -181,6 +264,9 @@ Graph QuantizeGraph(Graph &&src) {
   const auto excluded_ops = src.GetAttr<std::unordered_set<std::string>>("excluded_ops");
   const auto quantized_dtype = src.GetAttr<std::string>("quantized_dtype");
 
+  std::unordered_map<NodePtr, NodePtr> quantized_node_map;
+  MarkQuantizedNodes(src, quantized_node_map);
+
   // mirror_map stores the mapping from the currently visited graph to the newly created quantized
   // graph. Key is the currently visited graph's node pointer, and value is a copied node of the key
   // node. The existing key's value may be updated with the newly created quantize/dequantize op.
@@ -190,9 +276,9 @@ Graph QuantizeGraph(Graph &&src) {
     NodePtr new_node = Node::Create();
     // If the currently visited node needs quantization, insert a quantize op node before the
     // current node and replace the current node with the quantized version in the new graph.
-    auto tmp_node = NeedQuantize(node, excluded_nodes, excluded_ops, dev_type);
-    if (tmp_node) {
-      new_node = tmp_node;
+    if (quantized_node_map.count(node)) {
+      LOG(INFO) << node->attrs.name << " is quantized.";
+      new_node = quantized_node_map[node];
 
       // add data into quantized op input
       for (size_t i = 0; i < node->inputs.size(); ++i) {
@@ -208,7 +294,7 @@ Graph QuantizeGraph(Graph &&src) {
         if (avoid_quantize_input_map.count(node->op()) &&
             avoid_quantize_input_map[node->op()](node->attrs, i)) {
           new_node->inputs.emplace_back(mirror_entry);
-        } else if (!NeedQuantize(e.node, excluded_nodes, excluded_ops, dev_type)) {
+        } else if (!quantized_node_map.count(e.node)) {
           if (mirror_entry_map.count(e)) {
             new_node->inputs.emplace_back(mirror_entry_map[e]);
           } else {
@@ -261,7 +347,7 @@ Graph QuantizeGraph(Graph &&src) {
           // skip non-quantized input
           continue;
         }
-        if (NeedQuantize(e.node, excluded_nodes, excluded_ops, dev_type)) {
+        if (quantized_node_map.count(e.node)) {
           // here we calculate the output number (exclude min/max, in order to
           // calculate min/max index from mirror node) based on assumption that
           // there is only 1min and 1max output from mirror node (which is
@@ -306,6 +392,7 @@ Graph QuantizeGraph(Graph &&src) {
       // (e.g., a quantized_conv2d node), and insert a dequantize op node in the new graph if there
       // are any. Otherwise, simply add a copy of the current node's entry to the inputs of
       // the new_node.
+      if (!node->is_variable()) LOG(INFO) << node->attrs.name << " is NOT quantized.";
       *new_node = *node;
       new_node->inputs.clear();
       for (const auto& e : node->inputs) {
@@ -313,7 +400,7 @@ Graph QuantizeGraph(Graph &&src) {
         NodeEntry mirror_entry = NodeEntry{
           mirror_node, e.index, e.version};
         // if input node is quantized operator, add dequantize node
-        if (NeedQuantize(e.node, excluded_nodes, excluded_ops, dev_type) &&
+        if (quantized_node_map.count(e.node) &&
             (mirror_node->op() != Op::Get("_contrib_dequantize"))) {
           // here we calculate the output number (exclude min/max, in order to
           // calculate min/max index from mirror node) based on assumption that
@@ -344,7 +431,7 @@ Graph QuantizeGraph(Graph &&src) {
 
   std::vector<NodeEntry> outputs;
   for (const auto& e : src.outputs) {
-    if (NeedQuantize(e.node, excluded_nodes, excluded_ops, dev_type)) {
+    if (quantized_node_map.count(e.node)) {
       // Only insert dequantize for those Ops supports quantize and not excluded.
       NodePtr mirror_node = mirror_map.at(e.node.get());
       NodeEntry mirror_entry = NodeEntry{mirror_node, e.index, e.version};

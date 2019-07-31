@@ -167,7 +167,8 @@ def check_quantize(sym, data_shape, out_type, name='conv',
                                                                    calib_data=calib_data,
                                                                    calib_layer=None,
                                                                    label_names=None,
-                                                                   num_calib_examples=1)
+                                                                   num_calib_examples=1,
+                                                                   quantize_mode='full')
   qsym = qsym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
   if check_calibration:
     check_qsym_calibrated(qsym, out_type, name=name)
@@ -227,7 +228,8 @@ def check_quantize_whole_model_with_forward():
                                                                      calib_data=calib_data,
                                                                      calib_layer=calib_layer,
                                                                      label_names=None,
-                                                                     num_calib_examples=1)
+                                                                     num_calib_examples=1,
+                                                                     quantize_mode='full')
     qsym = qsym.get_backend_symbol('MKLDNN_QUANTIZE')
     check_qsym_forward(qsym, qarg_params, qaux_params, data_shape)
 
