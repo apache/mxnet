@@ -575,6 +575,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
         USE_CPP_PACKAGE=1             \
         USE_BLAS=mkl                  \
         USE_SIGNAL_HANDLER=1          \
+        USE_INTEL_PATH=/opt/intel/    \
         -j$(nproc)
 }
 
