@@ -1427,7 +1427,7 @@ build_setup() {
 
 
 fetch_latest_mxnet() {
-   wget -q http://jenkins.mxnet-ci.amazon-ml.com/job/docs-pipelines/job/test-mxnet-build/lastSuccessfulBuild/artifact/lib/libmxnet.so -O /work/mxnet/lib
+   wget -q http://jenkins.mxnet-ci.amazon-ml.com/job/docs-pipelines/job/test-mxnet-build/lastSuccessfulBuild/artifact/lib/libmxnet.so -O /work/mxnet/lib/libmxnet.so
 }
 
 
