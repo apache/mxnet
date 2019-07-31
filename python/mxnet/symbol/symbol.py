@@ -2539,7 +2539,7 @@ class Symbol(SymbolBase):
         """
         return op.softmin(self, *args, **kwargs)
 
-    def squeeze(self, axis, inplace=False, **kwargs): # pylint: disable=unused-argument
+    def squeeze(self, axis=None, inplace=False, **kwargs): # pylint: disable=unused-argument
         """Convenience fluent method for :py:func:`squeeze`.
 
         The arguments are the same as for :py:func:`squeeze`, with
