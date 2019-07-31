@@ -92,13 +92,13 @@ class FeatureExtractor {
     GetFeatureSymbol();
     LoadParameters();
     GetMeanImg();
+    executor = nullptr;
   }
 
   void Extract(NDArray data) {
     /*Normalize the pictures*/
     data.Slice(0, 1) -= mean_img;
     data.Slice(1, 2) -= mean_img;
-    args_map["data"] = data;
     /*Singleton Pattern*/
     if(!executor){
         args_map["data"] = data;
