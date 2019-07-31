@@ -1466,12 +1466,9 @@ build_python_docs() {
 
    rm -rf build/_build/
    make html EVAL=0
-   popd
 
-   doc_path='build/_build'
-   doc_artifact='docs/_build/python-artifacts.tgz'
-   pushd $doc_path
-   tar zcvf $doc_artifact html
+   cd build/_build
+   tar zcvf docs/_build/python-artifacts.tgz html
 
    popd
 }
