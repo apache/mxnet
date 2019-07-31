@@ -1527,6 +1527,7 @@ build_scala_docs() {
     set -ex
     pushd .
     build_setup
+    fetch_latest_mxnet
     build_scala
 
     scala_path='scala-package'
