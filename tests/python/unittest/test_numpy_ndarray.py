@@ -36,9 +36,7 @@ def test_array_creation():
         (),
         [[1, 2], [3, 4]],
         _np.random.uniform(size=rand_shape_nd(3)),
-        _np.random.uniform(size=(3, 0, 4)),
-        np.random.uniform(size=rand_shape_nd(3)),
-        np.random.uniform(size=(3, 0, 4))
+        _np.random.uniform(size=(3, 0, 4))
     ]
     for dtype in dtypes:
         for src in objects:
@@ -308,11 +306,11 @@ def test_hybrid_block_multiple_outputs():
     @use_np
     class TestAllNumpyOutputs(HybridBlock):
         def hybrid_forward(self, F, x, *args, **kwargs):
-            return F.npx.relu(x), F.np.sum(x)
+            return F.np.add(x, x), F.np.multiply(x, x)
 
     class TestAllClassicOutputs(HybridBlock):
         def hybrid_forward(self, F, x, *args, **kwargs):
-            return F.relu(x.as_nd_ndarray()), F.sum(x.as_nd_ndarray())
+            return x.as_nd_ndarray() + x.as_nd_ndarray(), x.as_nd_ndarray() * x.as_nd_ndarray()
 
     data_np = np.ones((2, 3))
     for block, expected_out_type in [(TestAllClassicOutputs, mx.nd.NDArray),
@@ -328,7 +326,7 @@ def test_hybrid_block_multiple_outputs():
     @use_np
     class TestMixedTypeOutputsFailure(HybridBlock):
         def hybrid_forward(self, F, x, *args, **kwargs):
-            return F.relu(x.as_nd_ndarray()), F.np.sum(x)
+            return x.as_nd_ndarray() + x.as_nd_ndarray(), F.np.multiply(x, x)
 
     net = TestMixedTypeOutputsFailure()
     assert_exception(net, TypeError, data_np)
@@ -432,7 +430,7 @@ def test_np_ndarray_indexing():
         if len(indexed_array_shape) > 1:
             # test ndarray with broadcast
             assert_same(np_array, np_index, mx_array, index,
-                        np.random.uniform(low=-10000, high=0, size=(indexed_array_shape[-1],)))
+                        _np.random.uniform(low=-10000, high=0, size=(indexed_array_shape[-1],)))
             # test numpy array with broadcast
             assert_same(np_array, np_index, mx_array, index,
                         _np.random.randint(low=-10000, high=0, size=(indexed_array_shape[-1],)))
@@ -454,7 +452,7 @@ def test_np_ndarray_indexing():
     def test_setitem_autograd(np_array, index):
         x = np.array(np_array, dtype=np_array.dtype)
         out_shape = x[index].shape
-        y = np.random.uniform(size=out_shape)
+        y = np.array(_np.random.uniform(size=out_shape))
         y.attach_grad()
         try:
             with autograd.record():

@@ -43,10 +43,8 @@ from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 
-__all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange',
-           'argmax', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
-           'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'sin', 'cos',
-           'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan']
+__all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'add', 'subtract', 'multiply', 'divide',
+           'mod', 'power']
 
 
 # This function is copied from ndarray.py since pylint
@@ -91,7 +89,7 @@ def _get_index(idx):
     if isinstance(idx, ndarray):
         return idx._as_nd_ndarray()
     elif sys.version_info[0] > 2 and isinstance(idx, range):
-        return arange(idx.start, idx.stop, idx.step, dtype='int32')._as_nd_ndarray()
+        return array(_np.arange(idx.start, idx.stop, idx.step, dtype=_np.int32))._as_nd_ndarray()
     else:
         return idx
 
@@ -589,7 +587,7 @@ class ndarray(NDArray):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute asscalar')
 
     def argmax(self, axis=None, out=None):  # pylint: disable=arguments-differ
-        return _mx_nd_np.argmax(self, axis, out)
+        raise NotImplementedError
 
     def as_in_context(self, context):
         """Returns an array on the target device with the same value as this array.
@@ -618,7 +616,7 @@ class ndarray(NDArray):
         return super(ndarray, self).copy().as_np_ndarray()
 
     def dot(self, b, out=None):
-        return _mx_np_op.dot(self, b, out=out)
+        raise NotImplementedError
 
     def reshape(self, *args, **kwargs):  # pylint: disable=arguments-differ
         """Returns an array containing the same data with a new shape.
@@ -643,10 +641,7 @@ class ndarray(NDArray):
                                           ' while received {}'.format(order))
         if len(args) == 0:
             raise TypeError('reshape() takes exactly 1 argument (0 given)')
-        if len(args) == 1 and isinstance(args[0], tuple):
-            return _mx_np_op.reshape(self, newshape=args[0], order=order)
-        else:
-            return _mx_np_op.reshape(self, newshape=args, order=order)
+        raise NotImplementedError
 
     def reshape_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape_like`.
@@ -682,7 +677,7 @@ class ndarray(NDArray):
 
     def repeat(self, repeats, axis=None):  # pylint: disable=arguments-differ
         """Repeat elements of an array."""
-        return _mx_np_op.repeat(self, repeats=repeats, axis=axis)
+        raise NotImplementedError
 
     def pad(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`pad`.
@@ -696,7 +691,7 @@ class ndarray(NDArray):
         """Return a copy of the array with axis1 and axis2 interchanged.
         Refer to `mxnet.numpy.swapaxes` for full documentation.
         """
-        return swapaxes(self, axis1, axis2)
+        raise NotImplementedError
 
     def split(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`split`.
@@ -806,7 +801,7 @@ class ndarray(NDArray):
         """Return an array whose values are limited to [min, max].
         One of max or min must be given.
         """
-        return clip(self, min, max, out=out)
+        raise NotImplementedError
 
     def abs(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`abs`.
@@ -826,7 +821,7 @@ class ndarray(NDArray):
 
     def flatten(self, order='C'):  # pylint: disable=arguments-differ
         """Return a copy of the array collapsed into one dimension."""
-        return self.reshape(-1, order=order)
+        raise NotImplementedError
 
     def shape_array(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`shape_array`.
@@ -862,7 +857,7 @@ class ndarray(NDArray):
 
     def transpose(self, *axes):  # pylint: disable=arguments-differ
         """Permute the dimensions of an array."""
-        return _mx_np_op.transpose(self, axes=axes if len(axes) != 0 else None)
+        raise NotImplementedError
 
     def flip(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`flip`.
@@ -902,7 +897,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`sum`, with
         this array as data.
         """
-        return _mx_np_op.sum(self, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
+        raise NotImplementedError
 
     def nansum(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`nansum`.
@@ -914,7 +909,7 @@ class ndarray(NDArray):
 
     def prod(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return the product of the array elements over the given axis."""
-        return _mx_np_op.prod(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
+        raise NotImplementedError
 
     def nanprod(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`nanprod`.
@@ -926,7 +921,7 @@ class ndarray(NDArray):
 
     def mean(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Returns the average of the array elements along given axis."""
-        return _mx_np_op.mean(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
+        raise NotImplementedError
 
     # TODO(junwu): Use mxnet std op instead of onp.std
     def std(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=arguments-differ
@@ -943,7 +938,7 @@ class ndarray(NDArray):
 
     def max(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return the maximum along a given axis."""
-        return _mx_np_op.max(self, axis=axis, keepdims=keepdims, out=out)
+        raise NotImplementedError
 
     def min(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`min`.
@@ -1260,7 +1255,7 @@ class ndarray(NDArray):
     def squeeze(self, axis=None):  # pylint: disable=arguments-differ
         """Remove single-dimensional entries from the shape of a.
         """
-        return _mx_np_op.squeeze(self, axis=axis)
+        raise NotImplementedError
 
     def broadcast_to(self, shape):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute broadcast_to')
@@ -1411,152 +1406,6 @@ def ones(shape, dtype=None, **kwargs):
 
 
 @set_module('mxnet.numpy')
-def maximum(x1, x2, out=None):
-    """Returns element-wise maximum of the input arrays with broadcasting.
-
-    Parameters
-    ----------
-    x1, x2 : scalar or mxnet.numpy.ndarray
-        The arrays holding the elements to be compared. They must have the same shape,
-        or shapes that can be broadcast to a single shape.
-
-    Returns
-    -------
-    out : mxnet.numpy.ndarray or scalar
-        The maximum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
-    return _mx_nd_np.maximum(x1, x2, out=out)
-
-
-@set_module('mxnet.numpy')
-def minimum(x1, x2, out=None):
-    """Returns element-wise minimum of the input arrays with broadcasting.
-
-    Parameters
-    ----------
-    x1, x2 : scalar or mxnet.numpy.ndarray
-        The arrays holding the elements to be compared. They must have the same shape,
-        or shapes that can be broadcast to a single shape.
-
-    Returns
-    -------
-    out : mxnet.numpy.ndarray or scalar
-        The minimum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
-    return _mx_nd_np.minimum(x1, x2, out=out)
-
-
-@set_module('mxnet.numpy')
-def stack(arrays, axis=0, out=None):
-    """Join a sequence of arrays along a new axis.
-
-        The axis parameter specifies the index of the new axis in the dimensions of the result.
-        For example, if `axis=0` it will be the first dimension and if `axis=-1` it will be the last dimension.
-
-    Parameters
-    ----------
-    arrays : sequence of array_like
-        Each array must have the same shape.
-    axis : int, optional
-        The axis in the result array along which the input arrays are stacked.
-    out : ndarray, optional
-        If provided, the destination to place the result. The shape must be correct,
-        matching that of what stack would have returned if no out argument were specified.
-
-    Returns
-    -------
-    stacked : ndarray
-        The stacked array has one more dimension than the input arrays."""
-    return _mx_nd_np.stack(arrays, axis=axis, out=out)
-
-
-@set_module('mxnet.numpy')
-def arange(start, stop=None, step=1, dtype=None, ctx=None):
-    """Return evenly spaced values within a given interval.
-
-    Values are generated within the half-open interval ``[start, stop)``
-    (in other words, the interval including `start` but excluding `stop`).
-    For integer arguments the function is equivalent to the Python built-in
-    `range` function, but returns an ndarray rather than a list.
-
-    Parameters
-    ----------
-    start : number, optional
-        Start of interval. The interval includes this value.  The default
-        start value is 0.
-    stop : number
-        End of interval. The interval does not include this value, except
-        in some cases where `step` is not an integer and floating point
-        round-off affects the length of `out`.
-    step : number, optional
-        Spacing between values. For any output `out`, this is the distance
-        between two adjacent values, ``out[i+1] - out[i]``.  The default
-        step size is 1.  If `step` is specified as a position argument,
-        `start` must also be given.
-    dtype : dtype
-        The type of the output array. The default is `float32`.
-
-    Returns
-    -------
-    arange : ndarray
-        Array of evenly spaced values.
-
-        For floating point arguments, the length of the result is
-        ``ceil((stop - start)/step)``.  Because of floating point overflow,
-        this rule may result in the last element of `out` being greater
-        than `stop`.
-    """
-    return _mx_nd_np.arange(start, stop, step, dtype, ctx)
-
-
-@set_module('mxnet.numpy')
-def argmax(a, axis=None, out=None):
-    """Returns the indices of the maximum values along an axis.
-
-    Parameters
-    ----------
-    a : ndarray
-        Input array. Only support ndarrays of dtype `float16`, `float32`, and `float64`.
-    axis : int, optional
-        By default, the index is into the flattened array, otherwise
-        along the specified axis.
-    out : array, optional
-        If provided, the result will be inserted into this array. It should
-        be of the appropriate shape and dtype.
-
-    Returns
-    -------
-    index_array : ndarray of indices whose dtype is same as the input ndarray.
-        Array of indices into the array. It has the same shape as `a.shape`
-        with the dimension along `axis` removed.
-    """
-    return _mx_nd_np.argmax(a, axis, out)
-
-
-@set_module('mxnet.numpy')
-def concatenate(seq, axis=0, out=None):
-    """Join a sequence of arrays along an existing axis.
-
-    Parameters
-    ----------
-    a1, a2, ... : sequence of array_like
-        The arrays must have the same shape, except in the dimension
-        corresponding to `axis` (the first, by default).
-    axis : int, optional
-        The axis along which the arrays will be joined.  If axis is None,
-        arrays are flattened before use.  Default is 0.
-    out : ndarray, optional
-        If provided, the destination to place the result. The shape must be
-        correct, matching that of what concatenate would have returned if no
-        out argument were specified.
-
-    Returns
-    -------
-    res : ndarray
-        The concatenated array.
-    """
-    return _mx_nd_np.concatenate(seq, axis=axis, out=out)
-
-
-@set_module('mxnet.numpy')
 def add(x1, x2, out=None):
     """Add arguments element-wise.
 
@@ -1700,448 +1549,3 @@ def power(x1, x2, out=None):
         This is a scalar if both x1 and x2 are scalars.
     """
     return _mx_nd_np.power(x1, x2, out=out)
-
-
-@set_module('mxnet.numpy')
-def clip(a, a_min, a_max, out=None):
-    """clip(a, a_min, a_max, out=None)
-
-    Clip (limit) the values in an array.
-    Given an interval, values outside the interval are clipped to
-    the interval edges.  For example, if an interval of ``[0, 1]``
-    is specified, values smaller than 0 become 0, and values larger
-    than 1 become 1.
-
-    Parameters
-    ----------
-    a : ndarray
-        Array containing elements to clip.
-    a_min : scalar or `None`
-        Minimum value. If `None`, clipping is not performed on lower
-        interval edge. Not more than one of `a_min` and `a_max` may be
-        `None`.
-    a_max : scalar or `None`
-        Maximum value. If `None`, clipping is not performed on upper
-        interval edge. Not more than one of `a_min` and `a_max` may be
-        `None`.
-    out : ndarray, optional
-        The results will be placed in this array. It may be the input
-        array for in-place clipping.  `out` must be of the right shape
-        to hold the output.  Its type is preserved.
-
-    Returns
-    -------
-    clipped_array : ndarray
-        An array with the elements of `a`, but where values
-        < `a_min` are replaced with `a_min`, and those > `a_max`
-        with `a_max`.
-
-    Notes
-    -----
-    array_like `a_min` and `a_max` are not supported.
-
-    Examples
-    --------
-    >>> a = np.arange(10)
-    >>> np.clip(a, 1, 8)
-    array([1., 1., 2., 3., 4., 5., 6., 7., 8., 8.], dtype=float32)
-    >>> a
-    array([0., 1., 2., 3., 4., 5., 6., 7., 8., 9.], dtype=float32)
-    >>> np.clip(a, 3, 6, out=a)
-    array([3., 3., 3., 3., 4., 5., 6., 6., 6., 6.], dtype=float32)
-    """
-    return _mx_nd_np.clip(a, a_min, a_max, out=out)
-
-
-@set_module('mxnet.numpy')
-def swapaxes(a, axis1, axis2):
-    """Interchange two axes of an array.
-
-    Parameters
-    ----------
-    a : ndarray
-        Input array.
-    axis1 : int
-        First axis.
-    axis2 : int
-        Second axis.
-
-    Returns
-    -------
-    a_swapped : ndarray
-        Swapped array. This is always a copy of the input array.
-    """
-    return _npi.swapaxes(a, dim1=axis1, dim2=axis2)
-
-
-@set_module('mxnet.numpy')
-def expand_dims(a, axis):
-    """Expand the shape of an array.
-
-    Insert a new axis that will appear at the `axis` position in the expanded array shape.
-
-    Parameters
-    ----------
-    a : ndarray
-        Input array.
-    axis : int
-        Position in the expanded axes where the new axis is placed.
-
-    Returns
-    -------
-    res : ndarray
-        Output array. The number of dimensions is one greater than that of
-        the input array.
-    """
-    return _npi.expand_dims(a, axis)
-
-
-@set_module('mxnet.numpy')
-def split(ary, indices_or_sections, axis=0):
-    """Split an array into multiple sub-arrays.
-
-    Parameters
-    ----------
-    ary : ndarray
-        Array to be divided into sub-arrays.
-    indices_or_sections : int or 1-D array
-        If `indices_or_sections` is an integer, N, the array will be divided
-        into N equal arrays along `axis`.  If such a split is not possible,
-        an error is raised.
-
-        If `indices_or_sections` is a 1-D array of sorted integers, the entries
-        indicate where along `axis` the array is split.  For example,
-        ``[2, 3]`` would, for ``axis=0``, result in
-
-          - ary[:2]
-          - ary[2:3]
-          - ary[3:]
-
-        If an index exceeds the dimension of the array along `axis`,
-        an empty sub-array is returned correspondingly.
-    axis : int, optional
-        The axis along which to split, default is 0.
-
-    Returns
-    -------
-    sub-arrays : list of ndarrays
-        A list of sub-arrays.
-
-    Raises
-    ------
-    ValueError
-        If `indices_or_sections` is given as an integer, but
-        a split does not result in equal division."""
-    return _mx_nd_np.split(ary, indices_or_sections, axis=axis)
-
-
-@set_module('mxnet.numpy')
-def tile(A, reps):
-    """
-    Construct an array by repeating A the number of times given by reps.
-
-    If `reps` has length ``d``, the result will have dimension of
-    ``max(d, A.ndim)``.
-
-    If ``A.ndim < d``, `A` is promoted to be d-dimensional by prepending new
-    axes. So a shape (3,) array is promoted to (1, 3) for 2-D replication,
-    or shape (1, 1, 3) for 3-D replication. If this is not the desired
-    behavior, promote `A` to d-dimensions manually before calling this
-    function.
-
-    If ``A.ndim > d``, `reps` is promoted to `A`.ndim by pre-pending 1's to it.
-    Thus for an `A` of shape (2, 3, 4, 5), a `reps` of (2, 2) is treated as
-    (1, 1, 2, 2).
-
-    Note : Although tile may be used for broadcasting, it is strongly
-    recommended to use numpy's broadcasting operations and functions.
-
-    Parameters
-    ----------
-    A : ndarray
-        The input array.
-    reps : tuple of integers
-        The number of repetitions of `A` along each axis.
-
-    Returns
-    -------
-    c : ndarray
-        The tiled output array.
-    """
-    return _npi.tile(A, reps)
-
-
-@set_module('mxnet.numpy')
-def sin(x, out=None, **kwargs):
-    r"""Trigonometric sine, element-wise.
-
-    Parameters
-    ----------
-    x : ndarray or scalar
-        Angle, in radians (:math:`2 \pi` rad equals 360 degrees).
-    out : ndarray or None
-        A location into which the result is stored. If provided, it
-        must have a shape that the inputs broadcast to. If not provided
-        or None, a freshly-allocated array is returned. The dtype of the
-        output is the same as that of the input if the input is an ndarray.
-
-    Returns
-    -------
-    y : ndarray or scalar
-        The sine of each element of x. This is a scalar if `x` is a scalar.
-
-    Notes
-    ----
-    This function only supports input type of float.
-    """
-    return _mx_nd_np.sin(x, out=out, **kwargs)
-
-
-@set_module('mxnet.numpy')
-def cos(x, out=None, **kwargs):
-    r"""Cosine, element-wise.
-
-    Parameters
-    ----------
-    x : ndarray or scalar
-        Angle, in radians (:math:`2 \pi` rad equals 360 degrees).
-    out : ndarray or None
-        A location into which the result is stored. If provided, it
-        must have a shape that the inputs broadcast to. If not provided
-        or None, a freshly-allocated array is returned. The dtype of the
-        output is the same as that of the input if the input is an ndarray.
-
-    Returns
-    -------
-    y : ndarray or scalar
-        The corresponding cosine values. This is a scalar if x is a scalar.
-
-    Notes
-    ----
-    This function only supports input type of float.
-    """
-    return _mx_nd_np.cos(x, out=out, **kwargs)
-
-
-def sinh(x, out=None, **kwargs):
-    """Hyperbolic sine, element-wise.
-
-    Equivalent to ``1/2 * (np.exp(x) - np.exp(-x))`` or ``-1j * np.sin(1j*x)``.
-
-    Parameters
-    ----------
-    x : ndarray or scalar
-        Input array or scalar.
-    out : ndarray or None
-        A location into which the result is stored. If provided, it
-        must have a shape that the inputs broadcast to. If not provided
-        or None, a freshly-allocated array is returned. The dtype of the
-        output is the same as that of the input if the input is an ndarray.
-
-    Returns
-    -------
-    y : ndarray or scalar
-        The corresponding hyperbolic sine values. This is a scalar if `x` is a scalar.
-
-    Notes
-    ----
-    This function only supports input type of float.
-    """
-    return _mx_nd_np.sinh(x, out=out, **kwargs)
-
-
-@set_module('mxnet.numpy')
-def cosh(x, out=None, **kwargs):
-    """Hyperbolic cosine, element-wise.
-
-    Equivalent to ``1/2 * (np.exp(x) + np.exp(-x))`` and ``np.cos(1j*x)``.
-
-
-    Parameters
-    ----------
-    x : ndarray or scalar
-        Input array or scalar.
-    out : ndarray or None
-        A location into which the result is stored. If provided, it
-        must have a shape that the inputs broadcast to. If not provided
-        or None, a freshly-allocated array is returned. The dtype of the
-        output is the same as that of the input if the input is an ndarray.
-
-    Returns
-    -------
-    y : ndarray or scalar
-        The corresponding hyperbolic cosine values. This is a scalar if `x` is a scalar.
-
-    Notes
-    ----
-    This function only supports input type of float.
-    """
-    return _mx_nd_np.cosh(x, out=out, **kwargs)
-
-
-@set_module('mxnet.numpy')
-def log10(x, out=None, **kwargs):
-    """Return the base 10 logarithm of the input array, element-wise.
-
-    Parameters
-    ----------
-    x : ndarray or scalar
-        Input array or scalar.
-    out : ndarray or None
-        A location into which the result is stored. If provided, it
-        must have a shape that the inputs broadcast to. If not provided
-        or None, a freshly-allocated array is returned. The dtype of the
-        output is the same as that of the input if the input is an ndarray.
-
-    Returns
-    -------
-    y : ndarray or scalar
-        The logarithm to the base 10 of `x`, element-wise. NaNs are
-        returned where x is negative. This is a scalar if `x` is a scalar.
-
-    Notes
-    ----
-    This function only supports input type of float.
-    """
-    return _mx_nd_np.log10(x, out=out, **kwargs)
-
-
-@set_module('mxnet.numpy')
-def sqrt(x, out=None, **kwargs):
-    """
-    Return the non-negative square-root of an array, element-wise.
-
-    Parameters
-    ----------
-    x : ndarray or scalar
-        The values whose square-roots are required.
-    out : ndarray, or None, optional
-        A location into which the result is stored. If provided, it must have
-        a shape that the inputs broadcast to. If not provided or `None`,
-        a freshly-allocated array is returned.
-
-    Returns
-    -------
-    y : ndarray or scalar
-        An array of the same shape as `x`, containing the positive
-        square-root of each element in `x`. This is a scalar if `x` is a scalar.
-
-    Notes
-    ----
-    This function only supports input type of float.
-    """
-    return _mx_nd_np.sqrt(x, out=out, **kwargs)
-
-
-@set_module('mxnet.numpy')
-def abs(x, out=None, **kwargs):
-    r"""abs(x, out=None, **kwargs)
-
-    Calculate the absolute value element-wise.
-
-    Parameters
-    ----------
-    x : ndarray or scalar
-        Input array.
-    out : ndarray or None, optional
-        A location into which the result is stored. If provided, it must have
-        a shape that the inputs broadcast to. If not provided or `None`,
-        a freshly-allocated array is returned.
-
-    Returns
-    -------
-    absolute : ndarray
-        An ndarray containing the absolute value of
-        each element in `x`. This is a scalar if `x` is a scalar.
-
-    Examples
-    --------
-    >>> x = np.array([-1.2, 1.2])
-    >>> np.abs(x)
-    array([1.2, 1.2])
-    """
-    return _mx_nd_np.abs(x, out=out, **kwargs)
-
-
-@set_module('mxnet.numpy')
-def exp(x, out=None, **kwargs):
-    r"""exp(x, out=None, **kwargs)
-
-    Calculate the exponential of all elements in the input array.
-
-    Parameters
-    ----------
-    x : ndarray or scalar
-        Input values.
-    out : ndarray or None, optional
-        A location into which the result is stored. If provided, it must have
-        a shape that the inputs broadcast to. If not provided or `None`,
-        a freshly-allocated array is returned.
-
-    Returns
-    -------
-    out : ndarray or scalar
-        Output array, element-wise exponential of `x`.
-        This is a scalar if `x` is a scalar.
-
-    Examples
-    --------
-    >>> np.exp(1)
-    2.718281828459045
-    >>> x = np.array([-1, 1, -2, 2])
-    >>> np.exp(x)
-    array([0.36787945, 2.7182817 , 0.13533528, 7.389056  ])
-    """
-    return _mx_nd_np.exp(x, out=out, **kwargs)
-
-
-@set_module('mxnet.numpy')
-def arctan(x, out=None, **kwargs):
-    r"""arctan(x, out=None, **kwargs)
-
-    Trigonometric inverse tangent, element-wise.
-
-    The inverse of tan, so that if ``y = tan(x)`` then ``x = arctan(y)``.
-
-    Parameters
-    ----------
-    x : ndarray or scalar
-        Input values.
-    out : ndarray or None, optional
-        A location into which the result is stored. If provided, it must have
-        a shape that the inputs broadcast to. If not provided or `None`,
-        a freshly-allocated array is returned.
-
-    Returns
-    -------
-    out : ndarray or scalar
-        Out has the same shape as `x`. It lies is in
-        ``[-pi/2, pi/2]`` (``arctan(+/-inf)`` returns ``+/-pi/2``).
-        This is a scalar if `x` is a scalar.
-
-    Notes
-    -----
-    `arctan` is a multi-valued function: for each `x` there are infinitely
-    many numbers `z` such that tan(`z`) = `x`.  The convention is to return
-    the angle `z` whose real part lies in [-pi/2, pi/2].
-
-    For real-valued input data types, `arctan` always returns real output.
-    For each value that cannot be expressed as a real number or infinity,
-    it yields ``nan`` and sets the `invalid` floating point error flag.
-
-    For complex-valued input, we do not have support for them yet.
-
-    The inverse tangent is also known as `atan` or tan^{-1}.
-
-    Examples
-    --------
-    We expect the arctan of 0 to be 0, and of 1 to be pi/4:
-
-    >>> x = np.array([0, 1])
-    >>> np.arctan(x)
-    array([0.       , 0.7853982])
-
-    >>> np.pi/4
-    0.7853981633974483
-    """
-    return _mx_nd_np.arctan(x, out=out, **kwargs)
