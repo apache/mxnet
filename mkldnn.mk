@@ -42,7 +42,7 @@ $(MKLDNN_LIBFILE):
 	if [ -f "$(MKLDNN_LIB64FILE)" ]; then \
 		cp $(MKLDNNROOT)/lib64/libmkldnn* $(MXNET_LIBDIR); \
 	else \
-		cp $(MKLDNNROOT)/lib/linmkldnn* $(MXNET_LIBDIR); \
+		cp $(MKLDNNROOT)/lib/libmkldnn* $(MXNET_LIBDIR); \
 	fi
 	cp $(MKLDNN_BUILDDIR)/include/mkldnn_version.h $(MXNET_INCLDIR)/mkldnn/.
 
