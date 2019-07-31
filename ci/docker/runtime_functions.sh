@@ -1436,8 +1436,6 @@ build_ubuntu_cpu_docs() {
         USE_LIBJPEG_TURBO=1           \
         USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
-    build_setup
-    tar zcvf docs/_build/mxnet_artifact.tgz lib/libmxnet.so
 }
 
 
