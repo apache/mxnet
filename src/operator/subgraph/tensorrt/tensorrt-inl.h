@@ -88,6 +88,7 @@ class TensorrtSelector : public SubgraphSelector {
     "clip",
     "Concat",
     "Convolution",
+    "Deconvolution",
     "Dropout",
     "elemwise_add",
     "elemwise_sub",
@@ -104,6 +105,7 @@ class TensorrtSelector : public SubgraphSelector {
   const std::unordered_set<std::string> withWeightsOps = {
     "BatchNorm",
     "Convolution",
+    "Deconvolution",
     "FullyConnected"
   };
 
