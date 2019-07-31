@@ -1531,7 +1531,7 @@ def docs_jekyll() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu_jekyll', 'build_r_docs', false)
-            //archiveArtifacts 'docs/_build/jekyll-artifacts.tgz'
+            archiveArtifacts 'docs/_build/jekyll-artifacts.tgz'
           }
         }
       }

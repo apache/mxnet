@@ -1460,7 +1460,7 @@ fetch_jekyll_repo() {
 
 build_jekyll_docs() {
    repo=mxnet.io-v2
-   fetch_jekyll_repo($repo)
+   fetch_jekyll_repo $repo
    pushd $repo/src
    JEKYLL_ENV=production bundle exec jekyll build --config _config_prod.yml -d ../release
    popd
