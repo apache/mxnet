@@ -1494,7 +1494,7 @@ build_r_docs() {
 build_c_docs() {
     set -ex
     pushd .
-
+    ls lib
     build_setup
     make doxygen
     doc_path="docs/doxygen"
