@@ -126,8 +126,9 @@ In the rest of this document, we list routines provided by the `gluon.contrib` p
 ```
 
 #### EventHandler
+
 ```eval_rst
-.. currentmodule:: mxnet.gluon.contrib.estimator.event_handler
+.. currentmodule:: mxnet.gluon.contrib.estimator
 
 .. autosummary::
     :nosignatures:
