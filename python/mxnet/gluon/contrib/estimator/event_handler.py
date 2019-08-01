@@ -26,7 +26,12 @@ import warnings
 
 import numpy as np
 
-from ....metric import EvalMetric, Loss
+from ....metric import EvalMetric
+from ....metric import Loss as metric_loss
+
+__all__ = ['TrainBegin', 'TrainEnd', 'EpochBegin', 'EpochEnd', 'BatchBegin', 'BatchEnd',
+           'StoppingHandler', 'MetricHandler', 'ValidationHandler',
+           'LoggingHandler', 'CheckpointHandler', 'EarlyStoppingHandler']
 
 
 class TrainBegin(object):
@@ -127,7 +132,7 @@ class MetricHandler(EpochBegin, BatchEnd):
         label = kwargs['label']
         loss = kwargs['loss']
         for metric in self.train_metrics:
-            if isinstance(metric, Loss):
+            if isinstance(metric, metric_loss):
                 # metric wrapper for loss values
                 metric.update(0, loss)
             else:
@@ -135,7 +140,7 @@ class MetricHandler(EpochBegin, BatchEnd):
 
 
 class ValidationHandler(TrainBegin, BatchEnd, EpochEnd):
-    """"Validation Handler that evaluate model on validation dataset
+    """Validation Handler that evaluate model on validation dataset
 
     :py:class:`ValidationHandler` takes validation dataset, an evaluation function,
     metrics to be evaluated, and how often to run the validation. You can provide custom
@@ -430,7 +435,7 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
         self.current_epoch = 0
         self.current_batch = 0
         if self.save_best:
-            self.best = np.Inf if self.monitor_op == np.less else -np.Inf # pylint: disable=comparison-with-callable
+            self.best = np.Inf if self.monitor_op == np.less else -np.Inf  # pylint: disable=comparison-with-callable
         if self.resume_from_checkpoint:
             error_msg = "To use resume from checkpoint, you must only specify " \
                         "the same type of period you used for training." \
@@ -506,12 +511,12 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
 
     def _save_symbol(self, estimator):
         symbol_file = os.path.join(self.model_dir, self.model_prefix + '-symbol.json')
-        if hasattr(estimator.net, '_cached_graph'):
+        if hasattr(estimator.net, '_cached_graph') and estimator.net._cached_graph:
             sym = estimator.net._cached_graph[1]
             sym.save(symbol_file)
         else:
-            self.logger.info("Model architecture(symbol file) is not saved, please use HybridBlock"
-                             "to construct your model, can call net.hybridize() before passing to"
+            self.logger.info("Model architecture(symbol file) is not saved, please use HybridBlock "
+                             "to construct your model, can call net.hybridize() before passing to "
                              "Estimator in order to save model architecture as %s.", symbol_file)
 
     def _save_params_and_trainer(self, estimator, file_prefix):
@@ -666,7 +671,7 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
                                  "if you want otherwise", self.monitor.get()[0])
                 self.monitor_op = np.less
 
-        if self.monitor_op == np.greater: # pylint: disable=comparison-with-callable
+        if self.monitor_op == np.greater:  # pylint: disable=comparison-with-callable
             self.min_delta *= 1
         else:
             self.min_delta *= -1
@@ -679,7 +684,7 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
         if self.baseline is not None:
             self.best = self.baseline
         else:
-            self.best = np.Inf if self.monitor_op == np.less else -np.Inf # pylint: disable=comparison-with-callable
+            self.best = np.Inf if self.monitor_op == np.less else -np.Inf  # pylint: disable=comparison-with-callable
 
     def epoch_end(self, estimator, *args, **kwargs):
         monitor_name, monitor_value = self.monitor.get()
