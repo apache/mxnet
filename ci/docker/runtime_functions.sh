@@ -1449,7 +1449,7 @@ build_ubuntu_cpu_docs() {
 
 
 fetch_new_docs_repo() {
-   git clone https://github.com/mli/new-docs.git $1 || exit 0
+   git clone https://github.com/aaronmarkham/new-docs.git $1 || exit 0
 }
 
 

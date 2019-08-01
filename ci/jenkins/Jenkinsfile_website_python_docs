@@ -29,6 +29,7 @@ node('utility') {
   utils = load('ci/Jenkinsfile_utils.groovy')
   custom_steps = load('ci/jenkins/Jenkins_steps.groovy')
 }
+// TODO: this will have to be a multi-gpu node for distributed training tutorial tests
 utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu')
 
 utils.main_wrapper(
