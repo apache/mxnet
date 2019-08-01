@@ -2243,6 +2243,8 @@ fixed-size items.
         """Attach a gradient buffer to this NDArray, so that `backward`
         can compute gradient with respect to it.
 
+        The gradient is initialized to zeros.
+
         Parameters
         ----------
         grad_req : {'write', 'add', 'null'}
