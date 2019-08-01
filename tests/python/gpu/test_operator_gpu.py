@@ -2331,6 +2331,47 @@ def test_math():
             for op in ops:
                 run_math(op, shape, dtype, check_value=check_value)
 
+@with_seed()
+def test_np_nonzero():
+    class TestNonzero(HybridBlock):
+        def __init__(self):
+            super(TestNonzero, self).__init__()
+            
+        def hybrid_forward(self, F, x):
+            return F.npx.nonzero(x)
+
+    types = ['int32', 'int64', 'float64', 'float32', 'float16']
+    for hybridize in [True, False]:
+        for shape in [(),
+                      (1,),
+                      (1, 1),
+                      (1, 2, 3),
+                      (1, 0),
+                      (2, 0, 3)
+                      ]:
+            for oneType in types:
+                if oneType is 'float16':
+                    rtol=1e-2
+                    atol=1e-2
+                else:
+                    rtol=1e-3
+                    atol=1e-5
+                test_nonzero = TestNonzero()
+                if hybridize:
+                    test_nonzero.hybridize()
+                x = rand_ndarray(shape, dtype=oneType).as_np_ndarray()
+                np_out = np.nonzero(x.asnumpy())
+                np_out = np.transpose(np_out)
+                mx_out = test_nonzero(x)
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol, atol)
+
+                # Test imperative once again
+                mx_out = mx.npx.nonzero(x)
+                np_out = np.nonzero(x.asnumpy())
+                np_out = np.transpose(np_out)
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol, atol)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
