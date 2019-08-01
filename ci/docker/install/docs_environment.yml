@@ -1,7 +1,9 @@
 name: mxnet-docs
+channels:
+- conda-forge
 dependencies:
 - conda>=4.6.13
-- pandoc=2.7.3
+- pandoc==2.7.3
 - pip
 - python
 - jupyter
