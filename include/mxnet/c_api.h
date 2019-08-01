@@ -55,7 +55,7 @@ extern "C" {
 #endif
 
 /*! \brief manually define unsigned int */
-typedef uint32_t mx_uint;
+typedef unsigned int mx_uint;
 /*! \brief manually define 64-bit int */
 typedef int64_t mx_int64;
 /*! \brief manually define float */
