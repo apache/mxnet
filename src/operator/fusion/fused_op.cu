@@ -208,9 +208,10 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
           };
           std::string begin;
           std::string end;
+          std::string ndim_var_name = "ndim_" + var_name;
           if (op_name == "broadcast_like" || op_name == "slice_like") {
             std::string begin_var_name = var_name + "_" + std::to_string(i) + "_begin";
-            code += "Shape<ndim_" + var_name + "> "+ begin_var_name + ";\n";
+            code += "Shape<" + var_name + "> "+ begin_var_name + ";\n";
             code += begin_var_name + ".set(0);\n";
             int like_id = node.inputs[1].node_id;
             if (std::find(extra_shape_args_.begin(), extra_shape_args_.end(), like_id) == extra_shape_args_.end()) {
@@ -224,10 +225,13 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
             end = parse_tuple(source->attrs.dict.at("end"), "INT_MAX");
             if (op_name == "slice_axis") {
               std::string axis = source->attrs.dict.at("axis");
+              if (std::stoi(axis) < 0) {
+                  axis = ndim_var_name + axis;
+              }
               std::string begin_var_name = var_name + "_" + std::to_string(i) + "_begin";
               std::string end_var_name = var_name + "_" + std::to_string(i) + "_end";
-              code += "Shape<ndim_" + var_name + "> "+ begin_var_name + ";\n";
-              code += "Shape<ndim_" + var_name + "> "+ end_var_name + ";\n";
+              code += "Shape<" + ndim_var_name + "> "+ begin_var_name + ";\n";
+              code += "Shape<" + ndim_var_name + "> "+ end_var_name + ";\n";
               code += begin_var_name + ".set(0);\n";
               code += end_var_name + ".set(INT_MAX);\n";
               code += begin_var_name + "["+axis+"] = " + begin + ";\n";
