@@ -34,15 +34,15 @@ namespace mxnet {
 namespace op {
 
 struct SliceParam : public dmlc::Parameter<SliceParam> {
-  mxnet::Tuple<dmlc::optional<index_t>> begin, end;
-  mxnet::Tuple<dmlc::optional<index_t>> step;
+  mxnet::Tuple<dmlc::optional<int>> begin, end;
+  mxnet::Tuple<dmlc::optional<int>> step;
   DMLC_DECLARE_PARAMETER(SliceParam) {
     DMLC_DECLARE_FIELD(begin)
     .describe("starting indices for the slice operation, supports negative indices.");
     DMLC_DECLARE_FIELD(end)
     .describe("ending indices for the slice operation, supports negative indices.");
     DMLC_DECLARE_FIELD(step)
-    .set_default(mxnet::Tuple<dmlc::optional<index_t>>())
+    .set_default(mxnet::Tuple<dmlc::optional<int>>())
     .describe("step for the slice operation, supports negative values.");
   }
   bool operator==(const SliceParam& other) const {
