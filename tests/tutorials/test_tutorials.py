@@ -213,3 +213,6 @@ def test_control_flow():
 
 def test_amp():
     assert _test_tutorial_nb('amp/amp_tutorial')
+
+def test_mkldnn_quantization():
+    assert _test_tutorial_nb('mkldnn/mkldnn_quantization')
