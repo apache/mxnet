@@ -28,7 +28,6 @@ import logging
 import json
 import warnings
 import numpy as np
-from .. import numpy as _mx_np  # pylint: disable=reimported
 
 
 try:
@@ -41,8 +40,6 @@ from .. import ndarray as nd
 from ..ndarray import _internal
 from .. import io
 from .. import recordio
-from .. util import is_np_array
-from ..ndarray.numpy import _internal as _npi
 
 
 def imread(filename, *args, **kwargs):
@@ -83,11 +80,7 @@ def imread(filename, *args, **kwargs):
     >>> mx.img.imread("flower.jpg", to_rgb=0)
     <NDArray 224x224x3 @cpu(0)>
     """
-    if is_np_array():
-        read_fn = _npi.cvimread
-    else:
-        read_fn = _internal._cvimread
-    return read_fn(filename, *args, **kwargs)
+    return _internal._cvimread(filename, *args, **kwargs)
 
 
 def imresize(src, w, h, *args, **kwargs):
@@ -144,8 +137,7 @@ def imresize(src, w, h, *args, **kwargs):
     >>> new_image
     <NDArray 240x360x3 @cpu(0)>
     """
-    resize_fn = _npi.cvimresize if is_np_array() else _internal._cvimresize
-    return resize_fn(src, w, h, *args, **kwargs)
+    return _internal._cvimresize(src, w, h, *args, **kwargs)
 
 
 def imdecode(buf, *args, **kwargs):
@@ -201,11 +193,9 @@ def imdecode(buf, *args, **kwargs):
         if sys.version_info[0] == 3 and not isinstance(buf, (bytes, bytearray, np.ndarray)):
             raise ValueError('buf must be of type bytes, bytearray or numpy.ndarray,'
                              'if you would like to input type str, please convert to bytes')
-        array_fn = _mx_np.array if is_np_array() else nd.array
-        buf = array_fn(np.frombuffer(buf, dtype=np.uint8), dtype=np.uint8)
+        buf = nd.array(np.frombuffer(buf, dtype=np.uint8), dtype=np.uint8)
 
-    cvimdecode = _npi.cvimdecode if is_np_array() else _internal._cvimdecode
-    return cvimdecode(buf, *args, **kwargs)
+    return _internal._cvimdecode(buf, *args, **kwargs)
 
 
 def scale_down(src_size, size):
@@ -1216,7 +1206,6 @@ class ImageIter(io.DataIter):
         else:
             self.imgrec = None
 
-        array_fn = _mx_np.array if is_np_array() else nd.array
         if path_imglist:
             logging.info('%s: loading image list %s...', class_name, path_imglist)
             with open(path_imglist) as fin:
@@ -1224,7 +1213,7 @@ class ImageIter(io.DataIter):
                 imgkeys = []
                 for line in iter(fin.readline, ''):
                     line = line.strip().split('\t')
-                    label = array_fn(line[1:-1], dtype=dtype)
+                    label = nd.array(line[1:-1], dtype=dtype)
                     key = int(line[0])
                     imglist[key] = (label, line[-1])
                     imgkeys.append(key)
@@ -1238,11 +1227,11 @@ class ImageIter(io.DataIter):
                 key = str(index)
                 index += 1
                 if len(img) > 2:
-                    label = array_fn(img[:-1], dtype=dtype)
+                    label = nd.array(img[:-1], dtype=dtype)
                 elif isinstance(img[0], numeric_types):
-                    label = array_fn([img[0]], dtype=dtype)
+                    label = nd.array([img[0]], dtype=dtype)
                 else:
-                    label = array_fn(img[0], dtype=dtype)
+                    label = nd.array(img[0], dtype=dtype)
                 result[key] = (label, img[-1])
                 imgkeys.append(str(key))
             self.imglist = result
@@ -1378,14 +1367,8 @@ class ImageIter(io.DataIter):
             i = self._cache_idx
             # clear the cache data
         else:
-            if is_np_array():
-                zeros_fn = _mx_np.zeros
-                empty_fn = _mx_np.empty
-            else:
-                zeros_fn = nd.zeros
-                empty_fn = nd.empty
-            batch_data = zeros_fn((batch_size, c, h, w))
-            batch_label = empty_fn(self.provide_label[0][1])
+            batch_data = nd.zeros((batch_size, c, h, w))
+            batch_label = nd.empty(self.provide_label[0][1])
             i = self._batchify(batch_data, batch_label)
         # calculate the padding
         pad = batch_size - i
@@ -1462,7 +1445,4 @@ class ImageIter(io.DataIter):
 
     def postprocess_data(self, datum):
         """Final postprocessing step before image is loaded into the batch."""
-        if is_np_array():
-            return datum.transpose(2, 0, 1)
-        else:
-            return nd.transpose(datum, axes=(2, 0, 1))
+        return nd.transpose(datum, axes=(2, 0, 1))
