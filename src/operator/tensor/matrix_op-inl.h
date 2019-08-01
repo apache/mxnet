@@ -354,17 +354,12 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(out_shp.ndim(), shp.ndim());
   mxnet::TShape get(std::max(shp.ndim(), out_shp.ndim()), -1);
   mxnet::TShape ret(std::max(shp.ndim(), out_shp.ndim()), -1);
-  auto ifUnknownAssignElseCheck = [](mxnet::TShape& arr, int i, int val) {
-                                     if (arr[i] == -1) { arr[i] = val;
-                                     } else { CHECK_EQ(arr[i], val); } };
   if (param.axes.ndim() == 0) {
     for (int i = 0; i < shp.ndim(); ++i) {
-      get[i] = shp[i];
       ret[i] = shp[shp.ndim()-1-i];
     }
     for (int i = 0; i < out_shp.ndim(); ++i) {
-      ifUnknownAssignElseCheck(ret, i, out_shp[i]);
-      ifUnknownAssignElseCheck(get, shp.ndim()-1-i, out_shp[i]);
+      get[shp.ndim()-1-i] = out_shp[i];
     }
   } else {
     CHECK_EQ(std::max(shp.ndim(), out_shp.ndim()), param.axes.ndim());
@@ -373,8 +368,7 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
       ret[i] = shp[param.axes[i]];
     }
     for (int i = 0; i < out_shp.ndim(); ++i) {
-      ifUnknownAssignElseCheck(ret, i, out_shp[i]);
-      ifUnknownAssignElseCheck(get, param.axes[i], out_shp[i]);
+      get[param.axes[i]] = out_shp[i];
     }
   }
   SHAPE_ASSIGN_CHECK(*in_attrs, 0, get);
