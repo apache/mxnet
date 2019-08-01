@@ -215,10 +215,7 @@ _LIB = _load_lib()
 # type definitions
 mx_int = ctypes.c_int
 mx_uint = ctypes.c_uint
-if sys.version_info[0] > 2:
-    mx_int64 = ctypes.c_int64
-else:
-    mx_int64 = ctypes.c_int32
+mx_int64 = ctypes.c_int64
 mx_float = ctypes.c_float
 mx_float_p = ctypes.POINTER(mx_float)
 mx_real_t = _np.float32
