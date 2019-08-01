@@ -92,7 +92,7 @@ class FeatureExtractor {
     GetFeatureSymbol();
     LoadParameters();
     GetMeanImg();
-    executor = NULL;
+    executor = nullptr；
   }
 
   void Extract(NDArray data) {
