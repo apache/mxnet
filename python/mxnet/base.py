@@ -746,13 +746,6 @@ if Features().is_enabled("TVM_OP"):
     check_call(_LIB.MXLoadTVMOp(c_str(_LIB_TVM_OP[0])))
 
 
-def _sanity_check_params(func_name, unsupported_params, param_dict):
-    for param_name in unsupported_params:
-        if param_name in param_dict:
-            raise NotImplementedError("function {} does not support parameter {}"
-                                      .format(func_name, param_name))
-
-
 _NP_OP_PREFIX = '_np_'
 _NP_OP_SUBMODULE_LIST = ['_random_', '_linalg_']
 
@@ -768,6 +761,7 @@ def _is_np_op(op_name):
 
 
 def _get_op_submodule_name(op_name, op_name_prefix, submodule_name_list):
+    """Get the submodule name of a specific op"""
     assert op_name.startswith(op_name_prefix)
     for submodule_name in submodule_name_list:
         if op_name[len(op_name_prefix):].startswith(submodule_name):

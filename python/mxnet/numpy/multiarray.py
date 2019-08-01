@@ -71,7 +71,7 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
     return hdl
 
 
-# Have to use 0 as default value for stype since plylint does not allow
+# Have to use 0 as default value for stype since pylint does not allow
 # importing _STORAGE_TYPE_DEFAULT from ndarray.py.
 def _np_ndarray_cls(handle, writable=True, stype=0):
     if stype != 0:
@@ -87,9 +87,9 @@ def _get_index(idx):
     if isinstance(idx, NDArray) and not isinstance(idx, ndarray):
         raise TypeError('Cannot have mx.nd.NDArray as index')
     if isinstance(idx, ndarray):
-        return idx._as_nd_ndarray()
+        return idx.as_nd_ndarray()
     elif sys.version_info[0] > 2 and isinstance(idx, range):
-        return array(_np.arange(idx.start, idx.stop, idx.step, dtype=_np.int32))._as_nd_ndarray()
+        return array(_np.arange(idx.start, idx.stop, idx.step, dtype=_np.int32)).as_nd_ndarray()
     else:
         return idx
 
@@ -135,7 +135,7 @@ class ndarray(NDArray):
                 return self
 
         if isinstance(key, ndarray):
-            key = key._as_nd_ndarray()
+            key = key.as_nd_ndarray()
         elif isinstance(key, tuple):
             key = [_get_index(idx) for idx in key]
             key = tuple(key)
@@ -143,7 +143,7 @@ class ndarray(NDArray):
             key = [_get_index(idx) for idx in key]
         elif sys.version_info[0] > 2 and isinstance(key, range):
             key = _get_index(key)
-        return self._as_nd_ndarray().__getitem__(key).as_np_ndarray()
+        return self.as_nd_ndarray().__getitem__(key).as_np_ndarray()
     # pylint: enable=too-many-return-statements
 
     def __setitem__(self, key, value):
@@ -154,14 +154,14 @@ class ndarray(NDArray):
             if not isinstance(key, tuple) or len(key) != 0:
                 raise IndexError('scalar tensor can only accept `()` as index')
         if isinstance(value, ndarray):
-            value = value._as_nd_ndarray()
+            value = value.as_nd_ndarray()
         # TODO(junwu): Better handling of this situation
         if isinstance(key, tuple) and len(key) == 0:
-            self._as_nd_ndarray().__setitem__(slice(None), value)
+            self.as_nd_ndarray().__setitem__(slice(None), value)
             return
 
         if isinstance(key, ndarray):
-            key = key._as_nd_ndarray()
+            key = key.as_nd_ndarray()
         elif isinstance(key, tuple):
             key = [_get_index(idx) for idx in key]
             key = tuple(key)
@@ -169,7 +169,7 @@ class ndarray(NDArray):
             key = [_get_index(idx) for idx in key]
         elif sys.version_info[0] > 2 and isinstance(key, range):
             key = _get_index(key)
-        self._as_nd_ndarray().__setitem__(key, value)
+        self.as_nd_ndarray().__setitem__(key, value)
 
     def __add__(self, other):
         """x.__add__(y) <=> x + y"""
@@ -399,20 +399,11 @@ class ndarray(NDArray):
     def any(self, axis=None, out=None, keepdims=False):
         raise NotImplementedError
 
-    def _as_nd_ndarray(self):
-        """This is not a user-facing API."""
+    def as_nd_ndarray(self):
+        """Convert mxnet.numpy.ndarray to mxnet.ndarray.NDArray to use its fluent methods."""
         hdl = NDArrayHandle()
         check_call(_LIB.MXShallowCopyNDArray(self.handle, ctypes.byref(hdl)))
         return NDArray(handle=hdl, writable=self.writable)
-
-    def as_nd_ndarray(self):
-        """Convert mxnet.numpy.ndarray to mxnet.ndarray.NDArray to use its fluent methods."""
-        # TODO(junwu): Uncomment the following lines
-        # if self.ndim == 0:  # TODO(junwu): this costs ~10ns, can be moved to backend
-        #     raise ValueError('cannot convert a scalar np.ndarray to mx.nd.NDArray')
-        # if self.size == 0:  # TODO(junwu): this costs ~10ns, can be moved to backend
-        #     raise ValueError('cannot convert a zero-size np.ndarray to mx.nd.NDArray')
-        return self._as_nd_ndarray()
 
     def as_np_ndarray(self):
         """A convenience function for creating a numpy ndarray from the current ndarray
@@ -580,8 +571,8 @@ class ndarray(NDArray):
                [ 1.,  1.,  1.]], dtype=float32)
         """
         if isinstance(other, ndarray):
-            other = other._as_nd_ndarray()
-        return self._as_nd_ndarray().copyto(other).as_np_ndarray()
+            other = other.as_nd_ndarray()
+        return self.as_nd_ndarray().copyto(other).as_np_ndarray()
 
     def asscalar(self):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute asscalar')
@@ -1282,7 +1273,7 @@ class ndarray(NDArray):
 
 
 @set_module('mxnet.numpy')
-def empty(shape, dtype=None, **kwargs):
+def empty(shape, dtype=float, order='C', ctx=None):
     """Return a new array of given shape and type, without initializing entries.
 
     Parameters
@@ -1293,6 +1284,9 @@ def empty(shape, dtype=None, **kwargs):
         `numpy.float32`. Note that this behavior is different from NumPy's `empty`
         function where `float64` is the default value, because `float32` is
         considered as the default data type in deep learning.
+    order : {'C'}, optional, default: 'C'
+        How to store multi-dimensional data in memory, currently only row-major
+        (C-style) is supported.
     ctx : device context, optional
         Device context on which the memory is allocated. Default is
         `mxnet.context.current_context()`.
@@ -1302,8 +1296,8 @@ def empty(shape, dtype=None, **kwargs):
     out : ndarray
         Array of uninitialized (arbitrary) data of the given shape, dtype, and order.
     """
-    _sanity_check_params('emtpy', ['order'], kwargs)
-    ctx = kwargs.get('ctx', current_context())
+    if order != 'C':
+        raise NotImplementedError
     if ctx is None:
         ctx = current_context()
     if dtype is None:
@@ -1354,7 +1348,7 @@ def array(object, dtype=None, ctx=None):
 
 
 @set_module('mxnet.numpy')
-def zeros(shape, dtype=_np.float32, **kwargs):
+def zeros(shape, dtype=_np.float32, order='C', ctx=None):
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -1368,6 +1362,9 @@ def zeros(shape, dtype=_np.float32, **kwargs):
         behavior is different from NumPy's `ones` function where `float64`
         is the default value, because `float32` is considered as the default
         data type in deep learning.
+    order : {'C'}, optional, default: 'C'
+        How to store multi-dimensional data in memory, currently only row-major
+        (C-style) is supported.
     ctx : Context, optional
         An optional device context (default is the current default context).
 
@@ -1376,11 +1373,11 @@ def zeros(shape, dtype=_np.float32, **kwargs):
     out : ndarray
         Array of zeros with the given shape, dtype, and ctx.
     """
-    return _mx_nd_np.zeros(shape, dtype, **kwargs)
+    return _mx_nd_np.zeros(shape, dtype, order, ctx)
 
 
 @set_module('mxnet.numpy')
-def ones(shape, dtype=None, **kwargs):
+def ones(shape, dtype=_np.float32, order='C', ctx=None):
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -1394,6 +1391,9 @@ def ones(shape, dtype=None, **kwargs):
         behavior is different from NumPy's `ones` function where `float64`
         is the default value, because `float32` is considered as the default
         data type in deep learning.
+    order : {'C'}, optional, default: 'C'
+        How to store multi-dimensional data in memory, currently only row-major
+        (C-style) is supported.
     ctx : Context, optional
         An optional device context (default is the current default context).
 
@@ -1402,7 +1402,7 @@ def ones(shape, dtype=None, **kwargs):
     out : ndarray
         Array of zeros with the given shape, dtype, and ctx.
     """
-    return _mx_nd_np.ones(shape, dtype, **kwargs)
+    return _mx_nd_np.ones(shape, dtype, order, ctx)
 
 
 @set_module('mxnet.numpy')

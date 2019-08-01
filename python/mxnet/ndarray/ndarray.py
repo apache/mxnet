@@ -229,7 +229,6 @@ fixed-size items.
 
     def __add__(self, other):
         """x.__add__(y) <=> x+y <=> mx.nd.add(x, y) """
-        # other may be the type of mxnet.numpy.ndarray
         return add(self, other)
 
     def __iadd__(self, other):
@@ -248,7 +247,6 @@ fixed-size items.
 
     def __sub__(self, other):
         """x.__sub__(y) <=> x-y <=> mx.nd.subtract(x, y) """
-        # other may be the type of mxnet.numpy.ndarray
         return subtract(self, other)
 
     def __isub__(self, other):

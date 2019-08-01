@@ -26,6 +26,7 @@ from ..base import c_str_array, c_handle_array, c_str, mx_uint
 from ..base import SymbolHandle
 from ..base import check_call
 
+# The symbol class to be used (Cython or Ctypes)
 _symbol_cls = None
 _np_symbol_cls = None
 
@@ -117,7 +118,7 @@ def _set_symbol_class(cls):
 
 
 def _set_np_symbol_class(cls):
-    """Set the symbolic class to be cls"""
+    """Set the numpy-compatible symbolic class to be cls"""
     global _np_symbol_cls
     _np_symbol_cls = cls
 

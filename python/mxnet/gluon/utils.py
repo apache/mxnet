@@ -440,7 +440,7 @@ def _check_same_symbol_type(symbols):
     the symbols."""
     from ..symbol.numpy import _Symbol as np_symbol
     from ..symbol import Symbol as nd_symbol
-    is_np_sym = bool(isinstance(symbols[0], np_symbol))
+    is_np_sym = isinstance(symbols[0], np_symbol)
     for s in symbols[1:]:
         if is_np_sym != isinstance(s, np_symbol):
             raise TypeError('Found both classic symbol (mx.sym.Symbol) and numpy symbol '

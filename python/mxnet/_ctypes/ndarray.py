@@ -130,13 +130,6 @@ class CachedOp(object):
     def __del__(self):
         check_call(_LIB.MXFreeCachedOp(self.handle))
 
-    def _is_from_np_compat_op(self, idx):
-        """Check if the CachedOp's idx-th output is directly from a numpy op."""
-        is_from_np_op = ctypes.c_int(0)
-        check_call(_LIB.MXIsCachedOpOutputFromNumpyCompatOp(self.handle, ctypes.c_int(idx),
-                                                            ctypes.byref(is_from_np_op)))
-        return is_from_np_op.value != 0
-
     def __call__(self, *args, **kwargs):
         """ctypes implementation of imperative invoke wrapper"""
         out = kwargs.pop('out', None)

@@ -110,7 +110,6 @@ class _Conv(HybridBlock):
                 self._kwargs['adj'] = adj
 
             dshape = [0]*(len(kernel_size) + 2)
-
             dshape[layout.find('N')] = 1
             dshape[layout.find('C')] = in_channels
             wshapes = _infer_weight_shape(op_name, dshape, self._kwargs)

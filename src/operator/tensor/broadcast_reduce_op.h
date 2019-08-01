@@ -168,10 +168,13 @@ struct BroadcastLikeParam : public dmlc::Parameter<BroadcastLikeParam> {
   }
 };
 
+/*
+ * Check whether the axis is within the legal range.
+ */
 inline int CheckAxis(const int axis, const int ndim) {
   if (ndim == 0) {
-    CHECK(axis == 0 || axis == -1) << "axis " << axis << " is out of bounds for array of"
-                                                         " dimension 1";
+    CHECK(axis == 0 || axis == -1) << "axis " << axis
+                                   << " is out of bounds for 0-dimension tensor";
     return 0;
   } else {
     CHECK(axis < ndim && axis >= -ndim)
@@ -897,8 +900,8 @@ struct reduce_axes_backward_broadcast {
                                   OType *out,
                                   DType *igrad,
                                   OType *ograd,
-                                  mshadow::Shape<5> in_shape,
-                                  mshadow::Shape<5> out_shape,
+                                  mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> in_shape,
+                                  mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> out_shape,
                                   const uint32_t ndim) {
     size_t in_stride = 1;
     size_t out_stride = 1;
@@ -934,9 +937,9 @@ void ReduceAxesBackwardUseInOutImpl(const OpContext& ctx,
 
   MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      mshadow::Shape<5> in_shape;
-      mshadow::Shape<5> out_shape;
-      for (int i = 0; i < 5; ++i) {
+      mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> in_shape;
+      mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> out_shape;
+      for (int i = 0; i < MXNET_SPECIAL_MAX_NDIM; ++i) {
         if (i < dst_shape.ndim()) {
           in_shape[i] = src_shape[i];
           out_shape[i] = dst_shape[i];
@@ -1006,8 +1009,8 @@ struct broadcast_kernel {
   MSHADOW_XINLINE static void Map(index_t i,
                                   IType *input,
                                   OType *output,
-                                  mshadow::Shape<5> in_shape,
-                                  mshadow::Shape<5> out_shape,
+                                  mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> in_shape,
+                                  mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> out_shape,
                                   const OpReqType req,
                                   const uint32_t ndim) {
     size_t in_stride = 1;
@@ -1043,9 +1046,9 @@ inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      mshadow::Shape<5> in_shape;
-      mshadow::Shape<5> out_shape;
-      for (int i = 0; i < 5; ++i) {
+      mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> in_shape;
+      mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> out_shape;
+      for (int i = 0; i < MXNET_SPECIAL_MAX_NDIM; ++i) {
         if (i < dst_shape.ndim()) {
           in_shape[i] = src_shape[i];
           out_shape[i] = dst_shape[i];
@@ -1291,8 +1294,8 @@ struct norm_backward_broadcast {
                                   DType *igrad,
                                   OType *ograd,
                                   DType *data,
-                                  mshadow::Shape<5> in_shape,
-                                  mshadow::Shape<5> out_shape,
+                                  mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> in_shape,
+                                  mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> out_shape,
                                   const uint32_t ndim) {
     size_t in_stride = 1;
     size_t out_stride = 1;
@@ -1334,9 +1337,9 @@ void LpNormGradCompute(const nnvm::NodeAttrs& attrs,
     mxnet::TShape src_shape, dst_shape;
     BroadcastReduceShapeCompact(outputs[0].shape_, small, &src_shape, &dst_shape);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    mshadow::Shape<5> in_shape;
-    mshadow::Shape<5> out_shape;
-    for (int i = 0; i < 5; ++i) {
+    mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> in_shape;
+    mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> out_shape;
+    for (int i = 0; i < MXNET_SPECIAL_MAX_NDIM; ++i) {
       if (i < dst_shape.ndim()) {
         in_shape[i] = src_shape[i];
         out_shape[i] = dst_shape[i];

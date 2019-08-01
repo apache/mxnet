@@ -22,7 +22,7 @@ from __future__ import absolute_import
 import ctypes
 import numpy as _np
 from ...base import _LIB, SymbolHandle, numeric_types, mx_uint
-from ...util import _sanity_check_params, check_call, set_module
+from ...util import check_call, set_module
 from ...context import current_context
 from ..symbol import Symbol
 from .._internal import _set_np_symbol_class
@@ -862,7 +862,7 @@ class _Symbol(Symbol):
 
 
 @set_module('mxnet.symbol.numpy')
-def zeros(shape, dtype=_np.float32, **kwargs):
+def zeros(shape, dtype=_np.float32, order='C', ctx=None):
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -876,6 +876,9 @@ def zeros(shape, dtype=_np.float32, **kwargs):
         behavior is different from NumPy's `zeros` function  where `float64`
         is the default value, because `float32` is considered as the default
         data type in deep learning.
+    order : {'C'}, optional, default: 'C'
+        How to store multi-dimensional data in memory, currently only row-major
+        (C-style) is supported.
     ctx : Context, optional
         An optional device context (default is the current default context).
 
@@ -884,16 +887,16 @@ def zeros(shape, dtype=_np.float32, **kwargs):
     out : Symbol
         Array of zeros with the given shape, dtype, and ctx.
     """
-    _sanity_check_params('zeros', ['order'], kwargs)
-    ctx = kwargs.get('ctx', current_context())
+    if order != 'C':
+        raise NotImplementedError
     if ctx is None:
         ctx = current_context()
     dtype = _np.float32 if dtype is None else dtype
-    return _npi.zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
+    return _npi.zeros(shape=shape, ctx=ctx, dtype=dtype)
 
 
 @set_module('mxnet.symbol.numpy')
-def ones(shape, dtype=None, **kwargs):
+def ones(shape, dtype=_np.float32, order='C', ctx=None):
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -907,6 +910,9 @@ def ones(shape, dtype=None, **kwargs):
         behavior is different from NumPy's `ones` function where `float64`
         is the default value, because `float32` is considered as the default
         data type in deep learning.
+    order : {'C'}, optional, default: 'C'
+        How to store multi-dimensional data in memory, currently only row-major
+        (C-style) is supported.
     ctx : Context, optional
         An optional device context (default is the current default context).
 
@@ -915,12 +921,12 @@ def ones(shape, dtype=None, **kwargs):
     out : ndarray
         Array of zeros with the given shape, dtype, and ctx.
     """
-    _sanity_check_params('zeros', ['order'], kwargs)
-    ctx = kwargs.get('ctx', current_context())
+    if order != 'C':
+        raise NotImplementedError
     if ctx is None:
         ctx = current_context()
     dtype = _np.float32 if dtype is None else dtype
-    return _npi.ones(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
+    return _npi.ones(shape=shape, ctx=ctx, dtype=dtype)
 
 
 #pylint: disable= too-many-arguments, no-member, protected-access

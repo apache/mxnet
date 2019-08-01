@@ -30,7 +30,6 @@ from . import random
 from . import registry
 from . import ndarray
 
-
 # inherit str for backward compatibility
 class InitDesc(str):
     """
