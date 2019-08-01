@@ -25,8 +25,14 @@ set -ex
 echo 'Installing dependencies...'
 apt-get update || true
 apt-get install -y \
-    doxygen \
-    pandoc
+    doxygen
+
+# Install latest pandoc
+wget -q https://github.com/jgm/pandoc/releases/download/2.7.3/pandoc-2.7.3-linux.tar.gz
+tar xvf pandoc-2.7.3-linux.tar.gz
+chmod 775 pandoc-2.7.3/bin/pandoc
+chmod 775 pandoc-2.7.3/bin/pandoc-citeproc
+sudo cp pandoc-2.7.3/bin/* /usr/local/bin
 
 # Can probably delete these and docs_requirements
 # pip3 install -r /work/docs_requirements

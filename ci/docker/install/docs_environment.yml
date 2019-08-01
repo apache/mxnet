@@ -17,7 +17,7 @@ dependencies:
   - recommonmark
   - notedown
   - mxnet
-  - pypandoc>=2.7.3
+  - pypandoc
   - breathe
   - mock
   - awscli
