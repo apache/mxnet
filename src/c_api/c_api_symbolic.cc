@@ -585,6 +585,78 @@ int MXSymbolInferShape(SymbolHandle sym,
   API_END();
 }
 
+template<typename dtype, typename stype>
+inline void SymbolInferShape(const char** keys,
+                      mx_uint num_args,
+                      const dtype* arg_shape_data,
+                      const dtype* arg_ind_ptr,
+                      const int** in_shape_ndim,
+                      const dtype*** in_shape_data,
+                      const int** out_shape_ndim,
+                      const dtype*** out_shape_data,
+                      const int** aux_shape_ndim,
+                      const dtype*** aux_shape_data,
+                      nnvm::Symbol* s,
+                      MXAPIThreadLocalEntry* ret,
+                      stype* in_shape_size,
+                      stype* out_shape_size,
+                      stype* aux_shape_size,
+                      int* complete) {
+nnvm::Graph g = Symbol2Graph(*s);
+mxnet::ShapeVector arg_shapes(g.indexed_graph().input_nodes().size(), mxnet::TShape());
+if (keys == nullptr && num_args != 0) {
+  std::vector < uint32_t > read_only_args = mxnet::ReadOnlyArgIndices(g.indexed_graph());
+  CHECK_LE(num_args, read_only_args.size());
+  for (mx_uint i = 0; i < num_args; ++i) {
+    arg_shapes[read_only_args[i]] = mxnet::ShapeTypeCast(arg_shape_data + arg_ind_ptr[i],
+                                                         arg_shape_data + arg_ind_ptr[i + 1]);
+  }
+} else {
+  std::unordered_map<std::string, mxnet::TShape> kwargs;
+  for (mx_uint i = 0; i < num_args; ++i) {
+    kwargs[keys[i]] = mxnet::ShapeTypeCast(arg_shape_data + arg_ind_ptr[i],
+                                           arg_shape_data + arg_ind_ptr[i + 1]);
+  }
+  mxnet::MatchArguments(g.indexed_graph(), kwargs, &arg_shapes, "InferShape");
+}
+try {
+  g = mxnet::exec::InferShape(std::move(g), std::move(arg_shapes), "__shape__");
+} catch (const mxnet::op::InferShapeError& err) {
+  throw dmlc::Error(err.msg);
+}
+// if use legacy shape definition, need to convert numpy shape to legacy shape
+mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
+if (!Imperative::Get()->is_np_shape()) {
+  common::ConvertToLegacyShape(&shapes);
+}
+// copy back
+CopyAttr(g.indexed_graph(), shapes, &(ret->arg_shapes), &(ret->out_shapes), &(ret->aux_shapes));
+// copy data back
+  MXAPIThreadLocalEntry::SetupShapeArrayReturnWithBufferEx<dtype>(ret->arg_shapes,
+                                                           &(ret->arg_shape_ndim_ex),
+                                                           &(ret->arg_shape_data_ex),
+                                                           &(ret->arg_shape_buffer_ex));
+  MXAPIThreadLocalEntry::SetupShapeArrayReturnWithBufferEx<dtype>(ret->out_shapes,
+                                                           &(ret->out_shape_ndim_ex),
+                                                           &(ret->out_shape_data_ex),
+                                                           &(ret->out_shape_buffer_ex));
+  MXAPIThreadLocalEntry::SetupShapeArrayReturnWithBufferEx<dtype>(ret->aux_shapes,
+                                                           &(ret->aux_shape_ndim_ex),
+                                                           &(ret->aux_shape_data_ex),
+                                                           &(ret->aux_shape_buffer_ex));
+  *in_shape_size = static_cast<stype>(ret->arg_shapes.size());
+  *in_shape_ndim = dmlc::BeginPtr(ret->arg_shape_ndim_ex);
+  *in_shape_data = dmlc::BeginPtr(ret->arg_shape_data_ex);
+  *out_shape_size = static_cast<stype>(ret->out_shapes.size());
+  *out_shape_ndim = dmlc::BeginPtr(ret->out_shape_ndim_ex);
+  *out_shape_data = dmlc::BeginPtr(ret->out_shape_data_ex);
+  *aux_shape_size = static_cast<stype>(ret->aux_shapes.size());
+  *aux_shape_ndim = dmlc::BeginPtr(ret->aux_shape_ndim_ex);
+  *aux_shape_data = dmlc::BeginPtr(ret->aux_shape_data_ex);
+// mark complete
+*complete = (g.GetAttr<size_t>("shape_num_unknown_nodes") == 0);
+}
+
 int MXSymbolInferShapeEx(SymbolHandle sym,
                          mx_uint num_args,
                          const char** keys,
@@ -603,58 +675,22 @@ int MXSymbolInferShapeEx(SymbolHandle sym,
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(sym);
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
-  nnvm::Graph g = Symbol2Graph(*s);
-  mxnet::ShapeVector arg_shapes(g.indexed_graph().input_nodes().size(), mxnet::TShape());
-  if (keys == nullptr && num_args != 0) {
-    std::vector<uint32_t> read_only_args = mxnet::ReadOnlyArgIndices(g.indexed_graph());
-    CHECK_LE(num_args, read_only_args.size());
-    for (mx_uint i = 0; i < num_args; ++i) {
-      arg_shapes[read_only_args[i]] = mxnet::ShapeTypeCast(
-          arg_shape_data + arg_ind_ptr[i], arg_shape_data + arg_ind_ptr[i+1]);
-    }
-  } else {
-    std::unordered_map<std::string, mxnet::TShape> kwargs;
-    for (mx_uint i = 0; i < num_args; ++i) {
-      kwargs[keys[i]] = mxnet::ShapeTypeCast(
-          arg_shape_data + arg_ind_ptr[i], arg_shape_data + arg_ind_ptr[i+1]);
-    }
-    mxnet::MatchArguments(g.indexed_graph(), kwargs, &arg_shapes, "InferShape");
-  }
-
-  try {
-    g = mxnet::exec::InferShape(std::move(g), std::move(arg_shapes), "__shape__");
-  } catch (const mxnet::op::InferShapeError &err) {
-    throw dmlc::Error(err.msg);
-  }
-
-  // if use legacy shape definition, need to convert numpy shape to legacy shape
-  mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
-  if (!Imperative::Get()->is_np_shape()) {
-    common::ConvertToLegacyShape(&shapes);
-  }
-
-  // copy back
-  CopyAttr(g.indexed_graph(), shapes,
-           &(ret->arg_shapes), &(ret->out_shapes), &(ret->aux_shapes));
-
-  // copy data back
-  MXAPIThreadLocalEntry::SetupShapeArrayReturnWithBufferEx(ret->arg_shapes,
-      &(ret->arg_shape_ndim_ex), &(ret->arg_shape_data_ex), &(ret->arg_shape_buffer_ex));
-  MXAPIThreadLocalEntry::SetupShapeArrayReturnWithBufferEx(ret->out_shapes,
-      &(ret->out_shape_ndim_ex), &(ret->out_shape_data_ex), &(ret->out_shape_buffer_ex));
-  MXAPIThreadLocalEntry::SetupShapeArrayReturnWithBufferEx(ret->aux_shapes,
-      &(ret->aux_shape_ndim_ex), &(ret->aux_shape_data_ex), &(ret->aux_shape_buffer_ex));
-  *in_shape_size = static_cast<mx_uint>(ret->arg_shapes.size());
-  *in_shape_ndim = dmlc::BeginPtr(ret->arg_shape_ndim_ex);
-  *in_shape_data = dmlc::BeginPtr(ret->arg_shape_data_ex);
-  *out_shape_size = static_cast<mx_uint>(ret->out_shapes.size());
-  *out_shape_ndim = dmlc::BeginPtr(ret->out_shape_ndim_ex);
-  *out_shape_data = dmlc::BeginPtr(ret->out_shape_data_ex);
-  *aux_shape_size = static_cast<mx_uint>(ret->aux_shapes.size());
-  *aux_shape_ndim = dmlc::BeginPtr(ret->aux_shape_ndim_ex);
-  *aux_shape_data = dmlc::BeginPtr(ret->aux_shape_data_ex);
-  // mark complete
-  *complete = (g.GetAttr<size_t>("shape_num_unknown_nodes") == 0);
+  SymbolInferShape<int, mx_uint>(keys,
+                                 num_args,
+                                 arg_shape_data,
+                                 arg_ind_ptr,
+                                 in_shape_ndim,
+                                 in_shape_data,
+                                 out_shape_ndim,
+                                 out_shape_data,
+                                 aux_shape_ndim,
+                                 aux_shape_data,
+                                 s,
+                                 ret,
+                                 in_shape_size,
+                                 out_shape_size,
+                                 aux_shape_size,
+                                 complete);
   API_END();
 }
 
@@ -676,64 +712,22 @@ int MXSymbolInferShapeExInt64(SymbolHandle sym,
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(sym);
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
-  nnvm::Graph g = Symbol2Graph(*s);
-  mxnet::ShapeVector arg_shapes(g.indexed_graph().input_nodes().size(), mxnet::TShape());
-  if (keys == nullptr && num_args != 0) {
-    std::vector<uint32_t> read_only_args = mxnet::ReadOnlyArgIndices(g.indexed_graph());
-    CHECK_LE(num_args, read_only_args.size());
-    for (mx_uint i = 0; i < num_args; ++i) {
-      arg_shapes[read_only_args[i]] = mxnet::ShapeTypeCast(
-          arg_shape_data + arg_ind_ptr[i], arg_shape_data + arg_ind_ptr[i+1]);
-    }
-  } else {
-    std::unordered_map<std::string, mxnet::TShape> kwargs;
-    for (mx_uint i = 0; i < num_args; ++i) {
-      kwargs[keys[i]] = mxnet::ShapeTypeCast(
-          arg_shape_data + arg_ind_ptr[i], arg_shape_data + arg_ind_ptr[i+1]);
-    }
-    mxnet::MatchArguments(g.indexed_graph(), kwargs, &arg_shapes, "InferShape");
-  }
-
-  try {
-    g = mxnet::exec::InferShape(std::move(g), std::move(arg_shapes), "__shape__");
-  } catch (const mxnet::op::InferShapeError &err) {
-    throw dmlc::Error(err.msg);
-  }
-
-  // if use legacy shape definition, need to convert numpy shape to legacy shape
-  mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
-  if (!Imperative::Get()->is_np_shape()) {
-    common::ConvertToLegacyShape(&shapes);
-  }
-
-  // copy back
-  CopyAttr(g.indexed_graph(), shapes,
-           &(ret->arg_shapes), &(ret->out_shapes), &(ret->aux_shapes));
-
-  // copy data back
-  MXAPIThreadLocalEntry::SetupShapeArrayReturnWithBufferExInt64(ret->arg_shapes,
-      &(ret->arg_shape_ndim_ex),
-      &(ret->arg_shape_data_ex_int64),
-      &(ret->arg_shape_buffer_ex_int64));
-  MXAPIThreadLocalEntry::SetupShapeArrayReturnWithBufferExInt64(ret->out_shapes,
-      &(ret->out_shape_ndim_ex),
-      &(ret->out_shape_data_ex_int64),
-      &(ret->out_shape_buffer_ex_int64));
-  MXAPIThreadLocalEntry::SetupShapeArrayReturnWithBufferExInt64(ret->aux_shapes,
-      &(ret->aux_shape_ndim_ex),
-      &(ret->aux_shape_data_ex_int64),
-      &(ret->aux_shape_buffer_ex_int64));
-  *in_shape_size = static_cast<size_t>(ret->arg_shapes.size());
-  *in_shape_ndim = dmlc::BeginPtr(ret->arg_shape_ndim_ex);
-  *in_shape_data = dmlc::BeginPtr(ret->arg_shape_data_ex_int64);
-  *out_shape_size = static_cast<size_t>(ret->out_shapes.size());
-  *out_shape_ndim = dmlc::BeginPtr(ret->out_shape_ndim_ex);
-  *out_shape_data = dmlc::BeginPtr(ret->out_shape_data_ex_int64);
-  *aux_shape_size = static_cast<size_t>(ret->aux_shapes.size());
-  *aux_shape_ndim = dmlc::BeginPtr(ret->aux_shape_ndim_ex);
-  *aux_shape_data = dmlc::BeginPtr(ret->aux_shape_data_ex_int64);
-  // mark complete
-  *complete = (g.GetAttr<size_t>("shape_num_unknown_nodes") == 0);
+  SymbolInferShape<int64_t, size_t>(keys,
+                                 num_args,
+                                 arg_shape_data,
+                                 arg_ind_ptr,
+                                 in_shape_ndim,
+                                 in_shape_data,
+                                 out_shape_ndim,
+                                 out_shape_data,
+                                 aux_shape_ndim,
+                                 aux_shape_data,
+                                 s,
+                                 ret,
+                                 in_shape_size,
+                                 out_shape_size,
+                                 aux_shape_size,
+                                 complete);
   API_END();
 }
 
