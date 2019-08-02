@@ -433,6 +433,7 @@ def test_custom_operator_profiling_multiple_custom_ops_imperative():
     custom_operator_profiling_multiple_custom_ops(None, 'imperative', \
             'test_custom_operator_profiling_multiple_custom_ops_imperative.json')
 
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
 def test_custom_operator_profiling_naive_engine():
     # run the three tests above using Naive Engine
     run_in_spawned_process(test_custom_operator_profiling, \
