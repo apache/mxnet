@@ -93,7 +93,11 @@ void* load_lib(const char* path) {
  * \param handle library file handle
  */
 void close_lib(void* handle) {
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  FreeLibrary(handle);
+#else
   dlclose(handle);
+#endif  // _WIN32 or _WIN64 or __WINDOWS__
 }
 
 /*!
