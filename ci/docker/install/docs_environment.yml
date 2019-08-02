@@ -21,4 +21,5 @@ dependencies:
   - notedown
   - pypandoc
   - recommonmark
+  - setuptools
   - git+https://github.com/rmk135/sphinxcontrib-disqus
