@@ -366,6 +366,7 @@ class Tuple {
   }
 };
 
+
 /*! brief check if a shape's ndim is known. */
 inline bool ndim_is_known(const int ndim) {
   CHECK_GE(ndim, -1) << "shape ndim must be >= -1, while received " << ndim;

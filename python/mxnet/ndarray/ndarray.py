@@ -133,24 +133,14 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
         A new empty `NDArray` handle.
     """
     hdl = NDArrayHandle()
-    if Features().is_enabled('INT64_TENSOR_SIZE') and sys.version_info[0] > 2:
-        check_call(_LIB.MXNDArrayCreateExInt64(
-            c_array_buf(mx_int64, native_array('q', shape)),
-            ctypes.c_int(len(shape)),
-            ctypes.c_int(ctx.device_typeid),
-            ctypes.c_int(ctx.device_id),
-            ctypes.c_int(int(delay_alloc)),
-            ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
-            ctypes.byref(hdl)))
-    else:
-        check_call(_LIB.MXNDArrayCreateEx(
-            c_array_buf(mx_uint, native_array('I', shape)),
-            mx_uint(len(shape)),
-            ctypes.c_int(ctx.device_typeid),
-            ctypes.c_int(ctx.device_id),
-            ctypes.c_int(int(delay_alloc)),
-            ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
-            ctypes.byref(hdl)))
+    check_call(_LIB.MXNDArrayCreateEx(
+        c_array_buf(mx_uint, native_array('I', shape)),
+        mx_uint(len(shape)),
+        ctypes.c_int(ctx.device_typeid),
+        ctypes.c_int(ctx.device_id),
+        ctypes.c_int(int(delay_alloc)),
+        ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
+        ctypes.byref(hdl)))
     return hdl
 
 
