@@ -1571,14 +1571,6 @@ def test_np_indexing():
     """
     Test all indexing.
     """
-    # @npx.use_np_shape
-    # class TestIndexing(HybridBlock):
-    #     def __init__(self):
-    #         super(TestIndexing, self).__init__()
-
-    #     def hybrid_forward(self, F, x1, x2):  # TODO: need it??
-    #         return None
-    
     def np_int(index, int_type=np.int32):
         """
         Helper function for testing indexing that converts slices to slices of ints or None, and tuples to 
@@ -1648,6 +1640,7 @@ def test_np_indexing():
 
         np_array is a native numpy array.
         """
+        # print("Tesing index:", index)
         def assert_same(np_array, np_index, mx_array, mx_index, mx_value, np_value=None):
             if np_value is not None:
                 np_array[np_index] = np_value
@@ -1721,7 +1714,7 @@ def test_np_indexing():
     def test_setitem_autograd(np_array, index):
         x = np.array(np_array, dtype=np_array.dtype)
         if not isinstance(x[index], np.ndarray):
-            return
+            return  # x[index] is scalar
         out_shape = x[index].shape
         y = np.array(_np.random.uniform(size=out_shape))
         y.attach_grad()
@@ -1733,6 +1726,18 @@ def test_np_indexing():
                     assert False, 'failed with index = {}'.format(index)  # should not reach here
         except mx.base.MXNetError as err:
             assert str(err).find('Inplace operations (+=, -=, x[:]=, etc) are not supported when recording with') != -1
+
+    # def test_setitem_autograd(np_array, index):
+    #     x = np.array(np_array, dtype=np_array.dtype)
+    #     out_shape = x[index].shape
+    #     y = np.array(_np.random.uniform(size=out_shape))
+    #     y.attach_grad()
+    #     try:
+    #         with mx.autograd.record():
+    #             x[index] = y
+    #             assert False  # should not reach here
+    #     except mx.base.MXNetError as err:
+    #         assert str(err).find('Inplace operations (+=, -=, x[:]=, etc) are not supported when recording with') != -1
 
 
     shape = (8, 16, 9, 9)
@@ -1806,22 +1811,28 @@ def test_np_indexing():
                 # Test Ellipsis ('...')
                 ((1, Ellipsis, -1), False),
                 ((slice(2), Ellipsis, None, 0), False),
-                # None as indices (alias: np.newaxis)
+                # Test newaxis
                 (None, False),
                 ((1, None, -2, 3, -4), False),
+                ((1, slice(2, 5), None), False), 
+                ((slice(None), slice(1, 4), None, slice(2, 3)), False), 
+                ((slice(1, 3), slice(1, 3), slice(1, 3), slice(1, 3), None), False), 
+                ((slice(1, 3), slice(1, 3), None, slice(1, 3), slice(1, 3)), False), 
+                ((None, slice(1, 2), 3, None), False),
+                ((1, None, 2, 3, None, None, 4), False),
                 # Advanced indexing
-                (([1, 2], slice(3, 5), None, None, [3, 4]), False), # These test cases are not passed!!
+                (([1, 2], slice(3, 5), None, None, [3, 4]), False),
                 ((slice(None), slice(3, 5), None, None, [2, 3], [3, 4]), False),
                 ((slice(None), slice(3, 5), None, [2, 3], None, [3, 4]), False),
                 ((None, slice(None), slice(3, 5), [2, 3], None, [3, 4]), False),
                 ([1], False), ([1, 2], False), ([2, 1, 3], False), ([7, 5, 0, 3, 6, 2, 1], False),
-                (np.array([6, 3], dtype=np.int32), False), # debug here
+                (np.array([6, 3], dtype=np.int32), False),
                 (np.array([[3, 4], [0, 6]], dtype=np.int32), False),
                 (np.array([[7, 3], [2, 6], [0, 5], [4, 1]], dtype=np.int32), False),
                 (np.array([[7, 3], [2, 6], [0, 5], [4, 1]], dtype=np.int64), False),
                 (np.array([[2], [0], [1]], dtype=np.int32), False),
                 (np.array([[2], [0], [1]], dtype=np.int64), False),
-                (np.array([4, 7], dtype=np.int32), False), # debug here
+                (np.array([4, 7], dtype=np.int32), False),
                 (np.array([4, 7], dtype=np.int64), False),
                 (np.array([[3, 6], [2, 1]], dtype=np.int32), False),
                 (np.array([[3, 6], [2, 1]], dtype=np.int64), False),
@@ -1851,16 +1862,18 @@ def test_np_indexing():
                 (([1, 2], slice(3, 5), [2, 3], [3, 4]), False),
                 (([1, 2], slice(3, 5), (2, 3), [3, 4]), False),
     ]
+    index_list_debug = [((1, slice(2, 5), None), False),]
 
     for index in index_list:
         print("Testing index:", index)
         test_getitem(np_array, index[0], index[1])
         test_setitem(np_array, index[0], index[1])
         test_getitem_autograd(np_array, index[0])
-        test_setitem_autograd(np_array, index[0])
+        if not isinstance(index, tuple) or len(index) != 0:
+            # When index = (), this is same a[()] = b is equivalent to b.copyto(a)
+            # which should have no problem to do autograd
+            test_setitem_autograd(np_array, index[0])
 
-    # Test empyt tensor
-    # test_getitem(np.array(3), 0, True)
 
 if __name__ == '__main__':
     import nose

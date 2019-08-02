@@ -213,7 +213,7 @@ class ndarray(NDArray):
 
         none_axes = [ax for ax in range(len(key)) if key[ax] is None]  # pylint: disable=invalid-name
         slc_key, int_axes = self._basic_indexing_key_int_to_slice(key_nd)
-        new_axes = self._new_axes_after_basic_indexing(none_axes, key_nd)
+        new_axes = self._new_axes_after_basic_indexing(none_axes, key)
 
         # Check bounds for integer axes
         for ax in int_axes:  # pylint: disable=invalid-name
@@ -306,7 +306,7 @@ class ndarray(NDArray):
         else:
             idcs = _npi.stack(*[i if type(i) == __class__ else i.as_np_ndarray() for i in idcs])
         vshape = _get_oshape_of_gather_nd_op(self.shape, idcs.shape)
-        value_nd = self._prepare_value_nd(value, new_axes=[], bcast_shape=vshape, squeeze_axes=new_axes)
+        value_nd = self._prepare_value_nd(value, bcast_shape=vshape, squeeze_axes=new_axes)
         self._scatter_set_nd(value_nd, idcs)
 
     # pylint: disable=too-many-return-statements
@@ -330,46 +330,6 @@ class ndarray(NDArray):
             return self._get_np_advanced_indexing(key)
         else:
             raise RuntimeError  # TODO: why change to RuntimeError? 
-        
-    #     ##################################
-    #     # Jun Wu's cdoe
-    #     # TODO(junwu): calling base class __getitem__ is a temp solution
-    #     # eg. x[(1, 2)]
-    #     elif isinstance(key, tuple) and len(key) == ndim\
-    #             and all(isinstance(idx, integer_types) for idx in key):
-    #         out = self
-    #         for idx in key:
-    #             out = out[idx]
-    #         return out
-    #     # eg. x[3]
-    #     elif isinstance(key, integer_types):
-    #         if key > shape[0] - 1:
-    #             raise IndexError(
-    #                 'index {} is out of bounds for axis 0 with size {}'.format(
-    #                     key, shape[0]))
-    #         return self._at(key)
-    #     # eg. Slice(1, 3, 1)
-    #     elif isinstance(key, py_slice):
-    #         if key.step is not None and key.step != 1:
-    #             if key.step == 0:
-    #                 raise ValueError("slice step cannot be zero")
-    #             return self.as_nd_ndarray()._get_nd_basic_indexing(key).as_np_ndarray()
-    #         elif key.start is not None or key.stop is not None:
-    #             return self._slice(key.start, key.stop)
-    #         else:
-    #             return self
-
-    #     if isinstance(key, ndarray):
-    #         key = key._as_nd_ndarray()
-    #     elif isinstance(key, tuple):
-    #         key = [_get_index(idx) for idx in key]
-    #         key = tuple(key)
-    #     elif isinstance(key, list):
-    #         key = [_get_index(idx) for idx in key]
-    #     elif sys.version_info[0] > 2 and isinstance(key, range):
-    #         key = _get_index(key)
-    #     return self._as_nd_ndarray().__getitem__(key).as_np_ndarray()
-    # # pylint: enable=too-many-return-statements
 
     def __setitem__(self, key, value):
         """
@@ -379,28 +339,8 @@ class ndarray(NDArray):
         Overriding the method in NDArray class in a numpy fashion. 
         """
         # # TODO(junwu): calling base class __setitem__ is a temp solution
-        # if isinstance(value, NDArray) and not isinstance(value, ndarray):
-        #     raise TypeError('Cannot assign mx.nd.NDArray to mxnet.numpy.ndarray')
-        # if self.ndim == 0:
-        #     if not isinstance(key, tuple) or len(key) != 0:
-        #         raise IndexError('scalar tensor can only accept `()` as index')
-        # if isinstance(value, ndarray):
-        #     value = value._as_nd_ndarray()
-        # # TODO(junwu): Better handling of this situation
-        # if isinstance(key, tuple) and len(key) == 0:
-        #     self._as_nd_ndarray().__setitem__(slice(None), value)
-        #     return
-
-        # if isinstance(key, ndarray):
-        #     key = key._as_nd_ndarray()
-        # elif isinstance(key, tuple):
-        #     key = [_get_index(idx) for idx in key]
-        #     key = tuple(key)
-        # elif isinstance(key, list):
-        #     key = [_get_index(idx) for idx in key]
-        # elif sys.version_info[0] > 2 and isinstance(key, range):
-        #     key = _get_index(key)
-        # self._as_nd_ndarray().__setitem__(key, value)
+        if isinstance(value, NDArray) and not isinstance(value, ndarray):
+            raise TypeError('Cannot assign mx.nd.NDArray to mxnet.numpy.ndarray')
         if self.ndim == 0:
             if not isinstance(key, tuple) or len(key) != 0:
                 raise IndexError('scalar tensor can only accept `()` as index')
@@ -424,7 +364,7 @@ class ndarray(NDArray):
                 )
             indexing_dispatch_code = _get_indexing_dispatch_code(slc_key)
             if indexing_dispatch_code == _NDARRAY_BASIC_INDEXING:
-                self._set_nd_basic_indexing(slc_key, value)  # function is inheritated from NDArray class
+                self._set_nd_basic_indexing(key, value)  # function is inheritated from NDArray class
             elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
                 self._set_np_advanced_indexing(key, value)  # function is inheritated from NDArray class
             else:
@@ -433,14 +373,14 @@ class ndarray(NDArray):
                     ''.format(key, type(key))
                 )
 
-    def _prepare_value_nd(self, value, new_axes, bcast_shape, squeeze_axes=None):
+    def _prepare_value_nd(self, value, bcast_shape, squeeze_axes=None):
         """Return a broadcast `ndarray` with same context and dtype as ``self``.
         Before broadcasting, ``new_axes`` of length 1 will be added to
         ``value``. This is done in contrast to blindly reshaping based on
         ``bcast_shape``, since the latter would silently ignore wrongly shaped
         ``value`` arrays, e.g. ``nd.zeros((2, 3))[:, :1] = nd.ones(2)``.
+        Note: Does not support NDArray as assigned value. 
         """
-        # TODO(xinyge): currently do not support NDArray as assignment. 
         if isinstance(value, numeric_types):
             value_nd = full(bcast_shape, value, ctx=self.context, dtype=self.dtype)
             new_axes = []  # ignore for scalar
@@ -459,13 +399,6 @@ class ndarray(NDArray):
         # since None is also ignored in slicing the original array. 
         if squeeze_axes and value_nd.ndim > len(bcast_shape):
             value_nd = value_nd.squeeze(axis=tuple(squeeze_axes))
-
-        # Reshape `value_nd` to a new shape that incorporates existing
-        # axes, new axes and broadcasting axes in the right way.
-        tmp_shape = _shape_for_bcast(
-            value_nd.shape, target_ndim=len(bcast_shape), new_axes=new_axes
-        )
-        value_nd = value_nd.reshape(tmp_shape)
 
         if value_nd.shape != bcast_shape:
             value_nd = value_nd.broadcast_to(bcast_shape)
