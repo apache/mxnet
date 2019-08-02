@@ -86,6 +86,25 @@ inline void replaceString(std::string *input, const std::string old, const std::
     }
 }
 
+inline std::vector<std::string> splitStringToVector(const std::string& input) {
+    size_t pos_start = 0, pos_end;
+    const std::string& s = input.substr(1, input.length()-2);
+    std::vector<std::string> res;
+
+    while ((pos_end = s.find (",", pos_start)) != std::string::npos) {
+        std::string token = s.substr (pos_start, pos_end - pos_start);
+        pos_start = pos_end + 1;
+        if (token.length() > 0) {
+            res.push_back (token);
+        }
+    }
+
+    if (pos_start < s.length()-1) {
+        res.push_back (s.substr (pos_start));
+    }
+    return res;
+}
+
 std::string ParseOpDescription(const std::vector<std::string>& op_desc,
                                const std::map<std::pair<int, int>, std::string>& variables,
                                const nnvm::IndexedGraph::Node& node) {
@@ -198,6 +217,7 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
           int arg_id = node.inputs[0].node_id;
           const auto& var_name = g[arg_id].source->attrs.name;
           const auto vec_name = "vec_" + var_name + "_" + std::to_string(i);
+          std::string ndim_var_name = "ndim_" + var_name;
           load_index[arg_id] = 0;
           auto parse_tuple = [](const std::string& input, const std::string def) {
             std::string out = input;
@@ -206,28 +226,42 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
             replaceString(&out, "None", def);
             return out;
           };
+          auto parse_axis = [ndim_var_name](const std::string& axis) {
+            if (std::stoi(axis) < 0) {
+                return ndim_var_name + axis;
+            }
+            return axis;
+          }; 
           std::string begin;
           std::string end;
-          std::string ndim_var_name = "ndim_" + var_name;
           if (op_name == "broadcast_like" || op_name == "slice_like") {
             std::string begin_var_name = var_name + "_" + std::to_string(i) + "_begin";
-            code += "Shape<" + var_name + "> "+ begin_var_name + ";\n";
+            code += "Shape<" + ndim_var_name + "> "+ begin_var_name + ";\n";
             code += begin_var_name + ".set(0);\n";
             int like_id = node.inputs[1].node_id;
             if (std::find(extra_shape_args_.begin(), extra_shape_args_.end(), like_id) == extra_shape_args_.end()) {
                 extra_shape_args_.push_back(like_id);
             }
-            std::string end_var_name = "extra_" + std::to_string(like_id) + "_shape";
+            std::string end_var_name;
+            std::string extra_var_name = "extra_" + std::to_string(like_id) + "_shape";
+            if (source->attrs.dict.count("axes") == 0) {
+                end_var_name = extra_var_name;
+            } else {
+                std::string axes = source->attrs.dict.at("axes");
+                end_var_name = var_name + "_" + std::to_string(i) + "_end";
+                code += "Shape<" + ndim_var_name + "> "+ end_var_name + ";\n";
+                code += end_var_name + ".set(INT_MAX);\n";
+                for (auto axis: splitStringToVector(axes)) {
+                    code += end_var_name + "["+axis+"] = " + extra_var_name + "["+axis+"]" + + ";\n";
+                }
+            }
             begin = begin_var_name;
             end = end_var_name;
           } else {
             begin = parse_tuple(source->attrs.dict.at("begin"), "0");
             end = parse_tuple(source->attrs.dict.at("end"), "INT_MAX");
             if (op_name == "slice_axis") {
-              std::string axis = source->attrs.dict.at("axis");
-              if (std::stoi(axis) < 0) {
-                  axis = ndim_var_name + axis;
-              }
+              std::string axis = parse_axis(source->attrs.dict.at("axis"));
               std::string begin_var_name = var_name + "_" + std::to_string(i) + "_begin";
               std::string end_var_name = var_name + "_" + std::to_string(i) + "_end";
               code += "Shape<" + ndim_var_name + "> "+ begin_var_name + ";\n";
