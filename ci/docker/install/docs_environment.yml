@@ -1,4 +1,6 @@
 name: mxnet-docs
+channels:
+- conda-forge
 dependencies:
 - conda
 - jupyter
