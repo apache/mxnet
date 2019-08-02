@@ -548,7 +548,7 @@ static void MKLDNNRNNForwardUnidi(const bool state_outputs,
           user_bias_f[g + l * single_b_size] =
               b_ptr[g + hidden_size + l * mx_single_b_sz * 2]
               + b_ptr[g + hidden_size + l * mx_single_b_sz * 2 + mx_single_b_sz];
-          
+
           user_bias_f[g + l * single_b_size + 2 * hidden_size] =
               b_ptr[g + l * mx_single_b_sz * 2 + 2 * hidden_size];
           user_bias_f[g + l * single_b_size + 3 * hidden_size] =
