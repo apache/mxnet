@@ -173,6 +173,15 @@ def test_ndarray_negate():
 
 
 @with_seed()
+def test_ndarray_magic_abs():
+    for dim in range(1, 7):
+        shape = rand_shape_nd(dim)
+        npy = np.random.uniform(-10, 10, shape)
+        arr = mx.nd.array(npy)
+        assert_almost_equal(abs(arr).asnumpy(), arr.abs().asnumpy())
+
+
+@with_seed()
 def test_ndarray_reshape():
     tensor = (mx.nd.arange(30) + 1).reshape(2, 3, 5)
     true_res = mx.nd.arange(30) + 1

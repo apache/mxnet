@@ -205,6 +205,10 @@ fixed-size items.
             self.handle, ctypes.byref(shared_pid), ctypes.byref(shared_id)))
         return shared_pid.value, shared_id.value, self.shape, self.dtype
 
+    def __abs__(self):
+        """x.__abs__() <=> abs(x) <=> x.abs() <=> mx.nd.abs(x, y)"""
+        return self.abs()
+
     def __add__(self, other):
         """x.__add__(y) <=> x+y <=> mx.nd.add(x, y) """
         return add(self, other)
