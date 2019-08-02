@@ -332,8 +332,8 @@ class ThreadedEngine : public Engine {
       kill_.store(true);
     }
     finished_cv_.notify_all();
-    //close opened libraries
-    for(auto const& lib : loaded_libs) {
+    // close opened libraries
+    for (auto const& lib : loaded_libs) {
       close_lib(lib.second);
     }
   }

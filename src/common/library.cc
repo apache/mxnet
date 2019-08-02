@@ -30,6 +30,7 @@
 #include <dlfcn.h>
 #endif
 
+#include <string>
 #include "library.h"
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
@@ -60,9 +61,9 @@ void win_err(char **err) {
 void* load_lib(const char* path) {
   void *handle = nullptr;
   std::string path_str(path);
-  //check if library was already loaded
-  if(loaded_libs.find(path_str) == loaded_libs.end()) {
-    //if not, load it
+  // check if library was already loaded
+  if (loaded_libs.find(path_str) == loaded_libs.end()) {
+    // if not, load it
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
     handle = LoadLibrary(path);
     if (!handle) {
@@ -79,10 +80,10 @@ void* load_lib(const char* path) {
       return nullptr;
     }
 #endif  // _WIN32 or _WIN64 or __WINDOWS__
-    //then store the pointer to the library
+    // then store the pointer to the library
     loaded_libs[path_str] = handle;
   } else {
-    //otherwise just look up the pointer
+    // otherwise just look up the pointer
     handle = loaded_libs[path_str];
   }
   return handle;

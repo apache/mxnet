@@ -26,10 +26,12 @@
 #define MXNET_COMMON_LIBRARY_H_
 
 #include <iostream>
+#include <map>
+#include <string>
 #include "dmlc/io.h"
 
-//map of libraries loaded
-static std::map<std::string,void*> loaded_libs;
+// map of libraries loaded
+static std::map<std::string, void*> loaded_libs;
 
 void* load_lib(const char* path);
 void close_lib(void* handle);

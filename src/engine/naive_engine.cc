@@ -85,8 +85,8 @@ class NaiveEngine final : public Engine {
       }
     }
 #endif
-    //close opened libraries
-    for(auto const& lib : loaded_libs) {
+    // close opened libraries
+    for (auto const& lib : loaded_libs) {
       close_lib(lib.second);
     }
   }
