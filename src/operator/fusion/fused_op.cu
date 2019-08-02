@@ -244,15 +244,35 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
             }
             std::string end_var_name;
             std::string extra_var_name = "extra_" + std::to_string(like_id) + "_shape";
-            if (source->attrs.dict.count("axes") == 0) {
-                end_var_name = extra_var_name;
+            if (op_name == "slice_like") {
+                if (source->attrs.dict.count("axes") == 0) {
+                    end_var_name = extra_var_name;
+                } else {
+                    std::string axes = source->attrs.dict.at("axes");
+                    end_var_name = var_name + "_" + std::to_string(i) + "_end";
+                    code += "Shape<" + ndim_var_name + "> "+ end_var_name + ";\n";
+                    code += end_var_name + ".set(INT_MAX);\n";
+                    for (auto axis: splitStringToVector(axes)) {
+                        axis = parse_axis(axis);
+                        code += end_var_name + "["+axis+"] = " + extra_var_name + "["+axis+"]" + + ";\n";
+                    }
+                }
             } else {
-                std::string axes = source->attrs.dict.at("axes");
-                end_var_name = var_name + "_" + std::to_string(i) + "_end";
-                code += "Shape<" + ndim_var_name + "> "+ end_var_name + ";\n";
-                code += end_var_name + ".set(INT_MAX);\n";
-                for (auto axis: splitStringToVector(axes)) {
-                    code += end_var_name + "["+axis+"] = " + extra_var_name + "["+axis+"]" + + ";\n";
+                if (source->attrs.dict.count("lhs_axes") == 0) {
+                    end_var_name = extra_var_name;
+                } else {
+                    std::string lhs_axes = source->attrs.dict.at("lhs_axes");
+                    std::string rhs_axes = source->attrs.dict.at("rhs_axes");
+                    end_var_name = var_name + "_" + std::to_string(i) + "_end";
+                    code += "Shape<" + ndim_var_name + "> "+ end_var_name + ";\n";
+                    code += end_var_name + ".set(INT_MAX);\n";
+                    std::vector<std::string> v_lhs_axes = splitStringToVector(lhs_axes);
+                    std::vector<std::string> v_rhs_axes = splitStringToVector(rhs_axes);
+                    for (int i = 0; i < v_lhs_axes.size(); i++) {
+                        std::string lhs_axis = parse_axis(v_lhs_axes[i]);
+                        std::string rhs_axis = parse_axis(v_rhs_axes[i]);
+                        code += end_var_name + "["+lhs_axis+"] = " + extra_var_name + "["+rhs_axis+"]" + + ";\n";
+                    }
                 }
             }
             begin = begin_var_name;
