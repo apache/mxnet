@@ -1450,6 +1450,9 @@ build_ubuntu_cpu_docs() {
 
 fetch_new_docs_repo() {
    git clone https://github.com/aaronmarkham/new-docs.git $1 || exit 0
+   cd $1/themes/mx-theme
+   python setup.py install
+   popd
 }
 
 
@@ -1481,9 +1484,6 @@ build_python_docs() {
 
    repo="new_docs_python"
    fetch_new_docs_repo $repo
-   pushd $repo/themes/mx-theme
-   python setup.py install
-   popd
    cd $repo/python
 
    rm -rf build/_build/
