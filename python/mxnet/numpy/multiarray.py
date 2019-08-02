@@ -366,7 +366,7 @@ class ndarray(NDArray):
             if indexing_dispatch_code == _NDARRAY_BASIC_INDEXING:
                 self._set_nd_basic_indexing(key, value)  # function is inheritated from NDArray class
             elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
-                self._set_np_advanced_indexing(key, value)  # function is inheritated from NDArray class
+                self._set_np_advanced_indexing(key, value)
             else:
                 raise ValueError(
                     'Indexing NDArray with index {} of type {} is not supported'

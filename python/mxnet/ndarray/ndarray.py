@@ -700,14 +700,13 @@ fixed-size items.
 
     @staticmethod
     def _new_axes_after_basic_indexing(axes, key):
-        """Return indices of ``axes`` after slicing with ``key_nd``.
+        """Return indices of ``axes`` after slicing with ``key``.
 
         This function is used to calculate the positions where new axes should
         end up after indexing, taking into account the removal of axes by
         integer indexing.
 
-        The ``key_nd`` sequence should contain slices and integers only, no
-        ``None`` entries.
+        The ``key`` sequence should be the exapanded key including slices, integer types and ``None``.
         """
         steps = [0] + [0 if isinstance(idx, integer_types) else 1 for idx in key]
         cum_steps = np.cumsum(steps)
@@ -894,9 +893,12 @@ fixed-size items.
                 'too many indices ({}) for array with {} dimensions'
                 ''.format(len(key_nd), self.ndim)
             )
+        slc_key, int_axes = self._basic_indexing_key_int_to_slice(key_nd)
         none_axes = [ax for ax in range(len(key)) if key[ax] is None]
-        slc_key, int_axes = self._basic_indexing_key_int_to_slice(key_nd)  # OK
-        new_axes = self._new_axes_after_basic_indexing(none_axes, key)  #OK
+        if none_axes:
+            new_axes = self._new_axes_after_basic_indexing(none_axes, key)
+        else:
+            new_axes = []
 
         # Check bounds for integer axes
         for ax in int_axes:  # pylint: disable=invalid-name
@@ -905,15 +907,15 @@ fixed-size items.
                     'index {} is out of bounds for axis {} with size {}'
                     ''.format(key_nd[ax], ax, self.shape[ax]))
 
-        # Make sure we don't accidentally have advanced indexing or
-        # unsupported entries.
-        # TODO(xinyi): unnecessary code?
-        for idx in slc_key:
-            if not isinstance(idx, py_slice):
-                raise RuntimeError(
-                    'found object of type {} instead of `slice`. '
-                    'This is a bug, please report it!'
-                    ''.format(type(idx)))
+        # # Make sure we don't accidentally have advanced indexing or
+        # # unsupported entries.
+        # # TODO(xinyi): unnecessary code?
+        # for idx in slc_key:
+        #     if not isinstance(idx, py_slice):
+        #         raise RuntimeError(
+        #             'found object of type {} instead of `slice`. '
+        #             'This is a bug, please report it!'
+        #             ''.format(type(idx)))
 
         # Convert to begin, end and step, and return immediately if the slice
         # is empty
@@ -1049,7 +1051,10 @@ fixed-size items.
         return tuple(key)
 
     def _get_index_nd(self, key):
-        """Return an index array for use in `scatter_nd` and `gather_nd`."""
+        """
+        Return an index array for use in `scatter_nd` and `gather_nd`, 
+        and a list of positions of new_axes in ouptut shape.
+        """
         key_nd = tuple(idx for idx in key if idx is not None)
         if len(key_nd) < self.ndim:
             raise RuntimeError(
@@ -1158,10 +1163,13 @@ fixed-size items.
         sliced = op.gather_nd(self, slc_key)
         
         # Reshape due to `None` entries in `key`.
-        final_shape = [sliced.shape[i] for i in range(sliced.ndim)]
-        for ax in new_axes:  # pylint: disable=invalid-name
-            final_shape.insert(ax, 1)
-        return sliced.reshape(final_shape)
+        if new_axes:
+            final_shape = [sliced.shape[i] for i in range(sliced.ndim)]
+            for ax in new_axes:  # pylint: disable=invalid-name
+                final_shape.insert(ax, 1)
+            return sliced.reshape(final_shape)
+        else:
+            return sliced
 
     def _sync_copyfrom(self, source_array):
         """Performs a synchronized copy from the `source_array` to the current array.

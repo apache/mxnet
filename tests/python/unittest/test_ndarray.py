@@ -1376,8 +1376,6 @@ def test_ndarray_indexing():
             except Exception as e:
                 print('Failed with index = {}, value.shape = {}'.format(mx_index, mx_value.shape))
                 raise e
-            # print("np:", np_array.shape)
-            # print("mxnet:", mx_array.shape)
             assert same(np_array, mx_array.asnumpy())
 
         np_index = index
@@ -1404,23 +1402,18 @@ def test_ndarray_indexing():
             np_indexed_array = np.random.randint(low=-10000, high=0, size=indexed_array_shape)
             # test value is a numpy array without broadcast
             assert_same(np_array, np_index, mx_array, index, np_indexed_array)
-            # print("without broadcast")
             # test value is an numeric_type
             assert_same(np_array, np_index, mx_array, index, np.random.randint(low=-10000, high=0))
-            # print("numeric type")
             if len(indexed_array_shape) > 1:
                 # test NDArray with broadcast
                 assert_same(np_array, np_index, mx_array, index,
                             mx.nd.random.uniform(low=-10000, high=0, shape=(indexed_array_shape[-1],)))
-                # print("with broadcast")
                 # test numpy array with broadcast
                 assert_same(np_array, np_index, mx_array, index,
                             np.random.randint(low=-10000, high=0, size=(indexed_array_shape[-1],)))
-                # print("with broadcast, numpy")
                 # test list with broadcast
                 assert_same(np_array, np_index, mx_array, index,
                             [np.random.randint(low=-10000, high=0)] * indexed_array_shape[-1])
-                # print("with broadcast, list")
 
     def test_getitem_autograd(np_array, index):
         x = mx.nd.array(np_array, dtype=np_array.dtype)
@@ -1593,7 +1586,6 @@ def test_ndarray_indexing():
                 ((None, slice(None), None, slice(3, 5), [2, 3], None, [3, 4]), False),
                 (([2, 3, 4], None, [3, 4, 6], None, slice(1, 2), None, [1, 2, 3]), False),
     ]
-    index_list_debug = [((None, slice(None), slice(3, 5), [2, 3], None, [3, 4]), False)]
     for index in index_list:
         print("Testing index:", index[0])
         test_getitem(np_array, index[0], index[1])
