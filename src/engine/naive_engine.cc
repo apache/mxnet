@@ -30,6 +30,7 @@
 #include "./openmp.h"
 #include "../common/object_pool.h"
 #include "../profiler/custom_op_profiler.h"
+#include "../../src/common/library.h"
 
 namespace mxnet {
 namespace engine {
@@ -84,6 +85,11 @@ class NaiveEngine final : public Engine {
       }
     }
 #endif
+    //close opened libraries
+    for(std::string path : loaded_libs) {
+      void* handle = loaded_libs[path];
+      dlclose(handle);
+    }
   }
 
   void Stop() override {
