@@ -96,6 +96,13 @@ NDArray::NDArray(const NDArrayStorageType stype, const mxnet::TShape &shape, Con
         dtype, aux_types, aux_shapes);
 }
 
+void NDArray::SetShapeFromChunk() {
+  if (Imperative::Get()->is_np_shape() ||
+      !(ptr_->storage_shape.ndim() == 1 && ptr_->storage_shape[0] == 0)) {
+    shape_ = ptr_->storage_shape;
+  }
+}
+
 struct ChunkMem {
   Storage::Handle h;
   std::vector<Storage::Handle> aux_h;
