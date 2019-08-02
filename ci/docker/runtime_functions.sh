@@ -1491,7 +1491,7 @@ build_python_docs() {
 
    cd build/_build
    tar zcvf python-artifacts.tgz html
-   popd
+   
    mv $repo/python/build/_build/python-artifacts.tgz docs/_build
 }
 
