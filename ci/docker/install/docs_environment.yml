@@ -1,25 +1,22 @@
 name: mxnet-docs
-channels:
-- conda-forge
 dependencies:
-- conda>=4.6.13
-- pandoc==2.7.3
+- conda
+- jupyter
+- matplotlib
+- notebook
+- pandas
+- pandoc>=2.7.3
 - pip
 - python
-- jupyter
 - sphinx
-- matplotlib
-- pandas
-- notebook
 - pip:
-  # using nbconvert master until v5.5 comes out
-  - git+https://github.com/jupyter/nbconvert@master
-  - nbsphinx>=0.4.2
-  - recommonmark
-  - notedown
-  - mxnet
-  - pypandoc
+  - awscli
   - breathe
   - mock
-  - awscli
+  - mxnet
+  - nbconvert>=5.5.0
+  - nbsphinx>=0.4.2
+  - notedown
+  - pypandoc
+  - recommonmark
   - git+https://github.com/rmk135/sphinxcontrib-disqus
