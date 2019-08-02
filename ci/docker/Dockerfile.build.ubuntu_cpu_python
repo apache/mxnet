@@ -38,6 +38,12 @@ COPY install/ubuntu_docs.sh /work/
 COPY install/docs_environment.yml /work/deps
 RUN /work/ubuntu_docs.sh
 
+# Always last
+ARG USER_ID=0
+ARG GROUP_ID=0
+COPY install/ubuntu_adduser.sh /work/
+RUN /work/ubuntu_adduser.sh
+
 COPY runtime_functions.sh /work/
 
 WORKDIR /work/mxnet
