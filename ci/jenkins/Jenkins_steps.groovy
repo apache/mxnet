@@ -1430,7 +1430,7 @@ def docs_c() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             //utils.unpack_and_init('libmxnet', 'lib/libmxnet.so', false)
-            utils.docker_run('ubuntu_cpu_c', 'build_c_docs', false)
+            utils.docker_run('ubuntu_cpu_c_lite', 'build_c_docs', false)
             archiveArtifacts 'docs/_build/c-artifacts.tgz'
           }
         }
