@@ -86,9 +86,8 @@ class NaiveEngine final : public Engine {
     }
 #endif
     //close opened libraries
-    for(std::string path : loaded_libs) {
-      void* handle = loaded_libs[path];
-      dlclose(handle);
+    for(auto const& lib : loaded_libs) {
+      close_lib(lib.second);
     }
   }
 

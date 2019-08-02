@@ -28,9 +28,11 @@
 #include <iostream>
 #include "dmlc/io.h"
 
+//map of libraries loaded
 static std::map<std::string,void*> loaded_libs;
 
 void* load_lib(const char* path);
+void close_lib(void* handle);
 void get_sym(void* handle, void** func, char* name);
 
 /*!

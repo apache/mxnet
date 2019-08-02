@@ -30,11 +30,7 @@
 #include <dlfcn.h>
 #endif
 
-#include <string>
-#include <map>
 #include "library.h"
-
-std::map<std::string,void*> loaded_libs;
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
 /*!
@@ -90,6 +86,14 @@ void* load_lib(const char* path) {
     handle = loaded_libs[path_str];
   }
   return handle;
+}
+
+/*!
+ * \brief Closes the loaded dynamic shared library file
+ * \param handle library file handle
+ */
+void close_lib(void* handle) {
+  dlclose(handle);
 }
 
 /*!

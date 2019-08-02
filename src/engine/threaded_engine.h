@@ -333,9 +333,8 @@ class ThreadedEngine : public Engine {
     }
     finished_cv_.notify_all();
     //close opened libraries
-    for(std::string path : loaded_libs) {
-      void* handle = loaded_libs[path];
-      dlclose(handle);
+    for(auto const& lib : loaded_libs) {
+      close_lib(lib.second);
     }
   }
 
