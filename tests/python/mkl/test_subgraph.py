@@ -819,6 +819,42 @@ def test_neg_fc_relu():
     syms, attrs, excluded_attrs = neg_fc_relu(no_bias, dshape, flatten)
     check_neg_fusion(syms, attrs, excluded_attrs, dshape, name='fc')
 
+@with_seed()   
+def test_SliceSplitEmbeddingConcatFuse():   
+    DATA_SHAPE = [(1000, 26000)]    
+    num_embed_features = 26 
+    num_cont_features = 13  
+    input_dims = 1000   
+    hidden_units = 32   
+
+    dns_data = mx.symbol.Variable("dns_data", shape=DATA_SHAPE[0]) 
+    x = mx.symbol.slice(data=dns_data, begin=(0, 0),    
+                        end=(None, num_embed_features)) 
+    embeds = mx.symbol.split(data=x, num_outputs=num_embed_features, squeeze_axis=1)    
+    x = mx.symbol.slice(data=dns_data, begin=(0, num_embed_features),   
+                        end=(None, num_embed_features + num_cont_features)) 
+    features = [x]  
+    for i, embed in enumerate(embeds):  
+        embed_weight = mx.symbol.Variable('embed_%d_weight' % i, stype='row_sparse')    
+        features.append(mx.symbol.sparse.Embedding(data=embed, weight=embed_weight, 
+                        input_dim=input_dims, output_dim=hidden_units, sparse_grad=True))   
+    hidden = mx.symbol.concat(*features, dim=1) 
+    sym = mx.symbol.SoftmaxOutput(hidden, name='model') 
+
+    sym_sg = sym.get_backend_symbol('WIDE_AND_DEEP_INPUT_FUSE')    
+    assert ''.join(sym_sg.attr_dict().keys()).find('SliceSplitEmbeddingConcatFuse') != -1   
+
+    arg_shapes, _, aux_shapes = sym.infer_shape()  
+    arg_array = [mx.nd.random.uniform(-1, 1, shape=shape) for shape in arg_shapes]  
+    aux_array = [mx.nd.random.uniform(shape=shape) for shape in aux_shapes] 
+    exe = sym.bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null') 
+    exe.forward()   
+    os.environ['MXNET_SUBGRAPH_BACKEND'] = 'WIDE_AND_DEEP_INPUT_FUSE'   
+    exe_sg = sym.bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')  
+    exe_sg.forward()    
+    for i in range(len(exe.outputs)):   
+      assert_almost_equal(exe.outputs[i].asnumpy(), exe_sg.outputs[i].asnumpy(), rtol=1e-3, atol=1e-3)
+
 if __name__ == "__main__":
   import nose
   nose.runmodule()

@@ -32,20 +32,19 @@
 namespace mxnet {
 namespace op {
 
-static bool ConcatShape(const nnvm::NodeAttrs& attrs,
-                        mxnet::ShapeVector *in_shape,
-                        mxnet::ShapeVector *out_shape) {
+bool ConcatSetShape(mxnet::ShapeVector *in_shape,
+                    mxnet::ShapeVector *out_shape, int num_args, int dim) {
   using namespace mshadow;
-  const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
-  CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
+
+  CHECK_EQ(in_shape->size(), static_cast<size_t>(num_args));
   mxnet::TShape dshape;
   dim_t size = 0;
   bool has_unknown_dim_size = false;
   int axis = -1;
-  for (int i = 0; i < param_.num_args; ++i) {
+  for (int i = 0; i < num_args; ++i) {
     mxnet::TShape tmp = (*in_shape)[i];
     if (tmp.ndim() > 0) {
-      axis = CheckAxis(param_.dim, tmp.ndim());
+      axis = CheckAxis(dim, tmp.ndim());
       has_unknown_dim_size = !mxnet::dim_size_is_known(tmp, axis) || has_unknown_dim_size;
       size += tmp[axis];
       tmp[axis] = -1;
@@ -55,7 +54,7 @@ static bool ConcatShape(const nnvm::NodeAttrs& attrs,
 
   mxnet::TShape tmp = (*out_shape)[0];
   if (tmp.ndim() > 0) {
-    axis = CheckAxis(param_.dim, tmp.ndim());
+    axis = CheckAxis(dim, tmp.ndim());
     tmp[axis] = -1;
     shape_assign(&dshape, tmp);
   }
@@ -63,7 +62,7 @@ static bool ConcatShape(const nnvm::NodeAttrs& attrs,
   if (dshape.ndim() == -1) return false;
   CHECK_NE(dshape.ndim(), 0) << "zero-dimensional arrays cannot be concatenated";
 
-  for (int i = 0; i < param_.num_args; ++i) {
+  for (int i = 0; i < num_args; ++i) {
     CHECK(shape_assign(&(*in_shape)[i], dshape))
         << "Incompatible input shape: expected " << dshape << ", got " << (*in_shape)[i];
   }
@@ -74,7 +73,12 @@ static bool ConcatShape(const nnvm::NodeAttrs& attrs,
 
   return shape_is_known(dshape);
 }
-
+static bool ConcatShape(const nnvm::NodeAttrs& attrs,
+                        mxnet::ShapeVector *in_shape,
+                        mxnet::ShapeVector *out_shape) {
+  const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
+  return ConcatSetShape(in_shape, out_shape, param_.num_args, param_.dim);
+}
 // Concat for RNN param deals with the reverse shape inference from output
 // for the special case of concatenating RNN parameters.
 // The first (and sometimes the second) input may be unknown on the target axis.

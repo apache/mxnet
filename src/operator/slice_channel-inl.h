@@ -146,7 +146,75 @@ class SliceChannelOp : public Operator {
 
 template<typename xpu>
 Operator *CreateOp(SliceChannelParam param, int dtype);
-
+inline bool SliceChannelInferShape(mxnet::ShapeVector *in_shape,
+    mxnet::ShapeVector *out_shape,
+    mxnet::ShapeVector *aux_shape,
+    int num_outputs, int axis, bool squeeze_axis) {
+    using namespace mshadow;
+    CHECK_EQ(in_shape->size(), 1U);
+    mxnet::TShape dshape = in_shape->at(slice_enum::kData);
+    mxnet::TShape ishape = in_shape->at(slice_enum::kData);
+    if (!mxnet::ndim_is_known(dshape)) return false;
+    if (axis >= 0) {
+        CHECK_LT(axis, dshape.ndim());
+    } else {
+        CHECK_LT(axis + dshape.ndim(), dshape.ndim());
+    }
+    int real_axis = axis;
+    if (real_axis < 0) {
+        real_axis += dshape.ndim();
+    }
+    CHECK_EQ(dshape[real_axis] % num_outputs, 0U)
+        << "You are trying to split the " << real_axis
+        << "-th axis of input tensor with shape " << dshape
+        << " into num_outputs=" << num_outputs
+        << " evenly sized chunks, but this is not possible because "
+        << num_outputs << " does not evenly divide "
+        << dshape[real_axis];
+    if (squeeze_axis && ishape[real_axis] != -1) {
+        CHECK_EQ(ishape[real_axis], num_outputs)
+            << "If squeeze axis is True, the size of the sliced axis"
+            << " must be the same as num_outputs."
+            << " Input shape=" << ishape << ", axis=" << real_axis
+            << ", num_outputs=" << num_outputs << ".";
+    }
+    if (dshape[real_axis] >= 0) {
+        dshape[real_axis] /= num_outputs;
+    }
+    if (squeeze_axis && (dshape[real_axis] == 1
+        || !mxnet::dim_size_is_known(ishape, real_axis))) {
+        for (int d = real_axis; d < dshape.ndim() - 1; ++d) {
+            dshape[d] = dshape[d + 1];
+        }
+        dshape = mxnet::TShape(&dshape[0], &dshape[dshape.ndim() - 1]);
+    }
+    CHECK_EQ(static_cast<int>((*out_shape).size()), num_outputs)
+        << "Size of output shape mismatch!";
+    for (int i = 0; i < num_outputs; ++i) {
+        SHAPE_ASSIGN_CHECK(*out_shape, i, dshape);
+        // Perform incomplete shape inference.
+        // We can back-calculate the inshape based on the out_shape.
+        mxnet::TShape back_calculate_dshape = ishape;
+        if (squeeze_axis && (dshape.ndim() == ishape.ndim() - 1)) {
+            for (int d = 0; d < real_axis; ++d) {
+                back_calculate_dshape[d] = (*out_shape)[i][d];
+            }
+            back_calculate_dshape[real_axis] = num_outputs;
+            for (int d = real_axis + 1; d < static_cast<int>(ishape.ndim()); ++d) {
+                back_calculate_dshape[d] = (*out_shape)[i][d - 1];
+            }
+        } else {
+            for (int d = 0; d < static_cast<int>(ishape.ndim()); ++d) {
+                back_calculate_dshape[d] = (*out_shape)[i][d];
+                if (d == real_axis) {
+                    back_calculate_dshape[d] *= num_outputs;
+                }
+            }
+        }
+        SHAPE_ASSIGN_CHECK(*in_shape, slice_enum::kData, back_calculate_dshape);
+    }
+    return true;
+}
 
 #if DMLC_USE_CXX11
 class SliceChannelProp : public OperatorProperty {
@@ -191,69 +259,8 @@ class SliceChannelProp : public OperatorProperty {
   bool InferShape(mxnet::ShapeVector *in_shape,
                   mxnet::ShapeVector *out_shape,
                   mxnet::ShapeVector *aux_shape) const override {
-    using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 1U);
-    mxnet::TShape dshape = in_shape->at(slice_enum::kData);
-    mxnet::TShape ishape = in_shape->at(slice_enum::kData);
-    if (!mxnet::ndim_is_known(dshape)) return false;
-    if (param_.axis >= 0) {
-      CHECK_LT(param_.axis, dshape.ndim());
-    } else {
-      CHECK_LT(param_.axis + dshape.ndim(), dshape.ndim());
-    }
-    int real_axis = param_.axis;
-    if (real_axis < 0) {
-      real_axis += dshape.ndim();
-    }
-    CHECK_EQ(dshape[real_axis] % param_.num_outputs, 0U)
-      << "You are trying to split the " << real_axis
-      << "-th axis of input tensor with shape " << dshape
-      << " into num_outputs=" << param_.num_outputs
-      << " evenly sized chunks, but this is not possible because "
-      << param_.num_outputs << " does not evenly divide "
-      << dshape[real_axis];
-    if (param_.squeeze_axis && ishape[real_axis] != -1) {
-      CHECK_EQ(ishape[real_axis], param_.num_outputs)
-        << "If squeeze axis is True, the size of the sliced axis must be the same as num_outputs."
-        << " Input shape=" << ishape << ", axis=" << real_axis
-        << ", num_outputs=" << param_.num_outputs << ".";
-    }
-    if (dshape[real_axis] >= 0) {
-      dshape[real_axis] /= param_.num_outputs;
-    }
-    if (param_.squeeze_axis && (dshape[real_axis] == 1
-        || !mxnet::dim_size_is_known(ishape, real_axis))) {
-      for (int d = real_axis; d < dshape.ndim() - 1; ++d) {
-        dshape[d] = dshape[d+1];
-      }
-      dshape = mxnet::TShape(&dshape[0], &dshape[dshape.ndim()-1]);
-    }
-    CHECK_EQ(static_cast<int>((*out_shape).size()), param_.num_outputs)
-      << "Size of output shape mismatch!";
-    for (int i = 0; i < param_.num_outputs; ++i) {
-      SHAPE_ASSIGN_CHECK(*out_shape, i, dshape);
-      // Perform incomplete shape inference.
-      // We can back-calculate the inshape based on the out_shape.
-      mxnet::TShape back_calculate_dshape = ishape;
-      if (param_.squeeze_axis && (dshape.ndim() == ishape.ndim() - 1)) {
-        for (int d = 0; d < real_axis; ++d) {
-          back_calculate_dshape[d] = (*out_shape)[i][d];
-        }
-        back_calculate_dshape[real_axis] = param_.num_outputs;
-        for (int d = real_axis + 1; d < static_cast<int>(ishape.ndim()); ++d) {
-          back_calculate_dshape[d] = (*out_shape)[i][d - 1];
-        }
-      } else {
-        for (int d = 0; d < static_cast<int>(ishape.ndim()); ++d) {
-          back_calculate_dshape[d] = (*out_shape)[i][d];
-          if (d == real_axis) {
-            back_calculate_dshape[d] *= param_.num_outputs;
-          }
-        }
-      }
-      SHAPE_ASSIGN_CHECK(*in_shape, slice_enum::kData, back_calculate_dshape);
-    }
-    return true;
+      return SliceChannelInferShape(
+          in_shape, out_shape, aux_shape, param_.num_outputs, param_.axis, param_.squeeze_axis);
   }
 
   OperatorProperty* Copy() const override {
