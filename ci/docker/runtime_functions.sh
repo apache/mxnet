@@ -1449,15 +1449,21 @@ build_ubuntu_cpu_docs() {
 
 
 fetch_new_docs_repo() {
-   git clone https://github.com/aaronmarkham/new-docs.git $1 || exit 0
-   cd $1/themes/mx-theme
+   if [ ! -d "$1" ]; then
+      git clone https://github.com/aaronmarkham/new-docs.git $1
+   fi
+   pushd $1/themes/mx-theme
+   git pull
    python setup.py install
    popd
 }
 
 
 fetch_jekyll_repo() {
-   git clone https://github.com/ThomasDelteil/mxnet.io-v2.git $1 || exit 0
+   if [ ! -d "$1" ]; then
+      git clone https://github.com/ThomasDelteil/mxnet.io-v2.git $1
+   fi
+   git pull
 }
 
 
@@ -1484,14 +1490,16 @@ build_python_docs() {
 
    repo="new_docs_python"
    fetch_new_docs_repo $repo
-   cd $repo/python
+   pushd $repo/python
 
    rm -rf build/_build/
    make html EVAL=0
 
    cd build/_build
    tar zcvf python-artifacts.tgz html
-   
+   pwd
+   popd
+   pwd
    mv $repo/python/build/_build/python-artifacts.tgz docs/_build
 }
 
