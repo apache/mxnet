@@ -1476,12 +1476,15 @@ build_python_docs() {
    pushd .
 
    build_setup
+   eval "$(/work/miniconda/bin/conda shell.bash hook)"
+   conda activate mxnet-docs
 
    repo="new_docs_python"
    fetch_new_docs_repo $repo
+   pushd $repo/themes/mx-theme
+   python setup.py install
+   popd
    cd $repo/python
-   eval "$(/work/miniconda/bin/conda shell.bash hook)"
-   conda activate mxnet-docs
 
    rm -rf build/_build/
    make html EVAL=0
