@@ -28,11 +28,17 @@ from benchmark.opperf.rules.default_params import PARAMS_OF_TYPE_NDARRAY
 
 def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
     kwargs_list = []
+    args_list = []
 
     for inp in inputs:
         kwargs = {}
         for key, value in inp.items():
-            if key in PARAMS_OF_TYPE_NDARRAY:
+            if key in PARAMS_OF_TYPE_NDARRAY and key=='args':
+                args_list.append(get_mx_ndarray(ctx=ctx, in_tensor=value,
+                                             dtype=dtype,
+                                             initializer=nd.normal,
+                                             attach_grad=run_backward))
+            elif key in PARAMS_OF_TYPE_NDARRAY:
                 kwargs[key] = get_mx_ndarray(ctx=ctx, in_tensor=value,
                                              dtype=dtype,
                                              initializer=nd.normal,
@@ -41,23 +47,23 @@ def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
                 kwargs[key] = value
         kwargs_list.append(kwargs)
 
-    return kwargs_list
+    return args_list, kwargs_list
 
 
-def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, kwargs_list):
+def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, args_list, kwargs_list):
     if run_backward:
         benchmark_helper_func = nd_forward_backward_and_profile
     else:
         benchmark_helper_func = nd_forward_and_profile
 
     # Warm up, ignore the profiler output
-    _, _ = benchmark_helper_func(op, warmup, **kwargs_list[0])
+    _, _ = benchmark_helper_func(op, warmup, args_list, **kwargs_list[0])
 
     # Run Benchmarks
     op_benchmark_result = {op.__name__: []}
     logging.info("Begin Benchmark - {name}".format(name=op.__name__))
     for idx, kwargs in enumerate(kwargs_list):
-        _, profiler_output = benchmark_helper_func(op, runs, **kwargs)
+        _, profiler_output = benchmark_helper_func(op, runs, args_list, **kwargs)
 
         # Add inputs used for profiling this operator into result
         profiler_output["inputs"] = inputs[idx]
@@ -98,7 +104,7 @@ def run_performance_test(ops, inputs, run_backward=True,
     List of dictionary of benchmark results. key -> name of the operator, Value is benchmark results.
 
     """
-    kwargs_list = _prepare_op_inputs(inputs, run_backward, dtype, ctx)
+    args_list, kwargs_list = _prepare_op_inputs(inputs, run_backward, dtype, ctx)
 
     if not isinstance(ops, list):
         ops = [ops]
@@ -106,7 +112,7 @@ def run_performance_test(ops, inputs, run_backward=True,
     op_benchmark_result = []
     for op in ops:
         if hasattr(mx.nd, op.__name__):
-            benchmark_result = _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, kwargs_list)
+            benchmark_result = _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, args_list, kwargs_list)
         else:
             raise ValueError("Unknown NDArray operator provided to benchmark. -  ", op.__name__)
         op_benchmark_result.append(benchmark_result)
