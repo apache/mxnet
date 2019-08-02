@@ -2230,7 +2230,7 @@ fixed-size items.
         (2L, 3L, 4L)
         """
         ndim = mx_int()
-        if Features().is_enabled('INT64_TENSOR_SIZE') and sys.version_info[0] > 2:
+        if sys.version_info[0] > 2 and Features().is_enabled('INT64_TENSOR_SIZE'):
             pdata = ctypes.POINTER(mx_int64)()
             check_call(_LIB.MXNDArrayGetShapeExInt64(
                 self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))
