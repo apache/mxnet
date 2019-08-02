@@ -28,6 +28,8 @@
 #include <iostream>
 #include "dmlc/io.h"
 
+static std::map<std::string,void*> loaded_libs;
+
 void* load_lib(const char* path);
 void get_sym(void* handle, void** func, char* name);
 

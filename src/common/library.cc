@@ -30,8 +30,11 @@
 #include <dlfcn.h>
 #endif
 
+#include <string>
+#include <map>
 #include "library.h"
 
+std::map<std::string,void*> loaded_libs;
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
 /*!
@@ -60,23 +63,32 @@ void win_err(char **err) {
  */
 void* load_lib(const char* path) {
   void *handle = nullptr;
+  std::string path_str(path);
+  //check if library was already loaded
+  if(loaded_libs.find(path_str) == loaded_libs.end()) {
+    //if not, load it
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  handle = LoadLibrary(path);
-  if (!handle) {
-    char *err_msg = nullptr;
-    win_err(&err_msg);
-    LOG(FATAL) << "Error loading library: '" << path << "'\n" << err_msg;
-    LocalFree(err_msg);
-    return nullptr;
-  }
+    handle = LoadLibrary(path);
+    if (!handle) {
+      char *err_msg = nullptr;
+      win_err(&err_msg);
+      LOG(FATAL) << "Error loading library: '" << path << "'\n" << err_msg;
+      LocalFree(err_msg);
+      return nullptr;
+    }
 #else
-  handle = dlopen(path, RTLD_LAZY);
-  if (!handle) {
-    LOG(FATAL) << "Error loading library: '" << path << "'\n" << dlerror();
-    return nullptr;
-  }
+    handle = dlopen(path, RTLD_LAZY);
+    if (!handle) {
+      LOG(FATAL) << "Error loading library: '" << path << "'\n" << dlerror();
+      return nullptr;
+    }
 #endif  // _WIN32 or _WIN64 or __WINDOWS__
-
+    //then store the pointer to the library
+    loaded_libs[path_str] = handle;
+  } else {
+    //otherwise just look up the pointer
+    handle = loaded_libs[path_str];
+  }
   return handle;
 }
 
