@@ -4793,7 +4793,7 @@ def test_tile():
 
     def test_empty_tensor():
         shape = (2, 3, 0, 4)
-        with mx.np_compat():
+        with mx.np_shape():
             a = np.array([], dtype=np.int32).reshape(shape)
             b = mx.nd.array(a, ctx=default_context(), dtype=a.dtype)
 
@@ -4890,7 +4890,7 @@ def test_one_hot():
 
     def test_empty_indices():
         shape = (2, 0, 9, 3)
-        with mx.np_compat():
+        with mx.np_shape():
             indices = np.array([]).reshape(shape)
             depth = 10
             mx_one_hot_array = mx.nd.one_hot(
