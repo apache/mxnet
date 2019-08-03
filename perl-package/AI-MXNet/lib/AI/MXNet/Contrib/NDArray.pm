@@ -18,6 +18,7 @@
 package AI::MXNet::Contrib::NDArray;
 use strict;
 use warnings;
+use AI::MXNet::NS;
 use parent 'AI::MXNet::AutoLoad';
 sub config { ('contrib', 'AI::MXNet::NDArray') }
 
