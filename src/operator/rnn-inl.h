@@ -397,20 +397,12 @@ class RNNOp {
   RNNParam param_;
   Context ctx_;
   #if MXNET_USE_MKLDNN == 1
-  std::vector<mkldnn::memory> concat_weight_memory;
-  std::vector<mkldnn::memory> concat_iter_memory;
-  std::vector<primitive> rnn_forward_prim;
-  std::vector<mkldnn::memory> x_memory;
-  std::vector<mkldnn::memory> hcx_memory;
-  std::vector<mkldnn::memory> wx_memory;
-  std::vector<mkldnn::memory> wh_memory;
-  std::vector<mkldnn::memory> bias_memory;
-  std::vector<mkldnn::memory> y_memory;
-  std::vector<mkldnn::memory> hcy_memory;
   bool has_cache;
   bool init_mem_;
   size_t reserve_mem_size_;
   Storage::Handle mem_space_;
+  MKLDNNRNNMemory mkldnn_mems;
+  std::vector<primitive> rnn_forward_prim;
   #endif
   explicit RNNOp(RNNParam param, Context ctx) {
     this->param_ = param;
@@ -908,9 +900,7 @@ class RNNOp {
                                   param_.mode);
       } else {
         #if MXNET_USE_MKLDNN == 1
-        if (dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1) && param_.mode != rnn_enum::kGru) {
-          // TODO(zixuanweeei): MKLDNN GRU has precision issue. A stable one
-          //   will be added to MXNet when we figure out the issue.
+        if (dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1)) {
           int dtype = in_data[rnn_enum::kData].type_flag_;
           MKLDNNRNNForwardInference<DType>(param_.state_outputs,
                                            param_.num_layers,
@@ -927,15 +917,7 @@ class RNNOp {
                                            y.dptr_,
                                            hy_ptr,
                                            cy_ptr,
-                                           &concat_weight_memory,
-                                           &concat_iter_memory,
-                                           &x_memory,
-                                           &hcx_memory,
-                                           &wx_memory,
-                                           &wh_memory,
-                                           &bias_memory,
-                                           &y_memory,
-                                           &hcy_memory,
+                                           &mkldnn_mems,
                                            &rnn_forward_prim,
                                            &has_cache,
                                            dtype,
@@ -943,8 +925,6 @@ class RNNOp {
                                            param_.mode);
         } else {
         #endif
-          //  Before integrating MKLDNN GRU fp32 inference
-          //  using below code for keep func being OK
           const size_t work_cpu_space_size =
               GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
                                   param_.state_size, direction, param_.mode);

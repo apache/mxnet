@@ -260,13 +260,14 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
       const RNNParam& param = op.param_;
       int ngates = 0, nstates = 0;
       GetMKLDNNRNNAlgo(param.mode, &ngates, &nstates);
-      int D = param.bidirectional ? 2 : 1;
+      const int D = param.bidirectional ? 2 : 1;
       Tensor<cpu, 3, DType> x = in_blobs[rnn_enum::kData].get<cpu, 3, DType>(s);
-      int T = x.shape_[0];
-      int N = x.shape_[1];
-      int I = x.shape_[2];
-      int H = param.state_size;
-      int L = param.num_layers;
+      const int T = x.shape_[0];
+      const int N = x.shape_[1];
+      const int I = x.shape_[2];
+      const int H = param.state_size;
+      const int L = param.num_layers;
+      const int nbias = param.mode == rnn_enum::kGru ? ngates + 1 : ngates;
 
       const size_t r_size = GetMKLDNNRNNCacheMemorySize(L, D, T, N, I, H, param.mode);
       if (op.init_mem_ && op.reserve_mem_size_ < r_size) {
@@ -281,7 +282,7 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
         op.init_mem_ = true;
         op.has_cache = false;
       }
-      if (op.has_cache && op.x_memory.size() == 0) {
+      if (op.has_cache && op.mkldnn_mems.x_memory.size() == 0) {
         op.has_cache = false;
       }
 
@@ -291,16 +292,16 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
       mkldnn::memory::dims dst_layer_tz = {T, N, D * H};
       auto dst_layer_md = mkldnn::memory::desc(
         { dst_layer_tz }, mkldnn_dtype, mkldnn::memory::format::tnc);
-      if (op.x_memory.size() == 0) {
+      if (op.mkldnn_mems.x_memory.size() == 0) {
         if (D == 1 && I == H) {
           auto user_src_layer_md = mkldnn::memory::desc(
               { src_layer_tz }, mkldnn_dtype, mkldnn::memory::format::tnc);
           auto user_src_layer_memory_n = mkldnn::memory({ user_src_layer_md, cpu_engine });
-          op.x_memory.push_back(user_src_layer_memory_n);
+          op.mkldnn_mems.x_memory.push_back(user_src_layer_memory_n);
 
           mkldnn::memory::dims weights_layer_tz = {L, 1, I, ngates, H};  //  ldigo
           mkldnn::memory::dims weights_iter_tz = {L, 1, H, ngates, H};  //  ldigo
-          mkldnn::memory::dims bias_tz = {L, 1, ngates, H};
+          mkldnn::memory::dims bias_tz = {L, 1, nbias, H};
           auto user_weight_layer_md = mkldnn::memory::desc(
               { weights_layer_tz }, mkldnn_dtype, mkldnn::memory::format::ldigo);
           auto user_weight_iter_md = mkldnn::memory::desc(
@@ -310,21 +311,22 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
           DType* weight_layer_n = workptr;  //  L * I * ngates * H
           auto user_weight_layer_memory_n
               = mkldnn::memory({ user_weight_layer_md, cpu_engine }, weight_layer_n);
-          op.wx_memory.push_back(user_weight_layer_memory_n);
+          op.mkldnn_mems.wx_memory.push_back(user_weight_layer_memory_n);
 
           DType* weight_iter_n = weight_layer_n + L * I * ngates * H;  //  L * H * ngates * H
           auto user_weight_iter_memory_n
               = mkldnn::memory({ user_weight_iter_md, cpu_engine }, weight_iter_n);
-          op.wh_memory.push_back(user_weight_iter_memory_n);
+          op.mkldnn_mems.wh_memory.push_back(user_weight_iter_memory_n);
 
-          DType* bias_n = weight_iter_n + L * H * ngates * H;  //  L * ngates * H
+          DType* bias_n = weight_iter_n + L * H * ngates * H;  //  Generally, L * ngates * H
+                                                               //  LBR-Gru, L * (ngates + 1) * H
           auto user_bias_memory_n =
               mkldnn::memory({ user_bias_md, cpu_engine }, bias_n);
-          op.bias_memory.push_back(user_bias_memory_n);
+          op.mkldnn_mems.bias_memory.push_back(user_bias_memory_n);
 
           auto wx_md_n = mkldnn::memory::desc(
               { weights_layer_tz }, mkldnn_dtype, mkldnn::memory::format::ldgoi);
-          DType* wx_n = bias_n + L * ngates * H;  //   L * ngates * I * H
+          DType* wx_n = bias_n + L * nbias * H;  //   L * ngates * I * H
           auto wx_memory_n =
               mkldnn::memory({ wx_md_n, cpu_engine }, wx_n);
           DType* wh_n = wx_n + L * ngates * I * H;  //  L * ngates * H * H
@@ -333,8 +335,8 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
           auto wh_memory_n =
               mkldnn::memory({ wh_md_n, cpu_engine }, wh_n);
 
-          op.concat_weight_memory.push_back(wx_memory_n);
-          op.concat_weight_memory.push_back(wh_memory_n);
+          op.mkldnn_mems.concat_weight_memory.push_back(wx_memory_n);
+          op.mkldnn_mems.concat_weight_memory.push_back(wh_memory_n);
           workptr = wh_n + L * ngates * H * H;
 
           mkldnn::memory::dims src_iter_tz_n1 = {1, 1, nstates, N, H};  //  ldsnc
@@ -344,7 +346,7 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
             DType* src_iter_n1 = workptr;  //  nstates * N * H
             auto src_iter_memory_n1 =
                 mkldnn::memory({ src_iter_md_n1, cpu_engine }, src_iter_n1);
-            op.concat_iter_memory.push_back(src_iter_memory_n1);
+            op.mkldnn_mems.concat_iter_memory.push_back(src_iter_memory_n1);
             workptr = src_iter_n1 + nstates * N * H;
           }
           mkldnn::memory::dims src_iter_tz_n = {L, 1, nstates, N, H};  //  ldsnc
@@ -353,12 +355,12 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
           DType* src_iter_n = workptr;  //  L * nstates * N * H
           auto src_iter_memory_n =
               mkldnn::memory({ src_iter_md_n, cpu_engine }, src_iter_n);
-          op.concat_iter_memory.push_back(src_iter_memory_n);
-          op.hcx_memory.push_back(src_iter_memory_n);
+          op.mkldnn_mems.concat_iter_memory.push_back(src_iter_memory_n);
+          op.mkldnn_mems.hcx_memory.push_back(src_iter_memory_n);
           DType* dst_layer_n = src_iter_n + L * nstates * N * H;  //  T * N * D * H
           auto dst_layer_memory_n
               = mkldnn::memory({ dst_layer_md, cpu_engine }, dst_layer_n);
-          op.y_memory.push_back(dst_layer_memory_n);
+          op.mkldnn_mems.y_memory.push_back(dst_layer_memory_n);
 
           mkldnn::memory::dims dst_iter_tz_n = {L, 1, nstates, N, H};  //  ldsnc
           auto dst_iter_md_n = mkldnn::memory::desc(
@@ -366,18 +368,18 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
           DType* dst_iter_n = dst_layer_n + T * N * D * H;  //  L * nstates * N * H
           auto dst_iter_memory_n =
               mkldnn::memory({ dst_iter_md_n, cpu_engine }, dst_iter_n);
-          op.hcy_memory.push_back(dst_iter_memory_n);
+          op.mkldnn_mems.hcy_memory.push_back(dst_iter_memory_n);
           workptr = dst_iter_n + L * nstates * N * H;
 
         } else {
           auto user_src_layer_md_0 = mkldnn::memory::desc(
               { src_layer_tz_0 }, mkldnn_dtype, mkldnn::memory::format::tnc);
           auto user_src_layer_memory_0 = mkldnn::memory({ user_src_layer_md_0, cpu_engine });
-          op.x_memory.push_back(user_src_layer_memory_0);
+          op.mkldnn_mems.x_memory.push_back(user_src_layer_memory_0);
 
           mkldnn::memory::dims weights_layer_tz_0 = {1, D, I, ngates, H};  //  ldigo
           mkldnn::memory::dims weights_iter_tz_0 = {1, D, H, ngates, H};  //  ldigo
-          mkldnn::memory::dims bias_tz_0 = {1, D, ngates, H};
+          mkldnn::memory::dims bias_tz_0 = {1, D, nbias, H};
           auto user_weight_layer_md_0 = mkldnn::memory::desc(
               { weights_layer_tz_0 }, mkldnn_dtype, mkldnn::memory::format::ldigo);
           auto user_weight_iter_md_0 = mkldnn::memory::desc(
@@ -388,18 +390,19 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
           DType* weight_layer_0 = workptr;  //  D * I * ngates * H
           auto user_weight_layer_memory_0
               = mkldnn::memory({ user_weight_layer_md_0, cpu_engine }, weight_layer_0);
-          op.wx_memory.push_back(user_weight_layer_memory_0);
+          op.mkldnn_mems.wx_memory.push_back(user_weight_layer_memory_0);
 
           DType* weight_iter_0 = weight_layer_0 + D * I * ngates * H;  //  D * H * ngates * H
           auto user_weight_iter_memory_0
               = mkldnn::memory({ user_weight_iter_md_0, cpu_engine }, weight_iter_0);
-          op.wh_memory.push_back(user_weight_iter_memory_0);
+          op.mkldnn_mems.wh_memory.push_back(user_weight_iter_memory_0);
 
-          DType* bias_0 = weight_iter_0 + D * H * ngates * H;  //  D * ngates * H
+          DType* bias_0 = weight_iter_0 + D * H * ngates * H;  //  Generally, D * ngates * H
+                                                               //  LBR-Gru, D * (ngates + 1) * H
           auto user_bias_memory_0 =
               mkldnn::memory({ user_bias_md_0, cpu_engine }, bias_0);
-          op.bias_memory.push_back(user_bias_memory_0);
-          workptr = bias_0 + D * ngates * H;
+          op.mkldnn_mems.bias_memory.push_back(user_bias_memory_0);
+          workptr = bias_0 + D * nbias * H;
 
           auto wx_md_0 = mkldnn::memory::desc(
               { weights_layer_tz_0 }, mkldnn_dtype, mkldnn::memory::format::ldgoi);
@@ -416,8 +419,8 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
             wh_memory_0.set_data_handle(wh_0);
             workptr = wh_0 + D * ngates * H * H;
           }
-          op.concat_weight_memory.push_back(wx_memory_0);
-          op.concat_weight_memory.push_back(wh_memory_0);
+          op.mkldnn_mems.concat_weight_memory.push_back(wx_memory_0);
+          op.mkldnn_mems.concat_weight_memory.push_back(wh_memory_0);
 
           mkldnn::memory::dims src_iter_undi_tz_0 = {1, 1, nstates, N, H};  //  ldsnc
           auto src_iter_undi_md_0 = mkldnn::memory::desc(
@@ -425,15 +428,15 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
           DType* src_iter_undi_0 = workptr;  //  nstates * N * H
           auto src_iter_undi_memory_0 =
               mkldnn::memory({ src_iter_undi_md_0, cpu_engine }, src_iter_undi_0);
-          op.concat_iter_memory.push_back(src_iter_undi_memory_0);
+          op.mkldnn_mems.concat_iter_memory.push_back(src_iter_undi_memory_0);
           workptr = src_iter_undi_0 + nstates * N * H;
           if (D == 1) {
-            op.hcx_memory.push_back(src_iter_undi_memory_0);
+            op.mkldnn_mems.hcx_memory.push_back(src_iter_undi_memory_0);
           } else {
             DType* src_iter_undi2_0 = workptr;  //  nstates * N * H
             auto src_iter_undi2_memory_0 =
                 mkldnn::memory({ src_iter_undi_md_0, cpu_engine }, src_iter_undi2_0);
-            op.concat_iter_memory.push_back(src_iter_undi2_memory_0);
+            op.mkldnn_mems.concat_iter_memory.push_back(src_iter_undi2_memory_0);
 
             mkldnn::memory::dims src_iter_tz_0 = {1, D, nstates, N, H};  //  ldsnc
             auto src_iter_md_0 = mkldnn::memory::desc(
@@ -441,15 +444,15 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
             DType* src_iter_0 = src_iter_undi2_0 + nstates * N * H;  //  D * nstates * N * H
             auto src_iter_memory_0 =
                 mkldnn::memory({ src_iter_md_0, cpu_engine }, src_iter_0);
-            op.concat_iter_memory.push_back(src_iter_memory_0);
-            op.hcx_memory.push_back(src_iter_memory_0);
+            op.mkldnn_mems.concat_iter_memory.push_back(src_iter_memory_0);
+            op.mkldnn_mems.hcx_memory.push_back(src_iter_memory_0);
             workptr = src_iter_0 + D * nstates * N * H;
           }
 
           DType* dst_layer_0 = workptr;  //  T * N * D * H
           auto dst_layer_memory_0
               = mkldnn::memory({ dst_layer_md, cpu_engine }, dst_layer_0);
-          op.y_memory.push_back(dst_layer_memory_0);
+          op.mkldnn_mems.y_memory.push_back(dst_layer_memory_0);
 
           mkldnn::memory::dims dst_iter_tz_0 = {1, D, nstates, N, H};  //  ldsnc
           auto dst_iter_md_0 = mkldnn::memory::desc(
@@ -457,7 +460,7 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
           DType* dst_iter_0 = dst_layer_0 + T * N * D * H;  //  D * nstates * N * H
           auto dst_iter_memory_0 =
               mkldnn::memory({ dst_iter_md_0, cpu_engine }, dst_iter_0);
-          op.hcy_memory.push_back(dst_iter_memory_0);
+          op.mkldnn_mems.hcy_memory.push_back(dst_iter_memory_0);
           workptr = dst_iter_0 + D * nstates * N * H;
 
           //  next L - 1 layers
@@ -465,11 +468,11 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
             auto user_src_layer_md = mkldnn::memory::desc(
                 { src_layer_tz }, mkldnn_dtype, mkldnn::memory::format::tnc);
             auto user_src_layer_memory = mkldnn::memory({ user_src_layer_md, cpu_engine });
-            op.x_memory.push_back(user_src_layer_memory);
+            op.mkldnn_mems.x_memory.push_back(user_src_layer_memory);
 
             mkldnn::memory::dims weights_layer_tz = {L - 1, 1, H, ngates, H};  //  ldigo
             mkldnn::memory::dims weights_iter_tz = {L - 1, 1, H, ngates, H};  //  ldigo
-            mkldnn::memory::dims bias_tz = {L - 1, 1, ngates, H};
+            mkldnn::memory::dims bias_tz = {L - 1, 1, nbias, H};
             auto user_weight_layer_md = mkldnn::memory::desc(
                 { weights_layer_tz }, mkldnn_dtype, mkldnn::memory::format::ldigo);
             auto user_weight_iter_md = mkldnn::memory::desc(
@@ -480,22 +483,24 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
             DType* weight_layer_n = workptr;  //  (L - 1) * H * ngates * H
             auto user_weight_layer_memory_n
                 = mkldnn::memory({ user_weight_layer_md, cpu_engine }, weight_layer_n);
-            op.wx_memory.push_back(user_weight_layer_memory_n);
+            op.mkldnn_mems.wx_memory.push_back(user_weight_layer_memory_n);
 
             DType* weight_iter_n = weight_layer_n +
                 (L - 1) * H * ngates * H;  //  (L - 1) * H * ngates * H
             auto user_weight_iter_memory_n
                 = mkldnn::memory({ user_weight_iter_md, cpu_engine }, weight_iter_n);
-            op.wh_memory.push_back(user_weight_iter_memory_n);
+            op.mkldnn_mems.wh_memory.push_back(user_weight_iter_memory_n);
 
-            DType* bias_n = weight_iter_n + (L - 1) * H * ngates * H;  //  (L - 1) * ngates * H
+            DType* bias_n = weight_iter_n + (L - 1) * H * ngates * H;  // Generally, (L - 1) *
+                                                                       // ngates * H. LBR-Gru,
+                                                                       // (L -1) * (ngates + 1) * H
             auto user_bias_memory_n =
                 mkldnn::memory({ user_bias_md, cpu_engine }, bias_n);
-            op.bias_memory.push_back(user_bias_memory_n);
+            op.mkldnn_mems.bias_memory.push_back(user_bias_memory_n);
 
             auto wx_md_n = mkldnn::memory::desc(
                 { weights_layer_tz }, mkldnn_dtype, mkldnn::memory::format::ldgoi);
-            DType* wx_n = bias_n + (L - 1) * ngates * H;  //  (L - 1) * ngates * H * H
+            DType* wx_n = bias_n + (L - 1) * nbias * H;  //  (L - 1) * ngates * H * H
             auto wx_memory_n =
                 mkldnn::memory({ wx_md_n, cpu_engine }, wx_n);
             DType* wh_n = wx_n + (L - 1) * ngates * H * H;  //  (L - 1) * ngates * H * H
@@ -504,8 +509,8 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
             auto wh_memory_n =
                 mkldnn::memory({ wh_md_n, cpu_engine }, wh_n);
 
-            op.concat_weight_memory.push_back(wx_memory_n);
-            op.concat_weight_memory.push_back(wh_memory_n);
+            op.mkldnn_mems.concat_weight_memory.push_back(wx_memory_n);
+            op.mkldnn_mems.concat_weight_memory.push_back(wh_memory_n);
             workptr = wh_n + (L - 1) * ngates * H * H;
 
             mkldnn::memory::dims src_iter_tz_n1 = {1, 1, nstates, N, H};  //  ldsnc
@@ -515,7 +520,7 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
               DType* src_iter_n1 = workptr;  //  nstates * N * H
               auto src_iter_memory_n1 =
                   mkldnn::memory({ src_iter_md_n1, cpu_engine }, src_iter_n1);
-              op.concat_iter_memory.push_back(src_iter_memory_n1);
+              op.mkldnn_mems.concat_iter_memory.push_back(src_iter_memory_n1);
               workptr = src_iter_n1 + nstates * N * H;
             }
             mkldnn::memory::dims src_iter_tz_n = {L - 1, 1, nstates, N, H};  //  ldsnc
@@ -524,13 +529,13 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
             DType* src_iter_n = workptr;  //  (L - 1) * nstates * N * H
             auto src_iter_memory_n =
                 mkldnn::memory({ src_iter_md_n, cpu_engine }, src_iter_n);
-            op.concat_iter_memory.push_back(src_iter_memory_n);
-            op.hcx_memory.push_back(src_iter_memory_n);
+            op.mkldnn_mems.concat_iter_memory.push_back(src_iter_memory_n);
+            op.mkldnn_mems.hcx_memory.push_back(src_iter_memory_n);
 
             DType* dst_layer_n = src_iter_n + (L - 1) * nstates * N * H;  //  T * N * D * H
             auto dst_layer_memory_n
                 = mkldnn::memory({ dst_layer_md, cpu_engine }, dst_layer_n);
-            op.y_memory.push_back(dst_layer_memory_n);
+            op.mkldnn_mems.y_memory.push_back(dst_layer_memory_n);
 
             mkldnn::memory::dims dst_iter_tz_n = {L - 1, 1, nstates, N, H};  //  ldsnc
             auto dst_iter_md_n = mkldnn::memory::desc(
@@ -538,13 +543,14 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
             DType* dst_iter_n = dst_layer_n + T * N * D * H;  //  (L - 1) * nstates * N * H
             auto dst_iter_memory_n =
                 mkldnn::memory({ dst_iter_md_n, cpu_engine }, dst_iter_n);
-            op.hcy_memory.push_back(dst_iter_memory_n);
+            op.mkldnn_mems.hcy_memory.push_back(dst_iter_memory_n);
+            workptr = dst_iter_n + (L - 1) * nstates * N * H;
           }
 
           if (L > 1 && D == 2) {
             mkldnn::memory::dims weights_layer_tz = {1, D, H * D, ngates, H};  //  ldigo
             mkldnn::memory::dims weights_iter_tz = {1, D, H, ngates, H};  //  ldigo
-            mkldnn::memory::dims bias_tz = {1, D, ngates, H};
+            mkldnn::memory::dims bias_tz = {1, D, nbias, H};
             auto user_weight_layer_md = mkldnn::memory::desc(
                 { weights_layer_tz }, mkldnn_dtype, mkldnn::memory::format::ldigo);
             auto user_weight_iter_md = mkldnn::memory::desc(
@@ -555,31 +561,30 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
             auto user_src_layer_md = mkldnn::memory::desc(
                 { src_layer_tz }, mkldnn_dtype, mkldnn::memory::format::tnc);
             auto user_src_layer_memory = mkldnn::memory({ user_src_layer_md, cpu_engine });
-            op.x_memory.push_back(user_src_layer_memory);
+            op.mkldnn_mems.x_memory.push_back(user_src_layer_memory);
 
             auto wx_md_n = mkldnn::memory::desc(
                 { weights_layer_tz }, mkldnn_dtype, mkldnn::memory::format::ldgoi);
             auto wh_md_n = mkldnn::memory::desc(
                 { weights_iter_tz }, mkldnn_dtype, mkldnn::memory::format::ldgoi);
 
-            for (int l = 0; l < L; l++) {
-              DType* weight_layer_n = workptr;  //  D * (H * D) * ngates * H
-              auto user_weight_layer_memory_n
-                  = mkldnn::memory({ user_weight_layer_md, cpu_engine }, weight_layer_n);
-              op.wx_memory.push_back(user_weight_layer_memory_n);
+            DType* weight_layer_n = workptr;  //  D * (H * D) * ngates * H
+            auto user_weight_layer_memory_n
+                = mkldnn::memory({ user_weight_layer_md, cpu_engine }, weight_layer_n);
+            op.mkldnn_mems.wx_memory.push_back(user_weight_layer_memory_n);
 
-              DType* weight_iter_n = weight_layer_n +
-                  D * (H * D) * ngates * H;  //  D * H * ngates * H
-              auto user_weight_iter_memory_n
-                  = mkldnn::memory({ user_weight_iter_md, cpu_engine }, weight_iter_n);
-              op.wh_memory.push_back(user_weight_iter_memory_n);
+            DType* weight_iter_n = weight_layer_n +
+                D * (H * D) * ngates * H;  //  D * H * ngates * H
+            auto user_weight_iter_memory_n
+                = mkldnn::memory({ user_weight_iter_md, cpu_engine }, weight_iter_n);
+            op.mkldnn_mems.wh_memory.push_back(user_weight_iter_memory_n);
 
-              DType* bias_n = weight_iter_n + D * H * ngates * H;  //  D * ngates * H
-              auto user_bias_memory_n =
-                  mkldnn::memory({ user_bias_md, cpu_engine }, bias_n);
-              op.bias_memory.push_back(user_bias_memory_n);
-              workptr = bias_n + D * ngates * H;
-            }
+            DType* bias_n = weight_iter_n + D * H * ngates * H;  //  Generally, D * ngates * H
+                                                                  //  LBR-Gru, D * (ngates + 1) * H
+            auto user_bias_memory_n =
+                mkldnn::memory({ user_bias_md, cpu_engine }, bias_n);
+            op.mkldnn_mems.bias_memory.push_back(user_bias_memory_n);
+            workptr = bias_n + D * nbias * H;
 
             DType* wx_n = workptr;  //  D * ngates * (D * H) * H
             DType* wh_n = wx_n + D * ngates * (D * H) * H;  //  D * ngates * H * H
@@ -587,8 +592,8 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
                 mkldnn::memory({ wx_md_n, cpu_engine }, wx_n);
             auto wh_memory_n =
                 mkldnn::memory({ wh_md_n, cpu_engine }, wh_n);
-            op.concat_weight_memory.push_back(wx_memory_n);
-            op.concat_weight_memory.push_back(wh_memory_n);
+            op.mkldnn_mems.concat_weight_memory.push_back(wx_memory_n);
+            op.mkldnn_mems.concat_weight_memory.push_back(wh_memory_n);
 
             mkldnn::memory::dims src_iter_undi_tz = {1, 1, nstates, N, H};  //  ldsnc
             auto src_iter_undi_md = mkldnn::memory::desc(
@@ -596,12 +601,12 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
             DType* src_iter_undi = wh_n + D * ngates * H * H;  //  nstates * N * H
             auto src_iter_undi_memory =
                 mkldnn::memory({ src_iter_undi_md, cpu_engine }, src_iter_undi);
-            op.concat_iter_memory.push_back(src_iter_undi_memory_0);
+            op.mkldnn_mems.concat_iter_memory.push_back(src_iter_undi_memory_0);
 
             DType* src_iter_undi2 = src_iter_undi + nstates * N * H;  //  nstates * N * H
             auto src_iter_undi2_memory =
                 mkldnn::memory({ src_iter_undi_md, cpu_engine }, src_iter_undi2);
-            op.concat_iter_memory.push_back(src_iter_undi2_memory);
+            op.mkldnn_mems.concat_iter_memory.push_back(src_iter_undi2_memory);
 
             mkldnn::memory::dims src_iter_tz = {1, D, nstates, N, H};  //  ldsnc
             auto src_iter_md = mkldnn::memory::desc(
@@ -609,13 +614,13 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
             DType* src_iter = src_iter_undi2 + nstates * N * H;  //  D * nstates * N * H
             auto src_iter_memory =
                 mkldnn::memory({ src_iter_md, cpu_engine }, src_iter);
-            op.concat_iter_memory.push_back(src_iter_memory);
-            op.hcx_memory.push_back(src_iter_memory);
+            op.mkldnn_mems.concat_iter_memory.push_back(src_iter_memory);
+            op.mkldnn_mems.hcx_memory.push_back(src_iter_memory);
 
             DType* dst_layer_n = src_iter + D * nstates * N * H;  //  T * N * D * H
             auto dst_layer_memory_n
                 = mkldnn::memory({ dst_layer_md, cpu_engine }, dst_layer_n);
-            op.y_memory.push_back(dst_layer_memory_n);
+            op.mkldnn_mems.y_memory.push_back(dst_layer_memory_n);
 
             mkldnn::memory::dims dst_iter_tz_n = {1, D, nstates, N, H};  //  ldsnc
             auto dst_iter_md_n = mkldnn::memory::desc(
@@ -623,7 +628,8 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
             DType* dst_iter_n = dst_layer_n + T * N * D * H;  //  D * nstates * N * H
             auto dst_iter_memory_n =
                 mkldnn::memory({ dst_iter_md_n, cpu_engine }, dst_iter_n);
-            op.hcy_memory.push_back(dst_iter_memory_n);
+            op.mkldnn_mems.hcy_memory.push_back(dst_iter_memory_n);
+            workptr = dst_iter_n + D * nstates * N * H;
           }
         }
       }
