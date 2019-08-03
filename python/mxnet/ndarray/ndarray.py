@@ -451,7 +451,7 @@ fixed-size items.
                 'but got {}. This is a bug, please report it!'
                 ''.format(self.ndim, len(slc_key))
             )
-        elif len(slc_key) > self.ndim:
+        if len(slc_key) > self.ndim:
             raise IndexError(
                 'too many indices ({}) for array with {} dimensions'
                 ''.format(len(slc_key), self.ndim)
@@ -842,7 +842,7 @@ fixed-size items.
                 'but got {}. This is a bug, please report it!'
                 ''.format(self.ndim, len(key_nd))
             )
-        elif len(key_nd) > self.ndim:
+        if len(key_nd) > self.ndim:
             raise IndexError(
                 'too many indices ({}) for array with {} dimensions'
                 ''.format(len(key_nd), self.ndim)
@@ -1010,7 +1010,7 @@ fixed-size items.
                 'but got {}. This is a bug, please report it!'
                 ''.format(self.ndim, len(key_nd))
             )
-        elif len(key_nd) > self.ndim:
+        if len(key_nd) > self.ndim:
             raise IndexError(
                 'too many indices ({}) for array with {} dimensions'
                 ''.format(len(key_nd), self.ndim)
@@ -2596,8 +2596,7 @@ def _indexing_key_expand_implicit_axes(key, shape):
                 raise IndexError(
                     'Cannot use more than one ellipsis (`...`) for indexing'
                 )
-            else:
-                ell_idx = i
+            ell_idx = i
         else:
             if idx is None:
                 num_none += 1
