@@ -169,6 +169,7 @@ Example::
 .add_arguments(DropoutParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_Dropout)
+.set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
@@ -176,7 +177,8 @@ NNVM_REGISTER_OP(_backward_Dropout)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
   return std::vector<std::pair<int, int> >{{0, 0}};
 })
-.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", DropoutGradCompute<cpu>);
+.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", DropoutGradCompute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 }  // namespace op
 }  // namespace mxnet
