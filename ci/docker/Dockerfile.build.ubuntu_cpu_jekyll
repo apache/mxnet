@@ -22,7 +22,11 @@ FROM ubuntu:16.04
 
 WORKDIR /work/deps
 
-RUN apt-get update && apt-get install -y ruby-full build-essential zlib1g-dev
+RUN apt-get update && apt-get install -y \
+      build-essential \
+      git \
+      ruby-full \
+      zlib1g-dev
 
 ENV BUNDLE_HOME=/usr/local/bundle
 ENV BUNDLE_APP_CONFIG=/usr/local/bundle
@@ -35,7 +39,7 @@ RUN unset GEM_HOME && unset GEM_BIN && \
   yes | gem update --system
 
 RUN unset GEM_HOME && unset GEM_BIN && yes | gem install --force bundler
-RUN gem install jekyll 
+RUN gem install jekyll
 
 COPY runtime_functions.sh /work/
 
