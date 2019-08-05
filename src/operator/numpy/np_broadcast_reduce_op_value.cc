@@ -56,16 +56,16 @@ NNVM_REGISTER_OP(_np_sum)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyReduceAxesShape)
 .set_attr<nnvm::FInferType>("FInferType", NumpySumType)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"a"};
-  })
+[](const NodeAttrs& attrs) {
+return std::vector<std::string>{"a"};
+})
 .add_argument("a", "NDArray-or-Symbol", "The input")
 .add_arguments(NumpyReduceAxesParam::__FIELDS__())
 .set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesCompute<cpu, mshadow_op::sum, true>)
 .set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
+[](const NodeAttrs& attrs) {
+return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_np_sum"});
 
 NNVM_REGISTER_OP(_backward_np_sum)
@@ -77,9 +77,9 @@ NNVM_REGISTER_OP(_backward_np_sum)
 
 inline bool IsIntType(const int dtype) {
   return (dtype == mshadow::kUint8 ||
-          dtype == mshadow::kInt32 ||
-          dtype == mshadow::kInt8 ||
-          dtype == mshadow::kInt64);
+      dtype == mshadow::kInt32 ||
+      dtype == mshadow::kInt8 ||
+      dtype == mshadow::kInt64);
 }
 
 inline bool NumpyMeanType(const nnvm::NodeAttrs& attrs,
@@ -109,16 +109,16 @@ NNVM_REGISTER_OP(_npi_mean)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyReduceAxesShape)
 .set_attr<nnvm::FInferType>("FInferType", NumpyMeanType)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"a"};
-  })
+[](const NodeAttrs& attrs) {
+return std::vector<std::string>{"a"};
+})
 .add_argument("a", "NDArray-or-Symbol", "The input")
 .add_arguments(NumpyReduceAxesParam::__FIELDS__())
 .set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesCompute<cpu, mshadow_op::sum, true, true>)
 .set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
+[](const NodeAttrs& attrs) {
+return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_np_mean"});
 
 NNVM_REGISTER_OP(_backward_np_mean)
@@ -147,16 +147,16 @@ NNVM_REGISTER_OP(_np_max)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyMaxShape)
 .set_attr<nnvm::FInferType>("FInferType", NumpyMaxType)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"a"};
-  })
+[](const NodeAttrs& attrs) {
+return std::vector<std::string>{"a"};
+})
 .add_argument("a", "NDArray-or-Symbol", "The input")
 .add_arguments(NumpyMaxParam::__FIELDS__())
 .set_attr<FCompute>("FCompute<cpu>", NumpyMaxCompute<cpu, mshadow::red::maximum>)
 .set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
+[](const NodeAttrs& attrs) {
+return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_np_max"});
 
 NNVM_REGISTER_OP(_backward_np_max)
@@ -166,6 +166,26 @@ NNVM_REGISTER_OP(_backward_np_max)
 .set_num_inputs(3)
 .set_attr<FCompute>("FCompute<cpu>", NumpyMaxBackward<cpu, mshadow_op::eq>);
 
+NNVM_REGISTER_OP(_np_min)
+.add_alias("_np_amin")
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<NumpyMaxParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyMaxShape)
+.set_attr<nnvm::FInferType>("FInferType", NumpyMaxType)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+[](const NodeAttrs& attrs) {
+return std::vector<std::string>{"a"};
+})
+.add_argument("a", "NDArray-or-Symbol", "The input")
+.add_arguments(NumpyMaxParam::__FIELDS__())
+.set_attr<FCompute>("FCompute<cpu>", NumpyMaxCompute<cpu, mshadow::red::minimum>)
+.set_attr<FResourceRequest>("FResourceRequest",
+[](const NodeAttrs& attrs) {
+return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+.set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_np_max"});
+
 NNVM_REGISTER_OP(_np_prod)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -174,15 +194,15 @@ NNVM_REGISTER_OP(_np_prod)
 .set_attr<nnvm::FInferType>("FInferType", NumpySumType)
 .add_arguments(NumpyReduceAxesParam::__FIELDS__())
 .set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"a"};
-  })
+[](const NodeAttrs& attrs) {
+return std::vector<std::string>{"a"};
+})
 .add_argument("a", "NDArray-or-Symbol", "The input")
 .set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesCompute<cpu, mshadow_op::product, true>)
 .set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
+[](const NodeAttrs& attrs) {
+return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_np_prod"});
 
 NNVM_REGISTER_OP(_backward_np_prod)
@@ -219,10 +239,10 @@ NNVM_REGISTER_OP(_np_broadcast_to)
 .set_num_outputs(1)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n,
-     const std::vector<nnvm::NodeEntry>& ograds) {
-    return MakeNonlossGradNode("_backward_np_broadcast_to", n, ograds, {}, n->attrs.dict);
-  })
+[](const nnvm::NodePtr& n,
+const std::vector<nnvm::NodeEntry>& ograds) {
+return MakeNonlossGradNode("_backward_np_broadcast_to", n, ograds, {}, n->attrs.dict);
+})
 .add_argument("array", "NDArray-or-Symbol", "The input")
 .set_attr_parser(ParamParser<BroadcastToParam>)
 .add_arguments(BroadcastToParam::__FIELDS__())
@@ -234,9 +254,9 @@ NNVM_REGISTER_OP(_backward_np_broadcast_to)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", NumpyBroadcastToBackward<cpu>)
 .set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  });
+[](const NodeAttrs& attrs) {
+return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+});
 
 }  // namespace op
 }  // namespace mxnet

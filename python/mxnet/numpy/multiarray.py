@@ -196,7 +196,7 @@ class ndarray(NDArray):
                 raise IndexError('scalar tensor can only accept `()` as index')
         if isinstance(key, tuple) and len(key) == 0:
             return self
-        elif isinstance(key, tuple) and len(key) == ndim\
+        elif isinstance(key, tuple) and len(key) == ndim \
                 and all(isinstance(idx, integer_types) for idx in key):
             out = self
             for idx in key:
@@ -930,7 +930,7 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute size_array')
 
-    def expand_dims(self, *args, **kwargs):  # pylint: disable=arguments-differ,unused-argument
+    def expand_dims(self, *args, **kwargs):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`expand_dims`.
 
         The arguments are the same as for :py:func:`expand_dims`, with
@@ -1031,13 +1031,13 @@ class ndarray(NDArray):
         """Return the maximum along a given axis."""
         return _mx_np_op.max(self, axis=axis, keepdims=keepdims, out=out)
 
-    def min(self, *args, **kwargs):
+    def min(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`min`.
 
         The arguments are the same as for :py:func:`min`, with
         this array as data.
         """
-        raise NotImplementedError
+        return _mx_np_op.min(self, axis=axis, keepdims=keepdims, out=out)
 
     def norm(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`norm`.

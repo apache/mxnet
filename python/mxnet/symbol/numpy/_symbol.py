@@ -494,7 +494,7 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute size_array')
 
-    def expand_dims(self, *args, **kwargs):  # pylint: disable=arguments-differ,unused-argument
+    def expand_dims(self, *args, **kwargs):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`expand_dims`.
 
         The arguments are the same as for :py:func:`expand_dims`, with
@@ -594,13 +594,13 @@ class _Symbol(Symbol):
         """Return the maximum along a given axis."""
         return _mx_np_op.max(self, axis=axis, keepdims=keepdims, out=out)
 
-    def min(self, *args, **kwargs):
+    def min(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`min`.
 
         The arguments are the same as for :py:func:`min`, with
         this array as data.
         """
-        raise NotImplementedError
+        return _mx_np_op.min(self, axis=axis, keepdims=keepdims, out=out)
 
     def norm(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`norm`.
@@ -1653,7 +1653,7 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
       GPU.
     """
     if isinstance(start, (list, _np.ndarray)) or \
-        isinstance(stop, (list, _np.ndarray)):
+            isinstance(stop, (list, _np.ndarray)):
         raise NotImplementedError('start and stop only support int')
     if axis != 0:
         raise NotImplementedError("the function only support axis 0")
