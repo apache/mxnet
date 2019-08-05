@@ -7891,6 +7891,14 @@ def test_image_normalize():
     check_numeric_gradient(img_norm_sym, [data_in_4d], atol=0.001)
 
 
+@with_seed()
+def test_cumsum():
+    input_data = mx.nd.array(np.random.rand(2,5,10))
+    mx_cumsum = mx.nd.cumsum(input_data)
+    np_cumsum = np.cumsum(input_data.asnumpy())
+    assert_almost_equal(mx_cumsum.asnumpy(),np_cumsum)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

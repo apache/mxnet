@@ -32,5 +32,8 @@ namespace op {
 NNVM_REGISTER_OP(cumsum)
 .set_attr<FCompute>("FCompute<gpu>", CumSumOpForward<gpu>)
 
+NNVM_REGISTER_OP(backward_cumsum)
+.set_attr<FCompute>("FCompute<gpu>", CumSumOpBackward<gpu>)
+
 }  // namespace op
 }  // namespace mxnet

@@ -51,12 +51,19 @@ Examples::
     return std::vector<std::string>{"data"};
   })
 .set_attr<mxnet::FInferShape>("FInferShape", CumSumOpShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FInferStorageType>("FInferStorageType", CumSumOpForwardStorageType)
+.set_attr<nnvm::FInferType>("FInferType", CumsumOpType)
 .set_attr<FCompute>("FCompute<cpu>", CumSumOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_cumsum"})
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray");
-// .add_arguments(CumsumParam::__FIELDS__());
+.add_arguments(CumsumParam::__FIELDS__());
+
+
+NNVM_REGISTER_OP(_backward_cumsum)
+.set_attr_parser(ParamParser<CumsumParam>)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", CumsumOpBackward<cpu>);
 
 
 }  // namespace op
