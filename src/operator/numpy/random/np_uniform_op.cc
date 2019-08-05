@@ -54,7 +54,7 @@ NNVM_REGISTER_OP(_npi_uniform)
     return std::vector<std::string>{"input1", "input2"};
   })
 .set_attr_parser(ParamParser<NumpyUniformParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", NumpyUniformOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", TwoparamsDistOpShape<NumpyUniformParam>)
 .set_attr<nnvm::FInferType>("FInferType", NumpyUniformOpType)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const nnvm::NodeAttrs& attrs) {

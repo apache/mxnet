@@ -30,6 +30,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include "./twoparams_dist_common.h"
 #include "../../elemwise_op_common.h"
 #include "../../tensor/elemwise_binary_broadcast_op.h"
 #include "../../mshadow_op.h"
@@ -75,100 +76,6 @@ struct NumpyUniformParam : public dmlc::Parameter<NumpyUniformParam> {
   }
 };
 
-
-inline int FillShape(const mxnet::TShape& lshape, const mxnet::TShape& rshape,
-                                       const mxnet::TShape& oshape, mxnet::TShape *new_lshape,
-                                       mxnet::TShape *new_rshape, mxnet::TShape *new_oshape) {
-  const int odim = std::max(oshape.ndim(), broadcast::MAX_DIM);
-  *new_lshape = mxnet::TShape(odim, 1);
-  *new_rshape = mxnet::TShape(odim, 1);
-  *new_oshape = mxnet::TShape(odim, 1);
-  int bl = oshape.ndim() - lshape.ndim();
-  int br = oshape.ndim() - rshape.ndim();
-  int j = 0, lprod = 1, rprod = 1, oprod = 1;
-  for (int i = 0; i < oshape.ndim(); ++i) {
-    int l = 1;
-    int r = 1;
-    int o = oshape[i];
-    if (i >= bl)  l = lshape[i - bl];
-    if (i >= br)  r = rshape[i - br];
-    if ((lprod != rprod || lprod != oprod || l != r || l != o) &&
-        (lprod * l > 1 || rprod * r > 1 || oprod * o > 1)) {
-      (*new_lshape)[j] = lprod;
-      (*new_rshape)[j] = rprod;
-      (*new_oshape)[j] = oprod;
-      lprod = rprod = oprod = 1; ++j;
-    }
-    lprod *= l;
-    rprod *= r;
-    oprod *= o;
-  }
-  if (lprod > 1 || rprod > 1 || oprod > 1) {
-    (*new_lshape)[j] = lprod;
-    (*new_rshape)[j] = rprod;
-    (*new_oshape)[j] = oprod;
-    ++j;
-  }
-  if (j <= broadcast::MAX_DIM) {
-    BROADCAST_NDIM_SWITCH(j, NDim, {
-      new_lshape->assign(new_lshape->begin(), new_lshape->begin() + NDim);
-      new_rshape->assign(new_rshape->begin(), new_rshape->begin() + NDim);
-      new_oshape->assign(new_oshape->begin(), new_oshape->begin() + NDim);
-    });
-  } else {
-    LOG(FATAL) << "Too many broadcast dimensions with operands " << lshape << " " << rshape;
-  }
-  return j;
-}
-
-inline void CheckBroadcastable(const mxnet::TShape &from, const mxnet::TShape &to) {
-  const int bl = to.ndim() - from.ndim();
-  const int br = 0;
-  for (int i = 0; i < to.ndim(); ++i) {
-    int l = 1, r = 1;
-    if (i >= bl)
-      l = from[i - bl];
-    if (i >= br)
-      r = to[i - br];
-    if (!mxnet::dim_size_is_known(l) || !mxnet::dim_size_is_known(r))
-      continue;
-    if (l != r) {
-      // Make it compatible with NumPy.
-      // For example, (2, 3) cannot broadcast to (2, 0, 3), but (1, 3) can
-      // broadcast to (2, 0, 3).
-      CHECK(l == 1 || r == 1)
-          << "operands could not be broadcast together with shapes " << from
-          << " " << to;
-    }
-  }
-}
-
-inline void InferBroadcastShape(const mxnet::TShape &lhs, const mxnet::TShape &rhs,
-                         mxnet::TShape* out_ptr) {
-  mxnet::TShape& out = (*out_ptr);
-  const int bl = out.ndim() - lhs.ndim();
-  const int br = out.ndim() - rhs.ndim();
-  for (int i = 0; i < out.ndim(); ++i) {
-    int l = 1, r = 1;
-    if (i >= bl)
-      l = lhs[i - bl];
-    if (i >= br)
-      r = rhs[i - br];
-    if (!mxnet::dim_size_is_known(l) || !mxnet::dim_size_is_known(r))
-      continue;
-    if (l != r) {
-      // Make it compatible with NumPy.
-      // For example, (2, 3) cannot broadcast to (2, 0, 3), but (1, 3) can
-      // broadcast to (2, 0, 3).
-      CHECK(l == 1 || r == 1)
-          << "operands could not be broadcast together with shapes " << lhs
-          << " " << rhs;
-      out[i] = (l == 1 ? r : l);
-    } else {
-      out[i] = l;
-    }
-  }
-}
 
 inline bool NumpyUniformOpShape(const nnvm::NodeAttrs &attrs,
                                 std::vector<TShape> *in_attrs,
