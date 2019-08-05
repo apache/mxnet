@@ -28,6 +28,8 @@
 #include <mxnet/operator_util.h>
 #include <mshadow/base.h>
 #include <vector>
+#include <string>
+#include <algorithm>
 #include "../../elemwise_op_common.h"
 #include "../../tensor/elemwise_binary_broadcast_op.h"
 #include "../../mshadow_op.h"
@@ -142,7 +144,8 @@ inline void CheckBroadcastable(const mxnet::TShape &from, const mxnet::TShape &t
 }
 
 inline void InferBroadcastShape(const mxnet::TShape &lhs, const mxnet::TShape &rhs,
-                         mxnet::TShape *out) {
+                         mxnet::TShape* out_ptr) {
+  mxnet::TShape& out = (*out_ptr);
   const int bl = out.ndim() - lhs.ndim();
   const int br = out.ndim() - rhs.ndim();
   for (int i = 0; i < out.ndim(); ++i) {
@@ -190,7 +193,7 @@ inline bool NumpyUniformOpShape(const nnvm::NodeAttrs &attrs,
       mxnet::TShape& low = (*in_attrs)[0];
       mxnet::TShape& high = (*in_attrs)[1];
       mxnet::TShape out(std::max(low.ndim(), high.ndim()), -1);
-      InferBroadcastShape(low, high, out);
+      InferBroadcastShape(low, high, &out);
       SHAPE_ASSIGN_CHECK(*out_attrs, 0, out);
     }
     if (in_attrs->size() == 1U) {
