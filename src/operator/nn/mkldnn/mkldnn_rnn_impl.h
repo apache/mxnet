@@ -170,7 +170,7 @@ static void AdjustGruWeightGateOrder(DType* weight,
   DType* weight_reset = weight;
   DType* weight_update = weight + single_weight_size;
   #pragma omp parallel for num_threads(omp_threads)
-  for (size_t i = 0; i < single_weight_size; i++) {
+  for (int i = 0; i < single_weight_size; i++) {
     DType tmp = weight_update[i];
     weight_update[i] = weight_reset[i];
     weight_reset[i] = tmp;
@@ -279,7 +279,7 @@ static void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
       }
     } else {
       #pragma omp parallel for num_threads(omp_threads)
-      for (size_t j = 0; j < mx_single_b_sz; j++) {
+      for (int j = 0; j < mx_single_b_sz; j++) {
         user_bias[j] = bx[j] + bh[j];
         user_bias[mx_single_b_sz + j] = back_bx[j] + back_bh[j];
       }
@@ -367,7 +367,7 @@ static void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
       size_t back_hy_offset = nstates * single_cell_size;
       size_t back_cy_offset = (nstates + 1) * single_cell_size;
       #pragma omp parallel for num_threads(omp_threads)
-      for (size_t n = 0; n < single_cell_size; n++) {
+      for (int n = 0; n < single_cell_size; n++) {
         hy_ptr[n] = dst_hcy[n];
         hy_ptr[n + single_cell_size] = dst_hcy[n + back_hy_offset];
         cy_ptr[n] = dst_hcy[n + single_cell_size];
@@ -375,7 +375,7 @@ static void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
       }
     } else {
       #pragma omp parallel for num_threads(omp_threads)
-      for (size_t n = 0; n < 2 * single_cell_size; n++) {
+      for (int n = 0; n < 2 * single_cell_size; n++) {
         hy_ptr[n] = dst_hcy[n];
       }
     }
@@ -561,7 +561,7 @@ static void MKLDNNRNNForwardUnidi(const bool state_outputs,
     } else {
       const size_t b_size = num_layer * single_b_size;
       #pragma omp parallel for num_threads(omp_threads)
-      for (size_t j = 0; j < b_size; j++) {
+      for (int j = 0; j < b_size; j++) {
         int k = j / single_b_size;
         user_bias_f[j] = b_ptr[j + k * single_b_size] +
             b_ptr[j + k * single_b_size + single_b_size];
@@ -608,7 +608,7 @@ static void MKLDNNRNNForwardUnidi(const bool state_outputs,
       #  pragma omp parallel for num_threads(omp_threads)
       #endif
       for (int l = 0; l < num_layer; l++) {
-        for (size_t n = 0; n < single_cell_size; n++) {
+        for (int n = 0; n < single_cell_size; n++) {
           const size_t single_state_offset = l * single_cell_size;
           const size_t concat_state_offset = l * nstates * single_cell_size;
           hy_ptr[single_state_offset + n] = dst_hcy[concat_state_offset + n];
@@ -618,7 +618,7 @@ static void MKLDNNRNNForwardUnidi(const bool state_outputs,
     } else {
       const size_t cell_size = num_layer * single_cell_size;
       #pragma omp parallel for num_threads(omp_threads)
-      for (size_t n = 0; n < cell_size; n++) {
+      for (int n = 0; n < cell_size; n++) {
         hy_ptr[n] = dst_hcy[n];
       }
     }
