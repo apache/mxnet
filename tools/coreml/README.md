@@ -100,7 +100,7 @@ Any MXNet model that uses the above operators can be converted easily. For insta
 mxnet_coreml_converter.py --model-prefix='Inception-BN' --epoch=126 --input-shape='{"data":"3,224,224"}' --mode=classifier --pre-processing-arguments='{"image_input_names":"data"}' --class-labels synset.txt --output-file="InceptionBN.mlmodel"
 ```
 
-2. [NiN](http://data.dmlc.ml/models/imagenet/nin/)
+2. [NiN](#)
 
 ```bash
 mxnet_coreml_converter.py --model-prefix='nin' --epoch=0 --input-shape='{"data":"3,224,224"}' --mode=classifier --pre-processing-arguments='{"image_input_names":"data"}' --class-labels synset.txt --output-file="nin.mlmodel"

@@ -151,8 +151,8 @@ class ModelsTest(unittest.TestCase):
 
     def test_pred_nin(self):
         self._test_model(model_name='nin', epoch_num=0,
-                         files=["http://data.dmlc.ml/models/imagenet/nin/nin-symbol.json",
-                                "http://data.dmlc.ml/models/imagenet/nin/nin-0000.params"])
+                         files=["",
+                                ""])
 
     @unittest.skip("You need to download and unzip file: "
                    "http://data.mxnet.io/models/imagenet/inception-v3.tar.gz in order to run this test.")
