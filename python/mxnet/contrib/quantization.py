@@ -32,11 +32,9 @@ from ..base import c_array, c_str, mx_uint, c_str_array
 from ..base import NDArrayHandle, SymbolHandle
 from ..symbol import Symbol
 from ..symbol import load as sym_load
-from ..symbol import load_json as sym_load_json
 from .. import ndarray
 from ..ndarray import load as nd_load
 from ..ndarray import save as nd_save
-from ..ndarray import zeros as zeros
 from ..ndarray import NDArray
 from ..io import DataIter, DataDesc, DataBatch
 from ..context import cpu, Context
@@ -965,9 +963,9 @@ def quantize_net(network, quantized_dtype='auto', exclude_layers=None, exclude_l
         prefix = os.path.join(tmpdirname, 'tmp')
         param_name = '%s-%04d.params' % (prefix + 'net-quantized', 0)
         save_dict = {('arg:%s' % k): v.as_in_context(cpu())
-                    for k, v in qarg_params.items()}
+                     for k, v in qarg_params.items()}
         save_dict.update({('aux:%s' % k): v.as_in_context(cpu())
-                        for k, v in aux_params.items()})
+                          for k, v in aux_params.items()})
         nd_save(param_name, save_dict)
         net.collect_params().load(param_name, cast_dtype=True, dtype_source='saved')
         net.collect_params().reset_ctx(ctx)
