@@ -847,7 +847,7 @@ def quantize_net(network, quantized_dtype='auto', exclude_layers=None, exclude_l
     calib_data : mx.io.DataIter or gluon.DataLoader
         A iterable data loading object.
     data_shapes : list
-        List of data_shape, required if calib_data is not provided
+        List of DataDesc, required if calib_data is not provided
     calib_mode : str
         If calib_mode='none', no calibration will be used and the thresholds for
         requantization after the corresponding layers will be calculated at runtime by
@@ -940,7 +940,8 @@ def quantize_net(network, quantized_dtype='auto', exclude_layers=None, exclude_l
                          data_names=data_names, label_names=None)
             mod.bind(for_training=False, data_shapes=data_shapes)
             mod.set_params(args, auxs, allow_missing=False, force_init=True)
-            num_examples = _collect_layer_statistics(mod, calib_data, collector, num_calib_examples, logger)
+            num_examples = _collect_layer_statistics(mod, calib_data, collector,
+                                                     num_calib_examples, logger)
             logger.info('Collected layer output values from FP32 model using %d examples'
                         % num_examples)
             qsym, qarg_params, aux_params = calib_graph(
@@ -949,6 +950,8 @@ def quantize_net(network, quantized_dtype='auto', exclude_layers=None, exclude_l
         else:
             raise ValueError(
                 'please set calibration mode to naive or entropy.')
+    elif calib_mode is not None and calib_mode == 'none':
+        data_names = [pair[0] for pair in data_shapes]
 
     if ctx == mx.cpu():
         qsym = qsym.get_backend_symbol('MKLDNN_QUANTIZE')
@@ -967,4 +970,5 @@ def quantize_net(network, quantized_dtype='auto', exclude_layers=None, exclude_l
                         for k, v in aux_params.items()})
         nd_save(param_name, save_dict)
         net.collect_params().load(param_name, cast_dtype=True, dtype_source='saved')
+        net.collect_params().reset_ctx(ctx)
     return net
