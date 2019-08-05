@@ -166,10 +166,11 @@ static void AdjustGruWeightGateOrder(DType* weight,
   // mxnet gru gate order is reset, update and new gates
   // mkldnn gru gate order is update, reset and new gates
   const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  size_t single_weight_size = input_size * hidden_size;
   DType* weight_reset = weight;
-  DType* weight_update = weight + input_size * hidden_size;
+  DType* weight_update = weight + single_weight_size;
   #pragma omp parallel for num_threads(omp_threads)
-  for (int i = 0; i < input_size * hidden_size; i++) {
+  for (size_t i = 0; i < single_weight_size; i++) {
     DType tmp = weight_update[i];
     weight_update[i] = weight_reset[i];
     weight_reset[i] = tmp;
@@ -205,8 +206,8 @@ static void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
   algorithm nalgorithm = GetMKLDNNRNNAlgo(mode, &ngates, &nstates);
   const int nbias = mode == rnn_enum::kGru ? ngates + 1 : ngates;
   mkldnn::memory::data_type mkldnn_dtype = get_mkldnn_type(dtype);
-  const int single_cell_size = batch_size * hidden_size;
-  const int mx_single_b_sz = ngates * hidden_size;
+  const size_t single_cell_size = batch_size * hidden_size;
+  const size_t mx_single_b_sz = ngates * hidden_size;
   DType* wx = w_ptr;  //  ngates * hidden_size, input_size
   DType* wh = w_ptr + input_size * hidden_size * ngates;  //  ngates * hidden_size, hidden_size
   DType* back_wx = w_ptr + ngates * hidden_size * (input_size + hidden_size);
@@ -218,7 +219,6 @@ static void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
   const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   auto cpu_engine = CpuEngine::Get()->get_engine();
   auto null_memory_ = null_memory(cpu_engine);
-  int offset1 = 0, offset2 = 0;
   bool initialized = *has_cache;
   mkldnn::memory::dims src_layer_tz = {seq_len, batch_size, input_size};
   mkldnn::memory::dims dst_layer_tz = {seq_len, batch_size, 2 * hidden_size};
@@ -263,7 +263,7 @@ static void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
       // While mxnet gru gate order is reset, update and new gates,
       // mkldnn gru gate order is update, reset and new gates. So
       // we need to swap the order of reset and update from mxnet.
-      const index_t single_b_sz = nbias * hidden_size;
+      const size_t single_b_sz = nbias * hidden_size;
       #pragma omp parallel for num_threads(omp_threads)
       for (int j = 0; j < hidden_size; j++) {
         user_bias[j + hidden_size] = bx[j] + bh[j];
@@ -279,7 +279,7 @@ static void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
       }
     } else {
       #pragma omp parallel for num_threads(omp_threads)
-      for (int j = 0; j < mx_single_b_sz; j++) {
+      for (size_t j = 0; j < mx_single_b_sz; j++) {
         user_bias[j] = bx[j] + bh[j];
         user_bias[mx_single_b_sz + j] = back_bx[j] + back_bh[j];
       }
@@ -364,18 +364,18 @@ static void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
     DType* dst_hcy = reinterpret_cast<DType *>(
         mkldnn_mems->hcy_memory[layer_index].get_data_handle());
     if (mode == rnn_enum::kLstm) {
-      offset1 = nstates * single_cell_size;
-      offset2 = (nstates + 1) * single_cell_size;
+      size_t back_hy_offset = nstates * single_cell_size;
+      size_t back_cy_offset = (nstates + 1) * single_cell_size;
       #pragma omp parallel for num_threads(omp_threads)
-      for (int n = 0; n < single_cell_size; n++) {
+      for (size_t n = 0; n < single_cell_size; n++) {
         hy_ptr[n] = dst_hcy[n];
-        hy_ptr[n + single_cell_size] = dst_hcy[n + offset1];
+        hy_ptr[n + single_cell_size] = dst_hcy[n + back_hy_offset];
         cy_ptr[n] = dst_hcy[n + single_cell_size];
-        cy_ptr[n + single_cell_size] = dst_hcy[n + offset2];
+        cy_ptr[n + single_cell_size] = dst_hcy[n + back_cy_offset];
       }
     } else {
       #pragma omp parallel for num_threads(omp_threads)
-      for (int n = 0; n < 2 * single_cell_size; n++) {
+      for (size_t n = 0; n < 2 * single_cell_size; n++) {
         hy_ptr[n] = dst_hcy[n];
       }
     }
@@ -415,14 +415,13 @@ static void MKLDNNRNNForwardUnidi(const bool state_outputs,
   algorithm nalgorithm = GetMKLDNNRNNAlgo(mode, &ngates, &nstates);
   const int nbias = (mode == rnn_enum::kGru ? ngates + 1 : ngates);
   mkldnn::memory::data_type mkldnn_dtype = get_mkldnn_type(dtype);
-  const int cell_size = batch_size * hidden_size;
-  const int single_cell_size = batch_size * hidden_size;
-  const int single_b_size = nbias * hidden_size;
-  const int w_size = (input_size + hidden_size) * hidden_size * ngates;
+  const size_t cell_size = batch_size * hidden_size;
+  const size_t single_cell_size = batch_size * hidden_size;
+  const size_t single_b_size = nbias * hidden_size;
+  const size_t w_size = (input_size + hidden_size) * hidden_size * ngates;
   const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   auto cpu_engine = CpuEngine::Get()->get_engine();
   auto null_memory_ = null_memory(cpu_engine);
-  int offset1 = 0, offset2 = 0;
   bool initialized = *has_cache;
 
   mkldnn::memory::dims src_layer_tz = {seq_len, batch_size, input_size};
@@ -534,9 +533,13 @@ static void MKLDNNRNNForwardUnidi(const bool state_outputs,
     DType* user_bias_f = reinterpret_cast<DType *>(
         mkldnn_mems->bias_memory[layer_index].get_data_handle());
     if (mode == rnn_enum::kGru) {
-      const int mx_single_b_sz = ngates * hidden_size;
+      const size_t mx_single_b_sz = ngates * hidden_size;
+      #if _OPENMP >= 200805
+      #  pragma omp parallel for num_threads(omp_threads) collapse(2)
+      #else
+      #  pragma omp parallel for num_threads(omp_threads)
+      #endif
       for (int l = 0; l < num_layer; l++) {
-        #pragma omp parallel for num_threads(omp_threads)
         for (int g = 0; g < hidden_size; g++) {
           // While mxnet gru gate order is reset, update and new gates,
           // mkldnn gru gate order is update, reset and new gates. So
@@ -556,8 +559,9 @@ static void MKLDNNRNNForwardUnidi(const bool state_outputs,
         }
       }
     } else {
+      const size_t b_size = num_layer * single_b_size;
       #pragma omp parallel for num_threads(omp_threads)
-      for (int j = 0; j < num_layer * single_b_size; j++) {
+      for (size_t j = 0; j < b_size; j++) {
         int k = j / single_b_size;
         user_bias_f[j] = b_ptr[j + k * single_b_size] +
             b_ptr[j + k * single_b_size + single_b_size];
@@ -588,7 +592,7 @@ static void MKLDNNRNNForwardUnidi(const bool state_outputs,
           mkldnn_mems->hcx_memory[layer_index], mkldnn_mems->wx_memory[layer_index],
           mkldnn_mems->wh_memory[layer_index], mkldnn_mems->bias_memory[layer_index],
           mkldnn_mems->y_memory[layer_index],
-         mkldnn_mems->hcy_memory[layer_index], null_memory_);
+          mkldnn_mems->hcy_memory[layer_index], null_memory_);
     rnn_forward_prim->push_back(rnn_prim);
   }
   MKLDNNStream::Get()->RegisterPrim((*rnn_forward_prim)[layer_index]);
@@ -598,18 +602,23 @@ static void MKLDNNRNNForwardUnidi(const bool state_outputs,
     DType* dst_hcy = reinterpret_cast<DType *>(
         mkldnn_mems->hcy_memory[layer_index].get_data_handle());
     if (mode == rnn_enum::kLstm) {
+      #if _OPENMP >= 200805
+      #  pragma omp parallel for num_threads(omp_threads) collapse(2)
+      #else
+      #  pragma omp parallel for num_threads(omp_threads)
+      #endif
       for (int l = 0; l < num_layer; l++) {
-        offset1 = l * single_cell_size;
-        offset2 = l * nstates * single_cell_size;
-        #pragma omp parallel for num_threads(omp_threads)
-        for (int n = 0; n < single_cell_size; n++) {
-          hy_ptr[offset1 + n] = dst_hcy[offset2 + n];
-          cy_ptr[offset1 + n] = dst_hcy[offset2 + n + single_cell_size];
+        for (size_t n = 0; n < single_cell_size; n++) {
+          const size_t single_state_offset = l * single_cell_size;
+          const size_t concat_state_offset = l * nstates * single_cell_size;
+          hy_ptr[single_state_offset + n] = dst_hcy[concat_state_offset + n];
+          cy_ptr[single_state_offset + n] = dst_hcy[concat_state_offset + n + single_cell_size];
         }
       }
     } else {
+      const size_t cell_size = num_layer * single_cell_size;
       #pragma omp parallel for num_threads(omp_threads)
-      for (int n = 0; n < num_layer * single_cell_size; n++) {
+      for (size_t n = 0; n < cell_size; n++) {
         hy_ptr[n] = dst_hcy[n];
       }
     }
