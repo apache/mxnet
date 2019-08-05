@@ -26,6 +26,7 @@ except ImportError:
 import ctypes
 import logging
 import os
+import shutil
 import numpy as np
 from ..base import _LIB, check_call, py_str
 from ..base import c_array, c_str, mx_uint, c_str_array
@@ -907,7 +908,7 @@ def quantize_net(network, quantized_dtype='auto', exclude_layers=None, exclude_l
     import tempfile
     try:
         from tempfile import TemporaryDirectory
-    except:
+    except AttributeError:
         # really simple implementation of TemporaryDirectory
         class TemporaryDirectory(object):
             def __init__(self, suffix='', prefix='', dir=''):
