@@ -2922,8 +2922,8 @@ MXNET_DLL int MXEnginePushSync(EngineSyncFunc sync_func, void* func_param,
   */
 MXNET_DLL int MXEnginePushAsyncND(EngineAsyncFunc async_func, void* func_param,
                                 EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
-                                NDArrayHandle const_nds_handle, int num_const_nds,
-                                NDArrayHandle mutable_nds_handle, int num_mutable_nds,
+                                NDArrayHandle* const_nds_handle, int num_const_nds,
+                                NDArrayHandle* mutable_nds_handle, int num_mutable_nds,
                                 EngineFnPropertyHandle prop_handle DEFAULT(NULL),
                                 int priority DEFAULT(0), const char* opr_name DEFAULT(NULL),
                                 bool wait DEFAULT(false));
@@ -2945,8 +2945,8 @@ MXNET_DLL int MXEnginePushAsyncND(EngineAsyncFunc async_func, void* func_param,
   */
 MXNET_DLL int MXEnginePushSyncND(EngineSyncFunc sync_func, void* func_param,
                                EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
-                               NDArrayHandle const_nds_handle, int num_const_nds,
-                               NDArrayHandle mutable_nds_handle, int num_mutable_nds,
+                               NDArrayHandle* const_nds_handle, int num_const_nds,
+                               NDArrayHandle* mutable_nds_handle, int num_mutable_nds,
                                EngineFnPropertyHandle prop_handle DEFAULT(NULL),
                                int priority DEFAULT(0), const char* opr_name DEFAULT(NULL));
 
