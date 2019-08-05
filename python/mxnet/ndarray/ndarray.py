@@ -442,6 +442,10 @@ fixed-size items.
         array([[ 6.,  5.,  5.],
                [ 6.,  0.,  4.]], dtype=float32)
         """
+        if self.ndim == 0 and key == ():
+            _internal._full(shape=self.shape, value=float(value), ctx=self.context,
+                            dtype=self.dtype, out=self)
+            return
         key = _indexing_key_expand_implicit_axes(key, self.shape)
         slc_key = tuple(idx for idx in key if idx is not None)
 
@@ -602,6 +606,8 @@ fixed-size items.
         array([[[4., 5.],
                 [6., 7.]]], dtype=float32)
         """
+        if self.ndim == 0 and key == ():
+            return self
         key = _indexing_key_expand_implicit_axes(key, self.shape)
         if len(key) == 0:
             raise ValueError('indexing key cannot be an empty tuple')
@@ -2741,6 +2747,8 @@ def _get_dim_size(start, stop, step):
     """Given start, stop, and stop, calculate the number of elements
     of this slice."""
     assert step != 0
+    if stop == start:
+        return 0
     if step > 0:
         assert start < stop
         dim_size = (stop - start - 1) // step + 1
