@@ -905,7 +905,21 @@ def quantize_net(network, quantized_dtype='auto', exclude_layers=None, exclude_l
             break
 
     import tempfile
-    with tempfile.TemporaryDirectory() as tmpdirname:
+    try:
+        from tempfile import TemporaryDirectory
+    except:
+        # really simple implementation of TemporaryDirectory
+        class TemporaryDirectory(object):
+            def __init__(self, suffix='', prefix='', dir=''):
+                self._dirname = tempfile.mkdtemp(suffix, prefix, dir)
+
+            def __enter__(self):
+                return self._dirname
+
+            def __exit__(self, exc_type, exc_value, traceback):
+                shutil.rmtree(self._dirname)
+
+    with TemporaryDirectory() as tmpdirname:
         prefix = os.path.join(tmpdirname, 'tmp')
         network.export(prefix, epoch=0)
         symnet, args, auxs = mx.model.load_checkpoint(prefix, 0)
@@ -961,7 +975,7 @@ def quantize_net(network, quantized_dtype='auto', exclude_layers=None, exclude_l
     for name in data_names:
         data_sym.append(mx.sym.var(name))
     net = SymbolBlock(qsym, data_sym)
-    with tempfile.TemporaryDirectory() as tmpdirname:
+    with TemporaryDirectory() as tmpdirname:
         prefix = os.path.join(tmpdirname, 'tmp')
         param_name = '%s-%04d.params' % (prefix + 'net-quantized', 0)
         save_dict = {('arg:%s' % k): v.as_in_context(cpu())
