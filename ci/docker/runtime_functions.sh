@@ -1510,12 +1510,14 @@ build_r_docs() {
     pushd .
 
     build_setup
-    repo="new_docs_r"
-    fetch_new_docs_repo $repo
-
-    pushd $repo/Rsite
     eval "$(/work/miniconda/bin/conda shell.bash hook)"
     conda activate mxnet-docs
+
+    repo="new_docs_r"
+    fetch_new_docs_repo $repo
+    pushd $repo/Rsite
+
+    rm -rf build
     make html EVAL=0
     popd
 
