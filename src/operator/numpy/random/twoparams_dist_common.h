@@ -178,4 +178,4 @@ inline bool TwoparamsDistOpShape(const nnvm::NodeAttrs &attrs,
 }  // namespace op
 }  // namespace mxnet
 
-#endif /* MXNET_OPERATOR_NUMPY_RANDOM_TWOPARAMS_DIST_COMMON_H_ */
+#endif  // MXNET_OPERATOR_NUMPY_RANDOM_TWOPARAMS_DIST_COMMON_H_ */
