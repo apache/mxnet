@@ -1544,11 +1544,11 @@ int MXEnginePushSync(EngineSyncFunc sync_func, void* func_param,
 }
 
 int MXEnginePushAsyncND(EngineAsyncFunc async_func, void* func_param,
-                      EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
-                      NDArrayHandle* const_nds_handle, int num_const_nds,
-                      NDArrayHandle* mutable_nds_handle, int num_mutable_nds,
-                      EngineFnPropertyHandle prop_handle, int priority,
-                      const char* opr_name, bool wait) {
+                        EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
+                        NDArrayHandle* const_nds_handle, int num_const_nds,
+                        NDArrayHandle* mutable_nds_handle, int num_mutable_nds,
+                        EngineFnPropertyHandle prop_handle, int priority,
+                        const char* opr_name, bool wait) {
   API_BEGIN();
   NDArray** const_nds = reinterpret_cast<NDArray**>(const_nds_handle);
   NDArray** mutable_nds = reinterpret_cast<NDArray**>(mutable_nds_handle);
@@ -1564,11 +1564,11 @@ int MXEnginePushAsyncND(EngineAsyncFunc async_func, void* func_param,
 }
 
 int MXEnginePushSyncND(EngineSyncFunc sync_func, void* func_param,
-                     EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
-                     NDArrayHandle* const_nds_handle, int num_const_nds,
-                     NDArrayHandle* mutable_nds_handle, int num_mutable_nds,
-                     EngineFnPropertyHandle prop_handle, int priority,
-                     const char* opr_name) {
+                       EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
+                       NDArrayHandle* const_nds_handle, int num_const_nds,
+                       NDArrayHandle* mutable_nds_handle, int num_mutable_nds,
+                       EngineFnPropertyHandle prop_handle, int priority,
+                       const char* opr_name) {
   API_BEGIN();
   NDArray** const_nds = reinterpret_cast<NDArray**>(const_nds_handle);
   NDArray** mutable_nds = reinterpret_cast<NDArray**>(mutable_nds_handle);
