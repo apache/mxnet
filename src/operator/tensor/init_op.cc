@@ -134,7 +134,8 @@ Examples::
     [](const NodeAttrs& attrs) { return std::vector<uint32_t>(1, 0); })
 .set_attr<FCompute>("FCompute<cpu>", RangeCompute<cpu, RangeLikeParam>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_argument("data", "NDArray-or-Symbol", "The input");
+.add_argument("data", "NDArray-or-Symbol", "The input")
+.add_arguments(RangeLikeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_linspace)
 .describe("Return evenly spaced numbers over a specified interval. Similar to Numpy")
