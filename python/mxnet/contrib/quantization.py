@@ -421,6 +421,7 @@ def _load_params(params, logger=logging):
         raise ValueError('Unsupported params provided. Must be either a path to the param file or'
                          ' a pair of dictionaries representing arg_params and aux_params')
 
+# pylint: disable=super-init-not-called
 class _DataIterWrapper(DataIter):
     """DataIter wrapper for general iterator, e.g., gluon dataloader"""
     def __init__(self, calib_data):
@@ -447,6 +448,7 @@ class _DataIterWrapper(DataIter):
 
     def next(self):
         return DataBatch(data=next(self._iter))
+# pylint: enable=super-init-not-called
 
 def _as_data_iter(calib_data):
     """Convert normal iterator to mx.io.DataIter while parsing the data_shapes"""
@@ -895,7 +897,7 @@ def quantize_net(network, quantized_dtype='auto', exclude_layers=None, exclude_l
     while True:
         try:
             network(*data_nd)
-        except:
+        except TypeError:
             del data_nd[-1]
             del calib_data.provide_data[-1]
             continue
