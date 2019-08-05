@@ -54,7 +54,11 @@ Examples::
 .set_attr<nnvm::FInferType>("FInferType", CumsumOpType)
 .set_attr<FCompute>("FCompute<cpu>", CumSumOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_cumsum"})
-.add_argument("data", "NDArray-or-Symbol", "Input ndarray");
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+   [](const NodeAttrs& attrs) {
+     return std::vector<std::pair<int, int> >{{0, 0}};
+   })
+.add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(CumsumParam::__FIELDS__());
 
 

@@ -36,6 +36,8 @@
 namespace mxnet {
 namespace op {
 
+using namespace mshadow;
+
 struct CumsumParam : public dmlc::Parameter<CumsumParam> {
   dmlc::optional<int> axis;
   DMLC_DECLARE_PARAMETER(CumsumParam) {
