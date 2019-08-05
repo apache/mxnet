@@ -45,6 +45,7 @@ NNVM_REGISTER_OP(_npi_uniform)
     case (3):
       return 0;
     }
+    return -1;
   }
 )
 .set_num_outputs(1)
