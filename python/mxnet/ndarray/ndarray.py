@@ -717,15 +717,18 @@ fixed-size items.
     def _new_axes_after_advanced_indexing(key, adv_axs, bcast_adv_ndim, adv_are_adjacent):
         """
         Return indices of ``axes`` after slicing with ``key_nd``.
+        
         This function is used to calculate the positions where new axes should
         end up after indexing, taking into account the removal of axes by
         integer indexing.
-        The ``key_nd`` sequence should contain slices and lists only, no
-        ``None`` entries.
+        
+        The ``key`` sequence should be the exapanded key including slices, array like objects, 
+        integer types and ``None``.
+        ``adv_axes`` is the sequence of indices of advanced axes. 
+        ``bcast_adv_ndim`` is the number of dimensions of advanced indexing subspace.
+        ``adv_are_adjacent`` is a boolean value. Value being True means all advanced indicies are adjacent. 
 
         Note: integer indices are also considered advanced indices here. 
-        ``ndim`` is the number of dimensions of key_nd
-        ``bcast_adv_ndim`` is the number of dimensions of advanced indexing subspace
         """
         new_axes = [ax for ax in range(len(key)) if key[ax] is None]
         adv_axs_set = set(adv_axs)
@@ -825,7 +828,7 @@ fixed-size items.
         )
         none_axes = [ax for ax in range(len(key)) if key[ax] is None]
         new_axes = self._new_axes_after_basic_indexing(none_axes, key)
-
+        print("begin, end, step:", begin, end, step)
         if can_assign_directly:
             # Easy case, overwrite whole array.
             if type(value) == self.__class__:
@@ -906,16 +909,6 @@ fixed-size items.
                 raise IndexError(
                     'index {} is out of bounds for axis {} with size {}'
                     ''.format(key_nd[ax], ax, self.shape[ax]))
-
-        # # Make sure we don't accidentally have advanced indexing or
-        # # unsupported entries.
-        # # TODO(xinyi): unnecessary code?
-        # for idx in slc_key:
-        #     if not isinstance(idx, py_slice):
-        #         raise RuntimeError(
-        #             'found object of type {} instead of `slice`. '
-        #             'This is a bug, please report it!'
-        #             ''.format(type(idx)))
 
         # Convert to begin, end and step, and return immediately if the slice
         # is empty
@@ -2472,19 +2465,85 @@ fixed-size items.
         """
         return self.copyto(self.context)
     
-
     def slice_assign_scalar(self, value, begin, end, step):
         """
-        TODO(xinyge): add doc here
-        """
-        _internal._slice_assign_scalar(self, value, begin=begin, end=end, step=step, out=self)
+        Assign the scalar to a cropped subset of this NDArray. Value will broadcast to the shape of the cropped shape
+        and will be cast to the same dtype of the NDArray.
+        
+        Parameters
+        ----------
+        value: numeric value
+            Value and this NDArray should be of the same data type.
+            The shape of rhs should be the same as the cropped shape of this NDArray. 
+        begin: tuple of begin indices
+        end: tuple of end indices
+        step: tuple of step lenghths
 
-    
+        Returns
+        -------
+        This NDArray. 
+
+        Examples
+        --------
+        >>> from mxnet import nd
+        >>> x = nd.ones((2, 2, 2))
+        >>> y = x.slice_assign_scalar(0, (0, 0, None), (1, 1, None), (None, None, None))
+        >>> y
+        [[[0. 0.]
+        [1. 1.]]
+
+        [[1. 1.]
+        [1. 1.]]]
+        <NDArray 2x2x2 @cpu(0)>
+        >>> x
+        [[[0. 0.]
+        [1. 1.]]
+
+        [[1. 1.]
+        [1. 1.]]]
+        <NDArray 2x2x2 @cpu(0)>
+
+        """
+        return _internal._slice_assign_scalar(self, value, begin=begin, end=end, step=step, out=self)
+
     def slice_assign(self, rhs, begin, end, step):
         """
-        TODO(xinyge): add doc here
+        Assign the rhs to a cropped subset of this NDarray in place. Returns the view of this NDArray. 
+
+        Parameters
+        ----------
+        rhs: NDArray. 
+            rhs and this NDArray should be of the same data type, and on the same device. 
+            The shape of rhs should be the same as the cropped shape of this NDArray. 
+        begin: tuple of begin indices
+        end: tuple of end indices
+        step: tuple of step lenghths
+
+        Returns
+        -------
+        This NDArray. 
+
+        Examples
+        --------
+        >>> x = nd.ones((2, 2, 2))
+        >>> assigned = nd.zeros((1, 1, 2))
+        >>> y = x.slice_assign(assigned, (0, 0, None), (1, 1, None), (None, None, None))
+        >>> y
+        [[[0. 0.]
+        [1. 1.]]
+
+        [[1. 1.]
+        [1. 1.]]]
+        <NDArray 2x2x2 @cpu(0)>
+        >>> x
+        [[[0. 0.]
+        [1. 1.]]
+
+        [[1. 1.]
+        [1. 1.]]]
+        <NDArray 2x2x2 @cpu(0)>
         """
-        _internal._slice_assign(self, rhs, begin=begin, end=end, step=step, out=self)
+        return _internal._slice_assign(self, rhs, begin=begin, end=end, step=step, out=self)
 
 
     def as_in_context(self, context):
@@ -2659,14 +2718,12 @@ fixed-size items.
 
     def _full(self, value):
         """
-        # TODO(xinyge) add doc here. 
         This is added as an NDArray class method in order to support polymorphism in NDArray and numpy.ndarray indexing
         """
         return _internal._full(self.shape, value=float(value), ctx=self.context, dtype=self.dtype, out=self)
     
     def _scatter_set_nd(self, value_nd, indices):
         """
-        # TODO(xinyge) add doc here. 
         This is added as an NDArray class method in order to support polymorphism in NDArray and numpy.ndarray indexing
         """
         return _internal._scatter_set_nd( 

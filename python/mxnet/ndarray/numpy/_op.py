@@ -181,7 +181,52 @@ def ones(shape, dtype=None, **kwargs):
 @set_module('mxnet.ndarray.numpy')
 def full(shape, fill_value, dtype=None, ctx=None, out=None):
     """
-    # TODO(xinyge) add and check doc here
+    Return a new array of given shape and type, filled with `fill_value`.
+
+    Parameters
+    ----------
+    shape : int or sequence of ints
+        Shape of the new array, e.g., ``(2, 3)`` or ``2``.
+    fill_value : scalar
+        Fill value.
+    dtype : data-type, optional
+        The desired data-type for the array. The default, `None`, means
+        `np.array(fill_value).dtype`.
+    ctx: to specify the device, e.g. the i-th GPU. 
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+    
+    Returns
+    -------
+    out : ndarray
+        Array of `fill_value` with the given shape, dtype, and order.
+
+    Notes
+    -----
+    This function differs from the original `numpy.full
+    https://docs.scipy.org/doc/numpy/reference/generated/numpy.full.html`_ in
+    the following way(s):
+
+    - Have an additional `ctx` argument to specify the device
+    - Have an additional `out` argument 
+    - Currently does not support `order` selection
+
+    See Also
+    --------
+    empty : Return a new uninitialized array.
+    ones : Return a new array setting values to one.
+    zeros : Return a new array setting values to zero.
+
+    Examples
+    --------
+    >>> np.full((2, 2), 10)
+    array([[10., 10.],
+           [10., 10.]])
+    >>> np.full((2, 2), 2, dtype=np.int32, ctx=mx.cpu(0))
+    array([[2, 2],
+           [2, 2]], dtype=int32)
     """
     if ctx is None:
         ctx = current_context()
@@ -1917,7 +1962,9 @@ def arcsin(x, out=None, **kwargs):
 @set_module('mxnet.ndarray.numpy')
 def slice_assign_scalar(lhs, value, begin, end, step, out=None):
     """
-    TODO(xinyge): add doc here
+    Assign the rhs to a cropped subset of this ndarray in place. Returns the view of this ndarray.
+    `rhs` and `lhs` should be of the same data type, and on the same device. 
+    The shape of rhs should be the same as the cropped shape of this ndarray. 
     """
     _npi.slice_assign_scalar(lhs, value, begin=begin, end=end, step=step, out=out)
 
@@ -1925,6 +1972,8 @@ def slice_assign_scalar(lhs, value, begin, end, step, out=None):
 @set_module('mxnet.ndarray.numpy')
 def slice_assign(lhs, rhs, begin, end, step, out=None):
     """
-    TODO(xinyge): add doc here
+    Assign the scalar to a cropped subset of this ndarray. Value will broadcast to the shape of the cropped shape
+    and will be cast to the same dtype of the ndarray.
     """
-    _npi.slice_assign(lhs, rhs, begin=begin, end=end, step=step, out=out)
+    return _npi.slice_assign(lhs, rhs, begin=begin, end=end, step=step, out=out)
+
