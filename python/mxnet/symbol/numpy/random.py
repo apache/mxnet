@@ -85,6 +85,8 @@ def uniform(low=0.0, high=1.0, size=None, ctx=None, dtype=None):
     dummy_value = -1.0
     if ctx is None:
         ctx = current_context()
+    if size is ():
+        size=None
     type_dict = {
         (True, True): lambda: _npi.uniform(low, high, low=dummy_value, high=dummy_value, size=size,
                                            t=0, ctx=ctx, dtype=dtype),
