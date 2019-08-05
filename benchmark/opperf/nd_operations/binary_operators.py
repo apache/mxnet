@@ -38,8 +38,8 @@ from benchmark.opperf.utils.op_registry_utils import get_all_broadcast_binary_op
     get_all_elemen_wise_binary_operators
 
 
-def run_mx_binary_broadcast_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10, runs=50):
-    """Runs benchmarks with the given context and precision (dtype)for all the binary
+def run_mx_binary_broadcast_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
+    """Runs benchmarks with the given context and precision (dtype) for all the binary
     broadcast operators in MXNet.
 
     Parameters
@@ -48,9 +48,9 @@ def run_mx_binary_broadcast_operators_benchmarks(ctx=mx.cpu(), dtype='float32', 
         Context to run benchmarks
     dtype: str, default 'float32'
         Precision to use for benchmarks
-    warmup: int, default 10
+    warmup: int, default 25
         Number of times to run for warmup
-    runs: int, default 50
+    runs: int, default 100
         Number of runs to capture benchmark results
 
     Returns
@@ -65,8 +65,8 @@ def run_mx_binary_broadcast_operators_benchmarks(ctx=mx.cpu(), dtype='float32', 
     return mx_binary_op_results
 
 
-def run_mx_binary_element_wise_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10, runs=50):
-    """Runs benchmarks with the given context and precision (dtype)for all the binary
+def run_mx_binary_element_wise_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
+    """Runs benchmarks with the given context and precision (dtype) for all the binary
     element_wise operators in MXNet.
 
     Parameters

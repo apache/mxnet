@@ -151,7 +151,7 @@ If your tutorial depends on specific packages, simply add them to this provision
 
 ### <a name="deep-learning-examples-other"></a>Other Deep Learning Examples with MXNet
 
-* [Face Recognition with ArcFace](https://github.com/onnx/models/tree/master/models/face_recognition/ArcFace) - ONNX model for face recognition with notebooks for training, validating and running inference in MXNet by [abhinavs95](https://github.com/abhinavs95)
+* [Face Recognition with ArcFace](https://github.com/onnx/models/tree/master/vision/body_analysis/arcface) - ONNX model for face recognition with notebooks for training, validating and running inference in MXNet by [abhinavs95](https://github.com/abhinavs95)
 * [Chinese plate recognition](https://github.com/imistyrain/mxnet-mr) - Recognize Chinese vehicle plate, by [imistyrain](https://github.com/imistyrain)
 * [Fast R-CNN](https://github.com/precedenceguo/mx-rcnn) by [Jian Guo](https://github.com/precedenceguo)
 * "End2End Captcha Recognition (OCR)" by [xlvector](https://github.com/xlvector) [github link](https://github.com/xlvector/learning-dl/tree/master/mxnet/ocr) [Blog in Chinese](http://blog.xlvector.net/2016-05/mxnet-ocr-cnn/)
@@ -171,7 +171,7 @@ If your tutorial depends on specific packages, simply add them to this provision
 * [MultiGPU enabled image generative models (GAN and DCGAN)](https://github.com/tqchen/mxnet-gan) by [Tianqi Chen](https://github.com/tqchen)
 * [Deep reinforcement learning for playing flappybird by mxnet](https://github.com/li-haoran/DRL-FlappyBird) by LIHaoran
 * [Neural Style in Markov Random Field (MRF) and Perceptual Losses Realtime transfer](https://github.com/zhaw/neural_style) by [zhaw](https://github.com/zhaw)
-* [MTCNN Face keypoints detection and alignment](https://pangyupo.github.io/2016/10/22/mxnet-mtcnn/) ([github](https://github.com/pangyupo/mxnet_mtcnn_face_detection)) in Chinese by [pangyupo](https://github.com/pangyupo)
+* [MTCNN Face keypoints detection and alignment](https://github.com/YYuanAnyVision/mxnet_mtcnn_face_detection) by [yuanyang](https://github.com/YYuanAnyVision), source code for [paper](https://kpzhang93.github.io/papers/spl.pdf) "Joint Face Detection and Alignment using Multi-task Cascaded Convolutional Neural Networks", [Kaipeng Zhang](https://github.com/kpzhang93), Zhanpeng Zhang, Zhifeng Li and Yu Qiao, IEEE Signal Processing Letters, 23(10), 2016
 * [SSD: Single Shot MultiBox Object Detector](https://github.com/zhreshold/mxnet-ssd) by [zhreshold](https://github.com/zhreshold)
 * [Fast Neural Style in Scala](https://github.com/Ldpe2G/DeepLearningForFun/tree/master/Mxnet-Scala/FastNeuralStyle) by [Ldpe2G](https://github.com/Ldpe2G)
 * [LSTM Human Activity Recognition](https://github.com/Ldpe2G/DeepLearningForFun/tree/master/Mxnet-Scala/HumanActivityRecognition) by [Ldpe2G](https://github.com/Ldpe2G)

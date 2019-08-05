@@ -23,6 +23,8 @@ import time
 import os
 import json
 from collections import OrderedDict
+from common import run_in_spawned_process
+import unittest
 
 def enable_profiler(profile_filename, run=True, continuous_dump=False, aggregate_stats=False):
     profiler.set_config(profile_symbolic=True,
@@ -265,21 +267,23 @@ def test_aggregate_stats_sorting():
     test_profile_event(False)
     for sb in sort_by_options:
         for asc in ascending_options:
-            debug_str = profiler.dumps(format = 'json', sort_by = sb, ascending = asc)
+            debug_str = profiler.dumps(format='json', sort_by=sb, ascending=asc)
             check_sorting(debug_str, sb, asc)
     profiler.set_state('stop')
 
 def test_aggregate_duplication():
     file_name = 'test_aggregate_duplication.json'
-    enable_profiler(profile_filename = file_name, run=True, continuous_dump=True, \
+    enable_profiler(profile_filename=file_name, run=True, continuous_dump=True, \
                     aggregate_stats=True)
+    # clear aggregate stats
+    profiler.dumps(reset=True)
     inp = mx.nd.zeros(shape=(100, 100))
     y = mx.nd.sqrt(inp)
     inp = inp + 1
     inp = inp + 1
     mx.nd.waitall()
     profiler.dump(False)
-    debug_str = profiler.dumps(format = 'json')
+    debug_str = profiler.dumps(format='json')
     target_dict = json.loads(debug_str)
     assert 'Time' in target_dict and 'operator' in target_dict['Time'] \
         and 'sqrt' in target_dict['Time']['operator'] \
@@ -291,6 +295,157 @@ def test_aggregate_duplication():
     assert target_dict['Time']['operator']['_plus_scalar']['Count'] == 2
     profiler.set_state('stop')
     
+def test_custom_operator_profiling(seed=None, file_name=None):
+    class Sigmoid(mx.operator.CustomOp):
+        def forward(self, is_train, req, in_data, out_data, aux):
+            x = in_data[0].asnumpy()
+            import numpy as np
+            y = 1.0 / (1.0 + np.exp(-x))
+            self.assign(out_data[0], req[0], mx.nd.array(y))
+            # Create a dummy matrix using nd.zeros. Test if 'MySigmoid::_zeros' is in dump file
+            dummy = mx.nd.zeros(shape=(100, 100))
+
+        def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+            y = out_data[0].asnumpy()
+            dy = out_grad[0].asnumpy()
+            dx = dy*(1.0 - y)*y
+            self.assign(in_grad[0], req[0], mx.nd.array(dx))
+
+    @mx.operator.register('MySigmoid')
+    class SigmoidProp(mx.operator.CustomOpProp):
+        def __init__(self):
+            super(SigmoidProp, self).__init__(True)
+
+        def list_arguments(self):
+            return ['data']
+
+        def list_outputs(self):
+            return ['output']
+
+        def infer_shape(self, in_shapes):
+            data_shape = in_shapes[0]
+            output_shape = data_shape
+            return (data_shape,), (output_shape,), ()
+
+        def create_operator(self, ctx, in_shapes, in_dtypes):
+            return Sigmoid()
+
+    if file_name is None:
+        file_name = 'test_custom_operator_profiling.json'
+    enable_profiler(profile_filename=file_name, run=True, continuous_dump=True,\
+                    aggregate_stats=True)
+    # clear aggregate stats
+    profiler.dumps(reset=True)
+    x = mx.nd.array([0, 1, 2, 3])
+    x.attach_grad()
+    with mx.autograd.record():
+        y = mx.nd.Custom(x, op_type='MySigmoid')
+    y.backward()
+    mx.nd.waitall()
+    profiler.dump(False)
+    debug_str = profiler.dumps(format='json')
+    target_dict = json.loads(debug_str)
+    assert 'Time' in target_dict and 'Custom Operator' in target_dict['Time'] \
+        and 'MySigmoid::pure_python' in target_dict['Time']['Custom Operator'] \
+        and '_backward_MySigmoid::pure_python' in target_dict['Time']['Custom Operator'] \
+        and 'MySigmoid::_zeros' in target_dict['Time']['Custom Operator']
+    profiler.set_state('stop')
+
+def check_custom_operator_profiling_multiple_custom_ops_output(debug_str):
+    target_dict = json.loads(debug_str)
+    assert 'Time' in target_dict and 'Custom Operator' in target_dict['Time'] \
+        and 'MyAdd1::pure_python' in target_dict['Time']['Custom Operator'] \
+        and 'MyAdd2::pure_python' in target_dict['Time']['Custom Operator'] \
+        and 'MyAdd1::_plus_scalar' in target_dict['Time']['Custom Operator'] \
+        and 'MyAdd2::_plus_scalar' in target_dict['Time']['Custom Operator']
+
+def custom_operator_profiling_multiple_custom_ops(seed, mode, file_name):
+    class MyAdd(mx.operator.CustomOp):
+        def forward(self, is_train, req, in_data, out_data, aux):        
+            self.assign(out_data[0], req[0], in_data[0] + 1)
+
+        def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+            self.assign(in_grad[0], req[0], out_grad[0])
+
+    @mx.operator.register('MyAdd1')
+    class MyAdd1Prop(mx.operator.CustomOpProp):
+        def __init__(self):
+            super(MyAdd1Prop, self).__init__(need_top_grad=True)
+
+        def list_arguments(self):
+            return ['data']
+
+        def list_outputs(self):
+            return ['output']
+
+        def infer_shape(self, in_shape):
+            # inputs, outputs, aux
+            return [in_shape[0]], [in_shape[0]], []
+
+        def create_operator(self, ctx, shapes, dtypes):
+            return MyAdd()
+
+    @mx.operator.register('MyAdd2')
+    class MyAdd2Prop(mx.operator.CustomOpProp):
+        def __init__(self):
+            super(MyAdd2Prop, self).__init__(need_top_grad=True)
+
+        def list_arguments(self):
+            return ['data']
+
+        def list_outputs(self):
+            return ['output']
+
+        def infer_shape(self, in_shape):
+            # inputs, outputs, aux
+            return [in_shape[0]], [in_shape[0]], []
+
+        def create_operator(self, ctx, shapes, dtypes):
+            return MyAdd()
+
+    enable_profiler(profile_filename=file_name, run=True, continuous_dump=True,\
+                    aggregate_stats=True)
+    # clear aggregate stats
+    profiler.dumps(reset=True)
+    inp = mx.nd.zeros(shape=(100, 100))
+    if mode == 'imperative':
+        y = mx.nd.Custom(inp, op_type='MyAdd1')
+        z = mx.nd.Custom(inp, op_type='MyAdd2')
+    elif mode == 'symbolic':
+        a = mx.symbol.Variable('a')
+        b = mx.symbol.Custom(data=a, op_type='MyAdd1')
+        c = mx.symbol.Custom(data=a, op_type='MyAdd2')
+        y = b.bind(mx.cpu(), {'a': inp})
+        z = c.bind(mx.cpu(), {'a': inp})
+        yy = y.forward()
+        zz = z.forward()
+    mx.nd.waitall()
+    profiler.dump(False)
+    debug_str = profiler.dumps(format='json')
+    check_custom_operator_profiling_multiple_custom_ops_output(debug_str)
+    profiler.set_state('stop')
+    
+def test_custom_operator_profiling_multiple_custom_ops_symbolic():
+    custom_operator_profiling_multiple_custom_ops(None, 'symbolic', \
+            'test_custom_operator_profiling_multiple_custom_ops_symbolic.json')
+
+def test_custom_operator_profiling_multiple_custom_ops_imperative():
+    custom_operator_profiling_multiple_custom_ops(None, 'imperative', \
+            'test_custom_operator_profiling_multiple_custom_ops_imperative.json')
+
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
+def test_custom_operator_profiling_naive_engine():
+    # run the three tests above using Naive Engine
+    run_in_spawned_process(test_custom_operator_profiling, \
+            {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, \
+            'test_custom_operator_profiling_naive.json')
+    run_in_spawned_process(custom_operator_profiling_multiple_custom_ops, \
+            {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, 'imperative', \
+            'test_custom_operator_profiling_multiple_custom_ops_imperative_naive.json')
+    run_in_spawned_process(custom_operator_profiling_multiple_custom_ops, \
+            {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, 'symbolic', \
+            'test_custom_operator_profiling_multiple_custom_ops_symbolic_naive.json')
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

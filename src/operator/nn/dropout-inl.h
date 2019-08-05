@@ -130,11 +130,18 @@ class DropoutOp {
     DType *dataptr = data.dptr_;
     auto maskptr = reinterpret_cast<int *>(mask.dptr_);
     int count = mask.shape_[0] * mask.shape_[1];
+    if (sizeof(DType) > sizeof(int)) {
+      // allocating new buffer to avoiding memory overlapping between `mask.dptr_` and `maskptr`
+      Tensor<xpu, 1, int> temp = ctx.requested[1].get_space_typed<xpu, 1, int>(Shape1(count), s);
+      maskptr = temp.dptr_;
+    }
     BernoulliGenerate(*pgen, count, this->pkeep_, maskptr);
     const float pk_1 = 1.0f / this->pkeep_;
 #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
     for (int i = 0; i < count; ++i) {
-      outptr[i] = dataptr[i] * maskptr[i] * pk_1;
+      const DType maskVal = static_cast<DType>(maskptr[i]) * pk_1;
+      outptr[i] = dataptr[i] * maskVal;
+      mask.dptr_[i] = maskVal;
     }
   }
 
@@ -149,12 +156,11 @@ class DropoutOp {
     Tensor<xpu, 2, DType> gdata = in_grad[dropout::kData].FlatTo2D<xpu, DType>(s);
     DType *ingradptr = gdata.dptr_;
     const DType *outgradptr = grad.dptr_;
-    auto maskptr = reinterpret_cast<int *>(mask.dptr_);
-    int count = mask.shape_[0] * mask.shape_[1];
-    const float pk_1 = 1.0f / this->pkeep_;
+    const DType *maskptr = mask.dptr_;
+    const int count = mask.shape_[0] * mask.shape_[1];
 #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
     for (int i = 0; i < count; ++i) {
-      ingradptr[i] = outgradptr[i] * maskptr[i] * pk_1;
+      ingradptr[i] = outgradptr[i] * maskptr[i];
     }
   }
 
@@ -398,6 +404,8 @@ class DropoutOp {
           }
         }
       } else {
+        if (req[dropout::kOut] == kWriteInplace) return;
+
         MXNET_ASSIGN_REQ_SWITCH(req[dropout::kOut], Req, {
           mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, Req>, xpu>::Launch(
             s, out.Size(), out.dptr<DType>(), in.dptr<DType>());
@@ -527,5 +535,4 @@ void DropoutGradCompute(const OpStatePtr& state,
 }  // namespace op
 }  // namespace mxnet
 
-#undef MXNET_USE_MKL_DROPOUT
 #endif  // MXNET_OPERATOR_NN_DROPOUT_INL_H_

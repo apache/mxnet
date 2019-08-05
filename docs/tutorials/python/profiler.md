@@ -154,6 +154,8 @@ run_training_iteration(*next(itr))
 mx.nd.waitall()
 # Ask the profiler to stop recording
 profiler.set_state('stop')
+# Dump all results to log file before download
+profiler.dump()
 ```
 
 Between running and stopping the profiler, you can also pause and resume the profiler using `profiler.pause()` and `profiler.resume()` respectively to profile only parts of the code you want to profile.
@@ -193,10 +195,10 @@ print(profiler.dumps())
 You can also dump the information collected by the profiler into a `json` file using the `profiler.dump()` function and view it in a browser.
 
 ```python
-profiler.dump()
+profiler.dump(finished=False)
 ```
 
-`dump()` creates a `json` file which can be viewed using a trace consumer like `chrome://tracing` in the Chrome browser. Here is a snapshot that shows the output of the profiling we did above.
+`dump()` creates a `json` file which can be viewed using a trace consumer like `chrome://tracing` in the Chrome browser. Here is a snapshot that shows the output of the profiling we did above. Note that setting the `finished` parameter to `False` will prevent the profiler from finishing dumping to file. If you just use `profiler.dump()`, you will no longer be able to profile the remaining sections of your model. 
 
 ![Tracing Screenshot](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/python/profiler/profiler_output_chrome.png)
 
@@ -205,6 +207,84 @@ Let's zoom in to check the time taken by operators
 ![Operator profiling](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/python/profiler/profile_operators.png)
 
 The above picture visualizes the sequence in which the operators were executed and the time taken by each operator.
+
+### Profiling Custom Operators
+Should the existing NDArray operators fail to meet all your model's needs, MXNet supports [Custom Operators](https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/customop.html) that you can define in Python. In `forward()` and `backward()` of a custom operator, there are two kinds of code: "pure Python" code (NumPy operators included) and "sub-operators" (NDArray operators called within `forward()` and `backward()`). With that said, MXNet can profile the execution time of both kinds without additional setup. Specifically, the MXNet profiler will break a single custom operator call into a pure Python event and several sub-operator events if there are any. Furthermore, all of those events will have a prefix in their names, which is, conveniently, the name of the custom operator you called.
+
+Let's try profiling custom operators with the following code example:
+
+```python
+class MyAddOne(mx.operator.CustomOp):
+    def forward(self, is_train, req, in_data, out_data, aux):  
+        self.assign(out_data[0], req[0], in_data[0]+1)
+
+    def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+        self.assign(in_grad[0], req[0], out_grad[0])
+
+@mx.operator.register('MyAddOne')
+class CustomAddOneProp(mx.operator.CustomOpProp):
+    def __init__(self):
+        super(CustomAddOneProp, self).__init__(need_top_grad=True)
+
+    def list_arguments(self):
+        return ['data']
+
+    def list_outputs(self):
+        return ['output']
+
+    def infer_shape(self, in_shape):
+        return [in_shape[0]], [in_shape[0]], []
+
+    def create_operator(self, ctx, shapes, dtypes):
+        return MyAddOne()
+
+
+inp = mx.nd.zeros(shape=(500, 500))
+
+profiler.set_config(profile_all=True, continuous_dump=True, \
+                    aggregate_stats=True)
+profiler.set_state('run')
+
+w = nd.Custom(inp, op_type="MyAddOne")
+
+mx.nd.waitall()
+
+profiler.set_state('stop')
+print(profiler.dumps())
+profiler.dump(finished=False)
+```
+
+Here, we have created a custom operator called `MyAddOne`, and within its `forward()` function, we simply add one to the input. We can visualize the dump file in `chrome://tracing/`:
+
+![Custom Operator Profiling Screenshot](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/python/profiler/profiler_output_custom_operator_chrome.png)
+
+As shown by the screenshot, in the **Custom Operator** domain where all the custom operator-related events fall into, we can easily visualize the execution time of each segment of `MyAddOne`. We can tell that `MyAddOne::pure_python` is executed first. We also know that `CopyCPU2CPU` and `_plus_scalr` are two "sub-operators" of `MyAddOne` and the sequence in which they are executed.
+
+Please note that: to be able to see the previously described information, you need to set `profile_imperative` to `True` even when you are using custom operators in [symbolic mode](https://mxnet.incubator.apache.org/versions/master/tutorials/basic/symbol.html) (refer to the code snippet below, which is the symbolic-mode equivelent of the code example above). The reason is that within custom operators, pure python code and sub-operators are still called imperatively. 
+
+```python 
+# Set profile_all to True
+profiler.set_config(profile_all=True, aggregate_stats=True, continuous_dump=True)
+# OR, Explicitly Set profile_symbolic and profile_imperative to True
+profiler.set_config(profile_symbolic=True, profile_imperative=True, \
+                    aggregate_stats=True, continuous_dump=True)
+
+profiler.set_state('run')
+# Use Symbolic Mode
+a = mx.symbol.Variable('a')
+b = mx.symbol.Custom(data=a, op_type='MyAddOne')
+c = b.bind(mx.cpu(), {'a': inp})
+y = c.forward()
+mx.nd.waitall()
+profiler.set_state('stop')
+print(profiler.dumps())
+profiler.dump()
+```
+
+### Some Rules to Pay Attention to
+1. Always use `profiler.dump(finished=False)` if you do not intend to finish dumping to file. Otherwise, calling `profiler.dump()` in the middle of your model may lead to unexpected behaviors; and if you subsequently call `profiler.set_config()`, the program will error out.
+
+2. You can only dump to one file. Do not change the target file by calling `profiler.set_config(filename='new_name.json')` in the middle of your model. This will lead to incomplete dump outputs.
 
 ## Advanced: Using NVIDIA Profiling Tools
 

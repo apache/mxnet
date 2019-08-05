@@ -173,6 +173,15 @@ def test_ndarray_negate():
 
 
 @with_seed()
+def test_ndarray_magic_abs():
+    for dim in range(1, 7):
+        shape = rand_shape_nd(dim)
+        npy = np.random.uniform(-10, 10, shape)
+        arr = mx.nd.array(npy)
+        assert_almost_equal(abs(arr).asnumpy(), arr.abs().asnumpy())
+
+
+@with_seed()
 def test_ndarray_reshape():
     tensor = (mx.nd.arange(30) + 1).reshape(2, 3, 5)
     true_res = mx.nd.arange(30) + 1
@@ -191,6 +200,65 @@ def test_ndarray_reshape():
     assert same(tensor.reshape(-1, 15).reshape(0, -4, 3, -1).asnumpy(), true_res.reshape(2, 3, 5).asnumpy())
     assert same(tensor.reshape(-1, 0).asnumpy(), true_res.reshape(10, 3).asnumpy())
     assert same(tensor.reshape(-1, 0, reverse=True).asnumpy(), true_res.reshape(6, 5).asnumpy())
+
+
+@with_seed()
+def test_ndarray_flatten():
+    tensor = (mx.nd.arange(30) + 1).reshape(2, 3, 5)
+    copy = tensor.flatten()
+    ref = tensor.flatten(inplace=True)
+    assert same(copy.asnumpy(), tensor.reshape(2, 15).asnumpy())
+    assert same(ref.asnumpy(), tensor.reshape(2, 15).asnumpy())
+
+    tensor[0] = -1
+    assert not same(copy.asnumpy(), tensor.reshape(2, 15).asnumpy())
+    assert same(ref.asnumpy(), tensor.reshape(2, 15).asnumpy())
+
+
+@with_seed()
+def test_ndarray_squeeze():
+    def check_squeeze(shape, axis=None):
+        data = mx.random.uniform(low=-10.0, high=10.0, shape=shape)
+        copy = data.squeeze(axis=axis)
+        ref = data.squeeze(axis=axis, inplace=True)
+        out_expected = np.squeeze(data.asnumpy(), axis=axis)
+        if copy.shape == (1,):  # as an exception (1, 1, 1) will be squeezed to (1,)
+            out_expected = np.squeeze(data.asnumpy(), axis=tuple([i for i in range(1, len(shape))]))
+        assert same(copy.asnumpy(), out_expected)
+        assert same(ref.asnumpy(), out_expected)
+        data[0][0] = -1
+        assert same(copy.asnumpy(), out_expected)
+        assert not same(ref.asnumpy(), out_expected)
+
+    # check forward
+    check_squeeze((1, 5, 1, 3, 1), 0)
+    check_squeeze((1, 5, 1, 3, 1), 2)
+    check_squeeze((1, 5, 1, 3, 1), 4)
+    check_squeeze((1, 5, 1, 3, 1), (0, 4))
+    check_squeeze((1, 5, 1, 3, 1), (0, 2, 4))
+    check_squeeze((1, 5, 1, 3, 1), -5)
+    check_squeeze((1, 5, 1, 3, 1), -3)
+    check_squeeze((1, 5, 1, 3, 1), -1)
+    check_squeeze((1, 5, 1, 3, 1), (0, 4))
+    check_squeeze((1, 5, 1, 3, 1), (0, 2, 4))
+    check_squeeze((1, 5, 1, 3, 1))
+    check_squeeze((1, 1, 1, 1))
+
+
+@with_seed()
+def test_ndarray_expand_dims():
+    for ndim in range(1, 6):
+        for axis in range(-ndim-1, ndim+1):
+            shape = list(np.random.randint(1, 10, size=ndim))
+            data = mx.random.normal(shape=shape)
+            copy = data.expand_dims(axis=axis)
+            ref = data.expand_dims(axis=axis, inplace=True)
+            out_expected = np.expand_dims(data.asnumpy(), axis=axis)
+            assert same(copy.asnumpy(), out_expected)
+            assert same(ref.asnumpy(), out_expected), (shape, axis, ref.asnumpy().shape, out_expected.shape)
+            data[0] = -1
+            assert same(copy.asnumpy(), out_expected)
+            assert not same(ref.asnumpy(), out_expected)
 
 
 @with_seed()
@@ -822,10 +890,7 @@ def test_order():
         # test for ret_typ=indices
         nd_ret_topk = mx.nd.topk(a_nd, axis=1, ret_typ="indices", k=3, is_ascend=True).asnumpy()
         # Test the default dtype
-        if is_large_tensor_enabled:
-            assert nd_ret_topk.dtype == np.int64
-        else:
-            assert nd_ret_topk.dtype == np.int32
+        assert nd_ret_topk.dtype == np.float32
         gt = gt_topk(a_npy, axis=1, ret_typ="indices", k=3, is_ascend=True)
         assert_almost_equal(nd_ret_topk, gt)
         nd_ret_topk = mx.nd.topk(a_nd, axis=3, ret_typ="indices", k=2, is_ascend=False, dtype=np.float64).asnumpy()
@@ -866,10 +931,7 @@ def test_order():
         nd_ret_topk_val = nd_ret_topk_val.asnumpy()
         nd_ret_topk_ind = nd_ret_topk_ind.asnumpy()
         assert nd_ret_topk_val.dtype == dtype
-        if is_large_tensor_enabled:
-            assert nd_ret_topk_ind.dtype == np.int64
-        else:
-            assert nd_ret_topk_ind.dtype == np.int32
+        assert nd_ret_topk_ind.dtype == np.float32
         gt_val = gt_topk(a_npy, axis=1, ret_typ="value", k=3, is_ascend=True)
         gt_ind = gt_topk(a_npy, axis=1, ret_typ="indices", k=3, is_ascend=True)
         assert_almost_equal(nd_ret_topk_val, gt_val)

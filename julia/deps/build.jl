@@ -24,7 +24,7 @@ using LinearAlgebra
 ################################################################################
 libmxnet_detected = false
 libmxnet_curr_ver = get(ENV, "MXNET_COMMIT", "master")
-curr_win = "20180211"  # v1.1.0
+curr_win = "20190608"  # v1.5.0
 
 if haskey(ENV, "MXNET_HOME")
   MXNET_HOME = ENV["MXNET_HOME"]
@@ -119,21 +119,25 @@ if !libmxnet_detected
     base_url = "https://github.com/yajiedesign/mxnet/releases/download/weekly_binary_build_v2/prebuildbase_win10_x64_vc14_v2.7z"
 
     if libmxnet_curr_ver == "master"
+      _cmd = "{
+        [System.Net.ServicePointManager]::SecurityProtocol='tls12';
+        Invoke-WebRequest -Uri 'https://api.github.com/repos/yajiedesign/mxnet/releases/latest'
+        -OutFile 'mxnet.json'}"
       # download_cmd uses powershell 2, but we need powershell 3 to do this
-      run(`powershell -NoProfile -Command Invoke-WebRequest -Uri "https://api.github.com/repos/yajiedesign/mxnet/releases/latest" -OutFile "mxnet.json"`)
+      run(`powershell -NoProfile -Command $_cmd`)
       curr_win = JSON.parsefile("mxnet.json")["tag_name"]
       @info("Can't use MXNet master on Windows, using latest binaries from $curr_win.")
     end
     # TODO: Get url from JSON.
-    name = "mxnet_x64_vc14_$(HAS_CUDA ? "gpu" : "cpu").7z"
+    # TODO: detect cuda version and select corresponding url.
+    name = "mxnet_x64_$(HAS_CUDA ? "vc141_gpu_cu101" : "vc14_cpu").7z"
     package_url = "https://github.com/yajiedesign/mxnet/releases/download/$(curr_win)/$(curr_win)_$(name)"
 
-    exe7z = joinpath(JULIA_HOME, "7z.exe")
+    exe7z = joinpath(Sys.BINDIR, "7z.exe")
 
     run(download_cmd(package_url, "mxnet.7z"))
     # this command will create the dir "usr\\lib"
-    run(`$exe7z x mxnet.7z build lib -y -ousr`)
-    run(`cmd /c copy "usr\\build\\*.dll" "usr\\lib"`)
+    run(`$exe7z e mxnet.7z *\\build\\* *\\lib\\* -y -ousr\\lib`)
 
     run(download_cmd(base_url, "mxnet_base.7z"))
     run(`$exe7z x mxnet_base.7z -y -ousr`)

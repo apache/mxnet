@@ -249,11 +249,11 @@ class Trainer(object):
 
     @property
     def learning_rate(self):
-        if not isinstance(self._optimizer, opt.Optimizer): # pylint: disable=no-else-raise
+        if not isinstance(self._optimizer, opt.Optimizer):
             raise UserWarning("Optimizer has to be defined before its learning "
                               "rate can be accessed.")
-        else:
-            return self._optimizer.learning_rate
+
+        return self._optimizer.learning_rate
 
     @property
     def optimizer(self):
@@ -270,11 +270,11 @@ class Trainer(object):
         lr : float
             The new learning rate of the optimizer.
         """
-        if not isinstance(self._optimizer, opt.Optimizer): # pylint: disable=no-else-raise
+        if not isinstance(self._optimizer, opt.Optimizer):
             raise UserWarning("Optimizer has to be defined before its learning "
                               "rate is mutated.")
-        else:
-            self._optimizer.set_learning_rate(lr)
+
+        self._optimizer.set_learning_rate(lr)
 
     def _row_sparse_pull(self, parameter, out, row_id, full_idx=False):
         """Internal method to invoke pull operations on KVStore. If `full_idx` is set to True,

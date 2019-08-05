@@ -22,7 +22,7 @@ import mxnet as mx
 import numpy as np
 from common import assertRaises, models
 from mxnet.base import NotImplementedForSymbol
-from mxnet.test_utils import discard_stderr
+from mxnet.test_utils import discard_stderr, rand_shape_nd
 import pickle as pkl
 
 def test_symbol_basic():
@@ -188,6 +188,21 @@ def test_symbol_infer_shape_var():
     assert arg_shapes[1] == overwrite_shape
     assert out_shapes[0] == overwrite_shape
 
+
+def test_symbol_magic_abs():
+    for dim in range(1, 7):
+        with mx.name.NameManager():
+            data = mx.symbol.Variable('data')
+            method = data.abs(name='abs0')
+            magic = abs(data)
+            regular = mx.symbol.abs(data, name='abs0')
+            ctx = {'ctx': mx.context.current_context(), 'data': rand_shape_nd(dim)}
+            mx.test_utils.check_consistency(
+                [method, magic], ctx_list=[ctx, ctx])
+            mx.test_utils.check_consistency(
+                [regular, magic], ctx_list=[ctx, ctx])
+
+
 def test_symbol_fluent():
     has_grad = set(['flatten', 'expand_dims', 'flip', 'tile', 'transpose', 'sum', 'nansum', 'prod',
                     'nanprod', 'mean', 'max', 'min', 'reshape', 'broadcast_to', 'split',
@@ -242,6 +257,7 @@ def test_symbol_fluent():
     check_fluent_regular('reshape', {'shape': (17, 1, 5)})
     check_fluent_regular('broadcast_to', {'shape': (5, 17, 47)})
     check_fluent_regular('squeeze', {'axis': (1, 3)}, shape=(2, 1, 3, 1, 4))
+    check_fluent_regular('squeeze', {}, shape=(2, 1, 3, 1, 4))
 
 def check_symbol_consistency(sym1, sym2, ctx, skip_grad=False, equal_nan=False):
     assert sym1.list_arguments() == sym2.list_arguments()

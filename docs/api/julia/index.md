@@ -17,7 +17,7 @@
 
 # MXNet - Julia API
 
-See the [MXNet Julia Reference Manual](https://media.readthedocs.org/pdf/mxnet-test/latest/mxnet-test.pdf).
+See the [MXNet Julia Site](site/index.html) for examples and API reference docs.
 
 MXNet supports the Julia programming language. The MXNet Julia package brings flexible and efficient GPU
 computing and the state-of-art deep learning to Julia.
@@ -26,8 +26,9 @@ computing and the state-of-art deep learning to Julia.
 - It also enables you to construct and customize the state-of-art deep learning models in Julia,
   and apply them to tasks such as image classification and data science challenges.
 
+## Installation
+* [Ubuntu installation guide](../../install/ubuntu_setup.html)
+* Mac / Windows guides are not available (contributions welcome!)
 
-&nbsp;
-
-## Julia API Reference
-Julia documents are available at [http://dmlc.ml/MXNet.jl/latest/](http://dmlc.ml/MXNet.jl/latest/).
+## Docs
+To build your own copy of the [MXNet Julia Site](site/index.html), run `make -C julia/docs` from the MXNet source root directory. You can also generate it with Docker by using `dev_menu.py` from the root directory and choosing to build the entire website. The Julia site will be located in `api/julia/site/`.

@@ -16,14 +16,11 @@
 # under the License.
 
 """Utilities to interact with MXNet operator registry."""
-import ctypes
-import sys
-from mxnet.base import _LIB, check_call, py_str, OpHandle, c_str, mx_uint
+from operator import itemgetter
+from mxnet import runtime
+import mxnet as mx
 
-from benchmark.opperf.rules.default_params import DEFAULTS_INPUTS
-
-# We will use all operators inside NDArray Module
-mx_nd_module = sys.modules["mxnet.ndarray.op"]
+from benchmark.opperf.rules.default_params import DEFAULTS_INPUTS, MX_OP_MODULE
 
 # Operators where parameter have special criteria that cannot be cleanly automated.
 # Example: sample_multinomial operator has a parameter 'data'. It expects values to sum up to 1.
@@ -62,7 +59,7 @@ def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_back
     for cur_op_name in operator_names:
         if not cur_op_name.startswith(filters):
             mx_operators[cur_op_name] = {"has_backward": False,
-                                         "nd_op_handle": getattr(mx_nd_module, cur_op_name)}
+                                         "nd_op_handle": getattr(MX_OP_MODULE, cur_op_name)}
 
         if cur_op_name.startswith("_backward_"):
             operators_with_backward.append(cur_op_name)
@@ -77,89 +74,19 @@ def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_back
     return mx_operators
 
 
-def _get_all_registered_ops():
-    """Get all registered MXNet operator names.
-
-
-    Returns
-    -------
-    ["operator_name"]
-    """
-    plist = ctypes.POINTER(ctypes.c_char_p)()
-    size = ctypes.c_uint()
-
-    check_call(_LIB.MXListAllOpNames(ctypes.byref(size),
-                                     ctypes.byref(plist)))
-
-    mx_registered_operator_names = [py_str(plist[i]) for i in range(size.value)]
-    return mx_registered_operator_names
-
-
-def _get_op_handles(op_name):
-    """Get handle for an operator with given name - op_name.
-
-    Parameters
-    ----------
-    op_name: str
-        Name of operator to get handle for.
-    """
-    op_handle = OpHandle()
-    check_call(_LIB.NNGetOpHandle(c_str(op_name), ctypes.byref(op_handle)))
-    return op_handle
-
-
-def _get_op_arguments(op_handle):
-    """Given operator name and handle, fetch operator arguments - number of arguments,
-    argument names, argument types.
-
-    Parameters
-    ----------
-    op_handle: OpHandle
-        Handle for the operator
-
-    Returns
-    -------
-    (narg, arg_names, arg_types)
-    """
-    real_name = ctypes.c_char_p()
-    desc = ctypes.c_char_p()
-    num_args = mx_uint()
-    arg_names = ctypes.POINTER(ctypes.c_char_p)()
-    arg_types = ctypes.POINTER(ctypes.c_char_p)()
-    arg_descs = ctypes.POINTER(ctypes.c_char_p)()
-    key_var_num_args = ctypes.c_char_p()
-    ret_type = ctypes.c_char_p()
-
-    check_call(_LIB.MXSymbolGetAtomicSymbolInfo(
-        op_handle, ctypes.byref(real_name), ctypes.byref(desc),
-        ctypes.byref(num_args),
-        ctypes.byref(arg_names),
-        ctypes.byref(arg_types),
-        ctypes.byref(arg_descs),
-        ctypes.byref(key_var_num_args),
-        ctypes.byref(ret_type)))
-
-    narg = int(num_args.value)
-    arg_names = [py_str(arg_names[i]) for i in range(narg)]
-    arg_types = [py_str(arg_types[i]) for i in range(narg)]
-
-    return narg, arg_names, arg_types
-
-
 def _set_op_arguments(mx_operators):
     """Fetch and set operator arguments - nargs, arg_names, arg_types
     """
     for op_name in mx_operators:
-        op_handle = _get_op_handles(op_name)
-        narg, arg_names, arg_types = _get_op_arguments(op_handle)
-        mx_operators[op_name]["params"] = {"narg": narg,
-                                           "arg_names": arg_names,
-                                           "arg_types": arg_types}
+        operator_arguments = mx.operator.get_operator_arguments(op_name)
+        mx_operators[op_name]["params"] = {"narg": operator_arguments.narg,
+                                           "arg_names": operator_arguments.names,
+                                           "arg_types": operator_arguments.types}
 
 
 def _get_all_mxnet_operators():
     # Step 1 - Get all registered op names and filter it
-    operator_names = _get_all_registered_ops()
+    operator_names = mx.operator.get_all_registered_operators()
     mx_operators = _select_ops(operator_names)
 
     # Step 2 - Get all parameters for the operators
@@ -188,10 +115,16 @@ def prepare_op_inputs(arg_params):
                                   arg_params["params"]["arg_types"]):
         if "NDArray" in arg_type and arg_name + "_nd" in DEFAULTS_INPUTS:
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_nd"]
+        elif "NDArray" in arg_type and arg_name + "_4d" in DEFAULTS_INPUTS:
+            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_4d"]
         elif arg_name in DEFAULTS_INPUTS:
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name]
         elif "float" in arg_type and arg_name + "_float" in DEFAULTS_INPUTS:
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_float"]
+        elif "Shape" in arg_type and arg_name + "_shape" in DEFAULTS_INPUTS:
+            # This is for cases where in some ops 'axis' is Int in some ops a shape tuple.
+            # Ex: axis in sum is shape, axis in sort is int.
+            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_shape"]
 
     # Number of different inputs we want to use to test
     # the operator
@@ -311,6 +244,67 @@ def get_all_reduction_operators():
     return reduction_mx_operators
 
 
+def get_all_optimizer_operators():
+    """Gets all Optimizer operators registered with MXNet.
+
+     Returns
+     -------
+     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+     """
+    optimizer_ops = ['mp_sgd_update', 'signum_update', 'rmspropalex_update', 'ftml_update', 'rmsprop_update',
+                     'sgd_mom_update', 'signsgd_update', 'mp_sgd_mom_update', 'ftrl_update', 'sgd_update',
+                     'adam_update']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Optimizer operators
+    optimizer_mx_operators = {}
+    for op_name, op_params in mx_operators.items():
+         if op_name in optimizer_ops and op_name not in unique_ops:
+             optimizer_mx_operators[op_name] = mx_operators[op_name]
+    return optimizer_mx_operators
+
+def get_all_sorting_searching_operators():
+    """Gets all Sorting and Searching operators registered with MXNet.
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
+    sort_search_ops = ['sort', 'argsort', 'argmax', 'argmin', 'topk']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Sort and search operators
+    sort_search_mx_operators = {}
+    for op_name, op_params in mx_operators.items():
+        if op_name in sort_search_ops and op_name not in unique_ops:
+            sort_search_mx_operators[op_name] = mx_operators[op_name]
+    return sort_search_mx_operators
+
+
+def get_all_rearrange_operators():
+    """Gets all array rearrange operators registered with MXNet.
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
+    rearrange_ops = ['transpose','swapaxes','flip','depth_to_space','space_to_depth']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Array Rearrange operators
+    rearrange_mx_operators = {}
+    for op_name, op_params in mx_operators.items():
+        if op_name in rearrange_ops and op_name not in unique_ops:
+            rearrange_mx_operators[op_name] = mx_operators[op_name]
+    return rearrange_mx_operators
+    
+
 def get_operators_with_no_benchmark(operators_with_benchmark):
     """Gets all MXNet operators with not benchmark.
 
@@ -329,3 +323,19 @@ def get_operators_with_no_benchmark(operators_with_benchmark):
     """
     all_mxnet_operators = _get_all_mxnet_operators().keys()
     return list(set(all_mxnet_operators) - set(operators_with_benchmark))
+
+
+def get_current_runtime_features():
+    """Get all current runtime time flags/configuration for MXNet.
+
+    Returns
+    -------
+    Map of current runtime features such as compile flags used by MXNet.
+        Example: {'runtime_features': {'OPENCV' : '✔ OPENCV', 'CUDA': '✖ CUDA'}}
+    """
+    features = runtime.Features()
+    runtime_features = {}
+    for feature, config in sorted(features.items(), key=itemgetter(0)):
+        runtime_features[feature] = config
+
+    return {'runtime_features': runtime_features}
