@@ -26,7 +26,6 @@ from . import engine
 from .base import MXNetError
 from .util import is_np_shape, set_np_shape, np_shape, use_np_shape
 from . import base
-from . import library
 from . import contrib
 from . import ndarray
 from . import ndarray as nd
