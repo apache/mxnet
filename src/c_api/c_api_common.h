@@ -57,6 +57,7 @@
 using namespace mxnet;
 
 /*! \brief entry to to easily hold returning information */
+template<typename dtype = int>
 struct MXAPIThreadLocalEntry {
   /*! \brief result holder for returning string */
   std::string ret_str;
@@ -81,21 +82,11 @@ struct MXAPIThreadLocalEntry {
   /*! \brief result holder for returning shape pointer */
   std::vector<const mx_uint*> arg_shape_data, out_shape_data, aux_shape_data;
   /*! \brief result holder for returning shape pointer */
-#if MXNET_USE_INT64_TENSOR_SIZE == 1
-  std::vector<const int64_t*>
-#else
-  std::vector<const int*>
-#endif
-                          arg_shape_data_ex, out_shape_data_ex, aux_shape_data_ex;
+  std::vector<const dtype*> arg_shape_data_ex, out_shape_data_ex, aux_shape_data_ex;
   /*! \brief uint32_t buffer for returning shape pointer */
   std::vector<uint32_t> arg_shape_buffer, out_shape_buffer, aux_shape_buffer;
   /*! \brief uint32_t buffer for returning shape pointer */
-#if MXNET_USE_INT64_TENSOR_SIZE == 1
-  std::vector<int64_t>
-#else
-  std::vector<int>
-#endif
-                    arg_shape_buffer_ex, out_shape_buffer_ex, aux_shape_buffer_ex;
+  std::vector<dtype> arg_shape_buffer_ex, out_shape_buffer_ex, aux_shape_buffer_ex;
   /*! \brief bool buffer */
   std::vector<bool> save_inputs, save_outputs;
   // DEPRECATED. Use SetupShapeArrayReturnWithBufferEx instead.
@@ -118,7 +109,6 @@ struct MXAPIThreadLocalEntry {
     }
   }
   // helper function to setup return value of shape array
-  template<typename dtype>
   inline static void SetupShapeArrayReturnWithBufferEx(
       const mxnet::ShapeVector &shapes,
       std::vector<int> *ndim,
@@ -142,11 +132,11 @@ struct MXAPIThreadLocalEntry {
       }
     }
   }
-
 };
 
 // define the threadlocal store.
-typedef dmlc::ThreadLocalStore<MXAPIThreadLocalEntry> MXAPIThreadLocalStore;
+template<typename dtype = int>
+using MXAPIThreadLocalStore = dmlc::ThreadLocalStore<MXAPIThreadLocalEntry<dtype>>;
 
 namespace mxnet {
 // copy attributes from inferred vector back to the vector of each type.
