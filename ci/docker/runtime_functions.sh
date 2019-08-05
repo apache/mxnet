@@ -1460,9 +1460,12 @@ fetch_new_docs_repo() {
 
 
 fetch_jekyll_repo() {
-   if [ ! -d "$1" ]; then
-      git clone https://github.com/ThomasDelteil/mxnet.io-v2.git $1
+   repo=$1
+   if [ ! -d "$repo" ]; then
+      git clone https://github.com/ThomasDelteil/mxnet.io-v2.git $repo
    fi
+   pushd $repo
+   git checkout master
    git pull
 }
 
@@ -1470,12 +1473,10 @@ fetch_jekyll_repo() {
 build_jekyll_docs() {
    repo=mxnet.io-v2
    fetch_jekyll_repo $repo
-   pushd $repo/src
+   pushd src
    JEKYLL_ENV=production bundle exec jekyll build --config _config_prod.yml -d ../release
    popd
-   pushd $repo
    tar zcvf jekyll-artifacts.tgz release
-   popd
    mv $repo/jekyll-artifacts.tgz docs/_build
 }
 
