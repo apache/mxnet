@@ -25,6 +25,7 @@
 #include "mxnet/base.h"
 #include "mxnet/c_api.h"
 #include "mxnet/imperative.h"
+#include "mxnet/libinfo.h"
 #include "nnvm/c_api.h"
 #include "nnvm/pass.h"
 #include "nnvm/pass_functions.h"
@@ -98,7 +99,7 @@ int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
                                 const char **return_type) {
   static auto& map_key_var_args = nnvm::Op::GetAttr<std::string>("key_var_num_args");
   const Op* op = static_cast<Op*>(creator);
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   ret->ret_str.resize(0);
 
   if (map_key_var_args.count(op) != 0) {
@@ -203,7 +204,7 @@ int MXSymbolGetAttr(SymbolHandle symbol,
                     const char** out,
                     int* success) {
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(symbol);
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   if (s->GetAttr(key, &(ret->ret_str))) {
     *out = (ret->ret_str).c_str();
@@ -251,7 +252,7 @@ int MXSymbolListAttr(SymbolHandle symbol,
                      mx_uint *out_size,
                      const char*** out) {
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(symbol);
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   std::vector<std::tuple<std::string, std::string, std::string> > attr =
       s->ListAttrsRecursive();
@@ -281,7 +282,7 @@ int MXSymbolListAttrShallow(SymbolHandle symbol,
                             mx_uint *out_size,
                             const char*** out) {
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(symbol);
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   std::unordered_map<std::string, std::string> attr =
       s->ListAttrs(static_cast<nnvm::Symbol::ListAttrOption>(1));  // NOLINT(*)
@@ -360,7 +361,7 @@ int MXSymbolGetInputSymbols(SymbolHandle sym, SymbolHandle **input_arr, int *inp
   std::vector<nnvm::Symbol *> input_syms = mxnet::GetInputSymbols(*s);
   *input_size = input_syms.size();
 
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   ret->ret_handles.clear();
   ret->ret_handles.reserve(*input_size);
   for (int i = 0; i < *input_size; ++i) ret->ret_handles.push_back(input_syms[i]);
@@ -405,7 +406,7 @@ int MXSymbolCutSubgraph(SymbolHandle sym, SymbolHandle **input_symbols,
     }
     *input_size = input_syms.size();
 
-    MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+    MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
     ret->ret_handles.clear();
     ret->ret_handles.reserve(*input_size);
     for (int i = 0; i < *input_size; ++i) ret->ret_handles.push_back(input_syms[i]);
@@ -464,7 +465,7 @@ int MXSymbolSaveToFile(SymbolHandle symbol, const char *fname) {
 
 int MXSymbolSaveToJSON(SymbolHandle symbol, const char **out_json) {
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(symbol);
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   ret->ret_str = nnvm::pass::SaveJSON(Symbol2Graph(*s));
   *out_json = ret->ret_str.c_str();
@@ -528,7 +529,7 @@ int MXSymbolInferShape(SymbolHandle sym,
                        const mx_uint ***aux_shape_data,
                        int *complete) {
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(sym);
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   nnvm::Graph g = Symbol2Graph(*s);
   mxnet::ShapeVector arg_shapes(g.indexed_graph().input_nodes().size(), mxnet::TShape());
@@ -565,11 +566,11 @@ int MXSymbolInferShape(SymbolHandle sym,
            &(ret->arg_shapes), &(ret->out_shapes), &(ret->aux_shapes));
 
   // copy data back
-  MXAPIThreadLocalEntry::SetupShapeArrayReturnWithBuffer(ret->arg_shapes,
+  MXAPIThreadLocalEntry<>::SetupShapeArrayReturnWithBuffer(ret->arg_shapes,
       &(ret->arg_shape_ndim), &(ret->arg_shape_data), &(ret->arg_shape_buffer));
-  MXAPIThreadLocalEntry::SetupShapeArrayReturnWithBuffer(ret->out_shapes,
+  MXAPIThreadLocalEntry<>::SetupShapeArrayReturnWithBuffer(ret->out_shapes,
       &(ret->out_shape_ndim), &(ret->out_shape_data), &(ret->out_shape_buffer));
-  MXAPIThreadLocalEntry::SetupShapeArrayReturnWithBuffer(ret->aux_shapes,
+  MXAPIThreadLocalEntry<>::SetupShapeArrayReturnWithBuffer(ret->aux_shapes,
       &(ret->aux_shape_ndim), &(ret->aux_shape_data), &(ret->aux_shape_buffer));
   *in_shape_size = static_cast<mx_uint>(ret->arg_shapes.size());
   *in_shape_ndim = dmlc::BeginPtr(ret->arg_shape_ndim);
@@ -585,11 +586,11 @@ int MXSymbolInferShape(SymbolHandle sym,
   API_END();
 }
 
-template<typename dtype, typename stype>
+template<typename dtype, typename stype, typename itype>
 inline void SymbolInferShape(const char** keys,
                       mx_uint num_args,
                       const dtype* arg_shape_data,
-                      const dtype* arg_ind_ptr,
+                      const itype* arg_ind_ptr,
                       const int** in_shape_ndim,
                       const dtype*** in_shape_data,
                       const int** out_shape_ndim,
@@ -597,7 +598,7 @@ inline void SymbolInferShape(const char** keys,
                       const int** aux_shape_ndim,
                       const dtype*** aux_shape_data,
                       nnvm::Symbol* s,
-                      MXAPIThreadLocalEntry* ret,
+                      MXAPIThreadLocalEntry<dtype>* ret,
                       stype* in_shape_size,
                       stype* out_shape_size,
                       stype* aux_shape_size,
@@ -632,27 +633,27 @@ if (!Imperative::Get()->is_np_shape()) {
 // copy back
 CopyAttr(g.indexed_graph(), shapes, &(ret->arg_shapes), &(ret->out_shapes), &(ret->aux_shapes));
 // copy data back
-  MXAPIThreadLocalEntry::SetupShapeArrayReturnWithBufferEx<dtype>(ret->arg_shapes,
-                                                           &(ret->arg_shape_ndim_ex),
-                                                           &(ret->arg_shape_data_ex),
-                                                           &(ret->arg_shape_buffer_ex));
-  MXAPIThreadLocalEntry::SetupShapeArrayReturnWithBufferEx<dtype>(ret->out_shapes,
-                                                           &(ret->out_shape_ndim_ex),
-                                                           &(ret->out_shape_data_ex),
-                                                           &(ret->out_shape_buffer_ex));
-  MXAPIThreadLocalEntry::SetupShapeArrayReturnWithBufferEx<dtype>(ret->aux_shapes,
-                                                           &(ret->aux_shape_ndim_ex),
-                                                           &(ret->aux_shape_data_ex),
-                                                           &(ret->aux_shape_buffer_ex));
+MXAPIThreadLocalEntry<dtype>::SetupShapeArrayReturnWithBufferEx(ret->arg_shapes,
+                                                                &(ret->arg_shape_ndim_ex),
+                                                                &(ret->arg_shape_data_ex),
+                                                                &(ret->arg_shape_buffer_ex));
+MXAPIThreadLocalEntry<dtype>::SetupShapeArrayReturnWithBufferEx(ret->out_shapes,
+                                                                &(ret->out_shape_ndim_ex),
+                                                                &(ret->out_shape_data_ex),
+                                                                &(ret->out_shape_buffer_ex));
+MXAPIThreadLocalEntry<dtype>::SetupShapeArrayReturnWithBufferEx(ret->aux_shapes,
+                                                                &(ret->aux_shape_ndim_ex),
+                                                                &(ret->aux_shape_data_ex),
+                                                                &(ret->aux_shape_buffer_ex));
+  *in_shape_data = dmlc::BeginPtr(ret->arg_shape_data_ex);
+  *out_shape_data = dmlc::BeginPtr(ret->out_shape_data_ex);
+  *aux_shape_data = dmlc::BeginPtr(ret->aux_shape_data_ex);
   *in_shape_size = static_cast<stype>(ret->arg_shapes.size());
   *in_shape_ndim = dmlc::BeginPtr(ret->arg_shape_ndim_ex);
-  *in_shape_data = dmlc::BeginPtr(ret->arg_shape_data_ex);
   *out_shape_size = static_cast<stype>(ret->out_shapes.size());
   *out_shape_ndim = dmlc::BeginPtr(ret->out_shape_ndim_ex);
-  *out_shape_data = dmlc::BeginPtr(ret->out_shape_data_ex);
   *aux_shape_size = static_cast<stype>(ret->aux_shapes.size());
   *aux_shape_ndim = dmlc::BeginPtr(ret->aux_shape_ndim_ex);
-  *aux_shape_data = dmlc::BeginPtr(ret->aux_shape_data_ex);
 // mark complete
 *complete = (g.GetAttr<size_t>("shape_num_unknown_nodes") == 0);
 }
@@ -673,9 +674,9 @@ int MXSymbolInferShapeEx(SymbolHandle sym,
                          const int ***aux_shape_data,
                          int *complete) {
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(sym);
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
-  SymbolInferShape<int, mx_uint>(keys,
+  SymbolInferShape<int, mx_uint, mx_uint>(keys,
                                  num_args,
                                  arg_shape_data,
                                  arg_ind_ptr,
@@ -710,9 +711,9 @@ int MXSymbolInferShapeExInt64(SymbolHandle sym,
                               const int64_t ***aux_shape_data,
                               int *complete) {
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(sym);
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<int64_t> *ret = MXAPIThreadLocalStore<int64_t>::Get();
   API_BEGIN();
-  SymbolInferShape<int64_t, size_t>(keys,
+  SymbolInferShape<int64_t, size_t, int64_t>(keys,
                                  num_args,
                                  arg_shape_data,
                                  arg_ind_ptr,
@@ -818,7 +819,7 @@ int MXSymbolInferType(SymbolHandle sym,
                       const int **aux_type_data,
                       int *complete) {
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(sym);
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   nnvm::Graph g = Symbol2Graph(*s);
   nnvm::DTypeVector arg_types(g.indexed_graph().input_nodes().size(), -1);
