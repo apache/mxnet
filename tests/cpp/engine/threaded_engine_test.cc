@@ -260,7 +260,7 @@ TEST(Engine, PushFuncND) {
   mxnet::NDArray nd(ctx);
   std::vector<mxnet::NDArray*> nds;
   nds.push_back(&nd);
-  mxnet::NDArray **pnds = nds.data();
+  void** pnds = reinterpret_cast<void**>(nds.data());
 
   // Test #1
   LOG(INFO) << "===== Test #1: PushAsyncND param and deleter =====";
