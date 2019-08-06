@@ -1,0 +1,22 @@
+/*
+Variables
+*/
+$font_size: 16px;
+
+$background_color: #fafafa;
+$code_background: rgba(0,0,0,.05);
+
+$body_font_family: Roboto, "Noto Sans SC Sliced", sans-serif;
+$code_font_family: "Menlo", "DejaVu Sans Mono", "Liberation Mono", "Consolas", "Ubuntu Mono", "Courier New", "andale mono", "lucida console", monospace !default;
+
+$xl-breakpoint: 1795px;
+$lg-breakpoint: 1200px;
+$md-breakpoint: 992px;
+$sm-breakpoint: 768px;
+$xs-breakpoint: 576px;
+
+$color-primary: $palette-blue-500;
+$color-primary-dark: $palette-blue-700 !default;
+$color-accent: $palette-deep-orange-A200 !default;
+$color-primary-contrast: $color-white !default;
+$color-accent-contrast: $color-white !default;

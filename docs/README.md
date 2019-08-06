@@ -25,39 +25,11 @@ MXNet Documentation Website is built with [Sphinx](http://www.sphinx-doc.org) an
 
 ## How to Build the MXNet Website for Development and QA
 
-Using `make docs` from the MXNet root is the quickest way to generate the MXNet API docs and the website, as long as you already have all of the dependencies installed. This method automatically generates each API, [except the Perl and R APIs](#other-build-processes).
-
-**Easy docs setup for Ubuntu:** Run the following on Ubuntu 16.04 to install all MXNet and docs dependencies and to build MXNet from source. Then issue the `make docs` command from the source root to build the docs.
-
-```bash
-git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
-cd mxnet/docs/build_version_doc
-./setup_docs_ubuntu.sh
-cd ../../
-make docs USE_OPENMP=1 SPHINXOPTS=-W
-```
-
-OpenMP speeds things up and will work on Ubuntu if you used the `setup_docs_ubuntu.sh` script.
-The `-W` Sphinx option enforces "warnings as errors". This will help you debug your builds and get them through CI.
-**CI will not let a PR through if it breaks the website.** Refer to the [MXNet Developer wiki's documentation guide](https://cwiki.apache.org/confluence/display/MXNET/Documentation+Guide) for troubleshooting tips.
-
-For more information on each API's documentation dependencies, how to serve the docs, or how to build the full website with each legacy MXNet version, refer to the following links:
-
-* [Dependencies](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#dependencies) - required before you build the docs
-* [Developer Build Instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#developer-instructions) - build your local branch
-* [Full Site Build Instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#full-website-build) - build the latest commits to the official branches
+To be updated
 
 
 ## File Structure
 
-* Static files such as **css**, **javascript** and **html** templates are under the `_static` folder:
-  - Javascript files are under `_static/js` folder
-  - Layout templates and landing page html file are under `_static/mxnet-theme` folder
-  - `_static/mxnet.css` contains all MXNet website styles
-
-* Page contents originate as markdown files. Sphinx converts markdown files to html through an `rst` intermediate format. Each content folder should contain an index file as landing page.
-
-* There are some utility scripts to help building website, such as `mxdoc.py` and `build_version_doc/`. They are used to manipulate website contents during building. Refer to [Developer Build Instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#developer-instructions) for more information.
 
 
 ## Production Website Deployment Process
@@ -83,18 +55,14 @@ The host repo is hooked with [Apache gitbox](https://gitbox.apache.org/repos/asf
 
 ## Build Versioning Website
 
-**IMPORTANT**: Refer to [Full Site Build Instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#full-website-build) for a working site build with the versions dropdown in the UI.
-
+To be updated
 
 ## Other Build Processes
 
 * Perl API docs are maintained separately at [metacpan](https://metacpan.org/release/AI-MXNet).
-* R API docs building must be triggered manually. The function for generating these automatically was disabled in the nightly builds. You may run the R docs build process in a local docs build by uncommenting the [function call in mxdoc.py](https://github.com/apache/incubator-mxnet/blob/master/docs/mxdoc.py#L378).
 
 
 ## Troubleshooting
 
-- If C++ code has been changed, remove the previous results to trigger the rebuild for all pages. To do this, run `make clean_docs`.
-- If C++ code fails to build, run `make clean`.
 - If CSS or javascript are changed, clear the cache in the browser with a *forced refresh*.
 - If search doesn't work, run `make clean` and then `make docs`.

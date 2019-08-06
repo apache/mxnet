@@ -1,0 +1,4 @@
+build/
+**.rst
+**.ipynb
+*.zip

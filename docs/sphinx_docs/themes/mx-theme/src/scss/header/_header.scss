@@ -1,0 +1,52 @@
+/*
+ * Header Styles
+ */
+
+nav.breadcrumb {
+    > a.mdl-navigation__link {
+        padding: 0 8px;
+        font-size: 18px;
+    }
+    @media (max-width: $lg-breakpoint - 1) {
+        width: calc( 100% - 64px );
+        a.mdl-navigation__link.is-active {
+            overflow-x: hidden;
+            width: 100%;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+        a.mdl-navigation__link:not(.is-active),
+        i.material-icons {
+            display: none;
+        }
+    }
+}
+
+
+div.mdl-layout__header-row.header-links {
+    background: rgba(255,255,255,0.2);
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    a.mdl-navigation__link  {
+        font-size: 1rem;
+        i {
+            font-size: 1.2rem;
+            margin: 0 8px;
+            position: relative;
+            bottom: -0.1rem;
+        }
+    };
+
+    a.mdl-navigation__link:hover  {
+        background-color: unquote("rgb(#{$color-primary})");
+        color: #eeeeee;
+    };
+    a.mdl-navigation__link[href="#"]  {
+        background-color: unquote("rgb(#{$color-primary})");
+        opacity: 1;
+        color: #ffffff;
+    };
+}
