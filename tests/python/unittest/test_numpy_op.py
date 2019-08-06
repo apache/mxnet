@@ -1570,24 +1570,30 @@ def test_np_trace():
 @use_np
 def test_np_hanning():
     class TestHanning(HybridBlock):
-        def __init__(self):
+        def __init__(self, M, dtype):
             super(TestHanning, self).__init__()
+            self._M = M
+            self._dtype = dtype
 
-        def hybrid_forward(self, F, a, *args, **kwargs):
-            return F.np.hanning(a)
+        def hybrid_forward(self, F, x, *args, **kwargs):
+            return x + F.np.hanning(M=self._M, dtype=self._dtype)
+    configs = [-10, -3, -1, 0, 1, 6, 10, 20]
+    dtypes = ['float32', 'float64']
 
-        M = [0, 1, 2, 3, 4, 5, 6, 10]
-        for hybridize in [True, False]:
-            for shape in M:
-                test_hanning = TestHanning()
+    for config in configs:
+        for dtype in dtypes:
+            x = np.zeros(shape=(), dtype=dtype)
+            for hybridize in [False, True]:
+                net = TestHanning(M=config, dtype=dtype)
+                np_out = _np.hanning(M=config)
                 if hybridize:
-                    test_hanning.hybridize()
+                    net.hybridize()
+                mx_out = net(x)
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
-                shape.attach_grad()
-                expected_np = _np.hanning(M)
-                with mx.autograd.record():
-                    out_mx = test_hanning(M)
-                assert_almost_equal(out_mx.asnumpy(), expected_np, rtol=rtol, atol=atol)
+                mx_out = np.hanning(M=config, dtype=dtype)
+                np_out = _np.hanning(M=config)
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
 if __name__ == '__main__':

@@ -3086,36 +3086,34 @@ def arcsin(x, out=None, **kwargs):
     return _mx_nd_np.arcsin(x, out=out, **kwargs)
 
 
-
 @set_module('mxnet.numpy')
-def hanning(M):
-    """
-    Return the Hanning window.
+def hanning(M, dtype=_np.float64, ctx=None):
+    r"""Return the Hanning window.
 
     The Hanning window is a taper formed by using a weighted cosine.
 
     Parameters
     ----------
     M : int
-    Number of points in the output window. If zero or less, an
-    empty array is returned.
+        Number of points in the output window. If zero or less, an
+        empty array is returned.
 
     Returns
     -------
     out : ndarray, shape(M,)
-    The window, with the maximum value normalized to one (the value
-    one appears only if `M` is odd).
+        The window, with the maximum value normalized to one (the value
+        one appears only if `M` is odd).
 
     See Also
     --------
-    bartlett, blackman, hamming, kaiser
+    blackman, hamming
 
     Notes
     -----
     The Hanning window is defined as
 
     .. math::  w(n) = 0.5 - 0.5cos\left(\frac{2\pi{n}}{M-1}\right)
-    \qquad 0 \leq n \leq M-1
+               \qquad 0 \leq n \leq M-1
 
     The Hanning was named for Julius von Hann, an Austrian meteorologist.
     It is also known as the Cosine Bell. Some authors prefer that it be
@@ -3124,59 +3122,47 @@ def hanning(M):
 
     Most references to the Hanning window come from the signal processing
     literature, where it is used as one of many windowing functions for
-        smoothing values.  It is also known as an apodization (which means
+    smoothing values.  It is also known as an apodization (which means
     "removing the foot", i.e. smoothing discontinuities at the beginning
-                                                               and end of the sampled signal) or tapering function.
+    and end of the sampled signal) or tapering function.
 
     References
     ----------
     .. [1] Blackman, R.B. and Tukey, J.W., (1958) The measurement of power
-    spectra, Dover Publications, New York.
+           spectra, Dover Publications, New York.
     .. [2] E.R. Kanasewich, "Time Sequence Analysis in Geophysics",
-    The University of Alberta Press, 1975, pp. 106-108.
+           The University of Alberta Press, 1975, pp. 106-108.
     .. [3] Wikipedia, "Window function",
-    http://en.wikipedia.org/wiki/Window_function
+           http://en.wikipedia.org/wiki/Window_function
     .. [4] W.H. Press,  B.P. Flannery, S.A. Teukolsky, and W.T. Vetterling,
-    "Numerical Recipes", Cambridge University Press, 1986, page 425.
+           "Numerical Recipes", Cambridge University Press, 1986, page 425.
 
     Examples
     --------
     >>> np.hanning(12)
-    array([ 0.        ,  0.07937323,  0.29229249,  0.57115742,  0.82743037,
-            0.97974649,  0.97974649,  0.82743037,  0.57115742,  0.29229249,
-            0.07937323,  0.        ])
+    array([0.00000000e+00, 7.93732437e-02, 2.92292528e-01, 5.71157416e-01,
+           8.27430424e-01, 9.79746513e-01, 9.79746489e-01, 8.27430268e-01,
+           5.71157270e-01, 2.92292448e-01, 7.93731320e-02, 1.06192832e-13], dtype=float64)
 
     Plot the window and its frequency response:
 
-    >>> from numpy.fft import fft, fftshift
+    >>> import matplotlib.pyplot as plt
     >>> window = np.hanning(51)
-    >>> plt.plot(window)
+    >>> plt.plot(window.asnumpy())
     [<matplotlib.lines.Line2D object at 0x...>]
     >>> plt.title("Hann window")
-    <matplotlib.text.Text object at 0x...>
+    Text(0.5, 1.0, 'Hann window')
     >>> plt.ylabel("Amplitude")
-    <matplotlib.text.Text object at 0x...>
+    Text(0, 0.5, 'Amplitude')
     >>> plt.xlabel("Sample")
-    <matplotlib.text.Text object at 0x...>
+    Text(0.5, 0, 'Sample')
     >>> plt.show()
 
     >>> plt.figure()
-    <matplotlib.figure.Figure object at 0x...>
-    >>> A = fft(window, 2048) / 25.5
-    >>> mag = np.abs(fftshift(A))
-    >>> freq = np.linspace(-0.5, 0.5, len(A))
-    >>> response = 20 * np.log10(mag)
-    >>> response = np.clip(response, -100, 100)
-    >>> plt.plot(freq, response)
-    [<matplotlib.lines.Line2D object at 0x...>]
-    >>> plt.title("Frequency response of the Hann window")
-    <matplotlib.text.Text object at 0x...>
-    >>> plt.ylabel("Magnitude [dB]")
-    <matplotlib.text.Text object at 0x...>
-    >>> plt.xlabel("Normalized frequency [cycles per sample]")
-    <matplotlib.text.Text object at 0x...>
-    >>> plt.axis('tight')
-    (-0.5, 0.5, -100.0, ...)
-    >>> plt.show()
+    <Figure size 640x480 with 0 Axes>
     """
-    return _mx_nd_np.hanning(M)
+    if dtype is None:
+        dtype = _np.float64
+    if ctx is None:
+        ctx = current_context()
+    return _mx_nd_np.hanning(M, dtype=dtype, ctx=ctx)

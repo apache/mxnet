@@ -19,25 +19,17 @@
 
 /*!
  *  Copyright (c) 2019 by Contributors
- * \file np_elemwise_unary_op_window.cc.cc
+ * \file np_window_op.cu
  * \brief CPU Implementation of unary op hanning, hamming, blackman window.
  */
 
-
-#include "./np_elemwise_unary_op_window.h"
+#include "np_window_op.h"
 
 namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_hanning)
-.describe("Return evenly spaced values within a given interval.")
-.set_num_inputs(0)
-.set_num_outputs(1)
-.set_attr_parser(RangeParamParser)
-.set_attr<mxnet::FInferShape>("FInferShape", NumpyHanningShape)
-.set_attr<nnvm::FInferType>("FInferType", InitType<RangeParam>)
-.set_attr<FCompute>("FCompute<cpu>", RangeCompute<cpu, RangeParam>)
-.add_arguments(RangeParam::__FIELDS__());
+.set_attr<FCompute>("FCompute<gpu>", NumpyWindowCompute<gpu, 0>);
 
 }  // namespace op
 }  // namespace mxnet
