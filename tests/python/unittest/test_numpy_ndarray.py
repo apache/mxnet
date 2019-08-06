@@ -614,6 +614,25 @@ def test_np_ndarray_indexing():
         range(4),
         range(3, 0, -1),
         (range(4,), [1]),
+        # Test Ellipsis ('...')
+        ((1, Ellipsis, -1), False),
+        ((slice(2), Ellipsis, None, 0), False),
+        ((Ellipsis, 3, 2, slice(1, 2)), False)
+        # Test newaxis, basic indexing
+        (None, False),
+        ((1, None, -2, 3, -4), False),
+        ((1, slice(2, 5), None), False), 
+        ((slice(None), slice(1, 4), None, slice(2, 3)), False), 
+        ((slice(1, 3), slice(1, 3), slice(1, 3), slice(1, 3), None), False), 
+        ((slice(1, 3), slice(1, 3), None, slice(1, 3), slice(1, 3)), False), 
+        ((None, slice(1, 2), 3, None), False),
+        ((1, None, 2, 3, None, None, 4), False),
+        ((None, Ellipsis, 3, 2, slice(1, 2), None,), False),
+        # Test newaxis, advanced indexing
+        (([1, 2], slice(3, 5), None, None, [3, 4]), False),
+        ((slice(None), slice(3, 5), None, None, [2, 3], [3, 4]), False),
+        ((slice(None), slice(3, 5), None, [2, 3], None, [3, 4]), False),
+        ((None, slice(None), slice(3, 5), [2, 3], None, [3, 4]), False),
         # slice(0, 0) does not support output zero-size tensor yet
     ]
     for index in index_list:
