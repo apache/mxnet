@@ -1474,6 +1474,7 @@ build_jekyll_docs() {
    repo=mxnet.io-v2
    fetch_jekyll_repo $repo
    pushd src
+   export PATH=/usr/gem/bin:$PATH
    JEKYLL_ENV=production bundle exec jekyll build --config _config_prod.yml -d ../release
    popd
    tar zcvf jekyll-artifacts.tgz release
