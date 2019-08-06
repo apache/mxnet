@@ -1958,6 +1958,7 @@ def take(a, indices, axis=None, mode='clip', out=None):
     """
     return _mx_nd_np.take(a, indices, axis, mode, out)
 
+
 @set_module('mxnet.numpy')
 def add(x1, x2, out=None):
     """Add arguments element-wise.

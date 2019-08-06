@@ -30,10 +30,10 @@ namespace op {
 
 template<>
 void NumpyTakeOpForward<cpu>(const nnvm::NodeAttrs& attrs,
-                        const OpContext& ctx,
-                        const std::vector<TBlob>& inputs,
-                        const std::vector<OpReqType>& req,
-                        const std::vector<TBlob>& outputs) {
+                             const OpContext& ctx,
+                             const std::vector<TBlob>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
   if (req[take_::kOut] == kNullOp) return;
   const NumpyTakeParam& param = nnvm::get<NumpyTakeParam>(attrs.parsed);

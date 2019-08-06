@@ -98,17 +98,17 @@ inline bool NumpyTakeOpShape(const nnvm::NodeAttrs& attrs,
 
 template<typename xpu>
 void NumpyTakeOpForward(const nnvm::NodeAttrs& attrs,
-                   const OpContext& ctx,
-                   const std::vector<TBlob>& inputs,
-                   const std::vector<OpReqType>& req,
-                   const std::vector<TBlob>& outputs);
+                        const OpContext& ctx,
+                        const std::vector<TBlob>& inputs,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& outputs);
 
 template<typename xpu>
 void NumpyTakeOpBackward(const nnvm::NodeAttrs& attrs,
-                    const OpContext& ctx,
-                    const std::vector<TBlob>& inputs,
-                    const std::vector<OpReqType>& req,
-                    const std::vector<TBlob>& outputs) {
+                         const OpContext& ctx,
+                         const std::vector<TBlob>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
   CHECK_EQ(inputs.size(), 2U);

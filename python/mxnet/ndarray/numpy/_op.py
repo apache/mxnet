@@ -672,6 +672,7 @@ def take(a, indices, axis=None, mode='clip', out=None):
             "function take does not support mode '{}'".format(mode))
     return _npi.take(a, indices, axis, mode, out)
 
+
 @set_module('mxnet.ndarray.numpy')
 def hstack(arrays):
     """
