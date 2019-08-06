@@ -33,7 +33,6 @@ COPY install/r.gpg /work/
 RUN /work/ubuntu_r.sh
 
 COPY install/ubuntu_docs.sh /work/
-COPY install/docs_environment.yml /work/deps
 RUN /work/ubuntu_docs.sh
 
 # Always last

@@ -22,21 +22,31 @@ FROM ubuntu:16.04
 
 WORKDIR /work/deps
 
-RUN apt-get update && apt-get install -y ruby-full build-essential zlib1g-dev
+RUN apt-get update && apt-get install -y \
+      build-essential \
+      git \
+      ruby-full \
+      zlib1g-dev
 
-ENV BUNDLE_HOME=/usr/local/bundle
-ENV BUNDLE_APP_CONFIG=/usr/local/bundle
-ENV BUNDLE_BIN=/usr/local/bundle/bin
-ENV GEM_BIN=/usr/gem/bin
-ENV GEM_HOME=/usr/gem
+ENV BUNDLE_HOME=/work/deps/bundle
+ENV BUNDLE_APP_CONFIG=/work/deps/bundle
+ENV BUNDLE_BIN=/work/deps/bundle/bin
+ENV GEM_BIN=/work/deps/gem/bin
+ENV GEM_HOME=/work/deps/gem
 
 RUN echo "gem: --no-ri --no-rdoc" > ~/.gemrc
-RUN unset GEM_HOME && unset GEM_BIN && \
-  yes | gem update --system
+RUN yes | gem update --system
+RUN yes | gem install --force bundler
+RUN gem install jekyll
 
-RUN unset GEM_HOME && unset GEM_BIN && yes | gem install --force bundler
-RUN gem install jekyll 
+ENV PATH=$GEM_BIN:$PATH
 
 COPY runtime_functions.sh /work/
+
+# Always last
+ARG USER_ID=0
+ARG GROUP_ID=0
+COPY install/ubuntu_adduser.sh /work/
+RUN /work/ubuntu_adduser.sh
 
 WORKDIR /work/mxnet

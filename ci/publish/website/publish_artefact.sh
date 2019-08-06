@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -16,21 +16,19 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
+#
 # build and install are separated so changes to build don't invalidate
 # the whole docker cache for the image
 
+# This script requires that APACHE_PASSWORD and APACHE_USERNAME are set
+# environment variables. Also, artifacts must be previously uploaded to S3
+# in the MXNet public bucket (mxnet-public.s3.us-east-2.amazonaws.com).
+
 set -ex
-# Install dependencies
-echo 'Installing dependencies...'
-apt-get update || true
-apt-get install -y \
-    doxygen \
-    pandoc
 
-# Can probably delete these and docs_requirements
-wget -q https://repo.anaconda.com/miniconda/Miniconda2-latest-Linux-x86_64.sh
-chmod +x Miniconda2-latest-Linux-x86_64.sh
-./Miniconda2-latest-Linux-x86_64.sh -b -p /work/miniconda
-
-echo 'Dependency installation complete.'
+api_list=("cpp" "clojure" "java" "julia" "python" "r" "scala")
+version=v1.5.0
+for i in "${api_list[@]}"
+do
+    tar cvf $i-artifacts.tgz $i && aws s3 cp $i-artifacts.tgz s3://mxnet-public/docs/$version/$i-artifacts.tgz
+done

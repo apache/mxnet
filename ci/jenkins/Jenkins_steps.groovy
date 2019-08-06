@@ -1376,8 +1376,8 @@ def docs_website() {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
+            //TODO REPLACE THIS WITH FULL BUILD
             utils.docker_run('ubuntu_cpu', 'deploy_docs', false)
-
             master_url = utils.get_jenkins_master_url()
             if ( master_url == 'jenkins.mxnet-ci.amazon-ml.com') {
                 sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
@@ -1398,8 +1398,7 @@ def compile_unix_lite() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu_lite', 'build_ubuntu_cpu_docs', false)
-            archiveArtifacts 'lib/libmxnet.so'
-            //utils.pack_lib('libmxnet', 'lib/libmxnet.so', false)
+            utils.pack_lib('libmxnet', 'lib/libmxnet.so', false)
           }
         }
       }
@@ -1412,10 +1411,9 @@ def docs_python() {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            //utils.unpack_and_init('cpu', mx_lib, false)
+            utils.unpack_and_init('cpu', mx_lib, false)
             utils.docker_run('ubuntu_cpu_python', 'build_python_docs', false)
-            archiveArtifacts 'docs/_build/python-artifacts.tgz'
+            utils.pack_lib('python-artifacts', 'docs/_build/python-artifacts.tgz', false)
           }
         }
       }
@@ -1428,10 +1426,9 @@ def docs_c() {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            //utils.unpack_and_init('libmxnet', 'lib/libmxnet.so', false)
+            utils.unpack_and_init('libmxnet', 'lib/libmxnet.so', false)
             utils.docker_run('ubuntu_cpu_c', 'build_c_docs', false)
-            archiveArtifacts 'docs/_build/c-artifacts.tgz'
+            utils.pack_lib('c-artifacts', 'docs/_build/c-artifacts.tgz', false)
           }
         }
       }
@@ -1444,11 +1441,10 @@ def docs_julia() {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            //utils.unpack_and_init('cpu', mx_lib, false)
+            utils.unpack_and_init('cpu', mx_lib, false)
             try {
                utils.docker_run('ubuntu_cpu_julia', 'build_julia_docs', false)
-               archiveArtifacts 'docs/_build/julia-artifacts.tgz'
+               utils.pack_lib('julia-artifacts', 'docs/_build/julia-artifacts.tgz', false)
             }
             catch (Exception e) {
                println(e.getMessage())
@@ -1465,10 +1461,9 @@ def docs_scala() {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            //utils.unpack_and_init('cpu', mx_lib, false)
+            utils.unpack_and_init('cpu', mx_lib, false)
             utils.docker_run('ubuntu_cpu_scala', 'build_scala_docs', false)
-            archiveArtifacts 'docs/_build/scala-artifacts.tgz'
+            utils.pack_lib('scala-artifacts', 'docs/_build/scala-artifacts.tgz', false)
           }
         }
       }
@@ -1481,10 +1476,9 @@ def docs_java() {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            //utils.unpack_and_init('cpu', mx_lib, false)
+            utils.unpack_and_init('cpu', mx_lib, false)
             utils.docker_run('ubuntu_cpu_scala', 'build_java_docs', false)
-            archiveArtifacts 'docs/_build/java-artifacts.tgz'
+            utils.pack_lib('java-artifacts', 'docs/_build/java-artifacts.tgz', false)
           }
         }
       }
@@ -1497,26 +1491,9 @@ def docs_clojure() {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            //utils.unpack_and_init('cpu', mx_lib, false)
+            utils.unpack_and_init('cpu', mx_lib, false)
             utils.docker_run('ubuntu_cpu_scala', 'build_clojure_docs', false)
-            archiveArtifacts 'docs/_build/clojure-artifacts.tgz'
-          }
-        }
-      }
-    }]
-}
-
-
-def docs_r() {
-    return ['R Docs': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/docs') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            //utils.unpack_and_init('cpu', mx_lib, false)
-            utils.docker_run('ubuntu_cpu_r', 'build_r_docs', false)
-            archiveArtifacts 'docs/_build/r-artifacts.tgz'
+            utils.pack_lib('clojure-artifacts', 'docs/_build/clojure-artifacts.tgz', false)
           }
         }
       }
@@ -1530,8 +1507,8 @@ def docs_jekyll() {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_cpu_jekyll', 'build_r_docs', false)
-            //archiveArtifacts 'docs/_build/jekyll-artifacts.tgz'
+            utils.docker_run('ubuntu_cpu_jekyll', 'build_jekyll_docs', false)
+            utils.pack_lib('jekyll-artifacts', 'docs/_build/jekyll-artifacts.tgz', false)
           }
         }
       }
@@ -1540,10 +1517,21 @@ def docs_jekyll() {
 
 
 def docs_publish() {
-    return ['R Docs': {
+    return ['Publish the full website': {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+              
+            unstash 'jekyll-artifacts'              
+            unstash 'c-artifacts'
+            unstash 'python-artifacts'
+            unstash 'julia-artifacts'
+            unstash 'scala-artifacts'
+            unstash 'java-artifacts'
+            unstash 'clojure-artifacts'
+              
+            utils.docker_run('ubuntu_cpu_jekyll', 'build_docs', false)
             build 'test-website-publish'
           }
         }
