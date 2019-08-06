@@ -1566,7 +1566,7 @@ def test_np_trace():
 
 
 @with_seed()
-@npx.use_np_shape
+@use_np
 def test_np_indexing():
     """
     Test all indexing.
@@ -1604,7 +1604,6 @@ def test_np_indexing():
 
         np_array is a native numpy array.
         """
-        start = time.time()
         np_index = index
         if isinstance(index, mx.nd.NDArray):  # TODO(xinyge): Abandon use of NDArray. 
             np_index = index.asnumpy()
@@ -1613,24 +1612,16 @@ def test_np_indexing():
                 idx.asnumpy() if isinstance(idx, mx.nd.NDArray) else idx
                 for idx in index
             )
-        start3 = time.time()
         np_indexed_array = np_array[np_index]
-        end3 = time.time()
         mx_np_array = np.array(np_array, dtype=np_array.dtype)
         try:
-            start2 = time.time()
             mx_indexed_array = mx_np_array[index]
-            end2 = time.time()
         except Exception as e:
             print('Failed with index = {}'.format(index))
             raise e
         if not is_scalar:
             mx_indexed_array = mx_indexed_array.asnumpy()
         assert same(np_indexed_array, mx_indexed_array), 'Failed with index = {}'.format(index)
-        end = time.time()
-        # print("All calculation:", end - start)
-        # print("Actual calculation:", end2 - start2)
-        # print("Numpy calculation:", end3 - start3)
 
     def test_setitem(np_array, index, is_scalar=False):
         """
@@ -1640,7 +1631,6 @@ def test_np_indexing():
 
         np_array is a native numpy array.
         """
-        # print("Tesing index:", index)
         def assert_same(np_array, np_index, mx_array, mx_index, mx_value, np_value=None):
             if np_value is not None:
                 np_array[np_index] = np_value
@@ -1726,19 +1716,6 @@ def test_np_indexing():
                     assert False, 'failed with index = {}'.format(index)  # should not reach here
         except mx.base.MXNetError as err:
             assert str(err).find('Inplace operations (+=, -=, x[:]=, etc) are not supported when recording with') != -1
-
-    # def test_setitem_autograd(np_array, index):
-    #     x = np.array(np_array, dtype=np_array.dtype)
-    #     out_shape = x[index].shape
-    #     y = np.array(_np.random.uniform(size=out_shape))
-    #     y.attach_grad()
-    #     try:
-    #         with mx.autograd.record():
-    #             x[index] = y
-    #             assert False  # should not reach here
-    #     except mx.base.MXNetError as err:
-    #         assert str(err).find('Inplace operations (+=, -=, x[:]=, etc) are not supported when recording with') != -1
-
 
     shape = (8, 16, 9, 9)
     np_array = _np.arange(_np.prod(_np.array(shape)), dtype='int32').reshape(shape)  # native np array
@@ -1862,10 +1839,9 @@ def test_np_indexing():
                 (([1, 2], slice(3, 5), [2, 3], [3, 4]), False),
                 (([1, 2], slice(3, 5), (2, 3), [3, 4]), False),
     ]
-    index_list_debug = [((1, slice(2, 5), None), False),]
+    index_list_debug = [((1, None, 2, 3, None, None, 4), False),]
 
-    for index in index_list:
-        print("Testing index:", index)
+    for index in index_list_debug:
         test_getitem(np_array, index[0], index[1])
         test_setitem(np_array, index[0], index[1])
         test_getitem_autograd(np_array, index[0])

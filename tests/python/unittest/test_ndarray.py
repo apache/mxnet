@@ -1587,7 +1587,6 @@ def test_ndarray_indexing():
                 (([2, 3, 4], None, [3, 4, 6], None, slice(1, 2), None, [1, 2, 3]), False),
     ]
     for index in index_list:
-        print("Testing index:", index[0])
         test_getitem(np_array, index[0], index[1])
         test_setitem(np_array, index[0], index[1])
         test_getitem_autograd(np_array, index[0])

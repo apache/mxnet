@@ -85,7 +85,8 @@ inline void NumpyGetIndexRange(const mxnet::TShape& dshape,
   }
 
   for (int i = 0; i < param_begin.ndim(); ++i) {
-    index_t s = mxnet::ndim_is_known(param_step.ndim()) && param_step[i].has_value() ? param_step[i].value() : 1;
+    index_t s = mxnet::ndim_is_known(param_step.ndim())
+                 && param_step[i].has_value() ? param_step[i].value() : 1;
     CHECK_NE(s, 0) << "slice op step[" << i << "] cannot be 0";
 
     index_t b = 0, e = 0;
@@ -105,7 +106,7 @@ inline void NumpyGetIndexRange(const mxnet::TShape& dshape,
 
     // move the begin and end to correct position for calculating dim size
     b = b < 0 && s > 0 ? 0 : b;
-    b = b > len-1 && s < 0 ? len-1 : b; 
+    b = b > len-1 && s < 0 ? len-1 : b;
     // if the start value lead to empty tensor under step s, use -1 for indication
     b = b < 0 || b > len-1 ? -1 : b;
     e = e > -1 ? e : -1;

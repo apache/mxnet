@@ -464,7 +464,7 @@ NNVM_REGISTER_OP(_np_squeeze)
 .add_argument("a", "NDArray-or-Symbol[]", "data to squeeze")
 .add_arguments(SqueezeParam::__FIELDS__());
 
-// TODO: added from Wenxu Mao's unmerged code
+// TODO(xinyge): added from Wenxu Mao's unmerged code
 NNVM_REGISTER_OP(_npx_slice)
 .add_alias("_npi_slice")
 // MXNET_ADD_SPARSE_OP_ALIAS(slice)

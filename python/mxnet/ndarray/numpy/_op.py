@@ -192,12 +192,12 @@ def full(shape, fill_value, dtype=None, ctx=None, out=None):
     dtype : data-type, optional
         The desired data-type for the array. The default, `None`, means
         `np.array(fill_value).dtype`.
-    ctx: to specify the device, e.g. the i-th GPU. 
+    ctx: to specify the device, e.g. the i-th GPU.
     out : ndarray or None, optional
         A location into which the result is stored.
         If provided, it must have the same shape and dtype as input ndarray.
         If not provided or `None`, a freshly-allocated array is returned.
-    
+
     Returns
     -------
     out : ndarray
@@ -210,7 +210,7 @@ def full(shape, fill_value, dtype=None, ctx=None, out=None):
     the following way(s):
 
     - Have an additional `ctx` argument to specify the device
-    - Have an additional `out` argument 
+    - Have an additional `out` argument
     - Currently does not support `order` selection
 
     See Also
@@ -1960,20 +1960,19 @@ def arcsin(x, out=None, **kwargs):
     return _unary_func_helper(x, _npi.arcsin, _np.arcsin, out=out, **kwargs)
 
 @set_module('mxnet.ndarray.numpy')
-def slice_assign_scalar(lhs, value, begin, end, step, out=None):
+def slice_assign_scalar(lhs, value, begin, end, step, out=None):  # pylint: disable=too-many-arguments
     """
     Assign the rhs to a cropped subset of this ndarray in place. Returns the view of this ndarray.
-    `rhs` and `lhs` should be of the same data type, and on the same device. 
-    The shape of rhs should be the same as the cropped shape of this ndarray. 
+    `rhs` and `lhs` should be of the same data type, and on the same device.
+    The shape of rhs should be the same as the cropped shape of this ndarray.
     """
     _npi.slice_assign_scalar(lhs, value, begin=begin, end=end, step=step, out=out)
 
 
 @set_module('mxnet.ndarray.numpy')
-def slice_assign(lhs, rhs, begin, end, step, out=None):
+def slice_assign(lhs, rhs, begin, end, step, out=None):  # pylint: disable=too-many-arguments
     """
-    Assign the scalar to a cropped subset of this ndarray. Value will broadcast to the shape of the cropped shape
-    and will be cast to the same dtype of the ndarray.
+    Assign the scalar to a cropped subset of this ndarray. Value will broadcast to the shape of the
+    cropped shape and will be cast to the same dtype of the ndarray.
     """
     return _npi.slice_assign(lhs, rhs, begin=begin, end=end, step=step, out=out)
-
