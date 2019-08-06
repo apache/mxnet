@@ -1293,15 +1293,38 @@ struct AdamParam : public dmlc::Parameter<AdamParam> {
   }
 };
 
+struct AdamUpdateKernel {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data,
+    DType* mean_data, DType* var_data, const DType* weight_data, const DType* grad_data,
+    const DType clip_gradient, const DType beta1, const DType beta2, const DType lr,
+    const DType wd, const DType epsilon, const DType rescale_grad, const OpReqType req) {
+    using namespace mshadow_op;
+
+    const DType grad_rescaled = grad_data[i] * rescale_grad + weight_data[i] * wd;
+    if (clip_gradient >= 0.0f) {
+      mean_data[i] = beta1 * mean_data[i] + (1.f - beta1) *
+                          clip::Map(grad_rescaled, clip_gradient);
+      var_data[i] =  beta2 * var_data[i] + (1.f - beta2) * square::Map(
+                          clip::Map(grad_rescaled, clip_gradient));
+    } else {
+      mean_data[i] = beta1 * mean_data[i] + (1.f - beta1) * grad_rescaled;
+      var_data[i] = beta2 * var_data[i] +
+                          (1.f - beta2) * grad_rescaled * grad_rescaled;
+    }
+
+    KERNEL_ASSIGN(out_data[i], req, weight_data[i] - lr * mean_data[i] /
+                  (square_root::Map(var_data[i]) + epsilon));
+  }
+};
+
 template<typename xpu>
 inline void AdamUpdate(const nnvm::NodeAttrs& attrs,
                        const OpContext &ctx,
                        const std::vector<TBlob> &inputs,
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  using namespace mshadow_op;
+  using namespace mxnet_op;
   const AdamParam& param = nnvm::get<AdamParam>(attrs.parsed);
   Stream<xpu>* s = ctx.get_stream<xpu>();
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
@@ -1311,22 +1334,12 @@ inline void AdamUpdate(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 2, DType> var = inputs[3].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
 
-    grad = scalar<DType>(param.rescale_grad) * grad +
-      scalar<DType>(param.wd) * weight;
-
-    if (param.clip_gradient >= 0.0f) {
-      mean = scalar<DType>(param.beta1)*mean + scalar<DType>(1.f-param.beta1) *
-          F<clip>(grad, DType(param.clip_gradient));
-      var = scalar<DType>(param.beta2)*var + scalar<DType>(1.f-param.beta2)*F<square>(
-          F<clip>(grad, DType(param.clip_gradient)));
-    } else {
-      mean = scalar<DType>(param.beta1)*mean + scalar<DType>(1.f-param.beta1) * grad;
-      var = scalar<DType>(param.beta2)*var + scalar<DType>(1.f-param.beta2) * F<square>(grad);
-    }
-    Assign(out, req[0],
-           weight -
-           scalar<DType>(param.lr) * mean /
-           (F<square_root>(var) + scalar<DType>(param.epsilon)));
+    Kernel<AdamUpdateKernel, xpu>::Launch(s, weight.shape_.Size(), out.dptr_, mean.dptr_,
+      var.dptr_, weight.dptr_, grad.dptr_, static_cast<DType>(param.clip_gradient),
+          static_cast<DType>(param.beta1), static_cast<DType>(param.beta2),
+          static_cast<DType>(param.lr),
+          static_cast<DType>(param.wd), static_cast<DType>(param.epsilon),
+          static_cast<DType>(param.rescale_grad), req[0]);
   });
 }
 
