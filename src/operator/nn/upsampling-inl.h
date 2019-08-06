@@ -105,21 +105,44 @@ void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
     for (int i = 0; i < param.num_args; ++i) {
       Tensor<xpu, 4, DType> data = in_data[i].get<xpu, 4, DType>(s);
       int end = begin + data.size(1);
-      int scale = out_data[up_enum::kOut].size(2)/in_data[i].size(2); //modify--two scales now
+      
+      //int scale = out_data[up_enum::kOut].size(2)/in_data[i].size(2); //modify--two scales now
+      int scale_h = out_data[up_enum::kOut].size(2)/in_data[i].size(2);//3rd dimension of TBlob (2nd from 4th dimension)
+      int scale_w = out_data[up_enum::kOut].size(1)/in_data[i].size(1);//4th dimension of TBlob (1st from 4th dimension) ->is this right???
+      
       if (param.multi_input_mode == up_enum::kSum) {
         if (i == 0) {
-          Assign(out, req[up_enum::kOut], upsampling_nearest(data, scale));
+
+          Assign(out, req[up_enum::kOut], upsampling_nearest(data, scale_h, scale_w)); //modify
+
         } else {
-          out += upsampling_nearest(data, scale);
+
+          out += upsampling_nearest(data, scale_h, scale_w); //modify
+
         }
       } else {
-        Assign(slice<1>(out, begin, end), req[up_enum::kOut], upsampling_nearest(data, scale));
+
+        Assign(slice<1>(out, begin, end), req[up_enum::kOut], upsampling_nearest(data, scale_h, scale_w)); //modify
+
       }
       begin = end;
     }
   } else {
     Tensor<xpu, 4, DType> data = in_data[up_enum::kData].get<xpu, 4, DType>(s);
-    Assign(out, req[up_enum::kOut], upsampling_nearest(data, param.scale));
+
+    int scale_h, scale_w;
+    if (param.scale.ndim() == 1) {
+      scale_h = param.scale[0];
+      scale_w = param.scale[0];
+    } else if (param.scale.ndim() == 2) {
+      scale_h = param.scale[0];
+      scale_w = param.scale[1];
+    } else if (param.scale.ndim() == 4) {
+      scale_h = param.scale[2];
+      scale_w = param.scale[3];
+    }
+    Assign(out, req[up_enum::kOut], upsampling_nearest(data, scale_h, scale_w)); //modify
+
   }
 }
 
