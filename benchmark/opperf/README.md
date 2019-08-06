@@ -47,7 +47,7 @@ Hence, in this utility, we will build the functionality to allow users and devel
 
 ## Prerequisites
 
-Make sure to build the flavor of MXNet, for example - with/without MKL, with CUDA 9 or 10.1 etc., on which you would like to measure operator performance. Finally, you need to add path to your cloned MXNet repository to the PYTHONPATH.
+Provided you have mxnet installed (any version > 1.5.1), all you need to use opperf utility is to add path to your cloned MXNet repository to the PYTHONPATH.
 
 ```
 export PYTHONPATH=$PYTHONPATH:/path/to/incubator-mxnet/
