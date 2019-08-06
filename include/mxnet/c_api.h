@@ -227,6 +227,13 @@ MXNET_DLL const char *MXGetLastError();
 //-------------------------------------
 
 /*!
+ * \brief Load library dynamically
+ * \param path to the library .so file
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXLoadLib(const char *path);
+
+/*!
  * \brief Get list of features supported on the runtime
  * \param libFeature pointer to array of LibFeature
  * \param size of the array

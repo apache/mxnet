@@ -33,11 +33,15 @@
 
 #include <onnx/onnx_pb.h>
 
+#include <unordered_map>
+#include <vector>
 #include <string>
 
 namespace mxnet {
 namespace op {
 namespace nnvm_to_onnx {
+
+enum ConvDeconvType {Convolution, Deconvolution};
 
 using namespace nnvm;
 using namespace ::onnx;
@@ -46,8 +50,7 @@ using int64 = ::google::protobuf::int64;
 std::unordered_map<std::string, mxnet::TShape> GetPlaceholderShapes(const ShapeVector& shape_inputs,
     const nnvm::IndexedGraph& ig);
 
-std::unordered_map<std::string, int> GetPlaceholderDTypes(const DTypeVector&
-dtype_inputs,
+std::unordered_map<std::string, int> GetPlaceholderDTypes(const DTypeVector& dtype_inputs,
     const nnvm::IndexedGraph& ig);
 
 std::unordered_map<std::string, uint32_t> GetOutputLookup(const nnvm::IndexedGraph& ig);
@@ -72,14 +75,24 @@ typedef void (*ConverterFunction)(NodeProto *node_proto,
                                   const nnvm::IndexedGraph &ig,
                                   const array_view<IndexedGraph::NodeEntry> &inputs);
 
+template <class ConvDeconvParam>
+void ConvDeconvConvertHelper(NodeProto *node_proto,
+                             const NodeAttrs &attrs,
+                             const nnvm::IndexedGraph &ig,
+                             const array_view<IndexedGraph::NodeEntry> &inputs,
+                             const ConvDeconvParam& param,
+                             ConvDeconvType type);
 
 // Forward declarations
-void ConvertConvolution(
-                        NodeProto *node_proto,
+void ConvertConvolution(NodeProto *node_proto,
                         const NodeAttrs &attrs,
                         const nnvm::IndexedGraph &ig,
                         const array_view<IndexedGraph::NodeEntry> &inputs);
 
+void ConvertDeconvolution(NodeProto *node_proto,
+                        const NodeAttrs &attrs,
+                        const nnvm::IndexedGraph &ig,
+                        const array_view<IndexedGraph::NodeEntry> &inputs);
 
 void ConvertPooling(NodeProto *node_proto,
                     const NodeAttrs &attrs,
@@ -152,13 +165,14 @@ void ConvertPad(NodeProto* node_proto,
                 const array_view<IndexedGraph::NodeEntry> &inputs);
 
 std::string ConvertNnvmGraphToOnnx(const nnvm::Graph &g,
-    const std::unordered_map<std::string, NDArray>* const params_map);
+    std::unordered_map<std::string, NDArray>* params_map);
 
 static const std::unordered_map<std::string, ConverterFunction> converter_map = {
   {"Activation", ConvertActivation},
   {"BatchNorm", ConvertBatchNorm},
   {"clip", ConvertClip},
   {"Convolution", ConvertConvolution},
+  {"Deconvolution", ConvertDeconvolution},
   {"Concat", ConvertConcatenate},
   {"Dropout", ConvertDropout},
   {"elemwise_add", ConvertElementwiseAdd},
@@ -170,6 +184,18 @@ static const std::unordered_map<std::string, ConverterFunction> converter_map = 
   {"Pooling", ConvertPooling},
   {"relu", ConvertRelu},
   {"SoftmaxOutput", ConvertSoftmaxOutput}
+};
+
+typedef void (*PreprocessFunction)(const NodeAttrs &attrs,
+                                   const std::vector<nnvm::NodeEntry> &inputs,
+                                   std::unordered_map<std::string, NDArray> *params_map);
+
+void PreprocessBatchNorm(const NodeAttrs &attrs,
+                         const std::vector<nnvm::NodeEntry> &inputs,
+                         std::unordered_map<std::string, NDArray> *params_map);
+
+static const std::unordered_map<std::string, PreprocessFunction> preprocess_map = {
+  {"BatchNorm", PreprocessBatchNorm}
 };
 
 }  // namespace nnvm_to_onnx

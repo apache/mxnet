@@ -64,22 +64,32 @@ static void MKLDNNQuantizedConcatForward(const nnvm::NodeAttrs& attrs, const OpC
   std::vector<const mkldnn::memory*> data_mem;
   // new_data_mem is for auto-free new created mkldnn memory
   std::vector<std::shared_ptr<mkldnn::memory>> new_data_mem;
+  const auto out_dtype = out_data[quantized_concat_enum::kOut].dtype();
   for (int i = 0; i < param_.num_args; ++i) {
     auto i_scale = GetScale(in_data[i], data_min[i], data_max[i]);
     if (i_scale == out_scale) {
+      CHECK(in_data[i].dtype() == out_dtype);
       auto mem = in_data[i].GetMKLDNNData();
       data_mem.push_back(mem);
       data_md.push_back(mem->get_primitive_desc());
     } else {
       auto mem = in_data[i].GetMKLDNNData();
       auto pd = mem->get_primitive_desc();
+      if (in_data[i].dtype() != out_dtype) {
+        auto mem_desc = pd.desc();
+        mkldnn::memory::desc new_md(
+            mkldnn::memory::dims(mem_desc.data.dims, mem_desc.data.dims + mem_desc.data.ndims),
+            get_mkldnn_type(out_dtype), static_cast<mkldnn::memory::format>(mem_desc.data.format));
+        pd = mkldnn::memory::primitive_desc(new_md, CpuEngine::Get()->get_engine());
+      }
       const auto rescaled_mem = std::make_shared<mkldnn::memory>(pd);
       new_data_mem.push_back(rescaled_mem);
       std::vector<float> reorder_scale = {out_scale / i_scale};
       primitive_attr reorder_attr;
       reorder_attr.set_int_output_round_mode(round_mode::round_nearest);
       reorder_attr.set_output_scales(0, reorder_scale);
-      const auto reorder_pd = mkldnn::reorder::primitive_desc(pd, pd, reorder_attr);
+      const auto reorder_pd =
+          mkldnn::reorder::primitive_desc(mem->get_primitive_desc(), pd, reorder_attr);
       MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(reorder_pd, *mem, *rescaled_mem));
       data_mem.push_back(rescaled_mem.get());
       data_md.push_back(pd);

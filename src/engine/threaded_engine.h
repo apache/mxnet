@@ -44,6 +44,7 @@
 #include "./openmp.h"
 #include "../common/object_pool.h"
 #include "../profiler/custom_op_profiler.h"
+#include "../../src/common/library.h"
 
 namespace mxnet {
 namespace engine {
@@ -331,6 +332,10 @@ class ThreadedEngine : public Engine {
       kill_.store(true);
     }
     finished_cv_.notify_all();
+    // close opened libraries
+    for (auto const& lib : loaded_libs) {
+      close_lib(lib.second);
+    }
   }
 
  protected:

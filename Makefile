@@ -107,7 +107,7 @@ else
 	CFLAGS += -O3 -DNDEBUG=1
 endif
 CFLAGS += -I$(TPARTYDIR)/mshadow/ -I$(TPARTYDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(TPARTYDIR)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
-LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
+LDFLAGS = -pthread -ldl $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 
 ifeq ($(ENABLE_TESTCOVERAGE), 1)
         CFLAGS += --coverage
@@ -190,6 +190,7 @@ endif
 
 ifeq ($(USE_OPENMP), 1)
 	CFLAGS += -fopenmp
+	CFLAGS += -DMXNET_USE_OPENMP=1
 endif
 
 ifeq ($(USE_NNPACK), 1)
@@ -252,7 +253,7 @@ ifeq ($(USE_CUDNN), 1)
 	LDFLAGS += -lcudnn
 endif
 
-ifeq ($(USE_BLAS), open)
+ifeq ($(USE_BLAS), openblas)
 	CFLAGS += -DMXNET_USE_BLAS_OPEN=1
 else ifeq ($(USE_BLAS), atlas)
 	CFLAGS += -DMXNET_USE_BLAS_ATLAS=1
