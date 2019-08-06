@@ -15,8 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import pickle as pkl
 import unittest
+import pickle as pkl
 
 from mxnet.ndarray import NDArray
 from mxnet.test_utils import *
@@ -34,6 +34,7 @@ def sparse_nd_ones(shape, stype):
 
 
 @with_seed()
+@unittest.skip("skip test_sparse_nd_elemwise_add")
 def test_sparse_nd_elemwise_add():
     def check_sparse_nd_elemwise_binary(shapes, stypes, f, g):
         # generate inputs
