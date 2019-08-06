@@ -1471,13 +1471,13 @@ fetch_jekyll_repo() {
 
 
 build_jekyll_docs() {
-   repo=mxnet.io-v2
-   fetch_jekyll_repo $repo
-   pushd src
-   export PATH=/usr/gem/bin:$PATH
-   bundle install
-   JEKYLL_ENV=production bundle exec jekyll build --config _config_prod.yml -d ../release
-   popd
+   #repo=mxnet.io-v2
+   #fetch_jekyll_repo $repo
+   #pushd src
+   #export PATH=/usr/gem/bin:$PATH
+   #bundle install
+   #JEKYLL_ENV=production bundle exec jekyll build --config _config_prod.yml -d ../release
+   #popd
    tar zcvf jekyll-artifacts.tgz release
    mv $repo/jekyll-artifacts.tgz docs/_build
 }

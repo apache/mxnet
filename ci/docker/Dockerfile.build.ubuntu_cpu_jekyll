@@ -41,6 +41,11 @@ RUN unset GEM_HOME && unset GEM_BIN && \
 RUN unset GEM_HOME && unset GEM_BIN && yes | gem install --force bundler
 RUN gem install jekyll
 
+RUN git clone https://github.com/ThomasDelteil/mxnet.io-v2.git && cd mxnet.io-v2
+RUN export PATH=/usr/gem/bin:$PATH
+RUN bundle install
+RUN JEKYLL_ENV=production bundle exec jekyll build --config _config_prod.yml -d ../release
+
 COPY runtime_functions.sh /work/
 
 WORKDIR /work/mxnet
