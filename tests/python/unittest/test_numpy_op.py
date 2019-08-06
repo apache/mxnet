@@ -1566,6 +1566,30 @@ def test_np_trace():
         assert False
 
 
+@with_seed()
+@use_np
+def test_np_hanning():
+    class TestHanning(HybridBlock):
+        def __init__(self):
+            super(TestHanning, self).__init__()
+
+        def hybrid_forward(self, F, a, *args, **kwargs):
+            return F.np.hanning(a)
+
+        M = [0, 1, 2, 3, 4, 5, 6, 10]
+        for hybridize in [True, False]:
+            for shape in M:
+                test_hanning = TestHanning()
+                if hybridize:
+                    test_hanning.hybridize()
+
+                shape.attach_grad()
+                expected_np = _np.hanning(M)
+                with mx.autograd.record():
+                    out_mx = test_hanning(M)
+                assert_almost_equal(out_mx.asnumpy(), expected_np, rtol=rtol, atol=atol)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
