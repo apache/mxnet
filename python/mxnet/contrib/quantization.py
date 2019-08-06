@@ -908,7 +908,7 @@ def quantize_net(network, quantized_dtype='auto', exclude_layers=None, exclude_l
     import tempfile
     try:
         from tempfile import TemporaryDirectory
-    except AttributeError:
+    except ImportError:
         # really simple implementation of TemporaryDirectory
         class TemporaryDirectory(object):
             def __init__(self, suffix='', prefix='', dir=''):
@@ -919,7 +919,8 @@ def quantize_net(network, quantized_dtype='auto', exclude_layers=None, exclude_l
 
             def __exit__(self, exc_type, exc_value, traceback):
                 shutil.rmtree(self._dirname)
-
+    # TODO(xinyu-intel): tmp solution to save and reload for mxnet.mod.Module.
+    # will enhance `export` function to return `sym, args, auxs` directly.
     with TemporaryDirectory() as tmpdirname:
         prefix = os.path.join(tmpdirname, 'tmp')
         network.export(prefix, epoch=0)
@@ -976,6 +977,8 @@ def quantize_net(network, quantized_dtype='auto', exclude_layers=None, exclude_l
     for name in data_names:
         data_sym.append(mx.sym.var(name))
     net = SymbolBlock(qsym, data_sym)
+    # TODO(xinyu-intel): tmp solution to save param_dict and reload for SymbolBlock
+    # will enhance SymbolBlock to load args, auxs directly.
     with TemporaryDirectory() as tmpdirname:
         prefix = os.path.join(tmpdirname, 'tmp')
         param_name = '%s-%04d.params' % (prefix + 'net-quantized', 0)
