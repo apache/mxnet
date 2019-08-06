@@ -906,18 +906,6 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     if ctx is None:
         ctx = default_context()
 
-    def random_projection(shape):
-        """Get a random weight matrix with not too small elements
-
-        Parameters
-        ----------
-        shape : list or tuple
-        """
-        # random_projection should not have elements too small,
-        # otherwise too much precision is lost in numerical gradient
-        plain = np.random.rand(*shape) + 0.1
-        return plain
-
     location = _parse_location(sym=sym, location=location, ctx=ctx, dtype=dtype)
     location_npy = {k:v.asnumpy() for k, v in location.items()}
     aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx,
@@ -941,12 +929,11 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     input_shape = {k: v.shape for k, v in location.items()}
     _, out_shape, _ = sym.infer_shape(**input_shape)
     proj = mx.sym.Variable("__random_proj")
-    out = sym * proj
+    out = sym + proj
     out = mx.sym.make_loss(out)
 
-    location = dict(list(location.items()) +
-                    [("__random_proj", mx.nd.array(random_projection(out_shape[0]),
-                                                   ctx=ctx, dtype=dtype))])
+    location = dict(list(location.items()) + [("__random_proj",
+                                               mx.nd.random.uniform(shape=out_shape[0], ctx=ctx, dtype=dtype))])
     args_grad_npy = dict([(k, np.random.normal(0, 0.01, size=location[k].shape))
                           for k in grad_nodes]
                          + [("__random_proj", np.random.normal(0, 0.01, size=out_shape[0]))])
