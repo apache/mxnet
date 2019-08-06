@@ -1799,6 +1799,38 @@ def test_save_load_scalar_zero_size_ndarrays():
     check_save_load(True, True, [(2, 0, 1), (0,), (), (), (0, 4), (), (3, 0, 0, 0), (2, 1), (0, 5, 0)], False, False)
 
 
+@with_seed()
+def test_adam_update_mutate():
+    def assert_mutate(x, y): return \
+        np.testing.assert_raises(
+            AssertionError, np.testing.assert_allclose, x, y)
+
+    def assert_unchanged(x, y): return \
+        np.testing.assert_allclose(x, y)
+
+    for dim in range(1, 7):
+        shape = rand_shape_nd(dim)
+        weight = mx.nd.random.normal(shape=shape)
+        grad = mx.nd.random.normal(shape=shape)
+        mean = mx.nd.random.normal(shape=shape)
+        var = mx.nd.random.normal(shape=shape)
+
+        pre_weight, pre_grad, pre_mean, pre_var = map(
+            lambda x: x.asnumpy(), [weight, grad, mean, var])
+
+        # Operate
+        mx.nd.adam_update(weight, grad, mean, var, out=weight, lr=0.01, wd=1e-3)
+
+        post_weight, post_grad, post_mean, post_var = map(
+            lambda x: x.asnumpy(), [weight, grad, mean, var])
+
+        # Assertions
+        assert_mutate(pre_weight, post_weight)
+        assert_mutate(pre_mean, post_mean)
+        assert_mutate(pre_var, post_var)
+        assert_unchanged(pre_grad, post_grad)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
