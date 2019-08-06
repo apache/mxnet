@@ -56,7 +56,7 @@ def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, ar
         benchmark_helper_func = nd_forward_and_profile
 
     if not args_list:
-        _, _ = benchmark_helper_func(op, warmup, None, **kwargs_list[0])
+        _, _ = benchmark_helper_func(op, warmup, [], **kwargs_list[0])
     else:
     # Warm up, ignore the profiler output
         _, _ = benchmark_helper_func(op, warmup, args_list[0], **kwargs_list[0])
@@ -66,7 +66,7 @@ def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, ar
     logging.info("Begin Benchmark - {name}".format(name=op.__name__))
     if not args_list:
         for idx, kwargs in enumerate(kwargs_list):
-            _, profiler_output = benchmark_helper_func(op, runs, None, **kwargs)
+            _, profiler_output = benchmark_helper_func(op, runs, [], **kwargs)
 
             # Add inputs used for profiling this operator into result
             profiler_output["inputs"] = inputs[idx]
