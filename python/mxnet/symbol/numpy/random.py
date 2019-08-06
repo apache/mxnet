@@ -49,7 +49,7 @@ def _random_helper(random, sampler, params, shape, dtype, ctx, out, kwargs):
                      "but got %s." % type(params[0]))
 
 
-def uniform(low=0.0, high=1.0, size=None, ctx=None, dtype=None):
+def uniform(low=0.0, high=1.0, size=None, ctx=None, dtype=None, out=None):
     """Draw samples from a uniform distribution.
 
     Samples are uniformly distributed over the half-open interval
@@ -85,17 +85,19 @@ def uniform(low=0.0, high=1.0, size=None, ctx=None, dtype=None):
     dummy_value = -1.0
     if ctx is None:
         ctx = current_context()
-    if size is ():
-        size=None
+    if out is not None:
+        size = out.shape
+    if size == ():
+        size = None
     type_dict = {
         (True, True): lambda: _npi.uniform(low, high, low=dummy_value, high=dummy_value, size=size,
-                                           t=0, ctx=ctx, dtype=dtype),
+                                           t=0, ctx=ctx, dtype=dtype, out=out),
         (False, True): lambda: _npi.uniform(high, low=low, high=dummy_value, size=size,
-                                            t=1, ctx=ctx, dtype=dtype),
+                                            t=1, ctx=ctx, dtype=dtype, out=out),
         (True, False): lambda: _npi.uniform(low, low=dummy_value, high=high, size=size,
-                                            t=2, ctx=ctx, dtype=dtype),
+                                            t=2, ctx=ctx, dtype=dtype, out=out),
         (False, False): lambda: _npi.uniform(low=low, high=high, size=size,
-                                             t=3, ctx=ctx, dtype=dtype)
+                                             t=3, ctx=ctx, dtype=dtype, out=out)
     }
     return type_dict[input_type]()
 

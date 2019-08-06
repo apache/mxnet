@@ -100,7 +100,7 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
     return _mx_nd_np.random.normal(loc, scale, size, **kwargs)
 
 
-def uniform(low=0.0, high=1.0, size=None, ctx=None, dtype=None):
+def uniform(low=0.0, high=1.0, size=None, ctx=None, dtype=None, out=None):
     """Draw samples from a uniform distribution.
 
     Samples are uniformly distributed over the half-open interval
@@ -131,7 +131,7 @@ def uniform(low=0.0, high=1.0, size=None, ctx=None, dtype=None):
     out : ndarray
         Drawn samples from the parameterized uniform distribution.
     """
-    return _mx_nd_np.random.uniform(low, high, size=size, ctx=ctx, dtype=dtype)
+    return _mx_nd_np.random.uniform(low, high, size=size, ctx=ctx, dtype=dtype, out=out)
 
 
 def multinomial(n, pvals, size=None, **kwargs):
