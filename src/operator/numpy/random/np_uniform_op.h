@@ -30,7 +30,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
-#include "./twoparams_dist_common.h"
+#include "./dist_common.h"
 #include "../../elemwise_op_common.h"
 #include "../../tensor/elemwise_binary_broadcast_op.h"
 #include "../../mshadow_op.h"
@@ -75,45 +75,6 @@ struct NumpyUniformParam : public dmlc::Parameter<NumpyUniformParam> {
               "Defaults to float32 if not defined (dtype=None).");
   }
 };
-
-
-inline bool NumpyUniformOpShape(const nnvm::NodeAttrs &attrs,
-                                std::vector<TShape> *in_attrs,
-                                std::vector<TShape> *out_attrs) {
-  const NumpyUniformParam &param = nnvm::get<NumpyUniformParam>(attrs.parsed);
-  CHECK_EQ(out_attrs->size(), 1U);
-  if (param.size.has_value()) {
-    // Size declared.
-    std::vector<dim_t> oshape_vec;
-    const mxnet::Tuple<int> &size = param.size.value();
-    for (int i = 0; i < size.ndim(); ++i) {
-      oshape_vec.emplace_back(size[i]);
-    }
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(oshape_vec));
-    for (size_t input_idx = 0; input_idx < in_attrs->size(); input_idx++) {
-      CheckBroadcastable((*in_attrs)[input_idx], (*out_attrs)[0]);
-    }
-  } else {
-    // Size undeclared.
-    if (in_attrs->size() == 2U) {
-      // Low and high both from ndarray.
-      mxnet::TShape& low = (*in_attrs)[0];
-      mxnet::TShape& high = (*in_attrs)[1];
-      mxnet::TShape out(std::max(low.ndim(), high.ndim()), -1);
-      InferBroadcastShape(low, high, &out);
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, out);
-    }
-    if (in_attrs->size() == 1U) {
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0))
-    }
-    // Two scalar case without predefined size.
-    if (in_attrs->size() == 0) {
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(0, -1))
-      return true;
-    }
-  }
-  return out_attrs->at(0).ndim() != 0U;;
-}
 
 inline bool NumpyUniformOpType(const nnvm::NodeAttrs &attrs,
                                    std::vector<int> *in_attrs,
@@ -210,10 +171,8 @@ void NumpyUniformForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
             param.low, param.high,
             uniform_tensor.dptr_, outputs[0].dptr<OType>());
     });
-  }
-
-  // [scalar tensor], [tensor scalar] case
-  if (inputs.size() == 1U) {
+  } else if (inputs.size() == 1U) {
+    // [scalar tensor], [tensor scalar] case
     int ndim = FillShape(inputs[0].shape_, inputs[0].shape_, outputs[0].shape_,
                          &new_lshape, &new_lshape, &new_oshape);
     int scalar_pos;
@@ -239,10 +198,8 @@ void NumpyUniformForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
         });
       });
     });
-  }
-
-  // [tensor tensor] case
-  if (inputs.size() == 2U) {
+  } else if (inputs.size() == 2U) {
+    // [tensor tensor] case
     int ndim = FillShape(inputs[0].shape_, inputs[1].shape_, outputs[0].shape_,
                          &new_lshape, &new_hshape, &new_oshape);
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
