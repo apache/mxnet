@@ -699,8 +699,9 @@ MXNET_ADD_SPARSE_OP_ALIAS(clip)
 .describe(R"code(Clips (limits) the values in an array.
 
 Given an interval, values outside the interval are clipped to the interval edges.
-Clipping ``x`` between `a_min` and `a_x` would be::
+Clipping ``x`` between `a_min` and `a_max` would be::
 
+.. math::
    clip(x, a_min, a_max) = max(min(x, a_max), a_min))
 
 Example::
