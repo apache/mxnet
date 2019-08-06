@@ -30,28 +30,11 @@
 #include <string>
 #include "dmlc/io.h"
 
-// map of libraries loaded
-static std::map<std::string, void*> loaded_libs;
 
 void* load_lib(const char* path);
 void close_lib(void* handle);
 void get_sym(void* handle, void** func, char* name);
 
-/*!
- * \brief a templated function that fetches from the library
- * a function pointer of any given datatype and name
- * \param T a template parameter for data type of function pointer
- * \param lib library handle
- * \param func_name function name to search for in the library
- * \return func a function pointer
- */
-template<typename T>
-T get_func(void *lib, char *func_name) {
-  T func;
-  get_sym(lib, reinterpret_cast<void**>(&func), func_name);
-  if (!func)
-    LOG(FATAL) << "Unable to get function '" << func_name << "' from library";
-  return func;
-}
+
 
 #endif  // MXNET_COMMON_LIBRARY_H_

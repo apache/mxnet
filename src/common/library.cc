@@ -24,33 +24,6 @@
  * and accessing its functions
  */
 
-#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-#include <windows.h>
-#else
-#include <dlfcn.h>
-#endif
-
-#include <string>
-#include "library.h"
-
-#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-/*!
- * \brief Retrieve the system error message for the last-error code
- * \param err string that gets the error message
- */
-void win_err(char **err) {
-  uint32_t dw = GetLastError();
-  FormatMessage(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER |
-        FORMAT_MESSAGE_FROM_SYSTEM |
-        FORMAT_MESSAGE_IGNORE_INSERTS,
-        NULL,
-        dw,
-        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        reinterpret_cast<char*>(err),
-        0, NULL);
-}
-#endif
 
 
 /*!

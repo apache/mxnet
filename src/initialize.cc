@@ -1,4 +1,4 @@
-/*
+  /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,6 +22,7 @@
  * \file initialize.cc
  * \brief initialize mxnet library
  */
+#include "initialize.h"
 #include <signal.h>
 #include <dmlc/logging.h>
 #include <mxnet/engine.h>
@@ -31,8 +32,37 @@
 #if MXNET_USE_OPENCV
 #include <opencv2/opencv.hpp>
 #endif  // MXNET_USE_OPENCV
+#include "common/utils.h"
+#include "engine/openmp.h"
+
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+#include <windows.h>
+#else
+#include <dlfcn.h>
+#endif
+
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+/*!
+ * \brief Retrieve the system error message for the last-error code
+ * \param err string that gets the error message
+ */
+void win_err(char **err) {
+  uint32_t dw = GetLastError();
+  FormatMessage(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_FROM_SYSTEM |
+        FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL,
+        dw,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        reinterpret_cast<char*>(err),
+        0, NULL);
+}
+#endif
+
 
 namespace mxnet {
+
 #if MXNET_USE_SIGNAL_HANDLER && DMLC_LOG_STACK_TRACE
 static void SegfaultLogger(int sig) {
   fprintf(stderr, "\nSegmentation fault: %d\n\n", sig);
@@ -41,65 +71,108 @@ static void SegfaultLogger(int sig) {
 }
 #endif
 
-class LibraryInitializer {
- public:
-  LibraryInitializer() {
-    dmlc::InitLogging("mxnet");
-#if MXNET_USE_SIGNAL_HANDLER && DMLC_LOG_STACK_TRACE
-    struct sigaction sa;
-    sigaction(SIGSEGV, nullptr, &sa);
-    if (sa.sa_handler == nullptr) {
-        signal(SIGSEGV, SegfaultLogger);
-    }
-#endif
+// pthread_atfork handlers, delegated to LibraryInitializer members.
 
-// disable openmp for multithreaded workers
-#ifndef _WIN32
-    using op::custom::CustomOperator;
-    pthread_atfork(
-      []() {
-        CustomOperator::Get()->Stop();
-        Engine::Get()->Stop();
-      },
-      []() {
-        Engine::Get()->Start();
-        CustomOperator::Get()->Start();
-      },
-      []() {
-        // Conservative thread management for multiprocess workers
-        const size_t mp_worker_threads = dmlc::GetEnv("MXNET_MP_WORKER_NTHREADS", 1);
-        dmlc::SetEnv("MXNET_CPU_WORKER_NTHREADS", mp_worker_threads);
-        dmlc::SetEnv("OMP_NUM_THREADS", 1);
-#if MXNET_USE_OPENCV && !__APPLE__
-        const size_t mp_cv_num_threads = dmlc::GetEnv("MXNET_MP_OPENCV_NUM_THREADS", 0);
-        cv::setNumThreads(mp_cv_num_threads);  // disable opencv threading
-#endif  // MXNET_USE_OPENCV
-        engine::OpenMP::Get()->set_enabled(false);
-        Engine::Get()->Start();
-        CustomOperator::Get()->Start();
-      });
-#endif
-  }
-
-  ~LibraryInitializer() {
-    // close opened libraries
-    for (auto const& lib : loaded_libs) {
-      close_lib(lib.second);
-    }
-  }
-
-  static LibraryInitializer* Get();
-};
-
-LibraryInitializer* LibraryInitializer::Get() {
-  static LibraryInitializer inst;
-  return &inst;
+void pthread_atfork_prepare() {
+  LibraryInitializer* library_initializer = LibraryInitializer::Get();
+  library_initializer->atfork_prepare();
 }
 
+void pthread_atfork_parent() {
+  LibraryInitializer* library_initializer = LibraryInitializer::Get();
+  library_initializer->atfork_parent();
+}
+
+void pthread_atfork_child() {
+  LibraryInitializer* library_initializer = LibraryInitializer::Get();
+  library_initializer->atfork_child();
+}
+
+// LibraryInitializer member functions
+
+LibraryInitializer::LibraryInitializer()
+  : original_pid_(common::current_process_id()),
+    mp_worker_nthreads_(dmlc::GetEnv("MXNET_MP_WORKER_NTHREADS", 1)),
+    cpu_worker_nthreads_(dmlc::GetEnv("MXNET_CPU_WORKER_NTHREADS", 1)),
+    mp_cv_num_threads_(dmlc::GetEnv("MXNET_MP_OPENCV_NUM_THREADS", 0))
+{
+  dmlc::InitLogging("mxnet");
+  engine::OpenMP::Get();   // force OpenMP initialization
+  install_signal_handlers();
+  install_pthread_atfork_handlers();
+}
+
+LibraryInitializer::~LibraryInitializer() {
+  close_open_libs();
+}
+
+bool LibraryInitializer::was_forked() const {
+  return common::current_process_id() != original_pid_;
+}
+
+void LibraryInitializer::atfork_prepare() {
+  using op::custom::CustomOperator;
+  CustomOperator::Get()->Stop();
+  Engine::Get()->Stop();
+}
+
+void LibraryInitializer::atfork_parent() {
+  using op::custom::CustomOperator;
+  Engine::Get()->Start();
+  CustomOperator::Get()->Start();
+}
+
+void LibraryInitializer::atfork_child() {
+  using op::custom::CustomOperator;
+  // Conservative thread management for multiprocess workers
+  this->cpu_worker_nthreads_ = this->mp_cv_num_threads_;
+#if MXNET_USE_OPENCV && !__APPLE__
+  cv::setNumThreads(mp_cv_num_threads_);
+#endif  // MXNET_USE_OPENCV
+  engine::OpenMP::Get()->set_thread_max(1);
+  engine::OpenMP::Get()->set_enabled(false);
+  Engine::Get()->Start();
+  CustomOperator::Get()->Start();
+}
+
+
+void LibraryInitializer::install_pthread_atfork_handlers() {
+#ifndef _WIN32
+  pthread_atfork(pthread_atfork_prepare, pthread_atfork_parent, pthread_atfork_child);
+#endif
+}
+
+void LibraryInitializer::install_signal_handlers() {
+#if MXNET_USE_SIGNAL_HANDLER && DMLC_LOG_STACK_TRACE
+  struct sigaction sa;
+  sigaction(SIGSEGV, nullptr, &sa);
+  if (sa.sa_handler == nullptr) {
+      signal(SIGSEGV, SegfaultLogger);
+  }
+#endif
+}
+
+void LibraryInitializer::close_open_libs() {
+  for (auto const& lib : loaded_libs) {
+    close_lib(lib.second);
+  }
+}
+
+void LibraryInitializer::dynlib_defer_close(const std::string &path, void *handle) {
+  loaded_libs.emplace(path, handle);
+}
+
+/**
+ * Perform static initialization
+ */
 #ifdef __GNUC__
-// Don't print an unused variable message since this is intentional
+// In GCC we use constructor to perform initialization before any static initializer is able to run
+__attribute__((constructor)) static void LibraryInitializerEntry() {
 #pragma GCC diagnostic ignored "-Wunused-variable"
+  volatile LibraryInitializer* library_init = LibraryInitializer::Get();
+}
+#else
+static LibraryInitializer* __library_init = LibraryInitializer::Get();
 #endif
 
-static LibraryInitializer* __library_init = LibraryInitializer::Get();
 }  // namespace mxnet

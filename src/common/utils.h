@@ -50,9 +50,22 @@
 #include "../operator/nn/mkldnn/mkldnn_base-inl.h"
 #endif
 
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+#include <windows.h>
+#else
+#include <unistd.h>
+#include <cstdint>
+#endif
+
+
 namespace mxnet {
 namespace common {
 
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+inline size_t current_process_id() { return ::GetCurrentProcessId(); }
+#else
+inline size_t current_process_id() { return getpid(); }
+#endif
 /*!
  * \brief IndPtr should be non-negative, in non-decreasing order, start with 0
  *           and end with value equal with size of indices.
