@@ -207,10 +207,10 @@ void TrilOpForward(const nnvm::NodeAttrs& attrs,
 
 template<typename xpu>
 void TrilOpBackward(const nnvm::NodeAttrs& attrs,
-                  const OpContext& ctx,
-                  const std::vector<TBlob>& inputs,
-                  const std::vector<OpReqType>& req,
-                  const std::vector<TBlob>& outputs) {
+                    const OpContext& ctx,
+                    const std::vector<TBlob>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 1U);
