@@ -46,7 +46,6 @@ def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
             else:
                 kwargs[key] = value
         kwargs_list.append(kwargs)
-    print(args_list, kwargs_list)
     return args_list, kwargs_list
 
 
@@ -57,7 +56,7 @@ def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, ar
         benchmark_helper_func = nd_forward_and_profile
 
     if not args_list:
-        _, _ = benchmark_helper_func(op, warmup, [], **kwargs_list[0])
+        _, _ = benchmark_helper_func(op, warmup, None, **kwargs_list[0])
     else:
     # Warm up, ignore the profiler output
         _, _ = benchmark_helper_func(op, warmup, args_list[0], **kwargs_list[0])
@@ -65,12 +64,20 @@ def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, ar
     # Run Benchmarks
     op_benchmark_result = {op.__name__: []}
     logging.info("Begin Benchmark - {name}".format(name=op.__name__))
-    for idx, (args,kwargs) in enumerate(zip(args_list,kwargs_list)):
-        _, profiler_output = benchmark_helper_func(op, runs, args, **kwargs)
+    if not args_list:
+        for idx, kwargs in enumerate(kwargs_list):
+            _, profiler_output = benchmark_helper_func(op, runs, None, **kwargs)
 
-        # Add inputs used for profiling this operator into result
-        profiler_output["inputs"] = inputs[idx]
-        op_benchmark_result[op.__name__].append(profiler_output)
+            # Add inputs used for profiling this operator into result
+            profiler_output["inputs"] = inputs[idx]
+            op_benchmark_result[op.__name__].append(profiler_output)
+    else:
+        for idx, (args,kwargs) in enumerate(zip(args_list,kwargs_list)):
+            _, profiler_output = benchmark_helper_func(op, runs, args, **kwargs)
+
+            # Add inputs used for profiling this operator into result
+            profiler_output["inputs"] = inputs[idx]
+            op_benchmark_result[op.__name__].append(profiler_output)
     logging.info("Complete Benchmark - {name}".format(name=op.__name__))
     return op_benchmark_result
 

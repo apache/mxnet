@@ -47,7 +47,7 @@ def nd_forward_backward_and_profile(op, runs, *args, **kwargs):
     """
     for _ in range(runs):
         with mx.autograd.record():
-            if(args==[]):
+            if(args==(None,)):
                 res = op(**kwargs)
             else:
                 res = op(*args, **kwargs)
@@ -79,7 +79,7 @@ def nd_forward_and_profile(op, runs, *args, **kwargs):
     any results from NDArray operation execution
     """
     for _ in range(runs):
-        if(args==[]):
+        if(args==(None,)):
             res = op(**kwargs)
         else:
             res = op(*args, **kwargs)
