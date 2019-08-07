@@ -39,8 +39,8 @@
 #include <string>
 #include <utility>
 #include <cstdint>
+#include <memory>
 
-#include "./math.h"
 #include "./math_functions-inl.h"
 #include "./operator_common.h"
 #include "./rnn_impl.h"
@@ -396,14 +396,50 @@ class RNNOp {
  public:
   RNNParam param_;
   Context ctx_;
+  bool init_space_, temp_init_space_;
+  size_t reserve_cpu_space_size_, temp_cpu_space_size_;
+  Storage::Handle reserve_cpu_space_, temp_cpu_space_;
+
   #if MXNET_USE_MKLDNN == 1
   bool has_cache;
   bool init_mem_;
   size_t reserve_mem_size_;
-  Storage::Handle mem_space_;
+  std::shared_ptr<Tensor<xpu, 1, DType> > mem_space_;
   MKLDNNRNNMemory mkldnn_mems;
   std::vector<primitive> rnn_forward_prim;
   #endif
+
+  #if MXNET_USE_CUDNN_RNN
+  cudnnDataType_t dtype_;
+  bool init_cudnn_;
+  cudnnRNNDescriptor_t rnn_desc_;
+  cudnnRNNMode_t mode_;
+  cudnnDirectionMode_t direction_;
+  cudnnRNNInputMode_t input_mode_;
+  cudnnDropoutDescriptor_t dropout_desc_;
+  Storage::Handle reserve_space_;
+  uint64_t seed_ = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
+  size_t workspace_byte_, reserve_space_byte_;
+  int workspace_size_;
+  std::vector<cudnnTensorDescriptor_t> x_desc_vec_, y_desc_vec_, dx_desc_vec_, dy_desc_vec_;
+  #if MXNET_USE_CUDNN_GE_7200
+  cudnnRNNDataDescriptor_t x_data_desc_, y_data_desc_, dx_data_desc_, dy_data_desc_;
+  DType padding_fill_ = 0;
+  #endif
+  cudnnTensorDescriptor_t hx_desc_, cx_desc_;
+  cudnnTensorDescriptor_t hy_desc_, cy_desc_;
+  cudnnTensorDescriptor_t dhx_desc_, dcx_desc_;
+  cudnnTensorDescriptor_t dhy_desc_, dcy_desc_;
+
+  cudnnFilterDescriptor_t w_desc_, dw_desc_;
+  // Allow TensorCore algo policy
+  bool cudnn_tensor_core_;
+
+  #if CUDNN_MAJOR >= 5
+  cudnnTensorFormat_t format_;
+  #endif
+  #endif
+
   explicit RNNOp(RNNParam param, Context ctx) {
     this->param_ = param;
     this->ctx_ = ctx;
@@ -514,7 +550,6 @@ class RNNOp {
   ~RNNOp() {
     #if MXNET_USE_MKLDNN == 1
     if (init_mem_) {
-      Storage::Get()->Free(mem_space_);
       init_mem_ = false;
     }
     #endif
@@ -1519,39 +1554,6 @@ class RNNOp {
     }
   #endif
   }
-  #if MXNET_USE_CUDNN_RNN
-  cudnnDataType_t dtype_;
-  bool init_cudnn_;
-  cudnnRNNDescriptor_t rnn_desc_;
-  cudnnRNNMode_t mode_;
-  cudnnDirectionMode_t direction_;
-  cudnnRNNInputMode_t input_mode_;
-  cudnnDropoutDescriptor_t dropout_desc_;
-  Storage::Handle reserve_space_;
-  uint64_t seed_ = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
-  size_t workspace_byte_, reserve_space_byte_;
-  int workspace_size_;
-  std::vector<cudnnTensorDescriptor_t> x_desc_vec_, y_desc_vec_, dx_desc_vec_, dy_desc_vec_;
-  #if MXNET_USE_CUDNN_GE_7200
-  cudnnRNNDataDescriptor_t x_data_desc_, y_data_desc_, dx_data_desc_, dy_data_desc_;
-  DType padding_fill_ = 0;
-  #endif
-  cudnnTensorDescriptor_t hx_desc_, cx_desc_;
-  cudnnTensorDescriptor_t hy_desc_, cy_desc_;
-  cudnnTensorDescriptor_t dhx_desc_, dcx_desc_;
-  cudnnTensorDescriptor_t dhy_desc_, dcy_desc_;
-
-  cudnnFilterDescriptor_t w_desc_, dw_desc_;
-  // Allow TensorCore algo policy
-  bool cudnn_tensor_core_;
-
-  #if CUDNN_MAJOR >= 5
-  cudnnTensorFormat_t format_;
-  #endif
-  #endif
-  bool init_space_, temp_init_space_;
-  size_t reserve_cpu_space_size_, temp_cpu_space_size_;
-  Storage::Handle reserve_cpu_space_, temp_cpu_space_;
 };  //  class RNNOp
 
 static OpStatePtr CreateRNNState(const nnvm::NodeAttrs &attrs,

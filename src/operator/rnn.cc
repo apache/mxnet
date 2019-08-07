@@ -170,10 +170,9 @@ static bool RNNType(const nnvm::NodeAttrs& attrs,
 static std::vector<ResourceRequest> RNNResourceEx(const NodeAttrs& attrs, const int dev_mask,
                                                   const DispatchMode dispatch_mode) {
   std::vector<ResourceRequest> request;
+  request.emplace_back(ResourceRequest::kTempSpace);
   if (dev_mask == kGPU) {
 #if MXNET_USE_CUDNN_RNN
-    request.emplace_back(ResourceRequest::kTempSpace);
-
     const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
     if (param.p != 0 && 1.0f - param.p > 0) {
       request.emplace_back(ResourceRequest::kCuDNNDropoutDesc);
@@ -270,14 +269,10 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
       const int nbias = param.mode == rnn_enum::kGru ? ngates + 1 : ngates;
 
       const size_t r_size = GetMKLDNNRNNCacheMemorySize(L, D, T, N, I, H, param.mode);
-      if (op.init_mem_ && op.reserve_mem_size_ < r_size) {
-        Storage::Get()->Free(op.mem_space_);
-        op.init_mem_ = false;
-      }
-      if (!op.init_mem_) {
-        op.mem_space_ = Storage::Get()->Alloc(
-            r_size * sizeof(DType),
-            Context::CPU());
+      if (!op.init_mem_ || op.reserve_mem_size_ < r_size) {
+        op.mem_space_ = std::make_shared<Tensor<cpu, 1, DType> >(
+            ctx.requested[rnn_enum::kTempSpace].get_space_typed<cpu, 1, DType>(
+              Shape1(r_size), s));
         op.reserve_mem_size_ = r_size;
         op.init_mem_ = true;
         op.has_cache = false;
@@ -286,7 +281,7 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
         op.has_cache = false;
       }
 
-      DType* workptr = static_cast<DType*>(op.mem_space_.dptr);
+      DType* workptr = static_cast<DType*>(op.mem_space_->dptr_);
       mkldnn::memory::dims src_layer_tz_0 = {T, N, I};
       mkldnn::memory::dims src_layer_tz = {T, N, D * H};
       mkldnn::memory::dims dst_layer_tz = {T, N, D * H};
