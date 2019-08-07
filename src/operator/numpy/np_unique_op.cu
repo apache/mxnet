@@ -58,10 +58,10 @@ struct argsort_functor2d : public thrust::unary_function<int64_t, int64_t> {
 };
 
 void NumpyUniqueGPUNoneAxisImpl(const NumpyUniqueParam& param,
-                          const OpContext &ctx,
-                          const std::vector<NDArray> &inputs,
-                          const std::vector<OpReqType> &req,
-                          const std::vector<NDArray> &outputs) {
+                                const OpContext &ctx,
+                                const std::vector<NDArray> &inputs,
+                                const std::vector<OpReqType> &req,
+                                const std::vector<NDArray> &outputs) {
   MXNET_NO_FLOAT16_TYPE_SWITCH(outputs[0].dtype(), DType, {
     mshadow::Stream<gpu> *stream = ctx.get_stream<gpu>();
     auto policy = thrust::cuda::par.on(stream->stream_);
@@ -236,12 +236,11 @@ void NumpyUniqueGPUImpl(const NumpyUniqueParam& param,
   });
 }
 
-template<>
-void NumpyUniqueForward<gpu>(const nnvm::NodeAttrs& attrs,
-                            const OpContext &ctx,
-                            const std::vector<NDArray> &inputs,
-                            const std::vector<OpReqType> &req,
-                            const std::vector<NDArray> &outputs) {
+void NumpyUniqueGPUForward(const nnvm::NodeAttrs& attrs,
+                           const OpContext &ctx,
+                           const std::vector<NDArray> &inputs,
+                           const std::vector<OpReqType> &req,
+                           const std::vector<NDArray> &outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK(req[0] == kWriteTo || req[0] == kWriteInplace);
   using namespace mshadow;
@@ -312,7 +311,7 @@ void NumpyUniqueForward<gpu>(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_npi_unique)
-.set_attr<FComputeEx>("FComputeEx<gpu>", NumpyUniqueForward<gpu>);
+.set_attr<FComputeEx>("FComputeEx<gpu>", NumpyUniqueGPUForward);
 
 }  // namespace op
 }  // namespace mxnet

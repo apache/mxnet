@@ -109,7 +109,7 @@ struct UniqueComputeMaskGPUKernel {
 };
 
 struct UniqueReturnInverseKernel {
-  MSHADOW_XINLINE static void Map(int i,
+  MSHADOW_XINLINE static void Map(int64_t i,
                                   int64_t* unique_inverse,
                                   const int32_t* prefix_sum,
                                   const int64_t* perm) {
@@ -119,7 +119,7 @@ struct UniqueReturnInverseKernel {
 };
 
 struct UniqueReturnCountsKernel {
-  MSHADOW_XINLINE static void Map(int i, int64_t* unique_counts, const int32_t* idx) {
+  MSHADOW_XINLINE static void Map(int64_t i, int64_t* unique_counts, const int32_t* idx) {
       unique_counts[i] = idx[i + 1] - idx[i];
   }
 };
@@ -156,10 +156,10 @@ inline bool NumpyUniqueType(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool NumpyUniqueStorageType(const nnvm::NodeAttrs& attrs,
-                            const int dev_mask,
-                            DispatchMode* dispatch_mode,
-                            std::vector<int> *in_attrs,
-                            std::vector<int> *out_attrs) {
+                                   const int dev_mask,
+                                   DispatchMode* dispatch_mode,
+                                   std::vector<int> *in_attrs,
+                                   std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   // CHECK_EQ(out_attrs->size(), 1U);
   for (int &attr : *in_attrs) {
@@ -171,13 +171,6 @@ inline bool NumpyUniqueStorageType(const nnvm::NodeAttrs& attrs,
   *dispatch_mode = DispatchMode::kFComputeEx;
   return true;
 }
-
-template<typename xpu>
-void NumpyUniqueForward(const nnvm::NodeAttrs& attrs,
-                        const OpContext &ctx,
-                        const std::vector<NDArray> &inputs,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<NDArray> &outputs);
 
 }  // namespace op
 }  // namespace mxnet

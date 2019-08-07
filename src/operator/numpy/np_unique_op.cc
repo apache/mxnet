@@ -28,10 +28,10 @@ namespace mxnet {
 namespace op {
 
 void NumpyUniqueCPUNoneAxisImpl(const NumpyUniqueParam& param,
-                          const OpContext &ctx,
-                          const std::vector<NDArray> &inputs,
-                          const std::vector<OpReqType> &req,
-                          const std::vector<NDArray> &outputs) {
+                                const OpContext &ctx,
+                                const std::vector<NDArray> &inputs,
+                                const std::vector<OpReqType> &req,
+                                const std::vector<NDArray> &outputs) {
   MXNET_NO_FLOAT16_TYPE_SWITCH(outputs[0].dtype(), DType, {
     mshadow::Stream<cpu> *stream = ctx.get_stream<cpu>();
 
@@ -219,12 +219,11 @@ void NumpyUniqueCPUImpl(const NumpyUniqueParam& param,
   });
 }
 
-template<>
-void NumpyUniqueForward<cpu>(const nnvm::NodeAttrs& attrs,
-                             const OpContext &ctx,
-                             const std::vector<NDArray> &inputs,
-                             const std::vector<OpReqType> &req,
-                             const std::vector<NDArray> &outputs) {
+void NumpyUniqueCPUForward(const nnvm::NodeAttrs& attrs,
+                           const OpContext &ctx,
+                           const std::vector<NDArray> &inputs,
+                           const std::vector<OpReqType> &req,
+                           const std::vector<NDArray> &outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK(req[0] == kWriteTo || req[0] == kWriteInplace);
   using namespace mshadow;
@@ -313,7 +312,7 @@ NNVM_REGISTER_OP(_npi_unique)
     return std::vector<std::string>{"data"};
   })
 .set_attr<nnvm::FInferType>("FInferType", NumpyUniqueType)
-.set_attr<FComputeEx>("FComputeEx<cpu>", NumpyUniqueForward<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", NumpyUniqueCPUForward)
 .set_attr<FInferStorageType>("FInferStorageType", NumpyUniqueStorageType)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<FResourceRequest>("FResourceRequest",
