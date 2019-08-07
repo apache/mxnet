@@ -82,14 +82,14 @@ def test_ndarray_random_randint():
 
 @with_seed()
 def test_ndarray_random_exponential():
-    scale_array = mx.nd.array(shape=(MEDIUM_X,SMALL_Y))
+    scale_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
     a = nd.random.exponential(scale =scale_array, shape=(LARGE_X, SMALL_Y), dtype=np.int64)
     assert a.shape == (MEDIUM_X,SMALL_Y,LARGE_X, SMALL_Y)
 
 @with_seed()
 def test_ndarray_random_gamma():
-    alpha_array = mx.nd.array(shape=(MEDIUM_X,SMALL_Y))
-    beta_array = mx.nd.array(shape=(MEDIUM_X,SMALL_Y))
+    alpha_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
+    beta_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
     a = nd.random.gamma(alpha =alpha_array, beta=beta_array, shape=(LARGE_X, SMALL_Y))
     assert a.shape == (MEDIUM_X,SMALL_Y,LARGE_X, SMALL_Y)
 
@@ -100,23 +100,23 @@ def test_ndarray_random_gamma():
 
 @with_seed()
 def test_ndarray_random_generalized_negative_binomial():
-    alpha_array = mx.nd.array(shape=(MEDIUM_X,SMALL_Y))
-    mu_array = mx.nd.array(shape=(MEDIUM_X,SMALL_Y))
+    alpha_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
+    mu_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
     a = nd.random.generalized_negative_binomial(mu=mu_array, alpha=alpha_array, shape=(LARGE_X, SMALL_Y))
     assert a.shape == (MEDIUM_X,SMALL_Y,LARGE_X, SMALL_Y)
 
 
 @with_seed()
 def test_ndarray_random_normal():
-    scale_array = mx.nd.array(shape=(MEDIUM_X,SMALL_Y))
-    loc_array = mx.nd.array(shape=(MEDIUM_X,SMALL_Y))
+    scale_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
+    loc_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
     a = nd.random.exponential(loc=loc_array, scale=scale_array, shape=(LARGE_X, SMALL_Y), dtype=np.int64)
     assert a.shape == (MEDIUM_X,SMALL_Y,LARGE_X, SMALL_Y)
 
 
 @with_seed()
 def test_ndarray_random_poisson():
-    lambda_array = mx.nd.array(shape=(MEDIUM_X,SMALL_Y))
+    lambda_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
     a = nd.random.poisson(lam=lambda_array, shape=(LARGE_X,SMALL_Y))
     assert a.shape == (MEDIUM_X,SMALL_Y,LARGE_X, SMALL_Y)
 
