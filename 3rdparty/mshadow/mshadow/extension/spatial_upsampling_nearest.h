@@ -50,8 +50,8 @@ struct Plan<UpSamplingNearestExp<SrcExp, DType, srcdim>, DType> {
  public:
   explicit Plan(const UpSamplingNearestExp<SrcExp, DType, srcdim> &e)
     : src_(MakePlan(e.src_)),
-      scale_h_(e.scale_h),
-      scale_w_(e.scale_w),
+      scale_h_(e.scale_h_),
+      scale_w_(e.scale_w_),
       new_height_(e.shape_[srcdim - 2]),
       //new_width_(e.shape_[srcdim - 1]),
       src_height_(static_cast<index_t>(e.shape_[srcdim - 2] / e.scale_h_)) {}
