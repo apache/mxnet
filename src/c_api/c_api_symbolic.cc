@@ -25,7 +25,6 @@
 #include "mxnet/base.h"
 #include "mxnet/c_api.h"
 #include "mxnet/imperative.h"
-#include "mxnet/libinfo.h"
 #include "nnvm/c_api.h"
 #include "nnvm/pass.h"
 #include "nnvm/pass_functions.h"
@@ -588,74 +587,74 @@ int MXSymbolInferShape(SymbolHandle sym,
 
 template<typename dtype, typename stype, typename itype>
 inline void SymbolInferShape(const char** keys,
-                      mx_uint num_args,
-                      const dtype* arg_shape_data,
-                      const itype* arg_ind_ptr,
-                      const int** in_shape_ndim,
-                      const dtype*** in_shape_data,
-                      const int** out_shape_ndim,
-                      const dtype*** out_shape_data,
-                      const int** aux_shape_ndim,
-                      const dtype*** aux_shape_data,
-                      nnvm::Symbol* s,
-                      MXAPIThreadLocalEntry<dtype>* ret,
-                      stype* in_shape_size,
-                      stype* out_shape_size,
-                      stype* aux_shape_size,
-                      int* complete) {
-nnvm::Graph g = Symbol2Graph(*s);
-mxnet::ShapeVector arg_shapes(g.indexed_graph().input_nodes().size(), mxnet::TShape());
-if (keys == nullptr && num_args != 0) {
-  std::vector < uint32_t > read_only_args = mxnet::ReadOnlyArgIndices(g.indexed_graph());
-  CHECK_LE(num_args, read_only_args.size());
-  for (mx_uint i = 0; i < num_args; ++i) {
-    arg_shapes[read_only_args[i]] = mxnet::ShapeTypeCast(arg_shape_data + arg_ind_ptr[i],
-                                                         arg_shape_data + arg_ind_ptr[i + 1]);
+                             mx_uint num_args,
+                             const dtype* arg_shape_data,
+                             const itype* arg_ind_ptr,
+                             const int** in_shape_ndim,
+                             const dtype*** in_shape_data,
+                             const int** out_shape_ndim,
+                             const dtype*** out_shape_data,
+                             const int** aux_shape_ndim,
+                             const dtype*** aux_shape_data,
+                             nnvm::Symbol* s,
+                             MXAPIThreadLocalEntry<dtype>* ret,
+                             stype* in_shape_size,
+                             stype* out_shape_size,
+                             stype* aux_shape_size,
+                             int* complete) {
+  nnvm::Graph g = Symbol2Graph(*s);
+  mxnet::ShapeVector arg_shapes(g.indexed_graph().input_nodes().size(), mxnet::TShape());
+  if (keys == nullptr && num_args != 0) {
+    std::vector < uint32_t > read_only_args = mxnet::ReadOnlyArgIndices(g.indexed_graph());
+    CHECK_LE(num_args, read_only_args.size());
+    for (mx_uint i = 0; i < num_args; ++i) {
+      arg_shapes[read_only_args[i]] = mxnet::ShapeTypeCast(arg_shape_data + arg_ind_ptr[i],
+                                                           arg_shape_data + arg_ind_ptr[i + 1]);
+    }
+  } else {
+    std::unordered_map<std::string, mxnet::TShape> kwargs;
+    for (mx_uint i = 0; i < num_args; ++i) {
+      kwargs[keys[i]] = mxnet::ShapeTypeCast(arg_shape_data + arg_ind_ptr[i],
+                                             arg_shape_data + arg_ind_ptr[i + 1]);
+    }
+    mxnet::MatchArguments(g.indexed_graph(), kwargs, &arg_shapes, "InferShape");
   }
-} else {
-  std::unordered_map<std::string, mxnet::TShape> kwargs;
-  for (mx_uint i = 0; i < num_args; ++i) {
-    kwargs[keys[i]] = mxnet::ShapeTypeCast(arg_shape_data + arg_ind_ptr[i],
-                                           arg_shape_data + arg_ind_ptr[i + 1]);
+  try {
+    g = mxnet::exec::InferShape(std::move(g), std::move(arg_shapes), "__shape__");
+  } catch (const mxnet::op::InferShapeError& err) {
+    throw dmlc::Error(err.msg);
   }
-  mxnet::MatchArguments(g.indexed_graph(), kwargs, &arg_shapes, "InferShape");
-}
-try {
-  g = mxnet::exec::InferShape(std::move(g), std::move(arg_shapes), "__shape__");
-} catch (const mxnet::op::InferShapeError& err) {
-  throw dmlc::Error(err.msg);
-}
-// if use legacy shape definition, need to convert numpy shape to legacy shape
-mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
-if (!Imperative::Get()->is_np_shape()) {
-  common::ConvertToLegacyShape(&shapes);
-}
-// copy back
-CopyAttr(g.indexed_graph(), shapes, &(ret->arg_shapes), &(ret->out_shapes), &(ret->aux_shapes));
-// copy data back
-MXAPIThreadLocalEntry<dtype>::SetupShapeArrayReturnWithBufferEx(ret->arg_shapes,
-                                                                &(ret->arg_shape_ndim_ex),
-                                                                &(ret->arg_shape_data_ex),
-                                                                &(ret->arg_shape_buffer_ex));
-MXAPIThreadLocalEntry<dtype>::SetupShapeArrayReturnWithBufferEx(ret->out_shapes,
-                                                                &(ret->out_shape_ndim_ex),
-                                                                &(ret->out_shape_data_ex),
-                                                                &(ret->out_shape_buffer_ex));
-MXAPIThreadLocalEntry<dtype>::SetupShapeArrayReturnWithBufferEx(ret->aux_shapes,
-                                                                &(ret->aux_shape_ndim_ex),
-                                                                &(ret->aux_shape_data_ex),
-                                                                &(ret->aux_shape_buffer_ex));
-  *in_shape_data = dmlc::BeginPtr(ret->arg_shape_data_ex);
-  *out_shape_data = dmlc::BeginPtr(ret->out_shape_data_ex);
-  *aux_shape_data = dmlc::BeginPtr(ret->aux_shape_data_ex);
+  // if use legacy shape definition, need to convert numpy shape to legacy shape
+  mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
+  if (!Imperative::Get()->is_np_shape()) {
+    common::ConvertToLegacyShape(&shapes);
+  }
+  // copy back
+  CopyAttr(g.indexed_graph(), shapes, &(ret->arg_shapes), &(ret->out_shapes), &(ret->aux_shapes));
+  // copy data back
+  MXAPIThreadLocalEntry<dtype>::SetupShapeArrayReturnWithBufferEx(ret->arg_shapes,
+                                                                  &(ret->arg_shape_ndim_ex),
+                                                                  &(ret->arg_shape_data_ex),
+                                                                  &(ret->arg_shape_buffer_ex));
+  MXAPIThreadLocalEntry<dtype>::SetupShapeArrayReturnWithBufferEx(ret->out_shapes,
+                                                                  &(ret->out_shape_ndim_ex),
+                                                                  &(ret->out_shape_data_ex),
+                                                                  &(ret->out_shape_buffer_ex));
+  MXAPIThreadLocalEntry<dtype>::SetupShapeArrayReturnWithBufferEx(ret->aux_shapes,
+                                                                  &(ret->aux_shape_ndim_ex),
+                                                                  &(ret->aux_shape_data_ex),
+                                                                  &(ret->aux_shape_buffer_ex));
   *in_shape_size = static_cast<stype>(ret->arg_shapes.size());
   *in_shape_ndim = dmlc::BeginPtr(ret->arg_shape_ndim_ex);
+  *in_shape_data = dmlc::BeginPtr(ret->arg_shape_data_ex);
   *out_shape_size = static_cast<stype>(ret->out_shapes.size());
   *out_shape_ndim = dmlc::BeginPtr(ret->out_shape_ndim_ex);
+  *out_shape_data = dmlc::BeginPtr(ret->out_shape_data_ex);
   *aux_shape_size = static_cast<stype>(ret->aux_shapes.size());
   *aux_shape_ndim = dmlc::BeginPtr(ret->aux_shape_ndim_ex);
-// mark complete
-*complete = (g.GetAttr<size_t>("shape_num_unknown_nodes") == 0);
+  *aux_shape_data = dmlc::BeginPtr(ret->aux_shape_data_ex);
+  // mark complete
+  *complete = (g.GetAttr<size_t>("shape_num_unknown_nodes") == 0);
 }
 
 int MXSymbolInferShapeEx(SymbolHandle sym,
@@ -677,58 +676,58 @@ int MXSymbolInferShapeEx(SymbolHandle sym,
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   SymbolInferShape<int, mx_uint, mx_uint>(keys,
-                                 num_args,
-                                 arg_shape_data,
-                                 arg_ind_ptr,
-                                 in_shape_ndim,
-                                 in_shape_data,
-                                 out_shape_ndim,
-                                 out_shape_data,
-                                 aux_shape_ndim,
-                                 aux_shape_data,
-                                 s,
-                                 ret,
-                                 in_shape_size,
-                                 out_shape_size,
-                                 aux_shape_size,
-                                 complete);
+                                              num_args,
+                                              arg_shape_data,
+                                              arg_ind_ptr,
+                                              in_shape_ndim,
+                                              in_shape_data,
+                                              out_shape_ndim,
+                                              out_shape_data,
+                                              aux_shape_ndim,
+                                              aux_shape_data,
+                                              s,
+                                              ret,
+                                              in_shape_size,
+                                              out_shape_size,
+                                              aux_shape_size,
+                                              complete);
   API_END();
 }
 
-int MXSymbolInferShapeExInt64(SymbolHandle sym,
-                              mx_uint num_args,
-                              const char** keys,
-                              const int64_t *arg_ind_ptr,
-                              const int64_t *arg_shape_data,
-                              size_t *in_shape_size,
-                              const int **in_shape_ndim,
-                              const int64_t ***in_shape_data,
-                              size_t *out_shape_size,
-                              const int **out_shape_ndim,
-                              const int64_t ***out_shape_data,
-                              size_t *aux_shape_size,
-                              const int **aux_shape_ndim,
-                              const int64_t ***aux_shape_data,
-                              int *complete) {
+int MXSymbolInferShapeEx64(SymbolHandle sym,
+                           mx_uint num_args,
+                           const char** keys,
+                           const int64_t *arg_ind_ptr,
+                           const int64_t *arg_shape_data,
+                           size_t *in_shape_size,
+                           const int **in_shape_ndim,
+                           const int64_t ***in_shape_data,
+                           size_t *out_shape_size,
+                           const int **out_shape_ndim,
+                           const int64_t ***out_shape_data,
+                           size_t *aux_shape_size,
+                           const int **aux_shape_ndim,
+                           const int64_t ***aux_shape_data,
+                           int *complete) {
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(sym);
   MXAPIThreadLocalEntry<int64_t> *ret = MXAPIThreadLocalStore<int64_t>::Get();
   API_BEGIN();
   SymbolInferShape<int64_t, size_t, int64_t>(keys,
-                                 num_args,
-                                 arg_shape_data,
-                                 arg_ind_ptr,
-                                 in_shape_ndim,
-                                 in_shape_data,
-                                 out_shape_ndim,
-                                 out_shape_data,
-                                 aux_shape_ndim,
-                                 aux_shape_data,
-                                 s,
-                                 ret,
-                                 in_shape_size,
-                                 out_shape_size,
-                                 aux_shape_size,
-                                 complete);
+                                                 num_args,
+                                                 arg_shape_data,
+                                                 arg_ind_ptr,
+                                                 in_shape_ndim,
+                                                 in_shape_data,
+                                                 out_shape_ndim,
+                                                 out_shape_data,
+                                                 aux_shape_ndim,
+                                                 aux_shape_data,
+                                                 s,
+                                                 ret,
+                                                 in_shape_size,
+                                                 out_shape_size,
+                                                 aux_shape_size,
+                                                 complete);
   API_END();
 }
 
@@ -747,7 +746,7 @@ int MXSymbolInferShapePartial(SymbolHandle sym,
                               const mx_uint **aux_shape_ndim,
                               const mx_uint ***aux_shape_data,
                               int *complete) {
-  int succ;
+  int succ = 0;
   *complete = 1;
   return MXSymbolInferShape(sym, num_args, keys,
                             arg_ind_ptr, arg_shape_data,
@@ -772,7 +771,7 @@ int MXSymbolInferShapePartialEx(SymbolHandle sym,
                                 const int **aux_shape_ndim,
                                 const int ***aux_shape_data,
                                 int *complete) {
-  int succ;
+  int succ = 0;
   *complete = 1;
   return MXSymbolInferShapeEx(sym, num_args, keys,
                               arg_ind_ptr, arg_shape_data,
@@ -782,29 +781,29 @@ int MXSymbolInferShapePartialEx(SymbolHandle sym,
                               &succ);
 }
 
-int MXSymbolInferShapePartialExInt64(SymbolHandle sym,
-                                     mx_uint num_args,
-                                     const char** keys,
-                                     const int64_t *arg_ind_ptr,
-                                     const int64_t *arg_shape_data,
-                                     size_t *in_shape_size,
-                                     const int **in_shape_ndim,
-                                     const int64_t ***in_shape_data,
-                                     size_t *out_shape_size,
-                                     const int **out_shape_ndim,
-                                     const int64_t ***out_shape_data,
-                                     size_t *aux_shape_size,
-                                     const int **aux_shape_ndim,
-                                     const int64_t ***aux_shape_data,
-                                     int *complete) {
-  int succ;
+int MXSymbolInferShapePartialEx64(SymbolHandle sym,
+                                  mx_uint num_args,
+                                  const char** keys,
+                                  const int64_t *arg_ind_ptr,
+                                  const int64_t *arg_shape_data,
+                                  size_t *in_shape_size,
+                                  const int **in_shape_ndim,
+                                  const int64_t ***in_shape_data,
+                                  size_t *out_shape_size,
+                                  const int **out_shape_ndim,
+                                  const int64_t ***out_shape_data,
+                                  size_t *aux_shape_size,
+                                  const int **aux_shape_ndim,
+                                  const int64_t ***aux_shape_data,
+                                  int *complete) {
+  int succ = 0;
   *complete = 1;
-  return MXSymbolInferShapeExInt64(sym, num_args, keys,
-                                   arg_ind_ptr, arg_shape_data,
-                                   in_shape_size, in_shape_ndim, in_shape_data,
-                                   out_shape_size, out_shape_ndim, out_shape_data,
-                                   aux_shape_size, aux_shape_ndim, aux_shape_data,
-                                   &succ);
+  return MXSymbolInferShapeEx64(sym, num_args, keys,
+                                arg_ind_ptr, arg_shape_data,
+                                in_shape_size, in_shape_ndim, in_shape_data,
+                                out_shape_size, out_shape_ndim, out_shape_data,
+                                aux_shape_size, aux_shape_ndim, aux_shape_data,
+                                &succ);
 }
 
 int MXSymbolInferType(SymbolHandle sym,
@@ -863,7 +862,7 @@ int MXSymbolInferTypePartial(SymbolHandle sym,
                              mx_uint *aux_type_size,
                              const int **aux_type_data,
                              int *complete) {
-  int succ;
+  int succ = 0;
   *complete = 1;
   return MXSymbolInferType(sym, num_args, keys,
                             arg_type_data,

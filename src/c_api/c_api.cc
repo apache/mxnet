@@ -190,8 +190,13 @@ int MXNDArrayCreateNone(NDArrayHandle *out) {
 }
 
 template<typename DataType, typename dimtype>
-void CreateArray(const DataType* shape, dimtype ndim, int dev_type, int dev_id, int delay_alloc,
-                 int dtype, NDArrayHandle* out) {
+void CreateNDArray(const DataType* shape,
+                   dimtype ndim,
+                   int dev_type,
+                   int dev_id,
+                   int delay_alloc,
+                   int dtype,
+                   NDArrayHandle* out) {
   *out = new NDArray(mxnet::TShape(shape, shape + ndim),
                      Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
                      delay_alloc != 0, dtype);
@@ -210,15 +215,15 @@ int MXNDArrayCreate(const mx_uint *shape,
   API_END();
 }
 
-int MXNDArrayCreateExInt64(const mx_int64 *shape,
-                           int ndim,
-                           int dev_type,
-                           int dev_id,
-                           int delay_alloc,
-                           int dtype,
-                           NDArrayHandle *out) {
+int MXNDArrayCreateEx64(const mx_int64 *shape,
+                        int ndim,
+                        int dev_type,
+                        int dev_id,
+                        int delay_alloc,
+                        int dtype,
+                        NDArrayHandle *out) {
   API_BEGIN();
-  CreateArray<mx_int64, int>(shape, ndim, dev_type, dev_id, delay_alloc, dtype, out);
+  CreateNDArray<mx_int64, int>(shape, ndim, dev_type, dev_id, delay_alloc, dtype, out);
   API_END();
 }
 
@@ -230,11 +235,7 @@ int MXNDArrayCreateEx(const mx_uint *shape,
                       int dtype,
                       NDArrayHandle *out) {
   API_BEGIN();
-  *out = new NDArray(
-      mxnet::TShape(shape, shape + ndim),
-      Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
-      delay_alloc != 0,
-      dtype);
+  CreateNDArray<mx_uint, mx_uint>(shape, ndim, dev_type, dev_id, delay_alloc, dtype, out);
   API_END();
 }
 
@@ -558,7 +559,7 @@ int MXNDArrayGetShape(NDArrayHandle handle,
 
 template<typename dtype>
 inline void GetShape(NDArrayHandle handle, const dtype** out_pdata, int* out_dim,
-              MXAPIThreadLocalEntry<dtype>* ret) {
+                     MXAPIThreadLocalEntry<dtype>* ret) {
   NDArray* arr = static_cast<NDArray*>(handle);
   if (!arr->is_none()) {
     mxnet::TShape s = arr->shape();
@@ -590,9 +591,9 @@ int MXNDArrayGetShapeEx(NDArrayHandle handle,
   API_END();
 }
 
-int MXNDArrayGetShapeExInt64(NDArrayHandle handle,
-                             int *out_dim,
-                             const mx_int64 **out_pdata) {
+int MXNDArrayGetShapeEx64(NDArrayHandle handle,
+                          int *out_dim,
+                          const mx_int64 **out_pdata) {
   MXAPIThreadLocalEntry<int64_t> *ret = MXAPIThreadLocalStore<int64_t>::Get();
   API_BEGIN();
   GetShape<mx_int64>(handle, out_pdata, out_dim, ret);
