@@ -80,6 +80,52 @@ def test_ndarray_random_randint():
     assert a.__gt__(low) and a.__lt__(high)
 
 
+@with_seed()
+def test_ndarray_random_exponential():
+    scale_array = mx.nd.array(shape=(MEDIUM_X,SMALL_Y))
+    a = nd.random.exponential(scale =scale_array, shape=(LARGE_X, SMALL_Y), dtype=np.int64)
+    assert a.shape == (MEDIUM_X,SMALL_Y,LARGE_X, SMALL_Y)
+
+@with_seed()
+def test_ndarray_random_gamma():
+    alpha_array = mx.nd.array(shape=(MEDIUM_X,SMALL_Y))
+    beta_array = mx.nd.array(shape=(MEDIUM_X,SMALL_Y))
+    a = nd.random.gamma(alpha =alpha_array, beta=beta_array, shape=(LARGE_X, SMALL_Y))
+    assert a.shape == (MEDIUM_X,SMALL_Y,LARGE_X, SMALL_Y)
+
+# @with_seed()
+# def test_ndarray_random_multinomial():
+#     a = nd.random.gamma()
+
+
+@with_seed()
+def test_ndarray_random_generalized_negative_binomial():
+    alpha_array = mx.nd.array(shape=(MEDIUM_X,SMALL_Y))
+    mu_array = mx.nd.array(shape=(MEDIUM_X,SMALL_Y))
+    a = nd.random.generalized_negative_binomial(mu=mu_array, alpha=alpha_array, shape=(LARGE_X, SMALL_Y))
+    assert a.shape == (MEDIUM_X,SMALL_Y,LARGE_X, SMALL_Y)
+
+
+@with_seed()
+def test_ndarray_random_normal():
+    scale_array = mx.nd.array(shape=(MEDIUM_X,SMALL_Y))
+    loc_array = mx.nd.array(shape=(MEDIUM_X,SMALL_Y))
+    a = nd.random.exponential(loc=loc_array, scale=scale_array, shape=(LARGE_X, SMALL_Y), dtype=np.int64)
+    assert a.shape == (MEDIUM_X,SMALL_Y,LARGE_X, SMALL_Y)
+
+
+@with_seed()
+def test_ndarray_random_poisson():
+    lambda_array = mx.nd.array(shape=(MEDIUM_X,SMALL_Y))
+    a = nd.random.poisson(lam=lambda_array, shape=(LARGE_X,SMALL_Y))
+    assert a.shape == (MEDIUM_X,SMALL_Y,LARGE_X, SMALL_Y)
+
+
+# @with_seed()
+# def test_ndarray_random_randn():
+#     a = nd.random.randn()
+
+
 def test_ndarray_empty():
     a = nd.empty((LARGE_X, SMALL_Y))
     assert a.shape == (LARGE_X, SMALL_Y)
