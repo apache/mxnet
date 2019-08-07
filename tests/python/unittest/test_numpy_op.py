@@ -58,7 +58,7 @@ def test_np_tensordot():
                 b_axes_summed = b_axes_summed,
 
         if len(a_axes_summed) != len(b_axes_summed):
-            raise ValueError('Axes length mismatch') 
+            raise ValueError('Axes length mismatch')
 
         a_axes_remained = []
         for i in range(a.ndim):
@@ -254,7 +254,7 @@ def test_np_dot():
         ((3, 4, 5), (5, )),  # Case 4
         ((3, 4, 5), (5, 2)), # Case 5
         ((5,), (5, 2)),
-        ((3, 5, 4), (5, 4, 3)),  
+        ((3, 5, 4), (5, 4, 3)),
         ((3, 4), (5, 4, 3)),
         ((4,), (5, 4, 3))
     ]
@@ -1007,15 +1007,15 @@ def test_np_argsort():
             return F.np.argsort(a, self._axis)
 
     shapes = [
-        (), 
-        (1,), 
+        (),
+        (1,),
         (5,4),
         (5,0,4),
         (5,0,0),
         (0,0,5),
         (0,0,0),
         (5,3,4)
-    ] 
+    ]
     for hybridize in [True, False]:
         for shape in shapes:
             for ax in list(range(len(shape))) + [-1, None]:
@@ -1131,7 +1131,7 @@ def test_np_hstack():
         if len(shape) == 0:
             l = random.randint(0,3)
             if l == 0:
-                return shape 
+                return shape
             else:
                 return (l,)
         shape_lst = list(shape)
@@ -1564,6 +1564,36 @@ def test_np_trace():
         except mx.base.MXNetError:
             continue
         assert False
+
+
+@with_seed()
+@use_np
+def test_np_hamming():
+    class TestHamming(HybridBlock):
+        def __init__(self, M, dtype):
+            super(TestHamming, self).__init__()
+            self._M = M
+            self._dtype = dtype
+
+        def hybrid_forward(self, F, x, *args, **kwargs):
+            return x + F.np.hamming(M=self._M, dtype=self._dtype)
+    configs = [-10, -3, -1, 0, 1, 6, 10, 20]
+    dtypes = ['float32', 'float64']
+
+    for config in configs:
+        for dtype in dtypes:
+            x = np.zeros(shape=(), dtype=dtype)
+            for hybridize in [False, True]:
+                net = TestHamming(M=config, dtype=dtype)
+                np_out = _np.hamming(M=config)
+                if hybridize:
+                    net.hybridize()
+                mx_out = net(x)
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+                mx_out = np.hamming(M=config, dtype=dtype)
+                np_out = _np.hamming(M=config)
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
 if __name__ == '__main__':
