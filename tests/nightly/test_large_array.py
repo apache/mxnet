@@ -121,9 +121,12 @@ def test_ndarray_random_poisson():
     assert a.shape == (MEDIUM_X,SMALL_Y,LARGE_X, SMALL_Y)
 
 
-# @with_seed()
-# def test_ndarray_random_randn():
-#     a = nd.random.randn()
+@with_seed()
+def test_ndarray_random_randn():
+    a = nd.random.randn(shape=(LARGE_X,SMALL_Y))
+    assert a.shape == (LARGE_X,SMALL_Y)
+    # TODO: Once PR for randn ndarray dtype for loc,scale param merged
+    # Add check for (x,y,m,n) where x,y shape of loc,scale and m,n input shape
 
 
 def test_ndarray_empty():
