@@ -990,7 +990,7 @@ def test_quantize_gluon_with_forward():
         if is_test_for_native_cpu():
             print('skipped testing test_quantize_model_with_forward for native cpu since it is not supported yet')
             return
-        elif qdtype == 'uint8' and is_test_for_gpu():
+        elif is_test_for_gpu():
             print('skipped testing test_quantize_model_with_forward for gpu uint8 since it is not supported yet')
             return
 
