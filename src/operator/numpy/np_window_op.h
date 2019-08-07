@@ -72,33 +72,37 @@ inline bool NumpyWindowsShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-struct windows_fwd {
+struct hanning_fwd {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(index_t i, index_t M, index_t window_select,
-                                  int req, DType* out) {
-    // hanning window
-    if (window_select == 0) {
-      if (M == 1) {
-        KERNEL_ASSIGN(out[i], req, static_cast<int64_t>(1));
-      } else {
-        KERNEL_ASSIGN(out[i], req,  DType(0.5)-DType(0.5)*math::cos(DType(2*PI*i/(M-1))));
-      }
-    } else if (window_select == 1) {  // hamming window
-      if (M == 1) {
-        KERNEL_ASSIGN(out[i], req, static_cast<int64_t>(1));
-      } else {
-        KERNEL_ASSIGN(out[i], req,  DType(0.54)-DType(0.46)*math::cos(DType(2*PI*i/(M-1))));
-      }
-    } else if (window_select == 2) {  // blackman window
-      if (M == 1) {
-        KERNEL_ASSIGN(out[i], req, static_cast<int64_t>(1));
-      } else {
-        KERNEL_ASSIGN(out[i], req,  DType(0.42) -
-                      DType(0.5) * math::cos(DType(2 * PI * i / M)) +
-                      DType(0.08) * math::cos(DType(4 * PI * i / M)));
-      }
+  MSHADOW_XINLINE static void Map(index_t i, index_t M, int req, DType* out) {
+    if (M == 1) {
+      KERNEL_ASSIGN(out[i], req, static_cast<int64_t>(1));
     } else {
-      LOG(FATAL) << "window_select must be (0, 1, 2)";
+      KERNEL_ASSIGN(out[i], req, DType(0.5) - DType(0.5) * math::cos(DType(2 * PI * i / (M - 1))));
+    }
+  }
+};
+
+struct hamming_fwd {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, index_t M, int req, DType* out) {
+    if (M == 1) {
+      KERNEL_ASSIGN(out[i], req, static_cast<int64_t>(1));
+    } else {
+      KERNEL_ASSIGN(out[i], req,
+          DType(0.54) - DType(0.46) * math::cos(DType(2 * PI * i / (M - 1))));
+    }
+  }
+};
+
+struct blackman_fwd {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, index_t M, int req, DType* out) {
+    if (M == 1) {
+      KERNEL_ASSIGN(out[i], req, static_cast<int64_t>(1));
+    } else {
+      KERNEL_ASSIGN(out[i], req, DType(0.42) - DType(0.5) * math::cos(DType(2 * PI * i /(M - 1))) +
+                    DType(0.08) * math::cos(DType(4 * PI * i /(M - 1))));
     }
   }
 };
@@ -112,15 +116,24 @@ void NumpyWindowCompute(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const NumpyWindowsParam& param = nnvm::get<NumpyWindowsParam>(attrs.parsed);
-
-  if (param.M.has_value() && param.M.value() <= 0) return;
+  if (param.M.has_value()) {
+    if (param.M.value() <= 0) {
+      return;
+    }
+  }
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-        Kernel<windows_fwd, xpu>::Launch(s,
-                                       outputs[0].Size(),
-                                       static_cast<int>(param.M.value()),
-                                       static_cast<int>(window_select),
-                                       req[0],
-                                       outputs[0].dptr<DType>());
+      if (window_select == 0) {
+        Kernel<hanning_fwd, xpu>::Launch(s, outputs[0].Size(), static_cast<int>(param.M.value()),
+                                        req[0], outputs[0].dptr<DType>());
+      } else if (window_select == 1) {
+        Kernel<hamming_fwd, xpu>::Launch(s, outputs[0].Size(), static_cast<int>(param.M.value()),
+                                         req[0], outputs[0].dptr<DType>());
+      } else if (window_select == 2) {
+        Kernel<blackman_fwd, xpu>::Launch(s, outputs[0].Size(), static_cast<int>(param.M.value()),
+                                         req[0], outputs[0].dptr<DType>());
+      } else {
+        LOG(FATAL) << "window_select must be (0, 1, 2)";
+      }
   });
 }
 

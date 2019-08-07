@@ -2369,6 +2369,11 @@ def hanning(M, dtype=_np.float64, ctx=None):
     M : int
         Number of points in the output window. If zero or less, an
         empty array is returned.
+    dtype : str or numpy.dtype, optional
+        An optional value type. Default is `numpy.float64`. Note that you need
+        select numpy.float32 or float64 in this operator.
+    ctx : Context, optional
+        An optional device context (default is the current default context).
 
     Returns
     -------
@@ -2429,9 +2434,6 @@ def hanning(M, dtype=_np.float64, ctx=None):
     >>> plt.xlabel("Sample")
     Text(0.5, 0, 'Sample')
     >>> plt.show()
-
-    >>> plt.figure()
-    <Figure size 640x480 with 0 Axes>
     """
     if dtype is None:
         dtype = _np.float64
