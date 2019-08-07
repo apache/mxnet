@@ -73,7 +73,8 @@ static void MKLDNNQuantizedBatchNormForward(const nnvm::NodeAttrs &attrs, const 
   float *moving_var_ptr = moving_var.data().dptr<float>();
 
   // rescale gamma and beta, to make mean=0 and var=1
-  auto rescaled_mean_mem = TmpMemMgr::Get()->Alloc(moving_mean.GetMKLDNNData()->get_primitive_desc());
+  auto rescaled_mean_mem =
+      TmpMemMgr::Get()->Alloc(moving_mean.GetMKLDNNData()->get_primitive_desc());
   auto rescaled_var_mem = TmpMemMgr::Get()->Alloc(moving_var.GetMKLDNNData()->get_primitive_desc());
   float *rescaled_mean_ptr = reinterpret_cast<float *>(rescaled_mean_mem->get_data_handle());
   float *rescaled_var_ptr = reinterpret_cast<float *>(rescaled_var_mem->get_data_handle());
