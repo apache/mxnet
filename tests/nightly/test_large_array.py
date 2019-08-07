@@ -83,7 +83,7 @@ def test_ndarray_random_randint():
 @with_seed()
 def test_ndarray_random_exponential():
     scale_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
-    a = nd.random.exponential(scale =scale_array, shape=(LARGE_X, SMALL_Y), dtype=np.int64)
+    a = nd.random.exponential(scale =scale_array, shape=(LARGE_X, SMALL_Y))
     assert a.shape == (MEDIUM_X,SMALL_Y,LARGE_X, SMALL_Y)
 
 @with_seed()
@@ -110,7 +110,7 @@ def test_ndarray_random_generalized_negative_binomial():
 def test_ndarray_random_normal():
     scale_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
     loc_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
-    a = nd.random.exponential(loc=loc_array, scale=scale_array, shape=(LARGE_X, SMALL_Y), dtype=np.int64)
+    a = nd.random.normal(loc=loc_array, scale=scale_array, shape=(LARGE_X, SMALL_Y))
     assert a.shape == (MEDIUM_X,SMALL_Y,LARGE_X, SMALL_Y)
 
 
