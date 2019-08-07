@@ -23,13 +23,13 @@ from tests.python.unittest.common import with_seed
 
 # dimension constants
 LARGE_X = 5000000000
-SMALL_Y = 1
+MEDIUM_X = 1000000000
 
 
 def test_slice():
     a = nd.ones(LARGE_X)
-    res = nd.slice(a, begin=(LARGE_X-1000000000), end=(LARGE_X))
-    assert res.shape[0] == 1000000000
+    res = nd.slice(a, begin=(LARGE_X - MEDIUM_X), end=LARGE_X)
+    assert res.shape[0] == MEDIUM_X
 
 
 if __name__ == '__main__':

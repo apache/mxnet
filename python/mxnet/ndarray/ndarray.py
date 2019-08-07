@@ -107,6 +107,14 @@ _NDARRAY_UNSUPPORTED_INDEXING = -1
 _NDARRAY_BASIC_INDEXING = 0
 _NDARRAY_ADVANCED_INDEXING = 1
 
+# Caching whether MXNet was built with INT64 support or not
+_INT64_TENSOR_SIZE_ENABLED = None
+
+def int64_enabled():
+    global _INT64_TENSOR_SIZE_ENABLED
+    if _INT64_TENSOR_SIZE_ENABLED is None:
+        _INT64_TENSOR_SIZE_ENABLED = Features().is_enabled('INT64_TENSOR_SIZE')
+    return _INT64_TENSOR_SIZE_ENABLED
 
 def _new_empty_handle():
     """Returns a new empty handle.
@@ -134,8 +142,8 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
         A new empty `NDArray` handle.
     """
     hdl = NDArrayHandle()
-    if Features().is_enabled('INT64_TENSOR_SIZE') and sys.version_info[0] > 2:
-        check_call(_LIB.MXNDArrayCreateExInt64(
+    if sys.version_info[0] > 2 and int64_enabled():
+        check_call(_LIB.MXNDArrayCreateEx64(
             c_array_buf(mx_int64, native_array('q', shape)),
             ctypes.c_int(len(shape)),
             ctypes.c_int(ctx.device_typeid),
@@ -2230,9 +2238,9 @@ fixed-size items.
         (2L, 3L, 4L)
         """
         ndim = mx_int()
-        if sys.version_info[0] > 2 and Features().is_enabled('INT64_TENSOR_SIZE'):
+        if _INT64_TENSOR_SIZE_ENABLED:
             pdata = ctypes.POINTER(mx_int64)()
-            check_call(_LIB.MXNDArrayGetShapeExInt64(
+            check_call(_LIB.MXNDArrayGetShapeEx64(
                 self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))
         else:
             pdata = ctypes.POINTER(mx_int)()

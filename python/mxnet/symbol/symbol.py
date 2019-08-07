@@ -39,9 +39,8 @@ from ..base import NDArrayHandle, ExecutorHandle, SymbolHandle
 from ..base import check_call, MXNetError, NotImplementedForSymbol
 from ..context import Context, current_context
 from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP, _GRAD_REQ_MAP
-from ..ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
+from ..ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID, int64_enabled
 from ..ndarray import _ndarray_cls
-from ..runtime import Features
 from ..executor import Executor
 from . import _internal
 from . import op
@@ -1213,14 +1212,14 @@ class Symbol(SymbolBase):
         aux_shape_size = mx_uint()
         aux_shape_ndim = ctypes.POINTER(mx_int)()
         complete = ctypes.c_int()
-        if Features().is_enabled('INT64_TENSOR_SIZE') and sys.version_info[0] > 2:
+        if sys.version_info[0] > 2 and int64_enabled():
             arg_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
             out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
             aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
             if partial:
-                infer_func = _LIB.MXSymbolInferShapePartialExInt64
+                infer_func = _LIB.MXSymbolInferShapePartialEx64
             else:
-                infer_func = _LIB.MXSymbolInferShapeExInt64
+                infer_func = _LIB.MXSymbolInferShapeEx64
             check_call(infer_func(
                 self.handle,
                 mx_uint(len(indptr) - 1),
