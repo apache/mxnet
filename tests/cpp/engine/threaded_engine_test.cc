@@ -257,7 +257,6 @@ TEST(Engine, PushFunc) {
 
 TEST(Engine, PushFuncND) {
   auto ctx = mxnet::Context{};
-  mxnet::NDArray nd(ctx);
   std::vector<mxnet::NDArray*> nds;
   const int num_nds = 5;
   for (int i = 0; i < num_nds; ++i) {
