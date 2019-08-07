@@ -157,11 +157,11 @@ def test_identity():
             self._n = n
             self._dtype = dtype
 
-        def hybrid_forward(self, F, x, *args, **kwargs):
-            return x * F.np.identity(n, dtype)
+        def hybrid_forward(self, F, x):
+            return x * F.np.identity(self._n, self._dtype)
 
     class TestIdentityOutputType(HybridBlock):
-        def hybrid_forward(self, F, x, *args, **kwargs):
+        def hybrid_forward(self, F, x):
             return x, F.np.identity(0)
 
     def check_identity_array_creation(shape, dtype):

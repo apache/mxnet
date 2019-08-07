@@ -981,7 +981,7 @@ def ones(shape, dtype=None, **kwargs):
 
 
 @set_module('mxnet.symbol.numpy')
-def identity(n, dtype=None, **kwargs):
+def identity(n, dtype=None, ctx=None):
     """
     Return the identity array.
 
@@ -1007,11 +1007,10 @@ def identity(n, dtype=None, **kwargs):
         raise TypeError("Input 'n' should be an integer")
     if n < 0:
         raise ValueError("Input 'n' cannot be negative")
-    ctx = kwargs.pop('ctx', current_context())
     if ctx is None:
         ctx = current_context()
     dtype = _np.float32 if dtype is None else dtype
-    return _npi.identity(shape=(n, n), ctx=ctx, dtype=dtype, **kwargs)
+    return _npi.identity(shape=(n, n), ctx=ctx, dtype=dtype)
 
 
 #pylint: disable= too-many-arguments, no-member, protected-access

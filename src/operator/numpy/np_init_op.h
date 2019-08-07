@@ -114,8 +114,9 @@ struct identity {
   MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const int n) {
     using namespace mxnet_op;
 
-    auto j = unravel(i, mshadow::Shape2(n, n));
-    if (j[0] == j[1]) {
+    const index_t row_id = i / n;
+    const index_t col_id = i % n;
+    if (row_id == col_id) {
       KERNEL_ASSIGN(out_data[i], req, static_cast<DType>(1));
     } else {
       KERNEL_ASSIGN(out_data[i], req, static_cast<DType>(0));

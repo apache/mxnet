@@ -1498,7 +1498,7 @@ def ones(shape, dtype=None, **kwargs):
 
 
 @set_module('mxnet.numpy')
-def identity(n, dtype=None, **kwargs):
+def identity(n, dtype=None, ctx=None):
     """
     Return the identity array.
 
@@ -1528,7 +1528,7 @@ def identity(n, dtype=None, **kwargs):
            [0., 1., 0.],
            [0., 0., 1.]])
     """
-    return _mx_nd_np.identity(n, dtype, **kwargs)
+    return _mx_nd_np.identity(n, dtype, ctx)
 
 
 @set_module('mxnet.numpy')
