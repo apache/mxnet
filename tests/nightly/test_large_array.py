@@ -116,6 +116,14 @@ def test_ndarray_random_generalized_negative_binomial():
 
 
 @with_seed()
+def test_ndarray_random_negative_binomial():
+    k_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
+    p_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
+    a = nd.random.negative_binomial(k=k_array, p=p_array, shape=(LARGE_X, SMALL_Y))
+    assert a.shape == (MEDIUM_X,SMALL_Y,LARGE_X, SMALL_Y)
+
+
+@with_seed()
 def test_ndarray_random_normal():
     scale_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
     loc_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
