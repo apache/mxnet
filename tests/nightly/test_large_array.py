@@ -95,14 +95,14 @@ def test_ndarray_random_gamma():
 
 @with_seed()
 def test_ndarray_random_multinomial():
-    prob = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
+    probs = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
     a = nd.random.multinomial(probs)
     # test 1 shape dimension
     assert a.shape == (MEDIUM_X,)
     a = nd.random.multinomial(probs, shape=(LARGE_X,SMALL_Y))
     # test for NDArray multi-dimension shape
     assert a.shape == (MEDIUM_X,LARGE_X,SMALL_Y)
-    a = nd.random.multinomial(probs, shape=(LARGE_X,SMALL_Y))
+    a = nd.random.multinomial(probs, shape=(LARGE_X,SMALL_Y), get_prob=True)
     # test log_likelihood output shape
     assert a[0].shape == (MEDIUM_X,LARGE_X,SMALL_Y) and a[0].shape == a[1].shape
 
@@ -132,7 +132,7 @@ def test_ndarray_random_poisson():
 
 @with_seed()
 def test_ndarray_random_randn():
-    a = nd.random.randn(shape=(LARGE_X,SMALL_Y))
+    a = nd.random.randn(LARGE_X,SMALL_Y)
     assert a.shape == (LARGE_X,SMALL_Y)
     # TODO: Once PR for randn ndarray dtype for loc,scale param merged
     # Add check for (x,y,m,n) where x,y shape of loc,scale and m,n input shape
