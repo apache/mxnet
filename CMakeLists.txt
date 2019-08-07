@@ -751,7 +751,7 @@ if(USE_TVM_OP)
   add_custom_command(TARGET mxnet POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E env
           PYTHONPATH="${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/python:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/topi/python:${CMAKE_CURRENT_SOURCE_DIR}/contrib"
-          LD_LIBRARY_PATH="${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm/build"
+          LD_LIBRARY_PATH="${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm"
           ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/tvmop/compile.py -o${CMAKE_CURRENT_BINARY_DIR}/libtvmop.so
     )
 endif()
