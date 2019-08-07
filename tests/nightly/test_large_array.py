@@ -292,7 +292,7 @@ def test_unravel_index():
     assert (indices_2d.asnumpy() == np.array(original_2d_indices)).all()
 
 
-def create_2d_tensor(rows, columns):
+def create_2d_tensor(rows, columns, dtype=np.int64):
     a = np.arange(0, rows).reshape(rows, 1)
     b = np.broadcast_to(a, shape=(a.shape[0], columns))
     return nd.array(b, dtype=np.int64)
@@ -352,8 +352,8 @@ def test_topk():
     assert l.sum() == np.sum(np.arange(0, SMALL_Y))
 
 def test_rdiv():
-    a = create_2d_tensor(rows=2, columns=3)
-    b = create_2d_tensor(rows=2, columns=3)
+    a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
+    b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
     res = b/a
     out = a.__rdiv__(b)
     assert_almost_equal(res.asnumpy(),out.asnumpy())
