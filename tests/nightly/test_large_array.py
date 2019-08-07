@@ -93,9 +93,18 @@ def test_ndarray_random_gamma():
     a = nd.random.gamma(alpha =alpha_array, beta=beta_array, shape=(LARGE_X, SMALL_Y))
     assert a.shape == (MEDIUM_X,SMALL_Y,LARGE_X, SMALL_Y)
 
-# @with_seed()
-# def test_ndarray_random_multinomial():
-#     a = nd.random.gamma()
+@with_seed()
+def test_ndarray_random_multinomial():
+    prob = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
+    a = nd.random.multinomial(probs)
+    # test 1 shape dimension
+    assert a.shape == (MEDIUM_X,)
+    a = nd.random.multinomial(probs, shape=(LARGE_X,SMALL_Y))
+    # test for NDArray multi-dimension shape
+    assert a.shape == (MEDIUM_X,LARGE_X,SMALL_Y)
+    a = nd.random.multinomial(probs, shape=(LARGE_X,SMALL_Y))
+    # test log_likelihood output shape
+    assert a[0].shape == (MEDIUM_X,LARGE_X,SMALL_Y) and a[0].shape == a[1].shape
 
 
 @with_seed()
