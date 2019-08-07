@@ -22,7 +22,6 @@
 
 from __future__ import absolute_import
 from __future__ import division
-from builtins import super
 try:
     from __builtin__ import slice as py_slice  # pylint: disable=unused-import
 except ImportError:
@@ -884,7 +883,7 @@ class ndarray(NDArray):
         """Returns a **view** of this array with a new shape without altering any data.
         Inheritated from NDArray.reshape.
         """
-        return super().reshape(*shape, **kwargs)
+        return super(ndarray, self).reshape(*shape, **kwargs)
 
     def zeros_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`zeros_like`.
