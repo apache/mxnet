@@ -28,7 +28,7 @@ from mxnet.test_utils import assert_almost_equal, assert_exception
 from mxnet.test_utils import default_context
 from mxnet.test_utils import np_reduce
 from mxnet.test_utils import same
-from mxnet.test_utils import random_sample, rand_shape_nd
+from mxnet.test_utils import random_sample, rand_shape_nd, random_arrays
 from mxnet import runtime
 from numpy.testing import assert_allclose
 import mxnet.autograd
@@ -1800,35 +1800,49 @@ def test_save_load_scalar_zero_size_ndarrays():
 
 
 @with_seed()
-def test_adam_update_mutate():
-    def assert_mutate(x, y): return \
-        np.testing.assert_raises(
-            AssertionError, np.testing.assert_allclose, x, y)
+def test_update_ops_mutation():
+    def assert_mutate(x, y, op):
+            np.testing.assert_raises(
+                AssertionError, np.testing.assert_allclose, x, y)
 
-    def assert_unchanged(x, y): return \
-        np.testing.assert_allclose(x, y)
+    def assert_unchanged(x, y, op):
+            np.testing.assert_allclose(x, y)
 
-    for dim in range(1, 7):
-        shape = rand_shape_nd(dim)
-        weight = mx.nd.random.normal(shape=shape)
-        grad = mx.nd.random.normal(shape=shape)
-        mean = mx.nd.random.normal(shape=shape)
-        var = mx.nd.random.normal(shape=shape)
+    def test_op(op, num_inputs, mutated_inputs, **kwargs):
+        for dim in range(1, 7):
+            shape = rand_shape_nd(dim)
+            shapes = (shape,) * num_inputs
 
-        pre_weight, pre_grad, pre_mean, pre_var = map(
-            lambda x: x.asnumpy(), [weight, grad, mean, var])
+            # Generate Arrays
+            arrays = tuple(map(mx.nd.array, random_arrays(*shapes)))
 
-        # Operate
-        mx.nd.adam_update(weight, grad, mean, var, out=weight, lr=0.01, wd=1e-3)
+            # Arrays before update
+            pre_arrays = tuple(map(
+                lambda x: x.asnumpy(), arrays))
 
-        post_weight, post_grad, post_mean, post_var = map(
-            lambda x: x.asnumpy(), [weight, grad, mean, var])
+            # Operate
+            # weight -> arrays[0]
+            op(*arrays, out=arrays[0], **kwargs)
 
-        # Assertions
-        assert_mutate(pre_weight, post_weight)
-        assert_mutate(pre_mean, post_mean)
-        assert_mutate(pre_var, post_var)
-        assert_unchanged(pre_grad, post_grad)
+            # Arrays post update
+            post_arrays = tuple(map(
+                lambda x: x.asnumpy(), arrays))
+
+            for idx, (pre_array, post_array) in \
+                    enumerate(zip(pre_arrays, post_arrays)):
+                if idx in mutated_inputs:
+                    assert_mutate(pre_array, post_array, op)
+                else:
+                    assert_unchanged(pre_array, post_array, op)
+
+    test_op(mx.nd.ftrl_update, 4, [0, 2, 3], **
+            {'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3})
+    test_op(mx.nd.adam_update, 4, [0, 2, 3], **
+            {'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3})
+
+    # Currently fails.
+    # test_op(mx.nd.rmsprop_update, 3, [0, 2],**{'rescale_grad':0.1, 'lr':0.01, 'wd':1e-3})
+    # test_op(mx.nd.rmspropalex_update, 5, [0, 2, 3, 4], **{'rescale_grad':0.1, 'lr':0.01, 'wd':1e-3})
 
 
 if __name__ == '__main__':
