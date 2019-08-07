@@ -41,36 +41,28 @@ namespace mxnet {
 namespace op {
 
 struct NumpyUniformParam : public dmlc::Parameter<NumpyUniformParam> {
-  int t;
-  float low;
-  float high;
+  dmlc::optional<float> low;
+  dmlc::optional<float> high;
   std::string ctx;
   int dtype;
   dmlc::optional<mxnet::Tuple<int>> size;
   DMLC_DECLARE_PARAMETER(NumpyUniformParam) {
     DMLC_DECLARE_FIELD(low);
     DMLC_DECLARE_FIELD(high);
-    DMLC_DECLARE_FIELD(t)
-        .describe("input type indicator, "
-                  "0: array array "
-                  "1: scalar array "
-                  "2: array scalar "
-                  "3: scalar scalar");
     DMLC_DECLARE_FIELD(size)
         .set_default(dmlc::optional<mxnet::Tuple<int>>())
         .describe("Output shape. If the given shape is, "
                   "e.g., (m, n, k), then m * n * k samples are drawn. "
                   "Default is None, in which case a single value is returned.");
     DMLC_DECLARE_FIELD(ctx)
-    .set_default("")
+    .set_default("cpu")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
-    .add_enum("None", -1)
     .add_enum("float32", mshadow::kFloat32)
     .add_enum("float64", mshadow::kFloat64)
     .add_enum("float16", mshadow::kFloat16)
-    .set_default(-1)
+    .set_default(mshadow::kFloat32)
     .describe("DType of the output in case this can't be inferred. "
               "Defaults to float32 if not defined (dtype=None).");
   }
@@ -168,7 +160,7 @@ void NumpyUniformForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
       mxnet_op::Kernel<uniform_two_scalar_kernel<OType>, xpu>::Launch(
             s, outputs[0].Size(),
-            param.low, param.high,
+            param.low.value(), param.high.value(),
             uniform_tensor.dptr_, outputs[0].dptr<OType>());
     });
   } else if (inputs.size() == 1U) {
@@ -177,13 +169,13 @@ void NumpyUniformForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                          &new_lshape, &new_lshape, &new_oshape);
     int scalar_pos;
     float scalar_value;
-    int type_flag = param.t;
-    if (type_flag == 1) {
+    // int type_flag = param.t;
+    if (param.low.has_value()) {
       scalar_pos = 0;
-      scalar_value = param.low;
+      scalar_value = param.low.value();
     } else {
       scalar_pos = 1;
-      scalar_value = param.high;
+      scalar_value = param.high.value();
     }
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
       MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {

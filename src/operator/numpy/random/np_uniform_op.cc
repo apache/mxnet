@@ -34,18 +34,10 @@ NNVM_REGISTER_OP(_npi_uniform)
 .set_num_inputs(
   [](const nnvm::NodeAttrs& attrs) {
     const NumpyUniformParam& param = nnvm::get<NumpyUniformParam>(attrs.parsed);
-    int type_flag = param.t;
-    switch (type_flag) {
-    case (0):
-      return 2;
-    case (1):
-      return 1;
-    case (2):
-      return 1;
-    case (3):
-      return 0;
-    }
-    return -1;
+    int num_inputs = 2;
+    if (param.low.has_value()) num_inputs -= 1;
+    if (param.high.has_value()) num_inputs -= 1;
+    return num_inputs;
   }
 )
 .set_num_outputs(1)

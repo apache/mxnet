@@ -50,53 +50,6 @@ def _random_helper(random, sampler, params, shape, dtype, ctx, out, kwargs):
                      "but got %s." % type(params[0]))
 
 
-def __deprecated_uniform(low=0.0, high=1.0, size=None, **kwargs):
-    """Draw samples from a uniform distribution.
-
-    Samples are uniformly distributed over the half-open interval
-    ``[low, high)`` (includes low, but excludes high).  In other words,
-    any value within the given interval is equally likely to be drawn
-    by `uniform`.
-
-    Parameters
-    ----------
-    low : float, optional
-        Lower boundary of the output interval.  All values generated will be
-        greater than or equal to low.  The default value is 0.
-    high : float
-        Upper boundary of the output interval.  All values generated will be
-        less than high.  The default value is 1.0.
-    size : int or tuple of ints, optional
-        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
-        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
-        a scalar tensor containing a single value is returned if
-        ``low`` and ``high`` are both scalars.
-    dtype : {'float16', 'float32', 'float64'}, optional
-        Data type of output samples. Default is 'float32'
-    ctx : Context, optional
-        Device context of output. Default is current context.
-    out : ndarray, optional
-        Store output to an existing ndarray.
-
-    Returns
-    -------
-    out : ndarray
-        Drawn samples from the parameterized uniform distribution.
-
-
-    Notes
-    -----
-    This function currently does not support ``low`` and ``high`` as ndarrays.
-    """
-    dtype = kwargs.pop('dtype', None)
-    if dtype is None:
-        dtype = 'float32'
-    ctx = kwargs.pop('ctx', None)
-    out = kwargs.pop('out', None)
-    return _random_helper(_npi.random_uniform, None,
-                          [low, high], size, dtype, ctx, out, kwargs)
-
-
 def normal(loc=0.0, scale=1.0, size=None, **kwargs):
     """Draw random samples from a normal (Gaussian) distribution.
 
@@ -170,8 +123,10 @@ def uniform(low=0.0, high=1.0, size=None, ctx=None, dtype=None, out=None):
     out : ndarray
         Drawn samples from the parameterized uniform distribution.
     """
-    input_type = (isinstance(low, NDArray), isinstance(high, NDArray))
-    dummy_value = -1.0
+    from ...numpy import ndarray as np_ndarray
+    input_type = (isinstance(low, np_ndarray), isinstance(high, np_ndarray))
+    if dtype is None:
+        dtype = 'float32'
     if ctx is None:
         ctx = current_context()
     if out is not None:
@@ -179,14 +134,14 @@ def uniform(low=0.0, high=1.0, size=None, ctx=None, dtype=None, out=None):
     if size == ():
         size = None
     type_dict = {
-        (True, True): lambda: _npi.uniform(low, high, low=dummy_value, high=dummy_value, size=size,
-                                           t=0, ctx=ctx, dtype=dtype, out=out),
-        (False, True): lambda: _npi.uniform(high, low=low, high=dummy_value, size=size,
-                                            t=1, ctx=ctx, dtype=dtype, out=out),
-        (True, False): lambda: _npi.uniform(low, low=dummy_value, high=high, size=size,
-                                            t=2, ctx=ctx, dtype=dtype, out=out),
+        (True, True): lambda: _npi.uniform(low, high, low=None, high=None, size=size,
+                                           ctx=ctx, dtype=dtype, out=out),
+        (False, True): lambda: _npi.uniform(high, low=low, high=None, size=size,
+                                            ctx=ctx, dtype=dtype, out=out),
+        (True, False): lambda: _npi.uniform(low, low=None, high=high, size=size,
+                                            ctx=ctx, dtype=dtype, out=out),
         (False, False): lambda: _npi.uniform(low=low, high=high, size=size,
-                                             t=3, ctx=ctx, dtype=dtype, out=out)
+                                             ctx=ctx, dtype=dtype, out=out)
     }
     return type_dict[input_type]()
 

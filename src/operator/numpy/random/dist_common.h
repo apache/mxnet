@@ -41,9 +41,9 @@
 namespace mxnet {
 namespace op {
 
-inline int FillShape(const mxnet::TShape& lshape, const mxnet::TShape& rshape,
-                                       const mxnet::TShape& oshape, mxnet::TShape *new_lshape,
-                                       mxnet::TShape *new_rshape, mxnet::TShape *new_oshape) {
+inline int FillShape(const mxnet::TShape &lshape, const mxnet::TShape &rshape,
+                     const mxnet::TShape &oshape, mxnet::TShape *new_lshape,
+                     mxnet::TShape *new_rshape, mxnet::TShape *new_oshape) {
   const int odim = std::max(oshape.ndim(), broadcast::MAX_DIM);
   *new_lshape = mxnet::TShape(odim, 1);
   *new_rshape = mxnet::TShape(odim, 1);
