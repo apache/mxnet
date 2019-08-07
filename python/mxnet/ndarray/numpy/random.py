@@ -133,17 +133,20 @@ def uniform(low=0.0, high=1.0, size=None, ctx=None, dtype=None, out=None):
         size = out.shape
     if size == ():
         size = None
-    type_dict = {
-        (True, True): lambda: _npi.uniform(low, high, low=None, high=None, size=size,
-                                           ctx=ctx, dtype=dtype, out=out),
-        (False, True): lambda: _npi.uniform(high, low=low, high=None, size=size,
-                                            ctx=ctx, dtype=dtype, out=out),
-        (True, False): lambda: _npi.uniform(low, low=None, high=high, size=size,
-                                            ctx=ctx, dtype=dtype, out=out),
-        (False, False): lambda: _npi.uniform(low=low, high=high, size=size,
-                                             ctx=ctx, dtype=dtype, out=out)
-    }
-    return type_dict[input_type]()
+    if input_type == (True, True):
+        return _npi.uniform(low, high, low=None, high=None, size=size,
+                            ctx=ctx, dtype=dtype, out=out)
+    elif input_type == (False, True):
+        return _npi.uniform(high, low=low, high=None, size=size,
+                            ctx=ctx, dtype=dtype, out=out)
+    elif input_type == (True, False):
+        return _npi.uniform(low, low=None, high=high, size=size,
+                            ctx=ctx, dtype=dtype, out=out)
+    else:
+        return _npi.uniform(low=low, high=high, size=size,
+                            ctx=ctx, dtype=dtype, out=out)
+
+    raise ValueError("Distribution parameters must be either mxnet.numpy.ndarray or numbers")
 
 
 def multinomial(n, pvals, size=None):
