@@ -98,6 +98,7 @@ void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
   if (req[up_enum::kOut] == kNullOp) {
     return;
   }
+  printf("UPDATE WAS APPLIED\n");
   Stream<xpu> *s = ctx.get_stream<xpu>();
   Tensor<xpu, 4, DType> out = out_data[up_enum::kOut].get<xpu, 4, DType>(s);
   if (param.num_args > 1) {
@@ -109,7 +110,7 @@ void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
       //int scale = out_data[up_enum::kOut].size(2)/in_data[i].size(2); //modify--two scales now
       int scale_h = out_data[up_enum::kOut].size(2)/in_data[i].size(2);//3rd dimension of TBlob (2nd from 4th dimension)
       int scale_w = out_data[up_enum::kOut].size(1)/in_data[i].size(1);//4th dimension of TBlob (1st from 4th dimension) ->is this right???
-      printf("UPDATE WAS APPLIED\n");
+      
       if (param.multi_input_mode == up_enum::kSum) {
         if (i == 0) {
 
