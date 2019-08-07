@@ -232,7 +232,7 @@ class ndarray(NDArray):
         if any(
             b >= e and s > 0 or b <= e and s < 0 for b, e, s in zip(begin, end, step)
         ):
-            return array([], self.context, self.dtype)
+            return array([], dtype=self.dtype, ctx=self.context)
         # pylint: enable=bad-continuation
 
         # _basic_indexing_slice_is_contiguous is inheritated from NDArray class.
@@ -267,10 +267,8 @@ class ndarray(NDArray):
 
         if final_shape == []:
             # Override for single element indexing
-            final_shape = ()
-        sliced = sliced.reshape_view(tuple(final_shape))
-        if final_shape == ():
             return sliced.item()
+        sliced = sliced.reshape_view(tuple(final_shape))
         return sliced
 
     def _get_np_advanced_indexing(self, key):
@@ -280,12 +278,14 @@ class ndarray(NDArray):
         else:
             idcs = _npi.stack(*[i if isinstance(i, self.__class__) else i.as_np_ndarray() for i in idcs])
         sliced = _npi.gather_nd(self, idcs)
-
         # Reshape due to `None` entries in `key`.
-        final_shape = [sliced.shape[i] for i in range(sliced.ndim)]
-        for ax in new_axes:  # pylint: disable=invalid-name
-            final_shape.insert(ax, 1)
-        return sliced.reshape(tuple(final_shape))
+        if new_axes:
+            final_shape = [sliced.shape[i] for i in range(sliced.ndim)]
+            for ax in new_axes:  # pylint: disable=invalid-name
+                final_shape.insert(ax, 1)
+            return sliced.reshape(tuple(final_shape))
+        else:
+            return sliced
 
     def _set_np_advanced_indexing(self, key, value):
         """This function is called by __setitem__ when key is an advanced index."""
