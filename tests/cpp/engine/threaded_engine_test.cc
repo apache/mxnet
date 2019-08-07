@@ -274,50 +274,58 @@ TEST(Engine, PushFuncND) {
       LOG(INFO) << "===== Test #1: PushAsyncND param and deleter =====";
       int* a = new int(100);
       int res = MXEnginePushAsyncND(FooAsyncFunc, a, FooFuncDeleter, &ctx,
-              const_nds_handle, num_const_nds, mutable_nds_handle, num_mutable_nds);
+              const_nds_handle, num_const_nds,
+              mutable_nds_handle, num_mutable_nds);
       EXPECT_EQ(res, 0);
 
       // Test #2
       LOG(INFO) << "===== Test #2: PushAsyncND NULL param and NULL deleter =====";
       res = MXEnginePushAsyncND(FooAsyncFunc, nullptr, nullptr, &ctx,
-              const_nds_handle, num_const_nds, mutable_nds_handle, num_mutable_nds);
+              const_nds_handle, num_const_nds,
+              mutable_nds_handle, num_mutable_nds);
       EXPECT_EQ(res, 0);
 
       // Test #3
       LOG(INFO) << "===== Test #3: PushAsyncND invalid number of const nds =====";
       res = MXEnginePushAsyncND(FooAsyncFunc, nullptr, nullptr, &ctx,
-              pnds, -1, mutable_nds_handle, num_mutable_nds);
+              const_nds_handle, -1,
+              mutable_nds_handle, num_mutable_nds);
       EXPECT_EQ(res, -1);
 
       // Test #4
       LOG(INFO) << "===== Test #4: PushAsyncND invalid number of mutable nds =====";
       res = MXEnginePushAsyncND(FooAsyncFunc, nullptr, nullptr, &ctx,
-              const_nds_handle, num_const_nds, pnds, -1);
+              const_nds_handle, num_const_nds,
+              mutable_nds_handle, -1);
       EXPECT_EQ(res, -1);
 
       // Test #5
       LOG(INFO) << "===== Test #5: PushSyncND param and deleter =====";
       int* b = new int(101);
       res = MXEnginePushSyncND(FooSyncFunc, b, FooFuncDeleter, &ctx,
-              const_nds_handle, num_const_nds, mutable_nds_handle, num_mutable_nds);
+              const_nds_handle, num_const_nds,
+              mutable_nds_handle, num_mutable_nds);
       EXPECT_EQ(res, 0);
 
       // Test #6
       LOG(INFO) << "===== Test #6: PushSyncND NULL param and NULL deleter =====";
       res = MXEnginePushSyncND(FooSyncFunc, nullptr, nullptr, &ctx,
-              const_nds_handle, num_const_nds, mutable_nds_handle, num_mutable_nds);
+              const_nds_handle, num_const_nds,
+              mutable_nds_handle, num_mutable_nds);
       EXPECT_EQ(res, 0);
 
       // Test #7
       LOG(INFO) << "===== Test #7: PushSyncND invalid number of const nds =====";
-      res = MXEnginePushSyncND(FooSyncFunc, nullptr, nullptr, &ctx, pnds, -1,
+      res = MXEnginePushSyncND(FooSyncFunc, nullptr, nullptr, &ctx,
+              const_nds_handle, -1,
               mutable_nds_handle, num_mutable_nds);
       EXPECT_EQ(res, -1);
 
       // Test #8
       LOG(INFO) << "===== Test #8: PushSyncND invalid number of mutable nds =====";
       res = MXEnginePushSyncND(FooSyncFunc, nullptr, nullptr, &ctx,
-              const_nds_handle, num_const_nds, pnds, -1);
+              const_nds_handle, num_const_nds,
+              mutable_nds_handle, -1);
       EXPECT_EQ(res, -1);
 
   }
