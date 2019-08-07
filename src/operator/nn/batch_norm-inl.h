@@ -100,12 +100,14 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
     .set_default(dmlc::optional<float>())
     .describe("The minimum scalar value in the form of float32 obtained "
               "through calibration. If present, it will be used to by "
-              "quantized batch norm op to calculate primitive scale");
+              "quantized batch norm op to calculate primitive scale."
+              "Note: this calib_range is to calib bn output.");
     DMLC_DECLARE_FIELD(max_calib_range)
     .set_default(dmlc::optional<float>())
     .describe("The maximum scalar value in the form of float32 obtained "
               "through calibration. If present, it will be used to by "
-              "quantized batch norm op to calculate primitive scale");
+              "quantized batch norm op to calculate primitive scale."
+              "Note: this calib_range is to calib bn output.");
   }
 
   bool operator==(const BatchNormParam &other) const {

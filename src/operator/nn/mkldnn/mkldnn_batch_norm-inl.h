@@ -175,6 +175,47 @@ class MKLDNNBNForward {
     }
   }
 
+  void SetDataHandle(const NDArray &data, const mkldnn::memory *mean,
+                     const mkldnn::memory *var, const mkldnn::memory *out) {
+    auto _data = data.GetMKLDNNData();
+    if (data_m) {
+      data_m->set_data_handle(_data->get_data_handle());
+    } else {
+      data_m.reset(new mkldnn::memory(_data->get_primitive_desc(),
+                                      _data->get_data_handle()));
+    }
+    if (out_m) {
+      out_m->set_data_handle(out->get_data_handle());
+    } else {
+      out_m.reset(new mkldnn::memory(out->get_primitive_desc(),
+                                     out->get_data_handle()));
+    }
+    if (mean_m) {
+      mean_m->set_data_handle(mean->get_data_handle());
+    } else {
+      mean_m.reset(new mkldnn::memory(mean->get_primitive_desc(),
+                                      mean->get_data_handle()));
+    }
+    if (var_m) {
+      var_m->set_data_handle(var->get_data_handle());
+    } else {
+      var_m.reset(new mkldnn::memory(var->get_primitive_desc(),
+                                     var->get_data_handle()));
+    }
+
+    if (fwd == nullptr) {
+      if (!is_train)
+        fwd.reset(new mkldnn::batch_normalization_forward(
+                pd, *data_m, mkldnn::primitive::at(*mean_m),
+                mkldnn::primitive::at(*var_m), *weight_m, *out_m));
+      else
+        fwd.reset(new mkldnn::batch_normalization_forward(
+                pd, mkldnn::primitive::at(*data_m),
+                mkldnn::primitive::at(*weight_m), *out_m,
+                *mean_m, *var_m));
+    }
+  }
+
   const mkldnn::batch_normalization_forward &GetFwd() const {
     return *fwd;
   }
