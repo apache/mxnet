@@ -93,6 +93,10 @@ class Symbol(SymbolBase):
         """
         return (self[i] for i in range(len(self)))
 
+    def __abs__(self):
+        """x.__abs__() <=> abs(x) <=> x.abs() <=> mx.symbol.abs(x, y)"""
+        return self.abs()
+
     def __add__(self, other):
         """x.__add__(y) <=> x+y
 

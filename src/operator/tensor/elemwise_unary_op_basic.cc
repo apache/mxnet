@@ -546,7 +546,8 @@ Negative indices are supported, and `None` can be used for either `lhs_end` or `
       return lhs;
     })
 .add_argument("lhs", "NDArray-or-Symbol", "First input.")
-.add_argument("rhs", "NDArray-or-Symbol", "Second input.");
+.add_argument("rhs", "NDArray-or-Symbol", "Second input.")
+.add_arguments(ReshapeLikeParam::__FIELDS__());
 
 void ShapeComputeCPU(const nnvm::NodeAttrs& attrs,
                      const OpContext& ctx,
@@ -594,8 +595,7 @@ Example::
     TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt64);
     return out_attrs->at(0) != -1;
   })
-.add_argument("data", "NDArray-or-Symbol", "Input Array.")
-.add_arguments(ReshapeLikeParam::__FIELDS__());
+.add_argument("data", "NDArray-or-Symbol", "Input Array.");
 
 void SizeComputeCPU(const nnvm::NodeAttrs& attrs,
                     const OpContext& ctx,

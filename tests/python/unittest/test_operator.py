@@ -5589,6 +5589,21 @@ def test_boolean_mask():
     assert same(out.asnumpy(), expected)
     assert same(data.grad.asnumpy(), expected_grad)
 
+    # test 0-size output
+    mx.set_np_shape(True)
+    data = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
+    index = mx.nd.array([0, 0, 0])
+    data.attach_grad()
+    with mx.autograd.record():
+        out = mx.nd.contrib.boolean_mask(data, index)
+    out.backward()
+    data.grad.wait_to_read()
+    expected = np.zeros((0, 3))
+    expected_grad = np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0]])
+    assert same(out.asnumpy(), expected)
+    assert same(data.grad.asnumpy(), expected_grad)
+    mx.set_np_shape(False)
+
     # test gradient
     shape = (100, 30)
     a = mx.nd.random.randint(0, 100, shape=shape)
@@ -8968,6 +8983,26 @@ def test_get_operator_arguments():
     ok_(operator_arguments.types
         == ['NDArray-or-Symbol', "{'relu', 'sigmoid', 'softrelu', 'softsign', 'tanh'}, required"])
     ok_(operator_arguments.narg == 2)
+
+
+def test_transpose_infer_shape_back():
+    o1 = mx.sym.ones(shape=[2,3])
+    o2 = mx.sym.ones(shape=[-1,-1])
+    t = mx.sym.transpose(o2)
+    b = o1 + t
+    x = b.bind(mx.cpu(), args={})
+    y = x.forward()
+    assert(y[0].shape == (2,3))
+
+
+def test_transpose_infer_shape_mixed():
+    o1 = mx.sym.ones(shape=[2,-1])
+    o2 = mx.sym.ones(shape=[3,-1])
+    t = mx.sym.transpose(o2)
+    b = o1 + t
+    x = b.bind(mx.cpu(), args={})
+    y = x.forward()
+    assert(y[0].shape == (2,3))
 
 
 if __name__ == '__main__':
