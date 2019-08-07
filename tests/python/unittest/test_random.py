@@ -229,6 +229,9 @@ def check_with_device(device, dtype):
         params = symbdic['params'].copy()
         params.update(shape=shape, dtype=dtype, ctx=device)
         args = ()
+        if name == 'randn':
+            params.pop('shape')  # randn does not accept shape param
+            args = shape
         if name.endswith('_like'):
             params['data'] = mx.nd.ones(params.pop('shape'),
                                         dtype=params.pop('dtype'),
