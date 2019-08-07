@@ -269,7 +269,7 @@ TEST(Engine, PushFuncND) {
       void** const_nds_handle = num_const_nds > 0 ?
           reinterpret_cast<void**>(nds.data()) : nullptr;
       void** mutable_nds_handle = num_mutable_nds > 0 ?
-          reinterpret_cast<void**>(nds.data() + num_const_nds);
+          reinterpret_cast<void**>(nds.data() + num_const_nds) : nullptr;
 
       // Test #1
       LOG(INFO) << "===== Test #1: PushAsyncND param and deleter =====";
