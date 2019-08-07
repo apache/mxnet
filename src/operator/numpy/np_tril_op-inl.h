@@ -83,11 +83,12 @@ struct tril1Dforward {
                                   mshadow::Shape<2> oshape, int k) {
     using namespace mxnet_op;
 
-    auto j = unravel(i, oshape);
-    if (j[1] > (j[0] + k)) {
+    const index_t row_id = i / oshape[1];
+    const index_t col_id = i % oshape[1];
+    if (col_id > (row_id + k)) {
       KERNEL_ASSIGN(out[i], req, static_cast<DType>(0));
     } else {
-      KERNEL_ASSIGN(out[i], req, data[j[1]]);
+      KERNEL_ASSIGN(out[i], req, data[col_id]);
     }
   }
 };
@@ -115,8 +116,9 @@ struct tril2D {
                                   mshadow::Shape<2> oshape, int k) {
     using namespace mxnet_op;
 
-    auto j = unravel(i, oshape);
-    if (j[1] > (j[0] + k)) {
+    const index_t row_id = i / oshape[1];
+    const index_t col_id = i % oshape[1];
+    if (col_id > (row_id + k)) {
       KERNEL_ASSIGN(out[i], req, static_cast<DType>(0));
     } else {
       KERNEL_ASSIGN(out[i], req, data[i]);
@@ -131,8 +133,9 @@ struct tril3D {
                                   mshadow::Shape<3> oshape, int k) {
     using namespace mxnet_op;
 
-    auto j = unravel(i, oshape);
-    if (j[2] > (j[1] + k)) {
+    const index_t row_id = i % (oshape[1] * oshape[2]) / oshape[2];
+    const index_t col_id = i % (oshape[1] * oshape[2]) % oshape[2];
+    if (col_id > (row_id + k)) {
       KERNEL_ASSIGN(out[i], req, static_cast<DType>(0));
     } else {
       KERNEL_ASSIGN(out[i], req, data[i]);
