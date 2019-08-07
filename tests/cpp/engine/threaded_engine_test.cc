@@ -327,7 +327,6 @@ TEST(Engine, PushFuncND) {
               const_nds_handle, num_const_nds,
               mutable_nds_handle, -1);
       EXPECT_EQ(res, -1);
-
   }
   for (mxnet::NDArray* pnd : nds) {
       delete pnd;
