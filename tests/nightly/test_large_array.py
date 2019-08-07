@@ -356,7 +356,7 @@ def test_add():
     a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
     b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
     mx_res = a.__add__(b)
-    np_res = b.asnumpy()+a.asnumpy()
+    np_res = a.asnumpy().__add__(b.asnumpy())
     assert mx_res.asnumpy()[-1][0]==np_res[-1][0]
 
 
@@ -364,7 +364,7 @@ def test_sub():
     a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
     b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
     mx_res = a.__sub__(b)
-    np_res = a.asnumpy()-b.asnumpy()
+    np_res = a.asnumpy().__sub__(b.asnumpy())
     assert mx_res.asnumpy()[-1][0]==np_res[-1][0]
 
 
@@ -372,14 +372,14 @@ def test_rsub():
     a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
     b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
     mx_res = a.__rsub__(b)
-    np_res = b.asnumpy()-a.asnumpy()
+    np_res = a.asnumpy().__rsub__(b.asnumpy())
     assert mx_res.asnumpy()[-1][0]==np_res[-1][0]
 
 
 def test_neg():
     a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
     mx_res = a.__neg__()
-    np_res = np.negative(a.asnumpy())
+    np_res = a.asnumpy().__neg__()
     assert mx_res.asnumpy()[-1][0]==np_res[-1][0]
 
 
@@ -387,7 +387,7 @@ def test_mul():
     a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
     b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
     mx_res = a.__mul__(b)
-    np_res = np.multiply(a.asnumpy(),b.asnumpy())
+    np_res = a.asnumpy().__mul__(b.asnumpy())
     assert mx_res.asnumpy()[-1][0]==np_res[-1][0]
 
 
@@ -395,7 +395,7 @@ def test_div():
     a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
     b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
     mx_res = a.__div__(b)
-    np_res = np.divide(a.asnumpy(),b.asnumpy())
+    np_res = a.asnumpy().__truediv__(b.asnumpy())
     assert mx_res.asnumpy()[-1][0]==np_res[-1][0]
 
 
@@ -403,7 +403,7 @@ def test_rdiv():
     a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
     b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
     mx_res = a.__rdiv__(b)
-    np_res = b.asnumpy()/a.asnumpy()
+    np_res = a.asnumpy().__rtruediv__(b.asnumpy())
     assert mx_res.asnumpy()[-1][0]==np_res[-1][0]
 
 
@@ -411,7 +411,7 @@ def test_mod():
     a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
     b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
     mx_res = a.__mod__(b)
-    np_res = np.mod(a.asnumpy(),b.asnumpy())
+    np_res = a.asnumpy().__mod__(b.asnumpy())
     assert mx_res.asnumpy()[-1][0]==np_res[-1][0]
 
 
@@ -419,7 +419,7 @@ def test_rmod():
     a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
     b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
     mx_res = a.__rmod__(b)
-    np_res = np.mod(b.asnumpy(),a.asnumpy())
+    np_res = a.asnumpy().__rmod__(b.asnumpy())
     assert mx_res.asnumpy()[-1][0]==np_res[-1][0]
 
 
@@ -435,9 +435,15 @@ def test_pow():
     a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
     b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
     mx_res = a.__pow__(b)
-    np_res = np.power(a.asnumpy(),b.asnumpy())
+    np_res = a.asnumpy().__pow__(b.asnumpy())
     assert mx_res.asnumpy()[-1][0]==np_res[-1][0]
 
+def test_rpow():
+    a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
+    b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
+    mx_res = a.__rpow__(b)
+    np_res = a.asnumpy().__rpow__(b.asnumpy())
+    assert mx_res.asnumpy()[-1][0]==np_res[-1][0]
 
 if __name__ == '__main__':
     import nose
