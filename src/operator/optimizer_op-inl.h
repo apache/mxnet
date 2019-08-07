@@ -1297,8 +1297,10 @@ struct AdamUpdateKernel {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out_data,
     DType* mean_data, DType* var_data, const DType* weight_data, const DType* grad_data,
-    const DType clip_gradient, const DType beta1, const DType beta2, const DType lr,
-    const DType wd, const DType epsilon, const DType rescale_grad, const OpReqType req) {
+    const DType clip_gradient, const DType rescale_grad,
+    const DType beta1, const DType beta2,
+    const DType lr, const DType wd,
+    const DType epsilon, const OpReqType req) {
     using namespace mshadow_op;
 
     const DType grad_rescaled = grad_data[i] * rescale_grad + weight_data[i] * wd;
@@ -1334,12 +1336,12 @@ inline void AdamUpdate(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 2, DType> var = inputs[3].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
 
-    Kernel<AdamUpdateKernel, xpu>::Launch(s, weight.shape_.Size(), out.dptr_, mean.dptr_,
-      var.dptr_, weight.dptr_, grad.dptr_, static_cast<DType>(param.clip_gradient),
+    Kernel<AdamUpdateKernel, xpu>::Launch(s, weight.shape_.Size(),
+          out.dptr_, mean.dptr_, var.dptr_, weight.dptr_, grad.dptr_,
+          static_cast<DType>(param.clip_gradient), static_cast<DType>(param.rescale_grad),
           static_cast<DType>(param.beta1), static_cast<DType>(param.beta2),
-          static_cast<DType>(param.lr),
-          static_cast<DType>(param.wd), static_cast<DType>(param.epsilon),
-          static_cast<DType>(param.rescale_grad), req[0]);
+          static_cast<DType>(param.lr), static_cast<DType>(param.wd),
+          static_cast<DType>(param.epsilon), req[0]);
   });
 }
 
@@ -1794,15 +1796,44 @@ struct FtrlParam : public dmlc::Parameter<FtrlParam> {
   }
 };
 
+struct FtrlUpdateKernel {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data,
+    DType* n_data, DType* z_data, const DType* weight_data, const DType* grad_data,
+    const DType clip_gradient, const DType rescale_grad,
+    const DType beta, const DType lamda1,
+    const DType lr, const DType wd,
+    const OpReqType req) {
+    using namespace mshadow_op;
+
+    const DType grad_rescaled = grad_data[i] * rescale_grad;
+      if (clip_gradient >= 0.0f) {
+        z_data[i] += clip::Map(grad_rescaled, clip_gradient) -
+                          (square_root::Map(n_data[i] +
+                          square::Map(clip::Map(grad_rescaled, clip_gradient))) -
+                          square_root::Map(n_data[i])) * weight_data[i] / lr;
+        n_data[i] += square::Map(clip::Map(grad_rescaled, clip_gradient));
+      } else {
+        z_data[i] += grad_rescaled - (square_root::Map(n_data[i] +
+                          square::Map(grad_rescaled)) - square_root::Map(n_data[i])) *
+                          weight_data[i] / lr;
+        n_data[i] += square::Map(grad_rescaled);
+      }
+      KERNEL_ASSIGN(out_data[i], req,
+                    (sign::Map(z_data[i]) * lamda1 - z_data[i]) /
+                    ((beta + square_root::Map(n_data[i])) / lr + wd) *
+                    gt::Map(abs::Map(z_data[i]), lamda1));
+  }
+};
+
 template<typename xpu>
 inline void FtrlUpdate(const nnvm::NodeAttrs& attrs,
                        const OpContext &ctx,
                        const std::vector<TBlob> &inputs,
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  using namespace mshadow_op;
+  using namespace mxnet_op;
+
   const FtrlParam& param = nnvm::get<FtrlParam>(attrs.parsed);
   Stream<xpu>* s = ctx.get_stream<xpu>();
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
@@ -1812,23 +1843,11 @@ inline void FtrlUpdate(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 2, DType> n = inputs[3].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
 
-    grad = scalar<DType>(param.rescale_grad) * grad;
-
-    if (param.clip_gradient >= 0.0f) {
-      z += F<clip>(grad, DType(param.clip_gradient)) - (F<square_root>(n +
-           F<square>(F<clip>(grad, DType(param.clip_gradient)))) - F<square_root>(n)) *
-           weight / scalar<DType>(param.lr);
-      n += F<square>(F<clip>(grad, DType(param.clip_gradient)));
-    } else {
-      z += grad - (F<square_root>(n + F<square>(grad)) - F<square_root>(n)) *
-           weight / scalar<DType>(param.lr);
-      n += F<square>(grad);
-    }
-    Assign(out, req[0],
-           (F<sign>(z) * scalar<DType>(param.lamda1) - z) /
-           ((scalar<DType>(param.beta) + F<square_root>(n)) /
-           scalar<DType>(param.lr) + scalar<DType>(param.wd)) *
-           F<gt>(F<abs>(z), scalar<DType>(param.lamda1)));
+    Kernel<FtrlUpdateKernel, xpu>::Launch(s, weight.shape_.Size(),
+      out.dptr_, n.dptr_, z.dptr_, weight.dptr_, grad.dptr_,
+      static_cast<DType>(param.clip_gradient), static_cast<DType>(param.rescale_grad),
+      static_cast<DType>(param.beta), static_cast<DType>(param.lamda1),
+      static_cast<DType>(param.lr), static_cast<DType>(param.wd), req[0]);
   });
 }
 
