@@ -1,0 +1,6 @@
+#!/bin/bash
+
+make -j2 USE_OPENCV=1 USE_OPENMP=0 DEBUG=1 USE_PROFILER=1
+cd python
+pip install -e .
+cd ..
