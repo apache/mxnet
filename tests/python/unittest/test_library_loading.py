@@ -21,6 +21,7 @@ import os
 import platform
 import unittest
 import mxnet as mx
+from mxnet.base import MXNetError
 from mxnet.test_utils import download
 
 def check_platform():
@@ -29,10 +30,19 @@ def check_platform():
 @unittest.skipIf(check_platform(), "not all machine types supported")
 def test_library_loading():
     if (os.name=='posix'):
-        lib = 'mylib.so'
+        lib = 'libsample_lib.so'
+        if os.path.exists(lib):
+            fname = lib
+        elif os.path.exists('build/'+lib):
+            fname = 'build/'+lib
+        else:
+            raise MXNetError("library %s not found " % lib)
     elif (os.name=='nt'):
-        lib = 'mylib.dll'
+        lib = 'libsample_lib.dll'
+        if os.path.exists('windows_package\\lib\\'+lib):
+            fname = 'windows_package\\lib\\'+lib
+        else:
+            raise MXNetError("library %s not found " % lib)
 
-    fname = mx.test_utils.download('https://mxnet-demo-models.s3.amazonaws.com/lib_binary/'+lib)
     fname = os.path.abspath(fname)
     mx.library.load(fname)
