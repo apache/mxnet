@@ -351,6 +351,12 @@ def test_topk():
     l = nd.topk(b, k=1, axis=-1, dtype=np.int64, ret_typ="value")
     assert l.sum() == np.sum(np.arange(0, SMALL_Y))
 
+def test_rdiv():
+    a = create_2d_tensor(rows=2, columns=3)
+    b = create_2d_tensor(rows=2, columns=3)
+    res = b/a
+    out = a.__rdiv__(b)
+    assert_almost_equal(res.asnumpy(),out.asnumpy())
 
 if __name__ == '__main__':
     import nose
