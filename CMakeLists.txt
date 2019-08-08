@@ -691,6 +691,8 @@ else()
 
 endif()
 
+add_library(sample_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/lib_api/mylib.cc)
+target_include_directories(sample_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
 set(MXNET_INSTALL_TARGETS mxnet)
 if(UNIX)
   # Create dummy file since we want an empty shared library before linking
@@ -701,9 +703,13 @@ if(UNIX)
   add_library(mxnet SHARED ${DUMMY_SOURCE})
   target_link_libraries(mxnet PRIVATE ${BEGIN_WHOLE_ARCHIVE} $<TARGET_FILE:mxnet_static> ${END_WHOLE_ARCHIVE})
   target_link_libraries(mxnet PRIVATE mxnet_static)
+  target_link_libraries(mxnet_static PUBLIC ${CMAKE_DL_LIBS})
+  target_compile_options(sample_lib PUBLIC -shared)
   set_target_properties(mxnet_static PROPERTIES OUTPUT_NAME mxnet)
 else()
   add_library(mxnet SHARED ${SOURCE})
+  target_compile_options(sample_lib PUBLIC /LD)
+  set_target_properties(sample_lib PROPERTIES PREFIX "lib")
 endif()
 
 if(USE_CUDA)
