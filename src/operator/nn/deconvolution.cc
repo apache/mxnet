@@ -408,6 +408,7 @@ struct DeconvolutionGrad {
 DMLC_REGISTER_PARAMETER(DeconvolutionParam);
 
 NNVM_REGISTER_OP(Deconvolution)
+.add_alias("_npx_deconvolution")
 .describe("Computes 1D or 2D transposed convolution (aka fractionally strided convolution) of the "
     "input tensor. This operation can be seen as the gradient of Convolution operation with "
     "respect to its input. Convolution usually reduces the size of the input. Transposed "

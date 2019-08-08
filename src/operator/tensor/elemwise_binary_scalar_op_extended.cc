@@ -84,7 +84,8 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_hypot_scalar)
   cpu, mshadow_op::hypot_grad_left>);
 
 NNVM_REGISTER_OP(smooth_l1)
-  .describe(R"code(Calculate Smooth L1 Loss(lhs, scalar) by summing
+.add_alias("_npx_smooth_l1")
+.describe(R"code(Calculate Smooth L1 Loss(lhs, scalar) by summing
 
 .. math::
 
