@@ -1417,6 +1417,14 @@ def convert_floor(node, **kwargs):
     """
     return create_basic_op_node('Floor', node, kwargs)
 
+@mx_op.register("dynamic_reshape")
+def convert_dynamic_reshape(node, **kwargs):
+    """Map MXNet's Reshape operator attributes to onnx's Reshape operator.
+    Converts output shape attribute to output shape tensor
+    and return multiple created nodes.
+    """
+    return create_basic_op_node('Reshape', node, kwargs)
+
 # Changing shape and type.
 @mx_op.register("Reshape")
 def convert_reshape(node, **kwargs):
