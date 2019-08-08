@@ -1590,7 +1590,6 @@ def check_nearest_upsampling_with_shape(shapes, scale, root_scale):
     for k in range(len(shapes)):
         name = 'arg_%d'%k
         assert_allclose(out, py_nearest_upsampling(arr[name].asnumpy(), root_scale), rtol=1e-4)
-    print("upsampling testing done")
 
 
 def check_bilinear_upsampling_with_shape(data_shape, weight_shape, scale, root_scale, num_filter):
@@ -1628,7 +1627,6 @@ def test_nearest_upsampling():
             for shapes in [(1,3,10,10), (4, 3, 256, 256), (1, 2, 3, 3)]:
                 print (root_scale)
                 check_nearest_upsampling_with_shape(shapes, scale, root_scale)
-    print("upsampling test completed successfully")
 
 
 @with_seed()
