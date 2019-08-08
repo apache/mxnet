@@ -27,6 +27,19 @@
 namespace mxnet {
 namespace op {
 
+struct PrefixSumInit{
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i,
+                                  int32_t* out,
+                                  DType* in) {
+    if(in[i]){
+      out[i] = 1;
+    } else {
+      out[i] = 0;
+    }
+  }
+};
+
 #define MAXDIM 5
 
 void NonzeroForwardGPU(const nnvm::NodeAttrs& attrs,

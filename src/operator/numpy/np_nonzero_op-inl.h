@@ -42,25 +42,12 @@
 namespace mxnet {
 namespace op {
 
-struct PrefixSumInit{
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i,
-                                  int32_t* out,
-                                  DType* in) {
-    if(in[i]){
-      out[i] = 1;
-    } else {
-      out[i] = 0;
-    }
-  }
-};
-
 struct NonzeroForwardKernel {
   template<int ndim>
   MSHADOW_XINLINE static void Map(int i,
                                   int64_t* out,
                                   const int32_t* idx,
-                                  const mshadow::Shape<ndim>& shape) {
+                                  const mshadow::Shape<ndim> shape) {
     int32_t prev = (i == 0) ? 0 : idx[i - 1];
     int32_t curr = idx[i];
     if (prev != curr) {
