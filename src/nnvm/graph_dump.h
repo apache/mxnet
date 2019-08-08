@@ -26,7 +26,6 @@
 
 #ifndef NNVM_GRAPH_DUMP_H_
 #define NNVM_GRAPH_DUMP_H_
-#pragma once
 
 #include <vector>
 #include <string>
