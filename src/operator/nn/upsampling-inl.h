@@ -98,7 +98,7 @@ void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
   if (req[up_enum::kOut] == kNullOp) {
     return;
   }
-  //printf("UPDATE WAS APPLIED\n");
+
   Stream<xpu> *s = ctx.get_stream<xpu>();
   Tensor<xpu, 4, DType> out = out_data[up_enum::kOut].get<xpu, 4, DType>(s);
   if (param.num_args > 1) {
@@ -107,23 +107,22 @@ void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
       Tensor<xpu, 4, DType> data = in_data[i].get<xpu, 4, DType>(s);
       int end = begin + data.size(1);
       
-      //int scale = out_data[up_enum::kOut].size(2)/in_data[i].size(2); //modify--two scales now
       int scale_h = out_data[up_enum::kOut].size(2)/in_data[i].size(2);//3rd dimension of TBlob (2nd from 4th dimension)
-      int scale_w = out_data[up_enum::kOut].size(1)/in_data[i].size(1);//4th dimension of TBlob (1st from 4th dimension) ->is this right???
+      int scale_w = out_data[up_enum::kOut].size(1)/in_data[i].size(1);//4th dimension of TBlob (1st from 4th dimension)
       
       if (param.multi_input_mode == up_enum::kSum) {
         if (i == 0) {
 
-          Assign(out, req[up_enum::kOut], upsampling_nearest(data, scale_h, scale_w)); //modify
+          Assign(out, req[up_enum::kOut], upsampling_nearest(data, scale_h, scale_w));
 
         } else {
 
-          out += upsampling_nearest(data, scale_h, scale_w); //modify
+          out += upsampling_nearest(data, scale_h, scale_w);
 
         }
       } else {
 
-        Assign(slice<1>(out, begin, end), req[up_enum::kOut], upsampling_nearest(data, scale_h, scale_w)); //modify
+        Assign(slice<1>(out, begin, end), req[up_enum::kOut], upsampling_nearest(data, scale_h, scale_w));
 
       }
       begin = end;
@@ -162,7 +161,6 @@ void UpSamplingBackward(const OpContext &ctx, const UpSamplingParam &param,
       Tensor<xpu, 4, DType> input_grad = in_grad[i].get<xpu, 4, DType>(s);
       mshadow::Shape<2> in_shape = Shape2(input_grad.shape_[2], input_grad.shape_[3]);
       int end = begin + input_grad.size(1);
-      //int scale = grad.size(2)/in_shape[0];
       int scale_h = grad.size(2)/in_shape[0];
       int scale_w = grad.size(3)/in_shape[1];
       if (param.multi_input_mode == up_enum::kSum) {
@@ -211,9 +209,6 @@ void UpSamplingBackward(const OpContext &ctx, const UpSamplingParam &param,
 
 static inline DeconvolutionParam GetDeconvolutionParam(const UpSamplingParam& param) {
   DeconvolutionParam p = DeconvolutionParam();
-  //int kernel = 2 * param.scale - param.scale % 2;
-  //int stride = param.scale;
-  //int pad = static_cast<int>(ceil((param.scale - 1) / 2.));
   int scale_h = 1;
   int scale_w = 1;
   if (param.scale.ndim() == 1) {

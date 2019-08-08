@@ -75,7 +75,6 @@ static bool UpSamplingShape(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(dshape.ndim(), 4U) << \
       "UpSamplingBilinear: Input data should be 4D in (batch, channel, y, x)";
     if (!shape_is_known(dshape)) return false;
-    //int kernel = 2 * param_.scale - param_.scale % 2;
     int kernel = static_cast<int>(2.0 * scale_h - ::fmod(scale_h, 2));
     SHAPE_ASSIGN_CHECK(*in_shape,
         up_enum::kWeight,
