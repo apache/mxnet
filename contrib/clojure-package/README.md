@@ -137,7 +137,7 @@ With this option, you will install a Git revision of the Clojure package source 
 
 - Install additional dependencies as described in [the corresponding section for Option 1](#installing-additional-dependencies),
 
-- Recursively clone the MXNet repository and checkout the desired version, (example 1.3.1). You should use the latest [version](https://search.maven.org/search?q=clojure-mxnet)), and a clone into the `~/mxnet` directory:
+- Recursively clone the MXNet repository and checkout the desired version, (example 1.4.1). You should use the latest [version](https://search.maven.org/search?q=clojure-mxnet)), and a clone into the `~/mxnet` directory:
 
   ```bash
   git clone --recursive https://github.com/apache/incubator-mxnet.git ~/mxnet
@@ -174,7 +174,7 @@ In that case, however, breakage can happen at any point, for instance when the S
 
 With this option, you will compile the core MXNet C++ package and jars for both Scala and Clojure language bindings from source. If you intend to make changes to the code in any of the parts, or if you simply want the latest and greatest features, this choice is for you.
 
-The first step is to recursively clone the MXNet repository and checkout the desired version, (example 1.3.1). You should use the latest [version](https://search.maven.org/search?q=clojure-mxnet)), and clone into the `~/mxnet` directory:
+The first step is to recursively clone the MXNet repository and checkout the desired version, (example 1.4.1). You should use the latest [version](https://search.maven.org/search?q=clojure-mxnet)), and clone into the `~/mxnet` directory:
 
   ```bash
   git clone --recursive https://github.com/apache/incubator-mxnet.git ~/mxnet

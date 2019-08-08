@@ -1035,19 +1035,21 @@ int MXSetCalibTableToQuantizedSymbol(SymbolHandle qsym_handle,
   API_END_HANDLE_ERROR(delete s);
 }
 
-int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend,
+int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend_name,
                          SymbolHandle *ret_sym_handle) {
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol *>(sym_handle);
   *s = sym->Copy();
-  std::vector<mxnet::op::SubgraphPropertyPtr> properties =
-      mxnet::op::SubgraphPropertyRegistry::Get()->CreateSubgraphProperty(backend);
-  for (auto property : properties) {
+  auto backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(backend_name);
+  const auto& subgraph_prop_list = backend->GetSubgraphProperties();
+  for (auto property : subgraph_prop_list) {
     nnvm::Graph g = Symbol2Graph(*s);
     property->SetAttr("graph", g);
-    g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(std::move(property));
+    g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
     g = ApplyPass(std::move(g), "BuildSubgraph");
+    property->RemoveAttr("graph");
+    g.attrs.erase("subgraph_property");
     s->outputs = g.outputs;
   }
   *ret_sym_handle = s;

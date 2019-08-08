@@ -21,6 +21,7 @@ Ref: http://images.nvidia.com/content/pdf/tesla/184457-Tesla-P4-Datasheet-NV-Fin
 import os
 import mxnet as mx
 import numpy as np
+from mxnet.gluon.model_zoo import vision
 from mxnet.test_utils import assert_almost_equal, assert_exception, rand_ndarray, rand_shape_nd, same, DummyIter
 from common import with_seed
 from mxnet.module import Module
@@ -898,6 +899,53 @@ def test_quantize_model_with_forward():
     for qdtype in ['int8', 'uint8']:
         check_quantize_model(qdtype)
 
+@with_seed()
+def test_quantize_gluon_with_forward():
+    def check_quantize_net(qdtype):
+        if is_test_for_native_cpu():
+            print('skipped testing test_quantize_model_with_forward for native cpu since it is not supported yet')
+            return
+        elif qdtype == 'uint8' and is_test_for_gpu():
+            print('skipped testing test_quantize_model_with_forward for gpu uint8 since it is not supported yet')
+            return
+
+        data_shape = (32, 3, 224, 224)
+        data_shapes = [mx.io.DataDesc(name='data', shape=data_shape)]
+        label_shape = (32, 1)
+        batch_size = 1
+        resnet18_v1 = vision.resnet18_v1(pretrained=True)
+        resnet18_v1.collect_params().reset_ctx(mx.current_context())
+        excluded_names_match = []
+        if mx.current_context() == mx.gpu():
+            excluded_names_match += ['activation', 'relu', 'conv0']
+        num_calib_examples = 5
+
+        random_data = mx.random.uniform(shape=data_shape)
+        random_label = mx.random.uniform(shape=label_shape)
+        dataset = mx.gluon.data.dataset.ArrayDataset(random_data, random_label)
+        calib_data = mx.gluon.data.DataLoader(dataset, batch_size=batch_size)
+
+        quantized_resnet18_v1 = mx.contrib.quant.quantize_net(resnet18_v1, quantized_dtype=qdtype,
+                                                              exclude_layers=None,
+                                                              exclude_layers_match=excluded_names_match,
+                                                              calib_mode='none',
+                                                              data_shapes=data_shapes,
+                                                              ctx=mx.current_context())
+        quantized_resnet18_v1.hybridize(static_alloc=True, static_shape=True)
+        quantized_resnet18_v1(random_data)
+
+        quantized_resnet18_v1 = mx.contrib.quant.quantize_net(resnet18_v1, quantized_dtype=qdtype,
+                                                              exclude_layers=None,
+                                                              exclude_layers_match=excluded_names_match,
+                                                              calib_data=calib_data,
+                                                              calib_mode='naive',
+                                                              num_calib_examples=num_calib_examples,
+                                                              ctx=mx.current_context())
+        quantized_resnet18_v1.hybridize(static_alloc=True, static_shape=True)
+        quantized_resnet18_v1(random_data)
+
+    for qdtype in ['int8', 'uint8']:
+        check_quantize_net(qdtype)
 
 @with_seed()
 def test_quantize_sym_with_calib():

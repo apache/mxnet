@@ -86,7 +86,7 @@ _Null = _NullType()
 
 
 class MXNetError(Exception):
-    """Error that will be throwed by all mxnet functions."""
+    """Error that will be thrown by all mxnet functions."""
     pass
 
 
