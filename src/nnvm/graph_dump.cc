@@ -37,11 +37,28 @@ using namespace nnvm;
 
 namespace {
 
-std::string unnamed(const std::string &s) {
-  if (s.empty())
-    return "unnamed";
-  return s;
-}
+class NodeNameDedup {
+public:
+  NodeNameDedup():
+    count_()
+  {}
+  string operator()(const std::string& x) {
+    auto i = count_.find(x);
+    if (i != count_.end()) {
+      size_t& freq = i->second;
+      freq += 1;
+      ostringstream os;
+      os << x << "_#" << freq;
+      return os.str();
+    } else {
+      count_.emplace(x, 0);
+      return x;
+    }
+  }
+private:
+  std::unordered_map<string, size_t> count_;
+};
+
 
 }  // namespace
 
@@ -56,6 +73,7 @@ std::string GraphDump(const std::vector<NodeEntry>& output_nodes) {
     ostringstream os;
     os << "digraph G {" << endl;
     Graph g;
+    NodeNameDedup dedup;
     g.outputs = output_nodes;
     auto& indexed_graph = g.indexed_graph();
     for (size_t i = 0; i < indexed_graph.num_nodes(); ++i) {
@@ -70,8 +88,8 @@ std::string GraphDump(const std::vector<NodeEntry>& output_nodes) {
           src_name_os << src.op()->name << " ";
         if (dst.op())
           dst_name_os << dst.op()->name << " ";
-        src_name_os << unnamed(src.attrs.name);
-        dst_name_os << unnamed(dst.attrs.name);
+        src_name_os << dedup(src.attrs.name);
+        dst_name_os << dedup(dst.attrs.name);
         os << "  \"" << src_name_os.str() << "\" -> \"" << dst_name_os.str() << "\"" << endl;
       }
     }
