@@ -28,20 +28,15 @@
 #include <mxnet/engine.h>
 #include "./engine/openmp.h"
 #include "./operator/custom/custom-inl.h"
-#include "./common/library.h"
 #if MXNET_USE_OPENCV
 #include <opencv2/opencv.hpp>
 #endif  // MXNET_USE_OPENCV
 #include "common/utils.h"
 #include "engine/openmp.h"
 
-#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-#include <windows.h>
-#else
-#include <dlfcn.h>
-#endif
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+#include <windows.h>
 /*!
  * \brief Retrieve the system error message for the last-error code
  * \param err string that gets the error message
@@ -58,8 +53,9 @@ void win_err(char **err) {
         reinterpret_cast<char*>(err),
         0, NULL);
 }
+#else
+#include <dlfcn.h>
 #endif
-
 
 namespace mxnet {
 
@@ -104,6 +100,91 @@ LibraryInitializer::LibraryInitializer()
 
 LibraryInitializer::~LibraryInitializer() {
   close_open_libs();
+}
+
+bool LibraryInitializer::lib_is_loaded(const std::string& path) const {
+  return loaded_libs.count(path) > 0;
+}
+
+/*!
+ * \brief Loads the dynamic shared library file
+ * \param path library file location
+ * \return handle a pointer for the loaded library, throws dmlc::error if library can't be loaded
+ */
+void* LibraryInitializer::lib_load(const char* path) {
+  void *handle = nullptr;
+  // check if library was already loaded
+  if (!lib_is_loaded(path)) {
+    // if not, load it
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+    handle = LoadLibrary(path);
+    if (!handle) {
+      char *err_msg = nullptr;
+      win_err(&err_msg);
+      LOG(FATAL) << "Error loading library: '" << path << "'\n" << err_msg;
+      LocalFree(err_msg);
+      return nullptr;
+    }
+#else
+    handle = dlopen(path, RTLD_LAZY);
+    if (!handle) {
+      LOG(FATAL) << "Error loading library: '" << path << "'\n" << dlerror();
+      return nullptr;
+    }
+#endif  // _WIN32 or _WIN64 or __WINDOWS__
+    // then store the pointer to the library
+    loaded_libs[path] = handle;
+  } else {
+    loaded_libs.at(path);
+  }
+  return handle;
+}
+
+/*!
+ * \brief Closes the loaded dynamic shared library file
+ * \param handle library file handle
+ */
+void LibraryInitializer::lib_close(void* handle) {
+  std::string libpath;
+  for (const auto& l: loaded_libs) {
+    if (l.second == handle) {
+      libpath = l.first;
+      break;
+    }
+  }
+  CHECK(!libpath.empty());
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  FreeLibrary((HMODULE)handle);
+#else
+  if (dlclose(handle)) {
+    LOG(WARNING) << "LibraryInitializer::lib_close: couldn't close library at address: " << handle
+        << " loaded from: '" << libpath << "': " << dlerror();
+  }
+#endif  // _WIN32 or _WIN64 or __WINDOWS__
+  loaded_libs.erase(libpath);
+}
+
+/*!
+ * \brief Obtains address of given function in the loaded library
+ * \param handle pointer for the loaded library
+ * \param func function pointer that gets output address
+ * \param name function name to be fetched
+ */
+void LibraryInitializer::get_sym(void* handle, void** func, char* name) {
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  *func = GetProcAddress((HMODULE)handle, name);
+  if (!(*func)) {
+    char *err_msg = nullptr;
+    win_err(&err_msg);
+    LOG(FATAL) << "Error getting function '" << name << "' from library\n" << err_msg;
+    LocalFree(err_msg);
+  }
+#else
+  *func = dlsym(handle, name);
+  if (!(*func)) {
+    LOG(FATAL) << "Error getting function '" << name << "' from library\n" << dlerror();
+  }
+#endif  // _WIN32 or _WIN64 or __WINDOWS__
 }
 
 bool LibraryInitializer::was_forked() const {
@@ -153,13 +234,9 @@ void LibraryInitializer::install_signal_handlers() {
 }
 
 void LibraryInitializer::close_open_libs() {
-  for (auto const& lib : loaded_libs) {
-    close_lib(lib.second);
+  for (const auto& l: loaded_libs) {
+    lib_close(l.second);
   }
-}
-
-void LibraryInitializer::dynlib_defer_close(const std::string &path, void *handle) {
-  loaded_libs.emplace(path, handle);
 }
 
 /**

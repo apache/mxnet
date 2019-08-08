@@ -26,27 +26,14 @@
 #include <cstdlib>
 #include <string>
 #include <map>
+#include "dmlc/io.h"
+
 
 #ifndef MXNET_INITIALIZE_H_
 #define MXNET_INITIALIZE_H_
 
 namespace mxnet {
 
-/*!
- * \brief fetches from the library a function pointer of any given datatype and name
- * \param T a template parameter for data type of function pointer
- * \param lib library handle
- * \param func_name function name to search for in the library
- * \return func a function pointer
- */
-template<typename T>
-T get_func(void *lib, char *func_name) {
-  T func;
-  get_sym(lib, reinterpret_cast<void**>(&func), func_name);
-  if (!func)
-    LOG(FATAL) << "Unable to get function '" << func_name << "' from library";
-  return func;
-}
 
 
 void pthread_atfork_prepare();
@@ -58,7 +45,7 @@ void pthread_atfork_child();
  */
 class LibraryInitializer {
  public:
-  typedef static std::map<std::string, void*> loaded_libs_t;
+  typedef std::map<std::string, void*> loaded_libs_t;
   static LibraryInitializer* Get() {
     static LibraryInitializer inst;
     return &inst;
@@ -79,8 +66,10 @@ class LibraryInitializer {
 
 
   // Library loading
-  void lib_defer_close(const std::string& path, void* handle);
-  void lib_is_loaded()
+  bool lib_is_loaded(const std::string& path) const;
+  void* lib_load(const char* path);
+  void lib_close(void* handle);
+  static void get_sym(void* handle, void** func, char* name);
 
   /**
    * Original pid of the process which first loaded and initialized the library
@@ -92,7 +81,6 @@ class LibraryInitializer {
   size_t mp_cv_num_threads_;
 
   // Actual code for the atfork handlers as member functions.
-
   void atfork_prepare();
   void atfork_parent();
   void atfork_child();
@@ -115,10 +103,24 @@ class LibraryInitializer {
 
   void close_open_libs();
 
-
   loaded_libs_t loaded_libs;
 };
 
+/*!
+ * \brief fetches from the library a function pointer of any given datatype and name
+ * \param T a template parameter for data type of function pointer
+ * \param lib library handle
+ * \param func_name function name to search for in the library
+ * \return func a function pointer
+ */
+template<typename T>
+T get_func(void *lib, char *func_name) {
+  T func;
+  LibraryInitializer::Get()->get_sym(lib, reinterpret_cast<void**>(&func), func_name);
+  if (!func)
+    LOG(FATAL) << "Unable to get function '" << func_name << "' from library";
+  return func;
+}
 
 }  // namespace mxnet
 #endif  // MXNET_INITIALIZE_H_
