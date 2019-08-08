@@ -335,7 +335,6 @@ class ndarray(NDArray):
         else:
             key = indexing_key_expand_implicit_axes(key, self.shape)
             slc_key = tuple(idx for idx in key if idx is not None)
-
             if len(slc_key) < self.ndim:
                 raise RuntimeError(
                     'too few indices after normalization: expected `ndim` ({}) '
