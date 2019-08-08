@@ -396,9 +396,6 @@ class RNNOp {
  public:
   RNNParam param_;
   Context ctx_;
-  bool init_space_, temp_init_space_;
-  size_t reserve_cpu_space_size_, temp_cpu_space_size_;
-  Storage::Handle reserve_cpu_space_, temp_cpu_space_;
 
   #if MXNET_USE_MKLDNN == 1
   bool has_cache;
@@ -1197,6 +1194,10 @@ class RNNOp {
   }
 
  private:
+  bool init_space_, temp_init_space_;
+  size_t reserve_cpu_space_size_, temp_cpu_space_size_;
+  Storage::Handle reserve_cpu_space_, temp_cpu_space_;
+
   #if MXNET_USE_CUDNN_RNN
   cudnnDataType_t dtype_;
   bool init_cudnn_;
