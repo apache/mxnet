@@ -685,13 +685,13 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
     << "Static array size=" << ndim
     << " is not equal to data shape ndim=" << dshape.ndim();
 
-  if (param_step.ndim() != 0) {
+  if (param_step.ndim() > 0) {
     CHECK_EQ(param_step.ndim(), param_begin.ndim())
       << "step and begin must have the same length";
   }
 
   for (int i = 0; i < param_begin.ndim(); ++i) {
-    index_t s = param_step.ndim() != 0U && param_step[i].has_value() ? param_step[i].value() : 1;
+    index_t s = param_step.ndim() > 0 && param_step[i].has_value() ? param_step[i].value() : 1;
     CHECK_NE(s, 0) << "slice op step[" << i << "] cannot be 0";
 
     index_t b = 0, e = 0;
@@ -703,29 +703,44 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
       // checking upper and lower bounds for begin
       if (b < 0) {
         b += len;
-        CHECK_GE(b, 0) << "slicing with begin[" << i << "]=" << b - len
-                       << " exceeds limit of input dimension[" << i << "]=" << len;
+        if (!Imperative::Get()->is_np_shape()) {
+          CHECK_GE(b, 0) << "slicing with begin[" << i << "]=" << b - len
+                         << " exceeds limit of input dimension[" << i << "]=" << len;
+        }
       }
-      CHECK_LT(b, len) << "slicing with begin[" << i << "]=" << b
-                       << " exceeds limit of input dimension[" << i << "]=" << len;
-
+      if (!Imperative::Get()->is_np_shape()) {
+        CHECK_LT(b, len) << "slicing with begin[" << i << "]=" << b
+                         << " exceeds limit of input dimension[" << i << "]=" << len;
+      }
       // checking upper and lower bounds for end
       if (e < 0 && param_end[i].has_value()) {
-        if (!(s < 0 && e == -1)) {
-          // Keep end=-1 as one-beyond-limits index for negative stride
-          e += len;
+        e += len;
+        if (!Imperative::Get()->is_np_shape()) {
+          CHECK_GE(e, 0) << "slicing with end[" << i << "]=" << e - len
+                         << " exceeds limit of input dimension[" << i << "]=" << len;
         }
-        CHECK_GE(e, 0) << "slicing with end[" << i << "]=" << e - len
-                       << " exceeds limit of input dimension[" << i << "]=" << len;
       }
-      CHECK_LE(e, len) << "slicing with end[" << i << "]=" << e
-                       << " exceeds limit of input dimension[" << i << "]=" << len;
+      if (!Imperative::Get()->is_np_shape()) {
+        CHECK_LE(e, len) << "slicing with end[" << i << "]=" << e
+                         << " exceeds limit of input dimension[" << i << "]=" << len;
+      }
 
       // checking begin==end case which is not supported
-      CHECK_NE(b, e) << "slicing with begin[" << i << "]=end[" << i << "]="
-                     << e << " results in an empty tensor and is not supported";
+      if (!Imperative::Get()->is_np_shape()) {
+        CHECK_NE(b, e) << "slicing with begin[" << i << "]=end[" << i << "]="
+                       << e << " results in an empty tensor and is not supported";
+      }
     }
 
+    if (Imperative::Get()->is_np_shape()) {
+      // move the begin and end to correct position for calculating dim size
+      b = b < 0 && s > 0 ? 0 : b;
+      b = b > len-1 && s < 0 ? len-1 : b;
+      // if the start value lead to empty tensor under step s, use -1 for indication
+      b = b < 0 || b > len-1 ? -1 : b;
+      e = e > -1 ? e : -1;
+      e = e > len ? len : e;
+    }
     (*begin)[i] = b;
     (*end)[i] = e;
     (*step)[i] = s;
@@ -741,17 +756,29 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
 inline void SetSliceOpOutputDimSize(const index_t i, const int b,
                                     const int e, const int s,
                                     mxnet::TShape* oshape) {
-  if (e != b) {
-    if (s > 0) {
-      CHECK_LT(b, e) << "slicing with begin[" << i << "]=" << b << ", end[" << i << "]="
-                     << e << ", and step[" << i << "]=" << s << " is invalid";
-      (*oshape)[i] = (e - b - 1) / s + 1;
+  if (!Imperative::Get()->is_np_shape()) { //handle as ndarray
+    if (e != b) {
+      if (s > 0) {
+        CHECK_LT(b, e) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
+                      << e << ", and step[" << i << "]=" << s << " is invalid";
+        (*oshape)[i] = (e - b - 1) / s + 1;
+      } else {
+        CHECK_LT(e, b) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
+                      << e << ", and step[" << i << "]=" << s << " is invalid";
+        (*oshape)[i] = (b - e - 1) / (-s) + 1;
+      }
+    }  // else leave oshape[i] as 0 for partial infer
+  } else { //handle as numpy compatible array
+    if (e != b && b >= 0) {
+      if (s > 0) {
+        (*oshape)[i] = e > b ? (e - b - 1) / s + 1 : 0;
+      } else {
+        (*oshape)[i] = e < b ? (b - e - 1) / (-s) + 1 : 0;
+      }
     } else {
-      CHECK_LT(e, b) << "slicing with begin[" << i << "]=" << b << ", end[" << i << "]="
-                     << e << ", and step[" << i << "]=" << s << " is invalid";
-      (*oshape)[i] = (b - e - 1) / (-s) + 1;
+        (*oshape)[i] = 0;
     }
-  }  // else leave oshape[i] as 0 for partial infer
+  }
 }
 
 inline bool SliceOpShape(const nnvm::NodeAttrs& attrs,
@@ -852,6 +879,7 @@ void SliceOpForward(const nnvm::NodeAttrs& attrs,
   Stream<xpu>* s = ctx.get_stream<xpu>();
   const TBlob& data = inputs[0];
   const TBlob& out = outputs[0];
+  if (Imperative::Get()->is_np_shape() && out.Size() == 0) return;
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
   MXNET_NDIM_SWITCH(data.ndim(), ndim, {
     common::StaticArray<index_t, ndim> begin, end, step;
@@ -951,6 +979,7 @@ void SliceOpBackward(const nnvm::NodeAttrs& attrs,
   } else if (req[0] == kWriteInplace) {
     LOG(FATAL) << "_slice_backward does not support kWriteInplace";
   }
+  if (Imperative::Get()->is_np_shape() && ograd.Size() == 0) return;
   MXNET_NDIM_SWITCH(ograd.ndim(), ndim, {
     common::StaticArray<index_t, ndim> begin, end, step;
     GetIndexRange(igrad.shape_, param.begin, param.end, param.step, &begin, &end, &step);
