@@ -30,7 +30,7 @@ bool NonzeroType(const nnvm::NodeAttrs& attrs,
                  std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
-  //Output must be int64.
+  // Output must be int64.
   TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt64);
   return out_attrs->at(0) != -1;
 }
@@ -65,10 +65,10 @@ void NonzeroForwardCPU(const nnvm::NodeAttrs& attrs,
   const NDArray &out = outputs[0];
   CHECK_LE(in.shape().ndim(), MAXDIM) << "ndim of input cannot larger than " << MAXDIM;
   // 0-dim
-  if(0 == in.shape().ndim()) {
+  if (0 == in.shape().ndim()) {
     MSHADOW_TYPE_SWITCH(in.dtype(), DType, {
       DType* in_dptr = in.data().dptr<DType>();
-      if(*in_dptr) {
+      if (*in_dptr) {
         mxnet::TShape s(2, 1);
         const_cast<NDArray &>(out).Init(s);
         *(out.data().dptr<int64_t>()) = 0;
@@ -78,15 +78,15 @@ void NonzeroForwardCPU(const nnvm::NodeAttrs& attrs,
         const_cast<NDArray &>(out).Init(s);
       }
     });
-    return ;
+    return;
   }
   size_t in_size = in.shape().Size();
   // 0-shape
-  if(0 == in_size) {
+  if (0 == in_size) {
     mxnet::TShape s(2, in.shape().ndim());
     s[0] = 0;
     const_cast<NDArray &>(out).Init(s);
-    return ;
+    return;
   }
   std::vector<int32_t> prefix_sum(in_size, 0);
   size_t valid_num = 0;
@@ -116,8 +116,8 @@ NNVM_REGISTER_OP(_npx_nonzero)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
-	[](const NodeAttrs& attrs) {
-	  return std::vector<std::string>{"x"};
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"x"};
   })
 .set_attr<nnvm::FInferType>("FInferType", NonzeroType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", NonzeroForwardCPU)
@@ -125,5 +125,5 @@ NNVM_REGISTER_OP(_npx_nonzero)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("x", "NDArray-or-Symbol", "The input array.");
 
-} // namespace op
-} // namespace mxnet
+}  // namespace op
+}  // namespace mxnet

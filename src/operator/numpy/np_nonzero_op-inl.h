@@ -52,14 +52,14 @@ struct NonzeroForwardKernel {
     int32_t curr = idx[i];
     if (prev != curr) {
       mshadow::Shape<ndim> coord = mxnet_op::unravel<ndim>(i, shape);
-      for(int j=0; j<ndim; j++){
+      for (int j = 0; j < ndim; j++) {
         out[prev * ndim + j] = coord[j];
       }
     }
   }
 };
 
-} // namespace op
-} // namespace mxnet
+}  // namespace op
+}  // namespace mxnet
 
-#endif
+#endif  // MXNET_OPERATOR_NUMPY_NP_NONZERO_OP_INL_H_

@@ -32,7 +32,7 @@ struct PrefixSumInit{
   MSHADOW_XINLINE static void Map(int i,
                                   int32_t* out,
                                   DType* in) {
-    if(in[i]){
+    if (in[i]) {
       out[i] = 1;
     } else {
       out[i] = 0;
@@ -55,11 +55,11 @@ void NonzeroForwardGPU(const nnvm::NodeAttrs& attrs,
   CHECK_LE(in.shape().ndim(), MAXDIM) << "ndim of input cannot larger than " << MAXDIM;
   size_t in_size = in.shape().Size();
   // 0-shape
-  if(0 == in_size) {
+  if (0 == in_size) {
     mxnet::TShape s(2, in.shape().ndim());
     s[0] = 0;
     const_cast<NDArray &>(out).Init(s);
-    return ;
+    return;
   }
   int32_t valid_num = 0;
   Stream<gpu>* stream = ctx.get_stream<gpu>();
@@ -94,9 +94,9 @@ void NonzeroForwardGPU(const nnvm::NodeAttrs& attrs,
   CUDA_CALL(cudaMemcpy(&valid_num, &prefix_sum[in_size - 1], sizeof(int32_t),
                        cudaMemcpyDeviceToHost));
   // 0-dim
-  if(0 == in.shape().ndim()) {
+  if (0 == in.shape().ndim()) {
     mxnet::TShape s(2, 1);
-    if(valid_num) {
+    if (valid_num) {
       const_cast<NDArray &>(out).Init(s);
       int64_t temp = 0;
       CUDA_CALL(cudaMemcpy(out.data().dptr<int64_t>(), &temp, sizeof(int64_t),
@@ -105,7 +105,7 @@ void NonzeroForwardGPU(const nnvm::NodeAttrs& attrs,
       s[0] = 0;
       const_cast<NDArray &>(out).Init(s);
     }
-    return ;
+    return;
   }
   // Set the output shape forcefully
   mxnet::TShape s(2, in.shape().ndim());
@@ -126,5 +126,5 @@ NNVM_REGISTER_OP(_npx_nonzero)
   })
 .set_attr<FComputeEx>("FComputeEx<gpu>", NonzeroForwardGPU);
 
-} // namespace op
-} // namespace mxnet
+}  // namespace op
+}  // namespace mxnet
