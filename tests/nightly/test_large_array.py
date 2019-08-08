@@ -353,97 +353,109 @@ def test_topk():
 
 
 def test_add():
-    a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
-    b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
-    mx_res = a.__add__(b)
-    np_res = a.asnumpy().__add__(b.asnumpy())
-    assert mx_res.asnumpy()[-1][0]==np_res[-1][0]
+    a = nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__add__(a)    
+    assert c[0][-1] == 2
+    assert c.shape == a.shape
 
 
 def test_sub():
-    a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
-    b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
-    mx_res = a.__sub__(b)
-    np_res = a.asnumpy().__sub__(b.asnumpy())
-    assert mx_res.asnumpy()[-1][0]==np_res[-1][0]
+    a = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__sub__(a)    
+    assert c[0][-1] == -2
+    assert c.shape == a.shape
 
 
 def test_rsub():
-    a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
-    b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
-    mx_res = a.__rsub__(b)
-    np_res = a.asnumpy().__rsub__(b.asnumpy())
-    assert mx_res.asnumpy()[-1][0]==np_res[-1][0]
+    a = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__rsub__(a)
+    assert c[0][-1] == 2
+    assert c.shape == a.shape
 
 
 def test_neg():
-    a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
-    mx_res = a.__neg__()
-    np_res = a.asnumpy().__neg__()
-    assert mx_res.asnumpy()[-1][0]==np_res[-1][0]
+    a = nd.ones(shape=(LARGE_X, SMALL_Y))    
+    c = a
+    c = c.__neg__()
+    assert c[0][-1] == -1
+    assert c.shape == a.shape
 
 
 def test_mul():
-    a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
-    b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
-    mx_res = a.__mul__(b)
-    np_res = a.asnumpy().__mul__(b.asnumpy())
-    assert mx_res.asnumpy()[-1][0]==np_res[-1][0]
+    a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__mul__(a)    
+    assert c[0][-1] == 6
+    assert c.shape == a.shape
 
 
 def test_div():
-    a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
-    b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
-    mx_res = a.__div__(b)
-    np_res = a.asnumpy().__truediv__(b.asnumpy())
-    assert mx_res.asnumpy()[-1][0]==np_res[-1][0]
+    a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__div__(a)    
+    assert c[0][-1] == 3/2
+    assert c.shape == a.shape
 
 
 def test_rdiv():
-    a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
-    b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
-    mx_res = a.__rdiv__(b)
-    np_res = a.asnumpy().__rtruediv__(b.asnumpy())
-    assert mx_res.asnumpy()[-1][0]==np_res[-1][0]
+    a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__rdiv__(a)    
+    assert c[0][-1] == 2/3
+    assert c.shape == a.shape
 
 
 def test_mod():
-    a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
-    b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
-    mx_res = a.__mod__(b)
-    np_res = a.asnumpy().__mod__(b.asnumpy())
-    assert mx_res.asnumpy()[-1][0]==np_res[-1][0]
+    a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__mod__(a)    
+    assert c[0][-1] == 1
+    assert c.shape == a.shape
 
 
 def test_rmod():
-    a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
-    b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
-    mx_res = a.__rmod__(b)
-    np_res = a.asnumpy().__rmod__(b.asnumpy())
-    assert mx_res.asnumpy()[-1][0]==np_res[-1][0]
+    a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__rmod__(a)    
+    assert c[0][-1] == 2
+    assert c.shape == a.shape
 
 
 def test_imod():
-    a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
-    b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
-    mx_res = a.__imod__(b)
-    np_res = a.asnumpy().__imod__(b.asnumpy())
-    assert mx_res.asnumpy()[-1][0]==np_res[-1][0]
+    a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__imod__(a)    
+    assert c[0][-1] == 1
+    assert c.shape == a.shape
 
 
 def test_pow():
-    a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
-    b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
-    mx_res = a.__pow__(b)
-    np_res = a.asnumpy().__pow__(b.asnumpy())
-    assert mx_res.asnumpy()[-1][0]==np_res[-1][0]
+    a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__pow__(a)    
+    assert c[0][-1] == 9
+    assert c.shape == a.shape
 
 def test_rpow():
-    a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
-    b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=np.float64)
-    mx_res = a.__rpow__(b)
-    np_res = a.asnumpy().__rpow__(b.asnumpy())
-    assert mx_res.asnumpy()[-1][0]==np_res[-1][0]
+    a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__rpow__(a)    
+    assert c[0][-1] == 8
+    assert c.shape == a.shape
 
 if __name__ == '__main__':
     import nose
