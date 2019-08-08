@@ -401,6 +401,25 @@ def test_sequence_last():
     assert b[0][-1] == a[1][0][-1] #check if it takes 2nd sequence from the first batch
 
 
+def test_softmax_cross_entropy():
+    # dtype of input data, mxnet cross entropy set explicitly to float64
+    # numpy implicitly takes care of double precision
+    batch_size = SMALL_Y
+    num_labels = LARGE_X
+    input_data = mx.nd.ones((batch_size, num_labels),dtype="float64")
+    input_label = mx.nd.zeros((batch_size,),dtype="float64")
+
+    true_softmax = np.full((batch_size, num_labels), (1 / num_labels))
+    # use 1/batch_size when softmax axis=0
+    # here 1/num_labels since softmax_cross_entropy uses default axis
+    # by default axis=1
+    np_one_hot_label = np.zeros((batch_size,num_labels))
+    np_one_hot_label[:,0] = 1
+
+    true_softmax_cross_entropy = np.sum(-np.log(true_softmax) * np_one_hot_label)
+    mx_softmax_cross_entropy = mx.nd.softmax_cross_entropy(input_data,input_label, dtype="float64")
+    assert_almost_equal(mx_softmax_cross_entropy.asnumpy(), true_softmax_cross_entropy, rtol=1e-3, atol=1e-5)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
