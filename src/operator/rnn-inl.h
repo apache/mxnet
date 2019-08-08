@@ -409,37 +409,6 @@ class RNNOp {
   std::vector<primitive> rnn_forward_prim;
   #endif
 
-  #if MXNET_USE_CUDNN_RNN
-  cudnnDataType_t dtype_;
-  bool init_cudnn_;
-  cudnnRNNDescriptor_t rnn_desc_;
-  cudnnRNNMode_t mode_;
-  cudnnDirectionMode_t direction_;
-  cudnnRNNInputMode_t input_mode_;
-  cudnnDropoutDescriptor_t dropout_desc_;
-  Storage::Handle reserve_space_;
-  uint64_t seed_ = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
-  size_t workspace_byte_, reserve_space_byte_;
-  int workspace_size_;
-  std::vector<cudnnTensorDescriptor_t> x_desc_vec_, y_desc_vec_, dx_desc_vec_, dy_desc_vec_;
-  #if MXNET_USE_CUDNN_GE_7200
-  cudnnRNNDataDescriptor_t x_data_desc_, y_data_desc_, dx_data_desc_, dy_data_desc_;
-  DType padding_fill_ = 0;
-  #endif
-  cudnnTensorDescriptor_t hx_desc_, cx_desc_;
-  cudnnTensorDescriptor_t hy_desc_, cy_desc_;
-  cudnnTensorDescriptor_t dhx_desc_, dcx_desc_;
-  cudnnTensorDescriptor_t dhy_desc_, dcy_desc_;
-
-  cudnnFilterDescriptor_t w_desc_, dw_desc_;
-  // Allow TensorCore algo policy
-  bool cudnn_tensor_core_;
-
-  #if CUDNN_MAJOR >= 5
-  cudnnTensorFormat_t format_;
-  #endif
-  #endif
-
   explicit RNNOp(RNNParam param, Context ctx) {
     this->param_ = param;
     this->ctx_ = ctx;
@@ -1228,6 +1197,37 @@ class RNNOp {
   }
 
  private:
+  #if MXNET_USE_CUDNN_RNN
+  cudnnDataType_t dtype_;
+  bool init_cudnn_;
+  cudnnRNNDescriptor_t rnn_desc_;
+  cudnnRNNMode_t mode_;
+  cudnnDirectionMode_t direction_;
+  cudnnRNNInputMode_t input_mode_;
+  cudnnDropoutDescriptor_t dropout_desc_;
+  Storage::Handle reserve_space_;
+  uint64_t seed_ = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
+  size_t workspace_byte_, reserve_space_byte_;
+  int workspace_size_;
+  std::vector<cudnnTensorDescriptor_t> x_desc_vec_, y_desc_vec_, dx_desc_vec_, dy_desc_vec_;
+  #if MXNET_USE_CUDNN_GE_7200
+  cudnnRNNDataDescriptor_t x_data_desc_, y_data_desc_, dx_data_desc_, dy_data_desc_;
+  DType padding_fill_ = 0;
+  #endif
+  cudnnTensorDescriptor_t hx_desc_, cx_desc_;
+  cudnnTensorDescriptor_t hy_desc_, cy_desc_;
+  cudnnTensorDescriptor_t dhx_desc_, dcx_desc_;
+  cudnnTensorDescriptor_t dhy_desc_, dcy_desc_;
+
+  cudnnFilterDescriptor_t w_desc_, dw_desc_;
+  // Allow TensorCore algo policy
+  bool cudnn_tensor_core_;
+
+  #if CUDNN_MAJOR >= 5
+  cudnnTensorFormat_t format_;
+  #endif
+  #endif
+
   inline void Init(const OpContext &ctx,
                    mshadow::Stream<xpu> *s,
                    const std::vector<TBlob> &in_data,
