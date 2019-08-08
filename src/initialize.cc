@@ -134,7 +134,7 @@ void* LibraryInitializer::lib_load(const char* path) {
     // then store the pointer to the library
     loaded_libs[path] = handle;
   } else {
-    loaded_libs.at(path);
+    handle = loaded_libs.at(path);
   }
   return handle;
 }
