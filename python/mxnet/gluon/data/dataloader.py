@@ -124,6 +124,7 @@ class SimpleQueue(multiprocessing.queues.SimpleQueue):
         self._send = self._writer.send
         self._recv = self._reader.recv
 
+
 def default_batchify_fn(data):
     """Collate data into batch."""
     if isinstance(data[0], nd.NDArray):
@@ -381,6 +382,7 @@ class DataLoaderV1(object):
 
     def __len__(self):
         return len(self._batch_sampler)
+
 
 _worker_dataset = None
 def _worker_initializer(dataset):

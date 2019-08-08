@@ -40,6 +40,7 @@ import numpy as np
 from .. import ndarray
 from ..util import is_np_shape
 
+
 def split_data(data, num_slice, batch_axis=0, even_split=True):
     """Splits an NDArray into `num_slice` slices along `batch_axis`.
     Usually used for data parallelism where each slices is sent
@@ -108,7 +109,7 @@ def split_and_load(data, ctx_list, batch_axis=0, even_split=True):
 
     Returns
     -------
-    list of NDArray
+    list of NDArrays
         Each corresponds to a context in `ctx_list`.
     """
     if not isinstance(data, ndarray.NDArray):
@@ -414,6 +415,7 @@ class HookHandle(object):
     def __exit__(self, ptype, value, trace):
         self.detach()
 
+
 def shape_is_known(shape):
     """Check whether a shape is completely known with or without np semantics.
 
@@ -430,3 +432,44 @@ def shape_is_known(shape):
         assert dim_size > unknown_dim_size, "shape dimension size cannot be less than {}, while " \
                                             "received {}".format(unknown_dim_size, dim_size)
     return True
+
+
+def _check_same_symbol_type(symbols):
+    """Check whether all the symbols in the list are of the same type.
+    Raise type error if the types are different. Return the class of
+    the symbols."""
+    from ..symbol.numpy import _Symbol as np_symbol
+    from ..symbol import Symbol as nd_symbol
+    is_np_sym = isinstance(symbols[0], np_symbol)
+    for s in symbols[1:]:
+        if is_np_sym != isinstance(s, np_symbol):
+            raise TypeError('Found both classic symbol (mx.sym.Symbol) and numpy symbol '
+                            '(mx.sym.np._Symbol) in outputs. This will prevent you from building '
+                            'a computation graph by grouping them since different types of symbols '
+                            'are not allowed to be grouped in Gluon to form a computation graph. '
+                            'You will need to convert them to the same type of symbols, either '
+                            'classic or numpy following this rule: if you want numpy ndarray '
+                            'output(s) from the computation graph, please convert all the classic '
+                            'symbols in the list to numpy symbols by calling `as_np_ndarray()` '
+                            'on each of them; if you want classic ndarray output(s) from the '
+                            'computation graph, please convert all the numpy symbols in the list '
+                            'to classic symbols by calling `as_nd_ndarray()` on each of them.')
+    return np_symbol if is_np_sym else nd_symbol
+
+
+def _check_all_np_ndarrays(out):
+    """Check if ndarrays/symbols in out are all np.ndarray/np._Symbol."""
+    from ..numpy import ndarray as np_ndarray
+    from ..symbol.numpy import _Symbol as np_symbol
+    from ..symbol import Symbol as nd_symbol
+    from ..ndarray import NDArray as nd_ndarray
+
+    # pylint: disable=no-else-raise
+    if isinstance(out, (nd_ndarray, nd_symbol)) and not isinstance(out, (np_ndarray, np_symbol)):
+        raise TypeError("Block's output ndarrays/symbols must be of type `mxnet.numpy.ndarray`"
+                        " or `mxnet.symbol.numpy._Symbol`, while got output type {}"
+                        .format(str(type(out))))
+    elif isinstance(out, (list, tuple)):
+        for i in out:
+            _check_all_np_ndarrays(i)
+    # pylint: enable=no-else-raise

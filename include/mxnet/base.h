@@ -421,7 +421,9 @@ inline int32_t Context::GetGPUCount() {
 #if MXNET_USE_CUDA
   int32_t count;
   cudaError_t e = cudaGetDeviceCount(&count);
-  if (e == cudaErrorNoDevice) {
+  // TODO(junwu): Remove e == cudaErrorInsufficientDriver
+  // This is skipped for working around wheel build system with older CUDA driver.
+  if (e == cudaErrorNoDevice || e == cudaErrorInsufficientDriver) {
     return 0;
   }
   CHECK_EQ(e, cudaSuccess) << " CUDA: " << cudaGetErrorString(e);

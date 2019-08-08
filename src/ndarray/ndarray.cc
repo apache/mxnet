@@ -312,7 +312,7 @@ NDArray NDArray::AtWithRecord(index_t idx) {
   CHECK(storage_type() == kDefaultStorage)
       << "Storage type " << storage_type() << " doesn't support At()";
   NDArray ret = this->SliceWithRecord(idx, idx+1);
-  if (shape_.ndim() > 1) {
+  if (shape_.ndim() > 1 || Imperative::Get()->is_np_shape()) {
     return ret.ReshapeWithRecord(mxnet::TShape(shape_.data()+1, shape_.data()+shape_.ndim()));
   } else {
     return ret;
@@ -1205,7 +1205,10 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority, bool is_op
       << "from.shape = " << from.shape() << " to.shape=" << to.shape();
   CHECK(!mxnet::op::shape_is_none(from.shape()))
       << "source operands have undefined shape";
-  if (from.shape().Size() == 0U) return;
+  // zero-size array, no need to copy
+  if (from.shape().Size() == 0U) {
+    return;
+  }
   // important: callback must always capture by value
   const Context from_ctx = from.ctx();
   const int a = from_ctx.dev_mask();
@@ -1725,7 +1728,7 @@ bool NDArray::Load(dmlc::Stream *strm) {
     CHECK(!Imperative::Get()->is_np_shape())
         << "ndarray was not saved in np shape semantics, but being loaded in np shape semantics."
            " Please turn off np shape semantics in Python using `with np_shape(False)`"
-           " to scope of the code of loading the ndarray.";
+           " to scope the code of loading the ndarray.";
   }
   if (magic != NDARRAY_V2_MAGIC && magic != NDARRAY_V3_MAGIC) {
     return LegacyLoad(strm, magic);
@@ -1865,6 +1868,10 @@ void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
   mxnet::TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
+  // zero-size array, no need to copy
+  if (size == 0U) {
+    return;
+  }
   TBlob src((void*)data, dshape, cpu::kDevMask, this->dtype_, 0); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
@@ -1996,6 +2003,10 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   mxnet::TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
+  // zero-size array, no need to copy
+  if (size == 0U) {
+    return;
+  }
   TBlob dst(data, dshape, cpu::kDevMask, this->dtype_, 0); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {

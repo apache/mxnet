@@ -34,6 +34,7 @@ DMLC_REGISTER_PARAMETER(SortParam);
 DMLC_REGISTER_PARAMETER(ArgSortParam);
 
 NNVM_REGISTER_OP(topk)
+.add_alias("_npx_topk")
 .describe(R"code(Returns the top *k* elements in an input array along the given axis.
  The returned elements will be sorted.
 

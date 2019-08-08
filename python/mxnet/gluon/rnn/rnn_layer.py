@@ -236,7 +236,6 @@ class _RNNLayer(HybridBlock):
         else:
             return super(_RNNLayer, self).__call__(inputs, states, **kwargs)
 
-
     def hybrid_forward(self, F, inputs, states, sequence_length=None, **kwargs):
         if F is ndarray:
             batch_size = inputs.shape[self._layout.find('N')]
@@ -284,7 +283,6 @@ class _RNNLayer(HybridBlock):
                     lstm_state_clip_min=self._lstm_state_clip_min,
                     lstm_state_clip_max=self._lstm_state_clip_max,
                     lstm_state_clip_nan=self._lstm_state_clip_nan)
-
 
         if self._mode == 'lstm':
             outputs, states = rnn[0], [rnn[1], rnn[2]]

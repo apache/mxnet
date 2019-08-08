@@ -61,6 +61,17 @@ class Symbol(SymbolBase):
     # Make numpy functions return Symbol instead of numpy object array
     __array_priority__ = 1000.0
 
+    def as_np_ndarray(self):
+        """Convert mx.sym.Symbol to mx.sym.np._Symbol."""
+        from .numpy import _Symbol
+        hdl = SymbolHandle()
+        check_call(_LIB.MXShallowCopySymbol(self.handle, ctypes.byref(hdl)))
+        return _Symbol(hdl)
+
+    def as_nd_ndarray(self):
+        """Returns self. For the convenience of conversion between legacy and np symbols."""
+        return self
+
     def __repr__(self):
         """Gets a string representation of the symbol."""
         name = self.name
@@ -144,6 +155,8 @@ class Symbol(SymbolBase):
         array([[-2., -2., -2.],
                [-2., -2., -2.]], dtype=float32)
         """
+        if isinstance(other, Symbol):
+            return other.__sub__(self)
         if isinstance(other, Number):
             return _internal._RMinusScalar(self, scalar=other)
         else:
@@ -192,6 +205,8 @@ class Symbol(SymbolBase):
         array([[ 0.33333334,  0.33333334,  0.33333334],
                [ 0.33333334,  0.33333334,  0.33333334]], dtype=float32)
         """
+        if isinstance(other, Symbol):
+            return other.__truediv__(self)
         if isinstance(other, Number):
             return _internal._RDivScalar(self, scalar=other)
         else:
@@ -222,6 +237,8 @@ class Symbol(SymbolBase):
         array([[ 1.,  1.,  1.,
                [ 1.,  1.,  1., dtype=float32)
         """
+        if isinstance(other, Symbol):
+            return other.__mod__(self)
         if isinstance(other, Number):
             return _internal._RModScalar(self, scalar=other)
         else:
@@ -252,7 +269,13 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __rpow__(self, other):
-        raise NotImplementedForSymbol(self.__rpow__, 'y**x', other)
+        """x.__rpow__(y) <=> y ** x"""
+        if isinstance(other, Symbol):
+            return other.__pow__(self)
+        elif isinstance(other, Number):
+            return _internal._rpower_scalar(self, scalar=other)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
 
     def __neg__(self):
         """x.__neg__() <=> -x
@@ -2667,8 +2690,12 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
 Variable = var
 
 
-def Group(symbols):
+def Group(symbols, create_fn=Symbol):
     """Creates a symbol that contains a collection of other symbols, grouped together.
+    A classic symbol (`mx.sym.Symbol`) will be returned if all the symbols in the list
+    are of that type; a numpy symbol (`mx.sym.np._Symbol`) will be returned if all the
+    symbols in the list are of that type. A type error will be raised if a list of mixed
+    classic and numpy symbols are provided.
 
     Example
     -------
@@ -2682,6 +2709,9 @@ def Group(symbols):
     symbols : list
         List of symbols to be grouped.
 
+    create_fn : mx.sym.Symbol or mx.sym.np._Symbol
+        Symbol class for creating the grouped symbol.
+
     Returns
     -------
     sym : Symbol
@@ -2693,7 +2723,7 @@ def Group(symbols):
     check_call(_LIB.MXSymbolCreateGroup(
         mx_uint(len(symbols)),
         c_handle_array(symbols), ctypes.byref(handle)))
-    return Symbol(handle)
+    return create_fn(handle)
 
 
 def load(fname):
