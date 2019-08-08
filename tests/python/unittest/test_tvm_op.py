@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import numpy as np
 import mxnet as mx
 from mxnet.test_utils import same, rand_shape_nd
 from mxnet.runtime import Features
@@ -31,6 +32,28 @@ def test_tvm_broadcast_add():
         b = mx.nd.normal(shape=b_shape)
         c = mx.nd.contrib.tvm_vadd(a, b)
         c_np = a.asnumpy() + b.asnumpy()
+        assert same(c.asnumpy(), c_np)
+
+@with_seed()
+def test_tvm_broadcast_fmax():
+    if _features.is_enabled("TVM_OP"):
+        a_shape = rand_shape_nd(4)
+        b_shape = (1,) + a_shape[1:2] + (1, 1)
+        a = mx.nd.normal(shape=a_shape)
+        b = mx.nd.normal(shape=b_shape)
+        c = mx.nd.contrib.tvm_fmax(a, b)
+        c_np = np.fmax(a.asnumpy(), b.asnumpy())
+        assert same(c.asnumpy(), c_np)
+
+@with_seed()
+def test_tvm_broadcast_fmin():
+    if _features.is_enabled("TVM_OP"):
+        a_shape = rand_shape_nd(4)
+        b_shape = (1,) + a_shape[1:2] + (1, 1)
+        a = mx.nd.normal(shape=a_shape)
+        b = mx.nd.normal(shape=b_shape)
+        c = mx.nd.contrib.tvm_fmin(a, b)
+        c_np = np.fmin(a.asnumpy(), b.asnumpy())
         assert same(c.asnumpy(), c_np)
 
 if __name__ == '__main__':
