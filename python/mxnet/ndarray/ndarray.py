@@ -185,6 +185,24 @@ fixed-size items.
     # See C++ side of definition(kTVMNDArrayTypeCode) at include/mxmet/tensor_blob.h
     _tvm_tcode = 19
     # pylint: disable= no-member, undefined-variable
+
+    def as_np_ndarray(self):
+        """Convert mxnet.ndarray.NDArray to mxnet.numpy.ndarray."""
+        storage_type = self.stype
+        if storage_type != 'default':
+            raise ValueError('cannot convert ndarray of stype {} to numpy ndarray'
+                             .format(str(type(storage_type))))
+        from ..numpy import ndarray
+        hdl = NDArrayHandle()
+        check_call(_LIB.MXShallowCopyNDArray(self.handle, ctypes.byref(hdl)))
+        return ndarray(handle=hdl, writable=self.writable)
+
+    def as_nd_ndarray(self):
+        """A convenience function for creating a classic ndarray from the current
+        ndarray with zero copy. For this class, it just returns itself since it is
+        already a classic ndarray."""
+        return self
+
     @property
     def _tvm_handle(self):
         return self.handle.value
@@ -1137,6 +1155,70 @@ fixed-size items.
             source_array.ctypes.data_as(ctypes.c_void_p),
             ctypes.c_size_t(source_array.size)))
 
+    def _slice(self, start, stop):
+        """Returns a sliced NDArray that shares memory with the current one.
+        This is called through ``x[start:stop]``.
+
+        Parameters
+        ----------
+        start : int
+            Starting inclusive index of slice in the first dim.
+        stop : int
+            Finishing exclusive index of slice in the first dim.
+
+        Returns
+        -------
+            `NDArray` sharing the memory with the current one sliced from
+            start to stop in the first dim.
+
+        Examples:
+        >>> a = mx.nd.array([[1,2], [3, 4], [5, 6], [7, 8]])
+        >>> a[1:2].asnumpy()
+        array([[ 3.,  4.]], dtype=float32)
+        >>> a[1:1].asnumpy()
+        array([], shape=(0, 2), dtype=float32)
+        """
+        handle = NDArrayHandle()
+        start, stop, _ = _get_index_range(start, stop, self.shape[0])
+
+        check_call(_LIB.MXNDArraySlice(
+            self.handle, mx_uint(start), mx_uint(stop), ctypes.byref(handle)))
+        return self.__class__(handle=handle, writable=self.writable)
+
+    def _at(self, idx):
+        """Returns a view of the array sliced at `idx` in the first dim.
+        This is called through ``x[idx]``.
+
+        Parameters
+        ----------
+        idx : int
+            index for slicing the `NDArray` in the first dim.
+
+        Returns
+        -------
+        NDArray
+            `NDArray` sharing the memory with the current one sliced at `idx` in the first dim.
+
+        Examples
+        --------
+        >>> a = mx.nd.array([[1,2], [3, 4]])
+        >>> a[1].asnumpy()
+        array([ 3.,  4.], dtype=float32)
+        >>> b = mx.nd.array([1, 2, 3, 4])
+        >>> b[0].asnumpy()
+        array([ 1.], dtype=float32)
+        """
+        handle = NDArrayHandle()
+        if idx < 0:
+            length = self.shape[0]
+            idx += length
+            if idx < 0:
+                raise IndexError('index %d is out of bounds for axis 0 with size %d'
+                                 % (idx-length, length))
+        check_call(_LIB.MXNDArrayAt(
+            self.handle, mx_uint(idx), ctypes.byref(handle)))
+        return self.__class__(handle=handle, writable=self.writable)
+
     def reshape(self, *shape, **kwargs):
         """Returns a **view** of this array with a new shape without altering any data.
 
@@ -1258,7 +1340,7 @@ fixed-size items.
                                            c_array(ctypes.c_int64, shape),
                                            reverse,
                                            ctypes.byref(handle)))
-        return NDArray(handle=handle, writable=self.writable)
+        return self.__class__(handle=handle, writable=self.writable)
 
     def reshape_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape_like`.
@@ -2774,7 +2856,7 @@ def _get_broadcast_shape(shape1, shape2):
     for a, b in zip(shape1[::-1], shape2[::-1]):
         if a != 1 and b != 1 and a != b:
             raise ValueError('shape1=%s is not broadcastable to shape2=%s' % (shape1, shape2))
-        shape[i] = max(a, b)
+        shape[i] = b if a == 1 else a
         i -= 1
     return tuple(shape)
 

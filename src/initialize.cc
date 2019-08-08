@@ -27,6 +27,7 @@
 #include <mxnet/engine.h>
 #include "./engine/openmp.h"
 #include "./operator/custom/custom-inl.h"
+#include "./common/library.h"
 #if MXNET_USE_OPENCV
 #include <opencv2/opencv.hpp>
 #endif  // MXNET_USE_OPENCV
@@ -78,6 +79,13 @@ class LibraryInitializer {
         CustomOperator::Get()->Start();
       });
 #endif
+  }
+
+  ~LibraryInitializer() {
+    // close opened libraries
+    for (auto const& lib : loaded_libs) {
+      close_lib(lib.second);
+    }
   }
 
   static LibraryInitializer* Get();

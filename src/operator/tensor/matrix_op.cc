@@ -263,6 +263,7 @@ static inline bool FlattenStorageType(const nnvm::NodeAttrs& attrs,
 
 NNVM_REGISTER_OP(Flatten)
 .add_alias("flatten")
+.add_alias("_npx_batch_flatten")
 .describe(R"code(Flattens the input array into a 2-D array by collapsing the higher dimensions.
 
 .. note:: `Flatten` is deprecated. Use `flatten` instead.
@@ -408,6 +409,7 @@ Examples::
 
 
 NNVM_REGISTER_OP(expand_dims)
+.add_alias("_npi_expand_dims")
 .describe(R"code(Inserts a new axis of size 1 into the array shape
 
 For example, given ``x`` with shape ``(2,3,4)``, then ``expand_dims(x, axis=1)``
@@ -696,6 +698,7 @@ NNVM_REGISTER_OP(_backward_slice_like)
 
 NNVM_REGISTER_OP(clip)
 MXNET_ADD_SPARSE_OP_ALIAS(clip)
+.add_alias("_npi_clip")
 .describe(R"code(Clips (limits) the values in an array.
 
 Given an interval, values outside the interval are clipped to the interval edges.
@@ -770,6 +773,7 @@ NNVM_REGISTER_OP(_backward_clip)
 .set_attr<FCompute>("FCompute<cpu>", ClipGrad_<cpu>);
 
 NNVM_REGISTER_OP(repeat)
+.add_alias("_np_repeat")
 .describe(R"code(Repeats elements of an array.
 
 By default, ``repeat`` flattens the input array into 1-D and then repeats the
@@ -820,6 +824,7 @@ NNVM_REGISTER_OP(_backward_repeat)
 });
 
 NNVM_REGISTER_OP(tile)
+.add_alias("_npi_tile")
 .describe(R"code(Repeats the whole array multiple times.
 
 If ``reps`` has length *d*, and input array has dimension of *n*. There are
@@ -1121,6 +1126,7 @@ Example::
 .add_arguments(DepthToSpaceParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_split_v2)
+.add_alias("_npi_split")
 .describe(R"code(Splits an array along a particular axis into multiple sub-arrays.
 
 Example::
