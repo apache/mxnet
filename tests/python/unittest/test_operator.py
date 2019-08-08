@@ -4796,14 +4796,10 @@ def test_tile():
         a = np.array([], dtype=np.int32).reshape(shape)
         b = mx.nd.array(a, ctx=default_context(), dtype=a.dtype)
         reps = (2, 4, 6)
-        with mx.np_compat():  # TODO(xiny): See PR tidiness
-            a = np.array([], dtype=np.int32).reshape(shape)
-            b = mx.nd.array(a, ctx=default_context(), dtype=a.dtype)
 
-            reps = (2, 4, 6)
-            a_tiled = np.tile(a, reps)
-            b_tiled = mx.nd.tile(b, reps).asnumpy()
-            assert same(a_tiled, b_tiled)
+        a_tiled = np.tile(a, reps)
+        b_tiled = mx.nd.tile(b, reps).asnumpy()
+        assert same(a_tiled, b_tiled)
 
     def test_empty_reps():
         a = np.array([[2, 3, 4], [5, 6, 7]], dtype=np.int32)
@@ -4891,17 +4887,15 @@ def test_one_hot():
             one_hot_array = mx_one_hot_array.asnumpy()
             assert same(expected_array, one_hot_array)
 
-    def test_empty_indices():  # TODO(xiny): See PR tidiness
+    def test_empty_indices():
         shape = (2, 0, 9, 3)
-        with mx.np_compat():
-            indices = np.array([]).reshape(shape)
-            depth = 10
-            mx_one_hot_array = mx.nd.one_hot(
-                mx.nd.array(indices, ctx=default_context(), dtype=np.int32),
-                depth=depth, dtype=np.int32
-            ).asnumpy()
-            expected_array = np.array([], dtype=np.int32).reshape(shape + (depth,))
-            assert same(expected_array, mx_one_hot_array)
+        indices = np.array([]).reshape(shape)
+        depth = 10
+        mx_one_hot_array = mx.nd.one_hot(
+            mx.nd.array(indices, ctx=default_context(), dtype=np.int32),
+            depth=depth, dtype=np.int32).asnumpy()
+        expected_array = np.array([], dtype=np.int32).reshape(shape + (depth, ))
+        assert same(expected_array, mx_one_hot_array)
 
     def test_zero_depth():
         shape = (2, 4, 9, 3)

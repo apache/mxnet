@@ -52,5 +52,14 @@ NNVM_REGISTER_OP(_backward_np_hstack)
 NNVM_REGISTER_OP(_np_squeeze)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
+// Temporarily added for using numpy indexing; should be overwritten by pull request # 15663
+NNVM_REGISTER_OP(_npx_slice)
+.add_alias("_npi_slice")
+.set_attr<FCompute>("FCompute<gpu>", NumpySliceOpForward<gpu>);
+
+// Temporarily added for using numpy indexing; should be overwritten by pull request # 15663
+NNVM_REGISTER_OP(_backward_npx_slice)
+.set_attr<FCompute>("FCompute<gpu>", NumpySliceOpBackward<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

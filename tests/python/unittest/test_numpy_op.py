@@ -461,6 +461,7 @@ def test_np_transpose():
             else:
                 axis = [i for i in range(ndim)]
                 axes.append(tuple(axis))
+                random.shuffle(axis)
                 axes.append(tuple(axis))
             for axis in axes:
                 np_out = _np.transpose(np_data, axes=axis)
