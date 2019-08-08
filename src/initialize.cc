@@ -205,7 +205,7 @@ void LibraryInitializer::atfork_parent() {
 void LibraryInitializer::atfork_child() {
   using op::custom::CustomOperator;
   // Conservative thread management for multiprocess workers
-  this->cpu_worker_nthreads_ = this->mp_cv_num_threads_;
+  this->cpu_worker_nthreads_ = this->mp_worker_nthreads_;
 #if MXNET_USE_OPENCV && !__APPLE__
   cv::setNumThreads(mp_cv_num_threads_);
 #endif  // MXNET_USE_OPENCV
