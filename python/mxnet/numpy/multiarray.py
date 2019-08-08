@@ -128,7 +128,7 @@ class ndarray(NDArray):
             if key.step is not None and key.step != 1:
                 if key.step == 0:
                     raise ValueError("slice step cannot be zero")
-                return self.as_nd_ndarray()._get_nd_basic_indexing(key).as_np_ndarray()
+                return self.as_nd_ndarray().__getitem__(key).as_np_ndarray()
             elif key.start is not None or key.stop is not None:
                 return self._slice(key.start, key.stop)
             else:
@@ -157,7 +157,7 @@ class ndarray(NDArray):
             value = value.as_nd_ndarray()
         # TODO(junwu): Better handling of this situation
         if isinstance(key, tuple) and len(key) == 0:
-            self.as_nd_ndarray().__setitem__(slice(None), value)
+            self.as_nd_ndarray().__setitem__(key, value)
             return
 
         if isinstance(key, ndarray):
