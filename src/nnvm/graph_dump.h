@@ -24,8 +24,8 @@
  * \author Pedro Larroy
  */
 
-#ifndef NNVM_GRAPH_DUMP_H_
-#define NNVM_GRAPH_DUMP_H_
+#ifndef MXNET_NNVM_GRAPH_DUMP_H_
+#define MXNET_NNVM_GRAPH_DUMP_H_
 
 #include <vector>
 #include <string>
@@ -39,4 +39,4 @@ namespace nnvm {
 std::string GraphDump(const std::vector<NodeEntry>& graph);
 
 }  // end namespace nnvm
-#endif
+#endif  // MXNET_NNVM_GRAPH_DUMP_H _

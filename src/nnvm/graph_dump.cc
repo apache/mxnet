@@ -38,7 +38,7 @@ using namespace nnvm;
 namespace {
 
 class NodeNameDedup {
-public:
+ public:
   NodeNameDedup():
     count_()
   {}
@@ -55,7 +55,7 @@ public:
       return x;
     }
   }
-private:
+ private:
   std::unordered_map<string, size_t> count_;
 };
 
