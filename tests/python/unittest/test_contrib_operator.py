@@ -22,6 +22,7 @@ import mxnet as mx
 import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
+from common import with_seed
 from mxnet.test_utils import *
 from common import with_seed, assert_raises_cudnn_not_satisfied
 import unittest
@@ -444,6 +445,39 @@ def test_modulated_deformable_convolution():
                         else:
                             rtol, atol = 0.05, 1e-3
 
+@with_seed()
+def test_dynamic_reshape():
+    def dynamic_reshape_testcases(src_shape, dst_shape):
+        data = mx.sym.Variable('data')
+        shape = mx.sym.Variable('shape')
+        net = mx.sym.contrib.dynamic_reshape(data, shape)
+        js = net.tojson()
+        net = mx.sym.load_json(js)
+        dat_npy = np.random.rand(*src_shape)
+        grad_npy = np.random.rand(*dst_shape)
+        args = {
+            'data': mx.nd.array(dat_npy),
+            'shape': mx.nd.array(grad_npy)
+            }
+        args_grad = {
+            'data': mx.nd.empty(src_shape),
+            'shape': mx.nd.empty(dst_shape)
+        }
+        exe = net.bind(default_context(), args, args_grad)
+        exe.forward(is_train=True)
+        assert np.square(exe.outputs[0].asnumpy() - dat_npy.reshape(dst_shape)).mean() < 1E-7
+        exe.backward(out_grads=mx.nd.array(grad_npy))
+        assert np.square(exe.grad_dict['data'].asnumpy() - grad_npy.reshape(src_shape)).mean() < 1E-7
+
+    test_cases = [
+        [(2, 3, 5, 5), (2, 75)],
+        [(2, 3, 5, 5), (2, 3, 25)],
+        [(64,), (16, 4)],
+        [(64, 1, 2, 3), (16, 4, 1, 2, 3)],
+        [(2, 4, 5, 3),  (30, 2, 2, 1)]]
+
+    for test_case in test_cases:
+        dynamic_reshape_testcases(*test_case)
 
 if __name__ == '__main__':
     import nose
