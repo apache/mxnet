@@ -2909,6 +2909,18 @@ MXNET_DLL int MXEnginePushSync(EngineSyncFunc sync_func, void* func_param,
                                EngineVarHandle mutable_vars_handle, int num_mutable_vars,
                                EngineFnPropertyHandle prop_handle DEFAULT(NULL),
                                int priority DEFAULT(0), const char* opr_name DEFAULT(NULL));
+/*!
+ * \brief Create an NDArray from source sharing the same data chunk.
+ * \param src source NDArray
+ * \param out new NDArray sharing the same data chunck with src
+ */
+MXNET_DLL int MXShallowCopyNDArray(NDArrayHandle src, NDArrayHandle* out);
+/*!
+ * \brief Create an Symbol from source sharing the same graph structure.
+ * \param src source Symbol
+ * \param out new Symbol sharing the same graph structure with src
+ */
+MXNET_DLL int MXShallowCopySymbol(SymbolHandle src, SymbolHandle * out);
 
 /*!
   * \brief Push an asynchronous operation to the engine.
@@ -2928,12 +2940,12 @@ MXNET_DLL int MXEnginePushSync(EngineSyncFunc sync_func, void* func_param,
   * \param wait Whether this is a WaitForVar operation.
   */
 MXNET_DLL int MXEnginePushAsyncND(EngineAsyncFunc async_func, void* func_param,
-                                EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
-                                NDArrayHandle const_nds_handle, int num_const_nds,
-                                NDArrayHandle mutable_nds_handle, int num_mutable_nds,
-                                EngineFnPropertyHandle prop_handle DEFAULT(NULL),
-                                int priority DEFAULT(0), const char* opr_name DEFAULT(NULL),
-                                bool wait DEFAULT(false));
+                                  EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
+                                  NDArrayHandle* const_nds_handle, int num_const_nds,
+                                  NDArrayHandle* mutable_nds_handle, int num_mutable_nds,
+                                  EngineFnPropertyHandle prop_handle DEFAULT(NULL),
+                                  int priority DEFAULT(0), const char* opr_name DEFAULT(NULL),
+                                  bool wait DEFAULT(false));
 
 /*!
   * \brief Push a synchronous operation to the engine.
@@ -2951,11 +2963,11 @@ MXNET_DLL int MXEnginePushAsyncND(EngineAsyncFunc async_func, void* func_param,
   * \param opr_name The operation name.
   */
 MXNET_DLL int MXEnginePushSyncND(EngineSyncFunc sync_func, void* func_param,
-                               EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
-                               NDArrayHandle const_nds_handle, int num_const_nds,
-                               NDArrayHandle mutable_nds_handle, int num_mutable_nds,
-                               EngineFnPropertyHandle prop_handle DEFAULT(NULL),
-                               int priority DEFAULT(0), const char* opr_name DEFAULT(NULL));
+                                 EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
+                                 NDArrayHandle* const_nds_handle, int num_const_nds,
+                                 NDArrayHandle* mutable_nds_handle, int num_mutable_nds,
+                                 EngineFnPropertyHandle prop_handle DEFAULT(NULL),
+                                 int priority DEFAULT(0), const char* opr_name DEFAULT(NULL));
 
 #ifdef __cplusplus
 }
