@@ -696,7 +696,10 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
 
       // checking upper and lower bounds for end
       if (e < 0 && param_end[i].has_value()) {
-        e += len;
+        if (!(s < 0 && e == -1)) {
+          // Keep end=-1 as one-beyond-limits index for negative stride
+          e += len;
+        }
         CHECK_GE(e, 0) << "slicing with end[" << i << "]=" << e - len
                        << " exceeds limit of input dimension[" << i << "]=" << len;
       }
@@ -725,11 +728,11 @@ inline void SetSliceOpOutputDimSize(const index_t i, const int b,
                                     mxnet::TShape* oshape) {
   if (e != b) {
     if (s > 0) {
-      CHECK_LT(b, e) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
+      CHECK_LT(b, e) << "slicing with begin[" << i << "]=" << b << ", end[" << i << "]="
                      << e << ", and step[" << i << "]=" << s << " is invalid";
       (*oshape)[i] = (e - b - 1) / s + 1;
     } else {
-      CHECK_LT(e, b) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
+      CHECK_LT(e, b) << "slicing with begin[" << i << "]=" << b << ", end[" << i << "]="
                      << e << ", and step[" << i << "]=" << s << " is invalid";
       (*oshape)[i] = (b - e - 1) / (-s) + 1;
     }

@@ -4679,13 +4679,14 @@ def test_tile():
 
     def test_empty_tensor():
         shape = (2, 3, 0, 4)
-        a = np.array([], dtype=np.int32).reshape(shape)
-        b = mx.nd.array(a, ctx=default_context(), dtype=a.dtype)
-        reps = (2, 4, 6)
+        with mx.np_shape():
+            a = np.array([], dtype=np.int32).reshape(shape)
+            b = mx.nd.array(a, ctx=default_context(), dtype=a.dtype)
 
-        a_tiled = np.tile(a, reps)
-        b_tiled = mx.nd.tile(b, reps).asnumpy()
-        assert same(a_tiled, b_tiled)
+            reps = (2, 4, 6)
+            a_tiled = np.tile(a, reps)
+            b_tiled = mx.nd.tile(b, reps).asnumpy()
+            assert same(a_tiled, b_tiled)
 
     def test_empty_reps():
         a = np.array([[2, 3, 4], [5, 6, 7]], dtype=np.int32)
@@ -4775,13 +4776,15 @@ def test_one_hot():
 
     def test_empty_indices():
         shape = (2, 0, 9, 3)
-        indices = np.array([]).reshape(shape)
-        depth = 10
-        mx_one_hot_array = mx.nd.one_hot(
-            mx.nd.array(indices, ctx=default_context(), dtype=np.int32),
-            depth=depth, dtype=np.int32).asnumpy()
-        expected_array = np.array([], dtype=np.int32).reshape(shape + (depth, ))
-        assert same(expected_array, mx_one_hot_array)
+        with mx.np_shape():
+            indices = np.array([]).reshape(shape)
+            depth = 10
+            mx_one_hot_array = mx.nd.one_hot(
+                mx.nd.array(indices, ctx=default_context(), dtype=np.int32),
+                depth=depth, dtype=np.int32
+            ).asnumpy()
+            expected_array = np.array([], dtype=np.int32).reshape(shape + (depth,))
+            assert same(expected_array, mx_one_hot_array)
 
     def test_zero_depth():
         shape = (2, 4, 9, 3)
@@ -8608,7 +8611,7 @@ def test_index_array():
 
     @mx.use_np_shape
     def test_index_array_default_zero_dim():
-        data  = mx.symbol.Variable("data")
+        data = mx.symbol.Variable("data")
         index_array = mx.sym.contrib.index_array(data)
 
         input_array = np.ones(())
