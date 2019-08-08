@@ -90,8 +90,7 @@ LibraryInitializer::LibraryInitializer()
   : original_pid_(common::current_process_id()),
     mp_worker_nthreads_(dmlc::GetEnv("MXNET_MP_WORKER_NTHREADS", 1)),
     cpu_worker_nthreads_(dmlc::GetEnv("MXNET_CPU_WORKER_NTHREADS", 1)),
-    mp_cv_num_threads_(dmlc::GetEnv("MXNET_MP_OPENCV_NUM_THREADS", 0))
-{
+    mp_cv_num_threads_(dmlc::GetEnv("MXNET_MP_OPENCV_NUM_THREADS", 0)) {
   dmlc::InitLogging("mxnet");
   engine::OpenMP::Get();   // force OpenMP initialization
   install_signal_handlers();
@@ -146,7 +145,7 @@ void* LibraryInitializer::lib_load(const char* path) {
  */
 void LibraryInitializer::lib_close(void* handle) {
   std::string libpath;
-  for (const auto& l: loaded_libs) {
+  for (const auto& l : loaded_libs) {
     if (l.second == handle) {
       libpath = l.first;
       break;
@@ -234,7 +233,7 @@ void LibraryInitializer::install_signal_handlers() {
 }
 
 void LibraryInitializer::close_open_libs() {
-  for (const auto& l: loaded_libs) {
+  for (const auto& l : loaded_libs) {
     lib_close(l.second);
   }
 }
