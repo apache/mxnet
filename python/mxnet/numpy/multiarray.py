@@ -1677,7 +1677,7 @@ def array(object, dtype=None, ctx=None):
     ret = empty(object.shape, dtype=dtype, ctx=ctx)
     if len(object.shape) == 0:
         ret[()] = object
-    else:
+    elif object.size != 0:
         ret[:] = object
     return ret
 

@@ -915,7 +915,7 @@ fixed-size items.
         if any(
             b >= e and s > 0 or b <= e and s < 0 for b, e, s in zip(begin, end, step)
         ):
-            return array([], self.dtype, self.context)
+            return array([], ctx=self.context, dtype=self.dtype)
         # pylint: enable=bad-continuation
 
         if self._basic_indexing_slice_is_contiguous(slc_key, self.shape):
