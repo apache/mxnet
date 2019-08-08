@@ -1483,6 +1483,117 @@ build_jekyll_docs() {
 }
 
 
+create_repo() {
+   repo_folder=$1
+   mxnet_url=$2
+   git clone $mxnet_url $repo_folder --recursive
+   echo "Adding MXNet upstream repo..."
+   cd $repo_folder
+   git remote add upstream https://github.com/apache/incubator-mxnet
+   cd ..
+}
+
+
+refresh_branches() {
+   repo_folder=$1
+   cd $repo_folder
+   git fetch
+   git fetch upstream
+   cd ..
+}
+
+checkout() {
+   repo_folder=$1
+   cd $repo_folder
+   # Overriding configs later will cause a conflict here, so stashing...
+   git stash
+   # Fails to checkout if not available locally, so try upstream
+   git checkout "$repo_folder" || git branch $repo_folder "upstream/$repo_folder" && git checkout "$repo_folder" || exit 1
+   if [ $tag == 'master' ]; then
+      git pull
+      # master gets warnings as errors for Sphinx builds
+      OPTS="-W"
+      else
+      OPTS=
+   fi
+   git submodule update --init --recursive
+   cd ..
+}
+
+
+build_version_doc() {
+
+   # $1 is the list of branch or tag to build
+   if [ -z "$1" ]
+     then
+        $branch='master'
+     else
+       $branch=$1
+       echo "Using this branch: $branch"
+   fi
+   # $2 is the GitHub project URL or fork
+   if [ -z "$2" ]
+     then
+       echo "Using the main project URL."
+       mxnet_url="https://github.com/apache/incubator-mxnet.git"
+       mxnet_folder="apache-mxnet"
+     else
+       mxnet_url=$2
+       fork=${mxnet_url##"https://github.com/"}
+       fork_user=${fork%%"/incubator-mxnet.git"}
+       mxnet_folder=$fork_user"-mxnet"
+       echo "Building with a user supplied fork: $mxnet_url"
+   fi
+
+   if [ ! -d "$mxnet_folder" ]; then
+     mkdir $mxnet_folder
+   fi
+
+   if [ ! -d "$built" ]; then
+     mkdir $built
+     mkdir "$built/versions"
+     else
+       if [ ! -d "$built/versions" ]; then
+         mkdir "$built/versions"
+       fi
+   fi
+
+   cd "$mxnet_folder"
+
+   # Branch will get its own subfolder
+   if [ ! -d "$branch" ]; then
+   create_repo "$branch" "$mxnet_url"
+   fi
+
+   refresh_branches $branch
+
+   checkout $branch
+
+   # Bring over the current configurations, so we can anticipate results.
+   # cp ../../mxdoc.py $tag/docs/
+   # cp ../../settings.ini $tag/docs/
+   cp ../../conf.py $branch/docs/
+   cp ../../Doxyfile $branch/docs/
+   cp -a ../../_static $branch/docs/
+
+   echo "Building $branch..."
+   cd $branch/docs
+   # OPTS is set in the checkout function
+   # BUILD_VER might still be used by some testing jobs
+   make html EVAL=0 USE_OPENMP=1 BUILD_VER=$branch SPHINXOPTS=$OPTS || exit 1
+   cd ../../../
+   # Use the branch name for the folder name
+   file_loc="$built/versions/$branch}"
+   if [ -d "$file_loc" ] ; then
+     rm -rf "$file_loc"
+   fi
+   mkdir "$file_loc"
+   echo "Storing artifacts for $branch in $file_loc folder..."
+   cp -a "$mxnet_folder/$branch/docs/_build/html/." "$file_loc"
+
+}
+
+
 build_python_docs() {
    set -ex
    pushd .

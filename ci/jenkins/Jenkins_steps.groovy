@@ -1414,7 +1414,9 @@ def docs_python() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             //utils.unpack_and_init('cpu', mx_lib, false)
-            utils.docker_run('ubuntu_cpu_python', 'build_python_docs ${params.branch}', false)
+            //utils.docker_run('ubuntu_cpu_python', 'build_python_docs', false)
+            // docker_run util could be updated to let runtime_functions take parameters
+            sh "ci/build.py -p ubuntu_cpu_python --docker-registry ${env.DOCKER_CACHE_REGISTRY} --docker-build-retries 3 /work/runtime_functions.sh build_version_docs ${params.branch} ${params.mxnet_url}"
             archiveArtifacts 'docs/_build/python-artifacts.tgz'
           }
         }
