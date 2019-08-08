@@ -184,6 +184,24 @@ fixed-size items.
     # See C++ side of definition(kTVMNDArrayTypeCode) at include/mxmet/tensor_blob.h
     _tvm_tcode = 19
     # pylint: disable= no-member, undefined-variable
+
+    def as_np_ndarray(self):
+        """Convert mxnet.ndarray.NDArray to mxnet.numpy.ndarray."""
+        storage_type = self.stype
+        if storage_type != 'default':
+            raise ValueError('cannot convert ndarray of stype {} to numpy ndarray'
+                             .format(str(type(storage_type))))
+        from ..numpy import ndarray
+        hdl = NDArrayHandle()
+        check_call(_LIB.MXShallowCopyNDArray(self.handle, ctypes.byref(hdl)))
+        return ndarray(handle=hdl, writable=self.writable)
+
+    def as_nd_ndarray(self):
+        """A convenience function for creating a classic ndarray from the current
+        ndarray with zero copy. For this class, it just returns itself since it is
+        already a classic ndarray."""
+        return self
+
     @property
     def _tvm_handle(self):
         return self.handle.value
@@ -204,6 +222,10 @@ fixed-size items.
         check_call(_LIB.MXNDArrayGetSharedMemHandle(
             self.handle, ctypes.byref(shared_pid), ctypes.byref(shared_id)))
         return shared_pid.value, shared_id.value, self.shape, self.dtype
+
+    def __abs__(self):
+        """x.__abs__() <=> abs(x) <=> x.abs() <=> mx.nd.abs(x, y)"""
+        return self.abs()
 
     def __add__(self, other):
         """x.__add__(y) <=> x+y <=> mx.nd.add(x, y) """
@@ -908,7 +930,7 @@ fixed-size items.
 
         check_call(_LIB.MXNDArraySlice(
             self.handle, mx_uint(start), mx_uint(stop), ctypes.byref(handle)))
-        return NDArray(handle=handle, writable=self.writable)
+        return self.__class__(handle=handle, writable=self.writable)
 
     def _at(self, idx):
         """Returns a view of the array sliced at `idx` in the first dim.
@@ -942,7 +964,7 @@ fixed-size items.
                                  % (idx-length, length))
         check_call(_LIB.MXNDArrayAt(
             self.handle, mx_uint(idx), ctypes.byref(handle)))
-        return NDArray(handle=handle, writable=self.writable)
+        return self.__class__(handle=handle, writable=self.writable)
 
     def reshape(self, *shape, **kwargs):
         """Returns a **view** of this array with a new shape without altering any data.
@@ -1065,7 +1087,7 @@ fixed-size items.
                                            c_array(ctypes.c_int64, shape),
                                            reverse,
                                            ctypes.byref(handle)))
-        return NDArray(handle=handle, writable=self.writable)
+        return self.__class__(handle=handle, writable=self.writable)
 
     def reshape_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape_like`.
@@ -1259,13 +1281,38 @@ fixed-size items.
         """
         return op.sign(self, *args, **kwargs)
 
-    def flatten(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`flatten`.
+    def flatten(self, inplace=False):
+        """Flatten this array without altering any data.
 
-        The arguments are the same as for :py:func:`flatten`, with
-        this array as data.
+        Parameters
+        ----------
+        inplace : bool, default False
+            If True, this method returns a **view** of this array
+            that shares data with this array. Otherwise, a copy is returned.
+
+        Returns
+        -------
+        NDArray
+            An array with flattened shape `(d1, d2*...*dk)` that shares data with
+            this array with shape `(d1, d2, ..., dk)`.
+
+        Examples
+        --------
+        >>> x = mx.nd.arange(30).reshape(5,2,3)
+        >>> y = x.flatten(inplace=True)
+        >>> z = x.flatten()
+        >>> y.shape
+        (5, 6)
+        >>> y[0].asnumpy()
+        array([0., 1., 2., 3., 4., 5.], dtype=float32)
+        >>> y[:] = -1
+        >>> x[0].asnumpy()
+        array([[-1., -1., -1.],
+               [-1., -1., -1.]], dtype=float32)
+        >>> z[0].asnumpy()
+        array([0., 1., 2., 3., 4., 5.], dtype=float32)
         """
-        return op.flatten(self, *args, **kwargs)
+        return op.flatten(self) if not inplace else self.reshape((0, -1))
 
     def shape_array(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`shape_array`.
@@ -1283,13 +1330,52 @@ fixed-size items.
         """
         return op.size_array(self, *args, **kwargs)
 
-    def expand_dims(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`expand_dims`.
+    def expand_dims(self, axis, inplace=False):
+        """Adds an additional dimension to the current array without altering any data.
 
-        The arguments are the same as for :py:func:`expand_dims`, with
-        this array as data.
+        Parameters
+        ----------
+        axis : int
+            Position where new axis is to be inserted.
+            Suppose that the input NDArray's dimension is ndim,
+            the range of the inserted axis is [-ndim, ndim].
+        inplace : bool, default False
+            If True, this method returns a **view** of this array
+            that shares data with this array. Otherwise, a copy is returned.
+
+        Returns
+        -------
+        NDArray
+            An array with expanded shape `(d1, d2, ..., 1, di, ..., dk)`
+            that shares data with this array with shape `(d1, d2, ..., dk)`,
+            given input axis `i`.
+
+        Examples
+        --------
+        >>> x = mx.nd.arange(6).reshape(2,3)
+        >>> y = x.expand_dims(1, inplace=True)
+        >>> z = x.expand_dims(1)
+        >>> y.shape
+        (2, 1, 3)
+        >>> y[0].asnumpy()
+        array([[0., 1., 2.]], dtype=float32)
+        >>> y[:] = -1
+        >>> x.asnumpy()
+        array([[-1., -1., -1.],
+               [-1., -1., -1.]], dtype=float32)
+        >>> z[0].asnumpy()
+        array([[0., 1., 2.]], dtype=float32)
         """
-        return op.expand_dims(self, *args, **kwargs)
+        if not inplace:
+            return op.expand_dims(self, axis=axis)
+        else:
+            new_shape = list(self.shape)
+            assert -len(new_shape)-1 <= axis <= len(new_shape), \
+                    "axis {} is out of range for {}d array".format(axis, len(new_shape))
+            if axis < 0:
+                axis += len(new_shape) + 1
+            new_shape.insert(axis, 1)
+            return self.reshape(new_shape)
 
     def tile(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`tile`.
@@ -1699,13 +1785,45 @@ fixed-size items.
         """
         return op.softmin(self, *args, **kwargs)
 
-    def squeeze(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`squeeze`.
+    def squeeze(self, axis=None, inplace=False):
+        """Remove dimensions with size 1 from this array without altering any data.
 
-        The arguments are the same as for :py:func:`squeeze`, with
-        this array as data.
+        Parameters
+        ----------
+        axis : int, tuple of int, or None
+            Selects a subset of the single-dimensional entries in the shape.
+            If an axis is selected with shape entry greater than one, an error is raised.
+        inplace : bool, default False
+            If True, this method returns a **view** of this array
+            that shares data with this array. Otherwise, a copy is returned.
         """
-        return op.squeeze(self, *args, **kwargs)
+        if not inplace:
+            return op.squeeze(self, axis=axis)
+        else:
+            new_shape = list(self.shape)
+            axes = axis # rename variable for readability
+            if isinstance(axes, int):
+                axes = [axes]
+            if axes:
+                assert len(axes) == len(set(axes)), \
+                    "axis {} contains duplicate which is not allowed.".format(axes)
+                resolved_axes = [i if i >= 0 else i+len(self.shape) for i in axes]
+                for arg_axis, actual_axis in zip(axes, resolved_axes):
+                    assert -len(new_shape) <= arg_axis < len(new_shape), \
+                        "axis {} is out of range for {}d array".format(arg_axis, len(new_shape))
+                    axis_size = new_shape[actual_axis]
+                    assert axis_size == 1, \
+                        "Squeeze target axis {} must be size 1, got {}.".format(arg_axis, axis_size)
+                for i in sorted(resolved_axes, reverse=True):
+                    del new_shape[i]
+            else:
+                for i in reversed(range(len(new_shape))):
+                    if new_shape[i] == 1:
+                        del new_shape[i]
+            if not new_shape:
+                new_shape.append(1)
+
+            return self.reshape(new_shape)
 
     # pylint: disable= undefined-variable
     def broadcast_to(self, shape):
@@ -2147,6 +2265,8 @@ fixed-size items.
         """Attach a gradient buffer to this NDArray, so that `backward`
         can compute gradient with respect to it.
 
+        The gradient is initialized to zeros.
+
         Parameters
         ----------
         grad_req : {'write', 'add', 'null'}
@@ -2388,7 +2508,7 @@ def _get_broadcast_shape(shape1, shape2):
     for a, b in zip(shape1[::-1], shape2[::-1]):
         if a != 1 and b != 1 and a != b:
             raise ValueError('shape1=%s is not broadcastable to shape2=%s' % (shape1, shape2))
-        shape[i] = max(a, b)
+        shape[i] = b if a == 1 else a
         i -= 1
     return tuple(shape)
 

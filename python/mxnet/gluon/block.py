@@ -26,7 +26,6 @@ import warnings
 import re
 from collections import OrderedDict
 
-
 from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer
 from ..symbol import Symbol
@@ -34,6 +33,10 @@ from ..ndarray import NDArray
 from .. import name as _name
 from .parameter import Parameter, ParameterDict, DeferredInitializationError
 from .utils import _indent, _brief_print_list, HookHandle
+from .utils import _check_same_symbol_type, _check_all_np_ndarrays
+from .. import numpy_extension as _mx_npx
+from .. import numpy as _mx_np
+from .. util import is_np_array, np_shape, np_array
 
 
 class _BlockScope(object):
@@ -332,7 +335,8 @@ class Block(object):
         """
         params = self._collect_params_with_prefix()
         arg_dict = {key : val._reduce() for key, val in params.items()}
-        ndarray.save(filename, arg_dict)
+        save_fn = _mx_npx.save if is_np_array() else ndarray.save
+        save_fn(filename, arg_dict)
 
     def save_params(self, filename):
         """[Deprecated] Please use save_parameters. Note that if you want load
@@ -381,7 +385,28 @@ class Block(object):
         `Saving and Loading Gluon Models \
         <https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html>`_
         """
-        loaded = ndarray.load(filename)
+        if is_np_array():
+            # failure may happen when loading parameters saved as NDArrays within
+            # NumPy semantics. Check the failure type and recover from it if it happens.
+            try:
+                loaded = _mx_npx.load(filename)
+            except MXNetError as e:
+                err_msg = str(e)
+                if 'is_np_shape' in err_msg:
+                    # Loading failure due to parameters saved without numpy semantics.
+                    # Temporarily disable numpy semantics and load parameters. After it's
+                    # done, resume the numpy semantics. This is fine because the cases
+                    # numpy ndarray covers is a superset of the legacy ndarray's.
+                    with np_array(False):
+                        with np_shape(False):
+                            loaded_nds = ndarray.load(filename)
+                    assert isinstance(loaded_nds, dict),\
+                        'expecting a dict type, got {}'.format(str(type(loaded_nds)))
+                    loaded = {k: loaded_nds[k].as_np_ndarray() for k in loaded_nds}
+                else:
+                    raise ValueError(err_msg)
+        else:
+            loaded = ndarray.load(filename)
         params = self._collect_params_with_prefix()
         if not loaded and not params:
             return
@@ -549,7 +574,8 @@ class Block(object):
 
         for hook in self._forward_hooks.values():
             hook(self, args, out)
-
+        if _mx_npx.is_np_array():
+            _check_all_np_ndarrays(out)
         return out
 
     def forward(self, *args):
@@ -739,9 +765,13 @@ class HybridBlock(Block):
         if not self._cached_graph:
             args, self._in_format = _flatten(args, "input")
             if len(args) > 1:
-                inputs = [symbol.var('data%d'%i) for i in range(len(args))]
+                inputs = [symbol.var('data%d' % i).as_np_ndarray()
+                          if isinstance(args[i], _mx_np.ndarray)
+                          else symbol.var('data%d' % i) for i in range(len(args))]
             else:
-                inputs = [symbol.var('data')]
+                inputs = [symbol.var('data').as_np_ndarray()
+                          if isinstance(args[0], _mx_np.ndarray)
+                          else symbol.var('data')]
             grouped_inputs = _regroup(inputs, self._in_format)[0]
 
             params = {i: j.var() for i, j in self._reg_params.items()}
@@ -749,7 +779,7 @@ class HybridBlock(Block):
                 out = self.hybrid_forward(symbol, *grouped_inputs, **params)  # pylint: disable=no-value-for-parameter
             out, self._out_format = _flatten(out, "output")
 
-            self._cached_graph = inputs, symbol.Group(out)
+            self._cached_graph = inputs, symbol.Group(out, _check_same_symbol_type(out))
 
         return self._cached_graph
 
@@ -842,8 +872,9 @@ class HybridBlock(Block):
         self._flags = list(kwargs.items())
         self._clear_cached_op()
         if active and self._forward_hooks or self._forward_pre_hooks:
-            warnings.warn('"{}" is being hybridized while still having forward hook/pre-hook. '
-                          'If "{}" is a child of HybridBlock, the hooks will not take effect.')
+            warnings.warn('"{block}" is being hybridized while still having forward hook/pre-hook. '
+                          'If "{block}" is a child of HybridBlock, the hooks will not take effect.'
+                          .format(block=self))
         super(HybridBlock, self).hybridize(active, **kwargs)
 
     def cast(self, dtype):
@@ -904,7 +935,8 @@ class HybridBlock(Block):
             else:
                 assert name in aux_names
                 arg_dict['aux:%s'%name] = param._reduce()
-        ndarray.save('%s-%04d.params'%(path, epoch), arg_dict)
+        save_fn = _mx_npx.save if is_np_array() else ndarray.save
+        save_fn('%s-%04d.params'%(path, epoch), arg_dict)
 
     def forward(self, x, *args):
         """Defines the forward computation. Arguments can be either
@@ -1057,7 +1089,7 @@ class SymbolBlock(HybridBlock):
 
         syms, self._in_format = _flatten(inputs, "input")
         out, self._out_format = _flatten(outputs, "output")
-        out = symbol.Group(out)
+        out = symbol.Group(out, _check_same_symbol_type(out))
 
         input_names = set()
         for i in syms:

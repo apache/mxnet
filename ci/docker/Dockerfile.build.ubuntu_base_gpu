@@ -19,7 +19,7 @@
 # Dockerfile to run the MXNet Installation Tests on Ubuntu 16.04
 # This should run in an empty docker with ubuntu and cuda.
 
-FROM nvidia/cuda:10.0-devel-ubuntu16.04
+FROM nvidia/cuda:10.1-devel-ubuntu16.04
 
 WORKDIR /work/deps
 

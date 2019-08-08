@@ -18,24 +18,24 @@
 MXNet Package for Scala/Java
 =====
 
-The MXNet Scala/Java Package brings flexible and efficient GPU/CPU computing and state-of-art deep learning to JVM.
+The MXNet Scala/Java Package brings flexible and efficient GPU/CPU computing and state-of-art deep learning to the JVM.
 
 - It enables you to write seamless tensor/matrix computation with multiple GPUs
-  in Scala, Java and other languages built on JVM.
+  in Scala, Java and other JVM languages.
 - It also enables you to construct and customize the state-of-art deep learning models in JVM languages,
   and apply them to tasks such as image classification and data science challenges.
-- The Scala/Java Inferece APIs provides an easy out of the box solution for loading pre-trained MXNet models and running inference on them.
-  
+- The Scala/Java _Inference API_ provides an easy out of the box solution for performing inference tasks using pre-trained MXNet models.
+
 Pre-Built Maven Packages
 ------------------------
 
 ### Stable ###
 
 The MXNet Scala/Java packages can be easily included in your Maven managed project.
-The stable jar files for the packages are available on the [MXNet Maven Package Repository](https://search.maven.org/search?q=g:org.apache.mxnet)
+The stable jar files for the packages are available on the [MXNet Maven Package Repository](https://search.maven.org/search?q=g:org.apache.mxnet).
 Currently we provide packages for Linux (Ubuntu 16.04) (CPU and GPU) and macOS (CPU only). Stable packages for Windows and CentOS will come soon. For now, if you have a CentOS machine, follow the ```Build From Source``` section below. 
 
-To add MXNet Scala/Java package to your project, add the dependency as shown below corresponding to your platform, under the ```dependencies``` tag in your project's ```pom.xml``` :
+To add the MXNet Scala/Java packages to your project, add the dependency as shown below corresponding to your platform, under the ```dependencies``` tag in your project's ```pom.xml``` :
 
 **Linux GPU**
 
@@ -45,7 +45,7 @@ To add MXNet Scala/Java package to your project, add the dependency as shown bel
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
-  <version>[1.3.1,)</version>
+  <version>[1.4.0,)</version>
 </dependency>
 ```
 
@@ -57,7 +57,7 @@ To add MXNet Scala/Java package to your project, add the dependency as shown bel
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
-  <version>[1.3.1,)</version>
+  <version>[1.4.0,)</version>
 </dependency>
 ```
 
@@ -69,15 +69,15 @@ To add MXNet Scala/Java package to your project, add the dependency as shown bel
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
-  <version>[1.3.1,)</version>
+  <version>[1.4.0,)</version>
 </dependency>
 ```
 
-**Note:** ```<version>[1.3.1,)<\version>``` indicates that we will fetch packages with version 1.3.1 or higher. This will always ensure that the pom.xml is able to fetch the latest and greatest jar files from Maven.  
+**Note:** ```<version>[1.4.0,)<\version>``` indicates that we will fetch packages with version 1.4.0 or higher. This will always ensure that the pom.xml is able to fetch the latest and greatest jar files from Maven.  
 
 ### Nightly ###
 
-Apart from these, the nightly builds representing the bleeding edge development  on Scala/Java packages are also available on the [MXNet Maven Nexus Package Repository](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~~~). 
+Apart from these, the nightly builds representing the bleeding edge development on Scala/Java packages are also available on the [MXNet Maven Nexus Package Repository](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~~~). 
 Currently we provide nightly packages for Linux (CPU and GPU) and MacOS (CPU only). The Linux nightly jar files also work on CentOS. Nightly packages for Windows will come soon.
 
 Add the following ```repository``` to your project's ```pom.xml``` file : 
@@ -101,7 +101,7 @@ Also, add the dependency which corresponds to your platform to the ```dependenci
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
-  <version>[1.5.0-SNAPSHOT,)</version>
+  <version>[1.6.0-SNAPSHOT,)</version>
 </dependency>
 ```
 
@@ -113,7 +113,7 @@ Also, add the dependency which corresponds to your platform to the ```dependenci
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
-  <version>[1.5.0-SNAPSHOT,)</version>
+  <version>[1.6.0-SNAPSHOT,)</version>
 </dependency>
 ```
 
@@ -124,17 +124,17 @@ Also, add the dependency which corresponds to your platform to the ```dependenci
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
-  <version>[1.5.0-SNAPSHOT,)</version>
+  <version>[1.6.0-SNAPSHOT,)</version>
 </dependency>
 ```
 
-**Note:** ```<version>[1.5.0-SNAPSHOT,)</version>``` indicates that we will fetch packages with version 1.5.0 or higher. This will always ensure that the pom.xml is able to fetch the latest and greatest jar files from Maven Snapshot repository.
+**Note:** ```<version>[1.6.0-SNAPSHOT,)</version>``` indicates that we will fetch packages with version 1.6.0 or higher. This will always ensure that the pom.xml is able to fetch the latest and greatest jar files from Maven Snapshot repository.
 
 Build From Source
 -----------------
 
-Checkout the [Installation Guide](http://mxnet.incubator.apache.org/install/index.html) contains instructions to install mxnet package and build it from source. Scala maven build assume you already have a ``lib/libmxnet.so`` file.
-If you have built MXNet from source and are looking to setup Scala from that point, you may simply run the following from the MXNet source root, Scala build will detect your platform (OSX/Linux) and libmxnet.so flavor (CPU/GPU):
+The [Installation Guide](http://mxnet.incubator.apache.org/install/index.html) contains instructions to install mxnet or build it from source. The Scala/Java package is built from source using Maven. The maven build assumes you already have a ``lib/libmxnet.so`` file.
+If you have built MXNet from source and are looking to set up Scala\Java from that point, you may simply run the following from the MXNet source root, the build will detect your platform (OSX/Linux) and libmxnet.so flavor (CPU/GPU):
 
 ```bash
 cd scala-package
@@ -156,21 +156,21 @@ mvn -Dsuites=org.apache.mxnet.NDArraySuite integration-test
 ```
 
 If everything goes well, you will find jars for `assembly`, `core` and `example` modules.
-Also it produces the native library in `native/target`, which you can use to cooperate with the `core` module.
+Also it produces the native library in `native/target`, which you can use in conjunction with the `core` module.
 
 Deploy to repository
 --------------------
 
-By default, `maven deploy` will deploy artifacts to local file system, you can file then in: ``scala-package/deploy/target/repo`` folder.
+By default, `maven deploy` will deploy artifacts to local file system, you can find them in the ``scala-package/deploy/target/repo`` folder.
 
-For nightly build in CI, a snapshot build will be uploaded to apache repository with follow command:
+For nightly builds (typically done by CI), a snapshot build will be uploaded to an apache snapshot repository with the following command:
 
 ```bash
 cd scala-package
 mvn deploy -Pnightly
 ```
 
-Use following command to deploy release build (push artifacts to apache staging repository):
+Use the following command when performing a release (pushes artifacts to an apache staging repository):
 
 ```bash
 cd scala-package
@@ -186,7 +186,7 @@ Adding the following configuration in `pom.xml`
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-INTERNAL</artifactId>
-  <version>1.5.0</version>
+  <version>1.6.0</version>
   <scope>system</scope>
   <systemPath>path_to_jar/mxnet-full_2.11-INTERNAL.jar</systemPath>
 </dependency>
@@ -208,7 +208,7 @@ Caused by: java.lang.ClassNotFoundException: org.apache.mxnet.NDArray
         at sun.misc.Launcher$AppClassLoader.loadClass(Launcher.java:331)
         at java.lang.ClassLoader.loadClass(ClassLoader.java:357)
 ```
-Please make sure your $CLASSPATH is able to find `mxnet-full_scala_version-INTERNAL.jar`.
+Please make sure your $CLASSPATH contains `mxnet-full_scala_version-INTERNAL.jar`.
 
 - To set up the Scala Project using IntelliJ IDE on macOS follow the instructions [here](https://mxnet.incubator.apache.org/tutorials/scala/mxnet_scala_on_intellij.html).
 - Several examples on using the Scala APIs are provided in the [Scala Examples Folder](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/)

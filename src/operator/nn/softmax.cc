@@ -59,15 +59,25 @@ inline static bool SoftmaxStorageType(const nnvm::NodeAttrs& attrs,
                                       DispatchMode* dispatch_mode,
                                       std::vector<int> *in_attrs,
                                       std::vector<int> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), (param.use_length.value()) ? 2U : 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  if (param.use_length.value()) {
+    auto& out_stype = out_attrs->at(0);
+    return storage_type_assign(&out_stype, kDefaultStorage,
+                               dispatch_mode, DispatchMode::kFCompute);
+  }
 
   return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs,
                            out_attrs);
 }
 #endif
 
+
+
 NNVM_REGISTER_OP(softmax)
+.add_alias("_npx_softmax")
 .describe(R"code(Applies the softmax function.
 
 The resulting array contains elements in the range (0,1) and the elements along the given axis sum up to 1.
@@ -92,6 +102,13 @@ Example::
 
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<SoftmaxParam>)
+.set_attr<nnvm::FListOutputNames>("FListInputNames",
+    [](const NodeAttrs& attrs){
+    const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
+    return (param.use_length.value()) ?
+           std::vector<std::string>{"data", "length"} :
+           std::vector<std::string>{"data"};
+})
 .set_attr<nnvm::FListOutputNames>("FListOutputNames",
     [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"output"};
@@ -103,20 +120,27 @@ Example::
 .set_attr<FInferStorageType>("FInferStorageType", SoftmaxStorageType)
 #endif
 .set_attr<nnvm::FGradient>("FGradient", SoftmaxFGradient{"_backward_softmax"})
+// .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<nnvm::FInferType>("FInferType", SoftmaxOpType)
-.set_num_inputs(1)
+.set_num_inputs([](const nnvm::NodeAttrs& attrs) {
+    const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
+    return (param.use_length.value()) ? 2 : 1;
+  })
 .set_num_outputs(1)
-.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", SoftmaxOpShape)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
 .add_argument("data", "NDArray-or-Symbol", "The input array.")
+.add_argument("length", "NDArray-or-Symbol", "The length array.")
 .add_arguments(SoftmaxParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_softmax)
 .set_num_inputs(SoftmaxGradOpNumInputs)
-.set_num_outputs(1)
+.set_num_outputs([](const nnvm::NodeAttrs& attrs) {
+    return (softmax_use_length(attrs) ? 2 : 1);
+  })
 .set_attr<nnvm::FListInputNames>("FListInputNames", SoftmaxGradOpInputNames)
 .set_attr<mxnet::FInferShape>("FInferShape", SoftmaxGradOpShape)
 .set_attr<nnvm::FInferType>("FInferType", SoftmaxGradOpType)
@@ -182,6 +206,7 @@ NNVM_REGISTER_OP(_backward_softmin)
                                                         mxnet_op::softmax_bwd, true>);
 
 NNVM_REGISTER_OP(log_softmax)
+.add_alias("_npx_log_softmax")
 .describe(R"code(Computes the log softmax of the input.
 This is equivalent to computing softmax followed by log.
 

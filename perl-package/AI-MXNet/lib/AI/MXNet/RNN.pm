@@ -18,6 +18,7 @@
 package AI::MXNet::RNN;
 use strict;
 use warnings;
+use AI::MXNet::NS;
 use AI::MXNet::Function::Parameters;
 use AI::MXNet::RNN::IO;
 use AI::MXNet::RNN::Cell;
