@@ -48,3 +48,63 @@ def vadd_gpu(dtype, ndim):
     s[C].bind(bx, tvm.thread_axis("blockIdx.x"))
     s[C].bind(tx, tvm.thread_axis("threadIdx.x"))
     return s, [A, B, C]
+
+def compute_fmax(dtype, ndim):
+    A = tvm.placeholder([tvm.var() for _ in range(ndim)], name='A', dtype=dtype)
+    B = tvm.placeholder([tvm.var() for _ in range(ndim)], name='B', dtype=dtype)
+    C = tvm.compute([tvm.var() for _ in range(ndim)],
+                    lambda *index: tvm.if_then_else(A[index] > B[index], A[index], B[index]), name='C')
+    s = tvm.create_schedule(C.op)
+    return s, A, B, C
+
+@defop(name="fmax", target="cpu", auto_broadcast=True,
+       dtype=AllTypes, ndim=list(range(1, 6)))
+def fmax(dtype, ndim):
+    s, A, B, C = compute_fmax(dtype, ndim)
+    axes = [axis for axis in C.op.axis]
+    fused = s[C].fuse(*axes)
+    s[C].parallel(fused)
+
+    return s, [A, B, C]
+
+@defop(name="cuda_fmax", target="cuda", auto_broadcast=True,
+       dtype=["float32", "float64"], ndim=list(range(1, 6)))
+def fmax_gpu(dtype, ndim):
+    s, A, B, C = compute_fmax(dtype, ndim)
+    s = tvm.create_schedule(C.op)
+    axes = [axis for axis in C.op.axis]
+    fused = s[C].fuse(*axes)
+    bx, tx = s[C].split(fused, factor=64)
+    s[C].bind(bx, tvm.thread_axis("blockIdx.x"))
+    s[C].bind(tx, tvm.thread_axis("threadIdx.x"))
+    return s, [A, B, C]
+
+def compute_fmin(dtype, ndim):
+    A = tvm.placeholder([tvm.var() for _ in range(ndim)], name='A', dtype=dtype)
+    B = tvm.placeholder([tvm.var() for _ in range(ndim)], name='B', dtype=dtype)
+    C = tvm.compute([tvm.var() for _ in range(ndim)],
+                    lambda *index: tvm.if_then_else(A[index] < B[index], A[index], B[index]), name='C')
+    s = tvm.create_schedule(C.op)
+    return s, A, B, C
+
+@defop(name="fmin", target="cpu", auto_broadcast=True,
+       dtype=AllTypes, ndim=list(range(1, 6)))
+def fmin(dtype, ndim):
+    s, A, B, C = compute_fmin(dtype, ndim)
+    axes = [axis for axis in C.op.axis]
+    fused = s[C].fuse(*axes)
+    s[C].parallel(fused)
+
+    return s, [A, B, C]
+
+@defop(name="cuda_fmin", target="cuda", auto_broadcast=True,
+       dtype=["float32", "float64"], ndim=list(range(1, 6)))
+def fmin_gpu(dtype, ndim):
+    s, A, B, C = compute_fmin(dtype, ndim)
+    s = tvm.create_schedule(C.op)
+    axes = [axis for axis in C.op.axis]
+    fused = s[C].fuse(*axes)
+    bx, tx = s[C].split(fused, factor=64)
+    s[C].bind(bx, tvm.thread_axis("blockIdx.x"))
+    s[C].bind(tx, tvm.thread_axis("threadIdx.x"))
+    return s, [A, B, C]

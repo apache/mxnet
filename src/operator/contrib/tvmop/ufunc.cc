@@ -38,6 +38,12 @@ namespace op {
 static constexpr char func_vadd_cpu[] = "vadd";
 static constexpr char func_vadd_gpu[] = "cuda_vadd";
 
+static constexpr char func_fmax_cpu[] = "fmax";
+static constexpr char func_fmax_gpu[] = "cuda_fmax";
+
+static constexpr char func_fmin_cpu[] = "fmin";
+static constexpr char func_fmin_gpu[] = "cuda_fmin";
+
 template<const char* func>
 void TVMBroadcastCompute(const nnvm::NodeAttrs& attrs,
                          const mxnet::OpContext& ctx,
@@ -60,6 +66,30 @@ NNVM_REGISTER_OP(_contrib_tvm_vadd)
     .set_attr<mxnet::FCompute>("FCompute<gpu>", mxnet::op::TVMBroadcastCompute<func_vadd_gpu>)
 #endif  // MXNET_USE_CUDA
     .set_attr<mxnet::FCompute>("FCompute<cpu>", mxnet::op::TVMBroadcastCompute<func_vadd_cpu>);
+
+NNVM_REGISTER_OP(_contrib_tvm_fmax)
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .add_argument("a", "NDArray-or-Symbol", "first input")
+    .add_argument("b", "NDArray-or-Symbol", "second input")
+    .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
+    .set_attr<nnvm::FInferType>("FInferType", mxnet::op::ElemwiseType<2, 1>)
+#if MXNET_USE_CUDA
+    .set_attr<mxnet::FCompute>("FCompute<gpu>", mxnet::op::TVMBroadcastCompute<func_fmax_gpu>)
+#endif  // MXNET_USE_CUDA
+    .set_attr<mxnet::FCompute>("FCompute<cpu>", mxnet::op::TVMBroadcastCompute<func_fmax_cpu>);
+
+NNVM_REGISTER_OP(_contrib_tvm_fmin)
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .add_argument("a", "NDArray-or-Symbol", "first input")
+    .add_argument("b", "NDArray-or-Symbol", "second input")
+    .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
+    .set_attr<nnvm::FInferType>("FInferType", mxnet::op::ElemwiseType<2, 1>)
+#if MXNET_USE_CUDA
+    .set_attr<mxnet::FCompute>("FCompute<gpu>", mxnet::op::TVMBroadcastCompute<func_fmin_gpu>)
+#endif  // MXNET_USE_CUDA
+    .set_attr<mxnet::FCompute>("FCompute<cpu>", mxnet::op::TVMBroadcastCompute<func_fmin_cpu>);
 
 }  // namespace op
 }  // namespace mxnet
