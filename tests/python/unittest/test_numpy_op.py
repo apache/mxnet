@@ -1568,15 +1568,15 @@ def test_np_trace():
 
 @with_seed()
 @use_np
-def test_np_hamming():
-    class TestHamming(HybridBlock):
+def test_np_blackman():
+    class TestBlackman(HybridBlock):
         def __init__(self, M, dtype):
-            super(TestHamming, self).__init__()
+            super(TestBlackman, self).__init__()
             self._M = M
             self._dtype = dtype
 
         def hybrid_forward(self, F, x, *args, **kwargs):
-            return x + F.np.hamming(M=self._M, dtype=self._dtype)
+            return x + F.np.blackman(M=self._M, dtype=self._dtype)
     configs = [-10, -3, -1, 0, 1, 6, 10, 20]
     dtypes = ['float32', 'float64']
 
@@ -1584,15 +1584,15 @@ def test_np_hamming():
         for dtype in dtypes:
             x = np.zeros(shape=(), dtype=dtype)
             for hybridize in [False, True]:
-                net = TestHamming(M=config, dtype=dtype)
-                np_out = _np.hamming(M=config)
+                net = TestBlackman(M=config, dtype=dtype)
+                np_out = _np.blackman(M=config)
                 if hybridize:
                     net.hybridize()
                 mx_out = net(x)
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
-                mx_out = np.hamming(M=config, dtype=dtype)
-                np_out = _np.hamming(M=config)
+                mx_out = np.blackman(M=config, dtype=dtype)
+                np_out = _np.blackman(M=config)
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 

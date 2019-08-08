@@ -33,7 +33,7 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arang
            'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
            'expand_dims', 'tile', 'linspace', 'eye', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt',
            'abs', 'exp', 'arctan', 'sign', 'log', 'degrees', 'log2', 'rint', 'radians', 'mean',
-           'reciprocal', 'square', 'arcsin', 'argsort', 'hstack', 'tensordot', 'hamming']
+           'reciprocal', 'square', 'arcsin', 'argsort', 'hstack', 'tensordot', 'blackman']
 
 
 def _num_outputs(sym):
@@ -2359,11 +2359,13 @@ def tensordot(a, b, axes=2):
 
 
 @set_module('mxnet.symbol.numpy')
-def hamming(M, dtype=_np.float64, ctx=None):
-    r"""Return the hamming window.
+def blackman(M, dtype=_np.float64, ctx=None):
+    r"""Return the Blackman window.
 
-
-    The hamming window is a taper formed by using a weighted cosine.
+    The Blackman window is a taper formed by using the first three
+    terms of a summation of cosines. It was designed to have close to the
+    minimal leakage possible.  It is close to optimal, only slightly worse
+    than a Kaiser window.
 
     Parameters
     ----------
@@ -2378,56 +2380,77 @@ def hamming(M, dtype=_np.float64, ctx=None):
 
     Returns
     -------
-    out : _Symbol, shape(M,)
-        The window, with the maximum value normalized to one (the value
-        one appears only if `M` is odd).
+    out : _Symbol
+        The window, with the maximum value normalized to one (the value one
+        appears only if the number of samples is odd).
 
     See Also
     --------
-    blackman, hanning
+    hamming, hanning
 
     Notes
     -----
-    The Hamming window is defined as
+    The Blackman window is defined as
 
-    .. math::  w(n) = 0.54 - 0.46cos\left(\frac{2\pi{n}}{M-1}\right)
-               \qquad 0 \leq n \leq M-1
+    .. math::  w(n) = 0.42 - 0.5 \cos(2\pi n/{M-1}) + 0.08 \cos(4\pi n/{M-1})
 
-    The Hamming was named for R. W. Hamming, an associate of J. W. Tukey
-    and is described in Blackman and Tukey. It was recommended for
-    smoothing the truncated autocovariance function in the time domain.
-    Most references to the Hamming window come from the signal processing
+    Most references to the Blackman window come from the signal processing
     literature, where it is used as one of many windowing functions for
     smoothing values.  It is also known as an apodization (which means
     "removing the foot", i.e. smoothing discontinuities at the beginning
-    and end of the sampled signal) or tapering function.
+    and end of the sampled signal) or tapering function. It is known as a
+    "near optimal" tapering function, almost as good (by some measures)
+    as the kaiser window.
 
     References
     ----------
-    .. [1] Blackman, R.B. and Tukey, J.W., (1958) The measurement of power
-           spectra, Dover Publications, New York.
-    .. [2] E.R. Kanasewich, "Time Sequence Analysis in Geophysics", The
-           University of Alberta Press, 1975, pp. 109-110.
-    .. [3] Wikipedia, "Window function",
-           https://en.wikipedia.org/wiki/Window_function
-    .. [4] W.H. Press,  B.P. Flannery, S.A. Teukolsky, and W.T. Vetterling,
-           "Numerical Recipes", Cambridge University Press, 1986, page 425.
+    Blackman, R.B. and Tukey, J.W., (1958) The measurement of power spectra,
+    Dover Publications, New York.
+
+    Oppenheim, A.V., and R.W. Schafer. Discrete-Time Signal Processing.
+    Upper Saddle River, NJ: Prentice-Hall, 1999, pp. 468-471.
+
+    See Also
+    --------
+    hamming, hanning
+
+    Notes
+    -----
+    The Blackman window is defined as
+
+    .. math::  w(n) = 0.42 - 0.5 \cos(2\pi n/{M-1}) + 0.08 \cos(4\pi n/{M-1})
+
+    Most references to the Blackman window come from the signal processing
+    literature, where it is used as one of many windowing functions for
+    smoothing values.  It is also known as an apodization (which means
+    "removing the foot", i.e. smoothing discontinuities at the beginning
+    and end of the sampled signal) or tapering function. It is known as a
+    "near optimal" tapering function, almost as good (by some measures)
+    as the kaiser window.
+
+    References
+    ----------
+    Blackman, R.B. and Tukey, J.W., (1958) The measurement of power spectra,
+    Dover Publications, New York.
+
+    Oppenheim, A.V., and R.W. Schafer. Discrete-Time Signal Processing.
+    Upper Saddle River, NJ: Prentice-Hall, 1999, pp. 468-471.
 
     Examples
     --------
-    >>> np.hamming(12)
-    array([0.08      , 0.15302338, 0.34890913, 0.60546482, 0.84123599,
-           0.98136679, 0.98136677, 0.84123585, 0.60546469, 0.34890905,
-           0.15302328, 0.08      ], dtype=float64)
+    >>> np.blackman(12)
+    array([-1.38777878e-17,  3.26064393e-02,  1.59903660e-01,  4.14397978e-01,
+            7.36045260e-01,  9.67046812e-01,  9.67046772e-01,  7.36045039e-01,
+            4.14397819e-01,  1.59903601e-01,  3.26063877e-02,  3.82194276e-14], dtype=float64)
 
     Plot the window and its frequency response:
 
     >>> import matplotlib.pyplot as plt
-    >>> window = np.hamming(51)
+    >>> window = np.blackman(51)
     >>> plt.plot(window.asnumpy())
     [<matplotlib.lines.Line2D object at 0x...>]
-    >>> plt.title("hamming window")
-    Text(0.5, 1.0, 'hamming window')
+    >>> plt.title("blackman window")
+    Text(0.5, 1.0, 'blackman window')
     >>> plt.ylabel("Amplitude")
     Text(0, 0.5, 'Amplitude')
     >>> plt.xlabel("Sample")
@@ -2438,7 +2461,7 @@ def hamming(M, dtype=_np.float64, ctx=None):
         dtype = _np.float64
     if ctx is None:
         ctx = current_context()
-    return _npi.hamming(M, dtype=dtype, ctx=ctx)
+    return _npi.blackman(M, dtype=dtype, ctx=ctx)
 
 
 _set_np_symbol_class(_Symbol)

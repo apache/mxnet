@@ -30,15 +30,15 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(NumpyWindowsParam);
 
-NNVM_REGISTER_OP(_npi_hamming)
-.describe("Return the Hamming window."
-"The Hamming window is a taper formed by using a weighted cosine.")
+NNVM_REGISTER_OP(_npi_blackman)
+.describe("Return the Blackman window."
+"The Blackman window is a taper formed by using a weighted cosine.")
 .set_num_inputs(0)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyWindowsParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyWindowsShape)
 .set_attr<nnvm::FInferType>("FInferType", InitType<NumpyWindowsParam>)
-.set_attr<FCompute>("FCompute<cpu>", NumpyWindowCompute<cpu, 1>)
+.set_attr<FCompute>("FCompute<cpu>", NumpyWindowCompute<cpu, 2>)
 .add_arguments(NumpyWindowsParam::__FIELDS__());
 
 }  // namespace op
