@@ -17,7 +17,7 @@
 
 import numpy as np
 import mxnet as mx
-from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d
+from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context
 from mxnet import gluon, nd
 from tests.python.unittest.common import with_seed
 
@@ -445,6 +445,37 @@ def test_index_copy():
 
     x = mx.nd.contrib.index_copy(x, index, t)
     assert x[-1][-1] == t[0][-1]
+
+
+# def test_dropout():
+#     a = mx.nd.ones((LARGE_X, SMALL_Y))
+#     # test dropout ratio
+#     x = nx.sym.var('data')
+
+
+def testSoftmaxOutput():
+    x = mx.sym.Variable('x')
+    label = mx.sym.Variable('label')
+    x_nd = mx.nd.ones((LARGE_X, SMALL_Y))
+    grad_x = mx.nd.zeros((LARGE_X, SMALL_Y))
+    label_nd = mx.nd.ones((LARGE_X))
+
+    sym = mx.sym.SoftmaxOutput(data=x, label=label, ignore_label=0, 
+                               use_ignore=False)
+    ex = sym.bind(ctx=default_context(), args={'x': x_nd, 'label': label_nd},
+                  args_grad={'x': grad_x})
+
+    ex.forward(is_train=True)
+    softmax_out = ex.outputs[0][0].asnumpy()
+    expected_softmax_out = (1/SMALL_Y)*mx.nd.ones((SMALL_Y)).asnumpy()
+    assert np.isclose(softmax_out, expected_softmax_out).all()
+
+    ex.backward(is_train=True)
+    grad_out = ex.grad_arrays[0][0].asnumpy()
+    k = int(label_nd[0].asscalar())
+    expected_grad_out = np.zeros((SMALL_Y,))
+    expected_grad_out[k] = -1
+    assert np.isclose(grad_out - softmax_out, expected_grad_out).all()
 
 if __name__ == '__main__':
     import nose
