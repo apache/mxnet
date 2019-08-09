@@ -106,7 +106,15 @@ There're 2 built-in attributes that used by MXNet executor.
 
 `inference_only` : bool, apply this property only for inference. Property will be skiped when need_grad=True. Default `false` if this attribute isn't defined.
 
-After defining the subgraph property, we need to register it in .cc file.
+After defining the subgraph property, we need to register it under a backend in .cc file.
+
+Firstly, we need to register the backend
+
+```C++
+MXNET_REGISTER_SUBGRAPH_BACKEND(SgTest);
+```
+
+Then register the property under it.
 
 ```c++
 MXNET_REGISTER_SUBGRAPH_PROPERTY(SgTest, SgProperty);
@@ -119,6 +127,7 @@ It's possible to register multiple properties for same backend. In practice, we 
 #include "SgProperty2.h" // Define SgProperty2 class
 #include "SgProperty3.h" // Define SgProperty3 class
 
+MXNET_REGISTER_SUBGRAPH_BACKEND(SgTest);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(SgTest, SgProperty);  // Execution order 1.
 MXNET_REGISTER_SUBGRAPH_PROPERTY(SgTest, SgProperty2); // Execution order 2.
 MXNET_REGISTER_SUBGRAPH_PROPERTY(SgTest, SgProperty3); // Execution order 3.

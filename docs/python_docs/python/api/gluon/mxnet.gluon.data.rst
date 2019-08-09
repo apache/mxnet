@@ -1,5 +1,5 @@
 data
-=====
+====
 
 .. automodule:: mxnet.gluon.data
 

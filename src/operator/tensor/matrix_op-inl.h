@@ -265,11 +265,17 @@ void TransposeImpl(RunContext ctx,
   using namespace mshadow;
   using namespace mshadow::expr;
   CHECK_EQ(src.type_flag_, ret.type_flag_);
+  // zero-size tensor, no need to compute
+  if (src.shape_.Size() == 0U) return;
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(ret.type_flag_, DType, {
     switch (axes.ndim()) {
-     case 0:
+     case 0: {
+      Tensor<xpu, 1, DType> in = src.get_with_shape<xpu, 1, DType>(mshadow::Shape1(1), s);
+      Tensor<xpu, 1, DType> out = ret.get_with_shape<xpu, 1, DType>(mshadow::Shape1(1), s);
+      Copy(out, in, s);
       break;
+     }
      case 1: {
       Tensor<xpu, 1, DType> in = src.get<xpu, 1, DType>(s);
       Tensor<xpu, 1, DType> out = ret.get<xpu, 1, DType>(s);
@@ -344,19 +350,34 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& shp = (*in_attrs)[0];
+  mxnet::TShape& out_shp = (*out_attrs)[0];
   CHECK_LE(shp.ndim(), 6) << "Transpose support at most 6 dimensions";
-  mxnet::TShape ret(shp.ndim(), -1);
+  CHECK_NE(shp.ndim(), 0) << "Number of dimensions cannot be 0";
+  CHECK_NE(out_shp.ndim(), 0) << "Number of dimensions cannot be 0";
+  if (shp.ndim() == -1 && out_shp.ndim() == -1)
+    return false;  // none of the shapes is known
+  if (out_shp.ndim() > 0 && shp.ndim() > 0)
+    CHECK_EQ(out_shp.ndim(), shp.ndim());
+  mxnet::TShape get(std::max(shp.ndim(), out_shp.ndim()), -1);
+  mxnet::TShape ret(std::max(shp.ndim(), out_shp.ndim()), -1);
   if (param.axes.ndim() == 0) {
     for (int i = 0; i < shp.ndim(); ++i) {
       ret[i] = shp[shp.ndim()-1-i];
     }
+    for (int i = 0; i < out_shp.ndim(); ++i) {
+      get[shp.ndim()-1-i] = out_shp[i];
+    }
   } else {
-    CHECK_EQ(shp.ndim(), param.axes.ndim());
+    CHECK_EQ(std::max(shp.ndim(), out_shp.ndim()), param.axes.ndim());
     for (int i = 0; i < shp.ndim(); ++i) {
       CHECK(param.axes[i] < static_cast<int64_t>(shp.ndim()));
       ret[i] = shp[param.axes[i]];
     }
+    for (int i = 0; i < out_shp.ndim(); ++i) {
+      get[param.axes[i]] = out_shp[i];
+    }
   }
+  SHAPE_ASSIGN_CHECK(*in_attrs, 0, get);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, ret);
   return shape_is_known(ret);
 }
@@ -690,7 +711,10 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
 
       // checking upper and lower bounds for end
       if (e < 0 && param_end[i].has_value()) {
-        e += len;
+        if (!(s < 0 && e == -1)) {
+          // Keep end=-1 as one-beyond-limits index for negative stride
+          e += len;
+        }
         CHECK_GE(e, 0) << "slicing with end[" << i << "]=" << e - len
                        << " exceeds limit of input dimension[" << i << "]=" << len;
       }
@@ -719,11 +743,11 @@ inline void SetSliceOpOutputDimSize(const index_t i, const int b,
                                     mxnet::TShape* oshape) {
   if (e != b) {
     if (s > 0) {
-      CHECK_LT(b, e) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
+      CHECK_LT(b, e) << "slicing with begin[" << i << "]=" << b << ", end[" << i << "]="
                      << e << ", and step[" << i << "]=" << s << " is invalid";
       (*oshape)[i] = (e - b - 1) / s + 1;
     } else {
-      CHECK_LT(e, b) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
+      CHECK_LT(e, b) << "slicing with begin[" << i << "]=" << b << ", end[" << i << "]="
                      << e << ", and step[" << i << "]=" << s << " is invalid";
       (*oshape)[i] = (b - e - 1) / (-s) + 1;
     }
@@ -1781,9 +1805,6 @@ inline bool TileOpShape(const nnvm::NodeAttrs& attrs,
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, ishape);
     return true;
   }
-  for (int i = 0; i < reps.ndim(); ++i) {
-    CHECK_GT(reps[i], 0) << "invalid reps=" << i << ", dim size must be greater than zero";
-  }
   mxnet::TShape oshape(std::max(ishape.ndim(), reps.ndim()), -1);
   int i1 = ishape.ndim() - 1;
   int i2 = reps.ndim() - 1;
@@ -1795,6 +1816,11 @@ inline bool TileOpShape(const nnvm::NodeAttrs& attrs,
     } else if (i2 >= 0) {
       oshape[i] = reps[i2--];
     }
+  }
+  // If reps contains 0s, oshape is a zero-size shape.
+  // Need to distinguish between np_shape mode and legacy mode.
+  if (!Imperative::Get()->is_np_shape()) {
+    common::ConvertToNumpyShape(&oshape);
   }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   return shape_is_known(oshape);
@@ -1814,7 +1840,7 @@ inline bool TileOpType(const nnvm::NodeAttrs& attrs,
 
 /*!
  * \brief Reshape the input and output tensors for
- * using broadcast_to to achieve the funcitonality
+ * using broadcast_to to achieve the functionality
  * of operator tile.
  * \return a pair of mxnet::TShape's, first is the reshaped
  * input shape, second is the reshaped output shape.
@@ -1822,7 +1848,7 @@ inline bool TileOpType(const nnvm::NodeAttrs& attrs,
 inline std::pair<mxnet::TShape, mxnet::TShape> ReshapeInputOutputForTileOp(
   const mxnet::TShape& ishape,
   const mxnet::Tuple<int>& reps) {
-  if (ishape.ndim() == 0 || reps.ndim() == 0) {
+  if (reps.ndim() == 0) {
     return std::make_pair(ishape, ishape);
   }
 
@@ -2177,7 +2203,7 @@ inline size_t SqueezeShapeHelper(mxnet::TShape* shape) {
   CHECK(shape != nullptr);
   size_t count = 0;
   for (int i = 0; i < shape->ndim(); ++i) {
-    if ((*shape)[i] == 0) {
+    if ((*shape)[i] == -1) {
       ++count;
     } else {
       std::swap((*shape)[i], (*shape)[i-count]);
@@ -2210,12 +2236,12 @@ inline bool SqueezeShape(const nnvm::NodeAttrs& attrs,
       CHECK_EQ(dshape[axes[i]], 1)
         << "cannot select an axis to squeeze out which has size="
         << dshape[axes[i]] << " not equal to one";
-      CHECK_NE(oshape[axes[i]], 0) << "duplicate value in axis";
-      oshape[axes[i]] = 0;
+      CHECK_NE(oshape[axes[i]], -1) << "duplicate value in axis";
+      oshape[axes[i]] = -1;
     }
   } else {
     for (int i = 0; i < oshape.ndim(); ++i) {
-      if (oshape[i] == 1) oshape[i] = 0;
+      if (oshape[i] == 1) oshape[i] = -1;
     }
   }
   size_t oshape_size = SqueezeShapeHelper(&oshape);
@@ -2631,10 +2657,14 @@ inline bool SplitOpShape(const nnvm::NodeAttrs& attrs,
   for (int i = 0; i < num_outputs; ++i) {
     int start = indices[i];
     int end = (i < num_outputs - 1) ? indices[i + 1] : ishape[real_axis];
-    CHECK(start < end)
-      << "start " << start << " is not less than end " << end << "for subarray " << i;
-    CHECK(end <= ishape[real_axis])
-      << "end " << end << " is no less than the size of the axis " << ishape[real_axis];
+    if (ishape[real_axis] == 0U) {
+      end = start;
+    } else {
+      CHECK(start < end)
+        << "start " << start << " is not less than end " << end << "for subarray " << i;
+      CHECK(end <= ishape[real_axis])
+        << "end " << end << " is no less than the size of the axis " << ishape[real_axis];
+    }
     dshape[real_axis] = (end - start);
     if (param.squeeze_axis) {
       CHECK_EQ(end - start, 1U) << "expected axis size of 1 but got " << end - start;

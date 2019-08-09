@@ -1,5 +1,5 @@
 mxnet.ndarray
-==========================
+=============
 
 The NDArray library in Apache MXNet defines the core data structure for all mathematical computations. NDArray supports fast execution on a wide range of hardware configurations and automatically parallelizes multiple operations across the available hardware.
 
@@ -18,8 +18,30 @@ The following example shows how you can create an NDArray from a regular Python 
 	{'a.shape':a.shape, 'b.shape':b.shape}
 
 
+.. note:: ``mxnet.ndarray`` is similar to ``numpy.ndarray`` in some aspects. But the differences are not negligible. For instance:
+
+   - ``mxnet.ndarray.NDArray.T`` does real data transpose to return new a copied
+     array, instead of returning a view of the input array.
+   - ``mxnet.ndarray.dot`` performs dot product between the last axis of the
+     first input array and the first axis of the second input, while `numpy.dot`
+     uses the second last axis of the input array.
+
+   In addition, ``mxnet.ndarray.NDArray`` supports GPU computation and various neural
+   network layers.
+
+.. note:: ``ndarray`` provides almost the same routines as ``symbol``. Most
+  routines between these two packages share the source code. But ``ndarray``
+  differs from ``symbol`` in few aspects:
+
+  - ``ndarray`` adopts imperative programming, namely sentences are executed
+    step-by-step so that the results can be obtained immediately whereas
+    ``symbol`` adopts declarative programming.
+
+  - Most binary operators in ``ndarray`` such as ``+`` and ``>`` have
+    broadcasting enabled by default.
+
 Tutorials
------------------
+---------
 
 .. container:: cards
 
@@ -33,7 +55,7 @@ Tutorials
 
 
 NDArray API of MXNet
------------------
+--------------------
 
 .. container:: cards
 
@@ -50,7 +72,7 @@ NDArray API of MXNet
       Manipulating multi-dimensional, fixed-size arrays.
 
 Sparse NDArray API of MXNet
------------------
+---------------------------
 
 .. container:: cards
 

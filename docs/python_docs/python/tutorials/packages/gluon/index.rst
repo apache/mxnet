@@ -125,6 +125,12 @@ Training
       How to manage parameters.
 
    .. card::
+      :title: Fit API Tutorial
+      :link: fit_api_tutorial.html
+
+      How to use the fit API
+
+   .. card::
       :title: Learning Rate Finder
       :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/learning_rate_finder.html
 

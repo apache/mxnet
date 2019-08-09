@@ -57,7 +57,7 @@
     <scala.version>2.11.8</scala.version>
     <build.platform/>
     <scala.binary.version>2.11</scala.binary.version>
-    <base.revision>1.5.0</base.revision>
+    <base.revision>1.6.0</base.revision>
     <build.platform />
     <cxx>g++</cxx>
     <dollar>$</dollar>

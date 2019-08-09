@@ -24,6 +24,7 @@
 #include <string>
 #include <vector>
 #include "../../nn/activation-inl.h"
+#include "../../nn/convolution-inl.h"
 #include "../../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../../tensor/matrix_op-inl.h"
 #include "../common.h"
@@ -62,10 +63,13 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
 
   bool Select(const nnvm::Node &n) override {
     if (n.op() && n.op()->name == "Convolution") {
-      status_ = disable_all_ ? kSuccess : kStart;
-      matched_list_.clear();
-      matched_list_.push_back(&n);
-      return true;
+      const auto &param = nnvm::get<ConvolutionParam>(n.attrs.parsed);
+      if (param.kernel.ndim() == 2) {
+        status_ = disable_all_ ? kSuccess : kStart;
+        matched_list_.clear();
+        matched_list_.push_back(&n);
+        return true;
+      }
     }
     return false;
   }
@@ -224,7 +228,7 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
   }
 
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
-    int quantize = HasAttr("quantize") ? GetAttr<int>("quantize") : 0;
+    bool quantize = HasAttr("quantize") ? GetAttr<bool>("quantize") : false;
     auto selector = std::make_shared<SgMKLDNNConvSelector>(
         disable_all_, disable_conv_bn_, disable_conv_act_, disable_conv_sum_, quantize);
     return selector;

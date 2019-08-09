@@ -15,7 +15,7 @@ Essential
 
    .. card::
       :title: Profiler
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/python/profiler.html
+      :link: backend/profiler.html
 
       How to profile MXNet models.
 
@@ -44,19 +44,11 @@ Compression
    ..
       .. card::
          :title: Compression: int8
-         :link: index.html
-
-         How to use int8 in your model to boost training speed.
-   ..
-
-   ..
-      TBD Content
-      .. card::
-         :title: Compression: int8
          :link: compression/int8.html
 
          How to use int8 in your model to boost training speed.
    ..
+
 
 Accelerated Backend
 -------------------
