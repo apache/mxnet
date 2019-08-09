@@ -38,9 +38,18 @@ cp make/config.mk .
 echo "USE_CUDA=1" >> config.mk
 echo "USE_CUDA_PATH=/usr/local/cuda" >> config.mk
 echo "USE_CUDNN=1" >> config.mk
-echo "DEV=1" >> config.mk
+echo "USE_PROFILER=1" >> config.mk
+echo "DEV=0" >> config.mk
 echo "EXTRA_OPERATORS=example/ssd/operator" >> config.mk
 echo "USE_CPP_PACKAGE=1" >> config.mk
+
+# Settings suitable to rebuild MXNet within NVIDIA's container
+echo "USE_MKLDNN=0" >> config.mk
+echo "USE_LAPACK_PATH=/usr/lib/x86_64-linux-gnu" >> config.mk
+echo "USE_BLAS=openblas" >> config.mk
+echo "USE_HOROVOD=1" >> config.mk
+echo "USE_MPI_PATH=/usr/local/mpi" >> config.mk
+echo "USE_NCCL=1" >> config.mk
 
 if [ "$WITH_CAFFE_PLUGIN" == "1" ]; then
     echo "CAFFE_PATH = $(pwd)/caffe" >> config.mk
@@ -53,20 +62,19 @@ make -j$(nproc)
 
 export PYTHONPATH=${PWD}/python
 
+if [ ! -x "$(which nosetests)" ]; then
+    pip install nose scipy
+fi
 echo "BUILD python_test"
 nosetests --verbose tests/python/unittest || exit 1
-nosetests --verbose tests/python/gpu/test_operator_gpu.py || exit 1
-nosetests --verbose tests/python/gpu/test_forward.py || exit 1
+nosetests --verbose tests/python/gpu || exit 1
 nosetests --verbose tests/python/train || exit 1
 
-echo "BUILD python3_test"
-nosetests3 --verbose tests/python/unittest || exit 1
-nosetests3 --verbose tests/python/gpu/test_operator_gpu.py || exit 1
-nosetests3 --verbose tests/python/gpu/test_forward.py || exit 1
-nosetests3 --verbose tests/python/train || exit 1
-
-echo "BUILD scala_test"
-export PATH=$PATH:/opt/apache-maven/bin
-cd scala-package
-mvn integration-test || exit 1
-
+if [ -x "$(which mvn)" ]; then
+    echo "BUILD scala_test"
+    export PATH=$PATH:/opt/apache-maven/bin
+    cd scala-package
+    mvn integration-test || exit 1
+else
+    echo "No mvn, bypassing scala test."
+fi

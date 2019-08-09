@@ -359,6 +359,27 @@ inline bool dispatch_fallback(StorageTypeVector* stypes, DispatchMode* dispatch)
   return true;
 }
 
+// quick helper to make node entries for a node
+inline std::vector<nnvm::NodeEntry> CreateNodeEntries(
+  nnvm::NodePtr pNode,
+  const std::vector<nnvm::NodeEntry>* pOgrads = nullptr,
+  const std::vector<nnvm::NodeEntry>* pInputs = nullptr) {
+  if (pOgrads)
+    pNode->inputs.insert(pNode->inputs.end(), pOgrads->begin(), pOgrads->end());
+
+  if (pInputs)
+    pNode->inputs.insert(pNode->inputs.end(), pInputs->begin(), pInputs->end());
+
+  CHECK_EQ(pNode->inputs.size(), pNode->num_inputs()) <<
+           "Mismatch in number of created vs. expected node inputs.";
+
+  std::vector<nnvm::NodeEntry> ret;
+  for (uint32_t i = 0; i < pNode->num_outputs(); ++i)
+    ret.emplace_back(pNode, i, 0);
+
+  return ret;
+}
+
 // make a new node with operator op_name. Inputs are not filled.
 inline nnvm::NodePtr MakeNode(
     const char* op_name, const std::string& name,
@@ -395,11 +416,7 @@ inline std::vector<nnvm::NodeEntry> MakeGradNode(
     const std::unordered_map<std::string, std::string>& dict) {
   auto p = MakeNode(op_name, n->attrs.name + "_backward",
                     &inputs, &dict, &n);
-  std::vector<nnvm::NodeEntry> ret;
-  for (uint32_t i = 0; i < p->num_outputs(); ++i) {
-    ret.emplace_back(p, i, 0);
-  }
-  return ret;
+  return CreateNodeEntries(p);
 }
 
 // quick helper to make gradient nodes that simply pass back zero. could be used in output ops.
@@ -446,13 +463,7 @@ inline std::vector<nnvm::NodeEntry> MakeNonlossGradNode(
     return MakeZeroGradNodes(n, ograds);
   auto p = MakeNode(op_name, n->attrs.name + "_backward",
                     nullptr, &dict, &n);
-  p->inputs.insert(p->inputs.end(), ograds.begin(), ograds.end());
-  p->inputs.insert(p->inputs.end(), inputs.begin(), inputs.end());
-  std::vector<nnvm::NodeEntry> ret;
-  for (uint32_t i = 0; i < p->num_outputs(); ++i) {
-    ret.emplace_back(p, i, 0);
-  }
-  return ret;
+  return CreateNodeEntries(p, &ograds, &inputs);
 }
 
 /*! \brief Parse keyword arguments as PType arguments and save to parsed */
