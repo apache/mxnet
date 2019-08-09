@@ -158,7 +158,7 @@ void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
     }
     //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     */
-    int scale_hw[] = scaleComp(param);
+    int* scale_hw = scaleComp(param);
     Assign(out, req[up_enum::kOut], upsampling_nearest(data, scale_hw[0], scale_hw[1]));
 
   }
@@ -220,7 +220,7 @@ void UpSamplingBackward(const OpContext &ctx, const UpSamplingParam &param,
     }
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     */
-    int scale_hw[] = scaleComp(param);
+    int* scale_hw = scaleComp(param);
     Assign(input_grad, req[up_enum::kData],
            pool<mshadow::red::sum>(grad,
                                    in_shape,
@@ -248,7 +248,7 @@ static inline DeconvolutionParam GetDeconvolutionParam(const UpSamplingParam& pa
   }
   //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   */
- int scale_hw[] = scaleComp(param);
+ int* scale_hw = scaleComp(param);
   CHECK_EQ(scale_hw[0], scale_hw[1]) <<
   "UpSamplingBilinear: Scale should be the same along all dimensions for bilinear upsampling";
   int kernel = static_cast<int>(2.0 * scale_hw[0] - ::fmod(scale_hw[0], 2));
