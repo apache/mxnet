@@ -156,11 +156,12 @@ def test_np_tensordot():
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
                 # test numeric gradient
-                a_sym = mx.sym.Variable("a").as_np_ndarray()
-                b_sym = mx.sym.Variable("b").as_np_ndarray()
-                mx_sym = mx.sym.np.tensordot(a_sym, b_sym, axes).as_nd_ndarray()
-                check_numeric_gradient(mx_sym, [a.as_nd_ndarray(), b.as_nd_ndarray()],
-                  rtol=1e-1, atol=1e-1, dtype = dtype)
+                if (_np.prod(a_shape) > 0 and _np.prod(b_shape) > 0):
+                    a_sym = mx.sym.Variable("a").as_np_ndarray()
+                    b_sym = mx.sym.Variable("b").as_np_ndarray()
+                    mx_sym = mx.sym.np.tensordot(a_sym, b_sym, axes).as_nd_ndarray()
+                    check_numeric_gradient(mx_sym, [a.as_nd_ndarray(), b.as_nd_ndarray()],
+                    rtol=1e-1, atol=1e-1, dtype = dtype)
 
 
 @with_seed()
@@ -197,7 +198,8 @@ def test_np_dot():
         mx_a = mx.sym.Variable("a")
         mx_b = mx.sym.Variable("b")
         mx_sym = mx.sym.np.dot(mx_a.as_np_ndarray(), mx_b.as_np_ndarray()).as_nd_ndarray()
-        check_numeric_gradient(mx_sym, {"a": a, "b": b}, numeric_eps=eps, rtol=1e-2, atol=1e-3)
+        if (len(shape_a) > 0 and len(shape_b) > 0 and _np.prod(shape_a) > 0 and _np.prod(shape_b) > 0):
+            check_numeric_gradient(mx_sym, {"a": a, "b": b}, numeric_eps=eps, rtol=1e-2, atol=1e-3)
 
     bad_shapes = [((4, 5), (2, 3)), ((3, 4, 5), (6, ))]
 

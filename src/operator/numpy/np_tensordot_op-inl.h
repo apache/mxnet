@@ -520,7 +520,7 @@ void TensordotIntAxesImpl(const int axes,
       << "Tensordot only supports float32/float64 for CPU, and float16/float32/float64 for GPU";
 
   MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {
-    if (a_shape.Size() == 0U || b_shape.Size() == 0U) {  
+    if (a_shape.Size() == 0U || b_shape.Size() == 0U) {
       // 0-size input
       if (req != kAddTo) {
         Tensor<xpu, 1, DType> out_data = out.get_with_shape<xpu, 1, DType>(
