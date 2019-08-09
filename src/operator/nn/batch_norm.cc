@@ -384,7 +384,6 @@ static inline bool SupportMKLDNNBN(const NDArray &input, const BatchNormParam &p
   mxnet::TShape shape = input.shape();
   return SupportMKLDNN(input) && shape.ndim() == 4
       && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS
-      && shape[param.axis] % 8 == 0
       && !mxnet::op::batchnorm::disable_mkl;
 }
 
@@ -396,7 +395,7 @@ void BatchNormComputeExCPU(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(inputs.size(), 5U);
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
   // MKLDNN batchnorm only works well on the special MKLDNN layout.
-  if (SupportMKLDNNBN(inputs[0], param) && inputs[0].IsMKLDNNData()) {
+  if (SupportMKLDNNBN(inputs[0], param)) {
     std::vector<NDArray> in_data(inputs.begin(), inputs.begin() + batchnorm::kInMovingMean);
     std::vector<NDArray> aux_states(inputs.begin() + batchnorm::kInMovingMean, inputs.end());
 
@@ -420,8 +419,7 @@ void BatchNormGradComputeExCPU(const nnvm::NodeAttrs &attrs,
 
   mxnet::TShape shape = inputs[0].shape();
   // MKLDNN batchnorm only works well on the special MKLDNN layout.
-  if (SupportMKLDNNBN(inputs[0], param)
-      && (inputs[3].IsMKLDNNData() || inputs[0].IsMKLDNNData())) {
+  if (SupportMKLDNNBN(inputs[0], param)) {
     std::vector<NDArray> out_grad(1);
     std::vector<NDArray> out_data(3);
     std::vector<NDArray> in_data(3);
