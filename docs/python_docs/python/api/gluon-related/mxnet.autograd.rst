@@ -3,8 +3,6 @@ mxnet.autograd
 
 .. automodule:: mxnet.autograd
 
-.. mdinclude:: autograd.md
-
 .. autosummary::
    :toctree: _autogen
 

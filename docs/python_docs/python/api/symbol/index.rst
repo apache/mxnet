@@ -26,7 +26,7 @@ Tutorials
 
    .. card::
       :title: Symbol Guide
-      :link: ../../guide/packages/symbol/
+      :link: ../../tutorials/packages/symbol/
 
       The Symbol guide. Start here!
 
@@ -45,4 +45,4 @@ Symbol Package
    :hidden:
 
    mxnet.symbol.Symbol
-
+   mxnet.symbol.linalg

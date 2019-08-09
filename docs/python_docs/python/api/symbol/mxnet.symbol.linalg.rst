@@ -1,7 +1,7 @@
 mxnet.linalg
 ============
 
-.. automodule:: mxnet.linalg
+.. automodule:: mxnet.symbol.linalg
 
 
 This document lists the linear algebra routines of the symbolic expression package:
