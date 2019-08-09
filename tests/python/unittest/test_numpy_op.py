@@ -2810,6 +2810,56 @@ def test_np_take():
                 check_output_n_grad(config[0], config[1], config[2], mode)
 
 
+@with_seed()
+@use_np
+def test_np_logspace():
+    class TestLogspace(HybridBlock):
+        def __init__(self, start, stop, num=50, endpoint=None, base=50.0, dtype=None, axis=0):
+            super(TestLogspace, self).__init__()
+            self._start = start
+            self._stop = stop
+            self._num = num
+            self._endpoint = endpoint
+            self._base = base
+            self._dtype = dtype
+            self.axis = axis
+
+        def hybrid_forward(self, F, x):
+            return x + F.np.logspace(self._start, self._stop, self._num, self._endpoint, self._base, self._dtype, self.axis)
+
+    configs = [
+        (0.0, 1.0, 20),
+        (2, 8, 0),
+        (22, 11, 1),
+        (2.22, 9.99, 11),
+        (4.99999, 12.11111111, 111)
+    ]
+    base_configs = [0, 1, 5, 8, 10, 33]
+    dtypes = ['float32', 'float64', None]
+
+    for config in configs:
+        for dtype in dtypes:
+            for endpoint in [False, True]:
+                for hybridize in [False, True]:
+                    for base in base_configs:
+                        x = np.zeros(shape=(), dtype=dtype)
+                        net = TestLogspace(*config, endpoint=endpoint, base=base, dtype=dtype)
+                        np_out = _np.logspace(*config, endpoint=endpoint, base=base, dtype=dtype)
+                        if hybridize:
+                            net.hybridize()
+                        mx_out = net(x)
+                        assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-3, rtol=1e-5)
+                        if dtype is not None:
+                            assert mx_out.dtype == np_out.dtype
+
+                        # Test imperative once again
+                        mx_ret = np.logspace(*config, endpoint=endpoint, base=base, dtype=dtype)
+                        np_ret = _np.logspace(*config, endpoint=endpoint, base=base, dtype=dtype)
+                        assert_almost_equal(mx_ret.asnumpy(), np_ret, atol=1e-3, rtol=1e-5)
+                        if dtype is not None:
+                            assert mx_out.dtype == np_out.dtype
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
