@@ -111,6 +111,11 @@ typedef void (*EngineFuncParamDeleter)(void*);
 typedef void (*ExecutorMonitorCallback)(const char*,
                                         NDArrayHandle,
                                         void*);
+/*! \brief Monitor callback called at operator level for cached op */
+typedef void (*CachedOpMonitorCallback)(const char*,
+                                        const char*,
+                                        NDArrayHandle);
+
 
 struct NativeOpInfo {
   void (*forward)(int, float**, int*, unsigned**, int*, void*);
@@ -1221,6 +1226,13 @@ MXNET_DLL int MXInvokeCachedOpEx(CachedOpHandle handle,
                                  int *num_outputs,
                                  NDArrayHandle **outputs,
                                  const int** out_stypes);
+
+/*!
+ * \brief cached op set monitor callback
+ */
+MXNET_DLL int MXCachedOpRegisterOpHook(NDArrayHandle handle,
+                                       CachedOpMonitorCallback callback,
+                                       bool monitor_all);
 
 //--------------------------------------------
 // Part 3: symbolic configuration generation

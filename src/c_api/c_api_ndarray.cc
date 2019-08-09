@@ -378,3 +378,23 @@ int MXAutogradGetSymbol(NDArrayHandle handle, SymbolHandle *out) {
   *out = reinterpret_cast<SymbolHandle>(sym);
   API_END();
 }
+
+int MXCachedOpRegisterOpHook(NDArrayHandle handle,
+                             CachedOpMonitorCallback callback,
+                             bool monitor_all) {
+  API_BEGIN();
+  CachedOpMonitorCallback callback_temp = nullptr;
+  std::function<void(const char *, const char *, void*)> clbk;
+  if (callback) {
+    callback_temp = callback;
+    clbk = [callback_temp](const char *name, const char *opr_name,
+                           void *handle) {
+      callback_temp(name, opr_name, handle);
+    };
+  } else {
+      clbk = nullptr;
+  }
+  CachedOpPtr op = *static_cast<CachedOpPtr *>(handle);
+  op->RegisterOpHook(clbk, monitor_all);
+  API_END();
+}
