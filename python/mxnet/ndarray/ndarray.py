@@ -460,6 +460,8 @@ fixed-size items.
         if self.ndim == 0 and (key == () or key == slice(None, None, None)):
             self._full(float(value))
             return
+        if self.size == 0:
+            return
         key = indexing_key_expand_implicit_axes(key, self.shape)
         slc_key = tuple(idx for idx in key if idx is not None)
 
@@ -666,7 +668,10 @@ fixed-size items.
             value_nd = value_nd.squeeze(axis=tuple(squeeze_axes))
 
         if value_nd.shape != bcast_shape:
-            value_nd = value_nd.broadcast_to(bcast_shape)
+            if value_nd.size == 0:
+                value_nd = value_nd.reshape(bcast_shape)
+            else:
+                value_nd = value_nd.broadcast_to(bcast_shape)
         return value_nd
 
     # pylint: disable=invalid-name
@@ -816,6 +821,14 @@ fixed-size items.
         int_axes = [
             ax for ax in range(len(key_nd)) if isinstance(key_nd[ax], integer_types)
         ]
+
+        # Check bounds for integer axes
+        for ax in int_axes:  # pylint: disable=invalid-name
+            if not -self.shape[ax] <= key_nd[ax] < self.shape[ax]:
+                raise IndexError(
+                    'index {} is out of bounds for axis {} with size {}'
+                    ''.format(key_nd[ax], ax, self.shape[ax]))
+
         begin, end, step = self._basic_indexing_key_to_begin_end_step(
             key, self.shape, keep_none=False
         )
@@ -866,7 +879,7 @@ fixed-size items.
 
         elif isinstance(value, numeric_types):
             self.slice_assign_scalar(float(value), begin, end, step)
-
+        
         else:
             # drop the axis of indexed_shape corresponding to int axes
             bcast_shape = []

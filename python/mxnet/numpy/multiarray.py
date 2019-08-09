@@ -332,6 +332,8 @@ class ndarray(NDArray):
                 raise IndexError('scalar tensor can only accept `()` as index')
             full(shape=self.shape, fill_value=float(value), ctx=self.context,
                  dtype=self.dtype, out=self)
+        elif self.size == 0:
+            pass
         else:
             key = indexing_key_expand_implicit_axes(key, self.shape)
             slc_key = tuple(idx for idx in key if idx is not None)
@@ -386,7 +388,10 @@ class ndarray(NDArray):
             value_nd = value_nd.squeeze(axis=tuple(squeeze_axes))
 
         if value_nd.shape != bcast_shape:
-            value_nd = value_nd.broadcast_to(bcast_shape)
+            if value_nd.size == 0:
+                value_nd = value_nd.reshape(bcast_shape)
+            else:
+                value_nd = value_nd.broadcast_to(bcast_shape)
         return value_nd
 
 
