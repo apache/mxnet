@@ -2578,24 +2578,26 @@ def test_np_unique():
         ((5, 3, 4), True, True, True, None),
         ((5, 3, 4), True, True, True, 1),
     ]
-    for hybridize in [True, False]:
-        for config in configs:
-            test_unique = TestUnique(*config[1:])
-            if hybridize:
-                test_unique.hybridize()
+    for dtype in ['float32', 'float64', 'int8', 'int32', 'int64']:
+        for hybridize in [True, False]:
+            for config in configs:
+                test_unique = TestUnique(*config[1:])
+                if hybridize:
+                    test_unique.hybridize()
+                x = _np.random.uniform(-8.0, 8.0, size=config[0])
+                x = np.array(x, dtype=dtype)
+                print(config, x.dtype)
+                np_out = _np.unique(x.asnumpy(), *config[1:])
+                mx_out = test_unique(x)
+                assert mx_out[0].shape == np_out[0].shape
+                for i in range(4):
+                    assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
 
-            x = np.random.uniform(size=config[0])
-            np_out = _np.unique(x.asnumpy(), *config[1:])
-            mx_out = test_unique(x)
-            assert mx_out[0].shape == np_out[0].shape
-            for i in range(4):
-                assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
-
-            # Test imperative once again
-            mx_out = np.unique(x, *config[1:])
-            np_out = _np.unique(x.asnumpy(), *config[1:])
-            for i in range(4):
-                assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
+                # Test imperative once again
+                mx_out = np.unique(x, *config[1:])
+                np_out = _np.unique(x.asnumpy(), *config[1:])
+                for i in range(4):
+                    assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
 
 
 if __name__ == '__main__':
