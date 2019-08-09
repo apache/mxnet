@@ -351,6 +351,7 @@ def test_topk():
     l = nd.topk(b, k=1, axis=-1, dtype=np.int64, ret_typ="value")
     assert l.sum() == np.sum(np.arange(0, SMALL_Y))
 
+
 def test_exponent_logarithm_operators():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     # exponent
@@ -383,6 +384,7 @@ def test_exponent_logarithm_operators():
     assert result[0][-1] == 0.6931472
     assert result.shape == a.shape
 
+
 def test_power_operators():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     # sqrt
@@ -414,6 +416,7 @@ def test_power_operators():
     result = nd.reciprocal(a)
     assert result[0][-1] == 0.5
     assert result.shape == a.shape
+
 
 if __name__ == '__main__':
     import nose
