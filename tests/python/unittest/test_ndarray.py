@@ -1839,10 +1839,10 @@ def test_update_ops_mutation():
             {'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3})
     test_op(mx.nd.adam_update, 4, [0, 2, 3], **
             {'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3})
-    test_op(mx.nd.rmspropalex_update, 5, [
-            0, 2, 3, 4], **{'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3})
-    # Currently fails.
-    # test_op(mx.nd.rmsprop_update, 3, [0, 2],**{'rescale_grad':0.1, 'lr':0.01, 'wd':1e-3})
+    test_op(mx.nd.rmspropalex_update, 5, [0, 2, 3, 4], **
+            {'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3})
+    test_op(mx.nd.rmsprop_update, 3, [0, 2], **
+            {'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3})
 
 
 if __name__ == '__main__':
