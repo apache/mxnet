@@ -457,7 +457,7 @@ fixed-size items.
         array([[ 6.,  5.,  5.],
                [ 6.,  0.,  4.]], dtype=float32)
         """
-        if self.ndim == 0 and (key == () or key == slice(None, None, None)):
+        if self.ndim == 0 and key == ():
             self._full(float(value))
             return
         if self.size == 0:
@@ -928,15 +928,20 @@ fixed-size items.
         begin, end, step = self._basic_indexing_key_to_begin_end_step(
             slc_key, self.shape, keep_none=False
         )
-        # Pylint is wrong about this
-        # pylint: disable=bad-continuation
-        if any(
-            b >= e and s > 0 or b <= e and s < 0 for b, e, s in zip(begin, end, step)
-        ):
-            return array([], ctx=self.context, dtype=self.dtype)
-        # pylint: enable=bad-continuation
 
-        if self._basic_indexing_slice_is_contiguous(slc_key, self.shape):
+        # handle zero-size outputs
+        shape = list(self.shape)
+        i = 0
+        zero_size = False
+        for b, e, s in zip(begin, end, step):
+            if b >= e and s > 0 or b <= e and s < 0:
+                shape[i] = 0
+                zero_size = True
+            i += 1
+        if zero_size:
+            sliced = zeros(tuple(shape), dtype=self.dtype, ctx=self.context)
+
+        elif self._basic_indexing_slice_is_contiguous(slc_key, self.shape):
             # Create a shared-memory view by using low-level flat slicing
             flat_begin, flat_end = self._basic_indexing_contiguous_flat_begin_end(
                 slc_key, self.shape
@@ -968,7 +973,9 @@ fixed-size items.
         if final_shape == []:
             # Override for single element indexing
             final_shape = [1]
-
+        if zero_size:
+            # Note: NDArray currently does not support reshape to fewer dimensions.  
+            return zeros(tuple(final_shape))
         return sliced.reshape(final_shape)
 
     @staticmethod

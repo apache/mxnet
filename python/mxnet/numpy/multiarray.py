@@ -226,16 +226,21 @@ class ndarray(NDArray):
         begin, end, step = self._basic_indexing_key_to_begin_end_step(
             slc_key, self.shape, keep_none=False
         ) # tuples
-        # Pylint is wrong about this
-        # pylint: disable=bad-continuation
-        if any(
-            b >= e and s > 0 or b <= e and s < 0 for b, e, s in zip(begin, end, step)
-        ):
-            return array([], dtype=self.dtype, ctx=self.context)
-        # pylint: enable=bad-continuation
+
+        # handle zero-size outputs
+        shape = list(self.shape)
+        i = 0
+        zero_size = False
+        for b, e, s in zip(begin, end, step):
+            if b >= e and s > 0 or b <= e and s < 0:
+                shape[i] = 0
+                zero_size = True
+            i += 1
+        if zero_size:
+            sliced = zeros(tuple(shape), dtype=self.dtype, ctx=self.context)
 
         # _basic_indexing_slice_is_contiguous is inheritated from NDArray class.
-        if self._basic_indexing_slice_is_contiguous(slc_key, self.shape):
+        elif self._basic_indexing_slice_is_contiguous(slc_key, self.shape):
             # Create a shared-memory view by using low-level flat slicing
             flat_begin, flat_end = self._basic_indexing_contiguous_flat_begin_end(
                 slc_key, self.shape
@@ -267,8 +272,10 @@ class ndarray(NDArray):
         if final_shape == []:
             # Override for single element indexing
             return sliced.item()
-        sliced = sliced.reshape_view(tuple(final_shape))
-        return sliced
+        if zero_size:
+            return sliced.reshape(tuple(final_shape))
+        else:
+            return sliced.reshape_view(tuple(final_shape))
 
     def _get_np_advanced_indexing(self, key):
         idcs, new_axes = self._get_index_nd(key)

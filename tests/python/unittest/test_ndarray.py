@@ -141,12 +141,6 @@ def test_ndarray_setitem():
     x_np[:, -3:-1, -2:-1] = 1
     assert same(x.asnumpy(), x_np)
 
-    # Scalar array, no assignment allowed
-    with mx.np_shape():
-        x = mx.nd.zeros(())
-        with assert_raises(IndexError):
-            x[:] = 1
-
     # Assignments for empty axes
     for trivial_shape in [(1,), (1, 1), (1, 1, 1)]:
         x = mx.nd.zeros(trivial_shape)
@@ -1889,11 +1883,12 @@ def test_ndarray_indexing():
                       ((0, 0, 0), [slice(None, None, None),]),
                       ((0, 3, 0), [slice(None, None, None),]),
     ]
-    for shape, indices in shapes_indices:
-        for index in indices:
-            np_array = np.zeros(shape)
-            test_getitem(np_array, index, False)
-            test_setitem(np_array, index, False)
+    with mx.np_shape():
+        for shape, indices in shapes_indices:
+            for index in indices:
+                np_array = np.zeros(shape)
+                test_getitem(np_array, index, False)
+                test_setitem(np_array, index, False)
 
 
 if __name__ == '__main__':

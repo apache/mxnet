@@ -431,7 +431,6 @@ def test_np_ndarray_indexing():
             raise e
         if not is_scalar:
             mx_indexed_array = mx_indexed_array.asnumpy()
-
         assert same(np_indexed_array, mx_indexed_array), 'Failed with index = {}'.format(index)
 
     def test_setitem(np_array, index, is_scalar=False):
@@ -664,9 +663,7 @@ def test_np_ndarray_indexing():
     # test zero-size tensors
     shapes_indices = [
                       ((0), [slice(None, None, None)]),
-                      ((3, 0), [2, (slice(None, None, None), None)]),
-                      ((0, 0, 0), [slice(None, None, None),]),
-                      ((0, 3, 0), [slice(None, None, None),]),
+                      ((3, 0), [2, (slice(None, None, None)), (slice(None, None, None), None)]),
     ]
     for shape, indices in shapes_indices:
         for index in indices:
