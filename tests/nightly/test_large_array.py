@@ -356,7 +356,7 @@ def test_add():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     b = nd.ones(shape=(LARGE_X, SMALL_Y))
     c = b
-    c = c.__add__(a)    
+    c = c.__add__(a)
     assert c[0][-1] == 2
     assert c.shape == a.shape
 
@@ -365,7 +365,7 @@ def test_sub():
     a = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = nd.ones(shape=(LARGE_X, SMALL_Y))
     c = b
-    c = c.__sub__(a)    
+    c = c.__sub__(a)
     assert c[0][-1] == -2
     assert c.shape == a.shape
 
@@ -380,7 +380,7 @@ def test_rsub():
 
 
 def test_neg():
-    a = nd.ones(shape=(LARGE_X, SMALL_Y))    
+    a = nd.ones(shape=(LARGE_X, SMALL_Y))
     c = a
     c = c.__neg__()
     assert c[0][-1] == -1
@@ -391,7 +391,7 @@ def test_mul():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
     c = b
-    c = c.__mul__(a)    
+    c = c.__mul__(a)
     assert c[0][-1] == 6
     assert c.shape == a.shape
 
@@ -400,7 +400,7 @@ def test_div():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
     c = b
-    c = c.__div__(a)    
+    c = c.__div__(a)
     assert c[0][-1] == 3/2
     assert c.shape == a.shape
 
@@ -409,7 +409,7 @@ def test_rdiv():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
     c = b
-    c = c.__rdiv__(a)    
+    c = c.__rdiv__(a)
     assert c[0][-1] == 2/3
     assert c.shape == a.shape
 
@@ -418,7 +418,7 @@ def test_mod():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
     c = b
-    c = c.__mod__(a)    
+    c = c.__mod__(a)
     assert c[0][-1] == 1
     assert c.shape == a.shape
 
@@ -427,7 +427,7 @@ def test_rmod():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
     c = b
-    c = c.__rmod__(a)    
+    c = c.__rmod__(a)
     assert c[0][-1] == 2
     assert c.shape == a.shape
 
@@ -436,7 +436,7 @@ def test_imod():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
     c = b
-    c = c.__imod__(a)    
+    c = c.__imod__(a)
     assert c[0][-1] == 1
     assert c.shape == a.shape
 
@@ -445,15 +445,16 @@ def test_pow():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
     c = b
-    c = c.__pow__(a)    
+    c = c.__pow__(a)
     assert c[0][-1] == 9
     assert c.shape == a.shape
+
 
 def test_rpow():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
     c = b
-    c = c.__rpow__(a)    
+    c = c.__rpow__(a)
     assert c[0][-1] == 8
     assert c.shape == a.shape
 
