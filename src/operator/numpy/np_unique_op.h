@@ -53,9 +53,9 @@ struct UniqueComputeAuxCPUKernel {
   // M is the number of columns of in_data and out_data
   // i is the index of out_data
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int64_t i, DType* out_data, const DType* in_data,
-                                  const int64_t* idx, const int64_t M) {
-    int64_t j = idx[i];
+  MSHADOW_XINLINE static void Map(dim_t i, DType* out_data, const DType* in_data,
+                                  const dim_t* idx, const dim_t M) {
+    dim_t j = idx[i];
     std::memcpy(out_data + i * M, in_data + j * M, M * sizeof(DType));
   }
 };
@@ -66,19 +66,19 @@ struct UniqueComputeAuxGPUKernel {
   // M is the number of columns of in_data and out_data
   // i is the index of out_data
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int64_t i, DType* out_data, const DType* in_data,
-                                  const int64_t* idx, const int64_t M) {
-    int64_t j = idx[i/M];
+  MSHADOW_XINLINE static void Map(dim_t i, DType* out_data, const DType* in_data,
+                                  const dim_t* idx, const dim_t M) {
+    dim_t j = idx[i/M];
     out_data[i] = in_data[j * M + i % M];
   }
 };
 
 struct UniqueComputeMaskCPUKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int64_t i,
-                                  int64_t* out_data,
+  MSHADOW_XINLINE static void Map(dim_t i,
+                                  dim_t* out_data,
                                   const DType* in_data,
-                                  const int64_t numel) {
+                                  const dim_t numel) {
     if (i == 0) {
       out_data[i] = 1;
     } else {
@@ -90,15 +90,15 @@ struct UniqueComputeMaskCPUKernel {
 
 struct UniqueComputeMaskGPUKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int64_t i,
-                                  int64_t* out_data,
+  MSHADOW_XINLINE static void Map(dim_t i,
+                                  dim_t* out_data,
                                   const DType* in_data,
-                                  const int64_t numel) {
+                                  const dim_t numel) {
     if (i == 0) {
       out_data[i] = 1;
     } else {
       out_data[i] = 0;
-      for (int64_t j = 0; j < numel; ++j) {
+      for (dim_t j = 0; j < numel; ++j) {
         if (in_data[(i - 1) * numel + j] != in_data[i * numel + j]) {
           out_data[i] = 1;
           break;
@@ -109,17 +109,17 @@ struct UniqueComputeMaskGPUKernel {
 };
 
 struct UniqueReturnInverseKernel {
-  MSHADOW_XINLINE static void Map(int64_t i,
-                                  int64_t* unique_inverse,
+  MSHADOW_XINLINE static void Map(dim_t i,
+                                  dim_t* unique_inverse,
                                   const int32_t* prefix_sum,
-                                  const int64_t* perm) {
+                                  const dim_t* perm) {
       dim_t j = perm[i];
       unique_inverse[j] = prefix_sum[i] - 1;
   }
 };
 
 struct UniqueReturnCountsKernel {
-  MSHADOW_XINLINE static void Map(int64_t i, int64_t* unique_counts, const int32_t* idx) {
+  MSHADOW_XINLINE static void Map(dim_t i, dim_t* unique_counts, const dim_t* idx) {
       unique_counts[i] = idx[i + 1] - idx[i];
   }
 };

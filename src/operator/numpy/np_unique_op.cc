@@ -53,7 +53,7 @@ void NumpyUniqueCPUNoneAxisImpl(const NumpyUniqueParam& param,
         stream, input_size, mask.data(), aux.data(), 1);
       // Calculate prefix sum
       std::vector<int32_t> prefix_sum(input_size, 0);
-      size_t valid_num = 0;
+      int32_t valid_num = 0;
       for (dim_t i = 0; i < input_size; i++) {
         prefix_sum[i] = (i == 0) ? 0 : prefix_sum[i - 1];
         prefix_sum[i] += (mask[i]) ? 1 : 0;
@@ -86,7 +86,7 @@ void NumpyUniqueCPUNoneAxisImpl(const NumpyUniqueParam& param,
       }
       if (param.return_counts) {
         output_flag += 1;
-        std::vector<int32_t> idx(valid_num + 1);
+        std::vector<dim_t> idx(valid_num + 1);
         auto iter = idx.begin();
         for (dim_t i = 0; i < input_size; ++i) {
           if (mask[i]) {
@@ -202,7 +202,7 @@ void NumpyUniqueCPUImpl(const NumpyUniqueParam& param,
     }
     if (param.return_counts) {
       output_flag += 1;
-      std::vector<int32_t> idx(valid_num + 1);
+      std::vector<dim_t> idx(valid_num + 1);
       auto iter = idx.begin();
       for (dim_t i = 0; i < temp_shape[0]; ++i) {
         if (mask[i]) {

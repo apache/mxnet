@@ -28,21 +28,21 @@ namespace mxnet {
 namespace op {
 
 template<typename DType>
-struct argsort_functor1d : public thrust::unary_function<int64_t, int64_t> {
+struct argsort_functor1d : public thrust::unary_function<dim_t, dim_t> {
   explicit argsort_functor1d(DType* data_) : data(data_) {}
   __device__
-  bool operator()(int64_t a, int64_t b) {
+  bool operator()(dim_t a, dim_t b) {
     return data[a] < data[b];
   }
   DType* data;
 };
 
 template<typename DType>
-struct argsort_functor2d : public thrust::unary_function<int64_t, int64_t> {
+struct argsort_functor2d : public thrust::unary_function<dim_t, dim_t> {
   argsort_functor2d(DType* data_, dim_t numel_) : data(data_), numel(numel_) {}
   __device__
-  bool operator()(int64_t a, int64_t b) {
-    for (int64_t i = 0; i < numel; ++i) {
+  bool operator()(dim_t a, dim_t b) {
+    for (dim_t i = 0; i < numel; ++i) {
       DType lhs = data[i + a * numel];
       DType rhs = data[i + b * numel];
       if (lhs < rhs) {
@@ -117,9 +117,9 @@ void NumpyUniqueGPUNoneAxisImpl(const NumpyUniqueParam& param,
     }
     if (param.return_counts) {
       output_flag += 1;
-      thrust::device_vector<int32_t> idx(valid_num + 1);
+      thrust::device_vector<dim_t> idx(valid_num + 1);
       auto iter = idx.begin();
-      for (int32_t i = 0; i < input_size; ++i) {
+      for (dim_t i = 0; i < input_size; ++i) {
         if (mask[i]) {
           *iter = i;
           ++iter;
@@ -218,7 +218,7 @@ void NumpyUniqueGPUImpl(const NumpyUniqueParam& param,
     }
     if (param.return_counts) {
       output_flag += 1;
-      thrust::device_vector<int32_t> idx(valid_num + 1);
+      thrust::device_vector<dim_t> idx(valid_num + 1);
       auto iter = idx.begin();
       for (dim_t i = 0; i < temp_shape[0]; ++i) {
         if (mask[i]) {
