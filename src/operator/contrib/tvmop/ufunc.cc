@@ -56,10 +56,10 @@ NNVM_REGISTER_OP(_contrib_tvm_vadd)
     .add_argument("b", "NDArray-or-Symbol", "second input")
     .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
     .set_attr<nnvm::FInferType>("FInferType", mxnet::op::ElemwiseType<2, 1>)
-    .set_attr<mxnet::FCompute>("FCompute<cpu>", mxnet::op::TVMBroadcastCompute<func_vadd_cpu>)
 #if MXNET_USE_CUDA
-    .set_attr<mxnet::FCompute>("FCompute<gpu>", mxnet::op::TVMBroadcastCompute<func_vadd_gpu>);
+    .set_attr<mxnet::FCompute>("FCompute<gpu>", mxnet::op::TVMBroadcastCompute<func_vadd_gpu>)
 #endif  // MXNET_USE_CUDA
+    .set_attr<mxnet::FCompute>("FCompute<cpu>", mxnet::op::TVMBroadcastCompute<func_vadd_cpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -28,24 +28,25 @@ RUN apt-get update && apt-get install -y \
       ruby-full \
       zlib1g-dev
 
-ENV BUNDLE_HOME=/usr/local/bundle
-ENV BUNDLE_APP_CONFIG=/usr/local/bundle
-ENV BUNDLE_BIN=/usr/local/bundle/bin
-ENV GEM_BIN=/usr/gem/bin
-ENV GEM_HOME=/usr/gem
+ENV BUNDLE_HOME=/work/deps/bundle
+ENV BUNDLE_APP_CONFIG=/work/deps/bundle
+ENV BUNDLE_BIN=/work/deps/bundle/bin
+ENV GEM_BIN=/work/deps/gem/bin
+ENV GEM_HOME=/work/deps/gem
 
 RUN echo "gem: --no-ri --no-rdoc" > ~/.gemrc
-RUN unset GEM_HOME && unset GEM_BIN && \
-  yes | gem update --system
-
-RUN unset GEM_HOME && unset GEM_BIN && yes | gem install --force bundler
+RUN yes | gem update --system
+RUN yes | gem install --force bundler
 RUN gem install jekyll
 
-RUN git clone https://github.com/ThomasDelteil/mxnet.io-v2.git && cd mxnet.io-v2
-RUN export PATH=/usr/gem/bin:$PATH
-RUN bundle install
-RUN JEKYLL_ENV=production bundle exec jekyll build --config _config_prod.yml -d ../release
+ENV PATH=$GEM_BIN:$PATH
 
 COPY runtime_functions.sh /work/
+
+# Always last
+ARG USER_ID=0
+ARG GROUP_ID=0
+COPY install/ubuntu_adduser.sh /work/
+RUN /work/ubuntu_adduser.sh
 
 WORKDIR /work/mxnet

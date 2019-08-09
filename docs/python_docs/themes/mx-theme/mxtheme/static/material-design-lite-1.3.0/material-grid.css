@@ -1,0 +1,988 @@
+/**
+ * material-design-lite - Material Design Components in CSS, JS and HTML
+ * @version v1.3.0
+ * @license Apache-2.0
+ * @copyright 2015 Google, Inc.
+ * @link https://github.com/google/material-design-lite
+ */
+/**
+ * Copyright 2015 Google Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/* Material Design Lite Grid*/
+/**
+ * Copyright 2015 Google Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/*------------------------------------*    $CONTENTS
+\*------------------------------------*/
+/**
+ * STYLE GUIDE VARIABLES------------------Declarations of Sass variables
+ * -----Typography
+ * -----Colors
+ * -----Textfield
+ * -----Switch
+ * -----Spinner
+ * -----Radio
+ * -----Menu
+ * -----List
+ * -----Layout
+ * -----Icon toggles
+ * -----Footer
+ * -----Column
+ * -----Checkbox
+ * -----Card
+ * -----Button
+ * -----Animation
+ * -----Progress
+ * -----Badge
+ * -----Shadows
+ * -----Grid
+ * -----Data table
+ * -----Dialog
+ * -----Snackbar
+ * -----Tooltip
+ * -----Chip
+ *
+ * Even though all variables have the `!default` directive, most of them
+ * should not be changed as they are dependent one another. This can cause
+ * visual distortions (like alignment issues) that are hard to track down
+ * and fix.
+ */
+/* ==========  TYPOGRAPHY  ========== */
+/* We're splitting fonts into "preferred" and "performance" in order to optimize
+   page loading. For important text, such as the body, we want it to load
+   immediately and not wait for the web font load, whereas for other sections,
+   such as headers and titles, we're OK with things taking a bit longer to load.
+   We do have some optional classes and parameters in the mixins, in case you
+   definitely want to make sure you're using the preferred font and don't mind
+   the performance hit.
+   We should be able to improve on this once CSS Font Loading L3 becomes more
+   widely available.
+*/
+/* ==========  COLORS  ========== */
+/**
+*
+* Material design color palettes.
+* @see http://www.google.com/design/spec/style/color.html
+*
+**/
+/**
+ * Copyright 2015 Google Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/* ==========  Color Palettes  ========== */
+/* colors.scss */
+/**
+ * Copyright 2015 Google Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/* ==========  IMAGES  ========== */
+/* ==========  Color & Themes  ========== */
+/* ==========  Typography  ========== */
+/* ==========  Components  ========== */
+/* ==========  Standard Buttons  ========== */
+/* ==========  Icon Toggles  ========== */
+/* ==========  Radio Buttons  ========== */
+/* ==========  Ripple effect  ========== */
+/* ==========  Layout  ========== */
+/* ==========  Content Tabs  ========== */
+/* ==========  Checkboxes  ========== */
+/* ==========  Switches  ========== */
+/* ==========  Spinner  ========== */
+/* ==========  Text fields  ========== */
+/* ==========  Card  ========== */
+/* ==========  Sliders ========== */
+/* ========== Progress ========== */
+/* ==========  List ========== */
+/* ==========  Item ========== */
+/* ==========  Dropdown menu ========== */
+/* ==========  Tooltips  ========== */
+/* ==========  Footer  ========== */
+/* TEXTFIELD */
+/* SWITCH */
+/* SPINNER */
+/* RADIO */
+/* MENU */
+/* LIST */
+/* LAYOUT */
+/* ICON TOGGLE */
+/* FOOTER */
+/*mega-footer*/
+/*mini-footer*/
+/* CHECKBOX */
+/* CARD */
+/* Card dimensions */
+/* Cover image */
+/* BUTTON */
+/**
+ *
+ * Dimensions
+ *
+ */
+/* ANIMATION */
+/* PROGRESS */
+/* BADGE */
+/* SHADOWS */
+/* GRID */
+/* DATA TABLE */
+/* DIALOG */
+/* SNACKBAR */
+/* TOOLTIP */
+/* CHIP */
+/**
+ * Copyright 2015 Google Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/* Typography */
+/* Shadows */
+/* Animations */
+/* Dialog */
+/**
+ * Copyright 2015 Google Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/*
+* NOTE: Some rules here are applied using duplicate selectors.
+* This is on purpose to increase their specificity when applied.
+* For example: `.mdl-cell--1-col-phone.mdl-cell--1-col-phone`
+*/
+/**
+ * Copyright 2015 Google Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/*------------------------------------*    $CONTENTS
+\*------------------------------------*/
+/**
+ * STYLE GUIDE VARIABLES------------------Declarations of Sass variables
+ * -----Typography
+ * -----Colors
+ * -----Textfield
+ * -----Switch
+ * -----Spinner
+ * -----Radio
+ * -----Menu
+ * -----List
+ * -----Layout
+ * -----Icon toggles
+ * -----Footer
+ * -----Column
+ * -----Checkbox
+ * -----Card
+ * -----Button
+ * -----Animation
+ * -----Progress
+ * -----Badge
+ * -----Shadows
+ * -----Grid
+ * -----Data table
+ * -----Dialog
+ * -----Snackbar
+ * -----Tooltip
+ * -----Chip
+ *
+ * Even though all variables have the `!default` directive, most of them
+ * should not be changed as they are dependent one another. This can cause
+ * visual distortions (like alignment issues) that are hard to track down
+ * and fix.
+ */
+/* ==========  TYPOGRAPHY  ========== */
+/* We're splitting fonts into "preferred" and "performance" in order to optimize
+   page loading. For important text, such as the body, we want it to load
+   immediately and not wait for the web font load, whereas for other sections,
+   such as headers and titles, we're OK with things taking a bit longer to load.
+   We do have some optional classes and parameters in the mixins, in case you
+   definitely want to make sure you're using the preferred font and don't mind
+   the performance hit.
+   We should be able to improve on this once CSS Font Loading L3 becomes more
+   widely available.
+*/
+/* ==========  COLORS  ========== */
+/**
+*
+* Material design color palettes.
+* @see http://www.google.com/design/spec/style/color.html
+*
+**/
+/**
+ * Copyright 2015 Google Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/* ==========  Color Palettes  ========== */
+/* colors.scss */
+/**
+ * Copyright 2015 Google Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/* ==========  IMAGES  ========== */
+/* ==========  Color & Themes  ========== */
+/* ==========  Typography  ========== */
+/* ==========  Components  ========== */
+/* ==========  Standard Buttons  ========== */
+/* ==========  Icon Toggles  ========== */
+/* ==========  Radio Buttons  ========== */
+/* ==========  Ripple effect  ========== */
+/* ==========  Layout  ========== */
+/* ==========  Content Tabs  ========== */
+/* ==========  Checkboxes  ========== */
+/* ==========  Switches  ========== */
+/* ==========  Spinner  ========== */
+/* ==========  Text fields  ========== */
+/* ==========  Card  ========== */
+/* ==========  Sliders ========== */
+/* ========== Progress ========== */
+/* ==========  List ========== */
+/* ==========  Item ========== */
+/* ==========  Dropdown menu ========== */
+/* ==========  Tooltips  ========== */
+/* ==========  Footer  ========== */
+/* TEXTFIELD */
+/* SWITCH */
+/* SPINNER */
+/* RADIO */
+/* MENU */
+/* LIST */
+/* LAYOUT */
+/* ICON TOGGLE */
+/* FOOTER */
+/*mega-footer*/
+/*mini-footer*/
+/* CHECKBOX */
+/* CARD */
+/* Card dimensions */
+/* Cover image */
+/* BUTTON */
+/**
+ *
+ * Dimensions
+ *
+ */
+/* ANIMATION */
+/* PROGRESS */
+/* BADGE */
+/* SHADOWS */
+/* GRID */
+/* DATA TABLE */
+/* DIALOG */
+/* SNACKBAR */
+/* TOOLTIP */
+/* CHIP */
+.mdl-grid {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-flex-flow: row wrap;
+      -ms-flex-flow: row wrap;
+          flex-flow: row wrap;
+  margin: 0 auto 0 auto;
+  -webkit-align-items: stretch;
+      -ms-flex-align: stretch;
+          align-items: stretch; }
+  .mdl-grid.mdl-grid--no-spacing {
+    padding: 0; }
+
+.mdl-cell {
+  box-sizing: border-box; }
+
+.mdl-cell--top {
+  -webkit-align-self: flex-start;
+      -ms-flex-item-align: start;
+          align-self: flex-start; }
+
+.mdl-cell--middle {
+  -webkit-align-self: center;
+      -ms-flex-item-align: center;
+              -ms-grid-row-align: center;
+          align-self: center; }
+
+.mdl-cell--bottom {
+  -webkit-align-self: flex-end;
+      -ms-flex-item-align: end;
+          align-self: flex-end; }
+
+.mdl-cell--stretch {
+  -webkit-align-self: stretch;
+      -ms-flex-item-align: stretch;
+              -ms-grid-row-align: stretch;
+          align-self: stretch; }
+
+.mdl-grid.mdl-grid--no-spacing > .mdl-cell {
+  margin: 0; }
+
+.mdl-cell--order-1 {
+  -webkit-order: 1;
+      -ms-flex-order: 1;
+          order: 1; }
+
+.mdl-cell--order-2 {
+  -webkit-order: 2;
+      -ms-flex-order: 2;
+          order: 2; }
+
+.mdl-cell--order-3 {
+  -webkit-order: 3;
+      -ms-flex-order: 3;
+          order: 3; }
+
+.mdl-cell--order-4 {
+  -webkit-order: 4;
+      -ms-flex-order: 4;
+          order: 4; }
+
+.mdl-cell--order-5 {
+  -webkit-order: 5;
+      -ms-flex-order: 5;
+          order: 5; }
+
+.mdl-cell--order-6 {
+  -webkit-order: 6;
+      -ms-flex-order: 6;
+          order: 6; }
+
+.mdl-cell--order-7 {
+  -webkit-order: 7;
+      -ms-flex-order: 7;
+          order: 7; }
+
+.mdl-cell--order-8 {
+  -webkit-order: 8;
+      -ms-flex-order: 8;
+          order: 8; }
+
+.mdl-cell--order-9 {
+  -webkit-order: 9;
+      -ms-flex-order: 9;
+          order: 9; }
+
+.mdl-cell--order-10 {
+  -webkit-order: 10;
+      -ms-flex-order: 10;
+          order: 10; }
+
+.mdl-cell--order-11 {
+  -webkit-order: 11;
+      -ms-flex-order: 11;
+          order: 11; }
+
+.mdl-cell--order-12 {
+  -webkit-order: 12;
+      -ms-flex-order: 12;
+          order: 12; }
+
+@media (max-width: 479px) {
+  .mdl-grid {
+    padding: 8px; }
+  .mdl-cell {
+    margin: 8px;
+    width: calc(100% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell {
+      width: 100%; }
+  .mdl-cell--hide-phone {
+    display: none !important; }
+  .mdl-cell--order-1-phone.mdl-cell--order-1-phone {
+    -webkit-order: 1;
+        -ms-flex-order: 1;
+            order: 1; }
+  .mdl-cell--order-2-phone.mdl-cell--order-2-phone {
+    -webkit-order: 2;
+        -ms-flex-order: 2;
+            order: 2; }
+  .mdl-cell--order-3-phone.mdl-cell--order-3-phone {
+    -webkit-order: 3;
+        -ms-flex-order: 3;
+            order: 3; }
+  .mdl-cell--order-4-phone.mdl-cell--order-4-phone {
+    -webkit-order: 4;
+        -ms-flex-order: 4;
+            order: 4; }
+  .mdl-cell--order-5-phone.mdl-cell--order-5-phone {
+    -webkit-order: 5;
+        -ms-flex-order: 5;
+            order: 5; }
+  .mdl-cell--order-6-phone.mdl-cell--order-6-phone {
+    -webkit-order: 6;
+        -ms-flex-order: 6;
+            order: 6; }
+  .mdl-cell--order-7-phone.mdl-cell--order-7-phone {
+    -webkit-order: 7;
+        -ms-flex-order: 7;
+            order: 7; }
+  .mdl-cell--order-8-phone.mdl-cell--order-8-phone {
+    -webkit-order: 8;
+        -ms-flex-order: 8;
+            order: 8; }
+  .mdl-cell--order-9-phone.mdl-cell--order-9-phone {
+    -webkit-order: 9;
+        -ms-flex-order: 9;
+            order: 9; }
+  .mdl-cell--order-10-phone.mdl-cell--order-10-phone {
+    -webkit-order: 10;
+        -ms-flex-order: 10;
+            order: 10; }
+  .mdl-cell--order-11-phone.mdl-cell--order-11-phone {
+    -webkit-order: 11;
+        -ms-flex-order: 11;
+            order: 11; }
+  .mdl-cell--order-12-phone.mdl-cell--order-12-phone {
+    -webkit-order: 12;
+        -ms-flex-order: 12;
+            order: 12; }
+  .mdl-cell--1-col,
+  .mdl-cell--1-col-phone.mdl-cell--1-col-phone {
+    width: calc(25% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--1-col, .mdl-grid--no-spacing >
+    .mdl-cell--1-col-phone.mdl-cell--1-col-phone {
+      width: 25%; }
+  .mdl-cell--2-col,
+  .mdl-cell--2-col-phone.mdl-cell--2-col-phone {
+    width: calc(50% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--2-col, .mdl-grid--no-spacing >
+    .mdl-cell--2-col-phone.mdl-cell--2-col-phone {
+      width: 50%; }
+  .mdl-cell--3-col,
+  .mdl-cell--3-col-phone.mdl-cell--3-col-phone {
+    width: calc(75% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--3-col, .mdl-grid--no-spacing >
+    .mdl-cell--3-col-phone.mdl-cell--3-col-phone {
+      width: 75%; }
+  .mdl-cell--4-col,
+  .mdl-cell--4-col-phone.mdl-cell--4-col-phone {
+    width: calc(100% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--4-col, .mdl-grid--no-spacing >
+    .mdl-cell--4-col-phone.mdl-cell--4-col-phone {
+      width: 100%; }
+  .mdl-cell--5-col,
+  .mdl-cell--5-col-phone.mdl-cell--5-col-phone {
+    width: calc(100% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--5-col, .mdl-grid--no-spacing >
+    .mdl-cell--5-col-phone.mdl-cell--5-col-phone {
+      width: 100%; }
+  .mdl-cell--6-col,
+  .mdl-cell--6-col-phone.mdl-cell--6-col-phone {
+    width: calc(100% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--6-col, .mdl-grid--no-spacing >
+    .mdl-cell--6-col-phone.mdl-cell--6-col-phone {
+      width: 100%; }
+  .mdl-cell--7-col,
+  .mdl-cell--7-col-phone.mdl-cell--7-col-phone {
+    width: calc(100% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--7-col, .mdl-grid--no-spacing >
+    .mdl-cell--7-col-phone.mdl-cell--7-col-phone {
+      width: 100%; }
+  .mdl-cell--8-col,
+  .mdl-cell--8-col-phone.mdl-cell--8-col-phone {
+    width: calc(100% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--8-col, .mdl-grid--no-spacing >
+    .mdl-cell--8-col-phone.mdl-cell--8-col-phone {
+      width: 100%; }
+  .mdl-cell--9-col,
+  .mdl-cell--9-col-phone.mdl-cell--9-col-phone {
+    width: calc(100% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--9-col, .mdl-grid--no-spacing >
+    .mdl-cell--9-col-phone.mdl-cell--9-col-phone {
+      width: 100%; }
+  .mdl-cell--10-col,
+  .mdl-cell--10-col-phone.mdl-cell--10-col-phone {
+    width: calc(100% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--10-col, .mdl-grid--no-spacing >
+    .mdl-cell--10-col-phone.mdl-cell--10-col-phone {
+      width: 100%; }
+  .mdl-cell--11-col,
+  .mdl-cell--11-col-phone.mdl-cell--11-col-phone {
+    width: calc(100% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--11-col, .mdl-grid--no-spacing >
+    .mdl-cell--11-col-phone.mdl-cell--11-col-phone {
+      width: 100%; }
+  .mdl-cell--12-col,
+  .mdl-cell--12-col-phone.mdl-cell--12-col-phone {
+    width: calc(100% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--12-col, .mdl-grid--no-spacing >
+    .mdl-cell--12-col-phone.mdl-cell--12-col-phone {
+      width: 100%; }
+  .mdl-cell--1-offset,
+  .mdl-cell--1-offset-phone.mdl-cell--1-offset-phone {
+    margin-left: calc(25% + 8px); }
+    .mdl-grid.mdl-grid--no-spacing > .mdl-cell--1-offset, .mdl-grid.mdl-grid--no-spacing >
+    .mdl-cell--1-offset-phone.mdl-cell--1-offset-phone {
+      margin-left: 25%; }
+  .mdl-cell--2-offset,
+  .mdl-cell--2-offset-phone.mdl-cell--2-offset-phone {
+    margin-left: calc(50% + 8px); }
+    .mdl-grid.mdl-grid--no-spacing > .mdl-cell--2-offset, .mdl-grid.mdl-grid--no-spacing >
+    .mdl-cell--2-offset-phone.mdl-cell--2-offset-phone {
+      margin-left: 50%; }
+  .mdl-cell--3-offset,
+  .mdl-cell--3-offset-phone.mdl-cell--3-offset-phone {
+    margin-left: calc(75% + 8px); }
+    .mdl-grid.mdl-grid--no-spacing > .mdl-cell--3-offset, .mdl-grid.mdl-grid--no-spacing >
+    .mdl-cell--3-offset-phone.mdl-cell--3-offset-phone {
+      margin-left: 75%; } }
+
+@media (min-width: 480px) and (max-width: 839px) {
+  .mdl-grid {
+    padding: 8px; }
+  .mdl-cell {
+    margin: 8px;
+    width: calc(50% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell {
+      width: 50%; }
+  .mdl-cell--hide-tablet {
+    display: none !important; }
+  .mdl-cell--order-1-tablet.mdl-cell--order-1-tablet {
+    -webkit-order: 1;
+        -ms-flex-order: 1;
+            order: 1; }
+  .mdl-cell--order-2-tablet.mdl-cell--order-2-tablet {
+    -webkit-order: 2;
+        -ms-flex-order: 2;
+            order: 2; }
+  .mdl-cell--order-3-tablet.mdl-cell--order-3-tablet {
+    -webkit-order: 3;
+        -ms-flex-order: 3;
+            order: 3; }
+  .mdl-cell--order-4-tablet.mdl-cell--order-4-tablet {
+    -webkit-order: 4;
+        -ms-flex-order: 4;
+            order: 4; }
+  .mdl-cell--order-5-tablet.mdl-cell--order-5-tablet {
+    -webkit-order: 5;
+        -ms-flex-order: 5;
+            order: 5; }
+  .mdl-cell--order-6-tablet.mdl-cell--order-6-tablet {
+    -webkit-order: 6;
+        -ms-flex-order: 6;
+            order: 6; }
+  .mdl-cell--order-7-tablet.mdl-cell--order-7-tablet {
+    -webkit-order: 7;
+        -ms-flex-order: 7;
+            order: 7; }
+  .mdl-cell--order-8-tablet.mdl-cell--order-8-tablet {
+    -webkit-order: 8;
+        -ms-flex-order: 8;
+            order: 8; }
+  .mdl-cell--order-9-tablet.mdl-cell--order-9-tablet {
+    -webkit-order: 9;
+        -ms-flex-order: 9;
+            order: 9; }
+  .mdl-cell--order-10-tablet.mdl-cell--order-10-tablet {
+    -webkit-order: 10;
+        -ms-flex-order: 10;
+            order: 10; }
+  .mdl-cell--order-11-tablet.mdl-cell--order-11-tablet {
+    -webkit-order: 11;
+        -ms-flex-order: 11;
+            order: 11; }
+  .mdl-cell--order-12-tablet.mdl-cell--order-12-tablet {
+    -webkit-order: 12;
+        -ms-flex-order: 12;
+            order: 12; }
+  .mdl-cell--1-col,
+  .mdl-cell--1-col-tablet.mdl-cell--1-col-tablet {
+    width: calc(12.5% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--1-col, .mdl-grid--no-spacing >
+    .mdl-cell--1-col-tablet.mdl-cell--1-col-tablet {
+      width: 12.5%; }
+  .mdl-cell--2-col,
+  .mdl-cell--2-col-tablet.mdl-cell--2-col-tablet {
+    width: calc(25% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--2-col, .mdl-grid--no-spacing >
+    .mdl-cell--2-col-tablet.mdl-cell--2-col-tablet {
+      width: 25%; }
+  .mdl-cell--3-col,
+  .mdl-cell--3-col-tablet.mdl-cell--3-col-tablet {
+    width: calc(37.5% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--3-col, .mdl-grid--no-spacing >
+    .mdl-cell--3-col-tablet.mdl-cell--3-col-tablet {
+      width: 37.5%; }
+  .mdl-cell--4-col,
+  .mdl-cell--4-col-tablet.mdl-cell--4-col-tablet {
+    width: calc(50% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--4-col, .mdl-grid--no-spacing >
+    .mdl-cell--4-col-tablet.mdl-cell--4-col-tablet {
+      width: 50%; }
+  .mdl-cell--5-col,
+  .mdl-cell--5-col-tablet.mdl-cell--5-col-tablet {
+    width: calc(62.5% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--5-col, .mdl-grid--no-spacing >
+    .mdl-cell--5-col-tablet.mdl-cell--5-col-tablet {
+      width: 62.5%; }
+  .mdl-cell--6-col,
+  .mdl-cell--6-col-tablet.mdl-cell--6-col-tablet {
+    width: calc(75% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--6-col, .mdl-grid--no-spacing >
+    .mdl-cell--6-col-tablet.mdl-cell--6-col-tablet {
+      width: 75%; }
+  .mdl-cell--7-col,
+  .mdl-cell--7-col-tablet.mdl-cell--7-col-tablet {
+    width: calc(87.5% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--7-col, .mdl-grid--no-spacing >
+    .mdl-cell--7-col-tablet.mdl-cell--7-col-tablet {
+      width: 87.5%; }
+  .mdl-cell--8-col,
+  .mdl-cell--8-col-tablet.mdl-cell--8-col-tablet {
+    width: calc(100% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--8-col, .mdl-grid--no-spacing >
+    .mdl-cell--8-col-tablet.mdl-cell--8-col-tablet {
+      width: 100%; }
+  .mdl-cell--9-col,
+  .mdl-cell--9-col-tablet.mdl-cell--9-col-tablet {
+    width: calc(100% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--9-col, .mdl-grid--no-spacing >
+    .mdl-cell--9-col-tablet.mdl-cell--9-col-tablet {
+      width: 100%; }
+  .mdl-cell--10-col,
+  .mdl-cell--10-col-tablet.mdl-cell--10-col-tablet {
+    width: calc(100% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--10-col, .mdl-grid--no-spacing >
+    .mdl-cell--10-col-tablet.mdl-cell--10-col-tablet {
+      width: 100%; }
+  .mdl-cell--11-col,
+  .mdl-cell--11-col-tablet.mdl-cell--11-col-tablet {
+    width: calc(100% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--11-col, .mdl-grid--no-spacing >
+    .mdl-cell--11-col-tablet.mdl-cell--11-col-tablet {
+      width: 100%; }
+  .mdl-cell--12-col,
+  .mdl-cell--12-col-tablet.mdl-cell--12-col-tablet {
+    width: calc(100% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--12-col, .mdl-grid--no-spacing >
+    .mdl-cell--12-col-tablet.mdl-cell--12-col-tablet {
+      width: 100%; }
+  .mdl-cell--1-offset,
+  .mdl-cell--1-offset-tablet.mdl-cell--1-offset-tablet {
+    margin-left: calc(12.5% + 8px); }
+    .mdl-grid.mdl-grid--no-spacing > .mdl-cell--1-offset, .mdl-grid.mdl-grid--no-spacing >
+    .mdl-cell--1-offset-tablet.mdl-cell--1-offset-tablet {
+      margin-left: 12.5%; }
+  .mdl-cell--2-offset,
+  .mdl-cell--2-offset-tablet.mdl-cell--2-offset-tablet {
+    margin-left: calc(25% + 8px); }
+    .mdl-grid.mdl-grid--no-spacing > .mdl-cell--2-offset, .mdl-grid.mdl-grid--no-spacing >
+    .mdl-cell--2-offset-tablet.mdl-cell--2-offset-tablet {
+      margin-left: 25%; }
+  .mdl-cell--3-offset,
+  .mdl-cell--3-offset-tablet.mdl-cell--3-offset-tablet {
+    margin-left: calc(37.5% + 8px); }
+    .mdl-grid.mdl-grid--no-spacing > .mdl-cell--3-offset, .mdl-grid.mdl-grid--no-spacing >
+    .mdl-cell--3-offset-tablet.mdl-cell--3-offset-tablet {
+      margin-left: 37.5%; }
+  .mdl-cell--4-offset,
+  .mdl-cell--4-offset-tablet.mdl-cell--4-offset-tablet {
+    margin-left: calc(50% + 8px); }
+    .mdl-grid.mdl-grid--no-spacing > .mdl-cell--4-offset, .mdl-grid.mdl-grid--no-spacing >
+    .mdl-cell--4-offset-tablet.mdl-cell--4-offset-tablet {
+      margin-left: 50%; }
+  .mdl-cell--5-offset,
+  .mdl-cell--5-offset-tablet.mdl-cell--5-offset-tablet {
+    margin-left: calc(62.5% + 8px); }
+    .mdl-grid.mdl-grid--no-spacing > .mdl-cell--5-offset, .mdl-grid.mdl-grid--no-spacing >
+    .mdl-cell--5-offset-tablet.mdl-cell--5-offset-tablet {
+      margin-left: 62.5%; }
+  .mdl-cell--6-offset,
+  .mdl-cell--6-offset-tablet.mdl-cell--6-offset-tablet {
+    margin-left: calc(75% + 8px); }
+    .mdl-grid.mdl-grid--no-spacing > .mdl-cell--6-offset, .mdl-grid.mdl-grid--no-spacing >
+    .mdl-cell--6-offset-tablet.mdl-cell--6-offset-tablet {
+      margin-left: 75%; }
+  .mdl-cell--7-offset,
+  .mdl-cell--7-offset-tablet.mdl-cell--7-offset-tablet {
+    margin-left: calc(87.5% + 8px); }
+    .mdl-grid.mdl-grid--no-spacing > .mdl-cell--7-offset, .mdl-grid.mdl-grid--no-spacing >
+    .mdl-cell--7-offset-tablet.mdl-cell--7-offset-tablet {
+      margin-left: 87.5%; } }
+
+@media (min-width: 840px) {
+  .mdl-grid {
+    padding: 8px; }
+  .mdl-cell {
+    margin: 8px;
+    width: calc(33.3333333333% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell {
+      width: 33.3333333333%; }
+  .mdl-cell--hide-desktop {
+    display: none !important; }
+  .mdl-cell--order-1-desktop.mdl-cell--order-1-desktop {
+    -webkit-order: 1;
+        -ms-flex-order: 1;
+            order: 1; }
+  .mdl-cell--order-2-desktop.mdl-cell--order-2-desktop {
+    -webkit-order: 2;
+        -ms-flex-order: 2;
+            order: 2; }
+  .mdl-cell--order-3-desktop.mdl-cell--order-3-desktop {
+    -webkit-order: 3;
+        -ms-flex-order: 3;
+            order: 3; }
+  .mdl-cell--order-4-desktop.mdl-cell--order-4-desktop {
+    -webkit-order: 4;
+        -ms-flex-order: 4;
+            order: 4; }
+  .mdl-cell--order-5-desktop.mdl-cell--order-5-desktop {
+    -webkit-order: 5;
+        -ms-flex-order: 5;
+            order: 5; }
+  .mdl-cell--order-6-desktop.mdl-cell--order-6-desktop {
+    -webkit-order: 6;
+        -ms-flex-order: 6;
+            order: 6; }
+  .mdl-cell--order-7-desktop.mdl-cell--order-7-desktop {
+    -webkit-order: 7;
+        -ms-flex-order: 7;
+            order: 7; }
+  .mdl-cell--order-8-desktop.mdl-cell--order-8-desktop {
+    -webkit-order: 8;
+        -ms-flex-order: 8;
+            order: 8; }
+  .mdl-cell--order-9-desktop.mdl-cell--order-9-desktop {
+    -webkit-order: 9;
+        -ms-flex-order: 9;
+            order: 9; }
+  .mdl-cell--order-10-desktop.mdl-cell--order-10-desktop {
+    -webkit-order: 10;
+        -ms-flex-order: 10;
+            order: 10; }
+  .mdl-cell--order-11-desktop.mdl-cell--order-11-desktop {
+    -webkit-order: 11;
+        -ms-flex-order: 11;
+            order: 11; }
+  .mdl-cell--order-12-desktop.mdl-cell--order-12-desktop {
+    -webkit-order: 12;
+        -ms-flex-order: 12;
+            order: 12; }
+  .mdl-cell--1-col,
+  .mdl-cell--1-col-desktop.mdl-cell--1-col-desktop {
+    width: calc(8.3333333333% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--1-col, .mdl-grid--no-spacing >
+    .mdl-cell--1-col-desktop.mdl-cell--1-col-desktop {
+      width: 8.3333333333%; }
+  .mdl-cell--2-col,
+  .mdl-cell--2-col-desktop.mdl-cell--2-col-desktop {
+    width: calc(16.6666666667% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--2-col, .mdl-grid--no-spacing >
+    .mdl-cell--2-col-desktop.mdl-cell--2-col-desktop {
+      width: 16.6666666667%; }
+  .mdl-cell--3-col,
+  .mdl-cell--3-col-desktop.mdl-cell--3-col-desktop {
+    width: calc(25% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--3-col, .mdl-grid--no-spacing >
+    .mdl-cell--3-col-desktop.mdl-cell--3-col-desktop {
+      width: 25%; }
+  .mdl-cell--4-col,
+  .mdl-cell--4-col-desktop.mdl-cell--4-col-desktop {
+    width: calc(33.3333333333% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--4-col, .mdl-grid--no-spacing >
+    .mdl-cell--4-col-desktop.mdl-cell--4-col-desktop {
+      width: 33.3333333333%; }
+  .mdl-cell--5-col,
+  .mdl-cell--5-col-desktop.mdl-cell--5-col-desktop {
+    width: calc(41.6666666667% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--5-col, .mdl-grid--no-spacing >
+    .mdl-cell--5-col-desktop.mdl-cell--5-col-desktop {
+      width: 41.6666666667%; }
+  .mdl-cell--6-col,
+  .mdl-cell--6-col-desktop.mdl-cell--6-col-desktop {
+    width: calc(50% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--6-col, .mdl-grid--no-spacing >
+    .mdl-cell--6-col-desktop.mdl-cell--6-col-desktop {
+      width: 50%; }
+  .mdl-cell--7-col,
+  .mdl-cell--7-col-desktop.mdl-cell--7-col-desktop {
+    width: calc(58.3333333333% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--7-col, .mdl-grid--no-spacing >
+    .mdl-cell--7-col-desktop.mdl-cell--7-col-desktop {
+      width: 58.3333333333%; }
+  .mdl-cell--8-col,
+  .mdl-cell--8-col-desktop.mdl-cell--8-col-desktop {
+    width: calc(66.6666666667% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--8-col, .mdl-grid--no-spacing >
+    .mdl-cell--8-col-desktop.mdl-cell--8-col-desktop {
+      width: 66.6666666667%; }
+  .mdl-cell--9-col,
+  .mdl-cell--9-col-desktop.mdl-cell--9-col-desktop {
+    width: calc(75% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--9-col, .mdl-grid--no-spacing >
+    .mdl-cell--9-col-desktop.mdl-cell--9-col-desktop {
+      width: 75%; }
+  .mdl-cell--10-col,
+  .mdl-cell--10-col-desktop.mdl-cell--10-col-desktop {
+    width: calc(83.3333333333% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--10-col, .mdl-grid--no-spacing >
+    .mdl-cell--10-col-desktop.mdl-cell--10-col-desktop {
+      width: 83.3333333333%; }
+  .mdl-cell--11-col,
+  .mdl-cell--11-col-desktop.mdl-cell--11-col-desktop {
+    width: calc(91.6666666667% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--11-col, .mdl-grid--no-spacing >
+    .mdl-cell--11-col-desktop.mdl-cell--11-col-desktop {
+      width: 91.6666666667%; }
+  .mdl-cell--12-col,
+  .mdl-cell--12-col-desktop.mdl-cell--12-col-desktop {
+    width: calc(100% - 16px); }
+    .mdl-grid--no-spacing > .mdl-cell--12-col, .mdl-grid--no-spacing >
+    .mdl-cell--12-col-desktop.mdl-cell--12-col-desktop {
+      width: 100%; }
+  .mdl-cell--1-offset,
+  .mdl-cell--1-offset-desktop.mdl-cell--1-offset-desktop {
+    margin-left: calc(8.3333333333% + 8px); }
+    .mdl-grid.mdl-grid--no-spacing > .mdl-cell--1-offset, .mdl-grid.mdl-grid--no-spacing >
+    .mdl-cell--1-offset-desktop.mdl-cell--1-offset-desktop {
+      margin-left: 8.3333333333%; }
+  .mdl-cell--2-offset,
+  .mdl-cell--2-offset-desktop.mdl-cell--2-offset-desktop {
+    margin-left: calc(16.6666666667% + 8px); }
+    .mdl-grid.mdl-grid--no-spacing > .mdl-cell--2-offset, .mdl-grid.mdl-grid--no-spacing >
+    .mdl-cell--2-offset-desktop.mdl-cell--2-offset-desktop {
+      margin-left: 16.6666666667%; }
+  .mdl-cell--3-offset,
+  .mdl-cell--3-offset-desktop.mdl-cell--3-offset-desktop {
+    margin-left: calc(25% + 8px); }
+    .mdl-grid.mdl-grid--no-spacing > .mdl-cell--3-offset, .mdl-grid.mdl-grid--no-spacing >
+    .mdl-cell--3-offset-desktop.mdl-cell--3-offset-desktop {
+      margin-left: 25%; }
+  .mdl-cell--4-offset,
+  .mdl-cell--4-offset-desktop.mdl-cell--4-offset-desktop {
+    margin-left: calc(33.3333333333% + 8px); }
+    .mdl-grid.mdl-grid--no-spacing > .mdl-cell--4-offset, .mdl-grid.mdl-grid--no-spacing >
+    .mdl-cell--4-offset-desktop.mdl-cell--4-offset-desktop {
+      margin-left: 33.3333333333%; }
+  .mdl-cell--5-offset,
+  .mdl-cell--5-offset-desktop.mdl-cell--5-offset-desktop {
+    margin-left: calc(41.6666666667% + 8px); }
+    .mdl-grid.mdl-grid--no-spacing > .mdl-cell--5-offset, .mdl-grid.mdl-grid--no-spacing >
+    .mdl-cell--5-offset-desktop.mdl-cell--5-offset-desktop {
+      margin-left: 41.6666666667%; }
+  .mdl-cell--6-offset,
+  .mdl-cell--6-offset-desktop.mdl-cell--6-offset-desktop {
+    margin-left: calc(50% + 8px); }
+    .mdl-grid.mdl-grid--no-spacing > .mdl-cell--6-offset, .mdl-grid.mdl-grid--no-spacing >
+    .mdl-cell--6-offset-desktop.mdl-cell--6-offset-desktop {
+      margin-left: 50%; }
+  .mdl-cell--7-offset,
+  .mdl-cell--7-offset-desktop.mdl-cell--7-offset-desktop {
+    margin-left: calc(58.3333333333% + 8px); }
+    .mdl-grid.mdl-grid--no-spacing > .mdl-cell--7-offset, .mdl-grid.mdl-grid--no-spacing >
+    .mdl-cell--7-offset-desktop.mdl-cell--7-offset-desktop {
+      margin-left: 58.3333333333%; }
+  .mdl-cell--8-offset,
+  .mdl-cell--8-offset-desktop.mdl-cell--8-offset-desktop {
+    margin-left: calc(66.6666666667% + 8px); }
+    .mdl-grid.mdl-grid--no-spacing > .mdl-cell--8-offset, .mdl-grid.mdl-grid--no-spacing >
+    .mdl-cell--8-offset-desktop.mdl-cell--8-offset-desktop {
+      margin-left: 66.6666666667%; }
+  .mdl-cell--9-offset,
+  .mdl-cell--9-offset-desktop.mdl-cell--9-offset-desktop {
+    margin-left: calc(75% + 8px); }
+    .mdl-grid.mdl-grid--no-spacing > .mdl-cell--9-offset, .mdl-grid.mdl-grid--no-spacing >
+    .mdl-cell--9-offset-desktop.mdl-cell--9-offset-desktop {
+      margin-left: 75%; }
+  .mdl-cell--10-offset,
+  .mdl-cell--10-offset-desktop.mdl-cell--10-offset-desktop {
+    margin-left: calc(83.3333333333% + 8px); }
+    .mdl-grid.mdl-grid--no-spacing > .mdl-cell--10-offset, .mdl-grid.mdl-grid--no-spacing >
+    .mdl-cell--10-offset-desktop.mdl-cell--10-offset-desktop {
+      margin-left: 83.3333333333%; }
+  .mdl-cell--11-offset,
+  .mdl-cell--11-offset-desktop.mdl-cell--11-offset-desktop {
+    margin-left: calc(91.6666666667% + 8px); }
+    .mdl-grid.mdl-grid--no-spacing > .mdl-cell--11-offset, .mdl-grid.mdl-grid--no-spacing >
+    .mdl-cell--11-offset-desktop.mdl-cell--11-offset-desktop {
+      margin-left: 91.6666666667%; } }

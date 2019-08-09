@@ -25,16 +25,12 @@ set -ex
 echo 'Installing dependencies...'
 apt-get update || true
 apt-get install -y \
-    doxygen
-
+    doxygen \
+    pandoc
 
 # Can probably delete these and docs_requirements
-# pip3 install -r /work/docs_requirements
-# pip2 install -r /work/docs_requirements
 wget -q https://repo.anaconda.com/miniconda/Miniconda2-latest-Linux-x86_64.sh
 chmod +x Miniconda2-latest-Linux-x86_64.sh
 ./Miniconda2-latest-Linux-x86_64.sh -b -p /work/miniconda
-eval "$(/work/miniconda/bin/conda shell.bash hook)"
-conda env create -f docs_environment.yml
 
 echo 'Dependency installation complete.'

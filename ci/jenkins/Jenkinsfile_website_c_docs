@@ -33,10 +33,12 @@ utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu')
 
 utils.main_wrapper(
 core_logic: {
-
+  utils.parallel_stage('Build', [
+    custom_steps.compile_unix_lite()
+  ])
+  
   utils.parallel_stage('C Docs', [
     custom_steps.docs_c()
-
   ])
 
 }

@@ -1,0 +1,52 @@
+---
+layout: page
+---
+<div class="row">
+    <div class="col-3 docs-side-bar">
+
+        {% for p in site.pages %}
+        {% if p.tag == 'main_docs' %}
+        {% for doc in p.docs %}
+        {% if doc.tag == page.tag %}
+        <div class="docs-card docs-side">
+            <ul>
+                <div class="docs-action-btn">
+                    <a href="{{doc.guide_link | relative_url}}"> <img src="{{'assets/img/compass.svg' | relative_url}}"
+                                                                      class="docs-logo-docs">{{doc.title}} Guide <span
+                            class="span-accented">›</span></a>
+                </div>
+                <div class="docs-action-btn">
+                    <a href="{{doc.tutorial_link | relative_url}}"> <img
+                            src="{{'assets/img/video-tutorial.svg' | relative_url}}" class="docs-logo-docs">{{doc.title}}
+                        Tutorials <span class="span-accented">›</span></a>
+                </div>
+                <div class="docs-action-btn">
+                    <a href="{{doc.api_link | relative_url}}"> <img src="{{'assets/img/api.svg' | relative_url}}"
+                                                                    class="docs-logo-docs">{{doc.title}} API Reference
+                        <span class="span-accented">›</span></a>
+                </div>
+
+                <!-- Let's show the list of tutorials -->
+                <br>
+                {% if page.is_tutorial == true %}
+                <h3>Tutorials</h3>
+                {% for p in site.pages %}
+                {% if p.is_tutorial == true %}
+                {% if page.tag == p.tag %}
+                <li><a href="{{ p.url  | relative_url }}">{{ p.title }}</a></li>
+                {% endif %}  <!-- page-category -->
+                {% endif %}   <!-- resource-p -->
+                {% endfor %}  <!-- page -->
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+        {% endfor %}
+        {% endif %}   <!-- resource-p -->
+        {% endfor %}  <!-- page -->
+        </ul>
+    </div>
+    <div class="col-9">
+        {{ content }}
+    </div>
+</div>
