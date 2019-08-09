@@ -1369,17 +1369,20 @@ def test_qemu_armv7_cpu() {
     }]
 }
 
-
+// This is for running on PRs
 def docs_website() {
     return ['Docs': {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            //TODO REPLACE THIS WITH FULL BUILD
-            utils.docker_run('ubuntu_cpu', 'deploy_docs', false)
+
+            unstash 'jekyll-artifacts'
+            unstash 'python-artifacts'
+            utils.docker_run('ubuntu_cpu_jekyll', 'build_docs_small', false)
+
             master_url = utils.get_jenkins_master_url()
             if ( master_url == 'jenkins.mxnet-ci.amazon-ml.com') {
+                // TODO: Make sure this scripts publish the website from the right folder
                 sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
             } else {
                 print "Skipping staging documentation publishing since we are not running in prod. Host: {$master_url}"
@@ -1516,28 +1519,49 @@ def docs_jekyll() {
 }
 
 
-def docs_publish() {
-    return ['Publish the full website': {
+// Ths is for the full website
+def docs_prepare() {
+    return ['Prepare for publication of the full website': {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-              
-            unstash 'jekyll-artifacts'              
+
+            unstash 'jekyll-artifacts'
             unstash 'c-artifacts'
             unstash 'python-artifacts'
             unstash 'julia-artifacts'
             unstash 'scala-artifacts'
             unstash 'java-artifacts'
             unstash 'clojure-artifacts'
-              
+
             utils.docker_run('ubuntu_cpu_jekyll', 'build_docs', false)
+            utils.pack_lib('full_website', 'docs/_build/full_website.tgz', false)
+
+            // TODO: Make sure this 'test-website-publish' understand the new structure
+          }
+        }
+      }
+    }]
+}
+
+// This is for the full website
+def docs_publish() {
+    return ['Publish the full website': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            unstash 'full_website'
+            sh 'tar -xzf docs/_build/full_website.tgz --directory .'
+            // TODO: Make sure this 'test-website-publish' understand the new structure
             build 'test-website-publish'
           }
         }
       }
     }]
 }
+
 
 
 def misc_asan_cpu() {
