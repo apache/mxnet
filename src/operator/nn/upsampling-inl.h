@@ -115,7 +115,6 @@ void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
   if (req[up_enum::kOut] == kNullOp) {
     return;
   }
-
   Stream<xpu> *s = ctx.get_stream<xpu>();
   Tensor<xpu, 4, DType> out = out_data[up_enum::kOut].get<xpu, 4, DType>(s);
   if (param.num_args > 1) {
