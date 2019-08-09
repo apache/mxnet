@@ -86,6 +86,21 @@ struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
   }
 };  // struct UpSamplingParam
 
+int* inline scaleComp(const UpSamplingParam &param){
+  int scaleArr[] = {1, 1};
+  if (param.scale.ndim() == 1) {
+    scaleArr[0] = param.scale[0];
+    scaleArr[1] = param.scale[0];
+  } else if (param.scale.ndim() == 2) {
+    scaleArr[0] = param.scale[0];
+    scaleArr[1] = param.scale[1];
+  } else if (param.scale.ndim() == 4) {
+    scaleArr[0] = param.scale[2];
+    scaleArr[1] = param.scale[3];
+  }
+  return scaleArr;
+}
+
 template<typename xpu, typename DType>
 void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
                        const std::vector<TBlob> &in_data,
@@ -106,10 +121,10 @@ void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
     for (int i = 0; i < param.num_args; ++i) {
       Tensor<xpu, 4, DType> data = in_data[i].get<xpu, 4, DType>(s);
       int end = begin + data.size(1);
-      
+      // scale computation section----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
       int scale_h = out_data[up_enum::kOut].size(2)/in_data[i].size(2);//3rd dimension of TBlob (2nd from 4th dimension)
       int scale_w = out_data[up_enum::kOut].size(1)/in_data[i].size(1);//4th dimension of TBlob (1st from 4th dimension)
-      
+      //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
       if (param.multi_input_mode == up_enum::kSum) {
         if (i == 0) {
 
@@ -129,8 +144,8 @@ void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
     }
   } else {
     Tensor<xpu, 4, DType> data = in_data[up_enum::kData].get<xpu, 4, DType>(s);
-
-    int scale_h, scale_w;
+    /* scale computation section----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    int scale_h = 1, scale_w = 1;
     if (param.scale.ndim() == 1) {
       scale_h = param.scale[0];
       scale_w = param.scale[0];
@@ -141,7 +156,10 @@ void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
       scale_h = param.scale[2];
       scale_w = param.scale[3];
     }
-    Assign(out, req[up_enum::kOut], upsampling_nearest(data, scale_h, scale_w)); //modify
+    //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    */
+    int* scale_hw = scaleComp(param);
+    Assign(out, req[up_enum::kOut], upsampling_nearest(data, scale_hw[0], scale_hw[1]));
 
   }
 }
@@ -161,8 +179,10 @@ void UpSamplingBackward(const OpContext &ctx, const UpSamplingParam &param,
       Tensor<xpu, 4, DType> input_grad = in_grad[i].get<xpu, 4, DType>(s);
       mshadow::Shape<2> in_shape = Shape2(input_grad.shape_[2], input_grad.shape_[3]);
       int end = begin + input_grad.size(1);
+      //scale computation section --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
       int scale_h = grad.size(2)/in_shape[0];
       int scale_w = grad.size(3)/in_shape[1];
+      //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
       if (param.multi_input_mode == up_enum::kSum) {
         Assign(input_grad, req[i],
                pool<mshadow::red::sum>(grad,
@@ -185,6 +205,7 @@ void UpSamplingBackward(const OpContext &ctx, const UpSamplingParam &param,
   } else {
     Tensor<xpu, 4, DType> input_grad = in_grad[up_enum::kData].get<xpu, 4, DType>(s);
     mshadow::Shape<2> in_shape = Shape2(input_grad.shape_[2], input_grad.shape_[3]);
+    /* scale computation section --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     int scale_h = 1;
     int scale_w = 1;
     if (param.scale.ndim() == 1) {
@@ -197,18 +218,22 @@ void UpSamplingBackward(const OpContext &ctx, const UpSamplingParam &param,
       scale_h = param.scale[2];
       scale_w = param.scale[3];
     }
+    //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    */
+    int* scale_hw = scaleComp(param);
     Assign(input_grad, req[up_enum::kData],
            pool<mshadow::red::sum>(grad,
                                    in_shape,
-                                   scale_h,
-                                   scale_w,
-                                   scale_h,
-                                   scale_w));
+                                   scale_hw[0],
+                                   scale_hw[1],
+                                   scale_hw[0],
+                                   scale_hw[1]));
   }
 }
 
 static inline DeconvolutionParam GetDeconvolutionParam(const UpSamplingParam& param) {
   DeconvolutionParam p = DeconvolutionParam();
+  /* scale computation section---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   int scale_h = 1;
   int scale_w = 1;
   if (param.scale.ndim() == 1) {
@@ -221,11 +246,14 @@ static inline DeconvolutionParam GetDeconvolutionParam(const UpSamplingParam& pa
     scale_h = param.scale[2];
     scale_w = param.scale[3];
   }
-  CHECK_EQ(scale_h, scale_w) <<
+  //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  */
+ int* scale_hw = scaleComp(param);
+  CHECK_EQ(scale_hw[0], scale_hw[1]) <<
   "UpSamplingBilinear: Scale should be the same along all dimensions for bilinear upsampling";
-  int kernel = static_cast<int>(2.0 * scale_h - ::fmod(scale_h, 2));
-  int stride = scale_h;
-  int pad = static_cast<int>(ceil((scale_h - 1) / 2.));
+  int kernel = static_cast<int>(2.0 * scale_hw[0] - ::fmod(scale_hw[0], 2));
+  int stride = scale_hw[0];
+  int pad = static_cast<int>(ceil((scale_hw[0] - 1) / 2.));
   p.workspace = param.workspace;
   p.num_group = param.num_filter;
   p.num_filter = param.num_filter;
