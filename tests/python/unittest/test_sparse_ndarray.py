@@ -450,6 +450,7 @@ def test_sparse_nd_broadcast():
 
 
 @with_seed()
+@unittest.skip("test_sparse_nd_transpose")
 def test_sparse_nd_transpose():
     npy = np.random.uniform(-10, 10, rand_shape_2d())
     stypes = ['csr', 'row_sparse']
