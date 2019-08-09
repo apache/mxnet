@@ -26,7 +26,7 @@ import mxnet.contrib.amp as amp
 from nose.tools import assert_raises
 from mxnet.test_utils import set_default_context, download_model, same_symbol_structure
 from mxnet.gluon.model_zoo.vision import get_model
-from mxnet.gluon import SymbolBlock
+from mxnet.gluon import SymbolBlock, nn, rnn
 from mxnet.contrib.amp import amp
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
@@ -299,6 +299,16 @@ def test_amp_conversion():
                                                    cast_optional_params=True)
         params = converted_model.collect_params()
         assert params["stage2_unit1_conv2_weight"].dtype == np.float16
+
+        model = nn.HybridSequential()
+        model.add(rnn.LSTM(hidden_size=10,num_layers=2,bidirectional=True))
+        model.add(nn.Dense(2))
+        model.initialize()
+        model.hybridize()
+        out = model(mx.nd.ones((2, 3, 4)))
+        new_model = amp.convert_hybrid_block(model)
+        out2 = new_model(mx.nd.ones((2, 3, 4)))
+        mx.test_utils.assert_almost_equal(out.asnumpy(), out2.asnumpy(), atol=1e-2, rtol=1e-2)
 
     with mx.Context(mx.gpu(0)):
         check_amp_convert_symbol()
