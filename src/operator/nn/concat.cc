@@ -177,7 +177,6 @@ bool ConcatType(const nnvm::NodeAttrs& attrs,
        << mxnet::op::type_string((*out_type)[0]) << ','
        << " inferred type = " << mxnet::op::type_string(dtype);
     throw mxnet::op::InferTypeError(os.str(), 0);
-    return false;
   }
   return true;
 }
