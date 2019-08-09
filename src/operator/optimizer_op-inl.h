@@ -1651,9 +1651,9 @@ struct RMSPropAlexUpdateKernel {
 
     if (clip_weights >= 0.0f) {
       const DType clipped_weight = clip::Map(weight_data[i] + delta_data[i], clip_weights);
-      Assign(out_data[i], req, clipped_weight);
+      KERNEL_ASSIGN(out_data[i], req, clipped_weight);
     } else {
-      Assign(out_data[i], req, weight_data[i] + delta_data[i]);
+      KERNEL_ASSIGN(out_data[i], req, weight_data[i] + delta_data[i]);
     }
   }
 };
