@@ -83,75 +83,81 @@ def test_ndarray_random_randint():
 
 @with_seed()
 def test_ndarray_random_exponential():
-    scale_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
-    a = nd.random.exponential(scale =scale_array, shape=(SMALL_X, SMALL_Y))
-    assert a.shape == (MEDIUM_X,SMALL_Y,SMALL_X, SMALL_Y)
+    scale_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    a = nd.random.exponential(scale=scale_array, shape=(SMALL_X, SMALL_Y))
+    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
     assert a[-1][0][0][0] >= 0
+
 
 @with_seed()
 def test_ndarray_random_gamma():
-    alpha_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
-    beta_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
-    a = nd.random.gamma(alpha =alpha_array, beta=beta_array, shape=(SMALL_X, SMALL_Y))
-    assert a.shape == (MEDIUM_X,SMALL_Y,SMALL_X, SMALL_Y)
+    alpha_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    beta_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    a = nd.random.gamma(alpha=alpha_array, beta=beta_array,
+                        shape=(SMALL_X, SMALL_Y))
+    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
     assert a[-1][0][0][0] >= 0
+
 
 @with_seed()
 def test_ndarray_random_multinomial():
     # test 1 shape dimension
-    probs = nd.random.uniform(shape=(LARGE_X,SMALL_Y))
+    probs = nd.random.uniform(shape=(LARGE_X, SMALL_Y))
     a = nd.random.multinomial(probs)
     assert a.shape == (LARGE_X,)
     assert a[-1] >= 0
     # test for NDArray multi-dimension shape
-    a = nd.random.multinomial(probs, shape=(SMALL_X,SMALL_Y))
-    assert a.shape == (LARGE_X,SMALL_X,SMALL_Y)
+    a = nd.random.multinomial(probs, shape=(SMALL_X, SMALL_Y))
+    assert a.shape == (LARGE_X, SMALL_X, SMALL_Y)
     assert a[-1][0][0] >= 0
     # test log_likelihood output shape
-    a = nd.random.multinomial(probs, shape=(SMALL_X,SMALL_Y), get_prob=True)
-    assert a[0].shape == (LARGE_X,SMALL_X,SMALL_Y) and a[0].shape == a[1].shape
+    a = nd.random.multinomial(probs, shape=(SMALL_X, SMALL_Y), get_prob=True)
+    assert a[0].shape == (LARGE_X, SMALL_X, SMALL_Y) and a[0].shape == a[1].shape
     assert a[-1][0][0] >= 0
 
 
 @with_seed()
 def test_ndarray_random_generalized_negative_binomial():
-    alpha_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
-    mu_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
-    a = nd.random.generalized_negative_binomial(mu=mu_array, alpha=alpha_array, shape=(SMALL_X, SMALL_Y))
-    assert a.shape == (MEDIUM_X,SMALL_Y,SMALL_X, SMALL_Y)
+    alpha_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    mu_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    a = nd.random.generalized_negative_binomial(mu=mu_array, alpha=alpha_array,
+                                                shape=(SMALL_X, SMALL_Y))
+    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
     assert a[-1][0][0][0] >= 0
 
 
 @with_seed()
 def test_ndarray_random_negative_binomial():
-    k_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
-    p_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
-    a = nd.random.negative_binomial(k=k_array, p=p_array, shape=(SMALL_X, SMALL_Y))
-    assert a.shape == (MEDIUM_X,SMALL_Y,SMALL_X, SMALL_Y)
+    k_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    p_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    a = nd.random.negative_binomial(k=k_array, p=p_array,
+                                    shape=(SMALL_X, SMALL_Y))
+    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
     assert a[-1][0][0][0] >= 0
 
 
 @with_seed()
 def test_ndarray_random_normal():
-    scale_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
-    loc_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
-    a = nd.random.normal(loc=loc_array, scale=scale_array, shape=(SMALL_X, SMALL_Y))
-    assert a.shape == (MEDIUM_X,SMALL_Y,SMALL_X, SMALL_Y)
+    scale_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    loc_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    a = nd.random.normal(loc=loc_array, scale=scale_array,
+                         shape=(SMALL_X, SMALL_Y))
+    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
     assert a[-1][0][0][0] >= 0
 
 
 @with_seed()
 def test_ndarray_random_poisson():
-    lambda_array = nd.random.uniform(shape=(MEDIUM_X,SMALL_Y))
-    a = nd.random.poisson(lam=lambda_array, shape=(SMALL_X,SMALL_Y))
-    assert a.shape == (MEDIUM_X,SMALL_Y,SMALL_X, SMALL_Y)
+    lambda_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    a = nd.random.poisson(lam=lambda_array, shape=(SMALL_X, SMALL_Y))
+    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
     assert a[-1][0][0][0] >= 0
 
 
 @with_seed()
 def test_ndarray_random_randn():
-    a = nd.random.randn(LARGE_X,SMALL_Y)
-    assert a.shape == (LARGE_X,SMALL_Y)
+    a = nd.random.randn(LARGE_X, SMALL_Y)
+    assert a.shape == (LARGE_X, SMALL_Y)
     assert a[-1][0] >= 0
     # TODO: Once PR for randn ndarray dtype for loc,scale param merged
     # Add check for (x,y,m,n) where x,y shape of loc,scale and m,n input shape
