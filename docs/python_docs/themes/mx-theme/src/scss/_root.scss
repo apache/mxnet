@@ -3,7 +3,7 @@ html {
 }
 
 body {
-    display: none;
+    display: block !important;
     background-color: $background_color;
     font-size: 1rem;
     line-height: 1.5rem;
@@ -17,6 +17,10 @@ body {
 h1, h2, h3, h4, h5, h6, blockquote, span.mdl-layout-title,
 a.download > code.download {
     font-family: $body_font_family;
+}
+
+h1, h2, h3, h4, h5, h6, .toc-backref, .contents, .toctree-wrapper, .contents a, .toctree-wrapper a, .globaltoc a.current {
+    color: $color-mxnet !important;
 }
 
 a {
