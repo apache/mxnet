@@ -2051,7 +2051,7 @@ def convert_broadcast_to(node, **kwargs):
 
 @mx_op.register("topk")
 def convert_topk(node, **kwargs):
-    """Map MXNet's size_array operator attributes to onnx's Size operator
+    """Map MXNet's topk operator attributes to onnx's TopK operator
     and return the created node.
     """
     name, input_nodes, attrs = get_inputs(node, kwargs)
