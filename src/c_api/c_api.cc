@@ -46,12 +46,12 @@
 #include "mxnet/libinfo.h"
 #include "mxnet/imperative.h"
 #include "mxnet/lib_api.h"
+#include "../initialize.h"
 #include "./c_api_common.h"
 #include "../operator/custom/custom-inl.h"
 #include "../operator/tensor/matrix_op-inl.h"
 #include "../operator/tvmop/op_module.h"
 #include "../common/utils.h"
-#include "../common/library.h"
 
 using namespace mxnet;
 
@@ -95,7 +95,7 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
 // Loads library and initializes it
 int MXLoadLib(const char *path) {
   API_BEGIN();
-  void *lib = load_lib(path);
+  void *lib = LibraryInitializer::Get()->lib_load(path);
   if (!lib)
     LOG(FATAL) << "Unable to load library";
 

@@ -24,6 +24,7 @@ mxnet_option(USE_OLDCMAKECUDA     "Build with old cmake cuda" OFF)
 mxnet_option(USE_NCCL             "Use NVidia NCCL with CUDA" OFF)
 mxnet_option(USE_OPENCV           "Build with OpenCV support" ON)
 mxnet_option(USE_OPENMP           "Build with Openmp support" ON)
+mxnet_option(USE_OPENMP_BUNDLED_LLVM "Build with bundled llvm openmp from 3rdparty" OFF)
 mxnet_option(USE_CUDNN            "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
 mxnet_option(USE_SSE              "Build with x86 SSE instruction support" ON IF NOT ARM)
 mxnet_option(USE_F16C             "Build with x86 F16C instruction support" ON) # autodetects support if ON
@@ -433,11 +434,11 @@ if(USE_OPENMP)
   find_package(OpenMP REQUIRED)
   # This should build on Windows, but there's some problem and I don't have a Windows box, so
   # could a Windows user please fix?
-  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp/CMakeLists.txt
-     AND SYSTEM_ARCHITECTURE STREQUAL "x86_64"
-     AND NOT MSVC
-     AND NOT CMAKE_CROSSCOMPILING)
-
+  if(USE_OPENMP_BUNDLED_LLVM AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp/CMakeLists.txt
+      AND SYSTEM_ARCHITECTURE STREQUAL "x86_64"
+      AND NOT MSVC
+      AND NOT CMAKE_CROSSCOMPILING)
+    message("Using bundlded LLVM OpenMP")
     # Intel/llvm OpenMP: https://github.com/llvm-mirror/openmp
     set(OPENMP_STANDALONE_BUILD TRUE)
     set(LIBOMP_ENABLE_SHARED TRUE)
@@ -451,6 +452,7 @@ if(USE_OPENMP)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
     add_definitions(-DMXNET_USE_OPENMP=1)
   else()
+    message("Using platform provided OpenMP")
     if(OPENMP_FOUND)
       set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
