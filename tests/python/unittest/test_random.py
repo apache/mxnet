@@ -434,6 +434,7 @@ def test_random_seed_setting():
 
 # Tests that seed setting of parallel rng is synchronous w.r.t. rng use before and after.
 @with_seed()
+@unittest.skip("test_parallel_random_seed_setting")
 def test_parallel_random_seed_setting():
     ctx = mx.context.current_context()
     seed_to_test = 1234
