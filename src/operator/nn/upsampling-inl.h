@@ -87,7 +87,9 @@ struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
 };  // struct UpSamplingParam
 
 inline int* scaleComp(const UpSamplingParam &param){
-  int scaleArr[] = {1, 1};
+  int* scaleArr = new int[2];
+  scaleArr[0] = 1;
+  scaleArr[1] = 1;
   if (param.scale.ndim() == 1) {
     scaleArr[0] = param.scale[0];
     scaleArr[1] = param.scale[0];
@@ -160,7 +162,7 @@ void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
     */
     int* scale_hw = scaleComp(param);
     Assign(out, req[up_enum::kOut], upsampling_nearest(data, scale_hw[0], scale_hw[1]));
-
+    delete scale_hw;
   }
 }
 
@@ -228,6 +230,7 @@ void UpSamplingBackward(const OpContext &ctx, const UpSamplingParam &param,
                                    scale_hw[1],
                                    scale_hw[0],
                                    scale_hw[1]));
+    delete scale_hw;
   }
 }
 
@@ -254,6 +257,7 @@ static inline DeconvolutionParam GetDeconvolutionParam(const UpSamplingParam& pa
   int kernel = static_cast<int>(2.0 * scale_hw[0] - ::fmod(scale_hw[0], 2));
   int stride = scale_hw[0];
   int pad = static_cast<int>(ceil((scale_hw[0] - 1) / 2.));
+  delete scale_hw;
   p.workspace = param.workspace;
   p.num_group = param.num_filter;
   p.num_filter = param.num_filter;
