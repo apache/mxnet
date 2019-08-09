@@ -102,66 +102,51 @@ def test_npx_slice():
             self._end = end
             self._step = step
 
-        def hybrid_forward(self, F, a, *args, **kwargs):
+        def hybrid_forward(self, F, a):
             return F.npx.slice(a, begin=self._begin, end=self._end, step=self._step)
 
-    def get_start_end_step(shape):
-        start = []
-        end = []
-        step_switch = random.randint(-1,1)
-        step = None if step_switch == 0 else []
-        for i in range(len(shape)):
-            s = random.randint(0, shape[i]-1)
-            e = random.randint(s+1, shape[i])
-            if step_switch == 1:
-                step.append(1)
-                start.append(s)
-                end.append(e)
-            elif step_switch == -1:
-                step.append(-1)
-                if e == shape[i]:
-                    e -= 1
-                    s -= 1
-                    if s == -1:
-                        s = None
-                start.append(e)
-                end.append(s)
-            else:
-                start.append(s)
-                end.append(e)
-        return start, end, step
+    shape = (8, 16, 9, 9)
+    np_array = _np.arange(_np.prod(shape), dtype='int32').reshape(shape)
+    configs = [
+        ([], [], None),
+        ([], [], []),
+        ([1], [4], None),
+        ([1], [10], [3]),
+        ([10], [0], [-2]),
+        ([None], [None], [None]),
+        ([None], [None], [-1]),
+        ([10], [None], [-1]),
+        ([1, 0, 3], [-2, 10, -4], [None, 2, 3]),
+        ([-2, -3, -5, -6], [1, 3, 4, 5], None),
+        ([-2, -3, -5, -6], [1, 3, 4, 5], [-1, -2, -3, -4]),
+        ([2, -3, -5, -6], [2, 3, 4, 5], None),
+        ([2, -3, -5, 5], [3, 3, 4, 5], None),
+    ]
 
     for hybridize in [True, False]:
-        for i in range(10):
-            dim = random.randint(1,4)
-            shape = [random.randint(1,5) for i in range(dim)]
-
-            # test gluon
-            start, end, step = get_start_end_step(shape)
+        for config in configs:
+            start, end, step = config[0], config[1], config[2]
             test_slice = TestSlice(begin=start, end=end, step=step)
             if hybridize:
                 test_slice.hybridize()
 
-            a = mx.nd.random.uniform(shape=shape).as_np_ndarray()
+            a = np.array(np_array, dtype=np_array.dtype)
             a.attach_grad()
-            if step is not None:
-                expected_ret = a.as_nd_ndarray().slice(start, end, step)
-            else:
-                expected_ret = a.as_nd_ndarray().slice(start, end)
+            basic_index = tuple([
+                slice(start[i], end[i], step[i]) if step is not None else slice(start[i], end[i])
+                for i in range(len(start))
+            ])
+            expected_ret = np_array[basic_index]
             with mx.autograd.record():
                 y = test_slice(a)
 
-            assert_almost_equal(y.asnumpy(), expected_ret.asnumpy(), rtol=1e-3, atol=1e-5)
+            assert same(y.asnumpy(), expected_ret)
 
             # test backward
             mx.autograd.backward(y)
             expected_grad = _np.zeros(shape)
-            basic_index = tuple([ 
-                slice(start[i], end[i], step[i]) if step is not None else slice(start[i], end[i])
-                for i in range(len(start))
-                ])
             expected_grad[basic_index] = 1
-            assert_almost_equal(a.grad.asnumpy(), expected_grad, rtol=1e-3, atol=1e-5)
+            assert same(a.grad.asnumpy(), expected_grad)
 
 
 if __name__ == '__main__':

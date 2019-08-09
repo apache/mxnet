@@ -700,42 +700,13 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
       b = param_begin[i].has_value() ? param_begin[i].value() : (s < 0 ? len - 1 : 0);
       e = param_end[i].has_value() ? param_end[i].value() : (s < 0 ? -1 : len);
 
-      // checking upper and lower bounds for begin
       if (b < 0) {
         b += len;
-        if (!Imperative::Get()->is_np_shape()) {
-          CHECK_GE(b, 0) << "slicing with begin[" << i << "]=" << b - len
-                         << " exceeds limit of input dimension[" << i << "]=" << len;
-        }
       }
-      if (!Imperative::Get()->is_np_shape()) {
-        CHECK_LT(b, len) << "slicing with begin[" << i << "]=" << b
-                         << " exceeds limit of input dimension[" << i << "]=" << len;
-      }
-      // checking upper and lower bounds for end
       if (e < 0 && param_end[i].has_value()) {
         e += len;
-        if (!Imperative::Get()->is_np_shape()) {
-          CHECK_GE(e, 0) << "slicing with end[" << i << "]=" << e - len
-                         << " exceeds limit of input dimension[" << i << "]=" << len;
-        }
-      }
-      if (!Imperative::Get()->is_np_shape()) {
-        CHECK_LE(e, len) << "slicing with end[" << i << "]=" << e
-                         << " exceeds limit of input dimension[" << i << "]=" << len;
       }
 
-      // checking begin==end case which is not supported
-      if (!Imperative::Get()->is_np_shape()) {
-        CHECK_NE(b, e) << "slicing with begin[" << i << "]=end[" << i << "]="
-                       << e << " results in an empty tensor and is not supported";
-      }
-    } else if (len == 0) {
-      b = 0;
-      e = 0;
-    }
-
-    if (Imperative::Get()->is_np_shape() && len > 0) {
       // move the begin and end to correct position for calculating dim size
       b = b < 0 && s > 0 ? 0 : b;
       b = b > len - 1 && s < 0 ? len-1 : b;
@@ -743,7 +714,11 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
       b = b < 0 || b > len - 1 ? -1 : b;
       e = e > -1 ? e : -1;
       e = e > len ? len : e;
+    } else if (len == 0) {
+      b = 0;
+      e = 0;
     }
+
     (*begin)[i] = b;
     (*end)[i] = e;
     (*step)[i] = s;
