@@ -354,6 +354,20 @@ inline VectorType<DType, nvec> load_index(const DType * input, int i, const Shap
 }
 
 template <int nvec, typename DType, int ndim>
+inline VectorType<DType, nvec> global_load_index(const DType * input, int i, const Shape<ndim> &shape) {
+  if (i < shape.size) {
+    const auto* vector_input = reinterpret_cast<
+                                const typename VectorConfig<sizeof(DType)*nvec>::IndexType *>(
+                                    input + i);
+    VectorType<DType, nvec> ret = {__ldg(vector_input)};
+    return ret;
+  } else {
+    VectorType<DType, nvec> ret({0});
+    return ret;
+  }
+}
+
+template <int nvec, typename DType, int ndim>
 inline VectorType<DType, nvec> load_slice(const DType * input, const Shape<ndim>& shape, Shape<ndim> begin, Shape<ndim> end, int offset) {
   int idx[nvec];
   bool mem_aligned = true;
@@ -372,7 +386,6 @@ inline VectorType<DType, nvec> load_slice(const DType * input, const Shape<ndim>
       strides[dim-1] = strides[dim] * shape[dim];
     }
   }
-
   #pragma unroll
   for (int j = 0; j < nvec; j++) {
     idx[j] = 0;
@@ -385,11 +398,12 @@ inline VectorType<DType, nvec> load_slice(const DType * input, const Shape<ndim>
        }
        ref_idx = ref_idx % stride;
     }
-    if (j > 0 && (idx[j] != (idx[j-1] + 1))) {
-        mem_aligned = false;
+    if (j > 0) {
+        if (mem_aligned) mem_aligned = (idx[j] == (idx[j-1] + 1));
+    } else {
+        if (mem_aligned) mem_aligned = ((idx[0] & (nvec-1)) == 0);
     }
   }
-  mem_aligned = mem_aligned && ((idx[0] % nvec) == 0);
   if (!mem_aligned) {
     VectorType<DType, nvec> ret;
     #pragma unroll
@@ -398,7 +412,43 @@ inline VectorType<DType, nvec> load_slice(const DType * input, const Shape<ndim>
     }
     return ret;
   }
-  return load_index<nvec>(input, idx[0], shape);
+  return global_load_index<nvec>(input, idx[0], shape);
+  //return load_index<nvec>(input, idx[0], shape);
+}
+
+template <int nvec, typename DType, int ndim>
+inline VectorType<DType, nvec> fast_load_slice(const DType * input, const Shape<ndim>& shape, Shape<ndim> begin, Shape<ndim> end, int offset) {
+  int idx[nvec];
+
+  Shape<ndim> ref_strides;
+  Shape<ndim> strides;
+  ref_strides[ndim-1] = 1;
+  strides[ndim-1] = 1;
+  #pragma unroll
+  for (int dim = ndim-1; dim >=0; dim--) {
+    if (begin[dim] < 0) begin[dim] = shape[dim] - begin[dim];
+    if (end[dim] < 0) end[dim] = shape[dim] - end[dim];
+    if (end[dim] == INT_MAX) end[dim] = shape[dim];
+    if (dim > 0) {
+      ref_strides[dim-1] = ref_strides[dim] * (end[dim] - begin[dim]);
+      strides[dim-1] = strides[dim] * shape[dim];
+    }
+  }
+  #pragma unroll
+  for (int j = 0; j < nvec; j++) {
+    idx[j] = 0;
+    int ref_idx = offset + j;
+    #pragma unroll
+    for (int dim = 0; dim < ndim; dim++) {
+       int stride = ref_strides[dim];
+       if (shape[dim] > 1) {
+         idx[j] += (ref_idx / stride + begin[dim]) * strides[dim];
+       }
+       ref_idx = ref_idx % stride;
+    }
+  }
+  return global_load_index<nvec>(input, idx[0], shape);
+  //return load_index<nvec>(input, idx[0], shape);
 }
 
 template <int nvec, typename DType, int ndim>
