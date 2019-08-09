@@ -1414,7 +1414,7 @@ def docs_python() {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib, false)
+            utils.unpack_and_init('libmxnet', mx_lib, false)
             utils.docker_run('ubuntu_cpu_python', 'build_python_docs', false)
             utils.pack_lib('python-artifacts', 'docs/_build/python-artifacts.tgz', false)
           }
@@ -1444,7 +1444,7 @@ def docs_julia() {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib, false)
+            utils.unpack_and_init('libmxnet', mx_lib, false)
             try {
                utils.docker_run('ubuntu_cpu_julia', 'build_julia_docs', false)
                utils.pack_lib('julia-artifacts', 'docs/_build/julia-artifacts.tgz', false)
@@ -1464,7 +1464,7 @@ def docs_scala() {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib, false)
+            utils.unpack_and_init('libmxnet', mx_lib, false)
             utils.docker_run('ubuntu_cpu_scala', 'build_scala_docs', false)
             utils.pack_lib('scala-artifacts', 'docs/_build/scala-artifacts.tgz', false)
           }
@@ -1479,7 +1479,7 @@ def docs_java() {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib, false)
+            utils.unpack_and_init('libmxnet', mx_lib, false)
             utils.docker_run('ubuntu_cpu_scala', 'build_java_docs', false)
             utils.pack_lib('java-artifacts', 'docs/_build/java-artifacts.tgz', false)
           }
@@ -1494,7 +1494,7 @@ def docs_clojure() {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib, false)
+            utils.unpack_and_init('libmxnet', mx_lib, false)
             utils.docker_run('ubuntu_cpu_scala', 'build_clojure_docs', false)
             utils.pack_lib('clojure-artifacts', 'docs/_build/clojure-artifacts.tgz', false)
           }
