@@ -4174,15 +4174,25 @@ def test_special_functions_using_scipy():
 
 
 @with_seed()
-@unittest.skip("Flaky test, tracked at https://github.com/apache/incubator-mxnet/issues/12901")
 def test_clip():
     data = mx.symbol.Variable('data')
     shape = (30, 30)
-    data_tmp = np.random.uniform(-1, 1, shape)
+    data_tmp = np.random.uniform(-1, 1, shape).astype('float32')
     test = mx.sym.clip(data, a_max=0.6, a_min=-0.6)
     check_symbolic_forward(test, [data_tmp], [np.clip(data_tmp, -0.6, 0.6)])
     check_symbolic_backward(test, [data_tmp], [np.ones(shape)],
-                            [np.where(data_tmp < 0.6, [1], [0]) * np.where(data_tmp > -0.6, [1], [0])])
+                            [np.where(data_tmp <= 0.6, [1], [0]) * np.where(data_tmp >= -0.6, [1], [0])])
+
+    # Test monitor on symbol using clip
+
+    def simple_callback(name, arr):
+        pass
+
+    exe = test.simple_bind(ctx=mx.current_context(), data=shape)
+    exe.set_monitor_callback(simple_callback, monitor_all=True)
+    exe.forward(is_train=True)
+    exe.backward(out_grads=mx.nd.ones(shape))
+    mx.nd.waitall()
 
 
 @with_seed()
