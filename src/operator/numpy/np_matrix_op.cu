@@ -46,5 +46,8 @@ NNVM_REGISTER_OP(_backward_np_concat)
 NNVM_REGISTER_OP(_npi_stack)
 .set_attr<FCompute>("FCompute<gpu>", StackOpForward<gpu>);
 
+NNVM_REGISTER_OP(_np_moveaxis)
+.set_attr<FCompute>("FCompute<gpu>", NumpyMoveaxisCompute<gpu>);
+
 }  // namespace op
 }  // namespace mxnet
