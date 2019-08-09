@@ -37,7 +37,7 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'vstack', 'mean',
            'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign',
            'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'hypot', 'rad2deg', 'deg2rad',
-           'unique', 'ldexp']
+           'unique', 'ldexp', 'vdot', 'inner', 'outer']
 
 
 def _num_outputs(sym):
@@ -1469,6 +1469,7 @@ def absolute(x, out=None, **kwargs):
     r"""
     Calculate the absolute value element-wise.
     np.abs is a shorthand for this function.
+
     Parameters
     ----------
     x : _Symbol
