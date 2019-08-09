@@ -1,21 +1,3 @@
-<!--- Licensed to the Apache Software Foundation (ASF) under one -->
-<!--- or more contributor license agreements.  See the NOTICE file -->
-<!--- distributed with this work for additional information -->
-<!--- regarding copyright ownership.  The ASF licenses this file -->
-<!--- to you under the Apache License, Version 2.0 (the -->
-<!--- "License"); you may not use this file except in compliance -->
-<!--- with the License.  You may obtain a copy of the License at -->
-
-<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
-
-<!--- Unless required by applicable law or agreed to in writing, -->
-<!--- software distributed under the License is distributed on an -->
-<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
-<!--- KIND, either express or implied.  See the License for the -->
-<!--- specific language governing permissions and limitations -->
-<!--- under the License. -->
-
-
 # MXNet Gluon Fit API
 
 In this tutorial, you will learn how to use the [Gluon Fit API](https://cwiki.apache.org/confluence/display/MXNET/Gluon+Fit+API+-+Tech+Design) which is the easiest way to train deep learning models using the [Gluon API](http://mxnet.incubator.apache.org/versions/master/gluon/index.html) in Apache MXNet. 
@@ -30,8 +12,6 @@ To complete this tutorial, you will need:
 
 - [MXNet](https://mxnet.incubator.apache.org/install/#overview) (The version of MXNet will be >= 1.5.0, you can use `pip install mxnet` to get 1.5.0 release pip package or build from source with master, refer to [MXNet installation](http://mxnet.incubator.apache.org/versions/master/install/index.html?platform=Linux&language=Python&processor=CPU)
 - [Jupyter Notebook](https://jupyter.org/index.html) (For interactively running the provided .ipynb file)
-
-
 
 
 ```python
@@ -146,6 +126,7 @@ with warnings.catch_warnings():
         epochs=num_epochs)
 ```
 
+```text
     Training begin: using optimizer SGD with current learning rate 0.0400 <!--notebook-skip-line-->
     Train for 2 epochs. <!--notebook-skip-line-->
     
@@ -153,7 +134,7 @@ with warnings.catch_warnings():
     
     [Epoch 1] finished in 23.595s: train_accuracy : 0.8823 train_softmaxcrossentropyloss0 : 0.3197 <!--notebook-skip-line-->
     Train finished using total 48s at epoch 1. train_accuracy : 0.8823 train_softmaxcrossentropyloss0 : 0.3197 <!--notebook-skip-line-->
-
+```
 
 ### Advanced Usage
 
@@ -239,6 +220,7 @@ with warnings.catch_warnings():
             event_handlers=[checkpoint_handler, loss_record_handler]) # Add the event handlers
 ```
 
+```text
     Training begin: using optimizer SGD with current learning rate 0.0400 <!--notebook-skip-line-->
     Train for 2 epochs. <!--notebook-skip-line-->
     
@@ -251,6 +233,7 @@ with warnings.catch_warnings():
     Training begin <!--notebook-skip-line-->
     Epoch 1, loss 0.5741 <!--notebook-skip-line-->
     Epoch 2, loss 0.3229 <!--notebook-skip-line-->
+```
 
 You can load the saved model, by using the `load_parameters` API in Gluon. For more details refer to the [Loading model parameters from file tutorial](save_load_params.html#saving-model-parameters-to-file)
 
@@ -267,5 +250,3 @@ resnet_18_v1.load_parameters('./my_model-best.params', ctx=ctx)
 ## Next Steps 
 
 - For more hands on learning about deep learning, check out [Dive into Deep Learning](https://d2l.ai)
-
-<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
