@@ -447,7 +447,7 @@ def test_index_copy():
     assert x[-1][-1] == t[0][-1]
 
 
-# def test_dropout():
+# def test_rnn_and_dropouts():
 #     a = mx.nd.ones((LARGE_X, SMALL_Y))
 #     # test dropout ratio
 #     x = nx.sym.var('data')
@@ -460,7 +460,7 @@ def testSoftmaxOutput():
     grad_x = mx.nd.zeros((LARGE_X, SMALL_Y))
     label_nd = mx.nd.ones((LARGE_X))
 
-    sym = mx.sym.SoftmaxOutput(data=x, label=label, ignore_label=0, 
+    sym = mx.sym.SoftmaxOutput(data=x, label=label, ignore_label=0,
                                use_ignore=False)
     ex = sym.bind(ctx=default_context(), args={'x': x_nd, 'label': label_nd},
                   args_grad={'x': grad_x})
@@ -476,6 +476,41 @@ def testSoftmaxOutput():
     expected_grad_out = np.zeros((SMALL_Y,))
     expected_grad_out[k] = -1
     assert np.isclose(grad_out - softmax_out, expected_grad_out).all()
+
+
+def test_leaky_relu():
+    a = -1*mx.nd.ones((LARGE_X, SMALL_Y))
+
+    def test_leaky():
+        res = mx.nd.LeakyReLU(a, act_type="leaky", slope=0.3)
+        assert res[-1][-1].asnumpy() == 0.3*a[-1][-1].asnumpy()
+
+    def test_elu():
+        res = mx.nd.LeakyReLU(a, act_type="elu", slope=0.3)
+        assert res[-1][-1].asnumpy() == 0.3*(np.exp(a[-1][-1].asnumpy())-1)
+
+    def test_selu():
+        lam = 1.0507009873554804934193349852946
+        alpha = 1.6732632423543772848170429916717
+        res = mx.nd.LeakyReLU(a, act_type="selu")
+        assert res[-1][-1].asnumpy() == (lam * alpha * (np.exp(a[-1][-1].asnumpy())-1))
+
+    def test_prelu():
+        res = mx.nd.LeakyReLU(a, act_type="prelu", gamma=mx.nd.array([0.3]))
+        assert res[-1][-1].asnumpy() == 0.3 * a[-1][-1].asnumpy()
+
+    def test_rrelu():
+        lower = 0.125
+        upper = 0.333999991
+        res = mx.nd.LeakyReLU(a, act_type="rrelu")
+        assert res[-1][-1].asnumpy() == (lower + upper) / 2 * a[-1][-1].asnumpy()
+
+    test_leaky()
+    test_elu()
+    test_selu()
+    test_prelu()
+    test_rrelu()
+
 
 if __name__ == '__main__':
     import nose
