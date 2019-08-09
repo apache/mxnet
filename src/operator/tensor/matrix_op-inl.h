@@ -756,7 +756,7 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
 inline void SetSliceOpOutputDimSize(const index_t i, const int b,
                                     const int e, const int s,
                                     mxnet::TShape* oshape) {
-  if (!Imperative::Get()->is_np_shape()) { //handle as ndarray
+  if (!Imperative::Get()->is_np_shape()) {  // handle as ndarray
     if (e != b) {
       if (s > 0) {
         CHECK_LT(b, e) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
@@ -768,7 +768,7 @@ inline void SetSliceOpOutputDimSize(const index_t i, const int b,
         (*oshape)[i] = (b - e - 1) / (-s) + 1;
       }
     }  // else leave oshape[i] as 0 for partial infer
-  } else { //handle as numpy compatible array
+  } else {  // handle as numpy compatible array
     if (e != b && b >= 0) {
       if (s > 0) {
         (*oshape)[i] = e > b ? (e - b - 1) / s + 1 : 0;
