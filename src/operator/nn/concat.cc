@@ -173,7 +173,7 @@ bool ConcatType(const nnvm::NodeAttrs& attrs,
   // if both out_types and in_types are known, and different
   } else if ((*out_type)[0] != -1 && dtype != -1 && ((*out_type)[0] != dtype)) {
     std::ostringstream os;
-    os << "Type inconsistent, Provided = "
+    os << "Type inconsistent, Provided output type = "
        << mxnet::op::type_string((*out_type)[0]) << ','
        << " inferred type = " << mxnet::op::type_string(dtype);
     throw mxnet::op::InferTypeError(os.str(), 0);
