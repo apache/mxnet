@@ -708,10 +708,10 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
       }
 
       // move the begin and end to correct position for calculating dim size
-      b = b < 0 && s > 0 ? 0 : b;
-      b = b > len - 1 && s < 0 ? len-1 : b;
+      b = (b < 0 && s > 0) ? 0 : b;
+      b = (b > len - 1 && s < 0) ? len - 1 : b;
       // if the start value lead to empty tensor under step s, use -1 for indication
-      b = b < 0 || b > len - 1 ? -1 : b;
+      b = (b < 0 || b > len - 1) ? -1 : b;
       e = e > -1 ? e : -1;
       e = e > len ? len : e;
     } else if (len == 0) {
@@ -724,7 +724,7 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
     (*step)[i] = s;
   }
 
-  for (index_t i = param_begin.ndim(); i < dshape.ndim(); ++i) {
+  for (int i = param_begin.ndim(); i < dshape.ndim(); ++i) {
     (*begin)[i] = 0;
     (*end)[i] = dshape[i];
     (*step)[i] = 1;
@@ -739,28 +739,14 @@ inline void SetSliceOpOutputDimSize(const mxnet::TShape& dshape,
     (*oshape)[i] = -1;
     return;
   }
-  if (!Imperative::Get()->is_np_shape()) {  // handle as ndarray
-    if (e != b) {
-      if (s > 0) {
-        CHECK_LT(b, e) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
-                      << e << ", and step[" << i << "]=" << s << " is invalid";
-        (*oshape)[i] = (e - b - 1) / s + 1;
-      } else {
-        CHECK_LT(e, b) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
-                      << e << ", and step[" << i << "]=" << s << " is invalid";
-        (*oshape)[i] = (b - e - 1) / (-s) + 1;
-      }
-    }  // else leave oshape[i] as 0 for partial infer
-  } else {  // handle as numpy compatible array
-    if (e != b && b >= 0) {
-      if (s > 0) {
-        (*oshape)[i] = e > b ? (e - b - 1) / s + 1 : 0;
-      } else {
-        (*oshape)[i] = e < b ? (b - e - 1) / (-s) + 1 : 0;
-      }
+  if (e != b && b >= 0) {
+    if (s > 0) {
+      (*oshape)[i] = e > b ? (e - b - 1) / s + 1 : 0;
     } else {
-        (*oshape)[i] = 0;
+      (*oshape)[i] = e < b ? (b - e - 1) / (-s) + 1 : 0;
     }
+  } else {
+      (*oshape)[i] = 0;
   }
 }
 
