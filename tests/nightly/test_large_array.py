@@ -458,6 +458,7 @@ def test_rpow():
     assert c[0][-1] == 8
     assert c.shape == a.shape
 
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
