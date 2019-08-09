@@ -1722,64 +1722,67 @@ struct RMSPropParam : public dmlc::Parameter<RMSPropParam> {
   }
 };
 
+struct RMSPropUpdateKernel {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i,
+    DType* out_data, DType* state_n_data,
+    const DType* weight_data, const DType* grad_data,
+    const DType clip_gradient, const DType rescale_grad,
+    const DType gamma1, const DType lr, const DType wd,
+    const DType clip_weights, const DType epsilon,
+    const OpReqType req) {
+    using namespace mshadow_op;
+
+    const DType rescaled_grad = rescale_grad * grad_data[i] + wd * weight_data[i];
+
+    if (clip_gradient >= 0.0f) {
+      const DType clipped_grad = clip::Map(rescaled_grad, clip_gradient);
+      state_n_data[i] = (1.f - gamma1) * (clipped_grad * clipped_grad) + gamma1 * state_n_data[i];
+      if (clip_weights >= 0.0f) {
+        KERNEL_ASSIGN(out_data[i], req,
+                      clip::Map(weight_data[i] -
+                                lr * clipped_grad / (square_root::Map(state_n_data[i] + epsilon)),
+                                clip_weights));
+      } else {
+        KERNEL_ASSIGN(out_data[i], req,
+                      weight_data[i] -
+                      lr * clipped_grad / (square_root::Map(state_n_data[i] + epsilon)));
+      }
+    } else {
+      state_n_data[i] = (1.f - gamma1) * (rescaled_grad * rescaled_grad) + gamma1 * state_n_data[i];
+      if (clip_weights >= 0.0f) {
+        KERNEL_ASSIGN(out_data[i], req,
+                      clip::Map(weight_data[i] -
+                                lr * (rescaled_grad / square_root::Map(state_n_data[i] + epsilon)),
+                                clip_weights));
+      } else {
+        KERNEL_ASSIGN(out_data[i], req,
+                      weight_data[i] -
+                      lr * (rescaled_grad / (square_root::Map(state_n_data[i] + epsilon))));
+      }
+    }
+  }
+};
+
 template <typename xpu>
 inline void RMSPropUpdate(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                           const std::vector<TBlob> &inputs,
                           const std::vector<OpReqType> &req,
                           const std::vector<TBlob> &outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  using namespace mshadow_op;
+  using namespace mxnet_op;
   const RMSPropParam &param = nnvm::get<RMSPropParam>(attrs.parsed);
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    Tensor<xpu, 2, DType> weight = inputs[0].FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 2, DType> grad = inputs[1].FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 2, DType> state_n = inputs[2].FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
+    DType* weight_data = inputs[0].dptr<DType>();
+    DType* grad_data = inputs[1].dptr<DType>();
+    DType* state_n_data = inputs[2].dptr<DType>();
+    DType* out_data = outputs[0].dptr<DType>();
 
-    grad = scalar<DType>(param.rescale_grad) * grad +
-           scalar<DType>(param.wd) * weight;
-
-    if (param.clip_gradient >= 0.0f) {
-      state_n = scalar<DType>(1.f - param.gamma1) *
-                    F<clip>(grad, DType(param.clip_gradient)) *
-                    F<clip>(grad, DType(param.clip_gradient)) +
-                scalar<DType>(param.gamma1) * state_n;
-      if (param.clip_weights >= 0.0f) {
-        Assign(out, req[0],
-               F<clip>(weight -
-                       scalar<DType>(param.lr) *
-                           (F<clip>(grad, DType(param.clip_gradient)) /
-                            (F<square_root>(state_n +
-                                            scalar<DType>(param.epsilon)))),
-                       DType(param.clip_weights)));
-      } else {
-        Assign(out, req[0], weight -
-                            scalar<DType>(param.lr) *
-                              (F<clip>(grad, DType(param.clip_gradient)) /
-                               (F<square_root>(state_n +
-                                               scalar<DType>(param.epsilon)))));
-      }
-    } else {
-      state_n = scalar<DType>(1.f - param.gamma1) * (grad * grad) +
-                scalar<DType>(param.gamma1) * state_n;
-      if (param.clip_weights >= 0.0f) {
-        Assign(out, req[0],
-               F<clip>(weight -
-                       scalar<DType>(param.lr) *
-                           (grad /
-                            (F<square_root>(state_n +
-                                            scalar<DType>(param.epsilon)))),
-                       DType(param.clip_weights)));
-      } else {
-        Assign(out, req[0], weight -
-                            scalar<DType>(param.lr) *
-                              (grad /
-                               (F<square_root>(state_n +
-                                               scalar<DType>(param.epsilon)))));
-      }
-    }
+    Kernel<RMSPropUpdateKernel, xpu>::Launch(s, inputs[0].shape_.Size(),
+      out_data, state_n_data, weight_data, grad_data,
+      static_cast<DType>(param.clip_gradient), static_cast<DType>(param.rescale_grad),
+      static_cast<DType>(param.gamma1), static_cast<DType>(param.lr), static_cast<DType>(param.wd),
+      static_cast<DType>(param.clip_weights), static_cast<DType>(param.epsilon), req[0]);
   });
 }
 
