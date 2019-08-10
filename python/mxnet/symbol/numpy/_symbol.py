@@ -37,7 +37,7 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'vstack', 'mean',
            'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign',
            'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'hypot', 'rad2deg', 'deg2rad',
-           'unique']
+           'unique', 'ldexp']
 
 
 def _num_outputs(sym):
@@ -3392,6 +3392,35 @@ def unique(ar, return_index=False, return_inverse=False, return_counts=False, ax
     first element.
     """
     return _npi.unique(ar, return_index, return_inverse, return_counts, axis)
+
+
+@set_module('mxnet.symbol.numpy')
+def ldexp(x1, x2, out=None):
+    """
+    ldexp(x1, x2, out=None)
+    Returns x1 * 2**x2, element-wise.
+    The mantissas `x1` and twos exponents `x2` are used to construct
+    floating point numbers ``x1 * 2**x2``.
+    Parameters
+    ----------
+    x1 : _Symbol
+        Array of multipliers.
+    x2 : _Symbol
+        Array of twos exponents.
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    y : _Symbol
+        The result of ``x1 * 2**x2``.
+    Notes
+    -----
+    Complex dtypes are not supported, they will raise a TypeError.
+    Different from numpy, we allow x2 to be float besides int.
+    `ldexp` is useful as the inverse of `frexp`, if used by itself it is
+    more clear to simply use the expression ``x1 * 2**x2``.
+    """
+    return _ufunc_helper(x1, x2, _npi.ldexp, _np.ldexp, _npi.ldexp_scalar, _npi.rldexp_scalar, out)
 
 
 _set_np_symbol_class(_Symbol)
