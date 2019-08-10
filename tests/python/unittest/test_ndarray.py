@@ -1835,6 +1835,25 @@ def test_update_ops_mutation():
                 else:
                     assert_unchanged(pre_array, post_array, op)
 
+    test_op(mx.nd.signsgd_update, 2, [0], **
+            {'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3,
+             'clip_gradient': 1e-3})
+    test_op(mx.nd.signum_update, 3, [0, 2], **
+            {'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3,
+             'momentum': 1e-3, 'clip_gradient': 1e-3,
+             'wd_lh': 1e-3})
+    test_op(mx.nd.sgd_update, 2, [0], **
+            {'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3,
+             'clip_gradient': 1e-3})
+    test_op(mx.nd.sgd_mom_update, 3, [0, 2], **
+            {'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3,
+             'momentum': 0.01, 'clip_gradient': 1e-3})
+    test_op(mx.nd.nag_mom_update, 3, [0, 2], **
+            {'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3,
+             'momentum': 0.01, 'clip_gradient': 1e-3})
+    test_op(mx.nd.ftml_update, 5, [0, 2, 3, 4], **
+            {'t': 3, 'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3,
+             'clip_grad': 1e-3})
     test_op(mx.nd.ftrl_update, 4, [0, 2, 3], **
             {'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3})
     test_op(mx.nd.adam_update, 4, [0, 2, 3], **
