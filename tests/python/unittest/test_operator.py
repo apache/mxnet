@@ -1557,7 +1557,7 @@ def test_deconvolution_forward_with_bias():
     check_deconvolution_forward_with_bias((32, 16, 5, 5), 32, 1, (3, 3), (1, 1))
 
 
-def check_nearest_upsampling_with_shape(shapes, scale, root_scale):
+def check_nearest_upsampling_with_shape(shapes, root_scale):
     def py_nearest_upsampling(x, scale):
         from collections import Counter
         batch, channel, inputHeight, inputWidth = x.shape
@@ -1566,11 +1566,13 @@ def check_nearest_upsampling_with_shape(shapes, scale, root_scale):
             outputWidth = inputWidth * scale
             row_ratio = col_ratio = scale
         else:
+            outputHeight = inputHeight
+            outputWidth = inputWidth
             if len(scale) == 1:
                 outputHeight = inputHeight * scale[0]
                 outputWidth = inputWidth * scale[0]
                 row_ratio = col_ratio = scale[0]
-            else:
+            elif len(scale) == 2:
                 outputHeight = inputHeight * scale[0]
                 outputWidth = inputWidth * scale[1]
                 col_ratio = scale[0]
@@ -1622,12 +1624,9 @@ def check_bilinear_upsampling_with_shape(data_shape, weight_shape, scale, root_s
 
 @with_seed()
 def test_nearest_upsampling():
-    for root_scale in [1, 2, (2,3), (3,2), (1,1), (5,1), (2,2)]:
-        for scale in [2,3]:
-            #for shapes in [(1,3,10,10), (4,3,256,256), (1,2,3,3)]:
-                #scale = 1
-            shapes = [(1,3,10,10)]
-            check_nearest_upsampling_with_shape(shapes, scale, root_scale)
+    for root_scale in [1, 2, (2,3), (3,2), (1,1), (5,1), (2,2), ()]:
+        shapes = [(1,3,10,10)]
+        check_nearest_upsampling_with_shape(shapes, root_scale)
 
 @with_seed()
 def test_bilinear_upsampling():

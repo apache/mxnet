@@ -2058,9 +2058,10 @@ def convert_upsample(node, **kwargs):
     sample_type = attrs.get('sample_type', 'nearest')
     sample_type = 'linear' if sample_type == 'bilinear' else sample_type
     scale = convert_string_to_list(attrs.get('scale'))
-    scaleh = scalew = float(scale[0])
+    scaleh = float(scale[0])
+    scalew = float(scale[0])
     if len(scale) > 1:
-        scaleh = float(scale[0])
+        #scaleh = float(scale[0])
         scalew = float(scale[1])
     scale = [1.0, 1.0, scaleh, scalew]
 
