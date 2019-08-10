@@ -92,6 +92,63 @@ def test_np_sum():
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
+@with_seed()
+@use_np
+def test_npx_slice():
+    class TestSlice(HybridBlock):
+        def __init__(self, begin, end, step):
+            super(TestSlice, self).__init__()
+            self._begin = begin
+            self._end = end
+            self._step = step
+
+        def hybrid_forward(self, F, a):
+            return F.npx.slice(a, begin=self._begin, end=self._end, step=self._step)
+
+    shape = (8, 16, 9, 9)
+    np_array = _np.arange(_np.prod(shape), dtype='int32').reshape(shape)
+    configs = [
+        ([], [], None),
+        ([], [], []),
+        ([1], [4], None),
+        ([1], [10], [3]),
+        ([10], [0], [-2]),
+        ([None], [None], [None]),
+        ([None], [None], [-1]),
+        ([10], [None], [-1]),
+        ([1, 0, 3], [-2, 10, -4], [None, 2, 3]),
+        ([-2, -3, -5, -6], [1, 3, 4, 5], None),
+        ([-2, -3, -5, -6], [1, 3, 4, 5], [-1, -2, -3, -4]),
+        ([2, -3, -5, -6], [2, 3, 4, 5], None),
+        ([2, -3, -5, 5], [3, 3, 4, 5], None),
+    ]
+
+    for hybridize in [True, False]:
+        for config in configs:
+            start, end, step = config[0], config[1], config[2]
+            test_slice = TestSlice(begin=start, end=end, step=step)
+            if hybridize:
+                test_slice.hybridize()
+
+            a = np.array(np_array, dtype=np_array.dtype)
+            a.attach_grad()
+            basic_index = tuple([
+                slice(start[i], end[i], step[i]) if step is not None else slice(start[i], end[i])
+                for i in range(len(start))
+            ])
+            expected_ret = np_array[basic_index]
+            with mx.autograd.record():
+                y = test_slice(a)
+
+            assert same(y.asnumpy(), expected_ret)
+
+            # test backward
+            mx.autograd.backward(y)
+            expected_grad = _np.zeros(shape)
+            expected_grad[basic_index] = 1
+            assert same(a.grad.asnumpy(), expected_grad)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
