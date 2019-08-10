@@ -702,9 +702,11 @@ MXNET_ADD_SPARSE_OP_ALIAS(clip)
 .describe(R"code(Clips (limits) the values in an array.
 
 Given an interval, values outside the interval are clipped to the interval edges.
-Clipping ``x`` between `a_min` and `a_x` would be::
+Clipping ``x`` between `a_min` and `a_max` would be::
 
-   clip(x, a_min, a_max) = max(min(x, a_max), a_min))
+.. math::
+
+   clip(x, a_min, a_max) = \max(\min(x, a_max), a_min))
 
 Example::
 
@@ -766,7 +768,7 @@ parameter values:
 .add_arguments(ClipParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_clip)
-.set_num_inputs(1)
+.set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<ClipParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
