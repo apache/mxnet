@@ -46,12 +46,12 @@
 #include "mxnet/libinfo.h"
 #include "mxnet/imperative.h"
 #include "mxnet/lib_api.h"
+#include "../initialize.h"
 #include "./c_api_common.h"
 #include "../operator/custom/custom-inl.h"
 #include "../operator/tensor/matrix_op-inl.h"
 #include "../operator/tvmop/op_module.h"
 #include "../common/utils.h"
-#include "../common/library.h"
 
 using namespace mxnet;
 
@@ -95,7 +95,7 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
 // Loads library and initializes it
 int MXLoadLib(const char *path) {
   API_BEGIN();
-  void *lib = load_lib(path);
+  void *lib = LibraryInitializer::Get()->lib_load(path);
   if (!lib)
     LOG(FATAL) << "Unable to load library";
 
@@ -1559,18 +1559,18 @@ int MXEnginePushSync(EngineSyncFunc sync_func, void* func_param,
 }
 
 int MXEnginePushAsyncND(EngineAsyncFunc async_func, void* func_param,
-                      EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
-                      NDArrayHandle const_nds_handle, int num_const_nds,
-                      NDArrayHandle mutable_nds_handle, int num_mutable_nds,
-                      EngineFnPropertyHandle prop_handle, int priority,
-                      const char* opr_name, bool wait) {
+                        EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
+                        NDArrayHandle* const_nds_handle, int num_const_nds,
+                        NDArrayHandle* mutable_nds_handle, int num_mutable_nds,
+                        EngineFnPropertyHandle prop_handle, int priority,
+                        const char* opr_name, bool wait) {
   API_BEGIN();
-  NDArray* const_nds = static_cast<NDArray*>(const_nds_handle);
-  NDArray* mutable_nds = static_cast<NDArray*>(mutable_nds_handle);
+  NDArray** const_nds = reinterpret_cast<NDArray**>(const_nds_handle);
+  NDArray** mutable_nds = reinterpret_cast<NDArray**>(mutable_nds_handle);
   std::vector<VarHandle> const_var_vec(num_const_nds);
-  for (int i = 0; i < num_const_nds; ++i) const_var_vec[i] = (const_nds+i)->var();
+  for (int i = 0; i < num_const_nds; ++i) const_var_vec[i] = const_nds[i]->var();
   std::vector<VarHandle> mutable_var_vec(num_mutable_nds);
-  for (int i = 0; i < num_mutable_nds; ++i) mutable_var_vec[i] = (mutable_nds+i)->var();
+  for (int i = 0; i < num_mutable_nds; ++i) mutable_var_vec[i] = mutable_nds[i]->var();
   return MXEnginePushAsync(async_func, func_param, deleter, ctx_handle,
                            const_var_vec.data(), num_const_nds,
                            mutable_var_vec.data(), num_mutable_nds,
@@ -1579,18 +1579,18 @@ int MXEnginePushAsyncND(EngineAsyncFunc async_func, void* func_param,
 }
 
 int MXEnginePushSyncND(EngineSyncFunc sync_func, void* func_param,
-                     EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
-                     NDArrayHandle const_nds_handle, int num_const_nds,
-                     NDArrayHandle mutable_nds_handle, int num_mutable_nds,
-                     EngineFnPropertyHandle prop_handle, int priority,
-                     const char* opr_name) {
+                       EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
+                       NDArrayHandle* const_nds_handle, int num_const_nds,
+                       NDArrayHandle* mutable_nds_handle, int num_mutable_nds,
+                       EngineFnPropertyHandle prop_handle, int priority,
+                       const char* opr_name) {
   API_BEGIN();
-  NDArray* const_nds = static_cast<NDArray*>(const_nds_handle);
-  NDArray* mutable_nds = static_cast<NDArray*>(mutable_nds_handle);
+  NDArray** const_nds = reinterpret_cast<NDArray**>(const_nds_handle);
+  NDArray** mutable_nds = reinterpret_cast<NDArray**>(mutable_nds_handle);
   std::vector<VarHandle> const_var_vec(num_const_nds);
-  for (int i = 0; i < num_const_nds; ++i) const_var_vec[i] = (const_nds+i)->var();
+  for (int i = 0; i < num_const_nds; ++i) const_var_vec[i] = const_nds[i]->var();
   std::vector<VarHandle> mutable_var_vec(num_mutable_nds);
-  for (int i = 0; i < num_mutable_nds; ++i) mutable_var_vec[i] = (mutable_nds+i)->var();
+  for (int i = 0; i < num_mutable_nds; ++i) mutable_var_vec[i] = mutable_nds[i]->var();
   return MXEnginePushSync(sync_func, func_param, deleter, ctx_handle,
                           const_var_vec.data(), num_const_nds,
                           mutable_var_vec.data(), num_mutable_nds,
@@ -1603,4 +1603,13 @@ int MXStorageEmptyCache(int dev_type, int dev_id) {
   Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
   Storage::Get()->ReleaseAll(ctx);
   API_END();
+}
+
+int MXShallowCopyNDArray(NDArrayHandle src_handle, NDArrayHandle* out) {
+  NDArray* ret = nullptr;
+  API_BEGIN();
+  NDArray* src_array = static_cast<NDArray*>(src_handle);
+  ret = new NDArray(*src_array);
+  *out = ret;
+  API_END_HANDLE_ERROR(delete ret);
 }
