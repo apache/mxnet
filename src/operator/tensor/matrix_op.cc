@@ -506,6 +506,7 @@ Example::
                                                             [5.,  7.],
                                                             [1.,  3.]]
 )code" ADD_FILELINE)
+.add_alias("_npx_slice")
 .set_attr_parser(ParamParser<SliceParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", SliceOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
