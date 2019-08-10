@@ -27,6 +27,7 @@
 
 namespace mxnet {
 namespace op {
+
 NNVM_REGISTER_OP(_npi_add)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, op::mshadow_op::plus>);
 
@@ -77,6 +78,9 @@ NNVM_REGISTER_OP(_npi_maximum_scalar)
 
 NNVM_REGISTER_OP(_npi_minimum_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::minimum>);
+
+NNVM_REGISTER_OP(_np_bitwise_xor)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::bitwise_xor>);
 
 }  // namespace op
 }  // namespace mxnet
