@@ -44,7 +44,7 @@ from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'add', 'subtract', 'multiply', 'divide',
-           'mod', 'power', 'tensordot', 'linspace', 'expand_dims', 'tile', 'arange']
+           'mod', 'power', 'tensordot', 'linspace', 'expand_dims', 'tile', 'arange', 'split']
 
 
 # This function is copied from ndarray.py since pylint
@@ -1606,6 +1606,7 @@ def tensordot(a, b, axes=2):
     return _mx_nd_np.tensordot(a, b, axes)
 
 
+@set_module('mxnet.numpy')
 def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis=0, ctx=None):  # pylint: disable=too-many-arguments
     r"""
     Return evenly spaced numbers over a specified interval.
@@ -1819,3 +1820,36 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
         than `stop`.
     """
     return _mx_nd_np.arange(start, stop, step, dtype, ctx)
+
+
+@set_module('mxnet.numpy')
+def split(ary, indices_or_sections, axis=0):
+    """Split an array into multiple sub-arrays.
+    Parameters
+    ----------
+    ary : ndarray
+        Array to be divided into sub-arrays.
+    indices_or_sections : int or 1-D array
+        If `indices_or_sections` is an integer, N, the array will be divided
+        into N equal arrays along `axis`.  If such a split is not possible,
+        an error is raised.
+        If `indices_or_sections` is a 1-D array of sorted integers, the entries
+        indicate where along `axis` the array is split.  For example,
+        ``[2, 3]`` would, for ``axis=0``, result in
+          - ary[:2]
+          - ary[2:3]
+          - ary[3:]
+        If an index exceeds the dimension of the array along `axis`,
+        an empty sub-array is returned correspondingly.
+    axis : int, optional
+        The axis along which to split, default is 0.
+    Returns
+    -------
+    sub-arrays : list of ndarrays
+        A list of sub-arrays.
+    Raises
+    ------
+    ValueError
+        If `indices_or_sections` is given as an integer, but
+        a split does not result in equal division."""
+    return _mx_nd_np.split(ary, indices_or_sections, axis=axis)
