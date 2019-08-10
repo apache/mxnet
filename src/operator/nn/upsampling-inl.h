@@ -86,7 +86,7 @@ struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
   }
 };  // struct UpSamplingParam
 
-inline int* scaleComp(const UpSamplingParam &param){
+inline int* scaleComp(const UpSamplingParam &param) {
   int* scaleArr = new int[2];
   scaleArr[0] = 1;
   scaleArr[1] = 1;
@@ -122,22 +122,18 @@ void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
     for (int i = 0; i < param.num_args; ++i) {
       Tensor<xpu, 4, DType> data = in_data[i].get<xpu, 4, DType>(s);
       int end = begin + data.size(1);
-      int scale_h = out_data[up_enum::kOut].size(2)/in_data[i].size(2);//3rd dimension of TBlob (2nd from 4th dimension)
-      int scale_w = out_data[up_enum::kOut].size(1)/in_data[i].size(1);//4th dimension of TBlob (1st from 4th dimension)
+      // 3rd dimension of TBlob (2nd from 4th dimension)
+      int scale_h = out_data[up_enum::kOut].size(2)/in_data[i].size(2);
+      // 4th dimension of TBlob (1st from 4th dimension)
+      int scale_w = out_data[up_enum::kOut].size(1)/in_data[i].size(1);
       if (param.multi_input_mode == up_enum::kSum) {
         if (i == 0) {
-
           Assign(out, req[up_enum::kOut], upsampling_nearest(data, scale_h, scale_w));
-
         } else {
-
           out += upsampling_nearest(data, scale_h, scale_w);
-
         }
       } else {
-
         Assign(slice<1>(out, begin, end), req[up_enum::kOut], upsampling_nearest(data, scale_h, scale_w));
-
       }
       begin = end;
     }
@@ -202,7 +198,7 @@ void UpSamplingBackward(const OpContext &ctx, const UpSamplingParam &param,
 
 static inline DeconvolutionParam GetDeconvolutionParam(const UpSamplingParam& param) {
   DeconvolutionParam p = DeconvolutionParam();
- int* scale_hw = scaleComp(param);
+  int* scale_hw = scaleComp(param);
   CHECK_EQ(scale_hw[0], scale_hw[1]) <<
   "UpSamplingBilinear: Scale should be the same along all dimensions for bilinear upsampling";
   int kernel = static_cast<int>(2.0 * scale_hw[0] - ::fmod(scale_hw[0], 2));
