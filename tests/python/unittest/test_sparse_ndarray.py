@@ -15,7 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import unittest
 import pickle as pkl
 
 from mxnet.ndarray import NDArray
@@ -34,7 +33,6 @@ def sparse_nd_ones(shape, stype):
 
 
 @with_seed()
-@unittest.skip("skip test_sparse_nd_elemwise_add")
 def test_sparse_nd_elemwise_add():
     def check_sparse_nd_elemwise_binary(shapes, stypes, f, g):
         # generate inputs
@@ -450,7 +448,6 @@ def test_sparse_nd_broadcast():
 
 
 @with_seed()
-@unittest.skip("test_sparse_nd_transpose")
 def test_sparse_nd_transpose():
     npy = np.random.uniform(-10, 10, rand_shape_2d())
     stypes = ['csr', 'row_sparse']

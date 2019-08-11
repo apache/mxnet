@@ -21,7 +21,6 @@ import mxnet as mx
 import numpy as np
 import unittest
 
-@unittest.skip("test skip test_tvm_bridge")
 def test_tvm_bridge():
     # only enable test if TVM is available
     try:
