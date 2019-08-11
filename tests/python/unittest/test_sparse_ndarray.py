@@ -33,8 +33,8 @@ def sparse_nd_ones(shape, stype):
     return mx.nd.ones(shape).tostype(stype)
 
 
+# @unittest.skip("skip test_sparse_nd_elemwise_add")
 @with_seed()
-@unittest.skip("skip test_sparse_nd_elemwise_add")
 def test_sparse_nd_elemwise_add():
     def check_sparse_nd_elemwise_binary(shapes, stypes, f, g):
         # generate inputs
