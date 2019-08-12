@@ -129,7 +129,7 @@ void NumpyUniqueGPUNoneAxisImpl(const NumpyUniqueParam& param,
       const_cast<NDArray &>(outputs[output_flag]).Init(s);
       dim_t* unique_counts = outputs[output_flag].data().dptr<dim_t>();
       mxnet_op::Kernel<UniqueReturnCountsKernel, gpu>::Launch(
-        stream, input_size, unique_counts,
+        stream, valid_num, unique_counts,
         thrust::raw_pointer_cast(idx.data()));
     }
   });
@@ -230,7 +230,7 @@ void NumpyUniqueGPUImpl(const NumpyUniqueParam& param,
       const_cast<NDArray &>(outputs[output_flag]).Init(mxnet::TShape(1, valid_num));
       dim_t* unique_counts = outputs[output_flag].data().dptr<dim_t>();
       mxnet_op::Kernel<UniqueReturnCountsKernel, gpu>::Launch(
-        stream, temp_shape[0], unique_counts,
+        stream, valid_num, unique_counts,
         thrust::raw_pointer_cast(idx.data()));
     }
   });
