@@ -2570,11 +2570,12 @@ def test_np_unique():
         ((), True, True, True, None),
         ((1, ), True, True, True, -1),
         ((5, ), True, True, True, 0),
-        ((3, ), True, True, True, None),
+        ((5, ), True, True, True, None),
+        ((5, 4), True, True, True, None),
         ((5, 4), True, True, True, -1),
         ((5, 0, 4), True, True, True, None),
         ((0, 0, 0), True, True, True, None),
-        ((5, 3, 4), True, True, True, -1),
+        # ((5, 3, 4), True, True, True, -1), # waiting for numpy 1.18, details in pr 14255
         ((5, 3, 4), True, True, True, None),
         ((5, 3, 4), True, True, True, 1),
     ]
@@ -2586,7 +2587,6 @@ def test_np_unique():
                     test_unique.hybridize()
                 x = _np.random.uniform(-8.0, 8.0, size=config[0])
                 x = np.array(x, dtype=dtype)
-                print(config, x.dtype)
                 np_out = _np.unique(x.asnumpy(), *config[1:])
                 mx_out = test_unique(x)
                 assert mx_out[0].shape == np_out[0].shape

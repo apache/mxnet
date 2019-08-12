@@ -98,7 +98,7 @@ void NumpyUniqueCPUNoneAxisImpl(const NumpyUniqueParam& param,
         const_cast<NDArray &>(outputs[output_flag]).Init(s);
         dim_t* unique_counts = outputs[output_flag].data().dptr<dim_t>();
         mxnet_op::Kernel<UniqueReturnCountsKernel, cpu>::Launch(
-          stream, input_size, unique_counts, idx.data());
+          stream, valid_num, unique_counts, idx.data());
       }
     } else {
       std::set<DType> set(input_data, input_data + input_size);
@@ -214,7 +214,7 @@ void NumpyUniqueCPUImpl(const NumpyUniqueParam& param,
       const_cast<NDArray &>(outputs[output_flag]).Init(mxnet::TShape(1, valid_num));
       dim_t* unique_counts = outputs[output_flag].data().dptr<dim_t>();
       mxnet_op::Kernel<UniqueReturnCountsKernel, cpu>::Launch(
-          stream, temp_shape[0], unique_counts, idx.data());
+          stream, valid_num, unique_counts, idx.data());
     }
   });
 }
