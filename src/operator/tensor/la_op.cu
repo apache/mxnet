@@ -100,12 +100,14 @@ NNVM_REGISTER_OP(_backward_linalg_inverse)
 .set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 2, 2, 2, 1, inverse_backward>);
 
 NNVM_REGISTER_OP(_linalg_det)
+.add_alias("_np__linalg_det")
 .set_attr<FCompute>("FCompute<gpu>", LaOpDetForward<gpu, 1, det>);
 
 NNVM_REGISTER_OP(_backward_linalg_det)
 .set_attr<FCompute>("FCompute<gpu>", LaOpDetBackward<gpu, 1, det_backward>);
 
 NNVM_REGISTER_OP(_linalg_slogdet)
+.add_alias("_np__linalg_slogdet")
 .set_attr<FCompute>("FCompute<gpu>", LaOpDetForward<gpu, 2, slogdet>);
 
 NNVM_REGISTER_OP(_backward_linalg_slogdet)
