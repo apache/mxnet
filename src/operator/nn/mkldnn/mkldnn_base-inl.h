@@ -620,9 +620,6 @@ bool MKLDNNStorageType(const nnvm::NodeAttrs &attrs,
 #define MKLDNN_OPCHECK_COPY_RESULT(outputs, indice) \
     if (debug) check.CopyResult(outputs, indice);
 
-}  // namespace mxnet
-#endif
-
 struct MKLDNNPostEltwiseParam {
   mkldnn::algorithm alg = mkldnn::algorithm::algorithm_undef;
   float scale = 1.f;
@@ -630,4 +627,6 @@ struct MKLDNNPostEltwiseParam {
   float beta = 1.f;
 };
 
+}  // namespace mxnet
+#endif
 #endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_BASE_INL_H_

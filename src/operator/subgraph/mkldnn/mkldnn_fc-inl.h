@@ -25,62 +25,55 @@
 #include <utility>
 #include <vector>
 #include "mkldnn.hpp"
-#include "../../nn/activation-inl.h"
+#include "../../nn/mkldnn/mkldnn_fully_connected-inl.h"
 
 namespace mxnet {
 namespace op {
 
-namespace sg_mkldnn_fc_fusion {
-  std::set<std::string> eltwise_name_list = {
-    "Activation",
-    "square",
-    "square_root",
-    "exp",
-    "abs",
-    "clip"
-  };
-}
-
 static inline bool SupportMKLDNNFCEltwiseFusion(const std::string op_name) {
-  auto res = sg_mkldnn_fc_fusion::eltwise_name_list.find(op_name);
-  if (res != sg_mkldnn_fc_fusion::eltwise_name_list.end())
+  if (op_name == "Activation" ||
+      op_name == "square" ||
+      op_name == "square_root" ||
+      op_name == "exp" ||
+      op_name == "abs" ||
+      op_name == "clip") {
     return true;
-  else
+  } else {
     return false;
+  }
 }
 
 static inline mkldnn::algorithm GetMKLDNNEltwiseAlgo(const std::string op_name) {
-  switch (op_name) {
-    case "square":
-      return mkldnn::algorithm::eltwise_square;
-    case "square_root":
-      return mkldnn::algorithm::eltwise_sqrt;
-    case "exp:
-      return mkldnn::algorithm::exp;
-    case "abs":
-      return mkldnn::algorithm::abs;
-    default:
-      LOG(FATAL) << "Unsupported eltwise fusion op: " << op_name; 
-  }
+  if (op_name == "square")
+    return mkldnn::algorithm::eltwise_square;
+  else if (op_name == "square_root")
+    return mkldnn::algorithm::eltwise_sqrt;
+  else if (op_name == "exp")
+    return mkldnn::algorithm::eltwise_exp;
+  else if (op_name == "abs")
+    return mkldnn::algorithm::eltwise_abs;
+  else
+    LOG(FATAL) << "Unsupported eltwise fusion op: " << op_name;
+
+  return mkldnn::algorithm::algorithm_undef;
 }
 
-static inline bool IsOutputUInt8(const MKLDNNConvFusionParam& param) {
-  bool result = false;
-  const auto& mkldnn_param = param.full_conv_param.mkldnn_param;
-  auto IsOutputUInt8Helper = [](const mkldnn::algorithm& act_alg) {
-    return (act_alg == mkldnn::algorithm::eltwise_relu ||
-            act_alg == mkldnn::algorithm::eltwise_logistic ||
-            act_alg == mkldnn::algorithm::eltwise_soft_relu ||
-            act_alg == mkldnn::algorithm::eltwise_bounded_relu);
-  };
-  if ((!mkldnn_param.with_sum) && mkldnn_param.with_act) {
-    CHECK(param.full_conv_param.act_param.alg != mkldnn::algorithm::algorithm_undef);
-    result = IsOutputUInt8Helper(param.full_conv_param.act_param.alg);
-  } else if (mkldnn_param.with_postsum_act) {
-    CHECK(param.full_conv_param.postsum_act_param.alg != mkldnn::algorithm::algorithm_undef);
-    result = IsOutputUInt8Helper(param.full_conv_param.postsum_act_param.alg);
+static inline bool IsOutputUint8(const MKLDNNFCFullParam& full_param) {
+  auto alg = full_param.eltwise_param.alg;
+  // TODO(ciyong): some alg doesn't support int8 so far.
+  if (full_param.mkldnn_param.with_eltwise &&
+      (alg == mkldnn::algorithm::eltwise_relu ||
+       alg == mkldnn::algorithm::eltwise_logistic ||
+       alg == mkldnn::algorithm::eltwise_soft_relu ||
+       alg == mkldnn::algorithm::eltwise_bounded_relu ||
+       alg == mkldnn::algorithm::eltwise_square ||
+       alg == mkldnn::algorithm::eltwise_sqrt ||
+       alg == mkldnn::algorithm::eltwise_exp ||
+       alg == mkldnn::algorithm::eltwise_abs)) {
+    return true;
   }
-  return result;
+
+  return false;
 }
 
 

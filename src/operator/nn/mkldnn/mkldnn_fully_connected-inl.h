@@ -70,7 +70,6 @@ struct MKLDNNFCFullParam {
   MKLDNNPostEltwiseParam eltwise_param;
   std::vector<float> output_scales = {0.0};
   std::vector<float> requantize_scales = {0.0};
-
 };
 
 mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(

@@ -32,8 +32,8 @@
 #include <vector>
 #include "../common.h"
 #include "../../tensor/matrix_op-inl.h"
-#include "mkldnn_fc-inl.h"
 #include "../subgraph_property.h"
+#include "mkldnn_fc-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -97,13 +97,16 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
           const ActivationParam &param = nnvm::get<ActivationParam>(new_node.attrs.parsed);
           if ((quantized_ && SupportQuantizedMKLDNNAct(param)) ||
               (!quantized_ && SupportMKLDNNAct(param))) {
-          matched_list_.push_back(&new_node);
-          status_ = kSuccess;
-          return true;
+            matched_list_.push_back(&new_node);
+            status_ = kSuccess;
+            return true;
+          }
         }
-        if (!quantized_ && (new_node.op() == Op::Get("square") ||
-          new_node.op() == Op::Get("square_root") ||
-          new_node.op() == Op::Get("exp"))) {
+
+        if ((new_node.op() == Op::Get("square") ||
+            new_node.op() == Op::Get("square_root") ||
+            new_node.op() == Op::Get("exp")) &&
+            !quantized_) {
           matched_list_.push_back(&new_node);
           status_ = kSuccess;
           return true;
@@ -114,7 +117,7 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
           return true;
         }
         if (new_node.op() == Op::Get("clip")) {
-          const ClipParam &param == nnvm::get<ClipParam>(new_node.attrs.parsed);
+          const ClipParam &param = nnvm::get<ClipParam>(new_node.attrs.parsed);
           if (param.a_min == 0.f && param.a_max == 1.0f) {
             matched_list_.push_back(&new_node);
             status_ = kSuccess;
@@ -180,7 +183,7 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
     nnvm::Symbol new_sym;
     new_sym.outputs.emplace_back(last_node);
     std::ostringstream node_name;
-    node_name << quantized_ ? "sg_quantized_mkldnn_" : "sg_mkldnn_";
+    node_name << (quantized_ ? "sg_quantized_mkldnn_" : "sg_mkldnn_");
     DFSVisit(new_sym.outputs, [&](const nnvm::NodePtr &node) {
       if (node->is_variable()) return;
       auto &sub_name = node->op()->name;

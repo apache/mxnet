@@ -33,6 +33,8 @@
 #include "../../nn/mkldnn/mkldnn_base-inl.h"
 #include "../../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../../nn/mkldnn/mkldnn_fully_connected-inl.h"
+#include "../../nn/mkldnn/mkldnn_act-inl.h"
+#include "../../tensor/matrix_op-inl.h"
 #include "../../quantization/quantization_utils.h"
 #include "mkldnn_fc-inl.h"
 
@@ -230,20 +232,20 @@ static void SgMKLDNNFCParamParser(nnvm::NodeAttrs *attrs) {
   auto subgraph_sym = attrs->subgraphs[0];
   DFSVisit(subgraph_sym->outputs, [&](const nnvm::NodePtr &node) {
     if (node->is_variable()) return;
-    auto &node_name = node->op()->name;
-    if (node_name == "FullyConnected") {
+    auto &op_name = node->op()->name;
+    if (op_name == "FullyConnected") {
       full_param.default_param =
           nnvm::get<FullyConnectedParam>(node->attrs.parsed);
-    } else if (SupportMKLDNNFCEltwiseFusion(node_name)) {
-      if (node_name == "Activation") {
+    } else if (SupportMKLDNNFCEltwiseFusion(op_name)) {
+      if (op_name == "Activation") {
         const ActivationParam act_param = nnvm::get<ActivationParam>(node->attrs.parsed);
-        full_param.mkldnn_param.eltwise_param.alg = GetMKLDNNActAlgo(act_param);
-      } else if (node_name == "clip") {
+        full_param.eltwise_param.alg = GetMKLDNNActAlgo(act_param);
+      } else if (op_name == "clip") {
         const ClipParam clip_param = nnvm::get<ClipParam>(node->attrs.parsed);
-        full_param.mkldnn_param.eltwiese_param.alg = mkldnn::algorithm::eltwise_bounded_relu;
-        full_param.mkldnn_param.eltwiese_param.alpha = clip_param.a_max;
+        full_param.eltwise_param.alg = mkldnn::algorithm::eltwise_bounded_relu;
+        full_param.eltwise_param.alpha = clip_param.a_max;
       } else {
-        full_param.mkldnn_param.eltwiese_param.alg = GetMKLDNNEltwiseAlgo(node_name);
+        full_param.eltwise_param.alg = GetMKLDNNEltwiseAlgo(op_name);
       }
     }
   });
@@ -345,7 +347,7 @@ static bool SgMKLDNNFCInferType(const nnvm::NodeAttrs &attrs,
     } else {
       if (full_param.mkldnn_param.min_calib_range.has_value() &&
           full_param.mkldnn_param.max_calib_range.has_value()) {
-        if (full_param.mkldnn_param.with_eltwise) { //TODO
+        if (IsOutputUint8(full_param)) {
           TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kUint8);
         } else {
           TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kInt8);
