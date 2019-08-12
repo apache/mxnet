@@ -25,7 +25,7 @@
 #define MXNET_OPERATOR_NUMPY_NP_TENSORDOT_OP_INL_H_
 
 #include <vector>
-#include "np_matrix_op-inl.h"
+#include "../tensor/matrix_op-inl.h"
 
 namespace mxnet {
 namespace op {
