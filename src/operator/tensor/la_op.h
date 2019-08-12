@@ -406,10 +406,57 @@ inline bool InverseShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
   const mxnet::TShape& in = (*in_attrs)[0];
+  if (!ndim_is_known(in)) return false;
   const int ndim(in.ndim());
   CHECK_GE(ndim, 2) << "Input A's dimension must be >= 2";
   CHECK_EQ(in[ndim-2], in[ndim-1]) << "Input A's last two dimension must be equal";
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, in);
+  return shape_is_known(in);
+}
+
+// Shape inference function for det functions in linalg
+template<int onum>
+inline bool DetShape(const nnvm::NodeAttrs& attrs,
+                     mxnet::ShapeVector* in_attrs,
+                     mxnet::ShapeVector* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), onum + 2);
+  const mxnet::TShape& in = (*in_attrs)[0];
+  if (!ndim_is_known(in)) return false;
+  const int ndim(in.ndim());
+  CHECK_GE(ndim, 2) << "Input A's dimension must be >= 2";
+  CHECK_EQ(in[ndim-2], in[ndim-1]) << "Input A's last two dimension must be equal";
+  mxnet::TShape out;
+  if (ndim == 2) {
+    out = mxnet::TShape(1, 1);
+  } else {
+    out = mxnet::TShape(in.begin(), in.end() - 2);
+  }
+  for (int i = 0; i < onum; ++i) {
+    SHAPE_ASSIGN_CHECK(*out_attrs, i, out); /* sign or det or logdet */
+  }
+  SHAPE_ASSIGN_CHECK(*out_attrs, onum, in); /* LU */
+  SHAPE_ASSIGN_CHECK(*out_attrs, onum + 1, mxnet::TShape(in.begin(), in.end() - 1)); /* pivot */
+  return shape_is_known(in);
+}
+
+// Type inference function for det functions in linalg
+template<int onum>
+inline bool DetType(const nnvm::NodeAttrs& attrs,
+                    std::vector<int>* in_type,
+                    std::vector<int>* out_type) {
+  using namespace mshadow;
+  CHECK_EQ(in_type->size(), 1);
+  CHECK_EQ(out_type->size(), onum + 2);
+  const int dtype = (*in_type)[0];
+  if (dtype == -1) return false;
+  CHECK(dtype == kFloat32 || dtype == kFloat64)
+    << "This operation only supports 32-bit and 64-bit floating point";
+  for (int i = 0; i < onum; ++i) {
+    TYPE_ASSIGN_CHECK(*out_type, i, dtype);  /* sign or det or logdet */
+  }
+  TYPE_ASSIGN_CHECK(*out_type, onum, dtype);  /* LU */
+  TYPE_ASSIGN_CHECK(*out_type, onum + 1, kInt32);  /* pivot */
   return true;
 }
 
@@ -752,6 +799,139 @@ void LaOpBackwSyevd(const nnvm::NodeAttrs& attrs,
     }
   });
 }
+
+
+template<typename xpu, typename DType, int onum, typename laop>
+struct LaOpDetForwardCaller {
+  static void op(const std::vector<TBlob>& inputs,
+                 const std::vector<TBlob>& outputs,
+                 const nnvm::NodeAttrs& attrs,
+                 const OpContext& ctx) {
+      CHECK(false) << "no specialized LaOpDetForward defined for template parameters";
+  }
+};
+template<typename xpu, typename DType, typename laop>
+struct LaOpDetForwardCaller<xpu, DType, 1, laop> {
+  static void op(const std::vector<TBlob>& inputs,
+                 const std::vector<TBlob>& outputs,
+                 const nnvm::NodeAttrs& attrs,
+                 const OpContext& ctx) {
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+    laop::op(inputs[0].FlatToKD<xpu, 3, DType>(s),
+             outputs[0].FlatToKD<xpu, 1, DType>(s),
+             outputs[1].FlatToKD<xpu, 3, DType>(s),
+             outputs[2].FlatToKD<xpu, 2, int>(s), ctx, attrs);
+  }
+};
+template<typename xpu, typename DType, typename laop>
+struct LaOpDetForwardCaller<xpu, DType, 2, laop> {
+  static void op(const std::vector<TBlob>& inputs,
+                 const std::vector<TBlob>& outputs,
+                 const nnvm::NodeAttrs& attrs,
+                 const OpContext& ctx) {
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+    laop::op(inputs[0].FlatToKD<xpu, 3, DType>(s),
+             outputs[0].FlatToKD<xpu, 1, DType>(s),
+             outputs[1].FlatToKD<xpu, 1, DType>(s),
+             outputs[2].FlatToKD<xpu, 3, DType>(s),
+             outputs[3].FlatToKD<xpu, 2, int>(s), ctx, attrs);
+  }
+};
+template<typename xpu, int onum, typename laop>
+void LaOpDetForward(const nnvm::NodeAttrs& attrs,
+                    const OpContext& ctx,
+                    const std::vector<TBlob>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 1);
+  CHECK_EQ(outputs.size(), onum + 2);
+  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+    LaOpDetForwardCaller<xpu, OType, onum, laop>::op(inputs, outputs, attrs, ctx);
+  });
+}
+
+template<typename xpu, typename DType, int onum, typename laop>
+struct LaOpDetBackwardCaller {
+  static void op(const std::vector<TBlob>& inputs,
+                 const std::vector<TBlob>& outputs,
+                 const nnvm::NodeAttrs& attrs,
+                 const OpContext& ctx) {
+      CHECK(false) << "no specialized LaOpDetBackward defined for template parameters";
+  }
+};
+template<typename xpu, typename DType, typename laop>
+struct LaOpDetBackwardCaller<xpu, DType, 1, laop> {
+  static void op(const std::vector<TBlob>& inputs,
+                 const std::vector<TBlob>& outputs,
+                 const nnvm::NodeAttrs& attrs,
+                 const OpContext& ctx) {
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+    laop::op(inputs[0].FlatToKD<xpu, 1, DType>(s),
+             inputs[1].FlatToKD<xpu, 1, DType>(s),
+             inputs[2].FlatToKD<xpu, 3, DType>(s),
+             inputs[3].FlatToKD<xpu, 2, int>(s),
+             outputs[0].FlatToKD<xpu, 3, DType>(s), ctx, attrs);
+  }
+};
+template<typename xpu, typename DType, typename laop>
+struct LaOpDetBackwardCaller<xpu, DType, 2, laop> {
+  static void op(const std::vector<TBlob>& inputs,
+                 const std::vector<TBlob>& outputs,
+                 const nnvm::NodeAttrs& attrs,
+                 const OpContext& ctx) {
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+    laop::op(inputs[0].FlatToKD<xpu, 1, DType>(s),
+             inputs[1].FlatToKD<xpu, 1, DType>(s),
+             inputs[2].FlatToKD<xpu, 1, DType>(s),
+             inputs[3].FlatToKD<xpu, 3, DType>(s),
+             inputs[4].FlatToKD<xpu, 2, int>(s),
+             outputs[0].FlatToKD<xpu, 3, DType>(s), ctx, attrs);
+  }
+};
+template<typename xpu, int onum, typename laop>
+void LaOpDetBackward(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  CHECK_EQ(inputs.size(), onum + 3);
+  CHECK_EQ(outputs.size(), 1);
+  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+    std::vector<TBlob> tspace(outputs);
+    for ( int i = 0; i < onum; ++i ) {
+      if ( req[i] == kAddTo ) {
+        tspace[i].dptr_ = ctx.requested[0]
+                             .get_space_typed<xpu, 1, OType>(Shape1(outputs[i].Size()), s).dptr_;
+      }
+    }
+    LaOpDetBackwardCaller<xpu, OType, onum, laop>::op(inputs, tspace, attrs, ctx);
+    for ( int i = 0; i < onum; ++i ) {
+      if ( req[i] == kAddTo ) {
+        Tensor<xpu, 1, OType> out = outputs[i].FlatTo1D<xpu, OType>(s);
+        out += tspace[i].FlatTo1D<xpu, OType>(s);
+      }
+    }
+  });
+}
+
+// Only transfer ddet and outputs to gradient
+template<int onum>
+struct ReduceDetGrad {
+  const char *op_name;
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+                                          const std::vector<nnvm::NodeEntry>& ograds) {
+    std::vector<nnvm::NodeEntry> heads;
+    heads.push_back(ograds[onum - 1]);
+    uint32_t n_out = n->num_outputs();
+    for (uint32_t i = 0; i < n_out; ++i) {
+      heads.emplace_back(nnvm::NodeEntry{n, i, 0});
+    }
+    return MakeGradNode(op_name, n, heads, n->attrs.dict);
+  }
+};
 
 }  // namespace op
 }  // namespace mxnet

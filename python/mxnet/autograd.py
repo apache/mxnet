@@ -197,6 +197,9 @@ def predict_mode():
 def mark_variables(variables, gradients, grad_reqs='write'):
     """Mark NDArrays as variables to compute gradient for autograd.
 
+    This is equivalent to the function .attach_grad() in a variable, but with this
+    call we can set the gradient to any value.
+
     Parameters
     ----------
     variables: NDArray or list of NDArray
