@@ -3764,6 +3764,58 @@ def test_np_share_memory():
                 assert not op(np.ones((5, 0), dtype=dt), np.ones((0, 3, 0), dtype=adt))
 
 
+@with_seed()
+@use_np
+def test_np_diff():
+    def np_diff_backward(ograd, n, axis):
+        res = ograd
+        for i in range(n):
+            res = _np.negative(_np.diff(res, n=1, axis=axis, prepend=0, append=0))
+        return res
+
+    class TestDiff(HybridBlock):
+        def __init__(self, n=1, axis=-1):
+            super(TestDiff, self).__init__()
+            self._n = n
+            self._axis = axis
+
+        def hybrid_forward(self, F, a):
+            return F.np.diff(a, n=self._n, axis=self._axis)
+
+    shapes = [tuple(random.randrange(10) for i in range(random.randrange(6))) for j in range(5)]
+    for hybridize in [True, False]:
+        for shape in shapes:
+            for axis in [i for i in range(-len(shape), len(shape))]:
+                for n in [i for i in range(0, shape[axis]+1)]:
+                    test_np_diff = TestDiff(n=n, axis=axis)
+                    if hybridize:
+                        test_np_diff.hybridize()
+                    for itype in [_np.float16, _np.float32, _np.float64]:
+                        # note the tolerance shall be scaled by the input n
+                        if itype == _np.float16:
+                            rtol = atol = 1e-2*len(shape)*n
+                        else:
+                            rtol = atol = 1e-5*len(shape)*n
+                        x = rand_ndarray(shape).astype(itype).as_np_ndarray()
+                        x.attach_grad()
+                        np_out = _np.diff(x.asnumpy(), n=n, axis=axis)
+                        with mx.autograd.record():
+                            mx_out = test_np_diff(x)
+                        assert mx_out.shape == np_out.shape
+                        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+                        mx_out.backward()
+                        if (np_out.size == 0):
+                            np_backward = _np.zeros(shape)
+                        else:                    
+                            np_backward = np_diff_backward(_np.ones(np_out.shape, dtype=itype), n=n, axis=axis)
+                        assert x.grad.shape == np_backward.shape
+                        assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
+
+                        mx_out = np.diff(x, n=n, axis=axis)
+                        np_out = _np.diff(x.asnumpy(), n=n, axis=axis)
+                        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
