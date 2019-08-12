@@ -44,7 +44,7 @@ from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'add', 'subtract', 'multiply', 'divide',
-           'mod', 'power']
+           'mod', 'power', 'logaddexp']
 
 
 # This function is copied from ndarray.py since pylint
@@ -1549,3 +1549,50 @@ def power(x1, x2, out=None):
         This is a scalar if both x1 and x2 are scalars.
     """
     return _mx_nd_np.power(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+def logaddexp(x1, x2, out=None):
+    """Logarithm of the sum of exponentiations of the inputs.
+    logaddexp(x1, x2, out=None)
+     Calculates ``log(exp(x1) + exp(x2))``. This function is useful in
+    statistics where the calculated probabilities of events may be so small
+    as to exceed the range of normal floating point numbers.  In such cases
+    the logarithm of the calculated probability is stored. This function
+    allows adding probabilities stored in such a fashion.
+     Parameters
+    ----------
+    x1, x2 : ndarray or scalar
+        Input values.
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape and dtype as the expected output. If not provided or `None`,
+        a freshly-allocated array is returned.
+     Returns
+    -------
+    result : ndarray or scalar
+        Logarithm of ``exp(x1) + exp(x2)``.
+        This is a scalar if both `x1` and `x2` are scalars.
+     See Also
+    --------
+    logaddexp2: Logarithm of the sum of exponentiations of inputs in base 2.
+     Notes
+    -----
+    This function differs from the original `numpy.logaddexp2
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.logaddexp2.html>`_ in
+    the following aspects:
+     - Input type does not support Python native iterables(list, tuple, ...). Only ndarray is supported.
+    - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+     Examples
+    --------
+    >>> prob1 = np.log(1e-50)
+    >>> prob2 = np.log(2.5e-50)
+    >>> prob12 = np.logaddexp(prob1, prob2)
+    >>> prob12
+    -113.87649168120691
+    >>> np.exp(prob12)
+    3.5000000000000057e-50
+    """
+    return _mx_nd_np.logaddexp(x1, x2, out)
