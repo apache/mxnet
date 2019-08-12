@@ -20,14 +20,21 @@
 
 from __future__ import absolute_import
 import ctypes
+import json
 import numpy as _np
 from . import _op as _mx_np_op
-from ...base import _LIB, SymbolHandle, numeric_types, mx_uint
+from ...base import _LIB, SymbolHandle, numeric_types, mx_uint, integer_types, string_types
+from ...base import c_str, c_handle_array
+from ...base import py_str
 from ...util import check_call, set_module
 from ...context import current_context
 from ..symbol import Symbol
 from .._internal import _set_np_symbol_class
 from . import _internal as _npi
+try:
+    from __builtin__ import slice as py_slice
+except ImportError:
+    from builtins import slice as py_slice
 
 __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'tensordot',
            'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate']
@@ -39,25 +46,88 @@ def _num_outputs(sym):
 
 @set_module('mxnet.symbol.numpy')
 class _Symbol(Symbol):
-    def __getitem__(self, key):
-        num_outputs = _num_outputs(self)
-        if num_outputs == 1:
+    def __init__(self, handle):
+        super(_Symbol, self).__init__(handle)
+        self._output_is_list = False
+
+    def __getitem__(self, key): # pylint: disable = too-many-return-statements, inconsistent-return-statements
+        num_outputs = len(self)
+        if num_outputs == 1: # pylint: disable = too-many-nested-blocks
+            # If number of output is one and is not a list, perform ndarray basic slicing
+            if not self._output_is_list:
+                if isinstance(key, integer_types):
+                    sliced = _npi.slice(self, key, key+1)
+                    return _npi.reshape(sliced, (-3, -4))
+                elif isinstance(key, py_slice):
+                    if key.step is None or key.step != 0:
+                        start = [None] if key.start is None else key.start
+                        stop = [None] if key.stop is None else key.stop
+                        return _npi.slice(self, start, stop, key.step)
+                    else:
+                        raise ValueError("slice step cannot be zero")
+                elif isinstance(key, list):
+                    raise NotImplementedError
+                elif isinstance(key, tuple):
+                    begin = []
+                    end = []
+                    step = []
+                    new_shape = ()
+                    for index in key:
+                        if isinstance(index, py_slice):
+                            if index.step is not None and index.step == 0:
+                                raise ValueError("slice step cannot be zero")
+                            begin.append(index.start)
+                            end.append(index.stop)
+                            step.append(index.step)
+                            new_shape += (-2,)
+                        elif isinstance(index, integer_types):
+                            begin.append(index)
+                            end.append(index+1)
+                            step.append(1)
+                            new_shape += (-3,)
+                    new_shape += (-4,)
+                    sliced = _npi.slice(self, begin, end, step)
+                    return _npi.reshape(sliced, new_shape)
+            # perform trivial list slicing on length one list represented by flag
+            else:
+                if isinstance(key, integer_types):
+                    if key in [-1, 0]:
+                        self._output_is_list = False
+                        return self
+                    else:
+                        raise IndexError
+                elif isinstance(key, py_slice):
+                    if (key.start is None or key.start <= 0) and (key.stop is None or key.stop > 0):
+                        return self
+                    else:
+                        raise ValueError
+                else:
+                    raise IndexError
+        # list slicing on several nodes of outputs
+        elif num_outputs > 1:
+            if isinstance(key, py_slice):
+                start = 0 if key.start is None else key.start
+                stop = num_outputs if key.stop is None else key.stop
+                step = 1 if key.step is None else key.step
+                return Group([self[i] for i in range(start, stop, step)], _Symbol)
+            elif isinstance(key, integer_types):
+                if key >= num_outputs:
+                # Important, python determines the end by this exception
+                    raise IndexError
+                handle = SymbolHandle()
+                check_call(_LIB.MXSymbolGetOutput(
+                    self.handle, mx_uint(key), ctypes.byref(handle)))
+                return _Symbol(handle=handle)
+            else:
+                raise NotImplementedError
+        else:
             raise NotImplementedError
-        if not isinstance(key, int):
-            raise NotImplementedError
-        if key >= num_outputs:
-            # Important, python determines the end by this exception
-            raise IndexError
-        handle = SymbolHandle()
-        check_call(_LIB.MXSymbolGetOutput(
-            self.handle, mx_uint(key), ctypes.byref(handle)))
-        return _Symbol(handle=handle)
 
     def __setitem__(self, key, value):
         raise NotImplementedError
 
     def __iter__(self):
-        raise AttributeError('_Symbol object has no attribute __iter__')
+        return (self[i] for i in range(len(self)))
 
     def __add__(self, other):
         """x.__add__(y) <=> x + y"""
@@ -190,7 +260,9 @@ class _Symbol(Symbol):
             raise TypeError("_Symbol does not support type {} as operand".format(str(type(other))))
 
     def __len__(self):
-        raise NotImplementedError
+        output_count = mx_uint()
+        check_call(_LIB.MXSymbolGetNumOutputs(self.handle, ctypes.byref(output_count)))
+        return output_count.value
 
     def as_nd_ndarray(self):
         """Convert _Symbol to mxnet.symbol.Symbol to use its convenience fluent methods."""
@@ -858,6 +930,52 @@ class _Symbol(Symbol):
     def broadcast_like(self, *args, **kwargs):
         raise AttributeError('_Symbol object has no attribute broadcast_like')
 
+    def save(self, fname, remove_amp_cast=True):
+        """Saves symbol to a file.
+        You can also use pickle to do the job if you only work on python.
+        The advantage of `load`/`save` functions is that the file contents are language agnostic.
+        This means the model saved by one language binding can be loaded by a different
+        language binding of `MXNet`.
+        You also get the benefit of being able to directly load/save from cloud storage(S3, HDFS).
+        Parameters
+        ----------
+        fname : str
+            The name of the file.
+            - "s3://my-bucket/path/my-s3-symbol"
+            - "hdfs://my-bucket/path/my-hdfs-symbol"
+            - "/path-to/my-local-symbol"
+        remove_amp_cast : bool, optional
+            Whether to remove the amp_cast and amp_multicast operators, before saving the model.
+        See Also
+        --------
+        symbol.load : Used to load symbol from file.
+        """
+        if not isinstance(fname, string_types):
+            raise TypeError('fname need to be string')
+
+        handle = self.handle
+        if remove_amp_cast:
+            handle = SymbolHandle()
+            check_call(_LIB.MXSymbolRemoveAmpCast(self.handle, ctypes.byref(handle)))
+
+        processed_symbol = _Symbol(handle)
+        json_str = processed_symbol.save_json_string()
+        json_data = json.loads(json_str)
+        with open(fname, 'w') as file_out:
+            json.dump(json_data, file_out, indent=2, sort_keys=True)
+
+    def save_json_string(self):
+        """Saves symbol to a JSON string.
+        See Also
+        --------
+        symbol.load_json : Used to load symbol from JSON string.
+        """
+        json_str = ctypes.c_char_p()
+        check_call(_LIB.MXSymbolSaveToJSON(self.handle, ctypes.byref(json_str)))
+        json_data = json.loads(py_str(json_str.value))
+        json_data["output_is_list"] = self._output_is_list
+        return json.dumps(json_data)
+
 
 @set_module('mxnet.symbol.numpy')
 def zeros(shape, dtype=_np.float32, order='C', ctx=None):
@@ -1332,7 +1450,100 @@ def concatenate(seq, axis=0, out=None):
     res : ndarray
         The concatenated array.
     """
+    if len(seq) > 1:
+        return _npi.concatenate(*[seq[i] for i in range(len(seq))], dim=axis, out=out)
     return _npi.concatenate(*seq, dim=axis, out=out)
 
+
+def Group(symbols, create_fn=_Symbol):
+    """Creates a symbol that contains a collection of other symbols, grouped together.
+    A classic symbol (`mx.sym.Symbol`) will be returned if all the symbols in the list
+    are of that type; a numpy symbol (`mx.sym.np._Symbol`) will be returned if all the
+    symbols in the list are of that type. A type error will be raised if a list of mixed
+    classic and numpy symbols are provided.
+    Example
+    -------
+    >>> a = mx.sym.Variable('a')
+    >>> b = mx.sym.Variable('b')
+    >>> mx.sym.Group([a,b])
+    <Symbol Grouped>
+    Parameters
+    ----------
+    symbols : list
+        List of symbols to be grouped.
+    create_fn : mx.sym.Symbol or mx.sym.np._Symbol
+        Symbol class for creating the grouped symbol.
+    Returns
+    -------
+    sym : Symbol
+        A group symbol.
+     """
+    if not symbols or any(not isinstance(sym, Symbol) for sym in symbols):
+        raise TypeError('Expected a list of symbols as input')
+    handle = SymbolHandle()
+    check_call(_LIB.MXSymbolCreateGroup(
+        mx_uint(len(symbols)),
+        c_handle_array(symbols), ctypes.byref(handle)))
+    self = create_fn(handle)
+    self._output_is_list = True #pylint: disable = protected-access
+    return self
+
+
+@set_module('mxnet.symbol.numpy')
+def load_json_string(json_str):
+    """
+    Loads symbol from json string.
+    Parameters
+    ----------
+    json_str : str
+        A JSON string.
+    Returns
+    -------
+    sym : Symbol
+        The loaded symbol.
+    See Also
+    --------
+    Symbol.tojson : Used to save symbol into json string.
+    """
+    if not isinstance(json_str, string_types):
+        raise TypeError('fname required to be string')
+    handle = SymbolHandle()
+    json_data = json.loads(json_str)
+    output_is_list = json_data["output_is_list"]
+    del json_data["output_is_list"]
+    check_call(_LIB.MXSymbolCreateFromJSON(c_str(json.dumps(json_data)), ctypes.byref(handle)))
+    s = _Symbol(handle)
+    s._output_is_list = output_is_list #pylint: disable = protected-access
+    return s
+
+
+@set_module('mxnet.symbol.numpy')
+def load(fname):
+    """Loads symbol from a JSON file.
+    You can also use pickle to do the job if you only work on python.
+    The advantage of load/save is the file is language agnostic.
+    This means the file saved using save can be loaded by other language binding of mxnet.
+    You also get the benefit being able to directly load/save from cloud storage(S3, HDFS).
+    Parameters
+    ----------
+    fname : str
+        The name of the file, examples:
+        - `s3://my-bucket/path/my-s3-symbol`
+        - `hdfs://my-bucket/path/my-hdfs-symbol`
+        - `/path-to/my-local-symbol`
+    Returns
+    -------
+    sym : Symbol
+        The loaded symbol.
+    See Also
+    --------
+    Symbol.save : Used to save symbol into file.
+    """
+    if not isinstance(fname, string_types):
+        raise TypeError('fname need to be string')
+    with open(fname, 'r') as file_input:
+        json_data = json.load(file_input)
+
+    return load_json_string(json.dumps(json_data))
 
 _set_np_symbol_class(_Symbol)
