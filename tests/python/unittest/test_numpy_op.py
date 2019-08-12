@@ -880,6 +880,50 @@ def test_np_concat():
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
+@with_seed()
+@use_np
+def test_np_unary_funcs_int():
+    # test unary functions that require integer input type in the standard numpy
+    def check_unary_func(func, ref_grad, shape, low, high):
+        @use_np
+        class TestUnaryInt(HybridBlock):
+            def __init__(self, func):
+                super(TestUnaryInt, self).__init__()
+                self._func = func
+
+            def hybrid_forward(self, F, a, *args, **kwargs):
+                return getattr(F.np, self._func)(a)
+
+        np_func = getattr(_np, func)
+        mx_func = TestUnaryInt(func)
+        np_test_data = _np.random.uniform(low, high, shape).astype(_np.int32)
+        mx_test_data = mx.numpy.array(np_test_data, dtype=np.int32)
+        for hybridize in [True, False]:
+            if hybridize:
+                mx_func.hybridize()
+            if ref_grad:
+                mx_test_data.attach_grad()
+            np_out = np_func(np_test_data)
+            with mx.autograd.record():
+                y = mx_func(mx_test_data)
+            assert y.shape == np_out.shape
+            assert_almost_equal(y.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+            if ref_grad:
+                y.backward()
+                assert_almost_equal(mx_test_data.grad.asnumpy(), ref_grad(np_test_data), rtol=1e-5, atol=1e-6, equal_nan=True)
+
+    funcs = {
+        'invert' : (None, -10, 10)
+    }
+    ndim = random.choice([2, 3, 4])
+    shape = random.choice([rand_shape_nd(ndim, dim=3), (1, 0, 2)])
+    for shape in [rand_shape_nd(ndim, dim=3), (1, 0, 2)]:
+        for func, func_data in funcs.items():
+            ref_grad, low, high = func_data
+            check_unary_func(func, ref_grad, shape, low, high)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

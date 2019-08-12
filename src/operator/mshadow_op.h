@@ -119,6 +119,8 @@ MXNET_UNARY_MATH_OP(negation, -a);
 
 MXNET_UNARY_MATH_OP(reciprocal, 1.0f / math::id(a));
 
+MXNET_UNARY_MATH_OP(invert, DType(~static_cast<int64_t>(a)));
+
 MXNET_UNARY_MATH_OP(reciprocal_grad, -1.0f / math::sqr(a));
 
 MXNET_UNARY_MATH_OP(sigmoid, 1.0f / (1.0f + math::exp(-a)));

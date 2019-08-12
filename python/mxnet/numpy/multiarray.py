@@ -45,7 +45,7 @@ from ..ndarray.numpy import _internal as _npi
 
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'add', 'subtract', 'multiply', 'divide',
            'mod', 'power', 'tensordot', 'linspace', 'expand_dims', 'tile', 'arange', 'split',
-           'concatenate']
+           'concatenate', 'invert']
 
 
 # This function is copied from ndarray.py since pylint
@@ -1877,3 +1877,42 @@ def concatenate(seq, axis=0, out=None):
         The concatenated array.
     """
     return _mx_nd_np.concatenate(seq, axis=axis, out=out)
+
+
+@set_module('mxnet.numpy')
+def invert(x, out=None, **kwargs):
+    """
+    Compute bit-wise inversion, or bit-wise NOT, element-wise.
+    Computes the bit-wise NOT of the underlying binary representation of
+    the integers in the input arrays. This ufunc implements the C/Python operator ~.
+    For signed integer inputs, the two’s complement is returned.
+    In a two’s-complement system negative numbers are represented
+    by the two’s complement of the absolute value.
+    This is the most common method of representing signed integers on computers [1].
+    A N-bit two’s-complement system can represent every integer in the range -2^{N-1} to +2^{N-1}-1.
+    Parameters
+    ----------
+    x : array_like
+        Only integer and boolean types are handled.
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape as the input.
+        If not provided or None, a freshly-allocated array is returned.
+    Returns
+    -------
+    out : ndarray
+        Bitwisely inverted elements of the original array.
+    Examples
+    --------
+    >>> np.invert(np.array([13], dtype=np.uint8))
+    array([242], dtype=uint8)
+    Notes
+    -----
+    This function differs from the original `numpy.invert
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.invert.html>`_ in
+    the following way(s):
+    - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
+    - broadcasting to `out` of different shape is currently not supported
+    - when input is plain python numerics, the result will not be stored in the `out` param
+    """
+    return _mx_nd_np.invert(x, out=out, **kwargs)

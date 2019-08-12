@@ -30,7 +30,7 @@ from .._internal import _set_np_symbol_class
 from . import _internal as _npi
 
 __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'tensordot',
-           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate']
+           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'invert']
 
 
 def _num_outputs(sym):
@@ -1135,6 +1135,66 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
     else:
         return _npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, ctx=ctx, dtype=dtype)
 
+def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
+    """Helper function for unary operators.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input of the unary operator.
+    fn_array : function
+        Function to be called if x is of ``_Symbol`` type.
+    fn_scalar : function
+        Function to be called if x is a Python scalar.
+    out : _Symbol
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    out : _Symbol or scalar
+        Result _Symbol or scalar.
+    """
+    if isinstance(x, numeric_types):
+        return fn_scalar(x, **kwargs)
+    elif isinstance(x, _Symbol):
+        return fn_array(x, out=out, **kwargs)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x))))
+
+
+@set_module('mxnet.symbol.numpy')
+def invert(x, out=None, **kwargs):
+    """
+    Compute bit-wise inversion, or bit-wise NOT, element-wise.
+    Computes the bit-wise NOT of the underlying binary representation of
+    the integers in the input arrays. This ufunc implements the C/Python operator ~.
+    For signed integer inputs, the two’s complement is returned.
+    In a two’s-complement system negative numbers are represented
+    by the two’s complement of the absolute value.
+    This is the most common method of representing signed integers on computers [1].
+    A N-bit two’s-complement system can represent every integer in the range -2^{N-1} to +2^{N-1}-1.
+    Parameters
+    ----------
+    x : _Symbol
+        Input value. Elements must be of real value.
+    out : _Symbol or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    out : _Symbol
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Examples
+    --------
+    >>> np.invert(np.array([13], dtype=np.uint8))
+    array([242], dtype=uint8)
+    Notes
+    -----
+    This function differs from the original `numpy.invert
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.invert.html>`_ in
+    the following way(s):
+    - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
+    - broadcasting to `out` of different shape is currently not supported
+    - when input is plain python numerics, the result will not be stored in the `out` param
+    """
+    return _unary_func_helper(x, _npi.invert, _np.invert, out=out, **kwargs)
 
 @set_module('mxnet.symbol.numpy')
 def expand_dims(a, axis):

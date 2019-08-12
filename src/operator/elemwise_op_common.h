@@ -186,6 +186,29 @@ inline bool ElemwiseType(const nnvm::NodeAttrs& attrs,
     attrs, in_attrs, out_attrs, -1);
 }
 
+template<index_t n_in, index_t n_out>
+inline bool ElemwiseIntType(const nnvm::NodeAttrs& attrs,
+                         std::vector<int> *in_attrs,
+                         std::vector<int> *out_attrs) {
+  if (n_in != -1) {
+    CHECK_EQ(in_attrs->size(), static_cast<size_t>(n_in)) << " in operator " << attrs.name;
+  }
+  if (n_out != -1) {
+    CHECK_EQ(out_attrs->size(), static_cast<size_t>(n_out)) << " in operator " << attrs.name;
+  }
+  for (size_t i = 0; i < in_attrs->size(); ++i) {
+    CHECK(type_is_none(in_attrs->at(i)) || type_is_int(in_attrs->at(i)))
+      <<"only integer input type is accepted, received type " << type_string(in_attrs->at(i));
+  }
+  for (size_t i = 0; i < out_attrs->size(); ++i) {
+    CHECK(type_is_none(out_attrs->at(i)) || type_is_int(out_attrs->at(i)))
+      <<"only integer output type is accepted, received type " << type_string(out_attrs->at(i));
+  }
+  return ElemwiseAttr<int, type_is_none, type_assign, true, type_string>(
+    attrs, in_attrs, out_attrs, -1);
+}
+
+
 // Transfer gradient and input to FGradient function
 struct ElemwiseGradUseIn {
   const char *op_name;

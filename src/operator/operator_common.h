@@ -131,6 +131,19 @@ inline std::string shape_string(const mxnet::TShape& x) {
   return os.str();
 }
 
+/*! \brief check if type is integer */
+inline bool type_is_int(const int& x) {
+   switch (x) {
+    case mshadow::kInt8:
+    case mshadow::kUint8:
+    case mshadow::kInt32:
+    case mshadow::kInt64:
+      return true;
+    default:
+      return false;
+  }
+}
+
 /*! \brief get string representation of data type */
 inline std::string type_string(const int& x) {
   switch (x) {
