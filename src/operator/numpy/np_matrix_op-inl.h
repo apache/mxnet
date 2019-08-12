@@ -26,8 +26,10 @@
 #define MXNET_OPERATOR_NUMPY_NP_MATRIX_OP_INL_H_
 
 #include <vector>
-#include "../tensor/matrix_op-inl.h"
+#include <string>
 #include "../nn/concat-inl.h"
+#include "../tensor/matrix_op-inl.h"
+#include "np_broadcast_reduce_op.h"
 
 namespace mxnet {
 namespace op {
@@ -59,6 +61,34 @@ void NumpyTranspose(const nnvm::NodeAttrs& attrs,
     TransposeImpl<xpu>(ctx.run_ctx, inputs[0], outputs[0], axes);
   }
 }
+
+struct NumpyXReshapeParam : public dmlc::Parameter<NumpyXReshapeParam> {
+  mxnet::Tuple<int> newshape;
+  std::string order;
+  DMLC_DECLARE_PARAMETER(NumpyXReshapeParam) {
+      DMLC_DECLARE_FIELD(newshape)
+          .set_default(mxnet::Tuple<int>())
+          .describe("The new shape should be compatible with the original shape."
+                    " If an integer, then the result will be a 1-D array of that length."
+                    " One shape dimension can be -1. In this case, the value is inferred"
+                    " from the length of the array and remaining dimensions."
+                    " -2 to -6 are used for data manipulation"
+                    " -2 copy this dimension from the input to the output shape"
+                    " -3 will skip current dimension if and only if the current dim size is one"
+                    " -4 copy all remain of the input dimensions to the output shape"
+                    " -5 use the product of two consecutive dimensions of the input"
+                    " shape as the output"
+                    " -6 split one dimension of the input into two dimensions passed"
+                    " subsequent to -6 in the new shape");
+      DMLC_DECLARE_FIELD(order)
+      .set_default("C")
+      .describe("Read the elements of a using this index order, and place the elements into"
+                " the reshaped array using this index order. 'C' means to read/write the elements"
+                " using C-like index order, with the last axis index changing fastest, back to the"
+                " first axis index changing slowest. Note that currently only C-like order is"
+                " supported");
+  }
+};
 
 }  // namespace op
 }  // namespace mxnet

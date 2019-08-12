@@ -42,5 +42,8 @@ NNVM_REGISTER_OP(_npi_concatenate)
 NNVM_REGISTER_OP(_backward_np_concat)
 .set_attr<FCompute>("FCompute<gpu>", ConcatGradCompute<gpu>);
 
+NNVM_REGISTER_OP(_npx_reshape)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

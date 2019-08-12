@@ -27,7 +27,7 @@ import re
 from collections import OrderedDict
 
 from ..base import mx_real_t, MXNetError
-from .. import symbol, ndarray, initializer
+from .. import symbol, ndarray, initializer, np_symbol
 from ..symbol import Symbol
 from ..ndarray import NDArray
 from .. import name as _name
@@ -1055,7 +1055,10 @@ class SymbolBlock(HybridBlock):
         ...     'net1-symbol.json', ['data'], 'net1-0001.params')
         >>> out2 = net2(x)
         """
-        sym = symbol.load(symbol_file)
+        if is_np_array():
+            sym = np_symbol.load(symbol_file)
+        else:
+            sym = symbol.load(symbol_file)
         if isinstance(input_names, str):
             input_names = [input_names]
         if param_file is None:
@@ -1063,7 +1066,7 @@ class SymbolBlock(HybridBlock):
             inputs = [symbol.var(i, dtype=mx_real_t) for i in input_names]
         else:
             # Do not specify type, rely on saved params type instead
-            inputs = [symbol.var(i) for i in input_names]
+            inputs = [symbol.var(i).as_np_ndarray() if is_np_array() else symbol.var(i) for i in input_names]
         ret = SymbolBlock(sym, inputs)
         if param_file is not None:
             ret.collect_params().load(param_file, ctx=ctx, cast_dtype=True, dtype_source='saved')

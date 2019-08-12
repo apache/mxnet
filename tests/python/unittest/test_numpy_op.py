@@ -880,6 +880,61 @@ def test_np_concat():
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
+@with_seed()
+@use_np
+def test_npx_reshape():
+    class TestNumpyXReshape(HybridBlock):
+        def __init__(self, newshape):
+            super(TestNumpyXReshape, self).__init__()
+            self._newshape = newshape
+
+        def hybrid_forward(self, F, a, *args, **kwargs):
+            return F.npx.reshape(a, self._newshape)
+
+    test_cases = [
+        [(2, 3, 5, 5),  (-2, -1),         (2, 75)],
+        [(2, 3, 5, 5),  (-2, -2, -1),     (2, 3, 25)],
+        [(5, 3, 4, 5),  (-2, -1, -2),     (5, 15, 4)],
+        [(2, 3, 5, 4),  (-1, -2, -2),     (8, 3, 5)],
+        [(2, 3, 5, 5),  (-2, -2, -2, -2), (2, 3, 5, 5)],
+        [(2, 1, 4, 5),  (-2, -3, -2, -2), (2, 4, 5)],
+        [(1, 1, 4, 1),  (-3, -3, -2, -2), (4, 1)],
+        [(1, 1, 1, 1),  (-3, -3, -3, -3), ()],
+        [(2, 4, 5, 3),  (-1, 2, 2, 1),    (30, 2, 2, 1)],
+        [(2, 3, 5, 6),  (-4,),            (2, 3, 5, 6)],
+        [(2, 3, 5, 6),  (6, 1, -4),       (6, 1, 5, 6)],
+        [(2, 3, 5, 6),  (-5, -5),         (6, 30)],
+        [(2, 3, 5, 6),  (-5, -1),         (6, 30)],
+        [(64,),         (-6, 16, 4),      (16, 4)],
+        [(64,),         (-6, 16, -1),     (16, 4)],
+        [(64, 1, 2, 3), (-6, 16, -1, -4), (16, 4, 1, 2, 3)]
+    ]
+    for hybridize in [True, False]:
+        for shape, newshape, expected_ret_shape in test_cases:
+            # test gluon
+            test_reshape = TestNumpyXReshape(newshape=newshape)
+            if hybridize:
+                test_reshape.hybridize()
+
+            a = mx.nd.random.uniform(shape=shape).as_np_ndarray()
+            a.attach_grad()
+            with mx.autograd.record():
+                y = test_reshape(a)
+
+            assert y.shape == expected_ret_shape
+            assert_almost_equal(y.asnumpy(), a.asnumpy().reshape(expected_ret_shape), rtol=1e-3, atol=1e-5)
+
+            # test backward
+            mx.autograd.backward(y)
+            expected_grad = _np.ones(shape)
+            assert_almost_equal(a.grad.asnumpy(), expected_grad, rtol=1e-3, atol=1e-5)
+
+            # test imperative
+            npx_out = npx.reshape(a, newshape)
+            expected_out = _np.reshape(a.asnumpy(), expected_ret_shape)
+            assert_almost_equal(npx_out.asnumpy(), expected_out, rtol=1e-3, atol=1e-5)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
