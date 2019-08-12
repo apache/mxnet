@@ -30,7 +30,7 @@ from mxnet.gluon import SymbolBlock, nn, rnn
 from mxnet.contrib.amp import amp
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import with_seed, teardown
+from common import with_seed, teardown, assert_raises_cudnn_not_satisfied
 
 def test_amp_coverage():
     conditional = [item[0] for item in amp.lists.symbol.CONDITIONAL_FP32_FUNCS]
@@ -300,8 +300,17 @@ def test_amp_conversion():
         params = converted_model.collect_params()
         assert params["stage2_unit1_conv2_weight"].dtype == np.float16
 
+    with mx.Context(mx.gpu(0)):
+        check_amp_convert_symbol()
+        check_amp_convert_model()
+        check_amp_convert_hybrid_block()
+
+@with_seed()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+def test_amp_conversion_rnn():
+    with mx.Context(mx.gpu(0)):
         model = nn.HybridSequential()
-        model.add(rnn.LSTM(hidden_size=10,num_layers=2,bidirectional=True))
+        model.add(rnn.LSTM(hidden_size=10, num_layers=2, bidirectional=True))
         model.add(nn.Dense(2))
         model.initialize()
         model.hybridize()
@@ -309,11 +318,6 @@ def test_amp_conversion():
         new_model = amp.convert_hybrid_block(model)
         out2 = new_model(mx.nd.ones((2, 3, 4)))
         mx.test_utils.assert_almost_equal(out.asnumpy(), out2.asnumpy(), atol=1e-2, rtol=1e-2)
-
-    with mx.Context(mx.gpu(0)):
-        check_amp_convert_symbol()
-        check_amp_convert_model()
-        check_amp_convert_hybrid_block()
 
 
 @with_seed()
