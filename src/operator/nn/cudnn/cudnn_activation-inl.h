@@ -35,7 +35,6 @@ namespace mxnet {
 namespace op {
 template<typename DType>
 class CuDNNActivationOp {
-  // Activation descriptors of cuDNN v5 (e.g. cudnnCreateActivationDescriptor()) used here.
   STATIC_ASSERT_CUDNN_VERSION_GE(5000);
 
  public:

@@ -29,6 +29,7 @@
 #include <dmlc/parameter.h>
 #include <dmlc/optional.h>
 #include <mshadow/base.h>
+#include <mxnet/libinfo.h>
 
 /*! \brief Macros/inlines to assist CLion to parse Cuda files (*.cu, *.cuh) */
 #ifdef __JETBRAINS_IDE__

@@ -35,8 +35,6 @@ namespace op {
 
 template<typename DType>
 class CuDNNPoolingOp {
-  // Implementation references CUDNN_POOLING_MAX_DETERMINISTIC mode option
-  // and nan_prop of cudnn v7, plus 3d pooling features of cudnn v5.
   STATIC_ASSERT_CUDNN_VERSION_GE(7000);
 
  public:

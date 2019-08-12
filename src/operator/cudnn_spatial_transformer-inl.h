@@ -32,7 +32,6 @@
 namespace mxnet {
 namespace op {
 #if defined(__CUDACC__) && MXNET_USE_CUDNN == 1
-// cuDNN v5 introduced the cudnnSpatialTransformerDescriptor_t and APIs that use it.
 STATIC_ASSERT_CUDNN_VERSION_GE(5000);
 template<typename DType>
 class CuDNNSpatialTransformerOp : public Operator {

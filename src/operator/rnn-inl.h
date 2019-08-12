@@ -398,7 +398,7 @@ class RNNOp {
  public:
   RNNParam param_;
   Context ctx_;
-  #if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 1
   std::vector<mkldnn::memory> concat_weight_memory;
   std::vector<mkldnn::memory> concat_iter_memory;
   std::vector<primitive> rnn_forward_prim;
@@ -413,7 +413,7 @@ class RNNOp {
   bool init_mem_;
   size_t reserve_mem_size_;
   Storage::Handle mem_space_;
-  #endif
+#endif
   explicit RNNOp(RNNParam param, Context ctx) {
     this->param_ = param;
     this->ctx_ = ctx;

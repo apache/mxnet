@@ -44,7 +44,6 @@ enum CuDNNBatchNormOpAuxiliary {kMovingMean, kMovingInvVar};
 #if defined(__CUDACC__)
 template<typename DType>
 class CuDNNBatchNormOp {
-  // This file was formerly included in batch_norm.cu only when CUDNN_MAJOR >= 5
   STATIC_ASSERT_CUDNN_VERSION_GE(5000);
 
  public:

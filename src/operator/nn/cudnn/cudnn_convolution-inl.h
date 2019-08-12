@@ -44,11 +44,6 @@ namespace op {
  */
 template<typename DType>
 class CuDNNConvolutionOp {
-  // Features of cuDNN v7 used here:
-  //     - grouped convolutions via cudnnSetConvolutionGroupCount()
-  //     - full strided convolution support (v6 had issues with backprop kernel in true fp16 mode)
-  //     - support for cudnnMathType_t CUDNN_TENSOR_OP_MATH, cudnnSetConvolutionMathType()
-  //     - cudnnGetConvolution*Algorithm_v7() entry points
   STATIC_ASSERT_CUDNN_VERSION_GE(7000);
 
  public:

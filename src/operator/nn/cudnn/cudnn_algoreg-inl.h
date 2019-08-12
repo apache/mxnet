@@ -44,10 +44,8 @@ namespace op {
  */
 template <typename CuDNNAlgoType>
 class CuDNNAlgo {
-  // Compile guard needed to get past non-nvcc compilation of cudnn_algoreg.cc.
-#ifdef STATIC_ASSERT_CUDNN_VERSION_GE
   STATIC_ASSERT_CUDNN_VERSION_GE(7000);
-#endif
+
  public:
   CuDNNAlgo() :
       algo_number_(static_cast<CuDNNAlgoType>(0)),
