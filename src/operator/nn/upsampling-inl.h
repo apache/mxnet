@@ -133,8 +133,8 @@ void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
           out += upsampling_nearest(data, scale_h, scale_w);
         }
       } else {
-        Assign(slice<1>(out, begin, end), 
-              req[up_enum::kOut], 
+        Assign(slice<1>(out, begin, end),
+              req[up_enum::kOut],
               upsampling_nearest(data, scale_h, scale_w));
       }
       begin = end;
