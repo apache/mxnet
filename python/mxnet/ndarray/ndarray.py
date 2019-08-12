@@ -457,36 +457,54 @@ fixed-size items.
         array([[ 6.,  5.,  5.],
                [ 6.,  0.,  4.]], dtype=float32)
         """
-        if self.ndim == 0 and key == ():
-            self._full(float(value))
+        # Note: currently 
+        if self.ndim == 0:
+            if not isinstance(key, (tuple, py_slice)):
+                raise IndexError('scalar tensor can only accept `()` and `:` as index')
+            if isinstance(key, tuple) and len(key) != 0:
+                raise IndexError('scalar tensor can only accept `()` and `:` as index')
+            if isinstance(value, numeric_types):
+                self._full(value)
+            elif isinstance(value, NDArray) and value.size == 1:
+                if value.shape != self.shape:
+                    value = value.reshape(self.shape)
+                value.copyto(self)
+            elif isinstance(value, (_np.ndarray, _np.generic)) and value.size == 1:
+                if isinstance(value, _np.generic) or value.shape != self.shape:
+                    value = value.reshape(self.shape)
+                self._sync_copyfrom(value)
+            else:
+                raise ValueError('setting an array element with a sequence.')
+        
+        elif self.size == 0:
             return
-        if self.size == 0:
-            return
-        key = indexing_key_expand_implicit_axes(key, self.shape)
-        slc_key = tuple(idx for idx in key if idx is not None)
 
-        if len(slc_key) < self.ndim:
-            raise RuntimeError(
-                'too few indices after normalization: expected `ndim` ({}) '
-                'but got {}. This is a bug, please report it!'
-                ''.format(self.ndim, len(slc_key))
-            )
-        if len(slc_key) > self.ndim:
-            raise IndexError(
-                'too many indices ({}) for array with {} dimensions'
-                ''.format(len(slc_key), self.ndim)
-            )
-
-        indexing_dispatch_code = get_indexing_dispatch_code(slc_key)
-        if indexing_dispatch_code == _NDARRAY_BASIC_INDEXING:
-            self._set_nd_basic_indexing(key, value)
-        elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
-            self._set_nd_advanced_indexing(key, value)
         else:
-            raise ValueError(
-                'Indexing NDArray with index {} of type {} is not supported'
-                ''.format(key, type(key))
-            )
+            key = indexing_key_expand_implicit_axes(key, self.shape)
+            slc_key = tuple(idx for idx in key if idx is not None)
+            
+            if len(slc_key) < self.ndim:
+                raise RuntimeError(
+                    'too few indices after normalization: expected `ndim` ({}) '
+                    'but got {}. This is a bug, please report it!'
+                    ''.format(self.ndim, len(slc_key))
+                )
+            if len(slc_key) > self.ndim:
+                raise IndexError(
+                    'too many indices ({}) for array with {} dimensions'
+                    ''.format(len(slc_key), self.ndim)
+                )
+
+            indexing_dispatch_code = get_indexing_dispatch_code(slc_key)
+            if indexing_dispatch_code == _NDARRAY_BASIC_INDEXING:
+                self._set_nd_basic_indexing(key, value)
+            elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
+                self._set_nd_advanced_indexing(key, value)
+            else:
+                raise ValueError(
+                    'Indexing NDArray with index {} of type {} is not supported'
+                    ''.format(key, type(key))
+                )
 
     # pylint: disable=line-too-long
     def __getitem__(self, key):
@@ -626,7 +644,7 @@ fixed-size items.
         array([[[4., 5.],
                 [6., 7.]]], dtype=float32)
         """
-        if self.ndim == 0 and key == ():
+        if self.ndim == 0 and (key == () or key == slice(None, None, None)):
             return self
         key = indexing_key_expand_implicit_axes(key, self.shape)
         if len(key) == 0:
@@ -2741,7 +2759,7 @@ fixed-size items.
         """
         This is added as an NDArray class method in order to support polymorphism in NDArray and numpy.ndarray indexing
         """
-        return _internal._full(self.shape, value=float(value), ctx=self.context, dtype=self.dtype, out=self)
+        return _internal._full(self.shape, value=value, ctx=self.context, dtype=self.dtype, out=self)
 
     def _scatter_set_nd(self, value_nd, indices):
         """

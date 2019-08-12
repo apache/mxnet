@@ -314,7 +314,6 @@ def test_np_mean():
             for axis in ([i for i in range(in_data_dim)] + [(), None]):
                 for itype in ['float16', 'float32', 'float64']:
                     for dtype in ['float16', 'float32', 'float64']:
-                        print(itype, dtype)
                         if is_int(dtype) and not is_int(itype):
                             continue
                         # test gluon
@@ -1232,7 +1231,7 @@ def test_np_squeeze():
 
         def hybrid_forward(self, F, x):
             return F.np.squeeze(x, axis=self._axis)
-
+    
     for shape, axis in config:
         data_np = _np.random.uniform(size=shape)
         data_mx = np.array(data_np, dtype=data_np.dtype)
@@ -1371,7 +1370,7 @@ def test_np_tile():
 
     for shape, reps in config:
         data_np = _np.random.uniform(size=shape)
-        data_mx = np.array(data_np, dtype=data_np.dtype)
+        data_mx = np.array(data_np, dtype=data_np.dtype)  # np.float64
         ret_np = _np.tile(data_np, reps=reps)
         ret_mx = np.tile(data_mx, reps=reps)
         assert same(ret_mx.asnumpy(), ret_np)

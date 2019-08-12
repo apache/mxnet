@@ -1074,7 +1074,10 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
 
     executor = sym.bind(ctx=ctx, args=location, args_grad=args_grad_data, aux_states=aux_states)
     for g in executor.grad_arrays:
-        g[:] = 0
+        if g.ndim == 0:
+            g[()] = 0
+        else:
+            g[:] = 0
 
     executor.forward(is_train=False)
 

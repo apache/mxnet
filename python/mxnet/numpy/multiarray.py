@@ -337,10 +337,20 @@ class ndarray(NDArray):
         if self.ndim == 0:
             if not isinstance(key, tuple) or len(key) != 0:
                 raise IndexError('scalar tensor can only accept `()` as index')
-            full(shape=self.shape, fill_value=float(value), ctx=self.context,
-                 dtype=self.dtype, out=self)
+            if isinstance(value, numeric_types):
+                self.full(value)
+            elif isinstance(value, ndarray) and value.size == 1:
+                if value.shape != self.shape:
+                    value = value.reshape(self.shape)
+                value.copyto(self)
+            elif isinstance(value, (_np.ndarray, _np.generic)) and value.size == 1:
+                if isinstance(value, _np.generic) or value.shape != self.shape:
+                    value = value.reshape(self.shape)
+                self._sync_copyfrom(value)
+            else:
+                raise ValueError('setting an array element with a sequence.')
         elif self.size == 0:
-            pass
+            return
         else:
             key = indexing_key_expand_implicit_axes(key, self.shape)
             slc_key = tuple(idx for idx in key if idx is not None)
@@ -1688,7 +1698,8 @@ def array(object, dtype=None, ctx=None):
     ret = empty(object.shape, dtype=dtype, ctx=ctx)
     if len(object.shape) == 0:
         ret[()] = object
-    elif object.size != 0:
+    # elif object.size != 0: # TODO(zoeygxy) check here
+    else:
         ret[:] = object
     return ret
 
@@ -1776,8 +1787,8 @@ def full(shape, fill_value, dtype=None, ctx=None, out=None):
     https://docs.scipy.org/doc/numpy/reference/generated/numpy.full.html`_ in
     the following way(s):
 
-    - Have an additional `ctx` argument to specify the device
-    - Have an additional `out` argument
+    - Has an additional `ctx` argument to specify the device
+    - Has an additional `out` argument
     - Currently does not support `order` selection
 
     See Also
