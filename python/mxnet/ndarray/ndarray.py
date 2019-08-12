@@ -110,7 +110,7 @@ _NDARRAY_ADVANCED_INDEXING = 1
 # Caching whether MXNet was built with INT64 support or not
 _INT64_TENSOR_SIZE_ENABLED = None
 
-def int64_enabled():
+def _int64_enabled():
     global _INT64_TENSOR_SIZE_ENABLED
     if _INT64_TENSOR_SIZE_ENABLED is None:
         _INT64_TENSOR_SIZE_ENABLED = Features().is_enabled('INT64_TENSOR_SIZE')
@@ -142,7 +142,7 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
         A new empty `NDArray` handle.
     """
     hdl = NDArrayHandle()
-    if sys.version_info[0] > 2 and int64_enabled():
+    if sys.version_info[0] > 2 and _int64_enabled():
         check_call(_LIB.MXNDArrayCreateEx64(
             c_array_buf(mx_int64, native_array('q', shape)),
             ctypes.c_int(len(shape)),
@@ -2238,7 +2238,7 @@ fixed-size items.
         (2L, 3L, 4L)
         """
         ndim = mx_int()
-        if _INT64_TENSOR_SIZE_ENABLED:
+        if _int64_enabled():
             pdata = ctypes.POINTER(mx_int64)()
             check_call(_LIB.MXNDArrayGetShapeEx64(
                 self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))

@@ -39,7 +39,7 @@ from ..base import NDArrayHandle, ExecutorHandle, SymbolHandle
 from ..base import check_call, MXNetError, NotImplementedForSymbol
 from ..context import Context, current_context
 from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP, _GRAD_REQ_MAP
-from ..ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID, int64_enabled
+from ..ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID, _int64_enabled
 from ..ndarray import _ndarray_cls
 from ..executor import Executor
 from . import _internal
@@ -1212,7 +1212,7 @@ class Symbol(SymbolBase):
         aux_shape_size = mx_uint()
         aux_shape_ndim = ctypes.POINTER(mx_int)()
         complete = ctypes.c_int()
-        if sys.version_info[0] > 2 and int64_enabled():
+        if sys.version_info[0] > 2 and _int64_enabled():
             arg_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
             out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
             aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
