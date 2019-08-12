@@ -457,7 +457,7 @@ def test_dynamic_reshape():
         grad_npy = np.random.rand(*dst_shape)
         args = {
             'data': mx.nd.array(dat_npy),
-            'shape': mx.nd.array(grad_npy)
+            'shape': mx.nd.array(dst_shape)
             }
         args_grad = {
             'data': mx.nd.empty(src_shape),

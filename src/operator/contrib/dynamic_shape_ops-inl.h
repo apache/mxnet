@@ -40,7 +40,16 @@ inline void DynamicReshapeForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   const NDArray &_size = inputs[1];
   const NDArray &out = outputs[0];
-  const_cast<NDArray &>(out).Init(_size.shape());
+  const NDArray &idx = inputs[1];
+  size_t idx_size = idx.shape()[0];
+  mxnet::TShape shapevalue = mxnet::TShape(idx_size, 0);
+  MSHADOW_TYPE_SWITCH(idx.dtype(), DType, {
+    DType* idx_dptr = idx.data().dptr<DType>();
+    for (size_t i = 0; i < idx_size; i++) {
+      shapevalue[i] = idx_dptr[i];
+    }
+  });
+  const_cast<NDArray &>(out).Init(shapevalue);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
 
   MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
