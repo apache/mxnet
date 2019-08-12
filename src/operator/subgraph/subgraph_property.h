@@ -153,7 +153,7 @@ class SubgraphSelectorV2 {
   }
   virtual bool Select(const BiDirectedNode& seed_node, const std::shared_ptr<NodeAttr>& node_attr) {
     return Select(seed_node);
-  };
+  }
   /*!
    * \brief Determines if to select input_node when traverse to the cur_node.
    * \param cur_node the node for determining whether its input_node should be selected
