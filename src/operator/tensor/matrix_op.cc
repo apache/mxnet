@@ -321,6 +321,9 @@ static void TransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
                                   const std::vector<NDArray>& inputs,
                                   const std::vector<OpReqType>& req,
                                   const std::vector<NDArray>& outputs) {
+  if (req[0] == kNullOp) {
+    return;
+  }
   const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
   CHECK_EQ(req[0], kWriteTo) << "Transpose does not support inplace";
   CHECK_EQ(inputs.size(), 1U);

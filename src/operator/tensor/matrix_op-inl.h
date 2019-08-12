@@ -324,6 +324,9 @@ void Transpose(const nnvm::NodeAttrs& attrs,
                const std::vector<TBlob>& inputs,
                const std::vector<OpReqType>& req,
                const std::vector<TBlob>& outputs) {
+  if (req[0] == kNullOp) {
+    return;
+  }
   const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
   CHECK_EQ(req[0], kWriteTo) << "Transpose does not support inplace";
   if (param.axes.ndim() == 0) {
