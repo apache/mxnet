@@ -20,6 +20,7 @@ import mxnet as mx
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context
 from mxnet import gluon, nd
 from tests.python.unittest.common import with_seed
+from tests.python.unittest.test_operator import check_layer_normalization
 
 # dimension constants
 MEDIUM_X = 10000
@@ -546,6 +547,15 @@ def test_pooling():
     test_max_pooling()
     test_sum_pooling()
     test_lp_pooling()
+
+
+def test_layer_norm():
+    for forward_check_eps, backward_check_eps in zip([1E-2, 1E-5], [1E-2, 1E-5]):
+        check_layer_normalization(in_shape=(LARGE_X, SMALL_Y),
+                                  forward_check_eps=forward_check_eps,
+                                  backward_check_eps=backward_check_eps,
+                                  npy_grad_check=True,
+                                  finite_grad_check=True)
 
 
 if __name__ == '__main__':
