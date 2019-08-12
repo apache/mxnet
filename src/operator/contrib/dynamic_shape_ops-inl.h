@@ -38,7 +38,6 @@ inline void DynamicReshapeForward(const nnvm::NodeAttrs& attrs,
                             const std::vector<NDArray> &outputs) {
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
-  const NDArray &_size = inputs[1];
   const NDArray &out = outputs[0];
   const NDArray &idx = inputs[1];
   size_t idx_size = idx.shape()[0];
@@ -68,8 +67,10 @@ inline void DynamicReshapeBackward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 2U);
   const NDArray& ograd = inputs[0];
   const NDArray& igrad_shape = outputs[1];
-  const NDArray& igrad_data = outputs[0];
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+
+  mxnet::TShape opshape = ograd.shape();
+  const_cast<NDArray &>(igrad_shape).Init(opshape);
 
   MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
       mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, kWriteTo>, xpu>::Launch(
