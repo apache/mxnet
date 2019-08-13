@@ -19,6 +19,7 @@
 import tvm
 from .. import defop, AllTypes
 
+
 def compute_add(dtype, ndim):
     A = tvm.placeholder([tvm.var() for _ in range(ndim)], name='A', dtype=dtype)
     B = tvm.placeholder([tvm.var() for _ in range(ndim)], name='B', dtype=dtype)
@@ -26,6 +27,7 @@ def compute_add(dtype, ndim):
                     lambda *index: A[index] + B[index], name='C')
     s = tvm.create_schedule(C.op)
     return s, A, B, C
+
 
 @defop(name="vadd", target="cpu", auto_broadcast=True,
        dtype=AllTypes, ndim=list(range(1, 6)))
@@ -36,6 +38,7 @@ def vadd(dtype, ndim):
     s[C].parallel(fused)
 
     return s, [A, B, C]
+
 
 @defop(name="cuda_vadd", target="cuda", auto_broadcast=True,
        dtype=["float32", "float64"], ndim=list(range(1, 6)))
@@ -49,7 +52,9 @@ def vadd_gpu(dtype, ndim):
     s[C].bind(tx, tvm.thread_axis("threadIdx.x"))
     return s, [A, B, C]
 
-def compute_fmax(dtype, ndim):
+
+# fmax forward
+def fmax_forward(dtype, ndim):
     A = tvm.placeholder([tvm.var() for _ in range(ndim)], name='A', dtype=dtype)
     B = tvm.placeholder([tvm.var() for _ in range(ndim)], name='B', dtype=dtype)
     C = tvm.compute([tvm.var() for _ in range(ndim)],
@@ -57,21 +62,21 @@ def compute_fmax(dtype, ndim):
     s = tvm.create_schedule(C.op)
     return s, A, B, C
 
-@defop(name="fmax", target="cpu", auto_broadcast=True,
+
+@defop(name="fmax_forward", target="cpu", auto_broadcast=True,
        dtype=AllTypes, ndim=list(range(1, 6)))
-def fmax(dtype, ndim):
-    s, A, B, C = compute_fmax(dtype, ndim)
+def fmax_forward_cpu(dtype, ndim):
+    s, A, B, C = fmax_forward(dtype, ndim)
     axes = [axis for axis in C.op.axis]
     fused = s[C].fuse(*axes)
     s[C].parallel(fused)
-
     return s, [A, B, C]
 
-@defop(name="cuda_fmax", target="cuda", auto_broadcast=True,
+
+@defop(name="cuda_fmax_forward", target="cuda", auto_broadcast=True,
        dtype=["float32", "float64"], ndim=list(range(1, 6)))
-def fmax_gpu(dtype, ndim):
-    s, A, B, C = compute_fmax(dtype, ndim)
-    s = tvm.create_schedule(C.op)
+def fmax_forward_gpu(dtype, ndim):
+    s, A, B, C = fmax_forward(dtype, ndim)
     axes = [axis for axis in C.op.axis]
     fused = s[C].fuse(*axes)
     bx, tx = s[C].split(fused, factor=64)
@@ -79,32 +84,45 @@ def fmax_gpu(dtype, ndim):
     s[C].bind(tx, tvm.thread_axis("threadIdx.x"))
     return s, [A, B, C]
 
-def compute_fmin(dtype, ndim):
+
+# fmax backward
+def fmax_backward(dtype, ndim):
+    dC = tvm.placeholder([tvm.var() for _ in range(ndim)], name='dC', dtype=dtype)
     A = tvm.placeholder([tvm.var() for _ in range(ndim)], name='A', dtype=dtype)
     B = tvm.placeholder([tvm.var() for _ in range(ndim)], name='B', dtype=dtype)
-    C = tvm.compute([tvm.var() for _ in range(ndim)],
-                    lambda *index: tvm.if_then_else(A[index] < B[index], A[index], B[index]), name='C')
-    s = tvm.create_schedule(C.op)
-    return s, A, B, C
+    dA = tvm.compute([tvm.var() for _ in range(ndim)],
+                    lambda *index: tvm.if_then_else(A[index] > B[index], dC[index], 0), name='dA')
+    dB = tvm.compute([tvm.var() for _ in range(ndim)],
+                    lambda *index: tvm.if_then_else(A[index] > B[index], 0, dC[index]), name='dB')
+    s = tvm.create_schedule([dA.op, dB.op])
+    return s, dC, A, B, dA, dB
 
-@defop(name="fmin", target="cpu", auto_broadcast=True,
+
+@defop(name="fmax_backward", target="cpu", auto_broadcast=True,
        dtype=AllTypes, ndim=list(range(1, 6)))
-def fmin(dtype, ndim):
-    s, A, B, C = compute_fmin(dtype, ndim)
-    axes = [axis for axis in C.op.axis]
-    fused = s[C].fuse(*axes)
-    s[C].parallel(fused)
+def fmax_backward_cpu(dtype, ndim):
+    s, dC, A, B, dA, dB = fmax_backward(dtype, ndim)
+    axes = [axis for axis in dA.op.axis]
+    fused = s[dA].fuse(*axes)
+    s[dA].parallel(fused)
+    axes = [axis for axis in dA.op.axis]
+    fused = s[dB].fuse(*axes)
+    s[dB].parallel(fused)
+    return s, [dC, A, B, dA, dB]
 
-    return s, [A, B, C]
 
-@defop(name="cuda_fmin", target="cuda", auto_broadcast=True,
+@defop(name="cuda_fmax_backward", target="cuda", auto_broadcast=True,
        dtype=["float32", "float64"], ndim=list(range(1, 6)))
-def fmin_gpu(dtype, ndim):
-    s, A, B, C = compute_fmin(dtype, ndim)
-    s = tvm.create_schedule(C.op)
-    axes = [axis for axis in C.op.axis]
-    fused = s[C].fuse(*axes)
-    bx, tx = s[C].split(fused, factor=64)
-    s[C].bind(bx, tvm.thread_axis("blockIdx.x"))
-    s[C].bind(tx, tvm.thread_axis("threadIdx.x"))
-    return s, [A, B, C]
+def fmax_backward_gpu(dtype, ndim):
+    s, dC, A, B, dA, dB = fmax_backward(dtype, ndim)
+    axes = [axis for axis in dA.op.axis]
+    fused = s[dA].fuse(*axes)
+    bx, tx = s[dA].split(fused, factor=64)
+    s[dA].bind(bx, tvm.thread_axis("blockIdx.x"))
+    s[dA].bind(tx, tvm.thread_axis("threadIdx.x"))
+    axes = [axis for axis in dB.op.axis]
+    fused = s[dB].fuse(*axes)
+    bx, tx = s[dB].split(fused, factor=64)
+    s[dB].bind(bx, tvm.thread_axis("blockIdx.x"))
+    s[dB].bind(tx, tvm.thread_axis("threadIdx.x"))
+    return s, [dC, A, B, dA, dB]
