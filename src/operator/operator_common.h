@@ -133,7 +133,7 @@ inline std::string shape_string(const mxnet::TShape& x) {
 
 /*! \brief check if type is integer */
 inline bool type_is_int(const int& x) {
-   switch (x) {
+  switch (x) {
     case mshadow::kInt8:
     case mshadow::kUint8:
     case mshadow::kInt32:
