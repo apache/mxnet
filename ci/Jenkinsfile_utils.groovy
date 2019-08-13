@@ -67,7 +67,7 @@ def pack_lib(name, libs, include_gcov_data = false) {
   sh returnStatus: true, script: """
 set +e
 echo "Packing ${libs} into ${name}"
-for i in \$(echo ${libs} | sed -e 's/,/ /g'); do md5sum \$i; done
+for i in \$(echo ${libs} | sed -e 's/,/ /g'); do md5sum \$i; ls -lh \$i; done
 return 0
 """
   stash includes: libs, name: name
