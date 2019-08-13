@@ -310,7 +310,7 @@ def test_np_linspace():
     # check linspace equivalent to arange
     for test_index in range(1000):
         assert_almost_equal(mx.np.linspace(0, test_index, test_index + 1).asnumpy(), _np.arange(test_index + 1))
-    @use_np
+
     class TestLinspace(HybridBlock):
         def __init__(self, start, stop, num=50, endpoint=None, retstep=False, dtype=None, axis=0):
             super(TestLinspace, self).__init__()
