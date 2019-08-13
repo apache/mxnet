@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,41 +17,17 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import mxnet as mx
-import sys
-from mxnet.runtime import *
-from mxnet.base import MXNetError
-from nose.tools import *
+set -evx
 
+MXNET_ROOT=$(cd "$(dirname $0)/.."; pwd)
 
-def test_features():
-    features = Features()
-    print(features)
-    ok_('CUDA' in features)
-    ok_(len(features) >= 30)
+image_path=$MXNET_ROOT/test/test-images
 
+if [ ! -d "$image_path" ]; then
+    mkdir -p "$image_path"
+fi
 
-def test_is_singleton():
-    x = Features()
-    y = Features()
-    assert x is y
-
-
-def test_is_enabled():
-    features = Features()
-    for f in features:
-        if features[f].enabled:
-            ok_(features.is_enabled(f))
-        else:
-            ok_(not features.is_enabled(f))
-
-
-@raises(RuntimeError)
-def test_is_enabled_not_existing():
-    features = Features()
-    features.is_enabled('this girl is on fire')
-
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()
+if [ ! -f "$image_path/kitten.jpg" ]; then
+    wget https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/resnet152/kitten.jpg -P $image_path
+    wget https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg -P $image_path
+fi

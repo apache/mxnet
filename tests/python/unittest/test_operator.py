@@ -4174,15 +4174,25 @@ def test_special_functions_using_scipy():
 
 
 @with_seed()
-@unittest.skip("Flaky test, tracked at https://github.com/apache/incubator-mxnet/issues/12901")
 def test_clip():
     data = mx.symbol.Variable('data')
     shape = (30, 30)
-    data_tmp = np.random.uniform(-1, 1, shape)
+    data_tmp = np.random.uniform(-1, 1, shape).astype('float32')
     test = mx.sym.clip(data, a_max=0.6, a_min=-0.6)
     check_symbolic_forward(test, [data_tmp], [np.clip(data_tmp, -0.6, 0.6)])
     check_symbolic_backward(test, [data_tmp], [np.ones(shape)],
-                            [np.where(data_tmp < 0.6, [1], [0]) * np.where(data_tmp > -0.6, [1], [0])])
+                            [np.where(data_tmp <= 0.6, [1], [0]) * np.where(data_tmp >= -0.6, [1], [0])])
+
+    # Test monitor on symbol using clip
+
+    def simple_callback(name, arr):
+        pass
+
+    exe = test.simple_bind(ctx=mx.current_context(), data=shape)
+    exe.set_monitor_callback(simple_callback, monitor_all=True)
+    exe.forward(is_train=True)
+    exe.backward(out_grads=mx.nd.ones(shape))
+    mx.nd.waitall()
 
 
 @with_seed()
@@ -4793,13 +4803,14 @@ def test_tile():
 
     def test_empty_tensor():
         shape = (2, 3, 0, 4)
-        a = np.array([], dtype=np.int32).reshape(shape)
-        b = mx.nd.array(a, ctx=default_context(), dtype=a.dtype)
-        reps = (2, 4, 6)
+        with mx.np_shape():
+            a = np.array([], dtype=np.int32).reshape(shape)
+            b = mx.nd.array(a, ctx=default_context(), dtype=a.dtype)
 
-        a_tiled = np.tile(a, reps)
-        b_tiled = mx.nd.tile(b, reps).asnumpy()
-        assert same(a_tiled, b_tiled)
+            reps = (2, 4, 6)
+            a_tiled = np.tile(a, reps)
+            b_tiled = mx.nd.tile(b, reps).asnumpy()
+            assert same(a_tiled, b_tiled)
 
     def test_empty_reps():
         a = np.array([[2, 3, 4], [5, 6, 7]], dtype=np.int32)
@@ -4889,13 +4900,15 @@ def test_one_hot():
 
     def test_empty_indices():
         shape = (2, 0, 9, 3)
-        indices = np.array([]).reshape(shape)
-        depth = 10
-        mx_one_hot_array = mx.nd.one_hot(
-            mx.nd.array(indices, ctx=default_context(), dtype=np.int32),
-            depth=depth, dtype=np.int32).asnumpy()
-        expected_array = np.array([], dtype=np.int32).reshape(shape + (depth, ))
-        assert same(expected_array, mx_one_hot_array)
+        with mx.np_shape():
+            indices = np.array([]).reshape(shape)
+            depth = 10
+            mx_one_hot_array = mx.nd.one_hot(
+                mx.nd.array(indices, ctx=default_context(), dtype=np.int32),
+                depth=depth, dtype=np.int32
+            ).asnumpy()
+            expected_array = np.array([], dtype=np.int32).reshape(shape + (depth,))
+            assert same(expected_array, mx_one_hot_array)
 
     def test_zero_depth():
         shape = (2, 4, 9, 3)
@@ -7516,15 +7529,6 @@ def test_slice():
     for index in index_list:
         test_slice_forward_backward(arr, index)
 
-    def test_begin_equals_end(shape, begin, end, step):
-        in_arr = mx.nd.arange(np.prod(shape)).reshape(shape=shape)
-        out_arr = mx.nd.slice(in_arr, begin=begin, end=end, step=step)
-
-    assertRaises(MXNetError, test_begin_equals_end, (4,), (2,), (2,), (1,))
-    assertRaises(MXNetError, test_begin_equals_end, (1, 5), (None, 3), (None, 3), (-1, 1))
-    assertRaises(MXNetError, test_begin_equals_end, (3, 4, 5), (1, 3, 1), (3, 3, 1), (1, -3, 2))
-    assertRaises(MXNetError, test_begin_equals_end, (2, 4), (None, 2), (None, 2), (1, -1))
-
     # check numeric gradient
     in_data = np.arange(36).reshape(2, 2, 3, 3)
     data = mx.sym.Variable('data')
@@ -8859,7 +8863,7 @@ def test_index_array():
 
     @mx.use_np_shape
     def test_index_array_default_zero_dim():
-        data  = mx.symbol.Variable("data")
+        data = mx.symbol.Variable("data")
         index_array = mx.sym.contrib.index_array(data)
 
         input_array = np.ones(())

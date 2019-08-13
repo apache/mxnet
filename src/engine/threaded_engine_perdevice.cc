@@ -28,6 +28,7 @@
 #include <dmlc/parameter.h>
 #include <dmlc/concurrency.h>
 #include <dmlc/thread_group.h>
+#include "../initialize.h"
 #include "./threaded_engine.h"
 #include "./thread_pool.h"
 #include "../common/lazy_alloc_array.h"
@@ -76,7 +77,8 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
   void Start() override {
     if (is_worker_) return;
     gpu_worker_nthreads_ = common::GetNumThreadsPerGPU();
-    cpu_worker_nthreads_ = dmlc::GetEnv("MXNET_CPU_WORKER_NTHREADS", 1);
+    // MXNET_CPU_WORKER_NTHREADS
+    cpu_worker_nthreads_ = LibraryInitializer::Get()->cpu_worker_nthreads_;
     gpu_copy_nthreads_ = dmlc::GetEnv("MXNET_GPU_COPY_NTHREADS", 2);
     // create CPU task
     int cpu_priority_nthreads = dmlc::GetEnv("MXNET_CPU_PRIORITY_NTHREADS", 4);
