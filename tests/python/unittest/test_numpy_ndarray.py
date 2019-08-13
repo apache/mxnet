@@ -646,10 +646,7 @@ def test_np_ndarray_indexing():
                 (([[[[1]]]], 3, slice(0, 3), 0), False),
                 (([[[[1]]]], [[2], [12]], slice(0, 3), slice(None)), False),
                 (([1, 2], slice(3, 5), [2, 3], [3, 4]), False),
-                (([1, 2], slice(3, 5), (2, 3), [3, 4]), False),
-                # Output zero size tensor not supported yet.
-                # ((slice(0, 0), slice(0, 0), 1, 2), False),
-                # ((slice(0, 0), slice(0, 0), slice(0, 0), slice(0, 0)), True),
+                (([1, 2], slice(3, 5), (2, 3), [3, 4]), False), 
     ]
     for index in index_list:
         test_getitem(np_array, index[0], index[1])
@@ -659,8 +656,16 @@ def test_np_ndarray_indexing():
             # When index = (), this is same a[()] = b is equivalent to b.copyto(a)
             # which should have no problem to do autograd
             test_setitem_autograd(np_array, index[0])
-
-    # test zero-size tensors
+    
+    # Test indexing to zero-size tensors (setitem not supported yet)
+    index_list = [
+        ((slice(0, 0), slice(0, 0), 1, 2), False),
+        ((slice(0, 0), slice(0, 0), slice(0, 0), slice(0, 0)), False),
+    ]
+    for index in index_list:
+        test_getitem(np_array, index[0], index[1])
+    
+    # test zero-size tensors get and setitem
     shapes_indices = [
                       ((0), [slice(None, None, None)]),
                       ((3, 0), [2, (slice(None, None, None)), (slice(None, None, None), None)]),

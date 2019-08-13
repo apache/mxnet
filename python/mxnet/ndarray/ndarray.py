@@ -957,7 +957,7 @@ fixed-size items.
                 zero_size = True
             i += 1
         if zero_size:
-            sliced = zeros(tuple(shape), dtype=self.dtype, ctx=self.context)
+            sliced = empty(tuple(shape), dtype=self.dtype, ctx=self.context)
 
         elif self._basic_indexing_slice_is_contiguous(slc_key, self.shape):
             # Create a shared-memory view by using low-level flat slicing

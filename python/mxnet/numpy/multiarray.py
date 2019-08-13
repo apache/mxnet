@@ -237,7 +237,7 @@ class ndarray(NDArray):
                 zero_size = True
             i += 1
         if zero_size:
-            sliced = zeros(tuple(shape), dtype=self.dtype, ctx=self.context)
+            sliced = empty(tuple(shape), dtype=self.dtype, ctx=self.context)
 
         # _basic_indexing_slice_is_contiguous is inheritated from NDArray class.
         elif self._basic_indexing_slice_is_contiguous(slc_key, self.shape):
