@@ -604,15 +604,17 @@ The `ndarray` package provides several classes:
 .. autosummary::
     :nosignatures:
 
-    mxnet.ndarray.random.uniform
-    mxnet.ndarray.random.normal
-    mxnet.ndarray.random.gamma
-    mxnet.ndarray.random.exponential
-    mxnet.ndarray.random.poisson
-    mxnet.ndarray.random.negative_binomial
-    mxnet.ndarray.random.generalized_negative_binomial
-    mxnet.ndarray.random.multinomial
-    mxnet.ndarray.random.shuffle
+    random.exponential
+    random.gamma
+    random.generalized_negative_binomial
+    random.multinomial
+    random.negative_binomial
+    random.normal
+    random.poisson
+    random.randint
+    random.randn
+    random.shuffle
+    random.uniform
     mxnet.random.seed
 ```
 
@@ -674,6 +676,7 @@ The `ndarray` package provides several classes:
     relu
     sigmoid
     erf
+    erfinv
 ```
 
 ### More

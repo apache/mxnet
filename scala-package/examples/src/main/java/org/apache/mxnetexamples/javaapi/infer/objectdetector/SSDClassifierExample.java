@@ -28,12 +28,11 @@ import org.apache.mxnet.javaapi.*;
 import org.apache.mxnet.infer.javaapi.ObjectDetector;
 
 // scalastyle:off
+import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 // scalastyle:on
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 import java.io.File;
 
@@ -128,22 +127,34 @@ public class SSDClassifierExample {
         try {
             Shape inputShape = new Shape(new int[]{1, 3, 512, 512});
             Shape outputShape = new Shape(new int[]{1, 6132, 6});
-            
-            
-            int width = inputShape.get(2);
-            int height = inputShape.get(3);
+
             StringBuilder outputStr = new StringBuilder().append("\n");
             
             List<List<ObjectDetectorOutput>> output
                     = runObjectDetectionSingle(mdprefixDir, imgPath, context);
-            
+
+            // Creating Bounding box material
+            BufferedImage buf = ImageIO.read(new File(imgPath));
+            int width = buf.getWidth();
+            int height = buf.getHeight();
+            List<Map<String, Integer>> boxes = new ArrayList<>();
+            List<String> names = new ArrayList<>();
             for (List<ObjectDetectorOutput> ele : output) {
                 for (ObjectDetectorOutput i : ele) {
                     outputStr.append("Class: " + i.getClassName() + "\n");
                     outputStr.append("Probabilties: " + i.getProbability() + "\n");
-                    
-                    List<Float> coord = Arrays.asList(i.getXMin() * width,
-                            i.getXMax() * height, i.getYMin() * width, i.getYMax() * height);
+                    names.add(i.getClassName());
+                    Map<String, Integer> map = new HashMap<>();
+                    float xmin = i.getXMin() * width;
+                    float xmax = i.getXMax() * width;
+                    float ymin = i.getYMin() * height;
+                    float ymax = i.getYMax() * height;
+                    List<Float> coord = Arrays.asList(xmin, xmax, ymin, ymax);
+                    map.put("xmin", (int) xmin);
+                    map.put("xmax", (int) xmax);
+                    map.put("ymin", (int) ymin);
+                    map.put("ymax", (int) ymax);
+                    boxes.add(map);
                     StringBuilder sb = new StringBuilder();
                     for (float c : coord) {
                         sb.append(", ").append(c);
@@ -152,7 +163,12 @@ public class SSDClassifierExample {
                 }
             }
             logger.info(outputStr.toString());
-            
+
+            // Covert to image
+            Image.drawBoundingBox(buf, boxes, names);
+            File outputFile = new File("boundingImage.png");
+            ImageIO.write(buf, "png", outputFile);
+
             List<List<List<ObjectDetectorOutput>>> outputList =
                     runObjectDetectionBatch(mdprefixDir, imgDir, context);
             
@@ -177,7 +193,6 @@ public class SSDClassifierExample {
                 }
             }
             logger.info(outputStr.toString());
-            
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
             parser.printUsage(System.err);

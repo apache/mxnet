@@ -24,8 +24,6 @@ import org.kohsuke.args4j.Option;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.imageio.ImageIO;
-import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
@@ -47,76 +45,7 @@ public class PredictorExample {
     private String inputImagePath = "/images/dog.jpg";
 
     final static Logger logger = LoggerFactory.getLogger(PredictorExample.class);
-
-    /**
-     * Load the image from file to buffered image
-     * It can be replaced by loadImageFromFile from ObjectDetector
-     * @param inputImagePath input image Path in String
-     * @return Buffered image
-     */
-    private static BufferedImage loadIamgeFromFile(String inputImagePath) {
-        BufferedImage buf = null;
-        try {
-            buf = ImageIO.read(new File(inputImagePath));
-        } catch (IOException e) {
-            System.err.println(e);
-        }
-        return buf;
-    }
-
-    /**
-     * Reshape the current image using ImageIO and Graph2D
-     * It can be replaced by reshapeImage from ObjectDetector
-     * @param buf Buffered image
-     * @param newWidth desired width
-     * @param newHeight desired height
-     * @return a reshaped bufferedImage
-     */
-    private static BufferedImage reshapeImage(BufferedImage buf, int newWidth, int newHeight) {
-        BufferedImage resizedImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g = resizedImage.createGraphics();
-        g.drawImage(buf, 0, 0, newWidth, newHeight, null);
-        g.dispose();
-        return resizedImage;
-    }
-
-    /**
-     * Convert an image from a buffered image into pixels float array
-     * It can be replaced by bufferedImageToPixels from ObjectDetector
-     * @param buf buffered image
-     * @return Float array
-     */
-    private static float[] imagePreprocess(BufferedImage buf) {
-        // Get height and width of the image
-        int w = buf.getWidth();
-        int h = buf.getHeight();
-
-        // get an array of integer pixels in the default RGB color mode
-        int[] pixels = buf.getRGB(0, 0, w, h, null, 0, w);
-
-        // 3 times height and width for R,G,B channels
-        float[] result = new float[3 * h * w];
-
-        int row = 0;
-        // copy pixels to array vertically
-        while (row < h) {
-            int col = 0;
-            // copy pixels to array horizontally
-            while (col < w) {
-                int rgb = pixels[row * w + col];
-                // getting red color
-                result[0 * h * w + row * w + col] = (rgb >> 16) & 0xFF;
-                // getting green color
-                result[1 * h * w + row * w + col] = (rgb >> 8) & 0xFF;
-                // getting blue color
-                result[2 * h * w + row * w + col] = rgb & 0xFF;
-                col += 1;
-            }
-            row += 1;
-        }
-        buf.flush();
-        return result;
-    }
+    private static NDArray$ NDArray = NDArray$.MODULE$;
 
     /**
      * Helper class to print the maximum prediction result
@@ -170,11 +99,10 @@ public class PredictorExample {
         inputDesc.add(new DataDesc("data", inputShape, DType.Float32(), "NCHW"));
         Predictor predictor = new Predictor(inst.modelPathPrefix, inputDesc, context,0);
         // Prepare data
-        BufferedImage img = loadIamgeFromFile(inst.inputImagePath);
-
-        img = reshapeImage(img, 224, 224);
+        NDArray img = Image.imRead(inst.inputImagePath, 1, true);
+        img = Image.imResize(img, 224, 224, null);
         // predict
-        float[][] result = predictor.predict(new float[][]{imagePreprocess(img)});
+        float[][] result = predictor.predict(new float[][]{img.toArray()});
         try {
             System.out.println("Predict with Float input");
             System.out.println(printMaximumClass(result[0], inst.modelPathPrefix));
@@ -182,10 +110,10 @@ public class PredictorExample {
             System.err.println(e);
         }
         // predict with NDArray
-        NDArray nd = new NDArray(
-                imagePreprocess(img),
-                new Shape(new int[]{1, 3, 224, 224}),
-                Context.cpu());
+        NDArray nd = img;
+        nd = NDArray.transpose(nd, new Shape(new int[]{2, 0, 1}), null)[0];
+        nd = NDArray.expand_dims(nd, 0, null)[0];
+        nd = nd.asType(DType.Float32());
         List<NDArray> ndList = new ArrayList<>();
         ndList.add(nd);
         List<NDArray> ndResult = predictor.predictWithNDArray(ndList);

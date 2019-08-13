@@ -18,11 +18,12 @@
 package org.apache.mxnetexamples.rnn
 
 
-import org.apache.mxnet.{Context, NDArrayCollector}
+import org.apache.mxnet.{Context, ResourceScope}
 import org.apache.mxnetexamples.Util
 import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore}
 import org.slf4j.LoggerFactory
 
+import scala.language.postfixOps
 import scala.sys.process.Process
 
 class ExampleRNNSuite extends FunSuite with BeforeAndAfterAll {
@@ -43,32 +44,43 @@ class ExampleRNNSuite extends FunSuite with BeforeAndAfterAll {
   }
 
   test("Example CI: Test LSTM Bucketing") {
-    val tempDirPath = System.getProperty("java.io.tmpdir")
-    var ctx = Context.cpu()
-    if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
-      System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
-      ctx = Context.gpu()
+    ResourceScope.using() {
+      val tempDirPath = System.getProperty("java.io.tmpdir")
+      var ctx = Context.cpu()
+      if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
+        System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
+        ctx = Context.gpu()
+      }
+      if (!System.getenv().containsKey("CI")) {
+        LstmBucketing.runTraining(tempDirPath + "/RNN/sherlockholmes.train.txt",
+                                  tempDirPath + "/RNN/sherlockholmes.valid.txt", Array(ctx), 1)
+      } else {
+        logger.info("Skipping test on CI...")
+      }
     }
-    LstmBucketing.runTraining(tempDirPath + "/RNN/sherlockholmes.train.txt",
-      tempDirPath + "/RNN/sherlockholmes.valid.txt", Array(ctx), 1)
   }
 
   test("Example CI: Test TrainCharRNN") {
-    val tempDirPath = System.getProperty("java.io.tmpdir")
-    if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
-      System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
-      val ctx = Context.gpu()
-      TrainCharRnn.runTrainCharRnn(tempDirPath + "/RNN/obama.txt",
-        tempDirPath, ctx, 1)
-    } else {
-      logger.info("CPU not supported for this test, skipped...")
+    ResourceScope.using() {
+      val tempDirPath = System.getProperty("java.io.tmpdir")
+      if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
+            System.getenv("SCALA_TEST_ON_GPU").toInt == 1 &&
+            !System.getenv().containsKey("CI")) {
+        val ctx = Context.gpu()
+        TrainCharRnn.runTrainCharRnn(tempDirPath + "/RNN/obama.txt",
+          tempDirPath, ctx, 1)
+      } else {
+        logger.info("CPU not supported for this test, skipped...")
+      }
     }
   }
 
   test("Example CI: Test Inference on CharRNN") {
-    val tempDirPath = System.getProperty("java.io.tmpdir")
-    val ctx = Context.gpu()
-    TestCharRnn.runInferenceCharRNN(tempDirPath + "/RNN/obama.txt",
-      tempDirPath + "/RNN/obama", "The joke")
+    ResourceScope.using() {
+      val tempDirPath = System.getProperty("java.io.tmpdir")
+      val ctx = Context.gpu()
+      TestCharRnn.runInferenceCharRNN(tempDirPath + "/RNN/obama.txt",
+        tempDirPath + "/RNN/obama", "The joke")
+    }
   }
 }

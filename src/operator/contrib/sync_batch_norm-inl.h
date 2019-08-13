@@ -69,7 +69,6 @@ struct SyncBatchNormParam : public dmlc::Parameter<SyncBatchNormParam> {
     DMLC_DECLARE_FIELD(ndev).set_default(1)
       .describe("The count of GPU devices");
     DMLC_DECLARE_FIELD(key)
-      .set_default("")
       .describe("Hash key for synchronization, please set the same hash key for same layer, "
                 "Block.prefix is typically used as in :class:`gluon.nn.contrib.SyncBatchNorm`.");
   }
@@ -275,14 +274,18 @@ class SyncBatchNorm : public Operator {
       static_cast<real_t>(in_data[syncbatchnorm::kData].shape_.Size());
     Tensor<xpu, 4> data;
     Tensor<xpu, 4> out;
-    if (in_data[syncbatchnorm::kData].ndim() == 2) {
-      Shape<4> dshape = Shape4(in_data[syncbatchnorm::kData].shape_[0],
-                               in_data[syncbatchnorm::kData].shape_[1], 1, 1);
-      data = in_data[syncbatchnorm::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
-      out = out_data[syncbatchnorm::kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
-    } else {
+    if (in_data[syncbatchnorm::kData].ndim() == 4) {
       data = in_data[syncbatchnorm::kData].get<xpu, 4, real_t>(s);
       out = out_data[syncbatchnorm::kOut].get<xpu, 4, real_t>(s);
+    } else {
+      index_t num_channels = in_data[syncbatchnorm::kData].ndim() > 1 ?
+        in_data[syncbatchnorm::kData].shape_[1] : 1;
+      index_t spatial_size = in_data[syncbatchnorm::kData].shape_.ProdShape(2,
+          in_data[syncbatchnorm::kData].ndim());
+      Shape<4> dshape = Shape4(in_data[syncbatchnorm::kData].shape_[0],
+                               num_channels, 1, spatial_size);
+      data = in_data[syncbatchnorm::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
+      out = out_data[syncbatchnorm::kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
     }
     Tensor<xpu, 1> slope = in_data[syncbatchnorm::kGamma].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> bias = in_data[syncbatchnorm::kBeta].get<xpu, 1, real_t>(s);
@@ -354,16 +357,20 @@ class SyncBatchNorm : public Operator {
     Tensor<xpu, 4> data, grad, grad_in;
     const real_t scale = static_cast<real_t>(out_grad[syncbatchnorm::kOut].shape_[1]) /
       static_cast<real_t>(out_grad[syncbatchnorm::kOut].shape_.Size());
-    if (in_data[syncbatchnorm::kData].ndim() == 2) {
-      Shape<4> dshape = Shape4(out_grad[syncbatchnorm::kOut].shape_[0],
-                               out_grad[syncbatchnorm::kOut].shape_[1], 1, 1);
-      data = in_data[syncbatchnorm::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
-      grad = out_grad[syncbatchnorm::kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
-      grad_in = in_grad[syncbatchnorm::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
-    } else {
+    if (in_data[syncbatchnorm::kData].ndim() == 4) {
       data = in_data[syncbatchnorm::kData].get<xpu, 4, real_t>(s);
       grad = out_grad[syncbatchnorm::kOut].get<xpu, 4, real_t>(s);
       grad_in = in_grad[syncbatchnorm::kData].get<xpu, 4, real_t>(s);
+    } else {
+      index_t num_channels = out_grad[syncbatchnorm::kOut].ndim() > 1 ?
+        out_grad[syncbatchnorm::kOut].shape_[1] : 1;
+      index_t spatial_size = out_grad[syncbatchnorm::kOut].shape_.ProdShape(2,
+          out_grad[syncbatchnorm::kOut].ndim());
+      Shape<4> dshape = Shape4(out_grad[syncbatchnorm::kOut].shape_[0],
+                               num_channels, 1, spatial_size);
+      data = in_data[syncbatchnorm::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
+      grad = out_grad[syncbatchnorm::kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
+      grad_in = in_grad[syncbatchnorm::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
     }
 
     Tensor<xpu, 1> mean = out_data[syncbatchnorm::kMean].get<xpu, 1, real_t>(s);
@@ -469,15 +476,15 @@ class SyncBatchNormProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 3U) << "Input:[data, gamma, beta]";
-    const TShape &dshape = in_shape->at(0);
-    if (dshape.ndim() == 0) return false;
-    in_shape->at(1) = TShape(Shape1(dshape[1]));
-    in_shape->at(2) = TShape(Shape1(dshape[1]));
+    const mxnet::TShape &dshape = in_shape->at(0);
+    if (mxnet::op::shape_is_none(dshape)) return false;
+    in_shape->at(1) = mxnet::TShape(Shape1(dshape[1]));
+    in_shape->at(2) = mxnet::TShape(Shape1(dshape[1]));
     out_shape->clear();
     out_shape->push_back(dshape);
     out_shape->push_back(Shape1(dshape[1]));
@@ -545,7 +552,7 @@ class SyncBatchNormProp : public OperatorProperty {
   }
 
   std::vector<ResourceRequest> BackwardResource(
-      const std::vector<TShape> &in_shape) const override {
+      const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
@@ -577,7 +584,7 @@ class SyncBatchNormProp : public OperatorProperty {
       return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
       std::vector<int> *in_type) const override;
 
   inline const SyncBatchNormParam& getParam() const {

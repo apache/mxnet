@@ -21,72 +21,18 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.mxnet</groupId>
-    <artifactId>mxnet-parent_2.11</artifactId>
-    <version>1.4.1-SNAPSHOT</version>
+    <artifactId>mxnet-parent</artifactId>
+    <version>INTERNAL</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>mxnet-examples_2.11</artifactId>
+  <artifactId>mxnet-examples</artifactId>
   <name>MXNet Scala Package - Examples</name>
 
   <properties>
     <skipTests>true</skipTests>
+    <skipJavaTests>${skipTests}</skipJavaTests>
   </properties>
-
-  <profiles>
-    <profile>
-      <id>integrationtest</id>
-      <properties>
-        <skipTests>false</skipTests>
-      </properties>
-    </profile>
-    <profile>
-      <id>osx-x86_64-cpu</id>
-      <properties>
-        <platform>osx-x86_64-cpu</platform>
-      </properties>
-    </profile>
-    <profile>
-      <id>linux-x86_64-cpu</id>
-      <properties>
-        <platform>linux-x86_64-cpu</platform>
-      </properties>
-    </profile>
-    <profile>
-      <id>linux-x86_64-gpu</id>
-      <properties>
-        <platform>linux-x86_64-gpu</platform>
-      </properties>
-    </profile>
-    <profile>
-      <id>release</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-source-plugin</artifactId>
-            <configuration>
-              <skipSource>true</skipSource>
-            </configuration>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-gpg-plugin</artifactId>
-            <configuration>
-              <skip>true</skip>
-            </configuration>
-          </plugin>
-          <plugin>
-            <groupId>org.sonatype.plugins</groupId>
-            <artifactId>nexus-staging-maven-plugin</artifactId>
-            <configuration>
-              <skipNexusStagingDeployMojo>true</skipNexusStagingDeployMojo>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
 
   <build>
     <plugins>
@@ -137,10 +83,6 @@
         <artifactId>maven-jar-plugin</artifactId>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-      </plugin>
-      <plugin>
         <groupId>net.alchim31.maven</groupId>
         <artifactId>scala-maven-plugin</artifactId>
       </plugin>
@@ -150,7 +92,7 @@
         <configuration>
           <skipTests>${skipTests}</skipTests>
           <argLine>
-            -Djava.library.path=${project.parent.basedir}/native/${platform}/target \
+            -Djava.library.path=${project.parent.basedir}/native/target \
             -Dlog4j.configuration=file://${project.basedir}/src/test/resources/log4j.properties
           </argLine>
         </configuration>
@@ -164,14 +106,14 @@
   <dependencies>
     <dependency>
       <groupId>org.apache.mxnet</groupId>
-      <artifactId>mxnet-core_${scala.binary.version}</artifactId>
-      <version>1.4.1-SNAPSHOT</version>
+      <artifactId>mxnet-core</artifactId>
+      <version>INTERNAL</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.mxnet</groupId>
-      <artifactId>mxnet-infer_${scala.binary.version}</artifactId>
-      <version>1.4.1-SNAPSHOT</version>
+      <artifactId>mxnet-infer</artifactId>
+      <version>INTERNAL</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -198,6 +140,11 @@
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-simple</artifactId>
       <version>1.7.5</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>2.8.5</version>
     </dependency>
   </dependencies>
 </project>

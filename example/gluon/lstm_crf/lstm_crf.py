@@ -14,46 +14,50 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
+"""This example demonstrates how the LSTM-CRF model can be implemented
+in Gluon to perform noun-phrase chunking as a sequence labeling task.
+"""
+import sys
 import mxnet as mx
 from mxnet import autograd as ag, ndarray as nd, gluon
 from mxnet.gluon import Block, nn, rnn
 import mxnet.optimizer as optim
-import sys
-
-# This example demonstrates how the LSTM-CRF model can be implemented 
-# in Gluon to perform noun-phrase chunking as a sequence labeling task.
 
 mx.random.seed(1)
+
 
 # Helper functions to make the code more readable.
 def to_scalar(x):
     return int(x.asscalar())
+
 
 def argmax(vec):
     # return the argmax as a python int
     idx = nd.argmax(vec, axis=1)
     return to_scalar(idx)
 
-def prepare_sequence(seq, word2idx):
-    return nd.array([word2idx[w] for w in seq])
+
+def prepare_sequence(seq, word2Idx):
+    return nd.array([word2Idx[w] for w in seq])
+
 
 # Compute log sum exp is numerically more stable than multiplying probabilities
 def log_sum_exp(vec):
     max_score = nd.max(vec).asscalar()
     return nd.log(nd.sum(nd.exp(vec - max_score))) + max_score
 
+
 # Model
 class BiLSTM_CRF(Block):
-    def __init__(self, vocab_size, tag2idx, embedding_dim, hidden_dim):
+    """Get BiLSTM_CRF model"""
+    def __init__(self, vocab_size, tag2Idx, embedding_dim, hidden_dim):
         super(BiLSTM_CRF, self).__init__()
         with self.name_scope():
             self.embedding_dim = embedding_dim
             self.hidden_dim = hidden_dim
             self.vocab_size = vocab_size
-            self.tag2idx = tag2idx
-            self.tagset_size = len(tag2idx)
-
+            self.tag2idx = tag2Idx
+            self.tagset_size = len(tag2Idx)
             self.word_embeds = nn.Embedding(vocab_size, embedding_dim)
             self.lstm = rnn.LSTM(hidden_dim // 2, num_layers=1, bidirectional=True)
 
@@ -62,9 +66,7 @@ class BiLSTM_CRF(Block):
 
             # Matrix of transition parameters.  Entry i,j is the score of
             # transitioning *to* i *from* j.
-            self.transitions = self.params.get("crf_transition_matrix", 
-                                               shape=(self.tagset_size, self.tagset_size))
-            
+            self.transitions = self.params.get("crf_transition_matrix", shape=(self.tagset_size, self.tagset_size))
             self.hidden = self.init_hidden()
 
     def init_hidden(self):
@@ -98,24 +100,25 @@ class BiLSTM_CRF(Block):
         alpha = log_sum_exp(terminal_var)
         return alpha
 
-    def _get_lstm_features(self, sentence):
+    def _get_lstm_features(self, sentences):
         self.hidden = self.init_hidden()
-        length = sentence.shape[0]
-        embeds = self.word_embeds(sentence).reshape((length, 1, -1))
+        length = sentences.shape[0]
+        embeds = self.word_embeds(sentences).reshape((length, 1, -1))
         lstm_out, self.hidden = self.lstm(embeds, self.hidden)
         lstm_out = lstm_out.reshape((length, self.hidden_dim))
         lstm_feats = self.hidden2tag(lstm_out)
         return nd.split(lstm_feats, num_outputs=length, axis=0, squeeze_axis=True)
 
-    def _score_sentence(self, feats, tags):
+    def _score_sentence(self, feats, tags_array):
         # Gives the score of a provided tag sequence
         score = nd.array([0])
-        tags = nd.concat(nd.array([self.tag2idx[START_TAG]]), *tags, dim=0)
-        for i, feat in enumerate(feats):
+        tags_array = nd.concat(nd.array([self.tag2idx[START_TAG]]), *tags_array, dim=0)
+        for idx, feat in enumerate(feats):
             score = score + \
-                self.transitions.data()[to_scalar(tags[i+1]), to_scalar(tags[i])] + feat[to_scalar(tags[i+1])]
+                    self.transitions.data()[to_scalar(tags_array[idx+1]),
+                                            to_scalar(tags_array[idx])] + feat[to_scalar(tags_array[idx+1])]
         score = score + self.transitions.data()[self.tag2idx[STOP_TAG],
-                                         to_scalar(tags[int(tags.shape[0]-1)])]
+                                                to_scalar(tags_array[int(tags_array.shape[0]-1)])]
         return score
 
     def _viterbi_decode(self, feats):
@@ -160,19 +163,20 @@ class BiLSTM_CRF(Block):
         best_path.reverse()
         return path_score, best_path
 
-    def neg_log_likelihood(self, sentence, tags):
-        feats = self._get_lstm_features(sentence)
+    def neg_log_likelihood(self, sentences, tags_list):
+        feats = self._get_lstm_features(sentences)
         forward_score = self._forward_alg(feats)
-        gold_score = self._score_sentence(feats, tags)
+        gold_score = self._score_sentence(feats, tags_list)
         return forward_score - gold_score
 
-    def forward(self, sentence):  # dont confuse this with _forward_alg above.
+    def forward(self, sentences):  # dont confuse this with _forward_alg above.
         # Get the emission scores from the BiLSTM
-        lstm_feats = self._get_lstm_features(sentence)
+        lstm_feats = self._get_lstm_features(sentences)
 
         # Find the best path, given the features.
         score, tag_seq = self._viterbi_decode(lstm_feats)
         return score, tag_seq
+
 
 # Run training
 START_TAG = "<START>"
@@ -210,6 +214,7 @@ print(model(precheck_sent))
 for epoch in range(300):  # again, normally you would NOT do 300 epochs, it is toy data
 
     neg_log_likelihood_acc = 0.
+    iter = 0
     for i, (sentence, tags) in enumerate(training_data):
         # Step 1. Get our inputs ready for the network, that is,
         # turn them into Variables of word indices.
@@ -226,7 +231,8 @@ for epoch in range(300):  # again, normally you would NOT do 300 epochs, it is t
             neg_log_likelihood.backward()
         optimizer.step(1)
         neg_log_likelihood_acc += neg_log_likelihood.mean()
-    print("Epoch [{}], Negative Log Likelihood {:.4f}".format(epoch, neg_log_likelihood_acc.asscalar()/(i+1)))
+        iter = i
+    print("Epoch [{}], Negative Log Likelihood {:.4f}".format(epoch, neg_log_likelihood_acc.asscalar()/(iter+1)))
 
 # Check predictions after training
 precheck_sent = prepare_sequence(training_data[0][0], word2idx)

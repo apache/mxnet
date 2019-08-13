@@ -62,7 +62,7 @@ object LstmBucketing {
 
   def runTraining(trainData : String, validationData : String,
                   ctx : Array[Context], numEpoch : Int): Unit = {
-    NDArrayCollector.auto().withScope {
+    ResourceScope.using() {
       val batchSize = 32
       val buckets = Array(10, 20, 30, 40, 50, 60)
       val numHidden = 200

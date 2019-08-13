@@ -61,9 +61,7 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   protected var monitorCallback: MXMonitorCallback = null
   private val logger: Logger = LoggerFactory.getLogger(classOf[Executor])
 
-  private[mxnet] var ownsArgArrays = false
-  private[mxnet] var ownsGradArrays = false
-  private[mxnet] var ownsAuxArrays = false
+  private var reshaped = false
 
   override def nativeAddress: CPtrAddress = handle
   override def nativeDeAllocator: (CPtrAddress => Int) = _LIB.mxExecutorFree
@@ -75,17 +73,12 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
     if (!super.isDisposed) {
       super.dispose()
       outputs.foreach(o => o.dispose())
-      // Symbol.bind clones symbol when creating the executor so we need to dispose of the clone
-      symbol.dispose()
-      if (ownsArgArrays && argArrays != null) {argArrays.foreach(a => a.dispose())}
-      if (ownsGradArrays && gradArrays != null) {gradArrays.foreach(
+      if (reshaped && argArrays != null) {argArrays.foreach(a => a.dispose())}
+      if (reshaped && gradArrays != null) {gradArrays.foreach(
         // Symbol will sometimes fill this with nulls so we've got to check the elements too
         a => if (a != null) {a.dispose()})
       }
-      if (ownsAuxArrays && auxArrays != null) {auxArrays.foreach(a => a.dispose())}
-      if (_argDict != null) {_argDict.foreach(a => a._2.dispose())}
-      if (_gradDict != null) {_gradDict.foreach(a => a._2.dispose())}
-      if (_auxDict != null) {_auxDict.foreach(a => a._2.dispose())}
+      if (reshaped && auxArrays != null) {auxArrays.foreach(a => a.dispose())}
     }
   }
 
@@ -104,95 +97,59 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
    */
   def reshape(partialShaping: Boolean = false, allowUpSizing: Boolean = false,
     kwargs: Map[String, Shape]): Executor = {
-    var setArgOwner = false
-    var setAuxOwner = false
-    var setGradOwner = false
-     val (argShapes, _, auxShapes) = this.symbol.inferShape(kwargs)
-    // TODO: more precise error message should be provided by backend
-    require(argShapes != null, "Shape inference failed." +
-      s"Known shapes are $kwargs for symbol arguments ${symbol.listArguments()} " +
-      s"and aux states ${symbol.listAuxiliaryStates()}")
 
-    var newArgDict = Map[String, NDArray]()
-    var newGradDict = Map[String, NDArray]()
+    val providedArgShapeNames = kwargs.keys
+    val providedArgShapeData = kwargs.values.flatMap(_.toVector)
+    val providedArgShapeIdx = kwargs.values.scanLeft(0)((sum, shape) => sum + shape.size)
 
-    this.symbol.listArguments().zipWithIndex.foreach { case (name, i) =>
-      val newShape = argShapes(i)
-      val arr = this.argArrays(i)
-      val dArr = if (this.gradArrays == null) null else this.gradArrays(i)
-      if (partialShaping || kwargs.contains(name) || newShape.equals(arr.shape)) {
-        if (newShape.product > arr.shape.product) {
-          require(allowUpSizing, s"New shape of arg:$name larger than original. " +
-                        "First making a big executor and then down sizing it " +
-                        "is more efficient than the reverse." +
-                        "If you really want to up size, set allowUpSizing = true " +
-                        "to enable allocation of new arrays.")
-          newArgDict = newArgDict + (name -> NDArray.empty(newShape, arr.context, arr.dtype))
-          setArgOwner = true
-          if (dArr != null) {
-            newGradDict = newGradDict + (name -> NDArray.empty(newShape, dArr.context, dArr.dtype))
-            setGradOwner = true
-          }
-        } else {
-          newArgDict = newArgDict + (name -> arr.reshape(newShape.toArray))
-          if (dArr != null) {
-            newGradDict = newGradDict + (name -> dArr.reshape(newShape.toArray))
-          }
-        }
-      } else {
-        throw new  AssertionError(s"Shape of unspecified array arg:$name changed." +
-                    "This can cause the new executor to not share parameters " +
-                    "with the old one. Please check for error in network." +
-                    "If this is intended, set partialShaping = true to suppress this warning.")
-      }
-    }
-
-    var newAuxDict = Map[String, NDArray]()
-    val zip3 = (this.symbol.listAuxiliaryStates(), auxShapes, this.auxArrays).zipped
-    zip3.foreach { case (name, newShape, arr) =>
-      if (partialShaping || newShape.equals(arr.shape)) {
-        if (newShape.product > arr.shape.product) {
-          require(allowUpSizing, s"New shape of aux:$name larger than original. " +
-                        "First making a big executor and then down sizing it " +
-                        "is more efficient than the reverse." +
-                        "If you really want to up size, set allowUpSizing = true " +
-                        "to enable allocation of new arrays.")
-          newAuxDict = newAuxDict + (name -> NDArray.empty(newShape, arr.context))
-          setAuxOwner = true
-        } else {
-          newAuxDict = newAuxDict + (name -> arr.reshape(newShape.toArray))
-        }
-      } else {
-        throw new  AssertionError(s"Shape of unspecified array aux:$name changed." +
-                  "This can cause the new executor to not share parameters " +
-                  "with the old one. Please check for error in network." +
-                  "If this is intended, set partialShaping = true to suppress this warning.")
-      }
-    }
-    val reshapedExecutor = if (this._gradsReq.isInstanceOf[Seq[_]]) {
-      this.symbol.bind(this._ctx,
-                          newArgDict,
-                          newGradDict,
-                          this._gradsReq.asInstanceOf[Seq[String]],
-                          newAuxDict,
-                          this._group2ctx,
-                          this)
+    val ctxMapKeys = if (_group2ctx != null) _group2ctx.keys.toArray else Array.empty[String]
+    val ctxMapDevTypes = if (_group2ctx != null) {
+      _group2ctx.values.map(_.deviceTypeid).toArray
     } else {
-      this.symbol.bind(this._ctx,
-                          newArgDict,
-                          newGradDict,
-                          this._gradsReq.asInstanceOf[Map[String, String]],
-                          newAuxDict,
-                          this._group2ctx,
-                          this)
+      Array.empty[Int]
+    }
+    val ctxMapDevIds = if (_group2ctx != null) {
+      _group2ctx.values.map(_.deviceId).toArray
+    } else {
+      Array.empty[Int]
     }
 
-    // This method has created new NDArrays that will need to be managed by the new Executor
-    if (setArgOwner) reshapedExecutor.ownsArgArrays = true
-    if (setGradOwner) reshapedExecutor.ownsGradArrays = true
-    if (setAuxOwner) reshapedExecutor.ownsAuxArrays = true
+    val inArgs = ArrayBuffer.empty[NDArrayHandle]
+    val argGrads = ArrayBuffer.empty[NDArrayHandle]
+    val auxStates = ArrayBuffer.empty[NDArrayHandle]
+    val outHandle = new ExecutorHandleRef()
 
-    reshapedExecutor
+    checkCall(_LIB.mxExecutorReshape(
+              if (partialShaping) 1 else 0,
+              if (allowUpSizing) 1 else 0,
+              _ctx.deviceTypeid,
+              _ctx.deviceId,
+              ctxMapKeys.toArray,
+              ctxMapDevTypes.toArray,
+              ctxMapDevIds.toArray,
+              providedArgShapeNames.toArray,
+              providedArgShapeData.toArray,
+              providedArgShapeIdx.toArray,
+              inArgs,
+              argGrads,
+              auxStates,
+              this.handle,
+              outHandle))
+
+    val argArrays = inArgs.map(new NDArray(_)).toArray
+    val gradArrays = argGrads.map(handle =>
+      if (handle == 0) null else new NDArray(handle)).toArray
+    val auxArrays = auxStates.map(new NDArray(_)).toArray
+
+    val executor = new Executor(outHandle.value, this.symbol)
+    executor._ctx = this._ctx
+    executor._gradsReq = this._gradsReq
+    executor._group2ctx = this._group2ctx
+    executor.argArrays = argArrays
+    executor.gradArrays = gradArrays
+    executor.auxArrays = auxArrays
+    executor.reshaped = true
+    executor
   }
 
   /**

@@ -19,15 +19,19 @@
 
 message(STATUS "Downloading MKLML...")
 
-set(MKLDNN_RELEASE v0.17-rc)
-set(MKLML_RELEASE_FILE_SUFFIX 2019.0.1.20180928)
+set(MKLDNN_RELEASE v0.19)
+set(MKLML_RELEASE_FILE_SUFFIX 2019.0.5.20190502)
+
+set(MKLML_LNX_MD5 dfcea335652dbf3518e1d02cab2cea97)
+set(MKLML_WIN_MD5 ff8c5237570f03eea37377ccfc95a08a)
+set(MKLML_MAC_MD5 0a3d83ec1fed9ea318e8573bb5e14c24)
 
 if(MSVC)
   set(MKL_NAME "mklml_win_${MKLML_RELEASE_FILE_SUFFIX}")
 
   file(DOWNLOAD "https://github.com/intel/mkl-dnn/releases/download/${MKLDNN_RELEASE}/${MKL_NAME}.zip"
        "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.zip"
-       EXPECTED_MD5 "443e661bdfd32dbbc99b460b43afceee" SHOW_PROGRESS)
+       EXPECTED_MD5 "${MKLML_WIN_MD5}" SHOW_PROGRESS)
   file(DOWNLOAD "https://github.com/apache/incubator-mxnet/releases/download/utils/7z.exe"
        "${CMAKE_CURRENT_BINARY_DIR}/mklml/7z2.exe"
        EXPECTED_MD5 "E1CF766CF358F368EC97662D06EA5A4C" SHOW_PROGRESS)
@@ -47,7 +51,7 @@ elseif(APPLE)
 
   file(DOWNLOAD "https://github.com/intel/mkl-dnn/releases/download/${MKLDNN_RELEASE}/${MKL_NAME}.tgz"
        "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.tgz"
-       EXPECTED_MD5 "95f887af332205b1d15b392260003952" SHOW_PROGRESS)
+       EXPECTED_MD5 "${MKLML_MAC_MD5}" SHOW_PROGRESS)
   execute_process(COMMAND "tar" "-xzf" "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.tgz"
                   "-C" "${CMAKE_CURRENT_BINARY_DIR}/mklml/")
 
@@ -61,7 +65,7 @@ elseif(UNIX)
 
   file(DOWNLOAD "https://github.com/intel/mkl-dnn/releases/download/${MKLDNN_RELEASE}/${MKL_NAME}.tgz"
        "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.tgz"
-       EXPECTED_MD5 "a63abf155361322b9c03f8fc50f4f317" SHOW_PROGRESS)
+       EXPECTED_MD5 "${MKLML_LNX_MD5}" SHOW_PROGRESS)
   execute_process(COMMAND "tar" "-xzf" "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.tgz"
                   "-C" "${CMAKE_CURRENT_BINARY_DIR}/mklml/")
 

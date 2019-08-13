@@ -411,8 +411,7 @@ abstract class BaseModule {
           fitParams: FitParams = new FitParams): Unit = {
     require(fitParams != null, "Undefined fitParams")
     require(numEpoch > 0, s"Invalid number of epochs $numEpoch")
-    import org.apache.mxnet.DataDesc._
-    bind(dataShapes = trainData.provideData, labelShapes = Option(trainData.provideLabel),
+    bind(dataShapes = trainData.provideDataDesc, labelShapes = Option(trainData.provideLabelDesc),
          forTraining = true, forceRebind = fitParams.forceRebind)
     fitParams.monitor.foreach(installMonitor)
     initParams(fitParams.initializer, argParams, auxParams,

@@ -1,0 +1,7 @@
+dlib==19.15.0
+Pillow==4.1.0
+scipy==0.19.0
+scikit-image==0.13.1
+scikit-video==1.1.11
+sk-video==1.1.10
+tqdm

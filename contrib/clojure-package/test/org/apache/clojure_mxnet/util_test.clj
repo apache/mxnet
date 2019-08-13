@@ -20,6 +20,7 @@
             [org.apache.clojure-mxnet.shape :as mx-shape]
             [org.apache.clojure-mxnet.util :as util]
             [org.apache.clojure-mxnet.ndarray :as ndarray]
+            [org.apache.clojure-mxnet.primitives :as primitives]
             [org.apache.clojure-mxnet.symbol :as sym]
             [org.apache.clojure-mxnet.test-util :as test-util]
             [clojure.spec.alpha :as s])
@@ -54,13 +55,23 @@
     (is (instance? Option x))
     (is (= 1 (.get x)))))
 
+(deftest test->int-option
+  (let [x (util/->int-option 4.5)]
+    (is (instance? Option x))
+    (is (= 4 (.get x)))))
+
+(deftest test-empty->int-option
+  (let [x (util/->int-option nil)]
+    (is (instance? Option x))
+    (is (.isEmpty x))))
+
 (deftest test-option->value
   (is (= 2 (-> (util/->option 2)
                (util/option->value)))))
 
 (deftest test-keyword->snake-case
-  (is (= [:foo-bar :foo2 :bar-bar])
-      (util/keyword->snake-case [:foo_bar :foo2 :bar-bar])))
+  (is (= ["foo_bar" "foo2" "bar_bar"]
+         (mapv util/keyword->snake-case [:foo_bar :foo2 :bar-bar]))))
 
 (deftest test-convert-tuple
   (is (instance? Tuple1 (util/convert-tuple [1])))
@@ -123,6 +134,9 @@
   (is (= "[F"  (->> (util/coerce-param [1 2] #{"float<>"}) str (take 2) (apply str))))
   (is (= "[L"  (->> (util/coerce-param [1 2] #{"java.lang.String<>"}) str (take 2) (apply str))))
 
+  (is (primitives/primitive? (util/coerce-param 1.0 #{"org.apache.mxnet.MX_PRIMITIVES$MX_PRIMITIVE_TYPE"})))
+  (is (primitives/primitive? (util/coerce-param (float 1.0) #{"org.apache.mxnet.MX_PRIMITIVES$MX_PRIMITIVE_TYPE"})))
+
   (is (= 1 (util/coerce-param 1 #{"unknown"}))))
 
 (deftest test-nil-or-coerce-param
@@ -149,6 +163,33 @@
   (is (= [1 2] (-> (util/convert-tuple [1 2])
                    (util/tuple->vec)))))
 
+(deftest test-to-array-nd
+  (let [a1 (util/to-array-nd '(1))
+        a2 (util/to-array-nd [1.0 2.0])
+        a3 (util/to-array-nd [[3.0] [4.0]])
+        a4 (util/to-array-nd [[[5 -5]]])]
+    (is (= 1 (alength a1)))
+    (is (= [1] (->> a1 vec)))
+    (is (= 2 (alength a2)))
+    (is (= 2.0 (aget a2 1)))
+    (is (= [1.0 2.0] (->> a2 vec)))
+    (is (= 2 (alength a3)))
+    (is (= 1 (alength (aget a3 0))))
+    (is (= 4.0 (aget a3 1 0)))
+    (is (= [[3.0] [4.0]] (->> a3 vec (mapv vec))))
+    (is (= 1 (alength a4)))
+    (is (= 1 (alength (aget a4 0))))
+    (is (= 2 (alength (aget a4 0 0))))
+    (is (= 5 (aget a4 0 0 0)))
+    (is (= [[[5 -5]]] (->> a4 vec (mapv vec) (mapv #(mapv vec %)))))))
+
+(deftest test-nd-seq-shape
+  (is (= [1] (util/nd-seq-shape '(5))))
+  (is (= [2] (util/nd-seq-shape [1.0 2.0])))
+  (is (= [3] (util/nd-seq-shape [1 1 1])))
+  (is (= [2 1] (util/nd-seq-shape [[3.0] [4.0]])))
+  (is (= [1 3 2] (util/nd-seq-shape [[[5 -5] [5 -5] [5 -5]]]))))
+
 (deftest test-coerce-return
   (is (= [] (util/coerce-return (ArrayBuffer.))))
   (is (= [1 2 3] (util/coerce-return (util/vec->indexed-seq [1 2 3]))))
@@ -161,6 +202,12 @@
                 (util/convert-tuple [1 2]))))
   (is (= [1 2 3] (util/coerce-return
                   (util/convert-tuple [1 2 3]))))
+
+  (is (instance? Double (util/coerce-return (primitives/mx-double 3))))
+  (is (= 3.0 (util/coerce-return (primitives/mx-double 3))))
+  (is (instance? Float (util/coerce-return (primitives/mx-float 2))))
+  (is (= 2.0 (util/coerce-return (primitives/mx-float 2))))
+
   (is (= "foo" (util/coerce-return "foo"))))
 
 (deftest test-translate-keyword-shape
@@ -206,3 +253,10 @@
   (let [nda (util/map->scala-tuple-seq {:a-b (ndarray/ones [1 2])})]
     (is (= "a_b" (._1 (.head nda))))
     (is (= [1.0 1.0] (ndarray/->vec (._2 (.head nda)))))))
+
+(deftest test-forms->scala-fn
+  (let [scala-fn (util/forms->scala-fn
+                  (def x 1)
+                  (def y 2)
+                  {:x x :y y})]
+    (is (= {:x 1 :y 2} (.apply scala-fn)))))

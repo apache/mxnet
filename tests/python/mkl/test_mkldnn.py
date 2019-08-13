@@ -24,6 +24,7 @@ import numpy as np
 import mxnet as mx
 import unittest
 from mxnet.test_utils import rand_ndarray, assert_almost_equal
+from mxnet.module import Module
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.test_utils import *
@@ -97,6 +98,37 @@ def test_mkldnn_engine_threading():
         # output should be 016711406 (non-mkldnn mode output)
         assert_almost_equal(y[0, 0, 0, 0], 0.016711406)
         break
+
+@with_seed()
+def test_mkldnn_reshape():
+    def test_reshape_after_conv(dst_shape):
+        shape = (1,1,4,4)
+        data = mx.symbol.Variable('data')
+        conv = mx.symbol.Convolution(data=data, num_filter=16, kernel=(1, 1), pad=(0, 0), stride=(1, 1))
+        res = mx.symbol.reshape(data=conv, shape=dst_shape)
+        exe = res.simple_bind(mx.cpu(), data=shape, grad_req='null')
+
+        val1 = np.random.uniform(-1, 1, shape)
+        val2 = np.random.uniform(-1, 1, (16, 1, 1, 1))
+        val3 = np.random.uniform(-1 ,1, (1))
+
+        exe.arg_arrays[0][:] = val1
+        exe.arg_arrays[1][:] = val2
+        exe.arg_arrays[2][:] = val3
+        outputs = exe.forward(is_train=False)[0].asnumpy()
+
+        conv_exe = conv.simple_bind(mx.cpu(), data=shape, grad_req='null')
+        conv_exe.arg_arrays[0][:] = val1
+        conv_exe.arg_arrays[1][:] = val2
+        conv_exe.arg_arrays[2][:] = val3
+        data_npy = conv_exe.forward(is_train=False)[0].asnumpy()
+        assert_almost_equal(outputs, data_npy.reshape(dst_shape))
+
+
+    # Test mkldnn reshape (Using shape)
+    test_cases = [(256), (16, 16), (4, 4, 16), (4, 4, 4, 4)]
+    for test_case in test_cases:
+        test_reshape_after_conv(test_case)
 
 
 @with_seed()
@@ -442,6 +474,75 @@ def test_non_mkldnn_fcomputeex():
     exec1 = custom.bind(mx.cpu(), args={'data': mx.nd.ones([10,3,96,96]), 'conv_weight': mx.nd.ones([8,3,5,5])})
     exec1.forward()[0].wait_to_read()
 
+@with_seed()
+def test_conv_transpose():
+    axes = [(0,2,1,3), (0,2,3,1), (1,2,3,0), (3,2,1,0)]
+    a = np.random.rand(10, 16, 50, 50)
+    b = np.random.rand(32, 16, 3, 3)
+    x = mx.nd.array(a)
+    w = mx.nd.array(b)
+    y = mx.nd.Convolution(data=x, weight=w, kernel=(3, 3), num_group=1, num_filter=32, no_bias=True)
+    for axis in axes:
+        t = mx.nd.transpose(y, axis)
+        t.wait_to_read()
+        s = y.asnumpy()
+        n = np.transpose(s, axis)
+        np.allclose(t.asnumpy(), n)
+
+
+# This test case is contributed by @awsbillz in https://github.com/apache/incubator-mxnet/issues/14766
+@with_seed()
+def test_reshape_transpose_6d():
+    class Reshape2D(gluon.HybridBlock):
+        def __init__(self, factor):
+            super(Reshape2D, self).__init__()
+            self._factors = (int(factor),) * 2
+
+        def hybrid_forward(self, F, x):
+            f1, f2 = self._factors
+                                                          # (N, f1*f2*C, H, W)
+            x = F.reshape(x, (0, -4, -1, f1 * f2, 0, 0))  # (N, C, f1*f2, H, W)
+            x = F.reshape(x, (0, 0, -4, f1, f2, 0, 0))    # (N, C, f1, f2, H, W)
+            x = F.transpose(x, (0, 1, 4, 2, 5, 3))        # (N, C, H, f1, W, f2)
+            x = F.reshape(x, (0, 0, -3, -3))              # (N, C, H*f1, W*f2)
+            return x
+
+
+    class Net(gluon.HybridBlock):
+        def __init__(self, **kwargs):
+            super(Net, self).__init__(**kwargs)
+            with self.name_scope():
+                self.conv1 = nn.Conv2D(8, kernel_size=5)
+                self.reshape2D = Reshape2D(2)
+
+        def hybrid_forward(self, F, x):
+            x = self.conv1(x)
+            x = self.reshape2D(x)
+            return x
+
+    net = Net()
+    net.initialize(mx.init.Xavier(), ctx=mx.cpu())
+    net.hybridize()
+    data = mx.nd.random_normal(shape=(1, 3, 600, 600))
+    output = net(data)
+    a = output.asnumpy()
+
+@with_seed()
+def test_weight_async_reorder():
+    data = mx.sym.Variable("data")
+    w1 = mx.sym.Variable("1_weight")
+    w2 = mx.sym.Variable("2_weight")
+    conv1 = mx.sym.Convolution(data=data, weight=w1 + w1, num_filter=32, no_bias=True, kernel=(3, 3))
+    conv2 = mx.sym.Convolution(data=conv1, weight=w2 + w2, num_filter=32, no_bias=True, kernel=(1, 1))
+    mod = Module(symbol=conv2, label_names=None, context=mx.current_context())
+    mod.bind(for_training=False, data_shapes=[('data', (10, 16, 50, 50))])
+    mod.init_params(initializer=mx.init.Xavier(magnitude=2.))
+    data = [mx.random.uniform(-1.0, 1.0, shape=(10, 16, 50, 50), ctx=mx.current_context())]
+    batch=mx.io.DataBatch(data, [])
+    for i in range(2):
+        mod.forward(batch, is_train=False)
+        for output in mod.get_outputs():
+            output.wait_to_read()
 
 if __name__ == '__main__':
     install.test_mkldnn_install()

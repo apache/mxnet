@@ -57,7 +57,7 @@
         mlp (sym/softmax-output "softmax" {:data fc1})
         [arg out aux] (sym/infer-type mlp {:data dtype/FLOAT64})]
     (is (= [dtype/FLOAT64 dtype/FLOAT32 dtype/FLOAT32 dtype/FLOAT32] (util/buffer->vec arg)))
-    (is (= [dtype/FLOAT32 (util/buffer->vec out)]))
+    (is (= [dtype/FLOAT32] (util/buffer->vec out)))
     (is (= [] (util/buffer->vec aux)))))
 
 (deftest test-copy
@@ -70,10 +70,10 @@
         b (sym/variable "b")
         c (sym/+ a b)
         ex (sym/bind c {"a" (ndarray/ones [2 2]) "b" (ndarray/ones [2 2])})]
-    (is (= [2.0 2.0 2.0 2.0]) (-> (executor/forward ex)
-                                  (executor/outputs)
-                                  (first)
-                                  (ndarray/->vec)))))
+    (is (= [2.0 2.0 2.0 2.0] (-> (executor/forward ex)
+                                 (executor/outputs)
+                                 (first)
+                                 (ndarray/->vec))))))
 (deftest test-simple-bind
   (let [a (sym/ones [3])
         b (sym/ones [3])

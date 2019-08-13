@@ -336,6 +336,7 @@ def test_parallel_random_seed_setting():
         # Avoid excessive test cpu runtimes
         num_temp_seeds = 25 if ctx.device_type == 'gpu' else 1
         # To flush out a possible race condition, run multiple times
+
         for _ in range(20):
             # Create enough samples such that we get a meaningful distribution.
             shape = (200, 200)
@@ -560,12 +561,12 @@ def test_exponential_generator():
         for scale in [0.1, 1.0]:
             buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.expon.ppf(x, loc=0, scale=scale), 5)
             generator_mx = lambda x: mx.nd.random.exponential(scale, shape=x, ctx=ctx, dtype=dtype).asnumpy()
-            verify_generator(generator=generator_mx, buckets=buckets, probs=probs)
+            verify_generator(generator=generator_mx, buckets=buckets, probs=probs, success_rate=0.20)
             generator_mx_same_seed = \
                 lambda x: np.concatenate(
                     [mx.nd.random.exponential(scale, shape=x // 10, ctx=ctx, dtype=dtype).asnumpy()
                      for _ in range(10)])
-            verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
+            verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs, success_rate=0.20)
 
 @with_seed()
 def test_poisson_generator():
@@ -639,15 +640,20 @@ def test_multinomial_generator():
         quantized_probs = quantize_probs(probs, dtype)
         generator_mx = lambda x: mx.nd.random.multinomial(data=mx.nd.array(quantized_probs, ctx=ctx, dtype=dtype),
                                                           shape=x).asnumpy()
+        # success_rate was set to 0.15 since PR #13498 and became flaky
+        # both of previous issues(#14457, #14158) failed with success_rate 0.25
+        # In func verify_generator inside test_utilis.py
+        # it raise the error when success_num(1) < nrepeat(5) * success_rate(0.25)
+        # by changing the 0.25 -> 0.2 solve these edge case but still have strictness
         verify_generator(generator=generator_mx, buckets=buckets, probs=quantized_probs,
-                         nsamples=samples, nrepeat=trials)
+                         nsamples=samples, nrepeat=trials, success_rate=0.20)
         generator_mx_same_seed = \
             lambda x: np.concatenate(
                 [mx.nd.random.multinomial(data=mx.nd.array(quantized_probs, ctx=ctx, dtype=dtype),
                                                           shape=x // 10).asnumpy()
                  for _ in range(10)])
         verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=quantized_probs,
-                         nsamples=samples, nrepeat=trials)
+                         nsamples=samples, nrepeat=trials, success_rate=0.20)
 
 
 @with_seed()
@@ -669,7 +675,7 @@ def test_with_random_seed():
         with random_seed(seed):
             python_data = [rnd.random() for _ in range(size)]
             np_data = np.random.rand(size)
-            mx_data = mx.nd.random_uniform(shape=shape, ctx=ctx).asnumpy()
+            mx_data = mx.random.uniform(shape=shape, ctx=ctx).asnumpy()
         return (seed, python_data, np_data, mx_data)
 
     # check data, expecting them to be the same or different based on the seeds
@@ -710,6 +716,32 @@ def test_with_random_seed():
     for i in range(0, num_seeds-1):
         for j in range(i+1, num_seeds):
             check_data(data[i],data[j])
+
+@with_seed()
+def test_random_seed():
+    shape = (5, 5)
+    seed = rnd.randint(-(1 << 31), (1 << 31))
+
+    def _assert_same_mx_arrays(a, b):
+        assert len(a) == len(b)
+        for a_i, b_i in zip(a, b):
+            assert (a_i.asnumpy() == b_i.asnumpy()).all()
+
+    N = 100
+    mx.random.seed(seed)
+    v1 = [mx.random.uniform(shape=shape) for _ in range(N)]
+
+    mx.random.seed(seed)
+    v2 = [mx.random.uniform(shape=shape) for _ in range(N)]
+    _assert_same_mx_arrays(v1, v2)
+
+    try:
+        long
+        mx.random.seed(long(seed))
+        v3 = [mx.random.uniform(shape=shape) for _ in range(N)]
+        _assert_same_mx_arrays(v1, v3)
+    except NameError:
+        pass
 
 @with_seed()
 def test_unique_zipfian_generator():
@@ -835,6 +867,8 @@ def test_shuffle():
     # Test larger arrays
     testLarge(mx.nd.arange(0, 100000).reshape((10, 10000)), 10)
     testLarge(mx.nd.arange(0, 100000).reshape((10000, 10)), 10)
+    testLarge(mx.nd.arange(0, 100000), 10)
+
 
 @with_seed()
 def test_randint():
@@ -864,24 +898,38 @@ def test_randint_extremes():
 def test_randint_generator():
     ctx = mx.context.current_context()
     for dtype in ['int32', 'int64']:
-        for low, high in [(50000000, 50001000),(-50000000,-9900),(-500,199),(-2147483647,2147483647)]:
+        for low, high in [(50000000, 50001000),(-50000100,-50000000),(-500,199)]:
             scale = high - low
             buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.uniform.ppf(x, loc=low, scale=scale), 5)
             # Quantize bucket boundaries to reflect the actual dtype and adjust probs accordingly
             buckets = np.array(buckets, dtype=dtype).tolist()
             probs = [(buckets[i][1] - buckets[i][0]) / float(scale) for i in range(5)]
             generator_mx = lambda x: mx.nd.random.randint(low, high, shape=x, ctx=ctx, dtype=dtype).asnumpy()
-            verify_generator(generator=generator_mx, buckets=buckets, probs=probs)
+            verify_generator(generator=generator_mx, buckets=buckets, probs=probs, nrepeat=100)
+            # Scipy uses alpha = 0.01 for testing discrete distribution generator but we are using default alpha=0.05 (higher threshold ensures robustness)
+            # Refer - https://github.com/scipy/scipy/blob/9f12af697763fb5f9767d5cb1280ce62456a3974/scipy/stats/tests/test_discrete_basic.py#L45
             generator_mx_same_seed = \
                 lambda x: np.concatenate(
                     [mx.nd.random.randint(low, high, shape=x // 10, ctx=ctx, dtype=dtype).asnumpy()
                         for _ in range(10)])
-            verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
+            verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs, nrepeat=100)
 
-with_seed()
+@with_seed()
 def test_randint_without_dtype():
     a = mx.nd.random.randint(low=50000000, high=50000010, ctx=mx.context.current_context())
-    assert(a.dtype, 'int32')
+    assert a.dtype == np.int32
+
+
+@with_seed()
+def test_sample_multinomial_num_outputs():
+    ctx = mx.context.current_context()
+    probs = [[0.125, 0.25, 0.25], [0.0625, 0.125, 0.1875]]
+    out = mx.nd.random.multinomial(data=mx.nd.array(probs, ctx=ctx), shape=10000, get_prob=False)
+    assert isinstance(out, mx.nd.NDArray)
+    out = mx.nd.random.multinomial(data=mx.nd.array(probs, ctx=ctx), shape=10000, get_prob=True)
+    assert isinstance(out, list)
+    assert len(out) == 2
+
 
 if __name__ == '__main__':
     import nose

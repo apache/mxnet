@@ -39,6 +39,7 @@
 #include <dmlc/logging.h>
 #include <dmlc/recordio.h>
 #include <opencv2/opencv.hpp>
+#include "../src/io/opencv_compatibility.h"
 #include "../src/io/image_recordio.h"
 #include <random>
 /*!

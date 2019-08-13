@@ -187,7 +187,7 @@ class TBlobContainer : public TBlob {
       release();
     }
   }
-  void resize(const TShape &shape, int type_flag) {
+  void resize(const mxnet::TShape &shape, int type_flag) {
     if (tensor_container_) {
       CHECK_EQ(this->type_flag_, type_flag);
       this->shape_ = shape;

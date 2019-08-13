@@ -75,6 +75,7 @@ A detailed tutorial is available at
     io.CSVIter
     io.LibSVMIter
     io.ImageRecordIter
+    io.ImageRecordInt8Iter
     io.ImageRecordUInt8Iter
     io.MNISTIter
     recordio.MXRecordIO

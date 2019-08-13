@@ -39,8 +39,8 @@ template<typename DType>
 static CuDNNConvolutionOp<DType>& GetCuDNNConvOp(const ConvolutionParam& param,
                                                  int forward_compute_type,
                                                  int backward_compute_type,
-                                                 const std::vector<TShape>& in_shape,
-                                                 const std::vector<TShape>& out_shape,
+                                                 const mxnet::ShapeVector& in_shape,
+                                                 const mxnet::ShapeVector& out_shape,
                                                  const RunContext& rctx,
                                                  bool add_to_weight) {
 #if DMLC_CXX11_THREAD_LOCAL
@@ -115,8 +115,8 @@ void ConvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
       param.kernel.ndim() == 2 &&
       param.dilate == mshadow::Shape2(1, 1) &&
       dtype == mshadow::kFloat32) {
-    std::vector<TShape> in_shape(inputs.size());
-    std::vector<TShape> out_shape(1, outputs[0].shape_);
+    mxnet::ShapeVector in_shape(inputs.size());
+    mxnet::ShapeVector out_shape(1, outputs[0].shape_);
     for (size_t i = 0; i < in_shape.size(); i++)
       in_shape[i] = inputs[i].shape_;
     DepthwiseConvolutionOp<float> op;
@@ -142,8 +142,8 @@ void ConvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
       op.Init(param);
       op.Forward(ctx, inputs, req, outputs);
     } else {
-      std::vector<TShape> in_shape(inputs.size());
-      std::vector<TShape> out_shape(1, outputs[0].shape_);
+      mxnet::ShapeVector in_shape(inputs.size());
+      mxnet::ShapeVector out_shape(1, outputs[0].shape_);
       for (size_t i = 0; i < in_shape.size(); i++)
         in_shape[i] = inputs[i].shape_;
       // req[conv::kWeight] is only set for backward, so assume the typical 'write' for now.
@@ -195,8 +195,8 @@ void ConvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
       param.dilate == mshadow::Shape2(1, 1) &&
       dtype == mshadow::kFloat32) {
     // The first element stores out grad.
-    std::vector<TShape> in_shape(in_data.size());
-    std::vector<TShape> out_shape(1, out_grad.shape_);
+    mxnet::ShapeVector in_shape(in_data.size());
+    mxnet::ShapeVector out_shape(1, out_grad.shape_);
     for (size_t i = 0; i < in_shape.size(); i++)
       in_shape[i] = in_data[i].shape_;
     DepthwiseConvolutionOp<float> op;
@@ -223,8 +223,8 @@ void ConvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
       op.Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
     } else {
       // The first element stores out grad.
-      std::vector<TShape> in_shape(in_data.size());
-      std::vector<TShape> out_shape(1, out_grad.shape_);
+      mxnet::ShapeVector in_shape(in_data.size());
+      mxnet::ShapeVector out_shape(1, out_grad.shape_);
       for (size_t i = 0; i < in_shape.size(); i++)
         in_shape[i] = in_data[i].shape_;
       auto add_to_weight = req[conv::kWeight] == kAddTo;

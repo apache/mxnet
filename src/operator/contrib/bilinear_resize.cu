@@ -25,83 +25,30 @@
 #include <cuda_runtime_api.h>
 #include <algorithm>
 #include "bilinear_resize-inl.h"
+#include "bilinear_resize-inl.cuh"
 
 namespace mxnet {
 namespace op {
 
 using namespace mshadow;
 
-template<typename In, typename Out>
-struct ScalarConvert {
-  static __host__ __device__ __forceinline__ Out to(const In v) { return (Out) v; }
-};
-
-
-// The maximum number of threads in a block
-static const unsigned MAX_BLOCK_SIZE = 512U;
-
-// Number of threads in a block given an input size up to MAX_BLOCK_SIZE
-static unsigned getNumThreads(int nElem, const bool smaller) {
-  unsigned threadSizes[5] = {32, 64, 128, 256, MAX_BLOCK_SIZE};
-  const int maxi = smaller ? 4 : 5;
-  for (int i = 0; i != maxi; ++i) {
-    if (static_cast<unsigned>(nElem) <= threadSizes[i]) {
-      return threadSizes[i];
-    }
-  }
-  return smaller ? (MAX_BLOCK_SIZE >> 1) : MAX_BLOCK_SIZE;
-}
-
 template<typename xpu, typename Dtype, typename Acctype>
-__global__ void caffe_gpu_interp2_kernel(const int n,
-    const Acctype rheight, const Acctype rwidth,
-    const Tensor<xpu, 4, Dtype> data1,
-    Tensor<xpu, 4, Dtype> data2) {
+__global__ void like_mode_kernel_backward(const int n,
+    Tensor<xpu, 4, Dtype> dataLike) {
   int index = threadIdx.x + blockIdx.x * blockDim.x;
-  const int batchsize = data1.size(0);
-  const int channels = data1.size(1);
-  const int height1 = data1.size(2);
-  const int width1 = data1.size(3);
-  const int height2 = data2.size(2);
-  const int width2 = data2.size(3);
-
+  const int batchsize = dataLike.size(0);
+  const int channels = dataLike.size(1);
+  const int height = dataLike.size(2);
+  const int width = dataLike.size(3);
   if (index < n) {
-    const int w2 = index % width2;  // 0:width2-1
-    const int h2 = index / width2;  // 0:height2-1
-    // special case: just copy
-    if (height1 == height2 && width1 == width2) {
-      const int h1 = h2;
-      const int w1 = w2;
-      for (int n = 0; n < batchsize ; n++) {
-        for (int c = 0; c < channels; ++c) {
-          const Dtype val = data1[n][c][h1][w1];
-          data2[n][c][h2][w2] = val;
-        }
-      }
-      return;
-    }
-    //
-    const Acctype h1r = rheight * h2;
-    const int h1 = h1r;
-    const int h1p = (h1 < height1 - 1) ? 1 : 0;
-    const Acctype h1lambda = h1r - h1;
-    const Acctype h0lambda = Acctype(1) - h1lambda;
-    //
-    const Acctype w1r = rwidth * w2;
-    const int w1 = w1r;
-    const int w1p = (w1 < width1 - 1) ? 1 : 0;
-    const Acctype w1lambda = w1r - w1;
-    const Acctype w0lambda = Acctype(1) - w1lambda;
-    //
+    const int w = index % width;
+    const int h = index / width;
     for (int n = 0; n < batchsize ; n++) {
-        for (int c = 0; c < channels; ++c) {
-        const Acctype val = h0lambda * (w0lambda * data1[n][c][h1][w1]
-                            + w1lambda * data1[n][c][h1][w1+w1p])
-                            + h1lambda * (w0lambda * data1[n][c][h1+h1p][w1]
-                            + w1lambda * data1[n][c][h1+h1p][w1+w1p]);
-        data2[n][c][h2][w2] = ScalarConvert<Acctype, Dtype>::to(val);
+      for (int c = 0; c < channels; ++c) {
+        dataLike[n][c][h][w] = 0;
       }
     }
+    return;
   }
 }
 
@@ -181,16 +128,18 @@ void SpatialUpSamplingBilinearUpdateOutput(mshadow::Stream<gpu> *s,
   dim3 blocks(static_cast<int>(num_kernels / num_threads) + 1);
   dim3 threads(num_threads);
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
+  ImageLayout layout = NCHW;
   caffe_gpu_interp2_kernel<xpu, DType, AccReal>
   <<<blocks, threads , 0, stream>>>(
-    num_kernels, rheight, rwidth, idata, odata);
+    num_kernels, rheight, rwidth, idata, odata, layout);
   MSHADOW_CUDA_POST_KERNEL_CHECK(SpatialUpSamplingBilinearUpdateOutput);
 }
 
 template<typename xpu, typename DType, typename AccReal>
 void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<gpu> *s,
                                               const std::vector<TBlob> &input,
-                                              const std::vector<TBlob> &output) {
+                                              const std::vector<TBlob> &output,
+                                              bool modeLike) {
   Tensor<xpu, 4, DType> data1 = output[0].get<xpu, 4, DType>(s);
   Tensor<xpu, 4, DType> data2 = input[0].get<xpu, 4, DType>(s);
   int height1 = data1.size(2);
@@ -207,6 +156,20 @@ void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<gpu> *s,
   caffe_gpu_interp2_kernel_backward<xpu, DType, AccReal>
   <<<blocks, threads, 0, stream>>>(
     num_kernels, rheight, rwidth, data1, data2);
+
+  if (modeLike) {
+    Tensor<xpu, 4, DType> dataLike = output[1].get<xpu, 4, DType>(s);
+    int heightLike = dataLike.size(2);
+    int widthLike = dataLike.size(3);
+    const int num_kernels_like = heightLike * widthLike;
+    const int num_threads_like = getNumThreads(num_kernels_like, false);
+    dim3 blocksLike(static_cast<int>(num_kernels_like / num_threads_like) + 1);
+    dim3 threadsLike(num_threads_like);
+    like_mode_kernel_backward<xpu, DType, AccReal>
+    <<<blocksLike, threadsLike, 0, stream>>>(
+      num_kernels_like, dataLike);
+  }
+
   MSHADOW_CUDA_POST_KERNEL_CHECK(SpatialUpSamplingBilinearUpdateGradInput);
 }
 
@@ -215,6 +178,5 @@ NNVM_REGISTER_OP(_contrib_BilinearResize2D)
 
 NNVM_REGISTER_OP(_backward_contrib_BilinearResize2D)
 .set_attr<FCompute>("FCompute<gpu>", BilinearSampleOpBackward<gpu>);
-
 }  // namespace op
 }  // namespace mxnet

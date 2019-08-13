@@ -7,7 +7,7 @@ This aim was to have only minimal changes to C++ code to get better maintainabil
 
 ## mxnet version
 
-This version of BMXNet 2 is based on: *mxnet v1.4.1*
+This version of BMXNet 2 is based on: *mxnet v1.5.0*
 
 ## News
 

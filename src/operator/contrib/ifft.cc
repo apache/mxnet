@@ -34,7 +34,7 @@ Operator *CreateOp<cpu>(IFFTParam param, int dtype) {
   return nullptr;
 }
 
-Operator *IFFTProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+Operator *IFFTProp::CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                                                     std::vector<int> *in_type) const {
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }

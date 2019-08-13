@@ -68,20 +68,18 @@ public class ObjectDetection {
 
     public static void main(String[] args) {
         List<Context> context = new ArrayList<Context>();
-        if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
-                Integer.valueOf(System.getenv("SCALA_TEST_ON_GPU")) == 1) {
-            context.add(Context.gpu());
-        } else {
-            context.add(Context.cpu());
-        }
+        context.add(Context.cpu());
         downloadModelImage();
+
+        List<List<ObjectDetectorOutput>> output
+                = runObjectDetectionSingle(modelPath, imagePath, context);
+        
         Shape inputShape = new Shape(new int[] {1, 3, 512, 512});
         Shape outputShape = new Shape(new int[] {1, 6132, 6});
         int width = inputShape.get(2);
         int height = inputShape.get(3);
-        List<List<ObjectDetectorOutput>> output
-                = runObjectDetectionSingle(modelPath, imagePath, context);
         String outputStr = "\n";
+        
         for (List<ObjectDetectorOutput> ele : output) {
             for (ObjectDetectorOutput i : ele) {
                 outputStr += "Class: " + i.getClassName() + "\n";

@@ -68,12 +68,12 @@ class SwapAxisOp : public Operator {
   }
 
   void Reshape2Five(mshadow::Shape<5> *inter_shape,
-                    const TShape &shape,
-                    uint32_t dim1, uint32_t dim2) {
+                    const mxnet::TShape &shape,
+                    int dim1, int dim2) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    index_t ndim_in = shape.ndim();
-    index_t si;
+    int ndim_in = shape.ndim();
+    int si;
 
     if (dim1 > dim2) {
       std::swap(dim1, dim2);
@@ -106,15 +106,15 @@ class SwapAxisOp : public Operator {
                 const std::vector<OpReqType> &req) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    uint32_t dim1 = param_.dim1;
-    uint32_t dim2 = param_.dim2;
+    int dim1 = param_.dim1;
+    int dim2 = param_.dim2;
 
     TBlob data_in = in_data[swapaxisenum::kData];
     TBlob data_out = out_data[swapaxisenum::kData];
     OpReqType out_req = req[swapaxisenum::kData];
 
-    TShape shape_in = data_in.shape_;
-    TShape shape_out = data_out.shape_;
+    mxnet::TShape shape_in = data_in.shape_;
+    mxnet::TShape shape_out = data_out.shape_;
 
     Shape<5> inter_shape;
 
@@ -181,15 +181,15 @@ class SwapAxisProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     CHECK_EQ(in_shape->size(), 1U);
 
-    TShape &shape0 = (*in_shape)[swapaxisenum::kData];
+    mxnet::TShape &shape0 = (*in_shape)[swapaxisenum::kData];
     out_shape->clear();
     out_shape->push_back(shape0);
-    TShape &shape1 = (*out_shape)[swapaxisenum::kOut];
+    mxnet::TShape &shape1 = (*out_shape)[swapaxisenum::kOut];
 
     std::swap(shape1[param_.dim1], shape1[param_.dim2]);
 
@@ -229,7 +229,7 @@ class SwapAxisProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  private:

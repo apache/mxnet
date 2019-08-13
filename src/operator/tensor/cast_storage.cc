@@ -72,7 +72,7 @@ Example::
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<CastStorageParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FInferStorageType>("FInferStorageType", CastStorageInferStorageType)
 .set_attr<FResourceRequest>("FResourceRequest",

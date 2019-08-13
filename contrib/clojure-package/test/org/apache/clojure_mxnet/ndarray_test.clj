@@ -28,7 +28,7 @@
   (is (= [0.0 0.0 0.0 0.0] (->vec (zeros [2 2])))))
 
 (deftest test-to-array
-  (is (= [0.0 0.0 0.0 0.0]) (vec (ndarray/to-array (zeros [2 2])))))
+  (is (= [0.0 0.0 0.0 0.0] (vec (ndarray/to-array (zeros [2 2]))))))
 
 (deftest test-to-scalar
   (is (= 0.0 (ndarray/to-scalar (zeros [1]))))
@@ -61,8 +61,8 @@
     (is (= [2.0 2.0] (->vec (ndarray/+ ndones 1))))
     (is (= [1.0 1.0] (->vec ndones)))
     ;;; += mutuates
-    (is (= [2.0 2.0]) (->vec (+= ndones 1)))
-    (is (= [2.0 2.0]) (->vec ndones))))
+    (is (= [2.0 2.0] (->vec (+= ndones 1))))
+    (is (= [2.0 2.0] (->vec ndones)))))
 
 (deftest test-minus
   (let [ndones (ones [2 1])
@@ -71,8 +71,8 @@
     (is (= [-1.0 -1.0] (->vec (ndarray/- ndzeros 1))))
     (is (= [0.0 0.0] (->vec ndzeros)))
     ;;; += mutuates
-    (is (= [-1.0 -1.0]) (->vec (-= ndzeros 1)))
-    (is (= [-1.0 -1.0]) (->vec ndzeros))))
+    (is (= [-1.0 -1.0] (->vec (-= ndzeros 1))))
+    (is (= [-1.0 -1.0] (->vec ndzeros)))))
 
 (deftest test-multiplication
   (let [ndones (ones [2 1])
@@ -97,7 +97,7 @@
     (is (= [1.0 1.0] (->vec ndhalves)))))
 
 (deftest test-full
-  (let [nda (full [1 2] 3)]
+  (let [nda (full [1 2] 3.0)]
     (is (= (shape nda) (mx-shape/->shape [1 2])))
     (is (= [3.0 3.0] (->vec nda)))))
 
@@ -145,6 +145,18 @@
         repeat 2]
     (is (= [0.0 0.0 0.5 0.5 1.0 1.0 1.5 1.5 2.0 2.0 2.5 2.5 3.0 3.0 3.5 3.5 4.0 4.0 4.5 4.5]
            (->vec (ndarray/arange start stop {:step step :repeat repeat}))))))
+
+(deftest test->ndarray
+  (let [nda1 (ndarray/->ndarray [5.0 -4.0])
+        nda2 (ndarray/->ndarray [[1 2 3]
+                                 [4 5 6]])
+        nda3 (ndarray/->ndarray [[[7.0] [8.0]]])]
+    (is (= [5.0 -4.0] (->vec nda1)))
+    (is (= [2] (mx-shape/->vec (shape nda1))))
+    (is (= [1.0 2.0 3.0 4.0 5.0 6.0] (->vec nda2)))
+    (is (= [2 3] (mx-shape/->vec (shape nda2))))
+    (is (= [7.0 8.0] (->vec nda3)))
+    (is (= [1 2 1] (mx-shape/->vec (shape nda3))))))
 
 (deftest test-power
   (let [nda (ndarray/array [3 5] [2 1])]
@@ -396,7 +408,7 @@
   (let [nda (ndarray/array [1 2 3 4 5 6] [3 2])
         res (ndarray/at nda 1)]
     (is (= [2] (-> res shape mx-shape/->vec)))
-    (is (= [3 4]))))
+    (is (= [3 4] (-> res ndarray/->int-vec)))))
 
 (deftest test-reshape
   (let [nda (ndarray/array [1 2 3 4 5 6] [3 2])
@@ -473,3 +485,15 @@
     (is (= [2 2] (ndarray/->int-vec nda)))
     (is (= [2.0 2.0] (ndarray/->double-vec nda)))
     (is (= [(byte 2) (byte 2)] (ndarray/->byte-vec nda)))))
+
+(deftest test->nd-vec
+  (is (= [[[1.0]]]
+         (ndarray/->nd-vec (ndarray/array [1] [1 1 1]))))
+  (is (= [[[1.0]] [[2.0]] [[3.0]]]
+         (ndarray/->nd-vec (ndarray/array [1 2 3] [3 1 1]))))
+  (is (= [[[1.0 2.0]] [[3.0 4.0]] [[5.0 6.0]]]
+         (ndarray/->nd-vec (ndarray/array [1 2 3 4 5 6] [3 1 2]))))
+  (is (= [[[1.0] [2.0]] [[3.0] [4.0]] [[5.0] [6.0]]]
+         (ndarray/->nd-vec (ndarray/array [1 2 3 4 5 6] [3 2 1]))))
+  (is (thrown-with-msg? Exception #"Invalid input array"
+                         (ndarray/->nd-vec [1 2 3 4 5]))))

@@ -17,19 +17,19 @@
 
 module TestModel
 
-using Base.Test
+using Test
 using MXNet
 
 
 function test_feedforward()
-  info("Model::FeedForward::constructor")
+  @info("Model::FeedForward::constructor")
   let x = @mx.var x
     m = mx.FeedForward(x)
     @test m.arch === x
     @test length(m.ctx) == 1
   end
 
-  info("Model::FeedForward::constructor::keyword context")
+  @info("Model::FeedForward::constructor::keyword context")
   let x = @mx.var x
     m = mx.FeedForward(x, context = mx.cpu())
     @test m.arch === x

@@ -662,7 +662,7 @@ method _infer_shape_impl(Maybe[Str|Shape] @args)
             push @{ $indptr }, scalar(@{ $sdata });
         }
     }
-    my $infer_func = $partial ? \&AI::MXNetCAPI::SymbolInferShapePartial : \&AI::MXNetCAPI::SymbolInferShape;
+    my $infer_func = $partial ? \&AI::MXNetCAPI::SymbolInferShapePartialEx : \&AI::MXNetCAPI::SymbolInferShapeEx;
     my ($arg_shapes, $out_shapes, $aux_shapes, $complete) = check_call(
         $infer_func->(
             $self->handle,
@@ -937,7 +937,7 @@ method simple_bind(
         ($updated_shared_data, $in_arg_handles, $arg_grad_handles, $aux_state_handles, $exe_handle)
             =
         check_call(
-            AI::MXNetCAPI::ExecutorSimpleBind(
+            AI::MXNetCAPI::ExecutorSimpleBindEx(
                 $self->handle,
                 $ctx->device_type_id,
                 $ctx->device_id,
@@ -1411,16 +1411,19 @@ method ones(Shape :$shape, Dtype :$dtype='float32', Maybe[Str] :$name=, Maybe[St
 
     Parameters
     ----------
-    start : number
+    :$start=0 : number
         Start of interval. The interval includes this value. The default start value is 0.
-    stop : number, optional
+    :$stop= : number, optional
         End of interval. The interval does not include this value.
-    step : number, optional
+    :$step=1.0 : number, optional
         Spacing between values
-    repeat : int, optional
+    :$repeat=1 : int, optional
         "The repeating time of all elements.
         E.g repeat=3, the element a will be repeated three times --> a, a, a.
-    dtype : type, optional
+    :$infer_range=0 : Bool
+        When set to 1, infer stop position from start, step, repeat, and
+        output tensor size.
+    :$dtype='float32' : type, optional
         The value type of the NDArray, default to np.float32
 
     Returns
@@ -1429,11 +1432,12 @@ method ones(Shape :$shape, Dtype :$dtype='float32', Maybe[Str] :$name=, Maybe[St
         The created Symbol
 =cut
 
-method arange(Index :$start=0, Index :$stop=, Num :$step=1.0, Index :$repeat=1, Maybe[Str] :$name=, Dtype :$dtype='float32')
+method arange(Index :$start=0, Index :$stop=, Num :$step=1.0, Index :$repeat=1, Bool :$infer_range=0, Maybe[Str] :$name=, Dtype :$dtype='float32')
 {
     return __PACKAGE__->_arange({
                  start => $start, (defined $stop ? (stop => $stop) : ()),
-                 step => $step, repeat => $repeat, name => $name, dtype => $dtype
+                 step => $step, repeat => $repeat, name => $name, dtype => $dtype,
+                 infer_range => $infer_range
     });
 }
 

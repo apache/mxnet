@@ -51,11 +51,10 @@ def test_imagenet1k_inception_bn(**kwargs):
     assert r > g and r < g + .1
 
 if __name__ == '__main__':
-    gpus = mx.test_utils.list_gpus()
-    assert len(gpus) > 0
-    batch_size = 16 * len(gpus)
-    gpus = ','.join([str(i) for i in gpus])
-
+    num_gpus = mx.context.num_gpus()
+    assert num_gpus > 0
+    batch_size = 16 * num_gpus
+    gpus = ','.join(map(str, range(num_gpus)))
     kwargs = {'gpus':gpus, 'batch_size':batch_size, 'max_num_examples':500}
     download_data()
     test_imagenet1k_resnet(**kwargs)

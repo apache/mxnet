@@ -17,7 +17,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 30;
+use Test::More tests => 32;
 use AI::MXNet 'mx';
 use AI::MXNet::Gluon 'gluon';
 use AI::MXNet::TestUtils 'almost_equal';
@@ -435,3 +435,47 @@ sub test_triplet_loss
 
 test_triplet_loss();
 
+sub test_cosine_loss
+{
+    my $input1 = mx->nd->random->randn(3, 2);
+    my $input2 = mx->nd->random->randn(3, 2);
+    my $label  = mx->nd->sign(mx->nd->random->randn($input1->shape->[0]));
+
+    my $Loss = gluon->loss->CosineEmbeddingLoss();
+    my $loss = $Loss->($input1, $input2, $label);
+
+    my $numerator = mx->nd->sum($input1 * $input2, keepdims => 1, axis => 1);
+    my $denominator = mx->nd->sqrt(mx->nd->sum($input1**2, axis=>1, keepdims=>1))
+        *
+    mx->nd->sqrt(mx->nd->sum($input2**2, axis=>1, keepdims=>1));
+    my $pdl_loss = mx->nd->where(
+        ($label == 1), 1-$numerator/$denominator,
+        mx->nd->broadcast_maximum(mx->nd->array([0]), $numerator/$denominator, { axis=>1 })
+    );
+    ok(almost_equal($loss->aspdl, $pdl_loss->aspdl));
+}
+
+test_cosine_loss();
+
+sub test_poisson_nllloss
+{
+    my $N = 1000;
+    mx->random->seed(1234);
+    srand(1234);
+    my $data = mx->random->poisson(shape=>[$N, 2]);
+    my $label = mx->random->poisson(lam=>4, shape=>[$N, 1]);
+    my $data_iter = mx->io->NDArrayIter($data, $label, batch_size=>20, label_name=>'label', shuffle=>1);
+    my $output = mx->sym->exp(get_net(1));
+    my $l = mx->symbol->Variable('label');
+    my $Loss = gluon->loss->PoissonNLLLoss(from_logits=>0);
+    my $loss = $Loss->($output, $l);
+    $loss = mx->sym->make_loss($loss);
+    my $mod = mx->mod->Module($loss, data_names=>['data'], label_names=>['label']);
+    local($AI::MXNet::Logging::silent) = 1;
+    $mod->fit($data_iter, num_epoch=>20, optimizer_params=>{learning_rate => 0.01},
+            initializer=>mx->init->Normal(sigma=>0.1), eval_metric=>mx->metric->Loss(),
+            optimizer=>'adam');
+    ok($mod->score($data_iter, mx->metric->Loss())->{loss} < 0.05);
+}
+
+test_poisson_nllloss;

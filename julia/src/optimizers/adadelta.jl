@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-doc"""
+@doc doc"""
     AdaDelta(; kwargs...)
 
 Scale learning rates by the ratio of accumulated gradients to accumulated

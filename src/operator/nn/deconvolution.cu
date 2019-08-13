@@ -37,8 +37,8 @@ template<typename DType>
 static CuDNNDeconvolutionOp<DType> &GetCuDNNDeconvOp(const DeconvolutionParam& param,
                                                      int forward_compute_type,
                                                      int backward_compute_type,
-                                                     const std::vector<TShape>& in_shape,
-                                                     const std::vector<TShape>& out_shape,
+                                                     const mxnet::ShapeVector& in_shape,
+                                                     const mxnet::ShapeVector& out_shape,
                                                      const RunContext& rctx,
                                                      bool add_to_weight) {
 #if DMLC_CXX11_THREAD_LOCAL
@@ -109,8 +109,8 @@ void DeconvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
       op.Init(param);
       op.Forward(ctx, inputs, req, outputs);
     } else {
-      std::vector<TShape> in_shape(inputs.size());
-      std::vector<TShape> out_shape(1, outputs[0].shape_);
+      mxnet::ShapeVector in_shape(inputs.size());
+      mxnet::ShapeVector out_shape(1, outputs[0].shape_);
       for (size_t i = 0; i < in_shape.size(); i++) {
         in_shape[i] = inputs[i].shape_;
       }
@@ -158,8 +158,8 @@ void DeconvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
       op.Init(param);
       op.Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
     } else {
-      std::vector<TShape> in_shape(in_data.size());
-      std::vector<TShape> out_shape(1, out_grad.shape_);
+      mxnet::ShapeVector in_shape(in_data.size());
+      mxnet::ShapeVector out_shape(1, out_grad.shape_);
       for (size_t i = 0; i < in_shape.size(); i++) {
         in_shape[i] = in_data[i].shape_;
       }

@@ -26,7 +26,7 @@ For a gluon imperative version, checkout https://github.com/dmlc/gluon-cv.
 
 ### Out-of-box inference models
 Download any of the following models to the current directory and run `python3 demo.py --dataset $Dataset$ --network $Network$ --params $MODEL_FILE$ --image $YOUR_IMAGE$` to get single image inference.
-For example `python3 demo.py --dataset voc --network vgg16 --params vgg16_voc0712.params --image myimage.jpg`, add `--gpu 0` to use GPU optionally.
+For example `python3 demo.py --dataset voc --network vgg16 --params vgg16_voc0712.params --image myimage.jpg`, add `--gpu 0` to use GPU, not set to use CPU. 
 Different network has different configuration. Different dataset has different object class names. You must pass them explicitly as command line arguments.
 
 | Network | Dataset | Imageset | Reference | Result | Link  |
@@ -43,8 +43,8 @@ Make a directory `data` and follow `py-faster-rcnn` for data preparation instruc
 * [MSCOCO](http://mscoco.org/dataset/) should be in `data/coco` containing `train2017`, `val2017` and `annotations/instances_train2017.json`, `annotations/instances_val2017.json`.
 
 ### Download pretrained ImageNet models
-* [VGG16](http://www.robots.ox.ac.uk/~vgg/research/very_deep/) should be at `model/vgg16-0000.params` from [MXNet model zoo](http://data.dmlc.ml/models/imagenet/vgg/).
-* [ResNet](https://github.com/tornadomeet/ResNet) should be at `model/resnet-101-0000.params` from [MXNet model zoo](http://data.dmlc.ml/models/imagenet/resnet/).
+* [VGG16](http://www.robots.ox.ac.uk/~vgg/research/very_deep/) should be at [/vgg/vgg16-0000.params](http://data.mxnet.io/mxnet/models/imagenet/vgg/vgg16-0000.params) from MXNet model zoo.
+* [ResNet](https://github.com/tornadomeet/ResNet) should be at [/resnet/101-layers/resnet-101-0000.params](http://data.mxnet.io/mxnet/models/imagenet/resnet/101-layers/resnet-101-0000.params) from MXNet model zoo.
 
 ### Training and evaluation
 Use `python3 train.py --dataset $Dataset$ --network $Network$ --pretrained $IMAGENET_MODEL_FILE$ --gpus $GPUS$` to train,

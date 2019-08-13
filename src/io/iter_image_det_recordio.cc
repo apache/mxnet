@@ -151,7 +151,7 @@ struct ImageDetRecParserParam : public dmlc::Parameter<ImageDetRecParserParam> {
   /*! \brief label-width, use -1 for variable width */
   int label_width;
   /*! \brief input shape */
-  TShape data_shape;
+  mxnet::TShape data_shape;
   /*! \brief number of threads */
   int preprocess_threads;
   /*! \brief whether to remain silent */

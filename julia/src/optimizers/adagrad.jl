@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-doc"""
+@doc doc"""
     AdaGrad(; kwargs...)
 
 Scale learning rates by dividing with the square root of accumulated

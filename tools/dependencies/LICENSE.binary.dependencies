@@ -1,0 +1,289 @@
+    
+    Apache MXNET (incubating) Dependencies:
+
+    The Apache MXNET (incubating) project contains dependencies with separate copyright
+    notices and license terms. Your use of these dependencies is subject to the terms and conditions of the following licenses.
+
+    =======================================================================================
+    MIT licenses
+    =======================================================================================
+
+    1. cityhash  - For details, see https://github.com/google/cityhash/blob/master/COPYING
+    	Copyright (c) 2011 Google, Inc.
+    2. protobuf - For details, see https://github.com/protocolbuffers/protobuf/blob/master/LICENSE
+        Copyright 2008 Google Inc.  All rights reserved.
+
+    =======================================================================================
+    Mozilla Public License Version 2.0
+    =======================================================================================
+
+    1. eigen - For details, see https://github.com/eigenteam/eigen-git-mirror/blob/master/COPYING.MPL2
+    Source code available at: https://github.com/eigenteam/eigen-git-mirror
+        Copyright (c) 2006-2019 various contributors
+
+    =======================================================================================
+    2-clause BSD licenses
+    =======================================================================================
+
+    1. lz4 - For details, see https://github.com/lz4/lz4/blob/dev/LICENSE
+        Copyright (c) 2011-2016, Yann Collet
+
+    =======================================================================================
+    3-clause BSD licenses
+    =======================================================================================
+
+    1. openblas - For details, see https://github.com/xianyi/OpenBLAS/blob/develop/LICENSE
+        Copyright (c) 2011-2014, The OpenBLAS Project
+
+    2. opencv - For details, see https://github.com/opencv/opencv/blob/master/LICENSE
+        Copyright (C) 2000-2019, Intel Corporation, all rights reserved.
+        Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
+        Copyright (C) 2009-2016, NVIDIA Corporation, all rights reserved.
+        Copyright (C) 2010-2013, Advanced Micro Devices, Inc., all rights reserved.
+        Copyright (C) 2015-2016, OpenCV Foundation, all rights reserved.
+        Copyright (C) 2015-2016, Itseez Inc., all rights reserved.
+
+    =======================================================================================
+    Apache-2.0 licenses
+    =======================================================================================
+
+    1. openssl - For details, see https://github.com/openssl/openssl/blob/master/LICENSE
+        Copyright (c) 1998-2018 The OpenSSL Project
+        Copyright (c) 1995-1998 Eric A. Young, Tim J. Hudson
+
+    =======================================================================================
+    Other Licenses
+    =======================================================================================
+
+    1. curl
+
+    COPYRIGHT AND PERMISSION NOTICE
+
+    Copyright (c) 1996 - 2019, Daniel Stenberg, <daniel@haxx.se>, and many
+    contributors, see the THANKS file.
+
+    All rights reserved.
+
+    Permission to use, copy, modify, and distribute this software for any purpose
+    with or without fee is hereby granted, provided that the above copyright
+    notice and this permission notice appear in all copies.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF THIRD PARTY RIGHTS. IN
+    NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+    DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+    OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
+    OR OTHER DEALINGS IN THE SOFTWARE.
+
+    Except as contained in this notice, the name of a copyright holder shall not
+    be used in advertising or otherwise to promote the sale, use or other dealings
+    in this Software without prior written authorization of the copyright holder.
+
+    =======================================================================================
+
+    2. libpng
+
+    COPYRIGHT NOTICE, DISCLAIMER, and LICENSE
+    =========================================
+
+    PNG Reference Library License version 2
+    ---------------------------------------
+
+     * Copyright (c) 1995-2019 The PNG Reference Library Authors.
+     * Copyright (c) 2018-2019 Cosmin Truta.
+     * Copyright (c) 2000-2002, 2004, 2006-2018 Glenn Randers-Pehrson.
+     * Copyright (c) 1996-1997 Andreas Dilger.
+     * Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc.
+
+    The software is supplied "as is", without warranty of any kind,
+    express or implied, including, without limitation, the warranties
+    of merchantability, fitness for a particular purpose, title, and
+    non-infringement.  In no event shall the Copyright owners, or
+    anyone distributing the software, be liable for any damages or
+    other liability, whether in contract, tort or otherwise, arising
+    from, out of, or in connection with the software, or the use or
+    other dealings in the software, even if advised of the possibility
+    of such damage.
+
+    Permission is hereby granted to use, copy, modify, and distribute
+    this software, or portions hereof, for any purpose, without fee,
+    subject to the following restrictions:
+
+     1. The origin of this software must not be misrepresented; you
+        must not claim that you wrote the original software.  If you
+        use this software in a product, an acknowledgment in the product
+        documentation would be appreciated, but is not required.
+
+     2. Altered source versions must be plainly marked as such, and must
+        not be misrepresented as being the original software.
+
+     3. This Copyright notice may not be removed or altered from any
+        source or altered source distribution.
+
+
+    PNG Reference Library License version 1 (for libpng 0.5 through 1.6.35)
+    -----------------------------------------------------------------------
+
+    libpng versions 1.0.7, July 1, 2000, through 1.6.35, July 15, 2018 are
+    Copyright (c) 2000-2002, 2004, 2006-2018 Glenn Randers-Pehrson, are
+    derived from libpng-1.0.6, and are distributed according to the same
+    disclaimer and license as libpng-1.0.6 with the following individuals
+    added to the list of Contributing Authors:
+
+        Simon-Pierre Cadieux
+        Eric S. Raymond
+        Mans Rullgard
+        Cosmin Truta
+        Gilles Vollant
+        James Yu
+        Mandar Sahastrabuddhe
+        Google Inc.
+        Vadim Barkov
+
+    and with the following additions to the disclaimer:
+
+        There is no warranty against interference with your enjoyment of
+        the library or against infringement.  There is no warranty that our
+        efforts or the library will fulfill any of your particular purposes
+        or needs.  This library is provided with all faults, and the entire
+        risk of satisfactory quality, performance, accuracy, and effort is
+        with the user.
+
+    Some files in the "contrib" directory and some configure-generated
+    files that are distributed with libpng have other copyright owners, and
+    are released under other open source licenses.
+
+    libpng versions 0.97, January 1998, through 1.0.6, March 20, 2000, are
+    Copyright (c) 1998-2000 Glenn Randers-Pehrson, are derived from
+    libpng-0.96, and are distributed according to the same disclaimer and
+    license as libpng-0.96, with the following individuals added to the
+    list of Contributing Authors:
+
+        Tom Lane
+        Glenn Randers-Pehrson
+        Willem van Schaik
+
+    libpng versions 0.89, June 1996, through 0.96, May 1997, are
+    Copyright (c) 1996-1997 Andreas Dilger, are derived from libpng-0.88,
+    and are distributed according to the same disclaimer and license as
+    libpng-0.88, with the following individuals added to the list of
+    Contributing Authors:
+
+        John Bowler
+        Kevin Bracey
+        Sam Bushell
+        Magnus Holmgren
+        Greg Roelofs
+        Tom Tanner
+
+    Some files in the "scripts" directory have other copyright owners,
+    but are released under this license.
+
+    libpng versions 0.5, May 1995, through 0.88, January 1996, are
+    Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc.
+
+    For the purposes of this copyright and license, "Contributing Authors"
+    is defined as the following set of individuals:
+
+        Andreas Dilger
+        Dave Martindale
+        Guy Eric Schalnat
+        Paul Schmidt
+        Tim Wegner
+
+    The PNG Reference Library is supplied "AS IS".  The Contributing
+    Authors and Group 42, Inc. disclaim all warranties, expressed or
+    implied, including, without limitation, the warranties of
+    merchantability and of fitness for any purpose.  The Contributing
+    Authors and Group 42, Inc. assume no liability for direct, indirect,
+    incidental, special, exemplary, or consequential damages, which may
+    result from the use of the PNG Reference Library, even if advised of
+    the possibility of such damage.
+
+    Permission is hereby granted to use, copy, modify, and distribute this
+    source code, or portions hereof, for any purpose, without fee, subject
+    to the following restrictions:
+
+     1. The origin of this source code must not be misrepresented.
+
+     2. Altered versions must be plainly marked as such and must not
+        be misrepresented as being the original source.
+
+     3. This Copyright notice may not be removed or altered from any
+        source or altered source distribution.
+
+    The Contributing Authors and Group 42, Inc. specifically permit,
+    without fee, and encourage the use of this source code as a component
+    to supporting the PNG file format in commercial products.  If you use
+    this source code in a product, acknowledgment is not required but would
+    be appreciated.
+
+    =======================================================================================
+
+    3. libtiff
+
+    Copyright (c) 1988-1997 Sam Leffler
+    Copyright (c) 1991-1997 Silicon Graphics, Inc.
+
+    Permission to use, copy, modify, distribute, and sell this software and
+    its documentation for any purpose is hereby granted without fee, provided
+    that (i) the above copyright notices and this permission notice appear in
+    all copies of the software and related documentation, and (ii) the names of
+    Sam Leffler and Silicon Graphics may not be used in any advertising or
+    publicity relating to the software without the specific, prior written
+    permission of Sam Leffler and Silicon Graphics.
+
+    THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY
+    WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
+
+    IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+    ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+    OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+    WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF
+    LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
+    OF THIS SOFTWARE.
+
+    =======================================================================================
+
+    4. libturbojpeg
+
+    The Modified (3-clause) BSD License
+    Copyright (C)2009-2019 D. R. Commander. All Rights Reserved. Copyright (C)2015 Viktor Szathmáry. All Rights Reserved.
+
+    Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+    Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+    Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+    Neither the name of the libjpeg-turbo Project nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS", AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+    =======================================================================================
+
+    5. libz
+
+    Copyright (C) 1995-2017 Jean-loup Gailly and Mark Adler
+
+    This software is provided 'as-is', without any express or implied
+    warranty.  In no event will the authors be held liable for any damages
+    arising from the use of this software.
+
+    Permission is granted to anyone to use this software for any purpose,
+    including commercial applications, and to alter it and redistribute it
+    freely, subject to the following restrictions:
+
+    1. The origin of this software must not be misrepresented; you must not
+     claim that you wrote the original software. If you use this software
+     in a product, an acknowledgment in the product documentation would be
+     appreciated but is not required.
+    2. Altered source versions must be plainly marked as such, and must not be
+     misrepresented as being the original software.
+    3. This notice may not be removed or altered from any source distribution.
+
+    Jean-loup Gailly        Mark Adler
+    jloup@gzip.org          madler@alumni.caltech.edu
+
+    =======================================================================================
+
+

@@ -247,14 +247,14 @@ class WarpCTCProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 2) << "Input:[data, label]";
-    const TShape &dshape = in_shape->at(0);
+    const mxnet::TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
-    TShape label_shape(dshape.ndim() - 1);
+    mxnet::TShape label_shape(dshape.ndim() - 1);
     label_shape[0] = param_.label_length * (dshape[0] / param_.input_length);
     SHAPE_ASSIGN_CHECK(*in_shape, warpctc_enum::kLabel, label_shape);
 
@@ -276,7 +276,7 @@ class WarpCTCProp : public OperatorProperty {
   }
 
   std::vector<ResourceRequest> BackwardResource(
-      const std::vector<TShape> &in_shape) const override {
+      const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 

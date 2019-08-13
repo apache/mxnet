@@ -105,7 +105,7 @@ class BNOperatorExecutor : public test::op::CoreOpExecutor<DType, AccReal> {
  public:
   using Super::ctx;
 
-  BNOperatorExecutor(const bool isGPU, const TShape& inputShape,
+  BNOperatorExecutor(const bool isGPU, const mxnet::TShape& inputShape,
                      const test::op::kwargs_t& kwargs,
                      const bool hasWeightAndBias = false)
     : test::op::CoreOpExecutor<DType, AccReal>(isGPU, { inputShape })
@@ -664,7 +664,7 @@ static StreamType& dumpB(StreamType *os,
 template<typename OperatorProp, typename OperatorExecutor>
 static test::op::OpInfo<OperatorProp, OperatorExecutor> TestBatchNormOperatorForward(
   bool isGPU,
-  const TShape& inputShape,
+  const mxnet::TShape& inputShape,
   const std::vector<std::pair<std::string, std::string> >& kwargs,
   const size_t count = 1) {
 #if MXNET_USE_CUDA
@@ -712,7 +712,7 @@ template<typename OperatorProp1, typename OperatorProp2, typename OperatorExecut
 static test::op::OpInfoPair<OperatorProp1, OperatorProp2, OperatorExecutor> testForwardAndBackward(
   const bool isGPU1,
   const bool isGPU2,
-  const TShape &inputShape,
+  const mxnet::TShape &inputShape,
   const test::op::kwargs_t& kwargs,
   const size_t count = 1,
   const size_t cycleCount = CYCLE_COUNT) {
@@ -781,7 +781,7 @@ static test::op::OpInfoPair<OperatorProp1, OperatorProp2, OperatorExecutor> test
 template<typename OperatorProp1, typename OperatorProp2, typename OperatorExecutor>
 static test::op::OpInfoPair<OperatorProp1, OperatorProp2, OperatorExecutor>
 testForwardAndBackward(const bool isGPU,
-                       const TShape &inputShape,
+                       const mxnet::TShape &inputShape,
                        const test::op::kwargs_t kwargs,
                        const size_t count = 1,
                        const size_t cycleCount = CYCLE_COUNT
@@ -821,7 +821,7 @@ struct BatchNormCoreOpProp : public mxnet::test::op::CoreOpProp {
 template<typename OperatorExecutor>
 static test::op::OpInfoPair<BatchNormCoreOpProp, BatchNormCoreOpProp, OperatorExecutor>
 testBNForwardAndBackward2D(const bool isGPU,
-                           const TShape &inputShape,
+                           const mxnet::TShape &inputShape,
                            const test::op::kwargs_t& kwargs) {
   CHECK_EQ(inputShape.ndim(), 4);  // V1 can only handle 2D
   return testForwardAndBackward<BatchNormCoreOpProp, BatchNormCoreOpProp, OperatorExecutor>(
@@ -831,7 +831,7 @@ testBNForwardAndBackward2D(const bool isGPU,
 template<typename OperatorExecutor>
 static test::op::OpInfoPair<BatchNormCoreOpProp, BatchNormCoreOpProp, OperatorExecutor>
 testBNForwardAndBackward(const bool isGPU,
-                         const TShape &inputShape,
+                         const mxnet::TShape &inputShape,
                          const test::op::kwargs_t& kwargs) {
   return testForwardAndBackward<BatchNormCoreOpProp, BatchNormCoreOpProp, OperatorExecutor>(
     isGPU, isGPU, inputShape, kwargs);
@@ -980,7 +980,9 @@ static void timingTest(const std::string& label,
 #endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
 
 /*! \brief Stress-test random batch size/channels/dimension(s) */
-TEST(BATCH_NORM, TestStochasticTiming_2D) {
+TEST(BATCH_NORM, DISABLED_TestStochasticTiming_2D) {
+  // Test is disabled due to suspected flakiness
+  // https://github.com/apache/incubator-mxnet/issues/14411
   MSHADOW_REAL_TYPE_SWITCH_EX(
     mshadow::kFloat32, DType, AccReal,
     {
@@ -1066,10 +1068,10 @@ inline std::ostream& operator << (std::ostream& os, const test::op::kwargs_t& kw
 
 #if 0
 TEST(BATCH_NORM, TestIterAll) {
-  TShape shapes[] = {
-    TShape({BATCH_SIZE, CHANNELS, DH}),
-    TShape({BATCH_SIZE, CHANNELS, DH, DW}),
-    TShape({BATCH_SIZE, CHANNELS, DEPTH, DH, DW})
+  mxnet::TShape shapes[] = {
+    mxnet::TShape({BATCH_SIZE, CHANNELS, DH}),
+    mxnet::TShape({BATCH_SIZE, CHANNELS, DH, DW}),
+    mxnet::TShape({BATCH_SIZE, CHANNELS, DEPTH, DH, DW})
   };
   int pass = 0;
   const char *tof[2] = { "False", "True" };
@@ -1082,7 +1084,7 @@ TEST(BATCH_NORM, TestIterAll) {
         if (x3) {
           kwargs.push_back({ "cudnn_off", "True" });
         }
-        for (TShape shape : shapes) {
+        for (mxnet::TShape shape : shapes) {
           for (bool g1 : { false, true }) {
             for (bool g2 : { false, true }) {
               for (int type : v2_types) {
@@ -1122,7 +1124,7 @@ TEST(BATCH_NORM, TestBackward3D) {
   MSHADOW_REAL_TYPE_SWITCH_EX(
     mshadow::kFloat32, DType, AccReal,
     {
-      const TShape inputShape({2, 3, 2, 3, 5});
+      const mxnet::TShape inputShape({2, 3, 2, 3, 5});
       test::op::OpInfo<BatchNormCoreOpProp, BNOperatorExecutor<DType, AccReal>> info =
         TestBatchNormOperatorForward<BatchNormCoreOpProp, BNOperatorExecutor<DType, AccReal>>(
           false, inputShape, blank_kwargs);
@@ -1140,7 +1142,7 @@ class ChannelAxisTestData {
   void loadOrSave(const RunContext& run_ctx, const TBlob& blob, int channel_axis, const Mode mode) {
     test::CAccessAsCPU cpu_blob(run_ctx, blob, true);
     mxnet::op::batchnorm::BNTensor3<DType> tensor3(cpu_blob(), channel_axis);
-    const TShape &shape = blob.shape_;
+    const mxnet::TShape &shape = blob.shape_;
     CHECK_GT(shape.ndim(), 0);
     if (channel_axis < 0) {
       channel_axis = shape.ndim() + channel_axis;
@@ -1264,7 +1266,7 @@ static void testSaveAndLoad(const std::vector<size_t>& dims,
   ChannelAxisTestData<DType> data;
   data.channel_data_ = inputChannelData;
 
-  TShape shape(dims.size());
+  mxnet::TShape shape(dims.size(), -1);
   for (size_t i = 0, n = dims.size(); i < n; ++i) {
     shape[i] = index_t(dims[i]);
   }
@@ -1312,7 +1314,7 @@ TEST(BATCH_NORM, TestChannelAxisSaveAndLoad) {
 }
 
 /*! \brief Insert the channel field `channelCount` into the shape at `channelAxis` position */
-static TShape MakeShape(const std::vector<index_t>& shape,
+static mxnet::TShape MakeShape(const std::vector<index_t>& shape,
                         signed int channelAxis,
                         const size_t channelCount) {
   if (channelAxis < 0) {
@@ -1320,7 +1322,7 @@ static TShape MakeShape(const std::vector<index_t>& shape,
   }
   CHECK_LT(channelAxis, shape.size() + 1);
   const index_t dim = index_t(shape.size()) + 1;
-  TShape newShape(dim);
+  mxnet::TShape newShape(dim, -1);
   for (size_t x = 0; x < static_cast<size_t>(channelAxis); ++x) {
     newShape[x] = index_t(shape[x]);
   }
@@ -1386,8 +1388,8 @@ static void runChannelAxisTest(
   test::op::kwargs_t kwargs = base_kwargs;
 
   // Insert the channel field into the shape at channelAxis position
-  const TShape shape_c1 = MakeShape(shape, channelAxis1, channelCount);
-  const TShape shape_c2 = MakeShape(shape, channelAxis2, channelCount);
+  const mxnet::TShape shape_c1 = MakeShape(shape, channelAxis1, channelCount);
+  const mxnet::TShape shape_c2 = MakeShape(shape, channelAxis2, channelCount);
 
   // Create operator 1 with ChannelAxis2 (normally the experimental one)
   kwargs.push_back({"axis", std::to_string(channelAxis1)});
@@ -1575,7 +1577,7 @@ TEST(BATCH_NORM, Test2DBackwardMixed_gpu_cpu) {
     MSHADOW_REAL_TYPE_SWITCH_EX(
       type, DType, AccReal,
       {
-        const TShape inputShape({1, 1, 2, 1});
+        const mxnet::TShape inputShape({1, 1, 2, 1});
         testForwardAndBackward<BatchNormCoreOpProp, BatchNormCoreOpProp,
           BNOperatorExecutor<DType, AccReal>>(
           false, true, inputShape, blank_kwargs);
@@ -1591,7 +1593,7 @@ TEST(BATCH_NORM, Test2DBackwardMixedComplex_gpu_cpu) {
     MSHADOW_REAL_TYPE_SWITCH_EX(
       type, DType, AccReal,
       {
-        const TShape inputShape({BATCH_SIZE, CHANNELS, DH, DW});
+        const mxnet::TShape inputShape({BATCH_SIZE, CHANNELS, DH, DW});
         testForwardAndBackward<BatchNormCoreOpProp, BatchNormCoreOpProp,
           BNOperatorExecutor<DType, AccReal>>(
           false, true, inputShape, blank_kwargs);
@@ -1609,7 +1611,7 @@ TEST(BATCH_NORM, Test2DBackwardMixed_gpu_cpu_nfg) {
     MSHADOW_REAL_TYPE_SWITCH_EX(
       type, DType, AccReal,
       {
-        const TShape inputShape({1, 1, 2, 1});
+        const mxnet::TShape inputShape({1, 1, 2, 1});
         testForwardAndBackward<BatchNormCoreOpProp, BatchNormCoreOpProp,
           BNOperatorExecutor<DType, AccReal>>(
           false, true, inputShape, nonfixgamma_kwargs);
@@ -1625,7 +1627,7 @@ TEST(BATCH_NORM, Test2DBackwardMixedComplex_gpu_cpu_nfg) {
     MSHADOW_REAL_TYPE_SWITCH_EX(
       type, DType, AccReal,
       {
-        const TShape inputShape({BATCH_SIZE, CHANNELS, DH, DW});
+        const mxnet::TShape inputShape({BATCH_SIZE, CHANNELS, DH, DW});
         testForwardAndBackward<BatchNormCoreOpProp, BatchNormCoreOpProp,
           BNOperatorExecutor<DType, AccReal>>(
           false, true, inputShape, nonfixgamma_kwargs);
@@ -1643,7 +1645,7 @@ TEST(BATCH_NORM, Test2DBackwardMixed_gpu_cpu_ugs) {
     MSHADOW_REAL_TYPE_SWITCH_EX(
       type, DType, AccReal,
       {
-        const TShape inputShape({2, 3, 2, 2});
+        const mxnet::TShape inputShape({2, 3, 2, 2});
         testForwardAndBackward<BatchNormCoreOpProp, BatchNormCoreOpProp,
           BNOperatorExecutor<DType, AccReal>>(
           false, true, inputShape, useglobalstats_kwargs_nocudnn);
@@ -1659,7 +1661,7 @@ TEST(BATCH_NORM, Test2DBackwardMixedComplex_gpu_cpu_ugs) {
     MSHADOW_REAL_TYPE_SWITCH_EX(
       type, DType, AccReal,
       {
-        const TShape inputShape({BATCH_SIZE, CHANNELS, DH, DW});
+        const mxnet::TShape inputShape({BATCH_SIZE, CHANNELS, DH, DW});
         testForwardAndBackward<BatchNormCoreOpProp, BatchNormCoreOpProp,
           BNOperatorExecutor<DType, AccReal>>(
           false, true, inputShape, useglobalstats_kwargs);

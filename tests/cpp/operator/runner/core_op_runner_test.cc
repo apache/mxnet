@@ -58,7 +58,7 @@ inline std::vector<TT> AsVect(const TT& t) {
  * \brief Generic bidirectional sanity test for simple unary op
  */
 TEST(CORE_OP_RUNNER, ExecuteBidirectionalSimpleUnaryList) {
-  TShape shape({5, 5});
+  mxnet::TShape shape({5, 5});
   kwargs_t kwargs = basic_args;
 
   for (const std::pair<std::string, std::string>& i : test_unary_operators) {
@@ -90,7 +90,7 @@ TEST(CORE_OP_RUNNER, ExecuteBidirectionalList) {
     const char *op_name = i.first.c_str();
     const char *backward_op_name = i.second.c_str();
 
-    TShape shape({5, 5});
+    mxnet::TShape shape({5, 5});
     kwargs_t kwargs = basic_args;
 
     test::op::CoreOpExecutor<float> op(false, AsVect(shape));
@@ -119,7 +119,7 @@ TEST(CORE_OP_RUNNER, ExecuteBidirectionalDotProduct) {
 
   kwargs_t kwargs = basic_args;
 
-  test::op::CoreOpExecutor<float> op(false, { TShape({ 2, 3 }), TShape({ 3, 2 }) });
+  test::op::CoreOpExecutor<float> op(false, { mxnet::TShape({ 2, 3 }), mxnet::TShape({ 3, 2 }) });
 
   op.set_verbose(false);
   op.Init(op.ArgsWithOpName(kwargs, op_name, backward_op_name));
@@ -137,7 +137,7 @@ TEST(CORE_OP_RUNNER, ExecuteBidirectionalDotProduct) {
 
 TEST(CORE_OP_RUNNER, ExecuteBidirectionalRunnerSimpleUnary) {
   typedef float DType;
-  TShape shape({5, 5});
+  mxnet::TShape shape({5, 5});
   for (const std::pair<std::string, std::string>& i : test_unary_operators) {
     const char *op_name = i.first.c_str();
     const char *backward_op_name = i.second.c_str();
@@ -149,7 +149,7 @@ TEST(CORE_OP_RUNNER, ExecuteBidirectionalRunnerSimpleUnary) {
 
 TEST(CORE_OP_RUNNER, ExecuteBidirectionalRunner) {
   typedef float DType;
-  TShape shape({5, 5});
+  mxnet::TShape shape({5, 5});
   for (const std::pair<std::string, std::string>& i : test_binary_operators) {
     const char *op_name = i.first.c_str();
     const char *backward_op_name = i.second.c_str();
@@ -168,7 +168,7 @@ TEST(CORE_OP_RUNNER, ExecuteBidirectionalRunnerDotProduct) {
   const char *backward_op_name = "_backward_dot";
   test::op::CoreOperatorRunner<DType> runner;
   runner.RunBidirectional(false,
-                          { TShape({ 2, 3 }), TShape({ 3, 2 }) },
+                          { mxnet::TShape({ 2, 3 }), mxnet::TShape({ 3, 2 }) },
                           test::op::CoreOpExecutor<DType>::ArgsWithOpName(basic_args,
                                                                           op_name,
                                                                           backward_op_name),
@@ -186,9 +186,9 @@ TEST(CORE_OP_RUNNER, TimingCPUSimpleUnary) {
   const kwargs_t kwargs = test::op::CoreOpExecutor<DType>::ArgsWithOpName(basic_args, op_name);
 
   test::op::CoreOperatorRunner<DType> runner;
-  runner.RunBidirectional(false, { TShape({10, 10, 10, 10}) }, kwargs, 1);  // prime code and cache
+  runner.RunBidirectional(false, { mxnet::TShape({10, 10, 10, 10}) }, kwargs, 1);
 
-  std::vector <TShape> shapes;
+  std::vector <mxnet::TShape> shapes;
   if (test::performance_run) {
     shapes = {
       {1,  1, 28,  28},
@@ -203,7 +203,7 @@ TEST(CORE_OP_RUNNER, TimingCPUSimpleUnary) {
       {50, 3, 18,  32},
     };
   }
-  for (const TShape &shape : shapes) {
+  for (const mxnet::TShape &shape : shapes) {
     runner.TimingTest(std::string(op_name) +  "Operator CPU",
                       false, false, kwargs, 2, 10, { shape });
   }
@@ -219,9 +219,9 @@ TEST(CORE_OP_RUNNER, TimingCPUBinary) {
     basic_args, op_name, backward_op_name);
 
   test::op::CoreOperatorRunner<DType> runner;
-  runner.RunBidirectional(false, { TShape({10, 10, 10, 10}) }, kwargs, 1);  // prime code and cache
+  runner.RunBidirectional(false, { mxnet::TShape({10, 10, 10, 10}) }, kwargs, 1);
 
-  std::vector <TShape> shapes;
+  std::vector <mxnet::TShape> shapes;
   if (test::performance_run) {
     shapes = {
       {1,  1, 28,  28},
@@ -236,7 +236,7 @@ TEST(CORE_OP_RUNNER, TimingCPUBinary) {
       {50, 3, 18,  32},
     };
   }
-  for (const TShape &shape : shapes) {
+  for (const mxnet::TShape &shape : shapes) {
     runner.TimingTest(std::string(op_name) + "Operator CPU", false,
                       false, kwargs, 2, 10, { shape });
   }
@@ -257,16 +257,16 @@ TEST(CORE_OP_RUNNER, TimingCPUBinaryDotProduct) {
   test::op::CoreOperatorRunner<DType> runner;
   runner.RunBidirectional(false, { {2, 3}, {3, 2} }, kwargs, 1);  // prime code and cache
 
-  std::vector <TShape> shapes;
+  std::vector <mxnet::TShape> shapes;
   if (test::performance_run) {
     shapes = { {28,  28}, {18,  32}, {128, 24}, {128, 256} };
   } else {
     shapes = { {28,  28}, {128, 24} };
   }
-  std::vector<TShape> input_shapes(2);
-  for (const TShape &shape : shapes) {
+  mxnet::ShapeVector input_shapes(2);
+  for (const mxnet::TShape &shape : shapes) {
     input_shapes[0] = shape;
-    input_shapes[1] = TShape({shape[1], shape[0]});
+    input_shapes[1] = mxnet::TShape({shape[1], shape[0]});
     runner.TimingTest(std::string(op_name) + " Operator CPU", false,
                       false, kwargs, 2, 10, input_shapes);
   }
@@ -281,11 +281,11 @@ TEST(CORE_OP_RUNNER, TimingGPUSimpleUnary) {
 
   test::op::CoreOperatorRunner<DType> runner;
   runner.RunBidirectional(false,
-                          { TShape({10, 10, 10, 10}) },
+                          { mxnet::TShape({10, 10, 10, 10}) },
                           kwargs,
                           1);  // prime code and cache
 
-  std::vector <TShape> shapes;
+  std::vector <mxnet::TShape> shapes;
   if (test::performance_run) {
     shapes = {
       {1,  1, 28,  28},
@@ -300,7 +300,7 @@ TEST(CORE_OP_RUNNER, TimingGPUSimpleUnary) {
       {50, 3, 18,  32},
     };
   }
-  for (const TShape &shape : shapes) {
+  for (const mxnet::TShape &shape : shapes) {
     runner.TimingTest(std::string(op_name) + "Operator GPU", true, false, kwargs, 2, 10, { shape });
   }}
 
@@ -315,11 +315,11 @@ TEST(CORE_OP_RUNNER, TimingGPUBinary) {
 
   test::op::CoreOperatorRunner<DType> runner;
   runner.RunBidirectional(true,
-                          { TShape({10, 10, 10, 10}) },
+                          { mxnet::TShape({10, 10, 10, 10}) },
                           kwargs,
                           1);  // prime code and cache
 
-  std::vector <TShape> shapes;
+  std::vector <mxnet::TShape> shapes;
   if (test::performance_run) {
     shapes = {
       {1,  1, 28,  28},
@@ -334,7 +334,7 @@ TEST(CORE_OP_RUNNER, TimingGPUBinary) {
       {50, 3, 18,  32},
     };
   }
-  for (const TShape &shape : shapes) {
+  for (const mxnet::TShape &shape : shapes) {
     runner.TimingTest(std::string(op_name) + "Operator GPU", true, false, kwargs, 2, 10, { shape });
   }
 }

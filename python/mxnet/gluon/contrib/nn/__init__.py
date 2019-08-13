@@ -17,7 +17,7 @@
 
 # coding: utf-8
 # pylint: disable=wildcard-import
-"""Contrib recurrent neural network module."""
+"""Contributed neural network modules."""
 
 from . import basic_layers
 

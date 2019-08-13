@@ -276,6 +276,18 @@ int MXAutogradSetIsRecording(int is_recording, int* prev) {
   API_END();
 }
 
+int MXIsNumpyShape(bool* curr) {
+  API_BEGIN();
+  *curr = Imperative::Get()->is_np_shape();
+  API_END();
+}
+
+int MXSetIsNumpyShape(int is_np_shape, int* prev) {
+  API_BEGIN();
+  *prev = Imperative::Get()->set_is_np_shape(static_cast<bool>(is_np_shape));
+  API_END();
+}
+
 int MXAutogradMarkVariables(mx_uint num_var,
                             NDArrayHandle *var_handles,
                             mx_uint *reqs_array,

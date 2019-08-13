@@ -19,7 +19,7 @@ package org.apache.mxnet.infer
 
 import org.apache.mxnet.io.NDArrayIter
 import org.apache.mxnet.module.{BaseModule, Module}
-import org.apache.mxnet.{DataDesc, Layout, NDArray, Shape}
+import org.apache.mxnet._
 import org.mockito.Matchers._
 import org.mockito.Mockito
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
@@ -82,6 +82,36 @@ class PredictorSuite extends FunSuite with BeforeAndAfterAll {
     assert(testFun.size == 1, "output size should be 1 ")
 
     assert(Array.fill[Float](12)(1).mkString == testFun(0).mkString)
+
+    // Verify that the module was bound with batch size 1 and rebound back to the original
+    // input descriptor. the number of times is twice here because loadModule overrides the
+    // initial bind.
+    Mockito.verify(testPredictor.mockModule, Mockito.times(2)).bind(any[IndexedSeq[DataDesc]],
+      any[Option[IndexedSeq[DataDesc]]], any[Boolean], any[Boolean], any[Boolean]
+      , any[Option[BaseModule]], any[String])
+  }
+
+  test("PredictorSuite-testWithFlatFloat64Arrays") {
+
+    val inputDescriptor = IndexedSeq[DataDesc](new DataDesc("data", Shape(2, 3, 2, 2),
+      layout = Layout.NCHW, dtype = DType.Float64))
+    val inputData = Array.fill[Double](12)(1d)
+
+    // this will disposed at the end of the predict call on Predictor.
+    val predictResult = IndexedSeq(NDArray.ones(Shape(1, 3, 2, 2), dtype = DType.Float64))
+
+    val testPredictor = new MyPredictor("xyz", inputDescriptor)
+
+    Mockito.doReturn(predictResult).when(testPredictor.mockModule)
+      .predict(any(classOf[NDArrayIter]), any[Int], any[Boolean])
+
+    val testFun = testPredictor.predict(IndexedSeq(inputData))
+
+    assert(testFun.size == 1, "output size should be 1 ")
+
+    assert(testFun(0)(0).getClass == 1d.getClass)
+
+    assert(Array.fill[Double](12)(1d).mkString == testFun(0).mkString)
 
     // Verify that the module was bound with batch size 1 and rebound back to the original
     // input descriptor. the number of times is twice here because loadModule overrides the

@@ -64,10 +64,10 @@ def init_git_win() {
 
 // pack libraries for later use
 def pack_lib(name, libs, include_gcov_data = false) {
-  sh """
+  sh returnStatus: true, script: """
 set +e
 echo "Packing ${libs} into ${name}"
-echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
+for i in \$(echo ${libs} | sed -e 's/,/ /g'); do md5sum \$i; done
 return 0
 """
   stash includes: libs, name: name
@@ -83,10 +83,10 @@ return 0
 def unpack_and_init(name, libs, include_gcov_data = false) {
   init_git()
   unstash name
-  sh """
+  sh returnStatus: true, script: """
 set +e
 echo "Unpacked ${libs} from ${name}"
-echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
+for i in \$(echo ${libs} | sed -e 's/,/ /g'); do md5sum \$i; done
 return 0
 """
   if (include_gcov_data) {
@@ -147,8 +147,9 @@ def collect_test_results_windows(original_file_name, new_file_name) {
 }
 
 
-def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
-  def command = "ci/build.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --docker-build-retries 3 --shm-size %SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
+def docker_run(platform, function_name, use_nvidia, shared_mem = '500m', env_vars = "") {
+  def command = "ci/build.py %ENV_VARS% --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --docker-build-retries 3 --shm-size %SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
+  command = command.replaceAll('%ENV_VARS%', env_vars.length() > 0 ? "-e ${env_vars}" : '')
   command = command.replaceAll('%USE_NVIDIA%', use_nvidia ? '--nvidiadocker' : '')
   command = command.replaceAll('%PLATFORM%', platform)
   command = command.replaceAll('%FUNCTION_NAME%', function_name)
@@ -173,22 +174,42 @@ def update_github_commit_status(state, message) {
     //properly and you would see an empty list of repos:
     //[Set GitHub commit status (universal)] PENDING on repos [] (sha:xxxxxxx) with context:test/mycontext
     //See https://cwiki.apache.org/confluence/display/MXNET/Troubleshooting#Troubleshooting-GitHubcommit/PRstatusdoesnotgetpublished
-    repoUrl = get_repo_url()
-    commitSha = get_git_commit_hash()
-    context = get_github_context()
 
-    step([
-      $class: 'GitHubCommitStatusSetter',
-      reposSource: [$class: "ManuallyEnteredRepositorySource", url: repoUrl],
-      contextSource: [$class: "ManuallyEnteredCommitContextSource", context: context],
-      commitShaSource: [$class: "ManuallyEnteredShaSource", sha: commitSha],
-      statusBackrefSource: [$class: "ManuallyEnteredBackrefSource", backref: "${env.RUN_DISPLAY_URL}"],
-      errorHandlers: [[$class: 'ShallowAnyErrorHandler']],
-      statusResultSource: [
-        $class: 'ConditionalStatusResultSource',
-        results: [[$class: "AnyBuildResult", message: message, state: state]]
-      ]
-    ])
+    echo "Publishing commit status..."
+
+    repoUrl = get_repo_url()
+    echo "repoUrl=${repoUrl}"
+
+    commitSha = get_git_commit_hash()
+    echo "commitSha=${commitSha}"
+    
+    context = get_github_context()
+    echo "context=${context}"
+
+    // a few attempts need to be made: https://github.com/apache/incubator-mxnet/issues/11654
+    for (int attempt = 1; attempt <= 3; attempt++) {
+      echo "Sending GitHub status attempt ${attempt}..."
+
+      step([
+        $class: 'GitHubCommitStatusSetter',
+        reposSource: [$class: "ManuallyEnteredRepositorySource", url: repoUrl],
+        contextSource: [$class: "ManuallyEnteredCommitContextSource", context: context],
+        commitShaSource: [$class: "ManuallyEnteredShaSource", sha: commitSha],
+        statusBackrefSource: [$class: "ManuallyEnteredBackrefSource", backref: "${env.RUN_DISPLAY_URL}"],
+        errorHandlers: [[$class: 'ShallowAnyErrorHandler']],
+        statusResultSource: [
+          $class: 'ConditionalStatusResultSource',
+          results: [[$class: "AnyBuildResult", message: message, state: state]]
+        ]
+      ])
+
+      if (attempt <= 2) {
+        sleep 1
+      }
+    }
+
+    echo "Publishing commit status done."
+
   }
 }
 
@@ -263,7 +284,10 @@ def main_wrapper(args) {
     node(NODE_UTILITY) {
       // Call failure handler
       args['failure_handler']()
-      
+
+      // Clean workspace to reduce space requirements
+      cleanWs()
+
       // Remember to rethrow so the build is marked as failing
       if (err) {
         throw err

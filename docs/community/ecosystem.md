@@ -41,7 +41,7 @@ Community contributions to MXNet have added many new valuable features and funct
 
 * [Gluon 60 Minute Crash Course](https://gluon-crash-course.mxnet.io/) - deep learning practitioners can learn Gluon quickly with these six 10-minute tutorials.
     - [YouTube Series](https://www.youtube.com/playlist?list=PLkEvNnRk8uVmVKRDgznk3o3LxmjFRaW7s)
-* [The Straight Dope](https://gluon.mxnet.io/) - a series of notebooks designed to teach deep learning using the Gluon Python API for MXNet.
+* [Dive into Deep Learning](https://www.d2l.ai/) - a series of notebooks designed to teach deep learning using the Gluon Python API for MXNet.
 
 
 ## MXNet APIs
@@ -79,10 +79,10 @@ Community contributions to MXNet have added many new valuable features and funct
 
 ## Model Zoos
 
-* [Gluon Model Zoo](https://github.com/awslabs/mxnet-model-server) - models trained in Gluon and available through Gluon's model zoo API.
+* [Gluon Model Zoo](https://mxnet.incubator.apache.org/api/python/gluon/model_zoo.html) - models trained in Gluon and available through Gluon's model zoo API.
 * [ONNX Model Zoo](https://github.com/onnx/models) - ONNX models from a variety of ONNX-supported frameworks.
 
 
 ## Contributions
 
-Do you know of a project or resource in the MXNet ecosystem that should be listed here? Or would you like to get involved by providing your own contribution? Check out the [guide for contributing to MXNet](contribute.html), and browse the [design proposals](https://cwiki.apache.org/confluence/display/MXNET/Design+Proposals) to see what others are working on. You might find something you would like to help with or use those design docs as a template for your own proposal. Use one of the [developer communication channels](https://mxnet.incubator.apache.org/community/contribute.html#mxnet-dev-communications) if you would like to know more, or [create a GitHub issue](https://github.com/apache/incubator-mxnet/issues/new) if you would like to propose something for the MXNet ecosystem.
+Do you know of a project or resource in the MXNet ecosystem that should be listed here? Or would you like to get involved by providing your own contribution? Check out the [guide for contributing to MXNet](contribute.html), and browse the [design proposals](https://cwiki.apache.org/confluence/display/MXNET/Proposals) to see what others are working on. You might find something you would like to help with or use those design docs as a template for your own proposal. Use one of the [developer communication channels](https://mxnet.incubator.apache.org/community/contribute.html#mxnet-dev-communications) if you would like to know more, or [create a GitHub issue](https://github.com/apache/incubator-mxnet/issues/new) if you would like to propose something for the MXNet ecosystem.

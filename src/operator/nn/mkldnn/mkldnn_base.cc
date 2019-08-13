@@ -70,9 +70,10 @@ mkldnn::memory *TmpMemMgr::Alloc(const mkldnn::memory::primitive_desc &pd) {
   } else {
     // If curr_mem has been initialized and we still reach here. It means
     // the current allocated memory isn't enough.
-    if (this->curr_mem)
+    if (this->curr_mem && dmlc::GetEnv("MXNET_MKLDNN_DEBUG", false)) {
       LOG(WARNING) << "Allocate " << pd.get_size()
           << " bytes with malloc directly";
+    }
     mkldnn_mem_ptr ret(new mkldnn::memory(pd));
     MKLDNNStream::Get()->RegisterMem(ret);
     return ret.get();
@@ -228,51 +229,49 @@ void CommitOutput(const NDArray &arr, const mkldnn_output_t &res) {
   }
 }
 
-const mkldnn::memory *GetWeights(const NDArray &arr,
-                                 const mkldnn::memory::primitive_desc &target_pd,
-                                 int num_groups) {
-  const mkldnn::memory *mem = arr.GetMKLDNNData(target_pd);
-  // If the weight array already uses the target layout, simply return it
-  // directly.
-  if (mem)
-    return mem;
-
-  mkldnn::memory::data_type type = get_mkldnn_type(arr.dtype());
+const mkldnn::memory *GetWeights(const NDArray &arr, int num_groups) {
+  const auto type = get_mkldnn_type(arr.dtype());
+  auto tz = mkldnn::memory::dims{0};
+  auto format = mkldnn::memory::format::format_undef;
   auto engine = CpuEngine::Get()->get_engine();
+  const int O = 0, I = 1, H = 2, W = 3;
   if (arr.shape().ndim() == 2) {
-    mkldnn::memory::dims tz = mkldnn::memory::dims{
-      static_cast<int>(arr.shape()[0]), static_cast<int>(arr.shape()[1])};
-    mkldnn::memory::desc md =
-        mkldnn::memory::desc{tz, type, mkldnn::memory::format::oi};
-    mkldnn::memory::primitive_desc pd =
-        mkldnn::memory::primitive_desc{md, engine};
-    mem = arr.GetMKLDNNData(pd);
-  } else if (arr.shape().ndim() == 4 && num_groups == 1) {
-    mkldnn::memory::dims tz = mkldnn::memory::dims{
-      static_cast<int>(arr.shape()[0]), static_cast<int>(arr.shape()[1]),
-          static_cast<int>(arr.shape()[2]), static_cast<int>(arr.shape()[3])};
-    mkldnn::memory::desc md =
-        mkldnn::memory::desc{tz, type, mkldnn::memory::format::oihw};
-    mkldnn::memory::primitive_desc pd =
-        mkldnn::memory::primitive_desc{md, engine};
-    mem = arr.GetMKLDNNData(pd);
+    tz = mkldnn::memory::dims{static_cast<int>(arr.shape()[O]), static_cast<int>(arr.shape()[I])};
+    format = mkldnn::memory::format::oi;
+  } else if (arr.shape().ndim() == 3) {
+    tz = num_groups > 1
+             ? mkldnn::memory::dims{num_groups, static_cast<int>(arr.shape()[O] / num_groups),
+                                    static_cast<int>(arr.shape()[I]),
+                                    static_cast<int>(arr.shape()[H])}
+             : mkldnn::memory::dims{static_cast<int>(arr.shape()[O]),
+                                    static_cast<int>(arr.shape()[I]),
+                                    static_cast<int>(arr.shape()[H])};
+    format = num_groups > 1 ? mkldnn::memory::format::goiw : mkldnn::memory::format::oiw;
   } else if (arr.shape().ndim() == 4) {
-    mkldnn::memory::dims tz = mkldnn::memory::dims{ num_groups,
-      static_cast<int>(arr.shape()[0] / num_groups),
-      static_cast<int>(arr.shape()[1]),
-      static_cast<int>(arr.shape()[2]),
-      static_cast<int>(arr.shape()[3])};
-    mkldnn::memory::desc md =
-        mkldnn::memory::desc{tz, type, mkldnn::memory::format::goihw};
-    mkldnn::memory::primitive_desc pd =
-        mkldnn::memory::primitive_desc{md, engine};
-    mem = arr.GetMKLDNNData(pd);
+    tz = num_groups > 1
+             ? mkldnn::memory::dims{num_groups, static_cast<int>(arr.shape()[O] / num_groups),
+                                    static_cast<int>(arr.shape()[I]),
+                                    static_cast<int>(arr.shape()[H]),
+                                    static_cast<int>(arr.shape()[W])}
+             : mkldnn::memory::dims{
+                   static_cast<int>(arr.shape()[O]), static_cast<int>(arr.shape()[I]),
+                   static_cast<int>(arr.shape()[H]), static_cast<int>(arr.shape()[W])};
+    format = num_groups > 1 ? mkldnn::memory::format::goihw : mkldnn::memory::format::oihw;
   } else {
     LOG(FATAL) << "The weight array has an unsupported number of dimensions";
-    return nullptr;
   }
-  if (mem == nullptr)
-    mem = arr.GetMKLDNNDataReorder(target_pd);
+  const auto md = mkldnn::memory::desc{tz, type, format};
+  const auto pd = mkldnn::memory::primitive_desc{md, engine};
+  return arr.GetMKLDNNData(pd);
+}
+
+const mkldnn::memory *GetWeights(const NDArray &arr,
+                                 const mkldnn::memory::primitive_desc &target_pd, int num_groups) {
+  const mkldnn::memory *mem = arr.GetMKLDNNData(target_pd);
+  // If the weight array already uses the target layout, simply return it directly.
+  if (mem) return mem;
+  mem = GetWeights(arr, num_groups);
+  if (mem == nullptr) mem = arr.GetMKLDNNDataReorder(target_pd);
   if (mem->get_primitive_desc() == target_pd) return mem;
 
   auto ret = TmpMemMgr::Get()->Alloc(target_pd);
@@ -284,6 +283,7 @@ mkldnn_memory_format_t GetDefaultFormat(int num_dims) {
   switch (num_dims) {
     case 1: return mkldnn_x;
     case 2: return mkldnn_nc;
+    case 3: return mkldnn_ncw;
     case 4: return mkldnn_nchw;
     case 5: return mkldnn_goihw;
     default:
@@ -300,6 +300,30 @@ mkldnn_memory_format_t GetDefaultFormat(const mkldnn::memory::desc &desc) {
       return mkldnn_oi;
     else
       return desc.data.format;
+  } else if (desc.data.ndims == 3) {
+    switch (desc.data.format) {
+      case mkldnn_ncw:
+      case mkldnn_nwc:
+      case mkldnn_nCw8c:
+      case mkldnn_nCw16c:
+        return mkldnn_ncw;
+      case mkldnn_oiw:
+      case mkldnn_wio:
+      case mkldnn_Owi8o:
+      case mkldnn_OIw8i8o:
+      case mkldnn_OIw8o8i:
+      case mkldnn_OIw16i16o:
+      case mkldnn_OIw16o16i:
+      case mkldnn_Oiw16o:
+      case mkldnn_Owi16o:
+      case mkldnn_OIw8i16o2i:
+      case mkldnn_OIw8o16i2o:
+      case mkldnn_IOw16o16i:
+        return mkldnn_oiw;
+      default:
+        LOG(FATAL) << "Unknown MKLDNN format for 3 dimensions: " << desc.data.format;
+        return mkldnn_format_undef;
+    }
   } else if (desc.data.ndims == 4) {
     switch (desc.data.format) {
       case mkldnn_nchw:
@@ -311,9 +335,11 @@ mkldnn_memory_format_t GetDefaultFormat(const mkldnn::memory::desc &desc) {
       case mkldnn_oihw:
       case mkldnn_ihwo:
       case mkldnn_hwio:
+      case mkldnn_iohw:
       case mkldnn_oIhw8i:
       case mkldnn_oIhw16i:
       case mkldnn_OIhw8i8o:
+      case mkldnn_hwio_s8s8:
       case mkldnn_OIhw16i16o:
       case mkldnn_OIhw4i16o4i:
       case mkldnn_OIhw4i16o4i_s8s8:
@@ -328,6 +354,18 @@ mkldnn_memory_format_t GetDefaultFormat(const mkldnn::memory::desc &desc) {
       case mkldnn_Ohwi16o:
       case mkldnn_OhIw16o4i:
         return mkldnn_oihw;
+      case mkldnn_goiw:
+      case mkldnn_gOwi8o:
+      case mkldnn_gOIw8o8i:
+      case mkldnn_gOIw8i8o:
+      case mkldnn_gOIw16i16o:
+      case mkldnn_gOIw16o16i:
+      case mkldnn_gOiw16o:
+      case mkldnn_gOwi16o:
+      case mkldnn_gOIw8i16o2i:
+      case mkldnn_gOIw8o16i2o:
+      case mkldnn_gIOw16o16i:
+        return mkldnn_goiw;
       default:
         LOG(FATAL) << "Unknown MKLDNN format for 4 dimensions: " << desc.data.format;
         return mkldnn_format_undef;
@@ -335,10 +373,13 @@ mkldnn_memory_format_t GetDefaultFormat(const mkldnn::memory::desc &desc) {
   } else if (desc.data.ndims == 5) {
     switch (desc.data.format) {
       case mkldnn_goihw:
+      case mkldnn_giohw:
       case mkldnn_hwigo:
+      case mkldnn_hwigo_s8s8:
       case mkldnn_gOIhw8i8o:
       case mkldnn_gOIhw16i16o:
       case mkldnn_gOIhw4i16o4i:
+      case mkldnn_gOIhw4i16o4i_s8s8:
       case mkldnn_gOIhw8i16o2i:
       case mkldnn_gOIhw8o16i2o:
       case mkldnn_gOIhw8o8i:
@@ -351,6 +392,7 @@ mkldnn_memory_format_t GetDefaultFormat(const mkldnn::memory::desc &desc) {
       case mkldnn_gOhwi8o:
       case mkldnn_gOhwi16o:
       case mkldnn_gOhIw16o4i:
+      case mkldnn_Goihw16g_s8s8:
         return mkldnn_goihw;
       default:
         LOG(FATAL) << "Unknown MKLDNN format for 5 dimensions: " << desc.data.format;
@@ -511,8 +553,8 @@ void OpCheck::Run(mxnet::FCompute fn, const nnvm::NodeAttrs &attrs,
   for (size_t i = 0; i < out_blobs.size(); i++)
     out_blobs[i] = outputs[i].data();
   fn(attrs, ctx, in_blobs, req, out_blobs);
-
-  LOG(INFO) << "test " << attrs.op->name;
+  if (dmlc::GetEnv("MXNET_MKLDNN_DEBUG", false))
+    LOG(INFO) << "test " << attrs.op->name;
   size_t num = std::min(outputs.size(), outputs_.size());
   num = std::min(num_checks, num);
   for (size_t i = 0; i < num; i++) {

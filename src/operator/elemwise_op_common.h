@@ -100,7 +100,7 @@ inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
  *  \tparam rsp whether row sparse stype is supported
  *  \tparam rsp whether csr stype is supported
  */
-template<int n_in, int n_out, bool cpu_only, bool rsp, bool csr>
+template<index_t n_in, index_t n_out, bool cpu_only, bool rsp, bool csr>
 inline bool ElemwiseStorageType(const nnvm::NodeAttrs& attrs,
                                 const int dev_mask,
                                 DispatchMode* dispatch_mode,
@@ -115,7 +115,7 @@ inline bool ElemwiseStorageType(const nnvm::NodeAttrs& attrs,
 template<typename AttrType, bool (*is_none)(const AttrType&),
          bool (*assign)(AttrType*, const AttrType&), bool reverse_infer,
          std::string (*attr_string)(const AttrType&),
-         int n_in = -1, int n_out = -1>
+         index_t n_in = -1, index_t n_out = -1>
 inline bool ElemwiseAttr(const nnvm::NodeAttrs& attrs,
                          std::vector<AttrType> *in_attrs,
                          std::vector<AttrType> *out_attrs,
@@ -158,21 +158,21 @@ inline bool ElemwiseAttr(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-template<int n_in, int n_out>
+template<index_t n_in, index_t n_out>
 inline bool ElemwiseShape(const nnvm::NodeAttrs& attrs,
-                          std::vector<TShape> *in_attrs,
-                          std::vector<TShape> *out_attrs) {
+                          mxnet::ShapeVector *in_attrs,
+                          mxnet::ShapeVector *out_attrs) {
   if (n_in != -1) {
     CHECK_EQ(in_attrs->size(), static_cast<size_t>(n_in)) << " in operator " << attrs.name;
   }
   if (n_out != -1) {
     CHECK_EQ(out_attrs->size(), static_cast<size_t>(n_out)) << " in operator " << attrs.name;
   }
-  return ElemwiseAttr<TShape, shape_is_none, shape_assign, true, shape_string>(
-    attrs, in_attrs, out_attrs, TShape());
+  return ElemwiseAttr<mxnet::TShape, shape_is_none, shape_assign, true, shape_string>(
+    attrs, in_attrs, out_attrs, mxnet::TShape());
 }
 
-template<int n_in, int n_out>
+template<index_t n_in, index_t n_out>
 inline bool ElemwiseType(const nnvm::NodeAttrs& attrs,
                          std::vector<int> *in_attrs,
                          std::vector<int> *out_attrs) {
@@ -203,7 +203,7 @@ struct ElemwiseGradUseOut {
     std::vector<nnvm::NodeEntry> heads;
     uint32_t n_out = n->num_outputs();
     for (uint32_t i = 0; i < n_out; ++i) {
-      heads.emplace_back(nnvm::NodeEntry{n, i, 0});
+      heads.emplace_back(n, i, 0);
     }
     return MakeNonlossGradNode(op_name, n, ograds, heads, n->attrs.dict);
   }
@@ -220,7 +220,7 @@ struct ElemwiseGradUseInOut {
     }
     uint32_t n_out = n->num_outputs();
     for (uint32_t i = 0; i < n_out; ++i) {
-      heads.emplace_back(nnvm::NodeEntry{n, i, 0});
+      heads.emplace_back(n, i, 0);
     }
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }

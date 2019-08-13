@@ -79,12 +79,7 @@ def _array(shape, ctx):
 
 
 def _get_gpus():
-    try:
-        re = subprocess.check_output(["nvidia-smi", "-L"], universal_newlines=True)
-    except OSError:
-        return []
-    return range(len([i for i in re.split('\n') if 'GPU' in i]))
-
+    return range(mx.util.get_gpu_count())
 
 def run_benchmark(cell_type, ctx, seq_len, batch_size, hidden_dim):
     obj = {"foreach": ForeachRNN, "while_loop": WhileRNN}[args.benchmark]

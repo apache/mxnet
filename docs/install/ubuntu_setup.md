@@ -96,20 +96,8 @@ Alternatively, you can use the table below to select the package that suits your
 #### pip Package Availability
 
 The following table presents the pip packages that are recommended for each version of MXNet.
-<!-- Table does not render - using a picture alternative
-| Package / MXNet Version | 1.3.0 | 1.2.1 | 1.1.0 | 1.0.0 | 0.12.1 | 0.11.0 |
-|-|:-:|:-:|:-:|:-:|:-:|:-:|
-| mxnet-cu92mkl | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> |
-| mxnet-cu92 | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> |
-| mxnet-cu90mkl | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="far fa-times-circle"></i> |
-| mxnet-cu90 | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="far fa-times-circle"></i> |
-| mxnet-cu80mkl | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> |
-| mxnet-cu80 | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> |
-| mxnet-mkl | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> |
-| mxnet | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> |
--->
 
-![pip package table](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages.png)
+![pip package table](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.4.0.png)
 
 To install an older version of MXNet with one of the packages in the previous table add `==` with the version you require. For example for version 1.1.0 of MXNet with CUDA 8, you would use `pip install mxnet-cu80==1.1.0`.
 
@@ -145,19 +133,40 @@ Or you can go through a manual process described next.
 
 #### Manual MXNet Installation
 
-It is recommended that you review the general [build from source](build_from_source.html) instructions before continuing.
+It is recommended that you review the general [build from source](build_from_source.md) instructions before continuing.
 
 On Ubuntu versions 16.04 or later, you need the following dependencies:
 
-**Step 1:** Install build tools and git.
+**Step 1:** Install prerequisite packages.
 ```bash
     sudo apt-get update
-    sudo apt-get install -y build-essential git
+    sudo apt-get install -y build-essential git ninja-build ccache
 ```
+
+**For Ubuntu 18.04 and CUDA builds you need to update CMake**
+
+```bash
+#!/usr/bin/env bash
+set -exuo pipefail
+sudo apt remove --purge --auto-remove cmake
+
+# Update CMAKE for correct cuda autotedetection: https://github.com/clab/dynet/issues/1457
+version=3.14
+build=0
+mkdir -p ~/tmp
+cd ~/tmp
+wget https://cmake.org/files/v$version/cmake-$version.$build.tar.gz
+tar -xzvf cmake-$version.$build.tar.gz
+cd cmake-$version.$build/
+./bootstrap
+make -j$(nproc)
+sudo make install
+```
+
 
 **Step 2:** Install a Math Library.
 
-Details on the different math libraries are found in the build from source guide's [Math Library Selection](build_from_source.html#math-library-selection) section.
+Details on the different math libraries are found in the build from source guide's [Math Library Selection](build_from_source.md#math-library-selection) section.
 
 For OpenBLAS use:
 
@@ -165,7 +174,7 @@ For OpenBLAS use:
     sudo apt-get install -y libopenblas-dev
 ```
 
-For other libraries, visit the [Math Library Selection](build_from_source.html#math-library-selection) section.
+For other libraries, visit the [Math Library Selection](build_from_source.md#math-library-selection) section.
 
 **Step 3:** Install OpenCV.
 
@@ -179,37 +188,72 @@ For other libraries, visit the [Math Library Selection](build_from_source.html#m
 
 If building on CPU and using OpenBLAS:
 
-```bash
-    git clone --recursive https://github.com/apache/incubator-mxnet.git
-    cd incubator-mxnet
-    make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
-```
-
-If building on CPU and using MKL and MKL-DNN (make sure MKL is installed according to [Math Library Selection](build_from_source.html#math-library-selection) and [MKL-DNN README](https://github.com/apache/incubator-mxnet/blob/master/MKLDNN_README.md)):
+Clone the repository:
 
 ```bash
     git clone --recursive https://github.com/apache/incubator-mxnet.git
     cd incubator-mxnet
-    make -j $(nproc) USE_OPENCV=1 USE_BLAS=mkl USE_MKLDNN=1
 ```
 
-If building on GPU and you want OpenCV and OpenBLAS (make sure you have installed the [CUDA dependencies first](#cuda-dependencies)):
+Build with CMake and ninja, without GPU and without MKL.
 
 ```bash
-    git clone --recursive https://github.com/apache/incubator-mxnet.git
-    cd incubator-mxnet
-    make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
+    rm -rf build
+    mkdir -p build && cd build
+    cmake -GNinja \
+        -DUSE_CUDA=OFF \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+    ..
+    ninja
 ```
 
-*Note* - USE_OPENCV and USE_BLAS are make file flags to set compilation options to use OpenCV and BLAS library. You can explore and use more compilation options in `make/config.mk` and also review common [usage examples](build_from_source.html#usage-examples).
-
-Building from source creates a library called ```libmxnet.so``` in the `lib` folder in your MXNet project root.
-
-You may also want to add the MXNet shared library to your `LD_LIBRARY_PATH`:
+If building on CPU and using MKL and MKL-DNN (make sure MKL is installed according to [Math Library Selection](build_from_source.md#math-library-selection) and [MKL-DNN README](https://github.com/apache/incubator-mxnet/blob/master/docs/tutorials/mkldnn/MKLDNN_README.md)):
 
 ```bash
-export LD_LIBRARY_PATH=$PWD/lib
+    rm -rf build
+    mkdir -p build && cd build
+    cmake -GNinja \
+        -DUSE_CUDA=OFF \
+        -DUSE_MKL_IF_AVAILABLE=ON \
+        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+    ..
+    ninja
 ```
+
+If building on GPU (make sure you have installed the [CUDA dependencies first](#cuda-dependencies)):
+Cuda 10.1 in Ubuntu 18.04 builds fine but is not currently tested in CI.
+
+```bash
+    rm -rf build
+    mkdir -p build && cd build
+    cmake -GNinja \
+        -DUSE_CUDA=ON \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+    ..
+    ninja
+```
+
+*Note* - You can explore and use more compilation options as they are delcared in the top of `CMakeLists.txt` and also review common [usage examples](build_from_source.md#usage-examples).
+Optionally, you can also use a higher level, scripted version of the above with an editable CMake options file by doing the
+following:
+
+```bash
+cp cmake/cmake_options.yml .
+# Edit cmake_options.yml in the MXNet root to your taste
+$EDITOR cmake_options.yml
+# Launch a local CMake build
+./dev_menu.py build
+```
+
+Building from source creates a library called ```libmxnet.so``` in the `build` folder in your MXNet project root.
 
 After building the MXNet library, you may install language bindings.
 
@@ -246,15 +290,15 @@ Note that the `-e` flag is optional. It is equivalent to `--editable` and means 
 You may optionally install ```graphviz``` library that is used for visualizing network graphs you build on MXNet. You may also install [Jupyter Notebook](http://jupyter.readthedocs.io/) which is used for running MXNet tutorials and examples.
 
 ```bash
-sudo pip install graphviz
-sudo pip install jupyter
+sudo pip install graphviz==0.8.4 \
+                 jupyter
 ```
 <hr>
 
 
 ### Install the MXNet Package for C++
 
-Refer to the [C++ Package setup guide](c_plus_plus.html).
+Refer to the [C++ Package setup guide](c_plus_plus.md).
 <hr>
 
 
@@ -363,12 +407,14 @@ $ sudo apt-get install -y libopenblas-dev liblapack-dev
 $ sudo apt-get install -y libopencv-dev
 ```
 
-**Step 4** Download MXNet sources and build MXNet core shared library. You can clone the repository as described in the following code block, or you may try the <a href="download.html">download links</a> for your desired MXNet version.
+**Step 4** Download MXNet sources and build MXNet core shared library. You can clone the repository as described in the following code block, or you may try the [download links](download.md) for your desired MXNet version.
 
 ```bash
 $ git clone --recursive https://github.com/apache/incubator-mxnet
 $ cd incubator-mxnet
-$ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
+$ echo "USE_OPENCV = 1" >> ./config.mk
+$ echo "USE_BLAS = openblas" >> ./config.mk
+$ make -j $(nproc)
 ```
 
 *Note* - USE_OPENCV and USE_BLAS are make file flags to set compilation options to use OpenCV and BLAS library. You can explore and use more compilation options in `make/config.mk`.
@@ -412,29 +458,29 @@ You should see the following output:
 
 To use the MXNet-Scala package, you can acquire the Maven package as a dependency.
 
-Further information is in the [MXNet-Scala Setup Instructions](scala_setup.html).
+Further information is in the [MXNet-Scala Setup Instructions](scala_setup.md).
 
-If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Scala on IntelliJ tutorial](../tutorials/scala/mxnet_scala_on_intellij.html) instead.
+If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Scala on IntelliJ tutorial](../tutorials/scala/mxnet_scala_on_intellij.md) instead.
 <hr>
 
 ### Install the MXNet Package for Java
 
 To use the MXNet-Java package, you can acquire the Maven package as a dependency.
 
-Further information is in the [MXNet-Java Setup Instructions](java.html).
+Further information is in the [MXNet-Java Setup Instructions](java_setup.md).
 
-If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Java on IntelliJ tutorial](../tutorials/java/mxnet_java_on_intellij.html) instead.
+If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Java on IntelliJ tutorial](../tutorials/java/mxnet_java_on_intellij.md) instead.
 <hr>
 
 ## Contributions
 
-You are more than welcome to contribute easy installation scripts for other operating systems and programming languages. See the [community contributions page](../community/contribute.html) for further information.
+You are more than welcome to contribute easy installation scripts for other operating systems and programming languages. See the [community contributions page](../community/contribute.md) for further information.
 
 ## Next Steps
 
-* [Tutorials](../tutorials/index.html)
-* [How To](../faq/index.html)
-* [Architecture](../architecture/index.html)
+* [Tutorials](../tutorials/index.md)
+* [How To](../faq/index.md)
+* [Architecture](../architecture/index.md)
 
 
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.1.0/css/all.css" integrity="sha384-lKuwvrZot6UHsBSfcMvOkWwlCMgc0TaWr+30HWe3a4ltaBwTZhyTEggF5tJv8tbt" crossorigin="anonymous">

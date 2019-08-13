@@ -39,7 +39,7 @@ const kwargs_t basic_activation_args = { };
  */
 TEST(ACTIVATION_PERF, ExecuteBidirectional) {
   using namespace std;
-  TShape shape({5, 5});
+  mxnet::TShape shape({5, 5});
   vector<string> activations = {
     "relu",
     "sigmoid",
@@ -70,11 +70,11 @@ TEST(ACTIVATION_PERF, TimingCPU) {
   kwargs.push_back({"act_type", "tanh"});
   kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "Activation",
                                                            "_backward_Activation");
-  TShape shape({10, 10, 10, 10});
+  mxnet::TShape shape({10, 10, 10, 10});
   test::op::CoreOperatorRunner<float> runner;
   runner.RunBidirectional(false, { shape }, kwargs, 1);
 
-  std::vector <TShape> shapes;
+  std::vector <mxnet::TShape> shapes;
   if (test::performance_run) {
     shapes = {
       {1,  1, 28,  28},
@@ -89,7 +89,7 @@ TEST(ACTIVATION_PERF, TimingCPU) {
       {50, 3, 18,  32},
     };
   }
-  for (const TShape &shape : shapes) {
+  for (const mxnet::TShape &shape : shapes) {
     runner.TimingTest("Activation Operator CPU", false, false, kwargs, 2, 10, { shape });
   }
 }
@@ -104,17 +104,17 @@ TEST(ACTIVATION_PERF, TimingGPU) {
   kwargs.push_back({"act_type", "tanh"});
   kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "Activation",
                                                            "_backward_Activation");
-  TShape shape({10, 10, 10, 10});
+  mxnet::TShape shape({10, 10, 10, 10});
   test::op::CoreOperatorRunner<float> runner;
   runner.RunBidirectional(true, { shape }, kwargs, 1);
-  std::vector <TShape> shapes = {
+  std::vector <mxnet::TShape> shapes = {
       {1,  1, 28,  28},
       {1,  3, 28,  28},
       {50, 1, 18,  32},
       {50, 3, 18,  32},
       {20, 3, 128, 128}
     };
-  for (const TShape &shape : shapes) {
+  for (const mxnet::TShape &shape : shapes) {
     runner.TimingTest("Activation Operator GPU", true, false, kwargs, 2, 10, { shape });
   }
 }

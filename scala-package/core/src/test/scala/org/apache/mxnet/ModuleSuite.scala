@@ -281,8 +281,8 @@ class ModuleSuite extends FunSuite with BeforeAndAfterAll {
 
     // create module
     val mod = new Module(x, contexts = Array(Context.cpu()))
-    mod.bind(dataShapes = trainData.provideData,
-      Option(trainData.provideLabel))
+    mod.bind(dataShapes = trainData.provideDataDesc,
+      Option(trainData.provideLabelDesc))
     mod.installMonitor(mon)
     val argParams = Map(
       "fc_0_weight" -> NDArray.array(Array(0.15f, 0.2f, 0.25f, 0.3f), Shape(2, 2)),

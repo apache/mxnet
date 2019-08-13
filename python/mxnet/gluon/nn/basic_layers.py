@@ -262,7 +262,10 @@ class Dropout(HybridBlock):
         self._axes = axes
 
     def hybrid_forward(self, F, x):
-        return F.Dropout(x, p=self._rate, axes=self._axes, name='fwd')
+        if self._rate > 0:
+            return F.Dropout(x, p=self._rate, axes=self._axes, name='fwd', cudnn_off=False)
+        else:
+            return F.identity(x)
 
     def __repr__(self):
         s = '{name}(p = {_rate}, axes={_axes})'
@@ -302,10 +305,10 @@ class BatchNorm(HybridBlock):
         Initializer for the beta weight.
     gamma_initializer: str or `Initializer`, default 'ones'
         Initializer for the gamma weight.
-    moving_mean_initializer: str or `Initializer`, default 'zeros'
-        Initializer for the moving mean.
-    moving_variance_initializer: str or `Initializer`, default 'ones'
-        Initializer for the moving variance.
+    running_mean_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the running mean.
+    running_variance_initializer: str or `Initializer`, default 'ones'
+        Initializer for the running variance.
     in_channels : int, default 0
         Number of channels (feature maps) in input data. If not specified,
         initialization will be deferred to the first time `forward` is called
@@ -537,7 +540,7 @@ class LayerNorm(HybridBlock):
 
     .. math::
 
-      out = \frac{x - mean[data, axis]}{ \sqrt{Var[data, axis]} + \epsilon} * gamma + beta
+      out = \frac{x - mean[data, axis]}{ \sqrt{Var[data, axis] + \epsilon}} * gamma + beta
 
     Parameters
     ----------

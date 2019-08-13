@@ -35,7 +35,7 @@
     [](const NodeAttrs& attrs) {                                                       \
       return std::vector<std::string>{"data", "label"};                                \
     })                                                                                 \
-  .set_attr<nnvm::FInferShape>("FInferShape", RegressionOpShape)                       \
+  .set_attr<mxnet::FInferShape>("FInferShape", RegressionOpShape)                       \
   .set_attr<nnvm::FGradient>("FGradient", RegressionOpGrad{__bwdop$})                  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)                        \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                                    \

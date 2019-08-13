@@ -42,4 +42,4 @@ cpp-package-lint:
 	(cd cpp-package; python scripts/lint.py dmlc ${LINT_LANG} include example)
 
 include cpp-package/example/example.mk
-
+include cpp-package/example/inference/inference.mk

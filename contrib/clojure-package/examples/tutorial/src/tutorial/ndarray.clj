@@ -91,8 +91,8 @@
 (ndarray/save "filename" {"arr1" arr1 "arr2" arr2})
 ;; (you can also do "s3://path" or "hdfs")
 
-(ndarray/save "/Users/daveliepmann/src/coursework/mxnet-clj-tutorials/abc"
-              {"arr1" arr1 "arr2" arr2})
+;; (ndarray/save "/Users/daveliepmann/src/coursework/mxnet-clj-tutorials/abc"
+;;              {"arr1" arr1 "arr2" arr2})
 
 ;; To load:
 (def from-file (ndarray/load "filename"))
@@ -114,7 +114,9 @@ from-file ;=>{"arr1" #object[org.apache.mxnet.NDArray 0x6115ba61 "org.apache.mxn
 (def cpu-a (ndarray/zeros [100 200]))
 (ndarray/context cpu-a) ;=> #object[org.apache.mxnet.Context 0x3f376123 "cpu(0)"]
 
-(def gpu-b (ndarray/zeros [100 200] {:ctx (context/gpu 0)})) ;; to use with gpu
+(comment
+  (def gpu-b (ndarray/zeros [100 200] {:ctx (context/gpu 0)})) ;; to use with gpu
+)
 
 ;; Currently, we do not allow operations among arrays from different
 ;; contexts. To manually enable this, use the `copy-to` function to

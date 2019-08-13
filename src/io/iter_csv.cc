@@ -37,11 +37,11 @@ struct CSVIterParam : public dmlc::Parameter<CSVIterParam> {
   /*! \brief path to data csv file */
   std::string data_csv;
   /*! \brief data shape */
-  TShape data_shape;
+  mxnet::TShape data_shape;
   /*! \brief path to label csv file */
   std::string label_csv;
   /*! \brief label shape */
-  TShape label_shape;
+  mxnet::TShape label_shape;
   // declare parameters
   DMLC_DECLARE_PARAMETER(CSVIterParam) {
     DMLC_DECLARE_FIELD(data_csv)
@@ -52,7 +52,7 @@ struct CSVIterParam : public dmlc::Parameter<CSVIterParam> {
         .describe("The input CSV file or a directory path. "
                   "If NULL, all labels will be returned as 0.");
     index_t shape1[] = {1};
-    DMLC_DECLARE_FIELD(label_shape).set_default(TShape(shape1, shape1 + 1))
+    DMLC_DECLARE_FIELD(label_shape).set_default(mxnet::TShape(shape1, shape1 + 1))
         .describe("The shape of one label.");
   }
 };
@@ -148,7 +148,7 @@ class CSVIterTyped: public CSVIterBase {
   }
 
  private:
-  inline TBlob AsTBlob(const dmlc::Row<uint32_t, DType>& row, const TShape& shape) {
+  inline TBlob AsTBlob(const dmlc::Row<uint32_t, DType>& row, const mxnet::TShape& shape) {
     CHECK_EQ(row.length, shape.Size())
         << "The data size in CSV do not match size of shape: "
         << "specified shape=" << shape << ", the csv row-length=" << row.length;

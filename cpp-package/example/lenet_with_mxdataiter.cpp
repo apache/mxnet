@@ -66,6 +66,16 @@ Symbol LenetSymbol() {
   return lenet;
 }
 
+NDArray ResizeInput(NDArray data, const Shape new_shape) {
+  NDArray pic = data.Reshape(Shape(0, 1, 28, 28));
+  NDArray output;
+  Operator("_contrib_BilinearResize2D")
+    .SetParam("height", new_shape[2])
+    .SetParam("width", new_shape[3])
+    (pic).Invoke(output);
+  return output;
+}
+
 int main(int argc, char const *argv[]) {
   /*setup basic configs*/
   int W = 28;
@@ -74,15 +84,24 @@ int main(int argc, char const *argv[]) {
   int max_epoch = argc > 1 ? strtol(argv[1], NULL, 10) : 100;
   float learning_rate = 1e-4;
   float weight_decay = 1e-4;
-  auto dev_ctx = Context::gpu();
-#if MXNET_USE_CPU
-    dev_ctx = Context::cpu();
+
+  auto dev_ctx = Context::cpu();
+  int num_gpu;
+  MXGetGPUCount(&num_gpu);
+#if !MXNET_USE_CPU
+  if (num_gpu > 0) {
+    dev_ctx = Context::gpu();
+  }
 #endif
+
+  TRY
   auto lenet = LenetSymbol();
   std::map<std::string, NDArray> args_map;
 
-  args_map["data"] = NDArray(Shape(batch_size, 1, W, H), dev_ctx);
-  args_map["data_label"] = NDArray(Shape(batch_size), dev_ctx);
+  const Shape data_shape = Shape(batch_size, 1, H, W),
+              label_shape = Shape(batch_size);
+  args_map["data"] = NDArray(data_shape, dev_ctx);
+  args_map["data_label"] = NDArray(label_shape, dev_ctx);
   lenet.InferArgsMap(dev_ctx, &args_map, args_map);
 
   args_map["fc1_w"] = NDArray(Shape(500, 4 * 4 * 50), dev_ctx);
@@ -97,10 +116,14 @@ int main(int argc, char const *argv[]) {
                                         };
 
   auto train_iter =  MXDataIter("MNISTIter");
-  setDataIter(&train_iter, "Train", data_files, batch_size);
+  if (!setDataIter(&train_iter, "Train", data_files, batch_size)) {
+    return 1;
+  }
 
   auto val_iter = MXDataIter("MNISTIter");
-  setDataIter(&val_iter, "Label", data_files, batch_size);
+  if (!setDataIter(&val_iter, "Label", data_files, batch_size)) {
+    return 1;
+  }
 
   Optimizer* opt = OptimizerRegistry::Find("sgd");
   opt->SetParam("momentum", 0.9)
@@ -127,7 +150,7 @@ int main(int argc, char const *argv[]) {
       samples += batch_size;
       auto data_batch = train_iter.GetDataBatch();
 
-      data_batch.data.CopyTo(&args_map["data"]);
+      ResizeInput(data_batch.data, data_shape).CopyTo(&args_map["data"]);
       data_batch.label.CopyTo(&args_map["data_label"]);
       NDArray::WaitAll();
 
@@ -159,7 +182,7 @@ int main(int argc, char const *argv[]) {
     val_iter.Reset();
     while (val_iter.Next()) {
       auto data_batch = val_iter.GetDataBatch();
-      data_batch.data.CopyTo(&args_map["data"]);
+      ResizeInput(data_batch.data, data_shape).CopyTo(&args_map["data"]);
       data_batch.label.CopyTo(&args_map["data_label"]);
       NDArray::WaitAll();
 
@@ -173,6 +196,8 @@ int main(int argc, char const *argv[]) {
   }
 
   delete exec;
+  delete opt;
   MXNotifyShutdown();
+  CATCH
   return 0;
 }

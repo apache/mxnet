@@ -23,4 +23,4 @@
 COPY install/scala.sh install/
 RUN install/scala.sh
 
-RUN cd mxnet && make scalapkg $BUILD_OPTS
+RUN cd mxnet/scala-package && mvn package

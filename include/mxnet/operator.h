@@ -50,7 +50,7 @@ namespace mxnet {
  *  To add new operator(aka. layers of neural nets) to mxnet, developer need to create
  *  a new OperatorProperty and its corresponding Operator.
  *
- * \sa TBlob, TShape, OperatorProperty
+ * \sa TBlob, mxnet::TShape, OperatorProperty
  */
 class Operator {
  public:
@@ -192,15 +192,15 @@ class OperatorProperty {
    *     common practice: set the shape of data input, and usually weight's shape can be inferred
    *
    * \param out_shape the shape of outputs of the operator
-   *     InferShape will modify the vector to fill output TShape
+   *     InferShape will modify the vector to fill output mxnet::TShape
    * \param aux_shape the shape of auxiliary states of the operator
-   *     InferShape will modify the vector to fill output TShape
+   *     InferShape will modify the vector to fill output mxnet::TShape
    * \return true if the shape inference is successful, false if there is not enough information.
    * \throws dmlc::Error if the known arg_shapes are inconsistent.
    */
-  virtual bool InferShape(std::vector<TShape> *in_shape,
-                          std::vector<TShape> *out_shape,
-                          std::vector<TShape> *aux_shape) const = 0;
+  virtual bool InferShape(mxnet::ShapeVector *in_shape,
+                          mxnet::ShapeVector *out_shape,
+                          mxnet::ShapeVector *aux_shape) const = 0;
   /*!
    * \brief infer the data types of outputs and unknown input arguments
    * \param in_type the type of input arguments of the operator
@@ -255,10 +255,10 @@ class OperatorProperty {
    * \param in_type dtype of the input ndarrays
    * \return the created operator
    */
-  virtual Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  virtual Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                                      std::vector<int> *in_type) const {
     std::vector<int> out_type, aux_type;
-    std::vector<TShape> out_shape, aux_shape;
+    mxnet::ShapeVector out_shape, aux_shape;
     out_type.resize(this->ListOutputs().size());
     out_shape.resize(this->ListOutputs().size());
     aux_type.resize(this->ListAuxiliaryStates().size());
@@ -284,7 +284,7 @@ class OperatorProperty {
    * \return Additional resource request
    */
   virtual std::vector<ResourceRequest> ForwardResource(
-      const std::vector<TShape> &in_shape) const {
+      const mxnet::ShapeVector &in_shape) const {
     return std::vector<ResourceRequest>();
   }
   /*!
@@ -295,7 +295,7 @@ class OperatorProperty {
    * \return Additional resource request
    */
   virtual std::vector<ResourceRequest> BackwardResource(
-      const std::vector<TShape> &in_shape) const {
+      const mxnet::ShapeVector &in_shape) const {
     return std::vector<ResourceRequest>();
   }
   /*!

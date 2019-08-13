@@ -40,7 +40,7 @@ BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
                                const std::vector<OpReqType>& req,
                                const std::vector<TBlob>& outputs) {
   using namespace broadcast;
-  TShape new_lshape, new_rshape, new_oshape;
+  mxnet::TShape new_lshape, new_rshape, new_oshape;
   int ndim = BinaryBroadcastShapeCompact(outputs[0].shape_, outputs[1].shape_, inputs[0].shape_,
                                          &new_lshape, &new_rshape, &new_oshape);
   if (!ndim) {

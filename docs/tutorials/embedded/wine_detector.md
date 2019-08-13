@@ -48,7 +48,7 @@ To complete this tutorial, you need:
 
 * Raspbian Wheezy or later, which can be downloaded [here](https://www.raspberrypi.org/downloads/raspbian/), loaded onto a 8GB+ micro SD card (with at least 4GB+ free)
 * A [Raspberry Pi 3](https://www.raspberrypi.org/blog/raspberry-pi-3-on-sale/) or equivalent Raspberry Pi with 1GB+ of RAM
-* A [Raspberry Pi Camera Module](https://www.raspberrypi.org/products/camera-module/) [activated and running with the corresponding Python module](http://www.pyimagesearch.com/2015/02/23/install-opencv-and-python-on-your-raspberry-pi-2-and-b/) (for the real-time video analysis with the deep network model)
+* A [Raspberry Pi Camera Module](https://www.raspberrypi.org/products/camera-module-v2/) [activated and running with the corresponding Python module](http://www.pyimagesearch.com/2015/02/23/install-opencv-and-python-on-your-raspberry-pi-2-and-b/) (for the real-time video analysis with the deep network model)
 * An AWS account With AWS IoT enabled and the [AWS IoT Python SDK](https://github.com/aws/aws-iot-device-sdk-python) (for remote, real-time managing and monitoring of the model running on the Pi)
 * The [cv2 Python library](http://www.pyimagesearch.com/2015/02/23/install-opencv-and-python-on-your-raspberry-pi-2-and-b/) for the Pi
 
@@ -91,6 +91,7 @@ The next step is to create a python script to load the model, and run inference 
 
 import mxnet as mx
 import numpy as np
+import time
 import cv2, os, urllib
 from collections import namedtuple
 Batch = namedtuple('Batch', ['data'])
@@ -100,13 +101,14 @@ with open('synset.txt', 'r') as f:
     synsets = [l.rstrip() for l in f]
 
 # Load the network parameters
-sym, arg_params, aux_params = mx.model.load_checkpoint('Inception_BN', 0)
+sym, arg_params, aux_params = mx.model.load_checkpoint('Inception-BN', 126)
+
 
 # Load the network into an MXNet module and bind the corresponding parameters
 mod = mx.mod.Module(symbol=sym, context=mx.cpu())
 mod.bind(for_training=False, data_shapes=[('data', (1,3,224,224))])
 mod.set_params(arg_params, aux_params)
- 
+
 '''
 Function to predict objects by giving the model a pointer to an image file and running a forward pass through the model.
 
@@ -129,14 +131,14 @@ def predict(filename, mod, synsets, N=5):
     img = np.swapaxes(img, 1, 2)
     img = img[np.newaxis, :]
     print "pre-processed image in "+str(time.time()-tic)
- 
+
     toc = time.time()
     mod.forward(Batch([mx.nd.array(img)]))
     prob = mod.get_outputs()[0].asnumpy()
     prob = np.squeeze(prob)
     print "forward pass in "+str(time.time()-toc)
- 
- 
+
+
     topN = []
     a = np.argsort(prob)[::-1]
     for i in a[0:N]:
@@ -156,7 +158,7 @@ def predict_from_url(url, N=5):
         return predict(filename, mod, synsets, N)
 
 # Code to predict on a local file
-def predict_from_local_file(filename, N=5):        
+def predict_from_local_file(filename, N=5):
     return predict(filename, mod, synsets, N)
 ```
 
@@ -164,11 +166,24 @@ Now that we have defined inception_predict.py we can test that the model is runn
 
 ```bash
 python
->>> import inception_predict
->>> predict_from_url("http://imgur.com/HzafyBA")
+>>> from inception_predict import *
+>>> predict_from_url("https://i.imgur.com/HzafyBA.jpg")
 ```
 
-This should give a reasonable prediction for the fluffy cow in this [image](http://imgur.com/HzafyBA). 
+This should give a reasonable prediction for the fluffy cow in this [image](http://imgur.com/HzafyBA).
+
+```
+pre-processed image in 0.20366191864
+forward pass in 63.2164611816
+probability=0.718524, class=n02403003 ox
+probability=0.176381, class=n02389026 sorrel
+probability=0.095558, class=n03868242 oxcart
+probability=0.002765, class=n02408429 water buffalo, water ox, Asiatic buffalo, Bubalus bubalis
+probability=0.001262, class=n03935335 piggy bank, penny bank
+[(0.71852392, 'n02403003 ox'), (0.17638102, 'n02389026 sorrel'), (0.09555836, 'n03868242 oxcart'),
+(0.0027645244, 'n02408429 water buffalo, water ox, Asiatic buffalo, Bubalus bubalis'),
+(0.0012616422, 'n03935335 piggy bank, penny bank')]
+```
 
 
 ## Running an Inception on Real-Time Video From PiCamera
@@ -194,11 +209,11 @@ while True:
     camera.start_preview()
     camera.capture(filename)
     camera.stop_preview()
-    
+
     # Run inception prediction on image
     print "Predicting"
     topn = inception_predict.predict_from_local_file(filename, N=5)
-    
+
     # Print the top N most likely objects in image (default set to 5, change this in the function call above)
     print topn
 ```
@@ -209,7 +224,7 @@ You can then run this file by entering the following command:
 python camera_test.py
 ```
 
-If camera_test.py is working you should see a preview every few seconds of the image that is being captured and fed to the model, as well as predicted classes for objects in the image being written to the terminal. 
+If camera_test.py is working you should see a preview every few seconds of the image that is being captured and fed to the model, as well as predicted classes for objects in the image being written to the terminal.
 
 Try pointing the PiCamera at a few different objects and see what predictions the network comes out with.
 
@@ -248,13 +263,13 @@ def customCallback(client, userdata, message):
 
 # Usage
 usageInfo = """Usage:
- 
+
 Use certificate based mutual authentication:
 python wine_alerter.py -e <endpoint> -r <rootCAFilePath> -c <certFilePath> -k <privateKeyFilePath>
- 
+
 Use MQTT over WebSocket:
 python wine_alerter.py -e <endpoint> -r <rootCAFilePath> -w
- 
+
 Type "python wine_alerter.py -h" for available options.
 """
 
@@ -272,7 +287,7 @@ helpInfo = """-e, --endpoint
 -h, --help
     Help information
 """
- 
+
 # Read in command-line parameters
 useWebsocket = False
 host = ""
@@ -367,10 +382,10 @@ while True:
     camera.capture(filename)
     camera.stop_preview()
     topn = inception_predict.predict_from_local_file(filename, N=5)
-    
+
     # Check if either of the top two predictions are wine related and publish a message if it is
     # you can change 'wine' here to anything you want to alert the server about detecting
-    if 'wine' in topn[0][1] or 'wine' in topn[1][1]: 
+    if 'wine' in topn[0][1] or 'wine' in topn[1][1]:
         myAWSIoTMQTTClient.publish("sdk/test/Python", "New Message: WINE DETECTED!", 0)
 ```
 

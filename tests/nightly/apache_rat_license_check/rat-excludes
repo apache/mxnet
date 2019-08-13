@@ -31,6 +31,7 @@ _mask.pyx
 coco.py
 base.pyi
 special_functions-inl.h
+erfinv-inl.h
 im2col.cuh
 im2col.h
 pool.h
@@ -42,8 +43,10 @@ moderngpu/*
 deformable_im2col.cuh
 deformable_im2col.h
 REQUIRE
+Project.toml
 include/*
 .*.iml
 .*.json.ref
 searchtools_custom.js
 theme.conf
+LICENSE.binary.dependencies

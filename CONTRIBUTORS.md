@@ -65,6 +65,12 @@ The committers are the granted write access to the project.
  - Marco is the creator of the current MXNet CI.
 * [Carin Meier](https://github.com/gigasquid)
   - Carin created and is the current maintainer for the Clojure interface.
+* [Patric Zhao](https://github.com/pengzhao-intel)
+  - Patric is a parallel computing expert and a major contributor to the MXNet MKL-DNN backend.
+* [Tao Lv](https://github.com/TaoLv)
+  - Tao is a major contributor to the MXNet MKL-DNN backend and performance on CPU.
+* [Zach Kimberg](https://github.com/zachgk)
+  - Zach is one of the major maintainers of the MXNet Scala package.
 
 
 ### Become a Committer
@@ -209,6 +215,34 @@ List of Contributors
 * [Rahul Padmanabhan](https://github.com/rahul3)
 * [Yuxi Hu](https://github.com/yuxihu)
 * [Harsh Patel](https://github.com/harshp8l)
+* [Xiao Wang](https://github.com/BeyonderXX)
+* [Piyush Ghai](https://github.com/piyushghai)
+* [Dang Trung Kien](https://github.com/kiendang)
+* [Zach Boldyga](https://github.com/zboldyga)
+* [Gordon Reid](https://github.com/gordon1992)
+* [Mikhail Lobanov](https://github.com/lobanov-m)
+* [Ming Yang](http://ufoym.com)
+* [Satya Krishna Gorti](https://github.com/satyakrishnagorti)
+* [Neo Chien](https://github.com/cchung100m)
+* [Wujie Zhou](https://github.com/eureka7mt)
+* [Ciyong Chen](https://github.com/ciyongch)
+* [Hao Li](https://github.com/lihaofd)
+* [Jin Huang](https://github.com/jinhuang415)
+* [Luobao Zou](https://github.com/luobao-intel)
+* [Pengxin Yuan](https://github.com/pengxin99)
+* [Rong Zhang](https://github.com/rongzha1/)
+* [Shu Zhang](https://github.com/Sherry-Zhang)
+* [Shufan Wu](https://github.com/juliusshufan)
+* [Wenting Jiang](https://github.com/wentingj)
+* [Xiaotao Chen](https://github.com/XiaotaoChen)
+* [Xinyu Chen](https://github.com/xinyu-intel)
+* [Zhennan Qin](https://github.com/ZhennanQin)
+* [Zhiyuan Huang](https://github.com/huangzhiyuan)
+* [Zak Jost](https://github.com/zjost)
+* [Nick Guletskii](https://github.com/nickguletskii)
+* [Shoubhik Bhattacharya](https://github.com/shoubhik)
+* [Rohit Srivastava](https://github.com/access2rohit)
+* [Caner Turkmen](https://github.com/canerturkmen)
 
 Label Bot
 ---------

@@ -25,18 +25,27 @@ import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
 
 private[mxnet] class AddJNDArrayAPIs(isContrib: Boolean) extends StaticAnnotation {
+/**
+  * Generate typesafe method for Java NDArray operations
+  * @param annottees Annottees used to define Class or Module
+  * @return Generated code for injection
+  */
   private[mxnet] def macroTransform(annottees: Any*) = macro JavaNDArrayMacro.typeSafeAPIDefs
 }
 
 private[mxnet] object JavaNDArrayMacro extends GeneratorBase {
 
-  // scalastyle:off havetype
-  def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
+  /**
+    * Methods that call code generation
+    * @param c Context used for code gen
+    * @param annottees Annottees used to define Class or Module
+    * @return Generated code for injection
+    */
+  def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) : c.Expr[Any] = {
     typeSafeAPIImpl(c)(annottees: _*)
   }
-  // scalastyle:off havetype
 
-  private def typeSafeAPIImpl(c: blackbox.Context)(annottees: c.Expr[Any]*) : c.Expr[Any] = {
+  private def typeSafeAPIImpl(c: blackbox.Context)(annottees: c.Expr[Any]*) : c.Expr[Nothing] = {
     import c.universe._
 
     val isContrib: Boolean = c.prefix.tree match {
@@ -96,9 +105,9 @@ private[mxnet] object JavaNDArrayMacro extends GeneratorBase {
       // add default out parameter
       argDef += s"out: org.apache.mxnet.javaapi.NDArray"
       if (useParamObject) {
-        impl += "if (po.getOut() != null) map(\"out\") = po.getOut()"
+        impl += "if (po.getOut() != null) map(\"out\") = po.getOut().nd"
       } else {
-        impl += "if (out != null) map(\"out\") = out"
+        impl += "if (out != null) map(\"out\") = out.nd"
       }
       val returnType = "Array[org.apache.mxnet.javaapi.NDArray]"
       // scalastyle:off

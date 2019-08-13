@@ -65,7 +65,7 @@ Examples::
 .set_num_inputs(1)
 .set_num_outputs(TopKNumOutputs)
 .set_attr_parser(ParamParser<TopKParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", TopKShape)
+.set_attr<mxnet::FInferShape>("FInferShape", TopKShape)
 .set_attr<nnvm::FInferType>("FInferType", TopKType)
 .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs", TopKNumVisibleOutputs)
 .set_attr<FCompute>("FCompute<cpu>", TopK<cpu>)
@@ -76,7 +76,7 @@ Examples::
       std::vector<nnvm::NodeEntry> inputs;
       uint32_t n_out = n->num_outputs();
       for (uint32_t i = 0; i < n_out; ++i) {
-        inputs.emplace_back(nnvm::NodeEntry{ n, i, 0 });
+        inputs.emplace_back(n, i, 0);
       }
       return MakeNonlossGradNode("_backward_topk", n, {ograds[0]}, inputs, n->attrs.dict);
     } else {
@@ -128,7 +128,7 @@ Examples::
 .set_num_inputs(1)
 .set_num_outputs(2)
 .set_attr_parser(ParamParser<SortParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", SortShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SortShape)
 .set_attr<nnvm::FInferType>("FInferType", SortType)
 .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs", [](const NodeAttrs& attrs) { return 1; })
 .set_attr<FCompute>("FCompute<cpu>", Sort<cpu>)
@@ -138,7 +138,7 @@ Examples::
     std::vector<nnvm::NodeEntry> inputs;
     uint32_t n_out = n->num_outputs();
     for (uint32_t i = 0; i < n_out; ++i) {
-      inputs.emplace_back(nnvm::NodeEntry{ n, i, 0 });
+      inputs.emplace_back(n, i, 0);
     }
     return MakeNonlossGradNode("_backward_topk", n, {ograds[0]}, inputs,
                                {{"axis", n->attrs.dict["axis"]},
@@ -178,7 +178,7 @@ Examples::
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<ArgSortParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ArgSortShape)
+.set_attr<mxnet::FInferShape>("FInferShape", ArgSortShape)
 .set_attr<nnvm::FInferType>("FInferType", ArgSortType)
 .set_attr<FCompute>("FCompute<cpu>", ArgSort<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)

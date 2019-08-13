@@ -18,12 +18,12 @@
 module TestIO
 
 using MXNet
-using Base.Test
+using Test
 
 using ..Main: rand_dims
 
 function test_mnist()
-  info("IO::MNIST")
+  @info "IO::MNIST"
   filenames = mx.get_mnist_ubyte()
 
   batch_size = 10
@@ -38,8 +38,8 @@ function test_mnist()
   n_batch = 0
   for batch in mnist_provider
     if n_batch == 0
-      data_array  = mx.empty(28,28,1,batch_size)
-      label_array = mx.empty(batch_size)
+      data_array  = NDArray(undef, 28, 28, 1, batch_size)
+      label_array = NDArray(undef, batch_size)
       # have to use "for i=1:1" to get over the legacy "feature" of using
       # [ ] to do concatenation in Julia
       data_targets = [[(1:batch_size, data_array)] for i = 1:1]
@@ -76,7 +76,7 @@ function test_arrays_impl(data::Vector, label::Vector, provider::mx.ArrayDataPro
     @test batch_size == d2[end]
   end
 
-  info("IO::Array::#data=$(length(data)),#label=$(length(label)),batch_size=$batch_size")
+  @info "IO::Array::#data=$(length(data)),#label=$(length(label)),batch_size=$batch_size"
   for (idx, batch) in zip(idx_all, provider)
     data_batch = [x[[Colon() for i=1:ndims(x)-1]..., idx:min(idx+batch_size-1,sample_count)] for x in data]
     data_get   = mx.get_data(provider, batch)
@@ -111,7 +111,7 @@ function test_arrays()
 end
 
 function test_arrays_shuffle()
-  info("IO::Array::shuffle")
+  @info "IO::Array::shuffle"
 
   sample_count = 15
   batch_size   = 4

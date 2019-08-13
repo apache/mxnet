@@ -17,12 +17,16 @@
 
 (ns rnn.test-char-rnn
   (:require [clojure.string :as string]
+            [clojure.java.shell :refer [sh]]
             [rnn.util :as util]
             [rnn.lstm :as lstm]
             [org.apache.clojure-mxnet.context :as context]
             [org.apache.clojure-mxnet.executor :as executor]
             [org.apache.clojure-mxnet.module :as m]
             [org.apache.clojure-mxnet.ndarray :as ndarray]))
+
+(when-not (.exists (clojure.java.io/file "data"))
+  (do (println "Retrieving data...") (sh "./get_data.sh")))
 
 (def data-path "data/obama.txt")
 (def model-prefix)

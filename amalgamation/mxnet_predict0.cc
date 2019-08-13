@@ -43,25 +43,31 @@
 #define DISABLE_OPENMP 1
 #define DMLC_LOG_STACK_TRACE 0
 
+#include "src/common/utils.cc"
 
 #include "src/ndarray/ndarray_function.cc"
 #include "src/ndarray/ndarray.cc"
 
 #include "src/imperative/imperative.cc"
+#include "src/imperative/imperative_utils.cc"
 #include "src/imperative/cached_op.cc"
 
 #include "src/engine/engine.cc"
 #include "src/engine/naive_engine.cc"
+#include "src/engine/openmp.cc"
 
 #include "src/profiler/profiler.cc"
+#include "src/profiler/aggregate_stats.cc"
 
 #include "src/executor/graph_executor.cc"
 #include "src/executor/attach_op_execs_pass.cc"
 #include "src/executor/attach_op_resource_pass.cc"
 #include "src/executor/inplace_addto_detect_pass.cc"
+#include "src/executor/infer_graph_attr_pass.cc"
 
 #include "src/nnvm/legacy_json_util.cc"
 #include "src/nnvm/legacy_op_util.cc"
+#include "src/nnvm/graph_editor.cc"
 
 #include "src/operator/operator.cc"
 #include "src/operator/operator_util.cc"
@@ -93,4 +99,5 @@
 #include "src/c_api/c_api_symbolic.cc"
 #include "src/c_api/c_api_ndarray.cc"
 #include "src/c_api/c_api_error.cc"
+#include "src/c_api/c_api_profile.cc"
 

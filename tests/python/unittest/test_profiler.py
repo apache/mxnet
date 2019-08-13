@@ -21,6 +21,8 @@ import mxnet as mx
 from mxnet import profiler
 import time
 import os
+import json
+from collections import OrderedDict
 
 def enable_profiler(profile_filename, run=True, continuous_dump=False, aggregate_stats=False):
     profiler.set_config(profile_symbolic=True,
@@ -232,6 +234,40 @@ def test_continuous_profile_and_instant_marker():
     print(debug_str)
     profiler.set_state('stop')
 
+def test_aggregate_stats_valid_json_return():
+    file_name = 'test_aggregate_stats_json_return.json'
+    enable_profiler(file_name, True, True, True)
+    test_profile_event(False)
+    debug_str = profiler.dumps(format = 'json')
+    assert(len(debug_str) > 0)
+    target_dict = json.loads(debug_str)
+    assert "Memory" in target_dict and "Time" in target_dict and "Unit" in target_dict
+    profiler.set_state('stop')
+
+def test_aggregate_stats_sorting():
+    sort_by_options = {'avg': "Avg", 'min': "Min", 'max': "Max", 'count': "Count"}
+    ascending_options = [False, True]
+    def check_ascending(lst, asc):
+        assert(lst == sorted(lst, reverse = not asc))
+
+    def check_sorting(debug_str, sort_by, ascending):
+        target_dict = json.loads(debug_str, object_pairs_hook=OrderedDict)
+        lst = []
+        for domain_name, domain in target_dict['Time'].items():
+            lst = [item[sort_by_options[sort_by]] for item_name, item in domain.items()]
+            check_ascending(lst, ascending)
+        for domain_name, domain in target_dict['Memory'].items():
+            lst = [item[sort_by_options[sort_by]] for item_name, item in domain.items()]
+            check_ascending(lst, ascending)
+
+    file_name = 'test_aggregate_stats_sorting.json'
+    enable_profiler(file_name, True, True, True)
+    test_profile_event(False)
+    for sb in sort_by_options:
+        for asc in ascending_options:
+            debug_str = profiler.dumps(format = 'json', sort_by = sb, ascending = asc)
+            check_sorting(debug_str, sb, asc)
+    profiler.set_state('stop')
 
 if __name__ == '__main__':
     import nose

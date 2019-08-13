@@ -18,12 +18,11 @@
 ROOTDIR = $(CURDIR)
 TPARTYDIR = $(ROOTDIR)/3rdparty
 
-SCALA_VERSION_PROFILE := scala-2.11
-
 ifeq ($(OS),Windows_NT)
 	UNAME_S := Windows
 else
 	UNAME_S := $(shell uname -s)
+	UNAME_P := $(shell uname -p)
 endif
 
 ifndef config
@@ -60,6 +59,16 @@ endif
 # use customized config file
 include $(config)
 
+ifndef USE_MKLDNN
+ifneq ($(UNAME_S), Darwin)
+ifneq ($(UNAME_S), Windows)
+ifeq ($(UNAME_P), x86_64)
+	USE_MKLDNN=1
+endif
+endif
+endif
+endif
+
 ifeq ($(USE_MKL2017), 1)
 $(warning "USE_MKL2017 is deprecated. We will switch to USE_MKLDNN.")
 	USE_MKLDNN=1
@@ -85,7 +94,7 @@ endif
 
 # CFLAGS for debug
 ifeq ($(DEBUG), 1)
-	CFLAGS += -g -O0
+	CFLAGS += -g -O0 -D_GLIBCXX_ASSERTIONS
 else
 	CFLAGS += -O3 -DNDEBUG=1
 endif
@@ -95,6 +104,11 @@ LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(ENABLE_TESTCOVERAGE), 1)
         CFLAGS += --coverage
         LDFLAGS += --coverage
+endif
+
+ifeq ($(USE_NVTX), 1)
+        CFLAGS += -DMXNET_USE_NVTX=1
+        LDFLAGS += -lnvToolsExt
 endif
 
 ifeq ($(USE_TENSORRT), 1)
@@ -120,7 +134,7 @@ ifdef CAFFE_PATH
 endif
 
 ifndef LINT_LANG
-	LINT_LANG="all"
+	LINT_LANG = "all"
 endif
 
 ifeq ($(USE_MKLDNN), 1)
@@ -137,11 +151,33 @@ endif
 
 # setup opencv
 ifeq ($(USE_OPENCV), 1)
-	CFLAGS += -DMXNET_USE_OPENCV=1 $(shell pkg-config --cflags opencv)
-	LDFLAGS += $(filter-out -lopencv_ts, $(shell pkg-config --libs opencv))
+	CFLAGS += -DMXNET_USE_OPENCV=1
+	ifneq ($(filter-out NONE, $(USE_OPENCV_INC_PATH)),)
+		CFLAGS += -I$(USE_OPENCV_INC_PATH)/include
+		ifeq ($(filter-out NONE, $(USE_OPENCV_LIB_PATH)),)
+$(error Please add the path of OpenCV shared library path into `USE_OPENCV_LIB_PATH`, when `USE_OPENCV_INC_PATH` is not NONE)
+		endif
+		LDFLAGS += -L$(USE_OPENCV_LIB_PATH)
+		ifneq ($(wildcard $(USE_OPENCV_LIB_PATH)/libopencv_imgcodecs.*),)
+			LDFLAGS += -lopencv_imgcodecs
+		endif
+		ifneq ($(wildcard $(USE_OPENCV_LIB_PATH)/libopencv_highgui.*),)
+			LDFLAGS += -lopencv_highgui
+		endif
+	else
+		ifeq ("$(shell pkg-config --exists opencv4; echo $$?)", "0")
+			OPENCV_LIB = opencv4
+		else
+			OPENCV_LIB = opencv
+		endif
+		CFLAGS += $(shell pkg-config --cflags $(OPENCV_LIB))
+		LDFLAGS += $(shell pkg-config --libs-only-L $(OPENCV_LIB))
+		LDFLAGS += $(filter -lopencv_imgcodecs -lopencv_highgui, $(shell pkg-config --libs-only-l $(OPENCV_LIB)))
+	endif
+	LDFLAGS += -lopencv_imgproc -lopencv_core
 	BIN += bin/im2rec
 else
-	CFLAGS+= -DMXNET_USE_OPENCV=0
+	CFLAGS += -DMXNET_USE_OPENCV=0
 endif
 
 ifeq ($(USE_OPENMP), 1)
@@ -157,6 +193,11 @@ ifeq ($(USE_OPERATOR_TUNING), 1)
 	CFLAGS += -DMXNET_USE_OPERATOR_TUNING=1
 endif
 
+ifeq ($(USE_INT64_TENSOR_SIZE), 1)
+   CFLAGS += -DMSHADOW_INT64_TENSOR_SIZE=1
+else
+   CFLAGS += -DMSHADOW_INT64_TENSOR_SIZE=0
+endif
 # verify existence of separate lapack library when using blas/openblas/atlas
 # switch off lapack support in case it can't be found
 # issue covered with this
@@ -201,6 +242,16 @@ endif
 ifeq ($(USE_CUDNN), 1)
 	CFLAGS += -DMSHADOW_USE_CUDNN=1
 	LDFLAGS += -lcudnn
+endif
+
+ifeq ($(use_blas), open)
+	CFLAGS += -DMXNET_USE_BLAS_OPEN=1
+else ifeq ($(use_blas), atlas)
+	CFLAGS += -DMXNET_USE_BLAS_ATLAS=1
+else ifeq ($(use_blas), mkl)
+	CFLAGS += -DMXNET_USE_BLAS_MKL=1
+else ifeq ($(use_blas), apple)
+	CFLAGS += -DMXNET_USE_BLAS_APPLE=1
 endif
 
 # whether to use F16C instruction set extension for fast fp16 compute on CPU
@@ -317,10 +368,32 @@ endif
 
 # Guard against displaying nvcc info messages to users not using CUDA.
 ifeq ($(USE_CUDA), 1)
+	# Get AR version, compare with expected ar version and find bigger and smaller version of the two
+	AR_VERSION := $(shell ar --version | egrep -o "([0-9]{1,}\.)+[0-9]{1,}")
+	EXPECTED_AR_VERSION := $(shell echo "2.27")
+	LARGE_VERSION := $(shell printf '%s\n' "$(AR_VERSION)" "$(EXPECTED_AR_VERSION)" | sort -V | tail -n 1)
+	SMALL_VERSION := $(shell printf '%s\n' "$(AR_VERSION)" "$(EXPECTED_AR_VERSION)" | sort -V | head -n 1)
+
 	# If NVCC is not at the location specified, use CUDA_PATH instead.
 	ifeq ("$(wildcard $(NVCC))","")
 		ifneq ($(USE_CUDA_PATH), NONE)
 			NVCC=$(USE_CUDA_PATH)/bin/nvcc
+
+# if larger version is the expected one and larger != smaller
+# this means ar version is less than expected version and user needs to be warned
+ifeq ($(LARGE_VERSION), $(EXPECTED_AR_VERSION))
+ifneq ($(LARGE_VERSION), $(SMALL_VERSION))
+define n
+
+
+endef
+
+$(warning WARNING: Archive utility: ar version being used is less than 2.27.0. $n \
+		   Note that with USE_CUDA=1 flag and USE_CUDNN=1 this is known to cause problems. $n \
+		   For more info see: https://github.com/apache/incubator-mxnet/issues/15084)
+$(shell sleep 5)
+endif
+endif
 $(info INFO: nvcc was not found on your path)
 $(info INFO: Using $(NVCC) as nvcc path)
 		else
@@ -397,18 +470,13 @@ PLUGIN_OBJ =
 PLUGIN_CUOBJ =
 include $(MXNET_PLUGINS)
 
-ifeq ($(UNAME_S), Windows)
-	# TODO(yizhi) currently scala package does not support windows
-	SCALA_PKG_PROFILE := windows
-else
+ifneq ($(UNAME_S), Windows)
 	ifeq ($(UNAME_S), Darwin)
 		WHOLE_ARCH= -all_load
 		NO_WHOLE_ARCH= -noall_load
-		SCALA_PKG_PROFILE := osx-x86_64
 	else
 		WHOLE_ARCH= --whole-archive
 		NO_WHOLE_ARCH= --no-whole-archive
-		SCALA_PKG_PROFILE := linux-x86_64
 	endif
 endif
 
@@ -417,7 +485,7 @@ LIB_DEP += $(DMLC_CORE)/libdmlc.a $(NNVM_PATH)/lib/libnnvm.a
 ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(PLUGIN_OBJ) $(LIB_DEP)
 
 ifeq ($(USE_CUDA), 1)
-	CFLAGS += -I$(ROOTDIR)/3rdparty/cub
+	CFLAGS += -I$(ROOTDIR)/3rdparty/nvidia_cub
 	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ) $(PLUGIN_CUOBJ)
 	LDFLAGS += -lcufft
 	ifeq ($(ENABLE_CUDA_RTC), 1)
@@ -427,7 +495,6 @@ ifeq ($(USE_CUDA), 1)
 	# Make sure to add stubs as fallback in order to be able to build
 	# without full CUDA install (especially if run without nvidia-docker)
 	LDFLAGS += -L/usr/local/cuda/lib64/stubs
-	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-gpu
 	ifeq ($(USE_NCCL), 1)
 		ifneq ($(USE_NCCL_PATH), NONE)
 			CFLAGS += -I$(USE_NCCL_PATH)/include
@@ -439,7 +506,6 @@ ifeq ($(USE_CUDA), 1)
 		CFLAGS += -DMXNET_USE_NCCL=0
 	endif
 else
-	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-cpu
 	CFLAGS += -DMXNET_USE_NCCL=0
 endif
 
@@ -454,6 +520,10 @@ else
 	CFLAGS += -DMXNET_USE_LIBJPEG_TURBO=0
 endif
 
+ifeq ($(CI), 1)
+	MAVEN_ARGS := -B
+endif
+
 # For quick compile test, used smaller subset
 ALLX_DEP= $(ALL_DEP)
 
@@ -463,7 +533,7 @@ build/src/%.o: src/%.cc | mkldnn
 
 build/src/%_gpu.o: src/%.cu | mkldnn
 	@mkdir -p $(@D)
-	$(NVCC) $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS)" -M -MT build/src/$*_gpu.o $< >build/src/$*_gpu.d
+	$(NVCC) $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS)" --generate-dependencies -MT build/src/$*_gpu.o $< >build/src/$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS)" $<
 
 # A nvcc bug cause it to generate "generic/xxx.h" dependencies from torch headers.
@@ -473,18 +543,23 @@ build/plugin/%_gpu.o: plugin/%.cu
 	$(CXX) -std=c++11 $(CFLAGS) -MM -MT build/plugin/$*_gpu.o $< >build/plugin/$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS)" $<
 
-build/plugin/%.o: plugin/%.cc
+build/plugin/%.o: plugin/%.cc | mkldnn
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
 
 %_gpu.o: %.cu
 	@mkdir -p $(@D)
-	$(NVCC) $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS) -Isrc/operator" -M -MT $*_gpu.o $< >$*_gpu.d
+	$(NVCC) $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS) -Isrc/operator" --generate-dependencies -MT $*_gpu.o $< >$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS) -Isrc/operator" $<
 
 %.o: %.cc $(CORE_INC)
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -Isrc/operator -c $< -o $@
+
+# Set install path for libmxnet.so on Mac OS
+ifeq ($(UNAME_S), Darwin)
+        LDFLAGS += -Wl,-install_name,@rpath/libmxnet.so
+endif
 
 # NOTE: to statically link libmxnet.a we need the option
 # --Wl,--whole-archive -lmxnet --Wl,--no-whole-archive
@@ -541,10 +616,10 @@ lint: cpplint rcpplint jnilint pylint
 
 cpplint:
 	3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests \
-	--exclude_path src/operator/contrib/ctc_include
+	--exclude_path src/operator/contrib/ctc_include include/mkldnn
 
 pylint:
-	pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py
+	python3 -m pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py
 
 doc: docs
 
@@ -559,7 +634,7 @@ doxygen:
 
 # Cython build
 cython:
-	cd python; python setup.py build_ext --inplace --with-cython
+	cd python; $(PYTHON) setup.py build_ext --inplace --with-cython
 
 cython2:
 	cd python; python2 setup.py build_ext --inplace --with-cython
@@ -578,21 +653,24 @@ rpkg:
 	mkdir -p R-package/inst/libs
 	cp src/io/image_recordio.h R-package/src
 	cp -rf lib/libmxnet.so R-package/inst/libs
+
+	if [ -e "lib/libmkldnn.so.0" ]; then \
+		cp -rf lib/libmkldnn.so.0 R-package/inst/libs; \
+		cp -rf lib/libiomp5.so R-package/inst/libs; \
+		cp -rf lib/libmklml_intel.so R-package/inst/libs; \
+	fi
+
 	mkdir -p R-package/inst/include
-	cp -rf include/* R-package/inst/include
-	cp -rf 3rdparty/dmlc-core/include/* R-package/inst/include/
-	cp -rf 3rdparty/tvm/nnvm/include/* R-package/inst/include
+	cp -rl include/* R-package/inst/include
 	Rscript -e "if(!require(devtools)){install.packages('devtools', repo = 'https://cloud.r-project.org/')}"
+	Rscript -e "if(!require(roxygen2)||packageVersion('roxygen2') < '6.1.1'){install.packages('roxygen2', repo = 'https://cloud.r-project.org/')}"
 	Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cloud.r-project.org/')); install_deps(pkg='R-package', dependencies = TRUE)"
 	cp R-package/dummy.NAMESPACE R-package/NAMESPACE
 	echo "import(Rcpp)" >> R-package/NAMESPACE
 	R CMD INSTALL R-package
-	Rscript -e "if (!require('roxygen2')||packageVersion('roxygen2') < '5.0.1'){\
-	    devtools::install_version('roxygen2',version='5.0.1',\
-	    repos='https://cloud.r-project.org/',quiet=TRUE)}"
 	Rscript -e "require(mxnet); mxnet:::mxnet.export('R-package'); warnings()"
 	rm R-package/NAMESPACE
-	Rscript -e "require(roxygen2); roxygen2::roxygenise('R-package'); warnings()"
+	Rscript -e "devtools::document('R-package');warnings()"
 	R CMD INSTALL R-package
 
 rpkgtest:
@@ -600,71 +678,51 @@ rpkgtest:
 	Rscript -e 'res<-covr:::package_coverage("R-package");fileConn<-file(paste("r-package_coverage_",toString(runif(1)),".json"));writeLines(covr:::to_codecov(res), fileConn);close(fileConn)'
 
 scalaclean:
-	(cd $(ROOTDIR)/scala-package; \
-		mvn clean -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE))
+	(cd $(ROOTDIR)/scala-package && mvn clean)
 
 scalapkg:
-	(cd $(ROOTDIR)/scala-package; \
-		mvn package -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -Dcxx="$(CXX)" \
-		    -Dbuild.platform="$(SCALA_PKG_PROFILE)" \
-			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-			-Dcurrent_libdir="$(ROOTDIR)/lib" \
-			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
-
-scalaunittest:
-	(cd $(ROOTDIR)/scala-package; \
-		mvn integration-test -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE),unittest -Dcxx="$(CXX)" \
-			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a" $(SCALA_TEST_ARGS))
-
-scalaintegrationtest:
-	(cd $(ROOTDIR)/scala-package; \
-		mvn integration-test -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE),integrationtest -Dcxx="$(CXX)" \
-			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a" $(SCALA_TEST_ARGS))
+	(cd $(ROOTDIR)/scala-package && mvn install -DskipTests)
 
 scalainstall:
-	(cd $(ROOTDIR)/scala-package; \
-		mvn install -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -DskipTests=true -Dcxx="$(CXX)" \
-		    -Dbuild.platform="$(SCALA_PKG_PROFILE)" \
-			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
+	(cd $(ROOTDIR)/scala-package && mvn install)
 
-scalarelease-dryrun:
-	(cd $(ROOTDIR)/scala-package; \
-		mvn release:clean release:prepare -DdryRun=true -DautoVersionSubmodules=true \
-		-Papache-release,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \
-		-Darguments=""-Dbuild\.platform=\""$(SCALA_PKG_PROFILE)\""\ -DskipTests=true\ -Dcflags=\""$(CFLAGS)\""\ -Dcxx=\""$(CXX)\""\ -Dldflags=\""$(LDFLAGS)\""\ -Dlddeps=\""$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a\"""")
+scalaunittest:
+	(cd $(ROOTDIR)/scala-package && mvn install)
 
-scalarelease-prepare:
-	(cd $(ROOTDIR)/scala-package; \
-		mvn release:clean release:prepare -DautoVersionSubmodules=true \
-		-Papache-release,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \
-		-Darguments=""-Dbuild\.platform=\""$(SCALA_PKG_PROFILE)\""\ -DskipTests=true\ -Dcflags=\""$(CFLAGS)\""\ -Dcxx=\""$(CXX)\""\ -Dldflags=\""$(LDFLAGS)\""\ -Dlddeps=\""$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a\"""")
-
-scalarelease-perform:
-	(cd $(ROOTDIR)/scala-package; \
-		mvn release:perform -DautoVersionSubmodules=true \
-		-Papache-release,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \
-		-Darguments=""-Dbuild\.platform=\""$(SCALA_PKG_PROFILE)\""\ -DskipTests=true\ -Dcflags=\""$(CFLAGS)\""\ -Dcxx=\""$(CXX)\""\ -Dldflags=\""$(LDFLAGS)\""\ -Dlddeps=\""$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a\"""")
-
-scaladeploy:
-	(cd $(ROOTDIR)/scala-package; \
-		mvn deploy -Papache-release,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \-DskipTests=true -Dcxx="$(CXX)" \
-		    -Dbuild.platform="$(SCALA_PKG_PROFILE)" \
-			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
+scalaintegrationtest:
+	(cd $(ROOTDIR)/scala-package && mvn integration-test -DskipTests=false)
 
 jnilint:
-	3rdparty/dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
+	3rdparty/dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src --exclude_path scala-package/native/src/main/native/org_apache_mxnet_native_c_api.h
 
 rclean:
 	$(RM) -r R-package/src/image_recordio.h R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
 		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
 
+build/rat/apache-rat/target/apache-rat-0.13-SNAPSHOT.jar:
+	mkdir -p build
+	svn co http://svn.apache.org/repos/asf/creadur/rat/branches/0.12-release/ build/rat; \
+	cd build/rat; \
+	mvn -Dmaven.test.skip=true install;
+
+ratcheck: build/rat/apache-rat/target/apache-rat-0.13-SNAPSHOT.jar
+	exec 5>&1; \
+	RAT_JAR=build/rat/apache-rat/target/apache-rat-0.13-SNAPSHOT.jar; \
+	OUTPUT=$(java -jar $(RAT_JAR) -E tests/nightly/apache_rat_license_check/rat-excludes -d .|tee >(cat - >&5)); \
+    ERROR_MESSAGE="Printing headers for text files without a valid license header"; \
+    echo "-------Process The Output-------"; \
+    if [[ $OUTPUT =~ $ERROR_MESSAGE ]]; then \
+        echo "ERROR: RAT Check detected files with unknown licenses. Please fix and run test again!"; \
+        exit 1; \
+    else \
+        echo "SUCCESS: There are no files with an Unknown License."; \
+    fi
+
+
 ifneq ($(EXTRA_OPERATORS),)
 clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
-	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ 
+	$(RM) -r build lib bin deps *~ */*~ */*/*~ */*/*/*~ 
+	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
@@ -674,6 +732,7 @@ clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
 else
 clean: rclean mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ 
+	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -

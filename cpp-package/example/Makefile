@@ -15,6 +15,12 @@
 # specific language governing permissions and limitations
 # under the License.
 
+ifeq ($(OS),Windows_NT)
+	UNAME_S := Windows
+else
+	UNAME_S := $(shell uname -s)
+endif
+
 prebuild :
 	@mkdir -p build
 	$(shell ./get_data.sh)
@@ -30,6 +36,7 @@ endif
 
 # CPPEX_CFLAGS += -I../include
 CPPEX_EXTRA_LDFLAGS := -L../../lib -lmxnet
+MXNET_LIB_PATH := $(shell cd ../../lib; pwd)
 
 .PHONY: all clean
 
@@ -38,10 +45,12 @@ all: prebuild  $(CPPEX_EXE)
 debug: CPPEX_CFLAGS += -DDEBUG -g
 debug: prebuild all
 
-
-
 $(CPPEX_EXE):% : %.cpp
 	$(CXX) -std=c++11 $(CFLAGS)  $(CPPEX_CFLAGS) -o build/$@ $(filter %.cpp %.a, $^) $(CPPEX_EXTRA_LDFLAGS)
+ifeq ($(UNAME_S), Darwin)
+	install_name_tool -add_rpath @loader_path build/$@
+	install_name_tool -add_rpath $(MXNET_LIB_PATH) build/$@
+endif
 
 clean:
 	@rm -rf build

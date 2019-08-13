@@ -20,8 +20,6 @@
 import os as _os
 import sys as _sys
 
-import numpy as np
-
 try:
     if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
         from .._ctypes.ndarray import NDArrayBase, CachedOp

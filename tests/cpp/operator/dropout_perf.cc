@@ -38,7 +38,7 @@ const kwargs_t basic_dropout_args = { };
  * \brief Generic bidirectional sanity test
  */
 TEST(DROPOUT_PERF, ExecuteBidirectional) {
-  TShape shape({5, 5});
+  mxnet::TShape shape({5, 5});
   kwargs_t kwargs = basic_dropout_args;
   kwargs.push_back({"mode", "always"});
   test::op::CoreOperatorRunner<float> runner;
@@ -55,12 +55,12 @@ TEST(DROPOUT_PERF, TimingCPU) {
   kwargs_t kwargs = basic_dropout_args;
 // Which math function is arbitrary since it will have roughly constant timing among approaches
   kwargs.push_back({"mode", "always"});
-  TShape shape({10, 10, 10, 10});
+  mxnet::TShape shape({10, 10, 10, 10});
   test::op::CoreOperatorRunner<float> runner;
   kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "Dropout",
                                                            "_backward_Dropout");
   runner.RunBidirectional(false, { shape }, kwargs, 1);
-  std::vector <TShape> shapes;
+  std::vector <mxnet::TShape> shapes;
   if (test::performance_run) {
     shapes = {
       {1,  1, 28,  28},
@@ -75,7 +75,7 @@ TEST(DROPOUT_PERF, TimingCPU) {
       {50, 3, 18,  32},
     };
   }
-  for (const TShape &shape : shapes) {
+  for (const mxnet::TShape &shape : shapes) {
     kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "Dropout",
                                                              "_backward_Dropout");
     runner.TimingTest("Dropout Operator CPU", false, false, kwargs, 2, 10, { shape }, false);
@@ -90,19 +90,19 @@ TEST(DROPOUT_PERF, TimingGPU) {
   kwargs_t kwargs = basic_dropout_args;
   // Which math function is arbitrary since it will have roughly constant timing among approaches
   kwargs.push_back({"mode", "always"});
-  TShape shape({10, 10, 10, 10});
+  mxnet::TShape shape({10, 10, 10, 10});
   test::op::CoreOperatorRunner<float> runner;
   kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "Dropout",
                                                            "_backward_Dropout");
   runner.RunBidirectional(false, { shape }, kwargs, 1);
-  std::vector <TShape> shapes = {
+  std::vector <mxnet::TShape> shapes = {
     {1,  1, 28,  28},
     {1,  3, 28,  28},
     {50, 1, 18,  32},
     {50, 3, 18,  32},
     {20, 3, 128, 128}
   };
-  for (const TShape &shape : shapes) {
+  for (const mxnet::TShape &shape : shapes) {
     kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "Dropout",
                                                              "_backward_Dropout");
     runner.TimingTest("Dropout Operator GPU", true, false, kwargs, 2, 10, { shape }, false);

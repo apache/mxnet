@@ -53,8 +53,11 @@ class GPUPooledStorageManager final : public StorageManager {
  public:
   /*!
    * \brief Default constructor.
+   *
+   * \param initial_context context used by this Storage Manager
    */
-  GPUPooledStorageManager() {
+  explicit GPUPooledStorageManager(Context initial_context) :
+    initial_context_(initial_context) {
     reserve_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_RESERVE", 5);
     page_size_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_PAGE_SIZE", 4096);
     large_alloc_round_size_ = dmlc::GetEnv("MXNET_GPU_MEM_LARGE_ALLOC_ROUND_SIZE", 2 * 1024 * 1024);
@@ -81,6 +84,8 @@ class GPUPooledStorageManager final : public StorageManager {
     std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
     DirectFreeNoLock(handle);
   }
+
+  void ReleaseAll() override;
 
  private:
   void DirectFreeNoLock(Storage::Handle handle) {
@@ -112,7 +117,6 @@ class GPUPooledStorageManager final : public StorageManager {
   }
 
  private:
-  void ReleaseAll();
   // used memory
   size_t used_memory_ = 0;
   // page size
@@ -123,6 +127,8 @@ class GPUPooledStorageManager final : public StorageManager {
   int reserve_;
   // number of devices
   const size_t NDEV = 32;
+  // context used by this Storage Manager
+  const Context initial_context_;
   // memory pool
   std::unordered_map<size_t, std::vector<void*>> memory_pool_;
   DISALLOW_COPY_AND_ASSIGN(GPUPooledStorageManager);
@@ -177,6 +183,7 @@ void GPUPooledStorageManager::ReleaseAll() {
       Storage::Handle handle;
       handle.dptr = j;
       handle.size = i.first;
+      handle.ctx = initial_context_;
       DirectFreeNoLock(handle);
     }
   }
@@ -201,8 +208,11 @@ class GPUPooledRoundedStorageManager final : public StorageManager {
  public:
   /*!
    * \brief Default constructor.
+   *
+   * \param initial_context context used by this Storage Manager
    */
-  GPUPooledRoundedStorageManager() {
+  explicit GPUPooledRoundedStorageManager(Context initial_context) :
+    initial_context_(initial_context) {
     reserve_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_RESERVE", 5);
     page_size_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_PAGE_SIZE", 4096);
     cut_off_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF", 24);
@@ -241,6 +251,8 @@ class GPUPooledRoundedStorageManager final : public StorageManager {
     DirectFreeNoLock(handle);
   }
 
+  void ReleaseAll() override;
+
  private:
   inline int div_pow2_round_up(size_t s, int divisor_log2) {
     // (1025, 10) -> 2
@@ -275,7 +287,6 @@ class GPUPooledRoundedStorageManager final : public StorageManager {
   }
 
  private:
-  void ReleaseAll();
   // number of devices
   const int NDEV = 32;
   // log2 of maximum page size. 16GB
@@ -290,6 +301,8 @@ class GPUPooledRoundedStorageManager final : public StorageManager {
   size_t cut_off_;
   // percentage of reserved memory
   int reserve_;
+  // context used by this Storage Manager
+  const Context initial_context_;
   // memory pool
   std::vector<std::vector<void*>> memory_pool_;
   DISALLOW_COPY_AND_ASSIGN(GPUPooledRoundedStorageManager);
@@ -345,6 +358,7 @@ void GPUPooledRoundedStorageManager::ReleaseAll() {
       Storage::Handle handle;
       handle.size = size;
       handle.dptr = j;
+      handle.ctx = initial_context_;
       DirectFreeNoLock(handle);
     }
     memory_pool_[i].clear();

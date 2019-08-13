@@ -80,6 +80,9 @@ ENABLE_CUDA_RTC = 1
 # whether use CuDNN R3 library
 USE_CUDNN = 0
 
+# whether to use NVTX when profiling
+USE_NVTX = 0
+
 #whether to use NCCL library
 USE_NCCL = 0
 #add the path to NCCL library
@@ -89,6 +92,10 @@ USE_NCCL_PATH = NONE
 # you can disable it, however, you will not able to use
 # imbin iterator
 USE_OPENCV = 1
+# Add OpenCV include path, in which the directory `opencv2` exists
+USE_OPENCV_INC_PATH = NONE
+# Add OpenCV shared library path, in which the shared library exists
+USE_OPENCV_LIB_PATH = NONE
 
 #whether use libjpeg-turbo for image decode without OpenCV wrapper
 USE_LIBJPEG_TURBO = 0
@@ -98,8 +105,10 @@ USE_LIBJPEG_TURBO_PATH = NONE
 # use openmp for parallelization
 USE_OPENMP = 1
 
-# whether use MKL-DNN library
-USE_MKLDNN = 0
+# whether use MKL-DNN library: 0 = disabled, 1 = enabled
+# if USE_MKLDNN is not defined, MKL-DNN will be enabled by default on x86 Linux.
+# you can disable it explicity with USE_MKLDNN = 0
+USE_MKLDNN =
 
 # whether use NNPACK library
 USE_NNPACK = 0
@@ -177,7 +186,8 @@ USE_S3 = 0
 USE_OPERATOR_TUNING = 1
 
 # Use gperftools if found
-USE_GPERFTOOLS = 1
+# Disable because of #8968
+USE_GPERFTOOLS = 0
 
 # path to gperftools (tcmalloc) library in case of a non-standard installation
 USE_GPERFTOOLS_PATH =
@@ -207,6 +217,15 @@ EXTRA_OPERATORS =
 
 # Create C++ interface package
 USE_CPP_PACKAGE = 0
+
+# Use int64_t type to represent the total number of elements in a tensor
+# This will cause performance degradation reported in issue #14496
+# Set to 1 for large tensor with tensor size greater than INT32_MAX i.e. 2147483647
+# Note: the size of each dimension is still bounded by INT32_MAX
+USE_INT64_TENSOR_SIZE = 0
+
+# Python executable. Needed for cython target
+PYTHON = python
 
 #----------------------------
 # plugins

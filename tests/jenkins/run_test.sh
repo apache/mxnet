@@ -56,8 +56,8 @@ nosetests3 --verbose tests/python/train || exit -1
 
 echo "BUILD scala_test"
 export PATH=$PATH:/opt/apache-maven/bin
-make scalapkg || exit -1
-make scalatest || exit -1
+cd scala-package
+mvn install || exit -1
 
 # echo "BUILD julia_test"
 # export MXNET_HOME="${PWD}"

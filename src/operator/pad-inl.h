@@ -50,7 +50,7 @@ enum PadOpOutputs { kOut };
 struct PadParam : public dmlc::Parameter<PadParam> {
   int mode;
   double constant_value;
-  TShape pad_width;
+  mxnet::TShape pad_width;
   DMLC_DECLARE_PARAMETER(PadParam) {
     DMLC_DECLARE_FIELD(mode)
         .add_enum("constant", pad_enum::kConstant)
@@ -200,12 +200,12 @@ class PadProp : public OperatorProperty {
     return dtype != -1;
   }
 
-  bool InferShape(std::vector<TShape> *in_shape, std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape, mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 1U) << "Can only be one input to symbol.";
 
-    const TShape &dshape = (*in_shape)[pad_enum::kData];
+    const mxnet::TShape &dshape = (*in_shape)[pad_enum::kData];
 
     auto rank = dshape.ndim();
     auto pad = param_.pad_width;
@@ -229,8 +229,8 @@ class PadProp : public OperatorProperty {
                         "only supports padding sizes smaller than the input size.";
       }
     }
-    TShape oshape = dshape;
-    for (size_t i = 0; i < dshape.ndim(); ++i) {
+    mxnet::TShape oshape = dshape;
+    for (int i = 0; i < dshape.ndim(); ++i) {
       oshape[i] =
           param_.pad_width[2 * i] + param_.pad_width[2 * i + 1] + dshape[i];
     }
@@ -258,7 +258,7 @@ class PadProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator *CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator *CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  private:

@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+     ~ Licensed to the Apache Software Foundation (ASF) under one or more
+     ~ contributor license agreements.  See the NOTICE file distributed with
+     ~ this work for additional information regarding copyright ownership.
+     ~ The ASF licenses this file to You under the Apache License, Version 2.0
+     ~ (the "License"); you may not use this file except in compliance with
+     ~ the License.  You may obtain a copy of the License at
+     ~
+     ~    http://www.apache.org/licenses/LICENSE-2.0
+     ~
+     ~ Unless required by applicable law or agreed to in writing, software
+     ~ distributed under the License is distributed on an "AS IS" BASIS,
+     ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     ~ See the License for the specific language governing permissions and
+     ~ limitations under the License.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.apache.mxnet</groupId>
+    <artifactId>mxnet-parent</artifactId>
+    <version>INTERNAL</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>mxnet-external-pom</artifactId>
+  <version>${revision}</version>
+  <name>MXNet Scala Package - Full ${platform}-only</name>
+  <packaging>pom</packaging>
+  <description>
+    Scala Package for Apache MXNet (Incubating) - flexible and efficient library for deep learning.
+  </description>
+
+  <properties>
+    <MXNET_DIR>${project.parent.basedir}/..</MXNET_DIR>
+    <ARTIFACT_ID>mxnet-full_2.11-${platform}-${flavor}</ARTIFACT_ID>
+    <revision>${base.revision}-SNAPSHOT</revision>
+    <skipGpg>true</skipGpg>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.mxnet</groupId>
+      <artifactId>mxnet-full_2.11</artifactId>
+      <version>INTERNAL</version>
+    </dependency>
+  </dependencies>
+
+  <profiles>
+    <profile>
+      <id>staging</id>
+      <properties>
+        <revision>${base.revision}</revision>
+        <skipGpg>false</skipGpg>
+      </properties>
+    </profile>
+  </profiles>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <attach>false</attach>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>replacer</artifactId>
+        <version>1.5.3</version>
+        <executions>
+          <execution>
+            <phase>deploy</phase>
+            <goals>
+              <goal>replace</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <file>${basedir}/src/main/deploy/deploy.xml</file>
+          <outputFile>${project.build.directory}/deploy.xml</outputFile>
+          <replacements>
+            <replacement>
+              <token>DESCRIPTION</token>
+              <value>${project.description}</value>
+            </replacement>
+            <replacement>
+              <token>ARTIFACT_ID</token>
+              <value>${ARTIFACT_ID}</value>
+            </replacement>
+            <replacement>
+              <token>PROJECT_VERSION</token>
+              <value>${project.version}</value>
+            </replacement>
+            <replacement>
+              <token>SCALA_VERSION</token>
+              <value>${scala.version}</value>
+            </replacement>
+          </replacements>
+        </configuration>
+      </plugin>
+
+      <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>build-helper-maven-plugin</artifactId>
+          <version>3.0.0</version>
+          <executions>
+              <execution>
+                  <id>attach-artifacts</id>
+                  <phase>deploy</phase>
+                  <goals>
+                      <goal>attach-artifact</goal>
+                  </goals>
+                  <configuration>
+                      <artifacts>
+                          <artifact>
+                              <file>target/deploy.xml</file>
+                              <type>xml</type>
+                          </artifact>
+                      </artifacts>
+                  </configuration>
+              </execution>
+          </executions>
+      </plugin>
+
+      <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-gpg-plugin</artifactId>
+          <version>1.6</version>
+          <executions>
+              <execution>
+                  <id>sign-artifacts</id>
+                  <phase>deploy</phase>
+                  <goals>
+                      <goal>sign</goal>
+                  </goals>
+              </execution>
+          </executions>
+          <configuration>
+              <skip>${skipGpg}</skip>
+          </configuration>
+      </plugin>
+
+    </plugins>
+  </build>
+
+</project>

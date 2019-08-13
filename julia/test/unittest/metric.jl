@@ -18,7 +18,7 @@
 module TestMetric
 
 using MXNet
-using Base.Test
+using Test
 
 ################################################################################
 # Supporting functions
@@ -58,7 +58,7 @@ end
 ################################################################################
 
 function test_ace()
-    info("EvalMetric::ACE")
+    @info "EvalMetric::ACE"
     n_categories   = 4
     n_observations = 100
     labels         = convert(Vector{Float32}, rand(0:(n_categories - 1), n_observations))    # MXNet uses Float32
@@ -72,7 +72,7 @@ end
 
 
 function test_nmse()
-    info("EvalMetric::NMSE")
+    @info "EvalMetric::NMSE"
 
     @testset "EvalMetric::NMSE::update!" begin
         metric = mx.NMSE()

@@ -38,9 +38,9 @@ namespace mxnet {
 /*! \brief namespace to support all possible Ndarray operator */
 namespace ndarray {
 struct BinaryBase {
-  inline static TShape GetShape(const TShape &lshape, const TShape &rshape) {
+  inline static mxnet::TShape GetShape(const mxnet::TShape &lshape, const mxnet::TShape &rshape) {
     CHECK(lshape == rshape) << "operands shape mismatch";
-    CHECK(lshape.ndim() != 0) << "source operand have zero dimension shape";
+    CHECK(!mxnet::op::shape_is_none(lshape)) << "source operand have zero dimension shape";
     return lshape;
   }
 };
@@ -94,7 +94,7 @@ struct ClipMax : public BinaryBase {
 
 
 struct OneHotEncode {
-  inline static TShape GetShape(const TShape &index, const TShape &proptype) {
+  inline static mxnet::TShape GetShape(const mxnet::TShape &index, const mxnet::TShape &proptype) {
     CHECK(index.ndim() == 1 && proptype.ndim() == 2) << "OneHotEncode only support 1d index.";
     CHECK_EQ(index[0], proptype[0]) << "OneHotEncode shape inconsistent";
     return proptype;
@@ -102,7 +102,7 @@ struct OneHotEncode {
 };
 
 struct MatChooseRowElem {
-  inline static TShape GetShape(const TShape &lshape, const TShape &rshape) {
+  inline static mxnet::TShape GetShape(const mxnet::TShape &lshape, const mxnet::TShape &rshape) {
     CHECK(lshape.ndim() == 2 && rshape.ndim() == 1)
         << "choose_row_element only support 2D Matrix and 1D index";
     CHECK_EQ(lshape[0], rshape[0]) << "choose_row_element index and matrix shape mismatch";
@@ -111,7 +111,9 @@ struct MatChooseRowElem {
 };
 
 struct MatFillRowElem {
-  inline static TShape GetShape(const TShape &lshape, const TShape &mshape, const TShape &rshape) {
+  inline static mxnet::TShape GetShape(const mxnet::TShape &lshape,
+                                       const mxnet::TShape &mshape,
+                                       const mxnet::TShape &rshape) {
     CHECK(lshape.ndim() == 2 && mshape.ndim() == 1 && rshape.ndim() == 1)
         << "fill_row_element only support 2D Matrix, 1D value and 1D index";
     CHECK((lshape[0] == mshape[0]) && (mshape[0] == rshape[0]))

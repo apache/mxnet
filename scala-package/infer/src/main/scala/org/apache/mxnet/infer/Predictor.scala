@@ -17,8 +17,9 @@
 
 package org.apache.mxnet.infer
 
+import org.apache.mxnet.MX_PRIMITIVES.MX_PRIMITIVE_TYPE
 import org.apache.mxnet.io.NDArrayIter
-import org.apache.mxnet.{Context, DataDesc, NDArray, Shape}
+import org.apache.mxnet._
 import org.apache.mxnet.module.Module
 
 import scala.collection.mutable.ListBuffer
@@ -32,27 +33,34 @@ import org.slf4j.LoggerFactory
 private[infer] trait PredictBase {
 
   /**
-   * Converts indexed sequences of 1-D array to NDArrays.
-   * <p>
-   * This method will take input as IndexedSeq one dimensional arrays and creates the
-   * NDArray needed for inference. The array will be reshaped based on the input descriptors.
-   * @param input:            An IndexedSequence of a one-dimensional array.
-                              An IndexedSequence is needed when the model has more than one input.
-   * @return                  Indexed sequence array of outputs
-   */
-  def predict(input: IndexedSeq[Array[Float]]): IndexedSeq[Array[Float]]
+    * Converts indexed sequences of 1-D array to NDArrays.
+    * This method will take input as IndexedSeq one dimensional arrays and creates the
+    * NDArray needed for inference. The array will be reshaped based on the input descriptors.
+    * @tparam T The Scala equivalent of the DType used for the input array and return value
+    * @param input An Indexed Sequence of a one-dimensional array of datatype
+    *              Float or Double
+    *              An IndexedSequence is needed when the model has more than one input.
+    * @return      Indexed sequence array of outputs
+    */
+  def predict[@specialized (Base.MX_PRIMITIVES) T](input: IndexedSeq[Array[T]])
+  : IndexedSeq[Array[T]]
 
   /**
-   * Predict using NDArray as input.
-   * <p>
-   * This method is useful when the input is a batch of data
-   * or when multiple operations on the input have to performed.
-   * Note: User is responsible for managing allocation/deallocation of NDArrays.
-   * @param input             IndexedSequence NDArrays.
-   * @return                  Output of predictions as NDArrays.
-   */
+    * Predict using NDArray as input.
+    * <p>
+    * This method is useful when the input is a batch of data
+    * or when multiple operations on the input have to performed.
+    * Note: User is responsible for managing allocation/deallocation of NDArrays.
+    * @param input             IndexedSequence NDArrays.
+    * @return                  Output of predictions as NDArrays.
+    */
   def predictWithNDArray(input: IndexedSeq[NDArray]): IndexedSeq[NDArray]
 
+  /**
+    * Get model output shapes.
+    * @return   model output shapes.
+    */
+  def outputShapes: IndexedSeq[(String, Shape)]
 }
 
 /**
@@ -119,17 +127,19 @@ class Predictor(modelPathPrefix: String,
 
   protected[infer] val mod = loadModule()
 
+  override def outputShapes: IndexedSeq[(String, Shape)] = mod.outputShapes
+
   /**
    * Takes input as IndexedSeq one dimensional arrays and creates the NDArray needed for inference
    * The array will be reshaped based on the input descriptors.
    *
-   * @param input:            An IndexedSequence of a one-dimensional array.
+   * @param input:            An IndexedSequence of a one-dimensional array
+    *                         of data type Float or Double.
                               An IndexedSequence is needed when the model has more than one input.
    * @return                  Indexed sequence array of outputs
    */
-  override def predict(input: IndexedSeq[Array[Float]])
-  : IndexedSeq[Array[Float]] = {
-
+  override def predict[@specialized (Base.MX_PRIMITIVES) T](input: IndexedSeq[Array[T]])
+  : IndexedSeq[Array[T]] = {
     require(input.length == inputDescriptors.length,
       s"number of inputs provided: ${input.length} does not match number of inputs " +
         s"in inputDescriptors: ${inputDescriptors.length}")
@@ -139,12 +149,30 @@ class Predictor(modelPathPrefix: String,
         s"number of elements:${i.length} in the input does not match the shape:" +
           s"${d.shape.toString()}")
     }
+
+    // Infer the dtype of input and call relevant method
+    val result = input(0)(0) match {
+      case d: Double => predictImpl(input.asInstanceOf[IndexedSeq[Array[Double]]])
+      case _ => predictImpl(input.asInstanceOf[IndexedSeq[Array[Float]]])
+    }
+
+    result.asInstanceOf[IndexedSeq[Array[T]]]
+  }
+
+  private def predictImpl[B, A <: MX_PRIMITIVE_TYPE]
+  (input: IndexedSeq[Array[B]])(implicit ev: B => A)
+  : IndexedSeq[Array[B]] = {
+
     var inputND: ListBuffer[NDArray] = ListBuffer.empty[NDArray]
 
     for((i, d) <- input.zip(inputDescriptors)) {
       val shape = d.shape.toVector.patch(from = batchIndex, patch = Vector(1), replaced = 1)
-
-      inputND += mxNetHandler.execute(NDArray.array(i, Shape(shape)))
+      if (d.dtype == DType.Float64) {
+        inputND += mxNetHandler.execute(NDArray.array(i.asInstanceOf[Array[Double]], Shape(shape)))
+      }
+      else {
+        inputND += mxNetHandler.execute(NDArray.array(i.asInstanceOf[Array[Float]], Shape(shape)))
+      }
     }
 
     // rebind with batchsize 1
@@ -158,7 +186,8 @@ class Predictor(modelPathPrefix: String,
     val resultND = mxNetHandler.execute(mod.predict(new NDArrayIter(
       inputND.toIndexedSeq, dataBatchSize = 1)))
 
-    val result = resultND.map((f : NDArray) => f.toArray)
+    val result =
+      resultND.map((f : NDArray) => if (f.dtype == DType.Float64) f.toFloat64Array else f.toArray)
 
     mxNetHandler.execute(inputND.foreach(_.dispose))
     mxNetHandler.execute(resultND.foreach(_.dispose))
@@ -168,8 +197,10 @@ class Predictor(modelPathPrefix: String,
       mxNetHandler.execute(mod.bind(inputDescriptors, forTraining = false, forceRebind = true))
     }
 
-    result
+    result.asInstanceOf[IndexedSeq[Array[B]]]
   }
+
+
 
   /**
    * Predict using NDArray as input
@@ -217,6 +248,10 @@ class Predictor(modelPathPrefix: String,
     resultND
   }
 
+  /**
+    * Creates the module backing the Predictor with the same path, epoch, contexts, and inputs
+    * @return The Module
+    */
   private[infer] def loadModule(): Module = {
     val mod = mxNetHandler.execute(Module.loadCheckpoint(modelPathPrefix, epoch.get,
       contexts = contexts, dataNames = inputDescriptors.map(desc => desc.name)))

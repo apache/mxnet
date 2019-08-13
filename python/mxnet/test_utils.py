@@ -23,7 +23,6 @@ import gzip
 import struct
 import traceback
 import numbers
-import subprocess
 import sys
 import os
 import errno
@@ -81,6 +80,11 @@ def get_rtol(rtol=None):
     # be needed for different device and dtype
     return 1e-5 if rtol is None else rtol
 
+def get_etol(etol=None):
+    """Get default numerical threshold for regression test."""
+    # _TODO: get from env variable, different threshold might
+    # be needed for different device and dtype
+    return 0 if etol is None else etol
 
 def random_arrays(*shapes):
     """Generate some random numpy arrays."""
@@ -207,11 +211,12 @@ def _get_powerlaw_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
                 return mx.nd.array(output_arr).tostype("csr")
         col_max = col_max * 2
 
-    if unused_nnz > 0:
+    if unused_nnz > 0: # pylint: disable=no-else-raise
         raise ValueError("not supported for this density: %s"
                          " for this shape (%s,%s)" % (density, num_rows, num_cols))
     else:
         return mx.nd.array(output_arr).tostype("csr")
+
 
 def assign_each(the_input, function):
     """Return ndarray composed of passing each array value through some function"""
@@ -255,7 +260,7 @@ def assign_each2(input1, input2, function):
 
 def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=None,
                         data_init=None, rsp_indices=None, modifier_func=None,
-                        shuffle_csr_indices=False):
+                        shuffle_csr_indices=False, ctx=None):
     """Generate a random sparse ndarray. Returns the ndarray, value(np) and indices(np)
 
     Parameters
@@ -296,6 +301,7 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
     >>> assert(row4nnz == 2*row3nnz)
 
     """
+    ctx = ctx if ctx else default_context()
     density = rnd.rand() if density is None else density
     dtype = default_dtype() if dtype is None else dtype
     distribution = "uniform" if distribution is None else distribution
@@ -310,7 +316,7 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
             idx_sample = rnd.rand(shape[0])
             indices = np.argwhere(idx_sample < density).flatten()
         if indices.shape[0] == 0:
-            result = mx.nd.zeros(shape, stype='row_sparse', dtype=dtype)
+            result = mx.nd.zeros(shape, stype='row_sparse', dtype=dtype, ctx=ctx)
             return result, (np.array([], dtype=dtype), np.array([]))
         # generate random values
         val = rnd.rand(indices.shape[0], *shape[1:]).astype(dtype)
@@ -321,17 +327,17 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
         if modifier_func is not None:
             val = assign_each(val, modifier_func)
 
-        arr = mx.nd.sparse.row_sparse_array((val, indices), shape=shape, dtype=dtype)
+        arr = mx.nd.sparse.row_sparse_array((val, indices), shape=shape, dtype=dtype, ctx=ctx)
         return arr, (val, indices)
     elif stype == 'csr':
         assert len(shape) == 2
         if distribution == "uniform":
             csr = _get_uniform_dataset_csr(shape[0], shape[1], density,
                                            data_init=data_init,
-                                           shuffle_csr_indices=shuffle_csr_indices, dtype=dtype)
+                                           shuffle_csr_indices=shuffle_csr_indices, dtype=dtype).as_in_context(ctx)
             return csr, (csr.indptr, csr.indices, csr.data)
         elif distribution == "powerlaw":
-            csr = _get_powerlaw_dataset_csr(shape[0], shape[1], density=density, dtype=dtype)
+            csr = _get_powerlaw_dataset_csr(shape[0], shape[1], density=density, dtype=dtype).as_in_context(ctx)
             return csr, (csr.indptr, csr.indices, csr.data)
         else:
             assert(False), "Distribution not supported: %s" % (distribution)
@@ -340,15 +346,17 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
         assert(False), "unknown storage type"
         return False
 
-def rand_ndarray(shape, stype='default', density=None, dtype=None,
-                 modifier_func=None, shuffle_csr_indices=False, distribution=None):
+def rand_ndarray(shape, stype='default', density=None, dtype=None, modifier_func=None,
+                 shuffle_csr_indices=False, distribution=None, ctx=None):
+    """Generate a random sparse ndarray. Returns the generated ndarray."""
+    ctx = ctx if ctx else default_context()
     if stype == 'default':
-        arr = mx.nd.array(random_arrays(shape), dtype=dtype)
+        arr = mx.nd.array(random_arrays(shape), dtype=dtype, ctx=ctx)
     else:
         arr, _ = rand_sparse_ndarray(shape, stype, density=density,
                                      modifier_func=modifier_func, dtype=dtype,
                                      shuffle_csr_indices=shuffle_csr_indices,
-                                     distribution=distribution)
+                                     distribution=distribution, ctx=ctx)
     return arr
 
 
@@ -409,6 +417,12 @@ def rand_shape_3d(dim0=10, dim1=10, dim2=10):
 
 def rand_shape_nd(num_dim, dim=10):
     return tuple(rnd.randint(1, dim+1, size=num_dim))
+
+
+def rand_coord_2d(x_low, x_high, y_low, y_high):
+    x = np.random.randint(x_low, x_high, dtype=np.int64)
+    y = np.random.randint(y_low, y_high, dtype=np.int64)
+    return x, y
 
 
 def np_reduce(dat, axis, keepdims, numpy_reduce_func):
@@ -493,6 +507,50 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
                             % (rel, rtol, atol, str(index), a[index], b[index]),
                             names=names)
     raise AssertionError(msg)
+
+def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None, names=('a', 'b'), equal_nan=False):
+    """Test that two numpy arrays are almost equal within given error rate. Raise exception message if not.
+
+    Parameters
+    ----------
+    a : np.ndarray
+    b : np.ndarray
+    threshold : None or float
+        The checking threshold. Default threshold will be used if set to ``None``.
+    etol : None or float
+        The error rate threshold. If etol is float, return true if error_rate < etol even if
+        any error is found.
+    """
+    rtol = get_rtol(rtol)
+    atol = get_atol(atol)
+    etol = get_etol(etol)
+    if etol:
+        equals = np.isclose(a, b, rtol=rtol, atol=atol)
+        err = 1 - np.count_nonzero(equals) / equals.size
+        if err > etol:
+            #if True:
+            index, rel = find_max_violation(a, b, rtol, atol)
+            np.set_printoptions(threshold=4, suppress=True)
+            msg = npt.build_err_msg([a, b],
+                                    err_msg="Error %f exceeds tolerance rtol=%f, atol=%f, etol=%f."
+                                            " Error_rate=%f. Location of maximum error:%s, a=%f, b=%f"
+                                    % (rel, rtol, atol, etol, err, str(index), a[index], b[index]),
+                                    names=names)
+            raise AssertionError(msg)
+
+        if almost_equal(a, b, rtol, atol, equal_nan=equal_nan):
+            return
+    else:
+        if almost_equal(a, b, rtol, atol, equal_nan=equal_nan):
+            return
+        index, rel = find_max_violation(a, b, rtol, atol)
+        np.set_printoptions(threshold=4, suppress=True)
+        msg = npt.build_err_msg([a, b],
+                                err_msg="Error %f exceeds tolerance rtol=%f, atol=%f. "
+                                        " Location of maximum error:%s, a=%f, b=%f"
+                                % (rel, rtol, atol, str(index), a[index], b[index]),
+                                names=names)
+        raise AssertionError(msg)
 
 
 def almost_equal_ignore_nan(a, b, rtol=None, atol=None):
@@ -620,8 +678,11 @@ def _parse_location(sym, location, ctx, dtype=default_dtype()):
         *In either case, value of all the arguments must be provided.*
     ctx : Context
         Device context.
-    dtype: np.float16 or np.float32 or np.float64
-        Datatype for mx.nd.array.
+    dtype: "asnumpy" or np.float16 or np.float32 or np.float64
+        If dtype is "asnumpy" then the mx.nd.array created will have the same
+        type as th numpy array from which it is copied.
+        Otherwise, dtype is the explicit datatype for all mx.nd.array objects
+        created in this function.
 
     Returns
     -------
@@ -643,7 +704,7 @@ def _parse_location(sym, location, ctx, dtype=default_dtype()):
     ValueError: Symbol arguments and keys of the given location do not match.
     """
     assert isinstance(location, (dict, list, tuple))
-    assert dtype in (np.float16, np.float32, np.float64)
+    assert dtype == "asnumpy" or dtype in (np.float16, np.float32, np.float64)
     if isinstance(location, dict):
         if set(location.keys()) != set(sym.list_arguments()):
             raise ValueError("Symbol arguments and keys of the given location do not match."
@@ -651,8 +712,8 @@ def _parse_location(sym, location, ctx, dtype=default_dtype()):
                              % (str(set(sym.list_arguments())), str(set(location.keys()))))
     else:
         location = {k: v for k, v in zip(sym.list_arguments(), location)}
-    location = {k: mx.nd.array(v, ctx=ctx, dtype=dtype) if isinstance(v, np.ndarray) \
-               else v for k, v in location.items()}
+    location = {k: mx.nd.array(v, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype) \
+               if isinstance(v, np.ndarray) else v for k, v in location.items()}
     return location
 
 
@@ -677,8 +738,11 @@ def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
         *In either case, all aux states of `sym` must be provided.*
     ctx : Context
         Device context.
-    dtype: np.float16 or np.float32 or np.float64
-        Datatype for mx.nd.array.
+    dtype: "asnumpy" or np.float16 or np.float32 or np.float64
+        If dtype is "asnumpy" then the mx.nd.array created will have the same
+        type as th numpy array from which it is copied.
+        Otherwise, dtype is the explicit datatype for all mx.nd.array objects
+        created in this function.
 
     Returns
     -------
@@ -702,7 +766,7 @@ def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
     >>> _parse_aux_states(fc2, {'batchnorm0_moving_var': mean_states}, None)
     ValueError: Symbol aux_states names and given aux_states do not match.
     """
-    assert dtype in (np.float16, np.float32, np.float64)
+    assert dtype == "asnumpy" or dtype in (np.float16, np.float32, np.float64)
     if aux_states is not None:
         if isinstance(aux_states, dict):
             if set(aux_states.keys()) != set(sym.list_auxiliary_states()):
@@ -713,7 +777,8 @@ def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
         elif isinstance(aux_states, (list, tuple)):
             aux_names = sym.list_auxiliary_states()
             aux_states = {k:v for k, v in zip(aux_names, aux_states)}
-        aux_states = {k: mx.nd.array(v, ctx=ctx, dtype=dtype) for k, v in aux_states.items()}
+        aux_states = {k: mx.nd.array(v, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype) \
+                      for k, v in aux_states.items()}
     return aux_states
 
 
@@ -962,8 +1027,11 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
             Contains the mapping between names of auxiliary states and their values.
     ctx : Context, optional
         running context
-    dtype: np.float16 or np.float32 or np.float64
-        Datatype for mx.nd.array.
+    dtype: "asnumpy" or np.float16 or np.float32 or np.float64
+        If dtype is "asnumpy" then the mx.nd.array created will have the same
+        type as th numpy array from which it is copied.
+        Otherwise, dtype is the explicit datatype for all mx.nd.array objects
+        created in this function.
 
     equal_nan: Boolean
         if True, `nan` is a valid value for checking equivalency (ie `nan` == `nan`)
@@ -979,7 +1047,7 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
     >>> ret_expected = np.array([[19, 22], [43, 50]])
     >>> check_symbolic_forward(sym_dot, [mat1, mat2], [ret_expected])
     """
-    assert dtype in (np.float16, np.float32, np.float64)
+    assert dtype == "asnumpy" or dtype in (np.float16, np.float32, np.float64)
     if ctx is None:
         ctx = default_context()
 
@@ -988,7 +1056,8 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
                                    dtype=dtype)
     if isinstance(expected, dict):
         expected = [expected[k] for k in sym.list_outputs()]
-    args_grad_data = {k:mx.nd.empty(v.shape, ctx=ctx, dtype=dtype) for k, v in location.items()}
+    args_grad_data = {k:mx.nd.empty(v.shape, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype) \
+                      for k, v in location.items()}
 
     executor = sym.bind(ctx=ctx, args=location, args_grad=args_grad_data, aux_states=aux_states)
     for g in executor.grad_arrays:
@@ -1337,7 +1406,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             except AssertionError as e:
                 print('Predict Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                 traceback.print_exc()
-                if raise_on_err:
+                if raise_on_err: # pylint: disable=no-else-raise
                     raise e
                 else:
                     print(str(e))
@@ -1364,7 +1433,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                 except AssertionError as e:
                     print('Train Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                     traceback.print_exc()
-                    if raise_on_err:
+                    if raise_on_err: # pylint: disable=no-else-raise
                         raise e
                     else:
                         print(str(e))
@@ -1380,14 +1449,7 @@ def list_gpus():
         If there are n GPUs, then return a list [0,1,...,n-1]. Otherwise returns
         [].
     """
-    re = ''
-    nvidia_smi = ['nvidia-smi', '/usr/bin/nvidia-smi', '/usr/local/nvidia/bin/nvidia-smi']
-    for cmd in nvidia_smi:
-        try:
-            re = subprocess.check_output([cmd, "-L"], universal_newlines=True)
-        except (subprocess.CalledProcessError, OSError):
-            pass
-    return range(len([i for i in re.split('\n') if 'GPU' in i]))
+    return range(mx.util.get_gpu_count())
 
 def download(url, fname=None, dirname=None, overwrite=False, retries=5):
     """Download an given URL
@@ -1451,7 +1513,7 @@ def download(url, fname=None, dirname=None, overwrite=False, retries=5):
                 break
         except Exception as e:
             retries -= 1
-            if retries <= 0:
+            if retries <= 0: # pylint: disable=no-else-raise
                 raise e
             else:
                 print("download failed, retrying, {} attempt{} left"
@@ -1532,7 +1594,7 @@ def get_mnist_iterator(batch_size, input_shape, num_parts=1, part_index=0):
     """
 
     get_mnist_ubyte()
-    flat = False if len(input_shape) == 3 else True
+    flat = False if len(input_shape) == 3 else True # pylint: disable=simplifiable-if-expression
 
     train_dataiter = mx.io.MNISTIter(
         image="data/train-images-idx3-ubyte",
@@ -1849,12 +1911,12 @@ def chi_square_check(generator, buckets, probs, nsamples=1000000):
 
     If the generator is continuous, the buckets should contain tuples of (range_min, range_max) \
     and the probs should be the corresponding ideal probability within the specific ranges. \
-    Otherwise, the buckets should be the possible output of the discrete distribution and the \
+    Otherwise, the buckets should contain all the possible values generated over the discrete distribution and the \
     probs should be groud-truth probability.
 
     Usually the user is required to specify the probs parameter.
 
-    After obtatining the p value, we could further use the standard p > 0.05 threshold to get \
+    After obtaining the p value, we could further use the standard p > 0.05 (alpha) threshold to get \
     the final result.
 
     Examples::
@@ -1906,21 +1968,23 @@ def chi_square_check(generator, buckets, probs, nsamples=1000000):
             buckets_npy[i * 2 + 1] = buckets[i][1]
     else:
         continuous_dist = False
-        buckets_npy = np.array(buckets)
     expected_freq = (nsamples * np.array(probs, dtype=np.float32)).astype(np.int32)
     if continuous_dist:
         sample_bucket_ids = np.searchsorted(buckets_npy, samples, side='right')
     else:
-        sample_bucket_ids = samples
+        sample_bucket_ids = np.array(samples)
     if continuous_dist:
         sample_bucket_ids = sample_bucket_ids // 2
     obs_freq = np.zeros(shape=len(buckets), dtype=np.int)
-    for i in range(len(buckets)):
-        obs_freq[i] = (sample_bucket_ids == i).sum()
+    for i, _ in enumerate(buckets):
+        if continuous_dist:
+            obs_freq[i] = (sample_bucket_ids == i).sum()
+        else:
+            obs_freq[i] = (sample_bucket_ids == buckets[i]).sum()
     _, p = ss.chisquare(f_obs=obs_freq, f_exp=expected_freq)
     return p, obs_freq, expected_freq
 
-def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, success_rate=0.15):
+def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, success_rate=0.2, alpha=0.05):
     """Verify whether the generator is correct using chi-square testing.
 
     The test is repeated for "nrepeat" times and we check if the success rate is
@@ -1943,6 +2007,8 @@ def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, suc
         The times to repeat the test
     success_rate: float
         The desired success rate
+    alpha: float
+        The desired threshold for type-I error i.e. when a true null hypothesis is rejected
 
     Returns
     -------
@@ -1958,7 +2024,7 @@ def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, suc
         cs_ret_l.append(cs_ret)
         obs_freq_l.append(obs_freq)
         expected_freq_l.append(expected_freq)
-    success_num = (np.array(cs_ret_l) > 0.05).sum()
+    success_num = (np.array(cs_ret_l) > alpha).sum()
     if success_num < nrepeat * success_rate:
         raise AssertionError("Generator test fails, Chi-square p=%s, obs_freq=%s, expected_freq=%s."
                              "\nbuckets=%s, probs=%s"
@@ -1982,7 +2048,7 @@ def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='defa
     if w_stype == 'default':
         w2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
         w1 = w2.copyto(default_context())
-    elif w_stype == 'row_sparse' or w_stype == 'csr':
+    elif w_stype in ('row_sparse', 'csr'):
         w2 = rand_ndarray(shape, w_stype, density=1, dtype=dtype)
         w1 = w2.copyto(default_context()).tostype('default')
     else:
@@ -1990,7 +2056,7 @@ def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='defa
     if g_stype == 'default':
         g2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
         g1 = g2.copyto(default_context())
-    elif g_stype == 'row_sparse' or g_stype == 'csr':
+    elif g_stype in ('row_sparse', 'csr'):
         g2 = rand_ndarray(shape, g_stype, dtype=dtype)
         g1 = g2.copyto(default_context()).tostype('default')
     else:

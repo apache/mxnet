@@ -30,14 +30,14 @@ import JSON
 Returns the graph description in GraphViz `dot` language.
 """
 function to_graphviz(network :: SymbolicNode; title="Network Visualization", input_shapes=nothing)
-  if !isa(input_shapes, Void)
+  if !isa(input_shapes, Cvoid)
     internals = get_internals(network)
     if isa(input_shapes, Dict)
       _, out_shapes, _ = infer_shape(internals; input_shapes...)
     else
       _, out_shapes, _ = infer_shape(internals, input_shapes...)
     end
-    @assert(!isa(out_shapes, Void), "Failed to do shape inference, input shapes are incomplete")
+    @assert(!isa(out_shapes, Cvoid), "Failed to do shape inference, input shapes are incomplete")
     shape_dict = Dict(zip(list_outputs(internals), out_shapes))
     draw_shape = true
   else
@@ -170,7 +170,7 @@ end
 
 function _format_graphviz_attr(io::IOBuffer, attrs)
   label = get(attrs, :label, nothing)
-  if isa(label, Void)
+  if isa(label, Cvoid)
     print(io, " [")
   else
     print(io, " [label=$(_simple_escape(label)),")
@@ -195,7 +195,7 @@ function _format_graphviz_attr(io::IOBuffer, attrs)
   println(io, "];")
 end
 function _simple_escape(str)
-  str = replace(string(str), r"\n", "\\n")
+  str = replace(string(str), r"\n" =>  "\\n")
   return "\"$str\""
 end
 function _format_graphviz_node(io::IOBuffer, name::AbstractString, attrs)

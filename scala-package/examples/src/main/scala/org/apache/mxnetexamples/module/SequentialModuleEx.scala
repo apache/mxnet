@@ -57,7 +57,7 @@ object SequentialModuleEx {
     cmdLine: SequentialModuleEx): Unit = {
     // Intermediate-level API
     val modSeq = getSeqModule()
-    modSeq.bind(dataShapes = train.provideData, labelShapes = Some(train.provideLabel))
+    modSeq.bind(dataShapes = train.provideDataDesc, labelShapes = Some(train.provideLabelDesc))
     if (cmdLine.loadModelPath != null) {
       logger.info(s"Load checkpoint from ${cmdLine.loadModelPath}")
       modSeq.loadParams(cmdLine.loadModelPath)

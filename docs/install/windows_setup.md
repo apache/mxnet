@@ -136,7 +136,7 @@ We provide two primary options to build and install MXNet yourself using [Micros
 
 **NOTE:** Visual Studio 2017's compiler is `vc15`. This is not to be confused with Visual Studio 2015's compiler, `vc14`.
 
-You also have the option to install MXNet with MKL or MKL-DNN. In this case it is recommended that you refer to the [MKLDNN_README](https://github.com/apache/incubator-mxnet/blob/master/MKLDNN_README.md).
+You also have the option to install MXNet with MKL or MKL-DNN. In this case it is recommended that you refer to the [MKLDNN_README](https://github.com/apache/incubator-mxnet/blob/master/docs/tutorials/mkldnn/MKLDNN_README.md).
 
 **Option 1: Build with Microsoft Visual Studio 2017 (VS2017)**
 
@@ -156,7 +156,7 @@ To build and install MXNet yourself using [VS2017](https://www.visualstudio.com/
 1. Download and run the  [OpenCV](https://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.4.1/opencv-3.4.1-vc14_vc15.exe/download) package. There are more recent versions of OpenCV, so please create an issue/PR to update this info if you validate one of these later versions.
 1. This will unzip several files. You can place them in another directory if you wish. We will use `C:\utils`(```mkdir C:\utils```) as our default path.
 1. Set the environment variable `OpenCV_DIR` to point to the OpenCV build directory that you just unzipped. Start ```cmd``` and type `set OpenCV_DIR=C:\utils\opencv\build`.
-1. If you don’t have the Intel Math Kernel Library (MKL) installed, you can install it and follow the [MKLDNN_README](https://github.com/apache/incubator-mxnet/blob/master/MKLDNN_README.md) from here, or you can use OpenBLAS. These instructions will assume you're using OpenBLAS.
+1. If you don’t have the Intel Math Kernel Library (MKL) installed, you can install it and follow the [MKLDNN_README](https://github.com/apache/incubator-mxnet/blob/master/docs/tutorials/mkldnn/MKLDNN_README.md) from here, or you can use OpenBLAS. These instructions will assume you're using OpenBLAS.
 1. Download the [OpenBlas](https://sourceforge.net/projects/openblas/files/v0.2.19/OpenBLAS-v0.2.19-Win64-int32.zip/download) package. Later versions of OpenBLAS are available, but you would need to build from source. v0.2.19 is the most recent version that ships with binaries. Contributions of more recent binaries would be appreciated.
 1. Unzip the file, rename it to ```OpenBLAS``` and put it under `C:\utils`. You can place the unzipped files and folders in another directory if you wish.
 1. Set the environment variable `OpenBLAS_HOME` to point to the OpenBLAS directory that contains the `include` and `lib` directories and type `set OpenBLAS_HOME=C:\utils\OpenBLAS` on the command prompt(```cmd```).
@@ -270,6 +270,9 @@ To install MXNet on a computer with a CPU processor, choose from two options:
 For Windows users, MXNet provides prebuilt binary packages.
 You can install the package directly in the R console.
 
+Note: packages for 3.6.x are not yet available.
+Install 3.5.x of R from [CRAN](https://cran.r-project.org/bin/windows/base/old/).
+
 For CPU-only package:
 
 ```r
@@ -378,6 +381,9 @@ Note: A pre-requisite to above softwares is [Nvidia-drivers](http://www.nvidia.c
 #### Installing MXNet-R with the Prebuilt Binary Package(GPU)
 For Windows users, MXNet provides prebuilt binary packages.
 You can install the package directly in the R console after you have the above software installed.
+
+Note: packages for 3.6.x are not yet available.
+Install 3.5.x of R from [CRAN](https://cran.r-project.org/bin/windows/base/old/).
 
 For GPU package:
 
@@ -497,6 +503,6 @@ MXNet-Scala is not yet available for Windows.
 
 ## Next Steps
 
-* [Tutorials](http://mxnet.io/tutorials/index.html)
-* [How To](http://mxnet.io/faq/index.html)
-* [Architecture](http://mxnet.io/architecture/index.html)
+* [Tutorials](../tutorials/index.md)
+* [How To](../faq/index.md)
+* [Architecture](../architecture/index.md)

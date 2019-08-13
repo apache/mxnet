@@ -186,13 +186,13 @@ void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) overr
   std::map<std::string, std::string> GetParams() const override {
     return param_.__DICT__();
   }
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 2U) << "Input:[data1, data2]";
-    TShape dshape1 = in_shape->at(Correlation::kData1);
-    TShape dshape2 = in_shape->at(Correlation::kData2);
+    mxnet::TShape dshape1 = in_shape->at(Correlation::kData1);
+    mxnet::TShape dshape2 = in_shape->at(Correlation::kData2);
     CHECK_EQ(dshape1.ndim(), 4U) << "data should be a 4D tensor";
     CHECK_EQ(dshape2.ndim(), 4U) << "data should be a 4D tensor";
     int paddedbottomheight;
@@ -266,7 +266,7 @@ void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) overr
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  private:

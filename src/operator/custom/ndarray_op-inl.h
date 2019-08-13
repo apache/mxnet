@@ -122,9 +122,9 @@ class NDArrayOpProp : public OperatorProperty {
   }
 
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     std::vector<uint32_t*> shapes;
     std::vector<int> ndims;
     size_t size = 0;
@@ -141,11 +141,11 @@ class NDArrayOpProp : public OperatorProperty {
     CHECK(param_.pinfo->infer_shape(shapes.size(), ndims.data(), shapes.data(),
                                     param_.pinfo->p_infer_shape));
     for (unsigned i = 0; i < in_shape->size(); ++i) {
-      SHAPE_ASSIGN_CHECK(*in_shape, i, TShape(shapes[i], shapes[i]+ndims[i]));
+      SHAPE_ASSIGN_CHECK(*in_shape, i, mxnet::TShape(shapes[i], shapes[i]+ndims[i]));
     }
     out_shape->clear();
     for (unsigned i = param_.num_inputs_; i < shapes.size(); ++i) {
-      out_shape->push_back(TShape(shapes[i], shapes[i]+ndims[i]));
+      out_shape->push_back(mxnet::TShape(shapes[i], shapes[i]+ndims[i]));
     }
     return true;
   }

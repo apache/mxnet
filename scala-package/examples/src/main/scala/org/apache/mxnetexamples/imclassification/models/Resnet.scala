@@ -17,6 +17,7 @@
 
 package org.apache.mxnetexamples.imclassification.models
 
+import org.apache.mxnet.DType.DType
 import org.apache.mxnet._
 
 object Resnet {
@@ -77,13 +78,14 @@ object Resnet {
     */
   def resnet(units: List[Int], numStages: Int, filterList: List[Int], numClasses: Int,
              imageShape: List[Int], bottleNeck: Boolean = true, bnMom: Float = 0.9f,
-             workspace: Int = 256, dtype: String = "float32", memonger: Boolean = false): Symbol = {
+             workspace: Int = 256, dtype: DType = DType.Float32,
+             memonger: Boolean = false): Symbol = {
     assert(units.size == numStages)
     var data = Symbol.Variable("data", shape = Shape(List(4) ::: imageShape), dType = DType.Float32)
-    if (dtype == "float32") {
+    if (dtype == DType.Float32) {
       data = Symbol.api.identity(Some(data), "id")
-    } else if (dtype == "float16") {
-      data = Symbol.api.cast(Some(data), "float16")
+    } else if (dtype == DType.Float16) {
+      data = Symbol.api.cast(Some(data), DType.Float16.toString)
     }
     data = Symbol.api.BatchNorm(Some(data), fix_gamma = Some(true), eps = Some(2e-5),
       momentum = Some(bnMom), name = "bn_data")
@@ -118,8 +120,8 @@ object Resnet {
       kernel = Some(Shape(7, 7)), pool_type = Some("avg"), name = "pool1")
     val flat = Symbol.api.Flatten(Some(pool1))
     var fc1 = Symbol.api.FullyConnected(Some(flat), num_hidden = numClasses, name = "fc1")
-    if (dtype == "float16") {
-      fc1 = Symbol.api.cast(Some(fc1), "float32")
+    if (dtype == DType.Float16) {
+      fc1 = Symbol.api.cast(Some(fc1), DType.Float32.toString)
     }
     Symbol.api.SoftmaxOutput(Some(fc1), name = "softmax")
   }
@@ -134,7 +136,7 @@ object Resnet {
     * @return Model symbol
     */
   def getSymbol(numClasses: Int, numLayers: Int, imageShape: List[Int], convWorkspace: Int = 256,
-                dtype: String = "float32"): Symbol = {
+                dtype: DType = DType.Float32): Symbol = {
     val List(channels, height, width) = imageShape
     val (numStages, units, filterList, bottleNeck): (Int, List[Int], List[Int], Boolean) =
       if (height <= 28) {

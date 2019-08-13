@@ -159,6 +159,12 @@ class Initializer(object):
             elif desc.endswith('max'):
                 self._init_one(desc, arr)
                 self._verbose_print(desc, 'max', arr)
+            elif desc.endswith('weight_quantize'):
+                self._init_quantized_weight(desc, arr)
+                self._verbose_print(desc, 'weight_quantize', arr)
+            elif desc.endswith('bias_quantize'):
+                self._init_quantized_bias(desc, arr)
+                self._verbose_print(desc, 'bias_quantize', arr)
             else:
                 self._init_default(desc, arr)
 
@@ -217,7 +223,7 @@ class Initializer(object):
         c = (2 * f - 1 - f % 2) / (2. * f)
         for i in range(np.prod(shape)):
             x = i % shape[3]
-            y = (i / shape[3]) % shape[2]
+            y = (i // shape[3]) % shape[2]
             weight[i] = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
         arr[:] = weight.reshape(shape)
 
@@ -235,6 +241,9 @@ class Initializer(object):
     def _init_bias(self, _, arr):
         arr[:] = 0.0
 
+    def _init_quantized_bias(self, _, arr):
+        arr[:] = 0
+
     def _init_gamma(self, _, arr):
         arr[:] = 1.0
 
@@ -244,6 +253,10 @@ class Initializer(object):
     def _init_weight(self, name, arr):
         """Abstract method to Initialize weight."""
         raise NotImplementedError("Must override it")
+
+    def _init_quantized_weight(self, _, arr):
+        _arr = random.randint(-127, 127, dtype='int32').asnumpy()
+        arr[:] = np.int8(_arr)
 
     def _init_default(self, name, _):
         raise ValueError(
@@ -657,7 +670,7 @@ class Bilinear(Initializer):
         c = (2 * f - 1 - f % 2) / (2. * f)
         for i in range(np.prod(shape)):
             x = i % shape[3]
-            y = (i / shape[3]) % shape[2]
+            y = (i // shape[3]) % shape[2]
             weight[i] = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
         arr[:] = weight.reshape(shape)
 

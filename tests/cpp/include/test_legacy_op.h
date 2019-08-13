@@ -67,7 +67,7 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
   typedef AccReal AccRealType;
 
   /*! \brief Manage test blobs and context */
-  LegacyOperatorExecutor(const bool isGPU, const std::vector<TShape>& topShapes)
+  LegacyOperatorExecutor(const bool isGPU, const mxnet::ShapeVector& topShapes)
 #if !MXNET_USE_CUDA
     : isGPU_(false)
 #else
@@ -102,7 +102,7 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
         const size_t output_count = opProp.ListOutputs().size();
         const size_t aux_count = opProp.ListAuxiliaryStates().size();
         // Figure out what sort of blobs we need to allocate
-        std::vector<TShape> out_shape, aux_shape;
+        mxnet::ShapeVector out_shape, aux_shape;
         out_shape.resize(output_count);
         aux_shape.resize(aux_count);
         opProp.InferShape(&shape_input_vec_, &out_shape, &aux_shape);
@@ -134,7 +134,7 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
         }
 
         // Get the resource of temporal space
-        std::vector<TShape> inputShapes;
+        mxnet::ShapeVector inputShapes;
         for (size_t x = 0, n = shape_input_vec_.size(); x < n; ++x) {
           inputShapes.emplace_back(shape_input_vec_[x]);
         }
@@ -166,7 +166,7 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
       }
 
       // Get the resource of temporal space
-      std::vector<TShape> ishapes;
+      mxnet::ShapeVector ishapes;
       allocateResources(opProp.BackwardResource(ishapes));
 
       resetBackward();
@@ -303,7 +303,7 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
     Stream& os = *_os;
     os << "static const std::vector< std::vector< std::vector<float> > > ___"
        << label << "_data_shape_";
-    const TShape& shape = shape_input_vec_[0];
+    const mxnet::TShape& shape = shape_input_vec_[0];
     for (size_t i = 0, n = shape.ndim(); i < n; ++i) {
       os << shape[i] << "_";
     }
@@ -398,7 +398,7 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
   /*! \brief Input and output blobs */
   OpContext                 opContext_;
 
-  std::vector<TShape>       shape_input_vec_;
+  mxnet::ShapeVector       shape_input_vec_;
 
   struct OpData {
     std::vector<TBlob> blob_input_vec_;
@@ -494,25 +494,38 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
     ctx.dev_id = 0;
 
     for (const ResourceRequest& req : reqs) {
-      if (req.type == ResourceRequest::kTempSpace) {
-        if (cached_temp.count(ctx) != 0) {
-          opContext_.requested.emplace_back(cached_temp.at(ctx));
-        } else {
-          Resource r = ResourceManager::Get()->Request(ctx, req);
-          opContext_.requested.emplace_back(r);
-          cached_temp[ctx] = r;
+      switch (req.type) {
+        case ResourceRequest::kTempSpace: {
+          if (cached_temp.count(ctx) != 0) {
+            opContext_.requested.emplace_back(cached_temp.at(ctx));
+          } else {
+            Resource r = ResourceManager::Get()->Request(ctx, req);
+            opContext_.requested.emplace_back(r);
+            cached_temp[ctx] = r;
+          }
+          break;
         }
-      } else if (req.type == ResourceRequest::kRandom) {
-        opContext_.requested.emplace_back(ResourceManager::Get()->Request(ctx, req));
-      } else if (req.type == ResourceRequest::kParallelRandom) {
-        Resource rm = ResourceManager::Get()->Request(ctx, req);
-        if (ctx.dev_mask() == Context::kCPU) {
-          common::random::RandGenerator<cpu, DType>::AllocState(
-            rm.get_parallel_random<cpu, DType>());
+        case ResourceRequest::kRandom: {
+          opContext_.requested.emplace_back(ResourceManager::Get()->Request(ctx, req));
+          break;
         }
-        opContext_.requested.emplace_back(rm);
-      } else {
-        LOG(FATAL) << "resource type not yet supported";
+        case ResourceRequest::kParallelRandom: {
+          Resource rm = ResourceManager::Get()->Request(ctx, req);
+          if (ctx.dev_mask() == Context::kCPU) {
+            common::random::RandGenerator<cpu, DType>::AllocState(
+              rm.get_parallel_random<cpu, DType>());
+          }
+          opContext_.requested.emplace_back(rm);
+          break;
+        }
+#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
+        case ResourceRequest::kCuDNNDropoutDesc: {
+          opContext_.requested.push_back(ResourceManager::Get()->Request(ctx, req));
+          break;
+        }
+#endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
+        default:
+          LOG(FATAL) << "resource type " << req.type << " is not yet supported";
       }
     }
   }
@@ -520,7 +533,7 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
   /*! \brief Locally allocate a managed TBlob and insert into the supplied vector */
   static TBlob *allocateBlob(std::list<std::unique_ptr<test::StandaloneBlob>> *standalone_blobs,
                              std::vector<TBlob> *dest,
-                             const TShape& shape,
+                             const mxnet::TShape& shape,
                              const bool isGPU,
                              const int dtype) {
     test::StandaloneBlob *blob = new test::StandaloneBlob(shape, isGPU, dtype);
@@ -531,7 +544,7 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
   }
 
   /*! \brief Locally allocate a managed TBlob and insert into the supplied vector */
-  inline TBlob *allocateBlob(std::vector<TBlob> *dest, const TShape& shape,
+  inline TBlob *allocateBlob(std::vector<TBlob> *dest, const mxnet::TShape& shape,
                              const bool isGPU, const int dtype) {
     return allocateBlob(&standalone_blobs_, dest, shape, isGPU, dtype);
   }

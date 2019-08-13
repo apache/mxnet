@@ -39,7 +39,7 @@ object NeuralStyle {
   private val logger = LoggerFactory.getLogger(classOf[NeuralStyle])
 
   def preprocessContentImage(path: String, longEdge: Int, ctx: Context): NDArray = {
-    val img = Image(new File(path))
+    val img = Image.fromFile(new File(path))
     logger.info(s"load the content image, size = ${(img.height, img.width)}")
     val factor = longEdge.toFloat / Math.max(img.height, img.width)
     val (newHeight, newWidth) = ((img.height * factor).toInt, (img.width * factor).toInt)
@@ -60,7 +60,7 @@ object NeuralStyle {
   }
 
   def preprocessStyleImage(path: String, shape: Shape, ctx: Context): NDArray = {
-    val img = Image(new File(path))
+    val img = Image.fromFile(new File(path))
     val resizedImg = img.scaleTo(shape(3), shape(2))
     val sample = NDArray.empty(Shape(1, 3, shape(2), shape(3)), ctx)
     val datas = {
@@ -170,7 +170,7 @@ object NeuralStyle {
                   contentWeight : Float, tvWeight : Float, gaussianRadius : Int,
                   lr: Float, maxNumEpochs: Int, maxLongEdge: Int,
                   saveEpochs : Int, stopEps: Float) : Unit = {
-    NDArrayCollector.auto().withScope {
+    ResourceScope.using() {
       val contentNp = preprocessContentImage(contentImage, maxLongEdge, dev)
       val styleNp = preprocessStyleImage(styleImage, contentNp.shape, dev)
       val size = (contentNp.shape(2), contentNp.shape(3))

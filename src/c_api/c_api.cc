@@ -22,20 +22,6 @@
  * \file c_api.cc
  * \brief C API of mxnet
  */
-#include <dmlc/base.h>
-#include <dmlc/logging.h>
-#include <dmlc/io.h>
-#include <dmlc/memory_io.h>
-#include <dmlc/recordio.h>
-#include <dmlc/omp.h>
-#include <mxnet/base.h>
-#include <mxnet/ndarray.h>
-#include <mxnet/operator.h>
-#include <mxnet/io.h>
-#include <mxnet/c_api.h>
-#include <mxnet/kvstore.h>
-#include <mxnet/rtc.h>
-#include <mxnet/storage.h>
 #include <vector>
 #include <sstream>
 #include <string>
@@ -43,9 +29,26 @@
 #include <memory>
 #include <functional>
 #include <utility>
+#include "dmlc/base.h"
+#include "dmlc/logging.h"
+#include "dmlc/io.h"
+#include "dmlc/memory_io.h"
+#include "dmlc/recordio.h"
+#include "dmlc/omp.h"
+#include "mxnet/base.h"
+#include "mxnet/ndarray.h"
+#include "mxnet/operator.h"
+#include "mxnet/io.h"
+#include "mxnet/c_api.h"
+#include "mxnet/kvstore.h"
+#include "mxnet/rtc.h"
+#include "mxnet/storage.h"
+#include "mxnet/libinfo.h"
+#include "mxnet/imperative.h"
 #include "./c_api_common.h"
 #include "../operator/custom/custom-inl.h"
 #include "../operator/tensor/matrix_op-inl.h"
+#include "../common/utils.h"
 
 using namespace mxnet;
 
@@ -85,6 +88,16 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
 }
 
 // NOTE: return value is added in API_END
+
+int MXLibInfoFeatures(const struct LibFeature **lib_features, size_t *size) {
+  using namespace features;
+  API_BEGIN();
+  LibInfo* lib_info = LibInfo::getInstance();
+  *lib_features = lib_info->getFeatures().data();
+  *size = lib_info->getFeatures().size();
+  API_END();
+}
+
 int MXRandomSeed(int seed) {
   API_BEGIN();
   mxnet::RandomSeed(seed);
@@ -100,6 +113,7 @@ int MXRandomSeedContext(int seed, int dev_type, int dev_id) {
 
 int MXNotifyShutdown() {
   API_BEGIN();
+  mxnet::op::custom::CustomOperator::Get()->Stop();
   Engine::Get()->NotifyShutdown();
   API_END();
 }
@@ -159,7 +173,7 @@ int MXNDArrayCreate(const mx_uint *shape,
                     NDArrayHandle *out) {
   API_BEGIN();
   *out = new NDArray(
-      TShape(shape, shape + ndim),
+      mxnet::TShape(shape, shape + ndim),
       Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
       delay_alloc != 0);
   API_END();
@@ -174,7 +188,7 @@ int MXNDArrayCreateEx(const mx_uint *shape,
                     NDArrayHandle *out) {
   API_BEGIN();
   *out = new NDArray(
-      TShape(shape, shape + ndim),
+      mxnet::TShape(shape, shape + ndim),
       Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
       delay_alloc != 0,
       dtype);
@@ -195,7 +209,7 @@ int MXNDArrayCreateSparseEx(int storage_type,
                     NDArrayHandle *out) {
   API_BEGIN();
   std::vector<int> aux_types;
-  std::vector<TShape> aux_shapes;
+  mxnet::ShapeVector aux_shapes;
   auto shape_start = aux_shape;
   for (size_t i = 0; i < num_aux; i++) {
     // types
@@ -206,7 +220,7 @@ int MXNDArrayCreateSparseEx(int storage_type,
   }
   *out = new NDArray(
       NDArrayStorageType(storage_type),
-      TShape(shape, shape + ndim),
+      mxnet::TShape(shape, shape + ndim),
       Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
       delay_alloc != 0,
       dtype, aux_types, aux_shapes);
@@ -422,7 +436,7 @@ MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
   NDArray *ptr = new NDArray();
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
-  TShape new_shape(dims, dims+ndim);
+  mxnet::TShape new_shape(dims, dims+ndim);
   int size = 1;
   int pos = -1;
   for (int i = 0; i < ndim; ++i) {
@@ -459,10 +473,10 @@ MXNET_DLL int MXNDArrayReshape64(NDArrayHandle handle,
   NDArray *ptr = new NDArray();
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
-  nnvm::Tuple<dim_t> shape(dims, dims+ndim);
+  mxnet::Tuple<dim_t> shape(dims, dims+ndim);
   CHECK_GT(arr->shape().Size(), 0) << "Source ndarray's shape is undefined. Input shape: "
     << arr->shape();
-  TShape new_shape = mxnet::op::InferReshapeShape(shape, arr->shape(), reverse);
+  mxnet::TShape new_shape = mxnet::op::InferReshapeShape(shape, arr->shape(), reverse);
   *ptr = arr->ReshapeWithRecord(new_shape);
   *out = ptr;
   API_END_HANDLE_ERROR(delete ptr);
@@ -487,7 +501,7 @@ int MXNDArrayGetShape(NDArrayHandle handle,
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
   if (!arr->is_none()) {
-    const TShape &s = arr->shape();
+    const mxnet::TShape &s = arr->shape();
     *out_dim = s.ndim();
     std::vector<uint32_t>& buffer = ret->arg_shape_buffer;
     buffer.resize(s.ndim());
@@ -495,6 +509,34 @@ int MXNDArrayGetShape(NDArrayHandle handle,
     *out_pdata = buffer.data();
   } else {
     *out_dim = 0;
+  }
+  API_END();
+}
+
+int MXNDArrayGetShapeEx(NDArrayHandle handle,
+                        int *out_dim,
+                        const int **out_pdata) {
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  if (!arr->is_none()) {
+    mxnet::TShape s = arr->shape();
+    if (!Imperative::Get()->is_np_shape()) {
+      common::ConvertToLegacyShape(&s);
+    }
+    *out_dim = s.ndim();
+    if (s.ndim() >= 0) {
+      std::vector<int> &buffer = ret->arg_shape_buffer_ex;
+      buffer.resize(s.ndim());
+      mxnet::ShapeTypeCast(s.begin(), s.end(), buffer.data());
+      *out_pdata = buffer.data();
+    }
+  } else {
+    if (Imperative::Get()->is_np_shape()) {
+      *out_dim = -1;
+    } else {
+      *out_dim = 0;
+    }
   }
   API_END();
 }
@@ -521,9 +563,16 @@ int MXNDArrayToDLPack(NDArrayHandle handle,
 
 int MXNDArrayFromDLPack(DLManagedTensorHandle dlpack,
                         NDArrayHandle *out_handle) {
+  return MXNDArrayFromDLPackEx(dlpack, false, out_handle);
+}
+
+int MXNDArrayFromDLPackEx(DLManagedTensorHandle dlpack,
+                          const bool transient_handle,
+                          NDArrayHandle *out_handle) {
   API_BEGIN();
   *out_handle = new NDArray(NDArray::FromDLPack(
-              static_cast<DLManagedTensor*>(dlpack)));
+              static_cast<DLManagedTensor*>(dlpack),
+              transient_handle));
   API_END();
 }
 
@@ -778,8 +827,8 @@ int MXDataIterGetLabel(DataIterHandle handle, NDArrayHandle *out) {
   NDArray* pndarray = new NDArray();
   // temp hack to make label 1D
   // TODO(tianjun) make label 1D when label_width=0
-  TShape shape = db.data[1].shape();
-  if (shape[1] == 1) {
+  mxnet::TShape shape = db.data[1].shape();
+  if (shape.ndim() > 1 && shape[1] == 1) {
     *pndarray = db.data[1].Reshape(mshadow::Shape1(shape[0]));
   } else {
     *pndarray = db.data[1];
@@ -1386,7 +1435,14 @@ int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid, int* shar
 int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const mx_uint *shape,
                                  mx_uint ndim, int dtype, NDArrayHandle *out) {
   API_BEGIN();
-  *out = new NDArray(shared_pid, shared_id, TShape(shape, shape + ndim), dtype);
+  *out = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
+  API_END();
+}
+
+int MXNDArrayCreateFromSharedMemEx(int shared_pid, int shared_id, const int *shape,
+                                   int ndim, int dtype, NDArrayHandle *out) {
+  API_BEGIN();
+  *out = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
   API_END();
 }
 
@@ -1475,5 +1531,52 @@ int MXEnginePushSync(EngineSyncFunc sync_func, void* func_param,
   Engine::Get()->PushSync(exec_fn, exec_ctx, const_var_vec, mutable_var_vec,
                           prop, priority, opr_name);
 
+  API_END();
+}
+
+int MXEnginePushAsyncND(EngineAsyncFunc async_func, void* func_param,
+                      EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
+                      NDArrayHandle const_nds_handle, int num_const_nds,
+                      NDArrayHandle mutable_nds_handle, int num_mutable_nds,
+                      EngineFnPropertyHandle prop_handle, int priority,
+                      const char* opr_name, bool wait) {
+  API_BEGIN();
+  NDArray* const_nds = static_cast<NDArray*>(const_nds_handle);
+  NDArray* mutable_nds = static_cast<NDArray*>(mutable_nds_handle);
+  std::vector<VarHandle> const_var_vec(num_const_nds);
+  for (int i = 0; i < num_const_nds; ++i) const_var_vec[i] = (const_nds+i)->var();
+  std::vector<VarHandle> mutable_var_vec(num_mutable_nds);
+  for (int i = 0; i < num_mutable_nds; ++i) mutable_var_vec[i] = (mutable_nds+i)->var();
+  return MXEnginePushAsync(async_func, func_param, deleter, ctx_handle,
+                           const_var_vec.data(), num_const_nds,
+                           mutable_var_vec.data(), num_mutable_nds,
+                           prop_handle, priority, opr_name, wait);
+  API_END();
+}
+
+int MXEnginePushSyncND(EngineSyncFunc sync_func, void* func_param,
+                     EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
+                     NDArrayHandle const_nds_handle, int num_const_nds,
+                     NDArrayHandle mutable_nds_handle, int num_mutable_nds,
+                     EngineFnPropertyHandle prop_handle, int priority,
+                     const char* opr_name) {
+  API_BEGIN();
+  NDArray* const_nds = static_cast<NDArray*>(const_nds_handle);
+  NDArray* mutable_nds = static_cast<NDArray*>(mutable_nds_handle);
+  std::vector<VarHandle> const_var_vec(num_const_nds);
+  for (int i = 0; i < num_const_nds; ++i) const_var_vec[i] = (const_nds+i)->var();
+  std::vector<VarHandle> mutable_var_vec(num_mutable_nds);
+  for (int i = 0; i < num_mutable_nds; ++i) mutable_var_vec[i] = (mutable_nds+i)->var();
+  return MXEnginePushSync(sync_func, func_param, deleter, ctx_handle,
+                          const_var_vec.data(), num_const_nds,
+                          mutable_var_vec.data(), num_mutable_nds,
+                          prop_handle, priority, opr_name);
+  API_END();
+}
+
+int MXStorageEmptyCache(int dev_type, int dev_id) {
+  API_BEGIN();
+  Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
+  Storage::Get()->ReleaseAll(ctx);
   API_END();
 }

@@ -26,7 +26,7 @@ import scala.collection.mutable.ListBuffer
   * This object will generate the Scala documentation of the Scala/Java APIs
   * The code will be executed during Macros stage and file live in Core stage
   */
-private[mxnet] object APIDocGenerator extends GeneratorBase {
+private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
 
   /**
     * Main method used to generate code and write to files
@@ -38,6 +38,8 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
     val hashCollector = ListBuffer[String]()
     hashCollector += typeSafeClassGen(FILE_PATH, true)
     hashCollector += typeSafeClassGen(FILE_PATH, false)
+    hashCollector += typeSafeRandomClassGen(FILE_PATH, true)
+    hashCollector += typeSafeRandomClassGen(FILE_PATH, false)
     hashCollector += nonTypeSafeClassGen(FILE_PATH, true)
     hashCollector += nonTypeSafeClassGen(FILE_PATH, false)
     hashCollector += javaClassGen(FILE_PATH)
@@ -76,6 +78,30 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
       "package org.apache.mxnet",
       if (isSymbol) "SymbolAPIBase" else "NDArrayAPIBase",
       "import org.apache.mxnet.annotation.Experimental",
+      generated)
+  }
+
+  /**
+    * Generate the Random classes for Symbol/NDArray
+    * @param FILE_PATH File path write the file to
+    * @param isSymbol Check if write the Symbol API, NDArray otherwise
+    * @return MD5 String
+    */
+  def typeSafeRandomClassGen(FILE_PATH: String, isSymbol: Boolean): String = {
+    val generated = typeSafeRandomFunctionsToGenerate(isSymbol)
+      .map { func =>
+        val scalaDoc = generateAPIDocFromBackend(func)
+        val typeParameter = randomGenericTypeSpec(isSymbol, false)
+        val decl = generateAPISignature(func, isSymbol, typeParameter)
+        s"$scalaDoc\n$decl"
+      }
+
+    writeFile(
+      FILE_PATH,
+      "package org.apache.mxnet",
+      if (isSymbol) "SymbolRandomAPIBase" else "NDArrayRandomAPIBase",
+      """import org.apache.mxnet.annotation.Experimental
+        |import scala.reflect.ClassTag""".stripMargin,
       generated)
   }
 
@@ -128,18 +154,18 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
     val absClassFunctions = functionsToGenerate(false, false, true)
     val (absFuncs, paramClassUncleaned) =
       absClassFunctions.filterNot(ele => notGenerated.contains(ele.name))
-        .groupBy(_.name.toLowerCase).map(ele => {
-        /* Pattern matching for not generating deprecated method
-         * Group all method name in lowercase
-         * Kill the capital lettered method such as Cast vs cast
-         * As it defined by default it deprecated
-         */
-        if (ele._2.length == 1) ele._2.head
-        else {
-          if (ele._2.head.name.head.isLower) ele._2.head
-          else ele._2.last
-        }
-      }).map(absClassFunction => {
+      .groupBy(_.name.toLowerCase).map(ele => {
+      /* Pattern matching for not generating deprecated method
+       * Group all method name in lowercase
+       * Kill the capital lettered method such as Cast vs cast
+       * As it defined by default it deprecated
+       */
+      if (ele._2.length == 1) ele._2.head
+      else {
+        if (ele._2.head.name.head.isLower) ele._2.head
+        else ele._2.last
+      }
+    }).map(absClassFunction => {
         generateJavaAPISignature(absClassFunction)
       }).toSeq.unzip
     val paramClass = paramClassUncleaned.filterNot(_.isEmpty)
@@ -264,22 +290,22 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
            | def getOut() = this.out
            | """.stripMargin
       (s"""$scalaDocNoParam
-          | $experimentalTag
-          | def ${func.name}(po: ${func.name}Param) : $returnType
-          | """.stripMargin,
+         | $experimentalTag
+         | def ${func.name}(po: ${func.name}Param) : $returnType
+         | """.stripMargin,
         s"""/**
-           | * This Param Object is specifically used for ${func.name}
-           | ${requiredParam.mkString("\n")}
-           | */
-           | class ${func.name}Param(${argDef.mkString(",")}) {
-           |  ${classDef.mkString("\n  ")}
-           | }""".stripMargin)
+         | * This Param Object is specifically used for ${func.name}
+         | ${requiredParam.mkString("\n")}
+         | */
+         | class ${func.name}Param(${argDef.mkString(",")}) {
+         |  ${classDef.mkString("\n  ")}
+         | }""".stripMargin)
     } else {
       argDef += "out : NDArray"
       (s"""$scalaDoc
-          |$experimentalTag
-          | def ${func.name}(${argDef.mkString(", ")}) : $returnType
-          | """.stripMargin, "")
+         |$experimentalTag
+         | def ${func.name}(${argDef.mkString(", ")}) : $returnType
+         | """.stripMargin, "")
     }
   }
 

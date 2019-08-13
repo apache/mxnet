@@ -71,11 +71,7 @@ In this tutorial, you will accomplish the following:
 
 ## Prerequisites
 
-To complete this tutorial, you need:
-
-- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/install/index.html)
-- [Scala 2.11.8](https://www.scala-lang.org/download/2.11.8.html)
-- [Maven 3](https://maven.apache.org/install.html)
+To complete this tutorial, setup and run the scala interpreter by following the [instructions](https://mxnet.incubator.apache.org/install/scala_setup.html#interpreter).
 
 ## Download the Data
 

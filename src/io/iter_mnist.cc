@@ -84,7 +84,7 @@ class MNISTIter: public IIterator<TBlobBatch> {
     out_.data.resize(2);
   }
   virtual ~MNISTIter(void) {
-    if (img_.dptr_ != nullptr) delete []img_.dptr_;
+    delete []img_.dptr_;
   }
   // intialize iterator loads data in
   virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
@@ -104,7 +104,7 @@ class MNISTIter: public IIterator<TBlobBatch> {
     out_.batch_size = param_.batch_size;
     if (param_.shuffle) this->Shuffle();
     if (param_.silent == 0) {
-      TShape s;
+      mxnet::TShape s;
       s = batch_data_.shape_;
       if (param_.flat) {
         LOG(INFO) << "MNISTIter: load " << (unsigned)img_.size(0) << " images, shuffle="

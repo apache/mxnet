@@ -36,6 +36,7 @@
 #include "../elemwise_op_common.h"
 #include "../linalg.h"
 #include "../../common/utils.h"
+#include "../tensor/broadcast_reduce_op.h"
 
 namespace mxnet {
 namespace op {
@@ -47,6 +48,12 @@ enum FullyConnectedOpInputs {kData, kWeight, kBias};
 enum FullyConnectedOpResource {kTempSpace};
 enum FullyConnectedOpOutputs {kOut};
 }  // fullc
+
+namespace quantized_fullc {
+enum QuantizedFCInputMinMax {kDataMin, kDataMax, kWeightMin, kWeightMax, kBiasMin, kBiasMax};
+enum QuantizedFCOutputs {kOut, kOutMin, kOutMax};
+}  // quantized_fullc
+
 
 struct FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
   int num_hidden;
@@ -84,8 +91,8 @@ void FCForward(const OpContext &ctx, const FullyConnectedParam &param,
   CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
       << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
-  const TShape& ishape = in_data[fullc::kData].shape_;
-  const TShape& oshape = out_data[fullc::kOut].shape_;
+  const mxnet::TShape& ishape = in_data[fullc::kData].shape_;
+  const mxnet::TShape& oshape = out_data[fullc::kOut].shape_;
 
   Tensor<xpu, 2, DType> wmat = in_data[fullc::kWeight].get<xpu, 2, DType>(s);
   Tensor<xpu, 2, DType> data, out;
@@ -128,8 +135,8 @@ void FCBackward(const OpContext &ctx, const FullyConnectedParam &param,
   // TODO(bing): check the BLAS Handle, be careful
   //  maybe need blas handle from context
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  const TShape& ishape = in_data[fullc::kData].shape_;
-  const TShape& oshape = out_grad[fullc::kOut].shape_;
+  const mxnet::TShape& ishape = in_data[fullc::kData].shape_;
+  const mxnet::TShape& oshape = out_grad[fullc::kOut].shape_;
 
   Tensor<xpu, 2, DType> wmat = in_data[fullc::kWeight].get<xpu, 2, DType>(s);
   Tensor<xpu, 2, DType> data, grad, gdata;
@@ -163,7 +170,18 @@ void FCBackward(const OpContext &ctx, const FullyConnectedParam &param,
   // gradient of bias
   if (!param.no_bias) {
     Tensor<xpu, 1, DType> gbias = in_grad[fullc::kBias].get<xpu, 1, DType>(s);
-    Assign(gbias, req[fullc::kBias], sum_rows(grad));
+    TBlob grad_blob = TBlob(grad);
+    TBlob gbias_blob = TBlob(gbias);
+    mxnet::TShape x(1, 0);
+    mxnet::TShape small;
+    if (shape_assign(&gbias_blob.shape_, Shape2(param.num_hidden, 1))) {
+      small = gbias_blob.shape_;
+    } else {
+      small = ReduceAxesShapeImpl(grad_blob.shape_, dmlc::optional<mxnet::TShape>(x), true, false);
+    }
+    ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, false,
+                          mshadow_op::identity>(ctx, {grad_blob}, {req[fullc::kBias]},
+                                                {in_grad[fullc::kBias]}, small);
   }
   // gradient of data
   // Legacy approach shown here for comparison:

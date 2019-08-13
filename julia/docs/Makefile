@@ -16,5 +16,14 @@
 # under the License.
 
 all:
-	julia --color=yes ./make.jl
-	mkdocs build
+	julia --color=yes --project=./ -e \
+	  'using Pkg; \
+	   Pkg.develop(PackageSpec(name="MXNet", path = joinpath(pwd(), "..")))'
+	julia --color=yes --project=./ ./make.jl
+	pip install --user pygments mkdocs mkdocs-material python-markdown-math
+	~/.local/bin/mkdocs build
+
+clean:
+	rm -rvf venv
+	rm -rvf build
+	rm -rvf site

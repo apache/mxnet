@@ -19,14 +19,18 @@ package org.apache.mxnet.infer
 
 // scalastyle:off
 import java.awt.image.BufferedImage
+
+import org.apache.mxnet.Shape
+
+import scala.collection.parallel.mutable.ParArray
 // scalastyle:on
 import org.apache.mxnet.NDArray
 import org.apache.mxnet.DataDesc
 import org.apache.mxnet.Context
-import scala.collection.mutable.ListBuffer
 
 /**
-  * A class for object detection tasks
+  * The ObjectDetector class helps to run ObjectDetection tasks where the goal
+  * is to find bounding boxes and corresponding labels for objects in a image.
   *
   * @param modelPathPrefix    Path prefix from where to load the model artifacts.
   *                           These include the symbol, parameters, and synset.txt.
@@ -94,41 +98,48 @@ class ObjectDetector(modelPathPrefix: String,
   def objectDetectWithNDArray(input: IndexedSeq[NDArray], topK: Option[Int])
   : IndexedSeq[IndexedSeq[(String, Array[Float])]] = {
 
-    val predictResult = predictor.predictWithNDArray(input)(0)
-    var batchResult = ListBuffer[IndexedSeq[(String, Array[Float])]]()
-    for (i <- 0 until predictResult.shape(0)) {
+    // Copy NDArray to CPU to avoid frequent GPU to CPU copying
+    val predictResult = predictor.predictWithNDArray(input)(0).asInContext(Context.cpu())
+    // Parallel Execution with ParArray for better performance
+    var batchResult = new ParArray[IndexedSeq[(String, Array[Float])]](predictResult.shape(0))
+    (0 until predictResult.shape(0)).toArray.par.foreach( i => {
       val r = predictResult.at(i)
-      batchResult += sortAndReformat(r, topK)
+      batchResult(i) = sortAndReformat(r, topK)
       handler.execute(r.dispose())
-    }
+    })
     handler.execute(predictResult.dispose())
     batchResult.toIndexedSeq
   }
 
+  /**
+    * Formats detection results by sorting in descending order of accuracy (topK only)
+    * and combining with synset labels
+    * @param predictResultND The results from the objectDetect call
+    * @param topK The number of top results to return or None for all
+    * @return The top predicted results as (className, [Accuracy, Xmin, Ymin, Xmax, Ymax])
+    */
   private[infer] def sortAndReformat(predictResultND: NDArray, topK: Option[Int])
   : IndexedSeq[(String, Array[Float])] = {
-    val predictResult: ListBuffer[Array[Float]] = ListBuffer[Array[Float]]()
-    val accuracy: ListBuffer[Float] = ListBuffer[Float]()
-
     // iterating over the all the predictions
     val length = predictResultND.shape(0)
 
-    for (i <- 0 until length) {
+    val predictResult = (0 until length).toArray.par.flatMap( i => {
       val r = predictResultND.at(i)
       val tempArr = r.toArray
-      if (tempArr(0) != -1.0) {
-        predictResult += tempArr
-        accuracy += tempArr(1)
+      val res = if (tempArr(0) != -1.0) {
+        Array[Array[Float]](tempArr)
       } else {
         // Ignore the minus 1 part
+        Array[Array[Float]]()
       }
       handler.execute(r.dispose())
-    }
+      res
+    }).toArray
     var result = IndexedSeq[(String, Array[Float])]()
     if (topK.isDefined) {
-      var sortedIndices = accuracy.zipWithIndex.sortBy(-_._1).map(_._2)
+      var sortedIndices = predictResult.zipWithIndex.sortBy(-_._1(1)).map(_._2)
       sortedIndices = sortedIndices.take(topK.get)
-      // takeRight(5) would provide the output as Array[Accuracy, Xmin, Ymin, Xmax, Ymax
+      // takeRight(5) would provide the output as Array[Accuracy, Xmin, Ymin, Xmax, Ymax]
       result = sortedIndices.map(idx
       => (synset(predictResult(idx)(0).toInt),
           predictResult(idx).takeRight(5))).toIndexedSeq
@@ -136,7 +147,6 @@ class ObjectDetector(modelPathPrefix: String,
       result = predictResult.map(ele
       => (synset(ele(0).toInt), ele.takeRight(5))).toIndexedSeq
     }
-
     result
   }
 
@@ -167,12 +177,42 @@ class ObjectDetector(modelPathPrefix: String,
     result
   }
 
+  /**
+    * Creates an image classifier from the object detector model
+    * @param modelPathPrefix    Path prefix from where to load the model artifacts.
+    *                           These include the symbol, parameters, and synset.txt.
+    *                           Example: file://model-dir/resnet-152 (containing
+    *                           resnet-152-symbol.json, resnet-152-0000.params, and synset.txt).
+    * @param inputDescriptors   Descriptors defining the input node names, shape,
+    *                           layout and type parameters
+    * @param contexts           Device contexts on which you want to run inference; defaults to CPU
+    * @param epoch              Model epoch to load; defaults to 0
+    * @return The corresponding image classifier
+    */
   private[infer] def getImageClassifier(modelPathPrefix: String,
                                         inputDescriptors: IndexedSeq[DataDesc],
                          contexts: Array[Context] = Context.cpu(),
                          epoch: Option[Int] = Some(0)):
   ImageClassifier = {
-    new ImageClassifier(modelPathPrefix, inputDescriptors, contexts, epoch)
-  }
+    val imageClassifier: ImageClassifier =
+      new ImageClassifier(modelPathPrefix, inputDescriptors, contexts, epoch)
 
+    val shapes: IndexedSeq[(String, Shape)] = imageClassifier.outputShapes
+    if (shapes.length != inputDescriptors.length) {
+      throw new IllegalStateException(s"Invalid output shapes, expected:" +
+        s" $inputDescriptors.length, actual: $shapes.length.")
+    }
+    shapes.map(_._2).foreach(shape => {
+      if (shape.length < 3) {
+        throw new IllegalArgumentException("Invalid output shapes, the model doesn't"
+          + " support object detection.")
+      }
+      if (shape.get(2) < 6) {
+        throw new IllegalArgumentException("Invalid output shapes, the model doesn't"
+          + " support object detection with bounding box.")
+      }
+    })
+
+    imageClassifier
+  }
 }

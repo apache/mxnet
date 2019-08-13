@@ -39,9 +39,9 @@ label <- mx.symbol.Reshape(data = label, target_shape = c(0))
 captcha_net <- mx.symbol.SoftmaxOutput(data = fc2, label = label, name = "softmax")
 
 mx.metric.acc2 <- mx.metric.custom("accuracy", function(label, pred) {
-    ypred <- max.col(t(pred)) - 1
+    ypred <- max.col(t(data.matrix(pred))) - 1
     ypred <- matrix(ypred, nrow = nrow(label), ncol = ncol(label), byrow = TRUE)
-    return(sum(colSums(label == ypred) == 4) / ncol(label))
+    return(sum(colSums(data.matrix(label) == ypred) == 4) / ncol(label))
   })
 
 data.shape <- c(80, 30, 3)

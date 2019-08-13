@@ -94,6 +94,7 @@ def _fix_pooling(pool_type, inputs, new_attr):
     stride = new_attr.get('stride')
     kernel = new_attr.get('kernel')
     padding = new_attr.get('pad')
+    p_value = new_attr.get('p_value')
 
     # Adding default stride.
     if stride is None:
@@ -138,7 +139,10 @@ def _fix_pooling(pool_type, inputs, new_attr):
             new_pad_op = symbol.pad(curr_sym, mode='constant', pad_width=pad_width)
 
     # Apply pooling without pads.
-    new_pooling_op = symbol.Pooling(new_pad_op, pool_type=pool_type, stride=stride, kernel=kernel)
+    if pool_type == 'lp':
+        new_pooling_op = symbol.Pooling(new_pad_op, pool_type=pool_type, stride=stride, kernel=kernel, p_value=p_value)
+    else:
+        new_pooling_op = symbol.Pooling(new_pad_op, pool_type=pool_type, stride=stride, kernel=kernel)
     return new_pooling_op
 
 def _fix_bias(op_name, attrs, num_inputs):
@@ -174,7 +178,7 @@ def _fix_channels(op_name, attrs, inputs, proto_obj):
     these attributes. We check the shape of weights provided to get the number.
     """
     weight_name = inputs[1].name
-    if not weight_name in proto_obj._params:
+    if not weight_name in proto_obj._params: # pylint: disable=no-else-raise
         raise ValueError("Unable to get channels/units attr from onnx graph.")
     else:
         wshape = proto_obj._params[weight_name].shape
@@ -217,7 +221,7 @@ def get_input_shape(sym, proto_obj):
     model_input_shape = [data[1] for data  in proto_obj.model_metadata.get('input_tensor_data')]
     data_names = [data[0] for data  in proto_obj.model_metadata.get('input_tensor_data')]
 
-    #creating dummy inputs
+    # creating dummy inputs
     inputs = []
     for  in_shape in model_input_shape:
         inputs.append(nd.ones(shape=in_shape))

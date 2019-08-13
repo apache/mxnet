@@ -38,7 +38,7 @@ fully connected layers.
 
 Returns the constructed MLP.
 """
-function MLP(input, spec; hidden_activation::Symbol=:relu, prefix=gensym())
+function MLP(input, spec; hidden_activation::Symbol = :relu, prefix = gensym())
   spec = convert(Vector{Union{Int,Tuple}}, spec)
 
   n_layer = length(spec)

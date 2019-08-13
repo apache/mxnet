@@ -24,12 +24,12 @@ import numpy as np
 from mxnet.test_utils import assert_almost_equal
 
 
-def test_subgraph_exe():
-    def _check_subgraph_exe1(sym, op_names):
+def _test_subgraph_exe(subgraph_backend):
+    def _check_subgraph_exe1(sym, subgraph_backend, op_names):
         """Use the partitioned sym to simple_bind an executor and compare the outputs
         with those of the original executor"""
         out = SymbolHandle()
-        check_call(_LIB.MXPartitionGraphByOpNames(sym.handle, c_str('default'), mx_uint(len(op_names)),
+        check_call(_LIB.MXBuildSubgraphByOpNames(sym.handle, c_str(subgraph_backend), mx_uint(len(op_names)),
                                                   c_str_array(op_names), ctypes.byref(out)))
 
         partitioned_sym = Symbol(out)
@@ -54,7 +54,7 @@ def test_subgraph_exe():
             assert_almost_equal((exe.outputs[i] - partitioned_exe.outputs[i]).abs().sum().asnumpy(),
                                 np.zeros(shape=(1,)))
 
-    def _check_subgraph_exe2(sym, op_names):
+    def _check_subgraph_exe2(sym, subgraph_backend, op_names):
         """Use env var MXNET_SUBGRAPH_BACKEND=default to trigger graph partitioning in simple_bind
         and compare results of the partitioned sym and the original sym."""
         def get_executor(sym, subgraph_backend=None, op_names=None, original_exec=None):
@@ -79,18 +79,18 @@ def test_subgraph_exe():
             return exe
 
         original_exec = get_executor(sym)
-        partitioned_exec = get_executor(sym, 'default', op_names, original_exec)
+        partitioned_exec = get_executor(sym, subgraph_backend, op_names, original_exec)
         outputs1 = original_exec.outputs
         outputs2 = partitioned_exec.outputs
         assert len(outputs1) == len(outputs2)
         for i in range(len(outputs1)):
             assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
 
-    def _check_subgraph_exe3(sym, op_names):
+    def _check_subgraph_exe3(sym, subgraph_backend, op_names):
         """Use the partitioned sym to bind an executor and compare the outputs
         with those of the original executor"""
         out = SymbolHandle()
-        check_call(_LIB.MXPartitionGraphByOpNames(sym.handle, c_str('default'), mx_uint(len(op_names)),
+        check_call(_LIB.MXBuildSubgraphByOpNames(sym.handle, c_str(subgraph_backend), mx_uint(len(op_names)),
                                                   c_str_array(op_names), ctypes.byref(out)))
 
         partitioned_sym = Symbol(out)
@@ -113,7 +113,7 @@ def test_subgraph_exe():
             assert_almost_equal((exe.outputs[i] - partitioned_exe.outputs[i]).abs().sum().asnumpy(),
                                 np.zeros(shape=(1,)))
 
-    def _check_subgraph_exe4(sym, op_names):
+    def _check_subgraph_exe4(sym, subgraph_backend, op_names):
         """Use env var MXNET_SUBGRAPH_BACKEND=default to trigger graph partitioning in bind
         and compare results of the partitioned sym and the original sym."""
         def get_executor(sym, subgraph_backend=None, op_names=None, original_exec=None):
@@ -139,38 +139,38 @@ def test_subgraph_exe():
             return exe
 
         original_exec = get_executor(sym)
-        partitioned_exec = get_executor(sym, 'default', op_names, original_exec)
+        partitioned_exec = get_executor(sym, subgraph_backend, op_names, original_exec)
         outputs1 = original_exec.outputs
         outputs2 = partitioned_exec.outputs
         assert len(outputs1) == len(outputs2)
         for i in range(len(outputs1)):
             assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
 
-    def check_subgraph_exe(sym, op_names):
-        _check_subgraph_exe1(sym, op_names)
-        _check_subgraph_exe2(sym, op_names)
-        _check_subgraph_exe3(sym, op_names)
-        _check_subgraph_exe4(sym, op_names)
+    def check_subgraph_exe(sym, subgraph_backend, op_names):
+        _check_subgraph_exe1(sym, subgraph_backend, op_names)
+        _check_subgraph_exe2(sym, subgraph_backend, op_names)
+        _check_subgraph_exe3(sym, subgraph_backend, op_names)
+        _check_subgraph_exe4(sym, subgraph_backend, op_names)
 
-    def test_network_structure_1():
+    def test_network_structure_1(subgraph_backend):
         data1 = mx.sym.var('data1', shape=(2, 3, 10, 10))
         data2 = mx.sym.var('data2')
         conv1 = mx.sym.Convolution(data=data1, weight=data2, no_bias=True, kernel=(2, 2), num_filter=1)
         conv2 = mx.sym.Convolution(data=data2, no_bias=True, kernel=(1, 1), num_filter=1)
         out = mx.sym.Group([conv1, conv2])
-        check_subgraph_exe(out, ['Convolution'])
+        check_subgraph_exe(out, subgraph_backend, ['Convolution'])
 
-    def test_network_structure_2():
+    def test_network_structure_2(subgraph_backend):
         # this tests whether the partitioning algorithm can deal with cycles
         data = mx.sym.var('data', shape=(2, 3, 10, 10))
         ret = mx.sym.exp(data)
         ret1 = mx.sym.cos(ret)
         ret2 = mx.sym.sin(ret)
         ret = ret1 + ret2
-        check_subgraph_exe(ret, ['exp', 'sin', '_Plus', 'elemwise_add', '_plus'])
-        check_subgraph_exe(ret, ['exp', 'cos', '_Plus', 'elemwise_add', '_plus'])
+        check_subgraph_exe(ret, subgraph_backend, ['exp', 'sin', '_Plus', 'elemwise_add', '_plus'])
+        check_subgraph_exe(ret, subgraph_backend, ['exp', 'cos', '_Plus', 'elemwise_add', '_plus'])
 
-    def test_network_structure_3():
+    def test_network_structure_3(subgraph_backend):
         # this tests whether the partitioned sym can distinguish in_args and aux_states
         data = mx.sym.var('data', shape=(2, 3, 10, 10))
         ret = mx.sym.exp(data)
@@ -179,27 +179,27 @@ def test_subgraph_exe():
         ret = ret1 + ret2
         ret = mx.sym.BatchNorm(ret)
         ret = mx.sym.BatchNorm(ret)
-        check_subgraph_exe(ret, ['exp', 'sin', '_Plus', 'elemwise_add', '_plus'])
-        check_subgraph_exe(ret, ['exp', 'cos', '_Plus', 'elemwise_add', '_plus'])
-        check_subgraph_exe(ret, ['exp', 'sin', '_Plus', 'elemwise_add', '_plus', 'BatchNorm'])
-        check_subgraph_exe(ret, ['exp', 'cos', '_Plus', 'elemwise_add', '_plus', 'BatchNorm'])
-        check_subgraph_exe(ret, ['exp', 'BatchNorm'])
-        check_subgraph_exe(ret, ['BatchNorm'])
+        check_subgraph_exe(ret, subgraph_backend, ['exp', 'sin', '_Plus', 'elemwise_add', '_plus'])
+        check_subgraph_exe(ret, subgraph_backend, ['exp', 'cos', '_Plus', 'elemwise_add', '_plus'])
+        check_subgraph_exe(ret, subgraph_backend, ['exp', 'sin', '_Plus', 'elemwise_add', '_plus', 'BatchNorm'])
+        check_subgraph_exe(ret, subgraph_backend, ['exp', 'cos', '_Plus', 'elemwise_add', '_plus', 'BatchNorm'])
+        check_subgraph_exe(ret, subgraph_backend, ['exp', 'BatchNorm'])
+        check_subgraph_exe(ret, subgraph_backend, ['BatchNorm'])
 
-    def test_network_structure_4():
+    def test_network_structure_4(subgraph_backend):
         # the last op has multiple duplicate outputs
         data = mx.sym.var('data', shape=(2, 3, 10, 10))
         ret = mx.sym.exp(data)
         ret = mx.sym.Group([ret, ret, ret])
-        check_subgraph_exe(ret, ['exp'])
+        check_subgraph_exe(ret, subgraph_backend, ['exp'])
 
-    def test_network_structure_5():
+    def test_network_structure_5(subgraph_backend):
         # the subgraph has two duplicate input entries
         data = mx.sym.var('data', shape=(2, 3, 10, 10))
         ret = data + data
-        check_subgraph_exe(ret, ['_plus', '_Plus', 'elemwise_add'])
+        check_subgraph_exe(ret, subgraph_backend, ['_plus', '_Plus', 'elemwise_add'])
 
-    def test_network_structure_6():
+    def test_network_structure_6(subgraph_backend):
         def get_graph():
             data1 = mx.sym.Variable('data1', shape=(3, 3, 10, 10), dtype=np.float32)
             data2 = mx.sym.Variable('data2', shape=(1, 0, 2, 2))
@@ -212,9 +212,9 @@ def test_subgraph_exe():
             return rets
 
         for sym, op_names in get_graph():
-            check_subgraph_exe(sym, op_names)
+            check_subgraph_exe(sym, subgraph_backend, op_names)
 
-    def test_network_structure_7():
+    def test_network_structure_7(subgraph_backend):
         # in this graph, the subgraph node and the other two external nodes form a cycle
         data = mx.sym.Variable('data', shape=(1,))
         ret1 = mx.sym.sin(data)
@@ -222,16 +222,21 @@ def test_subgraph_exe():
         for _ in range(5):
             ret2 = mx.sym.cos(ret2)
         ret = ret1 + ret2
-        check_subgraph_exe(ret, ['sin', 'elemwise_add', '_plus', '_Plus'])
+        check_subgraph_exe(ret, subgraph_backend, ['sin', 'elemwise_add', '_plus', '_Plus'])
 
-    test_network_structure_1()
-    test_network_structure_2()
-    test_network_structure_3()
-    test_network_structure_4()
-    test_network_structure_5()
-    test_network_structure_6()
-    test_network_structure_7()
+    test_network_structure_1(subgraph_backend)
+    test_network_structure_2(subgraph_backend)
+    test_network_structure_3(subgraph_backend)
+    test_network_structure_4(subgraph_backend)
+    test_network_structure_5(subgraph_backend)
+    test_network_structure_6(subgraph_backend)
+    test_network_structure_7(subgraph_backend)
 
+def test_subgraph_exe():
+    _test_subgraph_exe('default')
+
+def test_subgraph_v2_exe():
+    _test_subgraph_exe('default_v2')
 
 if __name__ == '__main__':
     import nose

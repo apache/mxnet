@@ -18,24 +18,45 @@ package org.apache.mxnet.utils
 
 private[mxnet] object CToScalaUtils {
 
+  private val javaType = Map(
+    "float" -> "java.lang.Float",
+    "int" -> "java.lang.Integer",
+    "long" -> "java.lang.Long",
+    "double" -> "java.lang.Double",
+    "bool" -> "java.lang.Boolean")
+  private val scalaType = Map(
+    "float" -> "Float",
+    "int" -> "Int",
+    "long" -> "Long",
+    "double" -> "Double",
+    "bool" -> "Boolean")
 
-
-  // Convert C++ Types to Scala Types
+  /**
+    * Convert C++ Types to Scala Types
+    * @param in Input raw string that contains C type docs
+    * @param argType Arg type that used for error messaging
+    * @param argName Arg name used for error messaging
+    * @param returnType The type that NDArray/Symbol should be
+    * @param isJava Check if generating for Java
+    * @return String that contains right Scala/Java types
+    */
   def typeConversion(in : String, argType : String = "", argName : String,
-                     returnType : String) : String = {
+                     returnType : String, isJava : Boolean) : String = {
     val header = returnType.split("\\.").dropRight(1)
+    val types = if (isJava) javaType else scalaType
     in match {
       case "Shape(tuple)" | "ShapeorNone" => s"${header.mkString(".")}.Shape"
       case "Symbol" | "NDArray" | "NDArray-or-Symbol" => returnType
       case "Symbol[]" | "NDArray[]" | "NDArray-or-Symbol[]" | "SymbolorSymbol[]"
       => s"Array[$returnType]"
-      case "float" | "real_t" | "floatorNone" => "java.lang.Float"
-      case "int" | "intorNone" | "int(non-negative)" => "java.lang.Integer"
-      case "long" | "long(non-negative)" => "java.lang.Long"
-      case "double" | "doubleorNone" => "java.lang.Double"
+      case "float" | "real_t" | "floatorNone" => types("float")
+      case "int" | "intorNone" | "int(non-negative)" => types("int")
+      case "long" | "long(non-negative)" => types("long")
+      case "double" | "doubleorNone" => types("double")
       case "string" => "String"
-      case "boolean" | "booleanorNone" => "java.lang.Boolean"
-      case "tupleof<float>" | "tupleof<double>" | "tupleof<>" | "ptr" | "" => "Any"
+      case "boolean" | "booleanorNone" => types("bool")
+      case "tupleof<int>" | "tupleof<float>" | "tupleof<double>" | "tupleof<intorNone>" |
+           "tupleof<>" | "ptr" | "" => "Any"
       case default => throw new IllegalArgumentException(
         s"Invalid type for args: $default\nString argType: $argType\nargName: $argName")
     }
@@ -51,10 +72,12 @@ private[mxnet] object CToScalaUtils {
     * optional, what is it Scala type and possibly pass in a default value
     * @param argName The name of the argument
     * @param argType Raw arguement Type description
+    * @param returnType Return type of the function (Symbol/NDArray)
+    * @param isJava Check if Java args should be generated
     * @return (Scala_Type, isOptional)
     */
   def argumentCleaner(argName: String, argType : String,
-                      returnType : String) : (String, Boolean) = {
+                      returnType : String, isJava : Boolean) : (String, Boolean) = {
     val spaceRemoved = argType.replaceAll("\\s+", "")
     var commaRemoved : Array[String] = new Array[String](0)
     // Deal with the case e.g: stype : {'csr', 'default', 'row_sparse'}
@@ -72,9 +95,9 @@ private[mxnet] object CToScalaUtils {
         s"""expected "optional" got ${commaRemoved(1)}""")
       require(commaRemoved(2).startsWith("default="),
         s"""expected "default=..." got ${commaRemoved(2)}""")
-      (typeConversion(commaRemoved(0), argType, argName, returnType), true)
+      (typeConversion(commaRemoved(0), argType, argName, returnType, isJava), true)
     } else if (commaRemoved.length == 2 || commaRemoved.length == 1) {
-      val tempType = typeConversion(commaRemoved(0), argType, argName, returnType)
+      val tempType = typeConversion(commaRemoved(0), argType, argName, returnType, isJava)
       val tempOptional = tempType.equals("org.apache.mxnet.Symbol")
       (tempType, tempOptional)
     } else {

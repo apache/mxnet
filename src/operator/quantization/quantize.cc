@@ -71,7 +71,7 @@ where
 `scale = quantized_range / MaxAbs(min_range, max_range).`
 
 .. Note::
-    This operator only supports forward propogation. DO NOT use it in training.)code" ADD_FILELINE)
+    This operator only supports forward propagation. DO NOT use it in training.)code" ADD_FILELINE)
 .set_attr_parser(ParamParser<QuantizeParam>)
 .set_num_inputs(3)
 .set_num_outputs(3)
@@ -79,9 +79,12 @@ where
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data", "min_range", "max_range"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", QuantizeShape)
+.set_attr<mxnet::FInferShape>("FInferShape", QuantizeShape)
 .set_attr<nnvm::FInferType>("FInferType", QuantizeType)
 .set_attr<FInferStorageType>("FInferStorageType", QuantizeStorageType)
+// TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,
+// will be reverted after the improvement of CachedOP is done.
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizeCompute)

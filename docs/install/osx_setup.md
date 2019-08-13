@@ -17,7 +17,7 @@
 
 # Installing MXNet from source on OS X (Mac)
 
-**NOTE:** For prebuild MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/install/index.html).
+**NOTE:** For pre-built MXNet with Python, please refer to the [new install guide](index.md).
 
 Installing MXNet is a two-step process:
 
@@ -81,7 +81,7 @@ Install the dependencies, required for MXNet, with the following commands:
 	brew install graphviz
 	brew install openblas
 	brew tap homebrew/core
-	brew install opencv
+	brew install opencv@3
 
 	# If building with MKLDNN
 	brew install llvm
@@ -89,18 +89,18 @@ Install the dependencies, required for MXNet, with the following commands:
 	# Get pip
 	easy_install pip
 	# For visualization of network graphs
-	pip install graphviz
+	pip install graphviz==0.8.4
 	# Jupyter notebook
 	pip install jupyter
 ```
 
 ### Build MXNet Shared Library
-After you have installed the dependencies, pull the MXNet source code from Git and build MXNet to produce an MXNet library called ```libmxnet.so```. You can clone the repository as described in the following code block, or you may try the <a href="download.html">download links</a> for your desired MXNet version.
+After you have installed the dependencies, pull the MXNet source code from Git and build MXNet to produce an MXNet library called ```libmxnet.so```. You can clone the repository as described in the following code block, or you may try the [download links](download.md) for your desired MXNet version.
 
 The file called ```osx.mk``` has the configuration required for building MXNet on OS X. First copy ```make/osx.mk``` into ```config.mk```, which is used by the ```make``` command:
 
 ```bash
-    git clone --recursive https://github.com/dmlc/mxnet ~/mxnet
+    git clone --recursive https://github.com/apache/incubator-mxnet ~/mxnet
     cd ~/mxnet
     cp make/osx.mk ./config.mk
     echo "USE_BLAS = openblas" >> ./config.mk
@@ -113,7 +113,14 @@ The file called ```osx.mk``` has the configuration required for building MXNet o
 To build with MKLDNN
 
 ```bash
-LIBRARY_PATH=$(brew --prefix llvm)/lib/ make -j $(sysctl -n hw.ncpu) CC=$(brew --prefix llvm)/bin/clang++ CXX=$(brew --prefix llvm)/bin/clang++ USE_OPENCV=1 USE_OPENMP=1 USE_MKLDNN=1 USE_BLAS=apple USE_PROFILER=1
+echo "CC=$(brew --prefix llvm)/bin/clang" >> ./config.mk
+echo "CXX=$(brew --prefix llvm)/bin/clang++" >> ./config.mk
+echo "USE_OPENCV=1" >> ./config.mk
+echo "USE_OPENMP=1" >> ./config.mk
+echo "USE_MKLDNN=1" >> ./config.mk
+echo "USE_BLAS=apple" >> ./config.mk
+echo "USE_PROFILER=1" >> ./config.mk
+LIBRARY_PATH=$(brew --prefix llvm)/lib/ make -j $(sysctl -n hw.ncpu)
 ```
 
 If building with ```GPU``` support, add the following configuration to config.mk and build:
@@ -164,7 +171,10 @@ Add a soft link to the OpenBLAS installation. This example links the 0.3.1 versi
 ln -sf /usr/local/opt/openblas/lib/libopenblasp-r0.3.* /usr/local/opt/openblas/lib/libopenblasp-r0.3.1.dylib
 ```
 
-Install the latest version (3.5.1+) of R from [CRAN](https://cran.r-project.org/bin/macosx/).
+Note: packages for 3.6.x are not yet available.
+
+Install 3.5.x of R from [CRAN](https://cran.r-project.org/bin/macosx/). The latest is [v3.5.3](https://cran.r-project.org/bin/macosx/R-3.5.3.pkg).
+
 For OS X (Mac) users, MXNet provides a prebuilt binary package for CPUs. The prebuilt package is updated weekly. You can install the package directly in the R console using the following commands:
 
 ```r
@@ -254,6 +264,6 @@ After you build the shared library, run the following command from the MXNet sou
 
 ## Next Steps
 
-* [Tutorials](http://mxnet.io/tutorials/index.html)
-* [How To](http://mxnet.io/faq/index.html)
-* [Architecture](http://mxnet.io/architecture/index.html)
+* [Tutorials](../tutorials/index.md)
+* [How To](../faq/index.md)
+* [Architecture](../architecture/index.md)

@@ -19,6 +19,7 @@ package org.apache.mxnet
 
 import org.apache.mxnet.io.{NDArrayIter, ResizeIter, PrefetchingIter}
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
+import scala.language.postfixOps
 import scala.sys.process._
 
 
@@ -53,10 +54,10 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     // test DataIter
     val mnistIter = mnistPack.iterator
     // test provideData
-    val provideData = mnistIter.provideData
-    val provideLabel = mnistIter.provideLabel
-    assert(provideData("data") === Shape(100, 784))
-    assert(provideLabel("label") === Shape(100))
+    val provideData = mnistIter.provideDataDesc
+    val provideLabel = mnistIter.provideLabelDesc
+    assert(provideData.find(_.name == "data").get.shape === Shape(100, 784))
+    assert(provideLabel.find(_.name == "label").get.shape === Shape(100))
     // test_loop
     mnistIter.reset()
     batchCount = 0
@@ -105,10 +106,10 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     val nBatch = 500
     var batchCount = 0
     // test provideData
-    val provideData = imgRecIter.provideData
-    val provideLabel = imgRecIter.provideLabel
-    assert(provideData("data").toArray === Array(100, 3, 28, 28))
-    assert(provideLabel("label").toArray === Array(100))
+    val provideData = imgRecIter.provideDataDesc
+    val provideLabel = imgRecIter.provideLabelDesc
+    assert(provideData.find(_.name == "data").get.shape.toArray === Array(100, 3, 28, 28))
+    assert(provideLabel.find(_.name == "label").get.shape.toArray === Array(100))
 
     imgRecIter.reset()
     while (imgRecIter.hasNext) {
@@ -208,12 +209,12 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     assert(nBatch === batchCount)
 
     // test provideData
-    val provideData = prefetchIter.provideData
-    val provideLabel = prefetchIter.provideLabel
-    assert(provideData("data1") === Shape(100, 784))
-    assert(provideData("data2") === Shape(100, 784))
-    assert(provideLabel("label1") === Shape(100))
-    assert(provideLabel("label2") === Shape(100))
+    val provideData = prefetchIter.provideDataDesc
+    val provideLabel = prefetchIter.provideLabelDesc
+    assert(provideData.find(_.name == "data1").get.shape === Shape(100, 784))
+    assert(provideData.find(_.name == "data2").get.shape === Shape(100, 784))
+    assert(provideLabel.find(_.name == "label1").get.shape === Shape(100))
+    assert(provideLabel.find(_.name == "label2").get.shape === Shape(100))
 
     // test reset
     prefetchIter.reset()
@@ -237,7 +238,7 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     val shape0 = Shape(Array(1000, 2, 2))
     val data = IndexedSeq(NDArray.ones(shape0), NDArray.zeros(shape0))
     val shape1 = Shape(Array(1000, 1))
-    val label = IndexedSeq(NDArray.ones(shape1))
+    val label = IndexedSeq(NDArray.ones(shape1, dtype = DType.Int32))
     val batchData0 = NDArray.ones(Shape(Array(128, 2, 2)))
     val batchData1 = NDArray.zeros(Shape(Array(128, 2, 2)))
     val batchLabel = NDArray.ones(Shape(Array(128, 1)))
@@ -254,6 +255,7 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
       assert(tBatch.data(0).toArray === batchData0.toArray)
       assert(tBatch.data(1).toArray === batchData1.toArray)
       assert(tBatch.label(0).toArray === batchLabel.toArray)
+      assert(tBatch.label(0).dtype == DType.Int32)
     }
 
     assert(batchCount === nBatch0)
@@ -303,5 +305,32 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     assert(dataDesc(0).layout == Layout.NTC)
     assert(labelDesc(0).dtype == DType.Int32)
     assert(labelDesc(0).layout == Layout.NT)
+
+
+    // Test with passing Float64 hardcoded as Dtype of data
+    val dataIter4 = new NDArrayIter(
+      IO.initDataDesc(data, false, "data", DType.Float64, Layout.NTC),
+      IO.initDataDesc(label, false, "label", DType.Int32, Layout.NT),
+      128, false, "pad")
+    val dataDesc4 = dataIter4.provideDataDesc
+    val labelDesc4 = dataIter4.provideLabelDesc
+    assert(dataDesc4(0).dtype == DType.Float64)
+    assert(dataDesc4(0).layout == Layout.NTC)
+    assert(labelDesc4(0).dtype == DType.Int32)
+    assert(labelDesc4(0).layout == Layout.NT)
+
+    // Test with Float64 coming from the data itself
+    val dataF64 = IndexedSeq(NDArray.ones(shape0, dtype = DType.Float64),
+      NDArray.zeros(shape0, dtype = DType.Float64))
+
+    val dataIter5 = new NDArrayIter(
+      IO.initDataDesc(dataF64, false, "data", DType.Float64, Layout.NTC),
+      IO.initDataDesc(label, false, "label", DType.Int32, Layout.NT),
+      128, false, "pad")
+    val dataDesc5 = dataIter5.provideDataDesc
+    assert(dataDesc5(0).dtype == DType.Float64)
+    assert(dataDesc5(0).dtype != DType.Float32)
+    assert(dataDesc5(0).layout == Layout.NTC)
+
   }
 }

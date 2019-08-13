@@ -50,8 +50,8 @@ inline std::vector<std::string> DefaultSubgraphOpListOutputs(const nnvm::NodeAtt
 }
 
 inline bool DefaultSubgraphOpShapeHelper(const nnvm::Symbol& subgraph_sym,
-                                         std::vector<TShape> *in_shapes,
-                                         std::vector<TShape> *out_shapes) {
+                                         mxnet::ShapeVector *in_shapes,
+                                         mxnet::ShapeVector *out_shapes) {
   using namespace exec;
   nnvm::Graph g;
   g.outputs = subgraph_sym.outputs;
@@ -60,7 +60,7 @@ inline bool DefaultSubgraphOpShapeHelper(const nnvm::Symbol& subgraph_sym,
   CHECK_EQ(idx_g.outputs().size(), out_shapes->size());
 
   // Put the input and output shapes to the shape vector.
-  nnvm::ShapeVector shapes(idx_g.num_node_entries());
+  mxnet::ShapeVector shapes(idx_g.num_node_entries());
   const auto &input_nids = idx_g.input_nodes();
   CHECK_EQ(input_nids.size(), in_shapes->size());
   for (size_t i = 0; i < in_shapes->size(); i++) {
@@ -78,7 +78,7 @@ inline bool DefaultSubgraphOpShapeHelper(const nnvm::Symbol& subgraph_sym,
   g = exec::InferShape(std::move(g));
 
   // Copy the inferred shape back to the input shapes and the output shapes.
-  shapes = g.GetAttr<nnvm::ShapeVector>("shape");
+  shapes = g.GetAttr<mxnet::ShapeVector>("shape");
   // assign to in_shapes
   for (size_t i = 0; i < in_shapes->size(); ++i) {
     const auto eid = idx_g.entry_id(input_nids[i], 0);
@@ -94,8 +94,8 @@ inline bool DefaultSubgraphOpShapeHelper(const nnvm::Symbol& subgraph_sym,
 }
 
 inline bool DefaultSubgraphOpShape(const nnvm::NodeAttrs& attrs,
-                                   std::vector<TShape> *in_shapes,
-                                   std::vector<TShape> *out_shapes) {
+                                   mxnet::ShapeVector *in_shapes,
+                                   mxnet::ShapeVector *out_shapes) {
   return DefaultSubgraphOpShapeHelper(*attrs.subgraphs[0], in_shapes, out_shapes);
 }
 

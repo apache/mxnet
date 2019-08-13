@@ -18,14 +18,14 @@
 module TestOperator
 
 using MXNet
-using Base.Test
+using Test
 
 using ..Main: rand_dims
 
 function test_scalar_op()
   data  = mx.Variable(:data)
   shape = rand_dims()
-  info("Operator::scalar_op::dims = $shape")
+  @info "Operator::scalar_op::dims = $shape"
 
   data_jl  = 5ones(Float32, shape)
   arr_data = mx.copy(data_jl, mx.cpu())
@@ -35,7 +35,7 @@ function test_scalar_op()
   exec_test = mx.bind(test, mx.cpu(), [arr_data], args_grad=[arr_grad])
   mx.forward(exec_test)
   out = copy(exec_test.outputs[1])
-  jl_out1 = (4 - ((1+data_jl+1)*2/5) - 0.2)
+  jl_out1 = @. 4 - ((1+data_jl+1)*2/5) - 0.2
   jl_out = 2 ./ jl_out1
   @test copy(out) ≈ jl_out
 

@@ -17,17 +17,22 @@
 
 @enum CONTEXT_TYPE CPU=1 GPU=2 CPU_PINNED=3
 
+Base.convert(::Type{CONTEXT_TYPE}, x::Integer) = CONTEXT_TYPE(x)
+
 """
     Context(dev_type, dev_id)
 
 A context describes the device type and id on which computation should be carried on.
 """
 struct Context
-  device_type :: CONTEXT_TYPE
-  device_id   :: Int
+  device_type::CONTEXT_TYPE
+  device_id::Int
+
+  Context(dev_type::CONTEXT_TYPE, dev_id::Integer = 0) = new(dev_type, dev_id)
 end
-Context(dev_type :: Union{CONTEXT_TYPE, Int}, dev_id :: Int = 0) =
-    Context(convert(CONTEXT_TYPE, dev_type), dev_id)
+
+Context(dev_type::Integer, dev_id::Integer = 0) =
+  Context(convert(CONTEXT_TYPE, dev_type), dev_id)
 
 Base.show(io::IO, ctx::Context) =
   print(io, "$(ctx.device_type)$(ctx.device_id)")
@@ -39,9 +44,9 @@ Get a CPU context with a specific id. `cpu()` is usually the default context for
 operations when no context is specified.
 
 # Arguments
-* `dev_id::Int = 0`: the CPU id.
+* `dev_id::Integer = 0`: the CPU id.
 """
-cpu(dev_id::Int = 0) = Context(CPU, dev_id)
+cpu(dev_id::Integer = 0) = Context(CPU, dev_id)
 
 """
     gpu(dev_id)
@@ -49,6 +54,6 @@ cpu(dev_id::Int = 0) = Context(CPU, dev_id)
 Get a GPU context with a specific id. The K GPUs on a node is typically numbered as 0,...,K-1.
 
 # Arguments
-* `dev_id :: Int = 0` the GPU device id.
+* `dev_id::Integer = 0` the GPU device id.
 """
-gpu(dev_id::Int = 0) = return Context(GPU, dev_id)
+gpu(dev_id::Integer = 0) = Context(GPU, dev_id)

@@ -6,6 +6,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/) 
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.3.2] - 2019-08-13
+
+### Changed
+
+- Upgrade base version of mxnet to *mxnet v1.5.0*
+
+### Fixed
+
+- model converter test
+
 ## [0.3.1] - 2019-05-28
 
 ### Changed

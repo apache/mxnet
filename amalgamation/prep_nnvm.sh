@@ -40,7 +40,6 @@ echo '#define MSHADOW_FORCE_STREAM
 #include "mshadow/tensor.h"
 #include "mxnet/base.h"
 #include "dmlc/json.h"
-#include "nnvm/tuple.h"
 #include "mxnet/tensor_blob.h"' > temp
 cat nnvm.cc >> temp
 mv temp ../../../../amalgamation/nnvm.cc

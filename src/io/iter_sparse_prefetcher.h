@@ -134,7 +134,7 @@ class SparsePrefetcherIter : public PrefetcherIter {
     return sparse_loader_->GetStorageType(is_data);
   }
 
-  virtual const TShape GetShape(bool is_data) const {
+  virtual const mxnet::TShape GetShape(bool is_data) const {
     return sparse_loader_->GetShape(is_data);
   }
 

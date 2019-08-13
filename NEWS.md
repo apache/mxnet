@@ -15,8 +15,26 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-Apache MXNet (incubating) Change Log
-====================================
+MXNet Change Log
+================
+
+## 1.4.1
+
+Apache MXNet (incubating) 1.4.1 is a maintenance release incorporating important bug fixes and important performance improvements. All users of Apache MXNet (incubating) 1.4.0 are advised to upgrade. You can install Apache MXNet (incubating) 1.4.1 at the usual place. Please review these Release Notes to learn the bug fixes.
+
+### Bug-fixes
+* Java bug-fix cherry pick (#14834)
+* Use DEFAULT macro in C APIs (#14767) (#14789)
+* Set idx2name for Optimizer object (#14703) (#14772)
+* Add pin_device_id option to Gluon DataLoader (#14136) (#14771)
+* Tidy up storage allocation and deallocation (#14480) (#14768)
+* Add MXEnginePushAsync and MXEnginePushSync C APIs (#14615) (#14770)
+* Less cudaGet/SetDevice calls in Gluon execution (#13764)
+* Fix nightly build of 1.4.x (#14556)
+* Memory fixes. Resolves #10867, and resolves #14080 (#14372) (#14586)
+* Fixes for data links (#14526)
+* Backport of Windows CI Fixes (#14420)
+
 
 ## 1.4.0
 
@@ -164,7 +182,7 @@ MKLDNN backend takes advantage of MXNet subgraph to implement the most of possib
 ##### Quantization
 Performance of reduced-precision (INT8) computation is also dramatically improved after the graph optimization feature is applied on CPU Platforms. Various models are supported and can benefit from reduced-precision computation, including symbolic models, Gluon models and even custom models. Users can run most of the pre-trained models with only a few lines of commands and a new quantization script imagenet_gen_qsym_mkldnn.py. The observed accuracy loss is less than 0.5% for popular CNN networks, like ResNet-50, Inception-BN, MobileNet, etc.
 
-Please find detailed information and performance/accuracy numbers here: [MKLDNN README](https://github.com/apache/incubator-mxnet/blob/master/MKLDNN_README.md), [quantization README](https://github.com/apache/incubator-mxnet/tree/master/example/quantization#1) and [design proposal](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN)
+Please find detailed information and performance/accuracy numbers here: [MKLDNN README](https://github.com/apache/incubator-mxnet/blob/master/docs/tutorials/mkldnn/MKLDNN_README.md), [quantization README](https://github.com/apache/incubator-mxnet/tree/master/example/quantization#1) and [design proposal](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN)
 
 ### New Operators
 
@@ -584,33 +602,31 @@ Submodule@commit ID::Last updated by MXNet:: Last update in submodule
 * dlpack@10892ac:: Oct 30, 2017 :: Aug 23, 2018
 * dmlc-core@0a0e8ad:: Aug 15, 2018 :: Nov 15, 2018
 * googletest@ec44c6c:: July 14, 2016 :: July 14, 2016
-* mkldnn@a7c5f53:: Nov 7, 2018 :: Nov 5, 2018
+* mkldnn@722901c:: Feb 13, 2019 :: Feb 12, 2019
 * mshadow@696803b:: Sep 28, 2018 :: Nov 7,  2018
 * onnx-tensorrt@3d8ee04:: Aug 22, 2018 :: Nov 10, 2018
 * openmp@37c7212: Nov 22, 2017 :: Nov 13, 2018
 * ps-lite@8a76389: April 25, 2018 :: Oct 9, 2018
 * tvm@0f053c8: Oct 10, 2018 :: Oct 8, 2018
 
-
-
 ## 1.3.1
 
 ### Bug fixes
 
-* [MXNET-953] Fix oob memory read (v1.3.x) / [#13118](https://github.com/apache/incubator-mxnet/pull/13118)
+* [MXNET-953] Fix oob memory read (v1.3.x) / [#13118](https://github.com/apache/incubator-mxnet/pull/13118)  
 Simple bugfix addressing an out-of-bounds memory read.
 
 
-* [MXNET-969] Fix buffer overflow in RNNOp (v1.3.x) / [#13119](https://github.com/apache/incubator-mxnet/pull/13119)
+* [MXNET-969] Fix buffer overflow in RNNOp (v1.3.x) / [#13119](https://github.com/apache/incubator-mxnet/pull/13119)  
 This fixes an buffer overflow detected by ASAN.
 
 
-* CudnnFind() usage improvements (v1.3.x) / [#13123](https://github.com/apache/incubator-mxnet/pull/13123)
+* CudnnFind() usage improvements (v1.3.x) / [#13123](https://github.com/apache/incubator-mxnet/pull/13123)  
   This PR improves the MXNet's use of cudnnFind() to address a few issues:
   1. With the gluon imperative style, cudnnFind() is called during forward(), and so might have its timings perturbed by other GPU activity (including potentially other cudnnFind() calls).
   2. With some cuda drivers versions, care is needed to ensure that the large I/O and workspace cudaMallocs() performed by cudnnFind() are immediately released and available to MXNet.
-  3. cudnnFind() makes both conv I/O and workspace allocations that must be covered by the GPU global memory headroom defined by MXNET_GPU_MEM_POOL_RESERVE. Per issue #12662, large convolutions can result in out-of-memory errors, even when MXNet's storage allocator has free memory in its pool.
-
+  3. cudnnFind() makes both conv I/O and workspace allocations that must be covered by the GPU global memory headroom defined by MXNET_GPU_MEM_POOL_RESERVE. Per issue #12662, large convolutions can result in out-of-memory errors, even when MXNet's storage allocator has free memory in its pool.  
+  
   This PR addresses these issues, providing the following benefits:
   1. Consistent algo choice for a given convolution type in a model, both for instances in the same GPU and in other GPUs in a multi-GPU training setting.
   2. Consistent algo choice from run to run, based on eliminating sources of interference of the cudnnFind() timing process.
@@ -618,38 +634,38 @@ This fixes an buffer overflow detected by ASAN.
   4. Increased training performance based on being able to consistently run with models that approach the GPU's full global memory footprint.
   5. Adds a unittest for and solves issue #12662.
 
-* [MXNET-922] Fix memleak in profiler (v1.3.x) / [#13120](https://github.com/apache/incubator-mxnet/pull/13120)
+* [MXNET-922] Fix memleak in profiler (v1.3.x) / [#13120](https://github.com/apache/incubator-mxnet/pull/13120)  
   Fix a memleak reported locally by ASAN during a normal inference test.
 
-* Fix lazy record io when used with dataloader and multi_worker > 0 (v1.3.x) / [#13124](https://github.com/apache/incubator-mxnet/pull/13124)
+* Fix lazy record io when used with dataloader and multi_worker > 0 (v1.3.x) / [#13124](https://github.com/apache/incubator-mxnet/pull/13124)  
   Fixes multi_worker data loader when record file is used. The MXRecordIO instance needs to require a new file handler after fork to be safely manipulated simultaneously.
 
   This fix also safely voids the previous temporary fixes #12093 #11370.
 
-* fixed symbols naming in RNNCell, LSTMCell, GRUCell (v1.3.x) / [#13158](https://github.com/apache/incubator-mxnet/pull/13158)
+* fixed symbols naming in RNNCell, LSTMCell, GRUCell (v1.3.x) / [#13158](https://github.com/apache/incubator-mxnet/pull/13158)  
   This fixes #12783, by assigning all nodes in hybrid_forward a unique name. Some operations were in fact performed without attaching the appropriate (time) prefix to the name, which makes serialized graphs non-deserializable.
 
-* Fixed `__setattr__` method of `_MXClassPropertyMetaClass` (v1.3.x) / [#13157](https://github.com/apache/incubator-mxnet/pull/13157)
+* Fixed `__setattr__` method of `_MXClassPropertyMetaClass` (v1.3.x) / [#13157](https://github.com/apache/incubator-mxnet/pull/13157)  
   Fixed `__setattr__` method
 
-* allow foreach on input with 0 length (v1.3.x) / [#13151](https://github.com/apache/incubator-mxnet/pull/13151)
+* allow foreach on input with 0 length (v1.3.x) / [#13151](https://github.com/apache/incubator-mxnet/pull/13151)  
   Fix #12470. With this change, outs shape can be inferred correctly.
 
-* Infer dtype in SymbolBlock import from input symbol (v1.3.x) / [#13117](https://github.com/apache/incubator-mxnet/pull/13117)
-  Fix for the issue - #11849
-  Currently, Gluon symbol block cannot import any symbol with type other than fp32. All the parameters are created as FP32 leading to failure in importing the params when it is of type fp16, fp64 etc,
-  In this PR, we infer the type of the symbol being imported and create the Symbol Block Parameters with that inferred type.
+* Infer dtype in SymbolBlock import from input symbol (v1.3.x) / [#13117](https://github.com/apache/incubator-mxnet/pull/13117)  
+  Fix for the issue - #11849  
+  Currently, Gluon symbol block cannot import any symbol with type other than fp32. All the parameters are created as FP32 leading to failure in importing the params when it is of type fp16, fp64 etc,  
+  In this PR, we infer the type of the symbol being imported and create the Symbol Block Parameters with that inferred type.  
   Added the tests
 
 ### Documentation fixes
 
-* Document the newly added env variable (v1.3.x) / [#13156](https://github.com/apache/incubator-mxnet/pull/13156)
+* Document the newly added env variable (v1.3.x) / [#13156](https://github.com/apache/incubator-mxnet/pull/13156)  
   Document the env variable: MXNET_ENFORCE_DETERMINISM added in PR: [#12992](https://github.com/apache/incubator-mxnet/pull/12992)
 
-* fix broken links (v1.3.x) / [#13155](https://github.com/apache/incubator-mxnet/pull/13155)
+* fix broken links (v1.3.x) / [#13155](https://github.com/apache/incubator-mxnet/pull/13155)  
   This PR fixes broken links on the website.
 
-* fix broken Python IO API docs (v1.3.x) / [#13154](https://github.com/apache/incubator-mxnet/pull/13154)
+* fix broken Python IO API docs (v1.3.x) / [#13154](https://github.com/apache/incubator-mxnet/pull/13154)  
   Fixes [#12854: Data Iterators documentation is broken](https://github.com/apache/incubator-mxnet/issues/12854)
 
   This PR manually specifies members of the IO module so that the docs will render as expected. This is workaround in the docs to deal with a bug introduced in the Python code/structure since v1.3.0. See the comments for more info.
@@ -658,7 +674,7 @@ This fixes an buffer overflow detected by ASAN.
 
   This is important for any future modules - that they recognize this issue and make efforts to map the params and other elements.
 
-* add/update infer_range docs (v1.3.x) / [#13153](https://github.com/apache/incubator-mxnet/pull/13153)
+* add/update infer_range docs (v1.3.x) / [#13153](https://github.com/apache/incubator-mxnet/pull/13153)  
   This PR adds or updates the docs for the infer_range feature.
 
   Clarifies the param in the C op docs
@@ -669,13 +685,13 @@ This fixes an buffer overflow detected by ASAN.
 
 ### Other Improvements
 
-* [MXNET-1179] Enforce deterministic algorithms in convolution layers (v1.3.x) / [#13152](https://github.com/apache/incubator-mxnet/pull/13152)
+* [MXNET-1179] Enforce deterministic algorithms in convolution layers (v1.3.x) / [#13152](https://github.com/apache/incubator-mxnet/pull/13152)  
   Some of the CUDNN convolution algorithms are non-deterministic (see issue #11341). This PR adds an env variable to enforce determinism in the convolution operators. If set to true, only deterministic CUDNN algorithms will be used. If no deterministic algorithm is available, MXNet will error out.
 
 
 ### Submodule updates
 
-* update mshadow (v1.3.x) / [#13122](https://github.com/apache/incubator-mxnet/pull/13122)
+* update mshadow (v1.3.x) / [#13122](https://github.com/apache/incubator-mxnet/pull/13122)  
   Update mshadow for omp acceleration when nvcc is not present
 
 ### Known issues
@@ -800,7 +816,7 @@ For more information and examples, see [full release notes](https://cwiki.apache
 - CTC operator performance improvement from HawkAaron/MXNet-CTC (#11834)
 - Improve performance of broadcast ops backward pass (#11252)
 - Improved numerical stability as a result of using stable L2 norm (#11573)
-- Accelerate the performance of topk for GPU and CPU side (#12085 #10997 ; This changes the behavior of topk when nan values occur in the input)
+- Accelerate the performance of topk for GPU and CPU side (#12085 #10997 ; This changes the behavior of topk when nan values occur in the input) 
 - Support for dot(dns, csr) = dns and dot(dns, csr.T) = dns on CPU ([#11113](https://github.com/apache/incubator-mxnet/pull/11113))
 - Performance improvement for Batch Dot on CPU from mshadow ([mshadow PR#342](https://github.com/dmlc/mshadow/pull/342))
 

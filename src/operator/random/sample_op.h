@@ -40,7 +40,7 @@ namespace op {
 
 
 struct SampleOpParam {
-  TShape shape;
+  mxnet::TShape shape;
   std::string ctx;
   int dtype;
 };
@@ -91,7 +91,7 @@ struct SampleUniformParam : public dmlc::Parameter<SampleUniformParam>,
     DMLC_DECLARE_FIELD(high).set_default(1.0f)
     .describe("Upper bound of the distribution.");
     DMLC_DECLARE_FIELD(shape)
-    .set_default(TShape())
+    .set_default(mxnet::TShape())
     .describe("Shape of the output.");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
@@ -116,7 +116,7 @@ struct SampleNormalParam : public dmlc::Parameter<SampleNormalParam>,
     DMLC_DECLARE_FIELD(scale).set_default(1.0f)
     .describe("Standard deviation of the distribution.");
     DMLC_DECLARE_FIELD(shape)
-    .set_default(TShape())
+    .set_default(mxnet::TShape())
     .describe("Shape of the output.");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
@@ -141,7 +141,7 @@ struct SampleGammaParam : public dmlc::Parameter<SampleGammaParam>,
     DMLC_DECLARE_FIELD(beta).set_default(1.0f)
     .describe("Beta parameter (scale) of the gamma distribution.");
     DMLC_DECLARE_FIELD(shape)
-    .set_default(TShape())
+    .set_default(mxnet::TShape())
     .describe("Shape of the output.");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
@@ -164,7 +164,7 @@ struct SampleExponentialParam : public dmlc::Parameter<SampleExponentialParam>,
     DMLC_DECLARE_FIELD(lam).set_default(1.0f)
     .describe("Lambda parameter (rate) of the exponential distribution.");
     DMLC_DECLARE_FIELD(shape)
-    .set_default(TShape())
+    .set_default(mxnet::TShape())
     .describe("Shape of the output.");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
@@ -187,7 +187,7 @@ struct SamplePoissonParam : public dmlc::Parameter<SamplePoissonParam>,
     DMLC_DECLARE_FIELD(lam).set_default(1.0f)
     .describe("Lambda parameter (rate) of the Poisson distribution.");
     DMLC_DECLARE_FIELD(shape)
-    .set_default(TShape())
+    .set_default(mxnet::TShape())
     .describe("Shape of the output.");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
@@ -212,7 +212,7 @@ struct SampleNegBinomialParam : public dmlc::Parameter<SampleNegBinomialParam>,
     DMLC_DECLARE_FIELD(p).set_default(1.0f)
     .describe("Failure probability in each experiment.");
     DMLC_DECLARE_FIELD(shape)
-    .set_default(TShape())
+    .set_default(mxnet::TShape())
     .describe("Shape of the output.");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
@@ -237,7 +237,7 @@ struct SampleGenNegBinomialParam : public dmlc::Parameter<SampleGenNegBinomialPa
     DMLC_DECLARE_FIELD(alpha).set_default(1.0f)
     .describe("Alpha (dispersion) parameter of the negative binomial distribution.");
     DMLC_DECLARE_FIELD(shape)
-    .set_default(TShape())
+    .set_default(mxnet::TShape())
     .describe("Shape of the output.");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
@@ -262,7 +262,7 @@ struct SampleRandIntParam : public dmlc::Parameter<SampleRandIntParam>,
     DMLC_DECLARE_FIELD(high)
     .describe("Upper bound of the distribution.");
     DMLC_DECLARE_FIELD(shape)
-    .set_default(TShape())
+    .set_default(mxnet::TShape())
     .describe("Shape of the output.");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")

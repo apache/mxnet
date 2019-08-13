@@ -148,11 +148,11 @@ inline void im2col_cpu(const DType* data_im, const int channels,
  */
 template <typename DType>
 inline void im2col_nd_core_cpu(const DType* data_input, const bool im2col,
-    const TShape& im_shape, const TShape& col_shape,
-    const TShape& kernel_shape, const TShape& pad, const TShape& stride,
-    const TShape& dilation, DType* data_output, OpReqType req = mxnet::kWriteTo) {
+    const mxnet::TShape& im_shape, const mxnet::TShape& col_shape,
+    const mxnet::TShape& kernel_shape, const mxnet::TShape& pad, const mxnet::TShape& stride,
+    const mxnet::TShape& dilation, DType* data_output, OpReqType req = mxnet::kWriteTo) {
   if (mxnet::kNullOp == req) return;
-  index_t num_spatial_axes = kernel_shape.ndim();
+  int num_spatial_axes = kernel_shape.ndim();
   if (!im2col) {
     index_t im_size = im_shape[1];  // skip batch dim
     for (index_t i = 0; i < num_spatial_axes; ++i) {
@@ -234,10 +234,10 @@ inline void im2col_nd_core_cpu(const DType* data_input, const bool im2col,
  */
 template <typename DType>
 inline void im2col(mshadow::Stream<cpu>* s,
-                   const DType* data_im, const TShape& im_shape,
-                   const TShape& col_shape, const TShape& kernel_shape,
-                   const TShape& pad, const TShape& stride,
-                   const TShape& dilation, DType* data_col) {
+                   const DType* data_im, const mxnet::TShape& im_shape,
+                   const mxnet::TShape& col_shape, const mxnet::TShape& kernel_shape,
+                   const mxnet::TShape& pad, const mxnet::TShape& stride,
+                   const mxnet::TShape& dilation, DType* data_col) {
   if (2 == kernel_shape.ndim()) {
     im2col_cpu(data_im, im_shape[1], im_shape[2], im_shape[3],
                kernel_shape[0], kernel_shape[1], pad[0], pad[1],
@@ -315,11 +315,11 @@ inline void col2im_cpu(const DType* data_col, const int channels,
  */
 template <typename DType>
 inline void col2im(mshadow::Stream<cpu>* s,
-                   const DType* data_col, const TShape& im_shape,
-                   const TShape& col_shape, const TShape& kernel_shape,
-                   const TShape& pad, const TShape& stride,
-                   const TShape& dilation, DType* data_im, OpReqType req) {
-  index_t num_spatial_axes = kernel_shape.ndim();
+                   const DType* data_col, const mxnet::TShape& im_shape,
+                   const mxnet::TShape& col_shape, const mxnet::TShape& kernel_shape,
+                   const mxnet::TShape& pad, const mxnet::TShape& stride,
+                   const mxnet::TShape& dilation, DType* data_im, OpReqType req) {
+  int num_spatial_axes = kernel_shape.ndim();
   if (2 == num_spatial_axes) {
     col2im_cpu(data_col, im_shape[1], im_shape[2], im_shape[3],
                kernel_shape[0], kernel_shape[1], pad[0], pad[1],

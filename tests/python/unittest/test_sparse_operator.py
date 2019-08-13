@@ -2306,6 +2306,48 @@ def test_sparse_quadratic_function():
     check_sparse_quadratic_function(a, b, 0.0, 'csr')
     check_sparse_quadratic_function(a, b, 1.0, 'default')
 
+def test_reshape_backward_fallback():
+    """
+     out
+     |  \
+    w_x  x
+     /
+    w
+    in which x is a sparse tensor.
+    Due to sparse gradient optimization in sym.dot, grad(w_x) is sparse.
+    Though sym.reshape itself does not have sparse version,
+    if we somehow make grad(w) sparse as well, e.g.,
+        - by setting args_grad in symbol.bind
+        - or, we can have out_y = sym.dot(sparse_y, w), then grad(w) will be inferred as sparse
+    reshape backward (from w_x to w) needs to understand how to handle sparse inputs.
+    """
+    ctx = default_context()
+    w_shape = (12, 4)
+    w_x_shape = (1, 48)
+    x_nd = rand_ndarray((4, 1), 'csr')
+
+    w_nd = rand_ndarray(w_shape)
+
+    w_x_nd = w_nd.reshape(w_x_shape)
+    out_x_nd = mx.nd.dot(x_nd, w_x_nd)
+
+    w_x_backward_grad = mx.nd.dot(x_nd, out_x_nd, transpose_a=True).asnumpy()
+    expected_grad_nd = w_x_backward_grad.reshape(w_shape)
+
+    x = mx.sym.Variable('x', stype='csr')
+    w = mx.sym.Variable('w')
+
+    w_x = mx.sym.reshape(w, w_x_shape, name="w_x")
+    out = mx.sym.sparse.dot(x, w_x, name='out_x')
+
+    grad_w_nd = rand_ndarray(w_shape, 'row_sparse')
+    executor = out.bind(ctx=ctx, args={"x": x_nd, "w": w_nd},
+                        args_grad={"w": grad_w_nd})
+    executor.forward(is_train=True)
+    executor.backward(out_x_nd)
+
+    assert_almost_equal(grad_w_nd.asnumpy(), expected_grad_nd)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

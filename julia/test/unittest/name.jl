@@ -17,10 +17,10 @@
 
 module TestNameManager
 using MXNet
-using Base.Test
+using Test
 
 function test_default()
-  info("NameManager::default")
+  @info("NameManager::default")
 
   name = :_____aaaaa_____
   @test get!(mx.DEFAULT_NAME_MANAGER, name, "") == name
@@ -32,7 +32,7 @@ function test_default()
 end
 
 function test_prefix()
-  info("NameManager::prefix")
+  @info("NameManager::prefix")
 
   name   = :_____bbbbb_____
   prefix = :_____foobar_____

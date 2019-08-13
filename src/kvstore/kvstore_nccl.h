@@ -342,7 +342,7 @@ class KVStoreNCCL : public KVStoreLocal {
       } else {
         auto& buf = merge_buf_[key];
         int root = src.ctx().dev_id;
-        assert(root == buf.ctx().dev_id);
+        assert(root == buf.merged.ctx().dev_id);
         root_id = FindRootId(dst, root);
 
         // Check whether we got the same set of devices
@@ -443,7 +443,7 @@ class KVStoreNCCL : public KVStoreLocal {
   }
 
   // Initialize single key
-  void InitKey(int key, const NDArrayStorageType stype, const TShape& shape,
+  void InitKey(int key, const NDArrayStorageType stype, const mxnet::TShape& shape,
             int dtype = mshadow::kFloat32) {
     if (stype == kDefaultStorage) {
       key_attrs_.push_back(std::make_tuple(key, shape, dtype));
@@ -492,11 +492,11 @@ class KVStoreNCCL : public KVStoreLocal {
     }
   }
 
-  using KeyAttrs = std::tuple<int, TShape, int>;
+  using KeyAttrs = std::tuple<int, mxnet::TShape, int>;
   void InitMergeBuffer(const std::vector<Context>& devs) {
     for (size_t i = 0; i < key_attrs_.size(); ++i) {
       int key  = std::get<0>(key_attrs_[i]);
-      TShape s = std::get<1>(key_attrs_[i]);
+      mxnet::TShape s = std::get<1>(key_attrs_[i]);
       int type = std::get<2>(key_attrs_[i]);
       auto& buf = merge_buf_[key];
       // always use devs[0] as root

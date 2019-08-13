@@ -20,6 +20,7 @@ package org.apache.mxnet
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 
 class SymbolSuite extends FunSuite with BeforeAndAfterAll {
+
   test("symbol compose") {
     val data = Symbol.Variable("data")
 
@@ -31,14 +32,8 @@ class SymbolSuite extends FunSuite with BeforeAndAfterAll {
     var net2 = Symbol.FullyConnected(name = "fc3")()(Map("num_hidden" -> 10))
     net2 = Symbol.Activation()()(Map("data" -> net2, "act_type" -> "relu"))
     net2 = Symbol.FullyConnected(name = "fc4")()(Map("data" -> net2, "num_hidden" -> 20))
-    // scalastyle:off println
-    println(s"net2 debug info:\n${net2.debugStr}")
-    // scalastyle:on println
 
     val composed = net2(name = "composed", Map("fc3_data" -> net1))
-    // scalastyle:off println
-    println(s"composed debug info:\n${composed.debugStr}")
-    // scalastyle:on println
     val multiOut = Symbol.Group(composed, net1)
     assert(multiOut.listOutputs().length === 2)
   }
@@ -70,5 +65,18 @@ class SymbolSuite extends FunSuite with BeforeAndAfterAll {
     val data = Symbol.Variable("data")
     val data2 = data.clone()
     assert(data.toJson === data2.toJson)
+  }
+
+  test("Symbol random module is generated properly") {
+    val lam = Symbol.Variable("lam")
+    val rnd = Symbol.random.poisson(lam = Some(lam), shape = Some(Shape(2, 2)))
+    val rnd2 = Symbol.random.poisson(lam = Some(1f), shape = Some(Shape(2, 2)))
+  }
+
+  test("Symbol random module is generated properly - special case of 'normal'") {
+    val loc = Symbol.Variable("loc")
+    val scale = Symbol.Variable("scale")
+    val rnd = Symbol.random.normal(mu = Some(loc), sigma = Some(scale), shape = Some(Shape(2, 2)))
+    val rnd2 = Symbol.random.normal(mu = Some(1f), sigma = Some(2f), shape = Some(Shape(2, 2)))
   }
 }

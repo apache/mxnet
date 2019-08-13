@@ -639,7 +639,7 @@ class RowSparseNDArray(BaseSparseNDArray):
         if isinstance(key, int):
             raise Exception("__getitem__ with int key is not implemented for RowSparseNDArray yet")
         if isinstance(key, py_slice):
-            if key.step is not None or key.start is not None or key.stop is not None:
+            if key.step is not None or key.start is not None or key.stop is not None: # pylint: disable=no-else-raise
                 raise Exception('RowSparseNDArray only supports [:] for __getitem__')
             else:
                 return self
@@ -1102,7 +1102,7 @@ def row_sparse_array(arg1, shape=None, ctx=None, dtype=None):
     # construct a row sparse array from (D0, D1 ..) or (data, indices)
     if isinstance(arg1, tuple):
         arg_len = len(arg1)
-        if arg_len < 2:
+        if arg_len < 2: # pylint: disable=no-else-raise
             raise ValueError("Unexpected length of input tuple: " + str(arg_len))
         elif arg_len > 2:
             # empty ndarray with shape

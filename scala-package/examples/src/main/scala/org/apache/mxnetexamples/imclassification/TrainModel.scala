@@ -19,6 +19,7 @@ package org.apache.mxnetexamples.imclassification
 
 import java.util.concurrent._
 
+import org.apache.mxnet.DType.DType
 import org.apache.mxnetexamples.imclassification.models._
 import org.apache.mxnetexamples.imclassification.util.Trainer
 import org.apache.mxnet._
@@ -42,12 +43,13 @@ object TrainModel {
     * @return The final validation accuracy
     */
   def test(model: String, dataPath: String, numExamples: Int = 60000,
-           numEpochs: Int = 10, benchmark: Boolean = false): Float = {
+           numEpochs: Int = 10, benchmark: Boolean = false,
+           dtype: DType = DType.Float32): Float = {
     ResourceScope.using() {
       val devs = Array(Context.cpu(0))
       val envs: mutable.Map[String, String] = mutable.HashMap.empty[String, String]
       val (dataLoader, net) = dataLoaderAndModel("mnist", model, dataPath,
-        numExamples = numExamples, benchmark = benchmark)
+        numExamples = numExamples, benchmark = benchmark, dtype = dtype)
       val Acc = Trainer.fit(batchSize = 128, numExamples, devs = devs,
         network = net, dataLoader = dataLoader,
         kvStore = "local", numEpochs = numEpochs)
@@ -69,7 +71,7 @@ object TrainModel {
     */
   def dataLoaderAndModel(dataset: String, model: String, dataDir: String = "",
                          numLayers: Int = 50, numExamples: Int = 60000,
-                         benchmark: Boolean = false
+                         benchmark: Boolean = false, dtype: DType = DType.Float32
                         ): ((Int, KVStore) => (DataIter, DataIter), Symbol) = {
     val (imageShape, numClasses) = dataset match {
       case "mnist" => (List(1, 28, 28), 10)
@@ -80,16 +82,17 @@ object TrainModel {
     val List(channels, height, width) = imageShape
     val dataSize: Int = channels * height * width
     val (datumShape, net) = model match {
-      case "mlp" => (List(dataSize), MultiLayerPerceptron.getSymbol(numClasses))
-      case "lenet" => (List(channels, height, width), Lenet.getSymbol(numClasses))
+      case "mlp" => (List(dataSize), MultiLayerPerceptron.getSymbol(numClasses, dtype = dtype))
+      case "lenet" => (List(channels, height, width), Lenet.getSymbol(numClasses, dtype = dtype))
       case "resnet" => (List(channels, height, width), Resnet.getSymbol(numClasses,
-        numLayers, imageShape))
+        numLayers, imageShape, dtype = dtype))
       case _ => throw new Exception("Invalid model name")
     }
 
     val dataLoader: (Int, KVStore) => (DataIter, DataIter) = if (benchmark) {
       (batchSize: Int, kv: KVStore) => {
-        val iter = new SyntheticDataIter(numClasses, batchSize, datumShape, List(), numExamples)
+        val iter = new SyntheticDataIter(numClasses, batchSize, datumShape, List(), numExamples,
+          dtype)
         (iter, iter)
       }
     } else {
@@ -116,8 +119,10 @@ object TrainModel {
         val dataPath = if (inst.dataDir == null) System.getenv("MXNET_HOME")
         else inst.dataDir
 
+        val dtype = DType.withName(inst.dType)
+
         val (dataLoader, net) = dataLoaderAndModel(inst.dataset, inst.network, dataPath,
-          inst.numLayers, inst.numExamples, inst.benchmark)
+          inst.numLayers, inst.numExamples, inst.benchmark, dtype)
 
         val devs =
           if (inst.gpus != null) inst.gpus.split(',').map(id => Context.gpu(id.trim.toInt))
@@ -210,5 +215,8 @@ class TrainModel {
   private val numWorker: Int = 1
   @Option(name = "--num-server", usage = "# of servers")
   private val numServer: Int = 1
+  @Option(name = "--dtype", usage = "data type of the model to train. " +
+    "Can be float32/float64. Works only with synthetic data currently")
+  private val dType: String = "float32"
 }
 

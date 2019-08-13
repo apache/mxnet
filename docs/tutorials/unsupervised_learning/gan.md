@@ -240,7 +240,7 @@ sigma = 0.02
 lr = 0.0002
 beta1 = 0.5
 # Define the compute context, use GPU if available
-ctx = mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()
+ctx = mx.gpu() if mx.context.num_gpus() else mx.cpu()
 
 #=============Generator Module=============
 generator = mx.mod.Module(symbol=generatorSymbol, data_names=('rand',), label_names=None, context=ctx)

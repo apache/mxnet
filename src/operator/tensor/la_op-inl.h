@@ -98,11 +98,16 @@ struct gemm {
 struct gemm2 {
   template<typename xpu, int dim, typename DType>
   static void op(const Tensor<xpu, dim, DType>& A, const Tensor<xpu, dim, DType>& B,
+                 const Tensor<xpu, dim, DType>& C, DType alpha, bool tA, bool tB,
+                 Stream<xpu> *s) {
+    gemm::op(A, B, C, DType(alpha), DType(0), tA, tB, s);
+  }
+  template<typename xpu, int dim, typename DType>
+  static void op(const Tensor<xpu, dim, DType>& A, const Tensor<xpu, dim, DType>& B,
                  const Tensor<xpu, dim, DType>& C, Stream<xpu> *s,
                  const nnvm::NodeAttrs& attrs) {
     const LaMatrixMultParam& param = nnvm::get<LaMatrixMultParam>(attrs.parsed);
-    gemm::op(A, B, C, DType(param.alpha), DType(0), param.transpose_a,
-             param.transpose_b, s);
+    op(A, B, C, DType(param.alpha), param.transpose_a, param.transpose_b, s);
   }
   template<typename xpu, int dim, typename DType>
   static void op(const Tensor<xpu, dim, DType>& A, const Tensor<xpu, dim, DType>& B,
@@ -229,6 +234,100 @@ struct sumlogdiag {
   }
 };
 
+template<bool forward>
+struct CopyDiag {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, int k, int n, DType* A, DType* B) {
+    // Index of the matrix from which the diagonal should be extracted.
+    const int matrix(i / (n-abs(k)));
+    // Index of the diagonal element that should be extracted.
+    const int index(i % (n-abs(k)));
+    // row/col that must be looked up.
+    const int row(index-(k < 0 ? k : 0)), col(index+(k > 0 ? k :0));
+    if (forward) {
+      B[i] = A[(matrix*n+row)*n+col];
+    } else {
+      B[(matrix*n+row)*n+col] = A[i];
+    }
+  }
+};
+
+struct copydiag {
+  // Extracts diagonal from matrix.
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 2, DType>& B,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    using namespace mxnet_op;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const LaDiagParam& param = nnvm::get<LaDiagParam>(attrs.parsed);
+    Kernel<CopyDiag<true>, xpu>::Launch(s, B.MSize(), param.offset, A.size(1), A.dptr_, B.dptr_);
+  }
+  // Sets diagonal in matrix.
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 3, DType>& B,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    using namespace mxnet_op;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const LaDiagParam& param = nnvm::get<LaDiagParam>(attrs.parsed);
+    Kernel<set_zero, xpu>::Launch(s, B.MSize(), B.dptr_);
+    Kernel<CopyDiag<false>, xpu>::Launch(s, A.MSize(), param.offset, B.size(1), A.dptr_, B.dptr_);
+  }
+};
+
+template<bool forward>
+struct CopyTrian {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, bool lower, int k, int n, DType* A, DType* B) {
+    // Matrix that this index belongs to.
+    const int matrix(i/(n*n));
+    // Row/Col that this index represents.
+    int row((i/n)%n), col(i%n);
+    if ((k > 0) || ((k == 0) && !lower)) {
+       // When working on upper triangle we switch to transposed coordinates for indexing.
+       int tmp(row);
+       row = col;
+       col = tmp;
+    }
+    // Actual row inside the lower triangular matrix after offset adjustment.
+    row -= abs(k);
+    if (row >= col) {
+      // Index in the 1-dimensional array that holds the values of the triangle.
+      const int index((row*(row+1))/2+col);
+      // Total number of entries in the triangle.
+      const int m(((n-abs(k))*(n-abs(k)+1))/2);
+      if (forward) {
+        B[m*matrix+index] = A[i];
+      } else {
+        B[i] = A[m*matrix+index];
+      }
+    }
+  }
+};
+
+struct copytrian {
+  // Extracts triangle from matrix.
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 2, DType>& B,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    using namespace mxnet_op;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const LaTrianParam& param = nnvm::get<LaTrianParam>(attrs.parsed);
+    Kernel<CopyTrian<true>, xpu>::Launch(s, A.MSize(), param.lower, param.offset,
+                                         A.size(1), A.dptr_, B.dptr_);
+  }
+  // Sets triangle in matrix.
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 3, DType>& B,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    using namespace mxnet_op;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const LaTrianParam& param = nnvm::get<LaTrianParam>(attrs.parsed);
+    Kernel<set_zero, xpu>::Launch(s, B.MSize(), B.dptr_);
+    Kernel<CopyTrian<false>, xpu>::Launch(s, B.MSize(), param.lower, param.offset,
+                                          B.size(1), A.dptr_, B.dptr_);
+  }
+};
+
 // B = syrk(A)
 struct syrk {
   template<typename xpu, typename DType>
@@ -351,6 +450,22 @@ struct syevd {
     using namespace mxnet_op;
     Kernel<SyevdEigenVecSigns, xpu>::Launch
       (s, U.size(0)*U.size(1), U.size(1), U.dptr_, U.stride_);
+  }
+};
+
+// A = inverse(B).
+struct inverse {
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 3, DType>& B, const Tensor<xpu, 3, DType>& A,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    // Reserve workspace (size determined by query)
+    int lwork(linalg_getri_workspace_query(A, s));
+    Tensor<xpu, 1, DType> work = ctx.requested[0]
+      .get_space_typed<xpu, 1, DType>(Shape1(lwork), s);
+    // Since inverse(A) = trans(inverse(trans(A))), so we don't need to transpose
+    // A even if we are using the col-major version of getrf and getri routines.
+    linalg_batch_inverse(A, B, work, s);
   }
 };
 
@@ -692,6 +807,21 @@ struct syevd_backward {
        L.stride_, dL.dptr_, dL.stride_, dA.dptr_, dA.stride_);
     gemm::op(U, dA, tempM, DType(1.0), DType(0.0), true, false, s);
     gemm::op(tempM, U, dA, DType(1.0), DType(0.0), false, false, s);
+  }
+};
+
+struct inverse_backward {
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 3, DType>& dA,
+                 const Tensor<xpu, 3, DType>& A,
+                 const Tensor<xpu, 3, DType>& dB,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    // Backward of A = inverse(B)
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    Tensor<xpu, 3, DType> temp = ctx.requested[0]
+      .get_space_typed<xpu, 3, DType>(A.shape_, s);
+    gemm2::op(dA, A, temp, DType(1), false, true, s);
+    gemm2::op(A, temp, dB, DType(-1), true, false, s);
   }
 };
 

@@ -54,6 +54,20 @@ In the rest of this document, we list routines provided by the `gluon.contrib` p
     Identity
     SparseEmbedding
     SyncBatchNorm
+    PixelShuffle1D
+    PixelShuffle2D
+    PixelShuffle3D
+```
+
+### Convolutional neural network
+
+```eval_rst
+.. currentmodule:: mxnet.gluon.contrib.cnn
+
+.. autosummary::
+    :nosignatures:
+    
+    DeformableConvolution
 ```
 
 ### Recurrent neural network
@@ -111,6 +125,10 @@ In the rest of this document, we list routines provided by the `gluon.contrib` p
     :imported-members:
 
 .. automodule:: mxnet.gluon.contrib.nn
+    :members:
+    :imported-members:
+    
+.. automodule:: mxnet.gluon.contrib.cnn
     :members:
     :imported-members:
 

@@ -23,5 +23,7 @@
 set -ex
 apt-get update || true
 apt-get install graphviz python-opencv
-pip2 install jupyter matplotlib Pillow opencv-python scikit-learn graphviz tqdm mxboard
-pip3 install jupyter matplotlib Pillow opencv-python scikit-learn graphviz tqdm mxboard
+
+# sckit-learn past version 0.20 does not support python version 2 and 3.4
+pip2 install jupyter matplotlib Pillow opencv-python "scikit-learn<0.21.0" graphviz==0.8.4 tqdm mxboard scipy gluoncv
+pip3 install jupyter matplotlib Pillow opencv-python scikit-learn graphviz==0.8.4 tqdm mxboard scipy gluoncv

@@ -222,9 +222,9 @@ class CaffeLossProp : public OperatorProperty {
   }
 
   /*brief Set up caffeop to infer output shape*/
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     using ::caffe::Blob;
     using std::vector;
@@ -236,7 +236,7 @@ class CaffeLossProp : public OperatorProperty {
     vector<Blob<float> *> bot_blobs, top_blobs;
 
     for (int i = 0; i < param_.num_data; ++i) {
-      TShape tshape = (*in_shape)[i];
+      mxnet::TShape tshape = (*in_shape)[i];
       if (tshape.ndim() == 0) return false;
       auto blob_ptr = new Blob<float>();
       blob_ptr->Reshape(caffe::TShape2Vector(tshape));
@@ -251,7 +251,7 @@ class CaffeLossProp : public OperatorProperty {
     // Initialize out shapes
     out_shape->clear();
     for (auto blob : top_blobs) {
-      TShape tshape = caffe::Vector2TShape(blob->shape());
+      mxnet::TShape tshape = caffe::Vector2TShape(blob->shape());
       out_shape->push_back(tshape);
     }
 
@@ -288,7 +288,7 @@ class CaffeLossProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
 

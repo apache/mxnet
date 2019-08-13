@@ -250,6 +250,28 @@ function set_instruction_set() {
         ${sorted_indexes[$end_buildfromsource_command_index]})
 }
 
+# given a $buildfromsource_commands string, filter out any build commands that should not be executed
+# during the build from source tests. An example, the build from source instructions include the commands:
+# $ git clone --recursive https://github.com/apache/incubator-mxnet 
+# $ cd incubator-mxnet 
+# if these commands get executed in the jenkins job, we will be testing the build from source instructions
+# against the master branch and not against the version of the repository that Jenkins checks out for testing.
+# This presents a particularly big problem for the version branches and their nightly builds. Because, 
+# we would, in effect, be testing the build from source instructions for one version of MXNet against
+# the master branch.
+# in this function we target the commands cited in the example above.
+# See also gh issue: https://github.com/apache/incubator-mxnet/issues/13800
+function filter_build_commands() {
+    filtered_build_commands="${1}"
+
+    # Remove git commands
+    filtered_build_commands=`echo "${filtered_build_commands}" | perl -pe 's/git .*?;//g'`
+
+    # Remove 'cd incubator-mxnet'
+    filtered_build_commands=`echo "${filtered_build_commands}" | perl -pe 's/cd incubator-mxnet;//'`
+
+    echo "${filtered_build_commands}"
+}
 
 ########################LINUX-PYTHON-CPU############################
 echo
@@ -302,8 +324,8 @@ ubuntu_python_cpu_source()
     set -e
     echo
     echo "### Testing Build From Source ###"
-    echo "${buildfromsource_commands}"
-    echo
+    buildfromsource_commands=$(filter_build_commands "${buildfromsource_commands}")
+    echo ${buildfromsource_commands}
     eval ${buildfromsource_commands}
     echo "ubuntu_python_cpu_source: MXNet Installed Successfully"
 
@@ -363,8 +385,8 @@ ubuntu_python_gpu_source()
     set -e
     echo
     echo "### Testing Build From Source ###"
-    echo "${buildfromsource_commands}"
-    echo
+    buildfromsource_commands=$(filter_build_commands "${buildfromsource_commands}")
+    echo ${buildfromsource_commands}
     eval ${buildfromsource_commands}
     echo "ubuntu_python_gpu_source: MXNet Installed Successfully"
 

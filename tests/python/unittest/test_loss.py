@@ -126,8 +126,8 @@ def test_logistic_loss_equal_bce():
     loss_bce = gluon.loss.SigmoidBCELoss(from_sigmoid=False)
     data = mx.random.uniform(-10, 10, shape=(N, 1))
     label = mx.nd.round(mx.random.uniform(0, 1, shape=(N, 1)))
-    assert_almost_equal(loss_binary(data, label).asnumpy(), loss_bce(data, label).asnumpy())
-    assert_almost_equal(loss_signed(data, 2 * label - 1).asnumpy(), loss_bce(data, label).asnumpy())
+    assert_almost_equal(loss_binary(data, label).asnumpy(), loss_bce(data, label).asnumpy(), atol=1e-6)
+    assert_almost_equal(loss_signed(data, 2 * label - 1).asnumpy(), loss_bce(data, label).asnumpy(), atol=1e-6)
 
 @with_seed()
 def test_kl_loss():
@@ -420,6 +420,37 @@ def test_poisson_nllloss_mod():
             initializer=mx.init.Normal(sigma=0.1), eval_metric=mx.metric.Loss(),
             optimizer='adam')
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+
+@with_seed()
+def test_bce_loss_with_pos_weight():
+    # Suppose it's a multi-label classification
+    N = np.random.randint(5, 30)
+    data = mx.nd.random.uniform(-1, 1, shape=(N, 20))
+    label = mx.nd.array(np.random.randint(2, size=(N, 5)), dtype='float32')
+    pos_weight = mx.nd.random.uniform(0, 10, shape=(1, 5))
+    pos_weight = mx.nd.repeat(pos_weight, repeats=N, axis=0)
+    data_iter = mx.io.NDArrayIter(data, {'label': label, 'pos_w': pos_weight}, batch_size=10, label_name='label')
+    output = get_net(5)
+    l = mx.symbol.Variable('label')
+    pos_w = mx.symbol.Variable('pos_w')
+    Loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
+    loss = Loss(output, l, None, pos_w)
+    loss = mx.sym.make_loss(loss)
+    mod = mx.mod.Module(loss, data_names=('data',), label_names=('label', 'pos_w'))
+    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
+            eval_metric=mx.metric.Loss(), optimizer='adam',
+            initializer=mx.init.Xavier(magnitude=2))
+    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.01
+    # Test against npy
+    data = mx.nd.random.uniform(-5, 5, shape=(N, 5))
+    label = mx.nd.array(np.random.randint(2, size=(N, 5)), dtype='float32')
+    pos_weight = mx.nd.random.uniform(0, 10, shape=(1, 5))
+    mx_bce_loss = Loss(data, label, None, pos_weight).asnumpy()
+    prob_npy = 1.0 / (1.0 + np.exp(-data.asnumpy()))
+    label_npy = label.asnumpy()
+    pos_weight_npy = pos_weight.asnumpy()
+    npy_bce_loss = (- label_npy * np.log(prob_npy)*pos_weight_npy - (1 - label_npy) * np.log(1 - prob_npy)).mean(axis=1)
+    assert_almost_equal(mx_bce_loss, npy_bce_loss, rtol=1e-4, atol=1e-5)
 
 
 if __name__ == '__main__':

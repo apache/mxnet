@@ -19,6 +19,7 @@
 # pylint: disable=invalid-name,too-many-locals,no-self-use
 """ Support import export formats."""
 from __future__ import absolute_import as _abs
+import numpy as np
 from .... import symbol
 from .... import ndarray as nd
 from ....base import string_types
@@ -87,7 +88,7 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
         params : dict
             A dict of name: nd.array pairs, used as pretrained weights
         """
-        #get input, output shapes
+        # get input, output shapes
         self.model_metadata = self.get_graph_metadata(graph)
         # parse network inputs, aka parameters
         for init_tensor in graph.initializer:
@@ -196,7 +197,11 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
         except ImportError:
             raise ImportError("Onnx and protobuf need to be installed. "
                               + "Instructions to install - https://github.com/onnx/onnx")
-        np_array = to_array(tensor_proto).reshape(tuple(tensor_proto.dims))
+        if len(tuple(tensor_proto.dims)) > 0:
+            np_array = to_array(tensor_proto).reshape(tuple(tensor_proto.dims))
+        else:
+            # If onnx's params are scalar values without dims mentioned.
+            np_array = np.array([to_array(tensor_proto)])
         return nd.array(np_array)
 
     def _parse_attr(self, attr_proto):

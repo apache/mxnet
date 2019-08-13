@@ -28,9 +28,7 @@
    download.md
    java_setup.md
    osx_setup.md
-   raspbian_setup.md
    scala_setup.md
-   tx2_setup.md
    ubuntu_setup.md
    validate_mxnet.md
    windows_setup.md
@@ -39,10 +37,11 @@
 Indicate your preferred configuration. Then, follow the customized commands to install MXNet.
 
 <div class="dropdown">
-  <button class="btn current-version btn-primary dropdown-toggle" type="button" data-toggle="dropdown">v1.3.1
+  <button class="btn current-version btn-primary dropdown-toggle" type="button" data-toggle="dropdown">v1.4.1
   <span class="caret"></span></button>
   <ul class="dropdown-menu opt-group">
-    <li class="opt active versions"><a href="#">v1.3.1</a></li>
+    <li class="opt active versions"><a href="#">v1.4.1</a></li>
+    <li class="opt versions"><a href="#">v1.3.1</a></li>
     <li class="opt versions"><a href="#">v1.2.1</a></li>
     <li class="opt versions"><a href="#">v1.1.0</a></li>
     <li class="opt versions"><a href="#">v1.0.0</a></li>
@@ -82,8 +81,8 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <!-- No CPU GPU for other Devices -->
 <div class="linux macos windows cloud">
 <div class="btn-group opt-group" role="group">
-  <button type="button" class="btn btn-default processors opt active">CPU</button>
-  <button type="button" class="btn btn-default processors opt">GPU</button>
+  <button type="button" class="btn btn-default processors opt active">GPU</button>
+  <button type="button" class="btn btn-default processors opt">CPU</button>
 </div>
 </div>
 
@@ -117,10 +116,32 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <div class="python">
 <div class="cpu">
 <div class="pip">
-<div class="v1-3-1">
+<div class="v1-4-1">
+
+MKL-DNN enabled pip packages are optimized for Intel hardware. You can find performance numbers in the <a href="http://mxnet.io/faq/perf.html#intel-cpu">MXNet tuning guide</a>.
 
 ```
 $ pip install mxnet
+```
+
+</div> <!-- End of v1-4-1 -->
+<div class="v1-4-0">
+
+```
+$ pip install mxnet==1.4.0
+```
+
+</div> <!-- End of v1-4-0 -->
+<div class="v1-3-1">
+
+```
+$ pip install mxnet==1.3.1
+```
+
+MKL-DNN enabled pip packages are optimized for Intel hardware. You can find performance numbers in the <a href="http://mxnet.io/faq/perf.html#intel-cpu">MXNet tuning guide</a>.
+
+```
+$ pip install mxnet-mkl==1.3.1
 ```
 
 </div> <!-- End of v1-3-1 -->
@@ -128,6 +149,12 @@ $ pip install mxnet
 
 ```
 $ pip install mxnet==1.2.1
+```
+
+MKL-DNN enabled pip packages are optimized for Intel hardware. You can find performance numbers in the <a href="http://mxnet.io/faq/perf.html#intel-cpu">MXNet tuning guide</a>.
+
+```
+$ pip install mxnet-mkl==1.2.1
 ```
 
 </div> <!-- End of v1-2-1 -->
@@ -177,9 +204,15 @@ $ pip install mxnet==0.11.0
 $ pip install mxnet --pre
 ```
 
+MKL-DNN enabled pip packages are optimized for Intel hardware. You can find performance numbers in the <a href="http://mxnet.io/faq/perf.html#intel-cpu">MXNet tuning guide</a>.
+
+```
+$ pip install mxnet-mkl --pre
+```
+
 </div> <!-- End of master-->
 <hr> <!-- pip footer -->
-MXNet offers MKL pip packages that will be much faster when running on Intel hardware.
+
 Check the chart below for other options, refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages.png" alt="pip packages"/>
@@ -251,10 +284,17 @@ To build from source, refer to the <a href="ubuntu_setup.html">MXNet Ubuntu inst
 
 <div class="gpu">
 <div class="pip">
-<div class="v1-3-1">
+<div class="v1-4-0">
 
 ```
 $ pip install mxnet-cu92
+```
+
+</div> <!-- End of v1-4-0 -->
+<div class="v1-3-1">
+
+```
+$ pip install mxnet==1.3.1
 ```
 
 </div> <!-- End of v1-3-1-->
@@ -490,15 +530,13 @@ You can use the Maven packages defined in the following dependency to include MX
 <br/>
 You can use the Maven packages defined in the following dependency to include MXNet in your Java project. The Java API is provided as a subset of the Scala API and is intended for inference only. Please refer to the <a href="java_setup.html">MXNet-Java setup guide</a> for a detailed set of instructions to help you with the setup process.
 
-<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.3.1-SNAPSHOT~~"><img src="https://img.shields.io/badge/org.apache.mxnet-linux gpu-green.svg" alt="maven badge"/></a>
+<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.4.1~~"><img src="https://img.shields.io/badge/org.apache.mxnet-linux gpu-green.svg" alt="maven badge"/></a>
 
 ```html
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
-    <scope>system</scope>
-    <version>1.3.1</version>
-    <systemPath>/system/path/to/jar/mxnet-full_2.11-linux-x86_64-gpu-1.3.1-SNAPSHOT.jar</systemPath>
+    <version>[1.4.1, )</version>
 </dependency>
 ```
 
@@ -509,15 +547,13 @@ You can use the Maven packages defined in the following dependency to include MX
 <br/>
 You can use the Maven packages defined in the following dependency to include MXNet in your Java project. The Java API is provided as a subset of the Scala API and is intended for inference only. Please refer to the <a href="java_setup.html">MXNet-Java setup guide</a> for a detailed set of instructions to help you with the setup process.
 
-<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.3.1-SNAPSHOT~~"><img src="https://img.shields.io/badge/org.apache.mxnet-linux cpu-green.svg" alt="maven badge"/></a>
+<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.4.1~~"><img src="https://img.shields.io/badge/org.apache.mxnet-linux cpu-green.svg" alt="maven badge"/></a>
 
 ```html
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
-    <scope>system</scope>
-    <version>1.3.1</version>
-    <systemPath>/system/path/to/jar/mxnet-full_2.11-linux-x86_64-cpu-1.3.1-SNAPSHOT.jar</systemPath>
+    <version>[1.4.1, )</version>
 </dependency>
 ```
 <br>
@@ -562,10 +598,16 @@ Refer to the <a href="ubuntu_setup.html#install-the-mxnet-package-for-perl">Perl
 <div class="python">
 <div class="cpu">
 <div class="pip">
-<div class="v1-3-1">
+<div class="v1-4-0">
 
 ```
 $ pip install mxnet
+```
+</div> <!-- End of v1-4-0 -->
+<div class="v1-3-1">
+
+```
+$ pip install mxnet==1.3.1
 ```
 
 </div> <!-- End of v1-3-1 -->
@@ -714,16 +756,19 @@ To run MXNet you also should have OpenCV and OpenBLAS installed. You may install
 
 ```bash
 brew install opencv
-brew install openblas@0.3.1
+brew install openblas
 ```
 
-Add a soft link to the OpenBLAS installation. This example links the 0.3.1 version:
+To ensure MXNet R package runs with the version of OpenBLAS installed, create a symbolic link as follows:
 
 ```bash
-ln -sf /usr/local/opt/openblas/lib/libopenblasp-r0.3.* /usr/local/opt/openblas/lib/libopenblasp-r0.3.1.dylib
+ln -sf /usr/local/opt/openblas/lib/libopenblas.dylib /usr/local/opt/openblas/lib/libopenblasp-r0.3.1.dylib
 ```
 
-Install the latest version (3.5.1+) of R from [CRAN](https://cran.r-project.org/bin/macosx/).
+Note: packages for 3.6.x are not yet available.
+
+Install 3.5.x of R from [CRAN](https://cran.r-project.org/bin/macosx/). The latest is [v3.5.3](https://cran.r-project.org/bin/macosx/R-3.5.3.pkg).
+
 You can [build MXNet-R from source](osx_setup.html#install-the-mxnet-package-for-r), or you can use a pre-built binary:
 
 ```r
@@ -793,15 +838,13 @@ Not available at this time. <br>
 </br>
 You can use the Maven packages defined in the following dependency to include MXNet in your Java project. The Java API is provided as a subset of the Scala API and is intended for inference only. Please refer to the <a href="java_setup.html">MXNet-Java setup guide</a> for a detailed set of instructions to help you with the setup process.
 
-<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.3.1-SNAPSHOT~~"><img src="https://img.shields.io/badge/org.apache.mxnet-mac cpu-green.svg" alt="maven badge"/></a>
+<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.4.1~~"><img src="https://img.shields.io/badge/org.apache.mxnet-mac cpu-green.svg" alt="maven badge"/></a>
 
 ```html
 <dependency>
     <groupId>org.apache.mxnet</groupId>
-    <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
-    <scope>system</scope>
-    <version>1.3.1</version>
-    <systemPath>/system/path/to/jar/mxnet-full_2.11-osx-x86_64-cpu-1.3.1-SNAPSHOT.jar</systemPath>
+    <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
+    <version>[1.4.1, )</version>
 </dependency>
 ```
 <br>
@@ -812,30 +855,6 @@ Not available at this time. <br>
 
 </div>
 </div> <!-- End of java -->
-
-
-<div class="clojure">
-<div class="cpu">
-</br>
-You can use the Maven packages defined in the following `dependency` to include MXNet in your Clojure project. To maximize leverage, the Clojure package has been built on the existing Scala package. Please refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a> for a detailed set of instructions to help you with the setup process that is required to use the Clojure dependency.
-
-<a href="https://mvnrepository.com/artifact/org.apache.mxnet.contrib.clojure/clojure-mxnet-osx-cpu"><img src="https://img.shields.io/badge/org.apache.mxnet-mac cpu-green.svg" alt="maven badge"/></a>
-
-```html
-<dependency>
-    <groupId>org.apache.mxnet.contrib.clojure</groupId>
-    <artifactId>clojure-mxnet-osx-cpu</artifactId>
-</dependency>
-```
-<br>
-</div> <!-- End of cpu  -->
-<div class="gpu">
-
-Not available at this time. <br>
-
-</div> <!-- End of gpu -->
-</div> <!-- End of clojure -->
-
 
 
 <div class="julia">
@@ -872,10 +891,17 @@ For more installation options, refer to the <a href="osx_setup.html">MXNet macOS
 <div class="python">
 <div class="cpu">
 <div class="pip">
-<div class="v1-3-1">
+<div class="v1-4-0">
 
 ```
 $ pip install mxnet
+```
+
+</div> <!-- End of v1-4-0 -->
+<div class="v1-3-1">
+
+```
+$ pip install mxnet==1.3.1
 ```
 
 </div> <!-- End of v1-3-1 -->
@@ -996,10 +1022,17 @@ Refer to the <a href="windows_setup.html">MXNet Windows installation guide</a>
 
 <div class="gpu">
 <div class="pip">
-<div class="v1-3-1">
+<div class="v1-4-0">
 
 ```
 $ pip install mxnet-cu92
+```
+
+</div> <!-- End of v1-4-0 -->
+<div class="v1-3-1">
+
+```
+$ pip install mxnet==1.3.1
 ```
 
 </div> <!-- End of v1-3-1 -->
@@ -1095,7 +1128,9 @@ To build from source, refer to the <a href="windows_setup.html">MXNet Windows in
 <div class="cpu">
 </br>
 
-Install the latest version (3.5.1+) of R from [CRAN](https://cran.r-project.org/bin/windows/).
+Note: packages for 3.6.x are not yet available.
+Install 3.5.x of R from [CRAN](https://cran.r-project.org/bin/windows/base/old/).
+
 You can [build MXNet-R from source](windows_setup.html#install-mxnet-package-for-r), or you can use a pre-built binary:
 
 ```r
@@ -1120,7 +1155,8 @@ You can [build MXNet-R from source](windows_setup.html#install-mxnet-package-for
   options(repos = cran)
   install.packages("mxnet")
 ```
-Change cu92 to cu80, cu90 or cu91 based on your CUDA toolkit version. Currently, MXNet supports these versions of CUDA.
+Change cu92 to cu90, cu91 or cuda100 based on your CUDA toolkit version. Currently, MXNet supports these versions of CUDA.
+Note : You also need to have cuDNN installed on Windows. Check out this [guide](https://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#installwindows) on the steps for installation.
 
 </div> <!-- END of GPU -->
 </div> <!-- END - Windows R -->
@@ -1181,11 +1217,36 @@ For more installation options, refer to the <a href="windows_setup.html">MXNet W
 <!-- START - Cloud Python Installation Instructions -->
 
 <div class="cloud">
+<div class="gpu">
 
-AWS Marketplace distributes Deep Learning AMIs (Amazon Machine Image) with MXNet pre-installed. You can launch one of these Deep Learning AMIs by following instructions in the [AWS Deep Learning AMI Developer Guide](http://docs.aws.amazon.com/dlami/latest/devguide/what-is-dlami.html).
+MXNet is available on several cloud providers with GPU support. You can also find GPU/CPU-hybrid support for use cases like scalable inference, or even fractional GPU support with AWS Elastic Inference.
 
-You can also run distributed deep learning with *MXNet* on AWS using [Cloudformation Template](https://github.com/awslabs/deeplearning-cfn/blob/master/README.md).
+* **Alibaba**
+    - [NVIDIA VM](https://docs.nvidia.com/ngc/ngc-alibaba-setup-guide/launching-nv-cloud-vm-console.html#launching-nv-cloud-vm-console)
+* **Amazon Web Services**
+    - [Amazon SageMaker](https://aws.amazon.com/sagemaker/) - Managed training and deployment of MXNet models
+    - [AWS Deep Learning AMI](https://aws.amazon.com/machine-learning/amis/) - Preinstalled Conda environments for Python 2 or 3 with MXNet, CUDA, cuDNN, MKL-DNN, and AWS Elastic Inference
+    - [Dynamic Training on AWS](https://github.com/awslabs/dynamic-training-with-apache-mxnet-on-aws) - experimental manual EC2 setup or semi-automated CloudFormation setup
+    - [NVIDIA VM](https://aws.amazon.com/marketplace/pp/B076K31M1S)
+* **Google Cloud Platform**
+    - [NVIDIA VM](https://console.cloud.google.com/marketplace/details/nvidia-ngc-public/nvidia_gpu_cloud_image)
+* **Microsoft Azure**
+    - [NVIDIA VM](https://azuremarketplace.microsoft.com/en-us/marketplace/apps/nvidia.ngc_azure_17_11?tab=Overview)
+* **Oracle Cloud**
+    - [NVIDIA VM](https://docs.cloud.oracle.com/iaas/Content/Compute/References/ngcimage.htm)
 
+All NVIDIA VMs use the [NVIDIA MXNet Docker container](https://ngc.nvidia.com/catalog/containers/nvidia:mxnet).
+Follow the [container usage instructions](https://ngc.nvidia.com/catalog/containers/nvidia:mxnet) found in [NVIDIA's container repository](https://ngc.nvidia.com/).
+
+</div> <!-- END gpu -->
+
+<div class="cpu">
+MXNet should work on any cloud provider's CPU-only instances. Follow the Python pip install instructions, Docker instructions, or try the following preinstalled option.
+
+* **Amazon Web Services**
+    - [AWS Deep Learning AMI](https://aws.amazon.com/machine-learning/amis/) - Preinstalled Conda environments for Python 2 or 3 with MXNet and MKL-DNN.
+
+</div> <!-- end cpu -->
 </div> <!-- END - Cloud Python Installation Instructions -->
 
 
@@ -1193,7 +1254,7 @@ You can also run distributed deep learning with *MXNet* on AWS using [Cloudforma
 <div class="devices">
   <div class="raspberry-pi">
 
-MXNet supports the Debian based Raspbian ARM based operating system so you can run MXNet on Raspberry Pi Devices.
+MXNet supports the Debian based Raspbian ARM based operating system so you can run MXNet on Raspberry Pi 3B devices.
 
 These instructions will walk through how to build MXNet for the Raspberry Pi and install the Python bindings for the library.
 
@@ -1201,7 +1262,8 @@ You can do a dockerized cross compilation build on your local machine or a nativ
 
 The complete MXNet library and its requirements can take almost 200MB of RAM, and loading large models with the library can take over 1GB of RAM. Because of this, we recommend running MXNet on the Raspberry Pi 3 or an equivalent device that has more than 1 GB of RAM and a Secure Digital (SD) card that has at least 4 GB of free memory.
 
-**Cross compilation build (Experimental)**
+## Quick installation
+You can use this [pre-built Python wheel](https://mxnet-public.s3.amazonaws.com/install/raspbian/mxnet-1.5.0-py2.py3-none-any.whl) on a Raspberry Pi 3B with Stretch. You will likely need to install several dependencies to get MXNet to work. Refer to the following **Build** section for details.
 
 ## Docker installation
 **Step 1**  Install Docker on your machine by following the [docker installation instructions](https://docs.docker.com/engine/installation/linux/ubuntu/#install-using-the-repository).
@@ -1214,31 +1276,79 @@ Follow the four steps in this [docker documentation](https://docs.docker.com/eng
 
 ## Build
 
-**Please use a Native build with gcc 4 as explained below, higher compiler versions currently cause test
-failures on ARM**
+**This cross compilation build is experimental.**
 
-The following command will build a container with dependencies and tools and then compile MXNet for
-ARMv7. The resulting artifact will be located in `build/mxnet-x.x.x-py2.py3-none-any.whl`, copy this
-file to your Raspberry Pi.
+**Please use a Native build with gcc 4 as explained below, higher compiler versions currently cause test failures on ARM.**
+
+The following command will build a container with dependencies and tools,
+and then compile MXNet for ARMv7.
+You will want to run this on a fast cloud instance or locally on a fast PC to save time.
+The resulting artifact will be located in `build/mxnet-x.x.x-py2.py3-none-any.whl`.
+Copy this file to your Raspberry Pi.
+The previously mentioned pre-built wheel was created using this method.
 
 ```
 ci/build.py -p armv7
 ```
 
-## Install
+## Install using a pip wheel
 
-Create a virtualenv and install the package we created previously.
+Your Pi will need several dependencies.
+
+Install MXNet dependencies with the following:
+```
+sudo apt-get update
+sudo apt-get install -y \
+    apt-transport-https \
+    build-essential \
+    ca-certificates \
+    cmake \
+    curl \
+    git \
+    libatlas-base-dev \
+    libcurl4-openssl-dev \
+    libjemalloc-dev \
+    liblapack-dev \
+    libopenblas-dev \
+    libopencv-dev \
+    libzmq3-dev \
+    ninja-build \
+    python-dev \
+    python-pip \
+    software-properties-common \
+    sudo \
+    unzip \
+    virtualenv \
+    wget
+```
+Install virtualenv with:
+```
+sudo pip install virtualenv
+```
+Create a Python 2.7 environment for MXNet with:
+```
+virtualenv -p `which python` mxnet_py27
+```
+You may use Python 3, however the [wine bottle detection example](https://mxnet.incubator.apache.org/versions/master/tutorials/embedded/wine_detector.html) for the Pi with camera requires Python 2.7.
+
+Activate the environment, then install the wheel we created previously, or install this [prebuilt wheel](https://mxnet-public.s3.amazonaws.com/install/raspbian/mxnet-1.5.0-py2.py3-none-any.whl).
 
 ```
-virtualenv -p `which python3` mxnet_py3
-source mxnet_py3/bin/activate
+source mxnet_py27/bin/activate
 pip install mxnet-x.x.x-py2.py3-none-any.whl
 ```
 
+Test MXNet with the Python interpreter:
+```
+$ python
 
-**Native Build**
+>>> import mxnet
+```
+If there are no errors then you're ready to start using MXNet on your Pi!
 
-Installing MXNet is a two-step process:
+## Native Build
+
+Installing MXNet from source is a two-step process:
 
 1. Build the shared library from the MXNet C++ source code.
 2. Install the supported language-specific packages for MXNet.
@@ -1262,7 +1372,7 @@ Install these dependencies using the following commands in any directory:
 
 ```
     sudo apt-get update
-    sudo apt-get -y install git cmake ninja-build build-essential g++-4.9 c++-4.9 liblapack* libblas* libopencv* libopenblas* python3-dev virtualenv
+    sudo apt-get -y install git cmake ninja-build build-essential g++-4.9 c++-4.9 liblapack* libblas* libopencv* libopenblas* python3-dev python-dev virtualenv
 ```
 
 Clone the MXNet source code repository using the following `git` command in your home directory:
@@ -1301,7 +1411,16 @@ then running:
   free -m # to verify the swapfile size has been increased
 ```
 
-**Step 2** Install MXNet Python Bindings
+**Step 2** Build cython modules (optional)
+
+```bash
+$ pip install Cython
+$ make cython # You can set the python executable with `PYTHON` flag, e.g., make cython PYTHON=python3
+```
+*MXNet* tries to use the cython modules unless the environment variable `MXNET_ENABLE_CYTHON` is set to `0`. If loading the cython modules fails, the default behavior is falling back to ctypes without any warning. To raise an exception at the failure, set the environment variable `MXNET_ENFORCE_CYTHON` to `1`. See [here](/faq/env_var.html) for more details.
+
+
+**Step 3** Install MXNet Python Bindings
 
 To install Python bindings run the following commands in the MXNet directory:
 
@@ -1362,7 +1481,8 @@ Install these dependencies using the following commands in any directory:
     sudo apt-get -y install git build-essential libatlas-base-dev libopencv-dev graphviz python-pip
     sudo pip install pip --upgrade
     sudo pip install setuptools numpy --upgrade
-    sudo pip install graphviz jupyter
+    sudo pip install graphviz==0.8.4 \
+                     jupyter
 ```
 
 Clone the MXNet source code repository using the following `git` command in your home directory:
@@ -1421,6 +1541,7 @@ You are now ready to run MXNet on your NVIDIA Jetson TX2 device.
 
 <!-- Download -->
 <hr>
+
 
 # Source Download
 

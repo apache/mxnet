@@ -215,7 +215,7 @@ The pooling kernel and stride sizes are automatically chosen for desired output 
 .set_attr_parser(ParamParser<AdaptiveAvgPoolParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr<nnvm::FInferShape>("FInferShape", AdaptiveAvgPoolOpInferShape)
+.set_attr<mxnet::FInferShape>("FInferShape", AdaptiveAvgPoolOpInferShape)
 .set_attr<FCompute>("FCompute<cpu>", AdaptiveAvgPoolOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   ElemwiseGradUseNone{"_backward_contrib_AdaptiveAvgPooling2D"})

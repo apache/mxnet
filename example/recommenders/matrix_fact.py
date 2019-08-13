@@ -28,14 +28,14 @@ logging.basicConfig(level=logging.DEBUG)
 def evaluate_network(network, data_iterator, ctx):
     loss_acc = 0.
     l2 = gluon.loss.L2Loss()
-    for i, (users, items, scores) in enumerate(data_iterator):
+    for idx, (users, items, scores) in enumerate(data_iterator):
         users_ = gluon.utils.split_and_load(users, ctx)
         items_ = gluon.utils.split_and_load(items, ctx)
         scores_ =gluon.utils.split_and_load(scores, ctx)
         preds = [network(u, i) for u, i in zip(users_, items_)]
         losses = [l2(p, s).asnumpy() for p, s in zip(preds, scores_)]         
         loss_acc += sum(losses).mean()/len(ctx)
-    return loss_acc/(i+1)
+    return loss_acc/(idx+1)
 
 def train(network, train_data, test_data, epochs, learning_rate=0.01, optimizer='sgd', ctx=mx.gpu(0), num_epoch_lr=5, factor=0.2):
 
@@ -56,7 +56,7 @@ def train(network, train_data, test_data, epochs, learning_rate=0.01, optimizer=
     losses_output = []
     for e in range(epochs):
         loss_acc = 0.
-        for i, (users, items, scores) in enumerate(train_data):
+        for idx, (users, items, scores) in enumerate(train_data):
             
             users_ = gluon.utils.split_and_load(users, ctx)
             items_ = gluon.utils.split_and_load(items, ctx)
@@ -71,7 +71,7 @@ def train(network, train_data, test_data, epochs, learning_rate=0.01, optimizer=
             trainer.update(users.shape[0])
 
         test_loss = evaluate_network(network, test_data, ctx)
-        train_loss = loss_acc/(i+1)
+        train_loss = loss_acc/(idx+1)
         print("Epoch [{}], Training RMSE {:.4f}, Test RMSE {:.4f}".format(e, train_loss, test_loss))
         losses_output.append((train_loss, test_loss))
     return losses_output

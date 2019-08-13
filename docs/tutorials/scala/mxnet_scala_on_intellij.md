@@ -152,7 +152,7 @@ mxnet
 ```
 **ArtifactId**
 ```
-ArtifactId: scalaMXNet
+scalaMXNet
 ```
 **Version**
 ```
@@ -228,6 +228,7 @@ The project's `pom.xml` will be open for editing.
     <dependency>
       <groupId>org.apache.mxnet</groupId>
       <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
+      <version>[1.3.1,)</version>
     </dependency>
     <dependency>
       <groupId>org.scala-lang</groupId>
@@ -341,7 +342,7 @@ log4j.appender.stdout.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss,SSS} [%t] 
 
 **Step 6.** Build the project:
 - To build the project, from the menu choose Build, and then choose Build Project.
-
+* Note that if you run into ```bad option: '-make:transitive'```, please remove ```<arg>-make:transitive</arg>``` from `pom.xml` and `<parameter value="-make:transitive" />` from  `.idea/scala_compiler`.
 
 **Step 7.** Run the Hello World App:
 
@@ -402,14 +403,14 @@ If you chose to "Build from Source" when following the [install instructions](ht
       <groupId>org.apache.mxnet</groupId>
       <artifactId>mxnet-core_${scala.version}-${platform}-sources</artifactId>
       <scope>system</scope>
-      <systemPath>/PathToMXNetSource/incubator-mxnet/scala-package/assembly/osx-x86_64-cpu/target/mxnet-full_${scala.version}-osx-x86_64-cpu-1.4.1-SNAPSHOT-sources.jar</systemPath>
+      <systemPath>/PathToMXNetSource/incubator-mxnet/scala-package/assembly/osx-x86_64-cpu/target/mxnet-full_${scala.version}-osx-x86_64-cpu-1.5.0-SNAPSHOT-sources.jar</systemPath>
     </dependency>
 
     <dependency>
       <groupId>org.apache.mxnet</groupId>
       <artifactId>mxnet-full_${scala.version}-${platform}</artifactId>
       <scope>system</scope>
-      <systemPath>/PathToMXNetSource/incubator-mxnet/scala-package/assembly/osx-x86_64-cpu/target/mxnet-full_${scala.version}-osx-x86_64-cpu-1.4.1-SNAPSHOT.jar</systemPath>
+      <systemPath>/PathToMXNetSource/incubator-mxnet/scala-package/assembly/osx-x86_64-cpu/target/mxnet-full_${scala.version}-osx-x86_64-cpu-1.5.0-SNAPSHOT.jar</systemPath>
     </dependency>
 ```
 

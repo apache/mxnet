@@ -459,7 +459,7 @@ class KVStoreDistServer {
     auto unit_len = req_data.lens[1] / num_bytes;
     CHECK_GT(unit_len, 0);
     size_t ds[] = {num_rows, (size_t) unit_len};
-    TShape dshape(ds, ds + 2);
+    mxnet::TShape dshape(ds, ds + 2);
     CHECK_EQ(req_data.vals.size(), num_rows * unit_len * num_bytes);
     TBlob recv_blob;
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
@@ -546,7 +546,7 @@ class KVStoreDistServer {
           // data
           TBlob idx_blob(indices.data(), mshadow::Shape1(num_rows), cpu::kDevMask);
           size_t ds[] = {(size_t) num_rows, (size_t) unit_len};
-          TShape dshape(ds, ds + 2);
+          mxnet::TShape dshape(ds, ds + 2);
           TBlob recv_blob;
           MSHADOW_REAL_TYPE_SWITCH(type.dtype, DType, {
             recv_blob = TBlob(reinterpret_cast<DType*>(req_data.vals.data()),
@@ -620,12 +620,12 @@ class KVStoreDistServer {
       auto& stored = store_[key];
 
       size_t ds[] = {(size_t)req_data.lens[1] / mshadow::mshadow_sizeof(type.dtype)};
-      TShape dshape(ds, ds + 1);
+      mxnet::TShape dshape(ds, ds + 1);
       TBlob recv_blob(reinterpret_cast<real_t*>(req_data.vals.data()), dshape, cpu::kDevMask);
       NDArray recved = NDArray(recv_blob, 0);
 
       NDArray decomp_buf = decomp_buf_[key];
-      dshape = TShape{(int64_t) original_size};
+      dshape = mxnet::TShape{(int64_t) original_size};
 
       if (decomp_buf.is_none()) {
         decomp_buf = NDArray(dshape, Context());
@@ -684,7 +684,7 @@ class KVStoreDistServer {
     // the operators with \a NDArray are actually finished
     if (req_meta.push) {
       size_t ds[] = {(size_t) req_data.lens[0] / mshadow::mshadow_sizeof(type.dtype)};
-      TShape dshape(ds, ds + 1);
+      mxnet::TShape dshape(ds, ds + 1);
       TBlob recv_blob;
       MSHADOW_REAL_TYPE_SWITCH(type.dtype, DType, {
         recv_blob = TBlob(reinterpret_cast<DType*>(req_data.vals.data()), dshape, cpu::kDevMask);

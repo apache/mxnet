@@ -121,7 +121,7 @@ class Executor {
                             const bool allow_up_sizing,
                             const Context& default_ctx,
                             const std::map<std::string, Context>& ctx_map,
-                            const std::unordered_map<std::string, TShape>&
+                            const std::unordered_map<std::string, mxnet::TShape>&
                               provided_arg_shapes,
                             std::vector<NDArray>* in_args,
                             std::vector<NDArray>* arg_grads,
@@ -155,7 +155,7 @@ class Executor {
                               const std::vector<Context>& in_arg_ctxes,
                               const std::vector<Context>& arg_grad_ctxes,
                               const std::vector<Context>& aux_state_ctxes,
-                              const std::unordered_map<std::string, TShape>& arg_shape_map,
+                              const std::unordered_map<std::string, mxnet::TShape>& arg_shape_map,
                               const std::unordered_map<std::string, int>& arg_dtype_map,
                               const std::unordered_map<std::string, int>& arg_stype_map,
                               const std::vector<OpReqType>& grad_req_types,
@@ -174,7 +174,7 @@ class Executor {
   /*!
    * \brief Install a callback to notify the completion of operation.
    */
-  virtual void SetMonitorCallback(const MonitorCallback& callback) {}
+  virtual void SetMonitorCallback(const MonitorCallback& callback, bool monitor_all = false) {}
 };  // class executor
 }  // namespace mxnet
 #endif  // MXNET_EXECUTOR_H_

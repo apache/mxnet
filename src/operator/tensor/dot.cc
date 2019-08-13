@@ -82,7 +82,7 @@ above patterns, ``dot`` will fallback and generate output with default storage.
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"lhs", "rhs"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", DotShape)
+.set_attr<mxnet::FInferShape>("FInferShape", DotShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<FInferStorageType>("FInferStorageType", DotForwardInferStorageType)
 .set_attr<FResourceRequest>("FResourceRequest",
@@ -130,7 +130,7 @@ which is computed by::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"lhs", "rhs"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", BatchDotShape)
+.set_attr<mxnet::FInferShape>("FInferShape", BatchDotShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {

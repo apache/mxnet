@@ -87,7 +87,7 @@ inline void MultiBoxDetectionForward(const Tensor<cpu, 3, DType> &out,
                                      const Tensor<cpu, 3, DType> &temp_space,
                                      const float threshold,
                                      const bool clip,
-                                     const nnvm::Tuple<float> &variances,
+                                     const mxnet::Tuple<float> &variances,
                                      const float nms_threshold,
                                      const bool force_suppress,
                                      const int nms_topk) {
@@ -174,7 +174,6 @@ inline void MultiBoxDetectionForward(const Tensor<cpu, 3, DType> &out,
     }
 
     // apply nms
-#pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < nkeep; ++i) {
       int offset_i = i * 6;
       if (p_out[offset_i] < 0) continue;  // skip eliminated
@@ -206,9 +205,9 @@ Operator *CreateOp<cpu>(MultiBoxDetectionParam param, int dtype) {
 }
 
 Operator* MultiBoxDetectionProp::CreateOperatorEx(Context ctx,
-                                                  std::vector<TShape> *in_shape,
+                                                  mxnet::ShapeVector *in_shape,
                                                   std::vector<int> *in_type) const {
-  std::vector<TShape> out_shape, aux_shape;
+  mxnet::ShapeVector out_shape, aux_shape;
   std::vector<int> out_type, aux_type;
   CHECK(InferShape(in_shape, &out_shape, &aux_shape));
   CHECK(InferType(in_type, &out_type, &aux_type));

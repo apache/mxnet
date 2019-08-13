@@ -19,11 +19,11 @@ package org.apache.mxnet
 import scala.collection.mutable
 
 
-@AddSymbolAPIs(false)
 /**
   * typesafe Symbol API: Symbol.api._
   * Main code will be generated during compile time through Macros
   */
+@AddSymbolAPIs(false)
 object SymbolAPI extends SymbolAPIBase {
   def Custom (op_type : String, kwargs : mutable.Map[String, Any],
              name : String = null, attr : Map[String, String] = null) : Symbol = {
@@ -32,3 +32,13 @@ object SymbolAPI extends SymbolAPIBase {
     Symbol.createSymbolGeneral("Custom", name, attr, Seq(), map.toMap)
   }
 }
+
+/**
+  * typesafe Symbol random module: Symbol.random._
+  * Main code will be generated during compile time through Macros
+  */
+@AddSymbolRandomAPIs(false)
+object SymbolRandomAPI extends SymbolRandomAPIBase {
+
+}
+

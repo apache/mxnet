@@ -144,7 +144,10 @@ print(data_names)
 And load them into a MXNet Gluon symbol block. 
 
 ```python
-net = gluon.nn.SymbolBlock(outputs=sym, inputs=mx.sym.var('data_0'))
+import warnings
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    net = gluon.nn.SymbolBlock(outputs=sym, inputs=mx.sym.var('data_0'))
 net_params = net.collect_params()
 for param in arg_params:
     if param in net_params:
@@ -246,6 +249,7 @@ plot_predictions(caltech101_images, result[3:7], categories, TOP_P)
 Lucky for us, the [Caltech101 dataset](http://www.vision.caltech.edu/Image_Datasets/Caltech101/) has them, let's see how we can fine-tune our network to classify these categories correctly.
 
 We show that in our next tutorial:
+
 
 - [Fine-tuning an ONNX Model using the modern imperative MXNet/Gluon](http://mxnet.incubator.apache.org/tutorials/onnx/fine_tuning_gluon.html)
     

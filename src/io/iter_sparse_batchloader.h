@@ -67,7 +67,7 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
     this->head_ = 0;
     // if overflown from previous round, directly return false, until before first is called
     if (num_overflow_ != 0) return false;
-    index_t top = 0;
+    size_t top = 0;
     offsets_.clear();
     while (sparse_base_->Next()) {
       const DataInst& inst = sparse_base_->Value();
@@ -108,14 +108,14 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
     return sparse_base_->GetStorageType(is_data);
   }
 
-  virtual const TShape GetShape(bool is_data) const {
-    TShape inst_shape = sparse_base_->GetShape(is_data);
+  virtual const mxnet::TShape GetShape(bool is_data) const {
+    mxnet::TShape inst_shape = sparse_base_->GetShape(is_data);
     std::vector<index_t> shape_vec;
     shape_vec.push_back(param_.batch_size);
     for (index_t dim = 0; dim < inst_shape.ndim(); ++dim) {
       shape_vec.push_back(inst_shape[dim]);
     }
-    return TShape(shape_vec.begin(), shape_vec.end());
+    return mxnet::TShape(shape_vec.begin(), shape_vec.end());
   }
 
  private:
@@ -186,7 +186,7 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
     // allocate buffer
     for (size_t i = 0; i < num_arrays; ++i) {
       // init object attributes
-      TShape dst_shape(mshadow::Shape1(buff_sizes[i]));
+      mxnet::TShape dst_shape(mshadow::Shape1(buff_sizes[i]));
       data_[i].resize(mshadow::Shape1(buff_sizes[i]), dtypes_[i]);
       CHECK(data_[i].dptr_ != nullptr);
     }

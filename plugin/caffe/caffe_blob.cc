@@ -72,7 +72,7 @@ void SetDataGradToBlob<mshadow::gpu, double>(caffeMemoryTypes memType,
     MXCAFFEBLOB(*blob, double)->set_gpu_diff(data_ptr);
 }
 
-TShape Vector2TShape(const std::vector<int> &vec_int) {
+mxnet::TShape Vector2TShape(const std::vector<int> &vec_int) {
   std::vector<mshadow::index_t> vec;
   for (uint32_t i = 0; i < vec_int.size(); ++i)
     vec.push_back(vec_int[i]);
@@ -82,7 +82,7 @@ TShape Vector2TShape(const std::vector<int> &vec_int) {
   return {vec.begin(), vec.end()};
 }
 
-std::vector<int> TShape2Vector(const TShape &tshape) {
+std::vector<int> TShape2Vector(const mxnet::TShape &tshape) {
   std::vector<int> s;
   for (uint32_t i =0 ; i < tshape.ndim(); ++i)
     s.push_back(tshape[i]);

@@ -113,7 +113,7 @@ class InstanceNormOp : public Operator {
     CHECK_EQ(in_data.size(), 3U);
     CHECK_EQ(out_data.size(), 3U);
 
-    CHECK_GE(in_data[instance_norm::kData].ndim(), 3U)
+    CHECK_GE(in_data[instance_norm::kData].ndim(), 3)
         << "InstanceNorm only supports input tensors of rank > 2.";
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -203,15 +203,15 @@ class InstanceNormProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape, std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape, mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 3U) << "Input:[data]";
-    const TShape &dshape = in_shape->at(0);
+    const mxnet::TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
 
-    in_shape->at(1) = TShape(Shape1(dshape[1]));
-    in_shape->at(2) = TShape(Shape1(dshape[1]));
+    in_shape->at(1) = mxnet::TShape(Shape1(dshape[1]));
+    in_shape->at(2) = mxnet::TShape(Shape1(dshape[1]));
     out_shape->clear();
     out_shape->push_back(dshape);
     out_shape->push_back(Shape2(dshape[0], dshape[1]));
@@ -236,7 +236,7 @@ class InstanceNormProp : public OperatorProperty {
   }
 
   std::vector<ResourceRequest> BackwardResource(
-      const std::vector<TShape> &in_shape) const override {
+      const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
@@ -257,7 +257,7 @@ class InstanceNormProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator *CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator *CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  private:

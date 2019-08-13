@@ -16,8 +16,10 @@ if(USE_CPP_PACKAGE)
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts
   )
 
-  if(NOT DO_NOT_BUILD_EXAMPLES)
+  if(BUILD_CPP_EXAMPLES)
     add_subdirectory(example)
   endif()
+
+  install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 endif()

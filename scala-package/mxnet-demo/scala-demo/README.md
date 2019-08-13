@@ -18,27 +18,27 @@
 # MXNet Scala Sample Project
 This is an project created to use Maven-published Scala package with two Scala examples.
 ## Setup
-User are required to use `mvn package` to build the package,
+You are required to use maven to build the package, by running the following:
+```
+mvn package
+```
+This command will pick the default values specified in the pom file.
+
+Note: If you are planning to use GPU, please add `-Dmxnet.profile=linux-x86_64-gpu`
+
+### Use customized version set
  which are shown below:
 ```Bash
-export SCALA_VERSION_PROFILE=2.11 SCALA_VERSION=2.11.8 MXNET_VERSION=1.3.0
+export SCALA_VERSION_PROFILE=2.11 SCALA_VERSION=2.11.8
 export SCALA_PKG_PROFILE=
 mvn package -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
 		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
-		-Dmxnet.version=$(MXNET_VERSION) \
 		-Dscala.version=$(SCALA_VERSION)
 ```
-These environment variable (`SCALA_PKG_PROFILE`, `SCALA_VERSION_PROFILE`, `MXNET_VERSION`, `SCALA_VERSION`)
+These environment variable (`SCALA_PKG_PROFILE`, `SCALA_VERSION_PROFILE`, `SCALA_VERSION`)
 should be set before executing the line above.
 
 To obtain the most recent MXNet version, please click [here](https://mvnrepository.com/search?q=org.apache.mxnet)
- 
-You can also use the `Makefile` as an alternative to do the same thing. Simply do the following:
-```Bash
-make scalademo
-```
-This will load the default parameter for all the environment variable.
- If you want to run with GPU on Linux, just simply add `USE_CUDA=1` when you run the make file
 
 ## Run
 ### Hello World
@@ -72,9 +72,9 @@ If you want to test run on GPU, you can set a environment variable as follows:
 export SCALA_TEST_ON_GPU=1
 ```
 ## Clean up
-Clean up for Maven package is simple, you can run the pre-configed `Makefile` as:
+To clean up a Maven package, run the following:
 ```Bash
-make scalaclean
+mvn clean
 ```
 
 ## Q & A

@@ -55,8 +55,8 @@ static bool NNZType(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool NNZShape(const nnvm::NodeAttrs& attrs,
-                     std::vector<TShape> *in_attrs,
-                     std::vector<TShape> *out_attrs) {
+                     mxnet::ShapeVector *in_attrs,
+                     mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   // csr_matrix is 2-D
@@ -178,7 +178,7 @@ This operator only supports CSR matrix on CPU.
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NNZParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", NNZShape)
+.set_attr<mxnet::FInferShape>("FInferShape", NNZShape)
 .set_attr<nnvm::FInferType>("FInferType", NNZType)
 .set_attr<FInferStorageType>("FInferStorageType", NNZStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", NNZComputeEx<cpu>)

@@ -62,6 +62,7 @@ int main(int argc, char** argv) {
   const int max_epoch = 10;
   const float learning_rate = 0.1;
   const float weight_decay = 1e-2;
+  float score = 0;
 
   std::vector<std::string> data_files = { "./data/mnist_data/train-images-idx3-ubyte",
                                           "./data/mnist_data/train-labels-idx1-ubyte",
@@ -70,11 +71,16 @@ int main(int argc, char** argv) {
                                         };
 
   auto train_iter =  MXDataIter("MNISTIter");
-  setDataIter(&train_iter, "Train", data_files, batch_size);
+  if (!setDataIter(&train_iter, "Train", data_files, batch_size)) {
+    return 1;
+  }
 
   auto val_iter = MXDataIter("MNISTIter");
-  setDataIter(&val_iter, "Label", data_files, batch_size);
+  if (!setDataIter(&val_iter, "Label", data_files, batch_size)) {
+    return 1;
+  }
 
+  TRY
   auto net = mlp(layers);
 
   Context ctx = Context::gpu();  // Use GPU for training
@@ -107,7 +113,6 @@ int main(int argc, char** argv) {
   auto *exec = net.SimpleBind(ctx, args);
   auto arg_names = net.ListArguments();
 
-  float score = 0;
   // Start training
   for (int iter = 0; iter < max_epoch; ++iter) {
     int samples = 0;
@@ -152,6 +157,8 @@ int main(int argc, char** argv) {
   }
 
   delete exec;
+  delete opt;
   MXNotifyShutdown();
+  CATCH
   return score >= MIN_SCORE ? 0 : 1;
 }

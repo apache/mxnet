@@ -1,0 +1,271 @@
+{
+    "traceEvents": [
+        {
+            "ph": "M",
+            "args": {
+                "name": "cpu/0"
+            },
+            "pid": 0,
+            "name": "process_name"
+        },
+        {
+            "ph": "M",
+            "args": {
+                "name": "cpu/1"
+            },
+            "pid": 1,
+            "name": "process_name"
+        },
+        {
+            "ph": "M",
+            "args": {
+                "name": "cpu/2"
+            },
+            "pid": 2,
+            "name": "process_name"
+        },
+        {
+            "ph": "M",
+            "args": {
+                "name": "cpu/3"
+            },
+            "pid": 3,
+            "name": "process_name"
+        },
+        {
+            "ph": "M",
+            "args": {
+                "name": "cpu pinned/"
+            },
+            "pid": 4,
+            "name": "process_name"
+        },
+        {
+            "ph": "M",
+            "args": {
+                "name": "cpu shared/"
+            },
+            "pid": 5,
+            "name": "process_name"
+        },        {
+            "ph": "M",
+            "args": {
+                "name": "MXNET_C_API"
+            },
+            "pid": 13841910479334118176,
+            "name": "process_name"
+        },
+
+    {
+        "name": "MXNet C API Calls",
+        "cat": "MXNET_C_API",
+        "ph": "C",
+        "ts": 51195258331,
+        "args": { "MXNet C API Calls": 1 },
+        "pid": 13841910479334118176,
+        "tid": 6902988396839073221
+    }
+,
+    {
+        "name": "MXNet C API Concurrency",
+        "cat": "MXNET_C_API",
+        "ph": "C",
+        "ts": 51195258338,
+        "args": { "MXNet C API Concurrency": 1 },
+        "pid": 13841910479334118176,
+        "tid": 6902988396839073221
+    }
+,
+    {
+        "name": "MXExecutorForward",
+        "cat": "MXNET_C_API",
+        "ph": "b",
+        "ts": 51195258348,
+        "id": 6902988396839073221,
+        "pid": 13841910479334118176,
+        "tid": 6902988396839073221
+    }
+,
+    {
+        "name": "MXExecutorForward",
+        "cat": "MXNET_C_API",
+        "ph": "e",
+        "ts": 51195258357,
+        "id": 6902988396839073221,
+        "pid": 13841910479334118176,
+        "tid": 6902988396839073221
+    }
+,
+    {
+        "name": "MXNet C API Concurrency",
+        "cat": "MXNET_C_API",
+        "ph": "C",
+        "ts": 51195258358,
+        "args": { "MXNet C API Concurrency": 0 },
+        "pid": 13841910479334118176,
+        "tid": 6902988396839073221
+    }
+,        {
+            "ph": "M",
+            "args": {
+                "name": "Device Storage"
+            },
+            "pid": 13545698322897290393,
+            "name": "process_name"
+        },
+
+    {
+        "name": "Memory: cpu/0",
+        "cat": "Device Storage",
+        "ph": "C",
+        "ts": 51195543378,
+        "args": { "Memory: cpu/0": 8 },
+        "pid": 13545698322897290393,
+        "tid": 5603937861270119161
+    }
+,
+    {
+        "name": "MXNet C API Calls",
+        "cat": "MXNET_C_API",
+        "ph": "C",
+        "ts": 51195258559,
+        "args": { "MXNet C API Calls": 2 },
+        "pid": 13841910479334118176,
+        "tid": 6902988396839073221
+    }
+,
+    {
+        "name": "Memory: cpu/0",
+        "cat": "Device Storage",
+        "ph": "C",
+        "ts": 51195857697,
+        "args": { "Memory: cpu/0": 67108872 },
+        "pid": 13545698322897290393,
+        "tid": 5603937861270119161
+    }
+,
+    {
+        "name": "MXNet C API Concurrency",
+        "cat": "MXNET_C_API",
+        "ph": "C",
+        "ts": 51195258560,
+        "args": { "MXNet C API Concurrency": 1 },
+        "pid": 13841910479334118176,
+        "tid": 6902988396839073221
+    }
+,
+
+    {
+        "name": "[dot]",
+        "cat": "operator",
+        "ph": "B",
+        "ts": 51195857671,
+        "pid": 0,
+        "tid": 5603937861270119161
+    }
+,
+    {
+        "name": "[dot]",
+        "cat": "operator",
+        "ph": "E",
+        "ts": 51196931353,
+        "pid": 0,
+        "tid": 5603937861270119161
+    }
+,
+
+    {
+        "name": "WaitForVar",
+        "cat": "operator",
+        "ph": "B",
+        "ts": 51196931369,
+        "pid": 0,
+        "tid": 5603937861270119161
+    }
+,
+    {
+        "name": "WaitForVar",
+        "cat": "operator",
+        "ph": "E",
+        "ts": 51196931376,
+        "pid": 0,
+        "tid": 5603937861270119161
+    }
+,        {
+            "ph": "M",
+            "args": {
+                "name": "operator"
+            },
+            "pid": 10847949044720084585,
+            "name": "process_name"
+        },
+
+    {
+        "name": "[dot]",
+        "cat": "operator",
+        "ph": "b",
+        "ts": 51195857671,
+        "id": 5603937861270119161,
+        "pid": 10847949044720084585,
+        "tid": 5603937861270119161
+    }
+,
+    {
+        "name": "[dot]",
+        "cat": "operator",
+        "ph": "e",
+        "ts": 51196931350,
+        "id": 5603937861270119161,
+        "pid": 10847949044720084585,
+        "tid": 5603937861270119161
+    }
+,
+    {
+        "name": "MXNDArrayWaitToRead",
+        "cat": "MXNET_C_API",
+        "ph": "b",
+        "ts": 51195258561,
+        "id": 6902988396839073221,
+        "pid": 13841910479334118176,
+        "tid": 6902988396839073221
+    }
+,
+    {
+        "name": "MXNDArrayWaitToRead",
+        "cat": "MXNET_C_API",
+        "ph": "e",
+        "ts": 51196931386,
+        "id": 6902988396839073221,
+        "pid": 13841910479334118176,
+        "tid": 6902988396839073221
+    }
+,
+    {
+        "name": "WaitForVar",
+        "cat": "operator",
+        "ph": "b",
+        "ts": 51196931369,
+        "id": 5603937861270119161,
+        "pid": 10847949044720084585,
+        "tid": 5603937861270119161
+    }
+,
+    {
+        "name": "WaitForVar",
+        "cat": "operator",
+        "ph": "e",
+        "ts": 51196931376,
+        "id": 5603937861270119161,
+        "pid": 10847949044720084585,
+        "tid": 5603937861270119161
+    }
+,
+    {
+        "name": "MXNet C API Concurrency",
+        "cat": "MXNET_C_API",
+        "ph": "C",
+        "ts": 51196931391,
+        "args": { "MXNet C API Concurrency": 0 },
+        "pid": 13841910479334118176,
+        "tid": 6902988396839073221
+    }

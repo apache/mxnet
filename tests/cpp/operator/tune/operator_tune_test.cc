@@ -41,8 +41,8 @@ TEST(OMP_TUNING, ShowAllTunedOps) {
 
 using kwargs_t = test::op::kwargs_t;
 
-static std::vector<std::vector<TShape>> tuning_shapes() {
-  std::vector<std::vector<TShape>> shapes;
+static std::vector<mxnet::ShapeVector> tuning_shapes() {
+  std::vector<mxnet::ShapeVector> shapes;
   if (test::performance_run || test::csv) {
     shapes = {
       {{1,  1, 28,  28}},
@@ -127,7 +127,7 @@ static float EvaluateTune(const bool verbose = true) {
     std::cout << "******************************" << std::endl;
 
     // Do the performance runs
-    std::vector<std::vector<TShape>> shapes = tuning_shapes();
+    std::vector<mxnet::ShapeVector> shapes = tuning_shapes();
 
     tuningTester.TestTunedOperator({}, verbose, shapes,
                                    binary_operators[i].first.c_str(),

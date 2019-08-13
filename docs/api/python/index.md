@@ -174,6 +174,17 @@ Code examples are placed throughout the API documentation and these can be run a
    rtc/rtc.md
 ```
 
+## Run-Time Feature detection / Library Info
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   libinfo/libinfo.md
+```
+
+
+
 ## Symbol API
 
 ```eval_rst

@@ -17,7 +17,7 @@
 
 module TestBind
 using MXNet
-using Base.Test
+using Test
 
 using ..Main: rand_dims
 
@@ -26,17 +26,17 @@ using ..Main: rand_dims
 ################################################################################
 function test_arithmetic(::Type{T}, uf, gf) where T <: mx.DType
   shape = rand_dims()
-  info("Bind::arithmetic::$T::$uf::dims = $shape")
+  @info "Bind::arithmetic::$T::$uf::dims = $shape"
 
   lhs = mx.Variable(:lhs)
   rhs = mx.Variable(:rhs)
   ret = uf(lhs, rhs)
   @test mx.list_arguments(ret) == [:lhs, :rhs]
 
-  lhs_arr  = mx.NDArray(rand(T, shape))
-  rhs_arr  = mx.NDArray(rand(T, shape))
-  lhs_grad = mx.empty(T, shape)
-  rhs_grad = mx.empty(T, shape)
+  lhs_arr  = NDArray(rand(T, shape))
+  rhs_arr  = NDArray(rand(T, shape))
+  lhs_grad = NDArray{T}(undef, shape)
+  rhs_grad = NDArray{T}(undef, shape)
 
   exec2 = mx.bind(ret, mx.Context(mx.CPU), [lhs_arr, rhs_arr], args_grad=[lhs_grad, rhs_grad])
   exec3 = mx.bind(ret, mx.Context(mx.CPU), [lhs_arr, rhs_arr])
@@ -77,7 +77,7 @@ function test_arithmetic()
     test_arithmetic(T, (x,y) -> x .- y, (g,x,y) -> (g,-g))
     test_arithmetic(T, (x,y) -> x .* y, (g,x,y) -> (y.*g, x.*g))
     if T <: Integer || T == Float16
-      warn("Not running division test for $T")
+      @warn "Not running division test for $T"
     else
       test_arithmetic(T, (x,y) -> x ./ y, (g,x,y) -> (g ./ y, -x .* g ./ (y.^2)))
     end

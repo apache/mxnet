@@ -2,7 +2,7 @@
 
 ## Overview
 
-MXNet has a built-in profiler which is compatibule with both Intel® VTune™ Amplifier as well as Chrome's chrome://tracing visualization engine.  When built witht he USE_VTUNE=1 flag, MXNet makes actual VTune API calls to define Domains, Frames, Tasks, Events Counters, and Markers.  For a detailed explanation of these, see [Instrumentation and Tracing Technology API Reference ](https://software.intel.com/en-us/vtune-amplifier-help-instrumentation-and-tracing-technology-api-reference)
+MXNet has a built-in profiler which is compatible with Intel® VTune™ Amplifier, NVIDIA NVTX and Chrome's chrome://tracing visualization engine.  When built with the USE_VTUNE=1 flag, MXNet makes VTune API calls to define Domains, Frames, Tasks, Events Counters, and Markers.  For a detailed explanation of these, see [Instrumentation and Tracing Technology API Reference ](https://software.intel.com/en-us/vtune-amplifier-help-instrumentation-and-tracing-technology-api-reference).  When built with CUDA NVTX ranges will be inserted into any profiles generated, which can subsequently be viewed view NVProf.
 
 ```eval_rst
 .. autosummary::
@@ -34,7 +34,7 @@ MXNet has a built-in profiler which is compatibule with both Intel® VTune™ Am
 
 ### Profiling Objects
 
-These profiling objects can be created and accessed from python in order to resord performance information of the python code paths 
+These profiling objects can be created and accessed from python in order to record performance information of the python code paths.
 
 ```eval_rst
 .. autosummary::

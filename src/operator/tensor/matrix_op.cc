@@ -27,14 +27,15 @@
 #include "./elemwise_unary_op.h"
 #include "../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../nn/mkldnn/mkldnn_base-inl.h"
+#include "../nn/mkldnn/mkldnn_slice-inl.h"
 
 namespace mxnet {
 namespace op {
 
 
 template<>
-void SliceDimTwoCsrImpl<cpu>(const TShape &begin, const TShape &end, const OpContext& ctx,
-                             const NDArray &in, const NDArray &out) {
+void SliceDimTwoCsrImpl<cpu>(const mxnet::TShape &begin, const mxnet::TShape &end,
+                             const OpContext& ctx, const NDArray &in, const NDArray &out) {
   using namespace mshadow;
   using namespace mxnet_op;
   using namespace csr;
@@ -102,6 +103,37 @@ DMLC_REGISTER_PARAMETER(ReverseParam);
 DMLC_REGISTER_PARAMETER(StackParam);
 DMLC_REGISTER_PARAMETER(SqueezeParam);
 DMLC_REGISTER_PARAMETER(DepthToSpaceParam);
+DMLC_REGISTER_PARAMETER(SplitParam);
+
+#if MXNET_USE_MKLDNN == 1
+static void ReshapeComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                const OpContext& ctx,
+                                const std::vector<NDArray>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  // If inputs are supposed to be in MKLDNN format and
+  // MKLDNNsupport the data type or the shape. Then convert
+  // it to the output format and shape
+  if (SupportMKLDNNArray(inputs[0].dtype(), inputs[0].shape())) {
+    MKLDNNReshapeForward(attrs, ctx, inputs[0], req[0], outputs[0]);
+    return;
+  }
+  FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
+}
+
+inline static bool ReshapeStorageType(const nnvm::NodeAttrs& attrs,
+                                      const int dev_mask,
+                                      DispatchMode* dispatch_mode,
+                                      std::vector<int>* in_attrs,
+                                      std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs,
+                           out_attrs);
+}
+#endif
 
 NNVM_REGISTER_OP(Reshape)
 .add_alias("reshape")
@@ -170,10 +202,18 @@ If the argument `reverse` is set to 1, then the special values are inferred from
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<ReshapeParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ReshapeShape)
+.set_attr<mxnet::FInferShape>("FInferShape", ReshapeShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_copy"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_reshape"})
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
+.set_attr<FComputeEx>("FComputeEx<cpu>", ReshapeComputeExCPU)
+.set_attr<FInferStorageType>("FInferStorageType", ReshapeStorageType)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
+  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+#endif
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
@@ -210,6 +250,7 @@ static void FlattenEx(const nnvm::NodeAttrs& attrs,
 #endif
 }
 
+#if MXNET_USE_MKLDNN == 1
 static inline bool FlattenStorageType(const nnvm::NodeAttrs& attrs,
                                    const int dev_mask,
                                    DispatchMode* dispatch_mode,
@@ -217,17 +258,10 @@ static inline bool FlattenStorageType(const nnvm::NodeAttrs& attrs,
                                    std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
-  bool ret = ElemwiseStorageType<1, 1, false, false, false>(attrs, dev_mask, dispatch_mode,
-                                                            in_attrs, out_attrs);
-#if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask
-      && in_attrs->at(0) == kDefaultStorage
-      && out_attrs->at(0) == kDefaultStorage) {
-    *dispatch_mode = DispatchMode::kFComputeEx;
-  }
-#endif
-  return ret;
+  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs,
+                           out_attrs);
 }
+#endif
 
 NNVM_REGISTER_OP(Flatten)
 .add_alias("flatten")
@@ -259,9 +293,11 @@ Example::
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr<nnvm::FInferShape>("FInferShape", FlattenShape)
+.set_attr<mxnet::FInferShape>("FInferShape", FlattenShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+#if MXNET_USE_MKLDNN == 1
 .set_attr<FInferStorageType>("FInferStorageType", FlattenStorageType)
+#endif
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_backward_copy" })
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", FlattenEx)
@@ -280,6 +316,35 @@ Example::
     return std::vector<bool>{true};
   })
 .add_argument("data", "NDArray-or-Symbol", "Input array.");
+
+#if MXNET_USE_MKLDNN == 1
+static void TransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                  const OpContext& ctx,
+                                  const std::vector<NDArray>& inputs,
+                                  const std::vector<OpReqType>& req,
+                                  const std::vector<NDArray>& outputs) {
+  const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
+  CHECK_EQ(req[0], kWriteTo) << "Transpose does not support inplace";
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+
+  if (SupportMKLDNNTranspose(param, inputs[0])) {
+    MKLDNNTransposeForward(attrs, ctx, inputs[0], req[0], outputs[0]);
+    return;
+  }
+  FallBackCompute(Transpose<cpu>, attrs, ctx, inputs, req, outputs);
+}
+
+inline static bool TransposeStorageType(const nnvm::NodeAttrs& attrs,
+                                        const int dev_mask,
+                                        DispatchMode* dispatch_mode,
+                                        std::vector<int>* in_attrs,
+                                        std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+}
+#endif
 
 NNVM_REGISTER_OP(transpose)
 .describe(R"code(Permutes the dimensions of an array.
@@ -313,7 +378,7 @@ Examples::
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<TransposeParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", TransposeShape)
+.set_attr<mxnet::FInferShape>("FInferShape", TransposeShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
@@ -323,8 +388,8 @@ Examples::
           "transpose", n, ograds, {},
           std::unordered_map<std::string, std::string>());
     } else {
-      TShape axes = TShape(param.axes.ndim());
-      for (index_t i = 0; i < axes.ndim(); ++i) {
+      mxnet::TShape axes = mxnet::TShape(param.axes.ndim(), -1);
+      for (int i = 0; i < axes.ndim(); ++i) {
         axes[param.axes[i]] = i;
       }
       std::ostringstream os;
@@ -335,6 +400,11 @@ Examples::
     }
   })
 .set_attr<FCompute>("FCompute<cpu>", Transpose<cpu>)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
+.set_attr<FComputeEx>("FComputeEx<cpu>", TransposeComputeExCPU)
+.set_attr<FInferStorageType>("FInferStorageType", TransposeStorageType)
+#endif
 .add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_arguments(TransposeParam::__FIELDS__());
 
@@ -349,7 +419,7 @@ will return a new array with shape ``(2,1,3,4)``.
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<ExpandDimParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ExpandDimShape)
+.set_attr<mxnet::FInferShape>("FInferShape", ExpandDimShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
@@ -359,10 +429,34 @@ will return a new array with shape ``(2,1,3,4)``.
   [](const NodeAttrs& attrs){
     return std::vector<bool>{true};
   })
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_copy"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_reshape"})
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_arguments(ExpandDimParam::__FIELDS__());
+
+void SliceExCPU(const nnvm::NodeAttrs& attrs,
+                const OpContext& ctx,
+                const std::vector<NDArray>& inputs,
+                const std::vector<OpReqType>& req,
+                const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), 1);
+  CHECK_EQ(outputs.size(), 1);
+  const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
+  auto in_stype = inputs[0].storage_type();
+  if (in_stype == kCSRStorage) {
+    SliceCsrImpl<cpu>(param, ctx, inputs[0], req[0], outputs[0]);
+#if MXNET_USE_MKLDNN == 1
+  } else if (in_stype == kDefaultStorage) {
+    if (SupportMKLDNN(inputs[0])) {
+      MKLDNNSlice(param, ctx, inputs[0], req[0], outputs[0]);
+    } else {
+      FallBackCompute(SliceOpForward<cpu>, attrs, ctx, inputs, req, outputs);
+    }
+#endif
+  } else {
+    LOG(FATAL) << "Slice not implemented for storage type" << in_stype;
+  }
+}
 
 NNVM_REGISTER_OP(slice)
 MXNET_ADD_SPARSE_OP_ALIAS(slice)
@@ -413,7 +507,7 @@ Example::
                                                             [1.,  3.]]
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<SliceParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", SliceOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SliceOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
@@ -422,7 +516,10 @@ Example::
 .set_attr<FInferStorageType>("FInferStorageType", SliceForwardInferStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice"})
 .set_attr<FCompute>("FCompute<cpu>", SliceOpForward<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", SliceEx<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SliceExCPU)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
+#endif
 .add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_arguments(SliceParam::__FIELDS__());
 
@@ -445,7 +542,7 @@ NNVM_REGISTER_OP(_slice_assign)
     return std::vector<std::string>{"lhs", "rhs"};
   })
 .set_attr_parser(ParamParser<SliceParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", SliceAssignOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SliceAssignOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
@@ -466,7 +563,7 @@ NNVM_REGISTER_OP(_slice_assign_scalar)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<SliceAssignScalarParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", SliceAssignScalarOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SliceAssignScalarOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
@@ -502,7 +599,7 @@ Examples::
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<SliceAxisParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", SliceAxisShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SliceAxisShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", SliceAxis<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice_axis"})
@@ -575,8 +672,17 @@ Example::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data", "shape_like"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", SliceLikeShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", SliceLikeShape)
+.set_attr<nnvm::FInferType>("FInferType", [](const nnvm::NodeAttrs& attrs,
+                                             std::vector<int> *in_attrs,
+                                             std::vector<int> *out_attrs) {
+    CHECK_EQ(in_attrs->size(), 2) << " in operator " << attrs.name;
+    std::vector<int> checked_in_attrs = { (*in_attrs)[0] };
+    bool ret = !type_is_none((*in_attrs)[1]) &&
+               ElemwiseType<1, 1>(attrs, &checked_in_attrs, out_attrs);
+    (*in_attrs)[0] = checked_in_attrs[0];
+    return ret;
+  })
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice_like"})
 .set_attr<FCompute>("FCompute<cpu>", SliceLikeForward<cpu>)
 .add_argument("data", "NDArray-or-Symbol", "Source input")
@@ -620,7 +726,7 @@ parameter values:
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<ClipParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", Clip<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ClipEx<cpu>)
@@ -641,7 +747,7 @@ parameter values:
     if (!dispatched && param.a_min <= 0.0 && param.a_max >= 0.0) {
       const int this_stype = (*in_attrs)[0];
       if (this_stype != kUndefinedStorage) {
-        dispatched = storage_type_assign(&(*out_attrs)[0], kRowSparseStorage,
+        dispatched = storage_type_assign(&(*out_attrs)[0], mxnet::NDArrayStorageType(this_stype),
                                          dispatch_mode, DispatchMode::kFComputeEx);
       }
     }
@@ -697,7 +803,7 @@ The parameter ``axis`` specifies the axis along which to perform repeat::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", RepeatOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", RepeatOpShape)
 .set_attr<nnvm::FInferType>("FInferType", RepeatOpType)
 .set_attr<FCompute>("FCompute<cpu>", RepeatOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_repeat"})
@@ -758,7 +864,7 @@ three cases:
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", TileOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", TileOpShape)
 .set_attr<nnvm::FInferType>("FInferType", TileOpType)
 .set_attr<FCompute>("FCompute<cpu>", TileOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_tile"})
@@ -804,7 +910,7 @@ Examples::
 [](const NodeAttrs& attrs) {
   return std::vector<ResourceRequest> {ResourceRequest::kTempSpace};
 })
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", ReverseOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_backward_reverse" })
@@ -855,7 +961,7 @@ Examples::
     return ret;
   })
 .set_attr<std::string>("key_var_num_args", "num_args")
-.set_attr<nnvm::FInferShape>("FInferShape", StackOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", StackOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<-1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", StackOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_stack"})
@@ -896,7 +1002,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", SqueezeShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SqueezeShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_squeeze"})
@@ -951,7 +1057,7 @@ Example::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", DepthToSpaceOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", DepthToSpaceOpShape)
 .set_attr<nnvm::FInferType>("FInferType", DepthToSpaceOpType)
 .set_attr<FCompute>("FCompute<cpu>", DepthToSpaceOpForward<cpu>)
 .set_attr<FResourceRequest>("FResourceRequest",
@@ -987,8 +1093,8 @@ Example::
          [12, 18, 13, 19, 14, 20],
          [3, 9, 4, 10, 5, 11],
          [15, 21, 16, 22, 17, 23]]]]
-  
-  
+
+
   space_to_depth(x, 2) = [[[[0, 1, 2],
                             [3, 4, 5]],
                            [[6, 7, 8],
@@ -1005,7 +1111,7 @@ Example::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", SpaceToDepthOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SpaceToDepthOpShape)
 .set_attr<nnvm::FInferType>("FInferType", SpaceToDepthOpType)
 .set_attr<FCompute>("FCompute<cpu>", SpaceToDepthOpForward<cpu>)
 .set_attr<FResourceRequest>("FResourceRequest",
@@ -1015,6 +1121,104 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"depth_to_space"})
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(DepthToSpaceParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_split_v2)
+.describe(R"code(Splits an array along a particular axis into multiple sub-arrays.
+
+Example::
+
+   x  = [[[ 1.]
+          [ 2.]]
+         [[ 3.]
+          [ 4.]]
+         [[ 5.]
+          [ 6.]]]
+   x.shape = (3, 2, 1)
+
+   y = split_v2(x, axis=1, indices_or_sections=2) // a list of 2 arrays with shape (3, 1, 1)
+   y = [[[ 1.]]
+        [[ 3.]]
+        [[ 5.]]]
+
+       [[[ 2.]]
+        [[ 4.]]
+        [[ 6.]]]
+
+   y[0].shape = (3, 1, 1)
+
+   z = split_v2(x, axis=0, indices_or_sections=3) // a list of 3 arrays with shape (1, 2, 1)
+   z = [[[ 1.]
+         [ 2.]]]
+
+       [[[ 3.]
+         [ 4.]]]
+
+       [[[ 5.]
+         [ 6.]]]
+
+   z[0].shape = (1, 2, 1)
+
+   w = split_v2(x, axis=0, indices_or_sections=(1,)) // a list of 2 arrays with shape [(1, 2, 1), (2, 2, 1)]
+   w = [[[ 1.]
+         [ 2.]]]
+
+       [[[3.]
+         [4.]]
+
+        [[5.]
+         [6.]]]
+
+  w[0].shape = (1, 2, 1)
+  w[1].shape = (2, 2, 1)
+
+`squeeze_axis=True` removes the axis with length 1 from the shapes of the output arrays.
+**Note** that setting `squeeze_axis` to ``1`` removes axis with length 1 only
+along the `axis` which it is split.
+Also `squeeze_axis` can be set to true only if ``input.shape[axis] == indices_or_sections``.
+
+Example::
+
+   z = split_v2(x, axis=0, indices_or_sections=3, squeeze_axis=1) // a list of 3 arrays with shape (2, 1)
+   z = [[ 1.]
+        [ 2.]]
+
+       [[ 3.]
+        [ 4.]]
+
+       [[ 5.]
+        [ 6.]]
+   z[0].shape = (2, 1)
+
+)code" ADD_FILELINE)
+.set_attr_parser(ParamParser<SplitParam>)
+.set_num_inputs(1)
+.set_num_outputs(SplitNumOutputs)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data"};
+  })
+.set_attr<mxnet::FInferShape>("FInferShape", SplitOpShape)
+.set_attr<nnvm::FInferType>("FInferType", SplitOpType)
+.set_attr<FCompute>("FCompute<cpu>", SplitOpForward<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& n) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_split_v2_backward"})
+.add_argument("data", "NDArray-or-Symbol", "The input")
+.add_arguments(SplitParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_split_v2_backward)
+.set_attr_parser(ParamParser<SplitParam>)
+.set_num_inputs(SplitNumOutputs)
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& n) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+.set_attr<FCompute>("FCompute<cpu>", SplitOpBackward<cpu>);
+
 
 }  // namespace op
 }  // namespace mxnet

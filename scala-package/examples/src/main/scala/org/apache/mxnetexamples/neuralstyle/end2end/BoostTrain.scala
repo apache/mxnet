@@ -19,7 +19,7 @@ package org.apache.mxnetexamples.neuralstyle.end2end
 
 import java.io.File
 
-import org.apache.mxnet.{Context, Executor, NDArray, NDArrayCollector, Shape, Symbol}
+import org.apache.mxnet.{Context, Executor, NDArray, ResourceScope, Shape, Symbol}
 import org.apache.mxnet.optimizer.SGD
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
@@ -56,7 +56,7 @@ object BoostTrain {
 
   def runTraining(dataPath : String, vggModelPath: String, ctx : Context,
                   styleImage : String, saveModelPath : String) : Unit = {
-    NDArrayCollector.auto().withScope {
+    ResourceScope.using() {
       // params
       val vggParams = NDArray.load2Map(vggModelPath)
       val styleWeight = 1.2f
@@ -117,7 +117,7 @@ object BoostTrain {
 
       // train
       for (i <- startEpoch until endEpoch) {
-        NDArrayCollector.auto().withScope {
+        ResourceScope.using() {
           filelist = Random.shuffle(filelist)
           for (idx <- filelist.indices) {
             var dataArray = Array[NDArray]()

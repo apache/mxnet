@@ -39,8 +39,8 @@ namespace caffe {
 // Declare Memory Type for Caffe blob
 enum caffeMemoryTypes {Data, Grad, Non};
 
-TShape Vector2TShape(const std::vector<int> &vec_int);
-std::vector<int> TShape2Vector(const TShape &tshape);
+mxnet::TShape Vector2TShape(const std::vector<int> &vec_int);
+std::vector<int> TShape2Vector(const mxnet::TShape &tshape);
 
 // implementation of tensor to blob, called by TensorToBlob
 template<typename Device, typename Dtype>

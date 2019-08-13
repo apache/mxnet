@@ -32,8 +32,8 @@ namespace mxnet {
 namespace op {
 
 bool QuantizedConvShape(const nnvm::NodeAttrs& attrs,
-                        std::vector<TShape>* in_shape,
-                        std::vector<TShape>* out_shape) {
+                        mxnet::ShapeVector* in_shape,
+                        mxnet::ShapeVector* out_shape) {
   using namespace mshadow;
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
   CHECK_EQ(param.num_group, 1U) << "quantized_conv only supports num_group=1 for now";
@@ -45,7 +45,7 @@ bool QuantizedConvShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(param.kernel.ndim(), 2U) << "quantized_conv only supports 2D convolution for now";
   CHECK(param.dilate.ndim() == 0U || param.dilate.Size() == 1U)
     << "quantized_conv only supports dilation=1 for all dimensions";
-  const TShape& dshape =  in_shape->at(0);
+  const mxnet::TShape& dshape =  in_shape->at(0);
   CHECK_EQ(dshape.ndim(), 4U);
   if (dshape.ndim() == 0U) return false;
 
@@ -55,7 +55,7 @@ bool QuantizedConvShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(param.num_filter % 4, 0U)
     << "for 8bit cudnn conv, the number of channel must be multiple of 4";
 
-  TShape wshape{0, 0, 0, 0};
+  mxnet::TShape wshape{0, 0, 0, 0};
   wshape[N] = param.num_filter;
   wshape[H] = param.kernel[0];
   wshape[W] = param.kernel[1];
@@ -64,22 +64,22 @@ bool QuantizedConvShape(const nnvm::NodeAttrs& attrs,
   const int start = param.no_bias? 2 : 3;
   const int end = param.no_bias? 6 : 9;
   for (int i = start; i < end; ++i) {
-    SHAPE_ASSIGN_CHECK(*in_shape, i, TShape{1});
+    SHAPE_ASSIGN_CHECK(*in_shape, i, mxnet::TShape{1});
   }
   if (!param.no_bias) {
     SHAPE_ASSIGN_CHECK(*in_shape, 2, Shape1(param.num_filter));
   }
 
   auto AddPad = [](index_t dsize, index_t pad) { return dsize + 2 * pad; };
-  TShape oshape{1, 1, 1, 1};
+  mxnet::TShape oshape{1, 1, 1, 1};
   oshape[N] = dshape[N];
   oshape[C] = wshape[N];
   oshape[H] = (AddPad(dshape[H], param.pad[0]) - wshape[H]) / param.stride[0] + 1;
   oshape[W] = (AddPad(dshape[W], param.pad[1]) - wshape[W]) / param.stride[1] + 1;
 
   SHAPE_ASSIGN_CHECK(*out_shape, 0, oshape);
-  SHAPE_ASSIGN_CHECK(*out_shape, 1, TShape({1}));
-  SHAPE_ASSIGN_CHECK(*out_shape, 2, TShape({1}));
+  SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape(1, 1));
+  SHAPE_ASSIGN_CHECK(*out_shape, 2, mxnet::TShape(1, 1));
   return true;
 }
 
@@ -157,9 +157,12 @@ and max thresholds representing the threholds for quantizing the float32 output 
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"output", "min_output", "max_output"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", QuantizedConvShape)
+.set_attr<mxnet::FInferShape>("FInferShape", QuantizedConvShape)
 .set_attr<nnvm::FInferType>("FInferType", QuantizedConvType)
 .set_attr<FInferStorageType>("FInferStorageType", QuantizedConvStorageType)
+// TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,
+// will be reverted after the improvement of CachedOP is done.
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);

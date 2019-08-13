@@ -208,14 +208,14 @@ inline uint32_t CTCLossOpNumInputs(const NodeAttrs& attrs) {
 }
 
 inline bool CTCLossOpShape(const nnvm::NodeAttrs &attrs,
-                           std::vector<TShape>* in_attrs,
-                           std::vector<TShape>* out_attrs) {
+                           mxnet::ShapeVector* in_attrs,
+                           mxnet::ShapeVector* out_attrs) {
     const CTCLossOpParam& param = nnvm::get<CTCLossOpParam>(attrs.parsed);
     CHECK_EQ(in_attrs->size(), CTCLossOpNumInputs(attrs));
     CHECK_EQ(out_attrs->size(), 2U);
 
-    const TShape &dshape = (*in_attrs)[ctc_loss::kData];
-    const TShape &lshape = (*in_attrs)[ctc_loss::kLabel];
+    const mxnet::TShape &dshape = (*in_attrs)[ctc_loss::kData];
+    const mxnet::TShape &lshape = (*in_attrs)[ctc_loss::kLabel];
     CHECK_EQ(dshape.ndim(), 3U) << "The number of dimensions of data array must be 3.";
     CHECK_EQ(lshape.ndim(), 2U) << "The number of dimensions of labels array must be 2.";
     CHECK_EQ(dshape[1], lshape[0])
@@ -223,14 +223,14 @@ inline bool CTCLossOpShape(const nnvm::NodeAttrs &attrs,
 
     if (param.use_data_lengths) {
       int kInputLength = 2;
-      const TShape &dlshape = (*in_attrs)[kInputLength];
+      const mxnet::TShape &dlshape = (*in_attrs)[kInputLength];
       CHECK_EQ(dlshape.ndim(), 1U) << "Data length array must be a vector.";
       CHECK_EQ(dlshape[0], dshape[1])
           << "The batch size for the data and data lengths must be the same.";
     }
     if (param.use_label_lengths) {
       int kLabelLength = 2 + param.use_data_lengths;
-      const TShape &llshape = (*in_attrs)[kLabelLength];
+      const mxnet::TShape &llshape = (*in_attrs)[kLabelLength];
       CHECK_EQ(llshape.ndim(), 1U) << "Label length array must be a vector.";
       CHECK_EQ(llshape[0], lshape[0])
           << "The batch size for the labels and label lengths must be the same.";
@@ -239,7 +239,7 @@ inline bool CTCLossOpShape(const nnvm::NodeAttrs &attrs,
                                       "the maximum sequence length of the "
                                       "data.";
 
-    TShape oshape(1);
+    mxnet::TShape oshape(1, -1);
     oshape[0] = dshape[1];  // batch size
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);  // forward output
     SHAPE_ASSIGN_CHECK(*out_attrs, 1, dshape);  // grad output

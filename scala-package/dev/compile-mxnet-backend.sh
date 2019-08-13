@@ -33,7 +33,7 @@ MXNETDIR=$2
 
 # below routine shamelessly copied from
 # https://github.com/apache/incubator-mxnet/blob/master/setup-utils/install-mxnet-osx-python.sh
-# This routine executes a command, 
+# This routine executes a command,
 # prints error message on the console on non-zero exit codes and
 # returns the exit code to the caller.
 chkret() {
@@ -51,7 +51,10 @@ chkret() {
 
 UNAME=`uname -s`
 chkret pushd $MXNETDIR
-chkret git submodule update --init --recursive
+
+set +e
+git submodule update --init --recursive
+set -e
 
 # don't want to overwrite an existing config file
 cp make/config.mk ./config.mk

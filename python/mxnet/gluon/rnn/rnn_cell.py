@@ -102,6 +102,26 @@ def _mask_sequence_variable_length(F, data, length, valid_length, time_axis, mer
                                    squeeze_axis=True))
     return outputs
 
+def _reverse_sequences(sequences, unroll_step, valid_length=None):
+    if isinstance(sequences[0], symbol.Symbol):
+        F = symbol
+    else:
+        F = ndarray
+
+    if valid_length is None:
+        reversed_sequences = list(reversed(sequences))
+    else:
+        reversed_sequences = F.SequenceReverse(F.stack(*sequences, axis=0),
+                                               sequence_length=valid_length,
+                                               use_sequence_length=True)
+        if unroll_step > 1 or F is symbol:
+            reversed_sequences = F.split(reversed_sequences, axis=0, num_outputs=unroll_step, squeeze_axis=True)
+        else:
+            reversed_sequences = [reversed_sequences[0]]
+
+    return reversed_sequences
+
+
 class RecurrentCell(Block):
     """Abstract base class for RNN cells
 
@@ -522,11 +542,11 @@ class LSTMCell(HybridRecurrentCell):
             F, slice_gates[2], self._activation, name=prefix+'c')
         out_gate = self._get_activation(
             F, slice_gates[3], self._recurrent_activation, name=prefix+'o')
-        next_c = F._internal._plus(F.elemwise_mul(forget_gate, states[1], name=prefix+'mul0'),
-                                   F.elemwise_mul(in_gate, in_transform, name=prefix+'mul1'),
-                                   name=prefix+'state')
-        next_h = F._internal._mul(out_gate, F.Activation(next_c, act_type=self._activation, name=prefix+'activation0'),
-                                  name=prefix+'out')
+        next_c = F.elemwise_add(F.elemwise_mul(forget_gate, states[1], name=prefix+'mul0'),
+                                F.elemwise_mul(in_gate, in_transform, name=prefix+'mul1'),
+                                name=prefix+'state')
+        next_h = F.elemwise_mul(out_gate, F.Activation(next_c, act_type=self._activation, name=prefix+'activation0'),
+                                name=prefix+'out')
 
         return next_h, [next_h, next_c]
 
@@ -650,11 +670,11 @@ class GRUCell(HybridRecurrentCell):
                                   name=prefix+'h_act')
 
         ones = F.ones_like(update_gate, name=prefix+"ones_like0")
-        next_h = F._internal._plus(F.elemwise_mul(F.elemwise_sub(ones, update_gate, name=prefix+'minus0'),
-                                                  next_h_tmp,
-                                                  name=prefix+'mul1'),
-                                   F.elemwise_mul(update_gate, prev_state_h, name=prefix+'mul20'),
-                                   name=prefix+'out')
+        next_h = F.elemwise_add(F.elemwise_mul(F.elemwise_sub(ones, update_gate, name=prefix+'minus0'),
+                                               next_h_tmp,
+                                               name=prefix+'mul1'),
+                                F.elemwise_mul(update_gate, prev_state_h, name=prefix+'mul20'),
+                                name=prefix+'out')
 
         return next_h, [next_h]
 
@@ -1035,14 +1055,7 @@ class BidirectionalCell(HybridRecurrentCell):
         self.reset()
 
         inputs, axis, F, batch_size = _format_sequence(length, inputs, layout, False)
-        if valid_length is None:
-            reversed_inputs = list(reversed(inputs))
-        else:
-            reversed_inputs = F.SequenceReverse(F.stack(*inputs, axis=0),
-                                                sequence_length=valid_length,
-                                                use_sequence_length=True)
-            reversed_inputs = _as_list(F.split(reversed_inputs, axis=0, num_outputs=length,
-                                               squeeze_axis=True))
+        reversed_inputs = list(_reverse_sequences(inputs, length, valid_length))
         begin_state = _get_begin_state(self, F, begin_state, inputs, batch_size)
 
         states = begin_state
@@ -1056,15 +1069,8 @@ class BidirectionalCell(HybridRecurrentCell):
                                             begin_state=states[len(l_cell.state_info(batch_size)):],
                                             layout=layout, merge_outputs=False,
                                             valid_length=valid_length)
-        if valid_length is None:
-            reversed_r_outputs = list(reversed(r_outputs))
-        else:
-            reversed_r_outputs = F.SequenceReverse(F.stack(*r_outputs, axis=0),
-                                                   sequence_length=valid_length,
-                                                   use_sequence_length=True,
-                                                   axis=0)
-            reversed_r_outputs = _as_list(F.split(reversed_r_outputs, axis=0, num_outputs=length,
-                                                  squeeze_axis=True))
+        reversed_r_outputs = _reverse_sequences(r_outputs, length, valid_length)
+
         if merge_outputs is None:
             merge_outputs = isinstance(l_outputs, tensor_types)
             l_outputs, _, _, _ = _format_sequence(None, l_outputs, layout, merge_outputs)

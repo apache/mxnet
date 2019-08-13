@@ -27,9 +27,9 @@ OS=""
 
 if [ "$(uname)" == "Darwin" ]; then
 	# Do something under Mac OS X platform
-  OS='osx-x86_64-cpu'
+  OS='osx-x86_64'
 elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
-  OS='linux-x86_64-cpu'
+  OS='linux-x86_64'
 fi
 
 LIB_DIR=${SPARK_MODULE_DIR}/target/classes/lib

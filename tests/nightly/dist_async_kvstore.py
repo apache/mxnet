@@ -27,21 +27,25 @@ my_rank = kv.rank
 nworker = kv.num_workers
 
 def test_gluon_trainer_type():
-    def check_trainer_kv_update(update_on_kv):
+    def check_trainer_kv_update(weight_stype, update_on_kv):
         params = mx.gluon.ParameterDict()
-        x = params.get('x', shape=(10,1), lr_mult=1.0)
+        x = params.get('x', shape=(10,1), lr_mult=1.0, stype=weight_stype)
         params.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
         try:
-            trainer = mx.gluon.Trainer(params, 'sgd', {'learning_rate': 0.1}, kvstore=kv, update_on_kvstore=update_on_kv)
+            trainer = mx.gluon.Trainer(params, 'sgd', {'learning_rate': 0.1},
+                                       kvstore=kv, update_on_kvstore=update_on_kv)
             trainer._init_kvstore()
             assert trainer._kv_initialized
             assert trainer._update_on_kvstore is True
         except ValueError:
             assert update_on_kv is False
 
-    check_trainer_kv_update(False)
-    check_trainer_kv_update(True)
-    check_trainer_kv_update(None)
+    check_trainer_kv_update('default', False)
+    check_trainer_kv_update('default', True)
+    check_trainer_kv_update('default', None)
+    check_trainer_kv_update('row_sparse', False)
+    check_trainer_kv_update('row_sparse', True)
+    check_trainer_kv_update('row_sparse', None)
     print('worker ' + str(my_rank) + ' passed test_gluon_trainer_type')
 
 if __name__ == "__main__":

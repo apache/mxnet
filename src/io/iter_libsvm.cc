@@ -36,11 +36,11 @@ struct LibSVMIterParam : public dmlc::Parameter<LibSVMIterParam> {
   /*! \brief path to data libsvm file */
   std::string data_libsvm;
   /*! \brief data shape */
-  TShape data_shape;
+  mxnet::TShape data_shape;
   /*! \brief path to label libsvm file */
   std::string label_libsvm;
   /*! \brief label shape */
-  TShape label_shape;
+  mxnet::TShape label_shape;
   /*! \brief partition the data into multiple parts */
   int num_parts;
   /*! \brief the index of the part will read*/
@@ -55,7 +55,7 @@ struct LibSVMIterParam : public dmlc::Parameter<LibSVMIterParam> {
         .describe("The input LibSVM label file or a directory path. "
                   "If NULL, all labels will be read from ``data_libsvm``.");
     index_t shape1[] = {1};
-    DMLC_DECLARE_FIELD(label_shape).set_default(TShape(shape1, shape1 + 1))
+    DMLC_DECLARE_FIELD(label_shape).set_default(mxnet::TShape(shape1, shape1 + 1))
         .describe("The shape of one label.");
     DMLC_DECLARE_FIELD(num_parts).set_default(1)
         .describe("partition the data into multiple parts");
@@ -153,7 +153,7 @@ class LibSVMIter: public SparseIIterator<DataInst> {
     return param_.label_shape.Size() > 1 ? kCSRStorage : kDefaultStorage;
   }
 
-  virtual const TShape GetShape(bool is_data) const {
+  virtual const mxnet::TShape GetShape(bool is_data) const {
     if (is_data) return param_.data_shape;
     return param_.label_shape;
   }
@@ -161,13 +161,13 @@ class LibSVMIter: public SparseIIterator<DataInst> {
  private:
   inline TBlob AsDataBlob(const dmlc::Row<uint64_t>& row) {
     const real_t* ptr = row.value;
-    TShape shape(mshadow::Shape1(row.length));
+    mxnet::TShape shape(mshadow::Shape1(row.length));
     return TBlob((real_t*) ptr, shape, cpu::kDevMask);  // NOLINT(*)
   }
 
   inline TBlob AsIdxBlob(const dmlc::Row<uint64_t>& row) {
     const uint64_t* ptr = row.index;
-    TShape shape(mshadow::Shape1(row.length));
+    mxnet::TShape shape(mshadow::Shape1(row.length));
     return TBlob((int64_t*) ptr, shape, cpu::kDevMask, mshadow::kInt64);  // NOLINT(*)
   }
 

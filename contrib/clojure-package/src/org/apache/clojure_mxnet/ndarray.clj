@@ -16,15 +16,18 @@
 ;;
 
 (ns org.apache.clojure-mxnet.ndarray
+  "NDArray API for Clojure package."
   (:refer-clojure :exclude [* - + > >= < <= / cast concat flatten identity load max
                             min repeat reverse set sort take to-array empty shuffle
                             ref])
-  (:require [org.apache.clojure-mxnet.base :as base]
-            [org.apache.clojure-mxnet.context :as mx-context]
-            [org.apache.clojure-mxnet.shape :as mx-shape]
-            [org.apache.clojure-mxnet.util :as util]
-            [clojure.reflect :as r]
-            [t6.from-scala.core :refer [$] :as $])
+  (:require
+    [clojure.spec.alpha :as s]
+
+    [org.apache.clojure-mxnet.base :as base]
+    [org.apache.clojure-mxnet.context :as mx-context]
+    [org.apache.clojure-mxnet.shape :as mx-shape]
+    [org.apache.clojure-mxnet.util :as util]
+    [t6.from-scala.core :refer [$] :as $])
   (:import (org.apache.mxnet NDArray)))
 
 ;; loads the generated functions into the namespace
@@ -90,6 +93,27 @@
    (NDArray/arange (float start) ($/option (float stop)) step repeat ctx dtype))
   ([start stop]
    (arange start stop {})))
+
+(defn ->ndarray
+  "Creates a new NDArray based on the given n-dimenstional vector
+   of numbers.
+    `nd-vec`: n-dimensional vector with numbers.
+    `opts-map` {
+       `ctx`: Context of the output ndarray, will use default context if unspecified.
+    }
+    returns: `ndarray` with the given values and matching the shape of the input vector.
+   Ex:
+    (->ndarray [5.0 -4.0])
+    (->ndarray [5 -4] {:ctx (context/cpu)})
+    (->ndarray [[1 2 3] [4 5 6]])
+    (->ndarray [[[1.0] [2.0]]]"
+  ([nd-vec {:keys [ctx]
+            :or {ctx (mx-context/default-context)}
+            :as opts}]
+   (array (vec (clojure.core/flatten nd-vec))
+          (util/nd-seq-shape nd-vec)
+          {:ctx ctx}))
+  ([nd-vec] (->ndarray nd-vec {})))
 
 (defn slice
   "Return a sliced NDArray that shares memory with current one."
@@ -167,3 +191,46 @@
 
 (defn shape-vec [ndarray]
   (mx-shape/->vec (shape ndarray)))
+
+(s/def ::ndarray #(instance? NDArray %))
+(s/def ::vector vector?)
+(s/def ::sequential sequential?)
+(s/def ::shape-vec-match-vec
+  (fn [[v vec-shape]] (= (count v) (reduce clojure.core/* 1 vec-shape))))
+
+(s/fdef vec->nd-vec
+        :args (s/cat :v ::sequential :shape-vec ::sequential)
+        :ret ::vector)
+
+(defn- vec->nd-vec
+  "Convert a vector `v` into a n-dimensional vector given the `shape-vec`
+   Ex:
+    (vec->nd-vec [1 2 3] [1 1 3])       ;[[[1 2 3]]]
+    (vec->nd-vec [1 2 3 4 5 6] [2 3 1]) ;[[[1] [2] [3]] [[4] [5] [6]]]
+    (vec->nd-vec [1 2 3 4 5 6] [1 2 3]) ;[[[1 2 3]] [4 5 6]]]
+    (vec->nd-vec [1 2 3 4 5 6] [3 1 2]) ;[[[1 2]] [[3 4]] [[5 6]]]
+    (vec->nd-vec [1 2 3 4 5 6] [3 2])   ;[[1 2] [3 4] [5 6]]"
+  [v [s1 & ss :as shape-vec]]
+  (util/validate! ::sequential v "Invalid input vector `v`")
+  (util/validate! ::sequential shape-vec "Invalid input vector `shape-vec`")
+  (util/validate! ::shape-vec-match-vec
+                  [v shape-vec]
+                  "Mismatch between vector `v` and vector `shape-vec`")
+  (if-not (seq ss)
+    (vec v)
+    (->> v
+         (partition (clojure.core// (count v) s1))
+         vec
+         (mapv #(vec->nd-vec % ss)))))
+
+(s/fdef ->nd-vec :args (s/cat :ndarray ::ndarray) :ret ::vector)
+
+(defn ->nd-vec
+  "Convert an ndarray `ndarray` into a n-dimensional Clojure vector.
+  Ex:
+    (->nd-vec (array [1] [1 1 1]))           ;[[[1.0]]]
+    (->nd-vec (array [1 2 3] [3 1 1]))       ;[[[1.0]] [[2.0]] [[3.0]]]
+    (->nd-vec (array [1 2 3 4 5 6]) [3 1 2]) ;[[[1.0 2.0]] [[3.0 4.0]] [[5.0 6.0]]]"
+  [ndarray]
+  (util/validate! ::ndarray ndarray "Invalid input array")
+  (vec->nd-vec (->vec ndarray) (shape-vec ndarray)))

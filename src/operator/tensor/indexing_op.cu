@@ -170,8 +170,8 @@ void EmbeddingOpForwardDnsImpl<gpu>(mshadow::Stream<gpu>* s,
                                     const OpReqType req,
                                     const TBlob& output) {
   using namespace mxnet_op;
-  const TShape& ishape = data.shape_;
-  const TShape& oshape = output.shape_;
+  const mxnet::TShape& ishape = data.shape_;
+  const mxnet::TShape& oshape = output.shape_;
 
   MSHADOW_TYPE_SWITCH(output.type_flag_, DType, {
     MSHADOW_TYPE_SWITCH(data.type_flag_, IType, {
@@ -439,22 +439,22 @@ inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const bool deterministic,
 
 struct backward_gather_nd_gpu {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, int N, int M, int K,
+  MSHADOW_XINLINE static void Map(index_t i, index_t N, index_t M, index_t K,
                                   const mshadow::Shape<10> strides,
                                   DType* out, const DType* data,
                                   const IType* indices) {
-    int offset = 0;
-    for (int j = 0; j < M; ++j) {
+    index_t offset = 0;
+    for (index_t j = 0; j < M; ++j) {
       offset += strides[j] * static_cast<int>(indices[j*N + i]);
     }
-    for (int j = 0; j < K; ++j) {
+    for (index_t j = 0; j < K; ++j) {
       atomicAdd(out + (offset + j), data[i * K + j]);
     }
   }
 };
 
 template<typename DType, typename IType>
-inline void GatherNDBackwardImpl(int N, int M, int K,
+inline void GatherNDBackwardImpl(index_t N, index_t M, index_t K,
                                  const mshadow::Shape<10> strides,
                                  DType* out,
                                  const DType* data,
@@ -475,9 +475,9 @@ void TakeOpForward<gpu>(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
 
-  const TShape& idxshape = inputs[take_::kIdx].shape_;
-  const TShape& arrshape = inputs[take_::kArr].shape_;
-  const TShape& oshape = outputs[take_::kOut].shape_;
+  const mxnet::TShape& idxshape = inputs[take_::kIdx].shape_;
+  const mxnet::TShape& arrshape = inputs[take_::kArr].shape_;
+  const mxnet::TShape& oshape = outputs[take_::kOut].shape_;
 
   Stream<gpu> *s = ctx.get_stream<gpu>();
   const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);

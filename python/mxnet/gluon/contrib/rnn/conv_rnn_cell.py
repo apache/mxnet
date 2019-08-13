@@ -462,10 +462,10 @@ class _ConvLSTMCell(_BaseConvRNNCell):
         forget_gate = F.Activation(slice_gates[1], act_type="sigmoid", name=prefix+'f')
         in_transform = self._get_activation(F, slice_gates[2], self._activation, name=prefix+'c')
         out_gate = F.Activation(slice_gates[3], act_type="sigmoid", name=prefix+'o')
-        next_c = F._internal._plus(forget_gate * states[1], in_gate * in_transform,
-                                   name=prefix+'state')
-        next_h = F._internal._mul(out_gate, self._get_activation(F, next_c, self._activation),
-                                  name=prefix+'out')
+        next_c = F.elemwise_add(forget_gate * states[1], in_gate * in_transform,
+                                name=prefix+'state')
+        next_h = F.elemwise_mul(out_gate, self._get_activation(F, next_c, self._activation),
+                                name=prefix+'out')
 
         return next_h, [next_h, next_c]
 
@@ -753,8 +753,8 @@ class _ConvGRUCell(_BaseConvRNNCell):
         next_h_tmp = self._get_activation(F, i2h + reset_gate * h2h, self._activation,
                                           name=prefix+'h_act')
 
-        next_h = F._internal._plus((1. - update_gate) * next_h_tmp, update_gate * states[0],
-                                   name=prefix+'out')
+        next_h = F.elemwise_add((1. - update_gate) * next_h_tmp, update_gate * states[0],
+                                name=prefix+'out')
 
         return next_h, [next_h]
 

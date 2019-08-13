@@ -18,7 +18,6 @@
 import os
 import contextlib
 import logging
-import requests
 
 def get_mxnet_root() -> str:
     curpath = os.path.abspath(os.path.dirname(__file__))
@@ -89,6 +88,7 @@ def under_ci() -> bool:
 
 
 def ec2_instance_id_hostname() -> str:
+    import requests
     if under_ci():
         result = []
         try:

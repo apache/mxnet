@@ -38,10 +38,7 @@
 
 * Following material from `mx` module got exported (#TBD):
     * `NDArray`
-        * `clip()`
-        * `clip!()`
         * `context()`
-        * `empty()`
         * `expand_dims()`
         * `@inplace`
         * `σ()`
@@ -147,6 +144,16 @@
    1.0
    2.0
    3.0
+  ```
+
+* `mx.empty` is deprecated and replaced by `UndefInitializer` constructor. (#TBD)
+
+  E.g.
+  ```julia
+  julia> NDArray(undef, 2, 5)
+  2×5 NDArray{Float32,2} @ CPU0:
+   -21260.344f0     1.674986f19    0.00016893122f0  1.8363f-41  0.0f0
+        3.0763f-41  1.14321726f27  4.24219f-8       0.0f0       0.0f0
   ```
 
 * A port of Python's `autograd` for `NDArray` (#274)
@@ -383,11 +390,12 @@
    99.9889  100.533  100.072
   ```
 
-* Signature of `clip` changed, it doesn't require any keyword argument now.
+* Signature of `clip` changed and renamed to `clamp`.
+  It doesn't require any keyword argument now.
   (#TBD)
 
   Before: `clip(x, a_min = -4, a_max = 4)`
-  After: `clip(x, -4, 4)`
+  After: `clamp(x, -4, 4)`
 
 ### Optimizer
 

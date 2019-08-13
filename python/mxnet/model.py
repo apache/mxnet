@@ -62,6 +62,11 @@ def _create_sparse_kvstore(kvstore):
     ----------
     kvstore : KVStore or str
         The kvstore.
+
+    Returns
+    -------
+    kvstore : KVStore
+    update_on_kvstore : bool. Always True.
     """
     # always update on kvstore
     update_on_kvstore = True
@@ -87,14 +92,14 @@ def _create_kvstore(kvstore, num_device, arg_params):
     arg_params : dict of str to `NDArray`.
         Model parameter, dict of name to `NDArray` of net's weights.
     """
-    update_on_kvstore = True
+    update_on_kvstore = bool(int(os.getenv('MXNET_UPDATE_ON_KVSTORE', "1")))
     if kvstore is None:
         kv = None
     elif isinstance(kvstore, kvs.KVStore):
         kv = kvstore
     elif isinstance(kvstore, str):
         # create kvstore using the string type
-        if num_device is 1 and 'dist' not in kvstore:
+        if num_device == 1 and 'dist' not in kvstore:
             # no need to use kv for single device and single machine
             kv = None
         else:
@@ -157,6 +162,7 @@ def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
 def _update_params(param_arrays, grad_arrays, updater, num_device,
                    kvstore=None, param_names=None):
     """Perform update of param_arrays from grad_arrays not on kvstore."""
+    updates = [[] for _ in range(num_device)]
     for i, pair in enumerate(zip(param_arrays, grad_arrays)):
         arg_list, grad_list = pair
         if grad_list[0] is None:
@@ -173,7 +179,12 @@ def _update_params(param_arrays, grad_arrays, updater, num_device,
             # state for the same index but on diff devs, TODO(mli)
             # use a better solution later
             w, g = p
-            updater(index*num_device+k, g, w)
+            updates[k].append((index*num_device+k, g, w))
+    for dev_updates in updates:
+        # update params if param_arrays and grad_arrays are not empty
+        if dev_updates:
+            i, w, g = zip(*dev_updates)
+            updater(i, w, g)
 
 
 def _multiple_callbacks(callbacks, *args, **kwargs):
@@ -380,7 +391,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
     # end of all epochs
 
 
-def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params):
+def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params, remove_amp_cast=True):
     """Checkpoint the model data into file.
 
     Parameters
@@ -395,13 +406,15 @@ def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params):
         Model parameter, dict of name to NDArray of net's weights.
     aux_params : dict of str to NDArray
         Model parameter, dict of name to NDArray of net's auxiliary states.
+    remove_amp_cast : bool, optional
+        Whether to remove the amp_cast and amp_multicast operators, before saving the model.
     Notes
     -----
     - ``prefix-symbol.json`` will be saved for symbol.
     - ``prefix-epoch.params`` will be saved for parameters.
     """
     if symbol is not None:
-        symbol.save('%s-symbol.json' % prefix)
+        symbol.save('%s-symbol.json' % prefix, remove_amp_cast=remove_amp_cast)
 
     save_dict = {('arg:%s' % k) : v.as_in_context(cpu()) for k, v in arg_params.items()}
     save_dict.update({('aux:%s' % k) : v.as_in_context(cpu()) for k, v in aux_params.items()})
@@ -629,7 +642,7 @@ class FeedForward(BASE_ESTIMATOR):
         """Initialize the iterator given input."""
         if isinstance(X, (np.ndarray, nd.NDArray)):
             if y is None:
-                if is_train:
+                if is_train: # pylint: disable=no-else-raise
                     raise ValueError('y must be specified when X is numpy.ndarray')
                 else:
                     y = np.zeros(X.shape[0])
@@ -894,7 +907,7 @@ class FeedForward(BASE_ESTIMATOR):
                             sym_gen=self.sym_gen)
 
 
-    def save(self, prefix, epoch=None):
+    def save(self, prefix, epoch=None, remove_amp_cast=True):
         """Checkpoint the model checkpoint into file.
         You can also use `pickle` to do the job if you only work on Python.
         The advantage of `load` and `save` (as compared to `pickle`) is that
@@ -905,6 +918,8 @@ class FeedForward(BASE_ESTIMATOR):
         ----------
         prefix : str
             Prefix of model name.
+        remove_amp_cast : bool, optional
+            Whether to remove the amp_cast and amp_multicast operators, before saving the model.
 
         Notes
         -----
@@ -914,7 +929,7 @@ class FeedForward(BASE_ESTIMATOR):
         if epoch is None:
             epoch = self.num_epoch
         assert epoch is not None
-        save_checkpoint(prefix, epoch, self.symbol, self.arg_params, self.aux_params)
+        save_checkpoint(prefix, epoch, self.symbol, self.arg_params, self.aux_params, remove_amp_cast=remove_amp_cast)
 
     @staticmethod
     def load(prefix, epoch, ctx=None, **kwargs):

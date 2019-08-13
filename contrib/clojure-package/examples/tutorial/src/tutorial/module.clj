@@ -184,7 +184,7 @@
                                      ]))
     (m/save-checkpoint mod {:prefix save-prefix
                             :epoch epoch-num
-                            :save-opt-states true})))
+                            :save-opt-states true}))) 
 
 ;; INFO  org.apache.mxnet.module.Module: Saved checkpoint to my-model-0000.params
 ;; INFO  org.apache.mxnet.module.Module: Saved optimizer state to my-model-0000.states
@@ -247,7 +247,40 @@ new-mod ;=> #object[org.apache.mxnet.module.Module 0x5304d0f4 "org.apache.mxnet.
 
 ;; Create `fit-params` and then use it to set `begin-epoch` so that
 ;; `fit` knows to resume from a saved epoch.
+
+
+(comment 
+;; FIXME
+; Caused by: java.io.EOFException
+;   at java.io.DataInputStream.readInt(DataInputStream.java:392)
+;   at java.io.ObjectInputStream$BlockDataInputStream.readInt(ObjectInputStream.java:3182)
+;   at java.io.ObjectInputStream.readInt(ObjectInputStream.java:1032)
+;   at org.apache.mxnet.Optimizer$$anon$1$$anonfun$deserializeState$1.apply$mcVI$sp(Optimizer.scala:84)
+;   at scala.collection.immutable.Range.foreach$mVc$sp(Range.scala:160)
+;   at org.apache.mxnet.Optimizer$$anon$1.deserializeState(Optimizer.scala:83)
+;   at org.apache.mxnet.module.Module$$anonfun$loadOptimizerStates$3.apply(Module.scala:594)
+;   at org.apache.mxnet.module.Module$$anonfun$loadOptimizerStates$3.apply(Module.scala:589)
+;   at scala.Option.foreach(Option.scala:257)
+;   at org.apache.mxnet.module.Module.loadOptimizerStates(Module.scala:589)
+;   at org.apache.mxnet.module.Module$$anonfun$initOptimizer$4.apply(Module.scala:407)
+;   at org.apache.mxnet.module.Module$$anonfun$initOptimizer$4.apply(Module.scala:406)
+;   at scala.Option.foreach(Option.scala:257)
+;   at org.apache.mxnet.module.Module.initOptimizer(Module.scala:406)
+;   at org.apache.mxnet.module.BaseModule.fit(BaseModule.scala:407)
+;   at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+;   at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+;   at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+;   at java.lang.reflect.Method.invoke(Method.java:498)
+;   at clojure.lang.Reflector.invokeMatchingMethod(Reflector.java:93)
+;   at clojure.lang.Reflector.invokeInstanceMethod(Reflector.java:28)
+;   at org.apache.clojure_mxnet.module$fit.invokeStatic(module.clj:551)
+;   at org.apache.clojure_mxnet.module$fit.invoke(module.clj:538)
+;   at tutorial.module$eval1787.invokeStatic(module.clj:250)
+;   at tutorial.module$eval1787.invoke(module.clj:250)
+
 (m/fit new-mod {:train-data train-data
                 :eval-data test-data
                 :num-epoch 2
                 :fit-params (m/fit-params {:begin-epoch 1})})
+
+)

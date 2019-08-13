@@ -93,7 +93,7 @@ MXNET_DLL int MXCVImdecode(const unsigned char *img, const mx_uint len,
   } else {
     LOG(FATAL) << "Only supports png and jpg.";
   }
-  NDArray ndout(TShape(dims, dims+3), Context::CPU(), true, mshadow::kUint8);
+  NDArray ndout(mxnet::TShape(dims, dims+3), Context::CPU(), true, mshadow::kUint8);
   unsigned char *img_cpy = new unsigned char[len];
   memcpy(img_cpy, img, sizeof(unsigned char)*len);
   Engine::Get()->PushSync([=](RunContext ctx){
@@ -124,7 +124,7 @@ MXNET_DLL int MXCVResize(NDArrayHandle src, const mx_uint w, const mx_uint h,
   CHECK_EQ(ndsrc.dtype(), mshadow::kUint8);
 
   mx_uint dims[3] = {h, w, ndsrc.shape()[2]};
-  NDArray ndout(TShape(dims, dims+3), Context::CPU(), true, mshadow::kUint8);
+  NDArray ndout(mxnet::TShape(dims, dims+3), Context::CPU(), true, mshadow::kUint8);
 
   Engine::Get()->PushSync([=](RunContext ctx){
       ndout.CheckAndAlloc();
@@ -156,7 +156,7 @@ MXNET_DLL int MXCVcopyMakeBorder(NDArrayHandle src,
 
   int h = ndsrc.shape()[0], w = ndsrc.shape()[1], c = ndsrc.shape()[2];
   mx_uint dims[3] = {top+h+bot, left+w+right, c};
-  NDArray ndout(TShape(dims, dims+3), Context::CPU(), true, mshadow::kUint8);
+  NDArray ndout(mxnet::TShape(dims, dims+3), Context::CPU(), true, mshadow::kUint8);
 
   Engine::Get()->PushSync([=](RunContext ctx){
       ndout.CheckAndAlloc();

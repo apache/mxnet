@@ -54,6 +54,9 @@ RUN /work/ubuntu_clang.sh
 COPY install/ubuntu_gcc8.sh /work/
 RUN /work/ubuntu_gcc8.sh
 
+COPY install/ubuntu_mkl.sh /work/
+RUN /work/ubuntu_mkl.sh
+
 COPY install/ubuntu_mklml.sh /work/
 RUN /work/ubuntu_mklml.sh
 
@@ -67,6 +70,7 @@ COPY install/ubuntu_docs.sh /work/
 COPY install/docs_requirements /work/
 RUN /work/ubuntu_docs.sh
 
+# Always last
 ARG USER_ID=0
 ARG GROUP_ID=0
 COPY install/ubuntu_adduser.sh /work/
@@ -75,4 +79,3 @@ RUN /work/ubuntu_adduser.sh
 COPY runtime_functions.sh /work/
 
 WORKDIR /work/mxnet
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib

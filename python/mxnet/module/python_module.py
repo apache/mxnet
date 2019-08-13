@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: disable=too-many-instance-attributes, too-many-arguments
+# pylint: disable=too-many-instance-attributes, too-many-arguments, unnecessary-pass
 """Provide some handy classes for user to implement a simple computation module
 in Python easily.
 """

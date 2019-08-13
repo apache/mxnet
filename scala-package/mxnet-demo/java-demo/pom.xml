@@ -24,17 +24,57 @@
     <version>1.0-SNAPSHOT</version>
     <name>MXNet Java Demo</name>
 
+    <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <mxnet.version>[1.5.0-SNAPSHOT, )</mxnet.version>
+        <mxnet.scalaprofile>2.11</mxnet.scalaprofile>
+    </properties>
+
+    <profiles>
+        <profile>
+            <id>ci-nightly</id>
+            <repositories>
+                <repository>
+                    <id>Apache Snapshot</id>
+                    <url>https://repository.apache.org/content/groups/snapshots</url>
+                </repository>
+            </repositories>
+            <properties>
+                <mxnet.version>[1.5.0-SNAPSHOT, )</mxnet.version>
+            </properties>
+        </profile>
+        <profile>
+          <id>osx-x86_64</id>
+          <activation>
+            <os>
+              <family>mac</family>
+            </os>
+          </activation>
+          <properties>
+            <mxnet.profile>osx-x86_64-cpu</mxnet.profile>
+          </properties>
+        </profile>
+        <profile>
+          <id>linux-x86_64</id>
+          <activation>
+          <os>
+            <family>unix</family>
+            <name>Linux</name>
+          </os>
+          </activation>
+          <properties>
+            <mxnet.profile>linux-x86_64-cpu</mxnet.profile>
+          </properties>
+        </profile>
+        </profiles>
+
     <repositories>
         <repository>
             <id>Apache Snapshot</id>
             <url>https://repository.apache.org/content/groups/snapshots</url>
         </repository>
     </repositories>
-
-    <properties>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-    </properties>
 
     <dependencies>
         <dependency>
@@ -43,10 +83,35 @@
             <version>${mxnet.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.apache.mxnet</groupId>
+            <artifactId>mxnet-full_${mxnet.scalaprofile}-${mxnet.profile}</artifactId>
+            <version>${mxnet.version}</version>
+            <classifier>sources</classifier>
+        </dependency>
+        <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <version>2.4</version>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>2.9</version>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

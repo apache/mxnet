@@ -55,7 +55,7 @@ The storage type of ``quadratic`` output depends on storage types of inputs
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", QuadraticOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", QuadraticOpShape)
 .set_attr<nnvm::FInferType>("FInferType", QuadraticOpType)
 .set_attr<FInferStorageType>("FInferStorageType", QuadraticOpStorageType)
 .set_attr<FCompute>("FCompute<cpu>", QuadraticOpForward<cpu>)

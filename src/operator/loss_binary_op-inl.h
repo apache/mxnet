@@ -35,15 +35,15 @@ namespace op {
 
 // return a shape of scalar
 inline bool SoftmaxCrossEntropyShape(const nnvm::NodeAttrs& attrs,
-                                     std::vector<TShape> *in_attrs,
-                                     std::vector<TShape> *out_attrs) {
+                                     mxnet::ShapeVector *in_attrs,
+                                     mxnet::ShapeVector *out_attrs) {
   CHECK_EQ((*in_attrs)[0].ndim(), 2U)
       << "SoftmaxCrossEntropy only accept 2D data";
   CHECK_EQ((*in_attrs)[1].ndim(), 1U)
       << "SoftmaxCrossEntropy only accept 1D label";
   CHECK_EQ((*in_attrs)[0][0], (*in_attrs)[1][0])
       << "SoftmaxCrossEntropy: data label shape mismatch";
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(1));
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(1, 1));
   return true;
 }
 

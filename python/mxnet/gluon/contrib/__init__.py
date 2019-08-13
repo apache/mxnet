@@ -22,4 +22,6 @@ from . import nn
 
 from . import rnn
 
+from . import cnn
+
 from . import data

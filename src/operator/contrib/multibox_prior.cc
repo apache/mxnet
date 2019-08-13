@@ -44,11 +44,12 @@ inline void MultiBoxPriorForward(const Tensor<cpu, 2, DType> &out,
     float center_y = (r + offsets[0]) * step_y;
     for (int c = 0; c < in_width; ++c) {
       float center_x = (c + offsets[1]) * step_x;
-      // ratio = 1, various sizes
+      // ratio = first ratio, various sizes
+      float ratio = num_ratios > 0? sqrtf(ratios[0]) : 1.f;
       for (int i = 0; i < num_sizes; ++i) {
         float size = sizes[i];
-        float w = size * in_height / in_width / 2;
-        float h = size / 2;
+        float w = size * in_height / in_width * ratio / 2;
+        float h = size / ratio / 2;
         out[count][0] = center_x - w;  // xmin
         out[count][1] = center_y - h;  // ymin
         out[count][2] = center_x + w;  // xmax
@@ -83,9 +84,9 @@ Operator* CreateOp<cpu>(MultiBoxPriorParam param, int dtype) {
   return op;
 }
 
-Operator* MultiBoxPriorProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+Operator* MultiBoxPriorProp::CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                                        std::vector<int> *in_type) const {
-  std::vector<TShape> out_shape, aux_shape;
+  mxnet::ShapeVector out_shape, aux_shape;
   std::vector<int> out_type, aux_type;
   CHECK(InferShape(in_shape, &out_shape, &aux_shape));
   CHECK(InferType(in_type, &out_type, &aux_type));
