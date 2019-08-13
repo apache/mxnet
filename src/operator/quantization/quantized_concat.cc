@@ -28,8 +28,8 @@
 namespace mxnet {
 namespace op {
 
-static bool ConcatShape(const nnvm::NodeAttrs& attrs, mxnet::ShapeVector* in_shape,
-                        mxnet::ShapeVector* out_shape) {
+static bool QuantizedConcatShape(const nnvm::NodeAttrs& attrs, mxnet::ShapeVector* in_shape,
+                                 mxnet::ShapeVector* out_shape) {
   const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args * 3));
   CHECK_EQ(out_shape->size(), 3U);
@@ -74,8 +74,8 @@ static bool ConcatShape(const nnvm::NodeAttrs& attrs, mxnet::ShapeVector* in_sha
   return shape_is_known(dshape);
 }
 
-static bool ConcatType(const nnvm::NodeAttrs& attrs, std::vector<int>* in_type,
-                       std::vector<int>* out_type) {
+static bool QuantizedConcatType(const nnvm::NodeAttrs& attrs, std::vector<int>* in_type,
+                                std::vector<int>* out_type) {
   const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
   CHECK_EQ(in_type->size(), static_cast<size_t>(param_.num_args * 3));
   CHECK_EQ(out_type->size(), 3U);
@@ -130,8 +130,8 @@ If any input holds int8, then the output will be int8. Otherwise output will be 
 // TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,
 // will be reverted after the improvement of CachedOP is done.
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.set_attr<nnvm::FInferType>("FInferType", ConcatType)
-.set_attr<mxnet::FInferShape>("FInferShape", ConcatShape)
+.set_attr<nnvm::FInferType>("FInferType", QuantizedConcatType)
+.set_attr<mxnet::FInferShape>("FInferShape", QuantizedConcatShape)
 .set_attr<std::string>("key_var_num_args", "num_args")
 .add_argument("data", "NDArray-or-Symbol[]", "List of arrays to concatenate")
 .add_arguments(ConcatParam::__FIELDS__());

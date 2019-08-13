@@ -32,6 +32,10 @@ fi
 apt-get update || true
 
 case ${CUDA_VERSION} in
+	10\.1*)
+		export libcudnn7_version="${CUDNN_VERSION}-1+cuda10.1"
+		export libcudnn7_dev_version="${CUDNN_VERSION}-1+cuda10.1"
+		;;
 	10\.0*)
 		export libcudnn7_version="${CUDNN_VERSION}-1+cuda10.0"
 		export libcudnn7_dev_version="${CUDNN_VERSION}-1+cuda10.0"

@@ -132,8 +132,8 @@ class MKLDNNBNForward {
     return *var_m;
   }
 
-  void SetDataHandle(const NDArray &data, const NDArray &mean,
-                     const NDArray &var, const mkldnn::memory &out) {
+  void SetDataHandle(const NDArray &data, const mkldnn::memory *mean,
+                     const mkldnn::memory *var, const mkldnn::memory *out) {
     auto _data = data.GetMKLDNNData();
     if (data_m) {
       data_m->set_data_handle(_data->get_data_handle());
@@ -142,24 +142,22 @@ class MKLDNNBNForward {
                                       _data->get_data_handle()));
     }
     if (out_m) {
-      out_m->set_data_handle(out.get_data_handle());
+      out_m->set_data_handle(out->get_data_handle());
     } else {
-      out_m.reset(new mkldnn::memory(out.get_primitive_desc(),
-                                     out.get_data_handle()));
+      out_m.reset(new mkldnn::memory(out->get_primitive_desc(),
+                                     out->get_data_handle()));
     }
-    auto mean_ptr = mean.data().dptr_;
     if (mean_m) {
-      mean_m->set_data_handle(mean_ptr);
+      mean_m->set_data_handle(mean->get_data_handle());
     } else {
-      mean_m.reset(new mkldnn::memory(pd.mean_primitive_desc(),
-                                      mean_ptr));
+      mean_m.reset(new mkldnn::memory(mean->get_primitive_desc(),
+                                      mean->get_data_handle()));
     }
-    auto var_ptr = var.data().dptr_;
     if (var_m) {
-      var_m->set_data_handle(var_ptr);
+      var_m->set_data_handle(var->get_data_handle());
     } else {
-      var_m.reset(new mkldnn::memory(pd.variance_primitive_desc(),
-                                     var_ptr));
+      var_m.reset(new mkldnn::memory(var->get_primitive_desc(),
+                                     var->get_data_handle()));
     }
 
     if (fwd == nullptr) {
@@ -173,6 +171,11 @@ class MKLDNNBNForward {
                 mkldnn::primitive::at(*weight_m), *out_m,
                 *mean_m, *var_m));
     }
+  }
+
+  void SetDataHandle(const NDArray &data, const NDArray &mean,
+                     const NDArray &var, const mkldnn::memory &out) {
+    SetDataHandle(data, mean.GetMKLDNNData(), var.GetMKLDNNData(), &out);
   }
 
   const mkldnn::batch_normalization_forward &GetFwd() const {
