@@ -948,9 +948,6 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
 
     val upArgs = (0 until shapes.size).map(i => Symbol.Variable(s"arg_$i"))
     val up = Symbol.UpSampling()(upArgs: _*)(Map("sample_type" -> "nearest", "scale" -> rootScale))
-    // scalastyle:off println
-    println("upArgs: \n" + upArgs + "\nrootScale: \n" + rootScale + "\nup: \n" + up + "\n")
-    // scalastyle:on println
     val exe = up.bind(Context.cpu(), args = arr, argsGrad = arrGrad)
     exe.forward(isTrain = true)
     exe.backward(exe.outputs)

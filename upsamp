@@ -1,7 +1,6 @@
 #!/bin/bash                                                                                                                    
 
-make -j2 USE_OPENCV=1 USE_OPENMP=0 DEBUG=1 USE_PROFILER=1 USE_BLAS=apple ADD_LDFLAGS=-I/usr/local/opt/openblas/lib ADD_CFLAGS=\
--I/usr/local/opt/openblas/include
+make -j2 USE_OPENCV=1 USE_OPENMP=0 DEBUG=1 USE_PROFILER=1 USE_BLAS=openblas ADD_LDFLAGS=-L/usr/local/opt/openblas/lib:-L/usr/local/lib/graphviz/ ADD_CFLAGS=-I/usr/local/opt/openblas/include
 cd python
 pip install -e .
 cd ..
