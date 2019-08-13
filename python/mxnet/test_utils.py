@@ -844,7 +844,14 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
     for k, v in location.items():
         stype = executor.arg_dict[k].stype
         if stype == 'default':
-            executor.arg_dict[k][:] = as_stype(v, stype, dtype=dtype)
+            assigned = as_stype(v, stype, dtype=dtype)
+            if executor.arg_dict[k].shape == ():
+                if assigned.shape == ():
+                    executor.arg_dict[k][()] = assigned.asnumpy().item()
+                else:
+                    raise ValueError("Test failed for scalar tensor.")
+            else:
+                executor.arg_dict[k][:] = assigned
     for k in location:
         location[k] = np.asarray(location[k], order='C')
     for k, v in location.items():
@@ -855,7 +862,14 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
         for i in range(int(np.prod(v.shape))):
             # inplace update
             v.ravel()[i] += eps/2.0
-            executor.arg_dict[k][:] = as_stype(v, stype, dtype=dtype)
+            assigned = as_stype(v, stype, dtype=dtype)
+            if executor.arg_dict[k].shape == ():
+                if assigned.shape == ():
+                    executor.arg_dict[k][()] = assigned.asnumpy().item()
+                else:
+                    raise ValueError("Test failed for scalar tensor.")
+            else:
+                executor.arg_dict[k][:] = assigned
             if aux_states is not None:
                 for key, val in aux_states.items():
                     executor.aux_dict[key][:] = val
@@ -863,7 +877,14 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
             f_peps = executor.outputs[0].asnumpy()
 
             v.ravel()[i] -= eps
-            executor.arg_dict[k][:] = as_stype(v, stype, dtype=dtype)
+            assigned = as_stype(v, stype, dtype=dtype)
+            if executor.arg_dict[k].shape == ():
+                if assigned.shape == ():
+                    executor.arg_dict[k][()] = assigned.asnumpy().item()
+                else:
+                    raise ValueError("Test failed for scalar tensor.")
+            else:
+                executor.arg_dict[k][:] = assigned
             if aux_states is not None:
                 for key, val in aux_states.items():
                     adstype = executor.aux_dict[key].stype
@@ -875,7 +896,14 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
             approx_grads[k].ravel()[i] = approx_grad
             v.ravel()[i] = old_value.ravel()[i]
         # copy back the original value
-        executor.arg_dict[k][:] = as_stype(old_value, stype, dtype=dtype)
+        assigned = as_stype(v, stype, dtype=dtype)
+        if executor.arg_dict[k].shape == ():
+            if assigned.shape == ():
+                executor.arg_dict[k][()] = assigned.asnumpy().item()
+            else:
+                raise ValueError("Test failed for scalar tensor.")
+        else:
+            executor.arg_dict[k][:] = assigned
 
     return approx_grads
 

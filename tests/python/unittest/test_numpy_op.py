@@ -2951,6 +2951,55 @@ def test_np_unique():
                     assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5, use_broadcast=False)
 
 
+@with_seed()
+@use_np
+def test_np_kron():
+    class TestKron(HybridBlock):
+        def __init__(self):
+            super(TestKron, self).__init__()
+
+        def hybrid_forward(self, F, a, b):
+            return F.np.kron(a, b)
+
+    # test input
+    tensor_shapes = [
+        ((3,), (3,)),
+        ((2, 3), (3,)),
+        ((2, 3, 4), (2,)),
+        ((3, 2), ())
+    ]
+
+    for hybridize in [True, False]:
+        for a_shape, b_shape in tensor_shapes:
+            for dtype in [_np.float32, _np.float64]:
+                test_kron = TestKron()
+                if hybridize:
+                    test_kron.hybridize()
+                a = rand_ndarray(shape=a_shape, dtype=dtype).as_np_ndarray()
+                b = rand_ndarray(shape=b_shape, dtype=dtype).as_np_ndarray()
+                a.attach_grad()
+                b.attach_grad()
+
+                np_out = _np.kron(a.asnumpy(), b.asnumpy())
+                with mx.autograd.record():
+                    mx_out = test_kron(a, b)
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
+                mx_out.backward()
+
+                # Test imperative once again
+                mx_out = np.kron(a, b)
+                np_out = _np.kron(a.asnumpy(), b.asnumpy())
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
+
+                # test numeric gradient
+                a_sym = mx.sym.Variable("a").as_np_ndarray()
+                b_sym = mx.sym.Variable("b").as_np_ndarray()
+                mx_sym = mx.sym.np.kron(a_sym, b_sym).as_nd_ndarray()
+                check_numeric_gradient(mx_sym, [a.as_nd_ndarray(), b.as_nd_ndarray()],
+                                       rtol=1e-2, atol=1e-2, dtype=dtype)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

@@ -54,7 +54,7 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'add', 'subtrac
            'tensordot', 'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate',
            'stack', 'vstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices',
            'copysign', 'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'arctan2', 'hypot',
-           'rad2deg', 'deg2rad', 'unique', 'ldexp', 'vdot', 'inner', 'outer']
+           'rad2deg', 'deg2rad', 'unique', 'ldexp', 'vdot', 'inner', 'outer', 'kron']
 
 # Return code for dispatching indexing function call
 _NDARRAY_UNSUPPORTED_INDEXING = -1
@@ -4977,3 +4977,48 @@ def vdot(a, b):
     30
     """
     return tensordot(a.flatten(), b.flatten(), 1)
+
+
+@set_module('mxnet.numpy')
+def kron(a, b):
+    r"""
+    Kronecker product of two arrays.
+    Computes the Kronecker product, a composite array made of blocks of the
+    second array scaled by the first.
+
+    Parameters
+    ----------
+    a, b : ndarray
+
+    Returns
+    -------
+    out : ndarray
+
+    See Also
+    --------
+    outer : The outer product
+
+    Notes
+    -----
+    The function assumes that the number of dimensions of `a` and `b`
+    are the same, if necessary prepending the smallest with ones.
+    If `a.shape = (r0,r1,..,rN)` and `b.shape = (s0,s1,...,sN)`,
+    the Kronecker product has shape `(r0*s0, r1*s1, ..., rN*SN)`.
+    The elements are products of elements from `a` and `b`, organized
+    explicitly by::
+        kron(a,b)[k0,k1,...,kN] = a[i0,i1,...,iN] * b[j0,j1,...,jN]
+    where::
+        kt = it * st + jt,  t = 0,...,N
+    In the common 2-D case (N=1), the block structure can be visualized::
+        [[ a[0,0]*b,   a[0,1]*b,  ... , a[0,-1]*b  ],
+        [  ...                              ...   ],
+        [ a[-1,0]*b,  a[-1,1]*b, ... , a[-1,-1]*b ]]
+
+    Examples
+    --------
+    >>> np.kron([1,10,100], [5,6,7])
+    array([  5,   6,   7,  50,  60,  70, 500, 600, 700])
+    >>> np.kron([5,6,7], [1,10,100])
+    array([  5,  50, 500,   6,  60, 600,   7,  70, 700])
+    """
+    return _npi.kron(a, b)
