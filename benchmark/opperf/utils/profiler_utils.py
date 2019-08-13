@@ -218,7 +218,12 @@ def python_profile(func):
     -------
     res, timing output. res being result returned after operator execution.
     profiler output is a dictionary with summary of operation execution.
-    Example output : TODO
+    Example output : { "add": [{"avg_time": 0.4053089120425284,
+                                "inputs": {
+                                    "lhs": [1024, 1024],
+                                    "rhs": [1024,1024]
+                                }]
+                     }
     """
 
     @functools.wraps(func)
