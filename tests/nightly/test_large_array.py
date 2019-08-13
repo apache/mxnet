@@ -291,10 +291,10 @@ def test_unravel_index():
     assert (indices_2d.asnumpy() == np.array(original_2d_indices)).all()
 
 
-def create_2d_tensor(rows, columns):
+def create_2d_tensor(rows, columns, dtype=np.int64):
     a = np.arange(0, rows).reshape(rows, 1)
     b = np.broadcast_to(a, shape=(a.shape[0], columns))
-    return nd.array(b, dtype=np.int64)
+    return nd.array(b, dtype=dtype)
 
 
 def test_transpose():
@@ -349,6 +349,113 @@ def test_topk():
     b = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
     l = nd.topk(b, k=1, axis=-1, dtype=np.int64, ret_typ="value")
     assert l.sum() == np.sum(np.arange(0, SMALL_Y))
+
+
+def test_add():
+    a = nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__add__(a)
+    assert c[0][-1] == 2
+    assert c.shape == a.shape
+
+
+def test_sub():
+    a = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__sub__(a)
+    assert c[0][-1] == -2
+    assert c.shape == a.shape
+
+
+def test_rsub():
+    a = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__rsub__(a)
+    assert c[0][-1] == 2
+    assert c.shape == a.shape
+
+
+def test_neg():
+    a = nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = a
+    c = c.__neg__()
+    assert c[0][-1] == -1
+    assert c.shape == a.shape
+
+
+def test_mul():
+    a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__mul__(a)
+    assert c[0][-1] == 6
+    assert c.shape == a.shape
+
+
+def test_div():
+    a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__div__(a)
+    assert c[0][-1] == 3/2
+    assert c.shape == a.shape
+
+
+def test_rdiv():
+    a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__rdiv__(a)
+    assert c[0][-1] == 2/3
+    assert c.shape == a.shape
+
+
+def test_mod():
+    a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__mod__(a)
+    assert c[0][-1] == 1
+    assert c.shape == a.shape
+
+
+def test_rmod():
+    a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__rmod__(a)
+    assert c[0][-1] == 2
+    assert c.shape == a.shape
+
+
+def test_imod():
+    a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__imod__(a)
+    assert c[0][-1] == 1
+    assert c.shape == a.shape
+
+
+def test_pow():
+    a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__pow__(a)
+    assert c[0][-1] == 9
+    assert c.shape == a.shape
+
+
+def test_rpow():
+    a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__rpow__(a)
+    assert c[0][-1] == 8
+    assert c.shape == a.shape
 
 
 if __name__ == '__main__':
