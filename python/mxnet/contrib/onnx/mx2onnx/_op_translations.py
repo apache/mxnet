@@ -2061,7 +2061,6 @@ def convert_upsample(node, **kwargs):
     scaleh = float(scale[0])
     scalew = float(scale[0])
     if len(scale) > 1:
-        #scaleh = float(scale[0])
         scalew = float(scale[1])
     scale = [1.0, 1.0, scaleh, scalew]
 
