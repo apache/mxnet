@@ -1555,7 +1555,7 @@ def docs_publish() {
             unstash 'full_website'
             sh 'tar -xzf docs/_build/full_website.tgz --directory .'
             // TODO: Make sure this 'test-website-publish' understand the new structure
-            build 'test-website-publish'
+            build 'test-website-publish-master'
           }
         }
       }
