@@ -1519,7 +1519,7 @@ def docs_jekyll() {
 }
 
 
-// Ths is for the full website
+// This is for the full website
 def docs_prepare() {
     return ['Prepare for publication of the full website': {
       node(NODE_LINUX_CPU) {
@@ -1543,6 +1543,20 @@ def docs_prepare() {
       }
     }]
 }
+
+
+def docs_archive() {
+    return ['Archive the full website': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            archiveArtifacts 'docs/_build/full_website.tgz'
+          }
+        }
+      }
+    }]
+}
+
 
 // This is for the full website
 def docs_publish() {
