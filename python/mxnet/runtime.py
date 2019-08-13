@@ -73,8 +73,12 @@ class Features(collections.OrderedDict):
     """
     OrderedDict of name to Feature
     """
-    def __init__(self):
-        super(Features, self).__init__([(f.name, f) for f in feature_list()])
+    instance = None
+    def __new__(cls):
+        if cls.instance is None:
+            cls.instance = super(Features, cls).__new__(cls)
+            super(Features, cls.instance).__init__([(f.name, f) for f in feature_list()])
+        return cls.instance
 
     def __repr__(self):
         return str(list(self.values()))

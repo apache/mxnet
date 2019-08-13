@@ -104,7 +104,7 @@ inline void SetShapeType(const Context& ctx,
   static auto& infershape = nnvm::Op::GetAttr<mxnet::FInferShape>("FInferShape");
   static auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
   static auto& inferstorage = nnvm::Op::GetAttr<FInferStorageType>("FInferStorageType");
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   // infer shape
   mxnet::ShapeVector& in_shapes  = ret->arg_shapes;
   in_shapes.clear();
@@ -884,7 +884,6 @@ inline std::multimap<size_t, NDArray> AllocateMemory(
     }
     CHECK_EQ(stypes[i], kDefaultStorage);
     if (mem_plan[i].root == i) {
-      CHECK_GT(mem_plan[i].size, 0);
       auto iter = pool.lower_bound(mem_plan[i].size);
       if (iter != pool.end()) {
         *arrays[i] = iter->second.AsArray(shapes[i], dtypes[i]);
