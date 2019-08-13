@@ -74,7 +74,6 @@ NNVM_REGISTER_OP(_contrib_tvm_vadd)
   .add_argument("b", "NDArray-or-Symbol", "second input")
   .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
   .set_attr<nnvm::FInferType>("FInferType", mxnet::op::ElemwiseType<2, 1>)
-  .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_np_fmax"})
 #if MXNET_USE_CUDA
   .set_attr<mxnet::FCompute>("FCompute<gpu>", mxnet::op::TVMBinaryForwardCompute<func_vadd_gpu>)
 #endif  // MXNET_USE_CUDA
@@ -92,7 +91,8 @@ NNVM_REGISTER_OP(_np_fmax)
                              mxnet::op::TVMBinaryForwardCompute<fmax_gpu_forward>)
 #endif  // MXNET_USE_CUDA
   .set_attr<mxnet::FCompute>("FCompute<cpu>",
-                             mxnet::op::TVMBinaryForwardCompute<fmax_cpu_forward>);
+                             mxnet::op::TVMBinaryForwardCompute<fmax_cpu_forward>)
+  .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_np_fmax"});
 
 NNVM_REGISTER_OP(_backward_np_fmax)
   .set_num_inputs(3)
