@@ -91,9 +91,9 @@ def fmax_backward(dtype, ndim):
     A = tvm.placeholder([tvm.var() for _ in range(ndim)], name='A', dtype=dtype)
     B = tvm.placeholder([tvm.var() for _ in range(ndim)], name='B', dtype=dtype)
     dA = tvm.compute([tvm.var() for _ in range(ndim)],
-                    lambda *index: tvm.if_then_else(A[index] > B[index], dC[index], 0), name='dA')
+                    lambda *index: tvm.if_then_else(A[index] > B[index], dC[index], tvm.const(0, dtype)), name='dA')
     dB = tvm.compute([tvm.var() for _ in range(ndim)],
-                    lambda *index: tvm.if_then_else(A[index] > B[index], 0, dC[index]), name='dB')
+                    lambda *index: tvm.if_then_else(A[index] > B[index], tvm.const(0, dtype), dC[index]), name='dB')
     s = tvm.create_schedule([dA.op, dB.op])
     return s, dC, A, B, dA, dB
 
@@ -105,7 +105,7 @@ def fmax_backward_cpu(dtype, ndim):
     axes = [axis for axis in dA.op.axis]
     fused = s[dA].fuse(*axes)
     s[dA].parallel(fused)
-    axes = [axis for axis in dA.op.axis]
+    axes = [axis for axis in dB.op.axis]
     fused = s[dB].fuse(*axes)
     s[dB].parallel(fused)
     return s, [dC, A, B, dA, dB]
