@@ -21,11 +21,19 @@ from mxnet.runtime import *
 from mxnet.base import MXNetError
 from nose.tools import *
 
+
 def test_features():
     features = Features()
     print(features)
     ok_('CUDA' in features)
     ok_(len(features) >= 30)
+
+
+def test_is_singleton():
+    x = Features()
+    y = Features()
+    assert x is y
+
 
 def test_is_enabled():
     features = Features()
@@ -34,6 +42,7 @@ def test_is_enabled():
             ok_(features.is_enabled(f))
         else:
             ok_(not features.is_enabled(f))
+
 
 @raises(RuntimeError)
 def test_is_enabled_not_existing():
