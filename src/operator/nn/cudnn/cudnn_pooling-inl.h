@@ -35,6 +35,8 @@ namespace op {
 
 template<typename DType>
 class CuDNNPoolingOp {
+  STATIC_ASSERT_CUDNN_VERSION_GE(7000);
+
  public:
   CuDNNPoolingOp() {
     // TODO(xxx): fp16
@@ -48,12 +50,8 @@ class CuDNNPoolingOp {
     param_ = p;
     switch (param_.pool_type) {
       case pool_enum::kMaxPooling:
-      #if CUDNN_MAJOR >= 7
         mode_ = dmlc::GetEnv("MXNET_ENFORCE_DETERMINISM", false) ?
           CUDNN_POOLING_MAX_DETERMINISTIC : CUDNN_POOLING_MAX;
-      #else
-        mode_ = CUDNN_POOLING_MAX;
-      #endif
         break;
       case pool_enum::kAvgPooling:
         if (param_.count_include_pad.has_value() && !param_.count_include_pad.value()) {
@@ -229,10 +227,6 @@ class CuDNNPoolingOp {
 #endif
     } else if (param.kernel.ndim() == 3) {
       // 3d pooling
-#if CUDNN_MAJOR < 5
-      LogUnsupportedDim(&unsupported_dim_warning_issued, param.kernel.ndim());
-      return false;
-#endif
       if (!(layout == mshadow::kNCDHW || layout == mshadow::kNDHWC))
         return false;
     } else {
@@ -250,9 +244,7 @@ class CuDNNPoolingOp {
       const TBlob &out_data) {
     using namespace mshadow;
     bool is_supported = true;
-    #if CUDNN_MAJOR >= 5
     nan_prop_ = CUDNN_NOT_PROPAGATE_NAN;
-    #endif
     int layout = param_.GetLayout(in_data.ndim());
     if (param_.kernel.ndim() == 2) {
       // 2d pooling
@@ -290,7 +282,6 @@ class CuDNNPoolingOp {
       #if CUDNN_VERSION == 7104
       is_supported = kernel_height <= 8 && kernel_width <= 8;
       #endif
-      #if CUDNN_MAJOR >= 5
       CUDNN_CALL(cudnnSetPooling2dDescriptor(pooling_desc_,
                                              mode_,
                                              nan_prop_,
@@ -300,16 +291,6 @@ class CuDNNPoolingOp {
                                              param_.global_pool ? 0 : param_.pad[1],
                                              param_.global_pool ? 1 : param_.stride[0],
                                              param_.global_pool ? 1 : param_.stride[1]));
-      #else
-      CUDNN_CALL(cudnnSetPooling2dDescriptor(pooling_desc_,
-                                             mode_,
-                                             kernel_height,
-                                             kernel_width,
-                                             param_.global_pool ? 0 : param_.pad[0],
-                                             param_.global_pool ? 0 : param_.pad[1],
-                                             param_.global_pool ? 1 : param_.stride[0],
-                                             param_.global_pool ? 1 : param_.stride[1]));
-      #endif
     } else {
       CHECK(layout == mshadow::kNCDHW ||
             layout == mshadow::kNDHWC) << "Need 3D layout NCDHW or NDHWC.";
@@ -376,7 +357,6 @@ class CuDNNPoolingOp {
                                             static_cast<int>(oshape_ncdhw_int.size()),
                                             &oshape_ncdhw_int[0],
                                             &ostride_ncdhw_int[0]));
-      #if CUDNN_MAJOR >= 5
       CUDNN_CALL(cudnnSetPoolingNdDescriptor(pooling_desc_,
                                              mode_,
                                              nan_prop_,
@@ -384,9 +364,6 @@ class CuDNNPoolingOp {
                                              &(kernel_vec[0]),
                                              &(pad_vec[0]),
                                              &(stride_vec[0])));
-      #else
-      LOG(FATAL) << "3D pooling is only supported by CUDNN v5 and above.";
-      #endif
     }
     return is_supported;
   }
@@ -406,9 +383,7 @@ class CuDNNPoolingOp {
   cudnnTensorDescriptor_t in_desc_;
   cudnnTensorDescriptor_t out_desc_;
   cudnnPoolingDescriptor_t pooling_desc_;
-  #if CUDNN_MAJOR >= 5
   cudnnNanPropagation_t nan_prop_;
-  #endif
   PoolingParam param_;
 };  // class CuDNNPoolingOp
 }  // namespace op
