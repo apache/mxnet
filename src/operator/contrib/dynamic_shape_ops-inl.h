@@ -24,9 +24,10 @@
 #ifndef MXNET_OPERATOR_CONTRIB_DYNAMIC_SHAPE_OPS_INL_H_
 #define MXNET_OPERATOR_CONTRIB_DYNAMIC_SHAPE_OPS_INL_H_
 
+#include <vector>
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
-#include <vector>
+#include "../tensor/matrix_op-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -43,18 +44,20 @@ inline void DynamicReshapeForward(const nnvm::NodeAttrs& attrs,
   const NDArray &idx = inputs[1];
   size_t idx_size = idx.shape()[0];
   mxnet::TShape shapevalue = mxnet::TShape(idx_size, 0);
+  std::vector<int> shapev(idx_size, 0);
   MSHADOW_TYPE_SWITCH(idx.dtype(), DType, {
     DType* idx_dptr = idx.data().dptr<DType>();
     for (size_t i = 0; i < idx_size; i++) {
-      shapevalue[i] = idx_dptr[i];
+      shapev[i] = idx_dptr[i];
     }
   });
+  shapevalue = InferReshapeShape(mxnet::Tuple<int>(shapev), inputs[0].shape(), false);
   const_cast<NDArray &>(out).Init(shapevalue);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
 
   MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
       mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, kWriteTo>, xpu>::Launch(
-          s, inputs[0].data().Size(), outputs[0].data().dptr<DType>(), 
+          s, inputs[0].data().Size(), outputs[0].data().dptr<DType>(),
           inputs[0].data().dptr<DType>());
           });
 }
@@ -67,16 +70,11 @@ inline void DynamicReshapeBackward(const nnvm::NodeAttrs& attrs,
                             const std::vector<NDArray> &outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 2U);
-  const NDArray& ograd = inputs[0];
-  const NDArray& igrad_shape = outputs[1];
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-
-  mxnet::TShape opshape = ograd.shape();
-  const_cast<NDArray &>(igrad_shape).Init(opshape);
 
   MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
       mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, kWriteTo>, xpu>::Launch(
-          s, inputs[0].data().Size(), outputs[0].data().dptr<DType>(), 
+          s, inputs[0].data().Size(), outputs[0].data().dptr<DType>(),
           inputs[0].data().dptr<DType>());
           });
 }

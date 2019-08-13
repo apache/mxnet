@@ -447,7 +447,7 @@ def test_modulated_deformable_convolution():
 
 @with_seed()
 def test_dynamic_reshape():
-    def dynamic_reshape_testcases(src_shape, dst_shape):
+    def dynamic_reshape_testcases(src_shape, shape_arg, dst_shape):
         data = mx.sym.Variable('data')
         shape = mx.sym.Variable('shape')
         net = mx.sym.contrib.dynamic_reshape(data, shape)
@@ -457,7 +457,7 @@ def test_dynamic_reshape():
         grad_npy = np.random.rand(*dst_shape)
         args = {
             'data': mx.nd.array(dat_npy),
-            'shape': mx.nd.array(dst_shape)
+            'shape': mx.nd.array(shape_arg)
             }
         args_grad = {
             'data': mx.nd.empty(src_shape),
@@ -470,11 +470,19 @@ def test_dynamic_reshape():
         assert np.square(exe.grad_dict['data'].asnumpy() - grad_npy.reshape(src_shape)).mean() < 1E-7
 
     test_cases = [
-        [(2, 3, 5, 5), (2, 75)],
-        [(2, 3, 5, 5), (2, 3, 25)],
-        [(64,), (16, 4)],
-        [(64, 1, 2, 3), (16, 4, 1, 2, 3)],
-        [(2, 4, 5, 3),  (30, 2, 2, 1)]]
+        [(2, 3, 5, 5),  (0, -1),           (2, 75)],
+        [(2, 3, 5, 5),  (0, 0, -1),        (2, 3, 25)],
+        [(5, 3, 4, 5),  (0, -1, 0),        (5, 15, 4)],
+        [(2, 3, 5, 4),  (-1, 0, 0),        (8, 3, 5)],
+        [(2, 3, 5, 5),  (0, 0, 0, 0),      (2, 3, 5, 5)],
+        [(2, 4, 5, 3),  (-1, 2, 2, 1),     (30, 2, 2, 1)],
+        [(2, 3, 5, 6),  (-2,),             (2, 3, 5, 6)],
+        [(2, 3, 5, 6),  (6, 1, -2),        (6, 1, 5, 6)],
+        [(2, 3, 5, 6),  (-3, -3),          (6, 30)],
+        [(2, 3, 5, 6),  (-3, -1),          (6, 30)],
+        [(64,),         (-4, 16, 4),       (16, 4)],
+        [(64,),         (-4, 16, -1),      (16, 4)],
+        [(64, 1, 2, 3), (-4, 16, -1, -2),  (16, 4, 1, 2, 3)]]
 
     for test_case in test_cases:
         dynamic_reshape_testcases(*test_case)
