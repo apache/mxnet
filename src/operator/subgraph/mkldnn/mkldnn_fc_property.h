@@ -102,11 +102,9 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
             return true;
           }
         }
-
-        if ((new_node.op() == Op::Get("square") ||
-            new_node.op() == Op::Get("square_root") ||
-            new_node.op() == Op::Get("exp")) &&
-            !quantized_) {
+        if (!quantized_ && (new_node.op() == Op::Get("square") ||
+            new_node.op() == Op::Get("sqrt") ||
+            new_node.op() == Op::Get("exp"))) {
           matched_list_.push_back(&new_node);
           status_ = kSuccess;
           return true;
@@ -160,7 +158,6 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
 class SgMKLDNNFCProperty : public SubgraphProperty {
  public:
   SgMKLDNNFCProperty() {
-    quantized_ = HasAttr("quantize") ? GetAttr<bool>("quantize") : false;
     disable_fc_eltwise_ = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_FC_ELTWISE", false);
   }
 
@@ -183,7 +180,7 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
     nnvm::Symbol new_sym;
     new_sym.outputs.emplace_back(last_node);
     std::ostringstream node_name;
-    node_name << (quantized_ ? "sg_quantized_mkldnn_" : "sg_mkldnn_");
+    node_name << "sg_mkldnn_";
     DFSVisit(new_sym.outputs, [&](const nnvm::NodePtr &node) {
       if (node->is_variable()) return;
       auto &sub_name = node->op()->name;
@@ -204,7 +201,8 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
   }
 
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
-    auto selector = std::make_shared<SgMKLDNNFCSelector>(disable_fc_eltwise_, quantized_);
+    bool quantized = HasAttr("quantize") ? GetAttr<bool>("quantize") : false;
+    auto selector = std::make_shared<SgMKLDNNFCSelector>(disable_fc_eltwise_, quantized);
     return selector;
   }
 
@@ -220,7 +218,6 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
 
  private:
   bool disable_fc_eltwise_;
-  bool quantized_;
 };
 
 }  // namespace op

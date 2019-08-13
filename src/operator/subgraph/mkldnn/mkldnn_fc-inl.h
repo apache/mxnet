@@ -33,7 +33,7 @@ namespace op {
 static inline bool SupportMKLDNNFCEltwiseFusion(const std::string op_name) {
   if (op_name == "Activation" ||
       op_name == "square" ||
-      op_name == "square_root" ||
+      op_name == "sqrt" ||
       op_name == "exp" ||
       op_name == "abs" ||
       op_name == "clip") {
@@ -46,7 +46,7 @@ static inline bool SupportMKLDNNFCEltwiseFusion(const std::string op_name) {
 static inline mkldnn::algorithm GetMKLDNNEltwiseAlgo(const std::string op_name) {
   if (op_name == "square")
     return mkldnn::algorithm::eltwise_square;
-  else if (op_name == "square_root")
+  else if (op_name == "sqrt")
     return mkldnn::algorithm::eltwise_sqrt;
   else if (op_name == "exp")
     return mkldnn::algorithm::eltwise_exp;
