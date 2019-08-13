@@ -712,11 +712,11 @@ def invert(x, out=None, **kwargs):
     Compute bit-wise inversion, or bit-wise NOT, element-wise.
     Computes the bit-wise NOT of the underlying binary representation of
     the integers in the input arrays. This ufunc implements the C/Python operator ~.
-    For signed integer inputs, the two’s complement is returned.
+    For signed integer inputs, the two's complement is returned.
     In a two's-complement system negative numbers are represented
-    by the two’s complement of the absolute value.
+    by the two's complement of the absolute value.
     This is the most common method of representing signed integers on computers [1].
-    A N-bit two’s-complement system can represent every integer in the range -2^{N-1} to +2^{N-1}-1.
+    A N-bit two's-complement system can represent every integer in the range -2^{N-1} to +2^{N-1}-1.
     Parameters
     ----------
     x : ndarray
