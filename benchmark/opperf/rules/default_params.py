@@ -28,9 +28,9 @@ MX_OP_MODULE = sys.modules["mxnet.ndarray.op"]
 # For Unary operators like abs, arccos, arcsin etc..
 DEFAULT_DATA = [(1024, 1024), (10000, 1), (10000, 100)]
 
-# For Binary broadcast operators like - broadcast_add/sub/mode/logical_and etc..
-DEFAULT_LHS = [[(1024, 1024), (10000, 10), (10000, 1)]]
-DEFAULT_RHS = [[(1024, 1024), (10000, 10), (10000, 1)]]
+# For Binary broadcast operators like - broadcast_add/sub/mod/logical_and etc..
+DEFAULT_LHS = [(1024, 1024), (10000, 10), (10000, 1)]
+DEFAULT_RHS = [(1024, 1024), (10000, 10), (10000, 1)]
 
 # For operators like - random_uniform, random_normal etc..
 DEFAULT_SHAPE = [(1024, 1024), (10000, 1), (10000, 100)]
