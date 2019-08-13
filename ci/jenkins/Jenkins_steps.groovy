@@ -1536,8 +1536,8 @@ def docs_prepare() {
             unstash 'clojure-artifacts'
 
             utils.docker_run('ubuntu_cpu_jekyll', 'build_docs', false)
-            utils.pack_lib('full_website', 'docs/_build/full_website.tgz', false)
-
+            //utils.pack_lib('full_website', 'docs/_build/full_website.tgz', false)
+            archiveArtifacts 'docs/_build/full_website.tgz'
             // TODO: Make sure this 'test-website-publish' understand the new structure
           }
         }
@@ -1552,7 +1552,7 @@ def docs_publish() {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             //utils.init_git()
-            unstash 'full_website'
+            //unstash 'full_website'
             //sh 'tar -xzf docs/_build/full_website.tgz --directory .'
             // TODO: Make sure this 'test-website-publish' understand the new structure
             try {
