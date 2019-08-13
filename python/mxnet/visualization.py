@@ -184,7 +184,7 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.40, .52, .60,
                             pre_filter += int(shape[0])
                             if op == 'Convolution':
                                 pre_feature_map = int(shape[1])
-        is_quantized = "_qconv" in node["name"] or "_scaledbinaryconv" in node["name"]
+        is_quantized = "qconv" in node["name"] or "qdense" in node["name"] or "scaledbinaryconv" in node["name"]
         cur_param = 0
         flops = 0
         if op == 'Convolution':
