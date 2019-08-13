@@ -23,7 +23,7 @@ from . import _internal as _npi
 __all__ = ['uniform']
 
 
-def uniform(low=0.0, high=1.0, size=None, ctx=None, dtype=None, out=None):
+def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
     """Draw samples from a uniform distribution.
 
     Samples are uniformly distributed over the half-open interval

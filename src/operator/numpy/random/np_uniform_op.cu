@@ -31,5 +31,5 @@ namespace op {
 NNVM_REGISTER_OP(_npi_uniform)
 .set_attr<FCompute>("FCompute<gpu>", NumpyUniformForward<gpu>);
 
-}
-}
+}  // namespace op
+}  // namespace mxnet

@@ -19,7 +19,7 @@
 
 /*!
  *  Copyright (c) 2015 by Contributors
- * \file etwoparams_dist_common.h
+ * \file dist_common.h
  * \brief Function definition of common functions for distributions
  * \with two parameters.
  */
@@ -27,16 +27,16 @@
 #ifndef MXNET_OPERATOR_NUMPY_RANDOM_DIST_COMMON_H_
 #define MXNET_OPERATOR_NUMPY_RANDOM_DIST_COMMON_H_
 
-#include <mxnet/operator_util.h>
 #include <mshadow/base.h>
-#include <vector>
-#include <string>
+#include <mxnet/operator_util.h>
 #include <algorithm>
+#include <string>
+#include <vector>
 #include "../../elemwise_op_common.h"
-#include "../../tensor/elemwise_binary_broadcast_op.h"
 #include "../../mshadow_op.h"
 #include "../../mxnet_op.h"
 #include "../../operator_common.h"
+#include "../../tensor/elemwise_binary_broadcast_op.h"
 
 namespace mxnet {
 namespace op {
@@ -55,14 +55,15 @@ inline int FillShape(const mxnet::TShape &lshape, const mxnet::TShape &rshape,
     int l = 1;
     int r = 1;
     int o = oshape[i];
-    if (i >= bl)  l = lshape[i - bl];
-    if (i >= br)  r = rshape[i - br];
+    if (i >= bl) l = lshape[i - bl];
+    if (i >= br) r = rshape[i - br];
     if ((lprod != rprod || lprod != oprod || l != r || l != o) &&
         (lprod * l > 1 || rprod * r > 1 || oprod * o > 1)) {
       (*new_lshape)[j] = lprod;
       (*new_rshape)[j] = rprod;
       (*new_oshape)[j] = oprod;
-      lprod = rprod = oprod = 1; ++j;
+      lprod = rprod = oprod = 1;
+      ++j;
     }
     lprod *= l;
     rprod *= r;
@@ -81,22 +82,21 @@ inline int FillShape(const mxnet::TShape &lshape, const mxnet::TShape &rshape,
       new_oshape->assign(new_oshape->begin(), new_oshape->begin() + NDim);
     });
   } else {
-    LOG(FATAL) << "Too many broadcast dimensions with operands " << lshape << " " << rshape;
+    LOG(FATAL) << "Too many broadcast dimensions with operands " << lshape
+               << " " << rshape;
   }
   return j;
 }
 
-inline void CheckBroadcastable(const mxnet::TShape &from, const mxnet::TShape &to) {
+inline void CheckBroadcastable(const mxnet::TShape &from,
+                               const mxnet::TShape &to) {
   const int bl = to.ndim() - from.ndim();
   const int br = 0;
   for (int i = 0; i < to.ndim(); ++i) {
     int l = 1, r = 1;
-    if (i >= bl)
-      l = from[i - bl];
-    if (i >= br)
-      r = to[i - br];
-    if (!mxnet::dim_size_is_known(l) || !mxnet::dim_size_is_known(r))
-      continue;
+    if (i >= bl) l = from[i - bl];
+    if (i >= br) r = to[i - br];
+    if (!mxnet::dim_size_is_known(l) || !mxnet::dim_size_is_known(r)) continue;
     if (l != r) {
       // Make it compatible with NumPy.
       // For example, (2, 3) cannot broadcast to (2, 0, 3), but (1, 3) can
@@ -108,19 +108,17 @@ inline void CheckBroadcastable(const mxnet::TShape &from, const mxnet::TShape &t
   }
 }
 
-inline void InferBroadcastShape(const mxnet::TShape &lhs, const mxnet::TShape &rhs,
-                         mxnet::TShape* out_ptr) {
-  mxnet::TShape& out = (*out_ptr);
+inline void InferBroadcastShape(const mxnet::TShape &lhs,
+                                const mxnet::TShape &rhs,
+                                mxnet::TShape *out_ptr) {
+  mxnet::TShape &out = (*out_ptr);
   const int bl = out.ndim() - lhs.ndim();
   const int br = out.ndim() - rhs.ndim();
   for (int i = 0; i < out.ndim(); ++i) {
     int l = 1, r = 1;
-    if (i >= bl)
-      l = lhs[i - bl];
-    if (i >= br)
-      r = rhs[i - br];
-    if (!mxnet::dim_size_is_known(l) || !mxnet::dim_size_is_known(r))
-      continue;
+    if (i >= bl) l = lhs[i - bl];
+    if (i >= br) r = rhs[i - br];
+    if (!mxnet::dim_size_is_known(l) || !mxnet::dim_size_is_known(r)) continue;
     if (l != r) {
       // Make it compatible with NumPy.
       // For example, (2, 3) cannot broadcast to (2, 0, 3), but (1, 3) can
@@ -135,10 +133,10 @@ inline void InferBroadcastShape(const mxnet::TShape &lhs, const mxnet::TShape &r
   }
 }
 
-template<typename DistParam>
+template <typename DistParam>
 inline bool TwoparamsDistOpShape(const nnvm::NodeAttrs &attrs,
-                                std::vector<TShape> *in_attrs,
-                                std::vector<TShape> *out_attrs) {
+                                 std::vector<TShape> *in_attrs,
+                                 std::vector<TShape> *out_attrs) {
   const DistParam &param = nnvm::get<DistParam>(attrs.parsed);
   CHECK_EQ(out_attrs->size(), 1U);
   if (param.size.has_value()) {
@@ -156,8 +154,8 @@ inline bool TwoparamsDistOpShape(const nnvm::NodeAttrs &attrs,
     // Size undeclared.
     if (in_attrs->size() == 2U) {
       // Both params from ndarray.
-      mxnet::TShape& low = (*in_attrs)[0];
-      mxnet::TShape& high = (*in_attrs)[1];
+      mxnet::TShape &low = (*in_attrs)[0];
+      mxnet::TShape &high = (*in_attrs)[1];
       mxnet::TShape out(std::max(low.ndim(), high.ndim()), -1);
       InferBroadcastShape(low, high, &out);
       SHAPE_ASSIGN_CHECK(*out_attrs, 0, out);
@@ -165,14 +163,13 @@ inline bool TwoparamsDistOpShape(const nnvm::NodeAttrs &attrs,
       // One param from ndarray.
       SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0))
     } else if (in_attrs->size() == 0) {
-    // Two scalar case.
+      // Two scalar case.
       SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(0, -1))
       return true;
     }
   }
   return out_attrs->at(0).ndim() != 0U;
 }
-
 
 }  // namespace op
 }  // namespace mxnet

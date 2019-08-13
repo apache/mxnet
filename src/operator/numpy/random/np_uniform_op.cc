@@ -19,7 +19,7 @@
 
 /*!
  * Copyright (c) 2019 by Contributors
- * \file np_uniform_op.h
+ * \file np_uniform_op.cc
  * \brief Operator for numpy sampling from uniform distributions
  */
 #include "./np_uniform_op.h"
