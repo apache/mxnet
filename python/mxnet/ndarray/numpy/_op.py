@@ -26,7 +26,8 @@ from ...context import current_context
 from . import _internal as _npi
 from ..ndarray import NDArray
 
-__all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'tensordot', 'linspace']
+__all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'tensordot',
+           'linspace', 'expand_dims', 'tile', 'arange']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -95,6 +96,58 @@ def ones(shape, dtype=_np.float32, order='C', ctx=None):
         ctx = current_context()
     dtype = _np.float32 if dtype is None else dtype
     return _npi.ones(shape=shape, ctx=ctx, dtype=dtype)
+
+
+@set_module('mxnet.ndarray.numpy')
+def arange(start, stop=None, step=1, dtype=None, ctx=None):
+    """Return evenly spaced values within a given interval.
+
+    Values are generated within the half-open interval ``[start, stop)``
+    (in other words, the interval including `start` but excluding `stop`).
+    For integer arguments the function is equivalent to the Python built-in
+    `range` function, but returns an ndarray rather than a list.
+
+    Parameters
+    ----------
+    start : number, optional
+        Start of interval. The interval includes this value.  The default
+        start value is 0.
+    stop : number
+        End of interval. The interval does not include this value, except
+        in some cases where `step` is not an integer and floating point
+        round-off affects the length of `out`.
+    step : number, optional
+        Spacing between values. For any output `out`, this is the distance
+        between two adjacent values, ``out[i+1] - out[i]``.  The default
+        step size is 1.  If `step` is specified as a position argument,
+        `start` must also be given.
+    dtype : dtype
+        The type of the output array. The default is `float32`.
+
+    Returns
+    -------
+    arange : ndarray
+        Array of evenly spaced values.
+
+        For floating point arguments, the length of the result is
+        ``ceil((stop - start)/step)``.  Because of floating point overflow,
+        this rule may result in the last element of `out` being greater
+        than `stop`.
+    """
+    if dtype is None:
+        dtype = 'float32'
+    if ctx is None:
+        ctx = current_context()
+    if stop is None:
+        stop = start
+        start = 0
+    if step is None:
+        step = 1
+    if start is None and stop is None:
+        raise ValueError('start and stop cannot be both None')
+    if step == 0:
+        raise ZeroDivisionError('step cannot be 0')
+    return _npi.arange(start=start, stop=stop, step=step, dtype=dtype, ctx=ctx)
 
 
 #pylint: disable= too-many-arguments, no-member, protected-access
@@ -462,3 +515,120 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
         return _npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, ctx=ctx, dtype=dtype), step
     else:
         return _npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, ctx=ctx, dtype=dtype)
+
+
+@set_module('mxnet.ndarray.numpy')
+def expand_dims(a, axis):
+    """Expand the shape of an array.
+
+    Insert a new axis that will appear at the `axis` position in the expanded
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array.
+    axis : int
+        Position in the expanded axes where the new axis is placed.
+
+    Returns
+    -------
+    res : ndarray
+        Output array. The number of dimensions is one greater than that of
+        the input array.
+    """
+    return _npi.expand_dims(a, axis)
+
+
+def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
+    """Helper function for unary operators.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input of the unary operator.
+    fn_array : function
+        Function to be called if x is of ``ndarray`` type.
+    fn_scalar : function
+        Function to be called if x is a Python scalar.
+    out : ndarray
+        The buffer ndarray for storing the result of the unary function.
+
+    Returns
+    -------
+    out : mxnet.numpy.ndarray or scalar
+        Result array or scalar.
+    """
+    if isinstance(x, numeric_types):
+        return fn_scalar(x, **kwargs)
+    elif isinstance(x, NDArray):
+        return fn_array(x, out=out, **kwargs)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x))))
+
+
+@set_module('mxnet.ndarray.numpy')
+def tile(A, reps):
+    r"""
+    Construct an array by repeating A the number of times given by reps.
+
+    If `reps` has length ``d``, the result will have dimension of
+    ``max(d, A.ndim)``.
+
+    If ``A.ndim < d``, `A` is promoted to be d-dimensional by prepending new
+    axes. So a shape (3,) array is promoted to (1, 3) for 2-D replication,
+    or shape (1, 1, 3) for 3-D replication. If this is not the desired
+    behavior, promote `A` to d-dimensions manually before calling this
+    function.
+
+    If ``A.ndim > d``, `reps` is promoted to `A`.ndim by pre-pending 1's to it.
+    Thus for an `A` of shape (2, 3, 4, 5), a `reps` of (2, 2) is treated as
+    (1, 1, 2, 2).
+
+    Parameters
+    ----------
+    A : ndarray or scalar
+        An input array or a scalar to repeat.
+    reps : a single integer or tuple of integers
+        The number of repetitions of `A` along each axis.
+
+    Returns
+    -------
+    c : ndarray
+        The tiled output array.
+
+    Examples
+    --------
+    >>> a = np.array([0, 1, 2])
+    >>> np.tile(a, 2)
+    array([0., 1., 2., 0., 1., 2.])
+    >>> np.tile(a, (2, 2))
+    array([[0., 1., 2., 0., 1., 2.],
+           [0., 1., 2., 0., 1., 2.]])
+    >>> np.tile(a, (2, 1, 2))
+    array([[[0., 1., 2., 0., 1., 2.]],
+           [[0., 1., 2., 0., 1., 2.]]])
+
+    >>> b = np.array([[1, 2], [3, 4]])
+    >>> np.tile(b, 2)
+    array([[1., 2., 1., 2.],
+           [3., 4., 3., 4.]])
+    >>> np.(b, (2, 1))
+    array([[1., 2.],
+           [3., 4.],
+           [1., 2.],
+           [3., 4.]])
+
+    >>> c = np.array([1,2,3,4])
+    >>> np.tile(c,(4,1))
+    array([[1., 2., 3., 4.],
+           [1., 2., 3., 4.],
+           [1., 2., 3., 4.],
+           [1., 2., 3., 4.]])
+
+    Scalar as input:
+
+    >>> np.tile(2, 3)
+    array([2, 2, 2]) # repeating integer `2`
+
+    """
+    return _unary_func_helper(A, _npi.tile, _np.tile, reps=reps)
