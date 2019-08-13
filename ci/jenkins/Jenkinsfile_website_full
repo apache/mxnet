@@ -49,7 +49,7 @@ core_logic: {
   ])
 
   utils.parallel_stage('Prepare', [
-    custom_steps.docs_prepare()
+    custom_steps.docs_prepare(),
     archiveArtifacts 'docs/_build/full_website.tgz'
   ])
 
