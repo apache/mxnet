@@ -187,7 +187,7 @@ def cpp_profile(func):
         # Prepare the results
         profiler_dump = profiler.dumps(reset=True)
 
-        # args[0] is assumed to operator name, if not found check for block name.
+        # args[0] is assumed to be operator name, if not found check for block name.
         # NOTE: This parameter should be removed when we get away from parsing
         # profiler output and start using new profiler APIs - get_summary(), reset()
         if len(args) > 0:
@@ -218,7 +218,7 @@ def python_profile(func):
     -------
     res, timing output. res being result returned after operator execution.
     profiler output is a dictionary with summary of operation execution.
-    Example output : { "add": [{"avg_time": 0.4053089120425284,
+    Example output : { "add": [{"avg_time_add": 0.4053089120425284,
                                 "inputs": {
                                     "lhs": [1024, 1024],
                                     "rhs": [1024,1024]
@@ -233,7 +233,14 @@ def python_profile(func):
         end_time = time.perf_counter()      # 2
         run_time = end_time - start_time    # 3
 
-        # parse the output (like parse)
-        profiler_output = {'avg_time': run_time}
+        # NOTE : same as cpp_profile_it
+        if len(args) > 0:
+            operator_name = args[0].__name__
+        elif 'block' in kwargs:
+            operator_name = kwargs['block']._op_name
+        else:
+            raise ValueError("Unable to identify operator name to extract profiler output!")
+
+        profiler_output = {'avg_time_'+str(operator_name): run_time}
         return res, profiler_output
     return python_profile_it
