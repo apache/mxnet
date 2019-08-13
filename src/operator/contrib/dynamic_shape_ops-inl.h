@@ -26,6 +26,7 @@
 
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
+#include <vector>
 
 namespace mxnet {
 namespace op {
@@ -53,7 +54,8 @@ inline void DynamicReshapeForward(const nnvm::NodeAttrs& attrs,
 
   MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
       mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, kWriteTo>, xpu>::Launch(
-          s, inputs[0].data().Size(), outputs[0].data().dptr<DType>(), inputs[0].data().dptr<DType>());
+          s, inputs[0].data().Size(), outputs[0].data().dptr<DType>(), 
+          inputs[0].data().dptr<DType>());
           });
 }
 
@@ -74,11 +76,12 @@ inline void DynamicReshapeBackward(const nnvm::NodeAttrs& attrs,
 
   MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
       mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, kWriteTo>, xpu>::Launch(
-          s, inputs[0].data().Size(), outputs[0].data().dptr<DType>(), inputs[0].data().dptr<DType>());
+          s, inputs[0].data().Size(), outputs[0].data().dptr<DType>(), 
+          inputs[0].data().dptr<DType>());
           });
 }
 
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_CONTRIB_DYNAMIC_RESHAPE_INL_H_
+#endif  // MXNET_OPERATOR_CONTRIB_DYNAMIC_SHAPE_OPS_INL_H_
