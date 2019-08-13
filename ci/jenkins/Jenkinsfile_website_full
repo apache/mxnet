@@ -48,8 +48,11 @@ core_logic: {
     custom_steps.docs_clojure()
   ])
 
+  utils.parallel_stage('Prepare', [
+    custom_steps.docs_prepare()
+  ])
+
   utils.parallel_stage('Publish', [
-    custom_steps.docs_prepare(),
     custom_steps.docs_publish()
   ])
 }
