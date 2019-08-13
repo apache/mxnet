@@ -311,6 +311,7 @@ enum TypeFlag {
   kInt32 = 4,
   kInt8  = 5,
   kInt64 = 6,
+  kBool = 7,
 };
 
 template<typename DType>
@@ -409,6 +410,11 @@ struct DataType<int32_t> {
 template<>
 struct DataType<int64_t> {
   static const int kFlag = kInt64;
+  static const int kLanes = 1;
+};
+template<>
+struct DataType<bool> {
+  static const int kFlag = kBool;
   static const int kLanes = 1;
 };
 
@@ -1138,10 +1144,64 @@ struct minimum {
     LOG(FATAL) << "Unknown type enum " << type;     \
   }
 
+#define MSHADOW_TYPE_SWITCH_WITH_BOOL(type, DType, ...)       \
+  switch (type) {                                             \
+  case mshadow::kFloat32:                                     \
+    {                                                         \
+      typedef float DType;                                    \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kFloat64:                                     \
+    {                                                         \
+      typedef double DType;                                   \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kFloat16:                                     \
+    {                                                         \
+      typedef mshadow::half::half_t DType;                    \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kUint8:                                       \
+    {                                                         \
+      typedef uint8_t DType;                                  \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kInt8:                                        \
+    {                                                         \
+      typedef int8_t DType;                                   \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kInt32:                                       \
+    {                                                         \
+      typedef int32_t DType;                                  \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kInt64:                                       \
+    {                                                         \
+      typedef int64_t DType;                                  \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kBool:                                        \
+    {                                                         \
+      typedef bool DType;                                     \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  default:                                                    \
+    LOG(FATAL) << "Unknown type enum " << type;               \
+  }
+
 /*! \brief get data type size from type enum */
 inline size_t mshadow_sizeof(int type) {
   int size = 0;
-  MSHADOW_TYPE_SWITCH(type, DType, size = sizeof(DType););
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(type, DType, size = sizeof(DType););
   return size;
 }
 

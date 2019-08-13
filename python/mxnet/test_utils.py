@@ -50,6 +50,7 @@ from .ndarray import array
 from .symbol import Symbol
 from .symbol.numpy import _Symbol as np_symbol
 from .util import use_np  # pylint: disable=unused-import
+from .runtime import Features
 
 
 def default_context():
@@ -2225,3 +2226,10 @@ def collapse_sum_like(a, shape):
 def is_cd_run():
     """Checks if the test is running as part of a Continuous Delivery run"""
     return os.environ.get("CD_JOB", 0) == "1"
+
+
+_features = Features()
+
+
+def has_tvm_ops():
+    return _features.is_enabled("TVM_OP")
