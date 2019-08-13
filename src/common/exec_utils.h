@@ -50,18 +50,18 @@ namespace common {
  * \return true if any source NDArray need to cast storage
  */
 bool SetupDefaultBlobsIn(const std::vector<NDArray>& src,
-                                const std::vector<NDArray> *bufs,
-                                std::vector<TBlob> *blobs,
-                                std::vector<NDArray> *temp_src,
-                                std::vector<NDArray> *temp_dst,
-                                std::unordered_map<uint32_t, uint32_t> *idx_map);
+                         const std::vector<NDArray> *bufs,
+                         std::vector<TBlob> *blobs,
+                         std::vector<NDArray> *temp_src,
+                         std::vector<NDArray> *temp_dst,
+                         std::unordered_map<uint32_t, uint32_t> *idx_map);
 
 bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
-                                 const std::vector<NDArray> *bufs,
-                                 std::vector<OpReqType> *req,
-                                 std::vector<TBlob> *blobs,
-                                 std::vector<NDArray> *temp_src,
-                                 std::vector<NDArray> *temp_dst);
+                          const std::vector<NDArray> *bufs,
+                          std::vector<OpReqType> *req,
+                          std::vector<TBlob> *blobs,
+                          std::vector<NDArray> *temp_src,
+                          std::vector<NDArray> *temp_dst);
 
 /*
  * \brief setup default-storage tblobs for input and output NDArrays.
@@ -71,18 +71,18 @@ bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
  *        their corresponding temporary NDArrays in the temp array.
  */
 void SetupDefaultBlobsInOut(const std::vector<NDArray> &ndinputs,
-                                   const std::vector<NDArray> &ndoutputs,
-                                   const std::vector<NDArray> *in_bufs,
-                                   const std::vector<NDArray> *out_bufs,
-                                   std::vector<OpReqType> *req,
-                                   std::vector<TBlob> *input_blobs,
-                                   std::vector<TBlob> *output_blobs,
-                                   std::vector<NDArray> *pre_temp_src,
-                                   std::vector<NDArray> *pre_temp_dst,
-                                   std::vector<NDArray> *post_temp_src,
-                                   std::vector<NDArray> *post_temp_dst,
-                                   std::unordered_map<uint32_t, uint32_t> *in_temp_idx_map,
-                                   const std::vector<uint32_t> &mutate_idx);
+                            const std::vector<NDArray> &ndoutputs,
+                            const std::vector<NDArray> *in_bufs,
+                            const std::vector<NDArray> *out_bufs,
+                            std::vector<OpReqType> *req,
+                            std::vector<TBlob> *input_blobs,
+                            std::vector<TBlob> *output_blobs,
+                            std::vector<NDArray> *pre_temp_src,
+                            std::vector<NDArray> *pre_temp_dst,
+                            std::vector<NDArray> *post_temp_src,
+                            std::vector<NDArray> *post_temp_dst,
+                            std::unordered_map<uint32_t, uint32_t> *in_temp_idx_map,
+                            const std::vector<uint32_t> &mutate_idx);
 
 /*
  * \brief cast the NDArrays in `src` and store the result in NDArrays in `dst`.
@@ -92,16 +92,16 @@ void SetupDefaultBlobsInOut(const std::vector<NDArray> &ndinputs,
  * \param ctx operator context for cast_storage operation
  */
 void CastNonDefaultStorage(const std::vector<NDArray>& src,
-                                  const std::vector<NDArray>& dst,
-                                  const OpContext& ctx,
-                                  const bool is_gpu);
+                           const std::vector<NDArray>& dst,
+                           const OpContext& ctx,
+                           const bool is_gpu);
 
 /*! \brief The default type inference function, which assigns all undefined
  *         types to the same type of one of the inputs or outputs.
  */
 bool SameType(const nnvm::NodeAttrs& attrs,
-                     std::vector<int> *iattr,
-                     std::vector<int> *oattr);
+              std::vector<int> *iattr,
+              std::vector<int> *oattr);
 
 
 /*! \brief The default storage type inference function, which assigns all undefined
@@ -110,10 +110,10 @@ bool SameType(const nnvm::NodeAttrs& attrs,
  *         DispatchMode::kFComputeFallback is assigned to dispatch_mode.
  */
 bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
-                               const int dev_mask,
-                               DispatchMode* dispatch_mode,
-                               std::vector<int> *iattr,
-                               std::vector<int> *oattr);
+                        const int dev_mask,
+                        DispatchMode* dispatch_mode,
+                        std::vector<int> *iattr,
+                        std::vector<int> *oattr);
 
 // string representation of storage id
 std::string storage_str(int storage_id);
