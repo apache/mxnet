@@ -249,6 +249,10 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   #define MXNET_LAPACK_sgetrf LAPACKE_sgetrf
   #define MXNET_LAPACK_dgetrf LAPACKE_dgetrf
 
+  // Internally A is factorized as U * L * VT, and (according to the tech report)
+  // we want to factorize it as UT * L * V, so we pass ut as u and v as vt.
+  // We also have to allocate at least m - 1 DType elements as workspace as the internal
+  // LAPACKE function needs it to store `superb`. (see MKL documentation)
   #define MXNET_LAPACK_CWRAP_GESVD(prefix, dtype) \
   inline int MXNET_LAPACK_##prefix##gesvd(int matrix_layout, int m, int n, dtype* ut, \
                                           int ldut, dtype* s, dtype* v, int ldv, \
@@ -382,6 +386,8 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   MXNET_LAPACK_CWRAP_SYEVD(ssyevd, float)
   MXNET_LAPACK_CWRAP_SYEVD(dsyevd, double)
 
+  // Note: Supports row-major format only. Internally, column-major is used, so all
+  // inputs/outputs are flipped and transposed. m and n are flipped as well.
   #define MXNET_LAPACK_CWRAP_GESVD(func, dtype) \
   inline int MXNET_LAPACK_##func(int matrix_layout, int m, int n, dtype* ut, \
                                  int ldut, dtype* s, dtype* v, int ldv, \

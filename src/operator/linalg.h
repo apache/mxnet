@@ -195,8 +195,7 @@ int linalg_syevd_workspace_query(const Tensor<xpu, 2, DType>& A,
 
 // CPU/GPU-versions of LAPACK function "gesvd". Please refer to the
 // LAPACK documentation for further details.
-// Note:
-// - V is input and output parameter (overwritten by A)
+// Note: V is input and output parameter (it overwrites A)
 
 template<typename xpu, typename DType>
 void linalg_gesvd(const Tensor<xpu, 2, DType>& UT,

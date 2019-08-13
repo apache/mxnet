@@ -61,8 +61,7 @@ struct GesvdVecSign {
 
 // (UT, L, V) = gesvd(A) [singular value decomposition]
 // - V can overwrite A
-// - Needs workspace (both DType and int), size of which is determined by a
-//   workspace query
+// - Needs workspace (DType), size of which is determined by a workspace query
 struct gesvd {
   template<typename xpu, typename DType>
   static void op(const Tensor<xpu, 3, DType>& A,
@@ -126,6 +125,7 @@ MSHADOW_XINLINE double gesvd_back_helper_eps(double* X) {
   return 1e-100;
 }
 
+// dA overwritten by L^-1 dA
 struct GesvdBackHelper_dV {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int k, int m, int n, DType* L, int ldl,
@@ -144,14 +144,18 @@ struct GesvdBackHelper_dV {
   }
 };
 
+// X (square) overwritten by X L
+// Y overwritten by the diagonal of X
 struct GesvdBackHelper_G1 {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int k, int m, int n, DType* X, int ldx,
-                                  DType* L, int ldl) {
+                                  DType* L, int ldl, DType* Y, int ldy) {
     const int offl(k * ldl);
+    const int offy(k * ldy);
     const int offx(k * m * ldx);
     DType numer(0.0);
     for (int i = 0; i < m; ++i) {
+      Y[offy + i] = X[offx + i * ldx + i];
       for (int j = 0; j < m; ++j) {
         numer = L[offl + j];
         X[offx + i * ldx + j] *= numer;
@@ -164,16 +168,15 @@ struct GesvdBackHelper_G2 {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int k, int m, int n, DType* X, int ldx,
                                   DType* L, int ldl, DType* dL, int lddl,
-                                  DType* dA, int ldda, DType* V, int ldv) {
+                                  DType* Y, int ldy) {
     const int offx(k * m * ldx);
     const int offl(k * ldl);
     const int offdl(k * lddl);
-    const int offda(k * m * ldda);
-    const int offv(k * m * ldv);
+    const int offy(k * ldy);
     const DType eps(gesvd_back_helper_eps(X));
     DType denom1(0.0), denom2(0.0), elem(0.0);
 
-    for (int i = 0; i < m - 1; ++i) {
+    for (int i = 0; i < m; ++i) {
       for (int j = i + 1; j < m; ++j) {
         denom1 = L[offl + i] - L[offl + j];
         denom2 = L[offl + i] + L[offl + j];
@@ -183,14 +186,7 @@ struct GesvdBackHelper_G2 {
         X[offx + i * ldx + j] = elem * L[offl + j];
         X[offx + j * ldx + i] = elem * L[offl + i];
       }
-    }
-    for (int i = 0; i < m; ++i) {
-      elem = DType(0.0);
-      for (int j = 0; j < n; ++j) {
-        elem += dA[offda + i * ldda + j] * V[offv + i * ldv + j];
-      }
-      elem = -elem + dL[offdl + i];
-      X[offx + i * ldx + i] = elem;
+      X[offx + i * ldx + i] = -Y[offy + i] + dL[offdl + i];
     }
   }
 };
@@ -204,8 +200,8 @@ struct gesvd_backward {
                  const Tensor<xpu, 2, DType>& L,
                  const Tensor<xpu, 3, DType>& V,
                  const Tensor<xpu, 3, DType>& dA,
-                 const Tensor<xpu, 3, DType>& tempMs,
-                 const Tensor<xpu, 3, DType>& tempMr,
+                 const Tensor<xpu, 3, DType>& tempM,
+                 const Tensor<xpu, 2, DType>& tempMd,
                  Stream<xpu>* s, const nnvm::NodeAttrs& attrs) {
     // Backward of (UT, L, V) = gesvd(A)
     using namespace mxnet_op;
@@ -213,32 +209,40 @@ struct gesvd_backward {
       Copy(dA, dV, s);
     }
     // From here on, we work on dA only
+    int k = dA.size(0), m = dA.size(1), n = dA.size(2);
 
     // Need temporal space, same shape as dUT
     // invdV:
     Kernel<GesvdBackHelper_dV, xpu>::Launch
-      (s, dA.size(0), dA.size(1), dA.size(2), L.dptr_, L.stride_, dA.dptr_, dA.stride_);
+      (s, k, m, n, L.dptr_, L.stride_, dA.dptr_, dA.stride_);
 
     // G1:
-    // This copy is just to make sure there are no invalid values (NaN, infinity) in tempM
-    Copy(tempMs, dUT, s);
-    Copy(tempMr, dA, s);
-    gemm::op(dA, V, tempMs, DType(1.0), DType(0.0), false, true, s);
+    // This is just to make sure there are no invalid values (NaN, infinity) in tempM and tempMd
+    tempM.FlatTo1D() = 0;
+    tempMd.FlatTo1D() = 0;
+    gemm::op(dA, V, tempM, DType(1.0), DType(0.0), false, true, s);
     Kernel<GesvdBackHelper_G1, xpu>::Launch
-      (s, dA.size(0), dA.size(1), dA.size(2), tempMs.dptr_, tempMs.stride_,
-       L.dptr_, L.stride_);
-    gemm::op(dUT, UT, tempMs, DType(1.0), DType(1.0), true, false, s);
+      (s, k, m, n, tempM.dptr_, tempM.stride_,
+       L.dptr_, L.stride_, tempMd.dptr_, tempMd.stride_);
+    gemm::op(dUT, UT, tempM, DType(1.0), DType(1.0), true, false, s);
 
     // G2:
     Kernel<GesvdBackHelper_G2, xpu>::Launch
-      (s, dA.size(0), dA.size(1), dA.size(2), tempMs.dptr_, tempMs.stride_,
-       L.dptr_, L.stride_, dL.dptr_, dL.stride_, dA.dptr_, dA.stride_,
-       V.dptr_, V.stride_);
+      (s, k, m, n, tempM.dptr_, tempM.stride_,
+       L.dptr_, L.stride_, dL.dptr_, dL.stride_,
+       tempMd.dptr_, tempMd.stride_);
 
     // G3:
-    gemm::op(tempMs, V, dA, DType(1.0), DType(1.0), false, false, s);
-    gemm::op(UT, dA, tempMr, DType(1.0), DType(0.0), false, false, s);
-    Copy(dA, tempMr, s);
+    gemm::op(tempM, V, dA, DType(1.0), DType(1.0), false, false, s);
+    for (int i = 0; i < n; i += m) {
+      int ncols = n - i < m ? n - i : m;
+      Tensor<xpu, 3, DType> t = Tensor<xpu, 3, DType>(dA.dptr_ + i,
+        Shape3(k, m, ncols), dA.stride_, dA.stream_);
+      Tensor<xpu, 3, DType> out = Tensor<xpu, 3, DType>(tempM.dptr_,
+        Shape3(k, m, ncols), tempM.stride_, tempM.stream_);
+      gemm::op(UT, t, out, DType(1.0), DType(0.0), false, false, s);
+      Copy(t, out, s);
+    }
   }
 };
 
@@ -258,23 +262,21 @@ void NumpyLaGesvdBackward(const nnvm::NodeAttrs& attrs,
   }
   MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
     TBlob tspace(outputs[0]);
-    TBlob tempMs, tempMr;
+    TBlob tempM, tempMd;
+    int kmn = outputs[0].shape_.Size();
+    int kmm = inputs[0].shape_.Size();
+    int km = inputs[1].shape_.Size();
     if (req[0] == kAddTo) {
       Tensor<xpu, 1, OType> tempspace = ctx.requested[0]
-        .get_space_typed<xpu, 1, OType>(Shape1(2 * outputs[0].shape_.Size()), s);
-      tspace = TBlob(tempspace.Slice(0, outputs[0].shape_.Size()))
-        .reshape(outputs[0].shape_);
-      tempMs = TBlob(tempspace.Slice(outputs[0].shape_.Size(),
-                                     outputs[0].shape_.Size() + inputs[0].shape_.Size()))
-        .reshape(inputs[0].shape_);
-      tempMr = TBlob(tempspace.Slice(outputs[0].shape_.Size(),
-                                     2 * outputs[0].shape_.Size()))
-        .reshape(outputs[0].shape_);
+        .get_space_typed<xpu, 1, OType>(Shape1(kmn + kmm + km), s);
+      tspace = TBlob(tempspace.Slice(0, kmn)).reshape(outputs[0].shape_);
+      tempM = TBlob(tempspace.Slice(kmn, kmn + kmm)).reshape(inputs[0].shape_);
+      tempMd = TBlob(tempspace.Slice(kmn + kmm, kmn + kmm + km)).reshape(inputs[1].shape_);
     } else {
       Tensor<xpu, 1, OType> tempspace = ctx.requested[0]
-        .get_space_typed<xpu, 1, OType>(Shape1(outputs[0].shape_.Size()), s);
-      tempMs = TBlob(tempspace.Slice(0, inputs[0].shape_.Size())).reshape(inputs[0].shape_);
-      tempMr = TBlob(tempspace.Slice(0, outputs[0].shape_.Size())).reshape(outputs[0].shape_);
+        .get_space_typed<xpu, 1, OType>(Shape1(kmm + km), s);
+      tempM = TBlob(tempspace.Slice(0, kmm)).reshape(inputs[0].shape_);
+      tempMd = TBlob(tempspace.Slice(kmm, kmm + km)).reshape(inputs[1].shape_);
     }
     laop::op(inputs[0].FlatToKD<xpu, 3, OType>(s),  // dUT
              inputs[1].FlatToKD<xpu, 2, OType>(s),  // dL
@@ -283,8 +285,8 @@ void NumpyLaGesvdBackward(const nnvm::NodeAttrs& attrs,
              inputs[4].FlatToKD<xpu, 2, OType>(s),  // L
              inputs[5].FlatToKD<xpu, 3, OType>(s),  // V
              tspace.FlatToKD<xpu, 3, OType>(s),  // dA
-             tempMs.FlatToKD<xpu, 3, OType>(s),  // tempMs
-             tempMr.FlatToKD<xpu, 3, OType>(s),  // tempMr
+             tempM.FlatToKD<xpu, 3, OType>(s),  // tempM
+             tempMd.FlatToKD<xpu, 2, OType>(s),  // tempMd
              s, attrs);
     if (req[0] == kAddTo) {
       Tensor<xpu, 1, OType> out = outputs[0].FlatTo1D<xpu, OType>(s);

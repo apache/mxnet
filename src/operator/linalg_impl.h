@@ -1262,25 +1262,16 @@ void linalg_gesvd<cpu, DType>(const Tensor<cpu, 2, DType>& UT, \
                               const Tensor<cpu, 1, DType>& work, \
                               Stream<cpu> *s) { \
   check_gesvd(UT, L, V); \
-  DType lwork(0); \
-  MXNET_LAPACK_##fname(MXNET_LAPACK_ROW_MAJOR, V.size(0), V.size(1), \
-                       UT.dptr_, UT.stride_, L.dptr_, V.dptr_, V.stride_, \
-                       &lwork, -1); \
+  int lwork(work.size(0)); \
   int ret(MXNET_LAPACK_##fname(MXNET_LAPACK_ROW_MAJOR, V.size(0), V.size(1), \
                                UT.dptr_, UT.stride_, L.dptr_, V.dptr_, V.stride_, \
-                               work.dptr_, static_cast<int>(lwork))); \
+                               work.dptr_, lwork)); \
   CHECK_EQ(ret, 0) << #fname << " failed in lapack on cpu."; \
 }
 
 LINALG_CPU_GESVD(sgesvd, float)
 LINALG_CPU_GESVD(dgesvd, double)
 
-// Mangle temp storage requirements for DType and int into a single
-// request as we can only allocate one temp space per operator. We
-// partition this temp space into two chunks again when calling sseyvd.
-// Returned is the number of elements of type DType that the temp space
-// needs to accomodate. This also makes this function signature equivalent
-// to the work space query on GPU.
 #define LINALG_CPU_GESVD_WORKSPACE_QUERY(func, DType) \
 template<> inline \
 int linalg_gesvd_workspace_query<cpu, DType>(const Tensor<cpu, 2, DType>& UT, \
