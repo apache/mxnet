@@ -668,9 +668,9 @@ void SliceEx(const nnvm::NodeAttrs& attrs,
 
 template<int ndim>
 inline void GetIndexRange(const mxnet::TShape& dshape,
-                          const mxnet::Tuple<dmlc::optional<int>>& param_begin,
-                          const mxnet::Tuple<dmlc::optional<int>>& param_end,
-                          const mxnet::Tuple<dmlc::optional<int>>& param_step,
+                          const mxnet::Tuple<dmlc::optional<index_t>>& param_begin,
+                          const mxnet::Tuple<dmlc::optional<index_t>>& param_end,
+                          const mxnet::Tuple<dmlc::optional<index_t>>& param_step,
                           common::StaticArray<index_t, ndim>* begin,
                           common::StaticArray<index_t, ndim>* end,
                           common::StaticArray<index_t, ndim>* step) {
@@ -685,13 +685,13 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
     << "Static array size=" << ndim
     << " is not equal to data shape ndim=" << dshape.ndim();
 
-  if (param_step.ndim() != 0) {
+  if (param_step.ndim() > 0) {
     CHECK_EQ(param_step.ndim(), param_begin.ndim())
       << "step and begin must have the same length";
   }
 
   for (int i = 0; i < param_begin.ndim(); ++i) {
-    index_t s = param_step.ndim() != 0U && param_step[i].has_value() ? param_step[i].value() : 1;
+    index_t s = param_step.ndim() > 0 && param_step[i].has_value() ? param_step[i].value() : 1;
     CHECK_NE(s, 0) << "slice op step[" << i << "] cannot be 0";
 
     index_t b = 0, e = 0;
@@ -700,27 +700,23 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
       b = param_begin[i].has_value() ? param_begin[i].value() : (s < 0 ? len - 1 : 0);
       e = param_end[i].has_value() ? param_end[i].value() : (s < 0 ? -1 : len);
 
-      // checking upper and lower bounds for begin
       if (b < 0) {
         b += len;
-        CHECK_GE(b, 0) << "slicing with begin[" << i << "]=" << b - len
-                       << " exceeds limit of input dimension[" << i << "]=" << len;
       }
-      CHECK_LT(b, len) << "slicing with begin[" << i << "]=" << b
-                       << " exceeds limit of input dimension[" << i << "]=" << len;
-
-      // checking upper and lower bounds for end
       if (e < 0 && param_end[i].has_value()) {
         e += len;
-        CHECK_GE(e, 0) << "slicing with end[" << i << "]=" << e - len
-                       << " exceeds limit of input dimension[" << i << "]=" << len;
       }
-      CHECK_LE(e, len) << "slicing with end[" << i << "]=" << e
-                       << " exceeds limit of input dimension[" << i << "]=" << len;
 
-      // checking begin==end case which is not supported
-      CHECK_NE(b, e) << "slicing with begin[" << i << "]=end[" << i << "]="
-                     << e << " results in an empty tensor and is not supported";
+      // move the begin and end to correct position for calculating dim size
+      b = (b < 0 && s > 0) ? 0 : b;
+      b = (b > len - 1 && s < 0) ? len - 1 : b;
+      // if the start value lead to empty tensor under step s, use -1 for indication
+      b = (b < 0 || b > len - 1) ? -1 : b;
+      e = e > -1 ? e : -1;
+      e = e > len ? len : e;
+    } else if (len == 0) {
+      b = 0;
+      e = 0;
     }
 
     (*begin)[i] = b;
@@ -728,27 +724,30 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
     (*step)[i] = s;
   }
 
-  for (index_t i = param_begin.ndim(); i < dshape.ndim(); ++i) {
+  for (int i = param_begin.ndim(); i < dshape.ndim(); ++i) {
     (*begin)[i] = 0;
     (*end)[i] = dshape[i];
     (*step)[i] = 1;
   }
 }
 
-inline void SetSliceOpOutputDimSize(const index_t i, const int b,
+inline void SetSliceOpOutputDimSize(const mxnet::TShape& dshape,
+                                    const index_t i, const int b,
                                     const int e, const int s,
                                     mxnet::TShape* oshape) {
-  if (e != b) {
+  if (!mxnet::dim_size_is_known(dshape, i)) {
+    (*oshape)[i] = -1;
+    return;
+  }
+  if (e != b && b >= 0) {
     if (s > 0) {
-      CHECK_LT(b, e) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
-                     << e << ", and step[" << i << "]=" << s << " is invalid";
-      (*oshape)[i] = (e - b - 1) / s + 1;
+      (*oshape)[i] = e > b ? (e - b - 1) / s + 1 : 0;
     } else {
-      CHECK_LT(e, b) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
-                     << e << ", and step[" << i << "]=" << s << " is invalid";
-      (*oshape)[i] = (b - e - 1) / (-s) + 1;
+      (*oshape)[i] = e < b ? (b - e - 1) / (-s) + 1 : 0;
     }
-  }  // else leave oshape[i] as 0 for partial infer
+  } else {
+      (*oshape)[i] = 0;
+  }
 }
 
 inline bool SliceOpShape(const nnvm::NodeAttrs& attrs,
@@ -758,6 +757,7 @@ inline bool SliceOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   const mxnet::TShape& dshape = (*in_attrs)[0];
   if (!mxnet::ndim_is_known(dshape)) return false;
+  CHECK_GT(dshape.ndim(), 0) << "slice only works for ndim > 0";
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
   mxnet::TShape oshape = dshape;
 
@@ -766,12 +766,12 @@ inline bool SliceOpShape(const nnvm::NodeAttrs& attrs,
     GetIndexRange(dshape, param.begin, param.end, param.step, &begin, &end, &step);
     for (int i = 0; i < param.begin.ndim(); ++i) {
       const int b = begin[i], e = end[i], s = step[i];
-      SetSliceOpOutputDimSize(i, b, e, s, &oshape);
+      SetSliceOpOutputDimSize(dshape, i, b, e, s, &oshape);
     }
   })
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
-  return shape_is_known(oshape);
+  return shape_is_known(dshape) && shape_is_known(oshape);
 }
 
 template<int ndim, int req, typename xpu>
@@ -849,6 +849,7 @@ void SliceOpForward(const nnvm::NodeAttrs& attrs,
   Stream<xpu>* s = ctx.get_stream<xpu>();
   const TBlob& data = inputs[0];
   const TBlob& out = outputs[0];
+  if (out.Size() == 0) return;
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
   MXNET_NDIM_SWITCH(data.ndim(), ndim, {
     common::StaticArray<index_t, ndim> begin, end, step;
@@ -948,6 +949,7 @@ void SliceOpBackward(const nnvm::NodeAttrs& attrs,
   } else if (req[0] == kWriteInplace) {
     LOG(FATAL) << "_slice_backward does not support kWriteInplace";
   }
+  if (ograd.Size() == 0) return;
   MXNET_NDIM_SWITCH(ograd.ndim(), ndim, {
     common::StaticArray<index_t, ndim> begin, end, step;
     GetIndexRange(igrad.shape_, param.begin, param.end, param.step, &begin, &end, &step);
@@ -979,7 +981,7 @@ inline bool SliceAssignOpShape(const nnvm::NodeAttrs& attrs,
     GetIndexRange(dshape, param.begin, param.end, param.step, &begin, &end, &step);
     for (int i = 0; i < param.begin.ndim(); ++i) {
       const int b = begin[i], e = end[i], s = step[i];
-      SetSliceOpOutputDimSize(i, b, e, s, &vshape);
+      SetSliceOpOutputDimSize(dshape, i, b, e, s, &vshape);
     }
   })
   SHAPE_ASSIGN_CHECK(*in_attrs, 1, vshape);
@@ -1031,8 +1033,8 @@ void SliceAssignOpForward(const nnvm::NodeAttrs& attrs,
 
 struct SliceAssignScalarParam : public dmlc::Parameter<SliceAssignScalarParam> {
   double scalar;
-  mxnet::Tuple<dmlc::optional<int>> begin, end;
-  mxnet::Tuple<dmlc::optional<int>> step;
+  mxnet::Tuple<dmlc::optional<index_t>> begin, end;
+  mxnet::Tuple<dmlc::optional<index_t>> step;
   DMLC_DECLARE_PARAMETER(SliceAssignScalarParam) {
     DMLC_DECLARE_FIELD(scalar)
     .set_default(0)
@@ -1042,7 +1044,7 @@ struct SliceAssignScalarParam : public dmlc::Parameter<SliceAssignScalarParam> {
     DMLC_DECLARE_FIELD(end)
     .describe("ending indices for the slice operation, supports negative indices.");
     DMLC_DECLARE_FIELD(step)
-    .set_default(mxnet::Tuple<dmlc::optional<int>>())
+    .set_default(mxnet::Tuple<dmlc::optional<index_t>>())
     .describe("step for the slice operation, supports negative values.");
   }
 };
@@ -1118,7 +1120,7 @@ void SliceAssignScalarOpForward(const nnvm::NodeAttrs& attrs,
     GetIndexRange(data.shape_, param.begin, param.end, param.step, &begin, &end, &step);
     for (index_t i = 0; i < param.begin.ndim(); ++i) {
       const int b = begin[i], e = end[i], s = step[i];
-      SetSliceOpOutputDimSize(i, b, e, s, &vshape);
+      SetSliceOpOutputDimSize(data.shape_, i, b, e, s, &vshape);
     }
     MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
       mxnet_op::Kernel<slice_assign_scalar<ndim>, xpu>::Launch(s, vshape.FlatTo2D()[0],
@@ -1344,12 +1346,12 @@ inline bool SliceLikeShape(const nnvm::NodeAttrs& attrs,
 inline void SliceLikeInferRanges(const mxnet::TShape& dshape,
                                  const mxnet::TShape& fshape,
                                  const mxnet::Tuple<int>& axes,
-                                 mxnet::Tuple<dmlc::optional<int>>* param_begin,
-                                 mxnet::Tuple<dmlc::optional<int>>* param_end,
-                                 mxnet::Tuple<dmlc::optional<int>>* param_step) {
-  std::vector<dmlc::optional<int>> pb(dshape.ndim());
-  std::vector<dmlc::optional<int>> pe(dshape.ndim());
-  std::vector<dmlc::optional<int>> ps(dshape.ndim());
+                                 mxnet::Tuple<dmlc::optional<index_t>>* param_begin,
+                                 mxnet::Tuple<dmlc::optional<index_t>>* param_end,
+                                 mxnet::Tuple<dmlc::optional<index_t>>* param_step) {
+  std::vector<dmlc::optional<index_t>> pb(dshape.ndim());
+  std::vector<dmlc::optional<index_t>> pe(dshape.ndim());
+  std::vector<dmlc::optional<index_t>> ps(dshape.ndim());
   if (axes.ndim() == 0) {
     for (int i = 0; i < dshape.ndim(); ++i) {
       pb[i] = 0;
@@ -1373,9 +1375,9 @@ inline void SliceLikeInferRanges(const mxnet::TShape& dshape,
       ps[axis] = 1;
     }
   }
-  *param_begin = mxnet::Tuple<dmlc::optional<int>>(pb.begin(), pb.end());
-  *param_end = mxnet::Tuple<dmlc::optional<int>>(pe.begin(), pe.end());
-  *param_step = mxnet::Tuple<dmlc::optional<int>>(ps.begin(), ps.end());
+  *param_begin = mxnet::Tuple<dmlc::optional<index_t>>(pb.begin(), pb.end());
+  *param_end = mxnet::Tuple<dmlc::optional<index_t>>(pe.begin(), pe.end());
+  *param_step = mxnet::Tuple<dmlc::optional<index_t>>(ps.begin(), ps.end());
 }
 
 template<typename xpu>
@@ -1394,9 +1396,9 @@ void SliceLikeForward(const nnvm::NodeAttrs& attrs,
   const TBlob& out = outputs[0];
   const mxnet::TShape& ishape = data.shape_;
   const mxnet::TShape& from_shape = inputs[1].shape_;
-  mxnet::Tuple<dmlc::optional<int>> param_begin;
-  mxnet::Tuple<dmlc::optional<int>> param_end;
-  mxnet::Tuple<dmlc::optional<int>> param_step;
+  mxnet::Tuple<dmlc::optional<index_t>> param_begin;
+  mxnet::Tuple<dmlc::optional<index_t>> param_end;
+  mxnet::Tuple<dmlc::optional<index_t>> param_step;
   SliceLikeInferRanges(ishape, from_shape, param.axes, &param_begin, &param_end, &param_step);
 
   MXNET_NDIM_SWITCH(data.ndim(), ndim, {
@@ -1442,9 +1444,9 @@ void SliceLikeBackward(const nnvm::NodeAttrs& attrs,
 
   const mxnet::TShape& ishape = ograd.shape_;
   const mxnet::TShape& from_shape = outputs[1].shape_;
-  mxnet::Tuple<dmlc::optional<int>> param_begin;
-  mxnet::Tuple<dmlc::optional<int>> param_end;
-  mxnet::Tuple<dmlc::optional<int>> param_step;
+  mxnet::Tuple<dmlc::optional<index_t>> param_begin;
+  mxnet::Tuple<dmlc::optional<index_t>> param_end;
+  mxnet::Tuple<dmlc::optional<index_t>> param_step;
   SliceLikeInferRanges(ishape, from_shape, param.axes, &param_begin, &param_end, &param_step);
 
   MXNET_NDIM_SWITCH(ograd.ndim(), ndim, {
@@ -1478,7 +1480,7 @@ struct ClipParam : public dmlc::Parameter<ClipParam> {
 struct clip {
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType* out, const DType* datas,
-                                  DType a_min, DType a_max) {
+                                  const float a_min, const float a_max) {
     DType data = datas[i];
     if (data > a_max) {
       out[i] = a_max;
@@ -1494,7 +1496,7 @@ struct clip {
 struct clip_grad {
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType* out, const DType* grad, const DType* datas,
-                                  DType a_min, DType a_max) {
+                                  const float a_min, const float a_max) {
     DType data = datas[i];
     if (data > a_max) {
       out[i] = 0;
@@ -1521,7 +1523,7 @@ void Clip(const nnvm::NodeAttrs& attrs,
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     mxnet_op::Kernel<mxnet::op::clip, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
                                                    inputs[0].dptr<DType>(),
-                                                   DType(param.a_min), DType(param.a_max));
+                                                   param.a_min, param.a_max);
   });
 }
 
@@ -1550,7 +1552,7 @@ void ClipGrad_(const nnvm::NodeAttrs& attrs,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Kernel<clip_grad, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
-    inputs[0].dptr<DType>(), inputs[1].dptr<DType>(), DType(param.a_min), DType(param.a_max));
+    inputs[0].dptr<DType>(), inputs[1].dptr<DType>(), param.a_min, param.a_max);
   });
 }
 

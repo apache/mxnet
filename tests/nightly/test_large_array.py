@@ -25,7 +25,6 @@ from tests.python.unittest.common import with_seed
 # dimension constants
 MEDIUM_X = 10000
 LARGE_X = 100000000
-LARGE_Y = 50000000
 SMALL_Y = 50
 LARGE_SIZE = LARGE_X * SMALL_Y
 
