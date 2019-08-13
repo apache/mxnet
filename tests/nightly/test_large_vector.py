@@ -15,20 +15,23 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""MXNet NumPy module."""
+import numpy as np
+import mxnet as mx
+from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d
+from mxnet import gluon, nd
+from tests.python.unittest.common import with_seed
 
-from __future__ import division, absolute_import, print_function
+# dimension constants
+LARGE_X = 5000000000
+MEDIUM_X = 1000000000
 
-from . import random
-from . import linalg
-from .multiarray import *  # pylint: disable=wildcard-import
-from . import _op
-from . import _register
-from ._op import *  # pylint: disable=wildcard-import
-from .utils import *  # pylint: disable=wildcard-import
-from .function_base import *  # pylint: disable=wildcard-import
-from .stride_tricks import *  # pylint: disable=wildcard-import
-from .io import *  # pylint: disable=wildcard-import
-from .arrayprint import *  # pylint: disable=wildcard-import
 
-__all__ = []
+def test_slice():
+    a = nd.ones(LARGE_X)
+    res = nd.slice(a, begin=(LARGE_X - MEDIUM_X), end=LARGE_X)
+    assert res.shape[0] == MEDIUM_X
+
+
+if __name__ == '__main__':
+    import nose
+    nose.runmodule()

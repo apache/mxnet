@@ -14,34 +14,29 @@
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
- * under the License.
+ * under the License.ø
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
- * \file np_init_op.cu
- * \brief GPU Implementation of numpy init op
+ * \file np_tensordot_inplace.cu
+ * \brief GPU Implementation of numpy-compatible tensordot
  */
 
-#include "../tensor/init_op.h"
-
+#include "np_tensordot_op-inl.h"
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_zeros)
-.set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 0>);
+NNVM_REGISTER_OP(_npi_tensordot)
+.set_attr<FCompute>("FCompute<gpu>", TensordotOpForward<gpu>);
 
-NNVM_REGISTER_OP(_npi_ones)
-.set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 1>);
+NNVM_REGISTER_OP(_backward_npi_tensordot)
+.set_attr<FCompute>("FCompute<gpu>", TensordotOpBackward<gpu>);
 
-NNVM_REGISTER_OP(_np_zeros_like)
-.set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 0>);
+NNVM_REGISTER_OP(_npi_tensordot_int_axes)
+.set_attr<FCompute>("FCompute<gpu>", TensordotIntAxesOpForward<gpu>);
 
-NNVM_REGISTER_OP(_np_ones_like)
-.set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 1>);
-
-NNVM_REGISTER_OP(_npi_arange)
-.set_attr<FCompute>("FCompute<gpu>", RangeCompute<gpu, RangeParam>);
+NNVM_REGISTER_OP(_backward_npi_tensordot_int_axes)
+.set_attr<FCompute>("FCompute<gpu>", TensordotIntAxesOpBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

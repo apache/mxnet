@@ -18,31 +18,20 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
- * \file np_reduce_op_value.cu
- * \brief GPU Implementation of reduce functions based on value.
+ * \file np_dot.cu
+ * \brief GPU Implementation of numpy-compatible dot
  */
-#include "np_broadcast_reduce_op.h"
+
+#include "./np_dot-inl.h"
 
 namespace mxnet {
 namespace op {
-NNVM_REGISTER_OP(_np_sum)
-.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesCompute<gpu, mshadow_op::sum, true>);
 
-NNVM_REGISTER_OP(_backward_np_sum)
-.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseNone<gpu>);
+NNVM_REGISTER_OP(_np_dot)
+.set_attr<FCompute>("FCompute<gpu>", NumpyDotForward<gpu>);
 
-NNVM_REGISTER_OP(_np_prod)
-.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesCompute<gpu, mshadow_op::product, true>);
-
-NNVM_REGISTER_OP(_backward_np_prod)
-.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseInOut<gpu, mshadow_op::rdiv>);
-
-NNVM_REGISTER_OP(_np_broadcast_to)
-.set_attr<FCompute>("FCompute<gpu>", NumpyBroadcastToForward<gpu>);
-
-NNVM_REGISTER_OP(_backward_np_broadcast_to)
-.set_attr<FCompute>("FCompute<gpu>", NumpyBroadcastToBackward<gpu>);
+NNVM_REGISTER_OP(_backward_np_dot)
+.set_attr<FCompute>("FCompute<gpu>", NumpyDotBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

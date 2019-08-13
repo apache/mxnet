@@ -35,7 +35,8 @@ bool SupportMKLDNNTranspose(const TransposeParam& param,
                             const NDArray &data) {
   auto data_ndim = data.shape().ndim();
 
-  if (data_ndim > 4 || data.dtype() != mshadow::kFloat32)
+  if (data_ndim > 4 || data_ndim == 0 || data.shape().Size() == 0 ||
+      data.dtype() != mshadow::kFloat32)
     return false;
 
   return true;

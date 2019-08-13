@@ -29,17 +29,17 @@ from array import array
 import ctypes
 import warnings
 from numbers import Number
-
+import sys
 import numpy as _numpy  # pylint: disable=relative-import
 
 from ..attribute import AttrScope
 from ..base import _LIB, numeric_types, c_array, c_array_buf, c_str, c_str_array, c_handle_array
-from ..base import mx_uint, py_str, string_types, integer_types, mx_int
+from ..base import mx_uint, py_str, string_types, integer_types, mx_int, mx_int64
 from ..base import NDArrayHandle, ExecutorHandle, SymbolHandle
 from ..base import check_call, MXNetError, NotImplementedForSymbol
 from ..context import Context, current_context
 from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP, _GRAD_REQ_MAP
-from ..ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
+from ..ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID, _int64_enabled
 from ..ndarray import _ndarray_cls
 from ..executor import Executor
 from . import _internal
@@ -1207,34 +1207,59 @@ class Symbol(SymbolBase):
             keys = c_str_array(str_keys)
         arg_shape_size = mx_uint()
         arg_shape_ndim = ctypes.POINTER(mx_int)()
-        arg_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()
         out_shape_size = mx_uint()
         out_shape_ndim = ctypes.POINTER(mx_int)()
-        out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()
         aux_shape_size = mx_uint()
         aux_shape_ndim = ctypes.POINTER(mx_int)()
-        aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()
         complete = ctypes.c_int()
-        if partial:
-            infer_func = _LIB.MXSymbolInferShapePartialEx
+        if sys.version_info[0] > 2 and _int64_enabled():
+            arg_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
+            out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
+            aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
+            if partial:
+                infer_func = _LIB.MXSymbolInferShapePartialEx64
+            else:
+                infer_func = _LIB.MXSymbolInferShapeEx64
+            check_call(infer_func(
+                self.handle,
+                mx_uint(len(indptr) - 1),
+                keys,
+                c_array_buf(mx_int64, array('q', indptr)),
+                c_array_buf(mx_int64, array('q', sdata)),
+                ctypes.byref(arg_shape_size),
+                ctypes.byref(arg_shape_ndim),
+                ctypes.byref(arg_shape_data),
+                ctypes.byref(out_shape_size),
+                ctypes.byref(out_shape_ndim),
+                ctypes.byref(out_shape_data),
+                ctypes.byref(aux_shape_size),
+                ctypes.byref(aux_shape_ndim),
+                ctypes.byref(aux_shape_data),
+                ctypes.byref(complete)))
         else:
-            infer_func = _LIB.MXSymbolInferShapeEx
-        check_call(infer_func(
-            self.handle,
-            mx_uint(len(indptr) - 1),
-            keys,
-            c_array_buf(mx_uint, array('I', indptr)),
-            c_array_buf(mx_int, array('i', sdata)),
-            ctypes.byref(arg_shape_size),
-            ctypes.byref(arg_shape_ndim),
-            ctypes.byref(arg_shape_data),
-            ctypes.byref(out_shape_size),
-            ctypes.byref(out_shape_ndim),
-            ctypes.byref(out_shape_data),
-            ctypes.byref(aux_shape_size),
-            ctypes.byref(aux_shape_ndim),
-            ctypes.byref(aux_shape_data),
-            ctypes.byref(complete)))
+            arg_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()
+            out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()
+            aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()
+            if partial:
+                infer_func = _LIB.MXSymbolInferShapePartialEx
+            else:
+                infer_func = _LIB.MXSymbolInferShapeEx
+            check_call(infer_func(
+                self.handle,
+                mx_uint(len(indptr) - 1),
+                keys,
+                c_array_buf(mx_uint, array('I', indptr)),
+                c_array_buf(mx_int, array('i', sdata)),
+                ctypes.byref(arg_shape_size),
+                ctypes.byref(arg_shape_ndim),
+                ctypes.byref(arg_shape_data),
+                ctypes.byref(out_shape_size),
+                ctypes.byref(out_shape_ndim),
+                ctypes.byref(out_shape_data),
+                ctypes.byref(aux_shape_size),
+                ctypes.byref(aux_shape_ndim),
+                ctypes.byref(aux_shape_data),
+                ctypes.byref(complete)))
         if complete.value != 0:
             arg_shapes = [tuple(arg_shape_data[i][:arg_shape_ndim[i]])
                           if arg_shape_ndim[i] >= 0 else None
