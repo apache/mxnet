@@ -1,6 +1,3 @@
-[submodule "3rdparty/mshadow"]
-	path = 3rdparty/mshadow
-	url = https://github.com/dmlc/mshadow.git
 [submodule "3rdparty/dmlc-core"]
 	path = 3rdparty/dmlc-core
 	url = https://github.com/dmlc/dmlc-core.git

@@ -133,6 +133,9 @@ def test_gluon_learning_rate_schedules_advanced():
 def test_gluon_info_gan():
     assert _test_tutorial_nb('gluon/info_gan')
 
+def test_gluon_fit_api_fashion_mnist():
+    assert _test_tutorial_nb('gluon/fit_api_tutorial')
+
 def test_nlp_cnn():
     assert _test_tutorial_nb('nlp/cnn')
 
@@ -213,3 +216,6 @@ def test_control_flow():
 
 def test_amp():
     assert _test_tutorial_nb('amp/amp_tutorial')
+
+def test_mkldnn_quantization():
+    assert _test_tutorial_nb('mkldnn/mkldnn_quantization')

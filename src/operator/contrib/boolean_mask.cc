@@ -143,6 +143,7 @@ inline void BooleanMaskForward<cpu>(const nnvm::NodeAttrs& attrs,
   // set the output shape forcefully
   mxnet::TShape s = data.shape();
   s[axis] = valid_num;
+
   const_cast<NDArray &>(out).Init(s);
   // do the copy
   MSHADOW_TYPE_SWITCH(data.dtype(), DType, {

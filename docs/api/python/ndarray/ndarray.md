@@ -462,6 +462,8 @@ The `ndarray` package provides several classes:
     where
     ravel_multi_index
     unravel_index
+    gather_nd
+    scatter_nd
 ```
 
 ## Mathematical functions
