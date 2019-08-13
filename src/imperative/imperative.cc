@@ -48,7 +48,7 @@ OpStatePtr Imperative::InvokeOp(
   using namespace imperative;
   static auto& createop = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
   static auto& is_layer_backward = Op::GetAttr<bool>("TIsLayerOpBackward");
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
 
   const nnvm::Op *op = attrs.op;
 
@@ -197,7 +197,7 @@ void Imperative::RecordOp(
     const OpStatePtr& state,
     std::vector<bool>* p_save_inputs,
     std::vector<bool>* p_save_outputs) {
-  MXAPIThreadLocalEntry *local_buff = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *local_buff = MXAPIThreadLocalStore<>::Get();
 
   for (auto output : outputs) {
     CHECK(AGInfo::IsNone(*output))
