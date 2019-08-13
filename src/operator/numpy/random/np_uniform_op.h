@@ -151,7 +151,7 @@ void NumpyUniformForward(const nnvm::NodeAttrs &attrs,
   // [scalar scalar] case
   if (inputs.size() == 0U) {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      mxnet_op::Kernel<uniform_two_scalar_kernel<OType>, xpu>::Launch(
+      Kernel<uniform_two_scalar_kernel<OType>, xpu>::Launch(
           s, outputs[0].Size(), param.low.value(), param.high.value(),
           uniform_tensor.dptr_, outputs[0].dptr<OType>());
     });
@@ -172,14 +172,12 @@ void NumpyUniformForward(const nnvm::NodeAttrs &attrs,
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
       MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
         BROADCAST_NDIM_SWITCH(ndim, NDim, {
-          mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
-          mshadow::Shape<NDim> stride =
-              mxnet_op::calc_stride(new_lshape.get<NDim>());
-          mxnet_op::Kernel<uniform_one_scalar_kernel<NDim, IType, OType>,
-                           xpu>::Launch(s, outputs[0].Size(), scalar_pos,
-                                        stride, oshape, inputs[0].dptr<IType>(),
-                                        scalar_value, uniform_tensor.dptr_,
-                                        outputs[0].dptr<OType>());
+          Shape<NDim> oshape = new_oshape.get<NDim>();
+          Shape<NDim> stride = calc_stride(new_lshape.get<NDim>());
+          Kernel<uniform_one_scalar_kernel<NDim, IType, OType>, xpu>::Launch(
+              s, outputs[0].Size(), scalar_pos, stride, oshape,
+              inputs[0].dptr<IType>(), scalar_value, uniform_tensor.dptr_,
+              outputs[0].dptr<OType>());
         });
       });
     });
@@ -190,12 +188,10 @@ void NumpyUniformForward(const nnvm::NodeAttrs &attrs,
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
       MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
         BROADCAST_NDIM_SWITCH(ndim, NDim, {
-          mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
-          mshadow::Shape<NDim> lstride =
-              mxnet_op::calc_stride(new_lshape.get<NDim>());
-          mshadow::Shape<NDim> hstride =
-              mxnet_op::calc_stride(new_hshape.get<NDim>());
-          mxnet_op::Kernel<uniform_kernel<NDim, IType, OType>, xpu>::Launch(
+          Shape<NDim> oshape = new_oshape.get<NDim>();
+          Shape<NDim> lstride = calc_stride(new_lshape.get<NDim>());
+          Shape<NDim> hstride = calc_stride(new_hshape.get<NDim>());
+          Kernel<uniform_kernel<NDim, IType, OType>, xpu>::Launch(
               s, outputs[0].Size(), lstride, hstride, oshape,
               inputs[0].dptr<IType>(), inputs[1].dptr<IType>(),
               uniform_tensor.dptr_, outputs[0].dptr<OType>());
