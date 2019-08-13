@@ -520,7 +520,7 @@ def test_np_ndarray_indexing():
         try:
             with mx.autograd.record():
                 x[index] = y
-                # `a[None] = v` is equivalent to `a[...] = v` which doesn't raise
+                # # `a[None] = v` is equivalent to `a[...] = v` which doesn't raise
                 if index is not None:
                     assert False, 'failed with index = {}'.format(index)  # should not reach here
         except mx.base.MXNetError as err:
@@ -664,6 +664,12 @@ def test_np_ndarray_indexing():
     ]
     for index in index_list:
         test_getitem(np_array, index[0], index[1])
+        test_setitem(np_array, index[0])
+        test_getitem_autograd(np_array, index[0])
+        if not isinstance(index, tuple) or len(index) != 0:
+            # When index = (), this is same a[()] = b is equivalent to b.copyto(a)
+            # which should have no problem to do autograd
+            test_setitem_autograd(np_array, index[0])
     
     # test zero-size tensors get and setitem
     shapes_indices = [
@@ -675,6 +681,12 @@ def test_np_ndarray_indexing():
             np_array = np.zeros(shape)
             test_getitem(np_array, index, False)
             test_setitem(np_array, index, False)
+            test_getitem_autograd(np_array, index)
+            if not isinstance(index, tuple) or len(index) != 0:
+                # When index = (), this is same a[()] = b is equivalent to b.copyto(a)
+                # which should have no problem to do autograd
+                test_setitem_autograd(np_array, index)
+            
 
 
 @with_seed()

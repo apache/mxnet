@@ -457,7 +457,6 @@ fixed-size items.
         array([[ 6.,  5.,  5.],
                [ 6.,  0.,  4.]], dtype=float32)
         """
-        # Note: currently 
         if self.ndim == 0:
             if not isinstance(key, (tuple, py_slice)):
                 raise IndexError('scalar tensor can only accept `()` and `:` as index')
@@ -475,14 +474,14 @@ fixed-size items.
                 self._sync_copyfrom(value)
             else:
                 raise ValueError('setting an array element with a sequence.')
-        
+
         elif self.size == 0:
             return
 
         else:
             key = indexing_key_expand_implicit_axes(key, self.shape)
             slc_key = tuple(idx for idx in key if idx is not None)
-            
+
             if len(slc_key) < self.ndim:
                 raise RuntimeError(
                     'too few indices after normalization: expected `ndim` ({}) '
@@ -897,7 +896,7 @@ fixed-size items.
 
         elif isinstance(value, numeric_types):
             self.slice_assign_scalar(float(value), begin, end, step)
-        
+
         else:
             # drop the axis of indexed_shape corresponding to int axes
             bcast_shape = []
@@ -951,7 +950,7 @@ fixed-size items.
         shape = list(self.shape)
         i = 0
         zero_size = False
-        for b, e, s in zip(begin, end, step):
+        for b, e, s in zip(begin, end, step):  # pylint: disable=invalid-name
             if b >= e and s > 0 or b <= e and s < 0:
                 shape[i] = 0
                 zero_size = True
@@ -992,7 +991,7 @@ fixed-size items.
             # Override for single element indexing
             final_shape = [1]
         if zero_size:
-            # Note: NDArray currently does not support reshape to fewer dimensions.  
+            # Note: NDArray currently does not support reshape to fewer dimensions.
             return zeros(tuple(final_shape))
         return sliced.reshape(final_shape)
 
