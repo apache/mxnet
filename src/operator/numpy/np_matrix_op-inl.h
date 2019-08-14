@@ -59,8 +59,7 @@ void NumpyTranspose(const nnvm::NodeAttrs& attrs,
   }
 }
 
-// 
-# TODO(zoeygxy): copied from Wenxu Mao's unmerged code
+// TODO(zoeygxy): copied from Wenxu Mao's unmerged code
 template<int ndim>
 inline void NumpyGetIndexRange(const mxnet::TShape& dshape,
                           const mxnet::Tuple<dmlc::optional<int>>& param_begin,
