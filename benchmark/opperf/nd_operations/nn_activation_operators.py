@@ -35,7 +35,7 @@ from benchmark.opperf.rules.default_params import MX_OP_MODULE
 """
 
 
-def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='cpp', warmup=25, runs=100):
+def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype)for all the activation
     operators (relu, sigmoid, softmax) in MXNet.
 

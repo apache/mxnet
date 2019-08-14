@@ -51,7 +51,7 @@ MXNet NDArray NN Convolution Operators
 """
 
 
-def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='cpp', warmup=25, runs=100):
+def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
     pool_types = ['avg', 'max', 'sum']
     global_pool_types = [0, 1]
 

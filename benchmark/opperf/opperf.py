@@ -47,7 +47,7 @@ from benchmark.opperf.utils.op_registry_utils import get_operators_with_no_bench
     get_current_runtime_features
 
 
-def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='cpp'):
+def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native'):
     """Run all the MXNet operators (NDArray) benchmarks.
 
     Returns
@@ -138,7 +138,7 @@ def main():
                         help='Name and path for the '
                              'output file.')
 
-    parser.add_argument('-p', '--profiler', type=str, default='cpp',
+    parser.add_argument('-p', '--profiler', type=str, default='native',
                         help='Use built-in CPP profiler or Python'
                              'time module')
 

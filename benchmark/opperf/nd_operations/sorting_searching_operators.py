@@ -29,7 +29,7 @@ from benchmark.opperf.utils.op_registry_utils import get_all_sorting_searching_o
 """
 
 
-def run_sorting_searching_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='cpp', warmup=25, runs=100):
+def run_sorting_searching_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype)for all the sorting and searching
     operators in MXNet.
 

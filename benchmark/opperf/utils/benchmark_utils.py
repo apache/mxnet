@@ -46,7 +46,7 @@ def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
 
 
 def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, kwargs_list, profiler):
-    if profiler == 'cpp':
+    if profiler == 'native':
         if run_backward:
             benchmark_helper_func = cpp_profile(nd_forward_backward_and_profile)
         else:
@@ -57,7 +57,7 @@ def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, kw
         else:
             benchmark_helper_func = python_profile(nd_forward_and_profile)
     else:
-        raise ValueError("Incorrect input for profiler. Valid input - 'python' or 'cpp'")
+        raise ValueError("Incorrect input for profiler. Valid input - 'python' or 'native'")
 
     # Warm up, ignore the profiler output
     _, _ = benchmark_helper_func(op, warmup, **kwargs_list[0])
@@ -76,7 +76,7 @@ def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, kw
 
 
 def run_performance_test(ops, inputs, run_backward=True,
-                         dtype='float32', ctx=mx.cpu(), profiler='cpp',
+                         dtype='float32', ctx=mx.cpu(), profiler='native',
                          warmup=10, runs=50):
     """Run operator benchmark for given operator or list of operators, ops, with the given inputs.
 
@@ -97,9 +97,9 @@ def run_performance_test(ops, inputs, run_backward=True,
         Precision to use for input tensors. Defaults to float32. Example: 'float32', 'int64'
     ctx: mx.ctx, default mx.cpu()
         Context to use for benchmarks. Default to mx.cpu()
-    profiler: Str, default 'cpp'
-        Type of profiler to run benchmarks. Default to 'cpp'
-        Option - ['python', 'cpp']
+    profiler: Str, default 'native'
+        Type of profiler to run benchmarks. Default to 'native'
+        Option - ['python', 'native']
     warmup: int, default 10
         Number of warmup runs
     runs: int, default 50
