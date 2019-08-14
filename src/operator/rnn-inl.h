@@ -48,7 +48,7 @@ STATIC_ASSERT_CUDNN_VERSION_GE(7000);
 #include "./rnn_impl.h"
 #if MXNET_USE_MKLDNN == 1
 #include "./nn/mkldnn/mkldnn_rnn_impl.h"
-#endif
+#endif  // MXNET_USE_MKLDNN
 
 namespace mxnet {
 namespace op {
@@ -399,14 +399,14 @@ class RNNOp {
   RNNParam param_;
   Context ctx_;
 
-  #if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 1
   bool has_cache;
   bool init_mem_;
   size_t reserve_mem_size_;
   std::shared_ptr<Tensor<xpu, 1, DType> > mem_space_;
   MKLDNNRNNMemory mkldnn_mems;
   std::vector<primitive> rnn_forward_prim;
-  #endif
+#endif  // MXNET_USE_MKLDNN
 
   explicit RNNOp(RNNParam param, Context ctx) {
     this->param_ = param;
@@ -414,7 +414,7 @@ class RNNOp {
 #if MXNET_USE_MKLDNN == 1
     init_mem_ = false;
     reserve_mem_size_ = 0;
-#endif
+#endif  // MXNET_USE_MKLDNN
 #if MXNET_USE_CUDNN == 1
     init_cudnn_ = false;
     dtype_ = mshadow::DataType<DType>::kCudnnFlag;
@@ -900,7 +900,7 @@ class RNNOp {
                                   param_.p,
                                   param_.mode);
       } else {
-        #if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 1
         if (dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1)) {
           int dtype = in_data[rnn_enum::kData].type_flag_;
           MKLDNNRNNForwardInference<DType>(param_.state_outputs,
@@ -925,7 +925,7 @@ class RNNOp {
                                            ctx.is_train,
                                            param_.mode);
         } else {
-        #endif
+#endif  // MXNET_USE_MKLDNN
           const size_t work_cpu_space_size =
               GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
                                   param_.state_size, direction, param_.mode);
@@ -959,7 +959,7 @@ class RNNOp {
                                      param_.mode);
 #if MXNET_USE_MKLDNN == 1
         }
-#endif
+#endif  // MXNET_USE_MKLDNN
       }
     }
   }
@@ -1198,7 +1198,7 @@ class RNNOp {
   size_t reserve_cpu_space_size_, temp_cpu_space_size_;
   Storage::Handle reserve_cpu_space_, temp_cpu_space_;
 
-  #if MXNET_USE_CUDNN_RNN
+#if MXNET_USE_CUDNN == 1
   cudnnDataType_t dtype_;
   bool init_cudnn_;
   cudnnRNNDescriptor_t rnn_desc_;
@@ -1211,10 +1211,10 @@ class RNNOp {
   size_t workspace_byte_, reserve_space_byte_;
   int workspace_size_;
   std::vector<cudnnTensorDescriptor_t> x_desc_vec_, y_desc_vec_, dx_desc_vec_, dy_desc_vec_;
-  #if MXNET_USE_CUDNN_GE_7200
+#if MXNET_USE_CUDNN_GE_7200
   cudnnRNNDataDescriptor_t x_data_desc_, y_data_desc_, dx_data_desc_, dy_data_desc_;
   DType padding_fill_ = 0;
-  #endif
+#endif  // MXNET_USE_CUDNN_GE_7200
   cudnnTensorDescriptor_t hx_desc_, cx_desc_;
   cudnnTensorDescriptor_t hy_desc_, cy_desc_;
   cudnnTensorDescriptor_t dhx_desc_, dcx_desc_;
@@ -1224,10 +1224,8 @@ class RNNOp {
   // Allow TensorCore algo policy
   bool cudnn_tensor_core_;
 
-  #if CUDNN_MAJOR >= 5
   cudnnTensorFormat_t format_;
-  #endif
-  #endif
+#endif  // MXNET_USE_CUDNN
 
   inline void Init(const OpContext &ctx,
                    mshadow::Stream<xpu> *s,

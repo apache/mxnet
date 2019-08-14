@@ -189,9 +189,9 @@ inline static bool RNNStorageType(const nnvm::NodeAttrs& attrs,
                                   std::vector<int> *out_attrs) {
   DispatchMode wanted_mode = DispatchMode::kFCompute;
 
-  #if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 1
     wanted_mode = DispatchMode::kFComputeEx;
-  #endif
+#endif  // MXNET_USE_MKLDNN
 
   return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                              dispatch_mode, wanted_mode);
@@ -632,7 +632,7 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
     });
   });
 }
-#endif
+#endif  // MXNET_USE_MKLDNN
 
 NNVM_REGISTER_OP(RNN)
 .add_alias("_npx_rnn")
@@ -719,7 +719,7 @@ The definition of GRU here is slightly different from paper but compatible with 
 #if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", RNNStatefulComputeCPU)
-#endif
+#endif  // MXNET_USE_MKLDNN
 .set_attr<nnvm::FGradient>("FGradient", RNNGrad{"_backward_RNN"})
 .set_attr<FResourceRequestEx>("FResourceRequestEx", RNNResourceEx)
 .add_argument("data", "NDArray-or-Symbol", "Input data to RNN")
