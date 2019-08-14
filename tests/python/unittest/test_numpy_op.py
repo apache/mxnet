@@ -776,6 +776,59 @@ def test_np_arange():
                 assert same(mx_out.asnumpy(), np_out)
 
 
+@with_seed()
+@use_np
+def test_np_split():
+    class TestSplit(HybridBlock):
+        def __init__(self, indices_or_sections, axis=None):
+            super(TestSplit, self).__init__()
+            self._axis = axis
+            self._indices_or_sections = indices_or_sections
+
+        def hybrid_forward(self, F, a, *args, **kwargs):
+            return F.np.split(a, indices_or_sections=self._indices_or_sections,
+                              axis=self._axis)
+
+    def get_indices(axis_size):
+        if axis_size is 0:
+            axis_size = random.randint(3, 6)
+        samples = random.randint(1, axis_size - 1)
+        indices = sorted(random.sample([i for i in range(1, axis_size)], samples))
+        indices = tuple(indices)
+        return indices
+
+    dim = random.randint(0, 3)
+    shape = [0] + [random.randint(2, 4) for i in range(dim)]
+    for hybridize in [True, False]:
+        for axis in range(len(shape)):
+            indices = get_indices(shape[axis])
+            sections = 7 if shape[axis] is 0 else shape[axis]
+            for indices_or_sections in [indices, sections]:
+                # test gluon
+                test_split = TestSplit(axis=axis, indices_or_sections=indices_or_sections)
+                if hybridize:
+                    test_split.hybridize()
+
+                a = mx.nd.random.uniform(-1.0, 1.0, shape=shape).as_np_ndarray()
+                a.attach_grad()
+                expected_ret = _np.split(a.asnumpy(), indices_or_sections=indices_or_sections, axis=axis)
+                with mx.autograd.record():
+                    y = test_split(a)
+                assert len(y) == len(expected_ret)
+                for mx_out, np_out in zip(y, expected_ret):
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+                mx.autograd.backward(y)
+
+                assert_almost_equal(a.grad.asnumpy(), _np.ones(a.shape), rtol=1e-3, atol=1e-5)
+
+                # test imperative
+                mx_outs = np.split(a, indices_or_sections=indices_or_sections, axis=axis)
+                np_outs = _np.split(a.asnumpy(), indices_or_sections=indices_or_sections, axis=axis)
+                for mx_out, np_out in zip(mx_outs, np_outs):
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
