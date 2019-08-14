@@ -389,6 +389,15 @@ def test_children_same_name():
     for c in b.get_children():
         pass
 
+def test_gen_atomic_symbol_multiple_outputs():
+    data=mx.sym.Variable('data')
+    p = mx.sym.Variable('param')
+    h0 = mx.sym.Variable('h0')
+    h1 = mx.sym.Variable('h1')
+    s = mx.sym.RNN(data, p, h0, h1, state_size=10, num_layers=2, 
+                   bidirectional=True, state_outputs=True, mode='lstm')
+    atomic_sym = s._gen_atomic_symbol()
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
