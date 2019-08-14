@@ -22,6 +22,7 @@ object HelloWorld {
     println("hello World")
     val arr = NDArray.ones(2, 3)
     println(arr.shape)
+    println("test")
     for (rootScale <- 1 to 3) {
       for (scale <- 1 to 3) {
         for (numShape <- 1 to 3) {
