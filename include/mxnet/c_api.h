@@ -2002,6 +2002,15 @@ MXNET_DLL int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend,
  * \param ret_sym_handle returned atomic symbol
  */
 MXNET_DLL int MXGenAtomicSymbolFromSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_handle);
+/*!
+ * \brief Partitions symbol for given backend, potentially creating subgraphs
+ * \param sym_handle symbol to be partitioned
+ * \param backend backend name
+ * \param ret_sym_handle partitioned symbol returned
+ */
+MXNET_DLL int MXOptimizeForBackend(SymbolHandle sym_handle,
+                                   const char* backend,
+                                   SymbolHandle* ret_sym_handle);
 
 
 //--------------------------------------------

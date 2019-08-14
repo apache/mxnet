@@ -1437,6 +1437,12 @@ class Symbol(SymbolBase):
         return Symbol(handle)
 
 
+    def optimizeFor(self, backend):
+        """Partition symbol and optimize it for a given backend"""
+        out = SymbolHandle()
+        check_call(_LIB.MXOptimizeForBackend(self.handle, c_str(backend), ctypes.byref(out)))
+
+
     # pylint: disable=too-many-locals
     def simple_bind(self, ctx, grad_req='write', type_dict=None, stype_dict=None,
                     group2ctx=None, shared_arg_names=None, shared_exec=None,
