@@ -253,7 +253,7 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
       }
     }
 
-    if (!ctx.is_train) {
+    if (!ctx.is_train || param.use_global_stats) {
       DType* omean    = out_data[batchnorm::kMean].data().dptr<DType>();
       DType* ovar     = out_data[batchnorm::kVar].data().dptr<DType>();
       DType* inmean   = aux_states[batchnorm::kMovingMean].data().dptr<DType>();
