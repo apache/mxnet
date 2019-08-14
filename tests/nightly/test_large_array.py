@@ -24,6 +24,7 @@ from tests.python.unittest.common import with_seed
 # dimension constants
 MEDIUM_X = 10000
 LARGE_X = 100000000
+SMALL_X = 100
 SMALL_Y = 50
 LARGE_SIZE = LARGE_X * SMALL_Y
 
@@ -77,6 +78,88 @@ def test_ndarray_random_randint():
     low = mx.nd.array([low_large_value], dtype='int64')
     high = mx.nd.array([high_large_value], dtype='int64')
     assert a.__gt__(low) and a.__lt__(high)
+
+
+@with_seed()
+def test_ndarray_random_exponential():
+    scale_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    a = nd.random.exponential(scale=scale_array, shape=(SMALL_X, SMALL_Y))
+    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
+    assert a[-1][0][0][0] >= 0
+
+
+@with_seed()
+def test_ndarray_random_gamma():
+    alpha_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    beta_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    a = nd.random.gamma(alpha=alpha_array, beta=beta_array,
+                        shape=(SMALL_X, SMALL_Y))
+    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
+    assert a[-1][0][0][0] >= 0
+
+
+@with_seed()
+def test_ndarray_random_multinomial():
+    # test 1 shape dimension
+    probs = nd.random.uniform(shape=(LARGE_X, SMALL_Y))
+    a = nd.random.multinomial(probs)
+    assert a.shape == (LARGE_X,)
+    assert a[-1] >= 0
+    # test for NDArray multi-dimension shape
+    a = nd.random.multinomial(probs, shape=(SMALL_X, SMALL_Y))
+    assert a.shape == (LARGE_X, SMALL_X, SMALL_Y)
+    assert a[-1][0][0] >= 0
+    # test log_likelihood output shape
+    a = nd.random.multinomial(probs, shape=(SMALL_X, SMALL_Y), get_prob=True)
+    assert a[0].shape == (LARGE_X, SMALL_X, SMALL_Y) and a[0].shape == a[1].shape
+    assert a[-1][0][0] >= 0
+
+
+@with_seed()
+def test_ndarray_random_generalized_negative_binomial():
+    alpha_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    mu_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    a = nd.random.generalized_negative_binomial(mu=mu_array, alpha=alpha_array,
+                                                shape=(SMALL_X, SMALL_Y))
+    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
+    assert a[-1][0][0][0] >= 0
+
+
+@with_seed()
+def test_ndarray_random_negative_binomial():
+    k_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    p_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    a = nd.random.negative_binomial(k=k_array, p=p_array,
+                                    shape=(SMALL_X, SMALL_Y))
+    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
+    assert a[-1][0][0][0] >= 0
+
+
+@with_seed()
+def test_ndarray_random_normal():
+    scale_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    loc_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    a = nd.random.normal(loc=loc_array, scale=scale_array,
+                         shape=(SMALL_X, SMALL_Y))
+    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
+    assert a[-1][0][0][0] >= 0
+
+
+@with_seed()
+def test_ndarray_random_poisson():
+    lambda_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    a = nd.random.poisson(lam=lambda_array, shape=(SMALL_X, SMALL_Y))
+    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
+    assert a[-1][0][0][0] >= 0
+
+
+@with_seed()
+def test_ndarray_random_randn():
+    a = nd.random.randn(LARGE_X, SMALL_Y)
+    assert a.shape == (LARGE_X, SMALL_Y)
+    assert a[-1][0] >= 0
+    # TODO: Once PR for randn ndarray dtype for loc,scale param merged
+    # Add check for (x,y,m,n) where x,y shape of loc,scale and m,n input shape
 
 
 def test_ndarray_empty():
@@ -291,10 +374,10 @@ def test_unravel_index():
     assert (indices_2d.asnumpy() == np.array(original_2d_indices)).all()
 
 
-def create_2d_tensor(rows, columns):
+def create_2d_tensor(rows, columns, dtype=np.int64):
     a = np.arange(0, rows).reshape(rows, 1)
     b = np.broadcast_to(a, shape=(a.shape[0], columns))
-    return nd.array(b, dtype=np.int64)
+    return nd.array(b, dtype=dtype)
 
 
 def test_transpose():
@@ -415,6 +498,113 @@ def test_power_operators():
     result = nd.reciprocal(a)
     assert result[0][-1] == 0.5
     assert result.shape == a.shape
+
+
+def test_add():
+    a = nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__add__(a)
+    assert c[0][-1] == 2
+    assert c.shape == a.shape
+
+
+def test_sub():
+    a = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__sub__(a)
+    assert c[0][-1] == -2
+    assert c.shape == a.shape
+
+
+def test_rsub():
+    a = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__rsub__(a)
+    assert c[0][-1] == 2
+    assert c.shape == a.shape
+
+
+def test_neg():
+    a = nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = a
+    c = c.__neg__()
+    assert c[0][-1] == -1
+    assert c.shape == a.shape
+
+
+def test_mul():
+    a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__mul__(a)
+    assert c[0][-1] == 6
+    assert c.shape == a.shape
+
+
+def test_div():
+    a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__div__(a)
+    assert c[0][-1] == 3/2
+    assert c.shape == a.shape
+
+
+def test_rdiv():
+    a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__rdiv__(a)
+    assert c[0][-1] == 2/3
+    assert c.shape == a.shape
+
+
+def test_mod():
+    a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__mod__(a)
+    assert c[0][-1] == 1
+    assert c.shape == a.shape
+
+
+def test_rmod():
+    a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__rmod__(a)
+    assert c[0][-1] == 2
+    assert c.shape == a.shape
+
+
+def test_imod():
+    a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__imod__(a)
+    assert c[0][-1] == 1
+    assert c.shape == a.shape
+
+
+def test_pow():
+    a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__pow__(a)
+    assert c[0][-1] == 9
+    assert c.shape == a.shape
+
+
+def test_rpow():
+    a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
+    c = b
+    c = c.__rpow__(a)
+    assert c[0][-1] == 8
+    assert c.shape == a.shape
 
 
 if __name__ == '__main__':

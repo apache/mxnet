@@ -29,6 +29,7 @@
 #include <dmlc/parameter.h>
 #include <dmlc/optional.h>
 #include <mshadow/base.h>
+#include <mxnet/libinfo.h>
 
 /*! \brief Macros/inlines to assist CLion to parse Cuda files (*.cu, *.cuh) */
 #ifdef __JETBRAINS_IDE__
@@ -482,13 +483,10 @@ static_assert(CUDNN_PATCHLEVEL < 100 && CUDNN_MINOR < 10,
  *         want to populate.
  */
 inline int MaxForwardAlgos(cudnnHandle_t cudnn_handle) {
-#if CUDNN_MAJOR >= 7
+  STATIC_ASSERT_CUDNN_VERSION_GE(7000);
   int max_algos = 0;
   CUDNN_CALL(cudnnGetConvolutionForwardAlgorithmMaxCount(cudnn_handle, &max_algos));
   return max_algos;
-#else
-  return 10;
-#endif
 }
 
 /*!
@@ -499,13 +497,10 @@ inline int MaxForwardAlgos(cudnnHandle_t cudnn_handle) {
  *         want to populate.
  */
 inline int MaxBackwardFilterAlgos(cudnnHandle_t cudnn_handle) {
-#if CUDNN_MAJOR >= 7
+  STATIC_ASSERT_CUDNN_VERSION_GE(7000);
   int max_algos = 0;
   CUDNN_CALL(cudnnGetConvolutionBackwardFilterAlgorithmMaxCount(cudnn_handle, &max_algos));
   return max_algos;
-#else
-  return 10;
-#endif
 }
 
 /*!
@@ -516,13 +511,10 @@ inline int MaxBackwardFilterAlgos(cudnnHandle_t cudnn_handle) {
  *         want to populate.
  */
 inline int MaxBackwardDataAlgos(cudnnHandle_t cudnn_handle) {
-#if CUDNN_MAJOR >= 7
+  STATIC_ASSERT_CUDNN_VERSION_GE(7000);
   int max_algos = 0;
   CUDNN_CALL(cudnnGetConvolutionBackwardDataAlgorithmMaxCount(cudnn_handle, &max_algos));
   return max_algos;
-#else
-  return 10;
-#endif
 }
 
 #endif  // MXNET_USE_CUDNN
