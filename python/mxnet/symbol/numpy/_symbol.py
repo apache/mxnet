@@ -1196,6 +1196,7 @@ def invert(x, out=None, **kwargs):
     """
     return _unary_func_helper(x, _npi.invert, _np.invert, out=out, **kwargs)
 
+
 @set_module('mxnet.symbol.numpy')
 def expand_dims(a, axis):
     """Expand the shape of an array.
@@ -1216,33 +1217,6 @@ def expand_dims(a, axis):
         the input array.
     """
     return _npi.expand_dims(a, axis)
-
-
-def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
-    """Helper function for unary operators.
-
-    Parameters
-    ----------
-    x : _Symbol or scalar
-        Input of the unary operator.
-    fn_array : function
-        Function to be called if x is of ``_Symbol`` type.
-    fn_scalar : function
-        Function to be called if x is a Python scalar.
-    out : _Symbol
-        Dummy parameter to keep the consistency with the ndarray counterpart.
-
-    Returns
-    -------
-    out : _Symbol or scalar
-        Result _Symbol or scalar.
-    """
-    if isinstance(x, numeric_types):
-        return fn_scalar(x, **kwargs)
-    elif isinstance(x, _Symbol):
-        return fn_array(x, out=out, **kwargs)
-    else:
-        raise TypeError('type {} not supported'.format(str(type(x))))
 
 
 @set_module('mxnet.symbol.numpy')
