@@ -95,7 +95,7 @@ def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='na
     return mx_pooling_op_results
 
 
-def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
+def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
     # Conv1D Benchmarks
     conv1d_benchmark_res = []
     for conv_data in [(32, 3, 256), (32, 3, 64)]:
@@ -141,7 +141,7 @@ def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=2
     return mx_conv_op_results
 
 
-def run_transpose_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10, runs=50):
+def run_transpose_convolution_operators_benchmarks(ctx=mx.cpu(), profiler='native', dtype='float32', warmup=10, runs=50):
     # Conv1DTranspose Benchmarks
     conv1d_transpose_benchmark_res = []
     for conv_data in [(32, 3, 256), (32, 3, 64)]:

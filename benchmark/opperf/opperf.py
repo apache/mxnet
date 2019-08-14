@@ -139,8 +139,9 @@ def main():
                              'output file.')
 
     parser.add_argument('-p', '--profiler', type=str, default='native',
-                        help='Use built-in CPP profiler or Python'
-                             'time module')
+                        help='Use built-in CPP profiler (native) or Python'
+                             'time module.'
+                             'Valid Inputs - native, python')
 
     args = parser.parse_args()
     logging.info("Running MXNet operator benchmarks with the following options: {args}".format(args=args))
