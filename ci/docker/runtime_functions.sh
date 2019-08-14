@@ -374,6 +374,7 @@ build_ubuntu_cpu_openblas() {
     build_ccache_wrappers
     make \
         DEV=1                         \
+        USE_TVM_OP=1                  \
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
@@ -390,11 +391,13 @@ build_ubuntu_cpu_mkl() {
     set -ex
     export CC="ccache gcc"
     export CXX="ccache g++"
+    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
     make \
         DEV=1                         \
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=mkl                  \
+        USE_TVM_OP=1                  \
         USE_MKLDNN=0                  \
         USE_INTEL_PATH=/opt/intel     \
         USE_DIST_KVSTORE=1            \
@@ -412,6 +415,7 @@ build_ubuntu_cpu_cmake_debug() {
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DENABLE_TESTCOVERAGE=ON \
         -DUSE_CUDA=OFF \
+        -DUSE_TVM_OP=ON \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_OPENMP=OFF \
         -DUSE_OPENCV=ON \
@@ -559,6 +563,7 @@ build_ubuntu_cpu_mkldnn() {
         DEV=1                         \
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
+        USE_TVM_OP=1                  \
         USE_BLAS=openblas             \
         USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
@@ -573,6 +578,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
         DEV=1                         \
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
+        USE_TVM_OP=1                  \
         USE_BLAS=mkl                  \
         USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
@@ -657,6 +663,7 @@ build_ubuntu_gpu_mkldnn() {
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=1                               \
+        USE_TVM_OP=1                              \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
@@ -674,6 +681,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=0                               \
+        USE_TVM_OP=1                              \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
@@ -690,6 +698,7 @@ build_ubuntu_gpu_cuda101_cudnn7() {
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=1                               \
+        USE_TVM_OP=1                              \
         USE_CPP_PACKAGE=1                         \
         USE_DIST_KVSTORE=1                        \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
@@ -733,6 +742,7 @@ build_ubuntu_gpu_cmake_mkldnn() {
         -DENABLE_TESTCOVERAGE=ON                \
         -DUSE_CUDA=1                            \
         -DUSE_CUDNN=1                           \
+        -DUSE_TVM_OP=1                          \
         -DUSE_MKLML_MKL=1                       \
         -DCMAKE_BUILD_TYPE=Release              \
         -DCUDA_ARCH_NAME=Manual                 \
@@ -758,6 +768,7 @@ build_ubuntu_gpu_cmake() {
         -DENABLE_TESTCOVERAGE=ON                \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
+        -DUSE_TVM_OP=ON                         \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
         -DUSE_MKLML_MKL=OFF                     \
         -DUSE_MKLDNN=OFF                        \
@@ -784,6 +795,7 @@ build_ubuntu_cpu_large_tensor() {
         -DENABLE_TESTCOVERAGE=ON                \
         -DUSE_CUDA=OFF                          \
         -DUSE_CUDNN=OFF                         \
+        -DUSE_TVM_OP=ON                         \
         -DUSE_MKLDNN=OFF                        \
         -DCMAKE_BUILD_TYPE=Release              \
         -DUSE_INT64_TENSOR_SIZE=ON              \
@@ -805,6 +817,7 @@ build_ubuntu_gpu_large_tensor() {
         -DENABLE_TESTCOVERAGE=ON                \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
+        -DUSE_TVM_OP=ON                         \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
         -DUSE_MKLML_MKL=OFF                     \
         -DUSE_MKLDNN=OFF                        \

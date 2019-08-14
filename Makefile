@@ -601,7 +601,7 @@ DMLCCORE:
 ifeq ($(USE_TVM_OP), 1)
 LIB_DEP += lib/libtvm_runtime.so lib/libtvmop.so
 CFLAGS += -I$(TVM_PATH)/include -DMXNET_USE_TVM_OP=1
-LDFLAGS += -L$(TVM_PATH)/build -ltvm_runtime
+LDFLAGS += -L$(ROOTDIR)/lib -ltvm_runtime
 
 TVM_USE_CUDA := OFF
 ifeq ($(USE_CUDA), 1)
@@ -617,13 +617,15 @@ lib/libtvm_runtime.so:
 	cmake -DUSE_LLVM="$(LLVM_PATH)/bin/llvm-config" \
 		  -DUSE_SORT=OFF -DUSE_CUDA=$(TVM_USE_CUDA) -DUSE_CUDNN=OFF ..; \
 	$(MAKE) VERBOSE=1; \
+	mkdir -p $(ROOTDIR)/lib; \
 	cp $(TVM_PATH)/build/libtvm_runtime.so $(ROOTDIR)/lib/libtvm_runtime.so; \
+	ls $(ROOTDIR); \
 	cd $(ROOTDIR)
 
 lib/libtvmop.so: lib/libtvm_runtime.so $(wildcard contrib/tvmop/*/*.py contrib/tvmop/*.py)
 	echo "Compile TVM operators"
-	PYTHONPATH=$(TVM_PATH)/python:$(TVM_PATH)/topi/python:$(ROOTDIR)/contrib:$PYTHONPATH \
-		LD_LIBRARY_PATH=lib \
+	PYTHONPATH=$(TVM_PATH)/python:$(TVM_PATH)/topi/python:$(ROOTDIR)/contrib \
+		LD_LIBRARY_PATH=$(ROOTDIR)/lib \
 	    python3 $(ROOTDIR)/contrib/tvmop/compile.py -o $(ROOTDIR)/lib/libtvmop.so
 endif
 
