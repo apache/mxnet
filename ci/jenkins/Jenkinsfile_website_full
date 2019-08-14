@@ -50,7 +50,7 @@ core_logic: {
 
   utils.parallel_stage('Prepare', [
     custom_steps.docs_prepare(),
-    custom_steup.docs_archive()
+    custom_setup.docs_archive()
   ])
 
   utils.parallel_stage('Publish', [
