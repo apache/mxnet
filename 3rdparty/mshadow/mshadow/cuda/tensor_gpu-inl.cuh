@@ -596,7 +596,8 @@ inline void SoftmaxGrad(const Tensor<gpu, 3, DType> &dst,
   MSHADOW_CUDA_POST_KERNEL_CHECK(Softmax3DGradKernel);
 }
 
-template<int x_bits, typename DType, typename DstPlan, typename SrcPlan1, typename SrcPlan2>
+template<bool clip, int x_bits, typename DType, typename DstPlan,
+         typename SrcPlan1, typename SrcPlan2>
 __global__ void AddTakeGradKernel(DstPlan dst,
                                   SrcPlan1 index, SrcPlan2 src,
                                   index_t ymax, index_t xmax, const int K) {
@@ -606,8 +607,13 @@ __global__ void AddTakeGradKernel(DstPlan dst,
   for (unsigned y = 0; y < ymax; ++y) {
     if (threadIdx.x == 0) {
       ptr = index.Eval(0, y);
-      if (ptr <= 0) ptr = 0;
-      else if (ptr >= K) ptr = K - 1;
+      if (clip) {
+        if (ptr <= 0) ptr = 0;
+        else if (ptr >= K) ptr = K - 1;
+      } else {
+        ptr %= K;
+        if (ptr < 0) ptr += K;
+      }
     }
     __syncthreads();
     if (xindex < xmax) {
@@ -671,7 +677,7 @@ __global__ void AddTakeGradLargeBatchKernel(DType* dst,
   }
 }
 
-template<typename IndexType, typename DType>
+template<bool clip = true, typename IndexType, typename DType>
 inline void AddTakeGrad(Tensor<gpu, 2, DType> dst,
                         const Tensor<gpu, 1, IndexType>& index,
                         const Tensor<gpu, 2, DType> &src) {
@@ -688,13 +694,23 @@ inline void AddTakeGrad(Tensor<gpu, 2, DType> dst,
   cudaStream_t stream = Stream<gpu>::GetStream(dst.stream_);
   const int K = dst.shape_[0];
 
-  AddTakeGradKernel<kUnitBits, DType>
+  if (clip) {
+    AddTakeGradKernel<true, kUnitBits, DType>
       <<<dimGrid, dimBlock, 0, stream>>>
       (expr::MakePlan(dst),
        expr::MakePlan(index),
        expr::MakePlan(src),
        src.size(0),
        src.size(1), K);
+  } else {
+    AddTakeGradKernel<false, kUnitBits, DType>
+      <<<dimGrid, dimBlock, 0, stream>>>
+      (expr::MakePlan(dst),
+       expr::MakePlan(index),
+       expr::MakePlan(src),
+       src.size(0),
+       src.size(1), K);
+  }
   MSHADOW_CUDA_POST_KERNEL_CHECK(AddTakeGradKernel);
 }
 
