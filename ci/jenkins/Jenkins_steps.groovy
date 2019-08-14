@@ -1545,6 +1545,29 @@ def docs_prepare() {
 }
 
 
+// This is for the website and the Python API only
+def docs_prepare_python_only() {
+    return ['Prepare for publication of the full website': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+
+            unstash 'jekyll-artifacts'
+            unstash 'python-artifacts'
+
+            // Prepare website and Python API docs
+            utils.docker_run('ubuntu_cpu_jekyll', 'build_docs_small', false)
+            
+            // Publish preview to S3
+            sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
+          }
+        }
+      }
+    }]
+}
+
+
 def docs_archive() {
     return ['Archive the full website': {
       node(NODE_LINUX_CPU) {
