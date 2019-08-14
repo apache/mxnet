@@ -756,8 +756,7 @@ inline void SetSliceOpOutputDimSize(const index_t i, const int b,
                      << e << ", and step[" << i << "]=" << s << " is invalid";
       (*oshape)[i] = (b - e - 1) / (-s) + 1;
     }
-  }
-  else {
+  } else {
     if ((*oshape)[i] != -1) {
       (*oshape)[i] = 0;
     }
@@ -984,7 +983,7 @@ inline bool SliceAssignOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   const mxnet::TShape& dshape = (*in_attrs)[0];
-  if (dshape.ndim() == 0U || dshape.Size() == 0U) return false;
+  if (dshape.ndim() == 0U) return false;
   mxnet::TShape vshape = dshape;  // vshape is the value shape on the right hand side
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
   MXNET_NDIM_SWITCH(dshape.ndim(), ndim, {
@@ -1027,10 +1026,10 @@ void SliceAssignOpForward(const nnvm::NodeAttrs& attrs,
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
   MXNET_NDIM_SWITCH(data.ndim(), ndim, {
     common::StaticArray<index_t, ndim> begin, end, step;
-    bool non_zero_shape = GetIndexRange(data.shape_, param.begin, param.end, param.step, 
+    bool non_zero_shape = GetIndexRange(data.shape_, param.begin, param.end, param.step,
                                         &begin, &end, &step);
     if (!non_zero_shape) {
-      return;  // slice_assign of zero-sized subspaced needs no operation. 
+      return;  // slice_assign of zero-sized subspace needs no operation.
     }
     MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
@@ -1132,10 +1131,10 @@ void SliceAssignScalarOpForward(const nnvm::NodeAttrs& attrs,
   const SliceAssignScalarParam& param = nnvm::get<SliceAssignScalarParam>(attrs.parsed);
   MXNET_NDIM_SWITCH(data.ndim(), ndim, {
     common::StaticArray<index_t, ndim> begin, end, step;
-    bool non_zero_shape = GetIndexRange(data.shape_, param.begin, param.end, param.step, 
-                                       &begin, &end, &step);
+    bool non_zero_shape = GetIndexRange(data.shape_, param.begin, param.end, param.step,
+                                        &begin, &end, &step);
     if (!non_zero_shape) {
-      return;  // slice_assign of zero-sized subspaced needs no operation. 
+      return;  // slice_assign of zero-sized subspaced needs no operation.
     }
     for (index_t i = 0; i < param.begin.ndim(); ++i) {
       const int b = begin[i], e = end[i], s = step[i];

@@ -1876,7 +1876,7 @@ def test_ndarray_indexing():
         test_getitem_autograd(np_array, index[0])
         test_setitem_autograd(np_array, index[0])
     
-    # test zero-size tensors
+    # test zero-size tensors in np_shape mode
     shapes_indices = [
                       ((0), [slice(None, None, None)]),
                       ((3, 0), [2, (slice(None, None, None), None)]),

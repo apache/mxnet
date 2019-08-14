@@ -520,9 +520,9 @@ def test_np_ndarray_indexing():
         try:
             with mx.autograd.record():
                 x[index] = y
-                # # `a[None] = v` is equivalent to `a[...] = v` which doesn't raise
-                if index is not None:
-                    assert False, 'failed with index = {}'.format(index)  # should not reach here
+                x.backward()
+                y_grad = np.ones_like(y)
+                assert same(y_grad.asnumpy(), y.grad.asnumpy())
         except mx.base.MXNetError as err:
             assert str(err).find('Inplace operations (+=, -=, x[:]=, etc) are not supported when recording with') != -1
 
@@ -653,8 +653,6 @@ def test_np_ndarray_indexing():
         test_setitem(np_array, index[0], index[1])
         test_getitem_autograd(np_array, index[0])
         if not isinstance(index, tuple) or len(index) != 0:
-            # When index = (), this is same a[()] = b is equivalent to b.copyto(a)
-            # which should have no problem to do autograd
             test_setitem_autograd(np_array, index[0])
     
     # Test indexing to zero-size tensors (setitem not supported yet)
@@ -667,8 +665,6 @@ def test_np_ndarray_indexing():
         test_setitem(np_array, index[0])
         test_getitem_autograd(np_array, index[0])
         if not isinstance(index, tuple) or len(index) != 0:
-            # When index = (), this is same a[()] = b is equivalent to b.copyto(a)
-            # which should have no problem to do autograd
             test_setitem_autograd(np_array, index[0])
     
     # test zero-size tensors get and setitem
@@ -683,8 +679,6 @@ def test_np_ndarray_indexing():
             test_setitem(np_array, index, False)
             test_getitem_autograd(np_array, index)
             if not isinstance(index, tuple) or len(index) != 0:
-                # When index = (), this is same a[()] = b is equivalent to b.copyto(a)
-                # which should have no problem to do autograd
                 test_setitem_autograd(np_array, index)
             
 

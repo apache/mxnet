@@ -231,7 +231,7 @@ class ndarray(NDArray):
         shape = list(self.shape)
         i = 0
         zero_size = False
-        for b, e, s in zip(begin, end, step):
+        for b, e, s in zip(begin, end, step):  # pylint: disable=invalid-name
             if b >= e and s > 0 or b <= e and s < 0:
                 shape[i] = 0
                 zero_size = True
@@ -257,10 +257,10 @@ class ndarray(NDArray):
             )
             sliced_shape = self._basic_indexing_sliced_shape(slc_key, self.shape)
             sliced = self.__class__(handle=handle, writable=self.writable)
-            try:
-                sliced = sliced.reshape_view(sliced_shape)
-            except:
+            if 0 in sliced_shape:
                 sliced = sliced.reshape(sliced_shape)
+            else:
+                sliced = sliced.reshape_view(sliced_shape)
 
         else:
             begin, end, step = self._basic_indexing_key_to_begin_end_step(
@@ -353,8 +353,6 @@ class ndarray(NDArray):
                 self._sync_copyfrom(value)
             else:
                 raise ValueError('setting an array element with a sequence.')
-        elif self.size == 0:
-            return
         else:
             key = indexing_key_expand_implicit_axes(key, self.shape)
             slc_key = tuple(idx for idx in key if idx is not None)
