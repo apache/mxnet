@@ -37,14 +37,6 @@ core_logic: {
     custom_steps.compile_unix_lite()
   ])
 
-  utils.parallel_stage('Build Docs', [
-    custom_steps.docs_jekyll(),
-    custom_steps.docs_python()
-  ])
-
-  utils.parallel_stage('Publish', [
-    custom_steps.docs_website()
-  ])
 }
 ,
 failure_handler: {

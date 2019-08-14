@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -14,21 +16,19 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# build and install are separated so changes to build don't invalidate
+# the whole docker cache for the image
 
-# This is the makefile for compiling Rmarkdown files into the md file with results.
-PKGROOT=../../R-package
+# This script requires that APACHE_PASSWORD and APACHE_USERNAME are set
+# environment variables. Also, artifacts must be previously uploaded to S3
+# in the MXNet public bucket (mxnet-public.s3.us-east-2.amazonaws.com).
 
-# ADD The Markdown to be built here, with suffix md
-classifyRealImageWithPretrainedModel.md:
-mnistCompetition.md:
-ndarrayAndSymbolTutorial.md:
-fiveMinutesNeuralNetwork.md:
+set -ex
 
-# General Rules for build rmarkdowns, need knitr
-%.md: $(PKGROOT)/vignettes/%.Rmd
-	rm -rf "../../web-data/mxnet/knitr/$(basename $@)-"*;
-	Rscript -e \
-	"require(knitr);"\
-	"knitr::opts_knit\$$set(root.dir=\".\");"\
-	"knitr::opts_chunk\$$set(fig.path=\"../../web-data/mxnet/knitr/$(basename $@)-\");"\
-	"knitr::knit(\"$+\")"
+api_list=("cpp" "clojure" "java" "julia" "python" "r" "scala")
+version=v1.5.0
+for i in "${api_list[@]}"
+do
+    tar cvf $i-artifacts.tgz $i && aws s3 cp $i-artifacts.tgz s3://mxnet-public/docs/$version/$i-artifacts.tgz
+done

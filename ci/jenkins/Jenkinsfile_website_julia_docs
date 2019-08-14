@@ -21,7 +21,7 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // timeout in minutes
-max_time = 180
+max_time = 60
 
 node('utility') {
   // Loading the utilities requires a node context unfortunately
@@ -36,15 +36,12 @@ core_logic: {
   utils.parallel_stage('Build', [
     custom_steps.compile_unix_lite()
   ])
+  
+  utils.parallel_stage('Julia Docs', [
+    custom_steps.docs_julia()
 
-  utils.parallel_stage('Build Docs', [
-    custom_steps.docs_jekyll(),
-    custom_steps.docs_python()
   ])
 
-  utils.parallel_stage('Publish', [
-    custom_steps.docs_website()
-  ])
 }
 ,
 failure_handler: {

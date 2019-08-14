@@ -1,5 +1,4 @@
-#!/usr/bin/env bash
-
+# -*- mode: dockerfile -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,21 +15,31 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Dockerfile to build and run MXNet on Ubuntu 16.04 for CPU
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+FROM ubuntu:16.04
 
-set -ex
-# Install dependencies
-echo 'Installing dependencies...'
-apt-get update || true
-apt-get install -y \
-    doxygen \
-    pandoc
+WORKDIR /work/deps
 
-# Can probably delete these and docs_requirements
-wget -q https://repo.anaconda.com/miniconda/Miniconda2-latest-Linux-x86_64.sh
-chmod +x Miniconda2-latest-Linux-x86_64.sh
-./Miniconda2-latest-Linux-x86_64.sh -b -p /work/miniconda
+COPY install/ubuntu_core.sh /work/
+RUN /work/ubuntu_core.sh
 
-echo 'Dependency installation complete.'
+COPY install/deb_ubuntu_ccache.sh /work/
+RUN /work/deb_ubuntu_ccache.sh
+
+COPY install/ubuntu_clang.sh /work/
+RUN /work/ubuntu_clang.sh
+
+COPY install/ubuntu_gcc8.sh /work/
+RUN /work/ubuntu_gcc8.sh
+
+# Always last
+ARG USER_ID=0
+ARG GROUP_ID=0
+COPY install/ubuntu_adduser.sh /work/
+RUN /work/ubuntu_adduser.sh
+
+COPY runtime_functions.sh /work/
+
+WORKDIR /work/mxnet

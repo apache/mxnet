@@ -1,5 +1,4 @@
-#!/usr/bin/env bash
-
+# -*- mode: dockerfile -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,21 +15,38 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Dockerfile to build and run MXNet on Ubuntu 16.04 for CPU
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+FROM ubuntu:16.04
 
-set -ex
-# Install dependencies
-echo 'Installing dependencies...'
-apt-get update || true
-apt-get install -y \
-    doxygen \
-    pandoc
+WORKDIR /work/deps
 
-# Can probably delete these and docs_requirements
-wget -q https://repo.anaconda.com/miniconda/Miniconda2-latest-Linux-x86_64.sh
-chmod +x Miniconda2-latest-Linux-x86_64.sh
-./Miniconda2-latest-Linux-x86_64.sh -b -p /work/miniconda
+RUN apt-get update && apt-get install -y \
+      build-essential \
+      git \
+      ruby-full \
+      zlib1g-dev
 
-echo 'Dependency installation complete.'
+ENV BUNDLE_HOME=/work/deps/bundle
+ENV BUNDLE_APP_CONFIG=/work/deps/bundle
+ENV BUNDLE_BIN=/work/deps/bundle/bin
+ENV GEM_BIN=/work/deps/gem/bin
+ENV GEM_HOME=/work/deps/gem
+
+RUN echo "gem: --no-ri --no-rdoc" > ~/.gemrc
+RUN yes | gem update --system
+RUN yes | gem install --force bundler
+RUN gem install jekyll
+
+ENV PATH=$GEM_BIN:$PATH
+
+COPY runtime_functions.sh /work/
+
+# Always last
+ARG USER_ID=0
+ARG GROUP_ID=0
+COPY install/ubuntu_adduser.sh /work/
+RUN /work/ubuntu_adduser.sh
+
+WORKDIR /work/mxnet
