@@ -1909,16 +1909,22 @@ MXNET_DLL int MXSymbolInferTypePartial(SymbolHandle sym,
  * \brief Convert a symbol into a quantized symbol where FP32 operators are replaced with INT8
  * \param sym_handle symbol to be converted
  * \param ret_sym_handle quantized symbol result
- * \param num_excluded_symbols number of layers excluded from being quantized in the input symbol
- * \param excluded_symbols op names to be excluded from being quantized
+ * \param dev_type device type
+ * \param num_excluded_sym_names number of layers excluded from being quantized in the input symbol
+ * \param excluded_sym_names node names to be excluded from being quantized
+ * \param num_excluded_op_names number of operators excluded from being quantized in the input symbol
+ * \param excluded_op_names operator names to be excluded from being quantized
  * \param num_offline number of parameters that are quantized offline
  * \param offline_params array of c strings representing the names of params quantized offline
  * \param quantized_dtype the quantized destination type for input data
  * \param calib_quantize **Deprecated**. quantize op will always be calibrated if could
  */
 MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_handle,
-                               const mx_uint num_excluded_symbols,
-                               const char **excluded_symbols,
+                               const int* dev_type,
+                               const mx_uint num_excluded_sym_names,
+                               const char **excluded_sym_names,
+                               const mx_uint num_excluded_op_names,
+                               const char **excluded_op_names,
                                const mx_uint num_offline, const char **offline_params,
                                const char *quantized_dtype, const bool calib_quantize);
 
