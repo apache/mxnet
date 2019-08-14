@@ -1560,7 +1560,7 @@ def docs_prepare_python_only() {
             utils.docker_run('ubuntu_cpu_jekyll', 'build_docs_small', false)
 
             // Publish preview to S3
-            sh "cd html && ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
+            sh "cd docs/_build/html && ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
           }
         }
       }
