@@ -27,7 +27,7 @@ from . import _internal as _npi
 from ..ndarray import NDArray
 
 __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'tensordot',
-           'linspace', 'expand_dims', 'tile', 'arange']
+           'linspace', 'expand_dims', 'tile', 'arange', 'split']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -420,6 +420,7 @@ def tensordot(a, b, axes=2):
     return _npi.tensordot(a, b, a_axes_summed, b_axes_summed)
 
 
+@set_module('mxnet.ndarray.numpy')
 def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis=0, ctx=None):  # pylint: disable=too-many-arguments
     r"""
     Return evenly spaced numbers over a specified interval.
@@ -632,3 +633,52 @@ def tile(A, reps):
 
     """
     return _unary_func_helper(A, _npi.tile, _np.tile, reps=reps)
+
+
+@set_module('mxnet.ndarray.numpy')
+def split(ary, indices_or_sections, axis=0):
+    """Split an array into multiple sub-arrays.
+    Parameters
+    ----------
+    ary : ndarray
+        Array to be divided into sub-arrays.
+    indices_or_sections : int or 1-D array
+        If `indices_or_sections` is an integer, N, the array will be divided
+        into N equal arrays along `axis`.  If such a split is not possible,
+        an error is raised.
+        If `indices_or_sections` is a 1-D array of sorted integers, the entries
+        indicate where along `axis` the array is split.  For example,
+        ``[2, 3]`` would, for ``axis=0``, result in
+          - ary[:2]
+          - ary[2:3]
+          - ary[3:]
+        If an index exceeds the dimension of the array along `axis`,
+        an empty sub-array is returned correspondingly.
+    axis : int, optional
+        The axis along which to split, default is 0.
+    Returns
+    -------
+    sub-arrays : list of ndarrays
+        A list of sub-arrays.
+    Raises
+    ------
+    ValueError
+        If `indices_or_sections` is given as an integer, but
+        a split does not result in equal division.
+    """
+    indices = []
+    axis_size = ary.shape[axis]
+    if isinstance(indices_or_sections, int):
+        sections = indices_or_sections
+        if axis_size % sections:
+            raise ValueError('array split does not result in an equal division')
+        section_size = int(axis_size / sections)
+        indices = [i * section_size for i in range(sections)]
+    elif isinstance(indices_or_sections, tuple):
+        indices = [0] + list(indices_or_sections)
+    else:
+        raise ValueError('indices_or_sections must either int or tuple of ints')
+    ret = _npi.split(ary, indices, axis, False)
+    if not isinstance(ret, list):
+        return [ret]
+    return ret
