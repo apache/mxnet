@@ -36,7 +36,7 @@ from subprocess import check_call
 from util import *
 
 KNOWN_VCVARS = {
-    'VS 2015': r'C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\amd64\vcvarsamd64.bat',
+    'VS 2015': r'C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat',
     'VS 2017': r'C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat'
 }
 
@@ -154,7 +154,7 @@ def windows_build(args):
         logging.info("Generating project with CMake:\n{}".format(cmd))
         check_call(cmd, shell=True)
 
-        cmd = "\"{}\" && jom".format(args.vcvars)
+        cmd = "\"{}\" amd64 && jom".format(args.vcvars)
         logging.info("Building with jom:\n{}".format(cmd))
 
         t0 = int(time.time())
