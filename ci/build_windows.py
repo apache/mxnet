@@ -148,7 +148,7 @@ def windows_build(args):
 
     with remember_cwd():
         os.chdir(path)
-        cmd = "\"{}\" && cmake -G \"NMake Makefiles JOM\" {} {}".format(args.vcvars,
+        cmd = "\"{}\" amd64 && cmake -G \"NMake Makefiles JOM\" {} {}".format(args.vcvars,
                                                                         CMAKE_FLAGS[args.flavour],
                                                                         mxnet_root)
         logging.info("Generating project with CMake:\n{}".format(cmd))
