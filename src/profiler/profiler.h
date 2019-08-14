@@ -36,22 +36,13 @@
 #include "./vtune.h"
 #include "./aggregate_stats.h"
 #include "./nvtx.h"
+#include "../common/utils.h"
 
-#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-#include <windows.h>
-#else
-#include <unistd.h>
-#include <cstdint>
-#endif
 
 namespace mxnet {
 namespace profiler {
 
-#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-inline size_t current_process_id() { return ::GetCurrentProcessId(); }
-#else
-inline size_t current_process_id() { return getpid(); }
-#endif
+
 
 /*!
  * \brief Constant-sized character array class with simple string API to avoid allocations
@@ -132,7 +123,7 @@ struct ProfileStat {
   bool enable_aggregate_ = true;
 
   /* !\brief Process id */
-  size_t process_id_ = current_process_id();
+  size_t process_id_ = common::current_process_id();
 
   /*! \brief id of thread which operation run on.
    *
