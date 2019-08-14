@@ -53,13 +53,7 @@ core_logic: {
   ])
 
   utils.parallel_stage('Publish Preview', [
-    master_url = utils.get_jenkins_master_url()
-    if ( master_url == 'jenkins.mxnet-ci.amazon-ml.com' || master_url == 'jenkins.mxnet-ci-dev.amazon-ml.com' ) {
-        // TODO: Make sure this scripts publish the website from the right folder
-        sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
-    } else {
-        print "Skipping staging documentation publishing since we are not running in prod. Host: {$master_url}"
-    }
+    sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
   ])
 }
 ,
