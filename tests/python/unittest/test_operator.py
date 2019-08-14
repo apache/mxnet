@@ -1626,7 +1626,7 @@ def test_bilinear_upsampling():
 @with_seed()
 def test_batchnorm_training():
     def check_batchnorm_training(stype):
-        for shape in [(2, 3), (2, 3, 2, 2)]:
+        for shape in [(2, 3), (2, 3, 2, 2), (2, 8, 2, 2)]:
             data_tmp = np.random.normal(-0.1, 0.1, size=shape)
             s = shape[1],
             gamma = np.ones(s)
@@ -1821,7 +1821,7 @@ def test_batchnorm():
                 bn_beta.grad.asnumpy(), db.asnumpy(), atol=atol, rtol=rtol)
 
     for op in [mx.nd.BatchNorm, mx.nd.contrib.SyncBatchNorm]:
-        for shape in [(24, 2), (24, 3, 4), (24, 4, 4, 4), (24, 5, 6, 4, 4)]:
+        for shape in [(24, 2), (24, 3, 4), (24, 4, 4, 4), (24, 8, 4, 4), (24, 5, 6, 4, 4)]:
             for axis in range(len(shape)):
                 for cudnn_off in [False, True]:
                     for output_mean_var in [False, True]:
