@@ -447,12 +447,6 @@ def test_index_copy():
     assert x[-1][-1] == t[0][-1]
 
 
-# def test_rnn_and_dropouts():
-#     a = mx.nd.ones((LARGE_X, SMALL_Y))
-#     # test dropout ratio
-#     x = nx.sym.var('data')
-
-
 def testSoftmaxOutput():
     x = mx.sym.Variable('x')
     label = mx.sym.Variable('label')
@@ -478,6 +472,7 @@ def testSoftmaxOutput():
     assert np.isclose(grad_out - softmax_out, expected_grad_out).all()
 
 
+# TODO: correctness of prelu (currently flaky)
 def test_leaky_relu():
     a = -1*mx.nd.ones((LARGE_X, SMALL_Y))
 
@@ -495,13 +490,6 @@ def test_leaky_relu():
         res = mx.nd.LeakyReLU(a, act_type="selu")
         assert res[-1][-1].asnumpy() == (lam * alpha * (np.exp(a[-1][-1].asnumpy())-1))
 
-    # def test_prelu():
-    #     res = mx.nd.LeakyReLU(a, act_type="prelu", gamma=mx.nd.array([0.3]))
-    #     assert res[-1][-1].asnumpy() == 0.3 * a[-1][-1].asnumpy()
-    # fails with large tensor shape
-    # all values from [0][0] till [14100654][3] have correct -0.3
-    # all values from [14100654][4] till [-1][-1] have 0.
-
     def test_rrelu():
         lower = 0.125
         upper = 0.333999991
@@ -511,7 +499,6 @@ def test_leaky_relu():
     test_leaky()
     test_elu()
     test_selu()
-    # test_prelu()
     test_rrelu()
 
 
@@ -583,13 +570,6 @@ def test_layer_norm():
     out = npy_layer_norm(data, gamma, beta, axis, eps)
     assert_almost_equal(out, out_nd.asnumpy(), forward_check_eps,
                         forward_check_eps)
-    # for forward_check_eps, backward_check_eps in zip([1E-2, 1E-5], [1E-2, 1E-5]):
-    #     check_layer_normalization(in_shape=(LARGE_X, SMALL_Y),
-    #                               forward_check_eps=forward_check_eps,
-    #                               backward_check_eps=backward_check_eps,
-    #                               npy_grad_check=True,
-    #                               finite_grad_check=True)
-
 
 # TODO: correctness of dropout
 # currently only test for dropout to work
@@ -637,8 +617,6 @@ def test_activation():
 # in future, we could test if mean, var of output
 # matches target output's mean, var
 def test_batchnorm():
-    # output_mean_var=True  # useful for correctness check
-    # epsilon = 0.0010000000474974513  # default
     shape = (LARGE_X, SMALL_Y)
     axis = 1  # default
     expand_shape = [1] * len(shape)
@@ -654,17 +632,6 @@ def test_batchnorm():
     output = mx.nd.BatchNorm(data, bn_gamma, bn_beta,
                              bn_running_mean, bn_running_var)
     output.wait_to_read()
-    # flaky
-    # data_mean = data.mean(axis=axis, exclude=True, keepdims=True)
-    # data_var = (data - data_mean).square().mean(axis=axis,
-    #                                             exclude=True,
-    #                                             keepdims=True)
-    # target_output = (data - data_mean) / \
-    #         (data_var + epsilon).sqrt() * \
-    #         bn_gamma.reshape(expand_shape) + \
-    #         bn_beta.reshape(expand_shape)
-    # assert_almost_equal(output.asnumpy(), target_output.asnumpy(),
-    #                     atol=1e-2, rtol=1e-2)
 
 
 if __name__ == '__main__':
