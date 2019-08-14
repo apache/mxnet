@@ -90,7 +90,6 @@ if __name__ == "__main__":
                                        name=name,
                                        binds=operator_def.get_binds(args))
                 func_list.append(func_lower)
-
     lowered_funcs = {get_target("cpu"): func_list_llvm}
     if len(func_list_cuda) > 0:
         lowered_funcs[get_target("cuda")] = func_list_cuda

@@ -67,6 +67,7 @@ def test_tvm_broadcast_add():
             assert same(a.grad.asnumpy(), expected_grad_a)
             assert same(b.grad.asnumpy(), expected_grad_b)
 
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

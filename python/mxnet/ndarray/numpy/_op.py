@@ -39,7 +39,7 @@ __all__ = ['zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide', 'mo
            'around', 'hypot', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take',
            'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal',
            'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero', 'shares_memory', 'may_share_memory', 'diff', 'resize',
-           'nan_to_num']
+           'nan_to_num', 'cumprod']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5308,3 +5308,47 @@ def nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None, **kwargs):
         return _npi.nan_to_num(x, copy=copy, nan=nan, posinf=posinf, neginf=neginf, out=None)
     else:
         raise TypeError('type {} not supported'.format(str(type(x))))
+
+
+@set_module('mxnet.ndarray.numpy')
+def cumprod(a, axis=None, out=None):
+    """
+    cumprod(a, axis=None, out=None)
+    Return the cumulative product of elements along a given axis.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array.
+    axis : int, optional
+        Axis along which the cumulative product is computed.  By default
+        the input is flattened.
+    out : ndarray, optional
+        Alternative output array in which to place the result. It must
+        have the same shape and buffer length as the expected output.
+    Returns
+    -------
+    cumprod : ndarray
+        A new array holding the result is returned unless `out` is
+        specified, in which case a reference to out is returned.
+    Examples
+    --------
+    >>> a = np.array([1, 2, 3])
+    >>> np.cumprod(a)
+    array([1., 2., 6.])
+    >>> a = np.array([[1, 2, 3], [4, 5, 6]])
+    >>> np.cumprod(a)
+    array([  1.,   2.,   6.,  24., 120., 720.])
+    The cumulative product for each column (i.e., over the rows) of `a`:
+
+    >>> np.cumprod(a, axis=0)
+    array([[ 1.,  2.,  3.],
+            [ 4., 10., 18.]])
+
+    The cumulative product for each row (i.e. over the columns) of `a`:
+
+    >>> np.cumprod(a, axis=1)
+    array([[  1.,   2.,   6.],
+            [  4.,  20., 120.]])
+    """
+    return _npi.cumprod(a, axis=axis, out=out)

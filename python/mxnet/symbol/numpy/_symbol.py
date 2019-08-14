@@ -41,7 +41,7 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'around', 'hypot', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take',
            'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal',
            'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'shares_memory', 'may_share_memory', 'diff',
-           'resize', 'nan_to_num']
+           'resize', 'nan_to_num', 'cumprod']
 
 
 def _num_outputs(sym):
@@ -4887,6 +4887,30 @@ def nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None, **kwargs):
     else:
         raise TypeError('type {} not supported'.format(str(type(x))))
 
+
+@set_module('mxnet.symbol.numpy')
+def cumprod(a, axis=None, out=None):
+    """
+    cumprod(a, axis=None, out=None)
+    Return the cumulative product of elements along a given axis.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input array.
+    axis : int, optional
+        Axis along which the cumulative product is computed.  By default
+        the input is flattened.
+    out : _Symbol, optional
+        Alternative output array in which to place the result. It must
+        have the same shape and buffer length as the expected output.
+    Returns
+    -------
+    cumprod : _Symbol
+        A new array holding the result is returned unless `out` is
+        specified, in which case a reference to out is returned.
+    """
+    return _npi.cumprod(a, axis=axis, out=out)
 
 
 _set_np_symbol_class(_Symbol)
