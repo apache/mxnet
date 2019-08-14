@@ -172,12 +172,12 @@ static std::vector<ResourceRequest> RNNResourceEx(const NodeAttrs& attrs, const 
   std::vector<ResourceRequest> request;
   request.emplace_back(ResourceRequest::kTempSpace);
   if (dev_mask == kGPU) {
-#if MXNET_USE_CUDNN_RNN
+#if MXNET_USE_CUDNN == 1
     const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
     if (param.p != 0 && 1.0f - param.p > 0) {
       request.emplace_back(ResourceRequest::kCuDNNDropoutDesc);
     }
-#endif
+#endif  // MXNET_USE_CUDNN == 1
   }
   return request;
 }
