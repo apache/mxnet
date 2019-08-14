@@ -111,7 +111,9 @@ void NumpyLaGesvdForward(const nnvm::NodeAttrs& attrs,
   });
 }
 
-// Helper for gesvd_backward. See technical report for details
+// Helper for gesvd_backward. See technical report
+// `Auto-Differentiating Linear Algebra` for details
+// on https://arxiv.org/pdf/1710.08717.pdf
 template<typename DType>
 DType gesvd_back_helper_eps(DType* X);
 
