@@ -370,7 +370,6 @@ inline VectorType<DType, nvec> global_load_index(const DType * input, int i, con
 template <int nvec, typename DType, int ndim>
 inline VectorType<DType, nvec> load_slice(const DType * input, const Shape<ndim>& shape, Shape<ndim> begin, Shape<ndim> end, int offset) {
   int idx[nvec];
-  bool mem_aligned = true;
 
   Shape<ndim> ref_strides;
   Shape<ndim> strides;
@@ -398,27 +397,18 @@ inline VectorType<DType, nvec> load_slice(const DType * input, const Shape<ndim>
        }
        ref_idx = ref_idx % stride;
     }
-    if (j > 0) {
-        if (mem_aligned) mem_aligned = (idx[j] == (idx[j-1] + 1));
-    } else {
-        if (mem_aligned) mem_aligned = ((idx[0] & (nvec-1)) == 0);
-    }
   }
-  if (!mem_aligned) {
-    VectorType<DType, nvec> ret;
-    #pragma unroll
-    for (int j = 0; j < nvec; j++) {
-        ret.x[j] = *(input + idx[j]);
-    }
-    return ret;
+  VectorType<DType, nvec> ret;
+  #pragma unroll
+  for (int j = 0; j < nvec; j++) {
+      ret.x[j] = *(input + idx[j]);
   }
-  return global_load_index<nvec>(input, idx[0], shape);
-  //return load_index<nvec>(input, idx[0], shape);
+  return ret;
 }
 
 template <int nvec, typename DType, int ndim>
 inline VectorType<DType, nvec> fast_load_slice(const DType * input, const Shape<ndim>& shape, Shape<ndim> begin, Shape<ndim> end, int offset) {
-  int idx[nvec];
+  int idx = 0;
 
   Shape<ndim> ref_strides;
   Shape<ndim> strides;
@@ -434,21 +424,16 @@ inline VectorType<DType, nvec> fast_load_slice(const DType * input, const Shape<
       strides[dim-1] = strides[dim] * shape[dim];
     }
   }
+  int ref_idx = offset;
   #pragma unroll
-  for (int j = 0; j < nvec; j++) {
-    idx[j] = 0;
-    int ref_idx = offset + j;
-    #pragma unroll
-    for (int dim = 0; dim < ndim; dim++) {
-       int stride = ref_strides[dim];
-       if (shape[dim] > 1) {
-         idx[j] += (ref_idx / stride + begin[dim]) * strides[dim];
-       }
-       ref_idx = ref_idx % stride;
-    }
+  for (int dim = 0; dim < ndim; dim++) {
+     int stride = ref_strides[dim];
+     if (shape[dim] > 1) {
+       idx += (ref_idx / stride + begin[dim]) * strides[dim];
+     }
+     ref_idx = ref_idx % stride;
   }
-  return global_load_index<nvec>(input, idx[0], shape);
-  //return load_index<nvec>(input, idx[0], shape);
+  return global_load_index<nvec>(input, idx, shape);
 }
 
 template <int nvec, typename DType, int ndim>

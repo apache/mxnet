@@ -30,6 +30,7 @@
 
 #if MXNET_USE_CUDA
 
+
 namespace mxnet {
 
 struct FusedOpConfig : public dmlc::Parameter<FusedOpConfig> {
@@ -102,16 +103,19 @@ class FusedOp {
   }
 
  private:
-  void GenerateCode(const std::vector<OpReqType> &req,
+  void GenerateCode(int kernel_index,
+                    const std::vector<OpReqType> &req,
                     const std::vector<int> &in_dtypes,
                     const std::vector<int> &out_dtypes,
                     const std::vector<int> &in_ndims,
                     const std::vector<int> &out_ndims,
+                    const mxnet::ShapeVector &node_shapes,
+                    const std::vector<int> &node_dtypes,
                     const int nvec,
                     const std::string& kernel_name,
-                    const std::vector<mxnet::TShape> &node_shapes,
-                    const std::vector<int> &node_dtypes);
-  void CompileCode(const std::string &kernel_name);
+                    std::vector<int> *check_shapes);
+  void CompileCode(int kernel_index,
+                   const std::string &kernel_name);
   bool CheckComputeCapability(const OpContext &ctx);
   void CheckShapesAndTypes(const std::vector<TBlob> &inputs,
                            const std::vector<TBlob> &outputs,
@@ -124,7 +128,7 @@ class FusedOp {
   std::vector<FusedOpEntry> inputs_;
   std::vector<FusedOpEntry> outputs_;
 
-  std::string code_;
+  std::string code_[2];
   nnvm::Graph subgraph_;
 
   template <typename T>
@@ -149,11 +153,12 @@ class FusedOp {
   std::vector<std::vector<int>> aux_out_types;
   std::vector<OpReqType> saved_reqs_;
   std::vector<int> extra_shape_args_;
+  std::vector<int> check_shape_args_;
 
-  std::string ptx_;
-  std::string kernel_name_;
+  std::string ptx_[2];
+  std::string kernel_name_[2];
+  CUfunction kernel_[2];
   bool initialized_;
-  CUfunction kernel_;
   int cc_major_;
   int cc_minor_;
 

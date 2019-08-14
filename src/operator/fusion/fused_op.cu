@@ -86,21 +86,28 @@ inline void replaceString(std::string *input, const std::string old, const std::
     }
 }
 
-inline std::vector<std::string> splitStringToVector(const std::string& input) {
+inline std::vector<int> splitStringToVector(const std::string& input, const std::string def) {
     size_t pos_start = 0, pos_end;
     const std::string& s = input.substr(1, input.length()-2);
-    std::vector<std::string> res;
+    std::vector<int> res;
+
+    auto convert_token = [def](std::string token){
+        if (token == def) {
+            return 0;
+        }
+        return std::stoi(token);
+    };
 
     while ((pos_end = s.find (",", pos_start)) != std::string::npos) {
         std::string token = s.substr (pos_start, pos_end - pos_start);
         pos_start = pos_end + 1;
         if (token.length() > 0) {
-            res.push_back (token);
+            res.push_back (convert_token(token));
         }
     }
 
-    if (pos_start < s.length()-1) {
-        res.push_back (s.substr (pos_start));
+    if (pos_start < s.length()) {
+        res.push_back (convert_token(s.substr (pos_start)));
     }
     return res;
 }
@@ -127,7 +134,7 @@ std::string ParseOpDescription(const std::vector<std::string>& op_desc,
   return fmt;
 }
 
-void AddShape(const mxnet::TShape& shape, 
+void AddShape(const mxnet::TShape& shape,
               std::vector<std::vector<int>>* shapes) {
   // We need alignment to 8 bytes for size_t in the Shape struct
   // so if ndim is odd, there will be 4B of padding
@@ -158,21 +165,23 @@ void AddPointerAndShape(const TBlob& data,
 
 }  // namespace
 
-void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
+void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
                            const std::vector<int> &in_dtypes,
                            const std::vector<int> &out_dtypes,
                            const std::vector<int> &in_ndims,
                            const std::vector<int> &out_ndims,
+                           const mxnet::ShapeVector &node_shapes,
+                           const std::vector<int> &node_dtypes,
                            const int nvec,
                            const std::string &kernel_name,
-                           const std::vector<mxnet::TShape> &node_shapes,
-                           const std::vector<int> &node_dtypes) {
+                           std::vector<int>* check_shapes) {
   const auto& g = this->subgraph_.indexed_graph();
   std::string code = "";
   int temp_name_counter = 0;
   using NodeEntry = nnvm::IndexedGraph::NodeEntry;
   std::map<std::pair<int, int>, std::string> variables;
   std::map<int, int> load_index;
+  bool check_shapes_compile = true;
 
   std::vector<uint32_t> outputs(g.num_nodes());
 
@@ -215,86 +224,117 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
         std::string op_name = source->op()->name;
         if (fusion::slice_ops.find(op_name) != fusion::slice_ops.end()) {
           int arg_id = node.inputs[0].node_id;
+          const auto& shape = node_shapes[arg_id];
+          const int ndim = shape.ndim();
           const auto& var_name = g[arg_id].source->attrs.name;
           const auto vec_name = "vec_" + var_name + "_" + std::to_string(i);
-          std::string ndim_var_name = "ndim_" + var_name;
           load_index[arg_id] = 0;
           auto parse_tuple = [](const std::string& input, const std::string def) {
             std::string out = input;
             replaceString(&out, "(", "{");
             replaceString(&out, ")", "}");
             replaceString(&out, "None", def);
+            replaceString(&out, " ", "");
             return out;
           };
-          auto parse_axis = [ndim_var_name](const std::string& axis) {
-            if (std::stoi(axis) < 0) {
-                return ndim_var_name + axis;
+          auto build_tuple = [ndim](int axis, const std::string str, const std::string def) {
+            std::string tuple = "{";
+            for (int i = 0; i < axis; i++) {
+                tuple = tuple + def + ",";
             }
-            return axis;
-          }; 
+            tuple += str;
+            for (int i = axis + 1; i < ndim; i++) {
+                tuple = tuple + "," + def;
+            }
+            tuple += "}";
+            return tuple;
+          };
+          auto check_tuple = [ndim, nvec](const std::string str) {
+            std::vector<int> tuple = splitStringToVector(str, "INT_MAX");
+            if (tuple[ndim-1] % nvec == 0) {
+              return true;
+            }
+            return false;
+          };
+          auto build_string_axis = [ndim](int axis) {
+            if (axis < 0) {
+                axis = ndim + axis;
+            }
+            return std::to_string(axis);
+          };
+          auto build_string_end = [i, ndim, var_name](std::string* code) {
+            std::string end_var_name = var_name + "_" + std::to_string(i) + "_end";
+            *code += "Shape<" + std::to_string(ndim) + "> "+ end_var_name + ";\n";
+            *code += end_var_name + ".set(INT_MAX);\n";
+            return end_var_name;
+          };
           std::string begin;
           std::string end;
           if (op_name == "broadcast_like" || op_name == "slice_like") {
-            std::string begin_var_name = var_name + "_" + std::to_string(i) + "_begin";
-            code += "Shape<" + ndim_var_name + "> "+ begin_var_name + ";\n";
-            code += begin_var_name + ".set(0);\n";
             int like_id = node.inputs[1].node_id;
+            begin = build_tuple(0, "0", "0");
+            std::string end_var_name;
+            std::string extra_var_name = "extra_" + std::to_string(like_id) + "_shape";
             if (std::find(extra_shape_args_.begin(), extra_shape_args_.end(), like_id) == extra_shape_args_.end()) {
                 extra_shape_args_.push_back(like_id);
             }
-            std::string end_var_name;
-            std::string extra_var_name = "extra_" + std::to_string(like_id) + "_shape";
             if (op_name == "slice_like") {
                 if (source->attrs.dict.count("axes") == 0) {
                     end_var_name = extra_var_name;
+                    if (check_shapes) {
+                      check_shapes->push_back(like_id);
+                      check_shapes->push_back(arg_id);
+                    }
                 } else {
                     std::string axes = source->attrs.dict.at("axes");
-                    end_var_name = var_name + "_" + std::to_string(i) + "_end";
-                    code += "Shape<" + ndim_var_name + "> "+ end_var_name + ";\n";
-                    code += end_var_name + ".set(INT_MAX);\n";
-                    for (auto axis: splitStringToVector(axes)) {
-                        axis = parse_axis(axis);
+                    end_var_name = build_string_end(&code);
+                    for (auto ax: splitStringToVector(axes, "")) {
+                        std::string axis = build_string_axis(ax);
                         code += end_var_name + "["+axis+"] = " + extra_var_name + "["+axis+"]" + + ";\n";
                     }
                 }
             } else {
                 if (source->attrs.dict.count("lhs_axes") == 0) {
                     end_var_name = extra_var_name;
+                    if (check_shapes) {
+                      check_shapes->push_back(like_id);
+                      check_shapes->push_back(arg_id);
+                    }
                 } else {
                     std::string lhs_axes = source->attrs.dict.at("lhs_axes");
                     std::string rhs_axes = source->attrs.dict.at("rhs_axes");
-                    end_var_name = var_name + "_" + std::to_string(i) + "_end";
-                    code += "Shape<" + ndim_var_name + "> "+ end_var_name + ";\n";
-                    code += end_var_name + ".set(INT_MAX);\n";
-                    std::vector<std::string> v_lhs_axes = splitStringToVector(lhs_axes);
-                    std::vector<std::string> v_rhs_axes = splitStringToVector(rhs_axes);
+                    end_var_name = build_string_end(&code);
+                    std::vector<int> v_lhs_axes = splitStringToVector(lhs_axes, "");
+                    std::vector<int> v_rhs_axes = splitStringToVector(rhs_axes, "");
                     for (int i = 0; i < v_lhs_axes.size(); i++) {
-                        std::string lhs_axis = parse_axis(v_lhs_axes[i]);
-                        std::string rhs_axis = parse_axis(v_rhs_axes[i]);
+                        std::string lhs_axis = build_string_axis(v_lhs_axes[i]);
+                        std::string rhs_axis = build_string_axis(v_rhs_axes[i]);
                         code += end_var_name + "["+lhs_axis+"] = " + extra_var_name + "["+rhs_axis+"]" + + ";\n";
                     }
                 }
             }
-            begin = begin_var_name;
             end = end_var_name;
           } else {
             begin = parse_tuple(source->attrs.dict.at("begin"), "0");
             end = parse_tuple(source->attrs.dict.at("end"), "INT_MAX");
             if (op_name == "slice_axis") {
-              std::string axis = parse_axis(source->attrs.dict.at("axis"));
-              std::string begin_var_name = var_name + "_" + std::to_string(i) + "_begin";
-              std::string end_var_name = var_name + "_" + std::to_string(i) + "_end";
-              code += "Shape<" + ndim_var_name + "> "+ begin_var_name + ";\n";
-              code += "Shape<" + ndim_var_name + "> "+ end_var_name + ";\n";
-              code += begin_var_name + ".set(0);\n";
-              code += end_var_name + ".set(INT_MAX);\n";
-              code += begin_var_name + "["+axis+"] = " + begin + ";\n";
-              code += end_var_name + "["+axis+"] = " + end + ";\n";
-              begin = begin_var_name;
-              end = end_var_name;
+              int axis = std::stoi(source->attrs.dict.at("axis"));
+              begin = build_tuple(axis, begin, "0");
+              end = build_tuple(axis, end, "INT_MAX");
+            }
+            if (check_shapes) {
+              if (check_tuple(begin) && check_tuple(end)) {
+                check_shapes->push_back(arg_id);
+              } else {
+                check_shapes_compile = false;
+              }
             }
           }
-          code += "const auto " + vec_name + " = load_slice<nvec>(" +
+          std::string slice_func = "load_slice";
+          if (!check_shapes) {
+            slice_func = "fast_" + slice_func;
+          }
+          code += "const auto " + vec_name + " = " + slice_func + "<nvec>(" +
                   var_name + ", " + var_name + "_shape," + begin +
                   "," + end + ", offset);\n";
           CHECK_EQ(outputs[i], 1);
@@ -303,6 +343,10 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
         }
       }
     }
+  }
+
+  if (!check_shapes_compile) {
+      check_shapes->clear();
   }
 
   size_t counter = 0;
@@ -444,11 +488,11 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
     ++counter;
   }
 
-  this->code_ = code;
+  this->code_[kernel_index] = code;
 
   // Add boilerplate and type information
   if (dmlc::GetEnv("MXNET_FUSION_VERBOSE", false)) {
-    LOG(INFO) << code_;
+    LOG(INFO) << code_[kernel_index];
   }
   std::string kernel_params = "";
   std::string tensor_params = "";
@@ -459,10 +503,9 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
   size_t i = 0;
   std::string aux_code = "static const int nvec = " + std::to_string(nvec) + ";\n";
 
-  const auto& shapes = this->subgraph_.GetAttr<mxnet::ShapeVector>("shape");
   for (const auto &shape_id: extra_shape_args_) {
       std::string shape_name = "extra_" + std::to_string(shape_id) + "_shape";
-      int ndim = shapes[shape_id].ndim();
+      int ndim = node_shapes[shape_id].ndim();
       kernel_params += " const Shape<" + std::to_string(ndim) + "> " + shape_name;
       kernel_params += ", ";
   }
@@ -499,24 +542,24 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
   }
   kernel_params += tensor_params;
 
-  code_ = std::string(fusion::fp16_support_string) + "\n" +
+  code_[kernel_index] = std::string(fusion::fp16_support_string) + "\n" +
           fusion::type_support_string + "\n" +
           fusion::function_definitions + "\n" +
           aux_code + "\n" +
           "__global__ void FusedKernel_" + kernel_name +
           "(size_t N, " + kernel_params + ") {\n" +
           fusion::kernel_begin + "\n" +
-          code_ + "\n" +
+          code_[kernel_index] + "\n" +
           fusion::kernel_end;
 }
 
-void FusedOp::CompileCode(const std::string &kernel_name) {
+void FusedOp::CompileCode(int kernel_index, const std::string &kernel_name) {
   // Guard NVRTC calls
   std::lock_guard<std::mutex> lock_nvrtc(mutex_);
   nvrtcProgram program;
   NVRTC_CALL(
       nvrtcCreateProgram(&program,                                  // prog
-                         &code_[0],                                 // buffer
+                         &code_[kernel_index][0],                                 // buffer
                          (kernel_name + "_kernel.cu").c_str(),      // name
                          0,                                         // num headers
                          NULL,                                      // headers
@@ -543,13 +586,13 @@ void FusedOp::CompileCode(const std::string &kernel_name) {
   // Obtain PTX from the program.
   size_t ptx_size;
   NVRTC_CALL(nvrtcGetPTXSize(program, &ptx_size));
-  ptx_.reserve(ptx_size);
-  NVRTC_CALL(nvrtcGetPTX(program, &ptx_[0]));
+  ptx_[kernel_index].reserve(ptx_size);
+  NVRTC_CALL(nvrtcGetPTX(program, &ptx_[kernel_index][0]));
   const char *name;
   NVRTC_CALL(nvrtcGetLoweredName(program,
                                  kernel_name_demangled.c_str(),
                                  &name));
-  kernel_name_ = name;
+  kernel_name_[kernel_index] = name;
   // Destroy the program.
   NVRTC_CALL(nvrtcDestroyProgram(&program));
   int device;
@@ -559,10 +602,10 @@ void FusedOp::CompileCode(const std::string &kernel_name) {
   CUDA_CALL(cudaGetDevice(&device));
   CUDA_DRIVER_CALL(cuDeviceGet(&cu_device, device));
   CUDA_DRIVER_CALL(cuDevicePrimaryCtxRetain(&context, cu_device));
-  CUDA_DRIVER_CALL(cuModuleLoadData(&module, &ptx_[0]));
-  CUDA_DRIVER_CALL(cuModuleGetFunction(&kernel_,
+  CUDA_DRIVER_CALL(cuModuleLoadData(&module, &ptx_[kernel_index][0]));
+  CUDA_DRIVER_CALL(cuModuleGetFunction(&kernel_[kernel_index],
                                        module,
-                                       kernel_name_.c_str()));
+                                       kernel_name_[kernel_index].c_str()));
 }
 
 bool FusedOp::CheckComputeCapability(const OpContext &ctx) {
@@ -655,9 +698,14 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   saved_reqs_ = req;
 
   if (!initialized_) {
-    this->GenerateCode(req, in_dtypes, out_dtypes, in_ndims, out_ndims,
-                       nvec, attrs.name, node_shapes, node_dtypes);
-    this->CompileCode(attrs.name);
+    this->GenerateCode(0, req, in_dtypes, out_dtypes, in_ndims, out_ndims,
+                       node_shapes, node_dtypes, nvec, attrs.name, &check_shape_args_);
+    this->CompileCode(0, attrs.name);
+    if (check_shape_args_.size() > 0) {
+        this->GenerateCode(1, req, in_dtypes, out_dtypes, in_ndims, out_ndims,
+                           node_shapes, node_dtypes, nvec, attrs.name, NULL);
+        this->CompileCode(1, attrs.name);
+    }
     initialized_ = true;
   }
   Stream<gpu>* s = ctx.get_stream<gpu>();
@@ -675,7 +723,6 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   std::vector<void*> ptrs;
   std::vector<std::vector<int>> shapes;
 
-  const auto& node_shapes = this->subgraph_.GetAttr<mxnet::ShapeVector>("shape");
   for (const auto &shape_id: extra_shape_args_) {
     AddShape(node_shapes[shape_id], &shapes);
   }
@@ -692,8 +739,18 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   for (auto &ptr : ptrs) {
     args.push_back(reinterpret_cast<void *>(&ptr));
   }
+  int kernel_index = 0;
+  if (check_shape_args_.size() > 0) {
+      kernel_index = 1;
+      for (const auto &shape_id: check_shape_args_) {
+          const auto& shape = node_shapes[shape_id];
+          if (shape[shape.ndim()-1] % nvec != 0) {
+              kernel_index = 0;
+          }
+      }
+  }
   CUDA_DRIVER_CALL(
-      cuLaunchKernel(kernel_,
+      cuLaunchKernel(kernel_[kernel_index],
         num_blocks, 1, 1,          // grid dim
         FusedOp::NTHREADS, 1, 1,   // block dim
         0, stream,                 // shared mem and stream
