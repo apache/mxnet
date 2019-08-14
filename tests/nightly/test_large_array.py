@@ -15,9 +15,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import math
 import numpy as np
 import mxnet as mx
-import math
+
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context
 from mxnet import gluon, nd
 from tests.python.unittest.common import with_seed
