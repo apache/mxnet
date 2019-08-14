@@ -2377,5 +2377,5 @@ def diff(a, n=1, axis=-1, prepend=None, append=None):
         raise NotImplementedError('prepend and append options not supported yet')
     return _npi.diff(a, n=n, axis=axis)
 
-    
+
 _set_np_symbol_class(_Symbol)

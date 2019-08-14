@@ -35,4 +35,3 @@ NNVM_REGISTER_OP(_backward_npi_diff)
 
 }  // namespace op
 }  // namespace mxnet
- 
