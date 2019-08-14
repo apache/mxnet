@@ -156,7 +156,7 @@ def main():
 
     # 3. PREPARE OUTPUTS
     run_time_features = get_current_runtime_features()
-    save_to_file(final_benchmark_results, args.output_file, args.output_format, run_time_features)
+    save_to_file(final_benchmark_results, args.output_file, args.output_format, run_time_features, profiler)
 
     # 4. Generate list of MXNet operators not covered in benchmarks
     ops_not_covered = get_operators_with_no_benchmark(final_benchmark_results.keys())
