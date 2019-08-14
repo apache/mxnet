@@ -1556,9 +1556,11 @@ def docs_prepare_python_only() {
             unstash 'jekyll-artifacts'
             unstash 'python-artifacts'
 
+            // Prepare website and Python API docs
             utils.docker_run('ubuntu_cpu_jekyll', 'build_docs_small', false)
-            //utils.pack_lib('full_website', 'docs/_build/full_website.tgz', false)
-            // TODO: Make sure this 'test-website-publish' understand the new structure
+            
+            // Publish preview to S3
+            sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
           }
         }
       }
@@ -1572,18 +1574,6 @@ def docs_archive() {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             archiveArtifacts 'docs/_build/full_website.tgz'
-          }
-        }
-      }
-    }]
-}
-
-def docs_preview() {
-    return ['Preview the website': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/docs') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
           }
         }
       }

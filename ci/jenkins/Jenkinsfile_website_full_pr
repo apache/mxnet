@@ -48,13 +48,10 @@ core_logic: {
     //custom_steps.docs_clojure()
   ])
 
-  utils.parallel_stage('Prepare', [
+  utils.parallel_stage('Prepare & Publish Preview', [
     custom_steps.docs_prepare_python_only()
   ])
 
-  utils.parallel_stage('Publish Preview', [
-    custom_steps.docs_preview()
-  ])
 }
 ,
 failure_handler: {
