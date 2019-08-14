@@ -51,7 +51,7 @@ MXNet NDArray NN Convolution Operators
 """
 
 
-def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
+def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='cpp', warmup=25, runs=100):
     pool_types = ['avg', 'max', 'sum']
     global_pool_types = [0, 1]
 
@@ -65,6 +65,7 @@ def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, r
                                                              run_backward=True,
                                                              dtype=dtype,
                                                              ctx=ctx,
+                                                             profiler=profiler,
                                                              inputs=[{"data": pool1d_data,
                                                                       "kernel": 3,
                                                                       "pool_type": pool_type,
@@ -79,6 +80,7 @@ def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, r
                                                              run_backward=True,
                                                              dtype=dtype,
                                                              ctx=ctx,
+                                                             profiler=profiler,
                                                              inputs=[{"data": pool2d_data,
                                                                       "kernel": (3, 3),
                                                                       "pool_type": pool_type,
@@ -101,6 +103,7 @@ def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=2
                                                      run_backward=True,
                                                      dtype=dtype,
                                                      ctx=ctx,
+                                                     profiler=profiler,
                                                      inputs=[{"data": conv_data,
                                                               "weight": (64, 3, 3),
                                                               "bias": (64,),
@@ -120,6 +123,7 @@ def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=2
                                                      run_backward=True,
                                                      dtype=dtype,
                                                      ctx=ctx,
+                                                     profiler=profiler,
                                                      inputs=[{"data": conv_data,
                                                               "weight": (64, 3, 3, 3),
                                                               "bias": (64,),
@@ -145,6 +149,7 @@ def run_transpose_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32'
                                                                run_backward=True,
                                                                dtype=dtype,
                                                                ctx=ctx,
+                                                               profiler=profiler,
                                                                inputs=[{"data": conv_data,
                                                                         "weight": (3, 64, 3),
                                                                         "bias": (64,),
@@ -166,6 +171,7 @@ def run_transpose_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32'
                                                                run_backward=True,
                                                                dtype=dtype,
                                                                ctx=ctx,
+                                                               profiler=profiler,
                                                                inputs=[{"data": conv_data,
                                                                         "weight": (3, 64, 3, 3),
                                                                         "bias": (64,),
