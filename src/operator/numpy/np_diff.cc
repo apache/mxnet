@@ -70,7 +70,7 @@ inline bool DiffType(const nnvm::NodeAttrs& attrs,
 
 DMLC_REGISTER_PARAMETER(DiffParam);
 
-NNVM_REGISTER_OP(_np_diff)
+NNVM_REGISTER_OP(_npi_diff)
 .set_attr_parser(ParamParser<DiffParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -85,7 +85,7 @@ NNVM_REGISTER_OP(_np_diff)
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
 .set_attr<FCompute>("FCompute<cpu>", DiffForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_np_diff"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_npi_diff"})
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
@@ -93,7 +93,7 @@ NNVM_REGISTER_OP(_np_diff)
 .add_argument("a", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(DiffParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_backward_np_diff)
+NNVM_REGISTER_OP(_backward_npi_diff)
 .set_attr_parser(ParamParser<DiffParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)

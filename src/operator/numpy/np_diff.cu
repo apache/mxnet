@@ -27,10 +27,10 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_np_diff)
+NNVM_REGISTER_OP(_npi_diff)
 .set_attr<FCompute>("FCompute<gpu>", DiffForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_np_diff)
+NNVM_REGISTER_OP(_backward_npi_diff)
 .set_attr<FCompute>("FCompute<gpu>", DiffBackward<gpu>);
 
 }  // namespace op

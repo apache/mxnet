@@ -1117,6 +1117,7 @@ def test_np_diff():
                     if hybridize:
                         test_np_diff.hybridize()
                     for itype in [_np.float16, _np.float32, _np.float64]:
+                        # note the tolerance shall be scaled by the input n
                         if itype == _np.float16:
                             rtol = atol = 1e-2*2*n
                         else:
@@ -1127,10 +1128,6 @@ def test_np_diff():
                         with mx.autograd.record():
                             mx_out = test_np_diff(x)
                         assert mx_out.shape == np_out.shape
-                        print("shape", shape, "axis", axis, "n", n, "type", itype)
-                        # print("input", x.asnumpy())
-                        # print("mx out", mx_out.asnumpy())
-                        # print("np out", np_out)
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
                         mx_out.backward()
                         if (np_out.size == 0):

@@ -53,6 +53,7 @@ struct DiffParam : public dmlc::Parameter<DiffParam> {
 };
 
 inline void YanghuiTri(int* buffer, int n) {
+  // apply basic yanghui's triangular to calculate the factors
   buffer[0] = 1;
   for (int i = 1; i <= n; ++i){
     buffer[i] = 1;
@@ -158,7 +159,7 @@ struct diff_backward {
     // one head thread for a whole sequence along the axis
     if (coor[axis] != 0) return;
     int j = ravel(coor, ishape);
-    // initialize the entry
+    // initialize the elements of output array
     for (int k = 0; k < oshape[axis]; ++k) igrad[i + k * stride] = 0;
     for (int k = 0; k < ishape[axis]; ++k){
       int indicator = 1;
