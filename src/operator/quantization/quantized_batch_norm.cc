@@ -106,6 +106,9 @@ the float32 data into int8.
 .set_attr<nnvm::FInferType>("FInferType", QuantizedBatchNormType)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return false; })
+.set_attr<FNeedCalibrateInput>("FNeedCalibrateOutput", [](const NodeAttrs& attrs){
+  return std::vector<int>{0};
+})
 .add_argument("data", "NDArray-or-Symbol", "Input data.")
 .add_argument("gamma", "NDArray-or-Symbol", "gamma.")
 .add_argument("beta", "NDArray-or-Symbol", "beta.")

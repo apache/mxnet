@@ -690,8 +690,12 @@ def test_quantize_params():
     params = {}
     for name in offline_params:
         params[name] = mx.nd.uniform(shape=(2, 2))
+<<<<<<< HEAD
     qsym = mx.contrib.quant._quantize_symbol(sym, ctx=mx.current_context(),
                                              offline_params=offline_params, quantize_mode='full')
+=======
+    qsym, _ = mx.contrib.quant._quantize_symbol(sym, offline_params=offline_params, quantize_mode='full')
+>>>>>>> Add calibrate op
     qparams = mx.contrib.quant._quantize_params(qsym, params, th_dict = {})
     param_names = params.keys()
     qparam_names = qparams.keys()

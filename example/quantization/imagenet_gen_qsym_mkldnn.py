@@ -193,7 +193,6 @@ if __name__ == '__main__':
     # get image shape
     image_shape = args.image_shape
 
-    calib_layer = lambda name: name.endswith('_output') or name == "data"
     exclude_first_conv = args.exclude_first_conv
     if args.quantized_dtype == "uint8":
         logger.info('quantized dtype is set to uint8, will exclude first conv.')
@@ -288,7 +287,7 @@ if __name__ == '__main__':
                                                               ctx=ctx, excluded_sym_names=excluded_sym_names,
                                                               calib_mode=calib_mode, calib_data=data,
                                                               num_calib_examples=num_calib_batches * batch_size,
-                                                              calib_layer=calib_layer, quantized_dtype=args.quantized_dtype,
+                                                              quantized_dtype=args.quantized_dtype,
                                                               label_names=(label_name,), logger=logger)
         if calib_mode == 'entropy':
             suffix = '-quantized-%dbatches-entropy' % num_calib_batches

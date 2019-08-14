@@ -889,7 +889,9 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
                      const char **offline_params,
                      const char *quantized_dtype,
                      const bool calib_quantize,
-                     const char *quantize_mode) {
+                     const char *quantize_mode,
+                     mx_uint* out_num_calib_names,
+                     const char ***out_calib_names) {
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol*>(sym_handle);
@@ -916,6 +918,16 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
   g.attrs["target_ctx"] = std::make_shared<nnvm::any>(target_dev);
   g.attrs["quantize_mode"] = std::make_shared<nnvm::any>(std::move(quantized_mode));
   g = ApplyPass(std::move(g), "QuantizeGraph");
+  const auto& calib_nodes =g.GetAttr<std::vector<std::string>>("calib_nodes");
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  ret->ret_vec_str = std::move(calib_nodes);
+  *out_num_calib_names = ret->ret_vec_str.size();
+  ret->ret_vec_charp.clear();
+  ret->ret_vec_charp.reserve(ret->ret_vec_str.size());
+  for (const auto &str : ret->ret_vec_str) {
+    ret->ret_vec_charp.push_back(str.c_str());
+  }
+  *out_calib_names = dmlc::BeginPtr(ret->ret_vec_charp);
   s->outputs = g.outputs;
   *ret_sym_handle = s;
   API_END_HANDLE_ERROR(delete s);

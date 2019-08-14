@@ -335,6 +335,20 @@ using FNeedRequantize = std::function<bool (const NodeAttrs& attrs)>;
 using FAvoidQuantizeInput = std::function<bool (const NodeAttrs& attrs,
                                                 size_t index)>;
 
+/*!
+ * \brief Register a function to determine if the input of a quantized operator
+ * needs to be calibrated. This is usually used for the quantized operators
+ * which need calibration on its input.
+ */
+using FNeedCalibrateInput = std::function<std::vector<int> (const NodeAttrs& attrs)>;
+
+/*!
+ * \brief Register a function to determine if the output of a quantized operator
+ * needs to be calibrated. This is usually used for the quantized operators
+ * which need calibration on its output.
+ */
+using FNeedCalibrateOutput = std::function<std::vector<int> (const NodeAttrs& attrs)>;
+
 }  // namespace mxnet
 
 #endif  // MXNET_OP_ATTR_TYPES_H_

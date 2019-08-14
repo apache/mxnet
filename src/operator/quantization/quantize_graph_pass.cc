@@ -41,7 +41,7 @@ using nnvm::NodePtr;
 using nnvm::NodeEntry;
 using nnvm::Graph;
 
-inline size_t GetNumOutputs(NodePtr node) {
+static inline size_t GetNumOutputs(NodePtr node) {
   // Get NumOutputs, check if current node has NumVisibleOutputs function, if yes, return
   // num_visible_outputs
   size_t num_outputs = node->num_outputs();
@@ -52,6 +52,12 @@ inline size_t GetNumOutputs(NodePtr node) {
     num_outputs = num_visible_output_func(node->attrs);
   }
   return num_outputs;
+}
+
+static inline std::string GetOutputName(const NodeEntry& e) {
+   nnvm::Symbol sym;
+   sym.outputs.push_back(e);
+   return sym.ListOutputNames()[0];
 }
 
 NodePtr CreateNode(std::string op_name, std::string node_name) {
@@ -271,13 +277,14 @@ Graph QuantizeGraph(Graph &&src) {
   // graph. Key is the currently visited graph's node pointer, and value is a copied node of the key
   // node. The existing key's value may be updated with the newly created quantize/dequantize op.
   std::unordered_map<Node*, NodePtr> mirror_map;
+  std::unordered_map<NodePtr, NodePtr> reverse_mirror_map;
   nnvm::NodeEntryMap<NodeEntry> mirror_entry_map;
   DFSVisit(src.outputs, [&](const NodePtr& node) {
     NodePtr new_node = Node::Create();
     // If the currently visited node needs quantization, insert a quantize op node before the
     // current node and replace the current node with the quantized version in the new graph.
     if (quantized_node_map.count(node)) {
-      LOG(INFO) << node->attrs.name << " is quantized.";
+      std::cout << node->attrs.name << " is quantized." << std::endl;
       new_node = quantized_node_map[node];
 
       // add data into quantized op input
@@ -392,7 +399,7 @@ Graph QuantizeGraph(Graph &&src) {
       // (e.g., a quantized_conv2d node), and insert a dequantize op node in the new graph if there
       // are any. Otherwise, simply add a copy of the current node's entry to the inputs of
       // the new_node.
-      if (!node->is_variable()) LOG(INFO) << node->attrs.name << " is NOT quantized.";
+      if (!node->is_variable()) std::cout << node->attrs.name << " is NOT quantized." << std::endl;
       *new_node = *node;
       new_node->inputs.clear();
       for (const auto& e : node->inputs) {
@@ -417,7 +424,8 @@ Graph QuantizeGraph(Graph &&src) {
           dequantize_node->op()->attr_parser(&(dequantize_node->attrs));
 
           new_node->inputs.emplace_back(dequantize_node, 0, 0);
-          mirror_map[e.node.get()] = std::move(dequantize_node);
+          mirror_map[e.node.get()] = dequantize_node;
+          reverse_mirror_map[dequantize_node] = e.node;
         } else if (mirror_entry_map.count(e)) {
           new_node->inputs.emplace_back(
               mirror_entry_map[e].node->inputs[0].node, e.index, e.version);
@@ -426,7 +434,8 @@ Graph QuantizeGraph(Graph &&src) {
         }
       }
     }
-    mirror_map[node.get()] = std::move(new_node);
+    mirror_map[node.get()] = new_node;
+    reverse_mirror_map[new_node] = node;
   });
 
   std::vector<NodeEntry> outputs;
@@ -459,103 +468,87 @@ Graph QuantizeGraph(Graph &&src) {
 
   Graph ret;
   ret.outputs = std::move(outputs);
+
+  static const auto& need_calib_input_map = Op::GetAttr<mxnet::FNeedCalibrateInput>("FNeedCalibrateInput");
+  static const auto& need_calib_output_map = Op::GetAttr<mxnet::FNeedCalibrateOutput>("FNeedCalibrateOutput");
+  std::vector<std::string> calib_nodes;
+  DFSVisit(ret.outputs, [&](const NodePtr& node) {
+    if (need_calib_input_map.count(node->op())) {
+      const auto calib_idx = need_calib_input_map[node->op()](node->attrs);
+      for (const auto &idx : calib_idx) {
+        if (reverse_mirror_map.count(node)) {
+          calib_nodes.push_back(GetOutputName(
+              {reverse_mirror_map[node], node->inputs[idx].index, node->inputs[idx].version}));
+        } else {
+          const auto& e = node->inputs[idx];
+          if (e.node->is_variable()) {
+            calib_nodes.push_back(e.node->attrs.name);
+          } else {
+            if (reverse_mirror_map.count(e.node)) {
+              const auto& fp32_in_node = reverse_mirror_map.at(e.node);
+              calib_nodes.push_back(GetOutputName({fp32_in_node, e.index, e.version}));
+            } else {
+              LOG(FATAL) << "Can't find calibration node for " << node->attrs.name;
+            }
+          }
+        }
+      }
+    } else if (need_calib_output_map.count(node->op())) {
+      const auto calib_idx = need_calib_output_map[node->op()](node->attrs);
+      for (const auto& idx : calib_idx) {
+        if (reverse_mirror_map.count(node)) {
+          calib_nodes.push_back(GetOutputName({reverse_mirror_map[node], static_cast<uint32_t>(idx), 0}));
+        } else {
+          calib_nodes.push_back(GetOutputName({node, static_cast<uint32_t>(idx), 0}));
+        }
+      }
+    }
+  });
+  ret.attrs["calib_nodes"] = std::make_shared<dmlc::any>(std::move(calib_nodes));
   return ret;
 }
 
+static inline void SetCalibTableForEntry(
+    const NodeEntry& e, const NodePtr& node,
+    const std::unordered_map<std::string, std::pair<float, float>>& calib_table) {
+  std::string out_data_name = GetOutputName(e);
+  ;
+  const std::string prefix = "quantized_";
+  if (e.node->attrs.name.rfind(prefix, 0) == 0) {
+    out_data_name = out_data_name.substr(prefix.size());
+  }
+  const auto calib_table_iter = calib_table.find(out_data_name);
+  if (calib_table_iter != calib_table.end()) {
+    std::cout << "Set calibration result to " << node->attrs.name
+              << " : min=" << calib_table_iter->second.first
+              << " max=" << calib_table_iter->second.second << std::endl;
+    node->attrs.dict["min_calib_range"] = std::to_string(calib_table_iter->second.first);
+    node->attrs.dict["max_calib_range"] = std::to_string(calib_table_iter->second.second);
+    if (node->op() && node->op()->attr_parser) node->op()->attr_parser(&(node->attrs));
+  } else {
+    std::cout << "Can't find calibration result for " << node->attrs.name << std::endl;
+  }
+}
+
 Graph SetCalibTableToQuantizedGraph(Graph&& g) {
-  static const auto& flist_outputs =
-    nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
-  static const auto& need_requantize_map =
-    nnvm::Op::GetAttr<mxnet::FNeedRequantize>("FNeedRequantize");
   const auto& calib_table =
-    g.GetAttr<std::unordered_map<std::string, std::pair<float, float>>>("calib_table");
+      g.GetAttr<std::unordered_map<std::string, std::pair<float, float>>>("calib_table");
+  static const auto& need_calib_input_map =
+      Op::GetAttr<mxnet::FNeedCalibrateInput>("FNeedCalibrateInput");
+  static const auto& need_calib_output_map =
+      Op::GetAttr<mxnet::FNeedCalibrateOutput>("FNeedCalibrateOutput");
+  std::cout << "Set calibration result to quantized symbol." << std::endl;
   DFSVisit(g.outputs, [&](const NodePtr& node) {
-    // If the current op is requantize
-    // find the thresholds from the calibration table with the key equal
-    // to the current op's input node name, e.g. a quantized_conv2d node.
-    if (node->op() == Op::Get("_contrib_requantize")) {
-      NodePtr quantized_op_node = node->inputs[0].node;
-      CHECK(quantized_op_node->op() != nullptr) << quantized_op_node->attrs.name
-                                                << " must be an quantized op node";
-      CHECK(need_requantize_map.count(quantized_op_node->op()) > 0
-          && need_requantize_map[quantized_op_node->op()](quantized_op_node->attrs))
-          << quantized_op_node->attrs.name << " op must register FNeedRequantize attr"
-                                              " and the attr func should return true";
-      const std::string prefix = "quantized_";
-      CHECK(std::equal(prefix.begin(), prefix.end(), quantized_op_node->attrs.name.begin()))
-          << "an quantized op should start with `quantized_`";
-
-      std::string out_data_name = quantized_op_node->attrs.name.substr(prefix.size()) + "_";
-      auto list_output_names_func = flist_outputs.get(quantized_op_node->op(), nullptr);
-      // Here it's assumed that the quantized_op node only produces three outputs:
-      // out_data, min_range, and max_range. So we want to get the pre-calculated min_calib_range
-      // and max_calib_range from the calibration table for out_data. Here we create the output
-      // data name same as its constructed in GraphExecutor::ExecuteMonCallback.
-      if (list_output_names_func != nullptr) {
-        std::vector<std::string> names = list_output_names_func(quantized_op_node->attrs);
-        CHECK_EQ(names.size(), 3U) << "ListOutputNames is expected to return three string for"
-                                      " quantized operators";
-        out_data_name += names[0];
-      } else {
-        out_data_name += "0";
-      }
-      const auto calib_table_iter = calib_table.find(out_data_name);
-      if (calib_table_iter != calib_table.end()) {
-        node->attrs.dict["min_calib_range"] = std::to_string(calib_table_iter->second.first);
-        node->attrs.dict["max_calib_range"] = std::to_string(calib_table_iter->second.second);
-        node->op()->attr_parser(&(node->attrs));
-      }
-    } else if (node->op() == Op::Get("_contrib_quantize_v2")) {
-      NodePtr float_op_node = node->inputs[0].node;
-      auto float_op_idx = node->inputs[0].index;
-      std::string out_data_name = float_op_node->attrs.name;
-      if (float_op_node->op()) {
-        auto list_output_names_func = flist_outputs.get(float_op_node->op(), nullptr);
-        // We want to get the pre-calculated min_range and max_range from the calibration table for
-        // out_data. Here we create the output data name same as its constructed in
-        // GraphExecutor::ExecuteMonCallback.
-        if (list_output_names_func != nullptr) {
-          std::vector<std::string> names = list_output_names_func(float_op_node->attrs);
-          out_data_name += "_" + names[float_op_idx];
-        } else {
-          out_data_name += "_" + std::to_string(float_op_idx);
-        }
-      }
-      const auto calib_table_iter = calib_table.find(out_data_name);
-      if (calib_table_iter != calib_table.end()) {
-        node->attrs.dict["min_calib_range"] = std::to_string(calib_table_iter->second.first);
-        node->attrs.dict["max_calib_range"] = std::to_string(calib_table_iter->second.second);
-        node->op()->attr_parser(&(node->attrs));
-        const QuantizeV2Param& param = nnvm::get<QuantizeV2Param>(node->attrs.parsed);
-        if (param.out_type == QuantizeOutType::kUint8 &&
-            param.min_calib_range.value() < 0.0f) {
-          LOG(WARNING) << "Calibration statistics indicates that node `" << node->attrs.name
-                       << "` has negative input, consider use `auto` or `int8` as out_type";
-        }
-      }
-    } else if (node->op() == Op::Get("_contrib_quantized_batch_norm")) {
-      auto quantized_op_idx = node->inputs[0].index;
-      const std::string prefix = "quantized_";
-      std::string out_data_name = node->attrs.name.substr(prefix.size());
-      if (node->op()) {
-        auto list_output_names_func = flist_outputs.get(node->op(), nullptr);
-        // We want to get the pre-calculated min_range and max_range from the calibration table for
-        // out_data. Here we create the output data name same as its constructed in
-        // GraphExecutor::ExecuteMonCallback.
-        if (list_output_names_func != nullptr) {
-          std::vector<std::string> names = list_output_names_func(node->attrs);
-          out_data_name += "_" + names[quantized_op_idx];
-        } else {
-          out_data_name += "_" + std::to_string(quantized_op_idx);
-        }
-      }
-
-      const auto calib_table_iter = calib_table.find(out_data_name);
-      if (calib_table_iter != calib_table.end()) {
-        node->attrs.dict["min_calib_range"] = std::to_string(calib_table_iter->second.first);
-        node->attrs.dict["max_calib_range"] = std::to_string(calib_table_iter->second.second);
-        node->op()->attr_parser(&(node->attrs));
-      }
+    if (need_calib_input_map.count(node->op())) {
+      const auto calib_idx = need_calib_input_map[node->op()](node->attrs);
+      CHECK_EQ(calib_idx.size(), 1);
+      const auto& idx = calib_idx[0];
+      SetCalibTableForEntry(node->inputs[idx], node, calib_table);
+    } else if (need_calib_output_map.count(node->op())) {
+      const auto calib_idx = need_calib_output_map[node->op()](node->attrs);
+      CHECK_EQ(calib_idx.size(), 1);
+      const auto& idx = calib_idx[0];
+      SetCalibTableForEntry({node, static_cast<uint32_t>(idx), 0}, node, calib_table);
     }
   });
   return g;
@@ -564,6 +557,7 @@ Graph SetCalibTableToQuantizedGraph(Graph&& g) {
 NNVM_REGISTER_PASS(QuantizeGraph)
 .describe("")
 .set_body(QuantizeGraph)
+.provide_graph_attr("calib_nodes")
 .set_change_graph(true);
 
 NNVM_REGISTER_PASS(SetCalibTableToQuantizedGraph)
