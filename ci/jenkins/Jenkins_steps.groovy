@@ -1557,6 +1557,18 @@ def docs_archive() {
     }]
 }
 
+def docs_preview() {
+    return ['Archive the full website': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            sh 'ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}'
+          }
+        }
+      }
+    }]
+}
+
 
 // This is for the full website
 def docs_publish() {

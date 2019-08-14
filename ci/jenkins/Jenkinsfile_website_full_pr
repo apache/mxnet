@@ -53,7 +53,7 @@ core_logic: {
   ])
 
   utils.parallel_stage('Publish Preview', [
-    sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
+    custom_steps.docs_preview()
   ])
 }
 ,
