@@ -26,6 +26,10 @@
 namespace mxnet {
 namespace op {
 
+#define MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(__name$, __kernel$)     \
+NNVM_REGISTER_OP(__name$)                                               \
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, __kernel$>)  \
+
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_invert, mshadow_op::invert);
 
 }  // namespace op
