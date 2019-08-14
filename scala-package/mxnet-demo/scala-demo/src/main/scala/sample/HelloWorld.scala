@@ -34,6 +34,7 @@ object HelloWorld {
         }
       }
     }
+    println("upsampling changes")
   }
 
   def checkNearestUpSamplingWithShape(shapes: Seq[Shape],
