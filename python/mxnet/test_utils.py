@@ -503,22 +503,23 @@ def same(a, b):
 def checkShapes(a, b):
     if a.shape != b.shape:
         msg = npt.build_err_msg([a, b],
-                        err_msg="a.shape = {} and b.shape = {} are not equal"
-                        .format(str(a.shape), str(b.shape)))
+                                err_msg="a.shape = {} and b.shape = {} are not equal"
+                                .format(str(a.shape), str(b.shape)))
         raise AssertionError(msg)
 
- 
+
 def almost_equal(a, b, rtol=None, atol=None, equal_nan=False, use_broadcast=True):
     """Test if two numpy arrays are almost equal."""
     # pylint: disable=unexpected-keyword-arg
     if not use_broadcast:
         checkShapes(a, b)
-        
+
     return np.allclose(a, b, rtol=get_rtol(rtol), atol=get_atol(atol), equal_nan=equal_nan)
     # pylint: enable=unexpected-keyword-arg
 
 
-def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=False, use_broadcast=True, mismatches=(10, 10)):
+def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=False,
+                        use_broadcast=True, mismatches=(10, 10)):
     """Test that two numpy arrays are almost equal. Raise exception message if not.
 
     Parameters
@@ -586,7 +587,7 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
     aTmp = a.copy()
     bTmp = b.copy()
     i = 1
-    while i < a.size:
+    while i <= a.size:
         if i <= mismatches[0]:
             print("%3d: Error %f  %s" %(i, rel, locationError(a, b, index, names)))
 
