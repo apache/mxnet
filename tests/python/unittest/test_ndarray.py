@@ -1875,20 +1875,6 @@ def test_ndarray_indexing():
         test_setitem(np_array, index[0], index[1])
         test_getitem_autograd(np_array, index[0])
         test_setitem_autograd(np_array, index[0])
-    
-    # test zero-size tensors
-    shapes_indices = [
-                      ((0), [slice(None, None, None)]),
-                      ((3, 0), [2, (slice(None, None, None), None)]),
-                      ((0, 0, 0), [slice(None, None, None),]),
-                      ((0, 3, 0), [slice(None, None, None),]),
-    ]
-    with mx.np_shape():
-        for shape, indices in shapes_indices:
-            for index in indices:
-                np_array = np.zeros(shape)
-                test_getitem(np_array, index, False)
-                test_setitem(np_array, index, False)
 
 
 if __name__ == '__main__':

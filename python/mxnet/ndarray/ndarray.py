@@ -956,9 +956,9 @@ fixed-size items.
                 shape[i] = 0
                 zero_size = True
             i += 1
+
         if zero_size:
             sliced = empty(tuple(shape), dtype=self.dtype, ctx=self.context)
-
         elif self._basic_indexing_slice_is_contiguous(slc_key, self.shape):
             # Create a shared-memory view by using low-level flat slicing
             flat_begin, flat_end = self._basic_indexing_contiguous_flat_begin_end(
@@ -991,9 +991,6 @@ fixed-size items.
         if final_shape == []:
             # Override for single element indexing
             final_shape = [1]
-        if zero_size:
-            # Note: NDArray currently does not support reshape to fewer dimensions.  
-            return zeros(tuple(final_shape))
         return sliced.reshape(final_shape)
 
     @staticmethod
