@@ -896,11 +896,16 @@ def test_shuffle():
         column0 = arr.reshape((arr.size,))[::stride].sort()
         seq = mx.nd.arange(0, arr.size - stride + 1, stride, ctx=arr.context)
         assert (column0 == seq).prod() == 1
+
+        arrays = []
         for i in range(arr.shape[0]):
             subarr = arr[i].reshape((arr[i].size,))
-            start = subarr[0].asscalar()
-            seq = mx.nd.arange(start, start + stride, ctx=arr.context)
-            assert (subarr == seq).prod() == 1
+            start = int(subarr[0].asscalar())
+            arrays.append(range(start, start + stride))
+
+        seq_array = mx.nd.array(arrays, ctx=arr.context)
+        reshaped_array = arr.reshape((arr.shape[0], -1))
+        assert (seq_array == reshaped_array).prod() == 1
 
     # This tests that the shuffling is along the first axis with `repeat1` number of shufflings
     # and the outcomes are uniformly distributed with `repeat2` number of shufflings.
