@@ -678,7 +678,7 @@ def almost_equal_ignore_nan(a, b, rtol=None, atol=None):
     b = np.copy(b)
     nan_mask = np.logical_or(np.isnan(a), np.isnan(b))
     a[nan_mask] = 0
-    b[nan_mask] = 0mismatches
+    b[nan_mask] = 0
 
     return almost_equal(a, b, rtol, atol)
 
