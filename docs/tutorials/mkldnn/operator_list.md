@@ -21,34 +21,38 @@ MXNet MKL-DNN backend provides optimized implementations for various operators c
 
 To help users understanding MKL-DNN backend better, the following table summarizes the list of supported operators, data types and functionalities.  A subset of operators support faster training and inference by using a lower precision version. Refer to the following table's `INT8 Inference` column to see which operators are supported.
 
-| Operator           | Function                   | FP32 Training (backward) | FP32 Inference | INT8 Inference |
-| ---                | ---                        | ---                      | ---            | ---            |
-| **Convolution**    | 1D Convolution             | Y                        | Y              | N              |
-|                    | 2D Convolution             | Y                        | Y              | Y              |
-|                    | 3D Convolution             | Y                        | Y              | N              |
-| **Deconvolution**  | 2D Deconvolution           | Y                        | Y              | N              |
-|                    | 3D Deconvolution           | Y                        | Y              | N              |
-| **FullyConnected** | 1D-4D input, flatten=True  | N                        | Y              | Y              |
-|                    | 1D-4D input, flatten=False | N                        | Y              | Y              |
-| **Pooling**        | 2D max Pooling             | Y                        | Y              | Y              |
-|                    | 2D avg pooling             | Y                        | Y              | Y              |
-| **BatchNorm**      | 2D BatchNorm               | Y                        | Y              | N              |
-| **LRN**            | 2D LRN                     | Y                        | Y              | N              |
-| **Activation**     | ReLU                       | Y                        | Y              | Y              |
-|                    | Tanh                       | Y                        | Y              | N              |
-|                    | SoftReLU                   | Y                        | Y              | N              |
-|                    | Sigmoid                    | Y                        | Y              | N              |
-| **softmax**        | 1D-4D input                | Y                        | Y              | N              |
-| **Softmax_output** | 1D-4D input                | N                        | Y              | N              |
-| **Transpose**      | 1D-4D input                | N                        | Y              | N              |
-| **elemwise_add**   | 1D-4D input                | Y                        | Y              | Y              |
-| **Concat**         | 1D-4D input                | Y                        | Y              | Y              |
-| **slice**          | 1D-4D input                | N                        | Y              | N              |
-| **Reshape**        | 1D-4D input                | N                        | Y              | N              |
-| **Flatten**        | 1D-4D input                | N                        | Y              | N              |
-| **Quantization**   | 1D-4D input                | N                        | N              | Y              |
-| **Dequantization** | 1D-4D input                | N                        | N              | Y              |
-| **Requantization** | 1D-4D input                | N                        | N              | Y              |
+| Operator           | Function                     | FP32 Training (backward) | FP32 Inference | INT8 Inference |
+| ---                | ---                          | ---                      | ---            | ---            |
+| **Convolution**    | 1D Convolution               | Y                        | Y              | N              |
+|                    | 2D Convolution               | Y                        | Y              | Y              |
+|                    | 3D Convolution               | Y                        | Y              | N              |
+| **Deconvolution**  | 2D Deconvolution             | Y                        | Y              | N              |
+|                    | 3D Deconvolution             | Y                        | Y              | N              |
+| **FullyConnected** | 1D-4D input, flatten=True    | N                        | Y              | Y              |
+|                    | 1D-4D input, flatten=False   | N                        | Y              | Y              |
+| **Pooling**        | 2D max Pooling               | Y                        | Y              | Y              |
+|                    | 2D avg pooling               | Y                        | Y              | Y              |
+| **BatchNorm**      | 2D BatchNorm                 | Y                        | Y              | N              |
+| **LRN**            | 2D LRN                       | Y                        | Y              | N              |
+| **Activation**     | ReLU                         | Y                        | Y              | Y              |
+|                    | Tanh                         | Y                        | Y              | N              |
+|                    | SoftReLU                     | Y                        | Y              | N              |
+|                    | Sigmoid                      | Y                        | Y              | N              |
+| **softmax**        | 1D-4D input                  | Y                        | Y              | N              |
+| **Softmax_output** | 1D-4D input                  | N                        | Y              | N              |
+| **Transpose**      | 1D-4D input                  | N                        | Y              | N              |
+| **elemwise_add**   | 1D-4D input                  | Y                        | Y              | Y              |
+| **Concat**         | 1D-4D input                  | Y                        | Y              | Y              |
+| **slice**          | 1D-4D input                  | N                        | Y              | N              |
+| **Reshape**        | 1D-4D input                  | N                        | Y              | N              |
+| **Flatten**        | 1D-4D input                  | N                        | Y              | N              |
+| **Quantization**   | 1D-4D input                  | N                        | N              | Y              |
+| **Dequantization** | 1D-4D input                  | N                        | N              | Y              |
+| **Requantization** | 1D-4D input                  | N                        | N              | Y              |
+| **RNN**            | Vanilla RNN, activation=Tanh | N                        | Y              | N              |
+|                    | Vanilla RNN, activation=ReLU | N                        | Y              | N              |
+|                    | LSTM, activation=Tanh        | N                        | Y              | N              |
+|                    | LBR-GRU                      | N                        | Y              | N              |
 
 Besides direct operator optimizations, we also provide graph fusion passes listed in the table below. Users can choose to enable or disable these fusion patterns through environmental variables.
 
