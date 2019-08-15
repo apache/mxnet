@@ -236,11 +236,11 @@ class ndarray(NDArray):
                 shape[i] = 0
                 zero_size = True
             i += 1
-        if zero_size:
-            sliced = empty(tuple(shape), dtype=self.dtype, ctx=self.context)
+        # if zero_size:
+        #     sliced = empty(tuple(shape), dtype=self.dtype, ctx=self.context)
 
         # _basic_indexing_slice_is_contiguous is inheritated from NDArray class.
-        elif self._basic_indexing_slice_is_contiguous(slc_key, self.shape):
+        if self._basic_indexing_slice_is_contiguous(slc_key, self.shape):
             # Create a shared-memory view by using low-level flat slicing
             flat_begin, flat_end = self._basic_indexing_contiguous_flat_begin_end(
                 slc_key, self.shape
@@ -256,7 +256,11 @@ class ndarray(NDArray):
                 )
             )
             sliced_shape = self._basic_indexing_sliced_shape(slc_key, self.shape)
-            sliced = self.__class__(handle=handle, writable=self.writable).reshape_view(sliced_shape)
+            sliced = self.__class__(handle=handle, writable=self.writable)
+            if 0 in sliced_shape:
+                sliced = sliced.reshape(sliced_shape)
+            else:
+                sliced = sliced.reshape_view(sliced_shape)
 
         else:
             begin, end, step = self._basic_indexing_key_to_begin_end_step(
