@@ -55,11 +55,9 @@ extern "C" {
 #endif
 
 /*! \brief manually define unsigned int */
-typedef uint32_t uint32_t;
-/*! \brief manually define 64-bit int */
-typedef int64_t int64_t;
+typedef uint32_t mx_uint;
 /*! \brief manually define float */
-typedef float float;
+typedef float mx_float;
 /*! \brief data type to store dim size */
 typedef int64_t dim_t;
 // all the handles are simply void *
