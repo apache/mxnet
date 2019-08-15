@@ -34,16 +34,19 @@ import ctypes
 import warnings
 import numpy as _np
 from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _GRAD_REQ_MAP
+from ..ndarray import indexing_key_expand_implicit_axes, get_indexing_dispatch_code,\
+                      get_oshape_of_gather_nd_op
 from ..ndarray._internal import _set_np_ndarray_class
 from . import _op as _mx_np_op
 from ..base import check_call, _LIB, NDArrayHandle
 from ..base import mx_real_t, c_array_buf, mx_uint, numeric_types, integer_types
+from ..context import Context
 from ..util import _sanity_check_params, set_module
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 
-__all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'add', 'subtract', 'multiply', 'divide',
+__all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide',
            'mod', 'power', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt',
            'abs', 'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative',
@@ -51,6 +54,10 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'add', 'subtract', 'mul
            'tensordot', 'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate',
            'stack']
 
+# Return code for dispatching indexing function call
+_NDARRAY_UNSUPPORTED_INDEXING = -1
+_NDARRAY_BASIC_INDEXING = 0
+_NDARRAY_ADVANCED_INDEXING = 1
 
 # This function is copied from ndarray.py since pylint
 # keeps giving false alarm error of undefined-all-variable
@@ -101,80 +108,238 @@ def _get_index(idx):
 
 @set_module('mxnet.numpy')  # pylint: disable=invalid-name
 class ndarray(NDArray):
-    """An array object represents a multidimensional, homogeneous array of fixed-size items.
+    """
+    An array object represents a multidimensional, homogeneous array of fixed-size items.
     An associated data-type object describes the format of each element in the array
     (its byte-order, how many bytes it occupies in memory, whether it is an integer, a
     floating point number, or something else, etc.). Arrays should be constructed using
-    `array`, `zeros` or `empty`. Currently, only c-contiguous arrays are supported."""
+    `array`, `zeros` or `empty`. Currently, only c-contiguous arrays are supported.
+    """
+    def _get_np_basic_indexing(self, key):
+        """
+        This function indexes ``self`` with a tuple of `slice` objects only.
+        """
+        key_nd = tuple(idx for idx in key if idx is not None)
+        if len(key_nd) < self.ndim:
+            raise RuntimeError(
+                'too few indices after normalization: expected `ndim` ({}) '
+                'but got {}. This is a bug, please report it!'
+                ''.format(self.ndim, len(key_nd))
+            )
+        if len(key_nd) > self.ndim:
+            raise IndexError(
+                'too many indices ({}) for array with {} dimensions'
+                ''.format(len(key_nd), self.ndim)
+            )
+
+        none_axes = [ax for ax in range(len(key)) if key[ax] is None]  # pylint: disable=invalid-name
+        slc_key, int_axes = self._basic_indexing_key_int_to_slice(key_nd)
+        new_axes = self._new_axes_after_basic_indexing(none_axes, key)
+
+        # Check bounds for integer axes
+        for ax in int_axes:  # pylint: disable=invalid-name
+            if not -self.shape[ax] <= key_nd[ax] < self.shape[ax]:
+                raise IndexError(
+                    'index {} is out of bounds for axis {} with size {}'
+                    ''.format(key_nd[ax], ax, self.shape[ax]))
+
+        if self._basic_indexing_slice_is_contiguous(slc_key, self.shape):
+            # Create a shared-memory view by using low-level flat slicing
+            flat_begin, flat_end = self._basic_indexing_contiguous_flat_begin_end(
+                slc_key, self.shape
+            )
+            handle = NDArrayHandle()
+            flat_self = self.reshape_view(-1)
+            check_call(
+                _LIB.MXNDArraySlice(
+                    flat_self.handle,
+                    mx_uint(flat_begin),
+                    mx_uint(flat_end),
+                    ctypes.byref(handle),
+                )
+            )
+            sliced_shape = self._basic_indexing_sliced_shape(slc_key, self.shape)
+            sliced = self.__class__(handle=handle, writable=self.writable)
+            if 0 in sliced_shape:
+                sliced = sliced.reshape(sliced_shape)
+            else:
+                sliced = sliced.reshape_view(sliced_shape)
+
+        else:
+            begin, end, step = self._basic_indexing_key_to_begin_end_step(
+                slc_key, self.shape, keep_none=True
+            )
+            sliced = _npi.slice(self, begin, end, step)
+
+        # Reshape to final shape due to integer and `None` entries in `key`.
+        final_shape = [sliced.shape[i] for i in range(sliced.ndim) if i not in int_axes]
+        for ax in new_axes:  # pylint: disable=invalid-name
+            final_shape.insert(ax, 1)
+
+        if final_shape == []:
+            # Override for single element indexing
+            return sliced.item()
+        if sliced.size == 0:
+            return sliced.reshape(tuple(final_shape))
+        else:
+            return sliced.reshape_view(tuple(final_shape))
+
+    def _get_np_advanced_indexing(self, key):
+        idcs, new_axes = self._get_index_nd(key)
+        if type(idcs) == NDArray:  # pylint: disable=unidiomatic-typecheck
+            idcs = idcs.as_np_ndarray()
+        else:
+            idcs = _npi.stack(*[i if isinstance(i, self.__class__) else i.as_np_ndarray() for i in idcs])
+        sliced = _npi.gather_nd(self, idcs)
+        # Reshape due to `None` entries in `key`.
+        if new_axes:
+            final_shape = [sliced.shape[i] for i in range(sliced.ndim)]
+            for ax in new_axes:  # pylint: disable=invalid-name
+                final_shape.insert(ax, 1)
+            return sliced.reshape(tuple(final_shape))
+        else:
+            return sliced
+
+    def _set_np_advanced_indexing(self, key, value):
+        """This function is called by __setitem__ when key is an advanced index."""
+        idcs, new_axes = self._get_index_nd(key)
+        if type(idcs) == NDArray:  # pylint: disable=unidiomatic-typecheck
+            idcs = idcs.as_np_ndarray()
+        else:
+            idcs = _npi.stack(*[i if isinstance(i, self.__class__) else i.as_np_ndarray() for i in idcs])
+        vshape = get_oshape_of_gather_nd_op(self.shape, idcs.shape)
+        value_nd = self._prepare_value_nd(value, bcast_shape=vshape, squeeze_axes=new_axes)
+        self._scatter_set_nd(value_nd, idcs)
 
     # pylint: disable=too-many-return-statements
     def __getitem__(self, key):
-        # TODO(junwu): calling base class __getitem__ is a temp solution
+        """
+        Overriding the method in NDArray class in a numpy fashion.
+        Calling numpy ndarray's _get_np_basic_indexing(key) and _get_np_advanced_indexing(key).
+        """
         ndim = self.ndim
         shape = self.shape
         if ndim == 0:
             if key != ():
                 raise IndexError('scalar tensor can only accept `()` as index')
+            return self.item()
+        # Handle simple cases for higher speed
         if isinstance(key, tuple) and len(key) == 0:
             return self
-        elif isinstance(key, tuple) and len(key) == ndim\
+        if isinstance(key, tuple) and len(key) == ndim\
                 and all(isinstance(idx, integer_types) for idx in key):
             out = self
             for idx in key:
                 out = out[idx]
             return out
-        elif isinstance(key, integer_types):
+        if isinstance(key, integer_types):
             if key > shape[0] - 1:
                 raise IndexError(
                     'index {} is out of bounds for axis 0 with size {}'.format(
                         key, shape[0]))
             return self._at(key)
         elif isinstance(key, py_slice):
-            if key.step is not None and key.step != 1:
-                if key.step == 0:
-                    raise ValueError("slice step cannot be zero")
-                return self.as_nd_ndarray().__getitem__(key).as_np_ndarray()
-            elif key.start is not None or key.stop is not None:
-                return self._slice(key.start, key.stop)
-            else:
-                return self
+            if (key.step is None or key.step == 1):
+                if  key.start is not None or key.stop is not None:
+                    return self._slice(key.start, key.stop)
+                else:
+                    return self
+            elif key.step == 0:
+                raise ValueError("slice step cannot be zero")
 
-        if isinstance(key, ndarray):
-            key = key.as_nd_ndarray()
-        elif isinstance(key, tuple):
-            key = [_get_index(idx) for idx in key]
-            key = tuple(key)
-        elif isinstance(key, list):
-            key = [_get_index(idx) for idx in key]
-        elif sys.version_info[0] > 2 and isinstance(key, range):
-            key = _get_index(key)
-        return self.as_nd_ndarray().__getitem__(key).as_np_ndarray()
-    # pylint: enable=too-many-return-statements
+        key = indexing_key_expand_implicit_axes(key, self.shape)
+        indexing_dispatch_code = get_indexing_dispatch_code(key)
+        if indexing_dispatch_code == _NDARRAY_BASIC_INDEXING:
+            return self._get_np_basic_indexing(key)
+        elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
+            return self._get_np_advanced_indexing(key)
+        else:
+            raise RuntimeError
 
     def __setitem__(self, key, value):
-        # TODO(junwu): calling base class __setitem__ is a temp solution
+        """
+        x.__setitem__(i, y) <=> x[i]=y
+        Sets ``self[key]`` to ``value``.
+
+        Overriding the method in NDArray class in a numpy fashion.
+        """
         if isinstance(value, NDArray) and not isinstance(value, ndarray):
             raise TypeError('Cannot assign mx.nd.NDArray to mxnet.numpy.ndarray')
         if self.ndim == 0:
             if not isinstance(key, tuple) or len(key) != 0:
                 raise IndexError('scalar tensor can only accept `()` as index')
-        if isinstance(value, ndarray):
-            value = value.as_nd_ndarray()
-        # TODO(junwu): Better handling of this situation
-        if isinstance(key, tuple) and len(key) == 0:
-            self.as_nd_ndarray().__setitem__(key, value)
-            return
+            if isinstance(value, numeric_types):
+                self.full(value)
+            elif isinstance(value, ndarray) and value.size == 1:
+                if value.shape != self.shape:
+                    value = value.reshape(self.shape)
+                value.copyto(self)
+            elif isinstance(value, (_np.ndarray, _np.generic)) and value.size == 1:
+                if isinstance(value, _np.generic) or value.shape != self.shape:
+                    value = value.reshape(self.shape)
+                self._sync_copyfrom(value)
+            else:
+                raise ValueError('setting an array element with a sequence.')
+        else:
+            key = indexing_key_expand_implicit_axes(key, self.shape)
+            slc_key = tuple(idx for idx in key if idx is not None)
+            if len(slc_key) < self.ndim:
+                raise RuntimeError(
+                    'too few indices after normalization: expected `ndim` ({}) '
+                    'but got {}. This is a bug, please report it!'
+                    ''.format(self.ndim, len(slc_key))
+                )
+            if len(slc_key) > self.ndim and self.ndim != 0:
+                raise IndexError(
+                    'too many indices ({}) for array with {} dimensions'
+                    ''.format(len(slc_key), self.ndim)
+                )
+            indexing_dispatch_code = get_indexing_dispatch_code(slc_key)
+            if indexing_dispatch_code == _NDARRAY_BASIC_INDEXING:
+                self._set_nd_basic_indexing(key, value)  # function is inheritated from NDArray class
+            elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
+                self._set_np_advanced_indexing(key, value)
+            else:
+                raise ValueError(
+                    'Indexing NDArray with index {} of type {} is not supported'
+                    ''.format(key, type(key))
+                )
 
-        if isinstance(key, ndarray):
-            key = key.as_nd_ndarray()
-        elif isinstance(key, tuple):
-            key = [_get_index(idx) for idx in key]
-            key = tuple(key)
-        elif isinstance(key, list):
-            key = [_get_index(idx) for idx in key]
-        elif sys.version_info[0] > 2 and isinstance(key, range):
-            key = _get_index(key)
-        self.as_nd_ndarray().__setitem__(key, value)
+    def _prepare_value_nd(self, value, bcast_shape, squeeze_axes=None):
+        """Return a broadcast `ndarray` with same context and dtype as ``self``.
+        For setting item, The returned `ndarray` is squeezed according to squeeze_axes since the
+        value_nd is assigned to not yet expanded space in original array.
+        `value`: numeric types or array like.
+        `bcast_shape`: a shape tuple.
+        `squeeze_axes`: a sequence of axes to squeeze in the value array.
+        Note: mxnet.numpy.ndarray not support NDArray as assigned value.
+        """
+        if isinstance(value, numeric_types):
+            value_nd = full(bcast_shape, value, ctx=self.context, dtype=self.dtype)
+        elif isinstance(value, self.__class__):
+            value_nd = value.as_in_context(self.context)
+            if value_nd.dtype != self.dtype:
+                value_nd = value_nd.astype(self.dtype)
+        else:
+            try:
+                value_nd = array(value, ctx=self.context, dtype=self.dtype)
+            except:
+                raise TypeError('mxnet.np.ndarray does not support assignment with non-array-like '
+                                'object {} of type {}'.format(value, type(value)))
+
+        # For advanced indexing setitem, if there is None in indices, we need to squeeze the
+        # assigned value_nd since None is also ignored in slicing the original array.
+        if squeeze_axes and value_nd.ndim > len(bcast_shape):
+            squeeze_axes = tuple([ax for ax in squeeze_axes if ax < len(value_nd.shape)])
+            value_nd = value_nd.squeeze(axis=tuple(squeeze_axes))
+
+        if value_nd.shape != bcast_shape:
+            if value_nd.size == 0:
+                value_nd = value_nd.reshape(bcast_shape)
+            else:
+                value_nd = value_nd.broadcast_to(bcast_shape)
+        return value_nd
+
 
     def __add__(self, other):
         """x.__add__(y) <=> x + y"""
@@ -550,7 +715,7 @@ class ndarray(NDArray):
         ``self.shape`` should be the same. This function copies the value from
         ``self`` to ``other``.
 
-        If ``other`` is a context, a new ``NDArray`` will be first created on
+        If ``other`` is a context, a new ``np.ndarray`` will be first created on
         the target context, and the value of ``self`` is copied.
 
         Parameters
@@ -560,14 +725,14 @@ class ndarray(NDArray):
 
         Returns
         -------
-        ndarray
+        out: ndarray
             The copied array. If ``other`` is an ``ndarray``, then the return value
             and ``other`` will point to the same ``ndarray``.
 
         Examples
         --------
         >>> x = np.ones((2,3))
-        >>> y = np.zeros((2,3), mx.gpu(0))
+        >>> y = np.zeros((2,3), ctx=mx.gpu(0))
         >>> z = x.copyto(y)
         >>> z is y
         True
@@ -576,8 +741,15 @@ class ndarray(NDArray):
                [ 1.,  1.,  1.]], dtype=float32)
         """
         if isinstance(other, ndarray):
-            other = other.as_nd_ndarray()
-        return self.as_nd_ndarray().copyto(other).as_np_ndarray()
+            if other.handle is self.handle:
+                warnings.warn('You are attempting to copy an array to itself', RuntimeWarning)
+                return False
+            return _npi.copyto(self, out=other)
+        elif isinstance(other, Context):
+            hret = ndarray(_new_alloc_handle(self.shape, other, True, self.dtype))
+            return _npi.copyto(self, out=hret)
+        else:
+            raise TypeError('copyto does not support type ' + str(type(other)))
 
     def asscalar(self):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute asscalar')
@@ -649,6 +821,12 @@ class ndarray(NDArray):
         this array as data.
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute reshape_like')
+
+    def reshape_view(self, *shape, **kwargs):
+        """Returns a **view** of this array with a new shape without altering any data.
+        Inheritated from NDArray.reshape.
+        """
+        return super(ndarray, self).reshape(*shape, **kwargs)
 
     def zeros_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`zeros_like`.
@@ -731,6 +909,82 @@ class ndarray(NDArray):
         this array as data.
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute slice_like')
+
+    def slice_assign_scalar(self, value, begin, end, step):
+        """
+        Assign the scalar to a cropped subset of this ndarray. Value will broadcast to the shape of the cropped shape
+        and will be cast to the same dtype of the ndarray.
+
+        Parameters
+        ----------
+        value: numeric value
+            Value and this ndarray should be of the same data type.
+            The shape of rhs should be the same as the cropped shape of this ndarray.
+        begin: tuple of begin indices
+        end: tuple of end indices
+        step: tuple of step lenghths
+
+        Returns
+        -------
+        This ndarray.
+
+        Examples
+        --------
+        >>> x = np.ones((2, 2, 2))
+        >>> y = x.slice_assign_scalar(0, (0, 0, None), (1, 1, None), (None, None, None))
+        >>> y
+        array([[[0., 0.],
+                [1., 1.]],
+
+               [[1., 1.],
+                [1., 1.]]])
+        >>> x
+        array([[[0., 0.],
+                [1., 1.]],
+
+               [[1., 1.],
+                [1., 1.]]])
+        """
+        return _npi.slice_assign_scalar(self, value, begin=begin, end=end, step=step, out=self)
+
+    def slice_assign(self, rhs, begin, end, step):
+        """
+        Assign the rhs to a cropped subset of this ndarray in place.
+        Returns the view of this ndarray.
+
+        Parameters
+        ----------
+        rhs: ndarray.
+            rhs and this NDArray should be of the same data type, and on the same device.
+            The shape of rhs should be the same as the cropped shape of this ndarray.
+        begin: tuple of begin indices
+        end: tuple of end indices
+        step: tuple of step lenghths
+
+        Returns
+        -------
+        out : ndarray
+            This ndarray.
+
+        Examples
+        --------
+        >>> x = np.ones((2, 2, 2))
+        >>> assigned = np.zeros((1, 1, 2))
+        >>> y = x.slice_assign(assigned, (0, 0, None), (1, 1, None), (None, None, None))
+        >>> y
+        array([[[0., 0.],
+                [1., 1.]],
+
+               [[1., 1.],
+                [1., 1.]]])
+        >>> x
+        array([[[0., 0.],
+                [1., 1.]],
+
+               [[1., 1.],
+                [1., 1.]]])
+        """
+        return _npi.slice_assign(self, rhs, begin=begin, end=end, step=step, out=self)
 
     def take(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`take`.
@@ -816,7 +1070,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`sign`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute abs')
+        raise AttributeError('mxnet.numpy.ndarray object has no attribute sign')
 
     def flatten(self, order='C'):  # pylint: disable=arguments-differ
         """Return a copy of the array collapsed into one dimension."""
@@ -1252,10 +1506,25 @@ class ndarray(NDArray):
         return _mx_np_op.squeeze(self, axis=axis)
 
     def broadcast_to(self, shape):
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute broadcast_to')
+        return _mx_np_op.broadcast_to(self, shape)
 
     def broadcast_like(self, other):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute broadcast_like')
+
+    def _full(self, value):
+        """
+        Currently for internal use only. Implemented for __setitem__.
+        Assign to self an array of self's same shape and type, filled with value.
+        """
+        return _mx_nd_np.full(self.shape, value, ctx=self.context, dtype=self.dtype, out=self)
+
+    def _scatter_set_nd(self, value_nd, indices):
+        """
+        This is added as an ndarray class method in order to support polymorphism in NDArray and numpy.ndarray indexing
+        """
+        return _npi.scatter_set_nd(
+            lhs=self, rhs=value_nd, indices=indices, shape=self.shape, out=self
+        )
 
     @property
     def shape(self):
@@ -1406,6 +1675,62 @@ def ones(shape, dtype=_np.float32, order='C', ctx=None):
         Array of zeros with the given shape, dtype, and ctx.
     """
     return _mx_nd_np.ones(shape, dtype, order, ctx)
+
+
+@set_module('mxnet.numpy')
+def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylint: disable=too-many-arguments
+    """
+    Return a new array of given shape and type, filled with `fill_value`.
+
+    Parameters
+    ----------
+    shape : int or sequence of ints
+        Shape of the new array, e.g., ``(2, 3)`` or ``2``.
+    fill_value : scalar
+        Fill value.
+    dtype : data-type, optional
+        The desired data-type for the array. The default, `None`, means
+        `np.array(fill_value).dtype`.
+    order : {'C'}, optional
+        Whether to store multidimensional data in C- or Fortran-contiguous
+        (row- or column-wise) order in memory. Currently only supports C order.
+    ctx: to specify the device, e.g. the i-th GPU.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray
+        Array of `fill_value` with the given shape, dtype, and order.
+
+    Notes
+    -----
+    This function differs from the original `numpy.full
+    https://docs.scipy.org/doc/numpy/reference/generated/numpy.full.html`_ in
+    the following way(s):
+
+    - Has an additional `ctx` argument to specify the device
+    - Has an additional `out` argument
+    - Currently does not support `order` selection
+
+    See Also
+    --------
+    empty : Return a new uninitialized array.
+    ones : Return a new array setting values to one.
+    zeros : Return a new array setting values to zero.
+
+    Examples
+    --------
+    >>> np.full((2, 2), 10)
+    array([[10., 10.],
+           [10., 10.]])
+    >>> np.full((2, 2), 2, dtype=np.int32, ctx=mx.cpu(0))
+    array([[2, 2],
+           [2, 2]], dtype=int32)
+    """
+    return _mx_nd_np.full(shape, fill_value, order=order, ctx=ctx, dtype=dtype, out=out)
 
 
 @set_module('mxnet.numpy')
