@@ -19,30 +19,28 @@
 
 /*!
  *  Copyright (c) 2019 by Contributors
- * \file np_reduce_op_value.cu
- * \brief GPU Implementation of reduce functions based on value.
+ * \file np_matrix_op.cu
+ * \brief GPU Implementation of numpy matrix operations
  */
-#include "np_broadcast_reduce_op.h"
+#include "./np_matrix_op-inl.h"
 
 namespace mxnet {
 namespace op {
-NNVM_REGISTER_OP(_np_sum)
-.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesCompute<gpu, mshadow_op::sum, true>);
 
-NNVM_REGISTER_OP(_backward_np_sum)
-.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseNone<gpu>);
+NNVM_REGISTER_OP(_np_transpose)
+.set_attr<FCompute>("FCompute<gpu>", NumpyTranspose<gpu>);
 
-NNVM_REGISTER_OP(_np_prod)
-.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesCompute<gpu, mshadow_op::product, true>);
+NNVM_REGISTER_OP(_np_reshape)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
-NNVM_REGISTER_OP(_backward_np_prod)
-.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseInOut<gpu, mshadow_op::rdiv>);
+NNVM_REGISTER_OP(_np_squeeze)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
-NNVM_REGISTER_OP(_np_broadcast_to)
-.set_attr<FCompute>("FCompute<gpu>", NumpyBroadcastToForward<gpu>);
+NNVM_REGISTER_OP(_npi_concatenate)
+.set_attr<FCompute>("FCompute<gpu>", ConcatCompute<gpu>);
 
-NNVM_REGISTER_OP(_backward_np_broadcast_to)
-.set_attr<FCompute>("FCompute<gpu>", NumpyBroadcastToBackward<gpu>);
+NNVM_REGISTER_OP(_backward_np_concat)
+.set_attr<FCompute>("FCompute<gpu>", ConcatGradCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
