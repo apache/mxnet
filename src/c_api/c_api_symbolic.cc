@@ -1215,16 +1215,16 @@ int MXShallowCopySymbol(SymbolHandle src, SymbolHandle* out) {
   API_END_HANDLE_ERROR(delete out_sym);
 }
 
-inline nnvm::Symbol MXOptimizeForBackend(SymbolHandle sym_handle,
-                                         const char* backend_name,
-                                         SymbolHandle* ret_sym_handle) {
+int MXOptimizeForBackend(SymbolHandle sym_handle,
+                         const char* backend_name,
+                         SymbolHandle* ret_sym_handle) {
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol *>(sym_handle);
   *s = sym->Copy();
   nnvm::Graph orig_g = Symbol2Graph(*s);
   /* TODO
-  if (infer_shapes_flag) {
+  if (infer_shape_type) {
     orig_g = InferForwardAttrs(orig_g, arg_shapes, arg_dtypes, arg_stypes,
                                default_ctx, ctx_map, in_arg_ctxes, aux_state_ctxes, true);
   } */
@@ -1233,10 +1233,12 @@ inline nnvm::Symbol MXOptimizeForBackend(SymbolHandle sym_handle,
   for (auto property : subgraph_prop_list) {
     nnvm::Graph g = orig_g;
     property->SetAttr("graph", g);
+    property->PrePartition();
     g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
     g = ApplyPass(std::move(g), "BuildSubgraph");
-    property->RemoveAttr("graph");
     g.attrs.erase("subgraph_property");
+    property->PostPartition();
+    property->RemoveAttr("graph");
     s->outputs = g.outputs;
   }
   *ret_sym_handle = s;

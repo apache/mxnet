@@ -221,6 +221,10 @@ class SubgraphProperty {
     return nullptr;
   }
 
+  virtual PrePartition() {}
+
+  virtual PostPartition() {}
+
   virtual SubgraphSelectorV2Ptr CreateSubgraphSelectorV2() const {
     auto v1_ptr = CreateSubgraphSelector();
     return std::make_shared<SubgraphSelectorV2Bridge>(v1_ptr);
