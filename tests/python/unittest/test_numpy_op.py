@@ -20,7 +20,9 @@ from __future__ import absolute_import
 import sys
 import unittest
 import numpy as _np
+import platform
 import mxnet as mx
+import scipy.stats as ss
 from mxnet import np, npx
 from mxnet.gluon import HybridBlock
 from mxnet.base import MXNetError
@@ -28,13 +30,9 @@ from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndar
 from mxnet.test_utils import check_numeric_gradient, use_np, collapse_sum_like
 from common import assertRaises, with_seed
 import random
-import scipy.stats as ss
-from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, retry
-from mxnet.runtime import Features
+from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
 from mxnet.numpy_op_signature import _get_builtin_op
-from mxnet.test_utils import current_context, verify_generator, gen_buckets_probs_with_ppf
 from mxnet.test_utils import is_op_runnable, has_tvm_ops
-import platform
 
 
 @with_seed()
@@ -3437,6 +3435,56 @@ def test_np_einsum():
                     grad.append(cur_grad)
                 for (iop, op) in enumerate(grad[0]):
                     assert_almost_equal(grad[0][iop], grad[1][iop], rtol=rtol, atol=atol)
+
+
+@with_seed()
+@use_np
+def test_np_rand():
+    # Test shapes.
+    shapes = [
+        (3, 3),
+        (3, 4),
+        (0, 0),
+        (3, 3, 3),
+        (0, 0, 0),
+        (2, 2, 4, 3),
+        (2, 2, 4, 3),
+        (2, 0, 3, 0),
+        (2, 0, 2, 3)
+    ]
+    dtypes = ['float16', 'float32', 'float64']
+    for dtype in dtypes:
+        for shape in shapes:
+            data_mx = np.random.rand(*shape, dtype=dtype)
+            assert data_mx.shape == shape
+
+    # Test random generator.
+    ctx = mx.context.current_context()
+    samples = 1000000
+    trials = 8
+    num_buckets = 10
+    lower = 0.0
+    upper = 1.0
+    for dtype in ['float16', 'float32', 'float64']:
+        buckets, probs = gen_buckets_probs_with_ppf(
+            lambda x: ss.uniform.ppf(x, lower, upper), num_buckets)
+        # Quantize bucket boundaries to reflect the actual dtype
+        # and adjust probs accordingly
+        buckets = np.array(buckets, dtype=dtype).tolist()
+        probs = [(ss.uniform.cdf(buckets[i][1], lower, upper) -
+                  ss.uniform.cdf(buckets[i][0], lower, upper))
+                 for i in range(num_buckets)]
+
+        def generator_mx(x): return np.random.rand(
+            samples, ctx=ctx, dtype=dtype).asnumpy()
+        verify_generator(generator=generator_mx, buckets=buckets,
+                         probs=probs, nsamples=samples, nrepeat=trials)
+        generator_mx_same_seed =\
+            lambda x: _np.concatenate(
+                [np.random.rand(x // 10, ctx=ctx, dtype=dtype).asnumpy()
+                    for _ in range(10)])
+        verify_generator(generator=generator_mx_same_seed, buckets=buckets,
+                         probs=probs, nsamples=samples, nrepeat=trials)
 
 
 if __name__ == '__main__':
