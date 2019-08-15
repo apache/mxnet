@@ -26,6 +26,8 @@ import mxnet as mx
 import os
 
 if (os.name=='posix'):
-    mx.library.load('mylib.so')
+    path = os.path.abspath('mylib.so')
+    mx.library.load(path)
 elif (os.name=='nt'):
-    mx.library.load('mylib.dll')
+    path = os.path.abspath('mylib.so')
+    mx.library.load(path)
