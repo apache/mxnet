@@ -26,6 +26,7 @@
 #define MXNET_OPERATOR_TENSOR_BROADCAST_REDUCE_OP_H_
 
 #include <mxnet/operator_util.h>
+#include <string>
 #include <vector>
 #include <utility>
 #include <algorithm>
@@ -1578,6 +1579,20 @@ void PickOpBackward(const nnvm::NodeAttrs& attrs,
       }
     });
   });
+}
+
+inline std::string get_reduce_axes_description(const std::string& op_name, int line) {
+  std::string doc = R"code(Computes the __op__ of array elements over given axes.
+
+Defined in )code";
+  doc += std::string(__FILE__) + std::string(":L") + std::to_string(line);
+  size_t pos = 0;
+  std::string holder("__op__");
+  while ((pos = doc.find(holder, pos)) != std::string::npos) {
+    doc.replace(pos, holder.length(), op_name);
+    pos += op_name.length();
+  }
+  return doc;
 }
 
 #define MXNET_OPERATOR_REGISTER_REDUCE_AXIS(name)               \
