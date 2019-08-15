@@ -139,7 +139,7 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
 
 
 def randn(*size, **kwargs):
-    """Return a sample (or samples) from the "standard normal" distribution.
+    r"""Return a sample (or samples) from the "standard normal" distribution.
 
     If positive, int_like or int-convertible arguments are provided,
     `randn` generates an array of shape ``(d0, d1, ..., dn)``, filled
@@ -182,10 +182,6 @@ def randn(*size, **kwargs):
     array([[-4.49401501,  4.00950034, -1.81814867,  7.29718677],  #random
         [ 0.39924804,  4.68456316,  4.99394529,  4.84057254]]) #random
     """
-    output_shape = ()
-    for s in size:
-        output_shape += (s,)
-    return _mx_nd_np.random.normal(0, 1, size=output_shape, **kwargs)
     output_shape = ()
     for s in size:
         output_shape += (s,)

@@ -24,7 +24,7 @@ __all__ = ['uniform', 'normal', 'randn']
 
 
 def randn(*size, **kwargs):
-    """Return a sample (or samples) from the "standard normal" distribution.
+    r"""Return a sample (or samples) from the "standard normal" distribution.
 
     If positive, int_like or int-convertible arguments are provided,
     `randn` generates an array of shape ``(d0, d1, ..., dn)``, filled
