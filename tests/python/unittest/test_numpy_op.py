@@ -1566,6 +1566,27 @@ def test_np_trace():
         assert False
 
 
+@with_seed()
+@use_np
+def test_np_randn():
+    shapes = [
+        (3, 3),
+        (3, 4),
+        (0, 0),
+        (3, 3, 3),
+        (0, 0, 0),
+        (2, 2, 4, 3),
+        (2, 2, 4, 3),
+        (2, 0, 3, 0),
+        (2, 0, 2, 3)
+    ]
+    dtypes = ['float16', 'float32', 'float64']
+    for dtype in dtypes:
+        for shape in shapes:
+            data_mx = np.random.randn(*shape, dtype=dtype)
+            assert data_mx.shape == shape
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
