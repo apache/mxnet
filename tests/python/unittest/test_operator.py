@@ -1227,8 +1227,8 @@ def test_rsqrt_cos_sin():
 
 @with_seed()
 def test_maximum_minimum():
-    data1 = mx.symbol.Variable('data')
-    data2 = mx.symbol.Variable('data')
+    data1 = mx.symbol.Variable('data1')
+    data2 = mx.symbol.Variable('data2')
     shape = (3, 4)
     data_tmp1 = np.random.rand(3,4)
     data_tmp2 = np.random.rand(3,4)
@@ -1241,7 +1241,7 @@ def test_maximum_minimum():
     arr_grad1 = mx.nd.empty(shape)
     arr_grad2 = mx.nd.empty(shape)
 
-    test =  mx.sym.maximum(data1,data2) + mx.sym.minimum(data1,data2);
+    test =  mx.sym.maximum(data1,data2) + mx.sym.minimum(data1,data2)
     exe_test = test.bind(default_context(), args=[arr_data1,arr_data2], args_grad=[arr_grad1,arr_grad2])
     exe_test.forward(is_train=True)
     out = exe_test.outputs[0].asnumpy()
@@ -2001,10 +2001,12 @@ def test_depthwise_convolution():
 
 @with_seed()
 def test_convolution_independent_gradients():
-    ctx = default_context()
-    # set a low bar for autotuned cudnn conv
-    atol = 1.0e-1 if ctx.device_type == "gpu" else 1.0e-3
-    rtol = 1.0e-2 if ctx.device_type == "gpu" else 1.0e-3
+    # NOTE(zixuanweeei): Flaky test tracked by https://github.com/apache/incubator-mxnet/issues/15603.
+    # GPU context will be enabled after figuring out the possible issue tracked at
+    # https://github.com/apache/incubator-mxnet/issues/15638.
+    ctx = mx.cpu()
+    atol = 1.0e-3
+    rtol = 1.0e-3
     reqs = ["null", "write", "add"]
     var_names = ["x", "w", "b"]
     dims = [1, 2]
@@ -2028,20 +2030,20 @@ def test_convolution_independent_gradients():
         x = mx.sym.Variable('x')
         w = mx.sym.Variable('w')
         b = mx.sym.Variable('b') if not no_bias else None
-        conv = mx.sym.Convolution(x, w, b, num_filter=num_filter, 
+        conv = mx.sym.Convolution(x, w, b, num_filter=num_filter,
             kernel=kernel, stride=stride, pad=pad, no_bias=no_bias)
-        
+
         for req_kind in reqs:
             # Binding args for conv with possible dependent gradients
             base_args = {
-                'x': mx.nd.random.normal(shape=x_shape),
-                'w': mx.nd.random.normal(shape=w_shape),
-                'b': mx.nd.random.normal(shape=(num_filter, )) if not no_bias else None}
+                'x': mx.nd.random.normal(shape=x_shape, ctx=ctx),
+                'w': mx.nd.random.normal(shape=w_shape, ctx=ctx),
+                'b': mx.nd.random.normal(shape=(num_filter, ), ctx=ctx) if not no_bias else None}
             args1 = copy.deepcopy(base_args)
             grad1 = {
-                'x': mx.nd.zeros(shape=x_shape),
-                'w': mx.nd.zeros(shape=w_shape),
-                'b': mx.nd.zeros(shape=(num_filter, )) if not no_bias else None}
+                'x': mx.nd.zeros(shape=x_shape, ctx=ctx),
+                'w': mx.nd.zeros(shape=w_shape, ctx=ctx),
+                'b': mx.nd.zeros(shape=(num_filter, ), ctx=ctx) if not no_bias else None}
 
             grad_req1 = [req_kind] * 3
             grad_req1 = dict(zip(var_names, grad_req1))
@@ -2049,21 +2051,21 @@ def test_convolution_independent_gradients():
             exe1 = conv.bind(ctx, args1, args_grad=grad1, grad_req=grad_req1)
             exe1.forward(is_train=True)
             exe1.backward(exe1.outputs[0])
-            
+
             for x_req, w_req, b_req in itertools.product(reqs, repeat=3):
                 # Binding args for conv with independent gradients
                 args2 = copy.deepcopy(base_args)    # Deepcopy the same params of `exe1`
                 grad2 = {
-                    'x': mx.nd.zeros(shape=x_shape),
-                    'w': mx.nd.zeros(shape=w_shape),
-                    'b': mx.nd.zeros(shape=(num_filter, )) if not no_bias else None}
+                    'x': mx.nd.zeros(shape=x_shape, ctx=ctx),
+                    'w': mx.nd.zeros(shape=w_shape, ctx=ctx),
+                    'b': mx.nd.zeros(shape=(num_filter, ), ctx=ctx) if not no_bias else None}
                 grad_req2 = {"x": x_req, "w": w_req, "b": b_req}
                 exe2 = conv.bind(ctx, args2, args_grad=grad2, grad_req=grad_req2)
-                    
+
                 exe2.forward(is_train=True)
                 np.testing.assert_allclose(exe1.outputs[0].asnumpy(),
                     exe2.outputs[0].asnumpy(), rtol=rtol, atol=atol)
-                
+
                 exe2.backward(exe2.outputs[0])
                 for var_name in var_names:
                     if var_name == "b" and no_bias:
@@ -3960,8 +3962,8 @@ def mathematical_core_binary(name,
                              data1_init=2.,
                              data2_init=3.,
                              grad_init=2.):
-    data1 = mx.symbol.Variable('data')
-    data2 = mx.symbol.Variable('data')
+    data1 = mx.symbol.Variable('data1')
+    data2 = mx.symbol.Variable('data2')
     shape = (3, 4)
     data_tmp1 = np.random.rand(3, 4)
     data_tmp2 = np.random.rand(3, 4)
@@ -4172,15 +4174,25 @@ def test_special_functions_using_scipy():
 
 
 @with_seed()
-@unittest.skip("Flaky test, tracked at https://github.com/apache/incubator-mxnet/issues/12901")
 def test_clip():
     data = mx.symbol.Variable('data')
     shape = (30, 30)
-    data_tmp = np.random.uniform(-1, 1, shape)
+    data_tmp = np.random.uniform(-1, 1, shape).astype('float32')
     test = mx.sym.clip(data, a_max=0.6, a_min=-0.6)
     check_symbolic_forward(test, [data_tmp], [np.clip(data_tmp, -0.6, 0.6)])
     check_symbolic_backward(test, [data_tmp], [np.ones(shape)],
-                            [np.where(data_tmp < 0.6, [1], [0]) * np.where(data_tmp > -0.6, [1], [0])])
+                            [np.where(data_tmp <= 0.6, [1], [0]) * np.where(data_tmp >= -0.6, [1], [0])])
+
+    # Test monitor on symbol using clip
+
+    def simple_callback(name, arr):
+        pass
+
+    exe = test.simple_bind(ctx=mx.current_context(), data=shape)
+    exe.set_monitor_callback(simple_callback, monitor_all=True)
+    exe.forward(is_train=True)
+    exe.backward(out_grads=mx.nd.ones(shape))
+    mx.nd.waitall()
 
 
 @with_seed()
@@ -4791,13 +4803,14 @@ def test_tile():
 
     def test_empty_tensor():
         shape = (2, 3, 0, 4)
-        a = np.array([], dtype=np.int32).reshape(shape)
-        b = mx.nd.array(a, ctx=default_context(), dtype=a.dtype)
-        reps = (2, 4, 6)
+        with mx.np_shape():
+            a = np.array([], dtype=np.int32).reshape(shape)
+            b = mx.nd.array(a, ctx=default_context(), dtype=a.dtype)
 
-        a_tiled = np.tile(a, reps)
-        b_tiled = mx.nd.tile(b, reps).asnumpy()
-        assert same(a_tiled, b_tiled)
+            reps = (2, 4, 6)
+            a_tiled = np.tile(a, reps)
+            b_tiled = mx.nd.tile(b, reps).asnumpy()
+            assert same(a_tiled, b_tiled)
 
     def test_empty_reps():
         a = np.array([[2, 3, 4], [5, 6, 7]], dtype=np.int32)
@@ -4887,13 +4900,15 @@ def test_one_hot():
 
     def test_empty_indices():
         shape = (2, 0, 9, 3)
-        indices = np.array([]).reshape(shape)
-        depth = 10
-        mx_one_hot_array = mx.nd.one_hot(
-            mx.nd.array(indices, ctx=default_context(), dtype=np.int32),
-            depth=depth, dtype=np.int32).asnumpy()
-        expected_array = np.array([], dtype=np.int32).reshape(shape + (depth, ))
-        assert same(expected_array, mx_one_hot_array)
+        with mx.np_shape():
+            indices = np.array([]).reshape(shape)
+            depth = 10
+            mx_one_hot_array = mx.nd.one_hot(
+                mx.nd.array(indices, ctx=default_context(), dtype=np.int32),
+                depth=depth, dtype=np.int32
+            ).asnumpy()
+            expected_array = np.array([], dtype=np.int32).reshape(shape + (depth,))
+            assert same(expected_array, mx_one_hot_array)
 
     def test_zero_depth():
         shape = (2, 4, 9, 3)
@@ -5586,6 +5601,21 @@ def test_boolean_mask():
     expected_grad = np.array([[0, 0, 0], [1, 1, 1], [0, 0, 0]])
     assert same(out.asnumpy(), expected)
     assert same(data.grad.asnumpy(), expected_grad)
+
+    # test 0-size output
+    mx.set_np_shape(True)
+    data = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
+    index = mx.nd.array([0, 0, 0])
+    data.attach_grad()
+    with mx.autograd.record():
+        out = mx.nd.contrib.boolean_mask(data, index)
+    out.backward()
+    data.grad.wait_to_read()
+    expected = np.zeros((0, 3))
+    expected_grad = np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0]])
+    assert same(out.asnumpy(), expected)
+    assert same(data.grad.asnumpy(), expected_grad)
+    mx.set_np_shape(False)
 
     # test gradient
     shape = (100, 30)
@@ -6825,14 +6855,35 @@ def test_laop_6():
         check_numeric_gradient(sym, location, numeric_eps=num_eps, rtol=rtol_bw,
                                atol=atol_bw, dtype=dtype)
 
-    a = np.sqrt(np.arange(4 * 4)).reshape(4, 4)
+    ## det(I + dot(v, v.T)) = 1 + dot(v.T, v) >= 1, so it's always invertible;
+    ## det is away from zero, so the value of logdet is stable
+    v = np.random.random(4)
+    a = np.eye(4) + np.outer(v, v)
     a = np.tile(a, (3, 1, 1))
+    permute_mat = np.eye(4)[[1, 0, 2, 3]]
+
+    # test matrix inverse
     r = np.eye(4)
     r = np.tile(r, (3, 1, 1))
     test_inverse = mx.sym.linalg.inverse(data)
     test_eye = mx.sym.linalg.gemm2(data, test_inverse)
     check_fw(test_eye, [a], [r])
     check_grad(test_inverse, [a])
+
+    # test matrix determinant
+    # det
+    r = np.linalg.det(a)
+    test_det = mx.sym.linalg.det(data)
+    check_fw(test_det, [a], [r])
+    check_grad(test_det, [a])
+    # test slogdet
+    r1 = np.array([1., 1., 1.])
+    r2 = np.log(np.abs(np.linalg.det(a)))
+    test_sign, test_logabsdet = mx.sym.linalg.slogdet(data)
+    check_fw(test_sign, [a], [r1])
+    check_fw(test_sign, [np.dot(a, permute_mat)], [-r1])
+    check_fw(test_logabsdet, [a], [r2])
+    check_grad(test_logabsdet, [a])
 
 @with_seed()
 def test_stack():
@@ -7478,15 +7529,6 @@ def test_slice():
     for index in index_list:
         test_slice_forward_backward(arr, index)
 
-    def test_begin_equals_end(shape, begin, end, step):
-        in_arr = mx.nd.arange(np.prod(shape)).reshape(shape=shape)
-        out_arr = mx.nd.slice(in_arr, begin=begin, end=end, step=step)
-
-    assertRaises(MXNetError, test_begin_equals_end, (4,), (2,), (2,), (1,))
-    assertRaises(MXNetError, test_begin_equals_end, (1, 5), (None, 3), (None, 3), (-1, 1))
-    assertRaises(MXNetError, test_begin_equals_end, (3, 4, 5), (1, 3, 1), (3, 3, 1), (1, -3, 2))
-    assertRaises(MXNetError, test_begin_equals_end, (2, 4), (None, 2), (None, 2), (1, -1))
-
     # check numeric gradient
     in_data = np.arange(36).reshape(2, 2, 3, 3)
     data = mx.sym.Variable('data')
@@ -7995,39 +8037,46 @@ def test_op_output_names_monitor():
             pass
         for output_name, expected_name in zip(output_names, expected_names):
             assert output_name == expected_name
+    is_windows = sys.platform.startswith('win')
+    if (is_windows):
+        # Windows doesn't support set environment variable on the fly, so disable it for now
+        pass
+    else:
+        # Disable subgraph in case subgraph will replace symbol
+        os.environ['MXNET_SUBGRAPH_BACKEND'] = "NONE"
+        data = mx.sym.Variable('data', shape=(10, 3, 10, 10))
+        conv_sym = mx.sym.Convolution(data, kernel=(2, 2), num_filter=1, name='conv')
+        check_name(conv_sym, ['conv_output'])
 
-    data = mx.sym.Variable('data', shape=(10, 3, 10, 10))
-    conv_sym = mx.sym.Convolution(data, kernel=(2, 2), num_filter=1, name='conv')
-    check_name(conv_sym, ['conv_output'])
+        deconv_sym = mx.sym.Deconvolution(data, kernel=(2, 2), num_filter=1, name='deconv')
+        check_name(deconv_sym, ['deconv_output'])
 
-    deconv_sym = mx.sym.Deconvolution(data, kernel=(2, 2), num_filter=1, name='deconv')
-    check_name(deconv_sym, ['deconv_output'])
+        fc_sym = mx.sym.FullyConnected(data, num_hidden=10, name='fc')
+        check_name(fc_sym, ['fc_output'])
 
-    fc_sym = mx.sym.FullyConnected(data, num_hidden=10, name='fc')
-    check_name(fc_sym, ['fc_output'])
+        lrn_sym = mx.sym.LRN(data, nsize=1, name='lrn')
+        check_name(lrn_sym, ['lrn_output', 'lrn_tmp_norm'])
 
-    lrn_sym = mx.sym.LRN(data, nsize=1, name='lrn')
-    check_name(lrn_sym, ['lrn_output', 'lrn_tmp_norm'])
+        act_sym = mx.sym.Activation(data, act_type='relu', name='act')
+        check_name(act_sym, ['act_output'])
 
-    act_sym = mx.sym.Activation(data, act_type='relu', name='act')
-    check_name(act_sym, ['act_output'])
+        cc_sym = mx.sym.concat(data, data, dim=0, name='concat')
+        check_name(cc_sym, ['concat_output'])
 
-    cc_sym = mx.sym.concat(data, data, dim=0, name='concat')
-    check_name(cc_sym, ['concat_output'])
+        sm_sym = mx.sym.softmax(data, name='softmax')
+        check_name(sm_sym, ['softmax_output'])
 
-    sm_sym = mx.sym.softmax(data, name='softmax')
-    check_name(sm_sym, ['softmax_output'])
+        sa_sym = mx.sym.SoftmaxActivation(data, name='softmax')
+        check_name(sa_sym, ['softmax_output'])
 
-    sa_sym = mx.sym.SoftmaxActivation(data, name='softmax')
-    check_name(sa_sym, ['softmax_output'])
+        us_sym = mx.sym.UpSampling(data, scale=2, sample_type='nearest',
+                                name='upsampling')
+        check_name(us_sym, ['upsampling_output'])
 
-    us_sym = mx.sym.UpSampling(data, scale=2, sample_type='nearest',
-                               name='upsampling')
-    check_name(us_sym, ['upsampling_output'])
-
-    us_sym = mx.sym.Pooling(data, kernel=(2, 2), pool_type='avg',
-                            name='pooling')
-    check_name(us_sym, ['pooling_output'])
+        us_sym = mx.sym.Pooling(data, kernel=(2, 2), pool_type='avg',
+                                name='pooling')
+        check_name(us_sym, ['pooling_output'])
+        del os.environ['MXNET_SUBGRAPH_BACKEND']
 
 def test_op_all_names_monitor():
     def check_name(op_sym, expected_names):
@@ -8046,43 +8095,51 @@ def test_op_all_names_monitor():
             pass
         for output_name, expected_name in zip(output_names, expected_names):
             assert output_name == expected_name
+    is_windows = sys.platform.startswith('win')
+    if (is_windows):
+        # Windows doesn't support set environment variable on the fly, so disable it for now
+        pass
+    else:
+        # Disable subgraph in case subgraph will replace symbol
+        os.environ['MXNET_SUBGRAPH_BACKEND'] = "NONE"
 
-    data = mx.sym.Variable('data', shape=(10, 3, 10, 10))
-    conv_sym = mx.sym.Convolution(data, kernel=(2, 2), num_filter=1, name='conv')
-    check_name(conv_sym, ['data', 'conv_data', 'conv_weight', 'conv_weight', 'conv_bias', 'conv_bias', 'conv_output'])
+        data = mx.sym.Variable('data', shape=(10, 3, 10, 10))
+        conv_sym = mx.sym.Convolution(data, kernel=(2, 2), num_filter=1, name='conv')
+        check_name(conv_sym, ['data', 'conv_data', 'conv_weight', 'conv_weight', 'conv_bias', 'conv_bias', 'conv_output'])
 
-    deconv_sym = mx.sym.Deconvolution(data, kernel=(2, 2), num_filter=1, name='deconv')
-    check_name(deconv_sym, ['data', 'deconv_data', 'deconv_weight', 'deconv_weight', 'deconv_output'])
+        deconv_sym = mx.sym.Deconvolution(data, kernel=(2, 2), num_filter=1, name='deconv')
+        check_name(deconv_sym, ['data', 'deconv_data', 'deconv_weight', 'deconv_weight', 'deconv_output'])
 
-    fc_sym = mx.sym.FullyConnected(data, num_hidden=10, name='fc')
-    check_name(fc_sym, ['data', 'fc_data', 'fc_weight', 'fc_weight', 'fc_bias', 'fc_bias', 'fc_output'])
+        fc_sym = mx.sym.FullyConnected(data, num_hidden=10, name='fc')
+        check_name(fc_sym, ['data', 'fc_data', 'fc_weight', 'fc_weight', 'fc_bias', 'fc_bias', 'fc_output'])
 
-    lrn_sym = mx.sym.LRN(data, nsize=1, name='lrn')
-    check_name(lrn_sym, ['data', 'lrn_data', 'lrn_output', 'lrn_tmp_norm'])
+        lrn_sym = mx.sym.LRN(data, nsize=1, name='lrn')
+        check_name(lrn_sym, ['data', 'lrn_data', 'lrn_output', 'lrn_tmp_norm'])
 
-    act_sym = mx.sym.Activation(data, act_type='relu', name='act')
-    check_name(act_sym, ['data', 'act_input0', 'act_output'])
+        act_sym = mx.sym.Activation(data, act_type='relu', name='act')
+        check_name(act_sym, ['data', 'act_input0', 'act_output'])
 
-    cc_sym = mx.sym.concat(data, data, dim=0, name='concat')
-    check_name(cc_sym, ['data', 'concat_arg0', 'data', 'concat_arg1', 'concat_output'])
+        cc_sym = mx.sym.concat(data, data, dim=0, name='concat')
+        check_name(cc_sym, ['data', 'concat_arg0', 'data', 'concat_arg1', 'concat_output'])
 
-    sm_sym = mx.sym.softmax(data, name='softmax')
-    check_name(sm_sym, ['data', 'softmax_data', 'softmax_output'])
+        sm_sym = mx.sym.softmax(data, name='softmax')
+        check_name(sm_sym, ['data', 'softmax_data', 'softmax_output'])
 
-    length = mx.sym.Variable("length", shape=(10, 10, 10))
-    sm_sym = mx.sym.softmax(data, length, axis=1, use_length=True, name='softmax')
-    check_name(sm_sym, ['data', 'softmax_data', 'length', 'softmax_length', 'softmax_output'])
+        length = mx.sym.Variable("length", shape=(10, 10, 10))
+        sm_sym = mx.sym.softmax(data, length, axis=1, use_length=True, name='softmax')
+        check_name(sm_sym, ['data', 'softmax_data', 'length', 'softmax_length', 'softmax_output'])
 
-    sa_sym = mx.sym.SoftmaxActivation(data, name='softmax')
-    check_name(sa_sym, ['data', 'softmax_input0', 'softmax_output'])
+        sa_sym = mx.sym.SoftmaxActivation(data, name='softmax')
+        check_name(sa_sym, ['data', 'softmax_input0', 'softmax_output'])
 
-    us_sym = mx.sym.UpSampling(data, scale=2, sample_type='nearest',
-                               name='upsampling')
-    check_name(us_sym, ['data', 'upsampling_arg0', 'upsampling_output'])
+        us_sym = mx.sym.UpSampling(data, scale=2, sample_type='nearest',
+                                name='upsampling')
+        check_name(us_sym, ['data', 'upsampling_arg0', 'upsampling_output'])
 
-    us_sym = mx.sym.Pooling(data, kernel=(2, 2), pool_type='avg',
-                            name='pooling')
-    check_name(us_sym, ['data', 'pooling_data', 'pooling_output'])
+        us_sym = mx.sym.Pooling(data, kernel=(2, 2), pool_type='avg',
+                                name='pooling')
+        check_name(us_sym, ['data', 'pooling_data', 'pooling_output'])
+        del os.environ['MXNET_SUBGRAPH_BACKEND']
 
 @with_seed()
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/13915")
@@ -8806,7 +8863,7 @@ def test_index_array():
 
     @mx.use_np_shape
     def test_index_array_default_zero_dim():
-        data  = mx.symbol.Variable("data")
+        data = mx.symbol.Variable("data")
         index_array = mx.sym.contrib.index_array(data)
 
         input_array = np.ones(())
@@ -8951,6 +9008,26 @@ def test_get_operator_arguments():
     ok_(operator_arguments.types
         == ['NDArray-or-Symbol', "{'relu', 'sigmoid', 'softrelu', 'softsign', 'tanh'}, required"])
     ok_(operator_arguments.narg == 2)
+
+
+def test_transpose_infer_shape_back():
+    o1 = mx.sym.ones(shape=[2,3])
+    o2 = mx.sym.ones(shape=[-1,-1])
+    t = mx.sym.transpose(o2)
+    b = o1 + t
+    x = b.bind(mx.cpu(), args={})
+    y = x.forward()
+    assert(y[0].shape == (2,3))
+
+
+def test_transpose_infer_shape_mixed():
+    o1 = mx.sym.ones(shape=[2,-1])
+    o2 = mx.sym.ones(shape=[3,-1])
+    t = mx.sym.transpose(o2)
+    b = o1 + t
+    x = b.bind(mx.cpu(), args={})
+    y = x.forward()
+    assert(y[0].shape == (2,3))
 
 
 if __name__ == '__main__':

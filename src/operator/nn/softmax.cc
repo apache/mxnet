@@ -77,6 +77,7 @@ inline static bool SoftmaxStorageType(const nnvm::NodeAttrs& attrs,
 
 
 NNVM_REGISTER_OP(softmax)
+.add_alias("_npx_softmax")
 .describe(R"code(Applies the softmax function.
 
 The resulting array contains elements in the range (0,1) and the elements along the given axis sum up to 1.
@@ -205,6 +206,7 @@ NNVM_REGISTER_OP(_backward_softmin)
                                                         mxnet_op::softmax_bwd, true>);
 
 NNVM_REGISTER_OP(log_softmax)
+.add_alias("_npx_log_softmax")
 .describe(R"code(Computes the log softmax of the input.
 This is equivalent to computing softmax followed by log.
 

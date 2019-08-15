@@ -18,11 +18,11 @@
 import mxnet as mx
 import numpy as np
 from distutils.version import LooseVersion
+from itertools import permutations, combinations_with_replacement
 import os
 import pickle as pkl
-import unittest
-from nose.tools import raises
-from common import setup_module, with_seed, assertRaises, TemporaryDirectory, teardown
+from nose.tools import assert_raises, raises
+from common import with_seed, assertRaises, TemporaryDirectory
 from mxnet.test_utils import almost_equal
 from mxnet.test_utils import assert_almost_equal, assert_exception
 from mxnet.test_utils import default_context
@@ -101,6 +101,26 @@ def test_ndarray_setitem():
     x_np[-1] = 1
     assert same(x.asnumpy(), x_np)
 
+    # Ellipsis
+    x = mx.nd.zeros(shape)
+    x[2, ...] = 1
+    x_np = np.zeros(shape, dtype=x.dtype)
+    x_np[2, ...] = 1
+    assert same(x.asnumpy(), x_np)
+
+    x = mx.nd.zeros(shape)
+    x[..., 1] = 1
+    x_np = np.zeros(shape, dtype=x.dtype)
+    x_np[..., 1] = 1
+    assert same(x.asnumpy(), x_np)
+
+    # `None` should be ignored
+    x = mx.nd.zeros(shape)
+    x[None, 0, None, None, 0, 0, None] = 1
+    x_np = np.zeros(shape, dtype=x.dtype)
+    x_np[None, 0, None, None, 0, 0, None] = 1
+    assert same(x.asnumpy(), x_np)
+
     # short all-dim indexing
     x = mx.nd.zeros(shape)
     val = mx.nd.ones((3, 2))
@@ -121,13 +141,15 @@ def test_ndarray_setitem():
     x_np[:, -3:-1, -2:-1] = 1
     assert same(x.asnumpy(), x_np)
 
-    # numpy assignment for empty axis
-    for trivial_shape in [(), (1,), (1, 1), (1, 1, 1)]:
-        if trivial_shape == tuple():
-            with mx.np_shape():
-                x = mx.nd.zeros(trivial_shape)
-        else:
-            x = mx.nd.zeros(trivial_shape)
+    # Scalar array, no assignment allowed
+    with mx.np_shape():
+        x = mx.nd.zeros(())
+        with assert_raises(IndexError):
+            x[:] = 1
+
+    # Assignments for empty axes
+    for trivial_shape in [(1,), (1, 1), (1, 1, 1)]:
+        x = mx.nd.zeros(trivial_shape)
         x[:] = np.ones(trivial_shape)
         x_np = np.ones(trivial_shape, dtype=x.dtype)
         assert x.shape == trivial_shape
@@ -173,6 +195,15 @@ def test_ndarray_negate():
 
 
 @with_seed()
+def test_ndarray_magic_abs():
+    for dim in range(1, 7):
+        shape = rand_shape_nd(dim)
+        npy = np.random.uniform(-10, 10, shape)
+        arr = mx.nd.array(npy)
+        assert_almost_equal(abs(arr).asnumpy(), arr.abs().asnumpy())
+
+
+@with_seed()
 def test_ndarray_reshape():
     tensor = (mx.nd.arange(30) + 1).reshape(2, 3, 5)
     true_res = mx.nd.arange(30) + 1
@@ -191,6 +222,65 @@ def test_ndarray_reshape():
     assert same(tensor.reshape(-1, 15).reshape(0, -4, 3, -1).asnumpy(), true_res.reshape(2, 3, 5).asnumpy())
     assert same(tensor.reshape(-1, 0).asnumpy(), true_res.reshape(10, 3).asnumpy())
     assert same(tensor.reshape(-1, 0, reverse=True).asnumpy(), true_res.reshape(6, 5).asnumpy())
+
+
+@with_seed()
+def test_ndarray_flatten():
+    tensor = (mx.nd.arange(30) + 1).reshape(2, 3, 5)
+    copy = tensor.flatten()
+    ref = tensor.flatten(inplace=True)
+    assert same(copy.asnumpy(), tensor.reshape(2, 15).asnumpy())
+    assert same(ref.asnumpy(), tensor.reshape(2, 15).asnumpy())
+
+    tensor[0] = -1
+    assert not same(copy.asnumpy(), tensor.reshape(2, 15).asnumpy())
+    assert same(ref.asnumpy(), tensor.reshape(2, 15).asnumpy())
+
+
+@with_seed()
+def test_ndarray_squeeze():
+    def check_squeeze(shape, axis=None):
+        data = mx.random.uniform(low=-10.0, high=10.0, shape=shape)
+        copy = data.squeeze(axis=axis)
+        ref = data.squeeze(axis=axis, inplace=True)
+        out_expected = np.squeeze(data.asnumpy(), axis=axis)
+        if copy.shape == (1,):  # as an exception (1, 1, 1) will be squeezed to (1,)
+            out_expected = np.squeeze(data.asnumpy(), axis=tuple([i for i in range(1, len(shape))]))
+        assert same(copy.asnumpy(), out_expected)
+        assert same(ref.asnumpy(), out_expected)
+        data[0][0] = -1
+        assert same(copy.asnumpy(), out_expected)
+        assert not same(ref.asnumpy(), out_expected)
+
+    # check forward
+    check_squeeze((1, 5, 1, 3, 1), 0)
+    check_squeeze((1, 5, 1, 3, 1), 2)
+    check_squeeze((1, 5, 1, 3, 1), 4)
+    check_squeeze((1, 5, 1, 3, 1), (0, 4))
+    check_squeeze((1, 5, 1, 3, 1), (0, 2, 4))
+    check_squeeze((1, 5, 1, 3, 1), -5)
+    check_squeeze((1, 5, 1, 3, 1), -3)
+    check_squeeze((1, 5, 1, 3, 1), -1)
+    check_squeeze((1, 5, 1, 3, 1), (0, 4))
+    check_squeeze((1, 5, 1, 3, 1), (0, 2, 4))
+    check_squeeze((1, 5, 1, 3, 1))
+    check_squeeze((1, 1, 1, 1))
+
+
+@with_seed()
+def test_ndarray_expand_dims():
+    for ndim in range(1, 6):
+        for axis in range(-ndim-1, ndim+1):
+            shape = list(np.random.randint(1, 10, size=ndim))
+            data = mx.random.normal(shape=shape)
+            copy = data.expand_dims(axis=axis)
+            ref = data.expand_dims(axis=axis, inplace=True)
+            out_expected = np.expand_dims(data.asnumpy(), axis=axis)
+            assert same(copy.asnumpy(), out_expected)
+            assert same(ref.asnumpy(), out_expected), (shape, axis, ref.asnumpy().shape, out_expected.shape)
+            data[0] = -1
+            assert same(copy.asnumpy(), out_expected)
+            assert not same(ref.asnumpy(), out_expected)
 
 
 @with_seed()
@@ -1218,6 +1308,42 @@ def test_bool():
     assert bool(mx.nd.ones((1,)))
 
 
+def test_basic_indexing_is_contiguous():
+    x_np = np.arange(np.prod((6, 7, 8, 9))).reshape((6, 7, 8, 9))
+    x_mx = mx.nd.array(x_np)
+
+    slices = [
+        slice(None),
+        slice(2),
+        slice(20),
+        slice(1, 4),
+        slice(None, None, 2),
+        slice(None, None, 20),
+        slice(0, 1),
+        slice(None, None, -1),
+        slice(3, None, -2),
+    ]
+
+    is_contiguous = mx.nd.NDArray._basic_indexing_slice_is_contiguous
+
+    for idx in combinations_with_replacement(slices, 4):
+        for slc in permutations(idx):
+            # Check helper function
+            contig_pred = is_contiguous(slc, x_np.shape)
+            contig_true = x_np[slc].flags.contiguous
+            assert contig_pred == contig_true, (
+                "failed with slc={}, pred ({}) != actual ({})"
+                "".format(slc, contig_pred, contig_true)
+            )
+
+            if contig_pred:
+                # Check mutation behavior
+                y_mx = x_mx.copy()
+                y_mx_slc = y_mx[slc]
+                y_mx_slc[:] = 0
+                assert (y_mx[slc].asnumpy() == 0).all()
+
+
 @with_seed()
 def test_ndarray_indexing():
     def test_getitem(np_array, index, is_scalar=False):
@@ -1228,22 +1354,24 @@ def test_ndarray_indexing():
         if isinstance(index, mx.nd.NDArray):
             np_index = index.asnumpy()
         if isinstance(index, tuple):
-            np_index = []
-            for idx in index:
-                if isinstance(idx, mx.nd.NDArray):
-                    np_index.append(idx.asnumpy())
-                else:
-                    np_index.append(idx)
-            np_index = tuple(np_index)
+            np_index = tuple(
+                idx.asnumpy() if isinstance(idx, mx.nd.NDArray) else idx
+                for idx in index
+            )
 
         np_indexed_array = np_array[np_index]
         mx_array = mx.nd.array(np_array, dtype=np_array.dtype)
-        mx_indexed_array = mx_array[index]
+        try:
+            mx_indexed_array = mx_array[index]
+        except Exception as e:
+            print('Failed with index = {}'.format(index))
+            raise e
         if is_scalar:
             mx_indexed_array = mx_indexed_array.asscalar()
         else:
             mx_indexed_array = mx_indexed_array.asnumpy()
-        assert same(np_indexed_array, mx_indexed_array), 'Failed with index=%s' % str(index)
+
+        assert same(np_indexed_array, mx_indexed_array), 'Failed with index = {}'.format(index)
 
     def test_setitem(np_array, index, is_scalar):
         def assert_same(np_array, np_index, mx_array, mx_index, mx_value, np_value=None):
@@ -1253,7 +1381,13 @@ def test_ndarray_indexing():
                 np_array[np_index] = mx_value.asnumpy()
             else:
                 np_array[np_index] = mx_value
-            mx_array[mx_index] = mx_value
+
+            try:
+                mx_array[mx_index] = mx_value
+            except Exception as e:
+                print('Failed with index = {}, value.shape = {}'.format(mx_index, mx_value.shape))
+                raise e
+
             assert same(np_array, mx_array.asnumpy())
 
         np_index = index
@@ -1312,7 +1446,9 @@ def test_ndarray_indexing():
         try:
             with mx.autograd.record():
                 x[index] = y
-                assert False  # should not reach here
+                # `a[None] = v` is equivalent to `a[...] = v` which doesn't raise
+                if index is not None:
+                    assert False, 'failed with index = {}'.format(index)  # should not reach here
         except mx.base.MXNetError as err:
             assert str(err).find('Inplace operations (+=, -=, x[:]=, etc) are not supported when recording with') != -1
 
@@ -1434,7 +1570,17 @@ def test_ndarray_indexing():
                   (([[[[1]]]], 3, slice(0, 3), 0), False),
                   (([[[[1]]]], [[2], [12]], slice(0, 3), slice(None)), False),
                   (([1, 2], slice(3, 5), [2, 3], [3, 4]), False),
-                  (([1, 2], slice(3, 5), (2, 3), [3, 4]), False)]
+                  (([1, 2], slice(3, 5), (2, 3), [3, 4]), False),
+                  ((1, Ellipsis, -1), False),
+                  ((slice(2), Ellipsis, None, 0), False),
+                  (None, False),
+                  ((1, None, -2, 3, -4), False),
+                  # TODO(zoeygxy): Support None in advanced indexing
+                  # (([1, 2], slice(3, 5), None, None, [3, 4]), False),
+                  # ((slice(None), slice(3, 5), None, None, [2, 3], [3, 4]), False),
+                  # ((slice(None), slice(3, 5), None, [2, 3], None, [3, 4]), False),
+                  # ((None, slice(None), slice(3, 5), [2, 3], None, [3, 4]), False),
+    ]
     for index in index_list:
         test_getitem(np_array, index[0], index[1])
         test_setitem(np_array, index[0], index[1])

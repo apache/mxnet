@@ -42,8 +42,8 @@
 /plugin/          @pllarroy
 
 # CMake
-CMakeLists.txt    @szha @rahul003 @pllarroy
-/cmake/           @szha @rahul003 @pllarroy
+CMakeLists.txt    @szha @pllarroy
+/cmake/           @szha @pllarroy
 
 # MXNet CI
 dev_menu.py         @pllarroy
@@ -71,4 +71,3 @@ prepare_mkl.sh    @szha
 
 # Github templates
 /.github/         @szha
-

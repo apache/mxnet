@@ -93,6 +93,7 @@ class Arg:
         'int (non-negative)': 'uint32_t',\
         'long (non-negative)': 'uint64_t',\
         'int or None':'dmlc::optional<int>',\
+        'float or None':'dmlc::optional<float>',\
         'long':'int64_t',\
         'double':'double',\
         'double or None':'dmlc::optional<double>',\

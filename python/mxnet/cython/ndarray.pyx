@@ -64,21 +64,27 @@ cdef class NDArrayBase:
 
 
 _ndarray_cls = None
+_np_ndarray_cls = None
 
 def _set_ndarray_class(cls):
     global _ndarray_cls
     _ndarray_cls = cls
 
 
-cdef NewArray(NDArrayHandle handle, int stype=-1):
+def _set_np_ndarray_class(cls):
+    global _np_ndarray_cls
+    _np_ndarray_cls = cls
+
+
+cdef NewArray(NDArrayHandle handle, int stype=-1, int is_np_array=0):
     """Create a new array given handle"""
-    return _ndarray_cls(_ctypes.cast(<unsigned long long>handle, _ctypes.c_void_p), stype=stype)
+    create_array_fn = _np_ndarray_cls if is_np_array else _ndarray_cls
+    return create_array_fn(_ctypes.cast(<unsigned long long>handle, _ctypes.c_void_p), stype=stype)
 
 
 cdef class CachedOp:
     """Cached operator handle."""
     cdef CachedOpHandle chandle
-
     cdef _set_handle(self, handle):
         cdef unsigned long long ptr
         if handle is None:
@@ -96,6 +102,8 @@ cdef class CachedOp:
         def __set__(self, value):
             self._set_handle(value)
 
+    cdef int is_np_sym
+
     def __init__(self, sym, flags=()):
         cdef vector[string] s_flag_keys
         cdef vector[string] s_flag_vals
@@ -105,6 +113,9 @@ cdef class CachedOp:
                 s_flag_vals.push_back(c_str(str(v)))
         cdef vector[const char*] c_flag_keys = SVec2Ptr(s_flag_keys)
         cdef vector[const char*] c_flag_vals = SVec2Ptr(s_flag_vals)
+
+        from ..symbol.numpy._symbol import _Symbol
+        self.is_np_sym = bool(isinstance(sym, _Symbol))
 
         CALL(MXCreateCachedOpEx(
             <SymbolHandle>(<unsigned long long>sym.handle.value),
@@ -154,12 +165,12 @@ cdef class CachedOp:
         if original_output is not None:
             return original_output
         if num_output == 1:
-            return NewArray(p_output_vars[0], p_output_stypes[0])
+            return NewArray(p_output_vars[0], p_output_stypes[0], self.is_np_sym)
         else:
-            return [NewArray(p_output_vars[i], p_output_stypes[i]) for i in range(num_output)]
+            return [NewArray(p_output_vars[i], p_output_stypes[i], self.is_np_sym) for i in range(num_output)]
 
 
-def _imperative_invoke(handle, ndargs, keys, vals, out):
+def _imperative_invoke(handle, ndargs, keys, vals, out, is_np_op=0):
     """cython implementation of imperative invoke wrapper"""
     cdef unsigned long long ihandle = handle
     cdef OpHandle chandle = <OpHandle>ihandle
@@ -211,6 +222,6 @@ def _imperative_invoke(handle, ndargs, keys, vals, out):
     if original_output is not None:
         return original_output
     if num_output == 1:
-        return NewArray(p_output_vars[0], p_output_stypes[0])
+        return NewArray(p_output_vars[0], p_output_stypes[0], is_np_op)
     else:
-        return [NewArray(p_output_vars[i], p_output_stypes[i]) for i in range(num_output)]
+        return [NewArray(p_output_vars[i], p_output_stypes[i], is_np_op) for i in range(num_output)]
