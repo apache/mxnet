@@ -463,7 +463,7 @@ def load_checkpoint(prefix, epoch):
                 aux_params[name] = v
             else:
                 logging.warning("Params file '%s' contains unknown param '%s'",
-                                '%s-%04d.params' % (prefix, epoch), k))
+                                '%s-%04d.params' % (prefix, epoch), k)
     return (symbol, arg_params, aux_params)
 
 from .callback import LogValidationMetricsCallback # pylint: disable=wrong-import-position
