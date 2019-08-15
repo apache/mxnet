@@ -460,7 +460,7 @@ def load_checkpoint(prefix, epoch):
             elif tp == 'aux':
                 aux_params[name] = v
             else:
-                raise MXNetError("Params file '%s' contains unknown param '%s'" % 
+                logging.warning("Params file '%s' contains unknown param '%s'" % 
                                  ('%s-%04d.params' % (prefix, epoch),
                                   k))
     return (symbol, arg_params, aux_params)
