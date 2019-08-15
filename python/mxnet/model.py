@@ -38,7 +38,7 @@ from .initializer import Uniform
 from .optimizer import get_updater
 from .executor_manager import DataParallelExecutorManager, _check_arguments, _load_data
 from .io import DataDesc
-from .base import mx_real_t, MXNetError
+from .base import mx_real_t
 
 BASE_ESTIMATOR = object
 
