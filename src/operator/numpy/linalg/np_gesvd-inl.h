@@ -236,6 +236,7 @@ struct gesvd_backward {
 
     // G3:
     gemm::op(tempM, V, dA, DType(1.0), DType(1.0), false, false, s);
+    // dA <- dot(UT, dA). Loop over (k, m, m) blocks to avoid large temporary memory
     for (int i = 0; i < n; i += m) {
       int ncols = n - i < m ? n - i : m;
       Tensor<xpu, 3, DType> t = Tensor<xpu, 3, DType>(dA.dptr_ + i,
