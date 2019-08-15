@@ -1452,6 +1452,8 @@ def concatenate(seq, axis=0, out=None):
     res : ndarray
         The concatenated array.
     """
+    if len(seq) > 1:
+        return _npi.concatenate(*[seq[i] for i in range(len(seq))], dim=axis, out=out)
     return _npi.concatenate(*seq, dim=axis, out=out)
 
 
