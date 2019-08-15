@@ -71,6 +71,7 @@ The following modified ReLU Activation functions are supported:
 .add_arguments(LeakyReLUParam::__FIELDS__());
 
 NNVM_REGISTER_OP(LeakyReLU)
+.add_alias("_npx_leaky_relu")
 .set_attr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose",
     [](const nnvm::NodeAttrs& attrs, nnvm::NodePtr var, const int index) {
       if (index == 1 && var->attrs.dict.find("__init__") == var->attrs.dict.end()) {

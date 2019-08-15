@@ -110,6 +110,7 @@ Examples::
 
 NNVM_REGISTER_OP(pick)
 .add_alias("choose_element_0index")
+.add_alias("_npx_pick")
 .describe(R"code(Picks elements from an input array according to the input indices along the given axis.
 
 Given an input array of shape ``(d0, d1)`` and indices of shape ``(i0,)``, the result will be

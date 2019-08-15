@@ -32,7 +32,7 @@
 
 int MXExecutorPrint(ExecutorHandle handle, const char **out_str) {
   Executor *exec = static_cast<Executor*>(handle);
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   std::ostringstream os;
   exec->Print(os);
@@ -78,7 +78,7 @@ int MXExecutorBackwardEx(ExecutorHandle handle,
 int MXExecutorOutputs(ExecutorHandle handle,
                       mx_uint *out_size,
                       NDArrayHandle **out) {
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   Executor *exec = static_cast<Executor*>(handle);
   std::vector<NDArray> heads = exec->outputs();
@@ -252,7 +252,7 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
                          NDArrayHandle** aux_states,
                          ExecutorHandle shared_exec_handle,
                          ExecutorHandle* out) {
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol*>(symbol_handle);
 
@@ -586,7 +586,7 @@ int MXExecutorSimpleBindEx(SymbolHandle symbol_handle,
                            NDArrayHandle** aux_states,
                            ExecutorHandle shared_exec_handle,
                            ExecutorHandle* out) {
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol*>(symbol_handle);
 
@@ -870,7 +870,7 @@ int MXExecutorReshape(int partial_shaping,
                       ExecutorHandle *out) {
   Executor* new_exec = nullptr;
 
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   *out = nullptr;  // ensure we can know whether to free executor on early abort
   // create shape map for in_args and aux_states
@@ -961,7 +961,7 @@ int MXExecutorReshapeEx(int partial_shaping,
                         ExecutorHandle *out) {
   Executor* new_exec = nullptr;
 
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   *out = nullptr;  // ensure we can know whether to free executor on early abort
   // create shape map for in_args and aux_states

@@ -35,7 +35,7 @@
 #define IS_TRAINING_FLAG      16
 #define USE_GLOBAL_STATS_FLAG 32
 
-#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
+#if MXNET_USE_CUDNN == 1
 #include "./cudnn/cudnn_batch_norm-inl.h"
 #endif
 
@@ -641,7 +641,7 @@ void BatchNormBackwardImpl(mshadow::Stream<gpu> *stream,
   MSHADOW_CUDA_POST_KERNEL_CHECK(BatchNormOp_DoBackward_gpu);
 }
 
-#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 4
+#if MXNET_USE_CUDNN == 1
 template<typename DType>
 static CuDNNBatchNormOp<DType> &GetCuDNNOp(const BatchNormParam& param) {
 #if DMLC_CXX11_THREAD_LOCAL
@@ -667,7 +667,7 @@ void BatchNormCompute<gpu>(const nnvm::NodeAttrs& attrs,
   mxnet::TShape shape = inputs[0].shape_;
 
   param.axis = mxnet::op::batchnorm::GetRealAxis(shape, param.axis);
-#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
+#if MXNET_USE_CUDNN == 1
   if (!param.use_global_stats && !param.cudnn_off
       && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS) {
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
@@ -696,7 +696,7 @@ void BatchNormGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
   mxnet::TShape shape = inputs[0].shape_;
 
   param.axis = mxnet::op::batchnorm::GetRealAxis(shape, param.axis);
-#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
+#if MXNET_USE_CUDNN == 1
   if (!param.use_global_stats && !param.cudnn_off
       && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS) {
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
