@@ -401,6 +401,15 @@ def single_concat(data_shape, input_num, dim):
   concat = mx.symbol.Concat(*inputs, name="concat", dim=dim)
   return concat
 
+def single_concat_pos_neg(data_shape):
+  data, weight = head_symbol(data_shape)
+  conv = mx.symbol.Convolution(data=data, weight=weight, name='conv', num_filter=4,
+                               kernel=(1, 1), stride=(1, 1), no_bias=True)
+  relu = mx.symbol.Activation(data=conv, name='relu', act_type='relu')
+  inputs = [data, relu]
+  concat = mx.symbol.Concat(*inputs, name="concat", dim=1)
+  return concat
+
 # concat scale alignment case
 def concat_scale_align(data_shape):
   data, weight = head_symbol(data_shape)
@@ -738,6 +747,8 @@ def test_pos_single_concat():
       net = single_concat(data_shape, 4, 3)
       check_quantize(net, data_shape, out_type, name='conv', check_calibration=False)
       check_quantize(net, data_shape, out_type, name='conv', check_calibration=False, gluon_forward=True)
+      net = single_concat_pos_neg(data_shape)
+      check_quantize(net, data_shape, out_type, name='', check_calibration=False)
 
 @with_seed()
 def test_pos_concat_scale_align():

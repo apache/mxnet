@@ -23,7 +23,7 @@ import platform
 import logging
 
 
-def find_lib_path():
+def find_lib_path(prefix='libmxnet'):
     """Find MXNet dynamic library files.
 
     Returns
@@ -61,13 +61,13 @@ def find_lib_path():
         dll_path[0:0] = [p.strip() for p in os.environ['LD_LIBRARY_PATH'].split(":")]
     if os.name == 'nt':
         os.environ['PATH'] = os.path.dirname(__file__) + ';' + os.environ['PATH']
-        dll_path = [os.path.join(p, 'libmxnet.dll') for p in dll_path]
+        dll_path = [os.path.join(p, prefix + '.dll') for p in dll_path]
     elif platform.system() == 'Darwin':
-        dll_path = [os.path.join(p, 'libmxnet.dylib') for p in dll_path] + \
-                   [os.path.join(p, 'libmxnet.so') for p in dll_path]
+        dll_path = [os.path.join(p, prefix + '.dylib') for p in dll_path] + \
+                   [os.path.join(p, prefix + '.so') for p in dll_path]
     else:
         dll_path.append('../../../')
-        dll_path = [os.path.join(p, 'libmxnet.so') for p in dll_path]
+        dll_path = [os.path.join(p, prefix + '.so') for p in dll_path]
     lib_path = [p for p in dll_path if os.path.exists(p) and os.path.isfile(p)]
     if len(lib_path) == 0:
         raise RuntimeError('Cannot find the MXNet library.\n' +
@@ -111,4 +111,4 @@ def find_include_path():
 
 
 # current version
-__version__ = "1.5.0"
+__version__ = "1.6.0"

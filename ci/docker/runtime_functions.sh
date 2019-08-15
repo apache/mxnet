@@ -579,7 +579,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
 }
 
 build_ubuntu_gpu() {
-    build_ubuntu_gpu_cuda100_cudnn7
+    build_ubuntu_gpu_cuda101_cudnn7
 }
 
 build_ubuntu_gpu_tensorrt() {
@@ -679,7 +679,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         -j$(nproc)
 }
 
-build_ubuntu_gpu_cuda100_cudnn7() {
+build_ubuntu_gpu_cuda101_cudnn7() {
     set -ex
     build_ccache_wrappers
     make \
@@ -1460,10 +1460,10 @@ build_static_python_mkl() {
     popd
 }
 
-build_static_python_cu100mkl() {
+build_static_python_cu101mkl() {
     set -ex
     pushd .
-    export mxnet_variant=cu100mkl
+    export mxnet_variant=cu101mkl
     ./ci/publish/python/build.sh
     popd
 }

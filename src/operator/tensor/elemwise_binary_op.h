@@ -487,9 +487,11 @@ class ElemwiseBinaryOp : public OpBase {
         MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
           const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[1].Size())
           + DataType<DType>::kLanes - 1) / DataType<DType>::kLanes;
-          Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, size,
-          outputs[0].dptr<DType>(),
-          inputs[0].dptr<DType>(), inputs[1].dptr<DType>());
+          if (size != 0) {
+            Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, size,
+            outputs[0].dptr<DType>(),
+            inputs[0].dptr<DType>(), inputs[1].dptr<DType>());
+          }
         });
       });
     }
@@ -510,9 +512,11 @@ class ElemwiseBinaryOp : public OpBase {
         MSHADOW_TYPE_SWITCH_WITH_HALF2(outputs[0].type_flag_, DType, {
           const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[1].Size())
           + DataType<DType>::kLanes - 1) / DataType<DType>::kLanes;
-          Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, size,
-          outputs[0].dptr<DType>(),
-          inputs[0].dptr<DType>(), inputs[1].dptr<DType>());
+          if (size != 0) {
+            Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, size,
+            outputs[0].dptr<DType>(),
+            inputs[0].dptr<DType>(), inputs[1].dptr<DType>());
+          }
         });
       });
     }

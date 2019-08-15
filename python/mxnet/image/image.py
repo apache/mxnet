@@ -428,7 +428,7 @@ def fixed_crop(src, x0, y0, w, h, size=None, interp=2):
     NDArray
         An `NDArray` containing the cropped image.
     """
-    out = nd.slice(src, begin=(y0, x0, 0), end=(y0 + h, x0 + w, int(src.shape[2])))
+    out = src[y0:y0+h, x0:x0+w]
     if size is not None and (w, h) != size:
         sizes = (h, w, size[1], size[0])
         out = imresize(out, *size, interp=_get_interp_method(interp, sizes))
@@ -1198,10 +1198,10 @@ class ImageIter(io.DataIter):
             logging.info('%s: loading recordio %s...',
                          class_name, path_imgrec)
             if path_imgidx:
-                self.imgrec = recordio.MXIndexedRecordIO(path_imgidx, path_imgrec, 'r')  # pylint: disable=redefined-variable-type
+                self.imgrec = recordio.MXIndexedRecordIO(path_imgidx, path_imgrec, 'r')
                 self.imgidx = list(self.imgrec.keys)
             else:
-                self.imgrec = recordio.MXRecordIO(path_imgrec, 'r')  # pylint: disable=redefined-variable-type
+                self.imgrec = recordio.MXRecordIO(path_imgrec, 'r')
                 self.imgidx = None
         else:
             self.imgrec = None
@@ -1224,7 +1224,7 @@ class ImageIter(io.DataIter):
             imgkeys = []
             index = 1
             for img in imglist:
-                key = str(index)  # pylint: disable=redefined-variable-type
+                key = str(index)
                 index += 1
                 if len(img) > 2:
                     label = nd.array(img[:-1], dtype=dtype)
@@ -1374,23 +1374,23 @@ class ImageIter(io.DataIter):
         pad = batch_size - i
         # handle padding for the last batch
         if pad != 0:
-            if self.last_batch_handle == 'discard': # pylint: disable=no-else-raise
+            if self.last_batch_handle == 'discard':
                 raise StopIteration
             # if the option is 'roll_over', throw StopIteration and cache the data
-            elif self.last_batch_handle == 'roll_over' and \
+            if self.last_batch_handle == 'roll_over' and \
                 self._cache_data is None:
                 self._cache_data = batch_data
                 self._cache_label = batch_label
                 self._cache_idx = i
                 raise StopIteration
+
+            _ = self._batchify(batch_data, batch_label, i)
+            if self.last_batch_handle == 'pad':
+                self._allow_read = False
             else:
-                _ = self._batchify(batch_data, batch_label, i)
-                if self.last_batch_handle == 'pad':
-                    self._allow_read = False
-                else:
-                    self._cache_data = None
-                    self._cache_label = None
-                    self._cache_idx = None
+                self._cache_data = None
+                self._cache_label = None
+                self._cache_idx = None
 
         return io.DataBatch([batch_data], [batch_label], pad=pad)
 

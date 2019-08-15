@@ -122,6 +122,8 @@ def prepare_op_inputs(arg_params):
                                   arg_params["params"]["arg_types"]):
         if "NDArray" in arg_type and arg_name + "_nd" in DEFAULTS_INPUTS:
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_nd"]
+        elif "NDArray" in arg_type and arg_name + "_4d" in DEFAULTS_INPUTS:
+            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_4d"]
         elif arg_name in DEFAULTS_INPUTS:
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name]
         elif "float" in arg_type and arg_name + "_float" in DEFAULTS_INPUTS:
@@ -249,6 +251,27 @@ def get_all_reduction_operators():
     return reduction_mx_operators
 
 
+def get_all_optimizer_operators():
+    """Gets all Optimizer operators registered with MXNet.
+
+     Returns
+     -------
+     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+     """
+    optimizer_ops = ['mp_sgd_update', 'signum_update', 'rmspropalex_update', 'ftml_update', 'rmsprop_update',
+                     'sgd_mom_update', 'signsgd_update', 'mp_sgd_mom_update', 'ftrl_update', 'sgd_update',
+                     'adam_update']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Optimizer operators
+    optimizer_mx_operators = {}
+    for op_name, op_params in mx_operators.items():
+         if op_name in optimizer_ops and op_name not in unique_ops:
+             optimizer_mx_operators[op_name] = mx_operators[op_name]
+    return optimizer_mx_operators
+
 def get_all_sorting_searching_operators():
     """Gets all Sorting and Searching operators registered with MXNet.
 
@@ -268,6 +291,26 @@ def get_all_sorting_searching_operators():
             sort_search_mx_operators[op_name] = mx_operators[op_name]
     return sort_search_mx_operators
 
+
+def get_all_rearrange_operators():
+    """Gets all array rearrange operators registered with MXNet.
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
+    rearrange_ops = ['transpose','swapaxes','flip','depth_to_space','space_to_depth']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Array Rearrange operators
+    rearrange_mx_operators = {}
+    for op_name, op_params in mx_operators.items():
+        if op_name in rearrange_ops and op_name not in unique_ops:
+            rearrange_mx_operators[op_name] = mx_operators[op_name]
+    return rearrange_mx_operators
+    
 
 def get_operators_with_no_benchmark(operators_with_benchmark):
     """Gets all MXNet operators with not benchmark.

@@ -24,6 +24,7 @@ mxnet_option(USE_OLDCMAKECUDA     "Build with old cmake cuda" OFF)
 mxnet_option(USE_NCCL             "Use NVidia NCCL with CUDA" OFF)
 mxnet_option(USE_OPENCV           "Build with OpenCV support" ON)
 mxnet_option(USE_OPENMP           "Build with Openmp support" ON)
+mxnet_option(USE_OPENMP_BUNDLED_LLVM "Build with bundled llvm openmp from 3rdparty" OFF)
 mxnet_option(USE_CUDNN            "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
 mxnet_option(USE_SSE              "Build with x86 SSE instruction support" ON IF NOT ARM)
 mxnet_option(USE_F16C             "Build with x86 F16C instruction support" ON) # autodetects support if ON
@@ -34,7 +35,6 @@ mxnet_option(USE_MKLDNN           "Use MKLDNN variant of MKL (if MKL found)" ON 
 mxnet_option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" ON IF NOT MSVC)
 mxnet_option(USE_GPERFTOOLS       "Build with GPerfTools support" OFF)
 mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   ON)
-mxnet_option(USE_PROFILER         "Build with Profiler support"   ON)
 mxnet_option(USE_DIST_KVSTORE     "Build with DIST_KVSTORE support" OFF)
 mxnet_option(USE_PLUGINS_WARPCTC  "Use WARPCTC Plugins" OFF)
 mxnet_option(USE_PLUGIN_CAFFE     "Use Caffe Plugin" OFF)
@@ -43,6 +43,7 @@ mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
 mxnet_option(USE_GPROF            "Compile with gprof (profiling) flag" OFF)
 mxnet_option(USE_CXX14_IF_AVAILABLE "Build with C++14 if the compiler supports it" OFF)
 mxnet_option(USE_VTUNE            "Enable use of Intel Amplifier XE (VTune)" OFF) # one could set VTUNE_ROOT for search path
+mxnet_option(USE_TVM_OP           "Enable use of TVM operator build system." OFF)
 mxnet_option(ENABLE_CUDA_RTC      "Build with CUDA runtime compilation support" ON)
 mxnet_option(BUILD_CPP_EXAMPLES   "Build cpp examples" ON)
 mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
@@ -433,11 +434,11 @@ if(USE_OPENMP)
   find_package(OpenMP REQUIRED)
   # This should build on Windows, but there's some problem and I don't have a Windows box, so
   # could a Windows user please fix?
-  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp/CMakeLists.txt
-     AND SYSTEM_ARCHITECTURE STREQUAL "x86_64"
-     AND NOT MSVC
-     AND NOT CMAKE_CROSSCOMPILING)
-
+  if(USE_OPENMP_BUNDLED_LLVM AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp/CMakeLists.txt
+      AND SYSTEM_ARCHITECTURE STREQUAL "x86_64"
+      AND NOT MSVC
+      AND NOT CMAKE_CROSSCOMPILING)
+    message("Using bundlded LLVM OpenMP")
     # Intel/llvm OpenMP: https://github.com/llvm-mirror/openmp
     set(OPENMP_STANDALONE_BUILD TRUE)
     set(LIBOMP_ENABLE_SHARED TRUE)
@@ -451,6 +452,7 @@ if(USE_OPENMP)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
     add_definitions(-DMXNET_USE_OPENMP=1)
   else()
+    message("Using platform provided OpenMP")
     if(OPENMP_FOUND)
       set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
@@ -691,6 +693,8 @@ else()
 
 endif()
 
+add_library(sample_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/lib_api/mylib.cc)
+target_include_directories(sample_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
 set(MXNET_INSTALL_TARGETS mxnet)
 if(UNIX)
   # Create dummy file since we want an empty shared library before linking
@@ -701,9 +705,13 @@ if(UNIX)
   add_library(mxnet SHARED ${DUMMY_SOURCE})
   target_link_libraries(mxnet PRIVATE ${BEGIN_WHOLE_ARCHIVE} $<TARGET_FILE:mxnet_static> ${END_WHOLE_ARCHIVE})
   target_link_libraries(mxnet PRIVATE mxnet_static)
+  target_link_libraries(mxnet_static PUBLIC ${CMAKE_DL_LIBS})
+  target_compile_options(sample_lib PUBLIC -shared)
   set_target_properties(mxnet_static PROPERTIES OUTPUT_NAME mxnet)
 else()
   add_library(mxnet SHARED ${SOURCE})
+  target_compile_options(sample_lib PUBLIC /LD)
+  set_target_properties(sample_lib PROPERTIES PREFIX "lib")
 endif()
 
 if(USE_CUDA)
@@ -732,6 +740,28 @@ if(USE_DIST_KVSTORE)
   add_definitions(-DMXNET_USE_DIST_KVSTORE)
   include_directories(SYSTEM ${pslite_INCLUDE_DIR})
   list(APPEND mxnet_LINKER_LIBS ${pslite_LINKER_LIBS})
+endif()
+
+if(USE_TVM_OP)
+  add_definitions(-DMXNET_USE_TVM_OP=1)
+  list(APPEND mxnet_LINKER_LIBS ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm/libtvm_runtime.so)
+  include(cmake/BuildTVM.cmake)
+  add_subdirectory("3rdparty/tvm")
+
+  if(NOT Python3_EXECUTABLE)
+    find_package(PythonInterp 3 REQUIRED)
+    set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE} CACHE FILEPATH "Path to the python3 executable")
+    if(NOT Python3_EXECUTABLE)
+      message(FATAL_ERROR "No python3 interpreter found to build TVM operators")
+    endif()
+  endif()
+
+  add_custom_command(TARGET mxnet POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E env
+          PYTHONPATH="${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/python:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/topi/python:${CMAKE_CURRENT_SOURCE_DIR}/contrib"
+          LD_LIBRARY_PATH="${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm"
+          ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/tvmop/compile.py -o${CMAKE_CURRENT_BINARY_DIR}/libtvmop.so
+    )
 endif()
 
 target_link_libraries(mxnet PUBLIC ${mxnet_LINKER_LIBS})

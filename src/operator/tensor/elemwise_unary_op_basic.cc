@@ -511,6 +511,7 @@ Negative indices are supported, and `None` can be used for either `lhs_end` or `
   - lhs shape = (30, 12), rhs shape = (4, 2, 2, 3), lhs_begin=-1, lhs_end=None, rhs_begin=1, rhs_end=None, output shape = (30, 2, 2, 3)
 
 )code" ADD_FILELINE)
+.add_alias("_npx_reshape_like")
 .set_num_inputs(2)
 .set_attr_parser(ParamParser<ReshapeLikeParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
@@ -546,7 +547,8 @@ Negative indices are supported, and `None` can be used for either `lhs_end` or `
       return lhs;
     })
 .add_argument("lhs", "NDArray-or-Symbol", "First input.")
-.add_argument("rhs", "NDArray-or-Symbol", "Second input.");
+.add_argument("rhs", "NDArray-or-Symbol", "Second input.")
+.add_arguments(ReshapeLikeParam::__FIELDS__());
 
 void ShapeComputeCPU(const nnvm::NodeAttrs& attrs,
                      const OpContext& ctx,
@@ -594,8 +596,7 @@ Example::
     TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt64);
     return out_attrs->at(0) != -1;
   })
-.add_argument("data", "NDArray-or-Symbol", "Input Array.")
-.add_arguments(ReshapeLikeParam::__FIELDS__());
+.add_argument("data", "NDArray-or-Symbol", "Input Array.");
 
 void SizeComputeCPU(const nnvm::NodeAttrs& attrs,
                     const OpContext& ctx,
@@ -649,6 +650,7 @@ Example::
 DMLC_REGISTER_PARAMETER(CastParam);
 NNVM_REGISTER_OP(Cast)
 .add_alias("cast")
+.add_alias("_npx_cast")
 .describe(R"code(Casts all elements of the input to a new type.
 
 .. note:: ``Cast`` is deprecated. Use ``cast`` instead.
@@ -1289,6 +1291,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_expm1, unary_bwd<msh
 // gamma
 MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(gamma, cpu, mshadow_op::gamma)
 MXNET_ADD_SPARSE_OP_ALIAS(gamma)
+.add_alias("_npx_gamma")
 .describe(R"code(Returns the gamma function (extension of the factorial function \
 to the reals), computed element-wise on the input array.
 
