@@ -16,7 +16,7 @@
 # under the License.
 
 message(STATUS "Prepare external packages for TVM...")
-execute_process(COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/contrib/tvmop/prepare_tvm.sh")
+execute_process(COMMAND "sh" "${CMAKE_CURRENT_SOURCE_DIR}/contrib/tvmop/prepare_tvm.sh")
 
 # Whether enable ROCM runtime
 #
