@@ -20,7 +20,36 @@
 from __future__ import absolute_import
 from ..ndarray import numpy as _mx_nd_np
 
-__all__ = ['uniform', 'normal']
+__all__ = ['uniform', 'normal', 'rand']
+
+
+def rand(*size, **kwargs):
+    r"""Random values in a given shape.
+
+    Create an array of the given shape and populate it with random
+    samples from a uniform distribution over [0, 1).
+    Parameters
+    ----------
+    d0, d1, ..., dn : int, optional
+        The dimensions of the returned array, should be all positive.
+        If no argument is given a single Python float is returned.
+    Returns
+    -------
+    out : ndarray
+        A ``(d0, d1, ..., dn)``-shaped array of floating-point samples from
+        the standard normal distribution, or a single such float if
+        no parameters were supplied.
+    Examples
+    --------
+    >>> np.random.rand(3,2)
+    array([[ 0.14022471,  0.96360618],  #random
+           [ 0.37601032,  0.25528411],  #random
+           [ 0.49313049,  0.94909878]]) #random
+    """
+    output_shape = ()
+    for s in size:
+        output_shape += (s,)
+    return _mx_nd_np.random.uniform(0, 1, size=output_shape, **kwargs)
 
 
 def uniform(low=0.0, high=1.0, size=None, **kwargs):
