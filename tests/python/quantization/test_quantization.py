@@ -943,7 +943,8 @@ def test_quantize_model_with_forward():
             if name not in ['sym3', 'sym4']:
                 excluded_names = []
                 if mx.current_context() == mx.cpu():
-                   excluded_names += ['fc', 'conv1']
+                   excluded_op_names += ['FullyConnected']
+                   excluded_names += ['conv1']
                 excluded_names += ['concat']
 
                 optional_names = ['pool0']
