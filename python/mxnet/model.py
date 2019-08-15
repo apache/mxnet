@@ -453,7 +453,7 @@ def load_checkpoint(prefix, epoch):
     aux_params = {}
     #load any params in the dict, skip if params are empty
     if not save_dict:
-        logging.warning("Params file '%s' is empty" % ('%s-%04d.params' % (prefix, epoch)))
+        logging.warning("Params file '%s' is empty", '%s-%04d.params' % (prefix, epoch))
     else:
         for k, v in save_dict.items():
             tp, name = k.split(':', 1)
@@ -462,9 +462,8 @@ def load_checkpoint(prefix, epoch):
             elif tp == 'aux':
                 aux_params[name] = v
             else:
-                logging.warning("Params file '%s' contains unknown param '%s'" % 
-                                 ('%s-%04d.params' % (prefix, epoch),
-                                  k))
+                logging.warning("Params file '%s' contains unknown param '%s'",
+                                '%s-%04d.params' % (prefix, epoch), k))
     return (symbol, arg_params, aux_params)
 
 from .callback import LogValidationMetricsCallback # pylint: disable=wrong-import-position
