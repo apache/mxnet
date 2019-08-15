@@ -215,7 +215,7 @@ int MXNDArrayCreate(const uint32_t *shape,
   API_END();
 }
 
-int MXNDArrayCreateEx64(const mx_int64 *shape,
+int MXNDArrayCreateEx64(const int64_t *shape,
                         int ndim,
                         int dev_type,
                         int dev_id,
@@ -223,7 +223,7 @@ int MXNDArrayCreateEx64(const mx_int64 *shape,
                         int dtype,
                         NDArrayHandle *out) {
   API_BEGIN();
-  CreateNDArray<mx_int64, int>(shape, ndim, dev_type, dev_id, delay_alloc, dtype, out);
+  CreateNDArray<int64_t, int>(shape, ndim, dev_type, dev_id, delay_alloc, dtype, out);
   API_END();
 }
 
@@ -616,10 +616,10 @@ int MXNDArrayGetShapeEx(NDArrayHandle handle,
 
 int MXNDArrayGetShapeEx64(NDArrayHandle handle,
                           int *out_dim,
-                          const mx_int64 **out_pdata) {
+                          const int64_t **out_pdata) {
   MXAPIThreadLocalEntry<int64_t> *ret = MXAPIThreadLocalStore<int64_t>::Get();
   API_BEGIN();
-  GetShape<mx_int64>(handle, out_pdata, out_dim, ret);
+  GetShape<int64_t>(handle, out_pdata, out_dim, ret);
   API_END();
 }
 

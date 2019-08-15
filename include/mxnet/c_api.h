@@ -57,7 +57,7 @@ extern "C" {
 /*! \brief manually define unsigned int */
 typedef uint32_t uint32_t;
 /*! \brief manually define 64-bit int */
-typedef int64_t mx_int64;
+typedef int64_t int64_t;
 /*! \brief manually define float */
 typedef float mx_float;
 /*! \brief data type to store dim size */
@@ -574,7 +574,7 @@ MXNET_DLL int MXNDArrayCreateEx(const uint32_t *shape,
                               int dtype,
                               NDArrayHandle *out);
 
-MXNET_DLL int MXNDArrayCreateEx64(const mx_int64 *shape,
+MXNET_DLL int MXNDArrayCreateEx64(const int64_t *shape,
                                   int ndim,
                                   int dev_type,
                                   int dev_id,
@@ -613,7 +613,7 @@ MXNET_DLL int MXNDArrayCreateSparseEx(int storage_type,
                                       NDArrayHandle *out);
 
 MXNET_DLL int MXNDArrayCreateSparseEx64(int storage_type,
-                                        const mx_int64 *shape,
+                                        const int64_t *shape,
                                         int ndim,
                                         int dev_type,
                                         int dev_id,
@@ -622,7 +622,7 @@ MXNET_DLL int MXNDArrayCreateSparseEx64(int storage_type,
                                         uint32_t num_aux,
                                         int *aux_type,
                                         int *aux_ndims,
-                                        const mx_int64 *aux_shape,
+                                        const int64_t *aux_shape,
                                         NDArrayHandle *out);
 
 /*!
@@ -673,9 +673,9 @@ MXNET_DLL int MXNDArrayLoad(const char* fname,
                             const char*** out_names);
 
 MXNET_DLL int MXNDArrayLoad64(const char* fname,
-                              mx_int64 *out_size,
+                              int64_t *out_size,
                               NDArrayHandle** out_arr,
-                              mx_int64 *out_name_size,
+                              int64_t *out_name_size,
                               const char*** out_names);
 
 /*!
@@ -701,9 +701,9 @@ MXNET_DLL int MXNDArrayLoadFromBuffer(const void *ndarray_buffer,
 
 MXNET_DLL int MXNDArrayLoadFromBuffer64(const void *ndarray_buffer,
                                         size_t size,
-                                        mx_int64 *out_size,
+                                        int64_t *out_size,
                                         NDArrayHandle** out_arr,
-                                        mx_int64 *out_name_size,
+                                        int64_t *out_name_size,
                                         const char*** out_names);
 
 /*!
@@ -872,7 +872,7 @@ MXNET_DLL int MXNDArrayGetShapeEx(NDArrayHandle handle,
 
 MXNET_DLL int MXNDArrayGetShapeEx64(NDArrayHandle handle,
                                     int *out_dim,
-                                    const mx_int64 **out_pdata);
+                                    const int64_t **out_pdata);
 
 /*!
  * \brief get the content of the data in NDArray
@@ -958,7 +958,7 @@ MXNET_DLL int MXNDArrayGetAuxType(NDArrayHandle handle,
                                   int *out_type);
 
 MXNET_DLL int MXNDArrayGetAuxType64(NDArrayHandle handle,
-                                    mx_int64 i,
+                                    int64_t i,
                                     int *out_type);
 
 /*!
@@ -971,7 +971,7 @@ MXNET_DLL int MXNDArrayGetAuxNDArray(NDArrayHandle handle,
                                      NDArrayHandle *out);
 
 MXNET_DLL int MXNDArrayGetAuxNDArray64(NDArrayHandle handle,
-                                       mx_int64 i,
+                                       int64_t i,
                                        NDArrayHandle *out);
 
 /*!
@@ -1652,17 +1652,17 @@ MXNET_DLL int MXSymbolInferShape(SymbolHandle sym,
 MXNET_DLL int MXSymbolInferShape64(SymbolHandle sym,
                                    uint32_t num_args,
                                    const char** keys,
-                                   const mx_int64 *arg_ind_ptr,
-                                   const mx_int64 *arg_shape_data,
+                                   const int64_t *arg_ind_ptr,
+                                   const int64_t *arg_shape_data,
                                    size_t *in_shape_size,
                                    const int **in_shape_ndim,
-                                   const mx_int64 ***in_shape_data,
+                                   const int64_t ***in_shape_data,
                                    size_t *out_shape_size,
                                    const int **out_shape_ndim,
-                                   const mx_int64 ***out_shape_data,
+                                   const int64_t ***out_shape_data,
                                    size_t *aux_shape_size,
                                    const int **aux_shape_ndim,
-                                   const mx_int64 ***aux_shape_data,
+                                   const int64_t ***aux_shape_data,
                                    int *complete);
 
 /*!
@@ -1706,17 +1706,17 @@ MXNET_DLL int MXSymbolInferShapeEx(SymbolHandle sym,
 MXNET_DLL int MXSymbolInferShapeEx64(SymbolHandle sym,
                                      uint32_t num_args,
                                      const char** keys,
-                                     const mx_int64 *arg_ind_ptr,
-                                     const mx_int64 *arg_shape_data,
+                                     const int64_t *arg_ind_ptr,
+                                     const int64_t *arg_shape_data,
                                      size_t *in_shape_size,
                                      const int **in_shape_ndim,
-                                     const mx_int64 ***in_shape_data,
+                                     const int64_t ***in_shape_data,
                                      size_t *out_shape_size,
                                      const int **out_shape_ndim,
-                                     const mx_int64 ***out_shape_data,
+                                     const int64_t ***out_shape_data,
                                      size_t *aux_shape_size,
                                      const int **aux_shape_ndim,
-                                     const mx_int64 ***aux_shape_data,
+                                     const int64_t ***aux_shape_data,
                                      int *complete);
 
 /*!
@@ -1763,17 +1763,17 @@ MXNET_DLL int MXSymbolInferShapePartial(SymbolHandle sym,
 MXNET_DLL int MXSymbolInferShapePartial64(SymbolHandle sym,
                                           uint32_t num_args,
                                           const char** keys,
-                                          const mx_int64 *arg_ind_ptr,
-                                          const mx_int64 *arg_shape_data,
+                                          const int64_t *arg_ind_ptr,
+                                          const int64_t *arg_shape_data,
                                           size_t *in_shape_size,
                                           const int **in_shape_ndim,
-                                          const mx_int64 ***in_shape_data,
+                                          const int64_t ***in_shape_data,
                                           size_t *out_shape_size,
                                           const int **out_shape_ndim,
-                                          const mx_int64 ***out_shape_data,
+                                          const int64_t ***out_shape_data,
                                           size_t *aux_shape_size,
                                           const int **aux_shape_ndim,
-                                          const mx_int64 ***aux_shape_data,
+                                          const int64_t ***aux_shape_data,
                                           int *complete);
 
 /*!
@@ -1819,17 +1819,17 @@ MXNET_DLL int MXSymbolInferShapePartialEx(SymbolHandle sym,
 MXNET_DLL int MXSymbolInferShapePartialEx64(SymbolHandle sym,
                                             uint32_t num_args,
                                             const char** keys,
-                                            const mx_int64 *arg_ind_ptr,
-                                            const mx_int64 *arg_shape_data,
+                                            const int64_t *arg_ind_ptr,
+                                            const int64_t *arg_shape_data,
                                             size_t *in_shape_size,
                                             const int **in_shape_ndim,
-                                            const mx_int64 ***in_shape_data,
+                                            const int64_t ***in_shape_data,
                                             size_t *out_shape_size,
                                             const int **out_shape_ndim,
-                                            const mx_int64 ***out_shape_data,
+                                            const int64_t ***out_shape_data,
                                             size_t *aux_shape_size,
                                             const int **aux_shape_ndim,
-                                            const mx_int64 ***aux_shape_data,
+                                            const int64_t ***aux_shape_data,
                                             int *complete);
 
 /*!
