@@ -67,7 +67,7 @@ struct MXAPINDList {
   mxnet::ShapeVector shapes;
   std::vector<uint32_t> shapes_buffer;
   std::vector<size_t> indptr;
-  std::vector<mx_float> data;
+  std::vector<float> data;
 };
 
 inline void _CreateExecutor(PredictorHandle pred_hnd) {
@@ -560,7 +560,7 @@ int MXPredGetOutputType(PredictorHandle handle,
 
 int MXPredSetInput(PredictorHandle handle,
                    const char* key,
-                   const mx_float* data,
+                   const float* data,
                    uint32_t size) {
   MXAPIPredictor* p = static_cast<MXAPIPredictor*>(handle);
   API_BEGIN();
@@ -591,7 +591,7 @@ int MXPredPartialForward(PredictorHandle handle, int step, int* step_left) {
 
 int MXPredGetOutput(PredictorHandle handle,
                     uint32_t index,
-                    mx_float* data,
+                    float* data,
                     uint32_t size) {
   MXAPIPredictor* p = static_cast<MXAPIPredictor*>(handle);
   API_BEGIN();
@@ -640,7 +640,7 @@ int MXNDListCreate(const char* nd_file_bytes,
 int MXNDListGet(NDListHandle handle,
                 uint32_t index,
                 const char** out_key,
-                const mx_float** out_data,
+                const float** out_data,
                 const uint32_t** out_shape,
                 uint32_t* out_ndim) {
   MXAPINDList* p = static_cast<MXAPINDList*>(handle);

@@ -811,7 +811,7 @@ int MXFuncDescribe(FunctionHandle fun,
 
 int MXFuncInvoke(FunctionHandle fun,
                  NDArrayHandle *use_vars,
-                 mx_float *scalar_args,
+                 float *scalar_args,
                  NDArrayHandle *mutate_vars) {
   API_BEGIN();
   auto *f = static_cast<const NDArrayFunctionReg*>(fun);
@@ -826,7 +826,7 @@ int MXFuncInvoke(FunctionHandle fun,
 
 int MXFuncInvokeEx(FunctionHandle fun,
                  NDArrayHandle *use_vars,
-                 mx_float *scalar_args,
+                 float *scalar_args,
                  NDArrayHandle *mutate_vars,
                  int num_params,
                  char **param_keys,

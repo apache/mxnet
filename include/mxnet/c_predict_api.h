@@ -46,7 +46,7 @@ typedef uint32_t uint32_t;
 /*! \brief manually define 64-bit int */
 typedef int64_t int64_t;
 /*! \brief manually define float */
-typedef float mx_float;
+typedef float float;
 /*! \brief handle to Predictor */
 typedef void *PredictorHandle;
 /*! \brief handle to NDArray list */
@@ -255,7 +255,7 @@ MXNET_DLL int MXPredGetOutputType(PredictorHandle handle,
  */
 MXNET_DLL int MXPredSetInput(PredictorHandle handle,
                              const char* key,
-                             const mx_float* data,
+                             const float* data,
                              uint32_t size);
 /*!
  * \brief Run a forward pass to get the output.
@@ -290,7 +290,7 @@ MXNET_DLL int MXPredPartialForward(PredictorHandle handle, int step, int* step_l
  */
 MXNET_DLL int MXPredGetOutput(PredictorHandle handle,
                               uint32_t index,
-                              mx_float* data,
+                              float* data,
                               uint32_t size);
 /*!
  * \brief Free a predictor handle.
@@ -324,7 +324,7 @@ MXNET_DLL int MXNDListCreate(const char* nd_file_bytes,
 MXNET_DLL int MXNDListGet(NDListHandle handle,
                           uint32_t index,
                           const char** out_key,
-                          const mx_float** out_data,
+                          const float** out_data,
                           const uint32_t** out_shape,
                           uint32_t* out_ndim);
 

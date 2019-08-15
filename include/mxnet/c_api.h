@@ -59,7 +59,7 @@ typedef uint32_t uint32_t;
 /*! \brief manually define 64-bit int */
 typedef int64_t int64_t;
 /*! \brief manually define float */
-typedef float mx_float;
+typedef float float;
 /*! \brief data type to store dim size */
 typedef int64_t dim_t;
 // all the handles are simply void *
@@ -1085,7 +1085,7 @@ MXNET_DLL int MXFuncDescribe(FunctionHandle fun,
  */
 MXNET_DLL int MXFuncInvoke(FunctionHandle fun,
                            NDArrayHandle *use_vars,
-                           mx_float *scalar_args,
+                           float *scalar_args,
                            NDArrayHandle *mutate_vars);
 /*!
  * \brief invoke a function, the array size of passed in arguments
@@ -1102,7 +1102,7 @@ MXNET_DLL int MXFuncInvoke(FunctionHandle fun,
  */
 MXNET_DLL int MXFuncInvokeEx(FunctionHandle fun,
                              NDArrayHandle *use_vars,
-                             mx_float *scalar_args,
+                             float *scalar_args,
                              NDArrayHandle *mutate_vars,
                              int num_params,
                              char **param_keys,
