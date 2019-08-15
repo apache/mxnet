@@ -38,11 +38,11 @@ invert([13]) = array([242])
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseIntType<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
 [](const NodeAttrs& attrs){
-return std::vector<std::pair<int, int> >{{0, 0}};
+  return std::vector<std::pair<int, int> >{{0, 0}};
 })
 .set_attr<nnvm::FListInputNames>("FListInputNames",
 [](const NodeAttrs& attrs) {
-return std::vector<std::string>{"x"};
+  return std::vector<std::string>{"x"};
 })
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::invert>)
 .add_argument("x", "NDArray-or-Symbol", "The input array.")

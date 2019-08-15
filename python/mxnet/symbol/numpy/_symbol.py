@@ -1135,6 +1135,29 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
     else:
         return _npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, ctx=ctx, dtype=dtype)
 
+
+@set_module('mxnet.symbol.numpy')
+def expand_dims(a, axis):
+    """Expand the shape of an array.
+
+    Insert a new axis that will appear at the `axis` position in the expanded
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input array.
+    axis : int
+        Position in the expanded axes where the new axis is placed.
+
+    Returns
+    -------
+    res : _Symbol
+        Output array. The number of dimensions is one greater than that of
+        the input array.
+    """
+    return _npi.expand_dims(a, axis)
+
+
 def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
     """Helper function for unary operators.
     Parameters
@@ -1195,28 +1218,6 @@ def invert(x, out=None, **kwargs):
     - when input is plain python numerics, the result will not be stored in the `out` param
     """
     return _unary_func_helper(x, _npi.invert, _np.invert, out=out, **kwargs)
-
-
-@set_module('mxnet.symbol.numpy')
-def expand_dims(a, axis):
-    """Expand the shape of an array.
-
-    Insert a new axis that will appear at the `axis` position in the expanded
-
-    Parameters
-    ----------
-    a : _Symbol
-        Input array.
-    axis : int
-        Position in the expanded axes where the new axis is placed.
-
-    Returns
-    -------
-    res : _Symbol
-        Output array. The number of dimensions is one greater than that of
-        the input array.
-    """
-    return _npi.expand_dims(a, axis)
 
 
 @set_module('mxnet.symbol.numpy')
