@@ -36,9 +36,7 @@ def rand(*size, **kwargs):
     Returns
     -------
     out : ndarray
-        A ``(d0, d1, ..., dn)``-shaped array of floating-point samples from
-        the standard normal distribution, or a single such float if
-        no parameters were supplied.
+       Random values.
     Examples
     --------
     >>> np.random.rand(3,2)
