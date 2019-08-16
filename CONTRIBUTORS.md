@@ -245,6 +245,8 @@ List of Contributors
 * [Rohit Srivastava](https://github.com/access2rohit)
 * [Caner Turkmen](https://github.com/canerturkmen)
 * [Disi A](https://github.com/adis300)
+* [Vandana Kannan](https://github.com/vandanavk)
+* [Benjamin He](https://github.com/benhe2011)
 
 Label Bot
 ---------
