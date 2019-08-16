@@ -102,6 +102,30 @@ int MXLoadLib(const char *path) {
   initialize_t initialize = get_func<initialize_t>(lib, const_cast<char*>(MXLIB_INITIALIZE_STR));
   if (!initialize(static_cast<int>(MXNET_VERSION)))
     LOG(FATAL) << "Library failed to initialize";
+
+  opRegSize_t opRegSize = get_func<opRegSize_t>(lib, const_cast<char*>(MXLIB_OPREGSIZE_STR));
+  int numOps = opRegSize();
+  LOG(INFO) << "Found " << numOps << " operators in library";
+
+  opRegGet_t opRegGet = get_func<opRegGet_t>(lib, const_cast<char*>(MXLIB_OPREGGET_STR));
+  for(int i=0; i<numOps; i++) {
+    const char* name;
+    fcomp_t fcomp = nullptr;
+    parseAttrs_t parse = nullptr;
+    inferType_t type = nullptr;
+    inferShape_t shape = nullptr;
+    
+    opRegGet(i,&name, &fcomp, &parse, &type, &shape);
+
+    CHECK(fcomp != nullptr) << "Error loading '" << name << "' custom op, FCompute function was not set.";
+    CHECK(parse != nullptr) << "Error loading '" << name << "' custom op, ParseAttrs function was not set.";
+    CHECK(type  != nullptr) << "Error loading '" << name << "' custom op, InferType function was not set.";
+    CHECK(shape != nullptr) << "Error loading '" << name << "' custom op, InferShape function was not set.";
+    
+    LOG(INFO) << "\tOp[" << i << "] " << name;
+
+  }
+  
   API_END();
 }
 
