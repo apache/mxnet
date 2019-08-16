@@ -1222,7 +1222,10 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
                          const int dev_type,
                          const int dev_id,
                          const mx_uint len,
-                         NDArrayHandle* in_args_handle) {
+                         NDArrayHandle* in_args_handle,
+                         const mx_uint num_options,
+                         const char** keys,
+                         const char** vals) {
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol *>(sym_handle);
@@ -1246,16 +1249,20 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
     orig_g = InferForwardAttrs(orig_g, arg_shapes, arg_dtypes, arg_stypes,
                                default_ctx, ctx_map, in_arg_ctxes, aux_state_ctxes, true);
   }
+  std::vector<std::pair<std::string, std::string>> options_map;
+  for (mx_uint i = 0; i < num_options; ++i) {
+    options_map.emplace_back(keys[i], vals[i]);
+  }
   const auto backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(backend_name);
   const auto& subgraph_prop_list = backend->GetSubgraphProperties();
   for (auto property : subgraph_prop_list) {
     nnvm::Graph g = orig_g;
     property->SetAttr("graph", g);
-    property->PrePartition(g);
+    property->PrePartition(g, options_map);
     g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
     g = ApplyPass(std::move(g), "BuildSubgraph");
     g.attrs.erase("subgraph_property");
-    property->PostPartition(g);
+    property->PostPartition(g, options_map);
     property->RemoveAttr("graph");
     s->outputs = g.outputs;
   }

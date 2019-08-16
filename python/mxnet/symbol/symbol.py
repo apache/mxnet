@@ -1439,6 +1439,7 @@ class Symbol(SymbolBase):
 
     def optimize_for(self, backend, ctx=None, args=None, **kwargs):
         """Partition symbol and optimize it for a given backend"""
+        out = SymbolHandle()
         if ctx is not None and args is not None):
             infer_shape_type = False
         else:
@@ -1447,7 +1448,12 @@ class Symbol(SymbolBase):
                 raise TypeError("Context type error")
             listed_arguments = self.list_arguments()
             args_handle, args = self._get_ndarray_inputs('args', args, listed_arguments, False)
-        out = SymbolHandle()
+        key_list = []
+        val_list = []
+        if kwargs is not None:
+            for key, value in kwargs.iteritems():
+                key_list.append(key)
+                val_list.append(val)
         check_call(_LIB.MXOptimizeForBackend(self.handle,
                                              c_str(backend),
                                              ctypes.byref(out),
@@ -1455,7 +1461,10 @@ class Symbol(SymbolBase):
                                              ctypes.c_int(ctx.device_typeid),
                                              ctypes.c_int(ctx.device_id),
                                              mx_uint(len(args)),
-                                             args_handle)
+                                             args_handle,
+                                             mx_uint(len(key_list)),
+                                             c_str_array([key for key in key_list]),
+                                             c_str_array([str(val) for val in val_list]))
         return out
 
 

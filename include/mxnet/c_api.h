@@ -2015,7 +2015,10 @@ MXNET_DLL int MXOptimizeForBackend(SymbolHandle sym_handle,
                                    const int dev_type,
                                    const int dev_id,
                                    const mx_uint len,
-                                   NDArrayHandle* in_args_handle);
+                                   NDArrayHandle* in_args_handle,
+                                   const mx_uint num_options,
+                                   const char** keys,
+                                   const char** vals);
 
 
 //--------------------------------------------
