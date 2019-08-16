@@ -1437,10 +1437,39 @@ class Symbol(SymbolBase):
         return Symbol(handle)
 
 
-    def optimizeFor(self, backend):
+    def optimizeFor(self, backend, ctx=None, args=None, **kwargs):
         """Partition symbol and optimize it for a given backend"""
+        if ctx is not None and args is not None):
+            infer_shape_type = False
+        else:
+            infer_shape_type = True
+            if not isinstance(ctx, Context):
+                raise TypeError("Context type error")
+            listed_arguments = self.list_arguments()
+            args_handle, args = self._get_ndarray_inputs('args', args, listed_arguments, False)
+            aux_states = []
+            aux_args_handle, aux_states = self._get_ndarray_inputs(
+                'aux_states', aux_states, self.list_auxiliary_states(), False)
+            ctx_map_keys = []
+            ctx_map_dev_types = []
+            ctx_map_dev_ids = []
+
         out = SymbolHandle()
-        check_call(_LIB.MXOptimizeForBackend(self.handle, c_str(backend), ctypes.byref(out)))
+        check_call(_LIB.MXOptimizeForBackend(self.handle,
+                                             c_str(backend),
+                                             ctypes.byref(out),
+                                             ctypes.c_bool(infer_shape_type)
+                                             ctypes.c_int(ctx.device_typeid),
+                                             ctypes.c_int(ctx.device_id),
+                                             mx_uint(len(ctx_map_keys)),
+                                             c_str_array(ctx_map_keys),
+                                             c_array_buf(ctypes.c_int, array('i', ctx_map_dev_types)),
+                                             c_array_buf(ctypes.c_int, array('i', ctx_map_dev_ids)),
+                                             mx_uint(len(args)),
+                                             args_handle,
+                                             mx_uint(len(aux_states)),
+                                             aux_args_handle))
+        return out
 
 
     # pylint: disable=too-many-locals
