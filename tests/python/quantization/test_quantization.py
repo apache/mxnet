@@ -678,6 +678,10 @@ def test_quantized_bn():
 
 @with_seed()
 def test_quantize_params():
+    if is_test_for_native_cpu():
+        print('skipped testing quantized_pooling for native cpu since it is not supported yet')
+        return
+
     data = mx.sym.Variable('data')
     conv = mx.sym.Convolution(data, kernel=(1, 1), num_filter=2048, name='conv')
     sym = mx.sym.BatchNorm(data=conv, eps=2e-05, fix_gamma=False, momentum=0.9, use_global_stats=False, name='bn')
@@ -1039,6 +1043,10 @@ def test_quantize_gluon_with_forward():
 
 @with_seed()
 def test_quantize_sym_with_calib():
+    if is_test_for_native_cpu():
+        print('skipped testing quantized_pooling for native cpu since it is not supported yet')
+        return
+
     sym = get_fp32_sym()
     offline_params = [name for name in sym.list_arguments()
                       if not name.startswith('data') and not name.endswith('label')]

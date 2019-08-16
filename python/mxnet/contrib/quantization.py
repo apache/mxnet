@@ -623,53 +623,7 @@ def quantize_model_mkldnn(sym, arg_params, aux_params,
 
     Parameters
     ----------
-    sym : str or Symbol
-        Defines the structure of a neural network for FP32 data types.
-    arg_params : dict
-        Dictionary of name to `NDArray`.
-    aux_params : dict
-        Dictionary of name to `NDArray`.
-    data_names : a list of strs
-        Data names required for creating a Module object to run forward propagation on the
-        calibration dataset.
-    label_names : a list of strs
-        Label names required for creating a Module object to run forward propagation on the
-        calibration dataset.
-    ctx : Context
-        Defines the device that users want to run forward propagation on the calibration
-        dataset for collecting layer output statistics. Currently, only supports single context.
-    excluded_sym_names : list of strings
-        A list of strings representing the names of the symbols that users want to excluding
-        from being quantized.
-    excluded_op_names : list of strings
-        A list of strings representing the names of the operators that users want to excluding
-        from being quantized.
-    calib_mode : str
-        If calib_mode='none', no calibration will be used and the thresholds for
-        requantization after the corresponding layers will be calculated at runtime by
-        calling min and max operators. The quantized models generated in this
-        mode are normally 10-20% slower than those with calibrations during inference.
-        If calib_mode='naive', the min and max values of the layer outputs from a calibration
-        dataset will be directly taken as the thresholds for quantization.
-        If calib_mode='entropy' (default mode), the thresholds for quantization will be
-        derived such that the KL divergence between the distributions of FP32 layer outputs and
-        quantized layer outputs is minimized based upon the calibration dataset.
-    calib_data : DataIter
-        A data iterator initialized by the calibration dataset.
-    num_calib_examples : int or None
-        The maximum number of examples that user would like to use for calibration. If not provided,
-        the whole calibration dataset will be used.
-    calib_layer : function
-        Given a layer's output name in string, return True or False for deciding whether to
-        calibrate this layer. If yes, the statistics of the layer's output will be collected;
-        otherwise, no information of the layer's output will be collected. If not provided,
-        all the layers' outputs that need requantization will be collected.
-    quantized_dtype : str
-        The quantized destination type for input data. Currently support 'int8'
-        , 'uint8' and 'auto'. 'auto' means automatically select output type according to calibration result.
-        Default value is 'int8'.
-    logger : Object
-        A logging object for printing information during the process of quantization.
+    same with quantize_model
 
     Returns
     -------
@@ -702,11 +656,6 @@ def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
     and a collector for naive or entropy calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
-    The quantization implementation adopts the TensorFlow's approach:
-    https://www.tensorflow.org/performance/quantization.
-    The calibration implementation borrows the idea of Nvidia's 8-bit Inference with TensorRT:
-    http://on-demand.gputechconf.com/gtc/2017/presentation/s7310-8-bit-inference-with-tensorrt.pdf
-    and adapts the method to MXNet.
     Parameters
     ----------
     sym : str or Symbol
@@ -796,11 +745,6 @@ def calib_graph(qsym, arg_params, aux_params, collector,
     """User-level API for calibrating a quantized model using a filled collector.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
-    The quantization implementation adopts the TensorFlow's approach:
-    https://www.tensorflow.org/performance/quantization.
-    The calibration implementation borrows the idea of Nvidia's 8-bit Inference with TensorRT:
-    http://on-demand.gputechconf.com/gtc/2017/presentation/s7310-8-bit-inference-with-tensorrt.pdf
-    and adapts the method to MXNet.
     Parameters
     ----------
     qsym : str or Symbol
@@ -866,11 +810,6 @@ def quantize_net(network, quantized_dtype='auto',
     """User-level API for Gluon users to generate a quantized SymbolBlock from a FP32 HybridBlock w/ or w/o calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
-    The quantization implementation adopts the TensorFlow's approach:
-    https://www.tensorflow.org/performance/quantization.
-    The calibration implementation borrows the idea of Nvidia's 8-bit Inference with TensorRT:
-    http://on-demand.gputechconf.com/gtc/2017/presentation/s7310-8-bit-inference-with-tensorrt.pdf
-    and adapts the method to MXNet.
 
     Parameters
     ----------
