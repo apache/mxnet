@@ -32,9 +32,6 @@ COPY install/ubuntu_r.sh /work/
 COPY install/r.gpg /work/
 RUN /work/ubuntu_r.sh
 
-COPY install/ubuntu_docs.sh /work/
-RUN /work/ubuntu_docs.sh
-
 # Always last
 ARG USER_ID=0
 ARG GROUP_ID=0

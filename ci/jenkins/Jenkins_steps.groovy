@@ -1459,6 +1459,21 @@ def docs_julia() {
 }
 
 
+def docs_r() {
+    return ['R Docs': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('libmxnet', mx_lib, false)
+            utils.docker_run('ubuntu_cpu_r', 'build_r_docs', false)
+            utils.pack_lib('r-artifacts', 'docs/_build/r-artifacts.tgz', false)
+          }
+        }
+      }
+    }]
+}
+
+
 def docs_scala() {
     return ['Scala Docs': {
       node(NODE_LINUX_CPU) {

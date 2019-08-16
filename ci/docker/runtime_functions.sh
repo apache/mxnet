@@ -1408,7 +1408,7 @@ deploy_docs() {
 
     export CC="ccache gcc"
     export CXX="ccache g++"
-    
+
     build_python_docs
 
     popd
@@ -1418,9 +1418,9 @@ deploy_docs() {
 build_docs_setup() {
     build_folder="docs/_build"
     mxnetlib_folder="/work/mxnet/lib"
-    
+
     mkdir -p $build_folder
-    mkdir -p $mxnetlib_folder    
+    mkdir -p $mxnetlib_folder
 }
 
 build_ubuntu_cpu_docs() {
@@ -1443,13 +1443,13 @@ build_ubuntu_cpu_docs() {
 build_jekyll_docs() {
     set -ex
     pushd .
-    
+
     build_docs_setup
     pushd docs/static_site
     make clean
     make html
     popd
-    
+
     GZIP=-9 tar zcvf jekyll-artifacts.tgz -C docs/static_site/build html
     mv jekyll-artifacts.tgz docs/_build/
     popd
@@ -1459,29 +1459,28 @@ build_jekyll_docs() {
 build_python_docs() {
    set -ex
    pushd .
-   
+
    build_docs_setup
-   
+
    pushd docs/python_docs
    eval "$(/work/miniconda/bin/conda shell.bash hook)"
    conda env create -f environment.yml -p /work/conda_env
-   conda activate /work/conda_env   
+   conda activate /work/conda_env
    pip install themes/mx-theme
    pip install -e /work/mxnet/python --user
-   
+
    pushd python
    make clean
    make html EVAL=0
 
    GZIP=-9 tar zcvf python-artifacts.tgz -C build/_build/html .
    popd
-   
-   mv python/python-artifacts.tgz /work/mxnet/docs/_build/   
+
+   mv python/python-artifacts.tgz /work/mxnet/docs/_build/
    popd
-   
+
    popd
 }
-
 
 
 build_c_docs() {
@@ -1489,18 +1488,45 @@ build_c_docs() {
     pushd .
 
     build_docs_setup
-    doc_path="docs/cpp_docs"    
+    doc_path="docs/cpp_docs"
     pushd $doc_path
-    
+
     make clean
     make html
 
     doc_artifact="c-artifacts.tgz"
     GZIP=-9 tar zcvf $doc_artifact -C build/html/html .
     popd
-    
+
     mv $doc_path/$doc_artifact docs/_build/
-    
+
+    popd
+}
+
+
+build_r_docs() {
+    set -ex
+    pushd .
+
+    build_docs_setup
+    r_root='R-package'
+    r_pdf='mxnet-r-reference-manual.pdf'
+    r_build='build'
+    docs_build_path="$r_root/$r_build/$r_pdf"
+    artifacts_path='docs/_build/r-artifacts.tgz'
+
+    mkdir -p $r_root/$r_build
+
+    unittest_ubuntu_minimal_R
+
+    pushd $r_root
+
+    R_LIBS=/tmp/r-site-library R CMD Rd2pdf . --no-preview --encoding=utf8 -o $r_build/$r_pdf
+
+    popd
+
+    GZIP=-9 tar zcvf $artifacts_path $docs_build_path
+
     popd
 }
 
@@ -1554,7 +1580,7 @@ build_scala_docs() {
     mkdir -p $docs_build_path
 
     for doc_file in index index.html org lib index.js package.html; do
-        mv $scala_path/$doc_file $docs_build_path 
+        mv $scala_path/$doc_file $docs_build_path
     done
 
     GZIP=-9 tar -zcvf $artifacts_path -C $docs_build_path .
@@ -1574,7 +1600,7 @@ build_julia_docs() {
    export JULIA_DEPOT_PATH='/work/julia-depot'
    export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
-   
+
    julia_doc_path='julia/docs/site/'
    julia_doc_artifact='docs/_build/julia-artifacts.tgz'
 
@@ -1650,14 +1676,14 @@ build_docs() {
     pushd docs/_build
     tar -xzf jekyll-artifacts.tgz
     api_folder='html/api'
-    mkdir -p $api_folder/cpp/docs/api && tar -xzf c-artifacts.tgz --directory $api_folder/cpp/docs/api             
+    mkdir -p $api_folder/cpp/docs/api && tar -xzf c-artifacts.tgz --directory $api_folder/cpp/docs/api
     mkdir -p $api_folder/python/docs && tar -xzf python-artifacts.tgz --directory $api_folder/python/docs
     mkdir -p $api_folder/julia/docs/api && tar -xzf julia-artifacts.tgz --directory $api_folder/julia/docs/api
     mkdir -p $api_folder/scala/docs/api && tar -xzf scala-artifacts.tgz --directory $api_folder/scala/docs/api
     mkdir -p $api_folder/java/docs/api && tar -xzf java-artifacts.tgz --directory $api_folder/java/docs/api
     mkdir -p $api_folder/clojure/docs/api && tar -xzf clojure-artifacts.tgz --directory $api_folder/clojure/docs/api
     GZIP=-9 tar -zcvf full_website.tgz -C html .
-    popd    
+    popd
 }
 
 build_docs_small() {
