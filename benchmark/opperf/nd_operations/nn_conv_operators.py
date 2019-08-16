@@ -51,7 +51,7 @@ MXNet NDArray NN Convolution Operators
 """
 
 
-def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
+def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
     pool_types = ['avg', 'max', 'sum']
     global_pool_types = [0, 1]
 
@@ -65,6 +65,7 @@ def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, r
                                                              run_backward=True,
                                                              dtype=dtype,
                                                              ctx=ctx,
+                                                             profiler=profiler,
                                                              inputs=[{"data": pool1d_data,
                                                                       "kernel": 3,
                                                                       "pool_type": pool_type,
@@ -79,6 +80,7 @@ def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, r
                                                              run_backward=True,
                                                              dtype=dtype,
                                                              ctx=ctx,
+                                                             profiler=profiler,
                                                              inputs=[{"data": pool2d_data,
                                                                       "kernel": (3, 3),
                                                                       "pool_type": pool_type,
@@ -93,7 +95,7 @@ def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, r
     return mx_pooling_op_results
 
 
-def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
+def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
     # Conv1D Benchmarks
     conv1d_benchmark_res = []
     for conv_data in [(32, 3, 256), (32, 3, 64)]:
@@ -101,6 +103,7 @@ def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=2
                                                      run_backward=True,
                                                      dtype=dtype,
                                                      ctx=ctx,
+                                                     profiler=profiler,
                                                      inputs=[{"data": conv_data,
                                                               "weight": (64, 3, 3),
                                                               "bias": (64,),
@@ -120,6 +123,7 @@ def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=2
                                                      run_backward=True,
                                                      dtype=dtype,
                                                      ctx=ctx,
+                                                     profiler=profiler,
                                                      inputs=[{"data": conv_data,
                                                               "weight": (64, 3, 3, 3),
                                                               "bias": (64,),
@@ -137,7 +141,7 @@ def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=2
     return mx_conv_op_results
 
 
-def run_transpose_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10, runs=50):
+def run_transpose_convolution_operators_benchmarks(ctx=mx.cpu(), profiler='native', dtype='float32', warmup=10, runs=50):
     # Conv1DTranspose Benchmarks
     conv1d_transpose_benchmark_res = []
     for conv_data in [(32, 3, 256), (32, 3, 64)]:
@@ -145,6 +149,7 @@ def run_transpose_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32'
                                                                run_backward=True,
                                                                dtype=dtype,
                                                                ctx=ctx,
+                                                               profiler=profiler,
                                                                inputs=[{"data": conv_data,
                                                                         "weight": (3, 64, 3),
                                                                         "bias": (64,),
@@ -166,6 +171,7 @@ def run_transpose_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32'
                                                                run_backward=True,
                                                                dtype=dtype,
                                                                ctx=ctx,
+                                                               profiler=profiler,
                                                                inputs=[{"data": conv_data,
                                                                         "weight": (3, 64, 3, 3),
                                                                         "bias": (64,),
