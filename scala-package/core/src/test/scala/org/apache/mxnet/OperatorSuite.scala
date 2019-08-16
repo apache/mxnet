@@ -965,16 +965,13 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   test("nearest upsampling") {
     for (rootScale <- 1 to 3) {
       for (scale <- 1 to 3) {
-        for (numShape <- 1 to 3) {
-          for (base <- 1 to 3) {
-            val shapes = (0 until numShape).map(i =>
-              Shape(1, 3, base * rootScale * Math.pow(scale, numShape - 1 - i).toInt,
-                     base * rootScale * Math.pow(scale, numShape - 1 - i).toInt))
-            checkNearestUpSamplingWithShape(shapes, scale, rootScale)
-          }
-        }
+        val numShape = 1
+        val shapes = (0 until numShape).map(i =>
+          Shape(1, 3, rootScale, scale))
+        checkNearestUpSamplingWithShape(shapes, scale, rootScale)
       }
     }
+
   }
 
   test("batch norm") {
