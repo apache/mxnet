@@ -25,6 +25,8 @@ from mxnet.gluon import HybridBlock
 from mxnet.base import MXNetError
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray
 from mxnet.test_utils import check_numeric_gradient, use_np
+from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, retry
+import scipy.stats as ss
 from common import assertRaises, with_seed
 import random
 import collections
@@ -1563,6 +1565,51 @@ def test_np_trace():
         except mx.base.MXNetError:
             continue
         assert False
+
+@with_seed()
+@use_np
+def test_np_randn():
+    # Test shapes.
+    shapes = [
+        (3, 3),
+        (3, 4),
+        (0, 0),
+        (3, 3, 3),
+        (0, 0, 0),
+        (2, 2, 4, 3),
+        (2, 2, 4, 3),
+        (2, 0, 3, 0),
+        (2, 0, 2, 3)
+    ]
+    dtypes = ['float16', 'float32', 'float64']
+    for dtype in dtypes:
+        for shape in shapes:
+            data_mx = np.random.randn(*shape, dtype=dtype)
+            assert data_mx.shape == shape
+
+    # Test random generator.
+    ctx = mx.context.current_context()
+    samples = 1000000
+    trials = 8
+    num_buckets = 5
+    mu = 0.0
+    sigma = 1.0
+    for dtype in ['float16', 'float32', 'float64']:
+        buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.norm.ppf(x, mu, sigma), num_buckets)
+        # Quantize bucket boundaries to reflect the actual dtype and adjust probs accordingly
+        buckets = np.array(buckets, dtype=dtype).tolist()
+        probs = [(ss.norm.cdf(buckets[i][1], mu, sigma) -
+                    ss.norm.cdf(buckets[i][0], mu, sigma)) for i in range(num_buckets)]
+        generator_mx = lambda x: np.random.randn(samples, ctx=ctx, dtype=dtype).asnumpy()
+        verify_generator(generator=generator_mx, buckets=buckets, probs=probs,
+                            nsamples=samples, nrepeat=trials)
+        generator_mx_same_seed =\
+            lambda x: _np.concatenate(
+                [np.random.randn(x // 10, ctx=ctx, dtype=dtype).asnumpy()
+                    for _ in range(10)])
+        verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs,
+                            nsamples=samples, nrepeat=trials)
+
 
 if __name__ == '__main__':
     import nose
