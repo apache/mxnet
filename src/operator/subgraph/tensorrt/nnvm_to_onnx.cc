@@ -406,6 +406,18 @@ void ConvertElementwiseAdd(NodeProto* node_proto, const NodeAttrs& /*attrs*/,
   node_proto->set_op_type("Add");
 }
 
+void ConvertElementwiseSub(NodeProto* node_proto, const NodeAttrs& /*attrs*/,
+                           const nnvm::IndexedGraph& /*ig*/,
+                           const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
+  node_proto->set_op_type("Sub");
+}
+
+void ConvertElementwiseMul(NodeProto* node_proto, const NodeAttrs& /*attrs*/,
+                           const nnvm::IndexedGraph& /*ig*/,
+                           const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
+  node_proto->set_op_type("Mul");
+}
+
 void ConvertConcatenate(NodeProto* node_proto, const NodeAttrs& attrs,
                         const nnvm::IndexedGraph& /*ig*/,
                         const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
