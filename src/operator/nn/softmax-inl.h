@@ -180,54 +180,11 @@ struct log_softmax_bwd {
   }
 };
 
-
-template<typename OP1, typename OP2, int Req, bool negate,
-         typename AType, typename DType, typename OType, int ndim>
-inline void SoftmaxGrad(Stream<cpu> *s, OType *out, OType *ograd,
-                        DType *igrad, Shape<ndim> shape, int axis,
-                        const DType temperature) {
-  index_t M = shape[axis];
-  index_t N = shape.Size()/M;
-  Shape<ndim> stride = calc_stride(shape);
-  Shape<ndim> sshape = shape;
-  sshape[axis] = 1;
-  index_t sa = stride[axis];
-
-  #pragma omp parallel for
-  for (index_t i = 0; i < N; ++i) {
-    index_t base = unravel_dot(i, sshape, stride);
-
-    AType sum = AType(0);
-    for (index_t j = 0; j < M; ++j) {
-      sum += OP1::Map(ograd[base + j*sa], out[base + j*sa]);
-    }
-
-    // By default temperature is 1.0.
-    // Adding a branch here to save the CPU 'divide-by-1' computation at runtime
-    DType final_result;
-    if (temperature == 1.0) {
-      for (index_t j = 0; j < M; ++j) {
-        final_result = negate ?
-                       -OP2::Map(ograd[base + j*sa], out[base + j*sa], sum) :
-                       OP2::Map(ograd[base + j*sa], out[base + j*sa], sum);
-        KERNEL_ASSIGN(igrad[base + j*sa], Req, final_result);
-      }
-    } else {
-      for (index_t j = 0; j < M; ++j) {
-        final_result = negate ?
-                       -OP2::Map(ograd[base + j*sa], out[base + j*sa], sum) / temperature :
-                       OP2::Map(ograd[base + j*sa], out[base + j*sa], sum) / temperature;
-        KERNEL_ASSIGN(igrad[base + j*sa], Req, final_result);
-      }
-    }
-  }
-}
-
 template<typename OP1, typename OP2, int Req, bool negate,
          typename AType, typename DType, typename OType, typename IType, int ndim>
-inline void SoftmaxWithLengthGrad(Stream<cpu> *s, OType *out, OType *ograd,
-                                  DType *igrad, IType *length, Shape<ndim> shape,
-                                  int axis, const DType temperature) {
+inline void SoftmaxGrad(Stream<cpu> *s, OType *out, OType *ograd,
+                        DType *igrad, IType *length, Shape<ndim> shape,
+                        int axis, const DType temperature) {
   index_t M = shape[axis];
   index_t N = shape.Size()/M;
   Shape<ndim> stride = calc_stride(shape);
@@ -235,34 +192,65 @@ inline void SoftmaxWithLengthGrad(Stream<cpu> *s, OType *out, OType *ograd,
   sshape[axis] = 1;
   index_t sa = stride[axis];
 
-  #pragma omp parallel for
-  for (index_t i = 0; i < N; ++i) {
-    index_t base = unravel_dot(i, sshape, stride);
-    index_t len = static_cast<index_t>(length[i]);
+  if (length != nullptr) {
+    #pragma omp parallel for
+    for (index_t i = 0; i < N; ++i) {
+      index_t base = unravel_dot(i, sshape, stride);
+      index_t len = static_cast<index_t>(length[i]);
 
-    AType sum = AType(0);
-    for (index_t j = 0; j < len; ++j) {
-      sum += OP1::Map(ograd[base + j*sa], out[base + j*sa]);
-    }
-
-    // By default temperature is 1.0.
-    // Adding a branch here to save the CPU 'divide-by-1' computation at runtime
-    DType final_result;
-    if (temperature == 1.0) {
-      for (index_t j = 0; j < M; ++j) {
-        final_result = negate ?
-                       -OP2::Map(ograd[base + j*sa], out[base + j*sa], sum) :
-                       OP2::Map(ograd[base + j*sa], out[base + j*sa], sum);
-        final_result = (j < len) ? final_result : DType(0.0f);
-        KERNEL_ASSIGN(igrad[base + j*sa], Req, final_result);
+      AType sum = AType(0);
+      for (index_t j = 0; j < len; ++j) {
+        sum += OP1::Map(ograd[base + j*sa], out[base + j*sa]);
       }
-    } else {
+
+      // By default temperature is 1.0.
+      // Adding a branch here to save the CPU 'divide-by-1' computation at runtime
+      DType final_result;
+      if (temperature == 1.0) {
+        for (index_t j = 0; j < M; ++j) {
+          final_result = negate ?
+                         -OP2::Map(ograd[base + j*sa], out[base + j*sa], sum) :
+                         OP2::Map(ograd[base + j*sa], out[base + j*sa], sum);
+          final_result = (j < len) ? final_result : DType(0.0f);
+          KERNEL_ASSIGN(igrad[base + j*sa], Req, final_result);
+        }
+      } else {
+        for (index_t j = 0; j < M; ++j) {
+          final_result = negate ?
+                         -OP2::Map(ograd[base + j*sa], out[base + j*sa], sum) / temperature :
+                         OP2::Map(ograd[base + j*sa], out[base + j*sa], sum) / temperature;
+          final_result = (j < len) ? final_result : DType(0.0f);
+          KERNEL_ASSIGN(igrad[base + j*sa], Req, final_result);
+        }
+      }
+    }
+  } else {
+    #pragma omp parallel for
+    for (index_t i = 0; i < N; ++i) {
+      index_t base = unravel_dot(i, sshape, stride);
+
+      AType sum = AType(0);
       for (index_t j = 0; j < M; ++j) {
-        final_result = negate ?
-                       -OP2::Map(ograd[base + j*sa], out[base + j*sa], sum) / temperature :
-                       OP2::Map(ograd[base + j*sa], out[base + j*sa], sum) / temperature;
-        final_result = (j < len) ? final_result : DType(0.0f);
-        KERNEL_ASSIGN(igrad[base + j*sa], Req, final_result);
+        sum += OP1::Map(ograd[base + j*sa], out[base + j*sa]);
+      }
+
+      // By default temperature is 1.0.
+      // Adding a branch here to save the CPU 'divide-by-1' computation at runtime
+      DType final_result;
+      if (temperature == 1.0) {
+        for (index_t j = 0; j < M; ++j) {
+          final_result = negate ?
+                         -OP2::Map(ograd[base + j*sa], out[base + j*sa], sum) :
+                         OP2::Map(ograd[base + j*sa], out[base + j*sa], sum);
+          KERNEL_ASSIGN(igrad[base + j*sa], Req, final_result);
+        }
+      } else {
+        for (index_t j = 0; j < M; ++j) {
+          final_result = negate ?
+                         -OP2::Map(ograd[base + j*sa], out[base + j*sa], sum) / temperature :
+                         OP2::Map(ograd[base + j*sa], out[base + j*sa], sum) / temperature;
+          KERNEL_ASSIGN(igrad[base + j*sa], Req, final_result);
+        }
       }
     }
   }
@@ -468,59 +456,8 @@ inline void Softmax(Stream<gpu> *s, DType *in, OType *out, IType *length,
 }
 
 template<int x_bits, typename OP1, typename OP2, int Req, bool negate, typename AType, int ndim,
-         typename DType, typename OType>
-__global__ void softmax_gradient_kernel(OType *out, OType *ograd, DType *igrad,
-                                        index_t M, int axis, Shape<ndim> sshape,
-                                        Shape<ndim> stride, const double temperature) {
-  const unsigned x_size = 1 << x_bits;
-  __shared__ AType smem[x_size];
-  index_t sa = stride[axis];
-  index_t base = unravel_dot(blockIdx.x, sshape, stride);
-  index_t x = threadIdx.x;
-
-  red::sum::SetInitValue(smem[x]);
-  for (index_t i = x; i < M; i += x_size) {
-    smem[x] += OP1::Map(ograd[base + i*sa], out[base + i*sa]);
-  }
-  __syncthreads();
-  cuda::Reduce1D<red::sum, x_bits>(smem);
-  __syncthreads();
-  AType ssum = smem[0];
-  __syncthreads();
-
-  DType final_result;
-  for (index_t i = x; i < M; i += x_size) {
-    final_result =
-      negate ?
-      -OP2::Map(ograd[base + i*sa], out[base + i*sa], ssum) :
-      OP2::Map(ograd[base + i*sa], out[base + i*sa], ssum);
-    KERNEL_ASSIGN(igrad[base + i*sa], Req, final_result / static_cast<DType>(temperature));
-  }
-}
-
-
-template<typename OP1, typename OP2, int Req, bool negate, typename AType, int ndim,
-         typename DType, typename OType>
-inline void SoftmaxGrad(Stream<gpu> *s, OType *out, OType *ograd,
-                        DType *igrad, Shape<ndim> shape, int axis,
-                        const double temperature) {
-  const int x_bits = 7;
-  const int x_size = 1 << x_bits;
-  index_t M = shape[axis];
-  index_t N = shape.Size()/M;
-  Shape<ndim> stride = calc_stride(shape);
-  Shape<ndim> sshape = shape;
-  sshape[axis] = 1;
-
-  softmax_gradient_kernel<x_bits, OP1, OP2, Req, negate, AType, ndim>
-    <<<N, x_size, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
-      out, ograd, igrad, M, axis, sshape, stride, temperature);
-  MSHADOW_CUDA_POST_KERNEL_CHECK(softmax_gradient_kernel);
-}
-
-template<int x_bits, typename OP1, typename OP2, int Req, bool negate, typename AType, int ndim,
          typename DType, typename OType, typename IType>
-__global__ void softmax_with_length_grad_kernel(OType *out, OType *ograd, DType *igrad,
+__global__ void softmax_grad_kernel(OType *out, OType *ograd, DType *igrad,
                                                 IType *length, index_t M, int axis,
                                                 Shape<ndim> sshape, Shape<ndim> stride,
                                                 const double temperature) {
@@ -529,7 +466,7 @@ __global__ void softmax_with_length_grad_kernel(OType *out, OType *ograd, DType 
   index_t sa = stride[axis];
   index_t base = unravel_dot(blockIdx.x, sshape, stride);
   index_t x = threadIdx.x;
-  index_t len = static_cast<index_t>(length[blockIdx.x]);
+  index_t len = length != nullptr ? static_cast<index_t>(length[blockIdx.x]) : M;
 
   red::sum::SetInitValue(smem[x]);
   for (index_t i = x; i < len; i += x_size) {
@@ -552,12 +489,11 @@ __global__ void softmax_with_length_grad_kernel(OType *out, OType *ograd, DType 
   }
 }
 
-
 template<typename OP1, typename OP2, int Req, bool negate, typename AType, int ndim,
          typename DType, typename OType, typename IType>
-inline void SoftmaxWithLengthGrad(Stream<gpu> *s, OType *out, OType *ograd,
-                                  DType *igrad, IType *length, Shape<ndim> shape, int axis,
-                                  const double temperature) {
+inline void SoftmaxGrad(Stream<gpu> *s, OType *out, OType *ograd,
+                        DType *igrad, IType *length, Shape<ndim> shape, int axis,
+                        const double temperature) {
   const int x_bits = 7;
   const int x_size = 1 << x_bits;
   index_t M = shape[axis];
@@ -566,10 +502,10 @@ inline void SoftmaxWithLengthGrad(Stream<gpu> *s, OType *out, OType *ograd,
   Shape<ndim> sshape = shape;
   sshape[axis] = 1;
 
-  softmax_with_length_grad_kernel<x_bits, OP1, OP2, Req, negate, AType, ndim>
+  softmax_grad_kernel<x_bits, OP1, OP2, Req, negate, AType, ndim>
     <<<N, x_size, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
       out, ograd, igrad, length, M, axis, sshape, stride, temperature);
-  MSHADOW_CUDA_POST_KERNEL_CHECK(softmax_with_length_grad_kernel);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(softmax_grad_kernel);
 }
 #endif
 
@@ -817,7 +753,16 @@ void SoftmaxGradCompute(const nnvm::NodeAttrs& attrs,
                         const std::vector<OpReqType>& req,
                         const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
+  if (softmax_use_length(attrs)) {
+    MXNET_INT_TYPE_SWITCH(inputs[2].type_flag_, IType, {
+      if (req[1] != kNullOp) {
+        mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(
+          ctx.get_stream<xpu>(), outputs[1].Size(), outputs[1].dptr<IType>());
+      }
+    });
+  }
   if (req[0] == kNullOp) return;
+  const int itype = softmax_use_length(attrs) ? inputs[2].type_flag_ : kInt32;
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
   int axis = CheckAxis(param.axis, inputs[0].ndim());
   const double temperature = param.temperature.has_value() ?
@@ -831,51 +776,41 @@ void SoftmaxGradCompute(const nnvm::NodeAttrs& attrs,
   MXNET_REAL_ACC_TYPE_SWITCH(inputs[0].type_flag_, OType, AType, {
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        if (!softmax_use_length(attrs)) {
+        MXNET_INT_TYPE_SWITCH(itype, IType, {
+          IType * length_ptr = nullptr;
+          if (softmax_use_length(attrs)) {
+            length_ptr = inputs[2].dptr<IType>();
+          }
           if (safe_acc) {
             if (shape.ndim() == 2) {
               SoftmaxGrad<OP1, OP2, Req, negate, AType>(
                   ctx.get_stream<xpu>(), inputs[out_idx].dptr<OType>(),
                   inputs[0].dptr<OType>(), outputs[0].dptr<DType>(),
-                  shape.get<2>(), axis, static_cast<DType>(temperature));
+                  length_ptr, shape.get<2>(), axis,
+                  static_cast<DType>(temperature));
             } else {
               SoftmaxGrad<OP1, OP2, Req, negate, AType>(
                   ctx.get_stream<xpu>(), inputs[out_idx].dptr<OType>(),
                   inputs[0].dptr<OType>(), outputs[0].dptr<DType>(),
-                  shape.get<3>(), axis, static_cast<DType>(temperature));
+                  length_ptr, shape.get<3>(), axis,
+                  static_cast<DType>(temperature));
             }
           } else {
             if (shape.ndim() == 2) {
               SoftmaxGrad<OP1, OP2, Req, negate, DType>(
                   ctx.get_stream<xpu>(), inputs[out_idx].dptr<OType>(),
                   inputs[0].dptr<OType>(), outputs[0].dptr<DType>(),
-                  shape.get<2>(), axis, static_cast<DType>(temperature));
+                  length_ptr, shape.get<2>(), axis,
+                  static_cast<DType>(temperature));
             } else {
               SoftmaxGrad<OP1, OP2, Req, negate, DType>(
                   ctx.get_stream<xpu>(), inputs[out_idx].dptr<OType>(),
                   inputs[0].dptr<OType>(), outputs[0].dptr<DType>(),
-                  shape.get<3>(), axis, static_cast<DType>(temperature));
+                  length_ptr, shape.get<3>(), axis,
+                  static_cast<DType>(temperature));
             }
           }
-        } else {
-          MXNET_INT_TYPE_SWITCH(inputs[2].type_flag_, IType, {
-            if (req[1] != kNullOp) {
-              mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(
-                ctx.get_stream<xpu>(), outputs[1].Size(), outputs[1].dptr<IType>());
-            }
-            if (shape.ndim() == 2) {
-              SoftmaxWithLengthGrad<OP1, OP2, Req, negate, AType>(
-                ctx.get_stream<xpu>(), inputs[out_idx].dptr<OType>(),
-                inputs[0].dptr<OType>(), outputs[0].dptr<DType>(),
-                inputs[2].dptr<IType>(), shape.get<2>(), axis, static_cast<DType>(temperature));
-            } else {
-              SoftmaxWithLengthGrad<OP1, OP2, Req, negate, AType>(
-                ctx.get_stream<xpu>(), inputs[out_idx].dptr<OType>(),
-                inputs[0].dptr<OType>(), outputs[0].dptr<DType>(),
-                inputs[2].dptr<IType>(), shape.get<3>(), axis, static_cast<DType>(temperature));
-            }
-          });
-        }
+        });
       });
     });
   });
