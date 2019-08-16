@@ -353,8 +353,6 @@ class ndarray(NDArray):
                 self._sync_copyfrom(value)
             else:
                 raise ValueError('setting an array element with a sequence.')
-        elif self.size == 0:
-            return
         else:
             key = indexing_key_expand_implicit_axes(key, self.shape)
             slc_key = tuple(idx for idx in key if idx is not None)
