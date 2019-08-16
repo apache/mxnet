@@ -1217,17 +1217,35 @@ int MXShallowCopySymbol(SymbolHandle src, SymbolHandle* out) {
 
 int MXOptimizeForBackend(SymbolHandle sym_handle,
                          const char* backend_name,
-                         SymbolHandle* ret_sym_handle) {
+                         SymbolHandle* ret_sym_handle,
+                         const bool infer_shape_type,
+                         const int dev_type,
+                         const int dev_id,
+                         const mx_uint len,
+                         NDArrayHandle* in_args_handle) {
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol *>(sym_handle);
   *s = sym->Copy();
   nnvm::Graph orig_g = Symbol2Graph(*s);
-  /* TODO
   if (infer_shape_type) {
+    Context default_ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
+    std::map<std::string, Context> ctx_map;
+    NDArray **in_args_ptr = reinterpret_cast<NDArray**>(in_args_handle);
+    mxnet::ShapeVector arg_shapes(len);
+    nnvm::DTypeVector arg_dtypes(len);
+    StorageTypeVector arg_stypes(len);
+    std::vector<Context> in_arg_ctxes(len);
+    std::vector<Context> aux_state_ctxes;
+    for (mx_uint i = 0; i < len; i++) {
+      const auto &in_arg = *(in_args_ptr[i]);
+      arg_shapes.push_back(in_arg.shape());
+      arg_dtypes.push_back(in_arg.dtype());
+      arg_stypes.push_back(in_arg.storage_type());
+      in_arg_ctxes[i] = in_arg.ctx();
     orig_g = InferForwardAttrs(orig_g, arg_shapes, arg_dtypes, arg_stypes,
                                default_ctx, ctx_map, in_arg_ctxes, aux_state_ctxes, true);
-  } */
+  }
   const auto backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(backend_name);
   const auto& subgraph_prop_list = backend->GetSubgraphProperties();
   for (auto property : subgraph_prop_list) {
