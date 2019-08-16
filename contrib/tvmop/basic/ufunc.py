@@ -27,6 +27,7 @@ def compute_add(dtype, ndim):
     s = tvm.create_schedule(C.op)
     return s, A, B, C
 
+
 @defop(name="vadd", target="cpu", auto_broadcast=True,
        dtype=AllTypes, ndim=list(range(1, 6)))
 def vadd(dtype, ndim):
@@ -36,6 +37,7 @@ def vadd(dtype, ndim):
     s[C].parallel(fused)
 
     return s, [A, B, C]
+
 
 @defop(name="cuda_vadd", target="cuda", auto_broadcast=True,
        dtype=["float32", "float64"], ndim=list(range(1, 6)))
@@ -48,3 +50,59 @@ def vadd_gpu(dtype, ndim):
     s[C].bind(bx, tvm.thread_axis("blockIdx.x"))
     s[C].bind(tx, tvm.thread_axis("threadIdx.x"))
     return s, [A, B, C]
+
+
+def reduce_axes(X, axes, reducer):
+    def get_index(idx, ridx):
+        j = 0
+        k = 0
+        ret = []
+        for val in axes:
+            ret.append(idx[j] if val == 0 else ridx[k])
+            j += (val == 0)
+            k += (val != 0)
+        return tuple(ret)
+    
+    ishape = X.shape
+    odim = (len(ishape) + 1 - axes[0]) // 2
+    oshape = [tvm.var() for _ in range(odim)]
+    ridx = [tvm.reduce_axis((0, ishape[i])) for (i, val) in enumerate(axes) if val == 1]
+    ret = tvm.compute(oshape, lambda *idx: reducer(X[get_index(idx, ridx)], axis=ridx), name='ret')
+    return ret
+
+
+def compute_backward_vadd(dtype, ndim, reduce1st):
+    axes = ([reduce1st, 1 - reduce1st] * ndim)[:ndim]
+    X = tvm.placeholder([tvm.var() for _ in range(ndim)], name='X', dtype=dtype)
+    reducer = tvm.comm_reducer(lambda x, y: x + y,
+        lambda t: tvm.const(0, dtype=t), name="sum")
+    ret = reduce_axes(X, axes, reducer)
+    s = tvm.create_schedule(ret.op)
+    return s, X, ret, [ret]
+
+
+@defop(name="backward_vadd", target="cpu", dtype=AllTypes,
+       ndim=list(range(1, 6)), reduce1st=[0, 1], attrs=["reduce1st"])
+def backward_vadd(dtype, ndim, reduce1st):
+    s, X, ret, c_list = compute_backward_vadd(dtype, ndim, reduce1st)
+    for t in c_list:
+        axes = [axis for axis in t.op.axis]
+        fused = s[t].fuse(*axes)
+        s[t].parallel(fused)
+    return s, [X, ret]
+
+
+@defop(name="cuda_backward_vadd", target="gpu", dtype=["float32", "float64"],
+       ndim=list(range(1, 6)), reduce1st=[0, 1], attrs=["reduce1st"])
+def backward_vadd_gpu(dtype, ndim, reduce1st):
+    s, X, ret, c_list = compute_backward_vadd(dtype, ndim, reduce1st)
+    num_thread = 64
+    for t in c_list:
+        block_x = tvm.thread_axis("blockIdx.x")
+        thread_x = tvm.thread_axis("threadIdx.x")
+        axes = [axis for axis in t.op.axis]
+        fused = s[t].fuse(*axes)
+        bx, tx = s[t].split(fused, factor=num_thread)
+        s[t].bind(bx, block_x)
+        s[t].bind(tx, thread_x)
+    return s, [X, ret]

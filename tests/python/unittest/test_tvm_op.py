@@ -16,6 +16,7 @@
 # under the License.
 
 import mxnet as mx
+import numpy as _np
 from mxnet.test_utils import same, rand_shape_nd
 from mxnet.runtime import Features
 from common import with_seed
@@ -29,9 +30,18 @@ def test_tvm_broadcast_add():
         b_shape = (1,) + a_shape[1:2] + (1, 1)
         a = mx.nd.normal(shape=a_shape)
         b = mx.nd.normal(shape=b_shape)
-        c = mx.nd.contrib.tvm_vadd(a, b)
+        a.attach_grad()
+        b.attach_grad()
+        with mx.autograd.record():
+            c = mx.nd.contrib.tvm_vadd(a, b)
         c_np = a.asnumpy() + b.asnumpy()
         assert same(c.asnumpy(), c_np)
+        c.backward()
+        expected_grad_a = _np.ones_like(a.asnumpy()) * c_np.size / a.asnumpy().size
+        expected_grad_b = _np.ones_like(b.asnumpy()) * c_np.size / b.asnumpy().size
+        assert same(a.grad.asnumpy(), expected_grad_a)
+        assert same(b.grad.asnumpy(), expected_grad_b)
+        
 
 if __name__ == '__main__':
     import nose
