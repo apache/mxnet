@@ -26,9 +26,9 @@
 
 #include "./spatial_transformer-inl.h"
 #include <algorithm>
-#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
+#if MXNET_USE_CUDNN == 1
 #include "./cudnn_spatial_transformer-inl.h"
-#endif  // MXNET_USE_CUDNN && CUDNN_MAJOR
+#endif  // MXNET_USE_CUDNN
 
 namespace mshadow {
 template<typename DType>
@@ -214,7 +214,7 @@ namespace op {
 template<>
 Operator* CreateOp<gpu>(SpatialTransformerParam param, int dtype) {
   Operator *op = NULL;
-#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
+#if MXNET_USE_CUDNN == 1
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     if (param.cudnn_off.has_value() && param.cudnn_off.value()) {
       op = new SpatialTransformerOp<gpu, DType>(param);
@@ -226,7 +226,7 @@ Operator* CreateOp<gpu>(SpatialTransformerParam param, int dtype) {
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new SpatialTransformerOp<gpu, DType>(param);
   })
-#endif  // MXNET_USE_CUDNN && CUDNN_MAJOR
+#endif  // MXNET_USE_CUDNN
   return op;
 }
 

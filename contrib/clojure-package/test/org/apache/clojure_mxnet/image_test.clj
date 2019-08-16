@@ -19,9 +19,13 @@
   (:require [org.apache.clojure-mxnet.image :as image]
             [org.apache.clojure-mxnet.ndarray :as ndarray]
             [clojure.java.io :as io]
-            [clojure.test :refer [deftest is use-fixtures]])
+            [clojure.test :refer [deftest is use-fixtures run-tests]]
+            [test-helper])
   (:import (javax.imageio ImageIO)
            (java.io File)))
+
+
+(test-helper/load-test-images)
 
 (def tmp-dir (System/getProperty "java.io.tmpdir"))
 (def image-path (.getAbsolutePath (io/file tmp-dir "Pug-Cookie.jpg")))
