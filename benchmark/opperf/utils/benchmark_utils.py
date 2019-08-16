@@ -24,6 +24,7 @@ from .ndarray_utils import get_mx_ndarray, nd_forward_and_profile, nd_forward_ba
 from .common_utils import merge_map_list
 from .op_registry_utils import prepare_op_inputs
 from benchmark.opperf.rules.default_params import PARAMS_OF_TYPE_NDARRAY
+from .profiler_utils import cpp_profile,python_profile
 
 
 def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
@@ -49,16 +50,24 @@ def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
     return args_list, kwargs_list
 
 
-def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, args_list, kwargs_list):
-    if run_backward:
-        benchmark_helper_func = nd_forward_backward_and_profile
+def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, kwargs_list, profiler):
+    if profiler == 'native':
+        if run_backward:
+            benchmark_helper_func = cpp_profile(nd_forward_backward_and_profile)
+        else:
+            benchmark_helper_func = cpp_profile(nd_forward_and_profile)
+    elif profiler == 'python':
+        if run_backward:
+            benchmark_helper_func = python_profile(nd_forward_backward_and_profile)
+        else:
+            benchmark_helper_func = python_profile(nd_forward_and_profile)
     else:
-        benchmark_helper_func = nd_forward_and_profile
+        raise ValueError("Incorrect input for profiler. Valid input - 'python' or 'native'")
 
+    # Warm up, ignore the profiler output
     if not args_list:
         _, _ = benchmark_helper_func(op, warmup, [], **kwargs_list[0])
-    else:
-    # Warm up, ignore the profiler output
+    else:    
         _, _ = benchmark_helper_func(op, warmup, args_list[0], **kwargs_list[0])
 
     # Run Benchmarks
@@ -83,7 +92,7 @@ def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, ar
 
 
 def run_performance_test(ops, inputs, run_backward=True,
-                         dtype='float32', ctx=mx.cpu(),
+                         dtype='float32', ctx=mx.cpu(), profiler='native',
                          warmup=10, runs=50):
     """Run operator benchmark for given operator or list of operators, ops, with the given inputs.
 
@@ -104,6 +113,9 @@ def run_performance_test(ops, inputs, run_backward=True,
         Precision to use for input tensors. Defaults to float32. Example: 'float32', 'int64'
     ctx: mx.ctx, default mx.cpu()
         Context to use for benchmarks. Default to mx.cpu()
+    profiler: Str, default 'native'
+        Type of profiler to run benchmarks. Default to 'native'
+        Option - ['python', 'native']
     warmup: int, default 10
         Number of warmup runs
     runs: int, default 50
@@ -122,14 +134,14 @@ def run_performance_test(ops, inputs, run_backward=True,
     op_benchmark_result = []
     for op in ops:
         if hasattr(mx.nd, op.__name__):
-            benchmark_result = _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, args_list, kwargs_list)
+            benchmark_result = _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs,args_list, kwargs_list, profiler)
         else:
             raise ValueError("Unknown NDArray operator provided to benchmark. -  ", op.__name__)
         op_benchmark_result.append(benchmark_result)
     return op_benchmark_result
 
 
-def run_op_benchmarks(ops, dtype, ctx, warmup, runs):
+def run_op_benchmarks(ops, dtype, ctx, profiler, warmup, runs):
     # For each operator, run benchmarks
     mx_op_benchmark_results = []
     for _, op_params in ops.items():
@@ -139,6 +151,7 @@ def run_op_benchmarks(ops, dtype, ctx, warmup, runs):
         cur_op_res = run_performance_test(op_params["nd_op_handle"],
                                           run_backward=op_params["has_backward"],
                                           dtype=dtype, ctx=ctx,
+                                          profiler=profiler,
                                           inputs=inputs,
                                           warmup=warmup, runs=runs)
         mx_op_benchmark_results += cur_op_res

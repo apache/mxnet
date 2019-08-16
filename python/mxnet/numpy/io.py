@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,24 +15,29 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# This script builds the static library of openblas that can be used as dependency of mxnet.
-set +e # This script throws an error but otherwise works
-set -x
-OPENBLAS_VERSION=0.3.5
-if [[ ! -e $DEPS_PATH/lib/libopenblas.a ]]; then
-    # download and build openblas
-    >&2 echo "Building openblas..."
 
-    download \
-        https://github.com/xianyi/OpenBLAS/archive/v${OPENBLAS_VERSION}.zip \
-        ${DEPS_PATH}/openblas.zip
-    unzip -q $DEPS_PATH/openblas.zip -d $DEPS_PATH
-    pushd .
-    cd $DEPS_PATH/OpenBLAS-$OPENBLAS_VERSION
+"""I/O functions for ndarrays."""
+from __future__ import absolute_import
+import numpy as onp
+from ..context import current_context
+from .multiarray import array
 
-    $MAKE DYNAMIC_ARCH=1 NO_SHARED=1 USE_OPENMP=1
-    $MAKE PREFIX=$DEPS_PATH install
-    popd
-    ln -s libopenblas.a $DEPS_PATH/lib/libcblas.a
-    ln -s libopenblas.a $DEPS_PATH/lib/liblapack.a
-fi
+__all__ = ['genfromtxt']
+
+
+# TODO(junwu): Add doc
+def genfromtxt(*args, **kwargs):
+    """This is a wrapper of the official NumPy's `genfromtxt` function.
+    Please refer to the documentation here
+    https://docs.scipy.org/doc/numpy/reference/generated/numpy.genfromtxt.html.
+
+    Notes
+    -----
+    This function has added an additional parameter `ctx` which allows to create
+    ndarrays on the user-specified device.
+    """
+    ctx = kwargs.pop('ctx', current_context())
+    if ctx is None:
+        ctx = current_context()
+    ret = onp.genfromtxt(*args, **kwargs)
+    return array(ret, dtype=ret.dtype, ctx=ctx)

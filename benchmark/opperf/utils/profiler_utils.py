@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import time
 import functools
 
 from .common_utils import merge_map_list
@@ -22,7 +23,7 @@ from mxnet import profiler
 
 """
 TODO: Below we are using logic of parsing the MXNet profiler output string to
-fetch the benchmark results. Note that this is a temporary solution till we add 
+fetch the benchmark results. Note that this is a temporary solution till we add
 a new utility API into MXNet profiler to get_summary(), reset(). All the below
 parsing logic should be removed once these read APIs are available in Profiler.
 
@@ -88,7 +89,7 @@ def parse_profiler_dump(operator_name, profiler_dump):
     """
     MXNet profiler output from mx.profiler.dumps() API looks like below. This function parses
     this string profiler output to fetch Memory and Compute metrics.
-    
+
     Profile Statistics.
     Note that counter items are counter values and not time units.
     Device Storage
@@ -151,7 +152,7 @@ def parse_profiler_dump(operator_name, profiler_dump):
     return merge_map_list([memory_profile, operator_profile])
 
 
-def profile(func):
+def cpp_profile(func):
     """Decorator for profiling MXNet operation.
     Uses MXNet profiler to collect metrics on memory usage and execution time
     of the operation.
@@ -163,7 +164,7 @@ def profile(func):
 
     Returns
     -------
-    res, profiler output. res being an return values from operator execution.
+    res, profiler output. res being result returned after operator execution.
     profiler output is a dictionary with summary of operation execution.
     Example output : { "add": [{"avg_time_mem_alloc_cpu/0": 207618.0469,
                                 "avg_time_forward_broadcast_add": 4.204,
@@ -176,7 +177,7 @@ def profile(func):
     """
 
     @functools.wraps(func)
-    def profile_it(*args, **kwargs):
+    def cpp_profile_it(*args, **kwargs):
         # Profile the operation
         profiler.set_config(profile_all=True, aggregate_stats=True)
         profiler.set_state('run')
@@ -186,7 +187,7 @@ def profile(func):
         # Prepare the results
         profiler_dump = profiler.dumps(reset=True)
 
-        # args[0] is assumed to operator name, if not found check for block name.
+        # args[0] is assumed to be operator name, if not found check for block name.
         # NOTE: This parameter should be removed when we get away from parsing
         # profiler output and start using new profiler APIs - get_summary(), reset()
         if len(args) > 0:
@@ -200,4 +201,46 @@ def profile(func):
         profiler_output = parse_profiler_dump(operator_name, profiler_dump)
         return res, profiler_output
 
-    return profile_it
+    return cpp_profile_it
+
+
+def python_profile(func):
+    """Decorator for profiling MXNet operation.
+    Uses Python's time module to collect execution time information
+    of the operation.
+
+    Parameters
+    ----------
+    func:
+        Operation to be executed and timed.
+
+    Returns
+    -------
+    res, timing output. res being result returned after operator execution.
+    profiler output is a dictionary with summary of operation execution.
+    Example output : { "add": [{"avg_time_add": 0.4053089120425284,
+                                "inputs": {
+                                    "lhs": [1024, 1024],
+                                    "rhs": [1024,1024]
+                                }]
+                     }
+    """
+
+    @functools.wraps(func)
+    def python_profile_it(*args, **kwargs):
+        start_time = time.perf_counter()    # 1
+        res = func(*args, **kwargs)
+        end_time = time.perf_counter()      # 2
+        run_time = end_time - start_time    # 3
+
+        # NOTE : same as cpp_profile_it
+        if len(args) > 0:
+            operator_name = args[0].__name__
+        elif 'block' in kwargs:
+            operator_name = kwargs['block']._op_name
+        else:
+            raise ValueError("Unable to identify operator name to extract profiler output!")
+
+        profiler_output = {'avg_time_'+str(operator_name): run_time}
+        return res, profiler_output
+    return python_profile_it
