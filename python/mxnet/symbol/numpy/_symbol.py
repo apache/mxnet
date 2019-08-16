@@ -52,7 +52,6 @@ class _Symbol(Symbol):
 
     def __getitem__(self, key): # pylint: disable = too-many-return-statements, inconsistent-return-statements
         num_outputs = len(self)
-        # print("Num of outputs is ", num_outputs)
         if num_outputs == 1: # pylint: disable = too-many-nested-blocks
             # If number of output is one and is not a list, perform ndarray basic slicing
             if not self._output_is_list:
@@ -123,7 +122,6 @@ class _Symbol(Symbol):
                 raise NotImplementedError
         else:
             raise NotImplementedError
-
 
     def __setitem__(self, key, value):
         raise NotImplementedError

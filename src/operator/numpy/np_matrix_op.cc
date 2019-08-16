@@ -199,7 +199,7 @@ bool NumpyXReshapeInferShape(const mxnet::TShape& src,
         const int d2 = src[src_inx++];
         if (!mxnet::dim_size_is_known(d1) || !mxnet::dim_size_is_known(d2)) {
           CHECK_LT(unknown_axis, 0)
-          << "One and only one dim can be inferred";
+            << "One and only one dim can be inferred";
           unknown_axis = output_shape_vector.size();
           output_shape_vector.push_back(-1);
         } else {
@@ -221,11 +221,11 @@ bool NumpyXReshapeInferShape(const mxnet::TShape& src,
           <<"Split dims " << d1 << ", " << d2 << " do not divide original dim " << d0;
         if (d1 == -1) {
           CHECK_LT(unknown_axis, 0)
-          << "One and only one dim can be inferred";
+            << "One and only one dim can be inferred";
           unknown_axis = output_shape_vector.size();
         } else if (d2 == -1) {
           CHECK_LT(unknown_axis, 0)
-          << "One and only one dim can be inferred";
+            << "One and only one dim can be inferred";
           unknown_axis = output_shape_vector.size() + 1;
         }
         known_dim_size_prod *= d0 == -1 ? 1 : d0;
@@ -242,7 +242,7 @@ bool NumpyXReshapeInferShape(const mxnet::TShape& src,
     if (unknown_axis > -1) {
       // if the input in zero size tensor, the output must be of known shape of zero size
       CHECK_NE(known_dim_size_prod, 0) << "Cannot reshape array of size "
-                                      << src.Size() << " into shape " << target;
+                                       << src.Size() << " into shape " << target;
       CHECK(src.Size() % known_dim_size_prod == 0)
         << "Cannot reshape array of size " << src.Size() << " into shape " << target;
       output_shape_vector[unknown_axis] = src.Size() / known_dim_size_prod;
@@ -252,7 +252,7 @@ bool NumpyXReshapeInferShape(const mxnet::TShape& src,
     CHECK_EQ((*output).Size(), src.Size())
       << "Target output shape of size " << (*output).Size()
       << " does not match the input shape of size " << src.Size();
-          return true;
+    return true;
   }
 }
 
@@ -267,7 +267,7 @@ bool NumpyXReshapeShape(const nnvm::NodeAttrs& attrs,
   for (int i = 0; i < param.newshape.ndim(); ++i) {
     if (param.newshape[i] < 0) {
       CHECK_GE(param.newshape[i], -6)
-      << "Dimension size must be greater than or equal to -6";
+        << "Dimension size must be greater than or equal to -6";
       if (param.newshape[i] == -1) {
         CHECK(!has_unknown_dim_size) << "Can only specify one unknown dimension";
         has_unknown_dim_size = true;
@@ -290,11 +290,11 @@ bool NumpyReshapeShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U) << "Input: [data]";
   CHECK_EQ(out_attrs->size(), 1U);
   const NumpyReshapeParam& param = nnvm::get<NumpyReshapeParam>(attrs.parsed);
-    // sanity check
+  // sanity check
   bool has_unknown_dim_size = false;
   for (int i = 0; i < param.newshape.ndim(); ++i) {
     if (param.newshape[i] < 0) {
-            CHECK_EQ(param.newshape[i], -1) << "The shape dimension size to inferred must be -1";
+      CHECK_EQ(param.newshape[i], -1) << "The shape dimension size to inferred must be -1";
       CHECK(!has_unknown_dim_size) << "Can only specify one unknown dimension";
       has_unknown_dim_size = true;
     }
