@@ -141,6 +141,24 @@ class MXNetGraph(object):
         # Provide input data as well as input params to infer_shape()
         _, out_shapes, _ = sym.infer_shape(**inputs)
 
+        if not out_shapes:
+            import mxnet as mx
+            out_shapes = []
+
+            data_forward = []
+            data_names = []
+            for k, v in inputs.items():
+                data_names.append(k)
+                data_forward.append(mx.nd.array(mx.nd.random_normal(shape=v)))
+
+            args = dict(zip(data_names, data_forward))
+            exe = sym.bind(mx.cpu(0), args=args, aux_states=None)
+            exe.forward(is_train=False)
+            result = []
+            for output in exe.outputs:
+                result.append(output.asnumpy())
+                out_shapes.append(output.asnumpy().shape)
+
         out_names = list()
         for name in sym.list_outputs():
             if name.endswith('_output'):
