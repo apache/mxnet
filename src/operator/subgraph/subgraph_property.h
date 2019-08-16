@@ -221,9 +221,9 @@ class SubgraphProperty {
     return nullptr;
   }
 
-  virtual PrePartition() {}
+  virtual void PrePartition(const nnvm::Graph g) {}
 
-  virtual PostPartition() {}
+  virtual void PostPartition(const nnvm::Graph g) {}
 
   virtual SubgraphSelectorV2Ptr CreateSubgraphSelectorV2() const {
     auto v1_ptr = CreateSubgraphSelector();
