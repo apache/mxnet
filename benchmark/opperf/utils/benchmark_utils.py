@@ -134,7 +134,7 @@ def run_performance_test(ops, inputs, run_backward=True,
     op_benchmark_result = []
     for op in ops:
         if hasattr(mx.nd, op.__name__):
-            benchmark_result = _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs,args_list, kwargs_list, profiler)
+            benchmark_result = _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, args_list, kwargs_list, profiler)
         else:
             raise ValueError("Unknown NDArray operator provided to benchmark. -  ", op.__name__)
         op_benchmark_result.append(benchmark_result)

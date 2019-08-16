@@ -25,7 +25,7 @@ MX_OP_MODULE = sys.modules["mxnet.ndarray.op"]
 
 """Default Input Tensor shapes to use for benchmarking"""
 
-# For operators like concat, Elementwisesum, squeeze, stack
+# For operators like concat, ElementWiseSum, squeeze, stack
 # argument data is passed as variable arg (*args)
 DEFAULT_ARGS = [(1024, 1024)]
 
