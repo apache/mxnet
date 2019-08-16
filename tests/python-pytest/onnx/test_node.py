@@ -274,11 +274,7 @@ test_cases = [
     ("test_random_normal", mx.sym.random_normal, "RandomNormal", [],
      {'shape': (2, 2), 'loc': 0, 'scale': 1}, False, {'modify': {'loc': 'mean'}}, False, True),
     ("test_random_uniform", mx.sym.random_uniform, "RandomUniform", [],
-     {'shape': (2, 2), 'low': 0.5, 'high': 1.0}, False, {}, False, True),
-    ("test_slice_axis", mx.sym.slice_axis, "Slice", [get_rnd((2, 3, 20, 20))],
-     {'axis': 0, 'begin': 0, 'end': None}, False,
-     {'remove': ['axis', 'begin', 'end'],
-      'add': {'axes': [0], 'starts': [0], 'ends': [sys.maxsize]}}, True, False)
+     {'shape': (2, 2), 'low': 0.5, 'high': 1.0}, False, {}, False, True)
 ]
 
 test_scalar_ops = ['Add', 'Sub', 'rSub' 'Mul', 'Div', 'Pow']
