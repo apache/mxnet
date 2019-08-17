@@ -26,6 +26,7 @@
 #include <unordered_map>
 #include <vector>
 #include <string>
+#include <utility>
 
 namespace mxnet {
 namespace op {

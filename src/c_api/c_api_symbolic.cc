@@ -30,6 +30,7 @@
 #include "nnvm/pass_functions.h"
 #include "nnvm/symbolic.h"
 #include "./c_api_common.h"
+#include "../common/exec_utils.h"
 #include "../operator/operator_common.h"
 #include "../executor/exec_pass.h"
 #include "../operator/subgraph/subgraph_property.h"
@@ -1246,8 +1247,9 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
       arg_dtypes.push_back(in_arg.dtype());
       arg_stypes.push_back(in_arg.storage_type());
       in_arg_ctxes[i] = in_arg.ctx();
-    orig_g = InferForwardAttrs(orig_g, arg_shapes, arg_dtypes, arg_stypes,
-                               default_ctx, ctx_map, in_arg_ctxes, aux_state_ctxes, true);
+    }
+    orig_g = common::InferForwardAttrs(orig_g, arg_shapes, arg_dtypes, arg_stypes, default_ctx,
+                                       ctx_map, in_arg_ctxes, aux_state_ctxes, true);
   }
   std::vector<std::pair<std::string, std::string>> options_map;
   for (mx_uint i = 0; i < num_options; ++i) {
