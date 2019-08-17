@@ -114,8 +114,12 @@ def test_ndarray_random_uniform():
 @with_seed()
 def test_ndarray_random_shuffle():
     a = nd.ones(shape=LARGE_X)
+    a[-1] == 3
     a = nd.random.shuffle(a)
-    assert a[-1] in np.unique(a.asnumpy())
+    unique_a = np.unique(a.asnumpy())
+    assert len(unique_a) == 2  # only 2 unique values
+    assert unique_a[0] == 1  # first unique value is 1
+    assert unique_a[1] == 3  # second unique value is 3
     assert a.shape[0] == LARGE_X
 
 

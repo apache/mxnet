@@ -164,6 +164,22 @@ def test_ndarray_random_randn():
     # Add check for (x,y,m,n) where x,y shape of loc,scale and m,n input shape
 
 
+@with_seed()
+def test_ndarray_random_shuffle():
+    a = nd.ones(shape=(LARGE_X, SMALL_Y))
+    a[-1] == 3  # assign 3 to entire last row
+    a = nd.random.shuffle(a)
+    # slice first column from shuffled array
+    # pass LARGE_X values to numpy instead of LARGE_X*SMALL_Y
+    # could have assigned to last column (so as to pass SMALL_Y)
+    # but shuffle operation is performed along first axis
+    unique_a = np.unique(a[:, 0].asnumpy())
+    assert len(unique_a) == 2  # only 2 unique values
+    assert unique_a[0] == 1  # first unique value is 1
+    assert unique_a[1] == 3  # second unique value is 3
+    assert a.shape[0] == (LARGE_X, SMALL_Y)
+
+
 def test_ndarray_empty():
     a = nd.empty((LARGE_X, SMALL_Y))
     assert a.shape == (LARGE_X, SMALL_Y)
