@@ -1534,7 +1534,7 @@ def docs_jekyll() {
 }
 
 
-// This is for the full website
+// This is for publishing the full website
 def docs_prepare() {
     return ['Prepare for publication of the full website': {
       node(NODE_LINUX_CPU) {
@@ -1545,14 +1545,19 @@ def docs_prepare() {
             unstash 'jekyll-artifacts'
             unstash 'c-artifacts'
             unstash 'python-artifacts'
+            unstash 'r-artifacts'
             unstash 'julia-artifacts'
             unstash 'scala-artifacts'
             unstash 'java-artifacts'
             unstash 'clojure-artifacts'
 
             utils.docker_run('ubuntu_cpu_jekyll', 'build_docs', false)
-            //utils.pack_lib('full_website', 'docs/_build/full_website.tgz', false)
-            // TODO: Make sure this 'test-website-publish' understand the new structure
+
+            // only stash if we're going to unstash later
+            // utils.pack_lib('full_website', 'docs/_build/full_website.tgz', false)
+
+            // archive so the publish pipeline can access the artifact
+            archiveArtifacts 'docs/_build/full_website.tgz'
           }
         }
       }
