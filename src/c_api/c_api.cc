@@ -1,3 +1,4 @@
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -175,7 +176,9 @@ int MXLoadLib(const char *path) {
     };
 
     //re-register op in MXNet using lambda converter functions
-    nnvm::Op &regOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(name);
+    std::string contrib_name("_contrib_");
+    contrib_name += name;
+    nnvm::Op &regOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(contrib_name.c_str());
     regOp.set_attr<FCompute>("FCompute<cpu>",fcomp_conv);
   }
   
