@@ -123,6 +123,72 @@ def test_ndarray_random_shuffle():
     assert a.shape[0] == LARGE_X
 
 
+def test_exponent_logarithm_operators():
+    a = 2*nd.ones(shape=(LARGE_X))
+    # exponent
+    result = nd.exp(a)
+    assert result[-1] == 7.389056
+    assert result.shape == a.shape
+
+    # exponent minus 1
+    result = nd.expm1(a)
+    assert result[-1] == 6.389056
+    assert result.shape == a.shape
+
+    # log2
+    result = nd.log2(a)
+    assert result[-1] == 1
+    assert result.shape == a.shape
+
+    # log10
+    result = nd.log10(a)
+    assert result[-1] == 0.30103
+    assert result.shape == a.shape
+
+    # log1p
+    result = nd.log1p(a)
+    assert result[-1] == 1.0986123
+    assert result.shape == a.shape
+
+    # log
+    result = nd.log(a)
+    assert result[-1] == 0.6931472
+    assert result.shape == a.shape
+
+
+def test_power_operators():
+    a = 2*nd.ones(shape=(LARGE_X))
+    # sqrt
+    result = nd.sqrt(a)
+    assert result[-1] == 1.4142135
+    assert result.shape == a.shape
+
+    # rsqrt
+    result = nd.rsqrt(a)
+    assert result[-1] == 0.70710677
+    assert result.shape == a.shape
+
+    # cbrt
+    result = nd.cbrt(a)
+    assert result[-1] == 1.2599211
+    assert result.shape == a.shape
+
+    # rcbrt
+    result = nd.rcbrt(a)
+    assert result[-1] == 0.7937005
+    assert result.shape == a.shape
+
+    # square
+    result = nd.square(a)
+    assert result[-1] == 4
+    assert result.shape == a.shape
+
+    # reciprocal
+    result = nd.reciprocal(a)
+    assert result[-1] == 0.5
+    assert result.shape == a.shape
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
