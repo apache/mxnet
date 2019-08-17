@@ -86,8 +86,8 @@ def test_ndarray_random_randint():
 def test_ndarray_random_exponential():
     scale_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
     a = nd.random.exponential(scale=scale_array, shape=(SMALL_X, SMALL_Y))
-    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
     assert a[-1][0][0][0] >= 0
+    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
 
 
 @with_seed()
@@ -96,8 +96,8 @@ def test_ndarray_random_gamma():
     beta_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
     a = nd.random.gamma(alpha=alpha_array, beta=beta_array,
                         shape=(SMALL_X, SMALL_Y))
-    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
     assert a[-1][0][0][0] >= 0
+    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
 
 
 @with_seed()
@@ -105,16 +105,16 @@ def test_ndarray_random_multinomial():
     # test 1 shape dimension
     probs = nd.random.uniform(shape=(LARGE_X, SMALL_Y))
     a = nd.random.multinomial(probs)
-    assert a.shape == (LARGE_X,)
     assert a[-1] >= 0
+    assert a.shape == (LARGE_X,)
     # test for NDArray multi-dimension shape
     a = nd.random.multinomial(probs, shape=(SMALL_X, SMALL_Y))
-    assert a.shape == (LARGE_X, SMALL_X, SMALL_Y)
     assert a[-1][0][0] >= 0
+    assert a.shape == (LARGE_X, SMALL_X, SMALL_Y)
     # test log_likelihood output shape
     a = nd.random.multinomial(probs, shape=(SMALL_X, SMALL_Y), get_prob=True)
-    assert a[0].shape == (LARGE_X, SMALL_X, SMALL_Y) and a[0].shape == a[1].shape
     assert a[-1][0][0] >= 0
+    assert a[0].shape == (LARGE_X, SMALL_X, SMALL_Y) and a[0].shape == a[1].shape
 
 
 @with_seed()
@@ -123,8 +123,8 @@ def test_ndarray_random_generalized_negative_binomial():
     mu_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
     a = nd.random.generalized_negative_binomial(mu=mu_array, alpha=alpha_array,
                                                 shape=(SMALL_X, SMALL_Y))
-    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
     assert a[-1][0][0][0] >= 0
+    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
 
 
 @with_seed()
@@ -133,8 +133,8 @@ def test_ndarray_random_negative_binomial():
     p_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
     a = nd.random.negative_binomial(k=k_array, p=p_array,
                                     shape=(SMALL_X, SMALL_Y))
-    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
     assert a[-1][0][0][0] >= 0
+    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
 
 
 @with_seed()
@@ -143,23 +143,23 @@ def test_ndarray_random_normal():
     loc_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
     a = nd.random.normal(loc=loc_array, scale=scale_array,
                          shape=(SMALL_X, SMALL_Y))
-    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
     assert a[-1][0][0][0] >= 0
+    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
 
 
 @with_seed()
 def test_ndarray_random_poisson():
     lambda_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
     a = nd.random.poisson(lam=lambda_array, shape=(SMALL_X, SMALL_Y))
-    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
     assert a[-1][0][0][0] >= 0
+    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
 
 
 @with_seed()
 def test_ndarray_random_randn():
     a = nd.random.randn(LARGE_X, SMALL_Y)
-    assert a.shape == (LARGE_X, SMALL_Y)
     assert a[-1][0] >= 0
+    assert a.shape == (LARGE_X, SMALL_Y)
     # TODO: Once PR for randn ndarray dtype for loc,scale param merged
     # Add check for (x,y,m,n) where x,y shape of loc,scale and m,n input shape
 
@@ -408,22 +408,22 @@ def create_2d_tensor(rows, columns, dtype=np.int64):
 def test_transpose():
     b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
     t = b.T
-    assert t.shape == (SMALL_Y, LARGE_X)
     assert np.sum(t[:, -1].asnumpy() == (LARGE_X - 1)) == b.shape[1]
+    assert t.shape == (SMALL_Y, LARGE_X)
 
 
 def test_swapaxes():
     b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
     t = nd.swapaxes(b, dim1=0, dim2=1)
-    assert t.shape == (SMALL_Y, LARGE_X)
     assert np.sum(t[:, -1].asnumpy() == (LARGE_X - 1)) == b.shape[1]
+    assert t.shape == (SMALL_Y, LARGE_X)
 
 
 def test_flip():
     b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
     t = nd.flip(b, axis=0)
-    assert t.shape == (LARGE_X, SMALL_Y)
     assert np.sum(t[-1, :].asnumpy() == 0) == b.shape[1]
+    assert t.shape == (LARGE_X, SMALL_Y)
 
 
 def test_softmax():
