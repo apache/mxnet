@@ -190,6 +190,11 @@ typedef int (*opRegGet_t)(int, const char**, fcomp_t*,
                           parseAttrs_t*, inferType_t*,
                           inferShape_t*);
 
+#define MXLIB_OPCALLFCOMP_STR "_opCallFCompute"
+typedef int (*opCallFComp_t)(fcomp_t, const char* const*, const char* const*, int,
+                             const int64_t**, int*, void**, int*, int,
+                             const int64_t**, int*, void**, int*, int);
+
 #define MXLIB_INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int);
 
@@ -215,6 +220,38 @@ extern "C" {
     *shape = op.infer_shape;
   }
 
+  int _opCallFCompute(fcomp_t fcomp, const char* const* keys, const char* const* vals, int num,
+                      const int64_t** inshapes, int* indims, void** indata, int* intypes, int num_in,
+                      const int64_t** outshapes, int* outdims, void** outdata, int* outtypes, int num_out) {
+    //create map of attributes from list
+    std::map<std::string,std::string> attrs;
+    for(int i=0; i<num; i++) {
+      attrs[std::string(keys[i])] = std::string(vals[i]);
+    }
+
+    //create a vector of tensors for inputs
+    std::vector<MXTensor> inputs(num_in);
+    for(int i=0; i<num_in; i++) {
+      inputs[i].data = indata[i];
+      inputs[i].dtype = (MXDType)intypes[i];
+      for(int j=0; j<indims[i]; j++) {
+        inputs[i].shape.push_back(inshapes[i][j]);
+      }
+    }
+
+    //create a vector of tensors for outputs
+    std::vector<MXTensor> outputs(num_out);
+    for(int i=0; i<num_out; i++) {
+      outputs[i].data = outdata[i];
+      outputs[i].dtype = (MXDType)outtypes[i];
+      for(int j=0; j<outdims[i]; j++) {
+        outputs[i].shape.push_back(outshapes[i][j]);
+      }
+    }
+
+    return fcomp(attrs,inputs,outputs);
+  }
+  
   /*!
    * \brief Checks if the MXNet version is supported by the library.
    * If supported, initializes the library.

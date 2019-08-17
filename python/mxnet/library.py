@@ -20,7 +20,9 @@
 from __future__ import absolute_import
 import ctypes
 import os
-from .base import _LIB, check_call, MXNetError
+from .base import _LIB, check_call, MXNetError, _init_op_module
+from .ndarray.register import _make_ndarray_function
+from .symbol.register import _make_symbol_function
 
 def load(path):
     """Loads library dynamically.
@@ -47,3 +49,7 @@ def load(path):
     byt_obj = path.encode('utf-8')
     chararr = ctypes.c_char_p(byt_obj)
     check_call(_LIB.MXLoadLib(chararr))
+
+    #regenerate operators
+    _init_op_module('mxnet', 'ndarray', _make_ndarray_function)
+    _init_op_module('mxnet', 'symbol', _make_symbol_function)
