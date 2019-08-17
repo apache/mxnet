@@ -31,3 +31,5 @@ if (os.name=='posix'):
 elif (os.name=='nt'):
     path = os.path.abspath('mylib.so')
     mx.library.load(path)
+
+print(mx.nd.sam)

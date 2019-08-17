@@ -99,14 +99,20 @@ int MXLoadLib(const char *path) {
   if (!lib)
     LOG(FATAL) << "Unable to load library";
 
+  //initialize library by passing MXNet version
   initialize_t initialize = get_func<initialize_t>(lib, const_cast<char*>(MXLIB_INITIALIZE_STR));
   if (!initialize(static_cast<int>(MXNET_VERSION)))
     LOG(FATAL) << "Library failed to initialize";
 
+  //get function to call fcompute
+  opCallFComp_t callFComp = get_func<opCallFComp_t>(lib, const_cast<char*>(MXLIB_OPCALLFCOMP_STR));
+  
+  //get number of operators registered in the library
   opRegSize_t opRegSize = get_func<opRegSize_t>(lib, const_cast<char*>(MXLIB_OPREGSIZE_STR));
   int numOps = opRegSize();
   LOG(INFO) << "Found " << numOps << " operators in library";
 
+  //loop and register each operator in the library
   opRegGet_t opRegGet = get_func<opRegGet_t>(lib, const_cast<char*>(MXLIB_OPREGGET_STR));
   for(int i=0; i<numOps; i++) {
     const char* name;
@@ -114,9 +120,11 @@ int MXLoadLib(const char *path) {
     parseAttrs_t parse = nullptr;
     inferType_t type = nullptr;
     inferShape_t shape = nullptr;
-    
+
+    //get operator from the library
     opRegGet(i,&name, &fcomp, &parse, &type, &shape);
 
+    //validate operator in the library
     CHECK(fcomp != nullptr) << "Error loading '" << name << "' custom op, FCompute function was not set.";
     CHECK(parse != nullptr) << "Error loading '" << name << "' custom op, ParseAttrs function was not set.";
     CHECK(type  != nullptr) << "Error loading '" << name << "' custom op, InferType function was not set.";
@@ -124,6 +132,51 @@ int MXLoadLib(const char *path) {
     
     LOG(INFO) << "\tOp[" << i << "] " << name;
 
+    std::string name_str(name);
+    //generate lambda functions to convert from MXNet types to external types
+    auto fcomp_conv = [=](const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const std::vector<TBlob>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<TBlob>& outputs) {
+      //convert attributes to vector of char*
+      std::vector<const char*> attr_keys,attr_vals;
+      for(auto kv : attrs.dict) {
+        attr_keys.push_back(kv.first.c_str());
+        attr_vals.push_back(kv.second.c_str());
+      }
+      
+      std::vector<void*> in_data, out_data;
+      std::vector<const int64_t *> in_shapes, out_shapes;
+      std::vector<int> in_dims, out_dims;
+      std::vector<int> in_types, out_types;
+
+      //convert input tensors to constituant parts
+      for(size_t i=0; i<inputs.size(); i++) {
+        in_data.push_back(inputs[i].dptr_);
+        in_shapes.push_back(inputs[i].shape_.data());
+        in_dims.push_back(inputs[i].shape_.ndim());
+        in_types.push_back(inputs[i].type_flag_);
+      }
+
+      //convert output tensors to constituant parts
+      for(size_t i=0; i<outputs.size(); i++) {
+        out_data.push_back(outputs[i].dptr_);
+        out_shapes.push_back(outputs[i].shape_.data());
+        out_dims.push_back(outputs[i].shape_.ndim());
+        out_types.push_back(outputs[i].type_flag_);
+      }
+
+      //call fcompute function
+      CHECK(callFComp(fcomp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                      in_shapes.data(), in_dims.data(), in_data.data(), in_types.data(), in_data.size(),
+                      out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(), out_data.size()))
+            << "Error calling FCompute for custom operator '" << name_str << "'";
+    };
+
+    //re-register op in MXNet using lambda converter functions
+    nnvm::Op &regOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(name);
+    regOp.set_attr<FCompute>("FCompute<cpu>",fcomp_conv);
   }
   
   API_END();
