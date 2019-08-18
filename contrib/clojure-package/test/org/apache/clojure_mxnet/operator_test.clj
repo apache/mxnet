@@ -588,7 +588,7 @@
 (deftest test-nearest-upsampling
   (doall (for [root-scale (range 1 4)
                scale (range 1 4)
-               num-shape (1)
+               num-shape (range 1 2)
                base (range 1 4)]
             (let [shape-vecs (mapv (fn [i] [1 3 (* base root-scale (int (Math/pow scale (- (dec num-shape) i))))
                                            (* base root-scale (int (Math/pow scale (- (dec num-shape) i))))])
