@@ -27,7 +27,7 @@ from . import _internal as _npi
 from ..ndarray import NDArray
 
 __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'tensordot',
-           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate']
+           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -705,3 +705,30 @@ def concatenate(seq, axis=0, out=None):
         The concatenated array.
     """
     return _npi.concatenate(*seq, dim=axis, out=out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def stack(arrays, axis=0, out=None):
+    """Join a sequence of arrays along a new axis.
+        The axis parameter specifies the index of the new axis in the dimensions of the result.
+        For example, if `axis=0` it will be the first dimension and if `axis=-1` it will be the last dimension.
+    Parameters
+    ----------
+    arrays : sequence of array_like
+        Each array must have the same shape.
+    axis : int, optional
+        The axis in the result array along which the input arrays are stacked.
+    out : ndarray, optional
+        If provided, the destination to place the result. The shape must be correct,
+        matching that of what stack would have returned if no out argument were specified.
+    Returns
+    -------
+    stacked : ndarray
+        The stacked array has one more dimension than the input arrays."""
+    def get_list(arrays):
+        if not hasattr(arrays, '__getitem__') and hasattr(arrays, '__iter__'):
+            raise ValueError("expected iterable for arrays but got {}".format(type(arrays)))
+        return [arr for arr in arrays]
+
+    arrays = get_list(arrays)
+    return _npi.stack(*arrays, axis=axis, out=out)
