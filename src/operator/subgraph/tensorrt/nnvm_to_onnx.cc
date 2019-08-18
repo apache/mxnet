@@ -329,7 +329,6 @@ void ConvertPooling(NodeProto* node_proto, const NodeAttrs& attrs,
   } else {
     count_include_pad->set_i(1);
   }
-
 }  // end ConvertPooling
 
 void ConvertRelu(NodeProto* node_proto, const NodeAttrs& /*attrs*/,
