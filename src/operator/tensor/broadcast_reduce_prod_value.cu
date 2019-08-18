@@ -19,25 +19,25 @@
 
 /*!
  *  Copyright (c) 2016 by Contributors
- * \file broadcast_reduce_op_value.cu
- * \brief GPU Implementation of broadcast and reduce functions based on value.
+ * \file broadcast_reduce_prod_value.cu
+ * \brief GPU Implementation of broadcast and reduce prod functions based on value.
  */
 #include "./broadcast_reduce_op.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(broadcast_axis)
-.set_attr<FCompute>("FCompute<gpu>", BroadcastCompute<gpu>);
+NNVM_REGISTER_OP(prod)
+.set_attr<FCompute>("FCompute<gpu>", ReduceAxesCompute<gpu, mshadow_op::product>);
 
-NNVM_REGISTER_OP(broadcast_to)
-.set_attr<FCompute>("FCompute<gpu>", BroadcastCompute<gpu>);
+NNVM_REGISTER_OP(_backward_prod)
+.set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseInOut<gpu, mshadow_op::rdiv>);
 
-NNVM_REGISTER_OP(broadcast_like)
-.set_attr<FCompute>("FCompute<gpu>", BroadcastCompute<gpu>);
+NNVM_REGISTER_OP(nanprod)
+.set_attr<FCompute>("FCompute<gpu>", ReduceAxesCompute<gpu, mshadow_op::nanprod>);
 
-NNVM_REGISTER_OP(_broadcast_backward)
-.set_attr<FCompute>("FCompute<gpu>", ReduceAxesCompute<gpu, mshadow::red::sum>);
+NNVM_REGISTER_OP(_backward_nanprod)
+.set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseInOut<gpu, mshadow_op::nanprod_grad>);
 
 }  // namespace op
 }  // namespace mxnet

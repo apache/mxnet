@@ -1142,6 +1142,14 @@ int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend_name,
   auto backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(backend_name);
   const auto& subgraph_prop_list = backend->GetSubgraphProperties();
   for (auto property : subgraph_prop_list) {
+    if (property->HasAttr("disable") && property->GetAttr<bool>("disable") == true) {
+      auto full_name = property->HasAttr("property_name")
+                           ? property->GetAttr<std::string>("property_name")
+                           : std::string();
+      LOG(INFO) << "subgraph property " << full_name << " from backend " << backend_name
+                << " is disabled.";
+      continue;
+    }
     nnvm::Graph g = Symbol2Graph(*s);
     property->SetAttr("graph", g);
     g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
