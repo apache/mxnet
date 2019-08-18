@@ -190,6 +190,10 @@ typedef int (*opRegGet_t)(int, const char**, fcomp_t*,
                           parseAttrs_t*, inferType_t*,
                           inferShape_t*);
 
+#define MXLIB_OPCALLPARSEATTRS_STR "_opCallParseAttrs"
+typedef int (*opCallParseAttrs_t)(parseAttrs_t, const char* const*, const char* const*, int,
+                                  int*, int*);
+
 #define MXLIB_OPCALLFCOMP_STR "_opCallFCompute"
 typedef int (*opCallFComp_t)(fcomp_t, const char* const*, const char* const*, int,
                              const int64_t**, int*, void**, int*, int,
@@ -220,6 +224,18 @@ extern "C" {
     *shape = op.infer_shape;
   }
 
+  int _opCallParseAttrs(parseAttrs_t parseAttrs, const char* const* keys, const char* const* vals, int num,
+                        int* num_in, int* num_out) {
+    //create map of attributes from list
+    std::map<std::string,std::string> attrs;
+    for(int i=0; i<num; i++) {
+      attrs[std::string(keys[i])] = std::string(vals[i]);
+    }
+
+    return parseAttrs(attrs,num_in,num_out);
+  }
+  
+  
   int _opCallFCompute(fcomp_t fcomp, const char* const* keys, const char* const* vals, int num,
                       const int64_t** inshapes, int* indims, void** indata, int* intypes, int num_in,
                       const int64_t** outshapes, int* outdims, void** outdata, int* outtypes, int num_out) {

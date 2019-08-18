@@ -105,7 +105,8 @@ int MXLoadLib(const char *path) {
   if (!initialize(static_cast<int>(MXNET_VERSION)))
     LOG(FATAL) << "Library failed to initialize";
 
-  //get function to call fcompute
+  //get call functions
+  opCallParseAttrs_t callParseAttrs = get_func<opCallParseAttrs_t>(lib, const_cast<char*>(MXLIB_OPCALLPARSEATTRS_STR));
   opCallFComp_t callFComp = get_func<opCallFComp_t>(lib, const_cast<char*>(MXLIB_OPCALLFCOMP_STR));
   
   //get number of operators registered in the library
@@ -132,16 +133,50 @@ int MXLoadLib(const char *path) {
     CHECK(shape != nullptr) << "Error loading '" << name << "' custom op, InferShape function was not set.";
     
     LOG(INFO) << "\tOp[" << i << "] " << name;
-
     std::string name_str(name);
-    //generate lambda functions to convert from MXNet types to external types
-    auto fcomp_conv = [=](const nnvm::NodeAttrs& attrs,
-                         const OpContext& ctx,
-                         const std::vector<TBlob>& inputs,
-                         const std::vector<OpReqType>& req,
-                         const std::vector<TBlob>& outputs) {
+
+    auto num_inputs = [=](const NodeAttrs& attrs) {
+      //convert attributes to vector of char
+      std::vector<const char*> attr_keys, attr_vals;
+      for(auto kv : attrs.dict) {
+        attr_keys.push_back(kv.first.c_str());
+        attr_vals.push_back(kv.second.c_str());
+      }
+
+      int num_in=-1;
+      int num_out=-1;
+      CHECK(callParseAttrs(parse, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                           &num_in, &num_out))
+      << "Error calling ParseAttrs for custom operator '" << name_str << "'";
+      
+      return num_in;
+    };
+
+    auto num_outputs = [=](const NodeAttrs& attrs) {
       //convert attributes to vector of char*
       std::vector<const char*> attr_keys,attr_vals;
+      for(auto kv : attrs.dict) {
+        attr_keys.push_back(kv.first.c_str());
+        attr_vals.push_back(kv.second.c_str());
+      }
+      
+      int num_in=-1;
+      int num_out=-1;
+      CHECK(callParseAttrs(parse, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                           &num_in, &num_out))
+      << "Error calling ParseAttrs for custom operator '" << name_str << "'";
+      
+      return num_out;
+    };
+
+    // lambda function to convert from external fcompute to internal MXNet types
+    auto fcomp_conv = [=](const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const std::vector<TBlob>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& outputs) {
+      //convert attributes to vector of char*
+      std::vector<const char*> attr_keys, attr_vals;
       for(auto kv : attrs.dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
@@ -180,6 +215,8 @@ int MXLoadLib(const char *path) {
     contrib_name += name;
     nnvm::Op &regOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(contrib_name.c_str());
     regOp.set_attr<FCompute>("FCompute<cpu>",fcomp_conv);
+    regOp.set_num_inputs(num_inputs);
+    regOp.set_num_outputs(num_outputs);
   }
   
   API_END();
