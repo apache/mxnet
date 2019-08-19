@@ -22,6 +22,7 @@
  * \brief GPU Implementation of numpy unary functions.
  */
 #include "../tensor/elemwise_binary_op.h"
+#include "np_elemwise_unary_op.h"
 
 namespace mxnet {
 namespace op {
@@ -105,6 +106,11 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_arcsinh, mshadow_op::arcsinh);
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_arccosh, mshadow_op::arccosh);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_arctanh, mshadow_op::arctanh);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_exp2, mshadow_op::exp2);
+
+NNVM_REGISTER_OP(_backward_exp2)
+.set_attr<FCompute>("FCompute<gpu>", Exp2Backward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

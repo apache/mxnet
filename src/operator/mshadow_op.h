@@ -357,6 +357,8 @@ MXNET_UNARY_MATH_OP(reciprocal_cube_root, 1.0f / math::cbrt(a));
 
 MXNET_UNARY_MATH_OP(reciprocal_cube_root_grad, -1.0f / (3.0f * math::cbrt(a) * math::id(a)));
 
+MXNET_UNARY_MATH_OP(exp2, math::pow(DType(2), a));
+
 /*! \brief used for generate element of round */
 MXNET_SIMPLE_UNARY_MATH_OP(round);
 

@@ -23,6 +23,7 @@
  */
 #include <mxnet/base.h>
 #include "../tensor/elemwise_unary_op.h"
+#include "np_elemwise_unary_op.h"
 
 namespace mxnet {
 namespace op {
@@ -365,6 +366,18 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_arctanh, "x", mshadow_op::arctanh)
 computed element-wise.
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arctanh" });
+
+// exp2
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_exp2, "x", mshadow_op::exp2)
+.describe(R"code(Calculate 2**p for all p in the input array.
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{ "_backward_exp2" });
+
+NNVM_REGISTER_OP(_backward_exp2)
+.set_num_inputs(3)
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", Exp2Backward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet
