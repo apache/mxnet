@@ -1440,7 +1440,7 @@ class Symbol(SymbolBase):
     def optimize_for(self, backend, ctx=None, args=None, **kwargs):
         """Partition symbol and optimize it for a given backend"""
         out = SymbolHandle()
-        if ctx is not None and args is not None):
+        if ctx is None or args is None:
             infer_shape_type = False
         else:
             infer_shape_type = True
@@ -1457,14 +1457,14 @@ class Symbol(SymbolBase):
         check_call(_LIB.MXOptimizeForBackend(self.handle,
                                              c_str(backend),
                                              ctypes.byref(out),
-                                             ctypes.c_bool(infer_shape_type)
+                                             ctypes.c_bool(infer_shape_type),
                                              ctypes.c_int(ctx.device_typeid),
                                              ctypes.c_int(ctx.device_id),
                                              mx_uint(len(args)),
                                              args_handle,
                                              mx_uint(len(key_list)),
                                              c_str_array([key for key in key_list]),
-                                             c_str_array([str(val) for val in val_list]))
+                                             c_str_array([str(val) for val in val_list])))
         return out
 
 

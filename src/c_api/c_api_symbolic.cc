@@ -1259,13 +1259,11 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
   const auto& subgraph_prop_list = backend->GetSubgraphProperties();
   for (auto property : subgraph_prop_list) {
     nnvm::Graph g = orig_g;
-    property->SetAttr("graph", g);
     property->PrePartition(g, options_map);
     g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
     g = ApplyPass(std::move(g), "BuildSubgraph");
     g.attrs.erase("subgraph_property");
     property->PostPartition(g, options_map);
-    property->RemoveAttr("graph");
     s->outputs = g.outputs;
   }
   *ret_sym_handle = s;
