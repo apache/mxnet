@@ -61,7 +61,7 @@ def check_compact(csr, id_arr, num_nodes):
     compact = mx.nd.contrib.dgl_graph_compact(csr, id_arr, graph_sizes=num_nodes, return_mapping=False)
     assert compact.shape[0] == num_nodes
     assert compact.shape[1] == num_nodes
-    assert mx.nd.sum(compact.indptr == csr.indptr[0:(num_nodes + 1)]).asnumpy() == num_nodes + 1
+    assert mx.nd.sum(compact.indptr == csr.indptr[0:int(num_nodes + 1)]).asnumpy() == num_nodes + 1
     sub_indices = compact.indices.asnumpy()
     indices = csr.indices.asnumpy()
     id_arr = id_arr.asnumpy()

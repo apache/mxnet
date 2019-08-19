@@ -149,6 +149,13 @@ class TBlob {
     *this = src;
   }
   /*!
+   * \brief constructor from TBlob (copy constructor)
+   * \param src source TBlob
+   */
+  TBlob(const TBlob &src): dptr_(src.dptr_), shape_(src.shape_), type_flag_(src.type_flag_) {
+    this->SetDLTensor(src.dev_mask(), src.dev_id());
+  }
+  /*!
    * \brief assignment from tensor
    * \param src source tensor
    * \tparam Device which device the tensor is on
@@ -162,6 +169,18 @@ class TBlob {
     shape_ = src.shape_;
     type_flag_ = mshadow::DataType<DType>::kFlag;
     SetDLTensor(Device::kDevMask, -1);
+    return *this;
+  }
+  /*!
+   * \brief assignment from TBlob (copy assignment)
+   * \param src source TBlob
+   * \return reference of self
+   */
+  inline TBlob &operator=(const TBlob &src) {
+    dptr_ = src.dptr_;
+    shape_ = src.shape_;
+    type_flag_ = src.type_flag_;
+    SetDLTensor(src.dev_mask(), src.dev_id());
     return *this;
   }
   /*!
