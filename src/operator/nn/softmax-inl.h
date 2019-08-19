@@ -526,9 +526,7 @@ __global__ void softmax_stride1_grad_kernel(const OType *out, const OType *ograd
       row[i] += igrad[my_row * M + i];
     }
   }
-  if (Req == kAddTo) {
-    __syncthreads();
-  }
+  __syncthreads();
 
   LType* igrad_aligned = reinterpret_cast<LType*>(igrad);
 
