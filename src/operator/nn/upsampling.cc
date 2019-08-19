@@ -37,20 +37,6 @@ static bool UpSamplingShape(const nnvm::NodeAttrs& attrs,
   CHECK_GE(in_shape->size(), 1U);
   const mxnet::TShape &dshape = (*in_shape)[0];
   mxnet::TShape oshape = dshape;
-  /*
-  int scale_h = 1;
-  int scale_w = 1;
-  if (param_.scale.ndim() == 1) {
-    scale_h = param_.scale[0];
-    scale_w = param_.scale[0];
-  } else if (param_.scale.ndim() == 2) {
-    scale_h = param_.scale[0];
-    scale_w = param_.scale[1];
-  } else if (param_.scale.ndim() == 4) {
-    scale_h = param_.scale[2];
-    scale_w = param_.scale[3];
-  }
-  */
   int* scale_hw = scaleComp(param_);
   int scale_h = scale_hw[0];
   int scale_w = scale_hw[1];
