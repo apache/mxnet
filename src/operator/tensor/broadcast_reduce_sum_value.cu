@@ -19,25 +19,31 @@
 
 /*!
  *  Copyright (c) 2016 by Contributors
- * \file broadcast_reduce_op_value.cu
- * \brief GPU Implementation of broadcast and reduce functions based on value.
+ * \file broadcast_reduce_sum_value.cu
+ * \brief GPU Implementation of broadcast and reduce sum (and related) functions based on value.
  */
 #include "./broadcast_reduce_op.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(broadcast_axis)
-.set_attr<FCompute>("FCompute<gpu>", BroadcastCompute<gpu>);
-
-NNVM_REGISTER_OP(broadcast_to)
-.set_attr<FCompute>("FCompute<gpu>", BroadcastCompute<gpu>);
-
-NNVM_REGISTER_OP(broadcast_like)
-.set_attr<FCompute>("FCompute<gpu>", BroadcastCompute<gpu>);
-
-NNVM_REGISTER_OP(_broadcast_backward)
+NNVM_REGISTER_OP(sum)
 .set_attr<FCompute>("FCompute<gpu>", ReduceAxesCompute<gpu, mshadow::red::sum>);
+
+NNVM_REGISTER_OP(_backward_sum)
+.set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseNone<gpu>);
+
+NNVM_REGISTER_OP(mean)
+.set_attr<FCompute>("FCompute<gpu>", ReduceAxesCompute<gpu, mshadow::red::sum, true>);
+
+NNVM_REGISTER_OP(_backward_mean)
+.set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseNone<gpu, true>);
+
+NNVM_REGISTER_OP(nansum)
+.set_attr<FCompute>("FCompute<gpu>", ReduceAxesCompute<gpu, mshadow_op::nansum>);
+
+NNVM_REGISTER_OP(_backward_nansum)
+.set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseInOut<gpu, mshadow_op::nansum_grad>);
 
 }  // namespace op
 }  // namespace mxnet
