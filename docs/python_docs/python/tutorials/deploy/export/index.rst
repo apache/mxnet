@@ -9,9 +9,9 @@ but you also have the option to export most models to the ONNX format.
 
    .. card::
       :title: Export ONNX Models
-      :link: /guide/packages/onnx/export_mxnet_to_onnx.html
 
-      How to export an MXNet model to the ONNX model format.
+
+      Coming Soon!
 
    .. card::
       :title: Export with GluonCV

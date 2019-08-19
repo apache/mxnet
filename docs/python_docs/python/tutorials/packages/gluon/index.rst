@@ -8,7 +8,7 @@ Getting started
 
    .. card::
       :title: A 60-minute Gluon crash course
-      :link: ../../crash-course/index.html
+      :link: ../../getting-started/crash-course/index.html
 
       Six 10-minute tutorials covering the core concepts of MXNet using the Gluon API.
 
@@ -108,7 +108,7 @@ Training
 
    .. card::
       :title: Loss Functions
-      :link: loss.html
+      :link: loss/loss.html
 
       How to use loss functions for predicting outputs.
 
@@ -236,9 +236,9 @@ Applications Topics
 
 .. toctree::
    :hidden:
-   :maxdepth: 1
+   :maxdepth: 2
 
-   ../../crash-course
+   ../../getting-started/crash-course
    custom_layer_beginners
    data
    image-augmentation
