@@ -25,7 +25,7 @@ The following tutorials teach how to use MXNet.
 
 .. toctree::
    :hidden:
-   :maxdepth: 1
+   :maxdepth: 2
 
    crash-course/index
    to-mxnet/index

@@ -17,6 +17,12 @@ The following tutorials will help you learn how to deploy MXNet on various AWS p
 
       How to run MXNet using Amazon SageMaker.
 
+    .. card::
+      :title: MXNet on the Cloud
+      :link: cloud.html
+
+      How to run MXNet in the cloud.
+
    .. card::
       :title: Training with Data from S3
       :link: https://mxnet.incubator.apache.org/versions/master/faq/s3_integration.html
@@ -29,3 +35,4 @@ The following tutorials will help you learn how to deploy MXNet on various AWS p
 
    use_ec2
    use_sagemaker
+   cloud

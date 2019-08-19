@@ -96,8 +96,7 @@ $(function() {
 
     reconstructionDrawerGlobalToc();
     collapse();
-    $('.mdl-layout__drawer').css('visibility', 'visible');
-    quickSearchClickEvent();    
+    quickSearchClickEvent();
 
 
     const spy = new ScrollSpy({
@@ -170,4 +169,6 @@ $(function() {
         header.append(button);
         header.append(hint);
     });
+
+    $('.mdl-layout__container').css('visibility', 'visible');
 });

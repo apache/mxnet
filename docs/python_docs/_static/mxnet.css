@@ -15,6 +15,10 @@
     }
 }
 
+.mdl-layout__container {
+    visibility: hidden;
+}
+
 .document .page-content {
     padding: 0 10% !important;
 }

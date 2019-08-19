@@ -6,19 +6,19 @@ NDArray
 
    .. card::
       :title: Introduction to NDArray - Part 1
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/ndarray.html
+      :link: 01-ndarray-intro.html
 
       Learn how to manipulate data with MXNet's multi-dimensional data format, NDArray.
 
    .. card::
       :title: Introduction to NDArray - Part 2: Operations
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/ndarray.html
+      :link: 02-ndarray-operations.html
 
       Learn basic array operations like math and slicing.
 
    .. card::
       :title: Introduction to NDArray - Part 3: Contexts
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/ndarray.html
+      :link: 03-ndarray-contexts.html
 
       This guide will introduce you to how CPU and GPU contexts are handled with MXNet.
 

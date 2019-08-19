@@ -12,9 +12,8 @@ The following tutorials will help you learn export MXNet models.
 
    .. card::
       :title: Export ONNX Models
-      :link: onnx.html
 
-      How to export an MXNet model to the ONNX model format.
+      COMING SOON
 
    .. card::
       :title: Export with GluonCV
@@ -27,6 +26,18 @@ Inference_
 The following tutorials will help you learn how to deploy MXNet models for inference applications.
 
 .. container:: cards
+
+   .. card::
+      :title: CPP Inference
+      :link: inference/cpp.html
+
+      How to deploy MXNet C++ Models
+
+   .. card::
+      :title: Scala Inference
+      :link: inference/scala.html
+
+      How to run Scala inference
 
    .. card::
       :title: GluonCV Models in a C++ Inference Application
@@ -59,8 +70,14 @@ The following tutorials will show you how to use MXNet on AWS.
       How to run MXNet using Amazon SageMaker.
 
    .. card::
+      :title: MXNet on the cloud
+      :link: run-on-aws/cloud.html
+
+      How to run MXNet on the cloud
+
+   .. card::
       :title: Training with Data from S3
-      :link: https://mxnet.incubator.apache.org/versions/master/faq/s3_integration.html
+      :link: https://mxnet.incubator.apache.org/api/faq/s3_integration
 
       How to train with data from Amazon S3 buckets.
 
@@ -71,7 +88,7 @@ Security
 
    .. card::
       :title: Securing MXNet
-      :link: https://mxnet.incubator.apache.org/versions/master/faq/security.html
+      :link: https://mxnet.incubator.apache.org/api/faq/security
 
       Best practices and deployment considerations.
 

@@ -6,13 +6,13 @@ The following tutorials will help you learn how to use compression techniques wi
 
    .. card::
       :title: Compression: float16
-      :link: https://mxnet.incubator.apache.org/versions/master/faq/float16.html
+      :link: https://mxnet.incubator.apache.org/api/faq/float16
 
       How to use float16 in your model to boost training speed.
 
    .. card::
       :title: Gradient Compression
-      :link: https://mxnet.incubator.apache.org/versions/master/faq/gradient_compression.html
+      :link: https://mxnet.incubator.apache.org/api/faq/gradient_compression
 
       How to use gradient compression to reduce communication bandwidth and increase speed.
 
