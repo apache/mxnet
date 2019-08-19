@@ -557,7 +557,9 @@ def test_sequence_reverse():
     assert b.shape == a.shape
 
     # test with sequence length
-    b = nd.SequenceReverse(a, sequence_length=[2, 3])
+    # 2 rows of batch 1 and 3 rows of batch 2 reversed
+    b = nd.SequenceReverse(a, sequence_length=nd.array([2, 3]),
+                           use_sequence_length=True)
     assert b[1][0][0] == a[0][0][0]  # check if reversed
     assert b[-1][0][0] == a[-1][0][0]  # check if intact
     assert b.shape == a.shape

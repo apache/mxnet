@@ -189,6 +189,61 @@ def test_power_operators():
     assert result.shape == a.shape
 
 
+def test_sequence_mask():
+    # Sequence Mask input [max_sequence_length, batch_size]
+    # test with input batch_size = 2
+    a = nd.arange(0, LARGE_X * 2).reshape(LARGE_X, 2)
+
+    # test as identity operator
+    b = nd.SequenceMask(a)
+    assert b[-1][0] == a[-1][0]
+    assert b.shape == a.shape
+
+    # test with default mask
+    b = nd.SequenceMask(a, sequence_length=nd.array([1, 1]),
+                        use_sequence_length=True)
+    assert b[0][1] == a[0][1]  # first sequence of each batch kept
+    assert b[-1][-1] != a[-1][-1]  # rest sequences masked
+    assert b[-1][-1] == 0
+
+    # test with mask value
+    b = nd.SequenceMask(a, sequence_length=nd.array([1, 1]),
+                        use_sequence_length=True, value=-1)
+    assert b[-1][-1] == -1
+
+
+def test_sequence_reverse():
+    a = nd.arange(0, LARGE_X * 2).reshape(LARGE_X, 2)
+    # test as reverse operator
+    b = nd.SequenceReverse(a)
+    assert b[-1][0] == a[0][0]
+    assert b.shape == a.shape
+
+    # test with sequence length
+    b = nd.SequenceReverse(a, sequence_length=nd.array([2, 3]),
+                           use_sequence_length=True)
+    assert b[1][0] == a[0][0]  # check if reversed
+    assert b[-1][0] == a[-1][0]  # check if intact
+    assert b.shape == a.shape
+
+
+def test_sequence_last():
+    a = nd.arange(0, LARGE_X * 2).reshape(LARGE_X, 2)
+
+    # test if returns last sequence
+    b = nd.SequenceLast(a)
+    assert_almost_equal(b, a[-1])
+    assert b.shape == (2,)
+
+    # test with sequence length
+    # parameter sequence_length - NDArray with shape (batch_size)
+    # (2,3) indicates 2nd sequence from batch 1 and 3rd sequence from batch 2
+    b = nd.SequenceLast(a, sequence_length=mx.nd.array([2, 3]),
+                        use_sequence_length=True)
+    # check if it takes 2nd sequence from the first batch
+    assert b[0] == a[1][0]
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
