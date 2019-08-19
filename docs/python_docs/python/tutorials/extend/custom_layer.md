@@ -89,10 +89,10 @@ layer(nd.array([1, 2, 3], ctx=mx.cpu()))
 
 
 
-    
+```text
     [0.  0.5 1. ]
     <NDArray 3 @cpu(0)>
-
+```
 
 
 As a rule of thumb, one should always implement custom layers by inheriting from `HybridBlock`. This allows to have more flexibility, and doesn't affect execution speed once hybridization is done. 
@@ -127,14 +127,14 @@ net(input)
 
 
 
-    
+```text
     [[-0.13601446]
      [ 0.26103732]
      [-0.05046433]
      [-1.2375476 ]
      [-0.15506986]]
     <NDArray 5x1 @cpu(0)>
-
+```
 
 
 ## Parameters of a custom layer
@@ -226,6 +226,7 @@ print_params("=========== Parameters after backward pass ===========\n", net)
 
 ```
 
+```text
     =========== Parameters after forward pass ===========
     
     hybridsequential94_normalizationhybridlayer0_weights = 
@@ -253,7 +254,7 @@ print_params("=========== Parameters after backward pass ===========\n", net)
     hybridsequential94_normalizationhybridlayer0_scales = 
     [2.]
     <NDArray 1 @cpu(0)>
-    
+``` 
 
 
 As it is seen from the output above, `weights` parameter has been changed by the training and `scales` not.
