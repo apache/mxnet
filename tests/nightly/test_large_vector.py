@@ -244,6 +244,113 @@ def test_sequence_last():
     assert b[0] == a[1][0]
 
 
+def test_add():
+    a = nd.ones(shape=(LARGE_X))
+    b = nd.ones(shape=(LARGE_X))
+    c = b
+    c = c.__add__(a)
+    assert c[-1] == 2
+    assert c.shape == a.shape
+
+
+def test_sub():
+    a = 3*nd.ones(shape=(LARGE_X))
+    b = nd.ones(shape=(LARGE_X))
+    c = b
+    c = c.__sub__(a)
+    assert c[-1] == -2
+    assert c.shape == a.shape
+
+
+def test_rsub():
+    a = 3*nd.ones(shape=(LARGE_X))
+    b = nd.ones(shape=(LARGE_X))
+    c = b
+    c = c.__rsub__(a)
+    assert c[-1] == 2
+    assert c.shape == a.shape
+
+
+def test_neg():
+    a = nd.ones(shape=(LARGE_X))
+    c = a
+    c = c.__neg__()
+    assert c[-1] == -1
+    assert c.shape == a.shape
+
+
+def test_mul():
+    a = 2*nd.ones(shape=(LARGE_X))
+    b = 3*nd.ones(shape=(LARGE_X))
+    c = b
+    c = c.__mul__(a)
+    assert c[-1] == 6
+    assert c.shape == a.shape
+
+
+def test_div():
+    a = 2*nd.ones(shape=(LARGE_X))
+    b = 3*nd.ones(shape=(LARGE_X))
+    c = b
+    c = c.__div__(a)
+    assert c[-1] == 3/2
+    assert c.shape == a.shape
+
+
+def test_rdiv():
+    a = 2*nd.ones(shape=(LARGE_X))
+    b = 3*nd.ones(shape=(LARGE_X))
+    c = b
+    c = c.__rdiv__(a)
+    assert c[-1] == 2/3
+    assert c.shape == a.shape
+
+
+def test_mod():
+    a = 2*nd.ones(shape=(LARGE_X))
+    b = 3*nd.ones(shape=(LARGE_X))
+    c = b
+    c = c.__mod__(a)
+    assert c[-1] == 1
+    assert c.shape == a.shape
+
+
+def test_rmod():
+    a = 2*nd.ones(shape=(LARGE_X))
+    b = 3*nd.ones(shape=(LARGE_X))
+    c = b
+    c = c.__rmod__(a)
+    assert c[-1] == 2
+    assert c.shape == a.shape
+
+
+def test_imod():
+    a = 2*nd.ones(shape=(LARGE_X))
+    b = 3*nd.ones(shape=(LARGE_X))
+    c = b
+    c = c.__imod__(a)
+    assert c[-1] == 1
+    assert c.shape == a.shape
+
+
+def test_pow():
+    a = 2*nd.ones(shape=(LARGE_X))
+    b = 3*nd.ones(shape=(LARGE_X))
+    c = b
+    c = c.__pow__(a)
+    assert c[-1] == 9
+    assert c.shape == a.shape
+
+
+def test_rpow():
+    a = 2*nd.ones(shape=(LARGE_X))
+    b = 3*nd.ones(shape=(LARGE_X))
+    c = b
+    c = c.__rpow__(a)
+    assert c[-1] == 8
+    assert c.shape == a.shape
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
