@@ -41,7 +41,7 @@ The following example configures a two-layer neural network.
     val data = Symbol.Variable("data")
     val fc1 = Symbol.api.FullyConnected(Some(data), num_hidden = 128, name = "fc1")
     val act1 = Symbol.api.Activation(Some(fc1), "relu", "relu1")
-    val fc2 = Symbol.api.FullyConnected(some(act1), num_hidden = 64, name = "fc2")
+    val fc2 = Symbol.api.FullyConnected(Some(act1), num_hidden = 64, name = "fc2")
     val net = Symbol.api.SoftmaxOutput(Some(fc2), name = "out")
     :type net
     // org.apache.mxnet.Symbol

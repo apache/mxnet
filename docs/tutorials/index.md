@@ -105,6 +105,8 @@ Select API:&nbsp;
     * [Module to Gluon API](/tutorials/python/module_to_gluon.html)
     * [Gluon end to end from training to inference](/tutorials/gluon/gluon_from_experiment_to_deployment.html)
     * [Automatic Mixed Precision in Gluon](/tutorials/amp/amp_tutorial.html)
+    * [How to build and install MXNet with MKL-DNN backend](/tutorials/mkldnn/MKLDNN_README.html)
+    * [How to quantize custom models with MKL-DNN backend](/tutorials/mkldnn/mkldnn_quantization.html)<span style="color:red"> (new!) </span>
 * API Guides
     * Core APIs
         * NDArray
@@ -137,6 +139,8 @@ Select API:&nbsp;
             * [Data Transforms](/tutorials/gluon/transforms.html)
             * [Applying Data Augmentation](/tutorials/gluon/data_augmentation.html)
             * [Data Augmentation with Masks (for Object Segmentation)](https://mxnet.incubator.apache.org/tutorials/python/data_augmentation_with_masks.html)
+        * Fit API
+            * [Using Fit API](/tutorials/gluon/fit_api_tutorial.html)
 </div> <!--end of gluon-->
 
 <div class="module">
@@ -157,7 +161,6 @@ Select API:&nbsp;
     * [Large-Scale Multi-Host Multi-GPU Image Classification](/tutorials/vision/large_scale_classification.html)
     * [Importing an ONNX model into MXNet](/tutorials/onnx/super_resolution.html)
     * [Optimizing Deep Learning Computation Graphs with TensorRT](/tutorials/tensorrt/inference_with_trt.html)
-    * [How to build and install MXNet with MKL-DNN backend](/tutorials/mkldnn/MKLDNN_README.html)
 * API Guides
     * Core APIs
         * NDArray
