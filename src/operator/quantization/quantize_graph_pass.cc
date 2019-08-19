@@ -133,7 +133,7 @@ inline NodePtr NeedQuantize(
     auto qnode = q_ptr(node->attrs);
     if (!isRegistered(qnode, dev_type)) {
       LOG(INFO) << "Neither FCompute nor FComputeEx registered, " << node->op()->name
-                << " excluded automatically.";
+                << " is excluded automatically.";
       need = false;
     } else {
       if (excluded_nodes.count(node->attrs.name) ||
@@ -147,8 +147,7 @@ inline NodePtr NeedQuantize(
           auto subgraph_sym = node->attrs.subgraphs[0];
           DFSVisit(subgraph_sym->outputs, [&](const nnvm::NodePtr& n) {
             if (n->is_variable()) return;
-            if (excluded_nodes.count(n->attrs.name) ||
-                excluded_ops.count(node->op()->name)) {
+            if (excluded_nodes.count(n->attrs.name)) {
               need = false;
             }
           });
