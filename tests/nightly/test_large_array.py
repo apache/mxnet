@@ -739,11 +739,12 @@ def test_layer_norm():
     assert_almost_equal(out, out_nd.asnumpy(), forward_check_eps,
                         forward_check_eps)
 
+
 # TODO: correctness of dropout
 # currently only test for dropout to work
 # since testing for correctness involves flakiness issue #14288
 def test_dropout():
-    shape = (10, 10)
+    shape = (LARGE_X, SMALL_Y)
     x = mx.sym.var('data')
     y = mx.sym.Dropout(x, p=1, cudnn_off=True)
     exe = y.simple_bind(ctx=default_context(), data=shape)
@@ -760,7 +761,7 @@ def test_activation():
     # Hyperbolic tangent (tanh)
     # y = (exp(x)-exp(-x))/(exp(x)+exp(-x))
     a = mx.nd.Activation(a, act_type="tanh")
-    tanh_x = (np.exp(-2)-np.exp(2))/(np.exp(-2)+np.exp(2))
+    tanh_x = (np.exp(test_x)-np.exp(-test_x))/(np.exp(test_x)+np.exp(-test_x))
     assert a[-1][-1] == tanh_x
 
     # Recitified Linear Unit (relu)
