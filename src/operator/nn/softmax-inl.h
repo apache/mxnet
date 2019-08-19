@@ -455,12 +455,94 @@ inline void Softmax(Stream<gpu> *s, DType *in, OType *out, IType *length,
   }
 }
 
+template<typename OP1, typename OP2, int Req, bool negate, typename AType, typename LType,
+  typename DType, typename OType, typename IType>
+__global__ void softmax_stride1_grad_kernel(const OType *out, const OType *ograd,
+                                            DType *igrad, const IType *length,
+                                            const index_t M,
+                                            const double temperature,
+                                            const int rows_per_block,
+                                            const index_t total_rows) {
+  __shared__ AType scratch[softmax_threads_per_block];
+  __shared__ LType persistent_storage[20 * 1024 / sizeof(LType)];
+  const int warp_size = 32;
+  const int threads_per_row = softmax_threads_per_block / rows_per_block;
+  const int my_local_row = threadIdx.x / threads_per_row;
+  const int my_row = blockIdx.x * rows_per_block + my_local_row;
+  if (my_row >= total_rows) return;
+  const int my_id = threadIdx.x % threads_per_row;
+  const int entries_per_load = sizeof(LType)/sizeof(DType);
+  const index_t len = length == nullptr ? M : static_cast<index_t>(length[my_row]);
+  // Due to usage of MSHADOW_TYPE_SWITCH macro we are generating
+  // kernels where sizeof(LType) may be less than sizeof(DType),
+  // resulting in entries_per_load being 0.
+  // This is not a valid combination and is being checked against
+  // in the launcher code. This switch here is just to silence
+  // the division by zero warning generated for such invalid cases.
+  const int row_length = entries_per_load > 0 ? M / entries_per_load : 0;
+
+  const LType* out_aligned = reinterpret_cast<const LType*>(out);
+  const LType* ograd_aligned = reinterpret_cast<const LType*>(ograd);
+  size_t base = my_row * row_length;
+
+  for (index_t i = my_id; i < row_length; i += threads_per_row) {
+    persistent_storage[my_local_row * row_length * 2 + i] = out_aligned[base + i];
+    persistent_storage[my_local_row * row_length * 2 + row_length + i] = ograd_aligned[base + i];
+  }
+  DType * row = reinterpret_cast<DType *>(persistent_storage + my_local_row * row_length * 2);
+  __syncthreads();
+
+  AType my_sum_value;
+  red::sum::SetInitValue(my_sum_value);
+
+  for (index_t i = my_id; i < len; i += threads_per_row) {
+    my_sum_value += OP1::Map(row[i + M], row[i]);
+  }
+  scratch[threadIdx.x] = my_sum_value;
+  __syncthreads();
+  for (int size = threads_per_row / 2; size >= warp_size; size /= 2) {
+    if (my_id < size) {
+      scratch[threadIdx.x] = scratch[threadIdx.x] + scratch[threadIdx.x + size];
+    }
+    __syncthreads();
+  }
+  if (my_id < warp_size) {
+    AType my_value = warp_reduce(scratch[threadIdx.x],
+                                 [](AType x, AType y) { return x + y; });
+    scratch[threadIdx.x] = my_value;
+  }
+  __syncthreads();
+  AType ssum = scratch[threadIdx.x - threadIdx.x % threads_per_row];
+  __syncthreads();
+
+  for (index_t i = my_id; i < M; i += threads_per_row) {
+    const DType val =
+      negate ?
+      -OP2::Map(row[i + M], row[i], ssum) :
+      OP2::Map(row[i + M], row[i], ssum);
+    row[i] = (i < len) ? DType(val / static_cast<DType>(temperature)) :
+                         DType(0.0f);
+    if (Req == kAddTo) {
+      row[i] += igrad[my_row * M + i];
+    }
+  }
+  if (Req == kAddTo) {
+    __syncthreads();
+  }
+
+  LType* igrad_aligned = reinterpret_cast<LType*>(igrad);
+
+  for (index_t i = my_id; i < row_length; i += threads_per_row) {
+    igrad_aligned[base + i] = persistent_storage[my_local_row * row_length * 2 + i];
+  }
+}
+
 template<int x_bits, typename OP1, typename OP2, int Req, bool negate, typename AType, int ndim,
          typename DType, typename OType, typename IType>
 __global__ void softmax_grad_kernel(OType *out, OType *ograd, DType *igrad,
-                                                IType *length, index_t M, int axis,
-                                                Shape<ndim> sshape, Shape<ndim> stride,
-                                                const double temperature) {
+                                    const IType *length, index_t M, int axis,
+                                    Shape<ndim> sshape, Shape<ndim> stride,
+                                    const double temperature) {
   const unsigned x_size = 1 << x_bits;
   __shared__ AType smem[x_size];
   index_t sa = stride[axis];
@@ -502,10 +584,30 @@ inline void SoftmaxGrad(Stream<gpu> *s, OType *out, OType *ograd,
   Shape<ndim> sshape = shape;
   sshape[axis] = 1;
 
-  softmax_grad_kernel<x_bits, OP1, OP2, Req, negate, AType, ndim>
-    <<<N, x_size, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
-      out, ograd, igrad, length, M, axis, sshape, stride, temperature);
-  MSHADOW_CUDA_POST_KERNEL_CHECK(softmax_grad_kernel);
+  const size_t DSize = sizeof(DType);
+  // Using 20 kB of shared memory for persistent storage in the optimized case
+  // Need to store both out and ograd, so M can be only half compared to
+  // forward pass.
+  const size_t max_opt_M = 20 * 1024 / DSize / 2;
+  if (stride[axis] == 1 &&
+      static_cast<size_t>(M) <= max_opt_M &&
+      std::is_same<DType, OType>::value) {
+    int ltype = mxnet::common::cuda::get_load_type(M * sizeof(DType));
+    MXNET_LOAD_TYPE_SWITCH(ltype, LType, {
+      int rows_per_block = get_rows_per_block(M * sizeof(DType) / sizeof(LType));
+      int nblocks = (N + rows_per_block - 1) / rows_per_block;
+      CHECK_LE(sizeof(DType), sizeof(LType));
+      softmax_stride1_grad_kernel<OP1, OP2, Req, negate, AType, LType>
+        <<<nblocks, softmax_threads_per_block, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
+          out, ograd, igrad, length, M, temperature, rows_per_block, N);
+    });
+    MSHADOW_CUDA_POST_KERNEL_CHECK(softmax_stride1_grad_kernel);
+  } else {
+    softmax_grad_kernel<x_bits, OP1, OP2, Req, negate, AType, ndim>
+      <<<N, x_size, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
+        out, ograd, igrad, length, M, axis, sshape, stride, temperature);
+    MSHADOW_CUDA_POST_KERNEL_CHECK(softmax_grad_kernel);
+  }
 }
 #endif
 
