@@ -679,7 +679,7 @@ def test_quantized_bn():
 @with_seed()
 def test_quantize_params():
     if is_test_for_native_cpu():
-        print('skipped testing quantized_pooling for native cpu since it is not supported yet')
+        print('skipped testing quantized_params for native cpu since it is not supported yet')
         return
 
     data = mx.sym.Variable('data')
