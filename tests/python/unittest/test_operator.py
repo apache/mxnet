@@ -2009,7 +2009,7 @@ def test_convolution_independent_gradients():
     reqs = ["null", "write", "add"]
     var_names = ["x", "w", "b"]
     dims = [1, 2]
-    num_bases = [1, 16, 64]
+    num_bases = [1, 8]
     kernel_xs = [3, 5]
     stride_xs = [1, 2]
     pad_xs = [0, 1]
