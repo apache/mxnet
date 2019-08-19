@@ -36,12 +36,26 @@ def test_tvm_broadcast_add():
             c = mx.nd.contrib.tvm_vadd(a, b)
         c_np = a.asnumpy() + b.asnumpy()
         assert same(c.asnumpy(), c_np)
+        # test backward
         c.backward()
         expected_grad_a = _np.ones_like(a.asnumpy()) * c_np.size / a.asnumpy().size
         expected_grad_b = _np.ones_like(b.asnumpy()) * c_np.size / b.asnumpy().size
         assert same(a.grad.asnumpy(), expected_grad_a)
         assert same(b.grad.asnumpy(), expected_grad_b)
-        
+        # test kAddTo request
+        a = mx.nd.normal(shape=a_shape)
+        b = mx.nd.normal(shape=b_shape)
+        a.attach_grad()
+        b.attach_grad()
+        with mx.autograd.record():
+            c = mx.nd.contrib.tvm_vadd(a, b)
+            d = mx.nd.contrib.tvm_vadd(a, b)
+        mx.autograd.backward([c, d])
+        expected_grad_a = 2 * _np.ones_like(a.asnumpy()) * c.size / a.size
+        expected_grad_b = 2 * _np.ones_like(b.asnumpy()) * c.size / b.size
+        assert same(a.grad.asnumpy(), expected_grad_a)
+        assert same(b.grad.asnumpy(), expected_grad_b)
+
 
 if __name__ == '__main__':
     import nose

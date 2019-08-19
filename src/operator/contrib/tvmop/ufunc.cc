@@ -62,6 +62,7 @@ void TVMBinaryBackwardComputeUseNone(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 2U);
   int ndim = inputs[0].shape_.ndim();
   for (int k = 0; k < 2; ++k) {
+    // dispatch by backward
     std::vector<int> ov, iv;
     const TBlob& ograd = inputs[0], igrad = outputs[k];
     bool flag = ograd.size(0) != igrad.size(0);
@@ -79,7 +80,16 @@ void TVMBinaryBackwardComputeUseNone(const nnvm::NodeAttrs& attrs,
     TBlob ograd_tvm(ograd.reshape(oshape).dltensor());
     TBlob igrad_tvm(igrad.reshape(ishape).dltensor());
     std::string funcname = std::string(func) + "reduce1st_" + std::to_string(flag);
-    tvm::runtime::TVMOpModule::Get()->Call(funcname, ctx, {ograd_tvm, igrad_tvm});
+    // dispatch by req
+    funcname += "req_";
+    MXNET_ASSIGN_REQ_SWITCH(req[k], req_type, {
+      if (req_type == kWriteTo) {
+                funcname += "kWriteTo";
+      } else {
+        funcname += "kAddTo";
+      }
+    })
+    tvm::runtime::TVMOpModule::Get()->Call(funcname, ctx, {ograd_tvm, igrad_tvm, igrad_tvm});
   }
 }
 

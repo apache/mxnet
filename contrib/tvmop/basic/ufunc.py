@@ -52,6 +52,15 @@ def vadd_gpu(dtype, ndim):
     return s, [A, B, C]
 
 
+def assign_by_req(a, req):
+    b = tvm.placeholder(a.shape, name='assign_by_req_b', dtype=a.dtype)
+    if (req == "kAddTo"):
+        c = tvm.compute(a.shape, lambda *idx: a[idx] + b[idx])
+    else:
+        c = tvm.compute(a.shape, lambda *idx: a[idx])
+    return b, c
+
+
 def reduce_axes(X, axes, reducer):
     def get_index(idx, ridx):
         j = 0
@@ -71,31 +80,34 @@ def reduce_axes(X, axes, reducer):
     return ret
 
 
-def compute_backward_vadd(dtype, ndim, reduce1st):
+def compute_backward_vadd(dtype, ndim, reduce1st, req):
     axes = ([reduce1st, 1 - reduce1st] * ndim)[:ndim]
     X = tvm.placeholder([tvm.var() for _ in range(ndim)], name='X', dtype=dtype)
     reducer = tvm.comm_reducer(lambda x, y: x + y,
         lambda t: tvm.const(0, dtype=t), name="sum")
     ret = reduce_axes(X, axes, reducer)
-    s = tvm.create_schedule(ret.op)
-    return s, X, ret, [ret]
+    in_grad_a, in_grad = assign_by_req(ret, req)
+    s = tvm.create_schedule(in_grad.op)
+    return s, X, in_grad_a, in_grad, [ret, in_grad]
 
 
-@defop(name="backward_vadd", target="cpu", dtype=AllTypes,
-       ndim=list(range(1, 6)), reduce1st=[0, 1], attrs=["reduce1st"])
-def backward_vadd(dtype, ndim, reduce1st):
-    s, X, ret, c_list = compute_backward_vadd(dtype, ndim, reduce1st)
+@defop(name="backward_vadd", target="cpu", dtype=AllTypes, 
+       ndim=list(range(1, 6)), reduce1st=[0, 1],
+       req=["kWriteTo", "kAddTo"], attrs=["reduce1st", "req"])
+def backward_vadd(dtype, ndim, reduce1st, req):
+    s, X, in_grad_a, in_grad, c_list = compute_backward_vadd(dtype, ndim, reduce1st, req)
     for t in c_list:
         axes = [axis for axis in t.op.axis]
         fused = s[t].fuse(*axes)
         s[t].parallel(fused)
-    return s, [X, ret]
+    return s, [X, in_grad_a, in_grad]
 
 
 @defop(name="cuda_backward_vadd", target="gpu", dtype=["float32", "float64"],
-       ndim=list(range(1, 6)), reduce1st=[0, 1], attrs=["reduce1st"])
-def backward_vadd_gpu(dtype, ndim, reduce1st):
-    s, X, ret, c_list = compute_backward_vadd(dtype, ndim, reduce1st)
+       ndim=list(range(1, 6)), reduce1st=[0, 1],
+       req=["kWriteTo", "kAddTo"], attrs=["reduce1st", "req"])
+def backward_vadd_gpu(dtype, ndim, reduce1st, req):
+    s, X, in_grad_a, in_grad, c_list = compute_backward_vadd(dtype, ndim, reduce1st, req)
     num_thread = 64
     for t in c_list:
         block_x = tvm.thread_axis("blockIdx.x")
@@ -105,4 +117,4 @@ def backward_vadd_gpu(dtype, ndim, reduce1st):
         bx, tx = s[t].split(fused, factor=num_thread)
         s[t].bind(bx, block_x)
         s[t].bind(tx, thread_x)
-    return s, [X, ret]
+    return s, [X, in_grad_a, in_grad]
