@@ -52,8 +52,8 @@ static bool UpSamplingShape(const nnvm::NodeAttrs& attrs,
   }
   */
   int* scale_hw = scaleComp(param_);
-  scale_h = scale_hw[0];
-  scale_w = scale_hw[1];
+  int scale_h = scale_hw[0];
+  int scale_w = scale_hw[1];
   delete scale_hw;
   if (param_.sample_type == up_enum::kNearest) {
     CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
