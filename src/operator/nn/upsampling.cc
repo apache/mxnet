@@ -37,6 +37,7 @@ static bool UpSamplingShape(const nnvm::NodeAttrs& attrs,
   CHECK_GE(in_shape->size(), 1U);
   const mxnet::TShape &dshape = (*in_shape)[0];
   mxnet::TShape oshape = dshape;
+  /*
   int scale_h = 1;
   int scale_w = 1;
   if (param_.scale.ndim() == 1) {
@@ -49,6 +50,11 @@ static bool UpSamplingShape(const nnvm::NodeAttrs& attrs,
     scale_h = param_.scale[2];
     scale_w = param_.scale[3];
   }
+  */
+  int* scale_hw = scaleComp(param_);
+  scale_h = scale_hw[0];
+  scale_w = scale_hw[1];
+  delete scale_hw;
   if (param_.sample_type == up_enum::kNearest) {
     CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
     oshape[1] = 0;
