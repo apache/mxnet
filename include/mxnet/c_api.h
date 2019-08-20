@@ -718,6 +718,7 @@ MXNET_DLL int MXNDArraySyncCopyFromCPU(NDArrayHandle handle,
 MXNET_DLL int MXNDArraySyncCopyToCPU(NDArrayHandle handle,
                                      void *data,
                                      size_t size);
+
 /*!
  * \brief Copy src.data() to dst.data() if i = -1, else dst.aux_data(i) if i >= 0
  * This function blocks. Do not use it in performance critical code.
@@ -774,6 +775,11 @@ MXNET_DLL int MXNDArraySlice(NDArrayHandle handle,
                              mx_uint slice_end,
                              NDArrayHandle *out);
 
+MXNET_DLL int MXNDArraySlice64(NDArrayHandle handle,
+                               int64_t slice_begin,
+                               int64_t slice_end,
+                               NDArrayHandle *out);
+
 /*!
  * \brief Index the NDArray along axis 0.
  * \param handle the handle to the NDArray
@@ -784,6 +790,10 @@ MXNET_DLL int MXNDArraySlice(NDArrayHandle handle,
 MXNET_DLL int MXNDArrayAt(NDArrayHandle handle,
                           mx_uint idx,
                           NDArrayHandle *out);
+
+MXNET_DLL int MXNDArrayAt64(NDArrayHandle handle,
+                            int64_t idx,
+                            NDArrayHandle *out);
 
 /*!
  * \brief get the storage type of the array
