@@ -214,7 +214,7 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
                             const std::vector<NDArray>   &out_data,
                             const std::vector<NDArray>   &aux_states) {
   TmpMemMgr::Get()->Init(ctx.requested[batchnorm::kTempSpace]);
-  unsigned flags      = _GetFlags(in_data, aux_states, param, ctx.is_train && !param.use_global_stats);
+  unsigned flags = _GetFlags(in_data, aux_states, param, ctx.is_train && !param.use_global_stats);
   const NDArray &data = in_data[batchnorm::kData];
 
   auto &fwd = GetBNForward<DType>(param, ctx, data, flags);
