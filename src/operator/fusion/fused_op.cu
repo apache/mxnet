@@ -98,16 +98,16 @@ inline std::vector<int> splitStringToVector(const std::string& input, const std:
         return std::stoi(token);
     };
 
-    while ((pos_end = s.find (",", pos_start)) != std::string::npos) {
-        std::string token = s.substr (pos_start, pos_end - pos_start);
+    while ((pos_end = s.find(",", pos_start)) != std::string::npos) {
+        std::string token = s.substr(pos_start, pos_end - pos_start);
         pos_start = pos_end + 1;
         if (token.length() > 0) {
-            res.push_back (convert_token(token));
+            res.push_back(convert_token(token));
         }
     }
 
     if (pos_start < s.length()) {
-        res.push_back (convert_token(s.substr (pos_start)));
+        res.push_back(convert_token(s.substr(pos_start)));
     }
     return res;
 }
@@ -275,7 +275,8 @@ void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
             begin = build_tuple(0, "0", "0");
             std::string end_var_name;
             std::string extra_var_name = "extra_" + std::to_string(like_id) + "_shape";
-            if (std::find(extra_shape_args_.begin(), extra_shape_args_.end(), like_id) == extra_shape_args_.end()) {
+            if (std::find(extra_shape_args_.begin(), extra_shape_args_.end(), like_id) ==
+                extra_shape_args_.end()) {
                 extra_shape_args_.push_back(like_id);
             }
             if (op_name == "slice_like") {
@@ -288,9 +289,10 @@ void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
                 } else {
                     std::string axes = source->attrs.dict.at("axes");
                     end_var_name = build_string_end(&code);
-                    for (auto ax: splitStringToVector(axes, "")) {
+                    for (auto ax : splitStringToVector(axes, "")) {
                         std::string axis = build_string_axis(ax);
-                        code += end_var_name + "["+axis+"] = " + extra_var_name + "["+axis+"]" + + ";\n";
+                        code += end_var_name + "["+axis+"] = " +
+                                extra_var_name + "["+axis+"];\n";
                     }
                 }
             } else {
@@ -306,10 +308,11 @@ void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
                     end_var_name = build_string_end(&code);
                     std::vector<int> v_lhs_axes = splitStringToVector(lhs_axes, "");
                     std::vector<int> v_rhs_axes = splitStringToVector(rhs_axes, "");
-                    for (int i = 0; i < v_lhs_axes.size(); i++) {
+                    for (size_t i = 0; i < v_lhs_axes.size(); i++) {
                         std::string lhs_axis = build_string_axis(v_lhs_axes[i]);
                         std::string rhs_axis = build_string_axis(v_rhs_axes[i]);
-                        code += end_var_name + "["+lhs_axis+"] = " + extra_var_name + "["+rhs_axis+"]" + + ";\n";
+                        code += end_var_name + "["+lhs_axis+"] = " +
+                                extra_var_name + "["+rhs_axis+"];\n";
                     }
                 }
             }
@@ -503,7 +506,7 @@ void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
   size_t i = 0;
   std::string aux_code = "static const int nvec = " + std::to_string(nvec) + ";\n";
 
-  for (const auto &shape_id: extra_shape_args_) {
+  for (const auto &shape_id : extra_shape_args_) {
       std::string shape_name = "extra_" + std::to_string(shape_id) + "_shape";
       int ndim = node_shapes[shape_id].ndim();
       kernel_params += " const Shape<" + std::to_string(ndim) + "> " + shape_name;
@@ -723,7 +726,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   std::vector<void*> ptrs;
   std::vector<std::vector<int>> shapes;
 
-  for (const auto &shape_id: extra_shape_args_) {
+  for (const auto &shape_id : extra_shape_args_) {
     AddShape(node_shapes[shape_id], &shapes);
   }
   for (const auto &data : inputs) {
@@ -742,7 +745,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   int kernel_index = 0;
   if (check_shape_args_.size() > 0) {
       kernel_index = 1;
-      for (const auto &shape_id: check_shape_args_) {
+      for (const auto &shape_id : check_shape_args_) {
           const auto& shape = node_shapes[shape_id];
           if (shape[shape.ndim()-1] % nvec != 0) {
               kernel_index = 0;
