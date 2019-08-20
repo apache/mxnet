@@ -144,6 +144,7 @@ bool ConcatType(const nnvm::NodeAttrs& attrs,
   const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
   int dtype = -1;
 
+  // checks uniformity of input
   for (int i : *in_type) {
     if (dtype == -1) {
       dtype = i;
@@ -154,18 +155,29 @@ bool ConcatType(const nnvm::NodeAttrs& attrs,
     }
   }
 
-  if (dtype == -1) {
-    LOG(FATAL) << "Not enough information to infer type in Concat.";
-    return false;
-  }
-
   size_t nin = param_.num_args;
-  in_type->clear();
-  for (size_t i = 0; i < nin; ++i) in_type->push_back(dtype);
 
-  out_type->clear();
-  out_type->push_back(dtype);
-
+  // if in types are known out types are unknown
+  if (dtype != -1 && (*out_type)[0] == -1) {
+    (*out_type)[0] = dtype;
+    in_type->clear();
+    for (size_t i = 0; i < nin; ++i) {
+      in_type->push_back(dtype);
+    }
+  // if out types are known in types are unknown
+  } else if ((*out_type)[0] != -1 && dtype == -1) {
+    in_type->clear();
+    for (size_t i = 0; i < nin; ++i) {
+      in_type->push_back((*out_type)[0]);
+    }
+  // if both out_types and in_types are known, and different
+  } else if ((*out_type)[0] != -1 && dtype != -1 && ((*out_type)[0] != dtype)) {
+    std::ostringstream os;
+    os << "Type inconsistent, Provided output type = "
+       << mxnet::op::type_string((*out_type)[0]) << ','
+       << " inferred type = " << mxnet::op::type_string(dtype);
+    throw mxnet::op::InferTypeError(os.str(), 0);
+  }
   return true;
 }
 

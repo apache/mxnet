@@ -104,7 +104,7 @@ inline void SetShapeType(const Context& ctx,
   static auto& infershape = nnvm::Op::GetAttr<mxnet::FInferShape>("FInferShape");
   static auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
   static auto& inferstorage = nnvm::Op::GetAttr<FInferStorageType>("FInferStorageType");
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   // infer shape
   mxnet::ShapeVector& in_shapes  = ret->arg_shapes;
   in_shapes.clear();
@@ -263,12 +263,12 @@ inline void SetDependency(const nnvm::NodeAttrs& attrs,
         requested.push_back(ResourceManager::Get()->Request(ctx, req));
         write_vars.push_back(requested.back().var);
         break;
-#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
+#if MXNET_USE_CUDNN == 1
        case ResourceRequest::kCuDNNDropoutDesc:
         requested.push_back(ResourceManager::Get()->Request(ctx, req));
         write_vars.push_back(requested.back().var);
         break;
-#endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
+#endif  // MXNET_USE_CUDNN == 1
        default:
         LOG(FATAL) << "resource type not yet supported";
       }

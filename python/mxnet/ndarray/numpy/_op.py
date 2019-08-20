@@ -24,8 +24,10 @@ from ...base import numeric_types
 from ...util import set_module
 from ...context import current_context
 from . import _internal as _npi
+from ..ndarray import NDArray
 
-__all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'tensordot']
+__all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'tensordot',
+           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -94,6 +96,58 @@ def ones(shape, dtype=_np.float32, order='C', ctx=None):
         ctx = current_context()
     dtype = _np.float32 if dtype is None else dtype
     return _npi.ones(shape=shape, ctx=ctx, dtype=dtype)
+
+
+@set_module('mxnet.ndarray.numpy')
+def arange(start, stop=None, step=1, dtype=None, ctx=None):
+    """Return evenly spaced values within a given interval.
+
+    Values are generated within the half-open interval ``[start, stop)``
+    (in other words, the interval including `start` but excluding `stop`).
+    For integer arguments the function is equivalent to the Python built-in
+    `range` function, but returns an ndarray rather than a list.
+
+    Parameters
+    ----------
+    start : number, optional
+        Start of interval. The interval includes this value.  The default
+        start value is 0.
+    stop : number
+        End of interval. The interval does not include this value, except
+        in some cases where `step` is not an integer and floating point
+        round-off affects the length of `out`.
+    step : number, optional
+        Spacing between values. For any output `out`, this is the distance
+        between two adjacent values, ``out[i+1] - out[i]``.  The default
+        step size is 1.  If `step` is specified as a position argument,
+        `start` must also be given.
+    dtype : dtype
+        The type of the output array. The default is `float32`.
+
+    Returns
+    -------
+    arange : ndarray
+        Array of evenly spaced values.
+
+        For floating point arguments, the length of the result is
+        ``ceil((stop - start)/step)``.  Because of floating point overflow,
+        this rule may result in the last element of `out` being greater
+        than `stop`.
+    """
+    if dtype is None:
+        dtype = 'float32'
+    if ctx is None:
+        ctx = current_context()
+    if stop is None:
+        stop = start
+        start = 0
+    if step is None:
+        step = 1
+    if start is None and stop is None:
+        raise ValueError('start and stop cannot be both None')
+    if step == 0:
+        raise ZeroDivisionError('step cannot be 0')
+    return _npi.arange(start=start, stop=stop, step=step, dtype=dtype, ctx=ctx)
 
 
 #pylint: disable= too-many-arguments, no-member, protected-access
@@ -364,3 +418,317 @@ def tensordot(a, b, axes=2):
         raise ValueError('Axes length mismatch')
 
     return _npi.tensordot(a, b, a_axes_summed, b_axes_summed)
+
+
+@set_module('mxnet.ndarray.numpy')
+def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis=0, ctx=None):  # pylint: disable=too-many-arguments
+    r"""
+    Return evenly spaced numbers over a specified interval.
+
+    Returns num evenly spaced samples, calculated over the interval [start, stop].
+    The endpoint of the interval can optionally be excluded.
+
+    Parameters
+    ----------
+    start : real number
+        The starting value of the sequence.
+    stop : real number
+        The end value of the sequence, unless endpoint is set to False. In
+        that case, the sequence consists of all but the last of num + 1
+        evenly spaced samples, so that stop is excluded. Note that the step
+        size changes when endpoint is False.
+    num : int, optional
+        Number of samples to generate. Default is 50. Must be non-negative.
+    endpoint : bool, optional
+        If True, stop is the last sample. Otherwise, it is not included.
+        Default is True.
+    retstep : bool, optional
+        If True, return (samples, step), where step is the spacing between samples.
+    dtype : dtype, optional
+        The type of the output array. If dtype is not given, infer the data
+        type from the other input arguments.
+    axis : int, optional
+        The axis in the result to store the samples. Relevant only if start or
+        stop are array-like. By default (0), the samples will be along a new
+        axis inserted at the beginning. Use -1 to get an axis at the end.
+
+    Returns
+    -------
+    samples : ndarray
+        There are num equally spaced samples in the closed interval
+        `[start, stop]` or the half-open interval `[start, stop)`
+        (depending on whether endpoint is True or False).
+    step : float, optional
+        Only returned if retstep is True
+        Size of spacing between samples.
+
+
+    See Also
+    --------
+    arange : Similar to `linspace`, but uses a step size (instead of the
+             number of samples).
+
+    Examples
+    --------
+    >>> np.linspace(2.0, 3.0, num=5)
+    array([2.  , 2.25, 2.5 , 2.75, 3.  ])
+    >>> np.linspace(2.0, 3.0, num=5, endpoint=False)
+    array([2. , 2.2, 2.4, 2.6, 2.8])
+    >>> np.linspace(2.0, 3.0, num=5, retstep=True)
+    (array([2.  , 2.25, 2.5 , 2.75, 3.  ]), 0.25)
+
+    Graphical illustration:
+
+    >>> import matplotlib.pyplot as plt
+    >>> N = 8
+    >>> y = np.zeros(N)
+    >>> x1 = np.linspace(0, 10, N, endpoint=True)
+    >>> x2 = np.linspace(0, 10, N, endpoint=False)
+    >>> plt.plot(x1.asnumpy(), y.asnumpy(), 'o')
+    [<matplotlib.lines.Line2D object at 0x...>]
+    >>> plt.plot(x2.asnumpy(), (y + 0.5).asnumpy(), 'o')
+    [<matplotlib.lines.Line2D object at 0x...>]
+    >>> plt.ylim([-0.5, 1])
+    (-0.5, 1)
+    >>> plt.show()
+
+    Notes
+    -----
+
+    This function differs from the original `numpy.linspace
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.linspace.html>`_ in
+    the following aspects:
+
+    - `start` and `stop` do not support list, numpy ndarray and mxnet ndarray
+    - axis could only be 0
+    - There could be an additional `ctx` argument to specify the device, e.g. the i-th
+      GPU.
+    """
+    if isinstance(start, (list, _np.ndarray, NDArray)) or \
+       isinstance(stop, (list, _np.ndarray, NDArray)):
+        raise NotImplementedError('start and stop only support int')
+    if axis != 0:
+        raise NotImplementedError("the function only support axis 0")
+    if ctx is None:
+        ctx = current_context()
+    if retstep:
+        step = (stop - start) / (num - 1)
+        return _npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, ctx=ctx, dtype=dtype), step
+    else:
+        return _npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, ctx=ctx, dtype=dtype)
+
+
+@set_module('mxnet.ndarray.numpy')
+def expand_dims(a, axis):
+    """Expand the shape of an array.
+
+    Insert a new axis that will appear at the `axis` position in the expanded
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array.
+    axis : int
+        Position in the expanded axes where the new axis is placed.
+
+    Returns
+    -------
+    res : ndarray
+        Output array. The number of dimensions is one greater than that of
+        the input array.
+    """
+    return _npi.expand_dims(a, axis)
+
+
+def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
+    """Helper function for unary operators.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input of the unary operator.
+    fn_array : function
+        Function to be called if x is of ``ndarray`` type.
+    fn_scalar : function
+        Function to be called if x is a Python scalar.
+    out : ndarray
+        The buffer ndarray for storing the result of the unary function.
+
+    Returns
+    -------
+    out : mxnet.numpy.ndarray or scalar
+        Result array or scalar.
+    """
+    if isinstance(x, numeric_types):
+        return fn_scalar(x, **kwargs)
+    elif isinstance(x, NDArray):
+        return fn_array(x, out=out, **kwargs)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x))))
+
+
+@set_module('mxnet.ndarray.numpy')
+def tile(A, reps):
+    r"""
+    Construct an array by repeating A the number of times given by reps.
+
+    If `reps` has length ``d``, the result will have dimension of
+    ``max(d, A.ndim)``.
+
+    If ``A.ndim < d``, `A` is promoted to be d-dimensional by prepending new
+    axes. So a shape (3,) array is promoted to (1, 3) for 2-D replication,
+    or shape (1, 1, 3) for 3-D replication. If this is not the desired
+    behavior, promote `A` to d-dimensions manually before calling this
+    function.
+
+    If ``A.ndim > d``, `reps` is promoted to `A`.ndim by pre-pending 1's to it.
+    Thus for an `A` of shape (2, 3, 4, 5), a `reps` of (2, 2) is treated as
+    (1, 1, 2, 2).
+
+    Parameters
+    ----------
+    A : ndarray or scalar
+        An input array or a scalar to repeat.
+    reps : a single integer or tuple of integers
+        The number of repetitions of `A` along each axis.
+
+    Returns
+    -------
+    c : ndarray
+        The tiled output array.
+
+    Examples
+    --------
+    >>> a = np.array([0, 1, 2])
+    >>> np.tile(a, 2)
+    array([0., 1., 2., 0., 1., 2.])
+    >>> np.tile(a, (2, 2))
+    array([[0., 1., 2., 0., 1., 2.],
+           [0., 1., 2., 0., 1., 2.]])
+    >>> np.tile(a, (2, 1, 2))
+    array([[[0., 1., 2., 0., 1., 2.]],
+           [[0., 1., 2., 0., 1., 2.]]])
+
+    >>> b = np.array([[1, 2], [3, 4]])
+    >>> np.tile(b, 2)
+    array([[1., 2., 1., 2.],
+           [3., 4., 3., 4.]])
+    >>> np.(b, (2, 1))
+    array([[1., 2.],
+           [3., 4.],
+           [1., 2.],
+           [3., 4.]])
+
+    >>> c = np.array([1,2,3,4])
+    >>> np.tile(c,(4,1))
+    array([[1., 2., 3., 4.],
+           [1., 2., 3., 4.],
+           [1., 2., 3., 4.],
+           [1., 2., 3., 4.]])
+
+    Scalar as input:
+
+    >>> np.tile(2, 3)
+    array([2, 2, 2]) # repeating integer `2`
+
+    """
+    return _unary_func_helper(A, _npi.tile, _np.tile, reps=reps)
+
+
+@set_module('mxnet.ndarray.numpy')
+def split(ary, indices_or_sections, axis=0):
+    """Split an array into multiple sub-arrays.
+    Parameters
+    ----------
+    ary : ndarray
+        Array to be divided into sub-arrays.
+    indices_or_sections : int or 1-D array
+        If `indices_or_sections` is an integer, N, the array will be divided
+        into N equal arrays along `axis`.  If such a split is not possible,
+        an error is raised.
+        If `indices_or_sections` is a 1-D array of sorted integers, the entries
+        indicate where along `axis` the array is split.  For example,
+        ``[2, 3]`` would, for ``axis=0``, result in
+          - ary[:2]
+          - ary[2:3]
+          - ary[3:]
+        If an index exceeds the dimension of the array along `axis`,
+        an empty sub-array is returned correspondingly.
+    axis : int, optional
+        The axis along which to split, default is 0.
+    Returns
+    -------
+    sub-arrays : list of ndarrays
+        A list of sub-arrays.
+    Raises
+    ------
+    ValueError
+        If `indices_or_sections` is given as an integer, but
+        a split does not result in equal division.
+    """
+    indices = []
+    axis_size = ary.shape[axis]
+    if isinstance(indices_or_sections, int):
+        sections = indices_or_sections
+        if axis_size % sections:
+            raise ValueError('array split does not result in an equal division')
+        section_size = int(axis_size / sections)
+        indices = [i * section_size for i in range(sections)]
+    elif isinstance(indices_or_sections, tuple):
+        indices = [0] + list(indices_or_sections)
+    else:
+        raise ValueError('indices_or_sections must either int or tuple of ints')
+    ret = _npi.split(ary, indices, axis, False)
+    if not isinstance(ret, list):
+        return [ret]
+    return ret
+
+
+@set_module('mxnet.ndarray.numpy')
+def concatenate(seq, axis=0, out=None):
+    """Join a sequence of arrays along an existing axis.
+    Parameters
+    ----------
+    a1, a2, ... : sequence of array_like
+        The arrays must have the same shape, except in the dimension
+        corresponding to `axis` (the first, by default).
+    axis : int, optional
+        The axis along which the arrays will be joined.  If axis is None,
+        arrays are flattened before use.  Default is 0.
+    out : ndarray, optional
+        If provided, the destination to place the result. The shape must be
+        correct, matching that of what concatenate would have returned if no
+        out argument were specified.
+    Returns
+    -------
+    res : ndarray
+        The concatenated array.
+    """
+    return _npi.concatenate(*seq, dim=axis, out=out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def stack(arrays, axis=0, out=None):
+    """Join a sequence of arrays along a new axis.
+        The axis parameter specifies the index of the new axis in the dimensions of the result.
+        For example, if `axis=0` it will be the first dimension and if `axis=-1` it will be the last dimension.
+    Parameters
+    ----------
+    arrays : sequence of array_like
+        Each array must have the same shape.
+    axis : int, optional
+        The axis in the result array along which the input arrays are stacked.
+    out : ndarray, optional
+        If provided, the destination to place the result. The shape must be correct,
+        matching that of what stack would have returned if no out argument were specified.
+    Returns
+    -------
+    stacked : ndarray
+        The stacked array has one more dimension than the input arrays."""
+    def get_list(arrays):
+        if not hasattr(arrays, '__getitem__') and hasattr(arrays, '__iter__'):
+            raise ValueError("expected iterable for arrays but got {}".format(type(arrays)))
+        return [arr for arr in arrays]
+
+    arrays = get_list(arrays)
+    return _npi.stack(*arrays, axis=axis, out=out)

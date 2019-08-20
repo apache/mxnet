@@ -893,14 +893,15 @@ def test_zipfian_generator():
 def test_shuffle():
     def check_first_axis_shuffle(arr):
         stride = int(arr.size / arr.shape[0])
-        column0 = arr.reshape((arr.size,))[::stride].sort()
+        column0 = arr.reshape((arr.size,))[::stride]
         seq = mx.nd.arange(0, arr.size - stride + 1, stride, ctx=arr.context)
-        assert (column0 == seq).prod() == 1
-        for i in range(arr.shape[0]):
-            subarr = arr[i].reshape((arr[i].size,))
-            start = subarr[0].asscalar()
-            seq = mx.nd.arange(start, start + stride, ctx=arr.context)
-            assert (subarr == seq).prod() == 1
+        assert (column0.sort() == seq).prod() == 1
+        # Check for ascending flattened-row sequences for 2D or greater inputs.
+        if stride > 1:
+            ascending_seq = mx.nd.arange(0, stride, ctx=arr.context)
+            equalized_columns = arr.reshape((arr.shape[0], stride)) - ascending_seq
+            column0_2d = column0.reshape((arr.shape[0],1))
+            assert (column0_2d == equalized_columns).prod() == 1
 
     # This tests that the shuffling is along the first axis with `repeat1` number of shufflings
     # and the outcomes are uniformly distributed with `repeat2` number of shufflings.
