@@ -21,6 +21,7 @@ Ref: http://images.nvidia.com/content/pdf/tesla/184457-Tesla-P4-Datasheet-NV-Fin
 import os
 import mxnet as mx
 import numpy as np
+from mxnet.gluon.model_zoo import vision
 from mxnet.test_utils import assert_almost_equal, assert_exception, rand_ndarray, rand_shape_nd, same, DummyIter
 from common import with_seed
 from mxnet.module import Module
@@ -594,6 +595,88 @@ def test_quantized_act():
         check_quantized_act((3, 4, 23, 23), qdtype)
 
 @with_seed()
+def test_quantized_bn():
+    def get_mean_var(data):
+        mean = mx.ndarray.mean(data, axis=1, exclude=1)
+        mean_broad = mx.ndarray.expand_dims(mean, axis=0)
+        mean_broad = mx.ndarray.expand_dims(mean_broad, axis=2)
+        mean_broad = mx.ndarray.expand_dims(mean_broad, axis=3)
+        mean_broad = mx.ndarray.broadcast_like(mean_broad, data)
+        var = mx.ndarray.multiply(data - mean_broad, data - mean_broad)
+        var = mx.ndarray.mean(var, axis=1, exclude=1)
+        return mean, var
+
+    def check_quantized_bn(data_shape, qdtype):
+        if qdtype == 'uint8':
+            print('skipped testing quantize_bn for uint8 since it is not supported yet')
+            return
+        elif is_test_for_native_cpu():
+            print('skipped testing quantize_bn for native cpu since it is not supported yet')
+            return
+        elif is_test_for_gpu():
+            print('skipped testing quantize_bn for gpu since it is not supported yet')
+            return
+
+        # qdtype = int8
+        data_low = -127.0
+        data_high = 127.0
+        quantized_range = 127.0
+        # run fp32 bn
+        data_sym = mx.sym.Variable(name='data', shape=data_shape, dtype='float32')
+        bn_fp32 = mx.sym.BatchNorm(data=data_sym, name='bn', use_global_stats=True, fix_gamma=False)
+        arg_shapes, out_shapes, aux_shapes = bn_fp32.infer_shape(data=data_shape)
+        arg_names = bn_fp32.list_arguments()
+        aux_names = bn_fp32.list_auxiliary_states()
+
+        data = mx.nd.random.uniform(low=data_low, high=data_high, shape=data_shape)
+        gamma = mx.nd.random.uniform(low=data_low, high=data_high, shape=arg_shapes[1])
+        beta = mx.nd.random.uniform(low=data_low, high=data_high, shape=arg_shapes[2])
+        moving_mean, moving_var = get_mean_var(data)
+
+        bn_fp32_exe = bn_fp32.simple_bind(ctx=mx.current_context(), grad_req='null')
+        bn_fp32_exe.arg_dict[arg_names[0]][:] = data
+        bn_fp32_exe.arg_dict[arg_names[1]][:] = gamma
+        bn_fp32_exe.arg_dict[arg_names[2]][:] = beta
+        bn_fp32_exe.aux_dict[aux_names[0]][:] = moving_mean
+        bn_fp32_exe.aux_dict[aux_names[1]][:] = moving_var
+        min_data = mx.nd.min(data)
+        max_data = mx.nd.max(data)
+        data_range = mx.nd.maximum(mx.nd.abs(min_data), mx.nd.abs(max_data))
+
+        output= bn_fp32_exe.forward()[0]
+
+        # generate int8 bn from fp32 bn
+        arg_params = dict()
+        for k,v in bn_fp32_exe.arg_dict.items():
+            if 'data' in k or 'softmax_label' in k:
+                continue
+            arg_params[k] = v
+
+        calib_data = NDArrayIter(data=data, batch_size=data_shape[0])
+        calib_data = DummyIter(calib_data)
+        qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=bn_fp32,
+                                                                             arg_params=arg_params,
+                                                                             aux_params=bn_fp32_exe.aux_dict,
+                                                                             ctx=mx.current_context(),
+                                                                             quantized_dtype=qdtype,
+                                                                             calib_mode='naive',
+                                                                             calib_data=calib_data,
+                                                                             num_calib_examples=20)
+
+        mod = mx.mod.Module(symbol=qsym, label_names=None, context=mx.current_context())
+        mod.bind(for_training=False, data_shapes=[('data', data_shape)])
+        mod.set_params(qarg_params, qaux_params)
+        batch = mx.io.DataBatch([data], [])
+        mod.forward(batch, is_train=False)
+        output_int8_to_fp32= mod.get_outputs()[0]
+
+        assert_almost_equal(output.asnumpy(), output_int8_to_fp32.asnumpy(), rtol=1e-1, atol=3)
+
+    check_quantized_bn((32, 512, 4, 4), 'int8')
+    check_quantized_bn((32, 1024, 8, 8), 'int8')
+    check_quantized_bn((32, 3, 224, 224), 'int8')
+
+@with_seed()
 def test_quantize_params():
     data = mx.sym.Variable('data')
     conv = mx.sym.Convolution(data, kernel=(1, 1), num_filter=2048, name='conv')
@@ -834,6 +917,12 @@ def test_quantize_model_with_forward():
             if qdtype == 'int8' and is_test_for_mkldnn() and name in ['sym1', 'sym2', 'sym3']:
               print('skipped testing test_quantize_model_with_forward for mkldnn cpu int8 since it is not supported yet')
               continue
+            elif qdtype == 'uint8' and is_test_for_mkldnn() and name in ['sym1']:
+              print('skipping test_quantize_model_with_forward for mkldnn cpu uint8 since it is not supported yet')
+              continue
+            elif qdtype == 'int8' and is_test_for_gpu() and name in ['sym1']:
+              print('skipped testing test_quantize_model_with_forward for gpu int8 since it is not supported yet')
+              continue
 
             if lshape is None:
                 mod = Module(symbol=s, label_names=None)
@@ -898,6 +987,53 @@ def test_quantize_model_with_forward():
     for qdtype in ['int8', 'uint8']:
         check_quantize_model(qdtype)
 
+@with_seed()
+def test_quantize_gluon_with_forward():
+    def check_quantize_net(qdtype):
+        if is_test_for_native_cpu():
+            print('skipped testing test_quantize_model_with_forward for native cpu since it is not supported yet')
+            return
+        elif is_test_for_gpu():
+            print('skipped testing test_quantize_model_with_forward for gpu uint8 since it is not supported yet')
+            return
+
+        data_shape = (32, 3, 224, 224)
+        data_shapes = [mx.io.DataDesc(name='data', shape=data_shape)]
+        label_shape = (32, 1)
+        batch_size = 1
+        resnet18_v1 = vision.resnet18_v1(pretrained=True)
+        resnet18_v1.collect_params().reset_ctx(mx.current_context())
+        excluded_names_match = []
+        if mx.current_context() == mx.gpu():
+            excluded_names_match += ['activation', 'relu', 'conv0']
+        num_calib_examples = 5
+
+        random_data = mx.random.uniform(shape=data_shape)
+        random_label = mx.random.uniform(shape=label_shape)
+        dataset = mx.gluon.data.dataset.ArrayDataset(random_data, random_label)
+        calib_data = mx.gluon.data.DataLoader(dataset, batch_size=batch_size)
+
+        quantized_resnet18_v1 = mx.contrib.quant.quantize_net(resnet18_v1, quantized_dtype=qdtype,
+                                                              exclude_layers=None,
+                                                              exclude_layers_match=excluded_names_match,
+                                                              calib_mode='none',
+                                                              data_shapes=data_shapes,
+                                                              ctx=mx.current_context())
+        quantized_resnet18_v1.hybridize(static_alloc=True, static_shape=True)
+        quantized_resnet18_v1(random_data)
+
+        quantized_resnet18_v1 = mx.contrib.quant.quantize_net(resnet18_v1, quantized_dtype=qdtype,
+                                                              exclude_layers=None,
+                                                              exclude_layers_match=excluded_names_match,
+                                                              calib_data=calib_data,
+                                                              calib_mode='naive',
+                                                              num_calib_examples=num_calib_examples,
+                                                              ctx=mx.current_context())
+        quantized_resnet18_v1.hybridize(static_alloc=True, static_shape=True)
+        quantized_resnet18_v1(random_data)
+
+    for qdtype in ['int8', 'uint8']:
+        check_quantize_net(qdtype)
 
 @with_seed()
 def test_quantize_sym_with_calib():

@@ -111,6 +111,7 @@ NNVM_REGISTER_OP(_backward_dot)
 .add_arguments(DotParam::__FIELDS__());
 
 NNVM_REGISTER_OP(batch_dot)
+.add_alias("_npx_batch_dot")
 .describe(R"doc(Batchwise dot product.
 
 ``batch_dot`` is used to compute dot product of ``x`` and ``y`` when ``x`` and

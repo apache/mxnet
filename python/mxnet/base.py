@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=invalid-name, no-member, trailing-comma-tuple, bad-mcs-classmethod-argument, unnecessary-pass
+# pylint: disable=invalid-name, no-member, trailing-comma-tuple, bad-mcs-classmethod-argument, unnecessary-pass, too-many-lines, wrong-import-position
 """ctypes library of mxnet and helper functions."""
 from __future__ import absolute_import
 
@@ -86,7 +86,7 @@ _Null = _NullType()
 
 
 class MXNetError(Exception):
-    """Error that will be throwed by all mxnet functions."""
+    """Error that will be thrown by all mxnet functions."""
     pass
 
 
@@ -215,6 +215,7 @@ _LIB = _load_lib()
 # type definitions
 mx_int = ctypes.c_int
 mx_uint = ctypes.c_uint
+mx_int64 = ctypes.c_int64
 mx_float = ctypes.c_float
 mx_float_p = ctypes.POINTER(mx_float)
 mx_real_t = _np.float32
@@ -598,7 +599,9 @@ def _init_op_module(root_namespace, module_name, make_op_func):
                                      ctypes.byref(plist)))
     op_names = []
     for i in range(size.value):
-        op_names.append(py_str(plist[i]))
+        op_name = py_str(plist[i])
+        if not _is_np_op(op_name):
+            op_names.append(op_name)
 
     module_op = sys.modules["%s.%s.op" % (root_namespace, module_name)]
     module_internal = sys.modules["%s.%s._internal" % (root_namespace, module_name)]
@@ -692,7 +695,9 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
                                      ctypes.byref(plist)))
     op_names = []
     for i in range(size.value):
-        op_names.append(py_str(plist[i]))
+        op_name = py_str(plist[i])
+        if not _is_np_op(op_name):
+            op_names.append(op_name)
 
     module_op_file = get_module_file("%s.%s.op" % (root_namespace, module_name))
     module_op_all = []
@@ -734,3 +739,116 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
 
 ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
 ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
+
+
+from .runtime import Features
+if Features().is_enabled("TVM_OP"):
+    _LIB_TVM_OP = libinfo.find_lib_path("libtvmop")
+    check_call(_LIB.MXLoadTVMOp(c_str(_LIB_TVM_OP[0])))
+
+
+_NP_OP_PREFIX = '_np_'
+_NP_OP_SUBMODULE_LIST = ['_random_', '_linalg_']
+
+_NP_EXT_OP_PREFIX = '_npx_'
+_NP_EXT_OP_SUBMODULE_LIST = ['_image_']
+
+_NP_INTERNAL_OP_PREFIX = '_npi_'
+
+
+def _is_np_op(op_name):
+    return op_name.startswith(_NP_OP_PREFIX) or op_name.startswith(_NP_EXT_OP_PREFIX)\
+           or op_name.startswith(_NP_INTERNAL_OP_PREFIX)
+
+
+def _get_op_submodule_name(op_name, op_name_prefix, submodule_name_list):
+    """Get the submodule name of a specific op"""
+    assert op_name.startswith(op_name_prefix)
+    for submodule_name in submodule_name_list:
+        if op_name[len(op_name_prefix):].startswith(submodule_name):
+            return submodule_name
+    return ""
+
+
+def _init_np_op_module(root_module_name, np_module_name, mx_module_name, make_op_func):
+    """
+    Register numpy operators in namespaces `mxnet.numpy`, `mxnet.ndarray.numpy`
+    and `mxnet.symbol.numpy`. They are used in imperative mode, Gluon APIs w/o hybridization,
+    and Gluon APIs w/ hybridization, respectively. Essentially, operators with the same name
+    registered in three namespaces, respectively share the same functionality in C++ backend.
+    Different namespaces are needed for dispatching operator calls in Gluon's `HybridBlock` by `F`.
+
+    Parameters
+    ----------
+    root_module_name : str
+        Top level module name, `mxnet` in the current cases.
+    np_module_name : str
+        Second level module name, `numpy` or `numpy_extension` in the current case.
+    make_op_func : function
+        Function for creating op functions.
+    """
+    from . import _numpy_op_doc as _np_op_doc
+    if np_module_name == 'numpy':
+        op_name_prefix = _NP_OP_PREFIX
+        submodule_name_list = _NP_OP_SUBMODULE_LIST
+    elif np_module_name == 'numpy_extension':
+        op_name_prefix = _NP_EXT_OP_PREFIX
+        submodule_name_list = _NP_EXT_OP_SUBMODULE_LIST
+    elif np_module_name == 'numpy._internal':
+        op_name_prefix = _NP_INTERNAL_OP_PREFIX
+        submodule_name_list = []
+    else:
+        raise ValueError('unsupported np module name {}'.format(np_module_name))
+
+    plist = ctypes.POINTER(ctypes.c_char_p)()
+    size = ctypes.c_uint()
+    check_call(_LIB.MXListAllOpNames(ctypes.byref(size), ctypes.byref(plist)))
+    op_names = []
+    for i in range(size.value):
+        name = py_str(plist[i])
+        if name.startswith(op_name_prefix):
+            op_names.append(name)
+
+    if mx_module_name is None:
+        # register np/npx ops for imperative programming
+        op_module_name = "%s.%s._op" % (root_module_name, np_module_name)  # e.g. mxnet.numpy._op
+        op_submodule_name = "%s.%s" % (root_module_name, np_module_name)  # e.g. mxnet.numpy.random
+    elif mx_module_name in ('ndarray', 'symbol'):
+        # register numpy internal ops and np/npx ops for use in Gluon
+        # np internal ops are registered in mxnet.ndarray/symbol.numpy._internal
+        # np ops are registered in mxnet.ndarray/symbol.numpy._op
+        # npx ops are registered in mxnet.ndarray/symbol.numpy_extension._op
+        op_module_name = "%s.%s.%s" % (root_module_name, mx_module_name, np_module_name)
+        if op_name_prefix != _NP_INTERNAL_OP_PREFIX:
+            op_module_name += '._op'
+        # e.g. mxnet.symbol.numpy.random
+        op_submodule_name = "%s.%s.%s" % (root_module_name, mx_module_name, np_module_name)
+    else:
+        raise ValueError('unsupported mxnet module {}'.format(mx_module_name))
+    op_submodule_name += '.%s'
+
+    op_module = sys.modules[op_module_name]
+    submodule_dict = {}
+    for submodule_name in submodule_name_list:
+        submodule_dict[submodule_name] = sys.modules[op_submodule_name % submodule_name[1:-1]]
+    for name in op_names:
+        hdl = OpHandle()
+        check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
+        submodule_name = _get_op_submodule_name(name, op_name_prefix, submodule_name_list)
+        if len(submodule_name) > 0:
+            func_name = name[(len(op_name_prefix) + len(submodule_name)):]
+            cur_module = submodule_dict[submodule_name]
+            module_name_local = op_submodule_name % submodule_name[1:-1]
+        else:
+            func_name = name[len(op_name_prefix):]
+            cur_module = op_module
+            module_name_local =\
+                op_module_name[:-len('._op')] if op_module_name.endswith('._op') else op_module_name
+
+        function = make_op_func(hdl, name, func_name)
+        function.__module__ = module_name_local
+        setattr(cur_module, function.__name__, function)
+        cur_module.__all__.append(function.__name__)
+
+        if hasattr(_np_op_doc, name):
+            function.__doc__ = getattr(_np_op_doc, name).__doc__

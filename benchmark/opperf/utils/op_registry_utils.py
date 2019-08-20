@@ -16,10 +16,8 @@
 # under the License.
 
 """Utilities to interact with MXNet operator registry."""
-import ctypes
 from operator import itemgetter
 from mxnet import runtime
-from mxnet.base import _LIB, check_call, py_str, OpHandle, c_str, mx_uint
 import mxnet as mx
 
 from benchmark.opperf.rules.default_params import DEFAULTS_INPUTS, MX_OP_MODULE
@@ -39,6 +37,8 @@ def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_back
     By default, filter out all Contrib operators that starts with '_contrib' and internal operators that
     starts with '_'.
 
+    Note - All deprecated operators are filtered out as well.
+
     Parameters
     ----------
     operator_names: List[str]
@@ -54,6 +54,11 @@ def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_back
     """
     mx_operators = {}
     operators_with_backward = []
+
+    # Filter out deprecated operators
+    filters += ("normal", "uniform", "BatchNorm_v1", "Flatten", "contrib_CTCLoss", "Pad", "Cast",
+                "Pooling_v1", "Concat", "Reshape", "Convolution_v1", "SliceChannel", "Crop",
+                "crop", "onehot_encode")
 
     if merge_op_forward_backward:
         filters += ("_backward",)
@@ -108,8 +113,11 @@ def prepare_op_inputs(arg_params, arg_values):
     return inputs
 
 
-def prepare_op_inputs(arg_params):
+def prepare_op_inputs(op, arg_params):
     inputs = []
+
+    # 4d tensor is needed only by following two ops
+    ops_4d = ['depth_to_space','space_to_depth']
 
     # Prepare op to default input mapping
     arg_values = {}
@@ -117,10 +125,16 @@ def prepare_op_inputs(arg_params):
                                   arg_params["params"]["arg_types"]):
         if "NDArray" in arg_type and arg_name + "_nd" in DEFAULTS_INPUTS:
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_nd"]
+        elif "NDArray" in arg_type and op in ops_4d and arg_name + "_4d" in DEFAULTS_INPUTS:
+            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_4d"]
         elif arg_name in DEFAULTS_INPUTS:
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name]
         elif "float" in arg_type and arg_name + "_float" in DEFAULTS_INPUTS:
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_float"]
+        elif "Shape" in arg_type and arg_name + "_shape" in DEFAULTS_INPUTS:
+            # This is for cases where in some ops 'axis' is Int in some ops a shape tuple.
+            # Ex: axis in sum is shape, axis in sort is int.
+            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_shape"]
 
     # Number of different inputs we want to use to test
     # the operator
@@ -239,6 +253,67 @@ def get_all_reduction_operators():
             reduction_mx_operators[op_name] = mx_operators[op_name]
     return reduction_mx_operators
 
+
+def get_all_optimizer_operators():
+    """Gets all Optimizer operators registered with MXNet.
+
+     Returns
+     -------
+     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+     """
+    optimizer_ops = ['mp_sgd_update', 'signum_update', 'rmspropalex_update', 'ftml_update', 'rmsprop_update',
+                     'sgd_mom_update', 'signsgd_update', 'mp_sgd_mom_update', 'ftrl_update', 'sgd_update',
+                     'adam_update']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Optimizer operators
+    optimizer_mx_operators = {}
+    for op_name, op_params in mx_operators.items():
+         if op_name in optimizer_ops and op_name not in unique_ops:
+             optimizer_mx_operators[op_name] = mx_operators[op_name]
+    return optimizer_mx_operators
+
+def get_all_sorting_searching_operators():
+    """Gets all Sorting and Searching operators registered with MXNet.
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
+    sort_search_ops = ['sort', 'argsort', 'argmax', 'argmin', 'topk']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Sort and search operators
+    sort_search_mx_operators = {}
+    for op_name, op_params in mx_operators.items():
+        if op_name in sort_search_ops and op_name not in unique_ops:
+            sort_search_mx_operators[op_name] = mx_operators[op_name]
+    return sort_search_mx_operators
+
+
+def get_all_rearrange_operators():
+    """Gets all array rearrange operators registered with MXNet.
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
+    rearrange_ops = ['transpose','swapaxes','flip','depth_to_space','space_to_depth']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Array Rearrange operators
+    rearrange_mx_operators = {}
+    for op_name, op_params in mx_operators.items():
+        if op_name in rearrange_ops and op_name not in unique_ops:
+            rearrange_mx_operators[op_name] = mx_operators[op_name]
+    return rearrange_mx_operators
+    
 
 def get_operators_with_no_benchmark(operators_with_benchmark):
     """Gets all MXNet operators with not benchmark.

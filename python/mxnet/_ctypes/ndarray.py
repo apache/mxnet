@@ -55,6 +55,8 @@ class NDArrayBase(object):
 
 
 _ndarray_cls = None
+_np_ndarray_cls = None
+
 
 def _set_ndarray_class(cls):
     """Set the symbolic class to be cls"""
@@ -62,7 +64,13 @@ def _set_ndarray_class(cls):
     _ndarray_cls = cls
 
 
-def _imperative_invoke(handle, ndargs, keys, vals, out):
+def _set_np_ndarray_class(cls):
+    """Set the symbolic class to be cls"""
+    global _np_ndarray_cls
+    _np_ndarray_cls = cls
+
+
+def _imperative_invoke(handle, ndargs, keys, vals, out, is_np_op):
     """ctypes implementation of imperative invoke wrapper"""
     if out is not None:
         original_output = out
@@ -91,22 +99,26 @@ def _imperative_invoke(handle, ndargs, keys, vals, out):
         c_str_array([str(s) for s in vals]),
         ctypes.byref(out_stypes)))
 
+    create_ndarray_fn = _np_ndarray_cls if is_np_op else _ndarray_cls
     if original_output is not None:
         return original_output
     if num_output.value == 1:
-        return _ndarray_cls(ctypes.cast(output_vars[0], NDArrayHandle),
-                            stype=out_stypes[0])
+        return create_ndarray_fn(ctypes.cast(output_vars[0], NDArrayHandle),
+                                 stype=out_stypes[0])
     else:
-        return [_ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle),
-                             stype=out_stypes[i])
-                for i in range(num_output.value)]
+        return [create_ndarray_fn(ctypes.cast(output_vars[i], NDArrayHandle),
+                                  stype=out_stypes[i]) for i in range(num_output.value)]
 
 
 class CachedOp(object):
     """Cached operator handle."""
-    __slots__ = ["handle"]
+    __slots__ = ["handle", "is_np_sym"]
+
     def __init__(self, sym, flags=()):
         self.handle = CachedOpHandle()
+
+        from ..symbol.numpy._symbol import _Symbol
+        self.is_np_sym = bool(isinstance(sym, _Symbol))
 
         check_call(_LIB.MXCreateCachedOpEx(
             sym.handle,
@@ -151,10 +163,10 @@ class CachedOp(object):
 
         if original_output is not None:
             return original_output
+        create_ndarray_fn = _np_ndarray_cls if self.is_np_sym else _ndarray_cls
         if num_output.value == 1:
-            return _ndarray_cls(ctypes.cast(output_vars[0], NDArrayHandle),
-                                stype=out_stypes[0])
+            return create_ndarray_fn(ctypes.cast(output_vars[0], NDArrayHandle),
+                                     stype=out_stypes[0])
         else:
-            return [_ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle),
-                                 stype=out_stypes[i])
-                    for i in range(num_output.value)]
+            return [create_ndarray_fn(ctypes.cast(output_vars[i], NDArrayHandle),
+                                      stype=out_stypes[i]) for i in range(num_output.value)]

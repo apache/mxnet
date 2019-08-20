@@ -451,12 +451,19 @@ def load_checkpoint(prefix, epoch):
     save_dict = nd.load('%s-%04d.params' % (prefix, epoch))
     arg_params = {}
     aux_params = {}
-    for k, v in save_dict.items():
-        tp, name = k.split(':', 1)
-        if tp == 'arg':
-            arg_params[name] = v
-        if tp == 'aux':
-            aux_params[name] = v
+    #load any params in the dict, skip if params are empty
+    if not save_dict:
+        logging.warning("Params file '%s' is empty", '%s-%04d.params' % (prefix, epoch))
+    else:
+        for k, v in save_dict.items():
+            tp, name = k.split(':', 1)
+            if tp == 'arg':
+                arg_params[name] = v
+            elif tp == 'aux':
+                aux_params[name] = v
+            else:
+                logging.warning("Params file '%s' contains unknown param '%s'",
+                                '%s-%04d.params' % (prefix, epoch), k)
     return (symbol, arg_params, aux_params)
 
 from .callback import LogValidationMetricsCallback # pylint: disable=wrong-import-position
@@ -642,10 +649,9 @@ class FeedForward(BASE_ESTIMATOR):
         """Initialize the iterator given input."""
         if isinstance(X, (np.ndarray, nd.NDArray)):
             if y is None:
-                if is_train: # pylint: disable=no-else-raise
+                if is_train:
                     raise ValueError('y must be specified when X is numpy.ndarray')
-                else:
-                    y = np.zeros(X.shape[0])
+                y = np.zeros(X.shape[0])
             if not isinstance(y, (np.ndarray, nd.NDArray)):
                 raise TypeError('y must be ndarray when X is numpy.ndarray')
             if X.shape[0] != y.shape[0]:
