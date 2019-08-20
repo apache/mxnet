@@ -25,9 +25,10 @@
 #ifndef MXNET_LIB_API_H_
 #define MXNET_LIB_API_H_
 
+#include <stdint.h>
 #include <vector>
 #include <map>
-#include <stdint.h>
+#include <string>
 
 /*!
  * \brief External Tensor data types
@@ -55,10 +56,10 @@ struct MXTensor {
    */
   template<typename data_type>
   data_type* getData() {
-    return (data_type*)data;
+    return reinterpret_cast<data_type*>(data);
   }
 
-  void *data; // not owned
+  void *data;  // not owned
   std::vector<int64_t> shape;
   MXDType dtype;
 };
@@ -66,13 +67,13 @@ struct MXTensor {
 /*!
  * Custom Operator function templates
  */
-typedef int (*fcomp_t)(std::map<std::string,std::string>,
+typedef int (*fcomp_t)(std::map<std::string, std::string>,
                        std::vector<MXTensor>, std::vector<MXTensor>);
-typedef int (*parseAttrs_t)(std::map<std::string,std::string>,
+typedef int (*parseAttrs_t)(std::map<std::string, std::string>,
                             int*, int*);
-typedef int (*inferType_t)(std::map<std::string,std::string>,
+typedef int (*inferType_t)(std::map<std::string, std::string>,
                            std::vector<int>&, std::vector<int>&);
-typedef int (*inferShape_t)(std::map<std::string,std::string>,
+typedef int (*inferShape_t)(std::map<std::string, std::string>,
                             std::vector<std::vector<unsigned int>>&,
                             std::vector<std::vector<unsigned int>>&);
 
@@ -80,8 +81,8 @@ typedef int (*inferShape_t)(std::map<std::string,std::string>,
  * \brief Class to hold custom operator registration
  */
 class CustomOp {
- public:
- CustomOp(const char* op_name) : name(op_name), fcompute(nullptr),
+  public:
+  explicit CustomOp(const char* op_name) : name(op_name), fcompute(nullptr),
     parse_attrs(nullptr), infer_type(nullptr), infer_shape(nullptr) {}
   ~CustomOp() {}
   CustomOp& setFCompute(fcomp_t fcomp) {
@@ -139,6 +140,7 @@ class Registry {
   T& get(int idx) {
     return *(entries[idx]);
   }
+  
  private:
   /*! \brief constructor */
   Registry() {}
@@ -146,8 +148,7 @@ class Registry {
   ~Registry() {}
   /*! \brief map of entries in registry */
   std::vector<T*> entries;
-};
-  
+};  
 
 /*
  * Macros to help with string concat
@@ -172,7 +173,8 @@ class Registry {
 /*!
  * \brief assign a var to a value
  */
-#define REGISTER_OP(Name) _STR_CONCAT(_REGISTER_DEF_(Name), __COUNTER__) = Registry<CustomOp>::get()->add(TOSTRING(Name))
+#define REGISTER_OP(Name) _STR_CONCAT(_REGISTER_DEF_(Name), __COUNTER__) = \
+    Registry<CustomOp>::get()->add(TOSTRING(Name))
 
 
 /*!
@@ -242,52 +244,54 @@ extern "C" {
   /*!
    * \brief returns status of calling parse attributes function for operator from library
    */
-  int _opCallParseAttrs(parseAttrs_t parseAttrs, const char* const* keys, const char* const* vals, int num,
+  int _opCallParseAttrs(parseAttrs_t parseAttrs, const char* const* keys,
+                        const char* const* vals, int num,
                         int* num_in, int* num_out) {
-    //create map of attributes from list
-    std::map<std::string,std::string> attrs;
-    for(int i=0; i<num; i++) {
+    // create map of attributes from list
+    std::map<std::string, std::string> attrs;
+    for (int i = 0; i < num; i++) {
       attrs[std::string(keys[i])] = std::string(vals[i]);
     }
 
-    return parseAttrs(attrs,num_in,num_out);
+    return parseAttrs(attrs, num_in, num_out);
   }
 
   /*!
    * \brief returns status of calling infer shape function for operator from library
    */
-  int _opCallInferShape(inferShape_t inferShape, const char* const* keys, const char* const* vals, int num,
+  int _opCallInferShape(inferShape_t inferShape, const char* const* keys,
+                        const char* const* vals, int num,
                         unsigned int** inshapes, int* indims, int num_in,
                         unsigned int*** outshapes, int** outdims, int num_out) {
-    //create map of attributes from list
-    std::map<std::string,std::string> attrs;
-    for(int i=0; i<num; i++) {
+    // create map of attributes from list
+    std::map<std::string, std::string> attrs;
+    for (int i = 0; i < num; i++) {
       attrs[std::string(keys[i])] = std::string(vals[i]);
     }
 
-    //create a vector of shapes for inputs
+    // create a vector of shapes for inputs
     std::vector<std::vector<unsigned int> > in_shapes(num_in);
-    for(int i=0; i<num_in; i++) {
-      for(int j=0; j<indims[i]; j++) {
+    for (int i = 0; i < num_in; i++) {
+      for (int j = 0; j < indims[i]; j++) {
         in_shapes[i].push_back(inshapes[i][j]);
       }
     }
 
-    //create a vector of shapes for outputs
+    // create a vector of shapes for outputs
     std::vector<std::vector<unsigned int> > out_shapes(num_out);
 
-    int retval = inferShape(attrs,in_shapes,out_shapes);
+    int retval = inferShape(attrs, in_shapes, out_shapes);
     if(!retval) return retval;
 
-    //allocate space for output dims, shape
-    *outdims = (int*)malloc(num_out*sizeof(int));
-    *outshapes = (unsigned**)malloc(num_out*sizeof(unsigned*));
+    // allocate space for output dims, shape
+    *outdims = (int*) malloc (num_out * sizeof(int));
+    *outshapes = (unsigned**) malloc (num_out * sizeof(unsigned*));
 
-    //copy output shapes
-    for(int i=0; i<num_out; i++) {
+    // copy output shapes
+    for (int i = 0; i < num_out; i++) {
       (*outdims)[i] = out_shapes[i].size();
-      (*outshapes)[i] = (unsigned*)malloc((*outdims)[i]*sizeof(unsigned));
-      for(int j=0; j<indims[i]; j++) {
+      (*outshapes)[i] = (unsigned*) malloc ((*outdims)[i] * sizeof(unsigned));
+      for (int j = 0; j < indims[i]; j++) {
         (*outshapes)[i][j] = out_shapes[i][j];
       }
     }
@@ -298,36 +302,39 @@ extern "C" {
   /*!
    * \brief returns status of calling FCompute function for operator from library
    */
-  int _opCallFCompute(fcomp_t fcomp, const char* const* keys, const char* const* vals, int num,
-                      const int64_t** inshapes, int* indims, void** indata, int* intypes, int num_in,
-                      const int64_t** outshapes, int* outdims, void** outdata, int* outtypes, int num_out) {
-    //create map of attributes from list
-    std::map<std::string,std::string> attrs;
-    for(int i=0; i<num; i++) {
+  int _opCallFCompute(fcomp_t fcomp, const char* const* keys,
+                      const char* const* vals, int num,
+                      const int64_t** inshapes, int* indims,
+                      void** indata, int* intypes, int num_in,
+                      const int64_t** outshapes, int* outdims,
+                      void** outdata, int* outtypes, int num_out) {
+    // create map of attributes from list
+    std::map<std::string, std::string> attrs;
+    for (int i = 0; i < num; i++) {
       attrs[std::string(keys[i])] = std::string(vals[i]);
     }
 
-    //create a vector of tensors for inputs
+    // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
-    for(int i=0; i<num_in; i++) {
+    for (int i = 0; i < num_in; i++) {
       inputs[i].data = indata[i];
       inputs[i].dtype = (MXDType)intypes[i];
-      for(int j=0; j<indims[i]; j++) {
+      for (int j = 0; j < indims[i]; j++) {
         inputs[i].shape.push_back(inshapes[i][j]);
       }
     }
 
-    //create a vector of tensors for outputs
+    // create a vector of tensors for outputs
     std::vector<MXTensor> outputs(num_out);
-    for(int i=0; i<num_out; i++) {
+    for (int i = 0; i < num_out; i++) {
       outputs[i].data = outdata[i];
-      outputs[i].dtype = (MXDType)outtypes[i];
-      for(int j=0; j<outdims[i]; j++) {
+      outputs[i].dtype = (MXDType) outtypes[i];
+      for (int j = 0; j < outdims[i]; j++) {
         outputs[i].shape.push_back(outshapes[i][j]);
       }
     }
 
-    return fcomp(attrs,inputs,outputs);
+    return fcomp(attrs, inputs, outputs);
   }
   
   /*!
