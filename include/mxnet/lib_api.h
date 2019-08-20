@@ -81,7 +81,7 @@ typedef int (*inferShape_t)(std::map<std::string, std::string>,
  * \brief Class to hold custom operator registration
  */
 class CustomOp {
-  public:
+ public:
   explicit CustomOp(const char* op_name) : name(op_name), fcompute(nullptr),
     parse_attrs(nullptr), infer_type(nullptr), infer_shape(nullptr) {}
   ~CustomOp() {}
@@ -140,7 +140,7 @@ class Registry {
   T& get(int idx) {
     return *(entries[idx]);
   }
-  
+
  private:
   /*! \brief constructor */
   Registry() {}
@@ -148,7 +148,7 @@ class Registry {
   ~Registry() {}
   /*! \brief map of entries in registry */
   std::vector<T*> entries;
-};  
+};
 
 /*
  * Macros to help with string concat
@@ -281,16 +281,16 @@ extern "C" {
     std::vector<std::vector<unsigned int> > out_shapes(num_out);
 
     int retval = inferShape(attrs, in_shapes, out_shapes);
-    if(!retval) return retval;
+    if (!retval) return retval;
 
     // allocate space for output dims, shape
-    *outdims = (int*) malloc (num_out * sizeof(int));
-    *outshapes = (unsigned**) malloc (num_out * sizeof(unsigned*));
+    *outdims = static_cast<int*>(malloc (num_out * sizeof(int)));
+    *outshapes = static_cast<unsigned**>(malloc (num_out * sizeof(unsigned*)));
 
     // copy output shapes
     for (int i = 0; i < num_out; i++) {
       (*outdims)[i] = out_shapes[i].size();
-      (*outshapes)[i] = (unsigned*) malloc ((*outdims)[i] * sizeof(unsigned));
+      (*outshapes)[i] = static_cast<unsigned*>(malloc ((*outdims)[i] * sizeof(unsigned)));
       for (int j = 0; j < indims[i]; j++) {
         (*outshapes)[i][j] = out_shapes[i][j];
       }
@@ -336,7 +336,7 @@ extern "C" {
 
     return fcomp(attrs, inputs, outputs);
   }
-  
+
   /*!
    * \brief Checks if the MXNet version is supported by the library.
    * If supported, initializes the library.
