@@ -59,12 +59,12 @@ def load(path):
     mx_nd = sys.modules["mxnet.ndarray"]
     mx_nd_op = sys.modules["mxnet.ndarray.op"]
     for op in dir(mx_nd_op):
-        func = getattr(mx_nd_op,op)
-        setattr(mx_nd,op,func)
+        func = getattr(mx_nd_op, op)
+        setattr(mx_nd, op, func)
 
     #re-register mx.sym.op into mx.sym
     mx_sym = sys.modules["mxnet.symbol"]
     mx_sym_op = sys.modules["mxnet.symbol.op"]
     for op in dir(mx_sym_op):
-        func = getattr(mx_sym_op,op)
-        setattr(mx_sym,op,func)
+        func = getattr(mx_sym_op, op)
+        setattr(mx_sym, op, func)
