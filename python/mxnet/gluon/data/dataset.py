@@ -40,6 +40,9 @@ class Dataset(object):
     def __len__(self):
         raise NotImplementedError
 
+    def filter(self, filter_fn):
+        raise NotImplementedError
+
     def transform(self, fn, lazy=True):
         """Returns a new dataset with each sample transformed by the
         transformer function `fn`.
@@ -90,6 +93,106 @@ class Dataset(object):
         """
         return self.transform(_TransformFirstClosure(fn), lazy)
 
+class RangeFilter(Filter):
+    """RangeFilter filters the data samples based on the range [start_idx, end_idx)
+    from the dataset. Only data samples within the range passes the filter.
+    Parameters
+    ----------
+    start_idx : int
+        The start index (included).
+    end_idx : int or None
+        The end index (excluded). If set to None, it is set to infinity.
+    Example
+    -------
+    >>> data =  "a,b,c\n"
+    >>> data += "d,e,f\n"
+    >>> data += "g,h,i\n"
+    >>> data += "j,k,l\n"
+    >>> data += "m,n,o\n"
+    >>> with open('test_range_filter.txt', 'w') as fout:
+    >>>     fout.write(data)
+    >>>
+    >>> # create 2 partitions, and read partition 0 only
+    >>> filter_fn = nlp.data.RangeFilter(1, 3)
+    >>> dataset = nlp.data.TextLineDataset('test_range_filter.txt', filter_fn=filter_fn)
+    >>> len(dataset)
+    2
+    >>> dataset[0]
+    "d,e,f"
+    >>> dataset[1]
+    "g,h,i"
+    """
+    def __init__(self, start_idx, end_idx):
+        self.start = start_idx
+        self.end = end_idx
+        if end_idx is not None:
+            assert self.start < self.end, 'end_idx must be greater than start_idx'
+
+    def __call__(self, index, data):
+        """Check if the data sample passes the filter.
+        Parameters
+        ----------
+        index : int
+            The original dataset index before filtering is applied.
+        sample : object
+            The original data sample object at the provided index.
+        """
+        if self.end is not None:
+            return index >= self.start and index < self.end
+        else:
+            return index >= self.start
+
+
+class SplitFilter(object):
+    """SplitFilter filters the data samples based on the number of partitions
+    and partition index of the dataset. Only data samples for the target
+    partition index passes the filter.
+
+    Parameters
+    ----------
+    num_parts : int
+        The number of partitions.
+    part_idx : int
+        The target partition index that will pass the filter.
+
+    Example
+    -------
+    >>> data =  "a,b,c\n"
+    >>> data += "d,e,f\n"
+    >>> data += "g,h,i\n"
+    >>> data += "j,k,l\n"
+    >>> data += "m,n,o\n"
+    >>> with open('test_split_filter.txt', 'w') as fout:
+    >>>     fout.write(data)
+    >>>
+    >>> # create 2 partitions, and read partition 0 only
+    >>> filter_fn = nlp.data.SplitFilter(2, 0)
+    >>> dataset = nlp.data.TextLineDataset('test_split_filter.txt', filter_fn=filter_fn)
+    >>> len(dataset)
+    3
+    >>> dataset[0]
+    "a,b,c"
+    >>> dataset[1]
+    "g,h,i"
+    >>> dataset[2]
+    "m,n,o"
+    """
+    def __init__(self, num_parts, part_idx):
+        self.num_parts = num_parts
+        self.part_idx = part_idx
+        assert self.part_idx < self.num_parts, 'part_idx should be less than num_parts'
+
+    def __call__(self, index, data):
+        """Check if the data sample passes the filter.
+        Parameters
+        ----------
+        index : int
+            The original dataset index before filtering is applied.
+        sample : object
+            The original data sample object at the provided index.
+        """
+        return index % self.num_parts == self.part_idx
+
 
 class SimpleDataset(Dataset):
     """Simple Dataset wrapper for lists and arrays.
@@ -107,6 +210,14 @@ class SimpleDataset(Dataset):
 
     def __getitem__(self, idx):
         return self._data[idx]
+
+    def filter(self, filter_fn):
+        data = []
+        for i in range(len(self)):
+            sample = self[i]
+            if filter_fn(i, sample):
+                data.append(sample)
+        return SimpleDataset(data)
 
 
 class _LazyTransformDataset(Dataset):

@@ -133,6 +133,15 @@ def test_datasets():
     assert len(gluon.data.vision.CIFAR100(root='data/cifar100', fine_label=True)) == 50000
     assert len(gluon.data.vision.CIFAR100(root='data/cifar100', train=False)) == 10000
 
+    from mxnet.gluon.data.dataset import SplitFilter, RangeFilter
+    dataset = gluon.data.SimpleDataset([i for i in range(10000)])
+    assert len(dataset.filter(SplitFilter(3, 0))) == 10000 // 3 + 1
+    assert len(dataset.filter(SplitFilter(3, 1))) == 10000 // 3
+    assert len(dataset.filter(SplitFilter(3, 2))) == 10000 // 3
+    assert len(dataset.filter(RangeFilter(10, 20))) == 10
+    assert dataset.filter(RangeFilter(10, 20))[0] == 10
+    assert dataset.filter(RangeFilter(10, 20))[9] == 19
+
 @with_seed()
 def test_image_folder_dataset():
     prepare_record()
