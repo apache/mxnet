@@ -263,7 +263,6 @@ void MKLDNNFCForwardFullFeature(const MKLDNNFCFullParam &full_param,
       CHECK(weight_mem->get_primitive_desc() == fwd->fwd_pd.weights_primitive_desc());
     }
   }
-
   auto out_mem = CreateMKLDNNMem(out_data[fullc::kOut],
       fwd->fwd_pd.dst_primitive_desc(), req[fullc::kOut], &data);
   if (!full_param.default_param.no_bias) {
@@ -273,7 +272,6 @@ void MKLDNNFCForwardFullFeature(const MKLDNNFCFullParam &full_param,
   } else {
     fwd->SetNewMem(*data_mem, *weight_mem, nullptr, *out_mem.second);
   }
-
   MKLDNNStream::Get()->RegisterPrim(fwd->GetFwd());
   CommitOutput(out_data[fullc::kOut], out_mem);
   MKLDNNStream::Get()->Submit();

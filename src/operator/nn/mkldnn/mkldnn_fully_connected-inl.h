@@ -87,8 +87,6 @@ class MKLDNNFullyConnectedForward {
                               const mkldnn::memory::desc &out_md)
       : fwd_pd(GetFCFwdImpl(full_param, is_train, data, weight, bias, out_md)) {}
 
-  void SetNewMem(const mkldnn::memory &data, const mkldnn::memory &output);
-
   void SetNewMem(const mkldnn::memory &data, const mkldnn::memory &weight,
                  const mkldnn::memory *bias, const mkldnn::memory &output);
 

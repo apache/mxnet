@@ -146,7 +146,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
       auto data_range = (data.dtype() == mshadow::kInt8) ? kInt8Range : kUint8Range;
       float data_scale  = data_range / MaxAbs(cached_min_data_, cached_max_data_);
       float weight_scale = kInt8Range / MaxAbs(cached_min_weight_, cached_max_weight_);
-      float quantized_out_range = mkldnn_param.with_eltwise? kUint8Range : kInt8Range;
+      float quantized_out_range = IsOutputUint8(full_param_)? kUint8Range : kInt8Range;
 
       if (has_bias) {
         NDArray bias = in_data[fullc::kBias];

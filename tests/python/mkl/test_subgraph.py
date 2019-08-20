@@ -833,7 +833,6 @@ def test_fc_eltwise():
                                                         [True, False],
                                                         fc_post_ops_list):
     syms, attrs = fc_eltwise(no_bias, dshape, flatten, alg)
-    print ('alg={0}, no_bias={1}, flatten={2}, dshape={3}'.format(alg, no_bias, flatten, dshape))
     if flatten is True:
       check_fusion(syms, dshape, attrs, check_quantization=True)
     else:

@@ -76,7 +76,6 @@ static inline bool IsOutputUint8(const MKLDNNFCFullParam& full_param) {
   return false;
 }
 
-
 }  // namespace op
 }  // namespace mxnet
 
