@@ -202,6 +202,7 @@ static void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
                                           int dtype,
                                           bool is_train,
                                           int mode) {
+  int primitive_index = layer_index ? 1 : 0;
   int ngates = 0, nstates = 0;
   algorithm nalgorithm = GetMKLDNNRNNAlgo(mode, &ngates, &nstates);
   const int nbias = mode == rnn_enum::kGru ? ngates + 1 : ngates;
@@ -239,8 +240,8 @@ static void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
       AdjustGruWeightGateOrder(back_wh, hidden_size, hidden_size);
       has_adjusted = true;
     }
-    mkldnn::memory& src_wx = mkldnn_mems->concat_weight_memory[2 * layer_index];
-    mkldnn::memory& src_wh = mkldnn_mems->concat_weight_memory[2 * layer_index + 1];
+    mkldnn::memory& src_wx = mkldnn_mems->concat_weight_memory[2 * primitive_index];
+    mkldnn::memory& src_wh = mkldnn_mems->concat_weight_memory[2 * primitive_index + 1];
     std::vector<void*> srcs_data1;
     srcs_data1.push_back(wx);
     srcs_data1.push_back(back_wx);
@@ -329,7 +330,7 @@ static void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
   } else {
     user_src_iter_memory.set_data_handle(hx_ptr);
   }
-  mkldnn_mems->hcx_memory[layer_index].set_data_handle(user_src_iter_memory.get_data_handle());
+  mkldnn_mems->hcx_memory[primitive_index].set_data_handle(user_src_iter_memory.get_data_handle());
 
   rnn_cell::desc rnn_cell(nalgorithm,
       mode == rnn_enum::kRnnRelu ? algorithm::eltwise_relu : algorithm::eltwise_tanh);
@@ -342,27 +343,27 @@ static void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
   auto prim_desc
        = rnn_forward::primitive_desc(layer_desc, cpu_engine);
 
-  if (x_ptr && layer_index == 0) {
-    mkldnn_mems->x_memory[layer_index].set_data_handle(x_ptr);
+  if (x_ptr && primitive_index == 0) {
+    mkldnn_mems->x_memory[primitive_index].set_data_handle(x_ptr);
   } else {
-    mkldnn_mems->x_memory[layer_index].set_data_handle(
+    mkldnn_mems->x_memory[primitive_index].set_data_handle(
         mkldnn_mems->user_src_layer_memory_l.get_data_handle());
   }
-  mkldnn_mems->y_memory[layer_index].set_data_handle(y_ptr);
-  if (rnn_forward_prim->size() <= (size_t)layer_index) {
-    primitive rnn_prim = rnn_forward(prim_desc, mkldnn_mems->x_memory[layer_index],
-          mkldnn_mems->hcx_memory[layer_index], mkldnn_mems->wx_memory[layer_index],
+  mkldnn_mems->y_memory[primitive_index].set_data_handle(y_ptr);
+  if (rnn_forward_prim->size() <= (size_t)primitive_index) {
+    primitive rnn_prim = rnn_forward(prim_desc, mkldnn_mems->x_memory[primitive_index],
+          mkldnn_mems->hcx_memory[primitive_index], mkldnn_mems->wx_memory[layer_index],
           mkldnn_mems->wh_memory[layer_index], mkldnn_mems->bias_memory[layer_index],
-          mkldnn_mems->y_memory[layer_index],
-          mkldnn_mems->hcy_memory[layer_index], null_memory_);
+          mkldnn_mems->y_memory[primitive_index],
+          mkldnn_mems->hcy_memory[primitive_index], null_memory_);
     rnn_forward_prim->push_back(rnn_prim);
   }
-  MKLDNNStream::Get()->RegisterPrim((*rnn_forward_prim)[layer_index]);
+  MKLDNNStream::Get()->RegisterPrim((*rnn_forward_prim)[primitive_index]);
   MKLDNNStream::Get()->Submit();
 
   if (state_outputs) {
     DType* dst_hcy = reinterpret_cast<DType *>(
-        mkldnn_mems->hcy_memory[layer_index].get_data_handle());
+        mkldnn_mems->hcy_memory[primitive_index].get_data_handle());
     if (mode == rnn_enum::kLstm) {
       size_t back_hy_offset = nstates * single_cell_size;
       size_t back_cy_offset = (nstates + 1) * single_cell_size;
@@ -691,7 +692,7 @@ static void MKLDNNRNNForward(const bool state_outputs,
       b_ptr += b_size;
       if (direction == 2) {
         w_size = (hidden_size * direction + hidden_size) * hidden_size * ngates * direction;
-        for (int l = 0; l < num_layer - 1; l++) {
+        for (int l = 1; l < num_layer; l++) {
           if (state_outputs) {
             hy_ptr += cell_size;
             if (mode == rnn_enum::kLstm) {
@@ -704,7 +705,7 @@ static void MKLDNNRNNForward(const bool state_outputs,
           }
           MKLDNNRNNForwardSingleLayerBi(state_outputs, seq_len, batch_size,
               direction * hidden_size, hidden_size, tmpNull, hx_ptr, cx_ptr, w_ptr, b_ptr,
-              y_ptr, hy_ptr, cy_ptr, mkldnn_mems, rnn_forward_prim, 1, has_cache, dtype,
+              y_ptr, hy_ptr, cy_ptr, mkldnn_mems, rnn_forward_prim, l, has_cache, dtype,
               is_train, mode);
           mkldnn_mems->user_src_layer_memory_l = mkldnn_mems->y_memory[1];
           w_ptr += w_size;

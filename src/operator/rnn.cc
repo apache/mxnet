@@ -563,23 +563,25 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
             auto wh_md_n = mkldnn::memory::desc(
                 { weights_iter_tz }, mkldnn_dtype, mkldnn::memory::format::ldgoi);
 
-            DType* weight_layer_n = workptr;  //  D * (H * D) * ngates * H
-            auto user_weight_layer_memory_n
-                = mkldnn::memory({ user_weight_layer_md, cpu_engine }, weight_layer_n);
-            op.mkldnn_mems.wx_memory.push_back(user_weight_layer_memory_n);
+            for (int l = 0; l < L - 1; ++l) {
+              DType* weight_layer_n = workptr;  //  D * (H * D) * ngates * H
+              auto user_weight_layer_memory_n
+                  = mkldnn::memory({ user_weight_layer_md, cpu_engine }, weight_layer_n);
+              op.mkldnn_mems.wx_memory.push_back(user_weight_layer_memory_n);
 
-            DType* weight_iter_n = weight_layer_n +
-                D * (H * D) * ngates * H;  //  D * H * ngates * H
-            auto user_weight_iter_memory_n
-                = mkldnn::memory({ user_weight_iter_md, cpu_engine }, weight_iter_n);
-            op.mkldnn_mems.wh_memory.push_back(user_weight_iter_memory_n);
+              DType* weight_iter_n = weight_layer_n +
+                  D * (H * D) * ngates * H;  //  D * H * ngates * H
+              auto user_weight_iter_memory_n
+                  = mkldnn::memory({ user_weight_iter_md, cpu_engine }, weight_iter_n);
+              op.mkldnn_mems.wh_memory.push_back(user_weight_iter_memory_n);
 
-            DType* bias_n = weight_iter_n + D * H * ngates * H;  //  Generally, D * ngates * H
+              DType* bias_n = weight_iter_n + D * H * ngates * H;  //  Generally, D * ngates * H
                                                                   //  LBR-Gru, D * (ngates + 1) * H
-            auto user_bias_memory_n =
-                mkldnn::memory({ user_bias_md, cpu_engine }, bias_n);
-            op.mkldnn_mems.bias_memory.push_back(user_bias_memory_n);
-            workptr = bias_n + D * nbias * H;
+              auto user_bias_memory_n =
+                  mkldnn::memory({ user_bias_md, cpu_engine }, bias_n);
+              op.mkldnn_mems.bias_memory.push_back(user_bias_memory_n);
+              workptr = bias_n + D * nbias * H;
+            }
 
             DType* wx_n = workptr;  //  D * ngates * (D * H) * H
             DType* wh_n = wx_n + D * ngates * (D * H) * H;  //  D * ngates * H * H
