@@ -33,7 +33,7 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'eye',
            'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'rint', 'radians', 'mean', 'reciprocal', 'square', 'arcsin',
-           'argsort', 'hstack', 'tensordot']
+           'argsort', 'hstack', 'tensordot', 'exp2']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1902,3 +1902,23 @@ def arcsin(x, out=None, **kwargs):
     http://www.math.sfu.ca/~cbm/aands/
     """
     return _unary_func_helper(x, _npi.arcsin, _np.arcsin, out=out, **kwargs)
+
+@set_module('mxnet.ndarray.numpy')
+def exp2(x, out=None, **kwargs):
+    r""" Calculate `2**p` for all `p` in the input array.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape as the input.
+        If not provided or None, a freshly-allocated array is returned.
+\
+    Examples
+    --------
+    >>> np.exp2([2, 3])
+    array([ 4.,  8.])
+    """
+    return _unary_func_helper(x, _npi.exp2, _np.exp2, out=out, **kwargs)

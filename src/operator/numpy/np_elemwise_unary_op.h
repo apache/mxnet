@@ -18,7 +18,7 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
+ *  Copyright (c) 2019 by Contributors
  * \file np_elementwise_unary_op.h
  * \brief Function definition of elementwise unary operators
  */
@@ -36,7 +36,7 @@ struct exp2_backward {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* in_grad, const DType* in_data1, 
                                   const DType* in_data2, const DType* out_grad) {
-    DType grad = in_data2[i] * in_data1[i] / DType(2);
+    DType grad = in_grad[i] * in_data2[i] * in_data1[i] / DType(2);
     KERNEL_ASSIGN(in_grad[i], req, grad);
   }
 };
