@@ -417,8 +417,7 @@ void TopKImpl(const RunContext &ctx,
   // Temp space needed by the full sorts.
   size_t temp_size = std::max(
       mxnet::op::SortByKeyWorkspaceSize<index_t, DType, xpu>(src.Size()),
-      mxnet::op::SortByKeyWorkspaceSize<DType, index_t, xpu>(src.Size())
-  );
+      mxnet::op::SortByKeyWorkspaceSize<DType, index_t, xpu>(src.Size()));
 
   size_t workspace_size = temp_size + PadBytes(sizeof(DType) * src.Size(), alignment)
                                     + PadBytes(sizeof(index_t) * src.Size(), alignment);
