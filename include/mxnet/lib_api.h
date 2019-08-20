@@ -190,9 +190,17 @@ typedef int (*opRegGet_t)(int, const char**, fcomp_t*,
                           parseAttrs_t*, inferType_t*,
                           inferShape_t*);
 
+#define MXLIB_OPCALLFREE_STR "_opCallFree"
+typedef int (*opCallFree_t)(void*);
+
 #define MXLIB_OPCALLPARSEATTRS_STR "_opCallParseAttrs"
 typedef int (*opCallParseAttrs_t)(parseAttrs_t, const char* const*, const char* const*, int,
                                   int*, int*);
+
+#define MXLIB_OPCALLINFERSHAPE_STR "_opCallInferShape"
+typedef int (*opCallInferShape_t)(inferShape_t, const char* const*, const char* const*, int,
+                                  unsigned int**, int*, int,
+                                  unsigned int***, int**, int);
 
 #define MXLIB_OPCALLFCOMP_STR "_opCallFCompute"
 typedef int (*opCallFComp_t)(fcomp_t, const char* const*, const char* const*, int,
@@ -224,6 +232,16 @@ extern "C" {
     *shape = op.infer_shape;
   }
 
+  /*!
+   * \brief calls free from the external library for library allocated arrays
+   */
+  void _opCallFree(void* ptr) {
+    free(ptr);
+  }
+
+  /*!
+   * \brief returns status of calling parse attributes function for operator from library
+   */
   int _opCallParseAttrs(parseAttrs_t parseAttrs, const char* const* keys, const char* const* vals, int num,
                         int* num_in, int* num_out) {
     //create map of attributes from list
@@ -234,8 +252,52 @@ extern "C" {
 
     return parseAttrs(attrs,num_in,num_out);
   }
-  
-  
+
+  /*!
+   * \brief returns status of calling infer shape function for operator from library
+   */
+  int _opCallInferShape(inferShape_t inferShape, const char* const* keys, const char* const* vals, int num,
+                        unsigned int** inshapes, int* indims, int num_in,
+                        unsigned int*** outshapes, int** outdims, int num_out) {
+    //create map of attributes from list
+    std::map<std::string,std::string> attrs;
+    for(int i=0; i<num; i++) {
+      attrs[std::string(keys[i])] = std::string(vals[i]);
+    }
+
+    //create a vector of shapes for inputs
+    std::vector<std::vector<unsigned int> > in_shapes(num_in);
+    for(int i=0; i<num_in; i++) {
+      for(int j=0; j<indims[i]; j++) {
+        in_shapes[i].push_back(inshapes[i][j]);
+      }
+    }
+
+    //create a vector of shapes for outputs
+    std::vector<std::vector<unsigned int> > out_shapes(num_out);
+
+    int retval = inferShape(attrs,in_shapes,out_shapes);
+    if(!retval) return retval;
+
+    //allocate space for output dims, shape
+    *outdims = (int*)malloc(num_out*sizeof(int));
+    *outshapes = (unsigned**)malloc(num_out*sizeof(unsigned*));
+
+    //copy output shapes
+    for(int i=0; i<num_out; i++) {
+      (*outdims)[i] = out_shapes[i].size();
+      (*outshapes)[i] = (unsigned*)malloc((*outdims)[i]*sizeof(unsigned));
+      for(int j=0; j<indims[i]; j++) {
+        (*outshapes)[i][j] = out_shapes[i][j];
+      }
+    }
+
+    return retval;
+  }
+
+  /*!
+   * \brief returns status of calling FCompute function for operator from library
+   */
   int _opCallFCompute(fcomp_t fcomp, const char* const* keys, const char* const* vals, int num,
                       const int64_t** inshapes, int* indims, void** indata, int* intypes, int num_in,
                       const int64_t** outshapes, int* outdims, void** outdata, int* outtypes, int num_out) {

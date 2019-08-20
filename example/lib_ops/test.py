@@ -25,6 +25,7 @@
 import mxnet as mx
 import os
 
+#load library
 if (os.name=='posix'):
     path = os.path.abspath('mylib.so')
     mx.library.load(path)
@@ -32,4 +33,13 @@ elif (os.name=='nt'):
     path = os.path.abspath('mylib.so')
     mx.library.load(path)
 
-print(mx.nd.contrib.sam)
+#setup inputs to call test operator
+a = mx.nd.array([[1,2],[3,4]])
+b = mx.nd.array([[5,6],[7,8]])
+
+#print inputs
+print(a)
+print(b)
+
+#compute and print output
+print(mx.nd.sam(a,b))
