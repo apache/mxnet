@@ -211,7 +211,8 @@ int MXLoadLib(const char *path) {
     };
 
     //re-register op in MXNet using lambda converter functions
-    std::string contrib_name("_contrib_");
+    //std::string contrib_name("_contrib_");
+    std::string contrib_name("");
     contrib_name += name;
     nnvm::Op &regOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(contrib_name.c_str());
     regOp.set_attr<FCompute>("FCompute<cpu>",fcomp_conv);

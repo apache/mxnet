@@ -19,6 +19,7 @@
 """Library management API of mxnet."""
 from __future__ import absolute_import
 import ctypes
+import sys
 import os
 from .base import _LIB, check_call, MXNetError, _init_op_module
 from .ndarray.register import _make_ndarray_function
@@ -53,3 +54,17 @@ def load(path):
     #regenerate operators
     _init_op_module('mxnet', 'ndarray', _make_ndarray_function)
     _init_op_module('mxnet', 'symbol', _make_symbol_function)
+
+    #re-register mx.nd.op into mx.nd
+    mx_nd = sys.modules["mxnet.ndarray"]
+    mx_nd_op = sys.modules["mxnet.ndarray.op"]
+    for op in dir(mx_nd_op):
+        func = getattr(mx_nd_op,op)
+        setattr(mx_nd,op,func)
+
+    #re-register mx.sym.op into mx.sym
+    mx_sym = sys.modules["mxnet.symbol"]
+    mx_sym_op = sys.modules["mxnet.symbol.op"]
+    for op in dir(mx_sym_op):
+        func = getattr(mx_sym_op,op)
+        setattr(mx_sym,op,func)
