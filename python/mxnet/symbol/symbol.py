@@ -1440,26 +1440,31 @@ class Symbol(SymbolBase):
     def optimize_for(self, backend, ctx=None, args=None, **kwargs):
         """Partition symbol and optimize it for a given backend"""
         out = SymbolHandle()
-        if ctx is None or args is None:
-            infer_shape_type = False
+        if ctx is None:
+            dev_type = -1
+            dev_id = 0
         else:
-            infer_shape_type = True
             if not isinstance(ctx, Context):
                 raise TypeError("Context type error")
+            dev_type = ctx.device_typeid
+            dev_id = ctx.device_id
+        if args is None:
+            args = []
+            args_handle = []
+        else:
             listed_arguments = self.list_arguments()
             args_handle, args = self._get_ndarray_inputs('args', args, listed_arguments, False)
         key_list = []
         val_list = []
         if kwargs is not None:
-            for key, value in kwargs.iteritems():
+            for key, val in kwargs.iteritems():
                 key_list.append(key)
                 val_list.append(val)
         check_call(_LIB.MXOptimizeForBackend(self.handle,
                                              c_str(backend),
                                              ctypes.byref(out),
-                                             ctypes.c_bool(infer_shape_type),
-                                             ctypes.c_int(ctx.device_typeid),
-                                             ctypes.c_int(ctx.device_id),
+                                             ctypes.c_int(dev_type),
+                                             ctypes.c_int(dev_id),
                                              mx_uint(len(args)),
                                              args_handle,
                                              mx_uint(len(key_list)),
