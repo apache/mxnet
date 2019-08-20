@@ -377,6 +377,10 @@ NNVM_REGISTER_OP(_backward_exp2)
 .set_num_inputs(3)
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FResourceRequest>("FResourceRequest",
+   [](const NodeAttrs& attrs) {
+      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
 .set_attr<FCompute>("FCompute<cpu>", Exp2Backward<cpu>);
 
 }  // namespace op

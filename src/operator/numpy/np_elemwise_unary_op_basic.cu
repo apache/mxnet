@@ -107,7 +107,8 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_arccosh, mshadow_op::arccosh);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_arctanh, mshadow_op::arctanh);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_exp2, mshadow_op::exp2);
+NNVM_REGISTER_OP(_np_exp2)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::exp2>);
 
 NNVM_REGISTER_OP(_backward_exp2)
 .set_attr<FCompute>("FCompute<gpu>", Exp2Backward<gpu>);
