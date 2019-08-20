@@ -93,7 +93,7 @@ class Dataset(object):
         """
         return self.transform(_TransformFirstClosure(fn), lazy)
 
-class RangeFilter(Filter):
+class RangeFilter(object):
     """RangeFilter filters the data samples based on the range [start_idx, end_idx)
     from the dataset. Only data samples within the range passes the filter.
     Parameters
