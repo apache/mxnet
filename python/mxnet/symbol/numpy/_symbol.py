@@ -21,6 +21,7 @@
 from __future__ import absolute_import
 import ctypes
 import numpy as _np
+from . import _op as _mx_np_op
 from ...base import _LIB, SymbolHandle, numeric_types, mx_uint
 from ...util import check_call, set_module
 from ...context import current_context
@@ -28,7 +29,8 @@ from ..symbol import Symbol
 from .._internal import _set_np_symbol_class
 from . import _internal as _npi
 
-__all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power']
+__all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'tensordot',
+           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack']
 
 
 def _num_outputs(sym):
@@ -236,7 +238,10 @@ class _Symbol(Symbol):
                                           ' while received {}'.format(order))
         if len(args) == 0:
             raise TypeError('reshape() takes exactly 1 argument (0 given)')
-        raise NotImplementedError
+        if len(args) == 1 and isinstance(args[0], tuple):
+            return _mx_np_op.reshape(self, newshape=args[0], order=order)
+        else:
+            return _mx_np_op.reshape(self, newshape=args, order=order)
 
     def argmax(self, axis=None, out=None):  # pylint: disable=arguments-differ
         raise NotImplementedError
@@ -437,7 +442,7 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute size_array')
 
-    def expand_dims(self, *args, **kwargs):  # pylint: disable=arguments-differ
+    def expand_dims(self, *args, **kwargs):  # pylint: disable=arguments-differ,unused-argument
         """Convenience fluent method for :py:func:`expand_dims`.
 
         The arguments are the same as for :py:func:`expand_dims`, with
@@ -454,12 +459,10 @@ class _Symbol(Symbol):
         raise AttributeError('_Symbol object has no attribute tile')
 
     def transpose(self, *axes):  # pylint: disable=arguments-differ
-        """Convenience fluent method for :py:func:`transpose`.
-
-        The arguments are the same as for :py:func:`transpose`, with
+        """The arguments are the same as for :py:func:`transpose`, with
         this array as data.
         """
-        raise NotImplementedError
+        return _mx_np_op.transpose(self, axes=axes if len(axes) != 0 else None)
 
     def flip(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`flip`.
@@ -494,12 +497,8 @@ class _Symbol(Symbol):
         raise AttributeError('_Symbol object has no attribute diag')
 
     def sum(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
-        """Convenience fluent method for :py:func:`sum`.
-
-        The arguments are the same as for :py:func:`sum`, with
-        this array as data.
-        """
-        raise NotImplementedError
+        """Return the sum of the array elements over the given axis."""
+        return _mx_np_op.sum(self, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
     def nansum(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`nansum`.
@@ -511,7 +510,7 @@ class _Symbol(Symbol):
 
     def prod(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return the product of the array elements over the given axis."""
-        raise NotImplementedError
+        return _mx_np_op.prod(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
 
     def nanprod(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`nanprod`.
@@ -850,9 +849,8 @@ class _Symbol(Symbol):
         raise AttributeError('_Symbol object has no attribute softmin')
 
     def squeeze(self, axis=None):  # pylint: disable=arguments-differ
-        """Remove single-dimensional entries from the shape of a.
-        """
-        raise NotImplementedError
+        """Remove single-dimensional entries from the shape of a."""
+        return _mx_np_op.squeeze(self, axis=axis)
 
     def broadcast_to(self, *args, **kwargs):
         raise AttributeError('_Symbol object has no attribute broadcast_to')
@@ -1008,6 +1006,360 @@ def mod(x1, x2, out=None):
 @set_module('mxnet.symbol.numpy')
 def power(x1, x2, out=None):
     return _ufunc_helper(x1, x2, _npi.power, _np.power, _npi.power_scalar, _npi.rpower_scalar, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def tensordot(a, b, axes=2):
+    r"""
+    tensordot(a, b, axes=2)
+    Compute tensor dot product along specified axes for arrays >= 1-D.
+    Given two tensors (arrays of dimension greater than or equal to one),
+    `a` and `b`, and an ndarray object containing two ndarray
+    objects, ``(a_axes, b_axes)``, sum the products of `a`'s and `b`'s
+    elements (components) over the axes specified by ``a_axes`` and
+    ``b_axes``. The third argument can be a single non-negative
+    integer_like scalar, ``N``; if it is such, then the last ``N``
+    dimensions of `a` and the first ``N`` dimensions of `b` are summed
+    over.
+    Parameters
+    ----------
+    a, b : _Symbol
+        Tensors to "dot".
+    axes : int or (2,) ndarray
+        * integer_like
+        If an int N, sum over the last N axes of `a` and the first N axes
+        of `b` in order. The sizes of the corresponding axes must match.
+        * (2,) array_like
+        Or, a list of axes to be summed over, first sequence applying to `a`,
+        second to `b`. Both elements array_like must be of the same length.
+    Notes
+    -----
+    Three common use cases are:
+        * ``axes = 0`` : tensor product :math:`a\otimes b`
+        * ``axes = 1`` : tensor dot product :math:`a\cdot b`
+        * ``axes = 2`` : (default) tensor double contraction :math:`a:b`
+    When `axes` is integer_like, the sequence for evaluation will be: first
+    the -Nth axis in `a` and 0th axis in `b`, and the -1th axis in `a` and
+    Nth axis in `b` last.
+    When there is more than one axis to sum over - and they are not the last
+    (first) axes of `a` (`b`) - the argument `axes` should consist of
+    two sequences of the same length, with the first axis to sum over given
+    first in both sequences, the second axis second, and so forth.
+    """
+    if _np.isscalar(axes):
+        return _npi.tensordot_int_axes(a, b, axes)
+
+    if len(axes) != 2:
+        raise ValueError('Axes must consist of two arrays.')
+    a_axes_summed, b_axes_summed = axes
+    if _np.isscalar(a_axes_summed):
+        a_axes_summed = (a_axes_summed,)
+    if _np.isscalar(b_axes_summed):
+        b_axes_summed = (b_axes_summed,)
+
+    if len(a_axes_summed) != len(b_axes_summed):
+        raise ValueError('Axes length mismatch')
+
+    return _npi.tensordot(a, b, a_axes_summed, b_axes_summed)
+
+
+@set_module('mxnet.symbol.numpy')
+def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis=0, ctx=None): # pylint: disable=too-many-arguments
+    r"""
+    Return evenly spaced numbers over a specified interval.
+
+    Returns num evenly spaced samples, calculated over the interval [start, stop].
+    The endpoint of the interval can optionally be excluded.
+
+    Parameters
+    ----------
+    start : real number
+        The starting value of the sequence.
+    stop : real number
+        The end value of the sequence, unless endpoint is set to False. In
+        that case, the sequence consists of all but the last of num + 1
+        evenly spaced samples, so that stop is excluded. Note that the step
+        size changes when endpoint is False.
+    num : int, optional
+        Number of samples to generate. Default is 50. Must be non-negative.
+    endpoint : bool, optional
+        If True, stop is the last sample. Otherwise, it is not included.
+        Default is True.
+    retstep : bool, optional
+        If True, return (samples, step), where step is the spacing between samples.
+    dtype : dtype, optional
+        The type of the output array. If dtype is not given, infer the data
+        type from the other input arguments.
+    axis : int, optional
+        The axis in the result to store the samples. Relevant only if start or
+        stop are array-like. By default (0), the samples will be along a new
+        axis inserted at the beginning. Use -1 to get an axis at the end.
+
+    Returns
+    -------
+    samples : _Symbol
+        There are num equally spaced samples in the closed interval
+        `[start, stop]` or the half-open interval `[start, stop)`
+        (depending on whether endpoint is True or False).
+    step : float, optional
+        Only returned if retstep is True
+        Size of spacing between samples.
+
+
+    See Also
+    --------
+    arange : Similar to `linspace`, but uses a step size (instead of the
+             number of samples).
+
+    Notes
+    -----
+
+    This function differs from the original `numpy.linspace
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.linspace.html>`_ in
+    the following aspects:
+
+    - `start` and `stop` do not support list, numpy ndarray and mxnet ndarray
+    - axis could only be 0
+    - There could be an additional `ctx` argument to specify the device, e.g. the i-th
+      GPU.
+    """
+    if isinstance(start, (list, _np.ndarray)) or isinstance(stop, (list, _np.ndarray)):
+        raise NotImplementedError('start and stop only support int')
+    if axis != 0:
+        raise NotImplementedError("the function only support axis 0")
+    if ctx is None:
+        ctx = current_context()
+    if retstep:
+        step = (stop - start) / (num - 1)
+        return _npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, ctx=ctx, dtype=dtype), step
+    else:
+        return _npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, ctx=ctx, dtype=dtype)
+
+
+@set_module('mxnet.symbol.numpy')
+def expand_dims(a, axis):
+    """Expand the shape of an array.
+
+    Insert a new axis that will appear at the `axis` position in the expanded
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input array.
+    axis : int
+        Position in the expanded axes where the new axis is placed.
+
+    Returns
+    -------
+    res : _Symbol
+        Output array. The number of dimensions is one greater than that of
+        the input array.
+    """
+    return _npi.expand_dims(a, axis)
+
+
+def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
+    """Helper function for unary operators.
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input of the unary operator.
+    fn_array : function
+        Function to be called if x is of ``_Symbol`` type.
+    fn_scalar : function
+        Function to be called if x is a Python scalar.
+    out : _Symbol
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    out : _Symbol or scalar
+        Result _Symbol or scalar.
+    """
+    if isinstance(x, numeric_types):
+        return fn_scalar(x, **kwargs)
+    elif isinstance(x, _Symbol):
+        return fn_array(x, out=out, **kwargs)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x))))
+
+
+@set_module('mxnet.symbol.numpy')
+def tile(A, reps):
+    r"""
+    Construct an array by repeating A the number of times given by reps.
+
+    If `reps` has length ``d``, the result will have dimension of
+    ``max(d, A.ndim)``.
+
+    If ``A.ndim < d``, `A` is promoted to be d-dimensional by prepending new
+    axes. So a shape (3,) array is promoted to (1, 3) for 2-D replication,
+    or shape (1, 1, 3) for 3-D replication. If this is not the desired
+    behavior, promote `A` to d-dimensions manually before calling this
+    function.
+
+    If ``A.ndim > d``, `reps` is promoted to `A`.ndim by pre-pending 1's to it.
+    Thus for an `A` of shape (2, 3, 4, 5), a `reps` of (2, 2) is treated as
+    (1, 1, 2, 2).
+
+    Parameters
+    ----------
+    A : _Symbol or scalar
+        An input array or a scalar to repeat.
+    reps : a single integer or tuple of integers
+        The number of repetitions of `x` along each axis.
+
+    Returns
+    -------
+    c : _Symbol
+        The tiled output array.
+    """
+    return _unary_func_helper(A, _npi.tile, _np.tile, reps=reps)
+
+
+@set_module('mxnet.symbol.numpy')
+def arange(start, stop=None, step=1, dtype=None, ctx=None):
+    """Return evenly spaced values within a given interval.
+
+    Values are generated within the half-open interval ``[start, stop)``
+    (in other words, the interval including `start` but excluding `stop`).
+    For integer arguments the function is equivalent to the Python built-in
+    `range` function, but returns an ndarray rather than a list.
+
+    Parameters
+    ----------
+    start : number, optional
+        Start of interval. The interval includes this value.  The default
+        start value is 0.
+    stop : number
+        End of interval. The interval does not include this value, except
+        in some cases where `step` is not an integer and floating point
+        round-off affects the length of `out`.
+    step : number, optional
+        Spacing between values. For any output `out`, this is the distance
+        between two adjacent values, ``out[i+1] - out[i]``.  The default
+        step size is 1.  If `step` is specified as a position argument,
+        `start` must also be given.
+    dtype : dtype
+        The type of the output array. The default is `float32`.
+
+    Returns
+    -------
+    arange : ndarray
+        Array of evenly spaced values.
+
+        For floating point arguments, the length of the result is
+        ``ceil((stop - start)/step)``.  Because of floating point overflow,
+        this rule may result in the last element of `out` being greater
+        than `stop`.
+    """
+    if dtype is None:
+        dtype = 'float32'
+    if ctx is None:
+        ctx = current_context()
+    if stop is None:
+        stop = start
+        start = 0
+    if step is None:
+        step = 1
+    if start is None and stop is None:
+        raise ValueError('start and stop cannot be both None')
+    if step == 0:
+        raise ZeroDivisionError('step cannot be 0')
+    return _npi.arange(start=start, stop=stop, step=step, dtype=dtype, ctx=ctx)
+
+
+@set_module('mxnet.symbol.numpy')
+def split(ary, indices_or_sections, axis=0):
+    """Split an array into multiple sub-arrays.
+    Parameters
+    ----------
+    ary : ndarray
+        Array to be divided into sub-arrays.
+    indices_or_sections : int or 1-D array
+        If `indices_or_sections` is an integer, N, the array will be divided
+        into N equal arrays along `axis`.  If such a split is not possible,
+        an error is raised.
+        If `indices_or_sections` is a 1-D array of sorted integers, the entries
+        indicate where along `axis` the array is split.  For example,
+        ``[2, 3]`` would, for ``axis=0``, result in
+          - ary[:2]
+          - ary[2:3]
+          - ary[3:]
+        If an index exceeds the dimension of the array along `axis`,
+        an empty sub-array is returned correspondingly.
+    axis : int, optional
+        The axis along which to split, default is 0.
+    Returns
+    -------
+    sub-arrays : list of ndarrays
+        A list of sub-arrays.
+    Raises
+    ------
+    ValueError
+        If `indices_or_sections` is given as an integer, but
+        a split does not result in equal division."""
+    indices = []
+    sections = 0
+    if isinstance(indices_or_sections, int):
+        sections = indices_or_sections
+    elif isinstance(indices_or_sections, tuple):
+        indices = [0] + list(indices_or_sections)
+    else:
+        raise ValueError('indices_or_sections must either int or tuple of ints')
+    ret = _npi.split(ary, indices, axis, False, sections)
+    return ret
+
+
+@set_module('mxnet.symbol.numpy')
+def concatenate(seq, axis=0, out=None):
+    """Join a sequence of arrays along an existing axis.
+    Parameters
+    ----------
+    a1, a2, ... : sequence of array_like
+        The arrays must have the same shape, except in the dimension
+        corresponding to `axis` (the first, by default).
+    axis : int, optional
+        The axis along which the arrays will be joined.  If axis is None,
+        arrays are flattened before use.  Default is 0.
+    out : ndarray, optional
+        If provided, the destination to place the result. The shape must be
+        correct, matching that of what concatenate would have returned if no
+        out argument were specified.
+    Returns
+    -------
+    res : ndarray
+        The concatenated array.
+    """
+    return _npi.concatenate(*seq, dim=axis, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def stack(arrays, axis=0, out=None):
+    """Join a sequence of arrays along a new axis.
+        The axis parameter specifies the index of the new axis in the dimensions of the result.
+        For example, if `axis=0` it will be the first dimension and if `axis=-1` it will be the last dimension.
+    Parameters
+    ----------
+    arrays : sequence of array_like
+        Each array must have the same shape.
+    axis : int, optional
+        The axis in the result array along which the input arrays are stacked.
+    out : ndarray, optional
+        If provided, the destination to place the result. The shape must be correct,
+        matching that of what stack would have returned if no out argument were specified.
+    Returns
+    -------
+    stacked : ndarray
+        The stacked array has one more dimension than the input arrays."""
+    def get_list(arrays):
+        if not hasattr(arrays, '__getitem__') and hasattr(arrays, '__iter__'):
+            raise ValueError("expected iterable for arrays but got {}".format(type(arrays)))
+        return [arr for arr in arrays]
+
+    arrays = get_list(arrays)
+    return _npi.stack(*arrays, axis=axis, out=out)
 
 
 _set_np_symbol_class(_Symbol)

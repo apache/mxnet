@@ -27,13 +27,14 @@ import mxnet.contrib.amp as amp
 from nose.tools import assert_raises
 from mxnet.test_utils import set_default_context, download_model, same_symbol_structure
 from mxnet.gluon.model_zoo.vision import get_model
-from mxnet.gluon import SymbolBlock
+from mxnet.gluon import SymbolBlock, nn, rnn
 from mxnet.contrib.amp import amp
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import with_seed, teardown
+from common import with_seed, teardown, assert_raises_cudnn_not_satisfied
 sys.path.insert(0, os.path.join(curr_path, '../train'))
 from test_bucketing import train_model
+set_default_context(mx.gpu(0))
 
 def test_amp_coverage():
     conditional = [item[0] for item in amp.lists.symbol.CONDITIONAL_FP32_FUNCS]
@@ -339,6 +340,20 @@ def test_amp_conversion():
         check_amp_convert_model()
         check_amp_convert_hybrid_block()
         check_amp_convert_bucketing_module()
+
+@with_seed()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+def test_amp_conversion_rnn():
+    with mx.Context(mx.gpu(0)):
+        model = nn.HybridSequential()
+        model.add(rnn.LSTM(hidden_size=10, num_layers=2, bidirectional=True))
+        model.add(nn.Dense(2))
+        model.initialize()
+        model.hybridize()
+        out = model(mx.nd.ones((2, 3, 4)))
+        new_model = amp.convert_hybrid_block(model)
+        out2 = new_model(mx.nd.ones((2, 3, 4)))
+        mx.test_utils.assert_almost_equal(out.asnumpy(), out2.asnumpy(), atol=1e-2, rtol=1e-2)
 
 
 @with_seed()

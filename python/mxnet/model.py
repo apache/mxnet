@@ -429,6 +429,8 @@ def load_params(prefix, epoch):
     save_dict = nd.load("%s-%04d.params" % (prefix, epoch))
     arg_params = {}
     aux_params = {}
+    if not save_dict:
+        logging.warning("Params file '%s' is empty", '%s-%04d.params' % (prefix, epoch))
     for k, v in save_dict.items():
         tp, name = k.split(":", 1)
         if tp == "arg":
