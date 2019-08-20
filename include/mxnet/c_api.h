@@ -1020,9 +1020,6 @@ MXNET_DLL int MXNDArrayGetGradState(NDArrayHandle handle, int *out);
 MXNET_DLL int MXListFunctions(mx_uint *out_size,
                               FunctionHandle **out_array);
 
-MXNET_DLL int MXListFunctions64(mx_int64 *out_size,
-                                FunctionHandle **out_array);
-
 /*!
  * \brief get the function handle by name
  * \param name the name of the function
@@ -1291,9 +1288,6 @@ MXNET_DLL int MXInvokeCachedOpEx(CachedOpHandle handle,
 MXNET_DLL int MXListAllOpNames(mx_uint *out_size,
                                const char ***out_array);
 
-MXNET_DLL int MXListAllOpNames64(mx_int64 *out_size,
-                                 const char ***out_array);
-
 /*!
  * \brief list all the available AtomicSymbolEntry
  * \param out_size the size of returned array
@@ -1302,9 +1296,6 @@ MXNET_DLL int MXListAllOpNames64(mx_int64 *out_size,
  */
 MXNET_DLL int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
                                                AtomicSymbolCreator **out_array);
-
-MXNET_DLL int MXSymbolListAtomicSymbolCreators64(mx_int64 *out_size,
-                                                 AtomicSymbolCreator **out_array);
 
 /*!
  * \brief Get the name of an atomic symbol.
@@ -1519,10 +1510,6 @@ MXNET_DLL int MXSymbolListArguments(SymbolHandle symbol,
                                     mx_uint *out_size,
                                     const char ***out_str_array);
 
-MXNET_DLL int MXSymbolListArguments64(SymbolHandle symbol,
-                                      size_t *out_size,
-                                      const char ***out_str_array);
-
 /*!
  * \brief List returns in the symbol.
  * \param symbol the symbol
@@ -1533,10 +1520,6 @@ MXNET_DLL int MXSymbolListArguments64(SymbolHandle symbol,
 MXNET_DLL int MXSymbolListOutputs(SymbolHandle symbol,
                                   mx_uint *out_size,
                                   const char ***out_str_array);
-
-MXNET_DLL int MXSymbolListOutputs64(SymbolHandle symbol,
-                                    size_t *out_size,
-                                    const char ***out_str_array);
 
 /*!
  * \brief Get number of outputs of the symbol.
@@ -1584,10 +1567,6 @@ MXNET_DLL int MXSymbolGetOutput(SymbolHandle symbol,
 MXNET_DLL int MXSymbolListAuxiliaryStates(SymbolHandle symbol,
                                           mx_uint *out_size,
                                           const char ***out_str_array);
-
-MXNET_DLL int MXSymbolListAuxiliaryStates64(SymbolHandle symbol,
-                                            size_t *out_size,
-                                            const char ***out_str_array);
 
 /*!
  * \brief Compose the symbol on other symbols.
