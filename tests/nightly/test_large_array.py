@@ -31,6 +31,12 @@ SMALL_Y = 50
 LARGE_SIZE = LARGE_X * SMALL_Y
 
 
+def create_2d_tensor(rows, columns, dtype=np.int64):
+    a = nd.arange(0, rows, dtype=dtype).reshape(rows, 1)
+    b = nd.broadcast_to(a, shape=(a.shape[0], columns))
+    return nd.array(b, dtype=dtype)
+
+
 def test_gluon_embedding():
     m = gluon.nn.Embedding(SMALL_Y, MEDIUM_X)
     m.initialize()
@@ -381,12 +387,6 @@ def test_unravel_index():
     indices_2d = mx.nd.unravel_index(mx.nd.array(idx_numpy, dtype=np.int64),
                                      shape=(LARGE_X, SMALL_Y))
     assert (indices_2d.asnumpy() == np.array(original_2d_indices)).all()
-
-
-def create_2d_tensor(rows, columns, dtype=np.int64):
-    a = np.arange(0, rows).reshape(rows, 1)
-    b = np.broadcast_to(a, shape=(a.shape[0], columns))
-    return nd.array(b, dtype=dtype)
 
 
 def test_transpose():
