@@ -629,7 +629,8 @@ def test_np_unary_funcs():
         'tanh' : (lambda x: 1. - _np.tanh(x) ** 2, -1.0, 1.0),
         'arcsinh' : (lambda x: 1./(x**2 + 1.)**(1./2.), -1.0, 1.0),
         'arccosh' : (lambda x: 1./(x**2 - 1.)**(1./2.), 2.0, 5.0),
-        'arctanh' : (lambda x: -1./(x**2 - 1.), -0.99, 0.99)
+        'arctanh' : (lambda x: -1./(x**2 - 1.), -0.99, 0.99),
+        'exp2' : (lambda x: _np.exp2(x)*x/2.0, -1.0, 1.0),
     }
     ndim = random.choice([2, 3, 4])
     shape = random.choice([rand_shape_nd(ndim, dim=3), (1, 0, 2)])

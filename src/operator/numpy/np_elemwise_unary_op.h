@@ -34,9 +34,9 @@ namespace op {
 template<int req>
 struct exp2_backward {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* in_grad, const DType* in_data1, 
+  MSHADOW_XINLINE static void Map(int i, DType* in_grad, const DType* in_data1,
                                   const DType* in_data2, const DType* out_grad) {
-    DType grad = in_grad[i] * in_data2[i] * in_data1[i] / DType(2);
+    DType grad = out_grad[i] * in_data2[i] * in_data1[i] / DType(2);
     KERNEL_ASSIGN(in_grad[i], req, grad);
   }
 };

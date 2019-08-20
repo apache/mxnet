@@ -2370,11 +2370,16 @@ def exp2(x, out=None, **kwargs):
         A location into which the result is stored.
         If provided, it must have the same shape as the input.
         If not provided or None, a freshly-allocated array is returned.
-\
+
+    Returns
+    -------
+    out : _Symbol or scalar
+        Element-wise 2 to the power x. This is a scalar if x is a scalar.
+
     Examples
     --------
-    >>> np.exp2([2, 3])
-    array([ 4.,  8.])
+    >>> np.exp2(np.array([2, 3]))
+    array([4., 8.])
     """
     return _unary_func_helper(x, _npi.exp2, _np.exp2, out=out, **kwargs)
 
