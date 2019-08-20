@@ -106,7 +106,9 @@ int MXLoadLib(const char *path) {
     LOG(FATAL) << "Library failed to initialize";
 
   //get call functions
+  opCallFree_t callFree = get_func<opCallFree_t>(lib, const_cast<char*>(MXLIB_OPCALLFREE_STR));
   opCallParseAttrs_t callParseAttrs = get_func<opCallParseAttrs_t>(lib, const_cast<char*>(MXLIB_OPCALLPARSEATTRS_STR));
+  opCallInferShape_t callInferShape = get_func<opCallInferShape_t>(lib, const_cast<char*>(MXLIB_OPCALLINFERSHAPE_STR));
   opCallFComp_t callFComp = get_func<opCallFComp_t>(lib, const_cast<char*>(MXLIB_OPCALLFCOMP_STR));
   
   //get number of operators registered in the library
@@ -126,7 +128,7 @@ int MXLoadLib(const char *path) {
     //get operator from the library
     opRegGet(i,&name, &fcomp, &parse, &type, &shape);
 
-    //validate operator in the library
+    //validate operator functions from the library
     CHECK(fcomp != nullptr) << "Error loading '" << name << "' custom op, FCompute function was not set.";
     CHECK(parse != nullptr) << "Error loading '" << name << "' custom op, ParseAttrs function was not set.";
     CHECK(type  != nullptr) << "Error loading '" << name << "' custom op, InferType function was not set.";
@@ -135,6 +137,31 @@ int MXLoadLib(const char *path) {
     LOG(INFO) << "\tOp[" << i << "] " << name;
     std::string name_str(name);
 
+    /*
+     * Below are a series of lambda functions that will be registered in the NNVM op registration
+     * Each one has the standard MXNet signature and converts to types supported by externally
+     * registered operators. 
+     */
+    
+    //lambda function to call parse attributes
+    auto attr_parser = [=](const NodeAttrs* attrs) {
+      //convert attributes to vector of char
+      std::vector<const char*> attr_keys, attr_vals;
+      for(auto kv : attrs->dict) {
+        attr_keys.push_back(kv.first.c_str());
+        attr_vals.push_back(kv.second.c_str());
+      }
+      
+      int num_in=-1;
+      int num_out=-1;
+      CHECK(callParseAttrs(parse, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                           &num_in, &num_out))
+      << "Error calling ParseAttrs for custom operator '" << name_str << "'";
+
+      //return type void
+    };
+
+    //lambda function to call parse attributes and return the number of inputs
     auto num_inputs = [=](const NodeAttrs& attrs) {
       //convert attributes to vector of char
       std::vector<const char*> attr_keys, attr_vals;
@@ -147,11 +174,12 @@ int MXLoadLib(const char *path) {
       int num_out=-1;
       CHECK(callParseAttrs(parse, attr_keys.data(), attr_vals.data(), attr_keys.size(),
                            &num_in, &num_out))
-      << "Error calling ParseAttrs for custom operator '" << name_str << "'";
+      << "Error calling ParseAttrs::num_inputs for custom operator '" << name_str << "'";
       
       return num_in;
     };
 
+    //lambda function to call parse attributes and return the number of outputs
     auto num_outputs = [=](const NodeAttrs& attrs) {
       //convert attributes to vector of char*
       std::vector<const char*> attr_keys,attr_vals;
@@ -164,11 +192,82 @@ int MXLoadLib(const char *path) {
       int num_out=-1;
       CHECK(callParseAttrs(parse, attr_keys.data(), attr_vals.data(), attr_keys.size(),
                            &num_in, &num_out))
-      << "Error calling ParseAttrs for custom operator '" << name_str << "'";
+      << "Error calling ParseAttrs::num_outputs for custom operator '" << name_str << "'";
       
       return num_out;
     };
 
+    //lambda function to call infer shape
+    auto infer_shape = [=] (const nnvm::NodeAttrs& attrs,
+                            mxnet::ShapeVector *in_shape,
+                            mxnet::ShapeVector *out_shape) {
+      //convert attributes to vector of char*
+      std::vector<const char*> attr_keys, attr_vals;
+      for(auto kv : attrs.dict) {
+        attr_keys.push_back(kv.first.c_str());
+        attr_vals.push_back(kv.second.c_str());
+      }
+
+      std::vector<uint32_t*> inshapes(in_shape->size());
+      std::vector<int> indims(in_shape->size());
+
+      //determine amount of memory needed to store all the input shapes
+      size_t buff_size = 0;
+      for (const auto& i : *in_shape) buff_size += i.ndim();
+
+      //copy input shapes from ShapeVector to raw memory layout
+      std::vector<uint32_t> inbuff(buff_size);
+      uint32_t *ptr = inbuff.data();
+      for (size_t i = 0; i < in_shape->size(); ++i) {
+        inshapes[i] = ptr;
+        indims[i] = (*in_shape)[i].ndim();
+        for (int j = 0; j < (*in_shape)[i].ndim(); ++j, ++ptr) {
+          *ptr = static_cast<uint32_t>((*in_shape)[i][j]);
+        }
+      }
+
+      //output shapes will be allocated by infer shape function
+      uint32_t** outshapes = nullptr;
+      int* outdims = nullptr;
+
+      CHECK(callInferShape(shape, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                           inshapes.data(), indims.data(), in_shape->size(),
+                           &outshapes, &outdims, out_shape->size()))
+      << "Error calling InferShape for custom operator '" << name_str << "'";
+
+      std::vector<uint32_t*> out_shapes(out_shape->size());
+      //determine amount of memory needed to store all the output shapes
+      buff_size = 0;
+      for (unsigned i=0; i<out_shape->size(); i++) {
+        buff_size += outdims[i];
+      }
+
+      //copy output shapes from custom op memory to MXNet memory
+      std::vector<uint32_t> outbuff(buff_size);
+      ptr = outbuff.data();
+      for (unsigned i = 0; i < out_shape->size(); ++i) {
+        out_shapes[i] = ptr;
+        for (int j = 0; j < outdims[i]; ++j, ++ptr) {
+          *ptr = static_cast<uint32_t>(outshapes[i][j]);
+        }
+      }
+
+      //assign output shapes to ShapeVector
+      for (unsigned i = 0; i < out_shape->size(); ++i) {
+        SHAPE_ASSIGN_CHECK(*out_shape, i,
+                           mxnet::TShape(out_shapes[i], out_shapes[i]+outdims[i]));
+      }
+
+      //free memory used by custom op to allocate shapes/dims
+      callFree(outdims);
+      for(unsigned i=0; i<out_shape->size(); i++) {
+        callFree(outshapes[i]);
+      }
+      callFree(outshapes);
+      
+      return true;
+    };
+    
     // lambda function to convert from external fcompute to internal MXNet types
     auto fcomp_conv = [=](const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
@@ -187,7 +286,7 @@ int MXLoadLib(const char *path) {
       std::vector<int> in_dims, out_dims;
       std::vector<int> in_types, out_types;
 
-      //convert input tensors to constituant parts
+      //convert input tensors to constituent parts
       for(size_t i=0; i<inputs.size(); i++) {
         in_data.push_back(inputs[i].dptr_);
         in_shapes.push_back(inputs[i].shape_.data());
@@ -195,7 +294,7 @@ int MXLoadLib(const char *path) {
         in_types.push_back(inputs[i].type_flag_);
       }
 
-      //convert output tensors to constituant parts
+      //convert output tensors to constituent parts
       for(size_t i=0; i<outputs.size(); i++) {
         out_data.push_back(outputs[i].dptr_);
         out_shapes.push_back(outputs[i].shape_.data());
@@ -207,17 +306,19 @@ int MXLoadLib(const char *path) {
       CHECK(callFComp(fcomp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
                       in_shapes.data(), in_dims.data(), in_data.data(), in_types.data(), in_data.size(),
                       out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(), out_data.size()))
-            << "Error calling FCompute for custom operator '" << name_str << "'";
+      << "Error calling FCompute for custom operator '" << name_str << "'";
+
+      //return type void
     };
 
     //re-register op in MXNet using lambda converter functions
-    //std::string contrib_name("_contrib_");
-    std::string contrib_name("");
-    contrib_name += name;
-    nnvm::Op &regOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(contrib_name.c_str());
-    regOp.set_attr<FCompute>("FCompute<cpu>",fcomp_conv);
+    nnvm::Op &regOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(name);
+    regOp.set_attr_parser(attr_parser);
     regOp.set_num_inputs(num_inputs);
     regOp.set_num_outputs(num_outputs);
+    regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape);
+    regOp.add_argument("data", "NDArray[]", "Source inputs");
+    regOp.set_attr<FCompute>("FCompute<cpu>",fcomp_conv);      
   }
   
   API_END();

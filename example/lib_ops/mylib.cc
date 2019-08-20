@@ -26,7 +26,10 @@
 #include <iostream>
 #include "lib_api.h"
 
-void gemm(double* A, double* B, double* C, unsigned n, unsigned k, unsigned m) {
+/*
+ * main matrix multiplication routine
+ */
+void gemm(float* A, float* B, float* C, unsigned n, unsigned k, unsigned m) {
   unsigned i,j,kk;
   for (i=0;i<n;i++) {
     for (j=0;j<m;j++) {
@@ -38,29 +41,39 @@ void gemm(double* A, double* B, double* C, unsigned n, unsigned k, unsigned m) {
   }
 }
 
+
 int myFCompute(std::map<std::string,std::string> attrs,
                std::vector<MXTensor> inputs, std::vector<MXTensor> outputs) {
+  //validate inputs
+  for(int i=0; i<inputs.size(); i++) {
+    if(inputs[i].dtype != kFloat32) {
+      std::cout << "Expected input " << i << " to have float32 type" << std::endl;
+      return 0;
+    }
+  }
 
-  double* input1 = inputs[0].getData<double>();
-  double* input2 = inputs[1].getData<double>();
-  double* output = outputs[0].getData<double>();
+  //extract data pointers from tensors
+  float* input1 = inputs[0].getData<float>();
+  float* input2 = inputs[1].getData<float>();
+  float* output = outputs[0].getData<float>();
+  //set tensor shapes
   unsigned n = inputs[0].shape[0];
   unsigned k = inputs[0].shape[1];
   unsigned m = inputs[1].shape[1];
 
   gemm(input1, input2, output, n, k, m);
   
-  return 1;
+  return 1; //no error
 }
 
 int parseAttrs(std::map<std::string,std::string> attrs,
                int* num_in, int* num_out) {
-
+  /*
   if(attrs.find("myParam") == attrs.end()) {
     std::cout << "Missing param 'myParam'" << std::endl;
     return 0;
   }
-
+  */
   *num_in = 2;
   *num_out = 1;
 
@@ -76,11 +89,30 @@ int inferType(std::map<std::string,std::string> attrs, std::vector<int> &intypes
 
 int inferShape(std::map<std::string,std::string> attrs, std::vector<std::vector<unsigned int>> &inshapes,
                std::vector<std::vector<unsigned int>> &outshapes) {
+  //validate inputs
+  if(inshapes.size() != 2) {
+    std::cout << "Expected 2 inputs to inferShape" << std::endl;
+    return 0;
+  }
+
+  if(inshapes[0].size() != 2) {
+    std::cout << "Expected 2D for first input to inferShape" << std::endl;
+    return 0;
+  }
+
+  if(inshapes[1].size() != 2) {
+    std::cout << "Expected 2D for second input to inferShape" << std::endl;
+    return 0;
+  }
+  
   unsigned n = inshapes[0][0];
   unsigned k = inshapes[0][1];
   unsigned kk = inshapes[1][0];
   unsigned m = inshapes[1][1];
 
+  std::cout << "inshapes[0][0]=" << n << "  inshapes[0][1]=" << k << std::endl;
+  std::cout << "inshapes[1][0]=" << kk << "  inshapes[1][1]=" << m << std::endl;
+  
   if(k != kk) return 0;
   
   outshapes[0].push_back(n);
