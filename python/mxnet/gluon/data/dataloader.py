@@ -18,6 +18,7 @@
 # coding: utf-8
 # pylint: disable=ungrouped-imports
 """Dataset generator."""
+from __future__ import absolute_import
 __all__ = ['DataLoader']
 
 import pickle
@@ -37,6 +38,8 @@ except ImportError:
 
 from . import sampler as _sampler
 from ... import nd, context
+from ...util import is_np_shape, is_np_array, set_np
+from ... import numpy as _mx_np
 
 if sys.platform == 'darwin' or sys.platform == 'win32':
     def rebuild_ndarray(*args):
@@ -128,27 +131,33 @@ class SimpleQueue(multiprocessing.queues.SimpleQueue):
 def default_batchify_fn(data):
     """Collate data into batch."""
     if isinstance(data[0], nd.NDArray):
-        return nd.stack(*data)
+        return _mx_np.stack(data) if is_np_array() else nd.stack(*data)
     elif isinstance(data[0], tuple):
         data = zip(*data)
         return [default_batchify_fn(i) for i in data]
     else:
         data = np.asarray(data)
-        return nd.array(data, dtype=data.dtype)
+        array_fn = _mx_np.array if is_np_array() else nd.array
+        return array_fn(data, dtype=data.dtype)
 
 
 def default_mp_batchify_fn(data):
     """Collate data into batch. Use shared memory for stacking."""
     if isinstance(data[0], nd.NDArray):
-        out = nd.empty((len(data),) + data[0].shape, dtype=data[0].dtype,
+        empty_fn = _mx_np.empty if is_np_array() else nd.empty
+        out = empty_fn((len(data),) + data[0].shape, dtype=data[0].dtype,
                        ctx=context.Context('cpu_shared', 0))
-        return nd.stack(*data, out=out)
+        if is_np_array():
+            return _mx_np.stack(data, out=out)
+        else:
+            return nd.stack(*data, out=out)
     elif isinstance(data[0], tuple):
         data = zip(*data)
         return [default_mp_batchify_fn(i) for i in data]
     else:
         data = np.asarray(data)
-        return nd.array(data, dtype=data.dtype,
+        array_fn = _mx_np.array if is_np_array() else nd.array
+        return array_fn(data, dtype=data.dtype,
                         ctx=context.Context('cpu_shared', 0))
 
 
@@ -384,14 +393,20 @@ class DataLoaderV1(object):
         return len(self._batch_sampler)
 
 
+def _thread_worker_initializer(active_shape, active_array):
+    """Initializer for ThreadPool."""
+    set_np(shape=active_shape, array=active_array)
+
+
 _worker_dataset = None
-def _worker_initializer(dataset):
+def _worker_initializer(dataset, active_shape, active_array):
     """Initialier for processing pool."""
     # global dataset is per-process based and only available in worker processes
     # this is only necessary to handle MXIndexedRecordIO because otherwise dataset
     # can be passed as argument
     global _worker_dataset
     _worker_dataset = dataset
+    set_np(shape=active_shape, array=active_array)
 
 def _worker_fn(samples, batchify_fn, dataset=None):
     """Function for processing data in worker process."""
@@ -558,10 +573,13 @@ class DataLoader(object):
         self._prefetch = max(0, int(prefetch) if prefetch is not None else 2 * self._num_workers)
         if self._num_workers > 0:
             if self._thread_pool:
-                self._worker_pool = ThreadPool(self._num_workers)
+                self._worker_pool = ThreadPool(self._num_workers,
+                                               initializer=_thread_worker_initializer,
+                                               initargs=(is_np_shape(), is_np_array()))
             else:
                 self._worker_pool = multiprocessing.Pool(
-                    self._num_workers, initializer=_worker_initializer, initargs=[self._dataset])
+                    self._num_workers, initializer=_worker_initializer,
+                    initargs=[self._dataset, is_np_shape(), is_np_array()])
         if batchify_fn is None:
             if num_workers > 0:
                 self._batchify_fn = default_mp_batchify_fn

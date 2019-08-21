@@ -775,8 +775,7 @@ class HybridBlock(Block):
             grouped_inputs = _regroup(inputs, self._in_format)[0]
 
             params = {i: j.var() for i, j in self._reg_params.items()}
-            with self.name_scope():
-                out = self.hybrid_forward(symbol, *grouped_inputs, **params)  # pylint: disable=no-value-for-parameter
+            out = self.hybrid_forward(symbol, *grouped_inputs, **params)  # pylint: disable=no-value-for-parameter
             out, self._out_format = _flatten(out, "output")
 
             self._cached_graph = inputs, symbol.Group(out, _check_same_symbol_type(out))
@@ -960,8 +959,7 @@ class HybridBlock(Block):
             "HybridBlock requires the first argument to forward be either " \
             "Symbol or NDArray, but got %s"%type(x)
         params = {i: j.var() for i, j in self._reg_params.items()}
-        with self.name_scope():
-            return self.hybrid_forward(symbol, x, *args, **params)
+        return self.hybrid_forward(symbol, x, *args, **params)
 
     def hybrid_forward(self, F, x, *args, **kwargs):
         """Overrides to construct symbolic graph for this `Block`.
