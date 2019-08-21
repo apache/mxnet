@@ -83,7 +83,8 @@ def _quantize_params(qsym, params, th_dict):
                 quantized_params[name] = ndarray.array([th_dict[output][1]])
     return quantized_params
 
-def _quantize_symbol(sym, excluded_symbols=None, offline_params=None, quantized_dtype='int8'):
+def _quantize_symbol(sym, ctx, excluded_symbols=None, excluded_operators=None,
+                     offline_params=None, quantized_dtype='int8'):
     """Given a symbol object representing a neural network of data type FP32,
     quantize it into a INT8 network.
 
@@ -91,8 +92,13 @@ def _quantize_symbol(sym, excluded_symbols=None, offline_params=None, quantized_
     ----------
     sym : Symbol
         FP32 neural network symbol.
-    excluded_sym_names : list of strings
+    ctx : Context
+        Defines the device that users want to run quantized symbol.
+    excluded_symbols : list of strings
         A list of strings representing the names of the symbols that users want to excluding
+        from being quantized.
+    excluded_operators : list of strings
+        A list of strings representing the names of the operators that users want to excluding
         from being quantized.
     offline_params : list of strs
         Names of the parameters that users want to quantize offline. It's always recommended to
@@ -108,6 +114,13 @@ def _quantize_symbol(sym, excluded_symbols=None, offline_params=None, quantized_
     else:
         excluded_symbols = []
 
+    num_excluded_ops = 0
+    if excluded_operators is not None:
+        assert isinstance(excluded_operators, list)
+        num_excluded_ops = len(excluded_operators)
+    else:
+        excluded_operators = []
+
     num_offline = 0
     offline = []
     if offline_params is not None:
@@ -118,8 +131,11 @@ def _quantize_symbol(sym, excluded_symbols=None, offline_params=None, quantized_
     out = SymbolHandle()
     check_call(_LIB.MXQuantizeSymbol(sym.handle,
                                      ctypes.byref(out),
+                                     ctypes.byref(ctypes.c_int(ctx.device_typeid)),
                                      mx_uint(num_excluded_symbols),
                                      c_str_array(excluded_symbols),
+                                     mx_uint(num_excluded_ops),
+                                     c_str_array(excluded_operators),
                                      mx_uint(num_offline),
                                      c_array(ctypes.c_char_p, offline),
                                      c_str(quantized_dtype),
@@ -462,7 +478,7 @@ def _as_data_iter(calib_data):
 
 def quantize_model(sym, arg_params, aux_params,
                    data_names=('data',), label_names=('softmax_label',),
-                   ctx=cpu(), excluded_sym_names=None, calib_mode='entropy',
+                   ctx=cpu(), excluded_sym_names=None, excluded_op_names=None, calib_mode='entropy',
                    calib_data=None, num_calib_examples=None, calib_layer=None,
                    quantized_dtype='int8', logger=logging):
     """User-level API for generating a quantized model from a FP32 model w/ or w/o calibration.
@@ -493,6 +509,9 @@ def quantize_model(sym, arg_params, aux_params,
         dataset for collecting layer output statistics. Currently, only supports single context.
     excluded_sym_names : list of strings
         A list of strings representing the names of the symbols that users want to excluding
+        from being quantized.
+    excluded_op_names : list of strings
+        A list of strings representing the names of the operators that users want to excluding
         from being quantized.
     calib_mode : str
         If calib_mode='none', no calibration will be used and the thresholds for
@@ -534,11 +553,19 @@ def quantize_model(sym, arg_params, aux_params,
                          ' the names of the symbols that will not be quantized,'
                          ' while received type %s' % str(type(excluded_sym_names)))
 
+    if excluded_op_names is None:
+        excluded_op_names = []
+    if not isinstance(excluded_op_names, list):
+        raise ValueError('excluded_op_names must be a list of strings representing'
+                         ' the names of the operators that will not be quantized,'
+                         ' while received type %s' % str(type(excluded_op_names)))
+
     logger.info('Quantizing symbol')
     if quantized_dtype not in ('int8', 'uint8', 'auto'):
         raise ValueError('unknown quantized_dtype %s received,'
                          ' expected `int8`, `uint8` or `auto`' % quantized_dtype)
-    qsym = _quantize_symbol(sym, excluded_symbols=excluded_sym_names,
+    qsym = _quantize_symbol(sym, ctx, excluded_symbols=excluded_sym_names,
+                            excluded_operators=excluded_op_names,
                             offline_params=list(arg_params.keys()),
                             quantized_dtype=quantized_dtype)
 
@@ -586,9 +613,9 @@ def quantize_model(sym, arg_params, aux_params,
 
 def quantize_model_mkldnn(sym, arg_params, aux_params,
                           data_names=('data',), label_names=('softmax_label',),
-                          ctx=cpu(), excluded_sym_names=None, calib_mode='entropy',
-                          calib_data=None, num_calib_examples=None, calib_layer=None,
-                          quantized_dtype='int8', logger=logging):
+                          ctx=cpu(), excluded_sym_names=None, excluded_op_names=None,
+                          calib_mode='entropy', calib_data=None, num_calib_examples=None,
+                          calib_layer=None, quantized_dtype='int8', logger=logging):
     """User-level API for generating a fusion + quantized model from a FP32 model
     w/ or w/o calibration with Intel MKL-DNN.
     The backend quantized operators are only enabled for Linux systems. Please do not run
@@ -596,50 +623,7 @@ def quantize_model_mkldnn(sym, arg_params, aux_params,
 
     Parameters
     ----------
-    sym : str or Symbol
-        Defines the structure of a neural network for FP32 data types.
-    arg_params : dict
-        Dictionary of name to `NDArray`.
-    aux_params : dict
-        Dictionary of name to `NDArray`.
-    data_names : a list of strs
-        Data names required for creating a Module object to run forward propagation on the
-        calibration dataset.
-    label_names : a list of strs
-        Label names required for creating a Module object to run forward propagation on the
-        calibration dataset.
-    ctx : Context
-        Defines the device that users want to run forward propagation on the calibration
-        dataset for collecting layer output statistics. Currently, only supports single context.
-    excluded_sym_names : list of strings
-        A list of strings representing the names of the symbols that users want to excluding
-        from being quantized.
-    calib_mode : str
-        If calib_mode='none', no calibration will be used and the thresholds for
-        requantization after the corresponding layers will be calculated at runtime by
-        calling min and max operators. The quantized models generated in this
-        mode are normally 10-20% slower than those with calibrations during inference.
-        If calib_mode='naive', the min and max values of the layer outputs from a calibration
-        dataset will be directly taken as the thresholds for quantization.
-        If calib_mode='entropy' (default mode), the thresholds for quantization will be
-        derived such that the KL divergence between the distributions of FP32 layer outputs and
-        quantized layer outputs is minimized based upon the calibration dataset.
-    calib_data : DataIter
-        A data iterator initialized by the calibration dataset.
-    num_calib_examples : int or None
-        The maximum number of examples that user would like to use for calibration. If not provided,
-        the whole calibration dataset will be used.
-    calib_layer : function
-        Given a layer's output name in string, return True or False for deciding whether to
-        calibrate this layer. If yes, the statistics of the layer's output will be collected;
-        otherwise, no information of the layer's output will be collected. If not provided,
-        all the layers' outputs that need requantization will be collected.
-    quantized_dtype : str
-        The quantized destination type for input data. Currently support 'int8'
-        , 'uint8' and 'auto'. 'auto' means automatically select output type according to calibration result.
-        Default value is 'int8'.
-    logger : Object
-        A logging object for printing information during the process of quantization.
+    same with quantize_model
 
     Returns
     -------
@@ -656,6 +640,7 @@ def quantize_model_mkldnn(sym, arg_params, aux_params,
     qsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
                                                    data_names=data_names, label_names=label_names,
                                                    ctx=ctx, excluded_sym_names=excluded_sym_names,
+                                                   excluded_op_names=excluded_op_names,
                                                    calib_mode=calib_mode, calib_data=calib_data,
                                                    num_calib_examples=num_calib_examples, calib_layer=calib_layer,
                                                    quantized_dtype=quantized_dtype, logger=logger)
@@ -664,22 +649,20 @@ def quantize_model_mkldnn(sym, arg_params, aux_params,
 
     return qsym, qarg_params, aux_params
 
-def quantize_graph(sym, arg_params, aux_params,
-                   excluded_sym_names=None, calib_mode='entropy',
+def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
+                   excluded_sym_names=None, excluded_op_names=None, calib_mode='entropy',
                    calib_layer=None, quantized_dtype='int8', logger=logging):
     """User-level API for generating a quantized model from a FP32 model w/o calibration
     and a collector for naive or entropy calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
-    The quantization implementation adopts the TensorFlow's approach:
-    https://www.tensorflow.org/performance/quantization.
-    The calibration implementation borrows the idea of Nvidia's 8-bit Inference with TensorRT:
-    http://on-demand.gputechconf.com/gtc/2017/presentation/s7310-8-bit-inference-with-tensorrt.pdf
-    and adapts the method to MXNet.
     Parameters
     ----------
     sym : str or Symbol
         Defines the structure of a neural network for FP32 data types.
+    ctx : Context
+        Defines the device that users want to run forward propagation on the calibration
+        dataset for collecting layer output statistics. Currently, only supports single context.
     arg_params : dict
         Dictionary of name to `NDArray`.
     aux_params : dict
@@ -687,6 +670,8 @@ def quantize_graph(sym, arg_params, aux_params,
     excluded_sym_names : list of strings
         A list of strings representing the names of the symbols that users want to excluding
         from being quantized.
+    excluded_op_names : list of strings
+        A list of strings representing the names of the operators that users want to excluding
     calib_mode : str
         If calib_mode='none', no calibration will be used and the thresholds for
         requantization after the corresponding layers will be calculated at runtime by
@@ -720,12 +705,14 @@ def quantize_graph(sym, arg_params, aux_params,
         raise ValueError('excluded_sym_names must be a list of strings representing'
                          ' the names of the symbols that will not be quantized,'
                          ' while received type %s' % str(type(excluded_sym_names)))
-
+    if not isinstance(ctx, Context):
+        raise ValueError('currently only supports single ctx, while received %s' % str(ctx))
     logger.info('Quantizing graph')
     if quantized_dtype not in ('int8', 'uint8', 'auto'):
         raise ValueError('unknown quantized_dtype %s received,'
                          ' expected `int8`, `uint8` or `auto`' % quantized_dtype)
-    qsym = _quantize_symbol(sym, excluded_symbols=excluded_sym_names,
+    qsym = _quantize_symbol(sym, ctx, excluded_symbols=excluded_sym_names,
+                            excluded_operators=excluded_op_names,
                             offline_params=list(arg_params.keys()),
                             quantized_dtype=quantized_dtype)
 
@@ -758,11 +745,6 @@ def calib_graph(qsym, arg_params, aux_params, collector,
     """User-level API for calibrating a quantized model using a filled collector.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
-    The quantization implementation adopts the TensorFlow's approach:
-    https://www.tensorflow.org/performance/quantization.
-    The calibration implementation borrows the idea of Nvidia's 8-bit Inference with TensorRT:
-    http://on-demand.gputechconf.com/gtc/2017/presentation/s7310-8-bit-inference-with-tensorrt.pdf
-    and adapts the method to MXNet.
     Parameters
     ----------
     qsym : str or Symbol
@@ -821,16 +803,13 @@ def calib_graph(qsym, arg_params, aux_params, collector,
 
     return qsym, qarg_params, aux_params
 
-def quantize_net(network, quantized_dtype='auto', exclude_layers=None, exclude_layers_match=None, calib_data=None,
-                 data_shapes=None, calib_mode='none', num_calib_examples=None, ctx=cpu(), logger=logging):
+def quantize_net(network, quantized_dtype='auto',
+                 exclude_layers=None, exclude_layers_match=None, exclude_operators=None,
+                 calib_data=None, data_shapes=None, calib_mode='none',
+                 num_calib_examples=None, ctx=cpu(), logger=logging):
     """User-level API for Gluon users to generate a quantized SymbolBlock from a FP32 HybridBlock w/ or w/o calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
-    The quantization implementation adopts the TensorFlow's approach:
-    https://www.tensorflow.org/performance/quantization.
-    The calibration implementation borrows the idea of Nvidia's 8-bit Inference with TensorRT:
-    http://on-demand.gputechconf.com/gtc/2017/presentation/s7310-8-bit-inference-with-tensorrt.pdf
-    and adapts the method to MXNet.
 
     Parameters
     ----------
@@ -845,6 +824,8 @@ def quantize_net(network, quantized_dtype='auto', exclude_layers=None, exclude_l
     exclude_layers_match : list of strings
         A list of strings wildcard matching the names of the symbols that users want to excluding
         from being quantized.
+    exclude_operators : list of strings
+        A list of strings representing the names of the operators that users want to excluding
     calib_data : mx.io.DataIter or gluon.DataLoader
         A iterable data loading object.
     data_shapes : list
@@ -930,6 +911,8 @@ def quantize_net(network, quantized_dtype='auto', exclude_layers=None, exclude_l
         exclude_layers = []
     if exclude_layers_match is None:
         exclude_layers_match = []
+    if exclude_operators is None:
+        exclude_operators = []
     for name_match in exclude_layers_match:
         for layers in list(symnet.get_internals()):
             if layers.name.find(name_match) != -1:
@@ -940,7 +923,8 @@ def quantize_net(network, quantized_dtype='auto', exclude_layers=None, exclude_l
         symnet = symnet.get_backend_symbol('MKLDNN_QUANTIZE')
 
     qsym, qarg_params, aux_params, collector = quantize_graph(
-        sym=symnet, arg_params=args, aux_params=auxs, excluded_sym_names=exclude_layers,
+        sym=symnet, arg_params=args, aux_params=auxs, ctx=ctx,
+        excluded_sym_names=exclude_layers, excluded_op_names=exclude_operators,
         calib_mode=calib_mode, calib_layer=None, quantized_dtype=quantized_dtype, logger=logger)
 
     if calib_mode is not None and calib_mode != 'none':

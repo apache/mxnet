@@ -99,7 +99,7 @@ calib_layer = None
 quantized_dtype = 'auto'
 logger.info('Quantizing FP32 model Resnet18-V1')
 qsym, qarg_params, aux_params, collector = quantize_graph(sym=sym, arg_params=arg_params, aux_params=aux_params,
-                                                          excluded_sym_names=excluded_names,
+                                                          ctx=mx.cpu(), excluded_sym_names=excluded_names,
                                                           calib_mode=calib_mode, calib_layer=calib_layer,
                                                           quantized_dtype=quantized_dtype, logger=logger)
 # (optional) visualize quantized model
@@ -151,9 +151,9 @@ calib_layer = None
 quantized_dtype = 'auto'
 logger.info('Quantizing FP32 model resnet18-V1')
 cqsym, cqarg_params, aux_params, collector = quantize_graph(sym=sym, arg_params=arg_params, aux_params=aux_params,
-                                                          excluded_sym_names=excluded_names,
-                                                          calib_mode=calib_mode, calib_layer=calib_layer,
-                                                          quantized_dtype=quantized_dtype, logger=logger)
+                                                            ctx=mx.cpu(), excluded_sym_names=excluded_names,
+                                                            calib_mode=calib_mode, calib_layer=calib_layer,
+                                                            quantized_dtype=quantized_dtype, logger=logger)
 
 # download imagenet validation dataset
 mx.test_utils.download('http://data.mxnet.io/data/val_256_q90.rec', 'dataset.rec')
