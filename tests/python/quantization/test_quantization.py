@@ -678,6 +678,10 @@ def test_quantized_bn():
 
 @with_seed()
 def test_quantize_params():
+    if is_test_for_native_cpu():
+        print('skipped testing quantized_params for native cpu since it is not supported yet')
+        return
+
     data = mx.sym.Variable('data')
     conv = mx.sym.Convolution(data, kernel=(1, 1), num_filter=2048, name='conv')
     sym = mx.sym.BatchNorm(data=conv, eps=2e-05, fix_gamma=False, momentum=0.9, use_global_stats=False, name='bn')
@@ -686,7 +690,7 @@ def test_quantize_params():
     params = {}
     for name in offline_params:
         params[name] = mx.nd.uniform(shape=(2, 2))
-    qsym = mx.contrib.quant._quantize_symbol(sym, offline_params=offline_params)
+    qsym = mx.contrib.quant._quantize_symbol(sym, ctx=mx.current_context(), offline_params=offline_params)
     qparams = mx.contrib.quant._quantize_params(qsym, params, th_dict = {})
     param_names = params.keys()
     qparam_names = qparams.keys()
@@ -938,13 +942,13 @@ def test_quantize_model_with_forward():
             arg_params, aux_params = mod.get_params()
 
             excluded_sym_names = []
+            excluded_op_names = []
             # sym3/sym4 doesn't have such layers
             if name not in ['sym3', 'sym4']:
                 excluded_names = []
                 if mx.current_context() == mx.cpu():
-                   excluded_names += ['fc', 'conv1']
-                if mx.current_context() == mx.gpu():
-                   excluded_names += ['sum0', 'relu0', 'relu1']
+                   excluded_op_names += ['FullyConnected']
+                   excluded_names += ['conv1']
                 excluded_names += ['concat']
 
                 optional_names = ['pool0']
@@ -959,6 +963,7 @@ def test_quantize_model_with_forward():
                                                                              arg_params=arg_params,
                                                                              aux_params=aux_params,
                                                                              excluded_sym_names=excluded_sym_names,
+                                                                             excluded_op_names=excluded_op_names,
                                                                              ctx=mx.current_context(),
                                                                              quantized_dtype=qdtype,
                                                                              calib_mode='none')
@@ -973,6 +978,7 @@ def test_quantize_model_with_forward():
                                                                              arg_params=arg_params,
                                                                              aux_params=aux_params,
                                                                              excluded_sym_names=excluded_sym_names,
+                                                                             excluded_op_names=excluded_op_names,
                                                                              ctx=mx.current_context(),
                                                                              quantized_dtype=qdtype,
                                                                              calib_mode='naive',
@@ -1037,10 +1043,14 @@ def test_quantize_gluon_with_forward():
 
 @with_seed()
 def test_quantize_sym_with_calib():
+    if is_test_for_native_cpu():
+        print('skipped testing quantized_pooling for native cpu since it is not supported yet')
+        return
+
     sym = get_fp32_sym()
     offline_params = [name for name in sym.list_arguments()
                       if not name.startswith('data') and not name.endswith('label')]
-    qsym = mx.contrib.quant._quantize_symbol(sym, offline_params=offline_params)
+    qsym = mx.contrib.quant._quantize_symbol(sym, ctx=mx.current_context(), offline_params=offline_params)
     requantize_op_names = ['requantize_conv', 'requantize_fc']
     th_dict = {'conv_output': (np.random.uniform(low=100.0, high=200.0), np.random.uniform(low=100.0, high=200.0)),
                'fc_output': (np.random.uniform(low=100.0, high=200.0), np.random.uniform(low=100.0, high=200.0))}
