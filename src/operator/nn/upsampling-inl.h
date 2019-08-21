@@ -125,7 +125,7 @@ void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
       // 3rd dimension of TBlob (2nd from 4th dimension)
       int scale_h = out_data[up_enum::kOut].size(2)/in_data[i].size(2);
       // 4th dimension of TBlob (1st from 4th dimension)
-      int scale_w = out_data[up_enum::kOut].size(1)/in_data[i].size(1);
+      int scale_w = out_data[up_enum::kOut].size(3)/in_data[i].size(3);
       if (param.multi_input_mode == up_enum::kSum) {
         if (i == 0) {
           Assign(out, req[up_enum::kOut], upsampling_nearest(data, scale_h, scale_w));
