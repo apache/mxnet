@@ -395,30 +395,6 @@ __global__ void softmax_stride1_compute_kernel(const DType *in, OType *out, ITyp
   }
 }
 
-namespace {
-
-int get_rows_per_block(size_t N) {
-  const int warp_size = 32;
-  // How many read instructions should 1 thread at least do
-  const int read_instructions = 2;
-  const int num_threads = (N + read_instructions - 1) / read_instructions;
-  int num_warps = (num_threads + warp_size - 1) / warp_size;
-  // num_warps needs to be power of 2
-  int used_num_warps = 1;
-  num_warps = std::min(num_warps, softmax_threads_per_block / warp_size);
-  int tmp = num_warps;
-  while (tmp >= 2) {
-    used_num_warps *= 2;
-    tmp /= 2;
-  }
-  if (used_num_warps < num_warps) {
-    used_num_warps *= 2;
-  }
-  return softmax_threads_per_block / (warp_size * used_num_warps);
-}
-
-}  // namespace
-
 template<typename OP, bool negate, typename AType, typename DType, typename OType,
          typename IType, int ndim>
 inline void Softmax(Stream<gpu> *s, DType *in, OType *out, IType *length,
@@ -439,7 +415,8 @@ inline void Softmax(Stream<gpu> *s, DType *in, OType *out, IType *length,
       std::is_same<DType, OType>::value) {
     int ltype = mxnet::common::cuda::get_load_type(M * sizeof(DType));
     MXNET_LOAD_TYPE_SWITCH(ltype, LType, {
-      int rows_per_block = get_rows_per_block(M * sizeof(DType) / sizeof(LType));
+      int rows_per_block = get_rows_per_block(M * sizeof(DType) / sizeof(LType),
+                                              softmax_threads_per_block);
       int nblocks = (N + rows_per_block - 1) / rows_per_block;
       CHECK_LE(sizeof(DType), sizeof(LType));
       softmax_stride1_compute_kernel<OP, negate, AType, LType>
@@ -592,7 +569,8 @@ inline void SoftmaxGrad(Stream<gpu> *s, OType *out, OType *ograd,
       std::is_same<DType, OType>::value) {
     int ltype = mxnet::common::cuda::get_load_type(M * sizeof(DType));
     MXNET_LOAD_TYPE_SWITCH(ltype, LType, {
-      int rows_per_block = get_rows_per_block(M * sizeof(DType) / sizeof(LType));
+      int rows_per_block = get_rows_per_block(M * sizeof(DType) / sizeof(LType),
+                                              softmax_threads_per_block);
       int nblocks = (N + rows_per_block - 1) / rows_per_block;
       CHECK_LE(sizeof(DType), sizeof(LType));
       softmax_stride1_grad_kernel<OP1, OP2, Req, negate, AType, LType>

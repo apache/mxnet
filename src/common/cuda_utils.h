@@ -327,7 +327,8 @@ class DeviceStore {
   bool restore_;
 };
 
-/*! \brief Get the largest datatype suitable to read
+/*!
+ * \brief Get the largest datatype suitable to read
  *         requested number of bytes.
  *
  *  \input Number of bytes to be read
@@ -335,6 +336,18 @@ class DeviceStore {
  *          be used for reading
  */
 int get_load_type(size_t N);
+
+/*!
+ * \brief Determine how many rows in a 2D matrix should a block
+ *        of threads handle based on the row size and the number
+ *        of threads in a block.
+ * \param row_size Size of the row expressed in the number of reads required to fully
+ *                 load it. For example, if the row has N elements, but  each thread
+ *                 reads 2 elements with a single read, row_size should be N / 2.
+ * \param num_threads_per_block Number of threads in a block.
+ * \return the number of rows that should be handled by a single block.
+ */
+int get_rows_per_block(size_t row_size, int num_threads_per_block);
 
 }  // namespace cuda
 }  // namespace common
