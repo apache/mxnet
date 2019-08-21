@@ -267,21 +267,23 @@ def test_aggregate_stats_sorting():
     test_profile_event(False)
     for sb in sort_by_options:
         for asc in ascending_options:
-            debug_str = profiler.dumps(format = 'json', sort_by = sb, ascending = asc)
+            debug_str = profiler.dumps(format='json', sort_by=sb, ascending=asc)
             check_sorting(debug_str, sb, asc)
     profiler.set_state('stop')
 
 def test_aggregate_duplication():
     file_name = 'test_aggregate_duplication.json'
-    enable_profiler(profile_filename = file_name, run=True, continuous_dump=True, \
+    enable_profiler(profile_filename=file_name, run=True, continuous_dump=True, \
                     aggregate_stats=True)
+    # clear aggregate stats
+    profiler.dumps(reset=True)
     inp = mx.nd.zeros(shape=(100, 100))
     y = mx.nd.sqrt(inp)
     inp = inp + 1
     inp = inp + 1
     mx.nd.waitall()
     profiler.dump(False)
-    debug_str = profiler.dumps(format = 'json')
+    debug_str = profiler.dumps(format='json')
     target_dict = json.loads(debug_str)
     assert 'Time' in target_dict and 'operator' in target_dict['Time'] \
         and 'sqrt' in target_dict['Time']['operator'] \
@@ -293,7 +295,7 @@ def test_aggregate_duplication():
     assert target_dict['Time']['operator']['_plus_scalar']['Count'] == 2
     profiler.set_state('stop')
     
-def test_custom_operator_profiling(seed = None, file_name = None):
+def test_custom_operator_profiling(seed=None, file_name=None):
     class Sigmoid(mx.operator.CustomOp):
         def forward(self, is_train, req, in_data, out_data, aux):
             x = in_data[0].asnumpy()
@@ -330,8 +332,10 @@ def test_custom_operator_profiling(seed = None, file_name = None):
 
     if file_name is None:
         file_name = 'test_custom_operator_profiling.json'
-    enable_profiler(profile_filename = file_name, run=True, continuous_dump=True,\
+    enable_profiler(profile_filename=file_name, run=True, continuous_dump=True,\
                     aggregate_stats=True)
+    # clear aggregate stats
+    profiler.dumps(reset=True)
     x = mx.nd.array([0, 1, 2, 3])
     x.attach_grad()
     with mx.autograd.record():
@@ -339,7 +343,7 @@ def test_custom_operator_profiling(seed = None, file_name = None):
     y.backward()
     mx.nd.waitall()
     profiler.dump(False)
-    debug_str = profiler.dumps(format = 'json')
+    debug_str = profiler.dumps(format='json')
     target_dict = json.loads(debug_str)
     assert 'Time' in target_dict and 'Custom Operator' in target_dict['Time'] \
         and 'MySigmoid::pure_python' in target_dict['Time']['Custom Operator'] \
@@ -347,8 +351,15 @@ def test_custom_operator_profiling(seed = None, file_name = None):
         and 'MySigmoid::_zeros' in target_dict['Time']['Custom Operator']
     profiler.set_state('stop')
 
-def test_custom_operator_profiling_multiple_custom_ops_imperative(seed = None, \
-        mode = 'imperative', file_name = None):
+def check_custom_operator_profiling_multiple_custom_ops_output(debug_str):
+    target_dict = json.loads(debug_str)
+    assert 'Time' in target_dict and 'Custom Operator' in target_dict['Time'] \
+        and 'MyAdd1::pure_python' in target_dict['Time']['Custom Operator'] \
+        and 'MyAdd2::pure_python' in target_dict['Time']['Custom Operator'] \
+        and 'MyAdd1::_plus_scalar' in target_dict['Time']['Custom Operator'] \
+        and 'MyAdd2::_plus_scalar' in target_dict['Time']['Custom Operator']
+
+def custom_operator_profiling_multiple_custom_ops(seed, mode, file_name):
     class MyAdd(mx.operator.CustomOp):
         def forward(self, is_train, req, in_data, out_data, aux):        
             self.assign(out_data[0], req[0], in_data[0] + 1)
@@ -392,49 +403,35 @@ def test_custom_operator_profiling_multiple_custom_ops_imperative(seed = None, \
         def create_operator(self, ctx, shapes, dtypes):
             return MyAdd()
 
-    if file_name is None:
-        file_name = 'test_custom_operator_profiling_multiple_custom_ops_imperative.json'
-    enable_profiler(profile_filename = file_name, run=True, continuous_dump=True,\
+    enable_profiler(profile_filename=file_name, run=True, continuous_dump=True,\
                     aggregate_stats=True)
+    # clear aggregate stats
+    profiler.dumps(reset=True)
     inp = mx.nd.zeros(shape=(100, 100))
     if mode == 'imperative':
-        x = inp + 1
         y = mx.nd.Custom(inp, op_type='MyAdd1')
         z = mx.nd.Custom(inp, op_type='MyAdd2')
     elif mode == 'symbolic':
         a = mx.symbol.Variable('a')
-        b = a + 1
-        c = mx.symbol.Custom(data=a, op_type='MyAdd1')
-        d = mx.symbol.Custom(data=a, op_type='MyAdd2')
-        b.bind(mx.cpu(), {'a': inp}).forward()
-        c.bind(mx.cpu(), {'a': inp}).forward()
-        d.bind(mx.cpu(), {'a': inp}).forward()
+        b = mx.symbol.Custom(data=a, op_type='MyAdd1')
+        c = mx.symbol.Custom(data=a, op_type='MyAdd2')
+        y = b.bind(mx.cpu(), {'a': inp})
+        z = c.bind(mx.cpu(), {'a': inp})
+        yy = y.forward()
+        zz = z.forward()
     mx.nd.waitall()
     profiler.dump(False)
-    debug_str = profiler.dumps(format = 'json')
-    target_dict = json.loads(debug_str)
-    '''
-    We are calling _plus_scalar within MyAdd1 and MyAdd2 and outside both the custom 
-    operators, so in aggregate stats we should have three different kinds of 
-    _plus_scalar under domains "Custom Operator" and "operator"
-    '''
-    assert 'Time' in target_dict and 'Custom Operator' in target_dict['Time'] \
-        and 'MyAdd1::pure_python' in target_dict['Time']['Custom Operator'] \
-        and 'MyAdd2::pure_python' in target_dict['Time']['Custom Operator'] \
-        and 'MyAdd1::_plus_scalar' in target_dict['Time']['Custom Operator'] \
-        and 'MyAdd2::_plus_scalar' in target_dict['Time']['Custom Operator'] \
-        and '_plus_scalar' not in target_dict['Time']['Custom Operator'] \
-        and 'operator' in target_dict['Time'] \
-        and '_plus_scalar' in target_dict['Time']['operator']
+    debug_str = profiler.dumps(format='json')
+    check_custom_operator_profiling_multiple_custom_ops_output(debug_str)
     profiler.set_state('stop')
-
-@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
+    
 def test_custom_operator_profiling_multiple_custom_ops_symbolic():
-    run_in_spawned_process(test_custom_operator_profiling_multiple_custom_ops_imperative, \
-            {'MXNET_EXEC_BULK_EXEC_INFERENCE' : 0, \
-            'MXNET_EXEC_BULK_EXEC_TRAIN' : 0}, \
-            'symbolic', \
+    custom_operator_profiling_multiple_custom_ops(None, 'symbolic', \
             'test_custom_operator_profiling_multiple_custom_ops_symbolic.json')
+
+def test_custom_operator_profiling_multiple_custom_ops_imperative():
+    custom_operator_profiling_multiple_custom_ops(None, 'imperative', \
+            'test_custom_operator_profiling_multiple_custom_ops_imperative.json')
 
 @unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
 def test_custom_operator_profiling_naive_engine():
@@ -442,15 +439,11 @@ def test_custom_operator_profiling_naive_engine():
     run_in_spawned_process(test_custom_operator_profiling, \
             {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, \
             'test_custom_operator_profiling_naive.json')
-    run_in_spawned_process(test_custom_operator_profiling_multiple_custom_ops_imperative, \
-            {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, \
-            'imperative', \
+    run_in_spawned_process(custom_operator_profiling_multiple_custom_ops, \
+            {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, 'imperative', \
             'test_custom_operator_profiling_multiple_custom_ops_imperative_naive.json')
-    run_in_spawned_process(test_custom_operator_profiling_multiple_custom_ops_imperative, \
-            {'MXNET_ENGINE_TYPE' : "NaiveEngine", \
-            'MXNET_EXEC_BULK_EXEC_INFERENCE' : 0, \
-            'MXNET_EXEC_BULK_EXEC_TRAIN' : 0}, \
-            'symbolic', \
+    run_in_spawned_process(custom_operator_profiling_multiple_custom_ops, \
+            {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, 'symbolic', \
             'test_custom_operator_profiling_multiple_custom_ops_symbolic_naive.json')
 
 if __name__ == '__main__':

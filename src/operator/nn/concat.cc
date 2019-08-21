@@ -32,9 +32,9 @@
 namespace mxnet {
 namespace op {
 
-static bool ConcatShape(const nnvm::NodeAttrs& attrs,
-                        mxnet::ShapeVector *in_shape,
-                        mxnet::ShapeVector *out_shape) {
+bool ConcatShape(const nnvm::NodeAttrs& attrs,
+                 mxnet::ShapeVector *in_shape,
+                 mxnet::ShapeVector *out_shape) {
   using namespace mshadow;
   const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
@@ -138,12 +138,13 @@ static bool RNNParamConcatShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(dshape);
 }
 
-static bool ConcatType(const nnvm::NodeAttrs& attrs,
-                       std::vector<int> *in_type,
-                       std::vector<int> *out_type) {
+bool ConcatType(const nnvm::NodeAttrs& attrs,
+                std::vector<int> *in_type,
+                std::vector<int> *out_type) {
   const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
   int dtype = -1;
 
+  // checks uniformity of input
   for (int i : *in_type) {
     if (dtype == -1) {
       dtype = i;
@@ -154,18 +155,29 @@ static bool ConcatType(const nnvm::NodeAttrs& attrs,
     }
   }
 
-  if (dtype == -1) {
-    LOG(FATAL) << "Not enough information to infer type in Concat.";
-    return false;
-  }
-
   size_t nin = param_.num_args;
-  in_type->clear();
-  for (size_t i = 0; i < nin; ++i) in_type->push_back(dtype);
 
-  out_type->clear();
-  out_type->push_back(dtype);
-
+  // if in types are known out types are unknown
+  if (dtype != -1 && (*out_type)[0] == -1) {
+    (*out_type)[0] = dtype;
+    in_type->clear();
+    for (size_t i = 0; i < nin; ++i) {
+      in_type->push_back(dtype);
+    }
+  // if out types are known in types are unknown
+  } else if ((*out_type)[0] != -1 && dtype == -1) {
+    in_type->clear();
+    for (size_t i = 0; i < nin; ++i) {
+      in_type->push_back((*out_type)[0]);
+    }
+  // if both out_types and in_types are known, and different
+  } else if ((*out_type)[0] != -1 && dtype != -1 && ((*out_type)[0] != dtype)) {
+    std::ostringstream os;
+    os << "Type inconsistent, Provided output type = "
+       << mxnet::op::type_string((*out_type)[0]) << ','
+       << " inferred type = " << mxnet::op::type_string(dtype);
+    throw mxnet::op::InferTypeError(os.str(), 0);
+  }
   return true;
 }
 
@@ -403,6 +415,7 @@ NNVM_REGISTER_OP(_backward_Concat)
 // which handles the case where the first one or two inputs may have
 // unknown shape that can be inferred from output shape.
 NNVM_REGISTER_OP(_rnn_param_concat)
+.add_alias("_npi_rnn_param_concat")
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};

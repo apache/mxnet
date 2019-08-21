@@ -91,7 +91,7 @@ void DotForward_(const nnvm::NodeAttrs& attrs,
                 inputs[0].get<xpu, 1, DType>(s),
                 inputs[1].get<xpu, 1, DType>(s));
     } else {
-      int ma, na, mb, nb, m, n;
+      index_t ma, na, mb, nb, m, n;
       if (param.transpose_a) {
         ma = inputs[0].size(0);
         na = inputs[0].Size()/ma;
