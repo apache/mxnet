@@ -60,7 +60,7 @@ struct greater_half
   typedef T second_argument_type;
   typedef bool result_type;
   __host__ __device__ bool operator()(const T &lhs, const T &rhs) const {
-    return static_cast<mshadow::half::half_t>(lhs) < static_cast<mshadow::half::half_t>(rhs);
+    return static_cast<mshadow::half::half_t>(lhs) > static_cast<mshadow::half::half_t>(rhs);
   }
 };
 }
@@ -142,11 +142,11 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
     if (is_ascend) {
       thrust::stable_sort_by_key(
         thrust::cuda::par.on(stream),
-        key_iter, key_iter + keys.size(0), value_iter, thrust::less<KDType>());
+        key_iter, key_iter + keys.size(0), value_iter.get(), thrust::less<KDType>());
     } else {
       thrust::stable_sort_by_key(
         thrust::cuda::par.on(stream),
-        key_iter, key_iter + keys.size(0), value_iter, thrust::greater<KDType>());
+        key_iter, key_iter + keys.size(0), value_iter.get(), thrust::greater<KDType>());
     }
 #ifndef SORT_WITH_THRUST
   }
@@ -203,11 +203,11 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
   if (is_ascend) {
     thrust::stable_sort_by_key(
       thrust::cuda::par.on(stream),
-      key_iter, key_iter + (keys.size(0)), value_iter, cuda::less_half<half>());
+      key_iter, key_iter + (keys.size(0)), value_iter.get(), cuda::less_half<half>());
   } else {
     thrust::stable_sort_by_key(
       thrust::cuda::par.on(stream),
-      key_iter, key_iter + (keys.size(0)), value_iter, cuda::greater_half<half>());
+      key_iter, key_iter + (keys.size(0)), value_iter.get(), cuda::greater_half<half>());
   }
   MSHADOW_CUDA_POST_KERNEL_CHECK(SortByKey);
 #else
@@ -234,11 +234,11 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
   if (is_ascend) {
     thrust::stable_sort_by_key(
       thrust::cuda::par.on(stream),
-      key_iter, key_iter + (keys.size(0)), value_iter, cuda::less_half<half>());
+      key_iter, key_iter + (keys.size(0)), value_iter.get(), cuda::less_half<half>());
   } else {
     thrust::stable_sort_by_key(
       thrust::cuda::par.on(stream),
-      key_iter, key_iter + (keys.size(0)), value_iter, cuda::greater_half<half>());
+      key_iter, key_iter + (keys.size(0)), value_iter.get(), cuda::greater_half<half>());
   }
   MSHADOW_CUDA_POST_KERNEL_CHECK(SortByKey);
 #else

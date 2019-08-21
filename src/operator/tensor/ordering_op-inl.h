@@ -420,6 +420,8 @@ void TopKImpl(const RunContext &ctx,
     mxnet::op::SortByKeyWorkspaceSize<int, int, xpu>(src.Size()));
   temp_size = std::max(temp_size,
     mxnet::op::SortByKeyWorkspaceSize<int, DType, xpu>(src.Size()));
+  temp_size = std::max(temp_size,
+    mxnet::op::SortByKeyWorkspaceSize<DType, int, xpu>(src.Size()));
   // Additional temp space for gpu full sorts for batch ids.
   temp_size += PadBytes(sizeof(index_t) * src.Size(), alignment);
   // Temp space for cpu sorts.
