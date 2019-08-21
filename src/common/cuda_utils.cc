@@ -23,10 +23,11 @@
  * \brief Common CUDA utilities.
  */
 
-#include <algorithm>
-
 #include <mxnet/base.h>
 #include <mshadow/base.h>
+
+#include <algorithm>
+
 #include "cuda_utils.h"
 
 #if MXNET_USE_CUDA
