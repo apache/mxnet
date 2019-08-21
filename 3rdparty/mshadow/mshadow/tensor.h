@@ -506,7 +506,7 @@ struct Tensor: public TRValue<Tensor<Device, dimension, DType>,
    * \param idx index
    * \return the result tensor
    */
-  MSHADOW_XINLINE Tensor<Device, kSubdim, DType> operator[](int idx) const {
+  MSHADOW_XINLINE Tensor<Device, kSubdim, DType> operator[](index_t idx) const {
     return Tensor<Device, kSubdim, DType>(dptr_ + this->MemSize<1>() * idx,
                                           shape_.SubShape(), stride_, stream_);
   }
