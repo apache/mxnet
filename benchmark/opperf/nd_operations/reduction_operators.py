@@ -31,7 +31,7 @@ from benchmark.opperf.utils.op_registry_utils import get_all_reduction_operators
 from benchmark.opperf.utils.benchmark_utils import run_op_benchmarks
 
 
-def run_mx_reduction_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
+def run_mx_reduction_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype)for all the reduction
     operators in MXNet.
 
@@ -54,5 +54,5 @@ def run_mx_reduction_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=
     # Fetch all Reduction Operators
     mx_reduction_broadcast_ops = get_all_reduction_operators()
     # Run benchmarks
-    mx_reduction_op_results = run_op_benchmarks(mx_reduction_broadcast_ops, dtype, ctx, warmup, runs)
+    mx_reduction_op_results = run_op_benchmarks(mx_reduction_broadcast_ops, dtype, ctx, profiler, warmup, runs)
     return mx_reduction_op_results

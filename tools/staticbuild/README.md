@@ -34,7 +34,7 @@ This would build the mxnet package based on MKLDNN and and pypi configuration se
 As the result, users would have a complete static dependencies in `/staticdeps` in the root folder as well as a static-linked `libmxnet.so` file lives in `lib`. You can build your language binding by using the `libmxnet.so`.
 
 ## `build_lib.sh`
-This script clones the most up-to-date master and builds the MXNet backend with a static library. In order to run the static library, you must set the the following environment variables:
+This script clones the most up-to-date master and builds the MXNet backend with a static library. In order to run the static library, you must set the following environment variables:
 
 - `DEPS_PATH` Path to your static dependencies
 - `STATIC_BUILD_TARGET` Either `pip` or `maven` as your publish platform

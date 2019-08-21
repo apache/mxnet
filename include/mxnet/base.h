@@ -192,6 +192,11 @@ struct Context {
    */
   inline static int32_t GetGPUCount();
   /*!
+   * Is the cuda driver installed and visible to the system.
+   * \return Whether the driver is present.
+   */
+  inline static bool GPUDriverPresent();
+  /*!
    * Get the number of streams that a GPU Worker has available to operations.
    * \return The number of streams that are available.
    */
@@ -222,6 +227,14 @@ struct Context {
    * \return Context
    */
   inline static Context FromString(const std::string& str);
+
+ private:
+#if MXNET_USE_CUDA
+    static void CudaLibChecks();
+#endif
+#if MXNET_USE_CUDNN
+    static void CuDNNLibChecks();
+#endif
 };
 
 #if MXNET_USE_CUDA
@@ -387,17 +400,21 @@ inline bool Context::operator<(const Context &b) const {
 inline Context Context::Create(DeviceType dev_type, int32_t dev_id) {
   Context ctx;
   ctx.dev_type = dev_type;
-  if (dev_id < 0) {
-    ctx.dev_id = 0;
-    if (dev_type & kGPU) {
+  ctx.dev_id = dev_id < 0 ? 0 : dev_id;
+  if (dev_type & kGPU) {
+#if MXNET_USE_CUDA
+    CudaLibChecks();
+#endif
+#if MXNET_USE_CUDNN
+    CuDNNLibChecks();
+#endif
+    if (dev_id < 0) {
 #if MXNET_USE_CUDA
       CHECK_EQ(cudaGetDevice(&ctx.dev_id), cudaSuccess);
 #else
       LOG(FATAL) << "Please compile with CUDA enabled for cuda features";
 #endif
     }
-  } else {
-    ctx.dev_id = dev_id;
   }
   return ctx;
 }
@@ -417,11 +434,26 @@ inline Context Context::GPU(int32_t dev_id) {
   return Create(kGPU, dev_id);
 }
 
+inline bool Context::GPUDriverPresent() {
+#if MXNET_USE_CUDA
+  int cuda_driver_version = 0;
+  CHECK_EQ(cudaDriverGetVersion(&cuda_driver_version), cudaSuccess);
+  return cuda_driver_version > 0;
+#else
+  return false;
+#endif
+}
+
 inline int32_t Context::GetGPUCount() {
 #if MXNET_USE_CUDA
+  if (!GPUDriverPresent()) {
+    return 0;
+  }
   int32_t count;
   cudaError_t e = cudaGetDeviceCount(&count);
-  if (e == cudaErrorNoDevice) {
+  // TODO(junwu): Remove e == cudaErrorInsufficientDriver
+  // This is skipped for working around wheel build system with older CUDA driver.
+  if (e == cudaErrorNoDevice || e == cudaErrorInsufficientDriver) {
     return 0;
   }
   CHECK_EQ(e, cudaSuccess) << " CUDA: " << cudaGetErrorString(e);
