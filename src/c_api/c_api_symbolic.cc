@@ -919,7 +919,7 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
   g.attrs["quantize_mode"] = std::make_shared<nnvm::any>(std::move(quantized_mode));
   g = ApplyPass(std::move(g), "QuantizeGraph");
   const auto& calib_nodes =g.GetAttr<std::vector<std::string>>("calib_nodes");
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   ret->ret_vec_str = std::move(calib_nodes);
   *out_num_calib_names = ret->ret_vec_str.size();
   ret->ret_vec_charp.clear();

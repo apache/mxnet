@@ -84,7 +84,7 @@ def _quantize_params(qsym, params, th_dict):
                 quantized_params[name] = ndarray.array([th_dict[output][1]])
     return quantized_params
 
-def _quantize_symbol(sym, excluded_symbols=None, excluded_operators=None,
+def _quantize_symbol(sym, ctx, excluded_symbols=None, excluded_operators=None,
                      offline_params=None, quantized_dtype='int8', quantize_mode='smart'):
     """Given a symbol object representing a neural network of data type FP32,
     quantize it into a INT8 network.
@@ -524,7 +524,7 @@ def quantize_model(sym, arg_params, aux_params,
     if quantized_dtype not in ('int8', 'uint8', 'auto'):
         raise ValueError('unknown quantized_dtype %s received,'
                          ' expected `int8`, `uint8` or `auto`' % quantized_dtype)
-    qsym, calib_layer = _quantize_symbol(sym, excluded_symbols=excluded_sym_names,
+    qsym, calib_layer = _quantize_symbol(sym, ctx, excluded_symbols=excluded_sym_names,
                                          excluded_operators=excluded_op_names,
                                          offline_params=list(
                                              arg_params.keys()),
@@ -666,7 +666,7 @@ def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
     if quantized_dtype not in ('int8', 'uint8', 'auto'):
         raise ValueError('unknown quantized_dtype %s received,'
                          ' expected `int8`, `uint8` or `auto`' % quantized_dtype)
-    qsym, calib_layer = _quantize_symbol(sym, excluded_symbols=excluded_sym_names,
+    qsym, calib_layer = _quantize_symbol(sym, ctx, excluded_symbols=excluded_sym_names,
                                          excluded_operators=excluded_op_names,
                                          offline_params=list(
                                              arg_params.keys()),

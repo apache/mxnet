@@ -126,11 +126,13 @@ bool isRegistered(NodePtr node, const int& dev_type) {
           fcomputestateful != nullptr || fcomputestateful_ex != nullptr);
 }
 
-inline NodePtr NeedQuantize(NodePtr node, const std::unordered_set<std::string>& excluded_nodes,
-                            const std::unordered_set<std::string>& excluded_ops,
-                            const int& dev_type,
-                            std::unordered_map<NodePtr, NodePtr>* quantized_node_map) {
+inline QuantizeType NeedQuantize(NodePtr node,
+                                 const std::unordered_set<std::string>& excluded_nodes,
+                                 const std::unordered_set<std::string>& excluded_ops,
+                                 const int& dev_type,
+                                 std::unordered_map<NodePtr, NodePtr>* quantized_node_map) {
   std::unordered_map<NodePtr, NodePtr> quantized_node;
+  static auto& quantizable_map = Op::GetAttr<mxnet::FQuantizable>("FQuantizable");
   static auto& quantized_op_map = Op::GetAttr<mxnet::FQuantizedOp>("FQuantizedOp");
   static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
   const auto& op = node->op();
@@ -190,14 +192,17 @@ enum quantize_bit {
 static void MarkQuantizedNodes(const Graph& src,
                                std::unordered_map<NodePtr, NodePtr>& quantized_node_map) {
   const auto excluded_nodes = src.GetAttr<std::unordered_set<std::string>>("excluded_nodes");
+  const auto excluded_ops = src.GetAttr<std::unordered_set<std::string>>("excluded_ops");
   const auto quantize_mode = src.GetAttr<std::string>("quantize_mode");
+  const auto dev_type = src.GetAttr<int>("target_ctx");
 
   std::unordered_map<NodePtr, std::vector<NodePtr>> node_output_map;
   std::unordered_set<NodePtr> must_quantize_nodes;
   std::unordered_map<NodePtr, int> support_quantize_nodes;
   // Build node_output_map, must_quantize_nodes and support_quantize_nodes;
   DFSVisit(src.outputs, [&](const NodePtr& node) {
-    auto quantize_type = NeedQuantize(node, excluded_nodes, &quantized_node_map);
+    auto quantize_type =
+        NeedQuantize(node, excluded_nodes, excluded_ops, dev_type, &quantized_node_map);
     if (quantize_type == QuantizeType::kMust) {
       must_quantize_nodes.insert(node);
     } else if (quantize_type == QuantizeType::kSupport) {
@@ -264,10 +269,7 @@ Graph QuantizeGraph(Graph &&src) {
   static const auto& need_requantize_map = Op::GetAttr<mxnet::FNeedRequantize>("FNeedRequantize");
   static const auto& avoid_quantize_input_map =
       Op::GetAttr<mxnet::FAvoidQuantizeInput>("FAvoidQuantizeInput");
-  const auto dev_type = src.GetAttr<int>("target_ctx");
   const auto offline_params = src.GetAttr<std::unordered_set<std::string>>("offline_params");
-  const auto excluded_nodes = src.GetAttr<std::unordered_set<std::string>>("excluded_nodes");
-  const auto excluded_ops = src.GetAttr<std::unordered_set<std::string>>("excluded_ops");
   const auto quantized_dtype = src.GetAttr<std::string>("quantized_dtype");
 
   std::unordered_map<NodePtr, NodePtr> quantized_node_map;
