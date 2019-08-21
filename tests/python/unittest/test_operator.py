@@ -1557,41 +1557,16 @@ def test_deconvolution_forward_with_bias():
 
 
 def check_nearest_upsampling_with_shape(shapes, root_scale):
-    def py_nearest_upsampling(x, scale):
-        from collections import Counter
-        batch, channel, inputHeight, inputWidth = x.shape
-        if not isinstance(scale, (list, tuple)):
-            outputHeight = inputHeight * scale
-            outputWidth = inputWidth * scale
-            row_ratio = col_ratio = scale
-        else:
-            outputHeight = inputHeight
-            outputWidth = inputWidth
-            if len(scale) == 1:
-                outputHeight = inputHeight * scale[0]
-                outputWidth = inputWidth * scale[0]
-                row_ratio = col_ratio = scale[0]
-            elif len(scale) == 2:
-                outputHeight = inputHeight * scale[0]
-                outputWidth = inputWidth * scale[1]
-                col_ratio = scale[0]
-                row_ratio = scale[1]
-        if outputHeight == inputHeight and outputWidth == inputWidth:
-            return x
-        a = x.repeat(col_ratio, axis=2).repeat(row_ratio, axis=3)
-        return a
     arr = {'arg_%d'%i: mx.random.uniform(-10.0, 10.0, shape, ctx=mx.cpu()).copyto(default_context()) for i, shape in zip(range(len(shapes)), shapes)}
     arr_grad = {'arg_%d'%i: mx.nd.zeros(shape) for i, shape in zip(range(len(shapes)), shapes)}
 
     up = mx.sym.UpSampling(*[mx.sym.Variable('arg_%d'%i) for i in range(len(shapes))], sample_type='nearest', scale=root_scale)
     exe = up.bind(default_context(), args=arr, args_grad=arr_grad)
     exe.forward(is_train=True)
-    out = exe.outputs[0].asnumpy()
     exe.backward(exe.outputs)
     for k in range(len(shapes)):
         name = 'arg_%d'%k
-        assert_allclose(out, py_nearest_upsampling(arr[name].asnumpy(), root_scale), rtol=1e-4)
-
+        assert_allclose(arr[name].asnumpy()*root_scale**2*scale**(2*k), arr_grad[name].asnumpy(), rtol=1e-4)
 
 def check_bilinear_upsampling_with_shape(data_shape, weight_shape, scale, root_scale, num_filter):
     def _init_bilinear(arr, f):
@@ -1624,8 +1599,11 @@ def check_bilinear_upsampling_with_shape(data_shape, weight_shape, scale, root_s
 @with_seed()
 def test_nearest_upsampling():
     for root_scale in [1, 2, (2,3), (3,2), (1,1), (5,1), (2,2), ()]:
-        shapes = [(1,3,10,10)]
-        check_nearest_upsampling_with_shape(shapes, root_scale)
+        for scale in [1,2,3]:
+            for num_shape in [1,2,3]:
+                for base in [1,2,3]:
+                    shapes = [(1,3,base*root_scale*scale**(num_shape-1-i),base*root_scale*scale**(num_shape-1-i)) for i in range(num_shape)]
+                    check_nearest_upsampling_with_shape(shapes, scale, root_scale)
 
 @with_seed()
 def test_bilinear_upsampling():
