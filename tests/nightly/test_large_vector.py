@@ -79,7 +79,7 @@ def test_ndarray_random_negative_binomial():
 @with_seed()
 def test_ndarray_random_normal():
     a = nd.random.normal(shape=LARGE_X)
-    assert a[-1] >= 0.
+    a.wait_to_read()
     assert a.shape[0] == LARGE_X
 
 
@@ -94,14 +94,14 @@ def test_ndarray_random_poisson():
 def test_ndarray_random_randint():
     a = nd.random.randint(1500, 9000, shape=LARGE_X, dtype="int64")
     assert a[-1] >= 1500 and a[-1] < 9000
-    assert a[-1] == np.int64
+    assert a[-1].dtype == np.int64
     assert a.shape[0] == LARGE_X
 
 
 @with_seed()
 def test_ndarray_random_randn():
     a = nd.random.randn(LARGE_X)
-    assert a[-1] >= 0.
+    a.wait_to_read()
     assert a.shape[0] == LARGE_X
 
 
@@ -320,7 +320,7 @@ def test_layer_norm():
         broadcast_shape[axis] = data.shape[axis]
         mean = data.mean(axis=axis, keepdims=True)
         var = data.var(axis=axis, keepdims=True)
-        std = np.sqrt(var + dtype(eps))
+        std = np.sqrt(var + np.float32(eps))
         out = np.reshape(gamma, broadcast_shape) * (data - mean) / std + \
               np.reshape(beta, broadcast_shape)
         return out

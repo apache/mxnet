@@ -80,6 +80,7 @@ def test_ndarray_random_randint():
     low = mx.nd.array([low_large_value], dtype='int64')
     high = mx.nd.array([high_large_value], dtype='int64')
     assert a.__gt__(low) and a.__lt__(high)
+    assert a[-1][0].dtype == np.int64
 
 
 @with_seed()
@@ -143,7 +144,7 @@ def test_ndarray_random_normal():
     loc_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
     a = nd.random.normal(loc=loc_array, scale=scale_array,
                          shape=(SMALL_X, SMALL_Y))
-    assert a[-1][0][0][0] >= 0
+    a.wait_to_read()
     assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
 
 
@@ -158,9 +159,9 @@ def test_ndarray_random_poisson():
 @with_seed()
 def test_ndarray_random_randn():
     a = nd.random.randn(LARGE_X, SMALL_Y)
-    assert a[-1][0] >= 0
+    a.wait_to_read()
     assert a.shape == (LARGE_X, SMALL_Y)
-    # TODO: Once PR for randn ndarray dtype for loc,scale param merged
+    # TODO: Once PR #15772 for randn ndarray dtype for loc,scale param merged
     # Add check for (x,y,m,n) where x,y shape of loc,scale and m,n input shape
 
 
