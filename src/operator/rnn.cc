@@ -271,7 +271,7 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
       const size_t r_size = GetMKLDNNRNNCacheMemorySize(L, D, T, N, I, H, param.mode);
       if (!op.init_mem_ || op.reserve_mem_size_ < r_size) {
         op.mem_space_.reset(
-            new NDArray(TShape({static_cast<dim_t>(r_size)}), ctx.run_ctx.ctx, dtype));
+            new NDArray(TShape({static_cast<dim_t>(r_size)}), ctx.run_ctx.ctx, false, dtype));
         op.reserve_mem_size_ = r_size;
         op.init_mem_ = true;
         op.has_cache = false;
