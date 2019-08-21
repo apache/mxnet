@@ -2005,8 +2005,15 @@ MXNET_DLL int MXGenAtomicSymbolFromSymbol(SymbolHandle sym_handle, SymbolHandle 
 /*!
  * \brief Partitions symbol for given backend, potentially creating subgraphs
  * \param sym_handle symbol to be partitioned
- * \param backend backend name
+ * \param backend_name backend name
  * \param ret_sym_handle partitioned symbol returned
+ * \param dev_type device type
+ * \param dev_id device id
+ * \param len number of args
+ * \param in_args_handle args array
+ * \param num_options number of key value pairs
+ * \param keys keys for options
+ * \param vals values corresponding to keys
  */
 MXNET_DLL int MXOptimizeForBackend(SymbolHandle sym_handle,
                                    const char* backend_name,

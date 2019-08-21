@@ -1437,9 +1437,39 @@ class Symbol(SymbolBase):
         return Symbol(handle)
 
 
-    def optimize_for(self, backend, ctx=None, args=None, **kwargs):
-        """Partition symbol and optimize it for a given backend"""
+    def optimize_for(self, backend, args=None, ctx=None, **kwargs):
+        """Partition symbol and optimize it for a given backend
+
+        Parameters
+        ----------
+        backend : str
+            The name of backend, as registered in `SubgraphBackendRegistry`
+
+        args : list of NDArray or dict of str to NDArray, optional
+            Input arguments to the symbol.
+            - If type is a list of `NDArray`, the order is the same as that of `list_arguments()`.
+            - If type is a dict of str to `NDArray`, then it maps the name of arguments
+              to the corresponding `NDArray`.
+
+        ctx : Context, optional
+            Device context. Used to infer stypes.
+
+        kwargs : Optional arguments
+            Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
+
+        Returns
+        -------
+        out : SymbolHandle
+            The created symbol for target backend.
+        """
         out = SymbolHandle()
+        assert isinstance(backend, str)
+        if args is None:
+            args = []
+            args_handle = []
+        else:
+            listed_arguments = self.list_arguments()
+            args_handle, args = self._get_ndarray_inputs('args', args, listed_arguments, False)
         if ctx is None:
             dev_type = -1
             dev_id = 0
@@ -1448,12 +1478,6 @@ class Symbol(SymbolBase):
                 raise TypeError("Context type error")
             dev_type = ctx.device_typeid
             dev_id = ctx.device_id
-        if args is None:
-            args = []
-            args_handle = []
-        else:
-            listed_arguments = self.list_arguments()
-            args_handle, args = self._get_ndarray_inputs('args', args, listed_arguments, False)
         key_list = []
         val_list = []
         if kwargs is not None:
