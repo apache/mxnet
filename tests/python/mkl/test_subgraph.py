@@ -150,9 +150,9 @@ def check_quantize(sym, data_shape, out_type, name='conv',
   ref_out = mod.get_outputs()
 
   excluded_sym_names = []
+  excluded_op_names = []
   if mx.current_context() == mx.cpu() and gluon_forward == True:
-    excluded_sym_names += ['sg_mkldnn_fully_connected_0']
-    excluded_sym_names += ['fc_softmax']
+    excluded_op_names += ['_sg_mkldnn_fully_connected']
 
   calib_data = CalibIter(batch, data_shape, 1)
 
@@ -161,6 +161,7 @@ def check_quantize(sym, data_shape, out_type, name='conv',
                                                                    aux_params=aux_params,
                                                                    ctx=mx.current_context(),
                                                                    excluded_sym_names=excluded_sym_names,
+                                                                   excluded_op_names=excluded_op_names,
                                                                    quantized_dtype=out_type,
                                                                    calib_mode='naive',
                                                                    calib_data=calib_data,
@@ -399,6 +400,15 @@ def single_concat(data_shape, input_num, dim):
   for i in range(input_num):
     inputs.append(data)
   concat = mx.symbol.Concat(*inputs, name="concat", dim=dim)
+  return concat
+
+def single_concat_pos_neg(data_shape):
+  data, weight = head_symbol(data_shape)
+  conv = mx.symbol.Convolution(data=data, weight=weight, name='conv', num_filter=4,
+                               kernel=(1, 1), stride=(1, 1), no_bias=True)
+  relu = mx.symbol.Activation(data=conv, name='relu', act_type='relu')
+  inputs = [data, relu]
+  concat = mx.symbol.Concat(*inputs, name="concat", dim=1)
   return concat
 
 # concat scale alignment case
@@ -738,6 +748,8 @@ def test_pos_single_concat():
       net = single_concat(data_shape, 4, 3)
       check_quantize(net, data_shape, out_type, name='conv', check_calibration=False)
       check_quantize(net, data_shape, out_type, name='conv', check_calibration=False, gluon_forward=True)
+      net = single_concat_pos_neg(data_shape)
+      check_quantize(net, data_shape, out_type, name='', check_calibration=False)
 
 @with_seed()
 def test_pos_concat_scale_align():

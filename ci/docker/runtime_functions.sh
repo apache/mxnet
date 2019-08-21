@@ -58,7 +58,7 @@ EOF
     else
         echo "NOTE: cython is used."
         return 0
-    fi 
+    fi
 }
 
 build_ccache_wrappers() {
@@ -579,7 +579,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
 }
 
 build_ubuntu_gpu() {
-    build_ubuntu_gpu_cuda100_cudnn7
+    build_ubuntu_gpu_cuda101_cudnn7
 }
 
 build_ubuntu_gpu_tensorrt() {
@@ -679,7 +679,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         -j$(nproc)
 }
 
-build_ubuntu_gpu_cuda100_cudnn7() {
+build_ubuntu_gpu_cuda101_cudnn7() {
     set -ex
     build_ccache_wrappers
     make \
@@ -1210,6 +1210,16 @@ test_ubuntu_cpu_python3() {
 build_docs() {
     set -ex
     pushd .
+
+    # Setup environment for Julia docs
+    export PATH="/work/julia10/bin:$PATH"
+    export MXNET_HOME='/work/mxnet'
+    export JULIA_DEPOT_PATH='/work/julia-depot'
+
+    julia -e 'using InteractiveUtils; versioninfo()'
+    export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
+    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
+
     cd /work/mxnet/docs/build_version_doc
     # Parameters are set in the Jenkins pipeline: restricted-website-build
     # $1: the list of branches/tags to build
@@ -1403,10 +1413,8 @@ nightly_estimator() {
     set -ex
     cd /work/mxnet/tests/nightly/estimator
     export PYTHONPATH=/work/mxnet/python/
-    python test_estimator_cnn.py --type gpu
-    python test_sentiment_rnn.py --type gpu
-    python test_estimator_cnn.py --type cpu
-    python test_sentiment_rnn.py --type cpu
+    nosetests test_estimator_cnn.py
+    nosetests test_sentiment_rnn.py
 }
 
 # Deploy
@@ -1415,15 +1423,7 @@ deploy_docs() {
     set -ex
     pushd .
 
-    export CC="ccache gcc"
-    export CXX="ccache g++"
-    make docs SPHINXOPTS=-W USE_MKLDNN=0
-
-    popd
-}
-
-deploy_jl_docs() {
-    set -ex
+    # Setup for Julia docs
     export PATH="/work/julia10/bin:$PATH"
     export MXNET_HOME='/work/mxnet'
     export JULIA_DEPOT_PATH='/work/julia-depot'
@@ -1433,11 +1433,13 @@ deploy_jl_docs() {
     # FIXME
     export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
+    # End Julia setup
 
-    make -C julia/docs
+    export CC="ccache gcc"
+    export CXX="ccache g++"
+    make docs SPHINXOPTS=-W USE_MKLDNN=0
 
-    # TODO: make Jenkins worker push to MXNet.jl ph-pages branch if master build
-    # ...
+    popd
 }
 
 build_static_scala_mkl() {
@@ -1458,10 +1460,10 @@ build_static_python_mkl() {
     popd
 }
 
-build_static_python_cu100mkl() {
+build_static_python_cu101mkl() {
     set -ex
     pushd .
-    export mxnet_variant=cu100mkl
+    export mxnet_variant=cu101mkl
     ./ci/publish/python/build.sh
     popd
 }

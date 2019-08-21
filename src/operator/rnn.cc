@@ -171,7 +171,7 @@ static std::vector<ResourceRequest> RNNResourceEx(const NodeAttrs& attrs, const 
                                                   const DispatchMode dispatch_mode) {
   std::vector<ResourceRequest> request;
   if (dev_mask == kGPU) {
-#if MXNET_USE_CUDNN_RNN
+#if MXNET_USE_CUDNN == 1
     request.emplace_back(ResourceRequest::kTempSpace);
 
     const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
@@ -634,6 +634,7 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
 #endif
 
 NNVM_REGISTER_OP(RNN)
+.add_alias("_npx_rnn")
 .describe(R"code(Applies recurrent layers to input data. Currently, vanilla RNN, LSTM and GRU are
 implemented, with both multi-layer and bidirectional support.
 

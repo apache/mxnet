@@ -29,6 +29,7 @@
 #include <dmlc/parameter.h>
 #include <dmlc/optional.h>
 #include <mshadow/base.h>
+#include <mxnet/libinfo.h>
 
 /*! \brief Macros/inlines to assist CLion to parse Cuda files (*.cu, *.cuh) */
 #ifdef __JETBRAINS_IDE__
@@ -47,11 +48,19 @@ extern __cuda_fake_struct threadIdx;
 extern __cuda_fake_struct blockIdx;
 #endif
 
+#define QUOTE(x) #x
+#define QUOTEVALUE(x) QUOTE(x)
+
 #if MXNET_USE_CUDA
 
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 #include <curand.h>
+
+#define STATIC_ASSERT_CUDA_VERSION_GE(min_version) \
+  static_assert(CUDA_VERSION >= min_version, "Compiled-against CUDA version " \
+      QUOTEVALUE(CUDA_VERSION) " is too old, please upgrade system to version " \
+      QUOTEVALUE(min_version) " or later.")
 
 /*!
  * \brief When compiling a __device__ function, check that the architecture is >= Kepler (3.0)
@@ -441,6 +450,25 @@ inline cublasMath_t SetCublasMathMode(cublasHandle_t blas_handle, cublasMath_t n
 
 #include <cudnn.h>
 
+// Creating CUDNN_VERSION_AS_STRING as follows avoids a static_assert error message that shows
+// the formula for CUDNN_VERSION, i.e. "1000 * 7 + 100 * 6 + 0" rather than number "7600".
+static_assert(CUDNN_PATCHLEVEL < 100 && CUDNN_MINOR < 10,
+              "CUDNN_VERSION_AS_STRING macro assumptions violated.");
+#if CUDNN_PATCHLEVEL >= 10
+#define CUDNN_VERSION_AS_STRING QUOTEVALUE(CUDNN_MAJOR) \
+                                QUOTEVALUE(CUDNN_MINOR) \
+                                QUOTEVALUE(CUDNN_PATCHLEVEL)
+#else
+#define CUDNN_VERSION_AS_STRING QUOTEVALUE(CUDNN_MAJOR) \
+                                QUOTEVALUE(CUDNN_MINOR) \
+                                "0" QUOTEVALUE(CUDNN_PATCHLEVEL)
+#endif
+
+#define STATIC_ASSERT_CUDNN_VERSION_GE(min_version) \
+  static_assert(CUDNN_VERSION >= min_version, "Compiled-against cuDNN version " \
+      CUDNN_VERSION_AS_STRING " is too old, please upgrade system to version " \
+      QUOTEVALUE(min_version) " or later.")
+
 #define CUDNN_CALL(func)                                                      \
   {                                                                           \
     cudnnStatus_t e = (func);                                                 \
@@ -455,13 +483,10 @@ inline cublasMath_t SetCublasMathMode(cublasHandle_t blas_handle, cublasMath_t n
  *         want to populate.
  */
 inline int MaxForwardAlgos(cudnnHandle_t cudnn_handle) {
-#if CUDNN_MAJOR >= 7
+  STATIC_ASSERT_CUDNN_VERSION_GE(7000);
   int max_algos = 0;
   CUDNN_CALL(cudnnGetConvolutionForwardAlgorithmMaxCount(cudnn_handle, &max_algos));
   return max_algos;
-#else
-  return 10;
-#endif
 }
 
 /*!
@@ -472,13 +497,10 @@ inline int MaxForwardAlgos(cudnnHandle_t cudnn_handle) {
  *         want to populate.
  */
 inline int MaxBackwardFilterAlgos(cudnnHandle_t cudnn_handle) {
-#if CUDNN_MAJOR >= 7
+  STATIC_ASSERT_CUDNN_VERSION_GE(7000);
   int max_algos = 0;
   CUDNN_CALL(cudnnGetConvolutionBackwardFilterAlgorithmMaxCount(cudnn_handle, &max_algos));
   return max_algos;
-#else
-  return 10;
-#endif
 }
 
 /*!
@@ -489,13 +511,10 @@ inline int MaxBackwardFilterAlgos(cudnnHandle_t cudnn_handle) {
  *         want to populate.
  */
 inline int MaxBackwardDataAlgos(cudnnHandle_t cudnn_handle) {
-#if CUDNN_MAJOR >= 7
+  STATIC_ASSERT_CUDNN_VERSION_GE(7000);
   int max_algos = 0;
   CUDNN_CALL(cudnnGetConvolutionBackwardDataAlgorithmMaxCount(cudnn_handle, &max_algos));
   return max_algos;
-#else
-  return 10;
-#endif
 }
 
 #endif  // MXNET_USE_CUDNN
