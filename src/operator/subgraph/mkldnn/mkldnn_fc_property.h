@@ -116,7 +116,7 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
         }
         if (new_node.op() == Op::Get("clip")) {
           const ClipParam &param = nnvm::get<ClipParam>(new_node.attrs.parsed);
-          if (param.a_min == 0.f && param.a_max == 1.0f) {
+          if (param.a_min == 0.f) {
             matched_list_.push_back(&new_node);
             status_ = kSuccess;
             return true;
