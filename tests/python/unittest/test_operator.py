@@ -6837,7 +6837,7 @@ def test_laop_5():
                     check_numeric_gradient(test_trian, [data_in])
 
 # Tests for linalg.inverse
-@with_seed()
+@with_seed(1394594398)
 def test_laop_6():
     dtype = np.float64
     rtol_fw = 1e-7
