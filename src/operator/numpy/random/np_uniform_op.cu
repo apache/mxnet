@@ -18,22 +18,18 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
- * \file softmax.cu
- * \brief GPU Implementation of softmax
+ * Copyright (c) 2019 by Contributors
+ * \file np_uniform_op.cu
+ * \brief Operator for numpy sampling from uniform distributions
  */
-#include "./softmax-inl.h"
-#include "../tensor/elemwise_unary_op.h"
+
+#include "./np_uniform_op.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(softmax)
-.set_attr<FCompute>("FCompute<gpu>", SoftmaxCompute<gpu, mxnet_op::softmax_fwd>);
-
-NNVM_REGISTER_OP(_backward_softmax)
-.set_attr<FCompute>("FCompute<gpu>", SoftmaxGradCompute<gpu, op::mshadow_op::mul,
-                                                        mxnet_op::softmax_bwd>);
+NNVM_REGISTER_OP(_npi_uniform)
+.set_attr<FCompute>("FCompute<gpu>", NumpyUniformForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
