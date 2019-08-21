@@ -1659,10 +1659,15 @@ static bool SubgraphBackendCheck(const op::SubgraphBackendPtr& backend,
 static bool SubgraphPropertyCheck(const std::string& backend_name,
                                   const op::SubgraphPropertyPtr& prop, bool need_grad,
                                   bool verbose = false) {
+  auto full_name =
+      prop->HasAttr("property_name") ? prop->GetAttr<std::string>("property_name") : std::string();
+  if (prop->HasAttr("disable") && prop->GetAttr<bool>("disable") == true) {
+    LOG(INFO) << "subgraph property " << full_name << " from backend " << backend_name
+              << " is disabled.";
+    return false;
+  }
   if (prop->HasAttr("inference_only") && prop->GetAttr<bool>("inference_only") == true) {
     if (need_grad) {
-      auto full_name = prop->HasAttr("property_name") ? prop->GetAttr<std::string>("property_name")
-                                                      : std::string();
       if (verbose) {
         LOG(INFO) << "skip partitioning graph with subgraph property " << full_name
                   << " from backend " << backend_name << " as it requires `grad_req=null`.";
