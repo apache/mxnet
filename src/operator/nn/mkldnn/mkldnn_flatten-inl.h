@@ -18,11 +18,13 @@
  */
 
 /*!
- * \file mkldnn_flatten.cc
+ * \file mkldnn_flatten-inl.h
  * \brief Implement flatten operator by using mkldnn reorder primitive
  * \author Wuxun Zhang
  */
 
+#ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_FLATTEN_INL_H_
+#define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_FLATTEN_INL_H_
 #if MXNET_USE_MKLDNN == 1
 
 #include "mkldnn_reshape-inl.h"
@@ -42,4 +44,5 @@ void MKLDNNFlattenForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx, co
 }  // namespace op
 }  // namespace mxnet
 
-#endif
+#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_FLATTEN_INL_H_

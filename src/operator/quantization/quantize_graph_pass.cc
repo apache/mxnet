@@ -55,9 +55,9 @@ static inline size_t GetNumOutputs(NodePtr node) {
 }
 
 static inline std::string GetOutputName(const NodeEntry& e) {
-   nnvm::Symbol sym;
-   sym.outputs.push_back(e);
-   return sym.ListOutputNames()[0];
+  nnvm::Symbol sym;
+  sym.outputs.push_back(e);
+  return sym.ListOutputNames()[0];
 }
 
 NodePtr CreateNode(std::string op_name, std::string node_name) {
@@ -174,8 +174,7 @@ inline QuantizeType NeedQuantize(NodePtr node,
       }
       if (quantizable_map.count(op)) {
         return quantizable_map[op](node->attrs);
-      }
-      else {
+      } else {
         return QuantizeType::kSupport;
       }
     }
@@ -190,7 +189,7 @@ enum quantize_bit {
 };
 
 static void MarkQuantizedNodes(const Graph& src,
-                               std::unordered_map<NodePtr, NodePtr>& quantized_node_map) {
+                               std::unordered_map<NodePtr, NodePtr>* quantized_node_map) {
   const auto excluded_nodes = src.GetAttr<std::unordered_set<std::string>>("excluded_nodes");
   const auto excluded_ops = src.GetAttr<std::unordered_set<std::string>>("excluded_ops");
   const auto quantize_mode = src.GetAttr<std::string>("quantize_mode");
@@ -202,7 +201,7 @@ static void MarkQuantizedNodes(const Graph& src,
   // Build node_output_map, must_quantize_nodes and support_quantize_nodes;
   DFSVisit(src.outputs, [&](const NodePtr& node) {
     auto quantize_type =
-        NeedQuantize(node, excluded_nodes, excluded_ops, dev_type, &quantized_node_map);
+        NeedQuantize(node, excluded_nodes, excluded_ops, dev_type, quantized_node_map);
     if (quantize_type == QuantizeType::kMust) {
       must_quantize_nodes.insert(node);
     } else if (quantize_type == QuantizeType::kSupport) {
@@ -254,9 +253,9 @@ static void MarkQuantizedNodes(const Graph& src,
 
     // Summarize the result
     for (const auto& node : support_quantize_nodes) {
-      CHECK(quantized_node_map.count(node.first));
+      CHECK(quantized_node_map->count(node.first));
       if (node.second != (kFromInput | kFromOutput)) {
-        quantized_node_map.erase(node.first);
+        quantized_node_map->erase(node.first);
       }
     }
   } else {
@@ -273,7 +272,7 @@ Graph QuantizeGraph(Graph &&src) {
   const auto quantized_dtype = src.GetAttr<std::string>("quantized_dtype");
 
   std::unordered_map<NodePtr, NodePtr> quantized_node_map;
-  MarkQuantizedNodes(src, quantized_node_map);
+  MarkQuantizedNodes(src, &quantized_node_map);
 
   // mirror_map stores the mapping from the currently visited graph to the newly created quantized
   // graph. Key is the currently visited graph's node pointer, and value is a copied node of the key
@@ -471,8 +470,10 @@ Graph QuantizeGraph(Graph &&src) {
   Graph ret;
   ret.outputs = std::move(outputs);
 
-  static const auto& need_calib_input_map = Op::GetAttr<mxnet::FNeedCalibrateInput>("FNeedCalibrateInput");
-  static const auto& need_calib_output_map = Op::GetAttr<mxnet::FNeedCalibrateOutput>("FNeedCalibrateOutput");
+  static const auto& need_calib_input_map =
+      Op::GetAttr<mxnet::FNeedCalibrateInput>("FNeedCalibrateInput");
+  static const auto& need_calib_output_map =
+      Op::GetAttr<mxnet::FNeedCalibrateOutput>("FNeedCalibrateOutput");
   std::vector<std::string> calib_nodes;
   DFSVisit(ret.outputs, [&](const NodePtr& node) {
     if (need_calib_input_map.count(node->op())) {
@@ -499,7 +500,8 @@ Graph QuantizeGraph(Graph &&src) {
       const auto calib_idx = need_calib_output_map[node->op()](node->attrs);
       for (const auto& idx : calib_idx) {
         if (reverse_mirror_map.count(node)) {
-          calib_nodes.push_back(GetOutputName({reverse_mirror_map[node], static_cast<uint32_t>(idx), 0}));
+          calib_nodes.push_back(
+              GetOutputName({reverse_mirror_map[node], static_cast<uint32_t>(idx), 0}));
         } else {
           calib_nodes.push_back(GetOutputName({node, static_cast<uint32_t>(idx), 0}));
         }
@@ -514,7 +516,6 @@ static inline void SetCalibTableForEntry(
     const NodeEntry& e, const NodePtr& node,
     const std::unordered_map<std::string, std::pair<float, float>>& calib_table) {
   std::string out_data_name = GetOutputName(e);
-  ;
   const std::string prefix = "quantized_";
   if (e.node->attrs.name.rfind(prefix, 0) == 0) {
     out_data_name = out_data_name.substr(prefix.size());

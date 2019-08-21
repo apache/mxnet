@@ -23,7 +23,6 @@ try:
 except ImportError:
     stats = None
 
-import sys
 import ctypes
 import logging
 import os
@@ -154,6 +153,8 @@ def _quantize_symbol(sym, ctx, excluded_symbols=None, excluded_operators=None,
     return Symbol(out), calib_layer
 
 def combine_histogram(old_hist, arr, new_min, new_max, new_th):
+    """ Collect layer histogram for arr and combine it with old histogram.
+    """
     (old_hist, old_hist_edges, old_min, old_max, old_th) = old_hist
     if new_th <= old_th:
         hist, _ = np.histogram(arr, bins=len(old_hist), range=(-old_th, old_th))
@@ -282,7 +283,7 @@ def _collect_layer_output_min_max(mod, data, quantized_dtype, include_layer=None
     return collector.min_max_dict, num_examples
 
 
-def _collect_layer_histogram(mod, data, quantized_dtype, include_layer=None,
+def _collect_layer_histogram(mod, data, include_layer=None,
                              max_num_examples=None, logger=None):
     """Collect layer outputs and save them in a dictionary mapped by layer names."""
     collector = _LayerHistogramCollector(include_layer=include_layer, logger=logger)
@@ -492,11 +493,13 @@ def quantize_model(sym, arg_params, aux_params,
         The maximum number of examples that user would like to use for calibration. If not provided,
         the whole calibration dataset will be used.
     quantized_dtype : str
-        The quantized destination type for input data. Currently support 'int8'
-        , 'uint8' and 'auto'. 'auto' means automatically select output type according to calibration result.
+        The quantized destination type for input data. Currently support 'int8', 'uint8' and 'auto'.
+        'auto' means automatically select output type according to calibration result.
         Default value is 'int8'.
     quantize_mode : str
-        The mode that quantization pass to apply. Support 'full' and 'smart'. 'full' means quantize all operator if possible. 'smart' means quantization pass will smartly choice which operator should be quantized.
+        The mode that quantization pass to apply. Support 'full' and 'smart'.
+        'full' means quantize all operator if possible.
+        'smart' means quantization pass will smartly choice which operator should be quantized.
     logger : Object
         A logging object for printing information during the process of quantization.
 
@@ -548,7 +551,7 @@ def quantize_model(sym, arg_params, aux_params,
             mod.bind(for_training=False, data_shapes=calib_data.provide_data)
         mod.set_params(arg_params, aux_params)
         if calib_mode == 'entropy':
-            hist_dict, num_examples = _collect_layer_histogram(mod, calib_data, quantized_dtype,
+            hist_dict, num_examples = _collect_layer_histogram(mod, calib_data,
                                                                include_layer=calib_layer,
                                                                max_num_examples=num_calib_examples,
                                                                logger=logger)
@@ -681,8 +684,8 @@ def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
             logger.info(
                 'Create a layer output collector for entropy calibration.')
         elif calib_mode == 'naive':
-            collector = _LayerOutputMinMaxCollector(
-                include_layer=calib_layer, logger=logger)
+            collector = _LayerOutputMinMaxCollector(quantized_dtype=quantized_dtype,
+                                                    include_layer=calib_layer, logger=logger)
             logger.info(
                 'Create a layer output minmax collector for naive calibration')
         else:

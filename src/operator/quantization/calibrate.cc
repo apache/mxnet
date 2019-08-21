@@ -23,6 +23,7 @@
  * \brief
  */
 
+#include <numeric>
 #include "./calibrate-inl.h"
 
 namespace mxnet {
@@ -61,7 +62,10 @@ std::vector<float> SmoothDistribution(const std::vector<float>& p, const float e
   }
   return ret;
 }
-static float ComputeEntropy(std::vector<float>& p, std::vector<float>& q) {
+
+static float ComputeEntropy(std::vector<float>* p_ptr, std::vector<float>* q_ptr) {
+  std::vector<float>& p = *p_ptr;
+  std::vector<float>& q = *q_ptr;
   CHECK_EQ(p.size(), q.size());
   float p_sum = std::accumulate(p.begin(), p.end(), 0.f);
   float q_sum = std::accumulate(q.begin(), q.end(), 0.f);
@@ -150,7 +154,7 @@ void CalibrateComputeCPU(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
     if (!q.size()) {
       divergence[i - num_half_quantized_bins] = std::numeric_limits<float>::infinity();
     } else {
-      divergence[i - num_half_quantized_bins] = ComputeEntropy(p, q);
+      divergence[i - num_half_quantized_bins] = ComputeEntropy(&p, &q);
     }
   }
 
