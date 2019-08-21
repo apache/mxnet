@@ -403,7 +403,7 @@ class RNNOp {
   bool has_cache;
   bool init_mem_;
   size_t reserve_mem_size_;
-  std::shared_ptr<Tensor<xpu, 1, DType> > mem_space_;
+  std::shared_ptr<NDArray> mem_space_;
   MKLDNNRNNMemory mkldnn_mems;
   std::vector<primitive> rnn_forward_prim;
 #endif  // MXNET_USE_MKLDNN
@@ -414,6 +414,7 @@ class RNNOp {
 #if MXNET_USE_MKLDNN == 1
     init_mem_ = false;
     reserve_mem_size_ = 0;
+    mem_space_ = std::make_shared<NDArray>(NDArray());
 #endif  // MXNET_USE_MKLDNN
 #if MXNET_USE_CUDNN == 1
     init_cudnn_ = false;
