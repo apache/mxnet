@@ -25,8 +25,7 @@ $env:MXNET_HOME=[io.path]::combine($PSScriptRoot, 'mxnet_home')
 C:\Python37\Scripts\pip install -r tests\requirements.txt
 C:\Python37\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_unittest.xml tests\python\unittest
 if (! $?) { Throw ("Error running unittest, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
-$env:MXNET_MODULE_SEED=1381486931
-C:\Python37\python.exe -m nose -v -s --logging-level=DEBUG --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_operator.xml tests\python\gpu\test_operator_gpu.py
+C:\Python37\python.exe -m nose -v -s --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_operator.xml tests\python\gpu\test_operator_gpu.py
 if (! $?) { Throw ("Error running tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
 C:\Python37\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_forward.xml tests\python\gpu\test_forward.py
 if (! $?) { Throw ("Error running tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
