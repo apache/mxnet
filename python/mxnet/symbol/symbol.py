@@ -1437,7 +1437,7 @@ class Symbol(SymbolBase):
         return Symbol(handle)
 
 
-    def optimize_for(self, backend, args=None, ctx=None, **kwargs):
+    def optimize_for(self, backend, args=None, **kwargs):
         """Partition symbol and optimize it for a given backend
 
         Parameters
@@ -1450,9 +1450,6 @@ class Symbol(SymbolBase):
             - If type is a list of `NDArray`, the order is the same as that of `list_arguments()`.
             - If type is a dict of str to `NDArray`, then it maps the name of arguments
               to the corresponding `NDArray`.
-
-        ctx : Context, optional
-            Device context. Used to infer stypes.
 
         kwargs : Optional arguments
             Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
@@ -1470,14 +1467,6 @@ class Symbol(SymbolBase):
         else:
             listed_arguments = self.list_arguments()
             args_handle, args = self._get_ndarray_inputs('args', args, listed_arguments, False)
-        if ctx is None:
-            dev_type = -1
-            dev_id = 0
-        else:
-            if not isinstance(ctx, Context):
-                raise TypeError("Context type error")
-            dev_type = ctx.device_typeid
-            dev_id = ctx.device_id
         key_list = []
         val_list = []
         if kwargs is not None:
@@ -1487,8 +1476,6 @@ class Symbol(SymbolBase):
         check_call(_LIB.MXOptimizeForBackend(self.handle,
                                              c_str(backend),
                                              ctypes.byref(out),
-                                             ctypes.c_int(dev_type),
-                                             ctypes.c_int(dev_id),
                                              mx_uint(len(args)),
                                              args_handle,
                                              mx_uint(len(key_list)),

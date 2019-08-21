@@ -1219,8 +1219,6 @@ int MXShallowCopySymbol(SymbolHandle src, SymbolHandle* out) {
 int MXOptimizeForBackend(SymbolHandle sym_handle,
                          const char* backend_name,
                          SymbolHandle* ret_sym_handle,
-                         const int dev_type,
-                         const int dev_id,
                          const mx_uint len,
                          NDArrayHandle* in_args_handle,
                          const mx_uint num_options,
@@ -1232,20 +1230,24 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
   *s = sym->Copy();
   nnvm::Graph g = Symbol2Graph(*s);
   if (len) {
-    NDArray **in_args_ptr = reinterpret_cast<NDArray**>(in_args_handle);
+    NDArray *in_args = reinterpret_cast<NDArray*>(in_args_handle);
+    Context default_ctx = in_args[0].ctx();
     mxnet::ShapeVector arg_shapes(len);
     nnvm::DTypeVector arg_dtypes(len);
     StorageTypeVector arg_stypes(len);
-    std::vector<Context> in_arg_ctxes(len);
     for (mx_uint i = 0; i < len; i++) {
-      const auto &in_arg = *(in_args_ptr[i]);
-      arg_shapes.push_back(in_arg.shape());
-      arg_dtypes.push_back(in_arg.dtype());
-      arg_stypes.push_back(in_arg.storage_type());
-      in_arg_ctxes[i] = in_arg.ctx();
+      arg_shapes.push_back(in_args[i].shape());
+      arg_dtypes.push_back(in_args[i].dtype());
+      arg_stypes.push_back(in_args[i].storage_type());
+      CHECK(in_args[i].ctx() == default_ctx)
+          << "args[" << i << "] is on context: " << in_args[i].ctx()
+          << ", whereas args[0] is on context: " << default_ctx
+          << ". All args must be on the same context.";
     }
     const auto& indexed_graph = g.indexed_graph();
     const auto num_forward_inputs = indexed_graph.input_nodes().size();
+    g.attrs["context"] = std::make_shared<nnvm::any>(
+        exec::ContextVector(indexed_graph.num_nodes(), default_ctx));
     // infer shapes
     g = exec::InferShape(std::move(g), std::move(arg_shapes), "__shape__");
     if (g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U) {
@@ -1258,17 +1260,11 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
       common::HandleInferTypeError(num_forward_inputs, indexed_graph,
                                    g.GetAttr<nnvm::DTypeVector>("dtype"));
     }
-    if (dev_type >= 0) {
-      Context default_ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
-      std::map<std::string, Context> ctx_map;
-      g = common::AssignContext(g, default_ctx, ctx_map, in_arg_ctxes, {}, {}, {},
-                                num_forward_inputs, g.outputs.size());
-      // infer stypes
-      g = exec::InferStorageType(std::move(g), std::move(arg_stypes), "__storage_type__");
-      if (g.GetAttr<size_t>("storage_type_num_unknown_nodes") != 0U) {
-        common::HandleInferStorageTypeError(num_forward_inputs, indexed_graph,
-                                            g.GetAttr<StorageTypeVector>("storage_type"));
-      }
+    // infer stypes
+    g = exec::InferStorageType(std::move(g), std::move(arg_stypes), "__storage_type__");
+    if (g.GetAttr<size_t>("storage_type_num_unknown_nodes") != 0U) {
+      common::HandleInferStorageTypeError(num_forward_inputs, indexed_graph,
+                                          g.GetAttr<StorageTypeVector>("storage_type"));
     }
   }
   std::vector<std::pair<std::string, std::string>> options_map;
