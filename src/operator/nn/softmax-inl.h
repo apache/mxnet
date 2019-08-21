@@ -415,8 +415,9 @@ inline void Softmax(Stream<gpu> *s, DType *in, OType *out, IType *length,
       std::is_same<DType, OType>::value) {
     int ltype = mxnet::common::cuda::get_load_type(M * sizeof(DType));
     MXNET_LOAD_TYPE_SWITCH(ltype, LType, {
-      int rows_per_block = get_rows_per_block(M * sizeof(DType) / sizeof(LType),
-                                              softmax_threads_per_block);
+      int rows_per_block = mxnet::common::cuda::get_rows_per_block(M *
+                                                                   sizeof(DType) / sizeof(LType),
+                                                                   softmax_threads_per_block);
       int nblocks = (N + rows_per_block - 1) / rows_per_block;
       CHECK_LE(sizeof(DType), sizeof(LType));
       softmax_stride1_compute_kernel<OP, negate, AType, LType>
@@ -569,8 +570,9 @@ inline void SoftmaxGrad(Stream<gpu> *s, OType *out, OType *ograd,
       std::is_same<DType, OType>::value) {
     int ltype = mxnet::common::cuda::get_load_type(M * sizeof(DType));
     MXNET_LOAD_TYPE_SWITCH(ltype, LType, {
-      int rows_per_block = get_rows_per_block(M * sizeof(DType) / sizeof(LType),
-                                              softmax_threads_per_block);
+      int rows_per_block = mxnet::common::cuda::get_rows_per_block(M *
+                                                                   sizeof(DType) / sizeof(LType),
+                                                                   softmax_threads_per_block);
       int nblocks = (N + rows_per_block - 1) / rows_per_block;
       CHECK_LE(sizeof(DType), sizeof(LType));
       softmax_stride1_grad_kernel<OP1, OP2, Req, negate, AType, LType>
