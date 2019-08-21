@@ -548,6 +548,7 @@ void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
   code_[kernel_index] = std::string(fusion::fp16_support_string) + "\n" +
           fusion::type_support_string + "\n" +
           fusion::function_definitions + "\n" +
+          fusion::backward_function_definitions + "\n" +
           aux_code + "\n" +
           "__global__ void FusedKernel_" + kernel_name +
           "(size_t N, " + kernel_params + ") {\n" +

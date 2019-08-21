@@ -526,18 +526,8 @@ inline DType relu(const DType val) {
 }
 
 template <typename DType>
-inline DType backward_relu(const DType val, const DType grad) {
-  return val > 0 ? grad : 0;
-}
-
-template <typename DType>
 inline DType sigmoid(const DType val) {
   return 1.f/(1 + expf(-val));
-}
-
-template <typename DType>
-inline DType backward_sigmoid(const DType out, const DType grad) {
-  return grad * out * (1 - out);
 }
 
 template <typename DType>
@@ -546,19 +536,8 @@ inline DType softrelu(const DType val) {
 }
 
 template <typename DType>
-inline DType backward_softrelu(const DType val, const DType grad) {
-  return grad * sigmoid(val);
-}
-
-template <typename DType>
 inline DType softsign(const DType val) {
   return val / (1 + fabsf(val));
-}
-
-template <typename DType>
-inline DType backward_softsign(const DType val, const DType grad) {
-  const DType ap1 = 1 + fabsf(val);
-  return grad / (ap1 * ap1);
 }
 
 // exp and log
@@ -569,18 +548,8 @@ inline DType exp(const DType val) {
 }
 
 template <typename DType>
-inline DType backward_exp(const DType val, const DType grad) {
-  return grad * expf(val);
-}
-
-template <typename DType>
 inline DType expm1(const DType val) {
   return expm1f(val);
-}
-
-template <typename DType>
-inline DType backward_expm1(const DType val, const DType grad) {
-  return grad * expf(val);
 }
 
 template <typename DType>
@@ -589,18 +558,8 @@ inline DType log(const DType val) {
 }
 
 template <typename DType>
-inline DType backward_log(const DType val, const DType grad) {
-  return grad / val;
-}
-
-template <typename DType>
 inline DType log10(const DType val) {
   return log10f(val);
-}
-
-template <typename DType>
-inline DType backward_log10(const DType val, const DType grad) {
-  return grad / (val * logf(10));
 }
 
 template <typename DType>
@@ -609,18 +568,8 @@ inline DType log2(const DType val) {
 }
 
 template <typename DType>
-inline DType backward_log2(const DType val, const DType grad) {
-  return grad / (val * logf(2));
-}
-
-template <typename DType>
 inline DType log1p(const DType val) {
   return log1pf(val);
-}
-
-template <typename DType>
-inline DType backward_log1p(const DType val, const DType grad) {
-  return grad / (1 + val);
 }
 
 // trigonometric
@@ -643,29 +592,13 @@ inline DType sin(const DType val) {
 }
 
 template <typename DType>
-inline DType backward_sin(const DType val, const DType grad) {
-  return grad * cosf(val);
-}
-
-template <typename DType>
 inline DType cos(const DType val) {
   return cosf(val);
 }
 
 template <typename DType>
-inline DType backward_cos(const DType val, const DType grad) {
-  return -grad * sinf(val);
-}
-
-template <typename DType>
 inline DType tan(const DType val) {
   return tanf(val);
-}
-
-// Uses output from tan
-template <typename DType>
-inline DType backward_tan(const DType out, const DType grad) {
-  return grad * (out * out + 1);
 }
 
 template <typename DType>
@@ -674,18 +607,8 @@ inline DType arcsin(const DType val) {
 }
 
 template <typename DType>
-inline DType backward_arcsin(const DType val, const DType grad) {
-  return grad / sqrtf(1 - val*val);
-}
-
-template <typename DType>
 inline DType arccos(const DType val) {
   return acosf(val);
-}
-
-template <typename DType>
-inline DType backward_arccos(const DType val, const DType grad) {
-  return -grad / sqrtf(1 - val*val);
 }
 
 template <typename DType>
@@ -694,18 +617,8 @@ inline DType arctan(const DType val) {
 }
 
 template <typename DType>
-inline DType backward_arctan(const DType val, const DType grad) {
-  return grad / (1 + val*val);
-}
-
-template <typename DType>
 inline DType sinh(const DType val) {
   return sinhf(val);
-}
-
-template <typename DType>
-inline DType backward_sinh(const DType val, const DType grad) {
-  return grad * coshf(val);
 }
 
 template <typename DType>
@@ -714,19 +627,8 @@ inline DType cosh(const DType val) {
 }
 
 template <typename DType>
-inline DType backward_cosh(const DType val, const DType grad) {
-  return grad * sinhf(val);
-}
-
-template <typename DType>
 inline DType tanh(const DType val) {
   return tanhf(val);
-}
-
-// Uses tanh output
-template <typename DType>
-inline DType backward_tanh(const DType out, const DType grad) {
-  return grad * (1 - out * out);
 }
 
 template <typename DType>
@@ -735,28 +637,13 @@ inline DType arcsinh(const DType val) {
 }
 
 template <typename DType>
-inline DType backward_arcsinh(const DType val, const DType grad) {
-  return grad / sqrtf(val * val + 1);
-}
-
-template <typename DType>
 inline DType arccosh(const DType val) {
   return acoshf(val);
 }
 
 template <typename DType>
-inline DType backward_arccosh(const DType val, const DType grad) {
-  return grad / sqrtf(val * val - 1);
-}
-
-template <typename DType>
 inline DType arctanh(const DType val) {
   return atanhf(val);
-}
-
-template <typename DType>
-inline DType backward_arctanh(const DType val, const DType grad) {
-  return grad / (1 - val * val);
 }
 
 // sqrt
@@ -767,19 +654,8 @@ inline DType sqrt(const DType val) {
 }
 
 template <typename DType>
-inline DType backward_sqrt(const DType out, const DType grad) {
-  return 0.5 * grad / out;
-}
-
-template <typename DType>
 inline DType rsqrt(const DType val) {
   return rsqrtf(val);
-}
-
-template <typename DType>
-inline DType backward_rsqrt(const DType val, const DType grad) {
-  const DType inv = 1 / val;
-  return -0.5 * grad * sqrtf(inv) * inv;
 }
 
 template <typename DType>
@@ -788,29 +664,13 @@ inline DType cbrt(const DType val) {
 }
 
 template <typename DType>
-inline DType backward_cbrt(const DType out, const DType grad) {
-  return grad / (3.0f * out * out);
-}
-
-template <typename DType>
 inline DType rcbrt(const DType val) {
   return rcbrtf(val);
 }
 
 template <typename DType>
-inline DType backward_rcbrt(const DType val, const DType grad) {
-  const DType inv = 1 / val;
-  return -1.f/3.f * grad * cbrtf(inv) * inv;
-}
-
-template <typename DType>
 inline DType square(const DType val) {
   return val * val;
-}
-
-template <typename DType>
-inline DType backward_square(const DType val, const DType grad) {
-  return 2 * val * grad;
 }
 
 template <typename DType>
@@ -871,15 +731,6 @@ inline DType clip(const DType val, const float a_min, const float a_max) {
 }
 
 template <typename DType>
-inline DType backward_clip(const DType val, const DType grad, const float a_min, const float a_max) {
-  if (val > a_max || val < a_min) {
-    return 0;
-  } else {
-    return grad;
-  }
-}
-
-template <typename DType>
 inline DType sign(const DType val) {
   if (val < 0) return -1;
   return val > 0 ? 1 : 0;
@@ -888,11 +739,6 @@ inline DType sign(const DType val) {
 template <typename DType>
 inline DType reciprocal(const DType val) {
   return 1.0f / val;
-}
-
-template <typename DType>
-inline DType backward_reciprocal(const DType val, const DType grad) {
-  return -grad / (val * val);
 }
 
 template <typename DType>
@@ -916,18 +762,8 @@ inline DType erf(const DType val) {
 }
 
 template <typename DType>
-inline DType backward_erf(const DType val, const DType grad) {
-  return 2.0f / sqrt(pi) * exp(-(val*val)) * grad;
-}
-
-template <typename DType>
 inline DType erfinv(const DType val) {
   return erfinvf(val);
-}
-
-template <typename DType>
-inline DType backward_erfinv(const DType val, const DType grad) {
-  return 0.5f * sqrt(pi) * exp(val * val) * grad;
 }
 
 template <typename DType1, typename DType2>
@@ -941,6 +777,173 @@ inline DType1 smooth_l1(const DType1 val, const DType2 scalar) {
   } else {
     return 0.5f * val * val * bsq;
   }
+}
+
+)code";
+
+const char backward_function_definitions[] = R"code(
+template <typename DType>
+inline DType backward_relu(const DType val, const DType grad) {
+  return val > 0 ? grad : 0;
+}
+
+template <typename DType>
+inline DType backward_sigmoid(const DType out, const DType grad) {
+  return grad * out * (1 - out);
+}
+
+template <typename DType>
+inline DType backward_softrelu(const DType val, const DType grad) {
+  return grad * sigmoid(val);
+}
+
+template <typename DType>
+inline DType backward_softsign(const DType val, const DType grad) {
+  const DType ap1 = 1 + fabsf(val);
+  return grad / (ap1 * ap1);
+}
+
+template <typename DType>
+inline DType backward_exp(const DType val, const DType grad) {
+  return grad * expf(val);
+}
+
+template <typename DType>
+inline DType backward_expm1(const DType val, const DType grad) {
+  return grad * expf(val);
+}
+
+template <typename DType>
+inline DType backward_log(const DType val, const DType grad) {
+  return grad / val;
+}
+
+template <typename DType>
+inline DType backward_log10(const DType val, const DType grad) {
+  return grad / (val * logf(10));
+}
+
+template <typename DType>
+inline DType backward_log2(const DType val, const DType grad) {
+  return grad / (val * logf(2));
+}
+
+template <typename DType>
+inline DType backward_log1p(const DType val, const DType grad) {
+  return grad / (1 + val);
+}
+
+template <typename DType>
+inline DType backward_sin(const DType val, const DType grad) {
+  return grad * cosf(val);
+}
+
+template <typename DType>
+inline DType backward_cos(const DType val, const DType grad) {
+  return -grad * sinf(val);
+}
+
+// Uses output from tan
+template <typename DType>
+inline DType backward_tan(const DType out, const DType grad) {
+  return grad * (out * out + 1);
+}
+
+template <typename DType>
+inline DType backward_arcsin(const DType val, const DType grad) {
+  return grad / sqrtf(1 - val*val);
+}
+
+template <typename DType>
+inline DType backward_arccos(const DType val, const DType grad) {
+  return -grad / sqrtf(1 - val*val);
+}
+
+template <typename DType>
+inline DType backward_arctan(const DType val, const DType grad) {
+  return grad / (1 + val*val);
+}
+
+template <typename DType>
+inline DType backward_sinh(const DType val, const DType grad) {
+  return grad * coshf(val);
+}
+
+template <typename DType>
+inline DType backward_cosh(const DType val, const DType grad) {
+  return grad * sinhf(val);
+}
+
+// Uses tanh output
+template <typename DType>
+inline DType backward_tanh(const DType out, const DType grad) {
+  return grad * (1 - out * out);
+}
+
+template <typename DType>
+inline DType backward_arcsinh(const DType val, const DType grad) {
+  return grad / sqrtf(val * val + 1);
+}
+
+template <typename DType>
+inline DType backward_arccosh(const DType val, const DType grad) {
+  return grad / sqrtf(val * val - 1);
+}
+
+template <typename DType>
+inline DType backward_arctanh(const DType val, const DType grad) {
+  return grad / (1 - val * val);
+}
+
+template <typename DType>
+inline DType backward_sqrt(const DType out, const DType grad) {
+  return 0.5 * grad / out;
+}
+
+template <typename DType>
+inline DType backward_rsqrt(const DType val, const DType grad) {
+  const DType inv = 1 / val;
+  return -0.5 * grad * sqrtf(inv) * inv;
+}
+
+template <typename DType>
+inline DType backward_cbrt(const DType out, const DType grad) {
+  return grad / (3.0f * out * out);
+}
+
+template <typename DType>
+inline DType backward_rcbrt(const DType val, const DType grad) {
+  const DType inv = 1 / val;
+  return -1.f/3.f * grad * cbrtf(inv) * inv;
+}
+
+template <typename DType>
+inline DType backward_square(const DType val, const DType grad) {
+  return 2 * val * grad;
+}
+
+template <typename DType>
+inline DType backward_clip(const DType val, const DType grad, const float a_min, const float a_max) {
+  if (val > a_max || val < a_min) {
+    return 0;
+  } else {
+    return grad;
+  }
+}
+
+template <typename DType>
+inline DType backward_reciprocal(const DType val, const DType grad) {
+  return -grad / (val * val);
+}
+
+template <typename DType>
+inline DType backward_erf(const DType val, const DType grad) {
+  return 2.0f / sqrt(pi) * exp(-(val*val)) * grad;
+}
+
+template <typename DType>
+inline DType backward_erfinv(const DType val, const DType grad) {
+  return 0.5f * sqrt(pi) * exp(val * val) * grad;
 }
 
 template <typename DType, typename DType2>
