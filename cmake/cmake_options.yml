@@ -20,7 +20,7 @@ USE_CUDA: "OFF" # Build with CUDA support
 USE_OLDCMAKECUDA: "OFF" # Build with old cmake cuda
 USE_NCCL: "OFF" # Use NVidia NCCL with CUDA
 USE_OPENCV: "ON" # Build with OpenCV support
-USE_OPENMP: "ON" # Build with Openmp support
+USE_OPENMP: "ON" # Build with Openmp support 
 USE_CUDNN: "ON" # Build with cudnn support) # one could set CUDNN_ROOT for search path
 USE_SSE: "ON" # Build with x86 SSE instruction support IF NOT ARM
 USE_F16C: "ON" # Build with x86 F16C instruction support) # autodetects support if "ON"
