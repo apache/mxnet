@@ -34,8 +34,8 @@ from setuptools.dist import Distribution
 
 # We can not import `mxnet.info.py` in setup.py directly since mxnet/__init__.py
 # Will be invoked which introduces dependences
-CURRENT_DIR = os.path.dirname(__file__)
-libinfo_py = os.path.join(CURRENT_DIR, 'mxnet-build/python/mxnet/libinfo.py')
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+libinfo_py = os.path.join(CURRENT_DIR, 'mxnet/libinfo.py')
 libinfo = {'__file__': libinfo_py}
 exec(compile(open(libinfo_py, "rb").read(), libinfo_py, 'exec'), libinfo, libinfo)
 
@@ -67,41 +67,41 @@ DEPENDENCIES = [
     'graphviz<0.9.0,>=0.8.1'
 ]
 
-shutil.rmtree(os.path.join(CURRENT_DIR, 'mxnet'), ignore_errors=True)
+#shutil.rmtree(os.path.join(CURRENT_DIR, 'mxnet'), ignore_errors=True)
 shutil.rmtree(os.path.join(CURRENT_DIR, 'dmlc_tracker'), ignore_errors=True)
-shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/python/mxnet'),
-                os.path.join(CURRENT_DIR, 'mxnet'))
-shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/dmlc-core/tracker/dmlc_tracker'),
+#shutil.copytree(os.path.join(CURRENT_DIR, '../python/mxnet'),
+#                os.path.join(CURRENT_DIR, 'mxnet'))
+shutil.copytree(os.path.join(CURRENT_DIR, '../3rdparty/dmlc-core/tracker/dmlc_tracker'),
                 os.path.join(CURRENT_DIR, 'dmlc_tracker'))
 shutil.copy(LIB_PATH[0], os.path.join(CURRENT_DIR, 'mxnet'))
 
 # copy license and notice
-shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/licenses'),
+shutil.copytree(os.path.join(CURRENT_DIR, '../licenses'),
             os.path.join(CURRENT_DIR, 'mxnet/licenses'))
 
 # copy tools to mxnet package
 shutil.rmtree(os.path.join(CURRENT_DIR, 'mxnet/tools'), ignore_errors=True)
 os.mkdir(os.path.join(CURRENT_DIR, 'mxnet/tools'))
-shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/tools/launch.py'), os.path.join(CURRENT_DIR, 'mxnet/tools'))
-shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/tools/im2rec.py'), os.path.join(CURRENT_DIR, 'mxnet/tools'))
-shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/tools/kill-mxnet.py'), os.path.join(CURRENT_DIR, 'mxnet/tools'))
-shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/tools/parse_log.py'), os.path.join(CURRENT_DIR, 'mxnet/tools'))
-shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/tools/diagnose.py'), os.path.join(CURRENT_DIR, 'mxnet/tools'))
-shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/tools/caffe_converter'), os.path.join(CURRENT_DIR, 'mxnet/tools/caffe_converter'))
-shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/tools/bandwidth'), os.path.join(CURRENT_DIR, 'mxnet/tools/bandwidth'))
+shutil.copy(os.path.join(CURRENT_DIR, '../tools/launch.py'), os.path.join(CURRENT_DIR, 'mxnet/tools'))
+shutil.copy(os.path.join(CURRENT_DIR, '../tools/im2rec.py'), os.path.join(CURRENT_DIR, 'mxnet/tools'))
+shutil.copy(os.path.join(CURRENT_DIR, '../tools/kill-mxnet.py'), os.path.join(CURRENT_DIR, 'mxnet/tools'))
+shutil.copy(os.path.join(CURRENT_DIR, '../tools/parse_log.py'), os.path.join(CURRENT_DIR, 'mxnet/tools'))
+shutil.copy(os.path.join(CURRENT_DIR, '../tools/diagnose.py'), os.path.join(CURRENT_DIR, 'mxnet/tools'))
+shutil.copytree(os.path.join(CURRENT_DIR, '../tools/caffe_converter'), os.path.join(CURRENT_DIR, 'mxnet/tools/caffe_converter'))
+shutil.copytree(os.path.join(CURRENT_DIR, '../tools/bandwidth'), os.path.join(CURRENT_DIR, 'mxnet/tools/bandwidth'))
 
 # copy headers to mxnet package
 shutil.rmtree(os.path.join(CURRENT_DIR, 'mxnet/include'), ignore_errors=True)
 os.mkdir(os.path.join(CURRENT_DIR, 'mxnet/include'))
-shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/include/mxnet'),
+shutil.copytree(os.path.join(CURRENT_DIR, '../include/mxnet'),
                 os.path.join(CURRENT_DIR, 'mxnet/include/mxnet'))
-shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/dlpack/include/dlpack'),
+shutil.copytree(os.path.join(CURRENT_DIR, '../3rdparty/dlpack/include/dlpack'),
                 os.path.join(CURRENT_DIR, 'mxnet/include/dlpack'))
-shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/dmlc-core/include/dmlc'),
+shutil.copytree(os.path.join(CURRENT_DIR, '../3rdparty/dmlc-core/include/dmlc'),
                 os.path.join(CURRENT_DIR, 'mxnet/include/dmlc'))
-shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mshadow/mshadow'),
+shutil.copytree(os.path.join(CURRENT_DIR, '../3rdparty/mshadow/mshadow'),
                 os.path.join(CURRENT_DIR, 'mxnet/include/mshadow'))
-shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/tvm/nnvm/include/nnvm'),
+shutil.copytree(os.path.join(CURRENT_DIR, '../3rdparty/tvm/nnvm/include/nnvm'),
                 os.path.join(CURRENT_DIR, 'mxnet/include/nnvm'))
 
 package_name = 'mxnet'
@@ -147,7 +147,20 @@ package_data = {'mxnet': [os.path.join('mxnet', os.path.basename(LIB_PATH[0]))],
                 'dmlc_tracker': []}
 if variant.endswith('MKL'):
     if platform.system() == 'Darwin':
-    shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mkldnn/build/install/include'),
+        shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libmklml.dylib'), os.path.join(CURRENT_DIR, 'mxnet'))
+        shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libiomp5.dylib'), os.path.join(CURRENT_DIR, 'mxnet'))
+        shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libmkldnn.0.dylib'), os.path.join(CURRENT_DIR, 'mxnet'))
+        package_data['mxnet'].append('mxnet/libmklml.dylib')
+        package_data['mxnet'].append('mxnet/libiomp5.dylib')
+        package_data['mxnet'].append('mxnet/libmkldnn.0.dylib')
+    else:
+        shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libmklml_intel.so'), os.path.join(CURRENT_DIR, 'mxnet'))
+        shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libiomp5.so'), os.path.join(CURRENT_DIR, 'mxnet'))
+        shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libmkldnn.so.0'), os.path.join(CURRENT_DIR, 'mxnet'))
+        package_data['mxnet'].append('mxnet/libmklml_intel.so')
+        package_data['mxnet'].append('mxnet/libiomp5.so')
+        package_data['mxnet'].append('mxnet/libmkldnn.so.0')
+    shutil.copytree(os.path.join(CURRENT_DIR, '../3rdparty/mkldnn/build/install/include'),
                     os.path.join(CURRENT_DIR, 'mxnet/include/mkldnn'))
 if platform.system() == 'Linux':
     shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libgfortran.so.3'), os.path.join(CURRENT_DIR, 'mxnet'))
