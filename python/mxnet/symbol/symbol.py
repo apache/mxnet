@@ -1463,25 +1463,24 @@ class Symbol(SymbolBase):
         assert isinstance(backend, str)
         if args is None:
             args = []
-            args_handle = []
+            args_handle = c_array(NDArrayHandle, [])
         else:
             listed_arguments = self.list_arguments()
             args_handle, args = self._get_ndarray_inputs('args', args, listed_arguments, False)
         key_list = []
         val_list = []
-        if kwargs is not None:
-            for key, val in kwargs.iteritems():
-                key_list.append(key)
-                val_list.append(val)
+        for key, val in kwargs.items():
+            key_list.append(key)
+            val_list.append(str(val))
         check_call(_LIB.MXOptimizeForBackend(self.handle,
                                              c_str(backend),
                                              ctypes.byref(out),
                                              mx_uint(len(args)),
                                              args_handle,
                                              mx_uint(len(key_list)),
-                                             c_str_array([key for key in key_list]),
-                                             c_str_array([str(val) for val in val_list])))
-        return out
+                                             c_str_array(key_list),
+                                             c_str_array(val_list)))
+        return Symbol(out)
 
 
     # pylint: disable=too-many-locals
