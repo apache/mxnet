@@ -788,8 +788,6 @@ def test_activation():
 def test_batchnorm():
     shape = (LARGE_X, SMALL_Y)
     axis = 1  # default
-    expand_shape = [1] * len(shape)
-    expand_shape[axis] = shape[axis]
 
     nch = shape[axis]
     data = mx.nd.ones(shape=shape)

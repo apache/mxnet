@@ -64,7 +64,7 @@ def test_ndarray_random_generalized_negative_binomial():
 
 @with_seed()
 def test_ndarray_random_multinomial():
-    a = nd.random.generalized_negative_binomial(probs=create_large_vector(LARGE_X))
+    a = nd.random.multinomial(create_large_vector(LARGE_X))
     assert a[-1] >= 0.
     assert a.shape[0] == 1
 
@@ -125,7 +125,7 @@ def test_ndarray_random_shuffle():
 
 
 def test_exponent_logarithm_operators():
-    a = 2*nd.ones(shape=(LARGE_X))
+    a = 2*nd.ones(shape=LARGE_X)
     # exponent
     result = nd.exp(a)
     assert result[-1] == 7.389056
@@ -158,7 +158,7 @@ def test_exponent_logarithm_operators():
 
 
 def test_power_operators():
-    a = 2*nd.ones(shape=(LARGE_X))
+    a = 2*nd.ones(shape=LARGE_X)
     # sqrt
     result = nd.sqrt(a)
     assert result[-1] == 1.4142135
@@ -246,7 +246,7 @@ def test_sequence_last():
 
 
 def test_softmax_cross_entropy():
-    # SoftmaxCrossEntropy only accept 2D data
+    # SoftmaxCrossEntropy only accepts 2D data
     # dtype of input data, mxnet cross entropy set explicitly to float64
     # numpy implicitly takes care of double precision
     batch_size = 2
@@ -271,7 +271,7 @@ def test_softmax_cross_entropy():
 
 
 def test_index_copy():
-    x = mx.nd.zeros((LARGE_X))
+    x = mx.nd.zeros(LARGE_X)
     t = mx.nd.array([-1])
     index = mx.nd.array([LARGE_X - 1])
 
@@ -279,35 +279,9 @@ def test_index_copy():
     assert x[-1] == t[-1]
 
 
-# softmaxoutput for vector returns 1 regardless of input/labels
-# def testSoftmaxOutput():
-#     x = mx.sym.Variable('x')
-#     label = mx.sym.Variable('label')
-#     x_nd = mx.nd.ones((LARGE_X))
-#     grad_x = mx.nd.zeros((LARGE_X))
-#     label_nd = mx.nd.ones((LARGE_X))
-
-#     sym = mx.sym.SoftmaxOutput(data=x, label=label, ignore_label=0,
-#                                use_ignore=False)
-#     ex = sym.bind(ctx=default_context(), args={'x': x_nd, 'label': label_nd},
-#                   args_grad={'x': grad_x})
-
-#     ex.forward(is_train=True)
-#     softmax_out = ex.outputs[0][0].asnumpy()
-#     expected_softmax_out = (1/SMALL_Y)*mx.nd.ones((SMALL_Y)).asnumpy()
-#     assert np.isclose(softmax_out, expected_softmax_out).all()
-
-#     ex.backward(is_train=True)
-#     grad_out = ex.grad_arrays[0][0].asnumpy()
-#     k = int(label_nd[0].asscalar())
-#     expected_grad_out = np.zeros((SMALL_Y,))
-#     expected_grad_out[k] = -1
-#     assert np.isclose(grad_out - softmax_out, expected_grad_out).all()
-
-
 # TODO: correctness of prelu (currently flaky)
 def test_leaky_relu():
-    a = -1*mx.nd.ones((LARGE_X, SMALL_Y))
+    a = -1*mx.nd.ones(LARGE_X)
 
     def test_leaky():
         res = mx.nd.LeakyReLU(a, act_type="leaky", slope=0.3)
@@ -336,26 +310,25 @@ def test_leaky_relu():
 
 
 def test_layer_norm():
-    dtype = np.float32
     forward_check_eps = 1E-3
     axis = 0
     eps = 1E-5
-    in_shape = (LARGE_X,)
+    in_shape = LARGE_X
 
     def npy_layer_norm(data, gamma, beta, axis=0, eps=1E-5):
         broadcast_shape = [1 for _ in range(data.ndim)]
         broadcast_shape[axis] = data.shape[axis]
-        mean = data.mean(axis=axis, keepdims=True).astype(dtype)
-        var = data.var(axis=axis, keepdims=True).astype(dtype)
-        std = np.sqrt(var + dtype(eps)).astype(dtype)
+        mean = data.mean(axis=axis, keepdims=True)
+        var = data.var(axis=axis, keepdims=True)
+        std = np.sqrt(var + dtype(eps))
         out = np.reshape(gamma, broadcast_shape) * (data - mean) / std + \
               np.reshape(beta, broadcast_shape)
         return out
-    data = np.random.normal(0, 1, in_shape).astype(dtype)
-    gamma = np.random.normal(0, 1, (in_shape[axis],)).astype(dtype)
-    beta = np.random.normal(0, 1, (in_shape[axis],)).astype(dtype)
+    data = nd.random.normal(0, 1, in_shape)
+    gamma = np.random.normal(0, 1, in_shape)
+    beta = np.random.normal(0, 1, in_shape)
     mx_out = nd.LayerNorm(data, gamma, beta, axis, eps)
-    np_out = npy_layer_norm(data, gamma, beta, axis, eps)
+    np_out = npy_layer_norm(data.asnumpy(), gamma.asnumpy(), beta.asnumpy(), axis, eps)
     assert_almost_equal(np_out, mx_out.asnumpy(), forward_check_eps,
                         forward_check_eps)
 
@@ -364,7 +337,7 @@ def test_layer_norm():
 # currently only test for dropout to work
 # since testing for correctness involves flakiness issue #14288
 def test_dropout():
-    shape = (LARGE_X, )
+    shape = LARGE_X
     x = mx.sym.var('data')
     y = mx.sym.Dropout(x, p=1, cudnn_off=True)
     exe = y.simple_bind(ctx=default_context(), data=shape)
@@ -374,14 +347,14 @@ def test_dropout():
 
 
 def test_activation():
-    a = mx.nd.ones((LARGE_X,))
+    a = mx.nd.ones(LARGE_X)
     test_x = -2
     a[-1] = test_x
 
     # Hyperbolic tangent (tanh)
     # y = (exp(x)-exp(-x))/(exp(x)+exp(-x))
     a = mx.nd.Activation(a, act_type="tanh")
-    tanh_x = (np.exp(-2)-np.exp(2))/(np.exp(-2)+np.exp(2))
+    tanh_x = (np.exp(-2) - np.exp(2)) / (np.exp(-2) + np.exp(2))
     assert a[-1] == tanh_x
 
     # Recitified Linear Unit (relu)
@@ -392,13 +365,13 @@ def test_activation():
     # Sigmoid
     # y = x/(1+abs(x))
     a = mx.nd.Activation(a, act_type="sigmoid")
-    sigmoid_x = 1/(1+math.exp(-test_x))
+    sigmoid_x = 1 / (1 + math.exp(-test_x))
     assert a[-1] == sigmoid_x
 
     # Soft Sign
     # y = 1/(1+exp(-x))
     a = mx.nd.Activation(a, act_type="softsign")
-    softsign_x = test_x/(1+abs(test_x))
+    softsign_x = test_x / (1 + abs(test_x))
     assert a[-1] == softsign_x
 
 
@@ -406,26 +379,23 @@ def test_activation():
 # in future, we could test if mean, var of output
 # matches target output's mean, var
 def test_batchnorm():
-    shape = (LARGE_X,)
+    shape = LARGE_X
     axis = 0  # since vector
-    expand_shape = [1] * len(shape)
-    expand_shape[axis] = shape[axis]
 
-    nch = shape[axis]
     data = mx.nd.ones(shape=shape)
-    bn_gamma = mx.nd.random.uniform(shape=(nch,))
-    bn_beta = mx.nd.random.uniform(shape=(nch,))
-    bn_running_mean = mx.nd.zeros(nch)
-    bn_running_var = mx.nd.ones(nch)
+    bn_gamma = mx.nd.random.uniform(shape=shape)
+    bn_beta = mx.nd.random.uniform(shape=shape)
+    bn_running_mean = mx.nd.zeros(shape)
+    bn_running_var = mx.nd.ones(shape)
 
     output = mx.nd.BatchNorm(data, bn_gamma, bn_beta,
-                             bn_running_mean, bn_running_var)
+                             bn_running_mean, bn_running_var, axis=axis)
     output.wait_to_read()
 
 
 def test_add():
-    a = nd.ones(shape=(LARGE_X))
-    b = nd.ones(shape=(LARGE_X))
+    a = nd.ones(shape=LARGE_X)
+    b = nd.ones(shape=LARGE_X)
     c = b
     c = c.__add__(a)
     assert c[-1] == 2
@@ -433,8 +403,8 @@ def test_add():
 
 
 def test_sub():
-    a = 3*nd.ones(shape=(LARGE_X))
-    b = nd.ones(shape=(LARGE_X))
+    a = 3*nd.ones(shape=LARGE_X)
+    b = nd.ones(shape=LARGE_X)
     c = b
     c = c.__sub__(a)
     assert c[-1] == -2
@@ -442,8 +412,8 @@ def test_sub():
 
 
 def test_rsub():
-    a = 3*nd.ones(shape=(LARGE_X))
-    b = nd.ones(shape=(LARGE_X))
+    a = 3*nd.ones(shape=LARGE_X)
+    b = nd.ones(shape=LARGE_X)
     c = b
     c = c.__rsub__(a)
     assert c[-1] == 2
@@ -451,7 +421,7 @@ def test_rsub():
 
 
 def test_neg():
-    a = nd.ones(shape=(LARGE_X))
+    a = nd.ones(shape=LARGE_X)
     c = a
     c = c.__neg__()
     assert c[-1] == -1
@@ -459,8 +429,8 @@ def test_neg():
 
 
 def test_mul():
-    a = 2*nd.ones(shape=(LARGE_X))
-    b = 3*nd.ones(shape=(LARGE_X))
+    a = 2*nd.ones(shape=LARGE_X)
+    b = 3*nd.ones(shape=LARGE_X)
     c = b
     c = c.__mul__(a)
     assert c[-1] == 6
@@ -468,8 +438,8 @@ def test_mul():
 
 
 def test_div():
-    a = 2*nd.ones(shape=(LARGE_X))
-    b = 3*nd.ones(shape=(LARGE_X))
+    a = 2*nd.ones(shape=LARGE_X)
+    b = 3*nd.ones(shape=LARGE_X)
     c = b
     c = c.__div__(a)
     assert c[-1] == 3/2
@@ -477,8 +447,8 @@ def test_div():
 
 
 def test_rdiv():
-    a = 2*nd.ones(shape=(LARGE_X))
-    b = 3*nd.ones(shape=(LARGE_X))
+    a = 2*nd.ones(shape=LARGE_X)
+    b = 3*nd.ones(shape=LARGE_X)
     c = b
     c = c.__rdiv__(a)
     assert c[-1] == 2/3
@@ -486,8 +456,8 @@ def test_rdiv():
 
 
 def test_mod():
-    a = 2*nd.ones(shape=(LARGE_X))
-    b = 3*nd.ones(shape=(LARGE_X))
+    a = 2*nd.ones(shape=LARGE_X)
+    b = 3*nd.ones(shape=LARGE_X)
     c = b
     c = c.__mod__(a)
     assert c[-1] == 1
@@ -495,8 +465,8 @@ def test_mod():
 
 
 def test_rmod():
-    a = 2*nd.ones(shape=(LARGE_X))
-    b = 3*nd.ones(shape=(LARGE_X))
+    a = 2*nd.ones(shape=LARGE_X)
+    b = 3*nd.ones(shape=LARGE_X)
     c = b
     c = c.__rmod__(a)
     assert c[-1] == 2
@@ -504,8 +474,8 @@ def test_rmod():
 
 
 def test_imod():
-    a = 2*nd.ones(shape=(LARGE_X))
-    b = 3*nd.ones(shape=(LARGE_X))
+    a = 2*nd.ones(shape=LARGE_X)
+    b = 3*nd.ones(shape=LARGE_X)
     c = b
     c = c.__imod__(a)
     assert c[-1] == 1
@@ -513,8 +483,8 @@ def test_imod():
 
 
 def test_pow():
-    a = 2*nd.ones(shape=(LARGE_X))
-    b = 3*nd.ones(shape=(LARGE_X))
+    a = 2*nd.ones(shape=LARGE_X)
+    b = 3*nd.ones(shape=LARGE_X)
     c = b
     c = c.__pow__(a)
     assert c[-1] == 9
@@ -522,8 +492,8 @@ def test_pow():
 
 
 def test_rpow():
-    a = 2*nd.ones(shape=(LARGE_X))
-    b = 3*nd.ones(shape=(LARGE_X))
+    a = 2*nd.ones(shape=LARGE_X)
+    b = 3*nd.ones(shape=LARGE_X)
     c = b
     c = c.__rpow__(a)
     assert c[-1] == 8
