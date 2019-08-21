@@ -71,26 +71,32 @@ static bool BinaryScalarLogicStorageType(const nnvm::NodeAttrs& attrs,
 
 
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR_LOGIC(_equal_scalar, mshadow_op::eq)
+.add_alias("_npi_equal_scalar")
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_alias("_EqualScalar");
 
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR_LOGIC(_not_equal_scalar, mshadow_op::ne)
+.add_alias("_npi_not_equal_scalar")
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_alias("_NotEqualScalar");
 
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR_LOGIC(_greater_scalar, mshadow_op::gt)
+.add_alias("_npi_greater_scalar")
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_alias("_GreaterScalar");
 
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR_LOGIC(_greater_equal_scalar, mshadow_op::ge)
+.add_alias("_npi_greater_equal_scalar")
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_alias("_GreaterEqualScalar");
 
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR_LOGIC(_lesser_scalar, mshadow_op::lt)
+.add_alias("_npi_less_scalar")
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_alias("_LesserScalar");
 
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR_LOGIC(_lesser_equal_scalar, mshadow_op::le)
+.add_alias("_npi_less_equal_scalar")
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_alias("_LesserEqualScalar");
 

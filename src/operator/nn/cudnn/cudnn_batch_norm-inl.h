@@ -34,7 +34,7 @@
 
 namespace mxnet {
 namespace op {
-#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 4
+#if MXNET_USE_CUDNN == 1
 namespace cudnnbatchnorm {
 enum CuDNNBatchNormOpInputs {kData, kGamma, kBeta};
 enum CuDNNBatchNormOpOutputs {kOut, kMean, kInvVar};
@@ -44,6 +44,8 @@ enum CuDNNBatchNormOpAuxiliary {kMovingMean, kMovingInvVar};
 #if defined(__CUDACC__)
 template<typename DType>
 class CuDNNBatchNormOp {
+  STATIC_ASSERT_CUDNN_VERSION_GE(5000);
+
  public:
   CuDNNBatchNormOp() {
     using namespace mshadow;
@@ -182,7 +184,6 @@ class CuDNNBatchNormOp {
 
     const bool global_stats = !ctx.is_train || param_.use_global_stats;
 
-#if CUDNN_VERSION >= 4007
 #if CUDNN_VERSION >= 7002
     auto mode = CUDNN_BATCHNORM_SPATIAL_PERSISTENT;
 #else
@@ -229,45 +230,6 @@ class CuDNNBatchNormOp {
         global_stats ? nullptr : save_inv_var.dptr_));
       if (param_.fix_gamma) dgamma = 0.f;
     })
-#else  // CUDNN_VERSION < 4007
-    MSHADOW_REAL_TYPE_SWITCH(dtype_param_, DTypeParam, {
-      Tensor<gpu, 1, DTypeParam> gamma =
-        in_gamma.get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
-      Tensor<gpu, 1, DTypeParam> dbeta =
-        in_grad[cudnnbatchnorm::kBeta].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
-      Tensor<gpu, 1, DTypeParam> dgamma =
-        in_grad[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
-      Tensor<gpu, 1, DTypeParam> save_mean =
-        out_mean.get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
-      Tensor<gpu, 1, DTypeParam> save_inv_var =
-        out_var.get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
-
-      typename DataType<DType>::ScaleType a = 1.0f;
-      typename DataType<DType>::ScaleType b = 0.0f;
-      typename DataType<DType>::ScaleType b_add = 1.0f;
-      CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
-
-      if (param_.fix_gamma) gamma = 1.f;
-      CUDNN_CALL(cudnnBatchNormalizationBackward(s->dnn_handle_,
-                                                 CUDNN_BATCHNORM_SPATIAL,
-                                                 &a,
-                                                 &b,
-                                                 io_desc_,
-                                                 x.dptr_,
-                                                 io_desc_,
-                                                 dy.dptr_,
-                                                 io_desc_,
-                                                 dx.dptr_,
-                                                 mean_desc_,
-                                                 gamma.dptr_,
-                                                 dgamma.dptr_,
-                                                 dbeta.dptr_,
-                                                 param_.eps,
-                                                 global_stats ? nullptr : save_mean.dptr_,
-                                                 global_stats ? nullptr : save_inv_var.dptr_));
-      if (param_.fix_gamma) dgamma = 0.f;
-    })
-#endif
   }
 
  private:
@@ -303,7 +265,7 @@ class CuDNNBatchNormOp {
 };
 #endif  // defined(__CUDACC__)
 
-#endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 4
+#endif  // MXNET_USE_CUDNN == 1
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_NN_CUDNN_CUDNN_BATCH_NORM_INL_H_

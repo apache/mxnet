@@ -248,6 +248,7 @@ def save(fname, data):
     >>> mx.nd.load('my_dict')
     {'y': <NDArray 1x4 @cpu(0)>, 'x': <NDArray 2x3 @cpu(0)>}
     """
+    from ..numpy import ndarray as np_ndarray
     if isinstance(data, NDArray):
         data = [data]
         handles = c_array(NDArrayHandle, [])
@@ -257,11 +258,17 @@ def save(fname, data):
         if any(not isinstance(k, string_types) for k in str_keys) or \
            any(not isinstance(v, NDArray) for v in nd_vals):
             raise TypeError('save only accept dict str->NDArray or list of NDArray')
+        if any(isinstance(v, np_ndarray) for v in nd_vals):
+            raise TypeError('cannot save mxnet.numpy.ndarray using mxnet.ndarray.save;'
+                            ' use mxnet.numpy.save instead.')
         keys = c_str_array(str_keys)
         handles = c_handle_array(nd_vals)
     elif isinstance(data, list):
         if any(not isinstance(v, NDArray) for v in data):
             raise TypeError('save only accept dict str->NDArray or list of NDArray')
+        if any(isinstance(v, np_ndarray) for v in data):
+            raise TypeError('cannot save mxnet.numpy.ndarray using mxnet.ndarray.save;'
+                            ' use mxnet.numpy.save instead.')
         keys = None
         handles = c_handle_array(data)
     else:

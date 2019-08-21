@@ -357,7 +357,7 @@ class SubgraphPropertyEntry {
 
   template<typename T>
   SubgraphPropertyEntry set_attr(const std::string& name, const T value) const {
-    entry_->SetAttr<T>(name, value);
+    if (entry_) entry_->SetAttr<T>(name, value);
     return *this;
   }
 
@@ -403,9 +403,12 @@ class SubgraphBackend {
     }
   }
 
-  SubgraphPropertyPtr& RegisterSubgraphProperty(const SubgraphPropertyPtr prop) {
-    prop_ptr_.push_back(prop);
-    return prop_ptr_.back();
+  SubgraphPropertyPtr RegisterSubgraphProperty(SubgraphPropertyPtr prop) {
+    if (prop) {
+      prop_ptr_.push_back(prop);
+      return prop_ptr_.back();
+    }
+    return prop;
   }
 
   const std::string& GetName() const { return name_; }

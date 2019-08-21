@@ -794,7 +794,6 @@ def test_leaky_relu():
 # NOTE(haojin2): Skipping the numeric check tests for float16 data type due to precision issues,
 # the analytical checks are still performed on each and every data type to verify the correctness.
 @with_seed()
-@unittest.skip("Flaky test tracked by https://github.com/apache/incubator-mxnet/issues/12885")
 def test_prelu():
     def fprelu(x, gamma):
         pos_indices = x > 0
@@ -2010,7 +2009,7 @@ def test_convolution_independent_gradients():
     reqs = ["null", "write", "add"]
     var_names = ["x", "w", "b"]
     dims = [1, 2]
-    num_bases = [1, 16, 64]
+    num_bases = [1, 8]
     kernel_xs = [3, 5]
     stride_xs = [1, 2]
     pad_xs = [0, 1]
@@ -4174,15 +4173,25 @@ def test_special_functions_using_scipy():
 
 
 @with_seed()
-@unittest.skip("Flaky test, tracked at https://github.com/apache/incubator-mxnet/issues/12901")
 def test_clip():
     data = mx.symbol.Variable('data')
     shape = (30, 30)
-    data_tmp = np.random.uniform(-1, 1, shape)
+    data_tmp = np.random.uniform(-1, 1, shape).astype('float32')
     test = mx.sym.clip(data, a_max=0.6, a_min=-0.6)
     check_symbolic_forward(test, [data_tmp], [np.clip(data_tmp, -0.6, 0.6)])
     check_symbolic_backward(test, [data_tmp], [np.ones(shape)],
-                            [np.where(data_tmp < 0.6, [1], [0]) * np.where(data_tmp > -0.6, [1], [0])])
+                            [np.where(data_tmp <= 0.6, [1], [0]) * np.where(data_tmp >= -0.6, [1], [0])])
+
+    # Test monitor on symbol using clip
+
+    def simple_callback(name, arr):
+        pass
+
+    exe = test.simple_bind(ctx=mx.current_context(), data=shape)
+    exe.set_monitor_callback(simple_callback, monitor_all=True)
+    exe.forward(is_train=True)
+    exe.backward(out_grads=mx.nd.ones(shape))
+    mx.nd.waitall()
 
 
 @with_seed()
@@ -4793,13 +4802,14 @@ def test_tile():
 
     def test_empty_tensor():
         shape = (2, 3, 0, 4)
-        a = np.array([], dtype=np.int32).reshape(shape)
-        b = mx.nd.array(a, ctx=default_context(), dtype=a.dtype)
-        reps = (2, 4, 6)
+        with mx.np_shape():
+            a = np.array([], dtype=np.int32).reshape(shape)
+            b = mx.nd.array(a, ctx=default_context(), dtype=a.dtype)
 
-        a_tiled = np.tile(a, reps)
-        b_tiled = mx.nd.tile(b, reps).asnumpy()
-        assert same(a_tiled, b_tiled)
+            reps = (2, 4, 6)
+            a_tiled = np.tile(a, reps)
+            b_tiled = mx.nd.tile(b, reps).asnumpy()
+            assert same(a_tiled, b_tiled)
 
     def test_empty_reps():
         a = np.array([[2, 3, 4], [5, 6, 7]], dtype=np.int32)
@@ -4889,13 +4899,15 @@ def test_one_hot():
 
     def test_empty_indices():
         shape = (2, 0, 9, 3)
-        indices = np.array([]).reshape(shape)
-        depth = 10
-        mx_one_hot_array = mx.nd.one_hot(
-            mx.nd.array(indices, ctx=default_context(), dtype=np.int32),
-            depth=depth, dtype=np.int32).asnumpy()
-        expected_array = np.array([], dtype=np.int32).reshape(shape + (depth, ))
-        assert same(expected_array, mx_one_hot_array)
+        with mx.np_shape():
+            indices = np.array([]).reshape(shape)
+            depth = 10
+            mx_one_hot_array = mx.nd.one_hot(
+                mx.nd.array(indices, ctx=default_context(), dtype=np.int32),
+                depth=depth, dtype=np.int32
+            ).asnumpy()
+            expected_array = np.array([], dtype=np.int32).reshape(shape + (depth,))
+            assert same(expected_array, mx_one_hot_array)
 
     def test_zero_depth():
         shape = (2, 4, 9, 3)
@@ -6842,14 +6854,35 @@ def test_laop_6():
         check_numeric_gradient(sym, location, numeric_eps=num_eps, rtol=rtol_bw,
                                atol=atol_bw, dtype=dtype)
 
-    a = np.sqrt(np.arange(4 * 4)).reshape(4, 4)
+    ## det(I + dot(v, v.T)) = 1 + dot(v.T, v) >= 1, so it's always invertible;
+    ## det is away from zero, so the value of logdet is stable
+    v = np.random.random(4)
+    a = np.eye(4) + np.outer(v, v)
     a = np.tile(a, (3, 1, 1))
+    permute_mat = np.eye(4)[[1, 0, 2, 3]]
+
+    # test matrix inverse
     r = np.eye(4)
     r = np.tile(r, (3, 1, 1))
     test_inverse = mx.sym.linalg.inverse(data)
     test_eye = mx.sym.linalg.gemm2(data, test_inverse)
     check_fw(test_eye, [a], [r])
     check_grad(test_inverse, [a])
+
+    # test matrix determinant
+    # det
+    r = np.linalg.det(a)
+    test_det = mx.sym.linalg.det(data)
+    check_fw(test_det, [a], [r])
+    check_grad(test_det, [a])
+    # test slogdet
+    r1 = np.array([1., 1., 1.])
+    r2 = np.log(np.abs(np.linalg.det(a)))
+    test_sign, test_logabsdet = mx.sym.linalg.slogdet(data)
+    check_fw(test_sign, [a], [r1])
+    check_fw(test_sign, [np.dot(a, permute_mat)], [-r1])
+    check_fw(test_logabsdet, [a], [r2])
+    check_grad(test_logabsdet, [a])
 
 @with_seed()
 def test_stack():
@@ -7494,15 +7527,6 @@ def test_slice():
                   (slice(10, 0, -2), slice(5, 2, -1), slice(7, None, 3), slice(None, 12, 4))]
     for index in index_list:
         test_slice_forward_backward(arr, index)
-
-    def test_begin_equals_end(shape, begin, end, step):
-        in_arr = mx.nd.arange(np.prod(shape)).reshape(shape=shape)
-        out_arr = mx.nd.slice(in_arr, begin=begin, end=end, step=step)
-
-    assertRaises(MXNetError, test_begin_equals_end, (4,), (2,), (2,), (1,))
-    assertRaises(MXNetError, test_begin_equals_end, (1, 5), (None, 3), (None, 3), (-1, 1))
-    assertRaises(MXNetError, test_begin_equals_end, (3, 4, 5), (1, 3, 1), (3, 3, 1), (1, -3, 2))
-    assertRaises(MXNetError, test_begin_equals_end, (2, 4), (None, 2), (None, 2), (1, -1))
 
     # check numeric gradient
     in_data = np.arange(36).reshape(2, 2, 3, 3)
@@ -8838,7 +8862,7 @@ def test_index_array():
 
     @mx.use_np_shape
     def test_index_array_default_zero_dim():
-        data  = mx.symbol.Variable("data")
+        data = mx.symbol.Variable("data")
         index_array = mx.sym.contrib.index_array(data)
 
         input_array = np.ones(())

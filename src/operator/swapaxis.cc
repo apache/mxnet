@@ -69,6 +69,6 @@ Examples::
                        [ 3, 7]]]
 )code" ADD_FILELINE);
 
-NNVM_REGISTER_OP(SwapAxis).add_alias("swapaxes");
+NNVM_REGISTER_OP(SwapAxis).add_alias("swapaxes").add_alias("_npi_swapaxes");
 }  // namespace op
 }  // namespace mxnet
