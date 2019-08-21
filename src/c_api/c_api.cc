@@ -451,21 +451,46 @@ int MXNDArrayFree(NDArrayHandle handle) {
   API_END();
 }
 
+template<typename dtype>
+void SliceArray(NDArrayHandle handle, dtype slice_begin, dtype slice_end, NDArray* ptr,
+                NDArrayHandle* out) {
+  *ptr = static_cast<NDArray*>(handle)->SliceWithRecord(slice_begin, slice_end);
+  *out = ptr;
+}
+
 int MXNDArraySlice(NDArrayHandle handle,
                    mx_uint slice_begin,
                    mx_uint slice_end,
                    NDArrayHandle *out) {
   NDArray *ptr = new NDArray();
   API_BEGIN();
-  *ptr = static_cast<NDArray*>(handle)->SliceWithRecord(
-      slice_begin, slice_end);
-  *out = ptr;
+  SliceArray<uint32_t>(handle, slice_begin, slice_end, ptr, out);
+  API_END_HANDLE_ERROR(delete ptr);
+}
+
+int MXNDArraySlice64(NDArrayHandle handle,
+                     int64_t slice_begin,
+                     int64_t slice_end,
+                     NDArrayHandle *out) {
+  NDArray *ptr = new NDArray();
+  API_BEGIN();
+  SliceArray<int64_t>(handle, slice_begin, slice_end, ptr, out);
   API_END_HANDLE_ERROR(delete ptr);
 }
 
 int MXNDArrayAt(NDArrayHandle handle,
-                mx_uint idx,
+                uint32_t idx,
                 NDArrayHandle *out) {
+  NDArray *ptr = new NDArray();
+  API_BEGIN();
+  *ptr = static_cast<NDArray*>(handle)->AtWithRecord(idx);
+  *out = ptr;
+  API_END_HANDLE_ERROR(delete ptr);
+}
+
+int MXNDArrayAt64(NDArrayHandle handle,
+                  int64_t idx,
+                  NDArrayHandle *out) {
   NDArray *ptr = new NDArray();
   API_BEGIN();
   *ptr = static_cast<NDArray*>(handle)->AtWithRecord(idx);
