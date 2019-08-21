@@ -25,6 +25,7 @@ from tests.python.unittest.common import with_seed
 # dimension constants
 LARGE_X = 5000000000
 MEDIUM_X = 1000000000
+LARGE_Y = 100000
 SMALL_Y = 1
 
 
@@ -35,12 +36,12 @@ def test_slice():
 
 
 def test_gluon_embedding():
-    m = gluon.nn.Embedding(SMALL_Y, MEDIUM_X)
+    m = gluon.nn.Embedding(1, LARGE_Y)
     m.initialize()
-    a = nd.zeros((MEDIUM_X, SMALL_Y))
+    a = nd.zeros((LARGE_Y, 1))
     b = m(a)
-    assert b.shape == (MEDIUM_X, SMALL_Y, MEDIUM_X)
-    assert b.asnumpy().size == LARGE_SIZE
+    assert b.shape == (LARGE_Y, 1, LARGE_Y)
+    assert b.asnumpy().size == LARGE_X*2
 
 
 def test_ndarray_zeros():
@@ -51,26 +52,15 @@ def test_ndarray_zeros():
 
 
 def test_ndarray_ones():
-    a = nd.ones(shape=(LARGE_X))
-    assert a[-1][0] == 1
+    a = nd.ones(shape=LARGE_X)
+    assert a[-1] == 1
     assert nd.sum(a).asnumpy() == LARGE_X
-
-
-@unittest.skip("need to fix")
-def test_ndarray_convert():
-    a = nd.zeros(shape=(LARGE_X, SMALL_Y))
-    b = a.astype(np.int32)
-    b.wait_to_read()
-    assert b.dtype == np.int32
-    b = a.tostype('row_sparse')
-    b.wait_to_read()
-    assert isinstance(b, mx.nd.sparse.RowSparseNDArray)
 
 
 @with_seed()
 def test_ndarray_random_uniform():
     a = nd.random.uniform(shape=LARGE_X)
-    assert a[-1][0] != 0
+    assert a[-1] != 0
 
 
 @with_seed()
@@ -105,14 +95,6 @@ def test_elementwise():
 def test_reduce():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     assert nd.sum(a).asnumpy() == a.shape[0] * a.shape[1]
-
-
-@unittest.skip("need to fix")
-def test_dot():
-    a = nd.ones(shape=(LARGE_X, SMALL_Y))
-    b = nd.ones(shape=(SMALL_Y, SMALL_Y))
-    res = nd.dot(a, b)
-    assert np.sum(res[-1].asnumpy() == SMALL_Y) == b.shape[1]
 
 
 def test_FullyConnected():
@@ -198,17 +180,6 @@ def test_Dense(ctx=mx.cpu(0)):
     res = linear(data)
     res.wait_to_read()
     assert res.shape == (LARGE_X, 2)
-
-
-@unittest.skip("need to fix")
-def test_where():
-    a = nd.ones(shape=(LARGE_X, SMALL_Y))
-    b = nd.arange(0, LARGE_X * SMALL_Y).reshape(LARGE_X, SMALL_Y)
-    res = nd.where(b > 100, a, b)
-    assert np.sum(res[-1].asnumpy() == 1) == b.shape[1]
-    csr_cond = nd.sparse.cast_storage(b < 10, 'csr')
-    res = nd.sparse.where(csr_cond, a, b)
-    assert np.sum(res[0].asnumpy() == 1) == 10
 
 
 def test_pick():
