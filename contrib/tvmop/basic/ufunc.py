@@ -18,6 +18,7 @@
 # coding: utf-8
 import tvm
 from .. import defop, AllTypes
+from .. import assign_by_req, reduce_axes
 
 def compute_add(dtype, ndim):
     A = tvm.placeholder([tvm.var() for _ in range(ndim)], name='A', dtype=dtype)
@@ -29,7 +30,7 @@ def compute_add(dtype, ndim):
 
 
 @defop(name="vadd", target="cpu", auto_broadcast=True,
-       dtype=AllTypes, ndim=list(range(1, 6)))
+       dtype=AllTypes, ndim=[5])
 def vadd(dtype, ndim):
     s, A, B, C = compute_add(dtype, ndim)
     axes = [axis for axis in C.op.axis]
@@ -40,7 +41,7 @@ def vadd(dtype, ndim):
 
 
 @defop(name="cuda_vadd", target="cuda", auto_broadcast=True,
-       dtype=["float32", "float64"], ndim=list(range(1, 6)))
+       dtype=["float32", "float64"], ndim=[5])
 def vadd_gpu(dtype, ndim):
     s, A, B, C = compute_add(dtype, ndim)
     s = tvm.create_schedule(C.op)
@@ -52,35 +53,14 @@ def vadd_gpu(dtype, ndim):
     return s, [A, B, C]
 
 
-def assign_by_req(a, req):
-    b = tvm.placeholder(a.shape, name='assign_by_req_b', dtype=a.dtype)
-    if (req == "kAddTo"):
-        c = tvm.compute(a.shape, lambda *idx: a[idx] + b[idx])
-    else:
-        c = tvm.compute(a.shape, lambda *idx: a[idx])
-    return b, c
-
-
-def reduce_axes(X, axes, reducer):
-    def get_index(idx, ridx):
-        j = 0
-        k = 0
-        ret = []
-        for val in axes:
-            ret.append(idx[j] if val == 0 else ridx[k])
-            j += (val == 0)
-            k += (val != 0)
-        return tuple(ret)
-    
-    ishape = X.shape
-    odim = (len(ishape) + 1 - axes[0]) // 2
-    oshape = [tvm.var() for _ in range(odim)]
-    ridx = [tvm.reduce_axis((0, ishape[i])) for (i, val) in enumerate(axes) if val == 1]
-    ret = tvm.compute(oshape, lambda *idx: reducer(X[get_index(idx, ridx)], axis=ridx), name='ret')
-    return ret
-
-
 def compute_backward_vadd(dtype, ndim, reduce1st, req):
+    # The backward of broadcast op is basically a reduction on broadcast axes.
+    # We label the reduce axes as 1 and other axes as 0, and they form a bit string.
+    # Each bit string correponds to a kernel, so the number of kernels is as many as `2^n`
+    # To reduce it, the bit string is compressed by combining consecutive 0s or 1s.
+    # In this way, the number of bit string (the number of kernels) is reduced to `2 * n`
+    # They compressed bit string is stored in `axes`. And `reduce1st` represents the first bit
+    # of the compressed bit string. Credit to @junrushao1994 and @yzhliu.
     axes = ([reduce1st, 1 - reduce1st] * ndim)[:ndim]
     X = tvm.placeholder([tvm.var() for _ in range(ndim)], name='X', dtype=dtype)
     reducer = tvm.comm_reducer(lambda x, y: x + y,
@@ -92,7 +72,7 @@ def compute_backward_vadd(dtype, ndim, reduce1st, req):
 
 
 @defop(name="backward_vadd", target="cpu", dtype=AllTypes, 
-       ndim=list(range(1, 6)), reduce1st=[0, 1],
+       ndim=[5], reduce1st=[0, 1],
        req=["kWriteTo", "kAddTo"], attrs=["reduce1st", "req"])
 def backward_vadd(dtype, ndim, reduce1st, req):
     s, X, in_grad_a, in_grad, c_list = compute_backward_vadd(dtype, ndim, reduce1st, req)
@@ -104,7 +84,7 @@ def backward_vadd(dtype, ndim, reduce1st, req):
 
 
 @defop(name="cuda_backward_vadd", target="gpu", dtype=["float32", "float64"],
-       ndim=list(range(1, 6)), reduce1st=[0, 1],
+       ndim=[5], reduce1st=[0, 1],
        req=["kWriteTo", "kAddTo"], attrs=["reduce1st", "req"])
 def backward_vadd_gpu(dtype, ndim, reduce1st, req):
     s, X, in_grad_a, in_grad, c_list = compute_backward_vadd(dtype, ndim, reduce1st, req)

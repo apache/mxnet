@@ -40,6 +40,16 @@ static constexpr char func_vadd_cpu[] = "vadd";
 static constexpr char func_vadd_gpu[] = "cuda_vadd";
 static constexpr char func_bakcward_vadd_cpu[] = "backward_vadd";
 static constexpr char func_bakcward_vadd_gpu[] = "cuda_backward_vadd";
+static constexpr int max_dim = 5;
+
+TBlob padding(const TBlob& tblob, const int max_dim) {
+  TShape tshape(max_dim, 1);
+  int ndim = tblob.shape_.ndim();
+  for (int i = max_dim - ndim; i < max_dim; ++i) {
+    tshape[i] = tblob.size(i - max_dim + ndim);
+  }
+  return tblob.reshape(tshape);
+}
 
 template<const char* func>
 void TVMBinaryCompute(const nnvm::NodeAttrs& attrs,
@@ -49,7 +59,12 @@ void TVMBinaryCompute(const nnvm::NodeAttrs& attrs,
                       const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
-  tvm::runtime::TVMOpModule::Get()->Call(func, ctx, {inputs[0], inputs[1], outputs[0]});
+  TBlob idata[2], odata;
+  for (int k = 0; k < 2; ++k) {
+    idata[k] = padding(inputs[k], max_dim);
+  }
+  odata = padding(outputs[0], max_dim);
+  tvm::runtime::TVMOpModule::Get()->Call(func, ctx, {idata[0], idata[1], odata});
 }
 
 template<const char* func>
@@ -64,8 +79,13 @@ void TVMBinaryBackwardComputeUseNone(const nnvm::NodeAttrs& attrs,
   for (int k = 0; k < 2; ++k) {
     // dispatch by backward
     std::vector<int> ov, iv;
-    const TBlob& ograd = inputs[0], igrad = outputs[k];
-    bool flag = ograd.size(0) != igrad.size(0);
+    TBlob ograd = padding(inputs[0], ndim), igrad = padding(outputs[k], ndim);
+    int flag;
+    if (ograd.size(0) != igrad.size(0)) {
+      flag = 1;
+    } else {
+      flag = 0;
+    }
     for (int i = 0; i < ndim; ++i) {
       if (i == 0 || (ograd.size(i) != igrad.size(i)) != (ograd.size(i - 1) != igrad.size(i - 1))) {
         ov.push_back(ograd.size(i));
@@ -73,18 +93,21 @@ void TVMBinaryBackwardComputeUseNone(const nnvm::NodeAttrs& attrs,
         ov.back() *= ograd.size(i);
       }
     }
+    for (int i = ov.size(); i < max_dim; ++i) {
+      ov.push_back(1);
+    }
     for (int i = flag; i < ov.size(); i += 2) {
       iv.push_back(ov[i]);
     }
     TShape oshape(ov.begin(), ov.end()), ishape(iv.begin(), iv.end());
-    TBlob ograd_tvm(ograd.reshape(oshape).dltensor());
-    TBlob igrad_tvm(igrad.reshape(ishape).dltensor());
+    TBlob ograd_tvm(ograd.reshape(oshape));
+    TBlob igrad_tvm(igrad.reshape(ishape));
     std::string funcname = std::string(func) + "reduce1st_" + std::to_string(flag);
     // dispatch by req
     funcname += "req_";
     MXNET_ASSIGN_REQ_SWITCH(req[k], req_type, {
       if (req_type == kWriteTo) {
-                funcname += "kWriteTo";
+        funcname += "kWriteTo";
       } else {
         funcname += "kAddTo";
       }
