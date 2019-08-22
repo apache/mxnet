@@ -122,9 +122,9 @@ void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
     for (int i = 0; i < param.num_args; ++i) {
       Tensor<xpu, 4, DType> data = in_data[i].get<xpu, 4, DType>(s);
       int end = begin + data.size(1);
-      // 3rd dimension of TBlob (2nd from 4th dimension)
+      // 3rd dimension of TBlob
       int scale_h = out_data[up_enum::kOut].size(2)/in_data[i].size(2);
-      // 4th dimension of TBlob (1st from 4th dimension)
+      // 4th dimension of TBlob
       int scale_w = out_data[up_enum::kOut].size(3)/in_data[i].size(3);
       if (param.multi_input_mode == up_enum::kSum) {
         if (i == 0) {
