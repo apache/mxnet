@@ -49,6 +49,10 @@ def randint(low, high=None, size=None, dtype=None, **kwargs):
         name, i.e., 'int64', 'int', etc, so byteorder is not available
         and a specific precision may have different C types depending
         on the platform. The default value is 'np.int'.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ndarray, optional
+        The output ndarray (default is `None`).
 
     Returns
     -------
