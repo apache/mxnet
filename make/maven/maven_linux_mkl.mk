@@ -76,7 +76,7 @@ USE_CUDNN = 0
 # CUDA_ARCH :=
 
 # whether use cuda runtime compiling for writing kernels in native language (i.e. Python)
-ENABLE_CUDA_RTC = 0
+USE_NVRTC = 0
 
 # use openmp for parallelization
 USE_OPENMP = 1
