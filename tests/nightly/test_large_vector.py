@@ -115,7 +115,7 @@ def test_ndarray_random_uniform():
 @with_seed()
 def test_ndarray_random_shuffle():
     a = nd.ones(shape=LARGE_X)
-    a[-1] == 3
+    a[-1] = 3
     a = nd.random.shuffle(a)
     unique_a = np.unique(a.asnumpy())
     assert len(unique_a) == 2  # only 2 unique values
@@ -325,8 +325,8 @@ def test_layer_norm():
               np.reshape(beta, broadcast_shape)
         return out
     data = nd.random.normal(0, 1, in_shape)
-    gamma = np.random.normal(0, 1, in_shape)
-    beta = np.random.normal(0, 1, in_shape)
+    gamma = nd.random.normal(0, 1, in_shape)
+    beta = nd.random.normal(0, 1, in_shape)
     mx_out = nd.LayerNorm(data, gamma, beta, axis, eps)
     np_out = npy_layer_norm(data.asnumpy(), gamma.asnumpy(), beta.asnumpy(), axis, eps)
     assert_almost_equal(np_out, mx_out.asnumpy(), forward_check_eps,
