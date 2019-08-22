@@ -199,7 +199,11 @@ class Tuple {
    * \return the corresponding dimension size
    */
   inline ValueType& operator[](int i) {
-    CHECK(i >= 0 && i < ndim()) << "index = " << i << " must be in range [0, " << ndim() << ")";
+    // it fixes the false alarm of assuming signed overflow does not occur when assuming that (X - c) > X is always false [-Werror=strict-overflow]
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wstrict-overflow"
+      CHECK(i >= 0 && i < ndim()) << "index = " << i << " must be in range [0, " << ndim() << ")";
+    #pragma GCC diagnostic pop
     return begin()[i];
   }
   /*!
