@@ -734,6 +734,7 @@ MXNET_DLL int MXNDArraySyncCopyFromCPU(NDArrayHandle handle,
 MXNET_DLL int MXNDArraySyncCopyToCPU(NDArrayHandle handle,
                                      void *data,
                                      size_t size);
+
 /*!
  * \brief Copy src.data() to dst.data() if i = -1, else dst.aux_data(i) if i >= 0
  * This function blocks. Do not use it in performance critical code.
@@ -790,6 +791,11 @@ MXNET_DLL int MXNDArraySlice(NDArrayHandle handle,
                              mx_uint slice_end,
                              NDArrayHandle *out);
 
+MXNET_DLL int MXNDArraySlice64(NDArrayHandle handle,
+                               int64_t slice_begin,
+                               int64_t slice_end,
+                               NDArrayHandle *out);
+
 /*!
  * \brief Index the NDArray along axis 0.
  * \param handle the handle to the NDArray
@@ -800,6 +806,10 @@ MXNET_DLL int MXNDArraySlice(NDArrayHandle handle,
 MXNET_DLL int MXNDArrayAt(NDArrayHandle handle,
                           mx_uint idx,
                           NDArrayHandle *out);
+
+MXNET_DLL int MXNDArrayAt64(NDArrayHandle handle,
+                            int64_t idx,
+                            NDArrayHandle *out);
 
 /*!
  * \brief get the storage type of the array
@@ -1019,9 +1029,6 @@ MXNET_DLL int MXNDArrayGetGradState(NDArrayHandle handle, int *out);
  */
 MXNET_DLL int MXListFunctions(mx_uint *out_size,
                               FunctionHandle **out_array);
-
-MXNET_DLL int MXListFunctions64(mx_int64 *out_size,
-                                FunctionHandle **out_array);
 
 /*!
  * \brief get the function handle by name
@@ -1291,9 +1298,6 @@ MXNET_DLL int MXInvokeCachedOpEx(CachedOpHandle handle,
 MXNET_DLL int MXListAllOpNames(mx_uint *out_size,
                                const char ***out_array);
 
-MXNET_DLL int MXListAllOpNames64(mx_int64 *out_size,
-                                 const char ***out_array);
-
 /*!
  * \brief list all the available AtomicSymbolEntry
  * \param out_size the size of returned array
@@ -1302,9 +1306,6 @@ MXNET_DLL int MXListAllOpNames64(mx_int64 *out_size,
  */
 MXNET_DLL int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
                                                AtomicSymbolCreator **out_array);
-
-MXNET_DLL int MXSymbolListAtomicSymbolCreators64(mx_int64 *out_size,
-                                                 AtomicSymbolCreator **out_array);
 
 /*!
  * \brief Get the name of an atomic symbol.
@@ -1519,10 +1520,6 @@ MXNET_DLL int MXSymbolListArguments(SymbolHandle symbol,
                                     mx_uint *out_size,
                                     const char ***out_str_array);
 
-MXNET_DLL int MXSymbolListArguments64(SymbolHandle symbol,
-                                      size_t *out_size,
-                                      const char ***out_str_array);
-
 /*!
  * \brief List returns in the symbol.
  * \param symbol the symbol
@@ -1533,10 +1530,6 @@ MXNET_DLL int MXSymbolListArguments64(SymbolHandle symbol,
 MXNET_DLL int MXSymbolListOutputs(SymbolHandle symbol,
                                   mx_uint *out_size,
                                   const char ***out_str_array);
-
-MXNET_DLL int MXSymbolListOutputs64(SymbolHandle symbol,
-                                    size_t *out_size,
-                                    const char ***out_str_array);
 
 /*!
  * \brief Get number of outputs of the symbol.
@@ -1584,10 +1577,6 @@ MXNET_DLL int MXSymbolGetOutput(SymbolHandle symbol,
 MXNET_DLL int MXSymbolListAuxiliaryStates(SymbolHandle symbol,
                                           mx_uint *out_size,
                                           const char ***out_str_array);
-
-MXNET_DLL int MXSymbolListAuxiliaryStates64(SymbolHandle symbol,
-                                            size_t *out_size,
-                                            const char ***out_str_array);
 
 /*!
  * \brief Compose the symbol on other symbols.
@@ -1909,16 +1898,22 @@ MXNET_DLL int MXSymbolInferTypePartial(SymbolHandle sym,
  * \brief Convert a symbol into a quantized symbol where FP32 operators are replaced with INT8
  * \param sym_handle symbol to be converted
  * \param ret_sym_handle quantized symbol result
- * \param num_excluded_symbols number of layers excluded from being quantized in the input symbol
- * \param excluded_symbols op names to be excluded from being quantized
+ * \param dev_type device type
+ * \param num_excluded_sym_names number of layers excluded from being quantized in the input symbol
+ * \param excluded_sym_names node names to be excluded from being quantized
+ * \param num_excluded_op_names number of operators excluded from being quantized in the input symbol
+ * \param excluded_op_names operator names to be excluded from being quantized
  * \param num_offline number of parameters that are quantized offline
  * \param offline_params array of c strings representing the names of params quantized offline
  * \param quantized_dtype the quantized destination type for input data
  * \param calib_quantize **Deprecated**. quantize op will always be calibrated if could
  */
 MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_handle,
-                               const mx_uint num_excluded_symbols,
-                               const char **excluded_symbols,
+                               const int* dev_type,
+                               const mx_uint num_excluded_sym_names,
+                               const char **excluded_sym_names,
+                               const mx_uint num_excluded_op_names,
+                               const char **excluded_op_names,
                                const mx_uint num_offline, const char **offline_params,
                                const char *quantized_dtype, const bool calib_quantize);
 

@@ -932,14 +932,24 @@ fixed-size items.
             )
             handle = NDArrayHandle()
             flat_self = self.reshape(-1)
-            check_call(
-                _LIB.MXNDArraySlice(
-                    flat_self.handle,
-                    mx_uint(flat_begin),
-                    mx_uint(flat_end),
-                    ctypes.byref(handle),
+            if sys.version_info[0] > 2 and _int64_enabled():
+                check_call(
+                    _LIB.MXNDArraySlice64(
+                        flat_self.handle,
+                        ctypes.c_int64(flat_begin),
+                        ctypes.c_int64(flat_end),
+                        ctypes.byref(handle),
+                    )
                 )
-            )
+            else:
+                check_call(
+                    _LIB.MXNDArraySlice(
+                        flat_self.handle,
+                        ctypes.c_uint32(flat_begin),
+                        ctypes.c_uint32(flat_end),
+                        ctypes.byref(handle),
+                    )
+                )
             sliced_shape = self._basic_indexing_sliced_shape(slc_key, self.shape)
             sliced = NDArray(handle=handle, writable=self.writable).reshape(sliced_shape)
         else:
@@ -1235,8 +1245,12 @@ fixed-size items.
             if idx < 0:
                 raise IndexError('index %d is out of bounds for axis 0 with size %d'
                                  % (idx-length, length))
-        check_call(_LIB.MXNDArrayAt(
-            self.handle, mx_uint(idx), ctypes.byref(handle)))
+        if sys.version_info[0] > 2 and _int64_enabled():
+            check_call(_LIB.MXNDArrayAt64(
+                self.handle, ctypes.c_int64(idx), ctypes.byref(handle)))
+        else:
+            check_call(_LIB.MXNDArrayAt(
+                self.handle, ctypes.c_uint32(idx), ctypes.byref(handle)))
         return self.__class__(handle=handle, writable=self.writable)
 
     def reshape(self, *shape, **kwargs):

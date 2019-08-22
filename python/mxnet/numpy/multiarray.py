@@ -44,7 +44,8 @@ from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'add', 'subtract', 'multiply', 'divide',
-           'mod', 'power', 'tensordot', 'linspace', 'expand_dims', 'tile', 'arange', 'split']
+           'mod', 'power', 'tensordot', 'linspace', 'expand_dims', 'tile', 'arange', 'split',
+           'concatenate', 'stack']
 
 
 # This function is copied from ndarray.py since pylint
@@ -1853,3 +1854,47 @@ def split(ary, indices_or_sections, axis=0):
         If `indices_or_sections` is given as an integer, but
         a split does not result in equal division."""
     return _mx_nd_np.split(ary, indices_or_sections, axis=axis)
+
+
+@set_module('mxnet.numpy')
+def concatenate(seq, axis=0, out=None):
+    """Join a sequence of arrays along an existing axis.
+    Parameters
+    ----------
+    a1, a2, ... : sequence of array_like
+        The arrays must have the same shape, except in the dimension
+        corresponding to `axis` (the first, by default).
+    axis : int, optional
+        The axis along which the arrays will be joined.  If axis is None,
+        arrays are flattened before use.  Default is 0.
+    out : ndarray, optional
+        If provided, the destination to place the result. The shape must be
+        correct, matching that of what concatenate would have returned if no
+        out argument were specified.
+    Returns
+    -------
+    res : ndarray
+        The concatenated array.
+    """
+    return _mx_nd_np.concatenate(seq, axis=axis, out=out)
+
+
+@set_module('mxnet.numpy')
+def stack(arrays, axis=0, out=None):
+    """Join a sequence of arrays along a new axis.
+        The axis parameter specifies the index of the new axis in the dimensions of the result.
+        For example, if `axis=0` it will be the first dimension and if `axis=-1` it will be the last dimension.
+    Parameters
+    ----------
+    arrays : sequence of array_like
+        Each array must have the same shape.
+    axis : int, optional
+        The axis in the result array along which the input arrays are stacked.
+    out : ndarray, optional
+        If provided, the destination to place the result. The shape must be correct,
+        matching that of what stack would have returned if no out argument were specified.
+    Returns
+    -------
+    stacked : ndarray
+        The stacked array has one more dimension than the input arrays."""
+    return _mx_nd_np.stack(arrays, axis=axis, out=out)
