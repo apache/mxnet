@@ -976,6 +976,28 @@ class HybridBlock(Block):
         # pylint: disable= invalid-name
         raise NotImplementedError
 
+    def optimize_for(self, backend, **kwargs):
+        """Partition Block and optimize it for a given backend
+
+        Parameters
+        ----------
+        backend : str
+            The name of the backend, as registered in `SubgraphBackendRegistry`
+
+        kwargs : Optional arguments
+            Passed on to `PrePartition` function of `SubgraphProperty`
+        
+        Returns
+        -------
+        ret : SymbolBlock containing the partitioned symbol
+        """
+        inputs, sym = self._cached_graph
+
+        #TODO: partition symbol
+
+        ret = SymbolBlock(sym,inputs)
+        return ret
+    
 def _common_prefix(names):
     """Get the common prefix for all names"""
     if not names:
