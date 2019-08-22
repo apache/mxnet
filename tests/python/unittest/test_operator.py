@@ -1565,7 +1565,6 @@ def check_nearest_upsampling_with_shape(shapes, scale, root_scale):
     exe.backward(exe.outputs)
     for k in range(len(shapes)):
         name = 'arg_%d'%k
-        ame = 'arg_%d'%k
         out = arr_grad[name].asnumpy()
         root_h = root_w = 1
         if type(root_scale) is int:
