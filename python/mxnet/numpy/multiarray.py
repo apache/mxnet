@@ -45,7 +45,7 @@ from ..ndarray.numpy import _internal as _npi
 
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'add', 'subtract', 'multiply', 'divide',
            'mod', 'power', 'tensordot', 'linspace', 'expand_dims', 'tile', 'arange', 'split',
-           'concatenate', 'stack']
+           'concatenate', 'stack', 'deg2rad']
 
 
 # This function is copied from ndarray.py since pylint
@@ -1898,3 +1898,39 @@ def stack(arrays, axis=0, out=None):
     stacked : ndarray
         The stacked array has one more dimension than the input arrays."""
     return _mx_nd_np.stack(arrays, axis=axis, out=out)
+
+
+@set_module('mxnet.numpy')
+def deg2rad(x, out=None):
+    r"""
+    deg2rad(x, out=None)
+
+    Convert angles from degrees to radians.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Angles in degrees.
+    out : ndarray or None, optional
+        A location into which the result is stored. If not provided or `None`,
+        a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        The corresponding angle in radians.
+        This is a scalar if `x` is a scalar.
+
+    Notes
+    -----
+    "deg2rad(x)" is "x * pi / 180".
+
+    This function differs from the original numpy.arange in the following aspects:
+        - Only support float32 and float64.
+        - `out` must be in the same size of input.
+
+    Examples
+    --------
+    >>> np.deg2rad(180)
+    3.1415927
+    """
+    return _mx_nd_np.deg2rad(x, out=out)

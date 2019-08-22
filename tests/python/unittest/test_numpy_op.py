@@ -931,6 +931,55 @@ def test_np_stack():
                 assert same(mx_out.asnumpy(), np_out)
 
 
+@with_seed()
+@use_np
+def test_np_deg2rad():
+    class TestDeg2rad(HybridBlock):
+        def __init__(self):
+            super(TestDeg2rad, self).__init__()
+
+        def hybrid_forward(self, F, x):
+            return F.np.deg2rad(x)
+
+    types = ['float64', 'float32']
+    for hybridize in [True, False]:
+        for shape in [(),
+                      (1,),
+                      (1, 1),
+                      (1, 2, 3),
+                      (1, 0),
+                      (2, 0, 3)
+                      ]:
+            for oneType in types:
+                rtol=1e-3
+                atol=1e-5
+                test_deg2rad = TestDeg2rad()
+                if hybridize:
+                    test_deg2rad.hybridize()
+                x = rand_ndarray(shape, dtype=oneType).as_np_ndarray()
+                x.attach_grad()
+                np_out = _np.deg2rad(x.asnumpy())
+                with mx.autograd.record():
+                    mx_out = test_deg2rad(x)
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol, atol)
+                mx_out.backward()
+                import math
+                np_backward = math.pi / 180
+                assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
+
+                mx_out = np.deg2rad(x)
+                np_out = _np.deg2rad(x.asnumpy())
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol, atol)
+
+                # Test AddTo Request
+                with mx.autograd.record():
+                    a = test_deg2rad(x)
+                    b = test_deg2rad(x)
+                mx.autograd.backward([a, b])
+                assert_almost_equal(x.grad.asnumpy(), 2 * np_backward, rtol=rtol, atol=atol)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
