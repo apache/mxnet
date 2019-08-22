@@ -190,123 +190,123 @@ def test_power_operators():
     assert result.shape == a.shape
 
 
-def test_sequence_mask():
-    # Sequence Mask input [max_sequence_length, batch_size]
-    # test with input batch_size = 2
-    a = nd.arange(0, LARGE_X * 2).reshape(LARGE_X, 2)
+# def test_sequence_mask():
+#     # Sequence Mask input [max_sequence_length, batch_size]
+#     # test with input batch_size = 2
+#     a = nd.arange(0, LARGE_X * 2).reshape(LARGE_X, 2)
 
-    # test as identity operator
-    b = nd.SequenceMask(a)
-    assert b[-1][0] == a[-1][0]
-    assert b.shape == a.shape
+#     # test as identity operator
+#     b = nd.SequenceMask(a)
+#     assert b[-1][0] == a[-1][0]
+#     assert b.shape == a.shape
 
-    # test with default mask
-    b = nd.SequenceMask(a, sequence_length=nd.array([1, 1]),
-                        use_sequence_length=True)
-    assert b[0][1] == a[0][1]  # first sequence of each batch kept
-    assert b[-1][-1] != a[-1][-1]  # rest sequences masked
-    assert b[-1][-1] == 0
+#     # test with default mask
+#     b = nd.SequenceMask(a, sequence_length=nd.array([1, 1]),
+#                         use_sequence_length=True)
+#     assert b[0][1] == a[0][1]  # first sequence of each batch kept
+#     assert b[-1][-1] != a[-1][-1]  # rest sequences masked
+#     assert b[-1][-1] == 0
 
-    # test with mask value
-    b = nd.SequenceMask(a, sequence_length=nd.array([1, 1]),
-                        use_sequence_length=True, value=-1)
-    assert b[-1][-1] == -1
-
-
-def test_sequence_reverse():
-    a = nd.arange(0, LARGE_X * 2).reshape(LARGE_X, 2)
-    # test as reverse operator
-    b = nd.SequenceReverse(a)
-    assert b[-1][0] == a[0][0]
-    assert b.shape == a.shape
-
-    # test with sequence length
-    b = nd.SequenceReverse(a, sequence_length=nd.array([2, 3]),
-                           use_sequence_length=True)
-    assert b[1][0] == a[0][0]  # check if reversed
-    assert b[-1][0] == a[-1][0]  # check if intact
-    assert b.shape == a.shape
+#     # test with mask value
+#     b = nd.SequenceMask(a, sequence_length=nd.array([1, 1]),
+#                         use_sequence_length=True, value=-1)
+#     assert b[-1][-1] == -1
 
 
-def test_sequence_last():
-    a = nd.arange(0, LARGE_X * 2).reshape(LARGE_X, 2)
+# def test_sequence_reverse():
+#     a = nd.arange(0, LARGE_X * 2).reshape(LARGE_X, 2)
+#     # test as reverse operator
+#     b = nd.SequenceReverse(a)
+#     assert b[-1][0] == a[0][0]
+#     assert b.shape == a.shape
 
-    # test if returns last sequence
-    b = nd.SequenceLast(a)
-    assert_almost_equal(b, a[-1])
-    assert b.shape == (2,)
-
-    # test with sequence length
-    # parameter sequence_length - NDArray with shape (batch_size)
-    # (2,3) indicates 2nd sequence from batch 1 and 3rd sequence from batch 2
-    b = nd.SequenceLast(a, sequence_length=mx.nd.array([2, 3]),
-                        use_sequence_length=True)
-    # check if it takes 2nd sequence from the first batch
-    assert b[0] == a[1][0]
+#     # test with sequence length
+#     b = nd.SequenceReverse(a, sequence_length=nd.array([2, 3]),
+#                            use_sequence_length=True)
+#     assert b[1][0] == a[0][0]  # check if reversed
+#     assert b[-1][0] == a[-1][0]  # check if intact
+#     assert b.shape == a.shape
 
 
-def test_softmax_cross_entropy():
-    # SoftmaxCrossEntropy only accepts 2D data
-    # dtype of input data, mxnet cross entropy set explicitly to float64
-    # numpy implicitly takes care of double precision
-    batch_size = 2
-    num_labels = LARGE_X
-    input_data = mx.nd.ones((batch_size, num_labels), dtype="float64")
-    input_label = mx.nd.zeros((batch_size,), dtype="float64")
+# def test_sequence_last():
+#     a = nd.arange(0, LARGE_X * 2).reshape(LARGE_X, 2)
 
-    true_softmax = np.full((batch_size, num_labels), (1 / num_labels))
-    # use 1/batch_size when softmax axis=0
-    # here 1/num_labels since softmax_cross_entropy uses default axis
-    # by default axis=1
-    np_one_hot_label = np.zeros((batch_size, num_labels))
-    np_one_hot_label[:, 0] = 1
+#     # test if returns last sequence
+#     b = nd.SequenceLast(a)
+#     assert_almost_equal(b, a[-1])
+#     assert b.shape == (2,)
 
-    true_softmax_cross_entropy = np.sum(-np.log(true_softmax) *
-                                        np_one_hot_label)
-    mx_softmax_cross_entropy = mx.nd.softmax_cross_entropy(input_data,
-                                                           input_label,
-                                                           dtype="float64")
-    assert_almost_equal(mx_softmax_cross_entropy.asnumpy(),
-                        true_softmax_cross_entropy, rtol=1e-3, atol=1e-5)
+#     # test with sequence length
+#     # parameter sequence_length - NDArray with shape (batch_size)
+#     # (2,3) indicates 2nd sequence from batch 1 and 3rd sequence from batch 2
+#     b = nd.SequenceLast(a, sequence_length=mx.nd.array([2, 3]),
+#                         use_sequence_length=True)
+#     # check if it takes 2nd sequence from the first batch
+#     assert b[0] == a[1][0]
 
 
-def test_index_copy():
-    x = mx.nd.zeros(LARGE_X)
-    t = mx.nd.array([-1])
-    index = mx.nd.array([LARGE_X - 1])
+# def test_softmax_cross_entropy():
+#     # SoftmaxCrossEntropy only accepts 2D data
+#     # dtype of input data, mxnet cross entropy set explicitly to float64
+#     # numpy implicitly takes care of double precision
+#     batch_size = 2
+#     num_labels = LARGE_X
+#     input_data = mx.nd.ones((batch_size, num_labels), dtype="float64")
+#     input_label = mx.nd.zeros((batch_size,), dtype="float64")
 
-    x = mx.nd.contrib.index_copy(x, index, t)
-    assert x[-1] == t[-1]
+#     true_softmax = np.full((batch_size, num_labels), (1 / num_labels))
+#     # use 1/batch_size when softmax axis=0
+#     # here 1/num_labels since softmax_cross_entropy uses default axis
+#     # by default axis=1
+#     np_one_hot_label = np.zeros((batch_size, num_labels))
+#     np_one_hot_label[:, 0] = 1
+
+#     true_softmax_cross_entropy = np.sum(-np.log(true_softmax) *
+#                                         np_one_hot_label)
+#     mx_softmax_cross_entropy = mx.nd.softmax_cross_entropy(input_data,
+#                                                            input_label,
+#                                                            dtype="float64")
+#     assert_almost_equal(mx_softmax_cross_entropy.asnumpy(),
+#                         true_softmax_cross_entropy, rtol=1e-3, atol=1e-5)
+
+
+# def test_index_copy():
+#     x = mx.nd.zeros(LARGE_X)
+#     t = mx.nd.array([-1])
+#     index = mx.nd.array([LARGE_X - 1])
+
+#     x = mx.nd.contrib.index_copy(x, index, t)
+#     assert x[-1] == t[-1]
 
 
 # TODO: correctness of prelu (currently flaky)
-def test_leaky_relu():
-    a = -1*mx.nd.ones(LARGE_X)
+# def test_leaky_relu():
+#     a = -1*mx.nd.ones(LARGE_X)
 
-    def test_leaky():
-        res = mx.nd.LeakyReLU(a, act_type="leaky", slope=0.3)
-        assert res[-1][-1].asnumpy() == 0.3*a[-1][-1].asnumpy()
+#     def test_leaky():
+#         res = mx.nd.LeakyReLU(a, act_type="leaky", slope=0.3)
+#         assert res[-1][-1].asnumpy() == 0.3*a[-1][-1].asnumpy()
 
-    def test_elu():
-        res = mx.nd.LeakyReLU(a, act_type="elu", slope=0.3)
-        assert res[-1][-1].asnumpy() == 0.3*(np.exp(a[-1][-1].asnumpy())-1)
+#     def test_elu():
+#         res = mx.nd.LeakyReLU(a, act_type="elu", slope=0.3)
+#         assert res[-1][-1].asnumpy() == 0.3*(np.exp(a[-1][-1].asnumpy())-1)
 
-    def test_selu():
-        lam = 1.0507009873554804934193349852946
-        alpha = 1.6732632423543772848170429916717
-        res = mx.nd.LeakyReLU(a, act_type="selu")
-        assert res[-1][-1].asnumpy() == (lam * alpha * (np.exp(a[-1][-1].asnumpy())-1))
+#     def test_selu():
+#         lam = 1.0507009873554804934193349852946
+#         alpha = 1.6732632423543772848170429916717
+#         res = mx.nd.LeakyReLU(a, act_type="selu")
+#         assert res[-1][-1].asnumpy() == (lam * alpha * (np.exp(a[-1][-1].asnumpy())-1))
 
-    def test_rrelu():
-        lower = 0.125
-        upper = 0.333999991
-        res = mx.nd.LeakyReLU(a, act_type="rrelu")
-        assert res[-1][-1].asnumpy() == (lower + upper) / 2 * a[-1][-1].asnumpy()
+#     def test_rrelu():
+#         lower = 0.125
+#         upper = 0.333999991
+#         res = mx.nd.LeakyReLU(a, act_type="rrelu")
+#         assert res[-1][-1].asnumpy() == (lower + upper) / 2 * a[-1][-1].asnumpy()
 
-    test_leaky()
-    test_elu()
-    test_selu()
-    test_rrelu()
+#     test_leaky()
+#     test_elu()
+#     test_selu()
+#     test_rrelu()
 
 # TODO: correctness of layernorm
 # numpy implementation for large vector is flaky
@@ -325,43 +325,43 @@ def test_layer_norm():
 # TODO: correctness of dropout
 # currently only test for dropout to work
 # since testing for correctness involves flakiness issue #14288
-def test_dropout():
-    shape = (LARGE_X, )
-    x = mx.sym.var('data')
-    y = mx.sym.Dropout(x, p=1, cudnn_off=True)
-    exe = y.simple_bind(ctx=default_context(), data=shape)
-    exe.arg_arrays[0][:] = 1
-    out = exe.forward(is_train=True)
-    out[0].wait_to_read()
+# def test_dropout():
+#     shape = (LARGE_X, )
+#     x = mx.sym.var('data')
+#     y = mx.sym.Dropout(x, p=1, cudnn_off=True)
+#     exe = y.simple_bind(ctx=default_context(), data=shape)
+#     exe.arg_arrays[0][:] = 1
+#     out = exe.forward(is_train=True)
+#     out[0].wait_to_read()
 
 
-def test_activation():
-    a = mx.nd.ones(LARGE_X)
-    test_x = -2
-    a[-1] = test_x
+# def test_activation():
+#     a = mx.nd.ones(LARGE_X)
+#     test_x = -2
+#     a[-1] = test_x
 
-    # Hyperbolic tangent (tanh)
-    # y = (exp(x)-exp(-x))/(exp(x)+exp(-x))
-    a = mx.nd.Activation(a, act_type="tanh")
-    tanh_x = (np.exp(-2) - np.exp(2)) / (np.exp(-2) + np.exp(2))
-    assert a[-1] == tanh_x
+#     # Hyperbolic tangent (tanh)
+#     # y = (exp(x)-exp(-x))/(exp(x)+exp(-x))
+#     a = mx.nd.Activation(a, act_type="tanh")
+#     tanh_x = (np.exp(-2) - np.exp(2)) / (np.exp(-2) + np.exp(2))
+#     assert a[-1] == tanh_x
 
-    # Recitified Linear Unit (relu)
-    # y = max(x,0)
-    a = mx.nd.Activation(a, act_type="relu")
-    assert a[-1] == 0
+#     # Recitified Linear Unit (relu)
+#     # y = max(x,0)
+#     a = mx.nd.Activation(a, act_type="relu")
+#     assert a[-1] == 0
 
-    # Sigmoid
-    # y = x/(1+abs(x))
-    a = mx.nd.Activation(a, act_type="sigmoid")
-    sigmoid_x = 1 / (1 + math.exp(-test_x))
-    assert a[-1] == sigmoid_x
+#     # Sigmoid
+#     # y = x/(1+abs(x))
+#     a = mx.nd.Activation(a, act_type="sigmoid")
+#     sigmoid_x = 1 / (1 + math.exp(-test_x))
+#     assert a[-1] == sigmoid_x
 
-    # Soft Sign
-    # y = 1/(1+exp(-x))
-    a = mx.nd.Activation(a, act_type="softsign")
-    softsign_x = test_x / (1 + abs(test_x))
-    assert a[-1] == softsign_x
+#     # Soft Sign
+#     # y = 1/(1+exp(-x))
+#     a = mx.nd.Activation(a, act_type="softsign")
+#     softsign_x = test_x / (1 + abs(test_x))
+#     assert a[-1] == softsign_x
 
 
 # TODO: correctness of batchnorm
