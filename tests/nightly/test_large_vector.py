@@ -18,7 +18,7 @@
 import numpy as np
 import mxnet as mx
 
-from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d
+from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, create_vector
 from mxnet import gluon, nd
 from tests.python.unittest.common import with_seed
 
@@ -85,23 +85,16 @@ def test_elementwise():
     a = nd.ones(shape=LARGE_X)
     b = nd.ones(shape=LARGE_X)
     res = a + b
-    assert np.sum(res[-1].asnumpy() == 2) == a.shape[1]
+    assert res[-1].asnumpy() == 2
     res = a + 1
-    assert np.sum(res[-1].asnumpy() == 2) == a.shape[1]
-    res = nd.sqrt(a + 3)
-    assert np.sum(res[-1].asnumpy() == 2) == a.shape[1]
+    assert res[-1].asnumpy() == 2
+    res = nd.sqrt(a + 8)
+    assert res[-1].asnumpy() == 3
 
 
 def test_reduce():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     assert nd.sum(a).asnumpy() == a.shape[0] * a.shape[1]
-
-
-def test_FullyConnected():
-    a = nd.ones(shape=(LARGE_X, SMALL_Y))
-    b = nd.ones(shape=(SMALL_Y, SMALL_Y))
-    res = nd.FullyConnected(a, b, num_hidden=b.shape[1], no_bias=True)
-    assert np.sum(res[-1].asnumpy() == SMALL_Y) == b.shape[1]
 
 
 def test_broadcast():
@@ -116,7 +109,7 @@ def test_broadcast():
 def test_clip():
     a = nd.arange(0, LARGE_X)
     res = nd.clip(a, a_min=100, a_max=1000)
-    assert np.sum(res[-1].asnumpy() == 1000) == 101
+    assert np.sum(res[-1].asnumpy() == 1000) == 1
 
 
 def test_argmin():
@@ -137,12 +130,6 @@ def test_take():
     idx = nd.arange(LARGE_X - 1000, LARGE_X)
     res = nd.take(a, idx)
     assert np.sum(res.asnumpy() == 1) == res.shape[0]
-
-
-def test_slice():
-    a = nd.ones(shape=(2, LARGE_X))
-    res = nd.slice(a, begin=(1, LARGE_X-1000000000), end=(2, LARGE_X))
-    assert np.sum(res[-1].asnumpy() == 1) == res.shape[1]
 
 
 def test_slice_assign():
@@ -262,13 +249,6 @@ def test_unravel_index():
     assert (indices_2d.asnumpy() == np.array(original_2d_indices)).all()
 
 
-def create_large_vector(size, dtype=np.int64):
-    a = nd.arange(0, size, dtype=dtype)
-    # Implicitly calling nd.waitall()
-    assert a[0] == 0
-    return a
-
-
 def test_transpose():
     b = nd.arange(0, LARGE_X, dtype=np.int64).reshape(1, LARGE_X)
     t = b.T
@@ -285,27 +265,27 @@ def test_swapaxes():
 
 def test_flip():
     b = nd.arange(0, LARGE_X, dtype=np.int64).reshape(1, LARGE_X)
-    t = nd.flip(b, axis=0)
-    assert t.shape == (LARGE_X, 1)
-    assert t[-1, :].asnumpy() == 0
+    t = nd.flip(b, axis=1)
+    assert t.shape == (1, LARGE_X)
+    assert t[-1, -1].asnumpy() == 0
 
 
 def test_softmax():
-    input_data = mx.nd.ones(2, LARGE_X)
-    true_output = np.full(LARGE_X, 0.5)
+    input_data = nd.ones((2, LARGE_X))
     output = nd.softmax(input_data, axis=0)
-    assert_almost_equal(output.asnumpy(), true_output, rtol=1e-5, atol=1e-5)
+    assert output[0][0] == 0.5
+    assert output[-1][-1] == 0.5
 
 
 def test_argsort():
-    b = create_large_vector(size=LARGE_X)
+    b = create_vector(size=LARGE_X)
     s = nd.argsort(b, axis=0, is_ascend=False, dtype=np.int64)
     mx.nd.waitall()
     assert (s[0].asnumpy() == (LARGE_X - 1)).all()
 
 
 def test_sort():
-    b = create_large_vector(size=LARGE_X)
+    b = create_vector(size=LARGE_X)
     s = nd.sort(b, axis=0, is_ascend=False)
     assert np.sum(s[-1][SMALL_Y//2:SMALL_Y].asnumpy() == 0).all()
     s = nd.sort(b, is_ascend=True)
@@ -313,7 +293,7 @@ def test_sort():
 
 
 def test_topk():
-    b = create_large_vector(size=LARGE_X)
+    b = create_vector(size=LARGE_X)
     k = nd.topk(b, k=10, axis=0, dtype=np.int64)
     assert np.sum(k.asnumpy() == (LARGE_X - 1)) == SMALL_Y
     ind, val = mx.nd.topk(b, k=3, axis=0, dtype=np.int64, ret_typ="both", is_ascend=False)
