@@ -377,7 +377,6 @@ MSHADOW_FORCE_INLINE void TopKSort(const Tensor<gpu, 1, DType>& dat,
    * \param resource temporary resource handler
    * \param src the Source blob
    * \param ret the destination blobs
-   * \param k the K elements to keep
    * \param param the topk parameters
    * \tparam xpu the device type.
    * \tparam DType type of the output value/mask.
