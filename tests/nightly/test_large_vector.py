@@ -190,27 +190,27 @@ def test_power_operators():
     assert result.shape == a.shape
 
 
-# def test_sequence_mask():
-#     # Sequence Mask input [max_sequence_length, batch_size]
-#     # test with input batch_size = 2
-#     a = nd.arange(0, LARGE_X * 2).reshape(LARGE_X, 2)
+def test_sequence_mask():
+    # Sequence Mask input [max_sequence_length, batch_size]
+    # test with input batch_size = 2
+    a = nd.arange(0, LARGE_X * 2).reshape(LARGE_X, 2)
 
-#     # test as identity operator
-#     b = nd.SequenceMask(a)
-#     assert b[-1][0] == a[-1][0]
-#     assert b.shape == a.shape
+    # test as identity operator
+    b = nd.SequenceMask(a)
+    assert b[-1][0] == a[-1][0]
+    assert b.shape == a.shape
 
-#     # test with default mask
-#     b = nd.SequenceMask(a, sequence_length=nd.array([1, 1]),
-#                         use_sequence_length=True)
-#     assert b[0][1] == a[0][1]  # first sequence of each batch kept
-#     assert b[-1][-1] != a[-1][-1]  # rest sequences masked
-#     assert b[-1][-1] == 0
+    # test with default mask
+    b = nd.SequenceMask(a, sequence_length=nd.array([1, 1]),
+                        use_sequence_length=True)
+    assert b[0][1] == a[0][1]  # first sequence of each batch kept
+    assert b[-1][-1] != a[-1][-1]  # rest sequences masked
+    assert b[-1][-1] == 0
 
-#     # test with mask value
-#     b = nd.SequenceMask(a, sequence_length=nd.array([1, 1]),
-#                         use_sequence_length=True, value=-1)
-#     assert b[-1][-1] == -1
+    # test with mask value
+    b = nd.SequenceMask(a, sequence_length=nd.array([1, 1]),
+                        use_sequence_length=True, value=-1)
+    assert b[-1][-1] == -1
 
 
 # def test_sequence_reverse():
@@ -233,7 +233,7 @@ def test_power_operators():
 
 #     # test if returns last sequence
 #     b = nd.SequenceLast(a)
-#     assert_almost_equal(b, a[-1])
+#     assert_almost_equal(b.asnumpy(), a[-1].asnumpy())
 #     assert b.shape == (2,)
 
 #     # test with sequence length

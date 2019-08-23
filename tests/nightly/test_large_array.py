@@ -571,7 +571,7 @@ def test_sequence_last():
 
     # test if returns last sequence
     b = nd.SequenceLast(a)
-    assert_almost_equal(b, a[-1])  # only checks for (2,SMALL_Y) tensor
+    assert_almost_equal(b.asnumpy(), a[-1].asnumpy())  # only checks for (2,SMALL_Y) tensor
     assert b.shape == (2, SMALL_Y)
 
     # test with sequence length
