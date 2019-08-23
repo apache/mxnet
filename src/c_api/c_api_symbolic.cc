@@ -1280,8 +1280,8 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
     g = ApplyPass(std::move(g), "BuildSubgraph");
     g.attrs.erase("subgraph_property");
     property->PostPartition(g);
-    s->outputs = g.outputs;
   }
+  s->outputs = g.outputs;
   *ret_sym_handle = s;
   API_END_HANDLE_ERROR(delete s);
 }
