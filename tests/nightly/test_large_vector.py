@@ -64,7 +64,7 @@ def test_ndarray_random_generalized_negative_binomial():
 
 @with_seed()
 def test_ndarray_random_multinomial():
-    a = nd.random.multinomial(create_large_vector(LARGE_X))
+    a = nd.random.multinomial(nd.random.uniform(shape=LARGE_X))
     assert a[-1] >= 0.
     assert a.shape[0] == 1
 
