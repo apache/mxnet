@@ -165,6 +165,7 @@ def _test_subgraph_exe(subgraph_backend):
                                                      c_str_array(op_names)))
         part_sym = sym.optimize_for(subgraph_backend)
         check_call(_LIB.MXRemoveSubgraphPropertyOpNames(c_str(subgraph_backend)))
+
         exe2 = part_sym.simple_bind(ctx=mx.current_context(), grad_req='null')
         for name in input_names:
             if name in exe2.arg_dict:
@@ -200,6 +201,7 @@ def _test_subgraph_exe(subgraph_backend):
                                                      c_str_array(op_names)))
         part_sym = sym.optimize_for(subgraph_backend, exe1.arg_dict)
         check_call(_LIB.MXRemoveSubgraphPropertyOpNames(c_str(subgraph_backend)))
+
         exe2 = part_sym.simple_bind(ctx=mx.current_context(), grad_req='null')
         for name in input_names:
             if name in exe2.arg_dict:
@@ -231,6 +233,7 @@ def _test_subgraph_exe(subgraph_backend):
                                                      c_str_array(op_names)))
         part_sym = sym.optimize_for(subgraph_backend)
         check_call(_LIB.MXRemoveSubgraphPropertyOpNames(c_str(subgraph_backend)))
+
         exe2 = part_sym.bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
         exe2.forward()
 
@@ -256,6 +259,7 @@ def _test_subgraph_exe(subgraph_backend):
                                                      c_str_array(op_names)))
         part_sym = sym.optimize_for(subgraph_backend, arg_array)
         check_call(_LIB.MXRemoveSubgraphPropertyOpNames(c_str(subgraph_backend)))
+
         exe2 = part_sym.bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
         exe2.forward()
 
@@ -272,9 +276,9 @@ def _test_subgraph_exe(subgraph_backend):
         _check_subgraph_exe3(sym, subgraph_backend, op_names)
         _check_subgraph_exe4(sym, subgraph_backend, op_names)
         _check_subgraph_exe5(sym, subgraph_backend, op_names)
-        # _check_subgraph_exe6(sym, subgraph_backend, op_names)
+        _check_subgraph_exe6(sym, subgraph_backend, op_names)
         _check_subgraph_exe7(sym, subgraph_backend, op_names)
-        # _check_subgraph_exe8(sym, subgraph_backend, op_names)
+        _check_subgraph_exe8(sym, subgraph_backend, op_names)
 
     def test_network_structure_1(subgraph_backend):
         data1 = mx.sym.var('data1', shape=(2, 3, 10, 10))

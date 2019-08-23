@@ -1438,7 +1438,8 @@ class Symbol(SymbolBase):
 
 
     def optimize_for(self, backend, args=None, **kwargs):
-        """Partition symbol and optimize it for a given backend
+        """Partitions current symbol and optimizes it for a given backend,
+        returns new partitioned symbol.
 
         Parameters
         ----------
@@ -1446,12 +1447,13 @@ class Symbol(SymbolBase):
             The name of backend, as registered in `SubgraphBackendRegistry`
 
         args : list of NDArray or dict of str to NDArray, optional
-            Input arguments to the symbol.
+            Input arguments to the symbol, required to infer shapes/types before partitioning
+
             - If type is a list of `NDArray`, the order is the same as that of `list_arguments()`.
             - If type is a dict of str to `NDArray`, then it maps the name of arguments
               to the corresponding `NDArray`.
 
-        kwargs : Optional arguments
+        kwargs : optional arguments
             Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
 
         Returns
