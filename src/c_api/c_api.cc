@@ -329,7 +329,7 @@ int MXLoadLib(const char *path) {
       // return type void
     };
 
-    //check if operator is already registered
+    // check if operator is already registered
     const nnvm::Op *regOpPtr = dmlc::Registry<nnvm::Op>::Get()->Find(name);
     if (regOpPtr == nullptr) {
       // re-register op in MXNet using lambda converter functions
