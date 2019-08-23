@@ -19,8 +19,8 @@
 
 /*!
  * Copyright (c) 2017 by Contributors
- * \file softmax.cu
- * \brief GPU Implementation of softmax
+ * \file softmin.cu
+ * \brief GPU Implementation of softmin
  */
 #include "./softmax-inl.h"
 #include "../tensor/elemwise_unary_op.h"
@@ -28,12 +28,12 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(softmax)
-.set_attr<FCompute>("FCompute<gpu>", SoftmaxCompute<gpu, mxnet_op::softmax_fwd>);
+NNVM_REGISTER_OP(softmin)
+.set_attr<FCompute>("FCompute<gpu>", SoftmaxCompute<gpu, mxnet_op::softmax_fwd, true>);
 
-NNVM_REGISTER_OP(_backward_softmax)
+NNVM_REGISTER_OP(_backward_softmin)
 .set_attr<FCompute>("FCompute<gpu>", SoftmaxGradCompute<gpu, op::mshadow_op::mul,
-                                                        mxnet_op::softmax_bwd>);
+                                                        mxnet_op::softmax_bwd, true>);
 
 }  // namespace op
 }  // namespace mxnet

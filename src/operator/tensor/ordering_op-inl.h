@@ -404,7 +404,7 @@ void TopKImpl(const RunContext &ctx,
   bool do_transpose = false;
   bool is_ascend = false;
   index_t k = 0;
-  size_t alignment = std::max(sizeof(DType), sizeof(int));
+  size_t alignment = std::max(sizeof(DType), sizeof(index_t));
   mxnet::TShape target_shape;
   ParseTopKParam(src.shape_, param,
                  &target_shape, &batch_size, &element_num, &axis, &k, &do_transpose, &is_ascend);
@@ -414,30 +414,30 @@ void TopKImpl(const RunContext &ctx,
     << element_num << ", but the selected index_t can only represent "
     << mxnet::common::MaxIntegerValue<index_t>() << " elements";
   Tensor<xpu, 3, DType> dat = src.FlatTo3D<xpu, DType>(axis, axis, s);
-  size_t temp_size = 0;
-  // Temp space needed by the gpu-based full sorts.
+  // Temp space needed by the full sorts.
+  size_t temp_size = std::max(
+      mxnet::op::SortByKeyWorkspaceSize<index_t, DType, xpu>(src.Size()),
+      mxnet::op::SortByKeyWorkspaceSize<DType, index_t, xpu>(src.Size()));
+
   temp_size = std::max(temp_size,
-    mxnet::op::SortByKeyWorkspaceSize<int, int, xpu>(src.Size()));
-  temp_size = std::max(temp_size,
-    mxnet::op::SortByKeyWorkspaceSize<int, DType, xpu>(src.Size()));
-  temp_size = std::max(temp_size,
-    mxnet::op::SortByKeyWorkspaceSize<DType, int, xpu>(src.Size()));
+      mxnet::op::SortByKeyWorkspaceSize<index_t, index_t, xpu>(src.Size()));
   // Additional temp space for gpu full sorts for batch ids.
   temp_size += PadBytes(sizeof(index_t) * src.Size(), alignment);
   // Temp space for cpu sorts.
-  temp_size = std::max(temp_size, static_cast<size_t>(sizeof(DType) * src.Size()));
+  temp_size = std::max(temp_size, sizeof(DType) * src.Size());
+
   size_t workspace_size = temp_size + PadBytes(sizeof(DType) * src.Size(), alignment)
                                     + PadBytes(sizeof(index_t) * src.Size(), alignment);
   if (param.ret_typ == topk_enum::kReturnMask) {
-    workspace_size += PadBytes(sizeof(int) * batch_size * k, alignment);
+    workspace_size += PadBytes(sizeof(index_t) * batch_size * k, alignment);
   }
   workspace = resource.get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
   char* workspace_curr_ptr = workspace.dptr_;
   sorted_dat = Tensor<xpu, 1, DType>(reinterpret_cast<DType*>(workspace_curr_ptr),
-                                      Shape1(src.Size()), s);  // contain sorted dat
+      Shape1(src.Size()), s);  // contain sorted dat
   workspace_curr_ptr += PadBytes(sizeof(DType) * src.Size(), alignment);
   indices = Tensor<xpu, 1, index_t>(reinterpret_cast<index_t*>(workspace_curr_ptr),
-                                Shape1(src.Size()), s);  // indices in the original matrix
+      Shape1(src.Size()), s);  // indices in the original matrix
   workspace_curr_ptr += PadBytes(sizeof(index_t) * src.Size(), alignment);
 
   if (param.ret_typ == topk_enum::kReturnMask) {
