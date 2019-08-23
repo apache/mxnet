@@ -126,22 +126,21 @@ void Imperative::MarkVariables(
     const std::vector<NDArray*>& gradients) {
   for (size_t i = 0; i < variables.size(); ++i) {
     std::string str_c(std::to_string(variable_count_++));
-    {
-      variables[i]->autograd_ = nnvm::NodeEntry{
-          nnvm::Symbol::CreateVariable("var" + str_c).outputs[0].node, 0, 0};
-      AGInfo &info = AGInfo::Create(variables[i]->autograd_.node);
-      info.outputs.emplace_back(variables[i]->Detach());
-      info.out_grads.emplace_back(gradients[i]->Detach());
-      info.grad_req = static_cast<OpReqType>(grad_reqs[i]);
-      info.ctx = variables[i]->ctx();
-    }
-    {
-      gradients[i]->autograd_ = nnvm::NodeEntry{
-          nnvm::Symbol::CreateVariable("grad" + str_c).outputs[0].node, 0, 0};
-      AGInfo &grad_info = AGInfo::Create(gradients[i]->autograd_.node);
-      grad_info.outputs.emplace_back(gradients[i]->Detach());
-      grad_info.ctx = gradients[i]->ctx();
-    }
+    // Add autograd storage for variables and link to the graph
+    variables[i]->autograd_ = nnvm::NodeEntry{
+        nnvm::Symbol::CreateVariable("var" + str_c).outputs[0].node, 0, 0};
+    AGInfo &info = AGInfo::Create(variables[i]->autograd_.node);
+    info.outputs.emplace_back(variables[i]->Detach());
+    info.out_grads.emplace_back(gradients[i]->Detach());
+    info.grad_req = static_cast<OpReqType>(grad_reqs[i]);
+    CHECK(info.grad_req < kOpReqTypeMax) << "gradient update request out of range";
+    info.ctx = variables[i]->ctx();
+    // Handle gradients themselves
+    gradients[i]->autograd_ = nnvm::NodeEntry{
+        nnvm::Symbol::CreateVariable("grad" + str_c).outputs[0].node, 0, 0};
+    AGInfo &grad_info = AGInfo::Create(gradients[i]->autograd_.node);
+    grad_info.outputs.emplace_back(gradients[i]->Detach());
+    grad_info.ctx = gradients[i]->ctx();
   }
 }
 

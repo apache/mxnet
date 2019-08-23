@@ -54,7 +54,8 @@ enum OpReqType {
    */
   kWriteInplace,
   /*! \brief add to the provided space */
-  kAddTo
+  kAddTo,
+  kOpReqTypeMax
 };
 
 /*!
