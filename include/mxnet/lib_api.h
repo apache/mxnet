@@ -18,10 +18,13 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
+ * Copyright (c) 2019 by Contributors
  * \file lib_api.h
  * \brief APIs to interact with libraries
+ * This API specifies function prototypes to
+ * register custom ops for library authors
  */
+
 #ifndef MXNET_LIB_API_H_
 #define MXNET_LIB_API_H_
 

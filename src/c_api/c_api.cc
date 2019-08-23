@@ -93,7 +93,10 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
 
 // NOTE: return value is added in API_END
 
-// Loads library and initializes it
+/*!
+ * \brief Loads dynamic library and initializes it
+ * \param path library path
+ */
 int MXLoadLib(const char *path) {
   API_BEGIN();
   void *lib = LibraryInitializer::Get()->lib_load(path);
@@ -122,7 +125,10 @@ int MXLoadLib(const char *path) {
   int numOps = opRegSize();
   LOG(INFO) << "Found " << numOps << " operators in library";
 
-  // loop and register each operator in the library
+  /*
+   * The library has custom operators implementation
+   * loop and register each operator in the library to NNVM
+   */
   opRegGet_t opRegGet = get_func<opRegGet_t>(lib, const_cast<char*>(MXLIB_OPREGGET_STR));
   for (int i = 0; i < numOps; i++) {
     const char* name;

@@ -18,9 +18,10 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
+ * Copyright (c) 2019 by Contributors
  * \file mylib.cc
- * \brief Sample library file
+ * \brief Sample custom operator implementation
+ * library file
  */
 
 #include <iostream>
