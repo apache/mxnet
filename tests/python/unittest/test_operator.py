@@ -1608,9 +1608,9 @@ def check_bilinear_upsampling_with_shape(data_shape, weight_shape, scale, root_s
 @with_seed()
 def test_nearest_upsampling():
     for root_scale in [1, 2, (2,3), (3,2), (1,1), (5,1), (2,2), ()]:
-        for scale in [1,2,3]:
-            for num_shape in [1,2,3]:
-                for base in [1,2,3]:
+        for scale in [1, 2, 3]:
+            for num_shape in [1, 2, 3]:
+                for base in [1, 2, 3]:
                     root_h = root_w = 1
                     if type(root_scale) is int:
                         root_h = root_w = root_scale
@@ -1619,7 +1619,7 @@ def test_nearest_upsampling():
                     elif len(root_scale) >= 2:
                         root_h = root_scale[0]
                         root_w = root_scale[1]
-                    shapes = [(1,3,base*root_h*scale**(num_shape-1-i),base*root_w*scale**(num_shape-1-i)) for i in range(num_shape)]
+                    shapes = [(1, 3, base*root_h*scale**(num_shape-1-i), base*root_w*scale**(num_shape-1-i)) for i in range(num_shape)]
                     check_nearest_upsampling_with_shape(shapes, scale, root_scale)
 
 @with_seed()
