@@ -16,5 +16,34 @@
 # under the License.
 
 # coding: utf-8
+import tvm
+
 AllTypes = ["float32", "float64", "float16", "uint8", "int8", "int32", "int64"]
 RealTypes = ["float32", "float64", "float16"]
+
+def assign_by_req(a, req):
+    b = tvm.placeholder(a.shape, name='assign_by_req_b', dtype=a.dtype)
+    if (req == "kAddTo"):
+        c = tvm.compute(a.shape, lambda *idx: a[idx] + b[idx])
+    else:
+        c = tvm.compute(a.shape, lambda *idx: a[idx])
+    return b, c
+
+
+def reduce_axes(X, axes, reducer):
+    def get_index(idx, ridx):
+        j = 0
+        k = 0
+        ret = []
+        for val in axes:
+            ret.append(idx[j] if val == 0 else ridx[k])
+            j += (val == 0)
+            k += (val != 0)
+        return tuple(ret)
+    
+    ishape = X.shape
+    odim = (len(ishape) + 1 - axes[0]) // 2
+    oshape = [tvm.var() for _ in range(odim)]
+    ridx = [tvm.reduce_axis((0, ishape[i])) for (i, val) in enumerate(axes) if val == 1]
+    ret = tvm.compute(oshape, lambda *idx: reducer(X[get_index(idx, ridx)], axis=ridx), name='ret')
+    return ret

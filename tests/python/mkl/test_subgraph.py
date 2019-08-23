@@ -49,6 +49,8 @@ config =  {
 }
 
 DATA_SHAPE=[(64, 4, 10, 10), (4, 3, 24, 24), (1, 16, 32, 32)]
+fc_post_ops_list=['relu', 'sigmoid', 'tanh', 'softrelu',
+                  'square', 'square_root', 'abs', 'exp', 'bounded_relu']
 
 def check_qsym_calibrated(qsym, out_type, name='conv'):
   quantized_op_name = 'quantized_' + name
@@ -150,9 +152,9 @@ def check_quantize(sym, data_shape, out_type, name='conv',
   ref_out = mod.get_outputs()
 
   excluded_sym_names = []
+  excluded_op_names = []
   if mx.current_context() == mx.cpu() and gluon_forward == True:
-    excluded_sym_names += ['sg_mkldnn_fully_connected_0']
-    excluded_sym_names += ['fc_softmax']
+    excluded_op_names += ['_sg_mkldnn_fully_connected']
 
   calib_data = CalibIter(batch, data_shape, 1)
 
@@ -161,6 +163,7 @@ def check_quantize(sym, data_shape, out_type, name='conv',
                                                                    aux_params=aux_params,
                                                                    ctx=mx.current_context(),
                                                                    excluded_sym_names=excluded_sym_names,
+                                                                   excluded_op_names=excluded_op_names,
                                                                    quantized_dtype=out_type,
                                                                    calib_mode='naive',
                                                                    calib_data=calib_data,
@@ -236,6 +239,12 @@ def check_quantize_whole_model_with_forward():
 @with_seed()
 def check_fusion(sym, data_shape, attrs_dict, check_fp32_fusion=True, check_quantization=True, out_types=['uint8', 'int8', 'auto']):
   if check_fp32_fusion:
+    data_min = -1.0
+    data_max = 1.0
+    if ''.join(sym.get_internals().list_outputs()).find('sqrt'):
+      check_quantization = False
+      data_min = 0
+
     sym_sg = sym.get_backend_symbol(SG_PASS_NAME)
     for name, attrs in attrs_dict.items():
       if name in config:
@@ -251,9 +260,8 @@ def check_fusion(sym, data_shape, attrs_dict, check_fp32_fusion=True, check_quan
               for attr_name, attr_value in attrs.items():
                 assert v[attr_name].lower() == attr_value.lower()
           assert found
-
     arg_shapes, _, aux_shapes = sym.infer_shape()
-    arg_array = [mx.nd.random.uniform(-1.0, 1.0, shape=shape) for shape in arg_shapes]
+    arg_array = [mx.nd.random.uniform(data_min, data_max, shape=shape) for shape in arg_shapes]
     aux_array = [mx.nd.random.uniform(shape=shape) for shape in aux_shapes]
     exe = sym.bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
     exe.forward()
@@ -625,13 +633,28 @@ def single_fc(no_bias, data_shape, flatten=True):
                                 no_bias=no_bias, flatten=flatten)
   return fc, attr
 
-def fc_relu(no_bias, data_shape, flatten=True):
-  attr = {'fc': {'with_relu': 'true'}}
+# fc + eltwise fusion case
+def fc_eltwise(no_bias, data_shape, flatten=True, alg='relu'):
+  assert alg in fc_post_ops_list
+
+  attr = {'fc': {'with_eltwise': 'true'}}
   data, weight = head_symbol(data_shape)
   fc = mx.symbol.FullyConnected(name='fc', data=data, weight=weight, num_hidden=64,
                                 no_bias=no_bias, flatten=flatten)
-  relu = mx.symbol.Activation(data=fc, name='relu', act_type="relu")
-  return relu, attr
+  if alg in ['relu', 'sigmoid', 'tanh', 'softrelu']:
+    sym = mx.symbol.Activation(data=fc, name='act', act_type=alg)
+  elif alg == 'square':
+    sym = mx.symbol.square(data=fc, name='square')
+  elif alg == 'square_root':
+    sym = mx.symbol.sqrt(data=fc, name='sqrt')
+  elif alg == 'abs':
+    sym = mx.symbol.abs(data=fc, name='abs')
+  elif alg == 'exp':
+    sym = mx.symbol.exp(data=fc, name='exp')
+  else:
+    sym = mx.symbol.clip(data=fc, name='bounded_relu', a_min=0, a_max=1.0)
+
+  return sym, attr
 
 # fc + relu can't be fusion case
 # eg.1
@@ -805,9 +828,12 @@ def test_single_fc():
 
 
 @with_seed()
-def test_fc_relu():
-  for dshape, no_bias, flatten in itertools.product(DATA_SHAPE, [True, False], [True, False]):
-    syms, attrs = fc_relu(no_bias, dshape, flatten)
+def test_fc_eltwise():
+  for dshape, no_bias, flatten, alg in itertools.product(DATA_SHAPE,
+                                                        [True, False],
+                                                        [True, False],
+                                                        fc_post_ops_list):
+    syms, attrs = fc_eltwise(no_bias, dshape, flatten, alg)
     if flatten is True:
       check_fusion(syms, dshape, attrs, check_quantization=True)
     else:
