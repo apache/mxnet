@@ -18,30 +18,20 @@
 import numpy as np
 import mxnet as mx
 
-from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, create_vector
+from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, create_vector
 from mxnet import gluon, nd
 from tests.python.unittest.common import with_seed
 
 # dimension constants
 LARGE_X = 5000000000
 MEDIUM_X = 1000000000
-LARGE_Y = 100000
-SMALL_Y = 1
 
 
 def test_slice():
     a = nd.ones(LARGE_X)
     res = nd.slice(a, begin=(LARGE_X - MEDIUM_X), end=LARGE_X)
+    assert a[0] == 1
     assert res.shape[0] == MEDIUM_X
-
-
-def test_gluon_embedding():
-    m = gluon.nn.Embedding(1, LARGE_Y)
-    m.initialize()
-    a = nd.zeros((LARGE_Y, 1))
-    b = m(a)
-    assert b.shape == (LARGE_Y, 1, LARGE_Y)
-    assert b.asnumpy().size == LARGE_X*2
 
 
 def test_ndarray_zeros():
@@ -73,7 +63,7 @@ def test_ndarray_random_randint():
     a = nd.random.randint(low_large_value, high_large_value, dtype=np.int64)
     low = mx.nd.array([low_large_value], dtype='int64')
     high = mx.nd.array([high_large_value], dtype='int64')
-    assert a.__gt__(low) and a.__lt__(high)
+    assert a > low  and a < high
 
 
 def test_ndarray_empty():
@@ -93,36 +83,22 @@ def test_elementwise():
 
 
 def test_reduce():
-    a = nd.ones(shape=(LARGE_X, SMALL_Y))
+    a = nd.ones(shape=(LARGE_X, 1))
     assert nd.sum(a).asnumpy() == a.shape[0] * a.shape[1]
 
 
-def test_broadcast():
-    a = nd.ones(shape=(LARGE_X, SMALL_Y*2))
-    b = nd.arange(0, LARGE_X).reshape(LARGE_X, 1)
-    res = nd.broadcast_to(b, shape=(b.shape[0], SMALL_Y*2))
-    assert np.sum(res[-1].asnumpy() == LARGE_X) == res.shape[1]
-    res = mx.nd.broadcast_like(b, a)
-    assert np.sum(res[-1].asnumpy() == LARGE_X) == res.shape[1]
-
-
 def test_clip():
-    a = nd.arange(0, LARGE_X)
+    a = create_vector(LARGE_X)
     res = nd.clip(a, a_min=100, a_max=1000)
     assert np.sum(res[-1].asnumpy() == 1000) == 1
 
 
 def test_argmin():
-    a = nd.arange(0, LARGE_X)
+    a = create_vector(LARGE_X, dtype=np.float32)
+    assert a[0] == 0
     idx = mx.nd.argmin(a, axis=0)
-    assert idx.shape[0] == SMALL_Y
-
-
-def test_tile():
-    a = nd.arange(0, LARGE_X)
-    b = nd.tile(a, reps=(1,2))
-    assert b[0][LARGE_X] == b[0][0]
-    assert b[0][LARGE_X-1] == b[0][-1]
+    assert idx[0] == 0
+    assert idx.shape[0] == 1
 
 
 def test_take():
@@ -169,114 +145,6 @@ def test_Dense(ctx=mx.cpu(0)):
     assert res.shape == (LARGE_X, 2)
 
 
-def test_pick():
-    a = mx.nd.ones(shape=(LARGE_X, 2))
-    b = mx.nd.ones(shape=LARGE_X)
-    res = mx.nd.pick(a, b)
-    assert res.shape == b.shape
-
-
-def test_depthtospace():
-    def numpy_depth_to_space(x, blocksize):
-        b, c, h, w = x.shape[0], x.shape[1], x.shape[2], x.shape[3]
-        tmp = np.reshape(x, [b, blocksize, blocksize, c // (blocksize**2), h, w])
-        tmp = np.transpose(tmp, [0, 3, 4, 1, 5, 2])
-        y = np.reshape(tmp, [b, c // (blocksize**2), h * blocksize, w * blocksize])
-        return y
-
-    shape_inp = (LARGE_X, 4, 1, 1)
-    data = rand_ndarray(shape_inp, 'default')
-    data_np = data.asnumpy()
-    expected = numpy_depth_to_space(data_np, 2)
-    output = mx.nd.depth_to_space(data, 2)
-    assert_almost_equal(output.asnumpy(), expected, atol=1e-3, rtol=1e-3)
-
-
-def test_spacetodepth():
-    def numpy_space_to_depth(x, blocksize):
-        b, c, h, w = x.shape[0], x.shape[1], x.shape[2], x.shape[3]
-        tmp = np.reshape(x, [b, c, h // blocksize, blocksize, w // blocksize, blocksize])
-        tmp = np.transpose(tmp, [0, 3, 5, 1, 2, 4])
-        y = np.reshape(tmp, [b, c * (blocksize**2), h // blocksize, w // blocksize])
-        return y
-
-    shape_inp = (LARGE_X, 1, 2, 2)
-    data = rand_ndarray(shape_inp, 'default')
-    data_np = data.asnumpy()
-    expected = numpy_space_to_depth(data_np, 2)
-    output = mx.nd.space_to_depth(data, 2)
-    assert_almost_equal(output.asnumpy(), expected, atol=1e-3, rtol=1e-3)
-
-@with_seed()
-def test_diag():
-    a_np = np.random.random((LARGE_X, 2)).astype(np.float32)
-    a = mx.nd.array(a_np)
-
-    # k == 0
-    r = mx.nd.diag(a)
-    assert_almost_equal(r.asnumpy(), np.diag(a_np))
-
-    # k == 1
-    k = 1
-    r = mx.nd.diag(a, k=k)
-    assert_almost_equal(r.asnumpy(), np.diag(a_np, k=k))
-
-    # k == -1
-    k = -1
-    r = mx.nd.diag(a, k=k)
-    assert_almost_equal(r.asnumpy(), np.diag(a_np, k=k))
-
-
-@with_seed()
-def test_ravel_multi_index():
-    x1, y1 = rand_coord_2d((LARGE_X - 100), LARGE_X, SMALL_Y, 4)
-    x2, y2 = rand_coord_2d((LARGE_X - 200), LARGE_X, SMALL_Y, 3)
-    x3, y3 = rand_coord_2d((LARGE_X - 300), LARGE_X, SMALL_Y, 2)
-    indices_2d = [[x1, x2, x3], [y1, y2, y3]]
-    idx = mx.nd.ravel_multi_index(mx.nd.array(indices_2d, dtype=np.int64), shape=(LARGE_X, 5))
-    idx_numpy = np.ravel_multi_index(indices_2d, (LARGE_X, 5))
-    assert np.sum(1 for i in range(idx.size) if idx[i] == idx_numpy[i]) == 3
-
-
-@with_seed()
-def test_unravel_index():
-    x1, y1 = rand_coord_2d((LARGE_X - 100), LARGE_X, SMALL_Y, 4)
-    x2, y2 = rand_coord_2d((LARGE_X - 200), LARGE_X, SMALL_Y, 3)
-    x3, y3 = rand_coord_2d((LARGE_X - 300), LARGE_X, SMALL_Y, 2)
-    original_2d_indices = [[x1, x2, x3], [y1, y2, y3]]
-    idx_numpy = np.ravel_multi_index(original_2d_indices, (LARGE_X, 5))
-    indices_2d = mx.nd.unravel_index(mx.nd.array(idx_numpy, dtype=np.int64), shape=(LARGE_X, 5))
-    assert (indices_2d.asnumpy() == np.array(original_2d_indices)).all()
-
-
-def test_transpose():
-    b = nd.arange(0, LARGE_X, dtype=np.int64).reshape(1, LARGE_X)
-    t = b.T
-    assert t.shape == (LARGE_X, 1)
-    assert t[-1, 0].asnumpy() == (LARGE_X - 1)
-
-
-def test_swapaxes():
-    b = nd.arange(0, LARGE_X, dtype=np.int64).reshape(LARGE_X, 1)
-    t = nd.swapaxes(b, dim1=0, dim2=1)
-    assert t.shape == (1, LARGE_X)
-    assert t[0, -1].asnumpy() == (LARGE_X - 1)
-
-
-def test_flip():
-    b = nd.arange(0, LARGE_X, dtype=np.int64).reshape(1, LARGE_X)
-    t = nd.flip(b, axis=1)
-    assert t.shape == (1, LARGE_X)
-    assert t[-1, -1].asnumpy() == 0
-
-
-def test_softmax():
-    input_data = nd.ones((2, LARGE_X))
-    output = nd.softmax(input_data, axis=0)
-    assert output[0][0] == 0.5
-    assert output[-1][-1] == 0.5
-
-
 def test_argsort():
     b = create_vector(size=LARGE_X)
     s = nd.argsort(b, axis=0, is_ascend=False, dtype=np.int64)
@@ -287,19 +155,19 @@ def test_argsort():
 def test_sort():
     b = create_vector(size=LARGE_X)
     s = nd.sort(b, axis=0, is_ascend=False)
-    assert np.sum(s[-1][SMALL_Y//2:SMALL_Y].asnumpy() == 0).all()
+    assert np.sum(s[-1].asnumpy() == 0).all()
     s = nd.sort(b, is_ascend=True)
     assert np.sum(s[0].asnumpy() == 0).all()
 
 
 def test_topk():
     b = create_vector(size=LARGE_X)
-    k = nd.topk(b, k=10, axis=0, dtype=np.int64)
-    assert np.sum(k.asnumpy() == (LARGE_X - 1)) == SMALL_Y
+    ind = nd.topk(b, k=10, axis=0, dtype=np.int64)
+    assert np.sum(ind.asnumpy() == (LARGE_X - 1)) == 1
     ind, val = mx.nd.topk(b, k=3, axis=0, dtype=np.int64, ret_typ="both", is_ascend=False)
     assert np.all(ind == val)
-    l = nd.topk(b, k=1, axis=0, dtype=np.int64, ret_typ="value")
-    assert l.sum() == (LARGE_X - 1)
+    val = nd.topk(b, k=1, axis=0, dtype=np.int64, ret_typ="value")
+    assert val.sum() == (LARGE_X - 1)
 
 
 if __name__ == '__main__':
