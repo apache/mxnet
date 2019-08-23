@@ -1279,7 +1279,7 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
     g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
     g = ApplyPass(std::move(g), "BuildSubgraph");
     g.attrs.erase("subgraph_property");
-    property->PostPartition(g, options_map);
+    property->PostPartition(g);
     s->outputs = g.outputs;
   }
   *ret_sym_handle = s;

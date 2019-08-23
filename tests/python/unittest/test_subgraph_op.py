@@ -146,18 +146,31 @@ def _test_subgraph_exe(subgraph_backend):
         for i in range(len(outputs1)):
             assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
 
-    def _check_subgraph_exe5(sym, subgraph_backend, op_names):
-        """Call optimize_for to trigger graph partitioning without infer shapes/types before,
-        then simple_bind and compare results of the partitioned sym and the original sym."""
-        # simple_bind
-        exe1 = sym.simple_bind(ctx=mx.current_context(), grad_req='null')
-        input_names = sym.list_inputs()
+    def set_random_inputs(exe1, input_names):
+        """Sets random values to exe1's args and auxs"""
         for name in input_names:
             if name in exe1.arg_dict:
                 exe1.arg_dict[name][:] = mx.nd.random.uniform(shape=exe1.arg_dict[name].shape)
             else:
                 assert name in exe1.aux_dict
                 exe1.aux_dict[name][:] = mx.nd.random.uniform(shape=exe1.aux_dict[name].shape)
+
+    def copy_inputs_between_executors(exe1, exe2, input_names):
+        """Copies values of args and auxs from exe1 to exe2"""
+        for name in input_names:
+            if name in exe2.arg_dict:
+                exe2.arg_dict[name][:] = exe1.arg_dict[name]
+            else:
+                assert name in exe2.aux_dict
+                exe2.aux_dict[name][:] = exe1.aux_dict[name]
+
+    def _check_subgraph_exe5(sym, subgraph_backend, op_names):
+        """Call optimize_for to trigger graph partitioning without infer shapes/types before,
+        then simple_bind and compare results of the partitioned sym and the original sym."""
+        # simple_bind
+        exe1 = sym.simple_bind(ctx=mx.current_context(), grad_req='null')
+        input_names = sym.list_inputs()
+        set_random_inputs(exe1, input_names)
         exe1.forward()
 
         # partition before simple_bind
@@ -167,12 +180,7 @@ def _test_subgraph_exe(subgraph_backend):
         check_call(_LIB.MXRemoveSubgraphPropertyOpNames(c_str(subgraph_backend)))
 
         exe2 = part_sym.simple_bind(ctx=mx.current_context(), grad_req='null')
-        for name in input_names:
-            if name in exe2.arg_dict:
-                exe2.arg_dict[name][:] = exe1.arg_dict[name]
-            else:
-                assert name in exe2.aux_dict
-                exe2.aux_dict[name][:] = exe1.aux_dict[name]
+        copy_inputs_between_executors(exe1, exe2, input_names)
         exe2.forward()
 
         # compare outputs
@@ -188,12 +196,7 @@ def _test_subgraph_exe(subgraph_backend):
         # simple_bind
         exe1 = sym.simple_bind(ctx=mx.current_context(), grad_req='null')
         input_names = sym.list_inputs()
-        for name in input_names:
-            if name in exe1.arg_dict:
-                exe1.arg_dict[name][:] = mx.nd.random.uniform(shape=exe1.arg_dict[name].shape)
-            else:
-                assert name in exe1.aux_dict
-                exe1.aux_dict[name][:] = mx.nd.random.uniform(shape=exe1.aux_dict[name].shape)
+        set_random_inputs(exe1, input_names)
         exe1.forward()
 
         # infer shape/type before partition before simple_bind
@@ -203,12 +206,7 @@ def _test_subgraph_exe(subgraph_backend):
         check_call(_LIB.MXRemoveSubgraphPropertyOpNames(c_str(subgraph_backend)))
 
         exe2 = part_sym.simple_bind(ctx=mx.current_context(), grad_req='null')
-        for name in input_names:
-            if name in exe2.arg_dict:
-                exe2.arg_dict[name][:] = exe1.arg_dict[name]
-            else:
-                assert name in exe2.aux_dict
-                exe2.aux_dict[name][:] = exe1.aux_dict[name]
+        copy_inputs_between_executors(exe1, exe2, input_names)
         exe2.forward()
 
         # compare outputs
