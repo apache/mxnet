@@ -70,11 +70,6 @@ inline bool SampleMultinomialOpShape(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape& ishape = (*in_attrs)[0];
   if (!ndim_is_known(ishape)) return false;
 
-  MSHADOW_TYPE_SWITCH(param.dtype, DType, {
-    // CHECK_LE(ishape[ishape.ndim() - 1], mxnet::common::MaxIntegerValue<DType>())
-    // << "'dtype' does not have a sufficient precision to represent the indices of the input array.";
-  });
-
   if (ishape.ndim() == 1) {
     if (param.shape.ndim() > 0) {
       SHAPE_ASSIGN_CHECK(*out_attrs, 0, param.shape);
