@@ -86,6 +86,7 @@ from . import rnn
 
 from . import gluon
 
+# Dynamic library module should be done after ndarray and symbol are initialized
 from . import library
 
 __version__ = base.__version__

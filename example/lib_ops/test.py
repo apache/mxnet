@@ -21,6 +21,7 @@
 # pylint: disable=arguments-differ
 
 # This test checks if dynamic loading of library into MXNet is successful
+# and checks the end of end computation of custom operator
 
 import mxnet as mx
 import os
