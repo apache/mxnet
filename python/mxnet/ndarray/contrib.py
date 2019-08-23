@@ -30,7 +30,8 @@ try:
 except ImportError:
     pass
 
-__all__ = ["rand_zipfian", "foreach", "while_loop", "cond", "isinf", "isfinite", "isnan"]
+__all__ = ["rand_zipfian", "foreach", "while_loop",
+           "cond", "isinf", "isfinite", "isnan", "std"]
 
 # pylint: disable=line-too-long
 def rand_zipfian(true_classes, num_sampled, range_max, ctx=None):
@@ -569,3 +570,32 @@ def mp_adamw_update(weight, grad, mean, var, weight32, rescale_grad, lr, eta, be
                                               beta1=beta1, beta2=beta2, epsilon=epsilon,
                                               wd=wd, clip_gradient=clip_gradient, out=out,
                                               name=name, **kwargs)
+
+
+def std(data, axis=0):
+    """Compute the standard deviation along the specified axis.
+    sigma = sqrt(E(X^2) - E(X)^2)
+    https://en.wikipedia.org/wiki/Standard_deviation
+
+    Parameters
+    ----------
+    input : NDArray
+        An N-D NDArray.
+    axis : Axis or axes along which the standard deviation is computed.
+           Default valus is 0
+
+    Returns
+    -------
+    output: NDArray.  return a reference to the output array.
+
+    Examples
+    --------
+    >>> data = mx.ndarray.arange(10).reshape((2, 5))
+    >>> output = mx.nd.contrib.std(data, axis=1)
+    >>> output
+    [1.4142135 1.4142135]
+    <NDArray 2 @cpu(0)>
+    """
+    out = ndarray.sqrt(ndarray.square(data).mean(
+        axis=axis) - data.mean(axis=axis).square())
+    return out 
