@@ -20,17 +20,20 @@ import tvm
 
 AllTypes = ["float32", "float64", "float16", "uint8", "int8", "int32", "int64"]
 RealTypes = ["float32", "float64", "float16"]
+AccTypes = {'float16': 'float32', 'float32': 'float64', 'float64': 'float64'}
 
-def assign_by_req(a, req):
-    b = tvm.placeholder(a.shape, name='assign_by_req_b', dtype=a.dtype)
+def assign_by_req(a, req, otype=None):
+    if otype is None:
+        otype = a.dtype
+    b = tvm.placeholder(a.shape, name='assign_by_req_b', dtype=otype)
     if (req == "kAddTo"):
-        c = tvm.compute(a.shape, lambda *idx: a[idx] + b[idx])
+        c = tvm.compute(a.shape, lambda *idx: a[idx].astype(otype) + b[idx])
     else:
-        c = tvm.compute(a.shape, lambda *idx: a[idx])
+        c = tvm.compute(a.shape, lambda *idx: a[idx].astype(otype))
     return b, c
 
 
-def reduce_axes(X, axes, reducer):
+def reduce_axes(X, axes, reducer, atype=None):
     def get_index(idx, ridx):
         j = 0
         k = 0
@@ -40,10 +43,12 @@ def reduce_axes(X, axes, reducer):
             j += (val == 0)
             k += (val != 0)
         return tuple(ret)
-    
+
     ishape = X.shape
     odim = (len(ishape) + 1 - axes[0]) // 2
     oshape = [tvm.var() for _ in range(odim)]
+    if atype is None:
+        atype = X.dtype
     ridx = [tvm.reduce_axis((0, ishape[i])) for (i, val) in enumerate(axes) if val == 1]
-    ret = tvm.compute(oshape, lambda *idx: reducer(X[get_index(idx, ridx)], axis=ridx), name='ret')
+    ret = tvm.compute(oshape, lambda *idx: reducer(X[get_index(idx, ridx)].astype(atype), axis=ridx), name='ret')
     return ret

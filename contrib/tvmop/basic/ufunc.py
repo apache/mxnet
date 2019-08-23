@@ -71,7 +71,7 @@ def compute_backward_vadd(dtype, ndim, reduce1st, req):
     return s, X, in_grad_a, in_grad, [ret, in_grad]
 
 
-@defop(name="backward_vadd", target="cpu", dtype=AllTypes, 
+@defop(name="backward_vadd", target="cpu", dtype=AllTypes,
        ndim=[5], reduce1st=[0, 1],
        req=["kWriteTo", "kAddTo"], attrs=["reduce1st", "req"])
 def backward_vadd(dtype, ndim, reduce1st, req):

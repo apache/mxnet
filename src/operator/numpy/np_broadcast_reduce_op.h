@@ -204,6 +204,10 @@ inline bool NumpyReduceAxesNoDTypeShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(out_attrs->at(0));
 }
 
+bool NumpySumType(const nnvm::NodeAttrs& attrs,
+                  std::vector<int> *in_attrs,
+                  std::vector<int> *out_attrs);
+
 template<bool safe_acc_hint = false>
 inline bool NeedSafeAcc(int itype, int otype) {
   bool rule = (itype != otype) || (itype != mshadow::kFloat32 && itype != mshadow::kFloat64);
