@@ -35,7 +35,7 @@ from nose.tools import assert_raises, ok_
 import unittest
 import os
 
-def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req, rtol=1e-2, atol=1e-4):
+def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req, rtol=1e-2, atol=2e-4):
     dshape = (N, T, I)
     data = mx.sym.Variable('data')
 
