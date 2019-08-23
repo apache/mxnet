@@ -112,11 +112,11 @@ def _prepare_op_benchmark_result(op, op_bench_result, profiler):
             inputs = value
         elif "avg_time" in key:
             avg_time = value
-        elif "p50_" in key:
+        elif "p50_time" in key:
             p50_time = value
-        elif "p90_" in key:
+        elif "p90_time" in key:
             p90_time = value
-        elif "p99_" in key:
+        elif "p99_time" in key:
             p99_time = value
 
     result = ""

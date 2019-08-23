@@ -220,6 +220,9 @@ def python_profile(func):
     res, timing output. res being result returned after operator execution.
     profiler output is a dictionary with summary of operation execution.
     Example output : { "add": [{"avg_time_add": 0.4053089120425284,
+                                'p50_time_add': 16.761042876169086,
+                                'p90_time_add': 18.081666342914108,
+                                'p99_time_add': 19.060144051909447,
                                 "inputs": {
                                     "lhs": [1024, 1024],
                                     "rhs": [1024,1024]
@@ -254,9 +257,9 @@ def python_profile(func):
         p99_run_time = np.percentile(times, 99)
 
         profiler_output = {'avg_time_'+str(operator_name): avg_run_time,
-                           'p50_'+str(operator_name): p50_run_time,
-                           'p90_'+str(operator_name): p90_run_time,
-                           'p99_'+str(operator_name): p99_run_time,
+                           'p50_time_'+str(operator_name): p50_run_time,
+                           'p90_time_'+str(operator_name): p90_run_time,
+                           'p99_time_'+str(operator_name): p99_run_time,
                            }
         return res, profiler_output
     return python_profile_it
