@@ -92,6 +92,7 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 * [How do I contribute an example or tutorial?](https://github.com/apache/incubator-mxnet/tree/master/example#contributing)
 
 * [How do I set MXNet's environmental variables?](env_var.html)
+* [Use TensorInspector to Help Debug Operators](tensor_inspector_tutorial.md)
 
 ## Questions about Using MXNet
 If you need help with using MXNet, have questions about applying it to a particular kind of problem, or have a discussion topic, please use our [forum](https://discuss.mxnet.io).
