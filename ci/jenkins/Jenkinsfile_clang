@@ -37,8 +37,8 @@ core_logic: {
     custom_steps.compile_unix_clang_3_9_cpu(),
     custom_steps.compile_unix_clang_6_cpu(),
     custom_steps.compile_unix_clang_tidy_cpu(),
-    custom_steps.compile_unix_clang_3_9_mkldnn_cpu(),
-    custom_steps.compile_unix_clang_6_mkldnn_cpu()
+    custom_steps.compile_unix_clang_3_9_mkldnn_cpu()
+    // custom_steps.compile_unix_clang_6_mkldnn_cpu()
   ]) 
 }
 ,
