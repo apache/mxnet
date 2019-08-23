@@ -325,7 +325,7 @@ int MXLoadLib(const char *path) {
 
     //check if operator is already registered
     const nnvm::Op *regOpPtr = dmlc::Registry<nnvm::Op>::Get()->Find(name);
-    if(regOpPtr == nullptr) {
+    if (regOpPtr == nullptr) {
       // re-register op in MXNet using lambda converter functions
       nnvm::Op &regOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(name);
       regOp.set_attr_parser(attr_parser);
@@ -337,7 +337,7 @@ int MXLoadLib(const char *path) {
       regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape);
       regOp.set_attr<FCompute>("FCompute<cpu>", fcomp_conv);
     } else {
-      //overwrite registration of existing op with custom op
+      // overwrite registration of existing op with custom op
       nnvm::Op &regOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(name);
 
       regOp.set_attr_parser(attr_parser);
@@ -347,8 +347,8 @@ int MXLoadLib(const char *path) {
       regOp.arguments.clear();
       regOp.add_argument("data", "NDArray[]", "Source inputs");
 
-      //set attribute with higher plevel (11) to allow re-registering once
-      //TODO: enable constant overwriting of registertion multiple times
+      // set attribute with higher plevel (11) to allow re-registering once
+      // TODO(samskalicky): enable constant overwriting of registertion multiple times
       regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape, 11);
       regOp.set_attr<FCompute>("FCompute<cpu>", fcomp_conv, 11);
     }
