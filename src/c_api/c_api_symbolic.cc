@@ -880,6 +880,9 @@ int MXSymbolGrad(SymbolHandle sym, mx_uint num_wrt, const char** wrt, SymbolHand
 
 int MXQuantizeSymbol(SymbolHandle sym_handle,
                      SymbolHandle *ret_sym_handle,
+                     const int* dev_type,
+                     const mx_uint num_excluded_sym_names,
+                     const char **excluded_sym_names,
                      const mx_uint num_excluded_op_names,
                      const char **excluded_op_names,
                      const mx_uint num_offline,
@@ -890,9 +893,14 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol*>(sym_handle);
   nnvm::Graph g = Symbol2Graph(*sym);
+  int target_dev = *dev_type;
   std::unordered_set<std::string> excluded_node_names;
+  for (size_t i = 0; i < num_excluded_sym_names; ++i) {
+    excluded_node_names.emplace(excluded_sym_names[i]);
+  }
+  std::unordered_set<std::string> excluded_op;
   for (size_t i = 0; i < num_excluded_op_names; ++i) {
-    excluded_node_names.emplace(excluded_op_names[i]);
+    excluded_op.emplace(excluded_op_names[i]);
   }
   std::unordered_set<std::string> offline;
   for (size_t i = 0; i < num_offline; ++i) {
@@ -900,8 +908,10 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
   }
   std::string quantized_type(quantized_dtype);
   g.attrs["excluded_nodes"] = std::make_shared<nnvm::any>(std::move(excluded_node_names));
+  g.attrs["excluded_ops"] = std::make_shared<nnvm::any>(std::move(excluded_op));
   g.attrs["offline_params"] = std::make_shared<nnvm::any>(std::move(offline));
   g.attrs["quantized_dtype"] = std::make_shared<nnvm::any>(std::move(quantized_type));
+  g.attrs["target_ctx"] = std::make_shared<nnvm::any>(target_dev);
   g = ApplyPass(std::move(g), "QuantizeGraph");
   s->outputs = g.outputs;
   *ret_sym_handle = s;
@@ -1142,6 +1152,14 @@ int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend_name,
   auto backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(backend_name);
   const auto& subgraph_prop_list = backend->GetSubgraphProperties();
   for (auto property : subgraph_prop_list) {
+    if (property->HasAttr("disable") && property->GetAttr<bool>("disable") == true) {
+      auto full_name = property->HasAttr("property_name")
+                           ? property->GetAttr<std::string>("property_name")
+                           : std::string();
+      LOG(INFO) << "subgraph property " << full_name << " from backend " << backend_name
+                << " is disabled.";
+      continue;
+    }
     nnvm::Graph g = Symbol2Graph(*s);
     property->SetAttr("graph", g);
     g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);

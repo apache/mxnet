@@ -177,13 +177,12 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
   }
   static SubgraphPropertyPtr Create() {
     static const std::string &name = "MKLDNN convolution optimization pass";
-    if (dmlc::GetEnv("MXNET_DISABLE_MKLDNN_CONV_OPT", 0)) {
-      LOG(INFO) << name << " is disabled.";
-      return nullptr;
-    }
     auto property = std::make_shared<SgMKLDNNConvProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
+    if (dmlc::GetEnv("MXNET_DISABLE_MKLDNN_CONV_OPT", 0)) {
+      property->SetAttr<bool>("disable", true);
+    }
     return property;
   }
   nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,

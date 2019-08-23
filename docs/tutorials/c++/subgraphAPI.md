@@ -105,9 +105,11 @@ class SgProperty : public SubgraphProperty {
 };
 ```
 `SetAttr` is optional and developer can define their own attributes to control property behavior.
-There're 2 built-in attributes that used by MXNet executor.
+There're some built-in attributes that used by MXNet executor.
 
-`property_name`  : std::string, name of this property.
+`property_name`  : std::string, name of this property, used for diagnose.
+
+`disable` : bool, whther to disable this property.
 
 `inference_only` : bool, apply this property only for inference. Property will be skiped when need_grad=True. Default `false` if this attribute isn't defined.
 

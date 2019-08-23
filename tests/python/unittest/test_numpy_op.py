@@ -715,6 +715,155 @@ def test_np_tile():
 
 @with_seed()
 @use_np
+def test_np_unary_funcs():
+    def check_unary_func(func, ref_grad, shape, low, high):
+        class TestUnary(HybridBlock):
+            def __init__(self, func):
+                super(TestUnary, self).__init__()
+                self._func = func
+
+            def hybrid_forward(self, F, a, *args, **kwargs):
+                print(self._func)
+                return getattr(F.np, self._func)(a)
+
+        np_func = getattr(_np, func)
+        mx_func = TestUnary(func)
+        np_test_data = _np.random.uniform(low, high, shape).astype(_np.float32)
+        mx_test_data = mx.numpy.array(np_test_data)
+        for hybridize in [True, False]:
+            if hybridize:
+                mx_func.hybridize()
+            if ref_grad:
+                mx_test_data.attach_grad()
+            np_out = np_func(np_test_data)
+            with mx.autograd.record():
+                y = mx_func(mx_test_data)
+            assert y.shape == np_out.shape
+            assert_almost_equal(y.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+            if ref_grad:
+                y.backward()
+                assert_almost_equal(mx_test_data.grad.asnumpy(), ref_grad(np_test_data), rtol=1e-5, atol=1e-6, equal_nan=True)
+
+    funcs = {
+        'absolute' : (lambda x: -1. * (x < 0) + (x > 0), -1.0, 1.0),
+        'cbrt' : (lambda x: 1. / (3. * _np.cbrt(x) ** 2), -1.0, 1.0),
+        'ceil' : (None, -10.0, 10.0),
+        'exp' : (lambda x: _np.exp(x), -1.0, 1.0),
+        'expm1' : (lambda x: _np.exp(x), -1.0, 1.0),
+        'fix' : (None, -10.0, 10.0),
+        'floor' : (None, -10.0, 10.0),
+        'log' : (lambda x: 1.0 / x, 0.1, 5.0),
+        'log10' : (lambda x: 1.0 / (x * _np.log(10)), 0.1, 10.0),
+        'log1p' : (lambda x: 1.0 / (1.0 + x), -0.9, 5.0),
+        'log2' : (lambda x: 1.0 / (x * _np.log(2)), 0.1, 2.0),
+        'logical_not' : (None, -1.0, 1.0),
+        'negative' : (lambda x: -1. * _np.ones(x.shape), -1.0, 1.0),
+        'reciprocal' : (lambda x: -1. / (x ** 2), 0.01, 1.0),
+        'rint' : (None, -5.0, 5.0),
+        'sign' : (None, -1.0, 1.0),
+        'sqrt' : (lambda x: 0.5 / _np.sqrt(x), 0.001, 10.0),
+        'square' : (lambda x: 2.0 * x, -1.0, 1.0),
+        'trunc' : (None, -5.0, 5.0),
+        'sin' : (lambda x: _np.cos(x), -1.0, 1.0),
+        'cos' : (lambda x: -_np.sin(x), -1.0, 1.0),
+        'tan' : (lambda x: _np.tan(x) ** 2 + 1.0, -1.0, 1.0),
+        'arcsin' : (lambda x: 1. / (1. - x ** 2) ** (1. / 2.), -1.0, 1.0),
+        'arccos' : (lambda x: -1. / (1. - x ** 2.) ** (1. / 2.), -1.0, 1.0),
+        'arctan' : (lambda x: 1. / (x ** 2. + 1.), -1.0, 1.0),
+        'degrees' : (lambda x: 180. / _np.pi * _np.ones(x.shape), -1.0, 1.0),
+        'radians' : (lambda x: _np.pi / 180. * _np.ones(x.shape), -1.0, 1.0),
+        'sinh' : (lambda x: _np.cosh(x), -1.0, 1.0),
+        'cosh' : (lambda x: _np.sinh(x), -1.0, 1.0),
+        'tanh' : (lambda x: 1. - _np.tanh(x) ** 2, -1.0, 1.0),
+        'arcsinh' : (lambda x: 1./(x**2 + 1.)**(1./2.), -1.0, 1.0),
+        'arccosh' : (lambda x: 1./(x**2 - 1.)**(1./2.), 2.0, 5.0),
+        'arctanh' : (lambda x: -1./(x**2 - 1.), -0.99, 0.99)
+    }
+    ndim = random.choice([2, 3, 4])
+    shape = random.choice([rand_shape_nd(ndim, dim=3), (1, 0, 2)])
+    for shape in [rand_shape_nd(ndim, dim=3), (1, 0, 2)]:
+        for func, func_data in funcs.items():
+            ref_grad, low, high = func_data
+            check_unary_func(func, ref_grad, shape, low, high)
+
+
+@with_seed()
+@use_np
+def test_npx_relu():
+    def np_relu(x):
+        return _np.maximum(x, 0.0)
+    def np_relu_grad(x):
+        return 1.0 * (x > 0.0)
+
+    class TestReLU(HybridBlock):
+        def __init__(self):
+            super(TestReLU, self).__init__()
+
+        def hybrid_forward(self, F, a):
+            return F.npx.relu(a)
+
+    shapes = [(), (2, 3, 4), (2, 0, 3), (1, 0, 0)]
+    for hybridize in [True, False]:
+        for shape in shapes:
+            test_relu = TestReLU()
+            if hybridize:
+                test_relu.hybridize()
+            x = rand_ndarray(shape).as_np_ndarray()
+            x.attach_grad()
+            np_out = np_relu(x.asnumpy())
+            with mx.autograd.record():
+                mx_out = test_relu(x)
+            assert mx_out.shape == np_out.shape
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+            mx_out.backward()
+            np_backward = np_relu_grad(x.asnumpy())
+            assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5)
+
+            mx_out = npx.relu(x)
+            np_out = np_relu(x.asnumpy())
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@use_np
+def test_npx_sigmoid():
+    def np_sigmoid(x):
+        return _np.divide(1.0, (1.0 + _np.exp(-x)))
+    def np_sigmoid_grad(ya):
+        return ya * (1 - ya)
+
+    class TestSigmoid(HybridBlock):
+        def __init__(self):
+            super(TestSigmoid, self).__init__()
+
+        def hybrid_forward(self, F, a):
+            return F.npx.sigmoid(a)
+
+    shapes = [(), (2, 3, 4), (2, 0, 3), (1, 0, 0)]
+    for hybridize in [True, False]:
+        for shape in shapes:
+            test_sigmoid = TestSigmoid()
+            if hybridize:
+                test_sigmoid.hybridize()
+            x = rand_ndarray(shape).as_np_ndarray()
+            x.attach_grad()
+            np_out = np_sigmoid(x.asnumpy())
+            with mx.autograd.record():
+                mx_out = test_sigmoid(x)
+            assert mx_out.shape == np_out.shape
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+            mx_out.backward()
+            np_backward = np_sigmoid_grad(np_out)
+            assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5)
+
+            mx_out = npx.sigmoid(x)
+            np_out = np_sigmoid(x.asnumpy())
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@use_np
 def test_np_arange():
     configs = [
         (1, 10, 2),
@@ -864,6 +1013,7 @@ def test_np_concat():
                 expected_ret = _np.concatenate([a.asnumpy(), b.asnumpy(), c.asnumpy(), d.asnumpy()], axis=axis)
                 with mx.autograd.record():
                     y = test_concat(a, b, c, d)
+
                 assert y.shape == expected_ret.shape
                 assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3, atol=1e-5)
 
@@ -878,6 +1028,56 @@ def test_np_concat():
                 mx_out = np.concatenate([a, b, c, d], axis=axis)
                 np_out = _np.concatenate([a.asnumpy(), b.asnumpy(), c.asnumpy(), d.asnumpy()], axis=axis)
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@use_np
+def test_np_stack():
+    class TestStack(HybridBlock):
+        def __init__(self, axis=None):
+            super(TestStack, self).__init__()
+            self._axis = axis
+
+        def hybrid_forward(self, F, a, *args):
+            return F.np.stack([a] + list(args), axis=self._axis)
+
+    a, b, c, d = mx.sym.Variable("a"), mx.sym.Variable("b"), mx.sym.Variable("c"), mx.sym.Variable("d")
+    ret = mx.sym.np.stack([a.as_np_ndarray(), b.as_np_ndarray(), c.as_np_ndarray(), d.as_np_ndarray()])
+    assert type(ret) == mx.sym.np._Symbol
+
+    for shape in [(0, 0), (2, 3)]:
+        for hybridize in [True, False]:
+            for axis in range(2):
+                test_stack = TestStack(axis=axis)
+                if hybridize:
+                    test_stack.hybridize()
+                np_a = _np.random.uniform(-1.0, 1.0, shape).astype(_np.float32)
+                np_b = _np.random.uniform(-1.0, 1.0, shape).astype(_np.float32)
+                np_c = _np.random.uniform(-1.0, 1.0, shape).astype(_np.float32)
+                np_d = _np.random.uniform(-1.0, 1.0, shape).astype(_np.float32)
+
+                mx_a = np.array(np_a)
+                mx_a.attach_grad()
+                mx_b = np.array(np_b)
+                mx_b.attach_grad()
+                mx_c = np.array(np_c)
+                mx_c.attach_grad()
+                mx_d = np.array(np_d)
+                mx_d.attach_grad()
+                expected_ret = _np.stack([np_a, np_b, np_c, np_d], axis=axis)
+                with mx.autograd.record():
+                    y = test_stack(mx_a, mx_b, mx_c, mx_d)
+
+                y.backward()
+
+                assert_almost_equal(mx_a.grad.asnumpy(), _np.ones(shape), rtol=1e-3, atol=1e-5)
+                assert_almost_equal(mx_b.grad.asnumpy(), _np.ones(shape), rtol=1e-3, atol=1e-5)
+                assert_almost_equal(mx_c.grad.asnumpy(), _np.ones(shape), rtol=1e-3, atol=1e-5)
+                assert_almost_equal(mx_d.grad.asnumpy(), _np.ones(shape), rtol=1e-3, atol=1e-5)
+
+                np_out = _np.stack([np_a, np_b, np_c, np_d], axis=axis)
+                mx_out = np.stack([mx_a, mx_b, mx_c, mx_d], axis=axis)
+                assert same(mx_out.asnumpy(), np_out)
 
 
 if __name__ == '__main__':

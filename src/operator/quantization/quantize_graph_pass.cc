@@ -102,7 +102,24 @@ std::vector<NodeEntry> OfflineParams(std::vector<NodeEntry>&& outputs,
   return outputs;
 }
 
-inline NodePtr NeedQuantize(NodePtr node, const std::unordered_set<std::string>& excluded_nodes) {
+// To check if a node is registered with a computation function on a target device.
+bool isRegistered(NodePtr node, const int& dev_type) {
+  const auto& op = node->op();
+  Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), 0);
+  FCompute fcompute = common::GetFCompute<FCompute>(op, "FCompute", ctx);
+  FComputeEx fcomp_ex = common::GetFCompute<FComputeEx>(op, "FComputeEx", ctx);
+  FStatefulCompute fcomputestateful =
+      common::GetFCompute<FStatefulCompute>(op, "FStatefulCompute", ctx);
+  FStatefulComputeEx fcomputestateful_ex =
+      common::GetFCompute<FStatefulComputeEx>(op, "FStatefulComputeEx", ctx);
+  return (fcompute != nullptr || fcomp_ex != nullptr ||
+          fcomputestateful != nullptr || fcomputestateful_ex != nullptr);
+}
+
+inline NodePtr NeedQuantize(
+    NodePtr node, const std::unordered_set<std::string>& excluded_nodes,
+    const std::unordered_set<std::string>& excluded_ops,
+    const int& dev_type) {
   std::unordered_map<NodePtr, NodePtr> quantized_node;
   static auto& quantized_op_map = Op::GetAttr<mxnet::FQuantizedOp>("FQuantizedOp");
   static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
@@ -110,20 +127,31 @@ inline NodePtr NeedQuantize(NodePtr node, const std::unordered_set<std::string>&
 
   if (op && quantized_op_map.count(op)) {
     bool need = true;
-    if (excluded_nodes.count(node->attrs.name)) {
+    // If the quantized node is not registered with a computation function, the node
+    // will be excluded automatically.
+    auto q_ptr = quantized_op_map[node->op()];
+    auto qnode = q_ptr(node->attrs);
+    if (!isRegistered(qnode, dev_type)) {
+      LOG(INFO) << "Neither FCompute nor FComputeEx registered, " << node->op()->name
+                << " is excluded automatically.";
       need = false;
-    } else if (!node->attrs.subgraphs.empty()) {
-      ExecType exec_type = fexec_type.count(op) ? fexec_type[op](node->attrs) : ExecType::kSync;
-      if (exec_type != ExecType::kSubgraphExec) {
-        // This is a fused subgraph node, try to match inner node.
-        CHECK_EQ(node->attrs.subgraphs.size(), 1);
-        auto subgraph_sym = node->attrs.subgraphs[0];
-        DFSVisit(subgraph_sym->outputs, [&](const nnvm::NodePtr& n) {
-          if (n->is_variable()) return;
-          if (excluded_nodes.count(n->attrs.name)) {
-            need = false;
-          }
-        });
+    } else {
+      if (excluded_nodes.count(node->attrs.name) ||
+          excluded_ops.count(node->op()->name)) {
+        need = false;
+      } else if (!node->attrs.subgraphs.empty()) {
+        ExecType exec_type = fexec_type.count(op) ? fexec_type[op](node->attrs) : ExecType::kSync;
+        if (exec_type != ExecType::kSubgraphExec) {
+          // This is a fused subgraph node, try to match inner node.
+          CHECK_EQ(node->attrs.subgraphs.size(), 1);
+          auto subgraph_sym = node->attrs.subgraphs[0];
+          DFSVisit(subgraph_sym->outputs, [&](const nnvm::NodePtr& n) {
+            if (n->is_variable()) return;
+            if (excluded_nodes.count(n->attrs.name)) {
+              need = false;
+            }
+          });
+        }
       }
     }
 
@@ -147,8 +175,10 @@ Graph QuantizeGraph(Graph &&src) {
   static const auto& need_requantize_map = Op::GetAttr<mxnet::FNeedRequantize>("FNeedRequantize");
   static const auto& avoid_quantize_input_map =
       Op::GetAttr<mxnet::FAvoidQuantizeInput>("FAvoidQuantizeInput");
+  const auto dev_type = src.GetAttr<int>("target_ctx");
   const auto offline_params = src.GetAttr<std::unordered_set<std::string>>("offline_params");
   const auto excluded_nodes = src.GetAttr<std::unordered_set<std::string>>("excluded_nodes");
+  const auto excluded_ops = src.GetAttr<std::unordered_set<std::string>>("excluded_ops");
   const auto quantized_dtype = src.GetAttr<std::string>("quantized_dtype");
 
   // mirror_map stores the mapping from the currently visited graph to the newly created quantized
@@ -160,7 +190,7 @@ Graph QuantizeGraph(Graph &&src) {
     NodePtr new_node = Node::Create();
     // If the currently visited node needs quantization, insert a quantize op node before the
     // current node and replace the current node with the quantized version in the new graph.
-    auto tmp_node = NeedQuantize(node, excluded_nodes);
+    auto tmp_node = NeedQuantize(node, excluded_nodes, excluded_ops, dev_type);
     if (tmp_node) {
       new_node = tmp_node;
 
@@ -178,7 +208,7 @@ Graph QuantizeGraph(Graph &&src) {
         if (avoid_quantize_input_map.count(node->op()) &&
             avoid_quantize_input_map[node->op()](node->attrs, i)) {
           new_node->inputs.emplace_back(mirror_entry);
-        } else if (!NeedQuantize(e.node, excluded_nodes)) {
+        } else if (!NeedQuantize(e.node, excluded_nodes, excluded_ops, dev_type)) {
           if (mirror_entry_map.count(e)) {
             new_node->inputs.emplace_back(mirror_entry_map[e]);
           } else {
@@ -231,7 +261,7 @@ Graph QuantizeGraph(Graph &&src) {
           // skip non-quantized input
           continue;
         }
-        if (NeedQuantize(e.node, excluded_nodes)) {
+        if (NeedQuantize(e.node, excluded_nodes, excluded_ops, dev_type)) {
           // here we calculate the output number (exclude min/max, in order to
           // calculate min/max index from mirror node) based on assumption that
           // there is only 1min and 1max output from mirror node (which is
@@ -283,7 +313,7 @@ Graph QuantizeGraph(Graph &&src) {
         NodeEntry mirror_entry = NodeEntry{
           mirror_node, e.index, e.version};
         // if input node is quantized operator, add dequantize node
-        if (NeedQuantize(e.node, excluded_nodes) &&
+        if (NeedQuantize(e.node, excluded_nodes, excluded_ops, dev_type) &&
             (mirror_node->op() != Op::Get("_contrib_dequantize"))) {
           // here we calculate the output number (exclude min/max, in order to
           // calculate min/max index from mirror node) based on assumption that
@@ -314,7 +344,7 @@ Graph QuantizeGraph(Graph &&src) {
 
   std::vector<NodeEntry> outputs;
   for (const auto& e : src.outputs) {
-    if (NeedQuantize(e.node, excluded_nodes)) {
+    if (NeedQuantize(e.node, excluded_nodes, excluded_ops, dev_type)) {
       // Only insert dequantize for those Ops supports quantize and not excluded.
       NodePtr mirror_node = mirror_map.at(e.node.get());
       NodeEntry mirror_entry = NodeEntry{mirror_node, e.index, e.version};

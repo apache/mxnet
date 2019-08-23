@@ -19,7 +19,7 @@ import math
 import numpy as np
 import mxnet as mx
 
-from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context
+from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward
 from mxnet import gluon, nd
 from tests.python.unittest.common import with_seed
 
@@ -29,6 +29,12 @@ LARGE_X = 100000000
 SMALL_X = 100
 SMALL_Y = 50
 LARGE_SIZE = LARGE_X * SMALL_Y
+
+
+def create_2d_tensor(rows, columns, dtype=np.int64):
+    a = nd.arange(0, rows, dtype=dtype).reshape(rows, 1)
+    b = nd.broadcast_to(a, shape=(a.shape[0], columns))
+    return nd.array(b, dtype=dtype)
 
 
 def test_gluon_embedding():
@@ -398,12 +404,6 @@ def test_unravel_index():
     indices_2d = mx.nd.unravel_index(mx.nd.array(idx_numpy, dtype=np.int64),
                                      shape=(LARGE_X, SMALL_Y))
     assert (indices_2d.asnumpy() == np.array(original_2d_indices)).all()
-
-
-def create_2d_tensor(rows, columns, dtype=np.int64):
-    a = np.arange(0, rows).reshape(rows, 1)
-    b = np.broadcast_to(a, shape=(a.shape[0], columns))
-    return nd.array(b, dtype=dtype)
 
 
 def test_transpose():
@@ -907,6 +907,320 @@ def test_rpow():
     c = c.__rpow__(a)
     assert c[0][-1] == 8
     assert c.shape == a.shape
+
+
+def test_shape():
+    b = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
+    mx.nd.waitall()
+    assert b.shape == (SMALL_Y, LARGE_X)
+
+
+def test_size():
+    b = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
+    mx.nd.waitall()
+    assert b.size == LARGE_SIZE
+
+
+def test_copy():
+    a = nd.ones((SMALL_Y, LARGE_X))
+    b = a.copy()
+    nd.waitall()
+    assert b.shape == a.shape
+    assert b.size == LARGE_SIZE
+
+
+def test_copy_to():
+    a = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
+    b = nd.array(np.zeros((SMALL_Y, LARGE_X)))
+    c = a.copyto(b)
+    assert c is b
+    print(b)
+    assert b[0][-1] == LARGE_X-1
+
+
+def test_zeros_like():
+    a = nd.array(np.ones((SMALL_Y, LARGE_X)))
+    b = nd.zeros_like(a)
+    assert b[-1][-1] == 0
+    assert b.shape == a.shape
+
+
+def test_ones_like():
+    a = nd.array(np.zeros((SMALL_Y, LARGE_X)))
+    b = nd.ones_like(a)
+    assert b[-1][-1] == 1
+    assert b.shape == a.shape
+
+
+def test_reshape_like():
+    a = nd.array(np.zeros((SMALL_Y, LARGE_X)))
+    b = nd.array(np.zeros((SMALL_Y//2, LARGE_X*2)))
+    c = nd.reshape_like(a, b)
+    assert c.shape == (SMALL_Y//2, LARGE_X*2)
+
+
+def test_flatten():
+    a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y).reshape((LARGE_X//2, 2, SMALL_Y))
+    b = nd.flatten(a)
+    assert b[-1][-1] == (LARGE_X-1)
+    assert b[-1][0] == (LARGE_X-2)
+    assert b.shape == (LARGE_X//2, SMALL_Y*2)
+
+
+def test_expand_dims():
+    a = nd.array(np.ones((SMALL_Y, LARGE_X)))
+    b = nd.expand_dims(a, axis=1)
+    nd.waitall()
+    assert b.shape == (SMALL_Y, 1, LARGE_X)
+
+
+def test_concat():
+    a = nd.array(np.ones((SMALL_Y, LARGE_X)))
+    b = nd.array(np.zeros((SMALL_Y, LARGE_X)))
+    c = nd.concat(a,b, dim=0)
+    assert c.shape == (b.shape[0]*2, LARGE_X)
+
+
+def test_stack():
+    a = nd.array(np.ones((SMALL_Y, LARGE_X)))
+    b = nd.array(np.zeros((SMALL_Y, LARGE_X)))
+    c = nd.stack(a,b, axis=1)
+    assert c.shape == (b.shape[0], 2, LARGE_X)
+
+
+def test_broadcast_axes():
+    a = create_2d_tensor(rows=1, columns=LARGE_X)
+    b = nd.broadcast_axis(a, axis=[0], size=2)
+    assert b.shape == (a.shape[0]*2, a.shape[1])
+
+
+def test_sum():
+    a = nd.array(np.ones((SMALL_Y, LARGE_X)))
+    b = nd.sum(a, axis=1)
+    assert b.shape[0] == SMALL_Y
+
+
+def test_prod():
+    a = nd.array(np.ones((SMALL_Y, LARGE_X)))
+    b = nd.prod(a, axis=1)
+    assert b.shape[0] == SMALL_Y
+
+
+def test_mean():
+    a = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
+    b = nd.mean(a, axis=0)
+    assert b[0] == (SMALL_Y/2-1)
+
+
+def test_min():
+    a = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
+    b = nd.min(a, axis=0)
+    assert b[0] == 0
+    assert b[-1] == 0
+
+
+def test_max():
+    a = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
+    b = nd.max(a, axis=0)
+    assert b[0] == (SMALL_Y-1)
+    assert b[-1] == (SMALL_Y-1)
+
+
+def test_norm():
+    a = np.array(np.full((1, LARGE_X), 3))
+    b = np.array(np.full((1, LARGE_X), 4))
+    c = nd.array(np.concatenate((a,b), axis=0))
+    d = nd.norm(c, ord=2, axis=0)
+    e = nd.norm(c, ord=1, axis=0)
+    assert d.shape[0] == LARGE_X
+    assert e.shape[0] == LARGE_X
+    assert d[-1] == 5
+    assert e[-1] == 7
+
+
+def test_argmax():
+    a = np.ones((SMALL_Y, LARGE_X))
+    b = np.zeros((SMALL_Y, LARGE_X))
+    c = nd.array(np.concatenate((a,b), axis=0))
+    d = nd.argmax(c, axis=0)
+    assert d.shape[0] == LARGE_X
+    assert d[-1] == d[0] == 0
+
+
+def test_relu():
+    def frelu(x):
+        return np.maximum(x, 0.0)
+    def frelu_grad(x):
+        return 1.0 * (x > 0.0)
+    shape = (SMALL_Y, LARGE_X)
+    x = mx.symbol.Variable("x")
+    y = mx.sym.relu(x)
+    xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
+    eps = 1e-4
+    xa[abs(xa) < eps] = 1.0
+    ya = frelu(xa)
+    ga = frelu_grad(xa)
+    check_symbolic_forward(y, [xa], [ya])
+
+
+def test_sigmoid():
+    def fsigmoid(a):
+        return np.divide(1.0, (1.0 + np.exp(-a)))
+    shape = (SMALL_Y, LARGE_X)
+    x = mx.symbol.Variable("x")
+    y = mx.sym.sigmoid(x)
+    xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
+    ya = fsigmoid(xa)
+    check_symbolic_forward(y, [xa], [ya])
+
+
+def np_softmax(x, axis=-1, temperature=1.0):
+    x = x - np.max(x, axis=axis, keepdims=True)
+    x = np.exp(x/temperature)
+    x /= np.sum(x, axis=axis, keepdims=True)
+    return x
+
+
+def test_log_softmax():
+    ndim = 2
+    shape = (SMALL_Y, LARGE_X)
+    axis = np.random.randint(0, ndim)
+    data = np.random.uniform(-2, 2, size=shape)
+    sym = mx.sym.log_softmax(axis=axis-ndim)
+    check_symbolic_forward(sym, [data], [np.log(np_softmax(data, axis=axis)+1e-20)])
+
+
+def test_iadd():
+    a = nd.array(np.ones((SMALL_Y, LARGE_X)))
+    b = nd.array(np.ones((SMALL_Y, LARGE_X)))
+    c = b
+    c += a
+    assert c.shape == a.shape
+    assert c[0][-1] == 2
+
+
+def test_isub():
+    a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
+    b = nd.array(np.ones((SMALL_Y, LARGE_X)))
+    c = a
+    c -= b
+    assert c.shape == a.shape
+    assert c[0][-1] == 2
+
+
+def test_imul():
+    a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
+    b = nd.array(np.ones((SMALL_Y, LARGE_X)))
+    c = b
+    c *= a
+    assert c.shape == a.shape
+    assert c[0][-1] == 3
+
+
+def test_idiv():
+    a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 4)))
+    b = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 2)))
+    c = a
+    c /= b
+    assert c.shape == a.shape
+    assert c[0][-1] == 2
+
+
+def test_imod():
+    a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
+    b = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 2)))
+    c = a
+    c %= b
+    assert c.shape == a.shape
+    assert c[0][-1] == 1
+
+
+def test_eq():
+    a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
+    b = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
+    c = (a == b)
+    assert np.sum(c[0].asnumpy() == 1).all()
+
+
+def test_neq():
+    a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 2)))
+    b = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
+    c = (a != b)
+    assert np.sum(c[0].asnumpy() == 1).all()
+
+
+def test_lt():
+    a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 2)))
+    b = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
+    d = (a <= b)
+    assert np.sum(d[0].asnumpy() == 1).all()
+
+
+def test_lte():
+    a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 2)))
+    b = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
+    c = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 2)))
+    d = (a <= b)
+    e = (a <= c)
+    assert np.sum(d[0].asnumpy() == 1).all()
+    assert np.sum(e[0].asnumpy() == 1).all()
+
+
+def test_gt():
+    a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
+    b = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 2)))
+    d = (a >= b)
+    assert np.sum(d[0].asnumpy() == 1).all()
+
+
+def test_gte():
+    a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
+    b = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 2)))
+    c = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
+    d = (a >= b)
+    e = (a >= c)
+    assert np.sum(d[0].asnumpy() == 1).all()
+    assert np.sum(e[0].asnumpy() == 1).all()
+
+
+def test_slice_like():
+    a = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
+    b = nd.array(np.ones((SMALL_Y//2, LARGE_X//2)))
+    c = nd.slice_like(a, b)
+    d = nd.slice_like(a, b, axes=(0))
+    e = nd.slice_like(a, b, axes=(-1))
+    assert c.shape == b.shape
+    assert d.shape[0] == b.shape[0]
+    assert e.shape[-1] == b.shape[-1]
+    assert c[0][-1] == 0
+    assert d[-1][0] == (SMALL_Y//2-1)
+    assert e[-1][-1] == (SMALL_Y-1)
+
+
+def test_slice_axis():
+    a = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
+    c = nd.slice_axis(a, axis=0, begin=0, end=SMALL_Y//2)
+    d = nd.slice_axis(a, axis=1, begin=0, end=LARGE_X//2)
+    assert c.shape[0] == a.shape[0]//2
+    assert d.shape[1] == a.shape[1]//2
+    assert c[-1][0] == (SMALL_Y//2-1)
+    assert d[-1][-1] == (SMALL_Y-1)
+
+
+def test_one_hot():
+    a = nd.array(np.zeros(SMALL_Y))
+    a[0] = 1
+    a[-1] = 1
+    b = nd.one_hot(a, LARGE_X)
+    b[0][1] == 1
+    b[-1][1] == 1
+
+
+def test_full():
+    a = nd.full((SMALL_Y, LARGE_X), 3)
+    assert a.shape == (SMALL_Y, LARGE_X)
+    assert a[SMALL_Y//2][LARGE_X//2] == 3
+    assert a[-1][-1] == 3
 
 
 if __name__ == '__main__':
