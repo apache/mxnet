@@ -1417,6 +1417,38 @@ def convert_floor(node, **kwargs):
     """
     return create_basic_op_node('Floor', node, kwargs)
 
+
+@mx_op.register("_contrib_constant")
+def convert_constant(node, **kwargs):
+    """Map MXNet's contrib.constant operator attributes to onnx's Constant
+    operator and return the created node.
+    """
+    name, _, attrs = get_inputs(node, kwargs)
+
+    value = convert_string_to_list(attrs["value"])
+
+    output_shape_np = np.array(value, dtype='float32')
+    data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[output_shape_np.dtype]
+    dims = np.shape(output_shape_np)
+
+    output_shape_name = "constant_attr_tensor" + str(kwargs["idx"])
+
+    constant_node = onnx.helper.make_node(
+        "Constant",
+        [],
+        [name],
+        value=onnx.helper.make_tensor(
+            name=output_shape_name,
+            data_type=data_type,
+            dims=dims,
+            vals=value,
+            raw=False,
+        ),
+        name=name
+    )
+
+    return [constant_node]
+
 # Changing shape and type.
 @mx_op.register("Reshape")
 def convert_reshape(node, **kwargs):

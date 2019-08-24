@@ -27,6 +27,30 @@ def identity(attrs, inputs, proto_obj):
     """Returns the identity function of the input."""
     return 'identity', attrs, inputs
 
+
+def constant(attrs, inputs, proto_obj):
+    """Returns the identity function of the input."""
+    try:
+        from onnx import numpy_helper
+        from onnx.mapping import TENSOR_TYPE_TO_NP_TYPE
+    except ImportError:
+        raise ImportError("Onnx and protobuf need to be installed. "
+                          "Instructions to install - https://github.com/onnx/onnx")
+    data = attrs['value']
+    dtype = 1
+    if not isinstance(data, tuple):
+        val = numpy_helper.to_array(data)
+        val = tuple(val) if data.dims else val
+        dtype = int(data.data_type)
+    else:
+        val = data
+
+    dtype = TENSOR_TYPE_TO_NP_TYPE[dtype]
+    sym = symbol.contrib.constant(value=val, dtype=dtype)
+    new_attrs = translation_utils._remove_attributes(attrs, ['value'])
+    return sym, new_attrs, inputs
+
+
 def random_uniform(attrs, inputs, proto_obj):
     """Draw random samples from a uniform distribtuion."""
     try:
