@@ -147,12 +147,19 @@ class MXNetGraph(object):
 
             data_forward = []
             data_names = []
-            for k, v in inputs.items():
-                data_names.append(k)
-                data_forward.append(mx.nd.array(mx.nd.random_normal(shape=v)))
+            for arg in sym.list_arguments():
+                data_names.append(arg)
+                data_forward.append(mx.nd.array(mx.nd.random_normal(shape=inputs[arg])))
+
+            aux_names = []
+            aux_forward = []
+            for aux in sym.list_auxiliary_states():
+                aux_names.append(aux)
+                aux_forward.append(mx.nd.array(mx.nd.random_normal(shape=inputs[aux])))
 
             args = dict(zip(data_names, data_forward))
-            exe = sym.bind(mx.cpu(0), args=args, aux_states=None)
+            auxs = dict(zip(aux_names, aux_forward))
+            exe = sym.bind(mx.cpu(0), args=args, aux_states=auxs)
             exe.forward(is_train=False)
             result = []
             for output in exe.outputs:
