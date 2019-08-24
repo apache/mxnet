@@ -43,7 +43,7 @@ int MXBuildSubgraphByOpNames(SymbolHandle sym_handle,
   if (!op_name_set.empty()) {
     auto& backend =
         mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(prop_name);
-    LOG(INFO) << "Subgraph backend " << backend->GetName() << " is activated.";
+    // LOG(INFO) << "Subgraph backend " << backend->GetName() << " is activated.";
     const auto& subgraph_prop_list = backend->GetSubgraphProperties();
     for (auto property : subgraph_prop_list) {
       nnvm::Graph g;
