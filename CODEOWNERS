@@ -47,7 +47,7 @@ CMakeLists.txt    @szha @pllarroy
 
 # MXNet CI
 dev_menu.py         @pllarroy
-/ci/                @pllarroy @marcoabreu
+/ci/                @pllarroy @marcoabreu 
 /docker/            @marcoabreu
 /tests/ci_build/    @marcoabreu
 Jenkinsfile         @marcoabreu
