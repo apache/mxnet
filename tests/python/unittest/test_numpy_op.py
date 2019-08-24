@@ -1892,7 +1892,7 @@ def test_np_copysign():
         sign = sign.reshape(-1, *a1.shape)
         sign = _np.sum(sign, axis=0)
         return sign, _np.zeros_like(a2)
-    
+
     def get_grad_left(a1, a2):
         sign = _np.logical_or(_np.logical_and(a1 < 0, a2 < 0),
                               _np.logical_and(a1 >= 0, a2 >= 0))
