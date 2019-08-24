@@ -2047,3 +2047,30 @@ def convert_broadcast_to(node, **kwargs):
     )
 
     return [tensor_node, expand_node]
+
+
+@mx_op.register("UpSampling")
+def convert_upsample(node, **kwargs):
+    """Map MXNet's UpSampling operator attributes to onnx's Upsample operator
+    and return the created node.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    sample_type = attrs.get('sample_type', 'nearest')
+    sample_type = 'linear' if sample_type == 'bilinear' else sample_type
+    scale = convert_string_to_list(attrs.get('scale'))
+    scaleh = float(scale[0])
+    scalew = float(scale[0])
+    if len(scale) > 1:
+        scalew = float(scale[1])
+    scale = [1.0, 1.0, scaleh, scalew]
+
+    node = onnx.helper.make_node(
+        'Upsample',
+        input_nodes,
+        [name],
+        scales=scale,
+        mode=sample_type,
+        name=name
+    )
+    return [node]
