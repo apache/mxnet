@@ -52,7 +52,8 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'add', 'subtrac
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative',
            'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh',
            'tensordot', 'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate',
-           'stack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign']
+           'stack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign',
+           'rot90']
 
 # Return code for dispatching indexing function call
 _NDARRAY_UNSUPPORTED_INDEXING = -1
@@ -3986,3 +3987,49 @@ def copysign(x1, x2, out=None):
     array([-1.,  0.,  1.])
     """
     return _mx_nd_np.copysign(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+def rot90(m, k=1, axes=(0, 1)):
+    """
+    Rotate an array by 90 degrees in the plane specified by axes.
+    Rotation direction is from the first towards the second axis.
+    Parameters
+    ----------
+    m : ndarray
+        Array of two or more dimensions.
+    k : integer
+        Number of times the array is rotated by 90 degrees.
+    axes: (2,) array_like
+        The array is rotated in the plane defined by the axes.
+        Axes must be different.
+
+    Returns
+    -------
+    y : ndarray
+        A rotated view of `m`.
+
+    -----
+    rot90(m, k=1, axes=(1,0)) is the reverse of rot90(m, k=1, axes=(0,1))
+    rot90(m, k=1, axes=(1,0)) is equivalent to rot90(m, k=-1, axes=(0,1))
+    Examples
+    --------
+    >>> m = np.array([[1,2],[3,4]], 'int')
+    >>> m
+    array([[1, 2],
+           [3, 4]], dtype=int64)
+    >>> np.rot90(m)
+    array([[2, 4],
+           [1, 3]], dtype=int64)
+    >>> np.rot90(m, 2)
+    array([[4, 3],
+           [2, 1]], dtype=int64)
+    >>> m = np.arange(8).reshape((2,2,2))
+    >>> np.rot90(m, 1, (1,2))
+    array([[[1., 3.],
+            [0., 2.]],
+
+           [[5., 7.],
+            [4., 6.]]])
+    """
+    return _mx_nd_np.rot90(m, k=k, axes=axes)

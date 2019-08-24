@@ -1870,17 +1870,17 @@ def test_np_copysign():
         sign = sign.reshape(-1, *a1.shape)
         sign = _np.sum(sign, axis=0)
         return sign, _np.zeros_like(a2)
-    
+
     def get_grad_left(a1, a2):
         sign = _np.logical_or(_np.logical_and(a1 < 0, a2 < 0),
                               _np.logical_and(a1 >= 0, a2 >= 0))
         sign = 2 * sign.astype(int) - 1
         sign = sign.reshape(a1.shape)
         return sign
-    
+
     def get_grad_right(a1, a2):
         return _np.zeros_like(a2)
-        
+
     shapes = [
         (),
         (1),
@@ -1921,7 +1921,7 @@ def test_np_copysign():
                     mx_out = np.copysign(a1, a2)
                     expected_np = _np.copysign(a1_np, a2_np)
                     assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
-    
+
     types = ['float16', 'float32', 'float64']
     for x_shape in shapes:
         for dtype in types:
@@ -1935,12 +1935,12 @@ def test_np_copysign():
                 mx_out = np.copysign(x, scalar)
             assert mx_out.shape == expected_np.shape
             assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
-            
+
             # Test gradient
             mx_out.backward()
             x_grad = get_grad_left(x_np, scalar)
             assert_almost_equal(x.grad.asnumpy(), x_grad, rtol=rtol, atol=atol)
-            
+
             # Test right
             x_np = _np.array(_np.random.uniform(-2.0, 2.0, x_shape), dtype=dtype)
             scalar = _np.random.uniform(-2.0, 2.0)
@@ -1951,11 +1951,64 @@ def test_np_copysign():
                 mx_out = np.copysign(scalar, x)
             assert mx_out.shape == expected_np.shape
             assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
-            
+
             # Test gradient
             mx_out.backward()
             x_grad = get_grad_right(scalar, x_np)
             assert_almost_equal(x.grad.asnumpy(), x_grad, rtol=rtol, atol=atol)
+
+
+@with_seed()
+@use_np
+def test_np_rot90():
+    class TestTRot90(HybridBlock):
+        def __init__(self, k=1, axes=(0, 1)):
+            super(TestTRot90, self).__init__()
+            self._k = k
+            self._axes = axes
+
+        def hybrid_forward(self, F, a, *args):
+            return F.np.rot90(a, self._k, self._axes)
+
+    configs = [
+        ((2, 3), 1, (0, 1)),
+        ((2, 3), 3, (0, 1)),
+        ((2, 3), 1, (1, 0)),
+        ((2, 3), 2, (1, 0)),
+        ((2, 3), 3, (1, 0)),
+        ((2, 3), 0, (1, 0)),
+        ((2, 3, 4, 5), 3, (1, 2)),
+        ((2, 3, 4, 5), -3, (2, 3)),
+        ((2, 3, 0, 5), -2, (2, 3)),
+        ((2, 0, 0, 5), -3, (2, 3)),
+        ((2, 3, 0, 5), 0, (2, 1)),
+    ]
+    dtypes = ['uint8', 'int8', 'int32', 'int64', 'float16', 'float32', 'float64']
+
+    for config in configs:
+        for dtype in dtypes:
+            for hybridize in [True, False]:
+                shape, k, axes = config[0], config[1], config[2]
+                x = rand_ndarray(shape=shape, dtype=dtype).as_np_ndarray()
+                net = TestTRot90(k=k, axes=axes)
+                if hybridize:
+                    net.hybridize()
+
+                x.attach_grad()
+                np_out = _np.rot90(x.asnumpy(), k=k, axes=axes)
+                with mx.autograd.record():
+                    mx_out = net(x)
+                assert mx_out.shape == np_out.shape
+                assert same(mx_out.asnumpy(), np_out)
+                mx_out.backward()
+                np_backward = _np.ones(shape, dtype)
+
+                assert same(x.grad.asnumpy().shape, np_backward.shape)
+                assert same(x.grad.asnumpy(), np_backward)
+
+                np_out = _np.rot90(x.asnumpy(), k=k, axes=axes)
+                mx_out = np.rot90(x, k=k, axes=axes)
+                assert same(mx_out.asnumpy(), np_out)
 
 
 if __name__ == '__main__':
