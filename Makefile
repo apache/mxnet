@@ -108,6 +108,7 @@ else
 endif
 CFLAGS += -I$(TPARTYDIR)/mshadow/ -I$(TPARTYDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(TPARTYDIR)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread -ldl $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
+LDFLAGS += -Wl,-rpath,'$${ORIGIN}'
 
 ifeq ($(ENABLE_TESTCOVERAGE), 1)
         CFLAGS += --coverage
@@ -154,7 +155,7 @@ ifeq ($(USE_MKLDNN), 1)
 		LDFLAGS += -L$(MKLROOT)/lib
 	endif
 	CFLAGS += -I$(MKLDNNROOT)/include
-	LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
+	LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn
 endif
 
 # setup opencv
@@ -601,7 +602,7 @@ DMLCCORE:
 ifeq ($(USE_TVM_OP), 1)
 LIB_DEP += lib/libtvm_runtime.so lib/libtvmop.so
 CFLAGS += -I$(TVM_PATH)/include -DMXNET_USE_TVM_OP=1
-LDFLAGS += -L$(ROOTDIR)/lib -ltvm_runtime -Wl,-rpath,'$${ORIGIN}'
+LDFLAGS += -L$(ROOTDIR)/lib -ltvm_runtime
 
 TVM_USE_CUDA := OFF
 ifeq ($(USE_CUDA), 1)
@@ -619,7 +620,7 @@ lib/libtvm_runtime.so:
 	$(MAKE) VERBOSE=1; \
 	mkdir -p $(ROOTDIR)/lib; \
 	cp $(TVM_PATH)/build/libtvm_runtime.so $(ROOTDIR)/lib/libtvm_runtime.so; \
-	ls $(ROOTDIR); \
+	ls $(ROOTDIR)/lib; \
 	cd $(ROOTDIR)
 
 lib/libtvmop.so: lib/libtvm_runtime.so $(wildcard contrib/tvmop/*/*.py contrib/tvmop/*.py)

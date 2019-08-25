@@ -854,6 +854,8 @@ sanity_check() {
 }
 
 unittest_ubuntu_python2_cpu_cython() {
+    ls ./lib/
+    ldd ./lib/libmxnet.so
     set -ex
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1
