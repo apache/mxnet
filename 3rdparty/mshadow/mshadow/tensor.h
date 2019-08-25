@@ -69,7 +69,7 @@ struct Shape {
    * \param idx dimension index
    * \return the corresponding dimension size
    */
-  MSHADOW_XINLINE index_t &operator[](index_t idx) {
+  MSHADOW_XINLINE index_t &operator[](int idx) {
     return shape_[idx];
   }
   /*!
@@ -77,7 +77,7 @@ struct Shape {
    * \param idx dimension index
    * \return the corresponding dimension size
    */
-  MSHADOW_XINLINE const index_t &operator[](index_t idx) const {
+  MSHADOW_XINLINE const index_t &operator[](int idx) const {
     return shape_[idx];
   }
   /*!
@@ -484,7 +484,7 @@ struct Tensor: public TRValue<Tensor<Device, dimension, DType>,
    * \param idx the dimension count from the highest dimensin
    * \return the size
    */
-  MSHADOW_XINLINE index_t size(index_t idx) const {
+  MSHADOW_XINLINE index_t size(int idx) const {
     return shape_[idx];
   }
   /*!
