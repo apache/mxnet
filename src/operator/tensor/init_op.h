@@ -179,7 +179,6 @@ struct RangeLikeParam : public dmlc::Parameter<RangeLikeParam> {
   double step;
   int repeat;
   std::string ctx;
-  int dtype;
   dmlc::optional<int> axis;
 
   DMLC_DECLARE_PARAMETER(RangeLikeParam) {
@@ -197,9 +196,6 @@ struct RangeLikeParam : public dmlc::Parameter<RangeLikeParam> {
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
-    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
-    MXNET_ADD_ALL_TYPES
-    .describe("Target data type.");
     DMLC_DECLARE_FIELD(axis)
     .set_default(dmlc::optional<int>())
     .describe("Arange elements according to the size of a certain axis of input array."
