@@ -270,8 +270,8 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
 
       const size_t r_size = GetMKLDNNRNNCacheMemorySize(L, D, T, N, I, H, param.mode);
       if (!op.init_mem_ || op.reserve_mem_size_ < r_size) {
-        op.mem_space_.reset(
-            new NDArray(TShape({static_cast<dim_t>(r_size)}), ctx.run_ctx.ctx, false, dtype));
+        op.mem_space_ = NDArray(TShape({static_cast<dim_t>(r_size)}),
+            ctx.run_ctx.ctx, false, dtype);
         op.reserve_mem_size_ = r_size;
         op.init_mem_ = true;
         op.has_cache = false;
@@ -280,7 +280,7 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
         op.has_cache = false;
       }
 
-      DType* workptr = static_cast<DType*>(op.mem_space_->data().dptr_);
+      DType* workptr = static_cast<DType*>(op.mem_space_.data().dptr_);
       mkldnn::memory::dims src_layer_tz_0 = {T, N, I};
       mkldnn::memory::dims src_layer_tz = {T, N, D * H};
       mkldnn::memory::dims dst_layer_tz = {T, N, D * H};
