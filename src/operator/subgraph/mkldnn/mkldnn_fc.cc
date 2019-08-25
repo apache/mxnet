@@ -188,16 +188,13 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
     initialized_ = true;
   }
   std::vector<NDArray> new_inputs;
-  std::vector<OpReqType> new_req;
   if (has_bias) {
     new_inputs = {data, weight, cached_bias_};
-    new_req = {req[fullc::kData], req[fullc::kWeight], req[fullc::kBias]};
   } else {
     new_inputs = {data, weight};
-    new_req = {req[fullc::kData], req[fullc::kWeight]};
   }
 
-  MKLDNNFCForwardFullFeature(full_param_, ctx, fwd_.get(), new_inputs, new_req, out_data);
+  MKLDNNFCForwardFullFeature(full_param_, ctx, fwd_.get(), new_inputs, req, out_data);
 
   if (mkldnn_param.quantized && !mkldnn_param.enable_float_output) {
     float *min_output_ptr = out_data[quantized_fullc::kOutMin].data().dptr<float>();
