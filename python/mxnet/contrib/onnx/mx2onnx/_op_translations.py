@@ -1427,10 +1427,8 @@ def convert_constant(node, **kwargs):
 
     value = convert_string_to_list(attrs["value"])
     dtype = attrs.get('dtype', 'int64')
-
-    output_shape_np = np.array(value, dtype=dtype)
-    data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[output_shape_np.dtype]
-    dims = np.shape(output_shape_np)
+    data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)]
+    dims = np.shape(value)
 
     output_shape_name = "constant_attr_tensor" + str(kwargs["idx"])
 
