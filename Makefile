@@ -601,7 +601,7 @@ DMLCCORE:
 ifeq ($(USE_TVM_OP), 1)
 LIB_DEP += lib/libtvm_runtime.so lib/libtvmop.so
 CFLAGS += -I$(TVM_PATH)/include -DMXNET_USE_TVM_OP=1
-LDFLAGS += -L$(ROOTDIR)/lib -ltvm_runtime
+LDFLAGS += -L$(ROOTDIR)/lib -ltvm_runtime -Wl,-rpath,'$${ORIGIN}'
 
 TVM_USE_CUDA := OFF
 ifeq ($(USE_CUDA), 1)

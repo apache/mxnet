@@ -372,7 +372,7 @@ build_ubuntu_cpu_openblas() {
     export CC="gcc"
     export CXX="g++"
     build_ccache_wrappers
-    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
+    #export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
     make \
         DEV=1                         \
         USE_TVM_OP=1                  \
@@ -392,7 +392,7 @@ build_ubuntu_cpu_mkl() {
     set -ex
     export CC="ccache gcc"
     export CXX="ccache g++"
-    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
+    #export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
     make \
         DEV=1                         \
         ENABLE_TESTCOVERAGE=1         \
@@ -411,13 +411,14 @@ build_ubuntu_cpu_cmake_debug() {
     pushd .
     cd /work/build
     build_ccache_wrappers
-    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
+    #export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DENABLE_TESTCOVERAGE=ON \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=ON \
+        -DPython3_EXECUTABLE=/usr/bin/python3 \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_OPENMP=OFF \
         -DUSE_OPENCV=ON \
@@ -560,7 +561,7 @@ build_ubuntu_cpu_mkldnn() {
     set -ex
 
     build_ccache_wrappers
-    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
+    #export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
 
     make  \
         DEV=1                         \
@@ -576,7 +577,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
     set -ex
 
     build_ccache_wrappers
-    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
+    #export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
 
     make  \
         DEV=1                         \
@@ -791,7 +792,7 @@ build_ubuntu_cpu_large_tensor() {
     set -ex
     cd /work/build
     build_ccache_wrappers
-    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
+    #export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
@@ -801,6 +802,7 @@ build_ubuntu_cpu_large_tensor() {
         -DUSE_CUDA=OFF                          \
         -DUSE_CUDNN=OFF                         \
         -DUSE_TVM_OP=ON                         \
+        -DPython3_EXECUTABLE=/usr/bin/python3   \
         -DUSE_MKLDNN=OFF                        \
         -DCMAKE_BUILD_TYPE=Release              \
         -DUSE_INT64_TENSOR_SIZE=ON              \
