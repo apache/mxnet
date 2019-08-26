@@ -53,7 +53,7 @@ static void MKLDNNQuantizedBatchNormForward(const nnvm::NodeAttrs &attrs, const 
     auto data_reorder_mem = TmpMemMgr::Get()->Alloc(s8_pd);
 
     std::vector<float> reorder_scale;
-    reorder_scale = {float(kInt8Range) / kUint8Range};
+    reorder_scale = {static_cast<float>(kInt8Range) / kUint8Range};
     primitive_attr reorder_attr;
     reorder_attr.set_int_output_round_mode(round_mode::round_nearest);
     reorder_attr.set_output_scales(0, reorder_scale);
