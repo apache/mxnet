@@ -426,15 +426,12 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
     MKLDNNStream::Get()->Submit();
   } else {
     std::vector<NDArray> new_inputs;
-    std::vector<OpReqType> new_req;
     if (has_bias) {
       new_inputs = {data, cached_weight_, cached_bias_};
-      new_req = {req[in_data], req[in_weight], req[in_bias]};
     } else {
       new_inputs = {data, cached_weight_};
-      new_req = {req[in_data], req[in_weight]};
     }
-    MKLDNNConvolutionForwardFullFeature(full_conv_param, ctx, fwd_.get(), new_inputs, new_req,
+    MKLDNNConvolutionForwardFullFeature(full_conv_param, ctx, fwd_.get(), new_inputs, req,
                                         {output});
   }
 
