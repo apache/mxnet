@@ -607,10 +607,7 @@ def test_quantized_bn():
         return mean, var
 
     def check_quantized_bn(data_shape, qdtype):
-        if qdtype == 'uint8':
-            print('skipped testing quantize_bn for uint8 since it is not supported yet')
-            return
-        elif is_test_for_native_cpu():
+        if is_test_for_native_cpu():
             print('skipped testing quantize_bn for native cpu since it is not supported yet')
             return
         elif is_test_for_gpu():
@@ -672,9 +669,10 @@ def test_quantized_bn():
 
         assert_almost_equal(output.asnumpy(), output_int8_to_fp32.asnumpy(), rtol=1e-1, atol=3)
 
-    check_quantized_bn((32, 512, 4, 4), 'int8')
-    check_quantized_bn((32, 1024, 8, 8), 'int8')
-    check_quantized_bn((32, 3, 224, 224), 'int8')
+    for qdtype in ['int8', 'uint8']:
+        check_quantized_bn((32, 512, 4, 4), qdtype)
+        check_quantized_bn((32, 1024, 8, 8), qdtype)
+        check_quantized_bn((32, 3, 224, 224), qdtype)
 
 @with_seed()
 def test_quantize_params():
@@ -918,15 +916,9 @@ def test_quantize_model_with_forward():
         lshape_list.append(None)
 
         for s, dshape, lshape, name in zip(sym_list, dshape_list, lshape_list, name_list):
-            if qdtype == 'int8' and is_test_for_mkldnn() and name in ['sym1', 'sym2', 'sym3']:
-              print('skipped testing test_quantize_model_with_forward for mkldnn cpu int8 since it is not supported yet')
-              continue
-            elif qdtype == 'uint8' and is_test_for_mkldnn() and name in ['sym1']:
-              print('skipping test_quantize_model_with_forward for mkldnn cpu uint8 since it is not supported yet')
-              continue
-            elif qdtype == 'int8' and is_test_for_gpu() and name in ['sym1']:
-              print('skipped testing test_quantize_model_with_forward for gpu int8 since it is not supported yet')
-              continue
+            if is_test_for_gpu() and name in ['sym1']:
+               print('skipped testing test_quantize_model_with_forward for gpu int8 since it is not supported yet')
+               continue
 
             if lshape is None:
                 mod = Module(symbol=s, label_names=None)
