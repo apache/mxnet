@@ -1613,7 +1613,7 @@ at once with the shapes having various sizes
 for their heights and widths
 """
 def test_nearest_upsampling():
-    for root_scale in [1, 2, (2,3), (3,2), (1,1), (5,1), (2,2), ()]:
+    for root_scale in [1, 2, (3), (2,3), (3,2), (1,1), (5,1), (2,2), ()]:
         for scale in [1, 2, 3]:
             for num_shape in [1, 2, 3]:
                 for base in [1, 2, 3]:
