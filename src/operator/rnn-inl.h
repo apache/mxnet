@@ -1547,22 +1547,22 @@ static OpStatePtr CreateRNNState(const nnvm::NodeAttrs &attrs,
   int dtype = in_types[rnn_enum::kData];
   int itype = dtype;
   if (param.use_sequence_length) {
-      size_t seq_len_input_idx = rnn_enum::kSequenceLength;
-      if  (param.mode != rnn_enum::kLstm) {
-        seq_len_input_idx -= 1;
-      }
+    size_t seq_len_input_idx = rnn_enum::kSequenceLength;
+    if  (param.mode != rnn_enum::kLstm) {
+      seq_len_input_idx -= 1;
+    }
     itype = in_types[seq_len_input_idx];
   }
 
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-      MSHADOW_TYPE_SWITCH(itype, IType, {
-    if (ctx.dev_type == kGPU) {
-      state = OpStatePtr::Create<RNNOp<gpu, DType, IType>>(param, ctx);
-    } else {
-      state = OpStatePtr::Create<RNNOp<cpu, DType, IType>>(param, ctx);
-    }
-  });
+    MSHADOW_TYPE_SWITCH(itype, IType, {
+      if (ctx.dev_type == kGPU) {
+        state = OpStatePtr::Create<RNNOp<gpu, DType, IType>>(param, ctx);
+      } else {
+        state = OpStatePtr::Create<RNNOp<cpu, DType, IType>>(param, ctx);
+      }
     });
+  });
   return state;
 }
 
@@ -1580,11 +1580,11 @@ void RNNStatefulCompute(const OpStatePtr& state,
   int itype = inputs[inputs.size()-1].type_flag_;
 
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-      MSHADOW_TYPE_SWITCH(itype, IType, {
-          RNNOp<xpu, DType, IType>& op = state.get_state<RNNOp<xpu, DType, IType>>();
-          op.Forward(ctx, inputs, req, outputs);
-        });
+    MSHADOW_TYPE_SWITCH(itype, IType, {
+      RNNOp<xpu, DType, IType>& op = state.get_state<RNNOp<xpu, DType, IType>>();
+      op.Forward(ctx, inputs, req, outputs);
     });
+  });
 }
 
 /*
@@ -1619,35 +1619,35 @@ void RNNStatefulGradCompute(const OpStatePtr& state,
   int itype = outputs[outputs.size()-1].type_flag_;
 
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-      MSHADOW_TYPE_SWITCH(itype, IType, {
-          RNNOp<xpu, DType, IType>& op = state.get_state<RNNOp<xpu, DType, IType>>();
-          const RNNParam& param = op.param_;
-          int index = 5;
-          if (param.state_outputs) {
-            out_data.push_back(inputs[index++]);
-            out_grad.push_back(inputs[index++]);
-          }
+    MSHADOW_TYPE_SWITCH(itype, IType, {
+      RNNOp<xpu, DType, IType>& op = state.get_state<RNNOp<xpu, DType, IType>>();
+      const RNNParam& param = op.param_;
+      int index = 5;
+      if (param.state_outputs) {
+        out_data.push_back(inputs[index++]);
+        out_grad.push_back(inputs[index++]);
+      }
 
-          if (param.mode == rnn_enum::kLstm) {
-            in_data.push_back(inputs[index++]);
-            if (param.state_outputs) {
-              out_data.push_back(inputs[index++]);
-              out_grad.push_back(inputs[index]);
-            }
-          }
+      if (param.mode == rnn_enum::kLstm) {
+        in_data.push_back(inputs[index++]);
+        if (param.state_outputs) {
+          out_data.push_back(inputs[index++]);
+          out_grad.push_back(inputs[index]);
+        }
+      }
 
 
-          if (param.use_sequence_length) {
-            size_t seq_len_input_idx = rnn_enum::kSequenceLength;
-            if  (param.mode != rnn_enum::kLstm) {
-              seq_len_input_idx -= 1;
-            }
-            in_data.push_back(outputs[seq_len_input_idx]);
-          }
+      if (param.use_sequence_length) {
+        size_t seq_len_input_idx = rnn_enum::kSequenceLength;
+        if  (param.mode != rnn_enum::kLstm) {
+          seq_len_input_idx -= 1;
+        }
+        in_data.push_back(outputs[seq_len_input_idx]);
+      }
 
-          op.Backward(ctx, out_grad, in_data, out_data, req, in_grad);
-        });
+      op.Backward(ctx, out_grad, in_data, out_data, req, in_grad);
     });
+  });
 }
 
 }  // namespace op

@@ -59,7 +59,7 @@ static bool RNNShape(const nnvm::NodeAttrs& attrs,
   std::vector<std::string> expected_arguments = ListArguments(param_);
 
   CHECK_EQ(in_shape->size(), expected_arguments.size()) << "Input shape mismatch. Expected " <<
-    expected_arguments.size() << " input parameters but got " << in_shape->size() << ".";
+      expected_arguments.size() << " input parameters but got " << in_shape->size() << ".";
 
   const TShape &dshape = (*in_shape)[rnn_enum::kData];
   if (!mxnet::ndim_is_known(dshape)) return false;
@@ -170,9 +170,10 @@ static bool RNNType(const nnvm::NodeAttrs& attrs,
 static std::vector<ResourceRequest> RNNResourceEx(const NodeAttrs& attrs, const int dev_mask,
                                                   const DispatchMode dispatch_mode) {
   std::vector<ResourceRequest> request;
-  request.emplace_back(ResourceRequest::kTempSpace);
+
   if (dev_mask == kGPU) {
 #if MXNET_USE_CUDNN == 1
+    request.emplace_back(ResourceRequest::kTempSpace);
     const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
     if (param.p != 0 && 1.0f - param.p > 0) {
       request.emplace_back(ResourceRequest::kCuDNNDropoutDesc);
@@ -190,7 +191,7 @@ inline static bool RNNStorageType(const nnvm::NodeAttrs& attrs,
   DispatchMode wanted_mode = DispatchMode::kFCompute;
 
 #if MXNET_USE_MKLDNN == 1
-    wanted_mode = DispatchMode::kFComputeEx;
+  wanted_mode = DispatchMode::kFComputeEx;
 #endif  // MXNET_USE_MKLDNN
 
   return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
