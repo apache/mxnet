@@ -372,7 +372,6 @@ build_ubuntu_cpu_openblas() {
     export CC="gcc"
     export CXX="g++"
     build_ccache_wrappers
-    #export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
     make \
         DEV=1                         \
         USE_TVM_OP=1                  \
@@ -392,7 +391,6 @@ build_ubuntu_cpu_mkl() {
     set -ex
     export CC="ccache gcc"
     export CXX="ccache g++"
-    #export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
     make \
         DEV=1                         \
         ENABLE_TESTCOVERAGE=1         \
@@ -411,7 +409,6 @@ build_ubuntu_cpu_cmake_debug() {
     pushd .
     cd /work/build
     build_ccache_wrappers
-    #export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
@@ -561,7 +558,6 @@ build_ubuntu_cpu_mkldnn() {
     set -ex
 
     build_ccache_wrappers
-    #export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
 
     make  \
         DEV=1                         \
@@ -577,7 +573,6 @@ build_ubuntu_cpu_mkldnn_mkl() {
     set -ex
 
     build_ccache_wrappers
-    #export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
 
     make  \
         DEV=1                         \
@@ -792,7 +787,6 @@ build_ubuntu_cpu_large_tensor() {
     set -ex
     cd /work/build
     build_ccache_wrappers
-    #export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
@@ -854,6 +848,7 @@ sanity_check() {
 }
 
 unittest_ubuntu_python2_cpu_cython() {
+    echo "ldd ./lib/libmxnet.so "
     ls ./lib/
     ldd ./lib/libmxnet.so
     set -ex
@@ -869,6 +864,9 @@ unittest_ubuntu_python2_cpu_cython() {
 }
 
 unittest_ubuntu_python2_cpu() {
+    echo "ldd ./lib/libmxnet.so"
+    ls ./lib/
+    ldd ./lib/libmxnet.so
     set -ex
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=0
@@ -890,6 +888,9 @@ unittest_ubuntu_python3_cpu() {
 }
 
 unittest_ubuntu_python3_cpu_mkldnn() {
+    echo "ldd ./lib/libmxnet.so"
+    ls ./lib/
+    ldd ./lib/libmxnet.so
     set -ex
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
