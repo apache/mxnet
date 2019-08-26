@@ -916,10 +916,6 @@ def test_quantize_model_with_forward():
         lshape_list.append(None)
 
         for s, dshape, lshape, name in zip(sym_list, dshape_list, lshape_list, name_list):
-            if is_test_for_gpu() and name in ['sym1']:
-               print('skipped testing test_quantize_model_with_forward for gpu int8 since it is not supported yet')
-               continue
-
             if lshape is None:
                 mod = Module(symbol=s, label_names=None)
                 mod.bind(for_training=False,
