@@ -612,6 +612,7 @@ Composite multiple symbols into a new one by an operator.
     random.normal
     random.poisson
     random.randint
+    random.randn
     random.shuffle
     random.uniform
     mxnet.random.seed

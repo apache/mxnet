@@ -607,19 +607,21 @@ def test_quantized_bn():
         return mean, var
 
     def check_quantized_bn(data_shape, qdtype):
-        if qdtype == 'uint8':
-            print('skipped testing quantize_bn for uint8 since it is not supported yet')
-            return
-        elif is_test_for_native_cpu():
+        if is_test_for_native_cpu():
             print('skipped testing quantize_bn for native cpu since it is not supported yet')
             return
         elif is_test_for_gpu():
             print('skipped testing quantize_bn for gpu since it is not supported yet')
             return
 
-        # qdtype = int8
-        data_low = -127.0
-        data_high = 127.0
+        # qdtype = uint8
+        if qdtype == 'uint8':
+            data_low = 0.0
+            data_high = 127.0
+        else:
+            data_low = -127.0
+            data_high = 127.0
+        # output type = int8
         quantized_range = 127.0
         # run fp32 bn
         data_sym = mx.sym.Variable(name='data', shape=data_shape, dtype='float32')
@@ -639,9 +641,6 @@ def test_quantized_bn():
         bn_fp32_exe.arg_dict[arg_names[2]][:] = beta
         bn_fp32_exe.aux_dict[aux_names[0]][:] = moving_mean
         bn_fp32_exe.aux_dict[aux_names[1]][:] = moving_var
-        min_data = mx.nd.min(data)
-        max_data = mx.nd.max(data)
-        data_range = mx.nd.maximum(mx.nd.abs(min_data), mx.nd.abs(max_data))
 
         output= bn_fp32_exe.forward()[0]
 
@@ -654,11 +653,12 @@ def test_quantized_bn():
 
         calib_data = NDArrayIter(data=data, batch_size=data_shape[0])
         calib_data = DummyIter(calib_data)
+        # quantize bn with quantized_type = int8: MKLDNN BN only support int8 output
         qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=bn_fp32,
                                                                              arg_params=arg_params,
                                                                              aux_params=bn_fp32_exe.aux_dict,
                                                                              ctx=mx.current_context(),
-                                                                             quantized_dtype=qdtype,
+                                                                             quantized_dtype='int8',
                                                                              calib_mode='naive',
                                                                              calib_data=calib_data,
                                                                              num_calib_examples=20)
@@ -668,13 +668,14 @@ def test_quantized_bn():
         mod.set_params(qarg_params, qaux_params)
         batch = mx.io.DataBatch([data], [])
         mod.forward(batch, is_train=False)
-        output_int8_to_fp32= mod.get_outputs()[0]
+        output_int8_to_fp32 = mod.get_outputs()[0]
 
-        assert_almost_equal(output.asnumpy(), output_int8_to_fp32.asnumpy(), rtol=1e-1, atol=3)
+        assert_almost_equal(output.asnumpy(), output_int8_to_fp32.asnumpy(), rtol=1e-1, atol=4)
 
-    check_quantized_bn((32, 512, 4, 4), 'int8')
-    check_quantized_bn((32, 1024, 8, 8), 'int8')
-    check_quantized_bn((32, 3, 224, 224), 'int8')
+    for qdtype in ['int8', 'uint8']:
+      check_quantized_bn((32, 512, 4, 4), qdtype)
+      check_quantized_bn((32, 1024, 8, 8), qdtype)
+      check_quantized_bn((32, 3, 224, 224), qdtype)
 
 @with_seed()
 def test_quantize_params():
@@ -921,16 +922,12 @@ def test_quantize_model_with_forward():
         lshape_list.append(None)
 
         for s, dshape, lshape, name in zip(sym_list, dshape_list, lshape_list, name_list):
-            if qdtype == 'int8' and is_test_for_mkldnn() and name in ['sym1', 'sym2', 'sym3']:
-              print('skipped testing test_quantize_model_with_forward for mkldnn cpu int8 since it is not supported yet')
-              continue
-            elif qdtype == 'uint8' and is_test_for_mkldnn() and name in ['sym1']:
-              print('skipping test_quantize_model_with_forward for mkldnn cpu uint8 since it is not supported yet')
-              continue
-            elif qdtype == 'int8' and is_test_for_gpu() and name in ['sym1']:
-              print('skipped testing test_quantize_model_with_forward for gpu int8 since it is not supported yet')
-              continue
-
+            if qdtype == 'int8' and name in ['sym1','sym2','sym3']:
+                print('mkldnn_quantized_conv op only supports uint8 as input type, skip test with int8.')
+                continue
+            if qdtype == 'uint8' and name in ['sym1']:
+                print('mkldnn_quantized_bn doesn\'t support calib_mode=None')
+                continue
             if lshape is None:
                 mod = Module(symbol=s, label_names=None)
                 mod.bind(for_training=False,
