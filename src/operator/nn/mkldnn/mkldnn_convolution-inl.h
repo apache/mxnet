@@ -70,20 +70,13 @@ struct MKLDNNConvParam : public dmlc::Parameter<MKLDNNConvParam> {
   }
 };
 
-struct MKLDNNPostActParam {
-  mkldnn::algorithm alg = mkldnn::algorithm::algorithm_undef;
-  float scale = 1.f;
-  float alpha = 0.f;
-  float beta = 1.f;
-};
-
 struct MKLDNNConvFullParam {
   ConvolutionParam conv_param;
   MKLDNNConvParam mkldnn_param;
   float sum_scale = 1.f;
   std::vector<float> requantize_scales;
-  MKLDNNPostActParam act_param;
-  MKLDNNPostActParam postsum_act_param;
+  MKLDNNPostEltwiseParam act_param;
+  MKLDNNPostEltwiseParam postsum_act_param;
 };
 
 mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(const MKLDNNConvFullParam &param,

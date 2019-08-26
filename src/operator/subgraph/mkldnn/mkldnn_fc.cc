@@ -33,7 +33,10 @@
 #include "../../nn/mkldnn/mkldnn_base-inl.h"
 #include "../../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../../nn/mkldnn/mkldnn_fully_connected-inl.h"
+#include "../../nn/mkldnn/mkldnn_act-inl.h"
+#include "../../tensor/matrix_op-inl.h"
 #include "../../quantization/quantization_utils.h"
+#include "mkldnn_fc-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -143,7 +146,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
       auto data_range = (data.dtype() == mshadow::kInt8) ? kInt8Range : kUint8Range;
       float data_scale  = data_range / MaxAbs(cached_min_data_, cached_max_data_);
       float weight_scale = kInt8Range / MaxAbs(cached_min_weight_, cached_max_weight_);
-      float quantized_out_range = mkldnn_param.with_relu ? kUint8Range : kInt8Range;
+      float quantized_out_range = IsOutputUint8(full_param_)? kUint8Range : kInt8Range;
 
       if (has_bias) {
         NDArray bias = in_data[fullc::kBias];
@@ -205,6 +208,13 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
 }
 
 static void SgMKLDNNFCParamParser(nnvm::NodeAttrs *attrs) {
+  // For backward compatible, with_relu->with_eltwise
+  auto legacy = attrs->dict.find("with_relu");
+  if (legacy != attrs->dict.end()) {
+    attrs->dict["with_eltwise"] = attrs->dict["with_relu"];
+    attrs->dict.erase(legacy);
+  }
+
   MKLDNNFCFullParam full_param;
   try {
     full_param.mkldnn_param.Init(attrs->dict);
@@ -222,10 +232,21 @@ static void SgMKLDNNFCParamParser(nnvm::NodeAttrs *attrs) {
   auto subgraph_sym = attrs->subgraphs[0];
   DFSVisit(subgraph_sym->outputs, [&](const nnvm::NodePtr &node) {
     if (node->is_variable()) return;
-    auto &node_name = node->op()->name;
-    if (node_name == "FullyConnected") {
+    auto &op_name = node->op()->name;
+    if (op_name == "FullyConnected") {
       full_param.default_param =
           nnvm::get<FullyConnectedParam>(node->attrs.parsed);
+    } else if (SupportMKLDNNFCEltwiseFusion(op_name)) {
+      if (op_name == "Activation") {
+        const ActivationParam act_param = nnvm::get<ActivationParam>(node->attrs.parsed);
+        full_param.eltwise_param.alg = GetMKLDNNActAlgo(act_param);
+      } else if (op_name == "clip") {
+        const ClipParam clip_param = nnvm::get<ClipParam>(node->attrs.parsed);
+        full_param.eltwise_param.alg = mkldnn::algorithm::eltwise_bounded_relu;
+        full_param.eltwise_param.alpha = clip_param.a_max;
+      } else {
+        full_param.eltwise_param.alg = GetMKLDNNEltwiseAlgo(op_name);
+      }
     }
   });
   attrs->parsed = std::move(full_param);
@@ -326,7 +347,7 @@ static bool SgMKLDNNFCInferType(const nnvm::NodeAttrs &attrs,
     } else {
       if (full_param.mkldnn_param.min_calib_range.has_value() &&
           full_param.mkldnn_param.max_calib_range.has_value()) {
-        if (full_param.mkldnn_param.with_relu) {
+        if (IsOutputUint8(full_param)) {
           TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kUint8);
         } else {
           TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kInt8);
