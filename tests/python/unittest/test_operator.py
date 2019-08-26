@@ -6851,6 +6851,7 @@ def test_laop_5():
 
 # Tests for linalg.inverse
 @with_seed()
+@unittest.skip("Test crashes https://github.com/apache/incubator-mxnet/issues/15975")
 def test_laop_6():
     dtype = np.float64
     rtol_fw = 1e-7
