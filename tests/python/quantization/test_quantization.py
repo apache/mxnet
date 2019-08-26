@@ -614,9 +614,14 @@ def test_quantized_bn():
             print('skipped testing quantize_bn for gpu since it is not supported yet')
             return
 
-        # qdtype = int8
-        data_low = -127.0
-        data_high = 127.0
+        # qdtype = uint8
+        if qdtype == 'uint8':
+            data_low = 0.0
+            data_high = 127.0
+        else:
+            data_low = -127.0
+            data_high = 127.0
+        # output type = int8
         quantized_range = 127.0
         # run fp32 bn
         data_sym = mx.sym.Variable(name='data', shape=data_shape, dtype='float32')
@@ -636,9 +641,6 @@ def test_quantized_bn():
         bn_fp32_exe.arg_dict[arg_names[2]][:] = beta
         bn_fp32_exe.aux_dict[aux_names[0]][:] = moving_mean
         bn_fp32_exe.aux_dict[aux_names[1]][:] = moving_var
-        min_data = mx.nd.min(data)
-        max_data = mx.nd.max(data)
-        data_range = mx.nd.maximum(mx.nd.abs(min_data), mx.nd.abs(max_data))
 
         output= bn_fp32_exe.forward()[0]
 
@@ -651,11 +653,12 @@ def test_quantized_bn():
 
         calib_data = NDArrayIter(data=data, batch_size=data_shape[0])
         calib_data = DummyIter(calib_data)
+        # quantize bn with quantized_type = int8: MKLDNN BN only support int8 output
         qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=bn_fp32,
                                                                              arg_params=arg_params,
                                                                              aux_params=bn_fp32_exe.aux_dict,
                                                                              ctx=mx.current_context(),
-                                                                             quantized_dtype=qdtype,
+                                                                             quantized_dtype='int8',
                                                                              calib_mode='naive',
                                                                              calib_data=calib_data,
                                                                              num_calib_examples=20)
@@ -665,14 +668,14 @@ def test_quantized_bn():
         mod.set_params(qarg_params, qaux_params)
         batch = mx.io.DataBatch([data], [])
         mod.forward(batch, is_train=False)
-        output_int8_to_fp32= mod.get_outputs()[0]
+        output_int8_to_fp32 = mod.get_outputs()[0]
 
-        assert_almost_equal(output.asnumpy(), output_int8_to_fp32.asnumpy(), rtol=1e-1, atol=3)
+        assert_almost_equal(output.asnumpy(), output_int8_to_fp32.asnumpy(), rtol=1e-1, atol=4)
 
     for qdtype in ['int8', 'uint8']:
-        check_quantized_bn((32, 512, 4, 4), qdtype)
-        check_quantized_bn((32, 1024, 8, 8), qdtype)
-        check_quantized_bn((32, 3, 224, 224), qdtype)
+      check_quantized_bn((32, 512, 4, 4), qdtype)
+      check_quantized_bn((32, 1024, 8, 8), qdtype)
+      check_quantized_bn((32, 3, 224, 224), qdtype)
 
 @with_seed()
 def test_quantize_params():
