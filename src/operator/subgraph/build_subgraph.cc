@@ -599,6 +599,10 @@ void CreateSubgraphNode(nnvm::Graph* g,
     }
   }
 #if DEBUG_SUBGRAPH
+  if (n)
+    LOG(INFO) << "Subgraph node created and output_entries updated.";
+  else
+    LOG(INFO) << "Subgraph node not created, output_entries not updated.";
   PrintNodeEntries(output_entries);
 #endif
 }
