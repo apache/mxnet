@@ -216,7 +216,7 @@ if __name__ == '__main__':
             if exclude_first_conv:
                 excluded_sym_names += ['resnetv10_conv0_fwd']
         elif args.model.find('resnet') != -1 and args.model.find('v2') != -1:
-            excluded_sym_names += ['resnetv20_flatten0_flatten0']
+            excluded_sym_names += ['resnetv20_flatten0_flatten0', 'resnetv20_stage1_batchnorm0_fwd']
             if exclude_first_conv:
                 excluded_sym_names += ['resnetv20_conv0_fwd']
         elif args.model.find('vgg') != -1:
