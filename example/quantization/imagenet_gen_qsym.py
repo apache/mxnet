@@ -138,6 +138,7 @@ if __name__ == '__main__':
 
     exclude_first_conv = args.exclude_first_conv
     excluded_sym_names = []
+    excluded_op_names = []
     if args.model == 'imagenet1k-resnet-152':
         rgb_mean = '0,0,0'
         if args.ctx == 'gpu':
@@ -155,16 +156,6 @@ if __name__ == '__main__':
         if args.ctx == 'gpu':
             calib_layer = lambda name: name.endswith('_output') and (name.find('conv') != -1
                                                                      or name.find('fc') != -1)
-            excluded_sym_names += ['ch_concat_3a_chconcat',
-                                   'ch_concat_3b_chconcat',
-                                   'ch_concat_3c_chconcat',
-                                   'ch_concat_4a_chconcat',
-                                   'ch_concat_4b_chconcat',
-                                   'ch_concat_4c_chconcat',
-                                   'ch_concat_4d_chconcat',
-                                   'ch_concat_4e_chconcat',
-                                   'ch_concat_5a_chconcat',
-                                   'ch_concat_5b_chconcat']
         else:
             calib_layer = lambda name: name.endswith('_output') and (name.find('conv') != -1)
             excluded_sym_names += ['flatten', 'fc1']
@@ -187,6 +178,7 @@ if __name__ == '__main__':
         logger.info('Quantizing FP32 model %s' % args.model)
         qsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
                                                        ctx=ctx, excluded_sym_names=excluded_sym_names,
+                                                       excluded_op_names=excluded_op_names,
                                                        calib_mode=calib_mode, quantized_dtype=args.quantized_dtype,
                                                        logger=logger)
         sym_name = '%s-symbol.json' % (prefix + '-quantized')
@@ -208,6 +200,7 @@ if __name__ == '__main__':
 
         cqsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
                                                         ctx=ctx, excluded_sym_names=excluded_sym_names,
+                                                        excluded_op_names=excluded_op_names,
                                                         calib_mode=calib_mode, calib_data=data,
                                                         num_calib_examples=num_calib_batches * batch_size,
                                                         calib_layer=calib_layer, quantized_dtype=args.quantized_dtype,

@@ -27,6 +27,7 @@
 
 #include <vector>
 #include "../tensor/matrix_op-inl.h"
+#include "../nn/concat-inl.h"
 
 namespace mxnet {
 namespace op {

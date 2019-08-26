@@ -28,12 +28,7 @@ import uuid
 import warnings
 import collections
 import weakref
-try:
-    import requests
-except ImportError:
-    class requests_failed_to_import(object):
-        pass
-    requests = requests_failed_to_import
+import requests
 
 import numpy as np
 
