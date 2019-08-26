@@ -2328,4 +2328,38 @@ def stack(arrays, axis=0, out=None):
     return _npi.stack(*arrays, axis=axis, out=out)
 
 
+@set_module('mxnet.symbol.numpy')
+def bitwise_and(x1, x2, out=None):
+    """
+    Computes the bit-wise AND of the underlying binary representation of
+    the integers in the input arrays. This method implements the C/Python
+    operator ``&``.
+
+    Parameters
+    ----------
+    x1, x2 : _Symbol
+    out : _Symbol or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    y : _Symbol of integer dtypes
+
+    See Also
+    --------
+    bitwise_or
+    bitwise_xor
+
+    Notes
+    -------
+    This function differs from the original `numpy.bitwise_and
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.bitwise_and.html>`_ in
+    the following aspects:
+    - Input type currently does not support Python native iterables(list, tuple, ...).
+    - Input type currently does not support boolean arrays.
+
+    """
+    return _ufunc_helper(x1, x2, _npi.bitwise_and, _np.bitwise_and, _npi.bitwise_and_scalar, None, out)
+
+
 _set_np_symbol_class(_Symbol)

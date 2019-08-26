@@ -49,7 +49,7 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'add', 'subtract', 'mul
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative',
            'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh',
            'tensordot', 'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate',
-           'stack']
+           'stack', 'bitwise_and']
 
 
 # This function is copied from ndarray.py since pylint
@@ -3086,3 +3086,67 @@ def stack(arrays, axis=0, out=None):
     stacked : ndarray
         The stacked array has one more dimension than the input arrays."""
     return _mx_nd_np.stack(arrays, axis=axis, out=out)
+
+
+@set_module('mxnet.numpy')
+def bitwise_and(x1, x2, out=None):
+    """
+    Computes the bit-wise AND of the underlying binary representation of
+    the integers in the input arrays. This method implements the C/Python
+    operator ``&``.
+
+    Parameters
+    ----------
+    x1, x2 : ndarray of integer dtypes, or ints.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray of integer dtypes, or scalar if both inputs are scalars.
+
+    See Also
+    --------
+    bitwise_or
+    bitwise_xor
+
+    Notes
+    -------
+    This function differs from the original `numpy.bitwise_and
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.bitwise_and.html>`_ in
+    the following aspects:
+    - Input type currently does not support Python native iterables(list, tuple, ...).
+    - Input type currently does not support boolean arrays.
+
+    Examples
+    --------
+    The number 13 is represented by ``00001101``.  Likewise, 17 is
+    represented by ``00010001``.  The bit-wise AND of 13 and 17 is
+    therefore ``000000001``, or 1:
+    >>> np.bitwise_and(13, 17)
+    1
+
+    >>> np.bitwise_and(14, 13)
+    12
+
+    >>> x = np.array([14, 13], dtype=np.int32)
+    >>> np.bitwise_and(x, 13)
+    array([12, 13], dtype=int32)
+
+    >>> x = np.array([11,7], dtype=np.int32)
+    >>> y = np.array([4, 25], dtype=np.int32)
+    >>> np.bitwise_and(x, y)
+    array([0, 1], dtype=int32)
+
+    >>> x1 = np.array(13, dtype=np.int32)
+    >>> x2 = np.array(17, dtype=np.int32)
+    >>> out = np.array(0, dtype=np.int32)
+    >>> np.bitwise_and(x1, x2, out)
+    array(1, dtype=int32)
+    >>> out
+    array(1, dtype=int32)
+
+    """
+    return _mx_nd_np.bitwise_and(x1, x2, out)
