@@ -213,19 +213,19 @@ def test_sequence_mask():
     assert b[-1][-1] == -1
 
 
-# def test_sequence_reverse():
-#     a = nd.arange(0, LARGE_X * 2).reshape(LARGE_X, 2)
-#     # test as reverse operator
-#     b = nd.SequenceReverse(a)
-#     assert b[-1][0] == a[0][0]
-#     assert b.shape == a.shape
+def test_sequence_reverse():
+    a = nd.arange(0, LARGE_X * 2).reshape(LARGE_X, 2)
+    # test as reverse operator
+    b = nd.SequenceReverse(a)
+    assert b[-1][0] == a[0][0]
+    assert b.shape == a.shape
 
-#     # test with sequence length
-#     b = nd.SequenceReverse(a, sequence_length=nd.array([2, 3]),
-#                            use_sequence_length=True)
-#     assert b[1][0] == a[0][0]  # check if reversed
-#     assert b[-1][0] == a[-1][0]  # check if intact
-#     assert b.shape == a.shape
+    # test with sequence length
+    b = nd.SequenceReverse(a, sequence_length=nd.array([2, 3]),
+                           use_sequence_length=True)
+    assert b[1][0] == a[0][0]  # check if reversed
+    assert b[-1][0] == a[-1][0]  # check if intact
+    assert b.shape == a.shape
 
 
 def test_sequence_last():
