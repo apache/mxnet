@@ -1555,7 +1555,6 @@ def power(x1, x2, out=None):
 
 
 @set_module('mxnet.numpy')
-<<<<<<< HEAD
 def sin(x, out=None, **kwargs):
     r"""Trigonometric sine, element-wise.
     Parameters
