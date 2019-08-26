@@ -1605,13 +1605,13 @@ def check_bilinear_upsampling_with_shape(data_shape, weight_shape, scale, root_s
     assert out.shape == data_shape[:2] + target_shape
 
 
-@with_seed()
 """
 The test cases include integer, tuple, 
 and empty tuple scales on up to 3 shapes 
 at once with the shapes having various sizes 
 for their heights and widths
 """
+@with_seed()
 def test_nearest_upsampling():
     for root_scale in [1, 2, (3), (2,3), (3,2), (1,1), (5,1), (2,2), ()]:
         for scale in [1, 2, 3]:
