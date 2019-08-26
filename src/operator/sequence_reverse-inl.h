@@ -74,7 +74,7 @@ struct ReverseKernel {
                                   const index_t other_dim, const index_t numel,
                                   const IType *const indices) {
     const index_t batch = i / (max_seq_len * other_dim);
-    const int id = (i / other_dim) % max_seq_len;
+    const index_t id = (i / other_dim) % max_seq_len;
     const index_t j = i % other_dim;
     const index_t num_seq =
         indices ? static_cast<index_t>(indices[batch]) : max_seq_len;
