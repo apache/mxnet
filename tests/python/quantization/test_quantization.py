@@ -919,6 +919,12 @@ def test_quantize_model_with_forward():
         lshape_list.append(None)
 
         for s, dshape, lshape, name in zip(sym_list, dshape_list, lshape_list, name_list):
+            if qdtype == 'int8' and name in ['sym1','sym2','sym3']:
+                print('mkldnn_quantized_conv op only supports uint8 as input type, skip test with int8.')
+                continue
+            if qdtype == 'uint8' and name in ['sym1']:
+                print('mkldnn_quantized_bn doesn\'t support calib_mode=None')
+                continue
             if lshape is None:
                 mod = Module(symbol=s, label_names=None)
                 mod.bind(for_training=False,
