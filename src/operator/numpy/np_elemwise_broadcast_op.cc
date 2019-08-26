@@ -186,7 +186,7 @@ NNVM_REGISTER_OP(_npi_bitwise_and)
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseIntType<2, 1>)  //TODO(reminisce):boolean support
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseIntType<2, 1>)  // TODO(reminisce) boolean support
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
   return std::vector<std::string>{"x1", "x2"};
@@ -203,7 +203,7 @@ NNVM_REGISTER_OP(_npi_bitwise_and_scalar)
     attrs->parsed = std::stod(attrs->dict["scalar"]);
   })
 .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseIntType<1, 1>)  //TODO(reminisce):boolean support
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseIntType<1, 1>)  // TODO(reminisce) boolean support
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
   return std::vector<std::string>{"x1", "x2"};
