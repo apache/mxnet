@@ -43,6 +43,7 @@ DMLC_REGISTER_PARAMETER(ConstantParam);
 NNVM_REGISTER_OP(_contrib_constant)
 .describe(R"code(Creates a constant tensor for a value.
 Example::
+
   v1 = (1, 2)
   constant_op = symbol.contrib.constant(value=v1)
   executor = constant_op.simple_bind(ctx=cpu())
