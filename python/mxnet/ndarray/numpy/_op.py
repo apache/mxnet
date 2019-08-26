@@ -1907,7 +1907,6 @@ def stack(arrays, axis=0, out=None):
     return _npi.stack(*arrays, axis=axis, out=out)
 
 
-
 @set_module('mxnet.ndarray.numpy')
 def deg2rad(x, out=None):
     r"""
