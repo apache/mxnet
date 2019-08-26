@@ -1223,6 +1223,57 @@ def test_np_split():
 
 @with_seed()
 @use_np
+def test_np_hsplit():
+    class TestHSplit(HybridBlock):
+        def __init__(self, indices_or_sections):
+            super(TestHSplit, self).__init__()
+            self._indices_or_sections = indices_or_sections
+
+        def hybrid_forward(self, F, a, *args, **kwargs):
+            return F.np.hsplit(a, indices_or_sections=self._indices_or_sections)
+
+    shapes = [
+        (10,),
+        (3, 8, 5),
+        (3, 0, 5),
+        (3, 8, 5, 6),
+        (3, 0, 5, 6),
+    ]
+    indices_or_sections_num = [
+        (2, 4),
+        (3, 3),
+        (3,),
+        (1,),
+        2,
+    ]
+    for hybridize in [True, False]:
+        for shape in shapes:
+            for indices_or_sections in indices_or_sections_num:
+                # test gluon
+                test_hsplit = TestHSplit(indices_or_sections=indices_or_sections)
+                if hybridize:
+                    test_hsplit.hybridize()
+
+                a = mx.nd.random.uniform(-1.0, 1.0, shape=shape).as_np_ndarray()
+                a.attach_grad()
+                expected_ret = _np.hsplit(a.asnumpy(), indices_or_sections=indices_or_sections)
+                with mx.autograd.record():
+                    y = test_hsplit(a)
+                assert len(y) == len(expected_ret)
+                for mx_out, np_out in zip(y, expected_ret):
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+                mx.autograd.backward(y)
+                assert_almost_equal(a.grad.asnumpy(), _np.ones(a.shape), rtol=1e-3, atol=1e-5)
+
+                # test imperative
+                mx_outs = np.hsplit(a, indices_or_sections=indices_or_sections)
+                np_outs = _np.hsplit(a.asnumpy(), indices_or_sections=indices_or_sections)
+                for mx_out, np_out in zip(mx_outs, np_outs):
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@use_np
 def test_np_concat():
     class TestConcat(HybridBlock):
         def __init__(self, axis=None):
@@ -1664,7 +1715,7 @@ def test_np_choice():
             super(TestWeightedChoice, self).__init__()
             self.sample_size = sample_size
             self.replace = replace
-        
+
         def hybrid_forward(self, F, a, p):
             op = getattr(F.np.random, "choice", None)
             return F.np.random.choice(a, self.sample_size, self.replace, p)
@@ -1703,7 +1754,7 @@ def test_np_choice():
         assert len(samples) == samples_size
         if not replace:
             assert len(_np.unique(samples)) == samples_size
-        
+
     num_classes = 10
     num_samples = 10 ** 8
     # Density tests are commented out due to their huge time comsumption.
@@ -1717,7 +1768,7 @@ def test_np_choice():
     #     test_sample_with_replacement(np.random.choice, num_classes, shape)
     #     weight = np.array(_np.random.dirichlet([1.0] * num_classes))
     #     test_sample_with_replacement(np.random.choice, num_classes, shape, weight)
-    
+
     # Tests passed locally,
     # commented out for the same reason as above.
     # shape_list2 = [
@@ -1730,7 +1781,7 @@ def test_np_choice():
     #     test_sample_without_replacement(np.random.choice, num_classes, shape, 10 ** 5)
     #     weight = np.array(_np.random.dirichlet([1.0] * num_classes))
     #     test_sample_without_replacement(np.random.choice, num_classes, shape, 10 ** 5, weight)
-    
+
     # Test hypridize mode:
     for hybridize in [True, False]:
         for replace in [True, False]:

@@ -46,5 +46,11 @@ NNVM_REGISTER_OP(_backward_np_concat)
 NNVM_REGISTER_OP(_npi_stack)
 .set_attr<FCompute>("FCompute<gpu>", StackOpForward<gpu>);
 
+NNVM_REGISTER_OP(_npi_hsplit)
+.set_attr<FCompute>("FCompute<gpu>", HSplitOpForward<gpu>);
+
+NNVM_REGISTER_OP(_npi_hsplit_backward)
+.set_attr<FCompute>("FCompute<gpu>", HSplitOpBackward<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

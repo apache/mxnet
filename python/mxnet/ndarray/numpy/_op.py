@@ -32,7 +32,7 @@ __all__ = ['zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide', 'mo
            'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot',
-           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'mean',
+           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'hsplit', 'concatenate', 'stack', 'mean',
            'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var']
 
 
@@ -1935,6 +1935,119 @@ def split(ary, indices_or_sections, axis=0):
     ret = _npi.split(ary, indices, axis, False)
     if not isinstance(ret, list):
         return [ret]
+    return ret
+
+
+@set_module('mxnet.ndarray.numpy')
+def hsplit(ary, indices_or_sections):
+    """Split an array into multiple sub-arrays horizontally (column-wise).
+
+    This is equivalent to ``split`` with ``axis=0`` if ``ary`` has one
+    dimension, and otherwise that with ``axis=1``.
+
+    Parameters
+    ----------
+    ary : ndarray
+        Array to be divided into sub-arrays.
+    indices_or_sections : int, list of ints or tuple of ints.
+        If `indices_or_sections` is an integer, N, the array will be divided
+        into N equal arrays along `axis`.  If such a split is not possible,
+        an error is raised.
+
+        If `indices_or_sections` is a list of sorted integers, the entries
+        indicate where along `axis` the array is split.
+
+        If an index exceeds the dimension of the array along `axis`,
+        it will raises errors. so index must less than or euqal to
+        the dimension of the array along axis.
+
+    Returns
+    -------
+    sub-arrays : list of ndarrays
+        A list of sub-arrays.
+
+    Notes
+    ------
+    - If `indices_or_sections` is given as an integer, but a split
+      does not result in equal division.It will raises ValueErrors.
+
+    - If indices_or_sections is an integer, and the number is 1, it will
+      raises an error. Because single output from split is not supported yet...
+
+    See Also
+    --------
+    split : Split an array into multiple sub-arrays of equal size.
+
+    Examples
+    --------
+    >>> x = np.arange(16.0).reshape(4, 4)
+    >>> x
+    array([[ 0.,  1.,  2.,  3.],
+           [ 4.,  5.,  6.,  7.],
+           [ 8.,  9., 10., 11.],
+           [12., 13., 14., 15.]])
+    >>> np.hsplit(x, 2)
+    [array([[ 0.,  1.],
+           [ 4.,  5.],
+           [ 8.,  9.],
+           [12., 13.]]),
+    array([[ 2.,  3.],
+           [ 6.,  7.],
+           [10., 11.],
+           [14., 15.]])]
+    >>> np.hsplit(x, [3, 6])
+    [array([[ 0.,  1.,  2.],
+           [ 4.,  5.,  6.],
+           [ 8.,  9., 10.],
+           [12., 13., 14.]]),
+    array([[ 3.],
+           [ 7.],
+           [11.],
+           [15.]]),
+    array([], shape=(4, 0), dtype=float32)]
+
+    With a higher dimensional array the split is still along the second axis.
+
+    >>> x = np.arange(8.0).reshape(2, 2, 2)
+    >>> x
+    array([[[ 0.,  1.],
+            [ 2.,  3.]],
+           [[ 4.,  5.],
+            [ 6.,  7.]]])
+    >>> np.hsplit(x, 2)
+    [array([[[ 0.,  1.]],
+            [[ 4.,  5.]]]),
+     array([[[ 2.,  3.]],
+            [[ 6.,  7.]]])]
+
+    If ``ary`` has one dimension, 'axis' = 0.
+    >>> x = np.arange(4)
+    array([0., 1., 2., 3.])
+    >>> np.hsplit(x, 2)
+    [array([0., 1.]), array([2., 3.])]
+
+    If you want to produce an empty sub-array, you can see an example.
+    >>> np.hsplit(x, [2, 2])
+    [array([0., 1.]), array([], dtype=float32), array([2., 3.])]
+    """
+    indices = []
+    axis = 1
+    if (len(ary.shape) == 1):
+        axis = 0
+    axis_size = ary.shape[axis]
+    if isinstance(indices_or_sections, int):
+        sections = indices_or_sections
+        if axis_size % sections:
+            raise ValueError('array split does not result in an equal division')
+        section_size = int(axis_size / sections)
+        indices = [i * section_size for i in range(sections)]
+    elif isinstance(indices_or_sections, (list, set, tuple)):
+        indices = [0] + list(indices_or_sections)
+    else:
+        raise ValueError('indices_or_sections must either int or tuple of ints')
+    ret = _npi.hsplit(ary, indices, axis, False)
+    if not isinstance(ret, list):
+        raise NotImplementedError('single output from split is not supported yet...')
     return ret
 
 
