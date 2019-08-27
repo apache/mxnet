@@ -1372,12 +1372,11 @@ void GraphExecutor::ExecuteMonInputCallback(size_t nid) {
 void GraphExecutor::ExecuteMonOutputCallback(size_t nid) {
   const auto& idx = graph_.indexed_graph();
   OpNode& opnode = op_nodes_[nid];
-  const auto& inode = idx[nid];
   const auto& node = idx[nid].source;
   for (size_t i = 0; i < opnode.exec->out_array.size(); ++i) {
     NDArray *cpy = new NDArray(opnode.exec->out_array[i]);
     nnvm::NodePtr node_ptr = std::make_shared<nnvm::Node>(*node);
-    std::string name = GetOutputName({node_ptr, i, 0});
+    std::string name = GetOutputName({node_ptr, static_cast<uint32_t >(i), 0});
     this->monitor_callback_(name.c_str(), reinterpret_cast<void*>(cpy));
   }
 }
