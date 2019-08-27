@@ -28,13 +28,6 @@ LARGE_X = 5000000000
 MEDIUM_X = 1000000000
 
 
-def create_large_vector(size, dtype="int64"):
-    a = nd.arange(0, size, dtype=dtype)
-    # Implicitly calling nd.waitall()
-    assert a[0] == 0
-    return a
-
-
 def test_slice():
     a = nd.ones(LARGE_X)
     res = nd.slice(a, begin=(LARGE_X - MEDIUM_X), end=LARGE_X)
@@ -176,6 +169,8 @@ def test_topk():
     assert np.all(ind == val)
     val = nd.topk(b, k=1, axis=0, dtype=np.int64, ret_typ="value")
     assert val.sum() == (LARGE_X - 1)
+
+
 @with_seed()
 def test_ndarray_random_exponential():
     a = nd.random.exponential(shape=LARGE_X)
