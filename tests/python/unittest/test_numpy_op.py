@@ -28,6 +28,8 @@ from mxnet.test_utils import check_numeric_gradient, use_np, collapse_sum_like
 from common import assertRaises, with_seed
 import random
 import collections
+import scipy.stats as ss
+from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, retry
 
 
 @with_seed()
@@ -1078,6 +1080,50 @@ def test_np_stack():
                 np_out = _np.stack([np_a, np_b, np_c, np_d], axis=axis)
                 mx_out = np.stack([mx_a, mx_b, mx_c, mx_d], axis=axis)
                 assert same(mx_out.asnumpy(), np_out)
+
+
+@with_seed()
+@use_np
+def test_np_randint():
+    ctx = mx.context.current_context()
+    # test shapes
+    params = [
+        (0, 10),
+        (5, None)
+    ]
+    shapes = [
+        (3, 3),
+        (3, 4),
+        (0, 0),
+        (3, 3, 3),
+        (0, 0, 0),
+        (2, 2, 4, 3),
+        (2, 2, 4, 3),
+        (2, 0, 3, 0),
+        (2, 0, 2, 3)
+    ]
+    for shape in shapes:
+        for (low, high) in params:
+            data_mx = np.random.randint(low, high, size=shape)
+            assert data_mx.shape == shape
+
+    # test generator
+    for dtype in ['int32', 'int64']:
+        for low, high in [(50000000, 50001000),(-50000100,-50000000),(-500,199)]:
+            scale = high - low
+            buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.uniform.ppf(x, loc=low, scale=scale), 5)
+            # Quantize bucket boundaries to reflect the actual dtype and adjust probs accordingly
+            buckets = _np.array(buckets, dtype=dtype).tolist()
+            probs = [(buckets[i][1] - buckets[i][0]) / float(scale) for i in range(5)]
+            generator_mx = lambda x: np.random.randint(low, high, size=x, dtype=dtype, ctx=ctx).asnumpy()
+            verify_generator(generator=generator_mx, buckets=buckets, probs=probs, nrepeat=100)
+            # Scipy uses alpha = 0.01 for testing discrete distribution generator but we are using default alpha=0.05 (higher threshold ensures robustness)
+            # Refer - https://github.com/scipy/scipy/blob/9f12af697763fb5f9767d5cb1280ce62456a3974/scipy/stats/tests/test_discrete_basic.py#L45
+            generator_mx_same_seed = \
+                lambda x: _np.concatenate(
+                    [np.random.randint(low, high, size=x // 10, dtype=dtype, ctx=ctx).asnumpy()
+                        for _ in range(10)])
+            verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs, nrepeat=100)
 
 
 if __name__ == '__main__':
