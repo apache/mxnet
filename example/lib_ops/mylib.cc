@@ -44,7 +44,8 @@ void gemm(float* A, float* B, float* C, unsigned n, unsigned k, unsigned m) {
 
 
 int myFCompute(std::map<std::string,std::string> attrs,
-               std::vector<MXTensor> inputs, std::vector<MXTensor> outputs) {
+               std::vector<MXTensor> inputs, std::vector<MXTensor> outputs,
+               OpResource res) {
   //validate inputs
   for(int i=0; i<inputs.size(); i++) {
     if(inputs[i].dtype != kFloat32) {
@@ -52,7 +53,7 @@ int myFCompute(std::map<std::string,std::string> attrs,
       return 0;
     }
   }
-
+  
   //extract data pointers from tensors
   float* input1 = inputs[0].getData<float>();
   float* input2 = inputs[1].getData<float>();
