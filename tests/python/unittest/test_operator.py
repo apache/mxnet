@@ -794,7 +794,6 @@ def test_leaky_relu():
 # NOTE(haojin2): Skipping the numeric check tests for float16 data type due to precision issues,
 # the analytical checks are still performed on each and every data type to verify the correctness.
 @with_seed()
-@unittest.skip("Flaky test tracked by https://github.com/apache/incubator-mxnet/issues/12885")
 def test_prelu():
     def fprelu(x, gamma):
         pos_indices = x > 0
@@ -1627,7 +1626,7 @@ def test_bilinear_upsampling():
 @with_seed()
 def test_batchnorm_training():
     def check_batchnorm_training(stype):
-        for shape in [(2, 3), (2, 3, 2, 2)]:
+        for shape in [(2, 3), (2, 3, 2, 2), (2, 8, 2, 2)]:
             data_tmp = np.random.normal(-0.1, 0.1, size=shape)
             s = shape[1],
             gamma = np.ones(s)
@@ -1822,7 +1821,7 @@ def test_batchnorm():
                 bn_beta.grad.asnumpy(), db.asnumpy(), atol=atol, rtol=rtol)
 
     for op in [mx.nd.BatchNorm, mx.nd.contrib.SyncBatchNorm]:
-        for shape in [(24, 2), (24, 3, 4), (24, 4, 4, 4), (24, 5, 6, 4, 4)]:
+        for shape in [(24, 2), (24, 3, 4), (24, 4, 4, 4), (24, 8, 4, 4), (24, 5, 6, 4, 4)]:
             for axis in range(len(shape)):
                 for cudnn_off in [False, True]:
                     for output_mean_var in [False, True]:
@@ -2010,7 +2009,7 @@ def test_convolution_independent_gradients():
     reqs = ["null", "write", "add"]
     var_names = ["x", "w", "b"]
     dims = [1, 2]
-    num_bases = [1, 16, 64]
+    num_bases = [1, 8]
     kernel_xs = [3, 5]
     stride_xs = [1, 2]
     pad_xs = [0, 1]
@@ -4174,15 +4173,25 @@ def test_special_functions_using_scipy():
 
 
 @with_seed()
-@unittest.skip("Flaky test, tracked at https://github.com/apache/incubator-mxnet/issues/12901")
 def test_clip():
     data = mx.symbol.Variable('data')
     shape = (30, 30)
-    data_tmp = np.random.uniform(-1, 1, shape)
+    data_tmp = np.random.uniform(-1, 1, shape).astype('float32')
     test = mx.sym.clip(data, a_max=0.6, a_min=-0.6)
     check_symbolic_forward(test, [data_tmp], [np.clip(data_tmp, -0.6, 0.6)])
     check_symbolic_backward(test, [data_tmp], [np.ones(shape)],
-                            [np.where(data_tmp < 0.6, [1], [0]) * np.where(data_tmp > -0.6, [1], [0])])
+                            [np.where(data_tmp <= 0.6, [1], [0]) * np.where(data_tmp >= -0.6, [1], [0])])
+
+    # Test monitor on symbol using clip
+
+    def simple_callback(name, arr):
+        pass
+
+    exe = test.simple_bind(ctx=mx.current_context(), data=shape)
+    exe.set_monitor_callback(simple_callback, monitor_all=True)
+    exe.forward(is_train=True)
+    exe.backward(out_grads=mx.nd.ones(shape))
+    mx.nd.waitall()
 
 
 @with_seed()
@@ -4296,15 +4305,6 @@ def test_order():
     large_matrix_npy = get_large_matrix()
 
     for axis in [1, 3, None]:
-        K = [1, 3, 5, 7] if axis is None else [1, 3, 5]
-        for k in K:
-            for is_ascend in [True, False]:
-                b = mx.sym.topk(a, axis=axis, is_ascend=is_ascend, ret_typ="value", k=k)
-                out_npy = gt_topk(dat=a_npy, axis=axis, ret_typ="value", k=k, is_ascend=is_ascend)
-                check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-2, ctx=ctx)
-                check_symbolic_forward(b, location={'a': a_npy}, expected=[out_npy])
-
-    for axis in [1, 3, None]:
         for is_ascend in [True, False]:
             b = mx.sym.sort(a, axis=axis, is_ascend=is_ascend)
             if axis is None:
@@ -4322,22 +4322,6 @@ def test_order():
                            expected=[gt_topk(dat=large_matrix_npy, axis=1,
                                              ret_typ="indices", k=5,
                                              is_ascend=is_ascend)])
-
-    b = mx.sym.topk(a, axis=3, is_ascend=is_ascend, ret_typ="indices", k=3)
-    check_symbolic_backward(sym=b, location={'a': a_npy},
-                            out_grads=[np.random.normal(size=(5, 5, 5, 3))],
-                            expected=[np.zeros((5, 5, 5, 5))])
-    check_symbolic_forward(b, location={'a': a_npy},
-                           expected=[gt_topk(dat=a_npy, axis=3, ret_typ="indices", k=3,
-                                             is_ascend=False)])
-
-    b = mx.sym.topk(a, axis=1, is_ascend=True, ret_typ="mask", k=3)
-    check_symbolic_backward(sym=b, location={'a': a_npy},
-                            out_grads=[np.random.normal(size=(5, 5, 5, 5))],
-                            expected=[np.zeros((5, 5, 5, 5))])
-    check_symbolic_forward(b, location={'a': a_npy},
-                           expected=[gt_topk(dat=a_npy, axis=1, ret_typ="mask", k=3,
-                                             is_ascend=True)])
 
     b = mx.sym.argsort(a, axis=1, is_ascend=False)
     check_symbolic_backward(sym=b, location={'a': a_npy},
@@ -4362,6 +4346,45 @@ def test_order():
     check_symbolic_forward(b, location={'a': a_npy},
                            expected=[gt_topk(dat=a_npy, axis=1, ret_typ="indices", k=1,
                                              is_ascend=True)])
+
+    for dtype in [np.float16, np.float32, np.float64]:
+        dshape = (5, 5, 5, 5)
+        a_npy = np.arange(np.prod(dshape)).astype(dtype)
+        np.random.shuffle(a_npy)
+        a_npy = a_npy.reshape(dshape)
+        a = mx.sym.Variable('a')
+        for axis in [1, 3, None]:
+            K = [1, 3, 5, 7] if axis is None else [1, 3, 5]
+            for k in K:
+                for is_ascend in [True, False]:
+                    b = mx.sym.topk(a, axis=axis, is_ascend=is_ascend, ret_typ="value", k=k)
+                    out_npy = gt_topk(dat=a_npy, axis=axis, ret_typ="value", k=k, is_ascend=is_ascend)
+                    check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-2, ctx=ctx)
+                    check_symbolic_forward(b, location={'a': a_npy}, expected=[out_npy])
+
+        b = mx.sym.topk(a, axis=1, is_ascend=is_ascend, ret_typ="indices", k=5)
+        check_symbolic_backward(sym=b, location={'a': large_matrix_npy},
+                out_grads=[np.random.normal(size=(100, 5))],
+                expected=[np.zeros((100, 300096))])
+        check_symbolic_forward(b, location={'a': large_matrix_npy},
+                expected=[gt_topk(dat=large_matrix_npy, axis=1,
+                    ret_typ="indices", k=5, is_ascend=is_ascend)])
+
+        b = mx.sym.topk(a, axis=3, is_ascend=is_ascend, ret_typ="indices", k=3)
+        check_symbolic_backward(sym=b, location={'a': a_npy},
+                out_grads=[np.random.normal(size=(5, 5, 5, 3))],
+                expected=[np.zeros((5, 5, 5, 5))])
+        check_symbolic_forward(b, location={'a': a_npy},
+                expected=[gt_topk(dat=a_npy, axis=3, ret_typ="indices", k=3,
+                    is_ascend=False)])
+
+        b = mx.sym.topk(a, axis=1, is_ascend=True, ret_typ="mask", k=3)
+        check_symbolic_backward(sym=b, location={'a': a_npy},
+                out_grads=[np.random.normal(size=(5, 5, 5, 5))],
+                expected=[np.zeros((5, 5, 5, 5))])
+        check_symbolic_forward(b, location={'a': a_npy},
+                expected=[gt_topk(dat=a_npy, axis=1, ret_typ="mask", k=3,
+                    is_ascend=True)])
 
 
 @with_seed()
@@ -6828,6 +6851,7 @@ def test_laop_5():
 
 # Tests for linalg.inverse
 @with_seed()
+@unittest.skip("Test crashes https://github.com/apache/incubator-mxnet/issues/15975")
 def test_laop_6():
     dtype = np.float64
     rtol_fw = 1e-7
@@ -7518,15 +7542,6 @@ def test_slice():
                   (slice(10, 0, -2), slice(5, 2, -1), slice(7, None, 3), slice(None, 12, 4))]
     for index in index_list:
         test_slice_forward_backward(arr, index)
-
-    def test_begin_equals_end(shape, begin, end, step):
-        in_arr = mx.nd.arange(np.prod(shape)).reshape(shape=shape)
-        out_arr = mx.nd.slice(in_arr, begin=begin, end=end, step=step)
-
-    assertRaises(MXNetError, test_begin_equals_end, (4,), (2,), (2,), (1,))
-    assertRaises(MXNetError, test_begin_equals_end, (1, 5), (None, 3), (None, 3), (-1, 1))
-    assertRaises(MXNetError, test_begin_equals_end, (3, 4, 5), (1, 3, 1), (3, 3, 1), (1, -3, 2))
-    assertRaises(MXNetError, test_begin_equals_end, (2, 4), (None, 2), (None, 2), (1, -1))
 
     # check numeric gradient
     in_data = np.arange(36).reshape(2, 2, 3, 3)

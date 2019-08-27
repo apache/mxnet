@@ -87,7 +87,7 @@ void MXImperativeInvokeImpl(AtomicSymbolCreator creator,
                             const char **param_keys,
                             const char **param_vals) {
   const nnvm::Op* op = static_cast<nnvm::Op*>(creator);
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
 
   nnvm::NodeAttrs attrs = imperative::ParseAttrs(op, num_inputs, num_params,
                                                  param_keys, param_vals);
@@ -138,7 +138,7 @@ int MXImperativeInvokeEx(AtomicSymbolCreator creator,
                          const char **param_keys,
                          const char **param_vals,
                          const int **out_stypes) {  // outputs storage types
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   MXImperativeInvokeImpl(creator, num_inputs, inputs, num_outputs, outputs,
                          num_params, param_keys, param_vals);
@@ -194,7 +194,7 @@ int MXInvokeCachedOp(CachedOpHandle handle,
                      NDArrayHandle *inputs,
                      int *num_outputs,
                      NDArrayHandle **outputs) {
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
 
   API_BEGIN();
   CachedOpPtr op = *static_cast<CachedOpPtr*>(handle);
@@ -238,7 +238,7 @@ int MXInvokeCachedOpEx(CachedOpHandle handle,
                        int *num_outputs,
                        NDArrayHandle **outputs,
                        const int **out_stypes) {  // outputs storage types
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   int err = MXInvokeCachedOp(handle, num_inputs, inputs, num_outputs, outputs);
   if (err != 0) return err;
   API_BEGIN();
@@ -331,7 +331,7 @@ int MXAutogradBackwardEx(mx_uint num_output,
                          int is_train,
                          NDArrayHandle **grad_handles,
                          int **grad_stypes) {
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
 
   std::vector<NDArray*> outputs, ograds, variables;

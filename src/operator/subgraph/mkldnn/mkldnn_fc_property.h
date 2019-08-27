@@ -31,7 +31,9 @@
 #include <string>
 #include <vector>
 #include "../common.h"
+#include "../../tensor/matrix_op-inl.h"
 #include "../subgraph_property.h"
+#include "mkldnn_fc-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -46,18 +48,21 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
   };
 
  private:
-  bool disable_fc_relu;
-  SelectStatus status;
-  std::vector<const nnvm::Node *> matched_list;
+  bool disable_fc_eltwise_;
+  bool quantized_;
+  SelectStatus status_;
+  std::vector<const nnvm::Node *> matched_list_;
 
  public:
-  explicit SgMKLDNNFCSelector(const bool dis_fc_relu) : disable_fc_relu(dis_fc_relu) {}
+  explicit SgMKLDNNFCSelector(const bool dis_fc_eltwise, bool quantized) :
+      disable_fc_eltwise_(dis_fc_eltwise),
+      quantized_(quantized) {}
 
   bool Select(const nnvm::Node &n) override {
     if (n.op() == Op::Get("FullyConnected")) {
-      status = disable_fc_relu ? kSuccess : kStart;
-      matched_list.clear();
-      matched_list.push_back(&n);
+      status_ = disable_fc_eltwise_ ? kSuccess : kStart;
+      matched_list_.clear();
+      matched_list_.push_back(&n);
       return true;
     }
     return false;
@@ -68,44 +73,70 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
   }
 
   bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) override {
-    if (status == kFail || status == kSuccess || new_node.is_variable())
+    if (status_ == kFail || status_ == kSuccess || new_node.is_variable())
       return false;
 
     // If n isn't the last matched node, then we encoutered a internal
     // branch, we should pop out the node behind n and stop fusion.
-    if (matched_list.back() != &n) {
-      if (std::find(matched_list.begin(), matched_list.end(), &n) !=
-        matched_list.end()) {
-        while (matched_list.back() != &n) {
-          matched_list.pop_back();
+    if (matched_list_.back() != &n) {
+      if (std::find(matched_list_.begin(), matched_list_.end(), &n) !=
+        matched_list_.end()) {
+        while (matched_list_.back() != &n) {
+          matched_list_.pop_back();
         }
       }
 
-      status = kSuccess;
+      status_ = kSuccess;
       return false;
     }
 
-    switch (status) {
+    switch (status_) {
       case kStart:
-        if (new_node.op() == Op::Get("Activation") &&
-            new_node.attrs.dict.at("act_type") == "relu") {
-          matched_list.push_back(&new_node);
-          status = kSuccess;
+        // Currently, For INT8 FC fusion, only supports relu/bounded_relu(clip)/abs.
+        if (new_node.op() == Op::Get("Activation")) {
+          const ActivationParam &param = nnvm::get<ActivationParam>(new_node.attrs.parsed);
+          if ((quantized_ && SupportQuantizedMKLDNNAct(param)) ||
+              (!quantized_ && SupportMKLDNNAct(param))) {
+            matched_list_.push_back(&new_node);
+            status_ = kSuccess;
+            return true;
+          }
+        }
+        if (!quantized_ && (new_node.op() == Op::Get("square") ||
+            new_node.op() == Op::Get("sqrt") ||
+            new_node.op() == Op::Get("exp"))) {
+          matched_list_.push_back(&new_node);
+          status_ = kSuccess;
           return true;
         }
+        if (new_node.op() == Op::Get("abs")) {
+          matched_list_.push_back(&new_node);
+          status_ = kSuccess;
+          return true;
+        }
+        if (new_node.op() == Op::Get("clip")) {
+          const ClipParam &param = nnvm::get<ClipParam>(new_node.attrs.parsed);
+          if (param.a_min == 0.f) {
+            matched_list_.push_back(&new_node);
+            status_ = kSuccess;
+            return true;
+          }
+          status_ = kSuccess;
+          return false;
+        }
       default:
-        status = kSuccess;
+        status_ = kSuccess;
         return false;
     }
   }
 
   std::vector<nnvm::Node *> Filter(
       const std::vector<nnvm::Node *> &candidates) override {
-    if (status == kFail) {
+    if (status_ == kFail) {
       return std::vector<nnvm::Node *>(0);
     } else {
       std::vector<nnvm::Node *> ret;
-      for (auto i : matched_list) {
+      for (auto i : matched_list_) {
         auto non_const_i = const_cast<nnvm::Node *>(i);
         if (std::find(candidates.begin(), candidates.end(), non_const_i) !=
             candidates.end()) {
@@ -117,9 +148,9 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
   }
 
   void Reset() override {
-    CHECK_GE(matched_list.size(), 1);
-    auto new_selector = SgMKLDNNFCSelector(disable_fc_relu);
-    new_selector.Select(*matched_list[0]);
+    CHECK_GE(matched_list_.size(), 1);
+    auto new_selector = SgMKLDNNFCSelector(disable_fc_eltwise_, quantized_);
+    new_selector.Select(*matched_list_[0]);
     *this = new_selector;
   }
 };
@@ -127,18 +158,17 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
 class SgMKLDNNFCProperty : public SubgraphProperty {
  public:
   SgMKLDNNFCProperty() {
-    disable_fc_relu = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_FC_RELU", false);
+    disable_fc_eltwise_ = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_FC_ELTWISE", false);
   }
 
   static SubgraphPropertyPtr Create() {
     static const std::string &name = "MKLDNN FullyConnected optimization pass";
-    if (dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FC_OPT", 0)) {
-      LOG(INFO) << name << " is disabled.";
-      return nullptr;
-    }
     auto property = std::make_shared<SgMKLDNNFCProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
+    if (dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FC_OPT", 0)) {
+      property->SetAttr<bool>("disable", true);
+    }
     return property;
   }
 
@@ -156,10 +186,9 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
       auto &sub_name = node->op()->name;
       if (sub_name == "FullyConnected") {
         node_name << "fully_connected_";
-      } else if ((sub_name == "Activation") &&
-                 (node->attrs.dict.at("act_type") == "relu")) {
-          node_name << "relu_";
-          n->attrs.dict["with_relu"] = "True";
+      } else if (SupportMKLDNNFCEltwiseFusion(sub_name)) {
+          node_name << "eltwise_";
+          n->attrs.dict["with_eltwise"] = "True";
       }
     });
     node_name << std::to_string(subgraph_id);
@@ -172,7 +201,8 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
   }
 
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
-    auto selector = std::make_shared<SgMKLDNNFCSelector>(disable_fc_relu);
+    bool quantized = HasAttr("quantize") ? GetAttr<bool>("quantize") : false;
+    auto selector = std::make_shared<SgMKLDNNFCSelector>(disable_fc_eltwise_, quantized);
     return selector;
   }
 
@@ -187,7 +217,7 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
   }
 
  private:
-  bool disable_fc_relu;
+  bool disable_fc_eltwise_;
 };
 
 }  // namespace op

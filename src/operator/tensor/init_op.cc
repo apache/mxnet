@@ -129,7 +129,7 @@ Examples::
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<RangeLikeParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", RangeLikeShape)
-.set_attr<nnvm::FInferType>("FInferType", InitType<RangeLikeParam, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",
     [](const NodeAttrs& attrs) { return std::vector<uint32_t>(1, 0); })
 .set_attr<FCompute>("FCompute<cpu>", RangeCompute<cpu, RangeLikeParam>)
@@ -138,6 +138,7 @@ Examples::
 .add_arguments(RangeLikeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_linspace)
+.add_alias("_npi_linspace")
 .describe("Return evenly spaced numbers over a specified interval. Similar to Numpy")
 .set_num_inputs(0)
 .set_num_outputs(1)
