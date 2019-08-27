@@ -86,7 +86,7 @@ struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
   }
 };  // struct UpSamplingParam
 
-inline std::vector<int> scaleComp(const UpSamplingParam &param) {
+inline mxnet::TShape scaleComp(const UpSamplingParam &param) {
   std::vector<int> scaleArr{ 1, 1 };
   if (param.scale.ndim() == 1) {
     scaleArr[0] = param.scale[0];
@@ -99,9 +99,7 @@ inline std::vector<int> scaleComp(const UpSamplingParam &param) {
     scaleArr[1] = param.scale[3];
   }
   mxnet::TShape scaleTup(scaleArr.begin(), scaleArr.end());
-  test = scaleTup[0];
-  test2 = scaleTup[1];
-  return scaleArr;
+  return scaleTup;
 }
 
 template<typename xpu, typename DType>
@@ -142,7 +140,7 @@ void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
     }
   } else {
     Tensor<xpu, 4, DType> data = in_data[up_enum::kData].get<xpu, 4, DType>(s);
-    std::vector<int> scale_hw = scaleComp(param);
+    mxnet::TShape scale_hw = scaleComp(param);
     Assign(out, req[up_enum::kOut], upsampling_nearest(data, scale_hw[0], scale_hw[1]));
   }
 }
@@ -186,7 +184,7 @@ void UpSamplingBackward(const OpContext &ctx, const UpSamplingParam &param,
   } else {
     Tensor<xpu, 4, DType> input_grad = in_grad[up_enum::kData].get<xpu, 4, DType>(s);
     mshadow::Shape<2> in_shape = Shape2(input_grad.shape_[2], input_grad.shape_[3]);
-    std::vector<int> scale_hw = scaleComp(param);
+    mxnet::TShape scale_hw = scaleComp(param);
     Assign(input_grad, req[up_enum::kData],
            pool<mshadow::red::sum>(grad,
                                    in_shape,
@@ -199,7 +197,7 @@ void UpSamplingBackward(const OpContext &ctx, const UpSamplingParam &param,
 
 static inline DeconvolutionParam GetDeconvolutionParam(const UpSamplingParam& param) {
   DeconvolutionParam p = DeconvolutionParam();
-  std::vector<int> scale_hw = scaleComp(param);
+  mxnet::TShape scale_hw = scaleComp(param);
   CHECK_EQ(scale_hw[0], scale_hw[1]) <<
   "UpSamplingBilinear: Scale should be the same along all dimensions for bilinear upsampling";
   int kernel = static_cast<int>(2.0 * scale_hw[0] - ::fmod(scale_hw[0], 2));
