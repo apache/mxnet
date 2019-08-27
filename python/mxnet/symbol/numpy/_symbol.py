@@ -249,6 +249,8 @@ class _Symbol(Symbol):
             return _mx_np_op.reshape(self, newshape=args, order=order)
 
     def argmax(self, axis=None, out=None):  # pylint: disable=arguments-differ
+        """Return indices of the maximum values along the given axis.
+        Refer to `mxnet.numpy.argmax` for full documentation."""
         return argmax(self, axis, out)
 
     def reshape_like(self, *args, **kwargs):

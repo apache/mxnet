@@ -751,6 +751,8 @@ class ndarray(NDArray):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute asscalar')
 
     def argmax(self, axis=None, out=None):  # pylint: disable=arguments-differ
+        """Return indices of the maximum values along the given axis.
+        Refer to `mxnet.numpy.argmax` for full documentation."""
         return argmax(self, axis, out)
 
     def as_in_context(self, context):
