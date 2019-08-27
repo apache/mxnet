@@ -25,6 +25,8 @@
 
 #include "../tensor/elemwise_binary_broadcast_op.h"
 #include "../tensor/elemwise_binary_scalar_op.h"
+#include "np_elemwise_binary_broadcast_op.h"
+#include "np_elemwise_binary_scalar_op.h"
 
 namespace mxnet {
 namespace op {
@@ -95,6 +97,25 @@ NNVM_REGISTER_OP(_backward_npi_copysign)
   })
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::copysign_grad,
                                                                   mshadow_op::copysign_rgrad>);
+
+MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_left_shift)
+.describe(R"code(Shift the bits of an integer to the left.
+
+Bits are shifted to the left by appending x2 0s at the right of x1.
+Since the internal representation of numbers is in binary format,
+this operation is equivalent to multiplying x1 by 2**x2.
+)code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", BitBinaryBroadcastCompute<cpu, mshadow_op::left_shift>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
+MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_right_shift)
+.describe(R"code(Shift the bits of an integer to the right.
+
+Bits are shifted to the right x2. Because the internal representation of numbers is in binary format,
+this operation is equivalent to dividing x1 by 2**x2.
+)code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", BitBinaryBroadcastCompute<cpu, mshadow_op::right_shift>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_add_scalar)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, op::mshadow_op::plus>)
@@ -262,6 +283,22 @@ NNVM_REGISTER_OP(_backward_npi_hypot)
   })
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::hypot_grad_left,
                                                                   mshadow_op::hypot_grad_right>);
+
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_left_shift_scalar)
+.set_attr<FCompute>("FCompute<cpu>", BitScalarCompute<cpu, mshadow_op::left_shift>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_rleft_shift_scalar)
+.set_attr<FCompute>("FCompute<cpu>", BitScalarCompute<cpu, mshadow_op::rleft_shift>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_right_shift_scalar)
+.set_attr<FCompute>("FCompute<cpu>", BitScalarCompute<cpu, mshadow_op::right_shift>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_rright_shift_scalar)
+.set_attr<FCompute>("FCompute<cpu>", BitScalarCompute<cpu, mshadow_op::rright_shift>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 }  // namespace op
 }  // namespace mxnet

@@ -54,7 +54,7 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'add', 'subtrac
            'tensordot', 'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate',
            'stack', 'vstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices',
            'copysign', 'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'arctan2', 'hypot',
-           'rad2deg', 'deg2rad', 'unique']
+           'rad2deg', 'deg2rad', 'unique', 'left_shift', 'right_shift']
 
 # Return code for dispatching indexing function call
 _NDARRAY_UNSUPPORTED_INDEXING = -1
@@ -4792,3 +4792,63 @@ def hypot(x1, x2, out=None):
            [ 5.,  5.,  5.]])
     """
     return _mx_nd_np.hypot(x1, x2, out=out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def left_shift(x1, x2, out=None):
+    """Shift the bits of an integer to the left.
+
+    Bits are shifted to the left by appending x2 0s at the right of x1.
+    Since the internal representation of numbers is in binary format,
+    this operation is equivalent to multiplying x1 by 2**x2.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Input values.
+
+    x2 : ndarray or scalar
+        Number of zeros to append to x1. Has to be non-negative.
+        If x1.shape != x2.shape, they must be broadcastable to a common shape (which becomes the shape of the output).
+
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray of integer type or scalar
+        Return x1 with bits shifted x2 times to the left.
+        This is a scalar if both x1 and x2 are scalars.
+    """
+    return _mx_nd_np.left_shift(x1, x2, out=out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def right_shift(x1, x2, out=None):
+    """Shift the bits of an integer to the right.
+
+    Bits are shifted to the right x2. Because the internal representation of numbers is in binary format,
+    this operation is equivalent to dividing x1 by 2**x2.
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Input values.
+
+    x2 : ndarray or scalar
+        Number of zeros to append to x1. Has to be non-negative.
+        If x1.shape != x2.shape, they must be broadcastable to a common shape (which becomes the shape of the output).
+
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray of integer type or scalar
+        Return x1 with bits shifted x2 times to the right.
+        This is a scalar if both x1 and x2 are scalars.
+    """
+    return _mx_nd_np.right_shift(x1, x2, out=out)

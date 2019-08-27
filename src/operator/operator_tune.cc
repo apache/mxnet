@@ -84,6 +84,12 @@ struct static_init_var {
   __macro$(__VA_ARGS__, int32_t); \
   __macro$(__VA_ARGS__, int64_t);
 
+#define MSHADOW_MACRO_INT_FOREACH_TYPE(__macro$, ...) \
+  __macro$(__VA_ARGS__, uint8_t); \
+  __macro$(__VA_ARGS__, int8_t); \
+  __macro$(__VA_ARGS__, int32_t); \
+  __macro$(__VA_ARGS__, int64_t);
+
 #define IMPLEMENT_WORKLOAD_VALUE_FOR_TYPE(__op$, __typ$) \
   namespace mxnet_op { \
   template<> std::vector<float> mxnet::op::mxnet_op::tuned_op<__op$, __typ$>::workload_ = \
@@ -198,6 +204,8 @@ struct static_init_var {
 #define IMPLEMENT_CUSTOM_WORKLOAD_FWD(__op$) \
   MSHADOW_MACRO_FOREACH_TYPE(_IMPLEMENT_CUSTOM_WORKLOAD_FWD, __op$)
 
+#define IMPLEMENT_BIT_BINARY_WORKLOAD_FWD(__op$) \
+  MSHADOW_MACRO_INT_FOREACH_TYPE(_IMPLEMENT_BINARY_WORKLOAD_FWD, __op$)
 /*!
  * \brief Tuning data and default weights in the case that MXNET_ENABLE_OPERATOR_AUTOTUNE is set
  *        to zero (thus turning off auto-tuning)
@@ -372,6 +380,10 @@ IMPLEMENT_BINARY_WORKLOAD_BWD(mxnet::op::mshadow_op::smooth_l1_gradient);  // NO
 IMPLEMENT_BLANK_WORKLOAD_FWD(mxnet::op::mxnet_op::set_to_int<0>);  // NOLINT()
 IMPLEMENT_BLANK_WORKLOAD_FWD(mxnet::op::mxnet_op::set_to_int<1>);  // NOLINT()
 IMPLEMENT_BLANK_WORKLOAD_FWD(mxnet::op::PopulateFullIdxRspKernel);  // NOLINT()
+IMPLEMENT_BIT_BINARY_WORKLOAD_FWD(mxnet::op::mshadow_op::left_shift);  // NOLINT()
+IMPLEMENT_BIT_BINARY_WORKLOAD_FWD(mxnet::op::mshadow_op::right_shift);  // NOLINT()
+IMPLEMENT_BIT_BINARY_WORKLOAD_FWD(mxnet::op::mshadow_op::rleft_shift);  // NOLINT()
+IMPLEMENT_BIT_BINARY_WORKLOAD_FWD(mxnet::op::mshadow_op::rright_shift);  // NOLINT()
 /*!
  * \brief Tuner objects, *not* automatically generated
  */
