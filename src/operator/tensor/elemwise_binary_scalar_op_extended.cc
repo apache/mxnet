@@ -29,10 +29,10 @@
 namespace mxnet {
 namespace op {
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_maximum_scalar)
-.add_alias("_npi_maximum_scalar")
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::maximum>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_maximum_scalar"})
-.add_alias("_MaximumScalar");
+.add_alias("_MaximumScalar")
+.add_alias("_npi_maximum_scalar");
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_maximum_scalar)
 .add_argument("scalar", "float", "scalar value")
@@ -40,10 +40,10 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_maximum_scalar)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::ge>);
 
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_minimum_scalar)
-.add_alias("_npi_minimum_scalar")
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::minimum>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_minimum_scalar"})
-.add_alias("_MinimumScalar");
+.add_alias("_MinimumScalar")
+.add_alias("_npi_minimum_scalar");
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_minimum_scalar)
 .add_argument("scalar", "float", "scalar value")
