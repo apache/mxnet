@@ -19,7 +19,7 @@ import math
 import numpy as np
 import mxnet as mx
 
-from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward
+from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward, create_2d_tensor
 from mxnet import gluon, nd
 from tests.python.unittest.common import with_seed
 
@@ -29,12 +29,6 @@ LARGE_X = 100000000
 SMALL_X = 100
 SMALL_Y = 50
 LARGE_SIZE = LARGE_X * SMALL_Y
-
-
-def create_2d_tensor(rows, columns, dtype=np.int64):
-    a = nd.arange(0, rows, dtype=dtype).reshape(rows, 1)
-    b = nd.broadcast_to(a, shape=(a.shape[0], columns))
-    return nd.array(b, dtype=dtype)
 
 
 def test_gluon_embedding():
