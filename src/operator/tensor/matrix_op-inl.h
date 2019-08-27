@@ -675,7 +675,7 @@ inline bool GetIndexRange(const mxnet::TShape& dshape,
                           common::StaticArray<index_t, ndim>* end,
                           common::StaticArray<index_t, ndim>* step) {
   // Function returns false if output is zero-sized, true otherwise.
-  bool size_non_zero = true;
+  bool zero_size_shape = false;
   CHECK_NE(dshape.ndim(), 0U);
   CHECK_LE(param_begin.ndim(), dshape.ndim())
     << "Slicing axis exceeds data dimensions";
@@ -726,7 +726,7 @@ inline bool GetIndexRange(const mxnet::TShape& dshape,
     (*step)[i] = s;
     // checking begin==end
     if (b == e) {
-      size_non_zero = false;
+      zero_size_shape = true;
     }
   }
 
@@ -736,7 +736,7 @@ inline bool GetIndexRange(const mxnet::TShape& dshape,
     (*step)[i] = 1;
   }
 
-  return size_non_zero;
+  return zero_size_shape;
 }
 
 inline void SetSliceOpOutputDimSize(const mxnet::TShape& dshape,
@@ -981,7 +981,7 @@ inline bool SliceAssignOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   const mxnet::TShape& dshape = (*in_attrs)[0];
-  if (dshape.ndim() == 0U) return false;
+  if (!mxnet::ndim_is_known(dshape)) return false;
   mxnet::TShape vshape = dshape;  // vshape is the value shape on the right hand side
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
   MXNET_NDIM_SWITCH(dshape.ndim(), ndim, {
@@ -1024,9 +1024,9 @@ void SliceAssignOpForward(const nnvm::NodeAttrs& attrs,
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
   MXNET_NDIM_SWITCH(data.ndim(), ndim, {
     common::StaticArray<index_t, ndim> begin, end, step;
-    bool non_zero_shape = GetIndexRange(data.shape_, param.begin, param.end, param.step,
+    bool zero_size_shape = GetIndexRange(data.shape_, param.begin, param.end, param.step,
                                         &begin, &end, &step);
-    if (!non_zero_shape) {
+    if (zero_size_shape) {
       return;  // slice_assign of zero-sized subspace needs no operation.
     }
     MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
@@ -1129,9 +1129,9 @@ void SliceAssignScalarOpForward(const nnvm::NodeAttrs& attrs,
   const SliceAssignScalarParam& param = nnvm::get<SliceAssignScalarParam>(attrs.parsed);
   MXNET_NDIM_SWITCH(data.ndim(), ndim, {
     common::StaticArray<index_t, ndim> begin, end, step;
-    bool non_zero_shape = GetIndexRange(data.shape_, param.begin, param.end, param.step,
+    bool zero_size_shape = GetIndexRange(data.shape_, param.begin, param.end, param.step,
                                         &begin, &end, &step);
-    if (!non_zero_shape) {
+    if (zero_size_shape) {
       return;  // slice_assign of zero-sized subspaced needs no operation.
     }
     for (index_t i = 0; i < param.begin.ndim(); ++i) {

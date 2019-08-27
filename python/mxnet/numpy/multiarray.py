@@ -176,9 +176,6 @@ class ndarray(NDArray):
         for ax in new_axes:  # pylint: disable=invalid-name
             final_shape.insert(ax, 1)
 
-        if final_shape == []:
-            # Override for single element indexing
-            return sliced.item()
         if sliced.size == 0:
             return sliced.reshape(tuple(final_shape))
         else:
@@ -222,7 +219,6 @@ class ndarray(NDArray):
         if ndim == 0:
             if key != ():
                 raise IndexError('scalar tensor can only accept `()` as index')
-            return self.item()
         # Handle simple cases for higher speed
         if isinstance(key, tuple) and len(key) == 0:
             return self
