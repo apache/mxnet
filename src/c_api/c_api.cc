@@ -117,6 +117,9 @@ int MXLoadLib(const char *path) {
   opCallInferShape_t callInferShape =
     get_func<opCallInferShape_t>(lib, const_cast<char*>(MXLIB_OPCALLINFERSHAPE_STR));
 
+  opCallInferType_t callInferType =
+    get_func<opCallInferType_t>(lib, const_cast<char*>(MXLIB_OPCALLINFERTYPE_STR));
+
   opCallFComp_t callFComp =
     get_func<opCallFComp_t>(lib, const_cast<char*>(MXLIB_OPCALLFCOMP_STR));
 
@@ -137,10 +140,10 @@ int MXLoadLib(const char *path) {
     inferType_t type = nullptr;
     inferShape_t shape = nullptr;
 
-    // get operator from the library
+    // get custom operator implemenation from the dynamic library
     opRegGet(i, &name, &fcomp, &parse, &type, &shape);
 
-    // validate operator functions from the library
+    // validate custom operator functions from the dynamic library
     CHECK(fcomp != nullptr) << "Error loading '" << name
                             << "' custom op, FCompute function was not set.";
     CHECK(parse != nullptr) << "Error loading '" << name
@@ -284,6 +287,36 @@ int MXLoadLib(const char *path) {
       return true;
     };
 
+    // lambda function to call infer type
+    auto infer_type = [=] (const nnvm::NodeAttrs& attrs,
+                            std::vector<int> *in_type,
+                            std::vector<int> *out_type) {
+      // convert attributes to vector of char*
+      std::vector<const char*> attr_keys, attr_vals;
+      for (auto kv : attrs.dict) {
+        attr_keys.push_back(kv.first.c_str());
+        attr_vals.push_back(kv.second.c_str());
+      }
+
+      // copy input types from in_type
+      std::vector<int> intypes(*in_type);
+
+      // output types will be populated by inferType function
+      std::vector<int> outtypes(out_type->size());
+
+      CHECK(callInferType(type, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                           intypes.data(), in_type->size(),
+                           outtypes.data(), out_type->size()))
+      << "Error calling InferType for custom operator '" << name_str << "'";
+
+      // copy and assign output types from custom op to MXNet memory
+      for (size_t i = 0; i < out_type->size(); i++) {
+        TYPE_ASSIGN_CHECK(*out_type, i, outtypes[i]);
+      }
+
+      return true;
+    };
+
     // lambda function to convert from external fcompute to internal MXNet types
     auto fcomp_conv = [=](const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
@@ -339,7 +372,7 @@ int MXLoadLib(const char *path) {
       regOp.set_num_outputs(num_outputs);
 
       regOp.add_argument("data", "NDArray[]", "Source inputs");
-
+      regOp.set_attr<nnvm::FInferType>("FInferType", infer_type);
       regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape);
       regOp.set_attr<FCompute>("FCompute<cpu>", fcomp_conv);
     } else {
@@ -355,6 +388,7 @@ int MXLoadLib(const char *path) {
 
       // set attribute with higher plevel (11) to allow re-registering once
       // TODO(samskalicky): enable constant overwriting of registertion multiple times
+      regOp.set_attr<nnvm::FInferType>("FInferType", infer_type, 11);
       regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape, 11);
       regOp.set_attr<FCompute>("FCompute<cpu>", fcomp_conv, 11);
     }
