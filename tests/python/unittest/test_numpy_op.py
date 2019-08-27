@@ -1126,6 +1126,8 @@ def test_np_randint():
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs, nrepeat=100)
 
 
+@with_seed()
+@use_np
 def test_np_minimum_maximum():
     def check_symbol_output_type(op_name):
         x1, x2 = mx.sym.var('x1').as_np_ndarray(), mx.sym.var('x2').as_np_ndarray()
