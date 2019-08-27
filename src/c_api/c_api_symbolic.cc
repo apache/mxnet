@@ -1251,10 +1251,6 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
         exec::ContextVector(indexed_graph.num_nodes(), default_ctx));
     // infer shapes
     g = exec::InferShape(std::move(g), std::move(arg_shapes), "__shape__");
-    if (g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U) {
-      common::HandleInferShapeError(num_forward_inputs, indexed_graph,
-                                    g.GetAttr<mxnet::ShapeVector>("shape"));
-    }
     // infer dtypes
     g = exec::InferType(std::move(g), std::move(arg_dtypes), "__dtype__");
     if (g.GetAttr<size_t>("dtype_num_unknown_nodes") != 0U) {
