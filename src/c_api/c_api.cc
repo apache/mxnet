@@ -351,12 +351,32 @@ int MXLoadLib(const char *path) {
         out_types.push_back(outputs[i].type_flag_);
       }
 
+      // get memory resource
+      const Resource &resource = ctx.requested[0];
+      mshadow::Stream<mxnet::cpu> *cpu_stream = ctx.get_stream<mxnet::cpu>();
+
+      // create lambda that captures stream & resource objects
+      auto cpu_alloc = [&](int size) {
+        mshadow::Tensor<mxnet::cpu, 1, char> data = resource.get_space_typed<mxnet::cpu, 1, char>(mshadow::Shape1(size),cpu_stream);
+        return data.dptr_;
+      };
+
+      // create lambda without captures so that we can cast it to function pointer
+      // this needs to be a lambda function so that we can do the decltype cast
+      auto cpu_malloc = [](void* _cpu_alloc, int size) {
+        // cast the void* argument to the type for the cpu_alloc lambda function
+        decltype(cpu_alloc)* cpualloc = static_cast<decltype(cpu_alloc)*>(_cpu_alloc);
+        
+        void* ptr = (*cpualloc)(size);
+        return ptr;
+      };
+
       // call fcompute function
       CHECK(callFComp(fcomp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
                       in_shapes.data(), in_dims.data(), in_data.data(),
                       in_types.data(), in_data.size(),
                       out_shapes.data(), out_dims.data(), out_data.data(),
-                      out_types.data(), out_data.size()))
+                      out_types.data(), out_data.size(), cpu_malloc, &cpu_alloc))
       << "Error calling FCompute for custom operator '" << name_str << "'";
 
       // return type void
@@ -370,7 +390,10 @@ int MXLoadLib(const char *path) {
       regOp.set_attr_parser(attr_parser);
       regOp.set_num_inputs(num_inputs);
       regOp.set_num_outputs(num_outputs);
-
+      regOp.set_attr<FResourceRequest>("FResourceRequest",
+                                       [](const NodeAttrs& attrs) {
+                                         return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                       });
       regOp.add_argument("data", "NDArray[]", "Source inputs");
       regOp.set_attr<nnvm::FInferType>("FInferType", infer_type);
       regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape);

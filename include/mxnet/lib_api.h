@@ -68,10 +68,34 @@ struct MXTensor {
 };
 
 /*!
+ * \brief resource malloc function to allocate memory inside fcompute function
+ */
+typedef void* (*xpu_malloc_t)(void*,int);
+
+/*!
+ * \brief Class to provide resource APIs to FCompute
+ */
+class OpResource {
+ public:
+  OpResource(xpu_malloc_t xm, void* _xm) : xpu_malloc(xm), _xpu_malloc(_xm) {}
+
+  /*!
+   * \brief allocate memory controlled by MXNet
+   */
+  void* alloc(int size) {
+    return xpu_malloc(_xpu_malloc,size);
+  }
+ private:
+  xpu_malloc_t xpu_malloc;
+  void* _xpu_malloc;
+};
+
+/*!
  * Custom Operator function templates
  */
 typedef int (*fcomp_t)(std::map<std::string, std::string>,
-                       std::vector<MXTensor>, std::vector<MXTensor>);
+                       std::vector<MXTensor>, std::vector<MXTensor>,
+                       OpResource res);
 typedef int (*parseAttrs_t)(std::map<std::string, std::string>,
                             int*, int*);
 typedef int (*inferType_t)(std::map<std::string, std::string>,
@@ -214,7 +238,8 @@ typedef int (*opCallInferType_t)(inferType_t, const char* const*, const char* co
 #define MXLIB_OPCALLFCOMP_STR "_opCallFCompute"
 typedef int (*opCallFComp_t)(fcomp_t, const char* const*, const char* const*, int,
                              const int64_t**, int*, void**, int*, int,
-                             const int64_t**, int*, void**, int*, int);
+                             const int64_t**, int*, void**, int*, int,
+                             xpu_malloc_t, void*);
 
 #define MXLIB_INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int);
@@ -247,7 +272,7 @@ extern "C" {
   void _opCallFree(void* ptr) {
     free(ptr);
   }
-
+  
   /*!
    * \brief returns status of calling parse attributes function for operator from library
    */
@@ -348,7 +373,8 @@ extern "C" {
                       const int64_t** inshapes, int* indims,
                       void** indata, int* intypes, int num_in,
                       const int64_t** outshapes, int* outdims,
-                      void** outdata, int* outtypes, int num_out) {
+                      void** outdata, int* outtypes, int num_out,
+                      xpu_malloc_t xpu_malloc, void* _xpu_malloc) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
@@ -375,7 +401,9 @@ extern "C" {
       }
     }
 
-    return fcomp(attrs, inputs, outputs);
+    OpResource res(xpu_malloc,_xpu_malloc);
+    
+    return fcomp(attrs, inputs, outputs, res);
   }
 
   /*!
