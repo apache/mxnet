@@ -103,7 +103,7 @@ void CalibrateComputeCPU(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
   std::vector<float> thresholds(num_bins / 2 + 1 - num_quantized_bins / 2, 0.f);
   std::vector<float> divergence(thresholds.size(), 0.f);
   #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for (index_t i = num_quantized_bins / 2; i < static_cast<int>(num_bins / 2 + 1); i++) {
+  for (index_t i = num_quantized_bins / 2; i <= zero_bin_idx; i++) {
     const size_t p_bin_idx_start = zero_bin_idx - i;
     const size_t p_bin_idx_stop = zero_bin_idx + i + 1;
     thresholds[i - num_half_quantized_bins] = hist_edges_ptr[p_bin_idx_stop];
@@ -123,7 +123,7 @@ void CalibrateComputeCPU(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
       }
     }
     // calculate how many bins should be merged to generate quantized distribution q
-    const float num_merged_bins = sliced_nd_hist.size() / num_quantized_bins;
+    const float num_merged_bins = static_cast<float>(sliced_nd_hist.size()) / num_quantized_bins;
     // merge hist into num_quantized_bins bins
     std::vector<float> quantized_bins(num_quantized_bins, 0);
     for (index_t j = 0; j < num_quantized_bins; j++) {

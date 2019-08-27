@@ -80,7 +80,7 @@ def test_dequantize_int8_to_float32():
     def test_nd_array_dequantization(qdata, min_range, max_range, expected_result):
         data = mx.nd.contrib.dequantize(qdata, min_range, max_range, out_type='float32')
         assert data.dtype == np.float32
-        assert_almost_equal(data.asnumpy(), expected_result)
+        assert_almost_equal(data.asnumpy(), expected_result, atol = 1)
 
     def test_symbolic_api_dequantization(qdata, min_range, max_range, expected_result):
         sym_data = mx.sym.Variable('data')
@@ -92,7 +92,7 @@ def test_dequantize_int8_to_float32():
                            args={'data':qdata, 'min_range':min_range, 'max_range':max_range})
         data = out.forward()[0]
         assert data.dtype == np.float32
-        assert_almost_equal(data.asnumpy(), expected_result)
+        assert_almost_equal(data.asnumpy(), expected_result, atol = 1)
 
     real_range = 402.3347
     shape = rand_shape_nd(4)
@@ -691,7 +691,7 @@ def test_quantize_params():
     params = {}
     for name in offline_params:
         params[name] = mx.nd.uniform(shape=(2, 2))
-    qsym, _ = mx.contrib.quant._quantize_symbol(sym, ctx=mx.current_context(), 
+    qsym, _ = mx.contrib.quant._quantize_symbol(sym, ctx=mx.current_context(),
                                                 offline_params=offline_params, quantize_mode='full')
     qparams = mx.contrib.quant._quantize_params(qsym, params, th_dict = {})
     param_names = params.keys()
@@ -1086,11 +1086,22 @@ def test_optimal_threshold_adversarial_case():
     # The worst case for the optimal_threshold function is when the values are concentrated
     # at one edge: [0, 0, ..., 1000]. (histogram)
     # We want to make sure that the optimal threshold in this case is the max.
-    arr = np.array([2] * 1000)
+    hist = []
+    hist_edges = []
+    min_val = -2
+    max_val = 2
+    for i in range(0, 998):
+        hist.append(0)
+    for i in range(0, 999):
+        hist_edges.append((max_val - min_val) / 999 * i + min_val)
+    hist.append(1000)
+    hist_edges.append(max_val)
+    hist_data = (hist, hist_edges, min_val, max_val, max_val)
     for dtype in ['uint8', 'int8', 'auto']:
-        res = mx.contrib.quant._get_optimal_threshold(arr, dtype, num_quantized_bins=5)
+        res = mx.contrib.quant._get_optimal_threshold(hist_data, dtype, num_quantized_bins=5)
         # The threshold should be 2.
-        assert res[3] - 2 < 1e-5
+        print (res)
+        assert abs(res[2] - 2) < 1e-5
 
 
 @with_seed()
@@ -1103,9 +1114,15 @@ def test_get_optimal_thresholds():
         return mx.nd.maximum(mx.nd.abs(min_nd), mx.nd.abs(max_nd)).asnumpy()
 
     for dtype in ['uint8', 'int8', 'auto']:
-        nd_dict = {'layer1': mx.nd.uniform(low=-10.532, high=11.3432, shape=(8, 3, 23, 23), dtype=np.float64)}
-        expected_threshold = get_threshold(nd_dict['layer1'])
-        th_dict = mx.contrib.quant._get_optimal_thresholds(nd_dict, dtype)
+        nd = mx.nd.uniform(low=-10.532, high=11.3432, shape=(8, 3, 23, 23), dtype=np.float64)
+        expected_threshold = get_threshold(nd)
+        arr = nd.asnumpy()
+        min_range = np.min(arr)
+        max_range = np.max(arr)
+        th = max(abs(min_range), abs(max_range))
+        hist, hist_edges = np.histogram(arr, bins=8001, range=(-th, th))
+        hist_dict = {'layer1' : (hist, hist_edges, min_range, max_range, th)}
+        th_dict = mx.contrib.quant._get_optimal_thresholds(hist_dict, dtype)
         assert 'layer1' in th_dict
         assert_almost_equal(np.array([th_dict['layer1'][1]]), expected_threshold, rtol=1e-2, atol=1e-4)
 
