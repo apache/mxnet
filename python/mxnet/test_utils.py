@@ -262,6 +262,17 @@ def assign_each2(input1, input2, function):
 
     return output
 
+# For testing Large Tensors having total size > 2^32 elements
+def create_2d_tensor(rows, columns, dtype=np.int64):
+    a = mx.nd.arange(0, rows, dtype=dtype).reshape(rows, 1)
+    b = mx.nd.broadcast_to(a, shape=(a.shape[0], columns))
+    return b
+
+# For testing Large Vectors having total size > 2^32 elements
+def create_vector(size, dtype=np.int64):
+    a = mx.nd.arange(0, size, dtype=dtype)
+    return a
+
 def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=None,
                         data_init=None, rsp_indices=None, modifier_func=None,
                         shuffle_csr_indices=False, ctx=None):
