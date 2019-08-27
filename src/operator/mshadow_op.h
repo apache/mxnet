@@ -147,6 +147,9 @@ MXNET_BINARY_MATH_OP_NC(elu, a > DType(0) ? a :
 
 MXNET_BINARY_MATH_OP_NC(elu_grad, a > DType(0) ? DType(1) : DType(b + a));
 
+MXNET_BINARY_MATH_OP(bitwise_and,
+                     static_cast<int64_t>(static_cast<int64_t>(a) & static_cast<int64_t>(b)));
+
 MXNET_SIMPLE_UNARY_MATH_OP(tanh);
 
 MXNET_UNARY_MATH_OP(tanh_grad, 1.0f - math::sqr(a));
