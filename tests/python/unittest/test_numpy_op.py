@@ -1322,6 +1322,39 @@ def test_np_stack():
 
 @with_seed()
 @use_np
+def test_np_ravel():
+    class TestRavel(HybridBlock):
+        def __init__(self):
+            super(TestRavel, self).__init__()
+
+        def hybrid_forward(self, F, a):
+            return F.np.ravel(a)
+
+    types = ['float64', 'float32', 'float16', 'int64', 'int32', 'int8']
+    for oneType in types:
+        for hybridize in [True, False]:
+            for shape in [(), (2,), (2, 2), (1, 2, 3), (3, 0), (1, 0, 2)]:
+                test_ravel = TestRavel()
+                if hybridize:
+                    test_ravel.hybridize()
+                x = rand_ndarray(shape, dtype=oneType).as_np_ndarray()
+                x.attach_grad()
+                np_out = _np.ravel(x.asnumpy())
+                with mx.autograd.record():
+                    mx_out = test_ravel(x)
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+                mx_out.backward()
+                np_backward = _np.ones(shape)
+                assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5)
+
+                mx_out = np.ravel(x)
+                np_out = _np.ravel(x.asnumpy())
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@use_np
 def test_np_randint():
     ctx = mx.context.current_context()
     # test shapes
