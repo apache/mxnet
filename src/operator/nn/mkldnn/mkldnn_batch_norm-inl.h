@@ -132,14 +132,13 @@ class MKLDNNBNForward {
     return *var_m;
   }
 
-  void SetDataHandle(const NDArray &data, const mkldnn::memory *mean,
+  void SetDataHandle(const mkldnn::memory *data, const mkldnn::memory *mean,
                      const mkldnn::memory *var, const mkldnn::memory *out) {
-    auto _data = data.GetMKLDNNData();
     if (data_m) {
-      data_m->set_data_handle(_data->get_data_handle());
+      data_m->set_data_handle(data->get_data_handle());
     } else {
-      data_m.reset(new mkldnn::memory(_data->get_primitive_desc(),
-                                      _data->get_data_handle()));
+      data_m.reset(new mkldnn::memory(data->get_primitive_desc(),
+                                      data->get_data_handle()));
     }
     if (out_m) {
       out_m->set_data_handle(out->get_data_handle());
@@ -175,7 +174,7 @@ class MKLDNNBNForward {
 
   void SetDataHandle(const NDArray &data, const NDArray &mean,
                      const NDArray &var, const mkldnn::memory &out) {
-    SetDataHandle(data, mean.GetMKLDNNData(), var.GetMKLDNNData(), &out);
+    SetDataHandle(data.GetMKLDNNData(), mean.GetMKLDNNData(), var.GetMKLDNNData(), &out);
   }
 
   const mkldnn::batch_normalization_forward &GetFwd() const {
