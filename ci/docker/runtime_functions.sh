@@ -848,7 +848,7 @@ sanity_check() {
 }
 
 unittest_ubuntu_python2_cpu_cython() {
-    echo "ldd ./lib/libmxnet.so "
+    echo "ldd ./lib/libmxnet.so"
     ls ./lib/
     ldd ./lib/libmxnet.so
     set -ex
