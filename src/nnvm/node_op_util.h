@@ -22,8 +22,8 @@
  * \file node_op_util.h
  * \brief abstraction for commonly nnvm::Node operations.
  */
-#ifndef MXNET_OPERATOR_TENSOR_UTIL_NODE_OP_UTIL_H_
-#define MXNET_OPERATOR_TENSOR_UTIL_NODE_OP_UTIL_H_
+#ifndef MXNET_NNVM_NODE_OP_UTIL_H_
+#define MXNET_NNVM_NODE_OP_UTIL_H_
 #include <mxnet/base.h>
 #include <string>
 #include <unordered_map>
@@ -32,12 +32,12 @@
 namespace mxnet {
 namespace util {
 
-class NodeOp {
+class NodeOpGen {
  private:
     const nnvm::NodePtr &dependent_node;
 
  public:
-    explicit NodeOp(const nnvm::NodePtr &dependent_node) : dependent_node{dependent_node} {}
+    explicit NodeOpGen(const nnvm::NodePtr &dependent_node) : dependent_node{dependent_node} {}
 
     nnvm::NodeEntry mul(const nnvm::NodeEntry &lhs, const nnvm::NodeEntry &rhs) {
         return nnvm::NodeEntry{mxnet::op::MakeNode("elemwise_mul",
@@ -54,7 +54,7 @@ class NodeOp {
     }
 
     nnvm::NodeEntry mul(double scalar, const nnvm::NodeEntry &x) {
-        return NodeOp::mul(x, scalar);
+        return NodeOpGen::mul(x, scalar);
     }
 
     nnvm::NodeEntry div(const nnvm::NodeEntry &lhs, const nnvm::NodeEntry &rhs) {
@@ -73,4 +73,4 @@ class NodeOp {
 }  // namespace util
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_TENSOR_UTIL_NODE_OP_UTIL_H_
+#endif  // MXNET_NNVM_NODE_OP_UTIL_H_
