@@ -717,8 +717,8 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
 }
 
 inline void SetSliceOpOutputDimSize(const mxnet::TShape& dshape,
-                                    const index_t i, const int b,
-                                    const int e, const int s,
+                                    const index_t i, const index_t b,
+                                    const index_t e, const index_t s,
                                     mxnet::TShape* oshape) {
   if (!mxnet::dim_size_is_known(dshape, i)) {
     (*oshape)[i] = -1;
@@ -750,7 +750,7 @@ inline bool SliceOpShape(const nnvm::NodeAttrs& attrs,
     common::StaticArray<index_t, ndim> begin, end, step;
     GetIndexRange(dshape, param.begin, param.end, param.step, &begin, &end, &step);
     for (int i = 0; i < param.begin.ndim(); ++i) {
-      const int b = begin[i], e = end[i], s = step[i];
+      const index_t b = begin[i], e = end[i], s = step[i];
       SetSliceOpOutputDimSize(dshape, i, b, e, s, &oshape);
     }
   })
