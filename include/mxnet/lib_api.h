@@ -70,7 +70,7 @@ struct MXTensor {
 /*!
  * \brief resource malloc function to allocate memory inside fcompute function
  */
-typedef void* (*xpu_malloc_t)(void*,int);
+typedef void* (*xpu_malloc_t)(void*, int);
 
 /*!
  * \brief Class to provide resource APIs to FCompute
@@ -83,7 +83,7 @@ class OpResource {
    * \brief allocate memory controlled by MXNet
    */
   void* alloc(int size) {
-    return xpu_malloc(_xpu_malloc,size);
+    return xpu_malloc(_xpu_malloc, size);
   }
  private:
   xpu_malloc_t xpu_malloc;
@@ -272,7 +272,7 @@ extern "C" {
   void _opCallFree(void* ptr) {
     free(ptr);
   }
-  
+
   /*!
    * \brief returns status of calling parse attributes function for operator from library
    */
@@ -338,7 +338,7 @@ extern "C" {
   int _opCallInferType(inferType_t inferType, const char* const* keys,
                         const char* const* vals, int num,
                         int* intypes, int num_in, int* outtypes, int num_out) {
-    //create map of attributes from list
+    // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
       attrs[std::string(keys[i])] = std::string(vals[i]);
@@ -401,8 +401,8 @@ extern "C" {
       }
     }
 
-    OpResource res(xpu_malloc,_xpu_malloc);
-    
+    OpResource res(xpu_malloc, _xpu_malloc);
+
     return fcomp(attrs, inputs, outputs, res);
   }
 
