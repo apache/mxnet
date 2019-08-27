@@ -1047,7 +1047,7 @@ class ndarray(NDArray):
         this array as data.
         """
         raise NotImplementedError
-    
+
     def clip(self, min=None, max=None, out=None):  # pylint: disable=arguments-differ
         """Return an array whose values are limited to [min, max].
         One of max or min must be given.
