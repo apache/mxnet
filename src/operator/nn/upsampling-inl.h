@@ -98,6 +98,8 @@ inline std::vector<int> scaleComp(const UpSamplingParam &param) {
     scaleArr[0] = param.scale[2];
     scaleArr[1] = param.scale[3];
   }
+  mxnet::TShape scaleTup(scaleArr.begin(), scaleArr.end())
+
   return scaleArr;
 }
 
