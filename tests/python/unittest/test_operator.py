@@ -1574,7 +1574,7 @@ def check_nearest_upsampling_with_shape(shapes, scale, root_scale):
         elif len(root_scale) >= 2:
             root_h = root_scale[0]
             root_w = root_scale[1]
-        exp = arr[name].asnumpy()*root_h*root_w*scale**(2*k)
+        exp = arr[name].asnumpy() * root_h * root_w * scale ** (2 * k)
         assert_allclose(exp, out, rtol=1e-4)
 
 def check_bilinear_upsampling_with_shape(data_shape, weight_shape, scale, root_scale, num_filter):
@@ -1613,7 +1613,7 @@ for their heights and widths
 """
 @with_seed()
 def test_nearest_upsampling():
-    for root_scale in [1, 2, (3), (2,3), (3,2), (1,1), (5,1), (2,2), ()]:
+    for root_scale in [1, 2, (3), rand_shape_nd(1), (5,1), (2,3), rand_shape_nd(2), rand_shape_nd(2), ()]:
         for scale in [1, 2, 3]:
             for num_shape in [1, 2, 3]:
                 for base in [1, 2, 3]:
@@ -1627,6 +1627,7 @@ def test_nearest_upsampling():
                         root_w = root_scale[1]
                     shapes = [(1, 3, base*root_h*scale**(num_shape-1-i), base*root_w*scale**(num_shape-1-i)) for i in range(num_shape)]
                     check_nearest_upsampling_with_shape(shapes, scale, root_scale)
+
 
 @with_seed()
 def test_bilinear_upsampling():

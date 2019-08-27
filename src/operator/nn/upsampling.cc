@@ -37,7 +37,7 @@ static bool UpSamplingShape(const nnvm::NodeAttrs& attrs,
   CHECK_GE(in_shape->size(), 1U);
   const mxnet::TShape &dshape = (*in_shape)[0];
   mxnet::TShape oshape = dshape;
-  mxnet::TShape scale_hw = scaleComp(param_);
+  std::vector<int> scale_hw = scaleComp(param_);
   int scale_h = scale_hw[0];
   int scale_w = scale_hw[1];
   if (param_.sample_type == up_enum::kNearest) {
@@ -46,7 +46,7 @@ static bool UpSamplingShape(const nnvm::NodeAttrs& attrs,
     for (auto& shape : *in_shape) {
       CHECK_EQ(shape.ndim(), 4U) << \
         "UpSamplingNearest: Input data should be 4D in (batch, channel, y, x)";
-      int oh = dshape[2]*scale_h, ow = dshape[3]*scale_w;
+      int oh = dshape[2] * scale_h, ow = dshape[3] * scale_w;
       CHECK_EQ(oh%shape[2], 0U) << "UpSamplingNearest: input height of " << shape[2] << \
         "does not divide output height of " << oh;
       CHECK_EQ(ow%shape[3], 0U) << "UpSamplingNearest: input width of " << shape[3] << \
@@ -66,7 +66,7 @@ static bool UpSamplingShape(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(dshape.ndim(), 4U) << \
       "UpSamplingBilinear: Input data should be 4D in (batch, channel, y, x)";
     if (!shape_is_known(dshape)) return false;
-    int kernel = static_cast<int>(2.0 * scale_h - ::fmod(scale_h, 2));
+    int kernel = static_cast<int>(2.0 * scale_h - (scale_h & 1));
     SHAPE_ASSIGN_CHECK(*in_shape,
         up_enum::kWeight,
         mshadow::Shape4(dshape[1], 1, kernel, kernel));
