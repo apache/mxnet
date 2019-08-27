@@ -17,6 +17,7 @@
 
 import time
 import functools
+import numpy as np
 
 from .common_utils import merge_map_list
 from mxnet import profiler
@@ -219,6 +220,9 @@ def python_profile(func):
     res, timing output. res being result returned after operator execution.
     profiler output is a dictionary with summary of operation execution.
     Example output : { "add": [{"avg_time_add": 0.4053089120425284,
+                                'p50_time_add': 16.761042876169086,
+                                'p90_time_add': 18.081666342914108,
+                                'p99_time_add': 19.060144051909447,
                                 "inputs": {
                                     "lhs": [1024, 1024],
                                     "rhs": [1024,1024]
@@ -228,10 +232,16 @@ def python_profile(func):
 
     @functools.wraps(func)
     def python_profile_it(*args, **kwargs):
-        start_time = time.perf_counter()    # 1
-        res = func(*args, **kwargs)
-        end_time = time.perf_counter()      # 2
-        run_time = end_time - start_time    # 3
+        runs = args[1]
+        modified_args = (args[0], 1, args[2])
+        times = []
+
+        for _ in range(runs):
+            start_time = time.perf_counter()    # 1
+            res = func(*modified_args, **kwargs)
+            end_time = time.perf_counter()      # 2
+            run_time = (end_time - start_time)*1000    # 3
+            times.append(run_time)
 
         # NOTE : same as cpp_profile_it
         if len(args) > 0:
@@ -241,6 +251,15 @@ def python_profile(func):
         else:
             raise ValueError("Unable to identify operator name to extract profiler output!")
 
-        profiler_output = {'avg_time_'+str(operator_name): run_time}
+        avg_run_time = np.mean(times)
+        p50_run_time = np.percentile(times, 50)
+        p90_run_time = np.percentile(times, 90)
+        p99_run_time = np.percentile(times, 99)
+
+        profiler_output = {'avg_time_'+str(operator_name): avg_run_time,
+                           'p50_time_'+str(operator_name): p50_run_time,
+                           'p90_time_'+str(operator_name): p90_run_time,
+                           'p99_time_'+str(operator_name): p99_run_time,
+                           }
         return res, profiler_output
     return python_profile_it
