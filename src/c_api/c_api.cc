@@ -357,7 +357,8 @@ int MXLoadLib(const char *path) {
 
       // create lambda that captures stream & resource objects
       auto cpu_alloc = [&](int size) {
-        mshadow::Tensor<mxnet::cpu, 1, char> data = resource.get_space_typed<mxnet::cpu, 1, char>(mshadow::Shape1(size),cpu_stream);
+        mshadow::Tensor<mxnet::cpu, 1, char> data =
+        resource.get_space_typed<mxnet::cpu, 1, char>(mshadow::Shape1(size), cpu_stream);
         return data.dptr_;
       };
 
@@ -366,7 +367,7 @@ int MXLoadLib(const char *path) {
       auto cpu_malloc = [](void* _cpu_alloc, int size) {
         // cast the void* argument to the type for the cpu_alloc lambda function
         decltype(cpu_alloc)* cpualloc = static_cast<decltype(cpu_alloc)*>(_cpu_alloc);
-        
+
         void* ptr = (*cpualloc)(size);
         return ptr;
       };
@@ -392,7 +393,8 @@ int MXLoadLib(const char *path) {
       regOp.set_num_outputs(num_outputs);
       regOp.set_attr<FResourceRequest>("FResourceRequest",
                                        [](const NodeAttrs& attrs) {
-                                         return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                         return std::vector<ResourceRequest>{
+                                           ResourceRequest::kTempSpace};
                                        });
       regOp.add_argument("data", "NDArray[]", "Source inputs");
       regOp.set_attr<nnvm::FInferType>("FInferType", infer_type);
