@@ -24,7 +24,7 @@
 #include <mxnet/base.h>
 #include "elemwise_unary_op.h"
 #include "./elemwise_binary_op-inl.h"
-#include "./util/node_op_util.h"
+#include "../../nnvm/node_op_util.h"
 
 namespace mxnet {
 namespace op {

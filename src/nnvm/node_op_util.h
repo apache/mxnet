@@ -27,7 +27,7 @@
 #include <mxnet/base.h>
 #include <string>
 #include <unordered_map>
-#include "../../elemwise_op_common.h"
+#include "../operator/elemwise_op_common.h"
 
 namespace mxnet {
 namespace util {
