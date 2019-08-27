@@ -18,9 +18,10 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
+ * Copyright (c) 2019 by Contributors
  * \file mylib.cc
- * \brief Sample library file
+ * \brief Sample custom operator implementation
+ * library file
  */
 
 #include <iostream>
@@ -82,25 +83,39 @@ int parseAttrs(std::map<std::string,std::string> attrs,
 
 int inferType(std::map<std::string,std::string> attrs, std::vector<int> &intypes,
               std::vector<int> &outtypes) {
+  // validate inputs
+  if (intypes.size() != 2) {
+    std::cout << "Expected 2 inputs to inferType" << std::endl;
+    return 0;
+  }
+
+  if (intypes[0] != intypes[1]) {
+    std::cout << "Expected 2 inputs to have same data type for inferType" << std::endl;
+    return 0;
+  }
+
   outtypes[0] = intypes[0];
-  
+
+  std::cout << "intypes[0]=" << intypes[0] << "  outtypes[0]=" << outtypes[0] << std::endl;
+  std::cout << "intypes=" << intypes.size() << "  outtypes=" << outtypes.size() << std::endl;
+
   return 1; //no error
 }
 
 int inferShape(std::map<std::string,std::string> attrs, std::vector<std::vector<unsigned int>> &inshapes,
                std::vector<std::vector<unsigned int>> &outshapes) {
-  //validate inputs
-  if(inshapes.size() != 2) {
+  // validate inputs
+  if (inshapes.size() != 2) {
     std::cout << "Expected 2 inputs to inferShape" << std::endl;
     return 0;
   }
 
-  if(inshapes[0].size() != 2) {
+  if (inshapes[0].size() != 2) {
     std::cout << "Expected 2D for first input to inferShape" << std::endl;
     return 0;
   }
 
-  if(inshapes[1].size() != 2) {
+  if (inshapes[1].size() != 2) {
     std::cout << "Expected 2D for second input to inferShape" << std::endl;
     return 0;
   }
@@ -113,7 +128,8 @@ int inferShape(std::map<std::string,std::string> attrs, std::vector<std::vector<
   std::cout << "inshapes[0][0]=" << n << "  inshapes[0][1]=" << k << std::endl;
   std::cout << "inshapes[1][0]=" << kk << "  inshapes[1][1]=" << m << std::endl;
   
-  if(k != kk) return 0;
+  if (k != kk)
+    return 0;
   
   outshapes[0].push_back(n);
   outshapes[0].push_back(m);

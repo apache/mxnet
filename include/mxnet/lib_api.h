@@ -18,10 +18,13 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
+ * Copyright (c) 2019 by Contributors
  * \file lib_api.h
  * \brief APIs to interact with libraries
+ * This API specifies function prototypes to
+ * register custom ops for library authors
  */
+
 #ifndef MXNET_LIB_API_H_
 #define MXNET_LIB_API_H_
 
@@ -204,6 +207,10 @@ typedef int (*opCallInferShape_t)(inferShape_t, const char* const*, const char* 
                                   unsigned int**, int*, int,
                                   unsigned int***, int**, int);
 
+#define MXLIB_OPCALLINFERTYPE_STR "_opCallInferType"
+typedef int (*opCallInferType_t)(inferType_t, const char* const*, const char* const*, int,
+                                  int*, int, int*, int);
+
 #define MXLIB_OPCALLFCOMP_STR "_opCallFCompute"
 typedef int (*opCallFComp_t)(fcomp_t, const char* const*, const char* const*, int,
                              const int64_t**, int*, void**, int*, int,
@@ -281,7 +288,8 @@ extern "C" {
     std::vector<std::vector<unsigned int> > out_shapes(num_out);
 
     int retval = inferShape(attrs, in_shapes, out_shapes);
-    if (!retval) return retval;
+    if (!retval)
+      return retval;
 
     // allocate space for output dims, shape
     *outdims = static_cast<int*>(malloc (num_out * sizeof(int)));
@@ -294,6 +302,39 @@ extern "C" {
       for (int j = 0; j < indims[i]; j++) {
         (*outshapes)[i][j] = out_shapes[i][j];
       }
+    }
+
+    return retval;
+  }
+
+  /*!
+   * \brief returns status of calling InferType function for operator from library
+   */
+  int _opCallInferType(inferType_t inferType, const char* const* keys,
+                        const char* const* vals, int num,
+                        int* intypes, int num_in, int* outtypes, int num_out) {
+    //create map of attributes from list
+    std::map<std::string, std::string> attrs;
+    for (int i = 0; i < num; i++) {
+      attrs[std::string(keys[i])] = std::string(vals[i]);
+    }
+
+    // create a vector of types for inputs
+    std::vector<int> in_types(num_in);
+    for (int i = 0; i < num_in; i++) {
+      in_types[i] = intypes[i];
+    }
+
+    // create a vector of types for outputs
+    std::vector<int> out_types(num_out);
+
+    int retval = inferType(attrs, in_types, out_types);
+    if (!retval)
+      return retval;
+
+    // copy output types
+    for (int i = 0; i < num_out; i++) {
+      outtypes[i] = out_types[i];
     }
 
     return retval;
