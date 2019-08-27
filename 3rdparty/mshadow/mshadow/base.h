@@ -26,6 +26,7 @@
 #include <functional>
 #include <sstream>
 #include <string>
+#include <complex>
 
 #ifdef _MSC_VER
 //! \cond Doxygen_Suppress
@@ -278,6 +279,7 @@ extern "C" {
 #include "./half.h"
 #include "./half2.h"
 #include "./logging.h"
+#include "./complex.h"
 /*! \brief namespace for mshadow */
 namespace mshadow {
 /*! \brief buffer size for each random number generator */
@@ -312,6 +314,8 @@ enum TypeFlag {
   kInt8  = 5,
   kInt64 = 6,
   kBool = 7,
+  kComplex64 = 8,
+  kComplex128 = 9
 };
 
 template<typename DType>
@@ -416,6 +420,22 @@ template<>
 struct DataType<bool> {
   static const int kFlag = kBool;
   static const int kLanes = 1;
+};
+template<>
+struct DataType<complex::complex64> {
+  static const int kFlag = kComplex64;
+  static const int kLanes = 1;
+#if (MSHADOW_USE_CUDA && CUDA_VERSION >= 8000)
+  static const cudaDataType_t kCudaFlag = CUDA_C_32F;
+#endif
+};
+template<>
+struct DataType<complex::complex128> {
+  static const int kFlag = kComplex128;
+  static const int kLanes = 1;
+#if (MSHADOW_USE_CUDA && CUDA_VERSION >= 8000)
+  static const cudaDataType_t kCudaFlag = CUDA_C_64F;
+#endif
 };
 
 /*! \brief type enum value for default real type */
@@ -1006,6 +1026,72 @@ struct minimum {
     LOG(FATAL) << "Unknown type enum " << type;           \
   }
 
+#define MSHADOW_TYPE_SWITCH_WITH_COMPLEX(type, DType, ...)  \
+  switch (type) {                                           \
+  case mshadow::kFloat32:                                   \
+    {                                                       \
+      typedef float DType;                                  \
+      {__VA_ARGS__}                                         \
+    }                                                       \
+    break;                                                  \
+  case mshadow::kFloat64:                                   \
+    {                                                       \
+      typedef double DType;                                 \
+      {__VA_ARGS__}                                         \
+    }                                                       \
+    break;                                                  \
+  case mshadow::kFloat16:                                   \
+    {                                                       \
+      typedef mshadow::half::half_t DType;                  \
+      {__VA_ARGS__}                                         \
+    }                                                       \
+    break;                                                  \
+  case mshadow::kUint8:                                     \
+    {                                                       \
+      typedef uint8_t DType;                                \
+      {__VA_ARGS__}                                         \
+    }                                                       \
+    break;                                                  \
+  case mshadow::kInt8:                                      \
+    {                                                       \
+      typedef int8_t DType;                                 \
+      {__VA_ARGS__}                                         \
+    }                                                       \
+    break;                                                  \
+  case mshadow::kInt32:                                     \
+    {                                                       \
+      typedef int32_t DType;                                \
+      {__VA_ARGS__}                                         \
+    }                                                       \
+    break;                                                  \
+  case mshadow::kInt64:                                     \
+    {                                                       \
+      typedef int64_t DType;                                \
+      {__VA_ARGS__}                                         \
+    }                                                       \
+    break;                                                  \
+  case mshadow::kBool:                                      \
+    {                                                       \
+      typedef bool DType;                                   \
+      {__VA_ARGS__}                                         \
+    }                                                       \
+    break;                                                  \
+  case mshadow::kComplex64:                                 \
+    {                                                       \
+      typedef mshadow::complex::complex64 DType;            \
+      {__VA_ARGS__}                                         \
+    }                                                       \
+    break;                                                  \
+  case mshadow::kComplex128:                                \
+    {                                                       \
+      typedef mshadow::complex::complex128 DType;           \
+      {__VA_ARGS__}                                         \
+    }                                                       \
+    break;                                                  \
+  default:                                                  \
+    LOG(FATAL) << "Unknown type enum " << type;             \
+  }
+
 #define MSHADOW_SGL_DBL_TYPE_SWITCH(type, DType, ...)  \
   switch (type) {                                      \
   case mshadow::kFloat32:                              \
@@ -1023,6 +1109,25 @@ struct minimum {
   default:                                             \
     LOG(FATAL) << "This operation only supports "      \
                   "32-bit and 64-bit floating point";  \
+  }
+
+#define MSHADOW_COMPLEX_TYPE_SWITCH(type, DType, ...)  \
+  switch (type) {                                           \
+  case mshadow::kComplex64:                                 \
+    {                                                       \
+      typedef mshadow::complex::complex64 DType;            \
+      {__VA_ARGS__}                                         \
+    }                                                       \
+    break;                                                  \
+  case mshadow::kComplex128:                                \
+    {                                                       \
+      typedef mshadow::complex::complex128 DType;           \
+      {__VA_ARGS__}                                         \
+    }                                                       \
+    break;                                                  \
+  default:                                                  \
+    LOG(FATAL) << "This operation only supports "           \
+                  "complex64 and complex128";               \
   }
 
 #define MSHADOW_REAL_TYPE_SWITCH(type, DType, ...)  \
@@ -1211,7 +1316,7 @@ struct minimum {
 /*! \brief get data type size from type enum */
 inline size_t mshadow_sizeof(int type) {
   int size = 0;
-  MSHADOW_TYPE_SWITCH_WITH_BOOL(type, DType, size = sizeof(DType););
+  MSHADOW_TYPE_SWITCH_WITH_COMPLEX(type, DType, size = sizeof(DType););
   return size;
 }
 

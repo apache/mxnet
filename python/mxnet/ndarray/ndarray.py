@@ -70,6 +70,8 @@ _DTYPE_NP_TO_MX = {
     np.int8: 5,
     np.int64: 6,
     np.bool_: 7,
+    np.complex64: 8,
+    np.complex128: 9
 }
 
 _DTYPE_MX_TO_NP = {
@@ -82,6 +84,8 @@ _DTYPE_MX_TO_NP = {
     5: np.int8,
     6: np.int64,
     7: np.bool_,
+    8: np.complex64,
+    9: np.complex128
 }
 
 _STORAGE_TYPE_STR_TO_ID = {
