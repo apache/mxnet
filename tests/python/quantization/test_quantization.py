@@ -94,7 +94,7 @@ def test_dequantize_int8_to_float32():
         assert data.dtype == np.float32
         assert_almost_equal(data.asnumpy(), expected_result, atol = 1)
 
-    real_range = 402.3347
+    real_range = 128
     shape = rand_shape_nd(4)
     qdata_np = np.random.uniform(low=-127, high=127, size=shape).astype(dtype=np.int8)
     qdata, min_range, max_range = get_test_data(real_range, qdata_np)

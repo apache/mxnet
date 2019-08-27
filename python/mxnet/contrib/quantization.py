@@ -532,7 +532,6 @@ def quantize_model(sym, arg_params, aux_params,
                                          offline_params=list(
                                              arg_params.keys()),
                                          quantized_dtype=quantized_dtype, quantize_mode=quantize_mode)
-
     th_dict = {}
     if calib_mode is not None and calib_mode != 'none':
         if not isinstance(ctx, Context):

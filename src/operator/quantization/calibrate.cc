@@ -123,23 +123,23 @@ void CalibrateComputeCPU(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
       }
     }
     // calculate how many bins should be merged to generate quantized distribution q
-    const float num_merged_bins = static_cast<float>(sliced_nd_hist.size()) / num_quantized_bins;
+    const auto num_merged_bins = sliced_nd_hist.size() / num_quantized_bins;
     // merge hist into num_quantized_bins bins
     std::vector<float> quantized_bins(num_quantized_bins, 0);
     for (index_t j = 0; j < num_quantized_bins; j++) {
-      const int start = std::round(j * num_merged_bins);
-      const int stop = std::round((j + 1) * num_merged_bins);
+      const int start = j * num_merged_bins;
+      const int stop = (j + 1) * num_merged_bins;
       quantized_bins[j] =
           std::accumulate(sliced_nd_hist.begin() + start, sliced_nd_hist.begin() + stop, 0);
     }
     quantized_bins.back() += std::accumulate(
-        sliced_nd_hist.begin() + static_cast<int>(std::round(num_quantized_bins * num_merged_bins)),
+        sliced_nd_hist.begin() + static_cast<int>(num_quantized_bins * num_merged_bins),
         sliced_nd_hist.end(), 0);
     // expand quantized_bins into p.size bins
     std::vector<float> q(sliced_nd_hist.size(), 0);
     for (index_t j = 0; j < num_quantized_bins; j++) {
-      const int start = std::round(j * num_merged_bins);
-      const int stop = std::round((j + 1) * num_merged_bins);
+      const int start = j * num_merged_bins;
+      const int stop = (j == num_quantized_bins - 1) ? q.size() : ((j + 1) * num_merged_bins);
       int norm = std::count_if(sliced_nd_hist.begin() + start, sliced_nd_hist.begin() + stop,
                                [](size_t i) { return i != 0; });
       if (norm) {

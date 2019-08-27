@@ -31,6 +31,7 @@
 #include <unordered_set>
 #include <vector>
 #include "quantize_v2-inl.h"
+#include "../../common/utils.h"
 
 namespace mxnet {
 namespace op {
@@ -52,12 +53,6 @@ static inline size_t GetNumOutputs(NodePtr node) {
     num_outputs = num_visible_output_func(node->attrs);
   }
   return num_outputs;
-}
-
-static inline std::string GetOutputName(const NodeEntry& e) {
-  nnvm::Symbol sym;
-  sym.outputs.push_back(e);
-  return sym.ListOutputNames()[0];
 }
 
 NodePtr CreateNode(std::string op_name, std::string node_name) {
@@ -480,7 +475,7 @@ Graph QuantizeGraph(Graph &&src) {
       const auto calib_idx = need_calib_input_map[node->op()](node->attrs);
       for (const auto &idx : calib_idx) {
         if (reverse_mirror_map.count(node)) {
-          calib_nodes.push_back(GetOutputName(
+          calib_nodes.push_back(common::GetOutputName(
               {reverse_mirror_map[node], node->inputs[idx].index, node->inputs[idx].version}));
         } else {
           const auto& e = node->inputs[idx];
@@ -489,7 +484,7 @@ Graph QuantizeGraph(Graph &&src) {
           } else {
             if (reverse_mirror_map.count(e.node)) {
               const auto& fp32_in_node = reverse_mirror_map.at(e.node);
-              calib_nodes.push_back(GetOutputName({fp32_in_node, e.index, e.version}));
+              calib_nodes.push_back(common::GetOutputName({fp32_in_node, e.index, e.version}));
             } else {
               LOG(FATAL) << "Can't find calibration node for " << node->attrs.name;
             }
@@ -501,9 +496,9 @@ Graph QuantizeGraph(Graph &&src) {
       for (const auto& idx : calib_idx) {
         if (reverse_mirror_map.count(node)) {
           calib_nodes.push_back(
-              GetOutputName({reverse_mirror_map[node], static_cast<uint32_t>(idx), 0}));
+              common::GetOutputName({reverse_mirror_map[node], static_cast<uint32_t>(idx), 0}));
         } else {
-          calib_nodes.push_back(GetOutputName({node, static_cast<uint32_t>(idx), 0}));
+          calib_nodes.push_back(common::GetOutputName({node, static_cast<uint32_t>(idx), 0}));
         }
       }
     }
@@ -515,7 +510,7 @@ Graph QuantizeGraph(Graph &&src) {
 static inline void SetCalibTableForEntry(
     const NodeEntry& e, const NodePtr& node,
     const std::unordered_map<std::string, std::pair<float, float>>& calib_table) {
-  std::string out_data_name = GetOutputName(e);
+  std::string out_data_name = common::GetOutputName(e);
   const std::string prefix = "quantized_";
   if (e.node->attrs.name.rfind(prefix, 0) == 0) {
     out_data_name = out_data_name.substr(prefix.size());
