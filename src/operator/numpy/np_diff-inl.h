@@ -86,9 +86,12 @@ void DiffForwardImpl(const OpContext& ctx, const TBlob& in, const TBlob& out,
   using namespace mshadow;
   using namespace mxnet_op;
 
+  // undefined behavior for n < 0
   CHECK_GE(n, 0);
   int axis_checked = CheckAxis(axis, in.ndim());
-  if (n >= in.shape_[axis_checked]) return;  // nothing in the output
+  // nothing in the output
+  if (n >= in.shape_[axis_checked]) return;
+  // stride for elements on the given axis, same in input and output
   int stride = 1;
   for (int i = in.ndim() - 1; i > axis_checked; --i) {
     stride *= in.shape_[i];
@@ -165,10 +168,12 @@ void DiffBackwardImpl(const OpContext& ctx, const TBlob& ograd,
   using namespace mshadow;
   using namespace mxnet_op;
 
+  // undefined behavior for n < 0
   CHECK_GE(n, 0);
   int axis_checked = CheckAxis(axis, igrad.ndim());
-  if (n >= igrad.shape_[axis_checked])
-    return;  // nothing in the ograd and igrad
+  // nothing in the ograd and igrad
+  if (n >= igrad.shape_[axis_checked]) return;
+  // stride for elements on the given axis, same in input and output
   int stride = 1;
   for (int i = igrad.ndim() - 1; i > axis_checked; --i) {
     stride *= igrad.shape_[i];
