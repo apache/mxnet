@@ -967,7 +967,7 @@ def test_quantize_model_with_forward():
                                                                              ctx=mx.current_context(),
                                                                              quantized_dtype=qdtype,
                                                                              calib_mode='none',
-                                                                             quantize_model='full')
+                                                                             quantize_mode='full')
             check_params(arg_params, qarg_params, qsym)
             check_params(aux_params, qaux_params)
             check_qsym_forward(qsym, qarg_params, qaux_params, dshape, lshape)
@@ -985,7 +985,7 @@ def test_quantize_model_with_forward():
                                                                              calib_mode='naive',
                                                                              calib_data=calib_data,
                                                                              num_calib_examples=20,
-                                                                             quantize_model='full')
+                                                                             quantize_mode='full')
             check_params(arg_params, qarg_params, qsym)
             check_params(aux_params, qaux_params)
             check_qsym_calibrated(qsym)
@@ -1052,7 +1052,7 @@ def test_quantize_sym_with_calib():
     sym = get_fp32_sym()
     offline_params = [name for name in sym.list_arguments()
                       if not name.startswith('data') and not name.endswith('label')]
-    qsym = mx.contrib.quant._quantize_symbol(sym, ctx=mx.current_context(),
+    qsym, _ = mx.contrib.quant._quantize_symbol(sym, ctx=mx.current_context(),
                                              offline_params=offline_params, quantize_mode='full')
     requantize_op_names = ['requantize_conv', 'requantize_fc']
     th_dict = {'conv_output': (np.random.uniform(low=100.0, high=200.0), np.random.uniform(low=100.0, high=200.0)),
