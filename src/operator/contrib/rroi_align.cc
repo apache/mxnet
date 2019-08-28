@@ -165,7 +165,7 @@ inline void RROIAlignForward(const OpContext &ctx, const RROIAlignParam &param,
 
   // (n, c, ph, pw) is an element in the pooled output
   // can be parallelized using omp
-#pragma omp parallel for
+#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for (int n = 0; n < num_rois; ++n) {
     // Increment ROI data pointer
     const DType *bottom_rois_n = bottom_rois + n * bbox.size(1);
