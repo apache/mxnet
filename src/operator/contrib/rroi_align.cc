@@ -22,8 +22,9 @@
  * \file rroi_align.cc
  * \brief rroi align operator
  * \author Yixin Bao
- * Adapted from Caffe2
-*/
+ * Forward pass adapted from Caffe2
+ * link: https://github.com/pytorch/pytorch/blob/master/caffe2/operators/roi_align_rotated_op.cc
+ */
 #include "./rroi_align-inl.h"
 #include <mshadow/tensor.h>
 #include "math.h"

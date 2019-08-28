@@ -22,7 +22,6 @@
  * \file rroi_align-inl.h
  * \brief rroi align operator and symbol
  * \author Yixin Bao
- * Adapted from Caffe2
 */
 #ifndef MXNET_OPERATOR_RROI_ALIGN_INL_H_
 #define MXNET_OPERATOR_RROI_ALIGN_INL_H_
@@ -34,8 +33,8 @@
 #include <vector>
 #include <string>
 #include <utility>
-#include "./mshadow_op.h"
-#include "./operator_common.h"
+#include "../mshadow_op.h"
+#include "../operator_common.h"
 
 namespace mxnet {
 namespace op {
