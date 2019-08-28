@@ -848,9 +848,6 @@ sanity_check() {
 }
 
 unittest_ubuntu_python2_cpu_cython() {
-    echo "ldd ./lib/libmxnet.so"
-    ls ./lib/
-    ldd ./lib/libmxnet.so
     set -ex
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1
@@ -864,9 +861,6 @@ unittest_ubuntu_python2_cpu_cython() {
 }
 
 unittest_ubuntu_python2_cpu() {
-    echo "ldd ./lib/libmxnet.so"
-    ls ./lib/
-    ldd ./lib/libmxnet.so
     set -ex
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=0
@@ -878,9 +872,6 @@ unittest_ubuntu_python2_cpu() {
 }
 
 unittest_ubuntu_python3_cpu() {
-    echo "ldd ./lib/libmxnet.so"
-    ls ./lib/
-    ldd ./lib/libmxnet.so
     set -ex
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
@@ -891,9 +882,6 @@ unittest_ubuntu_python3_cpu() {
 }
 
 unittest_ubuntu_python3_cpu_mkldnn() {
-    echo "ldd ./lib/libmxnet.so"
-    ls ./lib/
-    ldd ./lib/libmxnet.so
     set -ex
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
