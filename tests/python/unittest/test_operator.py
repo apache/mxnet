@@ -1575,7 +1575,7 @@ def check_nearest_upsampling_with_shape(shapes, scale, root_scale):
             root_h = root_scale[0]
             root_w = root_scale[1]
         exp = arr[name].asnumpy() * root_h * root_w * scale ** (2 * k)
-        assert_allclose(exp, out, rtol=1e-4)
+        assert_allclose(exp, out, rtol=1.5e-4)
 
 def check_bilinear_upsampling_with_shape(data_shape, weight_shape, scale, root_scale, num_filter):
     def _init_bilinear(arr, f):
