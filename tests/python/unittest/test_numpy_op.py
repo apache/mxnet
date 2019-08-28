@@ -1307,6 +1307,53 @@ def test_np_clip():
                     assert_almost_equal(mx_ret.asnumpy(), np_ret, atol=1e-4, rtol=1e-3, use_broadcast=False)
 
 
+@with_seed()
+@use_np
+def test_np_random():
+    shapes = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
+    dtypes = ['float16', 'float32', 'float64']
+    op_names = ['uniform', 'normal']
+    op_names = ['normal']
+    for shape in shapes:
+        for dtype in dtypes:
+            for op_name in op_names:
+                print('-------------------------------')
+                print(op_name)
+                print(shape)
+                print(dtype)
+                op = getattr(np.random, op_name, None)
+                assert op is not None
+                out = op(size=shape, dtype=dtype)
+                expected_shape = shape
+                if not isinstance(shape, tuple):
+                    expected_shape = () if shape is None else (shape,)
+                assert out.shape == expected_shape
+
+    class TestRandom(HybridBlock):
+        def __init__(self, shape, op_name):
+            super(TestRandom, self).__init__()
+            self._shape = shape
+            self._op_name = op_name
+
+        def hybrid_forward(self, F, x):
+            op = getattr(F.np.random, self._op_name, None)
+            assert op is not None
+            return x + op(size=shape)
+
+    x = np.ones(())
+    for op_name in op_names:
+        for shape in shapes:
+            for hybridize in [False, True]:
+                net = TestRandom(shape, op_name)
+                if hybridize:
+                    net.hybridize()
+                out = net(x)
+                expected_shape = shape
+                if not isinstance(shape, tuple):
+                    expected_shape = () if shape is None else (shape,)
+                assert out.shape == expected_shape
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
