@@ -607,19 +607,21 @@ def test_quantized_bn():
         return mean, var
 
     def check_quantized_bn(data_shape, qdtype):
-        if qdtype == 'uint8':
-            print('skipped testing quantize_bn for uint8 since it is not supported yet')
-            return
-        elif is_test_for_native_cpu():
+        if is_test_for_native_cpu():
             print('skipped testing quantize_bn for native cpu since it is not supported yet')
             return
         elif is_test_for_gpu():
             print('skipped testing quantize_bn for gpu since it is not supported yet')
             return
 
-        # qdtype = int8
-        data_low = -127.0
-        data_high = 127.0
+        # qdtype = uint8
+        if qdtype == 'uint8':
+            data_low = 0.0
+            data_high = 127.0
+        else:
+            data_low = -127.0
+            data_high = 127.0
+        # output type = int8
         quantized_range = 127.0
         # run fp32 bn
         data_sym = mx.sym.Variable(name='data', shape=data_shape, dtype='float32')
@@ -639,9 +641,6 @@ def test_quantized_bn():
         bn_fp32_exe.arg_dict[arg_names[2]][:] = beta
         bn_fp32_exe.aux_dict[aux_names[0]][:] = moving_mean
         bn_fp32_exe.aux_dict[aux_names[1]][:] = moving_var
-        min_data = mx.nd.min(data)
-        max_data = mx.nd.max(data)
-        data_range = mx.nd.maximum(mx.nd.abs(min_data), mx.nd.abs(max_data))
 
         output= bn_fp32_exe.forward()[0]
 
@@ -654,11 +653,12 @@ def test_quantized_bn():
 
         calib_data = NDArrayIter(data=data, batch_size=data_shape[0])
         calib_data = DummyIter(calib_data)
+        # quantize bn with quantized_type = int8: MKLDNN BN only support int8 output
         qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=bn_fp32,
                                                                              arg_params=arg_params,
                                                                              aux_params=bn_fp32_exe.aux_dict,
                                                                              ctx=mx.current_context(),
-                                                                             quantized_dtype=qdtype,
+                                                                             quantized_dtype='int8',
                                                                              calib_mode='naive',
                                                                              calib_data=calib_data,
                                                                              num_calib_examples=20)
@@ -668,16 +668,21 @@ def test_quantized_bn():
         mod.set_params(qarg_params, qaux_params)
         batch = mx.io.DataBatch([data], [])
         mod.forward(batch, is_train=False)
-        output_int8_to_fp32= mod.get_outputs()[0]
+        output_int8_to_fp32 = mod.get_outputs()[0]
 
-        assert_almost_equal(output.asnumpy(), output_int8_to_fp32.asnumpy(), rtol=1e-1, atol=3)
+        assert_almost_equal(output.asnumpy(), output_int8_to_fp32.asnumpy(), rtol=1e-1, atol=4)
 
-    check_quantized_bn((32, 512, 4, 4), 'int8')
-    check_quantized_bn((32, 1024, 8, 8), 'int8')
-    check_quantized_bn((32, 3, 224, 224), 'int8')
+    for qdtype in ['int8', 'uint8']:
+      check_quantized_bn((32, 512, 4, 4), qdtype)
+      check_quantized_bn((32, 1024, 8, 8), qdtype)
+      check_quantized_bn((32, 3, 224, 224), qdtype)
 
 @with_seed()
 def test_quantize_params():
+    if is_test_for_native_cpu():
+        print('skipped testing quantized_params for native cpu since it is not supported yet')
+        return
+
     data = mx.sym.Variable('data')
     conv = mx.sym.Convolution(data, kernel=(1, 1), num_filter=2048, name='conv')
     sym = mx.sym.BatchNorm(data=conv, eps=2e-05, fix_gamma=False, momentum=0.9, use_global_stats=False, name='bn')
@@ -686,7 +691,7 @@ def test_quantize_params():
     params = {}
     for name in offline_params:
         params[name] = mx.nd.uniform(shape=(2, 2))
-    qsym = mx.contrib.quant._quantize_symbol(sym, offline_params=offline_params)
+    qsym = mx.contrib.quant._quantize_symbol(sym, ctx=mx.current_context(), offline_params=offline_params)
     qparams = mx.contrib.quant._quantize_params(qsym, params, th_dict = {})
     param_names = params.keys()
     qparam_names = qparams.keys()
@@ -914,16 +919,12 @@ def test_quantize_model_with_forward():
         lshape_list.append(None)
 
         for s, dshape, lshape, name in zip(sym_list, dshape_list, lshape_list, name_list):
-            if qdtype == 'int8' and is_test_for_mkldnn() and name in ['sym1', 'sym2', 'sym3']:
-              print('skipped testing test_quantize_model_with_forward for mkldnn cpu int8 since it is not supported yet')
-              continue
-            elif qdtype == 'uint8' and is_test_for_mkldnn() and name in ['sym1']:
-              print('skipping test_quantize_model_with_forward for mkldnn cpu uint8 since it is not supported yet')
-              continue
-            elif qdtype == 'int8' and is_test_for_gpu() and name in ['sym1']:
-              print('skipped testing test_quantize_model_with_forward for gpu int8 since it is not supported yet')
-              continue
-
+            if qdtype == 'int8' and name in ['sym1','sym2','sym3']:
+                print('mkldnn_quantized_conv op only supports uint8 as input type, skip test with int8.')
+                continue
+            if qdtype == 'uint8' and name in ['sym1']:
+                print('mkldnn_quantized_bn doesn\'t support calib_mode=None')
+                continue
             if lshape is None:
                 mod = Module(symbol=s, label_names=None)
                 mod.bind(for_training=False,
@@ -938,13 +939,13 @@ def test_quantize_model_with_forward():
             arg_params, aux_params = mod.get_params()
 
             excluded_sym_names = []
+            excluded_op_names = []
             # sym3/sym4 doesn't have such layers
             if name not in ['sym3', 'sym4']:
                 excluded_names = []
                 if mx.current_context() == mx.cpu():
-                   excluded_names += ['fc', 'conv1']
-                if mx.current_context() == mx.gpu():
-                   excluded_names += ['sum0', 'relu0', 'relu1']
+                   excluded_op_names += ['FullyConnected']
+                   excluded_names += ['conv1']
                 excluded_names += ['concat']
 
                 optional_names = ['pool0']
@@ -959,6 +960,7 @@ def test_quantize_model_with_forward():
                                                                              arg_params=arg_params,
                                                                              aux_params=aux_params,
                                                                              excluded_sym_names=excluded_sym_names,
+                                                                             excluded_op_names=excluded_op_names,
                                                                              ctx=mx.current_context(),
                                                                              quantized_dtype=qdtype,
                                                                              calib_mode='none')
@@ -973,6 +975,7 @@ def test_quantize_model_with_forward():
                                                                              arg_params=arg_params,
                                                                              aux_params=aux_params,
                                                                              excluded_sym_names=excluded_sym_names,
+                                                                             excluded_op_names=excluded_op_names,
                                                                              ctx=mx.current_context(),
                                                                              quantized_dtype=qdtype,
                                                                              calib_mode='naive',
@@ -1037,10 +1040,14 @@ def test_quantize_gluon_with_forward():
 
 @with_seed()
 def test_quantize_sym_with_calib():
+    if is_test_for_native_cpu():
+        print('skipped testing quantized_pooling for native cpu since it is not supported yet')
+        return
+
     sym = get_fp32_sym()
     offline_params = [name for name in sym.list_arguments()
                       if not name.startswith('data') and not name.endswith('label')]
-    qsym = mx.contrib.quant._quantize_symbol(sym, offline_params=offline_params)
+    qsym = mx.contrib.quant._quantize_symbol(sym, ctx=mx.current_context(), offline_params=offline_params)
     requantize_op_names = ['requantize_conv', 'requantize_fc']
     th_dict = {'conv_output': (np.random.uniform(low=100.0, high=200.0), np.random.uniform(low=100.0, high=200.0)),
                'fc_output': (np.random.uniform(low=100.0, high=200.0), np.random.uniform(low=100.0, high=200.0))}
