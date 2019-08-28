@@ -1442,8 +1442,9 @@ build_ubuntu_cpu_docs() {
 
 build_jekyll_docs() {
     set -ex
-    pushd .
+    source /etc/profile.d/rvm.sh
 
+    pushd .
     build_docs_setup
     pushd docs/static_site
     make clean
