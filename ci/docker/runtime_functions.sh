@@ -878,6 +878,9 @@ unittest_ubuntu_python2_cpu() {
 }
 
 unittest_ubuntu_python3_cpu() {
+    echo "ldd ./lib/libmxnet.so"
+    ls ./lib/
+    ldd ./lib/libmxnet.so
     set -ex
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
