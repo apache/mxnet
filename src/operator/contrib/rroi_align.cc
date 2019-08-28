@@ -163,6 +163,9 @@ inline void RROIAlignForward(const OpContext &ctx, const RROIAlignParam &param,
   const index_t out_size_c = pooled_height_ * pooled_width_;
   const index_t out_size = channels_ * out_size_c;
 
+  // (n, c, ph, pw) is an element in the pooled output
+  // can be parallelized using omp
+#pragma omp parallel for
   for (int n = 0; n < num_rois; ++n) {
     // Increment ROI data pointer
     const DType *bottom_rois_n = bottom_rois + n * bbox.size(1);
@@ -201,7 +204,6 @@ inline void RROIAlignForward(const OpContext &ctx, const RROIAlignParam &param,
                                       bin_size_h, bin_size_w, roi_bin_grid_h, roi_bin_grid_w,
                                       roi_center_h, roi_center_w, roi_theta, &pre_calc);
 
-#pragma omp parallel for
     for (int c = 0; c < channels_; ++c) {
       const DType *offset_bottom_data = bottom_data + roi_batch_ind * data_size + c * data_size_c;
       int pre_calc_index = 0;
