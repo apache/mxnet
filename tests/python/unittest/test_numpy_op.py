@@ -1354,6 +1354,17 @@ def test_np_random():
                 assert out.shape == expected_shape
 
 
+@with_seed()
+@use_np
+def test_random_seed():
+    for seed in [234, 594, 7240, 20394]:
+        ret = []
+        for _ in range(2):
+            npx.random.seed(seed=seed)
+            ret.append(np.random.uniform(size=(2, 3)))
+        assert_almost_equal(ret[0].asnumpy(), ret[1].asnumpy(), use_broadcast=False)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

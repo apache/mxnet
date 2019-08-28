@@ -42,7 +42,7 @@ def seed(seed, ctx='all'):  # pylint: disable=redefined-outer-name
     Notes
     -----
     Random number generators in MXNet are device specific.
-    `mx.random.seed(seed_state)` sets the state of each generator using `seed_state` and the
+    `npx.random.seed(seed)` sets the state of each generator using `seed` and the
     device id. Therefore, random numbers generated from different devices can be different
     even if they are seeded using the same seed.
 
