@@ -20,7 +20,7 @@
 /*!
  *  Copyright (c) 2019 by Contributors
  * \file node_op_util.h
- * \brief abstraction for commonly nnvm::Node operations.
+ * \brief abstraction for commonly used nnvm::Node operations.
  */
 #ifndef MXNET_NNVM_NODE_OP_UTIL_H_
 #define MXNET_NNVM_NODE_OP_UTIL_H_
