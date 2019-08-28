@@ -23,8 +23,8 @@
  * \brief rroi align operator and symbol
  * \author Yixin Bao
 */
-#ifndef MXNET_OPERATOR_RROI_ALIGN_INL_H_
-#define MXNET_OPERATOR_RROI_ALIGN_INL_H_
+#ifndef MXNET_OPERATOR_CONTRIB_RROI_ALIGN_INL_H_
+#define MXNET_OPERATOR_CONTRIB_RROI_ALIGN_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -64,4 +64,4 @@ struct RROIAlignParam : public dmlc::Parameter<RROIAlignParam> {
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_RROI_ALIGN_INL_H_
+#endif  // MXNET_OPERATOR_CONTRIB_RROI_ALIGN_INL_H_
