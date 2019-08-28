@@ -1362,7 +1362,7 @@ def test_random_seed():
         for _ in range(2):
             npx.random.seed(seed=seed)
             ret.append(np.random.uniform(size=(2, 3)))
-        assert_almost_equal(ret[0].asnumpy(), ret[1].asnumpy(), use_broadcast=False)
+        assert_almost_equal(ret[0].asnumpy(), ret[1].asnumpy(), rtol=1e-4, atol=1e-5, use_broadcast=False)
 
 
 if __name__ == '__main__':
