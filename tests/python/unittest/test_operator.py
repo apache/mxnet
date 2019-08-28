@@ -1613,7 +1613,7 @@ for their heights and widths
 """
 @with_seed()
 def test_nearest_upsampling():
-    for root_scale in [1, 2, (3), rand_shape_nd(1), (5,1), (2,3), rand_shape_nd(2), rand_shape_nd(2), ()]:
+    for root_scale in [1, 2, (3), rand_shape_nd(1, 10), (5,1), (2,3), rand_shape_nd(2, 10), rand_shape_nd(2, 10), ()]:
         for scale in [1, 2, 3]:
             for num_shape in [1, 2, 3]:
                 for base in [1, 2, 3]:
