@@ -8518,6 +8518,10 @@ def test_op_rroi_align():
 
     def test_rroi_align_value(sampling_ratio=-1):
         ctx = default_context()
+        if ctx.device_type == 'gpu':
+            print('skipped testing rroi align for gpu since it is not supported yet')
+            return
+
         dtype = np.float32
         dlen = 224
         N, C, H, W = 5, 3, 16, 16
