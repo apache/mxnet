@@ -238,14 +238,14 @@ __global__ void AddBiasGradKernelPhase1(AType * temp_space, const DType* grad,
 
 template <typename DType, typename AType>
 __global__ void AddBiasGradKernelPhase2(const AType * temp_space, DType * out,
-                                        int lead_dim, int n_blocks) {
+                                        int lead_dim, int n_blocks, OpReqType req) {
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   if (tid < lead_dim) {
     AType acc = 0;
     for (int i = tid; i < lead_dim * n_blocks; i += lead_dim) {
       acc += temp_space[i];
     }
-    out[tid] = static_cast<DType>(acc);
+    KERNEL_ASSIGN(out[tid], req, static_cast<DType>(acc));
   }
 }
 
@@ -255,6 +255,7 @@ void AddBiasGrad(const TBlob& in_grad,
                  OpReqType req,
                  int num_hidden,
                  const OpContext& ctx) {
+  if (req == kNullOp) return;
   using AType = typename mxnet_op::AccType<DType>::type;
   mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
   Tensor<gpu, 1, DType> gbias = in_grad.get<gpu, 1, DType>(s);
@@ -283,8 +284,8 @@ void AddBiasGrad(const TBlob& in_grad,
     AddBiasGradKernelPhase1<LType><<<n_blocks, 512, 0, stream>>>(scratch_space.dptr_,
                                                                  grad.dptr_, N, M);
     AddBiasGradKernelPhase2<<<(N + 127) / 128, 128, 0, stream>>>(scratch_space.dptr_,
-                                                                         gbias.dptr_, N,
-                                                                         blocks_y);
+                                                                 gbias.dptr_, N,
+                                                                 blocks_y, req);
   });
 }
 #endif
