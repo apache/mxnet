@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,22 +17,34 @@
 # specific language governing permissions and limitations
 # under the License.
 
-all: warpctc_lib subgraph_lib
+# coding: utf-8
+# pylint: disable=arguments-differ
 
-warpctc_lib:
-	g++ -shared -fPIC -std=gnu++0x mylib.cc -o mylib.so -I ../../include/mxnet
+# This test checks if dynamic loading of library into MXNet is successful
+# and checks the end of end computation of custom operator
 
-subgraph_lib:
-	g++ -shared -fPIC -std=gnu++0x subgraph_lib.cc -o subgraph_lib.so -I ../../include/mxnet
+import mxnet as mx
+import os
 
-test:
-	g++ -std=c++11 -O3 -o libtest libtest.cc -ldl -I ../../include/mxnet
+# load library
+if (os.name=='posix'):
+    path = os.path.abspath('subgraph_lib.so')
+    mx.library.load(path)
+elif (os.name=='nt'):
+    path = os.path.abspath('subgraph_lib.so')
+    mx.library.load(path)
 
-windows:
-	cl /LD mylib.cc
+# setup inputs to call test operator
+a = mx.nd.array([[1,2],[3,4]])
+b = mx.nd.array([[5,6],[7,8]])
 
-win_test:
-	cl libtest.cc
+# imperative compute and print output
+print(mx.nd.subgraph_op(a,b))
 
-clean:
-	rm -rf mylib.so libtest
+# symbolic compute
+s = mx.sym.Variable('s')
+t = mx.sym.Variable('t')
+c = mx.sym.subgraph_op(s,t)
+exe = c.bind(ctx=mx.cpu(),args={'s':a,'t':b})
+out = exe.forward()
+print(out)

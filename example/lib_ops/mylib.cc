@@ -138,7 +138,13 @@ MXReturnValue inferShape(std::map<std::string,std::string> attrs, std::vector<st
   return MX_SUCCESS;
 }
 
-REGISTER_OP(sam)
+REGISTER_OP(gemm)
+.setFCompute(myFCompute)
+.setParseAttrs(parseAttrs)
+.setInferType(inferType)
+.setInferShape(inferShape);
+
+REGISTER_OP(warpctc)
 .setFCompute(myFCompute)
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
