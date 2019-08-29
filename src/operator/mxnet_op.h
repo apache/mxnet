@@ -249,6 +249,16 @@ inline int get_num_threads<cpu>(const int N) {
     LOG(FATAL) << "Unknown type enum " << type;            \
   }
 
+template <typename T>
+struct AccType {
+  using type = T;
+};
+
+template <>
+struct AccType<mshadow::half::half_t> {
+  using type = float;
+};
+
 #define MXNET_REAL_ACC_TYPE_SWITCH(type, DType, AType, ...)\
   switch (type) {                                          \
   case mshadow::kFloat32:                                  \
