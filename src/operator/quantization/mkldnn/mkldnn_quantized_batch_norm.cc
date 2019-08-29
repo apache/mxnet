@@ -80,7 +80,7 @@ static void MKLDNNQuantizedBatchNormForward(const nnvm::NodeAttrs &attrs, const 
   const float max_abs_output = std::max(std::abs(*min_output_ptr), std::abs(*max_output_ptr));
 
   unsigned flags = mkldnn::use_global_stats | mkldnn::use_scale_shift;
-  auto &fwd = GetBNForward<float>(param, ctx, data, flags);
+  auto &fwd = GetBNForward<float>(param, ctx, data_mem, flags);
   const mkldnn::memory &weight_mem = fwd.GetWeight();
   CHECK_EQ(weight_mem.get_primitive_desc().get_size(), channel_count * sizeof(float) * 2);
   float *weight_buf = reinterpret_cast<float *>(weight_mem.get_data_handle());
