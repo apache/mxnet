@@ -419,7 +419,6 @@ def test_np_reshape():
     for hybridize in [True, False]:
         for shape_pair in shape_pairs:
             shape1, shape2 = shape_pair
-            print(shape1, shape2)
             test_reshape = TestReshape(shape2)
             if hybridize:
                 test_reshape.hybridize()
@@ -504,7 +503,6 @@ def test_np_prod():
                             test_prod.hybridize()
                         x = np.array(_np.random.uniform(-2.0, 2.0, size=shape), dtype=itype)
                         x.attach_grad()
-                        print(x.grad.dtype)
                         expected_ret = _np.prod(x.asnumpy(), axis=axis, keepdims=keepdims)
                         expected_ret = expected_ret.astype(dtype)
                         with mx.autograd.record():
@@ -725,7 +723,6 @@ def test_np_unary_funcs():
                 self._func = func
 
             def hybrid_forward(self, F, a, *args, **kwargs):
-                print(self._func)
                 return getattr(F.np, self._func)(a)
 
         np_func = getattr(_np, func)
@@ -1317,10 +1314,6 @@ def test_np_random():
     for shape in shapes:
         for dtype in dtypes:
             for op_name in op_names:
-                print('-------------------------------')
-                print(op_name)
-                print(shape)
-                print(dtype)
                 op = getattr(np.random, op_name, None)
                 assert op is not None
                 out = op(size=shape, dtype=dtype)
