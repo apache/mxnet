@@ -33,6 +33,8 @@
 #include <map>
 #include <string>
 
+#define MX_LIBRARY_VERSION 1
+
 /*!
  * \brief External Tensor data types
  */
@@ -249,16 +251,31 @@ typedef int (*opCallFComp_t)(fcomp_t, const char* const*, const char* const*, in
 #define MXLIB_INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int);
 
+#define MXLIB_OPVERSION_STR "_opVersion"
+typedef int (*opVersion_t)();
+
 extern "C" {
+  /*!
+   * \brief returns MXNet library version 
+   */
+  #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) int __cdecl
+#else
+  int
+#endif
+  _opVersion () {
+    return MX_LIBRARY_VERSION;
+  }
+
   /*!
    * \brief returns number of ops registered in this library
    */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) int __cdecl _opRegSize
+  __declspec(dllexport) int __cdecl
 #else
-  int _opRegSize
+  int
 #endif
-  () {
+  _opRegSize () {
     return Registry<CustomOp>::get()->size();
   }
 
@@ -266,13 +283,13 @@ extern "C" {
    * \brief returns operator registration at specified index
    */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) void __cdecl _opRegGet
+  __declspec(dllexport) void __cdecl
 #else
-    void _opRegGet
+  void
 #endif
-    (int idx, const char** name, fcomp_t* fcomp,
-                 parseAttrs_t* parse, inferType_t* type,
-                 inferShape_t* shape) {
+  _opRegGet (int idx, const char** name, fcomp_t* fcomp,
+             parseAttrs_t* parse, inferType_t* type,
+             inferShape_t* shape) {
     CustomOp op = Registry<CustomOp>::get()->get(idx);
     *name = op.name;
     *fcomp = op.fcompute;
@@ -285,11 +302,11 @@ extern "C" {
    * \brief calls free from the external library for library allocated arrays
    */
   #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) void __cdecl _opCallFree
+  __declspec(dllexport) void __cdecl
 #else
-  void _opCallFree
+  void
 #endif
-  (void* ptr) {
+  _opCallFree (void* ptr) {
     free(ptr);
   }
 
@@ -297,13 +314,13 @@ extern "C" {
    * \brief returns status of calling parse attributes function for operator from library
    */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) int __cdecl _opCallParseAttrs
+  __declspec(dllexport) int __cdecl
 #else
-  int _opCallParseAttrs
+  int
 #endif
-  (parseAttrs_t parseAttrs, const char* const* keys,
-                        const char* const* vals, int num,
-                        int* num_in, int* num_out) {
+  _opCallParseAttrs (parseAttrs_t parseAttrs, const char* const* keys,
+                     const char* const* vals, int num,
+                     int* num_in, int* num_out) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
@@ -317,14 +334,14 @@ extern "C" {
    * \brief returns status of calling infer shape function for operator from library
    */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) int __cdecl _opCallInferShape
+  __declspec(dllexport) int __cdecl
 #else
-  int _opCallInferShape
+  int
 #endif
-  (inferShape_t inferShape, const char* const* keys,
-                        const char* const* vals, int num,
-                        unsigned int** inshapes, int* indims, int num_in,
-                        unsigned int*** outshapes, int** outdims, int num_out) {
+  _opCallInferShape (inferShape_t inferShape, const char* const* keys,
+                     const char* const* vals, int num,
+                     unsigned int** inshapes, int* indims, int num_in,
+                     unsigned int*** outshapes, int** outdims, int num_out) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
@@ -366,13 +383,13 @@ extern "C" {
    * \brief returns status of calling InferType function for operator from library
    */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) int __cdecl _opCallInferType
+  __declspec(dllexport) int __cdecl
 #else
-  int _opCallInferType
+  int
 #endif
-  (inferType_t inferType, const char* const* keys,
-                        const char* const* vals, int num,
-                        int* intypes, int num_in, int* outtypes, int num_out) {
+  _opCallInferType (inferType_t inferType, const char* const* keys,
+                    const char* const* vals, int num,
+                    int* intypes, int num_in, int* outtypes, int num_out) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
@@ -405,17 +422,17 @@ extern "C" {
    */
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) int __cdecl _opCallFCompute
+  __declspec(dllexport) int __cdecl
 #else
-  int _opCallFCompute
+  int
 #endif
-  (fcomp_t fcomp, const char* const* keys,
-                      const char* const* vals, int num,
-                      const int64_t** inshapes, int* indims,
-                      void** indata, int* intypes, int num_in,
-                      const int64_t** outshapes, int* outdims,
-                      void** outdata, int* outtypes, int num_out,
-                      xpu_malloc_t xpu_malloc, void* _xpu_malloc) {
+  _opCallFCompute (fcomp_t fcomp, const char* const* keys,
+                   const char* const* vals, int num,
+                   const int64_t** inshapes, int* indims,
+                   void** indata, int* intypes, int num_in,
+                   const int64_t** outshapes, int* outdims,
+                   void** outdata, int* outtypes, int num_out,
+                   xpu_malloc_t xpu_malloc, void* _xpu_malloc) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
@@ -455,9 +472,10 @@ extern "C" {
    * \return Non-zero value on error i.e. library incompatible with passed MXNet version
    */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) int __cdecl initialize(int);
+  __declspec(dllexport) MXReturnValue __cdecl
 #else
-  MXReturnValue initialize(int);
+  MXReturnValue
 #endif
+  initialize(int version);
 }
 #endif  // MXNET_LIB_API_H_

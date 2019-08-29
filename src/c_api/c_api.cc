@@ -103,6 +103,13 @@ int MXLoadLib(const char *path) {
   if (!lib)
     LOG(FATAL) << "Unable to load library";
 
+  // check that library and MXNet use same version of library API
+  opVersion_t opVersion = get_func<opVersion_t>(lib, const_cast<char*>(MXLIB_OPVERSION_STR));
+  int libVersion =  opVersion();
+  if (MX_LIBRARY_VERSION != libVersion)
+    LOG(FATAL) << "Library version (" << libVersion << ") does not match MXNet version ("
+               << MX_LIBRARY_VERSION << ")";
+
   // initialize library by passing MXNet version
   initialize_t initialize = get_func<initialize_t>(lib, const_cast<char*>(MXLIB_INITIALIZE_STR));
   if (!initialize(static_cast<int>(MXNET_VERSION)))
