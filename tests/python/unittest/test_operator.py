@@ -5571,9 +5571,10 @@ def test_quantization_op():
 
     qa_real = mx.nd.array([[18, 75], [77, 109]])
     a_real  = mx.nd.array([[0.14173228, 0.5905512], [0.6062992, 0.8582677]])
-
+    print(a_.asnumpy())
+    print(a_real.asnumpy())
     assert same(qa.asnumpy(), qa_real.asnumpy())
-    assert same(a_.asnumpy(),  a_real.asnumpy())
+    assert_almost_equal(a_.asnumpy(),  a_real.asnumpy(), rtol=1e-2)
 
 @with_seed()
 def test_index_copy():

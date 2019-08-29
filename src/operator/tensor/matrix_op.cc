@@ -507,6 +507,7 @@ Example::
                                                             [1.,  3.]]
 )code" ADD_FILELINE)
 .add_alias("_npx_slice")
+.add_alias("_npi_slice")
 .set_attr_parser(ParamParser<SliceParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", SliceOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
@@ -531,6 +532,7 @@ NNVM_REGISTER_OP(_backward_slice)
 
 NNVM_REGISTER_OP(_slice_assign)
 .add_alias("_crop_assign")
+.add_alias("_npi_slice_assign")
 .MXNET_DESCRIBE("Assign the rhs to a cropped subset of lhs.\n\n"
 "Requirements\n"
 "------------\n"
@@ -556,6 +558,7 @@ NNVM_REGISTER_OP(_slice_assign)
 
 NNVM_REGISTER_OP(_slice_assign_scalar)
 .add_alias("_crop_assign_scalar")
+.add_alias("_npi_slice_assign_scalar")
 .MXNET_DESCRIBE("(Assign the scalar to a cropped subset of the input.\n\n"
 "Requirements\n"
 "------------\n"

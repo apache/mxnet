@@ -1370,24 +1370,13 @@ void GraphExecutor::ExecuteMonInputCallback(size_t nid) {
 }
 
 void GraphExecutor::ExecuteMonOutputCallback(size_t nid) {
-  static const auto& flist_outputs =
-      nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
   const auto& idx = graph_.indexed_graph();
-  std::vector<std::string> output_names;
   OpNode& opnode = op_nodes_[nid];
-  const auto& inode = idx[nid];
   const auto& node = idx[nid].source;
-  if (flist_outputs.count(node->op())) {
-    output_names = flist_outputs[node->op()](node->attrs);
-  } else {
-    for (size_t i = 0; i < node->num_outputs(); ++i) {
-      output_names.emplace_back(std::to_string(i));
-    }
-  }
-  CHECK_EQ(opnode.exec->out_array.size(), output_names.size());
   for (size_t i = 0; i < opnode.exec->out_array.size(); ++i) {
     NDArray *cpy = new NDArray(opnode.exec->out_array[i]);
-    std::string name = inode.source->attrs.name + "_" + output_names[i];
+    nnvm::NodePtr node_ptr = std::make_shared<nnvm::Node>(*node);
+    std::string name = GetOutputName({node_ptr, static_cast<uint32_t >(i), 0});
     this->monitor_callback_(name.c_str(), reinterpret_cast<void*>(cpy));
   }
 }

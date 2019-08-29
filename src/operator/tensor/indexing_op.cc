@@ -815,6 +815,7 @@ Examples::
 
 
 NNVM_REGISTER_OP(gather_nd)
+.add_alias("_npi_gather_nd")
 .describe(R"code(Gather elements or slices from `data` and store to a tensor whose
 shape is defined by `indices`.
 
@@ -1008,6 +1009,7 @@ Examples::
 .add_arguments(ScatterNDParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_scatter_set_nd)
+.add_alias("_npi_scatter_set_nd")
 .describe(R"code(This operator has the same functionality as scatter_nd
 except that it does not reset the elements not indexed by the input
 index `NDArray` in the input data `NDArray`. output should be explicitly
