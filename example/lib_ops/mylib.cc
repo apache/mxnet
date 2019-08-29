@@ -43,14 +43,14 @@ void gemm(float* A, float* B, float* C, unsigned n, unsigned k, unsigned m) {
 }
 
 
-int myFCompute(std::map<std::string,std::string> attrs,
+MXReturnValue myFCompute(std::map<std::string,std::string> attrs,
                std::vector<MXTensor> inputs, std::vector<MXTensor> outputs,
                OpResource res) {
   //validate inputs
   for(int i=0; i<inputs.size(); i++) {
     if(inputs[i].dtype != kFloat32) {
       std::cout << "Expected input " << i << " to have float32 type" << std::endl;
-      return 0;
+      return MX_FAIL;
     }
   }
   
@@ -65,10 +65,10 @@ int myFCompute(std::map<std::string,std::string> attrs,
 
   gemm(input1, input2, output, n, k, m);
   
-  return 1; //no error
+  return MX_SUCCESS;
 }
 
-int parseAttrs(std::map<std::string,std::string> attrs,
+MXReturnValue parseAttrs(std::map<std::string,std::string> attrs,
                int* num_in, int* num_out) {
   /*
   if(attrs.find("myParam") == attrs.end()) {
@@ -79,20 +79,20 @@ int parseAttrs(std::map<std::string,std::string> attrs,
   *num_in = 2;
   *num_out = 1;
 
-  return 1; //no error
+  return MX_SUCCESS;
 }
 
-int inferType(std::map<std::string,std::string> attrs, std::vector<int> &intypes,
+MXReturnValue inferType(std::map<std::string,std::string> attrs, std::vector<int> &intypes,
               std::vector<int> &outtypes) {
   // validate inputs
   if (intypes.size() != 2) {
     std::cout << "Expected 2 inputs to inferType" << std::endl;
-    return 0;
+    return MX_FAIL;
   }
 
   if (intypes[0] != intypes[1]) {
     std::cout << "Expected 2 inputs to have same data type for inferType" << std::endl;
-    return 0;
+    return MX_FAIL;
   }
 
   outtypes[0] = intypes[0];
@@ -100,25 +100,25 @@ int inferType(std::map<std::string,std::string> attrs, std::vector<int> &intypes
   std::cout << "intypes[0]=" << intypes[0] << "  outtypes[0]=" << outtypes[0] << std::endl;
   std::cout << "intypes=" << intypes.size() << "  outtypes=" << outtypes.size() << std::endl;
 
-  return 1; //no error
+  return MX_SUCCESS;
 }
 
-int inferShape(std::map<std::string,std::string> attrs, std::vector<std::vector<unsigned int>> &inshapes,
+MXReturnValue inferShape(std::map<std::string,std::string> attrs, std::vector<std::vector<unsigned int>> &inshapes,
                std::vector<std::vector<unsigned int>> &outshapes) {
   // validate inputs
   if (inshapes.size() != 2) {
     std::cout << "Expected 2 inputs to inferShape" << std::endl;
-    return 0;
+    return MX_FAIL;
   }
 
   if (inshapes[0].size() != 2) {
     std::cout << "Expected 2D for first input to inferShape" << std::endl;
-    return 0;
+    return MX_FAIL;
   }
 
   if (inshapes[1].size() != 2) {
     std::cout << "Expected 2D for second input to inferShape" << std::endl;
-    return 0;
+    return MX_FAIL;
   }
   
   unsigned n = inshapes[0][0];
@@ -130,12 +130,12 @@ int inferShape(std::map<std::string,std::string> attrs, std::vector<std::vector<
   std::cout << "inshapes[1][0]=" << kk << "  inshapes[1][1]=" << m << std::endl;
   
   if (k != kk)
-    return 0;
+    return MX_FAIL;
   
   outshapes[0].push_back(n);
   outshapes[0].push_back(m);
 
-  return 1; //no error
+  return MX_SUCCESS;
 }
 
 REGISTER_OP(sam)
@@ -144,13 +144,13 @@ REGISTER_OP(sam)
 .setInferType(inferType)
 .setInferShape(inferShape);
 
-int initialize(int version) {
+MXReturnValue initialize(int version) {
   if (version >= 10400) {
     std::cout << "MXNet version " << version << " supported" << std::endl;
-    return 1;
+    return MX_SUCCESS;
   } else {
     std::cout << "MXNet version " << version << " not supported" << std::endl;
-    return 0;
+    return MX_FAIL;
   }
 }
 
