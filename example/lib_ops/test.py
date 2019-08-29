@@ -41,6 +41,15 @@ b = mx.nd.array([[5,6],[7,8]])
 #print inputs
 print(a)
 print(b)
+print('--------------')
 
 #compute and print output
-print(mx.nd.sam(a,b))
+print(mx.nd.gemm(a,b))
+
+# symbol api
+s = mx.sym.Variable('s')
+t = mx.sym.Variable('t')
+c = mx.sym.warpctc(s,t)
+exe = c.bind(ctx=mx.cpu(),args={'s':a,'t':b})
+out = exe.forward()
+print(out)
