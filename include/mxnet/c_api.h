@@ -2016,7 +2016,7 @@ MXNET_DLL int MXGenAtomicSymbolFromSymbol(SymbolHandle sym_handle, SymbolHandle 
  */
 MXNET_DLL int MXOptimizeForBackend(SymbolHandle sym_handle,
                                    const char* backend_name,
-                                   const int* dev_type,
+                                   const int dev_type,
                                    SymbolHandle* ret_sym_handle,
                                    const mx_uint len,
                                    NDArrayHandle* in_args_handle,
