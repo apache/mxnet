@@ -363,7 +363,7 @@ int MXLoadLib(const char *path) {
       };
 
       typedef decltype(cpu_alloc) alloc_type;
-      
+
       // create lambda without captures so that we can cast it to function pointer
       // this needs to be a lambda function so that we can do the decltype cast
       auto cpu_malloc = [](void* _cpu_alloc, int size) {
