@@ -325,8 +325,8 @@ def _get_optimal_threshold(hist_data, quantized_dtype, num_quantized_bins=255):
     if min_val >= 0 and quantized_dtype in ['auto', 'uint8']:
         # We need to move negative bins to positive bins to fit uint8 range.
         num_quantized_bins = num_quantized_bins * 2 + 1
-    hist = ndarray.array(hist)
-    hist_edges = ndarray.array(hist_edges)
+    hist = ndarray.array(hist, ctx=cpu())
+    hist_edges = ndarray.array(hist_edges, ctx=cpu())
     threshold, divergence = ndarray.contrib.calibrate_entropy(hist=hist,
                                                               hist_edges=hist_edges,
                                                               num_quantized_bins=num_quantized_bins)
