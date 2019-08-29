@@ -18,7 +18,7 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
+ * Copyright (c) 2019 by Contributors
  * \file rroi_align-inl.h
  * \brief rroi align operator and symbol
  * \author Yixin Bao
@@ -55,7 +55,7 @@ struct RROIAlignParam : public dmlc::Parameter<RROIAlignParam> {
     .set_expect_ndim(2).enforce_nonzero()
     .describe("RROI align output shape (h,w) ");
     DMLC_DECLARE_FIELD(spatial_scale).set_range(0.0, 1.0)
-    .describe("Ratio of input feature map height (or w) to raw image height (or w). "
+    .describe("Ratio of input feature map height (or width) to raw image height (or width). "
     "Equals the reciprocal of total stride in convolutional layers");
     DMLC_DECLARE_FIELD(sampling_ratio).set_default(-1)
     .describe("Optional sampling ratio of RROI align, using adaptive size by default.");

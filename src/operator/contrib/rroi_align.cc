@@ -18,7 +18,7 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
+ * Copyright (c) 2019 by Contributors
  * \file rroi_align.cc
  * \brief rroi align operator
  * \author Yixin Bao
@@ -74,7 +74,7 @@ void pre_calc_for_bilinear_interpolate(
           // deal with: inverse elements are out of feature map boundary
           if (y < -1.0 || y > height || x < -1.0 || x > width) {
             // empty
-            position_for_bilinear_interpolate<DType> pc;
+            position_for_bilinear_interpolate<DType> &pc = (*pre_calc)[pre_calc_index];
             pc.pos1 = 0;
             pc.pos2 = 0;
             pc.pos3 = 0;
@@ -83,7 +83,6 @@ void pre_calc_for_bilinear_interpolate(
             pc.w2 = 0;
             pc.w3 = 0;
             pc.w4 = 0;
-            pre_calc->at(pre_calc_index) = pc;
             pre_calc_index += 1;
             continue;
           }
@@ -117,7 +116,7 @@ void pre_calc_for_bilinear_interpolate(
           DType w1 = hy * hx, w2 = hy * lx, w3 = ly * hx, w4 = ly * lx;
 
           // Save weights and indices
-          position_for_bilinear_interpolate<DType> pc;
+          position_for_bilinear_interpolate<DType> &pc = (*pre_calc)[pre_calc_index];
           pc.pos1 = y_low * width + x_low;
           pc.pos2 = y_low * width + x_high;
           pc.pos3 = y_high * width + x_low;
@@ -126,8 +125,6 @@ void pre_calc_for_bilinear_interpolate(
           pc.w2 = w2;
           pc.w3 = w3;
           pc.w4 = w4;
-          pre_calc->at(pre_calc_index) = pc;
-
           pre_calc_index += 1;
         }
       }
@@ -245,6 +242,14 @@ void RROIAlignForwardCompute(const nnvm::NodeAttrs& attrs,
   })
 }
 
+template<typename xpu>
+void RROIAlignBackwardCompute(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx, const std::vector<TBlob>& in_data,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& out_data) {
+  LOG(FATAL) << "RROIAlign: Backward is not supported.";
+}
+
 DMLC_REGISTER_PARAMETER(RROIAlignParam);
 
 NNVM_REGISTER_OP(_contrib_RROIAlign)
@@ -307,10 +312,15 @@ IEEE Transactions on Multimedia, 2018.
   return true;
 })
 .set_attr<FCompute>("FCompute<cpu>", RROIAlignForwardCompute<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("data", "NDArray-or-Symbol", "Input data to the pooling operator, a 4D Feature maps")
 .add_argument("rois", "NDArray-or-Symbol", "Bounding box coordinates, a 2D array")
 .add_arguments(RROIAlignParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_RROIAlign)
+.set_num_outputs(2)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr_parser(ParamParser<RROIAlignParam>)
+.set_attr<FCompute>("FCompute<cpu>", RROIAlignBackwardCompute<cpu>);
 
 }  // namespace op
 }  // namespace mxnet
