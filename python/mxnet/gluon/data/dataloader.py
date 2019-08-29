@@ -39,7 +39,7 @@ except ImportError:
 from . import sampler as _sampler
 from ... import nd, context
 from ...util import is_np_shape, is_np_array, set_np
-from ... import numpy as _mx_np
+from ... import numpy as _mx_np  # pylint: disable=reimported
 
 if sys.platform == 'darwin' or sys.platform == 'win32':
     def rebuild_ndarray(*args):
