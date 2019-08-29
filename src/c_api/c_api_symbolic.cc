@@ -1232,7 +1232,7 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
   nnvm::Graph g = Symbol2Graph(*s);
   if (len) {
     NDArray **in_args_ptr = reinterpret_cast<NDArray**>(in_args_handle);
-    Context default_ctx = Context::Create(dev_type);
+    Context default_ctx = Context::Create(static_cast<Context::DeviceType>(*dev_type),0);
     mxnet::ShapeVector arg_shapes(len);
     nnvm::DTypeVector arg_dtypes(len);
     StorageTypeVector arg_stypes(len);
