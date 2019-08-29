@@ -39,7 +39,7 @@ def test_np_tensordot():
         def __init__(self, axes):
             super(TestTensordot, self).__init__()
             self._axes = axes
-            
+
         def hybrid_forward(self, F, a, b):
             return F.np.tensordot(a, b, self._axes)
 
@@ -1363,6 +1363,47 @@ def test_random_seed():
             npx.random.seed(seed=seed)
             ret.append(np.random.uniform(size=(2, 3)))
         assert_almost_equal(ret[0].asnumpy(), ret[1].asnumpy(), rtol=1e-4, atol=1e-5, use_broadcast=False)
+
+
+@with_seed()
+@use_np
+def test_np_cumsum():
+    def np_cumsum_backward(ograd, axis=None, dtype=None):
+        return _np.flip(_np.cumsum(_np.flip(ograd, axis=axis), axis=axis, dtype=dtype), axis=axis)
+
+    class TestCumsum(HybridBlock):
+        def __init__(self, axis=None, dtype=None):
+            super(TestCumsum, self).__init__()
+            self._axis = axis
+            self._dtype = dtype
+
+        def hybrid_forward(self, F, a):
+            return F.np.cumsum(a, axis=self._axis, dtype=self._dtype)
+
+    shapes = [(2, 3, 4), (2, 0, 3), ()]
+    for hybridize in [True, False]:
+        for shape in shapes:
+            for axis in [None] + [i for i in range(0, len(shape))]:
+                for otype in [None, _np.float32, _np.float64]:
+                    test_cumsum = TestCumsum(axis=axis, dtype=otype)
+                    if hybridize:
+                        test_cumsum.hybridize()
+                    for itype in [_np.float16, _np.float32, _np.float64]:
+                        x = rand_ndarray(shape).astype(itype).as_np_ndarray()
+                        x.attach_grad()
+                        np_out = _np.cumsum(x.asnumpy(), axis=axis, dtype=otype)
+                        with mx.autograd.record():
+                            mx_out = test_cumsum(x)
+                        assert mx_out.shape == np_out.shape
+                        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+                        mx_out.backward()
+                        np_backward = np_cumsum_backward(_np.ones(np_out.shape, dtype=otype),
+                                                         axis=axis, dtype=otype).reshape(x.shape)
+                        assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5)
+
+                        mx_out = np.cumsum(x, axis=axis, dtype=otype)
+                        np_out = _np.cumsum(x.asnumpy(), axis=axis, dtype=otype)
+                        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
 if __name__ == '__main__':
