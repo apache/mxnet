@@ -1218,6 +1218,7 @@ int MXShallowCopySymbol(SymbolHandle src, SymbolHandle* out) {
 
 int MXOptimizeForBackend(SymbolHandle sym_handle,
                          const char* backend_name,
+			 const int* dev_type,
                          SymbolHandle* ret_sym_handle,
                          const mx_uint len,
                          NDArrayHandle* in_args_handle,
@@ -1231,7 +1232,7 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
   nnvm::Graph g = Symbol2Graph(*s);
   if (len) {
     NDArray **in_args_ptr = reinterpret_cast<NDArray**>(in_args_handle);
-    Context default_ctx = in_args_ptr[0]->ctx();
+    Context default_ctx = Context::Create(dev_type);
     mxnet::ShapeVector arg_shapes(len);
     nnvm::DTypeVector arg_dtypes(len);
     StorageTypeVector arg_stypes(len);
@@ -1240,10 +1241,6 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
       arg_shapes[i] = in_arg.shape();
       arg_dtypes[i] = in_arg.dtype();
       arg_stypes[i] = in_arg.storage_type();
-      CHECK(in_arg.ctx() == default_ctx)
-          << "args[" << i << "] is on context: " << in_arg.ctx()
-          << ", whereas args[0] is on context: " << default_ctx
-          << ". All args must be on the same context.";
     }
     const auto& indexed_graph = g.indexed_graph();
     const auto num_forward_inputs = indexed_graph.input_nodes().size();
