@@ -304,6 +304,13 @@ def test_pcc():
     _, pear = met_pear.get()
     np.testing.assert_almost_equal(pcc, pear)
 
+    # pcc should also accept pred as scalar rather than softmax vector
+    # like acc does
+    met_pcc.reset()
+    met_pcc.update(labels, [p.argmax(axis=1) for p in preds])
+    _, chk = met_pcc.get()
+    np.testing.assert_almost_equal(pcc, chk)
+
     # check multiclass case against reference implementation
     CM = [
         [ 23, 13,  3 ],
