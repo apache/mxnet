@@ -1446,6 +1446,9 @@ class Symbol(SymbolBase):
         backend : str
             The name of backend, as registered in `SubgraphBackendRegistry`
 
+        ctx : Context, optional
+            Device context, used to infer stypes
+
         args : list of NDArray or dict of str to NDArray, optional
             Input arguments to the symbol, required to infer shapes/types before partitioning
 
@@ -1466,8 +1469,8 @@ class Symbol(SymbolBase):
 
         if ctx is None:
             ctx = current_context()
-        assert isinstance(ctx,Context)
-        
+        assert isinstance(ctx, Context)
+
         if args is None:
             args = []
             args_handle = c_array(NDArrayHandle, [])
