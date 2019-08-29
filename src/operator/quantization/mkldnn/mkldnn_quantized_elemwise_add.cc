@@ -60,7 +60,7 @@ static void MKLDNNQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs, cons
   auto dataB_mem  = in_data[quantized_elemwise_add_enum::kDataB].GetMKLDNNData();
   const bool is_dataA_int8 = (in_data[quantized_elemwise_add_enum::kDataA].dtype()
                               == mshadow::kInt8);
-  const size_t dataA_range = is_dataA_int8 ? kInt8Range : kUint8Range;
+  const float dataA_range = is_dataA_int8 ? kInt8Range : kUint8Range;
 
   const float A_scale = GetScale(in_data[quantized_elemwise_add_enum::kDataA],
                                  dataA_min,
@@ -72,7 +72,7 @@ static void MKLDNNQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs, cons
   mkldnn::memory *rescaled_mem;
 
   // output default set as int32
-  size_t output_data_range = kInt32Range;
+  float output_data_range = kInt32Range;
   auto output_data_type = mkldnn::memory::s32;
   // dataA && dataB are uint8
   if (out_data[quantized_elemwise_add_enum::kOut].dtype() == mshadow::kInt8) {
