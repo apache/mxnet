@@ -1437,7 +1437,7 @@ class Symbol(SymbolBase):
         return Symbol(handle)
 
 
-    def optimize_for(self, backend, ctx=None, args=None, **kwargs):
+    def optimize_for(self, backend, args=None, ctx=None, **kwargs):
         """Partitions current symbol and optimizes it for a given backend,
         returns new partitioned symbol.
 
@@ -1469,8 +1469,8 @@ class Symbol(SymbolBase):
 
         if ctx is None:
             ctx = current_context()
-        assert isinstance(ctx, Context)
 
+        assert isinstance(ctx, Context)
         if args is None:
             args = []
             args_handle = c_array(NDArrayHandle, [])
