@@ -32,7 +32,8 @@ __all__ = ['zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide', 'mo
            'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot',
-           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack']
+           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack',
+           'maximum', 'minimum', 'swapaxes', 'clip', 'argmax']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1960,3 +1961,187 @@ def stack(arrays, axis=0, out=None):
 
     arrays = get_list(arrays)
     return _npi.stack(*arrays, axis=axis, out=out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def maximum(x1, x2, out=None):
+    """Returns element-wise maximum of the input arrays with broadcasting.
+
+    Parameters
+    ----------
+    x1, x2 : scalar or mxnet.numpy.ndarray
+        The arrays holding the elements to be compared. They must have the same shape,
+        or shapes that can be broadcast to a single shape.
+
+    Returns
+    -------
+    out : mxnet.numpy.ndarray or scalar
+        The maximum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
+    return _ufunc_helper(x1, x2, _npi.maximum, _np.maximum, _npi.maximum_scalar, None, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def minimum(x1, x2, out=None):
+    """Returns element-wise minimum of the input arrays with broadcasting.
+
+    Parameters
+    ----------
+    x1, x2 : scalar or mxnet.numpy.ndarray
+        The arrays holding the elements to be compared. They must have the same shape,
+        or shapes that can be broadcast to a single shape.
+
+    Returns
+    -------
+    out : mxnet.numpy.ndarray or scalar
+        The minimum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
+    return _ufunc_helper(x1, x2, _npi.minimum, _np.minimum, _npi.minimum_scalar, None, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def swapaxes(a, axis1, axis2):
+    """Interchange two axes of an array.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array.
+    axis1 : int
+        First axis.
+    axis2 : int
+        Second axis.
+
+    Returns
+    -------
+    a_swapped : ndarray
+        Swapped array. This is always a copy of the input array.
+    """
+    return _npi.swapaxes(a, dim1=axis1, dim2=axis2)
+
+
+@set_module('mxnet.ndarray.numpy')
+def clip(a, a_min, a_max, out=None):
+    """clip(a, a_min, a_max, out=None)
+
+    Clip (limit) the values in an array.
+    Given an interval, values outside the interval are clipped to
+    the interval edges.  For example, if an interval of ``[0, 1]``
+    is specified, values smaller than 0 become 0, and values larger
+    than 1 become 1.
+
+    Parameters
+    ----------
+    a : ndarray
+        Array containing elements to clip.
+    a_min : scalar or `None`
+        Minimum value. If `None`, clipping is not performed on lower
+        interval edge. Not more than one of `a_min` and `a_max` may be
+        `None`.
+    a_max : scalar or `None`
+        Maximum value. If `None`, clipping is not performed on upper
+        interval edge. Not more than one of `a_min` and `a_max` may be
+        `None`.
+    out : ndarray, optional
+        The results will be placed in this array. It may be the input
+        array for in-place clipping.  `out` must be of the right shape
+        to hold the output.  Its type is preserved.
+
+    Returns
+    -------
+    clipped_array : ndarray
+        An array with the elements of `a`, but where values
+        < `a_min` are replaced with `a_min`, and those > `a_max`
+        with `a_max`.
+
+    Notes
+    -----
+    array_like `a_min` and `a_max` are not supported.
+
+    Examples
+    --------
+    >>> a = np.arange(10)
+    >>> np.clip(a, 1, 8)
+    array([1., 1., 2., 3., 4., 5., 6., 7., 8., 8.], dtype=float32)
+    >>> a
+    array([0., 1., 2., 3., 4., 5., 6., 7., 8., 9.], dtype=float32)
+    >>> np.clip(a, 3, 6, out=a)
+    array([3., 3., 3., 3., 4., 5., 6., 6., 6., 6.], dtype=float32)
+    """
+    if a_min is None and a_max is None:
+        raise ValueError('array_clip: must set either max or min')
+    if a_min is None:
+        a_min = float('-inf')
+    if a_max is None:
+        a_max = float('inf')
+    return _npi.clip(a, a_min, a_max, out=out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def argmax(a, axis=None, out=None):
+    r"""
+    argmax(a, axis=None, out=None)
+
+    Returns the indices of the maximum values along an axis.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array. Only support ndarrays of dtype `float16`, `float32`, and `float64`.
+    axis : int, optional
+        By default, the index is into the flattened array, otherwise
+        along the specified axis.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    index_array : ndarray of indices whose dtype is same as the input ndarray.
+        Array of indices into the array. It has the same shape as `a.shape`
+        with the dimension along `axis` removed.
+
+    Notes
+    -----
+    In case of multiple occurrences of the maximum values, the indices
+    corresponding to the first occurrence are returned.
+
+    This function differs from the original `numpy.argmax
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.argmax.html>`_ in
+    the following aspects:
+
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - Output has dtype that is same as the input ndarray.
+    - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+
+    Examples
+    --------
+    >>> a = np.arange(6).reshape(2,3) + 10
+    >>> a
+    array([[10., 11., 12.],
+           [13., 14., 15.]])
+    >>> np.argmax(a)
+    array(5.)
+    >>> np.argmax(a, axis=0)
+    array([1., 1., 1.])
+    >>> np.argmax(a, axis=1)
+    array([2., 2.])
+
+    >>> b = np.arange(6)
+    >>> b[1] = 5
+    >>> b
+    array([0., 5., 2., 3., 4., 5.])
+    >>> np.argmax(b)  # Only the first occurrence is returned.
+    array(1.)
+
+    Specify ``out`` ndarray:
+
+    >>> a = np.arange(6).reshape(2,3) + 10
+    >>> b = np.zeros((2,))
+    >>> np.argmax(a, axis=1, out=b)
+    array([2., 2.])
+    >>> b
+    array([2., 2.])
+    """
+    return _npi.argmax(a, axis=axis, keepdims=False, out=out)

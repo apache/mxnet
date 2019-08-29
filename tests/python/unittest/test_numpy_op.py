@@ -1126,6 +1126,245 @@ def test_np_randint():
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs, nrepeat=100)
 
 
+@with_seed()
+@use_np
+def test_np_minimum_maximum():
+    def check_symbol_output_type(op_name):
+        x1, x2 = mx.sym.var('x1').as_np_ndarray(), mx.sym.var('x2').as_np_ndarray()
+        ret = getattr(mx.sym.np, op_name)(x1, x2)
+        assert type(ret) == mx.sym.np._Symbol
+
+    def check_comp_op(op_name, x1, x2):
+        mx_out = getattr(np, op_name)(x1, x2)
+        if isinstance(x1, np.ndarray) or isinstance(x2, np.ndarray):
+            assert type(mx_out) == np.ndarray
+        np_out = getattr(_np, op_name)(x1.asnumpy() if isinstance(x1, np.ndarray) else x1,
+                                       x2.asnumpy() if isinstance(x2, np.ndarray) else x2)
+        assert same(mx_out.asnumpy() if isinstance(mx_out, np.ndarray) else mx_out, np_out)
+
+    op_names = ['minimum', 'maximum']
+    for op_name in op_names:
+        check_symbol_output_type(op_name)
+        check_comp_op(op_name, np.random.uniform(size=(2, 1)), np.random.uniform(size=(5, 1, 4)))
+        check_comp_op(op_name, np.random.uniform(size=(2, 0)), np.random.uniform(size=(5, 1, 1)))
+        check_comp_op(op_name, np.random.uniform(), np.random.uniform(size=(5, 1, 4)))
+        check_comp_op(op_name, _np.random.uniform(), np.random.uniform(size=(2, 3)))
+        check_comp_op(op_name, np.random.uniform(size=(2, 3)), _np.random.uniform())
+
+
+@with_seed()
+@use_np
+def test_np_swapaxes():
+    config = [((0, 1, 2), 0, 1),
+              ((0, 1, 2), -1, -2),
+              ((4, 5, 6, 7), 2, 3),
+              ((4, 5, 6, 7), -2, -3)]
+
+    class TestSwapaxes(HybridBlock):
+        def __init__(self, axis1, axis2):
+            super(TestSwapaxes, self).__init__()
+            self._axis1 = axis1
+            self._axis2 = axis2
+
+        def hybrid_forward(self, F, x):
+            return F.np.swapaxes(x, self._axis1, self._axis2)
+
+    for shape, axis1, axis2 in config:
+        data_np = _np.random.uniform(size=shape)
+        data_mx = np.array(data_np, dtype=data_np.dtype)
+        ret_np = _np.swapaxes(data_np, axis1=axis1, axis2=axis2)
+        ret_mx = np.swapaxes(data_mx, axis1=axis1, axis2=axis2)
+        assert same(ret_mx.asnumpy(), ret_np)
+
+        net = TestSwapaxes(axis1, axis2)
+        for hybrid in [False, True]:
+            if hybrid:
+                net.hybridize()
+            ret_mx = net(data_mx)
+            assert same(ret_mx.asnumpy(), ret_np)
+
+
+@with_seed()
+@use_np
+def test_np_argmax():
+    workloads = [
+        ((), 0, False),
+        ((), -1, False),
+        ((), 1, True),
+        ((5, 3), None, False),
+        ((5, 3), -1, False),
+        ((5, 3), 1, False),
+        ((5, 3), 3, True),
+        ((5, 0, 3), 0, False),
+        ((5, 0, 3), -1, False),
+        ((5, 0, 3), None, True),
+        ((5, 0, 3), 1, True),
+    ]
+    dtypes = ['float16', 'float32', 'float64']
+
+    class TestArgMax(HybridBlock):
+        def __init__(self, axis=None):
+            super(TestArgMax, self).__init__()
+            self._axis = axis
+
+        def hybrid_forward(self, F, x):
+            return F.np.argmax(x, self._axis)
+
+    for shape, axis, throw_exception in workloads:
+        for dtype in dtypes:
+            a = np.random.uniform(size=shape, dtype=dtype)
+            if throw_exception:
+                # Cannot use assert_exception because sometimes the main thread
+                # proceeds to `assert False` before the exception is thrown
+                # in the worker thread. Have to use mx.nd.waitall() here
+                # to block the main thread.
+                try:
+                    np.argmax(a, axis)
+                    mx.nd.waitall()
+                    assert False
+                except mx.MXNetError:
+                    pass
+            else:
+                mx_ret = np.argmax(a, axis=axis)
+                np_ret = _np.argmax(a.asnumpy(), axis=axis)
+                assert same(mx_ret.asnumpy(), np_ret)
+
+            for hybridize in [False, True]:
+                net = TestArgMax(axis)
+                if hybridize:
+                    net.hybridize()
+                if throw_exception:
+                    try:
+                        net(a)
+                        mx.nd.waitall()
+                        assert False
+                    except mx.MXNetError:
+                        pass
+                else:
+                    mx_ret = net(a)
+                    assert same(mx_ret.asnumpy(), np_ret)
+
+
+@with_seed()
+@use_np
+def test_np_clip():
+    workloads = [
+        ((), None, None, True),
+        ((), None, 1, False),
+        ((), -1, 1, False),
+        ((), -1, None, False),
+        ((5, 3), None, 0.1, False),
+        ((5, 3), -0.1, None, False),
+        ((5, 3), -0.1, 0.1, False),
+        ((5, 3), 0, 0, False),
+        ((5, 0, 3), 0, None, False),
+        ((5, 0, 3), None, -1, False),
+        ((5, 0, 3), -1, 0, False),
+    ]
+    dtypes = ['float32', 'float64']
+
+    class TestClip(HybridBlock):
+        def __init__(self, a_min=None, a_max=None):
+            super(TestClip, self).__init__()
+            self._a_min = a_min
+            self._a_max = a_max
+
+        def hybrid_forward(self, F, x):
+            return x.clip(self._a_min, self._a_max)
+
+    for shape, a_min, a_max, throw_exception in workloads:
+        for dtype in dtypes:
+            a = np.random.uniform(size=shape, dtype=dtype)
+            if throw_exception:
+                # Cannot use assert_exception because sometimes the main thread
+                # proceeds to `assert False` before the exception is thrown
+                # in the worker thread. Have to use mx.nd.waitall() here
+                # to block the main thread.
+                try:
+                    a.clip(min=a_min, max=a_max)
+                    mx.nd.waitall()
+                    assert False
+                except:
+                    pass
+            else:
+                mx_ret = a.clip(min=a_min, max=a_max)
+                np_ret = a.asnumpy().clip(min=a_min, max=a_max)
+                assert_almost_equal(mx_ret.asnumpy(), np_ret, atol=1e-4, rtol=1e-3, use_broadcast=False)
+
+            for hybridize in [False, True]:
+                net = TestClip(a_min, a_max)
+                if hybridize:
+                    net.hybridize()
+                if throw_exception:
+                    try:
+                        net(a)
+                        mx.nd.waitall()
+                        assert False
+                    except:
+                        pass
+                else:
+                    mx_ret = net(a)
+                    assert_almost_equal(mx_ret.asnumpy(), np_ret, atol=1e-4, rtol=1e-3, use_broadcast=False)
+
+
+@with_seed()
+@use_np
+def test_np_random():
+    shapes = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
+    dtypes = ['float16', 'float32', 'float64']
+    op_names = ['uniform', 'normal']
+    op_names = ['normal']
+    for shape in shapes:
+        for dtype in dtypes:
+            for op_name in op_names:
+                print('-------------------------------')
+                print(op_name)
+                print(shape)
+                print(dtype)
+                op = getattr(np.random, op_name, None)
+                assert op is not None
+                out = op(size=shape, dtype=dtype)
+                expected_shape = shape
+                if not isinstance(shape, tuple):
+                    expected_shape = () if shape is None else (shape,)
+                assert out.shape == expected_shape
+
+    class TestRandom(HybridBlock):
+        def __init__(self, shape, op_name):
+            super(TestRandom, self).__init__()
+            self._shape = shape
+            self._op_name = op_name
+
+        def hybrid_forward(self, F, x):
+            op = getattr(F.np.random, self._op_name, None)
+            assert op is not None
+            return x + op(size=shape)
+
+    x = np.ones(())
+    for op_name in op_names:
+        for shape in shapes:
+            for hybridize in [False, True]:
+                net = TestRandom(shape, op_name)
+                if hybridize:
+                    net.hybridize()
+                out = net(x)
+                expected_shape = shape
+                if not isinstance(shape, tuple):
+                    expected_shape = () if shape is None else (shape,)
+                assert out.shape == expected_shape
+
+
+@with_seed()
+@use_np
+def test_random_seed():
+    for seed in [234, 594, 7240, 20394]:
+        ret = []
+        for _ in range(2):
+            npx.random.seed(seed=seed)
+            ret.append(np.random.uniform(size=(2, 3)))
+        assert_almost_equal(ret[0].asnumpy(), ret[1].asnumpy(), rtol=1e-4, atol=1e-5, use_broadcast=False)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
