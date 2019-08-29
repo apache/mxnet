@@ -90,19 +90,24 @@ class OpResource {
   void* _xpu_malloc;
 };
 
+enum MXReturnValue {
+  MX_FAIL = 0,
+  MX_SUCCESS = 1,
+};
+
 /*!
  * Custom Operator function templates
  */
-typedef int (*fcomp_t)(std::map<std::string, std::string>,
-                       std::vector<MXTensor>, std::vector<MXTensor>,
-                       OpResource res);
-typedef int (*parseAttrs_t)(std::map<std::string, std::string>,
-                            int*, int*);
-typedef int (*inferType_t)(std::map<std::string, std::string>,
-                           std::vector<int>&, std::vector<int>&);
-typedef int (*inferShape_t)(std::map<std::string, std::string>,
-                            std::vector<std::vector<unsigned int>>&,
-                            std::vector<std::vector<unsigned int>>&);
+typedef MXReturnValue (*fcomp_t)(std::map<std::string, std::string>,
+                                 std::vector<MXTensor>, std::vector<MXTensor>,
+                                 OpResource res);
+typedef MXReturnValue (*parseAttrs_t)(std::map<std::string, std::string>,
+                                      int*, int*);
+typedef MXReturnValue (*inferType_t)(std::map<std::string, std::string>,
+                                     std::vector<int>&, std::vector<int>&);
+typedef MXReturnValue (*inferShape_t)(std::map<std::string, std::string>,
+                                      std::vector<std::vector<unsigned int>>&,
+                                      std::vector<std::vector<unsigned int>>&);
 
 /*!
  * \brief Class to hold custom operator registration
@@ -248,14 +253,24 @@ extern "C" {
   /*!
    * \brief returns number of ops registered in this library
    */
-  int _opRegSize() {
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) int __cdecl _opRegSize
+#else
+  int _opRegSize
+#endif
+  () {
     return Registry<CustomOp>::get()->size();
   }
 
   /*!
    * \brief returns operator registration at specified index
    */
-  void _opRegGet(int idx, const char** name, fcomp_t* fcomp,
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) void __cdecl _opRegGet
+#else
+    void _opRegGet
+#endif
+    (int idx, const char** name, fcomp_t* fcomp,
                  parseAttrs_t* parse, inferType_t* type,
                  inferShape_t* shape) {
     CustomOp op = Registry<CustomOp>::get()->get(idx);
@@ -269,14 +284,24 @@ extern "C" {
   /*!
    * \brief calls free from the external library for library allocated arrays
    */
-  void _opCallFree(void* ptr) {
+  #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) void __cdecl _opCallFree
+#else
+  void _opCallFree
+#endif
+  (void* ptr) {
     free(ptr);
   }
 
   /*!
    * \brief returns status of calling parse attributes function for operator from library
    */
-  int _opCallParseAttrs(parseAttrs_t parseAttrs, const char* const* keys,
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) int __cdecl _opCallParseAttrs
+#else
+  int _opCallParseAttrs
+#endif
+  (parseAttrs_t parseAttrs, const char* const* keys,
                         const char* const* vals, int num,
                         int* num_in, int* num_out) {
     // create map of attributes from list
@@ -291,7 +316,12 @@ extern "C" {
   /*!
    * \brief returns status of calling infer shape function for operator from library
    */
-  int _opCallInferShape(inferShape_t inferShape, const char* const* keys,
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) int __cdecl _opCallInferShape
+#else
+  int _opCallInferShape
+#endif
+  (inferShape_t inferShape, const char* const* keys,
                         const char* const* vals, int num,
                         unsigned int** inshapes, int* indims, int num_in,
                         unsigned int*** outshapes, int** outdims, int num_out) {
@@ -335,7 +365,12 @@ extern "C" {
   /*!
    * \brief returns status of calling InferType function for operator from library
    */
-  int _opCallInferType(inferType_t inferType, const char* const* keys,
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) int __cdecl _opCallInferType
+#else
+  int _opCallInferType
+#endif
+  (inferType_t inferType, const char* const* keys,
                         const char* const* vals, int num,
                         int* intypes, int num_in, int* outtypes, int num_out) {
     // create map of attributes from list
@@ -368,7 +403,13 @@ extern "C" {
   /*!
    * \brief returns status of calling FCompute function for operator from library
    */
-  int _opCallFCompute(fcomp_t fcomp, const char* const* keys,
+
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) int __cdecl _opCallFCompute
+#else
+  int _opCallFCompute
+#endif
+  (fcomp_t fcomp, const char* const* keys,
                       const char* const* vals, int num,
                       const int64_t** inshapes, int* indims,
                       void** indata, int* intypes, int num_in,
@@ -416,7 +457,7 @@ extern "C" {
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) int __cdecl initialize(int);
 #else
-  int initialize(int);
+  MXReturnValue initialize(int);
 #endif
 }
 #endif  // MXNET_LIB_API_H_
