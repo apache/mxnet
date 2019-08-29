@@ -704,6 +704,10 @@ rpkg:
 		cp -rf lib/libmklml_intel.so R-package/inst/libs; \
 	fi
 
+	if [ -e "lib/libtvm_runtime.so" ]; then \
+		cp -rf lib/libtvm_runtime.so R-package/inst/libs; \
+	fi
+
 	mkdir -p R-package/inst/include
 	cp -rl include/* R-package/inst/include
 	Rscript -e "if(!require(devtools)){install.packages('devtools', repo = 'https://cloud.r-project.org/')}"
