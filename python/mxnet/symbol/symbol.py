@@ -1446,15 +1446,15 @@ class Symbol(SymbolBase):
         backend : str
             The name of backend, as registered in `SubgraphBackendRegistry`
 
-        ctx : Context, optional
-            Device context, used to infer stypes
-
         args : list of NDArray or dict of str to NDArray, optional
             Input arguments to the symbol, required to infer shapes/types before partitioning
 
             - If type is a list of `NDArray`, the order is the same as that of `list_arguments()`.
             - If type is a dict of str to `NDArray`, then it maps the name of arguments
               to the corresponding `NDArray`.
+
+        ctx : Context, optional
+            Device context, used to infer stypes
 
         kwargs : optional arguments
             Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
@@ -1467,16 +1467,17 @@ class Symbol(SymbolBase):
         out = SymbolHandle()
         assert isinstance(backend, str)
 
-        if ctx is None:
-            ctx = current_context()
-
-        assert isinstance(ctx, Context)
         if args is None:
             args = []
             args_handle = c_array(NDArrayHandle, [])
         else:
             listed_arguments = self.list_arguments()
             args_handle, args = self._get_ndarray_inputs('args', args, listed_arguments, False)
+
+        if ctx is None:
+            ctx = current_context()
+        assert isinstance(ctx, Context)
+
         key_list = []
         val_list = []
         for key, val in kwargs.items():
