@@ -101,8 +101,8 @@ namespace mxnet {
 namespace op {
 template<>
 Operator* CreateOp<cpu>(BinaryInferenceFullyConnectedParam param, int dtype,
-                        std::vector<TShape> *in_shape,
-                        std::vector<TShape> *out_shape,
+                        mxnet::ShapeVector *in_shape,
+                        mxnet::ShapeVector *out_shape,
                         Context ctx) {
   Operator *op = NULL;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
@@ -112,9 +112,9 @@ Operator* CreateOp<cpu>(BinaryInferenceFullyConnectedParam param, int dtype,
 }
 
 // DO_BIND_DISPATCH comes from operator_common.h
-Operator *BinaryInferenceFullyConnectedProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+Operator *BinaryInferenceFullyConnectedProp::CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                                      std::vector<int> *in_type) const {
-  std::vector<TShape> out_shape, aux_shape;
+  mxnet::ShapeVector out_shape, aux_shape;
   std::vector<int> out_type, aux_type;
   CHECK(InferType(in_type, &out_type, &aux_type));
   CHECK(InferShape(in_shape, &out_shape, &aux_shape));

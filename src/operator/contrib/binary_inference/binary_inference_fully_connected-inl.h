@@ -95,8 +95,8 @@ class BinaryInferenceFullyConnectedOp : public Operator {
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
         << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
-    const TShape& ishape = in_data[binary_inference_fullc::kData].shape_;
-    const TShape& oshape = out_data[binary_inference_fullc::kOut].shape_;
+    const mxnet::TShape& ishape = in_data[binary_inference_fullc::kData].shape_;
+    const mxnet::TShape& oshape = out_data[binary_inference_fullc::kOut].shape_;
 
     Tensor<xpu, 2, DType> data = in_data[binary_inference_fullc::kData].get_with_shape<xpu, 2, DType>(
         Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())), s);    
@@ -144,8 +144,8 @@ class BinaryInferenceFullyConnectedOp : public Operator {
 // Decalre Factory function, used for dispatch specialization
 template<typename xpu>
 Operator* CreateOp(BinaryInferenceFullyConnectedParam param, int dtype,
-                   std::vector<TShape> *in_shape,
-                   std::vector<TShape> *out_shape,
+                   mxnet::ShapeVector *in_shape,
+                   mxnet::ShapeVector *out_shape,
                    Context ctx);
 
 #if DMLC_USE_CXX11
@@ -167,16 +167,16 @@ class BinaryInferenceFullyConnectedProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     if (!param_.no_bias) {
       CHECK_EQ(in_shape->size(), 3) << "Input:[data, weight, bias]";
     } else {
       CHECK_EQ(in_shape->size(), 2) << "Input:[data, weight]";
     }
-    const TShape &dshape = (*in_shape)[binary_inference_fullc::kData];
+    const mxnet::TShape &dshape = (*in_shape)[binary_inference_fullc::kData];
     // require data to be known
     if (dshape.ndim() ==  0) return false;
 
@@ -250,7 +250,7 @@ class BinaryInferenceFullyConnectedProp : public OperatorProperty {
   }
 
   std::vector<ResourceRequest> ForwardResource(
-          const std::vector<TShape> &in_shape) const override {
+          const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
@@ -259,7 +259,7 @@ class BinaryInferenceFullyConnectedProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  private:

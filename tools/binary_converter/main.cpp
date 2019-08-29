@@ -92,7 +92,7 @@ int convert_to_binary_row(mxnet::NDArray& array) {
     return -1;
   }
 
-  nnvm::TShape binarized_shape(4);
+  mxnet::TShape binarized_shape(4, -1);
   size_t size = array.shape().Size();
   binarized_shape[0] = array.shape()[0];
   binarized_shape[1] = array.shape()[1] / BITS_PER_BINARY_WORD;
@@ -116,7 +116,7 @@ int convert_to_binary_row(mxnet::NDArray& array) {
 
 void transpose(mxnet::NDArray& array) {
   CHECK(array.shape().ndim() == 2);
-  nnvm::TShape tansposed_shape(2);
+  mxnet::TShape tansposed_shape(2, -1);
   int rows = array.shape()[0];
   int cols = array.shape()[1];
   tansposed_shape[0] = cols;
@@ -151,7 +151,7 @@ int transpose_and_convert_to_binary_col(mxnet::NDArray& array) {
     return -1;
   }
 
-  nnvm::TShape binarized_shape(2);  
+  mxnet::TShape binarized_shape(2, -1);
   binarized_shape[0] = array.shape()[1];
   binarized_shape[1] = array.shape()[0] / BITS_PER_BINARY_WORD;
 

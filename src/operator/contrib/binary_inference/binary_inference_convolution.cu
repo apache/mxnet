@@ -131,8 +131,8 @@ namespace op {
 
 template<>
 Operator* CreateOp<gpu>(BinaryInferenceConvolutionParam param, int dtype,
-                        std::vector<TShape> *in_shape,
-                        std::vector<TShape> *out_shape,
+                        mxnet::ShapeVector *in_shape,
+                        mxnet::ShapeVector *out_shape,
                         Context ctx) {
   Operator *op = NULL;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {

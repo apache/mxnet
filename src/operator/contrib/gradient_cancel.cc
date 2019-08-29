@@ -49,7 +49,7 @@ The storage type of ``gradcancel`` output depends on storage types of inputs
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", GradCancelOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", GradCancelOpShape)
 .set_attr<nnvm::FInferType>("FInferType", GradCancelOpType)
 .set_attr<FInferStorageType>("FInferStorageType", GradCancelOpStorageType)
 .set_attr<FCompute>("FCompute<cpu>", GradCancelOpForward<cpu>)

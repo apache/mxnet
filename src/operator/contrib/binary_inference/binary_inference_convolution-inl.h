@@ -53,10 +53,10 @@ namespace mxnet {
         }
 
         struct BinaryInferenceConvolutionParam : public dmlc::Parameter<BinaryInferenceConvolutionParam> {
-            TShape kernel;
-            TShape stride;
-            TShape dilate;
-            TShape pad;
+            mxnet::TShape kernel;
+            mxnet::TShape stride;
+            mxnet::TShape dilate;
+            mxnet::TShape pad;
             uint32_t num_filter;
             uint32_t num_group;
             uint64_t workspace;
@@ -64,11 +64,11 @@ namespace mxnet {
             dmlc::optional<int> layout;
             DMLC_DECLARE_PARAMETER(BinaryInferenceConvolutionParam) {
               DMLC_DECLARE_FIELD(kernel).describe("convolution kernel size: (h, w) or (d, h, w)");
-              DMLC_DECLARE_FIELD(stride).set_default(TShape())
+              DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape(0, -1))
                       .describe("convolution stride: (h, w) or (d, h, w)");
-              DMLC_DECLARE_FIELD(dilate).set_default(TShape())
+              DMLC_DECLARE_FIELD(dilate).set_default(mxnet::TShape(0, -1))
                       .describe("convolution dilate: (h, w) or (d, h, w)");
-              DMLC_DECLARE_FIELD(pad).set_default(TShape())
+              DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape(0, -1))
                       .describe("pad for convolution: (h, w) or (d, h, w)");
               DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
                       .describe("convolution filter(channel) number");
@@ -125,7 +125,7 @@ namespace mxnet {
               Tensor<xpu, 1, DType> workspace = ctx.requested[binary_inference_conv::kTempSpace]
                       .get_space_typed<xpu, 1, DType>(Shape1(col_buffer_size_), s);
               // calculate the shape of col_buffer
-              TShape col_buffer_shape(num_spatial_axes_ + 1);
+              mxnet::TShape col_buffer_shape(num_spatial_axes_ + 1, -1);
               col_buffer_shape[0] = conv_in_channels_ * param_.kernel.Size();
               for (index_t i = 1; i < col_buffer_shape.ndim(); ++i) {
                 col_buffer_shape[i] = out_data[0].shape_[i+1];
@@ -196,7 +196,7 @@ namespace mxnet {
             }
 
         private:
-            void LayerSetUp(const TShape& ishape, const TShape& oshape) {
+            void LayerSetUp(const mxnet::TShape& ishape, const mxnet::TShape& oshape) {
               channel_axis_ = 1;  // hard code channel axis
               const index_t first_spatial_axis = channel_axis_ + 1;
               const index_t num_axes = param_.kernel.ndim() + 2;
@@ -254,8 +254,8 @@ namespace mxnet {
 
         template<typename xpu>
         Operator* CreateOp(BinaryInferenceConvolutionParam param, int dtype,
-                           std::vector<TShape> *in_shape,
-                           std::vector<TShape> *out_shape,
+                           mxnet::ShapeVector *in_shape,
+                           mxnet::ShapeVector *out_shape,
                            Context ctx);
 
 #if DMLC_USE_CXX11
@@ -295,9 +295,9 @@ namespace mxnet {
               return param_.__DICT__();
             }
 
-            bool InferShape(std::vector<TShape> *in_shape,
-                            std::vector<TShape> *out_shape,
-                            std::vector<TShape> *aux_shape) const override {
+            bool InferShape(mxnet::ShapeVector *in_shape,
+                            mxnet::ShapeVector *out_shape,
+                            mxnet::ShapeVector *aux_shape) const override {
               using namespace mshadow;
               if (!param_.no_bias) {
                 LOG(WARNING) << "convolution with bias untested //mf";
@@ -306,8 +306,8 @@ namespace mxnet {
                 CHECK_EQ(in_shape->size(), 2U) << "Input:[data, weight]";
               }
               // CHECK_EQ(out_shape->size(), 1) << "Output: [output]";
-              out_shape->resize(1, TShape());
-              const TShape &dshp = (*in_shape)[binary_inference_conv::kData];
+              out_shape->resize(1, mxnet::TShape());
+              const mxnet::TShape &dshp = (*in_shape)[binary_inference_conv::kData];
               if (dshp.ndim() ==  0) return false;
 
               if (param_.kernel.ndim() != 2) {
@@ -423,12 +423,12 @@ namespace mxnet {
             }
 
             std::vector<ResourceRequest> ForwardResource(
-                    const std::vector<TShape> &in_shape) const override {
+                    const mxnet::ShapeVector &in_shape) const override {
               return {ResourceRequest::kTempSpace};
             }
 
             std::vector<ResourceRequest> BackwardResource(
-                    const std::vector<TShape> &in_shape) const override {
+                    const mxnet::ShapeVector &in_shape) const override {
               return {ResourceRequest::kTempSpace};
             }
 
@@ -437,7 +437,7 @@ namespace mxnet {
               return NULL;
             }
 
-            Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+            Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                                        std::vector<int> *in_type) const override;
 
         private:
