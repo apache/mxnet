@@ -21,7 +21,7 @@ import mxnet as mx
 
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, create_vector
 from mxnet import gluon, nd
-from tests.python.unittest.common import with_seed
+from tests.python.unittest.common import with_seed, teardown
 
 # dimension constants
 LARGE_X = 5000000000
@@ -64,7 +64,7 @@ def test_ndarray_random_randint():
     a = nd.random.randint(low_large_value, high_large_value, dtype=np.int64)
     low = mx.nd.array([low_large_value], dtype='int64')
     high = mx.nd.array([high_large_value], dtype='int64')
-    assert a > low  and a < high
+    assert a > low and a < high
 
 
 def test_ndarray_empty():
@@ -209,7 +209,6 @@ def test_ndarray_random_negative_binomial():
 @with_seed()
 def test_ndarray_random_normal():
     a = nd.random.normal(shape=LARGE_X)
-    a.wait_to_read()
     assert a.shape[0] == LARGE_X
 
 
@@ -221,24 +220,8 @@ def test_ndarray_random_poisson():
 
 
 @with_seed()
-def test_ndarray_random_randint():
-    a = nd.random.randint(1500, 9000, shape=LARGE_X, dtype="int64")
-    assert a[-1] >= 1500 and a[-1] < 9000
-    assert a[-1].dtype == np.int64
-    assert a.shape[0] == LARGE_X
-
-
-@with_seed()
 def test_ndarray_random_randn():
     a = nd.random.randn(LARGE_X)
-    a.wait_to_read()
-    assert a.shape[0] == LARGE_X
-
-
-@with_seed()
-def test_ndarray_random_uniform():
-    a = nd.random.uniform(1500, 9000, shape=LARGE_X)
-    assert a[-1] >= 1500 and a[-1] < 9000
     assert a.shape[0] == LARGE_X
 
 
@@ -386,7 +369,7 @@ def test_layer_norm():
     gamma = nd.random.normal(0, 1, in_shape)
     beta = nd.random.normal(0, 1, in_shape)
     mx_out = nd.LayerNorm(data, gamma, beta, axis, eps)
-    mx_out.wait_to_read()
+    assert mx_out.shape == in_shape
 
 
 # TODO: correctness of batchnorm
@@ -404,7 +387,7 @@ def test_batchnorm():
 
     output = mx.nd.BatchNorm(data, bn_gamma, bn_beta,
                              bn_running_mean, bn_running_var, axis=axis)
-    output.wait_to_read()
+    assert output.shape == shape
 
 
 def test_add():
