@@ -87,8 +87,8 @@ class Arg:
         'NDArray[]':'const std::vector<Symbol>&',\
         'caffe-layer-parameter':'::caffe::LayerParameter',\
         'NDArray-or-Symbol[]':'const std::vector<Symbol>&',\
-        'float':'mx_float',\
-        'real_t':'mx_float',\
+        'float':'float',\
+        'real_t':'float',\
         'int':'int',\
         'long':'int64_t',\
         'int (non-negative)': 'uint32_t',\
@@ -101,7 +101,7 @@ class Arg:
         'tuple of <long>':'nnvm::Tuple<int64_t>',\
         'tuple of <int (non-negative)>':'nnvm::Tuple<uint32_t>',\
         'tuple of <long (non-negative)>':'nnvm::Tuple<uint64_t>',\
-        'tuple of <float>':'nnvm::Tuple<mx_float>',\
+        'tuple of <float>':'nnvm::Tuple<float>',\
         'tuple of <double>':'nnvm::Tuple<double>',\
         }
     # add optional types

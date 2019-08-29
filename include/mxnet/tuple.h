@@ -272,6 +272,14 @@ class Tuple {
       is.get();
       if (ch == '(' || ch == '[') break;
       if (!isspace(ch)) {
+        if (ch == 'N') {
+          std::string tmp_val;
+          is >> tmp_val;
+          if (tmp_val == "one") {  // is stores "None"
+            t.SetDim(-1);
+            return is;
+          }
+        }
         is.setstate(std::ios::failbit);
         return is;
       }
@@ -649,6 +657,13 @@ inline bool shape_is_known(const TShape& x) {
   if (!ndim_is_known(x)) return false;
   for (int i = 0; i < x.ndim(); ++i) {
     if (!dim_size_is_known(x, i)) return false;
+  }
+  return true;
+}
+
+inline bool shape_is_known(const std::vector<TShape>& shapes) {
+  for (const TShape& shape : shapes) {
+    if (!shape_is_known(shape)) return false;
   }
   return true;
 }

@@ -466,6 +466,7 @@ DMLC_REGISTER_PARAMETER(ScatterNDParam);
 
 NNVM_REGISTER_OP(Embedding)
 MXNET_ADD_SPARSE_OP_ALIAS(Embedding)
+.add_alias("_npx_embedding")
 .describe(R"code(Maps integer indices to vector representations (embeddings).
 
 This operator maps words to real-valued vectors in a high-dimensional space,
@@ -764,6 +765,7 @@ Examples::
 .add_argument("indices", "NDArray-or-Symbol", "The index array");
 
 NNVM_REGISTER_OP(one_hot)
+.add_alias("_npx_one_hot")
 .describe(R"code(Returns a one-hot array.
 
 The locations represented by `indices` take value `on_value`, while all
@@ -813,6 +815,7 @@ Examples::
 
 
 NNVM_REGISTER_OP(gather_nd)
+.add_alias("_npi_gather_nd")
 .describe(R"code(Gather elements or slices from `data` and store to a tensor whose
 shape is defined by `indices`.
 
@@ -1006,6 +1009,7 @@ Examples::
 .add_arguments(ScatterNDParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_scatter_set_nd)
+.add_alias("_npi_scatter_set_nd")
 .describe(R"code(This operator has the same functionality as scatter_nd
 except that it does not reset the elements not indexed by the input
 index `NDArray` in the input data `NDArray`. output should be explicitly

@@ -51,7 +51,7 @@ using mkldnn::forward_inference;
 
 inline static unsigned _GetFlags(const std::vector<NDArray> &in_data,
                                  const std::vector<NDArray> &aux_states,
-                                 const BatchNormParam &param, bool is_train) {
+                                 const BatchNormParam &param, bool is_train_and_not_global_stats) {
   unsigned flags = 0U;
   if (in_data.size() == 3U) {
     flags |= use_scale_shift;
@@ -59,7 +59,7 @@ inline static unsigned _GetFlags(const std::vector<NDArray> &in_data,
 
   // aux_states[0]: inMean
   // aux_states[1]: inVariance
-  if (aux_states.size() == 2U && !is_train) {
+  if (aux_states.size() == 2U && !is_train_and_not_global_stats) {
     flags |= use_global_stats;
   }
   return flags;
@@ -107,13 +107,13 @@ class MKLDNNBNForward {
   std::shared_ptr<const mkldnn::memory> mean_m;
   std::shared_ptr<const mkldnn::memory> var_m;
   std::shared_ptr<mkldnn::batch_normalization_forward> fwd;
-  bool is_train;
+  bool is_train_and_not_global_stats;
   t_bn_f_pdesc pd;
 
  public:
-  MKLDNNBNForward(const t_bn_f_pdesc &_pd, bool is_train): pd(_pd) {
+  MKLDNNBNForward(const t_bn_f_pdesc &_pd, bool is_train_and_not_global_stats): pd(_pd) {
     weight_m.reset(new mkldnn::memory(pd.weights_primitive_desc()));
-    this->is_train = is_train;
+    this->is_train_and_not_global_stats = is_train_and_not_global_stats;
   }
 
   const mkldnn::memory &GetWeight() const {
@@ -132,38 +132,35 @@ class MKLDNNBNForward {
     return *var_m;
   }
 
-  void SetDataHandle(const NDArray &data, const NDArray &mean,
-                     const NDArray &var, const mkldnn::memory &out) {
-    auto _data = data.GetMKLDNNData();
+  void SetDataHandle(const mkldnn::memory *data, const mkldnn::memory *mean,
+                     const mkldnn::memory *var, const mkldnn::memory *out) {
     if (data_m) {
-      data_m->set_data_handle(_data->get_data_handle());
+      data_m->set_data_handle(data->get_data_handle());
     } else {
-      data_m.reset(new mkldnn::memory(_data->get_primitive_desc(),
-                                      _data->get_data_handle()));
+      data_m.reset(new mkldnn::memory(data->get_primitive_desc(),
+                                      data->get_data_handle()));
     }
     if (out_m) {
-      out_m->set_data_handle(out.get_data_handle());
+      out_m->set_data_handle(out->get_data_handle());
     } else {
-      out_m.reset(new mkldnn::memory(out.get_primitive_desc(),
-                                     out.get_data_handle()));
+      out_m.reset(new mkldnn::memory(out->get_primitive_desc(),
+                                     out->get_data_handle()));
     }
-    auto mean_ptr = mean.data().dptr_;
     if (mean_m) {
-      mean_m->set_data_handle(mean_ptr);
+      mean_m->set_data_handle(mean->get_data_handle());
     } else {
-      mean_m.reset(new mkldnn::memory(pd.mean_primitive_desc(),
-                                      mean_ptr));
+      mean_m.reset(new mkldnn::memory(mean->get_primitive_desc(),
+                                      mean->get_data_handle()));
     }
-    auto var_ptr = var.data().dptr_;
     if (var_m) {
-      var_m->set_data_handle(var_ptr);
+      var_m->set_data_handle(var->get_data_handle());
     } else {
-      var_m.reset(new mkldnn::memory(pd.variance_primitive_desc(),
-                                     var_ptr));
+      var_m.reset(new mkldnn::memory(var->get_primitive_desc(),
+                                     var->get_data_handle()));
     }
 
     if (fwd == nullptr) {
-      if (!is_train)
+      if (!is_train_and_not_global_stats)
         fwd.reset(new mkldnn::batch_normalization_forward(
                 pd, *data_m, mkldnn::primitive::at(*mean_m),
                 mkldnn::primitive::at(*var_m), *weight_m, *out_m));
@@ -173,6 +170,11 @@ class MKLDNNBNForward {
                 mkldnn::primitive::at(*weight_m), *out_m,
                 *mean_m, *var_m));
     }
+  }
+
+  void SetDataHandle(const NDArray &data, const NDArray &mean,
+                     const NDArray &var, const mkldnn::memory &out) {
+    SetDataHandle(data.GetMKLDNNData(), mean.GetMKLDNNData(), var.GetMKLDNNData(), &out);
   }
 
   const mkldnn::batch_normalization_forward &GetFwd() const {
@@ -191,13 +193,14 @@ static MKLDNNBNForward &GetBNForward(const BatchNormParam& param,
 #endif
   MKLDNNBNSignature key(param);
   key.AddSign(ctx.is_train);
+  key.AddSign(param.use_global_stats);
   key.AddSign(in_data);
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
     auto fwd_pd = _GetFwd(*in_data.GetMKLDNNData(), ctx.is_train,
                           (DType) param.eps, flags);
-    MKLDNNBNForward fwd(fwd_pd, ctx.is_train);
+    MKLDNNBNForward fwd(fwd_pd, ctx.is_train && !param.use_global_stats);
     it = AddToCache(&fwds, key, fwd);
   }
   return it->second;
@@ -210,7 +213,7 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
                             const std::vector<NDArray>   &out_data,
                             const std::vector<NDArray>   &aux_states) {
   TmpMemMgr::Get()->Init(ctx.requested[batchnorm::kTempSpace]);
-  unsigned flags      = _GetFlags(in_data, aux_states, param, ctx.is_train);
+  unsigned flags = _GetFlags(in_data, aux_states, param, ctx.is_train && !param.use_global_stats);
   const NDArray &data = in_data[batchnorm::kData];
 
   auto &fwd = GetBNForward<DType>(param, ctx, data, flags);
@@ -250,7 +253,7 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
       }
     }
 
-    if (!ctx.is_train) {
+    if (!ctx.is_train || param.use_global_stats) {
       DType* omean    = out_data[batchnorm::kMean].data().dptr<DType>();
       DType* ovar     = out_data[batchnorm::kVar].data().dptr<DType>();
       DType* inmean   = aux_states[batchnorm::kMovingMean].data().dptr<DType>();
@@ -375,7 +378,7 @@ void MKLDNNBatchNormBackward(const OpContext &ctx, const BatchNormParam &param,
   CHECK_EQ(in_data.size(), 3U);
   CHECK_EQ(out_data.size(), 3U);
   CHECK_EQ(in_grad.size(), 3U);
-  unsigned flags = _GetFlags(in_data, aux_states, param, ctx.is_train);
+  unsigned flags = _GetFlags(in_data, aux_states, param, ctx.is_train && !param.use_global_stats);
 
   const NDArray &data         = in_data[batchnorm::kData];
   const NDArray &diff         = out_grad[batchnorm::kOut];

@@ -1572,7 +1572,11 @@ class PCC(EvalMetric):
         # update the confusion matrix
         for label, pred in zip(labels, preds):
             label = label.astype('int32', copy=False).asnumpy()
-            pred = pred.asnumpy().argmax(axis=1)
+            pred = pred.asnumpy()
+            if pred.shape != label.shape:
+                pred = pred.argmax(axis=1)
+            else:
+                pred = pred.astype('int32', copy=False)
             n = max(pred.max(), label.max())
             if n >= self.k:
                 self._grow(n + 1 - self.k)
