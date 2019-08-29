@@ -263,7 +263,7 @@ extern "C" {
 #else
   int
 #endif
-  _opVersion () {
+  _opVersion() {
     return MX_LIBRARY_VERSION;
   }
 
@@ -275,7 +275,7 @@ extern "C" {
 #else
   int
 #endif
-  _opRegSize () {
+  _opRegSize() {
     return Registry<CustomOp>::get()->size();
   }
 
@@ -287,9 +287,9 @@ extern "C" {
 #else
   void
 #endif
-  _opRegGet (int idx, const char** name, fcomp_t* fcomp,
-             parseAttrs_t* parse, inferType_t* type,
-             inferShape_t* shape) {
+  _opRegGet(int idx, const char** name, fcomp_t* fcomp,
+            parseAttrs_t* parse, inferType_t* type,
+            inferShape_t* shape) {
     CustomOp op = Registry<CustomOp>::get()->get(idx);
     *name = op.name;
     *fcomp = op.fcompute;
@@ -306,7 +306,7 @@ extern "C" {
 #else
   void
 #endif
-  _opCallFree (void* ptr) {
+  _opCallFree(void* ptr) {
     free(ptr);
   }
 
@@ -318,9 +318,9 @@ extern "C" {
 #else
   int
 #endif
-  _opCallParseAttrs (parseAttrs_t parseAttrs, const char* const* keys,
-                     const char* const* vals, int num,
-                     int* num_in, int* num_out) {
+  _opCallParseAttrs(parseAttrs_t parseAttrs, const char* const* keys,
+                    const char* const* vals, int num,
+                    int* num_in, int* num_out) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
@@ -338,10 +338,10 @@ extern "C" {
 #else
   int
 #endif
-  _opCallInferShape (inferShape_t inferShape, const char* const* keys,
-                     const char* const* vals, int num,
-                     unsigned int** inshapes, int* indims, int num_in,
-                     unsigned int*** outshapes, int** outdims, int num_out) {
+  _opCallInferShape(inferShape_t inferShape, const char* const* keys,
+                    const char* const* vals, int num,
+                    unsigned int** inshapes, int* indims, int num_in,
+                    unsigned int*** outshapes, int** outdims, int num_out) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
@@ -387,9 +387,9 @@ extern "C" {
 #else
   int
 #endif
-  _opCallInferType (inferType_t inferType, const char* const* keys,
-                    const char* const* vals, int num,
-                    int* intypes, int num_in, int* outtypes, int num_out) {
+  _opCallInferType(inferType_t inferType, const char* const* keys,
+                   const char* const* vals, int num,
+                   int* intypes, int num_in, int* outtypes, int num_out) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
@@ -403,7 +403,7 @@ extern "C" {
     }
 
     // create a vector of types for outputs
-    std::vector<int> out_types(num_out);
+    std::vector<int> out_types(num_out, -1);
 
     int retval = inferType(attrs, in_types, out_types);
     if (!retval)
@@ -426,13 +426,13 @@ extern "C" {
 #else
   int
 #endif
-  _opCallFCompute (fcomp_t fcomp, const char* const* keys,
-                   const char* const* vals, int num,
-                   const int64_t** inshapes, int* indims,
-                   void** indata, int* intypes, int num_in,
-                   const int64_t** outshapes, int* outdims,
-                   void** outdata, int* outtypes, int num_out,
-                   xpu_malloc_t xpu_malloc, void* _xpu_malloc) {
+  _opCallFCompute(fcomp_t fcomp, const char* const* keys,
+                  const char* const* vals, int num,
+                  const int64_t** inshapes, int* indims,
+                  void** indata, int* intypes, int num_in,
+                  const int64_t** outshapes, int* outdims,
+                  void** outdata, int* outtypes, int num_out,
+                  xpu_malloc_t xpu_malloc, void* _xpu_malloc) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
