@@ -21,7 +21,7 @@ from __future__ import absolute_import
 from ..ndarray import numpy as _mx_nd_np
 
 
-__all__ = ["randint", "uniform"]
+__all__ = ["randint", "uniform", "normal"]
 
 
 def randint(low, high=None, size=None, dtype=None, **kwargs):
@@ -108,3 +108,39 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
         Drawn samples from the parameterized uniform distribution.
     """
     return _mx_nd_np.random.uniform(low, high, size=size, ctx=ctx, dtype=dtype, out=out)
+
+
+def normal(loc=0.0, scale=1.0, size=None, **kwargs):
+    """Draw random samples from a normal (Gaussian) distribution.
+
+    Samples are distributed according to a normal distribution parametrized
+    by *loc* (mean) and *scale* (standard deviation).
+
+
+    Parameters
+    ----------
+    loc : float, optional
+        Mean (centre) of the distribution.
+    scale : float, optional
+        Standard deviation (spread or "width") of the distribution.
+    size : int or tuple of ints, optional
+        Output shape. If the given shape is, e.g., `(m, n, k)`, then `m * n * k`
+        samples are drawn. If size is `None` (default), a scalar tensor containing
+        a single value is returned if loc and scale are both scalars.
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples. Default is 'float32'
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
+    Returns
+    -------
+    out : ndarray
+        Drawn samples from the parameterized normal distribution.
+
+    Notes
+    -----
+    This function currently does not support ``loc`` and ``scale`` as ndarrays.
+    """
+    return _mx_nd_np.random.normal(loc, scale, size, **kwargs)
