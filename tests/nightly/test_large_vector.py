@@ -64,7 +64,7 @@ def test_ndarray_random_randint():
     a = nd.random.randint(low_large_value, high_large_value, dtype=np.int64)
     low = mx.nd.array([low_large_value], dtype='int64')
     high = mx.nd.array([high_large_value], dtype='int64')
-    assert a > low and a < high
+    assert a >= low and a < high
 
 
 def test_ndarray_empty():
@@ -369,7 +369,7 @@ def test_layer_norm():
     gamma = nd.random.normal(0, 1, in_shape)
     beta = nd.random.normal(0, 1, in_shape)
     mx_out = nd.LayerNorm(data, gamma, beta, axis, eps)
-    assert mx_out.shape == in_shape
+    assert mx_out.shape == (in_shape,)
 
 
 # TODO: correctness of batchnorm
@@ -387,7 +387,7 @@ def test_batchnorm():
 
     output = mx.nd.BatchNorm(data, bn_gamma, bn_beta,
                              bn_running_mean, bn_running_var, axis=axis)
-    assert output.shape == shape
+    assert output.shape == (shape,)
 
 
 def test_add():
