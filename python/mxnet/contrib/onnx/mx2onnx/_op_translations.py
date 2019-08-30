@@ -1502,7 +1502,7 @@ def convert_slice_axis(node, **kwargs):
     ends = attrs.get("end", None)
     if not ends or ends == 'None':
         # ONNX doesn't support None for ends. Since ends=None depicts
-        # length of dimension, passing INT_MAX in this case.
+        # length of dimension, passing dimension in this case.
         in_shape = kwargs['in_shape'][0]
         ends = in_shape[axes]
 
