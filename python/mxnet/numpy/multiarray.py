@@ -235,8 +235,8 @@ class ndarray(NDArray):
                         key, shape[0]))
             return self._at(key)
         elif isinstance(key, py_slice):
-            if (key.step is None or key.step == 1):
-                if  key.start is not None or key.stop is not None:
+            if key.step is None or key.step == 1:
+                if key.start is not None or key.stop is not None:
                     return self._slice(key.start, key.stop)
                 else:
                     return self
