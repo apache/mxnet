@@ -109,6 +109,8 @@ endif
 CFLAGS += -I$(TPARTYDIR)/mshadow/ -I$(TPARTYDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(TPARTYDIR)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread -ldl $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 
+# please note that when you enable this, you might run into an linker not being able to work properly due to large code injection.
+# you can find more information here https://github.com/apache/incubator-mxnet/issues/15971
 ifeq ($(ENABLE_TESTCOVERAGE), 1)
         CFLAGS += --coverage
         LDFLAGS += --coverage

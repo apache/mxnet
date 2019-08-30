@@ -888,7 +888,10 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
                      const mx_uint num_offline,
                      const char **offline_params,
                      const char *quantized_dtype,
-                     const bool calib_quantize) {
+                     const bool calib_quantize,
+                     const char *quantize_mode,
+                     mx_uint* out_num_calib_names,
+                     const char ***out_calib_names) {
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol*>(sym_handle);
@@ -907,12 +910,24 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
     offline.emplace(offline_params[i]);
   }
   std::string quantized_type(quantized_dtype);
+  std::string quantized_mode(quantize_mode);
   g.attrs["excluded_nodes"] = std::make_shared<nnvm::any>(std::move(excluded_node_names));
   g.attrs["excluded_ops"] = std::make_shared<nnvm::any>(std::move(excluded_op));
   g.attrs["offline_params"] = std::make_shared<nnvm::any>(std::move(offline));
   g.attrs["quantized_dtype"] = std::make_shared<nnvm::any>(std::move(quantized_type));
   g.attrs["target_ctx"] = std::make_shared<nnvm::any>(target_dev);
+  g.attrs["quantize_mode"] = std::make_shared<nnvm::any>(std::move(quantized_mode));
   g = ApplyPass(std::move(g), "QuantizeGraph");
+  const auto& calib_nodes = g.GetAttr<std::vector<std::string>>("calib_nodes");
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
+  ret->ret_vec_str = std::move(calib_nodes);
+  *out_num_calib_names = ret->ret_vec_str.size();
+  ret->ret_vec_charp.clear();
+  ret->ret_vec_charp.reserve(ret->ret_vec_str.size());
+  for (const auto &str : ret->ret_vec_str) {
+    ret->ret_vec_charp.push_back(str.c_str());
+  }
+  *out_calib_names = dmlc::BeginPtr(ret->ret_vec_charp);
   s->outputs = g.outputs;
   *ret_sym_handle = s;
   API_END_HANDLE_ERROR(delete s);

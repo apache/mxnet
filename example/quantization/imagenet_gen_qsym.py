@@ -141,23 +141,12 @@ if __name__ == '__main__':
     excluded_op_names = []
     if args.model == 'imagenet1k-resnet-152':
         rgb_mean = '0,0,0'
-        if args.ctx == 'gpu':
-            calib_layer = lambda name: name.endswith('_output') and (name.find('conv') != -1
-                                                                     or name.find('sc') != -1
-                                                                     or name.find('fc') != -1)
-        else:
-            calib_layer = lambda name: name.endswith('_output') and (name.find('conv') != -1
-                                                                     or name.find('sc') != -1)
-            excluded_sym_names += ['flatten0', 'fc1']
+        excluded_sym_names += ['flatten0', 'fc1']
         if exclude_first_conv:
             excluded_sym_names += ['conv0']
     elif args.model == 'imagenet1k-inception-bn':
         rgb_mean = '123.68,116.779,103.939'
-        if args.ctx == 'gpu':
-            calib_layer = lambda name: name.endswith('_output') and (name.find('conv') != -1
-                                                                     or name.find('fc') != -1)
-        else:
-            calib_layer = lambda name: name.endswith('_output') and (name.find('conv') != -1)
+        if args.ctx == 'cpu':
             excluded_sym_names += ['flatten', 'fc1']
         if exclude_first_conv:
             excluded_sym_names += ['conv_1']
@@ -203,7 +192,7 @@ if __name__ == '__main__':
                                                         excluded_op_names=excluded_op_names,
                                                         calib_mode=calib_mode, calib_data=data,
                                                         num_calib_examples=num_calib_batches * batch_size,
-                                                        calib_layer=calib_layer, quantized_dtype=args.quantized_dtype,
+                                                        quantized_dtype=args.quantized_dtype,
                                                         logger=logger)
         if calib_mode == 'entropy':
             suffix = '-quantized-%dbatches-entropy' % num_calib_batches
