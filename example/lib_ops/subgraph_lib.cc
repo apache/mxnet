@@ -27,11 +27,22 @@
 #include <iostream>
 #include "lib_api.h"
 
+void gemm(float* A, float* B, float* C, unsigned n, unsigned k, unsigned m) {
+  unsigned i,j,kk;
+  for (i=0;i<n;i++) {
+    for (j=0;j<m;j++) {
+      C[i*m+j] = 0;
+      for (kk=0;kk<k;kk++) {
+        C[i*m+j] += A[i*k+kk] * B[kk*m+j];
+      }
+    }
+  }
+}
+
 MXReturnValue parseAttrs(std::map<std::string,std::string> attrs,
                int* num_in, int* num_out) {
   *num_in = 2;
   *num_out = 1;
-
   return MX_SUCCESS;
 }
 
@@ -43,14 +54,43 @@ MXReturnValue inferType(std::map<std::string,std::string> attrs, std::vector<int
 
 MXReturnValue inferShape(std::map<std::string,std::string> attrs, std::vector<std::vector<unsigned int>> &inshapes,
                std::vector<std::vector<unsigned int>> &outshapes) {
-  outshapes[0] = inshapes[0];
+  unsigned n = inshapes[0][0];
+  unsigned k = inshapes[0][1];
+  unsigned kk = inshapes[1][0];
+  unsigned m = inshapes[1][1];
+
+  std::cout << "inshapes[0][0]=" << n << "  inshapes[0][1]=" << k << std::endl;
+  std::cout << "inshapes[1][0]=" << kk << "  inshapes[1][1]=" << m << std::endl;
+
+  if (k != kk)
+    return MX_FAIL;
+
+  outshapes[0].push_back(n);
+  outshapes[0].push_back(m);
   return MX_SUCCESS;
 }
 
 MXReturnValue myFCompute(std::map<std::string,std::string> attrs,
                std::vector<MXTensor> inputs, std::vector<MXTensor> outputs,
                OpResource res) {
-  outputs[0] = inputs[0];
+  //extract data pointers from tensors
+  float* input1 = inputs[0].getData<float>();
+  float* input2 = inputs[1].getData<float>();
+  float* output = outputs[0].getData<float>();
+  //set tensor shapes
+  unsigned n = inputs[0].shape[0];
+  unsigned k = inputs[0].shape[1];
+  unsigned m = inputs[1].shape[1];
+
+  gemm(input1, input2, output, n, k, m);
+
+  return MX_SUCCESS;
+}
+
+MXReturnValue mutateInputs(std::map<std::string,std::string> attrs,
+               std::vector<int> &input_indices) {
+  input_indices.push_back(1);
+  std::cout << "the 1st input is marked as mutate input by library author" << std::endl;
   return MX_SUCCESS;
 }
 
@@ -58,7 +98,8 @@ REGISTER_OP(subgraph_op)
 .setFCompute(myFCompute)
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
-.setInferShape(inferShape);
+.setInferShape(inferShape)
+.setMutateInputs(mutateInputs);
 
 MXReturnValue initialize(int version) {
   if (version >= 10400) {
