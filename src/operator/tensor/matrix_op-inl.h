@@ -1148,8 +1148,8 @@ void SliceAssignScalarOpForward(const nnvm::NodeAttrs& attrs,
 
 struct SliceAxisParam : public dmlc::Parameter<SliceAxisParam> {
   int axis;
-  int begin;
-  dmlc::optional<int> end;
+  index_t begin;
+  dmlc::optional<index_t> end;
   DMLC_DECLARE_PARAMETER(SliceAxisParam) {
     DMLC_DECLARE_FIELD(axis)
       .describe("Axis along which to be sliced, supports negative indexes.");
