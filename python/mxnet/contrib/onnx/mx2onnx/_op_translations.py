@@ -57,7 +57,6 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import re
-import sys
 import logging
 import numpy as np
 from .export_onnx import MXNetGraph as mx_op
@@ -1504,7 +1503,8 @@ def convert_slice_axis(node, **kwargs):
     if not ends or ends == 'None':
         # ONNX doesn't support None for ends. Since ends=None depicts
         # length of dimension, passing INT_MAX in this case.
-        ends = sys.maxsize
+        in_shape = kwargs['in_shape'][0]
+        ends = in_shape[axes]
 
     node = onnx.helper.make_node(
         "Slice",
