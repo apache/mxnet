@@ -299,7 +299,6 @@ build_centos7_cpu() {
     make \
         DEV=1 \
         USE_LAPACK=1 \
-        ENABLE_TESTCOVERAGE=1 \
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
         USE_BLAS=openblas \
         USE_MKLDNN=0 \
@@ -314,7 +313,6 @@ build_amzn_linux_cpu() {
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_CUDA=OFF\
         -DUSE_OPENCV=ON\
         -DUSE_OPENMP=ON\
@@ -335,7 +333,6 @@ build_centos7_mkldnn() {
     build_ccache_wrappers
     make \
         DEV=1 \
-        ENABLE_TESTCOVERAGE=1 \
         USE_LAPACK=1 \
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
         USE_BLAS=openblas \
@@ -350,7 +347,6 @@ build_centos7_gpu() {
     build_ccache_wrappers
     make \
         DEV=1                                     \
-        ENABLE_TESTCOVERAGE=1                     \
         USE_LAPACK=1                              \
         USE_LAPACK_PATH=/usr/lib64/liblapack.so   \
         USE_BLAS=openblas                         \
@@ -374,7 +370,6 @@ build_ubuntu_cpu_openblas() {
     build_ccache_wrappers
     make \
         DEV=1                         \
-        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=0                  \
@@ -392,7 +387,6 @@ build_ubuntu_cpu_mkl() {
     export CXX="ccache g++"
     make \
         DEV=1                         \
-        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=mkl                  \
         USE_MKLDNN=0                  \
@@ -410,7 +404,6 @@ build_ubuntu_cpu_cmake_debug() {
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_OPENMP=OFF \
@@ -461,7 +454,6 @@ build_ubuntu_cpu_clang39() {
     export CC=clang-3.9
     build_ccache_wrappers
     make \
-        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=0                  \
@@ -479,7 +471,6 @@ build_ubuntu_cpu_clang60() {
     build_ccache_wrappers
 
     make  \
-        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=0                  \
@@ -525,7 +516,6 @@ build_ubuntu_cpu_clang39_mkldnn() {
     build_ccache_wrappers
 
     make \
-        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=0                  \
@@ -542,7 +532,6 @@ build_ubuntu_cpu_clang60_mkldnn() {
     build_ccache_wrappers
 
     make \
-        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=1                  \
@@ -557,7 +546,6 @@ build_ubuntu_cpu_mkldnn() {
 
     make  \
         DEV=1                         \
-        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_SIGNAL_HANDLER=1          \
@@ -571,7 +559,6 @@ build_ubuntu_cpu_mkldnn_mkl() {
 
     make  \
         DEV=1                         \
-        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=mkl                  \
         USE_SIGNAL_HANDLER=1          \
@@ -635,7 +622,6 @@ build_ubuntu_gpu_tensorrt() {
           -DUSE_OPENMP=0                          \
           -DUSE_MKLDNN=0                          \
           -DUSE_MKL_IF_AVAILABLE=OFF              \
-          -DENABLE_TESTCOVERAGE=ON                \
           -DCUDA_ARCH_NAME=Manual                 \
           -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
           -G Ninja                                \
@@ -651,7 +637,6 @@ build_ubuntu_gpu_mkldnn() {
 
     make  \
         DEV=1                                     \
-        ENABLE_TESTCOVERAGE=1                     \
         USE_CPP_PACKAGE=1                         \
         USE_BLAS=openblas                         \
         USE_CUDA=1                                \
@@ -669,7 +654,6 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
 
     make  \
         DEV=1                                     \
-        ENABLE_TESTCOVERAGE=1                     \
         USE_BLAS=openblas                         \
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
@@ -684,7 +668,6 @@ build_ubuntu_gpu_cuda101_cudnn7() {
     build_ccache_wrappers
     make \
         DEV=1                                     \
-        ENABLE_TESTCOVERAGE=1                     \
         USE_BLAS=openblas                         \
         USE_MKLDNN=0                              \
         USE_CUDA=1                                \
@@ -706,8 +689,7 @@ build_ubuntu_amalgamation() {
     build_ccache_wrappers
     make -C amalgamation/ clean
     make -C amalgamation/     \
-        USE_BLAS=openblas     \
-        ENABLE_TESTCOVERAGE=1
+        USE_BLAS=openblas
 }
 
 build_ubuntu_amalgamation_min() {
@@ -717,8 +699,7 @@ build_ubuntu_amalgamation_min() {
     make -C amalgamation/ clean
     make -C amalgamation/     \
         USE_BLAS=openblas     \
-        MIN=1                 \
-        ENABLE_TESTCOVERAGE=1
+        MIN=1
 }
 
 build_ubuntu_gpu_cmake_mkldnn() {
@@ -730,7 +711,6 @@ build_ubuntu_gpu_cmake_mkldnn() {
         -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
         -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache   \
         -DUSE_SIGNAL_HANDLER=ON                 \
-        -DENABLE_TESTCOVERAGE=ON                \
         -DUSE_CUDA=1                            \
         -DUSE_CUDNN=1                           \
         -DUSE_MKLML_MKL=1                       \
@@ -755,7 +735,6 @@ build_ubuntu_gpu_cmake() {
         -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
         -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache   \
         -DUSE_SIGNAL_HANDLER=ON                 \
-        -DENABLE_TESTCOVERAGE=ON                \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
@@ -781,7 +760,6 @@ build_ubuntu_cpu_large_tensor() {
         -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
         -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache   \
         -DUSE_SIGNAL_HANDLER=ON                 \
-        -DENABLE_TESTCOVERAGE=ON                \
         -DUSE_CUDA=OFF                          \
         -DUSE_CUDNN=OFF                         \
         -DUSE_MKLDNN=OFF                        \
@@ -802,7 +780,6 @@ build_ubuntu_gpu_large_tensor() {
         -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
         -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache   \
         -DUSE_SIGNAL_HANDLER=ON                 \
-        -DENABLE_TESTCOVERAGE=ON                \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
