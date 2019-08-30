@@ -142,7 +142,6 @@ def test_Dense(ctx=mx.cpu(0)):
     linear = gluon.nn.Dense(2)
     linear.initialize(ctx=ctx)
     res = linear(data)
-    res.wait_to_read()
     assert res.shape == (LARGE_X, 2)
 
 

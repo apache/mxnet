@@ -21,7 +21,7 @@ import mxnet as mx
 
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward, create_2d_tensor
 from mxnet import gluon, nd
-from tests.python.unittest.common import with_seed
+from tests.python.unittest.common import with_seed, teardown
 
 # dimension constants
 MEDIUM_X = 10000
@@ -56,10 +56,8 @@ def test_ndarray_ones():
 def test_ndarray_convert():
     a = nd.zeros(shape=(LARGE_X, SMALL_Y))
     b = a.astype(np.int32)
-    b.wait_to_read()
     assert b.dtype == np.int32
     b = a.tostype('row_sparse')
-    b.wait_to_read()
     assert isinstance(b, mx.nd.sparse.RowSparseNDArray)
 
 
@@ -79,7 +77,7 @@ def test_ndarray_random_randint():
     a = nd.random.randint(low_large_value, high_large_value, dtype=np.int64)
     low = mx.nd.array([low_large_value], dtype='int64')
     high = mx.nd.array([high_large_value], dtype='int64')
-    assert a.__gt__(low) and a.__lt__(high)
+    assert a >= low and a < high
     assert a[-1][0].dtype == np.int64
 
 
@@ -144,7 +142,6 @@ def test_ndarray_random_normal():
     loc_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
     a = nd.random.normal(loc=loc_array, scale=scale_array,
                          shape=(SMALL_X, SMALL_Y))
-    a.wait_to_read()
     assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
 
 
@@ -159,7 +156,6 @@ def test_ndarray_random_poisson():
 @with_seed()
 def test_ndarray_random_randn():
     a = nd.random.randn(LARGE_X, SMALL_Y)
-    a.wait_to_read()
     assert a.shape == (LARGE_X, SMALL_Y)
     # TODO: Once PR #15772 for randn ndarray dtype for loc,scale param merged
     # Add check for (x,y,m,n) where x,y shape of loc,scale and m,n input shape
@@ -294,7 +290,6 @@ def test_Dense(ctx=mx.cpu(0)):
     linear = gluon.nn.Dense(100)
     linear.initialize(ctx=ctx)
     res = linear(data)
-    res.wait_to_read()
     assert res.shape == (50000000, 100)
 
 
@@ -745,7 +740,7 @@ def test_dropout():
     exe = y.simple_bind(ctx=default_context(), data=shape)
     exe.arg_arrays[0][:] = 1
     out = exe.forward(is_train=True)
-    out[0].wait_to_read()
+    assert out.shape == out.shape
 
 
 def test_activation():
@@ -793,7 +788,7 @@ def test_batchnorm():
 
     output = mx.nd.BatchNorm(data, bn_gamma, bn_beta,
                              bn_running_mean, bn_running_var)
-    output.wait_to_read()
+    assert output.shape == shape
 
 
 def test_add():
