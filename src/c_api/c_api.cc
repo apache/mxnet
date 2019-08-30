@@ -150,7 +150,8 @@ int MXLoadLib(const char *path) {
     parseAttrs_t parse = nullptr;
     inferType_t type = nullptr;
     inferShape_t shape = nullptr;
-    mutateInputs_t mutate = nullptr; // optional
+    // optional attributes
+    mutateInputs_t mutate = nullptr;
 
     // get custom operator implemenation from the dynamic library
     opRegGet(i, &name, &fcomp, &parse, &type, &shape, &mutate);
@@ -416,7 +417,7 @@ int MXLoadLib(const char *path) {
       << "Error calling MutateInputs for custom operator '" << name_str << "'";
 
       std::vector<uint32_t> mutate_indices_list(indices_size);
-      for (int i=0; i<indices_size; i++) {
+      for (int i=0; i < indices_size; i++) {
         mutate_indices_list[i] = static_cast<uint32_t>(mutate_indices[i]);
       }
 
