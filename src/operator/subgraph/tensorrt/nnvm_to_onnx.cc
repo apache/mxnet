@@ -31,6 +31,7 @@
 #include <mxnet/base.h>
 #include <nnvm/graph.h>
 #include <nnvm/pass_functions.h>
+#include <operator/nn/deconvolution-inl.h>
 
 #include "../../../common/utils.h"
 #include "../../../ndarray/ndarray_function.h"
@@ -170,20 +171,25 @@ std::string ConvertNnvmGraphToOnnx(
   return serialized_onnx_graph;
 }
 
-void ConvertConvolution(NodeProto* node_proto, const NodeAttrs& attrs,
-                        const nnvm::IndexedGraph& /*ig*/,
-                        const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
-  const auto& conv_param = nnvm::get<op::ConvolutionParam>(attrs.parsed);
+template <class ConvDeconvParam>
+void ConvDeconvConvertHelper(NodeProto* node_proto, const NodeAttrs& attrs,
+                             const nnvm::IndexedGraph& /*ig*/,
+                             const array_view<IndexedGraph::NodeEntry>& /*input*/,
+                             const ConvDeconvParam& param,
+                             ConvDeconvType type) {
+  if (type == ConvDeconvType::Convolution) {
+    node_proto->set_op_type("Conv");
+  } else {
+    node_proto->set_op_type("ConvTranspose");
+  }
 
-  node_proto->set_op_type("Conv");
-
-  const mxnet::TShape kernel = conv_param.kernel;
-  const mxnet::TShape stride = conv_param.stride;
-  const mxnet::TShape dilate = conv_param.dilate;
-  const mxnet::TShape pad = conv_param.pad;
-  const uint32_t num_group = conv_param.num_group;
+  const mxnet::TShape kernel = param.kernel;
+  const mxnet::TShape stride = param.stride;
+  const mxnet::TShape dilate = param.dilate;
+  const mxnet::TShape pad = param.pad;
+  const uint32_t num_group = param.num_group;
   // const bool no_bias = conv_param.no_bias;
-  const dmlc::optional<int> layout = conv_param.layout;
+  const dmlc::optional<int> layout = param.layout;
 
   // dilations
   AttributeProto* const dilations = node_proto->add_attribute();
@@ -226,7 +232,23 @@ void ConvertConvolution(NodeProto* node_proto, const NodeAttrs& attrs,
   for (const dim_t kval : stride) {
     strides->add_ints(static_cast<int64>(kval));
   }
+}
+
+void ConvertConvolution(NodeProto* node_proto, const NodeAttrs& attrs,
+                        const nnvm::IndexedGraph& ig,
+                        const array_view<IndexedGraph::NodeEntry>& inputs) {
+  const auto& conv_param = nnvm::get<op::ConvolutionParam>(attrs.parsed);
+  ConvDeconvConvertHelper(node_proto, attrs, ig, inputs, conv_param,
+      ConvDeconvType::Convolution);
 }  // end ConvertConvolution
+
+void ConvertDeconvolution(NodeProto* node_proto, const NodeAttrs& attrs,
+                          const nnvm::IndexedGraph& ig,
+                          const array_view<IndexedGraph::NodeEntry>& inputs) {
+  const auto& deconv_param = nnvm::get<op::DeconvolutionParam>(attrs.parsed);
+  ConvDeconvConvertHelper(node_proto, attrs, ig, inputs, deconv_param,
+      ConvDeconvType::Deconvolution);
+}  // end ConvertDeconvolution
 
 void ConvertPooling(NodeProto* node_proto, const NodeAttrs& attrs,
                     const nnvm::IndexedGraph& /*ig*/,

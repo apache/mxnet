@@ -263,6 +263,7 @@ static inline bool FlattenStorageType(const nnvm::NodeAttrs& attrs,
 
 NNVM_REGISTER_OP(Flatten)
 .add_alias("flatten")
+.add_alias("_npx_batch_flatten")
 .describe(R"code(Flattens the input array into a 2-D array by collapsing the higher dimensions.
 
 .. note:: `Flatten` is deprecated. Use `flatten` instead.
@@ -408,6 +409,7 @@ Examples::
 
 
 NNVM_REGISTER_OP(expand_dims)
+.add_alias("_npi_expand_dims")
 .describe(R"code(Inserts a new axis of size 1 into the array shape
 
 For example, given ``x`` with shape ``(2,3,4)``, then ``expand_dims(x, axis=1)``
@@ -504,6 +506,8 @@ Example::
                                                             [5.,  7.],
                                                             [1.,  3.]]
 )code" ADD_FILELINE)
+.add_alias("_npx_slice")
+.add_alias("_npi_slice")
 .set_attr_parser(ParamParser<SliceParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", SliceOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
@@ -528,6 +532,7 @@ NNVM_REGISTER_OP(_backward_slice)
 
 NNVM_REGISTER_OP(_slice_assign)
 .add_alias("_crop_assign")
+.add_alias("_npi_slice_assign")
 .MXNET_DESCRIBE("Assign the rhs to a cropped subset of lhs.\n\n"
 "Requirements\n"
 "------------\n"
@@ -553,6 +558,7 @@ NNVM_REGISTER_OP(_slice_assign)
 
 NNVM_REGISTER_OP(_slice_assign_scalar)
 .add_alias("_crop_assign_scalar")
+.add_alias("_npi_slice_assign_scalar")
 .MXNET_DESCRIBE("(Assign the scalar to a cropped subset of the input.\n\n"
 "Requirements\n"
 "------------\n"
@@ -696,12 +702,15 @@ NNVM_REGISTER_OP(_backward_slice_like)
 
 NNVM_REGISTER_OP(clip)
 MXNET_ADD_SPARSE_OP_ALIAS(clip)
+.add_alias("_npi_clip")
 .describe(R"code(Clips (limits) the values in an array.
 
 Given an interval, values outside the interval are clipped to the interval edges.
-Clipping ``x`` between `a_min` and `a_x` would be::
+Clipping ``x`` between `a_min` and `a_max` would be::
 
-   clip(x, a_min, a_max) = max(min(x, a_max), a_min))
+.. math::
+
+   clip(x, a_min, a_max) = \max(\min(x, a_max), a_min))
 
 Example::
 
@@ -763,13 +772,14 @@ parameter values:
 .add_arguments(ClipParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_clip)
-.set_num_inputs(1)
+.set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<ClipParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", ClipGrad_<cpu>);
 
 NNVM_REGISTER_OP(repeat)
+.add_alias("_np_repeat")
 .describe(R"code(Repeats elements of an array.
 
 By default, ``repeat`` flattens the input array into 1-D and then repeats the
@@ -820,6 +830,7 @@ NNVM_REGISTER_OP(_backward_repeat)
 });
 
 NNVM_REGISTER_OP(tile)
+.add_alias("_npi_tile")
 .describe(R"code(Repeats the whole array multiple times.
 
 If ``reps`` has length *d*, and input array has dimension of *n*. There are
@@ -1121,6 +1132,7 @@ Example::
 .add_arguments(DepthToSpaceParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_split_v2)
+.add_alias("_npi_split")
 .describe(R"code(Splits an array along a particular axis into multiple sub-arrays.
 
 Example::

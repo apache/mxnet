@@ -28,4 +28,4 @@ set -ex
 
 # Compile tests for discovery later
 cd scala-package
-mvn -B deploy
+mvn -B deploy -DskipTests=true

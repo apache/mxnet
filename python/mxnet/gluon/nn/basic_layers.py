@@ -28,6 +28,7 @@ from .activations import Activation
 from ..block import Block, HybridBlock
 from ..utils import _indent
 from ... import nd, sym
+from ...util import is_np_array
 
 
 class Sequential(Block):
@@ -218,8 +219,9 @@ class Dense(HybridBlock):
                 self.act = None
 
     def hybrid_forward(self, F, x, weight, bias=None):
-        act = F.FullyConnected(x, weight, bias, no_bias=bias is None, num_hidden=self._units,
-                               flatten=self._flatten, name='fwd')
+        fc = F.npx.fully_connected if is_np_array() else F.FullyConnected
+        act = fc(x, weight, bias, no_bias=bias is None, num_hidden=self._units,
+                 flatten=self._flatten, name='fwd')
         if self.act is not None:
             act = self.act(act)
         return act
@@ -264,9 +266,11 @@ class Dropout(HybridBlock):
 
     def hybrid_forward(self, F, x):
         if self._rate > 0:
-            return F.Dropout(x, p=self._rate, axes=self._axes, name='fwd', cudnn_off=False)
+            dropout = F.npx.dropout if is_np_array() else F.Dropout
+            return dropout(x, p=self._rate, axes=self._axes, name='fwd', cudnn_off=False)
         else:
-            return F.identity(x)
+            copy = F.np.copy if is_np_array() else F.identity
+            return copy(x)
 
     def __repr__(self):
         s = '{name}(p = {_rate}, axes={_axes})'
@@ -357,8 +361,9 @@ class BatchNorm(HybridBlock):
         super(BatchNorm, self).cast(dtype)
 
     def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
-        return F.BatchNorm(x, gamma, beta, running_mean, running_var,
-                           name='fwd', **self._kwargs)
+        batch_norm = F.npx.batch_norm if is_np_array() else F.BatchNorm
+        return batch_norm(x, gamma, beta, running_mean, running_var,
+                          name='fwd', **self._kwargs)
 
     def __repr__(self):
         s = '{name}({content}'
@@ -410,7 +415,8 @@ class Embedding(HybridBlock):
                                       allow_deferred_init=True, grad_stype=grad_stype)
 
     def hybrid_forward(self, F, x, weight):
-        return F.Embedding(x, weight, name='fwd', **self._kwargs)
+        embedding = F.npx.embedding if is_np_array() else F.Embedding
+        return embedding(x, weight, name='fwd', **self._kwargs)
 
     def __repr__(self):
         s = '{block_name}({input_dim} -> {output_dim}, {dtype})'
@@ -431,7 +437,8 @@ class Flatten(HybridBlock):
         super(Flatten, self).__init__(**kwargs)
 
     def hybrid_forward(self, F, x):
-        return F.Flatten(x)
+        flatten = F.npx.batch_flatten if is_np_array() else F.flatten
+        return flatten(x)
 
     def __repr__(self):
         return self.__class__.__name__
@@ -604,8 +611,8 @@ class LayerNorm(HybridBlock):
                                     allow_deferred_init=True)
 
     def hybrid_forward(self, F, data, gamma, beta):
-        norm_data = F.LayerNorm(data, gamma=gamma, beta=beta, axis=self._axis, eps=self._epsilon)
-        return norm_data
+        layer_norm = F.npx.layer_norm if is_np_array() else F.LayerNorm
+        return layer_norm(data, gamma=gamma, beta=beta, axis=self._axis, eps=self._epsilon)
 
     def __repr__(self):
         s = '{name}({content}'

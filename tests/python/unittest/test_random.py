@@ -61,8 +61,10 @@ def check_with_device(device, dtype):
         },
         {
             'name': 'randn',
+            'symbol': mx.sym.random.randn,
             'ndop': mx.nd.random.randn,
             'params': { 'loc': 10.0, 'scale': 0.5 },
+            'inputs': [ ('loc',[ [ 0.0, 2.5 ], [ -9.75, -7.0 ] ]) , ('scale',[ [ 1.0, 3.7 ], [ 4.2, 1.5 ] ]) ],
             'checks': [
                 ('mean', lambda x, params: np.mean(x.astype(np.float64) - params['loc']),  tol),
                 ('std',  lambda x, params: np.std(x.astype(np.float64)) - params['scale'], tol)
@@ -250,6 +252,9 @@ def check_with_device(device, dtype):
 
         params = {'shape': shape, 'dtype': dtype, 'ctx': device}
         params.update({k : mx.nd.array(v, ctx=device, dtype=dtype) for k, v in symbdic['inputs']})
+        if name == 'randn':
+            params.pop('shape')  # randn does not accept shape param
+            args = shape
         mx.random.seed(128)
         ret1 = ndop(*args, **params).asnumpy()
         mx.random.seed(128)
@@ -263,14 +268,12 @@ def check_with_device(device, dtype):
                     err = np.abs(check_func(ret2[i,j], stats))
                     assert err < tol, "%f vs %f: symbolic test: %s check for `%s` did not pass" % (err, tol, check_name, name)
 
-        if 'symbol' not in symbdic: continue  # randn does not have symbol
-
         # check symbolic
         symbol = symbdic['symbol']
         X = mx.sym.Variable("X")
         params = symbdic['params'].copy()
         params.update(shape=shape, dtype=dtype)
-        if name.endswith('_like'):
+        if name.endswith('_like') or name == 'randn':
             params['data'] = mx.sym.ones(params.pop('shape'))
         Y = symbol(**params) + X
         x = mx.nd.zeros(shape, dtype=dtype, ctx=device)
@@ -298,7 +301,12 @@ def check_with_device(device, dtype):
         single_param = len(symbdic['inputs']) == 1
         v1 = mx.sym.Variable('v1')
         v2 = mx.sym.Variable('v2')
-        Y = symbol(v1,**params) if single_param else symbol(v1,v2,**params)
+        if name == 'randn':
+            params.pop('shape')  # randn does not accept shape param
+            args=shape
+            Y = symbol(v1, **params) if single_param else symbol(*args, loc=v1, scale=v2,**params)
+        else:
+            Y = symbol(v1,**params) if single_param else symbol(v1,v2,**params)
         bindings = { 'v1' : mx.nd.array(symbdic['inputs'][0][1]) }
         if not single_param :
             bindings.update({ 'v2' : mx.nd.array(symbdic['inputs'][1][1]) })
@@ -315,9 +323,10 @@ def check_with_device(device, dtype):
                 for check_name, check_func, tol in symbdic['checks']:
                     assert np.abs(check_func(samples, params)) < tol, "symbolic test: %s check for `%s` did not pass" % (check_name, name)
 
+        if 'pdfsymbol' not in symbdic: continue  # randn not tested for pdf
+
         # check pdfs with only a subset of the generated samples
         un1 = np.resize(un1, (un1.shape[0], un1.shape[1], pdfshape[0], pdfshape[1]))
-        print(name)
         symbol  = symbdic['pdfsymbol']
         pdffunc = symbdic['pdffunc']
         v0 = mx.sym.Variable('v0')
@@ -355,7 +364,6 @@ def check_with_device(device, dtype):
                 check_symbolic_forward(test_pdf, [un1, p1, p2], [res], atol=forw_atol, rtol=forw_rtol, dtype=dtype)
                 if dtype == np.float64:
                   grad_nodes = ['v1', 'v2'] if symbdic['discrete'] else ['v0', 'v1', 'v2']
-                  print(backw_rtol)
                   check_numeric_gradient(test_pdf, [un1, p1, p2], grad_nodes=grad_nodes, atol=backw_atol, rtol=backw_rtol, dtype=dtype)
 
 @with_seed(1000)
@@ -893,14 +901,15 @@ def test_zipfian_generator():
 def test_shuffle():
     def check_first_axis_shuffle(arr):
         stride = int(arr.size / arr.shape[0])
-        column0 = arr.reshape((arr.size,))[::stride].sort()
+        column0 = arr.reshape((arr.size,))[::stride]
         seq = mx.nd.arange(0, arr.size - stride + 1, stride, ctx=arr.context)
-        assert (column0 == seq).prod() == 1
-        for i in range(arr.shape[0]):
-            subarr = arr[i].reshape((arr[i].size,))
-            start = subarr[0].asscalar()
-            seq = mx.nd.arange(start, start + stride, ctx=arr.context)
-            assert (subarr == seq).prod() == 1
+        assert (column0.sort() == seq).prod() == 1
+        # Check for ascending flattened-row sequences for 2D or greater inputs.
+        if stride > 1:
+            ascending_seq = mx.nd.arange(0, stride, ctx=arr.context)
+            equalized_columns = arr.reshape((arr.shape[0], stride)) - ascending_seq
+            column0_2d = column0.reshape((arr.shape[0],1))
+            assert (column0_2d == equalized_columns).prod() == 1
 
     # This tests that the shuffling is along the first axis with `repeat1` number of shufflings
     # and the outcomes are uniformly distributed with `repeat2` number of shufflings.

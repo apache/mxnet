@@ -41,6 +41,8 @@ namespace mxnet {
 namespace op {
 namespace nnvm_to_onnx {
 
+enum ConvDeconvType {Convolution, Deconvolution};
+
 using namespace nnvm;
 using namespace ::onnx;
 using int64 = ::google::protobuf::int64;
@@ -48,8 +50,7 @@ using int64 = ::google::protobuf::int64;
 std::unordered_map<std::string, mxnet::TShape> GetPlaceholderShapes(const ShapeVector& shape_inputs,
     const nnvm::IndexedGraph& ig);
 
-std::unordered_map<std::string, int> GetPlaceholderDTypes(const DTypeVector&
-dtype_inputs,
+std::unordered_map<std::string, int> GetPlaceholderDTypes(const DTypeVector& dtype_inputs,
     const nnvm::IndexedGraph& ig);
 
 std::unordered_map<std::string, uint32_t> GetOutputLookup(const nnvm::IndexedGraph& ig);
@@ -74,8 +75,21 @@ typedef void (*ConverterFunction)(NodeProto *node_proto,
                                   const nnvm::IndexedGraph &ig,
                                   const array_view<IndexedGraph::NodeEntry> &inputs);
 
+template <class ConvDeconvParam>
+void ConvDeconvConvertHelper(NodeProto *node_proto,
+                             const NodeAttrs &attrs,
+                             const nnvm::IndexedGraph &ig,
+                             const array_view<IndexedGraph::NodeEntry> &inputs,
+                             const ConvDeconvParam& param,
+                             ConvDeconvType type);
+
 // Forward declarations
 void ConvertConvolution(NodeProto *node_proto,
+                        const NodeAttrs &attrs,
+                        const nnvm::IndexedGraph &ig,
+                        const array_view<IndexedGraph::NodeEntry> &inputs);
+
+void ConvertDeconvolution(NodeProto *node_proto,
                         const NodeAttrs &attrs,
                         const nnvm::IndexedGraph &ig,
                         const array_view<IndexedGraph::NodeEntry> &inputs);
@@ -158,6 +172,7 @@ static const std::unordered_map<std::string, ConverterFunction> converter_map = 
   {"BatchNorm", ConvertBatchNorm},
   {"clip", ConvertClip},
   {"Convolution", ConvertConvolution},
+  {"Deconvolution", ConvertDeconvolution},
   {"Concat", ConvertConcatenate},
   {"Dropout", ConvertDropout},
   {"elemwise_add", ConvertElementwiseAdd},
