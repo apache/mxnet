@@ -130,6 +130,9 @@ int MXLoadLib(const char *path) {
   opCallFComp_t callFComp =
     get_func<opCallFComp_t>(lib, const_cast<char*>(MXLIB_OPCALLFCOMP_STR));
 
+  opCallMutateInputs_t callMutateInputs =
+    get_func<opCallMutateInputs_t>(lib, const_cast<char*>(MXLIB_OPCALLMUTATEINPUTS_STR));
+
   // get number of operators registered in the library
   opRegSize_t opRegSize = get_func<opRegSize_t>(lib, const_cast<char*>(MXLIB_OPREGSIZE_STR));
   int numOps = opRegSize();
@@ -142,13 +145,15 @@ int MXLoadLib(const char *path) {
   opRegGet_t opRegGet = get_func<opRegGet_t>(lib, const_cast<char*>(MXLIB_OPREGGET_STR));
   for (int i = 0; i < numOps; i++) {
     const char* name;
+    // function pointers holding implementation from custom library
     fcomp_t fcomp = nullptr;
     parseAttrs_t parse = nullptr;
     inferType_t type = nullptr;
     inferShape_t shape = nullptr;
+    mutateInputs_t mutate = nullptr; // optional
 
     // get custom operator implemenation from the dynamic library
-    opRegGet(i, &name, &fcomp, &parse, &type, &shape);
+    opRegGet(i, &name, &fcomp, &parse, &type, &shape, &mutate);
 
     // validate custom operator functions from the dynamic library
     CHECK(fcomp != nullptr) << "Error loading '" << name
@@ -392,6 +397,32 @@ int MXLoadLib(const char *path) {
       // return type void
     };
 
+    // lambda function to convert from external mutate_inputs to internal MXNet types
+    auto mutate_inputs = [=](const nnvm::NodeAttrs& attrs) {
+      // convert attributes to vector of char*
+      std::vector<const char*> attr_keys, attr_vals;
+      for (auto kv : attrs.dict) {
+        attr_keys.push_back(kv.first.c_str());
+        attr_vals.push_back(kv.second.c_str());
+      }
+
+      // C type placeholder for mutate input indices vector
+      int* mutate_indices = nullptr;
+      int indices_size = 0;
+
+      // call mutate inputs function
+      CHECK(callMutateInputs(mutate, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                      &mutate_indices, &indices_size))
+      << "Error calling MutateInputs for custom operator '" << name_str << "'";
+
+      std::vector<uint32_t> mutate_indices_list(indices_size);
+      for (int i=0; i<indices_size; i++) {
+        mutate_indices_list[i] = static_cast<uint32_t>(mutate_indices[i]);
+      }
+
+      return mutate_indices_list;
+    };
+
     // check if operator is already registered
     const nnvm::Op *regOpPtr = dmlc::Registry<nnvm::Op>::Get()->Find(name);
     if (regOpPtr == nullptr) {
@@ -409,6 +440,8 @@ int MXLoadLib(const char *path) {
       regOp.set_attr<nnvm::FInferType>("FInferType", infer_type);
       regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape);
       regOp.set_attr<FCompute>("FCompute<cpu>", fcomp_conv);
+      if (mutate != nullptr)
+        regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs);
     } else {
       // overwrite registration of existing op with custom op
       nnvm::Op &regOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(name);
@@ -425,6 +458,8 @@ int MXLoadLib(const char *path) {
       regOp.set_attr<nnvm::FInferType>("FInferType", infer_type, 11);
       regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape, 11);
       regOp.set_attr<FCompute>("FCompute<cpu>", fcomp_conv, 11);
+      if (mutate != nullptr)
+        regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs, 11);
     }
   }
 
