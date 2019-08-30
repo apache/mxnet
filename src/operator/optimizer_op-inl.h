@@ -1303,17 +1303,14 @@ struct AdamUpdateKernel {
     const DType epsilon, const OpReqType req) {
     using namespace mshadow_op;
 
-    const DType grad_rescaled = grad_data[i] * rescale_grad + weight_data[i] * wd;
-    if (clip_gradient >= 0.0f) {
-      mean_data[i] = beta1 * mean_data[i] + (1.f - beta1) *
-                          clip::Map(grad_rescaled, clip_gradient);
-      var_data[i] =  beta2 * var_data[i] + (1.f - beta2) * square::Map(
-                          clip::Map(grad_rescaled, clip_gradient));
-    } else {
-      mean_data[i] = beta1 * mean_data[i] + (1.f - beta1) * grad_rescaled;
-      var_data[i] = beta2 * var_data[i] +
-                          (1.f - beta2) * grad_rescaled * grad_rescaled;
+    DType grad_rescaled = grad_data[i] * rescale_grad + weight_data[i] * wd;
+    if (clip_gradient >= 0.f) {
+      grad_rescaled = clip::Map(grad_rescaled, clip_gradient);
     }
+
+    mean_data[i] = beta1 * mean_data[i] + (1.f - beta1) * grad_rescaled;
+    var_data[i] = beta2 * var_data[i] +
+                        (1.f - beta2) * grad_rescaled * grad_rescaled;
 
     KERNEL_ASSIGN(out_data[i], req, weight_data[i] - lr * mean_data[i] /
                   (square_root::Map(var_data[i]) + epsilon));
@@ -1623,31 +1620,19 @@ struct RMSPropAlexUpdateKernel {
     const OpReqType req) {
     using namespace mshadow_op;
 
-    const DType rescaled_grad = rescale_grad * grad_data[i] +
-           wd * weight_data[i];
-
+    DType grad_rescaled = rescale_grad * grad_data[i] + wd * weight_data[i];
     if (clip_gradient >= 0.0f) {
-      state_n_data[i] = (1.f - gamma1) *
-                    clip::Map(rescaled_grad, clip_gradient) *
-                    clip::Map(rescaled_grad, clip_gradient) +
-                gamma1 * state_n_data[i];
-      state_g_data[i] = (1.f - gamma1) *
-                    clip::Map(rescaled_grad, clip_gradient) +
-                gamma1 * state_g_data[i];
-      delta_data[i] = gamma2 * delta_data[i] -
-                      lr * (clip::Map(rescaled_grad, clip_gradient) /
-                            (square_root::Map(state_n_data[i] -
-                                              state_g_data[i] * state_g_data[i] + epsilon)));
-    } else {
-      state_n_data[i] = (1.f - gamma1) * rescaled_grad * rescaled_grad +
-                        gamma1 * state_n_data[i];
-      state_g_data[i] = (1.f - gamma1) * rescaled_grad +
-                        gamma1 * state_g_data[i];
-      delta_data[i] = gamma2 * delta_data[i] -
-                      (lr * (rescaled_grad) /
-                       (square_root::Map(state_n_data[i] -
-                                         state_g_data[i] * state_g_data[i] + epsilon)));
+      grad_rescaled = clip::Map(grad_rescaled, clip_gradient);
     }
+
+    state_n_data[i] = (1.f - gamma1) * grad_rescaled * grad_rescaled +
+                      gamma1 * state_n_data[i];
+    state_g_data[i] = (1.f - gamma1) * grad_rescaled +
+                      gamma1 * state_g_data[i];
+    delta_data[i] = gamma2 * delta_data[i] -
+                    (lr * (grad_rescaled) /
+                      (square_root::Map(state_n_data[i] -
+                                        state_g_data[i] * state_g_data[i] + epsilon)));
 
     if (clip_weights >= 0.0f) {
       const DType clipped_weight = clip::Map(weight_data[i] + delta_data[i], clip_weights);
@@ -1733,34 +1718,19 @@ struct RMSPropUpdateKernel {
     const OpReqType req) {
     using namespace mshadow_op;
 
-    const DType rescaled_grad = rescale_grad * grad_data[i] + wd * weight_data[i];
-
+    DType grad_rescaled = rescale_grad * grad_data[i] + wd * weight_data[i];
     if (clip_gradient >= 0.0f) {
-      const DType clipped_grad = clip::Map(rescaled_grad, clip_gradient);
-      state_n_data[i] = (1.f - gamma1) * (clipped_grad * clipped_grad) + gamma1 * state_n_data[i];
-      if (clip_weights >= 0.0f) {
-        KERNEL_ASSIGN(out_data[i], req,
-                      clip::Map(weight_data[i] -
-                                lr * clipped_grad / (square_root::Map(state_n_data[i] + epsilon)),
-                                clip_weights));
-      } else {
-        KERNEL_ASSIGN(out_data[i], req,
-                      weight_data[i] -
-                      lr * clipped_grad / (square_root::Map(state_n_data[i] + epsilon)));
-      }
-    } else {
-      state_n_data[i] = (1.f - gamma1) * (rescaled_grad * rescaled_grad) + gamma1 * state_n_data[i];
-      if (clip_weights >= 0.0f) {
-        KERNEL_ASSIGN(out_data[i], req,
-                      clip::Map(weight_data[i] -
-                                lr * (rescaled_grad / square_root::Map(state_n_data[i] + epsilon)),
-                                clip_weights));
-      } else {
-        KERNEL_ASSIGN(out_data[i], req,
-                      weight_data[i] -
-                      lr * (rescaled_grad / (square_root::Map(state_n_data[i] + epsilon))));
-      }
+      grad_rescaled = clip::Map(grad_rescaled, clip_gradient);
     }
+
+    state_n_data[i] = (1.f - gamma1) * (grad_rescaled * grad_rescaled) + gamma1 * state_n_data[i];
+
+    DType weight = weight_data[i] -
+                   lr * (grad_rescaled / square_root::Map(state_n_data[i] + epsilon));
+    if (clip_weights >= 0.0f) {
+      weight = clip::Map(weight, clip_weights);
+    }
+    KERNEL_ASSIGN(out_data[i], req, weight);
   }
 };
 
@@ -1828,23 +1798,20 @@ struct FtrlUpdateKernel {
     const OpReqType req) {
     using namespace mshadow_op;
 
-    const DType grad_rescaled = grad_data[i] * rescale_grad;
-      if (clip_gradient >= 0.0f) {
-        z_data[i] += clip::Map(grad_rescaled, clip_gradient) -
-                          (square_root::Map(n_data[i] +
-                          square::Map(clip::Map(grad_rescaled, clip_gradient))) -
-                          square_root::Map(n_data[i])) * weight_data[i] / lr;
-        n_data[i] += square::Map(clip::Map(grad_rescaled, clip_gradient));
-      } else {
-        z_data[i] += grad_rescaled - (square_root::Map(n_data[i] +
-                          square::Map(grad_rescaled)) - square_root::Map(n_data[i])) *
-                          weight_data[i] / lr;
-        n_data[i] += square::Map(grad_rescaled);
-      }
-      KERNEL_ASSIGN(out_data[i], req,
-                    (sign::Map(z_data[i]) * lamda1 - z_data[i]) /
-                    ((beta + square_root::Map(n_data[i])) / lr + wd) *
-                    gt::Map(abs::Map(z_data[i]), lamda1));
+    DType grad_rescaled = grad_data[i] * rescale_grad;
+    if (clip_gradient >= 0.0f) {
+      grad_rescaled = clip::Map(grad_rescaled, clip_gradient);
+    }
+
+    z_data[i] += grad_rescaled - (square_root::Map(n_data[i] +
+                      square::Map(grad_rescaled)) - square_root::Map(n_data[i])) *
+                      weight_data[i] / lr;
+    n_data[i] += square::Map(grad_rescaled);
+
+    KERNEL_ASSIGN(out_data[i], req,
+                  (sign::Map(z_data[i]) * lamda1 - z_data[i]) /
+                  ((beta + square_root::Map(n_data[i])) / lr + wd) *
+                  gt::Map(abs::Map(z_data[i]), lamda1));
   }
 };
 
