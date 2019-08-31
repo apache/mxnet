@@ -385,10 +385,10 @@ class PyNAG(PySGD):
             else:
               mom = state
               mom[:] *= self.momentum
-              mom[:] += grad
-              mom[:] += wd * weight
-              grad[:] += self.momentum * mom
-              weight[:] -= lr * grad
+              weight[:] -= self.momentum * mom[:]
+              grad += wd * weight
+              grad *= lr
+              weight[:] -= (self.momentum + 1) * grad
         else:
             grad32 = array(grad, ctx=grad.context, dtype=np.float32)
             grad32 = grad32 * self.rescale_grad
@@ -400,10 +400,10 @@ class PyNAG(PySGD):
                 weight32[:] += -lr * (grad32 + wd * weight32)
             else:
                 mom[:] *= self.momentum
-                mom[:] += grad32
-                mom[:] += wd * weight32
-                grad32[:] += self.momentum * mom
-                weight32[:] -= lr * grad32
+                weight32[:] -= self.momentum * mom[:]
+                grad32 += wd * weight32
+                grad32 *= lr
+                weight32[:] -= (self.momentum + 1) * grad32
             tmp = weight32.astype(weight.dtype)
             tmp.copyto(weight)
 
