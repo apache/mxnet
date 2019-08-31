@@ -345,7 +345,7 @@ MXNET_DLL int MXAggregateProfileStatsPrint(const char **out_str, int reset);
  * \param out_str will receive a pointer to the output string
  * \param reset clear the aggregate stats after printing
  * \param format whether to return in tabular or json format
- * \param sort_by sort by avg, min, max, or count
+ * \param sort_by sort by total, avg, min, max, or count
  * \param ascending whether to sort ascendingly
  * \return 0 when success, -1 when failure happens.
  * \note
