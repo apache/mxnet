@@ -30,6 +30,9 @@ import random
 import collections
 import scipy.stats as ss
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, retry
+from mxnet.runtime import Features
+
+_features = Features()
 
 
 @with_seed()
@@ -1664,7 +1667,7 @@ def test_np_choice():
             super(TestWeightedChoice, self).__init__()
             self.sample_size = sample_size
             self.replace = replace
-        
+
         def hybrid_forward(self, F, a, p):
             op = getattr(F.np.random, "choice", None)
             return F.np.random.choice(a, self.sample_size, self.replace, p)
@@ -1703,7 +1706,7 @@ def test_np_choice():
         assert len(samples) == samples_size
         if not replace:
             assert len(_np.unique(samples)) == samples_size
-        
+
     num_classes = 10
     num_samples = 10 ** 8
     # Density tests are commented out due to their huge time comsumption.
@@ -1717,7 +1720,7 @@ def test_np_choice():
     #     test_sample_with_replacement(np.random.choice, num_classes, shape)
     #     weight = np.array(_np.random.dirichlet([1.0] * num_classes))
     #     test_sample_with_replacement(np.random.choice, num_classes, shape, weight)
-    
+
     # Tests passed locally,
     # commented out for the same reason as above.
     # shape_list2 = [
@@ -1730,7 +1733,7 @@ def test_np_choice():
     #     test_sample_without_replacement(np.random.choice, num_classes, shape, 10 ** 5)
     #     weight = np.array(_np.random.dirichlet([1.0] * num_classes))
     #     test_sample_without_replacement(np.random.choice, num_classes, shape, 10 ** 5, weight)
-    
+
     # Test hypridize mode:
     for hybridize in [True, False]:
         for replace in [True, False]:
@@ -1742,6 +1745,52 @@ def test_np_choice():
             weight = np.array(_np.random.dirichlet([1.0] * num_classes))
             test_indexing_mode(test_choice, num_classes, num_classes // 2, replace, None)
             test_indexing_mode(test_choice_weighted, num_classes, num_classes // 2, replace, weight)
+
+
+@with_seed()
+@use_np
+def test_np_exp2():
+    if _features.is_enabled("TVM_OP"):
+        class Testexp2(HybridBlock):
+            def __init__(self):
+                super(Testexp2, self).__init__()
+
+            def hybrid_forward(self, F, x, *args, **kwargs):
+                return F.np.exp2(x)
+
+        shapes = [
+            (),
+            (2,),
+            (2, 1, 2),
+            (2, 0, 2),
+            (1, 2, 3, 4, 5),
+            (6, 6, 6, 6, 6),
+        ]
+        dtypes = ['int8', 'int32', 'int64', 'float32', 'float64']
+
+        for hybridize in [True, False]:
+            for shape in shapes:
+                for dtype in dtypes:
+                    test_exp2 = Testexp2()
+                    if hybridize:
+                        test_exp2.hybridize()
+                    x = rand_ndarray(shape=shape, dtype=dtype).as_np_ndarray()
+                    x.attach_grad()
+                    np_out = _np.exp2(x.asnumpy())
+                    with mx.autograd.record():
+                        mx_out = test_exp2(x)
+                    mx_out.backward()
+                    log2 = 0.6931471805599453
+                    assert_almost_equal(mx_out.asnumpy(), np_out.astype(dtype), rtol = 1e-3, atol = 1e-5)
+                    if dtype in ['float32', 'float64']:
+                        np_backward = (np_out.astype(dtype) * log2).astype(dtype)
+                    else:
+                        np_backward = 0
+                    assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5)
+                    # test imperative
+                    np_out = _np.exp2(x.asnumpy())
+                    mx_out = np.exp2(x)
+                    assert_almost_equal(mx_out.asnumpy(), np_out.astype(dtype), rtol = 1e-3, atol = 1e-5)
 
 
 if __name__ == '__main__':
