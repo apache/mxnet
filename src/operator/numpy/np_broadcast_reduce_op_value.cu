@@ -56,6 +56,12 @@ NNVM_REGISTER_OP(_npi_mean)
 NNVM_REGISTER_OP(_backward_np_mean)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseNone<gpu, true>);
 
+NNVM_REGISTER_OP(_npi_std)
+.set_attr<FCompute>("FCompute<gpu>", NumpyMomentsForward<gpu, true>);
+
+NNVM_REGISTER_OP(_npi_var)
+.set_attr<FCompute>("FCompute<gpu>", NumpyMomentsForward<gpu, false>);
+
 NNVM_REGISTER_OP(_np_broadcast_to)
 .set_attr<FCompute>("FCompute<gpu>", NumpyBroadcastToForward<gpu>);
 

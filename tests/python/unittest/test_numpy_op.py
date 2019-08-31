@@ -457,6 +457,70 @@ def test_np_mean():
 
 @with_seed()
 @use_np
+def test_np_moment():
+    class TestMoment(HybridBlock):
+        def __init__(self, name, axis=None, dtype=None, keepdims=False, ddof=0):
+            super(TestMoment, self).__init__()
+            self._name = name
+            self._axis = axis
+            self._dtype = dtype
+            self._keepdims = keepdims
+            self._ddof = ddof
+
+        def hybrid_forward(self, F, a, *args, **kwargs):
+            return getattr(F.np, self._name)(a, axis=self._axis, dtype=self._dtype, keepdims=self._keepdims, ddof=self._ddof)
+
+    def is_int(dtype):
+        return 'int' in dtype
+
+    def legalize_shape(shape):
+        shape_ = list(shape)
+        for i in range(len(shape_)):
+            shape_[i] += 1
+        return tuple(shape_)
+
+    in_data_dim = random.choice([2, 3, 4])
+    shape = rand_shape_nd(in_data_dim, dim=3)
+    shape = legalize_shape(shape)
+    acc_type = {'float16': 'float32', 'float32': 'float64', 'float64': 'float64',
+                'int8': 'float64', 'int32': 'float64', 'int64': 'float64'}
+
+    for name in ['var', 'std']:
+        for hybridize in [False, True]:
+            for ddof in [0, 1]:
+                for keepdims in [True, False]:
+                    for axis in ([i for i in range(in_data_dim)] + [(), None]):
+                        for itype in ['float16', 'float32', 'float64', 'int8', 'int32', 'int64']:
+                            for dtype in ['float16', 'float32', 'float64']:
+                                if is_int(dtype) and not is_int(itype) or is_int(itype) and is_int(dtype):
+                                    continue
+                                atol = 1e-4 if itype == 'float16' or dtype == 'float16' else 1e-5
+                                rtol = 1e-2 if itype == 'float16' or dtype == 'float16' else 1e-3
+                                # test gluon
+                                test_moment = TestMoment(name, axis=axis, dtype=dtype, keepdims=keepdims, ddof=ddof)
+                                if hybridize:
+                                    test_moment.hybridize()
+                                if is_int(itype):
+                                    x = _np.random.randint(-16, 16, shape, dtype=itype)
+                                    x = mx.nd.array(x)
+                                else:
+                                    x = mx.nd.random.uniform(-1.0, 1.0, shape=shape, dtype=itype)
+                                x = x.as_np_ndarray()
+                                x.attach_grad()
+                                expected_ret = getattr(_np, name)(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims, ddof=ddof)
+                                expected_ret = expected_ret.astype(dtype)
+                                y = test_moment(x)
+                                assert y.shape == expected_ret.shape
+                                assert_almost_equal(y.asnumpy(), expected_ret, rtol=rtol, atol=atol, use_broadcast=False, equal_nan=True)
+
+                                # test imperative
+                                mx_out = getattr(np, name)(x, axis=axis, dtype=dtype, keepdims=keepdims, ddof=ddof)
+                                np_out = getattr(_np, name)(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims, ddof=ddof).astype(dtype)
+                                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol, use_broadcast=False, equal_nan=True)
+
+
+@with_seed()
+@use_np
 def test_np_linspace():
     configs = [
         (0.0, 1.0, 10),
