@@ -218,7 +218,9 @@ class _Symbol(Symbol):
         raise NotImplementedError
 
     def dot(self, b, out=None):
-        raise NotImplementedError
+        """Dot product of two arrays.
+        Refer to ``numpy.dot`` for full documentation."""
+        return _mx_np_op.dot(self, b, out=out)
 
     def reshape(self, *args, **kwargs):  # pylint: disable=arguments-differ
         """Returns an array containing the same data with a new shape.

@@ -1133,7 +1133,7 @@ void BatchTakeOpForward(const nnvm::NodeAttrs& attrs,
  * \brief The parameters of the one_hot operator.
  */
 struct OneHotParam : public dmlc::Parameter<OneHotParam> {
-  int depth;
+  index_t depth;
   double on_value;
   double off_value;
   int axis;
@@ -1153,7 +1153,7 @@ struct OneHotParam : public dmlc::Parameter<OneHotParam> {
   }
 };
 
-inline void GetOneHotParams(const OneHotParam& param, int* depth, double* on_value,
+inline void GetOneHotParams(const OneHotParam& param, index_t* depth, double* on_value,
                             double* off_value, int* dtype) {
   *depth = param.depth;
   CHECK_GE(*depth, 0) << "Dimension size, depth, must be a non-negative integer";
@@ -1172,7 +1172,7 @@ inline bool OneHotOpShape(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape& ishape = (*in_attrs)[0];
   if (!shape_is_known(ishape)) return false;
 
-  int depth = 0;
+  index_t depth = 0;
   double on_value = 1.0;
   double off_value = 0.0;
   int dtype = mshadow::kFloat32;
@@ -1193,7 +1193,7 @@ inline bool OneHotOpType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   CHECK_NE((*in_attrs)[0], -1) << "Index type must be set for one_hot operator";
-  int depth = 0;
+  index_t depth = 0;
   double on_value = 1.0;
   double off_value = 0.0;
   int dtype = -1;
@@ -1207,10 +1207,10 @@ inline bool OneHotOpType(const nnvm::NodeAttrs& attrs,
 template<int req>
 struct one_hot {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const IType* indices,
-                                  int depth, DType on_value) {
-    int offset = i * depth;
-    int j = static_cast<int>(indices[i]);
+  MSHADOW_XINLINE static void Map(index_t i, DType* out, const IType* indices,
+                                  index_t depth, DType on_value) {
+    index_t offset = i * depth;
+    index_t j = static_cast<index_t>(indices[i]);
     if (j >= 0 && j < depth) {
       KERNEL_ASSIGN(out[offset+j], req, on_value);
     }
@@ -1229,7 +1229,7 @@ void OneHotOpForward(const nnvm::NodeAttrs& attrs,
   // The following line is needed to guard the situation when
   // an output array is empty on GPU. In that case, out.dptr() = 0x0
   if (outputs[0].Size() == 0) return;
-  int depth = 0;
+  index_t depth = 0;
   double on_value = 1.0;
   double off_value = 0.0;
   int dtype = mshadow::kFloat32;
