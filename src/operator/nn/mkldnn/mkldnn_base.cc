@@ -279,145 +279,74 @@ const mkldnn::memory *GetWeights(const NDArray &arr,
   return ret;
 }
 
-mkldnn_memory_format_t GetDefaultFormat(int num_dims) {
+
+// default: block and dims' stride increase monotonically
+// mkldnn: 1.winograd 2.rnn packed 3. block and dims'stride is not increase monotonically
+bool IsMKLDNN(const mkldnn::memory::desc &desc) {
+  bool rslt = true;
+  if (desc.data.format_kind == mkldnn_blocked) {
+    if (desc.data.format_desc.blocking.inner_nblks == 0) {
+      int i = 0;
+      for (i = 0; i < desc.data.ndims-1; i++) {
+        if (desc.data.format_desc.blocking.strides[i]
+            < desc.data.format_desc.blocking.strides[i + 1]) {
+          break;
+        }
+      }
+      if (i == desc.data.ndims-1) {
+        rslt = false;
+      }
+    }
+  }
+  return rslt;
+}
+
+mkldnn_format_tag_t GetDefaultFormat(int num_dims) {
   switch (num_dims) {
-    case 1: return mkldnn_x;
-    case 2: return mkldnn_nc;
-    case 3: return mkldnn_ncw;
-    case 4: return mkldnn_nchw;
-    case 5: return mkldnn_goihw;
+    case 1: return mkldnn_a;
+    case 2: return mkldnn_ab;
+    case 3: return mkldnn_abc;
+    case 4: return mkldnn_abcd;
+    case 5: return mkldnn_abcde;
     default:
-      LOG(FATAL) << "Unsupported MKLDNN dimensions: " << num_dims;
-      return mkldnn_format_undef;
+      LOG(FATAL) << "Not implemented dimension (" << num_dims << ") for MKLDNN";
+      return mkldnn_format_tag_undef;
   }
 }
 
-mkldnn_memory_format_t GetDefaultFormat(const mkldnn::memory::desc &desc) {
-  if (desc.data.ndims == 1) {
-    return desc.data.format;
-  } else if (desc.data.ndims == 2) {
-    if (desc.data.format == mkldnn_io)
-      return mkldnn_oi;
-    else
-      return desc.data.format;
-  } else if (desc.data.ndims == 3) {
-    switch (desc.data.format) {
-      case mkldnn_ncw:
-      case mkldnn_nwc:
-      case mkldnn_nCw8c:
-      case mkldnn_nCw16c:
-        return mkldnn_ncw;
-      case mkldnn_oiw:
-      case mkldnn_wio:
-      case mkldnn_Owi8o:
-      case mkldnn_OIw8i8o:
-      case mkldnn_OIw8o8i:
-      case mkldnn_OIw16i16o:
-      case mkldnn_OIw16o16i:
-      case mkldnn_Oiw16o:
-      case mkldnn_Owi16o:
-      case mkldnn_OIw8i16o2i:
-      case mkldnn_OIw8o16i2o:
-      case mkldnn_IOw16o16i:
-        return mkldnn_oiw;
-      default:
-        LOG(FATAL) << "Unknown MKLDNN format for 3 dimensions: " << desc.data.format;
-        return mkldnn_format_undef;
-    }
-  } else if (desc.data.ndims == 4) {
-    switch (desc.data.format) {
-      case mkldnn_nchw:
-      case mkldnn_nhwc:
-      case mkldnn_chwn:
-      case mkldnn_nChw4c:
-      case mkldnn_nChw8c:
-      case mkldnn_nChw16c:
-        return mkldnn_nchw;
-      case mkldnn_oihw:
-      case mkldnn_ihwo:
-      case mkldnn_hwio:
-      case mkldnn_iohw:
-      case mkldnn_oIhw8i:
-      case mkldnn_oIhw16i:
-      case mkldnn_OIhw4i4o:
-      case mkldnn_OIhw8i8o:
-      case mkldnn_hwio_s8s8:
-      case mkldnn_OIhw16i16o:
-      case mkldnn_OIhw4i16o4i:
-      case mkldnn_OIhw4i16o4i_s8s8:
-      case mkldnn_OIhw8i16o2i:
-      case mkldnn_OIhw8o16i2o:
-      case mkldnn_OIhw8o8i:
-      case mkldnn_OIhw16o16i:
-      case mkldnn_IOhw16o16i:
-      case mkldnn_Oihw8o:
-      case mkldnn_Oihw16o:
-      case mkldnn_Ohwi8o:
-      case mkldnn_Ohwi16o:
-      case mkldnn_OhIw16o4i:
-        return mkldnn_oihw;
-      case mkldnn_goiw:
-      case mkldnn_gOwi8o:
-      case mkldnn_gOIw8o8i:
-      case mkldnn_gOIw8i8o:
-      case mkldnn_gOIw16i16o:
-      case mkldnn_gOIw16o16i:
-      case mkldnn_gOiw16o:
-      case mkldnn_gOwi16o:
-      case mkldnn_gOIw8i16o2i:
-      case mkldnn_gOIw8o16i2o:
-      case mkldnn_gIOw16o16i:
-        return mkldnn_goiw;
-      default:
-        LOG(FATAL) << "Unknown MKLDNN format for 4 dimensions: " << desc.data.format;
-        return mkldnn_format_undef;
-    }
-  } else if (desc.data.ndims == 5) {
-    switch (desc.data.format) {
-      case mkldnn_goihw:
-      case mkldnn_giohw:
-      case mkldnn_hwigo:
-      case mkldnn_hwigo_s8s8:
-      case mkldnn_gOIhw4i4o:
-      case mkldnn_gOIhw8i8o:
-      case mkldnn_gOIhw16i16o:
-      case mkldnn_gOIhw4i16o4i:
-      case mkldnn_gOIhw4i16o4i_s8s8:
-      case mkldnn_gOIhw8i16o2i:
-      case mkldnn_gOIhw8o16i2o:
-      case mkldnn_gOIhw8o8i:
-      case mkldnn_gOIhw4o4i:
-      case mkldnn_gOIhw16o16i:
-      case mkldnn_gIOhw16o16i:
-      case mkldnn_gOihw8o:
-      case mkldnn_Goihw8g:
-      case mkldnn_gOihw16o:
-      case mkldnn_Goihw16g:
-      case mkldnn_gOhwi8o:
-      case mkldnn_gOhwi16o:
-      case mkldnn_gOhIw16o4i:
-      case mkldnn_Goihw16g_s8s8:
-        return mkldnn_goihw;
-      default:
-        LOG(FATAL) << "Unknown MKLDNN format for 5 dimensions: " << desc.data.format;
-        return mkldnn_format_undef;
-    }
-  } else {
-    LOG(FATAL) << "Unsupported dimensions: " << desc.data.ndims;
-    return mkldnn_format_undef;
-  }
+mkldnn_format_tag_t GetDefaultFormat(const mkldnn::memory::desc &desc) {
+  return GetDefaultFormat(desc.data.ndims);
 }
 
-mkldnn::memory::primitive_desc GetPrimitiveDesc(mkldnn::memory::primitive_desc pd,
-                                                mkldnn_memory_format_t format) {
-  mkldnn::memory::dims dims(pd.desc().data.ndims);
+bool IsDefaultFormat(const mkldnn::memory::desc &desc) {
+  bool rslt = false;
+  if (desc.data.format_kind == mkldnn_blocked) {
+    if (desc.data.format_desc.blocking.inner_nblks == 0) {
+      int i = 0;
+      for (i = 0; i < desc.data.ndims-1; i++) {
+        if (desc.data.format_desc.blocking.strides[i]
+            < desc.data.format_desc.blocking.strides[i + 1]) {
+          break;
+        }
+      }
+      if (i == desc.data.ndims-1) {
+        rslt = true;
+      }
+    }
+  }
+  return rslt;
+}
+
+mkldnn::memory::desc GetDesc(const mkldnn::memory::desc &desc,
+                             const mkldnn_format_tag_t &format) {
+  mkldnn::memory::dims dims(desc.data.ndims);
   for (size_t i = 0; i < dims.size(); i++)
-    dims[i] = pd.desc().data.dims[i];
-  mkldnn::memory::format cpp_format = static_cast<mkldnn::memory::format>(format);
+    dims[i] = desc.data.dims[i];
+  mkldnn::memory::format_tag cpp_format = static_cast<mkldnn::memory::format_tag>(format);
   mkldnn::memory::data_type cpp_type = static_cast<mkldnn::memory::data_type>(
-      pd.desc().data.data_type);
+      desc.data.data_type);
   mkldnn::memory::desc data_md(dims, cpp_type, cpp_format);
-  return mkldnn::memory::primitive_desc(data_md, pd.get_engine());
+  return mkldnn::memory::desc(dims, cpp_type, cpp_format);
 }
 
 void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
