@@ -454,6 +454,7 @@ def load_checkpoint(prefix, epoch):
     #load any params in the dict, skip if params are empty
     if not save_dict:
         logging.warning("Params file '%s' is empty", '%s-%04d.params' % (prefix, epoch))
+        return (symbol, arg_params, aux_params)
     else:
         for k, v in save_dict.items():
             tp, name = k.split(':', 1)
