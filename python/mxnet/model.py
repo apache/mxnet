@@ -438,6 +438,8 @@ def load_checkpoint(prefix, epoch):
     save_dict = nd.load('%s-%04d.params' % (prefix, epoch))
     arg_params = {}
     aux_params = {}
+    if not save_dict:
+        return (symbol, arg_params, aux_params)
     for k, v in save_dict.items():
         tp, name = k.split(':', 1)
         if tp == 'arg':
