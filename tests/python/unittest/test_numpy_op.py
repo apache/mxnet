@@ -415,7 +415,6 @@ def test_np_mean():
             for axis in ([i for i in range(in_data_dim)] + [(), None]):
                 for itype in ['float16', 'float32', 'float64']:
                     for dtype in ['float16', 'float32', 'float64']:
-                        print(itype, dtype)
                         if is_int(dtype) and not is_int(itype):
                             continue
                         # test gluon
@@ -494,7 +493,7 @@ def test_np_moment():
                             for dtype in ['float16', 'float32', 'float64']:
                                 if is_int(dtype) and not is_int(itype) or is_int(itype) and is_int(dtype):
                                     continue
-                                atol = 1e-4 if itype == 'float16' or dtype == 'float16' else 1e-5
+                                atol = 3e-4 if itype == 'float16' or dtype == 'float16' else 1e-5
                                 rtol = 1e-2 if itype == 'float16' or dtype == 'float16' else 1e-3
                                 # test gluon
                                 test_moment = TestMoment(name, axis=axis, dtype=dtype, keepdims=keepdims, ddof=ddof)

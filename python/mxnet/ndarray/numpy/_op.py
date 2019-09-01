@@ -2204,7 +2204,7 @@ def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable
 
 
 @set_module('mxnet.ndarray.numpy')
-def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
+def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=too-many-arguments
     """
     Compute the standard deviation along the specified axis.
     Returns the standard deviation, a measure of the spread of a distribution,
@@ -2271,7 +2271,7 @@ def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
 
 
 @set_module('mxnet.ndarray.numpy')
-def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
+def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=too-many-arguments
     """
     Compute the variance along the specified axis.
     Returns the variance of the array elements, a measure of the spread of a
