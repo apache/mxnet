@@ -172,7 +172,7 @@ use Mouse;
         Whether to load the training or testing set.
         Defaults to True
     transform : function
-        A user defined callback that transforms each instance. For example
+        A user defined callback that transforms each instance. For example:
 
     transform => sub { my ($data, $label) = @_; return ($data->astype('float32')/255, $label) }
 =cut
