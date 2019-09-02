@@ -409,10 +409,11 @@ class RNNOp {
   std::vector<mkldnn::memory> bias_memory;
   std::vector<mkldnn::memory> y_memory;
   std::vector<mkldnn::memory> hcy_memory;
+  size_t weights_version;
   bool has_cache;
   bool init_mem_;
   size_t reserve_mem_size_;
-  Storage::Handle mem_space_;
+  NDArray mem_space_;
 #endif
   explicit RNNOp(RNNParam param, Context ctx) {
     this->param_ = param;
@@ -522,12 +523,6 @@ class RNNOp {
   }
 
   ~RNNOp() {
-#if MXNET_USE_MKLDNN == 1
-    if (init_mem_) {
-      Storage::Get()->Free(mem_space_);
-      init_mem_ = false;
-    }
-#endif  // MXNET_USE_MKLDNN
 #if MXNET_USE_CUDNN == 1
     CUDNN_CALL(cudnnDestroyTensorDescriptor(hx_desc_));
     CUDNN_CALL(cudnnDestroyTensorDescriptor(cx_desc_));
@@ -560,17 +555,6 @@ class RNNOp {
     CUDNN_CALL(cudnnDestroyRNNDataDescriptor(dy_data_desc_));
 #endif  // MXNET_USE_CUDNN_GE_7200
 #endif  // MXNET_USE_CUDNN
-
-    if (ctx_.dev_type == kCPU) {
-      if (init_space_) {
-        Storage::Get()->Free(reserve_cpu_space_);
-        init_space_ = false;
-      }
-      if (temp_init_space_) {
-        Storage::Get()->Free(temp_cpu_space_);
-        temp_init_space_ = false;
-      }
-    }
   }
 
   void Forward(const OpContext &ctx, const std::vector<TBlob> &in_data,
@@ -855,37 +839,30 @@ class RNNOp {
 #endif  // MXNET_USE_CUDNN == 1 && defined(__CUDACC__)
 
     if (ctx_.dev_type == kCPU) {
+      // allocate temp space
+      const size_t work_cpu_space_size = GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
+          param_.state_size, direction, param_.mode);
+      if (!temp_init_space_ || temp_cpu_space_size_ < work_cpu_space_size) {
+        temp_cpu_space_size_ = work_cpu_space_size;
+        temp_cpu_space_ = NDArray(TShape({static_cast<dim_t>(temp_cpu_space_size_)}), ctx_,
+            false, in_data[rnn_enum::kData].type_flag_);
+        temp_init_space_ = true;
+      }
+      DType* work_cpu_space = static_cast<DType*>(temp_cpu_space_.data().dptr_);
+
       if (ctx.is_train) {
-        // allocate temp space
-        const size_t work_cpu_space_size =
-            GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
-                              param_.state_size, direction, param_.mode);
-        if (temp_init_space_ && temp_cpu_space_size_ < work_cpu_space_size) {
-            Storage::Get()->Free(temp_cpu_space_);
-            temp_init_space_ = false;
-        }
-        if (!temp_init_space_) {
-          temp_cpu_space_ = Storage::Get()->Alloc
-              (work_cpu_space_size * sizeof(DType), Context::CPU());
-          temp_cpu_space_size_ = work_cpu_space_size;
-          temp_init_space_ = true;
-        }
-        DType* work_cpu_space = static_cast<DType*>(temp_cpu_space_.dptr);
+        // allocate reserve space
 
         const size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
                                                      param_.seq_length_, param_.batch_size_,
                                                      param_.state_size, param_.mode);
-        if (init_space_ && reserve_cpu_space_size_ < r_size) {
-          Storage::Get()->Free(reserve_cpu_space_);
-          init_space_ = false;
-        }
-        if (!init_space_) {
-          reserve_cpu_space_ = Storage::Get()->Alloc(r_size * sizeof(DType), Context::CPU());
+        if (!init_space_ || reserve_cpu_space_size_ < r_size) {
           reserve_cpu_space_size_ = r_size;
+          reserve_cpu_space_ = NDArray(TShape({static_cast<dim_t>(reserve_cpu_space_size_)}), ctx_,
+              false, in_data[rnn_enum::kData].type_flag_);
           init_space_ = true;
         }
-
-        DType* reserve_space_ptr = static_cast<DType*>(reserve_cpu_space_.dptr);
+        DType* reserve_space_ptr = static_cast<DType*>(reserve_cpu_space_.data().dptr_);
 
         RNNForwardTraining<DType>(work_cpu_space,
                                   reserve_space_ptr,
@@ -945,20 +922,6 @@ class RNNOp {
 #endif  // MXNET_USE_MKLDNN == 1
           //  Before integrating MKLDNN GRU fp32 inference
           //  using below code for keep func being OK
-          const size_t work_cpu_space_size =
-              GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
-                                  param_.state_size, direction, param_.mode);
-          if (temp_init_space_ && temp_cpu_space_size_ < work_cpu_space_size) {
-            Storage::Get()->Free(temp_cpu_space_);
-            temp_init_space_ = false;
-          }
-          if (!temp_init_space_) {
-            temp_cpu_space_ = Storage::Get()->Alloc
-                (work_cpu_space_size * sizeof(DType), Context::CPU());
-            temp_cpu_space_size_ = work_cpu_space_size;
-            temp_init_space_ = true;
-          }
-          DType* work_cpu_space = static_cast<DType*>(temp_cpu_space_.dptr);
           RNNForwardInference<DType>(work_cpu_space,
                                      param_.state_outputs,
                                      param_.num_layers,
@@ -1171,7 +1134,7 @@ class RNNOp {
       if (!temp_init_space_ || temp_cpu_space_size_ != work_cpu_space_size) {
         LOG(FATAL) << "Check temp init error";
       }
-      DType* work_cpu_space = static_cast<DType*>(temp_cpu_space_.dptr);
+      DType* work_cpu_space = static_cast<DType*>(temp_cpu_space_.data().dptr_);
       size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
                                              param_.seq_length_, param_.batch_size_,
                                              param_.state_size, param_.mode);
@@ -1180,7 +1143,7 @@ class RNNOp {
         LOG(FATAL) << "Check forward init error";
       }
 
-      DType* reserve_space_ptr = static_cast<DType*>(reserve_cpu_space_.dptr);
+      DType* reserve_space_ptr = static_cast<DType*>(reserve_cpu_space_.data().dptr_);
       RNNBackward<DType>(work_cpu_space,
                          reserve_space_ptr,
                          param_.num_layers,
@@ -1551,7 +1514,7 @@ class RNNOp {
 #endif  // MXNET_USE_CUDNN
   bool init_space_, temp_init_space_;
   size_t reserve_cpu_space_size_, temp_cpu_space_size_;
-  Storage::Handle reserve_cpu_space_, temp_cpu_space_;
+  NDArray reserve_cpu_space_, temp_cpu_space_;
 };  //  class RNNOp
 
 static OpStatePtr CreateRNNState(const nnvm::NodeAttrs &attrs,
