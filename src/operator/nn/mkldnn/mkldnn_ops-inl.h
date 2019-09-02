@@ -26,7 +26,6 @@
 #ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_OPS_INL_H_
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_OPS_INL_H_
 
-#if MXNET_USE_MKLDNN == 1
 
 #include <mxnet/io.h>
 #include <mxnet/base.h>
@@ -36,11 +35,15 @@
 #include <dmlc/logging.h>
 #include <dmlc/optional.h>
 #include <vector>
+
+#if MXNET_USE_MKLDNN == 100
 #include <mkldnn.hpp>
+#endif
 
 namespace mxnet {
 namespace op {
 
+#if MXNET_USE_MKLDNN == 1
 /* For fully connected. */
 void MKLDNNFCForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                      const std::vector<NDArray> &in_data,
@@ -110,9 +113,6 @@ void MKLDNNActivationBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx
                               const NDArray &out_grad, const NDArray &in_data,
                               const OpReqType &req, const NDArray &in_grad);
 
-void MKLDNNSum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
-         const mkldnn::memory &out);
-
 void MKLDNNTransposeForward(const nnvm::NodeAttrs& attrs,
                             const OpContext &ctx,
                             const NDArray &data,
@@ -130,8 +130,14 @@ void MKLDNNFlattenForward(const nnvm::NodeAttrs &attrs,
                           const NDArray &input,
                           const OpReqType &req,
                           const NDArray &output);
+#endif
+
+#if MXNET_USE_MKLDNN == 100
+void MKLDNNSum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
+         const mkldnn::memory &out);
+#endif
+
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_USE_MKLDNN == 1
 
 #endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_OPS_INL_H_
