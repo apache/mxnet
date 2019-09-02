@@ -723,6 +723,7 @@ build_ubuntu_gpu_cmake_mkldnn() {
         -DUSE_CUDA=1                            \
         -DUSE_CUDNN=1                           \
         -DUSE_TVM_OP=1                          \
+        -DPython3_EXECUTABLE=/usr/bin/python3   \
         -DUSE_MKLML_MKL=1                       \
         -DCMAKE_BUILD_TYPE=Release              \
         -DCUDA_ARCH_NAME=Manual                 \
@@ -748,6 +749,7 @@ build_ubuntu_gpu_cmake() {
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
         -DUSE_TVM_OP=ON                         \
+        -DPython3_EXECUTABLE=/usr/bin/python3   \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
         -DUSE_MKLML_MKL=OFF                     \
         -DUSE_MKLDNN=OFF                        \
