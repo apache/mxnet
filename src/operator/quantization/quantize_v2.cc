@@ -114,6 +114,9 @@ If min_calib_range isn't presented, the output type will be int8.
 .set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity", [](const NodeAttrs& attrs){
   return std::vector<bool>{true};
 })
+.set_attr<FNeedCalibrateInput>("FNeedCalibrateInput", [](const NodeAttrs& attrs){
+  return std::vector<int>{0};
+})
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
   const QuantizeV2Param &param = nnvm::get<QuantizeV2Param>(attrs.parsed);
   if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
