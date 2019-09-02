@@ -175,8 +175,8 @@ class _FilteredDataset(Dataset):
     def __init__(self, dataset, fn):
         self._dataset = dataset
         self._indices = []
-        for i in range(len(dataset)):
-            if fn(dataset[i]):
+        for i, sample in enumerate(dataset):
+            if fn(sample):
                 self._indices.append(i)
 
     def __len__(self):
