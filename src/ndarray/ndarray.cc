@@ -1078,7 +1078,7 @@ inline void CopyFromToRspImpl(const NDArray& from, const NDArray& to, RunContext
 // Make a copy of a dense NDArray
 template<typename from_xpu, typename to_xpu>
 inline void CopyFromToDnsImpl(const NDArray& from, const NDArray& to, RunContext ctx) {
-#if MXNET_USE_MKLDNN ==100 
+#if MXNET_USE_MKLDNN == 100
   // If neither is MKLDNN, we can copy data normally.
   if (!from.IsMKLDNNData() && !to.IsMKLDNNData()) {
 #endif
@@ -1616,7 +1616,6 @@ void NDArray::Save(dmlc::Stream *strm) const {
 #if MXNET_USE_MKLDNN == 1
     if (nd_cpu.IsMKLDNNData()) {
       LOG(FATAL) << "TODO: MKL-DNN 1.0";
-      
       nd_cpu = nd_cpu.Reorder2Default();
     }
 #endif
