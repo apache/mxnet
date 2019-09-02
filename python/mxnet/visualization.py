@@ -466,11 +466,12 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, dtype=None
         elif op == "BatchNorm":
             attr["fillcolor"] = cm[3]
         elif op == 'Activation' or "qactivation" in name:
-            act_type = node["attrs"]["act_type"]
-            label = '{prefix}Activation\n{activation}'.format(
-                prefix="Q" if "qactivation" in name else "",
-                activation=act_type)
-            attr["fillcolor"] = cm[2]
+            if "qactivation" in name:
+                label = "QActivation"
+            else:
+                act_type = node["attrs"]["act_type"]
+                label = 'Activation\n{activation}'.format(activation=act_type)
+                attr["fillcolor"] = cm[2]
         elif op == 'LeakyReLU':
             attrs = node.get("attrs")
             act_type = attrs.get("act_type", "Leaky") if attrs else "Leaky"
