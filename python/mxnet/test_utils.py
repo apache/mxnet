@@ -2224,4 +2224,4 @@ def collapse_sum_like(a, shape):
 
 def is_cd_run():
     """Checks if the test is running as part of a Continuous Delivery run"""
-    return os.environ.get("CD_JOB", 0) == 1
+    return os.environ.get("CD_JOB", 0) == "1"
