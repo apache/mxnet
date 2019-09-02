@@ -40,6 +40,41 @@ class Dataset(object):
     def __len__(self):
         raise NotImplementedError
 
+    def filter(self, fn):
+        """Returns a new dataset with samples filtered by the
+        filter function `fn`.
+
+        Parameters
+        ----------
+        fn : callable
+            A filter function that takes a sample as input and
+            returns a boolean. Samples that return False are discarded.
+
+        Returns
+        -------
+        Dataset
+            The filtered dataset.
+        """
+        return _FilteredDataset(self, fn)
+
+    def take(self, count):
+        """Returns a new dataset with at most `count` number of samples in it.
+
+        Parameters
+        ----------
+        count : int or None
+            A integer representing the number of elements of this dataset that
+            should be taken to form the new dataset. If count is None, or if count
+            is greater than the size of this dataset, the new dataset will contain
+            all elements of this dataset.
+
+        Returns
+        -------
+        Dataset
+            The result dataset.
+        """
+        return _TakenDataset(self, count)
+
     def transform(self, fn, lazy=True):
         """Returns a new dataset with each sample transformed by the
         transformer function `fn`.
@@ -134,6 +169,38 @@ class _TransformFirstClosure(object):
         if args:
             return (self._fn(x),) + args
         return self._fn(x)
+
+class _FilteredDataset(Dataset):
+    """Dataset with a filter applied"""
+    def __init__(self, dataset, fn):
+        self._dataset = dataset
+        self._indices = []
+        for i in range(len(dataset)):
+            if fn(dataset[i]):
+                self._indices.append(i)
+
+    def __len__(self):
+        return len(self._indices)
+
+    def __getitem__(self, idx):
+        return self._dataset[self._indices[idx]]
+
+class _TakenDataset(Dataset):
+    """Dataset with at most `count` samples"""
+    def __init__(self, dataset, count):
+        self._dataset = dataset
+        self._count = count
+        if count is None or count > len(dataset):
+            self._count = len(dataset)
+        assert self._count >= 0
+
+    def __len__(self):
+        return self._count
+
+    def __getitem__(self, idx):
+        if idx >= len(self):
+            raise IndexError('Invalid index %d. Expected index < %d'%(idx, len(self)))
+        return self._dataset[idx]
 
 class ArrayDataset(Dataset):
     """A dataset that combines multiple dataset-like objects, e.g.
