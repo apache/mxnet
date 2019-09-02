@@ -533,11 +533,11 @@ class _Symbol(Symbol):
         """Returns the average of the array elements along given axis."""
         return mean(self, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
-    def std(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=arguments-differ
+    def std(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=arguments-differ,too-many-arguments
         """Returns the standard deviation of the array elements along given axis."""
         return std(self, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
 
-    def var(self, axis=None, dtype=None, out=None, ddof=0, keepdims=None):  # pylint: disable=arguments-differ
+    def var(self, axis=None, dtype=None, out=None, ddof=0, keepdims=None):  # pylint: disable=arguments-differ,too-many-arguments
         """Returns the variance of the array elements, along given axis."""
         return var(self, axis=axis, dtype=dtype, out=out, ddof=ddof, keepdims=keepdims)
 
