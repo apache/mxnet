@@ -35,6 +35,7 @@
 #include "./ndarray.h"
 
 namespace mxnet {
+  enum NumpyShape{Off, On, Global};
 /*! \brief runtime functions for NDArray */
 class Imperative {
  public:
@@ -97,15 +98,30 @@ class Imperative {
       is_recording_ = is_recording;
       return old;
   }
-  /*! brief whether numpy compatibility is on. */
+  /*! \brief whether numpy compatibility is on. */
   bool is_np_shape() const {
+    if (is_np_shape_global_) {
+      return true;
+    }
     return is_np_shape_;
   }
-  /*! brief turn on or turn off numpy compatibility switch. */
-  bool set_is_np_shape(bool is_np_shape) {
-    bool old = is_np_shape_;
-    is_np_shape_ = is_np_shape;
-    return old;
+  /*! \brief specify numpy compatibility off, thread local on or global on. */
+  bool set_is_np_shape(int is_np_shape) {
+    NumpyShape flag = static_cast<NumpyShape>(is_np_shape);
+    bool old = this->is_np_shape();
+    switch(flag) {
+      case Global:
+        is_np_shape_global_ = true;
+        is_np_shape_ = true;
+        return old;
+      case On:
+        is_np_shape_ = true;
+        return old;
+      case Off:
+        is_np_shape_global_ = false;
+        is_np_shape_ = false;
+        return old;
+    }
   }
   /*! \brief to record operator, return corresponding node. */
   void RecordOp(nnvm::NodeAttrs&& attrs,
@@ -185,6 +201,7 @@ class Imperative {
   // Delete it in the next major release.
   static MX_THREAD_LOCAL bool is_np_shape_;
 #endif
+  bool is_np_shape_global_{false};
   /*! \brief node count used for naming */
   std::atomic<uint64_t> node_count_{0};
   /*! \brief variable count used for naming */
