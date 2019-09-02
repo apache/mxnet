@@ -3704,7 +3704,7 @@ def test_norm():
 
     ctx = default_context()
     data = mx.symbol.Variable('data')
-    in_data_dim = random_sample([4,5,6], 1)[0]
+    in_data_dim = random_sample([2,3,4], 1)[0]
     in_shape = rand_shape_nd(in_data_dim, dim=5)
     epsilon = 1e-3
     acc_type = {np.float16: np.float32, np.float32: np.float32, np.float64: np.float64,
@@ -6808,7 +6808,7 @@ def test_laop_5():
     # tests for diagonal and triangular matrix extraction and generation
     data = mx.symbol.Variable('data')
     # test complete range of small matrices to cover corner cases
-    for n in range(1, 10):
+    for n in range(1, 5):
         # test batched and non-batched processing
         for b in range(3):
             shape = (n, n) if b == 0 else (b, n, n)
