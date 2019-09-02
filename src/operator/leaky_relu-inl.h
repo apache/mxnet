@@ -332,7 +332,50 @@ class LeakyReLUOp : public Operator {
 };  // class LeakyReLUOp
 
 template<typename xpu>
-Operator* CreateOp(LeakyReLUParam type, int dtype);
+void LeakyReLUCompute(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx, const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
+  const LeakyReLUParam &param = nnvm::get<LeakyReLUParam>(attrs.parsed);
+  const std::vector<TBlob> no_use_but_adapt_origin_api;
+  size_t expected = param.act_type == leakyrelu::kPReLU ? 2 : 1;
+  CHECK_EQ(inputs.size(), expected);
+
+  MSHADOW_REAL_TYPE_SWITCH(inputs[leakyrelu::kData].type_flag_, DType, {
+    LeakyReLUOp<xpu, DType> op(param);
+    op.Forward(ctx, inputs, req, outputs, no_use_but_adapt_origin_api);
+  });
+}
+
+template<typename xpu>
+void LeakyReLUGradCompute(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const std::vector<TBlob>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& outputs) {
+  const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(attrs.parsed);
+  const std::vector<TBlob> no_use_but_adapt_origin_api;
+  // inputs: out_grad, input_data, input_gamma, output, output_mask
+  size_t expected_in = param.act_type == leakyrelu::kPReLU ? 2 : 1;
+  size_t expected_out = param.act_type == leakyrelu::kRReLU ? 2 : 1;
+
+  std::vector<TBlob> out_grad{inputs[0]};
+  std::vector<TBlob> in_data(inputs.begin() + 1,
+                             inputs.begin() + 1 + expected_in);
+  std::vector<TBlob> out_data(inputs.begin() + 1 + expected_in,
+                              inputs.begin() + 1 + expected_in + expected_out);
+
+  CHECK_EQ(out_grad.size(), 1U);
+  CHECK_EQ(req.size(), expected_in);
+  CHECK_EQ(in_data.size(), expected_in);
+  int dtype = inputs[0].type_flag_;
+  const std::vector<TBlob> &in_grad = outputs;
+
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    LeakyReLUOp<xpu, DType> op(param);
+    op.Backward(ctx, out_grad, in_data, out_data, req, in_grad, no_use_but_adapt_origin_api);
+  });
+}
 
 #if DMLC_USE_CXX11
 class LeakyReLUProp : public OperatorProperty {
