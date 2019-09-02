@@ -20,9 +20,10 @@
 from __future__ import absolute_import
 from ...context import current_context
 from . import _internal as _npi
+from ...base import numeric_types
 
 
-__all__ = ['randint', 'uniform']
+__all__ = ['randint', 'uniform', 'normal']
 
 
 def randint(low, high=None, size=None, dtype=None, **kwargs):
@@ -142,5 +143,50 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
         return _npi.uniform(low=low, high=high, size=size,
                             ctx=ctx, dtype=dtype, out=out)
 
-    raise ValueError(
-        "Distribution parameters must be either mxnet.numpy.ndarray or numbers")
+
+def normal(loc=0.0, scale=1.0, size=None, **kwargs):
+    """Draw random samples from a normal (Gaussian) distribution.
+
+    Samples are distributed according to a normal distribution parametrized
+    by *loc* (mean) and *scale* (standard deviation).
+
+
+    Parameters
+    ----------
+    loc : float, optional
+        Mean (centre) of the distribution.
+    scale : float, optional
+        Standard deviation (spread or "width") of the distribution.
+    size : int or tuple of ints, optional
+        Output shape. If the given shape is, e.g., `(m, n, k)`, then `m * n * k`
+        samples are drawn. If size is `None` (default), a scalar tensor containing
+        a single value is returned if loc and scale are both scalars.
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples. Default is 'float32'
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
+    Returns
+    -------
+    out : _Symbol (symbol representing `mxnet.numpy.ndarray` in computational graphs)
+        Drawn samples from the parameterized normal distribution.
+
+    Notes
+    -----
+    This function currently does not support ``loc`` and ``scale`` as `_Symbol`s.
+    """
+    dtype = kwargs.pop('dtype', None)
+    if dtype is None:
+        dtype = 'float32'
+    ctx = kwargs.pop('ctx', None)
+    if ctx is None:
+        ctx = current_context()
+    out = kwargs.pop('out', None)
+    if size is None and out is None:
+        size = ()
+    if (not isinstance(loc, numeric_types)) or (not isinstance(scale, numeric_types)):
+        raise NotImplementedError('np.random.normal only supports loc and scale of '
+                                  'numeric types for now')
+    return _npi.random_normal(loc, scale, shape=size, dtype=dtype, ctx=ctx, out=out, **kwargs)
