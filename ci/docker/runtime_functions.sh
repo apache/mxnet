@@ -741,6 +741,11 @@ build_ubuntu_gpu_cmake() {
     set -ex
     cd /work/build
     build_ccache_wrappers
+    echo "ls cuda path"
+    ls /usr/local/cuda/lib64
+    ls /usr/local/cuda/targets/x86_64-linux/lib/stubs
+    ls -l /usr/lib/x86_64-linux-gnu/
+    find /usr/ -name libcuda.so.1
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
@@ -798,6 +803,7 @@ build_ubuntu_gpu_large_tensor() {
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
         -DUSE_TVM_OP=ON                         \
+        -DPython3_EXECUTABLE=/usr/bin/python3   \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
         -DUSE_MKLML_MKL=OFF                     \
         -DUSE_MKLDNN=OFF                        \
