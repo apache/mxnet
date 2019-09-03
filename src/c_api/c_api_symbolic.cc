@@ -30,6 +30,7 @@
 #include "nnvm/pass_functions.h"
 #include "nnvm/symbolic.h"
 #include "./c_api_common.h"
+#include "../common/exec_utils.h"
 #include "../operator/operator_common.h"
 #include "../executor/exec_pass.h"
 #include "../operator/subgraph/subgraph_property.h"
@@ -888,7 +889,10 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
                      const mx_uint num_offline,
                      const char **offline_params,
                      const char *quantized_dtype,
-                     const bool calib_quantize) {
+                     const bool calib_quantize,
+                     const char *quantize_mode,
+                     mx_uint* out_num_calib_names,
+                     const char ***out_calib_names) {
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol*>(sym_handle);
@@ -907,12 +911,24 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
     offline.emplace(offline_params[i]);
   }
   std::string quantized_type(quantized_dtype);
+  std::string quantized_mode(quantize_mode);
   g.attrs["excluded_nodes"] = std::make_shared<nnvm::any>(std::move(excluded_node_names));
   g.attrs["excluded_ops"] = std::make_shared<nnvm::any>(std::move(excluded_op));
   g.attrs["offline_params"] = std::make_shared<nnvm::any>(std::move(offline));
   g.attrs["quantized_dtype"] = std::make_shared<nnvm::any>(std::move(quantized_type));
   g.attrs["target_ctx"] = std::make_shared<nnvm::any>(target_dev);
+  g.attrs["quantize_mode"] = std::make_shared<nnvm::any>(std::move(quantized_mode));
   g = ApplyPass(std::move(g), "QuantizeGraph");
+  const auto& calib_nodes = g.GetAttr<std::vector<std::string>>("calib_nodes");
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
+  ret->ret_vec_str = std::move(calib_nodes);
+  *out_num_calib_names = ret->ret_vec_str.size();
+  ret->ret_vec_charp.clear();
+  ret->ret_vec_charp.reserve(ret->ret_vec_str.size());
+  for (const auto &str : ret->ret_vec_str) {
+    ret->ret_vec_charp.push_back(str.c_str());
+  }
+  *out_calib_names = dmlc::BeginPtr(ret->ret_vec_charp);
   s->outputs = g.outputs;
   *ret_sym_handle = s;
   API_END_HANDLE_ERROR(delete s);
@@ -1198,4 +1214,67 @@ int MXShallowCopySymbol(SymbolHandle src, SymbolHandle* out) {
   *out_sym = *src_sym;
   *out = out_sym;
   API_END_HANDLE_ERROR(delete out_sym);
+}
+
+int MXOptimizeForBackend(SymbolHandle sym_handle,
+                         const char* backend_name,
+                         const int dev_type,
+                         SymbolHandle* ret_sym_handle,
+                         const mx_uint len,
+                         NDArrayHandle* in_args_handle,
+                         const mx_uint num_options,
+                         const char** keys,
+                         const char** vals) {
+  nnvm::Symbol *s = new nnvm::Symbol();
+  API_BEGIN();
+  nnvm::Symbol *sym = static_cast<nnvm::Symbol *>(sym_handle);
+  *s = sym->Copy();
+  nnvm::Graph g = Symbol2Graph(*s);
+  if (len) {
+    NDArray **in_args_ptr = reinterpret_cast<NDArray**>(in_args_handle);
+    Context default_ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), 0);
+    mxnet::ShapeVector arg_shapes(len);
+    nnvm::DTypeVector arg_dtypes(len);
+    StorageTypeVector arg_stypes(len);
+    for (mx_uint i = 0; i < len; i++) {
+      const auto &in_arg = *(in_args_ptr[i]);
+      arg_shapes[i] = in_arg.shape();
+      arg_dtypes[i] = in_arg.dtype();
+      arg_stypes[i] = in_arg.storage_type();
+    }
+    const auto& indexed_graph = g.indexed_graph();
+    const auto num_forward_inputs = indexed_graph.input_nodes().size();
+    g.attrs["context"] = std::make_shared<nnvm::any>(
+        exec::ContextVector(indexed_graph.num_nodes(), default_ctx));
+    // infer shapes
+    g = exec::InferShape(std::move(g), std::move(arg_shapes), "__shape__");
+    // infer dtypes
+    g = exec::InferType(std::move(g), std::move(arg_dtypes), "__dtype__");
+    if (g.GetAttr<size_t>("dtype_num_unknown_nodes") != 0U) {
+      common::HandleInferTypeError(num_forward_inputs, indexed_graph,
+                                   g.GetAttr<nnvm::DTypeVector>("dtype"));
+    }
+    // infer stypes
+    g = exec::InferStorageType(std::move(g), std::move(arg_stypes), "__storage_type__");
+    if (g.GetAttr<size_t>("storage_type_num_unknown_nodes") != 0U) {
+      common::HandleInferStorageTypeError(num_forward_inputs, indexed_graph,
+                                          g.GetAttr<StorageTypeVector>("storage_type"));
+    }
+  }
+  std::vector<std::pair<std::string, std::string>> options_map;
+  for (mx_uint i = 0; i < num_options; ++i) {
+    options_map.emplace_back(keys[i], vals[i]);
+  }
+  const auto backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(backend_name);
+  const auto& subgraph_prop_list = backend->GetSubgraphProperties();
+  for (auto property : subgraph_prop_list) {
+    property->PrePartition(g, options_map);
+    g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
+    g = ApplyPass(std::move(g), "BuildSubgraph");
+    g.attrs.erase("subgraph_property");
+    property->PostPartition(g);
+  }
+  s->outputs = g.outputs;
+  *ret_sym_handle = s;
+  API_END_HANDLE_ERROR(delete s);
 }

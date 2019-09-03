@@ -52,7 +52,7 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'add', 'subtrac
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative',
            'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh',
            'tensordot', 'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate',
-           'stack']
+           'stack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var']
 
 # Return code for dispatching indexing function call
 _NDARRAY_UNSUPPORTED_INDEXING = -1
@@ -235,8 +235,8 @@ class ndarray(NDArray):
                         key, shape[0]))
             return self._at(key)
         elif isinstance(key, py_slice):
-            if (key.step is None or key.step == 1):
-                if  key.start is not None or key.stop is not None:
+            if key.step is None or key.step == 1:
+                if key.start is not None or key.stop is not None:
                     return self._slice(key.start, key.stop)
                 else:
                     return self
@@ -751,7 +751,9 @@ class ndarray(NDArray):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute asscalar')
 
     def argmax(self, axis=None, out=None):  # pylint: disable=arguments-differ
-        raise NotImplementedError
+        """Return indices of the maximum values along the given axis.
+        Refer to `mxnet.numpy.argmax` for full documentation."""
+        return argmax(self, axis, out)
 
     def as_in_context(self, context):
         """Returns an array on the target device with the same value as this array.
@@ -780,7 +782,9 @@ class ndarray(NDArray):
         return super(ndarray, self).copy().as_np_ndarray()
 
     def dot(self, b, out=None):
-        raise NotImplementedError
+        """Dot product of two arrays.
+        Refer to ``numpy.dot`` for full documentation."""
+        return _mx_np_op.dot(self, b, out=out)
 
     def reshape(self, *args, **kwargs):  # pylint: disable=arguments-differ
         """Returns an array containing the same data with a new shape.
@@ -864,7 +868,7 @@ class ndarray(NDArray):
         """Return a copy of the array with axis1 and axis2 interchanged.
         Refer to `mxnet.numpy.swapaxes` for full documentation.
         """
-        raise NotImplementedError
+        return swapaxes(self, axis1, axis2)
 
     def split(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`split`.
@@ -1050,7 +1054,7 @@ class ndarray(NDArray):
         """Return an array whose values are limited to [min, max].
         One of max or min must be given.
         """
-        raise NotImplementedError
+        return clip(self, min, max, out=out)
 
     def abs(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`abs`.
@@ -1166,13 +1170,15 @@ class ndarray(NDArray):
 
     def mean(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Returns the average of the array elements along given axis."""
-        raise NotImplementedError
+        return mean(self, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
-    # TODO(junwu): Use mxnet std op instead of onp.std
     def std(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=arguments-differ
         """Returns the standard deviation of the array elements along given axis."""
-        ret_np = self.asnumpy().std(axis=axis, dtype=dtype, out=out, ddof=ddof, keepdims=keepdims)
-        return array(ret_np, dtype=ret_np.dtype, ctx=self.context)
+        return std(self, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+
+    def var(self, axis=None, dtype=None, out=None, ddof=0, keepdims=None):  # pylint: disable=arguments-differ
+        """Returns the variance of the array elements, along given axis."""
+        return var(self, axis=axis, dtype=dtype, out=out, ddof=ddof, keepdims=keepdims)
 
     def cumsum(self, axis=None, dtype=None, out=None):
         """Return the cumulative sum of the elements along the given axis."""
@@ -3407,3 +3413,373 @@ def stack(arrays, axis=0, out=None):
     stacked : ndarray
         The stacked array has one more dimension than the input arrays."""
     return _mx_nd_np.stack(arrays, axis=axis, out=out)
+
+
+@set_module('mxnet.numpy')
+def maximum(x1, x2, out=None):
+    """Returns element-wise maximum of the input arrays with broadcasting.
+
+    Parameters
+    ----------
+    x1, x2 : scalar or mxnet.numpy.ndarray
+        The arrays holding the elements to be compared. They must have the same shape,
+        or shapes that can be broadcast to a single shape.
+
+    Returns
+    -------
+    out : mxnet.numpy.ndarray or scalar
+        The maximum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
+    return _mx_nd_np.maximum(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+def minimum(x1, x2, out=None):
+    """Returns element-wise minimum of the input arrays with broadcasting.
+
+    Parameters
+    ----------
+    x1, x2 : scalar or mxnet.numpy.ndarray
+        The arrays holding the elements to be compared. They must have the same shape,
+        or shapes that can be broadcast to a single shape.
+
+    Returns
+    -------
+    out : mxnet.numpy.ndarray or scalar
+        The minimum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
+    return _mx_nd_np.minimum(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+def swapaxes(a, axis1, axis2):
+    """Interchange two axes of an array.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array.
+    axis1 : int
+        First axis.
+    axis2 : int
+        Second axis.
+
+    Returns
+    -------
+    a_swapped : ndarray
+        Swapped array. This is always a copy of the input array.
+    """
+    return _npi.swapaxes(a, dim1=axis1, dim2=axis2)
+
+
+@set_module('mxnet.numpy')
+def clip(a, a_min, a_max, out=None):
+    """clip(a, a_min, a_max, out=None)
+
+    Clip (limit) the values in an array.
+    Given an interval, values outside the interval are clipped to
+    the interval edges.  For example, if an interval of ``[0, 1]``
+    is specified, values smaller than 0 become 0, and values larger
+    than 1 become 1.
+
+    Parameters
+    ----------
+    a : ndarray
+        Array containing elements to clip.
+    a_min : scalar or `None`
+        Minimum value. If `None`, clipping is not performed on lower
+        interval edge. Not more than one of `a_min` and `a_max` may be
+        `None`.
+    a_max : scalar or `None`
+        Maximum value. If `None`, clipping is not performed on upper
+        interval edge. Not more than one of `a_min` and `a_max` may be
+        `None`.
+    out : ndarray, optional
+        The results will be placed in this array. It may be the input
+        array for in-place clipping.  `out` must be of the right shape
+        to hold the output.  Its type is preserved.
+
+    Returns
+    -------
+    clipped_array : ndarray
+        An array with the elements of `a`, but where values
+        < `a_min` are replaced with `a_min`, and those > `a_max`
+        with `a_max`.
+
+    Notes
+    -----
+    array_like `a_min` and `a_max` are not supported.
+
+    Examples
+    --------
+    >>> a = np.arange(10)
+    >>> np.clip(a, 1, 8)
+    array([1., 1., 2., 3., 4., 5., 6., 7., 8., 8.], dtype=float32)
+    >>> a
+    array([0., 1., 2., 3., 4., 5., 6., 7., 8., 9.], dtype=float32)
+    >>> np.clip(a, 3, 6, out=a)
+    array([3., 3., 3., 3., 4., 5., 6., 6., 6., 6.], dtype=float32)
+    """
+    return _mx_nd_np.clip(a, a_min, a_max, out=out)
+
+
+@set_module('mxnet.numpy')
+def argmax(a, axis=None, out=None):
+    r"""
+    argmax(a, axis=None, out=None)
+
+    Returns the indices of the maximum values along an axis.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array. Only support ndarrays of dtype `float16`, `float32`, and `float64`.
+    axis : int, optional
+        By default, the index is into the flattened array, otherwise
+        along the specified axis.
+    out : ndarray or None, optional
+        If provided, the result will be inserted into this array. It should
+        be of the appropriate shape and dtype.
+
+    Returns
+    -------
+    index_array : ndarray of indices whose dtype is same as the input ndarray.
+        Array of indices into the array. It has the same shape as `a.shape`
+        with the dimension along `axis` removed.
+
+    Notes
+    -----
+    In case of multiple occurrences of the maximum values, the indices
+    corresponding to the first occurrence are returned.
+
+    This function differs from the original `numpy.argmax
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.argmax.html>`_ in
+    the following aspects:
+
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - Output has dtype that is same as the input ndarray.
+    - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+
+    Examples
+    --------
+    >>> a = np.arange(6).reshape(2,3) + 10
+    >>> a
+    array([[10., 11., 12.],
+           [13., 14., 15.]])
+    >>> np.argmax(a)
+    array(5.)
+    >>> np.argmax(a, axis=0)
+    array([1., 1., 1.])
+    >>> np.argmax(a, axis=1)
+    array([2., 2.])
+
+    >>> b = np.arange(6)
+    >>> b[1] = 5
+    >>> b
+    array([0., 5., 2., 3., 4., 5.])
+    >>> np.argmax(b)  # Only the first occurrence is returned.
+    array(1.)
+
+    Specify ``out`` ndarray:
+
+    >>> a = np.arange(6).reshape(2,3) + 10
+    >>> b = np.zeros((2,))
+    >>> np.argmax(a, axis=1, out=b)
+    array([2., 2.])
+    >>> b
+    array([2., 2.])
+    """
+    return _mx_nd_np.argmax(a, axis, out)
+
+
+@set_module('mxnet.numpy')
+def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
+    """
+    mean(a, axis=None, dtype=None, out=None, keepdims=None)
+    Compute the arithmetic mean along the specified axis.
+    Returns the average of the array elements.
+    The average is taken over the flattened array by default, otherwise over the specified axis.
+    Parameters
+    ----------
+    a : ndarray
+        ndarray containing numbers whose mean is desired.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which the means are computed. The default is to compute the mean of the flattened array.
+        If this is a tuple of ints, a mean is performed over multiple axes,
+        instead of a single axis or all the axes as before.
+    dtype : data-type, optional
+        Type to use in computing the mean. For integer inputs, the default is float32;
+        for floating point inputs, it is the same as the input dtype.
+    out : ndarray, optional
+        Alternate output array in which to place the result. The default is None; if provided,
+        it must have the same shape and type as the expected output.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in the result
+        as dimensions with size one. With this option, the result will broadcast correctly
+        against the input array.
+        If the default value is passed, then keepdims will not be passed through to the mean
+        method of sub-classes of ndarray, however any non-default value will be. If the sub-class
+        method does not implement keepdims any exceptions will be raised.
+    Returns
+    -------
+    m : ndarray, see dtype parameter above
+        If out=None, returns a new array containing the mean values,
+        otherwise a reference to the output array is returned.
+    Notes
+    -----
+    This function differs from the original `numpy.mean
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.mean.html>`_ in
+    the following way(s):
+    - only ndarray is accepted as valid input, python iterables or scalar is not supported
+    - default data type for integer input is float32
+    Examples
+    --------
+    >>> a = np.array([[1, 2], [3, 4]])
+    >>> np.mean(a)
+    array(2.5)
+    >>> a = np.zeros((2, 512*512), dtype=np.float32)
+    >>> a[0,:] = 1.0
+    >>> a[1,:] = 0.1
+    >>> np.mean(a)
+    array(0.55)
+    >>> np.mean(a, dtype=np.float64)
+    array(0.55)
+    """
+    return _npi.mean(a, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.numpy')
+def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=None):
+    """
+    Compute the standard deviation along the specified axis.
+    Returns the standard deviation, a measure of the spread of a distribution,
+    of the array elements. The standard deviation is computed for the
+    flattened array by default, otherwise over the specified axis.
+
+    Parameters
+    ----------
+    a : array_like
+        Calculate the standard deviation of these values.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which the standard deviation is computed. The
+        default is to compute the standard deviation of the flattened array.
+        .. versionadded:: 1.7.0
+        If this is a tuple of ints, a standard deviation is performed over
+        multiple axes, instead of a single axis or all the axes as before.
+    dtype : dtype, optional
+        Type to use in computing the standard deviation. For arrays of
+        integer type the default is float64, for arrays of float types it is
+        the same as the array type.
+    out : ndarray, optional
+        Alternative output array in which to place the result. It must have
+        the same shape as the expected output but the type (of the calculated
+        values) will be cast if necessary.
+    ddof : int, optional
+        Means Delta Degrees of Freedom.  The divisor used in calculations
+        is ``N - ddof``, where ``N`` represents the number of elements.
+        By default `ddof` is zero.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the input array.
+        If the default value is passed, then `keepdims` will not be
+        passed through to the `std` method of sub-classes of
+        `ndarray`, however any non-default value will be.  If the
+        sub-class' method does not implement `keepdims` any
+        exceptions will be raised.
+
+    Returns
+    -------
+    standard_deviation : ndarray, see dtype parameter above.
+        If `out` is None, return a new array containing the standard deviation,
+        otherwise return a reference to the output array.
+
+    Examples
+    --------
+    >>> a = np.array([[1, 2], [3, 4]])
+    >>> np.std(a)
+    1.1180339887498949 # may vary
+    >>> np.std(a, axis=0)
+    array([1.,  1.])
+    >>> np.std(a, axis=1)
+    array([0.5,  0.5])
+    In single precision, std() can be inaccurate:
+    >>> a = np.zeros((2, 512*512), dtype=np.float32)
+    >>> a[0, :] = 1.0
+    >>> a[1, :] = 0.1
+    >>> np.std(a)
+    array(0.45)
+    >>> np.std(a, dtype=np.float64)
+    array(0.45, dtype=float64)
+    """
+    return _npi.std(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.numpy')
+def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=None):
+    """
+    Compute the variance along the specified axis.
+    Returns the variance of the array elements, a measure of the spread of a
+    distribution.  The variance is computed for the flattened array by
+    default, otherwise over the specified axis.
+
+    Parameters
+    ----------
+    a : array_like
+        Array containing numbers whose variance is desired.  If `a` is not an
+        array, a conversion is attempted.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which the variance is computed.  The default is to
+        compute the variance of the flattened array.
+        .. versionadded:: 1.7.0
+        If this is a tuple of ints, a variance is performed over multiple axes,
+        instead of a single axis or all the axes as before.
+    dtype : data-type, optional
+        Type to use in computing the variance.  For arrays of integer type
+        the default is `float32`; for arrays of float types it is the same as
+        the array type.
+    out : ndarray, optional
+        Alternate output array in which to place the result.  It must have
+        the same shape as the expected output, but the type is cast if
+        necessary.
+    ddof : int, optional
+        "Delta Degrees of Freedom": the divisor used in the calculation is
+        ``N - ddof``, where ``N`` represents the number of elements. By
+        default `ddof` is zero.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the input array.
+        If the default value is passed, then `keepdims` will not be
+        passed through to the `var` method of sub-classes of
+        `ndarray`, however any non-default value will be.  If the
+        sub-class' method does not implement `keepdims` any
+        exceptions will be raised.
+
+    Returns
+    -------
+    variance : ndarray, see dtype parameter above
+        If ``out=None``, returns a new array containing the variance;
+        otherwise, a reference to the output array is returned.
+
+    Examples
+    --------
+    >>> a = np.array([[1, 2], [3, 4]])
+    >>> np.var(a)
+    array(1.25)
+    >>> np.var(a, axis=0)
+    array([1.,  1.])
+    >>> np.var(a, axis=1)
+    array([0.25,  0.25])
+
+    >>> a = np.zeros((2, 512*512), dtype=np.float32)
+    >>> a[0, :] = 1.0
+    >>> a[1, :] = 0.1
+    >>> np.var(a)
+    array(0.2025)
+    >>> np.var(a, dtype=np.float64)
+    array(0.2025, dtype=float64)
+    >>> ((1-0.55)**2 + (0.1-0.55)**2)/2
+    0.2025
+    """
+    return _npi.var(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)

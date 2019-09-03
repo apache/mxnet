@@ -345,7 +345,7 @@ MXNET_DLL int MXAggregateProfileStatsPrint(const char **out_str, int reset);
  * \param out_str will receive a pointer to the output string
  * \param reset clear the aggregate stats after printing
  * \param format whether to return in tabular or json format
- * \param sort_by sort by avg, min, max, or count
+ * \param sort_by sort by total, avg, min, max, or count
  * \param ascending whether to sort ascendingly
  * \return 0 when success, -1 when failure happens.
  * \note
@@ -1907,6 +1907,9 @@ MXNET_DLL int MXSymbolInferTypePartial(SymbolHandle sym,
  * \param offline_params array of c strings representing the names of params quantized offline
  * \param quantized_dtype the quantized destination type for input data
  * \param calib_quantize **Deprecated**. quantize op will always be calibrated if could
+ * \param quantize_mode quantize mode to be used in quantize pass
+ * \param out_num_calib_names return the number of nodes to be calibrated
+ * \param out_calib_names return the node names to be calibrated
  */
 MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_handle,
                                const int* dev_type,
@@ -1915,7 +1918,9 @@ MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_ha
                                const mx_uint num_excluded_op_names,
                                const char **excluded_op_names,
                                const mx_uint num_offline, const char **offline_params,
-                               const char *quantized_dtype, const bool calib_quantize);
+                               const char *quantized_dtype, const bool calib_quantize,
+                               const char *quantize_mode, mx_uint* out_num_calib_names,
+                               const char ***out_calib_names);
 
 /*!
  * \brief Convert a symbol into a mixed precision symbol with cast operators for target dtype casting
@@ -1997,6 +2002,27 @@ MXNET_DLL int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend,
  * \param ret_sym_handle returned atomic symbol
  */
 MXNET_DLL int MXGenAtomicSymbolFromSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_handle);
+/*!
+ * \brief Partitions symbol for given backend, potentially creating subgraphs
+ * \param sym_handle symbol to be partitioned
+ * \param dev_type context device type
+ * \param backend_name backend name
+ * \param ret_sym_handle partitioned symbol returned
+ * \param len number of args
+ * \param in_args_handle args array
+ * \param num_options number of key value pairs
+ * \param keys keys for options
+ * \param vals values corresponding to keys
+ */
+MXNET_DLL int MXOptimizeForBackend(SymbolHandle sym_handle,
+                                   const char* backend_name,
+                                   const int dev_type,
+                                   SymbolHandle* ret_sym_handle,
+                                   const mx_uint len,
+                                   NDArrayHandle* in_args_handle,
+                                   const mx_uint num_options,
+                                   const char** keys,
+                                   const char** vals);
 
 
 //--------------------------------------------
