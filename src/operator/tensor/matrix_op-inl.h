@@ -330,8 +330,11 @@ void Transpose(const nnvm::NodeAttrs& attrs,
                const std::vector<TBlob>& inputs,
                const std::vector<OpReqType>& req,
                const std::vector<TBlob>& outputs) {
+  if (req[0] == kNullOp) {
+    return;
+  }
   const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
-  CHECK_EQ(req[0], kWriteTo) << "Transpose does not support inplace";
+  CHECK_EQ(req[0], kWriteTo) << "Transpose does not support kWriteInplace and kAddTo";
   if (param.axes.ndim() == 0) {
     mxnet::TShape axes(inputs[0].ndim(), -1);
     for (int i = 0; i < axes.ndim(); ++i) {
@@ -1148,8 +1151,8 @@ void SliceAssignScalarOpForward(const nnvm::NodeAttrs& attrs,
 
 struct SliceAxisParam : public dmlc::Parameter<SliceAxisParam> {
   int axis;
-  int begin;
-  dmlc::optional<int> end;
+  index_t begin;
+  dmlc::optional<index_t> end;
   DMLC_DECLARE_PARAMETER(SliceAxisParam) {
     DMLC_DECLARE_FIELD(axis)
       .describe("Axis along which to be sliced, supports negative indexes.");

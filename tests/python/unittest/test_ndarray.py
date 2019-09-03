@@ -1136,7 +1136,7 @@ def test_ndarray_lesser_equal():
 
 
 @with_seed()
-def test_take():
+def test_ndarray_take():
     for data_ndim in range(2, 5):
         for idx_ndim in range(1, 4):
             data_shape = ()

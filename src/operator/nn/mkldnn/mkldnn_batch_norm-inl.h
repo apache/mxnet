@@ -184,7 +184,7 @@ class MKLDNNBNForward {
 
 template<typename DType>
 static MKLDNNBNForward &GetBNForward(const BatchNormParam& param,
-                                     const OpContext &ctx, const NDArray &in_data,
+                                     const OpContext &ctx, const mkldnn::memory *data_mem,
                                      unsigned flags) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNBNSignature, MKLDNNBNForward, OpHash> fwds;
@@ -194,16 +194,23 @@ static MKLDNNBNForward &GetBNForward(const BatchNormParam& param,
   MKLDNNBNSignature key(param);
   key.AddSign(ctx.is_train);
   key.AddSign(param.use_global_stats);
-  key.AddSign(in_data);
+  key.AddSign(*data_mem);
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
-    auto fwd_pd = _GetFwd(*in_data.GetMKLDNNData(), ctx.is_train,
+    auto fwd_pd = _GetFwd(*data_mem, ctx.is_train,
                           (DType) param.eps, flags);
     MKLDNNBNForward fwd(fwd_pd, ctx.is_train && !param.use_global_stats);
     it = AddToCache(&fwds, key, fwd);
   }
   return it->second;
+}
+
+template<typename DType>
+static MKLDNNBNForward &GetBNForward(const BatchNormParam& param,
+                                     const OpContext &ctx, const NDArray &in_data,
+                                     unsigned flags) {
+  return GetBNForward<DType>(param, ctx, in_data.GetMKLDNNData(), flags);
 }
 
 template <typename DType>
