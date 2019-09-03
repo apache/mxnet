@@ -57,6 +57,8 @@ extern __cuda_fake_struct blockIdx;
 #include <cublas_v2.h>
 #include <curand.h>
 
+#include <vector>
+
 #define STATIC_ASSERT_CUDA_VERSION_GE(min_version) \
   static_assert(CUDA_VERSION >= min_version, "Compiled-against CUDA version " \
       QUOTEVALUE(CUDA_VERSION) " is too old, please upgrade system to version " \
