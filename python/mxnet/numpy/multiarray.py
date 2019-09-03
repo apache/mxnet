@@ -1170,11 +1170,15 @@ class ndarray(NDArray):
 
     def mean(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Returns the average of the array elements along given axis."""
-        raise NotImplementedError
+        return mean(self, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
     def std(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=arguments-differ
         """Returns the standard deviation of the array elements along given axis."""
-        return _mx_np_op.std(self, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+        return std(self, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+
+    def var(self, axis=None, dtype=None, out=None, ddof=0, keepdims=None):  # pylint: disable=arguments-differ
+        """Returns the variance of the array elements, along given axis."""
+        return var(self, axis=axis, dtype=dtype, out=out, ddof=ddof, keepdims=keepdims)
 
     def cumsum(self, axis=None, dtype=None, out=None):
         """Return the cumulative sum of the elements along the given axis."""
