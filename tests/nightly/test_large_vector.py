@@ -170,7 +170,7 @@ def test_topk():
 
     
 def test_mean():
-    a = nd.arange(-LARGE_X / 2, LARGE_X / 2 + 1, dtype=np.int64)
+    a = nd.arange(-LARGE_X // 2, LARGE_X // 2 + 1, dtype=np.int64)
     b = nd.mean(a, axis=0)
     assert b == 0
 
