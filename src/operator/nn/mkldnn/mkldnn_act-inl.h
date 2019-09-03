@@ -40,18 +40,17 @@ namespace mxnet {
 namespace op {
 
 struct MKLDNNActParam {
-  int act_type;
-  bool is_leakyrelu = false;
+  mkldnn::algorithm alg;
   float slope = 0.f;
 
   bool operator==(const MKLDNNActParam& other) const {
-    return this->act_type == other.act_type &&
-           this->is_leakyrelu == other.is_leakyrelu &&
+    return this->alg == other.alg &&
            this->slope == other.slope;
   }
 };
 
-mkldnn::algorithm GetMKLDNNActAlgo(const MKLDNNActParam& param);
+mkldnn::algorithm GetMKLDNNActAlgo(const ActivationParam& param);
+mkldnn::algorithm GetMKLDNNActAlgo(const LeakyReLUParam& param);
 mkldnn::eltwise_forward::primitive_desc GetActFwdDescImpl(
     const MKLDNNActParam& param, bool is_train,
     const mkldnn::memory &input_mem, int dtype);
@@ -91,8 +90,7 @@ template<>
 struct hash<mxnet::op::MKLDNNActParam> {
   size_t operator()(const mxnet::op::MKLDNNActParam& val) {
     size_t ret = 0;
-    ret = dmlc::HashCombine(ret, val.act_type);
-    ret = dmlc::HashCombine(ret, val.is_leakyrelu);
+    ret = dmlc::HashCombine(ret, static_cast<size_t>(val.alg));
     ret = dmlc::HashCombine(ret, val.slope);
     return ret;
   }

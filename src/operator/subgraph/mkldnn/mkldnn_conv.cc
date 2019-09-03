@@ -519,17 +519,11 @@ static void SgMKLDNNConvParamParser(nnvm::NodeAttrs *attrs) {
       with_act = true;
       if (node_name == "Activation") {
         const auto act_param = nnvm::get<ActivationParam>(node->attrs.parsed);
-        MKLDNNActParam param_;
-        param_.act_type = act_param.act_type;
-        post_act_param.alg = GetMKLDNNActAlgo(param_);
+        post_act_param.alg = GetMKLDNNActAlgo(act_param);
       } else if (node_name == "LeakyReLU") {
         const auto act_param = nnvm::get<LeakyReLUParam>(node->attrs.parsed);
-        MKLDNNActParam param_;
-        param_.act_type = act_param.act_type;
-        param_.is_leakyrelu = true;
-        param_.slope = act_param.slope;
-        post_act_param.alpha = param_.slope;
-        post_act_param.alg = GetMKLDNNActAlgo(param_);
+        post_act_param.alpha = act_param.slope;
+        post_act_param.alg = GetMKLDNNActAlgo(act_param);
       } else {
         const auto clip_param = nnvm::get<ClipParam>(node->attrs.parsed);
         post_act_param.alg = mkldnn::algorithm::eltwise_bounded_relu;

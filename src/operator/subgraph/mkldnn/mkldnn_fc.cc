@@ -236,9 +236,7 @@ static void SgMKLDNNFCParamParser(nnvm::NodeAttrs *attrs) {
     } else if (SupportMKLDNNFCEltwiseFusion(op_name)) {
       if (op_name == "Activation") {
         const ActivationParam act_param = nnvm::get<ActivationParam>(node->attrs.parsed);
-        MKLDNNActParam param_;
-        param_.act_type = act_param.act_type;
-        full_param.eltwise_param.alg = GetMKLDNNActAlgo(param_);
+        full_param.eltwise_param.alg = GetMKLDNNActAlgo(act_param);
       } else if (op_name == "clip") {
         const ClipParam clip_param = nnvm::get<ClipParam>(node->attrs.parsed);
         full_param.eltwise_param.alg = mkldnn::algorithm::eltwise_bounded_relu;

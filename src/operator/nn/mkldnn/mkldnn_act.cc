@@ -77,31 +77,31 @@ bool SupportQuantizedMKLDNNAct(const ActivationParam &param) {
   return param.act_type == activation::kReLU;
 }
 
-mkldnn::algorithm GetMKLDNNActAlgo(const MKLDNNActParam& param) {
-  if (param.is_leakyrelu) {
-    switch (param.act_type) {
-      case leakyrelu::kLeakyReLU:
-        return mkldnn::algorithm::eltwise_relu;
-      case leakyrelu::kELU:
-        return mkldnn::algorithm::eltwise_elu;
-      default:
-        LOG(FATAL) << "unknown activation type";
-        return mkldnn::algorithm::eltwise_relu;
-    }
-  } else {
-    switch (param.act_type) {
-      case activation::kReLU:
-        return mkldnn::algorithm::eltwise_relu;
-      case activation::kSigmoid:
-        return mkldnn::algorithm::eltwise_logistic;
-      case activation::kTanh:
-        return mkldnn::algorithm::eltwise_tanh;
-      case activation::kSoftReLU:
-        return mkldnn::algorithm::eltwise_soft_relu;
-      default:
-        LOG(FATAL) << "unknown activation type";
-        return mkldnn::algorithm::eltwise_relu;
-    }
+mkldnn::algorithm GetMKLDNNActAlgo(const ActivationParam& param) {
+  switch (param.act_type) {
+    case activation::kReLU:
+      return mkldnn::algorithm::eltwise_relu;
+    case activation::kSigmoid:
+      return mkldnn::algorithm::eltwise_logistic;
+    case activation::kTanh:
+      return mkldnn::algorithm::eltwise_tanh;
+    case activation::kSoftReLU:
+      return mkldnn::algorithm::eltwise_soft_relu;
+    default:
+      LOG(FATAL) << "unknown activation type";
+      return mkldnn::algorithm::eltwise_relu;
+  }
+}
+
+mkldnn::algorithm GetMKLDNNActAlgo(const LeakyReLUParam& param) {
+  switch (param.act_type) {
+    case leakyrelu::kLeakyReLU:
+      return mkldnn::algorithm::eltwise_relu;
+    case leakyrelu::kELU:
+      return mkldnn::algorithm::eltwise_elu;
+    default:
+      LOG(FATAL) << "unknown activation type";
+      return mkldnn::algorithm::eltwise_relu;
   }
 }
 
@@ -112,7 +112,7 @@ mkldnn::eltwise_forward::primitive_desc GetActFwdDescImpl(
   mkldnn::memory::desc data_md = data_mpd.desc();
   auto cpu_engine = data_mpd.get_engine();
 
-  auto alg = GetMKLDNNActAlgo(param);
+  auto alg = param.alg;
 
   auto prop = is_train ? mkldnn::prop_kind::forward_training :
                          mkldnn::prop_kind::forward_scoring;
@@ -155,8 +155,7 @@ MKLDNNActForward &GetActForward(const MKLDNNActParam& param,
 #endif
   MKLDNNActSignature key(param);
   key.AddSign(ctx.is_train);
-  key.AddSign(param.act_type);
-  key.AddSign(param.is_leakyrelu);
+  key.AddSign(param.alg);
   key.AddSign(param.slope);
   key.AddSign(in_data);
 
@@ -173,7 +172,7 @@ void MKLDNNActivationForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                              const NDArray &out_data) {
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
   MKLDNNActParam param_;
-  param_.act_type = param.act_type;
+  param_.alg = GetMKLDNNActAlgo(param);
 
   NDArray in_buffer = in_data;
   MKLDNNStream *stream = MKLDNNStream::Get();
@@ -195,8 +194,7 @@ void MKLDNNLeakyReluForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                              const NDArray &out_data) {
   const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(attrs.parsed);
   MKLDNNActParam param_;
-  param_.act_type = param.act_type;
-  param_.is_leakyrelu = true;
+  param_.alg = GetMKLDNNActAlgo(param);
   param_.slope = param.slope;
 
   NDArray in_buffer = in_data;
@@ -221,7 +219,7 @@ static mkldnn::eltwise_backward::primitive_desc GetActBwdDescImpl(
   mkldnn::memory::desc data_md = data_mpd.desc();
   mkldnn::memory::desc diff_md = diff_dst_memory.get_primitive_desc().desc();
   auto cpu_engine = data_mpd.get_engine();
-  auto alg = GetMKLDNNActAlgo(param);
+  auto alg = param.alg;
 
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     mkldnn::eltwise_forward::desc fw_desc(mkldnn::prop_kind::forward_training,
@@ -323,7 +321,7 @@ void MKLDNNActivationBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx
 
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
   MKLDNNActParam param_;
-  param_.act_type = param.act_type;
+  param_.alg = GetMKLDNNActAlgo(param);
   TmpMemMgr::Get()->Init(ctx.requested[activation::kTempSpace]);
   auto diff_dst_memory = out_buffer.GetMKLDNNData();
   auto input_mem = in_buffer.GetMKLDNNData();
@@ -359,8 +357,7 @@ void MKLDNNLeakyReluBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
 
   const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(attrs.parsed);
   MKLDNNActParam param_;
-  param_.act_type = param.act_type;
-  param_.is_leakyrelu = true;
+  param_.alg = GetMKLDNNActAlgo(param);
   param_.slope = param.slope;
 
   TmpMemMgr::Get()->Init(ctx.requested[leakyrelu::kRandom]);
