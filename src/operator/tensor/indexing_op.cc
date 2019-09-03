@@ -291,8 +291,17 @@ void TakeOpForward<cpu>(const nnvm::NodeAttrs& attrs,
   Stream<cpu> *s = ctx.get_stream<cpu>();
   const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
 
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output data type
-    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // index data type
+  MSHADOW_TYPE_SWITCH(outputs[take_::kOut].type_flag_, DType, {  // output data type
+    MSHADOW_TYPE_SWITCH(inputs[take_::kIdx].type_flag_, IType, {  // index data type
+      if (param.mode == take_::kRaise) {
+        IType min = 0;
+        IType max = static_cast<IType>(arrshape[actual_axis] - 1);
+        // check with single thread is faster since data is small
+        IType* idx_ptr = inputs[take_::kIdx].dptr<IType>();
+        size_t idx_size = idxshape.Size();
+        bool is_valid = CheckIndexOutOfBound(idx_ptr, idx_size, min, max);
+        CHECK(is_valid) << "take operator contains indices out of bound";
+      }
       if (actual_axis == 0) {
         if (param.mode == take_::kClip) {
           Kernel<TakeCPU<true>, cpu>::Launch(s, idxshape.Size(),
@@ -326,7 +335,7 @@ void TakeOpForward<cpu>(const nnvm::NodeAttrs& attrs,
                                           in_strides, out_strides, arrshape.ndim(),
                                           oshape.ndim(), idxshape.ndim(),
                                           arrshape[actual_axis], actual_axis);
-        } else if (param.mode == take_::kWrap) {
+        } else {
           Kernel<Take<false>, cpu>::Launch(s, oshape.Size(),
                                            outputs[take_::kOut].dptr<DType>(),
                                            inputs[take_::kArr].dptr<DType>(),
@@ -466,6 +475,7 @@ DMLC_REGISTER_PARAMETER(ScatterNDParam);
 
 NNVM_REGISTER_OP(Embedding)
 MXNET_ADD_SPARSE_OP_ALIAS(Embedding)
+.add_alias("_npx_embedding")
 .describe(R"code(Maps integer indices to vector representations (embeddings).
 
 This operator maps words to real-valued vectors in a high-dimensional space,
@@ -764,6 +774,7 @@ Examples::
 .add_argument("indices", "NDArray-or-Symbol", "The index array");
 
 NNVM_REGISTER_OP(one_hot)
+.add_alias("_npx_one_hot")
 .describe(R"code(Returns a one-hot array.
 
 The locations represented by `indices` take value `on_value`, while all
@@ -813,6 +824,7 @@ Examples::
 
 
 NNVM_REGISTER_OP(gather_nd)
+.add_alias("_npi_gather_nd")
 .describe(R"code(Gather elements or slices from `data` and store to a tensor whose
 shape is defined by `indices`.
 
@@ -1006,6 +1018,7 @@ Examples::
 .add_arguments(ScatterNDParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_scatter_set_nd)
+.add_alias("_npi_scatter_set_nd")
 .describe(R"code(This operator has the same functionality as scatter_nd
 except that it does not reset the elements not indexed by the input
 index `NDArray` in the input data `NDArray`. output should be explicitly

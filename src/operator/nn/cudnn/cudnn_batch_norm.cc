@@ -30,7 +30,7 @@
 
 namespace mxnet {
 namespace op {
-#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 4
+#if MXNET_USE_CUDNN == 1
 
 static bool BatchNormShape(const nnvm::NodeAttrs& attrs, mxnet::ShapeVector *in_shape,
     mxnet::ShapeVector *out_shape) {
@@ -114,7 +114,7 @@ NNVM_REGISTER_OP(_backward_CuDNNBatchNorm)
 .set_attr_parser(ParamParser<BatchNormParam>)
 .set_attr<FCompute>("FCompute<cpu>", BatchNormGradCompute_CPU);
 
-#endif  // CUDNN_MAJOR >= 4
+#endif  // MXNET_USE_CUDNN
 
 }  // namespace op
 }  // namespace mxnet

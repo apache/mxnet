@@ -24,12 +24,97 @@ import numpy as _np  # pylint: disable=unused-import
 from ._internal import NDArrayBase, _imperative_invoke # pylint: disable=unused-import
 from ..ndarray_doc import _build_doc
 
-from ..base import mx_uint, check_call, _LIB, py_str, _init_op_module, _Null # pylint: disable=unused-import
+from ..base import mx_uint, check_call, _LIB, py_str, _init_op_module, _Null, _is_np_op  # pylint: disable=unused-import
+from ..util import use_np_shape  # pylint: disable=unused-import
+
+
+def _verify_all_np_ndarrays(op_name, func_name, args, out):
+    """Verify if all the arrays are numpy ndarrays.
+
+    Parameters
+    ----------
+    op_name : str
+        Operator full name registered in backend.
+    func_name : str
+        Operator name exposed to users. This is usually the name by stripping off
+        the prefix of the full operator names registered in backend.
+    args : list of arrays
+        Input ndarray arguments to be checked.
+    out : ndarray or None or list of ndarrays
+        User-provided output ndarrays.
+    """
+    from ..numpy import ndarray as np_ndarray
+    for arr in args:
+        if (arr is not None) and (not isinstance(arr, np_ndarray)):
+            raise TypeError('Operator `{}` registered in backend is known as `{}` in Python. '
+                            'This is a numpy operator which can only accept '
+                            'MXNet numpy ndarrays, while received a legacy ndarray. '
+                            'Please ensure that you have activated numpy semantics by calling '
+                            '`npx.set_np()` in your code. If you still see this error with numpy '
+                            'semantics activated, please call `as_np_ndarray()` upon the legacy '
+                            'ndarray to convert it to an MXNet numpy ndarray, and then feed the '
+                            'converted array to this operator.'
+                            .format(op_name, func_name))
+    if out is None:
+        return
+    if not isinstance(out, (list, tuple)):
+        out = [out]
+    for arr in out:
+        if (arr is not None) and (not isinstance(arr, np_ndarray)):
+            raise TypeError('Operator `{}` registered in backend is known as `{}` in Python. '
+                            'This is a numpy operator which can only accept '
+                            'MXNet numpy ndarrays, while received a legacy ndarray. '
+                            'Please ensure that you have activated numpy semantics by calling '
+                            '`npx.set_np()` in your code. If you still see this error with numpy '
+                            'semantics activated, please call `as_np_ndarray()` upon the legacy '
+                            'ndarray to convert it to an MXNet numpy ndarray, and then feed the '
+                            'converted array to this operator.'
+                            .format(op_name, func_name))
+
+
+def _verify_all_legacy_ndarrays(op_name, func_name, args, out):
+    """Verify if all the arrays are legacy ndarrays.
+
+    Parameters
+    ----------
+    op_name : str
+        Operator full name registered in backend.
+    func_name : str
+        Operator name exposed to users. This is usually the name by stripping off
+        the prefix of the full operator names registered in backend.
+    args : list of arrays
+        Input ndarray arguments to be checked.
+    out : ndarray or None or list of ndarrays
+        User-provided output ndarrays.
+    """
+    from ..numpy import ndarray as np_ndarray
+    for arr in args:
+        if (arr is not None) and (isinstance(arr, np_ndarray)):
+            raise TypeError('Operator `{}` registered in backend is known as `{}` in Python. '
+                            'This is a legacy operator which can only accept '
+                            'legacy ndarrays, while received an MXNet numpy ndarray. '
+                            'Please call `as_nd_ndarray()` upon the numpy ndarray to '
+                            'convert it to a legacy ndarray, and then feed the converted '
+                            'array to this operator.'
+                            .format(op_name, func_name))
+    if out is None:
+        return
+    if not isinstance(out, (list, tuple)):
+        out = [out]
+    for arr in out:
+        if (arr is not None) and (isinstance(arr, np_ndarray)):
+            raise TypeError('Operator `{}` registered in backend is known as `{}` in Python. '
+                            'This is a legacy operator which can only write to '
+                            'legacy ndarrays, while received an MXNet numpy ndarray. '
+                            'Please call `as_nd_ndarray()` upon the numpy ndarray to '
+                            'convert it to a legacy ndarray, and then feed the converted '
+                            'array to this operator.'
+                            .format(op_name, func_name))
 
 
 # pylint: disable=too-many-locals
-def _generate_ndarray_function_code(handle, name, func_name, signature_only=False):
-    """Generate function for ndarray op by handle and function name."""
+def _generate_ndarray_function_code(handle, op_name, func_name, signature_only=False):
+    """Generate function for ndarray op by handle and function op_name."""
     real_name = ctypes.c_char_p()
     desc = ctypes.c_char_p()
     num_args = mx_uint()
@@ -52,7 +137,7 @@ def _generate_ndarray_function_code(handle, name, func_name, signature_only=Fals
     arg_types = [py_str(arg_types[i]) for i in range(narg)]
     key_var_num_args = py_str(key_var_num_args.value)
     ret_type = py_str(ret_type.value) if ret_type.value is not None else ''
-    doc_str = _build_doc(name,
+    doc_str = _build_doc(op_name,
                          py_str(desc.value),
                          arg_names,
                          arg_types,
@@ -90,6 +175,10 @@ def _generate_ndarray_function_code(handle, name, func_name, signature_only=Fals
     signature = ndsignature + signature
 
     code = []
+    is_np_op = _is_np_op(op_name)
+    doc_str_idx = 1
+    if is_np_op:
+        doc_str_idx = 2
     if arr_name:
         code.append("""
 def %s(*%s, **kwargs):"""%(func_name, arr_name))
@@ -134,15 +223,26 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
         vals.append(%s)"""%(name, name, name))
             # dtype
             if dtype_name is not None:
-                code.append("""
+                if is_np_op:
+                    code.append("""
+    if %s is not _Null and %s is not None:
+        keys.append('%s')
+        vals.append(_np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name, dtype_name))
+                else:
+                    code.append("""
     if %s is not _Null:
         keys.append('%s')
         vals.append(_np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
 
+    verify_ndarrays_fn =\
+        _verify_all_np_ndarrays.__name__ if is_np_op else _verify_all_legacy_ndarrays.__name__
     if not signature_only:
         code.append("""
-    return _imperative_invoke(%d, ndargs, keys, vals, out)"""%(
-        handle.value))
+    {verify_fn}("{op_name}", "{func_name}", ndargs, out)
+        """.format(verify_fn=verify_ndarrays_fn, op_name=op_name, func_name=func_name))
+        code.append("""
+    return _imperative_invoke(%d, ndargs, keys, vals, out, %s)"""%(
+        handle.value, str(is_np_op)))
     else:
         code.append("""
     return (0,)""")
@@ -150,7 +250,7 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
     doc_str_lines = _os.linesep+''.join(['    '+s if s.strip() else s
                                          for s in 'r"""{doc_str}"""'.format(doc_str=doc_str)
                                          .splitlines(True)])
-    code.insert(1, doc_str_lines)
+    code.insert(doc_str_idx, doc_str_lines)
     return ''.join(code), doc_str
 
 
