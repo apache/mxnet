@@ -257,6 +257,26 @@ struct TransposeParam : public dmlc::Parameter<TransposeParam> {
   }
 };
 
+
+// using namespace mshadow;
+template<typename xpu, typename DType>
+MSHADOW_XINLINE void Transpose2D(DType *in, DType *out, index_t shape_0, index_t shape_1){
+
+// ensure cache line hits and prevent cache miss for any configuration
+index_t blocksize = 4;
+index_t n = shape_0;
+index_t p = shape_1;
+for (index_t i = 0; i < n; i += blocksize) {
+    for (index_t j = 0; j < p; ++j) {
+        // transpose the block
+        for(index_t b = 0; b < blocksize && i + b < n; ++b) {
+                out[j*n + i + b] = in[(i + b)*p + j];
+            }
+    }
+}
+}
+
+
 template<typename xpu>
 void TransposeImpl(RunContext ctx,
                    const TBlob& src,
@@ -285,8 +305,9 @@ void TransposeImpl(RunContext ctx,
      case 2: {
       mshadow::Tensor<xpu, 2, DType> in = src.FlatTo2D<xpu, DType>(s);
       mshadow::Tensor<xpu, 2, DType> out = ret.FlatTo2D<xpu, DType>(s);
+
       if (axes[0] == 1 && axes[1] == 0) {
-        out = in.T();
+        Transpose2D<xpu, DType>(in.dptr_, out.dptr_, in.shape_[0], in.shape_[1]);
       } else {
         Copy(out, in, s);
       }
