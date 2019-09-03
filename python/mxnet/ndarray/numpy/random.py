@@ -17,8 +17,10 @@
 
 """Namespace for operators used in Gluon dispatched by F=ndarray."""
 from __future__ import absolute_import
+import numpy as np
 from ...context import current_context
 from . import _internal as _npi
+from ..ndarray import NDArray
 from ...base import numeric_types
 
 
@@ -237,7 +239,7 @@ def multinomial(n, pvals, size=None):
         return _npi.multinomial(pvals, pvals=None, n=n, size=size)
     else:
         if isinstance(pvals, np.ndarray):
-            pvals = pvals.tolist()
+            raise ValueError('numpy ndarray is not supported!')
         if any(isinstance(i, list) for i in pvals):
             raise ValueError('object too deep for desired array')
         return _npi.multinomial(n=n, pvals=pvals, size=size)
