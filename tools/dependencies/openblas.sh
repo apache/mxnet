@@ -20,7 +20,7 @@
 # This script builds the static library of openblas that can be used as dependency of mxnet.
 set +e # This script throws an error but otherwise works
 set -x
-OPENBLAS_VERSION=0.3.3
+OPENBLAS_VERSION=0.3.5
 if [[ ! -e $DEPS_PATH/lib/libopenblas.a ]]; then
     # download and build openblas
     >&2 echo "Building openblas..."

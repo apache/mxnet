@@ -82,6 +82,7 @@ NNVM_REGISTER_OP(_ones)
 .add_arguments(InitOpParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_full)
+.add_alias("_npi_full")
   .describe("fill target with a scalar value")
   .set_num_inputs(0)
   .set_num_outputs(1)
@@ -129,7 +130,7 @@ Examples::
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<RangeLikeParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", RangeLikeShape)
-.set_attr<nnvm::FInferType>("FInferType", InitType<RangeLikeParam, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",
     [](const NodeAttrs& attrs) { return std::vector<uint32_t>(1, 0); })
 .set_attr<FCompute>("FCompute<cpu>", RangeCompute<cpu, RangeLikeParam>)

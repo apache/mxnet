@@ -494,10 +494,10 @@ def test_elemwise_binary_ops():
 
         for ii in range(1):
             # Run defaults
-            check_elemwise_binary_ops('default', 'default', rand_shape_2d())
+            check_elemwise_binary_ops('default', 'default', rand_shape_2d(5, 5))
 
             # Try different densities
-            shape = rand_shape_2d()
+            shape = rand_shape_2d(5, 5)
             for lhs_density in [0.0, random.uniform(0, 1), 1.0]:
                 for rhs_density in [0.0, random.uniform(0, 1), 1.0]:
                     for ograd_density in [0.0, random.uniform(0, 1), 1.0]:
