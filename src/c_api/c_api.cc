@@ -115,7 +115,7 @@ int MXLoadLib(const char *path) {
   if (!initialize(static_cast<int>(MXNET_VERSION)))
     LOG(FATAL) << "Library failed to initialize";
 
-  // get call functions
+  // get C type interface functions
   opCallFree_t callFree = get_func<opCallFree_t>(lib, const_cast<char*>(MXLIB_OPCALLFREE_STR));
 
   opCallParseAttrs_t callParseAttrs =
@@ -146,24 +146,24 @@ int MXLoadLib(const char *path) {
   for (int i = 0; i < numOps; i++) {
     const char* name;
     // function pointers holding implementation from custom library
-    fcomp_t fcomp = nullptr;
-    parseAttrs_t parse = nullptr;
-    inferType_t type = nullptr;
-    inferShape_t shape = nullptr;
+    fcomp_t fcomp_fp = nullptr;
+    parseAttrs_t parse_fp = nullptr;
+    inferType_t type_fp = nullptr;
+    inferShape_t shape_fp = nullptr;
     // optional attributes
-    mutateInputs_t mutate = nullptr;
+    mutateInputs_t mutate_fp = nullptr;
 
     // get custom operator implemenation from the dynamic library
-    opRegGet(i, &name, &fcomp, &parse, &type, &shape, &mutate);
+    opRegGet(i, &name, &fcomp_fp, &parse_fp, &type_fp, &shape_fp, &mutate_fp);
 
     // validate custom operator functions from the dynamic library
-    CHECK(fcomp != nullptr) << "Error loading '" << name
+    CHECK(fcomp_fp != nullptr) << "Error loading '" << name
                             << "' custom op, FCompute function was not set.";
-    CHECK(parse != nullptr) << "Error loading '" << name
+    CHECK(parse_fp != nullptr) << "Error loading '" << name
                             << "' custom op, ParseAttrs function was not set.";
-    CHECK(type  != nullptr) << "Error loading '" << name
+    CHECK(type_fp  != nullptr) << "Error loading '" << name
                             << "' custom op, InferType function was not set.";
-    CHECK(shape != nullptr) << "Error loading '" << name
+    CHECK(shape_fp != nullptr) << "Error loading '" << name
                             << "' custom op, InferShape function was not set.";
 
     LOG(INFO) << "\tOp[" << i << "] " << name;
@@ -186,7 +186,7 @@ int MXLoadLib(const char *path) {
 
       int num_in = -1;
       int num_out = -1;
-      CHECK(callParseAttrs(parse, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+      CHECK(callParseAttrs(parse_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
                            &num_in, &num_out))
       << "Error calling ParseAttrs for custom operator '" << name_str << "'";
 
@@ -204,7 +204,7 @@ int MXLoadLib(const char *path) {
 
       int num_in = -1;
       int num_out = -1;
-      CHECK(callParseAttrs(parse, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+      CHECK(callParseAttrs(parse_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
                            &num_in, &num_out))
       << "Error calling ParseAttrs::num_inputs for custom operator '" << name_str << "'";
 
@@ -222,7 +222,7 @@ int MXLoadLib(const char *path) {
 
       int num_in = -1;
       int num_out = -1;
-      CHECK(callParseAttrs(parse, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+      CHECK(callParseAttrs(parse_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
                            &num_in, &num_out))
       << "Error calling ParseAttrs::num_outputs for custom operator '" << name_str << "'";
 
@@ -262,7 +262,7 @@ int MXLoadLib(const char *path) {
       uint32_t** outshapes = nullptr;
       int* outdims = nullptr;
 
-      CHECK(callInferShape(shape, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+      CHECK(callInferShape(shape_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
                            inshapes.data(), indims.data(), in_shape->size(),
                            &outshapes, &outdims, out_shape->size()))
       << "Error calling InferShape for custom operator '" << name_str << "'";
@@ -317,7 +317,7 @@ int MXLoadLib(const char *path) {
       // output types will be populated by inferType function
       std::vector<int> outtypes(out_type->size());
 
-      CHECK(callInferType(type, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+      CHECK(callInferType(type_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
                            intypes.data(), in_type->size(),
                            outtypes.data(), out_type->size()))
       << "Error calling InferType for custom operator '" << name_str << "'";
@@ -331,11 +331,11 @@ int MXLoadLib(const char *path) {
     };
 
     // lambda function to convert from external fcompute to internal MXNet types
-    auto fcomp_conv = [=](const nnvm::NodeAttrs& attrs,
+    auto fcomp_lambda = [=](const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
-                          const std::vector<TBlob>& inputs,
+                          const std::vector<NDArray>& inputs,
                           const std::vector<OpReqType>& req,
-                          const std::vector<TBlob>& outputs) {
+                          const std::vector<NDArray>& outputs) {
       // convert attributes to vector of char*
       std::vector<const char*> attr_keys, attr_vals;
       for (auto kv : attrs.dict) {
@@ -350,18 +350,18 @@ int MXLoadLib(const char *path) {
 
       // convert input tensors to constituent parts
       for (size_t i = 0; i < inputs.size(); i++) {
-        in_data.push_back(inputs[i].dptr_);
-        in_shapes.push_back(inputs[i].shape_.data());
-        in_dims.push_back(inputs[i].shape_.ndim());
-        in_types.push_back(inputs[i].type_flag_);
+        in_data.push_back(inputs[i].data().dptr_);
+        in_shapes.push_back(inputs[i].shape().data());
+        in_dims.push_back(inputs[i].shape().ndim());
+        in_types.push_back(inputs[i].dtype());
       }
 
       // convert output tensors to constituent parts
       for (size_t i = 0; i < outputs.size(); i++) {
-        out_data.push_back(outputs[i].dptr_);
-        out_shapes.push_back(outputs[i].shape_.data());
-        out_dims.push_back(outputs[i].shape_.ndim());
-        out_types.push_back(outputs[i].type_flag_);
+        out_data.push_back(outputs[i].data().dptr_);
+        out_shapes.push_back(outputs[i].shape().data());
+        out_dims.push_back(outputs[i].shape().ndim());
+        out_types.push_back(outputs[i].dtype());
       }
 
       // get memory resource
@@ -388,7 +388,7 @@ int MXLoadLib(const char *path) {
       };
 
       // call fcompute function
-      CHECK(callFComp(fcomp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+      CHECK(callFComp(fcomp_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
                       in_shapes.data(), in_dims.data(), in_data.data(),
                       in_types.data(), in_data.size(),
                       out_shapes.data(), out_dims.data(), out_data.data(),
@@ -412,7 +412,7 @@ int MXLoadLib(const char *path) {
       int indices_size = 0;
 
       // call mutate inputs function
-      CHECK(callMutateInputs(mutate, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+      CHECK(callMutateInputs(mutate_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
                       &mutate_indices, &indices_size))
       << "Error calling MutateInputs for custom operator '" << name_str << "'";
 
@@ -424,6 +424,15 @@ int MXLoadLib(const char *path) {
       return mutate_indices_list;
     };
 
+    auto infer_storage_type = [=](const nnvm::NodeAttrs& attrs,
+                                  const int dev_mask,
+                                  DispatchMode* dispatch_mode,
+                                  std::vector<int>* in_stypes,
+                                  std::vector<int>* out_stypes) {
+      return op::storage_type_assign(out_stypes, mxnet::kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+    };
+
     // check if operator is already registered
     const nnvm::Op *regOpPtr = dmlc::Registry<nnvm::Op>::Get()->Find(name);
     if (regOpPtr == nullptr) {
@@ -432,6 +441,7 @@ int MXLoadLib(const char *path) {
       regOp.set_attr_parser(attr_parser);
       regOp.set_num_inputs(num_inputs);
       regOp.set_num_outputs(num_outputs);
+      regOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type);
       regOp.set_attr<FResourceRequest>("FResourceRequest",
                                        [](const NodeAttrs& attrs) {
                                          return std::vector<ResourceRequest>{
@@ -440,26 +450,23 @@ int MXLoadLib(const char *path) {
       regOp.add_argument("data", "NDArray[]", "Source inputs");
       regOp.set_attr<nnvm::FInferType>("FInferType", infer_type);
       regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape);
-      regOp.set_attr<FCompute>("FCompute<cpu>", fcomp_conv);
-      if (mutate != nullptr)
+      regOp.set_attr<FComputeEx>("FComputeEx<cpu>", fcomp_lambda);
+      if (mutate_fp != nullptr)
         regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs);
     } else {
       // overwrite registration of existing op with custom op
       nnvm::Op &regOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(name);
-
       regOp.set_attr_parser(attr_parser);
       regOp.set_num_inputs(num_inputs);
       regOp.set_num_outputs(num_outputs);
-
       regOp.arguments.clear();
       regOp.add_argument("data", "NDArray[]", "Source inputs");
-
       // set attribute with higher plevel (11) to allow re-registering once
       // TODO(samskalicky): enable constant overwriting of registertion multiple times
       regOp.set_attr<nnvm::FInferType>("FInferType", infer_type, 11);
       regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape, 11);
-      regOp.set_attr<FCompute>("FCompute<cpu>", fcomp_conv, 11);
-      if (mutate != nullptr)
+      regOp.set_attr<FComputeEx>("FComputeEx<cpu>", fcomp_lambda, 11);
+      if (mutate_fp != nullptr)
         regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs, 11);
     }
   }
