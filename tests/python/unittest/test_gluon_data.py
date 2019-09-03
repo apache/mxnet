@@ -288,7 +288,12 @@ def test_dataset_filter():
     a = mx.gluon.data.SimpleDataset([i for i in range(length)])
     a_filtered = a.filter(lambda x: x % 10 == 0)
     assert(len(a_filtered) == 10)
-    for idx, sample in enumerate(gluon.data.DataLoader(a_filtered, 1)):
+    for idx, sample in enumerate(a_filtered):
+        assert sample % 10 == 0
+    a_xform_filtered = a.transform(lambda x: x + 1).filter(lambda x: x % 10 == 0)
+    assert(len(a_xform_filtered) == 10)
+    # the filtered data is already transformed
+    for idx, sample in enumerate(a_xform_filtered):
         assert sample % 10 == 0
 
 def test_dataset_take():
@@ -303,8 +308,17 @@ def test_dataset_take():
     assert len(a_take_10) == count
     expected_total = sum([i for i in range(count)])
     total = 0
-    for idx, sample in enumerate(a_take_10):#gluon.data.DataLoader(a_take_10, 1)):
+    for idx, sample in enumerate(a_take_10):
         assert sample < count
+        total += sample
+    assert total == expected_total
+
+    a_xform_take_10 = a.transform(lambda x: x * 10).take(count)
+    assert len(a_xform_take_10) == count
+    expected_total = sum([i * 10 for i in range(count)])
+    total = 0
+    for idx, sample in enumerate(a_xform_take_10):
+        assert sample < count * 10
         total += sample
     assert total == expected_total
 
