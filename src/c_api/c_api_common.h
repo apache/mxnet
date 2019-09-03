@@ -76,11 +76,11 @@ struct MXAPIThreadLocalEntry {
   /*! \brief result holder for returning storage types */
   std::vector<int> arg_storage_types, out_storage_types, aux_storage_types;
   /*! \brief result holder for returning shape dimensions */
-  std::vector<mx_uint> arg_shape_ndim, out_shape_ndim, aux_shape_ndim;
+  std::vector<uint32_t> arg_shape_ndim, out_shape_ndim, aux_shape_ndim;
   /*! \brief result holder for returning shape dimensions */
   std::vector<int> arg_shape_ndim_ex, out_shape_ndim_ex, aux_shape_ndim_ex;
   /*! \brief result holder for returning shape pointer */
-  std::vector<const mx_uint*> arg_shape_data, out_shape_data, aux_shape_data;
+  std::vector<const uint32_t*> arg_shape_data, out_shape_data, aux_shape_data;
   /*! \brief result holder for returning shape pointer */
   std::vector<const dtype*> arg_shape_data_ex, out_shape_data_ex, aux_shape_data_ex;
   /*! \brief uint32_t buffer for returning shape pointer */
@@ -93,8 +93,8 @@ struct MXAPIThreadLocalEntry {
   // helper function to setup return value of shape array
   inline static void SetupShapeArrayReturnWithBuffer(
       const mxnet::ShapeVector &shapes,
-      std::vector<mx_uint> *ndim,
-      std::vector<const mx_uint*> *data,
+      std::vector<uint32_t> *ndim,
+      std::vector<const uint32_t*> *data,
       std::vector<uint32_t> *buffer) {
     ndim->resize(shapes.size());
     data->resize(shapes.size());

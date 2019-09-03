@@ -288,17 +288,17 @@ int MXSetIsNumpyShape(int is_np_shape, int* prev) {
   API_END();
 }
 
-int MXAutogradMarkVariables(mx_uint num_var,
+int MXAutogradMarkVariables(uint32_t num_var,
                             NDArrayHandle *var_handles,
-                            mx_uint *reqs_array,
+                            uint32_t *reqs_array,
                             NDArrayHandle *grad_handles) {
   API_BEGIN();
   std::vector<NDArray*> variables, gradients;
-  std::vector<mx_uint> grad_reqs;
+  std::vector<uint32_t> grad_reqs;
   variables.reserve(num_var);
   gradients.reserve(num_var);
   grad_reqs.reserve(num_var);
-  for (mx_uint i = 0; i < num_var; ++i) {
+  for (uint32_t i = 0; i < num_var; ++i) {
     variables.emplace_back(static_cast<NDArray*>(var_handles[i]));
     gradients.emplace_back(static_cast<NDArray*>(grad_handles[i]));
     grad_reqs.emplace_back(reqs_array[i]);
@@ -307,12 +307,12 @@ int MXAutogradMarkVariables(mx_uint num_var,
   API_END();
 }
 
-int MXAutogradComputeGradient(mx_uint num_output,
+int MXAutogradComputeGradient(uint32_t num_output,
                               NDArrayHandle *output_handles) {
   return MXAutogradBackward(num_output, output_handles, nullptr, 0);
 }
 
-int MXAutogradBackward(mx_uint num_output,
+int MXAutogradBackward(uint32_t num_output,
                        NDArrayHandle *output_handles,
                        NDArrayHandle *ograd_handles,
                        int retain_graph) {
@@ -321,10 +321,10 @@ int MXAutogradBackward(mx_uint num_output,
                               nullptr, nullptr);
 }
 
-int MXAutogradBackwardEx(mx_uint num_output,
+int MXAutogradBackwardEx(uint32_t num_output,
                          NDArrayHandle *output_handles,
                          NDArrayHandle *ograd_handles,
-                         mx_uint num_variables,
+                         uint32_t num_variables,
                          NDArrayHandle *var_handles,
                          int retain_graph,
                          int create_graph,
@@ -336,12 +336,12 @@ int MXAutogradBackwardEx(mx_uint num_output,
 
   std::vector<NDArray*> outputs, ograds, variables;
   outputs.reserve(num_output);
-  for (mx_uint i = 0; i < num_output; ++i) {
+  for (uint32_t i = 0; i < num_output; ++i) {
     outputs.emplace_back(reinterpret_cast<NDArray*>(output_handles[i]));
   }
 
   ograds.reserve(num_output);
-  for (mx_uint i = 0; i < num_output; ++i) {
+  for (uint32_t i = 0; i < num_output; ++i) {
     if (ograd_handles != nullptr) {
       ograds.emplace_back(reinterpret_cast<NDArray*>(ograd_handles[i]));
     } else {
@@ -350,7 +350,7 @@ int MXAutogradBackwardEx(mx_uint num_output,
   }
 
   variables.reserve(num_variables);
-  for (mx_uint i = 0; i < num_variables; ++i) {
+  for (uint32_t i = 0; i < num_variables; ++i) {
     variables.emplace_back(reinterpret_cast<NDArray*>(var_handles[i]));
   }
 

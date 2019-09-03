@@ -572,30 +572,37 @@ void CreateSubgraphNode(nnvm::Graph* g,
   }
   const SubgraphPropertyPtr& subg_prop = g->GetAttr<SubgraphPropertyPtr>("subgraph_property");
   nnvm::NodePtr n = subg_prop->CreateSubgraphNode(sym, subgraph_selector, subgraph_id);
+  // CreateSubgraphNode returns NULL if subgraph property determines that subgraph is sub-optimal
+  // In that case, subgraph node is not created and graph is not modified
+  if (n) {
+    // Connect the external nodes to the subgraph node.
+    subg_prop->ConnectSubgraphOutputs(n, &output_entries);
+    subg_prop->ConnectSubgraphInputs(n, &input_entries, &orig_input_entries);
 
-  // Connect the external nodes to the subgraph node.
-  subg_prop->ConnectSubgraphOutputs(n, &output_entries);
-  subg_prop->ConnectSubgraphInputs(n, &input_entries, &orig_input_entries);
-
-  const auto& indexed_graph = g->indexed_graph();
-  for (size_t i = 0; i < n->inputs.size(); ++i) {
-    auto& e = n->inputs[i];
-    // update entry_top_order_map with newly created orig_input_entries
-    auto it = entry_top_order_map->find(input_entries[i]);
-    CHECK(it != entry_top_order_map->end());
-    entry_top_order_map->emplace(&e, it->second);
-    // update input entries' source simple nodes' outputs map
-    nnvm::Node* node = e.node.get();
-    if (indexed_graph.exist(node)) {
-      const auto nid = indexed_graph.node_id(node);
-      BiDirectedNode* sn = simple_nodes[nid].get();
-      for (BiDirectedNode* dest_node : subgraph_nodes) {
-        sn->outputs.erase(dest_node->node);
+    const auto& indexed_graph = g->indexed_graph();
+    for (size_t i = 0; i < n->inputs.size(); ++i) {
+      auto& e = n->inputs[i];
+      // update entry_top_order_map with newly created orig_input_entries
+      auto it = entry_top_order_map->find(input_entries[i]);
+      CHECK(it != entry_top_order_map->end());
+      entry_top_order_map->emplace(&e, it->second);
+      // update input entries' source simple nodes' outputs map
+      nnvm::Node* node = e.node.get();
+      if (indexed_graph.exist(node)) {
+        const auto nid = indexed_graph.node_id(node);
+        BiDirectedNode* sn = simple_nodes[nid].get();
+        for (BiDirectedNode* dest_node : subgraph_nodes) {
+          sn->outputs.erase(dest_node->node);
+        }
+        sn->outputs[n.get()].push_back(i);
       }
-      sn->outputs[n.get()].push_back(i);
     }
   }
 #if DEBUG_SUBGRAPH
+  if (n)
+    LOG(INFO) << "Subgraph node created and output_entries updated.";
+  else
+    LOG(INFO) << "Subgraph node not created, output_entries not updated.";
   PrintNodeEntries(output_entries);
 #endif
 }

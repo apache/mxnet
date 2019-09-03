@@ -68,10 +68,10 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
     } else {
       if (inputs[0].dtype() == mshadow::kUint8) {
         *outputs[1].data().dptr<float>() = 0;
-        *outputs[2].data().dptr<float>() = 255;
+        *outputs[2].data().dptr<float>() = kUint8Range;
       } else {
-        *outputs[1].data().dptr<float>() = -127;
-        *outputs[2].data().dptr<float>() = 127;
+        *outputs[1].data().dptr<float>() = -kInt8Range;
+        *outputs[2].data().dptr<float>() = kInt8Range;
       }
     }
     if (req[0] != kWriteInplace) {

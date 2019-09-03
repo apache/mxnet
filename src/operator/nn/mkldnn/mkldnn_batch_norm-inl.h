@@ -132,14 +132,13 @@ class MKLDNNBNForward {
     return *var_m;
   }
 
-  void SetDataHandle(const NDArray &data, const mkldnn::memory *mean,
+  void SetDataHandle(const mkldnn::memory *data, const mkldnn::memory *mean,
                      const mkldnn::memory *var, const mkldnn::memory *out) {
-    auto _data = data.GetMKLDNNData();
     if (data_m) {
-      data_m->set_data_handle(_data->get_data_handle());
+      data_m->set_data_handle(data->get_data_handle());
     } else {
-      data_m.reset(new mkldnn::memory(_data->get_primitive_desc(),
-                                      _data->get_data_handle()));
+      data_m.reset(new mkldnn::memory(data->get_primitive_desc(),
+                                      data->get_data_handle()));
     }
     if (out_m) {
       out_m->set_data_handle(out->get_data_handle());
@@ -175,7 +174,7 @@ class MKLDNNBNForward {
 
   void SetDataHandle(const NDArray &data, const NDArray &mean,
                      const NDArray &var, const mkldnn::memory &out) {
-    SetDataHandle(data, mean.GetMKLDNNData(), var.GetMKLDNNData(), &out);
+    SetDataHandle(data.GetMKLDNNData(), mean.GetMKLDNNData(), var.GetMKLDNNData(), &out);
   }
 
   const mkldnn::batch_normalization_forward &GetFwd() const {
@@ -185,7 +184,7 @@ class MKLDNNBNForward {
 
 template<typename DType>
 static MKLDNNBNForward &GetBNForward(const BatchNormParam& param,
-                                     const OpContext &ctx, const NDArray &in_data,
+                                     const OpContext &ctx, const mkldnn::memory *data_mem,
                                      unsigned flags) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNBNSignature, MKLDNNBNForward, OpHash> fwds;
@@ -195,16 +194,23 @@ static MKLDNNBNForward &GetBNForward(const BatchNormParam& param,
   MKLDNNBNSignature key(param);
   key.AddSign(ctx.is_train);
   key.AddSign(param.use_global_stats);
-  key.AddSign(in_data);
+  key.AddSign(*data_mem);
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
-    auto fwd_pd = _GetFwd(*in_data.GetMKLDNNData(), ctx.is_train,
+    auto fwd_pd = _GetFwd(*data_mem, ctx.is_train,
                           (DType) param.eps, flags);
     MKLDNNBNForward fwd(fwd_pd, ctx.is_train && !param.use_global_stats);
     it = AddToCache(&fwds, key, fwd);
   }
   return it->second;
+}
+
+template<typename DType>
+static MKLDNNBNForward &GetBNForward(const BatchNormParam& param,
+                                     const OpContext &ctx, const NDArray &in_data,
+                                     unsigned flags) {
+  return GetBNForward<DType>(param, ctx, in_data.GetMKLDNNData(), flags);
 }
 
 template <typename DType>
