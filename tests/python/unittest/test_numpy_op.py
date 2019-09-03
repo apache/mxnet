@@ -1080,6 +1080,42 @@ def test_np_stack():
                 assert same(mx_out.asnumpy(), np_out)
 
 
+@with_seed()
+@use_np
+def test_np_choice():
+    
+    def test_sample_with_replacement(num_classes, shape, weight=None):
+        samples = np.random.choice(num_classes, shape, p=weight)
+        generated_density = np.histogram(samples, np.arange(num_classes + 1), density=True)
+        expected_density = (weight if weight is not None else
+                            np.array([1 / num_classes] * num_classes))
+        # test almost equal
+        print(generated_density[0] - expected_density)
+        # test shape
+        assert (samples.shape == shape)
+
+    def test_sample_without_replacement(num_classes, shape, num_trials, weight=None):
+        samples = np.random.choice(num_classes, shape, replace=False, p=weight)
+        # Check shape and uniqueness
+        assert samples.shape == shape
+        assert len(np.unique(samples)) == samples.size
+        # Check distribution
+        bins = np.zeros((num_classes))
+        expected_freq = (weight if weight is not None else
+                         np.array([1 / num_classes] * num_classes))
+        for i in range(num_trials):
+            out = np.random.choice(num_classes, 1, replace=False, p=weight)
+            bins[out] += 1
+        bins /= num_trials
+        print(bins - expected_freq)
+        # assert_almost_equal(bins, expected_freq)
+    ctx = n
+    num_classes = 20
+    num_samples = 10 ** 5
+    # Sample with replacement:
+    
+    # Sample without replacment:
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

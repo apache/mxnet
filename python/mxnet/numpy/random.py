@@ -20,7 +20,7 @@
 from __future__ import absolute_import
 from ..ndarray import numpy as _mx_nd_np
 
-__all__ = ['uniform']
+__all__ = ['uniform', 'choice']
 
 
 def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
@@ -55,3 +55,7 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
         Drawn samples from the parameterized uniform distribution.
     """
     return _mx_nd_np.random.uniform(low, high, size=size, ctx=ctx, dtype=dtype, out=out)
+
+
+def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
+    return _mx_nd_np.random.choice(a, size, replace, p, ctx, out)
