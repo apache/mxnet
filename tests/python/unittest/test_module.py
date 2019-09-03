@@ -1029,6 +1029,8 @@ def test_module_init_optimizer():
     mod2.init_optimizer(optimizer=opt)
     assert mod2._optimizer.idx2name == get_module_idx2name(mod2)
 
+    # Add test comment
+
 
 if __name__ == '__main__':
     import nose
