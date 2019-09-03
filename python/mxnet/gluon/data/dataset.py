@@ -44,6 +44,12 @@ class Dataset(object):
         """Returns a new dataset with samples filtered by the
         filter function `fn`.
 
+        Note that if the Dataset is the result of a lazily transformed one with
+        transform(lazy=False), the filter is eagerly applied to the transformed
+        samples without materializing the transformed result. That is, the
+        transformation will be applied again whenever a sample is retrieved after
+        filter().
+
         Parameters
         ----------
         fn : callable
@@ -174,10 +180,7 @@ class _FilteredDataset(Dataset):
     """Dataset with a filter applied"""
     def __init__(self, dataset, fn):
         self._dataset = dataset
-        self._indices = []
-        for i, sample in enumerate(dataset):
-            if fn(sample):
-                self._indices.append(i)
+        self._indices = [i for for i, sample in enumerate(dataset) if fn(sample)]
 
     def __len__(self):
         return len(self._indices)
