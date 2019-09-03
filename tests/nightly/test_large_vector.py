@@ -170,6 +170,12 @@ def test_topk():
     assert val.sum() == (LARGE_X - 1)
 
 
+def test_mean():
+    a = nd.arange(-LARGE_X / 2, LARGE_X / 2 + 1, dtype=np.int64)
+    b = nd.mean(a, axis=0)
+    assert b == 0
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
