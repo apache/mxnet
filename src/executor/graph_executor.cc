@@ -1986,9 +1986,10 @@ Executor *Executor::SimpleBind(nnvm::Symbol symbol,
   }
   if (!init) {
     // init without subgraph
-    exec->Init(symbol, default_ctx, group2ctx, in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes,
-               arg_shape_map, arg_dtype_map, arg_stype_map, grad_req_types, shared_arg_names,
-               in_args, arg_grads, aux_states, shared_buffer, shared_exec);
+    exec->Init(symbol.Copy(), default_ctx, group2ctx, in_arg_ctxes, arg_grad_ctxes,
+               aux_state_ctxes, arg_shape_map, arg_dtype_map, arg_stype_map,
+               grad_req_types, shared_arg_names, in_args, arg_grads, aux_states,
+               shared_buffer, shared_exec);
   }
   return exec;
 }

@@ -225,9 +225,9 @@ using FCreateOpState = std::function<OpStatePtr (const NodeAttrs& attrs,
  *        This enables certain optimizations
  *        like common expression elimination.
  *
- * \note Register under "FHasDeterministicOutput"
+ * \note Register under "THasDeterministicOutput"
  */
-using FHasDeterministicOutput = bool;
+using THasDeterministicOutput = bool;
 
 /*!
  * \brief Execution mode of this operator.

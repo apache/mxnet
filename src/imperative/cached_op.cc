@@ -94,7 +94,7 @@ struct CachedOp::CachedOpState {
 };
 
 CachedOp::CachedOp(
-    const nnvm::Symbol& sym,
+    const nnvm::Symbol& symbol,
     const std::vector<std::pair<std::string, std::string> >& flags) {
   using namespace nnvm;
   using namespace imperative;
@@ -107,6 +107,7 @@ CachedOp::CachedOp(
     CHECK(config_.static_alloc) << "static_alloc must be True when static_shape is True";
   }
 
+  nnvm::Symbol sym = symbol.Copy();
   // construct forward graph
   {
     NodeEntryMap<size_t> dedup_out;
@@ -126,6 +127,7 @@ CachedOp::CachedOp(
         fwd_graph_.outputs.push_back(nodeEntry);
       }
     }
+
     fwd_graph_ = exec::EliminateCommonExpr(std::move(fwd_graph_));
 
     const auto& idx = fwd_graph_.indexed_graph();

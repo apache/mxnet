@@ -223,6 +223,7 @@ If the argument `reverse` is set to 1, then the special values are inferred from
   [](const NodeAttrs& attrs){
     return std::vector<bool>{true};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .add_argument("data", "NDArray-or-Symbol", "Input data to reshape.")
 .add_arguments(ReshapeParam::__FIELDS__());
 
@@ -314,6 +315,7 @@ Example::
   [](const NodeAttrs& attrs){
     return std::vector<bool>{true};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .add_argument("data", "NDArray-or-Symbol", "Input array.");
 
 #if MXNET_USE_MKLDNN == 1
@@ -518,6 +520,7 @@ Example::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FInferStorageType>("FInferStorageType", SliceForwardInferStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice"})
 .set_attr<FCompute>("FCompute<cpu>", SliceOpForward<cpu>)
@@ -922,6 +925,7 @@ Examples::
 [](const NodeAttrs& attrs) {
   return std::vector<ResourceRequest> {ResourceRequest::kTempSpace};
 })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", ReverseOpForward<cpu>)
@@ -1032,7 +1036,7 @@ NNVM_REGISTER_OP(depth_to_space)
 .describe(R"code(Rearranges(permutes) data from depth into blocks of spatial data.
 Similar to ONNX DepthToSpace operator:
 https://github.com/onnx/onnx/blob/master/docs/Operators.md#DepthToSpace.
-The output is a new tensor where the values from depth dimension are moved in spatial blocks 
+The output is a new tensor where the values from depth dimension are moved in spatial blocks
 to height and width dimension. The reverse of this operation is ``space_to_depth``.
 
 .. math::
@@ -1043,7 +1047,7 @@ to height and width dimension. The reverse of this operation is ``space_to_depth
     y = reshape(x \prime \prime, [N, C / (block\_size ^ 2), H * block\_size, W * block\_size])
     \end{gather*}
 
-where :math:`x` is an input tensor with default layout as :math:`[N, C, H, W]`: [batch, channels, height, width] 
+where :math:`x` is an input tensor with default layout as :math:`[N, C, H, W]`: [batch, channels, height, width]
 and :math:`y` is the output tensor of layout :math:`[N, C / (block\_size ^ 2), H * block\_size, W * block\_size]`
 
 Example::
@@ -1076,6 +1080,7 @@ Example::
   [](const NodeAttrs& n) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"space_to_depth"})
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(DepthToSpaceParam::__FIELDS__());
@@ -1083,9 +1088,9 @@ Example::
 NNVM_REGISTER_OP(space_to_depth)
 .describe(R"code(Rearranges(permutes) blocks of spatial data into depth.
 Similar to ONNX SpaceToDepth operator:
-https://github.com/onnx/onnx/blob/master/docs/Operators.md#SpaceToDepth 
+https://github.com/onnx/onnx/blob/master/docs/Operators.md#SpaceToDepth
 
-The output is a new tensor where the values from height and width dimension are 
+The output is a new tensor where the values from height and width dimension are
 moved to the depth dimension. The reverse of this operation is ``depth_to_space``.
 
 .. math::
@@ -1096,7 +1101,7 @@ moved to the depth dimension. The reverse of this operation is ``depth_to_space`
     y = reshape(x \prime \prime, [N, C * (block\_size ^ 2), H / block\_size, W / block\_size])
     \end{gather*}
 
-where :math:`x` is an input tensor with default layout as :math:`[N, C, H, W]`: [batch, channels, height, width] 
+where :math:`x` is an input tensor with default layout as :math:`[N, C, H, W]`: [batch, channels, height, width]
 and :math:`y` is the output tensor of layout :math:`[N, C * (block\_size ^ 2), H / block\_size, W / block\_size]`
 
 Example::
@@ -1130,6 +1135,7 @@ Example::
   [](const NodeAttrs& n) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"depth_to_space"})
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(DepthToSpaceParam::__FIELDS__());
@@ -1217,6 +1223,7 @@ Example::
   [](const NodeAttrs& n) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_split_v2_backward"})
 .add_argument("data", "NDArray-or-Symbol", "The input")
 .add_arguments(SplitParam::__FIELDS__());

@@ -67,6 +67,7 @@ NNVM_REGISTER_OP(_np_sum)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_np_sum"});
 
 NNVM_REGISTER_OP(_backward_np_sum)
@@ -105,6 +106,7 @@ NNVM_REGISTER_OP(_np_max)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_np_max"});
 
 NNVM_REGISTER_OP(_backward_np_max)
@@ -132,6 +134,7 @@ return std::vector<std::string>{"a"};
 [](const NodeAttrs& attrs) {
 return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_np_min"});
 
 NNVM_REGISTER_OP(_backward_np_min)
@@ -158,6 +161,7 @@ NNVM_REGISTER_OP(_np_prod)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_np_prod"});
 
 NNVM_REGISTER_OP(_backward_np_prod)
@@ -211,6 +215,7 @@ NNVM_REGISTER_OP(_npi_mean)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_np_mean"});
 
 NNVM_REGISTER_OP(_backward_np_mean)
@@ -279,6 +284,7 @@ NNVM_REGISTER_OP(_npi_std)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 NNVM_REGISTER_OP(_npi_var)
@@ -306,6 +312,7 @@ NNVM_REGISTER_OP(_npi_var)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 bool NumpyBroadcastToShape(const nnvm::NodeAttrs& attrs,

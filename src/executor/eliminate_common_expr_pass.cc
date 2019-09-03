@@ -58,7 +58,7 @@ bool NodeEqual(const Node * n, const Node * m) {
 
   // If an op is marked explicitly as having deterministic output
   static auto& deterministic_output =
-    Op::GetAttr<FHasDeterministicOutput>("FHasDeterministicOutput");
+    Op::GetAttr<THasDeterministicOutput>("THasDeterministicOutput");
   if (deterministic_output.get(n->op(), false)) return true;
 
   // Stateful ops cannot be be equal to each other
