@@ -32,6 +32,7 @@
 #include <mutex>
 #include <string>
 #include <vector>
+#include <map>
 
 namespace tvm {
 namespace runtime {
@@ -71,6 +72,79 @@ class TVMOpModule {
   std::mutex mutex_;
   std::shared_ptr<Module> module_ptr_;
 };
+
+class OtherOptionEntity {
+ public:
+  explicit OtherOptionEntity(int val): val(val) {}
+  OtherOptionEntity(): val(0) {}
+  inline int get_val() const {
+    return val;
+  }
+ private:
+  int val;
+};
+
+class OtherOptionSpace {
+ public:
+  explicit OtherOptionSpace(const std::vector<int>& entities) {
+    int size = entities.size();
+    for (int i = 0; i < size; ++i) {
+      this->entities.push_back(OtherOptionEntity(entities[i]));
+    }
+  }
+
+  OtherOptionSpace() {}
+
+  inline OtherOptionEntity &operator[] (int idx) {
+    return entities[idx];
+  }
+
+  inline const OtherOptionEntity &operator[] (int idx) const {
+    return entities[idx];
+  }
+
+  inline int size() const {
+    return entities.size();
+  }
+
+ private:
+  std::vector<OtherOptionEntity> entities;
+};
+
+class TVMOpConfig {
+ public:
+  std::string name;
+
+  inline TVMOpConfig& add_space(const std::string& name, const std::vector<int>& val) {
+    int size = val.size();
+    space_map[name] = OtherOptionSpace(val);
+    weight_map[name] = weight_acc;
+    weight_acc *= size;
+    return *this;
+  }
+  inline TVMOpConfig& add_entity(const std::string& name, const int val) {
+    _entity_map[name] = OtherOptionEntity(val);
+    return *this;
+  }
+
+  TVMOpConfig(): weight_acc(1) {}
+
+  inline const OtherOptionSpace& get_space(const std::string& name) const {
+    return space_map.at(name);
+  }
+
+  inline int get_weight(const std::string& name) const {
+    return weight_map.at(name);
+  }
+
+ private:
+  std::map<std::string, OtherOptionEntity> _entity_map;
+  std::map<std::string, OtherOptionSpace> space_map;
+  std::map<std::string, int> weight_map;
+  int weight_acc;
+};
+
+const TVMOpConfig& GetOpConfig(const std::string& name);
 
 }  // namespace runtime
 }  // namespace tvm

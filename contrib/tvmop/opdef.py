@@ -17,6 +17,7 @@
 
 # coding: utf-8
 import tvm
+from tvm import autotvm
 from itertools import product
 
 __OP_DEF__ = []
@@ -47,7 +48,7 @@ class OpDef:
          without considering whether dimension size equals to one.
          TVM maps buffer[i][j][k] -> buffer[i][0][k] if dimension i's shape equals 1.
     """
-    def __init__(self, func, name, target, auto_broadcast, **kwargs):
+    def __init__(self, func, name, target, auto_broadcast, dispatch, **kwargs):
         # construct the value combination of the arguments
         # e.g., ldtype=["float32", "int32"], rdtype=["float16", "int16"]
         # arg_combination = [
@@ -68,6 +69,7 @@ class OpDef:
         self.name = name
         self.target = target
         self.auto_broadcast = auto_broadcast
+        self.dispatch = dispatch
 
     def __call__(self, *args, **kwargs):
         return self.func(*args, **kwargs)
@@ -89,7 +91,7 @@ class OpDef:
         return None
 
 
-def defop(name, target=None, auto_broadcast=False, **kwargs):
+def defop(name, target=None, auto_broadcast=False, dispatch=False, **kwargs):
     """Decorator to define a tvm operator.
     Parameters
     ----------
@@ -110,7 +112,7 @@ def defop(name, target=None, auto_broadcast=False, **kwargs):
     target = "cpu" if target is None else target
 
     def _defop(func):
-        opdef = OpDef(func, name, target, auto_broadcast, **kwargs)
+        opdef = OpDef(func, name, target, auto_broadcast, dispatch, **kwargs)
         __OP_DEF__.append(opdef)
         return opdef
     return _defop
