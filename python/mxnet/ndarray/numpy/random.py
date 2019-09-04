@@ -203,10 +203,10 @@ def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
     if isinstance(a, np_ndarray):
         if p is None:
             indices = _npi.choice(a, a=None, size=size, replace=replace, ctx=ctx, weighted=False)
-            return a[indices]
+            return _npi.take(a, indices)
         else:
             indices = _npi.choice(a, p, a=None, size=size, replace=replace, ctx=ctx, weighted=True)
-            return a[indices]
+            return _npi.take(a, indices)
     else:
         if p is None:
             return _npi.choice(a=a, size=size, replace=replace, ctx=ctx, weighted=False)

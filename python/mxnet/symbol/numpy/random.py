@@ -190,3 +190,26 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
         raise NotImplementedError('np.random.normal only supports loc and scale of '
                                   'numeric types for now')
     return _npi.random_normal(loc, scale, shape=size, dtype=dtype, ctx=ctx, out=out, **kwargs)
+
+
+def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
+    from ._symbol import _Symbol as np_symbol
+    if ctx is None:
+        ctx = current_context()
+    if out is not None:
+        size = out.shape
+    if size == ():
+        size = None
+
+    if isinstance(a, np_symbol):
+        if p is None:
+            indices = _npi.choice(a, a=None, size=size, replace=replace, ctx=ctx, weighted=False)
+            return _npi.take(a, indices)
+        else:
+            indices = _npi.choice(a, p, a=None, size=size, replace=replace, ctx=ctx, weighted=True)
+            return _npi.take(a, indices)
+    else:
+        if p is None:
+            return _npi.choice(a=a, size=size, replace=replace, ctx=ctx, weighted=False)
+        else:
+            return _npi.choice(p, a=a, size=size, replace=replace, ctx=ctx, weighted=True)  

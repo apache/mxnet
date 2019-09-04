@@ -17,10 +17,8 @@ namespace op {
 
 struct NumpyChoiceParam: public dmlc::Parameter<NumpyChoiceParam> {
     dmlc::optional<int64_t> a;
-    // int64_t a;
     std::string ctx;
     dmlc::optional<mxnet::Tuple<int64_t>> size;
-    // int64_t size;
     bool replace;
     bool weighted;
     DMLC_DECLARE_PARAMETER(NumpyChoiceParam) {
@@ -43,7 +41,6 @@ inline bool NumpyChoiceOpType(const nnvm::NodeAttrs &attrs,
 inline bool NumpyChoiceOpShape(const nnvm::NodeAttrs &attrs,
                                std::vector<TShape> *in_attrs,
                                std::vector<TShape> *out_attrs) {
-  // begin
   const NumpyChoiceParam &param = nnvm::get<NumpyChoiceParam>(attrs.parsed);
   int64_t a;
   if (param.size.has_value()) {
@@ -72,9 +69,7 @@ namespace mxnet_op {
 struct generate_samples {
   MSHADOW_XINLINE static void Map(index_t i, int64_t k,
                                   unsigned *rands) {
-    // printf("%d:%u,%d\n", i, rands[i], k);
     rands[i] = rands[i] % (i + k + 1);
-    // printf("sample[%d]:%u\n", i, rands[i]);
   }
 };
 
@@ -85,10 +80,7 @@ struct generate_reservoir {
                                   int64_t nb_iterations, int64_t k) {
     for (int64_t i = 0; i < nb_iterations; i++) {
       int64_t z = samples[i];
-      // printf("z:%d\n", z);
-      // printf("k:%d\n", k);
       if (z < k) {
-        // _swap<xpu>(indices[z], indices[i + k]);
         int64_t t = indices[z];
         indices[z] = indices[i + k];
         indices[i + k] = t;
@@ -129,28 +121,6 @@ struct categorical_sampling {
 
 }  // namespace mxnet_op
 
-
-template <typename xpu>
-void weighted_reservoir_sampling() {
-
-}
-
-template <typename xpu>
-void reservoir_sampling() {
-  // allocate
-}
-
-template <typename xpu>
-void sampling_with_replacement() {
-
-}
-
-template <typename xpu>
-void weighted_sampling_with_replacement() {
-
-}
-
-
 template <typename xpu>
 void NumpyChoiceForward(const nnvm::NodeAttrs &attrs,
                          const OpContext &ctx,
@@ -173,7 +143,6 @@ void NumpyChoiceForward(const nnvm::NodeAttrs &attrs,
     weight_index += 1;
   }
   int64_t output_size = outputs[0].Size();
-  // printf("%p\n", workspace_ptr);
   if (weighted) {
     Random<xpu, float> *prnd = ctx.requested[0].get_random<xpu, float>(s);
     int64_t random_tensor_size = replace ? output_size : input_size;
@@ -245,7 +214,7 @@ void NumpyChoiceForward(const nnvm::NodeAttrs &attrs,
       int64_t split = input_size - nb_iterations;
       Kernel<generate_samples, xpu>::Launch(s, random_tensor_size, split,
                                             random_numbers.dptr_);
-      // reservoir sampling
+      // Reservoir sampling.
       Kernel<generate_reservoir<xpu>, xpu>::Launch(
           s, 1, indices.dptr_, random_numbers.dptr_, nb_iterations, split);
       index_t begin;

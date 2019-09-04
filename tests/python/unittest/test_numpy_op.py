@@ -1650,38 +1650,99 @@ def test_np_cumsum():
 @with_seed()
 @use_np
 def test_np_choice():
-    
-    def test_sample_with_replacement(num_classes, shape, weight=None):
-        samples = np.random.choice(num_classes, shape, p=weight)
-        generated_density = np.histogram(samples, np.arange(num_classes + 1), density=True)
-        expected_density = (weight if weight is not None else
-                            np.array([1 / num_classes] * num_classes))
+    class TestUniformChoice(HybridBlock):
+        def __init__(self, sample_size, replace):
+            super(TestUniformChoice, self).__init__()
+            self.sample_size = sample_size
+            self.replace = replace
+
+        def hybrid_forward(self, F, a):
+            # op = getattr(F.np.random, "choice", None)
+            # return a + op(size=self.sample_size, replace=self.replace)
+            return F.np.random.choice(a=a, size=self.sample_size, replace=self.replace, p=None)
+
+    class TestWeightedChoice(HybridBlock):
+        def __init__(self, sample_size, replace):
+            super(TestWeightedChoice, self).__init__()
+            self.sample_size = sample_size
+            self.replace = replace
+        
+        def hybrid_forward(self, F, a, p):
+            op = getattr(F.np.random, "choice", None)
+            return F.np.random.choice(a, self.sample_size, self.replace, p)
+
+    def test_sample_with_replacement(sampler, num_classes, shape, weight=None):
+        samples = sampler(num_classes, shape, replace=True, p=weight).asnumpy()
+        generated_density = _np.histogram(samples, _np.arange(num_classes + 1), density=True)[0]
+        expected_density = (weight.asnumpy() if weight is not None else
+                            _np.array([1 / num_classes] * num_classes))
         # test almost equal
-        print(generated_density[0] - expected_density)
+        assert_almost_equal(generated_density, expected_density, rtol=1e-1, atol=1e-2)
         # test shape
         assert (samples.shape == shape)
 
-    def test_sample_without_replacement(num_classes, shape, num_trials, weight=None):
-        samples = np.random.choice(num_classes, shape, replace=False, p=weight)
+    def test_sample_without_replacement(sampler, num_classes, shape, num_trials, weight=None):
+        samples = sampler(num_classes, shape, replace=False, p=weight).asnumpy()
         # Check shape and uniqueness
         assert samples.shape == shape
-        assert len(np.unique(samples)) == samples.size
+        assert len(_np.unique(samples)) == samples.size
         # Check distribution
-        bins = np.zeros((num_classes))
-        expected_freq = (weight if weight is not None else
-                         np.array([1 / num_classes] * num_classes))
+        bins = _np.zeros((num_classes))
+        expected_freq = (weight.asnumpy() if weight is not None else
+                         _np.array([1 / num_classes] * num_classes))
         for i in range(num_trials):
-            out = np.random.choice(num_classes, 1, replace=False, p=weight)
+            out = sampler(num_classes, 1, replace=False, p=weight).item()
             bins[out] += 1
         bins /= num_trials
-        print(bins - expected_freq)
-        # assert_almost_equal(bins, expected_freq)
-    ctx = n
-    num_classes = 20
-    num_samples = 10 ** 5
-    # Sample with replacement:
+        assert_almost_equal(bins, expected_freq, rtol=1e-1, atol=1e-2)
+
+    def test_indexing_mode(sampler, set_size, samples_size, replace, weight=None):
+        a = np.arange(set_size)
+        if weight is not None:
+            samples = sampler(a, p)
+        else:
+            samples = sampler(a)
+        assert len(samples) == samples_size
+        if not replace:
+            assert len(_np.unique(samples)) == samples_size
+        
+    num_classes = 10
+    num_samples = 10 ** 8
+    # for hybridize in [True, False]:
+    # test sample with replacement
+    shape_list1 = [
+        (10 ** 8, 1),
+        (10 ** 5, 10 ** 3),
+        (10 ** 2, 10 ** 3, 10 ** 3)
+    ]
+    for shape in shape_list1:
+        test_sample_with_replacement(np.random.choice, num_classes, shape)
+        weight = np.array(_np.random.dirichlet([1.0] * num_classes))
+        test_sample_with_replacement(np.random.choice, num_classes, shape, weight)
     
-    # Sample without replacment:
+    shape_list2 = [
+        (6, 1),
+        (2, 3),
+        (1, 2, 3),
+        (2, 2),
+    ]
+    # for shape in shape_list2:
+    #     test_sample_without_replacement(np.random.choice, num_classes, shape, 10 ** 5)
+    #     weight = np.array(_np.random.dirichlet([1.0] * num_classes))
+    #     test_sample_without_replacement(np.random.choice, num_classes, shape, 10 ** 5, weight)
+    
+    # Test hypridize mode:
+    for hybridize in [True, False]:
+        for replace in [True, False]:
+            test_choice = TestUniformChoice(num_classes // 2, replace)
+            if hybridize:
+                test_choice.hybridize()
+            weight = np.array(_np.random.dirichlet([1.0] * num_classes))
+            test_indexing_mode(test_choice, num_classes, num_classes // 2, None)
+
+
+    
+
 
 if __name__ == '__main__':
     import nose
