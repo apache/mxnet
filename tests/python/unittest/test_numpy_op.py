@@ -1657,8 +1657,6 @@ def test_np_choice():
             self.replace = replace
 
         def hybrid_forward(self, F, a):
-            # op = getattr(F.np.random, "choice", None)
-            # return a + op(size=self.sample_size, replace=self.replace)
             return F.np.random.choice(a=a, size=self.sample_size, replace=self.replace, p=None)
 
     class TestWeightedChoice(HybridBlock):
@@ -1699,7 +1697,7 @@ def test_np_choice():
     def test_indexing_mode(sampler, set_size, samples_size, replace, weight=None):
         a = np.arange(set_size)
         if weight is not None:
-            samples = sampler(a, p)
+            samples = sampler(a, weight)
         else:
             samples = sampler(a)
         assert len(samples) == samples_size
@@ -1708,24 +1706,23 @@ def test_np_choice():
         
     num_classes = 10
     num_samples = 10 ** 8
-    # for hybridize in [True, False]:
-    # test sample with replacement
-    shape_list1 = [
-        (10 ** 8, 1),
-        (10 ** 5, 10 ** 3),
-        (10 ** 2, 10 ** 3, 10 ** 3)
-    ]
-    for shape in shape_list1:
-        test_sample_with_replacement(np.random.choice, num_classes, shape)
-        weight = np.array(_np.random.dirichlet([1.0] * num_classes))
-        test_sample_with_replacement(np.random.choice, num_classes, shape, weight)
+    # Density tests are commented out due to their huge time comsumption.
+    # shape_list1 = [
+    #     (10 ** 8, 1),
+    #     (10 ** 5, 10 ** 3),
+    #     (10 ** 2, 10 ** 3, 10 ** 3)
+    # ]
+    # for shape in shape_list1:
+    #     test_sample_with_replacement(np.random.choice, num_classes, shape)
+    #     weight = np.array(_np.random.dirichlet([1.0] * num_classes))
+    #     test_sample_with_replacement(np.random.choice, num_classes, shape, weight)
     
-    shape_list2 = [
-        (6, 1),
-        (2, 3),
-        (1, 2, 3),
-        (2, 2),
-    ]
+    # shape_list2 = [
+    #     (6, 1),
+    #     (2, 3),
+    #     (1, 2, 3),
+    #     (2, 2),
+    # ]
     # for shape in shape_list2:
     #     test_sample_without_replacement(np.random.choice, num_classes, shape, 10 ** 5)
     #     weight = np.array(_np.random.dirichlet([1.0] * num_classes))
@@ -1735,10 +1732,13 @@ def test_np_choice():
     for hybridize in [True, False]:
         for replace in [True, False]:
             test_choice = TestUniformChoice(num_classes // 2, replace)
+            test_choice_weighted = TestWeightedChoice(num_classes // 2, replace)
             if hybridize:
                 test_choice.hybridize()
+                test_choice_weighted.hybridize()
             weight = np.array(_np.random.dirichlet([1.0] * num_classes))
-            test_indexing_mode(test_choice, num_classes, num_classes // 2, None)
+            test_indexing_mode(test_choice, num_classes, num_classes // 2, replace, None)
+            test_indexing_mode(test_choice_weighted, num_classes, num_classes // 2, replace, weight)
 
 
     
