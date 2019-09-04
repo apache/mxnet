@@ -29,6 +29,9 @@ from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
 from mxnet.ndarray.ndarray import py_slice
 from mxnet.base import integer_types
 import scipy.stats as ss
+from mxnet.runtime import Features
+
+_features = Features()
 
 
 @with_seed()
@@ -187,7 +190,6 @@ def test_np_ndarray_binary_element_wise_ops():
         '+': _np.add,
         '*': _np.multiply,
         '-': _np.subtract,
-        '/': _np.divide,
         'mod': _np.mod,
         'pow': _np.power,
         '==': _np.equal,
@@ -196,6 +198,8 @@ def test_np_ndarray_binary_element_wise_ops():
         '<': _np.less,
         '<=': _np.less_equal
     }
+    if _features.is_enabled("TVM_OP"):
+        np_op_map['/'] = _np.divide
 
     def get_np_ret(x1, x2, op):
         return np_op_map[op](x1, x2)

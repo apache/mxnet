@@ -78,7 +78,8 @@ class OpDef:
                 sch, args = self.func(**each_kwargs)
                 name = self.name \
                     + ''.join(["{}_{}".format(key, each_kwargs[key]) for key in self.attrs]) \
-                    + ''.join(["%s_%d" % (arg.dtype, len(arg.shape)) for arg in args])
+                    + ''.join(["%s_%d" % (arg.dtype, len(arg.shape))
+                               for arg in args if hasattr(arg, 'shape')])
                 yield sch, args, name
 
     def get_binds(self, args):

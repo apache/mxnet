@@ -22,20 +22,22 @@
  * \file np_true_divide.cu
  * \brief GPU Implementation of true_divide operator.
  */
-#include "../tensor/elemwise_binary_broadcast_op.h"
-#include "../tensor/elemwise_binary_scalar_op.h"
+#include "np_true_divide.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_true_divide)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::div>);
+NNVM_REGISTER_OP(_backward_true_divide)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseInFloat<gpu, mshadow_op::div_grad,
+                                                                       mshadow_op::div_rgrad>);
 
-NNVM_REGISTER_OP(_npi_true_divide_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::div>);
+NNVM_REGISTER_OP(_backward_true_divide_scalar)
+.set_attr<FCompute>("FCompute<gpu>",
+                    BinaryScalarOpComputeFloat<gpu, mshadow_op::div>);
 
-NNVM_REGISTER_OP(_npi_rtrue_divide_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::rdiv>);
+NNVM_REGISTER_OP(_backward_rtrue_divide_scalar)
+.set_attr<FCompute>("FCompute<gpu>",
+                    BinaryScalarOpBackwardFloat<gpu, mshadow_op::rdiv_grad>);
 
 }  // namespace op
 }  // namespace mxnet

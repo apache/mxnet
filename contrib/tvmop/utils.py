@@ -20,6 +20,7 @@ import tvm
 
 AllTypes = ["float32", "float64", "float16", "uint8", "int8", "int32", "int64"]
 RealTypes = ["float32", "float64", "float16"]
+AllTypesButHalf = ["float32", "float64", "uint8", "int8", "int32", "int64"]
 
 def assign_by_req(a, req):
     b = tvm.placeholder(a.shape, name='assign_by_req_b', dtype=a.dtype)
