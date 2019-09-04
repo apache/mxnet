@@ -266,6 +266,7 @@ MSHADOW_XINLINE void Transpose2D(DType *in, DType *out, index_t shape_0, index_t
 index_t blocksize = 4;
 index_t n = shape_0;
 index_t p = shape_1;
+#pragma omp parallel for
 for (index_t i = 0; i < n; i += blocksize) {
     for (index_t j = 0; j < p; ++j) {
         // transpose the block
