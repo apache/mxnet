@@ -775,8 +775,6 @@ build_ubuntu_cpu_large_tensor() {
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=OFF                          \
         -DUSE_CUDNN=OFF                         \
-        -DUSE_TVM_OP=ON                         \
-        -DPython3_EXECUTABLE=/usr/bin/python3   \
         -DUSE_MKLDNN=OFF                        \
         -DCMAKE_BUILD_TYPE=Release              \
         -DUSE_INT64_TENSOR_SIZE=ON              \
