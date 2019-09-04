@@ -269,12 +269,14 @@ index_t p = shape_1;
 
 for (index_t i = 0; i < n; i += blocksize) {
   #pragma omp parallel for
-    for (index_t j = 0; j < p; ++j) {
+    for (index_t j = 0; j < p; j += blocksize) {
         // transpose the block
         #pragma unroll 4
-        for(index_t b = 0; b < blocksize && i + b < n; ++b) {
-                out[j*n + i + b] = in[(i + b)*p + j];
-            }
+        for (index_t a = 0; a < blocksize && j + a < n; ++a) {
+          for (index_t b = 0; b < blocksize && i + b < n; ++b) {
+                  out[(j + a) * n + i + b] = in[(i + b) * p + (j + a)];
+              }
+        }
     }
 }
 }
