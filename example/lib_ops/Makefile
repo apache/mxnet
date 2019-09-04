@@ -15,8 +15,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
-all:
+all: warpctc_lib subgraph_lib
+
+warpctc_lib:
 	g++ -shared -fPIC -std=gnu++0x mylib.cc -o mylib.so -I ../../include/mxnet
+
+subgraph_lib:
+	g++ -shared -fPIC -std=gnu++0x subgraph_lib.cc -o subgraph_lib.so -I ../../include/mxnet
 
 test:
 	g++ -std=c++11 -O3 -o libtest libtest.cc -ldl -I ../../include/mxnet

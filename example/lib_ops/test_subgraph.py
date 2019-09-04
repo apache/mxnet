@@ -26,30 +26,25 @@
 import mxnet as mx
 import os
 
-#load library
+# load library
 if (os.name=='posix'):
-    path = os.path.abspath('mylib.so')
+    path = os.path.abspath('subgraph_lib.so')
     mx.library.load(path)
 elif (os.name=='nt'):
-    path = os.path.abspath('mylib.so')
+    path = os.path.abspath('subgraph_lib.so')
     mx.library.load(path)
 
-#setup inputs to call test operator
+# setup inputs to call test operator
 a = mx.nd.array([[1,2],[3,4]])
 b = mx.nd.array([[5,6],[7,8]])
 
-#print inputs
-print(a)
-print(b)
-print('--------------')
+# imperative compute and print output
+print(mx.nd.subgraph_op(a,b))
 
-#compute and print output
-print(mx.nd.gemm(a,b))
-
-# symbol api
+# symbolic compute
 s = mx.sym.Variable('s')
 t = mx.sym.Variable('t')
-c = mx.sym.warpctc(s,t)
-exe = c.bind(ctx=mx.cpu(),args={'s':a,'t':b})
+c = mx.sym.subgraph_op(s,t)
+exe = c.bind(ctx=mx.cpu(),args={'s':a},aux_states={'t':b})
 out = exe.forward()
 print(out)

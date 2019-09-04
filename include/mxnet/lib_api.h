@@ -48,11 +48,17 @@ enum MXDType {
   kInt64 = 6,
 };
 
+enum MXReturnValue {
+  MX_FAIL = 0,
+  MX_SUCCESS = 1,
+};
+
 /*!
  * \brief External Tensor data structure
  */
 struct MXTensor {
-  MXTensor() { data = nullptr; }
+  MXTensor() : data(nullptr) {}
+
   MXTensor(void *data, const std::vector<int64_t> &shape, MXDType dtype)
   : data{data}, shape{shape}, dtype{dtype} {}
 
@@ -92,11 +98,6 @@ class OpResource {
   void* _xpu_malloc;
 };
 
-enum MXReturnValue {
-  MX_FAIL = 0,
-  MX_SUCCESS = 1,
-};
-
 /*!
  * Custom Operator function templates
  */
@@ -110,6 +111,8 @@ typedef MXReturnValue (*inferType_t)(std::map<std::string, std::string>,
 typedef MXReturnValue (*inferShape_t)(std::map<std::string, std::string>,
                                       std::vector<std::vector<unsigned int>>&,
                                       std::vector<std::vector<unsigned int>>&);
+typedef MXReturnValue (*mutateInputs_t)(std::map<std::string, std::string>,
+                                      std::vector<int>&);
 
 /*!
  * \brief Class to hold custom operator registration
@@ -117,7 +120,8 @@ typedef MXReturnValue (*inferShape_t)(std::map<std::string, std::string>,
 class CustomOp {
  public:
   explicit CustomOp(const char* op_name) : name(op_name), fcompute(nullptr),
-    parse_attrs(nullptr), infer_type(nullptr), infer_shape(nullptr) {}
+    parse_attrs(nullptr), infer_type(nullptr), infer_shape(nullptr),
+    mutate_inputs(nullptr) {}
   ~CustomOp() {}
   CustomOp& setFCompute(fcomp_t fcomp) {
     fcompute = fcomp;
@@ -135,6 +139,10 @@ class CustomOp {
     infer_shape = func;
     return *this;
   }
+  CustomOp& setMutateInputs(mutateInputs_t func) {
+    mutate_inputs = func;
+    return *this;
+  }
   /*! \brief operator name */
   const char* name;
   /*! \brief operator functions */
@@ -142,6 +150,7 @@ class CustomOp {
   parseAttrs_t parse_attrs;
   inferType_t infer_type;
   inferShape_t infer_shape;
+  mutateInputs_t mutate_inputs;
 };
 
 /*!
@@ -210,13 +219,15 @@ class Registry {
 #define REGISTER_OP(Name) _STR_CONCAT(_REGISTER_DEF_(Name), __COUNTER__) = \
     Registry<CustomOp>::get()->add(TOSTRING(Name))
 
+/*
+ * -------------- BELOW FUNCTIONS ARE USED IN MXNET BACKEND ---------------
+ */
 
 /*!
- * \brief Following are the APIs implemented in the external library
+ * \brief Following are the C type APIs implemented in the external library
  * Each API has a #define string that is used to lookup the function in the library
  * Followed by the function declaration
  */
-
 
 #define MXLIB_OPREGSIZE_STR "_opRegSize"
 typedef int (*opRegSize_t)(void);
@@ -224,7 +235,7 @@ typedef int (*opRegSize_t)(void);
 #define MXLIB_OPREGGET_STR "_opRegGet"
 typedef int (*opRegGet_t)(int, const char**, fcomp_t*,
                           parseAttrs_t*, inferType_t*,
-                          inferShape_t*);
+                          inferShape_t*, mutateInputs_t*);
 
 #define MXLIB_OPCALLFREE_STR "_opCallFree"
 typedef int (*opCallFree_t)(void*);
@@ -247,6 +258,10 @@ typedef int (*opCallFComp_t)(fcomp_t, const char* const*, const char* const*, in
                              const int64_t**, int*, void**, int*, int,
                              const int64_t**, int*, void**, int*, int,
                              xpu_malloc_t, void*);
+
+#define MXLIB_OPCALLMUTATEINPUTS_STR "_opCallMutateInputs"
+typedef int (*opCallMutateInputs_t)(mutateInputs_t, const char* const*, const char* const*, int,
+                                    int**, int*);
 
 #define MXLIB_INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int);
@@ -289,13 +304,14 @@ extern "C" {
 #endif
   _opRegGet(int idx, const char** name, fcomp_t* fcomp,
             parseAttrs_t* parse, inferType_t* type,
-            inferShape_t* shape) {
+            inferShape_t* shape, mutateInputs_t* mutate) {
     CustomOp op = Registry<CustomOp>::get()->get(idx);
     *name = op.name;
     *fcomp = op.fcompute;
     *parse = op.parse_attrs;
     *type = op.infer_type;
     *shape = op.infer_shape;
+    *mutate = op.mutate_inputs;
   }
 
   /*!
@@ -464,6 +480,39 @@ extern "C" {
     return fcomp(attrs, inputs, outputs, res);
   }
 
+  /*!
+   * \brief returns status of calling mutate inputs function for operator from library
+   */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) int __cdecl
+#else
+  int
+#endif
+  _opCallMutateInputs(mutateInputs_t mutate, const char* const* keys,
+                    const char* const* vals, int num,
+                    int** mutate_indices, int* indices_size) {
+    // create map of attributes from list
+    std::map<std::string, std::string> attrs;
+    for (int i = 0; i < num; i++) {
+      attrs[std::string(keys[i])] = std::string(vals[i]);
+    }
+
+    // create a vector of mutate input indices
+    std::vector<int> mut_ind;
+
+    int retval = mutate(attrs, mut_ind);
+    if (!retval)
+      return retval;
+
+    // output the input indices
+    *indices_size = mut_ind.size();
+    *mutate_indices = static_cast<int*>(malloc (*indices_size * sizeof(int)));
+    for (int i = 0; i < *indices_size; i++) {
+      (*mutate_indices)[i] = mut_ind[i];
+    }
+
+    return retval;
+  }
   /*!
    * \brief Checks if the MXNet version is supported by the library.
    * If supported, initializes the library.
