@@ -238,7 +238,7 @@ class Registry {
 typedef int (*opRegSize_t)(void);
 
 #define MXLIB_OPREGGET_STR "_opRegGet"
-typedef int (*opRegGet_t)(int, const char**, fcomp_t*,
+typedef int (*opRegGet_t)(int, const char**, fcomp_t*, fcomp_t*,
                           parseAttrs_t*, inferType_t*,
                           inferShape_t*, mutateInputs_t*);
 
@@ -307,12 +307,13 @@ extern "C" {
 #else
   void
 #endif
-  _opRegGet(int idx, const char** name, fcomp_t* fcomp,
+  _opRegGet(int idx, const char** name, fcomp_t* fcomp, fcomp_t* fgrad,
             parseAttrs_t* parse, inferType_t* type,
             inferShape_t* shape, mutateInputs_t* mutate) {
     CustomOp op = Registry<CustomOp>::get()->get(idx);
     *name = op.name;
     *fcomp = op.fcompute;
+    *fgrad = op.fgradient;
     *parse = op.parse_attrs;
     *type = op.infer_type;
     *shape = op.infer_shape;
