@@ -249,7 +249,7 @@ int MXLoadLib(const char *path) {
 
       return num_in + num_out;
     };
-    
+
     // lambda function to call infer shape
     auto infer_shape = [=] (const nnvm::NodeAttrs& attrs,
                             mxnet::ShapeVector *in_shape,
@@ -435,7 +435,7 @@ int MXLoadLib(const char *path) {
                               const std::vector<NDArray>& outputs) {
       return fcomp_lambda(fgrad_fp, attrs, ctx, inputs, req, outputs);
     };
-    
+
     // lambda function to convert from external mutate_inputs to internal MXNet types
     auto mutate_inputs = [=](const nnvm::NodeAttrs& attrs) {
       // convert attributes to vector of char*
@@ -520,7 +520,7 @@ int MXLoadLib(const char *path) {
       // optionally add fgradient if user specified a function
       if (fgrad_fp != nullptr) {
         std::string grad_name(std::string("_backward_") + name);
-        regOp.set_attr<nnvm::FGradient>("FGradient",GradStruct{grad_name.c_str()});
+        regOp.set_attr<nnvm::FGradient>("FGradient", GradStruct{grad_name.c_str()});
 
         nnvm::Op &gradOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(grad_name);
         gradOp.set_attr<nnvm::TIsBackward>("TIsBackward", true);
@@ -529,7 +529,7 @@ int MXLoadLib(const char *path) {
         gradOp.set_num_outputs(num_outputs);
         gradOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type);
         gradOp.set_attr<FResourceRequest>("FResourceRequest", resc_req);
-        gradOp.set_attr<FComputeEx>("FComputeEx<cpu>",gradient_lambda);
+        gradOp.set_attr<FComputeEx>("FComputeEx<cpu>", gradient_lambda);
       }
     } else {
       // overwrite registration of existing op with custom op
@@ -545,7 +545,7 @@ int MXLoadLib(const char *path) {
       // optionally add fgradient if user specified a function
       if (fgrad_fp != nullptr) {
         std::string grad_name(std::string("_backward_") + name);
-        regOp.set_attr<nnvm::FGradient>("FGradient",GradStruct{grad_name.c_str()}, 11);
+        regOp.set_attr<nnvm::FGradient>("FGradient", GradStruct{grad_name.c_str()}, 11);
 
         nnvm::Op &gradOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(grad_name);
         gradOp.set_attr<nnvm::TIsBackward>("TIsBackward", true, 11);
@@ -554,7 +554,7 @@ int MXLoadLib(const char *path) {
         gradOp.set_num_outputs(num_outputs);
         gradOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, 11);
         gradOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, 11);
-        gradOp.set_attr<FComputeEx>("FComputeEx<cpu>",gradient_lambda, 11);
+        gradOp.set_attr<FComputeEx>("FComputeEx<cpu>", gradient_lambda, 11);
       }
     }
     regOp.add_argument("data", "NDArray[]", "Source inputs");
