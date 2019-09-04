@@ -174,7 +174,7 @@ void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
                            const std::vector<int> &node_dtypes,
                            const int nvec,
                            const std::string &kernel_name,
-                           std::vector<int>* check_shapes) {
+                           std::vector<uint32_t>* check_shapes) {
   const auto& g = this->subgraph_.indexed_graph();
   std::string code = "";
   int temp_name_counter = 0;
@@ -223,12 +223,13 @@ void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
       } else {
         std::string op_name = source->op()->name;
         if (fusion::slice_ops.find(op_name) != fusion::slice_ops.end()) {
-          int arg_id = node.inputs[0].node_id;
-          const auto& shape = node_shapes[arg_id];
+          int node_id = node.inputs[0].node_id;
+          const uint32_t input_entry_id = g.entry_id(node.inputs[0]);
+          const auto& shape = node_shapes[input_entry_id];
           const int ndim = shape.ndim();
-          const auto& var_name = g[arg_id].source->attrs.name;
+          const auto& var_name = g[node_id].source->attrs.name;
           const auto vec_name = "vec_" + var_name + "_" + std::to_string(i);
-          load_index[arg_id] = 0;
+          load_index[node_id] = 0;
           auto parse_tuple = [](const std::string& input, const std::string def) {
             std::string out = input;
             replaceString(&out, "(", "{");
@@ -271,52 +272,18 @@ void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
           std::string begin;
           std::string end;
           if (op_name == "broadcast_like" || op_name == "slice_like") {
-            int like_id = node.inputs[1].node_id;
+            uint32_t like_id = g.entry_id(i, 0);
             begin = build_tuple(0, "0", "0");
-            std::string end_var_name;
             std::string extra_var_name = "extra_" + std::to_string(like_id) + "_shape";
             if (std::find(extra_shape_args_.begin(), extra_shape_args_.end(), like_id) ==
                 extra_shape_args_.end()) {
                 extra_shape_args_.push_back(like_id);
             }
-            if (op_name == "slice_like") {
-                if (source->attrs.dict.count("axes") == 0) {
-                    end_var_name = extra_var_name;
-                    if (check_shapes) {
-                      check_shapes->push_back(like_id);
-                      check_shapes->push_back(arg_id);
-                    }
-                } else {
-                    std::string axes = source->attrs.dict.at("axes");
-                    end_var_name = build_string_end(&code);
-                    for (auto ax : splitStringToVector(axes, "")) {
-                        std::string axis = build_string_axis(ax);
-                        code += end_var_name + "["+axis+"] = " +
-                                extra_var_name + "["+axis+"];\n";
-                    }
-                }
-            } else {
-                if (source->attrs.dict.count("lhs_axes") == 0) {
-                    end_var_name = extra_var_name;
-                    if (check_shapes) {
-                      check_shapes->push_back(like_id);
-                      check_shapes->push_back(arg_id);
-                    }
-                } else {
-                    std::string lhs_axes = source->attrs.dict.at("lhs_axes");
-                    std::string rhs_axes = source->attrs.dict.at("rhs_axes");
-                    end_var_name = build_string_end(&code);
-                    std::vector<int> v_lhs_axes = splitStringToVector(lhs_axes, "");
-                    std::vector<int> v_rhs_axes = splitStringToVector(rhs_axes, "");
-                    for (size_t i = 0; i < v_lhs_axes.size(); i++) {
-                        std::string lhs_axis = build_string_axis(v_lhs_axes[i]);
-                        std::string rhs_axis = build_string_axis(v_rhs_axes[i]);
-                        code += end_var_name + "["+lhs_axis+"] = " +
-                                extra_var_name + "["+rhs_axis+"];\n";
-                    }
-                }
+            if (check_shapes) {
+              check_shapes->push_back(like_id);
+              check_shapes->push_back(input_entry_id);
             }
-            end = end_var_name;
+            end = extra_var_name;
           } else {
             begin = parse_tuple(source->attrs.dict.at("begin"), "0");
             end = parse_tuple(source->attrs.dict.at("end"), "INT_MAX");
@@ -327,7 +294,7 @@ void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
             }
             if (check_shapes) {
               if (check_tuple(begin) && check_tuple(end)) {
-                check_shapes->push_back(arg_id);
+                check_shapes->push_back(input_entry_id);
               } else {
                 check_shapes_compile = false;
               }

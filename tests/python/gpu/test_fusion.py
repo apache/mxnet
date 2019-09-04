@@ -28,7 +28,8 @@ from common import with_seed
 def check_fused_symbol(sym, **kwargs):
     inputs = sym.list_inputs()
     shapes = {inp : kwargs[inp].shape for inp in inputs}
-    test_sym = mx.sym.Group([mx.sym.identity(s) for s in sym])
+    # Double identity so that there is always something to fuse
+    test_sym = mx.sym.Group([mx.sym.identity(mx.sym.identity(s)) for s in sym])
     rtol = {'float16' : 1e-2,
             'float32' : 1.5e-6,
             'float64' : 1.5e-6,
@@ -202,6 +203,14 @@ def check_other_ops():
            random.randint(begin[1]+1, shape[1]),
            random.randint(begin[2]+1, shape[2]))
     check_fused_symbol(mx.sym.slice(a, begin=begin, end=end), a=arr1)
+
+    arr1 = mx.random.uniform(shape=(2,3,4,5))
+    arr2 = mx.random.uniform(shape=(1,2,3))
+    check_fused_symbol(mx.sym.slice_like(a,b, axes=[-2, 0]), a=arr1, b=arr2)
+
+    arr1 = mx.random.uniform(shape=(1,1,2,3))
+    arr2 = mx.random.uniform(shape=(2,2,2,3))
+    check_fused_symbol(mx.sym.broadcast_like(a, b, lhs_axes=[0], rhs_axes=[0]), a=arr1, b=arr2)
 
 @with_seed()
 def test_fusion():
