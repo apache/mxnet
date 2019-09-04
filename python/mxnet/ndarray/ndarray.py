@@ -1053,17 +1053,15 @@ fixed-size items.
             if idx.dtype != idx_dtype:
                 idx = idx.astype(idx_dtype)
             return idx.as_in_context(ctx)
-
         elif isinstance(idx, (np.ndarray, list, tuple)):
             return array(idx, ctx, idx_dtype)
-
         elif isinstance(idx, integer_types):
             return array([idx], ctx, idx_dtype)
-
         elif isinstance(idx, py_slice):
             start, stop, step = idx.indices(ax_len)
             return arange(start, stop, step, ctx=ctx, dtype=idx_dtype)
-
+        elif sys.version_info[0] > 2 and isinstance(idx, range):
+            return arange(idx.start, idx.stop, idx.step, ctx=ctx, dtype=idx_dtype)
         else:
             raise RuntimeError('illegal index type {}'.format(type(idx)))
 
@@ -2888,6 +2886,7 @@ fixed-size items.
             lhs=self, rhs=value_nd, indices=indices, shape=self.shape, out=self
         )
 
+
 def indexing_key_expand_implicit_axes(key, shape):
     """Make implicit axes explicit by adding ``slice(None)``.
     Examples
@@ -2984,6 +2983,8 @@ def _is_advanced_index(idx):
         return True
     elif isinstance(idx, py_slice) or idx is None:
         return False
+    elif sys.version_info[0] > 2 and isinstance(idx, range):
+        return True
     else:
         raise RuntimeError('illegal index type {}'.format(type(idx)))
 
@@ -2995,7 +2996,8 @@ def get_indexing_dispatch_code(key):
     for idx in key:
         if isinstance(idx, (NDArray, np.ndarray, list, tuple)):
             return _NDARRAY_ADVANCED_INDEXING
-
+        elif sys.version_info[0] > 2 and isinstance(idx, range):
+            return _NDARRAY_ADVANCED_INDEXING
         elif not (isinstance(idx, (py_slice, integer_types)) or idx is None):
             raise ValueError(
                 'NDArray does not support slicing with key {} of type {}.'

@@ -243,11 +243,12 @@ def test_aggregate_stats_valid_json_return():
     debug_str = profiler.dumps(format = 'json')
     assert(len(debug_str) > 0)
     target_dict = json.loads(debug_str)
-    assert "Memory" in target_dict and "Time" in target_dict and "Unit" in target_dict
+    assert 'Memory' in target_dict and 'Time' in target_dict and 'Unit' in target_dict
     profiler.set_state('stop')
 
 def test_aggregate_stats_sorting():
-    sort_by_options = {'avg': "Avg", 'min': "Min", 'max': "Max", 'count': "Count"}
+    sort_by_options = {'total': 'Total', 'avg': 'Avg', 'min': 'Min',\
+        'max': 'Max', 'count': 'Count'}
     ascending_options = [False, True]
     def check_ascending(lst, asc):
         assert(lst == sorted(lst, reverse = not asc))
@@ -258,9 +259,11 @@ def test_aggregate_stats_sorting():
         for domain_name, domain in target_dict['Time'].items():
             lst = [item[sort_by_options[sort_by]] for item_name, item in domain.items()]
             check_ascending(lst, ascending)
-        for domain_name, domain in target_dict['Memory'].items():
-            lst = [item[sort_by_options[sort_by]] for item_name, item in domain.items()]
-            check_ascending(lst, ascending)
+        # Memory items do not have stat 'Total' 
+        if sort_by != 'total':
+            for domain_name, domain in target_dict['Memory'].items():
+                lst = [item[sort_by_options[sort_by]] for item_name, item in domain.items()]
+                check_ascending(lst, ascending)
 
     file_name = 'test_aggregate_stats_sorting.json'
     enable_profiler(file_name, True, True, True)
