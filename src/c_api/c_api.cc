@@ -50,6 +50,7 @@
 #include "../initialize.h"
 #include "./c_api_common.h"
 #include "../operator/custom/custom-inl.h"
+#include "../operator/operator_common.h"
 #include "../operator/tensor/matrix_op-inl.h"
 #include "../operator/tvmop/op_module.h"
 #include "../common/utils.h"
@@ -230,6 +231,25 @@ int MXLoadLib(const char *path) {
       return num_out;
     };
 
+    // lambda function to call parse attributes and return the number of inputs and outputs
+    // for gradient computation
+    auto num_inouts = [=](const NodeAttrs& attrs) {
+      // convert attributes to vector of char*
+      std::vector<const char*> attr_keys, attr_vals;
+      for (auto kv : attrs.dict) {
+        attr_keys.push_back(kv.first.c_str());
+        attr_vals.push_back(kv.second.c_str());
+      }
+
+      int num_in = -1;
+      int num_out = -1;
+      CHECK(callParseAttrs(parse_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                           &num_in, &num_out))
+      << "Error calling ParseAttrs::num_outputs for custom operator '" << name_str << "'";
+
+      return num_in + num_out;
+    };
+    
     // lambda function to call infer shape
     auto infer_shape = [=] (const nnvm::NodeAttrs& attrs,
                             mxnet::ShapeVector *in_shape,
@@ -332,11 +352,12 @@ int MXLoadLib(const char *path) {
     };
 
     // lambda function to convert from external fcompute to internal MXNet types
-    auto fcomp_lambda = [=](const nnvm::NodeAttrs& attrs,
-                          const OpContext& ctx,
-                          const std::vector<NDArray>& inputs,
-                          const std::vector<OpReqType>& req,
-                          const std::vector<NDArray>& outputs) {
+    auto fcomp_lambda = [=](fcomp_t fcomp_fp,
+                     const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<NDArray>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<NDArray>& outputs) {
       // convert attributes to vector of char*
       std::vector<const char*> attr_keys, attr_vals;
       for (auto kv : attrs.dict) {
@@ -399,6 +420,22 @@ int MXLoadLib(const char *path) {
       // return type void
     };
 
+    auto forward_lambda = [=](const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs) {
+      return fcomp_lambda(fcomp_fp, attrs, ctx, inputs, req, outputs);
+    };
+
+    auto gradient_lambda = [=](const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs) {
+      return fcomp_lambda(fgrad_fp, attrs, ctx, inputs, req, outputs);
+    };
+    
     // lambda function to convert from external mutate_inputs to internal MXNet types
     auto mutate_inputs = [=](const nnvm::NodeAttrs& attrs) {
       // convert attributes to vector of char*
@@ -425,13 +462,43 @@ int MXLoadLib(const char *path) {
       return mutate_indices_list;
     };
 
+    // lambda function to set storage types
     auto infer_storage_type = [=](const nnvm::NodeAttrs& attrs,
-                                  const int dev_mask,
-                                  DispatchMode* dispatch_mode,
-                                  std::vector<int>* in_stypes,
-                                  std::vector<int>* out_stypes) {
+                                const int dev_mask,
+                                DispatchMode* dispatch_mode,
+                                std::vector<int>* in_stypes,
+                                std::vector<int>* out_stypes) {
+      // set outputs as dense
       return op::storage_type_assign(out_stypes, mxnet::kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);
+    };
+
+    /*
+     * GradStruct
+     * this struct sets that the operator will use both the inputs and the outputs to compute
+     * the gradient. The order is: [grads, inputs, outputs]
+     */
+    struct GradStruct {
+      const char *op_name;
+      std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+                                              const std::vector<nnvm::NodeEntry>& ograds) const {
+        // copy gradients first
+        std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
+        // copy inputs second
+        for (auto& h : n->inputs) {
+          heads.push_back(h);
+        }
+        // copy outputs last
+        uint32_t n_out = n->num_outputs();
+        for (uint32_t i = 0; i < n_out; ++i) {
+          heads.emplace_back(n, i, 0);
+        }
+        return mxnet::op::MakeGradNode(op_name, n, heads, n->attrs.dict);
+      }
+    };
+
+    auto resc_req = [=](const NodeAttrs& attrs) {
+      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
     };
 
     // check if operator is already registered
@@ -441,31 +508,28 @@ int MXLoadLib(const char *path) {
     regOp.set_num_inputs(num_inputs);
     regOp.set_num_outputs(num_outputs);
     regOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type);
-    regOp.set_attr<FResourceRequest>("FResourceRequest",
-                                     [](const NodeAttrs& attrs) {
-                                       return std::vector<ResourceRequest>{
-                                         ResourceRequest::kTempSpace};
-                                     });
+    regOp.set_attr<FResourceRequest>("FResourceRequest", resc_req);
     if (regOpPtr == nullptr) {
       // re-register op in MXNet using lambda converter functions
       regOp.set_attr<nnvm::FInferType>("FInferType", infer_type);
       regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape);
-      regOp.set_attr<FComputeEx>("FComputeEx<cpu>", fcomp_lambda);
+      regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda);
+      // optionally add fmutate inputs if user specified a function
       if (mutate_fp != nullptr)
         regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs);
+      // optionally add fgradient if user specified a function
       if (fgrad_fp != nullptr) {
-        // regOp.set_attr<nnvm::FGradient>("FGradient");
         std::string grad_name(std::string("_backward_") + name);
+        regOp.set_attr<nnvm::FGradient>("FGradient",GradStruct{grad_name.c_str()});
+
         nnvm::Op &gradOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(grad_name);
         gradOp.set_attr<nnvm::TIsBackward>("TIsBackward", true);
-        // gradOp.set_attr_parser();
-        // gradOp.set_num_inputs();
-        // gradOp.set_num_outputs();
-        // gradOp.set_attr<FInferStorageType>("FInferStorageType");
-        // gradOp.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
-        // return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-        // })
-        // gradOp.set_attr<FComputeEx>("FComputeEx<cpu>");
+        gradOp.set_attr_parser(attr_parser);
+        gradOp.set_num_inputs(num_inouts);
+        gradOp.set_num_outputs(num_outputs);
+        gradOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type);
+        gradOp.set_attr<FResourceRequest>("FResourceRequest", resc_req);
+        gradOp.set_attr<FComputeEx>("FComputeEx<cpu>",gradient_lambda);
       }
     } else {
       // overwrite registration of existing op with custom op
@@ -474,10 +538,24 @@ int MXLoadLib(const char *path) {
       // TODO(samskalicky): enable constant overwriting of registertion multiple times
       regOp.set_attr<nnvm::FInferType>("FInferType", infer_type, 11);
       regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape, 11);
-      regOp.set_attr<FComputeEx>("FComputeEx<cpu>", fcomp_lambda, 11);
+      regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda, 11);
+      // optionally add fmutate inputs if user specified a function
       if (mutate_fp != nullptr)
         regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs, 11);
-      // TODO(samskalicky): add fgrad support here too
+      // optionally add fgradient if user specified a function
+      if (fgrad_fp != nullptr) {
+        std::string grad_name(std::string("_backward_") + name);
+        regOp.set_attr<nnvm::FGradient>("FGradient",GradStruct{grad_name.c_str()}, 11);
+
+        nnvm::Op &gradOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(grad_name);
+        gradOp.set_attr<nnvm::TIsBackward>("TIsBackward", true, 11);
+        gradOp.set_attr_parser(attr_parser);
+        gradOp.set_num_inputs(num_inouts);
+        gradOp.set_num_outputs(num_outputs);
+        gradOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, 11);
+        gradOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, 11);
+        gradOp.set_attr<FComputeEx>("FComputeEx<cpu>",gradient_lambda, 11);
+      }
     }
     regOp.add_argument("data", "NDArray[]", "Source inputs");
   }
