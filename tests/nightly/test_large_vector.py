@@ -23,16 +23,15 @@ from mxnet import gluon, nd
 from tests.python.unittest.common import with_seed
 
 # dimension constants
-LARGE_X = 5000000000
+LARGE_X = 4300000000
 MEDIUM_X = 1000000000
 
 
 def test_slice():
     a = nd.ones(LARGE_X)
     res = nd.slice(a, begin=(LARGE_X - MEDIUM_X), end=LARGE_X)
-    assert a[0] == 1
     assert res.shape[0] == MEDIUM_X
-
+    assert res[0] == 1
 
 def test_ndarray_zeros():
     a = nd.zeros(shape=LARGE_X)
@@ -44,7 +43,7 @@ def test_ndarray_zeros():
 def test_ndarray_ones():
     a = nd.ones(shape=LARGE_X)
     assert a[-1] == 1
-    assert nd.sum(a).asnumpy() == LARGE_X
+    assert nd.sum(a) == LARGE_X
 
 
 @with_seed()
@@ -55,15 +54,12 @@ def test_ndarray_random_uniform():
 
 @with_seed()
 def test_ndarray_random_randint():
-    a = nd.random.randint(100, 10000, shape=LARGE_X)
-    assert a.shape == (LARGE_X,)
     # check if randint can generate value greater than 2**32 (large)
-    low_large_value = 2**32
-    high_large_value = 2**34
-    a = nd.random.randint(low_large_value, high_large_value, dtype=np.int64)
-    low = mx.nd.array([low_large_value], dtype='int64')
-    high = mx.nd.array([high_large_value], dtype='int64')
-    assert a > low  and a < high
+    low = 4294967296
+    high = 17179869184
+    a = nd.random.randint(low, high, dtype=np.int64, shape=LARGE_X).asnumpy()
+    assert a.shape == (LARGE_X,)
+    assert (a >= low).all()  and (a < high).all()
 
 
 def test_ndarray_empty():
@@ -82,15 +78,10 @@ def test_elementwise():
     assert res[-1].asnumpy() == 3
 
 
-def test_reduce():
-    a = nd.ones(shape=(LARGE_X, 1))
-    assert nd.sum(a).asnumpy() == a.shape[0] * a.shape[1]
-
-
 def test_clip():
     a = create_vector(LARGE_X)
     res = nd.clip(a, a_min=100, a_max=1000)
-    assert np.sum(res[-1].asnumpy() == 1000) == 1
+    assert res[-1] == 1000
 
 
 def test_argmin():
@@ -146,27 +137,34 @@ def test_Dense(ctx=mx.cpu(0)):
 
 
 def test_argsort():
-    b = create_vector(size=LARGE_X)
-    s = nd.argsort(b, axis=0, is_ascend=False, dtype=np.int64)
-    assert (s[0].asnumpy() == (LARGE_X - 1)).all()
+    a = create_vector(size=LARGE_X)
+    s = nd.argsort(a, axis=0, is_ascend=False, dtype=np.int64)
+    assert s[0] == (LARGE_X - 1)
 
 
 def test_sort():
-    b = create_vector(size=LARGE_X)
-    s = nd.sort(b, axis=0, is_ascend=False)
-    assert np.sum(s[-1].asnumpy() == 0).all()
-    s = nd.sort(b, is_ascend=True)
-    assert np.sum(s[0].asnumpy() == 0).all()
+    a = create_vector(size=LARGE_X)
+
+    def test_descend(x):
+        s = nd.sort(x, axis=0, is_ascend=False)
+        assert s[-1] == 0
+
+    def test_ascend(x):
+        s = nd.sort(x, is_ascend=True)
+        assert s[0] == 0
+
+    test_descend(a)
+    test_ascend(a)
 
 
 def test_topk():
-    b = create_vector(size=LARGE_X)
-    ind = nd.topk(b, k=10, axis=0, dtype=np.int64)
-    assert np.sum(ind.asnumpy() == (LARGE_X - 1)) == 1
-    ind, val = mx.nd.topk(b, k=3, axis=0, dtype=np.int64, ret_typ="both", is_ascend=False)
-    assert np.all(ind == val)
-    val = nd.topk(b, k=1, axis=0, dtype=np.int64, ret_typ="value")
-    assert val.sum() == (LARGE_X - 1)
+    a = create_vector(size=LARGE_X)
+    ind = nd.topk(a, k=10, axis=0, dtype=np.int64)
+    assert ind == (LARGE_X - 1)
+    ind, val = mx.nd.topk(a, k=3, axis=0, dtype=np.int64, ret_typ="both", is_ascend=False)
+    assert ind == val
+    val = nd.topk(a, k=1, axis=0, dtype=np.int64, ret_typ="value")
+    assert val == (LARGE_X - 1)
 
     
 def test_mean():
@@ -320,21 +318,21 @@ def test_eq():
     a = nd.full(LARGE_X, 3)
     b = nd.full(LARGE_X, 3)
     c = (a == b)
-    assert np.sum(c[0].asnumpy() == 1).all()
+    assert (c.asnumpy() == 1).all()
 
 
 def test_neq():
     a = nd.full(LARGE_X, 2)
     b = nd.full(LARGE_X, 3)
     c = (a != b)
-    assert np.sum(c[0].asnumpy() == 1).all()
+    assert (c.asnumpy() == 1).all()
 
 
 def test_lt():
     a = nd.full(LARGE_X, 2)
     b = nd.full(LARGE_X, 3)
     d = (a <= b)
-    assert np.sum(d[0].asnumpy() == 1).all()
+    assert (d.asnumpy() == 1).all()
 
 
 def test_lte():
@@ -342,16 +340,16 @@ def test_lte():
     b = nd.full(LARGE_X, 3)
     c = nd.full(LARGE_X, 2)
     d = (a <= b)
-    assert np.sum(d[0].asnumpy() == 1).all()
+    assert (d.asnumpy() == 1).all()
     d = (a <= c)
-    assert np.sum(d[0].asnumpy() == 1).all()
+    assert (d.asnumpy() == 1).all()
 
 
 def test_gt():
     a = nd.full(LARGE_X, 3)
     b = nd.full(LARGE_X, 2)
     d = (a > b)
-    assert np.sum(d[0].asnumpy() == 1).all()
+    assert (d.asnumpy() == 1).all()
 
 
 def test_gte():
@@ -359,9 +357,9 @@ def test_gte():
     b = nd.full(LARGE_X, 2)
     c = nd.full(LARGE_X, 3)
     d = (a >= b)
-    assert np.sum(d[0].asnumpy() == 1).all()
+    assert (d.asnumpy() == 1).all()
     d = (a >= c)
-    assert np.sum(d[0].asnumpy() == 1).all()
+    assert (d.asnumpy() == 1).all()
 
 
 def test_slice_like():
@@ -370,20 +368,21 @@ def test_slice_like():
     c = nd.slice_like(a, b)
     assert c.shape == b.shape
     assert c[0] == 0
-    assert c[-1] == (LARGE_X//2-1)
+    assert c[-1] == (LARGE_X // 2 - 1)
 
 
 def test_slice_axis():
     a = create_vector(size=LARGE_X)
-    c = nd.slice_axis(a, axis=0, begin=0, end=LARGE_X//2)
-    assert c.shape[0] == a.shape[0]//2
-    assert c[-1][0] == (LARGE_X//2-1)
+    med = LARGE_X // 2
+    c = nd.slice_axis(a, axis=0, begin=0, end=med)
+    assert c.shape[0] == a.shape[0] // 2
+    assert c[-1][0] == (med - 1)
 
 
 def test_full():
     a = nd.full(LARGE_X, 3)
     assert a.shape[0] == LARGE_X
-    assert a[LARGE_X//2] == 3
+    assert a[LARGE_X // 2] == 3
     assert a[-1] == 3
 
 
