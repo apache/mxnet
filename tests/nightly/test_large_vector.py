@@ -160,9 +160,10 @@ def test_sort():
 def test_topk():
     a = create_vector(size=LARGE_X)
     ind = nd.topk(a, k=10, axis=0, dtype=np.int64)
-    assert ind == (LARGE_X - 1)
+    for i in range(10):
+        assert ind[i] == (LARGE_X - i - 1)
     ind, val = mx.nd.topk(a, k=3, axis=0, dtype=np.int64, ret_typ="both", is_ascend=False)
-    assert ind == val
+    assert np.all(ind == val)
     val = nd.topk(a, k=1, axis=0, dtype=np.int64, ret_typ="value")
     assert val == (LARGE_X - 1)
 
