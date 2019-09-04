@@ -40,7 +40,7 @@ void _sort<gpu>(float* key, int64_t* data, index_t length) {
 }
 
 NNVM_REGISTER_OP(_npi_choice)
-    .set_attr<FCompute>("FCompute<gpu>", NumpyChoiceForward<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", NumpyChoiceForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
