@@ -237,4 +237,3 @@ def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
     array([2, 3, 0])
     """
     return _mx_nd_np.random.choice(a, size, replace, p, ctx, out)
-
