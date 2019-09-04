@@ -122,7 +122,7 @@ OpStatePtr Imperative::Invoke(
 
 void Imperative::MarkVariables(
     const std::vector<NDArray*>& variables,
-    const std::vector<mx_uint>& grad_reqs,
+    const std::vector<uint32_t>& grad_reqs,
     const std::vector<NDArray*>& gradients) {
   for (uint32_t i = 0; i < variables.size(); ++i) {
     std::string str_c(std::to_string(variable_count_++));
