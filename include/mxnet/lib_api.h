@@ -120,11 +120,15 @@ typedef MXReturnValue (*mutateInputs_t)(std::map<std::string, std::string>,
 class CustomOp {
  public:
   explicit CustomOp(const char* op_name) : name(op_name), fcompute(nullptr),
-    parse_attrs(nullptr), infer_type(nullptr), infer_shape(nullptr),
-    mutate_inputs(nullptr) {}
+    fgradient(nullptr), parse_attrs(nullptr), infer_type(nullptr),
+    infer_shape(nullptr), mutate_inputs(nullptr) {}
   ~CustomOp() {}
-  CustomOp& setFCompute(fcomp_t fcomp) {
+  CustomOp& setForward(fcomp_t fcomp) {
     fcompute = fcomp;
+    return *this;
+  }
+  CustomOp& setGradient(fcomp_t fcomp) {
+    fgradient = fcomp;
     return *this;
   }
   CustomOp& setParseAttrs(parseAttrs_t func) {
@@ -147,6 +151,7 @@ class CustomOp {
   const char* name;
   /*! \brief operator functions */
   fcomp_t fcompute;
+  fcomp_t fgradient;
   parseAttrs_t parse_attrs;
   inferType_t infer_type;
   inferShape_t infer_shape;

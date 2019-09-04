@@ -70,7 +70,7 @@ MXReturnValue inferShape(std::map<std::string,std::string> attrs, std::vector<st
   return MX_SUCCESS;
 }
 
-MXReturnValue myFCompute(std::map<std::string,std::string> attrs,
+MXReturnValue forward(std::map<std::string,std::string> attrs,
                std::vector<MXTensor> inputs, std::vector<MXTensor> outputs,
                OpResource res) {
   //extract data pointers from tensors
@@ -95,7 +95,7 @@ MXReturnValue mutateInputs(std::map<std::string,std::string> attrs,
 }
 
 REGISTER_OP(subgraph_op)
-.setFCompute(myFCompute)
+.setForward(forward)
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
 .setInferShape(inferShape)

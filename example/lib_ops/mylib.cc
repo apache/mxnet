@@ -43,7 +43,7 @@ void gemm(float* A, float* B, float* C, unsigned n, unsigned k, unsigned m) {
 }
 
 
-MXReturnValue myFCompute(std::map<std::string,std::string> attrs,
+MXReturnValue forward(std::map<std::string,std::string> attrs,
                std::vector<MXTensor> inputs, std::vector<MXTensor> outputs,
                OpResource res) {
   //validate inputs
@@ -139,13 +139,13 @@ MXReturnValue inferShape(std::map<std::string,std::string> attrs, std::vector<st
 }
 
 REGISTER_OP(gemm)
-.setFCompute(myFCompute)
+.setForward(forward)
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
 .setInferShape(inferShape);
 
 REGISTER_OP(warpctc)
-.setFCompute(myFCompute)
+.setForward(forward)
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
 .setInferShape(inferShape);
