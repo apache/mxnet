@@ -108,8 +108,7 @@ def test_profile_task():
     task.start()
     start = time.time()
     var = mx.nd.ones((1000, 500))
-    log = get_log()
-    assert len(log) == 10
+    assert len(get_log()) == 10
     var.asnumpy()
     stop = time.time()
     task.stop()
@@ -136,8 +135,7 @@ def test_profile_frame():
     frame.start()
     start = time.time()
     var = mx.nd.ones((1000, 500))
-    log = get_log()
-    assert len(log) == 100000
+    assert len(get_log()) == 100000
     var.asnumpy()
     stop = time.time()
     frame.stop()
