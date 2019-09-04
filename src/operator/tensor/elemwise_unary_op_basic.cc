@@ -689,12 +689,14 @@ Example::
 )code" ADD_FILELINE)
 .add_alias("_npx_cast_like")
 .set_num_inputs(2)
+.set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) { return std::vector<std::string>{"lhs", "rhs"}; })
 .set_attr<mxnet::FInferShape>("FInferShape", [](const nnvm::NodeAttrs& attrs,
                                                 mxnet::ShapeVector *in_attrs,
                                                 mxnet::ShapeVector *out_attrs) {
     // Always the shape of LHS.
+    CHECK_EQ(in_attrs->size(), 2) << " in operator " << attrs.name;
     const mxnet::TShape &lshape = (*in_attrs)[0];
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, lshape);
     return shape_is_known(lshape);
@@ -711,7 +713,16 @@ Example::
     return ret;
   })
 .set_attr<FCompute>("FCompute<cpu>", CastCompute<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_cast"})
+.set_attr<nnvm::FGradient>("FGradient",
+    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+      if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
+      std::vector<nnvm::NodeEntry> ret;
+      ret.emplace_back(MakeNode("zeros_like", n->attrs.name + "_backward_grad_lhs",
+                                {n->inputs[0]}, nullptr, &n));
+      ret.emplace_back(MakeNode("zeros_like", n->attrs.name + "_backward_grad_rhs",
+                                {n->inputs[1]}, nullptr, &n));
+      return ret;
+  })
 .add_argument("lhs", "NDArray-or-Symbol", "First input.")
 .add_argument("rhs", "NDArray-or-Symbol", "Second input.");
 
