@@ -147,6 +147,7 @@ int MXLoadLib(const char *path) {
     const char* name;
     // function pointers holding implementation from custom library
     fcomp_t fcomp_fp = nullptr;
+    fcomp_t fgrad_fp = nullptr;
     parseAttrs_t parse_fp = nullptr;
     inferType_t type_fp = nullptr;
     inferShape_t shape_fp = nullptr;
@@ -154,7 +155,7 @@ int MXLoadLib(const char *path) {
     mutateInputs_t mutate_fp = nullptr;
 
     // get custom operator implemenation from the dynamic library
-    opRegGet(i, &name, &fcomp_fp, &parse_fp, &type_fp, &shape_fp, &mutate_fp);
+    opRegGet(i, &name, &fcomp_fp, &fgrad_fp, &parse_fp, &type_fp, &shape_fp, &mutate_fp);
 
     // validate custom operator functions from the dynamic library
     CHECK(fcomp_fp != nullptr) << "Error loading '" << name
@@ -435,32 +436,40 @@ int MXLoadLib(const char *path) {
 
     // check if operator is already registered
     const nnvm::Op *regOpPtr = dmlc::Registry<nnvm::Op>::Get()->Find(name);
+    nnvm::Op &regOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(name);
+    regOp.set_attr_parser(attr_parser);
+    regOp.set_num_inputs(num_inputs);
+    regOp.set_num_outputs(num_outputs);
+    regOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type);
+    regOp.set_attr<FResourceRequest>("FResourceRequest",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<ResourceRequest>{
+                                         ResourceRequest::kTempSpace};
+                                     });
     if (regOpPtr == nullptr) {
       // re-register op in MXNet using lambda converter functions
-      nnvm::Op &regOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(name);
-      regOp.set_attr_parser(attr_parser);
-      regOp.set_num_inputs(num_inputs);
-      regOp.set_num_outputs(num_outputs);
-      regOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type);
-      regOp.set_attr<FResourceRequest>("FResourceRequest",
-                                       [](const NodeAttrs& attrs) {
-                                         return std::vector<ResourceRequest>{
-                                           ResourceRequest::kTempSpace};
-                                       });
-      regOp.add_argument("data", "NDArray[]", "Source inputs");
       regOp.set_attr<nnvm::FInferType>("FInferType", infer_type);
       regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape);
       regOp.set_attr<FComputeEx>("FComputeEx<cpu>", fcomp_lambda);
       if (mutate_fp != nullptr)
         regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs);
+      if (fgrad_fp != nullptr) {
+        // regOp.set_attr<nnvm::FGradient>("FGradient");
+        std::string grad_name(std::string("_backward_") + name);
+        nnvm::Op &gradOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(grad_name);
+        gradOp.set_attr<nnvm::TIsBackward>("TIsBackward", true);
+        // gradOp.set_attr_parser();
+        // gradOp.set_num_inputs();
+        // gradOp.set_num_outputs();
+        // gradOp.set_attr<FInferStorageType>("FInferStorageType");
+        // gradOp.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
+        // return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+        // })
+        // gradOp.set_attr<FComputeEx>("FComputeEx<cpu>");
+      }
     } else {
       // overwrite registration of existing op with custom op
-      nnvm::Op &regOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(name);
-      regOp.set_attr_parser(attr_parser);
-      regOp.set_num_inputs(num_inputs);
-      regOp.set_num_outputs(num_outputs);
       regOp.arguments.clear();
-      regOp.add_argument("data", "NDArray[]", "Source inputs");
       // set attribute with higher plevel (11) to allow re-registering once
       // TODO(samskalicky): enable constant overwriting of registertion multiple times
       regOp.set_attr<nnvm::FInferType>("FInferType", infer_type, 11);
@@ -468,7 +477,9 @@ int MXLoadLib(const char *path) {
       regOp.set_attr<FComputeEx>("FComputeEx<cpu>", fcomp_lambda, 11);
       if (mutate_fp != nullptr)
         regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs, 11);
+      // TODO(samskalicky): add fgrad support here too
     }
+    regOp.add_argument("data", "NDArray[]", "Source inputs");
   }
 
   API_END();
