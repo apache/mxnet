@@ -125,39 +125,60 @@ void GetAttrFromFusedNode(uint32_t nid,
                           const std::string& infer_fusion_name) {
   std::vector<AttrType>& rshape = *rshape_ptr;
   const auto& inode = idx[nid];
-  nnvm::NodePtr fwd_ptr = inode.source->control_deps[0];
+  // gradient function, used to get node correspondence.
+  static auto& fgrad =
+      Op::GetAttr<nnvm::FGradient>("FGradient");
+  nnvm::NodePtr fused_fwd_ptr = inode.source->control_deps[0];
   static auto& finfer_fused_shape =
     Op::GetAttr<FAccessSubgraphType>(infer_fusion_name);
-  auto finfer = finfer_fused_shape.get(fwd_ptr->op(), nullptr);
-  CHECK(finfer != nullptr) << "Operator " << fwd_ptr->attrs.name <<
+  auto finfer = finfer_fused_shape.get(fused_fwd_ptr->op(), nullptr);
+  CHECK(finfer != nullptr) << "Operator " << fused_fwd_ptr->attrs.name <<
     " is marked as Fusion but does not allow accessing attributes";
-  const auto& inferred_attrs = finfer(fwd_ptr->attrs);
-  const auto& input_attrs = inferred_attrs.first;
-  const auto& output_attrs = inferred_attrs.second;
-  CHECK(input_attrs.size() == inode.source->num_outputs()) <<
-    "Number of outputs of the gradient node " << inode.source->attrs.name <<
-    " does not match the number of inputs of the corresponding forward node";
+  const auto& inferred_attrs = finfer(fused_fwd_ptr->attrs);
+  const auto& fwd_ptr = std::get<0>(inferred_attrs);
+  const auto& input_attrs = std::get<1>(inferred_attrs);
+  const auto& output_attrs = std::get<2>(inferred_attrs);
+
+  // use gradient function to find out the correspondence.
+  std::vector<nnvm::NodeEntry> ograd(fwd_ptr->num_outputs());
+  for (size_t i = 0; i < ograd.size(); ++i) {
+    ograd[i].index = static_cast<uint32_t>(i);
+  }
+  // input gradient list
+  const std::vector<nnvm::NodeEntry>& igrad = fgrad[fwd_ptr->op()](fwd_ptr, ograd);
+  const nnvm::Node* igrad_node = nullptr;
   // Set the attributes of output gradients
   // using attributes of forward node inputs
-  for (size_t i = 0; i < input_attrs.size(); ++i) {
-    uint32_t eid = idx.entry_id(nid, i);
-    if (fis_none(rshape[eid])) {
-      rshape[eid] = input_attrs[i];
-    } else if (!fis_none(input_attrs[i])) {
-      CHECK_EQ(rshape[eid], input_attrs[i])
-          << "Backward shape inconsistent with the forward shape";
+  for (size_t i = 0; i < igrad.size(); ++i) {
+    if (igrad[i].node->op() == inode.source->op()) {
+      uint32_t eid = idx.entry_id(nid, igrad[i].index);
+      if (fis_none(rshape[eid])) {
+        rshape[eid] = input_attrs[i];
+      } else if (!fis_none(input_attrs[i])) {
+        // Need to skip empty forward shape, because it may not be
+        // available now and it is possible to infer the forward
+        // shape in one of the next a few passes
+        CHECK_EQ(rshape[eid], input_attrs[i])
+            << "Backward shape inconsistent with the forward shape";
+      }
+      if (igrad_node == nullptr) {
+        igrad_node = igrad[i].node.get();
+      } else {
+        CHECK(igrad_node == igrad[i].node.get());
+      }
     }
   }
+
   // Set the attributes of input gradients
   // using attributes of forward node outputs
-  for (size_t i = 0; i < output_attrs.size(); ++i) {
-    // We assume that the first inputs to the
-    // backward op are the output gradients
-    const auto& e = inode.source->inputs[i];
+  CHECK(igrad_node != nullptr)
+    << "Cannot find matching backward op for " << inode.source->attrs.name;
+  for (size_t i = 0; i < igrad_node->inputs.size(); ++i) {
+    const nnvm::NodeEntry& e = igrad_node->inputs[i];
     if (e.node == nullptr) {
       uint32_t eid = idx.entry_id(inode.inputs[i]);
       if (fis_none(rshape[eid])) {
-        rshape[eid] = output_attrs[i];
+        rshape[eid] = output_attrs[e.index];
       }
     }
   }
@@ -189,7 +210,7 @@ void ProvideAttrToFusion(const uint32_t nid,
   CHECK(provide != nullptr) <<
     "Encountered Fusion operator that does not implement providing subgraph attr " <<
     provide_fusion_name << ".";
-  provide(inode.source->attrs, in_attrs, out_attrs);
+  provide(inode.source->attrs, inode.source->control_deps, in_attrs, out_attrs);
 }
 
 /*!\brief

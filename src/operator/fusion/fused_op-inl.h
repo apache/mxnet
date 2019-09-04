@@ -225,7 +225,7 @@ const std::map<std::string, std::string> slice_ops = {
   {"slice_axis"   , ""},
   {"slice"   , ""},
   {"slice_like"   , ""},
-  // {"broadcast_like"   , ""},
+  {"broadcast_like"   , ""},
 };
 
 const std::vector<std::string> variable_io_ops = {

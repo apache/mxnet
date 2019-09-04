@@ -144,7 +144,10 @@ bool FusedOp::InferType(const nnvm::NodeAttrs &attrs,
 }
 
 template <typename Attr>
-std::pair<std::vector<Attr>, std::vector<Attr>> FusedOp::GetAttrs(const std::string& attr_name,
+std::tuple<const nnvm::NodePtr,
+           std::vector<Attr>,
+           std::vector<Attr>>
+  FusedOp::GetAttrs(const std::string& attr_name,
                                                                   const uint32_t node_id) {
   const auto& g = this->subgraph_.indexed_graph();
   const std::vector<Attr> attrs = this->subgraph_.GetAttr<std::vector<Attr>>(attr_name);
@@ -169,7 +172,9 @@ std::pair<std::vector<Attr>, std::vector<Attr>> FusedOp::GetAttrs(const std::str
     }
   }
 
-  return {inputs, outputs};
+  return {node.weak_ref.lock(),
+          inputs,
+          outputs};
 }
 
 bool FusedOpInferShape(const nnvm::NodeAttrs& attrs,
@@ -187,20 +192,23 @@ bool FusedOpInferType(const nnvm::NodeAttrs& attrs,
 }
 
 void FusedOpProvideShape(const nnvm::NodeAttrs& attrs,
+                         const std::vector<nnvm::NodePtr>& nodes,
                          const std::vector<std::vector<mxnet::TShape>> &in_attrs,
                          const std::vector<std::vector<mxnet::TShape>> &out_attrs) {
   const FusedOpPtr& op = nnvm::get<FusedOpPtr>(attrs.parsed);
-  op->ProvideShape(in_attrs, out_attrs);
+  op->ProvideShape(nodes, in_attrs, out_attrs);
 }
 
 void FusedOpProvideType(const nnvm::NodeAttrs& attrs,
+                        const std::vector<nnvm::NodePtr>& nodes,
                         const std::vector<std::vector<int>> &in_attrs,
                         const std::vector<std::vector<int>> &out_attrs) {
   const FusedOpPtr& op = nnvm::get<FusedOpPtr>(attrs.parsed);
-  op->ProvideType(in_attrs, out_attrs);
+  op->ProvideType(nodes, in_attrs, out_attrs);
 }
 
 void FusedOpProvideStorageType(const nnvm::NodeAttrs& attrs,
+                               const std::vector<nnvm::NodePtr>& nodes,
                                const std::vector<std::vector<int>> &in_attrs,
                                const std::vector<std::vector<int>> &out_attrs) {}
 
@@ -219,8 +227,8 @@ NNVM_REGISTER_OP(_FusedOp)
     const auto num_inputs = op->num_inputs();
     const auto num_outputs = op->num_outputs();
     std::vector<std::pair<int, int> > ret;
-    for (auto i = 0u; i < num_inputs; ++i) {
-      for (auto j = 0u; j < num_outputs; ++j) {
+    for (unsigned int i = 0; i < num_inputs; ++i) {
+      for (unsigned int j = 0; j < num_outputs; ++j) {
         ret.emplace_back(i, j);
       }
     }
@@ -235,7 +243,9 @@ NNVM_REGISTER_OP(_FusedOp)
 .set_attr_parser(FusedOpParamParser)
 .add_argument("data", "NDArray-or-Symbol[]", "Data");
 
-std::pair<std::vector<mxnet::TShape>, std::vector<mxnet::TShape>>
+std::tuple<const nnvm::NodePtr,
+           std::vector<mxnet::TShape>,
+           std::vector<mxnet::TShape>>
 FusedOpHelperShape(const NodeAttrs& attrs) {
   const auto& p = nnvm::get<FusedOpHelperParamPtr>(attrs.parsed);
   const auto& op = p->op;
@@ -243,7 +253,9 @@ FusedOpHelperShape(const NodeAttrs& attrs) {
   return op->GetAttrs<mxnet::TShape>("shape", node_id);
 }
 
-std::pair<std::vector<int>, std::vector<int>>
+std::tuple<const nnvm::NodePtr,
+           std::vector<int>,
+           std::vector<int>>
 FusedOpHelperType(const NodeAttrs& attrs) {
   const auto& p = nnvm::get<FusedOpHelperParamPtr>(attrs.parsed);
   const auto& op = p->op;
@@ -260,7 +272,9 @@ NNVM_REGISTER_OP(_FusedOpHelper)
 .set_attr<exec::FAccessSubgraphType>("FAccessSubgraphType", FusedOpHelperType);
 
 
-std::pair<std::vector<mxnet::TShape>, std::vector<mxnet::TShape>>
+std::tuple<const nnvm::NodePtr,
+           std::vector<mxnet::TShape>,
+           std::vector<mxnet::TShape>>
 FusedOpOutHelperShape(const NodeAttrs& attrs) {
   const auto& p = nnvm::get<FusedOpHelperParamPtr>(attrs.parsed);
   const auto& op = p->op;
@@ -268,7 +282,9 @@ FusedOpOutHelperShape(const NodeAttrs& attrs) {
   return op->GetAuxShape(node_id);
 }
 
-std::pair<std::vector<int>, std::vector<int>>
+std::tuple<const nnvm::NodePtr,
+           std::vector<int>,
+           std::vector<int>>
 FusedOpOutHelperType(const NodeAttrs& attrs) {
   const auto& p = nnvm::get<FusedOpHelperParamPtr>(attrs.parsed);
   const auto& op = p->op;

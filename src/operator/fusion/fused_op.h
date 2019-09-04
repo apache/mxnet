@@ -78,28 +78,44 @@ class FusedOp {
                  std::vector<int> *out_attrs);
 
   template <typename Attr>
-  std::pair<std::vector<Attr>, std::vector<Attr>> GetAttrs(const std::string& attr_name,
-                                                           const uint32_t node_id);
+  std::tuple<const nnvm::NodePtr,
+             std::vector<Attr>,
+             std::vector<Attr>>
+    GetAttrs(const std::string& attr_name,
+             const uint32_t node_id);
 
-  void ProvideShape(const std::vector<std::vector<mxnet::TShape>> &in_attrs,
+  void ProvideShape(const std::vector<nnvm::NodePtr>& nodes,
+                    const std::vector<std::vector<mxnet::TShape>> &in_attrs,
                     const std::vector<std::vector<mxnet::TShape>> &out_attrs) {
-    aux_in_shapes = in_attrs;
-    aux_out_shapes = out_attrs;
+    aux_nodes_ = nodes;
+    aux_in_shapes_ = in_attrs;
+    aux_out_shapes_ = out_attrs;
   }
 
-  void ProvideType(const std::vector<std::vector<int>> &in_attrs,
+  void ProvideType(const std::vector<nnvm::NodePtr>& nodes,
+                   const std::vector<std::vector<int>> &in_attrs,
                    const std::vector<std::vector<int>> &out_attrs) {
-    aux_in_types = in_attrs;
-    aux_out_types = out_attrs;
+    aux_nodes_ = nodes;
+    aux_in_types_ = in_attrs;
+    aux_out_types_ = out_attrs;
   }
 
-  std::pair<std::vector<mxnet::TShape>, std::vector<mxnet::TShape>>
+  std::tuple<const nnvm::NodePtr,
+             std::vector<mxnet::TShape>,
+             std::vector<mxnet::TShape>>
     GetAuxShape(const int node_id) const {
-    return {aux_in_shapes[node_id], aux_out_shapes[node_id]};
+    return {aux_nodes_[node_id],
+            aux_in_shapes_[node_id],
+            aux_out_shapes_[node_id]};
   }
 
-  std::pair<std::vector<int>, std::vector<int>> GetAuxType(const int node_id) const {
-    return {aux_in_types[node_id], aux_out_types[node_id]};
+  std::tuple<const nnvm::NodePtr,
+             std::vector<int>,
+             std::vector<int>>
+    GetAuxType(const int node_id) const {
+    return {aux_nodes_[node_id],
+            aux_in_types_[node_id],
+            aux_out_types_[node_id]};
   }
 
  private:
@@ -147,10 +163,11 @@ class FusedOp {
   std::vector<IntermediateAttr<mxnet::TShape> > intermediate_shapes_;
   std::vector<IntermediateAttr<int> > intermediate_dtypes_;
 
-  std::vector<std::vector<mxnet::TShape>> aux_in_shapes;
-  std::vector<std::vector<mxnet::TShape>> aux_out_shapes;
-  std::vector<std::vector<int>> aux_in_types;
-  std::vector<std::vector<int>> aux_out_types;
+  std::vector<nnvm::NodePtr> aux_nodes_;
+  std::vector<std::vector<mxnet::TShape>> aux_in_shapes_;
+  std::vector<std::vector<mxnet::TShape>> aux_out_shapes_;
+  std::vector<std::vector<int>> aux_in_types_;
+  std::vector<std::vector<int>> aux_out_types_;
   std::vector<OpReqType> saved_reqs_;
   std::vector<uint32_t> extra_shape_args_;
   std::vector<uint32_t> check_shape_args_;

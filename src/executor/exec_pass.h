@@ -40,7 +40,7 @@ namespace mxnet {
 namespace exec {
 
 template <typename Attr>
-using FAccessSubgraphAttr = std::function<std::pair<std::vector<Attr>, std::vector<Attr>>
+using FAccessSubgraphAttr = std::function<std::tuple<const nnvm::NodePtr, std::vector<Attr>, std::vector<Attr>>
                               (const NodeAttrs& attrs)>;
 
 using FAccessSubgraphShape = FAccessSubgraphAttr<mxnet::TShape>;
@@ -49,6 +49,7 @@ using FAccessSubgraphStorageType = FAccessSubgraphAttr<int>;
 
 template <typename Attr>
 using FProvideSubgraphAttr = std::function<void (const NodeAttrs& attrs,
+                                                 const std::vector<nnvm::NodePtr> &nodes,
                                                  const std::vector<std::vector<Attr>> &in_attrs,
                                                  const std::vector<std::vector<Attr>> &out_attrs)>;
 using FProvideSubgraphShape = FProvideSubgraphAttr<mxnet::TShape>;
