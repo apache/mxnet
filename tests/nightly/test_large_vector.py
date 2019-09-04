@@ -148,7 +148,6 @@ def test_Dense(ctx=mx.cpu(0)):
 def test_argsort():
     b = create_vector(size=LARGE_X)
     s = nd.argsort(b, axis=0, is_ascend=False, dtype=np.int64)
-    mx.nd.waitall()
     assert (s[0].asnumpy() == (LARGE_X - 1)).all()
 
 
@@ -168,6 +167,227 @@ def test_topk():
     assert np.all(ind == val)
     val = nd.topk(b, k=1, axis=0, dtype=np.int64, ret_typ="value")
     assert val.sum() == (LARGE_X - 1)
+
+
+def test_shape():
+    b = create_vector(size=LARGE_X)
+    #explicit wait_to_read()
+    assert b[0] == 0
+    assert b.shape[0] == LARGE_X
+
+
+def test_size():
+    b = create_vector(size=LARGE_X)
+    #explicit wait_to_read()
+    assert b[0] == 0
+    assert b.size == LARGE_X
+
+
+def test_copy():
+    a = nd.ones(LARGE_X)
+    b = a.copy()
+    assert a[0] == b[0]
+    assert b.shape == a.shape
+    assert b.size == LARGE_X
+
+
+def test_copy_to():
+    a = create_vector(size=LARGE_X)
+    # keeping dtype same as input uses parallel copy which is much faster
+    b = nd.zeros(LARGE_X, dtype=np.int64)
+    c = a.copyto(b)
+    assert c is b
+    assert b[-1] == LARGE_X-1
+    assert b[0] == 0
+
+
+def test_zeros_like():
+    a = nd.ones(LARGE_X)
+    b = nd.zeros_like(a)
+    assert b[-1] == 0
+    assert b.shape == a.shape
+
+
+def test_ones_like():
+    a = nd.zeros(LARGE_X)
+    b = nd.ones_like(a)
+    assert b[-1] == 1
+    assert b.shape == a.shape
+
+
+def test_concat():
+    a = nd.ones(LARGE_X)
+    b = nd.zeros(LARGE_X)
+    c = nd.concat(a,b, dim=0)
+    assert c[0][0] == 1
+    assert c[-1][-1] == 0
+    assert c.shape[0] == (2 * LARGE_X)
+
+
+def test_sum():
+    a = nd.ones(LARGE_X)
+    b = nd.sum(a, axis=0)
+    assert b[0] == LARGE_X
+
+
+def test_prod():
+    a = nd.ones(LARGE_X)
+    b = nd.prod(a, axis=0)
+    assert b[0] == 1
+
+
+def test_min():
+    a = create_vector(size=LARGE_X)
+    b = nd.min(a, axis=0)
+    assert b[0] == 0
+    assert b[-1] == 0
+
+
+def test_max():
+    a = create_vector(size=LARGE_X)
+    b = nd.max(a, axis=0)
+    assert b[0] == (LARGE_X - 1)
+
+
+def test_argmax():
+    a = nd.ones(LARGE_X)
+    b = nd.zeros(LARGE_X)
+    c = nd.concat(a, b, dim=0)
+    d = nd.argmax(c, axis=0)
+    assert c.shape[0] == (2 * LARGE_X)
+    assert d == 0
+
+
+def np_softmax(x, axis=-1, temperature=1.0):
+    x = x - np.max(x, axis=axis, keepdims=True)
+    x = np.exp(x/temperature)
+    x /= np.sum(x, axis=axis, keepdims=True)
+    return x
+
+
+def test_iadd():
+    a = nd.ones(LARGE_X)
+    b = nd.ones(LARGE_X)
+    c = b
+    c += a
+    assert c.shape == a.shape
+    assert c[-1] == 2
+
+
+def test_isub():
+    a = nd.full(LARGE_X, 3)
+    b = nd.ones(LARGE_X)
+    c = a
+    c -= b
+    assert c.shape == a.shape
+    assert c[-1] == 2
+
+
+def test_imul():
+    a = nd.full(LARGE_X, 3)
+    b = nd.ones(LARGE_X)
+    c = b
+    c *= a
+    assert c.shape == a.shape
+    assert c[-1] == 3
+
+
+def test_idiv():
+    a = nd.full(LARGE_X, 4)
+    b = nd.full(LARGE_X, 2)
+    c = a
+    c /= b
+    assert c.shape == a.shape
+    assert c[-1] == 2
+
+
+def test_imod():
+    a = nd.full(LARGE_X, 3)
+    b = nd.full(LARGE_X, 2)
+    c = a
+    c %= b
+    assert c.shape == a.shape
+    assert c[0][-1] == 1
+
+
+def test_eq():
+    a = nd.full(LARGE_X, 3)
+    b = nd.full(LARGE_X, 3)
+    c = (a == b)
+    assert np.sum(c[0].asnumpy() == 1).all()
+
+
+def test_neq():
+    a = nd.full(LARGE_X, 2)
+    b = nd.full(LARGE_X, 3)
+    c = (a != b)
+    assert np.sum(c[0].asnumpy() == 1).all()
+
+
+def test_lt():
+    a = nd.full(LARGE_X, 2)
+    b = nd.full(LARGE_X, 3)
+    d = (a <= b)
+    assert np.sum(d[0].asnumpy() == 1).all()
+
+
+def test_lte():
+    a = nd.full(LARGE_X, 2)
+    b = nd.full(LARGE_X, 3)
+    c = nd.full(LARGE_X, 2)
+    d = (a <= b)
+    assert np.sum(d[0].asnumpy() == 1).all()
+    d = (a <= c)
+    assert np.sum(d[0].asnumpy() == 1).all()
+
+
+def test_gt():
+    a = nd.full(LARGE_X, 3)
+    b = nd.full(LARGE_X, 2)
+    d = (a > b)
+    assert np.sum(d[0].asnumpy() == 1).all()
+
+
+def test_gte():
+    a = nd.full(LARGE_X, 3)
+    b = nd.full(LARGE_X, 2)
+    c = nd.full(LARGE_X, 3)
+    d = (a >= b)
+    assert np.sum(d[0].asnumpy() == 1).all()
+    d = (a >= c)
+    assert np.sum(d[0].asnumpy() == 1).all()
+
+
+def test_slice_like():
+    a = create_vector(size=LARGE_X)
+    b = nd.ones(LARGE_X//2)
+    c = nd.slice_like(a, b)
+    assert c.shape == b.shape
+    assert c[0] == 0
+    assert c[-1] == (LARGE_X//2-1)
+
+
+def test_slice_axis():
+    a = create_vector(size=LARGE_X)
+    c = nd.slice_axis(a, axis=0, begin=0, end=LARGE_X//2)
+    assert c.shape[0] == a.shape[0]//2
+    assert c[-1][0] == (LARGE_X//2-1)
+
+
+def test_full():
+    a = nd.full(LARGE_X, 3)
+    assert a.shape[0] == LARGE_X
+    assert a[LARGE_X//2] == 3
+    assert a[-1] == 3
+
+
+def test_one_hot():
+    a = nd.zeros(10)
+    a[0] = 1
+    a[-1] = 1
+    b = nd.one_hot(a, LARGE_X)
+    assert b[0][1] == 1
+    assert b[-1][1] == 1
 
 
 if __name__ == '__main__':

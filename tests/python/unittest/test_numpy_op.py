@@ -66,7 +66,7 @@ def test_np_tensordot():
                 b_axes_summed[i] = (b_axes_summed[i] + b.ndim) % b.ndim
 
         if len(a_axes_summed) != len(b_axes_summed):
-            raise ValueError('Axes length mismatch') 
+            raise ValueError('Axes length mismatch')
 
         a_axes_remained = []
         for i in range(a.ndim):
@@ -179,7 +179,7 @@ def test_np_dot():
         ((3, 4, 5), (5, )),  # Case 4
         ((3, 4, 5), (5, 2)), # Case 5
         ((5,), (5, 2)),
-        ((3, 5, 4), (5, 4, 3)),  
+        ((3, 5, 4), (5, 4, 3)),
         ((3, 4), (5, 4, 3)),
         ((4,), (5, 4, 3))
     ]
@@ -275,6 +275,247 @@ def test_np_sum():
                         mx_out = np.sum(x, axis=axis, dtype=dtype, keepdims=keepdims)
                         np_out = _np.sum(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims).astype(dtype)
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
+
+
+@with_seed()
+@use_np
+def test_np_max_min():
+    class TestMax(HybridBlock):
+        def __init__(self, axis=None, keepdims=False):
+            super(TestMax, self).__init__()
+            self._axis = axis
+            self._keepdims = keepdims
+
+        def hybrid_forward(self, F, a, *args, **kwargs):
+            return F.np.max(a, axis=self._axis, keepdims=self._keepdims)
+
+    class TestMin(HybridBlock):
+        def __init__(self, axis=None, keepdims=False):
+            super(TestMin, self).__init__()
+            self._axis = axis
+            self._keepdims = keepdims
+
+        def hybrid_forward(self, F, a, *args, **kwargs):
+            return F.np.min(a, axis=self._axis, keepdims=self._keepdims)
+
+    def is_int(dtype):
+        return 'int' == dtype
+
+    def get_grad(axis, func_name):
+        index = -1 if func_name == 'max' else 0
+        if axis == ():
+            return _np.ones((2,3,4,5))
+        else:
+            temp = _np.zeros((2,3,4,5))
+            if axis == 0:
+                temp[index,:,:,:] = 1
+                return temp
+            elif axis == 1:
+                temp[:,index,:,:] = 1
+                return temp
+            elif axis == 2:
+                temp[:,:,index,:] = 1
+                return temp
+            elif axis == 3:
+                temp[:,:,:,index] = 1
+                return temp
+            elif not axis:
+                temp[index,index,index,index] = 1
+                return temp
+            raise ValueError('axis should be int or None or ()')
+
+    def _test_np_exception(func, shape, dim):
+        x = _np.random.uniform(-1.0, 1.0, shape)
+        x = mx.nd.array(x).as_np_ndarray()
+        if func == 'max':
+            out = mx.np.max(x)
+        else:
+            out = mx.np.min(x)
+        assert out.ndim == dim, 'dimension mismatch, output.ndim={}, dim={}'.format(output.ndim, dim)
+
+    in_data_dim = random.choice([2, 3, 4])
+    shape = rand_shape_nd(in_data_dim, dim=3)
+    for func in ['max', 'min']:
+        for hybridize in [False, True]:
+            for keepdims in [True, False]:
+                for axis in ([i for i in range(in_data_dim)] + [(), None]):
+                    for itype in ['float16', 'float32', 'float64', 'int']:
+                        # test gluon
+                        if func == 'max':
+                            test_gluon = TestMax(axis=axis, keepdims=keepdims)
+                        else:
+                            test_gluon = TestMin(axis=axis, keepdims=keepdims)
+                        if hybridize:
+                            test_gluon.hybridize()
+                        if is_int(itype):
+                            x = mx.nd.arange(120).reshape((2, 3, 4, 5))
+                            x = mx.nd.array(x)
+                        else:
+                            x = mx.nd.random.uniform(-1.0, 1.0, shape=shape, dtype=itype)
+                        x = x.as_np_ndarray()
+                        x.attach_grad()
+                        if func == 'max':
+                            expected_ret = _np.amax(x.asnumpy(), axis=axis, keepdims=keepdims)
+                        else:
+                            expected_ret = _np.amin(x.asnumpy(), axis=axis, keepdims=keepdims)
+                        with mx.autograd.record():
+                            y = test_gluon(x)
+                        assert y.shape == expected_ret.shape
+                        assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if itype == 'float16' else 1e-3,
+                                            atol=1e-5 if itype == 'float16' else 1e-5)
+                        y.backward()
+                        # only check the gradient with hardcoded input
+                        if is_int(itype):
+                            assert same(x.grad.asnumpy(), get_grad(axis, func)), \
+                                'x={}\ny={}\nx.grad={}\nnumpy={}'.format(x.asnumpy(), y.asnumpy(), x.grad.asnumpy(), get_grad(axis))
+
+                        # test imperative
+                        if func == 'max':
+                            mx_out = np.max(x, axis=axis, keepdims=keepdims)
+                            np_out = _np.amax(x.asnumpy(), axis=axis, keepdims=keepdims)
+                        else:
+                            mx_out = np.min(x, axis=axis, keepdims=keepdims)
+                            np_out = _np.amin(x.asnumpy(), axis=axis, keepdims=keepdims)
+                        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+    # test zero and zero dim
+    shapes = [(), (0), (2, 0), (0, 2, 1)]
+    exceptions = [False, True, True, True]
+    dims = [0] * len(shapes)
+    for func in ['max', 'min']:
+        for shape, exception, dim in zip(shapes, exceptions, dims):
+            if exception:
+                assertRaises(MXNetError, _test_np_exception, func, shape, dim)
+            else:
+                _test_np_exception(func, shape, dim)
+
+
+@with_seed()
+@use_np
+def test_np_mean():
+    class TestMean(HybridBlock):
+        def __init__(self, axis=None, dtype=None, keepdims=False):
+            super(TestMean, self).__init__()
+            self._axis = axis
+            self._dtype = dtype
+            self._keepdims = keepdims
+
+        def hybrid_forward(self, F, a, *args, **kwargs):
+            return a.mean(axis=self._axis, dtype=self._dtype, keepdims=self._keepdims)
+
+    def is_int(dtype):
+        return 'int' in dtype
+
+    in_data_dim = random.choice([2, 3, 4])
+    shape = rand_shape_nd(in_data_dim, dim=3)
+    acc_type = {'float16': 'float32', 'float32': 'float64', 'float64': 'float64',
+                'int8': 'int32', 'int32': 'int64', 'int64': 'int64'}
+    for hybridize in [False, True]:
+        for keepdims in [True, False]:
+            for axis in ([i for i in range(in_data_dim)] + [(), None]):
+                for itype in ['float16', 'float32', 'float64']:
+                    for dtype in ['float16', 'float32', 'float64']:
+                        if is_int(dtype) and not is_int(itype):
+                            continue
+                        # test gluon
+                        test_mean = TestMean(axis=axis, dtype=dtype, keepdims=keepdims)
+                        if hybridize:
+                            test_mean.hybridize()
+                        if is_int(itype):
+                            x = _np.random.randint(-128, 128, shape, dtype=itype)
+                            x = mx.nd.array(x, dtype=itype)
+                        else:
+                            x = mx.nd.random.uniform(-1.0, 1.0, shape=shape, dtype=itype)
+                        x = x.as_np_ndarray()
+                        x.attach_grad()
+
+                        expected_ret = _np.mean(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims)
+                        expected_ret = expected_ret.astype(dtype)
+                        with mx.autograd.record():
+                            y = test_mean(x)
+                        assert y.shape == expected_ret.shape
+                        assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if dtype == 'float16' else 1e-3,
+                                            atol=1e-5 if dtype == 'float16' else 1e-5)
+
+                        y.backward()
+                        N = x.size / y.size
+                        assert same(x.grad.asnumpy(), _np.ones(shape=x.shape, dtype=x.dtype) / N)
+
+                        # test numeric
+                        if itype == 'float32' and dtype == 'float32':
+                            x_sym = mx.sym.Variable("x").as_np_ndarray()
+                            mx_sym = mx.sym.np.mean(x_sym, axis=axis, dtype=dtype, keepdims=keepdims).as_nd_ndarray()
+                            check_numeric_gradient(mx_sym, [x.as_nd_ndarray()],
+                                                   numeric_eps=1e-3, rtol=1e-3, atol=1e-4, dtype=_np.float32)
+
+                        # test imperative
+                        mx_out = np.mean(x, axis=axis, dtype=dtype, keepdims=keepdims)
+                        np_out = _np.mean(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims).astype(dtype)
+                        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@use_np
+def test_np_moment():
+    class TestMoment(HybridBlock):
+        def __init__(self, name, axis=None, dtype=None, keepdims=False, ddof=0):
+            super(TestMoment, self).__init__()
+            self._name = name
+            self._axis = axis
+            self._dtype = dtype
+            self._keepdims = keepdims
+            self._ddof = ddof
+
+        def hybrid_forward(self, F, a, *args, **kwargs):
+            return getattr(a, self._name)(axis=self._axis, dtype=self._dtype, keepdims=self._keepdims, ddof=self._ddof)
+
+    def is_int(dtype):
+        return 'int' in dtype
+
+    def legalize_shape(shape):
+        shape_ = list(shape)
+        for i in range(len(shape_)):
+            shape_[i] += 1
+        return tuple(shape_)
+
+    in_data_dim = random.choice([2, 3, 4])
+    shape = rand_shape_nd(in_data_dim, dim=3)
+    shape = legalize_shape(shape)
+    acc_type = {'float16': 'float32', 'float32': 'float64', 'float64': 'float64',
+                'int8': 'float64', 'int32': 'float64', 'int64': 'float64'}
+
+    for name in ['var', 'std']:
+        for hybridize in [False, True]:
+            for ddof in [0, 1]:
+                for keepdims in [True, False]:
+                    for axis in ([i for i in range(in_data_dim)] + [(), None]):
+                        for itype in ['float16', 'float32', 'float64', 'int8', 'int32', 'int64']:
+                            for dtype in ['float16', 'float32', 'float64']:
+                                if is_int(dtype) and not is_int(itype) or is_int(itype) and is_int(dtype):
+                                    continue
+                                atol = 3e-4 if itype == 'float16' or dtype == 'float16' else 1e-5
+                                rtol = 1e-2 if itype == 'float16' or dtype == 'float16' else 1e-3
+                                # test gluon
+                                test_moment = TestMoment(name, axis=axis, dtype=dtype, keepdims=keepdims, ddof=ddof)
+                                if hybridize:
+                                    test_moment.hybridize()
+                                if is_int(itype):
+                                    x = _np.random.randint(-16, 16, shape, dtype=itype)
+                                    x = mx.nd.array(x)
+                                else:
+                                    x = mx.nd.random.uniform(-1.0, 1.0, shape=shape, dtype=itype)
+                                x = x.as_np_ndarray()
+                                x.attach_grad()
+                                expected_ret = getattr(_np, name)(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims, ddof=ddof)
+                                expected_ret = expected_ret.astype(dtype)
+                                y = test_moment(x)
+                                assert y.shape == expected_ret.shape
+                                assert_almost_equal(y.asnumpy(), expected_ret, rtol=rtol, atol=atol, use_broadcast=False, equal_nan=True)
+
+                                # test imperative
+                                mx_out = getattr(np, name)(x, axis=axis, dtype=dtype, keepdims=keepdims, ddof=ddof)
+                                np_out = getattr(_np, name)(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims, ddof=ddof).astype(dtype)
+                                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol, use_broadcast=False, equal_nan=True)
 
 
 @with_seed()
@@ -745,7 +986,7 @@ def test_np_unary_funcs():
 
             if ref_grad:
                 y.backward()
-                assert_almost_equal(mx_test_data.grad.asnumpy(), ref_grad(np_test_data), rtol=1e-5, atol=1e-6, equal_nan=True)
+                assert_almost_equal(mx_test_data.grad.asnumpy(), ref_grad(np_test_data), rtol=1e-1, atol=1e-2, equal_nan=True)
 
     funcs = {
         'absolute' : (lambda x: -1. * (x < 0) + (x > 0), -1.0, 1.0),

@@ -202,7 +202,8 @@ if __name__ == '__main__':
         if args.model == 'imagenet1k-resnet-152':
             rgb_mean = '0,0,0'
             rgb_std = '1,1,1'
-            excluded_sym_names += ['flatten0']
+            # stage1_unit1_bn1 & stage4_unit1_bn1 is excluded for the sake of accuracy
+            excluded_sym_names += ['flatten0', 'stage1_unit1_bn1', 'stage4_unit1_bn1']
             if exclude_first_conv:
                 excluded_sym_names += ['conv0']
         elif args.model == 'imagenet1k-inception-bn':
