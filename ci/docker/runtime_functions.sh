@@ -715,7 +715,6 @@ build_ubuntu_gpu_cmake_mkldnn() {
     set -ex
     cd /work/build
     build_ccache_wrappers
-    export LD_LIBRARY_PATH=/usr/local/cuda/compat:$LD_LIBRARY_PATH
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
@@ -742,11 +741,6 @@ build_ubuntu_gpu_cmake() {
     set -ex
     cd /work/build
     build_ccache_wrappers
-    echo "ls cuda path"
-    ls -l /usr/lib/x86_64-linux-gnu/
-    ls -l /usr/local/cuda
-    find /usr/ -name libcuda.so.1
-    export LD_LIBRARY_PATH=/usr/local/cuda/compat:$LD_LIBRARY_PATH
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
