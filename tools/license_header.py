@@ -74,6 +74,9 @@ _WHITE_LIST = [
                # Docs Sphinx themes under different licenses
                'docs/python_docs/themes',
 
+                # Docs Jekyll website under different licenses
+               'docs/static_site',
+  
                # Code shared with project by author - see file for details
                'src/operator/special_functions-inl.h',
 
