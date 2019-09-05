@@ -272,9 +272,14 @@ for (index_t i = 0; i < n; i += blocksize) {
     for (index_t j = 0; j < p; j += blocksize) {
         // transpose the block
         #pragma unroll 4
-        for (index_t a = 0; a < blocksize && j + a < n; ++a) {
-          for (index_t b = 0; b < blocksize && i + b < n; ++b) {
-                  out[(j + a) * n + i + b] = in[(i + b) * p + (j + a)];
+        for (index_t a = j; a < j + blocksize; ++a) {
+          for (index_t b = i; b < i + blocksize; ++b) {
+                  out[a * n + i] = in[i * p + j];
+              }
+        }
+        for (index_t a = a; a < n; ++a) {
+          for (index_t b = b; b < n; ++b) {
+                  out[a * n + i] = in[i * p + j];
               }
         }
     }
