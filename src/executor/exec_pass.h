@@ -35,12 +35,15 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <tuple>
 
 namespace mxnet {
 namespace exec {
 
 template <typename Attr>
-using FAccessSubgraphAttr = std::function<std::tuple<const nnvm::NodePtr, std::vector<Attr>, std::vector<Attr>>
+using FAccessSubgraphAttr = std::function<std::tuple<const nnvm::NodePtr,
+                                          std::vector<Attr>,
+                                          std::vector<Attr>>
                               (const NodeAttrs& attrs)>;
 
 using FAccessSubgraphShape = FAccessSubgraphAttr<mxnet::TShape>;
