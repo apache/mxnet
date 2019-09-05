@@ -268,9 +268,7 @@ index_t n = shape_0;
 index_t p = shape_1;
 
 index_t N = (n/blocksize)*blocksize;
-bool n_strip = (n - N > 0);
 index_t P = (p/blocksize)*blocksize;
-bool p_strip = (p - P > 0);
 
 for (index_t i = 0; i < N; i += blocksize) {
   #pragma omp parallel for
