@@ -1,3 +1,19 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
 ---
 layout: page_api
 title: NDArray
@@ -42,7 +58,7 @@ b <- mx.nd.zeros(c(2, 3), mx.cpu()) # create a 2-by-3 matrix on cpu
 ```
 
 Typically for CUDA-enabled devices, the device id of a GPU starts from 0.
-That's why we passed in 0 to the GPU id. 
+That's why we passed in 0 to the GPU id.
 
 We can initialize an `NDArray` object in various ways:
 
@@ -174,7 +190,7 @@ mx.nd.save(list(a), "hdfs///users/myname/mydata.bin")
 `NDArray` can automatically execute operations in parallel. Automatic parallelization is useful when
 using multiple resources, such as CPU cards, GPU cards, and CPU-to-GPU memory bandwidth.
 
-For example, if we write `a <- a + 1` followed by `b <- b + 1`, and `a` is on a CPU and 
+For example, if we write `a <- a + 1` followed by `b <- b + 1`, and `a` is on a CPU and
 `b` is on a GPU, executing them in parallel improves
 efficiency. Furthermore, because copying data between CPUs and GPUs are also expensive, running in parallel with other computations further increases efficiency.
 

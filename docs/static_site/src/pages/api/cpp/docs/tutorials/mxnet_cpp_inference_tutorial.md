@@ -1,3 +1,19 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
 ---
 layout: page_api
 title: C++ API inference tutorial
@@ -177,7 +193,7 @@ NDArray Predictor::LoadInputImage(const std::string& image_file) {
 
 Finally, let's run the inference. It's basically using MXNet executor to do a forward pass. To run predictions on multiple images, you can load the images in a list of NDArrays and run prediction in batches. Note that the Predictor class may not be thread safe. Calling it in multi-threaded environments was not tested. To utilize multi-threaded prediction, you need to use the C predict API. Please follow the [C predict example](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification/predict-cpp).
 
-An additional step is to normalize the image NDArrays values to `(0, 1)` and apply mean and standard deviation we just loaded. 
+An additional step is to normalize the image NDArrays values to `(0, 1)` and apply mean and standard deviation we just loaded.
 
 ```c++
 /*
