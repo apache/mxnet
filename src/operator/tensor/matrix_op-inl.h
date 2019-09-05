@@ -269,55 +269,51 @@ index_t p = shape_1;
 
 index_t N = (n/blocksize)*blocksize;
 index_t P = (p/blocksize)*blocksize;
+index_t a_limit = 0, b_limit = 0, i = 0, j = 0, a = 0, b = 0;
 
-for (index_t i = 0; i < N; i += blocksize) {
+for (i = 0; i < N; i += blocksize) {
   #pragma omp parallel for
-    for (index_t j = 0; j < P; j += blocksize) {
+    for (j = 0; j < P; j += blocksize) {
         // transpose the block
         #pragma unroll 4
-        index_t a_limit = j + blocksize;
-        index_t b_limit = i + blocksize;
-        for (index_t a = j; a < a_limit; ++a) {
-          for (index_t b = i; b < b_limit; ++b) {
+        a_limit = j + blocksize;
+        b_limit = i + blocksize;
+        for (a = j; a < a_limit; ++a) {
+          for (b = i; b < b_limit; ++b) {
                   out[a * n + b] = in[b * p + a];
           }
         }
     }
 }
 
-for (index_t i = 0; i < N; i += blocksize) {
-  #pragma omp parallel for
-    for (index_t j = P; j < p; j += blocksize) {
-        // transpose the block
-        index_t b_limit = i + blocksize;
-        #pragma unroll 4
-        for (index_t a = j; a < p; ++a) {
-          for (index_t b = i; b < b_limit; ++b) {
-                  out[a * n + b] = in[b * p + a];
-          }
-        }
+#pragma omp parallel for
+for (i = 0; i < N; i += blocksize) {
+  // transpose the block
+  b_limit = i + blocksize;
+  #pragma unroll 4
+  for (a = P; a < p; ++a) {
+    for (b = i; b < b_limit; ++b) {
+            out[a * n + b] = in[b * p + a];
     }
+  }
 }
 
-for (index_t i = N; i < n; i += blocksize) {
-  #pragma omp parallel for
-    for (index_t j = 0; j < P; j += blocksize) {
-        // transpose the block
-        
-        index_t a_limit = j + blocksize;        
-        #pragma unroll 4
-        for (index_t a = j; a < a_limit; ++a) {
-          for (index_t b = i; b < n; ++b) {
-                  out[a * n + b] = in[b * p + a];
-          }
-        }
-    }
-}
 
+#pragma omp parallel for
+for (j = 0; j < P; j += blocksize) {
+  // transpose the block
+  a_limit = j + blocksize;
+  #pragma unroll 4
+  for (a = j; a < a_limit; ++a) {
+    for (b = N; b < n; ++b) {
+            out[a * n + b] = in[b * p + a];
+    }
+  }
+}
 
 #pragma unroll 4
-for (index_t a = N; a < n; ++a) {
-  for (index_t b = P; b < p; ++b) {
+for (a = N; a < n; ++a) {
+  for (b = P; b < p; ++b) {
           out[a * n + b] = in[b * p + a];
   }
 }
