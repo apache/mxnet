@@ -267,23 +267,42 @@ index_t blocksize = 32;
 index_t n = shape_0;
 index_t p = shape_1;
 
-for (index_t i = 0; i < n; i += blocksize) {
+index_t N = (n/blocksize)*blocksize;
+bool n_strip = (n - N > 0);
+index_t P = (p/blocksize)*blocksize;
+bool p_strip = (p - P > 0);
+
+for (index_t i = 0; i < N; i += blocksize) {
   #pragma omp parallel for
-    for (index_t j = 0; j < p; j += blocksize) {
+    for (index_t j = 0; j < P; j += blocksize) {
         // transpose the block
         #pragma unroll 4
-        for (index_t a = j; a < j + blocksize; ++a) {
-          for (index_t b = i; b < i + blocksize; ++b) {
-                  out[a * n + i] = in[i * p + j];
-              }
-        }
-        for (index_t a = a; a < n; ++a) {
-          for (index_t b = b; b < n; ++b) {
-                  out[a * n + i] = in[i * p + j];
-              }
+        index_t a_limit = j + blocksize;
+        index_t b_limit = i + blocksize;
+        for (index_t a = j; a < a_limit; ++a) {
+          for (index_t b = i; b < b_limit; ++b) {
+                  out[a * n + b] = in[b * p + a];
+          }
         }
     }
 }
+
+for (index_t i = N; i < n; i += blocksize) {
+  #pragma omp parallel for
+    for (index_t j = P; j < p; j += blocksize) {
+        // transpose the block
+        index_t a_limit = j + blocksize;
+        index_t b_limit = i + blocksize;
+        #pragma unroll 4
+        for (index_t a = j; (a < a_limit && a < p); ++a) {
+          for (index_t b = i; (b < b_limit && b < n); ++b) {
+                  out[a * n + b] = in[b * p + a];
+          }
+        }
+    }
+}
+
+
 }
 
 
