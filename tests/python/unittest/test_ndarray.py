@@ -141,12 +141,6 @@ def test_ndarray_setitem():
     x_np[:, -3:-1, -2:-1] = 1
     assert same(x.asnumpy(), x_np)
 
-    # Scalar array, no assignment allowed
-    with mx.np_shape():
-        x = mx.nd.zeros(())
-        with assert_raises(IndexError):
-            x[:] = 1
-
     # Assignments for empty axes
     for trivial_shape in [(1,), (1, 1), (1, 1, 1)]:
         x = mx.nd.zeros(trivial_shape)
@@ -1142,7 +1136,7 @@ def test_ndarray_lesser_equal():
 
 
 @with_seed()
-def test_take():
+def test_ndarray_take():
     for data_ndim in range(2, 5):
         for idx_ndim in range(1, 4):
             data_shape = ()
@@ -1387,7 +1381,6 @@ def test_ndarray_indexing():
             except Exception as e:
                 print('Failed with index = {}, value.shape = {}'.format(mx_index, mx_value.shape))
                 raise e
-
             assert same(np_array, mx_array.asnumpy())
 
         np_index = index
@@ -1476,9 +1469,12 @@ def test_ndarray_indexing():
     np_array = np.arange(np.prod(shape), dtype='int32').reshape(shape)
     # index_list is a list of tuples. The tuple's first element is the index, the second one is a boolean value
     # indicating whether we should expect the result as a scalar compared to numpy.
-    index_list = [(0, False), (np.int32(0), False), (np.int64(0), False),
+    index_list = [# Basic indexing
+                  # Single int as index
+                  (0, False), (np.int32(0), False), (np.int64(0), False),
                   (5, False), (np.int32(5), False), (np.int64(5), False),
                   (-1, False), (np.int32(-1), False), (np.int64(-1), False),
+                  # Slicing as index
                   (slice(5), False), (np_int(slice(5), np.int32), False), (np_int(slice(5), np.int64), False),
                   (slice(1, 5), False), (np_int(slice(1, 5), np.int32), False), (np_int(slice(1, 5), np.int64), False),
                   (slice(1, 5, 2), False), (np_int(slice(1, 5, 2), np.int32), False),
@@ -1499,6 +1495,7 @@ def test_ndarray_indexing():
                   (np_int(slice(None, None, -1)), False), (np_int(slice(None, None, -1), np.int64), False),
                   (slice(None, None, -2), False),
                   (np_int(slice(None, None, -2), np.int32), False), (np_int(slice(None, None, -2), np.int64), False),
+                  # slice(None) as indices
                   ((slice(None), slice(None), 1, 8), False),
                   ((slice(None), slice(None), -1, 8), False),
                   ((slice(None), slice(None), 1, -8), False),
@@ -1511,6 +1508,7 @@ def test_ndarray_indexing():
                   ((slice(None), 2, slice(1, 5), 1), False),
                   (np_int((slice(None), 2, slice(1, 5), 1)), False),
                   (np_int((slice(None), 2, slice(1, 5), 1), np.int64), False),
+                  # Multiple ints as indices
                   ((1, 2, 3), False),
                   (np_int((1, 2, 3)), False),
                   (np_int((1, 2, 3), np.int64), False),
@@ -1535,6 +1533,19 @@ def test_ndarray_indexing():
                   ((slice(1, 8, 2), 1, slice(3, 8), 2), False),
                   (np_int((slice(1, 8, 2), 1, slice(3, 8), 2)), False),
                   (np_int((slice(1, 8, 2), 1, slice(3, 8), 2), np.int64), False),
+                  # Test Ellipsis ('...')
+                  ((1, Ellipsis, -1), False),
+                  ((slice(2), Ellipsis, None, 0), False),
+                  # Test basic indexing with newaxis
+                  (None, False),
+                  ((1, None, -2, 3, -4), False),
+                  ((1, slice(2, 5), None), False), 
+                  ((slice(None), slice(1, 4), None, slice(2, 3)), False), 
+                  ((slice(1, 3), slice(1, 3), slice(1, 3), slice(1, 3), None), False), 
+                  ((slice(1, 3), slice(1, 3), None, slice(1, 3), slice(1, 3)), False), 
+                  ((None, slice(1, 2), 3, None), False),
+                  ((1, None, 2, 3, None, None, 4), False),
+                  # Advanced indexing
                   ([1], False), ([1, 2], False), ([2, 1, 3], False), ([7, 5, 0, 3, 6, 2, 1], False),
                   (np.array([6, 3], dtype=np.int32), False),
                   (np.array([[3, 4], [0, 6]], dtype=np.int32), False),
@@ -1571,16 +1582,15 @@ def test_ndarray_indexing():
                   (([[[[1]]]], [[2], [12]], slice(0, 3), slice(None)), False),
                   (([1, 2], slice(3, 5), [2, 3], [3, 4]), False),
                   (([1, 2], slice(3, 5), (2, 3), [3, 4]), False),
-                  ((1, Ellipsis, -1), False),
-                  ((slice(2), Ellipsis, None, 0), False),
-                  (None, False),
-                  ((1, None, -2, 3, -4), False),
-                  # TODO(zoeygxy): Support None in advanced indexing
-                  # (([1, 2], slice(3, 5), None, None, [3, 4]), False),
-                  # ((slice(None), slice(3, 5), None, None, [2, 3], [3, 4]), False),
-                  # ((slice(None), slice(3, 5), None, [2, 3], None, [3, 4]), False),
-                  # ((None, slice(None), slice(3, 5), [2, 3], None, [3, 4]), False),
+                  # Advanced indexing with None
+                  (([1, 2], slice(3, 5), None, None, [3, 4]), False),
+                  ((slice(None), slice(3, 5), None, None, [2, 3], [3, 4]), False),
+                  ((slice(None), slice(3, 5), None, [2, 3], None, [3, 4]), False),
+                  ((None, slice(None), slice(3, 5), [2, 3], None, [3, 4]), False),
+                  ((None, slice(None), None, slice(3, 5), [2, 3], None, [3, 4]), False),
+                  (([2, 3, 4], None, [3, 4, 6], None, slice(1, 2), None, [1, 2, 3]), False),
     ]
+
     for index in index_list:
         test_getitem(np_array, index[0], index[1])
         test_setitem(np_array, index[0], index[1])

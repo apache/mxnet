@@ -1437,6 +1437,64 @@ class Symbol(SymbolBase):
         return Symbol(handle)
 
 
+    def optimize_for(self, backend, args=None, ctx=None, **kwargs):
+        """Partitions current symbol and optimizes it for a given backend,
+        returns new partitioned symbol.
+
+        Parameters
+        ----------
+        backend : str
+            The name of backend, as registered in `SubgraphBackendRegistry`
+
+        args : list of NDArray or dict of str to NDArray, optional
+            Input arguments to the symbol, required to infer shapes/types before partitioning
+
+            - If type is a list of `NDArray`, the order is the same as that of `list_arguments()`.
+            - If type is a dict of str to `NDArray`, then it maps the name of arguments
+              to the corresponding `NDArray`.
+
+        ctx : Context, optional
+            Device context, used to infer stypes
+
+        kwargs : optional arguments
+            Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
+
+        Returns
+        -------
+        out : SymbolHandle
+            The created symbol for target backend.
+        """
+        out = SymbolHandle()
+        assert isinstance(backend, str)
+
+        if args is None:
+            args = []
+            args_handle = c_array(NDArrayHandle, [])
+        else:
+            listed_arguments = self.list_arguments()
+            args_handle, args = self._get_ndarray_inputs('args', args, listed_arguments, False)
+
+        if ctx is None:
+            ctx = current_context()
+        assert isinstance(ctx, Context)
+
+        key_list = []
+        val_list = []
+        for key, val in kwargs.items():
+            key_list.append(key)
+            val_list.append(str(val))
+        check_call(_LIB.MXOptimizeForBackend(self.handle,
+                                             c_str(backend),
+                                             ctypes.c_int(ctx.device_typeid),
+                                             ctypes.byref(out),
+                                             mx_uint(len(args)),
+                                             args_handle,
+                                             mx_uint(len(key_list)),
+                                             c_str_array(key_list),
+                                             c_str_array(val_list)))
+        return Symbol(out)
+
+
     # pylint: disable=too-many-locals
     def simple_bind(self, ctx, grad_req='write', type_dict=None, stype_dict=None,
                     group2ctx=None, shared_arg_names=None, shared_exec=None,

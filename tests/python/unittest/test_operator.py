@@ -75,6 +75,45 @@ def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req, rtol=1e-2, atol=1e
         assert(mod2.get_input_grads()[0] == None)
 
 
+@with_seed()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+def test_rnn_with_new_param():
+    rnn_modes = ['rnn_relu', 'rnn_tanh', 'gru', 'lstm']
+    ngates_ = [1, 1, 3, 4]
+    num_layers, input_size, seq_len, batch_size, state_size = 3, 128, 5, 64, 8
+    for bidirectional in [False, True]:
+        directions = 2 if bidirectional else 1
+        for mode, ngates in zip(rnn_modes, ngates_):
+            first_layer_size = (input_size * state_size + state_size * state_size + state_size * 2) * ngates
+            rest_layer_size = (state_size * directions * state_size + state_size * state_size + state_size * 2) \
+                 * ngates * (num_layers - 1)
+            param_size = (first_layer_size + rest_layer_size) * directions
+            sym = mx.sym.RNN(mode=mode, num_layers=num_layers, bidirectional=bidirectional,
+                state_outputs=False, state_size=state_size, name='rnn')
+
+            bind_dict = {
+                'rnn_data': mx.ndarray.random.uniform(low=-1, high=1, shape=(seq_len, batch_size, input_size)),
+                'rnn_parameters': mx.ndarray.random.uniform(low=-1, high=1, shape=(param_size)),
+                'rnn_state': mx.ndarray.zeros(shape=(num_layers * directions, batch_size, state_size))
+            }
+            if mode == 'lstm':
+                bind_dict['rnn_state_cell'] = mx.ndarray.zeros(
+                    shape=(num_layers * directions, batch_size, state_size))
+
+            ex = sym.bind(default_context(), bind_dict)
+            ex.forward(is_train=True)
+            ex01 = ex.output_dict['rnn_output'].asnumpy()
+            ex.forward(is_train=False)
+            ex02 = ex.output_dict['rnn_output'].asnumpy()
+            assert_allclose(ex01, ex02, rtol=1e-2, atol=1e-4)
+            bind_dict['rnn_parameters'] = mx.ndarray.random.uniform(low=-1, high=1, shape=(param_size))
+            ex.copy_params_from(bind_dict)
+            ex.forward(is_train=True)
+            ex03 = ex.output_dict['rnn_output'].asnumpy()
+            ex.forward(is_train=False)
+            ex04 = ex.output_dict['rnn_output'].asnumpy()
+            assert_allclose(ex03, ex04, rtol=1e-2, atol=1e-4)
+
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
@@ -3704,7 +3743,7 @@ def test_norm():
 
     ctx = default_context()
     data = mx.symbol.Variable('data')
-    in_data_dim = random_sample([4,5,6], 1)[0]
+    in_data_dim = random_sample([2,3,4], 1)[0]
     in_shape = rand_shape_nd(in_data_dim, dim=5)
     epsilon = 1e-3
     acc_type = {np.float16: np.float32, np.float32: np.float32, np.float64: np.float64,
@@ -4426,7 +4465,7 @@ def test_take():
         else:
             raise ValueError("axis %d is not supported..." % axis)
 
-    def check_output_n_grad(data_shape, idx_shape, axis, mode):
+    def check_output_n_grad(data_shape, idx_shape, axis, mode, out_of_range=True):
         data = mx.sym.Variable('a')
         idx = mx.sym.Variable('indices')
         idx = mx.sym.BlockGrad(idx)
@@ -4434,7 +4473,13 @@ def test_take():
         exe = result.simple_bind(default_context(), a=data_shape,
                                  indices=idx_shape, axis=axis, mode=mode)
         data_real = np.random.normal(size=data_shape).astype('float32')
-        idx_real = np.random.randint(low=0, high=data_shape[axis], size=idx_shape)
+        if out_of_range:
+            idx_real = np.random.randint(low=-data_shape[axis], high=data_shape[axis], size=idx_shape)
+            if mode == 'raise':
+                idx_real[idx_real == 0] = 1
+                idx_real *= data_shape[axis]
+        else:
+            idx_real = np.random.randint(low=0, high=data_shape[axis], size=idx_shape)
         if axis < 0:
             axis += len(data_shape)
 
@@ -4444,9 +4489,20 @@ def test_take():
         exe.arg_dict['a'][:] = mx.nd.array(data_real)
         exe.arg_dict['indices'][:] = mx.nd.array(idx_real)
         exe.forward(is_train=True)
+        if out_of_range and mode == 'raise':
+            try:
+                mx_out = exe.outputs[0].asnumpy()
+            except MXNetError as e:
+                return
+            else:
+                # Did not raise exception
+                assert False, "did not raise %s" % MXNetError.__name__
+
         assert_almost_equal(exe.outputs[0].asnumpy(), np.take(data_real, idx_real, axis=axis, mode=mode))
 
         for i in np.nditer(idx_real):
+            if mode == 'clip':
+                i = np.clip(i, 0, data_shape[axis])
             grad_helper(grad_in, axis, i)
 
         exe.backward([mx.nd.array(grad_out)])
@@ -4477,7 +4533,7 @@ def test_take():
         x.backward()
         assert_almost_equal(np.ones(sc.grad.shape), sc.grad.asnumpy())
 
-    for mode in ['clip', 'wrap']:
+    for mode in ['clip', 'wrap', 'raise']:
         for data_ndim in range(1, 5):
             for idx_ndim in range(1, 4):
                 for axis in range(-data_ndim, data_ndim):
@@ -4487,6 +4543,8 @@ def test_take():
                     idx_shape = ()
                     for _ in range(idx_ndim):
                         idx_shape += (np.random.randint(low=1, high=5), )
+                    if mode == 'raise':
+                        check_output_n_grad(data_shape, idx_shape, axis, 'raise', False)
                     check_output_n_grad(data_shape, idx_shape, axis, mode)
 
     check_autograd_req()
@@ -5260,42 +5318,41 @@ def test_softmax_with_length():
 @with_seed()
 def test_pick():
     def test_pick_helper(index_type=np.int32):
-        for _ in range(100):
-            for mode in ['clip', 'wrap']:
-                ndim = np.random.randint(1, 5)
-                bshape = np.random.randint(1, 10, size=ndim)
-                axis = np.random.randint(0, ndim)
-                sshape = bshape.copy()
-                sshape[axis] = 1
-                data = np.random.uniform(-1, 1, size=bshape)
+        for mode in ['clip', 'wrap']:
+            ndim = np.random.randint(1, 5)
+            bshape = np.random.randint(1, 10, size=ndim)
+            axis = np.random.randint(0, ndim)
+            sshape = bshape.copy()
+            sshape[axis] = 1
+            data = np.random.uniform(-1, 1, size=bshape)
 
-                if mode == 'wrap':
-                    index = np.random.randint(-2*bshape[axis], 2*bshape[axis], size=sshape)
-                else:
-                    index = np.random.randint(0, bshape[axis], size=sshape)
-                exp = []
-                for i in range(ndim):
-                    if i == axis:
-                        if mode == 'wrap':
-                            exp.append(index % bshape[axis])
-                        else:
-                            exp.append(index)
+            if mode == 'wrap':
+                index = np.random.randint(-2*bshape[axis], 2*bshape[axis], size=sshape)
+            else:
+                index = np.random.randint(0, bshape[axis], size=sshape)
+            exp = []
+            for i in range(ndim):
+                if i == axis:
+                    if mode == 'wrap':
+                        exp.append(index % bshape[axis])
                     else:
-                        ishape = [1 for _ in range(ndim)]
-                        ishape[i] = bshape[i]
-                        exp.append(np.arange(bshape[i]).reshape(ishape))
-                expected = data[exp]
-                data = mx.nd.array(data, dtype='float32')
-                index = mx.nd.array(index, dtype=index_type)
-                out = mx.nd.pick(data, index, axis=axis, keepdims=True, mode=mode)
-                assert_almost_equal(out.asnumpy(), expected)
+                        exp.append(index)
+                else:
+                    ishape = [1 for _ in range(ndim)]
+                    ishape[i] = bshape[i]
+                    exp.append(np.arange(bshape[i]).reshape(ishape))
+            expected = data[exp]
+            data = mx.nd.array(data, dtype='float32')
+            index = mx.nd.array(index, dtype=index_type)
+            out = mx.nd.pick(data, index, axis=axis, keepdims=True, mode=mode)
+            assert_almost_equal(out.asnumpy(), expected)
 
-                data_holder = data
-                index_holder = index
-                data = mx.sym.Variable('data')
-                index = mx.sym.Variable('index')
-                sym = mx.sym.pick(data, index, axis=axis, keepdims=True, mode=mode)
-                check_numeric_gradient(sym, [data_holder, index_holder], grad_nodes=['data'])
+            data_holder = data
+            index_holder = index
+            data = mx.sym.Variable('data')
+            index = mx.sym.Variable('index')
+            sym = mx.sym.pick(data, index, axis=axis, keepdims=True, mode=mode)
+            check_numeric_gradient(sym, [data_holder, index_holder], grad_nodes=['data'])
 
     test_pick_helper(np.int32)
     test_pick_helper(np.float32)
@@ -5571,9 +5628,10 @@ def test_quantization_op():
 
     qa_real = mx.nd.array([[18, 75], [77, 109]])
     a_real  = mx.nd.array([[0.14173228, 0.5905512], [0.6062992, 0.8582677]])
-
+    print(a_.asnumpy())
+    print(a_real.asnumpy())
     assert same(qa.asnumpy(), qa_real.asnumpy())
-    assert same(a_.asnumpy(),  a_real.asnumpy())
+    assert_almost_equal(a_.asnumpy(),  a_real.asnumpy(), rtol=1e-2)
 
 @with_seed()
 def test_index_copy():
@@ -6807,7 +6865,7 @@ def test_laop_5():
     # tests for diagonal and triangular matrix extraction and generation
     data = mx.symbol.Variable('data')
     # test complete range of small matrices to cover corner cases
-    for n in range(1, 10):
+    for n in range(1, 5):
         # test batched and non-batched processing
         for b in range(3):
             shape = (n, n) if b == 0 else (b, n, n)
@@ -6851,6 +6909,7 @@ def test_laop_5():
 
 # Tests for linalg.inverse
 @with_seed()
+@unittest.skip("Test crashes https://github.com/apache/incubator-mxnet/issues/15975")
 def test_laop_6():
     dtype = np.float64
     rtol_fw = 1e-7
@@ -8408,6 +8467,143 @@ def test_op_roi_align():
     test_roi_align_value(position_sensitive=True)
     test_roi_align_autograd()
 
+@with_seed()
+def test_op_rroi_align():
+    T = np.float32
+
+    def assert_same_dtype(dtype_a, dtype_b):
+        '''
+        Assert whether the two data type are the same
+        Parameters
+        ----------
+        dtype_a, dtype_b: type
+            Input data types to compare
+        '''
+        assert dtype_a == dtype_b,\
+            TypeError('Unmatched data types: %s vs %s' % (dtype_a, dtype_b))
+
+    def bilinear_interpolate(bottom, height, width, y, x):
+        if y < -1.0 or y > height or x < -1.0 or x > width:
+            return T(0.0)
+        x = T(max(0.0, x))
+        y = T(max(0.0, y))
+        x_low = int(x)
+        y_low = int(y)
+        if x_low >= width - 1:
+            x_low = x_high = width - 1
+            x = T(x_low)
+        else:
+            x_high = x_low + 1
+        if y_low >= height - 1:
+            y_low = y_high = height - 1
+            y = T(y_low)
+        else:
+            y_high = y_low + 1
+        ly = y - T(y_low)
+        lx = x - T(x_low)
+        hy = T(1.0) - ly
+        hx = T(1.0) - lx
+        v1 = bottom[y_low, x_low]
+        v2 = bottom[y_low, x_high]
+        v3 = bottom[y_high, x_low]
+        v4 = bottom[y_high, x_high]
+        w1 = hy * hx
+        w2 = hy * lx
+        w3 = ly * hx
+        w4 = ly * lx
+        assert_same_dtype(w1.dtype, T)
+        assert_same_dtype(w2.dtype, T)
+        assert_same_dtype(w3.dtype, T)
+        assert_same_dtype(w4.dtype, T)
+        val = w1 * v1 + w2 * v2 + w3 * v3 + w4 * v4
+        assert_same_dtype(val.dtype, T)
+
+        return val
+
+    def rroialign_forward(data, rois, pooled_size, spatial_scale, sampling_ratio):
+        N, C, H, W = data.shape
+        R = rois.shape[0]
+        PH, PW = pooled_size
+        assert rois.ndim == 2,\
+            ValueError(
+                'The ndim of rois should be 2 rather than %d' % rois.ndim)
+        assert rois.shape[1] == 6,\
+            ValueError(
+                'The length of the axis 1 of rois should be 6 rather than %d' % rois.shape[1])
+        assert_same_dtype(data.dtype, T)
+        assert_same_dtype(rois.dtype, T)
+
+        out = np.zeros((R, C, PH, PW), dtype=T)
+
+        for r in range(R):
+            batch_ind = int(rois[r, 0])
+            roi_center_w, roi_center_h, roi_w, roi_h = rois[r, 1:5] * T(spatial_scale)
+            roi_theta = T(rois[r,5]  * np.pi / 180.0)
+            roi_w = T(max(roi_w, 1.0))
+            roi_h = T(max(roi_h, 1.0))
+            bin_h = roi_h / T(PH)
+            bin_w = roi_w / T(PW)
+            bdata = data[batch_ind]
+            if sampling_ratio > 0:
+                roi_bin_grid_h = roi_bin_grid_w = sampling_ratio
+            else:
+                roi_bin_grid_h = int(np.ceil(roi_h / T(PH)))
+                roi_bin_grid_w = int(np.ceil(roi_w / T(PW)))
+            count = T(roi_bin_grid_h * roi_bin_grid_w)
+            roi_start_h = T(-roi_h / 2.0)
+            roi_start_w = T(-roi_w / 2.0)
+            for c in range(C):
+                for ph in range(PH):
+                    for pw in range(PW):
+                        val = T(0.0)
+                        for iy in range(roi_bin_grid_h):
+                            yy = roi_start_h + T(ph) * bin_h + (T(iy) + T(0.5)) * \
+                                bin_h / T(roi_bin_grid_h)
+                            for ix in range(roi_bin_grid_w):
+                                xx = roi_start_w + T(pw) * bin_w + (T(ix) + T(0.5)) * \
+                                    bin_w / T(roi_bin_grid_w)
+                                x = xx * np.cos(roi_theta, dtype=T) + yy * np.sin(roi_theta, dtype=T) + roi_center_w
+                                y = yy * np.cos(roi_theta, dtype=T) - xx * np.sin(roi_theta, dtype=T) + roi_center_h
+                                v = bilinear_interpolate(
+                                    bdata[c], H, W, y, x)
+                                assert_same_dtype(v.dtype, T)
+                                val += v
+
+                        out[r, c, ph, pw] = val / count
+        assert_same_dtype(out.dtype, T)
+
+        return out
+
+    def test_rroi_align_value(sampling_ratio=-1):
+        ctx = default_context()
+        if ctx.device_type == 'gpu':
+            print('skipped testing rroi align for gpu since it is not supported yet')
+            return
+
+        dtype = np.float32
+        dlen = 224
+        N, C, H, W = 5, 3, 16, 16
+        R = 7
+        pooled_size = (3, 4)
+        spatial_scale = H * 1.0 / dlen
+        data = mx.nd.array(
+            np.arange(N * C * W * H).reshape((N, C, H, W)), ctx=ctx, dtype=dtype)
+        center_xy = mx.nd.random.uniform(0, dlen, (R, 2), ctx=ctx, dtype=dtype)
+        wh = mx.nd.random.uniform(0, dlen, (R, 2), ctx=ctx, dtype=dtype)
+        theta = mx.nd.random.uniform(0, 180, (R,1), ctx=ctx, dtype=dtype)
+        batch_ind = mx.nd.array(np.random.randint(0, N, size=(R, 1)), ctx=ctx)
+        pos = mx.nd.concat(center_xy, wh, theta, dim=1)
+        rois = mx.nd.concat(batch_ind, pos, dim=1)
+
+        output = mx.nd.contrib.RROIAlign(data, rois, pooled_size=pooled_size,
+                                        spatial_scale=spatial_scale, sampling_ratio=sampling_ratio)
+        real_output = rroialign_forward(data.asnumpy(), rois.asnumpy(), pooled_size,
+                                        spatial_scale, sampling_ratio)
+
+        assert_almost_equal(output.asnumpy(), real_output, atol=1e-3)
+
+    test_rroi_align_value()
+    test_rroi_align_value(sampling_ratio=2)
 
 @with_seed()
 def test_diag():
