@@ -258,10 +258,8 @@ struct TransposeParam : public dmlc::Parameter<TransposeParam> {
 };
 
 
-// using namespace mshadow;
 template<typename xpu, typename DType>
-MSHADOW_XINLINE void Transpose2D(DType *in, DType *out, index_t shape_0, index_t shape_1){
-
+MSHADOW_XINLINE void Transpose2D(DType *in, DType *out, index_t shape_0, index_t shape_1) {
 // ensure cache line hits and prevent cache miss for any configuration
 index_t blocksize = 32;
 index_t n = shape_0;
