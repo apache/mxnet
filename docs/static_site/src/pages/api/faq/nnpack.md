@@ -1,3 +1,19 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
 ---
 layout: page_category
 title: NNPACK for Multi-Core CPU Support in MXNet
@@ -23,7 +39,7 @@ including [fft](https://arxiv.org/abs/1312.5851) and [winograd](https://arxiv.or
 These algorithms work better on some special `batch size`, `kernel size`, and `stride` settings than on other,
 so depending on the context, not all convolution, max-pooling, or fully-connected layers can be powered by NNPACK.
 When favorable conditions for running NNPACKS are not met,
-_MXNet_ will fall back to the default implementation automatically.  
+_MXNet_ will fall back to the default implementation automatically.
 
 NNPACK only supports Linux and OS X systems. Windows is not supported at present.
 The following table explains under which conditions NNPACK will work.
@@ -38,7 +54,7 @@ The following table explains under which conditions NNPACK will work.
 
 If the trained model meets some conditions of using NNPACK,
 you can build MXNet with NNPACK support.
-Follow these simple steps:  
+Follow these simple steps:
 * Build NNPACK shared library with the following commands. _MXNet_ will link NNPACK dynamically.
 
 Note: The following NNPACK installation instructions have been tested on Ubuntu 14.04 and 16.04.

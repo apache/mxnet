@@ -1,3 +1,19 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
 ---
 layout: page_category
 title:  MXNet on the Cloud
@@ -53,14 +69,14 @@ unzip mnist.zip && s3cmd put t*-ubyte s3://dmlc/mnist/
 The [Deep Learning AMI](https://aws.amazon.com/marketplace/pp/B01M0AXXQB?qid=1475211685369&sr=0-1&ref_=srh_res_product_title) is an Amazon Linux image
 supported and maintained by Amazon Web Services for use on Amazon Elastic Compute Cloud (Amazon EC2).
 It contains [MXNet-v0.9.3 tag](https://github.com/dmlc/mxnet) and the necessary components to get going with deep learning,
-including Nvidia drivers, CUDA, cuDNN, Anaconda, Python2 and Python3.   
+including Nvidia drivers, CUDA, cuDNN, Anaconda, Python2 and Python3.
 The AMI IDs are the following:
 
 * us-east-1: ami-e7c96af1
 * us-west-2: ami-dfb13ebf
 * eu-west-1: ami-6e5d6808
 
-Now you can launch _MXNet_ directly on an EC2 GPU instance.  
+Now you can launch _MXNet_ directly on an EC2 GPU instance.
 You can also use [Jupyter](http://jupyter.org) notebook on EC2 machine.
 Here is a [good tutorial](https://github.com/dmlc/mxnet-notebooks)
 on how to connect to a Jupyter notebook running on an EC2 instance.
@@ -186,7 +202,7 @@ Put all of the record files into a folder, and point the data path to the folder
 
 #### Use YARN and SGE
 Although using SSH can be simple when you don't have a cluster scheduling framework,
-_MXNet_ is designed to be portable to various platforms.  
+_MXNet_ is designed to be portable to various platforms.
 We provide scripts available in [tracker](https://github.com/dmlc/dmlc-core/tree/master/tracker)
 to allow running on other cluster frameworks, including Hadoop (YARN) and SGE.
 We welcome contributions from the community of examples of running _MXNet_ on your favorite distributed platform.

@@ -1,9 +1,25 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
 ---
 layout: page_category
 title:  Model Parallel
 category: faq
 faq_c: Model
-question: How can I train using multiple GPUs with model parallelism? 
+question: How can I train using multiple GPUs with model parallelism?
 permalink: /api/faq/model_parallel_lstm
 ---
 
@@ -72,4 +88,3 @@ We also want to balance the workload across GPUs.
 Although the LSTM layers consume less memory than the decoder/encoder layers, they consume more computation time because of the dependency of the unrolled LSTM.
 Thus, the partition on the left will be faster than the one on the right
 because the workload is more evenly distributed.
-
