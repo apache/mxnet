@@ -287,15 +287,29 @@ for (index_t i = 0; i < N; i += blocksize) {
     }
 }
 
-for (index_t i = N; i < n; i += blocksize) {
+for (index_t i = 0; i < N; i += blocksize) {
   #pragma omp parallel for
     for (index_t j = P; j < p; j += blocksize) {
         // transpose the block
-        index_t a_limit = j + blocksize;
         index_t b_limit = i + blocksize;
         #pragma unroll 4
-        for (index_t a = j; (a < a_limit && a < p); ++a) {
-          for (index_t b = i; (b < b_limit && b < n); ++b) {
+        for (index_t a = j; a < p; ++a) {
+          for (index_t b = i; b < b_limit; ++b) {
+                  out[a * n + b] = in[b * p + a];
+          }
+        }
+    }
+}
+
+for (index_t i = N; i < n; i += blocksize) {
+  #pragma omp parallel for
+    for (index_t j = 0; j < P; j += blocksize) {
+        // transpose the block
+        
+        index_t a_limit = j + blocksize;        
+        #pragma unroll 4
+        for (index_t a = j; a < a_limit; ++a) {
+          for (index_t b = i; b < n; ++b) {
                   out[a * n + b] = in[b * p + a];
           }
         }
@@ -303,6 +317,12 @@ for (index_t i = N; i < n; i += blocksize) {
 }
 
 
+#pragma unroll 4
+for (index_t a = N; a < n; ++a) {
+  for (index_t b = P; b < p; ++b) {
+          out[a * n + b] = in[b * p + a];
+  }
+}
 }
 
 
