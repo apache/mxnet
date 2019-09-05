@@ -101,7 +101,7 @@ MSHADOW_XINLINE int diff(const Shape<ndim>& small, const Shape<ndim>& big, Shape
 
   index_t s = 1;
   #pragma unroll
-  for (int i = ndim-1, j = mdim; i >= 0; --i) {
+  for (int i = ndim - 1, j = mdim; i >= 0; --i) {
     if (small[i] != big[i]) {
       --j;
       (*stride)[j] = s;

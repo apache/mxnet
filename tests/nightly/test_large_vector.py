@@ -34,6 +34,7 @@ def test_slice():
     assert res.shape[0] == MEDIUM_X
     assert res[0] == 1
 
+
 def test_ndarray_zeros():
     a = nd.zeros(shape=LARGE_X)
     assert a[-1] == 0
@@ -56,8 +57,8 @@ def test_ndarray_random_uniform():
 @with_seed()
 def test_ndarray_random_randint():
     # check if randint can generate value greater than 2**32 (large)
-    low = 4294967296
-    high = 17179869184
+    low = 2**32
+    high = 2**34
     a = nd.random.randint(low, high, dtype=np.int64, shape=LARGE_X).asnumpy()
     assert a.shape == (LARGE_X,)
     assert (a >= low).all()  and (a < high).all()
