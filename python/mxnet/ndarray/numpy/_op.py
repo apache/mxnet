@@ -33,7 +33,7 @@ __all__ = ['zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide', 'mo
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot',
            'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'mean',
-           'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var']
+           'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'sinc']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2338,3 +2338,26 @@ def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
     0.2025
     """
     return _npi.var(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def sinc(x, out=None, **kwargs):
+    r"""Cosine, element-wise.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Angle, in radians (:math:`2 \pi` rad equals 360 degrees).
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs broadcast to. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output is the same as that of the input if the input is an ndarray.
+    Returns
+    -------
+    y : ndarray or scalar
+        The corresponding cosine values. This is a scalar if x is a scalar.
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _unary_func_helper(x, _npi.sinc, _np.sinc, out=out, **kwargs)

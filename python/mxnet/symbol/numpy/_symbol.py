@@ -35,7 +35,7 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'pow
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot',
            'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'mean',
-           'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var']
+           'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'sinc']
 
 
 def _num_outputs(sym):
@@ -2667,6 +2667,25 @@ def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
 
     """
     return _npi.var(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def sinc(x, out=None, **kwargs):
+    r"""abs(x, out=None, **kwargs)
+    Calculate the absolute value element-wise.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array.
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    absolute : _Symbol
+        An ndarray containing the absolute value of
+        each element in `x`. This is a scalar if `x` is a scalar.
+    """
+    return _unary_func_helper(x, _npi.sinc, _np.sinc, out=out, **kwargs)
 
 
 _set_np_symbol_class(_Symbol)

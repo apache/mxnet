@@ -30,6 +30,9 @@ import random
 import collections
 import scipy.stats as ss
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, retry
+from mxnet.runtime import Features
+
+_features = Features()
 
 
 @with_seed()
@@ -1646,6 +1649,49 @@ def test_np_cumsum():
                         np_out = _np.cumsum(x.asnumpy(), axis=axis, dtype=otype)
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
+
+@with_seed()
+@use_np
+def test_np_sinc():
+    if _features.is_enabled("TVM_OP"):
+        class TestSinc(HybridBlock):
+            def __init__(self):
+                super(TestSinc, self).__init__()
+
+            def hybrid_forward(self, F, x, *args, **kwargs):
+                return F.np.sinc(x)
+
+        shapes = [
+            (2,),
+            (2, 1, 2),
+            (2, 0, 2),
+            (1, 2, 3, 4, 5),
+            (6, 6, 0, 0, 6),
+        ]
+        dtypes = ['int8', 'int32', 'int64', 'float32', 'float64']
+        for hybridize in [True, False]:
+            for shape in shapes:
+                for dtype in dtypes:
+                    test_sinc = TestSinc()
+                    if hybridize:
+                        test_sinc.hybridize()
+                    x = rand_ndarray(shape=shape, dtype=dtype).as_np_ndarray()
+                    x.attach_grad()
+                    np_out = _np.sinc(x.asnumpy())
+                    with mx.autograd.record():
+                        mx_out = test_sinc(x)
+
+                    assert_almost_equal(mx_out.asnumpy(), np_out.astype(dtype), rtol = 1e-3, atol = 1e-5)
+                    if dtype in ['float32', 'float64']:
+                        mx_out.backward()
+                        x_t = _np.where(x.asnumpy() == 0, 1.0e-20, x.asnumpy())
+                        np_backward = _np.cos(_np.pi * x_t) / x_t - np_out / x_t
+                        assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5)
+
+                    # test imperative
+                    np_out = _np.sinc(x.asnumpy())
+                    mx_out = np.sinc(x)
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol = 1e-3, atol = 1e-5)
 
 if __name__ == '__main__':
     import nose

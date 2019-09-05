@@ -52,7 +52,7 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'add', 'subtrac
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative',
            'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh',
            'tensordot', 'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate',
-           'stack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var']
+           'stack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'sinc']
 
 # Return code for dispatching indexing function call
 _NDARRAY_UNSUPPORTED_INDEXING = -1
@@ -3779,3 +3779,27 @@ def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=None):
     0.2025
     """
     return _npi.var(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.numpy')
+def sinc(x, out=None, **kwargs):
+    """Hyperbolic cosine, element-wise.
+    Equivalent to ``1/2 * (np.exp(x) + np.exp(-x))`` and ``np.cos(1j*x)``.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array or scalar.
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs broadcast to. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output is the same as that of the input if the input is an ndarray.
+    Returns
+    -------
+    y : ndarray or scalar
+        The corresponding hyperbolic cosine values. This is a scalar if `x` is a scalar.
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _mx_nd_np.sinc(x, out=out, **kwargs)
