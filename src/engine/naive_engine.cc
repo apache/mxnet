@@ -29,7 +29,6 @@
 #include "../profiler/profiler.h"
 #include "./openmp.h"
 #include "../common/object_pool.h"
-#include "../profiler/custom_op_profiler.h"
 
 namespace mxnet {
 namespace engine {
@@ -164,10 +163,6 @@ class NaiveEngine final : public Engine {
     };
     std::unique_ptr<NaiveOpr, decltype(opr_deleter)> opr(nullptr, opr_deleter);
     const bool profiling = opr_name && profiler->IsProfiling(profiler::Profiler::kImperative);
-    // GenerateDisplayName() will return a pointer to the correct name of the operator
-    const char* display_name = profiling ?
-                               profiler::CustomOpProfiler::Get()->GenerateDisplayName(opr_name) :
-                               opr_name;
     if (profiling) {
       opr.reset(NewOperator(exec_fun, const_vars, mutable_vars,
                         prop, display_name)->Cast<NaiveOpr>());
