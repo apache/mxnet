@@ -23,14 +23,13 @@
  * \brief Operator for numpy sampling from normal distributions
  */
 
- #include "./np_normal_op.h"
+#include "./np_normal_op.h"
 
- namespace mxnet {
- namespace op {
- 
- NNVM_REGISTER_OP(_npi_normal)
- .set_attr<FCompute>("FCompute<gpu>", NumpyNormalForward<gpu>);
- 
- }  // namespace op
- }  // namespace mxnet
- 
+namespace mxnet {
+namespace op {
+
+NNVM_REGISTER_OP(_npi_normal)
+    .set_attr<FCompute>("FCompute<gpu>", NumpyNormalForward<gpu>);
+
+}  // namespace op
+}  // namespace mxnet

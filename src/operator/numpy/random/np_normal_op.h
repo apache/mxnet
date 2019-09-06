@@ -204,4 +204,4 @@ void NumpyNormalForward(const nnvm::NodeAttrs &attrs,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_NUMPY_RANDOM_NP_UNIFORM_OP_H_
+#endif  // MXNET_OPERATOR_NUMPY_RANDOM_NP_NORMAL_OP_H_

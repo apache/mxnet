@@ -20,7 +20,6 @@
 from __future__ import absolute_import
 from ...context import current_context
 from . import _internal as _npi
-from ...base import numeric_types
 
 
 __all__ = ['randint', 'uniform', 'normal']
@@ -144,7 +143,7 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
                             ctx=ctx, dtype=dtype, out=out)
 
 
-def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
+def normal(loc=0.0, scale=1.0, size=None, dtype=None, **kwargs):
     """Draw random samples from a normal (Gaussian) distribution.
 
     Samples are distributed according to a normal distribution parametrized
@@ -165,8 +164,6 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
         Data type of output samples. Default is 'float32'
     ctx : Context, optional
         Device context of output. Default is current context.
-    out : ``ndarray``, optional
-        Store output to an existing ``ndarray``.
 
     Returns
     -------
@@ -175,6 +172,8 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     """
     from ._symbol import _Symbol as np_symbol
     input_type = (isinstance(loc, np_symbol), isinstance(scale, np_symbol))
+    ctx = kwargs.pop('ctx', None)
+    out = kwargs.pop('out', None)
     if dtype is None:
         dtype = 'float32'
     if ctx is None:
@@ -185,13 +184,13 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
         size = None
     if input_type == (True, True):
         return _npi.normal(loc, scale, loc=None, scale=None, size=size,
-                            ctx=ctx, dtype=dtype, out=out)
+                           ctx=ctx, dtype=dtype, out=out)
     elif input_type == (False, True):
         return _npi.normal(scale, loc=loc, scale=None, size=size,
-                            ctx=ctx, dtype=dtype, out=out)
+                           ctx=ctx, dtype=dtype, out=out)
     elif input_type == (True, False):
         return _npi.normal(loc, loc=None, scale=scale, size=size,
-                            ctx=ctx, dtype=dtype, out=out)
+                           ctx=ctx, dtype=dtype, out=out)
     else:
         return _npi.normal(loc=loc, scale=scale, size=size,
-                            ctx=ctx, dtype=dtype, out=out)
+                           ctx=ctx, dtype=dtype, out=out)
