@@ -24,6 +24,7 @@
 #include <mxnet/base.h>
 #include "elemwise_unary_op.h"
 #include "./elemwise_binary_op-inl.h"
+#include "../../nnvm/node_op_util.h"
 
 namespace mxnet {
 namespace op {
@@ -227,7 +228,35 @@ The storage type of ``arctan`` output depends upon the input storage type:
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arctan" });
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arctan,
-                                                  unary_bwd<mshadow_op::arctan_grad>);
+                                                  unary_bwd<mshadow_op::arctan_grad>)
+.set_attr<nnvm::FGradient>("FGradient",
+    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+      // ograds[0]: head_grad_grads (dL/dxgrad)
+      // inputs[0]: dL/dy
+      // inputs[1]: x (ElemwiseGradUseIn)
+      // n: dL/dy * f'(x)
+      // f(x) = arctanh(x)
+      // dydx = f'(x) = 1/(1+x^2)
+      // f''(x) = f'(x) * f'(x) * -2 * x = (-2 * x) / (1 + x^2)^2
+      // return:
+      //     0: dL/dy_grad * dy/dx
+      //     1: dL/dy_grad * dL/dy * f''(x)
+      auto dldy = n->inputs[0];
+      auto x = n->inputs[1];
+      auto dldy_mul_dydx = nnvm::NodeEntry{n};
+      auto op = mxnet::util::NodeOpGen{n};
+
+      auto x_grad = op.div(dldy_mul_dydx, dldy);
+      auto x_grad_square = op.square(x_grad);
+      auto x_grad_square_mul_x = op.mul(x_grad_square, x);
+      auto x_grad_square_mul_2_x = op.mul(-2.0, x_grad_square_mul_x);
+      auto grad_grad_x = op.mul(dldy, x_grad_square_mul_2_x);
+
+      std::vector<nnvm::NodeEntry> ret;
+      ret.emplace_back(op.mul(ograds[0], x_grad));
+      ret.emplace_back(op.mul(ograds[0], grad_grad_x));
+      return ret;
+    });
 
 // degrees
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(degrees, cpu, mshadow_op::degrees)
@@ -265,7 +294,8 @@ The storage type of ``radians`` output depends upon the input storage type:
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_radians" });
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_radians,
-                                                  unary_bwd<mshadow_op::radians_grad>);
+                                                  unary_bwd<mshadow_op::radians_grad>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // sinh
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(sinh, cpu, mshadow_op::sinh)
@@ -391,8 +421,35 @@ The storage type of ``arctanh`` output depends upon the input storage type:
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arctanh" });
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arctanh,
-                                                  unary_bwd<mshadow_op::arctanh_grad>);
+                                                  unary_bwd<mshadow_op::arctanh_grad>)
+.set_attr<nnvm::FGradient>("FGradient",
+    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+      // ograds[0]: head_grad_grads (dL/dxgrad)
+      // inputs[0]: dL/dy
+      // inputs[1]: x (ElemwiseGradUseIn)
+      // n: dL/dy * dy/dx
+      // f(x) = arctanh(x)
+      // dy/dx = f'(x) = 1/(1-x^2)
+      // f''(x) = f'(x) * f'(x) * 2 * x = (2 * x) / (1 - x^2)^2
+      // return:
+      //     0: dL/dy_grad * dy/dx
+      //     1: dL/dy_grad * dL/dy * f''(x)
+      auto dldy = n->inputs[0];
+      auto x = n->inputs[1];
+      auto dldy_mul_dydx = nnvm::NodeEntry{n};
+      auto op = mxnet::util::NodeOpGen{n};
 
+      auto x_grad = op.div(dldy_mul_dydx, dldy);
+      auto x_grad_square = op.square(x_grad);
+      auto x_grad_square_mul_x = op.mul(x_grad_square, x);
+      auto x_grad_square_mul_2_x = op.mul(2.0, x_grad_square_mul_x);
+      auto grad_grad_x = op.mul(dldy, x_grad_square_mul_2_x);
+
+      std::vector<nnvm::NodeEntry> ret;
+      ret.emplace_back(op.mul(ograds[0], x_grad));
+      ret.emplace_back(op.mul(ograds[0], grad_grad_x));
+      return ret;
+    });
 
 }  // namespace op
 }  // namespace mxnet
