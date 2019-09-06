@@ -144,7 +144,7 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
                             ctx=ctx, dtype=dtype, out=out)
 
 
-def normal(loc=0.0, scale=1.0, size=None, **kwargs):
+def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     """Draw random samples from a normal (Gaussian) distribution.
 
     Samples are distributed according to a normal distribution parametrized
@@ -172,21 +172,26 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
     -------
     out : _Symbol (symbol representing `mxnet.numpy.ndarray` in computational graphs)
         Drawn samples from the parameterized normal distribution.
-
-    Notes
-    -----
-    This function currently does not support ``loc`` and ``scale`` as `_Symbol`s.
     """
-    dtype = kwargs.pop('dtype', None)
+    from ._symbol import _Symbol as np_symbol
+    input_type = (isinstance(loc, np_symbol), isinstance(scale, np_symbol))
     if dtype is None:
         dtype = 'float32'
-    ctx = kwargs.pop('ctx', None)
     if ctx is None:
         ctx = current_context()
-    out = kwargs.pop('out', None)
-    if size is None and out is None:
-        size = ()
-    if (not isinstance(loc, numeric_types)) or (not isinstance(scale, numeric_types)):
-        raise NotImplementedError('np.random.normal only supports loc and scale of '
-                                  'numeric types for now')
-    return _npi.random_normal(loc, scale, shape=size, dtype=dtype, ctx=ctx, out=out, **kwargs)
+    if out is not None:
+        size = out.shape
+    if size == ():
+        size = None
+    if input_type == (True, True):
+        return _npi.normal(loc, scale, loc=None, scale=None, size=size,
+                            ctx=ctx, dtype=dtype, out=out)
+    elif input_type == (False, True):
+        return _npi.normal(scale, loc=loc, scale=None, size=size,
+                            ctx=ctx, dtype=dtype, out=out)
+    elif input_type == (True, False):
+        return _npi.normal(loc, loc=None, scale=scale, size=size,
+                            ctx=ctx, dtype=dtype, out=out)
+    else:
+        return _npi.normal(loc=loc, scale=scale, size=size,
+                            ctx=ctx, dtype=dtype, out=out)

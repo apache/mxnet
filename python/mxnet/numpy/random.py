@@ -110,7 +110,7 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
     return _mx_nd_np.random.uniform(low, high, size=size, ctx=ctx, dtype=dtype, out=out)
 
 
-def normal(loc=0.0, scale=1.0, size=None, **kwargs):
+def normal(loc=0.0, scale=1.0, size=None, dtype=None, **kwargs):
     """Draw random samples from a normal (Gaussian) distribution.
 
     Samples are distributed according to a normal distribution parametrized
@@ -138,12 +138,8 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
     -------
     out : ndarray
         Drawn samples from the parameterized normal distribution.
-
-    Notes
-    -----
-    This function currently does not support ``loc`` and ``scale`` as ndarrays.
     """
-    return _mx_nd_np.random.normal(loc, scale, size, **kwargs)
+    return _mx_nd_np.random.normal(loc, scale, size, dtype, **kwargs)
 
 
 def multinomial(n, pvals, size=None, **kwargs):
