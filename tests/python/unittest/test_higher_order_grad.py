@@ -215,6 +215,36 @@ def test_abs():
         check_second_order_unary(array, abs, grad_grad_op)
 
 
+@with_seed()
+def test_clip():
+    def clip(x):
+        a_min, a_max = sorted([random.random(), random.random()])
+
+        return nd.clip(x, a_min, a_max)
+
+    def grad_grad_op(x):
+        return nd.zeros_like(x)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, clip, grad_grad_op)
+
+
+@with_seed()
+def test_dropout():
+    def dropout(x):
+        return nd.Dropout(x)
+
+    def grad_grad_op(x):
+        return nd.zeros_like(x)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, dropout, grad_grad_op)
+
+
 def test_sigmoid():
     def sigmoid(x):
         return nd.sigmoid(x)
