@@ -139,16 +139,6 @@ void ConvertElementwiseAdd(NodeProto *node_proto,
                     const nnvm::IndexedGraph &ig,
                     const array_view<IndexedGraph::NodeEntry> &inputs);
 
-void ConvertElementwiseSub(NodeProto *node_proto,
-                    const NodeAttrs &attrs,
-                    const nnvm::IndexedGraph &ig,
-                    const array_view<IndexedGraph::NodeEntry> &inputs);
-
-void ConvertElementwiseMul(NodeProto *node_proto,
-                    const NodeAttrs &attrs,
-                    const nnvm::IndexedGraph &ig,
-                    const array_view<IndexedGraph::NodeEntry> &inputs);
-
 void ConvertConcatenate(NodeProto *node_proto,
                     const NodeAttrs &attrs,
                     const nnvm::IndexedGraph &ig,
@@ -176,8 +166,6 @@ static const std::unordered_map<std::string, ConverterFunction> converter_map = 
   {"Concat", ConvertConcatenate},
   {"Dropout", ConvertDropout},
   {"elemwise_add", ConvertElementwiseAdd},
-  {"elemwise_sub", ConvertElementwiseSub},
-  {"elemwise_mul", ConvertElementwiseMul},
   {"Flatten", ConvertFlatten},
   {"FullyConnected", ConvertFullyConnected},
   {"Pad", ConvertPad},
