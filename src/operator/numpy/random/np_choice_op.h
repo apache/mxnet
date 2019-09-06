@@ -167,7 +167,7 @@ void NumpyChoiceForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     int64_t random_tensor_size = replace ? output_size : input_size;
     int64_t indices_size = replace ? 0 : input_size;
     Tensor<xpu, 1, char> workspace =
-        (ctx.requested[1].get_space_typed<xpu, 1, char>(
+        ctx.requested[1].get_space_typed<xpu, 1, char>(
             Shape1(indices_size * sizeof(int64_t) +
                    (random_tensor_size * sizeof(float) / 7 + 1) * 8),
             s));
@@ -189,8 +189,7 @@ void NumpyChoiceForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       Kernel<generate_keys, xpu>::Launch(s, input_size, random_numbers.dptr_,
                                          inputs[weight_index].dptr<float>());
       _sort<xpu>(random_numbers.dptr_, indices.dptr_, input_size);
-      Copy(outputs[0].FlatTo1D<xpu, int64_t>(s), indices.Slice(0, output_size),
-           s);
+      Copy(outputs[0].FlatTo1D<xpu, int64_t>(s), indices.Slice(0, output_size), s);
     }
   } else {
     Random<xpu, unsigned> *prnd = ctx.requested[0].get_random<xpu, unsigned>(s);
@@ -199,10 +198,10 @@ void NumpyChoiceForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                  : std::min(output_size, input_size - output_size));
     int64_t indices_size = replace ? 0 : input_size;
     Tensor<xpu, 1, char> workspace =
-        (ctx.requested[1].get_space_typed<xpu, 1, char>(
+        ctx.requested[1].get_space_typed<xpu, 1, char>(
             Shape1(indices_size * sizeof(int64_t) +
                    (random_tensor_size * sizeof(unsigned) / 7 + 1) * 8),
-            s));
+            s);
     // slice workspace
     char *workspace_ptr = workspace.dptr_;
     Tensor<xpu, 1, unsigned> random_numbers =

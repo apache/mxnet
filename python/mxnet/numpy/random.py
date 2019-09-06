@@ -182,7 +182,7 @@ def multinomial(n, pvals, size=None, **kwargs):
     return _mx_nd_np.random.multinomial(n, pvals, size, **kwargs)
 
 
-def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
+def choice(a, size=None, replace=True, p=None, **kwargs):
     """Generates a random sample from a given 1-D array
 
     Parameters
@@ -202,8 +202,6 @@ def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
         entries in a.
     ctx : Context, optional
         Device context of output. Default is current context.
-    out : ``ndarray``, optional
-        Store output to an existing ``ndarray``.
 
     Returns
     --------
@@ -236,4 +234,4 @@ def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
     >>> np.random.choice(5, 3, replace=False, p=[0.1, 0, 0.3, 0.6, 0])
     array([2, 3, 0])
     """
-    return _mx_nd_np.random.choice(a, size, replace, p, ctx, out)
+    return _mx_nd_np.random.choice(a, size, replace, p, **kwargs)

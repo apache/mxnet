@@ -245,7 +245,7 @@ def multinomial(n, pvals, size=None):
         return _npi.multinomial(n=n, pvals=pvals, size=size)
 
 
-def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
+def choice(a, size=None, replace=True, p=None, **kwargs):
     """Generates a random sample from a given 1-D array
 
     Parameters
@@ -265,8 +265,6 @@ def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
         entries in a.
     ctx : Context, optional
         Device context of output. Default is current context.
-    out : ``ndarray``, optional
-        Store output to an existing ``ndarray``.
 
     Returns
     --------
@@ -300,14 +298,14 @@ def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
     array([2, 3, 0])
     """
     from ...numpy import ndarray as np_ndarray
+    ctx = kwargs.pop('ctx', None)
     if ctx is None:
         ctx = current_context()
-    if out is not None:
-        size = out.shape
+    out = kwargs.pop('out', None)
     if size == ():
         size = None
-
     if isinstance(a, np_ndarray):
+        ctx = None
         if p is None:
             indices = _npi.choice(a, a=None, size=size,
                                   replace=replace, ctx=ctx, weighted=False)
@@ -318,6 +316,6 @@ def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
             return _npi.take(a, indices)
     else:
         if p is None:
-            return _npi.choice(a=a, size=size, replace=replace, ctx=ctx, weighted=False)
+            return _npi.choice(a=a, size=size, replace=replace, ctx=ctx, weighted=False, out=out)
         else:
-            return _npi.choice(p, a=a, size=size, replace=replace, ctx=ctx, weighted=True)
+            return _npi.choice(p, a=a, size=size, replace=replace, ctx=ctx, weighted=True, out=out)
