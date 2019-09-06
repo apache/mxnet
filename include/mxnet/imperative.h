@@ -129,7 +129,7 @@ class Imperative {
                       OpStatePtr state = OpStatePtr());
   /*! \brief mark variables for computing gradients. */
   void MarkVariables(const std::vector<NDArray*>& variables,
-                     const std::vector<mx_uint>& grad_reqs,
+                     const std::vector<uint32_t>& grad_reqs,
                      const std::vector<NDArray*>& gradients);
   /*! \brief compute the gradient of outputs w.r.t variables. */
   std::vector<NDArray*> Backward(const std::vector<NDArray*>& outputs,

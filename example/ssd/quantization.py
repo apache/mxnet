@@ -115,19 +115,10 @@ if __name__ == '__main__':
     # get image shape
     image_shape = '3,300,300'
 
-    def calib_layer(name): return not (name.endswith('_data') or
-                                       name.endswith('_weight') or
-                                       name.endswith('_bias') or
-                                       name.endswith('_workspace'))
     # Quantization layer configs
     exclude_first_conv = args.exclude_first_conv
     excluded_sym_names = []
     rgb_mean = '123,117,104'
-    for i in range(1,19):
-        excluded_sym_names += ['flatten'+str(i)]
-    excluded_sym_names += ['multibox_loc_pred',
-                           'concat0',
-                           'concat1']
     if exclude_first_conv:
         excluded_sym_names += ['conv1_1']
 
@@ -159,7 +150,7 @@ if __name__ == '__main__':
                                                         ctx=ctx, excluded_sym_names=excluded_sym_names,
                                                         calib_mode=calib_mode, calib_data=eval_iter,
                                                         num_calib_examples=num_calib_batches * batch_size,
-                                                        calib_layer=calib_layer, quantized_dtype=args.quantized_dtype,
+                                                        quantized_dtype=args.quantized_dtype,
                                                         label_names=(label_name,), logger=logger)
         sym_name = '%s-symbol.json' % ('./model/cqssd_vgg16_reduced_300')
         param_name = '%s-%04d.params' % ('./model/cqssd_vgg16_reduced_300', epoch)

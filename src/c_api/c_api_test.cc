@@ -29,7 +29,7 @@
 
 int MXBuildSubgraphByOpNames(SymbolHandle sym_handle,
                               const char* prop_name,
-                              const mx_uint num_ops,
+                              const uint32_t num_ops,
                               const char** op_names,
                               SymbolHandle* ret_sym_handle) {
   nnvm::Symbol* s = new nnvm::Symbol();
@@ -62,7 +62,7 @@ int MXBuildSubgraphByOpNames(SymbolHandle sym_handle,
 }
 
 int MXSetSubgraphPropertyOpNames(const char* prop_name,
-                                 const mx_uint num_ops,
+                                 const uint32_t num_ops,
                                  const char** op_names) {
   API_BEGIN();
   std::unordered_set<std::string> op_name_set;
