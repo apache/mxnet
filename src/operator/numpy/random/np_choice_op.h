@@ -170,7 +170,7 @@ void NumpyChoiceForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
         ctx.requested[1].get_space_typed<xpu, 1, char>(
             Shape1(indices_size * sizeof(int64_t) +
                    (random_tensor_size * sizeof(float) / 7 + 1) * 8),
-            s));
+            s);
     // slice workspace
     char *workspace_ptr = workspace.dptr_;
     Tensor<xpu, 1, float> random_numbers =
