@@ -359,15 +359,14 @@ void LeakyReLUGradCompute(const nnvm::NodeAttrs& attrs,
   size_t expected_in = param.act_type == leakyrelu::kPReLU ? 2 : 1;
   size_t expected_out = param.act_type == leakyrelu::kRReLU ? 2 : 1;
 
+  CHECK_GE(inputs.size(), 1 + expected_in + expected_out);
   std::vector<TBlob> out_grad{inputs[0]};
   std::vector<TBlob> in_data(inputs.begin() + 1,
                              inputs.begin() + 1 + expected_in);
   std::vector<TBlob> out_data(inputs.begin() + 1 + expected_in,
                               inputs.begin() + 1 + expected_in + expected_out);
 
-  CHECK_EQ(out_grad.size(), 1U);
-  CHECK_EQ(req.size(), expected_in);
-  CHECK_EQ(in_data.size(), expected_in);
+  CHECK_EQ(req.size(), outputs.size());
   int dtype = inputs[0].type_flag_;
   const std::vector<TBlob> &in_grad = outputs;
 

@@ -100,7 +100,7 @@ mkldnn::algorithm GetMKLDNNActAlgo(const LeakyReLUParam& param) {
     case leakyrelu::kELU:
       return mkldnn::algorithm::eltwise_elu;
     default:
-      LOG(FATAL) << "unknown activation type";
+      LOG(FATAL) << "unknown activation type for LeakyReLU: " << param.act_type;
       return mkldnn::algorithm::eltwise_relu;
   }
 }
@@ -340,20 +340,22 @@ void MKLDNNActivationBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx
   stream->Submit();
 }
 
-void MKLDNNLeakyReluBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                              const NDArray &out_grad, const NDArray &in_data,
-                              const OpReqType &req, const NDArray &in_grad) {
+void MKLDNNLeakyReluBackward(const nnvm::NodeAttrs& attrs,
+                             const OpContext &ctx,
+                             const std::vector<NDArray>& inputs,
+                             const OpReqType &req,
+                             const NDArray &output) {
   if (req == kNullOp) {
     return;
   }
+  CHECK_GE(inputs.size(), 2U);
+  NDArray out_buffer = inputs[0];
+  if (inputs[0].IsView() && inputs[0].IsMKLDNNData())
+    out_buffer = inputs[0].Reorder2Default();
 
-  NDArray out_buffer = out_grad;
-  if (out_grad.IsView() && out_grad.IsMKLDNNData())
-    out_buffer = out_grad.Reorder2Default();
-
-  NDArray in_buffer = in_data;
-  if (in_data.IsView() && in_data.IsMKLDNNData())
-    in_buffer = in_data.Reorder2Default();
+  NDArray in_buffer = inputs[1];
+  if (inputs[1].IsView() && inputs[1].IsMKLDNNData())
+    in_buffer = inputs[1].Reorder2Default();
 
   const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(attrs.parsed);
   MKLDNNActParam param_;
@@ -371,10 +373,10 @@ void MKLDNNLeakyReluBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
       GetActBackward(param_, ctx, in_buffer, out_buffer, *input_mem);
   MKLDNNStream *stream = MKLDNNStream::Get();
   mkldnn_output_t diff_src_memory =
-      CreateMKLDNNMem(in_grad, bwd.pd.diff_src_primitive_desc(), req);
+      CreateMKLDNNMem(output, bwd.pd.diff_src_primitive_desc(), req);
   bwd.SetNewMem(*input_mem, *diff_dst_memory, *diff_src_memory.second);
   stream->RegisterPrim(bwd.GetBwd());
-  CommitOutput(in_grad, diff_src_memory);
+  CommitOutput(output, diff_src_memory);
   stream->Submit();
 }
 

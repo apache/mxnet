@@ -86,10 +86,10 @@ static bool LeakyReLUShape(const nnvm::NodeAttrs& attrs,
 
 #if MXNET_USE_MKLDNN == 1
 static void LeakyReLUComputeExCPU(const nnvm::NodeAttrs& attrs,
-                                   const OpContext& ctx,
-                                   const std::vector<NDArray>& inputs,
-                                   const std::vector<OpReqType>& req,
-                                   const std::vector<NDArray>& outputs) {
+                                  const OpContext& ctx,
+                                  const std::vector<NDArray>& inputs,
+                                  const std::vector<OpReqType>& req,
+                                  const std::vector<NDArray>& outputs) {
   const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(attrs.parsed);
   size_t expected = param.act_type == leakyrelu::kPReLU ? 2 : 1;
   CHECK_EQ(inputs.size(), expected);
@@ -103,15 +103,15 @@ static void LeakyReLUComputeExCPU(const nnvm::NodeAttrs& attrs,
 }
 
 void LeakyReLUGradComputeExCPU(const nnvm::NodeAttrs& attrs,
-                                const OpContext& ctx,
-                                const std::vector<NDArray>& inputs,
-                                const std::vector<OpReqType>& req,
-                                const std::vector<NDArray>& outputs) {
+                               const OpContext& ctx,
+                               const std::vector<NDArray>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<NDArray>& outputs) {
   const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(attrs.parsed);
   if (SupportMKLDNNLeakyRelu(param, inputs[0])) {
+    std::vector<NDArray> in_data{inputs[0], inputs[1]};
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    MKLDNNLeakyReluBackward(attrs, ctx, inputs.at(0), inputs.at(1), req[0],
-                             outputs[0]);
+    MKLDNNLeakyReluBackward(attrs, ctx, in_data, req[0], outputs[0]);
     MKLDNN_OPCHECK_RUN(LeakyReLUGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
@@ -119,10 +119,10 @@ void LeakyReLUGradComputeExCPU(const nnvm::NodeAttrs& attrs,
 }
 
 inline static bool LeakyReLUStorageType(const nnvm::NodeAttrs& attrs,
-                                         const int dev_mask,
-                                         DispatchMode* dispatch_mode,
-                                         std::vector<int> *in_attrs,
-                                         std::vector<int> *out_attrs) {
+                                        const int dev_mask,
+                                        DispatchMode* dispatch_mode,
+                                        std::vector<int> *in_attrs,
+                                        std::vector<int> *out_attrs) {
   const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(attrs.parsed);
   size_t expected = param.act_type == leakyrelu::kPReLU ? 2 : 1;
   CHECK_EQ(in_attrs->size(), expected);
@@ -131,10 +131,10 @@ inline static bool LeakyReLUStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 inline static bool BackwardLeakyReLUStorageType(const nnvm::NodeAttrs& attrs,
-                                          const int dev_mask,
-                                          DispatchMode* dispatch_mode,
-                                          std::vector<int> *in_attrs,
-                                          std::vector<int> *out_attrs) {
+                                                const int dev_mask,
+                                                DispatchMode* dispatch_mode,
+                                                std::vector<int> *in_attrs,
+                                                std::vector<int> *out_attrs) {
   const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(attrs.parsed);
   return MKLDNNStorageType(attrs, dev_mask, SupportMKLDNNLeakyRelu(param),
                            dispatch_mode, in_attrs, out_attrs);
