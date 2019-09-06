@@ -35,9 +35,9 @@ namespace op {
 namespace math {
 
 // Wrappers for math.h unary and binary functions
-// - For DType != double: math::name(a) does computation in float
+// - For DType == float: math::name(a) does computation in float
 //   and returns float
-// - For DType == double: math::name(a) does computation in double
+// - For DType == double or DType == integer: math::name(a) does computation in double
 //   and returns double
 
 #define MXNET_UNARY_MATH_FUNC(name) \
