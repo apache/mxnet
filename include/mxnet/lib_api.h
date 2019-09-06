@@ -104,9 +104,7 @@ class OpResource {
 class CustomStatefulOpWrapper {
  public:
   CustomStatefulOpWrapper(void* inst) : instance(inst) {}
-
   void* get_instance() { return instance; }
-
  private:
   void* instance;
 };
@@ -116,22 +114,8 @@ class CustomStatefulOpWrapper {
  */
 class CustomStatefulOp {
  public:
-  CustomStatefulOp() {
-    std::cout << "CustomStatefulOp constructor called" << std::endl;
-    subgraph_sym = "json";
-    count = 0;
-  }
-
-  void Forward() {
-    std::cout << "CustomStatefulOp forward called" << std::endl;
-  }
-
-  ~CustomStatefulOp() {
-    std::cout << "CustomStatefulOp destructor called" << std::endl;
-  }
-
-  std::string subgraph_sym;
-  int count;
+  virtual void Forward() = 0;
+  virtual ~CustomStatefulOp() = 0;
 };
 
 /*!

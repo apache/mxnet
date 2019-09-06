@@ -65,18 +65,43 @@ MXReturnValue mutateInputs(std::map<std::string,std::string> attrs,
   return MX_SUCCESS;
 }
 
+class MyStatefulOp : public CustomStatefulOp {
+ public:
+  MyStatefulOp(std::string sym, int count) : subgraph_sym(sym), count(count) {}
+
+  void Forward() {
+    count++;
+  }
+
+  int State() {
+    return count;
+  }
+
+  ~MyStatefulOp() {}
+
+ private:
+  std::string subgraph_sym;
+  int count;
+};
+
 MXReturnValue createOpState(std::map<std::string,std::string> attrs,
                             CustomStatefulOp** op_inst) {
-  *op_inst = new CustomStatefulOp();
-  std::cout << "create op state run" << std::endl;
+  *op_inst = new MyStatefulOp("json", 0);
+  std::cout << "create op state successful" << std::endl;
   return MX_SUCCESS;
 }
 
 MXReturnValue forwardStateful(CustomStatefulOp* op_inst,
                               std::vector<MXTensor> inputs,
                               std::vector<MXTensor> outputs) {
-  op_inst->count++;
-  std::cout << "forward op state run" << std::endl;
+  MyStatefulOp* my_op_inst = static_cast<MyStatefulOp*>(op_inst);
+  if (my_op_inst == nullptr) {
+    std::cout << "stateful op loading failed" << std::endl;
+    return MX_FAIL;
+  }
+
+  my_op_inst->Forward();
+  std::cout << "forward op state run " << my_op_inst->State() << std::endl;
   return MX_SUCCESS;
 }
 
