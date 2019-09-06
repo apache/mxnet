@@ -489,8 +489,8 @@ class ThreadedEngine : public Engine {
     }
   }
 
-  static void OnCompleteStatic(Engine *engine, void *threaded_opr,
-                               const dmlc::Error* error);
+  static void OnCompleteStatic(Engine* engine, void* threaded_opr,
+                               const std::exception* error);
   /*!
    * \brief find exception in global_exception_refs and add it if missing
    * \param opr_exception the exception to be added to global_exception_refs
