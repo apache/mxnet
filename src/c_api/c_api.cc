@@ -134,6 +134,12 @@ int MXLoadLib(const char *path) {
   opCallMutateInputs_t callMutateInputs =
     get_func<opCallMutateInputs_t>(lib, const_cast<char*>(MXLIB_OPCALLMUTATEINPUTS_STR));
 
+  opCallCreateOpState_t callCreateOpState =
+    get_func<opCallCreateOpState_t>(lib, const_cast<char*>(MXLIB_OPCALLCREATEOPSTATE_STR));
+
+  opCallFStateful_t callFStateful=
+    get_func<opCallFStateful_t>(lib, const_cast<char*>(MXLIB_OPCALLFSTATEFUL_STR));
+
   // get number of operators registered in the library
   opRegSize_t opRegSize = get_func<opRegSize_t>(lib, const_cast<char*>(MXLIB_OPREGSIZE_STR));
   int numOps = opRegSize();
@@ -154,12 +160,15 @@ int MXLoadLib(const char *path) {
     inferShape_t shape_fp = nullptr;
     // optional attributes
     mutateInputs_t mutate_fp = nullptr;
+    createOpState_t create_op_state_fp = nullptr;
+    fstateful_t fstateful_fp = nullptr;
 
     // get custom operator implemenation from the dynamic library
-    opRegGet(i, &name, &fcomp_fp, &fgrad_fp, &parse_fp, &type_fp, &shape_fp, &mutate_fp);
+    opRegGet(i, &name, &fcomp_fp, &fgrad_fp, &parse_fp, &type_fp, &shape_fp,
+                &mutate_fp, &create_op_state_fp, &fstateful_fp);
 
     // validate custom operator functions from the dynamic library
-    CHECK(fcomp_fp != nullptr) << "Error loading '" << name
+    CHECK(fcomp_fp != nullptr || fstateful_fp != nullptr) << "Error loading '" << name
                             << "' custom op, FCompute function was not set.";
     CHECK(parse_fp != nullptr) << "Error loading '" << name
                             << "' custom op, ParseAttrs function was not set.";
@@ -468,6 +477,9 @@ int MXLoadLib(const char *path) {
                                 DispatchMode* dispatch_mode,
                                 std::vector<int>* in_stypes,
                                 std::vector<int>* out_stypes) {
+      // TODO(ziyimu): remove this dense enforce check after supporting sparse tensor
+      CHECK(mxnet::common::ContainsOnlyStorage(*in_stypes, mxnet::kDefaultStorage))
+      << "Error input tensors are not dense for custom operator '" << name_str << "'";
       // set outputs as dense
       return op::storage_type_assign(out_stypes, mxnet::kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);
@@ -501,6 +513,68 @@ int MXLoadLib(const char *path) {
       return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
     };
 
+    // library author should implement and return a 'state' which points to an instance
+    // in lambda we create OpStatePtr using the returned 'state'
+    auto create_op_state = [=] (const NodeAttrs& attrs,
+                                Context ctx,
+                                const std::vector<TShape>& in_shapes,
+                                const std::vector<int>& in_types) {
+      // convert attributes to vector of char*
+      std::vector<const char*> attr_keys, attr_vals;
+      for (auto kv : attrs.dict) {
+        attr_keys.push_back(kv.first.c_str());
+        attr_vals.push_back(kv.second.c_str());
+      }
+
+      // create a pointer to hold custom op state object
+      void* state_op_inst = nullptr;
+      CHECK(callCreateOpState(create_op_state_fp,
+                              attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                              &state_op_inst));
+      CHECK(state_op_inst != nullptr);
+
+      return OpStatePtr::Create<CustomStatefulOpWrapper>(state_op_inst);
+    };
+
+    auto fstateful_forward_lambda = [=](const OpStatePtr& state_ptr,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs) {
+      std::vector<void*> in_data, out_data;
+      std::vector<const int64_t *> in_shapes, out_shapes;
+      std::vector<int> in_dims, out_dims;
+      std::vector<int> in_types, out_types;
+
+      // convert input tensors to constituent parts
+      for (size_t i = 0; i < inputs.size(); i++) {
+        in_data.push_back(inputs[i].data().dptr_);
+        in_shapes.push_back(inputs[i].shape().data());
+        in_dims.push_back(inputs[i].shape().ndim());
+        in_types.push_back(inputs[i].dtype());
+      }
+
+      // convert output tensors to constituent parts
+      for (size_t i = 0; i < outputs.size(); i++) {
+        out_data.push_back(outputs[i].data().dptr_);
+        out_shapes.push_back(outputs[i].shape().data());
+        out_dims.push_back(outputs[i].shape().ndim());
+        out_types.push_back(outputs[i].dtype());
+      }
+
+      // retrieve op state object created from CreateOpState
+      CustomStatefulOpWrapper& op = state_ptr.get_state<CustomStatefulOpWrapper>();
+      void* state_op_inst = op.get_instance();
+      CHECK(state_op_inst != nullptr);
+
+      CHECK(callFStateful(fstateful_fp, state_op_inst,
+                          in_shapes.data(), in_dims.data(), in_data.data(),
+                          in_types.data(), in_data.size(),
+                          out_shapes.data(), out_dims.data(), out_data.data(),
+                          out_types.data(), out_data.size()));
+      // return type void
+    };
+
     // check if operator is already registered
     const nnvm::Op *regOpPtr = dmlc::Registry<nnvm::Op>::Get()->Find(name);
     nnvm::Op &regOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(name);
@@ -511,9 +585,15 @@ int MXLoadLib(const char *path) {
     regOp.set_attr<FResourceRequest>("FResourceRequest", resc_req);
     if (regOpPtr == nullptr) {
       // re-register op in MXNet using lambda converter functions
+      if (fstateful_fp != nullptr) {
+        regOp.set_attr<FCreateOpState>("FCreateOpState", create_op_state);
+        regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstateful_forward_lambda);
+      }
+      else {
+        regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda);
+      }
       regOp.set_attr<nnvm::FInferType>("FInferType", infer_type);
       regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape);
-      regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda);
       // optionally add fmutate inputs if user specified a function
       if (mutate_fp != nullptr)
         regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs);
@@ -536,9 +616,15 @@ int MXLoadLib(const char *path) {
       regOp.arguments.clear();
       // set attribute with higher plevel (11) to allow re-registering once
       // TODO(samskalicky): enable constant overwriting of registertion multiple times
+      if (fstateful_fp != nullptr) {
+        regOp.set_attr<FCreateOpState>("FCreateOpState", create_op_state, 11);
+        regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstateful_forward_lambda, 11);
+      }
+      else {
+        regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda, 11);
+      }
       regOp.set_attr<nnvm::FInferType>("FInferType", infer_type, 11);
       regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape, 11);
-      regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda, 11);
       // optionally add fmutate inputs if user specified a function
       if (mutate_fp != nullptr)
         regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs, 11);

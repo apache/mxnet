@@ -27,18 +27,6 @@
 #include <iostream>
 #include "lib_api.h"
 
-void gemm(float* A, float* B, float* C, unsigned n, unsigned k, unsigned m) {
-  unsigned i,j,kk;
-  for (i=0;i<n;i++) {
-    for (j=0;j<m;j++) {
-      C[i*m+j] = 0;
-      for (kk=0;kk<k;kk++) {
-        C[i*m+j] += A[i*k+kk] * B[kk*m+j];
-      }
-    }
-  }
-}
-
 MXReturnValue parseAttrs(std::map<std::string,std::string> attrs,
                int* num_in, int* num_out) {
   *num_in = 2;
@@ -70,23 +58,6 @@ MXReturnValue inferShape(std::map<std::string,std::string> attrs, std::vector<st
   return MX_SUCCESS;
 }
 
-MXReturnValue forward(std::map<std::string,std::string> attrs,
-               std::vector<MXTensor> inputs, std::vector<MXTensor> outputs,
-               OpResource res) {
-  //extract data pointers from tensors
-  float* input1 = inputs[0].getData<float>();
-  float* input2 = inputs[1].getData<float>();
-  float* output = outputs[0].getData<float>();
-  //set tensor shapes
-  unsigned n = inputs[0].shape[0];
-  unsigned k = inputs[0].shape[1];
-  unsigned m = inputs[1].shape[1];
-
-  gemm(input1, input2, output, n, k, m);
-
-  return MX_SUCCESS;
-}
-
 MXReturnValue mutateInputs(std::map<std::string,std::string> attrs,
                std::vector<int> &input_indices) {
   input_indices.push_back(1);
@@ -94,12 +65,28 @@ MXReturnValue mutateInputs(std::map<std::string,std::string> attrs,
   return MX_SUCCESS;
 }
 
+MXReturnValue createOpState(std::map<std::string,std::string> attrs,
+                            CustomStatefulOp** op_inst) {
+  *op_inst = new CustomStatefulOp();
+  std::cout << "create op state run" << std::endl;
+  return MX_SUCCESS;
+}
+
+MXReturnValue forwardStateful(CustomStatefulOp* op_inst,
+                              std::vector<MXTensor> inputs,
+                              std::vector<MXTensor> outputs) {
+  op_inst->count++;
+  std::cout << "forward op state run" << std::endl;
+  return MX_SUCCESS;
+}
+
 REGISTER_OP(subgraph_op)
-.setForward(forward)
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
 .setInferShape(inferShape)
-.setMutateInputs(mutateInputs);
+.setMutateInputs(mutateInputs)
+.setCreateOpState(createOpState)
+.setForwardStateful(forwardStateful);
 
 MXReturnValue initialize(int version) {
   if (version >= 10400) {

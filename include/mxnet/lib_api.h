@@ -99,6 +99,42 @@ class OpResource {
 };
 
 /*!
+ * \brief StatefulOp wrapper class to pass to backend OpState
+ */
+class CustomStatefulOpWrapper {
+ public:
+  CustomStatefulOpWrapper(void* inst) : instance(inst) {}
+
+  void* get_instance() { return instance; }
+
+ private:
+  void* instance;
+};
+
+/*!
+ * \brief An prototype interface class for library author creating stateful op
+ */
+class CustomStatefulOp {
+ public:
+  CustomStatefulOp() {
+    std::cout << "CustomStatefulOp constructor called" << std::endl;
+    subgraph_sym = "json";
+    count = 0;
+  }
+
+  void Forward() {
+    std::cout << "CustomStatefulOp forward called" << std::endl;
+  }
+
+  ~CustomStatefulOp() {
+    std::cout << "CustomStatefulOp destructor called" << std::endl;
+  }
+
+  std::string subgraph_sym;
+  int count;
+};
+
+/*!
  * Custom Operator function templates
  */
 typedef MXReturnValue (*fcomp_t)(std::map<std::string, std::string>,
@@ -113,6 +149,10 @@ typedef MXReturnValue (*inferShape_t)(std::map<std::string, std::string>,
                                       std::vector<std::vector<unsigned int>>&);
 typedef MXReturnValue (*mutateInputs_t)(std::map<std::string, std::string>,
                                       std::vector<int>&);
+typedef MXReturnValue (*createOpState_t)(std::map<std::string, std::string>,
+                                      CustomStatefulOp**);
+typedef MXReturnValue (*fstateful_t)(CustomStatefulOp*, std::vector<MXTensor>,
+                                      std::vector<MXTensor>);
 
 /*!
  * \brief Class to hold custom operator registration
@@ -120,8 +160,8 @@ typedef MXReturnValue (*mutateInputs_t)(std::map<std::string, std::string>,
 class CustomOp {
  public:
   explicit CustomOp(const char* op_name) : name(op_name), fcompute(nullptr),
-    fgradient(nullptr), parse_attrs(nullptr), infer_type(nullptr),
-    infer_shape(nullptr), mutate_inputs(nullptr) {}
+    fgradient(nullptr), parse_attrs(nullptr), infer_type(nullptr), infer_shape(nullptr),
+    mutate_inputs(nullptr), create_op_state(nullptr), fstateful(nullptr) {}
   ~CustomOp() {}
   CustomOp& setForward(fcomp_t fcomp) {
     fcompute = fcomp;
@@ -147,6 +187,14 @@ class CustomOp {
     mutate_inputs = func;
     return *this;
   }
+  CustomOp& setCreateOpState(createOpState_t func) {
+    create_op_state = func;
+    return *this;
+  }
+  CustomOp& setForwardStateful(fstateful_t func) {
+    fstateful = func;
+    return *this;
+  }
   /*! \brief operator name */
   const char* name;
   /*! \brief operator functions */
@@ -156,6 +204,8 @@ class CustomOp {
   inferType_t infer_type;
   inferShape_t infer_shape;
   mutateInputs_t mutate_inputs;
+  createOpState_t create_op_state;
+  fstateful_t fstateful;
 };
 
 /*!
@@ -240,7 +290,8 @@ typedef int (*opRegSize_t)(void);
 #define MXLIB_OPREGGET_STR "_opRegGet"
 typedef int (*opRegGet_t)(int, const char**, fcomp_t*, fcomp_t*,
                           parseAttrs_t*, inferType_t*,
-                          inferShape_t*, mutateInputs_t*);
+                          inferShape_t*, mutateInputs_t*,
+                          createOpState_t*, fstateful_t*);
 
 #define MXLIB_OPCALLFREE_STR "_opCallFree"
 typedef int (*opCallFree_t)(void*);
@@ -267,6 +318,15 @@ typedef int (*opCallFComp_t)(fcomp_t, const char* const*, const char* const*, in
 #define MXLIB_OPCALLMUTATEINPUTS_STR "_opCallMutateInputs"
 typedef int (*opCallMutateInputs_t)(mutateInputs_t, const char* const*, const char* const*, int,
                                     int**, int*);
+
+#define MXLIB_OPCALLCREATEOPSTATE_STR "_opCallCreateOpState"
+typedef int (*opCallCreateOpState_t)(createOpState_t, const char* const*, const char* const*, int,
+                                     void**);
+
+#define MXLIB_OPCALLFSTATEFUL_STR "_opCallFStateful"
+typedef int (*opCallFStateful_t)(fstateful_t, void*,
+                                 const int64_t**, int*, void**, int*, int,
+                                 const int64_t**, int*, void**, int*, int);
 
 #define MXLIB_INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int);
@@ -309,7 +369,8 @@ extern "C" {
 #endif
   _opRegGet(int idx, const char** name, fcomp_t* fcomp, fcomp_t* fgrad,
             parseAttrs_t* parse, inferType_t* type,
-            inferShape_t* shape, mutateInputs_t* mutate) {
+            inferShape_t* shape, mutateInputs_t* mutate,
+            createOpState_t* create_op, fstateful_t* fstateful) {
     CustomOp op = Registry<CustomOp>::get()->get(idx);
     *name = op.name;
     *fcomp = op.fcompute;
@@ -318,6 +379,8 @@ extern "C" {
     *type = op.infer_type;
     *shape = op.infer_shape;
     *mutate = op.mutate_inputs;
+    *create_op = op.create_op_state;
+    *fstateful = op.fstateful;
   }
 
   /*!
@@ -519,6 +582,67 @@ extern "C" {
 
     return retval;
   }
+
+  /*!
+   * \brief returns status of calling create stateful op function for operator from library
+   */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) int __cdecl
+#else
+  int
+#endif
+  _opCallCreateOpState(createOpState_t create_op, const char* const* keys,
+                    const char* const* vals, int num,
+                    void** state_op) {
+    // create map of attributes from list
+    std::map<std::string, std::string> attrs;
+    for (int i = 0; i < num; i++) {
+      attrs[std::string(keys[i])] = std::string(vals[i]);
+    }
+
+    // void pointer to hold custom state op instance created in custom library
+    CustomStatefulOp** op_ptr = reinterpret_cast<CustomStatefulOp**>(state_op);
+    return create_op(attrs, op_ptr);
+  }
+
+  /*!
+   * \brief returns status of calling FStateful function for operator from library
+   */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) int __cdecl
+#else
+  int
+#endif
+  _opCallFStateful(fstateful_t fstateful, void* state_op_inst,
+                  const int64_t** inshapes, int* indims,
+                  void** indata, int* intypes, int num_in,
+                  const int64_t** outshapes, int* outdims,
+                  void** outdata, int* outtypes, int num_out) {
+    // create a vector of tensors for inputs
+    std::vector<MXTensor> inputs(num_in);
+    for (int i = 0; i < num_in; i++) {
+      inputs[i].data = indata[i];
+      inputs[i].dtype = (MXDType)intypes[i];
+      for (int j = 0; j < indims[i]; j++) {
+        inputs[i].shape.push_back(inshapes[i][j]);
+      }
+    }
+
+    // create a vector of tensors for outputs
+    std::vector<MXTensor> outputs(num_out);
+    for (int i = 0; i < num_out; i++) {
+      outputs[i].data = outdata[i];
+      outputs[i].dtype = (MXDType) outtypes[i];
+      for (int j = 0; j < outdims[i]; j++) {
+        outputs[i].shape.push_back(outshapes[i][j]);
+      }
+    }
+
+    // pass the stateful op instance to stateful forward in custom library
+    CustomStatefulOp* state_op = reinterpret_cast<CustomStatefulOp*>(state_op_inst);
+    return fstateful(state_op, inputs, outputs);
+  }
+
   /*!
    * \brief Checks if the MXNet version is supported by the library.
    * If supported, initializes the library.
