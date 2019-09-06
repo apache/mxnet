@@ -43,8 +43,6 @@ extern "C" {
 
 /*! \brief manually define unsigned int */
 typedef uint32_t mx_uint;
-/*! \brief manually define 64-bit int */
-typedef int64_t mx_int64;
 /*! \brief manually define float */
 typedef float mx_float;
 /*! \brief handle to Predictor */
@@ -87,10 +85,10 @@ MXNET_DLL int MXPredCreate(const char* symbol_json_str,
                            const void* param_bytes,
                            int param_size,
                            int dev_type, int dev_id,
-                           mx_uint num_input_nodes,
+                           uint32_t num_input_nodes,
                            const char** input_keys,
-                           const mx_uint* input_shape_indptr,
-                           const mx_uint* input_shape_data,
+                           const uint32_t* input_shape_indptr,
+                           const uint32_t* input_shape_data,
                            PredictorHandle* out);
 
 /*!
@@ -122,11 +120,11 @@ MXNET_DLL int MXPredCreateEx(const char* symbol_json_str,
                              const void* param_bytes,
                              int param_size,
                              int dev_type, int dev_id,
-                             const mx_uint num_input_nodes,
+                             const uint32_t num_input_nodes,
                              const char** input_keys,
-                             const mx_uint* input_shape_indptr,
-                             const mx_uint* input_shape_data,
-                             const mx_uint num_provided_arg_dtypes,
+                             const uint32_t* input_shape_indptr,
+                             const uint32_t* input_shape_data,
+                             const uint32_t num_provided_arg_dtypes,
                              const char** provided_arg_dtype_names,
                              const int* provided_arg_dtypes,
                              PredictorHandle* out);
@@ -158,11 +156,11 @@ MXNET_DLL int MXPredCreatePartialOut(const char* symbol_json_str,
                                      const void* param_bytes,
                                      int param_size,
                                      int dev_type, int dev_id,
-                                     mx_uint num_input_nodes,
+                                     uint32_t num_input_nodes,
                                      const char** input_keys,
-                                     const mx_uint* input_shape_indptr,
-                                     const mx_uint* input_shape_data,
-                                     mx_uint num_output_nodes,
+                                     const uint32_t* input_shape_indptr,
+                                     const uint32_t* input_shape_data,
+                                     uint32_t num_output_nodes,
                                      const char** output_keys,
                                      PredictorHandle* out);
 
@@ -191,10 +189,10 @@ MXNET_DLL int MXPredCreateMultiThread(const char* symbol_json_str,
                                       const void* param_bytes,
                                       int param_size,
                                       int dev_type, int dev_id,
-                                      mx_uint num_input_nodes,
+                                      uint32_t num_input_nodes,
                                       const char** input_keys,
-                                      const mx_uint* input_shape_indptr,
-                                      const mx_uint* input_shape_data,
+                                      const uint32_t* input_shape_indptr,
+                                      const uint32_t* input_shape_data,
                                       int num_threads,
                                       PredictorHandle* out);
 
@@ -213,10 +211,10 @@ MXNET_DLL int MXPredCreateMultiThread(const char* symbol_json_str,
  * \param out The reshaped predictor handle.
  * \return 0 when success, -1 when failure.
  */
-MXNET_DLL int MXPredReshape(mx_uint num_input_nodes,
+MXNET_DLL int MXPredReshape(uint32_t num_input_nodes,
                   const char** input_keys,
-                  const mx_uint* input_shape_indptr,
-                  const mx_uint* input_shape_data,
+                  const uint32_t* input_shape_indptr,
+                  const uint32_t* input_shape_data,
                   PredictorHandle handle,
                   PredictorHandle* out);
 /*!
@@ -229,9 +227,9 @@ MXNET_DLL int MXPredReshape(mx_uint num_input_nodes,
  * \return 0 when success, -1 when failure.
  */
 MXNET_DLL int MXPredGetOutputShape(PredictorHandle handle,
-                                   mx_uint index,
-                                   mx_uint** shape_data,
-                                   mx_uint* shape_ndim);
+                                   uint32_t index,
+                                   uint32_t** shape_data,
+                                   uint32_t* shape_ndim);
 
 /*!
  * \brief Get the dtype of output node.
@@ -241,7 +239,7 @@ MXNET_DLL int MXPredGetOutputShape(PredictorHandle handle,
  * \param out_dtype The dtype of the output node
  */
 MXNET_DLL int MXPredGetOutputType(PredictorHandle handle,
-                                  mx_uint out_index,
+                                  uint32_t out_index,
                                   int* out_dtype);
 
 /*!
@@ -255,8 +253,8 @@ MXNET_DLL int MXPredGetOutputType(PredictorHandle handle,
  */
 MXNET_DLL int MXPredSetInput(PredictorHandle handle,
                              const char* key,
-                             const mx_float* data,
-                             mx_uint size);
+                             const float* data,
+                             uint32_t size);
 /*!
  * \brief Run a forward pass to get the output.
  * \param handle The handle of the predictor.
@@ -289,9 +287,9 @@ MXNET_DLL int MXPredPartialForward(PredictorHandle handle, int step, int* step_l
  * \return 0 when success, -1 when failure.
  */
 MXNET_DLL int MXPredGetOutput(PredictorHandle handle,
-                              mx_uint index,
-                              mx_float* data,
-                              mx_uint size);
+                              uint32_t index,
+                              float* data,
+                              uint32_t size);
 /*!
  * \brief Free a predictor handle.
  * \param handle The handle of the predictor.
@@ -310,7 +308,7 @@ MXNET_DLL int MXPredFree(PredictorHandle handle);
 MXNET_DLL int MXNDListCreate(const char* nd_file_bytes,
                              int nd_file_size,
                              NDListHandle *out,
-                             mx_uint* out_length);
+                             uint32_t* out_length);
 /*!
  * \brief Get an element from list
  * \param handle The handle to the NDArray
@@ -322,11 +320,11 @@ MXNET_DLL int MXNDListCreate(const char* nd_file_bytes,
  * \return 0 when success, -1 when failure.
  */
 MXNET_DLL int MXNDListGet(NDListHandle handle,
-                          mx_uint index,
+                          uint32_t index,
                           const char** out_key,
-                          const mx_float** out_data,
-                          const mx_uint** out_shape,
-                          mx_uint* out_ndim);
+                          const float** out_data,
+                          const uint32_t** out_shape,
+                          uint32_t* out_ndim);
 
 /*!
  * \brief set a call back to notify the completion of operation and allow for

@@ -1,0 +1,19 @@
+.page-content {
+    ul {
+        li {
+            margin: .3rem 0;
+            p {
+                margin: 0;
+            }
+        }
+    }
+    .option-list {
+        .option {
+            font-family: $code_font_family;
+        }
+        td {
+            padding: 0.5rem;
+            border: none;
+        }
+    }
+}

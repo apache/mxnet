@@ -423,6 +423,22 @@ def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params, remove_amp_ca
     logging.info('Saved checkpoint to \"%s\"', param_name)
 
 
+def load_params(prefix, epoch):
+    """Load params from a file
+    """
+    save_dict = nd.load("%s-%04d.params" % (prefix, epoch))
+    arg_params = {}
+    aux_params = {}
+    if not save_dict:
+        logging.warning("Params file '%s' is empty", '%s-%04d.params' % (prefix, epoch))
+    for k, v in save_dict.items():
+        tp, name = k.split(":", 1)
+        if tp == "arg":
+            arg_params[name] = v
+        if tp == "aux":
+            aux_params[name] = v
+    return (arg_params, aux_params)
+
 def load_checkpoint(prefix, epoch):
     """Load model checkpoint from file.
 
@@ -448,22 +464,7 @@ def load_checkpoint(prefix, epoch):
     - Parameters will be loaded from ``prefix-epoch.params``.
     """
     symbol = sym.load('%s-symbol.json' % prefix)
-    save_dict = nd.load('%s-%04d.params' % (prefix, epoch))
-    arg_params = {}
-    aux_params = {}
-    #load any params in the dict, skip if params are empty
-    if not save_dict:
-        logging.warning("Params file '%s' is empty", '%s-%04d.params' % (prefix, epoch))
-    else:
-        for k, v in save_dict.items():
-            tp, name = k.split(':', 1)
-            if tp == 'arg':
-                arg_params[name] = v
-            elif tp == 'aux':
-                aux_params[name] = v
-            else:
-                logging.warning("Params file '%s' contains unknown param '%s'",
-                                '%s-%04d.params' % (prefix, epoch), k)
+    arg_params, aux_params = load_params(prefix, epoch)
     return (symbol, arg_params, aux_params)
 
 from .callback import LogValidationMetricsCallback # pylint: disable=wrong-import-position

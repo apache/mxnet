@@ -330,8 +330,11 @@ void Transpose(const nnvm::NodeAttrs& attrs,
                const std::vector<TBlob>& inputs,
                const std::vector<OpReqType>& req,
                const std::vector<TBlob>& outputs) {
+  if (req[0] == kNullOp) {
+    return;
+  }
   const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
-  CHECK_EQ(req[0], kWriteTo) << "Transpose does not support inplace";
+  CHECK_EQ(req[0], kWriteTo) << "Transpose does not support kWriteInplace and kAddTo";
   if (param.axes.ndim() == 0) {
     mxnet::TShape axes(inputs[0].ndim(), -1);
     for (int i = 0; i < axes.ndim(); ++i) {
@@ -667,13 +670,15 @@ void SliceEx(const nnvm::NodeAttrs& attrs,
 }
 
 template<int ndim>
-inline void GetIndexRange(const mxnet::TShape& dshape,
+inline bool GetIndexRange(const mxnet::TShape& dshape,
                           const mxnet::Tuple<dmlc::optional<index_t>>& param_begin,
                           const mxnet::Tuple<dmlc::optional<index_t>>& param_end,
                           const mxnet::Tuple<dmlc::optional<index_t>>& param_step,
                           common::StaticArray<index_t, ndim>* begin,
                           common::StaticArray<index_t, ndim>* end,
                           common::StaticArray<index_t, ndim>* step) {
+  // Function returns false if output is zero-sized, true otherwise.
+  bool zero_size_shape = false;
   CHECK_NE(dshape.ndim(), 0U);
   CHECK_LE(param_begin.ndim(), dshape.ndim())
     << "Slicing axis exceeds data dimensions";
@@ -722,6 +727,10 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
     (*begin)[i] = b;
     (*end)[i] = e;
     (*step)[i] = s;
+    // checking begin==end
+    if (b == e) {
+      zero_size_shape = true;
+    }
   }
 
   for (int i = param_begin.ndim(); i < dshape.ndim(); ++i) {
@@ -729,11 +738,13 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
     (*end)[i] = dshape[i];
     (*step)[i] = 1;
   }
+
+  return zero_size_shape;
 }
 
 inline void SetSliceOpOutputDimSize(const mxnet::TShape& dshape,
-                                    const index_t i, const int b,
-                                    const int e, const int s,
+                                    const index_t i, const index_t b,
+                                    const index_t e, const index_t s,
                                     mxnet::TShape* oshape) {
   if (!mxnet::dim_size_is_known(dshape, i)) {
     (*oshape)[i] = -1;
@@ -765,7 +776,7 @@ inline bool SliceOpShape(const nnvm::NodeAttrs& attrs,
     common::StaticArray<index_t, ndim> begin, end, step;
     GetIndexRange(dshape, param.begin, param.end, param.step, &begin, &end, &step);
     for (int i = 0; i < param.begin.ndim(); ++i) {
-      const int b = begin[i], e = end[i], s = step[i];
+      const index_t b = begin[i], e = end[i], s = step[i];
       SetSliceOpOutputDimSize(dshape, i, b, e, s, &oshape);
     }
   })
@@ -973,7 +984,7 @@ inline bool SliceAssignOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   const mxnet::TShape& dshape = (*in_attrs)[0];
-  if (dshape.ndim() == 0U || dshape.Size() == 0U) return false;
+  if (!mxnet::ndim_is_known(dshape)) return false;
   mxnet::TShape vshape = dshape;  // vshape is the value shape on the right hand side
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
   MXNET_NDIM_SWITCH(dshape.ndim(), ndim, {
@@ -1016,7 +1027,11 @@ void SliceAssignOpForward(const nnvm::NodeAttrs& attrs,
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
   MXNET_NDIM_SWITCH(data.ndim(), ndim, {
     common::StaticArray<index_t, ndim> begin, end, step;
-    GetIndexRange(data.shape_, param.begin, param.end, param.step, &begin, &end, &step);
+    bool zero_size_shape = GetIndexRange(data.shape_, param.begin, param.end, param.step,
+                                        &begin, &end, &step);
+    if (zero_size_shape) {
+      return;  // slice_assign of zero-sized subspace needs no operation.
+    }
     MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
         int num_threads = val.shape_.FlatTo2D()[0];
@@ -1117,7 +1132,11 @@ void SliceAssignScalarOpForward(const nnvm::NodeAttrs& attrs,
   const SliceAssignScalarParam& param = nnvm::get<SliceAssignScalarParam>(attrs.parsed);
   MXNET_NDIM_SWITCH(data.ndim(), ndim, {
     common::StaticArray<index_t, ndim> begin, end, step;
-    GetIndexRange(data.shape_, param.begin, param.end, param.step, &begin, &end, &step);
+    bool zero_size_shape = GetIndexRange(data.shape_, param.begin, param.end, param.step,
+                                        &begin, &end, &step);
+    if (zero_size_shape) {
+      return;  // slice_assign of zero-sized subspaced needs no operation.
+    }
     for (index_t i = 0; i < param.begin.ndim(); ++i) {
       const int b = begin[i], e = end[i], s = step[i];
       SetSliceOpOutputDimSize(data.shape_, i, b, e, s, &vshape);
@@ -1132,8 +1151,8 @@ void SliceAssignScalarOpForward(const nnvm::NodeAttrs& attrs,
 
 struct SliceAxisParam : public dmlc::Parameter<SliceAxisParam> {
   int axis;
-  int begin;
-  dmlc::optional<int> end;
+  index_t begin;
+  dmlc::optional<index_t> end;
   DMLC_DECLARE_PARAMETER(SliceAxisParam) {
     DMLC_DECLARE_FIELD(axis)
       .describe("Axis along which to be sliced, supports negative indexes.");
@@ -1250,6 +1269,9 @@ void SliceAxisGrad_(const nnvm::NodeAttrs& attrs,
                 const std::vector<TBlob>& inputs,
                 const std::vector<OpReqType>& req,
                 const std::vector<TBlob>& outputs) {
+  if (outputs[0].shape_.Size() == 0) {
+    return;
+  }
   const SliceAxisParam& param = nnvm::get<SliceAxisParam>(attrs.parsed);
   using namespace mshadow::op;
   using namespace mshadow::expr;
@@ -1258,7 +1280,6 @@ void SliceAxisGrad_(const nnvm::NodeAttrs& attrs,
   index_t begin, end;
   GetSliceAxisParams(param, outputs[0].shape_, &axis, &begin, &end);
   int ndim = outputs[0].shape_.ndim();
-
   if (axis + 1 == ndim) {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
         mshadow::Tensor<xpu, 2, DType> ograd =

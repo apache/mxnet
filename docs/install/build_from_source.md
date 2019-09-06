@@ -197,7 +197,7 @@ There is a configuration file for make,
 
 ``` bash
 echo "USE_NCCL=1" >> make/config.mk
-echo "USE_NCCP_PATH=path-to-nccl-installation-folder" >> make/config.mk
+echo "USE_NCCL_PATH=path-to-nccl-installation-folder" >> make/config.mk
 cp make/config.mk .
 ```
 - Run make command

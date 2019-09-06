@@ -29,12 +29,13 @@ from ..symbol import Symbol
 from .._internal import _set_np_symbol_class
 from . import _internal as _npi
 
-__all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'sin', 'cos',
-           'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
+__all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'sin',
+           'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot',
-           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack']
+           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'mean',
+           'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var']
 
 
 def _num_outputs(sym):
@@ -217,7 +218,9 @@ class _Symbol(Symbol):
         raise NotImplementedError
 
     def dot(self, b, out=None):
-        raise NotImplementedError
+        """Dot product of two arrays.
+        Refer to ``numpy.dot`` for full documentation."""
+        return _mx_np_op.dot(self, b, out=out)
 
     def reshape(self, *args, **kwargs):  # pylint: disable=arguments-differ
         """Returns an array containing the same data with a new shape.
@@ -248,7 +251,9 @@ class _Symbol(Symbol):
             return _mx_np_op.reshape(self, newshape=args, order=order)
 
     def argmax(self, axis=None, out=None):  # pylint: disable=arguments-differ
-        raise NotImplementedError
+        """Return indices of the maximum values along the given axis.
+        Refer to `mxnet.numpy.argmax` for full documentation."""
+        return argmax(self, axis, out)
 
     def reshape_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape_like`.
@@ -298,7 +303,7 @@ class _Symbol(Symbol):
         """Return a copy of the array with axis1 and axis2 interchanged.
         Refer to `mxnet.numpy.swapaxes` for full documentation.
         """
-        raise NotImplementedError
+        return swapaxes(self, axis1, axis2)
 
     def split(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`split`.
@@ -408,7 +413,7 @@ class _Symbol(Symbol):
         """Return an array whose values are limited to [min, max].
         One of max or min must be given.
         """
-        raise NotImplementedError
+        return clip(self, min, max, out=out)
 
     def abs(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`abs`.
@@ -525,12 +530,16 @@ class _Symbol(Symbol):
         raise AttributeError('_Symbol object has no attribute nanprod')
 
     def mean(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
-        """Convenience fluent method for :py:func:`mean`.
+        """Returns the average of the array elements along given axis."""
+        return mean(self, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
-        The arguments are the same as for :py:func:`mean`, with
-        this array as data.
-        """
-        raise NotImplementedError
+    def std(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=arguments-differ,too-many-arguments
+        """Returns the standard deviation of the array elements along given axis."""
+        return std(self, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+
+    def var(self, axis=None, dtype=None, out=None, ddof=0, keepdims=None):  # pylint: disable=arguments-differ,too-many-arguments
+        """Returns the variance of the array elements, along given axis."""
+        return var(self, axis=axis, dtype=dtype, out=out, ddof=ddof, keepdims=keepdims)
 
     def cumsum(self, axis=None, dtype=None, out=None):
         """Return the cumulative sum of the elements along the given axis."""
@@ -931,6 +940,61 @@ def ones(shape, dtype=_np.float32, order='C', ctx=None):
     return _npi.ones(shape=shape, ctx=ctx, dtype=dtype)
 
 
+@set_module('mxnet.symbol.numpy')
+def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylint: disable=too-many-arguments
+    """
+    Return a new array of given shape and type, filled with `fill_value`.
+    Parameters
+    ----------
+    shape : int or sequence of ints
+        Shape of the new array, e.g., ``(2, 3)`` or ``2``.
+    fill_value : scalar
+        Fill value.
+    dtype : data-type, optional
+        The desired data-type for the array. The default, `None`, means
+        `np.array(fill_value).dtype`.
+    order : {'C'}, optional
+        Whether to store multidimensional data in C- or Fortran-contiguous
+        (row- or column-wise) order in memory. Currently only supports C order.
+    ctx: to specify the device, e.g. the i-th GPU.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+    Returns
+    -------
+    out : ndarray
+        Array of `fill_value` with the given shape, dtype, and order.
+    Notes
+    -----
+    This function differs from the original `numpy.full
+    https://docs.scipy.org/doc/numpy/reference/generated/numpy.full.html`_ in
+    the following way(s):
+    - Have an additional `ctx` argument to specify the device
+    - Have an additional `out` argument
+    - Currently does not support `order` selection
+    See Also
+    --------
+    empty : Return a new uninitialized array.
+    ones : Return a new array setting values to one.
+    zeros : Return a new array setting values to zero.
+    Examples
+    --------
+    >>> np.full((2, 2), 10)
+    array([[10., 10.],
+           [10., 10.]])
+    >>> np.full((2, 2), 2, dtype=np.int32, ctx=mx.cpu(0))
+    array([[2, 2],
+           [2, 2]], dtype=int32)
+    """
+    if order != 'C':
+        raise NotImplementedError
+    if ctx is None:
+        ctx = current_context()
+    dtype = _np.float32 if dtype is None else dtype
+    return _npi.full(shape=shape, value=fill_value, ctx=ctx, dtype=dtype, out=out)
+
+
 #pylint: disable= too-many-arguments, no-member, protected-access
 def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, out=None):
     """ Helper function for element-wise operation.
@@ -1004,6 +1068,11 @@ def divide(x1, x2, out=None):
 
 @set_module('mxnet.symbol.numpy')
 def mod(x1, x2, out=None):
+    return _ufunc_helper(x1, x2, _npi.mod, _np.mod, _npi.mod_scalar, _npi.rmod_scalar, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def remainder(x1, x2, out=None):
     return _ufunc_helper(x1, x2, _npi.mod, _np.mod, _npi.mod_scalar, _npi.rmod_scalar, out)
 
 
@@ -2326,6 +2395,287 @@ def stack(arrays, axis=0, out=None):
 
     arrays = get_list(arrays)
     return _npi.stack(*arrays, axis=axis, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def maximum(x1, x2, out=None):
+    return _ufunc_helper(x1, x2, _npi.maximum, _np.maximum, _npi.maximum_scalar, None, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def minimum(x1, x2, out=None):
+    return _ufunc_helper(x1, x2, _npi.minimum, _np.minimum, _npi.minimum_scalar, None, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def clip(a, a_min, a_max, out=None):
+    """clip(a, a_min, a_max, out=None)
+
+    Clip (limit) the values in an array.
+    Given an interval, values outside the interval are clipped to
+    the interval edges.  For example, if an interval of ``[0, 1]``
+    is specified, values smaller than 0 become 0, and values larger
+    than 1 become 1.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Array containing elements to clip.
+    a_min : scalar or `None`
+        Minimum value. If `None`, clipping is not performed on lower
+        interval edge. Not more than one of `a_min` and `a_max` may be
+        `None`.
+    a_max : scalar or `None`
+        Maximum value. If `None`, clipping is not performed on upper
+        interval edge. Not more than one of `a_min` and `a_max` may be
+        `None`.
+    out : _Symbol or `None`
+        The results will be placed in this array. It may be the input
+        array for in-place clipping.  `out` must be of the right shape
+        to hold the output.  Its type is preserved.
+
+    Returns
+    -------
+    clipped_array : _Symbol
+        An array with the elements of `a`, but where values
+        < `a_min` are replaced with `a_min`, and those > `a_max`
+        with `a_max`.
+
+    Notes
+    -----
+    array_like `a_min` and `a_max` are not supported.
+    """
+    if a_min is None and a_max is None:
+        raise ValueError('array_clip: must set either max or min')
+    if a_min is None:
+        a_min = float('-inf')
+    if a_max is None:
+        a_max = float('inf')
+    return _npi.clip(a, a_min, a_max, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def swapaxes(a, axis1, axis2):
+    """Interchange two axes of an array.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input array.
+    axis1 : int
+        First axis.
+    axis2 : int
+        Second axis.
+
+    Returns
+    -------
+    a_swapped : _Symbol
+        Swapped array symbol.
+    """
+    return _npi.swapaxes(a, dim1=axis1, dim2=axis2)
+
+
+@set_module('mxnet.symbol.numpy')
+def argmax(a, axis=None, out=None):
+    r"""
+    argmax(a, axis=None, out=None)
+
+    Returns the indices of the maximum values along an axis.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input array. Only support dtype `float16`, `float32`, and `float64`.
+    axis : int, optional
+        By default, the index is into the flattened array, otherwise
+        along the specified axis.
+    out : _Symbol or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    index_array : _Symbol of indices whose dtype is same as the input ndarray.
+        Array of indices into the array. It has the same shape as `a.shape`
+        with the dimension along `axis` removed.
+
+    Notes
+    -----
+    In case of multiple occurrences of the maximum values, the indices
+    corresponding to the first occurrence are returned.
+
+    This function differs from the original `numpy.argmax
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.argmax.html>`_ in
+    the following aspects:
+
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - Output has dtype that is same as the input ndarray.
+    - ``out`` param: cannot perform auto broadcasting. ``out`` symbol's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` symnbol's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+
+    """
+    return _npi.argmax(a, axis=axis, keepdims=False, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
+    """
+    mean(a, axis=None, dtype=None, out=None, keepdims=None)
+
+    Compute the arithmetic mean along the specified axis.
+    Returns the average of the array elements.
+    The average is taken over the flattened array by default, otherwise over the specified axis.
+
+    Parameters
+    ----------
+    a : `_Symbol`
+        _Symbol containing numbers whose mean is desired.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which the means are computed. The default is to compute the mean of the flattened array.
+        If this is a tuple of ints, a mean is performed over multiple axes,
+        instead of a single axis or all the axes as before.
+    dtype : data-type, optional
+        Type to use in computing the mean. For integer inputs, the default is float32;
+        for floating point inputs, it is the same as the input dtype.
+    out : _Symbol, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in the result
+        as dimensions with size one. With this option, the result will broadcast correctly
+        against the input array.
+        If the default value is passed, then keepdims will not be passed through to the mean
+        method of sub-classes of _Symbol, however any non-default value will be. If the sub-class
+        method does not implement keepdims any exceptions will be raised.
+
+    Returns
+    -------
+    m : _Symbol, see dtype parameter above
+        If out=None, returns a new array containing the mean values,
+        otherwise a reference to the output array is returned.
+
+    Notes
+    -----
+    This function differs from the original `numpy.mean
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.mean.html>`_ in
+    the following way(s):
+
+    - only _Symbol is accepted as valid input, python iterables or scalar is not supported
+    - default data type for integer input is float32
+
+    Examples
+    --------
+    >>> a = np.array([[1, 2], [3, 4]])
+    >>> np.mean(a)
+    array(2.5)
+    >>> a = np.zeros((2, 512*512), dtype=np.float32)
+    >>> a[0,:] = 1.0
+    >>> a[1,:] = 0.1
+    >>> np.mean(a)
+    array(0.55)
+    >>> np.mean(a, dtype=np.float64)
+    array(0.55)
+    """
+    return _npi.mean(a, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=too-many-arguments
+    """
+    Compute the standard deviation along the specified axis.
+
+    Returns the standard deviation, a measure of the spread of a distribution,
+    of the array elements. The standard deviation is computed for the
+    flattened array by default, otherwise over the specified axis.
+
+    Parameters
+    ----------
+    a : `_Symbol`
+        _Symbol containing numbers whose standard deviation is desired.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which the standard deviations are computed.
+        The default is to compute the standard deviation of the flattened array.
+        If this is a tuple of ints, computation is performed over multiple axes,
+        instead of a single axis or all the axes as before.
+    dtype : data-type, optional
+        Type to use in computing the standard deviation. For integer inputs, the default is float32;
+        for floating point inputs, it is the same as the input dtype.
+    out : _Symbol, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in the result
+        as dimensions with size one. With this option, the result will broadcast correctly
+        against the input array.
+        If the default value is passed, then keepdims will not be passed through to the mean
+        method of sub-classes of _Symbol, however any non-default value will be. If the sub-class
+        method does not implement keepdims any exceptions will be raised.
+
+    Returns
+    -------
+    m : _Symbol, see dtype parameter above
+        If out=None, returns a new array containing the standard deviation values,
+        otherwise a reference to the output array is returned.
+
+    Notes
+    -----
+    This function differs from the original `numpy.std
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.mean.html>`_ in
+    the following way(s):
+
+    - only _Symbol is accepted as valid input, python iterables or scalar is not supported
+    - default output data type for integer input is float32
+
+    """
+    return _npi.std(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=too-many-arguments
+    """
+    Compute the variance along the specified axis.
+
+    Returns the variance of the array elements, a measure of the spread of a
+    distribution.  The variance is computed for the flattened array by
+    default, otherwise over the specified axis.
+
+    Parameters
+    ----------
+    a : `_Symbol`
+        _Symbol containing numbers whose variance is desired.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which the variance is computed.
+        The default is to compute the variance of the flattened array.
+        If this is a tuple of ints, computation is performed over multiple axes,
+        instead of a single axis or all the axes as before.
+    dtype : data-type, optional
+        Type to use in computing the variance. For integer inputs, the default is float32;
+        for floating point inputs, it is the same as the input dtype.
+    out : _Symbol, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in the result
+        as dimensions with size one. With this option, the result will broadcast correctly
+        against the input array.
+        If the default value is passed, then keepdims will not be passed through to the mean
+        method of sub-classes of _Symbol, however any non-default value will be. If the sub-class
+        method does not implement keepdims any exceptions will be raised.
+
+    Returns
+    -------
+    m : _Symbol, see dtype parameter above
+        If out=None, returns a new array containing the variance values,
+        otherwise a reference to the output array is returned.
+
+    Notes
+    -----
+    This function differs from the original `numpy.var
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.mean.html>`_ in
+    the following way(s):
+
+    - only _Symbol is accepted as valid input, python iterables or scalar is not supported
+    - default output data type for integer input is float32
+
+    """
+    return _npi.var(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
 
 
 _set_np_symbol_class(_Symbol)

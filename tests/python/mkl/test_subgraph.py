@@ -167,9 +167,9 @@ def check_quantize(sym, data_shape, out_type, name='conv',
                                                                    quantized_dtype=out_type,
                                                                    calib_mode='naive',
                                                                    calib_data=calib_data,
-                                                                   calib_layer=None,
                                                                    label_names=None,
-                                                                   num_calib_examples=1)
+                                                                   num_calib_examples=1,
+                                                                   quantize_mode='full')
   qsym = qsym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
   if check_calibration:
     check_qsym_calibrated(qsym, out_type, name=name)
@@ -218,7 +218,6 @@ def check_quantize_whole_model_with_forward():
     calib_data = mx.nd.random.uniform(shape=data_shape)
     calib_data = mx.io.NDArrayIter(data=calib_data)
     calib_data = DummyIter(calib_data)
-    calib_layer = lambda name: name.endswith('_output')
     qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
                                                                      arg_params=arg_params,
                                                                      aux_params=aux_params,
@@ -227,9 +226,9 @@ def check_quantize_whole_model_with_forward():
                                                                      quantized_dtype=out_type,
                                                                      calib_mode='naive',
                                                                      calib_data=calib_data,
-                                                                     calib_layer=calib_layer,
                                                                      label_names=None,
-                                                                     num_calib_examples=1)
+                                                                     num_calib_examples=1,
+                                                                     quantize_mode='full')
     qsym = qsym.get_backend_symbol('MKLDNN_QUANTIZE')
     check_qsym_forward(qsym, qarg_params, qaux_params, data_shape)
 
