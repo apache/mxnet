@@ -61,7 +61,8 @@ class Dataset(object):
         Dataset
             The filtered dataset.
         """
-        return _FilteredDataset(self, fn)
+        from . import FilterSampler
+        return _SampledDataset(self, FilterSampler(fn, self))
 
     def take(self, count):
         """Returns a new dataset with at most `count` number of samples in it.
@@ -79,7 +80,29 @@ class Dataset(object):
         Dataset
             The result dataset.
         """
-        return _TakenDataset(self, count)
+        if count is None or count > len(self):
+            count = len(self)
+        from . import SequentialSampler
+        return _SampledDataset(self, SequentialSampler(count))
+
+    def sample(self, sampler):
+        """Returns a new dataset with elements sampled by the sampler.
+
+        Parameters
+        ----------
+        sampler : Sampler
+            A Sampler that returns the indices of sampled elements.
+
+        Returns
+        -------
+        Dataset
+            The result dataset.
+        """
+        from . import Sampler
+        if not isinstance(sampler, Sampler):
+            raise TypeError('Invalid sampler type: %s. Expected gluon.data.Sampler instead.'%
+                             type(sampler))
+        return _SampledDataset(self, sampler)
 
     def transform(self, fn, lazy=True):
         """Returns a new dataset with each sample transformed by the
@@ -188,22 +211,18 @@ class _FilteredDataset(Dataset):
     def __getitem__(self, idx):
         return self._dataset[self._indices[idx]]
 
-class _TakenDataset(Dataset):
-    """Dataset with at most `count` samples"""
-    def __init__(self, dataset, count):
+class _SampledDataset(Dataset):
+    """Dataset with elements chosen by a sampler"""
+    def __init__(self, dataset, sampler):
         self._dataset = dataset
-        self._count = count
-        if count is None or count > len(dataset):
-            self._count = len(dataset)
-        assert self._count >= 0
+        self._sampler = sampler
+        self._indices = list(iter(sampler))
 
     def __len__(self):
-        return self._count
+        return len(self._sampler)
 
     def __getitem__(self, idx):
-        if idx >= len(self):
-            raise IndexError('Invalid index %d. Expected index < %d'%(idx, len(self)))
-        return self._dataset[idx]
+        return self._dataset[self._indices[idx]]
 
 class ArrayDataset(Dataset):
     """A dataset that combines multiple dataset-like objects, e.g.
