@@ -2671,19 +2671,58 @@ def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
 
 @set_module('mxnet.symbol.numpy')
 def sinc(x, out=None, **kwargs):
-    r"""abs(x, out=None, **kwargs)
-    Calculate the absolute value element-wise.
+    r"""
+    Return the sinc function.
+    The sinc function is :math:`\\sin(\\pi x)/(\\pi x)`.
     Parameters
     ----------
-    x : _Symbol or scalar
-        Input array.
-    out : _Symbol or None
-        Dummy parameter to keep the consistency with the ndarray counterpart.
+    x : _Symbol
+        Array (possibly multi-dimensional) of values for which to to
+        calculate ``sinc(x)``.
     Returns
     -------
-    absolute : _Symbol
-        An ndarray containing the absolute value of
-        each element in `x`. This is a scalar if `x` is a scalar.
+    out : _Symbol
+        ``sinc(x)``, which has the same shape as the input.
+    Notes
+    -----
+    ``sinc(0)`` is the limit value 1.
+    The name sinc is short for "sine cardinal" or "sinus cardinalis".
+    The sinc function is used in various signal processing applications,
+    including in anti-aliasing, in the construction of a Lanczos resampling
+    filter, and in interpolation.
+    For bandlimited interpolation of discrete-time signals, the ideal
+    interpolation kernel is proportional to the sinc function.
+    References
+    ----------
+    .. [1] Weisstein, Eric W. "Sinc Function." From MathWorld--A Wolfram Web
+           Resource. http://mathworld.wolfram.com/SincFunction.html
+    .. [2] Wikipedia, "Sinc function",
+           https://en.wikipedia.org/wiki/Sinc_function
+    Examples
+    --------
+    >>> import matplotlib.pyplot as plt
+    >>> x = np.linspace(-4, 4, 41)
+    >>> np.sinc(x)
+    array([ 2.78275341e-08, -4.92362715e-02, -8.40918645e-02, -8.90384465e-02,
+           -5.84680997e-02, -2.53053822e-09,  6.68206811e-02,  1.16434909e-01,
+            1.26137808e-01,  8.50445256e-02,  2.78275341e-08, -1.03943266e-01,
+           -1.89206675e-01, -2.16236204e-01, -1.55914947e-01, -2.78275341e-08,
+            2.33872294e-01,  5.04551113e-01,  7.56826699e-01,  9.35489237e-01,
+            1.00000000e+00,  9.35489237e-01,  7.56826699e-01,  5.04551113e-01,
+            2.33872294e-01, -2.78275341e-08, -1.55914947e-01, -2.16236204e-01,
+           -1.89206675e-01, -1.03943266e-01,  2.78275341e-08,  8.50445256e-02,
+            1.26137808e-01,  1.16434909e-01,  6.68206811e-02, -2.53053822e-09,
+           -5.84680997e-02, -8.90384465e-02, -8.40918645e-02, -4.92362715e-02,
+            2.78275341e-08])
+    >>> plt.plot(x, np.sinc(x))
+    [<matplotlib.lines.Line2D object at 0x...>]
+    >>> plt.title("Sinc Function")
+    Text(0.5, 1.0, 'Sinc Function')
+    >>> plt.ylabel("Amplitude")
+    Text(0, 0.5, 'Amplitude')
+    >>> plt.xlabel("X")
+    Text(0.5, 0, 'X')
+    >>> plt.show()
     """
     return _unary_func_helper(x, _npi.sinc, _np.sinc, out=out, **kwargs)
 

@@ -39,7 +39,6 @@ namespace mxnet {
 namespace op {
 
 #if MXNET_USE_TVM_OP
-
 static constexpr int max_dim = 5;
 
 inline bool IsIntType(const int dtype) {
@@ -47,12 +46,6 @@ inline bool IsIntType(const int dtype) {
           dtype == mshadow::kInt32 ||
           dtype == mshadow::kInt8 ||
           dtype == mshadow::kInt64);
-}
-
-inline bool IsFloatType(const int dtype) {
-  return (dtype == mshadow::kFloat16 ||
-          dtype == mshadow::kFloat32 ||
-          dtype == mshadow::kFloat64);
 }
 
 TBlob padding(const TBlob& tblob, const int& max_dim) {
@@ -80,7 +73,6 @@ void TVMOpSincCompute(const nnvm::NodeAttrs& attrs,
   tvm::runtime::TVMOpModule::Get()->Call(func, ctx, {idata, odata});
 
 }
-
 
 template<const char* func>
 void TVMSincBackward(const nnvm::NodeAttrs& attrs,

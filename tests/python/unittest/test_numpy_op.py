@@ -1663,6 +1663,7 @@ def test_np_sinc():
 
         shapes = [
             (2,),
+            (2, 4),
             (2, 1, 2),
             (2, 0, 2),
             (1, 2, 3, 4, 5),
@@ -1680,18 +1681,17 @@ def test_np_sinc():
                     np_out = _np.sinc(x.asnumpy())
                     with mx.autograd.record():
                         mx_out = test_sinc(x)
-
-                    assert_almost_equal(mx_out.asnumpy(), np_out.astype(dtype), rtol = 1e-3, atol = 1e-5)
-                    if dtype in ['float32', 'float64']:
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol = 1e-3, atol = 1e-5)
+                    if dtype == 'float64':
                         mx_out.backward()
                         x_t = _np.where(x.asnumpy() == 0, 1.0e-20, x.asnumpy())
                         np_backward = _np.cos(_np.pi * x_t) / x_t - np_out / x_t
                         assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5)
-
                     # test imperative
                     np_out = _np.sinc(x.asnumpy())
                     mx_out = np.sinc(x)
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol = 1e-3, atol = 1e-5)
+
 
 if __name__ == '__main__':
     import nose
