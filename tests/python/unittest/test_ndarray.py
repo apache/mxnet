@@ -1952,6 +1952,25 @@ def test_update_ops_mutation():
             {'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3})
 
 
+def test_large_int_rounding():
+    large_integer = 50000001
+
+    a = mx.nd.array([large_integer], dtype='int32')
+    assert np.all(a == large_integer)
+
+    a = mx.nd.array([large_integer], dtype='int32').floor()
+    assert np.all(a == large_integer)
+
+    a = mx.nd.array([large_integer], dtype='int32').round()
+    assert np.all(a == large_integer)
+
+    a = mx.nd.array([large_integer], dtype='int32').ceil()
+    assert np.all(a == large_integer)
+
+    a = mx.nd.array([large_integer], dtype='int32').trunc()
+    assert np.all(a == large_integer)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
