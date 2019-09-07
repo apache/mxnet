@@ -28,6 +28,8 @@
 
 # v1.5.0 (#TBD)
 
+# v1.5.0
+
 * Following material from `mx` module got exported (#TBD):
     * `NDArray`
         * `context()`

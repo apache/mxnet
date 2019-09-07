@@ -41,11 +41,23 @@ namespace exec {
 
 using namespace mxnet::common;
 
+static const std::string GetDefaultSubgraphBackend() {
+#if MXNET_USE_MKLDNN == 1
+  return std::string("MKLDNN");
+#else
+  return std::string();
+#endif
+}
+
 GraphExecutor::GraphExecutor() {
   log_verbose_ = dmlc::GetEnv("MXNET_EXEC_VERBOSE_LOGGING", false);
   need_grad_ = false;
   is_dynamic_ = false;
-  subgraph_property_ = dmlc::GetEnv("MXNET_SUBGRAPH_BACKEND", std::string());
+  subgraph_property_ = dmlc::GetEnv("MXNET_SUBGRAPH_BACKEND", GetDefaultSubgraphBackend());
+  if (subgraph_property_ == "NONE") {
+    subgraph_property_ = std::string();
+    LOG(INFO) << "MXNET_SUBGRAPH_BACKEND=NONE is detected, subgraph backend is not in use";
+  }
   engine_ref_ = Engine::_GetSharedRef();
 }
 
@@ -1358,24 +1370,13 @@ void GraphExecutor::ExecuteMonInputCallback(size_t nid) {
 }
 
 void GraphExecutor::ExecuteMonOutputCallback(size_t nid) {
-  static const auto& flist_outputs =
-      nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
   const auto& idx = graph_.indexed_graph();
-  std::vector<std::string> output_names;
   OpNode& opnode = op_nodes_[nid];
-  const auto& inode = idx[nid];
   const auto& node = idx[nid].source;
-  if (flist_outputs.count(node->op())) {
-    output_names = flist_outputs[node->op()](node->attrs);
-  } else {
-    for (size_t i = 0; i < node->num_outputs(); ++i) {
-      output_names.emplace_back(std::to_string(i));
-    }
-  }
-  CHECK_EQ(opnode.exec->out_array.size(), output_names.size());
   for (size_t i = 0; i < opnode.exec->out_array.size(); ++i) {
     NDArray *cpy = new NDArray(opnode.exec->out_array[i]);
-    std::string name = inode.source->attrs.name + "_" + output_names[i];
+    nnvm::NodePtr node_ptr = std::make_shared<nnvm::Node>(*node);
+    std::string name = GetOutputName({node_ptr, static_cast<uint32_t >(i), 0});
     this->monitor_callback_(name.c_str(), reinterpret_cast<void*>(cpy));
   }
 }
@@ -1598,15 +1599,18 @@ static nnvm::Graph InferForwardAttrs(nnvm::Graph g,
                                      const Context& default_ctx,
                                      const std::map<std::string, Context>& ctx_map,
                                      const std::vector<Context>& in_arg_ctxes,
-                                     const std::vector<Context>& aux_state_ctxes) {
+                                     const std::vector<Context>& aux_state_ctxes,
+                                     bool partial_shape = false) {
   const auto& indexed_graph = g.indexed_graph();
   const auto num_forward_inputs = indexed_graph.input_nodes().size();
   g = AssignContext(g, default_ctx, ctx_map, in_arg_ctxes, {},
                    aux_state_ctxes, {}, num_forward_inputs, g.outputs.size());
   g = InferShape(std::move(g), std::move(arg_shapes), "__shape__");
   if (g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U) {
-    HandleInferShapeError(num_forward_inputs, indexed_graph,
-                          g.GetAttr<mxnet::ShapeVector>("shape"));
+    if (!partial_shape) {
+      HandleInferShapeError(num_forward_inputs, indexed_graph,
+                            g.GetAttr<mxnet::ShapeVector>("shape"));
+    }
   }
   g = InferType(std::move(g), std::move(arg_dtypes), "__dtype__");
   if (g.GetAttr<size_t>("dtype_num_unknown_nodes") != 0U) {
@@ -1621,10 +1625,51 @@ static nnvm::Graph InferForwardAttrs(nnvm::Graph g,
   return g;
 }
 
+static bool SubgraphBackendCheck(const op::SubgraphBackendPtr& backend,
+                                 const Context& default_ctx,
+                                 bool verbose = false) {
+  if (backend->HasAttr("enable") && (backend->GetAttr<bool>("enable") != true)) {
+    if (verbose) {
+      LOG(INFO) << "Subgraph backend " << backend->GetName()
+                << " isn't activated.";
+    }
+    return false;
+  }
+  if (backend->HasAttr("context") && backend->GetAttr<Context>("context") != default_ctx) {
+    if (verbose) {
+      LOG(INFO) << "Subgraph backend " << backend->GetName()
+                << " isn't activated as context mismatch.";
+    }
+    return false;
+  }
+  return true;
+}
+
+static bool SubgraphPropertyCheck(const std::string& backend_name,
+                                  const op::SubgraphPropertyPtr& prop, bool need_grad,
+                                  bool verbose = false) {
+  auto full_name =
+      prop->HasAttr("property_name") ? prop->GetAttr<std::string>("property_name") : std::string();
+  if (prop->HasAttr("disable") && prop->GetAttr<bool>("disable") == true) {
+    LOG(INFO) << "subgraph property " << full_name << " from backend " << backend_name
+              << " is disabled.";
+    return false;
+  }
+  if (prop->HasAttr("inference_only") && prop->GetAttr<bool>("inference_only") == true) {
+    if (need_grad) {
+      if (verbose) {
+        LOG(INFO) << "skip partitioning graph with subgraph property " << full_name
+                  << " from backend " << backend_name << " as it requires `grad_req=null`.";
+      }
+      return false;
+    }
+  }
+  return true;
+}
+
 // Given input attr arrays, partition the graph using the backend name equal to prop_name.
 // This is a common function for bind and simple_bind flows.
-static nnvm::Symbol BuildSubgraph(const nnvm::Symbol& src,
-                                  mxnet::op::SubgraphPropertyPtr subgraph_prop,
+static nnvm::Symbol BuildSubgraph(const nnvm::Symbol& src, op::SubgraphPropertyPtr subgraph_prop,
                                   const mxnet::ShapeVector& arg_shapes,
                                   const nnvm::DTypeVector& arg_dtypes,
                                   const StorageTypeVector& arg_stypes, const Context& default_ctx,
@@ -1635,28 +1680,26 @@ static nnvm::Symbol BuildSubgraph(const nnvm::Symbol& src,
   nnvm::Graph g;
   g.outputs = ret.outputs;
   g = InferForwardAttrs(g, arg_shapes, arg_dtypes, arg_stypes, default_ctx, ctx_map, in_arg_ctxes,
-                        aux_state_ctxes);
+                        aux_state_ctxes, true);
   subgraph_prop->SetAttr("graph", g);
-  g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(std::move(subgraph_prop));
+  g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(subgraph_prop);
   g = ApplyPass(std::move(g), "BuildSubgraph");
+  subgraph_prop->RemoveAttr("graph");
+  g.attrs.erase("subgraph_property");
   ret.outputs = g.outputs;
   return ret;
 }
 
-// Given input attr dicts, partition the graph using the backend name equal to prop_name.
+// Given input attr dicts, partition the graph using the backend.
 // This is for simple_bind flow.
-static nnvm::Symbol BuildSubgraph(const nnvm::Symbol& src,
-                                   const std::string& prop_name,
-                                   const std::unordered_map<std::string, mxnet::TShape>
-                                                                             & arg_shape_map,
-                                   const std::unordered_map<std::string, int>& arg_dtype_map,
-                                   const std::unordered_map<std::string, int>& arg_stype_map,
-                                   const Context& default_ctx,
-                                   const std::map<std::string, Context>& ctx_map,
-                                   std::vector<Context>* in_arg_ctxes,
-                                   std::vector<Context>* arg_grad_ctxes,
-                                   std::vector<OpReqType>* grad_req_types,
-                                   std::vector<Context>* aux_state_ctxes) {
+static nnvm::Symbol BuildSubgraph(
+    const nnvm::Symbol& src, const op::SubgraphBackendPtr backend,
+    const std::unordered_map<std::string, mxnet::TShape>& arg_shape_map,
+    const std::unordered_map<std::string, int>& arg_dtype_map,
+    const std::unordered_map<std::string, int>& arg_stype_map, const Context& default_ctx,
+    const std::map<std::string, Context>& ctx_map, std::vector<Context>* in_arg_ctxes,
+    std::vector<Context>* arg_grad_ctxes, std::vector<OpReqType>* grad_req_types,
+    std::vector<Context>* aux_state_ctxes, bool verbose = false) {
   // setup map for in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes and grad_req_types
   std::unordered_map<std::string, Context> in_arg_ctx_map;
   std::unordered_map<std::string, Context> arg_grad_ctx_map;
@@ -1666,7 +1709,7 @@ static nnvm::Symbol BuildSubgraph(const nnvm::Symbol& src,
   auto arg_names = src.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
   auto aux_names = src.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
   for (size_t i = 0; i < arg_names.size(); ++i) {
-    auto name = arg_names[i];
+    const auto& name = arg_names[i];
     in_arg_ctx_map[name] = in_arg_ctxes->at(i);
     arg_grad_ctx_map[name] = arg_grad_ctxes->at(i);
     grad_req_type_map[name] = grad_req_types->at(i);
@@ -1685,81 +1728,73 @@ static nnvm::Symbol BuildSubgraph(const nnvm::Symbol& src,
   }
   nnvm::Symbol ret = src.Copy();
   std::unordered_set<std::string> op_names_set;
-  auto it = op::SubgraphPropertyOpNameSet::Get()->find(prop_name);
+  const auto& backend_name = backend->GetName();
+  const auto it = op::SubgraphPropertyOpNameSet::Get()->find(backend_name);
   // assign a op name set to the subgraph property if it has been provided by users
   if (it != op::SubgraphPropertyOpNameSet::Get()->end()) {
-    LOG(INFO) << "SubgraphPropertyOpNameSet for subgraph property " << prop_name
+    LOG(INFO) << "SubgraphPropertyOpNameSet for subgraph property " << backend_name
               << " has been assigned a value. Please make sure it is initialized"
                  " only for the testing purpose.";
     op_names_set = it->second;
   }
-  std::vector<mxnet::op::SubgraphPropertyPtr> properties =
-      op::SubgraphPropertyRegistry::Get()->CreateSubgraphProperty(prop_name);
-  for (auto subgraph_prop : properties) {
-    if (subgraph_prop->HasAttr("inference_only") &&
-        subgraph_prop->GetAttr<bool>("inference_only") == true) {
-      if (need_grad) {
-        auto full_name = subgraph_prop->HasAttr("property_name")
-                             ? subgraph_prop->GetAttr<std::string>("property_name")
-                             : prop_name;
-        LOG(INFO) << "skip partitioning graph with subgraph property " << full_name
-                  << " as it requires `grad_req=null`.";
-        continue;
+
+  const auto& subgraph_prop_list = backend->GetSubgraphProperties();
+  for (auto& subgraph_prop : subgraph_prop_list) {
+    if (SubgraphPropertyCheck(backend_name, subgraph_prop, need_grad, verbose)) {
+      subgraph_prop->SetAttr("op_names", op_names_set);
+      const std::vector<std::string> input_names = ret.ListInputNames(Symbol::kAll);
+      mxnet::ShapeVector arg_shapes(input_names.size(), mxnet::TShape());
+      nnvm::DTypeVector arg_dtypes(input_names.size(), -1);
+      StorageTypeVector arg_stypes(input_names.size(), kUndefinedStorage);
+      for (size_t i = 0; i < input_names.size(); ++i) {
+        const auto& input_name = input_names[i];
+        const auto it1 = arg_shape_map.find(input_name);
+        if (arg_shape_map.end() != it1) {
+          arg_shapes[i] = it1->second;
+        }
+        const auto it2 = arg_dtype_map.find(input_name);
+        if (arg_dtype_map.end() != it2) {
+          arg_dtypes[i] = it2->second;
+        }
+        const auto it3 = arg_stype_map.find(input_name);
+        if (arg_stype_map.end() != it3) {
+          arg_stypes[i] = it3->second;
+        }
       }
-    }
-    subgraph_prop->SetAttr("op_names", op_names_set);
-    const std::vector<std::string> input_names = ret.ListInputNames(Symbol::kAll);
-    mxnet::ShapeVector arg_shapes(input_names.size(), mxnet::TShape());
-    nnvm::DTypeVector arg_dtypes(input_names.size(), -1);
-    StorageTypeVector arg_stypes(input_names.size(), kUndefinedStorage);
-    for (size_t i = 0; i < input_names.size(); ++i) {
-      const auto& input_name = input_names[i];
-      auto it1 = arg_shape_map.find(input_name);
-      if (arg_shape_map.end() != it1) {
-        arg_shapes[i] = it1->second;
+      ret = BuildSubgraph(ret, subgraph_prop, arg_shapes, arg_dtypes, arg_stypes, default_ctx,
+                          ctx_map, *in_arg_ctxes, *aux_state_ctxes);
+      // Reorder in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes and grad_req_types according to
+      // partitioned symbol input sequence
+      in_arg_ctxes->clear();
+      arg_grad_ctxes->clear();
+      aux_state_ctxes->clear();
+      grad_req_types->clear();
+      auto new_arg_names = ret.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
+      auto new_aux_names = ret.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
+      for (const auto& arg_name : new_arg_names) {
+        CHECK(in_arg_ctx_map.count(arg_name));
+        in_arg_ctxes->push_back(in_arg_ctx_map[arg_name]);
+        arg_grad_ctxes->push_back(arg_grad_ctx_map[arg_name]);
+        grad_req_types->push_back(grad_req_type_map[arg_name]);
       }
-      auto it2 = arg_dtype_map.find(input_name);
-      if (arg_dtype_map.end() != it2) {
-        arg_dtypes[i] = it2->second;
+      for (const auto& arg_name : new_aux_names) {
+        CHECK(aux_state_ctx_map.count(arg_name));
+        aux_state_ctxes->push_back(aux_state_ctx_map[arg_name]);
       }
-      auto it3 = arg_stype_map.find(input_name);
-      if (arg_stype_map.end() != it3) {
-        arg_stypes[i] = it3->second;
-      }
-    }
-    ret = BuildSubgraph(ret, subgraph_prop, arg_shapes, arg_dtypes, arg_stypes, default_ctx,
-                         ctx_map, *in_arg_ctxes, *aux_state_ctxes);
-    // Reorder in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes and grad_req_types according to
-    // partitioned symbol input sequence
-    in_arg_ctxes->clear();
-    arg_grad_ctxes->clear();
-    aux_state_ctxes->clear();
-    grad_req_types->clear();
-    auto new_arg_names = ret.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
-    auto new_aux_names = ret.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
-    for (auto arg_name : new_arg_names) {
-      CHECK(in_arg_ctx_map.count(arg_name));
-      in_arg_ctxes->push_back(in_arg_ctx_map[arg_name]);
-      arg_grad_ctxes->push_back(arg_grad_ctx_map[arg_name]);
-      grad_req_types->push_back(grad_req_type_map[arg_name]);
-    }
-    for (auto arg_name : new_aux_names) {
-      CHECK(aux_state_ctx_map.count(arg_name));
-      aux_state_ctxes->push_back(aux_state_ctx_map[arg_name]);
     }
   }
   return ret;
 }
 
-// Given input ndarrays, partition the graph using the backend name equal to prop_name.
+// Given input ndarrays, partition the graph using backend.
 // This is for bind flow.
-static nnvm::Symbol BuildSubgraph(const nnvm::Symbol& src, const std::string& prop_name,
+static nnvm::Symbol BuildSubgraph(const nnvm::Symbol& src, const op::SubgraphBackendPtr backend,
                                   const Context& default_ctx,
                                   const std::map<std::string, Context>& ctx_map,
                                   std::vector<NDArray>* in_args,
                                   std::vector<NDArray>* arg_grad_store,
                                   std::vector<OpReqType>* grad_req_type,
-                                  std::vector<NDArray>* aux_states) {
+                                  std::vector<NDArray>* aux_states, bool verbose = false) {
   // setup map for in_args, arg_grad_store, grad_req_type and aux_states
   std::unordered_map<std::string, NDArray> in_args_map;
   std::unordered_map<std::string, NDArray> arg_grad_store_map;
@@ -1768,14 +1803,19 @@ static nnvm::Symbol BuildSubgraph(const nnvm::Symbol& src, const std::string& pr
   const std::vector<std::string> arg_names = src.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
   const std::vector<std::string> aux_names = src.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
   for (size_t i = 0; i < arg_names.size(); ++i) {
-    auto name = arg_names[i];
-    in_args_map[name] = in_args->at(i);
-    arg_grad_store_map[name] = arg_grad_store->at(i);
-    grad_req_type_map[name] = grad_req_type->at(i);
+    in_args_map[arg_names[i]] = in_args->at(i);
   }
 
   for (size_t i = 0; i < aux_names.size(); ++i) {
     aux_states_map[aux_names[i]] = aux_states->at(i);
+  }
+
+  if (arg_grad_store->size()) {
+    for (size_t i = 0; i < arg_names.size(); ++i) {
+      const auto& name = arg_names[i];
+      arg_grad_store_map[name] = arg_grad_store->at(i);
+      grad_req_type_map[name] = grad_req_type->at(i);
+    }
   }
 
   bool need_grad = false;
@@ -1787,65 +1827,58 @@ static nnvm::Symbol BuildSubgraph(const nnvm::Symbol& src, const std::string& pr
   }
   nnvm::Symbol ret = src.Copy();
   std::unordered_set<std::string> op_names_set;
-  auto it = op::SubgraphPropertyOpNameSet::Get()->find(prop_name);
+  const auto& backend_name = backend->GetName();
+  auto it = op::SubgraphPropertyOpNameSet::Get()->find(backend_name);
   // assign a op name set to the subgraph property if it has been provided by users
   if (it != op::SubgraphPropertyOpNameSet::Get()->end()) {
-    LOG(INFO) << "SubgraphPropertyOpNameSet for subgraph property " << prop_name
+    LOG(INFO) << "SubgraphPropertyOpNameSet for subgraph property " << backend_name
               << " has been assigned a value. Please make sure it is initialized"
                  " only for the testing purpose.";
     op_names_set = it->second;
   }
-  std::vector<mxnet::op::SubgraphPropertyPtr> properties =
-      op::SubgraphPropertyRegistry::Get()->CreateSubgraphProperty(prop_name);
-  for (auto subgraph_prop : properties) {
-    if (subgraph_prop->HasAttr("inference_only") &&
-        subgraph_prop->GetAttr<bool>("inference_only") == true) {
-      if (need_grad) {
-        auto full_name = subgraph_prop->HasAttr("property_name")
-                             ? subgraph_prop->GetAttr<std::string>("property_name")
-                             : prop_name;
-        LOG(INFO) << "Skip subgraph " << full_name << " as it requires `grad_req=null`.";
-        continue;
-      }
-    }
-    subgraph_prop->SetAttr("op_names", op_names_set);
-    const std::vector<std::string> input_names = ret.ListInputNames(Symbol::kAll);
-    const std::vector<std::string> arg_names = ret.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
-    const std::vector<std::string> aux_names = ret.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
-    CHECK_EQ(arg_names.size(), in_args_map.size());
-    CHECK_EQ(aux_names.size(), aux_states_map.size());
-    mxnet::ShapeVector arg_shapes;  // all input shapes
-    arg_shapes.reserve(input_names.size());
-    nnvm::DTypeVector arg_dtypes;  // all input dtypes
-    arg_dtypes.reserve(input_names.size());
-    StorageTypeVector arg_stypes;  // all input stypes
-    arg_stypes.reserve(input_names.size());
-    std::vector<Context> in_arg_ctxes(in_args_map.size());
-    std::vector<Context> aux_state_ctxes(aux_states_map.size());
+  const auto& subgraph_prop_list = backend->GetSubgraphProperties();
 
-    size_t i1 = 0, i2 = 0;
-    for (const auto& input_name : input_names) {
-      if (i2 < aux_names.size() && aux_names[i2] == input_name) {
-        const auto &aux_st = aux_states_map[input_name];
-        arg_shapes.push_back(aux_st.shape());
-        arg_dtypes.push_back(aux_st.dtype());
-        arg_stypes.push_back(aux_st.storage_type());
-        aux_state_ctxes[i2] = aux_st.ctx();
-        ++i2;
-      } else {
-        CHECK(i1 < arg_names.size());
-        CHECK_EQ(arg_names[i1], input_name);
-        const auto &in_arg = in_args_map[input_name];
-        arg_shapes.push_back(in_arg.shape());
-        arg_dtypes.push_back(in_arg.dtype());
-        arg_stypes.push_back(in_arg.storage_type());
-        in_arg_ctxes[i1] = in_arg.ctx();
-        ++i1;
-      }
-    }
+  for (auto subgraph_prop : subgraph_prop_list) {
+    if (SubgraphPropertyCheck(backend_name, subgraph_prop, need_grad, verbose)) {
+      subgraph_prop->SetAttr("op_names", op_names_set);
+      const std::vector<std::string> input_names = ret.ListInputNames(Symbol::kAll);
+      const std::vector<std::string> arg_names = ret.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
+      const std::vector<std::string> aux_names = ret.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
+      CHECK_EQ(arg_names.size(), in_args_map.size());
+      CHECK_EQ(aux_names.size(), aux_states_map.size());
+      mxnet::ShapeVector arg_shapes;  // all input shapes
+      arg_shapes.reserve(input_names.size());
+      nnvm::DTypeVector arg_dtypes;  // all input dtypes
+      arg_dtypes.reserve(input_names.size());
+      StorageTypeVector arg_stypes;  // all input stypes
+      arg_stypes.reserve(input_names.size());
+      std::vector<Context> in_arg_ctxes(in_args_map.size());
+      std::vector<Context> aux_state_ctxes(aux_states_map.size());
 
-    ret = BuildSubgraph(ret, subgraph_prop, arg_shapes, arg_dtypes, arg_stypes, default_ctx,
-                        ctx_map, in_arg_ctxes, aux_state_ctxes);
+      size_t i1 = 0, i2 = 0;
+      for (const auto& input_name : input_names) {
+        if (i2 < aux_names.size() && aux_names[i2] == input_name) {
+          const auto &aux_st = aux_states_map[input_name];
+          arg_shapes.push_back(aux_st.shape());
+          arg_dtypes.push_back(aux_st.dtype());
+          arg_stypes.push_back(aux_st.storage_type());
+          aux_state_ctxes[i2] = aux_st.ctx();
+          ++i2;
+        } else {
+          CHECK(i1 < arg_names.size());
+          CHECK_EQ(arg_names[i1], input_name);
+          const auto &in_arg = in_args_map[input_name];
+          arg_shapes.push_back(in_arg.shape());
+          arg_dtypes.push_back(in_arg.dtype());
+          arg_stypes.push_back(in_arg.storage_type());
+          in_arg_ctxes[i1] = in_arg.ctx();
+          ++i1;
+        }
+      }
+
+      ret = BuildSubgraph(ret, subgraph_prop, arg_shapes, arg_dtypes, arg_stypes, default_ctx,
+                          ctx_map, in_arg_ctxes, aux_state_ctxes);
+    }
   }
   // Reorder in_args, arg_grad_store, grad_req_type and aux_states according to partitioned symbol
   // input sequence
@@ -1854,18 +1887,24 @@ static nnvm::Symbol BuildSubgraph(const nnvm::Symbol& src, const std::string& pr
   CHECK_EQ(arg_names.size(), new_arg_names.size());
   CHECK_EQ(arg_names.size(), new_arg_names.size());
   in_args->clear();
-  arg_grad_store->clear();
-  grad_req_type->clear();
   aux_states->clear();
-  for (auto arg_name : new_arg_names) {
+  for (const auto& arg_name : new_arg_names) {
     CHECK(in_args_map.count(arg_name));
     in_args->push_back(in_args_map[arg_name]);
-    arg_grad_store->push_back(arg_grad_store_map[arg_name]);
-    grad_req_type->push_back(grad_req_type_map[arg_name]);
   }
-  for (auto arg_name : new_aux_names) {
+
+  for (const auto& arg_name : new_aux_names) {
     CHECK(aux_states_map.count(arg_name));
     aux_states->push_back(aux_states_map[arg_name]);
+  }
+
+  if (arg_grad_store->size()) {
+    arg_grad_store->clear();
+    grad_req_type->clear();
+    for (const auto& arg_name : new_arg_names) {
+      arg_grad_store->push_back(arg_grad_store_map[arg_name]);
+      grad_req_type->push_back(grad_req_type_map[arg_name]);
+    }
   }
   return ret;
 }
@@ -1888,18 +1927,68 @@ Executor *Executor::SimpleBind(nnvm::Symbol symbol,
                                std::unordered_map<std::string, NDArray>* shared_buffer,
                                Executor* shared_exec) {
   auto exec = new exec::GraphExecutor();
-  std::vector<Context> tmp_in_arg_ctxes = in_arg_ctxes;
-  std::vector<Context> tmp_arg_grad_ctxes = arg_grad_ctxes;
-  std::vector<Context> tmp_aux_state_ctxes = aux_state_ctxes;
-  std::vector<OpReqType> tmp_grad_req_types = grad_req_types;
+  bool init = false;
   if (!exec->subgraph_property().empty()) {
-    symbol = exec::BuildSubgraph(symbol, exec->subgraph_property(), arg_shape_map, arg_dtype_map,
-                                 arg_stype_map, default_ctx, group2ctx, &tmp_in_arg_ctxes,
-                                 &tmp_arg_grad_ctxes, &tmp_grad_req_types, &tmp_aux_state_ctxes);
+    static bool verbose = dmlc::GetEnv("MXNET_SUBGRAPH_VERBOSE", false);
+    const auto& backend_name = exec->subgraph_property();
+    const auto& backend = op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(backend_name);
+    if (exec::SubgraphBackendCheck(backend, default_ctx, verbose)) {
+      LOG(INFO) << "Subgraph backend " << backend_name << " is activated.";
+      std::vector<Context> tmp_in_arg_ctxes = in_arg_ctxes;
+      std::vector<Context> tmp_arg_grad_ctxes = arg_grad_ctxes;
+      std::vector<Context> tmp_aux_state_ctxes = aux_state_ctxes;
+      std::vector<OpReqType> tmp_grad_req_types = grad_req_types;
+      std::vector<NDArray> tmp_in_args;
+      std::vector<NDArray> tmp_arg_grads;
+      std::vector<NDArray> tmp_aux_states;
+      const auto arg_names = symbol.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
+      const auto aux_names = symbol.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
+      symbol = exec::BuildSubgraph(symbol, backend, arg_shape_map, arg_dtype_map, arg_stype_map,
+                                   default_ctx, group2ctx, &tmp_in_arg_ctxes, &tmp_arg_grad_ctxes,
+                                   &tmp_grad_req_types, &tmp_aux_state_ctxes, verbose);
+      exec->Init(symbol, default_ctx, group2ctx, tmp_in_arg_ctxes, tmp_arg_grad_ctxes,
+                 tmp_aux_state_ctxes, arg_shape_map, arg_dtype_map, arg_stype_map,
+                 tmp_grad_req_types, shared_arg_names, &tmp_in_args, &tmp_arg_grads,
+                 &tmp_aux_states, shared_buffer, shared_exec);
+      init = true;
+      const auto new_arg_names = symbol.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
+      const auto new_aux_names = symbol.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
+      std::unordered_map<std::string, size_t> new_arg_names_idx_map;
+      std::unordered_map<std::string, size_t> new_aux_names_idx_map;
+      for (size_t i = 0; i != new_arg_names.size(); ++i) {
+        new_arg_names_idx_map[new_arg_names[i]] = i;
+      }
+      for (size_t i = 0; i != new_aux_names.size(); ++i) {
+        new_aux_names_idx_map[new_aux_names[i]] = i;
+      }
+
+      in_args->reserve(arg_names.size());
+      arg_grads->reserve(arg_names.size());
+      for (size_t i = 0; i != arg_names.size(); ++i) {
+        const auto& arg_name = arg_names[i];
+        const auto& it = new_arg_names_idx_map.find(arg_name);
+        CHECK(it != new_arg_names_idx_map.end())
+            << "Subgraph doesn't support remove any input node for now.";
+        in_args->emplace_back(std::move(tmp_in_args[it->second]));
+        arg_grads->emplace_back(std::move(tmp_arg_grads[it->second]));
+      }
+
+      aux_states->reserve(aux_names.size());
+      for (size_t i = 0; i != aux_names.size(); ++i) {
+        const auto& aux_name = aux_names[i];
+        const auto& it = new_aux_names_idx_map.find(aux_name);
+        CHECK(it != new_aux_names_idx_map.end())
+            << "Subgraph doesn't support remove any input node for now.";
+        aux_states->emplace_back(std::move(tmp_aux_states[it->second]));
+      }
+    }
   }
-  exec->Init(symbol, default_ctx, group2ctx, tmp_in_arg_ctxes, tmp_arg_grad_ctxes,
-             tmp_aux_state_ctxes, arg_shape_map, arg_dtype_map, arg_stype_map, tmp_grad_req_types,
-             shared_arg_names, in_args, arg_grads, aux_states, shared_buffer, shared_exec);
+  if (!init) {
+    // init without subgraph
+    exec->Init(symbol, default_ctx, group2ctx, in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes,
+               arg_shape_map, arg_dtype_map, arg_stype_map, grad_req_types, shared_arg_names,
+               in_args, arg_grads, aux_states, shared_buffer, shared_exec);
+  }
   return exec;
 }
 
@@ -1912,15 +2001,21 @@ Executor *Executor::Bind(nnvm::Symbol symbol,
                          const std::vector<NDArray> &aux_states,
                          Executor* shared_exec) {
   auto exec = new exec::GraphExecutor();
+  static bool verbose = dmlc::GetEnv("MXNET_SUBGRAPH_VERBOSE", false);
   std::vector<NDArray> tmp_in_args = in_args;
   std::vector<NDArray> tmp_arg_grad_store = arg_grad_store;
   std::vector<OpReqType> tmp_grad_req_type = grad_req_type;
   std::vector<NDArray> tmp_aux_states = aux_states;
 
   if (!exec->subgraph_property().empty()) {
-    symbol =
-        exec::BuildSubgraph(symbol, exec->subgraph_property(), default_ctx, group2ctx, &tmp_in_args,
-                            &tmp_arg_grad_store, &tmp_grad_req_type, &tmp_aux_states);
+    const auto& backend_name = exec->subgraph_property();
+    const auto& backend = op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(backend_name);
+    if (exec::SubgraphBackendCheck(backend, default_ctx, verbose)) {
+      LOG(INFO) << "Subgraph backend " << backend_name << " is activated.";
+      symbol = exec::BuildSubgraph(symbol, backend, default_ctx, group2ctx, &tmp_in_args,
+                                   &tmp_arg_grad_store, &tmp_grad_req_type, &tmp_aux_states,
+                                   verbose);
+    }
   }
   exec->Init(symbol, default_ctx, group2ctx, tmp_in_args, tmp_arg_grad_store, tmp_grad_req_type,
              tmp_aux_states, reinterpret_cast<Executor*>(shared_exec));

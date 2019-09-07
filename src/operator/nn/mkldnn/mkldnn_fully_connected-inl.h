@@ -40,7 +40,7 @@ namespace op {
 struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
   bool quantized;
   bool enable_float_output;
-  bool with_relu;
+  bool with_eltwise;
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
 
@@ -49,8 +49,8 @@ struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
     .describe("Whether it's a quantized FullyConnected operator");
     DMLC_DECLARE_FIELD(enable_float_output).set_default(false)
     .describe("Whether to enable float32 output");
-    DMLC_DECLARE_FIELD(with_relu).set_default(false)
-    .describe("Whether there's a post relu after FullyConnected operator");
+    DMLC_DECLARE_FIELD(with_eltwise).set_default(false)
+    .describe("Whether there's a post elemwise after FullyConnected operator");
     DMLC_DECLARE_FIELD(min_calib_range)
     .set_default(dmlc::optional<float>())
     .describe("The minimum scalar value in the form of float32 obtained "
@@ -67,6 +67,7 @@ struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
 struct MKLDNNFCFullParam {
   FullyConnectedParam default_param;
   MKLDNNFCParam mkldnn_param;
+  MKLDNNPostEltwiseParam eltwise_param;
   std::vector<float> output_scales = {0.0};
   std::vector<float> requantize_scales = {0.0};
 };
@@ -85,7 +86,6 @@ class MKLDNNFullyConnectedForward {
                               const NDArray *bias,
                               const mkldnn::memory::desc &out_md)
       : fwd_pd(GetFCFwdImpl(full_param, is_train, data, weight, bias, out_md)) {}
-
 
   void SetNewMem(const mkldnn::memory &data, const mkldnn::memory &weight,
                  const mkldnn::memory *bias, const mkldnn::memory &output);

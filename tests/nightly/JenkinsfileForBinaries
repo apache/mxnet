@@ -45,7 +45,7 @@ core_logic: {
         ws('workspace/build-cpu-int64') {
           utils.init_git()
           utils.docker_run('ubuntu_nightly_cpu', 'build_ubuntu_cpu_large_tensor', false)
-          utils.pack_lib('cpu_int64', mx_cmake_lib, true)
+          utils.pack_lib('cpu_int64', mx_cmake_lib)
         }
       }
     },
@@ -54,7 +54,7 @@ core_logic: {
         ws('workspace/build-gpu-int64') {
           utils.init_git()
           utils.docker_run('ubuntu_nightly_gpu', 'build_ubuntu_gpu_large_tensor', true)
-          utils.pack_lib('gpu_int64', mx_cmake_lib, true)
+          utils.pack_lib('gpu_int64', mx_cmake_lib)
         }
       }
     }

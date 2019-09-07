@@ -42,12 +42,13 @@
 /plugin/          @pllarroy
 
 # CMake
-CMakeLists.txt    @szha @rahul003 @pllarroy
-/cmake/           @szha @rahul003 @pllarroy
+CMakeLists.txt    @szha @pllarroy
+/cmake/           @szha @pllarroy
 
 # MXNet CI
 dev_menu.py         @pllarroy
-/ci/                @pllarroy
+/ci/                @pllarroy @marcoabreu 
+/docker/            @marcoabreu
 /tests/ci_build/    @marcoabreu
 Jenkinsfile         @marcoabreu
 .travis.yml         @marcoabreu
@@ -71,4 +72,3 @@ prepare_mkl.sh    @szha
 
 # Github templates
 /.github/         @szha
-
