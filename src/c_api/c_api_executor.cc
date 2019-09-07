@@ -32,7 +32,7 @@
 
 int MXExecutorPrint(ExecutorHandle handle, const char **out_str) {
   Executor *exec = static_cast<Executor*>(handle);
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   std::ostringstream os;
   exec->Print(os);
@@ -55,20 +55,20 @@ int MXExecutorForward(ExecutorHandle handle, int is_train) {
 }
 
 int MXExecutorBackward(ExecutorHandle handle,
-                       mx_uint len,
+                       uint32_t len,
                        NDArrayHandle *head_grads) {
   return MXExecutorBackwardEx(handle, len, head_grads, true);
 }
 
 int MXExecutorBackwardEx(ExecutorHandle handle,
-                         mx_uint len,
+                         uint32_t len,
                          NDArrayHandle *head_grads,
                          int is_train) {
   API_BEGIN();
   Executor *exec = static_cast<Executor*>(handle);
   std::vector<NDArray> ndarrays;
   NDArray **args_ptr = reinterpret_cast<NDArray**>(head_grads);
-  for (mx_uint i = 0; i < len; ++i) {
+  for (uint32_t i = 0; i < len; ++i) {
     ndarrays.push_back(*args_ptr[i]);
   }
   exec->Backward(ndarrays, is_train);
@@ -76,9 +76,9 @@ int MXExecutorBackwardEx(ExecutorHandle handle,
 }
 
 int MXExecutorOutputs(ExecutorHandle handle,
-                      mx_uint *out_size,
+                      uint32_t *out_size,
                       NDArrayHandle **out) {
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   Executor *exec = static_cast<Executor*>(handle);
   std::vector<NDArray> heads = exec->outputs();
@@ -96,11 +96,11 @@ int MXExecutorOutputs(ExecutorHandle handle,
 int MXExecutorBind(SymbolHandle symbol_handle,
                    int dev_type,
                    int dev_id,
-                   mx_uint len,
+                   uint32_t len,
                    NDArrayHandle *in_args,
                    NDArrayHandle *arg_grad_store,
-                   mx_uint *grad_req_type,
-                   mx_uint aux_states_len,
+                   uint32_t *grad_req_type,
+                   uint32_t aux_states_len,
                    NDArrayHandle *aux_states,
                    ExecutorHandle *out) {
   return MXExecutorBindX(symbol_handle,
@@ -113,15 +113,15 @@ int MXExecutorBind(SymbolHandle symbol_handle,
 int MXExecutorBindX(SymbolHandle symbol_handle,
                     int dev_type,
                     int dev_id,
-                    mx_uint num_map_keys,
+                    uint32_t num_map_keys,
                     const char** map_keys,
                     const int* map_dev_types,
                     const int* map_dev_ids,
-                    mx_uint len,
+                    uint32_t len,
                     NDArrayHandle *in_args,
                     NDArrayHandle *arg_grad_store,
-                    mx_uint *grad_req_type,
-                    mx_uint aux_states_len,
+                    uint32_t *grad_req_type,
+                    uint32_t aux_states_len,
                     NDArrayHandle *aux_states,
                     ExecutorHandle *out) {
   return MXExecutorBindEX(symbol_handle,
@@ -135,15 +135,15 @@ int MXExecutorBindX(SymbolHandle symbol_handle,
 int MXExecutorBindEX(SymbolHandle symbol_handle,
                      int dev_type,
                      int dev_id,
-                     mx_uint num_map_keys,
+                     uint32_t num_map_keys,
                      const char** map_keys,
                      const int* map_dev_types,
                      const int* map_dev_ids,
-                     mx_uint len,
+                     uint32_t len,
                      NDArrayHandle *in_args,
                      NDArrayHandle *arg_grad_store,
-                     mx_uint *grad_req_type,
-                     mx_uint aux_states_len,
+                     uint32_t *grad_req_type,
+                     uint32_t aux_states_len,
                      NDArrayHandle *aux_states,
                      ExecutorHandle shared_exec,
                      ExecutorHandle *out) {
@@ -151,7 +151,7 @@ int MXExecutorBindEX(SymbolHandle symbol_handle,
   nnvm::Symbol *symb = static_cast<nnvm::Symbol*>(symbol_handle);
   Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
   std::map<std::string, Context> ctx_map;
-  for (mx_uint i = 0; i < num_map_keys; ++i) {
+  for (uint32_t i = 0; i < num_map_keys; ++i) {
     ctx_map[std::string(map_keys[i])] = Context::Create(
         static_cast<Context::DeviceType>(map_dev_types[i]), map_dev_ids[i]);
   }
@@ -162,7 +162,7 @@ int MXExecutorBindEX(SymbolHandle symbol_handle,
   std::vector<NDArray> arg_grad_vec;
   std::vector<OpReqType> grad_req_vec;
   std::vector<NDArray> aux_states_vec;
-  for (mx_uint i = 0; i < len; ++i) {
+  for (uint32_t i = 0; i < len; ++i) {
     in_args_vec.push_back(*(in_args_ptr[i]));
     if (arg_grad_ptr[i] == nullptr) {
       arg_grad_vec.emplace_back();
@@ -172,7 +172,7 @@ int MXExecutorBindEX(SymbolHandle symbol_handle,
       grad_req_vec.push_back(static_cast<OpReqType>(grad_req_type[i]));
     }
   }
-  for (mx_uint i = 0; i < aux_states_len; ++i) {
+  for (uint32_t i = 0; i < aux_states_len; ++i) {
     aux_states_vec.push_back(*(aux_states_ptr[i]));
   }
   *out = Executor::Bind(*symb, ctx, ctx_map, in_args_vec,
@@ -221,38 +221,38 @@ int MXExecutorBindEX(SymbolHandle symbol_handle,
 int MXExecutorSimpleBind(SymbolHandle symbol_handle,
                          int dev_type,
                          int dev_id,
-                         const mx_uint num_g2c_keys,
+                         const uint32_t num_g2c_keys,
                          const char** g2c_keys,
                          const int* g2c_dev_types,
                          const int* g2c_dev_ids,
-                         const mx_uint provided_grad_req_list_len,
+                         const uint32_t provided_grad_req_list_len,
                          const char** provided_grad_req_names,
                          const char** provided_grad_req_types,
-                         const mx_uint num_provided_arg_shapes,
+                         const uint32_t num_provided_arg_shapes,
                          const char** provided_arg_shape_names,
-                         const mx_uint* provided_arg_shape_data,
-                         const mx_uint* provided_arg_shape_idx,
-                         const mx_uint num_provided_arg_dtypes,
+                         const uint32_t* provided_arg_shape_data,
+                         const uint32_t* provided_arg_shape_idx,
+                         const uint32_t num_provided_arg_dtypes,
                          const char** provided_arg_dtype_names,
                          const int* provided_arg_dtypes,
-                         const mx_uint num_provided_arg_stypes,
+                         const uint32_t num_provided_arg_stypes,
                          const char** provided_arg_stype_names,
                          const int* provided_arg_stypes,
-                         const mx_uint num_shared_arg_names,
+                         const uint32_t num_shared_arg_names,
                          const char** shared_arg_name_list,
                          int* shared_buffer_len,
                          const char** shared_buffer_name_list,
                          NDArrayHandle* shared_buffer_handle_list,
                          const char*** updated_shared_buffer_name_list,
                          NDArrayHandle** updated_shared_buffer_handle_list,
-                         mx_uint* num_in_args,
+                         uint32_t* num_in_args,
                          NDArrayHandle** in_args,
                          NDArrayHandle** arg_grads,
-                         mx_uint* num_aux_states,
+                         uint32_t* num_aux_states,
                          NDArrayHandle** aux_states,
                          ExecutorHandle shared_exec_handle,
                          ExecutorHandle* out) {
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol*>(symbol_handle);
 
@@ -283,7 +283,7 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
   } else {  // use user input type_dict
     // create dtype map for in_args and aux_states
     arg_dtype_map.reserve(num_provided_arg_dtypes);
-    for (mx_uint i = 0; i < num_provided_arg_dtypes; ++i) {
+    for (uint32_t i = 0; i < num_provided_arg_dtypes; ++i) {
       arg_dtype_map[provided_arg_dtype_names[i]] = provided_arg_dtypes[i];
     }
   }
@@ -300,7 +300,7 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
   } else {  // use user input type_dict
     // create stype map for in_args and aux_states
     arg_stype_map.reserve(num_provided_arg_stypes);
-    for (mx_uint i = 0; i < num_provided_arg_stypes; ++i) {
+    for (uint32_t i = 0; i < num_provided_arg_stypes; ++i) {
       arg_stype_map[provided_arg_stype_names[i]] = provided_arg_stypes[i];
     }
   }
@@ -312,7 +312,7 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
   std::vector<Context> in_arg_ctx_vec(in_arg_names.size(), ctx);
   std::vector<Context> aux_state_ctx_vec(aux_state_names.size(), ctx);
   if (nullptr != g2c_keys) {  // use user input group2ctx dict
-    for (mx_uint i = 0; i < num_g2c_keys; ++i) {
+    for (uint32_t i = 0; i < num_g2c_keys; ++i) {
       ctx_map[g2c_keys[i]] = Context::Create(
           static_cast<Context::DeviceType>(g2c_dev_types[i]), g2c_dev_ids[i]);
     }
@@ -370,7 +370,7 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
       && nullptr != provided_grad_req_types) {  // dict, grad_req=['lhs': 'null', 'rhs': 'write']
     grad_req_type = "dict";
     provided_grad_req_map.reserve(provided_grad_req_list_len);
-    for (mx_uint i = 0; i < provided_grad_req_list_len; ++i) {
+    for (uint32_t i = 0; i < provided_grad_req_list_len; ++i) {
       CHECK_EQ(req_map.count(provided_grad_req_types[i]), 1U)
         << "grad_req=" << provided_grad_req_types[i] << " is not a valid input in simple_bind; "
         "only \'null\', \'write\', and \'add\' are supported";
@@ -408,7 +408,7 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
 
   // create shape map for in_args and aux_states
   std::unordered_map<std::string, mxnet::TShape> arg_shape_map(num_provided_arg_shapes);
-  for (mx_uint i = 0; i < num_provided_arg_shapes; ++i) {
+  for (uint32_t i = 0; i < num_provided_arg_shapes; ++i) {
     auto p = arg_shape_map.emplace(provided_arg_shape_names[i],
         mxnet::TShape(provided_arg_shape_data+provided_arg_shape_idx[i],
           provided_arg_shape_data+provided_arg_shape_idx[i+1]));
@@ -423,7 +423,7 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
 
   // create para name set for sharing data array memory
   std::unordered_set<std::string> shared_arg_name_set(num_shared_arg_names);
-  for (mx_uint i = 0; i < num_shared_arg_names; ++i) {
+  for (uint32_t i = 0; i < num_shared_arg_names; ++i) {
     shared_arg_name_set.insert(shared_arg_name_list[i]);
   }
 
@@ -555,38 +555,38 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
 int MXExecutorSimpleBindEx(SymbolHandle symbol_handle,
                            int dev_type,
                            int dev_id,
-                           const mx_uint num_g2c_keys,
+                           const uint32_t num_g2c_keys,
                            const char** g2c_keys,
                            const int* g2c_dev_types,
                            const int* g2c_dev_ids,
-                           const mx_uint provided_grad_req_list_len,
+                           const uint32_t provided_grad_req_list_len,
                            const char** provided_grad_req_names,
                            const char** provided_grad_req_types,
-                           const mx_uint num_provided_arg_shapes,
+                           const uint32_t num_provided_arg_shapes,
                            const char** provided_arg_shape_names,
                            const int* provided_arg_shape_data,
-                           const mx_uint* provided_arg_shape_idx,
-                           const mx_uint num_provided_arg_dtypes,
+                           const uint32_t* provided_arg_shape_idx,
+                           const uint32_t num_provided_arg_dtypes,
                            const char** provided_arg_dtype_names,
                            const int* provided_arg_dtypes,
-                           const mx_uint num_provided_arg_stypes,
+                           const uint32_t num_provided_arg_stypes,
                            const char** provided_arg_stype_names,
                            const int* provided_arg_stypes,
-                           const mx_uint num_shared_arg_names,
+                           const uint32_t num_shared_arg_names,
                            const char** shared_arg_name_list,
                            int* shared_buffer_len,
                            const char** shared_buffer_name_list,
                            NDArrayHandle* shared_buffer_handle_list,
                            const char*** updated_shared_buffer_name_list,
                            NDArrayHandle** updated_shared_buffer_handle_list,
-                           mx_uint* num_in_args,
+                           uint32_t* num_in_args,
                            NDArrayHandle** in_args,
                            NDArrayHandle** arg_grads,
-                           mx_uint* num_aux_states,
+                           uint32_t* num_aux_states,
                            NDArrayHandle** aux_states,
                            ExecutorHandle shared_exec_handle,
                            ExecutorHandle* out) {
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol*>(symbol_handle);
 
@@ -617,7 +617,7 @@ int MXExecutorSimpleBindEx(SymbolHandle symbol_handle,
   } else {  // use user input type_dict
     // create dtype map for in_args and aux_states
     arg_dtype_map.reserve(num_provided_arg_dtypes);
-    for (mx_uint i = 0; i < num_provided_arg_dtypes; ++i) {
+    for (uint32_t i = 0; i < num_provided_arg_dtypes; ++i) {
       arg_dtype_map[provided_arg_dtype_names[i]] = provided_arg_dtypes[i];
     }
   }
@@ -634,7 +634,7 @@ int MXExecutorSimpleBindEx(SymbolHandle symbol_handle,
   } else {  // use user input type_dict
     // create stype map for in_args and aux_states
     arg_stype_map.reserve(num_provided_arg_stypes);
-    for (mx_uint i = 0; i < num_provided_arg_stypes; ++i) {
+    for (uint32_t i = 0; i < num_provided_arg_stypes; ++i) {
       arg_stype_map[provided_arg_stype_names[i]] = provided_arg_stypes[i];
     }
   }
@@ -646,7 +646,7 @@ int MXExecutorSimpleBindEx(SymbolHandle symbol_handle,
   std::vector<Context> in_arg_ctx_vec(in_arg_names.size(), ctx);
   std::vector<Context> aux_state_ctx_vec(aux_state_names.size(), ctx);
   if (nullptr != g2c_keys) {  // use user input group2ctx dict
-    for (mx_uint i = 0; i < num_g2c_keys; ++i) {
+    for (uint32_t i = 0; i < num_g2c_keys; ++i) {
       ctx_map[g2c_keys[i]] = Context::Create(
           static_cast<Context::DeviceType>(g2c_dev_types[i]), g2c_dev_ids[i]);
     }
@@ -704,7 +704,7 @@ int MXExecutorSimpleBindEx(SymbolHandle symbol_handle,
       && nullptr != provided_grad_req_types) {  // dict, grad_req=['lhs': 'null', 'rhs': 'write']
     grad_req_type = "dict";
     provided_grad_req_map.reserve(provided_grad_req_list_len);
-    for (mx_uint i = 0; i < provided_grad_req_list_len; ++i) {
+    for (uint32_t i = 0; i < provided_grad_req_list_len; ++i) {
       CHECK_EQ(req_map.count(provided_grad_req_types[i]), 1U)
         << "grad_req=" << provided_grad_req_types[i] << " is not a valid input in simple_bind; "
         "only \'null\', \'write\', and \'add\' are supported";
@@ -742,7 +742,7 @@ int MXExecutorSimpleBindEx(SymbolHandle symbol_handle,
 
   // create shape map for in_args and aux_states
   std::unordered_map<std::string, mxnet::TShape> arg_shape_map(num_provided_arg_shapes);
-  for (mx_uint i = 0; i < num_provided_arg_shapes; ++i) {
+  for (uint32_t i = 0; i < num_provided_arg_shapes; ++i) {
     auto p = arg_shape_map.emplace(provided_arg_shape_names[i],
         mxnet::TShape(provided_arg_shape_data+provided_arg_shape_idx[i],
           provided_arg_shape_data+provided_arg_shape_idx[i+1]));
@@ -757,7 +757,7 @@ int MXExecutorSimpleBindEx(SymbolHandle symbol_handle,
 
   // create para name set for sharing data array memory
   std::unordered_set<std::string> shared_arg_name_set(num_shared_arg_names);
-  for (mx_uint i = 0; i < num_shared_arg_names; ++i) {
+  for (uint32_t i = 0; i < num_shared_arg_names; ++i) {
     shared_arg_name_set.insert(shared_arg_name_list[i]);
   }
 
@@ -853,29 +853,29 @@ int MXExecutorReshape(int partial_shaping,
                       int allow_up_sizing,
                       int dev_type,
                       int dev_id,
-                      mx_uint num_map_keys,
+                      uint32_t num_map_keys,
                       const char** map_keys,
                       const int* map_dev_types,
                       const int* map_dev_ids,
-                      const mx_uint num_provided_arg_shapes,
+                      const uint32_t num_provided_arg_shapes,
                       const char** provided_arg_shape_names,
-                      const mx_uint* provided_arg_shape_data,
-                      const mx_uint* provided_arg_shape_idx,
-                      mx_uint* num_in_args,
+                      const uint32_t* provided_arg_shape_data,
+                      const uint32_t* provided_arg_shape_idx,
+                      uint32_t* num_in_args,
                       NDArrayHandle** in_args,
                       NDArrayHandle** arg_grads,
-                      mx_uint* num_aux_states,
+                      uint32_t* num_aux_states,
                       NDArrayHandle** aux_states,
                       ExecutorHandle shared_exec,
                       ExecutorHandle *out) {
   Executor* new_exec = nullptr;
 
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   *out = nullptr;  // ensure we can know whether to free executor on early abort
   // create shape map for in_args and aux_states
   std::unordered_map<std::string, mxnet::TShape> kwargs(num_provided_arg_shapes);
-  for (mx_uint i = 0; i < num_provided_arg_shapes; ++i) {
+  for (uint32_t i = 0; i < num_provided_arg_shapes; ++i) {
     auto p = kwargs.emplace(provided_arg_shape_names[i],
         mxnet::TShape(provided_arg_shape_data+provided_arg_shape_idx[i],
           provided_arg_shape_data+provided_arg_shape_idx[i+1]));
@@ -885,7 +885,7 @@ int MXExecutorReshape(int partial_shaping,
 
   Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
   std::map<std::string, Context> ctx_map;
-  for (mx_uint i = 0; i < num_map_keys; ++i) {
+  for (uint32_t i = 0; i < num_map_keys; ++i) {
     ctx_map[std::string(map_keys[i])] = Context::Create(
         static_cast<Context::DeviceType>(map_dev_types[i]), map_dev_ids[i]);
   }
@@ -944,29 +944,29 @@ int MXExecutorReshapeEx(int partial_shaping,
                         int allow_up_sizing,
                         int dev_type,
                         int dev_id,
-                        mx_uint num_map_keys,
+                        uint32_t num_map_keys,
                         const char** map_keys,
                         const int* map_dev_types,
                         const int* map_dev_ids,
-                        const mx_uint num_provided_arg_shapes,
+                        const uint32_t num_provided_arg_shapes,
                         const char** provided_arg_shape_names,
                         const int* provided_arg_shape_data,
-                        const mx_uint* provided_arg_shape_idx,
-                        mx_uint* num_in_args,
+                        const uint32_t* provided_arg_shape_idx,
+                        uint32_t* num_in_args,
                         NDArrayHandle** in_args,
                         NDArrayHandle** arg_grads,
-                        mx_uint* num_aux_states,
+                        uint32_t* num_aux_states,
                         NDArrayHandle** aux_states,
                         ExecutorHandle shared_exec,
                         ExecutorHandle *out) {
   Executor* new_exec = nullptr;
 
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   *out = nullptr;  // ensure we can know whether to free executor on early abort
   // create shape map for in_args and aux_states
   std::unordered_map<std::string, mxnet::TShape> kwargs(num_provided_arg_shapes);
-  for (mx_uint i = 0; i < num_provided_arg_shapes; ++i) {
+  for (uint32_t i = 0; i < num_provided_arg_shapes; ++i) {
     auto p = kwargs.emplace(provided_arg_shape_names[i],
         mxnet::TShape(provided_arg_shape_data+provided_arg_shape_idx[i],
           provided_arg_shape_data+provided_arg_shape_idx[i+1]));
@@ -976,7 +976,7 @@ int MXExecutorReshapeEx(int partial_shaping,
 
   Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
   std::map<std::string, Context> ctx_map;
-  for (mx_uint i = 0; i < num_map_keys; ++i) {
+  for (uint32_t i = 0; i < num_map_keys; ++i) {
     ctx_map[std::string(map_keys[i])] = Context::Create(
         static_cast<Context::DeviceType>(map_dev_types[i]), map_dev_ids[i]);
   }

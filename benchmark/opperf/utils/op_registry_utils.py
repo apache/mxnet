@@ -37,6 +37,8 @@ def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_back
     By default, filter out all Contrib operators that starts with '_contrib' and internal operators that
     starts with '_'.
 
+    Note - All deprecated operators are filtered out as well.
+
     Parameters
     ----------
     operator_names: List[str]
@@ -52,6 +54,11 @@ def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_back
     """
     mx_operators = {}
     operators_with_backward = []
+
+    # Filter out deprecated operators
+    filters += ("normal", "uniform", "BatchNorm_v1", "Flatten", "contrib_CTCLoss", "Pad", "Cast",
+                "Pooling_v1", "Concat", "Reshape", "Convolution_v1", "SliceChannel", "Crop",
+                "crop", "onehot_encode")
 
     if merge_op_forward_backward:
         filters += ("_backward",)
@@ -106,8 +113,11 @@ def prepare_op_inputs(arg_params, arg_values):
     return inputs
 
 
-def prepare_op_inputs(arg_params):
+def prepare_op_inputs(op, arg_params):
     inputs = []
+
+    # 4d tensor is needed only by following two ops
+    ops_4d = ['depth_to_space','space_to_depth']
 
     # Prepare op to default input mapping
     arg_values = {}
@@ -115,7 +125,7 @@ def prepare_op_inputs(arg_params):
                                   arg_params["params"]["arg_types"]):
         if "NDArray" in arg_type and arg_name + "_nd" in DEFAULTS_INPUTS:
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_nd"]
-        elif "NDArray" in arg_type and arg_name + "_4d" in DEFAULTS_INPUTS:
+        elif "NDArray" in arg_type and op in ops_4d and arg_name + "_4d" in DEFAULTS_INPUTS:
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_4d"]
         elif arg_name in DEFAULTS_INPUTS:
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name]

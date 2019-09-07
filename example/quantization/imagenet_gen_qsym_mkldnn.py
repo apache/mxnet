@@ -92,21 +92,12 @@ def save_params(fname, arg_params, aux_params, logger=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate a calibrated quantized model from a FP32 model with Intel MKL-DNN support')
-    parser.add_argument('--model', type=str, choices=['resnet18_v1',
-                                                      'resnet50_v1',
-                                                      'resnet101_v1',
-                                                      'inceptionv3',
-                                                      'squeezenet1.0',
-                                                      'mobilenet1.0',
-                                                      'mobilenetv2_1.0',
-                                                      'imagenet1k-resnet-152',
-                                                      'imagenet1k-inception-bn',
-                                                      'custom'],
-                        help='currently only supports imagenet1k-resnet-50_v1, imagenet1k-resnet-152 or imagenet1k-inception-bn.'
-                             'you can set to custom to load your pre-trained model.')
-    parser.add_argument('--use-gluon-model', type=bool, default=False,
-                        help='If enabled, will download pretrained model from Gluon-CV '
-                             'and convert to symbolic model ')
+    parser.add_argument('--model', type=str, default='resnet50_v1',
+                        help='model to be quantized.')
+    parser.add_argument('--epoch', type=int, default=0,
+                        help='number of epochs, default is 0')
+    parser.add_argument('--no-pretrained', action='store_true', default=False,
+                        help='If enabled, will not download pretrained model from MXNet or Gluon-CV modelzoo.')
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--label-name', type=str, default='softmax_label')
     parser.add_argument('--calib-dataset', type=str, default='data/val_256_q90.rec',
@@ -155,6 +146,7 @@ if __name__ == '__main__':
     logger = logging.getLogger('logger')
     logger.setLevel(logging.INFO)
 
+    logger.info(args)
     logger.info('shuffle_dataset=%s' % args.shuffle_dataset)
 
     calib_mode = args.calib_mode
@@ -165,29 +157,24 @@ if __name__ == '__main__':
         download_calib_dataset('http://data.mxnet.io/data/val_256_q90.rec', args.calib_dataset)
 
     # download model
-    if args.model in ['resnet18_v1',
-                      'resnet50_v1',
-                      'resnet101_v1',
-                      'squeezenet1.0',
-                      'mobilenet1.0',
-                      'mobilenetv2_1.0',
-                      'inceptionv3']:
-        logger.info('model %s is converted from GluonCV' % args.model)
-        args.use_gluon_model = True
-    if args.use_gluon_model == True:
-        prefix = convert_from_gluon(model_name=args.model, image_shape=args.image_shape, classes=1000, logger=logger)
-        epoch = 0
-        sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
-    elif args.model == 'custom':
+    if not args.no_pretrained:
+        logger.info('Get pre-trained model from MXNet or Gluoncv modelzoo.')
+        logger.info('If you want to use custom model, please set --no-pretrained.')
+        if args.model in ['imagenet1k-resnet-152', 'imagenet1k-inception-bn']:
+            logger.info('model %s is downloaded from MXNet modelzoo' % args.model)
+            prefix, epoch = download_model(model_name=args.model, logger=logger)
+        else:
+            logger.info('model %s is converted from GluonCV' % args.model)
+            prefix = convert_from_gluon(model_name=args.model, image_shape=args.image_shape, classes=1000, logger=logger)
+            rgb_mean = '123.68,116.779,103.939'
+            rgb_std = '58.393, 57.12, 57.375'
+            epoch = 0
+    else:
         dir_path = os.path.dirname(os.path.realpath(__file__))
         prefix = os.path.join(dir_path, 'model', args.model)
-        epoch = 0
-        sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
-    else:
-        prefix, epoch = download_model(model_name=args.model, logger=logger)
-        sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
+        epoch = args.epoch
 
-    sym = sym.get_backend_symbol('MKLDNN_QUANTIZE')
+    sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
 
     # get batch size
     batch_size = args.batch_size
@@ -206,63 +193,66 @@ if __name__ == '__main__':
     # get image shape
     image_shape = args.image_shape
 
-    calib_layer = lambda name: name.endswith('_output') or name == "data"
     exclude_first_conv = args.exclude_first_conv
     if args.quantized_dtype == "uint8":
         logger.info('quantized dtype is set to uint8, will exclude first conv.')
         exclude_first_conv = True
     excluded_sym_names = []
-    if args.model == 'imagenet1k-resnet-152':
-        rgb_mean = '0,0,0'
-        rgb_std = '1,1,1'
-        excluded_sym_names += ['flatten0']
-        if exclude_first_conv:
-            excluded_sym_names += ['conv0']
-    elif args.model == 'imagenet1k-inception-bn':
-        rgb_mean = '123.68,116.779,103.939'
-        rgb_std = '1,1,1'
-        excluded_sym_names += ['flatten']
-        if exclude_first_conv:
-            excluded_sym_names += ['conv_1']
-    elif args.model in ['resnet18_v1', 'resnet50_v1', 'resnet101_v1']:
-        rgb_mean = '123.68,116.779,103.939'
-        rgb_std = '58.393, 57.12, 57.375'
-        if exclude_first_conv:
-            excluded_sym_names += ['resnetv10_conv0_fwd']
-    elif args.model == 'squeezenet1.0':
-        rgb_mean = '123.68,116.779,103.939'
-        rgb_std = '58.393, 57.12, 57.375'
-        excluded_sym_names += ['squeezenet0_flatten0_flatten0']
-        if exclude_first_conv:
-            excluded_sym_names += ['squeezenet0_conv0_fwd']
-    elif args.model == 'mobilenet1.0':
-        rgb_mean = '123.68,116.779,103.939'
-        rgb_std = '58.393, 57.12, 57.375'
-        excluded_sym_names += ['mobilenet0_flatten0_flatten0',
-                               'mobilenet0_pool0_fwd']
-        if exclude_first_conv:
-            excluded_sym_names += ['mobilenet0_conv0_fwd']
-    elif args.model == 'mobilenetv2_1.0':
-        rgb_mean = '123.68,116.779,103.939'
-        rgb_std = '58.393, 57.12, 57.375'
-        excluded_sym_names += ['mobilenetv20_output_flatten0_flatten0']
-        if exclude_first_conv:
-            excluded_sym_names += ['mobilenetv20_conv0_fwd']
-    elif args.model == 'inceptionv3':
-        rgb_mean = '123.68,116.779,103.939'
-        rgb_std = '58.393, 57.12, 57.375'
-        if exclude_first_conv:
-            excluded_sym_names += ['inception30_conv0_fwd']
-    elif args.model == 'custom':
+    if not args.no_pretrained:
+        if args.model == 'imagenet1k-resnet-152':
+            rgb_mean = '0,0,0'
+            rgb_std = '1,1,1'
+            # stage1_unit1_bn1 & stage4_unit1_bn1 is excluded for the sake of accuracy
+            excluded_sym_names += ['flatten0', 'stage1_unit1_bn1', 'stage4_unit1_bn1']
+            if exclude_first_conv:
+                excluded_sym_names += ['conv0']
+        elif args.model == 'imagenet1k-inception-bn':
+            rgb_mean = '123.68,116.779,103.939'
+            rgb_std = '1,1,1'
+            excluded_sym_names += ['flatten']
+            if exclude_first_conv:
+                excluded_sym_names += ['conv_1']
+        elif args.model.find('resnet') != -1 and args.model.find('v1') != -1:
+            if exclude_first_conv:
+                excluded_sym_names += ['resnetv10_conv0_fwd']
+        elif args.model.find('resnet') != -1 and args.model.find('v2') != -1:
+            # resnetv20_stage1_batchnorm0_fwd is excluded for the sake of accuracy
+            excluded_sym_names += ['resnetv20_flatten0_flatten0', 'resnetv20_stage1_batchnorm0_fwd']
+            if exclude_first_conv:
+                excluded_sym_names += ['resnetv20_conv0_fwd']
+        elif args.model.find('vgg') != -1:
+            if exclude_first_conv:
+                excluded_sym_names += ['vgg0_conv0_fwd']
+        elif args.model.find('squeezenet1') != -1:
+            excluded_sym_names += ['squeezenet0_flatten0_flatten0']
+            if exclude_first_conv:
+                excluded_sym_names += ['squeezenet0_conv0_fwd']
+        elif args.model.find('mobilenet') != -1 and args.model.find('v2') == -1:
+            excluded_sym_names += ['mobilenet0_flatten0_flatten0',
+                                'mobilenet0_pool0_fwd']
+            if exclude_first_conv:
+                excluded_sym_names += ['mobilenet0_conv0_fwd']
+        elif args.model.find('mobilenet') != -1 and args.model.find('v2') != -1:
+            excluded_sym_names += ['mobilenetv20_output_flatten0_flatten0']
+            if exclude_first_conv:
+                excluded_sym_names += ['mobilenetv20_conv0_fwd']
+        elif args.model == 'inceptionv3':
+            if exclude_first_conv:
+                excluded_sym_names += ['inception30_conv0_fwd']
+        else:
+            raise ValueError('Currently, model %s is not supported in this script' % args.model)
+    else:
+        logger.info('Please set proper RGB configs for model %s' % args.model)
         # add rgb mean/std of your model.
         rgb_mean = '0,0,0'
         rgb_std = '0,0,0'
         # add layer names you donnot want to quantize.
+        logger.info('Please set proper excluded_sym_names for model %s' % args.model)
         excluded_sym_names += ['layers']
         if exclude_first_conv:
             excluded_sym_names += ['layers']
-    else:
-        raise ValueError('model %s is not supported in this script' % args.model)
+
+    logger.info('These layers have been excluded %s' % excluded_sym_names)
 
     label_name = args.label_name
     logger.info('label_name = %s' % label_name)
@@ -281,10 +271,10 @@ if __name__ == '__main__':
     combine_mean_std.update(std_args)
     if calib_mode == 'none':
         logger.info('Quantizing FP32 model %s' % args.model)
-        qsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
-                                                       ctx=ctx, excluded_sym_names=excluded_sym_names,
-                                                       calib_mode=calib_mode, quantized_dtype=args.quantized_dtype,
-                                                       logger=logger)
+        qsym, qarg_params, aux_params = quantize_model_mkldnn(sym=sym, arg_params=arg_params, aux_params=aux_params,
+                                                              ctx=ctx, excluded_sym_names=excluded_sym_names,
+                                                              calib_mode=calib_mode, quantized_dtype=args.quantized_dtype,
+                                                              logger=logger)
         sym_name = '%s-symbol.json' % (prefix + '-quantized')
     else:
         logger.info('Creating ImageRecordIter for reading calibration dataset')
@@ -301,12 +291,12 @@ if __name__ == '__main__':
                                      seed=args.shuffle_seed,
                                      **combine_mean_std)
 
-        qsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
-                                                        ctx=ctx, excluded_sym_names=excluded_sym_names,
-                                                        calib_mode=calib_mode, calib_data=data,
-                                                        num_calib_examples=num_calib_batches * batch_size,
-                                                        calib_layer=calib_layer, quantized_dtype=args.quantized_dtype,
-                                                        label_names=(label_name,), logger=logger)
+        qsym, qarg_params, aux_params = quantize_model_mkldnn(sym=sym, arg_params=arg_params, aux_params=aux_params,
+                                                              ctx=ctx, excluded_sym_names=excluded_sym_names,
+                                                              calib_mode=calib_mode, calib_data=data,
+                                                              num_calib_examples=num_calib_batches * batch_size,
+                                                              quantized_dtype=args.quantized_dtype,
+                                                              label_names=(label_name,), logger=logger)
         if calib_mode == 'entropy':
             suffix = '-quantized-%dbatches-entropy' % num_calib_batches
         elif calib_mode == 'naive':
@@ -315,7 +305,6 @@ if __name__ == '__main__':
             raise ValueError('unknow calibration mode %s received, only supports `none`, `naive`, and `entropy`'
                              % calib_mode)
         sym_name = '%s-symbol.json' % (prefix + suffix)
-    qsym = qsym.get_backend_symbol('MKLDNN_QUANTIZE')
     save_symbol(sym_name, qsym, logger)
     param_name = '%s-%04d.params' % (prefix + '-quantized', epoch)
     save_params(param_name, qarg_params, aux_params, logger)

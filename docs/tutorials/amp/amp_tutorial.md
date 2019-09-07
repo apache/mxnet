@@ -258,6 +258,7 @@ To do inference with mixed precision for a trained model in FP32, you can use th
 Below, we demonstrate for a gluon model and a symbolic model:
 - Conversion from FP32 model to mixed precision model.
 - Run inference on the mixed precision model.
+- For AMP conversion of bucketing module please refer to [example/rnn/bucketing/README.md](https://github.com/apache/incubator-mxnet/blob/master/example/rnn/bucketing/README.md).
 
 ```python
 with mx.Context(mx.gpu(0)):
@@ -335,7 +336,6 @@ with mx.Context(mx.gpu(0)):
     # Serialize AMP model and save to disk
     mod.save_checkpoint("amp_tutorial_model", 0, remove_amp_cast=False)
 ```
-
 
 ## Current limitations of AMP
 

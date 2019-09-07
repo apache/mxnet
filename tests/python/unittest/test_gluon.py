@@ -115,7 +115,7 @@ def test_parameter_dict():
     params1.get('w1', shape=(10, 10), stype='row_sparse')
     params1.load('test_parameter_dict.params', ctx)
     trainer1 = mx.gluon.Trainer(params1, 'sgd')
-    
+
     # compare the values before and after save/load
     cur_w0 = params1.get('w0').data(ctx)
     cur_w1 = params1.get('w1').row_sparse_data(all_row_ids)
@@ -134,7 +134,7 @@ def test_parameter_dict():
     cur_w1 = params2.get('w1').data(ctx)
     mx.test_utils.assert_almost_equal(prev_w0.asnumpy(), cur_w0.asnumpy())
     mx.test_utils.assert_almost_equal(prev_w1.asnumpy(), cur_w1.asnumpy())
-    
+
     # test the dtype casting functionality
     params0 = gluon.ParameterDict('')
     params0.get('w0', shape=(10, 10), dtype='float32')
@@ -386,7 +386,7 @@ def test_symbol_block():
         if 'conv' in param_name and 'weight' in param_name:
             break
     assert np.dtype(net_fp64.params[param_name].dtype) == np.dtype(np.float64)
-    
+
     # 3.b Verify same functionnality with the imports API
     net_fp_64 = mx.gluon.SymbolBlock.imports(sym_file, 'data', params_file, ctx=ctx)
 
@@ -2788,7 +2788,7 @@ def test_gluon_param_load():
     net.cast('float16')
     net.load_parameters('test_gluon_param_load.params', cast_dtype=True)
     mx.nd.waitall()
-    
+
 @with_seed()
 def test_gluon_param_load_dtype_source():
     net = mx.gluon.nn.Dense(10, in_units=10)
@@ -2799,6 +2799,22 @@ def test_gluon_param_load_dtype_source():
     net.load_parameters('test_gluon_param_load_dtype_source.params', cast_dtype=True, dtype_source="saved")
     assert net.weight.dtype == np.float16
     mx.nd.waitall()
+
+@with_seed()
+def test_squeeze_consistency():
+    class Foo(gluon.HybridBlock):
+        def __init__(self, inplace, **kwargs):
+            super(Foo, self).__init__(**kwargs)
+            self.inplace = inplace
+
+        def forward(self, x):
+            return x.squeeze(inplace=self.inplace)
+
+    for inplace in (True, False):
+        block = Foo(inplace)
+        block.hybridize()
+        shape = (np.random.randint(1, 10), np.random.randint(1, 10), 1)
+        block(mx.nd.ones(shape))
 
 if __name__ == '__main__':
     import nose

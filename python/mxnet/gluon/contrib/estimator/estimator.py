@@ -24,9 +24,15 @@ import warnings
 
 from .event_handler import MetricHandler, ValidationHandler, LoggingHandler, StoppingHandler
 from .event_handler import TrainBegin, EpochBegin, BatchBegin, BatchEnd, EpochEnd, TrainEnd
-from .... import gluon, autograd
+from ...data import DataLoader
+from ...loss import SoftmaxCrossEntropyLoss
+from ...loss import Loss as gluon_loss
+from ...trainer import Trainer
+from ...utils import split_and_load
+from .... import autograd
 from ....context import Context, cpu, gpu, num_gpus
-from ....metric import EvalMetric, Loss, Accuracy
+from ....metric import EvalMetric, Accuracy
+from ....metric import Loss as metric_loss
 
 __all__ = ['Estimator']
 
@@ -69,9 +75,9 @@ class Estimator(object):
         self.trainer = self._check_trainer(trainer)
 
     def _check_loss(self, loss):
-        if isinstance(loss, gluon.loss.Loss):
+        if isinstance(loss, gluon_loss):
             loss = [loss]
-        elif isinstance(loss, list) and all([isinstance(l, gluon.loss.Loss) for l in loss]):
+        elif isinstance(loss, list) and all([isinstance(l, gluon_loss) for l in loss]):
             loss = loss
         else:
             raise ValueError("loss must be a Loss or a list of Loss, "
@@ -146,9 +152,9 @@ class Estimator(object):
         if not trainer:
             warnings.warn("No trainer specified, default SGD optimizer "
                           "with learning rate 0.001 is used.")
-            trainer = gluon.Trainer(self.net.collect_params(),
-                                    'sgd', {'learning_rate': 0.001})
-        elif not isinstance(trainer, gluon.Trainer):
+            trainer = Trainer(self.net.collect_params(),
+                              'sgd', {'learning_rate': 0.001})
+        elif not isinstance(trainer, Trainer):
             raise ValueError("Trainer must be a Gluon Trainer instance, refer to "
                              "gluon.Trainer:{}".format(trainer))
         return trainer
@@ -165,8 +171,8 @@ class Estimator(object):
     def _get_data_and_label(self, batch, ctx, batch_axis=0):
         data = batch[0]
         label = batch[1]
-        data = gluon.utils.split_and_load(data, ctx_list=ctx, batch_axis=batch_axis)
-        label = gluon.utils.split_and_load(label, ctx_list=ctx, batch_axis=batch_axis)
+        data = split_and_load(data, ctx_list=ctx, batch_axis=batch_axis)
+        label = split_and_load(label, ctx_list=ctx, batch_axis=batch_axis)
         return data, label
 
     def prepare_loss_and_metrics(self):
@@ -179,13 +185,13 @@ class Estimator(object):
         """
         if any(not hasattr(self, attribute) for attribute in
                ['train_metrics', 'val_metrics']):
-            # Use default mx.metric.Accuracy() for gluon.loss.SoftmaxCrossEntropyLoss()
-            if not self.train_metrics and any([isinstance(l, gluon.loss.SoftmaxCrossEntropyLoss) for l in self.loss]):
+            # Use default mx.metric.Accuracy() for SoftmaxCrossEntropyLoss()
+            if not self.train_metrics and any([isinstance(l, SoftmaxCrossEntropyLoss) for l in self.loss]):
                 self.train_metrics = [Accuracy()]
             self.val_metrics = []
             for loss in self.loss:
                 # remove trailing numbers from loss name to avoid confusion
-                self.train_metrics.append(Loss(loss.name.rstrip('1234567890')))
+                self.train_metrics.append(metric_loss(loss.name.rstrip('1234567890')))
             for metric in self.train_metrics:
                 val_metric = copy.deepcopy(metric)
                 metric.name = "train " + metric.name
@@ -208,10 +214,10 @@ class Estimator(object):
          batch_axis : int, default 0
              Batch axis to split the validation data into devices.
          """
-        if not isinstance(val_data, gluon.data.DataLoader):
+        if not isinstance(val_data, DataLoader):
             raise ValueError("Estimator only support input as Gluon DataLoader. Alternatively, you "
                              "can transform your DataIter or any NDArray into Gluon DataLoader. "
-                             "Refer to gluon.data.dataloader")
+                             "Refer to gluon.data.DataLoader")
 
         for metric in val_metrics:
             metric.reset()
@@ -222,7 +228,7 @@ class Estimator(object):
             loss = [self.loss[0](y_hat, y) for y_hat, y in zip(pred, label)]
             # update metrics
             for metric in val_metrics:
-                if isinstance(metric, Loss):
+                if isinstance(metric, metric_loss):
                     metric.update(0, loss)
                 else:
                     metric.update(label, pred)
@@ -254,7 +260,7 @@ class Estimator(object):
         batch_axis : int, default 0
             Batch axis to split the training data into devices.
         """
-        if not isinstance(train_data, gluon.data.DataLoader):
+        if not isinstance(train_data, DataLoader):
             raise ValueError("Estimator only support input as Gluon DataLoader. Alternatively, you "
                              "can transform your DataIter or any NDArray into Gluon DataLoader. "
                              "Refer to gluon.data.dataloader")
@@ -328,28 +334,36 @@ class Estimator(object):
     def _prepare_default_handlers(self, val_data, event_handlers):
         event_handlers = event_handlers or []
         default_handlers = []
-        train_metrics, val_metrics = self.prepare_loss_and_metrics()
+        self.prepare_loss_and_metrics()
 
         # no need to add to default handler check as StoppingHandler does not use metrics
         event_handlers.append(StoppingHandler(self.max_epoch, self.max_batch))
+        default_handlers.append("StoppingHandler")
 
         if not any(isinstance(handler, MetricHandler) for handler in event_handlers):
-            event_handlers.append(MetricHandler(train_metrics=train_metrics))
+            event_handlers.append(MetricHandler(train_metrics=self.train_metrics))
             default_handlers.append("MetricHandler")
 
-        if val_data and not any(isinstance(handler, ValidationHandler) for handler in event_handlers):
-            event_handlers.append(ValidationHandler(val_data=val_data, eval_fn=self.evaluate,
-                                                    val_metrics=val_metrics))
-            default_handlers.append("ValidationHandler")
+        if not any(isinstance(handler, ValidationHandler) for handler in event_handlers):
+            # no validation handler
+            if val_data:
+                # add default validation handler if validation data found
+                event_handlers.append(ValidationHandler(val_data=val_data, eval_fn=self.evaluate,
+                                                        val_metrics=self.val_metrics))
+                default_handlers.append("ValidationHandler")
+                val_metrics = self.val_metrics
+            else:
+                # set validation metrics to None if no validation data and no validation handler
+                val_metrics = []
 
         if not any(isinstance(handler, LoggingHandler) for handler in event_handlers):
-            event_handlers.append(LoggingHandler(train_metrics=train_metrics,
+            event_handlers.append(LoggingHandler(train_metrics=self.train_metrics,
                                                  val_metrics=val_metrics))
             default_handlers.append("LoggingHandler")
 
         # if there is a mix of user defined event handlers and default event handlers
         # they should have the same set of loss and metrics
-        if default_handlers:
+        if default_handlers and len(event_handlers) != len(default_handlers):
             msg = "You are training with the following default event handlers: %s. " \
                   "They use loss and metrics from estimator.prepare_loss_and_metrics(). " \
                   "Please use the same set of metrics for all your other handlers." % \
@@ -368,7 +382,7 @@ class Estimator(object):
             # remove None metric references
             references = set([ref for ref in references if ref])
             for metric in references:
-                if metric not in train_metrics + val_metrics:
+                if metric not in self.train_metrics + self.val_metrics:
                     msg = "We have added following default handlers for you: %s and used " \
                           "estimator.prepare_loss_and_metrics() to pass metrics to " \
                           "those handlers. Please use the same set of metrics " \

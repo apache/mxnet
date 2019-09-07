@@ -39,6 +39,9 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 
 ## Set the Number of Threads
 
+* MXNET_OMP_MAX_THREADS
+  - Values: Int ```(default=Number of processors / Number of processors * 2 in X86)```
+  - Maximum number of threads to use in individual operators through OpenMP. If not set, OMP_NUM_THREADS is considered after.
 * MXNET_GPU_WORKER_NTHREADS
   - Values: Int ```(default=2)```
   - The maximum number of threads to use on each GPU. This parameter is used to parallelize the computation within a single GPU card.
@@ -47,7 +50,7 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - The maximum number of concurrent threads that do the memory copy job on each GPU.
 * MXNET_CPU_WORKER_NTHREADS
   - Values: Int ```(default=1)```
-  - The maximum number of scheduling threads on CPU. It specifies how many operators can be run in parallel. Note that most CPU operators are parallelized by OpenMP. To change the number of threads used by individual operators, please set `OMP_NUM_THREADS` instead.
+  - The maximum number of scheduling threads on CPU. It specifies how many operators can be run in parallel. Note that most CPU operators are parallelized by OpenMP. To change the number of threads used by individual operators, please set `MXNET_OMP_MAX_THREADS` instead.
 * MXNET_CPU_PRIORITY_NTHREADS
   - Values: Int ```(default=4)```
   - The number of threads given to prioritized CPU jobs.
@@ -56,10 +59,13 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - The number of threads used for NNPACK. NNPACK package aims to provide high-performance implementations of some layers for multi-core CPUs. Checkout [NNPACK](http://mxnet.io/faq/nnpack.html) to know more about it.
 * MXNET_MP_WORKER_NTHREADS
   - Values: Int ```(default=1)```
-  - The number of scheduling threads on CPU given to multiprocess workers. Enlarge this number allows more operators to run in parallel in individual workers but please consider reducing the overall `num_workers` to avoid thread contention (not available on Windows).
+  - The number of scheduling threads on CPU given to multiprocess workers (after fork). Enlarge this number allows more operators to run in parallel in individual workers but please consider reducing the overall `num_workers` to avoid thread contention (not available on Windows).
 * MXNET_MP_OPENCV_NUM_THREADS
   - Values: Int ```(default=0)```
   - The number of OpenCV execution threads given to multiprocess workers. OpenCV multithreading is disabled if `MXNET_MP_OPENCV_NUM_THREADS` < 1 (default). Enlarge this number may boost the performance of individual workers when executing underlying OpenCV functions but please consider reducing the overall `num_workers` to avoid thread contention (not available on Windows).
+* MXNET_GPU_COPY_NTHREADS
+  - Values:: Int ```(default=2)```
+  - Number of threads for copying data from CPU to GPU.
 
 ## Memory Options
 
