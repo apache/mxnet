@@ -101,7 +101,7 @@ class Dataset(object):
         from . import Sampler
         if not isinstance(sampler, Sampler):
             raise TypeError('Invalid sampler type: %s. Expected gluon.data.Sampler instead.'%
-                             type(sampler))
+                            type(sampler))
         return _SampledDataset(self, sampler)
 
     def transform(self, fn, lazy=True):
