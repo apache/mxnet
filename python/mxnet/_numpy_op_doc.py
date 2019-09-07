@@ -103,3 +103,26 @@ def _np_cumsum(a, axis=None, dtype=None, out=None):
 
     """
     pass
+
+
+def _np_repeat(a, repeats, axis=None):
+    """
+    Repeat elements of an array.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array.
+    repeats : int or array of ints
+        The number of repetitions for each element.  `repeats` is broadcasted
+        to fit the shape of the given axis.
+    axis : int, optional
+        The axis along which to repeat values.  By default, use the
+        flattened input array, and return a flat output array.
+    Returns`
+    -------
+    repeated_array : ndarray
+        Output array which has the same shape as `a`, except along
+        the given axis.
+    """
+    pass

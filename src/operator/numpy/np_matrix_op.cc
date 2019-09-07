@@ -266,7 +266,6 @@ struct NumpyConcatGrad {
   }
 };
 
-
 NNVM_REGISTER_OP(_npi_concatenate)
 .describe(R"code(Join a sequence of arrays along an existing axis.)code" ADD_FILELINE)
 .set_num_inputs([](const NodeAttrs& attrs) {
