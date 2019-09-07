@@ -68,6 +68,18 @@ class NodeOpGen {
                                                    dependent_node->attrs.name + "_square",
                                                    {x}, nullptr, &dependent_node)};
     }
+
+    nnvm::NodeEntry reciprocal(const nnvm::NodeEntry &x) {
+        return nnvm::NodeEntry{mxnet::op::MakeNode("reciprocal",
+                                                   dependent_node->attrs.name + "_reciprocal",
+                                                   {x}, nullptr, &dependent_node)};
+    }
+
+    nnvm::NodeEntry negative(const nnvm::NodeEntry &x) {
+        return nnvm::NodeEntry{mxnet::op::MakeNode("negative",
+                                                   dependent_node->attrs.name + "_negative",
+                                                   {x}, nullptr, &dependent_node)};
+    }
 };
 
 }  // namespace util
