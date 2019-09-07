@@ -31,7 +31,7 @@ if haskey(ENV, "MXNET_HOME")
   @warn "The environment variable `MXNET_HOME` has been renamed, please use `MXNET_ROOT` instead."
 end
 
-# TODO: remove MXNET_HOME backward compatibility in v1.7
+# TODO: remove MXNET_HOME backward compatibility in v2.0
 MXNET_ROOT = get(ENV, "MXNET_ROOT", get(ENV, "MXNET_HOME", ""))
 search_locations = if !isempty(MXNET_ROOT)
   !isabspath(MXNET_ROOT) && error("MXNET_ROOT should be a absolute path")
