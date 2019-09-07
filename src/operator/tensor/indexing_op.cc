@@ -291,8 +291,17 @@ void TakeOpForward<cpu>(const nnvm::NodeAttrs& attrs,
   Stream<cpu> *s = ctx.get_stream<cpu>();
   const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
 
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output data type
-    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // index data type
+  MSHADOW_TYPE_SWITCH(outputs[take_::kOut].type_flag_, DType, {  // output data type
+    MSHADOW_TYPE_SWITCH(inputs[take_::kIdx].type_flag_, IType, {  // index data type
+      if (param.mode == take_::kRaise) {
+        IType min = 0;
+        IType max = static_cast<IType>(arrshape[actual_axis] - 1);
+        // check with single thread is faster since data is small
+        IType* idx_ptr = inputs[take_::kIdx].dptr<IType>();
+        size_t idx_size = idxshape.Size();
+        bool is_valid = CheckIndexOutOfBound(idx_ptr, idx_size, min, max);
+        CHECK(is_valid) << "take operator contains indices out of bound";
+      }
       if (actual_axis == 0) {
         if (param.mode == take_::kClip) {
           Kernel<TakeCPU<true>, cpu>::Launch(s, idxshape.Size(),
@@ -326,7 +335,7 @@ void TakeOpForward<cpu>(const nnvm::NodeAttrs& attrs,
                                           in_strides, out_strides, arrshape.ndim(),
                                           oshape.ndim(), idxshape.ndim(),
                                           arrshape[actual_axis], actual_axis);
-        } else if (param.mode == take_::kWrap) {
+        } else {
           Kernel<Take<false>, cpu>::Launch(s, oshape.Size(),
                                            outputs[take_::kOut].dptr<DType>(),
                                            inputs[take_::kArr].dptr<DType>(),
@@ -481,8 +490,9 @@ All the input values should be integers in the range [0, input_dim).
 If the input_dim is ip0 and output_dim is op0, then shape of the embedding weight matrix must be
 (ip0, op0).
 
-By default, if any index mentioned is too large, it is replaced by the index that addresses
-the last vector in an embedding matrix.
+When "sparse_grad" is False, if any index mentioned is too large, it is replaced by the index that
+addresses the last vector in an embedding matrix.
+When "sparse_grad" is True, an error will be raised if invalid indices are found.
 
 Examples::
 

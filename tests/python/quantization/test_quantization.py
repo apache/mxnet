@@ -265,7 +265,7 @@ def test_quantized_conv():
         qoutput, min_range, max_range = conv_exe_int8.forward()
 
         if no_bias:
-            assert_almost_equal(output.asnumpy(), qoutput.asnumpy())
+            assert_almost_equal(output.asnumpy(), qoutput.asnumpy(), atol = 1)
         else:
             # with adding bias, accuracy loss should not be greater than one
             diff = mx.nd.abs(output - qoutput.astype(output.dtype))
