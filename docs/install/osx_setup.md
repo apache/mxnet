@@ -155,15 +155,9 @@ We have installed MXNet core library. Next, we will install MXNet interface pack
 To install the MXNet Python binding navigate to the root of the MXNet folder then run the following:
 
 ```bash
-virtualenv -p`which python3` mxnet_py3
-source mxnet_py3/bin/activate
 pip install -e python
 ```
-First we create a [virtualenv](https://docs.python-guide.org/dev/virtualenvs/#lower-level-virtualenv) to isolate this installation from our global environment.
 Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
-
-If you don't want to use virtualenv, a simple `pip install -e python` or `pip install -e python`
-will suffice.
 
 ## Install the MXNet Package for R
 You have 2 options:
