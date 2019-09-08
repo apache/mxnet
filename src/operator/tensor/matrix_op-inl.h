@@ -258,25 +258,39 @@ struct TransposeParam : public dmlc::Parameter<TransposeParam> {
 };
 
 
+/*!
+ * \brief This function performs transpose operation on a 2D matrix by utilizing the L1 cache
+ * \param in      input tensor
+ * \param out     output tensor
+ * \param shape_0 shape of dim 0 of input
+ * \param shape_1 shape of dim 1 of input
+ */
 template<typename xpu, typename DType>
 MSHADOW_XINLINE void Transpose2D(DType *in, DType *out, index_t shape_0, index_t shape_1) {
-// ensure cache line hits and prevent cache miss for any configuration
-index_t blocksize = 32;
-index_t n = shape_0;
-index_t p = shape_1;
+  // ensure cache line hits and prevent cache miss for any configuration
+  // L1 cache size to be utilized = 32kb = 2^15
+  // Largest size of a single unit of any dtype <= 8 byte = 2^3
+  // Number of elements - (2^15/2^3) = 2^12
+  // Block-size - 2^6 v 2^6 (64 v 64)
 
-for (index_t i = 0; i < n; i += blocksize) {
-  #pragma omp parallel for
-    for (index_t j = 0; j < p; j += blocksize) {
-        // transpose the block
-        #pragma unroll 4
-        for (index_t a = 0; a < blocksize && j + a < n; ++a) {
-          for (index_t b = 0; b < blocksize && i + b < p; ++b) {
-                  out[(j + a) * n + i + b] = in[(i + b) * p + (j + a)];
-              }
-        }
-    }
-}
+  // But we could leverage unrolling of for loops (for parallelization)
+  // Block-size - 2^5 v 2^5 (32 v 32) with 4 pragma for loop unrolled
+  index_t blocksize = 32;
+  index_t n = shape_0;
+  index_t p = shape_1;
+
+  for (index_t i = 0; i < n; i += blocksize) {
+      #pragma omp parallel for
+      for (index_t j = 0; j < p; j += blocksize) {
+          // transpose the block
+          #pragma unroll 4
+          for (index_t a = 0; a < blocksize && j + a < n; ++a) {
+            for (index_t b = 0; b < blocksize && i + b < p; ++b) {
+                    out[(j + a) * n + i + b] = in[(i + b) * p + (j + a)];
+                }
+          }
+      }
+  }
 }
 
 
