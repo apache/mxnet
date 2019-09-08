@@ -84,8 +84,8 @@ void TVMSincBackward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
   if (IsIntType(outputs[0].type_flag_)) {
-    LOG(FATAL) << "This Operator only support float dtype in backward, if you want"
-                  "to get backward gradient, you should transform input type for floating point.";
+    LOG(FATAL) << "This Operator only support float dtype in backward, if you want to"
+                  "get backward gradient, you should transform input type for floating point.";
   }
   if (inputs[0].Size() == 0U) return;
   using namespace mshadow;
