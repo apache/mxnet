@@ -17,6 +17,7 @@
 
 
 import math
+import random
 from mxnet import nd, autograd
 from mxnet.test_utils import assert_almost_equal, random_arrays, rand_shape_nd
 from common import with_seed
@@ -95,6 +96,51 @@ def test_tanh():
         array = random_arrays(shape)
         check_second_order_unary(
             array, tanh, grad_grad_op, rtol=1e-6, atol=1e-6)
+
+
+@with_seed()
+def test_arctan():
+    def arctan(x):
+        return nd.arctan(x)
+
+    def grad_grad_op(x):
+        return (-2 * x)/((1 + x**2)**2)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        # Domain of arctan is all real numbers.
+        # Scale std_dev
+        array *= random.randint(500, 10000)
+        check_second_order_unary(array, arctan, grad_grad_op)
+
+
+@with_seed()
+def test_arctanh():
+    def arctanh(x):
+        return nd.arctanh(x)
+
+    def grad_grad_op(x):
+        return (2 * x)/((1 - x**2)**2)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, arctanh, grad_grad_op)
+
+
+@with_seed()
+def test_radians():
+    def radians(x):
+        return nd.radians(x)
+
+    def grad_grad_op(x):
+        return nd.zeros_like(x)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, radians, grad_grad_op)
 
 
 @with_seed()
@@ -186,6 +232,36 @@ def test_abs():
         check_second_order_unary(array, abs, grad_grad_op)
 
 
+@with_seed()
+def test_clip():
+    def clip(x):
+        a_min, a_max = sorted([random.random(), random.random()])
+
+        return nd.clip(x, a_min, a_max)
+
+    def grad_grad_op(x):
+        return nd.zeros_like(x)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, clip, grad_grad_op)
+
+
+@with_seed()
+def test_dropout():
+    def dropout(x):
+        return nd.Dropout(x)
+
+    def grad_grad_op(x):
+        return nd.zeros_like(x)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, dropout, grad_grad_op)
+
+
 def test_sigmoid():
     def sigmoid(x):
         return nd.sigmoid(x)
@@ -205,11 +281,51 @@ def test_sigmoid():
         check_nth_order_unary(array, sigmoid, grad_grad_op, 2)
 
 
-def check_second_order_unary(x, op, grad_grad_op):
-    check_nth_order_unary(x, op, grad_grad_op, 2)
+@with_seed()
+def test_sqrt():
+    def sqrt(x):
+        return nd.sqrt(x)
+
+    def grad_grad_op(x):
+        return -1/(4 * sqrt(x**3))
+
+    sigma = random.randint(25, 100)
+    mu = random.randint(500, 1000)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        array = sigma * array + mu
+        # Only positive numbers
+        assert((array > 0).all())
+        check_second_order_unary(array, sqrt, grad_grad_op)
 
 
-def check_nth_order_unary(x, op, grad_ops, orders):
+@with_seed()
+def test_cbrt():
+    def cbrt(x):
+        return nd.cbrt(x)
+
+    def grad_grad_op(x):
+        return -2/(9 * cbrt(x**5))
+
+    sigma = random.randint(25, 100)
+    mu = random.randint(500, 1000)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        array = sigma * array + mu
+        # Only positive numbers
+        assert((array > 0).all())
+        check_second_order_unary(array, cbrt, grad_grad_op)
+
+
+def check_second_order_unary(x, op, grad_grad_op, rtol=None, atol=None):
+    check_nth_order_unary(x, op, grad_grad_op, 2, rtol, atol)
+
+
+def check_nth_order_unary(x, op, grad_ops, orders, rtol=None, atol=None):
     """Assert n-th order autograd gradient against expected gradient.
 
     Multiple order of gradients can be checked by passing list of
@@ -270,7 +386,8 @@ def check_nth_order_unary(x, op, grad_ops, orders):
         for head_grad in head_grads[:order]:
             expected_grad *= head_grad.asnumpy()
 
-        assert_almost_equal(expected_grad, computed_grad.asnumpy())
+        assert_almost_equal(
+            expected_grad, computed_grad.asnumpy(), rtol=rtol, atol=atol)
 
 
 if __name__ == '__main__':

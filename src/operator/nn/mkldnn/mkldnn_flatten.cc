@@ -25,18 +25,10 @@
 
 #if MXNET_USE_MKLDNN == 1
 
-#include "mkldnn_reshape-inl.h"
+#include "mkldnn_flatten-inl.h"
 
 namespace mxnet {
 namespace op {
-
-class MKLDNNFlattenFwd : public MKLDNNReshapeFwd {
- public:
-  explicit MKLDNNFlattenFwd(const OpReqType &req,
-                            const NDArray &input,
-                            const NDArray &output)
-    : MKLDNNReshapeFwd(req, input, output) {}
-};
 
 static MKLDNNFlattenFwd &GetFlattenForward(const OpReqType &req,
                                            const NDArray &input,
