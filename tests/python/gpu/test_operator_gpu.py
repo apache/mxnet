@@ -337,19 +337,14 @@ def check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights):
     mx_g = _make_ndarrays(grads_arr)
     mx_p_w = _make_ndarrays(weights_arr)
     mx_p_g = _make_ndarrays(grads_arr)
+    lrs = list((np.random.random(size=len(shapes)).astype('float32') + 0.1) / 100.)
+    mx_lrs = mx.nd.array(lrs, dtype='float32', ctx=mx.gpu(0))
+    wds = list((np.random.random(size=len(shapes)).astype('float32') + 0.1) / 1000.)
+    mx_wds = mx.nd.array(wds, dtype='float32', ctx=mx.gpu(0))
     if use_master_weights:
-        lrs = list((np.random.random(size=len(shapes)).astype('float32') + 0.1) / 100.)
-        mx_lrs = mx.nd.array(lrs, dtype='float32', ctx=mx.gpu(0))
-        wds = list((np.random.random(size=len(shapes)).astype('float32') + 0.1) / 1000.)
-        mx_wds = mx.nd.array(wds, dtype='float32', ctx=mx.gpu(0))
         weights32_arr = [arr.astype('float32') for arr in weights_arr]
         mx_w32 = _make_ndarrays(weights32_arr)
         mx_p_w32 = _make_ndarrays(weights32_arr)
-    else:
-        lrs = list((np.random.random(size=len(shapes)) + 0.01) / 10.)
-        mx_lrs = mx.nd.array(lrs, dtype=dtype, ctx=mx.gpu(0))
-        wds = list((np.random.random(size=len(shapes)) + 0.1) / 1000.)
-        mx_wds = mx.nd.array(wds, dtype=dtype, ctx=mx.gpu(0))
     if momentum is None:
         if use_master_weights:
             mx.nd.multi_mp_sgd_update(
@@ -394,12 +389,21 @@ def check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights):
                                     *_flatten_list(zip(mx_p_w, mx_p_g, mx_p_m)),
                                     mx_lrs, mx_wds, num_weights=len(shapes),
                                     rescale_grad=0.95, momentum=momentum, out=mx_p_w)
-    def _assert_all_almost_equal(lhs_list, rhs_list):
+
+    def _assert_all_almost_equal(lhs_list, rhs_list, rtol, atol):
         for i, (lhs, rhs) in enumerate(zip(lhs_list, rhs_list)):
-            assert_almost_equal(lhs.asnumpy(), rhs.asnumpy(), rtol=1e-5, atol=1e-6)
-    _assert_all_almost_equal(mx_p_w, mx_w)
+            assert_almost_equal(lhs.asnumpy(), rhs.asnumpy(), rtol=rtol, atol=atol)
+    if dtype == 'float16':
+        rtol = 1e-3
+        atol = 1e-3
+    else:
+        rtol = 1e-5
+        atol = 1e-6
+    _assert_all_almost_equal(mx_p_w, mx_w, rtol, atol)
     if momentum is not None:
-        _assert_all_almost_equal(mx_p_m, mx_m)
+        _assert_all_almost_equal(mx_p_m, mx_m, rtol, atol)
+    if use_master_weights:
+        _assert_all_almost_equal(mx_p_w32, mx_w32, 1e-5, 1e-6)
 
 @with_seed()
 def test_preloaded_multi_sgd():

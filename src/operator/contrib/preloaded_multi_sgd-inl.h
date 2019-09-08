@@ -43,17 +43,6 @@
 namespace mxnet {
 namespace op {
 
-/*
- * \brief log message for optimizers with lazy update.
- */
-inline void LogLazyUpdate() {
-  common::LogOnce("Optimizer with lazy_update = True detected. "
-                  "Be aware that lazy update with row_sparse gradient is different from "
-                  "standard update, and may lead to different empirical results. See "
-                  "https://mxnet.incubator.apache.org/api/python/optimization/optimization.html "
-                  "for more details.");
-}
-
 struct PreloadedMultiSGDParam : public dmlc::Parameter<PreloadedMultiSGDParam> {
   float rescale_grad;
   float clip_gradient;
@@ -173,8 +162,8 @@ struct PreloadedMultiSGDKernelParam {
   MPDType * mom[N];
   MPDType * weights32[N];
   DType * out_data[N];
-  MPDType * lrs;
-  MPDType * wds;
+  float * lrs;
+  float * wds;
   MPDType clip_gradient;
   MPDType rescale_grad;
   MPDType momentum;
@@ -249,8 +238,8 @@ PreloadedMultiSGDKernelParam<DType, MPDType> FillPreloadedMultiSGDKernelParam(
   }
   const int lrs_idx = param.count * input_stride;
   const int wds_idx = param.count * input_stride + 1;
-  param.lrs = inputs[lrs_idx].FlatTo2D<xpu, MPDType>(s).dptr_;
-  param.wds = inputs[wds_idx].FlatTo2D<xpu, MPDType>(s).dptr_;
+  param.lrs = inputs[lrs_idx].FlatTo2D<xpu, float>(s).dptr_;
+  param.wds = inputs[wds_idx].FlatTo2D<xpu, float>(s).dptr_;
   return param;
 }
 
