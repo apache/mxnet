@@ -31,7 +31,6 @@ def lenet5():
     """LeNet-5 Symbol"""
     #pylint: disable=no-member
     data = mx.sym.Variable('data')
-    #data = mx.sym.Cast(data, 'float16')
     conv1 = mx.sym.Convolution(data=data, kernel=(5, 5), num_filter=20)
     tanh1 = mx.sym.Activation(data=conv1, act_type="tanh")
     pool1 = mx.sym.Pooling(data=tanh1, pool_type="max",
@@ -47,7 +46,6 @@ def lenet5():
     tanh3 = mx.sym.Activation(data=fc1, act_type="tanh")
     # second fullc
     fc2 = mx.sym.FullyConnected(data=tanh3, num_hidden=10)
-    #fc2 = mx.sym.Cast(fc2, 'float32')
     # loss
     lenet = mx.sym.SoftmaxOutput(data=fc2, name='softmax')
     #pylint: enable=no-member
