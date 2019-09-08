@@ -51,7 +51,7 @@ It updates the weights using::
 .set_attr_parser(ParamParser<PreloadedMultiSGDParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", PreloadedMultiSGDShape<PreloadedMultiSGDParam, 2>)
 .set_attr<nnvm::FInferType>("FInferType",
-		            MP_PreloadedMultiSGD_InferType<PreloadedMultiSGDParam, 2, 0>)
+                            MP_PreloadedMultiSGD_InferType<PreloadedMultiSGDParam, 2, 0>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     uint32_t num_args = dmlc::get<PreloadedMultiSGDParam>(attrs.parsed).num_weights;
@@ -100,7 +100,7 @@ Where the parameter ``momentum`` is the decay rate of momentum estimates at each
 .set_attr_parser(ParamParser<PreloadedMultiSGDMomParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", PreloadedMultiSGDShape<PreloadedMultiSGDMomParam, 3>)
 .set_attr<nnvm::FInferType>("FInferType",
-		            MP_PreloadedMultiSGD_InferType<PreloadedMultiSGDMomParam, 3, 0>)
+                            MP_PreloadedMultiSGD_InferType<PreloadedMultiSGDMomParam, 3, 0>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     uint32_t num_args = dmlc::get<PreloadedMultiSGDParam>(attrs.parsed).num_weights;
