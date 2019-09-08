@@ -114,7 +114,7 @@ cmake \
     -DUSE_OPENMP=OFF \
     -DUSE_OPENCV=ON \
     -DUSE_SIGNAL_HANDLER=ON \
-    -DCMAKE_BUILD_TYPE=Debug \
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo\
     -GNinja ..
 ninja
 popd
