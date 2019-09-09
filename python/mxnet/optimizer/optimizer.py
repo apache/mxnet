@@ -40,7 +40,7 @@ from ..random import normal
 from ..util import is_np_array
 
 __all__ = [
-    'AdaDelta', 'AdaGrad', 'Adam', 'Adamax', 'DCASGD', 'FTML', 'Ftrl', 'LBSGD',
+    'AdaDelta', 'AdaGrad', 'Adam', 'Adamax', 'DCASGD', 'FTML', 'Ftrl', 'LARS', 'LBSGD',
     'NAG', 'NDabs', 'Nadam', 'Optimizer', 'RMSProp', 'SGD', 'SGLD', 'Signum',
     'Test', 'Updater', 'ccSGD', 'create', 'get_updater', 'register'
 ]
@@ -785,16 +785,45 @@ class FTML(Optimizer):
                     lr=lr, wd=wd, **kwargs)
 
 @register
-class SGDwFastLARS(Optimizer):
-    def __init__(self, momentum=0.0, lazy_update=True, lars_eta=0.001, lars_eps=0,
+class LARS(Optimizer):
+    """the LARS optimizer from 'Large Batch Training of Convolution Networks' \
+    (https://arxiv.org/abs/1708.03888)
+
+    Behave mostly like SGD with momentum and weight decay but is scaling \
+    adaptively the learning for each layer (except bias and batch norm parameters):
+    w_norm = L2norm(weights)
+    g_norm = L2norm(gradients)
+    if w_norm > 0 and g_norm > 0:
+        lr_layer = lr * lr_mult * eta * w_norm / (g_norm + weight_decay * w_norm + eps)
+    else:
+        lr_layer = lr * lr_mult
+
+    Parameters
+    ----------
+    momentum : float, optional
+        The momentum value.
+    lazy_update : bool, optional
+        Default is True. If True, lazy updates are applied \
+        if the storage types of weight and grad are both ``row_sparse``.
+    lars_eta : float, optional
+        LARS coefficient used to scale the learning rate. Default set to 0.001.
+    lars_epsilon : float, optional
+        Optional epsilon in case of very small gradients. Default set to 0.
+    momentum_correction : bool, optional
+        If True scale momentum w.r.t global learning rate change (with an lr_scheduler) \
+        as indicated in 'Accurate, Large Minibatch SGD: Training ImageNet in 1 Hour` \
+        (https://arxiv.org/pdf/1706.02677.pdf)
+        Default set to True.
+    """
+    def __init__(self, momentum=0.0, lazy_update=True, eta=0.001, eps=0,
                  momentum_correction=True, **kwargs):
-        super(SGDwFastLARS, self).__init__(**kwargs)
+        super(LARS, self).__init__(**kwargs)
         self.momentum = momentum
         self.momentum_correction = momentum_correction
         self.lazy_update = lazy_update
         self.aggregate_num = int(os.getenv('MXNET_OPTIMIZER_AGGREGATION_SIZE', "4"))
-        self.lars_eta = lars_eta
-        self.lars_eps = lars_eps
+        self.eta = eta
+        self.eps = eps
         self.skip = 0
         self.last_lr = None
         self.cur_lr = None
@@ -870,7 +899,7 @@ class SGDwFastLARS(Optimizer):
         return momentum
 
     def _l2norm(self, v, rescale=False):
-        "L2 Norm implementation"
+        """L2 Norm implementation"""
         v = v.astype('float32')
         if rescale:
             v *= self.rescale_grad
@@ -878,7 +907,7 @@ class SGDwFastLARS(Optimizer):
         return norm
 
     def _get_lars(self, i, weight, g, lr, wd):
-        "Returns a scaling factor for the learning rate for this layer"
+        """Returns a scaling factor for the learning rate for this layer"""
         name = self.idx2name[i] if i in self.idx2name else str(i)
         if name.endswith('gamma') or name.endswith('beta') or name.endswith('bias'):
             return lr
@@ -887,7 +916,7 @@ class SGDwFastLARS(Optimizer):
         g_norm = self._l2norm(g, rescale=True)
 
         if w_norm > 0.0 and g_norm > 0.0:
-            lars = self.lars_eta * w_norm/(g_norm + wd * w_norm + self.lars_eps)
+            lars = self.eta * w_norm/(g_norm + wd * w_norm + self.eps)
         else:
             lars = 1.0
 
@@ -938,7 +967,7 @@ class SGDwFastLARS(Optimizer):
                 w_sum_sq = multi_sum_sq(*new_weights[:nb_lars], num_arrays=nb_lars)
                 g_sum_sq = multi_sum_sq(*new_grads[:nb_lars], num_arrays=nb_lars)
                 multi_lars(new_lrs[:nb_lars], w_sum_sq, g_sum_sq, new_wds[:nb_lars],
-                           eta=self.lars_eta, eps=self.lars_eps, rescale_grad=self.rescale_grad,
+                           eta=self.eta, eps=self.eps, rescale_grad=self.rescale_grad,
                            out=new_lrs[:nb_lars])
             # Same than usual using preloaded sgd functions
             sidx = 0
@@ -1049,7 +1078,7 @@ class LBSGD(Optimizer):
 
     warmup_strategy: string ('linear', 'power2', 'sqrt'. , 'lars'   default : 'linear')
     warmup_epochs: unsigned, default: 5
-    batch_scale:   unsigned, default: 1 (same as batch size*numworkers)
+    batch_scale:   unsigned, default: 1 (same as batch size * numworkers)
     updates_per_epoch: updates_per_epoch (default: 32, Default might not reflect true number batches per epoch. Used for warmup.)
     begin_epoch: unsigned, default 0, starting epoch.
     """

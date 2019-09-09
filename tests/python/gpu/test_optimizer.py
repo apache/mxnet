@@ -73,11 +73,11 @@ def test_lars():
                                                       max_update=epoch_it * num_epochs,
                                                       warmup_steps=epoch_it * warmup_epochs),
         'momentum': 0.9,
-        'lars_eta': 14.,
+        'eta': 14.,
       }
     lenet_model.fit(train_iter,
                     eval_data=test_iter,
-                    optimizer='sgdwfastlars',
+                    optimizer='lars',
                     optimizer_params=optimizer_params,
                     eval_metric='acc',
                     num_epoch=num_epochs)
