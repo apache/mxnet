@@ -42,7 +42,6 @@ void gemm(float* A, float* B, float* C, unsigned n, unsigned k, unsigned m) {
   }
 }
 
-
 MXReturnValue forward(std::map<std::string,std::string> attrs,
                std::vector<MXTensor> inputs, std::vector<MXTensor> outputs,
                OpResource res) {
@@ -159,4 +158,3 @@ MXReturnValue initialize(int version) {
     return MX_FAIL;
   }
 }
-

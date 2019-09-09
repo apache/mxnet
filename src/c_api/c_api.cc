@@ -54,6 +54,7 @@
 #include "../operator/tensor/matrix_op-inl.h"
 #include "../operator/tvmop/op_module.h"
 #include "../common/utils.h"
+#include "nnvm/pass_functions.h"
 
 using namespace mxnet;
 
@@ -137,7 +138,7 @@ int MXLoadLib(const char *path) {
   opCallCreateOpState_t callCreateOpState =
     get_func<opCallCreateOpState_t>(lib, const_cast<char*>(MXLIB_OPCALLCREATEOPSTATE_STR));
 
-  opCallFStateful_t callFStateful=
+  opCallFStateful_t callFStateful =
     get_func<opCallFStateful_t>(lib, const_cast<char*>(MXLIB_OPCALLFSTATEFUL_STR));
 
   // get number of operators registered in the library
@@ -526,12 +527,24 @@ int MXLoadLib(const char *path) {
         attr_vals.push_back(kv.second.c_str());
       }
 
+      // convert subgraph symbol from node attributes to char*
+      if (!attrs.subgraphs.empty()) {
+        nnvm::Graph g;
+        g.outputs = attrs.subgraphs[0].get()->outputs;
+        const std::string serialized_subgraph = nnvm::pass::SaveJSON(g);
+        const std::string subgraph = SUBGRAPH;
+        attr_keys.push_back(subgraph.c_str());
+        attr_vals.push_back(serialized_subgraph.c_str());
+      }
+
       // create a pointer to hold custom op state object
       void* state_op_inst = nullptr;
-      CHECK(callCreateOpState(create_op_state_fp,
-                              attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                              &state_op_inst));
-      CHECK(state_op_inst != nullptr);
+      CHECK(callCreateOpState(create_op_state_fp, attr_keys.data(), attr_vals.data(),
+                              attr_keys.size(), &state_op_inst))
+      << "Error calling CreateOpState for custom operator '" << name_str << "'";
+
+      CHECK(state_op_inst != nullptr)
+      << "Error custom library failed to create stateful operator '" << name_str << "'";
 
       return OpStatePtr::Create<CustomStatefulOpWrapper>(state_op_inst);
     };
@@ -565,13 +578,16 @@ int MXLoadLib(const char *path) {
       // retrieve op state object created from CreateOpState
       CustomStatefulOpWrapper& op = state_ptr.get_state<CustomStatefulOpWrapper>();
       void* state_op_inst = op.get_instance();
-      CHECK(state_op_inst != nullptr);
+      CHECK(state_op_inst != nullptr)
+      << "Error MXNet cannot load custom stateful operator'" << name_str << "'";
 
       CHECK(callFStateful(fstateful_fp, state_op_inst,
                           in_shapes.data(), in_dims.data(), in_data.data(),
                           in_types.data(), in_data.size(),
                           out_shapes.data(), out_dims.data(), out_data.data(),
-                          out_types.data(), out_data.size()));
+                          out_types.data(), out_data.size()))
+      << "Error calling ForwardStateful for custom operator '" << name_str << "'";
+
       // return type void
     };
 
@@ -588,8 +604,7 @@ int MXLoadLib(const char *path) {
       if (fstateful_fp != nullptr) {
         regOp.set_attr<FCreateOpState>("FCreateOpState", create_op_state);
         regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstateful_forward_lambda);
-      }
-      else {
+      } else {
         regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda);
       }
       regOp.set_attr<nnvm::FInferType>("FInferType", infer_type);
@@ -619,8 +634,7 @@ int MXLoadLib(const char *path) {
       if (fstateful_fp != nullptr) {
         regOp.set_attr<FCreateOpState>("FCreateOpState", create_op_state, 11);
         regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstateful_forward_lambda, 11);
-      }
-      else {
+      } else {
         regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda, 11);
       }
       regOp.set_attr<nnvm::FInferType>("FInferType", infer_type, 11);

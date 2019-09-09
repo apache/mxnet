@@ -69,14 +69,21 @@ class MyStatefulOp : public CustomStatefulOp {
  public:
   MyStatefulOp(std::string sym, int count) : subgraph_sym(sym), count(count) {}
 
-  void Forward() {
+  void Forward(std::vector<MXTensor>& inputs, std::vector<MXTensor>& outputs) {
     count++;
+    float* input1 = inputs[0].getData<float>();
+    float* output = outputs[0].getData<float>();
+    unsigned n = inputs[0].shape[0];
+    unsigned m = inputs[0].shape[1];
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < m; j++) {
+        output[i * m + j] = input1[i * m + j] + count;
+      }
+    }
+    std::cout << "subgraph " << subgraph_sym << " forwarding" << std::endl;
   }
 
-  int State() {
-    return count;
-  }
-
+  int State() { return count; }
   ~MyStatefulOp() {}
 
  private:
@@ -86,7 +93,11 @@ class MyStatefulOp : public CustomStatefulOp {
 
 MXReturnValue createOpState(std::map<std::string,std::string> attrs,
                             CustomStatefulOp** op_inst) {
-  *op_inst = new MyStatefulOp("json", 0);
+  std::string serialized_subgraph = "[]";
+  if (attrs.count(SUBGRAPH)) {
+    serialized_subgraph = attrs[SUBGRAPH];
+  }
+  *op_inst = new MyStatefulOp(serialized_subgraph, 0);
   std::cout << "create op state successful" << std::endl;
   return MX_SUCCESS;
 }
@@ -94,13 +105,14 @@ MXReturnValue createOpState(std::map<std::string,std::string> attrs,
 MXReturnValue forwardStateful(CustomStatefulOp* op_inst,
                               std::vector<MXTensor> inputs,
                               std::vector<MXTensor> outputs) {
+  // retrieve the statful op instance
   MyStatefulOp* my_op_inst = static_cast<MyStatefulOp*>(op_inst);
   if (my_op_inst == nullptr) {
     std::cout << "stateful op loading failed" << std::endl;
     return MX_FAIL;
   }
 
-  my_op_inst->Forward();
+  my_op_inst->Forward(inputs, outputs);
   std::cout << "forward op state run " << my_op_inst->State() << std::endl;
   return MX_SUCCESS;
 }
@@ -122,4 +134,3 @@ MXReturnValue initialize(int version) {
     return MX_FAIL;
   }
 }
-

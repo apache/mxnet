@@ -110,11 +110,17 @@ class CustomStatefulOpWrapper {
 };
 
 /*!
+ * \brief Macro to help passing serialized subgraph through attribute dict
+ */
+#define SUBGRAPH "subgraph_sym_json"
+
+/*!
  * \brief An prototype interface class for library author creating stateful op
  */
 class CustomStatefulOp {
  public:
-  virtual void Forward() = 0;
+  virtual void Forward(std::vector<MXTensor>& inputs,
+                       std::vector<MXTensor>& outputs) = 0;
   virtual ~CustomStatefulOp() = 0;
 };
 
