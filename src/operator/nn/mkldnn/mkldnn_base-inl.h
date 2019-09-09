@@ -352,7 +352,7 @@ class MKLDNNStream {
  public:
   static MKLDNNStream *Get();
 
-  MKLDNNStream(): s(CpuEngine::Get()->get_engine()) {};
+  MKLDNNStream(): s(CpuEngine::Get()->get_engine()) {}
 
   void RegisterPrimArgs(const mkldnn::primitive &prim,
                         const mkldnn_args_map_t &args) {
