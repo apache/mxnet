@@ -779,7 +779,8 @@ NNVM_REGISTER_OP(_backward_clip)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<ClipParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", ClipGrad_<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", ClipGrad_<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 NNVM_REGISTER_OP(repeat)
 .add_alias("_np_repeat")
