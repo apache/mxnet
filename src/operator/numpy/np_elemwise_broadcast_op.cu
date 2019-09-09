@@ -28,6 +28,8 @@
 namespace mxnet {
 namespace op {
 
+#if MXNET_USE_TVM_OP == 0
+
 NNVM_REGISTER_OP(_npi_add)
 #ifndef _WIN32
 .set_attr<FCompute>(
@@ -38,6 +40,18 @@ NNVM_REGISTER_OP(_npi_add)
 .set_attr<FCompute>(
   "FCompute<gpu>",
   NumpyBinaryBroadcastComputeWithBool<gpu, op::mshadow_op::plus>);
+#endif
+
+NNVM_REGISTER_OP(_npi_multiply)
+#ifndef _WIN32
+.set_attr<FCompute>(
+  "FCompute<gpu>",
+  NumpyBinaryBroadcastComputeWithBool<gpu, op::mshadow_op::mul, op::mshadow_op::mixed_mul,
+  op::mshadow_op::mixed_mul>);
+#else
+.set_attr<FCompute>(
+  "FCompute<gpu>",
+  NumpyBinaryBroadcastComputeWithBool<gpu, op::mshadow_op::mul>);
 #endif
 
 NNVM_REGISTER_OP(_npi_subtract)
@@ -52,18 +66,7 @@ NNVM_REGISTER_OP(_npi_subtract)
   NumpyBinaryBroadcastCompute<gpu, op::mshadow_op::minus>);
 #endif
 
-NNVM_REGISTER_OP(_npi_multiply)
-#ifndef _WIN32
-.set_attr<FCompute>(
-  "FCompute<gpu>",
-  NumpyBinaryBroadcastComputeWithBool<gpu, op::mshadow_op::mul, op::mshadow_op::mixed_mul,
-                                      op::mshadow_op::mixed_mul>);
-#else
-.set_attr<FCompute>(
-  "FCompute<gpu>",
-  NumpyBinaryBroadcastComputeWithBool<gpu, op::mshadow_op::mul>);
-#endif
-
+<<<<<<< HEAD
 NNVM_REGISTER_OP(_backward_npi_broadcast_mul)
 .set_attr<FCompute>("FCompute<gpu>", NumpyBinaryBackwardUseIn<gpu, mshadow_op::right,
                                                               mshadow_op::left>);
@@ -87,8 +90,13 @@ NNVM_REGISTER_OP(_backward_npi_broadcast_power)
 .set_attr<FCompute>("FCompute<gpu>", NumpyBinaryBackwardUseIn<gpu, mshadow_op::power_grad,
                                                               mshadow_op::power_rgrad>);
 
+=======
+>>>>>>> bin forward
 NNVM_REGISTER_OP(_npi_add_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, op::mshadow_op::plus>);
+
+NNVM_REGISTER_OP(_npi_multiply_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, op::mshadow_op::mul>);
 
 NNVM_REGISTER_OP(_npi_subtract_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, op::mshadow_op::minus>);
@@ -96,8 +104,13 @@ NNVM_REGISTER_OP(_npi_subtract_scalar)
 NNVM_REGISTER_OP(_npi_rsubtract_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::rminus>);
 
-NNVM_REGISTER_OP(_npi_multiply_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, op::mshadow_op::mul>);
+#endif  // MXNET_USE_TVM_OP == 0
+
+NNVM_REGISTER_OP(_npi_mod)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::mod>);
+
+NNVM_REGISTER_OP(_npi_power)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::power>);
 
 NNVM_REGISTER_OP(_npi_mod_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::mod>);

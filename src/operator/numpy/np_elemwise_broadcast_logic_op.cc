@@ -24,12 +24,7 @@
  * broadcast operator.
  */
 
-#if MXNET_USE_TVM_OP
-#include <tvm/runtime/c_runtime_api.h>
-#include <tvm/runtime/packed_func.h>
-#include "../tvmop/op_module.h"
-#endif  // MXNET_USE_TVM_OP
-
+#include "./np_elemwise_broadcast_op.h"
 #include "../tensor/elemwise_binary_broadcast_op.h"
 #include "../tensor/elemwise_binary_scalar_op.h"
 

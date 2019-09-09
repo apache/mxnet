@@ -28,9 +28,10 @@ from mxnet.gluon import HybridBlock
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, retry, use_np
 from common import with_seed, TemporaryDirectory
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, assert_exception, is_op_runnable, collapse_sum_like
+from mxnet.test_utils import is_op_runnable, has_tvm_ops
 from mxnet.ndarray.ndarray import py_slice
 from mxnet.base import integer_types
-
+from mxnet.runtime import Features
 
 @with_seed()
 @use_np
@@ -107,6 +108,8 @@ def test_np_array_creation():
 
 @with_seed()
 @use_np
+@unittest.skipUnless(is_op_runnable(),
+                     'test_np_zeros uses op add, whose tvm implementation must be run with compute capability >= 53.')
 def test_np_zeros():
     # test np.zeros in Gluon
     class TestZeros(HybridBlock):
@@ -135,7 +138,11 @@ def test_np_zeros():
 
     shapes = [(0,), (2, 0, 2), (0, 0, 0, 0), ()]
     shapes += [rand_shape_nd(ndim, allow_zero_size=True) for ndim in range(5)]
-    dtypes = [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64, None]
+    if Features().is_enabled("TVM_OP"):
+        # TODO: add fp16 back
+        dtypes = [_np.int8, _np.int32, _np.float32, _np.float64, None]
+    else:
+        dtypes = [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64, None]
     for shape in shapes:
         for dtype in dtypes:
             check_zero_array_creation(shape, dtype)
@@ -161,6 +168,8 @@ def test_np_zeros():
 
 @with_seed()
 @use_np
+@unittest.skipUnless(is_op_runnable(),
+                     'test_np_ones uses op multiply, whose tvm implementation must be run with compute capability >= 53.')
 def test_np_ones():
     # test np.ones in Gluon
     class TestOnes(HybridBlock):
@@ -189,7 +198,11 @@ def test_np_ones():
 
     shapes = [(0,), (2, 0, 2), (0, 0, 0, 0), ()]
     shapes += [rand_shape_nd(ndim, allow_zero_size=True) for ndim in range(5)]
-    dtypes = [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64, None]
+    if Features().is_enabled("TVM_OP"):
+        # TODO: add fp16 back
+        dtypes = [_np.int8, _np.int32, _np.float32, _np.float64, None]
+    else:
+        dtypes = [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64, None]
     for shape in shapes:
         for dtype in dtypes:
             check_ones_array_creation(shape, dtype)
@@ -215,6 +228,8 @@ def test_np_ones():
 
 @with_seed()
 @use_np
+@unittest.skipUnless(is_op_runnable(),
+                     'test_np_identity uses op multiply, whose tvm implementation must be run with compute capability >= 53.')
 def test_identity():
     class TestIdentity(HybridBlock):
         def __init__(self, shape, dtype=None):
@@ -238,7 +253,11 @@ def test_identity():
             assert np_out.dtype == _np.float64
 
     ns = [0, 1, 2, 3, 5, 15, 30, 200]
-    dtypes = [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64, None]
+    if Features().is_enabled("TVM_OP"):
+        # TODO: add fp16 back
+        dtypes = [_np.int8, _np.int32, _np.float32, _np.float64, None]
+    else:
+        dtypes = [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64, None]
     for n in ns:
         for dtype in dtypes:
             check_identity_array_creation(n, dtype)
@@ -261,13 +280,9 @@ def test_identity():
 @with_seed()
 def test_np_ndarray_binary_element_wise_ops():
     np_op_map = {
-        '+': _np.add,
-        '*': _np.multiply,
-        '-': _np.subtract,
         '/': _np.divide,
         'mod': _np.mod,
         'pow': _np.power,
-
     }
 
     if is_op_runnable():
@@ -277,7 +292,10 @@ def test_np_ndarray_binary_element_wise_ops():
             '>': _np.greater,
             '>=': _np.greater_equal,
             '<': _np.less,
-            '<=': _np.less_equal
+            '<=': _np.less_equal,
+            '+': _np.add,
+            '*': _np.multiply,
+            '-': _np.subtract,
         })
 
     def _get_grad_func(op, scalar=None, reverse=False):
@@ -513,6 +531,9 @@ def test_np_ndarray_binary_element_wise_ops():
 
 
 @with_seed()
+@unittest.skipUnless(is_op_runnable(),
+                     'test_np_hybrid_block_multiple_outputs uses op multiply and add, '
+                     'whose tvm implementation must be run with compute capability >= 53.')
 def test_np_hybrid_block_multiple_outputs():
     @use_np
     class TestAllNumpyOutputs(HybridBlock):
