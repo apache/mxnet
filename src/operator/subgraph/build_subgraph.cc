@@ -556,7 +556,7 @@ void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
       // if the node is not yet an input to the subgraph, create a node in the subgraph
       nnvm::NodePtr n = nnvm::CreateVariableNode(var_name);
       nnvm::NodeEntry e_ = nnvm::NodeEntry{n, 0, 0};
-      orig_entries->push_back(i) = *e;
+      orig_entries->push_back(*e);
 
       // store the node in the map
       name_count_map.emplace(var_name, e_);
