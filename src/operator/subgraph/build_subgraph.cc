@@ -550,7 +550,7 @@ void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
     const auto output_names = sym.ListOutputNames();
     CHECK_EQ(output_names.size(), 1U);
     const std::string& var_name = output_names[0];
-    
+
     auto it = name_count_map.find(var_name);
     if (name_count_map.end() == it) {
       // if the node is not yet an input to the subgraph, create a node in the subgraph
@@ -569,7 +569,7 @@ void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
     else
       n->attrs.dict["isArg"] = "False";
     // lookup the name of the node and set it as the input dependency
-    *e = name_count_map[var_name];                                    
+    *e = name_count_map[var_name];
   }
 }
 
