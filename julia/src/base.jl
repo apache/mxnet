@@ -58,11 +58,11 @@ function _get_search_names()
 end
 
 function _get_search_dirs()
-  # TODO: remove MXNET_HOME backward compatibility in v1.7
+  # TODO: remove MXNET_HOME backward compatibility in v2.0
   if haskey(ENV, "MXNET_HOME")
     @warn "The environment variable `MXNET_HOME` has been renamed, please use `MXNET_ROOT` instead."
   end
-  A = [joinpath(@__DIR__, "..", "deps", "usr", "lib")]
+  A = [joinpath(@__DIR__, "..", "deps", "build")]
   MXNET_ROOT = get(ENV, "MXNET_ROOT", get(ENV, "MXNET_HOME", ""))
   if !isempty(MXNET_ROOT)
     !isabspath(MXNET_ROOT) && error("MXNET_ROOT should be a absolute path")
@@ -71,18 +71,15 @@ function _get_search_dirs()
   A
 end
 
-const MXNET_LIB = Libdl.find_library(_get_search_names(), _get_search_dirs())
-const LIB_VERSION = Ref{Cint}(0)
+const MXNET_LIB   = Libdl.find_library(_get_search_names(), _get_search_dirs())
+const LIB_VERSION = Ref{Cint}(C_NULL)
 
 if isempty(MXNET_LIB)
-  # touch this file, so that after the user properly build libmxnet, the precompiled
-  # MXNet.ji will be re-compiled to get MXNET_LIB properly.
-  touch(@__FILE__)
   error("Cannot find or load libmxnet.$(Libdl.dlext). " *
         "Please see the document on how to build it.")
-else
-  include_dependency(MXNET_LIB)
 end
+
+include_dependency(MXNET_LIB)
 
 function __init__()
   # TODO: bug in nnvm, if do not call this, call get handle "_copyto" will fail
@@ -92,12 +89,12 @@ function __init__()
 
   atexit() do
     # notify libmxnet we are shutting down
-    ccall( ("MXNotifyShutdown", MXNET_LIB), Cint, () )
+    ccall(("MXNotifyShutdown", MXNET_LIB), Cint, ())
   end
 end
 
 function mx_get_last_error()
-  msg = ccall( ("MXGetLastError", MXNET_LIB), char_p, () )
+  msg = ccall(("MXGetLastError", MXNET_LIB), char_p, ())
   if msg == C_NULL
     throw(MXError("Failed to get last error message"))
   end
