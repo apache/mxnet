@@ -536,9 +536,8 @@ void FindOutputEntries(nnvm::Graph* g,
 void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
                     std::vector<nnvm::NodeEntry> *orig_entries,
                     const bool skip_var = false) {
-  orig_entries->resize(input_entries.size());
   // map for creating unique var nodes for deduplicating entries from the same node
-  std::unordered_map<std::string, int> name_count_map;
+  std::unordered_map<std::string,  nnvm::NodeEntry> name_count_map;
   for (size_t i = 0; i < input_entries.size(); ++i) {
     nnvm::NodeEntry *e = input_entries[i];
     // If the node is a variable itself, we may want to skip the node.
@@ -546,17 +545,21 @@ void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
       continue;
     }
 
-    orig_entries->at(i) = *e;
     nnvm::Symbol sym;
     sym.outputs.push_back(*e);
     const auto output_names = sym.ListOutputNames();
     CHECK_EQ(output_names.size(), 1U);
     const std::string& var_name = output_names[0];
+    
     auto it = name_count_map.find(var_name);
     if (name_count_map.end() == it) {
-      name_count_map.emplace(var_name, 0);
-    } else {
-      ++(it->second);
+      // if the node is not yet an input to the subgraph, create a node in the subgraph
+      nnvm::NodePtr n = nnvm::CreateVariableNode(var_name);
+      nnvm::NodeEntry e_ = nnvm::NodeEntry{n, 0, 0};
+      orig_entries->push_back(i) = *e;
+
+      // store the node in the map
+      name_count_map.emplace(var_name, e_);
     }
     nnvm::ObjectPtr n = nnvm::CreateVariableNode(
         var_name + std::to_string(name_count_map[var_name]));
@@ -565,7 +568,8 @@ void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
       n->attrs.dict["isArg"] = "True";
     else
       n->attrs.dict["isArg"] = "False";
-    *e = nnvm::NodeEntry{n, 0, 0};
+    // lookup the name of the node and set it as the input dependency
+    *e = name_count_map[var_name];                                    
   }
 }
 
