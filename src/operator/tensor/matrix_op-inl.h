@@ -284,9 +284,9 @@ MSHADOW_XINLINE void Transpose2D(DType *in, DType *out, index_t shape_0, index_t
       for (index_t j = 0; j < p; j += blocksize) {
           // transpose the block
           #pragma unroll 4
-          for (index_t a = 0; a < blocksize && j + a < n; ++a) {
-            for (index_t b = 0; b < blocksize && i + b < p; ++b) {
-                    out[(j + a) * n + i + b] = in[(i + b) * p + (j + a)];
+          for (index_t a = j; a < blocksize && a < p; ++a) {
+            for (index_t b = i; b < blocksize && b < n; ++b) {
+                    out[a * n + b] = in[b * p + a];
                 }
           }
       }
