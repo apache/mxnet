@@ -1664,7 +1664,7 @@ def test_np_choice():
             super(TestWeightedChoice, self).__init__()
             self.sample_size = sample_size
             self.replace = replace
-        
+
         def hybrid_forward(self, F, a, p):
             op = getattr(F.np.random, "choice", None)
             return F.np.random.choice(a, self.sample_size, self.replace, p)
@@ -1703,7 +1703,7 @@ def test_np_choice():
         assert len(samples) == samples_size
         if not replace:
             assert len(_np.unique(samples)) == samples_size
-        
+
     num_classes = 10
     num_samples = 10 ** 8
     # Density tests are commented out due to their huge time comsumption.
@@ -1717,7 +1717,7 @@ def test_np_choice():
     #     test_sample_with_replacement(np.random.choice, num_classes, shape)
     #     weight = np.array(_np.random.dirichlet([1.0] * num_classes))
     #     test_sample_with_replacement(np.random.choice, num_classes, shape, weight)
-    
+
     # Tests passed locally,
     # commented out for the same reason as above.
     # shape_list2 = [
@@ -1730,7 +1730,7 @@ def test_np_choice():
     #     test_sample_without_replacement(np.random.choice, num_classes, shape, 10 ** 5)
     #     weight = np.array(_np.random.dirichlet([1.0] * num_classes))
     #     test_sample_without_replacement(np.random.choice, num_classes, shape, 10 ** 5, weight)
-    
+
     # Test hypridize mode:
     for hybridize in [True, False]:
         for replace in [True, False]:
@@ -1742,6 +1742,91 @@ def test_np_choice():
             weight = np.array(_np.random.dirichlet([1.0] * num_classes))
             test_indexing_mode(test_choice, num_classes, num_classes // 2, replace, None)
             test_indexing_mode(test_choice_weighted, num_classes, num_classes // 2, replace, weight)
+
+
+@with_seed()
+@use_np
+def test_np_linalg_norm():
+    class TestLinalgNorm(HybridBlock):
+        def __init__(self, ord=None, axis=None, keepdims=False):
+            super(TestLinalgNorm, self).__init__()
+            self._ord = ord
+            self._axis = axis
+            self._keepdims = keepdims
+
+        def hybrid_forward(self, F, x):
+            return F.np.linalg.norm(x, ord=self._ord, axis=self._axis, keepdims=self._keepdims)
+
+    configs = [
+        ((2,), None, None),
+        ((2, 3), 2, 1),
+        ((2, 3, 4), 1, 1),
+        ((2, 3, 4), -1, 2),
+        ((2, 3, 4), -2, 1),
+        ((2, 3, 4), 4, 1),
+        ((2, 3, 0, 4), -2, 1),
+        ((2, 3, 4), -3.2, 2),
+        ((2, 3, 4), 4.3, 2),
+        ((2, 3, 4), 'inf', 1),
+        ((2, 3, 4), '-inf', 0),
+        ((2, 3, 4), 5, 0),
+        ((2, 3), None, None),
+        ((2, 3, 4), 'fro', (0, 2)),
+        ((2, 0, 4), 'fro', (0, 2)),
+        ((2, 3, 4), None, (0, 2)),
+        ((2, 3, 4), 1, (0, 2)),
+        ((2, 3, 4), -1, (0, 2)),
+        ((2, 3, 4), 'inf', (0, 2)),
+        ((2, 3, 4), '-inf', (0, 2))
+    ]
+    for config in configs:
+        shape, ord, axis = config[0], config[1], config[2]
+        for keepdims in [True, True]:
+            for hybridize in [False, True]:
+                for itype in [ 'float16', 'float32', 'float64']:
+                    net = TestLinalgNorm(ord, axis, keepdims)
+                    if itype == 'float16':
+                        rtol = 1e-2
+                    else:
+                        rtol = 1e-3
+                    atol = 1e-5
+                    if hybridize:
+                        net.hybridize()
+                    a = mx.nd.random.uniform(-10.0, 10.0, shape=shape, dtype=itype).as_np_ndarray()
+                    a.attach_grad()
+                    with mx.autograd.record():
+                        mx_ret = net(a)
+                    if ord == 'inf':
+                        np_ret = _np.linalg.norm(a.asnumpy(), ord=_np.inf, axis=axis, keepdims=keepdims)
+                    elif ord == '-inf':
+                        np_ret = _np.linalg.norm(a.asnumpy(), ord=-_np.inf, axis=axis, keepdims=keepdims)
+                    else:
+                        np_ret = _np.linalg.norm(a.asnumpy(), ord=ord, axis=axis, keepdims=keepdims)
+                    assert_almost_equal(mx_ret.asnumpy(), np_ret, rtol=rtol, atol=atol)
+                    mx_ret.backward()
+
+                    if ord == 4:
+                        backward_expected = _np.sign(a.asnumpy()) * _np.power(_np.abs(a.asnumpy()), ord -2)*np_ret
+                        assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+
+                    if ord == 2:
+                        backward_expected = _np.divide(a.asnumpy(), np_ret)
+                        assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+
+                    if ord == 'fro':
+                        backward_expected = _np.divide(a.asnumpy(), np_ret)
+                        assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+
+                    # Test imperative once again
+                    if ord == 'inf':
+                        np_ret = _np.linalg.norm(a.asnumpy(), ord=_np.inf, axis=axis, keepdims=keepdims)
+                    elif ord == '-inf':
+                        np_ret = _np.linalg.norm(a.asnumpy(), ord=-_np.inf, axis=axis, keepdims=keepdims)
+                    else:
+                        np_ret = _np.linalg.norm(a.asnumpy(), ord=ord, axis=axis, keepdims=keepdims)
+                    mx_ret = np.linalg.norm(a, ord=ord, axis=axis, keepdims=keepdims)
+                    assert_almost_equal(mx_ret.asnumpy(), np_ret, rtol=rtol, atol=atol)
+
 
 
 if __name__ == '__main__':
