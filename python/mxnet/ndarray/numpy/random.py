@@ -17,11 +17,14 @@
 
 """Namespace for operators used in Gluon dispatched by F=ndarray."""
 from __future__ import absolute_import
+import numpy as np
 from ...context import current_context
 from . import _internal as _npi
+from ..ndarray import NDArray
+from ...base import numeric_types
 
 
-__all__ = ['randint', 'uniform']
+__all__ = ['randint', 'uniform', 'normal']
 
 
 def randint(low, high=None, size=None, dtype=None, **kwargs):
@@ -141,5 +144,102 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
         return _npi.uniform(low=low, high=high, size=size,
                             ctx=ctx, dtype=dtype, out=out)
 
-    raise ValueError(
-        "Distribution parameters must be either mxnet.numpy.ndarray or numbers")
+
+def normal(loc=0.0, scale=1.0, size=None, **kwargs):
+    """Draw random samples from a normal (Gaussian) distribution.
+
+    Samples are distributed according to a normal distribution parametrized
+    by *loc* (mean) and *scale* (standard deviation).
+
+
+    Parameters
+    ----------
+    loc : float, optional
+        Mean (centre) of the distribution.
+    scale : float, optional
+        Standard deviation (spread or "width") of the distribution.
+    size : int or tuple of ints, optional
+        Output shape. If the given shape is, e.g., `(m, n, k)`, then `m * n * k`
+        samples are drawn. If size is `None` (default), a scalar tensor containing
+        a single value is returned if loc and scale are both scalars.
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples. Default is 'float32'
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
+    Returns
+    -------
+    out : ndarray
+        Drawn samples from the parameterized normal distribution.
+
+    Notes
+    -----
+    This function currently does not support ``loc`` and ``scale`` as ndarrays.
+    """
+    dtype = kwargs.pop('dtype', None)
+    if dtype is None:
+        dtype = 'float32'
+    ctx = kwargs.pop('ctx', None)
+    if ctx is None:
+        ctx = current_context()
+    out = kwargs.pop('out', None)
+    if size is None and out is None:
+        size = ()
+    if (not isinstance(loc, numeric_types)) or (not isinstance(scale, numeric_types)):
+        raise NotImplementedError('np.random.normal only supports loc and scale of '
+                                  'numeric types for now')
+    return _npi.random_normal(loc, scale, shape=size, dtype=dtype, ctx=ctx, out=out, **kwargs)
+
+
+def multinomial(n, pvals, size=None):
+    """multinomial(n, pvals, size=None)
+
+    Draw samples from a multinomial distribution.
+
+    The multinomial distribution is a multivariate generalisation of the binomial distribution.
+    Take an experiment with one of ``p`` possible outcomes. An example of such an experiment is throwing a dice,
+    where the outcome can be 1 through 6. Each sample drawn from the distribution represents n such experiments.
+    Its values, ``X_i = [X_0, X_1, ..., X_p]``, represent the number of times the outcome was ``i``.
+
+    Parameters
+    ----------
+    n : int
+        Number of experiments.
+    pvals : sequence of floats, length p
+        Probabilities of each of the p different outcomes. These should sum to 1.
+    size : int or tuple of ints, optional
+        Output shape. If the given shape is, e.g., ``(m, n, k)``, then ``m * n * k`` samples
+        are drawn. Default is None, in which case a single value is returned.
+
+    Returns
+    -------
+    out : ndarray
+        The drawn samples, of shape size, if that was provided. If not, the shape is ``(N,)``.
+        In other words, each entry ``out[i,j,...,:]`` is an N-dimensional value drawn from the distribution.
+
+    Examples
+    --------
+    Throw a dice 1000 times, and 1000 times again:
+
+    >>> np.random.multinomial(1000, [1/6.]*6, size=2)
+    array([[164, 161, 179, 158, 150, 188],
+           [178, 162, 177, 143, 163, 177]])
+
+    A loaded die is more likely to land on number 6:
+
+    >>> np.random.multinomial(100, [1/7.]*5 + [2/7.])
+    array([19, 14, 12, 11, 21, 23])
+
+    >>> np.random.multinomial(100, [1.0 / 3, 2.0 / 3])
+    array([32, 68])
+    """
+    if isinstance(pvals, NDArray):
+        return _npi.multinomial(pvals, pvals=None, n=n, size=size)
+    else:
+        if isinstance(pvals, np.ndarray):
+            raise ValueError('numpy ndarray is not supported!')
+        if any(isinstance(i, list) for i in pvals):
+            raise ValueError('object too deep for desired array')
+        return _npi.multinomial(n=n, pvals=pvals, size=size)

@@ -684,9 +684,6 @@ inline bool TakeOpShape(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape &idxshape = (*in_attrs)[take_::kIdx];
   if (!shape_is_known(idxshape)) return false;
   const TakeParam& param = nnvm::get<TakeParam>(attrs.parsed);
-  if (param.mode == take_::kRaise) {
-    LOG(FATAL) << "Raise is not supported for the time being...";
-  }
   CHECK(param.axis >= -1 * arrshape.ndim() && param.axis < arrshape.ndim())
     << "Axis should be in the range of [-r, r-1] where r is the rank of input tensor";
 
@@ -813,14 +810,15 @@ struct TakeGradGeneralKernel {
                                   const IType* src_indptr, const IType* original_idx,
                                   mshadow::Shape<10> in_strides, mshadow::Shape<10> out_strides,
                                   const int in_ndims, const int out_ndims, const int idx_ndims,
-                                  const int axis) {
+                                  const int axis, const int K) {
     const int in_head_index = (axis == 0) ? 0 : tid / in_strides[axis - 1];
     const int in_rest_index = (axis == 0) ? tid : tid % in_strides[axis - 1];
     const int in_mid_index = in_rest_index / in_strides[axis];
     const int in_tail_index = (axis == in_ndims - 1) ?
                               0 : (in_rest_index % in_strides[axis]);
     for (IType i = src_indptr[in_mid_index]; i < src_indptr[in_mid_index + 1]; ++i) {
-      const int out_mid_index = original_idx[i];
+      int out_mid_index = original_idx[i];
+      out_mid_index = (out_mid_index < 0) ? out_mid_index + K : out_mid_index;
       int target = in_tail_index + out_mid_index * in_strides[axis];
       target += (axis == 0) ? 0 : in_head_index * out_strides[axis - 1];
       arr_grad[tid] += ograd[target];
@@ -894,7 +892,7 @@ void TakeOpBackwardImpl(mshadow::Stream<cpu>* s,
       Kernel<TakeGradGeneralKernel, cpu>::Launch(
         s, arrshape.Size(), arr.dptr<DType>(), ograd.dptr<DType>(), src_indptr_ptr,
         original_idx_ptr, in_strides, out_strides,
-        arrshape.ndim(), oshape.ndim(), idxshape.ndim(), axis);
+        arrshape.ndim(), oshape.ndim(), idxshape.ndim(), axis, static_cast<int>(arrshape[axis]));
     });
   });
 }
@@ -968,6 +966,15 @@ void TakeOpBackwardImpl(mshadow::Stream<gpu>* s,
     int num_bits = common::ilog2ui(static_cast<unsigned int>(idxshape.Size()) - 1);
     Tensor<gpu, 1, int> sorted_idx(sorted_idx_ptr, Shape1(idxshape.Size()), s);
     SortByKey(sorted_idx, original_idx, true, &temp_storage, 0, num_bits);
+    cub::DeviceHistogram::HistogramEven(temp_storage_ptr,
+                                        temp_storage_bytes,
+                                        sorted_idx_ptr,
+                                        src_indptr_ptr,
+                                        static_cast<int>(arrshape[axis] + 1),
+                                        0,
+                                        static_cast<int>(arrshape[axis] + 1),
+                                        static_cast<int>(idxshape.Size()),
+                                        mshadow::Stream<gpu>::GetStream(s));
     cub::DeviceScan::ExclusiveSum(temp_storage_ptr,
                                   temp_storage_bytes,
                                   src_indptr_ptr,
@@ -989,7 +996,7 @@ void TakeOpBackwardImpl(mshadow::Stream<gpu>* s,
       Kernel<TakeGradGeneralKernel, gpu>::Launch(
         s, arrshape.Size(), arr.dptr<DType>(), ograd.dptr<DType>(),
         src_indptr_ptr, original_idx_ptr, in_strides, out_strides,
-        arrshape.ndim(), oshape.ndim(), idxshape.ndim(), axis);
+        arrshape.ndim(), oshape.ndim(), idxshape.ndim(), axis, static_cast<int>(arrshape[axis]));
     });
   });
 }
@@ -1044,7 +1051,11 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
           if (req[take_::kArr] == kWriteTo) {
             grad_in = scalar<DType>(0.0f);
           }
-          AddTakeGrad(grad_in, idx, grad_out);
+          if (param.mode == take_::kClip) {
+            AddTakeGrad(grad_in, idx, grad_out);
+          } else {
+            AddTakeGrad<false>(grad_in, idx, grad_out);
+          }
         } else {
           LOG(FATAL) << "wrong req";
         }
@@ -1133,7 +1144,7 @@ void BatchTakeOpForward(const nnvm::NodeAttrs& attrs,
  * \brief The parameters of the one_hot operator.
  */
 struct OneHotParam : public dmlc::Parameter<OneHotParam> {
-  int depth;
+  index_t depth;
   double on_value;
   double off_value;
   int axis;
@@ -1153,7 +1164,7 @@ struct OneHotParam : public dmlc::Parameter<OneHotParam> {
   }
 };
 
-inline void GetOneHotParams(const OneHotParam& param, int* depth, double* on_value,
+inline void GetOneHotParams(const OneHotParam& param, index_t* depth, double* on_value,
                             double* off_value, int* dtype) {
   *depth = param.depth;
   CHECK_GE(*depth, 0) << "Dimension size, depth, must be a non-negative integer";
@@ -1172,7 +1183,7 @@ inline bool OneHotOpShape(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape& ishape = (*in_attrs)[0];
   if (!shape_is_known(ishape)) return false;
 
-  int depth = 0;
+  index_t depth = 0;
   double on_value = 1.0;
   double off_value = 0.0;
   int dtype = mshadow::kFloat32;
@@ -1193,7 +1204,7 @@ inline bool OneHotOpType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   CHECK_NE((*in_attrs)[0], -1) << "Index type must be set for one_hot operator";
-  int depth = 0;
+  index_t depth = 0;
   double on_value = 1.0;
   double off_value = 0.0;
   int dtype = -1;
@@ -1207,10 +1218,10 @@ inline bool OneHotOpType(const nnvm::NodeAttrs& attrs,
 template<int req>
 struct one_hot {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const IType* indices,
-                                  int depth, DType on_value) {
-    int offset = i * depth;
-    int j = static_cast<int>(indices[i]);
+  MSHADOW_XINLINE static void Map(index_t i, DType* out, const IType* indices,
+                                  index_t depth, DType on_value) {
+    index_t offset = i * depth;
+    index_t j = static_cast<index_t>(indices[i]);
     if (j >= 0 && j < depth) {
       KERNEL_ASSIGN(out[offset+j], req, on_value);
     }
@@ -1229,7 +1240,7 @@ void OneHotOpForward(const nnvm::NodeAttrs& attrs,
   // The following line is needed to guard the situation when
   // an output array is empty on GPU. In that case, out.dptr() = 0x0
   if (outputs[0].Size() == 0) return;
-  int depth = 0;
+  index_t depth = 0;
   double on_value = 1.0;
   double off_value = 0.0;
   int dtype = mshadow::kFloat32;

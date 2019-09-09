@@ -273,9 +273,9 @@ class DataParallelExecutorGroup(object):
         self.data_layouts = None
         self.label_layouts = None
         self.output_names = self.symbol.list_outputs()
-        self.output_layouts = [DataDesc.get_batch_axis(self.symbol[name].attr('__layout__'))
-                               for name in self.output_names]
-        self.num_outputs = len(self.symbol.list_outputs())
+        self.num_outputs = len(self.output_names)
+        self.output_layouts = [DataDesc.get_batch_axis(self.symbol[index].attr('__layout__'))
+                               for index in range(self.num_outputs)]
 
         self.bind_exec(data_shapes, label_shapes, shared_group)
 
