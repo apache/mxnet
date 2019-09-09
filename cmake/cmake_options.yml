@@ -31,7 +31,6 @@ USE_MKLDNN: "ON" # Use MKLDNN variant of MKL (if MKL found) IF USE_MKL_IF_AVAILA
 USE_OPERATOR_TUNING: "ON" # Enable auto-tuning of operators IF NOT MSVC
 USE_GPERFTOOLS: "ON" # Build with GPerfTools support (if found)
 USE_JEMALLOC: "ON" # Build with Jemalloc support
-USE_PROFILER: "ON" # Build with Profiler support
 USE_DIST_KVSTORE: "OFF" # Build with DIST_KVSTORE support
 USE_PLUGINS_WARPCTC: "OFF" # Use WARPCTC Plugins
 USE_PLUGIN_CAFFE: "OFF" # Use Caffe Plugin

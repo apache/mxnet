@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: disable=too-many-lines
+# pylint: disable=too-many-lines, unused-argument
 """numpy namespace for operators used in Gluon APIs dispatched by F=symbol module."""
 
 from __future__ import absolute_import
@@ -29,8 +29,13 @@ from ..symbol import Symbol
 from .._internal import _set_np_symbol_class
 from . import _internal as _npi
 
-__all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'tensordot',
-           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate']
+__all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'sin', 'cos',
+           'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
+           'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p',
+           'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
+           'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot',
+           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'mean',
+           'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var']
 
 
 def _num_outputs(sym):
@@ -213,7 +218,9 @@ class _Symbol(Symbol):
         raise NotImplementedError
 
     def dot(self, b, out=None):
-        raise NotImplementedError
+        """Dot product of two arrays.
+        Refer to ``numpy.dot`` for full documentation."""
+        return _mx_np_op.dot(self, b, out=out)
 
     def reshape(self, *args, **kwargs):  # pylint: disable=arguments-differ
         """Returns an array containing the same data with a new shape.
@@ -244,7 +251,9 @@ class _Symbol(Symbol):
             return _mx_np_op.reshape(self, newshape=args, order=order)
 
     def argmax(self, axis=None, out=None):  # pylint: disable=arguments-differ
-        raise NotImplementedError
+        """Return indices of the maximum values along the given axis.
+        Refer to `mxnet.numpy.argmax` for full documentation."""
+        return argmax(self, axis, out)
 
     def reshape_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape_like`.
@@ -294,7 +303,7 @@ class _Symbol(Symbol):
         """Return a copy of the array with axis1 and axis2 interchanged.
         Refer to `mxnet.numpy.swapaxes` for full documentation.
         """
-        raise NotImplementedError
+        return swapaxes(self, axis1, axis2)
 
     def split(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`split`.
@@ -404,7 +413,7 @@ class _Symbol(Symbol):
         """Return an array whose values are limited to [min, max].
         One of max or min must be given.
         """
-        raise NotImplementedError
+        return clip(self, min, max, out=out)
 
     def abs(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`abs`.
@@ -521,12 +530,16 @@ class _Symbol(Symbol):
         raise AttributeError('_Symbol object has no attribute nanprod')
 
     def mean(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
-        """Convenience fluent method for :py:func:`mean`.
+        """Returns the average of the array elements along given axis."""
+        return mean(self, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
-        The arguments are the same as for :py:func:`mean`, with
-        this array as data.
-        """
-        raise NotImplementedError
+    def std(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=arguments-differ,too-many-arguments
+        """Returns the standard deviation of the array elements along given axis."""
+        return std(self, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+
+    def var(self, axis=None, dtype=None, out=None, ddof=0, keepdims=None):  # pylint: disable=arguments-differ,too-many-arguments
+        """Returns the variance of the array elements, along given axis."""
+        return var(self, axis=axis, dtype=dtype, out=out, ddof=ddof, keepdims=keepdims)
 
     def cumsum(self, axis=None, dtype=None, out=None):
         """Return the cumulative sum of the elements along the given axis."""
@@ -927,6 +940,61 @@ def ones(shape, dtype=_np.float32, order='C', ctx=None):
     return _npi.ones(shape=shape, ctx=ctx, dtype=dtype)
 
 
+@set_module('mxnet.symbol.numpy')
+def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylint: disable=too-many-arguments
+    """
+    Return a new array of given shape and type, filled with `fill_value`.
+    Parameters
+    ----------
+    shape : int or sequence of ints
+        Shape of the new array, e.g., ``(2, 3)`` or ``2``.
+    fill_value : scalar
+        Fill value.
+    dtype : data-type, optional
+        The desired data-type for the array. The default, `None`, means
+        `np.array(fill_value).dtype`.
+    order : {'C'}, optional
+        Whether to store multidimensional data in C- or Fortran-contiguous
+        (row- or column-wise) order in memory. Currently only supports C order.
+    ctx: to specify the device, e.g. the i-th GPU.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+    Returns
+    -------
+    out : ndarray
+        Array of `fill_value` with the given shape, dtype, and order.
+    Notes
+    -----
+    This function differs from the original `numpy.full
+    https://docs.scipy.org/doc/numpy/reference/generated/numpy.full.html`_ in
+    the following way(s):
+    - Have an additional `ctx` argument to specify the device
+    - Have an additional `out` argument
+    - Currently does not support `order` selection
+    See Also
+    --------
+    empty : Return a new uninitialized array.
+    ones : Return a new array setting values to one.
+    zeros : Return a new array setting values to zero.
+    Examples
+    --------
+    >>> np.full((2, 2), 10)
+    array([[10., 10.],
+           [10., 10.]])
+    >>> np.full((2, 2), 2, dtype=np.int32, ctx=mx.cpu(0))
+    array([[2, 2],
+           [2, 2]], dtype=int32)
+    """
+    if order != 'C':
+        raise NotImplementedError
+    if ctx is None:
+        ctx = current_context()
+    dtype = _np.float32 if dtype is None else dtype
+    return _npi.full(shape=shape, value=fill_value, ctx=ctx, dtype=dtype, out=out)
+
+
 #pylint: disable= too-many-arguments, no-member, protected-access
 def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, out=None):
     """ Helper function for element-wise operation.
@@ -1186,6 +1254,968 @@ def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
 
 
 @set_module('mxnet.symbol.numpy')
+def sin(x, out=None, **kwargs):
+    r"""Trigonometric sine, element-wise.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Angle, in radians (:math:`2 \pi` rad equals 360 degrees).
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    y : _Symbol
+        The sine of each element of x.
+        This is a scalar if `x` is a scalar.
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _unary_func_helper(x, _npi.sin, _np.sin, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def cos(x, out=None, **kwargs):
+    r"""Cosine, element-wise.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Angle, in radians (:math:`2 \pi` rad equals 360 degrees).
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    y : _Symbol
+        The corresponding cosine values. This is a scalar if x is a scalar.
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _unary_func_helper(x, _npi.cos, _np.cos, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def sinh(x, out=None, **kwargs):
+    """Hyperbolic sine, element-wise.
+    Equivalent to ``1/2 * (np.exp(x) - np.exp(-x))`` or ``-1j * np.sin(1j*x)``.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array or scalar.
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    y : _Symbol or scalar
+        The corresponding hyperbolic sine values. This is a scalar if `x` is a scalar.
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _unary_func_helper(x, _npi.sinh, _np.sinh, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def cosh(x, out=None, **kwargs):
+    """Hyperbolic cosine, element-wise.
+    Equivalent to ``1/2 * (np.exp(x) + np.exp(-x))`` and ``np.cos(1j*x)``.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array or scalar.
+    out : ndarray or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    y : _Symbol or scalar
+        The corresponding hyperbolic cosine values. This is a scalar if `x` is a scalar.
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _unary_func_helper(x, _npi.cosh, _np.cosh, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def tanh(x, out=None, **kwargs):
+    """
+    Compute hyperbolic tangent element-wise.
+    Equivalent to ``np.sinh(x)/np.cosh(x)``.
+    Parameters
+    ----------
+    x : _Symbol
+        Input array.
+    out : _Symbol or None
+          Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    y : _Symbol
+        The corresponding hyperbolic tangent values.
+    Notes
+    -----
+    If `out` is provided, the function writes the result into it,
+    and returns a reference to `out`.  (See Examples)
+    - input x does not support complex computation (like imaginary number)
+    >>> np.tanh(np.pi*1j)
+    TypeError: type <type 'complex'> not supported
+    Examples
+    --------
+    >>> np.tanh(np.array[0, np.pi]))
+    array([0.       , 0.9962721])
+    >>> np.tanh(np.pi)
+    0.99627207622075
+    >>> # Example of providing the optional output parameter illustrating
+    >>> # that what is returned is a reference to said parameter
+    >>> out1 = np.array(1)
+    >>> out2 = np.tanh(np.array(0.1), out1)
+    >>> out2 is out1
+    True
+    >>> # Example of ValueError due to provision of shape mis-matched `out`
+    >>> np.tanh(np.zeros((3,3)),np.zeros((2,2)))
+    mxnet.base.MXNetError:
+    [07:17:36] ../src/ndarray/./../operator/tensor/../elemwise_op_common.h:135:
+    Check failed: assign(&dattr, vec.at(i)): Incompatible attr in node
+    at 0-th output: expected [3,3], got [2,2]
+    """
+    return _unary_func_helper(x, _npi.tanh, _np.tanh, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def log10(x, out=None, **kwargs):
+    """Return the base 10 logarithm of the input array, element-wise.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array or scalar.
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    y : _Symbol or scalar
+        The logarithm to the base 10 of `x`, element-wise. NaNs are
+        returned where x is negative. This is a scalar if `x` is a scalar.
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _unary_func_helper(x, _npi.log10, _np.log10, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def sqrt(x, out=None, **kwargs):
+    """
+    Return the non-negative square-root of an array, element-wise.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        The values whose square-roots are required.
+    out : _Symbol, or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    y : _Symbol or scalar
+        An array of the same shape as `x`, containing the positive
+        square-root of each element in `x`. This is a scalar if `x` is a scalar.
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _unary_func_helper(x, _npi.sqrt, _np.sqrt, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def cbrt(x, out=None, **kwargs):
+    r"""
+    Return the cube-root of an array, element-wise.
+    Parameters
+    ----------
+    x : _Symbol
+        The values whose cube-roots are required.
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    ----------
+    y : _Symbol
+        An array of the same shape as x, containing the cube cube-root of each element in x.
+        If out was provided, y is a reference to it. This is a scalar if x is a scalar.
+    """
+    return _unary_func_helper(x, _npi.cbrt, _np.cbrt, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def abs(x, out=None, **kwargs):
+    r"""abs(x, out=None, **kwargs)
+    Calculate the absolute value element-wise.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array.
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    absolute : _Symbol
+        An ndarray containing the absolute value of
+        each element in `x`. This is a scalar if `x` is a scalar.
+    """
+    return _unary_func_helper(x, _npi.abs, _np.abs, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def absolute(x, out=None, **kwargs):
+    r"""
+    Calculate the absolute value element-wise.
+    np.abs is a shorthand for this function.
+    Parameters
+    ----------
+    x : _Symbol
+        Input array.
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    ----------
+    absolute : _Symbol
+        An ndarray containing the absolute value of each element in x.
+    """
+    return _unary_func_helper(x, _npi.absolute, _np.absolute, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def sign(x, out=None, **kwargs):
+    r"""
+    sign(x, out=None)
+    Returns an element-wise indication of the sign of a number.
+    The `sign` function returns ``-1 if x < 0, 0 if x==0, 1 if x > 0``. Only supports real number.
+    Parameters
+    ----------
+    x : _Symbol or a scalar
+        Input values.
+    out : _Symbol or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    y : _Symbol
+        The sign of `x`.
+        This is a scalar if `x` is a scalar.
+    Note
+    -------
+    - Only supports real number as input elements.
+    - Input type does not support Python native iterables(list, tuple, ...)
+    - ``out`` param: cannot perform auto broadcasting. ``out`` symbol's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` symbol's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+    """
+    return _unary_func_helper(x, _npi.sign, _np.sign, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def exp(x, out=None, **kwargs):
+    r"""exp(x, out=None, **kwargs)
+    Calculate the exponential of all elements in the input array.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input values.
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    out : _Symbol
+        Output array, element-wise exponential of `x`.
+        This is a scalar if `x` is a scalar.
+    """
+    return _unary_func_helper(x, _npi.exp, _np.exp, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def expm1(x, out=None, **kwargs):
+    r"""expm1(x, out=None, **kwargs)
+    Calculate `exp(x) - 1` for all elements in the array.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input values.
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    out : _Symbol
+        Output array, .
+        This is a scalar if `x` is a scalar.
+    """
+    return _unary_func_helper(x, _npi.expm1, _np.expm1, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def arcsin(x, out=None, **kwargs):
+    r"""
+    arcsin(x, out=None)
+    Inverse sine, element-wise.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        The values whose reciprocals are required.
+    out : _Symbol, or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    angle : _Symbol or scalar
+        Output array is same shape and type as x. This is a scalar if x is a scalar.
+    Notes
+    -----
+    `arcsin` is a multivalued function: for each `x` there are infinitely
+    many numbers `z` such that :math:`sin(z) = x`.  The convention is to
+    return the angle `z` whose real part lies in [-pi/2, pi/2].
+    For real-valued input data types, *arcsin* always returns real output.
+    For each value that cannot be expressed as a real number or infinity,
+    it yields ``nan`` and sets the `invalid` floating point error flag.
+    The inverse sine is also known as `asin` or sin^{-1}.
+    The output `symbol` has the same `ctx` as the input `symbol`.
+    This function differs from the original `numpy.arcsin
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.arcsin.html>`_ in
+    the following aspects:
+    - Only support _Symbol or scalar now.
+    - `where` argument is not supported.
+    - Complex input is not supported.
+    References
+    ----------
+    Abramowitz, M. and Stegun, I. A., *Handbook of Mathematical Functions*,
+    10th printing, New York: Dover, 1964, pp. 79ff.
+    http://www.math.sfu.ca/~cbm/aands/
+    """
+    return _unary_func_helper(x, _npi.arcsin, _np.arcsin, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def arccos(x, out=None, **kwargs):
+    r"""
+    Trigonometric inverse cosine, element-wise.
+    The inverse of cos so that, if y = cos(x), then x = arccos(y).
+    Parameters
+    ----------
+    x : _Symbol
+        x-coordinate on the unit circle. For real arguments, the domain is [-1, 1].
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    ----------
+    angle : _Symbol
+        The angle of the ray intersecting the unit circle at the given x-coordinate in radians [0, pi].
+        This is a scalar if x is a scalar.
+    See also
+    ----------
+    cos, arctan, arcsin
+    Notes
+    ----------
+    arccos is a multivalued function: for each x there are infinitely many numbers z such that
+    cos(z) = x. The convention is to return the angle z whose real part lies in [0, pi].
+    For real-valued input data types, arccos always returns real output.
+    For each value that cannot be expressed as a real number or infinity, it yields nan and sets
+    the invalid floating point error flag.
+    The inverse cos is also known as acos or cos^-1.
+    """
+    return _unary_func_helper(x, _npi.arccos, _np.arccos, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def arctan(x, out=None, **kwargs):
+    r"""arctan(x, out=None, **kwargs)
+    Trigonometric inverse tangent, element-wise.
+    The inverse of tan, so that if ``y = tan(x)`` then ``x = arctan(y)``.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input values.
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    out : _Symbol
+        Out has the same shape as `x`. It lies is in
+        ``[-pi/2, pi/2]`` (``arctan(+/-inf)`` returns ``+/-pi/2``).
+        This is a scalar if `x` is a scalar.
+    Notes
+    -----
+    `arctan` is a multi-valued function: for each `x` there are infinitely
+    many numbers `z` such that tan(`z`) = `x`.  The convention is to return
+    the angle `z` whose real part lies in [-pi/2, pi/2].
+    For real-valued input data types, `arctan` always returns real output.
+    For each value that cannot be expressed as a real number or infinity,
+    it yields ``nan`` and sets the `invalid` floating point error flag.
+    For complex-valued input, we do not have support for them yet.
+    The inverse tangent is also known as `atan` or tan^{-1}.
+    """
+    return _unary_func_helper(x, _npi.arctan, _np.arctan, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def log(x, out=None, **kwargs):
+    """
+    log(x, out=None)
+    Natural logarithm, element-wise.
+    The natural logarithm `log` is the inverse of the exponential function,
+    so that `log(exp(x)) = x`. The natural logarithm is logarithm in base
+    `e`.
+    Parameters
+    ----------
+    x : _Symbol
+        Input value. Elements must be of real value.
+    out : _Symbol or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    y : _Symbol
+        The natural logarithm of `x`, element-wise.
+        This is a scalar if `x` is a scalar.
+    Notes
+    -----
+     Currently only supports data of real values and ``inf`` as input. Returns data of real value, ``inf``, ``-inf`` and
+    ``nan`` according to the input.
+    This function differs from the original `numpy.log
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.log.html>`_ in
+    the following aspects:
+    - Does not support complex number for now
+    - Input type does not support Python native iterables(list, tuple, ...). Only ndarray is supported.
+    - ``out`` param: cannot perform auto braodcasting. ``out`` symbol's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` symbol's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+    """
+    return _unary_func_helper(x, _npi.log, _np.log, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def degrees(x, out=None, **kwargs):
+    """
+    degrees(x, out=None)
+    Convert angles from radians to degrees.
+    Parameters
+    ----------
+    x : _Symbol
+        Input value. Elements must be of real value.
+    out : _Symbol or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    y : _Symbol of floats
+        The corresponding degree values; if `out` was supplied this is a
+        reference to it.
+        This is a scalar if `x` is a scalar.
+    Notes
+    -------
+    This function differs from the original `numpy.degrees
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.degrees.html>`_ in
+    the following aspects:
+    - Input type does not support Python native iterables(list, tuple, ...). Only ndarray is supported.
+    - ``out`` param: cannot perform auto broadcasting. ``out`` symbol's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` symbol's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+    """
+    return _unary_func_helper(x, _npi.degrees, _np.degrees, out=out, **kwargs)
+
+
+def rint(x, out=None, **kwargs):
+    """
+    Round elements of the array to the nearest integer.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array.
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    out : _Symbol or scalar
+        Output array is same shape and type as x. This is a scalar if x is a scalar.
+    Notes
+    -----
+    This function differs from the original `numpy.rint
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.rint.html>`_ in
+    the following way(s):
+    - only _Symbol or scalar is accpted as valid input, tuple of _Symbol is not supported
+     - broadcasting to `out` of different shape is currently not supported
+    - when input is plain python numerics, the result will not be stored in the `out` param
+    """
+    return _unary_func_helper(x, _npi.rint, _np.rint, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def log2(x, out=None, **kwargs):
+    """
+    Base-2 logarithm of x.
+    Parameters
+    ----------
+    x : _Symbol
+        Input values.
+    out : ndarray or None
+        A location into which the result is stored.
+        If provided, it must have the same shape and type as the input.
+        If not provided or None, a freshly-allocated array is returned.
+    Returns
+    -------
+    y : _Symbol
+        The logarithm base two of `x`, element-wise.
+        This is a scalar if `x` is a scalar.
+    Notes
+    -----
+    This function differs from the original `numpy.log2
+    <https://www.google.com/search?q=numpy+log2>`_ in
+    the following way(s):
+    - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
+    - broadcasting to `out` of different shape is currently not supported
+    - when input is plain python numerics, the result will not be stored in the `out` param
+    """
+    return _unary_func_helper(x, _npi.log2, _np.log2, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def log1p(x, out=None, **kwargs):
+    """
+    Return the natural logarithm of one plus the input array, element-wise.
+    Calculates ``log(1 + x)``.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array.
+    out : _Symbol or None
+          Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    y : _Symbol or scalar
+        Natural logarithm of 1 + x, element-wise. This is a scalar
+        if x is a scalar.
+    Notes
+    -----
+    For real-valued input, `log1p` is accurate also for `x` so small
+    that `1 + x == 1` in floating-point accuracy.
+    Logarithm is a multivalued function: for each `x` there is an infinite
+    number of `z` such that `exp(z) = 1 + x`. The convention is to return
+    the `z` whose imaginary part lies in `[-pi, pi]`.
+    For real-valued input data types, `log1p` always returns real output.
+    For each value that cannot be expressed as a real number or infinity,
+    it yields ``nan`` and sets the `invalid` floating point error flag.
+    cannot support complex-valued input.
+    Examples
+    --------
+    >>> np.log1p(1e-99)
+    1e-99
+    >>> a = np.array([3, 4, 5])
+    >>> np.log1p(a)
+    array([1.3862944, 1.609438 , 1.7917595])
+    """
+    return _unary_func_helper(x, _npi.log1p, _np.log1p, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def radians(x, out=None, **kwargs):
+    """
+    Convert angles from degrees to radians.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array in degrees.
+    out : _Symbol or None
+       Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    y : _Symbol
+        The corresponding radian values. This is a scalar if x is a scalar.
+    Notes
+    -----
+    This function differs from the original `numpy.radians
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.radians.html>`_ in
+    the following way(s):
+    - only _Symbol or scalar is accpted as valid input, tuple of _Symbol is not supported
+    - broadcasting to `out` of different shape is currently not supported
+    - when input is plain python numerics, the result will not be stored in the `out` param
+    Examples
+    --------
+    >>> deg = np.arange(12.) * 30.
+    >>> np.radians(deg)
+    array([0.       , 0.5235988, 1.0471976, 1.5707964, 2.0943952, 2.6179938,
+           3.1415927, 3.6651914, 4.1887903, 4.712389 , 5.2359877, 5.7595863],
+           dtype=float32)
+    """
+    return _unary_func_helper(x, _npi.radians, _np.radians, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def reciprocal(x, out=None, **kwargs):
+    r"""
+    reciprocal(x, out=None)
+    Return the reciprocal of the argument, element-wise.
+    Calculates ``1/x``.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        The values whose reciprocals are required.
+    out : _Symbol, or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    y : _Symbol or scalar
+        Output array is same shape and type as x. This is a scalar if x is a scalar.
+    Notes
+    -----
+    .. note::
+        This function is not designed to work with integers.
+    For integer arguments with absolute value larger than 1 the result is
+    always zero because of the way Python handles integer division.  For
+    integer zero the result is an overflow.
+    The output `symbol` has the same `ctx` as the input `symbol`.
+    This function differs from the original `numpy.reciprocal
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.reciprocal.html>`_ in
+    the following aspects:
+    - Only support _Symbol and scalar now.
+    - `where` argument is not supported.
+    """
+    return _unary_func_helper(x, _npi.reciprocal, _np.reciprocal, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def square(x, out=None, **kwargs):
+    r"""
+    square(x, out=None)
+    Return the element-wise square of the input.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        The values whose reciprocals are required.
+    out : _Symbol, or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    y : _Symbol or scalar
+        Output array is same shape and type as x. This is a scalar if x is a scalar.
+    Notes
+    -----
+    The output `symbol` has the same `ctx` as the input `symbol`.
+    This function differs from the original `numpy.square
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.square.html>`_ in
+    the following aspects:
+    - Only support _Symbol and scalar now.
+    - `where` argument is not supported.
+    """
+    return _unary_func_helper(x, _npi.square, _np.square, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def negative(x, out=None, where=True, **kwargs):
+    r"""
+    negative(x, out=None, where=True)
+    Numerical negative, element-wise.
+    Parameters:
+    ------------
+    x : _Symbol or scalar
+        Input array.
+    out : _Symbol or None, optional
+          A location into which the result is stored.
+          If provided, it must have a shape that the inputs broadcast to.
+          If not provided or None, a freshly-allocated array is returned.
+          A tuple (possible only as a keyword argument) must have length
+          equal to the number of outputs.
+    where : _Symbol or scalar, optional
+            Values of True indicate to calculate the ufunc at that position,
+            values of False indicate to leave the value in the output alone.
+    Returns:
+    -------
+    y : _Symbol or scalar
+        Returned array or scalar: y = -x. This is a scalar if x is a scalar.
+    Examples:
+    ---------
+    >>> np.negative(1)
+    -1
+    """
+    return _unary_func_helper(x, _npi.negative, _np.negative, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def fix(x, out=None):
+    """
+    Round to nearest integer towards zero.
+
+    Round an array of floats element-wise to nearest integer towards zero. The rounded values are returned as floats.
+
+    Parameters:
+    ----------
+    x : _Symbol or scalar
+        An array of floats to be rounded
+    out : _Symbol or scalar, optional
+          Output array
+    Returns:
+    ---------
+    y : _Symbol or scalar
+    Examples:
+    ----------
+    >>> np.fix(3.14)
+    3
+    """
+    return _unary_func_helper(x, _npi.fix, _np.fix, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def tan(x, out=None, where=True, **kwargs):
+    r"""
+    tan(x, out=None, where=True)
+    Compute tangent element-wise.
+    Equivalent to np.sin(x)/np.cos(x) element-wise.
+
+    Parameters:
+    ----------
+    x : _Symbol or scalar
+        Input array.
+    out : _Symbol or scalar or None.
+        A location into which the result is stored. If provided,
+        it must have a shape that the inputs broadcast to. If not provided or None,
+        a freshly-allocated array is returned. A tuple (possible only as a keyword argument)
+        must have length equal to the number of outputs.
+    where : array_like, optional
+            Values of True indicate to calculate the ufunc at that position,
+            values of False indicate to leave the value in the output alone.
+    Returns:
+    -------
+    y : _Symbol or scalar
+        The corresponding tangent values. This is a scalar if x is a scalar.
+    """
+
+    return _unary_func_helper(x, _npi.tan, _np.tan, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def ceil(x, out=None, **kwargs):
+    r"""
+    Return the ceiling of the input, element-wise.
+    The ceil of the ndarray `x` is the smallest integer `i`, such that
+    `i >= x`.  It is often denoted as :math:`\lceil x \rceil`.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array.
+    out : _Symbol or None
+          Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    y :
+        _Symbol or scalar
+        The ceiling of each element in `x`, with `float` dtype.
+        This is a scalar if `x` is a scalar.
+    Examples
+    --------
+    >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
+    >>> np.ceil(a)
+    array([-1., -1., -0.,  1.,  2.,  2.,  2.])
+    >>> #if you use parameter out, x and out must be ndarray. if not, you will get an error!
+    >>> a = np.array(1)
+    >>> np.ceil(np.array(3.5), a)
+    array(4.)
+    >>> a
+    array(4.)
+    """
+    return _unary_func_helper(x, _npi.ceil, _np.ceil, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def floor(x, out=None, **kwargs):
+    r"""
+    Return the floor of the input, element-wise.
+    The floor of the ndarray `x` is the largest integer `i`, such that
+    `i <= x`.  It is often denoted as :math:`\lfloor x \rfloor`.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array.
+    out : _Symbol or None
+          Dummy parameter to keep the consistency with the ndarray counterpart.
+    Returns
+    -------
+    y :
+        _Symbol or scalar
+        The floor of each element in `x`, with `float` dtype.
+        This is a scalar if `x` is a scalar.
+    Examples
+    --------
+    >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
+    >>> np.floor(a)
+    array([-2., -2., -1.,  0.,  1.,  1.,  2.])
+    >>> #if you use parameter out, x and out must be ndarray. if not, you will get an error!
+    >>> a = np.array(1)
+    >>> np.floor(np.array(3.5), a)
+    array(3.)
+    >>> a
+    array(3.)
+    """
+    return _unary_func_helper(x, _npi.floor, _np.floor, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def trunc(x, out=None, **kwargs):
+    r"""
+    trunc(x, out=None)
+    Return the truncated value of the input, element-wise.
+    The truncated value of the scalar `x` is the nearest integer `i` which
+    is closer to zero than `x` is. In short, the fractional part of the
+    signed number `x` is discarded.
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input data.
+    out : _Symbol or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    y : _Symbol or scalar
+        The truncated value of each element in `x`.
+        This is a scalar if `x` is a scalar.
+    Notes
+    -----
+    This function differs from the original numpy.trunc in the following aspects:
+        - Do not support `where`, a parameter in numpy which indicates where to calculate.
+        - Cannot cast type automatically. Dtype of `out` must be same as the expected one.
+        - Cannot broadcast automatically. Shape of `out` must be same as the expected one.
+        - If `x` is plain python numeric, the result won't be stored in out.
+    """
+    return _unary_func_helper(x, _npi.trunc, _np.trunc, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def logical_not(x, out=None, **kwargs):
+    r"""
+    logical_not(x, out=None)
+    Compute the truth value of NOT x element-wise.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Logical NOT is applied to the elements of `x`.
+    out : _Symbol or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    y : bool or _Symbol
+        Boolean result with the same shape as `x` of the NOT operation
+        on elements of `x`.
+        This is a scalar if `x` is a scalar.
+    Notes
+    -----
+    This function differs from the original numpy.logical_not in the following aspects:
+        - Do not support `where`, a parameter in numpy which indicates where to calculate.
+        - Cannot cast type automatically. Dtype of `out` must be same as the expected one.
+        - Cannot broadcast automatically. Shape of `out` must be same as the expected one.
+        - If `x` is plain python numeric, the result won't be stored in out.
+    """
+    return _unary_func_helper(x, _npi.logical_not, _np.logical_not, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def arcsinh(x, out=None, **kwargs):
+    r"""
+    arcsinh(x, out=None)
+    Inverse hyperbolic sine, element-wise.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array.
+    out : _Symbol or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    arcsinh : _Symbol
+        Array of the same shape as `x`.
+        This is a scalar if `x` is a scalar.
+    Notes
+    -----
+    `arcsinh` is a multivalued function: for each `x` there are infinitely
+    many numbers `z` such that `sinh(z) = x`.
+
+    For real-valued input data types, `arcsinh` always returns real output.
+    For each value that cannot be expressed as a real number or infinity, it
+    yields ``nan`` and sets the `invalid` floating point error flag.
+
+    This function differs from the original numpy.arcsinh in the following aspects:
+        - Do not support `where`, a parameter in numpy which indicates where to calculate.
+        - Do not support complex-valued input.
+        - Cannot cast type automatically. DType of `out` must be same as the expected one.
+        - Cannot broadcast automatically. Shape of `out` must be same as the expected one.
+        - If `x` is plain python numeric, the result won't be stored in out.
+    """
+    return _unary_func_helper(x, _npi.arcsinh, _np.arcsinh, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def arccosh(x, out=None, **kwargs):
+    r"""
+    arccosh(x, out=None)
+    Inverse hyperbolic cosine, element-wise.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array.
+    out : _Symbol or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    arccosh : _Symbol
+        Array of the same shape as `x`.
+        This is a scalar if `x` is a scalar.
+    Notes
+    -----
+    `arccosh` is a multivalued function: for each `x` there are infinitely
+    many numbers `z` such that `cosh(z) = x`.
+
+    For real-valued input data types, `arccosh` always returns real output.
+    For each value that cannot be expressed as a real number or infinity, it
+    yields ``nan`` and sets the `invalid` floating point error flag.
+
+    This function differs from the original numpy.arccosh in the following aspects:
+        - Do not support `where`, a parameter in numpy which indicates where to calculate.
+        - Do not support complex-valued input.
+        - Cannot cast type automatically. Dtype of `out` must be same as the expected one.
+        - Cannot broadcast automatically. Shape of `out` must be same as the expected one.
+        - If `x` is plain python numeric, the result won't be stored in out.
+    """
+    return _unary_func_helper(x, _npi.arccosh, _np.arccosh, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def arctanh(x, out=None, **kwargs):
+    r"""
+    arctanh(x, out=None)
+    Inverse hyperbolic tangent, element-wise.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array.
+    out : _Symbol or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    arctanh : _Symbol
+        Array of the same shape as `x`.
+        This is a scalar if `x` is a scalar.
+    Notes
+    -----
+    `arctanh` is a multivalued function: for each `x` there are infinitely
+    many numbers `z` such that `tanh(z) = x`.
+
+    For real-valued input data types, `arctanh` always returns real output.
+    For each value that cannot be expressed as a real number or infinity, it
+    yields ``nan`` and sets the `invalid` floating point error flag.
+
+    This function differs from the original numpy.arctanh in the following aspects:
+        - Do not support `where`, a parameter in numpy which indicates where to calculate.
+        - Do not support complex-valued input.
+        - Cannot cast type automatically. Dtype of `out` must be same as the expected one.
+        - Cannot broadcast automatically. Shape of `out` must be same as the expected one.
+        - If `x` is plain python numeric, the result won't be stored in out.
+    """
+    return _unary_func_helper(x, _npi.arctanh, _np.arctanh, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
 def tile(A, reps):
     r"""
     Construct an array by repeating A the number of times given by reps.
@@ -1333,6 +2363,314 @@ def concatenate(seq, axis=0, out=None):
         The concatenated array.
     """
     return _npi.concatenate(*seq, dim=axis, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def stack(arrays, axis=0, out=None):
+    """Join a sequence of arrays along a new axis.
+        The axis parameter specifies the index of the new axis in the dimensions of the result.
+        For example, if `axis=0` it will be the first dimension and if `axis=-1` it will be the last dimension.
+    Parameters
+    ----------
+    arrays : sequence of array_like
+        Each array must have the same shape.
+    axis : int, optional
+        The axis in the result array along which the input arrays are stacked.
+    out : ndarray, optional
+        If provided, the destination to place the result. The shape must be correct,
+        matching that of what stack would have returned if no out argument were specified.
+    Returns
+    -------
+    stacked : ndarray
+        The stacked array has one more dimension than the input arrays."""
+    def get_list(arrays):
+        if not hasattr(arrays, '__getitem__') and hasattr(arrays, '__iter__'):
+            raise ValueError("expected iterable for arrays but got {}".format(type(arrays)))
+        return [arr for arr in arrays]
+
+    arrays = get_list(arrays)
+    return _npi.stack(*arrays, axis=axis, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def maximum(x1, x2, out=None):
+    return _ufunc_helper(x1, x2, _npi.maximum, _np.maximum, _npi.maximum_scalar, None, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def minimum(x1, x2, out=None):
+    return _ufunc_helper(x1, x2, _npi.minimum, _np.minimum, _npi.minimum_scalar, None, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def clip(a, a_min, a_max, out=None):
+    """clip(a, a_min, a_max, out=None)
+
+    Clip (limit) the values in an array.
+    Given an interval, values outside the interval are clipped to
+    the interval edges.  For example, if an interval of ``[0, 1]``
+    is specified, values smaller than 0 become 0, and values larger
+    than 1 become 1.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Array containing elements to clip.
+    a_min : scalar or `None`
+        Minimum value. If `None`, clipping is not performed on lower
+        interval edge. Not more than one of `a_min` and `a_max` may be
+        `None`.
+    a_max : scalar or `None`
+        Maximum value. If `None`, clipping is not performed on upper
+        interval edge. Not more than one of `a_min` and `a_max` may be
+        `None`.
+    out : _Symbol or `None`
+        The results will be placed in this array. It may be the input
+        array for in-place clipping.  `out` must be of the right shape
+        to hold the output.  Its type is preserved.
+
+    Returns
+    -------
+    clipped_array : _Symbol
+        An array with the elements of `a`, but where values
+        < `a_min` are replaced with `a_min`, and those > `a_max`
+        with `a_max`.
+
+    Notes
+    -----
+    array_like `a_min` and `a_max` are not supported.
+    """
+    if a_min is None and a_max is None:
+        raise ValueError('array_clip: must set either max or min')
+    if a_min is None:
+        a_min = float('-inf')
+    if a_max is None:
+        a_max = float('inf')
+    return _npi.clip(a, a_min, a_max, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def swapaxes(a, axis1, axis2):
+    """Interchange two axes of an array.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input array.
+    axis1 : int
+        First axis.
+    axis2 : int
+        Second axis.
+
+    Returns
+    -------
+    a_swapped : _Symbol
+        Swapped array symbol.
+    """
+    return _npi.swapaxes(a, dim1=axis1, dim2=axis2)
+
+
+@set_module('mxnet.symbol.numpy')
+def argmax(a, axis=None, out=None):
+    r"""
+    argmax(a, axis=None, out=None)
+
+    Returns the indices of the maximum values along an axis.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input array. Only support dtype `float16`, `float32`, and `float64`.
+    axis : int, optional
+        By default, the index is into the flattened array, otherwise
+        along the specified axis.
+    out : _Symbol or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    index_array : _Symbol of indices whose dtype is same as the input ndarray.
+        Array of indices into the array. It has the same shape as `a.shape`
+        with the dimension along `axis` removed.
+
+    Notes
+    -----
+    In case of multiple occurrences of the maximum values, the indices
+    corresponding to the first occurrence are returned.
+
+    This function differs from the original `numpy.argmax
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.argmax.html>`_ in
+    the following aspects:
+
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - Output has dtype that is same as the input ndarray.
+    - ``out`` param: cannot perform auto broadcasting. ``out`` symbol's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` symnbol's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+
+    """
+    return _npi.argmax(a, axis=axis, keepdims=False, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
+    """
+    mean(a, axis=None, dtype=None, out=None, keepdims=None)
+
+    Compute the arithmetic mean along the specified axis.
+    Returns the average of the array elements.
+    The average is taken over the flattened array by default, otherwise over the specified axis.
+
+    Parameters
+    ----------
+    a : `_Symbol`
+        _Symbol containing numbers whose mean is desired.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which the means are computed. The default is to compute the mean of the flattened array.
+        If this is a tuple of ints, a mean is performed over multiple axes,
+        instead of a single axis or all the axes as before.
+    dtype : data-type, optional
+        Type to use in computing the mean. For integer inputs, the default is float32;
+        for floating point inputs, it is the same as the input dtype.
+    out : _Symbol, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in the result
+        as dimensions with size one. With this option, the result will broadcast correctly
+        against the input array.
+        If the default value is passed, then keepdims will not be passed through to the mean
+        method of sub-classes of _Symbol, however any non-default value will be. If the sub-class
+        method does not implement keepdims any exceptions will be raised.
+
+    Returns
+    -------
+    m : _Symbol, see dtype parameter above
+        If out=None, returns a new array containing the mean values,
+        otherwise a reference to the output array is returned.
+
+    Notes
+    -----
+    This function differs from the original `numpy.mean
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.mean.html>`_ in
+    the following way(s):
+
+    - only _Symbol is accepted as valid input, python iterables or scalar is not supported
+    - default data type for integer input is float32
+
+    Examples
+    --------
+    >>> a = np.array([[1, 2], [3, 4]])
+    >>> np.mean(a)
+    array(2.5)
+    >>> a = np.zeros((2, 512*512), dtype=np.float32)
+    >>> a[0,:] = 1.0
+    >>> a[1,:] = 0.1
+    >>> np.mean(a)
+    array(0.55)
+    >>> np.mean(a, dtype=np.float64)
+    array(0.55)
+    """
+    return _npi.mean(a, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=too-many-arguments
+    """
+    Compute the standard deviation along the specified axis.
+
+    Returns the standard deviation, a measure of the spread of a distribution,
+    of the array elements. The standard deviation is computed for the
+    flattened array by default, otherwise over the specified axis.
+
+    Parameters
+    ----------
+    a : `_Symbol`
+        _Symbol containing numbers whose standard deviation is desired.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which the standard deviations are computed.
+        The default is to compute the standard deviation of the flattened array.
+        If this is a tuple of ints, computation is performed over multiple axes,
+        instead of a single axis or all the axes as before.
+    dtype : data-type, optional
+        Type to use in computing the standard deviation. For integer inputs, the default is float32;
+        for floating point inputs, it is the same as the input dtype.
+    out : _Symbol, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in the result
+        as dimensions with size one. With this option, the result will broadcast correctly
+        against the input array.
+        If the default value is passed, then keepdims will not be passed through to the mean
+        method of sub-classes of _Symbol, however any non-default value will be. If the sub-class
+        method does not implement keepdims any exceptions will be raised.
+
+    Returns
+    -------
+    m : _Symbol, see dtype parameter above
+        If out=None, returns a new array containing the standard deviation values,
+        otherwise a reference to the output array is returned.
+
+    Notes
+    -----
+    This function differs from the original `numpy.std
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.mean.html>`_ in
+    the following way(s):
+
+    - only _Symbol is accepted as valid input, python iterables or scalar is not supported
+    - default output data type for integer input is float32
+
+    """
+    return _npi.std(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=too-many-arguments
+    """
+    Compute the variance along the specified axis.
+
+    Returns the variance of the array elements, a measure of the spread of a
+    distribution.  The variance is computed for the flattened array by
+    default, otherwise over the specified axis.
+
+    Parameters
+    ----------
+    a : `_Symbol`
+        _Symbol containing numbers whose variance is desired.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which the variance is computed.
+        The default is to compute the variance of the flattened array.
+        If this is a tuple of ints, computation is performed over multiple axes,
+        instead of a single axis or all the axes as before.
+    dtype : data-type, optional
+        Type to use in computing the variance. For integer inputs, the default is float32;
+        for floating point inputs, it is the same as the input dtype.
+    out : _Symbol, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in the result
+        as dimensions with size one. With this option, the result will broadcast correctly
+        against the input array.
+        If the default value is passed, then keepdims will not be passed through to the mean
+        method of sub-classes of _Symbol, however any non-default value will be. If the sub-class
+        method does not implement keepdims any exceptions will be raised.
+
+    Returns
+    -------
+    m : _Symbol, see dtype parameter above
+        If out=None, returns a new array containing the variance values,
+        otherwise a reference to the output array is returned.
+
+    Notes
+    -----
+    This function differs from the original `numpy.var
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.mean.html>`_ in
+    the following way(s):
+
+    - only _Symbol is accepted as valid input, python iterables or scalar is not supported
+    - default output data type for integer input is float32
+
+    """
+    return _npi.var(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
 
 
 _set_np_symbol_class(_Symbol)
