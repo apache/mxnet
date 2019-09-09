@@ -352,11 +352,11 @@ class MKLDNNStream {
  public:
   static MKLDNNStream *Get();
 
-  MKLDNNStream(): s(CpuEngine::Get()->get_engine()) {}
+  MKLDNNStream(): s(CpuEngine::Get()->get_engine()) {};
 
   void RegisterPrimArgs(const mkldnn::primitive &prim,
                         const mkldnn_args_map_t &args) {
-    net_prim_args.push_back(std::make_pair(prim, args));
+    net_prim_args.emplace_back(prim, args);
   }
 
   void RegisterMem(std::shared_ptr<const mkldnn::memory> mem) {
@@ -399,7 +399,7 @@ typedef std::pair<OutDataOp, mkldnn::memory *> mkldnn_output_t;
 void MKLDNNCopy(const mkldnn::memory &mem, const mkldnn::memory* this_mem);
 
 /*
- * Here we want to get MKLDNN memory whose primitive desc is exactly the same as
+ * Here we want to get MKLDNN memory whose desc is exactly the same as
  * the given one. operator== can't guarantee that. == can return true even if
  * the formats are different. I need to double check its format.
  */
@@ -496,7 +496,7 @@ inline bool same_shape(const mxnet::TShape &shape, int dtype,
 }
 
 /*
- * There is a large overhead of getting mkldnn::memory::primitive_desc from
+ * There is a large overhead of getting mkldnn::memory::desc from
  * mkldnn::memory. This class is created to cache the metadata of mkldnn memory
  * to provide a much more lightweight method to access them.
  */
