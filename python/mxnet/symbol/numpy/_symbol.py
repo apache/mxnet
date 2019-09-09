@@ -223,11 +223,11 @@ class _Symbol(Symbol):
         return _mx_np_op.dot(self, b, out=out)
 
     def reshape(self, *args, **kwargs):  # pylint: disable=arguments-differ
-        """Returns an array containing the same data with a new shape.
+        """Returns a copy of the array with a new shape.
 
         Notes
         -----
-        Unlike the free function `numpy.reshape`, this method on `ndarray` allows
+        Unlike the free function `mxnet.numpy.reshape`, this method on `ndarray` allows
         the elements of the shape parameter to be passed in as separate arguments.
         For example, ``a.reshape(10, 11)`` is equivalent to
         ``a.reshape((10, 11))``.
@@ -289,7 +289,7 @@ class _Symbol(Symbol):
 
     def repeat(self, repeats, axis=None):  # pylint: disable=arguments-differ
         """Repeat elements of an array."""
-        raise NotImplementedError
+        return _mx_np_op.repeat(self, repeats=repeats, axis=axis)
 
     def pad(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`pad`.
@@ -543,19 +543,15 @@ class _Symbol(Symbol):
 
     def cumsum(self, axis=None, dtype=None, out=None):
         """Return the cumulative sum of the elements along the given axis."""
-        raise NotImplementedError
+        return _mx_np_op.cumsum(self, axis=axis, dtype=dtype, out=out)
 
     def max(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return the maximum along a given axis."""
-        raise NotImplementedError
+        return _mx_np_op.max(self, axis=axis, keepdims=keepdims, out=out)
 
-    def min(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`min`.
-
-        The arguments are the same as for :py:func:`min`, with
-        this array as data.
-        """
-        raise NotImplementedError
+    def min(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
+        """Return the minimum along a given axis."""
+        return _mx_np_op.min(self, axis=axis, keepdims=keepdims, out=out)
 
     def norm(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`norm`.
