@@ -161,7 +161,7 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, **kwargs):
         samples are drawn. If size is `None` (default), a scalar tensor containing
         a single value is returned if loc and scale are both scalars.
     dtype : {'float16', 'float32', 'float64'}, optional
-        Data type of output samples. Default is 'float32'
+        Data type of output samples. Default is 'float32'.
     ctx : Context, optional
         Device context of output. Default is current context.
 
