@@ -715,12 +715,13 @@ def test_full():
 
 
 def test_one_hot():
-    a = nd.zeros(10)
-    a[0] = 1
-    a[-1] = 1
+    #default dtype of ndarray is float32 which cannot index elements over 2^32
+    a = nd.array([1], dtype=np.int64)
     b = nd.one_hot(a, LARGE_X)
     assert b[0][1] == 1
-    assert b[-1][1] == 1
+    a = nd.array([LARGE_X-1], dtype=np.int64)
+    b = nd.one_hot(a, LARGE_X)
+    assert b[0][-1] == 1
 
 
 if __name__ == '__main__':
