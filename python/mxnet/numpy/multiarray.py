@@ -1597,7 +1597,7 @@ class ndarray(NDArray):
 
 
 @set_module('mxnet.numpy')
-def empty(shape, dtype=float, order='C', ctx=None):
+def empty(shape, dtype=_np.float32, order='C', ctx=None):
     """Return a new array of given shape and type, without initializing entries.
 
     Parameters
@@ -1621,7 +1621,8 @@ def empty(shape, dtype=float, order='C', ctx=None):
         Array of uninitialized (arbitrary) data of the given shape, dtype, and order.
     """
     if order != 'C':
-        raise NotImplementedError
+        raise NotImplementedError('`empty` only supports order equal to `C`, while received {}'
+                                  .format(str(order)))
     if ctx is None:
         ctx = current_context()
     if dtype is None:
@@ -1654,7 +1655,7 @@ def array(object, dtype=None, ctx=None):
     """
     if ctx is None:
         ctx = current_context()
-    if isinstance(object, (ndarray, _np.ndarray)):
+    if isinstance(object, ndarray):
         dtype = object.dtype if dtype is None else dtype
     else:
         dtype = _np.float32 if dtype is None else dtype
