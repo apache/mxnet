@@ -31,7 +31,38 @@ import scipy.stats as ss
 
 @with_seed()
 @use_np
-def test_array_creation():
+def test_np_empty():
+    dtypes = [np.int8, np.int32, np.float16, np.float32, np.float64, None]
+    expected_dtypes = [np.int8, np.int32, np.float16, np.float32, np.float64, np.float32]
+    orders = ['C', 'F', 'A']
+    shapes = [
+        (),
+        0,
+        (0,),
+        (0, 0),
+        2,
+        (2,),
+        (3, 0),
+        (4, 5),
+        (1, 1, 1, 1),
+    ]
+    ctxes = [npx.current_context(), None]
+    for dtype, expected_dtype in zip(dtypes, expected_dtypes):
+        for shape in shapes:
+            for order in orders:
+                for ctx in ctxes:
+                    if order == 'C':
+                        ret = np.empty(shape, dtype, order, ctx)
+                        assert ret.dtype == expected_dtype
+                        assert ret.shape == shape if isinstance(shape, tuple) else (shape,)
+                        assert ret.ctx == npx.current_context()
+                    else:
+                        assert_exception(np.empty, NotImplementedError, shape, dtype, order, ctx)
+
+
+@with_seed()
+@use_np
+def test_np_array_creation():
     dtypes = [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64, None]
     objects = [
         [],
@@ -54,7 +85,7 @@ def test_array_creation():
 
 @with_seed()
 @use_np
-def test_zeros():
+def test_np_zeros():
     # test np.zeros in Gluon
     class TestZeros(HybridBlock):
         def __init__(self, shape, dtype=None):
@@ -102,7 +133,7 @@ def test_zeros():
 
 @with_seed()
 @use_np
-def test_ones():
+def test_np_ones():
     # test np.ones in Gluon
     class TestOnes(HybridBlock):
         def __init__(self, shape, dtype=None):
@@ -149,7 +180,7 @@ def test_ones():
 
 
 @with_seed()
-def test_ndarray_binary_element_wise_ops():
+def test_np_ndarray_binary_element_wise_ops():
     np_op_map = {
         '+': _np.add,
         '*': _np.multiply,
@@ -304,7 +335,7 @@ def test_ndarray_binary_element_wise_ops():
 
 
 @with_seed()
-def test_hybrid_block_multiple_outputs():
+def test_np_hybrid_block_multiple_outputs():
     @use_np
     class TestAllNumpyOutputs(HybridBlock):
         def hybrid_forward(self, F, x, *args, **kwargs):
@@ -338,7 +369,7 @@ def test_hybrid_block_multiple_outputs():
 
 @with_seed()
 @use_np
-def test_grad_ndarray_type():
+def test_np_grad_ndarray_type():
     data = np.array(2, dtype=_np.float32)
     data.attach_grad()
     assert type(data.grad) == np.ndarray

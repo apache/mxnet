@@ -59,6 +59,7 @@ _NDARRAY_UNSUPPORTED_INDEXING = -1
 _NDARRAY_BASIC_INDEXING = 0
 _NDARRAY_ADVANCED_INDEXING = 1
 
+
 # This function is copied from ndarray.py since pylint
 # keeps giving false alarm error of undefined-all-variable
 def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
