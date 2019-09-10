@@ -1822,6 +1822,37 @@ def test_np_repeat():
             assert same(ret_mx.asnumpy(), ret_np)
 
 
+@with_seed()
+@use_np
+def test_np_linalg_norm():
+    @use_np
+    class TestLinalgNorm(HybridBlock):
+        def __init__(self, ord=None, axis=None, keepdims=False):
+            super(TestLinalgNorm, self).__init__()
+            self._ord = ord
+            self._axis = axis
+            self._keepdims = keepdims
+
+        def hybrid_forward(self, F, x):
+            return F.np.linalg.norm(x, ord=self._ord, axis=self._axis, keepdims=self._keepdims)
+
+    a = np.arange(5 * 6 * 7 * 8).reshape((5, 6, 7, 8))
+    ords = [None, 'fro']
+    axes = [None, (0, 2), (1, 0), (1, 2)]
+    for ord in ords:
+        for axis in axes:
+            if ord == 'fro' and axis is None and a.ndim > 2:
+                continue
+            for keepdims in [False, True]:
+                for hybridize in [False, True]:
+                    net = TestLinalgNorm(ord, axis, keepdims)
+                    if hybridize:
+                        net.hybridize()
+                    mx_ret = net(a)
+                    np_ret = _np.linalg.norm(a.asnumpy(), ord=ord, axis=axis, keepdims=keepdims)
+                    assert_almost_equal(mx_ret.asnumpy(), np_ret, atol=1e-5, rtol=1e-4)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
