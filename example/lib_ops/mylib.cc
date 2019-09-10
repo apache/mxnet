@@ -42,7 +42,21 @@ void gemm(float* A, float* B, float* C, unsigned n, unsigned k, unsigned m) {
   }
 }
 
+void transpose(float* A, float* At, unsigned n, unsigned m) {
+  unsigned i,j;
+  for (i=0; i < n; i++) {
+    for (j=0; j < m; j++) {
+      At[i][j] = A[j][i];
+    }
+  }
+}
 
+/*
+ * Executes C = A * B
+ * inputs[0] = A
+ * inputs[1] = B
+ * outputs[0] = C
+ */
 MXReturnValue forward(std::map<std::string,std::string> attrs,
                std::vector<MXTensor> inputs, std::vector<MXTensor> outputs,
                OpResource res) {
@@ -55,15 +69,56 @@ MXReturnValue forward(std::map<std::string,std::string> attrs,
   }
   
   //extract data pointers from tensors
-  float* input1 = inputs[0].getData<float>();
-  float* input2 = inputs[1].getData<float>();
-  float* output = outputs[0].getData<float>();
+  float* A = inputs[0].getData<float>();
+  float* B = inputs[1].getData<float>();
+  float* C = outputs[0].getData<float>();
   //set tensor shapes
   unsigned n = inputs[0].shape[0];
   unsigned k = inputs[0].shape[1];
   unsigned m = inputs[1].shape[1];
 
-  gemm(input1, input2, output, n, k, m);
+  gemm(A, B, C, n, k, m);
+  
+  return MX_SUCCESS;
+}
+
+/*
+ * Executes dA = dC * B.T
+ * Executes dB = A.T * dC
+ ***** gradient inputs
+ * inputs[0] = dC
+ ***** original inputs
+ * inputs[1] = A
+ * inputs[2] = B
+ ***** original outputs
+ * inputs[3] = C
+ ***** gradient outputs
+ * outputs[0] = dA
+ * outputs[1] = dB
+ */
+MXReturnValue backward(std::map<std::string,std::string> attrs,
+               std::vector<MXTensor> inputs, std::vector<MXTensor> outputs,
+               OpResource res) {
+  //validate inputs
+  for(int i=0; i<inputs.size(); i++) {
+    if(inputs[i].dtype != kFloat32) {
+      std::cout << "Expected input " << i << " to have float32 type" << std::endl;
+      return MX_FAIL;
+    }
+  }
+  
+  //extract data pointers from tensors
+  float* dC = inputs[0].getData<float>();
+  float* A = inputs[1].getData<float>();
+  float* B = inputs[2].getData<float>();
+  float* dA = outputs[0].getData<float>();
+  float* dB = outputs[1].getData<float>();
+  //set tensor shapes
+  unsigned n = inputs[0].shape[0];
+  unsigned k = inputs[0].shape[1];
+  unsigned m = inputs[1].shape[1];
+
+  //gemm(input1, input2, output, n, k, m);
   
   return MX_SUCCESS;
 }
