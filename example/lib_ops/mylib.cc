@@ -46,7 +46,7 @@ void transpose(float* A, float* At, unsigned n, unsigned m) {
   unsigned i,j;
   for (i=0; i < n; i++) {
     for (j=0; j < m; j++) {
-      At[i][j] = A[j][i];
+      At[i*n+j] = A[j*m+i];
     }
   }
 }
@@ -72,6 +72,7 @@ MXReturnValue forward(std::map<std::string,std::string> attrs,
   float* A = inputs[0].getData<float>();
   float* B = inputs[1].getData<float>();
   float* C = outputs[0].getData<float>();
+
   //set tensor shapes
   unsigned n = inputs[0].shape[0];
   unsigned k = inputs[0].shape[1];
@@ -214,4 +215,3 @@ MXReturnValue initialize(int version) {
     return MX_FAIL;
   }
 }
-

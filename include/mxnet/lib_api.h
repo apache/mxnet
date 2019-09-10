@@ -32,6 +32,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <iostream>
 
 #define MX_LIBRARY_VERSION 1
 
@@ -76,12 +77,12 @@ struct MXTensor {
 };
 
 /*!
- * \brief resource malloc function to allocate memory inside fcompute function
+ * \brief resource malloc function to allocate memory inside Forward/Backward functions
  */
 typedef void* (*xpu_malloc_t)(void*, int);
 
 /*!
- * \brief Class to provide resource APIs to FCompute
+ * \brief Class to provide resource APIs to Forward/Backward functions
  */
 class OpResource {
  public:
@@ -99,6 +100,39 @@ class OpResource {
 };
 
 /*!
+ * \brief Macro to help passing serialized subgraph through attribute dict
+ */
+#define SUBGRAPH_SYM_JSON "subgraph_sym_json"
+
+/*!
+ * \brief An prototype interface class for library author creating stateful op
+ */
+class CustomStatefulOp {
+ public:
+  virtual int Forward(std::vector<MXTensor>& inputs,
+                      std::vector<MXTensor>& outputs,
+                      OpResource op_res) = 0;
+  virtual int Backward(std::vector<MXTensor>& inputs,
+                       std::vector<MXTensor>& outputs,
+                       OpResource op_res) {
+    std::cout << "Error! Operator does not support backward" << std::endl;
+    return MX_FAIL;
+  }
+  virtual ~CustomStatefulOp() = 0;
+};
+
+/*!
+ * \brief StatefulOp wrapper class to pass to backend OpState
+ */
+class CustomStatefulOpWrapper {
+ public:
+  explicit CustomStatefulOpWrapper(CustomStatefulOp* inst) : instance(inst) {}
+  CustomStatefulOp* get_instance() { return instance; }
+ private:
+  CustomStatefulOp* instance;
+};
+
+/*!
  * Custom Operator function templates
  */
 typedef MXReturnValue (*fcomp_t)(std::map<std::string, std::string>,
@@ -113,22 +147,24 @@ typedef MXReturnValue (*inferShape_t)(std::map<std::string, std::string>,
                                       std::vector<std::vector<unsigned int>>&);
 typedef MXReturnValue (*mutateInputs_t)(std::map<std::string, std::string>,
                                       std::vector<int>&);
+typedef MXReturnValue (*createOpState_t)(std::map<std::string, std::string>,
+                                      CustomStatefulOp**);
 
 /*!
  * \brief Class to hold custom operator registration
  */
 class CustomOp {
  public:
-  explicit CustomOp(const char* op_name) : name(op_name), fcompute(nullptr),
-    fgradient(nullptr), parse_attrs(nullptr), infer_type(nullptr),
-    infer_shape(nullptr), mutate_inputs(nullptr) {}
+  explicit CustomOp(const char* op_name) : name(op_name), forward(nullptr),
+    backward(nullptr), parse_attrs(nullptr), infer_type(nullptr), infer_shape(nullptr),
+    mutate_inputs(nullptr), create_opstate(nullptr) {}
   ~CustomOp() {}
   CustomOp& setForward(fcomp_t fcomp) {
-    fcompute = fcomp;
+    forward = fcomp;
     return *this;
   }
-  CustomOp& setGradient(fcomp_t fcomp) {
-    fgradient = fcomp;
+  CustomOp& setBackward(fcomp_t fcomp) {
+    backward = fcomp;
     return *this;
   }
   CustomOp& setParseAttrs(parseAttrs_t func) {
@@ -147,15 +183,21 @@ class CustomOp {
     mutate_inputs = func;
     return *this;
   }
+  CustomOp& setCreateOpState(createOpState_t func) {
+    create_opstate = func;
+    return *this;
+  }
+
   /*! \brief operator name */
   const char* name;
   /*! \brief operator functions */
-  fcomp_t fcompute;
-  fcomp_t fgradient;
+  fcomp_t forward;
+  fcomp_t backward;
   parseAttrs_t parse_attrs;
   inferType_t infer_type;
   inferShape_t infer_shape;
   mutateInputs_t mutate_inputs;
+  createOpState_t create_opstate;
 };
 
 /*!
@@ -240,7 +282,8 @@ typedef int (*opRegSize_t)(void);
 #define MXLIB_OPREGGET_STR "_opRegGet"
 typedef int (*opRegGet_t)(int, const char**, fcomp_t*, fcomp_t*,
                           parseAttrs_t*, inferType_t*,
-                          inferShape_t*, mutateInputs_t*);
+                          inferShape_t*, mutateInputs_t*,
+                          createOpState_t*);
 
 #define MXLIB_OPCALLFREE_STR "_opCallFree"
 typedef int (*opCallFree_t)(void*);
@@ -260,13 +303,23 @@ typedef int (*opCallInferType_t)(inferType_t, const char* const*, const char* co
 
 #define MXLIB_OPCALLFCOMP_STR "_opCallFCompute"
 typedef int (*opCallFComp_t)(fcomp_t, const char* const*, const char* const*, int,
-                             const int64_t**, int*, void**, int*, int,
-                             const int64_t**, int*, void**, int*, int,
-                             xpu_malloc_t, void*);
+                           const int64_t**, int*, void**, int*, int,
+                           const int64_t**, int*, void**, int*, int,
+                           xpu_malloc_t, void*);
+
+#define MXLIB_OPCALLBKWD_STR "_opCallBackward"
+typedef int (*opCallBkwd_t)(fcomp_t, const char* const*, const char* const*, int,
+                            const int64_t**, int*, void**, int*, int,
+                            const int64_t**, int*, void**, int*, int,
+                            xpu_malloc_t, void*);
 
 #define MXLIB_OPCALLMUTATEINPUTS_STR "_opCallMutateInputs"
 typedef int (*opCallMutateInputs_t)(mutateInputs_t, const char* const*, const char* const*, int,
                                     int**, int*);
+
+#define MXLIB_OPCALLCREATEOPSTATE_STR "_opCallCreateOpState"
+typedef int (*opCallCreateOpState_t)(createOpState_t, const char* const*, const char* const*, int,
+                                     void**);
 
 #define MXLIB_INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int);
@@ -309,15 +362,17 @@ extern "C" {
 #endif
   _opRegGet(int idx, const char** name, fcomp_t* fcomp, fcomp_t* fgrad,
             parseAttrs_t* parse, inferType_t* type,
-            inferShape_t* shape, mutateInputs_t* mutate) {
+            inferShape_t* shape, mutateInputs_t* mutate,
+            createOpState_t* create_op) {
     CustomOp op = Registry<CustomOp>::get()->get(idx);
     *name = op.name;
-    *fcomp = op.fcompute;
-    *fgrad = op.fgradient;
+    *fcomp = op.forward;
+    *fgrad = op.backward;
     *parse = op.parse_attrs;
     *type = op.infer_type;
     *shape = op.infer_shape;
     *mutate = op.mutate_inputs;
+    *create_op = op.create_opstate;
   }
 
   /*!
@@ -440,7 +495,7 @@ extern "C" {
   }
 
   /*!
-   * \brief returns status of calling FCompute function for operator from library
+   * \brief returns status of calling Forward function for operator from library
    */
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
@@ -519,6 +574,29 @@ extern "C" {
 
     return retval;
   }
+
+  /*!
+   * \brief returns status of calling create stateful op function for operator from library
+   */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) int __cdecl
+#else
+  int
+#endif
+  _opCallCreateOpState(createOpState_t create_op, const char* const* keys,
+                       const char* const* vals, int num,
+                       void** state_op) {
+    // create map of attributes from list
+    std::map<std::string, std::string> attrs;
+    for (int i = 0; i < num; i++) {
+      attrs[std::string(keys[i])] = std::string(vals[i]);
+    }
+
+    // void pointer to hold custom state op instance created in custom library
+    CustomStatefulOp** op_ptr = reinterpret_cast<CustomStatefulOp**>(state_op);
+    return create_op(attrs, op_ptr);
+  }
+
   /*!
    * \brief Checks if the MXNet version is supported by the library.
    * If supported, initializes the library.

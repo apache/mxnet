@@ -54,6 +54,7 @@
 #include "../operator/tensor/matrix_op-inl.h"
 #include "../operator/tvmop/op_module.h"
 #include "../common/utils.h"
+#include "nnvm/pass_functions.h"
 
 using namespace mxnet;
 
@@ -134,6 +135,9 @@ int MXLoadLib(const char *path) {
   opCallMutateInputs_t callMutateInputs =
     get_func<opCallMutateInputs_t>(lib, const_cast<char*>(MXLIB_OPCALLMUTATEINPUTS_STR));
 
+  opCallCreateOpState_t callCreateOpState =
+    get_func<opCallCreateOpState_t>(lib, const_cast<char*>(MXLIB_OPCALLCREATEOPSTATE_STR));
+
   // get number of operators registered in the library
   opRegSize_t opRegSize = get_func<opRegSize_t>(lib, const_cast<char*>(MXLIB_OPREGSIZE_STR));
   int numOps = opRegSize();
@@ -154,13 +158,15 @@ int MXLoadLib(const char *path) {
     inferShape_t shape_fp = nullptr;
     // optional attributes
     mutateInputs_t mutate_fp = nullptr;
+    createOpState_t create_opstate_fp = nullptr;
 
     // get custom operator implemenation from the dynamic library
-    opRegGet(i, &name, &fcomp_fp, &fgrad_fp, &parse_fp, &type_fp, &shape_fp, &mutate_fp);
+    opRegGet(i, &name, &fcomp_fp, &fgrad_fp, &parse_fp, &type_fp, &shape_fp,
+                &mutate_fp, &create_opstate_fp);
 
     // validate custom operator functions from the dynamic library
-    CHECK(fcomp_fp != nullptr) << "Error loading '" << name
-                            << "' custom op, FCompute function was not set.";
+    CHECK(fcomp_fp != nullptr || create_opstate_fp != nullptr) << "Error loading '" << name
+                            << "' custom op, Forward or CreateOpState function was not set.";
     CHECK(parse_fp != nullptr) << "Error loading '" << name
                             << "' custom op, ParseAttrs function was not set.";
     CHECK(type_fp  != nullptr) << "Error loading '" << name
@@ -232,7 +238,7 @@ int MXLoadLib(const char *path) {
     };
 
     // lambda function to call parse attributes and return the number of inputs and outputs
-    // for gradient computation
+    // for backward computation
     auto num_inouts = [=](const NodeAttrs& attrs) {
       // convert attributes to vector of char*
       std::vector<const char*> attr_keys, attr_vals;
@@ -397,14 +403,12 @@ int MXLoadLib(const char *path) {
         return data.dptr_;
       };
 
-      typedef decltype(cpu_alloc) alloc_type;
-
       // create lambda without captures so that we can cast it to function pointer
       // this needs to be a lambda function so that we can do the decltype cast
+      typedef decltype(cpu_alloc) alloc_type;
       auto cpu_malloc = [](void* _cpu_alloc, int size) {
         // cast the void* argument to the type for the cpu_alloc lambda function
         alloc_type* cpualloc = static_cast<alloc_type*>(_cpu_alloc);
-
         void* ptr = (*cpualloc)(size);
         return ptr;
       };
@@ -428,7 +432,7 @@ int MXLoadLib(const char *path) {
       return fcomp_lambda(fcomp_fp, attrs, ctx, inputs, req, outputs);
     };
 
-    auto gradient_lambda = [=](const nnvm::NodeAttrs& attrs,
+    auto backward_lambda = [=](const nnvm::NodeAttrs& attrs,
                               const OpContext& ctx,
                               const std::vector<NDArray>& inputs,
                               const std::vector<OpReqType>& req,
@@ -468,6 +472,9 @@ int MXLoadLib(const char *path) {
                                 DispatchMode* dispatch_mode,
                                 std::vector<int>* in_stypes,
                                 std::vector<int>* out_stypes) {
+      // TODO(ziyimu): remove this dense enforce check after supporting sparse tensor
+      CHECK(mxnet::common::ContainsOnlyStorage(*in_stypes, mxnet::kDefaultStorage))
+      << "Error input tensors are not dense for custom operator '" << name_str << "'";
       // set outputs as dense
       return op::storage_type_assign(out_stypes, mxnet::kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);
@@ -501,19 +508,182 @@ int MXLoadLib(const char *path) {
       return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
     };
 
+    // library author should implement and return a 'state' which points to an instance
+    // in lambda we create OpStatePtr using the returned 'state'
+    auto create_opstate = [=] (const NodeAttrs& attrs,
+                                Context ctx,
+                                const std::vector<TShape>& in_shapes,
+                                const std::vector<int>& in_types) {
+      // convert attributes to vector of char*
+      std::vector<const char*> attr_keys, attr_vals;
+      for (auto kv : attrs.dict) {
+        attr_keys.push_back(kv.first.c_str());
+        attr_vals.push_back(kv.second.c_str());
+      }
+
+      // convert subgraph symbol from node attributes to char*
+      if (!attrs.subgraphs.empty()) {
+        nnvm::Graph g;
+        g.outputs = attrs.subgraphs[0].get()->outputs;
+        const std::string serialized_subgraph = nnvm::pass::SaveJSON(g);
+        const std::string subgraph = SUBGRAPH_SYM_JSON;
+        attr_keys.push_back(subgraph.c_str());
+        attr_vals.push_back(serialized_subgraph.c_str());
+      }
+
+      // create a pointer to hold custom op state object
+      void* state_op_inst = nullptr;
+      CHECK(callCreateOpState(create_opstate_fp, attr_keys.data(), attr_vals.data(),
+                              attr_keys.size(), &state_op_inst))
+      << "Error calling CreateOpState for custom operator '" << name_str << "'";
+
+      CHECK(state_op_inst != nullptr)
+      << "Error custom library failed to create stateful operator '" << name_str << "'";
+
+      CustomStatefulOp* state_op = reinterpret_cast<CustomStatefulOp*>(state_op_inst);
+      return OpStatePtr::Create<CustomStatefulOpWrapper>(state_op);
+    };
+
+    auto fstateful_forward_lambda = [=](const OpStatePtr& state_ptr,
+                                        const OpContext& ctx,
+                                        const std::vector<NDArray>& inputs,
+                                        const std::vector<OpReqType>& req,
+                                        const std::vector<NDArray>& outputs) {
+      // create a vector of tensors for inputs
+      std::vector<MXTensor> c_inputs(inputs.size());
+      for (size_t i = 0; i < inputs.size(); i++) {
+        c_inputs[i].data = inputs[i].data().dptr_;
+        c_inputs[i].dtype = (MXDType)inputs[i].dtype();
+        for (int_least16_t j = 0; j < inputs[i].shape().ndim(); j++) {
+          c_inputs[i].shape.push_back(inputs[i].shape().data()[j]);
+        }
+      }
+
+      // create a vector of tensors for outputs
+      std::vector<MXTensor> c_outputs(outputs.size());
+      for (size_t i = 0; i < outputs.size(); i++) {
+        c_outputs[i].data = outputs[i].data().dptr_;
+        c_outputs[i].dtype = (MXDType)outputs[i].dtype();
+        for (int j = 0; j < outputs[i].shape().ndim(); j++) {
+          c_outputs[i].shape.push_back(outputs[i].shape().data()[j]);
+        }
+      }
+
+      // get memory resource
+      const Resource &resource = ctx.requested[0];
+      mshadow::Stream<mxnet::cpu> *cpu_stream = ctx.get_stream<mxnet::cpu>();
+
+      // create lambda that captures stream & resource objects
+      auto cpu_alloc = [&](int size) {
+        mshadow::Tensor<mxnet::cpu, 1, char> data =
+        resource.get_space_typed<mxnet::cpu, 1, char>(mshadow::Shape1(size), cpu_stream);
+        return data.dptr_;
+      };
+
+      // create lambda without captures so that we can cast it to function pointer
+      // this needs to be a lambda function so that we can do the decltype cast
+      typedef decltype(cpu_alloc) alloc_type;
+      auto cpu_malloc = [](void* _cpu_alloc, int size) {
+        // cast the void* argument to the type for the cpu_alloc lambda function
+        alloc_type* cpualloc = static_cast<alloc_type*>(_cpu_alloc);
+        void* ptr = (*cpualloc)(size);
+        return ptr;
+      };
+
+      OpResource op_res(cpu_malloc, &cpu_alloc);
+
+      // retrieve op state object created from CreateOpState
+      CustomStatefulOpWrapper& op = state_ptr.get_state<CustomStatefulOpWrapper>();
+      CustomStatefulOp* state_op_inst = op.get_instance();
+      CHECK(state_op_inst != nullptr)
+      << "Error MXNet cannot load custom stateful operator'" << name_str << "'";
+
+      CHECK(state_op_inst->Forward(c_inputs, c_outputs, op_res))
+      << "Error calling ForwardStateful for custom operator '" << name_str << "'";
+
+      // return type void
+    };
+
+    auto fstateful_backward_lambda = [=](const OpStatePtr& state_ptr,
+                                         const OpContext& ctx,
+                                         const std::vector<NDArray>& inputs,
+                                         const std::vector<OpReqType>& req,
+                                         const std::vector<NDArray>& outputs) {
+      // create a vector of tensors for inputs
+      std::vector<MXTensor> c_inputs(inputs.size());
+      for (size_t i = 0; i < inputs.size(); i++) {
+        c_inputs[i].data = inputs[i].data().dptr_;
+        c_inputs[i].dtype = (MXDType)inputs[i].dtype();
+        for (int_least16_t j = 0; j < inputs[i].shape().ndim(); j++) {
+          c_inputs[i].shape.push_back(inputs[i].shape().data()[j]);
+        }
+      }
+
+      // create a vector of tensors for outputs
+      std::vector<MXTensor> c_outputs(outputs.size());
+      for (size_t i = 0; i < outputs.size(); i++) {
+        c_outputs[i].data = outputs[i].data().dptr_;
+        c_outputs[i].dtype = (MXDType)outputs[i].dtype();
+        for (int j = 0; j < outputs[i].shape().ndim(); j++) {
+          c_outputs[i].shape.push_back(outputs[i].shape().data()[j]);
+        }
+      }
+
+      // get memory resource
+      const Resource &resource = ctx.requested[0];
+      mshadow::Stream<mxnet::cpu> *cpu_stream = ctx.get_stream<mxnet::cpu>();
+
+      // create lambda that captures stream & resource objects
+      auto cpu_alloc = [&](int size) {
+        mshadow::Tensor<mxnet::cpu, 1, char> data =
+        resource.get_space_typed<mxnet::cpu, 1, char>(mshadow::Shape1(size), cpu_stream);
+        return data.dptr_;
+      };
+
+      // create lambda without captures so that we can cast it to function pointer
+      // this needs to be a lambda function so that we can do the decltype cast
+      typedef decltype(cpu_alloc) alloc_type;
+      auto cpu_malloc = [](void* _cpu_alloc, int size) {
+        // cast the void* argument to the type for the cpu_alloc lambda function
+        alloc_type* cpualloc = static_cast<alloc_type*>(_cpu_alloc);
+        void* ptr = (*cpualloc)(size);
+        return ptr;
+      };
+
+      OpResource op_res(cpu_malloc, &cpu_alloc);
+
+      // retrieve op state object created from CreateOpState
+      CustomStatefulOpWrapper& op = state_ptr.get_state<CustomStatefulOpWrapper>();
+      CustomStatefulOp* state_op_inst = op.get_instance();
+      CHECK(state_op_inst != nullptr)
+      << "Error MXNet cannot load custom stateful operator'" << name_str << "'";
+
+      CHECK(state_op_inst->Backward(c_inputs, c_outputs, op_res))
+      << "Error calling BackwardStateful for custom operator '" << name_str << "'";
+
+      // return type void
+    };
+
     // check if operator is already registered
     const nnvm::Op *regOpPtr = dmlc::Registry<nnvm::Op>::Get()->Find(name);
     nnvm::Op &regOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(name);
     regOp.set_attr_parser(attr_parser);
     regOp.set_num_inputs(num_inputs);
     regOp.set_num_outputs(num_outputs);
-    regOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type);
-    regOp.set_attr<FResourceRequest>("FResourceRequest", resc_req);
     if (regOpPtr == nullptr) {
       // re-register op in MXNet using lambda converter functions
       regOp.set_attr<nnvm::FInferType>("FInferType", infer_type);
       regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape);
-      regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda);
+      regOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type);
+      regOp.set_attr<FResourceRequest>("FResourceRequest", resc_req);
+
+      if (create_opstate_fp != nullptr) {
+        regOp.set_attr<FCreateOpState>("FCreateOpState", create_opstate);
+        regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstateful_forward_lambda);
+      } else {
+        regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda);
+      }
+
       // optionally add fmutate inputs if user specified a function
       if (mutate_fp != nullptr)
         regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs);
@@ -529,7 +699,10 @@ int MXLoadLib(const char *path) {
         gradOp.set_num_outputs(num_outputs);
         gradOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type);
         gradOp.set_attr<FResourceRequest>("FResourceRequest", resc_req);
-        gradOp.set_attr<FComputeEx>("FComputeEx<cpu>", gradient_lambda);
+        if (create_opstate_fp != nullptr)
+          gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstateful_backward_lambda);
+        else
+          gradOp.set_attr<FComputeEx>("FComputeEx<cpu>", backward_lambda);
       }
     } else {
       // overwrite registration of existing op with custom op
@@ -539,6 +712,16 @@ int MXLoadLib(const char *path) {
       regOp.set_attr<nnvm::FInferType>("FInferType", infer_type, 11);
       regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape, 11);
       regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda, 11);
+      regOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, 11);
+      regOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, 11);
+
+      if (create_opstate_fp != nullptr) {
+        regOp.set_attr<FCreateOpState>("FCreateOpState", create_opstate, 11);
+        regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstateful_forward_lambda, 11);
+      } else {
+        regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda, 11);
+      }
+
       // optionally add fmutate inputs if user specified a function
       if (mutate_fp != nullptr)
         regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs, 11);
@@ -554,7 +737,10 @@ int MXLoadLib(const char *path) {
         gradOp.set_num_outputs(num_outputs);
         gradOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, 11);
         gradOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, 11);
-        gradOp.set_attr<FComputeEx>("FComputeEx<cpu>", gradient_lambda, 11);
+        if (create_opstate_fp != nullptr)
+          gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstateful_backward_lambda, 11);
+        else
+          gradOp.set_attr<FComputeEx>("FComputeEx<cpu>", backward_lambda, 11);
       }
     }
     regOp.add_argument("data", "NDArray[]", "Source inputs");
