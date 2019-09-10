@@ -654,6 +654,7 @@ NNVM_REGISTER_OP(_backward_SparseEmbedding)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SparseEmbeddingOpBackwardEx<cpu>);
 
 NNVM_REGISTER_OP(take)
+.add_alias("_npi_take")
 .describe(R"code(Takes elements from an input array along the given axis.
 
 This function slices the input array along a particular axis with the provided indices.
