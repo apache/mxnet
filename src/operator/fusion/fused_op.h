@@ -27,6 +27,7 @@
 #include <string>
 #include <utility>
 #include <mutex>
+#include <tuple>
 
 #if MXNET_USE_CUDA
 
