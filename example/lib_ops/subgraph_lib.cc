@@ -69,7 +69,9 @@ class MyStatefulOp : public CustomStatefulOp {
  public:
   MyStatefulOp(std::string sym, int count) : subgraph_sym(sym), count(count) {}
 
-  void Forward(std::vector<MXTensor>& inputs, std::vector<MXTensor>& outputs) {
+  int Forward(std::vector<MXTensor>& inputs,
+              std::vector<MXTensor>& outputs,
+              OpResource op_res) {
     count++;
     float* input1 = inputs[0].getData<float>();
     float* output = outputs[0].getData<float>();
@@ -81,6 +83,10 @@ class MyStatefulOp : public CustomStatefulOp {
       }
     }
     std::cout << "subgraph " << subgraph_sym << " forwarding" << std::endl;
+    int* p = static_cast<int*>(op_res.alloc(sizeof(int)));
+    *p = 42;
+    std::cout << *p << std::endl;
+    return MX_SUCCESS;
   }
 
   int State() { return count; }
@@ -93,7 +99,7 @@ class MyStatefulOp : public CustomStatefulOp {
 
 MXReturnValue createOpState(std::map<std::string,std::string> attrs,
                             CustomStatefulOp** op_inst) {
-  std::string serialized_subgraph = "[]";
+  std::string serialized_subgraph = "[empty]";
   if (attrs.count(SUBGRAPH)) {
     serialized_subgraph = attrs[SUBGRAPH];
   }
@@ -102,28 +108,12 @@ MXReturnValue createOpState(std::map<std::string,std::string> attrs,
   return MX_SUCCESS;
 }
 
-MXReturnValue forwardStateful(CustomStatefulOp* op_inst,
-                              std::vector<MXTensor> inputs,
-                              std::vector<MXTensor> outputs) {
-  // retrieve the statful op instance
-  MyStatefulOp* my_op_inst = static_cast<MyStatefulOp*>(op_inst);
-  if (my_op_inst == nullptr) {
-    std::cout << "stateful op loading failed" << std::endl;
-    return MX_FAIL;
-  }
-
-  my_op_inst->Forward(inputs, outputs);
-  std::cout << "forward op state run " << my_op_inst->State() << std::endl;
-  return MX_SUCCESS;
-}
-
 REGISTER_OP(subgraph_op)
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
 .setInferShape(inferShape)
 .setMutateInputs(mutateInputs)
-.setCreateOpState(createOpState)
-.setForwardStateful(forwardStateful);
+.setCreateOpState(createOpState);
 
 MXReturnValue initialize(int version) {
   if (version >= 10400) {

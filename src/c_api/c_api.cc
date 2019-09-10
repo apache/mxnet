@@ -138,9 +138,6 @@ int MXLoadLib(const char *path) {
   opCallCreateOpState_t callCreateOpState =
     get_func<opCallCreateOpState_t>(lib, const_cast<char*>(MXLIB_OPCALLCREATEOPSTATE_STR));
 
-  opCallFStateful_t callFStateful =
-    get_func<opCallFStateful_t>(lib, const_cast<char*>(MXLIB_OPCALLFSTATEFUL_STR));
-
   // get number of operators registered in the library
   opRegSize_t opRegSize = get_func<opRegSize_t>(lib, const_cast<char*>(MXLIB_OPREGSIZE_STR));
   int numOps = opRegSize();
@@ -161,15 +158,14 @@ int MXLoadLib(const char *path) {
     inferShape_t shape_fp = nullptr;
     // optional attributes
     mutateInputs_t mutate_fp = nullptr;
-    createOpState_t create_op_state_fp = nullptr;
-    fstateful_t fstateful_fp = nullptr;
+    createOpState_t create_opstate_fp = nullptr;
 
     // get custom operator implemenation from the dynamic library
     opRegGet(i, &name, &fcomp_fp, &fgrad_fp, &parse_fp, &type_fp, &shape_fp,
-                &mutate_fp, &create_op_state_fp, &fstateful_fp);
+                &mutate_fp, &create_opstate_fp);
 
     // validate custom operator functions from the dynamic library
-    CHECK(fcomp_fp != nullptr || fstateful_fp != nullptr) << "Error loading '" << name
+    CHECK(fcomp_fp != nullptr || create_opstate_fp != nullptr) << "Error loading '" << name
                             << "' custom op, FCompute function was not set.";
     CHECK(parse_fp != nullptr) << "Error loading '" << name
                             << "' custom op, ParseAttrs function was not set.";
@@ -407,14 +403,12 @@ int MXLoadLib(const char *path) {
         return data.dptr_;
       };
 
-      typedef decltype(cpu_alloc) alloc_type;
-
       // create lambda without captures so that we can cast it to function pointer
       // this needs to be a lambda function so that we can do the decltype cast
+      typedef decltype(cpu_alloc) alloc_type;
       auto cpu_malloc = [](void* _cpu_alloc, int size) {
         // cast the void* argument to the type for the cpu_alloc lambda function
         alloc_type* cpualloc = static_cast<alloc_type*>(_cpu_alloc);
-
         void* ptr = (*cpualloc)(size);
         return ptr;
       };
@@ -516,7 +510,7 @@ int MXLoadLib(const char *path) {
 
     // library author should implement and return a 'state' which points to an instance
     // in lambda we create OpStatePtr using the returned 'state'
-    auto create_op_state = [=] (const NodeAttrs& attrs,
+    auto create_opstate = [=] (const NodeAttrs& attrs,
                                 Context ctx,
                                 const std::vector<TShape>& in_shapes,
                                 const std::vector<int>& in_types) {
@@ -539,53 +533,72 @@ int MXLoadLib(const char *path) {
 
       // create a pointer to hold custom op state object
       void* state_op_inst = nullptr;
-      CHECK(callCreateOpState(create_op_state_fp, attr_keys.data(), attr_vals.data(),
+      CHECK(callCreateOpState(create_opstate_fp, attr_keys.data(), attr_vals.data(),
                               attr_keys.size(), &state_op_inst))
       << "Error calling CreateOpState for custom operator '" << name_str << "'";
 
       CHECK(state_op_inst != nullptr)
       << "Error custom library failed to create stateful operator '" << name_str << "'";
 
-      return OpStatePtr::Create<CustomStatefulOpWrapper>(state_op_inst);
+      CustomStatefulOp* state_op = reinterpret_cast<CustomStatefulOp*>(state_op_inst);
+      return OpStatePtr::Create<CustomStatefulOpWrapper>(state_op);
     };
 
     auto fstateful_forward_lambda = [=](const OpStatePtr& state_ptr,
-                              const OpContext& ctx,
-                              const std::vector<NDArray>& inputs,
-                              const std::vector<OpReqType>& req,
-                              const std::vector<NDArray>& outputs) {
-      std::vector<void*> in_data, out_data;
-      std::vector<const int64_t *> in_shapes, out_shapes;
-      std::vector<int> in_dims, out_dims;
-      std::vector<int> in_types, out_types;
-
-      // convert input tensors to constituent parts
+                                        const OpContext& ctx,
+                                        const std::vector<NDArray>& inputs,
+                                        const std::vector<OpReqType>& req,
+                                        const std::vector<NDArray>& outputs) {
+      // create a vector of tensors for inputs
+      std::vector<MXTensor> c_inputs(inputs.size());
       for (size_t i = 0; i < inputs.size(); i++) {
-        in_data.push_back(inputs[i].data().dptr_);
-        in_shapes.push_back(inputs[i].shape().data());
-        in_dims.push_back(inputs[i].shape().ndim());
-        in_types.push_back(inputs[i].dtype());
+        c_inputs[i].data = inputs[i].data().dptr_;
+        c_inputs[i].dtype = (MXDType)inputs[i].dtype();
+        for (int_least16_t j = 0; j < inputs[i].shape().ndim(); j++) {
+          c_inputs[i].shape.push_back(inputs[i].shape().data()[j]);
+        }
       }
 
-      // convert output tensors to constituent parts
+      // create a vector of tensors for outputs
+      std::vector<MXTensor> c_outputs(outputs.size());
       for (size_t i = 0; i < outputs.size(); i++) {
-        out_data.push_back(outputs[i].data().dptr_);
-        out_shapes.push_back(outputs[i].shape().data());
-        out_dims.push_back(outputs[i].shape().ndim());
-        out_types.push_back(outputs[i].dtype());
+        c_outputs[i].data = outputs[i].data().dptr_;
+        c_outputs[i].dtype = (MXDType)outputs[i].dtype();
+        for (int j = 0; j < outputs[i].shape().ndim(); j++) {
+          c_outputs[i].shape.push_back(outputs[i].shape().data()[j]);
+        }
       }
+
+      // get memory resource
+      const Resource &resource = ctx.requested[0];
+      mshadow::Stream<mxnet::cpu> *cpu_stream = ctx.get_stream<mxnet::cpu>();
+
+      // create lambda that captures stream & resource objects
+      auto cpu_alloc = [&](int size) {
+        mshadow::Tensor<mxnet::cpu, 1, char> data =
+        resource.get_space_typed<mxnet::cpu, 1, char>(mshadow::Shape1(size), cpu_stream);
+        return data.dptr_;
+      };
+
+      // create lambda without captures so that we can cast it to function pointer
+      // this needs to be a lambda function so that we can do the decltype cast
+      typedef decltype(cpu_alloc) alloc_type;
+      auto cpu_malloc = [](void* _cpu_alloc, int size) {
+        // cast the void* argument to the type for the cpu_alloc lambda function
+        alloc_type* cpualloc = static_cast<alloc_type*>(_cpu_alloc);
+        void* ptr = (*cpualloc)(size);
+        return ptr;
+      };
+
+      OpResource op_res(cpu_malloc, &cpu_alloc);
 
       // retrieve op state object created from CreateOpState
       CustomStatefulOpWrapper& op = state_ptr.get_state<CustomStatefulOpWrapper>();
-      void* state_op_inst = op.get_instance();
+      CustomStatefulOp* state_op_inst = op.get_instance();
       CHECK(state_op_inst != nullptr)
       << "Error MXNet cannot load custom stateful operator'" << name_str << "'";
 
-      CHECK(callFStateful(fstateful_fp, state_op_inst,
-                          in_shapes.data(), in_dims.data(), in_data.data(),
-                          in_types.data(), in_data.size(),
-                          out_shapes.data(), out_dims.data(), out_data.data(),
-                          out_types.data(), out_data.size()))
+      CHECK(state_op_inst->Forward(c_inputs, c_outputs, op_res))
       << "Error calling ForwardStateful for custom operator '" << name_str << "'";
 
       // return type void
@@ -601,8 +614,8 @@ int MXLoadLib(const char *path) {
     regOp.set_attr<FResourceRequest>("FResourceRequest", resc_req);
     if (regOpPtr == nullptr) {
       // re-register op in MXNet using lambda converter functions
-      if (fstateful_fp != nullptr) {
-        regOp.set_attr<FCreateOpState>("FCreateOpState", create_op_state);
+      if (create_opstate_fp != nullptr) {
+        regOp.set_attr<FCreateOpState>("FCreateOpState", create_opstate);
         regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstateful_forward_lambda);
       } else {
         regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda);
@@ -631,8 +644,8 @@ int MXLoadLib(const char *path) {
       regOp.arguments.clear();
       // set attribute with higher plevel (11) to allow re-registering once
       // TODO(samskalicky): enable constant overwriting of registertion multiple times
-      if (fstateful_fp != nullptr) {
-        regOp.set_attr<FCreateOpState>("FCreateOpState", create_op_state, 11);
+      if (create_opstate_fp != nullptr) {
+        regOp.set_attr<FCreateOpState>("FCreateOpState", create_opstate, 11);
         regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstateful_forward_lambda, 11);
       } else {
         regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda, 11);
