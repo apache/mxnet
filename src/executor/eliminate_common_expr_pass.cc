@@ -180,7 +180,7 @@ nnvm::Graph EliminateCommonExpr(nnvm::Graph&& g) {
   using nnvm::NodePtr;
   bool keep_running = true;
   while (keep_running) {
-    const std::vector<std::pair<NodePtr, NodePtr> >& common_nodes = GetCommonNodes(g);
+    const auto& common_nodes = GetCommonNodes(g);
     if (common_nodes.empty()) {
       keep_running = false;
     } else {
