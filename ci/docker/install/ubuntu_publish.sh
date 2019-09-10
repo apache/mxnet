@@ -66,5 +66,5 @@ python2 get-pip.py
 
 apt-get remove -y python3-urllib3
 
-pip2 install nose cpplint==1.3.0 'numpy>1.16.0,<2.0.0' nose-timer 'requests<2.19.0,>=2.18.4' h5py==2.8.0rc1 scipy==1.0.1 boto3
-pip3 install nose cpplint==1.3.0 pylint==2.3.1 'numpy>1.16.0,<2.0.0' nose-timer 'requests<2.19.0,>=2.18.4' h5py==2.8.0rc1 scipy==1.0.1 boto3
+pip2 install nose cpplint==1.3.0 'numpy<2.0.0,>1.16.0' nose-timer 'requests>=2.20.0,<3' h5py==2.8.0rc1 scipy==1.0.1 boto3
+pip3 install nose cpplint==1.3.0 pylint==2.3.1 'numpy<2.0.0,>1.16.0' nose-timer 'requests>=2.20.0,<3' h5py==2.8.0rc1 scipy==1.0.1 boto3
