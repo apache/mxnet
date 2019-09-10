@@ -341,8 +341,20 @@ class SubgraphProperty {
    */
   virtual void ConnectSubgraphOutputs(const nnvm::ObjectPtr subgraph_node,
                                       std::vector<nnvm::NodeEntry*>* output_entries) const {
+    // Collapse output_entries pointing to same NodeEntry
+    // Outputs are ordered, only neighboring nodes can point to same NodeEntry
+    //<TODO>:HAH: Implement with output_map to avoid duplicate compute in ConnectSubgraphOutputs()
+    nnvm::NodeEntryEqual node_equal;
+    nnvm::NodeEntry prevNodeEntry;
+    uint32_t idx = 0;
     for (size_t i = 0; i < output_entries->size(); ++i) {
-      *output_entries->at(i) = nnvm::NodeEntry{subgraph_node, static_cast<uint32_t>(i), 0};
+      if (0 != i ) {
+        if (!node_equal(prevNodeEntry, *output_entries->at(i))) {
+          idx++;
+        }
+      }
+      prevNodeEntry = *output_entries->at(i); //need a copy
+      *output_entries->at(i) = nnvm::NodeEntry{subgraph_node, idx, 0};
     }
   }
   /*!

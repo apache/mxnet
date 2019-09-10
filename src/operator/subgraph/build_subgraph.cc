@@ -611,10 +611,22 @@ void CreateSubgraphNode(nnvm::Graph* g,
   FindOutputEntries(g, simple_nodes, subgraph_nodes, *entry_top_order_map, &output_entries);
 
   // Create a subgraph for the subgraph node
+  // Collapse output_entries pointing to same NodeEntry
+  // Outputs are ordered, only neighboring nodes can point to same NodeEntry
+  //<TODO>:HAH: Implement with output_map to avoid duplicate compute in ConnectSubgraphOutputs()
   nnvm::Symbol sym;
+  nnvm::NodeEntryEqual node_equal;
+  size_t idx = 0;
   sym.outputs.resize(output_entries.size());
   for (size_t i = 0; i < output_entries.size(); ++i) {
-    sym.outputs[i] = *output_entries[i];
+    if (0 == i) {
+      sym.outputs[idx] = *output_entries[i];
+    } else {
+      if (!node_equal(*output_entries[i-1], *output_entries[i])) {
+        idx++;
+        sym.outputs[idx] = *output_entries[i];
+      } //else skip over dupe entry
+    }
   }
   const SubgraphPropertyPtr& subg_prop = g->GetAttr<SubgraphPropertyPtr>("subgraph_property");
   nnvm::ObjectPtr n = subg_prop->CreateSubgraphNode(sym, subgraph_selector, subgraph_id);
