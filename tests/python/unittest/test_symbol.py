@@ -389,7 +389,6 @@ def test_children_same_name():
     for c in b.get_children():
         pass
 
-
 def test_transpose_nullop():
     for dim in range(1, 7):
         a = mx.sym.Variable('a')
@@ -413,6 +412,15 @@ def test_gen_atomic_symbol_multiple_outputs():
     s = mx.sym.RNN(data, p, h0, h1, state_size=10, num_layers=2, 
                    bidirectional=True, state_outputs=True, mode='lstm')
     atomic_sym = s._gen_atomic_symbol()
+
+def test_eliminate_common_expr():
+    a = mx.sym.Variable('data')
+    out = (a + 5) * (a + 5)
+    n = 10
+    ctx = mx.cpu()
+    e = out.simple_bind(ctx=ctx, data=(n,))
+    s = e.get_optimized_symbol()
+    assert len(s.get_internals()) < 4
 
 if __name__ == '__main__':
     import nose
