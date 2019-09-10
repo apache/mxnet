@@ -370,6 +370,7 @@ build_ubuntu_cpu_openblas() {
     build_ccache_wrappers
     make \
         DEV=1                         \
+        USE_TVM_OP=1                  \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=0                  \
@@ -389,6 +390,7 @@ build_ubuntu_cpu_mkl() {
         DEV=1                         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=mkl                  \
+        USE_TVM_OP=1                  \
         USE_MKLDNN=0                  \
         USE_INTEL_PATH=/opt/intel     \
         USE_DIST_KVSTORE=1            \
@@ -405,6 +407,8 @@ build_ubuntu_cpu_cmake_debug() {
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF \
+        -DUSE_TVM_OP=ON \
+        -DPython3_EXECUTABLE=/usr/bin/python3 \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_OPENMP=OFF \
         -DUSE_OPENCV=ON \
@@ -547,6 +551,7 @@ build_ubuntu_cpu_mkldnn() {
     make  \
         DEV=1                         \
         USE_CPP_PACKAGE=1             \
+        USE_TVM_OP=1                  \
         USE_BLAS=openblas             \
         USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
@@ -560,6 +565,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
     make  \
         DEV=1                         \
         USE_CPP_PACKAGE=1             \
+        USE_TVM_OP=1                  \
         USE_BLAS=mkl                  \
         USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
@@ -642,6 +648,7 @@ build_ubuntu_gpu_mkldnn() {
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=1                               \
+        USE_TVM_OP=1                              \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
@@ -658,6 +665,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=0                               \
+        USE_TVM_OP=1                              \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
@@ -673,6 +681,7 @@ build_ubuntu_gpu_cuda101_cudnn7() {
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=1                               \
+        USE_TVM_OP=1                              \
         USE_CPP_PACKAGE=1                         \
         USE_DIST_KVSTORE=1                        \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
@@ -713,6 +722,8 @@ build_ubuntu_gpu_cmake_mkldnn() {
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=1                            \
         -DUSE_CUDNN=1                           \
+        -DUSE_TVM_OP=1                          \
+        -DPython3_EXECUTABLE=/usr/bin/python3   \
         -DUSE_MKLML_MKL=1                       \
         -DCMAKE_BUILD_TYPE=Release              \
         -DCUDA_ARCH_NAME=Manual                 \
@@ -737,6 +748,8 @@ build_ubuntu_gpu_cmake() {
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
+        -DUSE_TVM_OP=ON                         \
+        -DPython3_EXECUTABLE=/usr/bin/python3   \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
         -DUSE_MKLML_MKL=OFF                     \
         -DUSE_MKLDNN=OFF                        \
@@ -782,6 +795,8 @@ build_ubuntu_gpu_large_tensor() {
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
+        -DUSE_TVM_OP=ON                         \
+        -DPython3_EXECUTABLE=/usr/bin/python3   \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
         -DUSE_MKLML_MKL=OFF                     \
         -DUSE_MKLDNN=OFF                        \
@@ -1073,7 +1088,7 @@ unittest_ubuntu_gpu_R() {
 unittest_ubuntu_cpu_julia() {
     set -ex
     export PATH="$1/bin:$PATH"
-    export MXNET_HOME='/work/mxnet'
+    export MXNET_ROOT='/work/mxnet'
     export JULIA_DEPOT_PATH='/work/julia-depot'
     export INTEGRATION_TEST=1
 
@@ -1083,7 +1098,7 @@ unittest_ubuntu_cpu_julia() {
     export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
 
-    # use the prebuilt binary from $MXNET_HOME/lib
+    # use the prebuilt binary from $MXNET_ROOT/lib
     julia --project=./julia -e 'using Pkg; Pkg.build("MXNet")'
 
     # run the script `julia/test/runtests.jl`
@@ -1238,7 +1253,7 @@ build_docs() {
 
     # Setup environment for Julia docs
     export PATH="/work/julia10/bin:$PATH"
-    export MXNET_HOME='/work/mxnet'
+    export MXNET_ROOT='/work/mxnet'
     export JULIA_DEPOT_PATH='/work/julia-depot'
 
     julia -e 'using InteractiveUtils; versioninfo()'
@@ -1450,7 +1465,7 @@ deploy_docs() {
 
     # Setup for Julia docs
     export PATH="/work/julia10/bin:$PATH"
-    export MXNET_HOME='/work/mxnet'
+    export MXNET_ROOT='/work/mxnet'
     export JULIA_DEPOT_PATH='/work/julia-depot'
 
     julia -e 'using InteractiveUtils; versioninfo()'
