@@ -47,11 +47,31 @@ const grad_req_map = Dict{Symbol,GRAD_REQ}(
 ################################################################################
 # Initialization and library API entrance
 ################################################################################
-const MXNET_LIB = Libdl.find_library(["libmxnet.$(Libdl.dlext)", "libmxnet.so"],  # see build.jl
-                                     [joinpath(get(ENV, "MXNET_HOME", ""), "lib"),
-                                      get(ENV, "MXNET_HOME", ""),
-                                      joinpath(@__DIR__, "..",
-                                               "deps", "usr", "lib")])
+function _get_search_names()
+  MXNET_LIBRARY_PATH = get(ENV, "MXNET_LIBRARY_PATH", "")
+  A = ["libmxnet.$(Libdl.dlext)", "libmxnet.so"]  # see build.jl
+  if !isempty(MXNET_LIBRARY_PATH)
+    !isabspath(MXNET_LIBRARY_PATH) && error("MXNET_LIBRARY_PATH should be a absolute path")
+    pushfirst!(A, MXNET_LIBRARY_PATH)
+  end
+  A
+end
+
+function _get_search_dirs()
+  # TODO: remove MXNET_HOME backward compatibility in v1.7
+  if haskey(ENV, "MXNET_HOME")
+    @warn "The environment variable `MXNET_HOME` has been renamed, please use `MXNET_ROOT` instead."
+  end
+  A = [joinpath(@__DIR__, "..", "deps", "usr", "lib")]
+  MXNET_ROOT = get(ENV, "MXNET_ROOT", get(ENV, "MXNET_HOME", ""))
+  if !isempty(MXNET_ROOT)
+    !isabspath(MXNET_ROOT) && error("MXNET_ROOT should be a absolute path")
+    prepend!(A, [joinpath(MXNET_ROOT, "lib"), MXNET_ROOT])
+  end
+  A
+end
+
+const MXNET_LIB = Libdl.find_library(_get_search_names(), _get_search_dirs())
 const LIB_VERSION = Ref{Cint}(0)
 
 if isempty(MXNET_LIB)
