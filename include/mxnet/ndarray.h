@@ -37,7 +37,7 @@
 #include <algorithm>
 #include <memory>
 #include <algorithm>
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
 #include <mkldnn.hpp>
 #endif
 #include "./base.h"
@@ -699,7 +699,7 @@ class NDArray {
     ptr_->CheckAndAllocAuxData(i, aux_shape);
   }
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
   /*
    * Create NDArray from mkldnn memory.
    * mkldnn_mem The mkldnn memory to be managed.
@@ -709,7 +709,7 @@ class NDArray {
    * Create NDArray from mkldnn memory descriptor.
    * mem_pd The mkldnn memory descriptor to be created.
    */
-  explicit NDArray(mkldnn::memory::primitive_desc mem_pd);
+  explicit NDArray(const mkldnn::memory::desc &md);
   /*
    * Test if the data is stored in one of special MKLDNN format.
    */
@@ -737,15 +737,14 @@ class NDArray {
    * This function returns mkldnn::memory with the given primitive_desc
    * as long as the array size meets the required size in the given primitive_desc.
    */
-  const mkldnn::memory *GetMKLDNNData(
-      const mkldnn::memory::primitive_desc &desc) const;
+  const mkldnn::memory *GetMKLDNNData(const mkldnn::memory::desc &md) const;
   /*
    * This function returns mkldnn::memory with the given primitive_desc.
    * The returned mkldnn::memory will have the same physical layout as
    * the given primitive_desc.
    */
   const mkldnn::memory *GetMKLDNNDataReorder(
-      const mkldnn::memory::primitive_desc &desc) const;
+      const mkldnn::memory::desc &md) const;
 
   /*
    * This function copies data from mkldnn memory.
@@ -755,8 +754,7 @@ class NDArray {
    * This function allocates memory for array and creates mkldnn memory
    * with the specified format.
    */
-  mkldnn::memory *CreateMKLDNNData(
-      const mkldnn::memory::primitive_desc &desc);
+  mkldnn::memory *CreateMKLDNNData(const mkldnn::memory::desc &md);
 
   /*
    * These are the async version of the methods above.
@@ -764,7 +762,7 @@ class NDArray {
    * the array are complete.
    */
   void Reorder2DefaultAsync();
-  void MKLDNNDataReorderAsync(const mkldnn::memory::primitive_desc &desc);
+  void MKLDNNDataReorderAsync(const mkldnn::memory::desc &md);
 
   /*
    * This creates a new NDArray with the reordered data.
@@ -789,7 +787,7 @@ class NDArray {
    /*!
    * \ Fix mkldnn memory descriptor mismatch from NDArray.
    */
-  void UpdateMKLDNNMemDesc(mkldnn::memory::format format);
+  void UpdateMKLDNNMemDesc(mkldnn::memory::format_tag format);
 #endif
 
   /*!
@@ -827,7 +825,7 @@ class NDArray {
     */
     std::vector<Storage::Handle> aux_handles;
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
     /*! This is created when data is stored in MKLDNN format.
      */
     std::shared_ptr<MKLDNNMemory> mkl_mem_;
@@ -986,7 +984,7 @@ class NDArray {
     inline void CheckAndAlloc(void) {
       if (delay_alloc) {
         shandle = Storage::Get()->Alloc(shandle.size, shandle.ctx);
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
         mkl_mem_ = nullptr;
 #endif
         delay_alloc = false;
@@ -1001,7 +999,7 @@ class NDArray {
       dbytes = std::max(dbytes, static_cast<uint64_t>(shandle.size));
       if (delay_alloc) {
         shandle = Storage::Get()->Alloc(dbytes, shandle.ctx);
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
         mkl_mem_ = nullptr;
 #endif
         delay_alloc = false;
@@ -1010,7 +1008,7 @@ class NDArray {
         Storage::Get()->Free(shandle);
         // init storage
         shandle = Storage::Get()->Alloc(dbytes, shandle.ctx);
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
         mkl_mem_ = nullptr;
 #endif
       }
@@ -1046,7 +1044,7 @@ class NDArray {
     // and allocate new storage
     void CheckAndAllocData(const mxnet::TShape &shape, int dtype);
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
     // Have MKL memory reference to the data in the default storage
     // or create memory for MKLDNN.
     void SetMKLMem(const mxnet::TShape &shape, int dtype);
@@ -1054,7 +1052,7 @@ class NDArray {
     // save the result in shandle.
     void Reorder2Default();
     // Reroder data to a specified layout.
-    void MKLDNNDataReorder(const mkldnn::memory::primitive_desc &desc);
+    void MKLDNNDataReorder(const mkldnn::memory::desc &md);
     bool IsMKLDNN() const;
     bool IsDefault() const;
 #endif
