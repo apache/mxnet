@@ -530,13 +530,11 @@ bool MKLDNNStorageType(const nnvm::NodeAttrs &attrs,
     if (v == - 1) v = kDefaultStorage;
 
   DispatchMode wanted_mode;
-#if MXNET_USE_MKLDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask && !MKLDNNEnvSet())
     wanted_mode = DispatchMode::kFComputeFallback;
   else if (dev_mask == mshadow::cpu::kDevMask && support_mkldnn)
     wanted_mode = DispatchMode::kFComputeEx;
   else
-#endif
     wanted_mode = DispatchMode::kFCompute;
 
   bool dispatched = false;

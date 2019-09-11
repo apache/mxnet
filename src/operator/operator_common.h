@@ -526,16 +526,45 @@ class OpSignature {
    * and the layout to sign the op.
    */
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
   void AddSign(const mkldnn::memory &mem) {
-    auto desc = mem.get_primitive_desc().desc();
-    hash = hash * 2 + desc.data.format;
-    eles.push_back(desc.data.format);
+    auto desc = mem.get_desc();
+    hash = hash * 2 + desc.data.format_kind;
+    eles.push_back(desc.data.format_kind);
     hash = hash * 2 + desc.data.data_type;
     eles.push_back(desc.data.data_type);
     for (int i = 0; i < desc.data.ndims; i++) {
       hash = hash * 2 + desc.data.dims[i];
       eles.push_back(desc.data.dims[i]);
+    }
+    switch (desc.data.format_kind) {
+      case mkldnn_blocked:
+        hash = hash * 2 + desc.data.ndims;
+        eles.push_back(desc.data.ndims);
+        for (int i = 0; i < desc.data.ndims; i++) {
+          hash = hash * 2 + desc.data.format_desc.blocking.strides[i];
+          eles.push_back(desc.data.format_desc.blocking.strides[i]);
+        }
+        hash = hash * 2 + desc.data.format_desc.blocking.inner_nblks;
+        eles.push_back(desc.data.format_desc.blocking.inner_nblks);
+        for (int i = 0; i < desc.data.format_desc.blocking.inner_nblks; i++) {
+          hash = hash * 2 + desc.data.format_desc.blocking.inner_blks[i];
+          hash = hash * 2 + desc.data.format_desc.blocking.inner_idxs[i];
+          eles.push_back(desc.data.format_desc.blocking.inner_blks[i]);
+          eles.push_back(desc.data.format_desc.blocking.inner_idxs[i]);
+        }
+        break;
+      case mkldnn_format_kind_wino:
+        hash = hash * 2 + desc.data.format_desc.wino_desc.wino_format;
+        eles.push_back(desc.data.format_desc.wino_desc.wino_format);
+        break;
+      case mkldnn_format_kind_rnn_packed:
+        hash = hash * 2 + desc.data.format_desc.rnn_packed_desc.format;
+        eles.push_back(desc.data.format_desc.rnn_packed_desc.format);
+        break;
+      default:
+      // nothing need to add
+        break;
     }
   }
 #endif
@@ -547,7 +576,7 @@ class OpSignature {
   }
 
   void AddSign(const NDArray &arr) {
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
     if (arr.IsMKLDNNData()) {
       AddSign(*(arr.GetMKLDNNData()));
     } else {
@@ -555,7 +584,7 @@ class OpSignature {
       hash = hash * 2 + arr.dtype();
       eles.push_back(arr.dtype());
       AddSign(arr.shape());
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
     }
 #endif
   }

@@ -592,7 +592,7 @@ NDArray NDArray::Reorder2Default() const {
   return ret;
 }
 
-void NDArray::Reorder2DefaultAsync() {
+void NDArray::Reorder2DefaultAsync() const {
   std::vector<Engine::VarHandle> const_vars;
   std::vector<Engine::VarHandle> mutable_vars(1, this->var());
   NDArray tmp = *this;
@@ -604,7 +604,7 @@ void NDArray::Reorder2DefaultAsync() {
     FnProperty::kNormal, 0, "Reorder2Default");
 }
 
-void NDArray::MKLDNNDataReorderAsync(const mkldnn::memory::desc &desc) {
+void NDArray::MKLDNNDataReorderAsync(const mkldnn::memory::desc &desc) const {
   std::vector<Engine::VarHandle> const_vars;
   std::vector<Engine::VarHandle> mutable_vars(1, this->var());
   NDArray tmp = *this;

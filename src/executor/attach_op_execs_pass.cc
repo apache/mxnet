@@ -116,7 +116,7 @@ class StatefulComputeExecutor : public StorageFallbackOpExecutor {
  public:
   void Run(RunContext rctx, bool is_gpu) override {
     op_ctx.run_ctx = rctx;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
     InvalidateOutputs(out_array, req);
 #endif
     PreFCompute(is_gpu);
@@ -155,7 +155,7 @@ class StatefulComputeExExecutor : public OpExecutor {
  public:
   void Run(RunContext rctx, bool is_gpu) override {
     op_ctx.run_ctx = rctx;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
     InvalidateOutputs(out_array, req);
     // TODO(alex): (MXNET-847) Remove this fallback feature after subgraph implemented
     const auto is_mkldnn = Op::GetAttr<bool>("TIsMKLDNN");
@@ -202,7 +202,7 @@ class FComputeExecutor : public StorageFallbackOpExecutor {
   void Run(RunContext rctx, bool is_gpu) override {
     using namespace common;
     op_ctx.run_ctx = rctx;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
     InvalidateOutputs(out_array, req);
 #endif
     PreFCompute(is_gpu);
@@ -231,7 +231,7 @@ class FComputeExExecutor : public OpExecutor {
  public:
   void Run(RunContext rctx, bool is_gpu) override {
     op_ctx.run_ctx = rctx;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
     InvalidateOutputs(out_array, req);
     // TODO(alex): (MXNET-847) Remove this fallback feature after subgraph implemented
     const auto is_mkldnn = Op::GetAttr<bool>("TIsMKLDNN");

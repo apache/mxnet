@@ -761,8 +761,8 @@ class NDArray {
    * It changes the layout of this NDArray, but it happens after all accesses to
    * the array are complete.
    */
-  void Reorder2DefaultAsync();
-  void MKLDNNDataReorderAsync(const mkldnn::memory::desc &md);
+  void Reorder2DefaultAsync() const;
+  void MKLDNNDataReorderAsync(const mkldnn::memory::desc &md) const;
 
   /*
    * This creates a new NDArray with the reordered data.
