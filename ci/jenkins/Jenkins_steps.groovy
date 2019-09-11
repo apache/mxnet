@@ -1537,6 +1537,8 @@ def docs_jekyll() {
 
 
 // This is for publishing the full website
+// Assumes you have run all of the docs generation functions
+// Called from Jenkins_website_full and Jenkins_website_full_pr
 def docs_prepare() {
     return ['Prepare for publication of the full website': {
       node(NODE_LINUX_CPU) {
