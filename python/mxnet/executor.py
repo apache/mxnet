@@ -25,7 +25,7 @@ import ctypes
 import copy
 import numpy as np
 from .base import _LIB
-from .base import mx_uint, NDArrayHandle, ExecutorHandle, py_str, mx_int
+from .base import mx_uint, NDArrayHandle, SymbolHandle, ExecutorHandle, py_str, mx_int
 from .base import check_call, c_handle_array, c_array_buf, c_str_array
 from .ndarray import NDArray
 from .ndarray import _ndarray_cls
@@ -513,7 +513,7 @@ class Executor(object):
         return py_str(debug_str.value)
 
     def get_optimized_symbol(self):
-        from .symbol import Symbol, SymbolHandle
+        from .symbol import Symbol
         sym_handle = SymbolHandle()
         check_call(_LIB.MXExecutorGetOptimizedSymbol(self.handle, ctypes.byref(sym_handle)))
         ret = Symbol(sym_handle)
