@@ -480,15 +480,8 @@ int MXLoadLib(const char *path) {
                                      dispatch_mode, DispatchMode::kFComputeEx);
     };
 
-    /*
-     * GradStruct
-     * this struct sets that the operator will use both the inputs and the outputs to compute
-     * the gradient. The order is: [grads, inputs, outputs]
-     */
-    struct GradStruct {
-      const char *op_name;
-      std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
-                                              const std::vector<nnvm::NodeEntry>& ograds) const {
+    // FGradient register lambda
+    auto grad_reg = [=](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
         // copy gradients first
         std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
         // copy inputs second
@@ -500,8 +493,8 @@ int MXLoadLib(const char *path) {
         for (uint32_t i = 0; i < n_out; ++i) {
           heads.emplace_back(n, i, 0);
         }
-        return mxnet::op::MakeGradNode(op_name, n, heads, n->attrs.dict);
-      }
+        std::string grad_name = "_backward_" + name_str;
+        return mxnet::op::MakeGradNode(grad_name.c_str(), n, heads, n->attrs.dict);
     };
 
     auto resc_req = [=](const NodeAttrs& attrs) {
@@ -544,11 +537,13 @@ int MXLoadLib(const char *path) {
       return OpStatePtr::Create<CustomStatefulOpWrapper>(state_op);
     };
 
-    auto fstateful_forward_lambda = [=](const OpStatePtr& state_ptr,
-                                        const OpContext& ctx,
-                                        const std::vector<NDArray>& inputs,
-                                        const std::vector<OpReqType>& req,
-                                        const std::vector<NDArray>& outputs) {
+    // stateful forward and backward
+    auto fstateful_lambda = [=](bool forward,
+                                const OpStatePtr& state_ptr,
+                                const OpContext& ctx,
+                                const std::vector<NDArray>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<NDArray>& outputs) {
       // create a vector of tensors for inputs
       std::vector<MXTensor> c_inputs(inputs.size());
       for (size_t i = 0; i < inputs.size(); i++) {
@@ -598,70 +593,30 @@ int MXLoadLib(const char *path) {
       CHECK(state_op_inst != nullptr)
       << "Error MXNet cannot load custom stateful operator'" << name_str << "'";
 
-      CHECK(state_op_inst->Forward(c_inputs, c_outputs, op_res))
-      << "Error calling ForwardStateful for custom operator '" << name_str << "'";
-
+      if (forward) {
+        CHECK(state_op_inst->Forward(c_inputs, c_outputs, op_res))
+        << "Error calling ForwardStateful for custom operator '" << name_str << "'";
+      } else {
+        CHECK(state_op_inst->Backward(c_inputs, c_outputs, op_res))
+        << "Error calling BackwardStateful for custom operator '" << name_str << "'";
+      }
       // return type void
     };
 
-    auto fstateful_backward_lambda = [=](const OpStatePtr& state_ptr,
-                                         const OpContext& ctx,
-                                         const std::vector<NDArray>& inputs,
-                                         const std::vector<OpReqType>& req,
-                                         const std::vector<NDArray>& outputs) {
-      // create a vector of tensors for inputs
-      std::vector<MXTensor> c_inputs(inputs.size());
-      for (size_t i = 0; i < inputs.size(); i++) {
-        c_inputs[i].data = inputs[i].data().dptr_;
-        c_inputs[i].dtype = (MXDType)inputs[i].dtype();
-        for (int_least16_t j = 0; j < inputs[i].shape().ndim(); j++) {
-          c_inputs[i].shape.push_back(inputs[i].shape().data()[j]);
-        }
-      }
+    auto fstateful_forward = [=](const OpStatePtr& state_ptr,
+                                 const OpContext& ctx,
+                                 const std::vector<NDArray>& inputs,
+                                 const std::vector<OpReqType>& req,
+                                 const std::vector<NDArray>& outputs) {
+      fstateful_lambda(true, state_ptr, ctx, inputs, req, outputs);
+    };
 
-      // create a vector of tensors for outputs
-      std::vector<MXTensor> c_outputs(outputs.size());
-      for (size_t i = 0; i < outputs.size(); i++) {
-        c_outputs[i].data = outputs[i].data().dptr_;
-        c_outputs[i].dtype = (MXDType)outputs[i].dtype();
-        for (int j = 0; j < outputs[i].shape().ndim(); j++) {
-          c_outputs[i].shape.push_back(outputs[i].shape().data()[j]);
-        }
-      }
-
-      // get memory resource
-      const Resource &resource = ctx.requested[0];
-      mshadow::Stream<mxnet::cpu> *cpu_stream = ctx.get_stream<mxnet::cpu>();
-
-      // create lambda that captures stream & resource objects
-      auto cpu_alloc = [&](int size) {
-        mshadow::Tensor<mxnet::cpu, 1, char> data =
-        resource.get_space_typed<mxnet::cpu, 1, char>(mshadow::Shape1(size), cpu_stream);
-        return data.dptr_;
-      };
-
-      // create lambda without captures so that we can cast it to function pointer
-      // this needs to be a lambda function so that we can do the decltype cast
-      typedef decltype(cpu_alloc) alloc_type;
-      auto cpu_malloc = [](void* _cpu_alloc, int size) {
-        // cast the void* argument to the type for the cpu_alloc lambda function
-        alloc_type* cpualloc = static_cast<alloc_type*>(_cpu_alloc);
-        void* ptr = (*cpualloc)(size);
-        return ptr;
-      };
-
-      OpResource op_res(cpu_malloc, &cpu_alloc);
-
-      // retrieve op state object created from CreateOpState
-      CustomStatefulOpWrapper& op = state_ptr.get_state<CustomStatefulOpWrapper>();
-      CustomStatefulOp* state_op_inst = op.get_instance();
-      CHECK(state_op_inst != nullptr)
-      << "Error MXNet cannot load custom stateful operator'" << name_str << "'";
-
-      CHECK(state_op_inst->Backward(c_inputs, c_outputs, op_res))
-      << "Error calling BackwardStateful for custom operator '" << name_str << "'";
-
-      // return type void
+    auto fstateful_backward = [=](const OpStatePtr& state_ptr,
+                                  const OpContext& ctx,
+                                  const std::vector<NDArray>& inputs,
+                                  const std::vector<OpReqType>& req,
+                                  const std::vector<NDArray>& outputs) {
+      fstateful_lambda(false, state_ptr, ctx, inputs, req, outputs);
     };
 
     // check if operator is already registered
@@ -679,7 +634,7 @@ int MXLoadLib(const char *path) {
 
       if (create_opstate_fp != nullptr) {
         regOp.set_attr<FCreateOpState>("FCreateOpState", create_opstate);
-        regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstateful_forward_lambda);
+        regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstateful_forward);
       } else {
         regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda);
       }
@@ -688,21 +643,22 @@ int MXLoadLib(const char *path) {
       if (mutate_fp != nullptr)
         regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs);
       // optionally add fgradient if user specified a function
-      if (fgrad_fp != nullptr) {
-        std::string grad_name(std::string("_backward_") + name);
-        regOp.set_attr<nnvm::FGradient>("FGradient", GradStruct{grad_name.c_str()});
-
+      if (fgrad_fp != nullptr || create_opstate_fp != nullptr) {
+        regOp.set_attr<nnvm::FGradient>("FGradient", grad_reg);
+        std::string grad_name = "_backward_" + name_str;
         nnvm::Op &gradOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(grad_name);
         gradOp.set_attr<nnvm::TIsBackward>("TIsBackward", true);
         gradOp.set_attr_parser(attr_parser);
         gradOp.set_num_inputs(num_inouts);
-        gradOp.set_num_outputs(num_outputs);
+        gradOp.set_num_outputs(num_inputs);
         gradOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type);
         gradOp.set_attr<FResourceRequest>("FResourceRequest", resc_req);
-        if (create_opstate_fp != nullptr)
-          gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstateful_backward_lambda);
-        else
+        if (create_opstate_fp != nullptr) {
+          gradOp.set_attr<bool>("TIsLayerOpBackward", true);
+          gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstateful_backward);
+        } else {
           gradOp.set_attr<FComputeEx>("FComputeEx<cpu>", backward_lambda);
+        }
       }
     } else {
       // overwrite registration of existing op with custom op
@@ -717,7 +673,7 @@ int MXLoadLib(const char *path) {
 
       if (create_opstate_fp != nullptr) {
         regOp.set_attr<FCreateOpState>("FCreateOpState", create_opstate, 11);
-        regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstateful_forward_lambda, 11);
+        regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstateful_forward, 11);
       } else {
         regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda, 11);
       }
@@ -726,21 +682,22 @@ int MXLoadLib(const char *path) {
       if (mutate_fp != nullptr)
         regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs, 11);
       // optionally add fgradient if user specified a function
-      if (fgrad_fp != nullptr) {
-        std::string grad_name(std::string("_backward_") + name);
-        regOp.set_attr<nnvm::FGradient>("FGradient", GradStruct{grad_name.c_str()}, 11);
-
+      if (fgrad_fp != nullptr || create_opstate_fp != nullptr) {
+        regOp.set_attr<nnvm::FGradient>("FGradient", grad_reg, 11);
+        std::string grad_name = "_backward_" + name_str;
         nnvm::Op &gradOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(grad_name);
         gradOp.set_attr<nnvm::TIsBackward>("TIsBackward", true, 11);
         gradOp.set_attr_parser(attr_parser);
         gradOp.set_num_inputs(num_inouts);
-        gradOp.set_num_outputs(num_outputs);
+        gradOp.set_num_outputs(num_inputs);
         gradOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, 11);
         gradOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, 11);
-        if (create_opstate_fp != nullptr)
-          gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstateful_backward_lambda, 11);
-        else
+        if (create_opstate_fp != nullptr) {
+          gradOp.set_attr<bool>("TIsLayerOpBackward", true, 11);
+          gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstateful_backward, 11);
+        } else {
           gradOp.set_attr<FComputeEx>("FComputeEx<cpu>", backward_lambda, 11);
+        }
       }
     }
     regOp.add_argument("data", "NDArray[]", "Source inputs");

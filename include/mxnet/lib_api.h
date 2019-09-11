@@ -105,7 +105,9 @@ class OpResource {
 #define SUBGRAPH_SYM_JSON "subgraph_sym_json"
 
 /*!
- * \brief An prototype interface class for library author creating stateful op
+ * \brief An abstract class for library author creating stateful op
+ * custom library should override Forward and destructor, and has an
+ * option to implement Backward
  */
 class CustomStatefulOp {
  public:

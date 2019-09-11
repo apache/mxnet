@@ -89,8 +89,8 @@ MXReturnValue forward(std::map<std::string,std::string> attrs,
 
 MXReturnValue mutateInputs(std::map<std::string,std::string> attrs,
                std::vector<int> &input_indices) {
-  input_indices.push_back(1);
-  std::cout << "the 1st input is marked as mutate input by library author" << std::endl;
+  //input_indices.push_back(1);
+  //std::cout << "the 1st input is marked as mutate input by library author" << std::endl;
   return MX_SUCCESS;
 }
 
@@ -115,6 +115,24 @@ class MyStatefulOp : public CustomStatefulOp {
     int* p = static_cast<int*>(op_res.alloc(sizeof(int)));
     *p = 42;
     std::cout << *p << std::endl;
+    return MX_SUCCESS;
+  }
+
+  int Backward(std::vector<MXTensor>& inputs,
+               std::vector<MXTensor>& outputs,
+               OpResource op_res) {
+    std::cout << "subgraph " << subgraph_sym << " backwarding" << std::endl;
+    float* input = inputs[0].getData<float>();
+    float* output1 = outputs[0].getData<float>();
+    float* output2 = outputs[1].getData<float>();
+    unsigned n = inputs[0].shape[0];
+    unsigned m = inputs[0].shape[1];
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < m; j++) {
+        output1[i * m + j] = input[i * m + j] + 58;
+        output2[i * m + j] = input[i * m + j] + 59;
+      }
+    }
     return MX_SUCCESS;
   }
 
