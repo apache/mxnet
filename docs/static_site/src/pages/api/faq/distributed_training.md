@@ -6,6 +6,22 @@ faq_c: Deployment Environments
 question: How to do distributed training using MXNet on AWS?
 permalink: /api/faq/distributed_training
 ---
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
 
 # Distributed Training in MXNet
 MXNet supports distributed training enabling us to leverage multiple machines for faster training.
@@ -37,7 +53,7 @@ A server may or may not be co-located with the worker processes.
 The scheduler then lets all processes know about every other node in the cluster, so that they can communicate with each other.
 
 ### KV Store
-MXNet provides a key-value store, which is a critical component used for multi-device training. The communication of parameters across devices on a single machine, as well as across multiple machines, is relayed through one or more servers with a key-value store for the parameters. Each value in this store is represented by a key and value, where each parameter array in the network is assigned a key, and value refers to the weights of that parameter array. Workers `push` gradients after processing a batch, and `pull` updated weights before processing a new batch. 
+MXNet provides a key-value store, which is a critical component used for multi-device training. The communication of parameters across devices on a single machine, as well as across multiple machines, is relayed through one or more servers with a key-value store for the parameters. Each value in this store is represented by a key and value, where each parameter array in the network is assigned a key, and value refers to the weights of that parameter array. Workers `push` gradients after processing a batch, and `pull` updated weights before processing a new batch.
 We can also pass in optimizers for the KVStore to use while updating each weight. Optimizers like Stochastic Gradient Descent define an update rule,
 essentially a mathematical formula to compute the new weight based on the old weight, gradient, and some parameters.
 
@@ -46,7 +62,7 @@ it uses a kvstore object internally to aggregate gradients from multiple devices
 
 Although the API remains the same whether or not multiple machines are being used,
 the notion of kvstore server exists only during distributed training.
-In this case, each `push` and `pull` involves communication with the kvstore servers. When there are multiple devices on a single machine, gradients from these devices are first aggregated on the machine and then sent to the servers.  
+In this case, each `push` and `pull` involves communication with the kvstore servers. When there are multiple devices on a single machine, gradients from these devices are first aggregated on the machine and then sent to the servers.
 Note that we need to compile MXNet with the build flag `USE_DIST_KVSTORE=1` to use distributed training.
 
 The distributed mode of KVStore is enabled by calling `mxnet.kvstore.create` function
@@ -83,7 +99,7 @@ You can look at [example/gluon/image_classification.py](https://github.com/apach
 to see an example usage.
 
 ### Updating weights
-KVStore server supports two modes, one which aggregates the gradients and updates the weights using those gradients, and second where the server only aggregates gradients. In the latter case, when a worker process pulls from kvstore, it gets the aggregated gradients. The worker then uses these gradients and applies the weights locally. 
+KVStore server supports two modes, one which aggregates the gradients and updates the weights using those gradients, and second where the server only aggregates gradients. In the latter case, when a worker process pulls from kvstore, it gets the aggregated gradients. The worker then uses these gradients and applies the weights locally.
 
 When using Gluon there is an option to choose between these modes by passing `update_on_kvstore` variable when you create the [Trainer]({{'/api/python/docs/api/gluon/mxnet.gluon.Trainer.html'|relative_url}}) object like this:
 
@@ -114,7 +130,7 @@ This means that a worker who finishes processing a batch can pull the current pa
 even if other workers haven't finished processing the earlier batch.
 This is faster than `dist_sync` because there is no cost of synchronization, but can take more epochs to converge.
 The update of weights is atomic, meaning no two updates happen on the same weight at the same time. However, the order  of updates is not guaranteed.
-In `async` mode, it is required to pass an optimizer because in the absence of an optimizer kvstore would replace the stored weights with received weights and this doesn't make sense for training in asynchronous mode. Hence, when using Gluon with `async` mode we need to set `update_on_kvstore` to `True`. 
+In `async` mode, it is required to pass an optimizer because in the absence of an optimizer kvstore would replace the stored weights with received weights and this doesn't make sense for training in asynchronous mode. Hence, when using Gluon with `async` mode we need to set `update_on_kvstore` to `True`.
 
 - `dist_sync_device`: Same as `dist_sync` except that when there are multiple GPUs being used on each node,
 this mode aggregates gradients and updates weights on GPU while dist_sync does so on CPU memory.
@@ -223,7 +239,7 @@ If the hosts file has exactly `n` number of worker nodes, it will launch a serve
   172.30.1.174
   ```
 - `--sync-dst-dir` takes the path of a directory on all hosts to which the current working directory will be synchronized. This only supports `ssh` launcher mode.
-This is necessary when the working directory is not accessible to all machines in the cluster. Setting this option synchronizes the current directory using rsync before the job is launched.  
+This is necessary when the working directory is not accessible to all machines in the cluster. Setting this option synchronizes the current directory using rsync before the job is launched.
 If you have not installed MXNet system-wide
 then you have to copy the folder `python/mxnet` and the file `lib/libmxnet.so` into the current directory before running `launch.py`.
 For example if you are in `example/gluon`, you can do this with `cp -r ../../python/mxnet ../../lib/libmxnet.so .`. This would work if your `lib` folder contains `libmxnet.so`, as would be the case when you use make. If you use CMake, this file would be in your `build` directory.

@@ -5,6 +5,22 @@ permalink: /api/java/docs/tutorials/mxnet_java_on_intellij
 is_tutorial: true
 tag: java
 ---
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
 
 
 # Run MXNet Java Examples Using the IntelliJ IDE (macOS)
@@ -50,9 +66,9 @@ sudo apt-get install openjdk-8-jdk maven
 
 From the IntelliJ welcome screen, select "Create New Project".
 
-Choose the Maven project type. 
+Choose the Maven project type.
 
-Select the checkbox for `Create from archetype`, then choose `org.apache.maven.archetypes:maven-archetype-quickstart` from the list below. More on this can be found on a Maven tutorial : [Maven in 5 Minutes](https://maven.apache.org/guides/getting-started/maven-in-five-minutes.html). 
+Select the checkbox for `Create from archetype`, then choose `org.apache.maven.archetypes:maven-archetype-quickstart` from the list below. More on this can be found on a Maven tutorial : [Maven in 5 Minutes](https://maven.apache.org/guides/getting-started/maven-in-five-minutes.html).
 
 ![maven project type - archetype](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/java/project-archetype.png)
 
@@ -118,7 +134,7 @@ Click "Import Changes" in this prompt.
 **Step 6.** Navigate to the App.java class in the project and paste the code in `main` method from HelloWorld.java from [Java Demo project](https://github.com/apache/incubator-mxnet/tree/master/scala-package/mxnet-demo/java-demo/src/main/java/mxnet/HelloWorld.java) on MXNet repository, overwriting the original hello world code.
 You can also grab the entire [Java Demo project](https://github.com/apache/incubator-mxnet/tree/master/scala-package/mxnet-demo/java-demo) and run it by following the instructions on the [README](https://github.com/apache/incubator-mxnet/blob/master/scala-package/mxnet-demo/java-demo/README.md).
 
-**Step 7.** Now run the App.java. 
+**Step 7.** Now run the App.java.
 
 The result should be something similar to this:
 

@@ -4,10 +4,26 @@ title:  Exception Handling in MXNet
 category: architecture
 permalink: /api/architecture/exception_handling
 ---
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
 
 # Exception Handling in MXNet
 
-This tutorial explains the exception handling support in MXNet, 
+This tutorial explains the exception handling support in MXNet,
 and provides examples on how to throw and handle exceptions when in a multithreaded context.
 Although, the examples are in Python, they can be easily extended to MXNet
 language bindings.
@@ -20,10 +36,10 @@ MXNet exceptions can be thrown from two areas:
 
 In the first case, the exception is thrown and can be handled in the main thread.
 In the second case, the exception is thrown in a spawned thread, caught and transported to the
-main thread, where it is rethrown. This tutorial will give more explanation and examples on how 
+main thread, where it is rethrown. This tutorial will give more explanation and examples on how
 to handle exceptions for the second case.
 
-## Prerequisites 
+## Prerequisites
 
 To complete this tutorial, we need:
 - MXNet [7b24137](https://github.com/apache/incubator-mxnet/commit/7b24137ed45df605defa4ce72ec91554f6e445f0). See Instructions in [Setup and Installation](http://mxnet.io/install/index.html).
@@ -37,9 +53,9 @@ number of samples. This should throw an exception.
 CSVIter uses PrefetcherIter for loading and parsing data.
 The PrefetcherIter spawns a producer thread in the background which prefetches
 the data while the main thread consumes the data. The exception is thrown in the spawned
-producer thread during the prefetching, when the label is not found corresponding to a specific sample. 
+producer thread during the prefetching, when the label is not found corresponding to a specific sample.
 
-The exception is transported to the main thread, where it is rethrown when Next is 
+The exception is transported to the main thread, where it is rethrown when Next is
 called as part of the following line: `for batch in iter(data_train)`.
 
 In general, Exception may be rethrown as part of `Next` and `BeforeFirst` calls which correspond to `reset()` and `next()` methods in `MXDataIter` for Python language bindings.
@@ -80,10 +96,10 @@ There is a race condition when your last `next()` call doesnt reach the batch in
 
 The below example shows how to handle exceptions for operators in the imperative mode.
 
-For the operator case, the dependency engine spawns a number of threads if it is running in the `ThreadedEnginePool` or `ThreadedEnginePerDevice` mode. The final operator is executed in one of the spawned threads. 
+For the operator case, the dependency engine spawns a number of threads if it is running in the `ThreadedEnginePool` or `ThreadedEnginePerDevice` mode. The final operator is executed in one of the spawned threads.
 
 If an operator throws an exception during execution, this exception is propagated
-down the dependency chain. Once there is a synchronizing call i.e. WaitToRead for a variable in the dependency chain, the propagated exception is rethrown. 
+down the dependency chain. Once there is a synchronizing call i.e. WaitToRead for a variable in the dependency chain, the propagated exception is rethrown.
 
 In the below example, I illustrate how an exception that occured in the first line is propagated down the dependency chain, and finally is rethrown when we make a synchronizing call to WaitToRead.
 
@@ -109,7 +125,6 @@ c, d  = mx.nd.dot(a, b)
 try:
     c.asnumpy()
 except mx.base.MXNetError as ex:
-    print("Exception handled")    
+    print("Exception handled")
 d.asnumpy()
 ```
-

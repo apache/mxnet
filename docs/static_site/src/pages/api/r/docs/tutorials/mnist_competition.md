@@ -5,6 +5,22 @@ is_tutorial: true
 tag: r
 permalink: /api/r/docs/tutorials/mnist_competition
 ---
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
 
 Handwritten Digits Classification Competition
 =============================================
@@ -12,7 +28,7 @@ Handwritten Digits Classification Competition
 [MNIST](http://yann.lecun.com/exdb/mnist/) is a handwritten digits image data set created by Yann LeCun. Every digit is represented by a 28 x 28 pixel image. It's become a standard data set for testing classifiers on simple image input. A neural network is a strong model for image classification tasks. There's a [long-term hosted competition](https://www.kaggle.com/c/digit-recognizer) on Kaggle using this data set.
 This tutorial shows how to use [MXNet](https://github.com/dmlc/mxnet/tree/master/R-package) to compete in this challenge.
 
-## Loading the Data 
+## Loading the Data
 
 First, let's download the data from [Kaggle](https://www.kaggle.com/c/digit-recognizer/data) and put it in the `data/` folder in your working directory.
 

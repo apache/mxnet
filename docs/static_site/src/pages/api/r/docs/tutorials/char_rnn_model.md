@@ -5,6 +5,22 @@ is_tutorial: true
 tag: r
 permalink: /api/r/docs/tutorials/char_rnn_model
 ---
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
 
 
 # Character-level Language Model using RNN
@@ -45,36 +61,36 @@ Next we transform the test into feature vectors that is fed into the RNN model. 
 
 ```R
 make_data <- function(path, seq.len = 32, dic=NULL) {
-  
+
   text_vec <- read_file(file = path)
   text_vec <- stri_enc_toascii(str = text_vec)
   text_vec <- str_replace_all(string = text_vec, pattern = "[^[:print:]]", replacement = "")
   text_vec <- strsplit(text_vec, '') %>% unlist
-  
+
   if (is.null(dic)) {
     char_keep <- sort(unique(text_vec))
   } else char_keep <- names(dic)[!dic == 0]
-  
+
   # Remove terms not part of dictionary
   text_vec <- text_vec[text_vec %in% char_keep]
-  
+
   # Build dictionary
   dic <- 1:length(char_keep)
   names(dic) <- char_keep
-  
+
   # reverse dictionary
   rev_dic <- names(dic)
   names(rev_dic) <- dic
-  
+
   # Adjust by -1 to have a 1-lag for labels
   num.seq <- (length(text_vec) - 1) %/% seq.len
-  
-  features <- dic[text_vec[1:(seq.len * num.seq)]] 
+
+  features <- dic[text_vec[1:(seq.len * num.seq)]]
   labels <- dic[text_vec[1:(seq.len*num.seq) + 1]]
-  
+
   features_array <- array(features, dim = c(seq.len, num.seq))
   labels_array <- array(labels, dim = c(seq.len, num.seq))
-  
+
   return (list(features_array = features_array, labels_array = labels_array, dic = dic, rev_dic = rev_dic))
 }
 
@@ -117,7 +133,7 @@ vocab <- length(eval_buckets$dic)
 
 batch.size <- 32
 
-train.data <- mx.io.bucket.iter(buckets = train_buckets$buckets, batch.size = batch.size, 
+train.data <- mx.io.bucket.iter(buckets = train_buckets$buckets, batch.size = batch.size,
                                 data.mask.element = 0, shuffle = TRUE)
 
 eval.data <- mx.io.bucket.iter(buckets = eval_buckets$buckets, batch.size = batch.size,
@@ -131,12 +147,12 @@ This model is a multi-layer RNN for sampling from character-level language model
 
 
 ```R
-rnn_graph_one_one <- rnn.graph(num_rnn_layer = 3, 
+rnn_graph_one_one <- rnn.graph(num_rnn_layer = 3,
                                num_hidden = 96,
                                input_size = vocab,
-                               num_embed = 64, 
+                               num_embed = 64,
                                num_decode = vocab,
-                               dropout = 0.2, 
+                               dropout = 0.2,
                                ignore_label = 0,
                                cell_type = "lstm",
                                masking = F,
@@ -144,7 +160,7 @@ rnn_graph_one_one <- rnn.graph(num_rnn_layer = 3,
                                loss_output = "softmax",
                                config = "one-to-one")
 
-graph.viz(rnn_graph_one_one, type = "graph", direction = "LR", 
+graph.viz(rnn_graph_one_one, type = "graph", direction = "LR",
           graph.height.px = 180, shape=c(100, 64))
 
 devices <- mx.cpu()
@@ -185,11 +201,11 @@ mx.metric.Perplexity <- mx.metric.custom_nd("Perplexity", function(label, pred) 
 })
 
 model <- mx.model.buckets(symbol = rnn_graph_one_one,
-                          train.data = train.data, eval.data = eval.data, 
+                          train.data = train.data, eval.data = eval.data,
                           num.round = 20, ctx = devices, verbose = TRUE,
-                          metric = mx.metric.Perplexity, 
-                          initializer = initializer, optimizer = optimizer, 
-                          batch.end.callback = NULL, 
+                          metric = mx.metric.Perplexity,
+                          initializer = initializer, optimizer = optimizer,
+                          batch.end.callback = NULL,
                           epoch.end.callback = epoch.end.callback)
 
 mx.model.save(model, prefix = "one_to_one_seq_model", iteration = 20)
@@ -257,14 +273,14 @@ infer_raw <- c("Thou ")
 infer_split <- dic[strsplit(infer_raw, '') %>% unlist]
 infer_length <- length(infer_split)
 
-infer.data <- mx.io.arrayiter(data = matrix(infer_split), label = matrix(infer_split),  
+infer.data <- mx.io.arrayiter(data = matrix(infer_split), label = matrix(infer_split),
                               batch.size = 1, shuffle = FALSE)
 
-infer <- mx.infer.rnn.one(infer.data = infer.data, 
+infer <- mx.infer.rnn.one(infer.data = infer.data,
                           symbol = symbol,
                           arg.params = model$arg.params,
                           aux.params = model$aux.params,
-                          input.params = NULL, 
+                          input.params = NULL,
                           ctx = devices)
 
 pred_prob <- as.numeric(as.array(mx.nd.slice.axis(
@@ -273,18 +289,18 @@ pred <- sample(length(pred_prob), prob = pred_prob, size = 1) - 1
 predict <- c(predict, pred)
 
 for (i in 1:200) {
-  
-  infer.data <- mx.io.arrayiter(data = as.matrix(pred), label = as.matrix(pred),  
+
+  infer.data <- mx.io.arrayiter(data = as.matrix(pred), label = as.matrix(pred),
                                 batch.size = 1, shuffle = FALSE)
-  
-  infer <- mx.infer.rnn.one(infer.data = infer.data, 
+
+  infer <- mx.infer.rnn.one(infer.data = infer.data,
                             symbol = symbol,
                             arg.params = model$arg.params,
                             aux.params = model$aux.params,
-                            input.params = list(rnn.state = infer[[2]], 
-                                                rnn.state.cell = infer[[3]]), 
+                            input.params = list(rnn.state = infer[[2]],
+                                                rnn.state.cell = infer[[3]]),
                             ctx = devices)
-  
+
   pred_prob <- as.numeric(as.array(infer$loss_output))
   pred <- sample(length(pred_prob), prob = pred_prob, size = 1, replace = T) - 1
   predict <- c(predict, pred)

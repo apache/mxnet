@@ -5,6 +5,22 @@ is_tutorial: true
 tag: r
 permalink: /api/r/docs/tutorials/multi_dim_lstm
 ---
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
 
 
 LSTM Time Series Example
@@ -14,7 +30,7 @@ This tutorial shows how to use an LSTM model with multivariate data, and generat
 The tutorial is an illustration of how to use LSTM models with MXNet-R. We are forecasting the air pollution with data recorded at the US embassy in Beijing, China for five years.
 
 Dataset Attribution:
-"PM2.5 data of US Embassy in Beijing" 
+"PM2.5 data of US Embassy in Beijing"
 We want to predict pollution levels(PM2.5 concentration) in the city given the above dataset.
 
 ```r
@@ -117,11 +133,11 @@ eval_ids <- 301:400
 
 ## The number of samples used for training and evaluation is arbitrary.  I have kept aside few
 ## samples for testing purposes create dataiterators
-train.data <- mx.io.arrayiter(data = trainX[, , train_ids, drop = F], 
+train.data <- mx.io.arrayiter(data = trainX[, , train_ids, drop = F],
                               label = trainY[, train_ids],
                               batch.size = batch.size, shuffle = TRUE)
 
-eval.data <- mx.io.arrayiter(data = trainX[, , eval_ids, drop = F], 
+eval.data <- mx.io.arrayiter(data = trainX[, , eval_ids, drop = F],
                              label = trainY[, eval_ids],
                              batch.size = batch.size, shuffle = FALSE)
 
@@ -131,11 +147,11 @@ symbol <- rnn.graph(num_rnn_layer = 1,
                     input_size = NULL,
                     num_embed = NULL,
                     num_decode = 1,
-                    masking = F, 
+                    masking = F,
                     loss_output = "linear",
-                    dropout = 0.2, 
-                    ignore_label = -1, 
-                    cell_type = "lstm", 
+                    dropout = 0.2,
+                    ignore_label = -1,
+                    cell_type = "lstm",
                     output_last_state = T,
                     config = "one-to-one")
 
@@ -153,31 +169,31 @@ mx.metric.mse.seq <- mx.metric.custom("MSE", function(label, pred) {
 ctx <- mx.cpu()
 
 initializer <- mx.init.Xavier(rnd_type = "gaussian",
-                              factor_type = "avg", 
+                              factor_type = "avg",
                               magnitude = 3)
 
 optimizer <- mx.opt.create("adadelta",
-                           rho = 0.9, 
-                           eps = 1e-05, 
-                           wd = 1e-06, 
-                           clip_gradient = 1, 
+                           rho = 0.9,
+                           eps = 1e-05,
+                           wd = 1e-06,
+                           clip_gradient = 1,
                            rescale.grad = 1/batch.size)
 
 logger <- mx.metric.logger()
-epoch.end.callback <- mx.callback.log.train.metric(period = 10, 
+epoch.end.callback <- mx.callback.log.train.metric(period = 10,
                                                    logger = logger)
 
 ## train the network
-system.time(model <- mx.model.buckets(symbol = symbol, 
-                                      train.data = train.data, 
+system.time(model <- mx.model.buckets(symbol = symbol,
+                                      train.data = train.data,
                                       eval.data = eval.data,
-                                      num.round = 100, 
-                                      ctx = ctx, 
-                                      verbose = TRUE, 
-                                      metric = mx.metric.mse.seq, 
+                                      num.round = 100,
+                                      ctx = ctx,
+                                      verbose = TRUE,
+                                      metric = mx.metric.mse.seq,
                                       initializer = initializer,
-                                      optimizer = optimizer, 
-                                      batch.end.callback = NULL, 
+                                      optimizer = optimizer,
+                                      batch.end.callback = NULL,
                                       epoch.end.callback = epoch.end.callback))
 ```
 Output:
@@ -226,8 +242,8 @@ Start training with 1 devices
 [100] Train-MSE=0.00177267640829086
 [100] Validation-MSE=0.00153781197150238
 
-   user  system elapsed 
- 21.937   1.914  13.402 
+   user  system elapsed
+ 21.937   1.914  13.402
 ```
 We can see how mean squared error varies with epochs below.
 
@@ -257,16 +273,16 @@ label <- mx.nd.array(trainY[, 400, drop = F])
 
 ## We create dataiterators for the input, please note that the label is required to create
 ## iterator and will not be used in the inference. You can use dummy values too in the label.
-infer.data <- mx.io.arrayiter(data = data, 
-                              label = label, 
-                              batch.size = 1, 
+infer.data <- mx.io.arrayiter(data = data,
+                              label = label,
+                              batch.size = 1,
                               shuffle = FALSE)
 
-infer <- mx.infer.rnn.one(infer.data = infer.data, 
-                          symbol = symbol, 
+infer <- mx.infer.rnn.one(infer.data = infer.data,
+                          symbol = symbol,
                           arg.params = model$arg.params,
-                          aux.params = model$aux.params, 
-                          input.params = NULL, 
+                          aux.params = model$aux.params,
+                          input.params = NULL,
                           ctx = ctx)
 ## Once we get the weights for the above time series, we try to predict the next 100 steps for
 ## this time series, which is technically our 401st time series.
@@ -279,17 +295,17 @@ for (i in 1:pred_length) {
 
     data <- mx.nd.array(trainX[, i, 401, drop = F])
     label <- mx.nd.array(trainY[i, 401, drop = F])
-    infer.data <- mx.io.arrayiter(data = data, 
-                                  label = label, 
-                                  batch.size = 1, 
+    infer.data <- mx.io.arrayiter(data = data,
+                                  label = label,
+                                  batch.size = 1,
                                   shuffle = FALSE)
     ## note that we use rnn state values from previous iterations here
     infer <- mx.infer.rnn.one(infer.data = infer.data,
                               symbol = symbol,
-                              ctx = ctx, 
+                              ctx = ctx,
                               arg.params = model$arg.params,
-                              aux.params = model$aux.params, 
-                              input.params = list(rnn.state = infer[[2]], 
+                              aux.params = model$aux.params,
+                              input.params = list(rnn.state = infer[[2]],
                                                   rnn.state.cell = infer[[3]]))
 
     pred <- infer[[1]]
