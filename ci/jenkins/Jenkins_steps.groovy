@@ -1409,6 +1409,8 @@ def compile_unix_lite() {
     }]
 }
 
+// Each of the docs_{lang} functions will build the docs...
+// Stashing is only needed for master for website publishing or for testing "new_"
 
 // Call this function from Jenkins to generate just the Python API microsite artifacts.
 def docs_python() {
@@ -1418,7 +1420,9 @@ def docs_python() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('libmxnet', mx_lib, false)
             utils.docker_run('ubuntu_cpu_python', 'build_python_docs', false)
-            utils.pack_lib('python-artifacts', 'docs/_build/python-artifacts.tgz', false)
+            if (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("new_")) {
+              utils.pack_lib('python-artifacts', 'docs/_build/python-artifacts.tgz', false)
+            }
           }
         }
       }
@@ -1434,7 +1438,9 @@ def docs_c() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('libmxnet', 'lib/libmxnet.so', false)
             utils.docker_run('ubuntu_cpu_c', 'build_c_docs', false)
-            utils.pack_lib('c-artifacts', 'docs/_build/c-artifacts.tgz', false)
+            if (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("new_")) {
+              utils.pack_lib('c-artifacts', 'docs/_build/c-artifacts.tgz', false)
+            }
           }
         }
       }
@@ -1449,12 +1455,9 @@ def docs_julia() {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('libmxnet', mx_lib, false)
-            try {
-               utils.docker_run('ubuntu_cpu_julia', 'build_julia_docs', false)
-               utils.pack_lib('julia-artifacts', 'docs/_build/julia-artifacts.tgz', false)
-            }
-            catch (Exception e) {
-               println(e.getMessage())
+            utils.docker_run('ubuntu_cpu_julia', 'build_julia_docs', false)
+            if (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("new_")) {
+              utils.pack_lib('julia-artifacts', 'docs/_build/julia-artifacts.tgz', false)
             }
           }
         }
@@ -1471,7 +1474,9 @@ def docs_r() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('libmxnet', mx_lib, false)
             utils.docker_run('ubuntu_cpu_r', 'build_r_docs', false)
-            utils.pack_lib('r-artifacts', 'docs/_build/r-artifacts.tgz', false)
+            if (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("new_")) {
+              utils.pack_lib('r-artifacts', 'docs/_build/r-artifacts.tgz', false)
+            }
           }
         }
       }
@@ -1488,7 +1493,9 @@ def docs_scala() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('libmxnet', mx_lib, false)
             utils.docker_run('ubuntu_cpu_scala', 'build_scala_docs', false)
-            utils.pack_lib('scala-artifacts', 'docs/_build/scala-artifacts.tgz', false)
+            if (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("new_")) {
+              utils.pack_lib('scala-artifacts', 'docs/_build/scala-artifacts.tgz', false)
+            }
           }
         }
       }
@@ -1505,7 +1512,9 @@ def docs_java() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('libmxnet', mx_lib, false)
             utils.docker_run('ubuntu_cpu_scala', 'build_java_docs', false)
-            utils.pack_lib('java-artifacts', 'docs/_build/java-artifacts.tgz', false)
+            if (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("new_")) {
+              utils.pack_lib('java-artifacts', 'docs/_build/java-artifacts.tgz', false)
+            }
           }
         }
       }
@@ -1522,7 +1531,9 @@ def docs_clojure() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('libmxnet', mx_lib, false)
             utils.docker_run('ubuntu_cpu_scala', 'build_clojure_docs', false)
-            utils.pack_lib('clojure-artifacts', 'docs/_build/clojure-artifacts.tgz', false)
+            if (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("new_")) {
+              utils.pack_lib('clojure-artifacts', 'docs/_build/clojure-artifacts.tgz', false)
+            }
           }
         }
       }
@@ -1538,7 +1549,9 @@ def docs_jekyll() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu_jekyll', 'build_jekyll_docs', false)
-            utils.pack_lib('jekyll-artifacts', 'docs/_build/jekyll-artifacts.tgz', false)
+            if (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("new_")) {
+              utils.pack_lib('jekyll-artifacts', 'docs/_build/jekyll-artifacts.tgz', false)
+            }
           }
         }
       }
@@ -1579,29 +1592,6 @@ def docs_prepare() {
 }
 
 
-// This is for the website and the Python API only
-def docs_prepare_python_only() {
-    return ['Prepare for publication of the full website': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/docs') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-
-            unstash 'jekyll-artifacts'
-            unstash 'python-artifacts'
-
-            // Prepare website and Python API docs
-            utils.docker_run('ubuntu_cpu_jekyll', 'build_docs_small', false)
-
-            // Publish preview to S3
-            sh "cd docs/_build/html && ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
-          }
-        }
-      }
-    }]
-}
-
-
 def docs_archive() {
     return ['Archive the full website': {
       node(NODE_LINUX_CPU) {
@@ -1618,19 +1608,14 @@ def docs_archive() {
 // This is for the full website
 def docs_publish() {
     return ['Publish the full website': {
-      node(NODE_LINUX_CPU) {
+      node('restricted-mxnetlinux-cpu') {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            //utils.init_git()
+            // If used stashed files, you can retrieve them here
             //unstash 'full_website'
             //sh 'tar -xzf docs/_build/full_website.tgz --directory .'
-            // TODO: Make sure this 'test-website-publish' understand the new structure
-            try {
-              build 'website-publish-master'
-            }
-            catch (Exception e) {
-               println(e.getMessage())
-            }
+            // This jenkins job pulls artifacts from website-build-master
+            build 'restricted-website-publish-master'
           }
         }
       }
