@@ -2038,7 +2038,7 @@ def hsplit(ary, indices_or_sections):
     if isinstance(indices_or_sections, int):
         sections = indices_or_sections
         if axis_size % sections:
-            raise ValueError('array split does not result in an equal division')
+            raise ValueError('array hsplit does not result in an equal division')
         section_size = int(axis_size / sections)
         indices = [i * section_size for i in range(sections)]
     elif isinstance(indices_or_sections, (list, set, tuple)):
@@ -2047,7 +2047,7 @@ def hsplit(ary, indices_or_sections):
         raise ValueError('indices_or_sections must either int or tuple of ints')
     ret = _npi.hsplit(ary, indices, axis, False)
     if not isinstance(ret, list):
-        raise NotImplementedError('single output from split is not supported yet...')
+        raise NotImplementedError('single output from hsplit is not supported yet...')
     return ret
 
 

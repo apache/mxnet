@@ -349,78 +349,25 @@ inline bool HSplitOpShape(const nnvm::NodeAttrs& attrs,
                           mxnet::ShapeVector* in_attrs,
                           mxnet::ShapeVector* out_attrs) {
   using namespace mshadow;
-  const SplitParam& param = nnvm::get<SplitParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U);
   mxnet::TShape dshape = in_attrs->at(split_enum::kData);
-  mxnet::TShape ishape = in_attrs->at(split_enum::kData);
   if (!mxnet::ndim_is_known(dshape)) return false;
-  int real_axis = 1;
-
+  int real_axis;
   if (dshape.ndim() > 1) {
     real_axis = 1;
   } else {
     real_axis = 0;
   }
-  const mxnet::TShape indices =
-         param.sections > 0 ? GetSplitIndices(ishape, real_axis, param.sections) : param.indices;
-  int num_outputs = (param.sections > 0) ? indices.ndim() - 1 : indices.ndim();
-  // Pre-compute squeezed output shape for future usage
-  mxnet::TShape squeezed_dshape = dshape;
-  for (int d = real_axis; d < squeezed_dshape.ndim() - 1; ++d) {
-    squeezed_dshape[d] = squeezed_dshape[d+1];
-  }
-  squeezed_dshape = mxnet::TShape(&squeezed_dshape[0], &squeezed_dshape[squeezed_dshape.ndim()-1]);
-  // Assign shape to every output
-  for (int i = 0; i < num_outputs; ++i) {
-    int start = indices[i];
-    int end = (i < num_outputs - 1) ? indices[i + 1] : ishape[real_axis];
-    if (ishape[real_axis] == 0U) {
-      end = start;
-    } else {
-      CHECK(start <= end)
-        << "start " << start << " is not less than end " << end << "for subarray " << i;
-      CHECK(end <= ishape[real_axis])
-        << "end " << end << " is no less than the size of the axis " << ishape[real_axis];
-    }
-    dshape[real_axis] = (end - start);
-    if (param.squeeze_axis) {
-      CHECK_EQ(end - start, 1U) << "expected axis size of 1 but got " << end - start;
-      SHAPE_ASSIGN_CHECK(*out_attrs, i, squeezed_dshape);
-    } else {
-      SHAPE_ASSIGN_CHECK(*out_attrs, i, dshape);
-    }
-  }
-  mxnet::TShape back_calculate_dshape = ishape;
-  back_calculate_dshape[real_axis] = 0;
-  for (int d = 0; d < real_axis; ++d) {
-    back_calculate_dshape[d] = (*out_attrs)[0][d];
-  }
-  if (param.squeeze_axis) {
-    back_calculate_dshape[real_axis] = num_outputs;
-  } else {
-    for (int i = 0; i < num_outputs; ++i) {
-      back_calculate_dshape[real_axis] += (*out_attrs)[i][real_axis];
-    }
-  }
-  for (int d = real_axis + 1; d < ishape.ndim(); ++d) {
-    if (param.squeeze_axis) {
-      back_calculate_dshape[d] = (*out_attrs)[0][d - 1];
-    } else {
-      back_calculate_dshape[d] = (*out_attrs)[0][d];
-    }
-  }
-  SHAPE_ASSIGN_CHECK(*in_attrs, split_enum::kData, back_calculate_dshape);
-  return true;
+  return SplitOpShapeImpl(attrs, in_attrs, out_attrs, real_axis);
 }
 
 NNVM_REGISTER_OP(_npi_hsplit)
-.add_alias("_npi_hsplit")
 .set_attr_parser(ParamParser<SplitParam>)
 .set_num_inputs(1)
 .set_num_outputs(SplitNumOutputs)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"data"};
+     return std::vector<std::string>{"data"};
 })
 .set_attr<mxnet::FInferShape>("FInferShape", HSplitOpShape)
 .set_attr<nnvm::FInferType>("FInferType", SplitOpType)
