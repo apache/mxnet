@@ -1612,7 +1612,7 @@ def docs_publish() {
             //sh 'tar -xzf docs/_build/full_website.tgz --directory .'
             // TODO: Make sure this 'test-website-publish' understand the new structure
             try {
-              build 'test-website-publish-master'
+              build 'website-publish-master'
             }
             catch (Exception e) {
                println(e.getMessage())
