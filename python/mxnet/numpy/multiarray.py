@@ -1520,6 +1520,7 @@ class ndarray(NDArray):
         """
         return _mx_nd_np.full(self.shape, value, ctx=self.context, dtype=self.dtype, out=self)
 
+    # pylint: disable=redefined-outer-name
     def _scatter_set_nd(self, value_nd, indices):
         """
         This is added as an ndarray class method in order to support polymorphism in NDArray and numpy.ndarray indexing
@@ -1527,6 +1528,7 @@ class ndarray(NDArray):
         return _npi.scatter_set_nd(
             lhs=self, rhs=value_nd, indices=indices, shape=self.shape, out=self
         )
+    # pylint: enable=redefined-outer-name
 
     @property
     def shape(self):
@@ -3810,6 +3812,7 @@ def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=None):
     return _npi.var(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
 
 
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 def indices(dimensions, dtype=_np.int32, ctx=None):
     """Return an array representing the indices of a grid.
@@ -3869,3 +3872,4 @@ def indices(dimensions, dtype=_np.int32, ctx=None):
     extract the required elements directly with ``x[:2, :3]``.
     """
     return _mx_nd_np.indices(dimensions=dimensions, dtype=dtype, ctx=ctx)
+# pylint: enable=redefined-outer-name
