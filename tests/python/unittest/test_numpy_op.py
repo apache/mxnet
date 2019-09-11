@@ -1758,7 +1758,7 @@ def test_np_linalg_norm():
             return F.np.linalg.norm(x, ord=self._ord, axis=self._axis, keepdims=self._keepdims)
 
     configs = [
-        ((2,), None, None),
+        ((3,), None, None),
         ((2, 3), 2, 1),
         ((2, 3, 4), 1, 1),
         ((2, 3, 4), -1, 2),
