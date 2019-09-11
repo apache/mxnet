@@ -223,7 +223,6 @@ class DeformableConvolution(HybridBlock):
 
 
 class ModulatedDeformableConvolution(HybridBlock):
-#class ModulatedDeformableConvolution(Block):
     """2-D Deformable Convolution v_1 (Dai, 2017).
     Normal Convolution uses sampling points in a regular grid, while the sampling
     points of Deformablem Convolution can be offset. The offset is learned with a
@@ -267,6 +266,8 @@ class ModulatedDeformableConvolution(HybridBlock):
         Activation function to use. See :func:`~mxnet.ndarray.Activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
+    modulated : bool, (Default value = True)
+        whether use modulated deformable convolution or standard deformable convolution.
     weight_initializer : str or `Initializer`, (Default value = None)
         Initializer for the `weight` weights matrix for the convolution layer
         for generating the output features.

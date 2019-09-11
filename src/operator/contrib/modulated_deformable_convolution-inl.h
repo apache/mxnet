@@ -1,6 +1,30 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+ 
+/*
+ * Code is adapted from:
+ * https://github.com/msracver/Deformable-ConvNets 
+*/ 
+
 /*!
  * Copyright (c) 2018 Microsoft
- * Licensed under The MIT License [see LICENSE for details]
+ * Licensed under The Apache-2.0 License [see LICENSE for details]
  * \file modulated_deformable_convolution-inl.h
  * \brief
  * \ref: https://github.com/Yangqing/caffe/wiki/Convolution-in-Caffe:-a-memo
@@ -112,11 +136,7 @@ class ModulatedDeformableConvolutionOp : public Operator {
     Tensor<xpu, 1, DType> workspace = ctx.requested[dmconv::kTempSpace]
       .get_space_typed<xpu, 1, DType>(Shape1(col_buffer_size_ + num_*output_dim_), s);
     // calculate the shape of col_buffer
-    //wu TShape col_buffer_shape(num_spatial_axes_ + 2);
     TShape col_buffer_shape(num_spatial_axes_ + 2, 0);
-    std::cout << "------------------------------abc" << std::endl;
-    std::cout << col_buffer_shape << std::endl;
-    std::cout << conv_in_channels_ * param_.kernel.Size() << std::endl;
     col_buffer_shape[0] = conv_in_channels_ * param_.kernel.Size();
     //for (index_t i = 1; i < col_buffer_shape.ndim(); ++i) {
     //  col_buffer_shape[i] = out_data[0].shape_[i + 1];
@@ -124,10 +144,8 @@ class ModulatedDeformableConvolutionOp : public Operator {
     for (index_t i = 2; i < col_buffer_shape.ndim(); ++i) {
       col_buffer_shape[i] = out_data[0].shape_[i];
     }
-    std::cout << col_buffer_shape << std::endl;
     // create a column buffer using workspace and col_buffer_shape
     TBlob col_buffer(workspace.dptr_, col_buffer_shape, xpu::kDevMask, DataType<DType>::kFlag);
-    //wu mxnet::TShape output_buffer_shape(1);
     mxnet::TShape output_buffer_shape(1, 0);
     output_buffer_shape[0] = num_*output_dim_;
     TBlob output_buffer(workspace.dptr_ + col_buffer_size_, output_buffer_shape, xpu::kDevMask, DataType<DType>::kFlag);
@@ -195,7 +213,6 @@ class ModulatedDeformableConvolutionOp : public Operator {
     Tensor<xpu, 1, DType> workspace = ctx.requested[dmconv::kTempSpace]
       .get_space_typed<xpu, 1, DType>(Shape1(col_buffer_size_ + num_*output_dim_), s);
     // calculate the shape of col_buffer
-    //wu TShape col_buffer_shape(num_spatial_axes_ + 2);
     TShape col_buffer_shape(num_spatial_axes_ + 2, 0);
     col_buffer_shape[0] = conv_in_channels_ * param_.kernel.Size();
     col_buffer_shape[1] = im2col_step_;
@@ -204,7 +221,6 @@ class ModulatedDeformableConvolutionOp : public Operator {
     }
     // create a column buffer using workspace and col_buffer_shape
     TBlob col_buffer(workspace.dptr_, col_buffer_shape, xpu::kDevMask, DataType<DType>::kFlag);
-    //wu TShape output_buffer_shape(1);
     TShape output_buffer_shape(1, 0);
     output_buffer_shape[0] = num_*output_dim_;
     TBlob output_buffer(workspace.dptr_ + col_buffer_size_, output_buffer_shape, xpu::kDevMask, DataType<DType>::kFlag);
@@ -313,11 +329,7 @@ class ModulatedDeformableConvolutionOp : public Operator {
     col_offset_ = kernel_dim_ * conv_out_spatial_dim_;
     output_offset_ = conv_out_channels_ * conv_out_spatial_dim_ / group_;
     // size of the column buffer used for storing im2col-ed pixels
-    //wu im2col_step_ = std::min(param_.im2col_step, num_);
-    std::cout << "here1: " << param_.im2col_step << std::endl;
-    std::cout << "here2: " << num_ << std::endl;
     im2col_step_ = std::min(param_.im2col_step, static_cast<uint32_t>(num_));
-    std::cout << "here3: " << im2col_step_ << std::endl;
     col_buffer_size_ = kernel_dim_ * group_ * im2col_step_ * conv_out_spatial_dim_;
     // input/output image size (#channels * height * width)
     input_dim_ = ishape.ProdShape(1, ishape.ndim());
