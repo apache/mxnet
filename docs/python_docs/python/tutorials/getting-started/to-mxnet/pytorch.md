@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # PyTorch vs Apache MXNet
 
 [PyTorch](https://pytorch.org/) is a popular deep learning framework due to its easy-to-understand API and its completely imperative approach. Apache MXNet includes the Gluon API which gives you the simplicity and flexibility of PyTorch and allows you to hybridize your network to leverage performance optimizations of the symbolic graph. As of April 2019, [NVidia performance benchmarks](https://developer.nvidia.com/deep-learning-performance-training-inference) show that Apache MXNet outperforms PyTorch by ~77% on training ResNet-50: 10,925 images per second vs. 6,175.
@@ -147,7 +164,7 @@ mx_trainer = gluon.Trainer(mx_net.collect_params(),
                            'sgd', {'learning_rate': 0.1})
 ```
 
-The code difference between frameworks is small. The main difference is that in Apache MXNet we use [Trainer](http://beta.mxnet.io/api/gluon/mxnet.gluon.Trainer.html) class, which accepts optimization algorithm as an argument. We also use [.collect_params()](https://beta.mxnet.io/api/gluon/_autogen/mxnet.gluon.nn.Block.collect_params.html) method to get parameters of the network.
+The code difference between frameworks is small. The main difference is that in Apache MXNet we use [Trainer](http://beta.mxnet.io/api/gluon/mxnet.gluon.Trainer.html) class, which accepts optimization algorithm as an argument. We also use [.collect_params()](/api/python/docs/api/gluon/_autogen/mxnet.gluon.nn.Block.collect_params.html) method to get parameters of the network.
 
 ### 4. Training
 
@@ -195,13 +212,13 @@ Some of the differences in Apache MXNet when compared to PyTorch are as follows:
 
 * In Apache MXNet, you don't need to flatten the 4-D input into 2-D when feeding the data into forward pass.
 
-* In Apache MXNet, you need to perform the calculation within the [autograd.record()](https://beta.mxnet.io/api/gluon-related/_autogen/mxnet.autograd.record.html) scope so that it can be automatically differentiated in the backward pass.
+* In Apache MXNet, you need to perform the calculation within the [autograd.record()](/api/python/docs/api/gluon-related/_autogen/mxnet.autograd.record.html) scope so that it can be automatically differentiated in the backward pass.
 
 * It is not necessary to clear the gradient every time as with PyTorch's `trainer.zero_grad()` because by default the new gradient is written in, not accumulated.
 
-* You need to specify the update step size (usually batch size) when performing [step()](https://beta.mxnet.io/api/gluon/_autogen/mxnet.gluon.Trainer.step.html) on the trainer.
+* You need to specify the update step size (usually batch size) when performing [step()](/api/python/docs/api/gluon/_autogen/mxnet.gluon.Trainer.step.html) on the trainer.
 
-* You need to call [.asscalar()](https://beta.mxnet.io/api/ndarray/_autogen/mxnet.ndarray.NDArray.asscalar.html) to turn a multidimensional array into a scalar.
+* You need to call [.asscalar()](/api/python/docs/api/ndarray/_autogen/mxnet.ndarray.NDArray.asscalar.html) to turn a multidimensional array into a scalar.
 
 * In this sample, Apache MXNet is twice as fast as PyTorch. Though you need to be cautious with such toy comparisons.
 
@@ -213,9 +230,9 @@ As we saw above, Apache MXNet Gluon API and PyTorch have many similarities. The 
 
 While Apache MXNet Gluon API is very similar to PyTorch, there are some extra functionality that can make your code even faster.
 
-* Check out [Hybridize tutorial](https://beta.mxnet.io/guide/packages/gluon/hybridize.html) to learn how to write imperative code which can be converted to symbolic one.
+* Check out [Hybridize tutorial](/api/python/docs/guide/packages/gluon/hybridize.html) to learn how to write imperative code which can be converted to symbolic one.
 
-* Also, check out how to extend Apache MXNet with your own [custom layers](https://beta.mxnet.io/guide/extend/custom_layer.html).
+* Also, check out how to extend Apache MXNet with your own [custom layers](/api/python/docs/guide/extend/custom_layer.html).
 
 ## Appendix
 

@@ -1,7 +1,26 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Python binding docs
 
-The following guide will help you build a local version of the website,
+The following guide will help you build a local version of the Python API website,
 so that you may work on and test any contributions.
+
+It is recommended that you read the MXNet developer wiki's info on [building the website & docs](https://cwiki.apache.org/confluence/display/MXNET/Building+the+New+Website) as that includes info on how to test and build the site using Docker. The following information should only be used if you can't use Docker or if you're trying to run the site locally.
 
 ## Setup
 
@@ -50,7 +69,7 @@ Install recommended software:
     - The `choco`, `make`, and `conda` commands should work in `git bash`.
 
 ### Conda environment setup
-Run the following commands from the project root (`new-docs`) to setup the environment.
+Run the following commands from the project root (`python-docs`) to setup the environment.
 
 ```bash
 conda env create -f environment.yml
@@ -59,7 +78,7 @@ source activate mxnet-docs
 
 ## Build the docs
 
-* Change directories to `new-docs/python`.
+* Change directories to `python-docs/python`.
 
 To build without GPUs and without testing the notebooks (faster):
 

@@ -1,3 +1,20 @@
+.. Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing,
+   software distributed under the License is distributed on an
+   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+   KIND, either express or implied.  See the License for the
+   specific language governing permissions and limitations
+   under the License.
+
 Deployment
 ==========
 
@@ -12,9 +29,8 @@ The following tutorials will help you learn export MXNet models.
 
    .. card::
       :title: Export ONNX Models
-      :link: onnx.html
 
-      How to export an MXNet model to the ONNX model format.
+      COMING SOON
 
    .. card::
       :title: Export with GluonCV
@@ -27,6 +43,18 @@ Inference_
 The following tutorials will help you learn how to deploy MXNet models for inference applications.
 
 .. container:: cards
+
+   .. card::
+      :title: CPP Inference
+      :link: inference/cpp.html
+
+      How to deploy MXNet C++ Models
+
+   .. card::
+      :title: Scala Inference
+      :link: inference/scala.html
+
+      How to run Scala inference
 
    .. card::
       :title: GluonCV Models in a C++ Inference Application
@@ -59,8 +87,14 @@ The following tutorials will show you how to use MXNet on AWS.
       How to run MXNet using Amazon SageMaker.
 
    .. card::
+      :title: MXNet on the cloud
+      :link: run-on-aws/cloud.html
+
+      How to run MXNet on the cloud
+
+   .. card::
       :title: Training with Data from S3
-      :link: https://mxnet.incubator.apache.org/versions/master/faq/s3_integration.html
+      :link: https://mxnet.incubator.apache.org/api/faq/s3_integration
 
       How to train with data from Amazon S3 buckets.
 
@@ -71,7 +105,7 @@ Security
 
    .. card::
       :title: Securing MXNet
-      :link: https://mxnet.incubator.apache.org/versions/master/faq/security.html
+      :link: https://mxnet.incubator.apache.org/api/faq/security
 
       Best practices and deployment considerations.
 

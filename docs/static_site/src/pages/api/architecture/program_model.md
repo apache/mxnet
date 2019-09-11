@@ -1,3 +1,19 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
 ---
 layout: page_category
 title:  Deep Learning Programming Paradigm
@@ -20,7 +36,7 @@ In this document, we focus on two of the most important high-level design decisi
 
 Throughout, we'll focus on the programming models themselves.
 When programming style decisions may impact performance, we point this out,
-but we don't dwell on specific implementation details. 
+but we don't dwell on specific implementation details.
 
 
 ## Symbolic vs. Imperative Programs
@@ -396,7 +412,7 @@ while using the symbolic approach to perform gradient calculation.
 In comparing the two programming styles,
 some of our arguments might not be strictly true,
 i.e., it's possible to make an imperative program
-more like a traditional symbolic program or vice versa. 
+more like a traditional symbolic program or vice versa.
 However, the two archetypes are useful abstractions,
 especially for understanding the differences between deep learning libraries.
 We might reasonably conclude that there is no clear boundary between programming styles.
@@ -408,7 +424,7 @@ information held in symbolic programs.
 
 ## Big vs. Small Operations
 
-When designing a deep learning library, another important programming model decision 
+When designing a deep learning library, another important programming model decision
 is precisely what operations to support.
 In general, there are two families of operations supported by most deep learning libraries:
 
@@ -530,7 +546,7 @@ The more suitable programming style depends on the problem you are trying to sol
 For example, imperative programs are better for parameter updates,
 and symbolic programs for gradient calculation.
 
-We advocate *mixing* the approaches. 
+We advocate *mixing* the approaches.
 Sometimes the part that we want to be flexible
 isn't crucial to performance.
 In these cases, it's okay to leave some efficiency on the table
@@ -570,7 +586,7 @@ This is exactly like writing C++ programs and exposing them to Python, which we 
 Because parameter memory resides on the GPU,
 you might not want to use NumPy as an imperative component.
 Supporting a GPU-compatible imperative library
-that interacts with symbolic compiled functions 
+that interacts with symbolic compiled functions
 or provides a limited amount of updating syntax
 in the update statement in symbolic program execution
 might be a better choice.

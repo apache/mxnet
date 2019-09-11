@@ -1,3 +1,19 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
 ---
 layout: page_category
 title: Why MXNet came to be?
@@ -22,8 +38,8 @@ It might not come as a surprise that researchers
 have investigated neural networks for decades.
 Warren McCulloch and Walter Pitts
 suggested the forerunner of today's artificial neurons back in 1943.
-Each neuron is connected to other neurons along _edges_, analogous to the synapses that connect real neurons. 
-And associated with each edge is a _weight_ that indicates whether the connection is excitatory or inhibitatory and the strength of the connection. 
+Each neuron is connected to other neurons along _edges_, analogous to the synapses that connect real neurons.
+And associated with each edge is a _weight_ that indicates whether the connection is excitatory or inhibitatory and the strength of the connection.
 
 ![alt_text](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/get-started/artificial-neuron-2.png)
 
@@ -33,15 +49,15 @@ Neurons in any layer get input from the neurons in the layers below them.
 And, in turn, their output feeds into the neurons in the layer above.
 Typically, the lowest layer represents the _input_ to a neural network.
 After computing the values of each layer, the _output_ values are read out from the topmost layer.
-The behavior of the network is determined by the setting of the weights. 
-And the process of _learning_ in neural networks 
+The behavior of the network is determined by the setting of the weights.
+And the process of _learning_ in neural networks
 is precisely the process of searching for good settings of these _weights_.
 
 All that we need is an algorithm that tells us how to perform this search.
 And since David Rumelhart and colleagues
 introduced the _backpropagation_ learning algorithm to train neural networks,
 nearly all the major ideas have been in place.
-Still, for many years neural networks took a backseat 
+Still, for many years neural networks took a backseat
 to classical statistical methods like logistic regression and support vector machines (SVMs).
 So you might reasonably ask, what's changed to garner such interest?
 
@@ -55,11 +71,11 @@ Today, researchers cut their teeth on ImageNet, a massive dataset containing mil
 The falling price of storage and high network bandwidth
 make it affordable to work with big data at will.
 
-In this new world, with bigger datasets and abundant computation, 
+In this new world, with bigger datasets and abundant computation,
 neural networks dominate on most pattern recognition problems.
 Over the last five years, neural networks have come to dominate on nearly every problem in computer vision,
 replacing classical models and hand-engineered features.
-Similarly, nearly every production speech recognition system now relies on neural networks, 
+Similarly, nearly every production speech recognition system now relies on neural networks,
 where replacing the hidden Markov models that previously held sway.
 
 ![alt text](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/get-started/nvidia-gpus.jpg)
@@ -92,24 +108,24 @@ To perform this mapping, neural networks stack _layers_ of computation. Each lay
 hidden_linear = mx.sym.dot(X, W)
 hidden_activation = mx.sym.tanh(hidden_linear)
 ```
-The linear transformations consist of multiplication by parameter arrays (`W` above). 
+The linear transformations consist of multiplication by parameter arrays (`W` above).
 When we talk about learning we mean finding the right set of values for `W`.
-With just one layer, we can implement the familiar family of linear models, 
+With just one layer, we can implement the familiar family of linear models,
 including linear and logistic regression, linear support vector machines (SVMs), and the perceptron algorithm.
 With more layers and a few clever constraints, we can implement all of today's state-of-the-art deep learning techniques.
 
-Of course, tens or hundreds of matrix multiplications can be computationally taxing. 
+Of course, tens or hundreds of matrix multiplications can be computationally taxing.
 Generally, these linear operations are the computational bottleneck.
 Fortunately, linear operators can be parallelized trivially across the thousands of cores on a GPU.
 But low-level GPU programming requires specialized skills that are not common even among leading researchers in the ML community. Moreover, even for CUDA experts, implementing a new neural network architecture shouldn't require weeks of programming to implement low-level linear algebra operations. That's where _MXNet_ comes in.
 *  _MXNet_ provides optimized numerical computation for GPUs and distributed ecosystems, from the comfort of high-level environments like Python and R
 * _MXNet_ automates common workflows, so standard neural networks can be expressed concisely in just a few lines of code
 
-Now let's take a closer look at the computational demands of neural networks 
+Now let's take a closer look at the computational demands of neural networks
 and give a sense of how _MXNet_ helps us to write better, faster, code.
-Say we have a neural network trained to recognize spam from the content of emails. 
+Say we have a neural network trained to recognize spam from the content of emails.
 The emails may be streaming from an online service (at inference time),
-or from a large offline dataset __D__ (at training time). 
+or from a large offline dataset __D__ (at training time).
 In either case, the dataset typically must be managed by the CPU.
 
 ![alt text](https://raw.githubusercontent.com/kevinthesun/web-data/master/mxnet/get-started/architecture.png)
@@ -147,7 +163,7 @@ If you're familiar with NumPy, then the mechanics of _NDArray_ should be old hat
 ```python
 # Create a numpy array from an mxnet NDArray
 A_np = np.array([[0,1,2,3,4],[5,6,7,8,9]])
-A_nd = nd.array(A)  
+A_nd = nd.array(A)
 
 # Convert back to a numpy array
 A2_np = A_nd.asnumpy()
@@ -189,4 +205,3 @@ Symbolic computation is useful for several reasons. First, because we define a f
 
 ## Conclusions
 Given its combination of high performance, clean code, access to a high-level API, and low-level control, _MXNet_ stands out as a unique choice among deep learning frameworks.
-

@@ -1,14 +1,31 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Data
 
 One of the most critical steps for model training and inference is loading the data: without data you can’t do deep learning! In this tutorial we use the `data` module to:
 
-1) Define a [`Dataset`](https://beta.mxnet.io/api/gluon/_autogen/mxnet.gluon.data.Dataset.html)
+1) Define a [`Dataset`](/api/python/docs/api/gluon/_autogen/mxnet.gluon.data.Dataset.html)
 2) Use `transform`s to augment the dataset
-3) Use a [`DataLoader`](https://beta.mxnet.io/api/gluon/_autogen/mxnet.gluon.data.DataLoader.html) to iterate through the dataset in mini-batches
+3) Use a [`DataLoader`](/api/python/docs/api/gluon/_autogen/mxnet.gluon.data.DataLoader.html) to iterate through the dataset in mini-batches
 
-## Getting started with [`Dataset`](https://beta.mxnet.io/api/gluon/_autogen/mxnet.gluon.data.Dataset.html)s
+## Getting started with [`Dataset`](/api/python/docs/api/gluon/_autogen/mxnet.gluon.data.Dataset.html)s
 
-Our very first step is to define the [`Dataset`](https://beta.mxnet.io/api/gluon/_autogen/mxnet.gluon.data.Dataset.html). A [`Dataset`](https://beta.mxnet.io/api/gluon/_autogen/mxnet.gluon.data.Dataset.html) is MXNet Gluon's interface to the data that's stored on disk (or elsewhere). Out of the box, MXNet Gluon comes with a number of common benchmarking datasets such as CIFAR-10 and MNIST. We'll use an MNIST variant, called FashionMNIST, to understand the role of the [`Dataset`](https://beta.mxnet.io/api/gluon/_autogen/mxnet.gluon.data.Dataset.html). When we instantiate this benchmarking dataset, the data will be downloaded to disk and be ready to use.
+Our very first step is to define the [`Dataset`](/api/python/docs/api/gluon/_autogen/mxnet.gluon.data.Dataset.html). A [`Dataset`](/api/python/docs/api/gluon/_autogen/mxnet.gluon.data.Dataset.html) is MXNet Gluon's interface to the data that's stored on disk (or elsewhere). Out of the box, MXNet Gluon comes with a number of common benchmarking datasets such as CIFAR-10 and MNIST. We'll use an MNIST variant, called FashionMNIST, to understand the role of the [`Dataset`](/api/python/docs/api/gluon/_autogen/mxnet.gluon.data.Dataset.html). When we instantiate this benchmarking dataset, the data will be downloaded to disk and be ready to use.
 
 ```
 import mxnet as mx
@@ -16,7 +33,7 @@ import mxnet as mx
 dataset = mx.gluon.data.vision.FashionMNIST()
 ```
 
-So how do we get data out of a [`Dataset`](https://beta.mxnet.io/api/gluon/_autogen/mxnet.gluon.data.Dataset.html)? We index.
+So how do we get data out of a [`Dataset`](/api/python/docs/api/gluon/_autogen/mxnet.gluon.data.Dataset.html)? We index.
 
 ```
 sample = dataset[42]
@@ -44,7 +61,7 @@ plot = lambda s: plt.imshow(s[:,:,0].asnumpy(), cmap='gray')
 plot(data_sample)
 ```
 
-We can access all of our samples in the dataset using the indexing method above, but usually we leave this to the [`DataLoader`](https://beta.mxnet.io/api/gluon/_autogen/mxnet.gluon.data.DataLoader.html). We'll see an example of this shortly, but first we'll see how to change our dataset with `transform`s.
+We can access all of our samples in the dataset using the indexing method above, but usually we leave this to the [`DataLoader`](/api/python/docs/api/gluon/_autogen/mxnet.gluon.data.DataLoader.html). We'll see an example of this shortly, but first we'll see how to change our dataset with `transform`s.
 
 ## Getting started with `transform`s
 
@@ -60,7 +77,7 @@ Augmenting samples is also common practice: that is, randomly permuting existing
 
 We first define our transform and then apply it to our dataset.
 
-MXNet Gluon has a number of in-build transforms available at `mxnet.gluon.data.vision.transforms`, so let's use [`RandomResizedCrop`](https://beta.mxnet.io/api/gluon/_autogen/mxnet.gluon.data.vision.transforms.RandomResizedCrop.html) as an example. We're specifying that we want a random crop that contains 60% to 80% of the original image, and then we want to scale this cropped region to 20px by 20px. You should notice we're instantiating a class that can be called like a function.
+MXNet Gluon has a number of in-build transforms available at `mxnet.gluon.data.vision.transforms`, so let's use [`RandomResizedCrop`](/api/python/docs/api/gluon/_autogen/mxnet.gluon.data.vision.transforms.RandomResizedCrop.html) as an example. We're specifying that we want a random crop that contains 60% to 80% of the original image, and then we want to scale this cropped region to 20px by 20px. You should notice we're instantiating a class that can be called like a function.
 
 ```
 from mxnet.gluon.data.vision.transforms import RandomResizedCrop
@@ -84,9 +101,9 @@ print('Clothing Category #{}'.format(label_sample))
 plot(data_sample)
 ```
 
-## Getting started with [`DataLoader`](https://beta.mxnet.io/api/gluon/_autogen/mxnet.gluon.data.DataLoader.html)s
+## Getting started with [`DataLoader`](/api/python/docs/api/gluon/_autogen/mxnet.gluon.data.DataLoader.html)s
 
-Our `dataset` gives us individual samples, but we usually train neural networks on batches of samples. A [`DataLoader`](https://beta.mxnet.io/api/gluon/_autogen/mxnet.gluon.data.DataLoader.html) retrieves samples from the `dataset` and stacks them into batches. At a minimum, all we need to specify is the number of samples we want in each batch, called the `batch_size`, but [`DataLoader`](https://beta.mxnet.io/api/gluon/_autogen/mxnet.gluon.data.DataLoader.html)s have many other useful features. Shuffling data samples for training is as simple as setting `shuffle`. 
+Our `dataset` gives us individual samples, but we usually train neural networks on batches of samples. A [`DataLoader`](/api/python/docs/api/gluon/_autogen/mxnet.gluon.data.DataLoader.html) retrieves samples from the `dataset` and stacks them into batches. At a minimum, all we need to specify is the number of samples we want in each batch, called the `batch_size`, but [`DataLoader`](/api/python/docs/api/gluon/_autogen/mxnet.gluon.data.DataLoader.html)s have many other useful features. Shuffling data samples for training is as simple as setting `shuffle`. 
 
 Advanced: A larger `batch_size` often speeds up training, but can lead to out-of-memory and convergence issues. 12345 is just for demonstration purposes: you'll more commonly use a smaller batch size (e.g. 128) but it depends on the model.
 
@@ -103,7 +120,7 @@ for batch_idx, (data_batch, label_batch) in enumerate(dataloader):
     print('Batch {} has shape {}'.format(batch_idx, data_batch.shape))
 ```
 
-You might have noticed that the last batch contains fewer samples than the others. We had a remainder at the end and by default a [`DataLoader`](https://beta.mxnet.io/api/gluon/_autogen/mxnet.gluon.data.DataLoader.html) keeps the incomplete batch (see `last_batch` argument).
+You might have noticed that the last batch contains fewer samples than the others. We had a remainder at the end and by default a [`DataLoader`](/api/python/docs/api/gluon/_autogen/mxnet.gluon.data.DataLoader.html) keeps the incomplete batch (see `last_batch` argument).
 
 We can plot a few (augmented) images from the last batch.
 
@@ -117,7 +134,7 @@ plt.show()
 
 ## Conclusion
 
-We've now seen all of the core components of the MXNet Gluon data pipeline. You should now understand the difference between [`Dataset`](https://beta.mxnet.io/api/gluon/_autogen/mxnet.gluon.data.Dataset.html)s, that return individual samples, and [`DataLoader`](https://beta.mxnet.io/api/gluon/_autogen/mxnet.gluon.data.DataLoader.html)s, that return batches of samples. You should also be able to transform your `dataset` for pre-processing or augmentation purposes.
+We've now seen all of the core components of the MXNet Gluon data pipeline. You should now understand the difference between [`Dataset`](/api/python/docs/api/gluon/_autogen/mxnet.gluon.data.Dataset.html)s, that return individual samples, and [`DataLoader`](/api/python/docs/api/gluon/_autogen/mxnet.gluon.data.DataLoader.html)s, that return batches of samples. You should also be able to transform your `dataset` for pre-processing or augmentation purposes.
 
 ## Recommended Next Steps
 
