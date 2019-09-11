@@ -627,6 +627,13 @@ int MXNDArrayGetData(NDArrayHandle handle,
                      void **out_pdata) {
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
+#if MXNET_USE_MKLDNN == 1
+  NDArray temp = *arr;
+  if (arr->IsMKLDNNData()) {
+    temp = arr->Reorder2Default();
+    arr = &temp; 
+  }
+#endif
   if (!arr->is_none()) {
     *out_pdata = arr->data().dptr_;
   } else {
