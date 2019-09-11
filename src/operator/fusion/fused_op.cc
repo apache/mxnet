@@ -174,9 +174,9 @@ std::tuple<const nnvm::NodePtr,
     }
   }
 
-  return {node.weak_ref.lock(),
-          inputs,
-          outputs};
+  return std::make_tuple(node.weak_ref.lock(),
+                         inputs,
+                         outputs);
 }
 
 bool FusedOpInferShape(const nnvm::NodeAttrs& attrs,

@@ -105,18 +105,18 @@ class FusedOp {
              std::vector<mxnet::TShape>,
              std::vector<mxnet::TShape>>
     GetAuxShape(const int node_id) const {
-    return {aux_nodes_[node_id],
-            aux_in_shapes_[node_id],
-            aux_out_shapes_[node_id]};
+    return std::make_tuple(aux_nodes_[node_id],
+                           aux_in_shapes_[node_id],
+                           aux_out_shapes_[node_id]);
   }
 
   std::tuple<const nnvm::NodePtr,
              std::vector<int>,
              std::vector<int>>
     GetAuxType(const int node_id) const {
-    return {aux_nodes_[node_id],
-            aux_in_types_[node_id],
-            aux_out_types_[node_id]};
+    return std::make_tuple(aux_nodes_[node_id],
+                           aux_in_types_[node_id],
+                           aux_out_types_[node_id]);
   }
 
  private:
