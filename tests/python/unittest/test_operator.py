@@ -9239,6 +9239,19 @@ def test_transpose_infer_shape_mixed():
     assert(y[0].shape == (2,3))
 
 
+@with_seed()
+def test_sample_normal_default_shape():
+    # Test case from https://github.com/apache/incubator-mxnet/issues/16135
+    s = mx.nd.sample_normal(mu=mx.nd.array([10.0]), sigma=mx.nd.array([0.5]))
+    assert s.shape == (1,)
+    s = mx.nd.sample_normal(mu=mx.nd.array([10.0]), sigma=mx.nd.array([0.5]), shape=())
+    assert s.shape == (1,)
+    s = mx.nd.sample_normal(mu=mx.nd.array([10.0]), sigma=mx.nd.array([0.5]), shape=1)
+    assert s.shape == (1, 1)
+    s = mx.nd.sample_normal(mu=mx.nd.array([10.0]), sigma=mx.nd.array([0.5]), shape=(1,))
+    assert s.shape == (1, 1)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
