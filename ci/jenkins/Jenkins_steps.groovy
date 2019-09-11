@@ -1426,6 +1426,7 @@ def docs_python() {
 }
 
 
+// Call this function from Jenkins to generate just the C and C++ API microsite artifacts.
 def docs_c() {
     return ['C Docs': {
       node(NODE_LINUX_CPU) {
@@ -1441,6 +1442,7 @@ def docs_c() {
 }
 
 
+// Call this function from Jenkins to generate just the Julia API microsite artifacts.
 def docs_julia() {
     return ['Julia Docs': {
       node(NODE_LINUX_CPU) {
@@ -1461,6 +1463,7 @@ def docs_julia() {
 }
 
 
+// Call this function from Jenkins to generate just the R API PDF artifact.
 def docs_r() {
     return ['R Docs': {
       node(NODE_LINUX_CPU) {
@@ -1476,6 +1479,8 @@ def docs_r() {
 }
 
 
+// Call this function from Jenkins to generate just the Scala API microsite artifacts.
+// It will also generate the Scala package.
 def docs_scala() {
     return ['Scala Docs': {
       node(NODE_LINUX_CPU) {
@@ -1491,6 +1496,8 @@ def docs_scala() {
 }
 
 
+// Call this function from Jenkins to generate just the Java API microsite artifacts.
+// It will also generate the Scala package.
 def docs_java() {
     return ['Java Docs': {
       node(NODE_LINUX_CPU) {
@@ -1506,6 +1513,8 @@ def docs_java() {
 }
 
 
+// Call this function from Jenkins to generate just the Clojure API microsite artifacts.
+// It will also generate the Scala package.
 def docs_clojure() {
     return ['Clojure Docs': {
       node(NODE_LINUX_CPU) {
@@ -1521,6 +1530,7 @@ def docs_clojure() {
 }
 
 
+// Call this function from Jenkins to generate just the main website artifacts.
 def docs_jekyll() {
     return ['Main Jekyll Website': {
       node(NODE_LINUX_CPU) {
