@@ -47,12 +47,12 @@ from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide',
-           'mod', 'remainder', 'power', 'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10',
-           'sqrt', 'cbrt', 'abs', 'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
-           'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative',
-           'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh',
-           'tensordot', 'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate',
-           'stack', 'vstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices',
+           'floor_divide', 'mod', 'remainder', 'power', 'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh',
+           'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp', 'expm1', 'arcsin', 'arccos',
+           'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square',
+           'negative', 'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh',
+           'tensordot', 'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack',
+           'vstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices',
            'copysign', 'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'arctan2', 'hypot',
            'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take']
 
@@ -2168,6 +2168,50 @@ def divide(x1, x2, out=None):
         This is a scalar if both x1 and x2 are scalars.
     """
     return _mx_nd_np.divide(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+def floor_divide(x1, x2, out=None):
+    r"""
+    floor_divide(x1, x2, out=None)
+
+    Return the largest integer smaller or equal to the division of the inputs.
+    It is equivalent to the Python ``//`` operator and pairs with the
+    Python ``%`` (`remainder`), function so that ``a = a % b + b * (a // b)``
+    up to roundoff.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Numerator.
+    x2 : ndarray or scalar
+        Denominator.
+    out : ndarray, None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        y = floor(`x1`/`x2`)
+        This is a scalar if both `x1` and `x2` are scalars.
+
+    Examples
+    --------
+    >>> x1 = np.array([7], dtype="int32")
+    >>> x2 = np.array([3], dtype="int32")
+    >>> np.floor_divide(x1, x2)
+    array([2], dtype=int32)
+    >>> x = np.array([1., 2., 3., 4.])
+    >>> np.floor_divide(x, 2.5)
+    array([ 0.,  0.,  1.,  1.])
+    >>>
+    >>>
+    >>> np.floor_divide(4, 3)
+    1
+    """
+    return _mx_nd_np.floor_divide(x1, x2, out=out)
 
 
 @set_module('mxnet.numpy')
