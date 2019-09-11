@@ -499,7 +499,7 @@ MSHADOW_XINLINE Shape<ndim> unravel(const index_t idx, const Shape<ndim>& shape)
   Shape<ndim> ret;
   #pragma unroll
   for (index_t i = ndim-1, j = idx; i >=0; --i) {
-    auto tmp = j / shape[i];
+    index_t tmp = j / shape[i];
     ret[i] = j - tmp*shape[i];
     j = tmp;
   }
