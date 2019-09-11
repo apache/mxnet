@@ -513,7 +513,7 @@ class Executor(object):
         return py_str(debug_str.value)
 
     def get_optimized_symbol(self):
-        from .symbol import Symbol
+        from .symbol import Symbol, SymbolHandle
         sym_handle = SymbolHandle()
         check_call(_LIB.MXExecutorGetOptimizedSymbol(self.handle, ctypes.byref(sym_handle)))
         ret = Symbol(sym_handle)
