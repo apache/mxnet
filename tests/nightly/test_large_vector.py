@@ -714,15 +714,6 @@ def test_full():
     assert a[-1] == 3
 
 
-def test_one_hot():
-    a = nd.zeros(10)
-    a[0] = 1
-    a[-1] = 1
-    b = nd.one_hot(a, LARGE_X)
-    assert b[0][1] == 1
-    assert b[-1][1] == 1
-
-
 if __name__ == '__main__':
     import nose
     nose.runmodule()
