@@ -1756,7 +1756,7 @@ def test_np_indices():
         (2, 0, 4),
         (1, 1, 1, 1),
         (1, 0, 0, 1),
-        (2, 3, 4, 5, 6, 7, 8)
+        (2, 3, 4, 5, 6, 7)
     ]
     if platform.system() == 'Windows':
         shapes = shapes[1:]  #beacuse in numpy windows version, indces not support dimensions is empty tuple.
