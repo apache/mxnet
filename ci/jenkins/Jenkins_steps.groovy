@@ -1410,6 +1410,7 @@ def compile_unix_lite() {
 }
 
 
+// Call this function from Jenkins to generate just the Python API microsite artifacts.
 def docs_python() {
     return ['Python Docs': {
       node(NODE_LINUX_CPU) {
