@@ -182,6 +182,8 @@ There is a configuration file for make,
 
 **NOTE:** When certain set of build flags are set, MXNet archive increases to more than 4 GB. Since MXNet uses archive internally archive runs into a bug ("File Truncated": [bugreport](https://sourceware.org/bugzilla/show_bug.cgi?id=14625)) for archives greater than 4 GB. Please use ar version 2.27 or greater to overcome this bug. Please see https://github.com/apache/incubator-mxnet/issues/15084 for more details.
 
+You can specify different cmake compiler configurations with the option `CMAKE_BUILD_TYPE`. In most cases you should set this to option to `Release` for a smaller and faster binary compared to `Debug`. Alternatively, if you are interested in building the smallest binary you can set the option to `MinSizeRel`. In the case you are developing MXNet you might choose `Debug` instead.
+
 <hr>
 
 ## Build MXNet
@@ -233,7 +235,7 @@ For example, you can specify using all cores on Linux as follows:
 
 ```bash
 mkdir build && cd build
-cmake -GNinja ..
+cmake -GNinja -DCMAKE_BUILD_TYPE=Release ..
 ninja -v
 ```
 
@@ -243,7 +245,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -DUSE_MKLDNN=1 -GNinja ..
+cmake -DCMAKE_BUILD_TYPE=Release -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -DUSE_MKLDNN=1 -GNinja ..
 ninja -v
 ```
 
@@ -252,7 +254,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DBLAS=open -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -GNinja ..
+cmake -DCMAKE_BUILD_TYPE=Release -DBLAS=open -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -GNinja ..
 ninja -v
 ```
 
@@ -261,7 +263,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DUSE_CUDA=0 -DUSE_MKLDNN=1 -GNinja ..
+cmake -DCMAKE_BUILD_TYPE=Release -DUSE_CUDA=0 -DUSE_MKLDNN=1 -GNinja ..
 ninja -v
 ```
 
@@ -270,7 +272,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DUSE_CUDA=0 -DBLAS=open -GNinja ..
+cmake -DCMAKE_BUILD_TYPE=Release -DUSE_CUDA=0 -DBLAS=open -GNinja ..
 ninja -v
 ```
 
@@ -280,7 +282,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DUSE_OPENCV=0 -GNinja ..
+cmake -DCMAKE_BUILD_TYPE=Release -DUSE_OPENCV=0 -GNinja ..
 ninja -v
 ```
 
@@ -288,7 +290,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DBLAS=apple -DUSE_OPENCV=0 -DUSE_OPENMP=0 -GNinja ..
+cmake -DCMAKE_BUILD_TYPE=Release -DBLAS=apple -DUSE_OPENCV=0 -DUSE_OPENMP=0 -GNinja ..
 ninja -v
 ```
 
@@ -297,7 +299,7 @@ ninja -v
 ```bash
 brew install llvm
 mkdir build && cd build
-cmake -DBLAS=apple -DUSE_OPENMP=1 -GNinja ..
+cmake -DCMAKE_BUILD_TYPE=Release -DBLAS=apple -DUSE_OPENMP=1 -GNinja ..
 ninja -v
 ```
 

@@ -201,6 +201,7 @@ Build with CMake and ninja, without GPU and without MKL.
     rm -rf build
     mkdir -p build && cd build
     cmake -GNinja \
+        -DCMAKE_BUILD_TYPE=Release \
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
@@ -216,6 +217,7 @@ If building on CPU and using MKL and MKL-DNN (make sure MKL is installed accordi
     rm -rf build
     mkdir -p build && cd build
     cmake -GNinja \
+        -DCMAKE_BUILD_TYPE=Release \
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=ON \
         -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
@@ -232,6 +234,7 @@ Cuda 10.1 in Ubuntu 18.04 builds fine but is not currently tested in CI.
     rm -rf build
     mkdir -p build && cd build
     cmake -GNinja \
+        -DCMAKE_BUILD_TYPE=Release \
         -DUSE_CUDA=ON \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \

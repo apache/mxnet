@@ -1484,6 +1484,7 @@ Build:
 ```
     mkdir -p build && cd build
     cmake \
+        -DCMAKE_BUILD_TYPE=Release \
         -DUSE_SSE=OFF \
         -DUSE_CUDA=OFF \
         -DUSE_OPENCV=ON \
