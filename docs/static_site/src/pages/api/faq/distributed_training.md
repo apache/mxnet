@@ -1,3 +1,11 @@
+---
+layout: page_category
+title:  Distributed Training in MXNet
+category: faq
+faq_c: Deployment Environments
+question: How to do distributed training using MXNet on AWS?
+permalink: /api/faq/distributed_training
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title:  Distributed Training in MXNet
-category: faq
-faq_c: Deployment Environments
-question: How to do distributed training using MXNet on AWS?
-permalink: /api/faq/distributed_training
----
 
 # Distributed Training in MXNet
 MXNet supports distributed training enabling us to leverage multiple machines for faster training.

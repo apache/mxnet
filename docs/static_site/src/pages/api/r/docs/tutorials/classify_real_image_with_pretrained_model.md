@@ -1,3 +1,10 @@
+---
+layout: page_api
+title: Classify Images with a PreTrained Model
+is_tutorial: true
+tag: r
+permalink: /api/r/docs/tutorials/classify_real_image_with_pretrained_model
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,13 +21,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: Classify Images with a PreTrained Model
-is_tutorial: true
-tag: r
-permalink: /api/r/docs/tutorials/classify_real_image_with_pretrained_model
----
 
 Classify Images with a PreTrained Model
 =================================================

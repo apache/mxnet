@@ -1,3 +1,11 @@
+---
+layout: page_category
+title:  Exception Handling in MXNet
+category: faq
+faq_c: Extend and Contribute to MXNet
+question: How do I implement operators in MXNet backend?
+permalink: /api/faq/add_op_in_backend
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title:  Exception Handling in MXNet
-category: faq
-faq_c: Extend and Contribute to MXNet
-question: How do I implement operators in MXNet backend?
-permalink: /api/faq/add_op_in_backend
----
 
 # A Beginner's Guide to Implementing Operators in MXNet Backend
 

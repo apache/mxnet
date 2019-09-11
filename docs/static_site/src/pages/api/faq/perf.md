@@ -1,3 +1,11 @@
+---
+layout: page_category
+title: Some Tips for Improving MXNet Performance
+category: faq
+faq_c: Speed
+question: What are the best setup and data-handling tips and tricks for improving speed?
+permalink: /api/faq/perf
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title: Some Tips for Improving MXNet Performance
-category: faq
-faq_c: Speed
-question: What are the best setup and data-handling tips and tricks for improving speed?
-permalink: /api/faq/perf
----
 
 
 # Some Tips for Improving MXNet Performance

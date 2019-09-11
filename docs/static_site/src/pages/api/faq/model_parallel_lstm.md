@@ -1,3 +1,11 @@
+---
+layout: page_category
+title:  Model Parallel
+category: faq
+faq_c: Model
+question: How can I train using multiple GPUs with model parallelism?
+permalink: /api/faq/model_parallel_lstm
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title:  Model Parallel
-category: faq
-faq_c: Model
-question: How can I train using multiple GPUs with model parallelism?
-permalink: /api/faq/model_parallel_lstm
----
 
 
 # Training with Multiple GPUs Using Model Parallelism

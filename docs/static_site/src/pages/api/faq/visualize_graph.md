@@ -1,3 +1,11 @@
+---
+layout: page_category
+title: Visualize Neural Networks
+category: faq
+faq_c: Model
+question: How do I visualize neural networks as computation graphs?
+permalink: /api/faq/visualize_graph
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title: Visualize Neural Networks
-category: faq
-faq_c: Model
-question: How do I visualize neural networks as computation graphs?
-permalink: /api/faq/visualize_graph
----
 # How to visualize Neural Networks as computation graph
 
 Here, we'll demonstrate how to use ```mx.viz.plot_network```

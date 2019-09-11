@@ -1,3 +1,11 @@
+---
+layout: page_category
+title:  MXNet on the Cloud
+category: faq
+faq_c: Deployment Environments
+question: How to run MXNet on AWS?
+permalink: /api/faq/cloud
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title:  MXNet on the Cloud
-category: faq
-faq_c: Deployment Environments
-question: How to run MXNet on AWS?
-permalink: /api/faq/cloud
----
 
 # MXNet on the Cloud
 
