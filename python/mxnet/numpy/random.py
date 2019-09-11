@@ -235,3 +235,7 @@ def choice(a, size=None, replace=True, p=None, **kwargs):
     array([2, 3, 0])
     """
     return _mx_nd_np.random.choice(a, size, replace, p, **kwargs)
+
+
+def gamma(shape, scale=1.0, size=None, ctx=None, dtype=None, out=None):
+    return _mx_nd_np.random.gamma(shape, scale, size, ctx, dtype, out)

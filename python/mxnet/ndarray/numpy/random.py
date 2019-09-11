@@ -319,3 +319,30 @@ def choice(a, size=None, replace=True, p=None, **kwargs):
             return _npi.choice(a=a, size=size, replace=replace, ctx=ctx, weighted=False, out=out)
         else:
             return _npi.choice(p, a=a, size=size, replace=replace, ctx=ctx, weighted=True, out=out)
+
+
+def gamma(shape, scale, size=None, ctx=None, dtype=None, out=None):
+    from ...numpy import ndarray as np_ndarray
+    input_type = (isinstance(shape, np_ndarray), isinstance(scale, np_ndarray))
+    if dtype is None:
+        dtype = 'float32'
+    if ctx is None:
+        ctx = current_context()
+    if out is not None:
+        size = out.shape
+    if size == ():
+        size = None
+    if input_type == (True, True):
+        return _npi.gamma(shape, scale, shape=None, scale=None, size=size,
+                            ctx=ctx, dtype=dtype, out=out)
+    elif input_type == (False, True):
+        return _npi.gamma(scale, shape=shape, scale=None, size=size,
+                            ctx=ctx, dtype=dtype, out=out)
+    elif input_type == (True, False):
+        return _npi.gamma(shape, shape=None, scale=scale, size=size,
+                            ctx=ctx, dtype=dtype, out=out)
+    else:
+        return _npi.gamma(shape=shape, scale=scale, size=size,
+                            ctx=ctx, dtype=dtype, out=out)
+
+    raise ValueError("Distribution parameters must be either mxnet.numpy.ndarray or numbers")
