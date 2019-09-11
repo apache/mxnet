@@ -1394,6 +1394,7 @@ def docs_website() {
 }
 
 
+// This creates the MXNet binary needed for generating different docs sets
 def compile_unix_lite() {
     return ['MXNet lib': {
       node(NODE_LINUX_CPU) {
