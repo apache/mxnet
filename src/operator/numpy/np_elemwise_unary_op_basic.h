@@ -33,12 +33,23 @@
 #include "../tvmop/op_module.h"
 #endif  // MXNET_USE_TVM_OP
 #include <vector>
+#include <string>
 #include "../tensor/elemwise_unary_op.h"
 
 namespace mxnet {
 namespace op {
 
 #if MXNET_USE_TVM_OP
+static constexpr int max_dim = 5;
+TBlob padding(const TBlob& tblob, const int& max_dim) {
+  TShape tshape(max_dim, 1);
+  int ndim = tblob.shape_.ndim();
+  for (int i = max_dim - ndim; i < max_dim; ++i) {
+    tshape[i] = tblob.size(i - max_dim + ndim);
+  }
+  return tblob.reshape(tshape);
+}
+
 template<const char* func>
 void TVMOpExp2Compute(const nnvm::NodeAttrs& attrs,
                       const mxnet::OpContext& ctx,
@@ -48,7 +59,10 @@ void TVMOpExp2Compute(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   if (outputs[0].Size() == 0U) return;
-  tvm::runtime::TVMOpModule::Get()->Call(func, ctx, {inputs[0], outputs[0]});
+  TBlob idata, odata;
+  idata = padding(inputs[0], max_dim);
+  odata = padding(outputs[0], max_dim);
+  tvm::runtime::TVMOpModule::Get()->Call(func, ctx, {idata, odata});
 }
 
 template<const char* func>
@@ -62,10 +76,23 @@ void TVMExp2Backward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req.size(), 1U);
   if (inputs[0].Size() == 0U) return;
   using namespace mshadow;
-  const TBlob& out_grad = inputs[0];
-  const TBlob& out_data = inputs[1];
-  const TBlob& in_grad = outputs[0];
-  tvm::runtime::TVMOpModule::Get()->Call(func, ctx, {out_grad, out_data, in_grad});
+  TBlob out_grad;
+  TBlob out_data;
+  TBlob in_grad;
+  out_grad = padding(inputs[0], max_dim);
+  out_data = padding(inputs[1], max_dim);
+  in_grad = padding(outputs[0], max_dim);
+  std::string funcname = std::string(func);
+  funcname += "req_";
+  MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+    if (req_type == kWriteTo) {
+      funcname += "kWriteTo";
+    } else {
+      funcname += "kAddTo";
+    }
+    tvm::runtime::TVMOpModule::Get()->Call(funcname, ctx,
+                                           {out_grad, out_data, in_grad, in_grad});
+  })
 }
 #endif  // MXNET_USE_TVM_OP
 
