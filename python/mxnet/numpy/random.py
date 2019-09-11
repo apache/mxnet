@@ -130,7 +130,7 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, **kwargs):
     dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
     ctx : Context, optional
-        Device context of output. Default is current context.
+        Device context of output, default is current context.
     out : ``ndarray``, optional
         Store output to an existing ``ndarray``.
 
