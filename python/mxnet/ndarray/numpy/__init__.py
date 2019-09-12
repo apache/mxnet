@@ -22,5 +22,6 @@ from . import linalg
 from . import _op, _internal
 from . import _register
 from ._op import *  # pylint: disable=wildcard-import
+from .index_tricks import *  # pylint: disable=wildcard-import
 
 __all__ = _op.__all__

@@ -1870,17 +1870,17 @@ def test_np_copysign():
         sign = sign.reshape(-1, *a1.shape)
         sign = _np.sum(sign, axis=0)
         return sign, _np.zeros_like(a2)
-    
+
     def get_grad_left(a1, a2):
         sign = _np.logical_or(_np.logical_and(a1 < 0, a2 < 0),
                               _np.logical_and(a1 >= 0, a2 >= 0))
         sign = 2 * sign.astype(int) - 1
         sign = sign.reshape(a1.shape)
         return sign
-    
+
     def get_grad_right(a1, a2):
         return _np.zeros_like(a2)
-        
+
     shapes = [
         (),
         (1),
@@ -1921,7 +1921,7 @@ def test_np_copysign():
                     mx_out = np.copysign(a1, a2)
                     expected_np = _np.copysign(a1_np, a2_np)
                     assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
-    
+
     types = ['float16', 'float32', 'float64']
     for x_shape in shapes:
         for dtype in types:
@@ -1935,12 +1935,12 @@ def test_np_copysign():
                 mx_out = np.copysign(x, scalar)
             assert mx_out.shape == expected_np.shape
             assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
-            
+
             # Test gradient
             mx_out.backward()
             x_grad = get_grad_left(x_np, scalar)
             assert_almost_equal(x.grad.asnumpy(), x_grad, rtol=rtol, atol=atol)
-            
+
             # Test right
             x_np = _np.array(_np.random.uniform(-2.0, 2.0, x_shape), dtype=dtype)
             scalar = _np.random.uniform(-2.0, 2.0)
@@ -1951,11 +1951,69 @@ def test_np_copysign():
                 mx_out = np.copysign(scalar, x)
             assert mx_out.shape == expected_np.shape
             assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
-            
+
             # Test gradient
             mx_out.backward()
             x_grad = get_grad_right(scalar, x_np)
             assert_almost_equal(x.grad.asnumpy(), x_grad, rtol=rtol, atol=atol)
+
+
+@with_seed()
+@use_np
+def test_np_grids():
+    class TestGrids(HybridBlock):
+        def __init__(self, func, start, end, step, flag):
+            super(TestGrids, self).__init__()
+            self._func = func
+            self._start = start
+            self._end = end
+            self._step = step
+            self._flag = flag
+
+        def hybrid_forward(self, F, x):
+            if self._flag == 0:
+                return x + getattr(F.np, self._func)[self._start:self._end:self._step]
+            else:
+                return x + getattr(F.np, self._func)[self._start:self._end]
+
+    starts = (-10, 5, 0, 1, 10)
+    ends = (-20, 0, 5, 2, 10, 30, 33)
+    steps = (1, 3, -1, -3, 2j, -5j, 1j)
+    flags = (0, 1)
+    funcs = ['mgrid', 'ogrid']
+    for func in funcs:
+        for flag in flags:
+            for start in starts:
+                for end in ends:
+                    for step in steps:
+                        if isinstance(step, complex) and flag == 0:
+                            x = np.zeros((), dtype='float64')
+                        else:
+                            x = np.zeros((), dtype='float32')
+                        for hybridize in [False, True]:
+                            np_func = getattr(_np, func)
+                            mx_func = TestGrids(func, start, end, step, flag)
+                            if flag == 0:
+                                np_out = np_func[start:end:step]
+                            else:
+                                np_out = np_func[start:end]
+                            if hybridize:
+                                mx_func.hybridize()
+                            mx_out = mx_func(x)
+                            assert same(mx_out.asnumpy(), np_out)
+                            assert mx_out.shape == np_out.shape
+
+                            # test imperative
+                            if flag == 0:
+                                np_out = np_func[start:end:step]
+                                mx_func = getattr(np, func)
+                                mx_out = mx_func[start:end:step]
+                            else:
+                                np_out = np_func[start:end]
+                                mx_func = getattr(np, func)
+                                mx_out = mx_func[start:end]
+                            assert same(mx_out.asnumpy(), np_out)
+                            assert mx_out.shape == np_out.shape
 
 
 if __name__ == '__main__':

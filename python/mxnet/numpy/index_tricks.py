@@ -15,15 +15,12 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Module for numpy ops under mxnet.symbol."""
+"""Numpy index tricks."""
+from __future__ import absolute_import
+from ..ndarray import numpy as _mx_nd_np
 
-from . import random
-from . import linalg
-from . import _op, _symbol, _internal
-from ._symbol import _Symbol
-from . import _register
-from ._op import *  # pylint: disable=wildcard-import
-from ._symbol import *  # pylint: disable=wildcard-import
-from .index_tricks import *  # pylint: disable=wildcard-import
+__all__ = ['mgrid', 'ogrid']
 
-__all__ = _op.__all__ + _symbol.__all__
+
+mgrid = _mx_nd_np.mgrid
+ogrid = _mx_nd_np.ogrid
