@@ -123,6 +123,8 @@ class CustomStatefulOp {
   virtual ~CustomStatefulOp() = 0;
 };
 
+CustomStatefulOp::~CustomStatefulOp() {}
+
 /*!
  * \brief StatefulOp wrapper class to pass to backend OpState
  */
