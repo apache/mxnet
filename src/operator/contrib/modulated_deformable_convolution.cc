@@ -27,8 +27,6 @@
  * Licensed under The Apache-2.0 License [see LICENSE for details]
  * \file modulated_deformable_convolution.cc
  * \brief
- * \ref: https://github.com/Yangqing/caffe/wiki/Convolution-in-Caffe:-a-memo
- * \ref: https://arxiv.org/abs/1811.11168
  * \author Yuwen Xiong, Haozhi Qi, Jifeng Dai, Xizhou Zhu, Han Hu
 */
 
