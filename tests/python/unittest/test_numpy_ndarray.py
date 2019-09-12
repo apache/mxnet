@@ -26,6 +26,8 @@ from mxnet.gluon import HybridBlock
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, retry, assert_exception, use_np
 from common import with_seed, TemporaryDirectory
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
+from mxnet.ndarray.ndarray import py_slice
+from mxnet.base import integer_types
 import scipy.stats as ss
 
 
@@ -410,7 +412,7 @@ def test_np_ndarray_copy():
 def test_np_ndarray_indexing():
     def np_int(index, int_type=np.int32):
         """
-        Helper function for testing indexing that converts slices to slices of ints or None, and tuples to 
+        Helper function for testing indexing that converts slices to slices of ints or None, and tuples to
         tuples of ints or None.
         """
         def convert(num):
@@ -432,7 +434,7 @@ def test_np_ndarray_indexing():
         else:
             assert False
 
-    # Copied from test_ndarray.py. Under construction. 
+    # Copied from test_ndarray.py. Under construction.
     def test_getitem(np_array, index):
         np_index = index
         if type(index) == mx.nd.NDArray:  # use of NDArray is prohibited
@@ -470,6 +472,13 @@ def test_np_ndarray_indexing():
 
             assert same(np_array, mx_array.asnumpy())
 
+        def _is_basic_index(index):
+            if isinstance(index, (integer_types, py_slice)):
+                return True
+            if isinstance(index, tuple) and all(isinstance(i, (integer_types, py_slice)) for i in index):
+                return True
+            return False
+
         np_index = index  # keep this native numpy type
         if isinstance(index, np.ndarray):
             np_index = index.asnumpy()
@@ -498,6 +507,13 @@ def test_np_ndarray_indexing():
             assert_same(np_array, np_index, mx_array, index, np.array(np_value))
             # test native numpy array with broadcast
             assert_same(np_array, np_index, mx_array, index, np_value)
+
+            # test value shape are expanded to be longer than index array's shape
+            # this is currently only supported in basic indexing
+            if _is_basic_index(index):
+                expanded_value_shape = (1, 1, 1) + np_value.shape
+                assert_same(np_array, np_index, mx_array, index, np.array(np_value.reshape(expanded_value_shape)))
+                assert_same(np_array, np_index, mx_array, index, np_value.reshape(expanded_value_shape))
             # test list with broadcast
             assert_same(np_array, np_index, mx_array, index,
                         [_np.random.randint(low=-10000, high=0)] * indexed_array_shape[-1])
@@ -695,18 +711,18 @@ def test_np_ndarray_indexing():
         test_setitem(np_array, index)
         test_getitem_autograd(np_array, index)
         test_setitem_autograd(np_array, index)
-    
+
     # Test indexing to zero-size tensors
     index_list = [
-        (slice(0, 0), slice(0, 0), 1, 2),  
-        (slice(0, 0), slice(0, 0), slice(0, 0), slice(0, 0)),  
+        (slice(0, 0), slice(0, 0), 1, 2),
+        (slice(0, 0), slice(0, 0), slice(0, 0), slice(0, 0)),
     ]
     for index in index_list:
         test_getitem(np_array, index)
         test_setitem(np_array, index)
         test_getitem_autograd(np_array, index)
         test_setitem_autograd(np_array, index)
-    
+
     # test zero-size tensors get and setitem
     shapes_indices = [
                         ((0), [slice(None, None, None)]),

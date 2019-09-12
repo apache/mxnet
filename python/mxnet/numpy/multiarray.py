@@ -312,14 +312,14 @@ class ndarray(NDArray):
         Note: mxnet.numpy.ndarray not support NDArray as assigned value.
         """
         if isinstance(value, numeric_types):
-            value_nd = full(bcast_shape, value, ctx=self.context, dtype=self.dtype)
+            value_nd = full(bcast_shape, value, ctx=self.ctx, dtype=self.dtype)
         elif isinstance(value, self.__class__):
-            value_nd = value.as_in_context(self.context)
+            value_nd = value.as_in_ctx(self.ctx)
             if value_nd.dtype != self.dtype:
                 value_nd = value_nd.astype(self.dtype)
         else:
             try:
-                value_nd = array(value, ctx=self.context, dtype=self.dtype)
+                value_nd = array(value, ctx=self.ctx, dtype=self.dtype)
             except:
                 raise TypeError('mxnet.np.ndarray does not support assignment with non-array-like '
                                 'object {} of type {}'.format(value, type(value)))
@@ -330,13 +330,25 @@ class ndarray(NDArray):
             squeeze_axes = tuple([ax for ax in squeeze_axes if ax < len(value_nd.shape)])
             value_nd = value_nd.squeeze(axis=tuple(squeeze_axes))
 
+        # handle the cases like the following
+        # a = np.zeros((3, 3)), b = np.ones((1, 1, 1, 1, 3)), a[0] = b
+        # b cannot broadcast directly to a[0].shape unless its leading 1-size axes are trimmed
+        if value_nd.ndim > len(bcast_shape):
+            squeeze_axes = []
+            for i in range(value_nd.ndim - len(bcast_shape)):
+                if value_nd.shape[i] == 1:
+                    squeeze_axes.append(i)
+                else:
+                    break
+            if squeeze_axes:
+                value_nd = value_nd.squeeze(squeeze_axes)
+
         if value_nd.shape != bcast_shape:
             if value_nd.size == 0:
                 value_nd = value_nd.reshape(bcast_shape)
             else:
                 value_nd = value_nd.broadcast_to(bcast_shape)
         return value_nd
-
 
     def __add__(self, other):
         """x.__add__(y) <=> x + y"""
