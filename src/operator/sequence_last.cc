@@ -31,9 +31,9 @@ template <>
 Operator *CreateOp<cpu>(SequenceLastParam param, int dtype, int itype) {
   Operator *op = nullptr;
   MSHADOW_TYPE_SWITCH(dtype, DType, {
-//      MSHADOW_TYPE_SWITCH(itype, IType, {
-          op = new SequenceLastOp<cpu, DType, int64_t>(param);
-  //      });
+     MSHADOW_TYPE_SWITCH(itype, IType, {
+          op = new SequenceLastOp<cpu, DType, IType>(param);
+       });
     });
   return op;
 }

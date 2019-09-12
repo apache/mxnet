@@ -121,11 +121,11 @@ class SequenceLastOp : public Operator {
     using namespace mshadow::expr;
 
     auto axis = param_.axis;
-    int batch = out_grad.size(0);
-    int rest = out_grad.size(1);
-    int out_size = batch * rest;
+    index_t batch = out_grad.size(0);
+    index_t rest = out_grad.size(1);
+    index_t out_size = batch * rest;
 
-    int max_seq_len = in_grad.size(axis);
+    index_t max_seq_len = in_grad.size(axis);
     index_t offset1 = axis ? rest : out_size;
     index_t offset2 = axis ? (max_seq_len * rest) : rest;
 
