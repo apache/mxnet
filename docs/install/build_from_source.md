@@ -182,7 +182,7 @@ There is a configuration file for make,
 
 **NOTE:** When certain set of build flags are set, MXNet archive increases to more than 4 GB. Since MXNet uses archive internally archive runs into a bug ("File Truncated": [bugreport](https://sourceware.org/bugzilla/show_bug.cgi?id=14625)) for archives greater than 4 GB. Please use ar version 2.27 or greater to overcome this bug. Please see https://github.com/apache/incubator-mxnet/issues/15084 for more details.
 
-You can specify different cmake compiler configurations with the option `CMAKE_BUILD_TYPE`. In most cases you should set this to option to `Release` for a smaller and faster binary compared to `Debug`. Alternatively, if you are interested in building the smallest binary you can set the option to `MinSizeRel`. In the case you are developing MXNet you might choose `Debug` instead.
+You can specify different cmake compiler configurations with the option `CMAKE_BUILD_TYPE`. In most cases you should set this to option to `Release` for a smaller and faster binary compared to `Debug`. Alternatively, if you are interested in building the smallest binary you can set the option to `MinSizeRel`. In the case you are developing MXNet you might choose `Debug` or `RelWithDebInfo` instead.
 
 <hr>
 
