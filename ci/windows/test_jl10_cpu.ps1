@@ -20,7 +20,7 @@
 # set default output encoding to utf8
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
 
-$env:MXNET_ROOT = [System.IO.Path]::GetFullPath('.\windows_package')
+$env:MXNET_HOME = [System.IO.Path]::GetFullPath('.\windows_package')
 $env:JULIA_URL = "https://julialang-s3.julialang.org/bin/winnt/x64/1.0/julia-1.0.3-win64.exe"
 $env:JULIA_DEPOT_PATH = [System.IO.Path]::GetFullPath('.\julia-depot')
 
