@@ -21,7 +21,10 @@
 
 
 def _np_ones_like(a):
-    """Return an array of ones with the same shape and type as a given array.
+    """
+    ones_like(a)
+
+    Return an array of ones with the same shape and type as a given array.
 
     Parameters
     ----------
@@ -38,7 +41,10 @@ def _np_ones_like(a):
 
 
 def _np_zeros_like(a):
-    """Return an array of zeros with the same shape and type as a given array.
+    """
+    zeros_like(a)
+
+    Return an array of zeros with the same shape and type as a given array.
 
     Parameters
     ----------
@@ -55,7 +61,10 @@ def _np_zeros_like(a):
 
 
 def _np_cumsum(a, axis=None, dtype=None, out=None):
-    """Return the cumulative sum of the elements along a given axis.
+    """
+    cumsum(a, axis=None, dtype=None, out=None)
+
+    Return the cumulative sum of the elements along a given axis.
 
     Parameters
     ----------
@@ -106,7 +115,10 @@ def _np_cumsum(a, axis=None, dtype=None, out=None):
 
 
 def _np_repeat(a, repeats, axis=None):
-    """Repeat elements of an array.
+    """
+    repeat(a, repeats, axis=None)
+
+    Repeat elements of an array.
 
     Parameters
     ----------
