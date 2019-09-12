@@ -39,6 +39,12 @@ The following tutorials will help you learn how to use backend tools to boost pe
      :link: tvm.html
 
      How to use TVM to boost performance.
+
+  .. card::
+     :title: Automatic Mixed Precision (AMP)
+     :link: amp.html
+
+     How to use Automatic Mixed Precision to boost performance.
 ..
 
 .. toctree::

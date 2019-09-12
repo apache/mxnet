@@ -148,7 +148,7 @@ def dump_profile():
     dump(True)
 
 
-def dumps(reset=False, format='table', sort_by='avg', ascending=False):
+def dumps(reset=False, format='table', sort_by='total', ascending=False):
     """Return a printable string of aggregate profile stats.
 
     Parameters
@@ -160,9 +160,9 @@ def dumps(reset=False, format='table', sort_by='avg', ascending=False):
         can take 'table' or 'json'
         defaults to 'table'
     sort_by: string
-        can take 'avg', 'min', 'max', or 'count'
+        can take 'total', 'avg', 'min', 'max', or 'count'
         by which stat to sort the entries in each category
-        defaults to 'avg'
+        defaults to 'total'
     ascending: boolean
         whether to sort ascendingly
         defaults to False
@@ -170,12 +170,13 @@ def dumps(reset=False, format='table', sort_by='avg', ascending=False):
     debug_str = ctypes.c_char_p()
     reset_to_int = {False: 0, True: 1}
     format_to_int = {'table': 0, 'json': 1}
-    sort_by_to_int = {'avg': 0, 'min': 1, 'max': 2, 'count': 3}
+    sort_by_to_int = {'total': 0, 'avg': 1, 'min': 2, 'max': 3, 'count': 4}
     asc_to_int = {False: 0, True: 1}
     assert format in format_to_int.keys(),\
             "Invalid value provided for format: {0}. Support: 'table', 'json'".format(format)
     assert sort_by in sort_by_to_int.keys(),\
-            "Invalid value provided for sort_by: {0}. Support: 'avg', 'min', 'max', 'count'"\
+            "Invalid value provided for sort_by: {0}.\
+             Support: 'total', 'avg', 'min', 'max', 'count'"\
             .format(sort_by)
     assert  ascending in asc_to_int.keys(),\
             "Invalid value provided for ascending: {0}. Support: False, True".format(ascending)
