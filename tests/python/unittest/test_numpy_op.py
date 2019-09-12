@@ -31,6 +31,7 @@ import collections
 import scipy.stats as ss
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, retry
 from mxnet.runtime import Features
+import math
 
 _features = Features()
 
@@ -1780,7 +1781,7 @@ def test_np_exp2():
                     with mx.autograd.record():
                         mx_out = test_exp2(x)
                     mx_out.backward()
-                    log2 = 0.6931471805599453
+                    log2 = math.log(2)
                     assert_almost_equal(mx_out.asnumpy(), np_out.astype(dtype), rtol = 1e-3, atol = 1e-5)
                     if dtype in ['float32', 'float64']:
                         np_backward = (np_out.astype(dtype) * log2).astype(dtype)

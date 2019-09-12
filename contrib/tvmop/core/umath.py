@@ -50,7 +50,6 @@ def _exp2_cpu(dtype, ndim):
        dtype=AllTypes, ndim=[5])
 def _exp2_gpu(dtype, ndim):
     s, A, B= compute_exp2(dtype, ndim)
-    s = tvm.create_schedule(B.op)
     axes = [axis for axis in B.op.axis]
     fused = s[B].fuse(*axes)
     bx, tx = s[B].split(fused, factor=64)
