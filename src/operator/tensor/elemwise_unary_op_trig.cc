@@ -450,21 +450,16 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arcsinh,
       auto dydx = n->inputs[0];
       auto x = n->inputs[1];
       auto dydx_mul_grad_x = nnvm::NodeEntry{n};
-      auto grad_x = MakeNode("elemwise_div", n->attrs.name + "_grad_x",
-                             {dydx_mul_grad_x, dydx}, nullptr, &n);
-      auto grad_x_square = MakeNode("square", n->attrs.name + "_grad_x_square",
-                                    {nnvm::NodeEntry{grad_x}}, nullptr, &n);
-      auto grad_x_square_mul_x = MakeNode("elemwise_mul", n->attrs.name + "_grad_x_square_mul_x",
-                                          {nnvm::NodeEntry{grad_x_square}, x}, nullptr, &n);
-      auto grad_grad_x = MakeNode("elemwise_mul", n->attrs.name + "_grad_grad_x",
-                                  {dydx_mul_grad_x, nnvm::NodeEntry{grad_x_square_mul_x}},
-                                  nullptr, &n);
+      auto op = mxnet::util::NodeOpGen{n};
+
+      auto grad_x = op.div(dydx_mul_grad_x, dydx);
+      auto grad_x_square = op.square(grad_x);
+      auto grad_x_square_mul_x = op.mul(grad_x_square, x);
+      auto grad_grad_x = op.mul(dydx_mul_grad_x, grad_x_square_mul_x);
 
       std::vector<nnvm::NodeEntry> ret;
-      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
-                                {ograds[0], nnvm::NodeEntry{grad_x}}, nullptr, &n));
-      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_in",
-                                {ograds[0], nnvm::NodeEntry{grad_grad_x}}, nullptr, &n));
+      ret.emplace_back(op.mul(ograds[0], grad_x));
+      ret.emplace_back(op.mul(ograds[0], grad_grad_x));
       return ret;
     });
 
@@ -493,21 +488,16 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arccosh,
       auto dydx = n->inputs[0];
       auto x = n->inputs[1];
       auto dydx_mul_grad_x = nnvm::NodeEntry{n};
-      auto grad_x = MakeNode("elemwise_div", n->attrs.name + "_grad_x",
-                             {dydx_mul_grad_x, dydx}, nullptr, &n);
-      auto grad_x_square = MakeNode("square", n->attrs.name + "_grad_x_square",
-                                    {nnvm::NodeEntry{grad_x}}, nullptr, &n);
-      auto grad_x_square_mul_x = MakeNode("elemwise_mul", n->attrs.name + "_grad_x_square_mul_x",
-                                          {nnvm::NodeEntry{grad_x_square}, x}, nullptr, &n);
-      auto grad_grad_x = MakeNode("elemwise_mul", n->attrs.name + "_grad_grad_x",
-                                  {dydx_mul_grad_x, nnvm::NodeEntry{grad_x_square_mul_x}},
-                                  nullptr, &n);
+      auto op = mxnet::util::NodeOpGen{n};
+
+      auto grad_x = op.div(dydx_mul_grad_x, dydx);
+      auto grad_x_square = op.square(grad_x);
+      auto grad_x_square_mul_x = op.mul(grad_x_square, x);
+      auto grad_grad_x = op.mul(dydx_mul_grad_x, grad_x_square_mul_x);
 
       std::vector<nnvm::NodeEntry> ret;
-      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
-                                {ograds[0], nnvm::NodeEntry{grad_x}}, nullptr, &n));
-      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_in",
-                                {ograds[0], nnvm::NodeEntry{grad_grad_x}}, nullptr, &n));
+      ret.emplace_back(op.mul(ograds[0], grad_x));
+      ret.emplace_back(op.mul(ograds[0], grad_grad_x));
       return ret;
     });
 
