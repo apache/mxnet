@@ -482,8 +482,20 @@ void TakeOpForward<gpu>(const nnvm::NodeAttrs& attrs,
   Stream<gpu> *s = ctx.get_stream<gpu>();
   const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
 
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output data type
-    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // index data type
+  MSHADOW_TYPE_SWITCH(outputs[take_::kOut].type_flag_, DType, {  // output data type
+    MSHADOW_TYPE_SWITCH(inputs[take_::kIdx].type_flag_, IType, {  // index data type
+      if (param.mode == take_::kRaise) {
+        // check out-of-bound indices
+        IType min = 0;
+        IType max = static_cast<IType>(arrshape[actual_axis] - 1);
+        IType* idx_ptr = inputs[take_::kIdx].dptr<IType>();
+        size_t idx_size = idxshape.Size();
+        Tensor<gpu, 1, char> workspace =
+          ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(1), s);
+        char* is_valid_ptr = reinterpret_cast<char*>(workspace.dptr_);
+        bool is_valid = CheckIndexOutOfBound(s, idx_ptr, idx_size, min, max, is_valid_ptr);
+        CHECK(is_valid) << "Take indices contains indices out of bound";
+      }
       if (actual_axis == 0) {
         if (param.mode == take_::kClip) {
           Kernel<TakeGPU<true>, gpu>::Launch(s, oshape.Size(),
@@ -516,7 +528,7 @@ void TakeOpForward<gpu>(const nnvm::NodeAttrs& attrs,
                                           inputs[take_::kIdx].dptr<IType>(),
                                           in_strides, out_strides, arrshape.ndim(), oshape.ndim(),
                                           idxshape.ndim(), arrshape[actual_axis], actual_axis);
-        } else if (param.mode == take_::kWrap) {
+        } else {
           Kernel<Take<false>, gpu>::Launch(s, oshape.Size(),
                                            outputs[take_::kOut].dptr<DType>(),
                                            inputs[take_::kArr].dptr<DType>(),

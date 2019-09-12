@@ -107,7 +107,7 @@ master_doc = 'index'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['3rdparty', 'api/python/model.md', 'build_version_doc', 'README.md', 'tutorial_utils', 'virtualenv']
+exclude_patterns = ['3rdparty', 'api/python/model.md', 'build_version_doc', 'cpp_docs', 'python_docs', 'README.md', 'static_site', 'tutorial_utils', 'virtualenv']
 
 
 # The reST default role (used for this markup: `text`) to use for all documents.

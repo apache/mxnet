@@ -28,6 +28,7 @@
 #include <dmlc/logging.h>
 #include <dmlc/omp.h>
 #include <nnvm/graph.h>
+#include <nnvm/node.h>
 #include <mxnet/engine.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/op_attr_types.h>
@@ -802,6 +803,15 @@ inline void ConvertToLegacyShape(mxnet::ShapeVector* shapes) {
   for (size_t i = 0; i < shapes->size(); ++i) {
     ConvertToLegacyShape(&(shapes->at(i)));
   }
+}
+
+/*!
+ * \brief This is function can return the output names of a NodeEntry.
+ */
+static inline std::string GetOutputName(const nnvm::NodeEntry& e) {
+  nnvm::Symbol sym;
+  sym.outputs.push_back(e);
+  return sym.ListOutputNames()[0];
 }
 
 }  // namespace common

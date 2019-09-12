@@ -344,7 +344,8 @@ class KVStoreDistServer {
   }
 
   inline void ApplyUpdates(const DataHandleType type, const int key,
-                           UpdateBuf *update_buf, ps::KVServer<char>* server) {
+                           const ps::KVPairs<char>& req_data, UpdateBuf *update_buf,
+                           ps::KVServer<char>* server) {
     if (!sync_mode_ || update_buf->request.size() == (size_t) ps::NumWorkers()) {
       // let the main thread to execute updater_, which is necessary for python
       auto& stored = has_multi_precision_copy(type) ? store_realt_[key] : store_[key];
@@ -364,7 +365,16 @@ class KVStoreDistServer {
         LOG(INFO) << "sent response to " << update_buf->request.size() << " workers";
       }
       for (const auto& req : update_buf->request) {
-        server->Response(req);
+        /**
+         * Request can be for either push, pull or pushpull
+         * If pull flag is set, respond immediately with the updated values
+         * Otherwise, only send the notification
+         */
+        if (req.pull) {
+          DefaultStorageResponse(type, key, req, req_data, server);
+        } else {
+          server->Response(req);
+        }
       }
       update_buf->request.clear();
       if (has_multi_precision_copy(type)) CopyFromTo(stored, store_[key]);
@@ -532,7 +542,7 @@ class KVStoreDistServer {
                                        true, merged_dtype);
             }  // else nothing to aggregate
             updates.request.push_back(req_meta);
-            ApplyUpdates(type, master_key, &updates, server);
+            ApplyUpdates(type, master_key, req_data, &updates, server);
           } else {
             server->Response(req_meta);
           }
@@ -570,7 +580,7 @@ class KVStoreDistServer {
             AccumulateRowSparseGrads(type, recved, &updates);
           }
           updates.request.push_back(req_meta);
-          ApplyUpdates(type, master_key, &updates, server);
+          ApplyUpdates(type, master_key, req_data, &updates, server);
         }
       }
     } else {
@@ -649,7 +659,7 @@ class KVStoreDistServer {
           merged.merged += decomp_buf;
         }
         merged.request.push_back(req_meta);
-        ApplyUpdates(type, key, &merged, server);
+        ApplyUpdates(type, key, req_data, &merged, server);
       } else {
         // async push
         gradient_compression_->Dequantize(recved, &decomp_buf, 0);
@@ -732,7 +742,7 @@ class KVStoreDistServer {
           }
         }
         updates.request.push_back(req_meta);
-        ApplyUpdates(type, key, &updates, server);
+        ApplyUpdates(type, key, req_data, &updates, server);
       }
     } else {
       DefaultStorageResponse(type, key, req_meta, req_data, server);

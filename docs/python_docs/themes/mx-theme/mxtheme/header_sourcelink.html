@@ -1,0 +1,18 @@
+{%- if display_github %}
+<a id="button-show-github"
+    href="https://{{ github_host|default("github.com") }}/{{ github_user }}/{{ github_repo }}/{{ theme_vcs_pageview_mode|default("edit") }}/{{ github_version }}{{ conf_py_path }}{{ pagename }}{{ page_source_suffix }}" class="mdl-button mdl-js-button mdl-button--icon">
+<i class="material-icons">edit</i>
+</a>
+<div class="mdl-tooltip" data-mdl-for="button-show-github">
+{{ _('Edit on Github') }}
+</div>
+{%- elif show_source and has_source and sourcename %}
+<a id="button-show-source"
+    class="mdl-button mdl-js-button mdl-button--icon"
+    href="{{ pathto('_sources/' + sourcename, true)|e }}" rel="nofollow">
+  <i class="material-icons">code</i>
+</a>
+<div class="mdl-tooltip" data-mdl-for="button-show-source">
+{{ _('Show Source') }}
+</div>
+{%- endif %}
