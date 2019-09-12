@@ -21,6 +21,7 @@
  * \file np_elemwise_unary_op_basic.cc
  * \brief CPU Implementation of numpy elementwise unary function.
  */
+#include "./np_elemwise_unary_op_basic.h"
 #include <mxnet/base.h>
 #include "../tensor/elemwise_unary_op.h"
 
@@ -361,6 +362,35 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_arctanh, "x", mshadow_op::arctanh)
 computed element-wise.
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arctanh" });
+
+// exp2
+#if MXNET_USE_TVM_OP
+static constexpr char func_exp2_cpu[] = "exp2_cpu";
+static constexpr char func_epx2_gpu[] = "exp2_gpu";
+static constexpr char func_backward_epx2_cpu[] = "backward_exp2_cpu";
+static constexpr char func_backward_epx2_gpu[] = "backward_exp2_gpu";
+
+NNVM_REGISTER_OP(_npi_exp2)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.add_argument("data", "NDArray-or-Symbol", "resources")
+.set_attr<mxnet::FInferShape>("FInferShape", mxnet::op::ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", mxnet::op::ElemwiseType<1, 1>)
+#if MXNET_USE_CUDA
+.set_attr<mxnet::FCompute>("FCompute<gpu>", mxnet::op::TVMOpExp2Compute<func_epx2_gpu>)
+#endif  // MXNET_USE_CUDA
+.set_attr<mxnet::FCompute>("FCompute<cpu>", mxnet::op::TVMOpExp2Compute<func_exp2_cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{ "_backward_exp2" });
+
+NNVM_REGISTER_OP(_backward_exp2)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+#if MXNET_USE_CUDA
+.set_attr<FCompute>("FCompute<gpu>", mxnet::op::TVMExp2Backward<func_backward_epx2_gpu>)
+#endif  // MXNET_USE_CUDA
+.set_attr<FCompute>("FCompute<cpu>", mxnet::op::TVMExp2Backward<func_backward_epx2_cpu>);
+#endif  // MXNET_USE_TVM_OP
 
 }  // namespace op
 }  // namespace mxnet
