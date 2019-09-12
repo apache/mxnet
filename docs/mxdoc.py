@@ -468,7 +468,13 @@ def copy_artifacts(app):
 def setup(app):
     # If MXNET_DOCS_BUILD_MXNET is set something different than 1
     # Skip the build step
-    if os.getenv('MXNET_DOCS_BUILD_MXNET') == '1'or _MXNET_DOCS_BUILD_MXNET:
+    env_build_mxnet = os.getenv('MXNET_DOCS_BUILD_MXNET', default=None)
+    should_build_mxnet = _MXNET_DOCS_BUILD_MXNET
+    if env_build_mxnet is not None:
+        print("env MXNET_DOCS_BUILD_MXNET is set to " + str(env_build_mxnet))
+        should_build_mxnet = (env_build_mxnet == '1')
+
+    if should_build_mxnet:
         print("Building MXNet!")
         app.connect("builder-inited", build_mxnet)
     if _DOXYGEN_DOCS:
