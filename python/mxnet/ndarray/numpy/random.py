@@ -321,9 +321,42 @@ def choice(a, size=None, replace=True, p=None, **kwargs):
             return _npi.choice(p, a=a, size=size, replace=replace, ctx=ctx, weighted=True, out=out)
 
 
-def gamma(shape, scale, size=None, ctx=None, dtype=None, out=None):
+def gamma(shape, scale, size=None, **kwargs):
+    """Draw samples from a Gamma distribution.
+
+    Samples are drawn from a Gamma distribution with specified parameters,
+    `shape` (sometimes designated "k") and `scale` (sometimes designated
+    "theta"), where both parameters are > 0.
+
+    Parameters
+    ----------
+    shape : float or array_like of floats
+        The shape of the gamma distribution. Should be greater than zero.
+    scale : float or array_like of floats, optional
+        The scale of the gamma distribution. Should be greater than zero.
+        Default is equal to 1.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``shape`` and ``scale`` are both scalars.
+        Otherwise, ``np.broadcast(shape, scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized gamma distribution.
+
+    The Gamma distribution is often used to model the times to failure of
+    electronic components, and arises naturally in processes for which the
+    waiting times between Poisson distributed events are relevant.
+    """
     from ...numpy import ndarray as np_ndarray
     input_type = (isinstance(shape, np_ndarray), isinstance(scale, np_ndarray))
+    ctx = kwargs.pop('ctx', None)
+    out = kwargs.pop('out', None)
+    dtype = kwargs.pop('dtype', None)
     if dtype is None:
         dtype = 'float32'
     if ctx is None:
@@ -334,15 +367,15 @@ def gamma(shape, scale, size=None, ctx=None, dtype=None, out=None):
         size = None
     if input_type == (True, True):
         return _npi.gamma(shape, scale, shape=None, scale=None, size=size,
-                            ctx=ctx, dtype=dtype, out=out)
+                          ctx=ctx, dtype=dtype, out=out)
     elif input_type == (False, True):
         return _npi.gamma(scale, shape=shape, scale=None, size=size,
-                            ctx=ctx, dtype=dtype, out=out)
+                          ctx=ctx, dtype=dtype, out=out)
     elif input_type == (True, False):
         return _npi.gamma(shape, shape=None, scale=scale, size=size,
-                            ctx=ctx, dtype=dtype, out=out)
+                          ctx=ctx, dtype=dtype, out=out)
     else:
         return _npi.gamma(shape=shape, scale=scale, size=size,
-                            ctx=ctx, dtype=dtype, out=out)
+                          ctx=ctx, dtype=dtype, out=out)
 
     raise ValueError("Distribution parameters must be either mxnet.numpy.ndarray or numbers")
