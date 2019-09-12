@@ -22,7 +22,7 @@ import mxnet as mx
 import numpy as np
 from common import assertRaises, models
 from mxnet.base import NotImplementedForSymbol
-from mxnet.test_utils import discard_stderr
+from mxnet.test_utils import discard_stderr, rand_shape_nd
 import pickle as pkl
 
 def test_symbol_basic():
@@ -187,6 +187,21 @@ def test_symbol_infer_shape_var():
     assert arg_shapes[0] == overwrite_shape
     assert arg_shapes[1] == overwrite_shape
     assert out_shapes[0] == overwrite_shape
+
+
+def test_symbol_magic_abs():
+    for dim in range(1, 7):
+        with mx.name.NameManager():
+            data = mx.symbol.Variable('data')
+            method = data.abs(name='abs0')
+            magic = abs(data)
+            regular = mx.symbol.abs(data, name='abs0')
+            ctx = {'ctx': mx.context.current_context(), 'data': rand_shape_nd(dim)}
+            mx.test_utils.check_consistency(
+                [method, magic], ctx_list=[ctx, ctx])
+            mx.test_utils.check_consistency(
+                [regular, magic], ctx_list=[ctx, ctx])
+
 
 def test_symbol_fluent():
     has_grad = set(['flatten', 'expand_dims', 'flip', 'tile', 'transpose', 'sum', 'nansum', 'prod',
@@ -373,6 +388,31 @@ def test_children_same_name():
     b = a + a
     for c in b.get_children():
         pass
+
+
+def test_transpose_nullop():
+    for dim in range(1, 7):
+        a = mx.sym.Variable('a')
+        b = mx.sym.transpose(a, axes=tuple(np.random.permutation(dim)))
+        c = mx.sym.zeros_like(b)
+
+        shape = rand_shape_nd(dim)
+        nd_a = mx.nd.random.normal(shape=shape)
+        c_out = c.eval(ctx=mx.cpu(), a=nd_a)
+        b_out = b.eval(ctx=mx.cpu(), a=nd_a)
+
+        assert mx.test_utils.same(c_out[0].asnumpy(),
+                                  np.zeros_like(b_out[0].asnumpy()))
+
+
+def test_gen_atomic_symbol_multiple_outputs():
+    data=mx.sym.Variable('data')
+    p = mx.sym.Variable('param')
+    h0 = mx.sym.Variable('h0')
+    h1 = mx.sym.Variable('h1')
+    s = mx.sym.RNN(data, p, h0, h1, state_size=10, num_layers=2, 
+                   bidirectional=True, state_outputs=True, mode='lstm')
+    atomic_sym = s._gen_atomic_symbol()
 
 if __name__ == '__main__':
     import nose

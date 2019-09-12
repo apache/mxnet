@@ -171,7 +171,7 @@ static std::vector<ResourceRequest> RNNResourceEx(const NodeAttrs& attrs, const 
                                                   const DispatchMode dispatch_mode) {
   std::vector<ResourceRequest> request;
   if (dev_mask == kGPU) {
-#if MXNET_USE_CUDNN_RNN
+#if MXNET_USE_CUDNN == 1
     request.emplace_back(ResourceRequest::kTempSpace);
 
     const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
@@ -270,22 +270,24 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
 
       const size_t r_size = GetMKLDNNRNNCacheMemorySize(L, D, T, N, I, H, param.mode);
       if (op.init_mem_ && op.reserve_mem_size_ < r_size) {
-        Storage::Get()->Free(op.mem_space_);
         op.init_mem_ = false;
       }
+      const size_t weights_version = inputs[rnn_enum::kParams].version();
       if (!op.init_mem_) {
-        op.mem_space_ = Storage::Get()->Alloc(
-            r_size * sizeof(DType),
-            Context::CPU());
+        op.mem_space_ = NDArray(TShape({static_cast<dim_t>(r_size)}), op.ctx_, false, dtype);
         op.reserve_mem_size_ = r_size;
         op.init_mem_ = true;
         op.has_cache = false;
+        // Assign weights_version
+        op.weights_version = weights_version;
       }
-      if (op.has_cache && op.x_memory.size() == 0) {
+      // Check if NDArray was changed.
+      if (op.weights_version != weights_version) {
         op.has_cache = false;
+        op.weights_version = weights_version;
       }
 
-      DType* workptr = static_cast<DType*>(op.mem_space_.dptr);
+      DType* workptr = static_cast<DType*>(op.mem_space_.data().dptr_);
       mkldnn::memory::dims src_layer_tz_0 = {T, N, I};
       mkldnn::memory::dims src_layer_tz = {T, N, D * H};
       mkldnn::memory::dims dst_layer_tz = {T, N, D * H};
@@ -634,6 +636,7 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
 #endif
 
 NNVM_REGISTER_OP(RNN)
+.add_alias("_npx_rnn")
 .describe(R"code(Applies recurrent layers to input data. Currently, vanilla RNN, LSTM and GRU are
 implemented, with both multi-layer and bidirectional support.
 

@@ -27,6 +27,5 @@ from test_quantization import *
 if __name__ == '__main__':
     import nose
     nose.runmodule()
-
-del os.environ['ENABLE_MKLDNN_QUANTIZATION_TEST']
-del os.environ['MXNET_SUBGRAPH_BACKEND']
+    del os.environ['ENABLE_MKLDNN_QUANTIZATION_TEST']
+    del os.environ['MXNET_SUBGRAPH_BACKEND']

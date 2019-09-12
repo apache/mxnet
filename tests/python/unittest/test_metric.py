@@ -18,6 +18,7 @@
 import mxnet as mx
 import numpy as np
 import json
+import math
 from common import with_seed
 from copy import deepcopy
 
@@ -56,6 +57,21 @@ def _check_global_metric(metric, *args, **kwargs):
             label[:shape[0] // 2] = 0
         return pred, label
 
+    def _compare_metric_result(m1, m2):
+        # Compare names
+        assert m1[0] == m2[0]
+        # Compare values
+        if isinstance(m1[1], (list, tuple)):
+            assert len(m1[1]) == len(m2[1])
+            for r1, r2 in zip(m1[1], m2[1]):
+                assert r1 == r2 or \
+                       (math.isnan(r1) and
+                        math.isnan(r2))
+        else:
+            assert m1[1] == m2[1] or \
+                   (math.isnan(m1[1]) and
+                    math.isnan(m2[1]))
+
     shape = kwargs.pop('shape', (10,10))
     use_same_shape = kwargs.pop('use_same_shape', False)
     m1 = mx.metric.create(metric, *args, **kwargs)
@@ -78,7 +94,7 @@ def _check_global_metric(metric, *args, **kwargs):
     pred, label = _create_pred_label()
     m1.update([label], [pred])
     m2.update([label], [pred])
-    assert m1.get() == m2.get()
+    _compare_metric_result(m1.get(), m2.get())
 
 @with_seed()
 def test_global_metric():
@@ -287,6 +303,13 @@ def test_pcc():
     met_pear.update(labels, [p.argmax(axis=1) for p in preds])
     _, pear = met_pear.get()
     np.testing.assert_almost_equal(pcc, pear)
+
+    # pcc should also accept pred as scalar rather than softmax vector
+    # like acc does
+    met_pcc.reset()
+    met_pcc.update(labels, [p.argmax(axis=1) for p in preds])
+    _, chk = met_pcc.get()
+    np.testing.assert_almost_equal(pcc, chk)
 
     # check multiclass case against reference implementation
     CM = [

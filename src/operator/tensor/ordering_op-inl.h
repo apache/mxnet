@@ -377,7 +377,6 @@ MSHADOW_FORCE_INLINE void TopKSort(const Tensor<gpu, 1, DType>& dat,
    * \param resource temporary resource handler
    * \param src the Source blob
    * \param ret the destination blobs
-   * \param k the K elements to keep
    * \param param the topk parameters
    * \tparam xpu the device type.
    * \tparam DType type of the output value/mask.
@@ -404,7 +403,7 @@ void TopKImpl(const RunContext &ctx,
   bool do_transpose = false;
   bool is_ascend = false;
   index_t k = 0;
-  size_t alignment = std::max(sizeof(DType), sizeof(int));
+  size_t alignment = std::max(sizeof(DType), sizeof(index_t));
   mxnet::TShape target_shape;
   ParseTopKParam(src.shape_, param,
                  &target_shape, &batch_size, &element_num, &axis, &k, &do_transpose, &is_ascend);
@@ -414,30 +413,30 @@ void TopKImpl(const RunContext &ctx,
     << element_num << ", but the selected index_t can only represent "
     << mxnet::common::MaxIntegerValue<index_t>() << " elements";
   Tensor<xpu, 3, DType> dat = src.FlatTo3D<xpu, DType>(axis, axis, s);
-  size_t temp_size = 0;
-  // Temp space needed by the gpu-based full sorts.
+  // Temp space needed by the full sorts.
+  size_t temp_size = std::max(
+      mxnet::op::SortByKeyWorkspaceSize<index_t, DType, xpu>(src.Size()),
+      mxnet::op::SortByKeyWorkspaceSize<DType, index_t, xpu>(src.Size()));
+
   temp_size = std::max(temp_size,
-    mxnet::op::SortByKeyWorkspaceSize<int, int, xpu>(src.Size()));
-  temp_size = std::max(temp_size,
-    mxnet::op::SortByKeyWorkspaceSize<int, DType, xpu>(src.Size()));
-  temp_size = std::max(temp_size,
-    mxnet::op::SortByKeyWorkspaceSize<DType, int, xpu>(src.Size()));
+      mxnet::op::SortByKeyWorkspaceSize<index_t, index_t, xpu>(src.Size()));
   // Additional temp space for gpu full sorts for batch ids.
   temp_size += PadBytes(sizeof(index_t) * src.Size(), alignment);
   // Temp space for cpu sorts.
-  temp_size = std::max(temp_size, static_cast<size_t>(sizeof(DType) * src.Size()));
+  temp_size = std::max(temp_size, sizeof(DType) * src.Size());
+
   size_t workspace_size = temp_size + PadBytes(sizeof(DType) * src.Size(), alignment)
                                     + PadBytes(sizeof(index_t) * src.Size(), alignment);
   if (param.ret_typ == topk_enum::kReturnMask) {
-    workspace_size += PadBytes(sizeof(int) * batch_size * k, alignment);
+    workspace_size += PadBytes(sizeof(index_t) * batch_size * k, alignment);
   }
   workspace = resource.get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
   char* workspace_curr_ptr = workspace.dptr_;
   sorted_dat = Tensor<xpu, 1, DType>(reinterpret_cast<DType*>(workspace_curr_ptr),
-                                      Shape1(src.Size()), s);  // contain sorted dat
+      Shape1(src.Size()), s);  // contain sorted dat
   workspace_curr_ptr += PadBytes(sizeof(DType) * src.Size(), alignment);
   indices = Tensor<xpu, 1, index_t>(reinterpret_cast<index_t*>(workspace_curr_ptr),
-                                Shape1(src.Size()), s);  // indices in the original matrix
+      Shape1(src.Size()), s);  // indices in the original matrix
   workspace_curr_ptr += PadBytes(sizeof(index_t) * src.Size(), alignment);
 
   if (param.ret_typ == topk_enum::kReturnMask) {
@@ -563,13 +562,13 @@ void TopK(const nnvm::NodeAttrs& attrs,
           const std::vector<TBlob>& outputs) {
   const TopKParam& param = nnvm::get<TopKParam>(attrs.parsed);
   if (param.ret_typ == topk_enum::kReturnIndices || param.ret_typ == topk_enum::kReturnBoth) {
-    MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       MSHADOW_TYPE_SWITCH(param.dtype, IDType, {
         TopKImpl<xpu, DType, IDType>(ctx.run_ctx, ctx.requested[0], req, inputs[0], outputs, param);
       })
     });
   } else {
-    MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       TopKImpl<xpu, DType, index_t>(ctx.run_ctx, ctx.requested[0], req, inputs[0], outputs, param);
     });
   }
@@ -695,13 +694,13 @@ void TopKBackward_(const nnvm::NodeAttrs& attrs,
                    const std::vector<TBlob>& outputs) {
   const TopKParam& param = nnvm::get<TopKParam>(attrs.parsed);
   if (param.ret_typ == topk_enum::kReturnBoth) {
-    MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       MSHADOW_TYPE_SWITCH(param.dtype, IDType, {
         TopKBackwardImpl<xpu, DType, IDType>(ctx, inputs, req, outputs, param);
       });
     });
   } else if (param.ret_typ == topk_enum::kReturnValue) {
-    MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       TopKBackwardImpl<xpu, DType, index_t>(ctx, inputs, req, outputs, param);
     });
   } else {
@@ -732,7 +731,6 @@ inline bool TopKType(const nnvm::NodeAttrs& attrs,
                      std::vector<int> *in_attrs,
                      std::vector<int> *out_attrs) {
   const TopKParam& param = nnvm::get<TopKParam>(attrs.parsed);
-  int data_type = -1;
   size_t in_size = in_attrs->size();
   size_t out_size = out_attrs->size();
   CHECK_EQ(in_size, 1);
@@ -756,15 +754,9 @@ inline bool TopKType(const nnvm::NodeAttrs& attrs,
     CHECK(type_assign(&(*out_attrs)[0], param.dtype))
             << "Failed to set the type of ret_indices.";
   } else {
-    CHECK(type_assign(&data_type, (*in_attrs)[0])) << "Incompatible dtype of input, in_attrs[0]="
-                                                   << (*in_attrs)[0];
-    CHECK(type_assign(&data_type, (*out_attrs)[0])) << "Incompatible dtype of output, out_attrs[0]="
-                                                    << (*out_attrs)[0];
-    CHECK(type_assign(&(*in_attrs)[0], data_type)) << "Incompatible dtype of input, in_attrs[0]="
-                                                   << (*in_attrs)[0];
-    CHECK(type_assign(&(*out_attrs)[0], data_type)) << "Incompatible dtype of output, out_attrs[0]="
-                                                    << (*out_attrs)[0];
-    if (data_type == -1) return false;
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+    TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+    return out_attrs->at(0) != -1;
   }
   return true;
 }
