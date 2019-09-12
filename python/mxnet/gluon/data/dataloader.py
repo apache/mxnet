@@ -572,6 +572,7 @@ class DataLoader(object):
         self._pin_device_id = pin_device_id
         self._thread_pool = thread_pool
         self._timeout = timeout
+        assert timeout > 0, "timeout must be positive, given {}".format(timeout)
 
         if batch_sampler is None:
             if batch_size is None:
