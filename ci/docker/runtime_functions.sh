@@ -834,6 +834,8 @@ cd_unittest_ubuntu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=0
+    export CD_JOB=1 # signal this is a CD run so any unecessary tests can be skipped
 
     local mxnet_variant=${1:?"This function requires a mxnet variant as the first argument"}
     local python_cmd=${2:?"This function requires a python command as the first argument"}
