@@ -665,7 +665,7 @@ pylint:
 	python3 -m pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py
 
 sample_lib:
-	$(CXX) -shared -fPIC -std=c++11 example/lib_ops/mylib.cc -o libsample_lib.so -I include/mxnet
+	$(CXX) -shared -fPIC -std=c++11 example/lib_ops/gemm_lib.cc -o libsample_lib.so -I include/mxnet
 
 doc: docs
 

@@ -58,8 +58,9 @@ void transpose(float* A, float* At, unsigned n, unsigned m) {
  * outputs[0] = C
  */
 MXReturnValue forward(std::map<std::string,std::string> attrs,
-               std::vector<MXTensor> inputs, std::vector<MXTensor> outputs,
-               OpResource res) {
+                      std::vector<MXTensor> inputs,
+                      std::vector<MXTensor> outputs,
+                      OpResource res) {
   //validate inputs
   for(int i=0; i<inputs.size(); i++) {
     if(inputs[i].dtype != kFloat32) {
@@ -67,7 +68,7 @@ MXReturnValue forward(std::map<std::string,std::string> attrs,
       return MX_FAIL;
     }
   }
-  
+
   //extract data pointers from tensors
   float* A = inputs[0].getData<float>();
   float* B = inputs[1].getData<float>();
@@ -79,7 +80,7 @@ MXReturnValue forward(std::map<std::string,std::string> attrs,
   unsigned m = inputs[1].shape[1];
 
   gemm(A, B, C, n, k, m);
-  
+
   return MX_SUCCESS;
 }
 
@@ -98,8 +99,9 @@ MXReturnValue forward(std::map<std::string,std::string> attrs,
  * outputs[1] = dB
  */
 MXReturnValue backward(std::map<std::string,std::string> attrs,
-               std::vector<MXTensor> inputs, std::vector<MXTensor> outputs,
-               OpResource res) {
+                       std::vector<MXTensor> inputs,
+                       std::vector<MXTensor> outputs,
+                       OpResource res) {
   //validate inputs
   for(int i=0; i<inputs.size(); i++) {
     if(inputs[i].dtype != kFloat32) {
@@ -107,7 +109,7 @@ MXReturnValue backward(std::map<std::string,std::string> attrs,
       return MX_FAIL;
     }
   }
-  
+
   //extract data pointers from tensors
   float* dC = inputs[0].getData<float>();
   float* A = inputs[1].getData<float>();
@@ -115,31 +117,30 @@ MXReturnValue backward(std::map<std::string,std::string> attrs,
   float* dA = outputs[0].getData<float>();
   float* dB = outputs[1].getData<float>();
   //set tensor shapes
-  unsigned n = inputs[0].shape[0];
-  unsigned k = inputs[0].shape[1];
-  unsigned m = inputs[1].shape[1];
+  unsigned n = inputs[1].shape[0];
+  unsigned k = inputs[1].shape[1];
+  unsigned m = inputs[2].shape[1];
 
-  //gemm(input1, input2, output, n, k, m);
-  
+  std::cout << "n: " << n << " k: " << k << " m: " << m << std::endl;
+
+  float At[n*k], Bt[k*m];
+  transpose(A, At, n, k);
+  transpose(B, Bt, k, m);
+
+  gemm(dC, Bt, dA, n, k, m);
+  gemm(At, dC, dB, n, k, m);
+
   return MX_SUCCESS;
 }
 
-MXReturnValue parseAttrs(std::map<std::string,std::string> attrs,
-               int* num_in, int* num_out) {
-  /*
-  if(attrs.find("myParam") == attrs.end()) {
-    std::cout << "Missing param 'myParam'" << std::endl;
-    return 0;
-  }
-  */
+MXReturnValue parseAttrs(std::map<std::string,std::string> attrs, int* num_in, int* num_out) {
   *num_in = 2;
   *num_out = 1;
-
   return MX_SUCCESS;
 }
 
 MXReturnValue inferType(std::map<std::string,std::string> attrs, std::vector<int> &intypes,
-              std::vector<int> &outtypes) {
+                        std::vector<int> &outtypes) {
   // validate inputs
   if (intypes.size() != 2) {
     std::cout << "Expected 2 inputs to inferType" << std::endl;
@@ -159,8 +160,9 @@ MXReturnValue inferType(std::map<std::string,std::string> attrs, std::vector<int
   return MX_SUCCESS;
 }
 
-MXReturnValue inferShape(std::map<std::string,std::string> attrs, std::vector<std::vector<unsigned int>> &inshapes,
-               std::vector<std::vector<unsigned int>> &outshapes) {
+MXReturnValue inferShape(std::map<std::string,std::string> attrs,
+                         std::vector<std::vector<unsigned int>> &inshapes,
+                         std::vector<std::vector<unsigned int>> &outshapes) {
   // validate inputs
   if (inshapes.size() != 2) {
     std::cout << "Expected 2 inputs to inferShape" << std::endl;
@@ -176,7 +178,7 @@ MXReturnValue inferShape(std::map<std::string,std::string> attrs, std::vector<st
     std::cout << "Expected 2D for second input to inferShape" << std::endl;
     return MX_FAIL;
   }
-  
+
   unsigned n = inshapes[0][0];
   unsigned k = inshapes[0][1];
   unsigned kk = inshapes[1][0];
@@ -184,27 +186,76 @@ MXReturnValue inferShape(std::map<std::string,std::string> attrs, std::vector<st
 
   std::cout << "inshapes[0][0]=" << n << "  inshapes[0][1]=" << k << std::endl;
   std::cout << "inshapes[1][0]=" << kk << "  inshapes[1][1]=" << m << std::endl;
-  
+
   if (k != kk)
     return MX_FAIL;
-  
+
   outshapes[0].push_back(n);
   outshapes[0].push_back(m);
 
   return MX_SUCCESS;
 }
 
-REGISTER_OP(gemm)
+REGISTER_OP(my_gemm)
 .setForward(forward)
+.setBackward(backward)
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
 .setInferShape(inferShape);
 
-REGISTER_OP(warpctc)
-.setForward(forward)
+
+/* ------------------------------------------------------------------------- */
+
+MXReturnValue mutateInputs(std::map<std::string,std::string> attrs,
+               std::vector<int> &input_indices) {
+  //input_indices.push_back(1);
+  //std::cout << "the 1st input is marked as mutate input by library author" << std::endl;
+  return MX_SUCCESS;
+}
+
+class MyStatefulGemm : public CustomStatefulOp {
+ public:
+  explicit MyStatefulGemm(int count) : count(count) {}
+
+  MXReturnValue Forward(std::vector<MXTensor> inputs,
+              std::vector<MXTensor> outputs,
+              OpResource op_res) {
+    count++;
+    int* p = static_cast<int*>(op_res.alloc(sizeof(int)));
+    *p = count;
+    std::cout << "test op resource " << *p << std::endl;
+
+    std::map<std::string,std::string> attrs;
+    return forward(attrs, inputs, outputs, op_res);
+  }
+
+  MXReturnValue Backward(std::vector<MXTensor> inputs,
+               std::vector<MXTensor> outputs,
+               OpResource op_res) {
+    std::map<std::string,std::string> attrs;
+    return backward(attrs, inputs, outputs, op_res);
+  }
+
+  ~MyStatefulGemm() {}
+
+ private:
+  int count;
+};
+
+MXReturnValue createOpState(std::map<std::string,std::string> attrs,
+                            CustomStatefulOp** op_inst) {
+  *op_inst = new MyStatefulGemm(58);
+  std::cout << "create op state successful" << std::endl;
+  return MX_SUCCESS;
+}
+
+REGISTER_OP(state_gemm)
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
-.setInferShape(inferShape);
+.setInferShape(inferShape)
+.setMutateInputs(mutateInputs)
+.setCreateOpState(createOpState);
+
 
 MXReturnValue initialize(int version) {
   if (version >= 10400) {

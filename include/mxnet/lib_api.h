@@ -111,12 +111,12 @@ class OpResource {
  */
 class CustomStatefulOp {
  public:
-  virtual int Forward(std::vector<MXTensor>& inputs,
-                      std::vector<MXTensor>& outputs,
-                      OpResource op_res) = 0;
-  virtual int Backward(std::vector<MXTensor>& inputs,
-                       std::vector<MXTensor>& outputs,
-                       OpResource op_res) {
+  virtual MXReturnValue Forward(std::vector<MXTensor> inputs,
+                                std::vector<MXTensor> outputs,
+                                OpResource op_res) = 0;
+  virtual MXReturnValue Backward(std::vector<MXTensor> inputs,
+                                 std::vector<MXTensor> outputs,
+                                 OpResource op_res) {
     std::cout << "Error! Operator does not support backward" << std::endl;
     return MX_FAIL;
   }

@@ -20,34 +20,13 @@
 # coding: utf-8
 # pylint: disable=arguments-differ
 
-# This test checks if dynamic loading of library into MXNet is successful
-# and checks the end of end computation of custom operator
-
 import mxnet as mx
 import os
 
-# load library
+#load library
 if (os.name=='posix'):
-    path = os.path.abspath('subgraph_lib.so')
+    path = os.path.abspath('warpctc_lib.so')
     mx.library.load(path)
 elif (os.name=='nt'):
-    path = os.path.abspath('subgraph_lib.so')
+    path = os.path.abspath('warpctc_lib.so')
     mx.library.load(path)
-
-# setup inputs to call test operator
-a = mx.nd.array([[1,2],[3,4]])
-b = mx.nd.array([[5,6],[7,8]])
-
-# imperative compute and print output
-print(mx.nd.subgraph_op(a,b))
-
-# symbolic compute
-s = mx.sym.Variable('s')
-t = mx.sym.Variable('t')
-c = mx.sym.subgraph_op(s,t)
-in_grad = [mx.nd.empty((2,2)),mx.nd.empty((2,2))]
-#exe = c.bind(ctx=mx.cpu(),args={'s':a},args_grad=in_grad,aux_states={'t':b})
-exe = c.bind(ctx=mx.cpu(),args={'s':a,'t':b},args_grad=in_grad)
-out = exe.forward()
-out = exe.forward()
-print(out)

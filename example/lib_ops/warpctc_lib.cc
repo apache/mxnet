@@ -19,13 +19,26 @@
 
 /*!
  * Copyright (c) 2019 by Contributors
- * \file subgraph_lib.cc
- * \brief subgraph operator implementation
+ * \file mylib.cc
+ * \brief Sample custom operator implementation
  * library file
  */
 
 #include <iostream>
 #include "lib_api.h"
+
+MXReturnValue forward(std::map<std::string,std::string> attrs,
+               std::vector<MXTensor> inputs, std::vector<MXTensor> outputs,
+               OpResource res) {
+  return MX_SUCCESS;
+}
+
+
+MXReturnValue backward(std::map<std::string,std::string> attrs,
+               std::vector<MXTensor> inputs, std::vector<MXTensor> outputs,
+               OpResource res) {
+  return MX_SUCCESS;
+}
 
 MXReturnValue parseAttrs(std::map<std::string,std::string> attrs,
                int* num_in, int* num_out) {
@@ -36,71 +49,20 @@ MXReturnValue parseAttrs(std::map<std::string,std::string> attrs,
 
 MXReturnValue inferType(std::map<std::string,std::string> attrs, std::vector<int> &intypes,
               std::vector<int> &outtypes) {
-  outtypes[0] = intypes[0];
   return MX_SUCCESS;
 }
 
 MXReturnValue inferShape(std::map<std::string,std::string> attrs, std::vector<std::vector<unsigned int>> &inshapes,
                std::vector<std::vector<unsigned int>> &outshapes) {
-  unsigned n = inshapes[0][0];
-  unsigned k = inshapes[0][1];
-  unsigned kk = inshapes[1][0];
-  unsigned m = inshapes[1][1];
-
-  std::cout << "inshapes[0][0]=" << n << "  inshapes[0][1]=" << k << std::endl;
-  std::cout << "inshapes[1][0]=" << kk << "  inshapes[1][1]=" << m << std::endl;
-
-  if (k != kk)
-    return MX_FAIL;
-
-  outshapes[0].push_back(n);
-  outshapes[0].push_back(m);
   return MX_SUCCESS;
 }
 
-MXReturnValue mutateInputs(std::map<std::string,std::string> attrs,
-               std::vector<int> &input_indices) {
-  //input_indices.push_back(1);
-  //std::cout << "the 1st input is marked as mutate input by library author" << std::endl;
-  return MX_SUCCESS;
-}
-
-class MyStatefulOp : public CustomStatefulOp {
- public:
-  explicit MyStatefulOp(std::string sym) : subgraph_sym(sym){}
-
-  MXReturnValue Forward(std::vector<MXTensor> inputs,
-                        std::vector<MXTensor> outputs,
-                        OpResource op_res) {
-    std::cout << "subgraph " << subgraph_sym << " forwarding" << std::endl;
-    return MX_SUCCESS;
-  }
-
-  int State() { return count; }
-  ~MyStatefulOp() {}
-
- private:
-  std::string subgraph_sym;
-  int count;
-};
-
-MXReturnValue createOpState(std::map<std::string,std::string> attrs,
-                            CustomStatefulOp** op_inst) {
-  std::string serialized_subgraph = "[empty]";
-  if (attrs.count(SUBGRAPH_SYM_JSON)) {
-    serialized_subgraph = attrs[SUBGRAPH_SYM_JSON];
-  }
-  *op_inst = new MyStatefulOp(serialized_subgraph);
-  std::cout << "create op state successful" << std::endl;
-  return MX_SUCCESS;
-}
-
-REGISTER_OP(subgraph_op)
+REGISTER_OP(warpctc)
+.setForward(forward)
+.setBackward(backward)
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
-.setInferShape(inferShape)
-.setMutateInputs(mutateInputs)
-.setCreateOpState(createOpState);
+.setInferShape(inferShape);
 
 MXReturnValue initialize(int version) {
   if (version >= 10400) {
