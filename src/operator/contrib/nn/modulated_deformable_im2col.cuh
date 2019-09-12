@@ -259,8 +259,8 @@ __global__ void modulated_deformable_im2col_gpu_kernel(const int n,
 template <typename DType>
 inline void modulated_deformable_im2col(mshadow::Stream<gpu>* s,
   const DType* data_im, const DType* data_offset, const DType* data_mask,
-  const TShape& im_shape, const TShape& col_shape, const TShape& kernel_shape,
-  const TShape& pad, const TShape& stride, const TShape& dilation,
+  const mxnet::TShape& im_shape, const mxnet::TShape& col_shape, const mxnet::TShape& kernel_shape,
+  const mxnet::TShape& pad, const mxnet::TShape& stride, const mxnet::TShape& dilation,
   const uint32_t deformable_group, DType* data_col) {
   // num_axes should be smaller than block size
   index_t num_spatial_axes = kernel_shape.ndim();
@@ -363,9 +363,9 @@ __global__ void modulated_deformable_col2im_gpu_kernel(const int n,
 template <typename DType>
 inline void modulated_deformable_col2im(mshadow::Stream<gpu>* s,
   const DType* data_col, const DType* data_offset, const DType* data_mask,
-  const TShape& im_shape, const TShape& col_shape, const TShape& kernel_shape,
-  const TShape& pad, const TShape& stride,
-  const TShape& dilation, const uint32_t deformable_group,
+  const mxnet::TShape& im_shape, const mxnet::TShape& col_shape, const mxnet::TShape& kernel_shape,
+  const mxnet::TShape& pad, const mxnet::TShape& stride,
+  const mxnet::TShape& dilation, const uint32_t deformable_group,
   DType* grad_im, OpReqType req) {
   index_t num_spatial_axes = kernel_shape.ndim();
   index_t im_size = im_shape.ProdShape(1, im_shape.ndim());
@@ -484,9 +484,9 @@ __global__ void modulated_deformable_col2im_coord_gpu_kernel(const int n,
 template <typename DType>
 inline void modulated_deformable_col2im_coord(mshadow::Stream<gpu>* s,
   const DType* data_col, const DType* data_im, const DType* data_offset, const DType* data_mask,
-  const TShape& im_shape, const TShape& col_shape, const TShape& kernel_shape,
-  const TShape& pad, const TShape& stride,
-  const TShape& dilation, const uint32_t deformable_group,
+  const mxnet::TShape& im_shape, const mxnet::TShape& col_shape, const mxnet::TShape& kernel_shape,
+  const mxnet::TShape& pad, const mxnet::TShape& stride,
+  const mxnet::TShape& dilation, const uint32_t deformable_group,
   DType* grad_offset, DType* grad_mask, OpReqType offset_req, OpReqType mask_req) {
   index_t num_spatial_axes = kernel_shape.ndim();
   index_t num_kernels = col_shape[1] * col_shape[2] * col_shape[3] * 2 * kernel_shape[0] * kernel_shape[1] * deformable_group;

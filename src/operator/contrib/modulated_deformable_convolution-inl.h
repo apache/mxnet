@@ -62,10 +62,10 @@ namespace dmconv {
 }
 
 struct ModulatedDeformableConvolutionParam : public dmlc::Parameter<ModulatedDeformableConvolutionParam> {
-  TShape kernel;
-  TShape stride;
-  TShape dilate;
-  TShape pad;
+  mxnet::TShape kernel;
+  mxnet::TShape stride;
+  mxnet::TShape dilate;
+  mxnet::TShape pad;
   uint32_t num_filter;
   uint32_t num_group;
   uint32_t num_deformable_group;
@@ -75,11 +75,11 @@ struct ModulatedDeformableConvolutionParam : public dmlc::Parameter<ModulatedDef
   dmlc::optional<int> layout;
   DMLC_DECLARE_PARAMETER(ModulatedDeformableConvolutionParam) {
     DMLC_DECLARE_FIELD(kernel).describe("Convolution kernel size: (h, w) or (d, h, w)");
-    DMLC_DECLARE_FIELD(stride).set_default(TShape())
+    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape())
       .describe("Convolution stride: (h, w) or (d, h, w). Defaults to 1 for each dimension.");
-    DMLC_DECLARE_FIELD(dilate).set_default(TShape())
+    DMLC_DECLARE_FIELD(dilate).set_default(mxnet::TShape())
       .describe("Convolution dilate: (h, w) or (d, h, w). Defaults to 1 for each dimension.");
-    DMLC_DECLARE_FIELD(pad).set_default(TShape())
+    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape())
       .describe("Zero pad for convolution: (h, w) or (d, h, w). Defaults to no padding.");
     DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
       .describe("Convolution filter(channel) number");
@@ -136,17 +136,17 @@ class ModulatedDeformableConvolutionOp : public Operator {
     Tensor<xpu, 1, DType> workspace = ctx.requested[dmconv::kTempSpace]
       .get_space_typed<xpu, 1, DType>(Shape1(col_buffer_size_ + num_*output_dim_), s);
     // calculate the shape of col_buffer
-    TShape col_buffer_shape(num_spatial_axes_ + 2, 0);
+    mxnet::TShape col_buffer_shape(num_spatial_axes_ + 2, -1);
     col_buffer_shape[0] = conv_in_channels_ * param_.kernel.Size();
     //for (index_t i = 1; i < col_buffer_shape.ndim(); ++i) {
     //  col_buffer_shape[i] = out_data[0].shape_[i + 1];
     col_buffer_shape[1] = im2col_step_;
-    for (index_t i = 2; i < col_buffer_shape.ndim(); ++i) {
+    for (int i = 2; i < col_buffer_shape.ndim(); ++i) {
       col_buffer_shape[i] = out_data[0].shape_[i];
     }
     // create a column buffer using workspace and col_buffer_shape
     TBlob col_buffer(workspace.dptr_, col_buffer_shape, xpu::kDevMask, DataType<DType>::kFlag);
-    mxnet::TShape output_buffer_shape(1, 0);
+    mxnet::TShape output_buffer_shape(1, -1);
     output_buffer_shape[0] = num_*output_dim_;
     TBlob output_buffer(workspace.dptr_ + col_buffer_size_, output_buffer_shape, xpu::kDevMask, DataType<DType>::kFlag);
 
@@ -213,7 +213,7 @@ class ModulatedDeformableConvolutionOp : public Operator {
     Tensor<xpu, 1, DType> workspace = ctx.requested[dmconv::kTempSpace]
       .get_space_typed<xpu, 1, DType>(Shape1(col_buffer_size_ + num_*output_dim_), s);
     // calculate the shape of col_buffer
-    TShape col_buffer_shape(num_spatial_axes_ + 2, 0);
+    mxnet::TShape col_buffer_shape(num_spatial_axes_ + 2, -1);
     col_buffer_shape[0] = conv_in_channels_ * param_.kernel.Size();
     col_buffer_shape[1] = im2col_step_;
     for (index_t i = 2; i < col_buffer_shape.ndim(); ++i) {
@@ -221,7 +221,7 @@ class ModulatedDeformableConvolutionOp : public Operator {
     }
     // create a column buffer using workspace and col_buffer_shape
     TBlob col_buffer(workspace.dptr_, col_buffer_shape, xpu::kDevMask, DataType<DType>::kFlag);
-    TShape output_buffer_shape(1, 0);
+    mxnet::TShape output_buffer_shape(1, -1);
     output_buffer_shape[0] = num_*output_dim_;
     TBlob output_buffer(workspace.dptr_ + col_buffer_size_, output_buffer_shape, xpu::kDevMask, DataType<DType>::kFlag);
                 
@@ -304,7 +304,10 @@ class ModulatedDeformableConvolutionOp : public Operator {
   }
 
  private:
-  void LayerSetUp(const TShape& ishape, const TShape& offset_shape, const TShape& mask_shape, const TShape& oshape) {
+  void LayerSetUp(const mxnet::TShape& ishape, 
+                  const mxnet::TShape& offset_shape, 
+                  const mxnet::TShape& mask_shape, 
+                  const mxnet::TShape& oshape) {
     channel_axis_ = 1;  // hard code channel axis
     const index_t first_spatial_axis = channel_axis_ + 1;
     const index_t num_axes = param_.kernel.ndim() + 2;
@@ -368,8 +371,8 @@ class ModulatedDeformableConvolutionOp : public Operator {
 
 template<typename xpu>
 Operator* CreateOp(ModulatedDeformableConvolutionParam param, int dtype,
-  std::vector<TShape> *in_shape,
-  std::vector<TShape> *out_shape,
+  mxnet::ShapeVector *in_shape,
+  mxnet::ShapeVector *out_shape,
   Context ctx);
 
 #if DMLC_USE_CXX11
@@ -400,20 +403,20 @@ class ModulatedDeformableConvolutionProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-    std::vector<TShape> *out_shape,
-    std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+    mxnet::ShapeVector *out_shape,
+    mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     if (!param_.no_bias) {
       CHECK_EQ(in_shape->size(), 5U) << "Input:[data, offset, mask, weight, bias]";
     } else {
       CHECK_EQ(in_shape->size(), 4U) << "Input:[data, offset, mask, weight]";
     }
-    out_shape->resize(1, TShape());
-    const TShape &dshp = (*in_shape)[dmconv::kData];
-    const TShape &oshp = (*in_shape)[dmconv::kOffset];
-    const TShape &mshp = (*in_shape)[dmconv::kMask];
-    if (dshp.ndim() == 0) return false;
+    out_shape->resize(1, mxnet::TShape());
+    const mxnet::TShape &dshp = (*in_shape)[dmconv::kData];
+    const mxnet::TShape &oshp = (*in_shape)[dmconv::kOffset];
+    const mxnet::TShape &mshp = (*in_shape)[dmconv::kMask];
+    if (mxnet::op::shape_is_none(dshp)) return false;
     if (param_.kernel.ndim() == 2) {
       // 2d dmconv
       CHECK_EQ(dshp.ndim(), 4U) \
@@ -545,12 +548,12 @@ class ModulatedDeformableConvolutionProp : public OperatorProperty {
   }
 
   std::vector<ResourceRequest> ForwardResource(
-    const std::vector<TShape> &in_shape) const override {
+    const mxnet::ShapeVector &in_shape) const override {
     return{ ResourceRequest::kTempSpace };
   }
 
   std::vector<ResourceRequest> BackwardResource(
-    const std::vector<TShape> &in_shape) const override {
+    const mxnet::ShapeVector &in_shape) const override {
     return{ ResourceRequest::kTempSpace };
   }
 
@@ -559,7 +562,7 @@ class ModulatedDeformableConvolutionProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
     std::vector<int> *in_type) const override;
 
  private:
