@@ -26,24 +26,31 @@
 #if MXNET_USE_MKLDNN == 100
 
 #include "../convolution-inl.h"
+#include "./mkldnn_ops-inl.h"
 #include "./mkldnn_base-inl.h"
 #include "./mkldnn_convolution-inl.h"
-#include "./mkldnn_ops-inl.h"
 
 namespace mxnet {
 namespace op {
 
 DMLC_REGISTER_PARAMETER(MKLDNNConvParam);
 
-bool SupportMKLDNNConv(const ConvolutionParam &params, const NDArray &input) {
-  if ((params.kernel.ndim() != 1) && (params.kernel.ndim() != 2)) return false;
+bool SupportMKLDNNConv(const ConvolutionParam& params, const NDArray &input) {
+  if ((params.kernel.ndim() != 1) &&
+      (params.kernel.ndim() != 2))
+    return false;
   return SupportMKLDNNQuantize(input.dtype()) &&
-         ((input.shape().ndim() == 3) || (input.shape().ndim() == 4));
+         ((input.shape().ndim() == 3) ||
+          (input.shape().ndim() == 4));
 }
 
 std::shared_ptr<mkldnn::convolution_forward::primitive_desc> GetConvFwdImpl(
-    const MKLDNNConvFullParam &param, const bool is_train, const NDArray &data,
-    const NDArray &weights, const NDArray *bias, const NDArray &output) {
+                                                           const MKLDNNConvFullParam &param,
+                                                           const bool is_train,
+                                                           const NDArray &data,
+                                                           const NDArray &weights,
+                                                           const NDArray *bias,
+                                                           const NDArray &output) {
   auto prop = is_train ? mkldnn::prop_kind::forward_training : mkldnn::prop_kind::forward_scoring;
   auto data_md = GetMemDesc(data);
   auto weight_md = GetWeightDesc(weights, param.conv_param.num_group, param.mkldnn_param.quantized);
@@ -71,8 +78,8 @@ std::shared_ptr<mkldnn::convolution_forward::primitive_desc> GetConvFwdImpl(
     padding[0] = param.conv_param.pad[0];
     padding[1] = param.conv_param.pad[1];
   } else {
-    LOG(FATAL) << "Unexpected MKL-DNN Conv kernel size " << param.conv_param.kernel.ndim()
-               << ", supporting only 1 or 2.";
+    LOG(FATAL) << "Unexpected MKL-DNN Conv kernel size "
+               << param.conv_param.kernel.ndim() << ", supporting only 1 or 2.";
   }
   mkldnn::primitive_attr attr;
   mkldnn::post_ops ops;
@@ -210,8 +217,8 @@ static std::shared_ptr<mkldnn::convolution_backward_data::primitive_desc> GetCon
       dilates[0] = param.dilate[0] - 1;
       dilates[1] = param.dilate[1] - 1;
     } else {
-      LOG(FATAL) << "Unexpected MKL-DNN Conv dilate size " << param.dilate.ndim()
-                 << ", supporting only 1 or 2.";
+      LOG(FATAL) << "Unexpected MKL-DNN Conv dilate size "
+                 << param.dilate.ndim() << ", supporting only 1 or 2.";
     }
     mkldnn::convolution_backward_data::desc desc(mkldnn::algorithm::convolution_direct, data_md,
                                                  weight_md, out_md, strides, dilates, padding,
@@ -285,8 +292,8 @@ static std::shared_ptr<mkldnn::convolution_backward_weights::primitive_desc> Get
       dilates[0] = param.dilate[0] - 1;
       dilates[1] = param.dilate[1] - 1;
     } else {
-      LOG(FATAL) << "Unexpected MKL-DNN Conv dilate size " << param.dilate.ndim()
-                 << ", supporting only 1 or 2.";
+      LOG(FATAL) << "Unexpected MKL-DNN Conv dilate size "
+                 << param.dilate.ndim() << ", supporting only 1 or 2.";
     }
     if (bias == nullptr) {
       mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,
@@ -443,10 +450,10 @@ static inline MKLDNNConvBackward &GetConvBwd(const MKLDNNConvFullParam &param, c
   return it->second;
 }
 
-void MKLDNNConvolutionBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
-                               const std::vector<NDArray> &inputs,
-                               const std::vector<OpReqType> &req,
-                               const std::vector<NDArray> &outputs) {
+void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                               const std::vector<NDArray>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<NDArray>& outputs) {
   TmpMemMgr::Get()->Init(ctx.requested[conv::kTempSpace]);
   const std::vector<NDArray> &in_grad = outputs;
   MKLDNNConvFullParam full_param;
