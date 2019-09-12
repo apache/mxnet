@@ -30,6 +30,7 @@ import random
 import collections
 import scipy.stats as ss
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, retry
+import platform
 
 
 @with_seed()
@@ -1664,7 +1665,7 @@ def test_np_choice():
             super(TestWeightedChoice, self).__init__()
             self.sample_size = sample_size
             self.replace = replace
-        
+
         def hybrid_forward(self, F, a, p):
             op = getattr(F.np.random, "choice", None)
             return F.np.random.choice(a, self.sample_size, self.replace, p)
@@ -1703,7 +1704,7 @@ def test_np_choice():
         assert len(samples) == samples_size
         if not replace:
             assert len(_np.unique(samples)) == samples_size
-        
+
     num_classes = 10
     num_samples = 10 ** 8
     # Density tests are commented out due to their huge time comsumption.
@@ -1717,7 +1718,7 @@ def test_np_choice():
     #     test_sample_with_replacement(np.random.choice, num_classes, shape)
     #     weight = np.array(_np.random.dirichlet([1.0] * num_classes))
     #     test_sample_with_replacement(np.random.choice, num_classes, shape, weight)
-    
+
     # Tests passed locally,
     # commented out for the same reason as above.
     # shape_list2 = [
@@ -1730,7 +1731,7 @@ def test_np_choice():
     #     test_sample_without_replacement(np.random.choice, num_classes, shape, 10 ** 5)
     #     weight = np.array(_np.random.dirichlet([1.0] * num_classes))
     #     test_sample_without_replacement(np.random.choice, num_classes, shape, 10 ** 5, weight)
-    
+
     # Test hypridize mode:
     for hybridize in [True, False]:
         for replace in [True, False]:
@@ -1742,6 +1743,51 @@ def test_np_choice():
             weight = np.array(_np.random.dirichlet([1.0] * num_classes))
             test_indexing_mode(test_choice, num_classes, num_classes // 2, replace, None)
             test_indexing_mode(test_choice_weighted, num_classes, num_classes // 2, replace, weight)
+
+
+@with_seed()
+@use_np
+def test_np_indices():
+    dtypes = ['int32', 'int64', 'float16', 'float32', 'float64']
+    shapes = [
+        (0,),
+        (3,),
+        (2, 3, 4),
+        (2, 0, 4),
+        (1, 1, 1, 1),
+        (1, 0, 0, 1),
+        (2, 3, 4, 5, 6, 7)
+    ]
+    if platform.system() == 'Windows':
+        shapes = shapes[1:]  #beacuse in numpy windows version, indces not support dimensions is empty tuple.
+    for dtype in dtypes:
+        for shape in shapes:
+            np_out = _np.indices(dimensions=shape, dtype=dtype)
+            mx_out = np.indices(dimensions=shape, dtype=dtype)
+            same(mx_out.asnumpy(), np_out)
+            assert mx_out.shape == np_out.shape
+
+    @use_np
+    class TestIndices(HybridBlock):
+        def __init__(self, dimensions=None, dtype=None):
+            super(TestIndices, self).__init__()
+            self._dimensions = dimensions
+            self._dtype = dtype
+
+        def hybrid_forward(self, F, x):
+            return x + F.np.indices(dimensions=self._dimensions, dtype=self._dtype)
+
+    for dtype in dtypes:
+        for shape in shapes:
+            x = np.zeros(shape=(), dtype=dtype)
+            for hybridize in [False, True]:
+                net = TestIndices(dimensions=shape, dtype=dtype)
+                np_out = _np.indices(dimensions=shape, dtype=dtype)
+                if hybridize:
+                    net.hybridize()
+                mx_out = net(x)
+                same(mx_out.asnumpy(), np_out)
+                assert mx_out.shape == np_out.shape
 
 
 if __name__ == '__main__':
