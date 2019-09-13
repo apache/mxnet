@@ -1891,8 +1891,8 @@ def test_np_copysign():
                     atol = 1e-5
                     a1_np = _np.array(_np.random.uniform(-1.0, 1.0, a1shape), dtype=dtype)
                     a2_np = _np.array(_np.random.uniform(-1.0, 1.0, a2shape), dtype=dtype)
-                    a1 = mx.nd.array(a1_np).as_np_ndarray()
-                    a2 = mx.nd.array(a2_np).as_np_ndarray()
+                    a1 = np.array(a1_np, dtype=dtype)
+                    a2 = np.array(a2_np, dtype=dtype)
                     a1.attach_grad()
                     a2.attach_grad()
                     expected_np = _np.copysign(a1_np, a2_np)

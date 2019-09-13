@@ -80,7 +80,7 @@ NNVM_REGISTER_OP(_npi_rcopysign_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::rcopysign>);
 
 NNVM_REGISTER_OP(_backward_npi_copysign_scalar)
-.set_attr<FCompute>("FCompute<gpu>", 
+.set_attr<FCompute>("FCompute<gpu>",
                     BinaryScalarOp::Backward<gpu, mshadow_op::copysign_grad>);
 
 NNVM_REGISTER_OP(_backward_npi_rcopysign_scalar)

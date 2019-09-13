@@ -2766,6 +2766,14 @@ def copysign(x1, x2, out=None):
     out : _Symbol
         The values of `x1` with the sign of `x2`.
         This is a scalar if both `x1` and `x2` are scalars.
+
+    Notes
+    -------
+    This function differs from the original `numpy.copysign
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.copysign.html>`_ in
+    the following aspects:
+
+    - ``where`` param is not supported.
     """
     return _ufunc_helper(x1, x2, _npi.copysign, _np.copysign, _npi.copysign_scalar, _npi.rcopysign_scalar, out)
 

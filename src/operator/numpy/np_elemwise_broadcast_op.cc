@@ -94,7 +94,7 @@ NNVM_REGISTER_OP(_backward_npi_copysign)
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::copysign_grad,
-                                                              mshadow_op::copysign_rgrad>);
+                                                                  mshadow_op::copysign_rgrad>);
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_add_scalar)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, op::mshadow_op::plus>)
@@ -136,17 +136,13 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_rcopysign_scalar)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::rcopysign>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_rcopysign_scalar"});
 
-MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_copysign_scalar)
-.add_argument("scalar", "float", "scalar value")
-.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_backward_npi_copysign_scalar)
 .set_attr<FCompute>("FCompute<cpu>",
                     BinaryScalarOp::Backward<cpu, mshadow_op::copysign_grad>);
 
-MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_rcopysign_scalar)
-.add_argument("scalar", "float", "scalar value")
-.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<
-  cpu, mshadow_op::rcopysign_grad>);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_backward_npi_rcopysign_scalar)
+.set_attr<FCompute>("FCompute<cpu>",
+                    BinaryScalarOp::Backward<cpu, mshadow_op::rcopysign_grad>);
 
 }  // namespace op
 }  // namespace mxnet
