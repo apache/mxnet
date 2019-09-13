@@ -195,6 +195,7 @@ print(profiler.dumps())
 You can also dump the information collected by the profiler into a `json` file using the `profiler.dump()` function and view it in a browser.
 
 ```python
+profiler.set_state('run')
 profiler.dump(finished=False)
 ```
 
