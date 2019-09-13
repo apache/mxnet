@@ -109,6 +109,8 @@ endif
 CFLAGS += -I$(TPARTYDIR)/mshadow/ -I$(TPARTYDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(TPARTYDIR)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread -ldl $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 
+# please note that when you enable this, you might run into an linker not being able to work properly due to large code injection.
+# you can find more information here https://github.com/apache/incubator-mxnet/issues/15971
 ifeq ($(ENABLE_TESTCOVERAGE), 1)
         CFLAGS += --coverage
         LDFLAGS += --coverage
@@ -461,6 +463,20 @@ OBJ = $(patsubst %.cc, build/%.o, $(SRC))
 CUSRC = $(wildcard src/*/*/*/*.cu src/*/*/*.cu src/*/*.cu src/*.cu)
 CUOBJ = $(patsubst %.cu, build/%_gpu.o, $(CUSRC))
 
+ifeq ($(USE_TVM_OP), 1)
+LIB_DEP += lib/libtvm_runtime.so lib/libtvmop.so
+CFLAGS += -I$(TVM_PATH)/include -DMXNET_USE_TVM_OP=1
+LDFLAGS += -L$(ROOTDIR)/lib -ltvm_runtime -Wl,-rpath,'$${ORIGIN}'
+
+TVM_USE_CUDA := OFF
+ifeq ($(USE_CUDA), 1)
+	TVM_USE_CUDA := ON
+	ifneq ($(USE_CUDA_PATH), NONE)
+		TVM_USE_CUDA := $(USE_CUDA_PATH)
+	endif
+endif
+endif
+
 # extra operators
 ifneq ($(EXTRA_OPERATORS),)
 	EXTRA_SRC = $(wildcard $(patsubst %, %/*.cc, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.cc, $(EXTRA_OPERATORS)))
@@ -598,18 +614,6 @@ $(DMLC_CORE)/libdmlc.a: DMLCCORE
 DMLCCORE:
 	+ cd $(DMLC_CORE); $(MAKE) libdmlc.a USE_SSE=$(USE_SSE) config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
-ifeq ($(USE_TVM_OP), 1)
-LIB_DEP += lib/libtvm_runtime.so lib/libtvmop.so
-CFLAGS += -I$(TVM_PATH)/include -DMXNET_USE_TVM_OP=1
-LDFLAGS += -L$(TVM_PATH)/build -ltvm_runtime
-
-TVM_USE_CUDA := OFF
-ifeq ($(USE_CUDA), 1)
-	TVM_USE_CUDA := ON
-	ifneq ($(USE_CUDA_PATH), NONE)
-		TVM_USE_CUDA := $(USE_CUDA_PATH)
-	endif
-endif
 lib/libtvm_runtime.so:
 	echo "Compile TVM"
 	[ -e $(LLVM_PATH)/bin/llvm-config ] || sh $(ROOTDIR)/contrib/tvmop/prepare_tvm.sh; \
@@ -617,15 +621,16 @@ lib/libtvm_runtime.so:
 	cmake -DUSE_LLVM="$(LLVM_PATH)/bin/llvm-config" \
 		  -DUSE_SORT=OFF -DUSE_CUDA=$(TVM_USE_CUDA) -DUSE_CUDNN=OFF ..; \
 	$(MAKE) VERBOSE=1; \
+	mkdir -p $(ROOTDIR)/lib; \
 	cp $(TVM_PATH)/build/libtvm_runtime.so $(ROOTDIR)/lib/libtvm_runtime.so; \
+	ls $(ROOTDIR)/lib; \
 	cd $(ROOTDIR)
 
 lib/libtvmop.so: lib/libtvm_runtime.so $(wildcard contrib/tvmop/*/*.py contrib/tvmop/*.py)
 	echo "Compile TVM operators"
-	PYTHONPATH=$(TVM_PATH)/python:$(TVM_PATH)/topi/python:$(ROOTDIR)/contrib:$PYTHONPATH \
-		LD_LIBRARY_PATH=lib \
+	PYTHONPATH=$(TVM_PATH)/python:$(TVM_PATH)/topi/python:$(ROOTDIR)/contrib \
+		LD_LIBRARY_PATH=$(ROOTDIR)/lib \
 	    python3 $(ROOTDIR)/contrib/tvmop/compile.py -o $(ROOTDIR)/lib/libtvmop.so
-endif
 
 NNVM_INC = $(wildcard $(NNVM_PATH)/include/*/*.h)
 NNVM_SRC = $(wildcard $(NNVM_PATH)/src/*/*/*.cc $(NNVM_PATH)/src/*/*.cc $(NNVM_PATH)/src/*.cc)
@@ -685,6 +690,10 @@ rpkg:
 		cp -rf lib/libmkldnn.so.0 R-package/inst/libs; \
 		cp -rf lib/libiomp5.so R-package/inst/libs; \
 		cp -rf lib/libmklml_intel.so R-package/inst/libs; \
+	fi
+
+	if [ -e "lib/libtvm_runtime.so" ]; then \
+		cp -rf lib/libtvm_runtime.so R-package/inst/libs; \
 	fi
 
 	mkdir -p R-package/inst/include

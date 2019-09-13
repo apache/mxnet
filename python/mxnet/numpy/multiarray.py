@@ -17,7 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: disable=too-many-lines
+# pylint: disable=too-many-lines, unused-argument
 """numpy ndarray and util functions."""
 
 from __future__ import absolute_import
@@ -34,18 +34,30 @@ import ctypes
 import warnings
 import numpy as _np
 from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _GRAD_REQ_MAP
+from ..ndarray import indexing_key_expand_implicit_axes, get_indexing_dispatch_code,\
+                      get_oshape_of_gather_nd_op
 from ..ndarray._internal import _set_np_ndarray_class
 from . import _op as _mx_np_op
 from ..base import check_call, _LIB, NDArrayHandle
 from ..base import mx_real_t, c_array_buf, mx_uint, numeric_types, integer_types
+from ..context import Context
 from ..util import _sanity_check_params, set_module
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 
-__all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'add', 'subtract', 'multiply', 'divide',
-           'mod', 'power', 'tensordot', 'linspace', 'expand_dims', 'tile', 'arange']
+__all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide',
+           'mod', 'remainder', 'power', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt',
+           'abs', 'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
+           'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative',
+           'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh',
+           'tensordot', 'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate',
+           'stack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices']
 
+# Return code for dispatching indexing function call
+_NDARRAY_UNSUPPORTED_INDEXING = -1
+_NDARRAY_BASIC_INDEXING = 0
+_NDARRAY_ADVANCED_INDEXING = 1
 
 # This function is copied from ndarray.py since pylint
 # keeps giving false alarm error of undefined-all-variable
@@ -96,80 +108,234 @@ def _get_index(idx):
 
 @set_module('mxnet.numpy')  # pylint: disable=invalid-name
 class ndarray(NDArray):
-    """An array object represents a multidimensional, homogeneous array of fixed-size items.
+    """
+    An array object represents a multidimensional, homogeneous array of fixed-size items.
     An associated data-type object describes the format of each element in the array
     (its byte-order, how many bytes it occupies in memory, whether it is an integer, a
     floating point number, or something else, etc.). Arrays should be constructed using
-    `array`, `zeros` or `empty`. Currently, only c-contiguous arrays are supported."""
+    `array`, `zeros` or `empty`. Currently, only c-contiguous arrays are supported.
+    """
+    def _get_np_basic_indexing(self, key):
+        """
+        This function indexes ``self`` with a tuple of `slice` objects only.
+        """
+        key_nd = tuple(idx for idx in key if idx is not None)
+        if len(key_nd) < self.ndim:
+            raise RuntimeError(
+                'too few indices after normalization: expected `ndim` ({}) '
+                'but got {}. This is a bug, please report it!'
+                ''.format(self.ndim, len(key_nd))
+            )
+        if len(key_nd) > self.ndim:
+            raise IndexError(
+                'too many indices ({}) for array with {} dimensions'
+                ''.format(len(key_nd), self.ndim)
+            )
+
+        none_axes = [ax for ax in range(len(key)) if key[ax] is None]  # pylint: disable=invalid-name
+        slc_key, int_axes = self._basic_indexing_key_int_to_slice(key_nd)
+        new_axes = self._new_axes_after_basic_indexing(none_axes, key)
+
+        # Check bounds for integer axes
+        for ax in int_axes:  # pylint: disable=invalid-name
+            if not -self.shape[ax] <= key_nd[ax] < self.shape[ax]:
+                raise IndexError(
+                    'index {} is out of bounds for axis {} with size {}'
+                    ''.format(key_nd[ax], ax, self.shape[ax]))
+
+        if self._basic_indexing_slice_is_contiguous(slc_key, self.shape):
+            # Create a shared-memory view by using low-level flat slicing
+            flat_begin, flat_end = self._basic_indexing_contiguous_flat_begin_end(
+                slc_key, self.shape
+            )
+            handle = NDArrayHandle()
+            flat_self = self.reshape_view(-1)
+            check_call(
+                _LIB.MXNDArraySlice(
+                    flat_self.handle,
+                    mx_uint(flat_begin),
+                    mx_uint(flat_end),
+                    ctypes.byref(handle),
+                )
+            )
+            sliced_shape = self._basic_indexing_sliced_shape(slc_key, self.shape)
+            sliced = self.__class__(handle=handle, writable=self.writable)
+            if 0 in sliced_shape:
+                sliced = sliced.reshape(sliced_shape)
+            else:
+                sliced = sliced.reshape_view(sliced_shape)
+
+        else:
+            begin, end, step = self._basic_indexing_key_to_begin_end_step(
+                slc_key, self.shape, keep_none=True
+            )
+            sliced = _npi.slice(self, begin, end, step)
+
+        # Reshape to final shape due to integer and `None` entries in `key`.
+        final_shape = [sliced.shape[i] for i in range(sliced.ndim) if i not in int_axes]
+        for ax in new_axes:  # pylint: disable=invalid-name
+            final_shape.insert(ax, 1)
+
+        if sliced.size == 0:
+            return sliced.reshape(tuple(final_shape))
+        else:
+            return sliced.reshape_view(tuple(final_shape))
+
+    def _get_np_advanced_indexing(self, key):
+        idcs, new_axes = self._get_index_nd(key)
+        if type(idcs) == NDArray:  # pylint: disable=unidiomatic-typecheck
+            idcs = idcs.as_np_ndarray()
+        else:
+            idcs = _npi.stack(*[i if isinstance(i, self.__class__) else i.as_np_ndarray() for i in idcs])
+        sliced = _npi.gather_nd(self, idcs)
+        # Reshape due to `None` entries in `key`.
+        if new_axes:
+            final_shape = [sliced.shape[i] for i in range(sliced.ndim)]
+            for ax in new_axes:  # pylint: disable=invalid-name
+                final_shape.insert(ax, 1)
+            return sliced.reshape(tuple(final_shape))
+        else:
+            return sliced
+
+    def _set_np_advanced_indexing(self, key, value):
+        """This function is called by __setitem__ when key is an advanced index."""
+        idcs, new_axes = self._get_index_nd(key)
+        if type(idcs) == NDArray:  # pylint: disable=unidiomatic-typecheck
+            idcs = idcs.as_np_ndarray()
+        else:
+            idcs = _npi.stack(*[i if isinstance(i, self.__class__) else i.as_np_ndarray() for i in idcs])
+        vshape = get_oshape_of_gather_nd_op(self.shape, idcs.shape)
+        value_nd = self._prepare_value_nd(value, bcast_shape=vshape, squeeze_axes=new_axes)
+        self._scatter_set_nd(value_nd, idcs)
 
     # pylint: disable=too-many-return-statements
     def __getitem__(self, key):
-        # TODO(junwu): calling base class __getitem__ is a temp solution
+        """
+        Overriding the method in NDArray class in a numpy fashion.
+        Calling numpy ndarray's _get_np_basic_indexing(key) and _get_np_advanced_indexing(key).
+        """
         ndim = self.ndim
         shape = self.shape
         if ndim == 0:
             if key != ():
                 raise IndexError('scalar tensor can only accept `()` as index')
+        # Handle simple cases for higher speed
         if isinstance(key, tuple) and len(key) == 0:
             return self
-        elif isinstance(key, tuple) and len(key) == ndim\
+        if isinstance(key, tuple) and len(key) == ndim\
                 and all(isinstance(idx, integer_types) for idx in key):
             out = self
             for idx in key:
                 out = out[idx]
             return out
-        elif isinstance(key, integer_types):
+        if isinstance(key, integer_types):
             if key > shape[0] - 1:
                 raise IndexError(
                     'index {} is out of bounds for axis 0 with size {}'.format(
                         key, shape[0]))
             return self._at(key)
         elif isinstance(key, py_slice):
-            if key.step is not None and key.step != 1:
-                if key.step == 0:
-                    raise ValueError("slice step cannot be zero")
-                return self.as_nd_ndarray().__getitem__(key).as_np_ndarray()
-            elif key.start is not None or key.stop is not None:
-                return self._slice(key.start, key.stop)
-            else:
-                return self
+            if key.step is None or key.step == 1:
+                if key.start is not None or key.stop is not None:
+                    return self._slice(key.start, key.stop)
+                else:
+                    return self
+            elif key.step == 0:
+                raise ValueError("slice step cannot be zero")
 
-        if isinstance(key, ndarray):
-            key = key.as_nd_ndarray()
-        elif isinstance(key, tuple):
-            key = [_get_index(idx) for idx in key]
-            key = tuple(key)
-        elif isinstance(key, list):
-            key = [_get_index(idx) for idx in key]
-        elif sys.version_info[0] > 2 and isinstance(key, range):
-            key = _get_index(key)
-        return self.as_nd_ndarray().__getitem__(key).as_np_ndarray()
-    # pylint: enable=too-many-return-statements
+        key = indexing_key_expand_implicit_axes(key, self.shape)
+        indexing_dispatch_code = get_indexing_dispatch_code(key)
+        if indexing_dispatch_code == _NDARRAY_BASIC_INDEXING:
+            return self._get_np_basic_indexing(key)
+        elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
+            return self._get_np_advanced_indexing(key)
+        else:
+            raise RuntimeError
 
     def __setitem__(self, key, value):
-        # TODO(junwu): calling base class __setitem__ is a temp solution
+        """
+        x.__setitem__(i, y) <=> x[i]=y
+        Sets ``self[key]`` to ``value``.
+
+        Overriding the method in NDArray class in a numpy fashion.
+        """
         if isinstance(value, NDArray) and not isinstance(value, ndarray):
             raise TypeError('Cannot assign mx.nd.NDArray to mxnet.numpy.ndarray')
         if self.ndim == 0:
             if not isinstance(key, tuple) or len(key) != 0:
                 raise IndexError('scalar tensor can only accept `()` as index')
-        if isinstance(value, ndarray):
-            value = value.as_nd_ndarray()
-        # TODO(junwu): Better handling of this situation
-        if isinstance(key, tuple) and len(key) == 0:
-            self.as_nd_ndarray().__setitem__(key, value)
-            return
+            if isinstance(value, numeric_types):
+                self.full(value)
+            elif isinstance(value, ndarray) and value.size == 1:
+                if value.shape != self.shape:
+                    value = value.reshape(self.shape)
+                value.copyto(self)
+            elif isinstance(value, (_np.ndarray, _np.generic)) and value.size == 1:
+                if isinstance(value, _np.generic) or value.shape != self.shape:
+                    value = value.reshape(self.shape)
+                self._sync_copyfrom(value)
+            else:
+                raise ValueError('setting an array element with a sequence.')
+        else:
+            key = indexing_key_expand_implicit_axes(key, self.shape)
+            slc_key = tuple(idx for idx in key if idx is not None)
+            if len(slc_key) < self.ndim:
+                raise RuntimeError(
+                    'too few indices after normalization: expected `ndim` ({}) '
+                    'but got {}. This is a bug, please report it!'
+                    ''.format(self.ndim, len(slc_key))
+                )
+            if len(slc_key) > self.ndim and self.ndim != 0:
+                raise IndexError(
+                    'too many indices ({}) for array with {} dimensions'
+                    ''.format(len(slc_key), self.ndim)
+                )
+            indexing_dispatch_code = get_indexing_dispatch_code(slc_key)
+            if indexing_dispatch_code == _NDARRAY_BASIC_INDEXING:
+                self._set_nd_basic_indexing(key, value)  # function is inheritated from NDArray class
+            elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
+                self._set_np_advanced_indexing(key, value)
+            else:
+                raise ValueError(
+                    'Indexing NDArray with index {} of type {} is not supported'
+                    ''.format(key, type(key))
+                )
 
-        if isinstance(key, ndarray):
-            key = key.as_nd_ndarray()
-        elif isinstance(key, tuple):
-            key = [_get_index(idx) for idx in key]
-            key = tuple(key)
-        elif isinstance(key, list):
-            key = [_get_index(idx) for idx in key]
-        elif sys.version_info[0] > 2 and isinstance(key, range):
-            key = _get_index(key)
-        self.as_nd_ndarray().__setitem__(key, value)
+    def _prepare_value_nd(self, value, bcast_shape, squeeze_axes=None):
+        """Return a broadcast `ndarray` with same context and dtype as ``self``.
+        For setting item, The returned `ndarray` is squeezed according to squeeze_axes since the
+        value_nd is assigned to not yet expanded space in original array.
+        `value`: numeric types or array like.
+        `bcast_shape`: a shape tuple.
+        `squeeze_axes`: a sequence of axes to squeeze in the value array.
+        Note: mxnet.numpy.ndarray not support NDArray as assigned value.
+        """
+        if isinstance(value, numeric_types):
+            value_nd = full(bcast_shape, value, ctx=self.context, dtype=self.dtype)
+        elif isinstance(value, self.__class__):
+            value_nd = value.as_in_context(self.context)
+            if value_nd.dtype != self.dtype:
+                value_nd = value_nd.astype(self.dtype)
+        else:
+            try:
+                value_nd = array(value, ctx=self.context, dtype=self.dtype)
+            except:
+                raise TypeError('mxnet.np.ndarray does not support assignment with non-array-like '
+                                'object {} of type {}'.format(value, type(value)))
+
+        # For advanced indexing setitem, if there is None in indices, we need to squeeze the
+        # assigned value_nd since None is also ignored in slicing the original array.
+        if squeeze_axes and value_nd.ndim > len(bcast_shape):
+            squeeze_axes = tuple([ax for ax in squeeze_axes if ax < len(value_nd.shape)])
+            value_nd = value_nd.squeeze(axis=tuple(squeeze_axes))
+
+        if value_nd.shape != bcast_shape:
+            if value_nd.size == 0:
+                value_nd = value_nd.reshape(bcast_shape)
+            else:
+                value_nd = value_nd.broadcast_to(bcast_shape)
+        return value_nd
+
 
     def __add__(self, other):
         """x.__add__(y) <=> x + y"""
@@ -545,7 +711,7 @@ class ndarray(NDArray):
         ``self.shape`` should be the same. This function copies the value from
         ``self`` to ``other``.
 
-        If ``other`` is a context, a new ``NDArray`` will be first created on
+        If ``other`` is a context, a new ``np.ndarray`` will be first created on
         the target context, and the value of ``self`` is copied.
 
         Parameters
@@ -555,14 +721,14 @@ class ndarray(NDArray):
 
         Returns
         -------
-        ndarray
+        out: ndarray
             The copied array. If ``other`` is an ``ndarray``, then the return value
             and ``other`` will point to the same ``ndarray``.
 
         Examples
         --------
         >>> x = np.ones((2,3))
-        >>> y = np.zeros((2,3), mx.gpu(0))
+        >>> y = np.zeros((2,3), ctx=mx.gpu(0))
         >>> z = x.copyto(y)
         >>> z is y
         True
@@ -571,14 +737,23 @@ class ndarray(NDArray):
                [ 1.,  1.,  1.]], dtype=float32)
         """
         if isinstance(other, ndarray):
-            other = other.as_nd_ndarray()
-        return self.as_nd_ndarray().copyto(other).as_np_ndarray()
+            if other.handle is self.handle:
+                warnings.warn('You are attempting to copy an array to itself', RuntimeWarning)
+                return False
+            return _npi.copyto(self, out=other)
+        elif isinstance(other, Context):
+            hret = ndarray(_new_alloc_handle(self.shape, other, True, self.dtype))
+            return _npi.copyto(self, out=hret)
+        else:
+            raise TypeError('copyto does not support type ' + str(type(other)))
 
     def asscalar(self):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute asscalar')
 
     def argmax(self, axis=None, out=None):  # pylint: disable=arguments-differ
-        raise NotImplementedError
+        """Return indices of the maximum values along the given axis.
+        Refer to `mxnet.numpy.argmax` for full documentation."""
+        return argmax(self, axis, out)
 
     def as_in_context(self, context):
         """Returns an array on the target device with the same value as this array.
@@ -607,7 +782,9 @@ class ndarray(NDArray):
         return super(ndarray, self).copy().as_np_ndarray()
 
     def dot(self, b, out=None):
-        raise NotImplementedError
+        """Dot product of two arrays.
+        Refer to ``numpy.dot`` for full documentation."""
+        return _mx_np_op.dot(self, b, out=out)
 
     def reshape(self, *args, **kwargs):  # pylint: disable=arguments-differ
         """Returns an array containing the same data with a new shape.
@@ -644,6 +821,12 @@ class ndarray(NDArray):
         this array as data.
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute reshape_like')
+
+    def reshape_view(self, *shape, **kwargs):
+        """Returns a **view** of this array with a new shape without altering any data.
+        Inheritated from NDArray.reshape.
+        """
+        return super(ndarray, self).reshape(*shape, **kwargs)
 
     def zeros_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`zeros_like`.
@@ -685,7 +868,7 @@ class ndarray(NDArray):
         """Return a copy of the array with axis1 and axis2 interchanged.
         Refer to `mxnet.numpy.swapaxes` for full documentation.
         """
-        raise NotImplementedError
+        return swapaxes(self, axis1, axis2)
 
     def split(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`split`.
@@ -726,6 +909,82 @@ class ndarray(NDArray):
         this array as data.
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute slice_like')
+
+    def slice_assign_scalar(self, value, begin, end, step):
+        """
+        Assign the scalar to a cropped subset of this ndarray. Value will broadcast to the shape of the cropped shape
+        and will be cast to the same dtype of the ndarray.
+
+        Parameters
+        ----------
+        value: numeric value
+            Value and this ndarray should be of the same data type.
+            The shape of rhs should be the same as the cropped shape of this ndarray.
+        begin: tuple of begin indices
+        end: tuple of end indices
+        step: tuple of step lenghths
+
+        Returns
+        -------
+        This ndarray.
+
+        Examples
+        --------
+        >>> x = np.ones((2, 2, 2))
+        >>> y = x.slice_assign_scalar(0, (0, 0, None), (1, 1, None), (None, None, None))
+        >>> y
+        array([[[0., 0.],
+                [1., 1.]],
+
+               [[1., 1.],
+                [1., 1.]]])
+        >>> x
+        array([[[0., 0.],
+                [1., 1.]],
+
+               [[1., 1.],
+                [1., 1.]]])
+        """
+        return _npi.slice_assign_scalar(self, value, begin=begin, end=end, step=step, out=self)
+
+    def slice_assign(self, rhs, begin, end, step):
+        """
+        Assign the rhs to a cropped subset of this ndarray in place.
+        Returns the view of this ndarray.
+
+        Parameters
+        ----------
+        rhs: ndarray.
+            rhs and this NDArray should be of the same data type, and on the same device.
+            The shape of rhs should be the same as the cropped shape of this ndarray.
+        begin: tuple of begin indices
+        end: tuple of end indices
+        step: tuple of step lenghths
+
+        Returns
+        -------
+        out : ndarray
+            This ndarray.
+
+        Examples
+        --------
+        >>> x = np.ones((2, 2, 2))
+        >>> assigned = np.zeros((1, 1, 2))
+        >>> y = x.slice_assign(assigned, (0, 0, None), (1, 1, None), (None, None, None))
+        >>> y
+        array([[[0., 0.],
+                [1., 1.]],
+
+               [[1., 1.],
+                [1., 1.]]])
+        >>> x
+        array([[[0., 0.],
+                [1., 1.]],
+
+               [[1., 1.],
+                [1., 1.]]])
+        """
+        return _npi.slice_assign(self, rhs, begin=begin, end=end, step=step, out=self)
 
     def take(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`take`.
@@ -795,7 +1054,7 @@ class ndarray(NDArray):
         """Return an array whose values are limited to [min, max].
         One of max or min must be given.
         """
-        raise NotImplementedError
+        return clip(self, min, max, out=out)
 
     def abs(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`abs`.
@@ -811,7 +1070,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`sign`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute abs')
+        raise AttributeError('mxnet.numpy.ndarray object has no attribute sign')
 
     def flatten(self, order='C'):  # pylint: disable=arguments-differ
         """Return a copy of the array collapsed into one dimension."""
@@ -911,13 +1170,15 @@ class ndarray(NDArray):
 
     def mean(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Returns the average of the array elements along given axis."""
-        raise NotImplementedError
+        return mean(self, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
-    # TODO(junwu): Use mxnet std op instead of onp.std
     def std(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=arguments-differ
         """Returns the standard deviation of the array elements along given axis."""
-        ret_np = self.asnumpy().std(axis=axis, dtype=dtype, out=out, ddof=ddof, keepdims=keepdims)
-        return array(ret_np, dtype=ret_np.dtype, ctx=self.context)
+        return std(self, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+
+    def var(self, axis=None, dtype=None, out=None, ddof=0, keepdims=None):  # pylint: disable=arguments-differ
+        """Returns the variance of the array elements, along given axis."""
+        return var(self, axis=axis, dtype=dtype, out=out, ddof=ddof, keepdims=keepdims)
 
     def cumsum(self, axis=None, dtype=None, out=None):
         """Return the cumulative sum of the elements along the given axis."""
@@ -1247,10 +1508,27 @@ class ndarray(NDArray):
         return _mx_np_op.squeeze(self, axis=axis)
 
     def broadcast_to(self, shape):
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute broadcast_to')
+        return _mx_np_op.broadcast_to(self, shape)
 
     def broadcast_like(self, other):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute broadcast_like')
+
+    def _full(self, value):
+        """
+        Currently for internal use only. Implemented for __setitem__.
+        Assign to self an array of self's same shape and type, filled with value.
+        """
+        return _mx_nd_np.full(self.shape, value, ctx=self.context, dtype=self.dtype, out=self)
+
+    # pylint: disable=redefined-outer-name
+    def _scatter_set_nd(self, value_nd, indices):
+        """
+        This is added as an ndarray class method in order to support polymorphism in NDArray and numpy.ndarray indexing
+        """
+        return _npi.scatter_set_nd(
+            lhs=self, rhs=value_nd, indices=indices, shape=self.shape, out=self
+        )
+    # pylint: enable=redefined-outer-name
 
     @property
     def shape(self):
@@ -1404,6 +1682,62 @@ def ones(shape, dtype=_np.float32, order='C', ctx=None):
 
 
 @set_module('mxnet.numpy')
+def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylint: disable=too-many-arguments
+    """
+    Return a new array of given shape and type, filled with `fill_value`.
+
+    Parameters
+    ----------
+    shape : int or sequence of ints
+        Shape of the new array, e.g., ``(2, 3)`` or ``2``.
+    fill_value : scalar
+        Fill value.
+    dtype : data-type, optional
+        The desired data-type for the array. The default, `None`, means
+        `np.array(fill_value).dtype`.
+    order : {'C'}, optional
+        Whether to store multidimensional data in C- or Fortran-contiguous
+        (row- or column-wise) order in memory. Currently only supports C order.
+    ctx: to specify the device, e.g. the i-th GPU.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray
+        Array of `fill_value` with the given shape, dtype, and order.
+
+    Notes
+    -----
+    This function differs from the original `numpy.full
+    https://docs.scipy.org/doc/numpy/reference/generated/numpy.full.html`_ in
+    the following way(s):
+
+    - Has an additional `ctx` argument to specify the device
+    - Has an additional `out` argument
+    - Currently does not support `order` selection
+
+    See Also
+    --------
+    empty : Return a new uninitialized array.
+    ones : Return a new array setting values to one.
+    zeros : Return a new array setting values to zero.
+
+    Examples
+    --------
+    >>> np.full((2, 2), 10)
+    array([[10., 10.],
+           [10., 10.]])
+    >>> np.full((2, 2), 2, dtype=np.int32, ctx=mx.cpu(0))
+    array([[2, 2],
+           [2, 2]], dtype=int32)
+    """
+    return _mx_nd_np.full(shape, fill_value, order=order, ctx=ctx, dtype=dtype, out=out)
+
+
+@set_module('mxnet.numpy')
 def add(x1, x2, out=None):
     """Add arguments element-wise.
 
@@ -1524,6 +1858,31 @@ def mod(x1, x2, out=None):
 
 
 @set_module('mxnet.numpy')
+def remainder(x1, x2, out=None):
+    """Return element-wise remainder of division.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Dividend array.
+
+    x2 : ndarray or scalar
+        Divisor array.
+
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        This is a scalar if both x1 and x2 are scalars.
+    """
+    return _mx_nd_np.remainder(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
 def power(x1, x2, out=None):
     """First array elements raised to powers from second array, element-wise.
 
@@ -1547,6 +1906,1190 @@ def power(x1, x2, out=None):
         This is a scalar if both x1 and x2 are scalars.
     """
     return _mx_nd_np.power(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+def sin(x, out=None, **kwargs):
+    r"""Trigonometric sine, element-wise.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Angle, in radians (:math:`2 \pi` rad equals 360 degrees).
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs broadcast to. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output is the same as that of the input if the input is an ndarray.
+    Returns
+    -------
+    y : ndarray or scalar
+        The sine of each element of x. This is a scalar if `x` is a scalar.
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _mx_nd_np.sin(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def cos(x, out=None, **kwargs):
+    r"""Cosine, element-wise.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Angle, in radians (:math:`2 \pi` rad equals 360 degrees).
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs broadcast to. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output is the same as that of the input if the input is an ndarray.
+    Returns
+    -------
+    y : ndarray or scalar
+        The corresponding cosine values. This is a scalar if x is a scalar.
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _mx_nd_np.cos(x, out=out, **kwargs)
+
+
+def sinh(x, out=None, **kwargs):
+    """Hyperbolic sine, element-wise.
+    Equivalent to ``1/2 * (np.exp(x) - np.exp(-x))`` or ``-1j * np.sin(1j*x)``.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array or scalar.
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs broadcast to. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output is the same as that of the input if the input is an ndarray.
+    Returns
+    -------
+    y : ndarray or scalar
+        The corresponding hyperbolic sine values. This is a scalar if `x` is a scalar.
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _mx_nd_np.sinh(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def cosh(x, out=None, **kwargs):
+    """Hyperbolic cosine, element-wise.
+    Equivalent to ``1/2 * (np.exp(x) + np.exp(-x))`` and ``np.cos(1j*x)``.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array or scalar.
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs broadcast to. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output is the same as that of the input if the input is an ndarray.
+    Returns
+    -------
+    y : ndarray or scalar
+        The corresponding hyperbolic cosine values. This is a scalar if `x` is a scalar.
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _mx_nd_np.cosh(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def tanh(x, out=None, **kwargs):
+    """
+    Compute hyperbolic tangent element-wise.
+    Equivalent to ``np.sinh(x)/np.cosh(x)``.
+    Parameters
+    ----------
+    x : ndarray or scalar.
+        Input array.
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs fill into. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output and input must be the same.
+    Returns
+    ----------
+    y : ndarray or scalar
+       The corresponding hyperbolic tangent values.
+    Notes
+    -----
+    If `out` is provided, the function writes the result into it,
+    and returns a reference to `out`.  (See Examples)
+    - input x does not support complex computation (like imaginary number)
+    >>> np.tanh(np.pi*1j)
+    TypeError: type <type 'complex'> not supported
+    Examples
+    --------
+    >>> np.tanh(np.array[0, np.pi]))
+    array([0.       , 0.9962721])
+    >>> np.tanh(np.pi)
+    0.99627207622075
+    >>> # Example of providing the optional output parameter illustrating
+    >>> # that what is returned is a reference to said parameter
+    >>> out1 = np.array(1)
+    >>> out2 = np.tanh(np.array(0.1), out1)
+    >>> out2 is out1
+    True
+    >>> # Example of ValueError due to provision of shape mis-matched `out`
+    >>> np.tanh(np.zeros((3,3)),np.zeros((2,2)))
+    mxnet.base.MXNetError:
+    [07:17:36] ../src/ndarray/./../operator/tensor/../elemwise_op_common.h:135:
+    Check failed: assign(&dattr, vec.at(i)): Incompatible attr in node
+    at 0-th output: expected [3,3], got [2,2]
+    """
+    return _mx_nd_np.tanh(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def log10(x, out=None, **kwargs):
+    """Return the base 10 logarithm of the input array, element-wise.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array or scalar.
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs broadcast to. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output is the same as that of the input if the input is an ndarray.
+    Returns
+    -------
+    y : ndarray or scalar
+        The logarithm to the base 10 of `x`, element-wise. NaNs are
+        returned where x is negative. This is a scalar if `x` is a scalar.
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _mx_nd_np.log10(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def sqrt(x, out=None, **kwargs):
+    """
+    Return the non-negative square-root of an array, element-wise.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        The values whose square-roots are required.
+    out : ndarray, or None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+    Returns
+    -------
+    y : ndarray or scalar
+        An array of the same shape as `x`, containing the positive
+        square-root of each element in `x`. This is a scalar if `x` is a scalar.
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _mx_nd_np.sqrt(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def cbrt(x, out=None, **kwargs):
+    """
+    Return the cube-root of an array, element-wise.
+    Parameters
+    ----------
+    x : ndarray
+        The values whose cube-roots are required.
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have a shape that the
+        inputs broadcast to. If not provided or None, a freshly-allocated array is returned.
+        A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
+    Returns
+    ----------
+    y : ndarray
+        An array of the same shape as x, containing the cube cube-root of each element in x.
+        If out was provided, y is a reference to it. This is a scalar if x is a scalar.
+    Examples
+    ----------
+    >>> np.cbrt([1,8,27])
+    array([ 1.,  2.,  3.])
+    """
+    return _mx_nd_np.cbrt(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def abs(x, out=None, **kwargs):
+    r"""abs(x, out=None, **kwargs)
+    Calculate the absolute value element-wise.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+    out : ndarray or None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+    Returns
+    -------
+    absolute : ndarray
+        An ndarray containing the absolute value of
+        each element in `x`. This is a scalar if `x` is a scalar.
+    Examples
+    --------
+    >>> x = np.array([-1.2, 1.2])
+    >>> np.abs(x)
+    array([1.2, 1.2])
+    """
+    return _mx_nd_np.abs(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def absolute(x, out=None, **kwargs):
+    """
+    Calculate the absolute value element-wise.
+    np.abs is a shorthand for this function.
+    Parameters
+    ----------
+    x : ndarray
+        Input array.
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array is returned.
+        A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
+    Returns
+    ----------
+    absolute : ndarray
+        An ndarray containing the absolute value of each element in x.
+    Examples
+    ----------
+    >>> x = np.array([-1.2, 1.2])
+    >>> np.absolute(x)
+    array([ 1.2,  1.2])
+    """
+    return _mx_nd_np.absolute(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def exp(x, out=None, **kwargs):
+    r"""exp(x, out=None, **kwargs)
+    Calculate the exponential of all elements in the input array.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input values.
+    out : ndarray or None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+    Returns
+    -------
+    out : ndarray or scalar
+        Output array, element-wise exponential of `x`.
+        This is a scalar if `x` is a scalar.
+    Examples
+    --------
+    >>> np.exp(1)
+    2.718281828459045
+    >>> x = np.array([-1, 1, -2, 2])
+    >>> np.exp(x)
+    array([0.36787945, 2.7182817 , 0.13533528, 7.389056  ])
+    """
+    return _mx_nd_np.exp(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def expm1(x, out=None, **kwargs):
+    r"""expm1(x, out=None, **kwargs)
+    Calculate `exp(x) - 1` for all elements in the array.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input values.
+    out : ndarray or None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+    Returns
+    -------
+    out : ndarray or scalar
+        Output array, element-wise exponential minus one: `out = exp(x) - 1`.
+        This is a scalar if `x` is a scalar.
+    Examples
+    --------
+    >>> np.expm1(1)
+    1.718281828459045
+    >>> x = np.array([-1, 1, -2, 2])
+    >>> np.exp(x)
+    array([-0.63212056,  1.71828183, -0.86466472,  6.3890561])
+    """
+    return _mx_nd_np.expm1(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def arcsin(x, out=None, **kwargs):
+    r"""
+    arcsin(x, out=None)
+    Inverse sine, element-wise.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        `y`-coordinate on the unit circle.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape as the input.
+        If not provided or None, a freshly-allocated array is returned.
+    Returns
+    -------
+    angle : ndarray or scalar
+        Output array is same shape and type as x. This is a scalar if x is a scalar.
+        The inverse sine of each element in `x`, in radians and in the
+        closed interval ``[-pi/2, pi/2]``.
+    Examples
+    --------
+    >>> np.arcsin(1)     # pi/2
+    1.5707963267948966
+    >>> np.arcsin(-1)    # -pi/2
+    -1.5707963267948966
+    >>> np.arcsin(0)
+    0.0
+    Notes
+    -----
+    `arcsin` is a multivalued function: for each `x` there are infinitely
+    many numbers `z` such that :math:`sin(z) = x`.  The convention is to
+    return the angle `z` whose real part lies in [-pi/2, pi/2].
+    For real-valued input data types, *arcsin* always returns real output.
+    For each value that cannot be expressed as a real number or infinity,
+    it yields ``nan`` and sets the `invalid` floating point error flag.
+    The inverse sine is also known as `asin` or sin^{-1}.
+    The output `ndarray` has the same `ctx` as the input `ndarray`.
+    This function differs from the original `numpy.arcsin
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.arcsin.html>`_ in
+    the following aspects:
+    - Only support ndarray or scalar now.
+    - `where` argument is not supported.
+    - Complex input is not supported.
+    References
+    ----------
+    Abramowitz, M. and Stegun, I. A., *Handbook of Mathematical Functions*,
+    10th printing, New York: Dover, 1964, pp. 79ff.
+    http://www.math.sfu.ca/~cbm/aands/
+    """
+    return _mx_nd_np.arcsin(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def arccos(x, out=None, **kwargs):
+    """
+    Trigonometric inverse cosine, element-wise.
+    The inverse of cos so that, if y = cos(x), then x = arccos(y).
+    Parameters
+    ----------
+    x : ndarray
+        x-coordinate on the unit circle. For real arguments, the domain is [-1, 1].
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have a shape that
+        the inputs broadcast to. If not provided or None, a freshly-allocated array is returned.
+        A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
+    Returns
+    ----------
+    angle : ndarray
+        The angle of the ray intersecting the unit circle at the given x-coordinate in radians [0, pi].
+        This is a scalar if x is a scalar.
+    See also
+    ----------
+    cos, arctan, arcsin
+    Notes
+    ----------
+    arccos is a multivalued function: for each x there are infinitely many numbers z such that
+    cos(z) = x. The convention is to return the angle z whose real part lies in [0, pi].
+    For real-valued input data types, arccos always returns real output.
+    For each value that cannot be expressed as a real number or infinity, it yields nan and sets
+    the invalid floating point error flag.
+    The inverse cos is also known as acos or cos^-1.
+    Examples
+    ----------
+    We expect the arccos of 1 to be 0, and of -1 to be pi:
+    >>> np.arccos([1, -1])
+    array([ 0.        ,  3.14159265])
+    """
+    return _mx_nd_np.arccos(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def arctan(x, out=None, **kwargs):
+    r"""arctan(x, out=None, **kwargs)
+    Trigonometric inverse tangent, element-wise.
+    The inverse of tan, so that if ``y = tan(x)`` then ``x = arctan(y)``.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input values.
+    out : ndarray or None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+    Returns
+    -------
+    out : ndarray or scalar
+        Out has the same shape as `x`. It lies is in
+        ``[-pi/2, pi/2]`` (``arctan(+/-inf)`` returns ``+/-pi/2``).
+        This is a scalar if `x` is a scalar.
+    Notes
+    -----
+    `arctan` is a multi-valued function: for each `x` there are infinitely
+    many numbers `z` such that tan(`z`) = `x`.  The convention is to return
+    the angle `z` whose real part lies in [-pi/2, pi/2].
+    For real-valued input data types, `arctan` always returns real output.
+    For each value that cannot be expressed as a real number or infinity,
+    it yields ``nan`` and sets the `invalid` floating point error flag.
+    For complex-valued input, we do not have support for them yet.
+    The inverse tangent is also known as `atan` or tan^{-1}.
+    Examples
+    --------
+    We expect the arctan of 0 to be 0, and of 1 to be pi/4:
+    >>> x = np.array([0, 1])
+    >>> np.arctan(x)
+    array([0.       , 0.7853982])
+    >>> np.pi/4
+    0.7853981633974483
+    """
+    return _mx_nd_np.arctan(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def sign(x, out=None):
+    """
+    sign(x, out=None)
+    Returns an element-wise indication of the sign of a number.
+    The `sign` function returns ``-1 if x < 0, 0 if x==0, 1 if x > 0``. Only supports real number.
+    Parameters
+    ----------
+    x : ndarray or a scalar
+        Input values.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+    Returns
+    -------
+    y : ndarray
+        The sign of `x`.
+        This is a scalar if `x` is a scalar.
+    Note
+    -------
+    - Only supports real number as input elements.
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+    Examples
+    --------
+    >>> a = np.array([-5., 4.5])
+    >>> np.sign(a)
+    array([-1.,  1.])
+    Scalars as input:
+    >>> np.sign(4.0)
+    1.0
+    >>> np.sign(0)
+    0
+    Use ``out`` parameter:
+    >>> b = np.zeros((2, ))
+    >>> np.sign(a, out=b)
+    array([-1.,  1.])
+    >>> b
+    array([-1.,  1.])
+    """
+    return _mx_nd_np.sign(x, out=out)
+
+
+@set_module('mxnet.numpy')
+def log(x, out=None, **kwargs):
+    """
+    log(x, out=None)
+    Natural logarithm, element-wise.
+    The natural logarithm `log` is the inverse of the exponential function,
+    so that `log(exp(x)) = x`. The natural logarithm is logarithm in base
+    `e`.
+    Parameters
+    ----------
+    x : ndarray
+        Input value. Elements must be of real value.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+    Returns
+    -------
+    y : ndarray
+        The natural logarithm of `x`, element-wise.
+        This is a scalar if `x` is a scalar.
+    Notes
+    -----
+    Currently only supports data of real values and ``inf`` as input. Returns data of real value, ``inf``, ``-inf`` and
+    ``nan`` according to the input.
+    This function differs from the original `numpy.log
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.log.html>`_ in
+    the following aspects:
+    - Does not support complex number for now
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+    Examples
+    --------
+    >>> a = np.array([1, np.exp(1), np.exp(2), 0], dtype=np.float64)
+    >>> np.log(a)
+    array([  0.,   1.,   2., -inf], dtype=float64)
+    Due to internal calculation mechanism, using default float32 dtype may cause some special behavior:
+    >>> a = np.array([1, np.exp(1), np.exp(2), 0])
+    >>> np.log(a)
+    array([  0.,  0.99999994,   2., -inf])
+    Scalar calculation:
+    >>> np.log(1)
+    0.0
+    """
+    return _mx_nd_np.log(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def rint(x, out=None, **kwargs):
+    """
+    Round elements of the array to the nearest integer.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+    out : ndarray or None
+        A location into which the result is stored.
+        If provided, it must have the same shape and type as the input.
+        If not provided or None, a freshly-allocated array is returned.
+    Returns
+    -------
+    out : ndarray or scalar
+        Output array is same shape and type as x. This is a scalar if x is a scalar.
+    Notes
+    -----
+    This function differs from the original `numpy.rint
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.rint.html>`_ in
+    the following way(s):
+    - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
+    - broadcasting to `out` of different shape is currently not supported
+    - when input is plain python numerics, the result will not be stored in the `out` param
+    Examples
+    --------
+    >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
+    >>> np.rint(a)
+    array([-2., -2., -0.,  0.,  1.,  2.,  2.])
+    """
+    return _mx_nd_np.rint(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def log2(x, out=None, **kwargs):
+    """
+    Base-2 logarithm of x.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input values.
+    out : ndarray or None
+        A location into which the result is stored.
+        If provided, it must have the same shape and type as the input.
+        If not provided or None, a freshly-allocated array is returned.
+    Returns
+    -------
+    y : ndarray
+        The logarithm base two of `x`, element-wise.
+        This is a scalar if `x` is a scalar.
+    Notes
+    -----
+    This function differs from the original `numpy.log2
+    <https://www.google.com/search?q=numpy+log2>`_ in
+    the following way(s):
+    - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
+    - broadcasting to `out` of different shape is currently not supported
+    - when input is plain python numerics, the result will not be stored in the `out` param
+    Examples
+    --------
+    >>> x = np.array([0, 1, 2, 2**4])
+    >>> np.log2(x)
+    array([-inf,   0.,   1.,   4.])
+    """
+    return _mx_nd_np.log2(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def log1p(x, out=None, **kwargs):
+    """
+    Return the natural logarithm of one plus the input array, element-wise.
+    Calculates ``log(1 + x)``.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs fill into. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output and input must be the same.
+    Returns
+    -------
+    y : ndarray or scalar
+        Natural logarithm of 1 + x, element-wise. This is a scalar
+        if x is a scalar.
+    Notes
+    -----
+    For real-valued input, `log1p` is accurate also for `x` so small
+    that `1 + x == 1` in floating-point accuracy.
+    Logarithm is a multivalued function: for each `x` there is an infinite
+    number of `z` such that `exp(z) = 1 + x`. The convention is to return
+    the `z` whose imaginary part lies in `[-pi, pi]`.
+    For real-valued input data types, `log1p` always returns real output.
+    For each value that cannot be expressed as a real number or infinity,
+    it yields ``nan`` and sets the `invalid` floating point error flag.
+    cannot support complex-valued input.
+    Examples
+    --------
+    >>> np.log1p(1e-99)
+    1e-99
+    >>> a = np.array([3, 4, 5])
+    >>> np.log1p(a)
+    array([1.3862944, 1.609438 , 1.7917595])
+    """
+    return _mx_nd_np.log1p(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def degrees(x, out=None, **kwargs):
+    """
+    degrees(x, out=None)
+    Convert angles from radians to degrees.
+    Parameters
+    ----------
+    x : ndarray
+        Input value. Elements must be of real value.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+    Returns
+    -------
+    y : ndarray
+        The corresponding degree values; if `out` was supplied this is a
+        reference to it.
+        This is a scalar if `x` is a scalar.
+    Notes
+    -------
+    This function differs from the original `numpy.degrees
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.degrees.html>`_ in
+    the following aspects:
+    - Input type does not support Python native iterables(list, tuple, ...). Only ndarray is supported.
+    - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+    Examples
+    --------
+    Convert a radian array to degrees
+    >>> rad = np.arange(12.) * np.pi / 6
+    >>> np.degrees(rad)
+    array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300., 330.])
+    Use specified ``out`` ndarray:
+    >>> out = np.zeros((rad.shape))
+    >>> np.degrees(rad, out)
+    array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300., 330.])
+    >>> out
+    array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300., 330.])
+    """
+    return _mx_nd_np.degrees(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def radians(x, out=None, **kwargs):
+    """
+    Convert angles from degrees to radians.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array in degrees.
+    out : ndarray or None
+        A location into which the result is stored.
+        If provided, it must have the same shape and type as the input.
+        If not provided or None, a freshly-allocated array is returned.
+    Returns
+    -------
+    y : ndarray
+        The corresponding radian values. This is a scalar if x is a scalar.
+    Notes
+    -----
+    This function differs from the original `numpy.radians
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.radians.html>`_ in
+    the following way(s):
+    - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
+    - broadcasting to `out` of different shape is currently not supported
+    - when input is plain python numerics, the result will not be stored in the `out` param
+    Examples
+    --------
+    >>> deg = np.arange(12.) * 30.
+    >>> np.radians(deg)
+    array([0.       , 0.5235988, 1.0471976, 1.5707964, 2.0943952, 2.6179938,
+           3.1415927, 3.6651914, 4.1887903, 4.712389 , 5.2359877, 5.7595863],
+           dtype=float32)
+    """
+    return _mx_nd_np.radians(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def reciprocal(x, out=None, **kwargs):
+    r"""
+    reciprocal(x, out=None)
+    Return the reciprocal of the argument, element-wise.
+    Calculates ``1/x``.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        The values whose reciprocals are required.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape as the input.
+        If not provided or None, a freshly-allocated array is returned.
+    Returns
+    -------
+    y : ndarray or scalar
+        Output array is same shape and type as x. This is a scalar if x is a scalar.
+    Examples
+    --------
+    >>> np.reciprocal(2.)
+    0.5
+    >>> x = np.array([1, 2., 3.33])
+    >>> np.reciprocal(x)
+    array([1.       , 0.5      , 0.3003003])
+    Notes
+    -----
+    .. note::
+        This function is not designed to work with integers.
+    For integer arguments with absolute value larger than 1 the result is
+    always zero because of the way Python handles integer division.  For
+    integer zero the result is an overflow.
+    The output `ndarray` has the same `ctx` as the input `ndarray`.
+    This function differs from the original `numpy.reciprocal
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.reciprocal.html>`_ in
+    the following aspects:
+    - Only support ndarray and scalar now.
+    - `where` argument is not supported.
+    """
+    return _mx_nd_np.reciprocal(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def square(x, out=None, **kwargs):
+    r"""
+    square(x, out=None)
+    Return the element-wise square of the input.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        The values whose squares are required.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape as the input.
+        If not provided or None, a freshly-allocated array is returned.
+    Returns
+    -------
+    y : ndarray or scalar
+        Output array is same shape and type as x. This is a scalar if x is a scalar.
+    Examples
+    --------
+    >>> np.square(2.)
+    4.0
+    >>> x = np.array([1, 2., -1])
+    >>> np.square(x)
+    array([1., 4., 1.])
+    Notes
+    -----
+    The output `ndarray` has the same `ctx` as the input `ndarray`.
+    This function differs from the original `numpy.square
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.square.html>`_ in
+    the following aspects:
+    - Only support ndarray and scalar now.
+    - `where` argument is not supported.
+    - Complex input is not supported.
+    """
+    return _mx_nd_np.square(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def negative(x, out=None, where=True, **kwargs):
+    r"""
+    negative(x, out=None, where=True)
+    Numerical negative, element-wise.
+    Parameters:
+    ------------
+    x : ndarray or scalar
+        Input array.
+    out : ndarray, None, or tuple of ndarray and None, optional
+          A location into which the result is stored.
+          If provided, it must have a shape that the inputs broadcast to.
+          If not provided or None, a freshly-allocated array is returned.
+          A tuple (possible only as a keyword argument) must have length
+          equal to the number of outputs.
+    where : ndarray, optional
+            Values of True indicate to calculate the ufunc at that position,
+            values of False indicate to leave the value in the output alone.
+    Returns:
+    -------
+    y : ndarray or scalar
+        Returned array or scalar: y = -x. This is a scalar if x is a scalar.
+    Examples:
+    --------
+    >>> np.negative(1)
+    -1
+    """
+    return _mx_nd_np.negative(x, out=out)
+
+
+@set_module('mxnet.numpy')
+def fix(x, out=None):
+    """
+    Round an array of floats element-wise to nearest integer towards zero.
+    The rounded values are returned as floats.
+
+    Parameters:
+    ----------
+    x : ndarray
+        An array of floats to be rounded
+    out : ndarray, optional
+        Output array
+    Returns:
+    -------
+    y : ndarray or scalar
+    Returned array or scalar: y = -x. This is a scalar if x is a scalar.ndarray of floats
+    Examples:
+    ---------
+    >>> np.fix(3.14)
+    3
+    """
+    return _mx_nd_np.fix(x, out=out)
+
+
+@set_module('mxnet.numpy')
+def tan(x, out=None, where=True, **kwargs):
+    r"""
+    tan(x, out=None, where=True)
+    Compute tangent element-wise.
+    Equivalent to np.sin(x)/np.cos(x) element-wise.
+
+    Parameters:
+    ----------
+    x : ndarray
+        Input array.
+    out : ndarray or none, optional
+          A location into which the result is stored. If provided,
+          it must have a shape that the inputs broadcast to. If not provided or None,
+          a freshly-allocated array is returned. A tuple (possible only as a keyword argument)
+          must have length equal to the number of outputs.
+    where : ndarray, optional
+            Values of True indicate to calculate the ufunc at that position,
+            values of False indicate to leave the value in the output alone.
+    Returns:
+    -------
+    y : ndarray
+    The corresponding tangent values. This is a scalar if x is a scalar.
+    Examples:
+    ---------
+    >>> np.tan(0.5)
+    0.5463024898437905
+    """
+
+    return _mx_nd_np.tan(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def ceil(x, out=None, **kwargs):
+    r"""
+    Return the ceiling of the input, element-wise.
+    The ceil of the ndarray `x` is the smallest integer `i`, such that
+    `i >= x`.  It is often denoted as :math:`\lceil x \rceil`.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs fill into. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output and input must be the same.
+    Returns
+    -------
+    y : ndarray or scalar
+        The ceiling of each element in `x`, with `float` dtype.
+        This is a scalar if `x` is a scalar.
+    Examples
+    --------
+    >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
+    >>> np.ceil(a)
+    array([-1., -1., -0.,  1.,  2.,  2.,  2.])
+    >>> #if you use parameter out, x and out must be ndarray. if not, you will get an error!
+    >>> a = np.array(1)
+    >>> np.ceil(np.array(3.5), a)
+    array(4.)
+    >>> a
+    array(4.)
+    """
+    return _mx_nd_np.ceil(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def floor(x, out=None, **kwargs):
+    r"""
+    Return the floor of the input, element-wise.
+    The ceil of the ndarray `x` is the largest integer `i`, such that
+    `i <= x`.  It is often denoted as :math:`\lfloor x \rfloor`.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs fill into. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output and input must be the same.
+    Returns
+    -------
+    y : ndarray or scalar
+        The floor of each element in `x`, with `float` dtype.
+        This is a scalar if `x` is a scalar.
+    Examples
+    --------
+    >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
+    >>> np.floor(a)
+    array([-2., -2., -1.,  0.,  1.,  1.,  2.])
+    >>> #if you use parameter out, x and out must be ndarray. if not, you will get an error!
+    >>> a = np.array(1)
+    >>> np.floor(np.array(3.5), a)
+    array(3.)
+    >>> a
+    array(3.)
+    """
+    return _mx_nd_np.floor(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def trunc(x, out=None, **kwargs):
+    r"""
+    trunc(x, out=None)
+    Return the truncated value of the input, element-wise.
+    The truncated value of the scalar `x` is the nearest integer `i` which
+    is closer to zero than `x` is. In short, the fractional part of the
+    signed number `x` is discarded.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input data.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        The truncated value of each element in `x`.
+        This is a scalar if `x` is a scalar.
+    Notes
+    -----
+    This function differs from the original numpy.trunc in the following aspects:
+        - Do not support `where`, a parameter in numpy which indicates where to calculate.
+        - Cannot cast type automatically. Dtype of `out` must be same as the expected one.
+        - Cannot broadcast automatically. Shape of `out` must be same as the expected one.
+        - If `x` is plain python numeric, the result won't be stored in out.
+
+    Examples
+    --------
+    >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
+    >>> np.trunc(a)
+    array([-1., -1., -0.,  0.,  1.,  1.,  2.])
+    """
+    return _mx_nd_np.trunc(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def logical_not(x, out=None, **kwargs):
+    r"""
+    logical_not(x, out=None)
+    Compute the truth value of NOT x element-wise.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Logical NOT is applied to the elements of `x`.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+
+    Returns
+    -------
+    y : bool or ndarray of bool
+        Boolean result with the same shape as `x` of the NOT operation
+        on elements of `x`.
+        This is a scalar if `x` is a scalar.
+    Notes
+    -----
+    This function differs from the original numpy.logical_not in the following aspects:
+        - Do not support `where`, a parameter in numpy which indicates where to calculate.
+        - Cannot cast type automatically. Dtype of `out` must be same as the expected one.
+        - Cannot broadcast automatically. Shape of `out` must be same as the expected one.
+        - If `x` is plain python numeric, the result won't be stored in out.
+
+    Examples
+    --------
+    >>> x= np.array([True, False, 0, 1])
+    >>> np.logical_not(x)
+    array([0., 1., 1., 0.])
+
+    >>> x = np.arange(5)
+    >>> np.logical_not(x<3)
+    array([0., 0., 0., 1., 1.])
+    """
+    return _mx_nd_np.logical_not(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def arcsinh(x, out=None, **kwargs):
+    r"""
+    arcsinh(x, out=None)
+    Inverse hyperbolic cosine, element-wise.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+
+    Returns
+    -------
+    arcsinh : ndarray
+        Array of the same shape as `x`.
+        This is a scalar if `x` is a scalar.
+
+    Notes
+    -----
+    `arcsinh` is a multivalued function: for each `x` there are infinitely
+    many numbers `z` such that `sinh(z) = x`.
+
+    For real-valued input data types, `arcsinh` always returns real output.
+    For each value that cannot be expressed as a real number or infinity, it
+    yields ``nan`` and sets the `invalid` floating point error flag.
+
+    This function differs from the original numpy.arcsinh in the following aspects:
+        - Do not support `where`, a parameter in numpy which indicates where to calculate.
+        - Do not support complex-valued input.
+        - Cannot cast type automatically. DType of `out` must be same as the expected one.
+        - Cannot broadcast automatically. Shape of `out` must be same as the expected one.
+        - If `x` is plain python numeric, the result won't be stored in out.
+
+    Examples
+    --------
+    >>> a = np.array([3.2, 5.0])
+    >>> np.arcsinh(a)
+    array([1.8309381, 2.2924316])
+
+    >>> np.arcsinh(1)
+    0.0
+    """
+    return _mx_nd_np.arcsinh(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def arccosh(x, out=None, **kwargs):
+    r"""
+    arccosh(x, out=None)
+    Inverse hyperbolic cosine, element-wise.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+
+    Returns
+    -------
+    arccosh : ndarray
+        Array of the same shape as `x`.
+        This is a scalar if `x` is a scalar.
+
+    Notes
+    -----
+    `arccosh` is a multivalued function: for each `x` there are infinitely
+    many numbers `z` such that `cosh(z) = x`.
+
+    For real-valued input data types, `arccosh` always returns real output.
+    For each value that cannot be expressed as a real number or infinity, it
+    yields ``nan`` and sets the `invalid` floating point error flag.
+
+    This function differs from the original numpy.arccosh in the following aspects:
+        - Do not support `where`, a parameter in numpy which indicates where to calculate.
+        - Do not support complex-valued input.
+        - Cannot cast type automatically. Dtype of `out` must be same as the expected one.
+        - Cannot broadcast automatically. Shape of `out` must be same as the expected one.
+        - If `x` is plain python numeric, the result won't be stored in out.
+
+    Examples
+    --------
+    >>> a = np.array([3.2, 5.0])
+    >>> np.arccosh(a)
+    array([1.8309381, 2.2924316])
+
+    >>> np.arccosh(1)
+    0.0
+    """
+    return _mx_nd_np.arccosh(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def arctanh(x, out=None, **kwargs):
+    r"""
+    arctanh(x, out=None)
+    Inverse hyperbolic tangent, element-wise.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+
+    Returns
+    -------
+    arctanh : ndarray
+        Array of the same shape as `x`.
+        This is a scalar if `x` is a scalar.
+
+    Notes
+    -----
+    `arctanh` is a multivalued function: for each `x` there are infinitely
+    many numbers `z` such that `tanh(z) = x`.
+
+    For real-valued input data types, `arctanh` always returns real output.
+    For each value that cannot be expressed as a real number or infinity, it
+    yields ``nan`` and sets the `invalid` floating point error flag.
+
+    This function differs from the original numpy.arctanh in the following aspects:
+        - Do not support `where`, a parameter in numpy which indicates where to calculate.
+        - Do not support complex-valued input.
+        - Cannot cast type automatically. Dtype of `out` must be same as the expected one.
+        - Cannot broadcast automatically. Shape of `out` must be same as the expected one.
+        - If `x` is plain python numeric, the result won't be stored in out.
+
+    Examples
+    --------
+    >>> a = np.array([0.0, -0.5])
+    >>> np.arctanh(a)
+    array([0., -0.54930615])
+
+    >>> np.arctanh(1)
+    0.0
+    """
+    return _mx_nd_np.arctanh(x, out=out, **kwargs)
 
 
 @set_module('mxnet.numpy')
@@ -1606,6 +3149,7 @@ def tensordot(a, b, axes=2):
     return _mx_nd_np.tensordot(a, b, axes)
 
 
+@set_module('mxnet.numpy')
 def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis=0, ctx=None):  # pylint: disable=too-many-arguments
     r"""
     Return evenly spaced numbers over a specified interval.
@@ -1819,3 +3363,513 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
         than `stop`.
     """
     return _mx_nd_np.arange(start, stop, step, dtype, ctx)
+
+
+@set_module('mxnet.numpy')
+def split(ary, indices_or_sections, axis=0):
+    """Split an array into multiple sub-arrays.
+    Parameters
+    ----------
+    ary : ndarray
+        Array to be divided into sub-arrays.
+    indices_or_sections : int or 1-D array
+        If `indices_or_sections` is an integer, N, the array will be divided
+        into N equal arrays along `axis`.  If such a split is not possible,
+        an error is raised.
+        If `indices_or_sections` is a 1-D array of sorted integers, the entries
+        indicate where along `axis` the array is split.  For example,
+        ``[2, 3]`` would, for ``axis=0``, result in
+          - ary[:2]
+          - ary[2:3]
+          - ary[3:]
+        If an index exceeds the dimension of the array along `axis`,
+        an empty sub-array is returned correspondingly.
+    axis : int, optional
+        The axis along which to split, default is 0.
+    Returns
+    -------
+    sub-arrays : list of ndarrays
+        A list of sub-arrays.
+    Raises
+    ------
+    ValueError
+        If `indices_or_sections` is given as an integer, but
+        a split does not result in equal division."""
+    return _mx_nd_np.split(ary, indices_or_sections, axis=axis)
+
+
+@set_module('mxnet.numpy')
+def concatenate(seq, axis=0, out=None):
+    """Join a sequence of arrays along an existing axis.
+    Parameters
+    ----------
+    a1, a2, ... : sequence of array_like
+        The arrays must have the same shape, except in the dimension
+        corresponding to `axis` (the first, by default).
+    axis : int, optional
+        The axis along which the arrays will be joined.  If axis is None,
+        arrays are flattened before use.  Default is 0.
+    out : ndarray, optional
+        If provided, the destination to place the result. The shape must be
+        correct, matching that of what concatenate would have returned if no
+        out argument were specified.
+    Returns
+    -------
+    res : ndarray
+        The concatenated array.
+    """
+    return _mx_nd_np.concatenate(seq, axis=axis, out=out)
+
+
+@set_module('mxnet.numpy')
+def stack(arrays, axis=0, out=None):
+    """Join a sequence of arrays along a new axis.
+        The axis parameter specifies the index of the new axis in the dimensions of the result.
+        For example, if `axis=0` it will be the first dimension and if `axis=-1` it will be the last dimension.
+    Parameters
+    ----------
+    arrays : sequence of array_like
+        Each array must have the same shape.
+    axis : int, optional
+        The axis in the result array along which the input arrays are stacked.
+    out : ndarray, optional
+        If provided, the destination to place the result. The shape must be correct,
+        matching that of what stack would have returned if no out argument were specified.
+    Returns
+    -------
+    stacked : ndarray
+        The stacked array has one more dimension than the input arrays."""
+    return _mx_nd_np.stack(arrays, axis=axis, out=out)
+
+
+@set_module('mxnet.numpy')
+def maximum(x1, x2, out=None):
+    """Returns element-wise maximum of the input arrays with broadcasting.
+
+    Parameters
+    ----------
+    x1, x2 : scalar or mxnet.numpy.ndarray
+        The arrays holding the elements to be compared. They must have the same shape,
+        or shapes that can be broadcast to a single shape.
+
+    Returns
+    -------
+    out : mxnet.numpy.ndarray or scalar
+        The maximum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
+    return _mx_nd_np.maximum(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+def minimum(x1, x2, out=None):
+    """Returns element-wise minimum of the input arrays with broadcasting.
+
+    Parameters
+    ----------
+    x1, x2 : scalar or mxnet.numpy.ndarray
+        The arrays holding the elements to be compared. They must have the same shape,
+        or shapes that can be broadcast to a single shape.
+
+    Returns
+    -------
+    out : mxnet.numpy.ndarray or scalar
+        The minimum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
+    return _mx_nd_np.minimum(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+def swapaxes(a, axis1, axis2):
+    """Interchange two axes of an array.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array.
+    axis1 : int
+        First axis.
+    axis2 : int
+        Second axis.
+
+    Returns
+    -------
+    a_swapped : ndarray
+        Swapped array. This is always a copy of the input array.
+    """
+    return _npi.swapaxes(a, dim1=axis1, dim2=axis2)
+
+
+@set_module('mxnet.numpy')
+def clip(a, a_min, a_max, out=None):
+    """clip(a, a_min, a_max, out=None)
+
+    Clip (limit) the values in an array.
+    Given an interval, values outside the interval are clipped to
+    the interval edges.  For example, if an interval of ``[0, 1]``
+    is specified, values smaller than 0 become 0, and values larger
+    than 1 become 1.
+
+    Parameters
+    ----------
+    a : ndarray
+        Array containing elements to clip.
+    a_min : scalar or `None`
+        Minimum value. If `None`, clipping is not performed on lower
+        interval edge. Not more than one of `a_min` and `a_max` may be
+        `None`.
+    a_max : scalar or `None`
+        Maximum value. If `None`, clipping is not performed on upper
+        interval edge. Not more than one of `a_min` and `a_max` may be
+        `None`.
+    out : ndarray, optional
+        The results will be placed in this array. It may be the input
+        array for in-place clipping.  `out` must be of the right shape
+        to hold the output.  Its type is preserved.
+
+    Returns
+    -------
+    clipped_array : ndarray
+        An array with the elements of `a`, but where values
+        < `a_min` are replaced with `a_min`, and those > `a_max`
+        with `a_max`.
+
+    Notes
+    -----
+    array_like `a_min` and `a_max` are not supported.
+
+    Examples
+    --------
+    >>> a = np.arange(10)
+    >>> np.clip(a, 1, 8)
+    array([1., 1., 2., 3., 4., 5., 6., 7., 8., 8.], dtype=float32)
+    >>> a
+    array([0., 1., 2., 3., 4., 5., 6., 7., 8., 9.], dtype=float32)
+    >>> np.clip(a, 3, 6, out=a)
+    array([3., 3., 3., 3., 4., 5., 6., 6., 6., 6.], dtype=float32)
+    """
+    return _mx_nd_np.clip(a, a_min, a_max, out=out)
+
+
+@set_module('mxnet.numpy')
+def argmax(a, axis=None, out=None):
+    r"""
+    argmax(a, axis=None, out=None)
+
+    Returns the indices of the maximum values along an axis.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array. Only support ndarrays of dtype `float16`, `float32`, and `float64`.
+    axis : int, optional
+        By default, the index is into the flattened array, otherwise
+        along the specified axis.
+    out : ndarray or None, optional
+        If provided, the result will be inserted into this array. It should
+        be of the appropriate shape and dtype.
+
+    Returns
+    -------
+    index_array : ndarray of indices whose dtype is same as the input ndarray.
+        Array of indices into the array. It has the same shape as `a.shape`
+        with the dimension along `axis` removed.
+
+    Notes
+    -----
+    In case of multiple occurrences of the maximum values, the indices
+    corresponding to the first occurrence are returned.
+
+    This function differs from the original `numpy.argmax
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.argmax.html>`_ in
+    the following aspects:
+
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - Output has dtype that is same as the input ndarray.
+    - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+
+    Examples
+    --------
+    >>> a = np.arange(6).reshape(2,3) + 10
+    >>> a
+    array([[10., 11., 12.],
+           [13., 14., 15.]])
+    >>> np.argmax(a)
+    array(5.)
+    >>> np.argmax(a, axis=0)
+    array([1., 1., 1.])
+    >>> np.argmax(a, axis=1)
+    array([2., 2.])
+
+    >>> b = np.arange(6)
+    >>> b[1] = 5
+    >>> b
+    array([0., 5., 2., 3., 4., 5.])
+    >>> np.argmax(b)  # Only the first occurrence is returned.
+    array(1.)
+
+    Specify ``out`` ndarray:
+
+    >>> a = np.arange(6).reshape(2,3) + 10
+    >>> b = np.zeros((2,))
+    >>> np.argmax(a, axis=1, out=b)
+    array([2., 2.])
+    >>> b
+    array([2., 2.])
+    """
+    return _mx_nd_np.argmax(a, axis, out)
+
+
+@set_module('mxnet.numpy')
+def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
+    """
+    mean(a, axis=None, dtype=None, out=None, keepdims=None)
+    Compute the arithmetic mean along the specified axis.
+    Returns the average of the array elements.
+    The average is taken over the flattened array by default, otherwise over the specified axis.
+    Parameters
+    ----------
+    a : ndarray
+        ndarray containing numbers whose mean is desired.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which the means are computed. The default is to compute the mean of the flattened array.
+        If this is a tuple of ints, a mean is performed over multiple axes,
+        instead of a single axis or all the axes as before.
+    dtype : data-type, optional
+        Type to use in computing the mean. For integer inputs, the default is float32;
+        for floating point inputs, it is the same as the input dtype.
+    out : ndarray, optional
+        Alternate output array in which to place the result. The default is None; if provided,
+        it must have the same shape and type as the expected output.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in the result
+        as dimensions with size one. With this option, the result will broadcast correctly
+        against the input array.
+        If the default value is passed, then keepdims will not be passed through to the mean
+        method of sub-classes of ndarray, however any non-default value will be. If the sub-class
+        method does not implement keepdims any exceptions will be raised.
+    Returns
+    -------
+    m : ndarray, see dtype parameter above
+        If out=None, returns a new array containing the mean values,
+        otherwise a reference to the output array is returned.
+    Notes
+    -----
+    This function differs from the original `numpy.mean
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.mean.html>`_ in
+    the following way(s):
+    - only ndarray is accepted as valid input, python iterables or scalar is not supported
+    - default data type for integer input is float32
+    Examples
+    --------
+    >>> a = np.array([[1, 2], [3, 4]])
+    >>> np.mean(a)
+    array(2.5)
+    >>> a = np.zeros((2, 512*512), dtype=np.float32)
+    >>> a[0,:] = 1.0
+    >>> a[1,:] = 0.1
+    >>> np.mean(a)
+    array(0.55)
+    >>> np.mean(a, dtype=np.float64)
+    array(0.55)
+    """
+    return _npi.mean(a, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.numpy')
+def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=None):
+    """
+    Compute the standard deviation along the specified axis.
+    Returns the standard deviation, a measure of the spread of a distribution,
+    of the array elements. The standard deviation is computed for the
+    flattened array by default, otherwise over the specified axis.
+
+    Parameters
+    ----------
+    a : array_like
+        Calculate the standard deviation of these values.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which the standard deviation is computed. The
+        default is to compute the standard deviation of the flattened array.
+        .. versionadded:: 1.7.0
+        If this is a tuple of ints, a standard deviation is performed over
+        multiple axes, instead of a single axis or all the axes as before.
+    dtype : dtype, optional
+        Type to use in computing the standard deviation. For arrays of
+        integer type the default is float64, for arrays of float types it is
+        the same as the array type.
+    out : ndarray, optional
+        Alternative output array in which to place the result. It must have
+        the same shape as the expected output but the type (of the calculated
+        values) will be cast if necessary.
+    ddof : int, optional
+        Means Delta Degrees of Freedom.  The divisor used in calculations
+        is ``N - ddof``, where ``N`` represents the number of elements.
+        By default `ddof` is zero.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the input array.
+        If the default value is passed, then `keepdims` will not be
+        passed through to the `std` method of sub-classes of
+        `ndarray`, however any non-default value will be.  If the
+        sub-class' method does not implement `keepdims` any
+        exceptions will be raised.
+
+    Returns
+    -------
+    standard_deviation : ndarray, see dtype parameter above.
+        If `out` is None, return a new array containing the standard deviation,
+        otherwise return a reference to the output array.
+
+    Examples
+    --------
+    >>> a = np.array([[1, 2], [3, 4]])
+    >>> np.std(a)
+    1.1180339887498949 # may vary
+    >>> np.std(a, axis=0)
+    array([1.,  1.])
+    >>> np.std(a, axis=1)
+    array([0.5,  0.5])
+    In single precision, std() can be inaccurate:
+    >>> a = np.zeros((2, 512*512), dtype=np.float32)
+    >>> a[0, :] = 1.0
+    >>> a[1, :] = 0.1
+    >>> np.std(a)
+    array(0.45)
+    >>> np.std(a, dtype=np.float64)
+    array(0.45, dtype=float64)
+    """
+    return _npi.std(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.numpy')
+def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=None):
+    """
+    Compute the variance along the specified axis.
+    Returns the variance of the array elements, a measure of the spread of a
+    distribution.  The variance is computed for the flattened array by
+    default, otherwise over the specified axis.
+
+    Parameters
+    ----------
+    a : array_like
+        Array containing numbers whose variance is desired.  If `a` is not an
+        array, a conversion is attempted.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which the variance is computed.  The default is to
+        compute the variance of the flattened array.
+        .. versionadded:: 1.7.0
+        If this is a tuple of ints, a variance is performed over multiple axes,
+        instead of a single axis or all the axes as before.
+    dtype : data-type, optional
+        Type to use in computing the variance.  For arrays of integer type
+        the default is `float32`; for arrays of float types it is the same as
+        the array type.
+    out : ndarray, optional
+        Alternate output array in which to place the result.  It must have
+        the same shape as the expected output, but the type is cast if
+        necessary.
+    ddof : int, optional
+        "Delta Degrees of Freedom": the divisor used in the calculation is
+        ``N - ddof``, where ``N`` represents the number of elements. By
+        default `ddof` is zero.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the input array.
+        If the default value is passed, then `keepdims` will not be
+        passed through to the `var` method of sub-classes of
+        `ndarray`, however any non-default value will be.  If the
+        sub-class' method does not implement `keepdims` any
+        exceptions will be raised.
+
+    Returns
+    -------
+    variance : ndarray, see dtype parameter above
+        If ``out=None``, returns a new array containing the variance;
+        otherwise, a reference to the output array is returned.
+
+    Examples
+    --------
+    >>> a = np.array([[1, 2], [3, 4]])
+    >>> np.var(a)
+    array(1.25)
+    >>> np.var(a, axis=0)
+    array([1.,  1.])
+    >>> np.var(a, axis=1)
+    array([0.25,  0.25])
+
+    >>> a = np.zeros((2, 512*512), dtype=np.float32)
+    >>> a[0, :] = 1.0
+    >>> a[1, :] = 0.1
+    >>> np.var(a)
+    array(0.2025)
+    >>> np.var(a, dtype=np.float64)
+    array(0.2025, dtype=float64)
+    >>> ((1-0.55)**2 + (0.1-0.55)**2)/2
+    0.2025
+    """
+    return _npi.var(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+
+
+# pylint: disable=redefined-outer-name
+@set_module('mxnet.numpy')
+def indices(dimensions, dtype=_np.int32, ctx=None):
+    """Return an array representing the indices of a grid.
+
+    Compute an array where the subarrays contain index values 0,1,...
+    varying only along the corresponding axis.
+
+    Parameters
+    ----------
+    dimensions : sequence of ints
+        The shape of the grid.
+    dtype : data-type, optional
+        The desired data-type for the array. Default is `float32`.
+    ctx : device context, optional
+        Device context on which the memory is allocated. Default is
+        `mxnet.context.current_context()`.
+
+    Returns
+    -------
+    grid : ndarray
+        The array of grid indices,
+        ``grid.shape = (len(dimensions),) + tuple(dimensions)``.
+
+    Notes
+    -----
+    The output shape is obtained by prepending the number of dimensions
+    in front of the tuple of dimensions, i.e. if `dimensions` is a tuple
+    ``(r0, ..., rN-1)`` of length ``N``, the output shape is
+    ``(N,r0,...,rN-1)``.
+
+    The subarrays ``grid[k]`` contains the N-D array of indices along the
+    ``k-th`` axis. Explicitly::
+
+        grid[k,i0,i1,...,iN-1] = ik
+
+    Examples
+    --------
+    >>> grid = np.indices((2, 3))
+    >>> grid.shape
+    (2, 2, 3)
+    >>> grid[0]        # row indices
+    array([[0, 0, 0],
+           [1, 1, 1]])
+    >>> grid[1]        # column indices
+    array([[0, 0, 0],
+           [1, 1, 1]], dtype=int32)
+
+    The indices can be used as an index into an array.
+
+    >>> x = np.arange(20).reshape(5, 4)
+    >>> row, col = np.indices((2, 3))
+    >>> x[row, col]
+    array([[0., 1., 2.],
+           [4., 5., 6.]])
+
+    Note that it would be more straightforward in the above example to
+    extract the required elements directly with ``x[:2, :3]``.
+    """
+    return _mx_nd_np.indices(dimensions=dimensions, dtype=dtype, ctx=ctx)
+# pylint: enable=redefined-outer-name

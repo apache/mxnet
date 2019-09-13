@@ -262,6 +262,17 @@ def assign_each2(input1, input2, function):
 
     return output
 
+# For testing Large Tensors having total size > 2^32 elements
+def create_2d_tensor(rows, columns, dtype=np.int64):
+    a = mx.nd.arange(0, rows, dtype=dtype).reshape(rows, 1)
+    b = mx.nd.broadcast_to(a, shape=(a.shape[0], columns))
+    return b
+
+# For testing Large Vectors having total size > 2^32 elements
+def create_vector(size, dtype=np.int64):
+    a = mx.nd.arange(0, size, dtype=dtype)
+    return a
+
 def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=None,
                         data_init=None, rsp_indices=None, modifier_func=None,
                         shuffle_csr_indices=False, ctx=None):
@@ -1079,7 +1090,6 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
 
     executor = sym.bind(ctx=ctx, args=location, args_grad=args_grad_data, aux_states=aux_states)
     for g in executor.grad_arrays:
-        print(g.shape)
         if g.ndim == 0:
             g[()] = 0
         else:
@@ -2210,3 +2220,8 @@ def collapse_sum_like(a, shape):
             assert s == 1
             axes.append(i+ndim_diff)
     return np.sum(a, axis=tuple(axes)).reshape(shape)
+
+
+def is_cd_run():
+    """Checks if the test is running as part of a Continuous Delivery run"""
+    return os.environ.get("CD_JOB", 0) == "1"

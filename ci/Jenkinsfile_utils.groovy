@@ -18,7 +18,7 @@
 // under the License.
 
 // initialize source codes
-def init_git() {
+def init_git(git_sha = '') {
   deleteDir()
   retry(5) {
     try {
@@ -80,8 +80,8 @@ return 0
 }
 
 // unpack libraries saved before
-def unpack_and_init(name, libs, include_gcov_data = false) {
-  init_git()
+def unpack_and_init(name, libs, include_gcov_data = false, git_sha = '') {
+  init_git(git_sha)
   unstash name
   sh returnStatus: true, script: """
 set +e
@@ -295,4 +295,5 @@ def main_wrapper(args) {
     }
   }
 }
+
 return this

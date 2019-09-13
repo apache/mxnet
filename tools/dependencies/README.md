@@ -76,18 +76,8 @@ The dependencies could be categorized by several groups: BLAS libraries, CPU-bas
 
 ## How to update them?
 
-### MKL, MKLDNN
-
-@pengzhao-intel (https://github.com/apache/incubator-mxnet/commits?author=pengzhao-intel) and his team are tracking and updating these versions. Kudos to them!
-
-### CUDA, cuDNN, NCCL
-#### 1. Environment Setup
-We will install all the prerequsite software.
-We demonstrate with CUDA10/cuDNN7.5/NCCL 2.4.2.
-You might want to change these versions to suit your needs.
-
+#### 0. Prerequisite Software
 ```
-# Take Ubuntu 16.04 for example.
 sudo apt update
 sudo apt-get install -y git \
     cmake \
@@ -109,9 +99,21 @@ sudo apt-get install -y git \
     pandoc \
     python3-pip \
     automake \
-    pkg-config \
-    openjdk-8-jdk
-    
+    pkg-config
+```
+
+### MKL, MKLDNN
+
+@pengzhao-intel (https://github.com/apache/incubator-mxnet/commits?author=pengzhao-intel) and his team are tracking and updating these versions. Kudos to them!
+
+### CUDA, cuDNN, NCCL
+
+#### 1. Environment Setup
+We will install all the prerequsite software.
+We demonstrate with CUDA10/cuDNN7.5/NCCL 2.4.2.
+You might want to change these versions to suit your needs.
+
+```    
 # CUDA installation 
 # Take CUDA 10 for example, please follow the instructions on https://developer.nvidia.com/cuda-downloads
 # Install NVIDIA Accelerated Graphics Driver for Linux-x86_64 410.48?
@@ -272,8 +274,7 @@ sudo apt-get install -y git \
     pandoc \
     python3-pip \
     automake \
-    pkg-config \
-    openjdk-8-jdk
+    pkg-config
 ```
 2. Build PyPi package
 ```
@@ -322,8 +323,7 @@ sudo apt-get install -y git \
     pandoc \
     python3-pip \
     automake \
-    pkg-config \
-    openjdk-8-jdk
+    pkg-config
 ```
 2. Build PyPi package
 ```
