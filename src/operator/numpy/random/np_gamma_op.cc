@@ -41,7 +41,7 @@ void _copy<cpu>(double *dst, double *src) {
 }
 
 NNVM_REGISTER_OP(_npi_gamma)
-.describe("numpy behavior gamma")
+.describe("Numpy behavior gamma")
 .set_num_inputs(
   [](const nnvm::NodeAttrs& attrs) {
     const NumpyGammaParam& param = nnvm::get<NumpyGammaParam>(attrs.parsed);
