@@ -57,7 +57,7 @@ def _test_tutorial_nb(tutorial):
     """
     return run_notebook(tutorial, TUTORIAL_DIR, kernel=KERNEL, no_cache=NO_CACHE)
 
-
+```
 def test_basic_ndarray():
    assert _test_tutorial_nb('basic/ndarray')
 
@@ -114,10 +114,10 @@ def test_gluon_save_load_params():
 
 def test_gluon_hybrid():
     assert _test_tutorial_nb('gluon/hybrid')
-
+```
 def test_gluon_performance():
     assert _test_tutorial_nb('gluon/performance')
-    
+```    
 def test_gluon_pretrained_models():
     assert _test_tutorial_nb('gluon/pretrained_models')    
 
@@ -162,10 +162,10 @@ def test_python_numpy_gotchas() :
 
 def test_gluon_end_to_end():
     assert _test_tutorial_nb('gluon/gluon_from_experiment_to_deployment')
-
+```
 def test_python_mnist():
     assert _test_tutorial_nb('python/mnist')
-
+```
 def test_python_predict_image():
     assert _test_tutorial_nb('python/predict_image')
 
@@ -183,10 +183,10 @@ def test_module_to_gluon():
 
 def test_python_types_of_data_augmentation():
     assert _test_tutorial_nb('python/types_of_data_augmentation')
-
+```
 def test_python_profiler():
     assert _test_tutorial_nb('python/profiler')
-
+```
 def test_sparse_row_sparse():
     assert _test_tutorial_nb('sparse/row_sparse')
 
@@ -216,6 +216,6 @@ def test_control_flow():
 
 def test_amp():
     assert _test_tutorial_nb('amp/amp_tutorial')
-
+```
 #def test_mkldnn_quantization():
 #    assert _test_tutorial_nb('mkldnn/mkldnn_quantization')
