@@ -1608,19 +1608,14 @@ def docs_archive() {
 // This is for the full website
 def docs_publish() {
     return ['Publish the full website': {
-      node(NODE_LINUX_CPU) {
+      node('restricted-mxnetlinux-cpu') {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            //utils.init_git()
+            // If used stashed files, you can retrieve them here
             //unstash 'full_website'
             //sh 'tar -xzf docs/_build/full_website.tgz --directory .'
-            // TODO: Make sure this 'test-website-publish' understand the new structure
-            try {
-              build 'website-publish-master'
-            }
-            catch (Exception e) {
-               println(e.getMessage())
-            }
+            // This jenkins job pulls artifacts from website-build-master
+            build 'restricted-website-publish-master'
           }
         }
       }
