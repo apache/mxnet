@@ -196,6 +196,7 @@ You can also dump the information collected by the profiler into a `json` file u
 
 ```python
 profiler.set_state('run')
+profiler.set_state('stop')
 profiler.dump(finished=False)
 ```
 
