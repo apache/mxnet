@@ -197,6 +197,7 @@ if !libmxnet_detected
         @build_steps begin
           ChangeDirectory(_mxdir)
           `git fetch`
+          `git submodule update`
           if libmxnet_curr_ver != "master"
             `git checkout $libmxnet_curr_ver`
           else
