@@ -1614,8 +1614,12 @@ def docs_publish() {
             // If used stashed files, you can retrieve them here
             //unstash 'full_website'
             //sh 'tar -xzf docs/_build/full_website.tgz --directory .'
-            // This jenkins job pulls artifacts from website-build-master
-            build 'restricted-website-publish-master'
+            try {
+              build 'restricted-website-publish-master'
+            }
+            catch (Exception e) {
+               println(e.getMessage())
+            }
           }
         }
       }
