@@ -127,6 +127,8 @@ cmake_jemalloc(x::Bool)   =  "-DUSE_JEMALLOC=" * cmake_bool(x)
 cmake_cuda_path(::Nothing) = ""
 cmake_cuda_path(x::String) = "-DUSE_CUDA_PATH=" * x
 
+cmake_jl_blas(x::Bool, blas_path) = ifelse(x, "-DOpenBLAS_LIB=$blas_path", "")
+
 using BinDeps
 @BinDeps.setup
 if !libmxnet_detected
@@ -175,11 +177,6 @@ if !libmxnet_detected
   blas_path = Libdl.dlpath(Libdl.dlopen(Base.libblas_name))
   blas_vendor = LinearAlgebra.BLAS.vendor()
 
-  ilp64 = ""
-  if blas_vendor == :openblas64
-    ilp64 = "-DINTERFACE64"
-  end
-
   if blas_vendor == :unknown
     @info("Julia is built with an unkown blas library ($blas_path).")
     @info("Attempting build without reusing the blas library")
@@ -191,7 +188,7 @@ if !libmxnet_detected
   else
     USE_JULIA_BLAS = false
   end
-  @info("USE_JULIA_BLAS -> $USE_JULIA_BLAS")
+  @info "USE_JULIA_BLAS -> $USE_JULIA_BLAS"
 
   blas_name = occursin("openblas", string(blas_vendor)) ?  "open" : string(blas_vendor)
 
@@ -238,6 +235,7 @@ if !libmxnet_detected
             -DUSE_CUDNN=$(cmake_bool(HAS_CUDNN))
             $(cmake_jemalloc(USE_JEMALLOC))
             $(cmake_cuda_path(get(ENV, "CUDA_HOME", nothing)))
+            $(cmake_jl_blas(USE_JULIA_BLAS, blas_path))
             $_mxdir`
           `make -j$(get_cpucore()) VERBOSE=$(Int(libmxnet_curr_ver == "master"))`
         end
