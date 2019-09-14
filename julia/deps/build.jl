@@ -156,17 +156,7 @@ if !libmxnet_detected
   blas_path = Libdl.dlpath(Libdl.dlopen(Base.libblas_name))
   blas_vendor = LinearAlgebra.BLAS.vendor()
 
-  if blas_vendor == :unknown
-    @info("Julia is built with an unkown blas library ($blas_path).")
-    @info("Attempting build without reusing the blas library")
-    USE_JULIA_BLAS = false
-  elseif !(blas_vendor in (:openblas, :openblas64))
-    @info("Unsure if we can build against $blas_vendor.")
-    @info("Attempting build anyway.")
-    USE_JULIA_BLAS = true
-  else
-    USE_JULIA_BLAS = false
-  end
+  USE_JULIA_BLAS = (blas_vendor in (:openblas, :openblas64))
   @info "USE_JULIA_BLAS -> $USE_JULIA_BLAS"
 
   blas_name = occursin("openblas", string(blas_vendor)) ?  "open" : string(blas_vendor)
