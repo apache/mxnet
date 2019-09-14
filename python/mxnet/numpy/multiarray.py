@@ -59,6 +59,7 @@ _NDARRAY_UNSUPPORTED_INDEXING = -1
 _NDARRAY_BASIC_INDEXING = 0
 _NDARRAY_ADVANCED_INDEXING = 1
 
+
 # This function is copied from ndarray.py since pylint
 # keeps giving false alarm error of undefined-all-variable
 def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
@@ -311,14 +312,14 @@ class ndarray(NDArray):
         Note: mxnet.numpy.ndarray not support NDArray as assigned value.
         """
         if isinstance(value, numeric_types):
-            value_nd = full(bcast_shape, value, ctx=self.context, dtype=self.dtype)
+            value_nd = full(bcast_shape, value, ctx=self.ctx, dtype=self.dtype)
         elif isinstance(value, self.__class__):
-            value_nd = value.as_in_context(self.context)
+            value_nd = value.as_in_ctx(self.ctx)
             if value_nd.dtype != self.dtype:
                 value_nd = value_nd.astype(self.dtype)
         else:
             try:
-                value_nd = array(value, ctx=self.context, dtype=self.dtype)
+                value_nd = array(value, ctx=self.ctx, dtype=self.dtype)
             except:
                 raise TypeError('mxnet.np.ndarray does not support assignment with non-array-like '
                                 'object {} of type {}'.format(value, type(value)))
@@ -329,13 +330,25 @@ class ndarray(NDArray):
             squeeze_axes = tuple([ax for ax in squeeze_axes if ax < len(value_nd.shape)])
             value_nd = value_nd.squeeze(axis=tuple(squeeze_axes))
 
+        # handle the cases like the following
+        # a = np.zeros((3, 3)), b = np.ones((1, 1, 1, 1, 3)), a[0] = b
+        # b cannot broadcast directly to a[0].shape unless its leading 1-size axes are trimmed
+        if value_nd.ndim > len(bcast_shape):
+            squeeze_axes = []
+            for i in range(value_nd.ndim - len(bcast_shape)):
+                if value_nd.shape[i] == 1:
+                    squeeze_axes.append(i)
+                else:
+                    break
+            if squeeze_axes:
+                value_nd = value_nd.squeeze(squeeze_axes)
+
         if value_nd.shape != bcast_shape:
             if value_nd.size == 0:
                 value_nd = value_nd.reshape(bcast_shape)
             else:
                 value_nd = value_nd.broadcast_to(bcast_shape)
         return value_nd
-
 
     def __add__(self, other):
         """x.__add__(y) <=> x + y"""
@@ -727,14 +740,14 @@ class ndarray(NDArray):
 
         Examples
         --------
-        >>> x = np.ones((2,3))
-        >>> y = np.zeros((2,3), ctx=mx.gpu(0))
+        >>> x = np.ones((2, 3))
+        >>> y = np.zeros((2, 3), ctx=npx.gpu(0))
         >>> z = x.copyto(y)
         >>> z is y
         True
-        >>> y.asnumpy()
+        >>> y
         array([[ 1.,  1.,  1.],
-               [ 1.,  1.,  1.]], dtype=float32)
+               [ 1.,  1.,  1.]])
         """
         if isinstance(other, ndarray):
             if other.handle is self.handle:
@@ -756,6 +769,11 @@ class ndarray(NDArray):
         return argmax(self, axis, out)
 
     def as_in_context(self, context):
+        """This function has been deprecated. Please refer to ``ndarray.as_in_ctx``."""
+        warnings.warn('ndarray.context has been renamed to ndarray.ctx', DeprecationWarning)
+        return self.as_nd_ndarray().as_in_context(context).as_np_ndarray()
+
+    def as_in_ctx(self, ctx):
         """Returns an array on the target device with the same value as this array.
 
         If the target context is the same as ``self.context``, then ``self`` is
@@ -771,15 +789,58 @@ class ndarray(NDArray):
         ndarray
             The target array.
         """
-        if self.context == context:
+        if self.ctx == ctx:
             return self
-        return self.copyto(context)
+        return self.copyto(ctx)
+
+    @property
+    def ctx(self):
+        """Device context of the array.
+
+        Examples
+        --------
+        >>> x = np.array([1, 2, 3, 4])
+        >>> x.ctx
+        cpu(0)
+        >>> type(x.ctx)
+        <class 'mxnet.context.Context'>
+        >>> y = np.zeros((2, 3), npx.gpu(0))
+        >>> y.ctx
+        gpu(0)
+        """
+        dev_typeid = ctypes.c_int()
+        dev_id = ctypes.c_int()
+        check_call(_LIB.MXNDArrayGetContext(
+            self.handle, ctypes.byref(dev_typeid), ctypes.byref(dev_id)))
+        return Context(Context.devtype2str[dev_typeid.value], dev_id.value)
+
+    @property
+    def context(self):
+        """This function has been deprecated. Please refer to ``ndarray.ctx``."""
+        warnings.warn('ndarray.context has been renamed to ndarray.ctx', DeprecationWarning)
+        return self.as_nd_ndarray().context
 
     def copy(self, order='C'):  # pylint: disable=arguments-differ
+        """Return a coyp of the array, keeping the same context.
+
+        Parameters
+        ----------
+        order : str
+            The memory layout of the copy. Currently, only c-contiguous memory
+            layout is supported.
+
+        Examples
+        --------
+        >>> x = np.ones((2, 3))
+        >>> y = x.copy()
+        >>> y
+        array([[ 1.,  1.,  1.],
+               [ 1.,  1.,  1.]])
+        """
         if order != 'C':
             raise NotImplementedError('ndarray.copy only supports order=\'C\', while '
                                       'received {}'.format(str(order)))
-        return super(ndarray, self).copy().as_np_ndarray()
+        return self.copyto(self.ctx)
 
     def dot(self, b, out=None):
         """Dot product of two arrays.
@@ -787,7 +848,7 @@ class ndarray(NDArray):
         return _mx_np_op.dot(self, b, out=out)
 
     def reshape(self, *args, **kwargs):  # pylint: disable=arguments-differ
-        """Returns an array containing the same data with a new shape.
+        """Returns a copy of the array with a new shape.
 
         Notes
         -----
@@ -854,7 +915,7 @@ class ndarray(NDArray):
 
     def repeat(self, repeats, axis=None):  # pylint: disable=arguments-differ
         """Repeat elements of an array."""
-        raise NotImplementedError
+        return _mx_np_op.repeat(self, repeats=repeats, axis=axis)
 
     def pad(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`pad`.
@@ -1182,22 +1243,22 @@ class ndarray(NDArray):
 
     def cumsum(self, axis=None, dtype=None, out=None):
         """Return the cumulative sum of the elements along the given axis."""
-        raise NotImplementedError
+        return _mx_np_op.cumsum(self, axis=axis, dtype=dtype, out=out)
 
     def tolist(self):
         return self.asnumpy().tolist()
 
     def max(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return the maximum along a given axis."""
-        raise NotImplementedError
+        return _mx_np_op.max(self, axis=axis, keepdims=keepdims, out=out)
 
-    def min(self, *args, **kwargs):
+    def min(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`min`.
 
         The arguments are the same as for :py:func:`min`, with
         this array as data.
         """
-        raise NotImplementedError
+        return _mx_np_op.min(self, axis=axis, keepdims=keepdims, out=out)
 
     def norm(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`norm`.
@@ -1549,7 +1610,7 @@ class ndarray(NDArray):
 
 
 @set_module('mxnet.numpy')
-def empty(shape, dtype=float, order='C', ctx=None):
+def empty(shape, dtype=_np.float32, order='C', ctx=None):
     """Return a new array of given shape and type, without initializing entries.
 
     Parameters
@@ -1573,7 +1634,8 @@ def empty(shape, dtype=float, order='C', ctx=None):
         Array of uninitialized (arbitrary) data of the given shape, dtype, and order.
     """
     if order != 'C':
-        raise NotImplementedError
+        raise NotImplementedError('`empty` only supports order equal to `C`, while received {}'
+                                  .format(str(order)))
     if ctx is None:
         ctx = current_context()
     if dtype is None:
@@ -1609,7 +1671,7 @@ def array(object, dtype=None, ctx=None):
     if isinstance(object, ndarray):
         dtype = object.dtype if dtype is None else dtype
     else:
-        dtype = mx_real_t if dtype is None else dtype
+        dtype = _np.float32 if dtype is None else dtype
         if not isinstance(object, (ndarray, _np.ndarray)):
             try:
                 object = _np.array(object, dtype=dtype)

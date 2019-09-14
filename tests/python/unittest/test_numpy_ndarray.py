@@ -26,12 +26,45 @@ from mxnet.gluon import HybridBlock
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, retry, assert_exception, use_np
 from common import with_seed, TemporaryDirectory
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
+from mxnet.ndarray.ndarray import py_slice
+from mxnet.base import integer_types
 import scipy.stats as ss
 
 
 @with_seed()
 @use_np
-def test_array_creation():
+def test_np_empty():
+    dtypes = [np.int8, np.int32, np.float16, np.float32, np.float64, None]
+    expected_dtypes = [np.int8, np.int32, np.float16, np.float32, np.float64, np.float32]
+    orders = ['C', 'F', 'A']
+    shapes = [
+        (),
+        0,
+        (0,),
+        (0, 0),
+        2,
+        (2,),
+        (3, 0),
+        (4, 5),
+        (1, 1, 1, 1),
+    ]
+    ctxes = [npx.current_context(), None]
+    for dtype, expected_dtype in zip(dtypes, expected_dtypes):
+        for shape in shapes:
+            for order in orders:
+                for ctx in ctxes:
+                    if order == 'C':
+                        ret = np.empty(shape, dtype, order, ctx)
+                        assert ret.dtype == expected_dtype
+                        assert ret.shape == shape if isinstance(shape, tuple) else (shape,)
+                        assert ret.ctx == npx.current_context()
+                    else:
+                        assert_exception(np.empty, NotImplementedError, shape, dtype, order, ctx)
+
+
+@with_seed()
+@use_np
+def test_np_array_creation():
     dtypes = [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64, None]
     objects = [
         [],
@@ -54,7 +87,7 @@ def test_array_creation():
 
 @with_seed()
 @use_np
-def test_zeros():
+def test_np_zeros():
     # test np.zeros in Gluon
     class TestZeros(HybridBlock):
         def __init__(self, shape, dtype=None):
@@ -102,7 +135,7 @@ def test_zeros():
 
 @with_seed()
 @use_np
-def test_ones():
+def test_np_ones():
     # test np.ones in Gluon
     class TestOnes(HybridBlock):
         def __init__(self, shape, dtype=None):
@@ -149,7 +182,7 @@ def test_ones():
 
 
 @with_seed()
-def test_ndarray_binary_element_wise_ops():
+def test_np_ndarray_binary_element_wise_ops():
     np_op_map = {
         '+': _np.add,
         '*': _np.multiply,
@@ -304,7 +337,7 @@ def test_ndarray_binary_element_wise_ops():
 
 
 @with_seed()
-def test_hybrid_block_multiple_outputs():
+def test_np_hybrid_block_multiple_outputs():
     @use_np
     class TestAllNumpyOutputs(HybridBlock):
         def hybrid_forward(self, F, x, *args, **kwargs):
@@ -338,7 +371,7 @@ def test_hybrid_block_multiple_outputs():
 
 @with_seed()
 @use_np
-def test_grad_ndarray_type():
+def test_np_grad_ndarray_type():
     data = np.array(2, dtype=_np.float32)
     data.attach_grad()
     assert type(data.grad) == np.ndarray
@@ -379,7 +412,7 @@ def test_np_ndarray_copy():
 def test_np_ndarray_indexing():
     def np_int(index, int_type=np.int32):
         """
-        Helper function for testing indexing that converts slices to slices of ints or None, and tuples to 
+        Helper function for testing indexing that converts slices to slices of ints or None, and tuples to
         tuples of ints or None.
         """
         def convert(num):
@@ -401,7 +434,7 @@ def test_np_ndarray_indexing():
         else:
             assert False
 
-    # Copied from test_ndarray.py. Under construction. 
+    # Copied from test_ndarray.py. Under construction.
     def test_getitem(np_array, index):
         np_index = index
         if type(index) == mx.nd.NDArray:  # use of NDArray is prohibited
@@ -439,6 +472,13 @@ def test_np_ndarray_indexing():
 
             assert same(np_array, mx_array.asnumpy())
 
+        def _is_basic_index(index):
+            if isinstance(index, (integer_types, py_slice)):
+                return True
+            if isinstance(index, tuple) and all(isinstance(i, (integer_types, py_slice)) for i in index):
+                return True
+            return False
+
         np_index = index  # keep this native numpy type
         if isinstance(index, np.ndarray):
             np_index = index.asnumpy()
@@ -467,6 +507,13 @@ def test_np_ndarray_indexing():
             assert_same(np_array, np_index, mx_array, index, np.array(np_value))
             # test native numpy array with broadcast
             assert_same(np_array, np_index, mx_array, index, np_value)
+
+            # test value shape are expanded to be longer than index array's shape
+            # this is currently only supported in basic indexing
+            if _is_basic_index(index):
+                expanded_value_shape = (1, 1, 1) + np_value.shape
+                assert_same(np_array, np_index, mx_array, index, np.array(np_value.reshape(expanded_value_shape)))
+                assert_same(np_array, np_index, mx_array, index, np_value.reshape(expanded_value_shape))
             # test list with broadcast
             assert_same(np_array, np_index, mx_array, index,
                         [_np.random.randint(low=-10000, high=0)] * indexed_array_shape[-1])
@@ -664,18 +711,18 @@ def test_np_ndarray_indexing():
         test_setitem(np_array, index)
         test_getitem_autograd(np_array, index)
         test_setitem_autograd(np_array, index)
-    
+
     # Test indexing to zero-size tensors
     index_list = [
-        (slice(0, 0), slice(0, 0), 1, 2),  
-        (slice(0, 0), slice(0, 0), slice(0, 0), slice(0, 0)),  
+        (slice(0, 0), slice(0, 0), 1, 2),
+        (slice(0, 0), slice(0, 0), slice(0, 0), slice(0, 0)),
     ]
     for index in index_list:
         test_getitem(np_array, index)
         test_setitem(np_array, index)
         test_getitem_autograd(np_array, index)
         test_setitem_autograd(np_array, index)
-    
+
     # test zero-size tensors get and setitem
     shapes_indices = [
                         ((0), [slice(None, None, None)]),

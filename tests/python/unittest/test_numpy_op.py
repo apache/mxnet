@@ -288,7 +288,7 @@ def test_np_max_min():
             self._keepdims = keepdims
 
         def hybrid_forward(self, F, a, *args, **kwargs):
-            return F.np.max(a, axis=self._axis, keepdims=self._keepdims)
+            return a.max(axis=self._axis, keepdims=self._keepdims)
 
     class TestMin(HybridBlock):
         def __init__(self, axis=None, keepdims=False):
@@ -297,7 +297,7 @@ def test_np_max_min():
             self._keepdims = keepdims
 
         def hybrid_forward(self, F, a, *args, **kwargs):
-            return F.np.min(a, axis=self._axis, keepdims=self._keepdims)
+            return a.min(axis=self._axis, keepdims=self._keepdims)
 
     def is_int(dtype):
         return 'int' == dtype
@@ -326,12 +326,8 @@ def test_np_max_min():
             raise ValueError('axis should be int or None or ()')
 
     def _test_np_exception(func, shape, dim):
-        x = _np.random.uniform(-1.0, 1.0, shape)
-        x = mx.nd.array(x).as_np_ndarray()
-        if func == 'max':
-            out = mx.np.max(x)
-        else:
-            out = mx.np.min(x)
+        x = np.random.uniform(-1.0, 1.0, shape)
+        out = getattr(x, func)()
         assert out.ndim == dim, 'dimension mismatch, output.ndim={}, dim={}'.format(output.ndim, dim)
 
     in_data_dim = random.choice([2, 3, 4])
@@ -1620,7 +1616,7 @@ def test_np_cumsum():
             self._dtype = dtype
 
         def hybrid_forward(self, F, a):
-            return F.np.cumsum(a, axis=self._axis, dtype=self._dtype)
+            return a.cumsum(axis=self._axis, dtype=self._dtype)
 
     shapes = [(2, 3, 4), (2, 0, 3), ()]
     for hybridize in [True, False]:
@@ -1788,6 +1784,73 @@ def test_np_indices():
                 mx_out = net(x)
                 same(mx_out.asnumpy(), np_out)
                 assert mx_out.shape == np_out.shape
+
+
+@with_seed()
+@use_np
+def test_np_repeat():
+    config = [
+        ((), 2, None),
+        ((), 0, None),
+        ((4, 2), 2, None),
+        ((4, 2), 2, 0),
+        ((4, 2), 2, 1),
+        ((4, 2), 2, -1),
+    ]
+
+    class TestRepeat(HybridBlock):
+        def __init__(self, repeats, axis=None):
+            super(TestRepeat, self).__init__()
+            self._repeats = repeats
+            self._axis = axis
+
+        def hybrid_forward(self, F, x):
+            return x.repeat(self._repeats, self._axis)
+
+    for shape, repeats, axis in config:
+        data_np = _np.random.randint(low=0, high=1000, size=shape)
+        data_mx = np.array(data_np, dtype=data_np.dtype)
+        ret_np = data_np.repeat(repeats, axis)
+        ret_mx = data_mx.repeat(repeats, axis)
+        assert same(ret_mx.asnumpy(), ret_np)
+
+        net = TestRepeat(repeats, axis)
+        for hybrid in [False, True]:
+            if hybrid:
+                net.hybridize()
+            ret_mx = net(data_mx)
+            assert same(ret_mx.asnumpy(), ret_np)
+
+
+@with_seed()
+@use_np
+def test_np_linalg_norm():
+    @use_np
+    class TestLinalgNorm(HybridBlock):
+        def __init__(self, ord=None, axis=None, keepdims=False):
+            super(TestLinalgNorm, self).__init__()
+            self._ord = ord
+            self._axis = axis
+            self._keepdims = keepdims
+
+        def hybrid_forward(self, F, x):
+            return F.np.linalg.norm(x, ord=self._ord, axis=self._axis, keepdims=self._keepdims)
+
+    a = np.arange(5 * 6 * 7 * 8).reshape((5, 6, 7, 8))
+    ords = [None, 'fro']
+    axes = [None, (0, 2), (1, 0), (1, 2)]
+    for ord in ords:
+        for axis in axes:
+            if ord == 'fro' and axis is None and a.ndim > 2:
+                continue
+            for keepdims in [False, True]:
+                for hybridize in [False, True]:
+                    net = TestLinalgNorm(ord, axis, keepdims)
+                    if hybridize:
+                        net.hybridize()
+                    mx_ret = net(a)
+                    np_ret = _np.linalg.norm(a.asnumpy(), ord=ord, axis=axis, keepdims=keepdims)
+                    assert_almost_equal(mx_ret.asnumpy(), np_ret, atol=1e-5, rtol=1e-4)
 
 
 if __name__ == '__main__':
