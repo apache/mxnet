@@ -359,10 +359,14 @@ def check_nth_order_unary(x, op, grad_ops, orders, rtol=None, atol=None):
         orders = [orders]
         grad_ops = [grad_ops]
 
+    assert all(i < j for i, j in zip(orders[0:-1], orders[1:])), \
+        "orders should be monotonically increasing"
+    assert set(orders) == len(orders), "orders should have unique elements"
+    highest_order = max(orders)
+
     x = nd.array(x)
     x.attach_grad()
 
-    order = max(orders)
     expected_grads = [grad_op(x) for grad_op in grad_ops]
     computed_grads = []
     head_grads = []
@@ -370,7 +374,7 @@ def check_nth_order_unary(x, op, grad_ops, orders, rtol=None, atol=None):
     # Perform compute.
     with autograd.record():
         y = op(x)
-        for current_order in range(1, order+1):
+        for current_order in range(1, highest_order+1):
             head_grad = nd.random.normal(shape=x.shape)
             y = autograd.grad(heads=y, variables=x, head_grads=head_grad,
                               create_graph=True, retain_graph=True)[0]
