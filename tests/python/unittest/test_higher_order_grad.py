@@ -361,7 +361,8 @@ def check_nth_order_unary(x, op, grad_ops, orders, rtol=None, atol=None):
 
     assert all(i < j for i, j in zip(orders[0:-1], orders[1:])), \
         "orders should be monotonically increasing"
-    assert set(orders) == len(orders), "orders should have unique elements"
+    assert len(set(orders)) == len(orders), \
+        "orders should have unique elements"
     highest_order = max(orders)
 
     x = nd.array(x)
