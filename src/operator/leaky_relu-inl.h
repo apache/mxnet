@@ -82,12 +82,10 @@ struct get_slope {
                                   const int N, const int step,
                                   DType* out_data,
                                   const int upper_bound,
-                                  const int lower_bound,
-                                  mshadow::Tensor<xpu, 1, DType> dat) {
+                                  const int lower_bound) {
     RNG_KERNEL_LOOP(xpu, DType, id, gen, N, step, {
       const DType rand_num = static_cast<DType>(genImpl.uniform());
-      dat[i] = ((upper_bound - lower_bound) * rand_num) + lower_bound;
-      out_data[i] = dat[i];
+      out_data[i] = ((upper_bound - lower_bound) * rand_num) + lower_bound;
     });
   }
 };
@@ -164,18 +162,11 @@ class LeakyReLUOp : public Operator {
         if (ctx.is_train) {
           mask = out_data[leakyrelu::kMask].get_with_shape<xpu, 3, DType>(dshape, s);
           Stream<xpu> *s = ctx.get_stream<xpu>();
-          const Resource &resource = ctx.requested[0];
-          size_t workspace_size = sizeof(int) * in_data[leakyrelu::kData].Size();
-          Tensor<xpu, 1, char> workspace = resource.get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
-          char* workspace_ptr = workspace.dptr_;
-
-          Tensor<xpu, 1, DType> dat = Tensor<xpu, 1, DType>(reinterpret_cast<DType*>(workspace_ptr),
-                                      Shape1(in_data[leakyrelu::kData].Size()), s);
           RandGenerator<xpu, DType> *pgen = ctx.requested[1].get_parallel_random<xpu, DType>();
           CHECK_NOTNULL(pgen);
           LaunchRNG<get_slope<xpu>, xpu>(s, pgen,
-            out_data[leakyrelu::kOut].Size(), mask.dptr_,
-            param_.lower_bound, param_.upper_bound, dat);
+            out_data[leakyrelu::kMask].Size(), mask.dptr_,
+            param_.lower_bound, param_.upper_bound);
           MXNET_ASSIGN_REQ_SWITCH(req[leakyrelu::kOut], Req, {
             mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::xelu, Req>, xpu>::Launch(
               s, mask.size(0) * mask.size(1) * mask.size(2), out.dptr_, data.dptr_, mask.dptr_);
