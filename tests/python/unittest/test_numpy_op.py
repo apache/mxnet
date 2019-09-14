@@ -1987,9 +1987,9 @@ def test_np_grids():
                 for end in ends:
                     for step in steps:
                         if isinstance(step, complex) and flag == 0:
-                            x = np.zeros((), dtype='float64')
-                        else:
                             x = np.zeros((), dtype='float32')
+                        else:
+                            x = np.zeros((), dtype='int32')
                         for hybridize in [False, True]:
                             np_func = getattr(_np, func)
                             mx_func = TestGrids(func, start, end, step, flag)

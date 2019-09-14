@@ -18,7 +18,9 @@
 """Numpy index tricks."""
 from __future__ import absolute_import
 import math
+import numpy as _np
 from . import _symbol as _mx_nd_np
+
 
 __all__ = ['mgrid', 'ogrid']
 
@@ -51,14 +53,13 @@ class nd_grid(object):
     Users should use these pre-defined instances instead of using `nd_grid`
     directly.
     """
-
     def __init__(self, sparse=False):
         self.sparse = sparse
 
     def __getitem__(self, key):  # pylint: disable=too-many-branches
         try:
             size = []
-            typ = int
+            typ = _np.int32
             for k in range(len(key)):  # pylint: disable=consider-using-enumerate
                 step = key[k].step
                 start = key[k].start
@@ -68,13 +69,13 @@ class nd_grid(object):
                     step = 1
                 if isinstance(step, complex):
                     size.append(int(abs(step)))
-                    typ = float
+                    typ = _np.float32
                 else:
                     size.append(int(math.ceil((key[k].stop - start)/(step*1.0))))
-                if (isinstance(step, float) or
-                    isinstance(start, float) or
+                if (isinstance(step, float) or \
+                    isinstance(start, float) or \
                     isinstance(key[k].stop, float)):
-                    typ = float
+                    typ = _np.float32
             if self.sparse:
                 nn = [_mx_nd_np.arange(_x, dtype=_t)
                       for _x, _t in zip(size, (typ,)*len(size))]
@@ -111,9 +112,14 @@ class nd_grid(object):
                 if step != 1:
                     step = (key.stop-start)/float(step-1)
                 stop = key.stop + step
-                return _mx_nd_np.arange(0, length, 1, float)*step + start
+                return _mx_nd_np.arange(0, length, 1, _np.float32)*step + start
             else:
-                return _mx_nd_np.arange(start, stop, step)
+                if (isinstance(step, float) or \
+                    isinstance(start, float) or \
+                    isinstance(stop, float)):
+                    return _mx_nd_np.arange(start, stop, step, _np.float32)
+                else:
+                    return _mx_nd_np.arange(start, stop, step, _np.int32)
 # pylint: enable=useless-object-inheritance, too-few-public-methods
 
 
@@ -147,10 +153,9 @@ class MGridClass(nd_grid):  # pylint: disable=too-few-public-methods
             [0, 1, 2, 3, 4],
             [0, 1, 2, 3, 4],
             [0, 1, 2, 3, 4],
-            [0, 1, 2, 3, 4]]], dtype=int64)
-
+            [0, 1, 2, 3, 4]]], dtype=int32)
     >>> np.mgrid[-1:1:5j]
-    array([-1. , -0.5,  0. ,  0.5,  1. ], dtype=float64)
+    array([-1. , -0.5,  0. ,  0.5,  1. ])
     """
     def __init__(self):
         super(MGridClass, self).__init__(sparse=False)
@@ -180,13 +185,13 @@ class OGridClass(nd_grid):  # pylint: disable=too-few-public-methods
     Examples
     --------
     >>> np.ogrid[-1:1:5j]
-    array([-1. , -0.5,  0. ,  0.5,  1. ], dtype=float64)
+    array([-1. , -0.5,  0. ,  0.5,  1. ])
     >>> np.ogrid[0:5,0:5]
     [array([[0],
-            [1],
-            [2],
-            [3],
-            [4]], dtype=int64), array([[0, 1, 2, 3, 4]], dtype=int64)]
+           [1],
+           [2],
+           [3],
+           [4]], dtype=int32), array([[0, 1, 2, 3, 4]], dtype=int32)]
     """
     def __init__(self):
         super(OGridClass, self).__init__(sparse=True)
