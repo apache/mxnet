@@ -50,11 +50,12 @@ There are several environment variables that change this behaviour.
   (e.g. `a0b1c2d3`).
 - `CC`: The path of C compiler.
 - `CXX`: The path of C++ compiler.
-- `ADD_CFLAGS`: Additional C flags. For instance,
+- `CFLAGS`: Additional C flags. For instance,
   if you need to point non-standard include directory, please set it as
-  `ENV["ADD_CFLAGS"] = "-I'/path/to/include/dir'"`.
-- `ADD_LDFLAGS`: Additional linker flags.
-- `USE_JEMALLOC`: Default is enabled if jemalloc available.
+  `ENV["CFLAGS"] = "-I'/path/to/include/dir'"`.
+- `LDFLAGS`: Additional linker flags.
+- `USE_JEMALLOC`: Set it to `ON` or `OFF`.
+  Default is enabled if jemalloc available.
   If you ran into segfault cause by jemalloc,
   Please try to disable it.
 
