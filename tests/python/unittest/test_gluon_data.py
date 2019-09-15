@@ -296,6 +296,19 @@ def test_dataset_filter():
     for idx, sample in enumerate(a_xform_filtered):
         assert sample % 10 == 0
 
+def test_dataset_shard():
+    length = 11
+    a = mx.gluon.data.SimpleDataset([i for i in range(length)])
+    a_shard_0 = a.shard(2, 0)
+    a_shard_1 = a.shard(2, 1)
+    assert len(a_shard_0) + len(a_shard_1) == length
+    total = 0
+    for idx, sample in enumerate(a_shard_0):
+        total += sample
+    for idx, sample in enumerate(a_shard_1):
+        total += sample
+    assert total == sum(a)
+
 def test_dataset_take():
     length = 100
     a = mx.gluon.data.SimpleDataset([i for i in range(length)])
