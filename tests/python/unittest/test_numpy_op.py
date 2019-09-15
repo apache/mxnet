@@ -1870,7 +1870,17 @@ def test_np_copysign():
         sign = sign.reshape(-1, *a1.shape)
         sign = _np.sum(sign, axis=0)
         return sign, _np.zeros_like(a2)
-
+    
+    def get_grad_left(a1, a2):
+        sign = _np.logical_or(_np.logical_and(a1 < 0, a2 < 0),
+                              _np.logical_and(a1 >= 0, a2 >= 0))
+        sign = 2 * sign.astype(int) - 1
+        sign = sign.reshape(a1.shape)
+        return sign
+    
+    def get_grad_right(a1, a2):
+        return _np.zeros_like(a2)
+        
     shapes = [
         (),
         (1),
@@ -1911,6 +1921,41 @@ def test_np_copysign():
                     mx_out = np.copysign(a1, a2)
                     expected_np = _np.copysign(a1_np, a2_np)
                     assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
+    
+    types = ['float16', 'float32', 'float64']
+    for x_shape in shapes:
+        for dtype in types:
+            # Test left
+            x_np = _np.array(_np.random.uniform(-2.0, 2.0, x_shape), dtype=dtype)
+            scalar = _np.random.uniform(-2.0, 2.0)
+            x = np.array(x_np, dtype=dtype)
+            x.attach_grad()
+            expected_np = _np.copysign(x_np, scalar)
+            with mx.autograd.record():
+                mx_out = np.copysign(x, scalar)
+            assert mx_out.shape == expected_np.shape
+            assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
+            
+            # Test gradient
+            mx_out.backward()
+            x_grad = get_grad_left(x_np, scalar)
+            assert_almost_equal(x.grad.asnumpy(), x_grad, rtol=rtol, atol=atol)
+            
+            # Test right
+            x_np = _np.array(_np.random.uniform(-2.0, 2.0, x_shape), dtype=dtype)
+            scalar = _np.random.uniform(-2.0, 2.0)
+            x = np.array(x_np, dtype=dtype)
+            x.attach_grad()
+            expected_np = _np.copysign(scalar, x_np)
+            with mx.autograd.record():
+                mx_out = np.copysign(scalar, x)
+            assert mx_out.shape == expected_np.shape
+            assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
+            
+            # Test gradient
+            mx_out.backward()
+            x_grad = get_grad_right(scalar, x_np)
+            assert_almost_equal(x.grad.asnumpy(), x_grad, rtol=rtol, atol=atol)
 
 
 if __name__ == '__main__':
