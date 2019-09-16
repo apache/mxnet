@@ -58,7 +58,7 @@ std::shared_ptr<mkldnn::convolution_forward::primitive_desc> GetConvFwdImpl(
   auto bias_md =
       bias ? (param.mkldnn_param.quantized ? GetMemDesc(*bias, mshadow::kInt32) : GetMemDesc(*bias))
            : mkldnn::memory::desc{
-                 {}, mkldnn::memory::data_type::undef, mkldnn::memory::format_tag::any};
+             {}, mkldnn::memory::data_type::undef, mkldnn::memory::format_tag::any};
   auto bias_md_ptr = bias ? &bias_md : nullptr;
 
   mkldnn::memory::dims strides(param.conv_param.kernel.ndim());
@@ -490,16 +490,19 @@ void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ct
     mkldnn_args_map_t net_args = {{MKLDNN_ARG_DIFF_DST, *out_grad_mem},
                                   {MKLDNN_ARG_SRC, *data_mem},
                                   {MKLDNN_ARG_DIFF_WEIGHTS, *in_grad_weight.second}};
-
+    mkldnn_output_t in_grad_bias;
     if (!param.no_bias) {
-      auto in_grad_bias = CreateMKLDNNMem(in_grad[conv::kBias],
+      in_grad_bias = CreateMKLDNNMem(in_grad[conv::kBias],
                                           convBwd.GetWeightsPd().diff_bias_desc(),
                                           req[conv::kBias]);
       net_args.insert({MKLDNN_ARG_DIFF_BIAS, *in_grad_bias.second});
-      CommitOutput(in_grad[conv::kBias], in_grad_bias);
     }
     MKLDNNStream::Get()->RegisterPrimArgs(convBwd.GetBwdWeights(), net_args);
     CommitOutput(in_grad[conv::kWeight], in_grad_weight);
+    // CommitOutput Should run after RegisterPrimArgs for memory dependency
+    if (!param.no_bias) {
+      CommitOutput(in_grad[conv::kBias], in_grad_bias);
+    }
   }
   MKLDNNStream::Get()->Submit();
 }
