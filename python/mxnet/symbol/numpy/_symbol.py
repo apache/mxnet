@@ -35,7 +35,8 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot',
            'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'mean',
-           'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign']
+           'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign',
+           'ravel']
 
 
 def _num_outputs(sym):
@@ -2776,6 +2777,45 @@ def copysign(x1, x2, out=None):
     - ``where`` param is not supported.
     """
     return _ufunc_helper(x1, x2, _npi.copysign, _np.copysign, _npi.copysign_scalar, _npi.rcopysign_scalar, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def ravel(x, order='C'):
+    r"""
+    ravel(x)
+
+    Return a contiguous flattened array.
+    A 1-D array, containing the elements of the input, is returned.  A copy is
+    made only if needed.
+
+    Parameters
+    ----------
+    x : ndarray
+        Input array.  The elements in `x` are read in row-major, C-style order and
+        packed as a 1-D array.
+    order : `C`, optional
+        Only support row-major, C-style order.
+
+    Returns
+    -------
+    y : ndarray
+        y is an array of the same subtype as `x`, with shape ``(x.size,)``.
+        Note that matrices are special cased for backward compatibility, if `x`
+        is a matrix, then y is a 1-D ndarray.
+
+    Notes
+    -----
+    This function differs from the original numpy.arange in the following aspects:
+        - Only support row-major, C-style order.
+    """
+    if order != 'C':
+        raise NotImplementedError('order {} is not supported'.format(order))
+    if isinstance(x, numeric_types):
+        return _np.reshape(x, -1)
+    elif isinstance(x, _Symbol):
+        return _npi.reshape(x, -1)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x))))
 
 
 _set_np_symbol_class(_Symbol)

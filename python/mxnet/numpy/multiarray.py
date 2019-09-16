@@ -52,7 +52,8 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'add', 'subtrac
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative',
            'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh',
            'tensordot', 'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate',
-           'stack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign']
+           'stack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign',
+           'ravel']
 
 # Return code for dispatching indexing function call
 _NDARRAY_UNSUPPORTED_INDEXING = -1
@@ -3986,3 +3987,49 @@ def copysign(x1, x2, out=None):
     array([-1.,  0.,  1.])
     """
     return _mx_nd_np.copysign(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+def ravel(x, order='C'):
+    r"""
+    ravel(x)
+
+    Return a contiguous flattened array.
+    A 1-D array, containing the elements of the input, is returned.  A copy is
+    made only if needed.
+
+    Parameters
+    ----------
+    x : ndarray
+        Input array.  The elements in `x` are read in row-major, C-style order and
+        packed as a 1-D array.
+    order : `C`, optional
+        Only support row-major, C-style order.
+
+    Returns
+    -------
+    y : ndarray
+        y is an array of the same subtype as `x`, with shape ``(x.size,)``.
+        Note that matrices are special cased for backward compatibility, if `x`
+        is a matrix, then y is a 1-D ndarray.
+
+    Notes
+    -----
+    This function differs from the original numpy.arange in the following aspects:
+        - Only support row-major, C-style order.
+
+    Examples
+    --------
+    It is equivalent to ``reshape(x, -1)``.
+
+    >>> x = np.array([[1, 2, 3], [4, 5, 6]])
+    >>> print(np.ravel(x))
+    [1. 2. 3. 4. 5. 6.]
+
+    >>> print(x.reshape(-1))
+    [1. 2. 3. 4. 5. 6.]
+
+    >>> print(np.ravel(x.T))
+    [1. 4. 2. 5. 3. 6.]
+    """
+    return _mx_nd_np.ravel(x, order)
