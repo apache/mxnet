@@ -127,7 +127,7 @@ core_logic: {
         }
       }
     },
-    parallel 'Tutorial: Python2': {
+    'Tutorial: Python2': {
       node(NODE_LINUX_GPU_P3) {
         ws('workspace/tutorial-test-python2') {
           utils.unpack_and_init('gpu', mx_lib)
