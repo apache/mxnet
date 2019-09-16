@@ -114,10 +114,10 @@ def test_gluon_save_load_params():
 
 def test_gluon_hybrid():
     assert _test_tutorial_nb('gluon/hybrid')
-"""
+
 def test_gluon_performance():
     assert _test_tutorial_nb('gluon/performance')
-"""    
+
 def test_gluon_pretrained_models():
     assert _test_tutorial_nb('gluon/pretrained_models')    
 
@@ -162,10 +162,10 @@ def test_python_numpy_gotchas() :
 
 def test_gluon_end_to_end():
     assert _test_tutorial_nb('gluon/gluon_from_experiment_to_deployment')
-"""
+
 def test_python_mnist():
     assert _test_tutorial_nb('python/mnist')
-"""
+
 def test_python_predict_image():
     assert _test_tutorial_nb('python/predict_image')
 

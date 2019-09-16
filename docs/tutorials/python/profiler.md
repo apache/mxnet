@@ -57,6 +57,7 @@ from mxnet import profiler
 
 profiler.set_config(profile_all=True,
                     aggregate_stats=True,
+                    continuous_dump=True,
                     filename='profile_output.json')
 ```
 
