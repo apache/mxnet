@@ -146,6 +146,107 @@ build_wheel() {
 # Build commands: Every platform in docker/Dockerfile.build.<platform> should have a corresponding
 # function here with the same suffix:
 
+gather_licenses() {
+    mkdir -p licenses
+
+    cp tools/dependencies/LICENSE.binary.dependencies licenses/
+    cp NOTICE licenses/
+    cp LICENSE licenses/
+    cp DISCLAIMER licenses/
+}
+
+build_ubuntu_cpu_release() {
+    set -ex
+
+    build_ccache_wrappers
+
+    make  \
+        DEV=0                         \
+        ENABLE_TESTCOVERAGE=0         \
+        USE_CPP_PACKAGE=0             \
+        USE_MKLDNN=0                  \
+        USE_BLAS=openblas             \
+        USE_SIGNAL_HANDLER=1          \
+        -j$(nproc)
+}
+
+build_ubuntu_cpu_mkldnn_release() {
+    set -ex
+
+    build_ccache_wrappers
+
+    make  \
+        DEV=0                         \
+        ENABLE_TESTCOVERAGE=0         \
+        USE_CPP_PACKAGE=0             \
+        USE_MKLDNN=1                  \
+        USE_BLAS=openblas             \
+        USE_SIGNAL_HANDLER=1          \
+        -j$(nproc)
+}
+
+build_ubuntu_gpu_release() {
+    set -ex
+    # unfortunately this build has problems in 3rdparty dependencies with ccache and make
+    # build_ccache_wrappers
+
+    make \
+        DEV=0                                     \
+        ENABLE_TESTCOVERAGE=0                     \
+        USE_BLAS=openblas                         \
+        USE_MKLDNN=0                              \
+        USE_CUDA=1                                \
+        USE_CUDA_PATH=/usr/local/cuda             \
+        USE_CUDNN=1                               \
+        USE_CPP_PACKAGE=0                         \
+        USE_DIST_KVSTORE=1                        \
+        USE_SIGNAL_HANDLER=1                      \
+        -j$(nproc)
+}
+
+build_ubuntu_gpu_mkldnn_release() {
+    set -ex
+    # unfortunately this build has problems in 3rdparty dependencies with ccache and make
+    # build_ccache_wrappers
+
+    make \
+        DEV=0                                     \
+        ENABLE_TESTCOVERAGE=0                     \
+        USE_BLAS=openblas                         \
+        USE_MKLDNN=1                              \
+        USE_CUDA=1                                \
+        USE_CUDA_PATH=/usr/local/cuda             \
+        USE_CUDNN=1                               \
+        USE_CPP_PACKAGE=0                         \
+        USE_DIST_KVSTORE=1                        \
+        USE_SIGNAL_HANDLER=1                      \
+        -j$(nproc)
+}
+
+# Compiles the dynamic mxnet library
+# Parameters:
+# $1 -> mxnet_variant: the mxnet variant to build, e.g. cpu, cu100, cu92mkl, etc.
+build_dynamic_libmxnet() {
+    set -ex
+    
+    local mxnet_variant=${1:?"This function requires a mxnet variant as the first argument"}
+
+    # relevant licenses will be placed in the licenses directory
+    gather_licenses
+
+    if [[ ${mxnet_variant} = "cpu" ]]; then
+        build_ubuntu_cpu_release
+    elif [[ ${mxnet_variant} = "mkl" ]]; then
+        build_ubuntu_cpu_mkldnn_release
+    elif [[ ${mxnet_variant} =~ cu[0-9]+$ ]]; then
+        build_ubuntu_gpu_release
+    elif [[ ${mxnet_variant} =~ cu[0-9]+mkl$ ]]; then
+        build_ubuntu_gpu_mkldnn_release
+    else
+        echo "Error: Unrecognized mxnet variant '${mxnet_variant}'"
+    fi
+}
+
 build_jetson() {
     set -ex
     pushd .
