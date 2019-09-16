@@ -54,7 +54,6 @@ Operator *SequenceLastProp::CreateOperatorEx(Context ctx,
   #else
       DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], mshadow::kInt32);
   #endif
-  
 }
 
 DMLC_REGISTER_PARAMETER(SequenceLastParam);
