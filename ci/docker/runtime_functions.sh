@@ -834,6 +834,8 @@ cd_unittest_ubuntu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=0
+    export CD_JOB=1 # signal this is a CD run so any unecessary tests can be skipped
 
     local mxnet_variant=${1:?"This function requires a mxnet variant as the first argument"}
     local python_cmd=${2:?"This function requires a python command as the first argument"}
@@ -1088,7 +1090,7 @@ unittest_ubuntu_gpu_R() {
 unittest_ubuntu_cpu_julia() {
     set -ex
     export PATH="$1/bin:$PATH"
-    export MXNET_ROOT='/work/mxnet'
+    export MXNET_HOME='/work/mxnet'
     export JULIA_DEPOT_PATH='/work/julia-depot'
     export INTEGRATION_TEST=1
 
@@ -1098,7 +1100,7 @@ unittest_ubuntu_cpu_julia() {
     export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
 
-    # use the prebuilt binary from $MXNET_ROOT/lib
+    # use the prebuilt binary from $MXNET_HOME/lib
     julia --project=./julia -e 'using Pkg; Pkg.build("MXNet")'
 
     # run the script `julia/test/runtests.jl`
@@ -1253,7 +1255,7 @@ build_docs() {
 
     # Setup environment for Julia docs
     export PATH="/work/julia10/bin:$PATH"
-    export MXNET_ROOT='/work/mxnet'
+    export MXNET_HOME='/work/mxnet'
     export JULIA_DEPOT_PATH='/work/julia-depot'
 
     julia -e 'using InteractiveUtils; versioninfo()'
@@ -1465,7 +1467,7 @@ deploy_docs() {
 
     # Setup for Julia docs
     export PATH="/work/julia10/bin:$PATH"
-    export MXNET_ROOT='/work/mxnet'
+    export MXNET_HOME='/work/mxnet'
     export JULIA_DEPOT_PATH='/work/julia-depot'
 
     julia -e 'using InteractiveUtils; versioninfo()'
