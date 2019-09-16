@@ -84,14 +84,13 @@ class Dataset(object):
         """
         assert index < num_shards, 'Shard index of out bound: %d out of %d'%(index, num_shards)
         assert num_shards > 0, 'Number of shards must be greater than 0'
+        assert index >= 0, 'Index must be non-negative'
         length = len(self)
-        shard_len = length // num_shards
+        shard_len = (length + num_shards - 1) // num_shards
         # Compute the start index for this partition
         start = shard_len * index
         # Compute the end index for this partition
-        end = start + shard_len
-        if index == num_shards - 1:
-            end = length
+        end = start + shard_len if index < num_shards - 1 else length
         from . import SequentialSampler
         return _SampledDataset(self, SequentialSampler(end - start, start))
 
