@@ -21,6 +21,7 @@
  * \file np_elemwise_unary_op_basic.cc
  * \brief CPU Implementation of numpy elementwise unary function.
  */
+#include "./np_elemwise_unary_op_basic.h"
 #include <mxnet/base.h>
 #include "../tensor/elemwise_unary_op.h"
 
@@ -361,6 +362,49 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_arctanh, "x", mshadow_op::arctanh)
 computed element-wise.
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arctanh" });
+
+// sinc
+#if MXNET_USE_TVM_OP
+static constexpr char func_sinc_cpu[] = "sinc_cpu";
+static constexpr char func_sinc_gpu[] = "sinc_gpu";
+static constexpr char func_backward_sinc_cpu[] = "backward_sinc_cpu";
+static constexpr char func_backward_sinc_gpu[] = "backward_sinc_gpu";
+
+inline bool TVMOpSincType(const nnvm::NodeAttrs& attrs,
+                        std::vector<int>* in_attrs,
+                        std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  if (IsIntType(in_attrs->at(0))) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kFloat32);
+  } else {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+  }
+  return out_attrs->at(0) != -1;
+}
+
+NNVM_REGISTER_OP(_npi_sinc)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.add_argument("data", "NDArray-or-Symbol", "resources")
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", TVMOpSincType)
+#if MXNET_USE_CUDA
+.set_attr<mxnet::FCompute>("FCompute<gpu>", TVMOpSincCompute<func_sinc_gpu>)
+#endif  // MXNET_USE_CUDA
+.set_attr<mxnet::FCompute>("FCompute<cpu>", TVMOpSincCompute<func_sinc_cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{ "_backward_sinc" });
+
+NNVM_REGISTER_OP(_backward_sinc)
+.set_num_inputs(3)
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+#if MXNET_USE_CUDA
+.set_attr<FCompute>("FCompute<gpu>", TVMSincBackward<func_backward_sinc_gpu>)
+#endif  // MXNET_USE_CUDA
+.set_attr<FCompute>("FCompute<cpu>", TVMSincBackward<func_backward_sinc_cpu>);
+#endif  // MXNET_USE_TVM_OP
 
 }  // namespace op
 }  // namespace mxnet
