@@ -50,7 +50,7 @@ Examples::
                                       [ 2.]]
 
 )code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::maximum>)
+.set_attr<FCompute>("FCompute<cpu>", ArgmaxForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmin)
