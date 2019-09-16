@@ -383,14 +383,12 @@ class ThreadedEngine : public Engine {
             callback();
           }
         } catch (const std::exception& e) {
-          threaded_opr->opr_exception =
-              std::make_shared<std::exception_ptr>(std::current_exception());
-          callback();
+          callback(&e);
         }
         if (debug_info) {
           LOG(INFO) << "Fin ExecuteOprFn ";
         }
-      } catch (std::exception& e) {
+      } catch (const std::exception& e) {
         std::string what = e.what();
         if (what.find("driver shutting down") == std::string::npos &&
             !shutdown_phase_) {
