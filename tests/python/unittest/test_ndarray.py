@@ -28,7 +28,7 @@ from mxnet.test_utils import assert_almost_equal, assert_exception
 from mxnet.test_utils import default_context
 from mxnet.test_utils import np_reduce
 from mxnet.test_utils import same
-from mxnet.test_utils import random_sample, rand_shape_nd
+from mxnet.test_utils import random_sample, rand_shape_nd, random_arrays
 from mxnet import runtime
 from numpy.testing import assert_allclose
 import mxnet.autograd
@@ -1136,7 +1136,7 @@ def test_ndarray_lesser_equal():
 
 
 @with_seed()
-def test_take():
+def test_ndarray_take():
     for data_ndim in range(2, 5):
         for idx_ndim in range(1, 4):
             data_shape = ()
@@ -1885,6 +1885,90 @@ def test_save_load_scalar_zero_size_ndarrays():
     check_save_load(True, False, [(2, 0, 1), (0,), (0, 4), (3, 0, 0, 0), (2, 1), (0, 5, 0)], False, True)
     check_save_load(False, True, [(2, 0, 1), (0,), (0, 4), (3, 0, 0, 0), (2, 1), (0, 5, 0)], False, True)
     check_save_load(True, True, [(2, 0, 1), (0,), (), (), (0, 4), (), (3, 0, 0, 0), (2, 1), (0, 5, 0)], False, False)
+
+
+@with_seed()
+def test_update_ops_mutation():
+    def assert_mutate(x, y, op):
+            np.testing.assert_raises(
+                AssertionError, np.testing.assert_allclose, x, y)
+
+    def assert_unchanged(x, y, op):
+            np.testing.assert_allclose(x, y)
+
+    def test_op(op, num_inputs, mutated_inputs, **kwargs):
+        for dim in range(1, 7):
+            shape = rand_shape_nd(dim)
+            shapes = (shape,) * num_inputs
+
+            # Generate Arrays
+            arrays = tuple(map(mx.nd.array, random_arrays(*shapes)))
+
+            # Arrays before update
+            pre_arrays = tuple(map(
+                lambda x: x.asnumpy(), arrays))
+
+            # Operate
+            # weight -> arrays[0]
+            op(*arrays, out=arrays[0], **kwargs)
+
+            # Arrays post update
+            post_arrays = tuple(map(
+                lambda x: x.asnumpy(), arrays))
+
+            for idx, (pre_array, post_array) in \
+                    enumerate(zip(pre_arrays, post_arrays)):
+                if idx in mutated_inputs:
+                    assert_mutate(pre_array, post_array, op)
+                else:
+                    assert_unchanged(pre_array, post_array, op)
+
+    test_op(mx.nd.signsgd_update, 2, [0], **
+            {'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3,
+             'clip_gradient': 1e-3})
+    test_op(mx.nd.signum_update, 3, [0, 2], **
+            {'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3,
+             'momentum': 1e-3, 'clip_gradient': 1e-3,
+             'wd_lh': 1e-3})
+    test_op(mx.nd.sgd_update, 2, [0], **
+            {'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3,
+             'clip_gradient': 1e-3})
+    test_op(mx.nd.sgd_mom_update, 3, [0, 2], **
+            {'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3,
+             'momentum': 0.01, 'clip_gradient': 1e-3})
+    test_op(mx.nd.nag_mom_update, 3, [0, 2], **
+            {'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3,
+             'momentum': 0.01, 'clip_gradient': 1e-3})
+    test_op(mx.nd.ftml_update, 5, [0, 2, 3, 4], **
+            {'t': 3, 'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3,
+             'clip_grad': 1e-3})
+    test_op(mx.nd.ftrl_update, 4, [0, 2, 3], **
+            {'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3})
+    test_op(mx.nd.adam_update, 4, [0, 2, 3], **
+            {'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3})
+    test_op(mx.nd.rmspropalex_update, 5, [0, 2, 3, 4], **
+            {'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3})
+    test_op(mx.nd.rmsprop_update, 3, [0, 2], **
+            {'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3})
+
+
+def test_large_int_rounding():
+    large_integer = 50000001
+
+    a = mx.nd.array([large_integer], dtype='int32')
+    assert np.all(a == large_integer)
+
+    a = mx.nd.array([large_integer], dtype='int32').floor()
+    assert np.all(a == large_integer)
+
+    a = mx.nd.array([large_integer], dtype='int32').round()
+    assert np.all(a == large_integer)
+
+    a = mx.nd.array([large_integer], dtype='int32').ceil()
+    assert np.all(a == large_integer)
+
+    a = mx.nd.array([large_integer], dtype='int32').trunc()
+    assert np.all(a == large_integer)
 
 
 if __name__ == '__main__':
