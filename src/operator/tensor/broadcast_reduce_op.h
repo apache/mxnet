@@ -195,13 +195,13 @@ inline mxnet::TShape AxisShapeCompact(mxnet::TShape shape, int *axis, bool allow
   if (allow_2d && trailing == 1) {
     *axis = 1;
     return mshadow::Shape2(leading, M);
-  }
-  if (allow_2d && leading == 1) {
+  } else if (allow_2d && leading == 1) {
     *axis = 0;
     return mshadow::Shape2(M, trailing);
+  } else {
+    *axis = 1;
+    return mshadow::Shape3(leading, M, trailing);
   }
-  *axis = 1;
-  return mshadow::Shape3(leading, M, trailing);
 }
 
 inline mxnet::TShape ReduceAxisShapeImpl(const mxnet::TShape& ishape,
@@ -554,6 +554,102 @@ inline bool ReduceAxesOpForwardStorage(const nnvm::NodeAttrs& attrs,
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
   return dispatched;
+}
+
+template<typename xpu, typename DType>
+MSHADOW_XINLINE void Argmax(DType *in, DType *out, mxnet::TShape shape) {
+  index_t i = 0, i_blk = 0, j = 0, j_blk = 0, k_blk = 0, k = 0, loc = 0, blocksize = 32;
+  index_t i_stride = shape[1] * shape[2], j_stride = shape[2];
+  DType max = in[0];
+
+  if (j_stride == 1) {
+    for (i_blk = 0; i_blk < shape[0]; i_blk = i_blk+blocksize) {
+      index_t i_offset = i_blk * i_stride;
+      max = in[i_offset];
+      #pragma parallel for
+      for (j_blk = 0; j_blk < shape[1]; j_blk = j_blk+blocksize) {
+        index_t i_limit = i_blk + blocksize;
+        for (i = i_blk; i < i_limit && i < shape[0]; i++) {
+          index_t j_limit = j_blk + blocksize;
+          for (j = j_blk; j < j_limit && j < shape[1]; j++) {
+            index_t idx = j + i_offset;
+            if (in[idx] > max) {
+              loc = j;
+              max = in[idx];
+            }
+          }
+          out[i] = loc;
+        }
+      }
+    }
+  } else {
+    for (i = 0; i < shape[0]; ++i) {
+      index_t oi_offset = i * j_stride, i_offset = i * i_stride;
+      #pragma parallel for
+      for (k_blk = 0; k_blk < shape[2]; k_blk = k_blk + blocksize) {
+        for (j_blk = 0; j_blk < shape[1]; j_blk = j_blk + blocksize) {
+          index_t k_limit = k_blk + blocksize;
+          for (k = k_blk; k < k_limit && k < shape[2]; ++k) {
+            max = in[k];
+            index_t j_limit = j_blk + blocksize;
+            for (j = j_blk; j < j_limit && j < shape[1]; ++j) {
+              index_t idx = k + j * j_stride + i_offset;
+              if (in[idx] > max) {
+                loc = j;
+                max = in[idx];
+              }
+            }
+            out[oi_offset + k] = loc;
+          }
+        }
+      }
+    }
+  }
+}
+
+template<typename xpu>
+void ArgmaxForward(const nnvm::NodeAttrs& attrs,
+                   const OpContext& ctx,
+                   const std::vector<TBlob>& inputs,
+                   const std::vector<OpReqType>& req,
+                   const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  int axis = inputs[0].ndim();
+  TBlob input = inputs[0];
+  if (param.axis.has_value()) {
+    axis = param.axis.value();
+  } else {
+    // If global reduction, reshape the input tensor into 2D shape (1, inputs[0].shape_.Size())
+    // and search on axis = 1.
+    mxnet::TShape shape_2d(2, 1);
+    shape_2d[1] = input.shape_.Size();
+    input = TBlob(input.dptr_, shape_2d, input.dev_mask(), input.type_flag_, input.dev_id());
+    axis = 1;
+  }
+  axis = CheckAxis(axis, input.shape_.ndim());
+  if (inputs[0].shape_.ndim() != 0) {
+    if (param.axis.has_value()) {
+      // cannot do argmax in an empty dimension
+      CHECK_NE(inputs[0].shape_[axis], 0)
+          << "searching input tensor of shape " << inputs[0].shape_
+          << " along axis = " << axis << " of zero dim-size is not allowed";
+    } else {
+      // cannot do argmax on an empty array
+      CHECK_NE(inputs[0].shape_.Size(), 0U) << "attempt to search an empty sequence";
+    }
+  }
+  if (input.shape_.Size() == 0U) return;
+  mxnet::TShape shape = AxisShapeCompact(input.shape_, &axis, false);
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    Tensor<xpu, 2, DType> out = outputs[0].get_with_shape<xpu, 2, DType>(
+      Shape2(shape[0], shape[2]), s);
+    Tensor<xpu, 3, DType> in = input.get_with_shape<xpu, 3, DType>(
+      shape.get<3>(), s);
+    CHECK(req[0] != kAddTo) << "AddTo is not supported";
+    Argmax<xpu, DType>(in.dptr_, out.dptr_, in.shape_);
+  });
 }
 
 template<typename xpu, typename reducer>
