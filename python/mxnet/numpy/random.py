@@ -21,7 +21,7 @@ from __future__ import absolute_import
 from ..ndarray import numpy as _mx_nd_np
 
 
-__all__ = ["randint", "uniform", "normal"]
+__all__ = ["randint", "uniform", "normal", "choice"]
 
 
 def randint(low, high=None, size=None, dtype=None, **kwargs):
@@ -144,3 +144,94 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
     This function currently does not support ``loc`` and ``scale`` as ndarrays.
     """
     return _mx_nd_np.random.normal(loc, scale, size, **kwargs)
+
+
+def multinomial(n, pvals, size=None, **kwargs):
+    """multinomial(n, pvals, size=None)
+    Draw samples from a multinomial distribution.
+    The multinomial distribution is a multivariate generalisation of the binomial distribution.
+    Take an experiment with one of ``p`` possible outcomes. An example of such an experiment is throwing a dice,
+    where the outcome can be 1 through 6. Each sample drawn from the distribution represents n such experiments.
+    Its values, ``X_i = [X_0, X_1, ..., X_p]``, represent the number of times the outcome was ``i``.
+    Parameters
+    ----------
+    n : int
+        Number of experiments.
+    pvals : sequence of floats, length p
+        Probabilities of each of the p different outcomes. These should sum to 1.
+    size : int or tuple of ints, optional
+        Output shape. If the given shape is, e.g., ``(m, n, k)``, then ``m * n * k`` samples
+        are drawn. Default is None, in which case a single value is returned.
+    Returns
+    -------
+    out : ndarray
+        The drawn samples, of shape size, if that was provided. If not, the shape is ``(N,)``.
+        In other words, each entry ``out[i,j,...,:]`` is an N-dimensional value drawn from the distribution.
+    Examples
+    --------
+    Throw a dice 1000 times, and 1000 times again:
+    >>> np.random.multinomial(1000, [1/6.]*6, size=2)
+    array([[164, 161, 179, 158, 150, 188],
+           [178, 162, 177, 143, 163, 177]])
+    A loaded die is more likely to land on number 6:
+    >>> np.random.multinomial(100, [1/7.]*5 + [2/7.])
+    array([19, 14, 12, 11, 21, 23])
+    >>> np.random.multinomial(100, [1.0 / 3, 2.0 / 3])
+    array([32, 68])
+    """
+    return _mx_nd_np.random.multinomial(n, pvals, size, **kwargs)
+
+
+def choice(a, size=None, replace=True, p=None, **kwargs):
+    """Generates a random sample from a given 1-D array
+
+    Parameters
+    -----------
+    a : 1-D array-like or int
+        If an ndarray, a random sample is generated from its elements.
+        If an int, the random sample is generated as if a were np.arange(a)
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  Default is None, in which case a
+        single value is returned.
+    replace : boolean, optional
+        Whether the sample is with or without replacement
+    p : 1-D array-like, optional
+        The probabilities associated with each entry in a.
+        If not given the sample assumes a uniform distribution over all
+        entries in a.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+
+    Returns
+    --------
+    samples : ndarray
+        The generated random samples
+
+    Examples
+    ---------
+    Generate a uniform random sample from np.arange(5) of size 3:
+
+    >>> np.random.choice(5, 3)
+    array([0, 3, 4])
+    >>> #This is equivalent to np.random.randint(0,5,3)
+
+    Generate a non-uniform random sample from np.arange(5) of size 3:
+
+    >>> np.random.choice(5, 3, p=[0.1, 0, 0.3, 0.6, 0])
+    array([3, 3, 0])
+
+    Generate a uniform random sample from np.arange(5) of size 3 without
+    replacement:
+
+    >>> np.random.choice(5, 3, replace=False)
+    array([3,1,0])
+    >>> #This is equivalent to np.random.permutation(np.arange(5))[:3]
+
+    Generate a non-uniform random sample from np.arange(5) of size
+    3 without replacement:
+
+    >>> np.random.choice(5, 3, replace=False, p=[0.1, 0, 0.3, 0.6, 0])
+    array([2, 3, 0])
+    """
+    return _mx_nd_np.random.choice(a, size, replace, p, **kwargs)

@@ -33,7 +33,6 @@
 #include <vector>
 #include <fstream>
 #include "../../3rdparty/mshadow/mshadow/base.h"
-#include "../../tests/cpp/include/test_util.h"
 
 namespace mxnet {
 

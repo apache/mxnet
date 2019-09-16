@@ -26,6 +26,7 @@
 #include <unordered_map>
 #include <vector>
 #include <string>
+#include <utility>
 
 namespace mxnet {
 namespace op {
@@ -220,6 +221,11 @@ class SubgraphProperty {
     LOG(FATAL) << "No CreateSubgraphSelector is implemented for this SubgraphProperty.";
     return nullptr;
   }
+
+  virtual void PrePartition(const nnvm::Graph& g,
+    const std::vector<std::pair<std::string, std::string>>& options_map) {}
+
+  virtual void PostPartition(const nnvm::Graph& g) {}
 
   virtual SubgraphSelectorV2Ptr CreateSubgraphSelectorV2() const {
     auto v1_ptr = CreateSubgraphSelector();

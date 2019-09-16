@@ -322,8 +322,11 @@ static void TransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
                                   const std::vector<NDArray>& inputs,
                                   const std::vector<OpReqType>& req,
                                   const std::vector<NDArray>& outputs) {
+  if (req[0] == kNullOp) {
+    return;
+  }
   const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
-  CHECK_EQ(req[0], kWriteTo) << "Transpose does not support inplace";
+  CHECK_EQ(req[0], kWriteTo) << "Transpose does not support kWriteInplace and kAddTo";
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
 
@@ -776,7 +779,8 @@ NNVM_REGISTER_OP(_backward_clip)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<ClipParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", ClipGrad_<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", ClipGrad_<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 NNVM_REGISTER_OP(repeat)
 .add_alias("_np_repeat")
