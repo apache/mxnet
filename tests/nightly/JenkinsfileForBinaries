@@ -61,23 +61,22 @@ core_logic: {
   }
 
   stage('NightlyTests'){
-    /*
-    #parallel 'ImageClassification: GPU': {
-    #  node(NODE_LINUX_GPU) {
-    #    ws('workspace/nt-ImageClassificationTest') {
-    #      utils.unpack_and_init('gpu', mx_lib)
-    #      utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_image_classification', true)
-    #    }
-    #  }
-    #},
-    #'KVStore_SingleNode: GPU': {
-    #  node('mxnetlinux-gpu-p3-8xlarge') {
-    #    ws('workspace/nt-KVStoreTest') {
-    #      utils.unpack_and_init('gpu', mx_lib)
-    #      utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_KVStore_singleNode', true) 
+    parallel 'ImageClassification: GPU': {
+      node(NODE_LINUX_GPU) {
+        ws('workspace/nt-ImageClassificationTest') {
+          utils.unpack_and_init('gpu', mx_lib)
+          utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_image_classification', true)
         }
       }
-    },*/
+    },
+    'KVStore_SingleNode: GPU': {
+      node('mxnetlinux-gpu-p3-8xlarge') {
+        ws('workspace/nt-KVStoreTest') {
+          utils.unpack_and_init('gpu', mx_lib)
+          utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_KVStore_singleNode', true)
+        }
+      }
+    },
     // https://github.com/apache/incubator-mxnet/issues/14980
     /*'Test Large Tensor Size: CPU': {
       node(NODE_LINUX_CPU) {
@@ -96,7 +95,6 @@ core_logic: {
         }
       }
     },*/
-    /*
     'StraightDope: Python2 Single-GPU': {
       node(NODE_LINUX_GPU_P3) {
         ws('workspace/straight_dope-single_gpu') {
@@ -128,7 +126,7 @@ core_logic: {
           utils.docker_run('ubuntu_nightly_gpu', 'nightly_straight_dope_python3_multi_gpu_tests', true)
         }
       }
-    },*/
+    },
     parallel 'Tutorial: Python2': {
       node(NODE_LINUX_GPU_P3) {
         ws('workspace/tutorial-test-python2') {
@@ -144,7 +142,7 @@ core_logic: {
           utils.docker_run('ubuntu_nightly_gpu', 'nightly_tutorial_test_ubuntu_python3_gpu', true, '1500m')
         }
       }
-    }/*,
+    },
     'Gluon estimator: GPU': {
       node(NODE_LINUX_GPU) {
         ws('workspace/estimator-test-gpu') {
@@ -152,7 +150,7 @@ core_logic: {
           utils.docker_run('ubuntu_nightly_gpu', 'nightly_estimator', true)
         }
       }
-    }*/
+    }
   }
 }
 ,
