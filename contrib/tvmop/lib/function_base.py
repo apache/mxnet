@@ -19,22 +19,22 @@
 import tvm
 from .. import defop, AllTypes, RealTypes
 from .. import assign_by_req, reduce_axes
-import numpy as np
+import math
 
 def compute_sinc(dtype, ndim):
     A = tvm.placeholder([tvm.var() for _ in range(ndim)], name='input', dtype=dtype)
     if dtype in ['float16', 'float32', 'float64']:
-        var = tvm.const(np.pi, dtype)
+        var = tvm.const(math.pi, dtype)
         B = tvm.compute([tvm.var() for _ in range(ndim)],
                         lambda *index: tvm.if_then_else(A[index] == 0, tvm.const(1, dtype),
                                                         tvm.sin(var * A[index]) / (A[index] * var)),
                                                         name='output')
     else:
-        var = tvm.const(np.pi, "float64")
+        var = tvm.const(math.pi, "float32")
         B = tvm.compute([tvm.var() for _ in range(ndim)],
-                        lambda *index: tvm.if_then_else(A[index] == 0, tvm.const(1, 'float64'),
-                                                        tvm.sin(var * A[index].astype('float64')) /
-                                                        (A[index].astype("float64") * var)),
+                        lambda *index: tvm.if_then_else(A[index] == 0, tvm.const(1, 'float32'),
+                                                        tvm.sin(var * A[index].astype('float32')) /
+                                                        (A[index].astype("float32") * var)),
                                                         name='output')
 
     s = tvm.create_schedule(B.op)
@@ -67,7 +67,7 @@ def compute_backward_sinc(dtype, ndim, req):
     A = tvm.placeholder([tvm.var() for _ in range(ndim)], name='A', dtype=dtype)
     B = tvm.placeholder([tvm.var() for _ in range(ndim)], name='B', dtype=dtype)
     C = tvm.placeholder([tvm.var() for _ in range(ndim)], name='C', dtype=dtype)
-    var = tvm.const(np.pi, dtype)
+    var = tvm.const(math.pi, dtype)
     D = tvm.compute([tvm.var() for _ in range(ndim)],
                     lambda *index: tvm.if_then_else(B[index] == 0, tvm.const(0, dtype),
                                                     (tvm.cos(var * B[index]) / B[index] -

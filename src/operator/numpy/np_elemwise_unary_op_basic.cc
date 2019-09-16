@@ -377,7 +377,7 @@ inline bool TVMOpSincType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
 
   if (IsIntType(in_attrs->at(0))) {
-    TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kFloat64);
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kFloat32);
   } else {
     TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
   }
