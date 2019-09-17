@@ -259,20 +259,21 @@ def assign_node_labels(args) {
 
 def check_only_doc_tutorials_changes(){
   node(NODE_UTILITY) {
-  checkout scm
-  is_doc_tutorials = sh (returnStdout: true, script: """ 
-  set +e
-  git --no-pager diff --name-only HEAD master
-""")
-  lines = is_doc_tutorials.trim()
-  for(line in lines.split("\\s+")){
-     if(line.startsWith("docs") || line.startsWith("tests/night") || line.startsWith("ci/")){
-       continue
-     } else {
-       return false
-     } 
+    checkout scm
+    is_doc_tutorials = sh (returnStdout: true, script: """ 
+      set +e
+      git --no-pager diff --name-only HEAD master
+      """)
+    lines = is_doc_tutorials.trim()
+    for(line in lines.split("\\s+")){
+      if(line.startsWith("docs") || line.startsWith("tests/night") || line.startsWith("ci/")){
+        continue
+      } else {
+        return false
+      } 
+    }
+    return true
   }
-  return true
 }
   
 def main_wrapper(args) {
