@@ -262,24 +262,17 @@ def check_only_doc_tutorials_changes(){
   checkout scm
   is_doc_tutorials = sh (returnStdout: true, script: """ 
   set +e
-  c=`git --no-pager diff --name-only HEAD master`
-  stringarray=${c}
-  for i in  "${stringarray}"
-  do 
-    if [[ $i == docs/* ]] || [[ $i == tests/nightly* ]] || [[ $i == ci/* ]] ;
-    then
-      continue
-    else
-      echo "false"
-      return 0
-    fi
-  done
-  echo "true"    
-  return 0
+  git --no-pager diff --name-only HEAD master
 """)
   lines = is_doc_tutorials.trim()
-  return lines == "true"
+  for(line in lines.split("\\s+")){
+     if(line.startsWith("docs") || line.startsWith("tests/night") || line.startsWith("ci/")){
+       continue
+     } else {
+       return false
+     } 
   }
+  return true
 }
   
 def main_wrapper(args) {
