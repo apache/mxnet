@@ -288,7 +288,7 @@ def test_np_max_min():
             self._keepdims = keepdims
 
         def hybrid_forward(self, F, a, *args, **kwargs):
-            return F.np.max(a, axis=self._axis, keepdims=self._keepdims)
+            return a.max(axis=self._axis, keepdims=self._keepdims)
 
     class TestMin(HybridBlock):
         def __init__(self, axis=None, keepdims=False):
@@ -297,7 +297,7 @@ def test_np_max_min():
             self._keepdims = keepdims
 
         def hybrid_forward(self, F, a, *args, **kwargs):
-            return F.np.min(a, axis=self._axis, keepdims=self._keepdims)
+            return a.min(axis=self._axis, keepdims=self._keepdims)
 
     def is_int(dtype):
         return 'int' == dtype
@@ -326,12 +326,8 @@ def test_np_max_min():
             raise ValueError('axis should be int or None or ()')
 
     def _test_np_exception(func, shape, dim):
-        x = _np.random.uniform(-1.0, 1.0, shape)
-        x = mx.nd.array(x).as_np_ndarray()
-        if func == 'max':
-            out = mx.np.max(x)
-        else:
-            out = mx.np.min(x)
+        x = np.random.uniform(-1.0, 1.0, shape)
+        out = getattr(x, func)()
         assert out.ndim == dim, 'dimension mismatch, output.ndim={}, dim={}'.format(output.ndim, dim)
 
     in_data_dim = random.choice([2, 3, 4])
@@ -1326,6 +1322,39 @@ def test_np_stack():
 
 @with_seed()
 @use_np
+def test_np_ravel():
+    class TestRavel(HybridBlock):
+        def __init__(self):
+            super(TestRavel, self).__init__()
+
+        def hybrid_forward(self, F, a):
+            return F.np.ravel(a)
+
+    types = ['float64', 'float32', 'float16', 'int64', 'int32', 'int8']
+    for oneType in types:
+        for hybridize in [True, False]:
+            for shape in [(), (2,), (2, 2), (1, 2, 3), (3, 0), (1, 0, 2)]:
+                test_ravel = TestRavel()
+                if hybridize:
+                    test_ravel.hybridize()
+                x = rand_ndarray(shape, dtype=oneType).as_np_ndarray()
+                x.attach_grad()
+                np_out = _np.ravel(x.asnumpy())
+                with mx.autograd.record():
+                    mx_out = test_ravel(x)
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+                mx_out.backward()
+                np_backward = _np.ones(shape)
+                assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5)
+
+                mx_out = np.ravel(x)
+                np_out = _np.ravel(x.asnumpy())
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@use_np
 def test_np_randint():
     ctx = mx.context.current_context()
     # test shapes
@@ -1620,7 +1649,7 @@ def test_np_cumsum():
             self._dtype = dtype
 
         def hybrid_forward(self, F, a):
-            return F.np.cumsum(a, axis=self._axis, dtype=self._dtype)
+            return a.cumsum(axis=self._axis, dtype=self._dtype)
 
     shapes = [(2, 3, 4), (2, 0, 3), ()]
     for hybridize in [True, False]:
@@ -1788,6 +1817,178 @@ def test_np_indices():
                 mx_out = net(x)
                 same(mx_out.asnumpy(), np_out)
                 assert mx_out.shape == np_out.shape
+
+
+@with_seed()
+@use_np
+def test_np_repeat():
+    config = [
+        ((), 2, None),
+        ((), 0, None),
+        ((4, 2), 2, None),
+        ((4, 2), 2, 0),
+        ((4, 2), 2, 1),
+        ((4, 2), 2, -1),
+    ]
+
+    class TestRepeat(HybridBlock):
+        def __init__(self, repeats, axis=None):
+            super(TestRepeat, self).__init__()
+            self._repeats = repeats
+            self._axis = axis
+
+        def hybrid_forward(self, F, x):
+            return x.repeat(self._repeats, self._axis)
+
+    for shape, repeats, axis in config:
+        data_np = _np.random.randint(low=0, high=1000, size=shape)
+        data_mx = np.array(data_np, dtype=data_np.dtype)
+        ret_np = data_np.repeat(repeats, axis)
+        ret_mx = data_mx.repeat(repeats, axis)
+        assert same(ret_mx.asnumpy(), ret_np)
+
+        net = TestRepeat(repeats, axis)
+        for hybrid in [False, True]:
+            if hybrid:
+                net.hybridize()
+            ret_mx = net(data_mx)
+            assert same(ret_mx.asnumpy(), ret_np)
+
+
+@with_seed()
+@use_np
+def test_np_linalg_norm():
+    @use_np
+    class TestLinalgNorm(HybridBlock):
+        def __init__(self, ord=None, axis=None, keepdims=False):
+            super(TestLinalgNorm, self).__init__()
+            self._ord = ord
+            self._axis = axis
+            self._keepdims = keepdims
+
+        def hybrid_forward(self, F, x):
+            return F.np.linalg.norm(x, ord=self._ord, axis=self._axis, keepdims=self._keepdims)
+
+    a = np.arange(5 * 6 * 7 * 8).reshape((5, 6, 7, 8))
+    ords = [None, 'fro']
+    axes = [None, (0, 2), (1, 0), (1, 2)]
+    for ord in ords:
+        for axis in axes:
+            if ord == 'fro' and axis is None and a.ndim > 2:
+                continue
+            for keepdims in [False, True]:
+                for hybridize in [False, True]:
+                    net = TestLinalgNorm(ord, axis, keepdims)
+                    if hybridize:
+                        net.hybridize()
+                    mx_ret = net(a)
+                    np_ret = _np.linalg.norm(a.asnumpy(), ord=ord, axis=axis, keepdims=keepdims)
+                    assert_almost_equal(mx_ret.asnumpy(), np_ret, atol=1e-5, rtol=1e-4)
+
+
+@with_seed()
+@use_np
+def test_np_copysign():
+    class TestCopysign(HybridBlock):
+        def __init__(self):
+            super(TestCopysign, self).__init__()
+
+        def hybrid_forward(self, F, a1, a2):
+	            return F.np.copysign(a1, a2)
+
+    def get_grad(a1, a2):
+        sign = _np.logical_or(_np.logical_and(a1 < 0, a2 < 0),
+                              _np.logical_and(a1 >= 0, a2 >= 0))
+        sign = 2 * sign.astype(int) - 1
+        sign = sign.reshape(-1, *a1.shape)
+        sign = _np.sum(sign, axis=0)
+        return sign, _np.zeros_like(a2)
+    
+    def get_grad_left(a1, a2):
+        sign = _np.logical_or(_np.logical_and(a1 < 0, a2 < 0),
+                              _np.logical_and(a1 >= 0, a2 >= 0))
+        sign = 2 * sign.astype(int) - 1
+        sign = sign.reshape(a1.shape)
+        return sign
+    
+    def get_grad_right(a1, a2):
+        return _np.zeros_like(a2)
+        
+    shapes = [
+        (),
+        (1),
+        (2, 1),
+        (3, 2, 1),
+        (4, 3, 2, 1),
+        (2, 4, 3, 2, 1)
+    ]
+    types = ['float16', 'float32', 'float64', 'int8', 'int32', 'int64']
+    for a1shape in shapes:
+        for a2shape in shapes:
+            for hybridize in [True, False]:
+                for dtype in types:
+                    test_copysign = TestCopysign()
+                    if hybridize:
+                        test_copysign.hybridize()
+                    rtol = 1e-3
+                    atol = 1e-5
+                    a1_np = _np.array(_np.random.uniform(-1.0, 1.0, a1shape), dtype=dtype)
+                    a2_np = _np.array(_np.random.uniform(-1.0, 1.0, a2shape), dtype=dtype)
+                    a1 = np.array(a1_np, dtype=dtype)
+                    a2 = np.array(a2_np, dtype=dtype)
+                    a1.attach_grad()
+                    a2.attach_grad()
+                    expected_np = _np.copysign(a1_np, a2_np)
+                    with mx.autograd.record():
+                        mx_out = test_copysign(a1, a2)
+                    assert mx_out.shape == expected_np.shape
+                    assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
+
+                    # Test gradient
+                    mx_out.backward()
+                    a1_grad, a2_grad = get_grad(a1_np, a2_np)
+                    assert_almost_equal(a1.grad.asnumpy(), a1_grad, rtol=rtol, atol=atol)
+                    assert_almost_equal(a2.grad.asnumpy(), a2_grad, rtol=rtol, atol=atol)
+
+                    # Test imperative once again
+                    mx_out = np.copysign(a1, a2)
+                    expected_np = _np.copysign(a1_np, a2_np)
+                    assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
+    
+    types = ['float16', 'float32', 'float64']
+    for x_shape in shapes:
+        for dtype in types:
+            # Test left
+            x_np = _np.array(_np.random.uniform(-2.0, 2.0, x_shape), dtype=dtype)
+            scalar = _np.random.uniform(-2.0, 2.0)
+            x = np.array(x_np, dtype=dtype)
+            x.attach_grad()
+            expected_np = _np.copysign(x_np, scalar)
+            with mx.autograd.record():
+                mx_out = np.copysign(x, scalar)
+            assert mx_out.shape == expected_np.shape
+            assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
+            
+            # Test gradient
+            mx_out.backward()
+            x_grad = get_grad_left(x_np, scalar)
+            assert_almost_equal(x.grad.asnumpy(), x_grad, rtol=rtol, atol=atol)
+            
+            # Test right
+            x_np = _np.array(_np.random.uniform(-2.0, 2.0, x_shape), dtype=dtype)
+            scalar = _np.random.uniform(-2.0, 2.0)
+            x = np.array(x_np, dtype=dtype)
+            x.attach_grad()
+            expected_np = _np.copysign(scalar, x_np)
+            with mx.autograd.record():
+                mx_out = np.copysign(scalar, x)
+            assert mx_out.shape == expected_np.shape
+            assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
+            
+            # Test gradient
+            mx_out.backward()
+            x_grad = get_grad_right(scalar, x_np)
+            assert_almost_equal(x.grad.asnumpy(), x_grad, rtol=rtol, atol=atol)
 
 
 if __name__ == '__main__':

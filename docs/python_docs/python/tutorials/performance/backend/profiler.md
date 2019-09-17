@@ -57,6 +57,7 @@ from mxnet import profiler
 
 profiler.set_config(profile_all=True,
                     aggregate_stats=True,
+                    continuous_dump=True,
                     filename='profile_output.json')
 ```
 
@@ -185,6 +186,8 @@ There are a few ways to view the information collected by the profiler. You can 
 You can use the `profiler.dumps()` method to view the information collected by the profiler in the console. The collected information contains time taken by each operator, time taken by each C API and memory consumed in both CPU and GPU.
 
 ```python
+profiler.set_state('run')
+profiler.set_state('stop')
 print(profiler.dumps())
 ```
 
