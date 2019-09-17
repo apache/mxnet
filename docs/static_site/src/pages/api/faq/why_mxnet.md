@@ -1,3 +1,11 @@
+---
+layout: page_category
+title: Why MXNet came to be?
+category: faq
+faq_c: Extend and Contribute to MXNet
+question: Why was MXNet developed in the first place ?
+permalink: /api/faq/why_mxnet
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title: Why MXNet came to be?
-category: faq
-faq_c: Extend and Contribute to MXNet
-question: Why was MXNet developed in the first place ?
-permalink: /api/faq/why_mxnet
----
 
 # Why was MXNet developed in the first place ?
 

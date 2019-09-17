@@ -1,3 +1,11 @@
+---
+layout: page_category
+title: NNPACK for Multi-Core CPU Support in MXNet
+category: faq
+faq_c: Speed
+question: Can I use nnpack to improve the CPU performance of MXNet?
+permalink: /api/faq/nnpack
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title: NNPACK for Multi-Core CPU Support in MXNet
-category: faq
-faq_c: Speed
-question: Can I use nnpack to improve the CPU performance of MXNet?
-permalink: /api/faq/nnpack
----
 
 ### NNPACK for Multi-Core CPU Support in MXNet
 [NNPACK](https://github.com/Maratyszcza/NNPACK) is an acceleration package

@@ -1,3 +1,11 @@
+---
+layout: page_category
+title:  Environment Variables
+category: faq
+faq_c: Deployment Environments
+question: What are MXNet environment variables?
+permalink: /api/faq/env_var
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title:  Environment Variables
-category: faq
-faq_c: Deployment Environments
-question: What are MXNet environment variables?
-permalink: /api/faq/env_var
----
 
 Environment Variables
 =====================
@@ -129,10 +129,10 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - Values: Int ```(default=15)```
   - The maximum number of nodes in the subgraph executed in bulk during training (not inference). Setting this to a larger number may reduce the degree of parallelism for multi-GPU training.
 * MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD
-  - Values: Int ```(default=<value of MXNET_EXEC_BULK_MAX_NODE_TRAIN>)```
+  - Values: Int ```(default=<value of MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN>)```
   - The maximum number of nodes in the subgraph executed in bulk during training (not inference) in the forward pass.
 * MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD
-  - Values: Int ```(default=<value of MXNET_EXEC_BULK_MAX_NODE_TRAIN>)```
+  - Values: Int ```(default=<value of MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN>)```
   - The maximum number of nodes in the subgraph executed in bulk during training (not inference) in the backward pass.
 
 ## Control the Data Communication

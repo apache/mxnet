@@ -1,3 +1,10 @@
+---
+layout: page_api
+title: Scala on IntelliJ
+is_tutorial: true
+tag: scala
+permalink: /api/scala/docs/tutorials/mxnet_scala_on_intellij
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,13 +21,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: Scala on IntelliJ
-is_tutorial: true
-tag: scala
-permalink: /api/scala/docs/tutorials/mxnet_scala_on_intellij
----
 
 # Run MXNet Scala Examples Using the IntelliJ IDE (macOS)
 

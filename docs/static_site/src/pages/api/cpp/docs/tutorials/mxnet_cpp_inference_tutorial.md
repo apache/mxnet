@@ -1,3 +1,12 @@
+---
+layout: page_api
+title: C++ API inference tutorial
+action: Get Started
+action_url: /get_started
+permalink: /api/cpp/docs/tutorials/cpp_inference
+is_tutorial: true
+tag: cpp
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,15 +23,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: C++ API inference tutorial
-action: Get Started
-action_url: /get_started
-permalink: /api/cpp/docs/tutorials/cpp_inference
-is_tutorial: true
-tag: cpp
----
 
 # C++ API inference tutorial
 
