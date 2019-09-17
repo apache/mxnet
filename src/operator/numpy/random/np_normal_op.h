@@ -36,6 +36,7 @@
 #include "../../operator_common.h"
 #include "../../tensor/elemwise_binary_broadcast_op.h"
 #include "./dist_common.h"
+#include <stdio.h>
 
 namespace mxnet {
 namespace op {
@@ -126,6 +127,16 @@ struct normal_two_scalar_kernel {
     out[i] = loc + normals[i] * scale;
   }
 };
+
+template <typename IType>
+struct check_legal_scale_kernel {
+  MSHADOW_XINLINE static void Map(index_t i, IType *scalar, float* flag) {
+    if (scalar[i] < 0) {
+      flag[0] = -1.0;
+    }
+  }
+};
+
 }  // namespace mxnet_op
 
 template <typename xpu>
@@ -142,14 +153,20 @@ void NumpyNormalForward(const nnvm::NodeAttrs &attrs,
 
   // Generate base random number.
   Random<xpu, float> *prnd = ctx.requested[0].get_random<xpu, float>(s);
-  Tensor<xpu, 1, float> normal_tensor =
-      ctx.requested[1].get_space_typed<xpu, 1, float>(Shape1(outputs[0].Size()),
-                                                      s);
-  prnd->SampleGaussian(&normal_tensor, 0, 1);
+  index_t output_len = outputs[0].Size();
+  Tensor<xpu, 1, float> workspace = 
+      ctx.requested[1].get_space_typed<xpu, 1, float>(Shape1(output_len + 1), s);
+  Tensor<xpu, 1, float> normal_tensor = workspace.Slice(0, output_len);
+  Tensor<xpu, 1, float> indicator_device = workspace.Slice(output_len, output_len + 1);
+  float indicator_host = 1.0;
+  float *indicator_device_ptr = indicator_device.dptr_;
+  prnd->SampleGaussian(&normal_tensor, 0.0, 1.0);
   mxnet::TShape new_lshape, new_hshape, new_oshape;
 
   // [scalar scalar] case
   if (inputs.size() == 0U) {
+    // printf("scale value:%f", param.scale.value());
+    CHECK_GE(param.scale.value(), 0.0) << "ValueError: scale < 0";
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
       Kernel<normal_two_scalar_kernel<OType>, xpu>::Launch(
           s, outputs[0].Size(), param.loc.value(), param.scale.value(),
@@ -161,13 +178,20 @@ void NumpyNormalForward(const nnvm::NodeAttrs &attrs,
                          &new_lshape, &new_lshape, &new_oshape);
     int scalar_pos;
     float scalar_value;
-    // int type_flag = param.t;
     if (param.loc.has_value()) {
       scalar_pos = 0;
       scalar_value = param.loc.value();
+      MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
+        Kernel<check_legal_scale_kernel<IType>, xpu>::Launch(
+          s, inputs[0].Size(), inputs[0].dptr<IType>(), indicator_device_ptr
+        );
+      });
+      _copy<xpu>(&indicator_host, indicator_device_ptr);
+      CHECK_GE(indicator_host, 0.0) << "ValueError: scale < 0";
     } else {
       scalar_pos = 1;
       scalar_value = param.scale.value();
+      CHECK_GE(scalar_value, 0.0) << "ValueError: scale < 0";
     }
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
       MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
@@ -183,6 +207,12 @@ void NumpyNormalForward(const nnvm::NodeAttrs &attrs,
     });
   } else if (inputs.size() == 2U) {
     // [tensor tensor] case
+    MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
+      Kernel<check_legal_scale_kernel<IType>, xpu>::Launch(
+          s, inputs[1].Size(), inputs[1].dptr<IType>(), indicator_device_ptr);
+    });
+    _copy<xpu>(&indicator_host, indicator_device_ptr);
+    CHECK_GE(indicator_host, 0.0) << "ValueError: scale < 0";
     int ndim = FillShape(inputs[0].shape_, inputs[1].shape_, outputs[0].shape_,
                          &new_lshape, &new_hshape, &new_oshape);
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {

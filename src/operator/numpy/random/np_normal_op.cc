@@ -30,7 +30,7 @@ namespace op {
 DMLC_REGISTER_PARAMETER(NumpyNormalParam);
 
 NNVM_REGISTER_OP(_npi_normal)
-.describe("numpy behavior normal")
+.describe("Numpy behavior normal")
 .set_num_inputs(
   [](const nnvm::NodeAttrs& attrs) {
     const NumpyNormalParam& param = nnvm::get<NumpyNormalParam>(attrs.parsed);
