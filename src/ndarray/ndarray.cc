@@ -612,6 +612,8 @@ void NDArray::MKLDNNDataReorderAsync(const mkldnn::memory::desc &desc) const {
   const auto version = this->version();
   Engine::Get()->PushAsync(
     [tmp, version, desc](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+      // MXNet will try to reuse NDArray from memory planning, so we need to ensure
+      // the NDArray is still holding the original trunk data.
       if (tmp.version() == version) {
         tmp.ptr_->MKLDNNDataReorder(desc);
       }
