@@ -296,8 +296,7 @@ def main_wrapper(args) {
         currentBuild.result = "SUCCESS"
         update_github_commit_status('SUCCESS', 'Skipped as only doc and tutorials changes')
       }
-      return
-    }
+    } else {
     
     update_github_commit_status('PENDING', 'Job has been enqueued')
     args['core_logic']()
@@ -305,6 +304,7 @@ def main_wrapper(args) {
     // set build status to success at the end
     currentBuild.result = "SUCCESS"
     update_github_commit_status('SUCCESS', 'Job succeeded')
+    }
   } catch (caughtError) {
     node(NODE_UTILITY) {
       sh "echo caught ${caughtError}"
