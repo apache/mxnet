@@ -143,6 +143,9 @@ def test_parameter_dict():
     params3.initialize(ctx=ctx)
     list_contexts = [mx.cpu(42), mx.cpu(24)]
     params3.reset_ctx(list_contexts)
+    for p in params3.values():
+        assert set(p.list_ctx()) == set(list_contexts)
+
     # and test list_ctx
     assert set(params3.list_ctx()) == set(list_contexts)
 
