@@ -337,24 +337,13 @@ class SubgraphProperty {
    * \brief Connect subgraph internal output with external output entries.
    *        By default, each output entry will connect to an unique internal output.
    * \param subgraph_node the subgraph node to connect output
-   * \param output_entries external output entries depending on this subgraph node
+   * \param output_map external output entries depending on this subgraph node
    */
   virtual void ConnectSubgraphOutputs(const nnvm::ObjectPtr subgraph_node,
-                                      std::vector<nnvm::NodeEntry*>* output_entries) const {
-    // Collapse output_entries pointing to same NodeEntry
-    // Outputs are ordered, only neighboring nodes can point to same NodeEntry
-    //<TODO>:HAH: Implement with output_map to avoid duplicate compute in ConnectSubgraphOutputs()
-    nnvm::NodeEntryEqual node_equal;
-    nnvm::NodeEntry prevNodeEntry;
-    uint32_t idx = 0;
-    for (size_t i = 0; i < output_entries->size(); ++i) {
-      if (0 != i ) {
-        if (!node_equal(prevNodeEntry, *output_entries->at(i))) {
-          idx++;
-        }
-      }
-      prevNodeEntry = *output_entries->at(i); //need a copy
-      *output_entries->at(i) = nnvm::NodeEntry{subgraph_node, idx, 0};
+                                    std::vector<std::vector<nnvm::NodeEntry*>>* output_map) const {
+    for (size_t i = 0; i < output_map->size(); ++i) {
+      for (auto e : output_map[i]) 
+        *e = nnvm::NodeEntry{subgraph_node, i, 0};
     }
   }
   /*!
