@@ -30,5 +30,5 @@ wget -nv https://bootstrap.pypa.io/get-pip.py
 python3 get-pip.py
 python2 get-pip.py
 
-pip3 install -r /work/docs_requirements
-pip2 install -r /work/docs_requirements
+pip3 install -r /work/requirements
+pip2 install -r /work/requirements
