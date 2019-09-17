@@ -266,7 +266,7 @@ def check_only_doc_tutorials_changes(){
       """)
     lines = is_doc_tutorials.trim()
     for(line in lines.split("\\s+")){
-      if(line.startsWith("docs") || line.startsWith("tests/night") || line.startsWith("ci/")){
+      if(line.startsWith("docs") || line.startsWith("tests/night")){
         continue
       } else {
         return false
