@@ -262,7 +262,7 @@ def check_only_doc_tutorials_changes(){
     checkout scm
     is_doc_tutorials = sh (returnStdout: true, script: """ 
       set +e
-      git --no-pager diff --name-only HEAD master
+      git --no-pager diff --name-only FETCH_HEAD $(git merge-base FETCH_HEAD master)
       """)
     lines = is_doc_tutorials.trim()
     for(line in lines.split("\\s+")){
