@@ -291,7 +291,11 @@ def main_wrapper(args) {
   err = null
   try {
     if(check_only_doc_tutorials_changes()){   
-      update_github_commit_status('SUCCESS', 'Skipped as only doc and tutorials changes')
+      node(NODE_UTILITY) {
+        sh "echo skipping tests because only docs/tutorials change"
+        currentBuild.result = "SUCCESS"
+        update_github_commit_status('SUCCESS', 'Skipped as only doc and tutorials changes')
+      }
       return
     }
     
