@@ -978,18 +978,16 @@ class LARS(Optimizer):
                         preloaded_multi_sgd_mom_update(
                                     *_flatten_list(zip(new_weights[sidx:eidx],
                                                        new_grads[sidx:eidx],
-                                                       new_states[sidx:eidx])),
-                                    new_lrs[sidx:eidx],
-                                    new_wds[sidx:eidx],
+                                                       new_states[sidx:eidx])) +
+                                    [new_lrs[sidx:eidx], new_wds[sidx:eidx]],
                                     out=new_weights[sidx:eidx],
                                     num_weights=len(new_weights[sidx:eidx]),
                                     **kwargs)
                     else:
                         preloaded_multi_sgd_update(
                                     *_flatten_list(zip(new_weights[sidx:eidx],
-                                                        new_grads[sidx:eidx])),
-                                    new_lrs[sidx:eidx],
-                                    new_wds[sidx:eidx],
+                                                        new_grads[sidx:eidx])) +
+                                    [new_lrs[sidx:eidx], new_wds[sidx:eidx]],
                                     out=new_weights[sidx:eidx],
                                     num_weights=len(new_weights[sidx:eidx]),
                                     **kwargs)
@@ -998,9 +996,8 @@ class LARS(Optimizer):
                         preloaded_multi_mp_sgd_mom_update(
                                     *_flatten_list(zip(new_weights[sidx:eidx],
                                                        new_grads[sidx:eidx],
-                                                       *zip(*new_states[sidx:eidx]))),
-                                    new_lrs[sidx:eidx],
-                                    new_wds[sidx:eidx],
+                                                       *zip(*new_states[sidx:eidx]))) +
+                                    [new_lrs[sidx:eidx], new_wds[sidx:eidx]],
                                     out=new_weights[sidx:eidx],
                                     num_weights=len(new_weights[sidx:eidx]),
                                     **kwargs)
@@ -1008,9 +1005,8 @@ class LARS(Optimizer):
                         preloaded_multi_mp_sgd_update(
                                     *_flatten_list(zip(new_weights[sidx:eidx],
                                                        new_grads[sidx:eidx],
-                                                       list(zip(*new_states[sidx:eidx]))[1])),
-                                    new_lrs[sidx:eidx],
-                                    new_wds[sidx:eidx],
+                                                       list(zip(*new_states[sidx:eidx]))[1])) +
+                                    [new_lrs[sidx:eidx], new_wds[sidx:eidx]],
                                     out=new_weights[sidx:eidx],
                                     num_weights=len(new_weights[sidx:eidx]),
                                     **kwargs)
