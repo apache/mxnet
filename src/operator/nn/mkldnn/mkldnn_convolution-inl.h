@@ -126,12 +126,12 @@ class MKLDNNConvBackward {
   }
 
   const mkldnn::convolution_backward_weights::primitive_desc &GetWeightsPd() const {
-    return *bwd_weights_pd_;
+    return *bwd_weight_pd_;
   }
 
  private:
   std::shared_ptr<mkldnn::convolution_backward_data::primitive_desc> bwd_data_pd_;
-  std::shared_ptr<mkldnn::convolution_backward_weights::primitive_desc> bwd_weights_pd_;
+  std::shared_ptr<mkldnn::convolution_backward_weights::primitive_desc> bwd_weight_pd_;
   std::shared_ptr<mkldnn::convolution_backward_data> bwd_data_;
   std::shared_ptr<mkldnn::convolution_backward_weights> bwd_weight_;
 };

@@ -418,7 +418,7 @@ MKLDNNConvBackward::MKLDNNConvBackward(const MKLDNNConvFullParam &param, const N
                                        const NDArray &output) {
   const auto fwd_pd = GetConvFwdImpl(param, true, data, weight, bias, output);
   bwd_data_pd_ = GetConvBwdData(param.conv_param, data, weight, output, *fwd_pd);
-  bwd_weights_pd_ = GetConvBwdWeights(param.conv_param, data, weight, bias, output, *fwd_pd);
+  bwd_weight_pd_ = GetConvBwdWeights(param.conv_param, data, weight, bias, output, *fwd_pd);
   bwd_data_ = std::make_shared<mkldnn::convolution_backward_data>(GetDataPd());
   bwd_weight_ = std::make_shared<mkldnn::convolution_backward_weights>(GetWeightsPd());
 }
