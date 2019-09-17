@@ -289,9 +289,10 @@ def main_wrapper(args) {
   // assign any caught errors here
   err = null
   try {
-    if(check_only_doc_tutorials_changes()):    
+    if(check_only_doc_tutorials_changes()){   
       update_github_commit_status('SUCCESS', 'Skipped as only doc and tutorials changes')
       return
+    }
     
     update_github_commit_status('PENDING', 'Job has been enqueued')
     args['core_logic']()
