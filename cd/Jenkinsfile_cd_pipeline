@@ -48,9 +48,15 @@ pipeline {
         script {
           cd_utils.error_checked_parallel([
 
-            "Static libmxnet based Release": {
+            "Static libmxnet based release": {
               stage("Build") {
                 cd_utils.trigger_release_job("Build static libmxnet", "mxnet_lib/static", params.MXNET_VARIANTS)    
+              }
+            },
+
+            "Dynamic libmxnet based release": {
+              stage("Build") {
+                cd_utils.trigger_release_job("Build dynamic libmxnet", "mxnet_lib/dynamic", params.MXNET_VARIANTS)    
               }
             }
             

@@ -356,7 +356,9 @@ def test_sequence_last():
     # test with sequence length
     # parameter sequence_length - NDArray with shape (batch_size)
     # (2,3) indicates 2nd sequence from batch 1 and 3rd sequence from batch 2
-    b = nd.SequenceLast(a, sequence_length=mx.nd.array([2, 3]),
+    # need to mention dtype = int64 for sequence_length ndarray to support large indices
+    # else it defaults to float32 and errors
+    b = nd.SequenceLast(a, sequence_length=mx.nd.array([2, 3], dtype="int64"),
                         use_sequence_length=True)
     # check if it takes 2nd sequence from the first batch
     assert b[0] == a[1][0]

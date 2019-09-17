@@ -31,7 +31,7 @@ import nbformat
 
 
 IPYTHON_VERSION = 4  # Pin to ipython version 4.
-TIME_OUT = 10*60  # Maximum 10 mins/test. Reaching timeout causes test failure.
+TIME_OUT = 15*60  # Maximum 10 mins/test. Reaching timeout causes test failure.
 ATTEMPTS = 8
 KERNEL_ERROR_MSG = 'Kernel died before replying to kernel_info'
 
