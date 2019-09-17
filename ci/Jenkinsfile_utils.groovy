@@ -265,7 +265,7 @@ def check_only_doc_tutorials_changes(){
   stringarray=${c}
   for i in  "${stringarray}"
   do 
-    if [[ $i == docs/* ]] || [[ $i == tests/nightly* ]] ;
+    if [[ $i == docs/* ]] || [[ $i == tests/nightly* ]] || [[ $i == ci/* ]] ;
     then
       continue
     else
@@ -289,7 +289,7 @@ def main_wrapper(args) {
   // assign any caught errors here
   err = null
   try {
-    if check_only_doc_tutorials_changes() is True:    
+    if(check_only_doc_tutorials_changes()):    
       update_github_commit_status('SUCCESS', 'Skipped as only doc and tutorials changes')
       return
     
