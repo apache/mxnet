@@ -144,8 +144,10 @@ class ndarray(NDArray):
             mx_ufunc = _NUMPY_ARRAY_UFUNC_DICT.get(name, None)
             if mx_ufunc is None:
                 raise ValueError('mxnet.numpy operator `{}` has not been registered in '
-                                 'the _NUMPY_ARRAY_UFUNC_LIST. Please make sure the implementation'
-                                 ' is compatible with NumPy and then add it to the list.'
+                                 'the _NUMPY_ARRAY_UFUNC_LIST. Please make sure you are '
+                                 'using NumPy >= 1.15.0 and the operator implementation '
+                                 'is compatible with NumPy. Then add the operator name '
+                                 'to the list.'
                                  .format(name))
             return mx_ufunc(*inputs, **kwargs)
         else:
@@ -160,9 +162,10 @@ class ndarray(NDArray):
         mx_np_func = _NUMPY_ARRAY_FUNCTION_DICT.get(func, None)
         if mx_np_func is None:
             raise ValueError('mxnet.numpy operator `{}` has not been registered in '
-                             'the _NUMPY_ARRAY_FUNCTION_LIST. Please make sure the '
-                             'implementation is compatible with NumPy and then add '
-                             'it to the list.'.format(func))
+                             'the _NUMPY_ARRAY_FUNCTION_LIST. Please make sure you are '
+                             'using NumPy >= 1.17.0 and the operator '
+                             'implementation is compatible with NumPy. Then add '
+                             'the operator name to the list.'.format(func))
         # Note: this allows subclasses that don't override
         # __array_function__ to handle mxnet.numpy.ndarray objects
         if not all(issubclass(t, ndarray) for t in types):
