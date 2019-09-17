@@ -258,6 +258,7 @@ def assign_node_labels(args) {
 }
 
 def check_only_doc_tutorials_changes(){
+  node(NODE_UTILITY) {
   checkout scm
   is_doc_tutorials = sh (returnStdout: true, script: """ 
   set +e
@@ -278,6 +279,7 @@ def check_only_doc_tutorials_changes(){
 """)
   lines = is_doc_tutorials.trim()
   return lines == "true"
+  }
 }
   
 def main_wrapper(args) {
