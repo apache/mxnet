@@ -261,8 +261,8 @@ def check_only_doc_tutorials_changes(){
   checkout scm
   is_doc_tutorials = sh (returnStdout: true, script: """ 
   set +e
-  c=$(git --no-pager diff --name-only HEAD master)
-  stringarray=($c)
+  c=sh (returnStdout: true, script:"git --no-pager diff --name-only HEAD master")
+  stringarray=${c}
   for i in  "${stringarray[@]}"
   do 
     if [[ $i == docs/* ]] || [[ $i == tests/nightly* ]] ;
