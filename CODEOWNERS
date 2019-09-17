@@ -3,7 +3,7 @@
 # https://help.github.com/articles/about-codeowners/ and
 # https://github.com/blog/2392-introducing-code-owners
 #
-# Anybody can add themselves or a team as additional watcher or contributor 
+# Anybody can add themselves or a team as additional watcher or contributor
 # to get notified about changes in a specific package.
 # See https://help.github.com/articles/about-teams how to setup teams.
 
@@ -41,18 +41,23 @@
 /src/             @pllarroy
 /plugin/          @pllarroy
 
-# CMake
+# Build system
 CMakeLists.txt    @szha @pllarroy
 /cmake/           @szha @pllarroy
+/make/            @szha
 
 # MXNet CI
 dev_menu.py         @pllarroy
 /ci/                @pllarroy @marcoabreu 
+/ci/publish/        @szha
 /docker/            @marcoabreu
 /tests/ci_build/    @marcoabreu
 Jenkinsfile         @marcoabreu
 .travis.yml         @marcoabreu
 appveyor.yml        @marcoabreu
+
+# MXNet CD
+/cd/                @szha
 
 # Build logic
 Makefile          @szha
