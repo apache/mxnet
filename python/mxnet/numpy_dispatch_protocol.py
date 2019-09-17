@@ -54,9 +54,10 @@ def with_array_function_protocol(func):
         if cur_np_ver >= np_1_17_ver:
             try:
                 func(*args, **kwargs)
-            except:
+            except Exception as e:
                 raise RuntimeError('Running function {} with NumPy array function protocol failed'
-                                   .format(func.__name__))
+                                   ' with exception {}'
+                                   .format(func.__name__, str(e)))
 
     return _run_with_array_func_proto
 
@@ -73,9 +74,10 @@ def with_array_ufunc_protocol(func):
         if cur_np_ver >= np_1_15_ver:
             try:
                 func(*args, **kwargs)
-            except:
+            except Exception as e:
                 raise RuntimeError('Running function {} with NumPy array ufunc protocol failed'
-                                   .format(func.__name__))
+                                   ' with exception {}'
+                                   .format(func.__name__, str(e)))
 
     return _run_with_array_ufunc_proto
 
