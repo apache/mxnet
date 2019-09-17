@@ -173,7 +173,7 @@ This utility queries MXNet operator registry to fetch all operators registered w
 However, fully automated tests are enabled only for simpler operators such as - broadcast operators, element_wise operators etc... For the purpose of readability and giving more control to the users, complex operators such as convolution (2D, 3D), Pooling, Recurrent are not fully automated but expressed as default rules.
 See `utils/op_registry_utils.py` for more details.
 
-## Use nativa python timer
+## Use python timer
 Optionally, you could use the python time package as the profiler engine to caliberate runtime in each operator.
 To use python timer for all operators, use the argument --profiler 'python':
 ```
