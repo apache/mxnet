@@ -1503,7 +1503,6 @@ def docs_scala() {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            println(should_pack_website())
             utils.unpack_and_init('libmxnet', mx_lib, false)
             utils.docker_run('ubuntu_cpu_scala', 'build_scala_docs', false)
             if (should_pack_website()) {
