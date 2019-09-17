@@ -1409,6 +1409,18 @@ def compile_unix_lite() {
     }]
 }
 
+
+def should_pack_website() {
+  if (env.BRANCH_NAME) {
+    if (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("new_")) {
+      retun true
+    }
+  } else {
+    return true 
+  }
+  return false
+}
+  
 // Each of the docs_{lang} functions will build the docs...
 // Stashing is only needed for master for website publishing or for testing "new_"
 
@@ -1420,7 +1432,7 @@ def docs_python() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('libmxnet', mx_lib, false)
             utils.docker_run('ubuntu_cpu_python', 'build_python_docs', false)
-            if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("new_"))) {
+            if (should_pack_website()) {
               utils.pack_lib('python-artifacts', 'docs/_build/python-artifacts.tgz', false)
             }
           }
@@ -1438,7 +1450,7 @@ def docs_c() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('libmxnet', 'lib/libmxnet.so', false)
             utils.docker_run('ubuntu_cpu_c', 'build_c_docs', false)
-            if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("new_"))) {
+            if (should_pack_website()) {
               utils.pack_lib('c-artifacts', 'docs/_build/c-artifacts.tgz', false)
             }
           }
@@ -1456,7 +1468,7 @@ def docs_julia() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('libmxnet', mx_lib, false)
             utils.docker_run('ubuntu_cpu_julia', 'build_julia_docs', false)
-            if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("new_"))) {
+            if (should_pack_website()) {
               utils.pack_lib('julia-artifacts', 'docs/_build/julia-artifacts.tgz', false)
             }
           }
@@ -1474,7 +1486,7 @@ def docs_r() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('libmxnet', mx_lib, false)
             utils.docker_run('ubuntu_cpu_r', 'build_r_docs', false)
-            if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("new_"))) {
+            if (should_pack_website()) {
               utils.pack_lib('r-artifacts', 'docs/_build/r-artifacts.tgz', false)
             }
           }
@@ -1491,9 +1503,10 @@ def docs_scala() {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
+            println(should_pack_website())
             utils.unpack_and_init('libmxnet', mx_lib, false)
             utils.docker_run('ubuntu_cpu_scala', 'build_scala_docs', false)
-            if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("new_"))) {
+            if (should_pack_website()) {
               utils.pack_lib('scala-artifacts', 'docs/_build/scala-artifacts.tgz', false)
             }
           }
@@ -1512,7 +1525,7 @@ def docs_java() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('libmxnet', mx_lib, false)
             utils.docker_run('ubuntu_cpu_scala', 'build_java_docs', false)
-            if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("new_"))) {
+            if (should_pack_website()) {
               utils.pack_lib('java-artifacts', 'docs/_build/java-artifacts.tgz', false)
             }
           }
@@ -1531,7 +1544,7 @@ def docs_clojure() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('libmxnet', mx_lib, false)
             utils.docker_run('ubuntu_cpu_scala', 'build_clojure_docs', false)
-            if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("new_"))) {
+            if (should_pack_website()) {
               utils.pack_lib('clojure-artifacts', 'docs/_build/clojure-artifacts.tgz', false)
             }
           }
@@ -1549,7 +1562,7 @@ def docs_jekyll() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu_jekyll', 'build_jekyll_docs', false)
-            if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("new_"))) {
+            if (should_pack_website()) {
               utils.pack_lib('jekyll-artifacts', 'docs/_build/jekyll-artifacts.tgz', false)
             }
           }
