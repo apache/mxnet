@@ -259,10 +259,9 @@ def assign_node_labels(args) {
 
 def check_only_doc_tutorials_changes(){
   checkout scm
-  cmd = "git --no-pager diff --name-only " + env.BRANCH_NAME + " master"
-  print(cmd)
   lines = sh(returnStdout: true, script: "git --no-pager diff --name-only " + env.BRANCH_NAME + " master")
   lines = lines.trim()
+  echo ${lines}
   for line in lines:
     print(line)
     if "docs/" in line or "tests/nightly" in line or tests/tutorials in line:
