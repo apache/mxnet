@@ -304,10 +304,10 @@ def test_dataset_shard():
     shard_2 = a.shard(4, 2)
     shard_3 = a.shard(4, 3)
     assert len(shard_0) + len(shard_1) + len(shard_2) + len(shard_3) == length
-    assert len(shard_0) > 0
-    assert len(shard_1) > 0
-    assert len(shard_2) > 0
-    assert len(shard_3) > 0
+    assert len(shard_0) == 3
+    assert len(shard_1) == 2
+    assert len(shard_2) == 2
+    assert len(shard_3) == 2
     total = 0
     for shard in [shard_0, shard_1, shard_2, shard_3]:
         for idx, sample in enumerate(shard):
