@@ -299,18 +299,20 @@ class TensorrtProperty : public SubgraphProperty {
   }
 
   void ConnectSubgraphOutputs(const nnvm::ObjectPtr subgraph_node, \
-                              std::vector<nnvm::NodeEntry*>* output_entries) const override {
+                          std::vector<std::vector<nnvm::NodeEntry*>>* output_map) const override {
     std::vector<nnvm::NodeEntry>& outputs = subgraph_node->attrs.subgraphs[0]->outputs;
     TRTParam& _params = nnvm::get<TRTParam>(subgraph_node->attrs.parsed);
     for (size_t i = 0; i < outputs.size(); i++) {
       auto& o = outputs[i];
-      for (auto& e : *output_entries) {
-        if (o.index == e->index && o.node.get() == e->node.get()) {
-          e->index = i;
-          e->node = subgraph_node;
-          // TODO(cfujitsang): For future support this would fail
-          //                   if the node have multiple outputs
-          _params.outputs_to_idx[o.node->attrs.name] = i;
+      for (size_t idx = 0; i < output_map->size(); ++i) {
+        for (auto& e : output_map->at(idx)) {
+          if (o.index == e->index && o.node.get() == e->node.get()) {
+            e->index = i;
+            e->node = subgraph_node;
+            // TODO(cfujitsang): For future support this would fail
+            //                   if the node have multiple outputs
+            _params.outputs_to_idx[o.node->attrs.name] = i;
+          }
         }
       }
     }

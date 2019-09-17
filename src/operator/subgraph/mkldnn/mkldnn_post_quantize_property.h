@@ -161,12 +161,11 @@ class SgMKLDNNPostQuantizeProperty : public SubgraphProperty {
     return selector;
   }
 
-  void ConnectSubgraphOutputs(
-      const nnvm::ObjectPtr n,
-      std::vector<nnvm::NodeEntry *> *output_entries) const override {
-    for (size_t i = 0; i < output_entries->size(); ++i) {
-      auto entry_ptr = output_entries->at(i);
-      *entry_ptr = nnvm::NodeEntry{n, entry_ptr->index, 0};
+  void ConnectSubgraphOutputs(const nnvm::ObjectPtr n,
+                          std::vector<std::vector<nnvm::NodeEntry*>>* output_map) const override {
+    for (size_t i = 0; i < output_map->size(); ++i) {
+      for (auto e : output_map->at(i))
+        *e = nnvm::NodeEntry{n, e->index, 0};
     }
   }
 

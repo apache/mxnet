@@ -206,13 +206,12 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
     return selector;
   }
 
-  void ConnectSubgraphOutputs(
-      const nnvm::ObjectPtr n,
-      std::vector<nnvm::NodeEntry *> *output_entries) const override {
+  void ConnectSubgraphOutputs(const nnvm::ObjectPtr n,
+                          std::vector<std::vector<nnvm::NodeEntry*>>* output_map) const override {
     // Connect all extern output entries to output[0]
-    for (size_t i = 0; i < output_entries->size(); ++i) {
-      auto entry_ptr = output_entries->at(i);
-      *entry_ptr = nnvm::NodeEntry{n, entry_ptr->index, 0};
+    for (size_t i = 0; i < output_map->size(); ++i) {
+      for (auto e : output_map->at(i))
+        *e = nnvm::NodeEntry{n, e->index, 0};
     }
   }
 
