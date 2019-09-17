@@ -500,7 +500,7 @@ void FindOutputEntries(nnvm::Graph* g,
           for (auto idx : output_node.second) {
             auto& e = simple_nodes[nid]->node->inputs[idx];
             if (node2idx.find(e) == node2idx.end())
-              node2idx[e]=node2idx.size();
+              node2idx[e] = node2idx.size();
             uint32_t i = node2idx[e];
             if (output_map.size() < i)
               output_map[i].push_back(&e);
@@ -514,7 +514,7 @@ void FindOutputEntries(nnvm::Graph* g,
         for (auto idx : output_node.second) {
           auto& e = output_node.first->inputs[idx];
           if (node2idx.find(e) == node2idx.end())
-            node2idx[e]=node2idx.size();
+            node2idx[e] = node2idx.size();
           uint32_t i = node2idx[e];
           if (output_map.size() < i)
             output_map[i].push_back(&e);
@@ -535,7 +535,7 @@ void FindOutputEntries(nnvm::Graph* g,
       const auto nid = indexed_graph.node_id(entry.node.get());
       if (simple_nodes[nid]->label == label) {
         if (node2idx.find(entry) == node2idx.end())
-          node2idx[entry]=node2idx.size();
+          node2idx[entry] = node2idx.size();
         uint32_t i = node2idx[entry];
         if (output_map.size() < i)
           output_map[i].push_back(&entry);
@@ -641,7 +641,7 @@ void CreateSubgraphNode(nnvm::Graph* g,
   // In that case, subgraph node is not created and graph is not modified
   if (n) {
     // Connect the external nodes to the subgraph node.
-    subg_prop->ConnectSubgraphOutputs(n, output_map);
+    subg_prop->ConnectSubgraphOutputs(n, &output_map);
     subg_prop->ConnectSubgraphInputs(n, &input_entries, &orig_input_entries);
 
     const auto& indexed_graph = g->indexed_graph();
