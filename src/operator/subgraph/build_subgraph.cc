@@ -480,11 +480,11 @@ void FindOutputEntries(nnvm::Graph* g,
                        const std::vector<BiDirectedNode*>& subgraph_nodes,
                        const std::unordered_map<const nnvm::NodeEntry*, size_t>&
                          entry_top_order_map,
-                       std::map<int, std::vector<nnvm::NodeEntry*> > &output_map) {
+                       std::vector<std::vector<nnvm::NodeEntry*> > &output_map) {
   if (subgraph_nodes.empty()) return;
   const auto& indexed_graph = g->indexed_graph();
   int label = -1;
-  nnvm::NodeEntryMap<int> node2idx;
+  nnvm::NodeEntryMap<uint32_t> node2idx;
   for (auto subgraph_node : subgraph_nodes) {
     if (label == -1) {
       label = subgraph_node->label;
@@ -501,7 +501,11 @@ void FindOutputEntries(nnvm::Graph* g,
             auto& e = simple_nodes[nid]->node->inputs[idx];
             if (node2idx.find(e) == node2idx.end())
               node2idx[e]=node2idx.size();
-            output_map[node2idx[e]].push_back(&e);
+            uint32_t i = node2idx[e];
+            if (output_map.size() < i)
+              output_map[i].push_back(&e);
+            else
+              output_map.push_back({&e});
           }
         }
       } else {
@@ -511,7 +515,11 @@ void FindOutputEntries(nnvm::Graph* g,
           auto& e = output_node.first->inputs[idx];
           if (node2idx.find(e) == node2idx.end())
             node2idx[e]=node2idx.size();
-          output_map[node2idx[e]].push_back(&e);
+          uint32_t i = node2idx[e];
+          if (output_map.size() < i)
+            output_map[i].push_back(&e);
+          else
+            output_map.push_back({&e});
         }
       }
     }
@@ -528,7 +536,11 @@ void FindOutputEntries(nnvm::Graph* g,
       if (simple_nodes[nid]->label == label) {
         if (node2idx.find(entry) == node2idx.end())
           node2idx[entry]=node2idx.size();
-        output_map[node2idx[entry]].push_back(&entry);
+        uint32_t i = node2idx[entry];
+        if (output_map.size() < i)
+          output_map[i].push_back(&entry);
+        else
+          output_map.push_back({&entry});
       }
     }
   }
@@ -614,7 +626,7 @@ void CreateSubgraphNode(nnvm::Graph* g,
   PrintNodeEntries(input_entries);
   LOG(INFO) << "Searching for output entries...";
 #endif
-  std::map<int, std::vector<nnvm::NodeEntry*> > output_map;
+  std::vector<std::vector<nnvm::NodeEntry*> > output_map;
   FindOutputEntries(g, simple_nodes, subgraph_nodes, *entry_top_order_map, output_map);
 
   // Create a subgraph for the subgraph node
