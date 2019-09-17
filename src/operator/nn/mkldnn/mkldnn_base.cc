@@ -312,6 +312,7 @@ mkldnn_format_tag_t GetDefaultFormat(int num_dims) {
     case 3: return mkldnn_abc;
     case 4: return mkldnn_abcd;
     case 5: return mkldnn_abcde;
+    case 6: return mkldnn_abcdef;
     default:
       LOG(FATAL) << "Not implemented dimension (" << num_dims << ") for MKLDNN";
       return mkldnn_format_tag_undef;
