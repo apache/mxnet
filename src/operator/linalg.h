@@ -195,50 +195,68 @@ int linalg_syevd_workspace_query(const Tensor<xpu, 2, DType>& A,
 
 // CPU/GPU-versions of LAPACK function "getrf". Please refer to the
 // LAPACK documentation for further details.
-// Note that this is A = getrf(A), so A is input and output parameter.
 
+// Note:
+// - A is input and output parameter (overwritten by LU)
+// - Param check_singular is only useful in cpu version. If check_singular is false,
+//   don't throw error when A is non-invertible matrix.
 template<typename xpu, typename DType>
 void linalg_getrf(const Tensor<xpu, 2, DType>& A,
-                  const Tensor<xpu, 1, DType>& work,
+                  const Tensor<xpu, 1, int>& pivot,
+                  bool check_singular,
                   Stream<xpu> *s = 0);
 
 template<typename xpu, typename DType>
 void linalg_batch_getrf(const Tensor<xpu, 3, DType>& A,
-                        const Tensor<xpu, 1, DType>& work,
+                        const Tensor<xpu, 2, int>& pivot,
+                        bool check_singular,
                         Stream<xpu> *s = 0);
 
 //////////////////////////////// GETRI ////////////////////////////////////////////
 
 // CPU/GPU-versions of LAPACK function "getri". Please refer to the
 // LAPACK documentation for further details.
-// Note that this is A = getri(A), so A is input and output parameter.
 
+// Note:
+// - pivot and LU is the output of getrf(A)
+// - LU is also the output parameter (overwritten by inverse(A))
 template<typename xpu, typename DType>
-void linalg_getri(const Tensor<xpu, 2, DType>& A,
+void linalg_getri(const Tensor<xpu, 2, DType>& LU,
+                  const Tensor<xpu, 1, int>& pivot, \
                   const Tensor<xpu, 1, DType>& work,
                   Stream<xpu> *s = 0);
 
+// Note that this function only implements GPU version with "getriBatched" in cuBLAS.
+// Unlike lapack routines in cpu, it is computed out-of-place, so the final matrix
+// inverse is stored in A.
 template<typename xpu, typename DType>
 void linalg_batch_getri(const Tensor<xpu, 3, DType>& A,
-                        const Tensor<xpu, 3, DType>& B,
-                        const Tensor<xpu, 1, DType>& work,
+                        const Tensor<xpu, 3, DType>& LU,
+                        const Tensor<xpu, 2, int>& pivot,
                         Stream<xpu> *s = 0);
-
-// This function determines the amount of workspace needed for linalg_getri to operate
-// on a batch of matrices which is returned as number of elements of type DType.
-template<typename xpu, typename DType>
-int linalg_getri_workspace_query(const Tensor<xpu, 3, DType>& A,
-                                 Stream<xpu> *s = 0);
 
 //////////////////////////////// INVERSE ////////////////////////////////////////////
 
-// CPU/GPU-versions of matrix inversion combining LAPACK function "getrf" and "getri"
+// CPU/GPU-versions of matrix inverse combining LAPACK function "getrf" and "getri"
 // Note that A = inverse(B)
 template<typename xpu, typename DType>
 void linalg_batch_inverse(const Tensor<xpu, 3, DType>& A,
                           const Tensor<xpu, 3, DType>& B,
-                          const Tensor<xpu, 1, DType>& work,
-                          Stream<xpu> *s = 0);
+                          const mxnet::OpContext& ctx);
+
+//////////////////////////////// DET ////////////////////////////////////////////
+
+// CPU/GPU-versions of helper functions used in matrix determinant operators
+
+// Helper function in determinant backward computation: compute matrix inverse
+// from LU and pivot using temp workspace, the result is stored back to LU
+template<typename xpu, typename DType>
+void linalg_batch_det_backward_helper(const Tensor<xpu, 3, DType>& LU,
+                                      const Tensor<xpu, 2, int>& pivot,
+                                      const Tensor<xpu, 1, DType>& det,
+                                      const Tensor<xpu, 3, DType>& temp,
+                                      const DType zero_det,
+                                      const mxnet::OpContext& ctx);
 
 #include "linalg_impl.h"
 

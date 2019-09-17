@@ -15,7 +15,7 @@
 ;; limitations under the License.
 ;;
 
-(defproject org.apache.mxnet.contrib.clojure/clojure-mxnet "1.5.0-SNAPSHOT"
+(defproject org.apache.mxnet.contrib.clojure/clojure-mxnet "1.6.0-SNAPSHOT"
   :description "Clojure package for MXNet"
   :url "https://github.com/apache/incubator-mxnet"
   :license {:name "Apache License"
@@ -28,7 +28,7 @@
                  ;[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "<insert-snapshot-version>"]
                  ;[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu "<insert-snapshot-version"]
 
-                 ;;; CI
+                 ;;; CI / Local Build
                  [org.apache.mxnet/mxnet-full_2.11 "INTERNAL"]
 
                  [org.clojure/tools.logging "0.4.0"]
@@ -44,4 +44,4 @@
   :repositories [["staging" {:url "https://repository.apache.org/content/repositories/staging"                  :snapshots true
                              :update :always}]
                  ["snapshots" {:url "https://repository.apache.org/content/repositories/snapshots"               :snapshots true
-                              :update :always}]])
+                               :update :always}]])

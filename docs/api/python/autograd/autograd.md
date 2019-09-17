@@ -42,15 +42,27 @@ to allocate space for the gradient. Then, start a `with autograd.record()` block
 and do some computation. Finally, call `backward()` on the result:
 
 ```python
->>> x = mx.nd.array([1,2,3,4])
->>> x.attach_grad()
->>> with mx.autograd.record():
-...     y = x * x + 1
->>> y.backward()
->>> print(x.grad)
+import mxnet as mx
+x = mx.nd.array([1,2,3,4])
+x.attach_grad()
+with mx.autograd.record():
+    y = x * x + 1
+y.backward()
+print(x.grad)
+```
+
+Which outputs:
+
+```
 [ 2.  4.  6.  8.]
 <NDArray 4 @cpu(0)>
 ```
+
+Gradient recording is enabled during the scope of the `with mx.autograd.record():` statement, then
+disabled when we go out of that scope.
+
+It can be also set manually by executing `mx.autograd.set_recording(True)`, and turning it off after
+we no longer want to record operations with `mx.autograd.set_recording(False)`.
 
 
 ## Train mode and Predict Mode
@@ -76,8 +88,59 @@ Detailed tutorials are available in Part 1 of
 [the MXNet gluon book](http://gluon.mxnet.io/).
 
 
+# Higher order gradient
 
+Some operators support higher order gradients. Some operators support differentiating multiple
+times, and others two, most just once.
 
+For calculating higher order gradients, we can use the `mx.autograd.grad` function while recording
+and then call backward, or call `mx.autograd.grad` two times. If we do the latter, is important that
+the first call uses `create_graph=True` and `retain_graph=True` and the second call uses
+`create_graph=False` and `retain_graph=True`. Otherwise we will not get the results that we want. If
+we would be to recreate the graph in the second call, we would end up with a graph of just the
+backward nodes, not the full initial graph that includes the forward nodes.
+
+The pattern to calculate higher order gradients is the following:
+
+```python
+from mxnet import ndarray as nd
+from mxnet import autograd as ag
+x = nd.array([1,2,3])
+x.attach_grad()
+def f(x):
+    # Any function which supports higher oder gradient
+    return nd.log(x)
+```
+
+If the operators used in `f` don't support higher order gradients you will get an error like
+`operator ... is non-differentiable because it didn't register FGradient attribute.`. This means
+that it doesn't support getting the gradient of the gradient. Which is, running backward on
+the backward graph.
+
+Using mxnet.autograd.grad multiple times:
+
+```python
+with ag.record():
+    y = f(x)
+    x_grad = ag.grad(heads=y, variables=x, create_graph=True, retain_graph=True)[0]
+    x_grad_grad = ag.grad(heads=x_grad, variables=x, create_graph=False, retain_graph=False)[0]
+```
+
+Running backward on the backward graph:
+
+```python
+with ag.record():
+    y = f(x)
+    x_grad = ag.grad(heads=y, variables=x, create_graph=True, retain_graph=True)[0]
+x_grad.backward()
+x_grad_grad = x.grad
+```
+
+Both methods are equivalent, except that in the second case, retain_graph on running backward is set
+to False by default. But both calls are running a backward pass as on the graph as usual to get the
+gradient of the first gradient `x_grad` with respect to `x` evaluated at the value of `x`.
+
+For more examples, check the [higher order gradient unit tests](https://github.com/apache/incubator-mxnet/blob/master/tests/python/unittest/test_higher_order_grad.py).
 
 
 <script type="text/javascript" src='../../../_static/js/auto_module_index.js'></script>

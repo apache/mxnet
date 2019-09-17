@@ -44,11 +44,11 @@ mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(
 
   mkldnn::primitive_attr attr;
   mkldnn::post_ops ops;
-  if (full_param.mkldnn_param.with_relu) {
-    const float scale = 1.0f;
-    const float alpha = 0.0f;
-    const float beta = 1.0f;
-    ops.append_eltwise(scale, eltwise_relu, alpha, beta);
+  if (full_param.mkldnn_param.with_eltwise) {
+    ops.append_eltwise(full_param.eltwise_param.scale,
+                       full_param.eltwise_param.alg,
+                       full_param.eltwise_param.alpha,
+                       full_param.eltwise_param.beta);
   }
   attr.set_post_ops(ops);
 

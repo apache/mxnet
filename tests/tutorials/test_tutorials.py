@@ -57,7 +57,6 @@ def _test_tutorial_nb(tutorial):
     """
     return run_notebook(tutorial, TUTORIAL_DIR, kernel=KERNEL, no_cache=NO_CACHE)
 
-
 def test_basic_ndarray():
    assert _test_tutorial_nb('basic/ndarray')
 
@@ -114,10 +113,11 @@ def test_gluon_save_load_params():
 
 def test_gluon_hybrid():
     assert _test_tutorial_nb('gluon/hybrid')
-
+# https://github.com/apache/incubator-mxnet/issues/16181
+"""
 def test_gluon_performance():
     assert _test_tutorial_nb('gluon/performance')
-    
+"""
 def test_gluon_pretrained_models():
     assert _test_tutorial_nb('gluon/pretrained_models')    
 
@@ -132,6 +132,9 @@ def test_gluon_learning_rate_schedules_advanced():
 
 def test_gluon_info_gan():
     assert _test_tutorial_nb('gluon/info_gan')
+
+def test_gluon_fit_api_fashion_mnist():
+    assert _test_tutorial_nb('gluon/fit_api_tutorial')
 
 def test_nlp_cnn():
     assert _test_tutorial_nb('nlp/cnn')
@@ -180,10 +183,11 @@ def test_module_to_gluon():
 
 def test_python_types_of_data_augmentation():
     assert _test_tutorial_nb('python/types_of_data_augmentation')
-
+#https://github.com/apache/incubator-mxnet/issues/16181
+"""
 def test_python_profiler():
     assert _test_tutorial_nb('python/profiler')
-
+"""
 def test_sparse_row_sparse():
     assert _test_tutorial_nb('sparse/row_sparse')
 
@@ -213,3 +217,8 @@ def test_control_flow():
 
 def test_amp():
     assert _test_tutorial_nb('amp/amp_tutorial')
+# https://github.com/apache/incubator-mxnet/issues/16181
+"""
+def test_mkldnn_quantization():
+    assert _test_tutorial_nb('mkldnn/mkldnn_quantization')
+"""

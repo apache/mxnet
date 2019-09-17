@@ -48,7 +48,7 @@ OpStatePtr Imperative::InvokeOp(
   using namespace imperative;
   static auto& createop = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
   static auto& is_layer_backward = Op::GetAttr<bool>("TIsLayerOpBackward");
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
 
   const nnvm::Op *op = attrs.op;
 
@@ -122,7 +122,7 @@ OpStatePtr Imperative::Invoke(
 
 void Imperative::MarkVariables(
     const std::vector<NDArray*>& variables,
-    const std::vector<mx_uint>& grad_reqs,
+    const std::vector<uint32_t>& grad_reqs,
     const std::vector<NDArray*>& gradients) {
   for (uint32_t i = 0; i < variables.size(); ++i) {
     std::string str_c(std::to_string(variable_count_++));
@@ -197,7 +197,7 @@ void Imperative::RecordOp(
     const OpStatePtr& state,
     std::vector<bool>* p_save_inputs,
     std::vector<bool>* p_save_outputs) {
-  MXAPIThreadLocalEntry *local_buff = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *local_buff = MXAPIThreadLocalStore<>::Get();
 
   for (auto output : outputs) {
     CHECK(AGInfo::IsNone(*output))
@@ -313,7 +313,9 @@ std::vector<NDArray*> Imperative::Backward(
     } else {
       info.outputs.emplace_back(outputs[i]->shape(), outputs[i]->ctx(),
                                 true, outputs[i]->dtype());
-      info.outputs.back() = static_cast<real_t>(1.0);
+      if (info.outputs.back().shape().Size() != 0) {
+        info.outputs.back() = static_cast<real_t>(1.0);
+      }
     }
   }
 

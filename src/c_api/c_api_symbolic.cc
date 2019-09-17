@@ -30,6 +30,7 @@
 #include "nnvm/pass_functions.h"
 #include "nnvm/symbolic.h"
 #include "./c_api_common.h"
+#include "../common/exec_utils.h"
 #include "../operator/operator_common.h"
 #include "../executor/exec_pass.h"
 #include "../operator/subgraph/subgraph_property.h"
@@ -80,7 +81,7 @@ int MXListAllOpNames(nn_uint *out_size,
   return NNListAllOpNames(out_size, out_array);
 }
 
-int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
+int MXSymbolListAtomicSymbolCreators(uint32_t *out_size,
                                      AtomicSymbolCreator **out_array) {
   mxnet::op::RegisterLegacyOpProp();
   mxnet::op::RegisterLegacyNDFunc();
@@ -90,7 +91,7 @@ int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
 int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
                                 const char **name,
                                 const char **description,
-                                mx_uint *num_args,
+                                uint32_t *num_args,
                                 const char ***arg_names,
                                 const char ***arg_type_infos,
                                 const char ***arg_descriptions,
@@ -98,7 +99,7 @@ int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
                                 const char **return_type) {
   static auto& map_key_var_args = nnvm::Op::GetAttr<std::string>("key_var_num_args");
   const Op* op = static_cast<Op*>(creator);
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   ret->ret_str.resize(0);
 
   if (map_key_var_args.count(op) != 0) {
@@ -113,7 +114,7 @@ int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
 }
 
 int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
-                               mx_uint num_param,
+                               uint32_t num_param,
                                const char **keys,
                                const char **vals,
                                SymbolHandle *out) {
@@ -150,14 +151,14 @@ int MXSymbolCreateVariable(const char *name, SymbolHandle *out) {
   return NNSymbolCreateVariable(name, out);
 }
 
-int MXSymbolCreateGroup(mx_uint num_symbols,
+int MXSymbolCreateGroup(uint32_t num_symbols,
                         SymbolHandle *symbols,
                         SymbolHandle *out) {
   return NNSymbolCreateGroup(num_symbols, symbols, out);
 }
 
 int MXSymbolGetOutput(SymbolHandle symbol,
-                      mx_uint index,
+                      uint32_t index,
                       SymbolHandle *out) {
   return NNSymbolGetOutput(symbol, index, out);
 }
@@ -203,7 +204,7 @@ int MXSymbolGetAttr(SymbolHandle symbol,
                     const char** out,
                     int* success) {
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(symbol);
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   if (s->GetAttr(key, &(ret->ret_str))) {
     *out = (ret->ret_str).c_str();
@@ -248,10 +249,10 @@ int MXSymbolSetAttr(SymbolHandle symbol,
 }
 
 int MXSymbolListAttr(SymbolHandle symbol,
-                     mx_uint *out_size,
+                     uint32_t *out_size,
                      const char*** out) {
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(symbol);
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   std::vector<std::tuple<std::string, std::string, std::string> > attr =
       s->ListAttrsRecursive();
@@ -278,10 +279,10 @@ int MXSymbolListAttr(SymbolHandle symbol,
 }
 
 int MXSymbolListAttrShallow(SymbolHandle symbol,
-                            mx_uint *out_size,
+                            uint32_t *out_size,
                             const char*** out) {
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(symbol);
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   std::unordered_map<std::string, std::string> attr =
       s->ListAttrs(static_cast<nnvm::Symbol::ListAttrOption>(1));  // NOLINT(*)
@@ -307,19 +308,19 @@ int MXSymbolListAttrShallow(SymbolHandle symbol,
 }
 
 int MXSymbolListOutputs(SymbolHandle symbol,
-                        mx_uint *out_size,
+                        uint32_t *out_size,
                         const char ***out_str_array) {
   return NNSymbolListOutputNames(symbol, out_size, out_str_array);
 }
 
 int MXSymbolGetNumOutputs(SymbolHandle symbol,
-                           mx_uint *output_count) {
+                           uint32_t *output_count) {
   return NNSymbolGetNumOutputs(symbol, output_count);
 }
 
 int MXSymbolCompose(SymbolHandle sym,
                     const char *name,
-                    mx_uint num_args,
+                    uint32_t num_args,
                     const char** keys,
                     SymbolHandle* args) {
   return NNSymbolCompose(sym, name, num_args, keys, args);
@@ -327,13 +328,13 @@ int MXSymbolCompose(SymbolHandle sym,
 
 // adapter functions that re-implements the functions.
 int MXSymbolListArguments(SymbolHandle symbol,
-                          mx_uint *out_size,
+                          uint32_t *out_size,
                           const char ***out_str_array) {
   return NNSymbolListInputNames(symbol, 1, out_size, out_str_array);
 }
 
 int MXSymbolListAuxiliaryStates(SymbolHandle symbol,
-                                mx_uint *out_size,
+                                uint32_t *out_size,
                                 const char ***out_str_array) {
   return NNSymbolListInputNames(symbol, 2, out_size, out_str_array);
 }
@@ -360,7 +361,7 @@ int MXSymbolGetInputSymbols(SymbolHandle sym, SymbolHandle **input_arr, int *inp
   std::vector<nnvm::Symbol *> input_syms = mxnet::GetInputSymbols(*s);
   *input_size = input_syms.size();
 
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   ret->ret_handles.clear();
   ret->ret_handles.reserve(*input_size);
   for (int i = 0; i < *input_size; ++i) ret->ret_handles.push_back(input_syms[i]);
@@ -405,7 +406,7 @@ int MXSymbolCutSubgraph(SymbolHandle sym, SymbolHandle **input_symbols,
     }
     *input_size = input_syms.size();
 
-    MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+    MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
     ret->ret_handles.clear();
     ret->ret_handles.reserve(*input_size);
     for (int i = 0; i < *input_size; ++i) ret->ret_handles.push_back(input_syms[i]);
@@ -464,7 +465,7 @@ int MXSymbolSaveToFile(SymbolHandle symbol, const char *fname) {
 
 int MXSymbolSaveToJSON(SymbolHandle symbol, const char **out_json) {
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(symbol);
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   ret->ret_str = nnvm::pass::SaveJSON(Symbol2Graph(*s));
   *out_json = ret->ret_str.c_str();
@@ -513,35 +514,35 @@ void MatchArguments(
 }  // namespace mxnet
 
 int MXSymbolInferShape(SymbolHandle sym,
-                       mx_uint num_args,
+                       uint32_t num_args,
                        const char** keys,
-                       const mx_uint *arg_ind_ptr,
-                       const mx_uint *arg_shape_data,
-                       mx_uint *in_shape_size,
-                       const mx_uint **in_shape_ndim,
-                       const mx_uint ***in_shape_data,
-                       mx_uint *out_shape_size,
-                       const mx_uint **out_shape_ndim,
-                       const mx_uint ***out_shape_data,
-                       mx_uint *aux_shape_size,
-                       const mx_uint **aux_shape_ndim,
-                       const mx_uint ***aux_shape_data,
+                       const uint32_t *arg_ind_ptr,
+                       const uint32_t *arg_shape_data,
+                       uint32_t *in_shape_size,
+                       const uint32_t **in_shape_ndim,
+                       const uint32_t ***in_shape_data,
+                       uint32_t *out_shape_size,
+                       const uint32_t **out_shape_ndim,
+                       const uint32_t ***out_shape_data,
+                       uint32_t *aux_shape_size,
+                       const uint32_t **aux_shape_ndim,
+                       const uint32_t ***aux_shape_data,
                        int *complete) {
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(sym);
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   nnvm::Graph g = Symbol2Graph(*s);
   mxnet::ShapeVector arg_shapes(g.indexed_graph().input_nodes().size(), mxnet::TShape());
   if (keys == nullptr && num_args != 0) {
     std::vector<uint32_t> read_only_args = mxnet::ReadOnlyArgIndices(g.indexed_graph());
     CHECK_LE(num_args, read_only_args.size());
-    for (mx_uint i = 0; i < num_args; ++i) {
+    for (uint32_t i = 0; i < num_args; ++i) {
       arg_shapes[read_only_args[i]] = mxnet::ShapeTypeCast(
           arg_shape_data + arg_ind_ptr[i], arg_shape_data + arg_ind_ptr[i+1]);
     }
   } else {
     std::unordered_map<std::string, mxnet::TShape> kwargs;
-    for (mx_uint i = 0; i < num_args; ++i) {
+    for (uint32_t i = 0; i < num_args; ++i) {
       kwargs[keys[i]] = mxnet::ShapeTypeCast(
           arg_shape_data + arg_ind_ptr[i], arg_shape_data + arg_ind_ptr[i+1]);
     }
@@ -565,19 +566,19 @@ int MXSymbolInferShape(SymbolHandle sym,
            &(ret->arg_shapes), &(ret->out_shapes), &(ret->aux_shapes));
 
   // copy data back
-  MXAPIThreadLocalEntry::SetupShapeArrayReturnWithBuffer(ret->arg_shapes,
+  MXAPIThreadLocalEntry<>::SetupShapeArrayReturnWithBuffer(ret->arg_shapes,
       &(ret->arg_shape_ndim), &(ret->arg_shape_data), &(ret->arg_shape_buffer));
-  MXAPIThreadLocalEntry::SetupShapeArrayReturnWithBuffer(ret->out_shapes,
+  MXAPIThreadLocalEntry<>::SetupShapeArrayReturnWithBuffer(ret->out_shapes,
       &(ret->out_shape_ndim), &(ret->out_shape_data), &(ret->out_shape_buffer));
-  MXAPIThreadLocalEntry::SetupShapeArrayReturnWithBuffer(ret->aux_shapes,
+  MXAPIThreadLocalEntry<>::SetupShapeArrayReturnWithBuffer(ret->aux_shapes,
       &(ret->aux_shape_ndim), &(ret->aux_shape_data), &(ret->aux_shape_buffer));
-  *in_shape_size = static_cast<mx_uint>(ret->arg_shapes.size());
+  *in_shape_size = static_cast<uint32_t>(ret->arg_shapes.size());
   *in_shape_ndim = dmlc::BeginPtr(ret->arg_shape_ndim);
   *in_shape_data = dmlc::BeginPtr(ret->arg_shape_data);
-  *out_shape_size = static_cast<mx_uint>(ret->out_shapes.size());
+  *out_shape_size = static_cast<uint32_t>(ret->out_shapes.size());
   *out_shape_ndim = dmlc::BeginPtr(ret->out_shape_ndim);
   *out_shape_data = dmlc::BeginPtr(ret->out_shape_data);
-  *aux_shape_size = static_cast<mx_uint>(ret->aux_shapes.size());
+  *aux_shape_size = static_cast<uint32_t>(ret->aux_shapes.size());
   *aux_shape_ndim = dmlc::BeginPtr(ret->aux_shape_ndim);
   *aux_shape_data = dmlc::BeginPtr(ret->aux_shape_data);
   // mark complete
@@ -585,95 +586,168 @@ int MXSymbolInferShape(SymbolHandle sym,
   API_END();
 }
 
-int MXSymbolInferShapeEx(SymbolHandle sym,
-                         mx_uint num_args,
-                         const char** keys,
-                         const mx_uint *arg_ind_ptr,
-                         const int *arg_shape_data,
-                         mx_uint *in_shape_size,
-                         const int **in_shape_ndim,
-                         const int ***in_shape_data,
-                         mx_uint *out_shape_size,
-                         const int **out_shape_ndim,
-                         const int ***out_shape_data,
-                         mx_uint *aux_shape_size,
-                         const int **aux_shape_ndim,
-                         const int ***aux_shape_data,
-                         int *complete) {
-  nnvm::Symbol *s = static_cast<nnvm::Symbol*>(sym);
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
-  API_BEGIN();
+template<typename dtype, typename stype, typename itype>
+inline void SymbolInferShape(const char** keys,
+                             uint32_t num_args,
+                             const dtype* arg_shape_data,
+                             const itype* arg_ind_ptr,
+                             const int** in_shape_ndim,
+                             const dtype*** in_shape_data,
+                             const int** out_shape_ndim,
+                             const dtype*** out_shape_data,
+                             const int** aux_shape_ndim,
+                             const dtype*** aux_shape_data,
+                             nnvm::Symbol* s,
+                             MXAPIThreadLocalEntry<dtype>* ret,
+                             stype* in_shape_size,
+                             stype* out_shape_size,
+                             stype* aux_shape_size,
+                             int* complete) {
   nnvm::Graph g = Symbol2Graph(*s);
   mxnet::ShapeVector arg_shapes(g.indexed_graph().input_nodes().size(), mxnet::TShape());
   if (keys == nullptr && num_args != 0) {
-    std::vector<uint32_t> read_only_args = mxnet::ReadOnlyArgIndices(g.indexed_graph());
+    std::vector < uint32_t > read_only_args = mxnet::ReadOnlyArgIndices(g.indexed_graph());
     CHECK_LE(num_args, read_only_args.size());
-    for (mx_uint i = 0; i < num_args; ++i) {
-      arg_shapes[read_only_args[i]] = mxnet::ShapeTypeCast(
-          arg_shape_data + arg_ind_ptr[i], arg_shape_data + arg_ind_ptr[i+1]);
+    for (uint32_t i = 0; i < num_args; ++i) {
+      arg_shapes[read_only_args[i]] = mxnet::ShapeTypeCast(arg_shape_data + arg_ind_ptr[i],
+                                                           arg_shape_data + arg_ind_ptr[i + 1]);
     }
   } else {
     std::unordered_map<std::string, mxnet::TShape> kwargs;
-    for (mx_uint i = 0; i < num_args; ++i) {
-      kwargs[keys[i]] = mxnet::ShapeTypeCast(
-          arg_shape_data + arg_ind_ptr[i], arg_shape_data + arg_ind_ptr[i+1]);
+    for (uint32_t i = 0; i < num_args; ++i) {
+      kwargs[keys[i]] = mxnet::ShapeTypeCast(arg_shape_data + arg_ind_ptr[i],
+                                             arg_shape_data + arg_ind_ptr[i + 1]);
     }
     mxnet::MatchArguments(g.indexed_graph(), kwargs, &arg_shapes, "InferShape");
   }
-
   try {
     g = mxnet::exec::InferShape(std::move(g), std::move(arg_shapes), "__shape__");
-  } catch (const mxnet::op::InferShapeError &err) {
+  } catch (const mxnet::op::InferShapeError& err) {
     throw dmlc::Error(err.msg);
   }
-
   // if use legacy shape definition, need to convert numpy shape to legacy shape
   mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
   if (!Imperative::Get()->is_np_shape()) {
     common::ConvertToLegacyShape(&shapes);
   }
-
   // copy back
-  CopyAttr(g.indexed_graph(), shapes,
-           &(ret->arg_shapes), &(ret->out_shapes), &(ret->aux_shapes));
-
+  CopyAttr(g.indexed_graph(), shapes, &(ret->arg_shapes), &(ret->out_shapes), &(ret->aux_shapes));
   // copy data back
-  MXAPIThreadLocalEntry::SetupShapeArrayReturnWithBufferEx(ret->arg_shapes,
-      &(ret->arg_shape_ndim_ex), &(ret->arg_shape_data_ex), &(ret->arg_shape_buffer_ex));
-  MXAPIThreadLocalEntry::SetupShapeArrayReturnWithBufferEx(ret->out_shapes,
-      &(ret->out_shape_ndim_ex), &(ret->out_shape_data_ex), &(ret->out_shape_buffer_ex));
-  MXAPIThreadLocalEntry::SetupShapeArrayReturnWithBufferEx(ret->aux_shapes,
-      &(ret->aux_shape_ndim_ex), &(ret->aux_shape_data_ex), &(ret->aux_shape_buffer_ex));
-  *in_shape_size = static_cast<mx_uint>(ret->arg_shapes.size());
+  MXAPIThreadLocalEntry<dtype>::SetupShapeArrayReturnWithBufferEx(ret->arg_shapes,
+                                                                  &(ret->arg_shape_ndim_ex),
+                                                                  &(ret->arg_shape_data_ex),
+                                                                  &(ret->arg_shape_buffer_ex));
+  MXAPIThreadLocalEntry<dtype>::SetupShapeArrayReturnWithBufferEx(ret->out_shapes,
+                                                                  &(ret->out_shape_ndim_ex),
+                                                                  &(ret->out_shape_data_ex),
+                                                                  &(ret->out_shape_buffer_ex));
+  MXAPIThreadLocalEntry<dtype>::SetupShapeArrayReturnWithBufferEx(ret->aux_shapes,
+                                                                  &(ret->aux_shape_ndim_ex),
+                                                                  &(ret->aux_shape_data_ex),
+                                                                  &(ret->aux_shape_buffer_ex));
+  *in_shape_size = static_cast<stype>(ret->arg_shapes.size());
   *in_shape_ndim = dmlc::BeginPtr(ret->arg_shape_ndim_ex);
   *in_shape_data = dmlc::BeginPtr(ret->arg_shape_data_ex);
-  *out_shape_size = static_cast<mx_uint>(ret->out_shapes.size());
+  *out_shape_size = static_cast<stype>(ret->out_shapes.size());
   *out_shape_ndim = dmlc::BeginPtr(ret->out_shape_ndim_ex);
   *out_shape_data = dmlc::BeginPtr(ret->out_shape_data_ex);
-  *aux_shape_size = static_cast<mx_uint>(ret->aux_shapes.size());
+  *aux_shape_size = static_cast<stype>(ret->aux_shapes.size());
   *aux_shape_ndim = dmlc::BeginPtr(ret->aux_shape_ndim_ex);
   *aux_shape_data = dmlc::BeginPtr(ret->aux_shape_data_ex);
   // mark complete
   *complete = (g.GetAttr<size_t>("shape_num_unknown_nodes") == 0);
+}
+
+int MXSymbolInferShapeEx(SymbolHandle sym,
+                         uint32_t num_args,
+                         const char** keys,
+                         const uint32_t *arg_ind_ptr,
+                         const int *arg_shape_data,
+                         uint32_t *in_shape_size,
+                         const int **in_shape_ndim,
+                         const int ***in_shape_data,
+                         uint32_t *out_shape_size,
+                         const int **out_shape_ndim,
+                         const int ***out_shape_data,
+                         uint32_t *aux_shape_size,
+                         const int **aux_shape_ndim,
+                         const int ***aux_shape_data,
+                         int *complete) {
+  nnvm::Symbol *s = static_cast<nnvm::Symbol*>(sym);
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
+  API_BEGIN();
+  SymbolInferShape<int, uint32_t, uint32_t>(keys,
+                                              num_args,
+                                              arg_shape_data,
+                                              arg_ind_ptr,
+                                              in_shape_ndim,
+                                              in_shape_data,
+                                              out_shape_ndim,
+                                              out_shape_data,
+                                              aux_shape_ndim,
+                                              aux_shape_data,
+                                              s,
+                                              ret,
+                                              in_shape_size,
+                                              out_shape_size,
+                                              aux_shape_size,
+                                              complete);
+  API_END();
+}
+
+int MXSymbolInferShapeEx64(SymbolHandle sym,
+                           uint32_t num_args,
+                           const char** keys,
+                           const int64_t *arg_ind_ptr,
+                           const int64_t *arg_shape_data,
+                           size_t *in_shape_size,
+                           const int **in_shape_ndim,
+                           const int64_t ***in_shape_data,
+                           size_t *out_shape_size,
+                           const int **out_shape_ndim,
+                           const int64_t ***out_shape_data,
+                           size_t *aux_shape_size,
+                           const int **aux_shape_ndim,
+                           const int64_t ***aux_shape_data,
+                           int *complete) {
+  nnvm::Symbol *s = static_cast<nnvm::Symbol*>(sym);
+  MXAPIThreadLocalEntry<int64_t> *ret = MXAPIThreadLocalStore<int64_t>::Get();
+  API_BEGIN();
+  SymbolInferShape<int64_t, size_t, int64_t>(keys,
+                                                 num_args,
+                                                 arg_shape_data,
+                                                 arg_ind_ptr,
+                                                 in_shape_ndim,
+                                                 in_shape_data,
+                                                 out_shape_ndim,
+                                                 out_shape_data,
+                                                 aux_shape_ndim,
+                                                 aux_shape_data,
+                                                 s,
+                                                 ret,
+                                                 in_shape_size,
+                                                 out_shape_size,
+                                                 aux_shape_size,
+                                                 complete);
   API_END();
 }
 
 int MXSymbolInferShapePartial(SymbolHandle sym,
-                              mx_uint num_args,
+                              uint32_t num_args,
                               const char** keys,
-                              const mx_uint *arg_ind_ptr,
-                              const mx_uint *arg_shape_data,
-                              mx_uint *in_shape_size,
-                              const mx_uint **in_shape_ndim,
-                              const mx_uint ***in_shape_data,
-                              mx_uint *out_shape_size,
-                              const mx_uint **out_shape_ndim,
-                              const mx_uint ***out_shape_data,
-                              mx_uint *aux_shape_size,
-                              const mx_uint **aux_shape_ndim,
-                              const mx_uint ***aux_shape_data,
+                              const uint32_t *arg_ind_ptr,
+                              const uint32_t *arg_shape_data,
+                              uint32_t *in_shape_size,
+                              const uint32_t **in_shape_ndim,
+                              const uint32_t ***in_shape_data,
+                              uint32_t *out_shape_size,
+                              const uint32_t **out_shape_ndim,
+                              const uint32_t ***out_shape_data,
+                              uint32_t *aux_shape_size,
+                              const uint32_t **aux_shape_ndim,
+                              const uint32_t ***aux_shape_data,
                               int *complete) {
-  int succ;
+  int succ = 0;
   *complete = 1;
   return MXSymbolInferShape(sym, num_args, keys,
                             arg_ind_ptr, arg_shape_data,
@@ -684,21 +758,21 @@ int MXSymbolInferShapePartial(SymbolHandle sym,
 }
 
 int MXSymbolInferShapePartialEx(SymbolHandle sym,
-                                mx_uint num_args,
+                                uint32_t num_args,
                                 const char** keys,
-                                const mx_uint *arg_ind_ptr,
+                                const uint32_t *arg_ind_ptr,
                                 const int *arg_shape_data,
-                                mx_uint *in_shape_size,
+                                uint32_t *in_shape_size,
                                 const int **in_shape_ndim,
                                 const int ***in_shape_data,
-                                mx_uint *out_shape_size,
+                                uint32_t *out_shape_size,
                                 const int **out_shape_ndim,
                                 const int ***out_shape_data,
-                                mx_uint *aux_shape_size,
+                                uint32_t *aux_shape_size,
                                 const int **aux_shape_ndim,
                                 const int ***aux_shape_data,
                                 int *complete) {
-  int succ;
+  int succ = 0;
   *complete = 1;
   return MXSymbolInferShapeEx(sym, num_args, keys,
                               arg_ind_ptr, arg_shape_data,
@@ -708,31 +782,56 @@ int MXSymbolInferShapePartialEx(SymbolHandle sym,
                               &succ);
 }
 
+int MXSymbolInferShapePartialEx64(SymbolHandle sym,
+                                  uint32_t num_args,
+                                  const char** keys,
+                                  const int64_t *arg_ind_ptr,
+                                  const int64_t *arg_shape_data,
+                                  size_t *in_shape_size,
+                                  const int **in_shape_ndim,
+                                  const int64_t ***in_shape_data,
+                                  size_t *out_shape_size,
+                                  const int **out_shape_ndim,
+                                  const int64_t ***out_shape_data,
+                                  size_t *aux_shape_size,
+                                  const int **aux_shape_ndim,
+                                  const int64_t ***aux_shape_data,
+                                  int *complete) {
+  int succ = 0;
+  *complete = 1;
+  return MXSymbolInferShapeEx64(sym, num_args, keys,
+                                arg_ind_ptr, arg_shape_data,
+                                in_shape_size, in_shape_ndim, in_shape_data,
+                                out_shape_size, out_shape_ndim, out_shape_data,
+                                aux_shape_size, aux_shape_ndim, aux_shape_data,
+                                &succ);
+}
+
 int MXSymbolInferType(SymbolHandle sym,
-                      mx_uint num_args,
+                      uint32_t num_args,
                       const char** keys,
                       const int *arg_type_data,
-                      mx_uint *in_type_size,
+                      uint32_t *in_type_size,
                       const int **in_type_data,
-                      mx_uint *out_type_size,
+                      uint32_t *out_type_size,
                       const int **out_type_data,
-                      mx_uint *aux_type_size,
+                      uint32_t *aux_type_size,
                       const int **aux_type_data,
                       int *complete) {
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(sym);
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   nnvm::Graph g = Symbol2Graph(*s);
   nnvm::DTypeVector arg_types(g.indexed_graph().input_nodes().size(), -1);
   if (keys == nullptr && num_args != 0) {
     std::vector<uint32_t> read_only_args = mxnet::ReadOnlyArgIndices(g.indexed_graph());
     CHECK_LE(num_args, read_only_args.size());
-    for (mx_uint i = 0; i < num_args; ++i) {
+    for (uint32_t i = 0; i < num_args; ++i) {
       arg_types[read_only_args[i]] = arg_type_data[i];
     }
   } else {
     std::unordered_map<std::string, int> kwargs;
-    for (mx_uint i = 0; i < num_args; ++i) {
+    for (uint32_t i = 0; i < num_args; ++i) {
       kwargs[keys[i]] = arg_type_data[i];
     }
     mxnet::MatchArguments(g.indexed_graph(), kwargs, &arg_types, "InferType");
@@ -743,28 +842,28 @@ int MXSymbolInferType(SymbolHandle sym,
   CopyAttr(g.indexed_graph(), g.GetAttr<nnvm::DTypeVector>("dtype"),
            &(ret->arg_types), &(ret->out_types), &(ret->aux_types));
 
-  *in_type_size = static_cast<mx_uint>(ret->arg_types.size());
+  *in_type_size = static_cast<uint32_t>(ret->arg_types.size());
   *in_type_data = dmlc::BeginPtr(ret->arg_types);
-  *out_type_size = static_cast<mx_uint>(ret->out_types.size());
+  *out_type_size = static_cast<uint32_t>(ret->out_types.size());
   *out_type_data = dmlc::BeginPtr(ret->out_types);
-  *aux_type_size = static_cast<mx_uint>(ret->aux_types.size());
+  *aux_type_size = static_cast<uint32_t>(ret->aux_types.size());
   *aux_type_data = dmlc::BeginPtr(ret->aux_types);
   *complete = (g.GetAttr<size_t>("dtype_num_unknown_nodes") == 0);
   API_END();
 }
 
 int MXSymbolInferTypePartial(SymbolHandle sym,
-                             mx_uint num_args,
+                             uint32_t num_args,
                              const char** keys,
                              const int *arg_type_data,
-                             mx_uint *in_type_size,
+                             uint32_t *in_type_size,
                              const int **in_type_data,
-                             mx_uint *out_type_size,
+                             uint32_t *out_type_size,
                              const int **out_type_data,
-                             mx_uint *aux_type_size,
+                             uint32_t *aux_type_size,
                              const int **aux_type_data,
                              int *complete) {
-  int succ;
+  int succ = 0;
   *complete = 1;
   return MXSymbolInferType(sym, num_args, keys,
                             arg_type_data,
@@ -774,7 +873,7 @@ int MXSymbolInferTypePartial(SymbolHandle sym,
                             &succ);
 }
 
-int MXSymbolGrad(SymbolHandle sym, mx_uint num_wrt, const char** wrt, SymbolHandle* out) {
+int MXSymbolGrad(SymbolHandle sym, uint32_t num_wrt, const char** wrt, SymbolHandle* out) {
   API_BEGIN();
   LOG(FATAL) << "not implemented";
   API_END();
@@ -782,29 +881,54 @@ int MXSymbolGrad(SymbolHandle sym, mx_uint num_wrt, const char** wrt, SymbolHand
 
 int MXQuantizeSymbol(SymbolHandle sym_handle,
                      SymbolHandle *ret_sym_handle,
-                     const mx_uint num_excluded_op_names,
+                     const int* dev_type,
+                     const uint32_t num_excluded_sym_names,
+                     const char **excluded_sym_names,
+                     const uint32_t num_excluded_op_names,
                      const char **excluded_op_names,
-                     const mx_uint num_offline,
+                     const uint32_t num_offline,
                      const char **offline_params,
                      const char *quantized_dtype,
-                     const bool calib_quantize) {
+                     const bool calib_quantize,
+                     const char *quantize_mode,
+                     mx_uint* out_num_calib_names,
+                     const char ***out_calib_names) {
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol*>(sym_handle);
   nnvm::Graph g = Symbol2Graph(*sym);
+  int target_dev = *dev_type;
   std::unordered_set<std::string> excluded_node_names;
+  for (size_t i = 0; i < num_excluded_sym_names; ++i) {
+    excluded_node_names.emplace(excluded_sym_names[i]);
+  }
+  std::unordered_set<std::string> excluded_op;
   for (size_t i = 0; i < num_excluded_op_names; ++i) {
-    excluded_node_names.emplace(excluded_op_names[i]);
+    excluded_op.emplace(excluded_op_names[i]);
   }
   std::unordered_set<std::string> offline;
   for (size_t i = 0; i < num_offline; ++i) {
     offline.emplace(offline_params[i]);
   }
   std::string quantized_type(quantized_dtype);
+  std::string quantized_mode(quantize_mode);
   g.attrs["excluded_nodes"] = std::make_shared<nnvm::any>(std::move(excluded_node_names));
+  g.attrs["excluded_ops"] = std::make_shared<nnvm::any>(std::move(excluded_op));
   g.attrs["offline_params"] = std::make_shared<nnvm::any>(std::move(offline));
   g.attrs["quantized_dtype"] = std::make_shared<nnvm::any>(std::move(quantized_type));
+  g.attrs["target_ctx"] = std::make_shared<nnvm::any>(target_dev);
+  g.attrs["quantize_mode"] = std::make_shared<nnvm::any>(std::move(quantized_mode));
   g = ApplyPass(std::move(g), "QuantizeGraph");
+  const auto& calib_nodes = g.GetAttr<std::vector<std::string>>("calib_nodes");
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
+  ret->ret_vec_str = std::move(calib_nodes);
+  *out_num_calib_names = ret->ret_vec_str.size();
+  ret->ret_vec_charp.clear();
+  ret->ret_vec_charp.reserve(ret->ret_vec_str.size());
+  for (const auto &str : ret->ret_vec_str) {
+    ret->ret_vec_charp.push_back(str.c_str());
+  }
+  *out_calib_names = dmlc::BeginPtr(ret->ret_vec_charp);
   s->outputs = g.outputs;
   *ret_sym_handle = s;
   API_END_HANDLE_ERROR(delete s);
@@ -897,18 +1021,18 @@ static void _UpdateSymDTypeAttrs(
 
 int MXReducePrecisionSymbol(SymbolHandle sym_handle,
                             SymbolHandle *ret_sym_handle,
-                            mx_uint num_args,
+                            uint32_t num_args,
                             const int *arg_type_data,
-                            mx_uint num_ind_ptr,
+                            uint32_t num_ind_ptr,
                             const int* ind_ptr,
                             const int* target_dtype,
                             const int cast_optional_params,
-                            const mx_uint num_target_dtype_op_names,
-                            const mx_uint num_fp32_op_names,
-                            const mx_uint num_widest_dtype_op_names,
-                            const mx_uint num_conditional_fp32_op_names,
-                            const mx_uint num_excluded_symbols,
-                            const mx_uint num_model_params,
+                            const uint32_t num_target_dtype_op_names,
+                            const uint32_t num_fp32_op_names,
+                            const uint32_t num_widest_dtype_op_names,
+                            const uint32_t num_conditional_fp32_op_names,
+                            const uint32_t num_excluded_symbols,
+                            const uint32_t num_model_params,
                             const char **target_dtype_op_names,
                             const char **fp32_op_names,
                             const char **widest_dtype_op_names,
@@ -961,7 +1085,7 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   std::unordered_map<std::string, int> kwargs;
   std::unordered_map<std::string, int> node_name_dtype_map, node_without_dtype_map;
   nnvm::DTypeVector arg_types(g.indexed_graph().input_nodes().size(), -1);
-  for (mx_uint i = 0; i < num_args; ++i) {
+  for (uint32_t i = 0; i < num_args; ++i) {
     kwargs[arg_names[i]] = arg_type_data[i];
     node_name_dtype_map[arg_names[i]] = arg_type_data[i];
   }
@@ -1015,7 +1139,7 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
 }
 
 int MXSetCalibTableToQuantizedSymbol(SymbolHandle qsym_handle,
-                                     const mx_uint num_layers,
+                                     const uint32_t num_layers,
                                      const char** layer_names,
                                      const float* min_ranges,
                                      const float* max_ranges,
@@ -1035,19 +1159,29 @@ int MXSetCalibTableToQuantizedSymbol(SymbolHandle qsym_handle,
   API_END_HANDLE_ERROR(delete s);
 }
 
-int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend,
+int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend_name,
                          SymbolHandle *ret_sym_handle) {
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol *>(sym_handle);
   *s = sym->Copy();
-  std::vector<mxnet::op::SubgraphPropertyPtr> properties =
-      mxnet::op::SubgraphPropertyRegistry::Get()->CreateSubgraphProperty(backend);
-  for (auto property : properties) {
+  auto backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(backend_name);
+  const auto& subgraph_prop_list = backend->GetSubgraphProperties();
+  for (auto property : subgraph_prop_list) {
+    if (property->HasAttr("disable") && property->GetAttr<bool>("disable") == true) {
+      auto full_name = property->HasAttr("property_name")
+                           ? property->GetAttr<std::string>("property_name")
+                           : std::string();
+      LOG(INFO) << "subgraph property " << full_name << " from backend " << backend_name
+                << " is disabled.";
+      continue;
+    }
     nnvm::Graph g = Symbol2Graph(*s);
     property->SetAttr("graph", g);
-    g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(std::move(property));
+    g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
     g = ApplyPass(std::move(g), "BuildSubgraph");
+    property->RemoveAttr("graph");
+    g.attrs.erase("subgraph_property");
     s->outputs = g.outputs;
   }
   *ret_sym_handle = s;
@@ -1058,12 +1192,89 @@ int MXGenAtomicSymbolFromSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_h
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol *source = static_cast<nnvm::Symbol *>(sym_handle);
-  CHECK_EQ(source->outputs.size(), 1U)
-    << "Generating atomic symbol from other symbol only works for nongrouped symbol.";
-  const auto& node = source->outputs[0];
-  const auto *op = node.node->op();
+  CHECK_GE(source->outputs.size(), 1) << "Input symbol does not have outputs.";
+  const auto &node = source->outputs[0].node;
+  for (const auto &other_node : source->outputs) {
+    if (node.get() != other_node.node.get()) {
+      LOG(FATAL)
+        << "Generating atomic symbol from other symbol only works for nongrouped symbol.";
+    }
+  }
+  const auto *op = node->op();
   const auto attrs = source->ListAttrs(nnvm::Symbol::ListAttrOption::kShallow);
   *s = nnvm::Symbol::CreateFunctor(op, attrs);
+  *ret_sym_handle = s;
+  API_END_HANDLE_ERROR(delete s);
+}
+
+int MXShallowCopySymbol(SymbolHandle src, SymbolHandle* out) {
+  nnvm::Symbol* out_sym = new nnvm::Symbol;
+  API_BEGIN();
+  nnvm::Symbol* src_sym = static_cast<nnvm::Symbol*>(src);
+  *out_sym = *src_sym;
+  *out = out_sym;
+  API_END_HANDLE_ERROR(delete out_sym);
+}
+
+int MXOptimizeForBackend(SymbolHandle sym_handle,
+                         const char* backend_name,
+                         const int dev_type,
+                         SymbolHandle* ret_sym_handle,
+                         const mx_uint len,
+                         NDArrayHandle* in_args_handle,
+                         const mx_uint num_options,
+                         const char** keys,
+                         const char** vals) {
+  nnvm::Symbol *s = new nnvm::Symbol();
+  API_BEGIN();
+  nnvm::Symbol *sym = static_cast<nnvm::Symbol *>(sym_handle);
+  *s = sym->Copy();
+  nnvm::Graph g = Symbol2Graph(*s);
+  if (len) {
+    NDArray **in_args_ptr = reinterpret_cast<NDArray**>(in_args_handle);
+    Context default_ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), 0);
+    mxnet::ShapeVector arg_shapes(len);
+    nnvm::DTypeVector arg_dtypes(len);
+    StorageTypeVector arg_stypes(len);
+    for (mx_uint i = 0; i < len; i++) {
+      const auto &in_arg = *(in_args_ptr[i]);
+      arg_shapes[i] = in_arg.shape();
+      arg_dtypes[i] = in_arg.dtype();
+      arg_stypes[i] = in_arg.storage_type();
+    }
+    const auto& indexed_graph = g.indexed_graph();
+    const auto num_forward_inputs = indexed_graph.input_nodes().size();
+    g.attrs["context"] = std::make_shared<nnvm::any>(
+        exec::ContextVector(indexed_graph.num_nodes(), default_ctx));
+    // infer shapes
+    g = exec::InferShape(std::move(g), std::move(arg_shapes), "__shape__");
+    // infer dtypes
+    g = exec::InferType(std::move(g), std::move(arg_dtypes), "__dtype__");
+    if (g.GetAttr<size_t>("dtype_num_unknown_nodes") != 0U) {
+      common::HandleInferTypeError(num_forward_inputs, indexed_graph,
+                                   g.GetAttr<nnvm::DTypeVector>("dtype"));
+    }
+    // infer stypes
+    g = exec::InferStorageType(std::move(g), std::move(arg_stypes), "__storage_type__");
+    if (g.GetAttr<size_t>("storage_type_num_unknown_nodes") != 0U) {
+      common::HandleInferStorageTypeError(num_forward_inputs, indexed_graph,
+                                          g.GetAttr<StorageTypeVector>("storage_type"));
+    }
+  }
+  std::vector<std::pair<std::string, std::string>> options_map;
+  for (mx_uint i = 0; i < num_options; ++i) {
+    options_map.emplace_back(keys[i], vals[i]);
+  }
+  const auto backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(backend_name);
+  const auto& subgraph_prop_list = backend->GetSubgraphProperties();
+  for (auto property : subgraph_prop_list) {
+    property->PrePartition(g, options_map);
+    g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
+    g = ApplyPass(std::move(g), "BuildSubgraph");
+    g.attrs.erase("subgraph_property");
+    property->PostPartition(g);
+  }
+  s->outputs = g.outputs;
   *ret_sym_handle = s;
   API_END_HANDLE_ERROR(delete s);
 }

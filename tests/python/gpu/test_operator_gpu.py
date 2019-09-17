@@ -35,6 +35,8 @@ sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied
 from common import run_in_spawned_process
 from test_operator import *
+from test_numpy_ndarray import *
+from test_numpy_op import *
 from test_optimizer import *
 from test_random import *
 from test_exc_handling import *
@@ -45,6 +47,7 @@ from test_ndarray import *
 from test_subgraph_op import *
 from test_contrib_operator import test_multibox_target_op
 from test_tvm_op import *
+from test_library_loading import *
 
 set_default_context(mx.gpu(0))
 del test_support_vector_machine_l1_svm  # noqa
@@ -2327,6 +2330,22 @@ def test_math():
         for dtype in dtypes:
             for op in ops:
                 run_math(op, shape, dtype, check_value=check_value)
+
+@with_seed()
+def test_arange_like_dtype():
+    dtypes = [np.float16, np.float32, np.float64]
+
+    for t in dtypes:
+        x = mx.sym.Variable('x', dtype=t)
+        y = mx.sym.reshape(x, shape=(0, 0, -1))
+        z = mx.sym.contrib.arange_like(y, axis=-1)
+    
+        mod = z.simple_bind(ctx=mx.gpu(0), x=(3, 4, 5, 6), grad_req='null')
+        mod.arg_arrays[0][:] = np.random.normal(size=mod.arg_arrays[0].shape).astype(t)
+        out = mod.forward(is_train=False)
+        for v in out:
+            assert v.dtype == t
+    
 
 if __name__ == '__main__':
     import nose

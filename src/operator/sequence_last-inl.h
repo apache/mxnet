@@ -66,24 +66,24 @@ struct SequenceLastParam : public dmlc::Parameter<SequenceLastParam> {
 template <int req>
 struct SequenceLastKernel {
   template <typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in,
-                                  const IType *idx, int offset1, int offset2,
+  MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *in,
+                                  const IType *idx, index_t offset1, index_t offset2,
                                   mshadow::Shape<2> oshape) {
     const auto opos = mxnet_op::unravel(i, oshape);
-    const int seqpos = static_cast<int>(idx[opos[0]]) - 1;
-    const int ipos = seqpos * offset1 + opos[0] * offset2 + opos[1];
+    const index_t seqpos = static_cast<index_t>(idx[opos[0]]) - 1;
+    const index_t ipos = seqpos * offset1 + opos[0] * offset2 + opos[1];
     KERNEL_ASSIGN(out[i], req, in[ipos]);
   }
 };
 
 struct SequenceLastGradKernel {
   template <typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, DType *in_grad, const DType *out_grad,
-                                  const IType *idx, int offset1, int offset2,
+  MSHADOW_XINLINE static void Map(index_t i, DType *in_grad, const DType *out_grad,
+                                  const IType *idx, index_t offset1, index_t offset2,
                                   mshadow::Shape<2> oshape) {
     const auto opos = mxnet_op::unravel(i, oshape);
-    const int seqpos = static_cast<int>(idx[opos[0]]) - 1;
-    const int ipos = seqpos * offset1 + opos[0] * offset2 + opos[1];
+    const index_t seqpos = static_cast<index_t>(idx[opos[0]]) - 1;
+    const index_t ipos = seqpos * offset1 + opos[0] * offset2 + opos[1];
     in_grad[ipos] += out_grad[i];
   }
 };
@@ -101,10 +101,10 @@ class SequenceLastOp : public Operator {
     using namespace mshadow::expr;
 
     int axis = param_.axis;
-    int out_size = out.size(0) * out.size(1);
-    int max_seq_len = data.size(axis);
-    int offset1 = axis ? out.size(1) : out_size;
-    int offset2 = axis ? (max_seq_len * out.size(1)) : out.size(1);
+    index_t out_size = out.size(0) * out.size(1);
+    index_t max_seq_len = data.size(axis);
+    index_t offset1 = axis ? out.size(1) : out_size;
+    index_t offset2 = axis ? (max_seq_len * out.size(1)) : out.size(1);
 
     MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
       mxnet_op::Kernel<SequenceLastKernel<req_type>, xpu>::Launch(
@@ -121,13 +121,13 @@ class SequenceLastOp : public Operator {
     using namespace mshadow::expr;
 
     auto axis = param_.axis;
-    int batch = out_grad.size(0);
-    int rest = out_grad.size(1);
-    int out_size = batch * rest;
+    index_t batch = out_grad.size(0);
+    index_t rest = out_grad.size(1);
+    index_t out_size = batch * rest;
 
-    int max_seq_len = in_grad.size(axis);
-    int offset1 = axis ? rest : out_size;
-    int offset2 = axis ? (max_seq_len * rest) : rest;
+    index_t max_seq_len = in_grad.size(axis);
+    index_t offset1 = axis ? rest : out_size;
+    index_t offset2 = axis ? (max_seq_len * rest) : rest;
 
     mxnet_op::Kernel<SequenceLastGradKernel, xpu>::Launch(
         s, out_size, in_grad.dptr_, out_grad.dptr_, indices.dptr_, offset1,

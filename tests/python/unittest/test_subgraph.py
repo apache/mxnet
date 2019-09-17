@@ -144,6 +144,59 @@ def test_make_subgraph():
                         rtol=0.001, atol=0.0001)
 
 
+def test_subgraph_with_customOp():
+    class MyAdd(mx.operator.CustomOp):
+        def forward(self, is_train, req, in_data, out_data, aux):
+            self.assign(out_data[0], req[0], in_data[0] + 1)
+
+        def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+            self.assign(in_grad[0], req[0], out_grad[0])
+
+    @mx.operator.register('MyAdd1')
+    class MyAdd1Prop(mx.operator.CustomOpProp):
+        def __init__(self):
+            super(MyAdd1Prop, self).__init__(need_top_grad=True)
+
+        def list_arguments(self):
+            return ['data']
+
+        def list_outputs(self):
+            return ['output']
+
+        def infer_shape(self, in_shape):
+            # inputs, outputs, aux
+            return [in_shape[0]], [in_shape[0]], []
+
+        def create_operator(self, ctx, shapes, dtypes):
+            return MyAdd()
+
+    @mx.operator.register('MyAdd2')
+    class MyAdd2Prop(mx.operator.CustomOpProp):
+        def __init__(self):
+            super(MyAdd2Prop, self).__init__(need_top_grad=True)
+
+        def list_arguments(self):
+            return ['data']
+
+        def list_outputs(self):
+            return ['output']
+
+        def infer_shape(self, in_shape):
+            # inputs, outputs, aux
+            return [in_shape[0]], [in_shape[0]], []
+
+        def create_operator(self, ctx, shapes, dtypes):
+            return MyAdd()
+
+    inp = mx.nd.zeros(shape=(100, 100))
+    a = mx.symbol.Variable('a')
+    b = a + 1
+    b = mx.symbol.Custom(data=a, op_type='MyAdd1')
+    c = mx.symbol.Custom(data=a, op_type='MyAdd2')
+    b.bind(mx.cpu(), {'a': inp}).forward()
+    c.bind(mx.cpu(), {'a': inp}).forward()
+    mx.nd.waitall()
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

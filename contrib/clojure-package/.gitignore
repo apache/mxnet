@@ -46,5 +46,6 @@ test/test-symbol.clj
 test/test-symbol-random.clj
 test/test-symbol-random-api.clj
 test/test-symbol-api.clj
+test/test-images/*
 src/org/apache/clojure_mxnet/gen/*
 

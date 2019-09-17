@@ -114,6 +114,33 @@ In the rest of this document, we list routines provided by the `gluon.contrib` p
     WikiText103
 ```
 
+### Estimator
+
+```eval_rst
+.. currentmodule:: mxnet.gluon.contrib.estimator
+
+.. autosummary::
+    :nosignatures:
+    
+    Estimator
+```
+
+#### EventHandler
+
+```eval_rst
+.. currentmodule:: mxnet.gluon.contrib.estimator
+
+.. autosummary::
+    :nosignatures:
+
+    StoppingHandler
+    MetricHandler
+    ValidationHandler
+    LoggingHandler
+    CheckpointHandler
+    EarlyStoppingHandler
+```
+
 ## API Reference
 
 <script type="text/javascript" src='../../../_static/js/auto_module_index.js'></script>
@@ -144,6 +171,9 @@ In the rest of this document, we list routines provided by the `gluon.contrib` p
     :members:
     :imported-members:
 
+.. automodule:: mxnet.gluon.contrib.estimator
+    :members:
+    :imported-members:
 ```
 
 <script>auto_index("api-reference");</script>

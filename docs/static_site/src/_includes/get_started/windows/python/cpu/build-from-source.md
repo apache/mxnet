@@ -1,0 +1,1 @@
+Refer to the [MXNet Windows installation guide](windows_setup.html)

@@ -156,7 +156,7 @@ class NormalizationHybridLayer(gluon.HybridBlock):
 
             self.scales = self.params.get('scales',
                                       shape=scales.shape,
-                                      init=mx.init.Constant(scales.asnumpy().tolist()), # Convert to regular list to make this object serializable
+                                      init=mx.init.Constant(scales.asnumpy()), # Convert to regular list to make this object serializable
                                       differentiable=False)
             
     def hybrid_forward(self, F, x, weights, scales):

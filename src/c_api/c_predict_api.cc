@@ -67,7 +67,7 @@ struct MXAPINDList {
   mxnet::ShapeVector shapes;
   std::vector<uint32_t> shapes_buffer;
   std::vector<size_t> indptr;
-  std::vector<mx_float> data;
+  std::vector<float> data;
 };
 
 inline void _CreateExecutor(PredictorHandle pred_hnd) {
@@ -91,16 +91,16 @@ int _CreatePartialOut(const char* symbol_json_str,
                       const void* param_bytes,
                       int param_size,
                       int dev_type, int dev_id,
-                      const mx_uint num_input_nodes,
+                      const uint32_t num_input_nodes,
                       const char** input_keys,
-                      const mx_uint* input_shape_indptr,
-                      const mx_uint* input_shape_data,
-                      mx_uint num_output_nodes,
+                      const uint32_t* input_shape_indptr,
+                      const uint32_t* input_shape_data,
+                      uint32_t num_output_nodes,
                       const char** output_keys,
                       // This is used for parallel inference.
                       int num_threads,
                       bool lazy,
-                      const mx_uint num_provided_arg_dtypes,
+                      const uint32_t num_provided_arg_dtypes,
                       const char** provided_arg_dtype_names,
                       const int* provided_arg_dtypes,
                       PredictorHandle* out) {
@@ -110,7 +110,7 @@ int _CreatePartialOut(const char* symbol_json_str,
   Symbol sym;
   // make sure symbols are registered
   {
-  mx_uint outSize;
+  uint32_t outSize;
   const char **outArray;
   MXListAllOpNames(&outSize, &outArray);
   }
@@ -125,7 +125,7 @@ int _CreatePartialOut(const char* symbol_json_str,
     Symbol internal = sym.GetInternals();
     std::vector<std::string> all_out = internal.ListOutputNames();
     std::vector<Symbol> out_syms(num_output_nodes);
-    for (mx_uint i = 0; i < num_output_nodes; ++i) {
+    for (uint32_t i = 0; i < num_output_nodes; ++i) {
       std::string out_key(output_keys[i]);
       out_key += "_output";
       for (size_t j = 0; j < all_out.size(); ++j) {
@@ -176,7 +176,7 @@ int _CreatePartialOut(const char* symbol_json_str,
     }
 
     if (num_provided_arg_dtypes > 0) {
-      for (mx_uint i = 0; i < num_provided_arg_dtypes; ++i) {
+      for (uint32_t i = 0; i < num_provided_arg_dtypes; ++i) {
         if (aux_types.count(provided_arg_dtype_names[i]) == 0 &&
             arg_types.count(provided_arg_dtype_names[i]) == 0) {
           arg_types[provided_arg_dtype_names[i]] = provided_arg_dtypes[i];
@@ -187,7 +187,7 @@ int _CreatePartialOut(const char* symbol_json_str,
 
   // shape inference and bind
   std::unordered_map<std::string, mxnet::TShape> known_shape;
-  for (mx_uint i = 0; i < num_input_nodes; ++i) {
+  for (uint32_t i = 0; i < num_input_nodes; ++i) {
     known_shape[std::string(input_keys[i])] =
         mxnet::TShape(input_shape_data + input_shape_indptr[i],
                input_shape_data + input_shape_indptr[i + 1]);
@@ -309,11 +309,11 @@ int MXPredCreatePartialOut(const char* symbol_json_str,
                            const void* param_bytes,
                            int param_size,
                            int dev_type, int dev_id,
-                           mx_uint num_input_nodes,
+                           uint32_t num_input_nodes,
                            const char** input_keys,
-                           const mx_uint* input_shape_indptr,
-                           const mx_uint* input_shape_data,
-                           mx_uint num_output_nodes,
+                           const uint32_t* input_shape_indptr,
+                           const uint32_t* input_shape_data,
+                           uint32_t num_output_nodes,
                            const char** output_keys,
                            PredictorHandle* out) {
   return _CreatePartialOut(
@@ -339,10 +339,10 @@ int MXPredCreate(const char* symbol_json_str,
                  const void* param_bytes,
                  int param_size,
                  int dev_type, int dev_id,
-                 mx_uint num_input_nodes,
+                 uint32_t num_input_nodes,
                  const char** input_keys,
-                 const mx_uint* input_shape_indptr,
-                 const mx_uint* input_shape_data,
+                 const uint32_t* input_shape_indptr,
+                 const uint32_t* input_shape_data,
                  PredictorHandle* out) {
   return _CreatePartialOut(
       symbol_json_str,
@@ -368,11 +368,11 @@ int MXPredCreateEx(const char* symbol_json_str,
                    const void* param_bytes,
                    int param_size,
                    int dev_type, int dev_id,
-                   mx_uint num_input_nodes,
+                   uint32_t num_input_nodes,
                    const char** input_keys,
-                   const mx_uint* input_shape_indptr,
-                   const mx_uint* input_shape_data,
-                   const mx_uint num_provided_arg_dtypes,
+                   const uint32_t* input_shape_indptr,
+                   const uint32_t* input_shape_data,
+                   const uint32_t num_provided_arg_dtypes,
                    const char** provided_arg_dtype_names,
                    const int* provided_arg_dtypes,
                    PredictorHandle* out) {
@@ -400,10 +400,10 @@ int MXPredCreateMultiThread(const char* symbol_json_str,
                             const void* param_bytes,
                             int param_size,
                             int dev_type, int dev_id,
-                            mx_uint num_input_nodes,
+                            uint32_t num_input_nodes,
                             const char** input_keys,
-                            const mx_uint* input_shape_indptr,
-                            const mx_uint* input_shape_data,
+                            const uint32_t* input_shape_indptr,
+                            const uint32_t* input_shape_data,
                             // This is used for paralle inference.
                             int num_threads,
                             PredictorHandle* out) {
@@ -434,10 +434,10 @@ int MXPredCreateMultiThread(const char* symbol_json_str,
       out);
 }
 
-int MXPredReshape(mx_uint num_input_nodes,
+int MXPredReshape(uint32_t num_input_nodes,
                   const char** input_keys,
-                  const mx_uint* input_shape_indptr,
-                  const mx_uint* input_shape_data,
+                  const uint32_t* input_shape_indptr,
+                  const uint32_t* input_shape_data,
                   PredictorHandle handle,
                   PredictorHandle* out) {
   _CreateExecutor(handle);
@@ -447,7 +447,7 @@ int MXPredReshape(mx_uint num_input_nodes,
   API_BEGIN();
   // shape inference
   std::unordered_map<std::string, mxnet::TShape> new_shape;
-  for (mx_uint i = 0; i < num_input_nodes; ++i) {
+  for (uint32_t i = 0; i < num_input_nodes; ++i) {
     new_shape[std::string(input_keys[i])] =
         mxnet::TShape(input_shape_data + input_shape_indptr[i],
             input_shape_data + input_shape_indptr[i + 1]);
@@ -526,9 +526,9 @@ int MXPredReshape(mx_uint num_input_nodes,
 }
 
 int MXPredGetOutputShape(PredictorHandle handle,
-                         mx_uint out_index,
-                         mx_uint** shape_data,
-                         mx_uint* shape_ndim) {
+                         uint32_t out_index,
+                         uint32_t** shape_data,
+                         uint32_t* shape_ndim) {
   MXAPIPredictor* p = static_cast<MXAPIPredictor*>(handle);
   API_BEGIN();
   CHECK_LT(out_index, p->out_arrays.size())
@@ -544,7 +544,7 @@ int MXPredGetOutputShape(PredictorHandle handle,
 }
 
 int MXPredGetOutputType(PredictorHandle handle,
-                        mx_uint out_index,
+                        uint32_t out_index,
                         int* out_dtype) {
   MXAPIPredictor* p = static_cast<MXAPIPredictor*>(handle);
   API_BEGIN();
@@ -560,8 +560,8 @@ int MXPredGetOutputType(PredictorHandle handle,
 
 int MXPredSetInput(PredictorHandle handle,
                    const char* key,
-                   const mx_float* data,
-                   mx_uint size) {
+                   const float* data,
+                   uint32_t size) {
   MXAPIPredictor* p = static_cast<MXAPIPredictor*>(handle);
   API_BEGIN();
   auto it = p->key2arg.find(key);
@@ -590,9 +590,9 @@ int MXPredPartialForward(PredictorHandle handle, int step, int* step_left) {
 }
 
 int MXPredGetOutput(PredictorHandle handle,
-                    mx_uint index,
-                    mx_float* data,
-                    mx_uint size) {
+                    uint32_t index,
+                    float* data,
+                    uint32_t size) {
   MXAPIPredictor* p = static_cast<MXAPIPredictor*>(handle);
   API_BEGIN();
   CHECK_LT(index, p->out_arrays.size())
@@ -611,7 +611,7 @@ int MXPredFree(PredictorHandle handle) {
 int MXNDListCreate(const char* nd_file_bytes,
                    int nd_file_size,
                    NDListHandle *out,
-                   mx_uint* out_length) {
+                   uint32_t* out_length) {
   MXAPINDList* ret = new MXAPINDList();
   API_BEGIN();
   std::vector<NDArray> arrays;
@@ -633,16 +633,16 @@ int MXNDListCreate(const char* nd_file_bytes,
     ret->indptr.push_back(begin + size);
   }
   *out = ret;
-  *out_length = static_cast<mx_uint>(arrays.size());
+  *out_length = static_cast<uint32_t>(arrays.size());
   API_END();
 }
 
 int MXNDListGet(NDListHandle handle,
-                mx_uint index,
+                uint32_t index,
                 const char** out_key,
-                const mx_float** out_data,
-                const mx_uint** out_shape,
-                mx_uint* out_ndim) {
+                const float** out_data,
+                const uint32_t** out_shape,
+                uint32_t* out_ndim) {
   MXAPINDList* p = static_cast<MXAPINDList*>(handle);
   API_BEGIN();
   CHECK_LT(index, p->shapes.size())

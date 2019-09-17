@@ -87,8 +87,8 @@ class Arg:
         'NDArray[]':'const std::vector<Symbol>&',\
         'caffe-layer-parameter':'::caffe::LayerParameter',\
         'NDArray-or-Symbol[]':'const std::vector<Symbol>&',\
-        'float':'mx_float',\
-        'real_t':'mx_float',\
+        'float':'float',\
+        'real_t':'float',\
         'int':'int',\
         'long':'int64_t',\
         'int (non-negative)': 'uint32_t',\
@@ -101,7 +101,7 @@ class Arg:
         'tuple of <long>':'nnvm::Tuple<int64_t>',\
         'tuple of <int (non-negative)>':'nnvm::Tuple<uint32_t>',\
         'tuple of <long (non-negative)>':'nnvm::Tuple<uint64_t>',\
-        'tuple of <float>':'nnvm::Tuple<mx_float>',\
+        'tuple of <float>':'nnvm::Tuple<float>',\
         'tuple of <double>':'nnvm::Tuple<double>',\
         }
     # add optional types
@@ -313,13 +313,13 @@ class Op:
 
 def ParseAllOps():
     """
-    MXNET_DLL int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
+    MXNET_DLL int MXSymbolListAtomicSymbolCreators(uint32_t *out_size,
                                                    AtomicSymbolCreator **out_array);
 
     MXNET_DLL int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
                                               const char **name,
                                               const char **description,
-                                              mx_uint *num_args,
+                                              uint32_t *num_args,
                                               const char ***arg_names,
                                               const char ***arg_type_infos,
                                               const char ***arg_descriptions,
