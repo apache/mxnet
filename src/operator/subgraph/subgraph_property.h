@@ -342,7 +342,7 @@ class SubgraphProperty {
   virtual void ConnectSubgraphOutputs(const nnvm::ObjectPtr subgraph_node,
                                     std::vector<std::vector<nnvm::NodeEntry*>>* output_map) const {
     for (size_t i = 0; i < output_map->size(); ++i) {
-      for (auto e : output_map[i]) 
+      for (auto e : output_map->at(i))
         *e = nnvm::NodeEntry{subgraph_node, static_cast<uint32_t>(i), 0};
     }
   }
