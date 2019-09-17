@@ -75,6 +75,45 @@ def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req, rtol=1e-2, atol=1e
         assert(mod2.get_input_grads()[0] == None)
 
 
+@with_seed()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+def test_rnn_with_new_param():
+    rnn_modes = ['rnn_relu', 'rnn_tanh', 'gru', 'lstm']
+    ngates_ = [1, 1, 3, 4]
+    num_layers, input_size, seq_len, batch_size, state_size = 3, 128, 5, 64, 8
+    for bidirectional in [False, True]:
+        directions = 2 if bidirectional else 1
+        for mode, ngates in zip(rnn_modes, ngates_):
+            first_layer_size = (input_size * state_size + state_size * state_size + state_size * 2) * ngates
+            rest_layer_size = (state_size * directions * state_size + state_size * state_size + state_size * 2) \
+                 * ngates * (num_layers - 1)
+            param_size = (first_layer_size + rest_layer_size) * directions
+            sym = mx.sym.RNN(mode=mode, num_layers=num_layers, bidirectional=bidirectional,
+                state_outputs=False, state_size=state_size, name='rnn')
+
+            bind_dict = {
+                'rnn_data': mx.ndarray.random.uniform(low=-1, high=1, shape=(seq_len, batch_size, input_size)),
+                'rnn_parameters': mx.ndarray.random.uniform(low=-1, high=1, shape=(param_size)),
+                'rnn_state': mx.ndarray.zeros(shape=(num_layers * directions, batch_size, state_size))
+            }
+            if mode == 'lstm':
+                bind_dict['rnn_state_cell'] = mx.ndarray.zeros(
+                    shape=(num_layers * directions, batch_size, state_size))
+
+            ex = sym.bind(default_context(), bind_dict)
+            ex.forward(is_train=True)
+            ex01 = ex.output_dict['rnn_output'].asnumpy()
+            ex.forward(is_train=False)
+            ex02 = ex.output_dict['rnn_output'].asnumpy()
+            assert_allclose(ex01, ex02, rtol=1e-2, atol=1e-4)
+            bind_dict['rnn_parameters'] = mx.ndarray.random.uniform(low=-1, high=1, shape=(param_size))
+            ex.copy_params_from(bind_dict)
+            ex.forward(is_train=True)
+            ex03 = ex.output_dict['rnn_output'].asnumpy()
+            ex.forward(is_train=False)
+            ex04 = ex.output_dict['rnn_output'].asnumpy()
+            assert_allclose(ex03, ex04, rtol=1e-2, atol=1e-4)
+
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
@@ -1904,7 +1943,7 @@ def test_groupnorm():
                                   num_groups=num_groups, eps=eps, output_mean_var=True)
         check_symbolic_forward(mx_sym, [mx_data, mx_gamma, mx_beta], [np_out, np_mean, np_std],
                                rtol=1e-2 if dtype == np.float16 else 1e-3,
-                               atol=5e-3 if dtype == np.float16 else 1e-5, dtype=dtype)
+                               atol=5e-3 if dtype == np.float16 else 1e-4, dtype=dtype)
         mx_sym = mx.sym.GroupNorm(data=data_sym, gamma=gamma_sym, beta=beta_sym,
                                   num_groups=num_groups, eps=eps, output_mean_var=False)
         np_ograd = np.random.uniform(-1.0, 1.0, dshape).astype(dtype)
@@ -1917,7 +1956,7 @@ def test_groupnorm():
         check_symbolic_backward(mx_sym, [mx_data, mx_gamma, mx_beta], [mx.nd.array(np_ograd)],
                                 [np_data_grad, np_gamma_grad, np_beta_grad],
                                 rtol=1e-2 if dtype == np.float16 else 1e-3,
-                                atol=5e-2 if dtype == np.float16 else 1e-5, dtype=dtype)
+                                atol=5e-2 if dtype == np.float16 else 1e-4, dtype=dtype)
 
 
 @with_seed()
@@ -3704,7 +3743,7 @@ def test_norm():
 
     ctx = default_context()
     data = mx.symbol.Variable('data')
-    in_data_dim = random_sample([4,5,6], 1)[0]
+    in_data_dim = random_sample([2,3,4], 1)[0]
     in_shape = rand_shape_nd(in_data_dim, dim=5)
     epsilon = 1e-3
     acc_type = {np.float16: np.float32, np.float32: np.float32, np.float64: np.float64,
@@ -4426,7 +4465,7 @@ def test_take():
         else:
             raise ValueError("axis %d is not supported..." % axis)
 
-    def check_output_n_grad(data_shape, idx_shape, axis, mode):
+    def check_output_n_grad(data_shape, idx_shape, axis, mode, out_of_range=True):
         data = mx.sym.Variable('a')
         idx = mx.sym.Variable('indices')
         idx = mx.sym.BlockGrad(idx)
@@ -4434,7 +4473,13 @@ def test_take():
         exe = result.simple_bind(default_context(), a=data_shape,
                                  indices=idx_shape, axis=axis, mode=mode)
         data_real = np.random.normal(size=data_shape).astype('float32')
-        idx_real = np.random.randint(low=0, high=data_shape[axis], size=idx_shape)
+        if out_of_range:
+            idx_real = np.random.randint(low=-data_shape[axis], high=data_shape[axis], size=idx_shape)
+            if mode == 'raise':
+                idx_real[idx_real == 0] = 1
+                idx_real *= data_shape[axis]
+        else:
+            idx_real = np.random.randint(low=0, high=data_shape[axis], size=idx_shape)
         if axis < 0:
             axis += len(data_shape)
 
@@ -4444,9 +4489,20 @@ def test_take():
         exe.arg_dict['a'][:] = mx.nd.array(data_real)
         exe.arg_dict['indices'][:] = mx.nd.array(idx_real)
         exe.forward(is_train=True)
+        if out_of_range and mode == 'raise':
+            try:
+                mx_out = exe.outputs[0].asnumpy()
+            except MXNetError as e:
+                return
+            else:
+                # Did not raise exception
+                assert False, "did not raise %s" % MXNetError.__name__
+
         assert_almost_equal(exe.outputs[0].asnumpy(), np.take(data_real, idx_real, axis=axis, mode=mode))
 
         for i in np.nditer(idx_real):
+            if mode == 'clip':
+                i = np.clip(i, 0, data_shape[axis])
             grad_helper(grad_in, axis, i)
 
         exe.backward([mx.nd.array(grad_out)])
@@ -4477,7 +4533,7 @@ def test_take():
         x.backward()
         assert_almost_equal(np.ones(sc.grad.shape), sc.grad.asnumpy())
 
-    for mode in ['clip', 'wrap']:
+    for mode in ['clip', 'wrap', 'raise']:
         for data_ndim in range(1, 5):
             for idx_ndim in range(1, 4):
                 for axis in range(-data_ndim, data_ndim):
@@ -4487,6 +4543,8 @@ def test_take():
                     idx_shape = ()
                     for _ in range(idx_ndim):
                         idx_shape += (np.random.randint(low=1, high=5), )
+                    if mode == 'raise':
+                        check_output_n_grad(data_shape, idx_shape, axis, 'raise', False)
                     check_output_n_grad(data_shape, idx_shape, axis, mode)
 
     check_autograd_req()
@@ -6807,7 +6865,7 @@ def test_laop_5():
     # tests for diagonal and triangular matrix extraction and generation
     data = mx.symbol.Variable('data')
     # test complete range of small matrices to cover corner cases
-    for n in range(1, 10):
+    for n in range(1, 5):
         # test batched and non-batched processing
         for b in range(3):
             shape = (n, n) if b == 0 else (b, n, n)
@@ -9179,6 +9237,19 @@ def test_transpose_infer_shape_mixed():
     x = b.bind(mx.cpu(), args={})
     y = x.forward()
     assert(y[0].shape == (2,3))
+
+
+@with_seed()
+def test_sample_normal_default_shape():
+    # Test case from https://github.com/apache/incubator-mxnet/issues/16135
+    s = mx.nd.sample_normal(mu=mx.nd.array([10.0]), sigma=mx.nd.array([0.5]))
+    assert s.shape == (1,)
+    s = mx.nd.sample_normal(mu=mx.nd.array([10.0]), sigma=mx.nd.array([0.5]), shape=())
+    assert s.shape == (1,)
+    s = mx.nd.sample_normal(mu=mx.nd.array([10.0]), sigma=mx.nd.array([0.5]), shape=1)
+    assert s.shape == (1, 1)
+    s = mx.nd.sample_normal(mu=mx.nd.array([10.0]), sigma=mx.nd.array([0.5]), shape=(1,))
+    assert s.shape == (1, 1)
 
 
 if __name__ == '__main__':

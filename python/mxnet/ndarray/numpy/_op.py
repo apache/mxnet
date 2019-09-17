@@ -27,13 +27,14 @@ from ...context import current_context
 from . import _internal as _npi
 from ..ndarray import NDArray
 
-__all__ = ['zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'sin',
-           'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute',
+__all__ = ['zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power',
+           'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute',
            'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot',
-           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack',
-           'maximum', 'minimum', 'swapaxes', 'clip', 'argmax']
+           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'mean',
+           'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign',
+           'ravel']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -361,6 +362,31 @@ def divide(x1, x2, out=None):
 
 @set_module('mxnet.ndarray.numpy')
 def mod(x1, x2, out=None):
+    """Return element-wise remainder of division.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Dividend array.
+
+    x2 : ndarray or scalar
+        Divisor array.
+
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        This is a scalar if both x1 and x2 are scalars.
+    """
+    return _ufunc_helper(x1, x2, _npi.mod, _np.mod, _npi.mod_scalar, _npi.rmod_scalar, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def remainder(x1, x2, out=None):
     """Return element-wise remainder of division.
 
     Parameters
@@ -1863,7 +1889,7 @@ def tile(A, reps):
     """
     return _unary_func_helper(A, _npi.tile, _np.tile, reps=reps)
 
-
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.ndarray.numpy')
 def split(ary, indices_or_sections, axis=0):
     """Split an array into multiple sub-arrays.
@@ -1911,6 +1937,7 @@ def split(ary, indices_or_sections, axis=0):
     if not isinstance(ret, list):
         return [ret]
     return ret
+# pylint: enable=redefined-outer-name
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2145,3 +2172,368 @@ def argmax(a, axis=None, out=None):
     array([2., 2.])
     """
     return _npi.argmax(a, axis=axis, keepdims=False, out=out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
+    """
+    mean(a, axis=None, dtype=None, out=None, keepdims=None)
+    Compute the arithmetic mean along the specified axis.
+    Returns the average of the array elements.
+    The average is taken over the flattened array by default, otherwise over the specified axis.
+    Parameters
+    ----------
+    a : ndarray
+        ndarray containing numbers whose mean is desired.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which the means are computed. The default is to compute the mean of the flattened array.
+        If this is a tuple of ints, a mean is performed over multiple axes,
+        instead of a single axis or all the axes as before.
+    dtype : data-type, optional
+        Type to use in computing the mean. For integer inputs, the default is float32;
+        for floating point inputs, it is the same as the input dtype.
+    out : ndarray, optional
+        Alternate output array in which to place the result. The default is None; if provided,
+        it must have the same shape and type as the expected output
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in the result
+        as dimensions with size one. With this option, the result will broadcast correctly
+        against the input array.
+        If the default value is passed, then keepdims will not be passed through to the mean
+        method of sub-classes of ndarray, however any non-default value will be. If the sub-class
+        method does not implement keepdims any exceptions will be raised.
+    Returns
+    -------
+    m : ndarray, see dtype parameter above
+        If out=None, returns a new array containing the mean values,
+        otherwise a reference to the output array is returned.
+    Notes
+    -----
+    This function differs from the original `numpy.mean
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.mean.html>`_ in
+    the following way(s):
+    - only ndarray is accepted as valid input, python iterables or scalar is not supported
+    - default data type for integer input is float32
+    Examples
+    --------
+    >>> a = np.array([[1, 2], [3, 4]])
+    >>> np.mean(a)
+    array(2.5)
+    >>> a = np.zeros((2, 512*512), dtype=np.float32)
+    >>> a[0,:] = 1.0
+    >>> a[1,:] = 0.1
+    >>> np.mean(a)
+    array(0.55)
+    >>> np.mean(a, dtype=np.float64)
+    array(0.55)
+    """
+    return _npi.mean(a, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=too-many-arguments
+    """
+    Compute the standard deviation along the specified axis.
+    Returns the standard deviation, a measure of the spread of a distribution,
+    of the array elements. The standard deviation is computed for the
+    flattened array by default, otherwise over the specified axis.
+
+    Parameters
+    ----------
+    a : array_like
+        Calculate the standard deviation of these values.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which the standard deviation is computed. The
+        default is to compute the standard deviation of the flattened array.
+        .. versionadded:: 1.7.0
+        If this is a tuple of ints, a standard deviation is performed over
+        multiple axes, instead of a single axis or all the axes as before.
+    dtype : dtype, optional
+        Type to use in computing the standard deviation. For arrays of
+        integer type the default is float64, for arrays of float types it is
+        the same as the array type.
+    out : ndarray, optional
+        Alternative output array in which to place the result. It must have
+        the same shape as the expected output but the type (of the calculated
+        values) will be cast if necessary.
+    ddof : int, optional
+        Means Delta Degrees of Freedom.  The divisor used in calculations
+        is ``N - ddof``, where ``N`` represents the number of elements.
+        By default `ddof` is zero.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the input array.
+        If the default value is passed, then `keepdims` will not be
+        passed through to the `std` method of sub-classes of
+        `ndarray`, however any non-default value will be.  If the
+        sub-class' method does not implement `keepdims` any
+        exceptions will be raised.
+
+    Returns
+    -------
+    standard_deviation : ndarray, see dtype parameter above.
+        If `out` is None, return a new array containing the standard deviation,
+        otherwise return a reference to the output array.
+
+    Examples
+    --------
+    >>> a = np.array([[1, 2], [3, 4]])
+    >>> np.std(a)
+    1.1180339887498949 # may vary
+    >>> np.std(a, axis=0)
+    array([1.,  1.])
+    >>> np.std(a, axis=1)
+    array([0.5,  0.5])
+    In single precision, std() can be inaccurate:
+    >>> a = np.zeros((2, 512*512), dtype=np.float32)
+    >>> a[0, :] = 1.0
+    >>> a[1, :] = 0.1
+    >>> np.std(a)
+    array(0.45)
+    >>> np.std(a, dtype=np.float64)
+    array(0.45, dtype=float64)
+    """
+    return _npi.std(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=too-many-arguments
+    """
+    Compute the variance along the specified axis.
+    Returns the variance of the array elements, a measure of the spread of a
+    distribution.  The variance is computed for the flattened array by
+    default, otherwise over the specified axis.
+
+    Parameters
+    ----------
+    a : array_like
+        Array containing numbers whose variance is desired.  If `a` is not an
+        array, a conversion is attempted.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which the variance is computed.  The default is to
+        compute the variance of the flattened array.
+        .. versionadded:: 1.7.0
+        If this is a tuple of ints, a variance is performed over multiple axes,
+        instead of a single axis or all the axes as before.
+    dtype : data-type, optional
+        Type to use in computing the variance.  For arrays of integer type
+        the default is `float32`; for arrays of float types it is the same as
+        the array type.
+    out : ndarray, optional
+        Alternate output array in which to place the result.  It must have
+        the same shape as the expected output, but the type is cast if
+        necessary.
+    ddof : int, optional
+        "Delta Degrees of Freedom": the divisor used in the calculation is
+        ``N - ddof``, where ``N`` represents the number of elements. By
+        default `ddof` is zero.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the input array.
+        If the default value is passed, then `keepdims` will not be
+        passed through to the `var` method of sub-classes of
+        `ndarray`, however any non-default value will be.  If the
+        sub-class' method does not implement `keepdims` any
+        exceptions will be raised.
+
+    Returns
+    -------
+    variance : ndarray, see dtype parameter above
+        If ``out=None``, returns a new array containing the variance;
+        otherwise, a reference to the output array is returned.
+
+    Examples
+    --------
+    >>> a = np.array([[1, 2], [3, 4]])
+    >>> np.var(a)
+    array(1.25)
+    >>> np.var(a, axis=0)
+    array([1.,  1.])
+    >>> np.var(a, axis=1)
+    array([0.25,  0.25])
+
+    >>> a = np.zeros((2, 512*512), dtype=np.float32)
+    >>> a[0, :] = 1.0
+    >>> a[1, :] = 0.1
+    >>> np.var(a)
+    array(0.2025)
+    >>> np.var(a, dtype=np.float64)
+    array(0.2025, dtype=float64)
+    >>> ((1-0.55)**2 + (0.1-0.55)**2)/2
+    0.2025
+    """
+    return _npi.var(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+
+
+# pylint: disable=redefined-outer-name
+@set_module('mxnet.ndarray.numpy')
+def indices(dimensions, dtype=_np.int32, ctx=None):
+    """Return an array representing the indices of a grid.
+
+    Compute an array where the subarrays contain index values 0,1,...
+    varying only along the corresponding axis.
+
+    Parameters
+    ----------
+    dimensions : sequence of ints
+        The shape of the grid.
+    dtype : data-type, optional
+        The desired data-type for the array. Default is `float32`.
+    ctx : device context, optional
+        Device context on which the memory is allocated. Default is
+        `mxnet.context.current_context()`.
+
+    Returns
+    -------
+    grid : ndarray
+        The array of grid indices,
+        ``grid.shape = (len(dimensions),) + tuple(dimensions)``.
+
+    Notes
+    -----
+    The output shape is obtained by prepending the number of dimensions
+    in front of the tuple of dimensions, i.e. if `dimensions` is a tuple
+    ``(r0, ..., rN-1)`` of length ``N``, the output shape is
+    ``(N,r0,...,rN-1)``.
+
+    The subarrays ``grid[k]`` contains the N-D array of indices along the
+    ``k-th`` axis. Explicitly::
+
+        grid[k,i0,i1,...,iN-1] = ik
+
+    Examples
+    --------
+    >>> grid = np.indices((2, 3))
+    >>> grid.shape
+    (2, 2, 3)
+    >>> grid[0]        # row indices
+    array([[0, 0, 0],
+           [1, 1, 1]])
+    >>> grid[1]        # column indices
+    array([[0, 0, 0],
+           [1, 1, 1]], dtype=int32)
+
+    The indices can be used as an index into an array.
+
+    >>> x = np.arange(20).reshape(5, 4)
+    >>> row, col = np.indices((2, 3))
+    >>> x[row, col]
+    array([[0., 1., 2.],
+           [4., 5., 6.]])
+
+    Note that it would be more straightforward in the above example to
+    extract the required elements directly with ``x[:2, :3]``.
+    """
+    if isinstance(dimensions, (tuple, list)):
+        if ctx is None:
+            ctx = current_context()
+        return _npi.indices(dimensions=dimensions, dtype=dtype, ctx=ctx)
+    else:
+        raise ValueError("The dimensions must be sequence of ints")
+# pylint: enable=redefined-outer-name
+
+
+@set_module('mxnet.ndarray.numpy')
+def copysign(x1, x2, out=None):
+    r"""copysign(x1, x2, out=None)
+
+    Change the sign of x1 to that of x2, element-wise.
+
+    If `x2` is a scalar, its sign will be copied to all elements of `x1`.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Values to change the sign of.
+    x2 : ndarray or scalar
+        The sign of `x2` is copied to `x1`.
+    out : ndarray or None, optional
+        A location into which the result is stored. It must be of the
+        right shape and right type to hold the output. If not provided
+        or `None`,a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        The values of `x1` with the sign of `x2`.
+        This is a scalar if both `x1` and `x2` are scalars.
+
+    Notes
+    -------
+    This function differs from the original `numpy.copysign
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.copysign.html>`_ in
+    the following aspects:
+
+    - ``where`` param is not supported.
+
+    Examples
+    --------
+    >>> np.copysign(1.3, -1)
+    -1.3
+    >>> 1/np.copysign(0, 1)
+    inf
+    >>> 1/np.copysign(0, -1)
+    -inf
+
+    >>> a = np.array([-1, 0, 1])
+    >>> np.copysign(a, -1.1)
+    array([-1., -0., -1.])
+    >>> np.copysign(a, np.arange(3)-1)
+    array([-1.,  0.,  1.])
+    """
+    return _ufunc_helper(x1, x2, _npi.copysign, _np.copysign, _npi.copysign_scalar, _npi.rcopysign_scalar, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def ravel(x, order='C'):
+    r"""
+    ravel(x)
+
+    Return a contiguous flattened array.
+    A 1-D array, containing the elements of the input, is returned.  A copy is
+    made only if needed.
+
+    Parameters
+    ----------
+    x : ndarray
+        Input array.  The elements in `x` are read in row-major, C-style order and
+        packed as a 1-D array.
+    order : `C`, optional
+        Only support row-major, C-style order.
+
+    Returns
+    -------
+    y : ndarray
+        y is an array of the same subtype as `x`, with shape ``(x.size,)``.
+        Note that matrices are special cased for backward compatibility, if `x`
+        is a matrix, then y is a 1-D ndarray.
+
+    Notes
+    -----
+    This function differs from the original numpy.arange in the following aspects:
+        - Only support row-major, C-style order.
+
+    Examples
+    --------
+    It is equivalent to ``reshape(x, -1)``.
+
+    >>> x = np.array([[1, 2, 3], [4, 5, 6]])
+    >>> print(np.ravel(x))
+    [1. 2. 3. 4. 5. 6.]
+
+    >>> print(x.reshape(-1))
+    [1. 2. 3. 4. 5. 6.]
+
+    >>> print(np.ravel(x.T))
+    [1. 4. 2. 5. 3. 6.]
+    """
+    if order != 'C':
+        raise NotImplementedError('order {} is not supported'.format(order))
+    if isinstance(x, numeric_types):
+        return _np.reshape(x, -1)
+    elif isinstance(x, NDArray):
+        return _npi.reshape(x, -1)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x))))

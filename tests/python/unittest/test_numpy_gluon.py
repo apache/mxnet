@@ -19,9 +19,11 @@
 from __future__ import absolute_import
 from __future__ import division
 
+import numpy as _np
 import mxnet as mx
 from mxnet import gluon, autograd, np
-from mxnet.test_utils import use_np
+from mxnet.test_utils import use_np, assert_almost_equal
+from common import with_seed
 
 
 def test_create_np_param():
@@ -106,6 +108,40 @@ def test_optimizer_with_np_ndarrays():
             loss = total_loss(output, y)  # loss is a scalar np.ndarray
         loss.backward()
         trainer.step(1)
+
+
+@with_seed()
+@use_np
+def test_np_loss_ndarray():
+    # Ported from test_loss.test_loss_ndarray
+    output = np.array([1, 2, 3, 4])
+    label = np.array([1, 3, 5, 7])
+    weighting = np.array([0.5, 1, 0.5, 1])
+
+    loss = gluon.loss.L1Loss()
+    assert np.sum(loss(output, label)) == 6.
+    loss = gluon.loss.L1Loss(weight=0.5)
+    assert np.sum(loss(output, label)) == 3.
+    loss = gluon.loss.L1Loss()
+    assert np.sum(loss(output, label, weighting)) == 5.
+
+    loss = gluon.loss.L2Loss()
+    assert np.sum(loss(output, label)) == 7.
+    loss = gluon.loss.L2Loss(weight=0.25)
+    assert np.sum(loss(output, label)) == 1.75
+    loss = gluon.loss.L2Loss()
+    assert np.sum(loss(output, label, weighting)) == 6
+
+    output = np.array([[0, 2], [1, 4]])
+    label = np.array([0, 1])
+    weighting = np.array([[0.5], [1.0]])
+
+    loss = gluon.loss.SoftmaxCrossEntropyLoss()
+    L = loss(output, label).asnumpy()
+    assert_almost_equal(L, _np.array([2.12692809,  0.04858733]), use_broadcast=False)
+
+    L = loss(output, label, weighting).asnumpy()
+    assert_almost_equal(L, _np.array([1.06346405,  0.04858733]), use_broadcast=False)
 
 
 if __name__ == '__main__':

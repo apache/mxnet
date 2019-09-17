@@ -1,0 +1,173 @@
+/*
+ * Footer Styles
+ */
+footer.mdl-mini-footer {
+    background-color: #212121;
+    > div.mdl-mini-footer__left-section {
+        margin-bottom: 20px;
+        display: flex;
+        flex-direction: column;
+        .mdl-logo {
+            font-size: 1.1rem;
+        }
+        ul {
+            @extend .mdl-mini-footer__link-list;
+        }
+    }
+    > div.mdl-mini-footer__right-section {
+        font-size: 0.9rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+
+        a {
+            color: inherit;
+            font-weight: bold;
+            text-decoration: none;
+        }
+    }
+    p.caption {
+        display: none;
+    }
+}
+
+/*
+ * Pagenation Block Styles
+ */
+ .pagenation {
+    width: 100%;
+    margin-top: 80px;
+    height: 92px;
+    background-color: #424242;
+    display: flex;
+
+    .button-common {
+        text-transform: none;
+        padding: 0;
+        height: 92px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: #ffffff;
+    }
+    #button-prev {
+        @extend .button-common;
+        margin-right: auto;
+        .pagenation-text {
+            text-align: left;
+        }
+        
+    }
+    #button-next {
+        @extend .button-common;
+        margin-left: auto;
+        flex-direction: row-reverse;
+        .pagenation-text {
+            text-align: right;
+        }
+    }
+
+    &-arrow {
+        &-L {
+            margin-right: 20px;
+        }
+        &-R {
+            margin-left: 20px;
+        }
+    }
+
+    &-text {
+        line-height: 30px;
+        font-size: 20px;
+    }
+
+    &-direction {
+        opacity: 0.7;
+        font-size: 18px;
+    }
+    @media screen and (max-width: 1024px) {
+        #button-prev {
+            width: 20%;
+        }
+        
+        #button-next {
+            width: 80%;
+        }
+    
+        #button-prev .pagenation-text {
+            display: none;
+        }
+    }
+    @media screen and (min-width: 1025px) {
+        #button-prev,
+        #button-next {
+            width: 50%;
+        }
+    
+        #button-prev .pagenation-text {
+            display: block;
+        }
+    }
+}
+
+
+
+/**
+ * Site footer
+ */
+.site-footer {
+  border-top: 1px solid $grey-color-light;
+  padding: $spacing-unit 0;
+  background-color: #424242;
+  .footer-category-title {
+    color: $color-mxnet;
+  }
+  a {
+    color: $grey-color-light !important;
+
+    &:visited {
+      color: $grey-color-light !important;
+    }
+  }
+
+}
+
+.site-footer2 {
+  background-color: #424242;
+  padding-top: 40px;
+  padding-bottom: 10px;
+}
+
+.footer-heading {
+  margin-bottom: $spacing-unit / 2;
+}
+
+.contact-list,
+.social-media-list {
+  list-style: none;
+  margin-left: 0;
+}
+
+
+.footer-bottom-warning {
+  font-size: 80%;
+  color: white;
+  float: left;
+}
+
+.footer-logo {
+  width: 200px;
+  margin-bottom: 30px;
+  margin-top: 30px;
+}
+
+.footer-col {
+  float: left;
+  margin-bottom: $spacing-unit / 2;
+  padding-left: $spacing-unit / 2;
+}
+
+.footer-text {
+  color: $grey-color-light;
+}
+
