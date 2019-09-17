@@ -257,6 +257,19 @@ def assign_node_labels(args) {
   NODE_UTILITY = args.utility
 }
 
+def check_only_doc_tutorials_changes(){
+  checkout scm
+  cmd = "git --no-pager diff --name-only " + env.BRANCH_NAME + " master"
+  print(cmd)
+  lines = sh(returnStdout: true, script: cmd).trim()
+  for line in lines:
+    print(line)
+    if "docs/" in line or "tests/nightly" in line or tests/tutorials in line:
+      continue
+    else:
+      return False
+  return True
+  
 def main_wrapper(args) {
   // Main Jenkinsfile pipeline wrapper handler that allows to wrap core logic into a format
   // that supports proper failure handling
@@ -267,6 +280,10 @@ def main_wrapper(args) {
   // assign any caught errors here
   err = null
   try {
+    if check_only_doc_tutorials_changes() is True:    
+      update_github_commit_status('SUCCESS', 'Skipped as only doc and tutorials changes')
+      return
+    
     update_github_commit_status('PENDING', 'Job has been enqueued')
     args['core_logic']()
 
