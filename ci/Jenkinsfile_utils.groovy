@@ -278,6 +278,7 @@ def check_only_doc_tutorials_changes(){
 """)
   lines = is_doc_tutorials.trim()
   return lines == "true"
+}
   
 def main_wrapper(args) {
   // Main Jenkinsfile pipeline wrapper handler that allows to wrap core logic into a format
