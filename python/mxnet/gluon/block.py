@@ -851,9 +851,9 @@ class HybridBlock(Block):
         assert self._cached_op, "cached op is not None"
         if self._callback:
             self._cached_op._register_op_hook(self._callback, self._monitor_all)
-            if len(self._flags) >= 2 and self._flags[1]:
-                warnings.warn("Callback is not supported when static_shape=True "
-                              " and is likely to not work correctly")
+            if len(self._flags) >= 2 and (self._flags[1] or self._flags[0]):
+                warnings.warn("register_op_hook is experimental when static_alloc=True / static_shape=True "
+                              " and may not work correctly")
 
         args, fmt = _flatten(args, "input")
         assert fmt == self._in_format, "Invalid input format"
