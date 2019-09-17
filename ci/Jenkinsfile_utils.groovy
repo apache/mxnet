@@ -259,16 +259,25 @@ def assign_node_labels(args) {
 
 def check_only_doc_tutorials_changes(){
   checkout scm
-  lines = sh(returnStdout: true, script: "git --no-pager diff --name-only " + env.BRANCH_NAME + " master")
-  lines = lines.trim()
-  echo ${lines}
-  for line in lines:
-    print(line)
-    if "docs/" in line or "tests/nightly" in line or tests/tutorials in line:
+  is_doc_tutorials = sh (returnStdout: true, script: """ 
+  set +e
+  c=$(git --no-pager diff --name-only HEAD master)
+  stringarray=($c)
+  for i in  "${stringarray[@]}"
+  do 
+    if [[ $i == docs/* ]] || [[ $i == tests/nightly* ]] ;
+    then
       continue
-    else:
-      return False
-  return True
+    else
+      echo "false"
+      return 0
+    fi
+  done
+  echo "true"    
+  return 0
+""")
+  lines = is_doc_tutorials.trim()
+  return lines == "true"
   
 def main_wrapper(args) {
   // Main Jenkinsfile pipeline wrapper handler that allows to wrap core logic into a format
