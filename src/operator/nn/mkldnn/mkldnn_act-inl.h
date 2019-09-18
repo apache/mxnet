@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2019 by Contributors
  * \file mkldnn_act-inl.h
- * \brief MKLDNN(Quantized) Activation operator based on subgraph
+ * \brief MKLDNN Activation operator
  * /author Zhiyuan Huang
 */
 
@@ -28,20 +28,17 @@
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_ACT_INL_H_
 
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
 #include <vector>
 #include <utility>
 #include "../activation-inl.h"
-#include "./mkldnn_ops-inl.h"
-#include "./mkldnn_base-inl.h"
 
 namespace mxnet {
 namespace op {
 
 mkldnn::algorithm GetMKLDNNActAlgo(const ActivationParam& param);
 mkldnn::eltwise_forward::primitive_desc GetActFwdDescImpl(
-    const ActivationParam& param, bool is_train,
-    const mkldnn::memory &input_mem, int dtype);
+    const ActivationParam& param, bool is_train, const mkldnn::memory &input_mem);
 
 class MKLDNNActForward {
  public:
@@ -49,14 +46,13 @@ class MKLDNNActForward {
 
   MKLDNNActForward(const ActivationParam& param, bool is_train,
                    const NDArray &data, const mkldnn::memory &mem): fwd_pd(
-                       GetActFwdDescImpl(param, is_train, mem, data.dtype())) {}
-  void SetNewMem(const mkldnn::memory &data, const mkldnn::memory &output);
-  const mkldnn::eltwise_forward &GetFwd() const;
+                       GetActFwdDescImpl(param, is_train, mem)) {
+    fwd_ = std::make_shared<mkldnn::eltwise_forward>(fwd_pd);
+  }
+  const inline mkldnn::eltwise_forward &GetFwd() const;
 
  private:
   std::shared_ptr<mkldnn::eltwise_forward> fwd_;
-  std::shared_ptr<mkldnn::memory> data_;
-  std::shared_ptr<mkldnn::memory> out_;
 };
 
 typedef ParamOpSign<ActivationParam> MKLDNNActSignature;
@@ -67,8 +63,28 @@ MKLDNNActForward &GetActForward(const ActivationParam& param,
 void MKLDNNActivationForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                              const NDArray &in_data, const OpReqType &req,
                              const NDArray &out_data);
+
+mkldnn::eltwise_backward::primitive_desc GetActBwdDescImpl(
+    const ActivationParam &param, const mkldnn::memory &input_mem,
+    const mkldnn::memory &diff_dst_memory);
+
+class MKLDNNActBackward {
+  std::shared_ptr<mkldnn::eltwise_backward> bwd;
+
+ public:
+  const mkldnn::eltwise_backward::primitive_desc pd;
+
+  explicit MKLDNNActBackward(const ActivationParam &param, const NDArray &data,
+                             const mkldnn::memory &mem,
+                             const mkldnn::memory &diff_dst_memory): pd(
+                                 GetActBwdDescImpl(param, mem, diff_dst_memory)) {
+    bwd = std::make_shared<mkldnn::eltwise_backward>(pd);
+  }
+
+  const inline mkldnn::eltwise_backward &GetBwd() const;
+};
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_MKLDNN == 100
 #endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_ACT_INL_H_

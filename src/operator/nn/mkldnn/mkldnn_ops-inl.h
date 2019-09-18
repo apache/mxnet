@@ -95,14 +95,6 @@ void MKLDNNConcatBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                           const std::vector<OpReqType>& req,
                           const std::vector<NDArray>& outputs);
 
-/* For activation */
-void MKLDNNActivationForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                             const NDArray &in_data, const OpReqType &req,
-                             const NDArray &out_data);
-void MKLDNNActivationBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                              const NDArray &out_grad, const NDArray &in_data,
-                              const OpReqType &req, const NDArray &in_grad);
-
 void MKLDNNTransposeForward(const nnvm::NodeAttrs& attrs,
                             const OpContext &ctx,
                             const NDArray &data,
@@ -133,6 +125,13 @@ void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ct
                                const std::vector<OpReqType>& req,
                                const std::vector<NDArray>& outputs);
 
+/* For activation */
+void MKLDNNActivationForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                             const NDArray &in_data, const OpReqType &req,
+                             const NDArray &out_data);
+void MKLDNNActivationBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                              const NDArray &out_grad, const NDArray &in_data,
+                              const OpReqType &req, const NDArray &in_grad);
 
 void MKLDNNSum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
          const mkldnn::memory &out);
