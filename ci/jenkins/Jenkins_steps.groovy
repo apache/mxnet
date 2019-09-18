@@ -1413,7 +1413,7 @@ def compile_unix_lite() {
 def should_pack_website() {
   if (env.BRANCH_NAME) {
     if (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("new_")) {
-      retun true
+      return true
     }
   } else {
     return true 
@@ -1620,7 +1620,7 @@ def docs_archive() {
 // This is for the full website
 def docs_publish() {
     return ['Publish the full website': {
-      node('restricted-mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             // If used stashed files, you can retrieve them here
