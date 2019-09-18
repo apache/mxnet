@@ -330,7 +330,7 @@ def test_RNN_float64():
     args_grad = explicit_grad
     grad_req = 'write'
 
-    ex = sym.bind(default_context(),
+    ex = sym.bind(mx.cpu(),
         {
             'in': mx.nd.ones([2, 1, 2], dtype=dtype),
             'par': mx.nd.ones([12], dtype=dtype),
