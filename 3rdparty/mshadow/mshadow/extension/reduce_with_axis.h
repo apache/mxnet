@@ -49,7 +49,7 @@ struct ReduceWithAxisExp:
       }
     } else {
       this->shape_[axis] = 1;
-      for (int i = axis + 1; i < dimsrc; ++i) {
+      for (index_t i = axis + 1; i < dimsrc; ++i) {
         this->trailing_ *= src_shape[i];
         this->shape_[i] = src_shape[i];
       }

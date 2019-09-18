@@ -558,48 +558,92 @@ inline bool ReduceAxesOpForwardStorage(const nnvm::NodeAttrs& attrs,
 
 template<typename xpu, typename DType>
 MSHADOW_XINLINE void Argmax(DType *in, DType *out, mxnet::TShape shape) {
-  index_t i = 0, i_blk = 0, j = 0, j_blk = 0, k_blk = 0, k = 0, loc = 0, blocksize = 32;
+  index_t i = 0, j = 0, j_blk = 0, k = 0, k_blk = 0, loc = 0, idx = 0, blocksize = 32;
   index_t i_stride = shape[1] * shape[2], j_stride = shape[2];
   DType max = in[0];
+  const index_t omp_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount());
 
   if (j_stride == 1) {
-    for (i_blk = 0; i_blk < shape[0]; i_blk = i_blk+blocksize) {
-      index_t i_offset = i_blk * i_stride;
-      max = in[i_offset];
-      #pragma parallel for
-      for (j_blk = 0; j_blk < shape[1]; j_blk = j_blk+blocksize) {
-        index_t i_limit = i_blk + blocksize;
-        for (i = i_blk; i < i_limit && i < shape[0]; i++) {
-          index_t j_limit = j_blk + blocksize;
-          for (j = j_blk; j < j_limit && j < shape[1]; j++) {
-            index_t idx = j + i_offset;
-            if (in[idx] > max) {
-              loc = j;
-              max = in[idx];
+    if(shape[0] >= omp_threads || shape[0] > shape[1]){
+      #pragma omp parallel for private(j, max, loc, idx)
+      for (i = 0; i < shape[0]; i++) {
+        max = in[i * i_stride];
+        loc = 0;
+        for (j = 0, idx = i * i_stride; j < shape[1]; ++j, ++idx) {
+          if (in[idx] > max) {
+            loc = j;
+            max = in[idx];
+          }
+        }
+        out[i] = loc;
+      }
+    } else {
+      for (i = 0; i < shape[0]; i++) {
+        max = in[i * shape[1]];
+        loc = 0;
+        #pragma omp parallel
+        {
+          DType local_max = in[i * shape[1]];
+          index_t local_loc = 0;
+          #pragma omp for nowait
+          for (j = 0; j < shape[1]; ++j) {
+            if (in[j + i * shape[1]] > local_max) {
+              local_loc = j;
+              local_max = in[j + i * shape[1]];
             }
           }
-          out[i] = loc;
+          #pragma omp critical
+          {
+            if (local_max > max) {
+              max = local_max;
+              loc = local_loc;
+            }
+          }
         }
+        out[i] = loc;
       }
     }
   } else {
-    for (i = 0; i < shape[0]; ++i) {
-      index_t oi_offset = i * j_stride, i_offset = i * i_stride;
-      #pragma parallel for
-      for (k_blk = 0; k_blk < shape[2]; k_blk = k_blk + blocksize) {
-        for (j_blk = 0; j_blk < shape[1]; j_blk = j_blk + blocksize) {
-          index_t k_limit = k_blk + blocksize;
-          for (k = k_blk; k < k_limit && k < shape[2]; ++k) {
-            max = in[k];
-            index_t j_limit = j_blk + blocksize;
-            for (j = j_blk; j < j_limit && j < shape[1]; ++j) {
-              index_t idx = k + j * j_stride + i_offset;
-              if (in[idx] > max) {
-                loc = j;
-                max = in[idx];
+    index_t i_offset = 0;
+    if(shape[0] >= omp_threads || shape[0] >= shape[1]){
+      #pragma omp parallel for private(j, k, j_blk, k_blk, max, loc, idx, i_offset)
+      for (i = 0; i < shape[0]; ++i) {
+        i_offset = i * i_stride;
+        for(k_blk = 0; k_blk < shape[2]; k_blk+=blocksize){
+          for(j_blk = 0; j_blk < shape[1]; j_blk+=blocksize){
+            for (k = k_blk; k < k_blk+blocksize && k < shape[2]; ++k) {
+              max = in[i_offset + k];
+              loc = 0;
+              for (j = j_blk; j < j_blk+blocksize && j < shape[1]; ++j) {
+                idx = k + j * j_stride + i_offset;
+                if (in[idx] > max) {
+                  loc = j;
+                  max = in[idx];
+                }
               }
+              out[i * j_stride + k] = loc;
             }
-            out[oi_offset + k] = loc;
+          }
+        }
+      }
+    } else {
+      for (i = 0; i < shape[0]; ++i) {
+        i_offset = i * i_stride;
+        #pragma omp parallel for private(j, k, j_blk, k_blk, max, loc, idx)
+        for(k_blk = 0; k_blk < shape[2]; k_blk+=blocksize){
+          for(j_blk = 0; j_blk < shape[1]; j_blk+=blocksize){
+            for (k = k_blk; k < k_blk+blocksize && k < shape[2]; ++k) {
+              max = in[i_offset + k];
+              loc = 0;
+              for (j = j_blk; j < j_blk+blocksize && j < shape[1]; ++j) {
+                idx = k + j * j_stride + i_offset;
+                if (in[idx] > max) {
+                  loc = j;
+                  max = in[idx];
+                }
+              }
+              out[i * j_stride + k] = loc;
+            }
           }
         }
       }
