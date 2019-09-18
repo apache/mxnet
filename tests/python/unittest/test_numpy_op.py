@@ -20,16 +20,14 @@ from __future__ import absolute_import
 import numpy as _np
 import mxnet as mx
 from mxnet import np, npx
-from mxnet.base import MXNetError
 from mxnet.gluon import HybridBlock
 from mxnet.base import MXNetError
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray
 from mxnet.test_utils import check_numeric_gradient, use_np, collapse_sum_like
 from common import assertRaises, with_seed
 import random
-import collections
 import scipy.stats as ss
-from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, retry
+from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
 import platform
 
 
@@ -657,7 +655,6 @@ def test_np_reshape():
     for hybridize in [True, False]:
         for shape_pair in shape_pairs:
             shape1, shape2 = shape_pair
-            print(shape1, shape2)
             test_reshape = TestReshape(shape2)
             if hybridize:
                 test_reshape.hybridize()
@@ -742,7 +739,6 @@ def test_np_prod():
                             test_prod.hybridize()
                         x = np.array(_np.random.uniform(-2.0, 2.0, size=shape), dtype=itype)
                         x.attach_grad()
-                        print(x.grad.dtype)
                         expected_ret = _np.prod(x.asnumpy(), axis=axis, keepdims=keepdims)
                         expected_ret = expected_ret.astype(dtype)
                         with mx.autograd.record():
@@ -963,7 +959,6 @@ def test_np_unary_funcs():
                 self._func = func
 
             def hybrid_forward(self, F, a, *args, **kwargs):
-                print(self._func)
                 return getattr(F.np, self._func)(a)
 
         np_func = getattr(_np, func)
@@ -1588,10 +1583,6 @@ def test_np_random():
     for shape in shapes:
         for dtype in dtypes:
             for op_name in op_names:
-                print('-------------------------------')
-                print(op_name)
-                print(shape)
-                print(dtype)
                 op = getattr(np.random, op_name, None)
                 assert op is not None
                 out = op(size=shape, dtype=dtype)
@@ -1732,7 +1723,7 @@ def test_np_choice():
             samples = sampler(a)
         assert len(samples) == samples_size
         if not replace:
-            assert len(_np.unique(samples)) == samples_size
+            assert len(_np.unique(samples.asnumpy())) == samples_size
 
     num_classes = 10
     num_samples = 10 ** 8

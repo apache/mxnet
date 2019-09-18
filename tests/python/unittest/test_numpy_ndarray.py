@@ -729,8 +729,8 @@ def test_np_ndarray_indexing():
                         ((3, 0), [2, (slice(None, None, None)), (slice(None, None, None), None)]),
     ]
     for shape, indices in shapes_indices:
+        np_array = _np.zeros(shape)
         for index in indices:
-            np_array = np.zeros(shape)
             test_getitem(np_array, index)
             test_setitem(np_array, index)
             test_getitem_autograd(np_array, index)

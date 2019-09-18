@@ -108,6 +108,10 @@ def _get_index(idx):
         return idx
 
 
+_NUMPY_ARRAY_FUNCTION_DICT = {}
+_NUMPY_ARRAY_UFUNC_DICT = {}
+
+
 @set_module('mxnet.numpy')  # pylint: disable=invalid-name
 class ndarray(NDArray):
     """
@@ -117,6 +121,57 @@ class ndarray(NDArray):
     floating point number, or something else, etc.). Arrays should be constructed using
     `array`, `zeros` or `empty`. Currently, only c-contiguous arrays are supported.
     """
+
+    @staticmethod
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):  # pylint: disable=bad-staticmethod-argument
+        """
+        Dispatch official NumPy unary/binary operator calls on mxnet.numpy.ndarray
+        to this function. The operators must comply with the ufunc definition in NumPy.
+        The following code is adapted from CuPy.
+        """
+        if 'out' in kwargs:
+            # need to unfold tuple argument in kwargs
+            out = kwargs['out']
+            if len(out) != 1:
+                raise ValueError('The `out` parameter must have exactly one ndarray')
+            kwargs['out'] = out[0]
+
+        if method == '__call__':
+            if ufunc.signature is not None:
+                # we don't support generalised-ufuncs (gufuncs)
+                return NotImplemented
+            name = ufunc.__name__
+            mx_ufunc = _NUMPY_ARRAY_UFUNC_DICT.get(name, None)
+            if mx_ufunc is None:
+                raise ValueError('mxnet.numpy operator `{}` has not been registered in '
+                                 'the _NUMPY_ARRAY_UFUNC_LIST. Please make sure you are '
+                                 'using NumPy >= 1.15.0 and the operator implementation '
+                                 'is compatible with NumPy. Then add the operator name '
+                                 'to the list.'
+                                 .format(name))
+            return mx_ufunc(*inputs, **kwargs)
+        else:
+            return NotImplemented
+
+    @staticmethod
+    def __array_function__(self, func, types, args, kwargs):  # pylint: disable=bad-staticmethod-argument
+        """
+        Dispatch official NumPy operators that comply with the array function protocol to
+        this function.
+        """
+        mx_np_func = _NUMPY_ARRAY_FUNCTION_DICT.get(func, None)
+        if mx_np_func is None:
+            raise ValueError('mxnet.numpy operator `{}` has not been registered in '
+                             'the _NUMPY_ARRAY_FUNCTION_LIST. Please make sure you are '
+                             'using NumPy >= 1.17.0 and the operator '
+                             'implementation is compatible with NumPy. Then add '
+                             'the operator name to the list.'.format(func))
+        # Note: this allows subclasses that don't override
+        # __array_function__ to handle mxnet.numpy.ndarray objects
+        if not all(issubclass(t, ndarray) for t in types):
+            return NotImplemented
+        return mx_np_func(*args, **kwargs)
+
     def _get_np_basic_indexing(self, key):
         """
         This function indexes ``self`` with a tuple of `slice` objects only.
@@ -1238,7 +1293,7 @@ class ndarray(NDArray):
         """Returns the standard deviation of the array elements along given axis."""
         return std(self, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
 
-    def var(self, axis=None, dtype=None, out=None, ddof=0, keepdims=None):  # pylint: disable=arguments-differ
+    def var(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=arguments-differ
         """Returns the variance of the array elements, along given axis."""
         return var(self, axis=axis, dtype=dtype, out=out, ddof=ddof, keepdims=keepdims)
 
@@ -3739,7 +3794,7 @@ def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable
 
 
 @set_module('mxnet.numpy')
-def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=None):
+def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
     """
     Compute the standard deviation along the specified axis.
     Returns the standard deviation, a measure of the spread of a distribution,
@@ -3806,7 +3861,7 @@ def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=None):
 
 
 @set_module('mxnet.numpy')
-def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=None):
+def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
     """
     Compute the variance along the specified axis.
     Returns the variance of the array elements, a measure of the spread of a
