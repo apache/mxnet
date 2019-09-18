@@ -27,7 +27,7 @@ import os
 import numpy
 from ..base import py_str
 from ..ndarray import (NDArray, zeros, clip, sqrt, cast, maximum, abs as NDabs, array, multiply,
-                       multi_sum_sq, multi_lars)
+                       multi_sum_sq, multi_lars, norm as NDnorm)
 from ..ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
                        mp_sgd_update, mp_sgd_mom_update, square, ftrl_update, ftml_update,
                        signsgd_update, signum_update, nag_mom_update, mp_nag_mom_update,
@@ -882,7 +882,7 @@ class LARS(Optimizer):
     def create_state_multi_precision(self, index, weight):
         weight_master_copy = None
         if self.multi_precision and weight.dtype == numpy.float16:
-            weight_master_copy = weight.astype(np.float32)
+            weight_master_copy = weight.astype(numpy.float32)
             return (self.create_state(index, weight_master_copy), weight_master_copy)
         if weight.dtype == numpy.float16 and not self.multi_precision:
             warnings.warn("Accumulating with float16 in optimizer can lead to "
@@ -903,7 +903,7 @@ class LARS(Optimizer):
         v = v.astype('float32')
         if rescale:
             v *= self.rescale_grad
-        norm = mx.nd.norm(v).asnumpy()[0]
+        norm = NDnorm(v).asnumpy()[0]
         return norm
 
     def _get_lars(self, i, weight, g, lr, wd):
@@ -919,7 +919,6 @@ class LARS(Optimizer):
             lars = self.eta * w_norm/(g_norm + wd * w_norm + self.eps)
         else:
             lars = 1.0
-
         return lars * lr
 
     def _update_impl(self, indices, weights, grads, states, multi_precision=False):
@@ -951,11 +950,13 @@ class LARS(Optimizer):
         if aggregate:
             nb_params = len(indices)
             names = [self.idx2name[i] if i in self.idx2name else str(i) for i in indices]
-            lars_idx = [i for i in range(nb_params) if not(names[i].endswith('gamma')
-                        or names[i].endswith('beta') or names[i].endswith('bias'))]
+            lars_idx = [i for i in range(nb_params) if
+                        not(names[i].endswith('gamma') or names[i].endswith('beta') or
+                            names[i].endswith('bias'))]
             nb_lars = len(lars_idx)
-            no_lars_idx = [i for i in range(nb_params) if (names[i].endswith('gamma') or
-                           names[i].endswith('beta') or names[i].endswith('bias'))]
+            no_lars_idx = [i for i in range(nb_params) if
+                           (names[i].endswith('gamma') or names[i].endswith('beta') or
+                            names[i].endswith('bias'))]
             cur_ctx = weights[0].context
             full_idx = lars_idx + no_lars_idx
             new_lrs = array([lrs[i] for i in full_idx], ctx=cur_ctx, dtype='float32')
@@ -976,40 +977,40 @@ class LARS(Optimizer):
                 if not multi_precision:
                     if self.momentum > 0:
                         preloaded_multi_sgd_mom_update(
-                                    *_flatten_list(zip(new_weights[sidx:eidx],
-                                                       new_grads[sidx:eidx],
-                                                       new_states[sidx:eidx])) +
-                                    [new_lrs[sidx:eidx], new_wds[sidx:eidx]],
-                                    out=new_weights[sidx:eidx],
-                                    num_weights=len(new_weights[sidx:eidx]),
-                                    **kwargs)
+                            *(_flatten_list(zip(new_weights[sidx:eidx],
+                                                new_grads[sidx:eidx],
+                                                new_states[sidx:eidx])) +
+                              [new_lrs[sidx:eidx], new_wds[sidx:eidx]]),
+                            out=new_weights[sidx:eidx],
+                            num_weights=len(new_weights[sidx:eidx]),
+                            **kwargs)
                     else:
                         preloaded_multi_sgd_update(
-                                    *_flatten_list(zip(new_weights[sidx:eidx],
-                                                        new_grads[sidx:eidx])) +
-                                    [new_lrs[sidx:eidx], new_wds[sidx:eidx]],
-                                    out=new_weights[sidx:eidx],
-                                    num_weights=len(new_weights[sidx:eidx]),
-                                    **kwargs)
+                            *(_flatten_list(zip(new_weights[sidx:eidx],
+                                                new_grads[sidx:eidx])) +
+                              [new_lrs[sidx:eidx], new_wds[sidx:eidx]]),
+                            out=new_weights[sidx:eidx],
+                            num_weights=len(new_weights[sidx:eidx]),
+                            **kwargs)
                 else:
                     if self.momentum > 0:
                         preloaded_multi_mp_sgd_mom_update(
-                                    *_flatten_list(zip(new_weights[sidx:eidx],
-                                                       new_grads[sidx:eidx],
-                                                       *zip(*new_states[sidx:eidx]))) +
-                                    [new_lrs[sidx:eidx], new_wds[sidx:eidx]],
-                                    out=new_weights[sidx:eidx],
-                                    num_weights=len(new_weights[sidx:eidx]),
-                                    **kwargs)
+                            *(_flatten_list(zip(new_weights[sidx:eidx],
+                                                new_grads[sidx:eidx],
+                                                *zip(*new_states[sidx:eidx]))) +
+                              [new_lrs[sidx:eidx], new_wds[sidx:eidx]]),
+                            out=new_weights[sidx:eidx],
+                            num_weights=len(new_weights[sidx:eidx]),
+                            **kwargs)
                     else:
                         preloaded_multi_mp_sgd_update(
-                                    *_flatten_list(zip(new_weights[sidx:eidx],
-                                                       new_grads[sidx:eidx],
-                                                       list(zip(*new_states[sidx:eidx]))[1])) +
-                                    [new_lrs[sidx:eidx], new_wds[sidx:eidx]],
-                                    out=new_weights[sidx:eidx],
-                                    num_weights=len(new_weights[sidx:eidx]),
-                                    **kwargs)
+                            *(_flatten_list(zip(new_weights[sidx:eidx],
+                                                new_grads[sidx:eidx],
+                                                list(zip(*new_states[sidx:eidx]))[1])) +
+                              [new_lrs[sidx:eidx], new_wds[sidx:eidx]]),
+                            out=new_weights[sidx:eidx],
+                            num_weights=len(new_weights[sidx:eidx]),
+                            **kwargs)
                 sidx += self.aggregate_num
         else:
             lrs = [self._get_lars(i, w, g, lr, wd) for (i, w, g, lr, wd) in
@@ -1042,7 +1043,7 @@ class LARS(Optimizer):
         self._update_impl(index, weight, grad, state,
                           multi_precision=use_multi_precision)
 
-
+#
 @register
 class LBSGD(Optimizer):
     """The Large Batch SGD optimizer with momentum and weight decay.

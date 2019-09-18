@@ -352,8 +352,8 @@ def check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights):
                                      num_weights=len(shapes), lrs=lrs, wds=wds,
                                      rescale_grad=rescale_grad, out=mx_w)
             mx.nd.preloaded_multi_mp_sgd_update(
-                                     *_flatten_list(zip(mx_p_w, mx_p_g, mx_p_w32)),
-                                     mx_lrs, mx_wds, num_weights=len(shapes),
+                                     *(_flatten_list(zip(mx_p_w, mx_p_g, mx_p_w32)) +
+                                      [mx_lrs, mx_wds]), num_weights=len(shapes),
                                      rescale_grad=rescale_grad, out=mx_p_w)
         else:
             out = mx.nd.multi_sgd_update(
@@ -361,8 +361,8 @@ def check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights):
                                     num_weights=len(shapes), lrs=lrs, wds=wds,
                                     rescale_grad=rescale_grad, out=mx_w)
             preloaded_out = mx.nd.preloaded_multi_sgd_update(
-                                    *_flatten_list(zip(mx_p_w, mx_p_g)),
-                                    mx_lrs, mx_wds, num_weights=len(shapes),
+                                    *(_flatten_list(zip(mx_p_w, mx_p_g)) +
+                                     [mx_lrs, mx_wds]), num_weights=len(shapes),
                                     rescale_grad=rescale_grad, out=mx_p_w)
     else:
         if use_master_weights:
@@ -374,8 +374,8 @@ def check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights):
                                     num_weights=len(shapes), lrs=lrs, wds=wds,
                                     rescale_grad=0.95, momentum=momentum, out=mx_w)
             preloaded_out = mx.nd.preloaded_multi_mp_sgd_mom_update(
-                                    *_flatten_list(zip(mx_p_w, mx_p_g, mx_p_m, mx_p_w32)),
-                                    mx_lrs, mx_wds, num_weights=len(shapes),
+                                    *(_flatten_list(zip(mx_p_w, mx_p_g, mx_p_m, mx_p_w32)) +
+                                      [mx_lrs, mx_wds]), num_weights=len(shapes),
                                     rescale_grad=0.95, momentum=momentum, out=mx_p_w)
         else:
             momentums_arr = [np.random.rand(*shape).astype(dtype) for shape in shapes]
@@ -386,8 +386,8 @@ def check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights):
                                     num_weights=len(shapes), lrs=lrs, wds=wds,
                                     rescale_grad=0.95, momentum=momentum, out=mx_w)
             mx.nd.preloaded_multi_sgd_mom_update(
-                                    *_flatten_list(zip(mx_p_w, mx_p_g, mx_p_m)),
-                                    mx_lrs, mx_wds, num_weights=len(shapes),
+                                    *(_flatten_list(zip(mx_p_w, mx_p_g, mx_p_m)) +
+                                      [mx_lrs, mx_wds]), num_weights=len(shapes),
                                     rescale_grad=0.95, momentum=momentum, out=mx_p_w)
 
     def _assert_all_almost_equal(lhs_list, rhs_list, rtol, atol):
