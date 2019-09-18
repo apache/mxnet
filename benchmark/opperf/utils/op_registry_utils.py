@@ -228,7 +228,7 @@ def get_all_random_sampling_operators():
 
     # Filter for Random Sampling operators
     random_sampling_mx_operators = {}
-    for op_name, op_params in mx_operators.items():
+    for op_name, _ in mx_operators.items():
         if op_name.startswith(("random_", "sample_")) and op_name not in unique_ops:
             random_sampling_mx_operators[op_name] = mx_operators[op_name]
     return random_sampling_mx_operators
@@ -270,9 +270,9 @@ def get_all_optimizer_operators():
 
     # Filter for Optimizer operators
     optimizer_mx_operators = {}
-    for op_name, op_params in mx_operators.items():
-         if op_name in optimizer_ops and op_name not in unique_ops:
-             optimizer_mx_operators[op_name] = mx_operators[op_name]
+    for op_name, _ in mx_operators.items():
+        if op_name in optimizer_ops and op_name not in unique_ops:
+            optimizer_mx_operators[op_name] = mx_operators[op_name]
     return optimizer_mx_operators
 
 def get_all_sorting_searching_operators():
@@ -289,7 +289,7 @@ def get_all_sorting_searching_operators():
 
     # Filter for Sort and search operators
     sort_search_mx_operators = {}
-    for op_name, op_params in mx_operators.items():
+    for op_name, _ in mx_operators.items():
         if op_name in sort_search_ops and op_name not in unique_ops:
             sort_search_mx_operators[op_name] = mx_operators[op_name]
     return sort_search_mx_operators
@@ -309,11 +309,32 @@ def get_all_rearrange_operators():
 
     # Filter for Array Rearrange operators
     rearrange_mx_operators = {}
-    for op_name, op_params in mx_operators.items():
+    for op_name, _ in mx_operators.items():
         if op_name in rearrange_ops and op_name not in unique_ops:
             rearrange_mx_operators[op_name] = mx_operators[op_name]
     return rearrange_mx_operators
-    
+
+
+def get_all_indexing_routines():
+    """Gets all indexing routines registered with MXNet.
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
+    indexing_routines = ['slice', 'slice_axis', 'slice_like', 'take', 'batch_take', 'one_hot',
+                         'pick', 'where', 'ravel_multi_index', 'unravel_index', 'gather_nd', 'scatter_nd']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Indexing routines
+    indexing_mx_routines = {}
+    for op_name, _ in mx_operators.items():
+        if op_name in indexing_routines and op_name not in unique_ops:
+            indexing_mx_routines[op_name] = mx_operators[op_name]
+    return indexing_mx_routines
+
 
 def get_operators_with_no_benchmark(operators_with_benchmark):
     """Gets all MXNet operators with not benchmark.

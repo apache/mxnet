@@ -79,29 +79,37 @@ DEFAULT_V = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_Z = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_G = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_DELTA = [(1024, 1024), (10000, 1), (10000, 100)]
-DEFAULT_LRS = [(0.1,0.1)]
-DEFAULT_LR = [0.1,0.5,0.9]
-DEFAULT_GAMMA_1 = [0.1,0.5,0.9]
-DEFAULT_GAMMA_2 = [0.1,0.5,0.9]
+DEFAULT_LRS = [(0.1, 0.1)]
+DEFAULT_LR = [0.1, 0.5, 0.9]
+DEFAULT_GAMMA_1 = [0.1, 0.5, 0.9]
+DEFAULT_GAMMA_2 = [0.1, 0.5, 0.9]
 DEFAULT_EPSILON = [1e-08]
-DEFAULT_BETA_1 = [0.1,0.5,0.9]
-DEFAULT_BETA_2 = [0.1,0.5,0.9]
-DEFAULT_T = [1,5]
+DEFAULT_BETA_1 = [0.1, 0.5, 0.9]
+DEFAULT_BETA_2 = [0.1, 0.5, 0.9]
+DEFAULT_T = [1, 5]
 DEFAULT_RESCALE_GRAD = [0.4, 0.77]
-DEFAULT_CLIP_GRADIENT = [-1.0,0.8]
-DEFAULT_CLIP_WEIGHTS = [-1.0,0.8]
-DEFAULT_LAZY_UPDATE = [0,1]
+DEFAULT_CLIP_GRADIENT = [-1.0, 0.8]
+DEFAULT_CLIP_WEIGHTS = [-1.0, 0.8]
+DEFAULT_LAZY_UPDATE = [0, 1]
 
 # For rearrange operators
 # NOTE: Data needs to be a 4D tensor for  operators like space_to_depth and depth_to_space
 # Hence below we append 4d to mark the difference.
 # For depth_to_space, dimension 3 needs to be a multiple of 'block' and 1 should be a multiple of `block^2`
-DEFAULT_DATA_4d = [(1, 4, 2, 4), (10,25,10,100)]
+DEFAULT_DATA_4d = [(1, 4, 2, 4), (10, 25, 10, 100)]
 DEFAULT_BLOCK_SIZE = [2, 5]
 
 # For swapaxis operator
 DEFAULT_DIM_1 = [0]
 DEFAULT_DIM_2 = [1]
+
+# For indexing routines
+DEFAULT_INDICES = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_BEGIN = [[900, 900], [0, 0], [500, 50]]
+DEFAULT_END = [[1000, 1000], [100, 0], [1000, 75]]
+DEFAULT_SHAPE_LIKE = [(100, 100), (10, 1), (100, 10)]
+DEFAULT_Y = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_COND = [(1024,), (10000,), (10000,)]
 
 # Default Inputs. MXNet Op Param Name to Default Input mapping
 DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
@@ -124,35 +132,41 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "p_nd": DEFAULT_P_ND,
                    "axis_shape": DEFAULT_AXIS_SHAPE,
                    "axis": DEFAULT_AXIS,
-                   "weight" : DEFAULT_WEIGHT,
-                   "weight32" : DEFAULT_WEIGHT,
-                   "grad" : DEFAULT_GRAD,
-                   "mean" : DEFAULT_MEAN,
-                   "var" : DEFAULT_VAR,
-                   "mom" : DEFAULT_MOM,
-                   "n" : DEFAULT_N,
-                   "d" : DEFAULT_D,
-                   "v" : DEFAULT_V,
-                   "z" : DEFAULT_Z,
-                   "g" : DEFAULT_G,
-                   "delta" : DEFAULT_DELTA,
-                   "lr" : DEFAULT_LR,
-                   "lrs" : DEFAULT_LRS,
-                   "wds" : DEFAULT_LRS,
-                   "gamma1" : DEFAULT_GAMMA_1,
-                   "gamma2" : DEFAULT_GAMMA_2,
-                   "epsilon" : DEFAULT_EPSILON,
-                   "beta1" : DEFAULT_BETA_1,
-                   "beta2" : DEFAULT_BETA_2,
-                   "t" : DEFAULT_T,
-                   "rescale_grad" : DEFAULT_RESCALE_GRAD,
-                   "clip_grad" : DEFAULT_CLIP_GRADIENT,
-                   "lazy_update" : DEFAULT_LAZY_UPDATE,
+                   "weight": DEFAULT_WEIGHT,
+                   "weight32": DEFAULT_WEIGHT,
+                   "grad": DEFAULT_GRAD,
+                   "mean": DEFAULT_MEAN,
+                   "var": DEFAULT_VAR,
+                   "mom": DEFAULT_MOM,
+                   "n": DEFAULT_N,
+                   "d": DEFAULT_D,
+                   "v": DEFAULT_V,
+                   "z": DEFAULT_Z,
+                   "g": DEFAULT_G,
+                   "delta": DEFAULT_DELTA,
+                   "lr": DEFAULT_LR,
+                   "lrs": DEFAULT_LRS,
+                   "wds": DEFAULT_LRS,
+                   "gamma1": DEFAULT_GAMMA_1,
+                   "gamma2": DEFAULT_GAMMA_2,
+                   "epsilon": DEFAULT_EPSILON,
+                   "beta1": DEFAULT_BETA_1,
+                   "beta2": DEFAULT_BETA_2,
+                   "t": DEFAULT_T,
+                   "rescale_grad": DEFAULT_RESCALE_GRAD,
+                   "clip_grad": DEFAULT_CLIP_GRADIENT,
+                   "lazy_update": DEFAULT_LAZY_UPDATE,
                    "data_4d": DEFAULT_DATA_4d,
                    "dim1": DEFAULT_DIM_1,
                    "dim2": DEFAULT_DIM_2,
                    "block_size": DEFAULT_BLOCK_SIZE,
-                   "args": DEFAULT_ARGS}
+                   "args": DEFAULT_ARGS,
+                   "indices": DEFAULT_INDICES,
+                   "begin": DEFAULT_BEGIN,
+                   "end": DEFAULT_END,
+                   "shape_like": DEFAULT_SHAPE_LIKE,
+                   "y": DEFAULT_Y,
+                   "cond": DEFAULT_COND}
 
 
 # These are names of MXNet operator parameters that is of type NDArray.
