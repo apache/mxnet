@@ -1723,7 +1723,7 @@ def test_np_choice():
             samples = sampler(a)
         assert len(samples) == samples_size
         if not replace:
-            assert len(_np.unique(samples)) == samples_size
+            assert len(_np.unique(samples.asnumpy())) == samples_size
 
     num_classes = 10
     num_samples = 10 ** 8
