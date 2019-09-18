@@ -311,6 +311,8 @@ def test_rnnrelu_dropout():
     out[0].wait_to_read()
 
 def test_RNN_float64():
+    if default_context().device_type == 'gpu':
+        return
     sym = mx.sym.RNN(
         mx.sym.Variable('in'),
         mx.sym.Variable('par'),
@@ -330,7 +332,7 @@ def test_RNN_float64():
     args_grad = explicit_grad
     grad_req = 'write'
 
-    ex = sym.bind(mx.cpu(),
+    ex = sym.bind(default_context(),
         {
             'in': mx.nd.ones([2, 1, 2], dtype=dtype),
             'par': mx.nd.ones([12], dtype=dtype),
