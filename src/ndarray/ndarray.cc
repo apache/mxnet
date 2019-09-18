@@ -474,7 +474,7 @@ void NDArray::Chunk::SetMKLMem(const mxnet::TShape &shape, int dtype) {
 
   mkldnn::memory::dims dims;
   // These are shapes supprted by MKLDNN.
-  if (shape.ndim() >= 1 && shape.ndim() <= 5) {
+  if (shape.ndim() >= 1 && shape.ndim() <= 6) {
     dims.resize(shape.ndim());
     for (size_t i = 0; i < dims.size(); i++)
       dims[i] = shape[i];
@@ -488,6 +488,7 @@ void NDArray::Chunk::SetMKLMem(const mxnet::TShape &shape, int dtype) {
     case 3: layout = mkldnn::memory::format_tag::abc; break;
     case 4: layout = mkldnn::memory::format_tag::abcd; break;
     case 5: layout = mkldnn::memory::format_tag::abcde; break;
+    case 6: layout = mkldnn::memory::format_tag::abcdef; break;
     default:
       LOG(FATAL) << "Not implemented dimension (" << dims.size() << ") for MKLDNN";
   }
@@ -592,7 +593,7 @@ NDArray NDArray::Reorder2Default() const {
   return ret;
 }
 
-void NDArray::Reorder2DefaultAsync() {
+void NDArray::Reorder2DefaultAsync() const {
   std::vector<Engine::VarHandle> const_vars;
   std::vector<Engine::VarHandle> mutable_vars(1, this->var());
   NDArray tmp = *this;
@@ -604,13 +605,18 @@ void NDArray::Reorder2DefaultAsync() {
     FnProperty::kNormal, 0, "Reorder2Default");
 }
 
-void NDArray::MKLDNNDataReorderAsync(const mkldnn::memory::desc &desc) {
+void NDArray::MKLDNNDataReorderAsync(const mkldnn::memory::desc &desc) const {
   std::vector<Engine::VarHandle> const_vars;
   std::vector<Engine::VarHandle> mutable_vars(1, this->var());
   NDArray tmp = *this;
+  const auto version = this->version();
   Engine::Get()->PushAsync(
-    [tmp, desc](RunContext ctx, Engine::CallbackOnComplete on_complete) {
-      tmp.ptr_->MKLDNNDataReorder(desc);
+    [tmp, version, desc](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+      // MXNet will try to reuse NDArray from memory planning, so we need to ensure
+      // the NDArray is still holding the original trunk data.
+      if (tmp.version() == version) {
+        tmp.ptr_->MKLDNNDataReorder(desc);
+      }
       on_complete();
     }, ctx(), const_vars, mutable_vars,
     FnProperty::kNormal, 0, "Reorder");

@@ -312,6 +312,7 @@ mkldnn_format_tag_t GetDefaultFormat(int num_dims) {
     case 3: return mkldnn_abc;
     case 4: return mkldnn_abcd;
     case 5: return mkldnn_abcde;
+    case 6: return mkldnn_abcdef;
     default:
       LOG(FATAL) << "Not implemented dimension (" << num_dims << ") for MKLDNN";
       return mkldnn_format_tag_undef;
@@ -530,7 +531,7 @@ bool MKLDNNStorageType(const nnvm::NodeAttrs &attrs,
     if (v == - 1) v = kDefaultStorage;
 
   DispatchMode wanted_mode;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
   if (dev_mask == mshadow::cpu::kDevMask && !MKLDNNEnvSet())
     wanted_mode = DispatchMode::kFComputeFallback;
   else if (dev_mask == mshadow::cpu::kDevMask && support_mkldnn)

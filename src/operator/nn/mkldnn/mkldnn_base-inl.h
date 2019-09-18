@@ -277,6 +277,28 @@ inline static mkldnn::memory::desc GetWeightDesc(const NDArray &arr,
   }
 }
 
+inline static bool CheckMKLDNNInputArrayIsView(const std::vector<NDArray> &inputs) {
+  for (const auto &in : inputs) {
+    if (in.IsView() && in.IsMKLDNNData()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+inline static const std::vector<NDArray> GetMKLDNNInputArray(const std::vector<NDArray> &inputs) {
+  std::vector<NDArray> ret;
+  ret.reserve(inputs.size());
+  for (const auto &in : inputs) {
+    if (in.IsView() && in.IsMKLDNNData()) {
+      ret.push_back(in.Reorder2Default());
+    } else {
+      ret.push_back(in);
+    }
+  }
+  return ret;
+}
+
 typedef std::shared_ptr<mkldnn::memory> mkldnn_mem_ptr;
 typedef std::shared_ptr<const mkldnn::memory> mkldnn_mem_const_ptr;
 
