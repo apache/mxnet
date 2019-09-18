@@ -38,7 +38,11 @@ pipeline {
     // Release parameters
     string(defaultValue: "Generic release job", description: "Optional Job name", name: "RELEASE_JOB_NAME")
     string(defaultValue: "master", description: "Git Commit to Build", name: "COMMIT_ID")
-    choice(choices: ["mxnet_lib/static", "mxnet_lib/dynamic"], description: "Pipeline to build", name: "RELEASE_JOB_TYPE")
+
+    // Using string instead of choice parameter to keep the changes to the parameters minimal to avoid
+    // any disruption caused by different COMMIT_ID values chaning the job parameter configuration on 
+    // Jenkins.
+    string(defaultValue: "mxnet_lib/static", description: "Pipeline to build", name: "RELEASE_JOB_TYPE")
     string(defaultValue: "cpu,mkl,cu90,cu90mkl,cu92,cu92mkl,cu100,cu100mkl,cu101,cu101mkl", description: "Comma separated list of variants", name: "MXNET_VARIANTS")
     booleanParam(defaultValue: false, description: 'Whether this is a release build or not', name: "RELEASE_BUILD")
   }
