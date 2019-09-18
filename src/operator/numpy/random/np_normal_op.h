@@ -25,7 +25,6 @@
 #ifndef MXNET_OPERATOR_NUMPY_RANDOM_NP_NORMAL_OP_H_
 #define MXNET_OPERATOR_NUMPY_RANDOM_NP_NORMAL_OP_H_
 
-#include <mshadow/base.h>
 #include <mxnet/operator_util.h>
 #include <algorithm>
 #include <string>
@@ -36,7 +35,6 @@
 #include "../../operator_common.h"
 #include "../../tensor/elemwise_binary_broadcast_op.h"
 #include "./dist_common.h"
-#include <stdio.h>
 
 namespace mxnet {
 namespace op {
@@ -154,7 +152,7 @@ void NumpyNormalForward(const nnvm::NodeAttrs &attrs,
   // Generate base random number.
   Random<xpu, float> *prnd = ctx.requested[0].get_random<xpu, float>(s);
   index_t output_len = outputs[0].Size();
-  Tensor<xpu, 1, float> workspace = 
+  Tensor<xpu, 1, float> workspace =
       ctx.requested[1].get_space_typed<xpu, 1, float>(Shape1(output_len + 1), s);
   Tensor<xpu, 1, float> normal_tensor = workspace.Slice(0, output_len);
   Tensor<xpu, 1, float> indicator_device = workspace.Slice(output_len, output_len + 1);
@@ -165,7 +163,6 @@ void NumpyNormalForward(const nnvm::NodeAttrs &attrs,
 
   // [scalar scalar] case
   if (inputs.size() == 0U) {
-    // printf("scale value:%f", param.scale.value());
     CHECK_GE(param.scale.value(), 0.0) << "ValueError: scale < 0";
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
       Kernel<normal_two_scalar_kernel<OType>, xpu>::Launch(
@@ -183,8 +180,7 @@ void NumpyNormalForward(const nnvm::NodeAttrs &attrs,
       scalar_value = param.loc.value();
       MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
         Kernel<check_legal_scale_kernel<IType>, xpu>::Launch(
-          s, inputs[0].Size(), inputs[0].dptr<IType>(), indicator_device_ptr
-        );
+            s, inputs[0].Size(), inputs[0].dptr<IType>(), indicator_device_ptr);
       });
       _copy<xpu>(&indicator_host, indicator_device_ptr);
       CHECK_GE(indicator_host, 0.0) << "ValueError: scale < 0";
