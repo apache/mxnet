@@ -17,15 +17,16 @@
 
 # coding: utf-8
 """Init tvm ops."""
-import json
-
-from ._ctypes.space import _set_tvm_op_config
-from .base import check_call, _LIB, c_str
 from .runtime import Features
-from .space import ConfigSpaces
-from .libinfo import find_lib_path, find_conf_path
 
 if Features().is_enabled("TVM_OP"):
+    import json
+
+    from ._ctypes.space import _set_tvm_op_config
+    from .base import check_call, _LIB, c_str
+    from .space import ConfigSpaces
+    from .libinfo import find_lib_path, find_conf_path
+
     _LIB_TVM_OP = find_lib_path("libtvmop")
     check_call(_LIB.MXLoadTVMOp(c_str(_LIB_TVM_OP[0])))
 

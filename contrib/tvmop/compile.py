@@ -101,8 +101,8 @@ if __name__ == "__main__":
                             subname = name + "index_" + str(i) + \
                                 ''.join(["%s_%d" % (arg.dtype, len(arg.shape)) for arg in args])
                             func_lower = tvm.lower(sch, args,
-                                                name=subname,
-                                                binds=op.get_binds(args))
+                                                   name=subname,
+                                                   binds=op.get_binds(args))
                             func_list.append(func_lower)
                         # register config space
                         config_spaces[name] = ConfigSpace.from_tvm(config_space)
