@@ -124,9 +124,8 @@ class Arg:
         else:
             try:
                 self.type = self.typeDict[typeString.split(',')[0]]
-            except:
-                print('argument "%s" of operator "%s" has unknown type "%s"' % (argName, opName, typeString))
-                pass
+            except KeyError as e:
+                raise KeyError('argument "%s" of operator "%s" has unknown type "%s"' % (argName, opName, typeString))
         if typeString.find('default=') != -1:
             self.hasDefault = True
             self.defaultString = typeString.split('default=')[1].strip().strip("'")
@@ -367,36 +366,23 @@ def ParseAllOps():
 
         args = []
 
-        for i in range(0, nArgs.value):
-            arg = Arg(decoded_name,
-                      argNames[i].decode('utf-8'),
-                      argTypes[i].decode('utf-8'),
-                      argDescs[i].decode('utf-8'))
-            args.append(arg)
+        try:
+            for i in range(0, nArgs.value):
+                arg = Arg(decoded_name,
+                          argNames[i].decode('utf-8'),
+                          argTypes[i].decode('utf-8'),
+                          argDescs[i].decode('utf-8'))
+                args.append(arg)
+            op = Op(decoded_name, description.value.decode('utf-8'), args)
+            ret = ret + op.GetOpDefinitionString(True) + "\n"
+            ret2 = ret2 + op.GetOpDefinitionString(False) + "\n"
+        except Exception as e:
+            print(e)
+            continue
 
-        op = Op(decoded_name, description.value.decode('utf-8'), args)
-
-        ret = ret + op.GetOpDefinitionString(True) + "\n"
-        ret2 = ret2 + op.GetOpDefinitionString(False) + "\n"
     return ret + ret2
 
 if __name__ == "__main__":
-    #et = EnumType(typeName = 'MyET')
-    #print(et.GetDefinitionString())
-    #print(et.GetEnumStringArray())
-    #arg = Arg()
-    #print(arg.ConstructEnumTypeName('SoftmaxActivation', 'act_type'))
-    #arg = Arg(opName = 'FullConnected', argName='act_type', \
-    #    typeString="{'elu', 'leaky', 'prelu', 'rrelu'},optional, default='leaky'", \
-    #    descString='Activation function to be applied.')
-    #print(arg.isEnum)
-    #print(arg.defaultString)
-    #arg = Arg("fc", "alpha", "float, optional, default=0.0001", "alpha")
-    #decl = "%s %s" % (arg.type, arg.name)
-    #if arg.hasDefault:
-    #    decl = decl + "=" + arg.defaultString
-    #print(decl)
-
     temp_file_name = ""
     output_file = '../include/mxnet-cpp/op.h'
     try:
