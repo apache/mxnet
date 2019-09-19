@@ -356,7 +356,9 @@ def test_sequence_last():
     # test with sequence length
     # parameter sequence_length - NDArray with shape (batch_size)
     # (2,3) indicates 2nd sequence from batch 1 and 3rd sequence from batch 2
-    b = nd.SequenceLast(a, sequence_length=mx.nd.array([2, 3]),
+    # need to mention dtype = int64 for sequence_length ndarray to support large indices
+    # else it defaults to float32 and errors
+    b = nd.SequenceLast(a, sequence_length=mx.nd.array([2, 3], dtype="int64"),
                         use_sequence_length=True)
     # check if it takes 2nd sequence from the first batch
     assert b[0] == a[1][0]
@@ -712,15 +714,6 @@ def test_full():
     assert a.shape[0] == LARGE_X
     assert a[LARGE_X // 2] == 3
     assert a[-1] == 3
-
-
-def test_one_hot():
-    a = nd.zeros(10)
-    a[0] = 1
-    a[-1] = 1
-    b = nd.one_hot(a, LARGE_X)
-    assert b[0][1] == 1
-    assert b[-1][1] == 1
 
 
 if __name__ == '__main__':

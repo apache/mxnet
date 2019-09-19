@@ -21,7 +21,6 @@ import numpy as np
 from ...context import current_context
 from . import _internal as _npi
 from ..ndarray import NDArray
-from ...base import numeric_types
 
 
 __all__ = ['randint', 'uniform', 'normal', "choice"]
@@ -145,7 +144,7 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
                             ctx=ctx, dtype=dtype, out=out)
 
 
-def normal(loc=0.0, scale=1.0, size=None, **kwargs):
+def normal(loc=0.0, scale=1.0, size=None, dtype=None, **kwargs):
     """Draw random samples from a normal (Gaussian) distribution.
 
     Samples are distributed according to a normal distribution parametrized
@@ -166,31 +165,36 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
         Data type of output samples. Default is 'float32'
     ctx : Context, optional
         Device context of output. Default is current context.
-    out : ``ndarray``, optional
-        Store output to an existing ``ndarray``.
 
     Returns
     -------
     out : ndarray
         Drawn samples from the parameterized normal distribution.
-
-    Notes
-    -----
-    This function currently does not support ``loc`` and ``scale`` as ndarrays.
     """
-    dtype = kwargs.pop('dtype', None)
+    from ...numpy import ndarray as np_ndarray
+    input_type = (isinstance(loc, np_ndarray), isinstance(scale, np_ndarray))
+    ctx = kwargs.pop('ctx', None)
+    out = kwargs.pop('out', None)
     if dtype is None:
         dtype = 'float32'
-    ctx = kwargs.pop('ctx', None)
     if ctx is None:
         ctx = current_context()
-    out = kwargs.pop('out', None)
-    if size is None and out is None:
-        size = ()
-    if (not isinstance(loc, numeric_types)) or (not isinstance(scale, numeric_types)):
-        raise NotImplementedError('np.random.normal only supports loc and scale of '
-                                  'numeric types for now')
-    return _npi.random_normal(loc, scale, shape=size, dtype=dtype, ctx=ctx, out=out, **kwargs)
+    if out is not None:
+        size = out.shape
+    if size == ():
+        size = None
+    if input_type == (True, True):
+        return _npi.normal(loc, scale, loc=None, scale=None, size=size,
+                           ctx=ctx, dtype=dtype, out=out)
+    elif input_type == (False, True):
+        return _npi.normal(scale, loc=loc, scale=None, size=size,
+                           ctx=ctx, dtype=dtype, out=out)
+    elif input_type == (True, False):
+        return _npi.normal(loc, loc=None, scale=scale, size=size,
+                           ctx=ctx, dtype=dtype, out=out)
+    else:
+        return _npi.normal(loc=loc, scale=scale, size=size,
+                           ctx=ctx, dtype=dtype, out=out)
 
 
 def multinomial(n, pvals, size=None):

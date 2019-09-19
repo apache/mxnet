@@ -862,6 +862,27 @@ def test_neg_fc_relu():
     syms, attrs, excluded_attrs = neg_fc_relu(no_bias, dshape, flatten)
     check_neg_fusion(syms, attrs, excluded_attrs, dshape, name='fc')
 
+def test_float64_fallback():
+    sym = mx.sym.FullyConnected(
+        mx.sym.Variable('in'),
+        mx.sym.Variable('w'),
+        mx.sym.Variable('b'),
+        num_hidden=2
+    )
+
+    dtype = 'float64'
+    ex = sym.bind(mx.cpu(),
+                  {
+        'in': mx.nd.array([[2, 3, 4]], dtype=dtype),
+        'w': mx.nd.array([[1, 2, 3], [4, 5, 6]], dtype=dtype),
+        'b': mx.nd.array([7, 8], dtype=dtype)
+    },
+        args_grad=None,
+        grad_req='write'
+    )
+    ex.forward()
+    ex.outputs[0].wait_to_read()
+
 if __name__ == "__main__":
   import nose
   nose.runmodule()

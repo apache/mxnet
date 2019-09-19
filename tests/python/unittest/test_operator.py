@@ -310,6 +310,40 @@ def test_rnnrelu_dropout():
     out = exe.forward(is_train=True)
     out[0].wait_to_read()
 
+def test_RNN_float64():
+    if default_context().device_type == 'gpu':
+        return
+    sym = mx.sym.RNN(
+        mx.sym.Variable('in'),
+        mx.sym.Variable('par'),
+        mx.sym.Variable('s'),
+        state_size = (2),
+        num_layers = 1,
+        mode = 'rnn_tanh'
+    )
+
+    dtype = 'float64'
+    explicit_grad = {
+        'in': mx.nd.ones([2, 1, 2], dtype=dtype),
+        'par': mx.nd.ones([12], dtype=dtype),
+        's': mx.nd.ones([1, 1, 2], dtype=dtype)
+    }
+
+    args_grad = explicit_grad
+    grad_req = 'write'
+
+    ex = sym.bind(default_context(),
+        {
+            'in': mx.nd.ones([2, 1, 2], dtype=dtype),
+            'par': mx.nd.ones([12], dtype=dtype),
+            's': mx.nd.ones([1, 1, 2], dtype=dtype)
+        },
+        args_grad = args_grad,
+        grad_req = grad_req
+    )
+    ex.forward()
+    ex.outputs[0].wait_to_read()
+
 def np_softmax(x, axis=-1, temperature=1.0):
     x = x - np.max(x, axis=axis, keepdims=True)
     x = np.exp(x/temperature)
@@ -1943,7 +1977,7 @@ def test_groupnorm():
                                   num_groups=num_groups, eps=eps, output_mean_var=True)
         check_symbolic_forward(mx_sym, [mx_data, mx_gamma, mx_beta], [np_out, np_mean, np_std],
                                rtol=1e-2 if dtype == np.float16 else 1e-3,
-                               atol=5e-3 if dtype == np.float16 else 1e-5, dtype=dtype)
+                               atol=5e-3 if dtype == np.float16 else 1e-4, dtype=dtype)
         mx_sym = mx.sym.GroupNorm(data=data_sym, gamma=gamma_sym, beta=beta_sym,
                                   num_groups=num_groups, eps=eps, output_mean_var=False)
         np_ograd = np.random.uniform(-1.0, 1.0, dshape).astype(dtype)
@@ -1956,7 +1990,7 @@ def test_groupnorm():
         check_symbolic_backward(mx_sym, [mx_data, mx_gamma, mx_beta], [mx.nd.array(np_ograd)],
                                 [np_data_grad, np_gamma_grad, np_beta_grad],
                                 rtol=1e-2 if dtype == np.float16 else 1e-3,
-                                atol=5e-2 if dtype == np.float16 else 1e-5, dtype=dtype)
+                                atol=5e-2 if dtype == np.float16 else 1e-4, dtype=dtype)
 
 
 @with_seed()
@@ -9237,6 +9271,19 @@ def test_transpose_infer_shape_mixed():
     x = b.bind(mx.cpu(), args={})
     y = x.forward()
     assert(y[0].shape == (2,3))
+
+
+@with_seed()
+def test_sample_normal_default_shape():
+    # Test case from https://github.com/apache/incubator-mxnet/issues/16135
+    s = mx.nd.sample_normal(mu=mx.nd.array([10.0]), sigma=mx.nd.array([0.5]))
+    assert s.shape == (1,)
+    s = mx.nd.sample_normal(mu=mx.nd.array([10.0]), sigma=mx.nd.array([0.5]), shape=())
+    assert s.shape == (1,)
+    s = mx.nd.sample_normal(mu=mx.nd.array([10.0]), sigma=mx.nd.array([0.5]), shape=1)
+    assert s.shape == (1, 1)
+    s = mx.nd.sample_normal(mu=mx.nd.array([10.0]), sigma=mx.nd.array([0.5]), shape=(1,))
+    assert s.shape == (1, 1)
 
 
 if __name__ == '__main__':
