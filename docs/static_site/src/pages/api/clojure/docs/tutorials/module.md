@@ -1,3 +1,10 @@
+---
+layout: page_api
+title: Module API
+is_tutorial: true
+tag: clojure
+permalink: /api/clojure/docs/tutorials/module
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,13 +21,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: Module API
-is_tutorial: true
-tag: clojure
-permalink: /api/clojure/docs/tutorials/module
----
 
 # Module API
 The module API provides an intermediate and high-level interface for performing computation with neural networks in MXNet. Module wraps a Symbol and one or more Executors. It has both a high level and intermediate level API.

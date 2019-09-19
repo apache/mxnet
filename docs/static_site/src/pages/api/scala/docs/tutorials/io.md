@@ -1,3 +1,10 @@
+---
+layout: page_api
+title: Data Loading API
+permalink: /api/scala/docs/tutorials/io
+is_tutorial: true
+tag: scala
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,13 +21,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: Data Loading API
-permalink: /api/scala/docs/tutorials/io
-is_tutorial: true
-tag: scala
----
 
 # MXNet Scala Data Loading API
 This topic introduces the data input method for MXNet. MXNet uses an iterator to provide data to the neural network.  Iterators do some preprocessing and generate batches for the neural network.

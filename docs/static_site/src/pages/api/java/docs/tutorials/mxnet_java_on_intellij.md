@@ -1,3 +1,10 @@
+---
+layout: page_api
+title: Java with IntelliJ
+permalink: /api/java/docs/tutorials/mxnet_java_on_intellij
+is_tutorial: true
+tag: java
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,13 +21,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: Java with IntelliJ
-permalink: /api/java/docs/tutorials/mxnet_java_on_intellij
-is_tutorial: true
-tag: java
----
 
 
 # Run MXNet Java Examples Using the IntelliJ IDE (macOS)

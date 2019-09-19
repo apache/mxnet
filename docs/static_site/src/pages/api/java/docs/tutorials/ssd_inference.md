@@ -1,3 +1,10 @@
+---
+layout: page_api
+title: SSD Inference
+permalink: /api/java/docs/tutorials/ssd_inference
+is_tutorial: true
+tag: java
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,13 +21,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: SSD Inference
-permalink: /api/java/docs/tutorials/ssd_inference
-is_tutorial: true
-tag: java
----
 
 # Multi Object Detection using pre-trained SSD Model via Java Inference APIs
 
