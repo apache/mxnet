@@ -75,10 +75,30 @@ pipeline {
     stage("Release Job") {
       steps {
         script {
+
+          // Add new job types here
+          def valid_job_types = [
+            "mxnet_lib/static",
+            "mxnet_lib/dynamic", 
+            "python/pypi"
+          ]
           
           // Convert mxnet variants to a list
-          def mxnet_variants = params.MXNET_VARIANTS.split(',').inject([]) { list, item ->
+          def mxnet_variants = params.MXNET_VARIANTS.trim().split(',').inject([]) { list, item ->
             list << item.trim()
+          }.findAll { item -> ! (item == null || item.isEmpty()) }
+
+          echo "size: ${mxnet_variants.size()}"
+
+          // Exit successfully if there are no variants to build
+          if (mxnet_variants.size() == 0) {
+            currentBuild.result = 'SUCCESS'
+            return
+          }
+
+          // Only execute from allowed release job types
+          if (! ("${params.RELEASE_JOB_TYPE}" in valid_job_types)) {
+            error "Unknown release job type ${params.RELEASE_JOB_TYPE}"
           }
 
           // Load script for the supplied job type
