@@ -257,6 +257,25 @@ def assign_node_labels(args) {
   NODE_UTILITY = args.utility
 }
 
+def check_only_doc_tutorials_changes(){
+  node(NODE_UTILITY) {
+    checkout scm
+    is_doc_tutorials = sh (returnStdout: true, script: """ 
+      set +e
+      git --no-pager diff --name-only HEAD remotes/origin/master
+      """)
+    lines = is_doc_tutorials.trim()
+    for(line in lines.split("\\s+")){
+      if(line.startsWith("docs") || line.startsWith("tests/night")){
+        continue
+      } else {
+        return false
+      } 
+    }
+    return true
+  }
+}
+  
 def main_wrapper(args) {
   // Main Jenkinsfile pipeline wrapper handler that allows to wrap core logic into a format
   // that supports proper failure handling
@@ -267,12 +286,21 @@ def main_wrapper(args) {
   // assign any caught errors here
   err = null
   try {
+    if(check_only_doc_tutorials_changes()){   
+      node(NODE_UTILITY) {
+        sh "echo skipping tests because only docs/tutorials change"
+        currentBuild.result = "SUCCESS"
+        update_github_commit_status('SUCCESS', 'Skipped as only doc and tutorials changes')
+      }
+    } else {
+    
     update_github_commit_status('PENDING', 'Job has been enqueued')
     args['core_logic']()
 
     // set build status to success at the end
     currentBuild.result = "SUCCESS"
     update_github_commit_status('SUCCESS', 'Job succeeded')
+    }
   } catch (caughtError) {
     node(NODE_UTILITY) {
       sh "echo caught ${caughtError}"

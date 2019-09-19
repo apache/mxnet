@@ -26,6 +26,7 @@ Training a neural network with a large number of images presents several challen
 
 ```
 $ pip install opencv-python
+
 ```
 
 ```python
