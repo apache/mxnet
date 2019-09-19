@@ -804,6 +804,15 @@ inline void ConvertToLegacyShape(mxnet::ShapeVector* shapes) {
     ConvertToLegacyShape(&(shapes->at(i)));
   }
 }
+void ExecuteMonInputCallback(
+    const nnvm::IndexedGraph &idx, const std::vector<NDArray *> &state_arrays,
+    size_t nid, const std::function<void(const char *, const char *, void *)>
+                    &monitor_callback);
+
+void ExecuteMonOutputCallback(
+    const nnvm::IndexedGraph &idx, const std::vector<NDArray *> &state_arrays,
+    size_t nid, const std::function<void(const char *, const char *, void *)>
+                    &monitor_callback);
 
 /*!
  * \brief This is function can return the output names of a NodeEntry.
