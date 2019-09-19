@@ -195,10 +195,10 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
       }
     }
 
-    std::unordered_map<int, mkldnn::memory> net_args;
-    net_args.insert({MKLDNN_ARG_SRC, *(data.GetMKLDNNData())});
-    net_args.insert({MKLDNN_ARG_SCALE_SHIFT, weight_mem});
-    net_args.insert({MKLDNN_ARG_DST, *out_mem});
+    mkldnn_args_map_t net_args;
+    net_args[MKLDNN_ARG_SRC] = *data.GetMKLDNNData();
+    net_args[MKLDNN_ARG_SCALE_SHIFT] = weight_mem;
+    net_args[MKLDNN_ARG_DST] = *out_mem;
 
     if (!ctx.is_train || param.use_global_stats) {
       DType* omean    = out_data[batchnorm::kMean].data().dptr<DType>();
@@ -210,17 +210,15 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
         omean[i] = inmean[i];
         ovar[i] = VARIANCE_TO_INVSTD(invar[i], param.eps);
       }
-
-      net_args.insert({MKLDNN_ARG_MEAN, *(aux_states[batchnorm::kMovingMean].GetMKLDNNData())});
-      net_args.insert({MKLDNN_ARG_VARIANCE, *(aux_states[batchnorm::kMovingVar].GetMKLDNNData())});
+      net_args[MKLDNN_ARG_MEAN] = *(aux_states[batchnorm::kMovingMean].GetMKLDNNData());
+      net_args[MKLDNN_ARG_VARIANCE] = *(aux_states[batchnorm::kMovingVar].GetMKLDNNData());
       MKLDNNStream::Get()->RegisterPrimArgs(fwd.GetFwd(), net_args);
       MKLDNNStream::Get()->Submit();
     } else {  // training
       const NDArray &outMean  = out_data[batchnorm::kMean];
       const NDArray &outVar   = out_data[batchnorm::kVar];
-
-      net_args.insert({MKLDNN_ARG_MEAN, *(outMean.GetMKLDNNData())});
-      net_args.insert({MKLDNN_ARG_VARIANCE, *(outVar.GetMKLDNNData())});
+      net_args[MKLDNN_ARG_MEAN] = *(outMean.GetMKLDNNData());
+      net_args[MKLDNN_ARG_VARIANCE] = *(outVar.GetMKLDNNData());
       MKLDNNStream::Get()->RegisterPrimArgs(fwd.GetFwd(), net_args);
       MKLDNNStream::Get()->Submit();
 
@@ -337,12 +335,12 @@ void MKLDNNBatchNormBackward(const OpContext &ctx, const BatchNormParam &param,
       weight_buf[channels_ + i] = (beta.data().dptr<DType>())[i];  // bias
     }
 
-    std::unordered_map<int, mkldnn::memory> net_args;
-    net_args.insert({MKLDNN_ARG_SRC, *data_mem});
-    net_args.insert({MKLDNN_ARG_DIFF_SRC, *gradi_mem});
-    net_args.insert({MKLDNN_ARG_SCALE_SHIFT, bwd.GetWeight()});
-    net_args.insert({MKLDNN_ARG_DIFF_SCALE_SHIFT, bwd.GetGradw()});
-    net_args.insert({MKLDNN_ARG_DIFF_DST, *diff_mem});
+    mkldnn_args_map_t net_args;
+    net_args[MKLDNN_ARG_SRC] = *data_mem;
+    net_args[MKLDNN_ARG_DIFF_SRC] = *gradi_mem;
+    net_args[MKLDNN_ARG_SCALE_SHIFT] = bwd.GetWeight();
+    net_args[MKLDNN_ARG_DIFF_SCALE_SHIFT] = bwd.GetGradw();
+    net_args[MKLDNN_ARG_DIFF_DST] = *diff_mem;
 
     // training but no input mean and variance
     if (ctx.is_train && !param.use_global_stats) {
@@ -362,13 +360,13 @@ void MKLDNNBatchNormBackward(const OpContext &ctx, const BatchNormParam &param,
         moving_var_ptr[i] = moving_var_ptr[i] * param.momentum +
                             variance * minus_mom;
       }
-      net_args.insert({MKLDNN_ARG_MEAN, *(out_mean.GetMKLDNNData())});
-      net_args.insert({MKLDNN_ARG_VARIANCE, var_mem});
+      net_args[MKLDNN_ARG_MEAN] = *(out_mean.GetMKLDNNData());
+      net_args[MKLDNN_ARG_VARIANCE] = var_mem;
       MKLDNNStream::Get()->RegisterPrimArgs(bwd.GetBwd(), net_args);
       MKLDNNStream::Get()->Submit();
     } else {
-      net_args.insert({MKLDNN_ARG_MEAN, *(moving_mean.GetMKLDNNData())});
-      net_args.insert({MKLDNN_ARG_VARIANCE, *(moving_var.GetMKLDNNData())});
+      net_args[MKLDNN_ARG_MEAN] =  *(moving_mean.GetMKLDNNData());
+      net_args[MKLDNN_ARG_VARIANCE] = *(moving_var.GetMKLDNNData());
       MKLDNNStream::Get()->RegisterPrimArgs(bwd.GetBwd(), net_args);
       MKLDNNStream::Get()->Submit();
     }
