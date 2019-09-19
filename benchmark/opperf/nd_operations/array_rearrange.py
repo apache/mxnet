@@ -29,7 +29,7 @@ from benchmark.opperf.utils.op_registry_utils import get_all_rearrange_operators
 """
 
 
-def run_rearrange_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
+def run_rearrange_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype) for all the
     rearrange operators  in MXNet.
 
@@ -53,5 +53,5 @@ def run_rearrange_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25,
     mx_rearrange_ops = get_all_rearrange_operators()
 
     # Run benchmarks
-    mx_rearrange_op_results = run_op_benchmarks(mx_rearrange_ops, dtype, ctx, warmup, runs)
+    mx_rearrange_op_results = run_op_benchmarks(mx_rearrange_ops, dtype, ctx, profiler, warmup, runs)
     return mx_rearrange_op_results

@@ -28,5 +28,6 @@ from ..context import *  # pylint: disable=wildcard-import
 from ..util import is_np_shape, is_np_array, set_np, reset_np
 from ..ndarray import waitall
 from .utils import *  # pylint: disable=wildcard-import
+from . import random  # pylint: disable=wildcard-import
 
 __all__ = []

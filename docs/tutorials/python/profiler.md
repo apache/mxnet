@@ -57,6 +57,7 @@ from mxnet import profiler
 
 profiler.set_config(profile_all=True,
                     aggregate_stats=True,
+                    continuous_dump=True,
                     filename='profile_output.json')
 ```
 
@@ -195,6 +196,8 @@ print(profiler.dumps())
 You can also dump the information collected by the profiler into a `json` file using the `profiler.dump()` function and view it in a browser.
 
 ```python
+profiler.set_state('run')
+profiler.set_state('stop')
 profiler.dump(finished=False)
 ```
 

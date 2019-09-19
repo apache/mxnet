@@ -407,8 +407,8 @@
                  (-> (executor/forward exec-test) (executor/outputs) (first))))))
 
 (deftest test-maximum
-  (let [data1 (sym/variable "data")
-        data2 (sym/variable "data")
+  (let [data1 (sym/variable "data1")
+        data2 (sym/variable "data2")
         shape-vec [3 4]
         data-tmp1 (random/uniform 0 100 shape-vec)
         data-tmp2 (random/uniform 0 100 shape-vec)
@@ -424,8 +424,8 @@
                  out))))
 
 (deftest test-minimun
-  (let [data1 (sym/variable "data")
-        data2 (sym/variable "data")
+  (let [data1 (sym/variable "data1")
+        data2 (sym/variable "data2")
         shape-vec [3 4]
         data-tmp1 (random/uniform 0 100 shape-vec)
         data-tmp2 (random/uniform 0 100 shape-vec)

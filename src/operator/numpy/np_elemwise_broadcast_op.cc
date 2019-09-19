@@ -58,96 +58,22 @@ bool NumpyBinaryScalarType(const nnvm::NodeAttrs& attrs,
 
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_add)
-.describe(R"code(Add arguments element-wise with broadcasting if necessary.
-
-Example::
-
-   x = [[ 1.,  1.,  1.],
-        [ 1.,  1.,  1.]]
-
-   y = [[ 0.],
-        [ 1.]]
-
-   add(x, y) = [[ 1.,  1.,  1.],
-                [ 2.,  2.,  2.]]
-
-)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::plus>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_broadcast_add"});
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_subtract)
-.describe(R"code(Subtract arguments element-wise with broadcasting if necessary.
-
-Example::
-
-   x = [[ 1.,  1.,  1.],
-        [ 1.,  1.,  1.]]
-
-   y = [[ 0.],
-        [ 1.]]
-
-   subtract(x, y) = [[ 1.,  1.,  1.],
-                     [ 0.,  0.,  0.]]
-
-)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::minus>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_broadcast_sub"});
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_multiply)
-.describe(R"code(Multiply arguments with broadcasting if necessary.
-
-Example::
-
-   x = [[ 1.,  1.,  1.],
-        [ 1.,  1.,  1.]]
-
-   y = [[ 0.],
-        [ 1.]]
-
-   multiply(x, y) = [[ 0.,  0.,  0.],
-                     [ 1.,  1.,  1.]]
-
-)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::mul>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_mul"});
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_mod)
-.describe(R"code(Return element-wise remainder of division.
-It is equivalent to the Python modulus operator``x1 % x2`` and has the same sign as the divisor x2.
-
-Example::
-
-   x = [[ 8.,  8.,  8.],
-        [ 8.,  8.,  8.]]
-
-   y = [[ 2.],
-        [ 3.]]
-
-   mod(x, y) = [[ 0.,  0.,  0.],
-                [ 2.,  2.,  2.]]
-
-)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::mod>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_mod"});
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_power)
-.describe(R"code(First array elements raised to powers from second array, element-wise.
-
-Raise each base in x1 to the positionally-corresponding power in x2. x1 and x2 must be
-broadcastable to the same shape.
-
-Example::
-
-   x = [[ 1.,  1.,  1.],
-        [ 1.,  1.,  1.]]
-
-   y = [[ 0.],
-        [ 1.]]
-
-   power(x, y) = [[ 2.,  2.,  2.],
-                  [ 4.,  4.,  4.]]
-
-)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::power>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_power"});
 
@@ -158,6 +84,16 @@ MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_logaddexp)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_logaddexp"});
 
 NNVM_REGISTER_OP(_backward_broadcast_logaddexp)
+.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu,
+                                        mshadow_op::logadd_left,
+                                        mshadow_op::logadd_right>);
+
+MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_copysign)
+.describe(R"code()code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::copysign>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_copysign"});
+
+NNVM_REGISTER_OP(_backward_npi_copysign)
 .set_num_inputs(3)
 .set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
@@ -169,9 +105,8 @@ NNVM_REGISTER_OP(_backward_broadcast_logaddexp)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu,
-                                        mshadow_op::logadd_left,
-                                        mshadow_op::logadd_right>);
+.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::copysign_grad,
+                                                                  mshadow_op::copysign_rgrad>);
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_add_scalar)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, op::mshadow_op::plus>)
@@ -214,6 +149,22 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_logaddexp_scalar)
 .set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
 .set_attr<FCompute>("FCompute<cpu>",
                     BinaryScalarOp::Backward<cpu, mshadow_op::logadd_left>);
+
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_copysign_scalar)
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::copysign>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_copysign_scalar"});
+
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_rcopysign_scalar)
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::rcopysign>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_rcopysign_scalar"});
+
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_backward_npi_copysign_scalar)
+.set_attr<FCompute>("FCompute<cpu>",
+                    BinaryScalarOp::Backward<cpu, mshadow_op::copysign_grad>);
+
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_backward_npi_rcopysign_scalar)
+.set_attr<FCompute>("FCompute<cpu>",
+                    BinaryScalarOp::Backward<cpu, mshadow_op::rcopysign_grad>);
 
 }  // namespace op
 }  // namespace mxnet

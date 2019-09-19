@@ -25,11 +25,46 @@ from mxnet import np, npx, autograd
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, retry, assert_exception, use_np
 from common import with_seed, TemporaryDirectory
+from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
+from mxnet.ndarray.ndarray import py_slice
+from mxnet.base import integer_types
+import scipy.stats as ss
 
 
 @with_seed()
 @use_np
-def test_array_creation():
+def test_np_empty():
+    dtypes = [np.int8, np.int32, np.float16, np.float32, np.float64, None]
+    expected_dtypes = [np.int8, np.int32, np.float16, np.float32, np.float64, np.float32]
+    orders = ['C', 'F', 'A']
+    shapes = [
+        (),
+        0,
+        (0,),
+        (0, 0),
+        2,
+        (2,),
+        (3, 0),
+        (4, 5),
+        (1, 1, 1, 1),
+    ]
+    ctxes = [npx.current_context(), None]
+    for dtype, expected_dtype in zip(dtypes, expected_dtypes):
+        for shape in shapes:
+            for order in orders:
+                for ctx in ctxes:
+                    if order == 'C':
+                        ret = np.empty(shape, dtype, order, ctx)
+                        assert ret.dtype == expected_dtype
+                        assert ret.shape == shape if isinstance(shape, tuple) else (shape,)
+                        assert ret.ctx == npx.current_context()
+                    else:
+                        assert_exception(np.empty, NotImplementedError, shape, dtype, order, ctx)
+
+
+@with_seed()
+@use_np
+def test_np_array_creation():
     dtypes = [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64, None]
     objects = [
         [],
@@ -52,7 +87,7 @@ def test_array_creation():
 
 @with_seed()
 @use_np
-def test_zeros():
+def test_np_zeros():
     # test np.zeros in Gluon
     class TestZeros(HybridBlock):
         def __init__(self, shape, dtype=None):
@@ -100,7 +135,7 @@ def test_zeros():
 
 @with_seed()
 @use_np
-def test_ones():
+def test_np_ones():
     # test np.ones in Gluon
     class TestOnes(HybridBlock):
         def __init__(self, shape, dtype=None):
@@ -147,7 +182,7 @@ def test_ones():
 
 
 @with_seed()
-def test_ndarray_binary_element_wise_ops():
+def test_np_ndarray_binary_element_wise_ops():
     np_op_map = {
         '+': _np.add,
         '*': _np.multiply,
@@ -302,7 +337,7 @@ def test_ndarray_binary_element_wise_ops():
 
 
 @with_seed()
-def test_hybrid_block_multiple_outputs():
+def test_np_hybrid_block_multiple_outputs():
     @use_np
     class TestAllNumpyOutputs(HybridBlock):
         def hybrid_forward(self, F, x, *args, **kwargs):
@@ -336,7 +371,7 @@ def test_hybrid_block_multiple_outputs():
 
 @with_seed()
 @use_np
-def test_grad_ndarray_type():
+def test_np_grad_ndarray_type():
     data = np.array(2, dtype=_np.float32)
     data.attach_grad()
     assert type(data.grad) == np.ndarray
@@ -375,93 +410,11 @@ def test_np_ndarray_copy():
 @with_seed()
 @use_np
 def test_np_ndarray_indexing():
-    def test_getitem(np_array, index):
-        """`is_scalar` indicates whether we should expect a scalar for the result.
-        If so, the indexed array of NDArray should call asscalar to compare
-        with numpy's indexed array."""
-        np_index = index
-        if isinstance(index, np.ndarray):
-            np_index = index.asnumpy()
-        if isinstance(index, tuple):
-            np_index = []
-            for idx in index:
-                if isinstance(idx, np.ndarray):
-                    np_index.append(idx.asnumpy())
-                else:
-                    np_index.append(idx)
-            np_index = tuple(np_index)
-
-        np_indexed_array = np_array[np_index]
-        mx_array = np.array(np_array, dtype=np_array.dtype)
-        mx_indexed_array = mx_array[index].asnumpy()
-        assert same(np_indexed_array, mx_indexed_array), 'Failed with index=%s' % str(index)
-
-    def test_setitem(np_array, index):
-        def assert_same(np_array, np_index, mx_array, mx_index, mx_value, np_value=None):
-            if np_value is not None:
-                np_array[np_index] = np_value
-            elif isinstance(mx_value, np.ndarray):
-                np_array[np_index] = mx_value.asnumpy()
-            else:
-                np_array[np_index] = mx_value
-            mx_array[mx_index] = mx_value
-            assert same(np_array, mx_array.asnumpy())
-
-        np_index = index
-        if isinstance(index, np.ndarray):
-            np_index = index.asnumpy()
-        if isinstance(index, tuple):
-            np_index = []
-            for idx in index:
-                if isinstance(idx, np.ndarray):
-                    np_index.append(idx.asnumpy())
-                else:
-                    np_index.append(idx)
-            np_index = tuple(np_index)
-
-        mx_array = np.array(np_array, dtype=np_array.dtype)
-        np_array = mx_array.asnumpy()
-        indexed_array_shape = np_array[np_index].shape
-        np_indexed_array = _np.random.randint(low=-10000, high=0, size=indexed_array_shape)
-        # test value is a numpy array without broadcast
-        assert_same(np_array, np_index, mx_array, index, np_indexed_array)
-        # test value is an numeric_type
-        assert_same(np_array, np_index, mx_array, index, _np.random.randint(low=-10000, high=0))
-        if len(indexed_array_shape) > 1:
-            # test ndarray with broadcast
-            assert_same(np_array, np_index, mx_array, index,
-                        _np.random.uniform(low=-10000, high=0, size=(indexed_array_shape[-1],)))
-            # test numpy array with broadcast
-            assert_same(np_array, np_index, mx_array, index,
-                        _np.random.randint(low=-10000, high=0, size=(indexed_array_shape[-1],)))
-            # test list with broadcast
-            assert_same(np_array, np_index, mx_array, index,
-                        [_np.random.randint(low=-10000, high=0)] * indexed_array_shape[-1])
-
-    def test_getitem_autograd(np_array, index):
-        x = np.array(np_array, dtype=np_array.dtype)
-        x.attach_grad()
-        with autograd.record():
-            y = x[index]
-        y.backward()
-        value = np.ones_like(y)
-        x_grad = np.zeros_like(x)
-        x_grad[index] = value
-        assert same(x_grad.asnumpy(), x.grad.asnumpy())
-
-    def test_setitem_autograd(np_array, index):
-        x = np.array(np_array, dtype=np_array.dtype)
-        out_shape = x[index].shape
-        y = np.array(_np.random.uniform(size=out_shape))
-        y.attach_grad()
-        try:
-            with autograd.record():
-                x[index] = y
-                assert False  # should not reach here
-        except mx.base.MXNetError as err:
-            assert str(err).find('Inplace operations (+=, -=, x[:]=, etc) are not supported when recording with') != -1
-
-    def np_int(index, int_type=_np.int32):
+    def np_int(index, int_type=np.int32):
+        """
+        Helper function for testing indexing that converts slices to slices of ints or None, and tuples to
+        tuples of ints or None.
+        """
         def convert(num):
             if num is None:
                 return num
@@ -481,118 +434,258 @@ def test_np_ndarray_indexing():
         else:
             assert False
 
+    # Copied from test_ndarray.py. Under construction.
+    def test_getitem(np_array, index):
+        np_index = index
+        if type(index) == mx.nd.NDArray:  # use of NDArray is prohibited
+            assert False
+        if isinstance(index, np.ndarray):
+            np_index = index.asnumpy()
+        if isinstance(index, tuple):
+            np_index = tuple([
+                idx.asnumpy() if isinstance(idx, mx.nd.NDArray) else idx
+                for idx in index]
+            )
+        np_indexed_array = np_array[np_index]
+        mx_np_array = np.array(np_array, dtype=np_array.dtype)
+        try:
+            mx_indexed_array = mx_np_array[index]
+        except Exception as e:
+            print('Failed with index = {}'.format(index))
+            raise e
+        mx_indexed_array = mx_indexed_array.asnumpy()
+        assert same(np_indexed_array, mx_indexed_array), 'Failed with index = {}'.format(index)
+
+    def test_setitem(np_array, index):
+        def assert_same(np_array, np_index, mx_array, mx_index, mx_value, np_value=None):
+            if np_value is not None:
+                np_array[np_index] = np_value
+            elif isinstance(mx_value, np.ndarray):
+                np_array[np_index] = mx_value.asnumpy()
+            else:
+                np_array[np_index] = mx_value
+            try:
+                mx_array[mx_index] = mx_value
+            except Exception as e:
+                print('Failed with index = {}, value.shape = {}'.format(mx_index, mx_value.shape))
+                raise e
+
+            assert same(np_array, mx_array.asnumpy())
+
+        def _is_basic_index(index):
+            if isinstance(index, (integer_types, py_slice)):
+                return True
+            if isinstance(index, tuple) and all(isinstance(i, (integer_types, py_slice)) for i in index):
+                return True
+            return False
+
+        np_index = index  # keep this native numpy type
+        if isinstance(index, np.ndarray):
+            np_index = index.asnumpy()
+        if isinstance(index, tuple):
+            np_index = []
+            for idx in index:
+                if isinstance(idx, np.ndarray):
+                    np_index.append(idx.asnumpy())
+                else:
+                    np_index.append(idx)
+            np_index = tuple(np_index)
+
+        mx_array = np.array(np_array, dtype=np_array.dtype)  # mxnet.np.ndarray
+        np_array = mx_array.asnumpy()  # native numpy array
+        indexed_array_shape = np_array[np_index].shape
+        np_indexed_array = _np.random.randint(low=-10000, high=0, size=indexed_array_shape)
+        # test value is a native numpy array without broadcast
+        assert_same(np_array, np_index, mx_array, index, np_indexed_array)
+        # test value is a mxnet numpy array without broadcast
+        assert_same(np_array, np_index, mx_array, index, np.array(np_indexed_array))
+        # test value is an numeric_type
+        assert_same(np_array, np_index, mx_array, index, _np.random.randint(low=-10000, high=0))
+        if len(indexed_array_shape) > 1:
+            np_value = _np.random.randint(low=-10000, high=0, size=(indexed_array_shape[-1],))
+            # test mxnet ndarray with broadcast
+            assert_same(np_array, np_index, mx_array, index, np.array(np_value))
+            # test native numpy array with broadcast
+            assert_same(np_array, np_index, mx_array, index, np_value)
+
+            # test value shape are expanded to be longer than index array's shape
+            # this is currently only supported in basic indexing
+            if _is_basic_index(index):
+                expanded_value_shape = (1, 1, 1) + np_value.shape
+                assert_same(np_array, np_index, mx_array, index, np.array(np_value.reshape(expanded_value_shape)))
+                assert_same(np_array, np_index, mx_array, index, np_value.reshape(expanded_value_shape))
+            # test list with broadcast
+            assert_same(np_array, np_index, mx_array, index,
+                        [_np.random.randint(low=-10000, high=0)] * indexed_array_shape[-1])
+
+    def test_getitem_autograd(np_array, index):
+        """
+        np_array: native numpy array.
+        """
+        x = np.array(np_array, dtype=np_array.dtype)
+        x.attach_grad()
+        with mx.autograd.record():
+            y = x[index]
+        y.backward()
+        value = np.ones_like(y)
+        x_grad = np.zeros_like(x)
+        x_grad[index] = value
+        assert same(x_grad.asnumpy(), x.grad.asnumpy())
+
+    def test_setitem_autograd(np_array, index):
+        """
+        np_array: native numpy array.
+        """
+        x = np.array(np_array, dtype=np_array.dtype)
+        out_shape = x[index].shape
+        y = np.array(_np.random.uniform(size=out_shape))
+        y.attach_grad()
+        try:
+            with mx.autograd.record():
+                x[index] = y
+                x.backward()
+                y_grad = np.ones_like(y)
+                assert same(y_grad.asnumpy(), y.grad.asnumpy())
+        except mx.base.MXNetError as err:
+            assert str(err).find('Inplace operations (+=, -=, x[:]=, etc) are not supported when recording with') != -1
+
     shape = (8, 16, 9, 9)
-    np_array = _np.arange(_np.prod(shape), dtype='int32').reshape(shape)
+    np_array = _np.arange(_np.prod(_np.array(shape)), dtype='int32').reshape(shape)  # native np array
+
+    # Test sliced output being ndarray:
     index_list = [
         (),
+        # Basic indexing
+        # Single int as index
         0,
-        _np.int32(0),
-        _np.int64(0),
+        np.int32(0),
+        np.int64(0),
         5,
-        _np.int32(5),
-        _np.int64(5),
+        np.int32(5),
+        np.int64(5),
         -1,
-        _np.int32(-1),
-        _np.int64(-1),
+        np.int32(-1),
+        np.int64(-1),
+        # Slicing as index
         slice(5),
-        np_int(slice(5), _np.int32),
-        np_int(slice(5), _np.int64),
+        np_int(slice(5), np.int32),
+        np_int(slice(5), np.int64),
         slice(1, 5),
-        np_int(slice(1, 5), _np.int32),
-        np_int(slice(1, 5), _np.int64),
+        np_int(slice(1, 5), np.int32),
+        np_int(slice(1, 5), np.int64),
         slice(1, 5, 2),
-        np_int(slice(1, 5, 2), _np.int32),
-        np_int(slice(1, 5, 2), _np.int64),
+        np_int(slice(1, 5, 2), np.int32),
+        np_int(slice(1, 5, 2), np.int64),
         slice(7, 0, -1),
         np_int(slice(7, 0, -1)),
-        np_int(slice(7, 0, -1), _np.int64),
+        np_int(slice(7, 0, -1), np.int64),
         slice(None, 6),
         np_int(slice(None, 6)),
-        np_int(slice(None, 6), _np.int64),
+        np_int(slice(None, 6), np.int64),
         slice(None, 6, 3),
         np_int(slice(None, 6, 3)),
-        np_int(slice(None, 6, 3), _np.int64),
+        np_int(slice(None, 6, 3), np.int64),
         slice(1, None),
         np_int(slice(1, None)),
-        np_int(slice(1, None), _np.int64),
+        np_int(slice(1, None), np.int64),
         slice(1, None, 3),
         np_int(slice(1, None, 3)),
-        np_int(slice(1, None, 3), _np.int64),
+        np_int(slice(1, None, 3), np.int64),
         slice(None, None, 2),
         np_int(slice(None, None, 2)),
-        np_int(slice(None, None, 2), _np.int64),
+        np_int(slice(None, None, 2), np.int64),
         slice(None, None, -1),
         np_int(slice(None, None, -1)),
-        np_int(slice(None, None, -1), _np.int64),
+        np_int(slice(None, None, -1), np.int64),
         slice(None, None, -2),
-        np_int(slice(None, None, -2), _np.int32),
-        np_int(slice(None, None, -2), _np.int64),
+        np_int(slice(None, None, -2), np.int32),
+        np_int(slice(None, None, -2), np.int64),
+        # Multiple ints as indices
+        (1, 2, 3),
+        np_int((1, 2, 3)),
+        np_int((1, 2, 3), np.int64),
+        (-1, -2, -3),
+        np_int((-1, -2, -3)),
+        np_int((-1, -2, -3), np.int64),
+        (1, 2, 3, 4),
+        np_int((1, 2, 3, 4)),
+        np_int((1, 2, 3, 4), np.int64),
+        (-4, -3, -2, -1),
+        np_int((-4, -3, -2, -1)),
+        np_int((-4, -3, -2, -1), np.int64),
+        # slice(None) as indices
         (slice(None), slice(None), 1, 8),
         (slice(None), slice(None), -1, 8),
         (slice(None), slice(None), 1, -8),
         (slice(None), slice(None), -1, -8),
         np_int((slice(None), slice(None), 1, 8)),
-        np_int((slice(None), slice(None), 1, 8), _np.int64),
+        np_int((slice(None), slice(None), 1, 8), np.int64),
         (slice(None), slice(None), 1, 8),
         np_int((slice(None), slice(None), -1, -8)),
-        np_int((slice(None), slice(None), -1, -8), _np.int64),
+        np_int((slice(None), slice(None), -1, -8), np.int64),
         (slice(None), 2, slice(1, 5), 1),
         np_int((slice(None), 2, slice(1, 5), 1)),
-        np_int((slice(None), 2, slice(1, 5), 1), _np.int64),
-        (1, 2, 3),
-        np_int((1, 2, 3)),
-        np_int((1, 2, 3), _np.int64),
-        (-1, -2, -3),
-        np_int((-1, -2, -3)),
-        np_int((-1, -2, -3), _np.int64),
-        (1, 2, 3, 4),
-        np_int((1, 2, 3, 4)),
-        np_int((1, 2, 3, 4), _np.int64),
-        (-4, -3, -2, -1),
-        np_int((-4, -3, -2, -1)),
-        np_int((-4, -3, -2, -1), _np.int64),
+        np_int((slice(None), 2, slice(1, 5), 1), np.int64),
+        # Mixture of ints and slices as indices
         (slice(None, None, -1), 2, slice(1, 5), 1),
         np_int((slice(None, None, -1), 2, slice(1, 5), 1)),
-        np_int((slice(None, None, -1), 2, slice(1, 5), 1), _np.int64),
+        np_int((slice(None, None, -1), 2, slice(1, 5), 1), np.int64),
         (slice(None, None, -1), 2, slice(1, 7, 2), 1),
         np_int((slice(None, None, -1), 2, slice(1, 7, 2), 1)),
-        np_int((slice(None, None, -1), 2, slice(1, 7, 2), 1), _np.int64),
+        np_int((slice(None, None, -1), 2, slice(1, 7, 2), 1), np.int64),
         (slice(1, 8, 2), slice(14, 2, -2), slice(3, 8), slice(0, 7, 3)),
         np_int((slice(1, 8, 2), slice(14, 2, -2), slice(3, 8), slice(0, 7, 3))),
-        np_int((slice(1, 8, 2), slice(14, 2, -2), slice(3, 8), slice(0, 7, 3)), _np.int64),
+        np_int((slice(1, 8, 2), slice(14, 2, -2), slice(3, 8), slice(0, 7, 3)), np.int64),
         (slice(1, 8, 2), 1, slice(3, 8), 2),
         np_int((slice(1, 8, 2), 1, slice(3, 8), 2)),
-        np_int((slice(1, 8, 2), 1, slice(3, 8), 2), _np.int64),
+        np_int((slice(1, 8, 2), 1, slice(3, 8), 2), np.int64),
+        # Test Ellipsis ('...')
+        (1, Ellipsis, -1),
+        (slice(2), Ellipsis, None, 0),
+        # Test newaxis
+        None,
+        (1, None, -2, 3, -4),
+        (1, slice(2, 5), None),
+        (slice(None), slice(1, 4), None, slice(2, 3)),
+        (slice(1, 3), slice(1, 3), slice(1, 3), slice(1, 3), None),
+        (slice(1, 3), slice(1, 3), None, slice(1, 3), slice(1, 3)),
+        (None, slice(1, 2), 3, None),
+        (1, None, 2, 3, None, None, 4),
+        # Advanced indexing
+        ([1, 2], slice(3, 5), None, None, [3, 4]),
+        (slice(None), slice(3, 5), None, None, [2, 3], [3, 4]),
+        (slice(None), slice(3, 5), None, [2, 3], None, [3, 4]),
+        (None, slice(None), slice(3, 5), [2, 3], None, [3, 4]),
         [1],
         [1, 2],
         [2, 1, 3],
         [7, 5, 0, 3, 6, 2, 1],
-        _np.array([6, 3], dtype=_np.int32),
-        _np.array([[3, 4], [0, 6]], dtype=_np.int32),
-        _np.array([[7, 3], [2, 6], [0, 5], [4, 1]], dtype=_np.int32),
-        _np.array([[7, 3], [2, 6], [0, 5], [4, 1]], dtype=_np.int64),
-        _np.array([[2], [0], [1]], dtype=_np.int32),
-        _np.array([[2], [0], [1]], dtype=_np.int64),
-        np.array([4, 7], dtype=_np.int32),
-        np.array([4, 7], dtype=_np.int64),
-        np.array([[3, 6], [2, 1]], dtype=_np.int32),
-        np.array([[3, 6], [2, 1]], dtype=_np.int64),
-        np.array([[7, 3], [2, 6], [0, 5], [4, 1]], dtype=_np.int32),
-        np.array([[7, 3], [2, 6], [0, 5], [4, 1]], dtype=_np.int64),
+        np.array([6, 3], dtype=np.int32),
+        np.array([[3, 4], [0, 6]], dtype=np.int32),
+        np.array([[7, 3], [2, 6], [0, 5], [4, 1]], dtype=np.int32),
+        np.array([[7, 3], [2, 6], [0, 5], [4, 1]], dtype=np.int64),
+        np.array([[2], [0], [1]], dtype=np.int32),
+        np.array([[2], [0], [1]], dtype=np.int64),
+        np.array([4, 7], dtype=np.int32),
+        np.array([4, 7], dtype=np.int64),
+        np.array([[3, 6], [2, 1]], dtype=np.int32),
+        np.array([[3, 6], [2, 1]], dtype=np.int64),
+        np.array([[7, 3], [2, 6], [0, 5], [4, 1]], dtype=np.int32),
+        np.array([[7, 3], [2, 6], [0, 5], [4, 1]], dtype=np.int64),
         (1, [2, 3]),
-        (1, [2, 3], _np.array([[3], [0]], dtype=_np.int32)),
+        (1, [2, 3], np.array([[3], [0]], dtype=np.int32)),
         (1, [2, 3]),
-        (1, [2, 3], _np.array([[3], [0]], dtype=_np.int64)),
-        (1, [2], _np.array([[5], [3]], dtype=_np.int32), slice(None)),
-        (1, [2], _np.array([[5], [3]], dtype=_np.int64), slice(None)),
-        (1, [2, 3], _np.array([[6], [0]], dtype=_np.int32), slice(2, 5)),
-        (1, [2, 3], _np.array([[6], [0]], dtype=_np.int64), slice(2, 5)),
-        (1, [2, 3], _np.array([[4], [7]], dtype=_np.int32), slice(2, 5, 2)),
-        (1, [2, 3], _np.array([[4], [7]], dtype=_np.int64), slice(2, 5, 2)),
-        (1, [2], _np.array([[3]], dtype=_np.int32), slice(None, None, -1)),
-        (1, [2], _np.array([[3]], dtype=_np.int64), slice(None, None, -1)),
-        (1, [2], _np.array([[3]], dtype=_np.int32), np.array([[5, 7], [2, 4]], dtype=_np.int64)),
-        (1, [2], np.array([[4]], dtype=_np.int32), np.array([[1, 3], [5, 7]], dtype='int64')),
+        (1, [2, 3], np.array([[3], [0]], dtype=np.int64)),
+        (1, [2], np.array([[5], [3]], dtype=np.int32), slice(None)),
+        (1, [2], np.array([[5], [3]], dtype=np.int64), slice(None)),
+        (1, [2, 3], np.array([[6], [0]], dtype=np.int32), slice(2, 5)),
+        (1, [2, 3], np.array([[6], [0]], dtype=np.int64), slice(2, 5)),
+        (1, [2, 3], np.array([[4], [7]], dtype=np.int32), slice(2, 5, 2)),
+        (1, [2, 3], np.array([[4], [7]], dtype=np.int64), slice(2, 5, 2)),
+        (1, [2], np.array([[3]], dtype=np.int32), slice(None, None, -1)),
+        (1, [2], np.array([[3]], dtype=np.int64), slice(None, None, -1)),
+        (1, [2], np.array([[3]], dtype=np.int32), np.array([[5, 7], [2, 4]], dtype=np.int64)),
+        (1, [2], np.array([[4]], dtype=np.int32), np.array([[1, 3], [5, 7]], dtype='int64')),
         [0],
         [0, 1],
         [1, 2, 3],
@@ -612,15 +705,35 @@ def test_np_ndarray_indexing():
         range(4),
         range(3, 0, -1),
         (range(4,), [1]),
-        # slice(0, 0) does not support output zero-size tensor yet
     ]
     for index in index_list:
         test_getitem(np_array, index)
         test_setitem(np_array, index)
         test_getitem_autograd(np_array, index)
-        if not isinstance(index, tuple) or len(index) != 0:
-            # When index = (), this is same a[()] = b is equivalent to b.copyto(a)
-            # which should have no problem to do autograd
+        test_setitem_autograd(np_array, index)
+
+    # Test indexing to zero-size tensors
+    index_list = [
+        (slice(0, 0), slice(0, 0), 1, 2),
+        (slice(0, 0), slice(0, 0), slice(0, 0), slice(0, 0)),
+    ]
+    for index in index_list:
+        test_getitem(np_array, index)
+        test_setitem(np_array, index)
+        test_getitem_autograd(np_array, index)
+        test_setitem_autograd(np_array, index)
+
+    # test zero-size tensors get and setitem
+    shapes_indices = [
+                        ((0), [slice(None, None, None)]),
+                        ((3, 0), [2, (slice(None, None, None)), (slice(None, None, None), None)]),
+    ]
+    for shape, indices in shapes_indices:
+        np_array = _np.zeros(shape)
+        for index in indices:
+            test_getitem(np_array, index)
+            test_setitem(np_array, index)
+            test_getitem_autograd(np_array, index)
             test_setitem_autograd(np_array, index)
 
 
@@ -665,6 +778,114 @@ def test_np_save_load_ndarrays():
         for k, v in arr_dict_loaded.items():
             assert k in arr_dict
             assert _np.array_equal(v.asnumpy(), arr_dict[k].asnumpy())
+
+
+@retry(5)
+@with_seed()
+@use_np
+def test_np_uniform():
+    types = [None, "float32", "float64"]
+    ctx = mx.context.current_context()
+    samples = 1000000
+    # Generation test
+    trials = 8
+    num_buckets = 5
+    for dtype in types:
+        for low, high in [(-100.0, -98.0), (99.0, 101.0)]:
+            scale = high - low
+            buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.uniform.ppf(x, loc=low, scale=scale), num_buckets)
+            buckets = np.array(buckets, dtype=dtype).tolist()
+            probs = [(buckets[i][1] - buckets[i][0])/scale for i in range(num_buckets)]
+            generator_mx_np = lambda x: mx.np.random.uniform(low, high, size=x, ctx=ctx, dtype=dtype).asnumpy()
+            verify_generator(generator=generator_mx_np, buckets=buckets, probs=probs, nsamples=samples, nrepeat=trials)
+
+    # Broadcasting test
+    params = [
+        (1.0, mx.np.ones((4,4)) + 2.0),
+        (mx.np.zeros((4,4)) + 1, 2.0),
+        (mx.np.zeros((1,4)), mx.np.ones((4,4)) + mx.np.array([1, 2, 3, 4])),
+        (mx.np.array([1, 2, 3, 4]), mx.np.ones((2,4,4)) * 5)
+    ]
+    for dtype in types:
+        for low, high in params:
+            expect_mean = (low + high) / 2
+            expanded_size = (samples,) + expect_mean.shape
+            uniform_samples = mx.np.random.uniform(low, high, size=expanded_size, dtype=dtype)
+            mx.test_utils.assert_almost_equal(uniform_samples.asnumpy().mean(0), expect_mean.asnumpy(), rtol=0.20, atol=1e-1)
+
+
+@retry(5)
+@with_seed()
+@use_np
+def test_np_multinomial():
+    pvals_list = [[0.0, 0.1, 0.2, 0.3, 0.4], [0.4, 0.3, 0.2, 0.1, 0.0]]
+    sizes = [None, (), (3,), (2, 5, 7), (4, 9)]
+    experiements = 10000
+    for pvals_mx_np_array in [False, True]:
+        for have_size in [False, True]:
+            for pvals in pvals_list:
+                if pvals_mx_np_array:
+                    pvals = mx.np.array(pvals)
+                if have_size:
+                    for size in sizes:
+                        freq = mx.np.random.multinomial(experiements, pvals, size=size).asnumpy() / _np.float32(experiements)
+                        # for those cases that didn't need reshape
+                        if size in [None, ()]:
+                            if type(pvals) == np.ndarray:
+                                mx.test_utils.assert_almost_equal(freq, pvals.asnumpy(), rtol=0.20, atol=1e-1)
+                            else:
+                                mx.test_utils.assert_almost_equal(freq, pvals, rtol=0.20, atol=1e-1)
+                        else:
+                            # check the shape
+                            assert freq.shape == size + (len(pvals),), 'freq.shape={}, size + (len(pvals))={}'.format(freq.shape, size + (len(pvals)))
+                            freq = freq.reshape((-1, len(pvals)))
+                            # check the value for each row
+                            for i in range(freq.shape[0]):
+                                if type(pvals) == np.ndarray:
+                                    mx.test_utils.assert_almost_equal(freq[i, :], pvals.asnumpy(), rtol=0.20, atol=1e-1)
+                                else:
+                                    mx.test_utils.assert_almost_equal(freq[i, :], pvals, rtol=0.20, atol=1e-1)
+                else:
+                    freq = mx.np.random.multinomial(experiements, pvals).asnumpy() / _np.float32(experiements)
+                    if type(pvals) == np.ndarray:
+                        mx.test_utils.assert_almost_equal(freq, pvals.asnumpy(), rtol=0.20, atol=1e-1)
+                    else:
+                        mx.test_utils.assert_almost_equal(freq, pvals, rtol=0.20, atol=1e-1)
+    # check the zero dimension
+    sizes = [(0), (0, 2), (4, 0, 2), (3, 0, 1, 2, 0)]
+    for pvals_mx_np_array in [False, True]:
+        for pvals in pvals_list:
+            for size in sizes:
+                if pvals_mx_np_array:
+                    pvals = mx.np.array(pvals)
+                freq = mx.np.random.multinomial(experiements, pvals, size=size).asnumpy()
+                assert freq.size == 0
+    # check [] as pvals
+    for pvals_mx_np_array in [False, True]:
+        for pvals in [[], ()]:
+            if pvals_mx_np_array:
+                pvals = mx.np.array(pvals)
+            freq = mx.np.random.multinomial(experiements, pvals).asnumpy()
+            assert freq.size == 0
+            for size in sizes:
+                freq = mx.np.random.multinomial(experiements, pvals, size=size).asnumpy()
+                assert freq.size == 0
+    # test small experiment for github issue
+    # https://github.com/apache/incubator-mxnet/issues/15383
+    small_exp, total_exp = 20, 10000
+    for pvals_mx_np_array in [False, True]:
+        for pvals in pvals_list:
+            if pvals_mx_np_array:
+                pvals = mx.np.array(pvals)
+            x = np.random.multinomial(small_exp, pvals)
+            for i in range(total_exp // small_exp):
+                x = x + np.random.multinomial(20, pvals)
+        freq = (x.asnumpy() / _np.float32(total_exp)).reshape((-1, len(pvals)))
+        for i in range(freq.shape[0]):
+            if type(pvals) == np.ndarray:
+                mx.test_utils.assert_almost_equal(freq[i, :], pvals.asnumpy(), rtol=0.20, atol=1e-1)
+            else:
+                mx.test_utils.assert_almost_equal(freq[i, :], pvals, rtol=0.20, atol=1e-1)
 
 
 if __name__ == '__main__':

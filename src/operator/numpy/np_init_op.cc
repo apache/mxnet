@@ -24,12 +24,34 @@
  */
 #include "../tensor/init_op.h"
 #include "../tensor/elemwise_unary_op.h"
+#include "./np_init_op.h"
 
 namespace mxnet {
 namespace op {
 
+DMLC_REGISTER_PARAMETER(IndicesOpParam);
+
+inline bool NumpyIndicesShape(const nnvm::NodeAttrs& attrs,
+                              mxnet::ShapeVector* in_shapes,
+                              mxnet::ShapeVector* out_shapes) {
+  const IndicesOpParam& param = nnvm::get<IndicesOpParam>(attrs.parsed);
+  CHECK_EQ(in_shapes->size(), 0U);
+  CHECK_EQ(out_shapes->size(), 1U);
+  CHECK_GE(param.dimensions.ndim(), 0)
+    << "_npi_indices dimensions the number of dim must not be less than 0";
+  mxnet::TShape param_dim = param.dimensions;
+  if (!shape_is_known(param_dim)) return false;
+  const int indim = param.dimensions.ndim();
+  mxnet::TShape ret(indim + 1, -1);
+  ret[0] = indim;
+  for (int i = 1; i < indim + 1; ++i) {
+    ret[i] = param.dimensions[i-1];
+  }
+  SHAPE_ASSIGN_CHECK(*out_shapes, 0, ret);
+  return shape_is_known(out_shapes->at(0));
+}
+
 NNVM_REGISTER_OP(_npi_zeros)
-.describe("Return a new array of given shape, type, and context, filled with zeros.")
 .set_num_inputs(0)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<InitOpParam>)
@@ -50,17 +72,6 @@ NNVM_REGISTER_OP(_npi_ones)
 .add_arguments(InitOpParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_np_zeros_like)
-.describe(R"code(Return an array of zeros with the same shape and type as a given array.
-
-Examples::
-
-  x = [[ 1.,  1.,  1.],
-       [ 1.,  1.,  1.]]
-
-  zeros_like(x) = [[ 0.,  0.,  0.],
-                   [ 0.,  0.,  0.]]
-
-)code")
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
@@ -79,17 +90,6 @@ Examples::
               "The shape and data-type of a define these same attributes of the returned array.");
 
 NNVM_REGISTER_OP(_np_ones_like)
-.describe(R"code(Return an array of ones with the same shape and type as a given array.
-
-Examples::
-
-  x = [[ 0.,  0.,  0.],
-       [ 0.,  0.,  0.]]
-
-  ones_like(x) = [[ 1.,  1.,  1.],
-                  [ 1.,  1.,  1.]]
-
-)code")
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
@@ -106,6 +106,42 @@ Examples::
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("a", "NDArray-or-Symbol",
               "The shape and data-type of a define these same attributes of the returned array.");
+
+bool NumpyRangeShape(const nnvm::NodeAttrs& attrs,
+                     mxnet::ShapeVector* in_shapes,
+                     mxnet::ShapeVector* out_shapes) {
+  const RangeParam& param = nnvm::get<RangeParam>(attrs.parsed);
+  CHECK_EQ(in_shapes->size(), 0U);
+  CHECK_EQ(out_shapes->size(), 1U);
+  CHECK_NE(param.step, 0) << "_npi_arange does not support step=0";
+  CHECK_EQ(param.repeat, 1) << "_npi_arange only supports repeat=1, received " << param.repeat;
+  CHECK(param.stop.has_value()) << "_npi_arange requires stop to have a value";
+  double out_size = std::ceil((param.stop.value() - param.start) / param.step);
+  if (out_size < 0) {
+    out_size = 0;
+  }
+  SHAPE_ASSIGN_CHECK(*out_shapes, 0, mxnet::TShape({static_cast<nnvm::dim_t>(out_size)}));
+  return true;
+}
+
+NNVM_REGISTER_OP(_npi_arange)
+.set_num_inputs(0)
+.set_num_outputs(1)
+.set_attr_parser(RangeParamParser)
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyRangeShape)
+.set_attr<nnvm::FInferType>("FInferType", InitType<RangeParam>)
+.set_attr<FCompute>("FCompute<cpu>", RangeCompute<cpu, RangeParam>)
+.add_arguments(RangeParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_npi_indices)
+.describe("Return an array representing the indices of a grid.")
+.set_num_inputs(0)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<IndicesOpParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyIndicesShape)
+.set_attr<nnvm::FInferType>("FInferType", InitType<IndicesOpParam>)
+.set_attr<FCompute>("FCompute<cpu>", IndicesCompute<cpu>)
+.add_arguments(IndicesOpParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet
