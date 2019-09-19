@@ -52,12 +52,14 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'add', 'subtrac
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative',
            'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh',
            'tensordot', 'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate',
-           'stack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var']
+           'stack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign',
+           'ravel']
 
 # Return code for dispatching indexing function call
 _NDARRAY_UNSUPPORTED_INDEXING = -1
 _NDARRAY_BASIC_INDEXING = 0
 _NDARRAY_ADVANCED_INDEXING = 1
+
 
 # This function is copied from ndarray.py since pylint
 # keeps giving false alarm error of undefined-all-variable
@@ -106,6 +108,10 @@ def _get_index(idx):
         return idx
 
 
+_NUMPY_ARRAY_FUNCTION_DICT = {}
+_NUMPY_ARRAY_UFUNC_DICT = {}
+
+
 @set_module('mxnet.numpy')  # pylint: disable=invalid-name
 class ndarray(NDArray):
     """
@@ -115,6 +121,57 @@ class ndarray(NDArray):
     floating point number, or something else, etc.). Arrays should be constructed using
     `array`, `zeros` or `empty`. Currently, only c-contiguous arrays are supported.
     """
+
+    @staticmethod
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):  # pylint: disable=bad-staticmethod-argument
+        """
+        Dispatch official NumPy unary/binary operator calls on mxnet.numpy.ndarray
+        to this function. The operators must comply with the ufunc definition in NumPy.
+        The following code is adapted from CuPy.
+        """
+        if 'out' in kwargs:
+            # need to unfold tuple argument in kwargs
+            out = kwargs['out']
+            if len(out) != 1:
+                raise ValueError('The `out` parameter must have exactly one ndarray')
+            kwargs['out'] = out[0]
+
+        if method == '__call__':
+            if ufunc.signature is not None:
+                # we don't support generalised-ufuncs (gufuncs)
+                return NotImplemented
+            name = ufunc.__name__
+            mx_ufunc = _NUMPY_ARRAY_UFUNC_DICT.get(name, None)
+            if mx_ufunc is None:
+                raise ValueError('mxnet.numpy operator `{}` has not been registered in '
+                                 'the _NUMPY_ARRAY_UFUNC_LIST. Please make sure you are '
+                                 'using NumPy >= 1.15.0 and the operator implementation '
+                                 'is compatible with NumPy. Then add the operator name '
+                                 'to the list.'
+                                 .format(name))
+            return mx_ufunc(*inputs, **kwargs)
+        else:
+            return NotImplemented
+
+    @staticmethod
+    def __array_function__(self, func, types, args, kwargs):  # pylint: disable=bad-staticmethod-argument
+        """
+        Dispatch official NumPy operators that comply with the array function protocol to
+        this function.
+        """
+        mx_np_func = _NUMPY_ARRAY_FUNCTION_DICT.get(func, None)
+        if mx_np_func is None:
+            raise ValueError('mxnet.numpy operator `{}` has not been registered in '
+                             'the _NUMPY_ARRAY_FUNCTION_LIST. Please make sure you are '
+                             'using NumPy >= 1.17.0 and the operator '
+                             'implementation is compatible with NumPy. Then add '
+                             'the operator name to the list.'.format(func))
+        # Note: this allows subclasses that don't override
+        # __array_function__ to handle mxnet.numpy.ndarray objects
+        if not all(issubclass(t, ndarray) for t in types):
+            return NotImplemented
+        return mx_np_func(*args, **kwargs)
+
     def _get_np_basic_indexing(self, key):
         """
         This function indexes ``self`` with a tuple of `slice` objects only.
@@ -311,14 +368,14 @@ class ndarray(NDArray):
         Note: mxnet.numpy.ndarray not support NDArray as assigned value.
         """
         if isinstance(value, numeric_types):
-            value_nd = full(bcast_shape, value, ctx=self.context, dtype=self.dtype)
+            value_nd = full(bcast_shape, value, ctx=self.ctx, dtype=self.dtype)
         elif isinstance(value, self.__class__):
-            value_nd = value.as_in_context(self.context)
+            value_nd = value.as_in_ctx(self.ctx)
             if value_nd.dtype != self.dtype:
                 value_nd = value_nd.astype(self.dtype)
         else:
             try:
-                value_nd = array(value, ctx=self.context, dtype=self.dtype)
+                value_nd = array(value, ctx=self.ctx, dtype=self.dtype)
             except:
                 raise TypeError('mxnet.np.ndarray does not support assignment with non-array-like '
                                 'object {} of type {}'.format(value, type(value)))
@@ -329,13 +386,25 @@ class ndarray(NDArray):
             squeeze_axes = tuple([ax for ax in squeeze_axes if ax < len(value_nd.shape)])
             value_nd = value_nd.squeeze(axis=tuple(squeeze_axes))
 
+        # handle the cases like the following
+        # a = np.zeros((3, 3)), b = np.ones((1, 1, 1, 1, 3)), a[0] = b
+        # b cannot broadcast directly to a[0].shape unless its leading 1-size axes are trimmed
+        if value_nd.ndim > len(bcast_shape):
+            squeeze_axes = []
+            for i in range(value_nd.ndim - len(bcast_shape)):
+                if value_nd.shape[i] == 1:
+                    squeeze_axes.append(i)
+                else:
+                    break
+            if squeeze_axes:
+                value_nd = value_nd.squeeze(squeeze_axes)
+
         if value_nd.shape != bcast_shape:
             if value_nd.size == 0:
                 value_nd = value_nd.reshape(bcast_shape)
             else:
                 value_nd = value_nd.broadcast_to(bcast_shape)
         return value_nd
-
 
     def __add__(self, other):
         """x.__add__(y) <=> x + y"""
@@ -727,14 +796,14 @@ class ndarray(NDArray):
 
         Examples
         --------
-        >>> x = np.ones((2,3))
-        >>> y = np.zeros((2,3), ctx=mx.gpu(0))
+        >>> x = np.ones((2, 3))
+        >>> y = np.zeros((2, 3), ctx=npx.gpu(0))
         >>> z = x.copyto(y)
         >>> z is y
         True
-        >>> y.asnumpy()
+        >>> y
         array([[ 1.,  1.,  1.],
-               [ 1.,  1.,  1.]], dtype=float32)
+               [ 1.,  1.,  1.]])
         """
         if isinstance(other, ndarray):
             if other.handle is self.handle:
@@ -756,6 +825,11 @@ class ndarray(NDArray):
         return argmax(self, axis, out)
 
     def as_in_context(self, context):
+        """This function has been deprecated. Please refer to ``ndarray.as_in_ctx``."""
+        warnings.warn('ndarray.context has been renamed to ndarray.ctx', DeprecationWarning)
+        return self.as_nd_ndarray().as_in_context(context).as_np_ndarray()
+
+    def as_in_ctx(self, ctx):
         """Returns an array on the target device with the same value as this array.
 
         If the target context is the same as ``self.context``, then ``self`` is
@@ -771,15 +845,58 @@ class ndarray(NDArray):
         ndarray
             The target array.
         """
-        if self.context == context:
+        if self.ctx == ctx:
             return self
-        return self.copyto(context)
+        return self.copyto(ctx)
+
+    @property
+    def ctx(self):
+        """Device context of the array.
+
+        Examples
+        --------
+        >>> x = np.array([1, 2, 3, 4])
+        >>> x.ctx
+        cpu(0)
+        >>> type(x.ctx)
+        <class 'mxnet.context.Context'>
+        >>> y = np.zeros((2, 3), npx.gpu(0))
+        >>> y.ctx
+        gpu(0)
+        """
+        dev_typeid = ctypes.c_int()
+        dev_id = ctypes.c_int()
+        check_call(_LIB.MXNDArrayGetContext(
+            self.handle, ctypes.byref(dev_typeid), ctypes.byref(dev_id)))
+        return Context(Context.devtype2str[dev_typeid.value], dev_id.value)
+
+    @property
+    def context(self):
+        """This function has been deprecated. Please refer to ``ndarray.ctx``."""
+        warnings.warn('ndarray.context has been renamed to ndarray.ctx', DeprecationWarning)
+        return self.as_nd_ndarray().context
 
     def copy(self, order='C'):  # pylint: disable=arguments-differ
+        """Return a coyp of the array, keeping the same context.
+
+        Parameters
+        ----------
+        order : str
+            The memory layout of the copy. Currently, only c-contiguous memory
+            layout is supported.
+
+        Examples
+        --------
+        >>> x = np.ones((2, 3))
+        >>> y = x.copy()
+        >>> y
+        array([[ 1.,  1.,  1.],
+               [ 1.,  1.,  1.]])
+        """
         if order != 'C':
             raise NotImplementedError('ndarray.copy only supports order=\'C\', while '
                                       'received {}'.format(str(order)))
-        return super(ndarray, self).copy().as_np_ndarray()
+        return self.copyto(self.ctx)
 
     def dot(self, b, out=None):
         """Dot product of two arrays.
@@ -787,7 +904,7 @@ class ndarray(NDArray):
         return _mx_np_op.dot(self, b, out=out)
 
     def reshape(self, *args, **kwargs):  # pylint: disable=arguments-differ
-        """Returns an array containing the same data with a new shape.
+        """Returns a copy of the array with a new shape.
 
         Notes
         -----
@@ -854,7 +971,7 @@ class ndarray(NDArray):
 
     def repeat(self, repeats, axis=None):  # pylint: disable=arguments-differ
         """Repeat elements of an array."""
-        raise NotImplementedError
+        return _mx_np_op.repeat(self, repeats=repeats, axis=axis)
 
     def pad(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`pad`.
@@ -1176,28 +1293,28 @@ class ndarray(NDArray):
         """Returns the standard deviation of the array elements along given axis."""
         return std(self, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
 
-    def var(self, axis=None, dtype=None, out=None, ddof=0, keepdims=None):  # pylint: disable=arguments-differ
+    def var(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=arguments-differ
         """Returns the variance of the array elements, along given axis."""
         return var(self, axis=axis, dtype=dtype, out=out, ddof=ddof, keepdims=keepdims)
 
     def cumsum(self, axis=None, dtype=None, out=None):
         """Return the cumulative sum of the elements along the given axis."""
-        raise NotImplementedError
+        return _mx_np_op.cumsum(self, axis=axis, dtype=dtype, out=out)
 
     def tolist(self):
         return self.asnumpy().tolist()
 
     def max(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return the maximum along a given axis."""
-        raise NotImplementedError
+        return _mx_np_op.max(self, axis=axis, keepdims=keepdims, out=out)
 
-    def min(self, *args, **kwargs):
+    def min(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`min`.
 
         The arguments are the same as for :py:func:`min`, with
         this array as data.
         """
-        raise NotImplementedError
+        return _mx_np_op.min(self, axis=axis, keepdims=keepdims, out=out)
 
     def norm(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`norm`.
@@ -1520,6 +1637,7 @@ class ndarray(NDArray):
         """
         return _mx_nd_np.full(self.shape, value, ctx=self.context, dtype=self.dtype, out=self)
 
+    # pylint: disable=redefined-outer-name
     def _scatter_set_nd(self, value_nd, indices):
         """
         This is added as an ndarray class method in order to support polymorphism in NDArray and numpy.ndarray indexing
@@ -1527,6 +1645,7 @@ class ndarray(NDArray):
         return _npi.scatter_set_nd(
             lhs=self, rhs=value_nd, indices=indices, shape=self.shape, out=self
         )
+    # pylint: enable=redefined-outer-name
 
     @property
     def shape(self):
@@ -1547,7 +1666,7 @@ class ndarray(NDArray):
 
 
 @set_module('mxnet.numpy')
-def empty(shape, dtype=float, order='C', ctx=None):
+def empty(shape, dtype=_np.float32, order='C', ctx=None):
     """Return a new array of given shape and type, without initializing entries.
 
     Parameters
@@ -1571,7 +1690,8 @@ def empty(shape, dtype=float, order='C', ctx=None):
         Array of uninitialized (arbitrary) data of the given shape, dtype, and order.
     """
     if order != 'C':
-        raise NotImplementedError
+        raise NotImplementedError('`empty` only supports order equal to `C`, while received {}'
+                                  .format(str(order)))
     if ctx is None:
         ctx = current_context()
     if dtype is None:
@@ -1607,7 +1727,7 @@ def array(object, dtype=None, ctx=None):
     if isinstance(object, ndarray):
         dtype = object.dtype if dtype is None else dtype
     else:
-        dtype = mx_real_t if dtype is None else dtype
+        dtype = _np.float32 if dtype is None else dtype
         if not isinstance(object, (ndarray, _np.ndarray)):
             try:
                 object = _np.array(object, dtype=dtype)
@@ -3674,7 +3794,7 @@ def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable
 
 
 @set_module('mxnet.numpy')
-def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=None):
+def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
     """
     Compute the standard deviation along the specified axis.
     Returns the standard deviation, a measure of the spread of a distribution,
@@ -3741,7 +3861,7 @@ def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=None):
 
 
 @set_module('mxnet.numpy')
-def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=None):
+def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
     """
     Compute the variance along the specified axis.
     Returns the variance of the array elements, a measure of the spread of a
@@ -3808,3 +3928,163 @@ def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=None):
     0.2025
     """
     return _npi.var(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+
+
+# pylint: disable=redefined-outer-name
+@set_module('mxnet.numpy')
+def indices(dimensions, dtype=_np.int32, ctx=None):
+    """Return an array representing the indices of a grid.
+
+    Compute an array where the subarrays contain index values 0,1,...
+    varying only along the corresponding axis.
+
+    Parameters
+    ----------
+    dimensions : sequence of ints
+        The shape of the grid.
+    dtype : data-type, optional
+        The desired data-type for the array. Default is `float32`.
+    ctx : device context, optional
+        Device context on which the memory is allocated. Default is
+        `mxnet.context.current_context()`.
+
+    Returns
+    -------
+    grid : ndarray
+        The array of grid indices,
+        ``grid.shape = (len(dimensions),) + tuple(dimensions)``.
+
+    Notes
+    -----
+    The output shape is obtained by prepending the number of dimensions
+    in front of the tuple of dimensions, i.e. if `dimensions` is a tuple
+    ``(r0, ..., rN-1)`` of length ``N``, the output shape is
+    ``(N,r0,...,rN-1)``.
+
+    The subarrays ``grid[k]`` contains the N-D array of indices along the
+    ``k-th`` axis. Explicitly::
+
+        grid[k,i0,i1,...,iN-1] = ik
+
+    Examples
+    --------
+    >>> grid = np.indices((2, 3))
+    >>> grid.shape
+    (2, 2, 3)
+    >>> grid[0]        # row indices
+    array([[0, 0, 0],
+           [1, 1, 1]])
+    >>> grid[1]        # column indices
+    array([[0, 0, 0],
+           [1, 1, 1]], dtype=int32)
+
+    The indices can be used as an index into an array.
+
+    >>> x = np.arange(20).reshape(5, 4)
+    >>> row, col = np.indices((2, 3))
+    >>> x[row, col]
+    array([[0., 1., 2.],
+           [4., 5., 6.]])
+
+    Note that it would be more straightforward in the above example to
+    extract the required elements directly with ``x[:2, :3]``.
+    """
+    return _mx_nd_np.indices(dimensions=dimensions, dtype=dtype, ctx=ctx)
+# pylint: enable=redefined-outer-name
+
+
+@set_module('mxnet.numpy')
+def copysign(x1, x2, out=None):
+    r"""copysign(x1, x2, out=None)
+
+    Change the sign of x1 to that of x2, element-wise.
+
+    If `x2` is a scalar, its sign will be copied to all elements of `x1`.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Values to change the sign of.
+    x2 : ndarray or scalar
+        The sign of `x2` is copied to `x1`.
+    out : ndarray or None, optional
+        A location into which the result is stored. It must be of the
+        right shape and right type to hold the output. If not provided
+        or `None`,a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        The values of `x1` with the sign of `x2`.
+        This is a scalar if both `x1` and `x2` are scalars.
+
+    Notes
+    -------
+    This function differs from the original `numpy.copysign
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.copysign.html>`_ in
+    the following aspects:
+
+    - ``where`` param is not supported.
+
+    Examples
+    --------
+    >>> np.copysign(1.3, -1)
+    -1.3
+    >>> 1/np.copysign(0, 1)
+    inf
+    >>> 1/np.copysign(0, -1)
+    -inf
+
+    >>> a = np.array([-1, 0, 1])
+    >>> np.copysign(a, -1.1)
+    array([-1., -0., -1.])
+    >>> np.copysign(a, np.arange(3)-1)
+    array([-1.,  0.,  1.])
+    """
+    return _mx_nd_np.copysign(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+def ravel(x, order='C'):
+    r"""
+    ravel(x)
+
+    Return a contiguous flattened array.
+    A 1-D array, containing the elements of the input, is returned.  A copy is
+    made only if needed.
+
+    Parameters
+    ----------
+    x : ndarray
+        Input array.  The elements in `x` are read in row-major, C-style order and
+        packed as a 1-D array.
+    order : `C`, optional
+        Only support row-major, C-style order.
+
+    Returns
+    -------
+    y : ndarray
+        y is an array of the same subtype as `x`, with shape ``(x.size,)``.
+        Note that matrices are special cased for backward compatibility, if `x`
+        is a matrix, then y is a 1-D ndarray.
+
+    Notes
+    -----
+    This function differs from the original numpy.arange in the following aspects:
+        - Only support row-major, C-style order.
+
+    Examples
+    --------
+    It is equivalent to ``reshape(x, -1)``.
+
+    >>> x = np.array([[1, 2, 3], [4, 5, 6]])
+    >>> print(np.ravel(x))
+    [1. 2. 3. 4. 5. 6.]
+
+    >>> print(x.reshape(-1))
+    [1. 2. 3. 4. 5. 6.]
+
+    >>> print(np.ravel(x.T))
+    [1. 4. 2. 5. 3. 6.]
+    """
+    return _mx_nd_np.ravel(x, order)

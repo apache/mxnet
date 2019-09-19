@@ -24,6 +24,7 @@
  */
 
 #include "../tensor/init_op.h"
+#include "./np_init_op.h"
 
 namespace mxnet {
 namespace op {
@@ -42,6 +43,9 @@ NNVM_REGISTER_OP(_np_ones_like)
 
 NNVM_REGISTER_OP(_npi_arange)
 .set_attr<FCompute>("FCompute<gpu>", RangeCompute<gpu, RangeParam>);
+
+NNVM_REGISTER_OP(_npi_indices)
+.set_attr<FCompute>("FCompute<gpu>", IndicesCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

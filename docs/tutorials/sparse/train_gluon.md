@@ -151,7 +151,7 @@ Similar to using a [`DataLoader`](https://mxnet.incubator.apache.org/versions/ma
 
 
 ```python
-data_iter = mx.io.LibSVMIter(data_libsvm='test.libsvm', data_shape=(num_features,), label_shape=(1,), batch_size=10)
+data_iter = mx.io.LibSVMIter(data_libsvm=filepath, data_shape=(num_features,), label_shape=(1,), batch_size=10)
 for batch in data_iter:
     data = batch.data[0]
     print('data.stype: {}'.format(data.stype))

@@ -48,7 +48,7 @@ CMakeLists.txt    @szha @pllarroy
 
 # MXNet CI
 dev_menu.py         @pllarroy
-/ci/                @pllarroy @marcoabreu 
+/ci/                @pllarroy @marcoabreu @aaronmarkham
 /ci/publish/        @szha
 /docker/            @marcoabreu
 /tests/ci_build/    @marcoabreu
@@ -64,13 +64,13 @@ Makefile          @szha
 prepare_mkl.sh    @szha
 
 # Docs
-/docs/            @szha @pllarroy
+/docs/            @szha @pllarroy @aaronmarkham
 
 # Submodules
 .gitmodules       @szha
 
 # Examples
-/example/         @szha @pllarroy
+/example/         @szha @pllarroy @aaronmarkham
 
 # Tools
 /tools/           @szha @pllarroy
