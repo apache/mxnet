@@ -20,7 +20,7 @@ from __future__ import print_function
 import mxnet as mx
 from mxnet.gluon import nn
 from mxnet.gluon import contrib
-from mxnet.gluon.contrib.cnn import DeformableConvolution
+from mxnet.gluon.contrib.cnn import DeformableConvolution, ModulatedDeformableConvolution
 
 
 def test_DeformableConvolution():
@@ -47,6 +47,40 @@ def test_DeformableConvolution():
         _ = mx.nd.array([0], ctx=ctx)
     except mx.base.MXNetError:
         print("deformable_convolution only supports GPU")
+        return
+
+    net.initialize(force_reinit=True, ctx=ctx)
+    net.hybridize()
+
+    x = mx.nd.random.uniform(shape=(8, 5, 30, 31), ctx=ctx)
+    with mx.autograd.record():
+        y = net(x)
+        y.backward()
+
+def test_ModulatedDeformableConvolution():
+    """test of the modulated deformable convolution layer with possible combinations of arguments,
+    currently this layer only supports gpu
+    """
+    net = nn.HybridSequential()
+    net.add(
+        ModulatedDeformableConvolution(10, kernel_size=(3, 3), strides=1, padding=0),
+        ModulatedDeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',
+                               offset_use_bias=False, use_bias=False),
+        ModulatedDeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',
+                               offset_use_bias=False),
+        ModulatedDeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',
+                               use_bias=False),
+        ModulatedDeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, offset_use_bias=False, use_bias=False),
+        ModulatedDeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, offset_use_bias=False),
+        ModulatedDeformableConvolution(12, kernel_size=(3, 2), strides=1, padding=0, use_bias=False),
+        ModulatedDeformableConvolution(12, kernel_size=(3, 2), strides=1, padding=0, use_bias=False, num_deformable_group=4),
+    )
+
+    try:
+        ctx = mx.gpu()
+        _ = mx.nd.array([0], ctx=ctx)
+    except mx.base.MXNetError:
+        print("modulated_deformable_convolution only supports GPU")
         return
 
     net.initialize(force_reinit=True, ctx=ctx)
