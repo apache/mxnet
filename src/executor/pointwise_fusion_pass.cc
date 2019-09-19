@@ -30,6 +30,7 @@
 #include <nnvm/graph_attr_types.h>
 #include <nnvm/pass_functions.h>
 #include <algorithm>
+#include <queue>
 #include "./simple_partition_pass.h"
 #include "../operator/fusion/fused_op-inl.h"
 #include "../operator/fusion/fused_op.h"
@@ -224,7 +225,7 @@ void AddInputsOnlyCompatible(const Graph &g,
     }
   }
   std::vector<std::vector<nnvm::Node*> > to_add(subsets->size());
-  DFSVisit(g.outputs, [&is_compatible, &node2setidx, subsets, &to_add](const nnvm::NodePtr& n) {
+  DFSVisit(g.outputs, [&is_compatible, &node2setidx, &to_add](const nnvm::NodePtr& n) {
     const auto& it = node2setidx.find(n.get());
     if (it != node2setidx.end()) {
       for (auto& e : n->inputs) {
@@ -233,8 +234,28 @@ void AddInputsOnlyCompatible(const Graph &g,
       }
     }
   });
+  std::unordered_set<nnvm::Node*> added; // to avoid when the node to add is input of two subsets
   for (size_t i = 0; i < subsets->size(); ++i) {
-    (*subsets)[i].insert(to_add[i].begin(), to_add[i].end());
+    std::vector<nnvm::NodeEntry> heads;
+    for (auto n : subsets->at(i)) {
+      for (auto e : n->inputs) {
+        if (!subsets->at(i).count(e.node.get()))
+          heads.push_back(e);
+      }
+    }
+    for (size_t j = 0; j < to_add[i].size(); ++j) {
+      if (!added.count(to_add[i][j])) {
+        bool make_cycle = false;
+        DFSVisit(heads, [&make_cycle, &node=to_add[i][j]](const nnvm::NodePtr& n) {
+          if (n.get() == node)
+            make_cycle = true;
+        });
+        if (!make_cycle) {
+          (*subsets)[i].insert(to_add[i][j]);
+          added.insert(to_add[i][j]);
+        }
+      }
+    }
   }
 }
 
