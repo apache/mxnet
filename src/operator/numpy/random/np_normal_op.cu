@@ -19,29 +19,17 @@
 
 /*!
  * Copyright (c) 2019 by Contributors
- * \file np_multinomial_op.cu
- * \brief Operator for numpy sampling from multinomial distributions
+ * \file np_normal_op.cu
+ * \brief Operator for numpy sampling from normal distributions
  */
-#include "./np_multinomial_op.h"
+
+#include "./np_normal_op.h"
 
 namespace mxnet {
 namespace op {
 
-template<typename DType>
-void CheckPvalGPU(DType* input, int prob_length) {
-  std::vector<DType> pvals_(prob_length);
-  CUDA_CALL(cudaMemcpy(&pvals_[0], input, sizeof(DType) * prob_length,
-    cudaMemcpyDeviceToHost));
-  DType sum = DType(0.0);
-  for (int i = 0; i < prob_length; ++i) {
-    sum += pvals_[i];
-    CHECK(sum <= DType(1.0))
-      << "sum(pvals[:-1]) > 1.0";
-  }
-}
-
-NNVM_REGISTER_OP(_npi_multinomial)
-.set_attr<FCompute>("FCompute<gpu>", NumpyMultinomialForward<gpu>);
+NNVM_REGISTER_OP(_npi_normal)
+    .set_attr<FCompute>("FCompute<gpu>", NumpyNormalForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
