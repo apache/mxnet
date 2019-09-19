@@ -24,7 +24,6 @@
  */
 #include <nnvm/graph.h>
 #include <nnvm/pass.h>
-#include <mxnet/op_attr_types.h>
 #include <unordered_set>
 #include <stack>
 #include <queue>
@@ -105,6 +104,28 @@ void ResetNodeLabels(const nnvm::Graph& g,
   subgraph_nodes->clear();
 }
 
+/*
+ * \brief Prepare NodeAttr for node. NodeAttr will be used in SubgraphSelectorV2.
+ */
+static const std::shared_ptr<NodeAttr> PrepareNodeAttr(const nnvm::Graph& g,
+                                                       const BiDirectedNode& node) {
+  const auto& indexed_graph = g.indexed_graph();
+  if (g.HasAttr("dtype") && g.HasAttr("shape") && g.HasAttr("dispatch_mode")) {
+    const auto& vdtype = g.GetAttr<nnvm::DTypeVector>("dtype");
+    const auto& vshape = g.GetAttr<mxnet::ShapeVector>("shape");
+    const auto& dispatch_modes = g.GetAttr<mxnet::DispatchModeVector>("dispatch_mode");
+    auto ret = std::make_shared<NodeAttr>();
+    ret->dispatch_mode = dispatch_modes[indexed_graph.node_id(node.node)];
+    for (const auto& e : node.node->inputs) {
+      ret->ishape.emplace_back(vshape[indexed_graph.entry_id(e)]);
+      ret->itype.emplace_back(vdtype[indexed_graph.entry_id(e)]);
+    }
+    return ret;
+  } else {
+    return nullptr;
+  }
+}
+
 /*!
  * \brief This function traverses the nodes in a computation graph from a starting
  * node following the input edges and output edges, and marks all nodes that
@@ -153,7 +174,7 @@ bool LabelSubgraph(const nnvm::Graph& g, SubgraphSelectorV2Ptr subgraph_selector
       CHECK_LT(nid, simple_nodes.size());
       const bool select_input =
           (snode->label == -1) && (!excluded_nodes || !excluded_nodes->count(snode)) &&
-          subgraph_selector->SelectInput(*cur_node, *snode);
+          subgraph_selector->SelectInput(*cur_node, *snode, PrepareNodeAttr(g, *snode));
       if (select_input) {
         // e.node is a subgraph node
         snode->label = label;
@@ -170,7 +191,7 @@ bool LabelSubgraph(const nnvm::Graph& g, SubgraphSelectorV2Ptr subgraph_selector
       CHECK_LT(nid, simple_nodes.size());
       const bool select_output =
           (snode->label == -1) && (!excluded_nodes || !excluded_nodes->count(snode)) &&
-          subgraph_selector->SelectOutput(*cur_node, *snode);
+          subgraph_selector->SelectOutput(*cur_node, *snode, PrepareNodeAttr(g, *snode));
       if (select_output) {
         // it->first is a subgraph node
         snode->label = label;
@@ -325,14 +346,16 @@ void SelectSubgraphNodes(nnvm::Graph* g, SubgraphSelectorV2Ptr subgraph_selector
                          std::vector<SubgraphSelectorV2Ptr>* subgraph_selectors,
                          const BiDirectedNode* node, const size_t snid, size_t* subgraph_id) {
   const auto& indexed_graph = g->indexed_graph();
+
   auto node_cmp = [&] (const BiDirectedNode* node1, const BiDirectedNode* node2) {
     return indexed_graph.node_id(node1->node) < indexed_graph.node_id(node2->node);
   };
-  if (simple_nodes[snid]->label == -1 && subgraph_selector->Select(*node)) {
+  if ((simple_nodes[snid]->label == -1) &&
+      subgraph_selector->Select(*node, PrepareNodeAttr(*g, *node))) {
     // pre-select nodes that can be grouped in a subgraph
     std::vector<BiDirectedNode*> preselected_nodes;
     PreSelectSubgraphNodes(*g, subgraph_selector, *subgraph_id, snid, simple_nodes,
-                           &preselected_nodes);
+                            &preselected_nodes);
 
     // filter out unqualified pre-selected nodes
     std::vector<BiDirectedNode*> filtered_nodes = subgraph_selector->Filter(preselected_nodes);

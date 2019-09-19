@@ -729,8 +729,8 @@ def test_np_ndarray_indexing():
                         ((3, 0), [2, (slice(None, None, None)), (slice(None, None, None), None)]),
     ]
     for shape, indices in shapes_indices:
+        np_array = _np.zeros(shape)
         for index in indices:
-            np_array = np.zeros(shape)
             test_getitem(np_array, index)
             test_setitem(np_array, index)
             test_getitem_autograd(np_array, index)
@@ -821,47 +821,71 @@ def test_np_multinomial():
     pvals_list = [[0.0, 0.1, 0.2, 0.3, 0.4], [0.4, 0.3, 0.2, 0.1, 0.0]]
     sizes = [None, (), (3,), (2, 5, 7), (4, 9)]
     experiements = 10000
-    for have_size in [False, True]:
-        for pvals in pvals_list:
-            if have_size:
-                for size in sizes:
-                    freq = mx.np.random.multinomial(experiements, pvals, size=size).asnumpy() / _np.float32(experiements)
-                    # for those cases that didn't need reshape
-                    if size in [None, ()]:
-                        mx.test_utils.assert_almost_equal(freq, pvals, rtol=0.20, atol=1e-1)
+    for pvals_mx_np_array in [False, True]:
+        for have_size in [False, True]:
+            for pvals in pvals_list:
+                if pvals_mx_np_array:
+                    pvals = mx.np.array(pvals)
+                if have_size:
+                    for size in sizes:
+                        freq = mx.np.random.multinomial(experiements, pvals, size=size).asnumpy() / _np.float32(experiements)
+                        # for those cases that didn't need reshape
+                        if size in [None, ()]:
+                            if type(pvals) == np.ndarray:
+                                mx.test_utils.assert_almost_equal(freq, pvals.asnumpy(), rtol=0.20, atol=1e-1)
+                            else:
+                                mx.test_utils.assert_almost_equal(freq, pvals, rtol=0.20, atol=1e-1)
+                        else:
+                            # check the shape
+                            assert freq.shape == size + (len(pvals),), 'freq.shape={}, size + (len(pvals))={}'.format(freq.shape, size + (len(pvals)))
+                            freq = freq.reshape((-1, len(pvals)))
+                            # check the value for each row
+                            for i in range(freq.shape[0]):
+                                if type(pvals) == np.ndarray:
+                                    mx.test_utils.assert_almost_equal(freq[i, :], pvals.asnumpy(), rtol=0.20, atol=1e-1)
+                                else:
+                                    mx.test_utils.assert_almost_equal(freq[i, :], pvals, rtol=0.20, atol=1e-1)
+                else:
+                    freq = mx.np.random.multinomial(experiements, pvals).asnumpy() / _np.float32(experiements)
+                    if type(pvals) == np.ndarray:
+                        mx.test_utils.assert_almost_equal(freq, pvals.asnumpy(), rtol=0.20, atol=1e-1)
                     else:
-                        # check the shape
-                        assert freq.shape == size + (len(pvals),), 'freq.shape={}, size + (len(pvals))={}'.format(freq.shape, size + (len(pvals)))
-                        freq = freq.reshape((-1, len(pvals)))
-                        # check the value for each row
-                        for i in range(freq.shape[0]):
-                            mx.test_utils.assert_almost_equal(freq[i, :], pvals, rtol=0.20, atol=1e-1)
-            else:
-                freq = mx.np.random.multinomial(experiements, pvals).asnumpy() / _np.float32(experiements)
-                mx.test_utils.assert_almost_equal(freq, pvals, rtol=0.20, atol=1e-1)
+                        mx.test_utils.assert_almost_equal(freq, pvals, rtol=0.20, atol=1e-1)
     # check the zero dimension
     sizes = [(0), (0, 2), (4, 0, 2), (3, 0, 1, 2, 0)]
-    for pvals in pvals_list:
-        for size in sizes:
-            freq = mx.np.random.multinomial(experiements, pvals, size=size).asnumpy()
-            assert freq.size == 0
+    for pvals_mx_np_array in [False, True]:
+        for pvals in pvals_list:
+            for size in sizes:
+                if pvals_mx_np_array:
+                    pvals = mx.np.array(pvals)
+                freq = mx.np.random.multinomial(experiements, pvals, size=size).asnumpy()
+                assert freq.size == 0
     # check [] as pvals
-    for pvals in [[], ()]:
-        freq = mx.np.random.multinomial(experiements, pvals).asnumpy()
-        assert freq.size == 0
-        for size in sizes:
-            freq = mx.np.random.multinomial(experiements, pvals, size=size).asnumpy()
+    for pvals_mx_np_array in [False, True]:
+        for pvals in [[], ()]:
+            if pvals_mx_np_array:
+                pvals = mx.np.array(pvals)
+            freq = mx.np.random.multinomial(experiements, pvals).asnumpy()
             assert freq.size == 0
+            for size in sizes:
+                freq = mx.np.random.multinomial(experiements, pvals, size=size).asnumpy()
+                assert freq.size == 0
     # test small experiment for github issue
     # https://github.com/apache/incubator-mxnet/issues/15383
     small_exp, total_exp = 20, 10000
-    for pvals in pvals_list:
-        x = np.random.multinomial(small_exp, pvals)
-        for i in range(total_exp // small_exp):
-            x = x + np.random.multinomial(20, pvals)
-    freq = (x.asnumpy() / _np.float32(total_exp)).reshape((-1, len(pvals)))
-    for i in range(freq.shape[0]):
-        mx.test_utils.assert_almost_equal(freq[i, :], pvals, rtol=0.20, atol=1e-1)
+    for pvals_mx_np_array in [False, True]:
+        for pvals in pvals_list:
+            if pvals_mx_np_array:
+                pvals = mx.np.array(pvals)
+            x = np.random.multinomial(small_exp, pvals)
+            for i in range(total_exp // small_exp):
+                x = x + np.random.multinomial(20, pvals)
+        freq = (x.asnumpy() / _np.float32(total_exp)).reshape((-1, len(pvals)))
+        for i in range(freq.shape[0]):
+            if type(pvals) == np.ndarray:
+                mx.test_utils.assert_almost_equal(freq[i, :], pvals.asnumpy(), rtol=0.20, atol=1e-1)
+            else:
+                mx.test_utils.assert_almost_equal(freq[i, :], pvals, rtol=0.20, atol=1e-1)
 
 
 if __name__ == '__main__':

@@ -190,6 +190,15 @@ def test_opencv_exception():
     assert_raises(MXNetError, check_resize)
 
 
+@with_seed()
+def test_np_reshape_exception():
+    a = mx.np.ones((10, 10))
+    a.reshape((-1,)).asnumpy()  # Check no-raise
+    assert_raises(MXNetError, lambda: a.reshape((1,)))
+    assert_raises(MXNetError, lambda: mx.np.reshape(a, (1,)))
+    assert_raises(MXNetError, lambda: mx.np.reshape(a, (-1, 3)))
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

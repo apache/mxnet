@@ -51,5 +51,62 @@ void CastStorageDispatch<cpu>(const OpContext& ctx,
   mxnet::op::CastStorageComputeImpl<cpu>(ctx, input, output);
 }
 
+void ExecuteMonInputCallback(
+    const nnvm::IndexedGraph &idx, const std::vector<NDArray *> &state_arrays,
+    size_t nid, const std::function<void(const char *, const char *, void *)>
+                    &monitor_callback) {
+  static const auto &flist_inputs =
+      nnvm::Op::GetAttr<nnvm::FListInputNames>("FListInputNames");
+  std::vector<std::string> input_names;
+  const nnvm::IndexedGraph::Node &inode = idx[nid];
+  const nnvm::Node *node = inode.source;
+  if (flist_inputs.count(node->op())) {
+    input_names = flist_inputs[node->op()](node->attrs);
+  } else {
+    for (size_t i = 0; i < node->num_inputs(); ++i) {
+      input_names.emplace_back("input" + std::to_string(i));
+    }
+  }
+
+  for (size_t i = 0; i < node->num_inputs(); ++i) {
+    const nnvm::NodeEntry &input = node->inputs[i];
+    if (state_arrays[idx.entry_id(input)]->is_none()) {
+      continue;
+    }
+    NDArray *cpy = new NDArray(*state_arrays[idx.entry_id(input)]);
+    std::string name = inode.source->attrs.name + "_" + input_names[i];
+    monitor_callback(name.c_str(), inode.source->op()->name.c_str(),
+                     reinterpret_cast<void *>(cpy));
+  }
+}
+
+void ExecuteMonOutputCallback(
+    const nnvm::IndexedGraph &idx, const std::vector<NDArray *> &state_arrays,
+    size_t nid, const std::function<void(const char *, const char *, void *)>
+                    &monitor_callback) {
+  static const auto &flist_outputs =
+      nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
+  std::vector<std::string> output_names;
+  const nnvm::IndexedGraph::Node &inode = idx[nid];
+  const nnvm::Node *node = inode.source;
+  if (flist_outputs.count(node->op())) {
+    output_names = flist_outputs[node->op()](node->attrs);
+  } else {
+    for (size_t i = 0; i < node->num_outputs(); ++i) {
+      output_names.emplace_back(std::to_string(i));
+    }
+  }
+
+  for (size_t i = 0; i < node->num_outputs(); ++i) {
+    if (state_arrays[idx.entry_id(nid, i)]->is_none()) {
+      continue;
+    }
+    NDArray *cpy = new NDArray(*state_arrays[idx.entry_id(nid, i)]);
+    std::string name = inode.source->attrs.name + "_" + output_names[i];
+    monitor_callback(name.c_str(), inode.source->op()->name.c_str(),
+                     reinterpret_cast<void *>(cpy));
+  }
+}
+
 }  // namespace common
 }  // namespace mxnet

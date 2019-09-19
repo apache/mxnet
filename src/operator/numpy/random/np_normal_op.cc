@@ -19,51 +19,51 @@
 
 /*!
  * Copyright (c) 2019 by Contributors
- * \file np_uniform_op.cc
- * \brief Operator for numpy sampling from uniform distributions
+ * \file np_random_op.cc
+ * \brief Operator for numpy sampling from normal distributions.
  */
-#include "./np_uniform_op.h"
+#include "./np_normal_op.h"
 
 namespace mxnet {
 namespace op {
 
-DMLC_REGISTER_PARAMETER(NumpyUniformParam);
+DMLC_REGISTER_PARAMETER(NumpyNormalParam);
 
-NNVM_REGISTER_OP(_npi_uniform)
-.describe("numpy behavior uniform")
+NNVM_REGISTER_OP(_npi_normal)
+.describe("Numpy behavior normal")
 .set_num_inputs(
   [](const nnvm::NodeAttrs& attrs) {
-    const NumpyUniformParam& param = nnvm::get<NumpyUniformParam>(attrs.parsed);
+    const NumpyNormalParam& param = nnvm::get<NumpyNormalParam>(attrs.parsed);
     int num_inputs = 2;
-    if (param.low.has_value()) num_inputs -= 1;
-    if (param.high.has_value()) num_inputs -= 1;
+    if (param.loc.has_value()) num_inputs -= 1;
+    if (param.scale.has_value()) num_inputs -= 1;
     return num_inputs;
   }
 )
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
-    const NumpyUniformParam& param = nnvm::get<NumpyUniformParam>(attrs.parsed);
+    const NumpyNormalParam& param = nnvm::get<NumpyNormalParam>(attrs.parsed);
     int num_inputs = 2;
-    if (param.low.has_value()) num_inputs -= 1;
-    if (param.high.has_value()) num_inputs -= 1;
+    if (param.loc.has_value()) num_inputs -= 1;
+    if (param.scale.has_value()) num_inputs -= 1;
     if (num_inputs == 0) return std::vector<std::string>();
     if (num_inputs == 1) return std::vector<std::string>{"input1"};
     return std::vector<std::string>{"input1", "input2"};
   })
-.set_attr_parser(ParamParser<NumpyUniformParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", TwoparamsDistOpShape<NumpyUniformParam>)
-.set_attr<nnvm::FInferType>("FInferType", NumpyUniformOpType)
+.set_attr_parser(ParamParser<NumpyNormalParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", TwoparamsDistOpShape<NumpyNormalParam>)
+.set_attr<nnvm::FInferType>("FInferType", NumpyNormalOpType)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const nnvm::NodeAttrs& attrs) {
       return std::vector<ResourceRequest>{
         ResourceRequest::kRandom, ResourceRequest::kTempSpace};
   })
-.set_attr<FCompute>("FCompute<cpu>", NumpyUniformForward<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", NumpyNormalForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("input1", "NDArray-or-Symbol", "Source input")
 .add_argument("input2", "NDArray-or-Symbol", "Source input")
-.add_arguments(NumpyUniformParam::__FIELDS__());
+.add_arguments(NumpyNormalParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet
