@@ -27,6 +27,12 @@ pipeline {
   agent {
     label 'restricted-utility'
   }
+  options {
+    // Because each pass of the CD pipeline
+    // updates Jenkins' state of the release job
+    // to avoid crazy issues, we don't allow concurrent builds.
+    disableConcurrentBuilds()  
+  }
 
   parameters {
     // Release parameters
