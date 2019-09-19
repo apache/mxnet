@@ -43,6 +43,11 @@
 #include <thrust/device_vector.h>
 #endif
 
+#ifdef __CUDACC__
+#include "./pseudo2DTranspose_op-inl.cuh"
+#endif
+
+
 namespace mxnet {
 namespace op {
 
@@ -269,6 +274,15 @@ void TransposeImpl(RunContext ctx,
   if (src.shape_.Size() == 0U) return;
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(ret.type_flag_, DType, {
+#ifdef __CUDACC__
+    //  This transpose can be used only if there exist n and m such that:
+    //  params = (0, ..., n-1, n+m, ..., params.size, n, ..., n+m-1)
+    //  Example: (0, 2, 3, 1) or (0, 3, 1, 2), but not (0, 2, 1, 3).
+    if (isPseudo2DTranspose(axes)) {
+       transpose_pseudo2D<DType>(ret, src, axes, s);
+       return;
+    }
+#endif
     switch (axes.ndim()) {
      case 0: {
       Tensor<xpu, 1, DType> in = src.get_with_shape<xpu, 1, DType>(mshadow::Shape1(1), s);
