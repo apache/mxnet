@@ -50,7 +50,7 @@ pipeline {
   stages {
     stage("Init") {
       steps {
-        script{
+        script {
           cd_utils = load('cd/Jenkinsfile_utils.groovy')
           ci_utils = load('ci/Jenkinsfile_utils.groovy')
           ci_utils.assign_node_labels(
@@ -62,19 +62,31 @@ pipeline {
             windows_gpu: 'restricted-mxnetwindows-gpu'
           )
 
-          echo """\
+          // Skip Jenkins state update jobs
+          if (env.RELEASE_JOB_TYPE == cd_utils.STATE_UPDATE) {
+            echo """\
+            |Job Type: ${env.RELEASE_JOB_TYPE}
+            |Commit Id: ${env.GIT_COMMIT}""".stripMargin()
+          } else {
+            echo """\
             |Job Name: ${env.RELEASE_JOB_NAME}
             |Job Type: ${env.RELEASE_JOB_TYPE}
             |Release Build: ${params.RELEASE_BUILD}
             |Commit Id: ${env.GIT_COMMIT}
             |Branch: ${env.GIT_BRANCH}
             |Variants: ${env.MXNET_VARIANTS}""".stripMargin()
+          }
         }
       }
     }
     stage("Release Job") {
       steps {
         script {
+          // Skip builds for state update job
+          if (env.RELEASE_JOB_TYPE == cd_utils.STATE_UPDATE) {
+            currentBuild.result = "SUCCESS"
+            return
+          }
 
           // Add new job types here
           def valid_job_types = [
@@ -88,17 +100,14 @@ pipeline {
             list << item.trim()
           }.findAll { item -> ! (item == null || item.isEmpty()) }
 
-          echo "size: ${mxnet_variants.size()}"
-
           // Exit successfully if there are no variants to build
           if (mxnet_variants.size() == 0) {
-            currentBuild.result = 'SUCCESS'
-            return
+            error "No variants to build..."
           }
 
           // Only execute from allowed release job types
-          if (! ("${params.RELEASE_JOB_TYPE}" in valid_job_types)) {
-            error "Unknown release job type ${params.RELEASE_JOB_TYPE}"
+          if (! (valid_job_types.contains(params.RELEASE_JOB_TYPE))) {
+            error "Unknown release job type '${params.RELEASE_JOB_TYPE}'"
           }
 
           // Load script for the supplied job type

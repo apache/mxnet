@@ -39,6 +39,9 @@ pipeline {
       steps {
         script {
           cd_utils = load('cd/Jenkinsfile_utils.groovy')
+          
+          // Update release job state in Jenkins
+          cd_utils.update_release_job_state()
         }
       }
     }
