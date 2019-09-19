@@ -58,7 +58,7 @@ The dependencies could be categorized by several groups: BLAS libraries, CPU-bas
 |CUDA| 10.1 |
 |cuDNN| 7.5.1 |
 |NCCL| 2.4.2 |
-|numpy| >1.16.0,<2.0.0 |
+|numpy| >=1.17.0,<2.0.0 |
 |request| >=2.20.0,< 3.0.0 |
 |graphviz| <0.9.0,>=0.8.1 |
 |OpenCV| 3.4.2 |

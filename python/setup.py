@@ -30,7 +30,11 @@ if "--inplace" in sys.argv:
 else:
     from setuptools import setup
     from setuptools.extension import Extension
-    kwargs = {'install_requires': ['numpy>=1.17.0,<2.0.0', 'requests>=2.20.0,<3', 'graphviz<0.9.0,>=0.8.1'], 'zip_safe': False}
+    kwargs = {
+        'install_requires': ['requests>=2.20.0,<3', 'graphviz<0.9.0,>=0.8.1']
+            .append('numpy>=1.17.0,<2.0.0' if sys.version_info[0] > 2 else 'numpy>1.16.0,<2.0.0'),
+        'zip_safe': False
+    }
 
 with_cython = False
 if '--with-cython' in sys.argv:
