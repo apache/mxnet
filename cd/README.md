@@ -67,6 +67,8 @@ The release job executes, in parallel, the release pipeline for each of the vari
 
 NOTE: The **COMMIT_ID** is a little tricky and we must be very careful with it. It is necessary to ensure that the same commit is built through out the pipeline, but at the same time, it has the potential to change the current state of the release job configuration - specifically the parameter configuration. Any changes to this configuration will require a "dry-run" of the release job to ensure Jenkins has the current (master) version. This is acceptable as there will be few changes to the parameter configuration for the job, if any at all. But, it's something to keep in mind.
 
+To avoid potential issues as much as possible, the CD pipeline executes this "dry run" and ensures that Jenkins' state of the release job matches what is defined for the release job in the specified COMMIT_ID. This is done by setting the **RELEASE_JOB_TYPE** to *Status Update*.
+
 It should be noted that the 'Pipeline' section of the configuration should use the *$COMMIT_ID* parameter as the specifier and 'lightweight checkout' unchecked. For example:
 
 ![job setup example](img/job_setup.png)
