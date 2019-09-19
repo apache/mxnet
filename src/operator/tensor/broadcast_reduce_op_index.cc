@@ -50,8 +50,16 @@ Examples::
                                       [ 2.]]
 
 )code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::maximum>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+.set_attr<FCompute>("FCompute<cpu>", ArgMax<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
+return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+});
+
+template<>
+int DefineNumbWorkers<cpu>(const TShape &shape, int axis) {
+  return 1;              // We will not use extra workers on CPU
+}
 
 MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmin)
 .describe(R"code(Returns indices of the minimum values along an axis.

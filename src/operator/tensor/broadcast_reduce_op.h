@@ -184,7 +184,7 @@ inline int CheckAxis(const int axis, const int ndim) {
   }
 }
 
-inline mxnet::TShape AxisShapeCompact(mxnet::TShape shape, int *axis, bool allow_2d) {
+inline mxnet::TShape AxisShapeCompact(const mxnet::TShape &shape, int *axis, bool allow_2d) {
   int ndim = shape.ndim();
   index_t leading = 1, trailing = 1, M = 1;
   if (shape.ndim() > *axis) {
@@ -554,6 +554,162 @@ inline bool ReduceAxesOpForwardStorage(const nnvm::NodeAttrs& attrs,
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
   return dispatched;
+}
+
+struct argmax {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, const int nWorkers, const DType *in_data, DType *out_data,
+               size_t nSteps, size_t step, size_t shift, void *pIdxStorage, bool use_uint16) {
+    // i - index of launched thread
+    // nWorkers - number of threads, assigned to work on one row/column
+    // iw - index of current thread among workers assigned to the same vector
+    int iw = 0;
+    const DType *pCurr = in_data;
+    if (nWorkers > 1) {
+      // in - the vector number which current thread is assigned to
+      const auto in = i / nWorkers;
+      iw = i % nWorkers;
+      pCurr += in % step + shift * (in / step) + iw * step;
+      nSteps = (nSteps + nWorkers - 1 - iw) / nWorkers;
+      step *= nWorkers;
+    } else {
+      pCurr += i % step + shift * (i / step);
+    }
+
+    int maxIdx = 0;
+    DType maxVal = *pCurr;
+    for (size_t j = 1; j < nSteps; ++j) {
+      if (maxVal < *(pCurr += step)) {
+        maxVal = *pCurr;
+        maxIdx = j;
+      }
+    }
+
+    if (nWorkers > 1) {
+      // saving index of best element found by current thread
+      if (use_uint16) {
+        *(static_cast<uint16_t *>(pIdxStorage) + i) = maxIdx * nWorkers + iw;
+      } else {
+        *(static_cast<uint32_t *>(pIdxStorage) + i) = maxIdx * nWorkers + iw;
+      }
+    } else {
+      out_data[i] = maxIdx;    // output of argmax
+    }
+  }
+};
+
+struct argmax_reduce {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, const int nWorkers, const DType *in_data, DType *out_data,
+               const size_t step, const size_t shift, void *pIdx, const bool use_uin16) {
+    const DType *pCurr = in_data + i % step + shift * (i / step);
+    int maxIdx;
+    if (use_uin16) {
+      const auto *pIdxStorage = static_cast<uint16_t*>(pIdx);
+      maxIdx = *(pIdxStorage += i * nWorkers);
+      DType maxVal = *(pCurr + step * maxIdx);
+      for (int j = 1; j < nWorkers; ++j) {
+        const auto val = *(pCurr + step * pIdxStorage[j]);
+        if (maxVal < val) {
+          maxVal = val;
+          maxIdx = pIdxStorage[j];
+        }
+      }
+    } else {
+      const auto *pIdxStorage = static_cast<uint32_t*>(pIdx);
+      maxIdx = *(pIdxStorage += i * nWorkers);
+      DType maxVal = *(pCurr + step * maxIdx);
+      for (int j = 1; j < nWorkers; ++j) {
+        const auto val = *(pCurr + step * pIdxStorage[j]);
+        if (maxVal < val) {
+          maxVal = val;
+          maxIdx = pIdxStorage[j];
+        }
+      }
+    }
+
+    out_data[i] = maxIdx;
+  }
+};
+
+template<typename xpu, typename DType>
+DType *AllocateDTypeMemory(const OpContext& ctx, const size_t num_items) {
+  const size_t memSize = num_items * sizeof(DType);
+  mshadow::Tensor<xpu, 1, uint8_t> workspace =
+    ctx.requested[0].get_space_typed<xpu, 1, uint8_t>(
+      mshadow::Shape1(memSize), ctx.get_stream<xpu>());
+  return reinterpret_cast<DType *>(workspace.dptr_);
+}
+
+template<typename xpu, typename DType>
+void ArgMax(const OpContext& ctx, const TShape &shape, int axis, size_t step, size_t shift,
+            const int nWorkers, void *pIdxStorage, bool use_uin16,
+            const TBlob& input, const TBlob& output) {
+  using namespace mxnet_op;
+  const auto pIn = input.dptr<DType>();
+  auto *pOut = output.dptr<DType>();
+  const auto nSize = shape[axis];
+  const auto num_threads = shape.Size() / nSize;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  Kernel<argmax, xpu>::Launch(s, num_threads * nWorkers, nWorkers, pIn, pOut, nSize,
+                              step, shift, pIdxStorage, use_uin16);
+  if (nWorkers > 1) {
+    Kernel<argmax_reduce, xpu>::Launch(s, num_threads, nWorkers, pIn, pOut,
+                                       step, shift, pIdxStorage, use_uin16);
+  }
+}
+
+template<typename xpu>
+int DefineNumbWorkers(const TShape &shape, int axis);
+
+template<typename xpu>
+void ArgMax(const nnvm::NodeAttrs& attrs,
+            const OpContext& ctx,
+            const std::vector<TBlob>& inputs,
+            const std::vector<OpReqType>& req,
+            const std::vector<TBlob>& outputs) {
+  const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
+  if (!param.axis) LOG(FATAL) << "Global reduction not supported yet";
+
+  auto shape = inputs[0].shape_;
+  auto axis = CheckAxis(param.axis.value(), shape.ndim());
+  if (shape.ndim() == 1)
+    shape = AxisShapeCompact(shape, &axis, true);
+
+  void *pIdxMemory = nullptr;
+  auto nWorkers = DefineNumbWorkers<xpu>(shape, axis);
+  bool use_uint16 = false;
+  while (nWorkers > 1) {
+    const size_t num_items = nWorkers * shape.Size() / shape[axis];
+    pIdxMemory = AllocateDTypeMemory<xpu, uint32_t>(ctx, num_items);
+    if (pIdxMemory)
+      break;
+
+    // Check if indexes can be stored in uint16 format
+    if (shape[axis] <= UINT16_MAX) {
+      pIdxMemory = AllocateDTypeMemory<xpu, uint16_t>(ctx, num_items);
+      if (pIdxMemory) {
+        use_uint16 = false;
+        break;
+      }
+    }
+
+    // Decreasing the number of workers - less memory will be needed
+    nWorkers >>= 1;
+  }
+
+  // Calculate step over the input array which will be used by each thread in kernel
+  size_t step = 1;
+  int i = shape.ndim();
+  while (--i > axis)
+    step *= shape[i];
+
+  // Shift will be used for each thread in determination of reading data starting point
+  const size_t shift = i? step*shape[i] : 1;
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType,
+      ArgMax<xpu, DType>(ctx, shape, axis, step, shift, nWorkers, pIdxMemory, use_uint16,
+                         inputs[0], outputs[0]);
+  )
 }
 
 template<typename xpu, typename reducer>
