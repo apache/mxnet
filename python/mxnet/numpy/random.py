@@ -21,7 +21,7 @@ from __future__ import absolute_import
 from ..ndarray import numpy as _mx_nd_np
 
 
-__all__ = ["randint", "uniform", "normal"]
+__all__ = ["randint", "uniform", "normal", "choice"]
 
 
 def randint(low, high=None, size=None, dtype=None, **kwargs):
@@ -110,7 +110,7 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
     return _mx_nd_np.random.uniform(low, high, size=size, ctx=ctx, dtype=dtype, out=out)
 
 
-def normal(loc=0.0, scale=1.0, size=None, **kwargs):
+def normal(loc=0.0, scale=1.0, size=None, dtype=None, **kwargs):
     """Draw random samples from a normal (Gaussian) distribution.
 
     Samples are distributed according to a normal distribution parametrized
@@ -130,7 +130,7 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
     dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
     ctx : Context, optional
-        Device context of output. Default is current context.
+        Device context of output, default is current context.
     out : ``ndarray``, optional
         Store output to an existing ``ndarray``.
 
@@ -138,12 +138,8 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
     -------
     out : ndarray
         Drawn samples from the parameterized normal distribution.
-
-    Notes
-    -----
-    This function currently does not support ``loc`` and ``scale`` as ndarrays.
     """
-    return _mx_nd_np.random.normal(loc, scale, size, **kwargs)
+    return _mx_nd_np.random.normal(loc, scale, size, dtype, **kwargs)
 
 
 def multinomial(n, pvals, size=None, **kwargs):
@@ -180,3 +176,58 @@ def multinomial(n, pvals, size=None, **kwargs):
     array([32, 68])
     """
     return _mx_nd_np.random.multinomial(n, pvals, size, **kwargs)
+
+
+def choice(a, size=None, replace=True, p=None, **kwargs):
+    """Generates a random sample from a given 1-D array
+
+    Parameters
+    -----------
+    a : 1-D array-like or int
+        If an ndarray, a random sample is generated from its elements.
+        If an int, the random sample is generated as if a were np.arange(a)
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  Default is None, in which case a
+        single value is returned.
+    replace : boolean, optional
+        Whether the sample is with or without replacement
+    p : 1-D array-like, optional
+        The probabilities associated with each entry in a.
+        If not given the sample assumes a uniform distribution over all
+        entries in a.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+
+    Returns
+    --------
+    samples : ndarray
+        The generated random samples
+
+    Examples
+    ---------
+    Generate a uniform random sample from np.arange(5) of size 3:
+
+    >>> np.random.choice(5, 3)
+    array([0, 3, 4])
+    >>> #This is equivalent to np.random.randint(0,5,3)
+
+    Generate a non-uniform random sample from np.arange(5) of size 3:
+
+    >>> np.random.choice(5, 3, p=[0.1, 0, 0.3, 0.6, 0])
+    array([3, 3, 0])
+
+    Generate a uniform random sample from np.arange(5) of size 3 without
+    replacement:
+
+    >>> np.random.choice(5, 3, replace=False)
+    array([3,1,0])
+    >>> #This is equivalent to np.random.permutation(np.arange(5))[:3]
+
+    Generate a non-uniform random sample from np.arange(5) of size
+    3 without replacement:
+
+    >>> np.random.choice(5, 3, replace=False, p=[0.1, 0, 0.3, 0.6, 0])
+    array([2, 3, 0])
+    """
+    return _mx_nd_np.random.choice(a, size, replace, p, **kwargs)

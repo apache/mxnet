@@ -2,13 +2,18 @@ from ..base import MXNetError
 
 from libcpp.vector cimport vector
 from libcpp.string cimport string
+from libcpp cimport bool as _bool
 from cpython.version cimport PY_MAJOR_VERSION
 
 ctypedef void* SymbolHandle
 ctypedef void* NDArrayHandle
 ctypedef void* OpHandle
 ctypedef void* CachedOpHandle
+ctypedef void* MonitorCallbackHandle
 ctypedef unsigned nn_uint
+ctypedef void (*CachedOpMonitorCallback)(const char*,
+                                         const char*,
+                                         NDArrayHandle)
 
 cdef py_str(const char* x):
     if PY_MAJOR_VERSION < 3:
@@ -112,3 +117,6 @@ cdef extern from "mxnet/c_api.h":
                            int *num_outputs,
                            NDArrayHandle **outputs,
                            const int **out_stypes);
+    int MXCachedOpRegisterOpHook(NDArrayHandle handle,
+                                 CachedOpMonitorCallback callback,
+                                 _bool monitor_all);

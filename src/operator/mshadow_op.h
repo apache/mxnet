@@ -98,7 +98,7 @@ MXNET_UNARY_MATH_OP(identity_grad, 1);
 
 struct identity_with_cast {
   template<typename DTypeIn, typename DTypeOut>
-  MSHADOW_XINLINE static void Map(int i, DTypeOut *out, DTypeIn *in) {
+  MSHADOW_XINLINE static void Map(index_t i, DTypeOut *out, DTypeIn *in) {
     out[i] = DTypeOut(in[i]);
   }
 };
@@ -416,6 +416,16 @@ MSHADOW_XINLINE mshadow::half::half2_t div_rgrad::Map<mshadow::half::half2_t>
 MXNET_BINARY_MATH_OP(rdiv, math::id(b) / math::id(a));
 
 MXNET_BINARY_MATH_OP(rdiv_grad, -math::id(b) / math::sqr(a));
+
+MXNET_BINARY_MATH_OP(copysign, (a >= 0 && b >= 0) || (a < 0 && b < 0) ? a : -a);
+
+MXNET_BINARY_MATH_OP(copysign_grad, (a >= 0 && b >= 0) || (a < 0 && b < 0) ? 1: -1);
+
+MXNET_BINARY_MATH_OP(copysign_rgrad, 0);
+
+MXNET_BINARY_MATH_OP(rcopysign, (b >= 0 && a >= 0) || (b < 0 && a < 0) ? b : -b);
+
+MXNET_BINARY_MATH_OP(rcopysign_grad, 0);
 
 struct mod : public mxnet_op::tunable {
   template<typename DType>

@@ -20,7 +20,6 @@
 from __future__ import absolute_import
 from ...context import current_context
 from . import _internal as _npi
-from ...base import numeric_types
 
 
 __all__ = ['randint', 'uniform', 'normal']
@@ -144,7 +143,7 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
                             ctx=ctx, dtype=dtype, out=out)
 
 
-def normal(loc=0.0, scale=1.0, size=None, **kwargs):
+def normal(loc=0.0, scale=1.0, size=None, dtype=None, **kwargs):
     """Draw random samples from a normal (Gaussian) distribution.
 
     Samples are distributed according to a normal distribution parametrized
@@ -162,31 +161,114 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
         samples are drawn. If size is `None` (default), a scalar tensor containing
         a single value is returned if loc and scale are both scalars.
     dtype : {'float16', 'float32', 'float64'}, optional
-        Data type of output samples. Default is 'float32'
+        Data type of output samples. Default is 'float32'.
     ctx : Context, optional
         Device context of output. Default is current context.
-    out : ``ndarray``, optional
-        Store output to an existing ``ndarray``.
 
     Returns
     -------
     out : _Symbol (symbol representing `mxnet.numpy.ndarray` in computational graphs)
         Drawn samples from the parameterized normal distribution.
-
-    Notes
-    -----
-    This function currently does not support ``loc`` and ``scale`` as `_Symbol`s.
     """
-    dtype = kwargs.pop('dtype', None)
+    from ._symbol import _Symbol as np_symbol
+    input_type = (isinstance(loc, np_symbol), isinstance(scale, np_symbol))
+    ctx = kwargs.pop('ctx', None)
+    out = kwargs.pop('out', None)
     if dtype is None:
         dtype = 'float32'
+    if ctx is None:
+        ctx = current_context()
+    out = kwargs.pop('out', None)
+    if out is not None:
+        size = out.shape
+    if size == ():
+        size = None
+    if input_type == (True, True):
+        return _npi.normal(loc, scale, loc=None, scale=None, size=size,
+                           ctx=ctx, dtype=dtype, out=out)
+    elif input_type == (False, True):
+        return _npi.normal(scale, loc=loc, scale=None, size=size,
+                           ctx=ctx, dtype=dtype, out=out)
+    elif input_type == (True, False):
+        return _npi.normal(loc, loc=None, scale=scale, size=size,
+                           ctx=ctx, dtype=dtype, out=out)
+    else:
+        return _npi.normal(loc=loc, scale=scale, size=size,
+                           ctx=ctx, dtype=dtype, out=out)
+
+
+def choice(a, size=None, replace=True, p=None, **kwargs):
+    """Generates a random sample from a given 1-D array
+
+    Parameters
+    -----------
+    a : 1-D array-like or int
+        If an ndarray, a random sample is generated from its elements.
+        If an int, the random sample is generated as if a were np.arange(a)
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  Default is None, in which case a
+        single value is returned.
+    replace : boolean, optional
+        Whether the sample is with or without replacement
+    p : 1-D array-like, optional
+        The probabilities associated with each entry in a.
+        If not given the sample assumes a uniform distribution over all
+        entries in a.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+
+    Returns
+    --------
+    samples : _Symbol
+        The generated random samples
+
+    Examples
+    ---------
+    Generate a uniform random sample from np.arange(5) of size 3:
+
+    >>> np.random.choice(5, 3)
+    array([0, 3, 4])
+    >>> #This is equivalent to np.random.randint(0,5,3)
+
+    Generate a non-uniform random sample from np.arange(5) of size 3:
+
+    >>> np.random.choice(5, 3, p=[0.1, 0, 0.3, 0.6, 0])
+    array([3, 3, 0])
+
+    Generate a uniform random sample from np.arange(5) of size 3 without
+    replacement:
+
+    >>> np.random.choice(5, 3, replace=False)
+    array([3,1,0])
+    >>> #This is equivalent to np.random.permutation(np.arange(5))[:3]
+
+    Generate a non-uniform random sample from np.arange(5) of size
+    3 without replacement:
+
+    >>> np.random.choice(5, 3, replace=False, p=[0.1, 0, 0.3, 0.6, 0])
+    array([2, 3, 0])
+    """
+    from ._symbol import _Symbol as np_symbol
     ctx = kwargs.pop('ctx', None)
     if ctx is None:
         ctx = current_context()
     out = kwargs.pop('out', None)
-    if size is None and out is None:
-        size = ()
-    if (not isinstance(loc, numeric_types)) or (not isinstance(scale, numeric_types)):
-        raise NotImplementedError('np.random.normal only supports loc and scale of '
-                                  'numeric types for now')
-    return _npi.random_normal(loc, scale, shape=size, dtype=dtype, ctx=ctx, out=out, **kwargs)
+    if size == ():
+        size = None
+
+    if isinstance(a, np_symbol):
+        ctx = None
+        if p is None:
+            indices = _npi.choice(a, a=None, size=size,
+                                  replace=replace, ctx=ctx, weighted=False)
+            return _npi.take(a, indices)
+        else:
+            indices = _npi.choice(a, p, a=None, size=size,
+                                  replace=replace, ctx=ctx, weighted=True)
+            return _npi.take(a, indices)
+    else:
+        if p is None:
+            return _npi.choice(a=a, size=size, replace=replace, ctx=ctx, weighted=False, out=out)
+        else:
+            return _npi.choice(p, a=a, size=size, replace=replace, ctx=ctx, weighted=True, out=out)

@@ -96,7 +96,7 @@ void TVMBinaryBackwardComputeUseNone(const nnvm::NodeAttrs& attrs,
     for (int i = ov.size(); i < max_dim; ++i) {
       ov.push_back(1);
     }
-    for (int i = flag; i < ov.size(); i += 2) {
+    for (uint32_t i = flag; i < ov.size(); i += 2) {
       iv.push_back(ov[i]);
     }
     TShape oshape(ov.begin(), ov.end()), ishape(iv.begin(), iv.end());

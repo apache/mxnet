@@ -1,0 +1,115 @@
+html {
+    font-size: $font_size;
+}
+
+body {
+    display: block !important;
+    background-color: $background_color;
+    font-size: 1rem;
+    line-height: 1.5rem;
+    font-family: $body_font_family;
+}
+
+.mdl-layout__content:focus {
+    outline: none;
+ }
+
+h1, h2, h3, h4, h5, h6, blockquote, span.mdl-layout-title,
+a.download > code.download {
+    font-family: $body_font_family;
+}
+
+h1, h2, h3, h4, h5, h6, .toc-backref, .contents, .toctree-wrapper, .contents a, .toctree-wrapper a, .globaltoc a.current {
+    color: $color-mxnet !important;
+}
+
+a {
+    text-decoration: none;
+}
+
+.page-content {
+    font-size: 1rem;
+    p, ul, ol, dl, dd, dt, table, th, td {
+        font-size: 1rem;
+    }
+}
+
+.brand {
+    color: inherit;
+    text-decoration: none;
+}
+
+.section {
+    overflow-x: auto;
+}
+
+
+/*
+ *  Figure Directive Styles
+ */
+ img {
+    max-width: 100%;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+ }
+
+div.figure {
+    p.caption {
+        text-align: center;
+        margin-top: .75rem;
+
+        span.caption-number {
+            font-style: normal;
+        }
+        .caption-number::after {
+            content: "\00a0";
+        }
+    }
+}
+
+.svg-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  fill: $grey-color-light;
+  padding-right: 5px;
+  padding-top: 4px;
+  vertical-align: text-top;
+}
+
+/*
+ * Download Link Styles
+ */
+a.download > i.material-icons {
+    position: relative;
+    top: 5px;
+}
+
+a.download {
+    text-decoration: none;
+}
+
+%clearfix:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.wrapper {
+  max-width: -webkit-calc(#{$content-width} - (#{$spacing-unit} * 2));
+  max-width: calc(#{$content-width} - (#{$spacing-unit} * 2));
+  margin-right: auto;
+  margin-left: auto;
+  padding-right: calc(#{$spacing-unit}+15px);
+  padding-left: $spacing-unit;
+  @extend %clearfix;
+
+  @media screen and (max-width: $on-laptop) {
+    max-width: -webkit-calc(#{$content-width} - (#{$spacing-unit}));
+    max-width: calc(#{$content-width} - (#{$spacing-unit}));
+    padding-right: $spacing-unit / 2;
+    padding-left: $spacing-unit / 2;
+  }
+}
+

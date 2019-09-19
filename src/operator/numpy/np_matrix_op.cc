@@ -163,6 +163,7 @@ bool NumpyReshapeShape(const nnvm::NodeAttrs& attrs,
 
 NNVM_REGISTER_OP(_np_reshape)
 .describe(R"code()code" ADD_FILELINE)
+.add_alias("_npi_reshape")
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyReshapeParam>)

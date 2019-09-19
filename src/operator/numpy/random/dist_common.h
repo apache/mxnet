@@ -41,6 +41,13 @@
 namespace mxnet {
 namespace op {
 
+template <typename xpu>
+void _copy(float *dst, float*src);
+
+template <typename xpu>
+void _copy(double *dst, double*src);
+
+
 inline int FillShape(const mxnet::TShape &lshape, const mxnet::TShape &rshape,
                      const mxnet::TShape &oshape, mxnet::TShape *new_lshape,
                      mxnet::TShape *new_rshape, mxnet::TShape *new_oshape) {
