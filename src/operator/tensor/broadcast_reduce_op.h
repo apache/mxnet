@@ -30,6 +30,7 @@
 #include <vector>
 #include <utility>
 #include <algorithm>
+#include <limits>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "./elemwise_binary_broadcast_op.h"
@@ -559,43 +560,48 @@ inline bool ReduceAxesOpForwardStorage(const nnvm::NodeAttrs& attrs,
 template<typename xpu, typename DType>
 MSHADOW_XINLINE void Argmax(DType *in, DType *out, mxnet::TShape shape) {
   index_t i = 0, j = 0, j_blk = 0, k = 0, k_blk = 0, loc = 0, idx = 0, blocksize = 32;
-  index_t i_stride = shape[1] * shape[2], j_stride = shape[2];
-  DType max = in[0];
+  index_t i_stride = shape[1] * shape[2], j_stride = shape[2], i_offset = 0;
+  DType type_limit = std::numeric_limits<DType>::min();
+  DType max_num = type_limit;
   const index_t omp_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount());
 
+  using namespace mshadow_op::isnan_typed;
+
   if (j_stride == 1) {
-    if(shape[0] >= omp_threads || shape[0] > shape[1]){
-      #pragma omp parallel for private(j, max, loc, idx)
+    if (shape[0] >= omp_threads || shape[0] > shape[1]) {
+      #pragma omp parallel for private(j, max_num, loc, idx)
       for (i = 0; i < shape[0]; i++) {
-        max = in[i * i_stride];
+        i_offset = i * i_stride;
+        max_num = IsNan(in[i_offset]) ? type_limit : in[i_offset];
         loc = 0;
-        for (j = 0, idx = i * i_stride; j < shape[1]; ++j, ++idx) {
-          if (in[idx] > max) {
+        for (j = 0, idx = i_offset; j < shape[1]; ++j, ++idx) {
+          if (!IsNan(in[idx]) && in[idx] > max_num) {
             loc = j;
-            max = in[idx];
+            max_num = in[idx];
           }
         }
         out[i] = loc;
       }
     } else {
       for (i = 0; i < shape[0]; i++) {
-        max = in[i * shape[1]];
+        i_offset = i * i_stride;
+        max_num = IsNan(in[i_offset]) ? type_limit : in[i_offset];
         loc = 0;
         #pragma omp parallel
         {
-          DType local_max = in[i * shape[1]];
+          DType local_max = IsNan(in[i_offset]) ? type_limit : in[i_offset];
           index_t local_loc = 0;
           #pragma omp for nowait
           for (j = 0; j < shape[1]; ++j) {
-            if (in[j + i * shape[1]] > local_max) {
+            if (!IsNan(in[j + i_offset]) && in[j + i_offset] > local_max) {
               local_loc = j;
-              local_max = in[j + i * shape[1]];
+              local_max = in[j + i_offset];
             }
           }
           #pragma omp critical
           {
-            if (local_max > max) {
-              max = local_max;
+            if (local_max > max_num) {
+              max_num = local_max;
               loc = local_loc;
             }
           }
@@ -604,21 +610,20 @@ MSHADOW_XINLINE void Argmax(DType *in, DType *out, mxnet::TShape shape) {
       }
     }
   } else {
-    index_t i_offset = 0;
-    if(shape[0] >= omp_threads || shape[0] >= shape[1]){
-      #pragma omp parallel for private(j, k, j_blk, k_blk, max, loc, idx, i_offset)
+    if (shape[0] >= omp_threads || shape[0] >= shape[1]) {
+      #pragma omp parallel for private(j, k, j_blk, k_blk, max_num, loc, idx, i_offset)
       for (i = 0; i < shape[0]; ++i) {
         i_offset = i * i_stride;
-        for(k_blk = 0; k_blk < shape[2]; k_blk+=blocksize){
-          for(j_blk = 0; j_blk < shape[1]; j_blk+=blocksize){
+        for (k_blk = 0; k_blk < shape[2]; k_blk+=blocksize) {
+          for (j_blk = 0; j_blk < shape[1]; j_blk+=blocksize) {
             for (k = k_blk; k < k_blk+blocksize && k < shape[2]; ++k) {
-              max = in[i_offset + k];
+              max_num = IsNan(in[i_offset + k]) ? type_limit : in[i_offset + k];
               loc = 0;
               for (j = j_blk; j < j_blk+blocksize && j < shape[1]; ++j) {
                 idx = k + j * j_stride + i_offset;
-                if (in[idx] > max) {
+                if (!IsNan(in[idx]) && in[idx] > max_num) {
                   loc = j;
-                  max = in[idx];
+                  max_num = in[idx];
                 }
               }
               out[i * j_stride + k] = loc;
@@ -629,17 +634,17 @@ MSHADOW_XINLINE void Argmax(DType *in, DType *out, mxnet::TShape shape) {
     } else {
       for (i = 0; i < shape[0]; ++i) {
         i_offset = i * i_stride;
-        #pragma omp parallel for private(j, k, j_blk, k_blk, max, loc, idx)
-        for(k_blk = 0; k_blk < shape[2]; k_blk+=blocksize){
-          for(j_blk = 0; j_blk < shape[1]; j_blk+=blocksize){
+        #pragma omp parallel for private(j, k, j_blk, k_blk, max_num, loc, idx)
+        for (k_blk = 0; k_blk < shape[2]; k_blk+=blocksize) {
+          for (j_blk = 0; j_blk < shape[1]; j_blk+=blocksize) {
             for (k = k_blk; k < k_blk+blocksize && k < shape[2]; ++k) {
-              max = in[i_offset + k];
+              max_num = IsNan(in[i_offset + k]) ? type_limit : in[i_offset + k];
               loc = 0;
               for (j = j_blk; j < j_blk+blocksize && j < shape[1]; ++j) {
                 idx = k + j * j_stride + i_offset;
-                if (in[idx] > max) {
+                if (!IsNan(in[idx]) && in[idx] > max_num) {
                   loc = j;
-                  max = in[idx];
+                  max_num = in[idx];
                 }
               }
               out[i * j_stride + k] = loc;

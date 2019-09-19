@@ -9303,6 +9303,17 @@ def test_min_max_inf():
                 assert_array_equal(max_data_np, max_data_mx.asnumpy())
 
 
+def test_argmax_with_nans():
+    np_arr = np.array([[1,5,3],[float('nan'), 2,6]])
+    nd_arr = mx.nd.array(np_arr)
+    ans1 = np.array([0, 0, 1])
+    ans2 = np.array([1, 2])
+    nd_ans1 = mx.nd.argmax(nd_arr, axis=0)
+    assert (nd_ans1.asnumpy() == ans1).all() == True
+    nd_ans2 = mx.nd.argmax(nd_arr, axis=1)
+    assert (nd_ans2.asnumpy() == ans2).all() == True
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
