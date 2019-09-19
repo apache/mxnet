@@ -30,7 +30,6 @@ import scipy.stats as ss
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
 import platform
 
-
 @with_seed()
 @use_np
 def test_np_tensordot():
@@ -1979,6 +1978,101 @@ def test_np_copysign():
             mx_out.backward()
             x_grad = get_grad_right(scalar, x_np)
             assert_almost_equal(x.grad.asnumpy(), x_grad, rtol=rtol, atol=atol)
+
+
+@with_seed()
+@use_np
+def test_np_svd():
+    class TestSVD(HybridBlock):
+        def __init__(self):
+            super(TestSVD, self).__init__()
+
+        def hybrid_forward(self, F, data):
+            return F.np.linalg.svd(data)
+
+    def get_grad(UT, L, V):
+        m = V.shape[-2]
+        n = V.shape[-1]
+        E = _np.zeros_like(UT)
+        dUT = _np.ones_like(UT)
+        dV = _np.ones_like(V)
+        for i in range(m):
+            for j in range(i + 1, m):
+                denom1 = _np.maximum(L[..., i] - L[..., j], 1e-20)
+                denom2 = _np.maximum(L[..., i] + L[..., j], 1e-20)
+                E[..., i, j] = 1.0 / denom1 / denom2
+                E[..., j, i] = -E[..., i, j]
+            E[..., i, i] = 0
+        G1 = _np.matmul(1.0 / L[..., None] * dV, _np.swapaxes(V, -2, -1)) * L[..., None, :]
+        G1 = G1 + _np.matmul(_np.swapaxes(dUT, -2, -1), UT)
+        X = G1 * E
+        G2 = _np.eye(m) + (X + _np.swapaxes(X, -2, -1)) * L[..., None, :] - 1.0 / L[..., None] * _np.matmul(dV, _np.swapaxes(V, -2, -1)) * _np.eye(m)
+        dA = _np.matmul(UT, _np.matmul(G2, V) + 1.0 / L[..., None] * dV)
+        return dA
+
+    shapes = [
+        (3, 3),
+        (3, 5),
+        (4, 4),
+        (4, 5),
+        (5, 5),
+        (5, 6),
+        (6, 6),
+        (0, 1),
+        (6, 5, 6),
+        (2, 3, 3, 4),
+        (4, 2, 1, 2),
+        (0, 5, 3, 3),
+        (5, 0, 3, 3),
+        (3, 3, 0, 0),
+    ]
+    dtypes = ['float32', 'float64']
+    for hybridize in [True, False]:
+        for dtype in dtypes:
+            for shape in shapes:
+                rtol = atol = 0.01
+                test_svd = TestSVD()
+                if hybridize:
+                    test_svd.hybridize()
+                data_np = _np.random.uniform(-10.0, 10.0, shape)
+                data_np = _np.array(data_np, dtype=dtype)
+                data = np.array(data_np, dtype=dtype)
+                data.attach_grad()
+                with mx.autograd.record():
+                    ret = test_svd(data)
+                UT = ret[0].asnumpy()
+                L = ret[1].asnumpy()
+                V = ret[2].asnumpy()
+                # check UT @ L @ V == A
+                t = _np.matmul(UT * L[..., None, :], V)
+                assert t.shape == data_np.shape
+                assert_almost_equal(t, data_np, rtol=rtol, atol=atol)
+                # check UT @ U == I
+                I = _np.matmul(UT, _np.swapaxes(UT, -2, -1))
+                I_np = _np.ones_like(UT) * _np.eye(shape[-2])
+                assert I.shape == I_np.shape
+                assert_almost_equal(I, I_np, rtol=rtol, atol=atol)
+                # check U @ UT == I
+                I = _np.matmul(_np.swapaxes(UT, -2, -1), UT)
+                I_np = _np.ones_like(UT) * _np.eye(shape[-2])
+                assert I.shape == I_np.shape
+                assert_almost_equal(I, I_np, rtol=rtol, atol=atol)
+                # check V @ VT == I
+                I = _np.matmul(V, _np.swapaxes(V, -2, -1))
+                I_np = _np.ones_like(UT) * _np.eye(shape[-2])
+                assert I.shape == I_np.shape
+                assert_almost_equal(I, I_np, rtol=rtol, atol=atol)
+                # check descending singular values
+                s = [L[..., i] - L[..., i + 1] for i in range(L.shape[-1] - 1)]
+                s = _np.array(s)
+                assert (s >= -1e-5).all()
+                if L.size > 0:
+                    assert (L[..., -1] >= -1e-5).all()
+                # check backward
+                mx.autograd.backward(ret)
+                if ((s > 1e-5).all() and (L.size == 0 or (L > 1e-5).all())):
+                    backward_expected = get_grad(ret[0].asnumpy(), ret[1].asnumpy(), ret[2].asnumpy())
+                    assert_almost_equal(data.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
 
 
 if __name__ == '__main__':
