@@ -184,13 +184,13 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
       memcpy(&weight_buf[channels_], bias_ptr, sizeof(weight_buf[0]) * channels_);
     } else if (IsBNWriting(req[batchnorm::kGamma])) {
       for (int i = 0; i < channels_; i++) {
-        weight_buf[i] = (DType)1.0f;
-        weight_ptr[i] = (DType)1.0f;
+        weight_buf[i] = static_cast<DType>(1.0f);
+        weight_ptr[i] = static_cast<DType>(1.0f);
         weight_buf[channels_ + i] = bias_ptr[i];  // bias
       }
     } else {
       for (int i = 0; i < channels_; i++) {
-        weight_buf[i] = (DType)1.0f;
+        weight_buf[i] = static_cast<DType>(1.0f);
         weight_buf[channels_ + i] = bias_ptr[i];  // bias
       }
     }
@@ -224,7 +224,7 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
       MKLDNNStream::Get()->RegisterPrimArgs(fwd.GetFwd(), net_args);
       MKLDNNStream::Get()->Submit();
 
-      DType* ovar     = outVar.data().dptr<DType>();
+      DType* ovar = outVar.data().dptr<DType>();
       for (int i = 0; i < channels_; i++) {
         ovar[i] = VARIANCE_TO_INVSTD(ovar[i], param.eps);
       }
@@ -330,7 +330,7 @@ void MKLDNNBatchNormBackward(const OpContext &ctx, const BatchNormParam &param,
       if (!param.fix_gamma)
         weight_buf[i] = (gamma.data().dptr<DType>())[i];   // weight
       else
-        weight_buf[i] = (DType)1.0f;
+        weight_buf[i] = static_cast<DType>(1.0f);
     }
 
     for (int i = 0; i < channels_; i++) {
