@@ -131,6 +131,16 @@ enum class DispatchMode {
   kVariable,
 };
 
+/*! \brief the quantization type of the operator */
+enum class QuantizeType {
+  // This operator doesn't support quantization
+  kNone = 0,
+  // This operator can get huge benefit from quantization, thus must be quantized
+  kMust,
+  // This operator support quantization, but will be decided depending on the connection
+  kSupport,
+};
+
 /*!
  * \brief Operator state. This is a pointer type, its content is mutable
  *  even if OpStatePtr is const.
@@ -301,6 +311,12 @@ using FInferStorageType = std::function<bool (const NodeAttrs& attrs,
  * \brief Register a quantized node creation function based on the attrs of the node
  * \note Register under "FQuantizedOp" for non-quantized operators
  */
+using FQuantizable = std::function<QuantizeType (const NodeAttrs& attrs)>;
+
+/*!
+ * \brief Register a quantized node creation function based on the attrs of the node
+ * \note Register under "FQuantizedOp" for non-quantized operators
+ */
 using FQuantizedOp = std::function<nnvm::NodePtr (const NodeAttrs& attrs)>;
 
 /*!
@@ -318,6 +334,20 @@ using FNeedRequantize = std::function<bool (const NodeAttrs& attrs)>;
  */
 using FAvoidQuantizeInput = std::function<bool (const NodeAttrs& attrs,
                                                 size_t index)>;
+
+/*!
+ * \brief Register a function to determine if the input of a quantized operator
+ * needs to be calibrated. This is usually used for the quantized operators
+ * which need calibration on its input.
+ */
+using FNeedCalibrateInput = std::function<std::vector<int> (const NodeAttrs& attrs)>;
+
+/*!
+ * \brief Register a function to determine if the output of a quantized operator
+ * needs to be calibrated. This is usually used for the quantized operators
+ * which need calibration on its output.
+ */
+using FNeedCalibrateOutput = std::function<std::vector<int> (const NodeAttrs& attrs)>;
 
 }  // namespace mxnet
 

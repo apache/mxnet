@@ -322,8 +322,11 @@ static void TransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
                                   const std::vector<NDArray>& inputs,
                                   const std::vector<OpReqType>& req,
                                   const std::vector<NDArray>& outputs) {
+  if (req[0] == kNullOp) {
+    return;
+  }
   const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
-  CHECK_EQ(req[0], kWriteTo) << "Transpose does not support inplace";
+  CHECK_EQ(req[0], kWriteTo) << "Transpose does not support kWriteInplace and kAddTo";
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
 
@@ -506,6 +509,8 @@ Example::
                                                             [5.,  7.],
                                                             [1.,  3.]]
 )code" ADD_FILELINE)
+.add_alias("_npx_slice")
+.add_alias("_npi_slice")
 .set_attr_parser(ParamParser<SliceParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", SliceOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
@@ -530,6 +535,7 @@ NNVM_REGISTER_OP(_backward_slice)
 
 NNVM_REGISTER_OP(_slice_assign)
 .add_alias("_crop_assign")
+.add_alias("_npi_slice_assign")
 .MXNET_DESCRIBE("Assign the rhs to a cropped subset of lhs.\n\n"
 "Requirements\n"
 "------------\n"
@@ -555,6 +561,7 @@ NNVM_REGISTER_OP(_slice_assign)
 
 NNVM_REGISTER_OP(_slice_assign_scalar)
 .add_alias("_crop_assign_scalar")
+.add_alias("_npi_slice_assign_scalar")
 .MXNET_DESCRIBE("(Assign the scalar to a cropped subset of the input.\n\n"
 "Requirements\n"
 "------------\n"
@@ -702,9 +709,11 @@ MXNET_ADD_SPARSE_OP_ALIAS(clip)
 .describe(R"code(Clips (limits) the values in an array.
 
 Given an interval, values outside the interval are clipped to the interval edges.
-Clipping ``x`` between `a_min` and `a_x` would be::
+Clipping ``x`` between `a_min` and `a_max` would be::
 
-   clip(x, a_min, a_max) = max(min(x, a_max), a_min))
+.. math::
+
+   clip(x, a_min, a_max) = \max(\min(x, a_max), a_min))
 
 Example::
 
@@ -766,11 +775,12 @@ parameter values:
 .add_arguments(ClipParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_clip)
-.set_num_inputs(1)
+.set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<ClipParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", ClipGrad_<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", ClipGrad_<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 NNVM_REGISTER_OP(repeat)
 .add_alias("_np_repeat")

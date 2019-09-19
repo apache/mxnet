@@ -47,17 +47,18 @@
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_BASE_INL_H_
 
 #if MXNET_USE_MKLDNN == 1
+#include <algorithm>
 #include <iterator>
+#include <memory>
 #include <string>
 #include <unordered_map>
-#include <vector>
 #include <utility>
-#include <algorithm>
-#include <memory>
+#include <vector>
 #include "mkldnn.hpp"
+#include "mxnet/graph_attr_types.h"
 #include "mxnet/ndarray.h"
-#include "mxnet/resource.h"
 #include "mxnet/op_attr_types.h"
+#include "mxnet/resource.h"
 using namespace mkldnn;
 namespace mxnet {
 
@@ -130,6 +131,11 @@ static inline bool SupportStorageMKLDNN(int stype) {
 static inline bool SupportMKLDNN(int dtype, const mxnet::TShape &shape) {
   int ndim = shape.ndim();
   return dtype == mshadow::kFloat32 && (ndim == 1 || ndim == 2 || ndim == 4);
+}
+
+static inline bool SupportMKLDNNRNN(const NDArray &input) {
+  int ndim = input.shape().ndim();
+  return (input.dtype() == mshadow::kFloat32) && (ndim == 3);
 }
 
 static inline bool SupportMKLDNNQuantize(int dtype) {
@@ -569,7 +575,8 @@ class MKLDNNMemory {
   }
 };
 
-void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
+template <typename Compute, typename AttrState>
+void FallBackCompute(Compute fn, const AttrState &attrs,
                      const OpContext &ctx,
                      const std::vector<NDArray> &inputs,
                      const std::vector<OpReqType> &req,
@@ -619,6 +626,13 @@ bool MKLDNNStorageType(const nnvm::NodeAttrs &attrs,
     if (debug) check.Run(fn, attrs, ctx, inputs, req, outputs);
 #define MKLDNN_OPCHECK_COPY_RESULT(outputs, indice) \
     if (debug) check.CopyResult(outputs, indice);
+
+struct MKLDNNPostEltwiseParam {
+  mkldnn::algorithm alg = mkldnn::algorithm::algorithm_undef;
+  float scale = 1.f;
+  float alpha = 0.f;
+  float beta = 1.f;
+};
 
 }  // namespace mxnet
 #endif

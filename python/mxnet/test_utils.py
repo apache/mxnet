@@ -262,6 +262,17 @@ def assign_each2(input1, input2, function):
 
     return output
 
+# For testing Large Tensors having total size > 2^32 elements
+def create_2d_tensor(rows, columns, dtype=np.int64):
+    a = mx.nd.arange(0, rows, dtype=dtype).reshape(rows, 1)
+    b = mx.nd.broadcast_to(a, shape=(a.shape[0], columns))
+    return b
+
+# For testing Large Vectors having total size > 2^32 elements
+def create_vector(size, dtype=np.int64):
+    a = mx.nd.arange(0, size, dtype=dtype)
+    return a
+
 def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=None,
                         data_init=None, rsp_indices=None, modifier_func=None,
                         shuffle_csr_indices=False, ctx=None):
@@ -487,13 +498,18 @@ def same(a, b):
     """
     return np.array_equal(a, b)
 
-def almost_equal(a, b, rtol=None, atol=None, equal_nan=False):
+def almost_equal(a, b, rtol=None, atol=None, equal_nan=False, use_broadcast=True):
     """Test if two numpy arrays are almost equal."""
     # pylint: disable=unexpected-keyword-arg
+    if (not use_broadcast) and a.shape != b.shape:
+        msg = npt.build_err_msg([a, b],
+                                err_msg="a.shape = {} and b.shape = {} are not equal"
+                                .format(str(a.shape), str(b.shape)))
+        raise AssertionError(msg)
     return np.allclose(a, b, rtol=get_rtol(rtol), atol=get_atol(atol), equal_nan=equal_nan)
     # pylint: enable=unexpected-keyword-arg
 
-def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=False):
+def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=False, use_broadcast=True):
     """Test that two numpy arrays are almost equal. Raise exception message if not.
 
     Parameters
@@ -505,7 +521,7 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
     """
     rtol = get_rtol(rtol)
     atol = get_atol(atol)
-    if almost_equal(a, b, rtol, atol, equal_nan=equal_nan):
+    if almost_equal(a, b, rtol, atol, equal_nan=equal_nan, use_broadcast=use_broadcast):
         return
     index, rel = find_max_violation(a, b, rtol, atol)
     np.set_printoptions(threshold=4, suppress=True)
@@ -1074,7 +1090,10 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
 
     executor = sym.bind(ctx=ctx, args=location, args_grad=args_grad_data, aux_states=aux_states)
     for g in executor.grad_arrays:
-        g[:] = 0
+        if g.ndim == 0:
+            g[()] = 0
+        else:
+            g[:] = 0
 
     executor.forward(is_train=False)
 
@@ -2184,3 +2203,25 @@ class EnvManager(object):
             os.environ[self._key] = self._prev_val
         else:
             del os.environ[self._key]
+
+
+def collapse_sum_like(a, shape):
+    """Given `a` as a numpy ndarray, perform reduce_sum on `a` over the axes that do not
+    exist in `shape`. Note that an ndarray with `shape` must be broadcastable to `a`."""
+    assert len(a.shape) >= len(shape)
+    if np.prod(shape) == 0 or a.size == 0:
+        return np.zeros(shape, dtype=a.dtype)
+    axes = []
+    ndim_diff = len(a.shape) - len(shape)
+    for i in range(ndim_diff):
+        axes.append(i)
+    for i, s in enumerate(shape):
+        if s != a.shape[i+ndim_diff]:
+            assert s == 1
+            axes.append(i+ndim_diff)
+    return np.sum(a, axis=tuple(axes)).reshape(shape)
+
+
+def is_cd_run():
+    """Checks if the test is running as part of a Continuous Delivery run"""
+    return os.environ.get("CD_JOB", 0) == "1"

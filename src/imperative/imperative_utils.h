@@ -59,6 +59,7 @@ struct EngineOprSeg {
 };
 
 using MemoryPlanVector = std::vector<MemoryPlanInfo>;
+using CachedOpMonCallback = std::function<void(const char*, const char*, void*)>;
 
 inline Context GetContext(const nnvm::NodeAttrs& attrs,
                 const std::vector<NDArray*>& inputs,
@@ -104,7 +105,7 @@ inline void SetShapeType(const Context& ctx,
   static auto& infershape = nnvm::Op::GetAttr<mxnet::FInferShape>("FInferShape");
   static auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
   static auto& inferstorage = nnvm::Op::GetAttr<FInferStorageType>("FInferStorageType");
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   // infer shape
   mxnet::ShapeVector& in_shapes  = ret->arg_shapes;
   in_shapes.clear();
@@ -263,12 +264,12 @@ inline void SetDependency(const nnvm::NodeAttrs& attrs,
         requested.push_back(ResourceManager::Get()->Request(ctx, req));
         write_vars.push_back(requested.back().var);
         break;
-#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
+#if MXNET_USE_CUDNN == 1
        case ResourceRequest::kCuDNNDropoutDesc:
         requested.push_back(ResourceManager::Get()->Request(ctx, req));
         write_vars.push_back(requested.back().var);
         break;
-#endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
+#endif  // MXNET_USE_CUDNN == 1
        default:
         LOG(FATAL) << "resource type not yet supported";
       }
@@ -1056,7 +1057,9 @@ void RunGraph(const bool retain_graph,
               std::vector<OpStatePtr> *p_states,
               const DispatchModeVector &dispatch_modes,
               bool recording,
-              mxnet::ShapeVector *shapes = nullptr);
+              mxnet::ShapeVector *shapes = nullptr,
+              const CachedOpMonCallback& callback = nullptr,
+              const bool monitor_all_ = false);
 
 void NaiveRunGraph(const bool retain_graph,
                    const Context& default_ctx,
@@ -1068,7 +1071,9 @@ void NaiveRunGraph(const bool retain_graph,
                    std::vector<OpStatePtr> *p_states,
                    const DispatchModeVector &dispatch_modes,
                    bool recording,
-                   mxnet::ShapeVector *shapes);
+                   mxnet::ShapeVector *shapes,
+                   const CachedOpMonCallback& callback = nullptr,
+                   const bool monitor_all_ = false);
 
 }  // namespace imperative
 }  // namespace mxnet

@@ -29,7 +29,8 @@
 namespace mxnet {
 namespace op {
 
-#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 6 && CUDA_VERSION >= 8000
+#if MXNET_USE_CUDNN == 1 && CUDA_VERSION >= 8000
+STATIC_ASSERT_CUDNN_VERSION_GE(6000);
 template<typename DType>
 class QuantizedCuDNNPoolingOp {
  public:
@@ -115,7 +116,7 @@ class QuantizedCuDNNPoolingOp {
   cudnnTensorDescriptor_t out_desc_;
   cudnnPoolingDescriptor_t pool_desc_;
 };  // class QuantizedCuDNNPoolingOp
-#endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 6 && CUDA_VERSION >= 8000
+#endif  // MXNET_USE_CUDNN == 1 && CUDA_VERSION >= 8000
 
 void QuantizedPoolingForwardGPU(const nnvm::NodeAttrs& attrs,
                                 const OpContext& ctx,
@@ -125,7 +126,7 @@ void QuantizedPoolingForwardGPU(const nnvm::NodeAttrs& attrs,
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
   CHECK_EQ(param.kernel.ndim(), 2U)
     << "QuantizedPoolingForward<gpu> only supports 2D convolution for now";
-#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 6 && CUDA_VERSION >= 8000
+#if MXNET_USE_CUDNN == 1 && CUDA_VERSION >= 8000
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local QuantizedCuDNNPoolingOp<int8_t> op;
 #else
@@ -136,7 +137,7 @@ void QuantizedPoolingForwardGPU(const nnvm::NodeAttrs& attrs,
 #else
   LOG(FATAL) << "QuantizedPoolingForward<gpu> only supports cudnnPoolingForward "
                 "with CUDNN >= 6.0 and CUDA >= 8.0";
-#endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 6 && CUDA_VERSION >= 8000
+#endif  // MXNET_USE_CUDNN == 1 && CUDA_VERSION >= 8000
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_pooling)

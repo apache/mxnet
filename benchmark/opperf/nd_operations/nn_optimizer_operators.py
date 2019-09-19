@@ -36,7 +36,7 @@ from benchmark.opperf.utils.op_registry_utils import get_all_optimizer_operators
 """
 
 
-def run_optimizer_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
+def run_optimizer_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype) for all the neural network
     optimizer update operators in MXNet.
 
@@ -60,5 +60,5 @@ def run_optimizer_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25,
     mx_optimizer_ops = get_all_optimizer_operators()
 
     # Run benchmarks
-    mx_optimizer_op_results = run_op_benchmarks(mx_optimizer_ops, dtype, ctx, warmup, runs)
+    mx_optimizer_op_results = run_op_benchmarks(mx_optimizer_ops, dtype, ctx, profiler, warmup, runs)
     return mx_optimizer_op_results
