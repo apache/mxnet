@@ -1,3 +1,11 @@
+---
+layout: page_category
+title: Create a Dataset Using RecordIO
+category: faq
+faq_c: Speed
+question: How can I create a .rec dataset ?
+permalink: /api/faq/recordio
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title: Create a Dataset Using RecordIO
-category: faq
-faq_c: Speed
-question: How can I create a .rec dataset ?
-permalink: /api/faq/recordio
----
 
 
 ## Create a Dataset Using RecordIO

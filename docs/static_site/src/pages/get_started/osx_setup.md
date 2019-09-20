@@ -1,3 +1,10 @@
+---
+layout: page
+title: OSX Setup
+action: Get Started
+action_url: /get_started
+permalink: /get_started/osx_setup
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,13 +21,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page
-title: OSX Setup
-action: Get Started
-action_url: /get_started
-permalink: /get_started/osx_setup
----
 
 # Installing MXNet from source on OS X (Mac)
 
@@ -102,7 +102,8 @@ Install the dependencies, required for MXNet, with the following commands:
 ```
 
 ### Build MXNet Shared Library
-After you have installed the dependencies, pull the MXNet source code from Git and build MXNet to produce an MXNet library called ```libmxnet.so```. You can clone the repository as described in the following code block, or you may try the [download links](download.md) for your desired MXNet version.
+
+After you have installed the dependencies, pull the MXNet source code from Git and build MXNet to produce an MXNet library called ```libmxnet.so```. You can clone the repository as described in the following code block, or you may try the [download links](download) for your desired MXNet version.
 
 The file called ```osx.mk``` has the configuration required for building MXNet on OS X. First copy ```make/osx.mk``` into ```config.mk```, which is used by the ```make``` command:
 
@@ -223,19 +224,19 @@ You might want to add this command to your ```~/.bashrc``` file. If you do, you 
 	Pkg.add("MXNet")
 ```
 
-For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation](http://dmlc.ml/MXNet.jl/latest/user-guide/install/).
+For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation]({{'/api/julia'|relative_url}}).
 
 
 ## Install the MXNet Package for Scala
 
 To use the MXNet-Scala package, you can acquire the Maven package as a dependency.
 
-Further information is in the [MXNet-Scala Setup Instructions](./scala_setup.md).
+Further information is in the [MXNet-Scala Setup Instructions](scala_setup).
 
-If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Scala on IntelliJ tutorial](../tutorials/scala/mxnet_scala_on_intellij.md) instead.
-
+If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Scala on IntelliJ tutorial]({{'/api/scala/docs/tutorials/mxnet_scala_on_intellij'|relative_url}}) instead.
 
 ## Install the MXNet Package for Perl
+
 Before you build MXNet for Perl from source code, you must complete [building the shared library](#build-the-shared-library).
 After you build the shared library, run the following command from the MXNet source root directory to build the MXNet Perl package:
 
@@ -270,6 +271,6 @@ After you build the shared library, run the following command from the MXNet sou
 
 ## Next Steps
 
-* [Tutorials](../tutorials/index.md)
-* [How To](../faq/index.md)
-* [Architecture](../architecture/index.md)
+* [Tutorials]({{'/api'|relative_url}})
+* [How To]({{'/api/faq/add_op_in_backend'|relative_url}})
+* [Architecture]({{'/api/architecture/overview'|relative_url}})

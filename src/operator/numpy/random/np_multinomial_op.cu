@@ -35,7 +35,7 @@ void CheckPvalGPU(DType* input, int prob_length) {
   DType sum = DType(0.0);
   for (int i = 0; i < prob_length; ++i) {
     sum += pvals_[i];
-    CHECK(sum <= DType(1.0))
+    CHECK(sum <= DType(1.0 + 1e-12))
       << "sum(pvals[:-1]) > 1.0";
   }
 }

@@ -1,3 +1,11 @@
+---
+layout: page_category
+title:  Exception Handling in MXNet
+category: faq
+faq_c: Extend and Contribute to MXNet
+question: How do I implement operators in MXNet backend?
+permalink: /api/faq/add_op_in_backend
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title:  Exception Handling in MXNet
-category: faq
-faq_c: Extend and Contribute to MXNet
-question: How do I implement operators in MXNet backend?
-permalink: /api/faq/add_op_in_backend
----
 
 # A Beginner's Guide to Implementing Operators in MXNet Backend
 
@@ -119,7 +119,8 @@ skip passing 0-value parameters through the quadratic operator interface. You
 can choose not to define the default value for a parameter if it is required
 at runtime. Meanwhile, adding brief descriptions to the parameters enables
 the documentation engine to display them on
-[MXNet documentation web page](https://mxnet.incubator.apache.org/api/python/index.html).
+[MXNet documentation web page]({{'/api/python/docs/api'|relative_url}}).
+
 
 ### Attribute Inference
 Attribute inference is the process of deducing the properties of `NDArray`s
@@ -373,8 +374,8 @@ with respect to the outputs of the last layer throughout the network to the firs
 layer. The whole process is often known as backward propagation. We are not
 going to delineate the principle of backward propagation here since users can find
 great details covered in other resources, such as
-[CS231n](http://cs231n.github.io/optimization-2/) and
-[How the backgropagation algorithm works](http://neuralnetworksanddeeplearning.com/chap2.html).
+[CS231n](https://cs231n.github.io/optimization-2/) and
+[How the backgropagation algorithm works](https://neuralnetworksanddeeplearning.com/chap2.html).
 The problem we are going to solve here for the `quadratic` operator is that
 given a tensor representing the gradient of the loss function with respect
 to the output of the operator, calculate the gradient with respect to
@@ -688,5 +689,3 @@ We welcome your contributions to MXNet.
 and
 [test_operator.py](https://github.com/apache/incubator-mxnet/blob/master/tests/python/unittest/test_operator.py#L6514).
 
-## Additional Resources
-- [Use TensorInspector to Help Debug Operators](tensor_inspector_tutorial.md)
