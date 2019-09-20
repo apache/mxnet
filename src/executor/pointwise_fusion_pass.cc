@@ -234,7 +234,9 @@ void AddInputsOnlyCompatible(const Graph &g,
       }
     }
   });
-  std::unordered_set<nnvm::Node*> added; // to avoid when the node to add is input of two subsets
+
+  // Avoid duplicating the node that is input of two subsets
+  std::unordered_set<nnvm::Node*> added;
   for (size_t i = 0; i < subsets->size(); ++i) {
     std::vector<nnvm::NodeEntry> heads;
     for (auto n : subsets->at(i)) {
@@ -246,7 +248,8 @@ void AddInputsOnlyCompatible(const Graph &g,
     for (size_t j = 0; j < to_add[i].size(); ++j) {
       if (!added.count(to_add[i][j])) {
         bool make_cycle = false;
-        DFSVisit(heads, [&make_cycle, &node=to_add[i][j]](const nnvm::NodePtr& n) {
+        const auto& node = to_add[i][j];
+        DFSVisit(heads, [&make_cycle, &node](const nnvm::NodePtr& n) {
           if (n.get() == node)
             make_cycle = true;
         });
