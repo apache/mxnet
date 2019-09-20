@@ -9266,6 +9266,7 @@ def test_min_max_inf():
                 min_data_mx, max_data_mx = data_mx.min(), data_mx.max()
 
                 assert_array_equal(min_data_np, min_data_mx.asnumpy())
+                assert_array_equal(max_data_np, max_data_mx.asnumpy())
 
 
 if __name__ == '__main__':
