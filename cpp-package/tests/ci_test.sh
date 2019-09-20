@@ -63,7 +63,7 @@ cp ../../build/cpp-package/example/test_ndarray_copy .
 cp ../../build/cpp-package/example/test_regress_label .
 ./test_regress_label
 
-sh unittests/unit_test_mlp_csv.sh
+./unittests/unit_test_mlp_csv.sh
 
 cd inference
 cp ../../../build/cpp-package/example/imagenet_inference .
