@@ -656,12 +656,12 @@ MSHADOW_XINLINE DType NegInfValue(void) {
 /*! \brief negative infinity value of float */
 template<>
 MSHADOW_XINLINE float NegInfValue<float>(void) {
-  return -std::numeric_limits<float>::infinity();
+  return -HUGE_VALF;
 }
 /*! \brief negative infinity value of double */
 template<>
 MSHADOW_XINLINE double NegInfValue<double>(void) {
-  return -std::numeric_limits<double>::infinity();
+  return -HUGE_VAL;
 }
 
 /*!
@@ -717,12 +717,12 @@ MSHADOW_XINLINE DType PosInfValue(void) {
 /*! \brief positive infinity value of float */
 template<>
 MSHADOW_XINLINE float PosInfValue<float>(void) {
-  return std::numeric_limits<float>::infinity();
+  return HUGE_VALF;
 }
 /*! \brief positive infinity value of double */
 template<>
 MSHADOW_XINLINE double PosInfValue<double>(void) {
-  return std::numeric_limits<double>::infinity();
+  return HUGE_VAL;
 }
 
 }  // namespace limits
