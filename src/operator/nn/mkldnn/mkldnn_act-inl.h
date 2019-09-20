@@ -69,8 +69,6 @@ mkldnn::eltwise_backward::primitive_desc GetActBwdDescImpl(
     const mkldnn::memory &diff_dst_memory);
 
 class MKLDNNActBackward {
-  std::shared_ptr<mkldnn::eltwise_backward> bwd;
-
  public:
   const mkldnn::eltwise_backward::primitive_desc pd;
 
@@ -80,8 +78,10 @@ class MKLDNNActBackward {
                                  GetActBwdDescImpl(param, mem, diff_dst_memory)) {
     bwd = std::make_shared<mkldnn::eltwise_backward>(pd);
   }
-
   const inline mkldnn::eltwise_backward &GetBwd() const;
+
+ private:
+  std::shared_ptr<mkldnn::eltwise_backward> bwd;
 };
 }  // namespace op
 }  // namespace mxnet
