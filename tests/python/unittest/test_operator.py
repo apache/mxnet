@@ -2839,6 +2839,28 @@ def test_transpose():
             y = mx.nd.transpose(x)
             assert_allclose(np.transpose(x.asnumpy()), y.asnumpy())
 
+@with_seed()
+def test_pseudo2dtranspose():
+    def getTwoInts(mn, mx):
+        n1 = np.random.randint(mn, mx)
+        n2 = np.random.randint(mn, mx-1)
+        n2 = n2 if n2 < n1 else n2+1
+        return tuple(np.sort([n1, n2]))
+
+    def getTranspAxes(ndim):
+        axes = list(range(ndim))
+        n1, n2 = getTwoInts(0,ndim)
+        return tuple(axes[:n1]+axes[n2:]+axes[n1:n2])
+
+    for ndim in range(2, 7):
+        for dt in ['int8', 'half', 'int32', 'int64']:
+            for _ in range(5):
+                dims = list(np.random.randint(5, 20, size=ndim))
+                axes = getTranspAxes(ndim)
+                x = mx.nd.array(np.random.normal(size=dims), dtype=dt)
+                y = mx.nd.transpose(x, axes=axes)
+                assert_allclose(np.transpose(x.asnumpy(), axes=axes), y.asnumpy())
+
 
 @with_seed()
 def test_expand_dims():
