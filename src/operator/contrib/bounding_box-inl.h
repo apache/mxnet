@@ -835,23 +835,23 @@ inline bool BoxEncodeShape(const nnvm::NodeAttrs& attrs,
 
 struct box_encode {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType *out_targets, DType *out_masks,
+  MSHADOW_XINLINE static void Map(index_t i, DType *out_targets, DType *out_masks,
                                   const DType *samples, const DType *matches,
                                   const DType *anchors, const DType *refs,
                                   const DType *means, const DType *stds,
                                   const int m, const int n) {
-    int j = i / n;
-    int match = matches[i];
+    index_t j = i / n;
+    index_t match = matches[i];
     // xmin: 0, ymin:1, xmax: 2, ymax: 3
     // x:0, y:1, w:2, h:3
-    int ref_index = (j * m + match) * 4;
+    index_t ref_index = (j * m + match) * 4;
     DType ref_xmin = refs[ref_index + 0];
     DType ref_ymin = refs[ref_index + 1];
     DType ref_width = refs[ref_index + 2] - ref_xmin;
     DType ref_height = refs[ref_index + 3] - ref_ymin;
     DType ref_x = ref_xmin + ref_width * 0.5;
     DType ref_y = ref_ymin + ref_height * 0.5;
-    int a_index = i * 4;
+    index_t a_index = i * 4;
     DType a_xmin = anchors[a_index + 0];
     DType a_ymin = anchors[a_index + 1];
     DType a_width = anchors[a_index + 2] - a_xmin;
@@ -980,13 +980,13 @@ inline bool BoxDecodeShape(const nnvm::NodeAttrs& attrs,
 template<int anchor_encode, bool has_clip>
 struct box_decode {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *x,
+  MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *x,
                                   const DType *anchors, const DType std0,
                                   const DType std1, const DType std2,
                                   const DType std3, const DType clip,
                                   const int n) {
-    int index = i * 4;
-    int a_index = (i % n) * 4;
+    index_t index = i * 4;
+    index_t a_index = (i % n) * 4;
     DType a_x = anchors[a_index + 0];
     DType a_y = anchors[a_index + 1];
     DType a_width = anchors[a_index + 2];
