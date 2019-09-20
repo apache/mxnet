@@ -7614,7 +7614,7 @@ def test_softmax_output_normalization():
 
 @with_seed()
 def test_argmax():
-    def getNumWorkers(shape, axis,  ctx=mx.gpu()):
+    def getNumWorkers(shape, axis, ctx=mx.gpu()):
         if ctx == mx.cpu():
             return 1
 
@@ -7628,8 +7628,9 @@ def test_argmax():
         numbWorkers = math.floor(math.pow(2, (b * 5 + 28)/11))
         return numbWorkers if 2 * numbWorkers <= nSteps else 1
 
-    def calc_argmax(tensor, axis, checkResult=False):
+    def calc_argmax(tensor, axis, checkResult=False, nWorkers=1):
         max = mx.nd.argmax(tensor, axis=axis)
+
         if checkResult:
             topk_data = mx.nd.topk(tensor, axis=axis, is_ascend=0, k=1)
             assert_almost_equal(max.reshape(-1).asnumpy(), topk_data.reshape(-1).asnumpy())
@@ -7709,11 +7710,11 @@ def test_argmax():
 
     ci_test = True       # Use False if you need to collect aggregated information about argmax performance
     if ci_test:
-        for ctx in [mx.cpu(0), mx.gpu(0)]:
-            for multi_output in [False, True]:
-                axisMax = 4 if multi_output else 2
-                for axis in range(axisMax):
-                    run_test_argmax(multi_output, ctx, axis)
+        ctx = default_context()
+        for multi_output in [False, True]:
+            axisMax = 4 if multi_output else 2
+            for axis in range(axisMax):
+                run_test_argmax(multi_output, ctx, axis)
     else:
         testArgmax = 1
         lenTest = 10000

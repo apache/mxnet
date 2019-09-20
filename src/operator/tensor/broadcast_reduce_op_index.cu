@@ -50,6 +50,9 @@ int DefineNumbWorkers<gpu>(const TShape &shape, int axis) {
   if (nThreads > nSteps)
     return 1;
 
+  // The formula used here is just a heuristic. Experimenting with different values,
+  // we accumulated a lot of data for different(shape, axis, numbWorkers).
+  // It turned out that they almost perfectly correspond to this formula.
   const auto a = static_cast<float>(nSteps)/nThreads;
   const auto b = log2f(a);
   const auto numbWorkers = pow(2, (b * 5 + 28)/11);

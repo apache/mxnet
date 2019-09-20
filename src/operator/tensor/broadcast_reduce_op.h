@@ -556,10 +556,15 @@ inline bool ReduceAxesOpForwardStorage(const nnvm::NodeAttrs& attrs,
   return dispatched;
 }
 
+
+using namespace mshadow_op::isnan_typed;
+
 struct argmax {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const int nWorkers, const DType *in_data, DType *out_data,
-               size_t nSteps, size_t step, size_t shift, void *pIdxStorage, bool use_uint16) {
+  MSHADOW_XINLINE static void Map(index_t i, const int nWorkers,
+                                  const DType *in_data, DType *out_data,
+                                  uint32_t nSteps, uint32_t step, size_t shift,
+                                  void *pIdxStorage, bool use_uint16) {
     // i - index of launched thread
     // nWorkers - number of threads, assigned to work on one row/column
     // iw - index of current thread among workers assigned to the same vector
@@ -576,13 +581,22 @@ struct argmax {
       pCurr += i % step + shift * (i / step);
     }
 
-    int maxIdx = 0;
+    uint32_t maxIdx = 0;
     DType maxVal = *pCurr;
-    for (size_t j = 1; j < nSteps; ++j) {
-      if (maxVal < *(pCurr += step)) {
-        maxVal = *pCurr;
+    while (IsNan(maxVal) && ++maxIdx < nSteps)
+      maxVal = *(pCurr += step);
+
+    if (maxIdx < nSteps) {
+      for (uint32_t j = maxIdx + 1; j < nSteps; ++j) {
+        const auto val = *(pCurr += step);
+        if (IsNan(val) || maxVal >= val)
+          continue;
+
+        maxVal = val;
         maxIdx = j;
       }
+    } else {
+      maxIdx = 0;
     }
 
     if (nWorkers > 1) {
@@ -599,36 +613,39 @@ struct argmax {
 };
 
 struct argmax_reduce {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const int nWorkers, const DType *in_data, DType *out_data,
-               const size_t step, const size_t shift, void *pIdx, const bool use_uin16) {
-    const DType *pCurr = in_data + i % step + shift * (i / step);
-    int maxIdx;
-    if (use_uin16) {
-      const auto *pIdxStorage = static_cast<uint16_t*>(pIdx);
-      maxIdx = *(pIdxStorage += i * nWorkers);
-      DType maxVal = *(pCurr + step * maxIdx);
-      for (int j = 1; j < nWorkers; ++j) {
-        const auto val = *(pCurr + step * pIdxStorage[j]);
-        if (maxVal < val) {
-          maxVal = val;
-          maxIdx = pIdxStorage[j];
-        }
-      }
-    } else {
-      const auto *pIdxStorage = static_cast<uint32_t*>(pIdx);
-      maxIdx = *(pIdxStorage += i * nWorkers);
-      DType maxVal = *(pCurr + step * maxIdx);
-      for (int j = 1; j < nWorkers; ++j) {
-        const auto val = *(pCurr + step * pIdxStorage[j]);
-        if (maxVal < val) {
-          maxVal = val;
-          maxIdx = pIdxStorage[j];
-        }
-      }
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static uint32_t BestIdx(const int nWorkers, const DType *pCurr,
+                                          const uint32_t step, const IType *pIdxStorage) {
+    uint32_t maxIdx = *pIdxStorage;
+    DType maxVal = *(pCurr + step * maxIdx);
+    int j = 0;
+    while (IsNan(maxVal) && ++j < nWorkers)
+      maxVal = *(pCurr + step * (maxIdx = pIdxStorage[j]));
+
+    if (j == nWorkers)
+      return *pIdxStorage;
+
+    while (++j < nWorkers) {
+      const auto val = *(pCurr + step * pIdxStorage[j]);
+      if (IsNan(val) || maxVal >= val)
+        continue;
+
+      maxVal = val;
+      maxIdx = pIdxStorage[j];
     }
 
-    out_data[i] = maxIdx;
+    return maxIdx;
+  }
+
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, const int nWorkers,
+                                  const DType *in_data, DType *out_data,
+                                  const uint32_t step, const size_t shift,
+                                  void *pIdx, const bool use_uin16) {
+    const DType *pCurr = in_data + i % step + shift * (i / step);
+    out_data[i] = use_uin16?
+                  BestIdx(nWorkers, pCurr, step, static_cast<uint16_t*>(pIdx) + i * nWorkers):
+                  BestIdx(nWorkers, pCurr, step, static_cast<uint32_t*>(pIdx) + i * nWorkers);
   }
 };
 
@@ -689,7 +706,7 @@ void ArgMax(const nnvm::NodeAttrs& attrs,
     if (shape[axis] <= UINT16_MAX) {
       pIdxMemory = AllocateDTypeMemory<xpu, uint16_t>(ctx, num_items);
       if (pIdxMemory) {
-        use_uint16 = false;
+        use_uint16 = true;
         break;
       }
     }
@@ -699,8 +716,8 @@ void ArgMax(const nnvm::NodeAttrs& attrs,
   }
 
   // Calculate step over the input array which will be used by each thread in kernel
-  size_t step = 1;
-  int i = shape.ndim();
+  uint32_t step = 1;
+  auto i = shape.ndim();
   while (--i > axis)
     step *= shape[i];
 
