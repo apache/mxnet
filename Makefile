@@ -670,7 +670,7 @@ sample_lib:
 doc: docs
 
 docs:
-	make -C docs html
+	make -C docs linkcheck doctest html
 
 clean_docs:
 	make -C docs clean
