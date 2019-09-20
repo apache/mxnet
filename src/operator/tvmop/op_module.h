@@ -75,13 +75,13 @@ class TVMOpModule {
 
 class OtherOptionEntity {
  public:
-  explicit OtherOptionEntity(int val): val(val) {}
-  OtherOptionEntity(): val(0) {}
+  explicit OtherOptionEntity(int val): val_(val) {}
+  OtherOptionEntity(): val_(0) {}
   inline int get_val() const {
-    return val;
+    return val_;
   }
  private:
-  int val;
+  int val_;
 };
 
 class OtherOptionSpace {
@@ -89,26 +89,26 @@ class OtherOptionSpace {
   explicit OtherOptionSpace(const std::vector<int>& entities) {
     int size = entities.size();
     for (int i = 0; i < size; ++i) {
-      this->entities.push_back(OtherOptionEntity(entities[i]));
+      this->entities_.push_back(OtherOptionEntity(entities[i]));
     }
   }
 
   OtherOptionSpace() {}
 
   inline OtherOptionEntity &operator[] (int idx) {
-    return entities[idx];
+    return entities_[idx];
   }
 
   inline const OtherOptionEntity &operator[] (int idx) const {
-    return entities[idx];
+    return entities_[idx];
   }
 
   inline int size() const {
-    return entities.size();
+    return entities_.size();
   }
 
  private:
-  std::vector<OtherOptionEntity> entities;
+  std::vector<OtherOptionEntity> entities_;
 };
 
 class TVMOpConfig {
@@ -117,31 +117,31 @@ class TVMOpConfig {
 
   inline TVMOpConfig& add_space(const std::string& name, const std::vector<int>& val) {
     int size = val.size();
-    space_map[name] = OtherOptionSpace(val);
-    weight_map[name] = weight_acc;
-    weight_acc *= size;
+    space_map_[name] = OtherOptionSpace(val);
+    weight_map_[name] = weight_acc_;
+    weight_acc_ *= size;
     return *this;
   }
   inline TVMOpConfig& add_entity(const std::string& name, const int val) {
-    _entity_map[name] = OtherOptionEntity(val);
+    entity_map_[name] = OtherOptionEntity(val);
     return *this;
   }
 
-  TVMOpConfig(): weight_acc(1) {}
+  TVMOpConfig(): weight_acc_(1) {}
 
   inline const OtherOptionSpace& get_space(const std::string& name) const {
-    return space_map.at(name);
+    return space_map_.at(name);
   }
 
   inline int get_weight(const std::string& name) const {
-    return weight_map.at(name);
+    return weight_map_.at(name);
   }
 
  private:
-  std::map<std::string, OtherOptionEntity> _entity_map;
-  std::map<std::string, OtherOptionSpace> space_map;
-  std::map<std::string, int> weight_map;
-  int weight_acc;
+  std::map<std::string, OtherOptionEntity> entity_map_;
+  std::map<std::string, OtherOptionSpace> space_map_;
+  std::map<std::string, int> weight_map_;
+  int weight_acc_;
 };
 
 const TVMOpConfig& GetOpConfig(const std::string& name);
