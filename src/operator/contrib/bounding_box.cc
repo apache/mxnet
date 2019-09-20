@@ -220,7 +220,7 @@ NNVM_REGISTER_OP(_contrib_box_encode)
               "0 (ignore)")
 .add_argument("matches", "NDArray-or-Symbol", "(B, N) value range [0, M)")
 .add_argument("anchors", "NDArray-or-Symbol", "(B, N, 4) encoded in corner")
-.add_argument("refs", "NDArray-or-Symbol", "(B, N, 4) encoded in corner")
+.add_argument("refs", "NDArray-or-Symbol", "(B, M, 4) encoded in corner")
 .add_argument("means", "NDArray-or-Symbol", "(4,) Mean value to be subtracted from encoded values")
 .add_argument("stds", "NDArray-or-Symbol", "(4,) Std value to be divided from encoded values");
 
