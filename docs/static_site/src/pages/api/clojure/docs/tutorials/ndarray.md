@@ -31,7 +31,8 @@ Topics:
 
 * [Create NDArray](#create-ndarray)
 * [NDArray Operations](#ndarray-operations)
-* [NDArray API Reference](http://mxnet.incubator.apache.org/api/clojure/docs/org.apache.clojure-mxnet.ndarray.html)
+* [NDArray API Reference]({{'/api/clojure/docs/api/org.apache.clojure-mxnet.ndarray-api.html'|relative_url}})
+
 
 To follow along with this documentation, you can use this namespace with the needed requires:
 
@@ -140,4 +141,5 @@ Device information is stored in the `mxnet.Context` structure. When creating NDA
 ```
 
 ## Next Steps
-* See [KVStore API](kvstore.md) for multi-GPU and multi-host distributed training.
+* See [KVStore API](kvstore) for multi-GPU and multi-host distributed training.
+

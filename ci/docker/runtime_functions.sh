@@ -1350,34 +1350,6 @@ test_ubuntu_cpu_python3() {
     popd
 }
 
-build_docs() {
-    set -ex
-    pushd .
-
-    # Setup environment for Julia docs
-    export PATH="/work/julia10/bin:$PATH"
-    export MXNET_HOME='/work/mxnet'
-    export JULIA_DEPOT_PATH='/work/julia-depot'
-
-    julia -e 'using InteractiveUtils; versioninfo()'
-    export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
-    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
-
-    cd /work/mxnet/docs/build_version_doc
-    # Parameters are set in the Jenkins pipeline: restricted-website-build
-    # $1: the list of branches/tags to build
-    # $2: the list of tags to display
-    # So you can build from the 1.2.0 branch, but display 1.2.1 on the site
-    # $3: the fork URL
-    ./build_all_version.sh $1 $2 $3
-    # $4: the default version tag for the website
-    # $5: the base URL
-    ./update_all_version.sh $2 $4 $5
-    cd VersionedWeb
-    tar -zcvf ../artifacts.tgz .
-    popd
-}
-
 # Functions that run the nightly Tests:
 
 #Runs Apache RAT Check on MXNet Source for License Headers
@@ -1560,8 +1532,7 @@ nightly_estimator() {
     nosetests test_sentiment_rnn.py
 }
 
-# Deploy
-
+# For testing PRs
 deploy_docs() {
     set -ex
     pushd .
@@ -1580,9 +1551,331 @@ deploy_docs() {
 
     export CC="ccache gcc"
     export CXX="ccache g++"
-    make docs SPHINXOPTS=-W USE_MKLDNN=0
+
+    build_python_docs
 
     popd
+}
+
+
+build_docs_setup() {
+    build_folder="docs/_build"
+    mxnetlib_folder="/work/mxnet/lib"
+
+    mkdir -p $build_folder
+    mkdir -p $mxnetlib_folder
+}
+
+build_ubuntu_cpu_docs() {
+    set -ex
+    export CC="gcc"
+    export CXX="g++"
+    build_ccache_wrappers
+    make \
+        DEV=1                         \
+        USE_CPP_PACKAGE=1             \
+        USE_BLAS=openblas             \
+        USE_MKLDNN=0                  \
+        USE_DIST_KVSTORE=1            \
+        USE_LIBJPEG_TURBO=1           \
+        USE_SIGNAL_HANDLER=1          \
+        -j$(nproc)
+}
+
+
+build_jekyll_docs() {
+    set -ex
+    source /etc/profile.d/rvm.sh
+
+    pushd .
+    build_docs_setup
+    pushd docs/static_site
+    make clean
+    make html
+    popd
+
+    GZIP=-9 tar zcvf jekyll-artifacts.tgz -C docs/static_site/build html
+    mv jekyll-artifacts.tgz docs/_build/
+    popd
+}
+
+
+build_python_docs() {
+   set -ex
+   pushd .
+
+   build_docs_setup
+
+   pushd docs/python_docs
+   eval "$(/work/miniconda/bin/conda shell.bash hook)"
+   conda env create -f environment.yml -p /work/conda_env
+   conda activate /work/conda_env
+   pip install themes/mx-theme
+   pip install -e /work/mxnet/python --user
+
+   pushd python
+   make clean
+   make html EVAL=0
+
+   GZIP=-9 tar zcvf python-artifacts.tgz -C build/_build/html .
+   popd
+
+   mv python/python-artifacts.tgz /work/mxnet/docs/_build/
+   popd
+
+   popd
+}
+
+
+build_c_docs() {
+    set -ex
+    pushd .
+
+    build_docs_setup
+    doc_path="docs/cpp_docs"
+    pushd $doc_path
+
+    make clean
+    make html
+
+    doc_artifact="c-artifacts.tgz"
+    GZIP=-9 tar zcvf $doc_artifact -C build/html/html .
+    popd
+
+    mv $doc_path/$doc_artifact docs/_build/
+
+    popd
+}
+
+
+build_r_docs() {
+    set -ex
+    pushd .
+
+    build_docs_setup
+    r_root='R-package'
+    r_pdf='mxnet-r-reference-manual.pdf'
+    r_build='build'
+    docs_build_path="$r_root/$r_build/$r_pdf"
+    artifacts_path='docs/_build/r-artifacts.tgz'
+
+    mkdir -p $r_root/$r_build
+
+    unittest_ubuntu_minimal_R
+
+    pushd $r_root
+
+    R_LIBS=/tmp/r-site-library R CMD Rd2pdf . --no-preview --encoding=utf8 -o $r_build/$r_pdf
+
+    popd
+
+    GZIP=-9 tar zcvf $artifacts_path $docs_build_path
+
+    popd
+}
+
+
+build_scala() {
+   set -ex
+   pushd .
+
+   cd scala-package
+   mvn -B install -DskipTests
+
+   popd
+}
+
+
+build_scala_docs() {
+    set -ex
+    pushd .
+    build_docs_setup
+    build_scala
+
+    scala_path='scala-package'
+    docs_build_path='scala-package/docs/build/docs/scala'
+    artifacts_path='docs/_build/scala-artifacts.tgz'
+
+    pushd $scala_path
+
+    scala_doc_sources=`find . -type f -name "*.scala" | egrep "./core|./infer" | egrep -v "/javaapi"  | egrep -v "Suite" | egrep -v "/mxnetexamples"`
+    jar_native=`find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `
+    jar_macros=`find macros -name "*.jar" | tr "\\n" ":" `
+    jar_core=`find core -name "*.jar" | tr "\\n" ":" `
+    jar_infer=`find infer -name "*.jar" | tr "\\n" ":" `
+    scala_doc_classpath=$jar_native:$jar_macros:$jar_core:$jar_infer
+
+    scala_ignore_errors=''
+    legacy_ver=".*1.2|1.3.*"
+    # BUILD_VER needs to be pull from environment vars
+    if [[ $_BUILD_VER =~ $legacy_ver ]]
+    then
+      # There are unresolvable errors on mxnet 1.2.x. We are ignoring those
+      # errors while aborting the ci on newer versions
+      echo "We will ignoring unresolvable errors on MXNet 1.2/1.3."
+      scala_ignore_errors='; exit 0'
+    fi
+
+    scaladoc $scala_doc_sources -classpath $scala_doc_classpath $scala_ignore_errors -doc-title MXNet
+    popd
+
+    # Clean-up old artifacts
+    rm -rf $docs_build_path
+    mkdir -p $docs_build_path
+
+    for doc_file in index index.html org lib index.js package.html; do
+        mv $scala_path/$doc_file $docs_build_path
+    done
+
+    GZIP=-9 tar -zcvf $artifacts_path -C $docs_build_path .
+
+    popd
+}
+
+
+build_julia_docs() {
+   set -ex
+   pushd .
+
+   build_docs_setup
+   # Setup environment for Julia docs
+   export PATH="/work/julia10/bin:$PATH"
+   export MXNET_HOME='/work/mxnet'
+   export JULIA_DEPOT_PATH='/work/julia-depot'
+   export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
+   export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
+
+   julia_doc_path='julia/docs/site/'
+   julia_doc_artifact='docs/_build/julia-artifacts.tgz'
+
+   echo "Julia will check for MXNet in $MXNET_HOME/lib"
+
+   make -C julia/docs
+
+   GZIP=-9 tar -zcvf $julia_doc_artifact -C $julia_doc_path .
+
+   popd
+}
+
+
+build_java_docs() {
+    set -ex
+    pushd .
+
+    build_docs_setup
+    build_scala
+
+    # Re-use scala-package build artifacts.
+    java_path='scala-package'
+    docs_build_path='docs/scala-package/build/docs/java'
+    artifacts_path='docs/_build/java-artifacts.tgz'
+
+    pushd $java_path
+
+    java_doc_sources=`find . -type f -name "*.scala" | egrep "./core|./infer"  | egrep "/javaapi"  | egrep -v "Suite" | egrep -v "/mxnetexamples"`
+    jar_native=`find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `
+    jar_macros=`find macros -name "*.jar" | tr "\\n" ":" `
+    jar_core=`find core -name "*.jar" | tr "\\n" ":" `
+    jar_infer=`find infer -name "*.jar" | tr "\\n" ":" `
+    java_doc_classpath=$jar_native:$jar_macros:$jar_core:$jar_infer
+
+    scaladoc $java_doc_sources -classpath $java_doc_classpath -feature -deprecation -doc-title MXNet
+    popd
+
+    # Clean-up old artifacts
+    rm -rf $docs_build_path
+    mkdir -p $docs_build_path
+
+    for doc_file in index index.html org lib index.js package.html; do
+        mv $java_path/$doc_file $docs_build_path
+    done
+
+    GZIP=-9 tar -zcvf $artifacts_path -C $docs_build_path .
+
+    popd
+}
+
+
+build_clojure_docs() {
+    set -ex
+    pushd .
+
+    build_docs_setup
+    build_scala
+
+    clojure_path='contrib/clojure-package'
+    clojure_doc_path='contrib/clojure-package/target/doc'
+    clojure_doc_artifact='docs/_build/clojure-artifacts.tgz'
+
+    pushd $clojure_path
+    lein codox
+    popd
+
+    GZIP=-9 tar -zcvf $clojure_doc_artifact -C $clojure_doc_path .
+
+    popd
+}
+
+build_docs() {
+    pushd docs/_build
+    tar -xzf jekyll-artifacts.tgz
+    api_folder='html/api'
+    # Python has it's own landing page/site so we don't put it in /docs/api
+    mkdir -p $api_folder/python/docs && tar -xzf python-artifacts.tgz --directory $api_folder/python/docs
+    mkdir -p $api_folder/cpp/docs/api && tar -xzf c-artifacts.tgz --directory $api_folder/cpp/docs/api
+    mkdir -p $api_folder/r/docs/api && tar -xzf r-artifacts.tgz --directory $api_folder/r/docs/api
+    mkdir -p $api_folder/julia/docs/api && tar -xzf julia-artifacts.tgz --directory $api_folder/julia/docs/api
+    mkdir -p $api_folder/scala/docs/api && tar -xzf scala-artifacts.tgz --directory $api_folder/scala/docs/api
+    mkdir -p $api_folder/java/docs/api && tar -xzf java-artifacts.tgz --directory $api_folder/java/docs/api
+    mkdir -p $api_folder/clojure/docs/api && tar -xzf clojure-artifacts.tgz --directory $api_folder/clojure/docs/api
+    GZIP=-9 tar -zcvf full_website.tgz -C html .
+    popd
+}
+
+build_docs_small() {
+    pushd docs/_build
+    tar -xzf jekyll-artifacts.tgz
+    api_folder='html/api'
+    mkdir -p $api_folder/python/docs && tar -xzf python-artifacts.tgz --directory $api_folder/python/docs
+    # The folder to be published is now in /docs/_build/html
+    popd
+}
+
+create_repo() {
+   repo_folder=$1
+   mxnet_url=$2
+   git clone $mxnet_url $repo_folder --recursive
+   echo "Adding MXNet upstream repo..."
+   cd $repo_folder
+   git remote add upstream https://github.com/apache/incubator-mxnet
+   cd ..
+}
+
+
+refresh_branches() {
+   repo_folder=$1
+   cd $repo_folder
+   git fetch
+   git fetch upstream
+   cd ..
+}
+
+checkout() {
+   repo_folder=$1
+   cd $repo_folder
+   # Overriding configs later will cause a conflict here, so stashing...
+   git stash
+   # Fails to checkout if not available locally, so try upstream
+   git checkout "$repo_folder" || git branch $repo_folder "upstream/$repo_folder" && git checkout "$repo_folder" || exit 1
+   if [ $tag == 'master' ]; then
+      git pull
+      # master gets warnings as errors for Sphinx builds
+      OPTS="-W"
+      else
+      OPTS=
+   fi
+   git submodule update --init --recursive
+   cd ..
 }
 
 build_static_libmxnet() {

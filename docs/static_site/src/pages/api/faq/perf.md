@@ -134,7 +134,7 @@ AWS EC2 C5.xlarge:
 
 ## Other CPU
 
-If using CPUs (not just Intel CPUs -- ARMs also), NNPACK can improve the running performance with 2x~7x, please check [nnpack.md](./nnpack.md) for details.
+If using CPUs (not just Intel CPUs -- ARMs also), NNPACK can improve the running performance with 2x~7x, please check [nnpack.md](nnpack) for details.
 
 ## Nvidia GPU
 
@@ -289,7 +289,7 @@ that gives detailed information about execution time at the symbol level.
 This feature complements general profiling tools like _nvprof_ and _gprof_
 by summarizing at the operator level, instead of a function, kernel, or instruction level.
 
-The profiler can be turned on with an [environment variable](http://mxnet.io/faq/env_var.html#control-the-profiler)
+The profiler can be turned on with an [environment variable]({{'/api/faq/env_var#control-the-profiler' | relative_url}})
 for an entire program run, or programmatically for just part of a run.
 See [example/profiler](https://github.com/dmlc/mxnet/tree/master/example/profiler)
 for complete examples of how to use the profiler in code, but briefly, the Python code looks like:

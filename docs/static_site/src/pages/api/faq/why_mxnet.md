@@ -201,7 +201,7 @@ Symbolic computation is useful for several reasons. First, because we define a f
 
 ### Gluon for briding the gap between the two
 
-[MXNet Gluon]({{'/api/python'|relative_url}}) aims to bridge the gap between the imperative nature of MXNet and its symbolic capabilities and keep the advantages of both through [hybridization](http://d2l.ai/chapter_computational-performance/hybridize.html).
+[MXNet Gluon]({{'/api/python'|relative_url}}) aims to bridge the gap between the imperative nature of MXNet and its symbolic capabilities and keep the advantages of both through [hybridization](https://d2l.ai/chapter_computational-performance/hybridize.html).
 
 ## Conclusions
 Given its combination of high performance, clean code, access to a high-level API, and low-level control, _MXNet_ stands out as a unique choice among deep learning frameworks.

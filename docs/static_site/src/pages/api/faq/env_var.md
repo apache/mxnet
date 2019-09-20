@@ -61,7 +61,7 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - The number of threads given to prioritized CPU jobs.
 * MXNET_CPU_NNPACK_NTHREADS
   - Values: Int ```(default=4)```
-  - The number of threads used for NNPACK. NNPACK package aims to provide high-performance implementations of some layers for multi-core CPUs. Checkout [NNPACK](http://mxnet.io/faq/nnpack.html) to know more about it.
+  - The number of threads used for NNPACK. NNPACK package aims to provide high-performance implementations of some layers for multi-core CPUs. Checkout [NNPACK]({{'/api/faq/nnpack'|relative_url}}) to know more about it.
 * MXNET_MP_WORKER_NTHREADS
   - Values: Int ```(default=1)```
   - The number of scheduling threads on CPU given to multiprocess workers. Enlarge this number allows more operators to run in parallel in individual workers but please consider reducing the overall `num_workers` to avoid thread contention (not available on Windows).
@@ -73,7 +73,7 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 
 * MXNET_EXEC_ENABLE_INPLACE
   - Values: true or false ```(default=true)```
-  - Whether to enable in-place optimization in symbolic execution. Checkout [in-place optimization](http://mxnet.io/architecture/note_memory.html#in-place-operations) to know more about it.
+    - Whether to enable in-place optimization in symbolic execution. Checkout [in-place optimization]({{'/api/architecture/note_memory#in-place-operations'|relative_url}}) to know more about it.
 * NNVM_EXEC_MATCH_RANGE
   - Values: Int ```(default=16)```
   - The approximate matching scale in the symbolic execution memory allocator.
@@ -83,7 +83,7 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - Values: Int ```(default=1)```
   - The maximum number of temporary workspaces to allocate to each device. This controls space replicas and in turn reduces the memory usage.
   - Setting this to a small number can save GPU memory. It will also likely decrease the level of parallelism, which is usually acceptable.
-  - MXNet internally uses graph coloring algorithm to [optimize memory consumption](http://mxnet.io/architecture/note_memory.html).
+    - MXNet internally uses graph coloring algorithm to [optimize memory consumption]({{'/api/architecture/note_memory'|relative_url}}).
   - This parameter is also used to get number of matching colors in graph and in turn how much parallelism one can get in each GPU. Color based match usually costs more memory but also enables more parallelism.
 * MXNET_GPU_MEM_POOL_RESERVE
   - Values: Int ```(default=5)```

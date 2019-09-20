@@ -26,7 +26,7 @@ permalink: /api/clojure/docs/tutorials/symbol_in_pictures
 
 This topic explains symbolic construction and execution in pictures.
 
-We recommend that you read the [Symbolic API](symbol.md) as another useful reference.
+We recommend that you read the [Symbolic API](symbol) as another useful reference.
 
 ## Compose Symbols
 
@@ -98,4 +98,4 @@ Auxiliary states are just like arguments, except that you can't take the gradien
 
 ## Next Steps
 
-See [Symbolic API](symbol.md) and [Python Documentation](index.md).
+See [Symbolic API](symbol) and [Python Documentation]({{'/api/python'|relative_url}}).
