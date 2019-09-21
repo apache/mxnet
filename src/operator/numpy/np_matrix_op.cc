@@ -544,8 +544,15 @@ NNVM_REGISTER_OP(_np_roll)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
      const NumpyRollParam& param = nnvm::get<NumpyRollParam>(n->attrs.parsed);
+     if (!param.shift.has_value()) {
+       LOG(FATAL) << "roll missing 1 required positional argument: 'shift'.";
+     }
+     mxnet::TShape shifts(param.shift.value());
+     for (int i = 0; i < shifts.ndim(); ++i) {
+       shifts[i] = -shifts[i];
+     }
      std::ostringstream os1;
-     os1 << -param.shift;
+     os1 << dmlc::optional<mxnet::TShape>(shifts);
      std::ostringstream os2;
      os2 << param.axis;
      return MakeNonlossGradNode("_np_roll", n, ograds, {},

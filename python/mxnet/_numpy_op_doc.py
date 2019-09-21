@@ -523,6 +523,7 @@ def _np_roll(a, shift, axis=None):
     roll(a, shift, axis=None):
 
     Roll array elements along a given axis.
+    
     Elements that roll beyond the last position are re-introduced at
     the first.
 
