@@ -36,6 +36,7 @@
 #include "../elemwise_op_common.h"
 #include "../linalg.h"
 #include "../../common/utils.h"
+#include "../tensor/broadcast_reduce_op.h"
 
 namespace mxnet {
 namespace op {
@@ -169,7 +170,18 @@ void FCBackward(const OpContext &ctx, const FullyConnectedParam &param,
   // gradient of bias
   if (!param.no_bias) {
     Tensor<xpu, 1, DType> gbias = in_grad[fullc::kBias].get<xpu, 1, DType>(s);
-    Assign(gbias, req[fullc::kBias], sum_rows(grad));
+    TBlob grad_blob = TBlob(grad);
+    TBlob gbias_blob = TBlob(gbias);
+    mxnet::TShape x(1, 0);
+    mxnet::TShape small;
+    if (shape_assign(&gbias_blob.shape_, Shape2(param.num_hidden, 1))) {
+      small = gbias_blob.shape_;
+    } else {
+      small = ReduceAxesShapeImpl(grad_blob.shape_, dmlc::optional<mxnet::TShape>(x), true, false);
+    }
+    ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, false,
+                          mshadow_op::identity>(ctx, {grad_blob}, {req[fullc::kBias]},
+                                                {in_grad[fullc::kBias]}, small);
   }
   // gradient of data
   // Legacy approach shown here for comparison:

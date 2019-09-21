@@ -62,6 +62,7 @@ NNVM_REGISTER_OP(_backward_broadcast_power)
                                                               mshadow_op::power_rgrad>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_maximum)
+.add_alias("_npi_maximum")
 .describe(R"code(Returns element-wise maximum of the input arrays with broadcasting.
 
 This function compares two input arrays and returns a new array having the element-wise maxima.
@@ -97,6 +98,7 @@ NNVM_REGISTER_OP(_backward_broadcast_maximum)
                                                               mshadow_op::lt>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_minimum)
+.add_alias("_npi_minimum")
 .describe(R"code(Returns element-wise minimum of the input arrays with broadcasting.
 
 This function compares two input arrays and returns a new array having the element-wise minima.

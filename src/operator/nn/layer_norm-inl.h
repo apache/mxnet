@@ -63,21 +63,27 @@ struct LayerNormParam : public dmlc::Parameter<LayerNormParam> {
   }
 };
 
+static int GetRealAxis(int axis, int ndim) {
+  return axis < 0 ? (axis + ndim) : axis;
+}
 
 template<typename xpu>
 void LayerNormCompute(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx, const std::vector<TBlob>& inputs,
                       const std::vector<OpReqType>& req,
-                      const std::vector<TBlob>& outputs) {
+                      const std::vector<TBlob>& outputs);
+
+template<typename xpu>
+void LayerNormComputeGeneral(const nnvm::NodeAttrs& attrs,
+                             const OpContext& ctx, const std::vector<TBlob>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
   const LayerNormParam& param = nnvm::get<LayerNormParam>(attrs.parsed);
   if (req[0] == kNullOp) return;
   CHECK_NE(req[0], kAddTo);
-  int axis = param.axis;
-  if (axis < 0) {
-    axis += static_cast<int>(inputs[0].ndim());
-  }
+  int axis = GetRealAxis(param.axis, inputs[0].ndim());
   CHECK(axis >= 0 && axis < inputs[0].ndim()) << "Channel axis out of range: " << param.axis;
   CHECK_EQ(inputs.size(), 3U);
   Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -108,11 +114,24 @@ void LayerNormCompute(const nnvm::NodeAttrs& attrs,
     });
   });
   workspace = ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
+
+  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
+  if (!safe_acc && inputs[0].type_flag_ == mshadow::kFloat16) {
+    common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for float16 inputs for LayerNorm. "
+                    "See https://mxnet.incubator.apache.org/versions/master/faq/env_var.html "
+                    "for more details.");
+  }
+
   // Calculate mean
   MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
-      broadcast::Reduce<red::sum, NDim, DType, op::mshadow_op::identity>(
-        s, mean_data, req[0], workspace, in_data);
+      if (safe_acc) {
+        broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::identity, false>(
+          s, mean_data, req[0], workspace, in_data);
+      } else {
+        broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::identity, true>(
+          s, mean_data, req[0], workspace, in_data);
+      }
       Tensor<xpu, 1, DType> mean_data_tensor = mean_data.FlatTo1D<xpu, DType>(s);
       mean_data_tensor /= scalar<DType>(channel_size);
     });
@@ -125,26 +144,37 @@ void LayerNormCompute(const nnvm::NodeAttrs& attrs,
   const TBlob centered_out = outputs[0].reshape(red_src_shape);
   MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
-      broadcast::Reduce<red::sum, NDim, DType, op::mshadow_op::square>(
-        s, std_data, req[0], workspace, centered_out);
+      if (safe_acc) {
+        broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::square, false>(
+          s, std_data, req[0], workspace, centered_out);
+      } else {
+        broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::square, true>(
+          s, std_data, req[0], workspace, centered_out);
+      }
       Tensor<xpu, 1, DType> std_data_tensor = std_data.FlatTo1D<xpu, DType>(s);
       std_data_tensor = F<mshadow_op::square_root>(std_data_tensor / scalar<DType>(channel_size)
                         + scalar<DType>(param.eps));
     });
   });
   // Calculate data = data / std
-  BinaryBroadcastCompute<xpu, op::mshadow_op::div>(attrs, ctx,
-                                                   {outputs[0], outputs[layernorm::kStd]},
-                                                   {kWriteTo}, {outputs[0]});
+  BinaryBroadcastCompute<xpu, mshadow_op::div>(attrs, ctx,
+                                               {outputs[0], outputs[layernorm::kStd]},
+                                               {kWriteTo}, {outputs[0]});
   // Calculate data = data * gamma
-  BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx,
-                                                   {outputs[0], gamma},
-                                                   {kWriteTo}, {outputs[0]});
+  BinaryBroadcastCompute<xpu, mshadow_op::mul>(attrs, ctx,
+                                               {outputs[0], gamma},
+                                               {kWriteTo}, {outputs[0]});
   // Calculate data = data + beta
-  BinaryBroadcastCompute<xpu, op::mshadow_op::plus>(attrs, ctx,
-                                                   {outputs[0], beta},
-                                                   {kWriteTo}, {outputs[0]});
+  BinaryBroadcastCompute<xpu, mshadow_op::plus>(attrs, ctx,
+                                                {outputs[0], beta},
+                                                {kWriteTo}, {outputs[0]});
 }
+
+template<typename xpu>
+void LayerNormGradCompute(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx, const std::vector<TBlob>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& outputs);
 
 /*
 Calculate the gradient of layer normalization.
@@ -157,17 +187,17 @@ grad_beta = sum(og, exclude_axis)
 grad_x = w - mean(w, axis) - \bar{x} * mean(w * \bar{x}, axis)
 */
 template<typename xpu>
-void LayerNormGradCompute(const nnvm::NodeAttrs& attrs,
-                          const OpContext& ctx, const std::vector<TBlob>& inputs,
-                          const std::vector<OpReqType>& req,
-                          const std::vector<TBlob>& outputs) {
+void LayerNormGradComputeGeneral(const nnvm::NodeAttrs& attrs,
+                                 const OpContext& ctx, const std::vector<TBlob>& inputs,
+                                 const std::vector<OpReqType>& req,
+                                 const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
   CHECK_EQ(inputs.size(), 5U);
   const LayerNormParam& param = nnvm::get<LayerNormParam>(attrs.parsed);
   int axis = param.axis;
   if (axis < 0) {
-    axis += static_cast<int>(inputs[0].ndim());
+    axis += inputs[0].ndim();
   }
   CHECK(axis >= 0 && axis < inputs[0].ndim()) << "Channel axis out of range: " << param.axis;
   Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -203,14 +233,14 @@ void LayerNormGradCompute(const nnvm::NodeAttrs& attrs,
     BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
       reduce_workspace_size =
         std::max(reduce_workspace_size,
-                 broadcast::ReduceWorkspaceSize<NDim, DType>(s, red_src_shape,
-                                                             kAddTo, red_dst_shape));
+                 broadcast::ReduceWorkspaceSize<NDim, DType>(s, red_dst_shape,
+                                                             kAddTo, red_src_shape));
     });
     BROADCAST_NDIM_SWITCH(red_exclude_dst_shape.ndim(), NDim, {
       reduce_workspace_size =
         std::max(reduce_workspace_size,
-                 broadcast::ReduceWorkspaceSize<NDim, DType>(s, red_exclude_src_shape, kAddTo,
-                                                             red_exclude_dst_shape));
+                 broadcast::ReduceWorkspaceSize<NDim, DType>(s, red_exclude_dst_shape, kAddTo,
+                                                             red_exclude_src_shape));
     });
   });
   workspace = ctx.requested[0].get_space_typed<xpu, 1, char>(
@@ -222,19 +252,26 @@ void LayerNormGradCompute(const nnvm::NodeAttrs& attrs,
   const TBlob red_out = TBlob(workspace.dptr_ + reduce_workspace_size + data_size * 2,
                               mean.shape_, mean.dev_mask(), mean.type_flag_, mean.dev_id());
   // Compute normalized_data = (data - mean) / std
-  BinaryBroadcastCompute<xpu, op::mshadow_op::minus>(attrs, ctx,
-                                                    {data, mean},
-                                                    {kWriteTo}, {normalized_data});
-  BinaryBroadcastCompute<xpu, op::mshadow_op::div>(attrs, ctx,
-                                                   {normalized_data, std},
-                                                   {kWriteTo}, {normalized_data});
+  BinaryBroadcastCompute<xpu, mshadow_op::minus>(attrs, ctx,
+                                                 {data, mean},
+                                                 {kWriteTo}, {normalized_data});
+  BinaryBroadcastCompute<xpu, mshadow_op::div>(attrs, ctx,
+                                               {normalized_data, std},
+                                               {kWriteTo}, {normalized_data});
   // Calculate grad_beta
+  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
   if (req[2] != kNullOp) {
     MSHADOW_REAL_TYPE_SWITCH(outputs[2].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(red_exclude_dst_shape.ndim(), NDim, {
-        broadcast::Reduce<red::sum, NDim, DType, op::mshadow_op::identity>(
-          s, outputs[2].reshape(red_exclude_dst_shape), req[2], workspace,
-          ograd.reshape(red_exclude_src_shape));
+        if (safe_acc) {
+          broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::identity, false>(
+            s, outputs[2].reshape(red_exclude_dst_shape), req[2], workspace,
+            ograd.reshape(red_exclude_src_shape));
+        } else {
+          broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::identity, true>(
+            s, outputs[2].reshape(red_exclude_dst_shape), req[2], workspace,
+            ograd.reshape(red_exclude_src_shape));
+        }
       });
     });
   }
@@ -244,9 +281,15 @@ void LayerNormGradCompute(const nnvm::NodeAttrs& attrs,
   if (req[1] != kNullOp) {
     MSHADOW_REAL_TYPE_SWITCH(outputs[1].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(red_exclude_dst_shape.ndim(), NDim, {
-        broadcast::Reduce<red::sum, NDim, DType, op::mshadow_op::identity>(
-          s, outputs[1].reshape(red_exclude_dst_shape), req[1], workspace,
-          ograd_mult.reshape(red_exclude_src_shape));
+        if (safe_acc) {
+          broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::identity, false>(
+            s, outputs[1].reshape(red_exclude_dst_shape), req[1], workspace,
+            ograd_mult.reshape(red_exclude_src_shape));
+        } else {
+          broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::identity, true>(
+            s, outputs[1].reshape(red_exclude_dst_shape), req[1], workspace,
+            ograd_mult.reshape(red_exclude_src_shape));
+        }
       });
     });
   }
@@ -263,9 +306,15 @@ void LayerNormGradCompute(const nnvm::NodeAttrs& attrs,
                                                     {kWriteTo}, {ograd_mult});
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
-        broadcast::Reduce<red::sum, NDim, DType, op::mshadow_op::identity>(
-          s, red_out.reshape(red_dst_shape), kWriteTo, workspace,
-          ograd_mult.reshape(red_src_shape));
+        if (safe_acc) {
+          broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::identity, false>(
+            s, red_out.reshape(red_dst_shape), kWriteTo, workspace,
+            ograd_mult.reshape(red_src_shape));
+        } else {
+          broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::identity, true>(
+            s, red_out.reshape(red_dst_shape), kWriteTo, workspace,
+            ograd_mult.reshape(red_src_shape));
+        }
       });
       Tensor<xpu, 1, DType> red_out_tensor = red_out.FlatTo1D<xpu, DType>(s);
       red_out_tensor /= scalar<DType>(channel_size);
@@ -277,16 +326,22 @@ void LayerNormGradCompute(const nnvm::NodeAttrs& attrs,
                                                         {kWriteTo}, {ograd_mult});
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
-        broadcast::Reduce<red::sum, NDim, DType, op::mshadow_op::identity>(
-          s, red_out.reshape(red_dst_shape), kWriteTo, workspace,
-          ograd_mult.reshape(red_src_shape));
+        if (safe_acc) {
+          broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::identity, false>(
+            s, red_out.reshape(red_dst_shape), kWriteTo, workspace,
+            ograd_mult.reshape(red_src_shape));
+        } else {
+          broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::identity, true>(
+            s, red_out.reshape(red_dst_shape), kWriteTo, workspace,
+            ograd_mult.reshape(red_src_shape));
+        }
       });
       Tensor<xpu, 1, DType> red_out_tensor = red_out.FlatTo1D<xpu, DType>(s);
       red_out_tensor /=  scalar<DType>(- channel_size);
     });
-    BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx,
-                                                     {normalized_data, red_out},
-                                                     {kAddTo}, {outputs[0]});
+    BinaryBroadcastCompute<xpu, mshadow_op::mul>(attrs, ctx,
+                                                 {normalized_data, red_out},
+                                                 {kAddTo}, {outputs[0]});
   }
 }
 

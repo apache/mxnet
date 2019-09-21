@@ -31,13 +31,14 @@ private[mxnet] class LibInfo {
   @native def mxListAllOpNames(names: ListBuffer[String]): Int
   @native def nnGetOpHandle(opName: String, opHandle: RefLong): Int
   // NDArray
-  @native def mxImperativeInvoke(creator: FunctionHandle,
+  @native def mxImperativeInvokeEx(creator: FunctionHandle,
                                  inputs: Array[NDArrayHandle],
                                  outputsGiven: Array[NDArrayHandle],
                                  outputs: ArrayBuffer[NDArrayHandle],
                                  numParams: Int,
                                  paramKeys: Array[String],
-                                 paramVals: Array[String]): Int
+                                 paramVals: Array[String],
+                                 outStype: ArrayBuffer[Int]): Int
   @native def mxNDArrayFree(handle: NDArrayHandle): Int
   @native def mxNDArrayCreateNone(out: NDArrayHandleRef): Int
   @native def mxNDArrayCreateEx(shape: Array[Int],
@@ -47,6 +48,20 @@ private[mxnet] class LibInfo {
                                 delayAlloc: Int,
                                 dtype: Int,
                                 out: NDArrayHandleRef): Int
+  // scalastyle:off parameterNum
+  @native def mxNDArrayCreateSparseEx(storageType: Int,
+                                      shape: Array[Int],
+                                      ndim: Int,
+                                      devType: Int,
+                                      devId: Int,
+                                      delayAlloc: Int,
+                                      dtype: Int,
+                                      numAux: Int,
+                                      auxTypes: Array[Int],
+                                      auxNdims: Array[Int],
+                                      auxShapes: Array[Int],
+                                      out: NDArrayHandleRef): Int
+  // scalastyle:on parameterNum
   @native def mxNDArrayWaitAll(): Int
   @native def mxNDArrayWaitToRead(handle: NDArrayHandle): Int
   @native def mxListFunctions(functions: ListBuffer[FunctionHandle]): Int
@@ -76,6 +91,9 @@ private[mxnet] class LibInfo {
   @native def mxNDArrayGetShape(handle: NDArrayHandle,
                                 ndim: MXUintRef,
                                 data: ArrayBuffer[Int]): Int
+  @native def mxNDArraySyncCopyFromNDArray(handleDst: NDArrayHandle,
+                                           handleSrc: NDArrayHandle,
+                                           locator: Int): Int
   @native def mxNDArraySyncCopyToCPU(handle: NDArrayHandle,
                                      data: Array[Byte],
                                      size: Int): Int
@@ -105,10 +123,15 @@ private[mxnet] class LibInfo {
   @native def mxNDArraySave(fname: String,
                             handles: Array[NDArrayHandle],
                             keys: Array[String]): Int
+  @native def mxNDArrayGetDataNDArray(handle: NDArrayHandle, out: NDArrayHandleRef): Int
+  @native def mxNDArrayGetAuxNDArray(handle: NDArrayHandle,
+                                     location: Int,
+                                     out: NDArrayHandleRef): Int
   @native def mxNDArrayGetContext(handle: NDArrayHandle, devTypeId: RefInt, devId: RefInt): Int
   @native def mxNDArraySaveRawBytes(handle: NDArrayHandle, buf: ArrayBuffer[Byte]): Int
   @native def mxNDArrayLoadFromRawBytes(bytes: Array[Byte], handle: NDArrayHandleRef): Int
   @native def mxNDArrayGetDType(handle: NDArrayHandle, dtype: RefInt): Int
+  @native def mxNDArrayGetStorageType(handle: NDArrayHandle, stype: RefInt): Int
 
   // KVStore Server
   @native def mxInitPSEnv(keys: Array[String], values: Array[String]): Int
@@ -188,6 +211,23 @@ private[mxnet] class LibInfo {
                                  grads: Array[NDArrayHandle]): Int
   @native def mxExecutorPrint(handle: ExecutorHandle, debugStr: RefString): Int
   @native def mxExecutorSetMonitorCallback(handle: ExecutorHandle, callback: MXMonitorCallback): Int
+  // scalastyle:off parameterNum
+  @native def mxExecutorReshape(partialShaping: Int,
+                                allowUpSizing: Int,
+                                devType: Int,
+                                devId: Int,
+                                mapKeys: Array[String],
+                                mapDevTypes: Array[Int],
+                                mapDevIds: Array[Int],
+                                providedArgShapeNames: Array[String],
+                                providedArgShapeData: Array[Int],
+                                providedArgShapeIdx: Array[Int],
+                                inArgs: ArrayBuffer[NDArrayHandle],
+                                argGrads: ArrayBuffer[NDArrayHandle],
+                                auxStates: ArrayBuffer[NDArrayHandle],
+                                sharedExec: ExecutorHandle,
+                                out: ExecutorHandleRef): Int
+  // scalastyle:on parameterNum
 
   // Symbols
   @native def mxSymbolListAtomicSymbolCreators(symbolList: ListBuffer[SymbolHandle]): Int
@@ -240,11 +280,20 @@ private[mxnet] class LibInfo {
                                  numArgs: MXUint,
                                  keys: Array[String],
                                  argIndPtr: Array[MXUint],
-                                 argShapeData: Array[MXUint],
+                                 argShapeData: Array[Int],
                                  inShapeData: ListBuffer[Array[Int]],
                                  outShapeData: ListBuffer[Array[Int]],
                                  auxShapeData: ListBuffer[Array[Int]],
                                  complete: RefInt): Int
+  @native def mxSymbolInferShapePartial(handle: SymbolHandle,
+                                        numArgs: MXUint,
+                                        keys: Array[String],
+                                        argIndPtr: Array[MXUint],
+                                        argShapeData: Array[Int],
+                                        inShapeData: ListBuffer[Array[Int]],
+                                        outShapeData: ListBuffer[Array[Int]],
+                                        auxShapeData: ListBuffer[Array[Int]],
+                                        complete: RefInt): Int
   @native def mxSymbolGetOutput(handle: SymbolHandle, index: Int, out: SymbolHandleRef): Int
   @native def mxSymbolSaveToJSON(handle: SymbolHandle, out: RefString): Int
   @native def mxSymbolCreateFromJSON(json: String, handle: SymbolHandleRef): Int
@@ -322,4 +371,8 @@ private[mxnet] class LibInfo {
   @native def mxSetProfilerConfig(keys: Array[String], vals: Array[String]): Int
   @native def mxSetProfilerState(state: Int): Int
   @native def mxDumpProfile(finished: Int): Int
+
+  // Numpy
+  @native def mxIsNumpyShape(compatible: RefInt): Int
+  @native def mxSetIsNumpyShape(isNpComp: Int, prev: RefInt): Int
 }

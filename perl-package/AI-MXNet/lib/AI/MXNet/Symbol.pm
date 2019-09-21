@@ -24,6 +24,7 @@ package AI::MXNet::Symbol;
 
 use strict;
 use warnings;
+use AI::MXNet::NS;
 use AI::MXNet::Base;
 use AI::MXNet::Symbol::Base;
 use AI::MXNet::Symbol::Random;
@@ -662,7 +663,7 @@ method _infer_shape_impl(Maybe[Str|Shape] @args)
             push @{ $indptr }, scalar(@{ $sdata });
         }
     }
-    my $infer_func = $partial ? \&AI::MXNetCAPI::SymbolInferShapePartial : \&AI::MXNetCAPI::SymbolInferShape;
+    my $infer_func = $partial ? \&AI::MXNetCAPI::SymbolInferShapePartialEx : \&AI::MXNetCAPI::SymbolInferShapeEx;
     my ($arg_shapes, $out_shapes, $aux_shapes, $complete) = check_call(
         $infer_func->(
             $self->handle,
@@ -937,7 +938,7 @@ method simple_bind(
         ($updated_shared_data, $in_arg_handles, $arg_grad_handles, $aux_state_handles, $exe_handle)
             =
         check_call(
-            AI::MXNetCAPI::ExecutorSimpleBind(
+            AI::MXNetCAPI::ExecutorSimpleBindEx(
                 $self->handle,
                 $ctx->device_type_id,
                 $ctx->device_id,

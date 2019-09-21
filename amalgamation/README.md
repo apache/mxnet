@@ -114,17 +114,17 @@ To
 Change
 ```
 #ifdef __GNUC__
-  #define MX_TREAD_LOCAL __thread
+  #define MX_THREAD_LOCAL __thread
 #elif __STDC_VERSION__ >= 201112L
-  #define  MX_TREAD_LOCAL _Thread_local
+  #define  MX_THREAD_LOCAL _Thread_local
 #elif defined(_MSC_VER)
-  #define MX_TREAD_LOCAL __declspec(thread)
+  #define MX_THREAD_LOCAL __declspec(thread)
 #endif
 ```
 
 To
 ```
-#define MX_TREAD_LOCAL __declspec(thread)
+#define MX_THREAD_LOCAL __declspec(thread)
 ```
 
 **To build arm32 compatible version (e.g. iPhone 5):**

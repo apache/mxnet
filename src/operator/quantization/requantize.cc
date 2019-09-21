@@ -61,6 +61,10 @@ inference accuracy.
 .set_attr_parser(ParamParser<RequantizeParam>)
 .set_num_inputs(3)
 .set_num_outputs(3)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data", "min_range", "max_range"};
+  })
 .set_attr<mxnet::FInferShape>("FInferShape", QuantizeShape)
 .set_attr<nnvm::FInferType>("FInferType", RequantizeType)
 .set_attr<FInferStorageType>("FInferStorageType", RequantizeStorageType)
@@ -73,6 +77,9 @@ inference accuracy.
 #else
 .set_attr<FCompute>("FCompute<cpu>", RequantizeForward<cpu>)
 #endif
+.set_attr<FNeedCalibrateInput>("FNeedCalibrateInput", [](const NodeAttrs& attrs){
+  return std::vector<int>{0};
+})
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
     const RequantizeParam& param =
       nnvm::get<RequantizeParam>(attrs.parsed);

@@ -98,11 +98,16 @@ struct gemm {
 struct gemm2 {
   template<typename xpu, int dim, typename DType>
   static void op(const Tensor<xpu, dim, DType>& A, const Tensor<xpu, dim, DType>& B,
+                 const Tensor<xpu, dim, DType>& C, DType alpha, bool tA, bool tB,
+                 Stream<xpu> *s) {
+    gemm::op(A, B, C, DType(alpha), DType(0), tA, tB, s);
+  }
+  template<typename xpu, int dim, typename DType>
+  static void op(const Tensor<xpu, dim, DType>& A, const Tensor<xpu, dim, DType>& B,
                  const Tensor<xpu, dim, DType>& C, Stream<xpu> *s,
                  const nnvm::NodeAttrs& attrs) {
     const LaMatrixMultParam& param = nnvm::get<LaMatrixMultParam>(attrs.parsed);
-    gemm::op(A, B, C, DType(param.alpha), DType(0), param.transpose_a,
-             param.transpose_b, s);
+    op(A, B, C, DType(param.alpha), param.transpose_a, param.transpose_b, s);
   }
   template<typename xpu, int dim, typename DType>
   static void op(const Tensor<xpu, dim, DType>& A, const Tensor<xpu, dim, DType>& B,
@@ -229,6 +234,100 @@ struct sumlogdiag {
   }
 };
 
+template<bool forward>
+struct CopyDiag {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, int k, int n, DType* A, DType* B) {
+    // Index of the matrix from which the diagonal should be extracted.
+    const int matrix(i / (n-abs(k)));
+    // Index of the diagonal element that should be extracted.
+    const int index(i % (n-abs(k)));
+    // row/col that must be looked up.
+    const int row(index-(k < 0 ? k : 0)), col(index+(k > 0 ? k :0));
+    if (forward) {
+      B[i] = A[(matrix*n+row)*n+col];
+    } else {
+      B[(matrix*n+row)*n+col] = A[i];
+    }
+  }
+};
+
+struct copydiag {
+  // Extracts diagonal from matrix.
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 2, DType>& B,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    using namespace mxnet_op;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const LaDiagParam& param = nnvm::get<LaDiagParam>(attrs.parsed);
+    Kernel<CopyDiag<true>, xpu>::Launch(s, B.MSize(), param.offset, A.size(1), A.dptr_, B.dptr_);
+  }
+  // Sets diagonal in matrix.
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 3, DType>& B,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    using namespace mxnet_op;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const LaDiagParam& param = nnvm::get<LaDiagParam>(attrs.parsed);
+    Kernel<set_zero, xpu>::Launch(s, B.MSize(), B.dptr_);
+    Kernel<CopyDiag<false>, xpu>::Launch(s, A.MSize(), param.offset, B.size(1), A.dptr_, B.dptr_);
+  }
+};
+
+template<bool forward>
+struct CopyTrian {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, bool lower, int k, int n, DType* A, DType* B) {
+    // Matrix that this index belongs to.
+    const int matrix(i/(n*n));
+    // Row/Col that this index represents.
+    int row((i/n)%n), col(i%n);
+    if ((k > 0) || ((k == 0) && !lower)) {
+       // When working on upper triangle we switch to transposed coordinates for indexing.
+       int tmp(row);
+       row = col;
+       col = tmp;
+    }
+    // Actual row inside the lower triangular matrix after offset adjustment.
+    row -= abs(k);
+    if (row >= col) {
+      // Index in the 1-dimensional array that holds the values of the triangle.
+      const int index((row*(row+1))/2+col);
+      // Total number of entries in the triangle.
+      const int m(((n-abs(k))*(n-abs(k)+1))/2);
+      if (forward) {
+        B[m*matrix+index] = A[i];
+      } else {
+        B[i] = A[m*matrix+index];
+      }
+    }
+  }
+};
+
+struct copytrian {
+  // Extracts triangle from matrix.
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 2, DType>& B,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    using namespace mxnet_op;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const LaTrianParam& param = nnvm::get<LaTrianParam>(attrs.parsed);
+    Kernel<CopyTrian<true>, xpu>::Launch(s, A.MSize(), param.lower, param.offset,
+                                         A.size(1), A.dptr_, B.dptr_);
+  }
+  // Sets triangle in matrix.
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 3, DType>& B,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    using namespace mxnet_op;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const LaTrianParam& param = nnvm::get<LaTrianParam>(attrs.parsed);
+    Kernel<set_zero, xpu>::Launch(s, B.MSize(), B.dptr_);
+    Kernel<CopyTrian<false>, xpu>::Launch(s, B.MSize(), param.lower, param.offset,
+                                          B.size(1), A.dptr_, B.dptr_);
+  }
+};
+
 // B = syrk(A)
 struct syrk {
   template<typename xpu, typename DType>
@@ -351,6 +450,81 @@ struct syevd {
     using namespace mxnet_op;
     Kernel<SyevdEigenVecSigns, xpu>::Launch
       (s, U.size(0)*U.size(1), U.size(1), U.dptr_, U.stride_);
+  }
+};
+
+// A = inverse(B).
+struct inverse {
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 3, DType>& B, const Tensor<xpu, 3, DType>& A,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    // Since inverse(A) = trans(inverse(trans(A))), so we don't need to transpose
+    // A even if we are using the col-major version of getrf and getri routines.
+    linalg_batch_inverse(A, B, ctx);
+  }
+};
+
+// this kernel computes sign(det(A)), log(abs(det(A))) from LU decomposition
+struct SignedLogDet {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, int N, int* pivot,
+                                  DType *LU, DType* sign, DType *logdet) {
+    int changes(0);
+    DType diag_sign(1);
+    DType diag_logsum(0);
+    int *pivot_mat = pivot + i * N;
+    DType *LU_mat = LU + i * N * N;
+    for (int j = 0; j < N; ++j) {
+      changes += (pivot_mat[j] != (j + 1));
+      DType diag = LU_mat[j * (N + 1)];
+      diag_sign *= ((DType(0) < diag) - (diag < DType(0)));
+      diag_logsum += std::log(std::abs(diag));
+    }
+    sign[i] = (changes % 2 == 1 ? DType(-1) : DType(1)) * diag_sign;
+    logdet[i] = diag_logsum;
+  }
+};
+
+// det = det(A), the computation method is based on partial pivoting LU decomposition:
+//     A = PLU, so det(A) = det(P) * det(L) * det(U),
+//     det(P) depends on number of row changes in P
+//     det(L) = 1 since L has unit diagnal elemements
+//     det(U) = prod(diag(U))
+// LU and pivot store the LU decomposition output which will be used in computing gradient
+struct det {
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 1, DType>& det,
+                 const Tensor<xpu, 3, DType>& LU, const Tensor<xpu, 2, int>& pivot,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    Tensor<xpu, 1, DType> sign = ctx.requested[0]
+      .get_space_typed<xpu, 1, DType>(det.shape_, s);
+    Copy(LU, A, s);
+    // since det(A) = det(trans(A)), so we'll use col-major blas routines here
+    linalg_batch_getrf(LU, pivot, false, s);
+    using namespace mxnet_op;
+    using namespace mshadow::expr;
+    Kernel<SignedLogDet, xpu>::Launch(s, pivot.size(0), pivot.size(1), pivot.dptr_,
+                                      LU.dptr_, sign.dptr_, det.dptr_);
+    const_cast<Tensor<xpu, 1, DType>&>(det) = sign * F<mshadow_op::exp>(det);
+  }
+};
+
+// sign = sign(det(A))
+// logabsdet = log(abs(det(A)))
+struct slogdet {
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 1, DType>& sign,
+                 const Tensor<xpu, 1, DType>& logabsdet, const Tensor<xpu, 3, DType>& LU,
+                 const Tensor<xpu, 2, int>& pivot, const OpContext& ctx,
+                 const nnvm::NodeAttrs& attrs) {
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    Copy(LU, A, s);
+    linalg_batch_getrf(LU, pivot, false, s);
+    using namespace mxnet_op;
+    using namespace mshadow::expr;
+    Kernel<SignedLogDet, xpu>::Launch(s, pivot.size(0), pivot.size(1), pivot.dptr_,
+                                      LU.dptr_, sign.dptr_, logabsdet.dptr_);
   }
 };
 
@@ -692,6 +866,86 @@ struct syevd_backward {
        L.stride_, dL.dptr_, dL.stride_, dA.dptr_, dA.stride_);
     gemm::op(U, dA, tempM, DType(1.0), DType(0.0), true, false, s);
     gemm::op(tempM, U, dA, DType(1.0), DType(0.0), false, false, s);
+  }
+};
+
+struct inverse_backward {
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 3, DType>& dA,
+                 const Tensor<xpu, 3, DType>& A,
+                 const Tensor<xpu, 3, DType>& dB,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    // Backward of A = inverse(B)
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    Tensor<xpu, 3, DType> temp = ctx.requested[0]
+      .get_space_typed<xpu, 3, DType>(A.shape_, s);
+    gemm2::op(dA, A, temp, DType(1), false, true, s);
+    gemm2::op(A, temp, dB, DType(-1), true, false, s);
+  }
+};
+
+// Here we set grad to zero if det = 0
+struct StopZeroDetGrad {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, int grad_step, DType *grad, DType *det, DType zero_det) {
+    int batch_ind = i / grad_step;
+    if (det[batch_ind] == zero_det) {
+      grad[i] = DType(0);
+    }
+  }
+};
+
+// Backward of det(A) is derived from Jacobi's formula.
+// The closed form solution is pretty easy when A is invertible.
+// For non-invertible A, grad is not backwarded.
+struct det_backward {
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 1, DType>& ddet,
+                 const Tensor<xpu, 1, DType>& det,
+                 const Tensor<xpu, 3, DType>& LU,
+                 const Tensor<xpu, 2, int>& pivot,
+                 const Tensor<xpu, 3, DType>& dA,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    using namespace mshadow;
+    using namespace mshadow::expr;
+    using namespace mxnet_op;
+    // compute inverse(A) and stores it to LU
+    linalg_batch_det_backward_helper(LU, pivot, det, dA, DType(0), ctx);
+    const_cast<Tensor<xpu, 3, DType>&>(dA) = broadcast_to(reshape(det * ddet, \
+      Shape3(det.size(0), 1, 1)), mxnet::TShape(LU.shape_)) * \
+      transpose(LU, Shape3(0, 2, 1));
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    // stop grad for zero det temporarily
+    Kernel<StopZeroDetGrad, xpu>::Launch(s, dA.shape_.Size(), dA.size(1) * dA.size(2), \
+                                         dA.dptr_, det.dptr_, DType(0));
+  }
+};
+
+// Backward of slogdet(A) is derived from Jacobi's formula.
+// The closed form solution is pretty easy when A is invertible.
+// For non-invertible A, grad is not backwarded.
+// Grad is not properly defined on sign, so it's not backwarded either.
+struct slogdet_backward {
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 1, DType>& dlogabsdet,
+                 const Tensor<xpu, 1, DType>& sign,
+                 const Tensor<xpu, 1, DType>& logabsdet,
+                 const Tensor<xpu, 3, DType>& LU,
+                 const Tensor<xpu, 2, int>& pivot,
+                 const Tensor<xpu, 3, DType>& dA,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    using namespace mshadow;
+    using namespace mshadow::expr;
+    using namespace mxnet_op;
+    // compute inverse(A) and stores it to LU
+    linalg_batch_det_backward_helper(LU, pivot, logabsdet, dA, DType(-INFINITY), ctx);
+    const_cast<Tensor<xpu, 3, DType>&>(dA) = broadcast_to(reshape(dlogabsdet, \
+      Shape3(logabsdet.size(0), 1, 1)), mxnet::TShape(LU.shape_)) * \
+      transpose(LU, Shape3(0, 2, 1));
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    // stop grad for zero det
+    Kernel<StopZeroDetGrad, xpu>::Launch(s, dA.shape_.Size(), dA.size(1) * dA.size(2), \
+                                         dA.dptr_, logabsdet.dptr_, DType(-INFINITY));
   }
 };
 

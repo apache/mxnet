@@ -33,6 +33,8 @@ DMLC_REGISTER_PARAMETER(LaMatrixMacParam);
 DMLC_REGISTER_PARAMETER(LaMatrixMultParam);
 DMLC_REGISTER_PARAMETER(LaCholeskyParam);
 DMLC_REGISTER_PARAMETER(LaTriangMatrixMultParam);
+DMLC_REGISTER_PARAMETER(LaDiagParam);
+DMLC_REGISTER_PARAMETER(LaTrianParam);
 DMLC_REGISTER_PARAMETER(LaSyrkParam);
 
 NNVM_REGISTER_OP(_linalg_gemm)
@@ -71,14 +73,14 @@ Tensor Cores on suitable NVIDIA GPUs. This can sometimes give significant speedu
 
 Examples::
 
-   // Single matrix multiply-add
+   Single matrix multiply-add
    A = [[1.0, 1.0], [1.0, 1.0]]
    B = [[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]]
    C = [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]
    gemm(A, B, C, transpose_b=True, alpha=2.0, beta=10.0)
            = [[14.0, 14.0, 14.0], [14.0, 14.0, 14.0]]
 
-   // Batch matrix multiply-add
+   Batch matrix multiply-add
    A = [[[1.0, 1.0]], [[0.1, 0.1]]]
    B = [[[1.0, 1.0]], [[0.1, 0.1]]]
    C = [[[10.0]], [[0.01]]]
@@ -147,13 +149,13 @@ Tensor Cores on suitable NVIDIA GPUs. This can sometimes give significant speedu
 
 Examples::
 
-   // Single matrix multiply
+   Single matrix multiply
    A = [[1.0, 1.0], [1.0, 1.0]]
    B = [[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]]
    gemm2(A, B, transpose_b=True, alpha=2.0)
             = [[4.0, 4.0, 4.0], [4.0, 4.0, 4.0]]
 
-   // Batch matrix multiply
+   Batch matrix multiply
    A = [[[1.0, 1.0]], [[0.1, 0.1]]]
    B = [[[1.0, 1.0]], [[0.1, 0.1]]]
    gemm2(A, B, transpose_b=True, alpha=2.0)
@@ -202,11 +204,11 @@ If *n>2*, *potrf* is performed separately on the trailing two dimensions for all
 
 Examples::
 
-   // Single matrix factorization
+   Single matrix factorization
    A = [[4.0, 1.0], [1.0, 4.25]]
    potrf(A) = [[2.0, 0], [0.5, 2.0]]
 
-   // Batch matrix factorization
+   Batch matrix factorization
    A = [[[4.0, 1.0], [1.0, 4.25]], [[16.0, 4.0], [4.0, 17.0]]]
    potrf(A) = [[[2.0, 0], [0.5, 2.0]], [[4.0, 0], [1.0, 4.0]]]
 )code" ADD_FILELINE)
@@ -262,11 +264,11 @@ If *n>2*, *potri* is performed separately on the trailing two dimensions for all
 
 Examples::
 
-   // Single matrix inverse
+   Single matrix inverse
    A = [[2.0, 0], [0.5, 2.0]]
    potri(A) = [[0.26563, -0.0625], [-0.0625, 0.25]]
 
-   // Batch matrix inverse
+   Batch matrix inverse
    A = [[[2.0, 0], [0.5, 2.0]], [[4.0, 0], [1.0, 4.0]]]
    potri(A) = [[[0.26563, -0.0625], [-0.0625, 0.25]],
                [[0.06641, -0.01562], [-0.01562, 0,0625]]]
@@ -318,12 +320,12 @@ If *n>2*, *trmm* is performed separately on the trailing two dimensions for all 
 
 Examples::
 
-   // Single triangular matrix multiply
+   Single triangular matrix multiply
    A = [[1.0, 0], [1.0, 1.0]]
    B = [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]
    trmm(A, B, alpha=2.0) = [[2.0, 2.0, 2.0], [4.0, 4.0, 4.0]]
 
-   // Batch triangular matrix multiply
+   Batch triangular matrix multiply
    A = [[[1.0, 0], [1.0, 1.0]], [[1.0, 0], [1.0, 1.0]]]
    B = [[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]], [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5]]]
    trmm(A, B, alpha=2.0) = [[[2.0, 2.0, 2.0], [4.0, 4.0, 4.0]],
@@ -380,12 +382,12 @@ If *n>2*, *trsm* is performed separately on the trailing two dimensions for all 
 
 Examples::
 
-   // Single matrix solve
+   Single matrix solve
    A = [[1.0, 0], [1.0, 1.0]]
    B = [[2.0, 2.0, 2.0], [4.0, 4.0, 4.0]]
    trsm(A, B, alpha=0.5) = [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]
 
-   // Batch matrix solve
+   Batch matrix solve
    A = [[[1.0, 0], [1.0, 1.0]], [[1.0, 0], [1.0, 1.0]]]
    B = [[[2.0, 2.0, 2.0], [4.0, 4.0, 4.0]],
         [[4.0, 4.0, 4.0], [8.0, 8.0, 8.0]]]
@@ -433,11 +435,11 @@ inputs (batch mode).
 
 Examples::
 
-   // Single matrix reduction
+   Single matrix reduction
    A = [[1.0, 1.0], [1.0, 7.0]]
    sumlogdiag(A) = [1.9459]
 
-   // Batch matrix reduction
+   Batch matrix reduction
    A = [[[1.0, 1.0], [1.0, 7.0]], [[3.0, 0], [0, 17.0]]]
    sumlogdiag(A) = [1.9459, 3.9318]
 )code" ADD_FILELINE)
@@ -461,6 +463,235 @@ NNVM_REGISTER_OP(_backward_linalg_sumlogdiag)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 2, 1, sumlogdiag_backward>);
 
+NNVM_REGISTER_OP(_linalg_extractdiag)
+.add_alias("linalg_extractdiag")
+.describe(R"code(Extracts the diagonal entries of a square matrix.
+Input is a tensor *A* of dimension *n >= 2*.
+
+If *n=2*, then *A* represents a single square matrix which diagonal elements get extracted as a 1-dimensional tensor.
+
+If *n>2*, then *A* represents a batch of square matrices on the trailing two dimensions. The extracted diagonals are returned as an *n-1*-dimensional tensor.
+
+.. note:: The operator supports float32 and float64 data types only.
+
+Examples::
+
+    Single matrix diagonal extraction
+    A = [[1.0, 2.0],
+         [3.0, 4.0]]
+
+    extractdiag(A) = [1.0, 4.0]
+
+    extractdiag(A, 1) = [2.0]
+
+    Batch matrix diagonal extraction
+    A = [[[1.0, 2.0],
+          [3.0, 4.0]],
+         [[5.0, 6.0],
+          [7.0, 8.0]]]
+
+    extractdiag(A) = [[1.0, 4.0],
+                      [5.0, 8.0]]
+)code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<LaDiagParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
+  { return std::vector<std::string>{"A"}; } )
+.set_attr<mxnet::FInferShape>("FInferShape", LaDiagTrianShape<true, true>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 1, 1, 1, copydiag>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_linalg_extractdiag"})
+.add_argument("A", "NDArray-or-Symbol", "Tensor of square matrices")
+.add_arguments(LaDiagParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_linalg_extractdiag)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<LaDiagParam>)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
+  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 1, 2, 1, 1, copydiag>);
+
+NNVM_REGISTER_OP(_linalg_makediag)
+.add_alias("linalg_makediag")
+.describe(R"code(Constructs a square matrix with the input as diagonal.
+Input is a tensor *A* of dimension *n >= 1*.
+
+If *n=1*, then *A* represents the diagonal entries of a single square matrix. This matrix will be returned as a 2-dimensional tensor.
+If *n>1*, then *A* represents a batch of diagonals of square matrices. The batch of diagonal matrices will be returned as an *n+1*-dimensional tensor.
+
+.. note:: The operator supports float32 and float64 data types only.
+
+Examples::
+
+    Single diagonal matrix construction
+    A = [1.0, 2.0]
+
+    makediag(A)    = [[1.0, 0.0],
+                      [0.0, 2.0]]
+
+    makediag(A, 1) = [[0.0, 1.0, 0.0],
+                      [0.0, 0.0, 2.0],
+                      [0.0, 0.0, 0.0]]
+
+    Batch diagonal matrix construction
+    A = [[1.0, 2.0],
+         [3.0, 4.0]]
+
+    makediag(A) = [[[1.0, 0.0],
+                    [0.0, 2.0]],
+                   [[3.0, 0.0],
+                    [0.0, 4.0]]]
+)code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<LaDiagParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
+  { return std::vector<std::string>{"A"}; } )
+.set_attr<mxnet::FInferShape>("FInferShape", LaDiagTrianShape<true, false>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 1, 2, 1, 1, copydiag>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_linalg_makediag"})
+.add_argument("A", "NDArray-or-Symbol", "Tensor of diagonal entries")
+.add_arguments(LaDiagParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_linalg_makediag)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<LaDiagParam>)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
+  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 1, 1, 1, copydiag>);
+
+NNVM_REGISTER_OP(_linalg_extracttrian)
+.add_alias("linalg_extracttrian")
+.describe(R"code(Extracts a triangular sub-matrix from a square matrix.
+Input is a tensor *A* of dimension *n >= 2*.
+
+If *n=2*, then *A* represents a single square matrix from which a triangular sub-matrix is extracted as a 1-dimensional tensor.
+
+If *n>2*, then *A* represents a batch of square matrices on the trailing two dimensions. The extracted triangular sub-matrices are returned as an *n-1*-dimensional tensor.
+
+The *offset* and *lower* parameters determine the triangle to be extracted:
+
+- When *offset = 0* either the lower or upper triangle with respect to the main diagonal is extracted depending on the value of parameter *lower*.
+- When *offset = k > 0* the upper triangle with respect to the k-th diagonal above the main diagonal is extracted. 
+- When *offset = k < 0* the lower triangle with respect to the k-th diagonal below the main diagonal is extracted. 
+
+.. note:: The operator supports float32 and float64 data types only.
+
+Examples::
+
+    Single triagonal extraction
+    A = [[1.0, 2.0],
+         [3.0, 4.0]]
+
+    extracttrian(A) = [1.0, 3.0, 4.0]
+    extracttrian(A, lower=False) = [1.0, 2.0, 4.0]
+    extracttrian(A, 1) = [2.0]
+    extracttrian(A, -1) = [3.0]
+
+    Batch triagonal extraction
+    A = [[[1.0, 2.0],
+          [3.0, 4.0]],
+         [[5.0, 6.0],
+          [7.0, 8.0]]]
+
+    extracttrian(A) = [[1.0, 3.0, 4.0],
+                       [5.0, 7.0, 8.0]]
+)code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<LaTrianParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
+  { return std::vector<std::string>{"A"}; } )
+.set_attr<mxnet::FInferShape>("FInferShape", LaDiagTrianShape<false, true>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 1, 1, 1, copytrian>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_linalg_extracttrian"})
+.add_argument("A", "NDArray-or-Symbol", "Tensor of square matrices")
+.add_arguments(LaTrianParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_linalg_extracttrian)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<LaTrianParam>)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
+  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 1, 2, 1, 1, copytrian>);
+
+NNVM_REGISTER_OP(_linalg_maketrian)
+.add_alias("linalg_maketrian")
+.describe(R"code(Constructs a square matrix with the input representing a specific triangular sub-matrix.
+This is basically the inverse of *linalg.extracttrian*. Input is a tensor *A* of dimension *n >= 1*.
+
+If *n=1*, then *A* represents the entries of a triangular matrix which is lower triangular if *offset<0* or *offset=0*, *lower=true*. The resulting matrix is derived by first constructing the square
+matrix with the entries outside the triangle set to zero and then adding *offset*-times an additional 
+diagonal with zero entries to the square matrix. 
+
+If *n>1*, then *A* represents a batch of triangular sub-matrices. The batch of corresponding square matrices is returned as an *n+1*-dimensional tensor.
+
+.. note:: The operator supports float32 and float64 data types only.
+
+Examples::
+
+    Single  matrix construction
+    A = [1.0, 2.0, 3.0]
+
+    maketrian(A)              = [[1.0, 0.0],
+                                 [2.0, 3.0]]
+
+    maketrian(A, lower=false) = [[1.0, 2.0],
+                                 [0.0, 3.0]]
+
+    maketrian(A, offset=1)    = [[0.0, 1.0, 2.0],
+                                 [0.0, 0.0, 3.0],
+                                 [0.0, 0.0, 0.0]]
+    maketrian(A, offset=-1)   = [[0.0, 0.0, 0.0],
+                                 [1.0, 0.0, 0.0],
+                                 [2.0, 3.0, 0.0]]
+
+    Batch matrix construction
+    A = [[1.0, 2.0, 3.0],
+         [4.0, 5.0, 6.0]]
+
+    maketrian(A)           = [[[1.0, 0.0],
+                               [2.0, 3.0]],
+                              [[4.0, 0.0],
+                               [5.0, 6.0]]]
+
+    maketrian(A, offset=1) = [[[0.0, 1.0, 2.0],
+                               [0.0, 0.0, 3.0],
+                               [0.0, 0.0, 0.0]],
+                              [[0.0, 4.0, 5.0],
+                               [0.0, 0.0, 6.0],
+                               [0.0, 0.0, 0.0]]]
+)code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<LaTrianParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
+  { return std::vector<std::string>{"A"}; } )
+.set_attr<mxnet::FInferShape>("FInferShape", LaDiagTrianShape<false, false>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 1, 2, 1, 1, copytrian>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_linalg_maketrian"})
+.add_argument("A", "NDArray-or-Symbol", "Tensor of triangular matrices stored as vectors")
+.add_arguments(LaTrianParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_linalg_maketrian)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<LaTrianParam>)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
+  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 1, 1, 1, copytrian>);
+
 NNVM_REGISTER_OP(_linalg_syrk)
 .add_alias("linalg_syrk")
 .describe(R"code(Multiplication of matrix with its transpose.
@@ -483,7 +714,7 @@ inputs (batch mode).
 
 Examples::
 
-   // Single matrix multiply
+   Single matrix multiply
    A = [[1., 2., 3.], [4., 5., 6.]]
    syrk(A, alpha=1., transpose=False)
             = [[14., 32.],
@@ -493,7 +724,7 @@ Examples::
                [22., 29., 36.],
                [27., 36., 45.]]
 
-   // Batch matrix multiply
+   Batch matrix multiply
    A = [[[1., 1.]], [[0.1, 0.1]]]
    syrk(A, alpha=2., transpose=False) = [[[4.]], [[0.04]]]
 )code" ADD_FILELINE)
@@ -544,7 +775,7 @@ inputs (batch mode).
 
 Examples::
 
-   // Single LQ factorization
+   Single LQ factorization
    A = [[1., 2., 3.], [4., 5., 6.]]
    Q, L = gelqf(A)
    Q = [[-0.26726124, -0.53452248, -0.80178373],
@@ -552,7 +783,7 @@ Examples::
    L = [[-3.74165739, 0.],
         [-8.55235974, 1.96396101]]
 
-   // Batch LQ factorization
+   Batch LQ factorization
    A = [[[1., 2., 3.], [4., 5., 6.]],
         [[7., 8., 9.], [10., 11., 12.]]]
    Q, L = gelqf(A)
@@ -616,14 +847,14 @@ mode). In this case, *U* has *n* dimensions like *A*, and *L* has *n-1* dimensio
 
 Examples::
 
-   // Single symmetric eigendecomposition
+   Single symmetric eigendecomposition
    A = [[1., 2.], [2., 4.]]
    U, L = syevd(A)
    U = [[0.89442719, -0.4472136],
         [0.4472136, 0.89442719]]
    L = [0., 5.]
 
-   // Batch symmetric eigendecomposition
+   Batch symmetric eigendecomposition
    A = [[[1., 2.], [2., 4.]],
         [[1., 2.], [2., 5.]]]
    U, L = syevd(A)
@@ -657,6 +888,162 @@ NNVM_REGISTER_OP(_backward_linalg_syevd)
   { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", LaOpBackwSyevd<cpu, syevd_backward>);
+
+NNVM_REGISTER_OP(_linalg_inverse)
+.add_alias("linalg_inverse")
+.describe(R"code(Compute the inverse of a matrix.
+Input is a tensor *A* of dimension *n >= 2*.
+
+If *n=2*, *A* is a square matrix. We compute:
+
+  *out* = *A*\ :sup:`-1`
+
+If *n>2*, *inverse* is performed separately on the trailing two dimensions
+for all inputs (batch mode).
+
+.. note:: The operator supports float32 and float64 data types only.
+
+Examples::
+
+   Single matrix inverse
+   A = [[1., 4.], [2., 3.]]
+   inverse(A) = [[-0.6, 0.8], [0.4, -0.2]]
+
+   Batch matrix inverse
+   A = [[[1., 4.], [2., 3.]],
+        [[1., 3.], [2., 4.]]]
+   inverse(A) = [[[-0.6, 0.8], [0.4, -0.2]],
+                 [[-2., 1.5], [1., -0.5]]]
+)code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
+  { return std::vector<std::string>{"A"}; } )
+.set_attr<mxnet::FInferShape>("FInferShape", InverseShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
+  { return std::vector<std::pair<int, int>>{{0, 0}}; })
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
+  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
+.set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 2, 1, 1, inverse>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_linalg_inverse"})
+.add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix");
+
+NNVM_REGISTER_OP(_backward_linalg_inverse)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
+  { return std::vector<std::pair<int, int> >{{0, 0}}; })
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
+  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 2, 1, inverse_backward>);
+
+NNVM_REGISTER_OP(_linalg_det)
+.add_alias("linalg_det")
+.describe(R"code(Compute the determinant of a matrix.
+Input is a tensor *A* of dimension *n >= 2*.
+
+If *n=2*, *A* is a square matrix. We compute:
+
+  *out* = *det(A)*
+
+If *n>2*, *det* is performed separately on the trailing two dimensions
+for all inputs (batch mode).
+
+.. note:: The operator supports float32 and float64 data types only.
+.. note:: There is no gradient backwarded when A is non-invertible (which is
+          equivalent to det(A) = 0) because zero is rarely hit upon in float
+          point computation and the Jacobi's formula on determinant gradient
+          is not computationally efficient when A is non-invertible.
+
+Examples::
+
+   Single matrix determinant
+   A = [[1., 4.], [2., 3.]]
+   det(A) = [-5.]
+
+   Batch matrix determinant
+   A = [[[1., 4.], [2., 3.]],
+        [[2., 3.], [1., 4.]]]
+   det(A) = [-5., 5.]
+)code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(3)
+.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
+  { return std::vector<std::string>{"A"}; })
+.set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs", [](const NodeAttrs& attrs) {
+  return 1; })
+.set_attr<mxnet::FInferShape>("FInferShape", DetShape<1>)
+.set_attr<nnvm::FInferType>("FInferType", DetType<1>)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
+  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
+.set_attr<FCompute>("FCompute<cpu>", LaOpDetForward<cpu, 1, det>)
+.set_attr<nnvm::FGradient>("FGradient", ReduceDetGrad<1>{"_backward_linalg_det"})
+.add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix");
+
+NNVM_REGISTER_OP(_backward_linalg_det)
+.set_num_inputs(4)
+.set_num_outputs(1)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
+  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", LaOpDetBackward<cpu, 1, det_backward>);
+
+NNVM_REGISTER_OP(_linalg_slogdet)
+.add_alias("linalg_slogdet")
+.describe(R"code(Compute the sign and log of the determinant of a matrix.
+Input is a tensor *A* of dimension *n >= 2*.
+
+If *n=2*, *A* is a square matrix. We compute:
+
+  *sign* = *sign(det(A))*
+  *logabsdet* = *log(abs(det(A)))*
+
+If *n>2*, *slogdet* is performed separately on the trailing two dimensions
+for all inputs (batch mode).
+
+.. note:: The operator supports float32 and float64 data types only.
+.. note:: The gradient is not properly defined on sign, so the gradient of
+          it is not backwarded.
+.. note:: No gradient is backwarded when A is non-invertible. Please see
+          the docs of operator det for detail.
+
+Examples::
+
+   Single matrix signed log determinant
+   A = [[2., 3.], [1., 4.]]
+   sign, logabsdet = slogdet(A)
+   sign = [1.]
+   logabsdet = [1.609438]
+
+   Batch matrix signed log determinant
+   A = [[[2., 3.], [1., 4.]],
+        [[1., 2.], [2., 4.]],
+        [[1., 2.], [4., 3.]]]
+   sign, logabsdet = slogdet(A)
+   sign = [1., 0., -1.]
+   logabsdet = [1.609438, -inf, 1.609438]
+)code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(4)
+.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
+  { return std::vector<std::string>{"A"}; })
+.set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs", [](const NodeAttrs& attrs) {
+  return 2; })
+.set_attr<mxnet::FInferShape>("FInferShape", DetShape<2>)
+.set_attr<nnvm::FInferType>("FInferType", DetType<2>)
+.set_attr<FCompute>("FCompute<cpu>", LaOpDetForward<cpu, 2, slogdet>)
+.set_attr<nnvm::FGradient>("FGradient", ReduceDetGrad<2>{"_backward_linalg_slogdet"})
+.add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix");
+
+NNVM_REGISTER_OP(_backward_linalg_slogdet)
+.set_num_inputs(5)
+.set_num_outputs(1)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
+  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", LaOpDetBackward<cpu, 2, slogdet_backward>);
 
 }  // namespace op
 }  // namespace mxnet

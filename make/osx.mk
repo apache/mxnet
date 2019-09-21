@@ -53,6 +53,9 @@ ADD_LDFLAGS =
 # the additional compile flags you want to add
 ADD_CFLAGS =
 
+# whether to build operators written in TVM
+USE_TVM_OP = 0
+
 #---------------------------------------------
 # matrix computation libraries for CPU/GPU
 #---------------------------------------------
@@ -134,6 +137,12 @@ EXTRA_OPERATORS =
 
 # Create C++ interface package
 USE_CPP_PACKAGE = 0
+
+# Use int64_t type to represent the total number of elements in a tensor
+# This will cause performance degradation reported in issue #14496
+# Set to 1 for large tensor with tensor size greater than INT32_MAX i.e. 2147483647
+# Note: the size of each dimension is still bounded by INT32_MAX
+USE_INT64_TENSOR_SIZE = 0
 
 #----------------------------
 # plugins

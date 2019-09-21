@@ -524,13 +524,13 @@
     }
 }
 
-%typemap(in,numinputs=0) (mx_uint *out_dim, const mx_uint **out_pdata) (mx_uint temp_dim, mx_uint *temp_pdata)
+%typemap(in,numinputs=0) (int *out_dim, const int **out_pdata) (int temp_dim, int *temp_pdata)
 {
     $1 = &temp_dim;
     $2 = &temp_pdata;
 }
 
-%typemap(argout) (mx_uint *out_dim, const mx_uint **out_pdata)
+%typemap(argout) (int *out_dim, const int **out_pdata)
 {
     if(!result)
     {
@@ -956,12 +956,12 @@
     }
 }
 
-%typemap(in,numinputs=0) (mx_uint *in_shape_size, const mx_uint **in_shape_ndim, const mx_uint ***in_shape_data) 
-                         (mx_uint temp1, mx_uint *temp2, mx_uint **temp3),
-                         (mx_uint *out_shape_size, const mx_uint **out_shape_ndim, const mx_uint ***out_shape_data) 
-                         (mx_uint temp1, mx_uint *temp2, mx_uint **temp3),
-                         (mx_uint *aux_shape_size, const mx_uint **aux_shape_ndim, const mx_uint ***aux_shape_data) 
-                         (mx_uint temp1, mx_uint *temp2, mx_uint **temp3)
+%typemap(in,numinputs=0) (mx_uint *in_shape_size, const int **in_shape_ndim, const int ***in_shape_data) 
+                         (mx_uint temp1, int *temp2, int **temp3),
+                         (mx_uint *out_shape_size, const int **out_shape_ndim, const int ***out_shape_data) 
+                         (mx_uint temp1, int *temp2, int **temp3),
+                         (mx_uint *aux_shape_size, const int **aux_shape_ndim, const int ***aux_shape_data) 
+                         (mx_uint temp1, int *temp2, int **temp3)
 {
     $1 = &temp1;
     $2 = &temp2;
@@ -969,9 +969,9 @@
     *$1 = 0;
 }
 
-%typemap(argout) (mx_uint *in_shape_size, const mx_uint **in_shape_ndim, const mx_uint ***in_shape_data),
-                 (mx_uint *out_shape_size, const mx_uint **out_shape_ndim, const mx_uint ***out_shape_data),
-                 (mx_uint *aux_shape_size, const mx_uint **aux_shape_ndim, const mx_uint ***aux_shape_data)
+%typemap(argout) (mx_uint *in_shape_size, const int **in_shape_ndim, const int ***in_shape_data),
+                 (mx_uint *out_shape_size, const int **out_shape_ndim, const int ***out_shape_data),
+                 (mx_uint *aux_shape_size, const int **aux_shape_ndim, const int ***aux_shape_data)
 {
     if(!result && *arg15)
     {

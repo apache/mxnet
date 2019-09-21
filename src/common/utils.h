@@ -28,6 +28,7 @@
 #include <dmlc/logging.h>
 #include <dmlc/omp.h>
 #include <nnvm/graph.h>
+#include <nnvm/node.h>
 #include <mxnet/engine.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/op_attr_types.h>
@@ -50,9 +51,21 @@
 #include "../operator/nn/mkldnn/mkldnn_base-inl.h"
 #endif
 
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
+
+
 namespace mxnet {
 namespace common {
 
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+inline size_t current_process_id() { return ::GetCurrentProcessId(); }
+#else
+inline size_t current_process_id() { return getpid(); }
+#endif
 /*!
  * \brief IndPtr should be non-negative, in non-decreasing order, start with 0
  *           and end with value equal with size of indices.
@@ -654,7 +667,7 @@ FCompType GetFCompute(const nnvm::Op* op, const std::string& name,
   } else if (ctx.dev_mask() == gpu::kDevMask) {
     return fcompute_gpu.get(op, nullptr);
   } else {
-    LOG(FATAL) << "Unknown device mask";
+    LOG(FATAL) << "Unknown device mask " << ctx.dev_mask();
     return nullptr;
   }
 }
@@ -732,6 +745,82 @@ inline void ParallelCopy(DType* dst, const DType* src, index_t size) {
   } else {
     std::memcpy(dst, src, sizeof(DType) * size);
   }
+}
+
+/*!
+ * \brief If numpy compatibility is turned off (default), the shapes passed in
+ * by users follow the legacy shape definition:
+ * 1. 0 ndim means the shape is completely unknown.
+ * 2. 0 dim size means the dim size is unknown.
+ * We need to convert those shapes to use the numpy shape definition:
+ * 1. 0 ndim means it's a scalar tensor.
+ * 2. -1 ndim means the shape is unknown.
+ * 3. 0 dim size means no elements in that dimension.
+ * 4. -1 dim size means the dimension's size is unknown.
+ * so that operator's infer shape function can work in backend.
+ * \param shape to be converted.
+ * Note: It is possible that the shape to be converted is already
+ * numpy compatible. For example, when a subgraph operator's infer
+ * shape function is called from the infer shape pass of the whole
+ * graph, its input/output shapes have been converted to numpy
+ * compatible shapes.
+ */
+inline void ConvertToNumpyShape(mxnet::TShape* shape) {
+  if (shape->ndim() == 0) {  // legacy shape ndim = 0 means unknown
+    *shape = mxnet::TShape();  // unknown shape ndim = -1
+  } else {
+    for (int j = 0; j < shape->ndim(); ++j) {
+      if ((*shape)[j] == 0) {  // legacy shape dim_size = 0 means unknown
+        (*shape)[j] = -1;  // unknown dim size = -1
+      }
+    }
+  }
+}
+
+inline void ConvertToNumpyShape(mxnet::ShapeVector* shapes) {
+  for (size_t i = 0; i < shapes->size(); ++i) {
+    ConvertToNumpyShape(&(shapes->at(i)));
+  }
+}
+
+/*!
+ * \brief This is function is used to convert shapes returned by
+ * the infer shape functions/pass to the legacy shape definition.
+ */
+inline void ConvertToLegacyShape(mxnet::TShape* shape) {
+  if (!mxnet::ndim_is_known(*shape)) {
+    *shape = mxnet::TShape(0, -1);
+  } else {
+    for (int j = 0; j < shape->ndim(); ++j) {
+      if (!mxnet::dim_size_is_known(*shape, j)) {
+        (*shape)[j] = 0;
+      }
+    }
+  }
+}
+
+inline void ConvertToLegacyShape(mxnet::ShapeVector* shapes) {
+  for (size_t i = 0; i < shapes->size(); ++i) {
+    ConvertToLegacyShape(&(shapes->at(i)));
+  }
+}
+void ExecuteMonInputCallback(
+    const nnvm::IndexedGraph &idx, const std::vector<NDArray *> &state_arrays,
+    size_t nid, const std::function<void(const char *, const char *, void *)>
+                    &monitor_callback);
+
+void ExecuteMonOutputCallback(
+    const nnvm::IndexedGraph &idx, const std::vector<NDArray *> &state_arrays,
+    size_t nid, const std::function<void(const char *, const char *, void *)>
+                    &monitor_callback);
+
+/*!
+ * \brief This is function can return the output names of a NodeEntry.
+ */
+static inline std::string GetOutputName(const nnvm::NodeEntry& e) {
+  nnvm::Symbol sym;
+  sym.outputs.push_back(e);
+  return sym.ListOutputNames()[0];
 }
 
 }  // namespace common

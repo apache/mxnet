@@ -67,7 +67,7 @@ struct ActivationGrad {
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     // ograds, output...
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
-    heads.emplace_back(nnvm::NodeEntry{n, activation::kOut, 0});
+    heads.emplace_back(n, activation::kOut, 0);
 
     const NodeAttrs& attrs = n->attrs;
     using namespace activation;
@@ -154,6 +154,7 @@ inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
 
 
 MXNET_OPERATOR_REGISTER_UNARY(Activation)
+.add_alias("_npx_activation")
 .describe(R"code(Applies an activation function element-wise to the input.
 
 The following activation functions are supported:

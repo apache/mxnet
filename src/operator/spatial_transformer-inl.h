@@ -190,10 +190,10 @@ class SpatialTransformerProp : public OperatorProperty {
     CHECK_EQ(param_.sampler_type, st::kBilinear) << "only supports bilinear sampling currently";
     const mxnet::TShape &dshape = (*in_shape)[st::kData];
     const mxnet::TShape &lshape = (*in_shape)[st::kLoc];
-    if (dshape.ndim() ==  0) return false;
+    if (!shape_is_known(dshape)) return false;
     CHECK_EQ(dshape.ndim(), 4U) \
         << "input data should be 4D in batch-num_filter-y-x";
-    if (lshape.ndim() ==  0) return false;
+    if (!shape_is_known(lshape)) return false;
     CHECK_EQ(lshape.ndim(), 2U) \
         << "locolisation paramter should be 4D in batch-num_hidden";
     if (param_.transform_type == st::kAffine) {
@@ -267,7 +267,7 @@ class SpatialTransformerProp : public OperatorProperty {
     return {ResourceRequest::kTempSpace};
   }
 
-  #if CUDNN_MAJOR >= 5
+  #if MXNET_USE_CUDNN == 1
   std::vector<ResourceRequest> BackwardResource(
       const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};

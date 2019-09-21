@@ -49,7 +49,7 @@ object MnistMlp {
       logger.info("Load checkpoint from epoch {}", loadModelEpoch)
       Module.loadCheckpoint("model/mnist_mlp", loadModelEpoch, loadOptimizerStates = true)
     }
-    mod.bind(dataShapes = train.provideData, labelShapes = Some(train.provideLabel))
+    mod.bind(dataShapes = train.provideDataDesc, labelShapes = Some(train.provideLabelDesc))
     mod.initParams()
     mod.initOptimizer(optimizer = new SGD(learningRate = 0.01f, momentum = 0.9f))
 

@@ -63,15 +63,15 @@ mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(const MKLDNNConvFullP
   mkldnn::memory::dims strides(param.conv_param.kernel.ndim());
   mkldnn::memory::dims padding(param.conv_param.kernel.ndim());
   if (param.conv_param.kernel.ndim() == 1) {
-    CHECK_GE(param.conv_param.stride.ndim(), 1U);
-    CHECK_GE(param.conv_param.pad.ndim(), 1U);
-    CHECK_GE(param.conv_param.dilate.ndim(), 1U);
+    CHECK_GE(param.conv_param.stride.ndim(), 1);
+    CHECK_GE(param.conv_param.pad.ndim(), 1);
+    CHECK_GE(param.conv_param.dilate.ndim(), 1);
     strides[0] = param.conv_param.stride[0];
     padding[0] = param.conv_param.pad[0];
   } else if (param.conv_param.kernel.ndim() == 2) {
-    CHECK_GE(param.conv_param.stride.ndim(), 2U);
-    CHECK_GE(param.conv_param.pad.ndim(), 2U);
-    CHECK_GE(param.conv_param.dilate.ndim(), 2U);
+    CHECK_GE(param.conv_param.stride.ndim(), 2);
+    CHECK_GE(param.conv_param.pad.ndim(), 2);
+    CHECK_GE(param.conv_param.dilate.ndim(), 2);
     strides[0] = param.conv_param.stride[0];
     strides[1] = param.conv_param.stride[1];
     padding[0] = param.conv_param.pad[0];
@@ -82,20 +82,16 @@ mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(const MKLDNNConvFullP
   }
   mkldnn::primitive_attr attr;
   mkldnn::post_ops ops;
-  if (param.mkldnn_param.with_relu) {
-    float scale = 1.0f;  // for fp32, scale is 1.
-    float alpha = 0.0f;  // negative slope for mkldnn_eltwise_relu.
-    float beta = 1.0f;   // ignored for mkldnn_eltwise_relu.
-    ops.append_eltwise(scale, eltwise_relu, alpha, beta);
+  if (param.mkldnn_param.with_act) {
+    const auto &act_param = param.act_param;
+    ops.append_eltwise(act_param.scale, act_param.alg, act_param.alpha, act_param.beta);
   }
   if (param.mkldnn_param.with_sum) {
     ops.append_sum(param.sum_scale);
   }
-  if (param.mkldnn_param.with_postsum_relu) {
-    float scale = 1.0f;  // for fp32, scale is 1.
-    float alpha = 0.0f;  // negative slope for mkldnn_eltwise_relu.
-    float beta = 1.0f;   // ignored for mkldnn_eltwise_relu.
-    ops.append_eltwise(scale, eltwise_relu, alpha, beta);
+  if (param.mkldnn_param.with_postsum_act) {
+    const auto &act_param = param.postsum_act_param;
+    ops.append_eltwise(act_param.scale, act_param.alg, act_param.alpha, act_param.beta);
   }
   attr.set_post_ops(ops);
 
@@ -173,15 +169,15 @@ static mkldnn::convolution_backward_data::primitive_desc GetConvBwdData(
   mkldnn::memory::dims strides(param.kernel.ndim());
   mkldnn::memory::dims padding(param.kernel.ndim());
   if (param.kernel.ndim() == 1) {
-    CHECK_GE(param.stride.ndim(), 1U);
-    CHECK_GE(param.pad.ndim(), 1U);
-    CHECK_GE(param.dilate.ndim(), 1U);
+    CHECK_GE(param.stride.ndim(), 1);
+    CHECK_GE(param.pad.ndim(), 1);
+    CHECK_GE(param.dilate.ndim(), 1);
     strides[0] = param.stride[0];
     padding[0] = param.pad[0];
   } else if (param.kernel.ndim() == 2) {
-    CHECK_GE(param.stride.ndim(), 2U);
-    CHECK_GE(param.pad.ndim(), 2U);
-    CHECK_GE(param.dilate.ndim(), 2U);
+    CHECK_GE(param.stride.ndim(), 2);
+    CHECK_GE(param.pad.ndim(), 2);
+    CHECK_GE(param.dilate.ndim(), 2);
     strides[0] = param.stride[0];
     strides[1] = param.stride[1];
     padding[0] = param.pad[0];
@@ -241,15 +237,15 @@ static mkldnn::convolution_backward_weights::primitive_desc GetConvBwdWeights(
   mkldnn::memory::dims strides(param.kernel.ndim());
   mkldnn::memory::dims padding(param.kernel.ndim());
   if (param.kernel.ndim() == 1) {
-    CHECK_GE(param.stride.ndim(), 1U);
-    CHECK_GE(param.pad.ndim(), 1U);
-    CHECK_GE(param.dilate.ndim(), 1U);
+    CHECK_GE(param.stride.ndim(), 1);
+    CHECK_GE(param.pad.ndim(), 1);
+    CHECK_GE(param.dilate.ndim(), 1);
     strides[0] = param.stride[0];
     padding[0] = param.pad[0];
   } else if (param.kernel.ndim() == 2) {
-    CHECK_GE(param.stride.ndim(), 2U);
-    CHECK_GE(param.pad.ndim(), 2U);
-    CHECK_GE(param.dilate.ndim(), 2U);
+    CHECK_GE(param.stride.ndim(), 2);
+    CHECK_GE(param.pad.ndim(), 2);
+    CHECK_GE(param.dilate.ndim(), 2);
     strides[0] = param.stride[0];
     strides[1] = param.stride[1];
     padding[0] = param.pad[0];
@@ -415,11 +411,12 @@ void MKLDNNConvolutionForwardFullFeature(const MKLDNNConvFullParam &param,
     // For inference, we want to reorder the weight array so we don't need to
     // reorder data every time.
     if (weight.IsDefaultData()) {
-      weight_mem = GetWeights(weight, fwd->fwd_pd.weights_primitive_desc(),
-                              param.conv_param.num_group);
       // We also need to modify the layout on the original weight array. The
       // data conversion happens after the weight array is used.
       weight.MKLDNNDataReorderAsync(fwd->fwd_pd.weights_primitive_desc());
+      weight_mem = GetWeights(weight, fwd->fwd_pd.weights_primitive_desc(),
+                              param.conv_param.num_group);
+
     } else {
       weight_mem = weight.GetMKLDNNData();
       CHECK(weight_mem->get_primitive_desc() == fwd->fwd_pd.weights_primitive_desc());
@@ -510,9 +507,9 @@ class MKLDNNConvBackward {
           mkldnn::primitive::at(*this->weight), *this->in_grad));
   }
 
-void SetWeightNewMem(const mkldnn::memory &data,
-                     const mkldnn::memory &out_grad,
-                     const mkldnn::memory &in_grad_weight) {
+  void SetWeightNewMem(const mkldnn::memory &data,
+                       const mkldnn::memory &out_grad,
+                       const mkldnn::memory &in_grad_weight) {
     if (this->data == nullptr)
       this->data = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
           bwdWeights_pd.src_primitive_desc(), data.get_data_handle()));
@@ -652,7 +649,7 @@ void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ct
     MKLDNNStream::Get()->RegisterPrim(convBwd.GetBwdData());
     CommitOutput(in_grad[conv::kData], in_grad_mem);
   }
-  if (req[conv::kWeight]) {
+  if (req[conv::kWeight] || req[conv::kBias]) {
     MKLDNNConvBackward &convBwdWeight = GetConvBwd(attrs, data,
         weight, bias, out_grad, fwd_pd);
     if (convBwdWeight.bwdData_pd.diff_dst_primitive_desc() !=
@@ -665,17 +662,16 @@ void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ct
         in_grad[conv::kWeight],
         convBwdWeight.bwdWeights_pd.diff_weights_primitive_desc(),
         req[conv::kWeight]);
-    mkldnn_output_t in_grad_bias;
     if (param.no_bias) {
       convBwdWeight.SetWeightNewMem(*data_mem, *out_grad_mem,
-                              *in_grad_weight.second);
+          *in_grad_weight.second);
       MKLDNNStream::Get()->RegisterPrim(convBwdWeight.GetBwdWeights());
     } else {
-      in_grad_bias = CreateMKLDNNMem(
+      auto in_grad_bias = CreateMKLDNNMem(
           in_grad[conv::kBias],
           convBwdWeight.bwdWeights_pd.diff_bias_primitive_desc(), req[conv::kBias]);
       convBwdWeight.SetWeightNewMem(*data_mem, *out_grad_mem,
-                              *in_grad_weight.second, *in_grad_bias.second);
+          *in_grad_weight.second, *in_grad_bias.second);
       MKLDNNStream::Get()->RegisterPrim(convBwdWeight.GetBwdWeights());
       CommitOutput(in_grad[conv::kBias], in_grad_bias);
     }

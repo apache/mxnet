@@ -25,9 +25,11 @@ namespace mxnet {
 #if DMLC_CXX11_THREAD_LOCAL
 thread_local bool Imperative::is_train_ = false;
 thread_local bool Imperative::is_recording_ = false;
+thread_local bool Imperative::is_np_shape_ = false;
 #else
 MX_THREAD_LOCAL bool Imperative::is_train_ = false;
 MX_THREAD_LOCAL bool Imperative::is_recording_ = false;
+MX_THREAD_LOCAL bool Imperative::is_np_shape_ = false;
 #endif
 
 Imperative* Imperative::Get() {
@@ -46,7 +48,7 @@ OpStatePtr Imperative::InvokeOp(
   using namespace imperative;
   static auto& createop = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
   static auto& is_layer_backward = Op::GetAttr<bool>("TIsLayerOpBackward");
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
 
   const nnvm::Op *op = attrs.op;
 
@@ -109,7 +111,7 @@ OpStatePtr Imperative::Invoke(
   OpStatePtr ret = InvokeOp(ctx, attrs, inputs, outputs, req, dispatch_mode);
   // the followinng loop is used for finding out the correct shape when some shapes are dynamic
   for (size_t i = 0; i < outputs.size(); i++) {
-    if (outputs[i]->shape().ndim() == 0) {
+    if (!shape_is_known(outputs[i]->shape())) {
       // the WaitToRead overhead here does not seem to be avoidable
       outputs[i]->WaitToRead();
       outputs[i]->SetShapeFromChunk();
@@ -120,7 +122,7 @@ OpStatePtr Imperative::Invoke(
 
 void Imperative::MarkVariables(
     const std::vector<NDArray*>& variables,
-    const std::vector<mx_uint>& grad_reqs,
+    const std::vector<uint32_t>& grad_reqs,
     const std::vector<NDArray*>& gradients) {
   for (uint32_t i = 0; i < variables.size(); ++i) {
     std::string str_c(std::to_string(variable_count_++));
@@ -165,7 +167,7 @@ void Imperative::GetBackwardDependency(
     std::vector<nnvm::NodeEntry> ograd_entries;
     ograd_entries.reserve(num_outputs);
     for (uint32_t i = 0; i < num_outputs; ++i) {
-      ograd_entries.emplace_back(nnvm::NodeEntry{nullptr, i, 1});
+      ograd_entries.emplace_back(nullptr, i, 1);
     }
     auto igrad_entries = fgradient[node->op()](node, ograd_entries);
     for (const auto& i : igrad_entries) {
@@ -195,7 +197,7 @@ void Imperative::RecordOp(
     const OpStatePtr& state,
     std::vector<bool>* p_save_inputs,
     std::vector<bool>* p_save_outputs) {
-  MXAPIThreadLocalEntry *local_buff = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *local_buff = MXAPIThreadLocalStore<>::Get();
 
   for (auto output : outputs) {
     CHECK(AGInfo::IsNone(*output))
@@ -311,7 +313,9 @@ std::vector<NDArray*> Imperative::Backward(
     } else {
       info.outputs.emplace_back(outputs[i]->shape(), outputs[i]->ctx(),
                                 true, outputs[i]->dtype());
-      info.outputs.back() = static_cast<real_t>(1.0);
+      if (info.outputs.back().shape().Size() != 0) {
+        info.outputs.back() = static_cast<real_t>(1.0);
+      }
     }
   }
 
@@ -361,7 +365,7 @@ std::vector<NDArray*> Imperative::Backward(
       auto node = Node::Create();
       node->attrs.op = copy_op;
       node->inputs.push_back(e);
-      graph.outputs.push_back(NodeEntry{node, 0, 0});
+      graph.outputs.emplace_back(std::move(node));
     } else {
       graph.outputs.push_back(e);
     }
@@ -497,6 +501,10 @@ std::vector<NDArray*> Imperative::Backward(
                                shapes[eid], vctx[i], true, dtypes[eid]);
       }
     }
+  }
+
+  if (dmlc::GetEnv("MXNET_MEM_PLAN_VERBOSE_LOGGING", false)) {
+    common::LogMemoryPlan(graph);
   }
 
   // Execution

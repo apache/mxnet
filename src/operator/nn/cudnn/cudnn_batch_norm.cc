@@ -30,14 +30,14 @@
 
 namespace mxnet {
 namespace op {
-#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 4
+#if MXNET_USE_CUDNN == 1
 
 static bool BatchNormShape(const nnvm::NodeAttrs& attrs, mxnet::ShapeVector *in_shape,
     mxnet::ShapeVector *out_shape) {
   using namespace mshadow;
   CHECK_EQ(in_shape->size(), 5U) << "Input:[data, gamma, beta, moving_mean, moving_var]";
   const mxnet::TShape &dshape = in_shape->at(0);
-  if (dshape.ndim() == 0) return false;
+  if (!mxnet::ndim_is_known(dshape)) return false;
   in_shape->at(1) = mxnet::TShape(Shape1(dshape[1]));
   in_shape->at(2) = mxnet::TShape(Shape1(dshape[1]));
   in_shape->at(3) = mxnet::TShape(Shape1(dshape[1]));
@@ -114,7 +114,7 @@ NNVM_REGISTER_OP(_backward_CuDNNBatchNorm)
 .set_attr_parser(ParamParser<BatchNormParam>)
 .set_attr<FCompute>("FCompute<cpu>", BatchNormGradCompute_CPU);
 
-#endif  // CUDNN_MAJOR >= 4
+#endif  // MXNET_USE_CUDNN
 
 }  // namespace op
 }  // namespace mxnet

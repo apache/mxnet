@@ -133,11 +133,11 @@ After making this change and running `lein deps`, you should be able to run exam
 
 ### Option 2: Clojure package from Source, Scala Package from Jar
 
-With this option, you will install a Git revision of the Clojure package source and a [Scala package jar from Maven](https://search.maven.org/search?q=g:org.apache.mxnet) with native dependencies baked in.
+With this option, you will install a Git revision of the Clojure package source and a [Scala package jar from Maven](https://search.maven.org/search?q=g:org.apache.mxnet) with native dependencies baked in. Pick this if you want to make changes to the Clojure bindings but don't want to build the shared library or the Scala package jar yourself.
 
 - Install additional dependencies as described in [the corresponding section for Option 1](#installing-additional-dependencies),
 
-- Recursively clone the MXNet repository and checkout the desired version, (example 1.3.1). You should use the latest [version](https://search.maven.org/search?q=clojure-mxnet)), and a clone into the `~/mxnet` directory:
+- Recursively clone the MXNet repository and checkout the desired version, (example 1.4.1). You should use the latest [version](https://search.maven.org/search?q=clojure-mxnet)), and a clone into the `~/mxnet` directory:
 
   ```bash
   git clone --recursive https://github.com/apache/incubator-mxnet.git ~/mxnet
@@ -172,9 +172,9 @@ In that case, however, breakage can happen at any point, for instance when the S
 
 ### Option 3: Everything from Source
 
-With this option, you will compile the core MXNet C++ package and jars for both Scala and Clojure language bindings from source. If you intend to make changes to the code in any of the parts, or if you simply want the latest and greatest features, this choice is for you.
+With this option, you will compile the core MXNet C++ package and jars for both Scala and Clojure language bindings from source. If you intend to make changes to the C++ or Scala code, or if you simply want the latest and greatest features, this choice is for you.
 
-The first step is to recursively clone the MXNet repository and checkout the desired version, (example 1.3.1). You should use the latest [version](https://search.maven.org/search?q=clojure-mxnet)), and clone into the `~/mxnet` directory:
+The first step is to recursively clone the MXNet repository and checkout the desired version, (example 1.4.1). You should use the latest [version](https://search.maven.org/search?q=clojure-mxnet)), and clone into the `~/mxnet` directory:
 
   ```bash
   git clone --recursive https://github.com/apache/incubator-mxnet.git ~/mxnet
@@ -207,8 +207,8 @@ The outcome of this step will be a shared library `lib/libmxnet.so` that is used
   ```
 
 #### Building the Clojure jar
- 
-- Enter the `contrib/clojure` directory and edit the `project.clj` file. Add the Scala jar that was just created and installed, e.g., `[org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "latest-version-SNAPSHOT"]`, to the `:dependencies`.
+
+- Enter the `contrib/clojure` directory.
 - Run `lein test`. All the tests should run without an error.
 - Run `lein install` to build and install the Clojure jar locally.
 
@@ -237,7 +237,7 @@ If you are having trouble getting started or have a question, feel free to reach
 There are quite a few examples in the examples directory. To use.
 
 `lein install` in the main project
-`cd` in the the example project of interest
+`cd` in the example project of interest
 
 There are README is every directory outlining instructions.
 

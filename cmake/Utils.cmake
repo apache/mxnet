@@ -216,7 +216,7 @@ function(mxnet_option variable description value)
       option(${variable} "${description}" ${__value})
     endif()
   else()
-    unset(${variable} CACHE)
+    option(${variable} "${description}" OFF)
   endif()
 endfunction()
 

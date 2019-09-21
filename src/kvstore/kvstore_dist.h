@@ -141,9 +141,7 @@ class KVStoreDist : public KVStoreLocal {
     }
     if (server_) server_->Run();
     ps::Finalize(0, true);
-    if (server_) {
-      delete server_;
-    }
+    delete server_;
     server_ = nullptr;
   }
 
@@ -205,6 +203,81 @@ class KVStoreDist : public KVStoreLocal {
     }
     if (!ps::Postoffice::Get()->is_recovery()) {
       Barrier();
+    }
+  }
+
+  void PushPullImpl(const std::vector<int>& vkeys,
+                    const std::vector<int>& okeys,
+                    const std::vector<NDArray>& values,
+                    const std::vector<NDArray*>& outputs,
+                    int priority) override {
+    std::vector<int> uniq_vkeys;
+    std::vector<int> uniq_okeys;
+    std::vector<std::vector<NDArray>> grouped_vals;
+    std::vector<std::vector<NDArray*>> grouped_outs;
+
+    GroupKVPairsPush(vkeys, values, &uniq_vkeys, &grouped_vals, false);
+    GroupKVPairsPull(okeys, outputs, &uniq_okeys, &grouped_outs, true);
+    CHECK_EQ(uniq_vkeys.size(), uniq_okeys.size())
+             << "List of push and pull keys are different";
+
+    for (size_t i = 0; i < uniq_vkeys.size(); ++i) {
+      CHECK_EQ(uniq_vkeys[i], uniq_okeys[i])
+             << "Mismatch in push and pull key";
+      int key = uniq_vkeys[i];
+      const auto& vals = grouped_vals[i];
+      const auto& outs = grouped_outs[i];
+
+      NDArray merged = comm_->Reduce(key, vals, priority);
+
+      const auto push_stype = merged.storage_type();
+      const auto pull_stype = outs[0]->storage_type();
+      CHECK_EQ(push_stype, kDefaultStorage)
+               << "Expected push_stype of value to be kDefaultStorage";
+      CHECK_EQ(pull_stype, kDefaultStorage)
+               << "Expected pull_stype of value to be kDefaultStorage";
+
+      const int push_dtype = merged.dtype();
+      const int pull_dtype = outs[0]->dtype();
+      CHECK_EQ(push_dtype, pull_dtype) << "Output buffer dtype is different";
+
+      auto &comm_buf = comm_buf_[key];
+      if (merged.ctx().dev_mask() == cpu::kDevMask) {
+        comm_buf = merged;  // avoid memory copy
+      } else {
+        if (comm_buf.is_none()) {
+          comm_buf = NDArray(outs[0]->shape(), pinned_ctx_, true, pull_dtype);
+        }
+        CopyFromTo(merged, &comm_buf);
+      }
+
+      CHECK(gradient_compression_->get_type() == CompressionType::kNone)
+               << "Compression not supported with PushPull";
+      auto pushpull = [this, key, comm_buf](
+          RunContext rctx, Engine::CallbackOnComplete cb) {
+        size_t size = comm_buf.shape().Size();
+        const int dtype = comm_buf.dtype();
+        const int num_bytes = mshadow::mshadow_sizeof(dtype);
+        const int cmd = GetCommandType(RequestType::kDefaultPushPull, dtype);
+
+        PSKV& pskv = EncodeDefaultKey(key, size, num_bytes);
+        char* data = static_cast<char*>(comm_buf.data().dptr_);
+        auto vals = new ps::SArray<char>(data, size * num_bytes, false);
+
+        CHECK_NOTNULL(ps_worker_)->ZPushPull(
+          pskv.keys, *vals, vals, &pskv.lens, cmd, [vals, cb](){ delete vals; cb(); });
+      };
+
+      CHECK_NOTNULL(Engine::Get())->PushAsync(
+          pushpull,
+          pinned_ctx_,
+          {},
+          {comm_buf.var()},
+          FnProperty::kNormal,
+          priority,
+          "KVStoreDistDefaultStoragePushPull");
+
+      comm_->Broadcast(key, comm_buf, outs, priority);
     }
   }
 

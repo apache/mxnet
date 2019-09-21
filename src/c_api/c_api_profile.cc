@@ -198,6 +198,10 @@ enum class ProfileProcess {
   kWorker, kServer
 };
 
+enum class PrintFormat {
+  table, json
+};
+
 struct ProfileConfigParam : public dmlc::Parameter<ProfileConfigParam> {
   bool profile_all;
   bool profile_symbolic;
@@ -303,7 +307,12 @@ int MXSetProfilerConfig(int num_params, const char* const* keys, const char* con
 }
 
 int MXAggregateProfileStatsPrint(const char **out_str, int reset) {
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  return MXAggregateProfileStatsPrintEx(out_str, reset, 0, 0, 0);
+}
+
+int MXAggregateProfileStatsPrintEx(const char **out_str, int reset, int format, int sort_by,
+                                  int ascending) {
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
     CHECK_NOTNULL(out_str);
     profiler::Profiler *profiler = profiler::Profiler::Get();
@@ -314,8 +323,15 @@ int MXAggregateProfileStatsPrint(const char **out_str, int reset) {
     std::shared_ptr<profiler::AggregateStats> stats = profiler->GetAggregateStats();
     std::ostringstream os;
     if (stats) {
-      stats->Dump(os, reset != 0);
+      if (static_cast<PrintFormat>(format) == PrintFormat::table)
+        stats->DumpTable(os, sort_by, ascending);
+      else if (static_cast<PrintFormat>(format) == PrintFormat::json)
+        stats->DumpJson(os, sort_by, ascending);
+      else
+        LOG(FATAL) << "Invalid value for parameter format";
     }
+    if (reset != 0)
+      stats->clear();
     ret->ret_str = os.str();
     *out_str = (ret->ret_str).c_str();
   API_END();

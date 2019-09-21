@@ -78,7 +78,7 @@ class BatchLoader : public IIterator<TBlobBatch> {
 
     // if overflow from previous round, directly return false, until before first is called
     if (num_overflow_ != 0) return false;
-    index_t top = 0;
+    size_t top = 0;
 
     while (base_->Next()) {
       const DataInst& d = base_->Value();

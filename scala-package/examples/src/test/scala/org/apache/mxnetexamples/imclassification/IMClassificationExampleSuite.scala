@@ -19,11 +19,12 @@ package org.apache.mxnetexamples.imclassification
 
 import java.io.File
 
-import org.apache.mxnet.{Context, DType}
+import org.apache.mxnet.{Context, DType, ResourceScope}
 import org.apache.mxnetexamples.Util
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
 
+import scala.language.postfixOps
 import scala.sys.process.Process
 
 /**
@@ -34,35 +35,41 @@ class IMClassificationExampleSuite extends FunSuite with BeforeAndAfterAll {
 
   test("Example CI: Test MNIST Training") {
 
-    logger.info("Downloading mnist model")
-    val baseUrl = "https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci"
-    val tempDirPath = System.getProperty("java.io.tmpdir")
-    val modelDirPath = tempDirPath + File.separator + "mnist/"
-    logger.info("tempDirPath: %s".format(tempDirPath))
-    Util.downloadUrl(baseUrl + "/mnist/mnist.zip",
-      tempDirPath + "/mnist/mnist.zip")
-    // TODO: Need to confirm with Windows
-    Process("unzip " + tempDirPath + "/mnist/mnist.zip -d "
-      + tempDirPath + "/mnist/") !
+    ResourceScope.using() {
+      logger.info("Downloading mnist model")
+      val baseUrl = "https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci"
+      val tempDirPath = System.getProperty("java.io.tmpdir")
+      val modelDirPath = tempDirPath + File.separator + "mnist/"
+      logger.info("tempDirPath: %s".format(tempDirPath))
+      Util.downloadUrl(baseUrl + "/mnist/mnist.zip",
+        tempDirPath + "/mnist/mnist.zip")
+      // TODO: Need to confirm with Windows
+      Process("unzip " + tempDirPath + "/mnist/mnist.zip -d "
+        + tempDirPath + "/mnist/") !
 
-    var context = Context.cpu()
+      var context = Context.cpu()
 
-    val valAccuracy = TrainModel.test("mlp", modelDirPath)
-    Process("rm -rf " + modelDirPath) !
+      val valAccuracy = TrainModel.test("mlp", modelDirPath)
+      Process("rm -rf " + modelDirPath) !
 
-    assert(valAccuracy >= 0.95f)
+      assert(valAccuracy >= 0.95f)
+    }
   }
 
   for(model <- List("mlp", "lenet", "resnet")) {
     test(s"Example CI: Test Image Classification Model ${model}") {
-      val valAccuracy = TrainModel.test(model, "", 10, 1, benchmark = true)
+      ResourceScope.using() {
+        val valAccuracy = TrainModel.test(model, "", 10, 1, benchmark = true)
+      }
     }
   }
 
   for(model <- List("mlp", "lenet", "resnet")) {
     test(s"Example CI: Test Image Classification Model ${model} with Float64 input") {
-      val valAccuracy = TrainModel.test(model, "", 10, 1, benchmark = true,
-        dtype = DType.Float64)
+      ResourceScope.using() {
+        val valAccuracy = TrainModel.test(model, "", 10, 1, benchmark = true,
+          dtype = DType.Float64)
+      }
     }
   }
 

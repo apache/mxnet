@@ -44,6 +44,8 @@ namespace op {
  */
 template <typename CuDNNAlgoType>
 class CuDNNAlgo {
+  STATIC_ASSERT_CUDNN_VERSION_GE(7000);
+
  public:
   CuDNNAlgo() :
       algo_number_(static_cast<CuDNNAlgoType>(0)),
@@ -54,11 +56,9 @@ class CuDNNAlgo {
   }
   CuDNNAlgoType AlgoNumber() const { return algo_number_; }
   bool IsTensorCoreAlgo() const { return is_tensor_core_algo_; }
-  #if CUDNN_MAJOR >= 7
   cudnnMathType_t MathType() {
     return IsTensorCoreAlgo() ? CUDNN_TENSOR_OP_MATH : CUDNN_DEFAULT_MATH;
   }
-  #endif
  private:
   CuDNNAlgoType algo_number_;
   bool is_tensor_core_algo_;
@@ -96,7 +96,7 @@ class CuDNNAlgoReg {
       if (param.cudnn_tune.value() && reg_.size() % 50 == 0) {
         LOG(INFO) << "Running performance tests to find the best convolution "
             "algorithm, "
-            "this can take a while... (setting env variable "
+            "this can take a while... (set the environment variable "
             "MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable)";
         if (reg_.size() >= 1000) {
           // Many people are very concerned about this warning, so change the warning once.

@@ -86,6 +86,7 @@ private[mxnet] object NativeLibraryLoader {
     logger.debug(s"Attempting to load $loadLibname")
     val libFileInJar = libPathInJar + loadLibname
     saveLibraryToTemp("libmxnet.so", "/lib/native/libmxnet.so", true)
+    saveLibraryToTemp("libtvm_runtime.so", "/lib/native/libtvm_runtime.so", false)
     saveLibraryToTemp("libgfortran.so.3", "/lib/native/libgfortran.so.3", false)
     saveLibraryToTemp("libquadmath.so.0", "/lib/native/libquadmath.so.0", false)
     saveLibraryToTemp("libiomp5.so", "/lib/native/libiomp5.so", false)

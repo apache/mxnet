@@ -78,8 +78,8 @@ bool QuantizedConvShape(const nnvm::NodeAttrs& attrs,
   oshape[W] = (AddPad(dshape[W], param.pad[1]) - wshape[W]) / param.stride[1] + 1;
 
   SHAPE_ASSIGN_CHECK(*out_shape, 0, oshape);
-  SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape({1}));
-  SHAPE_ASSIGN_CHECK(*out_shape, 2, mxnet::TShape({1}));
+  SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape(1, 1));
+  SHAPE_ASSIGN_CHECK(*out_shape, 2, mxnet::TShape(1, 1));
   return true;
 }
 
@@ -180,6 +180,9 @@ and max thresholds representing the threholds for quantizing the float32 output 
 .add_arguments(ConvolutionParam::__FIELDS__());
 
 NNVM_REGISTER_OP(Convolution)
+.set_attr<FQuantizable>("FQuantizable", [](const NodeAttrs& attrs) {
+    return QuantizeType::kMust;
+})
 .set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
     nnvm::NodePtr node = nnvm::Node::Create();
     node->attrs.op = Op::Get("_contrib_quantized_conv");

@@ -56,7 +56,7 @@ std::vector<nnvm::NodeEntry> Gradient(
 
   std::vector<nnvm::NodeEntry> ret;
   for (uint32_t i = 0; i < g->num_outputs(); ++i) {
-    ret.emplace_back(nnvm::NodeEntry{g, i, 0});
+    ret.emplace_back(g, i, 0);
   }
 
   return ret;

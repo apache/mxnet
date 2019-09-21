@@ -47,11 +47,11 @@
         {:keys [class prob x-min x-max y-min y-max] :as pred} (first predictions)]
     (clojure.pprint/pprint predictions)
     (is (some? predictions))
-    (is (= 5 (count predictions)))
+    (is (= 3 (count predictions)))
     (is (string? class))
     (is (< 0.8 prob))
     (is (every? #(< 0 % 1) [x-min x-max y-min y-max]))
-    (is (= #{"dog" "person" "bicycle" "car"} (set (mapv :class predictions))))))
+    (is (= #{"dog" "bicycle" "car"} (set (mapv :class predictions))))))
 
 (deftest test-batch-detection
   (let [detector (create-detector)
@@ -60,7 +60,7 @@
         predictions (first batch-predictions)
         {:keys [class prob x-min x-max y-min y-max] :as pred} (first predictions)]
     (is (some? batch-predictions))
-    (is (= 5 (count predictions)))
+    (is (= 3 (count predictions)))
     (is (string? class))
     (is (< 0.8 prob))
     (println [x-min x-max y-min y-max])

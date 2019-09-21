@@ -42,7 +42,7 @@ struct MultiSampleParam : public dmlc::Parameter<MultiSampleParam> {
   int dtype;
   DMLC_DECLARE_PARAMETER(MultiSampleParam) {
     DMLC_DECLARE_FIELD(shape)
-      .set_default(mxnet::TShape())
+      .set_default(mxnet::TShape(0, 1))
       .describe("Shape to be sampled from each random distribution.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
@@ -66,7 +66,7 @@ inline bool MultiSampleOpShape(const nnvm::NodeAttrs& attrs,
   // Get shape to be sampled for each parameter set.
   const MultiSampleParam& param = nnvm::get<MultiSampleParam>(attrs.parsed);
   mxnet::TShape sshape = param.shape;
-  for (size_t i = 0; i < sshape.ndim(); ++i) {
+  for (int i = 0; i < sshape.ndim(); ++i) {
     CHECK_GT(sshape[i], 0) << "shape parameter must be non-zero within each dimension";
   }
   // Examine output shape whether it is already defined.

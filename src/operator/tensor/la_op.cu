@@ -63,11 +63,53 @@ NNVM_REGISTER_OP(_linalg_sumlogdiag)
 NNVM_REGISTER_OP(_backward_linalg_sumlogdiag)
 .set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 2, 2, 2, 1, sumlogdiag_backward>);
 
+NNVM_REGISTER_OP(_linalg_extractdiag)
+.set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 1, 1, 1, copydiag>);
+
+NNVM_REGISTER_OP(_backward_linalg_extractdiag)
+.set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 1, 2, 1, 1, copydiag>);
+
+NNVM_REGISTER_OP(_linalg_makediag)
+.set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 1, 2, 1, 1, copydiag>);
+
+NNVM_REGISTER_OP(_backward_linalg_makediag)
+.set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 2, 1, 1, 1, copydiag>);
+
+NNVM_REGISTER_OP(_linalg_extracttrian)
+.set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 1, 1, 1, copytrian>);
+
+NNVM_REGISTER_OP(_backward_linalg_extracttrian)
+.set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 1, 2, 1, 1, copytrian>);
+
+NNVM_REGISTER_OP(_linalg_maketrian)
+.set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 1, 2, 1, 1, copytrian>);
+
+NNVM_REGISTER_OP(_backward_linalg_maketrian)
+.set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 2, 1, 1, 1, copytrian>);
+
 NNVM_REGISTER_OP(_linalg_potri)
 .set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 2, 1, 1, potri>);
 
 NNVM_REGISTER_OP(_backward_linalg_potri)
 .set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 2, 2, 3, 1, potri_backward>);
+
+NNVM_REGISTER_OP(_linalg_inverse)
+.set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 2, 1, 1, inverse>);
+
+NNVM_REGISTER_OP(_backward_linalg_inverse)
+.set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 2, 2, 2, 1, inverse_backward>);
+
+NNVM_REGISTER_OP(_linalg_det)
+.set_attr<FCompute>("FCompute<gpu>", LaOpDetForward<gpu, 1, det>);
+
+NNVM_REGISTER_OP(_backward_linalg_det)
+.set_attr<FCompute>("FCompute<gpu>", LaOpDetBackward<gpu, 1, det_backward>);
+
+NNVM_REGISTER_OP(_linalg_slogdet)
+.set_attr<FCompute>("FCompute<gpu>", LaOpDetForward<gpu, 2, slogdet>);
+
+NNVM_REGISTER_OP(_backward_linalg_slogdet)
+.set_attr<FCompute>("FCompute<gpu>", LaOpDetBackward<gpu, 2, slogdet_backward>);
 
 #if MXNET_USE_CUSOLVER == 1
 

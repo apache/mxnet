@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import os
 import mxnet as mx
 import mxnet.ndarray as nd
 from mxnet.test_utils import *
@@ -23,6 +24,9 @@ from functools import reduce
 from mxnet.module.executor_group import DataParallelExecutorGroup
 from common import setup_module, with_seed, assertRaises, teardown
 from collections import namedtuple
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(curr_path, "../train"))
+from test_bucketing import train_model, prepare_bucketing_data
 
 
 @with_seed()
@@ -213,6 +217,73 @@ def test_save_load():
     assert mod._symbol.tojson() == mod2._symbol.tojson()
     dict_equ(mod.get_params()[0], mod2.get_params()[0])
     dict_equ(mod._kvstore._updater.states, mod2._updater.states)
+    os.putenv('MXNET_UPDATE_ON_KVSTORE', previous_update_on_kvstore)
+
+
+@with_seed()
+def test_bucketing_save_load():
+    previous_update_on_kvstore = os.getenv('MXNET_UPDATE_ON_KVSTORE', "1")
+    os.putenv('MXNET_UPDATE_ON_KVSTORE', '1')
+    def dict_equ(a, b):
+        assert set(a) == set(b)
+        for k in a:
+            assert (a[k].asnumpy() == b[k].asnumpy()).all()
+
+
+    len_vocab = 50
+    num_embed = 25
+    num_epochs = 5
+    batch_size = 128
+    num_layers = 2
+    num_hidden = 25
+    buckets = [5, 10, 20, 30, 40]
+    invalid_label = -1
+    num_sentence=1000
+
+    stack = mx.rnn.SequentialRNNCell()
+    for i in range(num_layers):
+        stack.add(mx.rnn.LSTMCell(num_hidden=num_hidden, prefix='lstm_l%d_' % i))
+
+    def sym_gen(seq_len):
+        data = mx.sym.Variable('data')
+        label = mx.sym.Variable('softmax_label')
+        embed = mx.sym.Embedding(data=data, input_dim=len_vocab,
+                                 output_dim=num_embed, name='embed')
+        stack.reset()
+        outputs, states = stack.unroll(seq_len, inputs=embed, merge_outputs=True)
+
+        pred = mx.sym.Reshape(outputs, shape=(-1, num_hidden))
+        pred = mx.sym.FullyConnected(data=pred, num_hidden=len_vocab, name='pred')
+
+        label = mx.sym.Reshape(label, shape=(-1,))
+        loss = mx.sym.SoftmaxOutput(data=pred, label=label, name='softmax')
+
+        return loss, ('data',), ('softmax_label',)
+
+    model = train_model(context=mx.current_context())
+    model.save_checkpoint("test", 0)
+    data_train, data_val = prepare_bucketing_data(buckets, len_vocab, batch_size, invalid_label, num_sentence)
+    mod2 = mx.mod.BucketingModule.load('test', 0, sym_gen=sym_gen,
+                                       default_bucket_key=data_train.default_bucket_key)
+
+    mod2.bind(data_shapes=data_train.provide_data,
+              label_shapes=data_train.provide_label)
+
+    for bucket_key in model._buckets.keys():
+        dict_equ(model._buckets[model._default_bucket_key].get_params()[0],
+                 mod2._buckets[mod2._default_bucket_key].get_params()[0])
+    mod2.fit(
+        train_data=data_train,
+        eval_data=data_val,
+        eval_metric=mx.metric.Perplexity(invalid_label), # Use Perplexity for multiclass classification.
+        kvstore='device',
+        optimizer='sgd',
+        optimizer_params={'learning_rate': 0.01,
+                          'momentum': 0,
+                          'wd': 0.00001},
+        initializer=mx.init.Xavier(factor_type="in", magnitude=2.34),
+        num_epoch=num_epochs,
+        batch_end_callback=mx.callback.Speedometer(batch_size, 50))
     os.putenv('MXNET_UPDATE_ON_KVSTORE', previous_update_on_kvstore)
 
 
@@ -930,6 +1001,34 @@ def test_module_update_no_pragram():
     mod.forward_backward(data_batch)
     mod.update()
     assert(mod.get_outputs()[0].shape == data_shape)
+
+
+def test_module_init_optimizer():
+    def get_module_idx2name(mod):
+        idx2name = {}
+        idx2name.update(enumerate(mod._exec_group.param_names))
+        return idx2name
+
+    data = mx.sym.Variable('data')
+    sym = mx.sym.FullyConnected(data, num_hidden=20, name='fc')
+    batch_size = 8
+    opt_params = {'learning_rate': 1, 'rescale_grad': 1.0 / batch_size}
+
+    # Pass an optimizer str
+    mod1 = mx.mod.Module(sym, ('data',), None, context=mx.cpu(0))
+    mod1.bind(data_shapes=[('data', (batch_size, 20))])
+    mod1.init_params()
+    mod1.init_optimizer(optimizer='sgd', optimizer_params=opt_params)
+    assert mod1._optimizer.idx2name == get_module_idx2name(mod1)
+
+    # Pass an Optimizer object
+    mod2 = mx.mod.Module(sym, ('data',), None, context=mx.cpu(0))
+    mod2.bind(data_shapes=[('data', (batch_size, 20))])
+    mod2.init_params()
+    opt = mx.optimizer.SGD(**opt_params)
+    mod2.init_optimizer(optimizer=opt)
+    assert mod2._optimizer.idx2name == get_module_idx2name(mod2)
+
 
 if __name__ == '__main__':
     import nose

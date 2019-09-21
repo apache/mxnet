@@ -76,8 +76,6 @@ def test_model_weights_and_outputs(model_name, image_url, gpu):
     convert_and_compare_caffe_to_mxnet(image_url, gpu, prototxt, caffemodel, mean,
                                        mean_diff_allowed=1e-03, max_diff_allowed=1e-01)
 
-    return
-
 
 def main():
     """Entrypoint for test_converter"""
@@ -92,9 +90,9 @@ def main():
         gpus = [-1]
         default_batch_size = 32
     else:
-        gpus = mx.test_utils.list_gpus()
-        assert gpus, 'At least one GPU is needed to run test_converter in GPU mode'
-        default_batch_size = 32 * len(gpus)
+        num_gpus = mx.context.num_gpus()
+        assert num_gpus, 'At least one GPU is needed to run test_converter in GPU mode'
+        default_batch_size = 32 * num_gpus
 
     models = ['bvlc_googlenet', 'vgg-16', 'resnet-50']
 

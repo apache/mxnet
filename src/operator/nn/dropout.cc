@@ -26,9 +26,28 @@
 
 #include "./dropout-inl.h"
 #include "../operator_common.h"
+#include "mxnet/op_attr_types.h"
 
 namespace mxnet {
 namespace op {
+
+OpStatePtr CreateDropoutState(const nnvm::NodeAttrs &attrs,
+                                     const Context ctx,
+                                     const mxnet::ShapeVector &in_shapes,
+                                     const std::vector<int> &in_types) {
+  const auto& param = nnvm::get<DropoutParam>(attrs.parsed);
+  OpStatePtr state;
+  MSHADOW_REAL_TYPE_SWITCH(in_types[dropout::kData], DType, {
+    if (ctx.dev_type == kGPU) {
+      state = OpStatePtr::Create<DropoutOp<mxnet::gpu, DType>>(param, ctx);
+    } else {
+      state = OpStatePtr::Create<DropoutOp<mxnet::cpu, DType>>(param, ctx);
+    }
+    return state;
+  });
+  LOG(FATAL) << "should never reach here";
+  return OpStatePtr();  // should never reach here
+}
 
 struct DropoutGrad {
   const char *op_name;
@@ -36,7 +55,7 @@ struct DropoutGrad {
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> heads;
     heads.push_back(ograds[0]);
-    heads.emplace_back(nnvm::NodeEntry{n, dropout::kMask, 0});
+    heads.emplace_back(n, dropout::kMask, 0);
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }
 };
@@ -44,6 +63,7 @@ struct DropoutGrad {
 DMLC_REGISTER_PARAMETER(DropoutParam);
 
 NNVM_REGISTER_OP(Dropout)
+.add_alias("_npx_dropout")
 .describe(R"(Applies dropout operation to input array.
 
 - During training, each element of the input is set to zero with probability p.
@@ -95,10 +115,10 @@ Example::
   CHECK_EQ(in_shape->size(), 1U);
   const DropoutParam& param = nnvm::get<DropoutParam>(attrs.parsed);
   mxnet::TShape dshape(in_shape->at(0));
-  if (dshape.ndim() == 0) return false;
+  if (!mxnet::ndim_is_known(dshape)) return false;
   out_shape->clear();
   out_shape->push_back(dshape);
-  for (index_t i = 0; i < param.axes.ndim(); ++i) {
+  for (int i = 0; i < param.axes.ndim(); ++i) {
     dshape[param.axes[i]] = 1;
   }
   out_shape->push_back(dshape);
@@ -142,12 +162,16 @@ Example::
 #endif
     }
     request.emplace_back(ResourceRequest::kParallelRandom);
+#if MXNET_USE_MKL_DROPOUT
+    request.emplace_back(ResourceRequest::kTempSpace);
+#endif
     return request;
   })
 .add_argument("data", "NDArray-or-Symbol", "Input array to which dropout will be applied.")
 .add_arguments(DropoutParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_Dropout)
+.set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
@@ -155,7 +179,8 @@ NNVM_REGISTER_OP(_backward_Dropout)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
   return std::vector<std::pair<int, int> >{{0, 0}};
 })
-.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", DropoutGradCompute<cpu>);
+.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", DropoutGradCompute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 }  // namespace op
 }  // namespace mxnet

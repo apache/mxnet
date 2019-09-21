@@ -173,14 +173,13 @@ class BucketingModule(symGen: AnyRef => (Symbol, IndexedSeq[String], IndexedSeq[
                           allowMissing: Boolean = false,
                           forceInit: Boolean = false,
                           allowExtra: Boolean = false): Unit = {
-    if (paramsInitialized && !forceInit) {
-      return
+    if (!paramsInitialized || forceInit) {
+      require(binded, "call bind before initializing the parameters")
+      this._currModule.initParams(initializer, argParams, auxParams,
+        allowMissing, forceInit, allowExtra)
+      this.paramsDirty = false
+      this.paramsInitialized = true
     }
-    require(binded, "call bind before initializing the parameters")
-    this._currModule.initParams(initializer, argParams, auxParams,
-      allowMissing, forceInit, allowExtra)
-    this.paramsDirty = false
-    this.paramsInitialized = true
   }
 
   /**
@@ -218,28 +217,27 @@ class BucketingModule(symGen: AnyRef => (Symbol, IndexedSeq[String], IndexedSeq[
 
     if (this.binded) {
       logger.warn("Already bound, ignoring bind()")
-      return
-    }
+    } else {
+      require(sharedModule.isEmpty,
+        "sharedModule for BucketingModule is not supported")
 
-    require(sharedModule.isEmpty,
-      "sharedModule for BucketingModule is not supported")
+      this.forTraining = forTraining
+      this.inputsNeedGrad = inputsNeedGrad
+      this.binded = true
 
-    this.forTraining = forTraining
-    this.inputsNeedGrad = inputsNeedGrad
-    this.binded = true
+      val (sym, dNames, lNames) = this.symGen(this.defaultBucketKey)
+      val module = new Module(sym, dNames, lNames, this.contexts,
+        this.workLoadList, this.fixedParamNames)
+      module.bind(dataShapes, labelShapes, forTraining, inputsNeedGrad,
+        forceRebind = false, sharedModule = None, gradReq)
+      this._currModule = module
+      this._currBucketKey = this.defaultBucketKey
+      this._buckets(this.defaultBucketKey) = module
 
-    val (sym, dNames, lNames) = this.symGen(this.defaultBucketKey)
-    val module = new Module(sym, dNames, lNames, this.contexts,
-      this.workLoadList, this.fixedParamNames)
-    module.bind(dataShapes, labelShapes, forTraining, inputsNeedGrad,
-      forceRebind = false, sharedModule = None, gradReq)
-    this._currModule = module
-    this._currBucketKey = this.defaultBucketKey
-    this._buckets(this.defaultBucketKey) = module
-
-    // copy back saved params, if already initialized
-    if (this.paramsInitialized) {
-      this.setParams(argParams, auxParams)
+      // copy back saved params, if already initialized
+      if (this.paramsInitialized) {
+        this.setParams(argParams, auxParams)
+      }
     }
   }
 
@@ -298,7 +296,7 @@ class BucketingModule(symGen: AnyRef => (Symbol, IndexedSeq[String], IndexedSeq[
     require(this.binded && this.paramsInitialized, "bind() and initParams() must be called first.")
     val bucketKey = dataBatch.bucketKey
     val originalBucketKey = this._currBucketKey
-    this.switchBucket(bucketKey, dataBatch.provideData, Option(dataBatch.provideLabel))
+    this.switchBucket(bucketKey, dataBatch.provideDataDesc, Option(dataBatch.provideLabelDesc))
     // switch back
     this.switchBucket(originalBucketKey, null, None)
   }
@@ -310,8 +308,8 @@ class BucketingModule(symGen: AnyRef => (Symbol, IndexedSeq[String], IndexedSeq[
    */
   override def forward(dataBatch: DataBatch, isTrain: Option[Boolean] = None): Unit = {
     require(binded && paramsInitialized, "bind() and initParams() must be called first.")
-    this.switchBucket(dataBatch.bucketKey, dataBatch.provideData,
-      Option(dataBatch.provideLabel))
+    this.switchBucket(dataBatch.bucketKey, dataBatch.provideDataDesc,
+      Option(dataBatch.provideLabelDesc))
     this._currModule.forward(dataBatch, isTrain)
   }
 

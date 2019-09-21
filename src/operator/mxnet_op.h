@@ -273,23 +273,175 @@ inline int get_num_threads<cpu>(const int N) {
     }                                                      \
     break;                                                 \
   case mshadow::kUint8:                                    \
-    LOG(FATAL) << "This operation only support "           \
-                  "floating point types not uint8";        \
+    {                                                      \
+      typedef uint8_t DType;                               \
+      typedef uint8_t AType;                               \
+      LOG(FATAL) << "This operation only support "         \
+                    "floating point types not uint8";      \
+    }                                                      \
     break;                                                 \
   case mshadow::kInt8:                                     \
-    LOG(FATAL) << "This operation only support "           \
-                  "floating point types not int8";         \
+    {                                                      \
+      typedef int8_t DType;                                \
+      typedef int8_t AType;                                \
+      LOG(FATAL) << "This operation only support "         \
+                    "floating point types not int8";       \
+    }                                                      \
     break;                                                 \
   case mshadow::kInt32:                                    \
-    LOG(FATAL) << "This operation only support "           \
-                  "floating point types, not int32";       \
+    {                                                      \
+      typedef int32_t DType;                               \
+      typedef int32_t AType;                               \
+      LOG(FATAL) << "This operation only support "         \
+                    "floating point types, not int32";     \
+    }                                                      \
     break;                                                 \
   case mshadow::kInt64:                                    \
-    LOG(FATAL) << "This operation only support "           \
-                  "floating point types, not int64";       \
+    {                                                      \
+      typedef int64_t DType;                               \
+      typedef int64_t AType;                               \
+      LOG(FATAL) << "This operation only support "         \
+                    "floating point types, not int64";     \
+    }                                                      \
     break;                                                 \
   default:                                                 \
     LOG(FATAL) << "Unknown type enum " << type;            \
+  }
+
+#define MXNET_ACC_TYPE_SWITCH(type, DType, AType, ...)\
+  switch (type) {                                          \
+  case mshadow::kFloat32:                                  \
+    {                                                      \
+      typedef float DType;                                 \
+      typedef double AType;                                \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kFloat64:                                  \
+    {                                                      \
+      typedef double DType;                                \
+      typedef double AType;                                \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kFloat16:                                  \
+    {                                                      \
+      typedef mshadow::half::half_t DType;                 \
+      typedef float AType;                                 \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kUint8:                                    \
+    {                                                      \
+      typedef uint8_t DType;                               \
+      typedef uint32_t AType;                              \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kInt8:                                     \
+    {                                                      \
+      typedef int8_t DType;                                \
+      typedef int32_t AType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kInt32:                                    \
+    {                                                      \
+      typedef int32_t DType;                               \
+      typedef int64_t AType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kInt64:                                    \
+    {                                                      \
+      typedef int64_t DType;                               \
+      typedef int64_t AType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  default:                                                 \
+    LOG(FATAL) << "Unknown type enum " << type;            \
+  }
+
+#define MXNET_INT_TYPE_SWITCH(type, DType, ...)\
+  switch (type) {                                          \
+  case mshadow::kFloat32:                                  \
+    {                                                      \
+      typedef float DType;                                 \
+      LOG(FATAL) << "This operation only support "         \
+                    "integer types, not float32";          \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kFloat64:                                  \
+    {                                                      \
+      typedef double DType;                                \
+      LOG(FATAL) << "This operation only support "         \
+                    "integer types, not float64";          \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kFloat16:                                  \
+    {                                                      \
+      typedef mshadow::half::half_t DType;                 \
+      LOG(FATAL) << "This operation only support "         \
+                    "integer types, not float16";          \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kUint8:                                    \
+    {                                                      \
+      typedef uint8_t DType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kInt8:                                     \
+    {                                                      \
+      typedef int8_t DType;                                \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kInt32:                                    \
+    {                                                      \
+      typedef int32_t DType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kInt64:                                    \
+    {                                                      \
+      typedef int64_t DType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  default:                                                 \
+    LOG(FATAL) << "Unknown type enum " << type;            \
+  }
+
+#define MXNET_LOAD_TYPE_SWITCH(type, DType, ...)           \
+  switch (type) {                                          \
+  case mshadow::kFloat32:                                  \
+    {                                                      \
+      typedef float DType;                                 \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kFloat64:                                  \
+    {                                                      \
+      typedef double DType;                                \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kFloat16:                                  \
+    {                                                      \
+      typedef mshadow::half::half_t DType;                 \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kUint8:                                    \
+    {                                                      \
+      typedef uint8_t DType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  default:                                                 \
+    LOG(FATAL) << "Invalid loading enum type " << type;    \
   }
 
 /*!
@@ -714,6 +866,7 @@ struct Kernel<OP, gpu> {
   /*! \brief Launch GPU kernel */
   template<typename ...Args>
   inline static void Launch(mshadow::Stream<gpu> *s, int N, Args... args) {
+    if (0 == N) return;
     using namespace mshadow::cuda;
     int ngrid = std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
     mxnet_generic_kernel<OP, Args...>
@@ -724,6 +877,7 @@ struct Kernel<OP, gpu> {
 
   template<typename ...Args>
   inline static void LaunchEx(mshadow::Stream<gpu> *s, const int N, Args... args) {
+    if (0 == N) return;
     using namespace mshadow::cuda;
     int ngrid = std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
     mxnet_generic_kernel_ex<OP, Args...>

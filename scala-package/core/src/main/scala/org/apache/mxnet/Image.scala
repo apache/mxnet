@@ -38,6 +38,7 @@ object Image {
     * @param flag   Convert decoded image to grayscale (0) or color (1).
     * @param to_rgb Whether to convert decoded image
     *               to mxnet's default RGB format (instead of opencv's default BGR).
+    * @param out    NDArray to store the output
     * @return NDArray in HWC format with DType [[DType.UInt8]]
     */
   def imDecode(buf: Array[Byte], flag: Int,
@@ -57,6 +58,10 @@ object Image {
   /**
     * Same imageDecode with InputStream
     * @param inputStream the inputStream of the image
+    * @param flag   Convert decoded image to grayscale (0) or color (1).
+    * @param to_rgb Whether to convert decoded image
+    *               to mxnet's default RGB format (instead of opencv's default BGR).
+    * @param out    NDArray to store the output
     * @return NDArray in HWC format with DType [[DType.UInt8]]
     */
   def imDecode(inputStream: InputStream, flag: Int = 1,
@@ -79,6 +84,7 @@ object Image {
     * @param flag     Convert decoded image to grayscale (0) or color (1).
     * @param to_rgb   Whether to convert decoded image to mxnet's default RGB format
     *                 (instead of opencv's default BGR).
+    * @param out    NDArray to store the output
     * @return org.apache.mxnet.NDArray in HWC format with DType [[DType.UInt8]]
     */
   def imRead(filename: String, flag: Option[Int] = None,
@@ -99,6 +105,7 @@ object Image {
     * @param w       Width of resized image.
     * @param h       Height of resized image.
     * @param interp  Interpolation method (default=cv2.INTER_LINEAR).
+    * @param out    NDArray to store the output
     * @return org.apache.mxnet.NDArray
     */
   def imResize(src: org.apache.mxnet.NDArray, w: Int, h: Int,
@@ -124,6 +131,7 @@ object Image {
     * @param typeOf Filling type (default=cv2.BORDER_CONSTANT).
     * @param value  (Deprecated! Use ``values`` instead.) Fill with single value.
     * @param values Fill with value(RGB[A] or gray), up to 4 channels.
+    * @param out    NDArray to store the output
     * @return org.apache.mxnet.NDArray
     */
   def copyMakeBorder(src: org.apache.mxnet.NDArray, top: Int, bot: Int,

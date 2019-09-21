@@ -87,7 +87,7 @@ inline void MultiBoxDetectionForward(const Tensor<cpu, 3, DType> &out,
                                      const Tensor<cpu, 3, DType> &temp_space,
                                      const float threshold,
                                      const bool clip,
-                                     const nnvm::Tuple<float> &variances,
+                                     const mxnet::Tuple<float> &variances,
                                      const float nms_threshold,
                                      const bool force_suppress,
                                      const int nms_topk) {
@@ -98,8 +98,7 @@ inline void MultiBoxDetectionForward(const Tensor<cpu, 3, DType> &out,
   const DType *p_anchor = anchors.dptr_;
 
   const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-  std::vector<DType> outputs;
-  outputs.reserve(num_anchors * 6);
+  std::vector<DType> outputs(num_anchors * 6);
   for (int nbatch = 0; nbatch < num_batches; ++nbatch) {
     const DType *p_cls_prob = cls_prob.dptr_ + nbatch * num_classes * num_anchors;
     const DType *p_loc_pred = loc_pred.dptr_ + nbatch * num_anchors * 4;
@@ -221,5 +220,9 @@ MXNET_REGISTER_OP_PROPERTY(_contrib_MultiBoxDetection, MultiBoxDetectionProp)
 .add_argument("loc_pred", "NDArray-or-Symbol", "Location regression predictions.")
 .add_argument("anchor", "NDArray-or-Symbol", "Multibox prior anchor boxes")
 .add_arguments(MultiBoxDetectionParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_contrib_MultiBoxDetection)
+.add_alias("_npx_multibox_detection");
+
 }  // namespace op
 }  // namespace mxnet

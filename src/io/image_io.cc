@@ -189,7 +189,7 @@ void Imdecode(const nnvm::NodeAttrs& attrs,
   size_t len = inputs[0].shape().Size();
   CHECK(len > 0) << "Input cannot be an empty buffer";
 
-  mxnet::TShape oshape(3);
+  mxnet::TShape oshape(3, 1);
   oshape[2] = param.flag == 0 ? 1 : 3;
   if (get_jpeg_size(str_img, len, &oshape[1], &oshape[0])) {
   } else if (get_png_size(str_img, len, &oshape[1], &oshape[0])) {
@@ -229,7 +229,7 @@ void Imread(const nnvm::NodeAttrs& attrs,
   CHECK(file.good()) << "Failed reading image file: '" << param.filename << "' "
             << strerror(errno);
 
-  mxnet::TShape oshape(3);
+  mxnet::TShape oshape(3, 1);
   oshape[2] = param.flag == 0 ? 1 : 3;
   if (get_jpeg_size(buff.get(), fsize, &oshape[1], &oshape[0])) {
   } else if (get_png_size(buff.get(), fsize, &oshape[1], &oshape[0])) {
@@ -295,7 +295,7 @@ struct MakeBorderParam : public dmlc::Parameter<MakeBorderParam> {
   int top, bot, left, right;
   int type;
   double value;
-  nnvm::Tuple<double> values;
+  mxnet::Tuple<double> values;
   DMLC_DECLARE_PARAMETER(MakeBorderParam) {
     DMLC_DECLARE_FIELD(top)
     .describe("Top margin.");
@@ -357,6 +357,7 @@ inline void copyMakeBorder(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_cvimdecode)
+.add_alias("_npi_cvimdecode")
 .describe("Decode image with OpenCV. \n"
           "Note: return image in RGB by default, "
           "instead of OpenCV's default BGR.")
@@ -368,6 +369,7 @@ NNVM_REGISTER_OP(_cvimdecode)
 .add_arguments(ImdecodeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_cvimread)
+.add_alias("_npi_cvimread")
 .describe("Read and decode image with OpenCV. \n"
           "Note: return image in RGB by default, "
           "instead of OpenCV's default BGR.")
@@ -378,6 +380,7 @@ NNVM_REGISTER_OP(_cvimread)
 .add_arguments(ImreadParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_cvimresize)
+.add_alias("_npi_cvimresize")
 .describe("Resize image with OpenCV. \n")
 .set_num_inputs(1)
 .set_num_outputs(1)

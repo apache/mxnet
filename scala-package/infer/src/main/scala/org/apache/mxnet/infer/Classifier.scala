@@ -31,6 +31,7 @@ trait ClassifierBase {
 
   /**
     * Takes an array of floats and returns corresponding (Label, Score) tuples
+    * @tparam T The Scala equivalent of the DType used for the input array and return value
     * @param input            Indexed sequence one-dimensional array of floats/doubles
     * @param topK             (Optional) How many result (sorting based on the last axis)
     *                         elements to return. Default returns unsorted output.
@@ -167,6 +168,12 @@ class Classifier(modelPathPrefix: String,
     result.toIndexedSeq
   }
 
+  /**
+    * Gives the path to the standard location of the synset.txt file
+    * @throws IllegalArgumentException Thrown when the file does not exist
+    * @param modelPathPrefix The path to the model directory
+    * @return The path to the synset.txt file
+    */
   private[infer] def getSynsetFilePath(modelPathPrefix: String): String = {
     val dirPath = modelPathPrefix.substring(0, 1 + modelPathPrefix.lastIndexOf(File.separator))
     val d = new File(dirPath)
@@ -179,6 +186,11 @@ class Classifier(modelPathPrefix: String,
     s.getCanonicalPath
   }
 
+  /**
+    * Parses the labels from a synset file
+    * @param synsetFilePath The path to the synset file. Can be gotten from getSynsetFilePath
+    * @return A IndexedSeq of each element in the file
+    */
   private[infer]  def readSynsetFile(synsetFilePath: String): IndexedSeq[String] = {
     val f = io.Source.fromFile(synsetFilePath)
     try {
@@ -188,6 +200,11 @@ class Classifier(modelPathPrefix: String,
     }
   }
 
+  /**
+    * Creates a predictor with the same modelPath, inputDescriptors, contexts,
+    * and epoch as the classifier
+    * @return The new Predictor
+    */
   private[infer] def getPredictor(): PredictBase = {
       new Predictor(modelPathPrefix, inputDescriptors, contexts, epoch)
   }

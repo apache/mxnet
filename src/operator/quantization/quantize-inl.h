@@ -119,14 +119,21 @@ inline bool QuantizeShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 3U);
 
+  mxnet::TShape dshape = (*in_attrs)[0];
   for (size_t i = 1; i < 3; ++i) {
-    SHAPE_ASSIGN_CHECK(*in_attrs, i, mxnet::TShape({1}));
+    SHAPE_ASSIGN_CHECK(*in_attrs, i, mxnet::TShape(1, 1));
   }
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
-  SHAPE_ASSIGN_CHECK(*out_attrs, 1, mxnet::TShape{1});
-  SHAPE_ASSIGN_CHECK(*out_attrs, 2, mxnet::TShape{1});
-  return !shape_is_none(out_attrs->at(0));
+  SHAPE_ASSIGN_CHECK(*out_attrs, 1, mxnet::TShape(1, 1));
+  SHAPE_ASSIGN_CHECK(*out_attrs, 2, mxnet::TShape(1, 1));
+
+  if ((*out_attrs)[0].ndim() > 0) {
+    dshape[0] = ((*out_attrs)[0])[0];
+    SHAPE_ASSIGN_CHECK(*in_attrs, 0, dshape);
+  }
+
+  return shape_is_known(out_attrs->at(0));
 }
 
 inline bool QuantizeType(const nnvm::NodeAttrs& attrs,

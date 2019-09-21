@@ -49,7 +49,7 @@ object ImageClassifierExample {
   def runInferenceOnSingleImage(modelPathPrefix: String, inputImagePath: String,
                                 context: Array[Context]):
   IndexedSeq[IndexedSeq[(String, Float)]] = {
-    NDArrayCollector.auto().withScope {
+    ResourceScope.using() {
       val dType = DType.Float32
       val inputShape = Shape(1, 3, 224, 224)
 
@@ -71,7 +71,7 @@ object ImageClassifierExample {
   def runInferenceOnBatchOfImage(modelPathPrefix: String, inputImageDir: String,
                                  context: Array[Context]):
   IndexedSeq[IndexedSeq[(String, Float)]] = {
-    NDArrayCollector.auto().withScope {
+    ResourceScope.using() {
       val dType = DType.Float32
       val inputShape = Shape(1, 3, 224, 224)
 

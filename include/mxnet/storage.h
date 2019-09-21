@@ -96,6 +96,14 @@ class Storage {
    */
   virtual void DirectFree(Handle handle) = 0;
   /*!
+  * \brief Release all memory from device if using a pooled storage manager
+  *
+  * This release all memory from pool storage managers such as
+  * GPUPooledStorageManager and GPUPooledRoundedStorageManager.
+  * For non-pool memory managers this has no effect.
+  */
+  virtual void ReleaseAll(Context ctx) = 0;
+  /*!
    * \brief Destructor.
    */
   virtual ~Storage() {}

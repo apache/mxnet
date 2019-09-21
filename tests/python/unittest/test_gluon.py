@@ -21,6 +21,7 @@ import tempfile
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
+from mxnet.base import py_str
 from mxnet.test_utils import assert_almost_equal
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from common import (setup_module, with_seed, assertRaises, teardown,
@@ -94,7 +95,7 @@ def test_parameter_invalid_access():
     assertRaises(RuntimeError, p1.list_row_sparse_data, row_id)
 
 @with_seed()
-def test_paramdict():
+def test_parameter_dict():
     ctx = mx.cpu(1)
     params0 = gluon.ParameterDict('net_')
     params0.get('w0', shape=(10, 10))
@@ -107,13 +108,13 @@ def test_paramdict():
     prev_w0 = params0.get('w0').data(ctx)
     prev_w1 = params0.get('w1').row_sparse_data(all_row_ids)
     # save params
-    params0.save('test_paramdict.params')
+    params0.save('test_parameter_dict.params')
 
     # load params
     params1 = gluon.ParameterDict('net_')
     params1.get('w0', shape=(10, 10))
     params1.get('w1', shape=(10, 10), stype='row_sparse')
-    params1.load('test_paramdict.params', ctx)
+    params1.load('test_parameter_dict.params', ctx)
     trainer1 = mx.gluon.Trainer(params1, 'sgd')
 
     # compare the values before and after save/load
@@ -127,13 +128,30 @@ def test_paramdict():
     params2 = gluon.ParameterDict('net_')
     params2.get('w0', shape=(10, 10))
     params2.get('w1', shape=(10, 10))
-    params2.load('test_paramdict.params', ctx)
+    params2.load('test_parameter_dict.params', ctx)
 
     # compare the values before and after save/load
     cur_w0 = params2.get('w0').data(ctx)
     cur_w1 = params2.get('w1').data(ctx)
     mx.test_utils.assert_almost_equal(prev_w0.asnumpy(), cur_w0.asnumpy())
     mx.test_utils.assert_almost_equal(prev_w1.asnumpy(), cur_w1.asnumpy())
+
+    # test the dtype casting functionality
+    params0 = gluon.ParameterDict('')
+    params0.get('w0', shape=(10, 10), dtype='float32')
+    params0.get('w1', shape=(10, 10), dtype='int8')
+    params0.initialize(mx.init.One(), ctx=ctx)
+    params0.save('test_parameter_dict.params')
+
+    params1 = gluon.ParameterDict('')
+    params1.get('w0', shape=(10, 10), dtype='float16')
+    params1.get('w1', shape=(10, 10), dtype='float64')
+    params1.load('test_parameter_dict.params', cast_dtype=True, dtype_source='current')
+    assert params1['w0'].data().dtype == np.float16
+    assert params1['w1'].data().dtype == np.float64
+    params1.load('test_parameter_dict.params', cast_dtype=True, dtype_source='saved')
+    assert params1['w0'].data().dtype == np.float32
+    assert params1['w1'].data().dtype == np.int8
 
 
 @with_seed()
@@ -242,7 +260,7 @@ def test_parameter_str():
 
 
 @with_seed()
-def test_collect_paramters():
+def test_collect_parameters():
     net = nn.HybridSequential(prefix="test_")
     with net.name_scope():
         net.add(nn.Conv2D(10, 3))
@@ -355,18 +373,30 @@ def test_symbol_block():
     net_fp32.forward(data)
     net_fp32.export(tmpfile, 0)
 
-    # 2. Load the saved model and verify if all the params are loaded correctly.
-    # and choose one of the param to verify the type if fp64.
-    sm = mx.sym.load(tmpfile + '-symbol.json')
+    # 2.a Load the saved model and verify if all the params are loaded correctly.
+    # and choose one of the param to verify the type if fp64.\
+    sym_file = tmpfile + '-symbol.json'
+    params_file = tmpfile + '-0000.params'
+    sm = mx.sym.load(sym_file)
     inputs = mx.sym.var('data', dtype='float64')
     net_fp64 = mx.gluon.SymbolBlock(sm, inputs)
-    net_fp64.collect_params().load(tmpfile + '-0000.params', ctx=ctx)
-    # 3. Get a conv layer's weight parameter name. Conv layer's weight param is
+    net_fp64.collect_params().load(params_file, ctx=ctx)
+    # Get a conv layer's weight parameter name. Conv layer's weight param is
     # expected to be of dtype casted, fp64.
     for param_name in net_fp64.params.keys():
         if 'conv' in param_name and 'weight' in param_name:
             break
     assert np.dtype(net_fp64.params[param_name].dtype) == np.dtype(np.float64)
+
+    # 3.b Verify same functionnality with the imports API
+    net_fp_64 = mx.gluon.SymbolBlock.imports(sym_file, 'data', params_file, ctx=ctx)
+
+    # Get a conv layer's weight parameter name. Conv layer's weight param is
+    # expected to be of dtype casted, fp64.
+    for param_name in net_fp_64.params.keys():
+        if 'conv' in param_name and 'weight' in param_name:
+            break
+    assert np.dtype(net_fp_64.params[param_name].dtype) == np.dtype(np.float64)
 
     # Cast the symbol block to FP32 and try to forward a FP32 data.
     # This will verify SymbolBlock.cast() functionality.
@@ -713,6 +743,15 @@ def test_layernorm():
     layer = nn.LayerNorm(in_channels=10)
     check_layer_forward(layer, (2, 10, 10, 10))
 
+
+@with_seed()
+def test_groupnorm():
+    layer = nn.GroupNorm()
+    check_layer_forward(layer, (2, 10, 10, 10))
+    layer = nn.GroupNorm(num_groups=2)
+    check_layer_forward(layer, (2, 10, 10, 10))
+    layer = nn.GroupNorm(num_groups=5)
+    check_layer_forward(layer, (2, 10, 10, 10))
 
 @with_seed()
 def test_reflectionpad():
@@ -1180,7 +1219,7 @@ def test_activations():
     elu = mx.gluon.nn.ELU()
     def elu_test(x):
         def elu(x):
-            return 1.0 * (mx.nd.exp(x) - 1) if x < 0 else x
+            return mx.nd.expm1(x) if x <= 0.0 else x
         return [elu(x_i) for x_i in x]
 
     for test_point, ref_point in zip(elu_test(point_to_validate), elu(point_to_validate)):
@@ -1464,6 +1503,74 @@ def test_hook():
     block(mx.nd.ones((3, 5)))
     assert hook_call_count == 1
     assert pre_hook_call_count == 2
+
+@with_seed()
+def test_op_hook_output_names():
+    def check_name(block, expected_names, inputs=None, expected_opr_names=None, monitor_all=False):
+        opr_names = []
+        output_names = []
+
+        def mon_callback(node_name, opr_name, arr):
+            output_names.append(py_str(node_name))
+            opr_names.append(py_str(opr_name))
+
+        block.register_op_hook(mon_callback, monitor_all)
+        if not inputs:
+            block(mx.nd.ones((2, 3, 4)))
+        else:
+            block(inputs)
+
+        for output_name, expected_name in zip(output_names, expected_names):
+            print(output_name)
+            assert output_name == expected_name
+
+        if expected_opr_names:
+            for opr_name, expected_opr_name in zip(opr_names, expected_opr_names):
+                assert opr_name == expected_opr_name
+
+    # Test with Dense layer
+    model = mx.gluon.nn.HybridSequential(prefix="dense_")
+    with model.name_scope():
+        model.add(mx.gluon.nn.Dense(2))
+    model.initialize()
+    model.hybridize()
+    check_name(model, ["dense_dense0_fwd_output"])
+
+    # Test with Activation, FListInputNames not registered, input name will have _input appended
+    model = mx.gluon.nn.HybridSequential(prefix="relu_")
+    with model.name_scope():
+        model.add(mx.gluon.nn.Activation("relu"))
+    model.initialize()
+    model.hybridize()
+    check_name(model, ["relu_relu0_fwd_output"])
+
+    # Test with Pooling, monitor_all is set to True
+    model = mx.gluon.nn.HybridSequential("pool_")
+    with model.name_scope():
+        model.add(mx.gluon.nn.AvgPool1D())
+    model.initialize()
+    model.hybridize()
+    check_name(model, ['pool_pool0_fwd_data', 'pool_pool0_fwd_output'], expected_opr_names=["Pooling"],
+               monitor_all=True)
+
+    # stack two layers and test
+    model = mx.gluon.nn.HybridSequential("dense_")
+    with model.name_scope():
+        model.add(mx.gluon.nn.Dense(2))
+        model.add(mx.gluon.nn.Activation("relu"))
+    model.initialize()
+    model.hybridize()
+    check_name(model,
+               ['dense_dense0_fwd_data', 'dense_dense0_fwd_weight',
+                'dense_dense0_fwd_bias', 'dense_dense0_fwd_output',
+                'dense_relu0_fwd_input0', 'dense_relu0_fwd_output'], monitor_all=True)
+
+    # check with different hybridize modes
+    model.hybridize(static_alloc=True)
+    check_name(model,
+               ['dense_dense0_fwd_data', 'dense_dense0_fwd_weight',
+                'dense_dense0_fwd_bias', 'dense_dense0_fwd_output',
+                'dense_relu0_fwd_input0', 'dense_relu0_fwd_output'], monitor_all=True)
 
 
 @with_seed()
@@ -2725,6 +2832,58 @@ def test_slice_activation_reshape_activation():
             shape = (4, 32, 32, -1)
             net = Net(act0, act1, shape, slice)
             check_layer_forward_withinput(net, x)
+
+@with_seed()
+def test_np_shape_parameters():
+    class Foo(gluon.Block):
+        def __init__(self, **kwargs):
+            super(Foo, self).__init__(**kwargs)
+            self.dense = gluon.nn.Dense(16)
+        def forward(self, x):
+            return self.dense(x)
+
+    with mx.np_shape(True):
+        z = mx.nd.zeros((2,2016))
+        print(z.shape)
+        foo = Foo()
+        foo.initialize()
+        print(foo(z).shape)
+
+@with_seed()
+def test_gluon_param_load():
+    net = mx.gluon.nn.Dense(10, in_units=10)
+    net.initialize()
+    net.save_parameters('test_gluon_param_load.params')
+    net.cast('float16')
+    net.load_parameters('test_gluon_param_load.params', cast_dtype=True)
+    mx.nd.waitall()
+
+@with_seed()
+def test_gluon_param_load_dtype_source():
+    net = mx.gluon.nn.Dense(10, in_units=10)
+    net.initialize()
+    net.cast('float16')
+    net.save_parameters('test_gluon_param_load_dtype_source.params')
+    net.cast('float32')
+    net.load_parameters('test_gluon_param_load_dtype_source.params', cast_dtype=True, dtype_source="saved")
+    assert net.weight.dtype == np.float16
+    mx.nd.waitall()
+
+@with_seed()
+def test_squeeze_consistency():
+    class Foo(gluon.HybridBlock):
+        def __init__(self, inplace, **kwargs):
+            super(Foo, self).__init__(**kwargs)
+            self.inplace = inplace
+
+        def forward(self, x):
+            return x.squeeze(inplace=self.inplace)
+
+    for inplace in (True, False):
+        block = Foo(inplace)
+        block.hybridize()
+        shape = (np.random.randint(1, 10), np.random.randint(1, 10), 1)
+        block(mx.nd.ones(shape))
 
 if __name__ == '__main__':
     import nose

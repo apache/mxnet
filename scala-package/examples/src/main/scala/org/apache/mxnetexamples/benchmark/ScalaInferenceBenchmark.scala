@@ -50,7 +50,7 @@ object ScalaInferenceBenchmark {
   List[Long] = {
     var inferenceTimes: List[Long] = List()
     for (i <- 1 to totalRuns) {
-      NDArrayCollector.auto().withScope {
+      ResourceScope.using() {
         val startTimeSingle = System.currentTimeMillis()
         objectToRun.runSingleInference(loadedModel, dataSet)
         val estimatedTimeSingle = System.currentTimeMillis() - startTimeSingle
@@ -67,7 +67,7 @@ object ScalaInferenceBenchmark {
 
     var inferenceTimes: List[Long] = List()
     for (batch <- dataSetBatches) {
-      NDArrayCollector.auto().withScope {
+      ResourceScope.using() {
         val loadedBatch = objecToRun.loadInputBatch(batch)
         val startTimeSingle = System.currentTimeMillis()
         objecToRun.runBatchInference(loadedModel, loadedBatch)
@@ -133,7 +133,7 @@ object ScalaInferenceBenchmark {
 
       logger.info("Running single inference call")
       // Benchmarking single inference call
-      NDArrayCollector.auto().withScope {
+      ResourceScope.using() {
         val loadedModel = loadModel(exampleToBenchmark, context, false)
         val dataSet = loadDataSet(exampleToBenchmark)
         val inferenceTimes = runInference(exampleToBenchmark, loadedModel, dataSet, baseCLI.count)
@@ -143,7 +143,7 @@ object ScalaInferenceBenchmark {
       if (baseCLI.batchSize != 0) {
         logger.info("Running for batch inference call")
         // Benchmarking batch inference call
-        NDArrayCollector.auto().withScope {
+        ResourceScope.using() {
           val loadedModel = loadModel(exampleToBenchmark, context, true)
           val batchDataSet = loadBatchDataSet(exampleToBenchmark, baseCLI.batchSize)
           val inferenceTimes = runBatchInference(exampleToBenchmark, loadedModel, batchDataSet)

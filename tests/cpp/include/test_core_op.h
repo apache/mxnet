@@ -310,7 +310,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     node->inputs.clear();
     node->inputs.reserve(num_inputs);
     for (uint32_t i = 0; i < num_inputs; ++i) {
-      node->inputs.emplace_back(nnvm::NodeEntry{nullptr, i, 0});
+      node->inputs.emplace_back(nullptr, i, 0);
       (*index2array)[i] = &inputs()[i];
     }
 
@@ -319,7 +319,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       ograd_entries.reserve(num_outputs);
       for (uint32_t i = 0; i < num_outputs; ++i) {
         const uint32_t index = num_inputs + i;
-        ograd_entries.emplace_back(nnvm::NodeEntry{nullptr, index, 1});
+        ograd_entries.emplace_back(nullptr, index, 1);
         (*index2array)[index] = &outputs()[i];
       }
       const std::vector<nnvm::NodeEntry> igrad_entries = fgradient[node->op()](node, ograd_entries);

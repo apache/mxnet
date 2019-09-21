@@ -37,12 +37,12 @@ MKLDNNSliceFwd::MKLDNNSliceFwd(const SliceParam &param,
                                const NDArray &out) {
   const mxnet::TShape ishape = in.shape();
   const mxnet::TShape oshape = out.shape();
-  uint32_t N = ishape.ndim();
+  const int N = ishape.ndim();
   mkldnn::memory::dims dims(N);
   mkldnn::memory::dims offsets(N);
-  for (uint32_t i = 0; i < N; ++i) {
+  for (int i = 0; i < N; ++i) {
     int s = 0;
-    if (param.begin[i]) {
+    if (i < param.begin.ndim() &&  param.begin[i]) {
       s = *param.begin[i];
       if (s < 0) s += ishape[i];
     }

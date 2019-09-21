@@ -35,7 +35,8 @@ bool SupportMKLDNNTranspose(const TransposeParam& param,
                             const NDArray &data) {
   auto data_ndim = data.shape().ndim();
 
-  if (data_ndim > 4 || data.dtype() != mshadow::kFloat32)
+  if (data_ndim > 4 || data_ndim == 0 || data.shape().Size() == 0 ||
+      data.dtype() != mshadow::kFloat32)
     return false;
 
   return true;
@@ -55,9 +56,9 @@ class MKLDNNTransposeForward {
     auto shape = data.shape();
     auto data_ndim = shape.ndim();
     auto axes_ndim = param.axes.ndim();
-    auto axes = mxnet::TShape(data_ndim);
+    auto axes = mxnet::TShape(data_ndim, -1);
     if (axes_ndim == 0) {
-      for (size_t i = 0; i < data_ndim; i++) {
+      for (int i = 0; i < data_ndim; i++) {
         axes[i] = data_ndim - i - 1;
       }
     } else {
@@ -79,7 +80,7 @@ class MKLDNNTransposeForward {
     dst_fmt.data_type = mkldnn_f32;
     dst_fmt.format = mkldnn_blocked;
 
-    for (size_t i = 0; i < data_ndim; i++)
+    for (int i = 0; i < data_ndim; i++)
       dst_fmt.dims[i] = shape[i];
 
     unsigned int total_stride = 1;

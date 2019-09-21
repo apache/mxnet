@@ -71,7 +71,7 @@ inline mxnet::TShape DiagShapeImpl(const mxnet::TShape& ishape, const int k,
   int32_t x1 = CheckAxis(axis1, ishape.ndim());
   int32_t x2 = CheckAxis(axis2, ishape.ndim());
 
-  CHECK_NE(x1, x2) << "axis1 and axis2 cannot refer to the the same axis " << x1;
+  CHECK_NE(x1, x2) << "axis1 and axis2 cannot refer to the same axis " << x1;
 
   auto h = ishape[x1];
   auto w = ishape[x2];
@@ -84,19 +84,19 @@ inline mxnet::TShape DiagShapeImpl(const mxnet::TShape& ishape, const int k,
 
   auto s = std::min(h, w);
   if (s < 0) {
-    s = 0;
+    s = -1;
   }
 
   if (x1 > x2) {
     std::swap(x1, x2);
   }
 
-  int32_t n_dim = static_cast<int32_t>(ishape.ndim()) - 1;
-  mxnet::TShape oshape(n_dim);
+  int32_t n_dim = ishape.ndim() - 1;
+  mxnet::TShape oshape(n_dim, -1);
 
   // remove axis1 and axis2 and append the new axis to the end
   uint32_t idx = 0;
-  for (int32_t i = 0; i <= n_dim; ++i) {
+  for (int i = 0; i <= n_dim; ++i) {
     if (i != x1 && i != x2) {
       oshape[idx++] = ishape[i];
     }
@@ -114,7 +114,7 @@ inline bool DiagOpShape(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(out_attrs->size(), 1U);
 
     const mxnet::TShape& ishape = (*in_attrs)[0];
-    if (ishape.ndim() == 0) {
+    if (!mxnet::ndim_is_known(ishape)) {
       return false;
     }
 
@@ -129,7 +129,7 @@ inline bool DiagOpShape(const nnvm::NodeAttrs& attrs,
     }
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
 
-    return out_attrs->at(0).ndim() != 0U;
+    return shape_is_known(out_attrs->at(0));
 }
 
 inline bool DiagOpType(const nnvm::NodeAttrs& attrs,

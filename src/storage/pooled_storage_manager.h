@@ -85,6 +85,8 @@ class GPUPooledStorageManager final : public StorageManager {
     DirectFreeNoLock(handle);
   }
 
+  void ReleaseAll() override;
+
  private:
   void DirectFreeNoLock(Storage::Handle handle) {
     mxnet::common::cuda::DeviceStore device_store(handle.ctx.real_dev_id(), true);
@@ -115,7 +117,6 @@ class GPUPooledStorageManager final : public StorageManager {
   }
 
  private:
-  void ReleaseAll();
   // used memory
   size_t used_memory_ = 0;
   // page size
@@ -152,8 +153,16 @@ void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
 
     void* ret = nullptr;
     cudaError_t e = cudaMalloc(&ret, size);
-    if (e != cudaSuccess && e != cudaErrorCudartUnloading) {
-      LOG(FATAL) << "cudaMalloc failed: " << cudaGetErrorString(e);
+    if (e != cudaSuccess) {
+      if (e == cudaErrorMemoryAllocation) {
+        ReleaseAll();
+        e = cudaMalloc(&ret, size);
+        if (e != cudaSuccess && e != cudaErrorCudartUnloading) {
+          LOG(FATAL) << "cudaMalloc retry failed: " << cudaGetErrorString(e);
+        }
+      } else if (e != cudaErrorCudartUnloading) {
+        LOG(FATAL) << "cudaMalloc failed: " << cudaGetErrorString(e);
+      }
     }
     used_memory_ += size;
     handle->dptr = ret;
@@ -250,6 +259,8 @@ class GPUPooledRoundedStorageManager final : public StorageManager {
     DirectFreeNoLock(handle);
   }
 
+  void ReleaseAll() override;
+
  private:
   inline int div_pow2_round_up(size_t s, int divisor_log2) {
     // (1025, 10) -> 2
@@ -284,7 +295,6 @@ class GPUPooledRoundedStorageManager final : public StorageManager {
   }
 
  private:
-  void ReleaseAll();
   // number of devices
   const int NDEV = 32;
   // log2 of maximum page size. 16GB
@@ -326,8 +336,16 @@ void GPUPooledRoundedStorageManager::Alloc(Storage::Handle* handle) {
 
     void* ret = nullptr;
     cudaError_t e = cudaMalloc(&ret, size);
-    if (e != cudaSuccess && e != cudaErrorCudartUnloading) {
-      LOG(FATAL) << "cudaMalloc failed: " << cudaGetErrorString(e);
+    if (e != cudaSuccess) {
+      if (e == cudaErrorMemoryAllocation) {
+        ReleaseAll();
+        e = cudaMalloc(&ret, size);
+        if (e != cudaSuccess && e != cudaErrorCudartUnloading) {
+          LOG(FATAL) << "cudaMalloc retry failed: " << cudaGetErrorString(e);
+        }
+      } else if (e != cudaErrorCudartUnloading) {
+        LOG(FATAL) << "cudaMalloc failed: " << cudaGetErrorString(e);
+      }
     }
     used_memory_ += size;
     handle->dptr = ret;

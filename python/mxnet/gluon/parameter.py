@@ -16,8 +16,10 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=
+# pylint: disable=unnecessary-pass, too-many-lines
 """Neural network parameter."""
+from __future__ import absolute_import
+
 __all__ = ['DeferredInitializationError', 'Parameter', 'Constant',
            'ParameterDict', 'tensor_types']
 
@@ -30,7 +32,9 @@ from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer, context
 from ..context import Context, cpu
 from .. import autograd
-from .utils import _indent, _brief_print_list
+from .utils import _indent, _brief_print_list, shape_is_known
+from ..util import is_np_shape, is_np_array
+from .. import numpy as _mx_np  # pylint: disable=reimported
 
 # pylint: disable= invalid-name
 tensor_types = (symbol.Symbol, ndarray.NDArray)
@@ -116,7 +120,7 @@ class Parameter(object):
             shape = (shape,)
         self._shape = shape
         self.name = name
-        self.dtype = dtype
+        self._dtype = dtype
         self.lr_mult = lr_mult
         self.wd_mult = wd_mult
         self.grad_req = grad_req
@@ -129,7 +133,6 @@ class Parameter(object):
             "one of 'default', 'row_sparse', or 'csr', but got '%s'" % (name, stype)
         self._grad_stype = grad_stype
         self._stype = stype
-
 
     def __repr__(self):
         s = 'Parameter {name} (shape={shape}, dtype={dtype})'
@@ -155,8 +158,33 @@ class Parameter(object):
             self._init_grad()
 
     @property
+    def dtype(self):
+        """The type of the parameter.
+
+        Setting the dtype value is equivalent to casting the value of the parameter
+        """
+        return self._dtype
+
+    @dtype.setter
+    def dtype(self, dtype):
+        self.cast(dtype)
+
+    @property
     def shape(self):
-        return self._shape
+        """The shape of the parameter.
+
+        By default, an unknown dimension size is 0. However, when the NumPy semantic
+        is turned on, unknown dimension size is -1.
+        """
+        if self._shape is None:
+            return None
+        elif is_np_shape():
+            # Parameters shouldn't be zero-size. If one of its dimension is 0,
+            # it means the parameter isn't initialized. In the NumPy semantics,
+            # the unknown dimension should be marked with -1.
+            return tuple(i if i != 0 else -1 for i in self._shape)
+        else:
+            return self._shape
 
     @shape.setter
     def shape(self, new_shape):
@@ -165,9 +193,9 @@ class Parameter(object):
             return
 
         assert len(self._shape) == len(new_shape) and \
-            all(j in (0, i) for i, j in zip(new_shape, self._shape)), \
+            all(j in (-1, 0, i) for i, j in zip(new_shape, self._shape)), \
             "Expected shape %s is incompatible with given shape %s."%(
-                str(new_shape), str(self._shape))
+                str(new_shape), str(self._shape))  # -1 means unknown dim size in np_shape mode
 
         self._shape = new_shape
 
@@ -227,19 +255,44 @@ class Parameter(object):
         self._trainer._row_sparse_pull(self, results, row_id)
         return results
 
-    def _load_init(self, data, ctx):
-        """(Re)initializes by loading from data."""
+    def _load_init(self, data, ctx, cast_dtype=False, dtype_source='current'):
+        """
+        (Re)initializes by loading from data.
+        Parameters
+        ----------
+        data : NDArray
+            The data to load
+        ctx : Context or list of Context
+            Context(s) initialize loaded parameters on.
+        cast_dtype : bool, default False
+            Cast the data type of the parameter
+        dtype_source : str, default 'current'
+            must be in {'current', 'saved'}
+            Only valid if cast_dtype=True, specify the source of the dtype for casting
+            the parameters
+        """
+        if cast_dtype:
+            assert dtype_source in ['current', 'saved']
         if self.shape:
+            unknown_dim_size = -1 if is_np_shape() else 0
             for self_dim, data_dim in zip(self.shape, data.shape):
-                assert self_dim in (0, data_dim), \
+                assert self_dim in (unknown_dim_size, data_dim), \
                     "Failed loading Parameter '%s' from saved params: " \
                     "shape incompatible expected %s vs saved %s"%(
                         self.name, str(self.shape), str(data.shape))
-            self.shape = tuple(i if i != 0 else j for i, j in zip(self.shape, data.shape))
+            self.shape = tuple(i if i != unknown_dim_size else j
+                               for i, j in zip(self.shape, data.shape))
         if self.dtype:
-            assert np.dtype(self.dtype).type == data.dtype, \
+            if cast_dtype and np.dtype(self.dtype).type != data.dtype:
+                if dtype_source == 'current':
+                    data = data.astype(self.dtype, copy=False)
+                elif dtype_source == 'saved':
+                    self.dtype = data.dtype
+            else:
+                assert np.dtype(self.dtype).type == data.dtype, \
                 "Failed loading Parameter '%s' from saved params: " \
-                "dtype incompatible expected %s vs saved %s"%(
+                "dtype incompatible expected %s vs saved %s. " \
+                "Set cast_dtype=True to cast the dtype of saved params."%(
                     self.name, str(self.dtype), str(data.dtype))
         if self._stype != data.stype:
             data = data.tostype(self._stype)
@@ -269,7 +322,8 @@ class Parameter(object):
             return
         init, ctx, default_init, data = self._deferred_init
         self._deferred_init = ()
-        assert self.shape is not None and np.prod(self.shape) > 0, \
+
+        assert shape_is_known(self.shape), \
             "Cannot initialize Parameter '%s' because it has " \
             "invalid shape: %s. Please specify in_units, " \
             "in_channels, etc for `Block`s."%(
@@ -277,8 +331,16 @@ class Parameter(object):
 
         with autograd.pause():
             if data is None:
-                data = ndarray.zeros(shape=self.shape, dtype=self.dtype,
-                                     ctx=context.cpu(), stype=self._stype)
+                kwargs = {'shape': self.shape, 'dtype': self.dtype, 'ctx': context.cpu()}
+                if is_np_array():
+                    if self._stype != 'default':
+                        raise ValueError("mxnet.numpy.zeros does not support stype = {}"
+                                         .format(self._stype))
+                    zeros_fn = _mx_np.zeros
+                else:
+                    kwargs['stype'] = self._stype
+                    zeros_fn = ndarray.zeros
+                data = zeros_fn(**kwargs)
                 initializer.create(default_init)(
                     initializer.InitDesc(self.name, {'__init__': init}), data)
 
@@ -303,8 +365,15 @@ class Parameter(object):
             self._grad = None
             return
 
-        self._grad = [ndarray.zeros(shape=i.shape, dtype=i.dtype, ctx=i.context,
-                                    stype=self._grad_stype) for i in self._data]
+        if is_np_array():
+            if self._grad_stype != 'default':
+                raise ValueError("mxnet.numpy.zeros does not support stype = {}"
+                                 .format(self._grad_stype))
+            self._grad = [_mx_np.zeros(shape=i.shape, dtype=i.dtype, ctx=i.context)
+                          for i in self._data]
+        else:
+            self._grad = [ndarray.zeros(shape=i.shape, dtype=i.dtype, ctx=i.context,
+                                        stype=self._grad_stype) for i in self._data]
 
         autograd.mark_variables(self._check_and_get(self._data, list),
                                 self._grad, self.grad_req)
@@ -314,7 +383,10 @@ class Parameter(object):
         ctx = context.cpu()
         if self._stype == 'default':
             block = self.list_data()
-            data = ndarray.add_n(*(w.copyto(ctx) for w in block)) / len(block)
+            if is_np_array():
+                data = sum([w.copyto(ctx) for w in block]) / len(block)
+            else:
+                data = ndarray.add_n(*(w.copyto(ctx) for w in block)) / len(block)
         else:
             # fetch all rows for 'row_sparse' param
             all_row_ids = ndarray.arange(0, self.shape[0], dtype='int64', ctx=ctx)
@@ -380,7 +452,7 @@ class Parameter(object):
             ctx = [ctx]
         if init is None:
             init = default_init if self.init is None else self.init
-        if not self.shape or np.prod(self.shape) <= 0:
+        if not shape_is_known(self.shape):
             if self._allow_deferred_init:
                 self._deferred_init = (init, ctx, default_init, None)
                 return
@@ -413,7 +485,6 @@ class Parameter(object):
         else:
             raise ValueError("Cannot reset context for Parameter '%s' because it "
                              "has not been initialized."%self.name)
-
 
     def set_data(self, data):
         """Sets this parameter's value on all contexts."""
@@ -553,6 +624,8 @@ class Parameter(object):
             self._var = symbol.var(self.name, shape=self.shape, dtype=self.dtype,
                                    lr_mult=self.lr_mult, wd_mult=self.wd_mult,
                                    init=self.init, stype=self._stype)
+            if is_np_array():
+                self._var = self._var.as_np_ndarray()
         return self._var
 
     def cast(self, dtype):
@@ -563,7 +636,7 @@ class Parameter(object):
         dtype : str or numpy.dtype
             The new data type.
         """
-        self.dtype = dtype
+        self._dtype = dtype
         if self._data is None:
             return
         with autograd.pause():
@@ -714,12 +787,12 @@ class ParameterDict(object):
                         inferred_shape = []
                         matched = True
                         for dim1, dim2 in zip(v, existing):
-                            if dim1 != dim2 and dim1 * dim2 != 0:
+                            if dim1 != dim2 and dim1 > 0 and dim2 > 0:
                                 matched = False
                                 break
                             elif dim1 == dim2:
                                 inferred_shape.append(dim1)
-                            elif dim1 == 0:
+                            elif dim1 in (0, -1):  # -1 means unknown dim size in np_shape mode
                                 inferred_shape.append(dim2)
                             else:
                                 inferred_shape.append(dim1)
@@ -877,7 +950,8 @@ class ParameterDict(object):
         ndarray.save(filename, arg_dict)
 
     def load(self, filename, ctx=None, allow_missing=False,
-             ignore_extra=False, restore_prefix=''):
+             ignore_extra=False, restore_prefix='', cast_dtype=False,
+             dtype_source="current"):
         """Load parameters from file.
 
         Parameters
@@ -893,28 +967,63 @@ class ParameterDict(object):
             present in this ParameterDict.
         restore_prefix : str, default ''
             prepend prefix to names of stored parameters before loading.
+        cast_dtype : bool, default False
+            Cast the data type of the parameter
+        dtype_source : str, default 'current'
+            must be in {'current', 'saved'}
+            Only valid if cast_dtype=True, specify the source of the dtype for casting
+            the parameters
         """
         if restore_prefix:
             for name in self.keys():
                 assert name.startswith(restore_prefix), \
                     "restore_prefix is '%s' but Parameters name '%s' does not start " \
                     "with '%s'"%(restore_prefix, name, restore_prefix)
+        ndarray_load = ndarray.load(filename)
+        self.load_dict(ndarray_load, ctx, allow_missing,
+                       ignore_extra, restore_prefix, filename, cast_dtype, dtype_source)
+
+    def load_dict(self, param_dict, ctx=None, allow_missing=False,
+                  ignore_extra=False, restore_prefix='', filename=None, cast_dtype=False,
+                  dtype_source="current"):
+        """Load parameters from dict
+
+        Parameters
+        ----------
+        param_dict : dict
+            Dictionary containing model parameters, preprended with arg: and aux: names
+        ctx : Context or list of Context
+            Context(s) initialize loaded parameters on.
+        allow_missing : bool, default False
+            Whether to silently skip loading parameters not represented in the file.
+        ignore_extra : bool, default False
+            Whether to silently ignore parameters from the file that are not
+            present in this ParameterDict.
+        restore_prefix : str, default ''
+            prepend prefix to names of stored parameters before loading
+        filename : str, default None
+        cast_dtype : bool, default False
+            Cast the data type of the NDArray loaded from the checkpoint to the dtype
+            provided by the Parameter if any
+        """
         lprefix = len(restore_prefix)
         loaded = [(k[4:] if k.startswith('arg:') or k.startswith('aux:') else k, v) \
-                  for k, v in ndarray.load(filename).items()]
+                  for k, v in param_dict.items()] if isinstance(param_dict, dict) else param_dict
         arg_dict = {restore_prefix+k: v for k, v in loaded}
+        error_str = "file: %s" % (filename) if filename else "param_dict"
         if not allow_missing:
             for name in self.keys():
                 assert name in arg_dict, \
-                    "Parameter '%s' is missing in file '%s', which contains parameters: %s. " \
+                    "Parameter '%s' is missing in %s, which contains parameters: %s. " \
                     "Please make sure source and target networks have the same prefix."%(
-                        name[lprefix:], filename, _brief_print_list(arg_dict.keys()))
+                        name[lprefix:], error_str, _brief_print_list(arg_dict.keys()))
         for name in arg_dict:
             if name not in self._params:
                 assert ignore_extra, \
-                    "Parameter '%s' loaded from file '%s' is not present in ParameterDict, " \
+                    "Parameter '%s' loaded from %s is not present in ParameterDict, " \
                     "choices are: %s. Set ignore_extra to True to ignore. " \
                     "Please make sure source and target networks have the same prefix."%(
-                        name[lprefix:], filename, _brief_print_list(self._params.keys()))
+                        name[lprefix:], error_str, _brief_print_list(self._params.keys()))
                 continue
-            self[name]._load_init(arg_dict[name], ctx)
+            self[name]._load_init(arg_dict[name], ctx, cast_dtype=cast_dtype,
+                                  dtype_source=dtype_source)

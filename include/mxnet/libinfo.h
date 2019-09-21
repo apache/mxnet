@@ -123,7 +123,13 @@
 #define MXNET_USE_SIGNAL_HANDLER 0
 #endif
 
+#ifndef MXNET_USE_INT64_TENSOR_SIZE
+#define MXNET_USE_INT64_TENSOR_SIZE MSHADOW_INT64_TENSOR_SIZE
+#endif
 
+#ifndef MXNET_USE_TVM_OP
+#define MXNET_USE_TVM_OP 0
+#endif
 
 namespace mxnet {
 namespace features {
@@ -177,9 +183,14 @@ enum : unsigned {
   PROFILER,
   DIST_KVSTORE,
   CXX14,
+  INT64_TENSOR_SIZE,
+
   // Signal handler to print stack traces on exceptions
   SIGNAL_HANDLER,
   DEBUG,
+
+  // TVM operator
+  TVM_OP,
 
   // size indicator
   MAX_FEATURES

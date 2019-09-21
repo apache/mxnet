@@ -117,9 +117,9 @@ class SoftmaxOutputOp : public Operator {
     CHECK_EQ(out_data.size(), 1U) << "SoftmaxOutput Output: [output]";
     Stream<xpu> *s = ctx.get_stream<xpu>();
     if (param_.multi_output) {
-      int n = in_data[softmaxout_enum::kData].size(0);
-      int k = in_data[softmaxout_enum::kData].size(1);
-      Shape<3> s3 = Shape3(n, k, static_cast<int>(in_data[softmaxout_enum::kData].Size()/n/k));
+      index_t n = in_data[softmaxout_enum::kData].size(0);
+      index_t k = in_data[softmaxout_enum::kData].size(1);
+      Shape<3> s3 = Shape3(n, k, static_cast<index_t>(in_data[softmaxout_enum::kData].Size()/n/k));
       Tensor<xpu, 3, DType> data =
           in_data[softmaxout_enum::kData].get_with_shape<xpu, 3, DType>(s3, s);
       Tensor<xpu, 3, DType> out =
@@ -131,8 +131,8 @@ class SoftmaxOutputOp : public Operator {
         Tensor<xpu, 2, DType> out = out_data[softmaxout_enum::kOut].FlatTo2D<xpu, DType>(s);
         Softmax(out, data);
       } else {
-        int n = in_data[softmaxout_enum::kData].size(0);
-        int k = in_data[softmaxout_enum::kData].Size()/n;
+        index_t n = in_data[softmaxout_enum::kData].size(0);
+        index_t k = in_data[softmaxout_enum::kData].Size()/n;
         Shape<2> s2 = Shape2(n, k);
         Tensor<xpu, 2, DType> data =
             in_data[softmaxout_enum::kData].get_with_shape<xpu, 2, DType>(s2, s);
@@ -171,9 +171,9 @@ class SoftmaxOutputOp : public Operator {
         grad = (out - label) * scalar<DType>(param_.grad_scale);
       }
     } else if (param_.multi_output) {
-      int n = out_data[softmaxout_enum::kOut].size(0);
-      int k = out_data[softmaxout_enum::kOut].size(1);
-      Shape<3> s3 = Shape3(n, k, static_cast<int>(out_data[softmaxout_enum::kOut].Size()/n/k));
+      index_t n = out_data[softmaxout_enum::kOut].size(0);
+      index_t k = out_data[softmaxout_enum::kOut].size(1);
+      Shape<3> s3 = Shape3(n, k, static_cast<index_t>(out_data[softmaxout_enum::kOut].Size()/n/k));
       Shape<2> s2 = Shape2(s3[0], s3[2]);
       Tensor<xpu, 2, DType> label =
           in_data[softmaxout_enum::kLabel].get_with_shape<xpu, 2, DType>(s2, s);
@@ -224,7 +224,7 @@ class SoftmaxOutputOp : public Operator {
 //        Tensor<xpu, 2, DType> out = out_data[softmaxout_enum::kOut].FlatTo2D<xpu, DType>(s);
 //        Tensor<xpu, 2, DType> grad = in_grad[softmaxout_enum::kData].FlatTo2D<xpu, DType>(s);
       } else {
-        int n = out_data[softmaxout_enum::kOut].size(0);
+        index_t n = out_data[softmaxout_enum::kOut].size(0);
         data_shape = Shape2(n, out_data[softmaxout_enum::kOut].Size()/n);
       }
       Tensor<xpu, 1, DType> label = in_data[softmaxout_enum::kLabel].get_with_shape<xpu, 1, DType>(
@@ -337,19 +337,19 @@ class SoftmaxOutputProp : public OperatorProperty {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 2U) << "Input:[data, label]";
     const mxnet::TShape &dshape = in_shape->at(0);
-    if (dshape.ndim() == 0) return false;
+    if (!shape_is_known(dshape)) return false;
 
     // label.shape == data.shape: use probability as label
     if (dshape != (*in_shape)[softmaxout_enum::kLabel]) {
       if (param_.multi_output) {
         mxnet::TShape lshape1 = Shape2(dshape[0], dshape.Size()/dshape[0]/dshape[1]);
-        mxnet::TShape lshape2(dshape.ndim() - 1);
+        mxnet::TShape lshape2(dshape.ndim() - 1, -1);
         lshape2[0] = dshape[0];
-        for (index_t i = 2; i < dshape.ndim(); ++i)
+        for (int i = 2; i < dshape.ndim(); ++i)
           lshape2[i-1] = dshape[i];
         mxnet::TShape lshape3 = dshape;
         lshape3[1] = 1;
-        if (in_shape->at(softmaxout_enum::kLabel).ndim() == 0) {
+        if (!mxnet::ndim_is_known(in_shape->at(softmaxout_enum::kLabel))) {
           in_shape->at(softmaxout_enum::kLabel) = lshape1;
         } else if (in_shape->at(softmaxout_enum::kLabel) == lshape1) {
         } else if (in_shape->at(softmaxout_enum::kLabel) == lshape2) {
@@ -361,8 +361,8 @@ class SoftmaxOutputProp : public OperatorProperty {
           throw InferShapeError(os.str(), softmaxout_enum::kLabel);
         }
       } else {
-        mxnet::TShape label_shape(dshape.ndim() - 1);
-        for (index_t i = 0; i + 1 < dshape.ndim(); ++i)
+        mxnet::TShape label_shape(dshape.ndim() - 1, -1);
+        for (int i = 0; i + 1 < dshape.ndim(); ++i)
           label_shape[i] = dshape[i];
         SHAPE_ASSIGN_CHECK(*in_shape, softmaxout_enum::kLabel, label_shape);
       }

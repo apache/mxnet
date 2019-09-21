@@ -45,6 +45,7 @@ apt-get install -y \
     software-properties-common \
     sudo \
     unzip \
+    vim-nox \
     wget
 
 # Use libturbojpeg package as it is correctly compiled with -fPIC flag

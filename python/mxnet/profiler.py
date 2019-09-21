@@ -47,7 +47,7 @@ def set_config(**kwargs):
         whether to profile memory usage
     profile_api : boolean,
         whether to profile the C API
-    contiguous_dump : boolean,
+    continuous_dump : boolean,
         whether to periodically dump profiling data to file
     dump_period : float,
         seconds between profile data dumps
@@ -148,17 +148,45 @@ def dump_profile():
     dump(True)
 
 
-def dumps(reset=False):
+def dumps(reset=False, format='table', sort_by='total', ascending=False):
     """Return a printable string of aggregate profile stats.
 
     Parameters
     ----------
     reset: boolean
-        Indicates whether to clean aggeregate statistical data collected up to this point
+        indicates whether to clean aggeregate statistical data collected up to this point
+    format: string
+        whether to return the aggregate stats in table of json format
+        can take 'table' or 'json'
+        defaults to 'table'
+    sort_by: string
+        can take 'total', 'avg', 'min', 'max', or 'count'
+        by which stat to sort the entries in each category
+        defaults to 'total'
+    ascending: boolean
+        whether to sort ascendingly
+        defaults to False
     """
     debug_str = ctypes.c_char_p()
-    do_reset = 1 if reset is True else 0
-    check_call(_LIB.MXAggregateProfileStatsPrint(ctypes.byref(debug_str), int(do_reset)))
+    reset_to_int = {False: 0, True: 1}
+    format_to_int = {'table': 0, 'json': 1}
+    sort_by_to_int = {'total': 0, 'avg': 1, 'min': 2, 'max': 3, 'count': 4}
+    asc_to_int = {False: 0, True: 1}
+    assert format in format_to_int.keys(),\
+            "Invalid value provided for format: {0}. Support: 'table', 'json'".format(format)
+    assert sort_by in sort_by_to_int.keys(),\
+            "Invalid value provided for sort_by: {0}.\
+             Support: 'total', 'avg', 'min', 'max', 'count'"\
+            .format(sort_by)
+    assert  ascending in asc_to_int.keys(),\
+            "Invalid value provided for ascending: {0}. Support: False, True".format(ascending)
+    assert  reset in reset_to_int.keys(),\
+            "Invalid value provided for reset: {0}. Support: False, True".format(reset)
+    check_call(_LIB.MXAggregateProfileStatsPrintEx(ctypes.byref(debug_str),
+                                                   reset_to_int[reset],
+                                                   format_to_int[format],
+                                                   sort_by_to_int[sort_by],
+                                                   asc_to_int[ascending]))
     return py_str(debug_str.value)
 
 

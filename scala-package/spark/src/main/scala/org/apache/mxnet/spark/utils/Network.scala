@@ -20,6 +20,7 @@ package org.apache.mxnet.spark.utils
 import java.io.IOException
 import java.net.{ServerSocket, NetworkInterface}
 import java.util.regex.Pattern
+import scala.collection.JavaConverters._
 
 /**
  * Helper functions to decide ip address / port
@@ -33,19 +34,16 @@ object Network {
       "([01]?\\d\\d?|2[0-4]\\d|25[0-5])$")
 
   def ipAddress: String = {
-    val interfaces = NetworkInterface.getNetworkInterfaces
-    while (interfaces.hasMoreElements) {
-      val interface = interfaces.nextElement
-      val addresses = interface.getInetAddresses
-      while (addresses.hasMoreElements) {
-        val address = addresses.nextElement
-        val ip = address.getHostAddress
-        if (!ip.startsWith("127.") && IPADDRESS_PATTERN.matcher(ip).matches()) {
-          return ip
+    val interfaces = NetworkInterface.getNetworkInterfaces.asScala
+    val interface = interfaces.toStream.flatMap(
+      _.getInetAddresses.asScala.toStream.flatMap(
+        address => {
+          val ip = address.getHostAddress
+          Option(ip).filter(ip => !ip.startsWith("127.") && IPADDRESS_PATTERN.matcher(ip).matches())
         }
-      }
-    }
-    "127.0.0.1"
+      )
+    ).headOption
+    interface.getOrElse("127.0.0.1")
   }
 
   def availablePort: Int = {

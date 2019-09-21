@@ -41,7 +41,7 @@ struct SampleMultinomialParam : public dmlc::Parameter<SampleMultinomialParam> {
   int dtype;
   DMLC_DECLARE_PARAMETER(SampleMultinomialParam) {
     DMLC_DECLARE_FIELD(shape)
-      .set_default(mxnet::TShape())
+      .set_default(mxnet::TShape(0, 1))
       .describe("Shape to be sampled from each random distribution.");
     DMLC_DECLARE_FIELD(get_prob)
     .set_default(false)
@@ -68,33 +68,31 @@ inline bool SampleMultinomialOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), param.get_prob ? 2U : 1U);
   const mxnet::TShape& ishape = (*in_attrs)[0];
-  if (!ishape.ndim()) return false;
-
-  MSHADOW_TYPE_SWITCH(param.dtype, DType, {
-    CHECK_LE(ishape[ishape.ndim() - 1], mxnet::common::MaxIntegerValue<DType>())
-    << "'dtype' does not have a sufficient precision to represent the indices of the input array.";
-  });
+  if (!ndim_is_known(ishape)) return false;
 
   if (ishape.ndim() == 1) {
-    if (param.shape.ndim()) {
+    if (param.shape.ndim() > 0) {
       SHAPE_ASSIGN_CHECK(*out_attrs, 0, param.shape);
       if (param.get_prob) SHAPE_ASSIGN_CHECK(*out_attrs, 1, param.shape);
     } else {
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(1));
-      if (param.get_prob) SHAPE_ASSIGN_CHECK(*out_attrs, 1, mxnet::TShape(1));
+      SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(1, 1));
+      if (param.get_prob) SHAPE_ASSIGN_CHECK(*out_attrs, 1, mxnet::TShape(1, 1));
     }
     return true;
   }
 
-  mxnet::TShape oshape(ishape.ndim() - 1 + param.shape.ndim());
-  for (size_t i = 0; i < ishape.ndim() - 1; ++i) {
+  mxnet::TShape oshape(ishape.ndim() - 1 + param.shape.ndim(), -1);
+  for (int i = 0; i < ishape.ndim() - 1; ++i) {
     oshape[i] = ishape[i];
   }
-  for (size_t i = 0; i < param.shape.ndim(); ++i) {
+  for (int i = 0; i < param.shape.ndim(); ++i) {
     oshape[i + ishape.ndim() - 1] = param.shape[i];
   }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   if (param.get_prob) SHAPE_ASSIGN_CHECK(*out_attrs, 1, oshape);
+  for (const auto& out_shape : *out_attrs) {
+    if (!shape_is_known(out_shape)) return false;
+  }
   return true;
 }
 
@@ -118,26 +116,30 @@ inline bool SampleMultinomialOpType(const nnvm::NodeAttrs& attrs,
 
 struct SampleMultinomialKernel {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, index_t K, index_t M,
-                                  DType* dist, float* uniform, IType* out,
-                                  DType* prob) {
+  MSHADOW_XINLINE static void Map(index_t i, index_t K, index_t M,
+                                  DType* dist, float* uniform, float* cum_table,
+                                  IType* out, DType* prob) {
+    double acc = 0.0;
+    // CDF table
+    for (index_t c = 0; c < K; ++c) {
+      acc += dist[i*K + c];
+      cum_table[i*K + c] = static_cast<float>(acc);
+    }
     for (index_t j = 0; j < M; ++j) {
+      index_t left = 0, right = K;
+      index_t middle = left + (right - left) / 2;
       DType loc = static_cast<DType>(uniform[i*M + j]);
-      DType acc = 0;
-      bool found = false;
-      for (index_t k = 0; k < K; ++k) {
-        acc += dist[i*K + k];
-        if (acc > loc) {
-          found = true;
-          out[i*M + j] = static_cast<IType>(k);
-          if (prob != nullptr) prob[i*M + j] = logf(dist[i*K + k]);
-          break;
+      while (right - left > 0) {
+        middle = left + (right - left) / 2;
+        DType cum_prob = cum_table[i*K + middle];
+        if (cum_prob < loc) {
+          left = middle + 1;
+        } else {
+          right = middle;
         }
       }
-      if (!found) {
-        out[i*M + j] = static_cast<IType>(K-1);
-        if (prob != nullptr) prob[i*M + j] = logf(dist[i*K + K - 1]);
-      }
+      out[i*M + j] = static_cast<IType>(left);
+      if (prob != nullptr) prob[i*M + j] = logf(dist[i*K + left]);
     }
   }
 };
@@ -160,12 +162,14 @@ void SampleMultinomialForward(const nnvm::NodeAttrs& attrs,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     Random<xpu, float> *prnd = ctx.requested[0].get_random<xpu, float>(s);
-    Tensor<xpu, 1, float> uniform =
-      ctx.requested[1].get_space_typed<xpu, 1, float>(Shape1(N*M), s);
+    Tensor<xpu, 1, float> workspace =
+      ctx.requested[1].get_space_typed<xpu, 1, float>(Shape1(N*M + N*K), s);
+    Tensor<xpu, 1, float> uniform(workspace.dptr_, Shape1(N*M));
     prnd->SampleUniform(&uniform, 0, 1);
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, IType, {
       Kernel<SampleMultinomialKernel, xpu>::Launch(
-        s, N, K, M, inputs[0].dptr<DType>(), uniform.dptr_, outputs[0].dptr<IType>(),
+        s, N, K, M, inputs[0].dptr<DType>(), uniform.dptr_, workspace.dptr_ + N*M,
+        outputs[0].dptr<IType>(),
         param.get_prob ? outputs[1].dptr<DType>() : nullptr);
     });
   });

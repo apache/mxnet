@@ -68,6 +68,15 @@ _WHITE_LIST = [
                # Git submodules under different licenses
                '3rdparty',
 
+               # 3rdparty headerfiles under different licenses
+               'include/mkldnn',
+
+               # Docs Sphinx themes under different licenses
+               'docs/python_docs/themes',
+
+                # Docs Jekyll website under different licenses
+               'docs/static_site',
+  
                # Code shared with project by author - see file for details
                'src/operator/special_functions-inl.h',
 
@@ -88,6 +97,7 @@ _WHITE_LIST = [
                'docs/_static/searchtools_custom.js',
                'docs/_static/js/clipboard.js',
                'docs/_static/js/clipboard.min.js',
+               'docs/static_site/src/assets/js/clipboard.js',
 
                # Licensed under 2-Clause BSD in header
                'example/ssd/dataset/pycocotools/coco.py',

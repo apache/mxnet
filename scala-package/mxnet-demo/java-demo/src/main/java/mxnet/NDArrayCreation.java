@@ -37,7 +37,7 @@ public class NDArrayCreation {
 
         // random
         NDArray random = NDArray.random_uniform(
-                NDArray.new random_uniformParam()
+                new random_uniformParam()
                         .setLow(0.0f)
                         .setHigh(2.0f)
                         .setShape(new Shape(new int[]{10, 10}))

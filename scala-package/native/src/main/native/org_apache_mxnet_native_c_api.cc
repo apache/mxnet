@@ -93,6 +93,31 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayCreateEx
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayCreateSparseEx
+  (JNIEnv *env, jobject obj, jint storageType, jintArray shape, jint ndim, jint devType,
+    jint devId, jint delayAlloc, jint dtype, jint numAux, jintArray auxTypes,
+    jintArray auxNdims, jintArray auxShapes, jobject ndArrayHandle) {
+    jint *shapeArr = env->GetIntArrayElements(shape, NULL);
+    jint *auxTypesArr = env->GetIntArrayElements(auxTypes, NULL);
+    jint *auxNdimsArr = env->GetIntArrayElements(auxNdims, NULL);
+    jint *auxShapesArr = env->GetIntArrayElements(auxShapes, NULL);
+    NDArrayHandle out;
+    int ret = MXNDArrayCreateSparseEx(storageType,
+     reinterpret_cast<const mx_uint *>(shapeArr),
+     static_cast<mx_uint>(ndim),
+     devType, devId, delayAlloc, dtype,
+     static_cast<mx_uint>(numAux),
+     reinterpret_cast<int *>(auxTypesArr),
+     reinterpret_cast<mx_uint *>(auxNdimsArr),
+     reinterpret_cast<const mx_uint *>(auxShapesArr),  &out);
+    env->ReleaseIntArrayElements(shape, shapeArr, 0);
+    env->ReleaseIntArrayElements(auxTypes, auxTypesArr, 0);
+    env->ReleaseIntArrayElements(auxNdims, auxNdimsArr, 0);
+    env->ReleaseIntArrayElements(auxShapes, auxShapesArr, 0);
+    SetLongField(env, ndArrayHandle, reinterpret_cast<jlong>(out));
+    return ret;
+}
+
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayWaitAll(JNIEnv *env, jobject obj) {
   return MXNDArrayWaitAll();
 }
@@ -179,10 +204,10 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxFuncGetInfo
   return ret;
 }
 
-JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxImperativeInvoke
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxImperativeInvokeEx
   (JNIEnv *env, jobject obj, jlong funcPtr, jlongArray inputs,
     jlongArray outputsGiven, jobject outputs, jint numParams,
-    jobjectArray paramKeys, jobjectArray paramVals) {
+    jobjectArray paramKeys, jobjectArray paramVals, jobject outStypes) {
 
   const char **cParamKeys = NULL;
   const char **cParamVals = NULL;
@@ -204,6 +229,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxImperativeInvoke
   int numOutputs = 0;
   jlong *cOutputsGiven = NULL;
   NDArrayHandle *cOutputs = NULL;
+  const int *cOutStypes;
   if (outputsGiven) {
     cOutputsGiven = env->GetLongArrayElements(outputsGiven, NULL);
     cOutputs = reinterpret_cast<NDArrayHandle *>(cOutputsGiven);
@@ -211,18 +237,16 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxImperativeInvoke
   }
   jlong *cInputs = env->GetLongArrayElements(inputs, NULL);
   jsize numInputs = env->GetArrayLength(inputs);
-  int ret = MXImperativeInvoke(reinterpret_cast<AtomicSymbolCreator>(funcPtr),
+  int ret = MXImperativeInvokeEx(reinterpret_cast<AtomicSymbolCreator>(funcPtr),
                                static_cast<int>(numInputs),
                                reinterpret_cast<NDArrayHandle *>(cInputs),
                                &numOutputs,
                                &cOutputs,
                                static_cast<int>(numParams),
                                cParamKeys,
-                               cParamVals);
+                               cParamVals,
+                               &cOutStypes);
   env->ReleaseLongArrayElements(inputs, cInputs, 0);
-  if (cOutputsGiven) {
-    env->ReleaseLongArrayElements(outputsGiven, cOutputsGiven, 0);
-  }
 
   // release allocated memory
   if (numParams > 0) {
@@ -240,7 +264,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxImperativeInvoke
 
   if (cOutputs) {
     jclass longCls = env->FindClass("java/lang/Long");
+    jclass intCls = env->FindClass("java/lang/Integer");
     jmethodID longConst = env->GetMethodID(longCls, "<init>", "(J)V");
+    jmethodID intConst = env->GetMethodID(intCls, "<init>", "(I)V");
     // scala.collection.mutable.ListBuffer append method
     jclass listClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
     jmethodID listAppend = env->GetMethodID(listClass, "$plus$eq",
@@ -249,7 +275,14 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxImperativeInvoke
       env->CallObjectMethod(outputs, listAppend,
                             env->NewObject(longCls, longConst,
                             reinterpret_cast<uint64_t>(cOutputs[i])));
+      env->CallObjectMethod(outStypes, listAppend,
+                            env->NewObject(intCls, intConst,
+                            cOutStypes[i]));
     }
+  }
+
+  if (cOutputsGiven) {
+    env->ReleaseLongArrayElements(outputsGiven, cOutputsGiven, 0);
   }
 
   return ret;
@@ -354,9 +387,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayLoadFromRawBytes
 
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayGetShape
   (JNIEnv *env, jobject obj, jlong ndArrayPtr, jobject ndimRef, jobject dataBuf) {
-  mx_uint ndim;
-  const mx_uint *pdata;
-  int ret = MXNDArrayGetShape(reinterpret_cast<NDArrayHandle>(ndArrayPtr), &ndim, &pdata);
+  int ndim;
+  const int *pdata;
+  int ret = MXNDArrayGetShapeEx(reinterpret_cast<NDArrayHandle>(ndArrayPtr), &ndim, &pdata);
 
   // fill dataBuf
   jclass integerClass = env->FindClass("java/lang/Integer");
@@ -365,7 +398,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayGetShape
   jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
   jmethodID arrayAppend = env->GetMethodID(arrayClass,
     "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
-  for (size_t i = 0; i < ndim; ++i) {
+  for (int i = 0; i < ndim; ++i) {
     jobject data = env->NewObject(integerClass, newInteger, pdata[i]);
     env->CallObjectMethod(dataBuf, arrayAppend, data);
     env->DeleteLocalRef(data);
@@ -376,6 +409,14 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayGetShape
   jfieldID valueInt = env->GetFieldID(refIntClass, "value", "I");
   env->SetIntField(ndimRef, valueInt, ndim);
 
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArraySyncCopyFromNDArray
+  (JNIEnv *env, jobject obj, jlong dstPtr, jlong srcPtr, jint locator) {
+  int ret = MXNDArraySyncCopyFromNDArray(reinterpret_cast<NDArrayHandle>(dstPtr),
+                                   reinterpret_cast<NDArrayHandle>(srcPtr),
+                                   locator);
   return ret;
 }
 
@@ -431,6 +472,25 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxFloat64NDArraySyncCopyFro
   int ret = MXNDArraySyncCopyFromCPU(reinterpret_cast<NDArrayHandle>(arrayPtr),
                                      static_cast<const double *>(sourcePtr), arrSize);
   env->ReleaseDoubleArrayElements(sourceArr, sourcePtr, 0);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayGetDataNDArray
+  (JNIEnv *env, jobject obj, jlong arrayPtr, jobject ndArrayHandle) {
+  NDArrayHandle out;
+  int ret = MXNDArrayGetDataNDArray(reinterpret_cast<NDArrayHandle>(arrayPtr),
+                                     &out);
+  SetLongField(env, ndArrayHandle, reinterpret_cast<jlong>(out));
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayGetAuxNDArray
+  (JNIEnv *env, jobject obj, jlong arrayPtr, jint location, jobject ndArrayHandle) {
+  NDArrayHandle out;
+  int ret = MXNDArrayGetAuxNDArray(reinterpret_cast<NDArrayHandle>(arrayPtr),
+                                   static_cast<mx_uint>(location),
+                                   &out);
+  SetLongField(env, ndArrayHandle, reinterpret_cast<jlong>(out));
   return ret;
 }
 
@@ -537,6 +597,14 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayGetDType
   int dtype;
   int ret = MXNDArrayGetDType(reinterpret_cast<NDArrayHandle>(jhandle), &dtype);
   SetIntField(env, jdtype, dtype);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayGetStorageType
+  (JNIEnv * env, jobject obj, jlong jhandle, jobject jstype) {
+  int stype;
+  int ret = MXNDArrayGetStorageType(reinterpret_cast<NDArrayHandle>(jhandle), &stype);
+  SetIntField(env, jstype, stype);
   return ret;
 }
 
@@ -889,6 +957,119 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxExecutorBackward
                                static_cast<mx_uint>(gradsSize),
                                reinterpret_cast<NDArrayHandle *>(gradArr));
   env->ReleaseLongArrayElements(grads, gradArr, 0);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxExecutorReshape
+  (JNIEnv * env, jobject obj,
+    jint partialReshaping, jint allowUpSizing, jint devType, jint devId,
+    jobjectArray jmapKeys, jintArray jmapDevTypes, jintArray jmapDevIds,
+    jobjectArray jprovidedArgShapeNames, jintArray jprovidedArgShapeData,
+    jintArray jprovidedArgShapeIdx, jobject jrefInArgs, jobject jrefArgGrads,
+    jobject jrefAuxStates, jlong jsharedExec, jobject jrefOut) {
+  CHECK(jmapKeys != NULL);
+  CHECK(jprovidedArgShapeNames != NULL);
+
+  int numMapKeys = env->GetArrayLength(jmapKeys);
+  jint *mapDevTypes = env->GetIntArrayElements(jmapDevTypes, NULL);
+  jint *mapDevIds = env->GetIntArrayElements(jmapDevIds, NULL);
+  const char **mapKeys = NULL;
+  if (numMapKeys > 0) {
+    mapKeys = new const char*[numMapKeys];
+    for (int i = 0; i < numMapKeys; ++i) {
+      jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jmapKeys, i));
+      mapKeys[i] = env->GetStringUTFChars(jkey, 0);
+      env->DeleteLocalRef(jkey);
+    }
+  }
+
+  int numProvidedArgShapes = env->GetArrayLength(jprovidedArgShapeNames);
+  jint *providedArgShapeData = env->GetIntArrayElements(jprovidedArgShapeData, NULL);
+  jint *providedArgShapeIdx = env->GetIntArrayElements(jprovidedArgShapeIdx, NULL);
+  const char **providedArgShapeNames = NULL;
+  if (numProvidedArgShapes > 0) {
+    providedArgShapeNames = new const char*[numProvidedArgShapes];
+    for (int i = 0; i < numProvidedArgShapes; ++i) {
+      jstring jkey = reinterpret_cast<jstring>(
+          env->GetObjectArrayElement(jprovidedArgShapeNames, i));
+      providedArgShapeNames[i] = env->GetStringUTFChars(jkey, 0);
+      env->DeleteLocalRef(jkey);
+    }
+  }
+
+  mx_uint numInArgs = 0;
+  NDArrayHandle *inArgs;
+  NDArrayHandle *argGrads;
+
+  mx_uint numAuxStates = 0;
+  NDArrayHandle *auxStates;
+
+  ExecutorHandle out;
+
+  int ret = MXExecutorReshapeEx(partialReshaping,
+                                allowUpSizing,
+                                devType,
+                                devId,
+                                static_cast<mx_uint>(numMapKeys),
+                                mapKeys,
+                                static_cast<const int*>(mapDevTypes),
+                                static_cast<const int*>(mapDevIds),
+                                static_cast<const mx_uint>(numProvidedArgShapes),
+                                providedArgShapeNames,
+                                static_cast<const int*>(providedArgShapeData),
+                                reinterpret_cast<const mx_uint*>(providedArgShapeIdx),
+                                &numInArgs,
+                                &inArgs,
+                                &argGrads,
+                                &numAuxStates,
+                                &auxStates,
+                                reinterpret_cast<ExecutorHandle>(jsharedExec),
+                                &out);
+
+  jclass longCls = env->FindClass("java/lang/Long");
+  jmethodID newLong = env->GetMethodID(longCls, "<init>", "(J)V");
+
+  jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+  jmethodID arrayAppend = env->GetMethodID(arrayClass,
+    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+
+  for (size_t i = 0; i < numInArgs; ++i) {
+    jobject inArg = env->NewObject(longCls, newLong, inArgs[i]);
+    env->CallObjectMethod(jrefInArgs, arrayAppend, inArg);
+    env->DeleteLocalRef(inArg);
+
+    jobject argGrad = env->NewObject(longCls, newLong, argGrads[i]);
+    env->CallObjectMethod(jrefArgGrads, arrayAppend, argGrad);
+    env->DeleteLocalRef(argGrad);
+  }
+
+  for (size_t i = 0; i < numAuxStates; ++i) {
+    jobject auxState = env->NewObject(longCls, newLong, auxStates[i]);
+    env->CallObjectMethod(jrefAuxStates, arrayAppend, auxState);
+    env->DeleteLocalRef(auxState);
+  }
+
+  SetLongField(env, jrefOut, reinterpret_cast<jlong>(out));
+
+  // release allocated memory
+  for (int i = 0; i < numMapKeys; i++) {
+    jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jmapKeys, i));
+    env->ReleaseStringUTFChars(jkey, mapKeys[i]);
+    env->DeleteLocalRef(jkey);
+  }
+  if (mapKeys != NULL) {
+    delete[] mapKeys;
+  }
+
+  for (int i = 0; i < numProvidedArgShapes; i++) {
+    jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jprovidedArgShapeNames, i));
+    env->ReleaseStringUTFChars(jkey, providedArgShapeNames[i]);
+    env->DeleteLocalRef(jkey);
+  }
+  if (providedArgShapeNames != NULL) {
+    delete[] providedArgShapeNames;
+  }
+
   return ret;
 }
 
@@ -1530,23 +1711,27 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolCreateFromFile
 
 int FillSymbolInferShape
   (JNIEnv *env, jmethodID listAppend, jobject joutData,
-    mx_uint shapeSize, const mx_uint *shapeNdim, const mx_uint **shapeData) {
-  for (size_t i = 0; i < shapeSize; ++i) {
-    jintArray jshape = env->NewIntArray(shapeNdim[i]);
-    if (jshape == NULL) {
-      // TODO(Yizhi): out of memory error thrown, return a specific error code ?
-      return -1;
+    int shapeSize, const int *shapeNdim, const int **shapeData) {
+  for (int i = 0; i < shapeSize; ++i) {
+    jintArray jshape = NULL;
+    if (shapeNdim[i] >= 0) {
+      jshape = env->NewIntArray(shapeNdim[i]);
+      if (jshape == NULL) {
+        // TODO(Yizhi): out of memory error thrown, return a specific error code ?
+        return -1;
+      }
+      env->SetIntArrayRegion(jshape, 0, shapeNdim[i], reinterpret_cast<const jint *>(shapeData[i]));
     }
-    env->SetIntArrayRegion(jshape, 0, shapeNdim[i], reinterpret_cast<const jint *>(shapeData[i]));
     env->CallObjectMethod(joutData, listAppend, jshape);
     env->DeleteLocalRef(jshape);
   }
   return 0;
 }
-JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
-  (JNIEnv *env, jobject obj, jlong symbolPtr, jint jnumArgs, jobjectArray jkeys,
-    jintArray jargIndPtr, jintArray jargShapeData,
-    jobject jinShapeData, jobject joutShapeData, jobject jauxShapeData, jobject jcomplete) {
+
+int SymbolInferShapeHelper(JNIEnv *env, jobject obj, jlong symbolPtr, jint jnumArgs,
+                            jobjectArray jkeys, jintArray jargIndPtr, jintArray jargShapeData,
+                            jobject jinShapeData, jobject joutShapeData, jobject jauxShapeData,
+                            jobject jcomplete, bool partial) {
   const char **keys = NULL;
   if (jkeys != NULL) {
     keys = new const char *[jnumArgs];
@@ -1559,26 +1744,28 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
   }
 
   mx_uint inShapeSize;
-  const mx_uint *inShapeNdim;
-  const mx_uint **inShapeData;
+  const int *inShapeNdim;
+  const int **inShapeData;
 
   mx_uint outShapeSize;
-  const mx_uint *outShapeNdim;
-  const mx_uint **outShapeData;
+  const int *outShapeNdim;
+  const int **outShapeData;
 
   mx_uint auxShapeSize;
-  const mx_uint *auxShapeNdim;
-  const mx_uint **auxShapeData;
+  const int *auxShapeNdim;
+  const int **auxShapeData;
 
   int complete;
 
   jint *argIndPtr = env->GetIntArrayElements(jargIndPtr, NULL);
   jint *argShapeData = env->GetIntArrayElements(jargShapeData, NULL);
-  int ret = MXSymbolInferShape(reinterpret_cast<SymbolHandle>(symbolPtr),
+  int ret;
+  if (!partial) {
+    ret = MXSymbolInferShapeEx(reinterpret_cast<SymbolHandle>(symbolPtr),
                                static_cast<mx_uint>(jnumArgs),
                                keys,
-                               reinterpret_cast<const mx_uint *>(argIndPtr),
-                               reinterpret_cast<const mx_uint *>(argShapeData),
+                               reinterpret_cast<mx_uint *>(argIndPtr),
+                               reinterpret_cast<const int *>(argShapeData),
                                &inShapeSize,
                                &inShapeNdim,
                                &inShapeData,
@@ -1589,6 +1776,23 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
                                &auxShapeNdim,
                                &auxShapeData,
                                &complete);
+  } else {
+    ret = MXSymbolInferShapePartialEx(reinterpret_cast<SymbolHandle>(symbolPtr),
+                                      static_cast<mx_uint>(jnumArgs),
+                                      keys,
+                                      reinterpret_cast<mx_uint *>(argIndPtr),
+                                      reinterpret_cast<const int *>(argShapeData),
+                                      &inShapeSize,
+                                      &inShapeNdim,
+                                      &inShapeData,
+                                      &outShapeSize,
+                                      &outShapeNdim,
+                                      &outShapeData,
+                                      &auxShapeSize,
+                                      &auxShapeNdim,
+                                      &auxShapeData,
+                                      &complete);
+  }
   env->ReleaseIntArrayElements(jargShapeData, argShapeData, 0);
   env->ReleaseIntArrayElements(jargIndPtr, argIndPtr, 0);
 
@@ -1627,6 +1831,24 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
   }
 
   return ret;
+}
+
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jint jnumArgs, jobjectArray jkeys,
+    jintArray jargIndPtr, jintArray jargShapeData,
+    jobject jinShapeData, jobject joutShapeData, jobject jauxShapeData, jobject jcomplete) {
+
+  return SymbolInferShapeHelper(env, obj, symbolPtr, jnumArgs, jkeys, jargIndPtr, jargShapeData,
+                                jinShapeData, joutShapeData, jauxShapeData, jcomplete, false);
+}
+
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShapePartial
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jint jnumArgs, jobjectArray jkeys,
+    jintArray jargIndPtr, jintArray jargShapeData,
+    jobject jinShapeData, jobject joutShapeData, jobject jauxShapeData, jobject jcomplete) {
+
+  return SymbolInferShapeHelper(env, obj, symbolPtr, jnumArgs, jkeys, jargIndPtr, jargShapeData,
+                                jinShapeData, joutShapeData, jauxShapeData, jcomplete, true);
 }
 
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxExecutorBindX
@@ -2550,4 +2772,21 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSetProfilerState
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxDumpProfile
   (JNIEnv *env, jobject obj, jint finished) {
   return MXDumpProfile(finished);
+}
+
+// Numpy
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxIsNumpyShape
+  (JNIEnv *env, jobject obj, jobject compatibleRef) {
+  bool isNumpyShape;
+  int ret = MXIsNumpyShape(&isNumpyShape);
+  SetIntField(env, compatibleRef, static_cast<int>(isNumpyShape));
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSetIsNumpyShape
+  (JNIEnv *env, jobject obj, jint isNpComp, jobject prevRef) {
+  int prev;
+  int ret = MXSetIsNumpyShape(isNpComp, &prev);
+  SetIntField(env, prevRef, prev);
+  return ret;
 }

@@ -36,6 +36,7 @@ inline void BooleanMaskForward<gpu>(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
+  CHECK(req[0] == kWriteTo || req[0] == kWriteInplace);
   const BooleanMaskParam& param = nnvm::get<BooleanMaskParam>(attrs.parsed);
   const int axis = param.axis;
   const NDArray &data = inputs[0];
@@ -78,7 +79,6 @@ inline void BooleanMaskForward<gpu>(const nnvm::NodeAttrs& attrs,
                                 Stream<gpu>::GetStream(s));
   CUDA_CALL(cudaMemcpy(&valid_num, &prefix_sum[idx_size - 1], sizeof(int32_t),
                        cudaMemcpyDeviceToHost));
-  CHECK(valid_num > 0) << "boolean_mask behavior not defined when all masks are 0";
   // Set the output shape forcefully
   mxnet::TShape data_shape = data.shape();
   data_shape[axis] = valid_num;
@@ -87,8 +87,10 @@ inline void BooleanMaskForward<gpu>(const nnvm::NodeAttrs& attrs,
   size_t col_size = input_size / idx.shape()[0];
   // Do the copy
   MSHADOW_TYPE_SWITCH(out.dtype(), DType, {
-    mxnet_op::Kernel<BooleanMaskForwardKernel, gpu>::Launch(
-      s, input_size, out.data().dptr<DType>(), data.data().dptr<DType>(), prefix_sum, col_size);
+    if (valid_num > 0) {
+      mxnet_op::Kernel<BooleanMaskForwardKernel, gpu>::Launch(
+        s, input_size, out.data().dptr<DType>(), data.data().dptr<DType>(), prefix_sum, col_size);
+    }
   });
 }
 
@@ -101,6 +103,7 @@ inline void BooleanMaskBackward<gpu>(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 3U);
   CHECK_EQ(outputs.size(), 2U);
+  if (req[0] == kNullOp) return;
   // inputs: {ograd, data, idx}
   // outputs: {igrad_data, igrad_idx}
   const NDArray& ograd = inputs[0];
@@ -141,9 +144,11 @@ inline void BooleanMaskBackward<gpu>(const nnvm::NodeAttrs& attrs,
   size_t col_size = input_size / idx_size;
   // Backward pass
   MSHADOW_TYPE_SWITCH(igrad_data.dtype(), DType, {
-    mxnet_op::Kernel<BooleanMaskBackwardKernel, gpu>::Launch(
-      s, input_size, igrad_data.data().dptr<DType>(), ograd.data().dptr<DType>(),
-      prefix_sum, col_size);
+    if (input_size > 0) {
+      mxnet_op::Kernel<BooleanMaskBackwardKernel, gpu>::Launch(
+        s, input_size, igrad_data.data().dptr<DType>(), req[0], ograd.data().dptr<DType>(),
+        prefix_sum, col_size);
+    }
   });
 }
 

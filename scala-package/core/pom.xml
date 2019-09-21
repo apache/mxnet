@@ -102,10 +102,6 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-clean-plugin</artifactId>
         <version>3.1.0</version>
         <configuration>
@@ -118,6 +114,7 @@
                 <include>NDArrayRandomAPIBase.scala</include>
                 <include>javaapi/NDArrayBase.scala</include>
                 <include>SymbolAPIBase.scala</include>
+                <include>SymbolBase.scala</include>
                 <include>SymbolRandomAPIBase.scala</include>
               </includes>
               <followSymlinks>false</followSymlinks>
@@ -141,6 +138,7 @@
       </plugin>
     </plugins>
   </build>
+
   <dependencies>
     <dependency>
       <groupId>org.apache.mxnet</groupId>

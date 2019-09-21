@@ -28,6 +28,8 @@ __all__ = ['RNN', 'LSTM', 'GRU']
 from ... import ndarray, symbol
 from .. import HybridBlock, tensor_types
 from . import rnn_cell
+from ...util import is_np_array
+
 
 class _RNNLayer(HybridBlock):
     """Implementation of recurrent layers."""
@@ -37,7 +39,7 @@ class _RNNLayer(HybridBlock):
                  i2h_bias_initializer, h2h_bias_initializer,
                  mode, projection_size, h2r_weight_initializer,
                  lstm_state_clip_min, lstm_state_clip_max, lstm_state_clip_nan,
-                 dtype, **kwargs):
+                 dtype, use_sequence_length=False, **kwargs):
         super(_RNNLayer, self).__init__(**kwargs)
         assert layout in ('TNC', 'NTC'), \
             "Invalid layout %s; must be one of ['TNC' or 'NTC']"%layout
@@ -58,6 +60,7 @@ class _RNNLayer(HybridBlock):
         self._lstm_state_clip_max = lstm_state_clip_max
         self._lstm_state_clip_nan = lstm_state_clip_nan
         self._dtype = dtype
+        self._use_sequence_length = use_sequence_length
 
         self._gates = {'rnn_relu': 1, 'rnn_tanh': 1, 'lstm': 4, 'gru': 3}[mode]
 
@@ -216,35 +219,48 @@ class _RNNLayer(HybridBlock):
                 info.update(kwargs)
             else:
                 info = kwargs
-            states.append(func(name='%sh0_%d'%(self.prefix, i), **info))
+            state = func(name='%sh0_%d' % (self.prefix, i), **info)
+            if is_np_array():
+                state = state.as_np_ndarray()
+            states.append(state)
         return states
 
-    def hybrid_forward(self, F, inputs, states=None, **kwargs):
-        if F is ndarray:
-            batch_size = inputs.shape[self._layout.find('N')]
-        skip_states = states is None
-        if skip_states:
-            if F is ndarray:
+    def __call__(self, inputs, states=None, sequence_length=None, **kwargs):
+        self.skip_states = states is None
+        if states is None:
+            if isinstance(inputs, ndarray.NDArray):
+                batch_size = inputs.shape[self._layout.find('N')]
                 states = self.begin_state(batch_size, ctx=inputs.context, dtype=inputs.dtype)
             else:
                 states = self.begin_state(0, func=symbol.zeros)
         if isinstance(states, tensor_types):
             states = [states]
+
+        if self._use_sequence_length:
+            return super(_RNNLayer, self).__call__(inputs, states, sequence_length, **kwargs)
+        else:
+            return super(_RNNLayer, self).__call__(inputs, states, **kwargs)
+
+    def hybrid_forward(self, F, inputs, states, sequence_length=None, **kwargs):
+        if F is ndarray:
+            batch_size = inputs.shape[self._layout.find('N')]
+
         if F is ndarray:
             for state, info in zip(states, self.state_info(batch_size)):
                 if state.shape != info['shape']:
                     raise ValueError(
                         "Invalid recurrent state shape. Expecting %s, got %s."%(
                             str(info['shape']), str(state.shape)))
-        out = self._forward_kernel(F, inputs, states, **kwargs)
+        out = self._forward_kernel(F, inputs, states, sequence_length, **kwargs)
 
         # out is (output, state)
-        return out[0] if skip_states else out
+        return out[0] if self.skip_states else out
 
-    def _forward_kernel(self, F, inputs, states, **kwargs):
+    def _forward_kernel(self, F, inputs, states, sequence_length, **kwargs):
         """ forward using CUDNN or CPU kenrel"""
+        swapaxes = F.np.swapaxes if is_np_array() else F.swapaxes
         if self._layout == 'NTC':
-            inputs = F.swapaxes(inputs, dim1=0, dim2=1)
+            inputs = swapaxes(inputs, 0, 1)
         if self._projection_size is None:
             params = (kwargs['{}{}_{}_{}'.format(d, l, g, t)].reshape(-1)
                       for t in ['weight', 'bias']
@@ -259,15 +275,23 @@ class _RNNLayer(HybridBlock):
                       for g in ['i2h', 'h2h', 'h2r']
                       if g != 'h2r' or t != 'bias')
 
-        params = F._internal._rnn_param_concat(*params, dim=0)
+        rnn_param_concat = F.np._internal.rnn_param_concat if is_np_array()\
+            else F._internal._rnn_param_concat
+        params = rnn_param_concat(*params, dim=0)
 
-        rnn = F.RNN(inputs, params, *states, state_size=self._hidden_size,
-                    projection_size=self._projection_size,
-                    num_layers=self._num_layers, bidirectional=self._dir == 2,
-                    p=self._dropout, state_outputs=True, mode=self._mode,
-                    lstm_state_clip_min=self._lstm_state_clip_min,
-                    lstm_state_clip_max=self._lstm_state_clip_max,
-                    lstm_state_clip_nan=self._lstm_state_clip_nan)
+        if self._use_sequence_length:
+            rnn_args = states + [sequence_length]
+        else:
+            rnn_args = states
+
+        rnn_fn = F.npx.rnn if is_np_array() else F.RNN
+        rnn = rnn_fn(inputs, params, *rnn_args, use_sequence_length=self._use_sequence_length,
+                     state_size=self._hidden_size, projection_size=self._projection_size,
+                     num_layers=self._num_layers, bidirectional=self._dir == 2,
+                     p=self._dropout, state_outputs=True, mode=self._mode,
+                     lstm_state_clip_min=self._lstm_state_clip_min,
+                     lstm_state_clip_max=self._lstm_state_clip_max,
+                     lstm_state_clip_nan=self._lstm_state_clip_nan)
 
         if self._mode == 'lstm':
             outputs, states = rnn[0], [rnn[1], rnn[2]]
@@ -275,7 +299,7 @@ class _RNNLayer(HybridBlock):
             outputs, states = rnn[0], [rnn[1]]
 
         if self._layout == 'NTC':
-            outputs = F.swapaxes(outputs, dim1=0, dim2=1)
+            outputs = swapaxes(outputs, 0, 1)
 
         return outputs, states
 

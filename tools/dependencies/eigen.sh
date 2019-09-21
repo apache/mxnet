@@ -32,6 +32,7 @@ if [[ ! -d $DEPS_PATH/include/eigen3 ]]; then
     cd $DEPS_PATH/eigen-git-mirror-$EIGEN_VERSION/build
     cmake \
           -D CMAKE_BUILD_TYPE=RELEASE \
+          -D EIGEN_MPL2_ONLY=1 \
           -D CMAKE_INSTALL_PREFIX=$DEPS_PATH ..
     $MAKE install
     popd

@@ -64,5 +64,13 @@ mkdir -p $DEPS_PATH
 # Build Dependencies
 source tools/dependencies/make_shared_dependencies.sh
 
+# Copy LICENSE
+mkdir -p licenses
+cp tools/dependencies/LICENSE.binary.dependencies licenses/
+cp NOTICE licenses/
+cp LICENSE licenses/
+cp DISCLAIMER licenses/
+
+
 # Build mxnet
 source tools/staticbuild/build_lib.sh

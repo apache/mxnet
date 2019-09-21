@@ -97,6 +97,16 @@ class Imperative {
       is_recording_ = is_recording;
       return old;
   }
+  /*! brief whether numpy compatibility is on. */
+  bool is_np_shape() const {
+    return is_np_shape_;
+  }
+  /*! brief turn on or turn off numpy compatibility switch. */
+  bool set_is_np_shape(bool is_np_shape) {
+    bool old = is_np_shape_;
+    is_np_shape_ = is_np_shape;
+    return old;
+  }
   /*! \brief to record operator, return corresponding node. */
   void RecordOp(nnvm::NodeAttrs&& attrs,
                 const std::vector<NDArray*>& inputs,
@@ -119,7 +129,7 @@ class Imperative {
                       OpStatePtr state = OpStatePtr());
   /*! \brief mark variables for computing gradients. */
   void MarkVariables(const std::vector<NDArray*>& variables,
-                     const std::vector<mx_uint>& grad_reqs,
+                     const std::vector<uint32_t>& grad_reqs,
                      const std::vector<NDArray*>& gradients);
   /*! \brief compute the gradient of outputs w.r.t variables. */
   std::vector<NDArray*> Backward(const std::vector<NDArray*>& outputs,
@@ -165,9 +175,15 @@ class Imperative {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local bool is_train_;
   static thread_local bool is_recording_;
+  // TOOD(junwu): Added numpy compatibility switch for backward compatibility.
+  // Delete it in the next major release.
+  static thread_local bool is_np_shape_;
 #else
   static MX_THREAD_LOCAL bool is_train_;
   static MX_THREAD_LOCAL bool is_recording_;
+  // TOOD(junwu): Added numpy compatibility switch for backward compatibility.
+  // Delete it in the next major release.
+  static MX_THREAD_LOCAL bool is_np_shape_;
 #endif
   /*! \brief node count used for naming */
   std::atomic<uint64_t> node_count_{0};

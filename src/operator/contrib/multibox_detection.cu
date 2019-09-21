@@ -213,7 +213,7 @@ inline void MultiBoxDetectionForward(const Tensor<gpu, 3, DType> &out,
                                      const Tensor<gpu, 3, DType> &temp_space,
                                      const float threshold,
                                      const bool clip,
-                                     const nnvm::Tuple<float> &variances,
+                                     const mxnet::Tuple<float> &variances,
                                      const float nms_threshold,
                                      const bool force_suppress,
                                      const int nms_topk) {

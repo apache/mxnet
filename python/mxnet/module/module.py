@@ -162,7 +162,7 @@ class Module(BaseModule):
             mod._preload_opt_states = '%s-%04d.states'%(prefix, epoch)
         return mod
 
-    def save_checkpoint(self, prefix, epoch, save_optimizer_states=False):
+    def save_checkpoint(self, prefix, epoch, save_optimizer_states=False, remove_amp_cast=True):
         """Saves current progress to checkpoint.
         Use `mx.callback.module_checkpoint` as `epoch_end_callback` to save during training.
 
@@ -175,7 +175,7 @@ class Module(BaseModule):
         save_optimizer_states : bool
             Whether to save optimizer states to continue training.
         """
-        self._symbol.save('%s-symbol.json'%prefix)
+        self._symbol.save('%s-symbol.json'%prefix, remove_amp_cast=remove_amp_cast)
         param_name = '%s-%04d.params' % (prefix, epoch)
         self.save_params(param_name)
         logging.info('Saved checkpoint to \"%s\"', param_name)
@@ -250,7 +250,7 @@ class Module(BaseModule):
         `(arg_params, aux_params)`
             A pair of dictionaries each mapping parameter names to NDArray values.
         """
-        assert self.binded and self.params_initialized
+        assert self.params_initialized
 
         if self._params_dirty:
             self._sync_params_from_devices()
@@ -505,14 +505,14 @@ class Module(BaseModule):
             batch_size *= kvstore.num_workers
         rescale_grad = 1.0/batch_size
 
+        idx2name = {}
+        if update_on_kvstore:
+            idx2name.update(enumerate(self._exec_group.param_names))
+        else:
+            for k in range(len(self._context)):
+                idx2name.update({i*len(self._context)+k: n
+                                 for i, n in enumerate(self._exec_group.param_names)})
         if isinstance(optimizer, str):
-            idx2name = {}
-            if update_on_kvstore:
-                idx2name.update(enumerate(self._exec_group.param_names))
-            else:
-                for k in range(len(self._context)):
-                    idx2name.update({i*len(self._context)+k: n
-                                     for i, n in enumerate(self._exec_group.param_names)})
             optimizer_params = dict(optimizer_params)
             if 'rescale_grad' not in optimizer_params:
                 optimizer_params['rescale_grad'] = rescale_grad
@@ -528,6 +528,8 @@ class Module(BaseModule):
                     "is not normalized to 1.0/batch_size/num_workers (%s vs. %s). "%(
                         optimizer.rescale_grad, rescale_grad) +
                     "Is this intended?", stacklevel=2)
+            if not optimizer.idx2name:
+                optimizer.idx2name = idx2name.copy()
 
         self._optimizer = optimizer
         self._kvstore = kvstore

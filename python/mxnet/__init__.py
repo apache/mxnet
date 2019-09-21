@@ -24,10 +24,17 @@ from __future__ import absolute_import
 from .context import Context, current_context, cpu, gpu, cpu_pinned
 from . import engine
 from .base import MXNetError
+from .util import is_np_shape, set_np_shape, np_shape, use_np_shape
+from .util import is_np_array, np_array, use_np_array, use_np
 from . import base
+from . import library
 from . import contrib
 from . import ndarray
 from . import ndarray as nd
+from . import numpy
+from . import numpy_extension
+from . import numpy as np
+from . import numpy_extension as npx
 from . import name
 # use mx.sym as short for symbol
 from . import symbol as sym
@@ -89,3 +96,7 @@ __version__ = base.__version__
 # checks the __version__ attr of MXNet, which is not set on kvstore server due to the
 # fact that kvstore-server module is imported before the __version__ attr is set.
 from . import kvstore_server
+
+from .numpy_dispatch_protocol import _register_array_function, _register_array_ufunc
+_register_array_function()
+_register_array_ufunc()

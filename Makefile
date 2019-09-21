@@ -52,6 +52,14 @@ ifndef AMALGAMATION_PATH
 	AMALGAMATION_PATH = $(ROOTDIR)/amalgamation
 endif
 
+ifndef TVM_PATH
+	TVM_PATH = $(TPARTYDIR)/tvm
+endif
+
+ifndef LLVM_PATH
+	LLVM_PATH = $(TVM_PATH)/build/llvm
+endif
+
 ifneq ($(USE_OPENMP), 1)
 	export NO_OPENMP = 1
 endif
@@ -94,16 +102,23 @@ endif
 
 # CFLAGS for debug
 ifeq ($(DEBUG), 1)
-	CFLAGS += -g -O0
+	CFLAGS += -g -O0 -D_GLIBCXX_ASSERTIONS
 else
 	CFLAGS += -O3 -DNDEBUG=1
 endif
 CFLAGS += -I$(TPARTYDIR)/mshadow/ -I$(TPARTYDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(TPARTYDIR)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
-LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
+LDFLAGS = -pthread -ldl $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 
+# please note that when you enable this, you might run into an linker not being able to work properly due to large code injection.
+# you can find more information here https://github.com/apache/incubator-mxnet/issues/15971
 ifeq ($(ENABLE_TESTCOVERAGE), 1)
         CFLAGS += --coverage
         LDFLAGS += --coverage
+endif
+
+ifeq ($(USE_NVTX), 1)
+        CFLAGS += -DMXNET_USE_NVTX=1
+        LDFLAGS += -lnvToolsExt
 endif
 
 ifeq ($(USE_TENSORRT), 1)
@@ -177,6 +192,7 @@ endif
 
 ifeq ($(USE_OPENMP), 1)
 	CFLAGS += -fopenmp
+	CFLAGS += -DMXNET_USE_OPENMP=1
 endif
 
 ifeq ($(USE_NNPACK), 1)
@@ -188,6 +204,11 @@ ifeq ($(USE_OPERATOR_TUNING), 1)
 	CFLAGS += -DMXNET_USE_OPERATOR_TUNING=1
 endif
 
+ifeq ($(USE_INT64_TENSOR_SIZE), 1)
+   CFLAGS += -DMSHADOW_INT64_TENSOR_SIZE=1
+else
+   CFLAGS += -DMSHADOW_INT64_TENSOR_SIZE=0
+endif
 # verify existence of separate lapack library when using blas/openblas/atlas
 # switch off lapack support in case it can't be found
 # issue covered with this
@@ -234,13 +255,13 @@ ifeq ($(USE_CUDNN), 1)
 	LDFLAGS += -lcudnn
 endif
 
-ifeq ($(use_blas), open)
+ifeq ($(USE_BLAS), openblas)
 	CFLAGS += -DMXNET_USE_BLAS_OPEN=1
-else ifeq ($(use_blas), atlas)
+else ifeq ($(USE_BLAS), atlas)
 	CFLAGS += -DMXNET_USE_BLAS_ATLAS=1
-else ifeq ($(use_blas), mkl)
+else ifeq ($(USE_BLAS), mkl)
 	CFLAGS += -DMXNET_USE_BLAS_MKL=1
-else ifeq ($(use_blas), apple)
+else ifeq ($(USE_BLAS), apple)
 	CFLAGS += -DMXNET_USE_BLAS_APPLE=1
 endif
 
@@ -358,10 +379,32 @@ endif
 
 # Guard against displaying nvcc info messages to users not using CUDA.
 ifeq ($(USE_CUDA), 1)
+	# Get AR version, compare with expected ar version and find bigger and smaller version of the two
+	AR_VERSION := $(shell ar --version | egrep -o "([0-9]{1,}\.)+[0-9]{1,}")
+	EXPECTED_AR_VERSION := $(shell echo "2.27")
+	LARGE_VERSION := $(shell printf '%s\n' "$(AR_VERSION)" "$(EXPECTED_AR_VERSION)" | sort -V | tail -n 1)
+	SMALL_VERSION := $(shell printf '%s\n' "$(AR_VERSION)" "$(EXPECTED_AR_VERSION)" | sort -V | head -n 1)
+
 	# If NVCC is not at the location specified, use CUDA_PATH instead.
 	ifeq ("$(wildcard $(NVCC))","")
 		ifneq ($(USE_CUDA_PATH), NONE)
 			NVCC=$(USE_CUDA_PATH)/bin/nvcc
+
+# if larger version is the expected one and larger != smaller
+# this means ar version is less than expected version and user needs to be warned
+ifeq ($(LARGE_VERSION), $(EXPECTED_AR_VERSION))
+ifneq ($(LARGE_VERSION), $(SMALL_VERSION))
+define n
+
+
+endef
+
+$(warning WARNING: Archive utility: ar version being used is less than 2.27.0. $n \
+		   Note that with USE_CUDA=1 flag and USE_CUDNN=1 this is known to cause problems. $n \
+		   For more info see: https://github.com/apache/incubator-mxnet/issues/15084)
+$(shell sleep 5)
+endif
+endif
 $(info INFO: nvcc was not found on your path)
 $(info INFO: Using $(NVCC) as nvcc path)
 		else
@@ -410,15 +453,29 @@ ifeq ($(USE_DIST_KVSTORE), 1)
 	LDFLAGS += $(PS_LDFLAGS_A)
 endif
 
-.PHONY: clean all extra-packages test lint docs clean_all rcpplint rcppexport roxygen\
+.PHONY: clean all extra-packages test lint clean_all rcpplint rcppexport roxygen\
 	cython2 cython3 cython cyclean
 
-all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages
+all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages sample_lib
 
 SRC = $(wildcard src/*/*/*/*.cc src/*/*/*.cc src/*/*.cc src/*.cc)
 OBJ = $(patsubst %.cc, build/%.o, $(SRC))
 CUSRC = $(wildcard src/*/*/*/*.cu src/*/*/*.cu src/*/*.cu src/*.cu)
 CUOBJ = $(patsubst %.cu, build/%_gpu.o, $(CUSRC))
+
+ifeq ($(USE_TVM_OP), 1)
+LIB_DEP += lib/libtvm_runtime.so lib/libtvmop.so
+CFLAGS += -I$(TVM_PATH)/include -DMXNET_USE_TVM_OP=1
+LDFLAGS += -L$(ROOTDIR)/lib -ltvm_runtime -Wl,-rpath,'$${ORIGIN}'
+
+TVM_USE_CUDA := OFF
+ifeq ($(USE_CUDA), 1)
+	TVM_USE_CUDA := ON
+	ifneq ($(USE_CUDA_PATH), NONE)
+		TVM_USE_CUDA := $(USE_CUDA_PATH)
+	endif
+endif
+endif
 
 # extra operators
 ifneq ($(EXTRA_OPERATORS),)
@@ -557,6 +614,24 @@ $(DMLC_CORE)/libdmlc.a: DMLCCORE
 DMLCCORE:
 	+ cd $(DMLC_CORE); $(MAKE) libdmlc.a USE_SSE=$(USE_SSE) config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
+lib/libtvm_runtime.so:
+	echo "Compile TVM"
+	[ -e $(LLVM_PATH)/bin/llvm-config ] || sh $(ROOTDIR)/contrib/tvmop/prepare_tvm.sh; \
+	cd $(TVM_PATH)/build; \
+	cmake -DUSE_LLVM="$(LLVM_PATH)/bin/llvm-config" \
+		  -DUSE_SORT=OFF -DUSE_CUDA=$(TVM_USE_CUDA) -DUSE_CUDNN=OFF ..; \
+	$(MAKE) VERBOSE=1; \
+	mkdir -p $(ROOTDIR)/lib; \
+	cp $(TVM_PATH)/build/libtvm_runtime.so $(ROOTDIR)/lib/libtvm_runtime.so; \
+	ls $(ROOTDIR)/lib; \
+	cd $(ROOTDIR)
+
+lib/libtvmop.so: lib/libtvm_runtime.so $(wildcard contrib/tvmop/*/*.py contrib/tvmop/*.py)
+	echo "Compile TVM operators"
+	PYTHONPATH=$(TVM_PATH)/python:$(TVM_PATH)/topi/python:$(ROOTDIR)/contrib \
+		LD_LIBRARY_PATH=$(ROOTDIR)/lib \
+	    python3 $(ROOTDIR)/contrib/tvmop/compile.py -o $(ROOTDIR)/lib/libtvmop.so
+
 NNVM_INC = $(wildcard $(NNVM_PATH)/include/*/*.h)
 NNVM_SRC = $(wildcard $(NNVM_PATH)/src/*/*/*.cc $(NNVM_PATH)/src/*/*.cc $(NNVM_PATH)/src/*.cc)
 $(NNVM_PATH)/lib/libnnvm.a: $(NNVM_INC) $(NNVM_SRC)
@@ -584,25 +659,14 @@ lint: cpplint rcpplint jnilint pylint
 
 cpplint:
 	3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests \
-	--exclude_path src/operator/contrib/ctc_include
+	--exclude_path src/operator/contrib/ctc_include include/mkldnn
 
 pylint:
-	pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py
-
-doc: docs
-
-docs:
-	make -C docs html
-
-clean_docs:
-	make -C docs clean
-
-doxygen:
-	doxygen docs/Doxyfile
+	python3 -m pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py
 
 # Cython build
 cython:
-	cd python; python setup.py build_ext --inplace --with-cython
+	cd python; $(PYTHON) setup.py build_ext --inplace --with-cython
 
 cython2:
 	cd python; python2 setup.py build_ext --inplace --with-cython
@@ -628,6 +692,10 @@ rpkg:
 		cp -rf lib/libmklml_intel.so R-package/inst/libs; \
 	fi
 
+	if [ -e "lib/libtvm_runtime.so" ]; then \
+		cp -rf lib/libtvm_runtime.so R-package/inst/libs; \
+	fi
+
 	mkdir -p R-package/inst/include
 	cp -rl include/* R-package/inst/include
 	Rscript -e "if(!require(devtools)){install.packages('devtools', repo = 'https://cloud.r-project.org/')}"
@@ -644,6 +712,10 @@ rpkg:
 rpkgtest:
 	Rscript -e 'require(testthat);res<-test_dir("R-package/tests/testthat");if(!testthat:::all_passed(res)){stop("Test failures", call. = FALSE)}'
 	Rscript -e 'res<-covr:::package_coverage("R-package");fileConn<-file(paste("r-package_coverage_",toString(runif(1)),".json"));writeLines(covr:::to_codecov(res), fileConn);close(fileConn)'
+
+
+sample_lib:
+	$(CXX) -shared -fPIC example/lib_api/mylib.cc -o libsample_lib.so -I include/mxnet
 
 scalaclean:
 	(cd $(ROOTDIR)/scala-package && mvn clean)
@@ -667,6 +739,26 @@ rclean:
 	$(RM) -r R-package/src/image_recordio.h R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
 		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
 
+build/rat/apache-rat/target/apache-rat-0.13.jar:
+	mkdir -p build
+	svn co http://svn.apache.org/repos/asf/creadur/rat/tags/apache-rat-project-0.13/ build/rat; \
+	cd build/rat; \
+	mvn -Dmaven.test.skip=true install;
+
+ratcheck: build/rat/apache-rat/target/apache-rat-0.13.jar
+	exec 5>&1; \
+	RAT_JAR=build/rat/apache-rat/target/apache-rat-0.13.jar; \
+	OUTPUT=$(java -jar $(RAT_JAR) -E tests/nightly/apache_rat_license_check/rat-excludes -d .|tee >(cat - >&5)); \
+    ERROR_MESSAGE="Printing headers for text files without a valid license header"; \
+    echo "-------Process The Output-------"; \
+    if [[ $OUTPUT =~ $ERROR_MESSAGE ]]; then \
+        echo "ERROR: RAT Check detected files with unknown licenses. Please fix and run test again!"; \
+        exit 1; \
+    else \
+        echo "SUCCESS: There are no files with an Unknown License."; \
+    fi
+
+
 ifneq ($(EXTRA_OPERATORS),)
 clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin deps *~ */*~ */*/*~ */*/*/*~ 
@@ -674,6 +766,7 @@ clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
+	cd $(TVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))

@@ -165,6 +165,38 @@ def test_multiple_waitalls():
     assert caught, "No exception thrown"
     mx.nd.waitall()
 
+@with_seed()
+def run_training_iteration(data):
+    output = net(data)
+
+    net = gluon.nn.HybridSequential()
+    with net.name_scope():
+        net.add(gluon.nn.Dense(10))
+
+    ctx = default_context()
+    net.collect_params().initialize(mx.init.Xavier(), ctx=ctx)
+    data = mx.nd.ones((3, 4))
+    mx.profiler.set_state("run")
+    run_training_iteration(data)
+    mx.nd.waitall()
+    mx.profiler.set_state("stop")
+
+@with_seed()
+def test_opencv_exception():
+    def check_resize():
+        img = mx.nd.ones((1200, 1600, 3))
+        img = mx.image.imresize(img, 320, 320, interp=-1)
+        img.asnumpy()
+    assert_raises(MXNetError, check_resize)
+
+
+@with_seed()
+def test_np_reshape_exception():
+    a = mx.np.ones((10, 10))
+    a.reshape((-1,)).asnumpy()  # Check no-raise
+    assert_raises(MXNetError, lambda: a.reshape((1,)))
+    assert_raises(MXNetError, lambda: mx.np.reshape(a, (1,)))
+    assert_raises(MXNetError, lambda: mx.np.reshape(a, (-1, 3)))
 
 
 if __name__ == '__main__':

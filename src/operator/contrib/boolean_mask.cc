@@ -90,10 +90,12 @@ struct BooleanMaskForwardCPUKernel {
   }
 };
 
-struct BooleanMaskBackwardCPUKernel {
+
+struct BooleanMaskBackwardCPUWriteKernel {
   template<typename DType>
   static void Map(int i,
                   DType* igrad,
+                  const OpReqType /*req*/,
                   const DType* ograd,
                   const int32_t* idx,
                   const size_t col_size) {
@@ -102,6 +104,8 @@ struct BooleanMaskBackwardCPUKernel {
     int32_t curr = idx[i];
     if (prev != curr) {
       std::memcpy(igrad + i * col_size, ograd + prev * col_size, col_size * sizeof(DType));
+    } else {
+      std::memset(igrad + i * col_size, 0, col_size * sizeof(DType));
     }
   }
 };
@@ -114,6 +118,7 @@ inline void BooleanMaskForward<cpu>(const nnvm::NodeAttrs& attrs,
                                     const std::vector<NDArray> &outputs) {
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
+  CHECK(req[0] == kWriteTo || req[0] == kWriteInplace);
   const BooleanMaskParam& param = nnvm::get<BooleanMaskParam>(attrs.parsed);
   const int axis = param.axis;
   const NDArray &data = inputs[0];
@@ -121,7 +126,7 @@ inline void BooleanMaskForward<cpu>(const nnvm::NodeAttrs& attrs,
   const NDArray &out = outputs[0];
   CHECK_EQ(axis, 0) << "Not supported yet";
   CHECK_EQ(data.shape()[axis], idx.shape()[0]);
-  CHECK_EQ(idx.shape().ndim(), 1U);
+  CHECK_EQ(idx.shape().ndim(), 1U);  // idx is required to be 1-d.
   // count the number of 1s in `idx`, so that we could know the output dimension
   size_t idx_size = idx.shape()[0];
   std::vector<int32_t> prefix_sum(idx_size, 0);
@@ -138,6 +143,7 @@ inline void BooleanMaskForward<cpu>(const nnvm::NodeAttrs& attrs,
   // set the output shape forcefully
   mxnet::TShape s = data.shape();
   s[axis] = valid_num;
+
   const_cast<NDArray &>(out).Init(s);
   // do the copy
   MSHADOW_TYPE_SWITCH(data.dtype(), DType, {
@@ -158,6 +164,7 @@ inline void BooleanMaskBackward<cpu>(const nnvm::NodeAttrs& attrs,
                                      const std::vector<NDArray> &outputs) {
   CHECK_EQ(inputs.size(), 3U);
   CHECK_EQ(outputs.size(), 2U);
+  if (req[0] == kNullOp) return;
   // inputs: {ograd, data, idx}
   // outputs: {igrad_data, igrad_idx}
   const NDArray& ograd = inputs[0];
@@ -175,9 +182,15 @@ inline void BooleanMaskBackward<cpu>(const nnvm::NodeAttrs& attrs,
         prefix_sum[i] += (idx_dptr[i]) ? 1 : 0;
       }
       mshadow::Stream<cpu> *stream = ctx.get_stream<cpu>();
-      mxnet_op::Kernel<BooleanMaskBackwardCPUKernel, cpu>::Launch(
-        stream, idx_size, igrad_data.data().dptr<DType>(), ograd.data().dptr<DType>(),
-        prefix_sum.data(), col_size);
+      if (req[0] == kAddTo) {
+        mxnet_op::Kernel<BooleanMaskBackwardKernel, cpu>::Launch(
+          stream, idx_size, igrad_data.data().dptr<DType>(), req[0],
+          ograd.data().dptr<DType>(), prefix_sum.data(), col_size);
+      } else {
+        mxnet_op::Kernel<BooleanMaskBackwardCPUWriteKernel, cpu>::Launch(
+          stream, idx_size, igrad_data.data().dptr<DType>(), req[0],
+          ograd.data().dptr<DType>(), prefix_sum.data(), col_size);
+      }
     });
   });
 }

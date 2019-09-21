@@ -33,27 +33,27 @@ import org.slf4j.LoggerFactory
 private[infer] trait PredictBase {
 
   /**
-   * Converts indexed sequences of 1-D array to NDArrays.
-   * <p>
-   * This method will take input as IndexedSeq one dimensional arrays and creates the
-   * NDArray needed for inference. The array will be reshaped based on the input descriptors.
-   * @param input:            An Indexed Sequence of a one-dimensional array of datatype
-    *                         Float or Double
-                              An IndexedSequence is needed when the model has more than one input.
-   * @return                  Indexed sequence array of outputs
-   */
+    * Converts indexed sequences of 1-D array to NDArrays.
+    * This method will take input as IndexedSeq one dimensional arrays and creates the
+    * NDArray needed for inference. The array will be reshaped based on the input descriptors.
+    * @tparam T The Scala equivalent of the DType used for the input array and return value
+    * @param input An Indexed Sequence of a one-dimensional array of datatype
+    *              Float or Double
+    *              An IndexedSequence is needed when the model has more than one input.
+    * @return      Indexed sequence array of outputs
+    */
   def predict[@specialized (Base.MX_PRIMITIVES) T](input: IndexedSeq[Array[T]])
   : IndexedSeq[Array[T]]
 
   /**
-   * Predict using NDArray as input.
-   * <p>
-   * This method is useful when the input is a batch of data
-   * or when multiple operations on the input have to performed.
-   * Note: User is responsible for managing allocation/deallocation of NDArrays.
-   * @param input             IndexedSequence NDArrays.
-   * @return                  Output of predictions as NDArrays.
-   */
+    * Predict using NDArray as input.
+    * <p>
+    * This method is useful when the input is a batch of data
+    * or when multiple operations on the input have to performed.
+    * Note: User is responsible for managing allocation/deallocation of NDArrays.
+    * @param input             IndexedSequence NDArrays.
+    * @return                  Output of predictions as NDArrays.
+    */
   def predictWithNDArray(input: IndexedSeq[NDArray]): IndexedSeq[NDArray]
 
   /**
@@ -248,6 +248,10 @@ class Predictor(modelPathPrefix: String,
     resultND
   }
 
+  /**
+    * Creates the module backing the Predictor with the same path, epoch, contexts, and inputs
+    * @return The Module
+    */
   private[infer] def loadModule(): Module = {
     val mod = mxNetHandler.execute(Module.loadCheckpoint(modelPathPrefix, epoch.get,
       contexts = contexts, dataNames = inputDescriptors.map(desc => desc.name)))
