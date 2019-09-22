@@ -74,7 +74,8 @@ export Executor,
 # context.jl
 export Context,
        cpu,
-       gpu
+       gpu,
+       num_gpus
 
 # model.jl
 export AbstractModel,

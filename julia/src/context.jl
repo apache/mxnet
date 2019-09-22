@@ -57,3 +57,14 @@ Get a GPU context with a specific id. The K GPUs on a node is typically numbered
 * `dev_id::Integer = 0` the GPU device id.
 """
 gpu(dev_id::Integer = 0) = Context(GPU, dev_id)
+
+"""
+    num_gpus()
+
+Query CUDA for the number of GPUs present.
+"""
+function num_gpus()
+  n = Ref{Cint}()
+  @mxcall :MXGetGPUCount (Ref{Cint},) n
+  n[]
+end
