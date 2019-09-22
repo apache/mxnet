@@ -27,6 +27,7 @@
 #define MXNET_OPERATOR_MSHADOW_OP_H_
 
 #include <mxnet/base.h>
+#include <mshadow/base.h>
 #include "math.h"
 #include "math_functions-inl.h"
 #include "special_functions-inl.h"
@@ -41,6 +42,8 @@ namespace mxnet {
 namespace op {
 namespace mshadow_op {
 
+using mshadow::isnan_typed::IsNan;
+
 #ifdef __CUDA_ARCH__
 __constant__ const float PI = 3.14159265358979323846;
 __constant__ const float SELU_ALPHA = 1.6732632423543772848170429916717;
@@ -51,7 +54,6 @@ const float PI = 3.14159265358979323846;
 const float SELU_ALPHA = 1.6732632423543772848170429916717;
 const float SELU_LAMBDA = 1.0507009873554804934193349852946;
 const float SQRT_2 = 1.4142135623730950488016887242096;
-using std::isnan;
 #endif
 using std::enable_if;
 using std::is_unsigned;
@@ -826,37 +828,13 @@ struct product {
   }
 };
 
-namespace isnan_typed {
-  template<typename DType>
-  MSHADOW_XINLINE bool IsNan(volatile DType val) {
-    return false;
-  }
-  template<>
-  MSHADOW_XINLINE bool IsNan(volatile float val) {
-    return isnan(val);
-  }
-  template<>
-  MSHADOW_XINLINE bool IsNan(volatile double val) {
-    return isnan(val);
-  }
-  template<>
-  MSHADOW_XINLINE bool IsNan(volatile long double val) {
-    return isnan(val);
-  }
-
-  template<>
-  MSHADOW_XINLINE bool IsNan(volatile mshadow::half::half_t val) {
-    return (val.half_ & 0x7fff) > 0x7c00;
-  }
-};  // namespace isnan_typed
-
-MXNET_UNARY_MATH_OP_NC(relu, isnan_typed::IsNan(a) || (a > DType(0)) ? a : DType(0));
+MXNET_UNARY_MATH_OP_NC(relu, IsNan(a) || (a > DType(0)) ? a : DType(0));
 
 /*! \brief used for computing gradient of relu operator */
 struct relu_grad : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    if (isnan_typed::IsNan(a)) {
+    if (IsNan(a)) {
       return a;
     } else {
       return a > DType(0) ? DType(1) : DType(0);
@@ -868,7 +846,7 @@ struct relu_grad : public mxnet_op::tunable {
 struct maximum : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    if (isnan_typed::IsNan(a)) {
+    if (IsNan(a)) {
       return a;
     } else {
       return (a > b ? a : b);
@@ -880,7 +858,7 @@ struct maximum : public mxnet_op::tunable {
 struct minimum : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    if (isnan_typed::IsNan(a)) {
+    if (IsNan(a)) {
       return a;
     } else {
       return DType(a < b ? a : b);
@@ -893,13 +871,13 @@ struct nansum {
   /*! \brief do reduction into dst */
   template<typename DType>
   MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src) { // NOLINT(*)
-    if (isnan_typed::IsNan(src)) return;
+    if (IsNan(src)) return;
     dst += src;
   }
   /*! \brief do reduction into dst */
   template<typename DType>
   MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src, volatile DType& residual) { // NOLINT(*)
-    if (isnan_typed::IsNan(src)) return;
+    if (IsNan(src)) return;
     DType y = src - residual;
     DType t = dst + y;
     residual = (t - dst) - y;
@@ -945,7 +923,7 @@ struct nansum {
 struct nansum_grad : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return isnan_typed::IsNan(a) ? DType(0) : DType(1);
+    return IsNan(a) ? DType(0) : DType(1);
   }
 };
 
@@ -954,7 +932,7 @@ struct nanprod {
   /*! \brief do reduction into dst */
   template<typename DType>
   MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src) { // NOLINT(*)
-    if (isnan_typed::IsNan(src)) return;
+    if (IsNan(src)) return;
     dst *= src;
   }
   /*! \brief do reduction into dst */
@@ -1128,7 +1106,7 @@ struct sum {
 struct nanprod_grad : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return isnan_typed::IsNan(a) ? DType(0) : b / a;
+    return IsNan(a) ? DType(0) : b / a;
   }
 };
 

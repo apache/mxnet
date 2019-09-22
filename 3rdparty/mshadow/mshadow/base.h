@@ -606,6 +606,64 @@ struct divto {
   typedef op::div OPType;
 };
 }  // namespace sv
+
+#ifndef __CUDA_ARCH__
+using std::isnan;
+using std::isinf;
+#endif
+
+/*! \brief
+ *  determines if the given floating point
+ *  number is not a number */
+namespace isnan_typed {
+  template<typename DType>
+  MSHADOW_XINLINE bool IsNan(volatile DType val) {
+    return false;
+  }
+  template<>
+  MSHADOW_XINLINE bool IsNan(volatile float val) {
+    return isnan(val);
+  }
+  template<>
+  MSHADOW_XINLINE bool IsNan(volatile double val) {
+    return isnan(val);
+  }
+  template<>
+  MSHADOW_XINLINE bool IsNan(volatile long double val) {
+    return isnan(val);
+  }
+  template<>
+  MSHADOW_XINLINE bool IsNan(volatile mshadow::half::half_t val) {
+    return (val.half_ & 0x7fff) > 0x7c00;
+  }
+}  // namespace isnan_typed
+
+/*! \brief
+ *  determines if the given floating point
+ *  number is a positive or negative infinity */
+namespace isinf_typed {
+  template<typename DType>
+  MSHADOW_XINLINE bool IsInf(volatile DType val) {
+    return false;
+  }
+  template<>
+  MSHADOW_XINLINE bool IsInf(volatile float val) {
+    return isinf(val);
+  }
+  template<>
+  MSHADOW_XINLINE bool IsInf(volatile double val) {
+    return isinf(val);
+  }
+  template<>
+  MSHADOW_XINLINE bool IsInf(volatile long double val) {
+    return isinf(val);
+  }
+  template<>
+  MSHADOW_XINLINE bool IsInf(volatile mshadow::half::half_t val) {
+    return (val.half_ & 0x7fff) == 0x7c00;
+  }
+}  // namespace isinf_typed
+
 /*! \brief namespace for potential reducer operations */
 namespace red {
 namespace limits {
@@ -669,6 +727,11 @@ template<>
 MSHADOW_XINLINE double NegInfValue<double>(void) {
   return -HUGE_VAL;
 }
+/*! \brief negative infinity value of float16 */
+template<>
+MSHADOW_XINLINE half::half_t NegInfValue<half::half_t>(void) {
+  return half::half_t::Binary(0xfc00);
+}
 
 /*!
  * \brief maximum value of certain types
@@ -730,6 +793,11 @@ template<>
 MSHADOW_XINLINE double PosInfValue<double>(void) {
   return HUGE_VAL;
 }
+/*! \brief positive infinity value of float16 */
+template<>
+MSHADOW_XINLINE half::half_t PosInfValue<half::half_t>(void) {
+  return half::half_t::Binary(0x7c00);
+}
 
 }  // namespace limits
 
@@ -745,7 +813,11 @@ struct sum {
   MSHADOW_XINLINE static void Reduce(volatile DType& dst,  volatile DType src, volatile DType& residual) { // NOLINT(*)
     DType y = src - residual;
     DType t = dst + y;
-    residual = (t - dst) - y;
+    if (isinf_typed::IsInf(t)) {
+      residual = 0;
+    } else {
+      residual = (t - dst) - y;
+    }
     dst = t;
   }
   /*! \brief combine the results of two reducers */
@@ -797,12 +869,9 @@ struct maximum {
   /*! \brief do reduction into dst */
   template<typename DType>
   MSHADOW_XINLINE static void Reduce(volatile DType& dst,  volatile DType src) { // NOLINT(*)
-    using namespace std;
-#ifdef __CUDACC__
-    dst = ::max(dst, src);
-#else
-    dst = max(dst, src);
-#endif  // __CUDACC__
+    if (!isnan_typed::IsNan(dst)) {
+      dst = DType(dst > src ? dst : src);
+    }
   }
   /*! \brief do reduction into dst */
   template<typename DType>
@@ -853,12 +922,9 @@ struct minimum {
   /*! \brief do reduction into dst */
   template<typename DType>
   MSHADOW_XINLINE static void Reduce(volatile DType& dst,  volatile DType src) { // NOLINT(*)
-    using namespace std;
-#ifdef __CUDACC__
-    dst = ::min(dst, src);
-#else
-    dst = min(dst, src);
-#endif  // __CUDACC__
+    if (!isnan_typed::IsNan(dst)) {
+      dst = DType(dst < src ? dst : src);
+    }
   }
   /*! \brief do reduction into dst */
   template<typename DType>

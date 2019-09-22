@@ -9244,21 +9244,20 @@ def test_sample_normal_default_shape():
     assert s.shape == (1, 1)
 
 
-def test_min_max_inf():
-    dtypes = [np.float32, np.double]
-    elem_list = [-1, 1, 0, np.inf, -np.inf]
-
+def test_inf_and_nan():
+    dtypes = [np.float16, np.float32, np.double]
+    elem_list = [-1, 1, 0, np.inf, -np.inf, np.nan]
+    op_names = ['min', 'max', 'mean', 'sum']
     for dtype in dtypes:
         for a in elem_list:
             for b in elem_list:
-                data_np = np.array([a, b], dtype=dtype)
-                data_mx = mx.nd.array(data_np, dtype=dtype)
-
-                min_data_np, max_data_np = data_np.min(), data_np.max()
-                min_data_mx, max_data_mx = data_mx.min(), data_mx.max()
-
-                assert_array_equal(min_data_np, min_data_mx.asnumpy())
-                assert_array_equal(max_data_np, max_data_mx.asnumpy())
+                for op_name in op_names:
+                    print(dtype, a, b, op_name)
+                    data_np = np.array([a, b], dtype=dtype)
+                    data_mx = mx.nd.array(data_np, dtype=dtype)
+                    out_data_np = getattr(data_np, op_name)()
+                    out_data_mx = getattr(data_mx, op_name)()
+                    assert_array_equal(out_data_np, out_data_mx.asnumpy())
 
 
 if __name__ == '__main__':
