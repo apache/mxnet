@@ -9259,8 +9259,10 @@ def test_inf_and_nan():
                     out_data_mx = getattr(data_mx, op_name)()
                     try:
                         assert_array_equal(out_data_np, out_data_mx.asnumpy())
-                    except AssertionError:
-                        record.append((dtype, a, b, op_name))
+                    except AssertionError as e:
+                        args = (dtype, a, b, op_name)
+                        print(args, e, '\n---------\n')
+                        record.append(args)
     assert len(record) == 0, record
 
 
