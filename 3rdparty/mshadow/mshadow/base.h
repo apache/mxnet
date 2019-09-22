@@ -829,10 +829,15 @@ struct sum {
   template<typename DType>
   MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
     DType t1 = dst_val + src_val;
-    DType e = t1 - dst_val;
-    DType t2 = ((src_val - e) + (dst_val - (t1 - e))) + dst_residual + src_residual;
-    dst_val = t1 + t2;
-    dst_residual = t2 - (dst_val - t1);
+    if (isinf_typed::IsInf(t1)) {
+      dst_val = t1;
+      dst_residual = 0;
+    } else {
+      DType e = t1 - dst_val;
+      DType t2 = ((src_val - e) + (dst_val - (t1 - e))) + dst_residual + src_residual;
+      dst_val = t1 + t2;
+      dst_residual = t2 - (dst_val - t1);
+    }
   }
   /*! \brief finalize reduction */
   template<typename DType>
