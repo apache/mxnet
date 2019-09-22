@@ -53,5 +53,8 @@ NNVM_REGISTER_OP(_npi_vstack)
 NNVM_REGISTER_OP(_backward_np_vstack)
 .set_attr<FCompute>("FCompute<gpu>", NumpyVstackBackward<gpu>);
 
+NNVM_REGISTER_OP(_np_roll)
+.set_attr<FCompute>("FCompute<gpu>", NumpyRollCompute<gpu>);
+
 }  // namespace op
 }  // namespace mxnet
