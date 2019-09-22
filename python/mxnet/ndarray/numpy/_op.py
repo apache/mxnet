@@ -2895,4 +2895,4 @@ def flip(m, axis=None, out=None):
     elif isinstance(m, ndarray):
         return _npi.flip(m, axis, out=out)
     else:
-        raise TypeError('type {} not supported'.format(str(type(x))))
+        raise TypeError('type {} not supported'.format(str(type(m))))
