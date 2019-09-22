@@ -297,6 +297,72 @@ void NumpyRollCompute(const nnvm::NodeAttrs& attrs,
   }
 }
 
+struct FlipParam : public dmlc::Parameter<FlipParam> {
+  mxnet::Tuple<int> axis;
+  DMLC_DECLARE_PARAMETER(FlipParam) {
+      DMLC_DECLARE_FIELD(axis)
+          .describe("The axis which to flip elements.");
+  }
+};
+
+#define FLIP_MAX_DIM 10
+#define FLIP_MIN_DIM -1
+
+template<typename xpu>
+void NumpyFlipForwardImpl(const OpContext& ctx,
+                          const std::vector<TBlob>& inputs,
+                          const std::vector<TBlob>& outputs,
+                          const std::vector<index_t>& stride_,
+                          const std::vector<index_t>& trailing_,
+                          const index_t& flip_index);
+
+template<typename xpu>
+void NumpyFlipForward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
+  const FlipParam& param = nnvm::get<FlipParam>(attrs.parsed);
+  mxnet::Tuple<int> axistemp;
+  CHECK_EQ(inputs[0].type_flag_, outputs[0].type_flag_);
+  CHECK_LT(param.axis.ndim(), FLIP_MAX_DIM);
+  CHECK_GE(param.axis.ndim(), FLIP_MIN_DIM);
+  if (param.axis.ndim() == FLIP_MIN_DIM) {
+    if (inputs[0].shape_.ndim() == 0) {
+      mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+      MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+        mshadow::Copy(outputs[0].FlatTo1D<xpu, DType>(s), inputs[0].FlatTo1D<xpu, DType>(s), s);
+    });
+      return;
+    }
+    std::vector<int> temp;
+    for (int i = 0; i < inputs[0].shape_.ndim(); i++) {
+      temp.push_back(i);
+    }
+    axistemp.assign(temp.begin(), temp.end());
+  } else {
+    axistemp = param.axis;
+  }
+
+  const mxnet::TShape& ishape = inputs[0].shape_;
+  if (ishape.ProdShape(0, ishape.ndim()) == 0) {
+    return;  // zero shape
+  }
+  std::vector<index_t> stride_(axistemp.ndim());
+  std::vector<index_t>  trailing_(axistemp.ndim());
+  index_t flip_index = 0;
+  for (int axis : axistemp) {
+    CHECK_LT(axis, ishape.ndim());
+    stride_[flip_index] = ishape[axis];
+    trailing_[flip_index] = 1;
+    for (int i2 = axis + 1; i2 < ishape.ndim(); ++i2) {
+      trailing_[flip_index] *= ishape[i2];
+    }
+    flip_index++;
+  }
+  NumpyFlipForwardImpl<xpu>(ctx, inputs, outputs, stride_, trailing_, flip_index);
+}
+
 }  // namespace op
 }  // namespace mxnet
 

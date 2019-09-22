@@ -30,6 +30,7 @@ import scipy.stats as ss
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
 import platform
 
+
 @with_seed()
 @use_np
 def test_np_tensordot():
@@ -2305,6 +2306,46 @@ def test_np_windows():
                     mx_out = getattr(np, func)(M=config, dtype=dtype)
                     np_out = np_func(M=config).astype(dtype)
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@use_np
+def test_np_flip():
+    class TestFlip(HybridBlock):
+        def __init__(self, axis):
+            super(TestFlip, self).__init__()
+            self.axis = axis
+
+        def hybrid_forward(self, F, x):
+            return F.np.flip(x, self.axis)
+
+    shapes = [(1, 2, 3), (1, 0), ()]
+    types = ['int32', 'int64', 'float16', 'float32', 'float64']
+    for hybridize in [True, False]:
+        for oneType in types:
+            rtol, atol=1e-3, 1e-5
+            for shape in shapes:
+                axis = random.randint(-1, len(shape) - 1)
+                if axis is -1:
+                    axis = None
+                test_flip = TestFlip(axis)
+                if hybridize:
+                    test_flip.hybridize()
+                x = rand_ndarray(shape, dtype=oneType).as_np_ndarray()
+                x.attach_grad()
+                np_out = _np.flip(x.asnumpy(), axis)
+                with mx.autograd.record():
+                    mx_out = test_flip(x)
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+                mx_out.backward()
+                np_backward = _np.ones(np_out.shape)
+                assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
+
+                # Test imperative once again
+                mx_out = np.flip(x, axis)
+                np_out = _np.flip(x.asnumpy(), axis)
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
 if __name__ == '__main__':

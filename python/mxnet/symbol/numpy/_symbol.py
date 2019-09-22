@@ -36,7 +36,7 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot',
            'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'vstack', 'mean',
            'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign',
-           'ravel', 'hanning', 'hamming', 'blackman']
+           'ravel', 'hanning', 'hamming', 'blackman', 'flip']
 
 
 def _num_outputs(sym):
@@ -3089,6 +3089,44 @@ def blackman(M, dtype=_np.float32, ctx=None):
     if ctx is None:
         ctx = current_context()
     return _npi.blackman(M, dtype=dtype, ctx=ctx)
+
+
+@set_module('mxnet.symbol.numpy')
+def flip(m, axis=None, out=None):
+    r"""
+    flip(m, axis=None, out=None)
+
+    Reverse the order of elements in an array along the given axis.
+
+    The shape of the array is preserved, but the elements are reordered.
+
+    Parameters
+    ----------
+    m : _Symbol or scalar
+        Input array.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which to flip over. The default,
+        axis=None, will flip over all of the axes of the input array.
+        If axis is negative it counts from the last to the first axis.
+
+        If axis is a tuple of ints, flipping is performed on all of the axes
+        specified in the tuple.
+    out : _Symbol or scalar, optional
+        Alternative output array in which to place the result. It must have
+        the same shape and type as the expected output.
+
+    Returns
+    -------
+    out : _Symbol or scalar
+        A view of `m` with the entries of axis reversed.  Since a view is
+        returned, this operation is done in constant time.
+    """
+    if isinstance(m, numeric_types):
+        return _np.flip(m, axis)
+    elif isinstance(m, _Symbol):
+        return _npi.flip(m, axis, out=out)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(m))))
 
 
 _set_np_symbol_class(_Symbol)
