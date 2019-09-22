@@ -29,7 +29,7 @@ import random
 import scipy.stats as ss
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
 import platform
-import random
+
 
 @with_seed()
 @use_np
