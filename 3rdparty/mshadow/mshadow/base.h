@@ -870,7 +870,7 @@ struct maximum {
   template<typename DType>
   MSHADOW_XINLINE static void Reduce(volatile DType& dst,  volatile DType src) { // NOLINT(*)
     if (!isnan_typed::IsNan(dst)) {
-      dst = DType(dst > src ? dst : src);
+      if (!(dst > src)) dst = src;
     }
   }
   /*! \brief do reduction into dst */
@@ -923,7 +923,7 @@ struct minimum {
   template<typename DType>
   MSHADOW_XINLINE static void Reduce(volatile DType& dst,  volatile DType src) { // NOLINT(*)
     if (!isnan_typed::IsNan(dst)) {
-      dst = DType(dst < src ? dst : src);
+      if (!(dst < src)) dst = src;
     }
   }
   /*! \brief do reduction into dst */
