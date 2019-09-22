@@ -1899,10 +1899,10 @@ def test_np_copysign():
         sign = 2 * sign.astype(int) - 1
         sign = sign.reshape(a1.shape)
         return sign
-    
+
     def get_grad_right(a1, a2):
         return _np.zeros_like(a2)
-        
+
     shapes = [
         (),
         (1),
@@ -1943,7 +1943,7 @@ def test_np_copysign():
                     mx_out = np.copysign(a1, a2)
                     expected_np = _np.copysign(a1_np, a2_np)
                     assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
-    
+
     types = ['float16', 'float32', 'float64']
     for x_shape in shapes:
         for dtype in types:
@@ -1957,12 +1957,12 @@ def test_np_copysign():
                 mx_out = np.copysign(x, scalar)
             assert mx_out.shape == expected_np.shape
             assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
-            
+
             # Test gradient
             mx_out.backward()
             x_grad = get_grad_left(x_np, scalar)
             assert_almost_equal(x.grad.asnumpy(), x_grad, rtol=rtol, atol=atol)
-            
+
             # Test right
             x_np = _np.array(_np.random.uniform(-2.0, 2.0, x_shape), dtype=dtype)
             scalar = _np.random.uniform(-2.0, 2.0)
@@ -1973,7 +1973,7 @@ def test_np_copysign():
                 mx_out = np.copysign(scalar, x)
             assert mx_out.shape == expected_np.shape
             assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
-            
+
             # Test gradient
             mx_out.backward()
             x_grad = get_grad_right(scalar, x_np)
@@ -2269,6 +2269,42 @@ def test_np_trace():
         except mx.base.MXNetError:
             continue
         assert False
+
+
+@with_seed()
+@use_np
+def test_np_windows():
+    class TestWindows(HybridBlock):
+        def __init__(self, func, M, dtype):
+            super(TestWindows, self).__init__()
+            self._func = func
+            self._M = M
+            self._dtype = dtype
+
+        def hybrid_forward(self, F, x, *args, **kwargs):
+            op = getattr(F.np, self._func)
+            assert op is not None
+            return x + op(M=self._M, dtype=self._dtype)
+
+    configs = [-10, -3, -1, 0, 1, 6, 10, 20]
+    dtypes = ['float32', 'float64']
+    funcs = ['hanning', 'hamming', 'blackman']
+    for config in configs:
+        for dtype in dtypes:
+            for func in funcs:
+                x = np.zeros(shape=(), dtype=dtype)
+                for hybridize in [False, True]:
+                    np_func = getattr(_np, func)
+                    mx_func = TestWindows(func, M=config, dtype=dtype)
+                    np_out = np_func(M=config).astype(dtype)
+                    if hybridize:
+                        mx_func.hybridize()
+                    mx_out = mx_func(x)
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+                    # test imperative
+                    mx_out = getattr(np, func)(M=config, dtype=dtype)
+                    np_out = np_func(M=config).astype(dtype)
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
 if __name__ == '__main__':
