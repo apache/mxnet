@@ -9247,7 +9247,7 @@ def test_sample_normal_default_shape():
 def test_inf_and_nan():
     dtypes = [np.float16, np.float32, np.double]
     elem_list = [-1, 1, 0, np.inf, -np.inf, np.nan]
-    op_names = ['min', 'max', 'mean', 'sum']
+    op_names = ['min', 'max', 'mean', 'sum', 'argmin', 'argmax']
     for dtype in dtypes:
         for a in elem_list:
             for b in elem_list:

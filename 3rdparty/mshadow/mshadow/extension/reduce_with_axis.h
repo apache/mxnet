@@ -112,7 +112,7 @@ struct Plan<ReduceWithAxisExp<Reducer, SrcExp, DType, dimsrc, mask, dimdst>, DTy
         index_t z = (x*size_+k)*trailing_+y;
         DType tmp = res;
         Reducer::Reduce(res, src_.Eval(z/last_, z%last_));
-        if (tmp != res) {
+        if (tmp != res && !isnan_typed::IsNan(tmp)) {
           idx = k;
         }
       }

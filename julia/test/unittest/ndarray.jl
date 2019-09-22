@@ -1525,8 +1525,8 @@ function test_argmax()
          NaN 2 6]
     x = NDArray(A)
 
-    @test copy(argmax(x, dims = 1)) == [1 1 2]
-    @test copy(argmax(x, dims = 2)) == reshape([2, 3], :, 1)
+    @test copy(argmax(x, dims = 1)) == [2 1 2]
+    @test copy(argmax(x, dims = 2)) == reshape([2, 1], :, 1)
   end
 end
 
@@ -1547,8 +1547,8 @@ function test_argmin()
          NaN 2 6]
     x = NDArray(A)
 
-    @test copy(argmin(x, dims = 1)) == [1 2 1]
-    @test copy(argmin(x, dims = 2)) == reshape([1, 2], :, 1)
+    @test copy(argmin(x, dims = 1)) == [2 2 1]
+    @test copy(argmin(x, dims = 2)) == reshape([1, 1], :, 1)
   end
 end
 
