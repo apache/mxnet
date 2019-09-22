@@ -43,6 +43,10 @@ import Base.Iterators: filter
 #  exports
 ###############################################################################
 
+# exceptions.jl
+export AbstractMXError,
+       MXError
+
 # symbolic-node.jl
 export SymbolicNode,
        Variable,
@@ -135,6 +139,7 @@ export to_graphviz
 #  includes
 ###############################################################################
 
+include("exceptions.jl")
 include("base.jl")
 
 include("runtime.jl")
