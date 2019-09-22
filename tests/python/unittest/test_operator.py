@@ -9252,6 +9252,7 @@ def test_inf_and_nan():
         for a in elem_list:
             for b in elem_list:
                 for op_name in op_names:
+                    print(dtype, a, b, op_name)
                     data_np = np.array([a, b], dtype=dtype)
                     data_mx = mx.nd.array(data_np, dtype=dtype)
                     out_data_np = getattr(data_np, op_name)()
