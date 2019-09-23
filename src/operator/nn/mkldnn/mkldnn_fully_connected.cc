@@ -208,7 +208,7 @@ void MKLDNNFCForwardFullFeature(const MKLDNNFCFullParam &full_param,
   } else {
     weight_mem = weight.GetMKLDNNData();
     if (weight_mem->get_desc() != fwd->fwd_pd.weights_desc()) {
-      // rm following line for ut:test_contrib_rnn, need debug
+      // TODO(rongzha1): rm following line for ut:test_contrib_rnn, need debug
       // weight.MKLDNNDataReorderAsync(fwd->fwd_pd.weights_desc());
       weight_mem = GetWeights(weight, fwd->fwd_pd.weights_desc(), 1);
     }
