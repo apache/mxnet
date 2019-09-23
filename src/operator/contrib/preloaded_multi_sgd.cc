@@ -61,8 +61,8 @@ It updates the weights using::
       ret.push_back(std::string("weight_") + std::to_string(i));
       ret.push_back(std::string("grad_") + std::to_string(i));
     }
-    ret.push_back(std::string("lrs"));
-    ret.push_back(std::string("wds"));
+    ret.emplace_back("lrs");
+    ret.emplace_back("wds");
     return ret;
   })
 .set_attr<FCompute>("FCompute<cpu>", PreloadedMultiSGDUpdate<cpu, preloaded_type_identity, 2>)
@@ -111,8 +111,8 @@ Where the parameter ``momentum`` is the decay rate of momentum estimates at each
       ret.push_back(std::string("grad_") + std::to_string(i));
       ret.push_back(std::string("mom_") + std::to_string(i));
     }
-    ret.push_back(std::string("lrs"));
-    ret.push_back(std::string("wds"));
+    ret.emplace_back("lrs");
+    ret.emplace_back("wds");
     return ret;
   })
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
@@ -160,8 +160,8 @@ It updates the weights using::
       ret.push_back(std::string("grad_") + std::to_string(i));
       ret.push_back(std::string("weight32_") + std::to_string(i));
     }
-    ret.push_back(std::string("lrs"));
-    ret.push_back(std::string("wds"));
+    ret.emplace_back("lrs");
+    ret.emplace_back("wds");
     return ret;
   })
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
@@ -221,8 +221,8 @@ Where the parameter ``momentum`` is the decay rate of momentum estimates at each
       ret.push_back(std::string("mom_") + std::to_string(i));
       ret.push_back(std::string("weight32_") + std::to_string(i));
     }
-    ret.push_back(std::string("lrs"));
-    ret.push_back(std::string("wds"));
+    ret.emplace_back("lrs");
+    ret.emplace_back("wds");
     return ret;
   })
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
