@@ -215,7 +215,7 @@ void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
       if (source->is_variable()) {
         if (load_index[i]) {
           const auto& var_name = source->attrs.name;
-          code += "const auto vec_" + var_name + " = load_index<nvec>(" +
+          code += "const auto vec_" + var_name + " = op::load_index<nvec>(" +
                    var_name + ", offset, " + var_name + "_shape);\n";
           variables[{i, 0}] = var_name;
         }
@@ -265,7 +265,7 @@ void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
           };
           auto build_string_end = [i, ndim, var_name](std::string* code) {
             std::string end_var_name = var_name + "_" + std::to_string(i) + "_end";
-            *code += "Shape<" + std::to_string(ndim) + "> "+ end_var_name + ";\n";
+            *code += "op::Shape<" + std::to_string(ndim) + "> "+ end_var_name + ";\n";
             *code += end_var_name + ".set(INT_MAX);\n";
             return end_var_name;
           };
@@ -304,7 +304,7 @@ void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
           if (!check_shapes) {
             slice_func = "fast_" + slice_func;
           }
-          code += "const auto " + vec_name + " = " + slice_func + "<nvec>(" +
+          code += "const auto " + vec_name + " = op::" + slice_func + "<nvec>(" +
                   var_name + ", " + var_name + "_shape," + begin +
                   "," + end + ", offset);\n";
           CHECK_EQ(outputs[i], 1);
@@ -322,7 +322,7 @@ void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
   size_t counter = 0;
   for (const auto& entry : g.outputs()) {
     std::string var_name = "output" + std::to_string(counter);
-    code += "VectorType<DType_" + var_name + \
+    code += "op::VectorType<DType_" + var_name + \
             ", nvec> vec_" + var_name + ";\n";
     ++counter;
   }
@@ -337,7 +337,8 @@ void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
       std::string var_name = "temp" + std::to_string(temp_name_counter++);
       if (source->is_variable()) {
         if (load_index[i]) {
-            code += "const auto " + var_name + " = load(vec_" + variables[{i, 0}] + ".x[j]);\n";
+            code += "const auto " + var_name + " = op::load(vec_" +
+                    variables[{i, 0}] + ".x[j]);\n";
             CHECK_EQ(outputs[i], 1);
             variables[{i, 0}] = var_name;
         }
@@ -359,7 +360,7 @@ void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
         }
 
         if (fusion::slice_ops.find(op_name) != fusion::slice_ops.end()) {
-          code += "const auto " + var_name + " = load(" + variables[{i, 0}] + ".x[j]);\n";
+          code += "const auto " + var_name + " = op::load(" + variables[{i, 0}] + ".x[j]);\n";
           variables[{i, 0}] = var_name;
           continue;
         }
@@ -374,7 +375,7 @@ void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
           code += "auto " + var_name + " = " + arg + ";\n";
           for (size_t inp = 1; inp < node.inputs.size(); ++inp) {
             const auto& temp_arg = variables[{node.inputs[inp].node_id, node.inputs[inp].index}];
-            code += var_name + " = add(" + var_name + ", " + temp_arg + ");\n";
+            code += var_name + " = op::add(" + var_name + ", " + temp_arg + ");\n";
           }
           variables[{i, 0}] = var_name;
           continue;
@@ -392,7 +393,7 @@ void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
           } else {
             lhs = variables[{node.inputs[2].node_id, node.inputs[2].index}];
           }
-          code += "const auto " + var_name + " = backward_" + act_type +
+          code += "const auto " + var_name + " = op::backward_" + act_type +
                   "(" + lhs + ", " + rhs + ");\n";
 
           variables[{i, 0}] = var_name;
@@ -415,7 +416,7 @@ void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
           CHECK_EQ(outputs[i], 1);
           const int output_type = node_dtypes[g.entry_id(i, 0)];
           const auto& arg = variables[{node.inputs[0].node_id, node.inputs[0].index}];
-          code += "const auto " + var_name + " = cast<" + mshadowTypeToString(output_type) +
+          code += "const auto " + var_name + " = op::cast<" + mshadowTypeToString(output_type) +
                   ">(" + arg + ");\n";
           variables[{i, 0}] = var_name;
           continue;
@@ -432,7 +433,7 @@ void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
   for (const auto& entry : g.outputs()) {
     const std::string& var = variables[{entry.node_id, entry.index}];
     const auto var_name = "output" + std::to_string(counter);
-    code += "vec_" + var_name + ".x[j] = store("+ var +", " + var_name + ");\n";
+    code += "vec_" + var_name + ".x[j] = op::store("+ var +", " + var_name + ");\n";
     ++counter;
   }
 
@@ -444,11 +445,11 @@ void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
     const std::string& var = variables[{entry.node_id, entry.index}];
     if (req[counter] == kWriteTo || req[counter] == kWriteInplace) {
       const auto var_name = "output" + std::to_string(counter);
-      code += "store_index(vec_" + var_name + ", i, " + var_name + ", " +
+      code += "op::store_index(vec_" + var_name + ", i, " + var_name + ", " +
               var_name + "_shape);\n";
     } else if (req[counter] == kAddTo) {
       const auto var_name = "output" + std::to_string(counter);
-      code += "store_add_index(vec_" + var_name + ", i, " + var_name + ", " +
+      code += "op::store_add_index(vec_" + var_name + ", i, " + var_name + ", " +
               var_name + "_shape);\n";
     } else if (req[counter] == kNullOp) {
       // NULL req, do not do anything
@@ -476,7 +477,7 @@ void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
   for (const auto &shape_id : extra_shape_args_) {
       std::string shape_name = "extra_" + std::to_string(shape_id) + "_shape";
       int ndim = node_shapes[shape_id].ndim();
-      kernel_params += " const Shape<" + std::to_string(ndim) + "> " + shape_name;
+      kernel_params += " const op::Shape<" + std::to_string(ndim) + "> " + shape_name;
       kernel_params += ", ";
   }
   for (const auto &type : in_dtypes) {
@@ -487,7 +488,7 @@ void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
     aux_code = "using " + dtype_var + " = " + type_name + ";\n" + aux_code;
     aux_code = "static const int " + dim_var + " = " + dim_val + ";\n" + aux_code;
     tensor_params += dtype_var + "* " +input_names[i];
-    kernel_params += " const Shape<" + dim_val + "> " + input_names[i]+"_shape";
+    kernel_params += " const op::Shape<" + dim_val + "> " + input_names[i]+"_shape";
     ++i;
     if (i < num_params) {
       tensor_params += ", ";
@@ -503,7 +504,7 @@ void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
     aux_code = "static const int " + dim_var + " = " + dim_val + ";\n" + aux_code;
     aux_code = "using " + dtype_var + " = " + type_name + ";\n" + aux_code;
     tensor_params += dtype_var + "* " + out_name;
-    kernel_params += " const Shape<" + dim_val + "> " + out_name+"_shape";
+    kernel_params += " const op::Shape<" + dim_val + "> " + out_name+"_shape";
     ++i;
     if (i < num_params) {
       tensor_params += ", ";
