@@ -19,11 +19,11 @@
 
 /*!
  * \file mkldnn_flatten.cc
- * \brief Implement flatten operator by using mkldnn reorder primitive
+ * \brief Implement flatten operator via using MKL-DNN reorder primitive
  * \author Wuxun Zhang
 */
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
 
 #include "mkldnn_flatten-inl.h"
 
