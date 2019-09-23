@@ -316,7 +316,7 @@ Example::
   })
 .add_argument("data", "NDArray-or-Symbol", "Input array.");
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
 static void TransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
                                   const OpContext& ctx,
                                   const std::vector<NDArray>& inputs,
@@ -402,7 +402,7 @@ Examples::
     }
   })
 .set_attr<FCompute>("FCompute<cpu>", Transpose<cpu>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", TransposeComputeExCPU)
 .set_attr<FInferStorageType>("FInferStorageType", TransposeStorageType)
