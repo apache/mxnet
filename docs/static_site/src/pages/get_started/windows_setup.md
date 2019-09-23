@@ -74,7 +74,7 @@ Install MXNet with CPU support with Python:
 pip install mxnet
 ```
 
-Now [validate your MXNet installation with Python](validate_mxnet).
+Now [validate your MXNet installation with Python](get_started/validate_mxnet).
 
 ### Install with Intel CPUs
 
