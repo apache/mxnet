@@ -17,6 +17,9 @@
 
 # v1.6.0
 
+* Add an abstract type `AbstractMXError` as the parent type for all MXNet-related
+  API errors. (#16235)
+
 
 # v1.5.0
 
