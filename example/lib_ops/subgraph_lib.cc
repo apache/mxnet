@@ -28,40 +28,23 @@
 #include "lib_api.h"
 
 MXReturnValue parseAttrs(std::map<std::string,std::string> attrs,
-               int* num_in, int* num_out) {
-  *num_in = 2;
+                         int* num_in, int* num_out) {
+  *num_in = 1;
   *num_out = 1;
   return MX_SUCCESS;
 }
 
-MXReturnValue inferType(std::map<std::string,std::string> attrs, std::vector<int> &intypes,
-              std::vector<int> &outtypes) {
+MXReturnValue inferType(std::map<std::string,std::string> attrs,
+                        std::vector<int> &intypes,
+                        std::vector<int> &outtypes) {
   outtypes[0] = intypes[0];
   return MX_SUCCESS;
 }
 
-MXReturnValue inferShape(std::map<std::string,std::string> attrs, std::vector<std::vector<unsigned int>> &inshapes,
-               std::vector<std::vector<unsigned int>> &outshapes) {
-  unsigned n = inshapes[0][0];
-  unsigned k = inshapes[0][1];
-  unsigned kk = inshapes[1][0];
-  unsigned m = inshapes[1][1];
-
-  std::cout << "inshapes[0][0]=" << n << "  inshapes[0][1]=" << k << std::endl;
-  std::cout << "inshapes[1][0]=" << kk << "  inshapes[1][1]=" << m << std::endl;
-
-  if (k != kk)
-    return MX_FAIL;
-
-  outshapes[0].push_back(n);
-  outshapes[0].push_back(m);
-  return MX_SUCCESS;
-}
-
-MXReturnValue mutateInputs(std::map<std::string,std::string> attrs,
-               std::vector<int> &input_indices) {
-  //input_indices.push_back(1);
-  //std::cout << "the 1st input is marked as mutate input by library author" << std::endl;
+MXReturnValue inferShape(std::map<std::string,std::string> attrs,
+                         std::vector<std::vector<unsigned int>> &inshapes,
+                         std::vector<std::vector<unsigned int>> &outshapes) {
+  outshapes[0] = inshapes[0];
   return MX_SUCCESS;
 }
 
@@ -76,17 +59,16 @@ class MyStatefulOp : public CustomStatefulOp {
     return MX_SUCCESS;
   }
 
-  int State() { return count; }
-  ~MyStatefulOp() {}
-
  private:
   std::string subgraph_sym;
-  int count;
 };
 
 MXReturnValue createOpState(std::map<std::string,std::string> attrs,
                             CustomStatefulOp** op_inst) {
   std::string serialized_subgraph = "[empty]";
+
+  // MXNet subgraph is stored as Symbol in operator node attributes subgraphs field
+  // custom subgraph is stored as json string in custom operator attrs map entry
   if (attrs.count(SUBGRAPH_SYM_JSON)) {
     serialized_subgraph = attrs[SUBGRAPH_SYM_JSON];
   }
@@ -95,11 +77,10 @@ MXReturnValue createOpState(std::map<std::string,std::string> attrs,
   return MX_SUCCESS;
 }
 
-REGISTER_OP(subgraph_op)
+REGISTER_OP(_custom_subgraph_op)
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
 .setInferShape(inferShape)
-.setMutateInputs(mutateInputs)
 .setCreateOpState(createOpState);
 
 MXReturnValue initialize(int version) {

@@ -25,6 +25,8 @@
 
 import mxnet as mx
 import os
+from mxnet.base import _LIB, check_call, mx_uint, c_str, c_str_array, SymbolHandle
+import ctypes
 
 # load library
 if (os.name=='posix'):
@@ -34,20 +36,28 @@ elif (os.name=='nt'):
     path = os.path.abspath('subgraph_lib.so')
     mx.library.load(path)
 
-# setup inputs to call test operator
-a = mx.nd.array([[1,2],[3,4]])
-b = mx.nd.array([[5,6],[7,8]])
+a = mx.sym.var('a')
+b = mx.sym.var('b')
+c = a + b
+d = mx.sym.exp(c)
+ret = mx.sym.log(d)
 
-# imperative compute and print output
-print(mx.nd.subgraph_op(a,b))
+op_names = ['exp','log']
+out = SymbolHandle()
 
-# symbolic compute
-s = mx.sym.Variable('s')
-t = mx.sym.Variable('t')
-c = mx.sym.subgraph_op(s,t)
-in_grad = [mx.nd.empty((2,2)),mx.nd.empty((2,2))]
-#exe = c.bind(ctx=mx.cpu(),args={'s':a},args_grad=in_grad,aux_states={'t':b})
-exe = c.bind(ctx=mx.cpu(),args={'s':a,'t':b},args_grad=in_grad)
-out = exe.forward()
+check_call(_LIB.MXBuildSubgraphByOpNames(ret.handle,
+                                         c_str('default'),
+                                         mx_uint(len(op_names)),
+                                         c_str_array(op_names),
+                                         ctypes.byref(out)))
+partitioned_sym = mx.sym.Symbol(out)
+json_sym = partitioned_sym.tojson()
+
+mystr = json_sym
+mystr = json_sym.replace("_CachedOp","_custom_subgraph_op")
+
+mysym = mx.sym.load_json(mystr)
+
+exe = mysym.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
 out = exe.forward()
 print(out)

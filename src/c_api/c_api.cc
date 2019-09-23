@@ -515,13 +515,13 @@ int MXLoadLib(const char *path) {
       }
 
       // convert subgraph symbol from node attributes to char*
+      std::string subgraph_json;
       if (!attrs.subgraphs.empty()) {
         nnvm::Graph g;
         g.outputs = attrs.subgraphs[0].get()->outputs;
-        const std::string serialized_subgraph = nnvm::pass::SaveJSON(g);
-        const std::string subgraph = SUBGRAPH_SYM_JSON;
-        attr_keys.push_back(subgraph.c_str());
-        attr_vals.push_back(serialized_subgraph.c_str());
+        subgraph_json = nnvm::pass::SaveJSON(g);
+        attr_keys.push_back(SUBGRAPH_SYM_JSON);
+        attr_vals.push_back(subgraph_json.c_str());
       }
 
       // create a pointer to hold custom op state object
