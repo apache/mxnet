@@ -27,8 +27,12 @@ from mxnet.test_utils import check_numeric_gradient, use_np, collapse_sum_like
 from common import assertRaises, with_seed
 import random
 import scipy.stats as ss
-from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
+from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, retry
+from mxnet.runtime import Features
 import platform
+
+
+_features = Features()
 
 
 @with_seed()
@@ -1015,6 +1019,9 @@ def test_np_unary_funcs():
         'arccosh' : (lambda x: 1./(x**2 - 1.)**(1./2.), 2.0, 5.0),
         'arctanh' : (lambda x: -1./(x**2 - 1.), -0.99, 0.99)
     }
+    if _features.is_enabled("TVM_OP"):
+        funcs['rad2deg'] = (lambda x: 180. / _np.pi * _np.ones(x.shape), -1.0, 1.0)
+        funcs['deg2rad'] = (lambda x: _np.pi / 180. * _np.ones(x.shape), -1.0, 1.0)
     ndim = random.choice([2, 3, 4])
     shape = random.choice([rand_shape_nd(ndim, dim=3), (1, 0, 2)])
     for shape in [rand_shape_nd(ndim, dim=3), (1, 0, 2)]:
