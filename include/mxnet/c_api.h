@@ -111,6 +111,11 @@ typedef void (*EngineFuncParamDeleter)(void*);
 typedef void (*ExecutorMonitorCallback)(const char*,
                                         NDArrayHandle,
                                         void*);
+/*! \brief Monitor callback called at operator level for cached op */
+typedef void (*CachedOpMonitorCallback)(const char*,
+                                        const char*,
+                                        NDArrayHandle);
+
 
 struct NativeOpInfo {
   void (*forward)(int, float**, int*, unsigned**, int*, void*);
@@ -670,12 +675,6 @@ MXNET_DLL int MXNDArrayLoad(const char* fname,
                             uint32_t *out_name_size,
                             const char*** out_names);
 
-MXNET_DLL int MXNDArrayLoad64(const char* fname,
-                              int64_t *out_size,
-                              NDArrayHandle** out_arr,
-                              int64_t *out_name_size,
-                              const char*** out_names);
-
 /*!
  * \brief Load list / dictionary of narrays from file content loaded into memory.
  * This will load a list of ndarrays in a similar
@@ -696,13 +695,6 @@ MXNET_DLL int MXNDArrayLoadFromBuffer(const void *ndarray_buffer,
                                       NDArrayHandle** out_arr,
                                       uint32_t *out_name_size,
                                       const char*** out_names);
-
-MXNET_DLL int MXNDArrayLoadFromBuffer64(const void *ndarray_buffer,
-                                        size_t size,
-                                        int64_t *out_size,
-                                        NDArrayHandle** out_arr,
-                                        int64_t *out_name_size,
-                                        const char*** out_names);
 
 /*!
  * \brief Perform a synchronize copy from a continugous CPU memory region.
@@ -1283,6 +1275,13 @@ MXNET_DLL int MXInvokeCachedOpEx(CachedOpHandle handle,
                                  int *num_outputs,
                                  NDArrayHandle **outputs,
                                  const int** out_stypes);
+
+/*!
+ * \brief cached op set monitor callback
+ */
+MXNET_DLL int MXCachedOpRegisterOpHook(NDArrayHandle handle,
+                                       CachedOpMonitorCallback callback,
+                                       bool monitor_all);
 
 //--------------------------------------------
 // Part 3: symbolic configuration generation

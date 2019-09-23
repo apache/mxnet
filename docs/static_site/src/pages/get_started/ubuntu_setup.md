@@ -1,3 +1,10 @@
+---
+layout: page
+title: Ubuntu Setup
+action: Get Started
+action_url: /get_started
+permalink: /get_started/ubuntu_setup
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,13 +21,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page
-title: Ubuntu Setup
-action: Get Started
-action_url: /get_started
-permalink: /get_started/ubuntu_setup
----
 
 # Installing MXNet on Ubuntu
 
@@ -403,7 +403,7 @@ julia --color=yes --project=./ -e \
 	   Pkg.develop(PackageSpec(name="MXNet", path = joinpath(ENV["MXNET_HOME"], "julia")))'
 ```
 
-For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation](../api/julia/site/).
+For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation]({{'/api/julia'|relative_url}}).
 <hr>
 
 
@@ -470,14 +470,14 @@ $ sudo apt-get install -y build-essential git
 
 **Step 2** Install OpenBLAS.
 
-*MXNet* uses [BLAS](https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms) and [LAPACK](https://en.wikipedia.org/wiki/LAPACK) libraries for accelerated numerical computations on CPU machine. There are several flavors of BLAS/LAPACK libraries - [OpenBLAS](http://www.openblas.net/), [ATLAS](http://math-atlas.sourceforge.net/) and [MKL](https://software.intel.com/en-us/intel-mkl). In this step we install OpenBLAS. You can choose to install ATLAS or MKL.
+*MXNet* uses [BLAS](https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms) and [LAPACK](https://en.wikipedia.org/wiki/LAPACK) libraries for accelerated numerical computations on CPU machine. There are several flavors of BLAS/LAPACK libraries - [OpenBLAS](https://www.openblas.net/), [ATLAS](http://math-atlas.sourceforge.net/) and [MKL](https://software.intel.com/en-us/intel-mkl). In this step we install OpenBLAS. You can choose to install ATLAS or MKL.
 ```bash
 $ sudo apt-get install -y libopenblas-dev liblapack-dev
 ```
 
 **Step 3** Install OpenCV.
 
-*MXNet* uses [OpenCV](http://opencv.org/) for efficient image loading and augmentation operations.
+*MXNet* uses [OpenCV](https://opencv.org/) for efficient image loading and augmentation operations.
 ```bash
 $ sudo apt-get install -y libopencv-dev
 ```
@@ -535,7 +535,7 @@ To use the MXNet-Scala package, you can acquire the Maven package as a dependenc
 
 Further information is in the [MXNet-Scala Setup Instructions](scala_setup).
 
-If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Scala on IntelliJ tutorial](../api/scala/docs/tutorials/mxnet_scala_on_intellij) instead.
+If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Scala on IntelliJ tutorial]({{'/api/scala/docs/tutorials/mxnet_scala_on_intellij'|relative_url}}) instead.
 <hr>
 
 ### Install the MXNet Package for Java
@@ -544,18 +544,18 @@ To use the MXNet-Java package, you can acquire the Maven package as a dependency
 
 Further information is in the [MXNet-Java Setup Instructions](java_setup).
 
-If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Java on IntelliJ tutorial](../api/java/docs/tutorials/mxnet_java_on_intellij) instead.
+If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Java on IntelliJ tutorial]({{'/api/java/docs/tutorials/mxnet_java_on_intellij'|relative_url}}) instead.
 <hr>
 
 ## Contributions
 
-You are more than welcome to contribute easy installation scripts for other operating systems and programming languages. See the [community contributions page](../community/contribute) for further information.
+You are more than welcome to contribute easy installation scripts for other operating systems and programming languages. See the [community contributions page]({{'/community/contribute'|relative_url}}) for further information.
 
 ## Next Steps
 
-* [Tutorials](../api/python/docs/tutorials)
-* [How To](../api)
-* [Architecture](../api)
+* [Tutorials]({{'/api'|relative_url}})
+* [How To]({{'/api/faq/add_op_in_backend'|relative_url}})
+* [Architecture]({{'/api/architecture/overview'|relative_url}})
 
 
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.1.0/css/all.css" integrity="sha384-lKuwvrZot6UHsBSfcMvOkWwlCMgc0TaWr+30HWe3a4ltaBwTZhyTEggF5tJv8tbt" crossorigin="anonymous">

@@ -420,7 +420,8 @@ mkldnn::memory::primitive_desc GetPrimitiveDesc(mkldnn::memory::primitive_desc p
   return mkldnn::memory::primitive_desc(data_md, pd.get_engine());
 }
 
-void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
+template <typename Compute, typename AttrState>
+void FallBackCompute(Compute fn, const AttrState &attrs_states,
                      const OpContext &ctx,
                      const std::vector<NDArray> &inputs,
                      const std::vector<OpReqType> &req,
@@ -461,7 +462,7 @@ void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
     out_blobs[i] = output.data();
   }
 
-  fn(attrs, ctx, in_blobs, req, out_blobs);
+  fn(attrs_states, ctx, in_blobs, req, out_blobs);
   for (size_t i = 0; i < out_blobs.size(); i++) {
     if (req[i] == kAddTo && outputs[i].IsMKLDNNData())
       mxnet::common::CastNonDefaultStorage(temp_src, temp_dst, ctx, false);
@@ -517,6 +518,24 @@ static bool SimilarArray(const mxnet::NDArray &arr1, const mxnet::NDArray &arr2,
   }
   return success.load();
 }
+
+template void FallBackCompute(void (*)(nnvm::NodeAttrs const &, OpContext const &,
+                                       std::vector<TBlob, std::allocator<TBlob> > const &,
+                                       std::vector<OpReqType, std::allocator<OpReqType> > const &,
+                                       std::vector<TBlob, std::allocator<TBlob> > const &),
+                              nnvm::NodeAttrs const &, OpContext const &,
+                              std::vector<NDArray, std::allocator<NDArray> > const &,
+                              std::vector<OpReqType, std::allocator<OpReqType> > const &,
+                              std::vector<NDArray, std::allocator<NDArray> > const &);
+
+template void FallBackCompute(void (*)(OpStatePtr const &, OpContext const &,
+                                       std::vector<TBlob, std::allocator<TBlob> > const &,
+                                       std::vector<OpReqType, std::allocator<OpReqType> > const &,
+                                       std::vector<TBlob, std::allocator<TBlob> > const &),
+                              OpStatePtr const &, OpContext const &,
+                              std::vector<NDArray, std::allocator<NDArray> > const &,
+                              std::vector<OpReqType, std::allocator<OpReqType> > const &,
+                              std::vector<NDArray, std::allocator<NDArray> > const &);
 
 void OpCheck::Init(const std::vector<mxnet::NDArray> &inputs_,
                    const std::vector<mxnet::NDArray> &outputs_) {

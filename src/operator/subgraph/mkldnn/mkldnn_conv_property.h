@@ -28,7 +28,7 @@
 #include "../../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../../tensor/matrix_op-inl.h"
 #include "../common.h"
-#include "../subgraph_property.h"
+#include "mkldnn_subgraph_base-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -61,15 +61,15 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
         disable_conv_sum_(dis_conv_sum),
         quantize_(quantize) {}
 
-  bool Select(const nnvm::Node &n) override {
+  bool Select(const nnvm::Node& n, const std::shared_ptr<NodeAttr>& node_attr) override {
     if (n.op() && n.op()->name == "Convolution") {
       const auto &param = nnvm::get<ConvolutionParam>(n.attrs.parsed);
-      if (param.kernel.ndim() == 2) {
+      if (param.kernel.ndim() == 2 && SupportMKLDNNAttr(node_attr)) {
         status_ = disable_all_ ? kSuccess : kStart;
         matched_list_.clear();
         matched_list_.push_back(&n);
         return true;
-      }
+        }
     }
     return false;
   }
@@ -161,7 +161,7 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
     CHECK_GE(matched_list_.size(), 1);
     auto new_selector = SgMKLDNNConvSelector(disable_all_, disable_conv_bn_, disable_conv_act_,
                                              disable_conv_sum_, quantize_);
-    new_selector.Select(*matched_list_[0]);
+    new_selector.Select(*matched_list_[0], nullptr);
     *this = new_selector;
   }
 };

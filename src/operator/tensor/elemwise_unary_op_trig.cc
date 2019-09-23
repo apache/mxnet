@@ -313,7 +313,30 @@ The storage type of ``sinh`` output depends upon the input storage type:
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_sinh" });
 
-MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_sinh, unary_bwd<mshadow_op::sinh_grad>);
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_sinh, unary_bwd<mshadow_op::sinh_grad>)
+.set_attr<nnvm::FGradient>("FGradient",
+    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+      // ograds[0]: head_grad_grads (dL/dxgrad)
+      // inputs[0]: dL/dy
+      // inputs[1]: x (ElemwiseUseIn)
+      // f(x) = sinh(x)
+      // f'(x) = cosh(x)
+      // f''(x) = sinh(x)
+      auto dydx = MakeNode("cosh", n->attrs.name + "_dydx",
+                             {n->inputs[1]}, nullptr, &n);
+      auto d2ydx2 = MakeNode("sinh", n->attrs.name + "_grad_grad_mid", {n->inputs[1]}, nullptr, &n);
+
+      auto grad_grad_mid = MakeNode("elemwise_mul", n->attrs.name + "backward_grad_grad_mid",
+                                    {n->inputs[0], nnvm::NodeEntry{d2ydx2}}, nullptr, &n);
+
+      std::vector<nnvm::NodeEntry> ret;
+
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
+                                {ograds[0], nnvm::NodeEntry{dydx}}, nullptr, &n));
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_in",
+                                {ograds[0], nnvm::NodeEntry{grad_grad_mid}}, nullptr, &n));
+      return ret;
+    });
 
 // cosh
 MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(cosh, cpu, mshadow_op::cosh)
@@ -328,7 +351,31 @@ The storage type of ``cosh`` output is always dense
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_cosh" });
 
-MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_cosh, unary_bwd<mshadow_op::cosh_grad>);
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_cosh, unary_bwd<mshadow_op::cosh_grad>)
+.set_attr<nnvm::FGradient>("FGradient",
+    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+      // ograds[0]: head_grad_grads (dL/dxgrad)
+      // inputs[0]: dL/dy
+      // inputs[1]: x (ElemwiseUseIn)
+      // f(x) = cosh(x)
+      // f'(x) = sinh(x)
+      // f''(x) = cosh(x)
+      auto dydx = MakeNode("sinh", n->attrs.name + "_dydx",
+                             {n->inputs[1]}, nullptr, &n);
+      auto d2ydx2 = MakeNode("cosh", n->attrs.name + "_grad_grad_mid", {n->inputs[1]}, nullptr, &n);
+
+      auto grad_grad_mid = MakeNode("elemwise_mul", n->attrs.name + "backward_grad_grad_mid",
+                                    {n->inputs[0], nnvm::NodeEntry{d2ydx2}}, nullptr, &n);
+
+      std::vector<nnvm::NodeEntry> ret;
+
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
+                                {ograds[0], nnvm::NodeEntry{dydx}}, nullptr, &n));
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_in",
+                                {ograds[0], nnvm::NodeEntry{grad_grad_mid}}, nullptr, &n));
+      return ret;
+    });
+
 
 // tanh
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(tanh, cpu, mshadow_op::tanh)

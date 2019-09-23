@@ -34,8 +34,9 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot',
-           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'mean',
-           'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var']
+           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'vstack', 'mean',
+           'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign',
+           'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around']
 
 
 def _num_outputs(sym):
@@ -223,11 +224,11 @@ class _Symbol(Symbol):
         return _mx_np_op.dot(self, b, out=out)
 
     def reshape(self, *args, **kwargs):  # pylint: disable=arguments-differ
-        """Returns an array containing the same data with a new shape.
+        """Returns a copy of the array with a new shape.
 
         Notes
         -----
-        Unlike the free function `numpy.reshape`, this method on `ndarray` allows
+        Unlike the free function `mxnet.numpy.reshape`, this method on `ndarray` allows
         the elements of the shape parameter to be passed in as separate arguments.
         For example, ``a.reshape(10, 11)`` is equivalent to
         ``a.reshape((10, 11))``.
@@ -289,7 +290,7 @@ class _Symbol(Symbol):
 
     def repeat(self, repeats, axis=None):  # pylint: disable=arguments-differ
         """Repeat elements of an array."""
-        raise NotImplementedError
+        return _mx_np_op.repeat(self, repeats=repeats, axis=axis)
 
     def pad(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`pad`.
@@ -537,25 +538,21 @@ class _Symbol(Symbol):
         """Returns the standard deviation of the array elements along given axis."""
         return std(self, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
 
-    def var(self, axis=None, dtype=None, out=None, ddof=0, keepdims=None):  # pylint: disable=arguments-differ,too-many-arguments
+    def var(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=arguments-differ,too-many-arguments
         """Returns the variance of the array elements, along given axis."""
         return var(self, axis=axis, dtype=dtype, out=out, ddof=ddof, keepdims=keepdims)
 
     def cumsum(self, axis=None, dtype=None, out=None):
         """Return the cumulative sum of the elements along the given axis."""
-        raise NotImplementedError
+        return _mx_np_op.cumsum(self, axis=axis, dtype=dtype, out=out)
 
     def max(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return the maximum along a given axis."""
-        raise NotImplementedError
+        return _mx_np_op.max(self, axis=axis, keepdims=keepdims, out=out)
 
-    def min(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`min`.
-
-        The arguments are the same as for :py:func:`min`, with
-        this array as data.
-        """
-        raise NotImplementedError
+    def min(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
+        """Return the minimum along a given axis."""
+        return _mx_np_op.min(self, axis=axis, keepdims=keepdims, out=out)
 
     def norm(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`norm`.
@@ -2305,6 +2302,7 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
     return _npi.arange(start=start, stop=stop, step=step, dtype=dtype, ctx=ctx)
 
 
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.symbol.numpy')
 def split(ary, indices_or_sections, axis=0):
     """Split an array into multiple sub-arrays.
@@ -2345,6 +2343,7 @@ def split(ary, indices_or_sections, axis=0):
         raise ValueError('indices_or_sections must either int or tuple of ints')
     ret = _npi.split(ary, indices, axis, False, sections)
     return ret
+# pylint: enable=redefined-outer-name
 
 
 @set_module('mxnet.symbol.numpy')
@@ -2395,6 +2394,39 @@ def stack(arrays, axis=0, out=None):
 
     arrays = get_list(arrays)
     return _npi.stack(*arrays, axis=axis, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def vstack(arrays, out=None):
+    r"""Stack arrays in sequence vertically (row wise).
+
+    This is equivalent to concatenation along the first axis after 1-D arrays
+    of shape `(N,)` have been reshaped to `(1,N)`. Rebuilds arrays divided by
+    `vsplit`.
+
+    This function makes most sense for arrays with up to 3 dimensions. For
+    instance, for pixel-data with a height (first axis), width (second axis),
+    and r/g/b channels (third axis). The functions `concatenate` and `stack`
+    provide more general stacking and concatenation operations.
+
+    Parameters
+    ----------
+    tup : sequence of _Symbol
+        The arrays must have the same shape along all but the first axis.
+        1-D arrays must have the same length.
+
+    Returns
+    -------
+    stacked : _Symbol
+        The array formed by stacking the given arrays, will be at least 2-D.
+    """
+    def get_list(arrays):
+        if not hasattr(arrays, '__getitem__') and hasattr(arrays, '__iter__'):
+            raise ValueError("expected iterable for arrays but got {}".format(type(arrays)))
+        return [arr for arr in arrays]
+
+    arrays = get_list(arrays)
+    return _npi.vstack(*arrays)
 
 
 @set_module('mxnet.symbol.numpy')
@@ -2676,6 +2708,468 @@ def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
 
     """
     return _npi.var(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+
+
+# pylint: disable=redefined-outer-name
+@set_module('mxnet.symbol.numpy')
+def indices(dimensions, dtype=_np.int32, ctx=None):
+    """Return an array representing the indices of a grid.
+
+    Compute an array where the subarrays contain index values 0,1,...
+    varying only along the corresponding axis.
+
+    Parameters
+    ----------
+    dimensions : sequence of ints
+        The shape of the grid.
+    dtype : data-type, optional
+        The desired data-type for the array. Default is `float32`.
+    ctx : device context, optional
+        Device context on which the memory is allocated. Default is
+        `mxnet.context.current_context()`.
+
+    Returns
+    -------
+    grid : _Symbol
+        The array of grid indices,
+        ``grid.shape = (len(dimensions),) + tuple(dimensions)``.
+
+    Notes
+    -----
+    The output shape is obtained by prepending the number of dimensions
+    in front of the tuple of dimensions, i.e. if `dimensions` is a tuple
+    ``(r0, ..., rN-1)`` of length ``N``, the output shape is
+    ``(N,r0,...,rN-1)``.
+
+    The subarrays ``grid[k]`` contains the N-D array of indices along the
+    ``k-th`` axis. Explicitly::
+
+        grid[k,i0,i1,...,iN-1] = ik
+
+    Examples
+    --------
+    >>> grid = np.indices((2, 3))
+    >>> grid.shape
+    (2, 2, 3)
+    >>> grid[0]        # row indices
+    array([[0, 0, 0],
+           [1, 1, 1]])
+    >>> grid[1]        # column indices
+    array([[0, 0, 0],
+           [1, 1, 1]], dtype=int32)
+
+    The indices can be used as an index into an array.
+
+    >>> x = np.arange(20).reshape(5, 4)
+    >>> row, col = np.indices((2, 3))
+    >>> x[row, col]
+    array([[0., 1., 2.],
+           [4., 5., 6.]])
+
+    Note that it would be more straightforward in the above example to
+    extract the required elements directly with ``x[:2, :3]``.
+    """
+    if isinstance(dimensions, (tuple, list)):
+        if ctx is None:
+            ctx = current_context()
+        return _npi.indices(dimensions=dimensions, dtype=dtype, ctx=ctx)
+    else:
+        raise ValueError("The dimensions must be sequence of ints")
+# pylint: enable=redefined-outer-name
+
+
+@set_module('mxnet.symbol.numpy')
+def copysign(x1, x2, out=None):
+    r"""copysign(x1, x2, out=None)
+
+    Change the sign of x1 to that of x2, element-wise.
+
+    If `x2` is a scalar, its sign will be copied to all elements of `x1`.
+
+    Parameters
+    ----------
+    x1 : _Symbol or scalar
+        Values to change the sign of.
+    x2 : _Symbol or scalar
+        The sign of `x2` is copied to `x1`.
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    out : _Symbol
+        The values of `x1` with the sign of `x2`.
+        This is a scalar if both `x1` and `x2` are scalars.
+
+    Notes
+    -------
+    This function differs from the original `numpy.copysign
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.copysign.html>`_ in
+    the following aspects:
+
+    - ``where`` param is not supported.
+    """
+    return _ufunc_helper(x1, x2, _npi.copysign, _np.copysign, _npi.copysign_scalar, _npi.rcopysign_scalar, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def ravel(x, order='C'):
+    r"""
+    ravel(x)
+
+    Return a contiguous flattened array.
+    A 1-D array, containing the elements of the input, is returned.  A copy is
+    made only if needed.
+
+    Parameters
+    ----------
+    x : ndarray
+        Input array.  The elements in `x` are read in row-major, C-style order and
+        packed as a 1-D array.
+    order : `C`, optional
+        Only support row-major, C-style order.
+
+    Returns
+    -------
+    y : ndarray
+        y is an array of the same subtype as `x`, with shape ``(x.size,)``.
+        Note that matrices are special cased for backward compatibility, if `x`
+        is a matrix, then y is a 1-D ndarray.
+
+    Notes
+    -----
+    This function differs from the original numpy.arange in the following aspects:
+        - Only support row-major, C-style order.
+    """
+    if order != 'C':
+        raise NotImplementedError('order {} is not supported'.format(order))
+    if isinstance(x, numeric_types):
+        return _np.reshape(x, -1)
+    elif isinstance(x, _Symbol):
+        return _npi.reshape(x, -1)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x))))
+
+
+@set_module('mxnet.symbol.numpy')
+def hanning(M, dtype=_np.float32, ctx=None):
+    r"""Return the Hanning window.
+
+    The Hanning window is a taper formed by using a weighted cosine.
+
+    Parameters
+    ----------
+    M : int
+        Number of points in the output window. If zero or less, an
+        empty array is returned.
+    dtype : str or numpy.dtype, optional
+        An optional value type. Default is `float32`. Note that you need
+        select numpy.float32 or float64 in this operator.
+    ctx : Context, optional
+        An optional device context (default is the current default context).
+
+    Returns
+    -------
+    out : _Symbol, shape(M,)
+        The window, with the maximum value normalized to one (the value
+        one appears only if `M` is odd).
+
+    See Also
+    --------
+    blackman, hamming
+
+    Notes
+    -----
+    The Hanning window is defined as
+
+    .. math::  w(n) = 0.5 - 0.5cos\left(\frac{2\pi{n}}{M-1}\right)
+               \qquad 0 \leq n \leq M-1
+
+    The Hanning was named for Julius von Hann, an Austrian meteorologist.
+    It is also known as the Cosine Bell. Some authors prefer that it be
+    called a Hann window, to help avoid confusion with the very similar
+    Hamming window.
+
+    Most references to the Hanning window come from the signal processing
+    literature, where it is used as one of many windowing functions for
+    smoothing values.  It is also known as an apodization (which means
+    "removing the foot", i.e. smoothing discontinuities at the beginning
+    and end of the sampled signal) or tapering function.
+
+    References
+    ----------
+    .. [1] Blackman, R.B. and Tukey, J.W., (1958) The measurement of power
+           spectra, Dover Publications, New York.
+    .. [2] E.R. Kanasewich, "Time Sequence Analysis in Geophysics",
+           The University of Alberta Press, 1975, pp. 106-108.
+    .. [3] Wikipedia, "Window function",
+           http://en.wikipedia.org/wiki/Window_function
+    .. [4] W.H. Press,  B.P. Flannery, S.A. Teukolsky, and W.T. Vetterling,
+           "Numerical Recipes", Cambridge University Press, 1986, page 425.
+
+    Examples
+    --------
+    >>> np.hanning(12)
+    array([0.        , 0.07937324, 0.29229254, 0.5711574 , 0.8274304 ,
+           0.9797465 , 0.97974646, 0.82743025, 0.5711573 , 0.29229245,
+           0.07937312, 0.        ])
+
+    Plot the window and its frequency response:
+
+    >>> import matplotlib.pyplot as plt
+    >>> window = np.hanning(51)
+    >>> plt.plot(window.asnumpy())
+    [<matplotlib.lines.Line2D object at 0x...>]
+    >>> plt.title("Hann window")
+    Text(0.5, 1.0, 'Hann window')
+    >>> plt.ylabel("Amplitude")
+    Text(0, 0.5, 'Amplitude')
+    >>> plt.xlabel("Sample")
+    Text(0.5, 0, 'Sample')
+    >>> plt.show()
+    """
+    if ctx is None:
+        ctx = current_context()
+    return _npi.hanning(M, dtype=dtype, ctx=ctx)
+
+
+@set_module('mxnet.symbol.numpy')
+def hamming(M, dtype=_np.float32, ctx=None):
+    r"""Return the hamming window.
+
+    The hamming window is a taper formed by using a weighted cosine.
+
+    Parameters
+    ----------
+    M : int
+        Number of points in the output window. If zero or less, an
+        empty array is returned.
+    dtype : str or numpy.dtype, optional
+        An optional value type. Default is `float32`. Note that you need
+        select numpy.float32 or float64 in this operator.
+    ctx : Context, optional
+        An optional device context (default is the current default context).
+
+    Returns
+    -------
+    out : _Symbol, shape(M,)
+        The window, with the maximum value normalized to one (the value
+        one appears only if `M` is odd).
+
+    See Also
+    --------
+    blackman, hanning
+
+    Notes
+    -----
+    The Hamming window is defined as
+
+    .. math::  w(n) = 0.54 - 0.46cos\left(\frac{2\pi{n}}{M-1}\right)
+               \qquad 0 \leq n \leq M-1
+
+    The Hamming was named for R. W. Hamming, an associate of J. W. Tukey
+    and is described in Blackman and Tukey. It was recommended for
+    smoothing the truncated autocovariance function in the time domain.
+    Most references to the Hamming window come from the signal processing
+    literature, where it is used as one of many windowing functions for
+    smoothing values.  It is also known as an apodization (which means
+    "removing the foot", i.e. smoothing discontinuities at the beginning
+    and end of the sampled signal) or tapering function.
+
+    References
+    ----------
+    .. [1] Blackman, R.B. and Tukey, J.W., (1958) The measurement of power
+           spectra, Dover Publications, New York.
+    .. [2] E.R. Kanasewich, "Time Sequence Analysis in Geophysics", The
+           University of Alberta Press, 1975, pp. 109-110.
+    .. [3] Wikipedia, "Window function",
+           https://en.wikipedia.org/wiki/Window_function
+    .. [4] W.H. Press,  B.P. Flannery, S.A. Teukolsky, and W.T. Vetterling,
+           "Numerical Recipes", Cambridge University Press, 1986, page 425.
+
+    Examples
+    --------
+    >>> np.hamming(12)
+    array([0.08000001, 0.15302339, 0.34890914, 0.6054648 , 0.841236  ,
+           0.9813669 , 0.9813668 , 0.8412359 , 0.6054647 , 0.34890908,
+           0.15302327, 0.08000001])
+
+    Plot the window and its frequency response:
+
+    >>> import matplotlib.pyplot as plt
+    >>> window = np.hamming(51)
+    >>> plt.plot(window.asnumpy())
+    [<matplotlib.lines.Line2D object at 0x...>]
+    >>> plt.title("hamming window")
+    Text(0.5, 1.0, 'hamming window')
+    >>> plt.ylabel("Amplitude")
+    Text(0, 0.5, 'Amplitude')
+    >>> plt.xlabel("Sample")
+    Text(0.5, 0, 'Sample')
+    >>> plt.show()
+    """
+    if ctx is None:
+        ctx = current_context()
+    return _npi.hamming(M, dtype=dtype, ctx=ctx)
+
+
+@set_module('mxnet.symbol.numpy')
+def blackman(M, dtype=_np.float32, ctx=None):
+    r"""Return the Blackman window.
+
+    The Blackman window is a taper formed by using the first three
+    terms of a summation of cosines. It was designed to have close to the
+    minimal leakage possible.  It is close to optimal, only slightly worse
+    than a Kaiser window.
+
+    Parameters
+    ----------
+    M : int
+        Number of points in the output window. If zero or less, an
+        empty array is returned.
+    dtype : str or numpy.dtype, optional
+        An optional value type. Default is `float32`. Note that you need
+        select numpy.float32 or float64 in this operator.
+    ctx : Context, optional
+        An optional device context (default is the current default context).
+
+    Returns
+    -------
+    out : _Symbol
+        The window, with the maximum value normalized to one (the value one
+        appears only if the number of samples is odd).
+
+    See Also
+    --------
+    hamming, hanning
+
+    Notes
+    -----
+    The Blackman window is defined as
+
+    .. math::  w(n) = 0.42 - 0.5 \cos(2\pi n/{M-1}) + 0.08 \cos(4\pi n/{M-1})
+
+    Most references to the Blackman window come from the signal processing
+    literature, where it is used as one of many windowing functions for
+    smoothing values.  It is also known as an apodization (which means
+    "removing the foot", i.e. smoothing discontinuities at the beginning
+    and end of the sampled signal) or tapering function. It is known as a
+    "near optimal" tapering function, almost as good (by some measures)
+    as the kaiser window.
+
+    References
+    ----------
+    Blackman, R.B. and Tukey, J.W., (1958) The measurement of power spectra,
+    Dover Publications, New York.
+
+    Oppenheim, A.V., and R.W. Schafer. Discrete-Time Signal Processing.
+    Upper Saddle River, NJ: Prentice-Hall, 1999, pp. 468-471.
+
+    Examples
+    --------
+    >>> np.blackman(12)
+    array([-1.4901161e-08,  3.2606423e-02,  1.5990365e-01,  4.1439798e-01,
+            7.3604530e-01,  9.6704686e-01,  9.6704674e-01,  7.3604506e-01,
+            4.1439781e-01,  1.5990359e-01,  3.2606363e-02, -1.4901161e-08])
+
+    Plot the window and its frequency response:
+
+    >>> import matplotlib.pyplot as plt
+    >>> window = np.blackman(51)
+    >>> plt.plot(window.asnumpy())
+    [<matplotlib.lines.Line2D object at 0x...>]
+    >>> plt.title("blackman window")
+    Text(0.5, 1.0, 'blackman window')
+    >>> plt.ylabel("Amplitude")
+    Text(0, 0.5, 'Amplitude')
+    >>> plt.xlabel("Sample")
+    Text(0.5, 0, 'Sample')
+    >>> plt.show()
+    """
+    if ctx is None:
+        ctx = current_context()
+    return _npi.blackman(M, dtype=dtype, ctx=ctx)
+
+
+@set_module('mxnet.symbol.numpy')
+def flip(m, axis=None, out=None):
+    r"""
+    flip(m, axis=None, out=None)
+
+    Reverse the order of elements in an array along the given axis.
+
+    The shape of the array is preserved, but the elements are reordered.
+
+    Parameters
+    ----------
+    m : _Symbol or scalar
+        Input array.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which to flip over. The default,
+        axis=None, will flip over all of the axes of the input array.
+        If axis is negative it counts from the last to the first axis.
+
+        If axis is a tuple of ints, flipping is performed on all of the axes
+        specified in the tuple.
+    out : _Symbol or scalar, optional
+        Alternative output array in which to place the result. It must have
+        the same shape and type as the expected output.
+
+    Returns
+    -------
+    out : _Symbol or scalar
+        A view of `m` with the entries of axis reversed.  Since a view is
+        returned, this operation is done in constant time.
+    """
+    if isinstance(m, numeric_types):
+        return _np.flip(m, axis)
+    elif isinstance(m, _Symbol):
+        return _npi.flip(m, axis, out=out)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(m))))
+
+
+@set_module('mxnet.symbol.numpy')
+def around(x, decimals=0, out=None, **kwargs):
+    r"""
+    around(x, decimals=0, out=None)
+
+    Evenly round to the given number of decimals.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input data.
+    decimals : int, optional
+        Number of decimal places to round to (default: 0).  If
+        decimals is negative, it specifies the number of positions to
+        the left of the decimal point.
+    out : _Symbol, optional
+        Alternative output array in which to place the result. It must have
+        the same shape and type as the expected output.
+
+    Returns
+    -------
+    rounded_array : _Symbol or scalar
+        An array of the same type as `x`, containing the rounded values.
+        A reference to the result is returned.
+
+    Notes
+    -----
+    For values exactly halfway between rounded decimal values, NumPy
+    rounds to the nearest even value. Thus 1.5 and 2.5 round to 2.0,
+    -0.5 and 0.5 round to 0.0, etc.
+
+    This function differs from the original numpy.prod in the following aspects:
+
+        - Cannot cast type automatically. Dtype of `out` must be same as the expected one.
+        - Cannot support complex-valued number.
+    """
+    if isinstance(x, numeric_types):
+        return _np.around(x, decimals, **kwargs)
+    elif isinstance(x, _Symbol):
+        return _npi.around(x, decimals, out=out, **kwargs)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x))))
 
 
 _set_np_symbol_class(_Symbol)

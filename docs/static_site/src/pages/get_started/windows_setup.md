@@ -1,3 +1,10 @@
+---
+layout: page
+title: Windows Setup
+action: Get Started
+action_url: /get_started
+permalink: /get_started/windows_setup
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,13 +21,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page
-title: Windows Setup
-action: Get Started
-action_url: /get_started
-permalink: /get_started/windows_setup
----
 
 # Installing MXNet on Windows
 
@@ -30,7 +30,7 @@ The following describes how to install with pip for computers with CPUs, Intel C
 - [Install MXNet with Python](#install-mxnet-with-python)
     - [Install with CPUs](#install-with-cpus)
     - [Install with Intel CPUs](#install-with-intel-cpus)
-    - [Install with GPUs](#install-with-gpus)
+    - [Install with NVIDIA GPUs](#install-with-nvidia-gpus)
     - [Notes on the Python Packages](#notes-on-the-python-packages)
 - [Build from Source](#build-from-source)
 - Install MXNet with a Programming Language API
@@ -74,7 +74,7 @@ Install MXNet with CPU support with Python:
 pip install mxnet
 ```
 
-Now [validate your MXNet installation with Python](validate_mxnet.md).
+Now [validate your MXNet installation with Python](validate_mxnet).
 
 ### Install with Intel CPUs
 
@@ -88,7 +88,7 @@ The following steps will setup MXNet with MKL. MKL-DNN can be enabled only when 
 pip install mxnet-mkl
 ```
 
-Now [validate your MXNet installation with Python](validate_mxnet.md).
+Now [validate your MXNet installation with Python](validate_mxnet).
 
 ### Install with NVIDIA GPUs
 
@@ -108,7 +108,7 @@ The following steps will setup MXNet with CUDA. cuDNN can be enabled only when b
 pip install mxnet-cu92
 ```
 
-Once you have installed a version of MXNet, [validate your MXNet installation with Python](validate_mxnet.md).
+Once you have installed a version of MXNet, [validate your MXNet installation with Python](validate_mxnet).
 
 #### Install with CUDA and MKL Support
 
@@ -125,7 +125,7 @@ The following steps will setup MXNet with CUDA and MKL.
 pip install mxnet-cu92mkl
 ```
 
-Once you have installed a version of MXNet, [validate your MXNet installation with Python](validate_mxnet.md).
+Once you have installed a version of MXNet, [validate your MXNet installation with Python](validate_mxnet).
 
 ### Notes on the Python Packages
 To get further enhancements for deep neural networks, you may want to enable MKL-DNN and/or cuDNN. Each of these require you to [build from source](#build-from-source) and to enable the build flags for each.
@@ -137,7 +137,7 @@ Check the chart below for other options or refer to [PyPI for other MXNet pip pa
 
 ## Build from Source
 
-**IMPORTANT: It is recommended that you review the [build from source guide](build_from_source.md) first.** It describes many of the build options that come with MXNet in more detail. You may decide to install additional dependencies and modify your build flags after reviewing this material.
+**IMPORTANT: It is recommended that you review the [build from source guide](build_from_source) first.** It describes many of the build options that come with MXNet in more detail. You may decide to install additional dependencies and modify your build flags after reviewing this material.
 
 We provide two primary options to build and install MXNet yourself using [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) or [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/).
 
@@ -227,7 +227,7 @@ Next, we install ```graphviz``` library that we use for visualizing network grap
 
 We have installed MXNet core library. Next, we will install MXNet interface package for programming language of your choice:
 - [Python](#install-the-mxnet-package-for-python)
-- [R](#install-mxnet-package-for-r)
+- [R](#install-the-mxnet-package-for-r)
 - [Julia](#install-the-mxnet-package-for-julia)
 - **Scala** is not yet available for Windows
 
@@ -261,7 +261,7 @@ opencv_world341.dll (in OpenCV folder you download)
 
 Done! We have installed MXNet with Python interface.
 
-You can continue with using MXNet-Python, or if you want to try a different language API for MXNet, keep reading. Otherwise, jump ahead to [next steps](#next-steps).
+You can continue with using MXNet-Python, or if you want to try a different language API for MXNet, keep reading.
 
 ## Install the MXNet Package for R
 MXNet for R is available for both CPUs and GPUs.
@@ -482,7 +482,7 @@ You might want to add this command to your ```~/.bashrc``` file. If you do, you 
 Pkg.add("MXNet")
 ```
 
-For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation](/api/julia/site/).
+For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation]({{'/api/julia'|relative_url}}).
 
 
 ## Installing the MXNet Package for Scala

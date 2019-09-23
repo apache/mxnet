@@ -1,3 +1,9 @@
+---
+layout: page_category
+title:  Exception Handling in MXNet
+category: architecture
+permalink: /api/architecture/exception_handling
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,12 +20,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title:  Exception Handling in MXNet
-category: architecture
-permalink: /api/architecture/exception_handling
----
 
 # Exception Handling in MXNet
 

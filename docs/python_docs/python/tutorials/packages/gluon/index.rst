@@ -37,7 +37,7 @@ Getting started
 
    .. card::
       :title: Gluon: from experiment to deployment
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/gluon_from_experiment_to_deployment.html
+      :link: gluon_from_experiment_to_deployment.html
 
       An end to end tutorial on working with the MXNet Gluon API.
 

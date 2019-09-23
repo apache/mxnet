@@ -24,7 +24,7 @@
 #include <string>
 #include <vector>
 #include "../common.h"
-#include "../subgraph_property.h"
+#include "mkldnn_subgraph_base-inl.h"
 
 namespace mxnet {
 namespace op {
