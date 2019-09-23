@@ -36,7 +36,7 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot',
            'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'vstack', 'mean',
            'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign',
-           'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around']
+           'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'hypot']
 
 
 def _num_outputs(sym):
@@ -3238,6 +3238,39 @@ def arctan2(x1, x2, out=None):
     """
     return _ufunc_helper(x1, x2, _npi.arctan2, _np.arctan2,
                          _npi.arctan2_scalar, _npi.rarctan2_scalar, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def hypot(x1, x2, out=None):
+    r"""
+    Given the "legs" of a right triangle, return its hypotenuse.
+
+    Equivalent to ``sqrt(x1**2 + x2**2)``, element-wise.  If `x1` or
+    `x2` is scalar_like (i.e., unambiguously cast-able to a scalar type),
+    it is broadcast for use with each element of the other argument.
+
+    Parameters
+    ----------
+    x1, x2 : array_like
+        Leg of the triangle(s).
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned. A tuple (possible only as a
+        keyword argument) must have length equal to the number of outputs.
+
+    Returns
+    -------
+    z : ndarray
+        The hypotenuse of the triangle(s).
+        This is a scalar if both `x1` and `x2` are scalars.
+
+    Notes
+    -----
+    This function differs from the original numpy.arange in the following aspects:
+        - Only support float16, float32 and float64.
+    """
+    return _ufunc_helper(x1, x2, _npi.hypot, _np.hypot, _npi.hypot_scalar, None, out)
 
 
 _set_np_symbol_class(_Symbol)
