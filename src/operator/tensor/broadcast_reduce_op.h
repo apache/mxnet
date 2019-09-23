@@ -568,87 +568,36 @@ MSHADOW_XINLINE void Argmax(DType *in, DType *out, mxnet::TShape shape) {
   using namespace mshadow_op::isnan_typed;
 
   if (j_stride == 1) {
-    if (shape[0] >= omp_threads || shape[0] > shape[1]) {
-      #pragma omp parallel for private(j, max_num, loc, idx)
-      for (i = 0; i < shape[0]; i++) {
-        i_offset = i * i_stride;
-        max_num = IsNan(in[i_offset]) ? type_limit : in[i_offset];
-        loc = 0;
-        for (j = 0, idx = i_offset; j < shape[1]; ++j, ++idx) {
-          if (!IsNan(in[idx]) && in[idx] > max_num) {
-            loc = j;
-            max_num = in[idx];
-          }
+    #pragma omp parallel for private(j, max_num, loc, idx)
+    for (i = 0; i < shape[0]; i++) {
+      i_offset = i * i_stride;
+      max_num = IsNan(in[i_offset]) ? type_limit : in[i_offset];
+      loc = 0;
+      for (j = 0, idx = i_offset; j < shape[1]; ++j, ++idx) {
+        if (!IsNan(in[idx]) && in[idx] > max_num) {
+          loc = j;
+          max_num = in[idx];
         }
-        out[i] = loc;
       }
-    } else {
-      for (i = 0; i < shape[0]; i++) {
-        i_offset = i * i_stride;
-        max_num = IsNan(in[i_offset]) ? type_limit : in[i_offset];
-        loc = 0;
-        #pragma omp parallel
-        {
-          DType local_max = IsNan(in[i_offset]) ? type_limit : in[i_offset];
-          index_t local_loc = 0;
-          #pragma omp for nowait
-          for (j = 0; j < shape[1]; ++j) {
-            if (!IsNan(in[j + i_offset]) && in[j + i_offset] > local_max) {
-              local_loc = j;
-              local_max = in[j + i_offset];
-            }
-          }
-          #pragma omp critical
-          {
-            if (local_max > max_num) {
-              max_num = local_max;
-              loc = local_loc;
-            }
-          }
-        }
-        out[i] = loc;
-      }
+      out[i] = loc;
     }
   } else {
-    if (shape[0] >= omp_threads || shape[0] >= shape[1]) {
-      #pragma omp parallel for private(j, k, j_blk, k_blk, max_num, loc, idx, i_offset)
-      for (i = 0; i < shape[0]; ++i) {
-        i_offset = i * i_stride;
-        for (k_blk = 0; k_blk < shape[2]; k_blk+=blocksize) {
-          for (j_blk = 0; j_blk < shape[1]; j_blk+=blocksize) {
-            for (k = k_blk; k < k_blk+blocksize && k < shape[2]; ++k) {
-              max_num = IsNan(in[i_offset + k]) ? type_limit : in[i_offset + k];
-              loc = 0;
-              for (j = j_blk; j < j_blk+blocksize && j < shape[1]; ++j) {
-                idx = k + j * j_stride + i_offset;
-                if (!IsNan(in[idx]) && in[idx] > max_num) {
-                  loc = j;
-                  max_num = in[idx];
-                }
+    #pragma omp parallel for private(j, k, j_blk, k_blk, max_num, loc, idx, i_offset)
+    for (i = 0; i < shape[0]; ++i) {
+      i_offset = i * i_stride;
+      for (k_blk = 0; k_blk < shape[2]; k_blk+=blocksize) {
+        for (j_blk = 0; j_blk < shape[1]; j_blk+=blocksize) {
+          for (k = k_blk; k < k_blk+blocksize && k < shape[2]; ++k) {
+            max_num = IsNan(in[i_offset + k]) ? type_limit : in[i_offset + k];
+            loc = 0;
+            for (j = j_blk; j < j_blk+blocksize && j < shape[1]; ++j) {
+              idx = k + j * j_stride + i_offset;
+              if (!IsNan(in[idx]) && in[idx] > max_num) {
+                loc = j;
+                max_num = in[idx];
               }
-              out[i * j_stride + k] = loc;
             }
-          }
-        }
-      }
-    } else {
-      for (i = 0; i < shape[0]; ++i) {
-        i_offset = i * i_stride;
-        #pragma omp parallel for private(j, k, j_blk, k_blk, max_num, loc, idx)
-        for (k_blk = 0; k_blk < shape[2]; k_blk+=blocksize) {
-          for (j_blk = 0; j_blk < shape[1]; j_blk+=blocksize) {
-            for (k = k_blk; k < k_blk+blocksize && k < shape[2]; ++k) {
-              max_num = IsNan(in[i_offset + k]) ? type_limit : in[i_offset + k];
-              loc = 0;
-              for (j = j_blk; j < j_blk+blocksize && j < shape[1]; ++j) {
-                idx = k + j * j_stride + i_offset;
-                if (!IsNan(in[idx]) && in[idx] > max_num) {
-                  loc = j;
-                  max_num = in[idx];
-                }
-              }
-              out[i * j_stride + k] = loc;
-            }
+            out[i * j_stride + k] = loc;
           }
         }
       }
