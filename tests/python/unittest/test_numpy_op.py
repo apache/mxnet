@@ -2447,6 +2447,38 @@ def test_np_arctan2():
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
+@with_seed()
+@use_np
+def test_np_nonzero():
+    class TestNonzero(HybridBlock):
+        def __init__(self):
+            super(TestNonzero, self).__init__()
+            
+        def hybrid_forward(self, F, x):
+            return F.npx.nonzero(x)
+
+    types = ['int32', 'int64', 'float64', 'float32', 'float16']
+    for hybridize in [True, False]:
+        for shape in [(), (1, 2, 3), (1, 0)]:
+            for oneType in types:
+                rtol, atol = 1e-3, 1e-5
+                test_nonzero = TestNonzero()
+                if hybridize:
+                    test_nonzero.hybridize()
+                x = rand_ndarray(shape, dtype=oneType).as_np_ndarray()
+                np_out = _np.nonzero(x.asnumpy())
+                np_out = _np.transpose(np_out)
+                mx_out = test_nonzero(x)
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol, atol)
+
+                # Test imperative once again
+                mx_out = npx.nonzero(x)
+                np_out = _np.nonzero(x.asnumpy())
+                np_out = _np.transpose(np_out)
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol, atol)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
