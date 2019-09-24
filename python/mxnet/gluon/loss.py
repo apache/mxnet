@@ -408,7 +408,7 @@ class KLDivLoss(Loss):
 
     .. math::
 
-        L = \sum_i {label}_i * \big[\log({label}_i) - \log({pred}_i)\big]
+        L = \sum_i {label}_i * \big[\log({label}_i) - {pred}_i\big]
 
     If `from_logits` is False, loss is defined as:
 
