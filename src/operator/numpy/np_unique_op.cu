@@ -27,6 +27,39 @@
 namespace mxnet {
 namespace op {
 
+struct UniqueComputeAuxGPUKernel {
+  // assume that idx have been flattened to a 1-D tensor (N,)
+  // assume that out_data and in_data have been flattened to 2-D tensors, (N, M) and (K, M)
+  // M is the number of columns of in_data and out_data
+  // i is the index of out_data
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(dim_t i, DType* out_data, const DType* in_data,
+                                  const dim_t* idx, const dim_t M) {
+    dim_t j = idx[i/M];
+    out_data[i] = in_data[j * M + i % M];
+  }
+};
+
+struct UniqueComputeMaskGPUKernel {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(dim_t i,
+                                  dim_t* out_data,
+                                  const DType* in_data,
+                                  const dim_t numel) {
+    if (i == 0) {
+      out_data[i] = 1;
+    } else {
+      out_data[i] = 0;
+      for (dim_t j = 0; j < numel; ++j) {
+        if (in_data[(i - 1) * numel + j] != in_data[i * numel + j]) {
+          out_data[i] = 1;
+          break;
+        }
+      }
+    }
+  }
+};
+
 template<typename DType>
 struct argsort_functor1d : public thrust::unary_function<dim_t, dim_t> {
   explicit argsort_functor1d(DType* data_) : data(data_) {}
