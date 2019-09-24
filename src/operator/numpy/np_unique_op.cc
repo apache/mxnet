@@ -27,12 +27,69 @@
 namespace mxnet {
 namespace op {
 
+inline bool NumpyUniqueType(const nnvm::NodeAttrs& attrs,
+                            std::vector<int> *in_attrs,
+                            std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+  for (size_t i = 1; i < out_attrs->size(); ++i) {
+    TYPE_ASSIGN_CHECK(*out_attrs, i, mshadow::kInt64);
+  }
+  return out_attrs->at(0) != -1;
+}
+
+inline bool NumpyUniqueStorageType(const nnvm::NodeAttrs& attrs,
+                                   const int dev_mask,
+                                   DispatchMode* dispatch_mode,
+                                   std::vector<int> *in_attrs,
+                                   std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  // CHECK_EQ(out_attrs->size(), 1U);
+  for (int &attr : *in_attrs) {
+    CHECK_EQ(attr, kDefaultStorage) << "Only default storage is supported";
+  }
+  for (int &attr : *out_attrs) {
+    attr = kDefaultStorage;
+  }
+  *dispatch_mode = DispatchMode::kFComputeEx;
+  return true;
+}
+
+struct UniqueComputeAuxCPUKernel {
+  // assume that idx have been flattened to a 1-D tensor (N,)
+  // assume that out_data and in_data have been flattened to 2-D tensors, (N, M) and (K, M)
+  // M is the number of columns of in_data and out_data
+  // i is the index of out_data
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(dim_t i, DType* out_data, const DType* in_data,
+                                  const dim_t* idx, const dim_t M) {
+    dim_t j = idx[i];
+    std::memcpy(out_data + i * M, in_data + j * M, M * sizeof(DType));
+  }
+};
+
+struct UniqueComputeMaskCPUKernel {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(dim_t i,
+                                  dim_t* out_data,
+                                  const DType* in_data,
+                                  const dim_t numel) {
+    if (i == 0) {
+      out_data[i] = 1;
+    } else {
+      out_data[i] = (std::memcmp(in_data + i * numel,
+                     in_data + (i - 1) * numel, numel * sizeof(DType)) == 0) ? 0 : 1;
+    }
+  }
+};
+
 void NumpyUniqueCPUNoneAxisImpl(const NumpyUniqueParam& param,
                                 const OpContext &ctx,
                                 const std::vector<NDArray> &inputs,
                                 const std::vector<OpReqType> &req,
                                 const std::vector<NDArray> &outputs) {
-  MXNET_NO_FLOAT16_TYPE_SWITCH(outputs[0].dtype(), DType, {
+  MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
     mshadow::Stream<cpu> *stream = ctx.get_stream<cpu>();
 
     DType* input_data = inputs[0].data().dptr<DType>();
@@ -117,7 +174,7 @@ void NumpyUniqueCPUImpl(const NumpyUniqueParam& param,
   CHECK(param.axis.value() >= -1 * inputs[0].shape().ndim() &&
       param.axis.value() < inputs[0].shape().ndim())
       << "Axis should be in the range of [-r, r-1] where r is the rank of input tensor";
-  MXNET_NO_FLOAT16_TYPE_SWITCH(outputs[0].dtype(), DType, {
+  MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
     using namespace mshadow;
     using namespace mshadow::expr;
     Stream<cpu> *stream = ctx.get_stream<cpu>();
@@ -314,7 +371,6 @@ NNVM_REGISTER_OP(_npi_unique)
 .set_attr<nnvm::FInferType>("FInferType", NumpyUniqueType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", NumpyUniqueCPUForward)
 .set_attr<FInferStorageType>("FInferStorageType", NumpyUniqueStorageType)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
