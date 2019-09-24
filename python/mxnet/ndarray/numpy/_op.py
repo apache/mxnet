@@ -35,7 +35,7 @@ __all__ = ['zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide', 'mo
            'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'vstack', 'mean',
            'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign',
            'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'hypot', 'rad2deg', 'deg2rad',
-           'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp']
+           'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1903,7 +1903,7 @@ def tan(x, out=None, where=True, **kwargs):
 
     Parameters:
     ----------
-    x : array_like
+    x : ndarray
         Input array.
     out : ndarray, None, or tuple of ndarray and None, optional
           A location into which the result is stored. If provided,
@@ -2323,7 +2323,7 @@ def concatenate(seq, axis=0, out=None):
     """Join a sequence of arrays along an existing axis.
     Parameters
     ----------
-    a1, a2, ... : sequence of array_like
+    a1, a2, ... : sequence of ndarray
         The arrays must have the same shape, except in the dimension
         corresponding to `axis` (the first, by default).
     axis : int, optional
@@ -2348,7 +2348,7 @@ def stack(arrays, axis=0, out=None):
         For example, if `axis=0` it will be the first dimension and if `axis=-1` it will be the last dimension.
     Parameters
     ----------
-    arrays : sequence of array_like
+    arrays : sequence of ndarray
         Each array must have the same shape.
     axis : int, optional
         The axis in the result array along which the input arrays are stacked.
@@ -2510,7 +2510,7 @@ def clip(a, a_min, a_max, out=None):
 
     Notes
     -----
-    array_like `a_min` and `a_max` are not supported.
+    ndarray `a_min` and `a_max` are not supported.
 
     Examples
     --------
@@ -2669,7 +2669,7 @@ def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
 
     Parameters
     ----------
-    a : array_like
+    a : ndarray
         Calculate the standard deviation of these values.
     axis : None or int or tuple of ints, optional
         Axis or axes along which the standard deviation is computed. The
@@ -2736,7 +2736,7 @@ def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
 
     Parameters
     ----------
-    a : array_like
+    a : ndarray
         Array containing numbers whose variance is desired.  If `a` is not an
         array, a conversion is attempted.
     axis : None or int or tuple of ints, optional
@@ -3430,7 +3430,7 @@ def hypot(x1, x2, out=None):
 
     Parameters
     ----------
-    x1, x2 : array_like
+    x1, x2 : ndarray
         Leg of the triangle(s).
     out : ndarray, None, or tuple of ndarray and None, optional
         A location into which the result is stored. If provided, it must have
@@ -3502,3 +3502,150 @@ def ldexp(x1, x2, out=None):
     array([  5.,  10.,  20.,  40.])
     """
     return _ufunc_helper(x1, x2, _npi.ldexp, _np.ldexp, _npi.ldexp_scalar, _npi.rldexp_scalar, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def inner(a, b):
+    r"""
+    Inner product of two arrays.
+    Ordinary inner product of vectors for 1-D arrays (without complex
+    conjugation), in higher dimensions a sum product over the last axes.
+
+    Parameters
+    ----------
+    a, b : ndarray
+        If `a` and `b` are nonscalar, their last dimensions must match.
+
+    Returns
+    -------
+    out : ndarray
+        `out.shape = a.shape[:-1] + b.shape[:-1]`
+
+    Raises
+    ------
+    ValueError
+        If the last dimension of `a` and `b` has different size.
+
+    See Also
+    --------
+    tensordot : Sum products over arbitrary axes.
+    dot : Generalised matrix product, using second last dimension of `b`.
+    einsum : Einstein summation convention.
+
+    Notes
+    -----
+    For vectors (1-D arrays) it computes the ordinary inner-product::
+        np.inner(a, b) = sum(a[:]*b[:])
+    More generally, if `ndim(a) = r > 0` and `ndim(b) = s > 0`::
+        np.inner(a, b) = np.tensordot(a, b, axes=(-1,-1))
+    or explicitly::
+        np.inner(a, b)[i0,...,ir-1,j0,...,js-1]
+            = sum(a[i0,...,ir-1,:]*b[j0,...,js-1,:])
+    In addition `a` or `b` may be scalars, in which case::
+    np.inner(a,b) = a*b
+
+    Examples
+    --------
+    Ordinary inner product for vectors:
+    >>> a = np.array([1,2,3])
+    >>> b = np.array([0,1,0])
+    >>> np.inner(a, b)
+    2
+    A multidimensional example:
+    >>> a = np.arange(24).reshape((2,3,4))
+    >>> b = np.arange(4)
+    >>> np.inner(a, b)
+    array([[ 14,  38,  62],
+           [ 86, 110, 134]])
+    """
+    return tensordot(a, b, [-1, -1])
+
+
+@set_module('mxnet.ndarray.numpy')
+def outer(a, b):
+    r"""
+    Compute the outer product of two vectors.
+    Given two vectors, ``a = [a0, a1, ..., aM]`` and
+    ``b = [b0, b1, ..., bN]``,
+    the outer product [1]_ is::
+    [[a0*b0  a0*b1 ... a0*bN ]
+    [a1*b0    .
+    [ ...          .
+    [aM*b0            aM*bN ]]
+
+    Parameters
+    ----------
+    a : (M,) ndarray
+        First input vector.  Input is flattened if
+        not already 1-dimensional.
+    b : (N,) ndarray
+        Second input vector.  Input is flattened if
+        not already 1-dimensional.
+
+    Returns
+    -------
+    out : (M, N) ndarray
+        ``out[i, j] = a[i] * b[j]``
+    See also
+    --------
+    inner
+    einsum : ``einsum('i,j->ij', a.ravel(), b.ravel())`` is the equivalent.
+    ufunc.outer : A generalization to N dimensions and other operations.
+                ``np.multiply.outer(a.ravel(), b.ravel())`` is the equivalent.
+    References
+    ----------
+    .. [1] : G. H. Golub and C. F. Van Loan, *Matrix Computations*, 3rd
+            ed., Baltimore, MD, Johns Hopkins University Press, 1996,
+            pg. 8.
+    Examples
+    --------
+    Make a (*very* coarse) grid for computing a Mandelbrot set:
+    >>> rl = np.outer(np.ones((5,)), np.linspace(-2, 2, 5))
+    >>> rl
+    array([[-2., -1.,  0.,  1.,  2.],
+        [-2., -1.,  0.,  1.,  2.],
+        [-2., -1.,  0.,  1.,  2.],
+        [-2., -1.,  0.,  1.,  2.],
+        [-2., -1.,  0.,  1.,  2.]])
+    """
+    return tensordot(a.flatten(), b.flatten(), 0)
+
+
+@set_module('mxnet.ndarray.numpy')
+def vdot(a, b):
+    r"""
+    Return the dot product of two vectors.
+    Note that `vdot` handles multidimensional arrays differently than `dot`:
+    it does *not* perform a matrix product, but flattens input arguments
+    to 1-D vectors first. Consequently, it should only be used for vectors.
+
+    Parameters
+    ----------
+    a : ndarray
+        First argument to the dot product.
+    b : ndarray
+        Second argument to the dot product.
+
+    Returns
+    -------
+    output : ndarray
+        Dot product of `a` and `b`.
+
+    See Also
+    --------
+    dot : Return the dot product without using the complex conjugate of the
+        first argument.
+
+    Examples
+    --------
+    Note that higher-dimensional arrays are flattened!
+    >>> a = np.array([[1, 4], [5, 6]])
+    >>> b = np.array([[4, 1], [2, 2]])
+    >>> np.vdot(a, b)
+    30
+    >>> np.vdot(b, a)
+    30
+    >>> 1*4 + 4*1 + 5*2 + 6*2
+    30
+    """
+    return tensordot(a.flatten(), b.flatten(), 1)
