@@ -258,27 +258,6 @@ struct TransposeParam : public dmlc::Parameter<TransposeParam> {
 };
 
 
-struct transpose_2d_kernel{
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(index_t t, const DType *in, DType *out, index_t row, index_t col) {
-    index_t blocksize = 32;
-
-  for (index_t i = 0; i < row; i += blocksize) {
-      #pragma omp parallel for
-      for (index_t j = 0; j < col; j += blocksize) {
-          // transpose the block
-          #pragma unroll 4
-          for (index_t a = j; a < blocksize && a < col; ++a) {
-            for (index_t b = i; b < blocksize && b < row; ++b) {
-                      out[a * row + b] = in[b * col + a];
-                  }
-            }
-      }
-  }
-  }   
-};
-
-
 /*!
  * \brief This function performs transpose operation on a 2D matrix by utilizing the L1 cache
  * \param in  input tensor
@@ -286,29 +265,32 @@ struct transpose_2d_kernel{
  * \param row shape of dim 0 of input
  * \param col shape of dim 1 of input
  */
-// template<typename DType>
-// MSHADOW_XINLINE void Transpose2D(Stream* s, const DType *in, DType *out, index_t row, index_t col) {
-//   // ensure cache line hits and prevent cache miss for any configuration
-//   // L1 cache size to be utilized = 32kb = 2^15
-//   // Largest size of a single unit of any dtype <= 8 byte = 2^3
-//   // Number of elements - (2^15/2^3) = 2^12
-//   // Block-size - 2^6 v 2^6 (64 v 64)
+template<typename DType>
+MSHADOW_XINLINE void Transpose2D(const DType *in, DType *out, index_t row, index_t col) {
+  // ensure cache line hits and prevent cache miss for any configuration
+  // L1 cache size to be utilized = 32kb = 2^15
+  // Largest size of a single unit of any dtype <= 8 byte = 2^3
+  // Number of elements - (2^15/2^3) = 2^12
+  // Block-size - 2^6 v 2^6 (64 v 64)
 
-//   // But we could leverage unrolling of for loops (for parallelization)
-//   // Block-size - 2^5 v 2^5 (32 v 32) with 4 pragma for loop unrolled
-//   // blocksize * blocksize * num_threads = cache_size / dtype_size
-//   index_t blocksize = 32;
+  // But we could leverage unrolling of for loops (for parallelization)
+  // Block-size - 2^5 v 2^5 (32 v 32) with 4 pragma for loop unrolled
+  // blocksize * blocksize * num_threads = cache_size / dtype_size
+  index_t blocksize = 32;
 
-//   for (index_t i = 0; i < row; i += blocksize) {
-//       #pragma omp parallel for
-//       for (index_t j = 0; j < col; j += blocksize) {
-//           // transpose the block
-//           #pragma unroll 4
-//           for (index_t a = j; a < blocksize && a < col; ++a) {
-//             mxnet_op::Kernel<transpose_2d_kernel, xpu>::Launch(s, size, in.dptr_, out.dptr_, in.shape_[0], in.shape_[1]);
-//       }
-//   }
-// }
+  for (index_t i = 0; i < row; i += blocksize) {
+    #pragma omp parallel for
+    for (index_t j = 0; j < col; j += blocksize) {
+      // transpose the block
+      #pragma unroll 4
+      for (index_t a = j; a < blocksize && a < col; ++a) {
+        for (index_t b = i; b < blocksize && b < row; ++b) {
+          out[a * row + b] = in[b * col + a];
+        }
+      }
+    }
+  }
+}
 
 
 template<typename xpu>
@@ -341,8 +323,11 @@ void TransposeImpl(RunContext ctx,
       mshadow::Tensor<xpu, 2, DType> out = ret.FlatTo2D<xpu, DType>(s);
 
       if (axes[0] == 1 && axes[1] == 0) {
-        // const index_t size = in.Size();
-        mxnet_op::Kernel<transpose_2d_kernel, xpu>::Launch(s, 1, in.dptr_, out.dptr_, in.shape_[0], in.shape_[1]);
+        if (ctx.get_ctx().dev_mask() == cpu::kDevMask) {
+          Transpose2D<DType>(in.dptr_, out.dptr_, in.shape_[0], in.shape_[1]);
+        } else {
+          out = in.T();
+        }
       } else {
         Copy(out, in, s);
       }
