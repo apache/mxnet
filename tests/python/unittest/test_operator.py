@@ -9244,28 +9244,6 @@ def test_sample_normal_default_shape():
     assert s.shape == (1, 1)
 
 
-def test_inf_and_nan():
-    dtypes = [np.float16, np.float32, np.double]
-    elem_list = [-1, 1, 0, np.inf, -np.inf, np.nan]
-    op_names = ['min', 'max', 'mean', 'sum', 'argmin', 'argmax']
-    record = []
-    for dtype in dtypes:
-        for a in elem_list:
-            for b in elem_list:
-                for op_name in op_names:
-                    data_np = np.array([a, b], dtype=dtype)
-                    data_mx = mx.nd.array(data_np, dtype=dtype)
-                    out_data_np = getattr(data_np, op_name)()
-                    out_data_mx = getattr(data_mx, op_name)()
-                    try:
-                        assert_array_equal(out_data_np, out_data_mx.asnumpy())
-                    except AssertionError as e:
-                        args = (dtype, a, b, op_name)
-                        print(args, e, '\n---------\n')
-                        record.append(args)
-    assert len(record) == 0, record
-
-
 if __name__ == '__main__':
     import nose
     nose.runmodule()
