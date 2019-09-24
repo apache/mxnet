@@ -70,7 +70,7 @@ void MKLDNNFlattenForward(const nnvm::NodeAttrs &attrs,
     ws_ptr = reinterpret_cast<void*>(ws.dptr_);
   }
 
-  fwd.Execute(input, output, ws_ptr);
+  fwd.Execute(input, output, req, ws_ptr);
 }
 
 }  // namespace op

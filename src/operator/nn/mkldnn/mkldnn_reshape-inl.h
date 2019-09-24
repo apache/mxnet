@@ -38,7 +38,6 @@ class MKLDNNReshapeFwd {
  protected:
   std::shared_ptr<mkldnn::memory> out_;
   std::shared_ptr<mkldnn::memory> temp_;
-  std::vector<mkldnn_args_map_t> args_map_;
   std::vector<mkldnn::primitive> prims_;
   bool needInvalidateInput = false;
 
@@ -49,6 +48,7 @@ class MKLDNNReshapeFwd {
   int GetWorkspaceSize();
   void Execute(const NDArray &input,
                const NDArray &output,
+               const OpReqType &req,
                void* workspace = nullptr);
 };
 

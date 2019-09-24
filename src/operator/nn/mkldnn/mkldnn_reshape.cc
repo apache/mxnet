@@ -93,11 +93,13 @@ int MKLDNNReshapeFwd::GetWorkspaceSize() {
 
 void MKLDNNReshapeFwd::Execute(const NDArray &input,
                                const NDArray &output,
+                               const OpReqType &req,
                                void* workspace) {
   auto stream = MKLDNNStream::Get();
   auto in_mem = input.GetMKLDNNData();
   auto in_md = in_mem->get_desc();
   // register primitives and arguments
+  std::vector<mkldnn_args_map_t> args_map_;
   size_t prims_size = prims_.size();
   if (prims_size == 1) {
     args_map_.push_back({{MKLDNN_ARG_FROM, *in_mem},
@@ -105,12 +107,16 @@ void MKLDNNReshapeFwd::Execute(const NDArray &input,
   } else if (prims_size == 2) {
     auto temp_md = GetDesc(in_md, GetDefaultFormat(in_md));
     temp_ = std::make_shared<mkldnn::memory>(temp_md, CpuEngine::Get()->get_engine(),
-              workspace);
+            workspace);
     args_map_.push_back({{MKLDNN_ARG_FROM, *in_mem},
                         {MKLDNN_ARG_TO, *temp_}});
     args_map_.push_back({{MKLDNN_ARG_FROM, *temp_},
                         {MKLDNN_ARG_TO, *output.GetMKLDNNData()}});
+  } else {
+    CHECK(prims_size == 0 && req != kWriteTo)
+          << "kWriteTo should never reach here.";
   }
+
   for (size_t i = 0; i < prims_size; i++) {
     stream->RegisterPrimArgs(prims_[i], args_map_[i]);
   }
@@ -142,7 +148,7 @@ void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
     ws_ptr = reinterpret_cast<void*>(ws.dptr_);
   }
 
-  fwd.Execute(input, output, ws_ptr);
+  fwd.Execute(input, output, req, ws_ptr);
 }
 }  // namespace op
 }  // namespace mxnet
