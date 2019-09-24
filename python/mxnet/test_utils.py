@@ -2220,3 +2220,8 @@ def collapse_sum_like(a, shape):
             assert s == 1
             axes.append(i+ndim_diff)
     return np.sum(a, axis=tuple(axes)).reshape(shape)
+
+
+def is_cd_run():
+    """Checks if the test is running as part of a Continuous Delivery run"""
+    return os.environ.get("CD_JOB", 0) == "1"

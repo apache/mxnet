@@ -1,3 +1,11 @@
+---
+layout: page_api
+title: Julia Guide
+action: Get Started
+action_url: /get_started
+permalink: /api/julia
+tag: julia
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: Julia Guide
-action: Get Started
-action_url: /get_started
-permalink: /api/julia
-tag: julia
----
 
 
 # MXNet - Julia API
@@ -35,5 +35,5 @@ computing and the state-of-art deep learning to Julia.
   and apply them to tasks such as image classification and data science challenges.
 
 ## Installation
-* [Ubuntu installation guide]({{'/get_started' | relative_url}})
+* [Ubuntu installation guide]({{'/get_started/ubuntu_setup' | relative_url}})
 * Mac / Windows guides are not available (contributions welcome!)

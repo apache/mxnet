@@ -590,6 +590,19 @@ class Block(object):
         # pylint: disable= invalid-name
         raise NotImplementedError
 
+    def register_op_hook(self, callback, monitor_all=False):
+        """Install callback monitor.
+
+        Parameters
+        ----------
+        callback : function
+            Takes a string and a NDArrayHandle.
+        monitor_all : bool, default False
+            If true, monitor both input and output, otherwise monitor output only.
+        """
+        for cld in self._children.values():
+            cld.register_op_hook(callback, monitor_all)
+
     def summary(self, *inputs):
         """Print the summary of the model's output and parameters.
 
@@ -754,6 +767,8 @@ class HybridBlock(Block):
         self._in_format = None
         self._active = False
         self._flags = []
+        self._callback = None
+        self._monitor_all = False
 
     def __setattr__(self, name, value):
         """Registers parameters."""
@@ -833,6 +848,12 @@ class HybridBlock(Block):
     def _call_cached_op(self, *args):
         if self._cached_op is None:
             self._build_cache(*args)
+        assert self._cached_op, "cached op is not None"
+        if self._callback:
+            self._cached_op._register_op_hook(self._callback, self._monitor_all)
+            if len(self._flags) >= 2 and (self._flags[1] or self._flags[0]):
+                warnings.warn("register_op_hook is experimental when static_alloc=True / static_shape=True "
+                              " and may not work correctly")
 
         args, fmt = _flatten(args, "input")
         assert fmt == self._in_format, "Invalid input format"
@@ -937,6 +958,22 @@ class HybridBlock(Block):
                 arg_dict['aux:%s'%name] = param._reduce()
         save_fn = _mx_npx.save if is_np_array() else ndarray.save
         save_fn('%s-%04d.params'%(path, epoch), arg_dict)
+
+    def register_op_hook(self, callback, monitor_all=False):
+        """Install op hook for block recursively.
+
+        Parameters
+        ----------
+        callback : function
+            Takes a string and a NDArrayHandle.
+        monitor_all : bool, default False
+            If true, monitor both input and output, otherwise monitor output only.
+        """
+        self._callback = callback
+        self._monitor_all = monitor_all
+        for cld in self._children.values():
+            cld._callback = callback
+            cld._monitor_all = monitor_all
 
     def forward(self, x, *args):
         """Defines the forward computation. Arguments can be either

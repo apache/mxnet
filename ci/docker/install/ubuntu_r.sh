@@ -41,4 +41,7 @@ apt-get install -y --allow-unauthenticated \
     libxml2-dev \
     libxt-dev \
     r-base \
-    r-base-dev
+    r-base-dev \
+    texinfo \
+    texlive \
+    texlive-fonts-extra 

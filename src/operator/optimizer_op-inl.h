@@ -1066,21 +1066,18 @@ struct NAGMomKernel {
     const DType param_lr, const DType param_wd,
     const DType param_rescale_grad, const OpReqType req) {
     if (param_clip_gradient >= 0.0f) {
-      mom_data[i] = param_momentum*mom_data[i]
-                    + mshadow_op::clip::Map(param_rescale_grad*grad_data[i],
-                                            param_clip_gradient)
-                    + (param_wd*weight_data[i]);
-      KERNEL_ASSIGN(out_data[i], req, weight_data[i]
-                    - param_lr*(param_momentum*mom_data[i]
-                    + mshadow_op::clip::Map(param_rescale_grad*grad_data[i],
-                                            param_clip_gradient)));
+      mom_data[i] = param_momentum*mom_data[i];
+      KERNEL_ASSIGN(out_data[i], req, weight_data[i]-mom_data[i]+(param_momentum+1)
+              *(mom_data[i]-(param_lr*(mshadow_op::clip::Map(param_rescale_grad
+                              *grad_data[i], param_clip_gradient)+(param_wd*weight_data[i])))));
+      mom_data[i] = mom_data[i] - (param_lr*((mshadow_op::clip::Map(param_rescale_grad*grad_data[i],
+                          param_clip_gradient))+(param_wd*weight_data[i])));
     } else {
-      mom_data[i] = param_momentum*mom_data[i]
-                    + param_rescale_grad*grad_data[i]
-                    + (param_wd*weight_data[i]);
-      KERNEL_ASSIGN(out_data[i], req, weight_data[i]
-                    - param_lr*(param_momentum*mom_data[i]
-                    + param_rescale_grad*grad_data[i]));
+      mom_data[i] = param_momentum*mom_data[i];
+      KERNEL_ASSIGN(out_data[i], req, weight_data[i]-mom_data[i]+(param_momentum+1)
+              *(mom_data[i]-(param_lr*(param_rescale_grad*grad_data[i]+param_wd*weight_data[i]))));
+      mom_data[i] = mom_data[i] - param_lr*((param_rescale_grad*grad_data[i])
+              +(param_wd*weight_data[i]));
     }
   }
 };
@@ -1119,22 +1116,21 @@ struct MP_NAGMomKernel {
     const OpReqType req) {
     float w = weight32[i];
     if (param_clip_gradient >= 0.0f) {
-      mom_data[i] = param_momentum*mom_data[i]
-                    + mshadow_op::clip::Map(param_rescale_grad
-                    *static_cast<float>(grad_data[i]), param_clip_gradient)
-                    + (param_wd*w);
-      w = w - param_lr*(param_momentum*mom_data[i]
-                        + mshadow_op::clip::Map(param_rescale_grad
-                        *static_cast<float>(grad_data[i]),
-                        param_clip_gradient));
+      mom_data[i] = param_momentum*mom_data[i];
+      w = w-mom_data[i]+(param_momentum+1)*(mom_data[i]-param_lr
+              *(mshadow_op::clip::Map(param_rescale_grad*static_cast<float>(grad_data[i]),
+                          param_clip_gradient)+(param_wd*w)));
+      mom_data[i] = mom_data[i] - param_lr
+          *((mshadow_op::clip::Map(param_rescale_grad*static_cast<float>(grad_data[i]),
+                          param_clip_gradient))+(param_wd*w));
       weight32[i] = w;
       KERNEL_ASSIGN(out_data[i], req, w);
     } else {
-      mom_data[i] = param_momentum*mom_data[i]
-                    + param_rescale_grad*static_cast<float>(grad_data[i])
-                    + (param_wd*w);
-      w = w - param_lr*(param_momentum*mom_data[i]
-       + param_rescale_grad*static_cast<float>(grad_data[i]));
+      mom_data[i] = param_momentum*mom_data[i];
+      w = w-mom_data[i]+(param_momentum+1)*(mom_data[i]-param_lr
+              *(param_rescale_grad*static_cast<float>(grad_data[i])+(param_wd*w)));
+      mom_data[i] = mom_data[i] - param_lr
+          *((param_rescale_grad*static_cast<float>(grad_data[i]))+(param_wd*w));
       weight32[i] = w;
       KERNEL_ASSIGN(out_data[i], req, w);
     }

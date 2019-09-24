@@ -31,14 +31,14 @@ Currently, 10 variants are supported:
 
 * *cpu*: CPU
 * *mkl*: CPU w/ MKL
-* *cu80*: CUDA 8.0
-* *cu80mkl*: CUDA 8.0 w/ MKL-DNN
 * *cu90*: CUDA 9.0
 * *cu90mkl*: CUDA 9.0 w/ MKL-DNN
 * *cu92*: CUDA 9.2
 * *cu92mkl*: CUDA 9.2 w/ MKL-DNN
 * *cu100*: CUDA 10
 * *cu100mkl*: CUDA 10 w/ MKL-DNN
+* *cu101*: CUDA 10
+* *cu101mkl*: CUDA 10.1 w/ MKL-DNN
 
 *For more on variants, see [here](https://github.com/apache/incubator-mxnet/issues/8671)*
 

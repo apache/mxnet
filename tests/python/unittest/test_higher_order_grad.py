@@ -69,6 +69,34 @@ def test_tan():
 
 
 @with_seed()
+def test_sinh():
+    def sinh(x):
+        return nd.sinh(x)
+
+    def grad_grad_op(x):
+        return sinh(x)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, sinh, grad_grad_op)
+
+
+@with_seed()
+def test_cosh():
+    def cosh(x):
+        return nd.cosh(x)
+
+    def grad_grad_op(x):
+        return cosh(x)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, cosh, grad_grad_op)
+
+
+@with_seed()
 def test_tanh():
     def tanh(x):
         return nd.tanh(x)
@@ -245,6 +273,7 @@ def test_dropout():
         check_second_order_unary(array, dropout, grad_grad_op)
 
 
+@with_seed()
 def test_sigmoid():
     def sigmoid(x):
         return nd.sigmoid(x)

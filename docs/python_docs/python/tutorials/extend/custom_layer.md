@@ -26,6 +26,7 @@ In this article, I will cover how to create a new layer from scratch, how to use
 
 To create a new layer in Gluon API, one must create a class that inherits from [Block](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/block.py#L123) class. This class provides the most basic functionality, and all pre-defined layers inherit from it directly or via other subclasses. Because each layer in Apache MxNet inherits from `Block`, words "layer" and "block" are used interchangeable inside of the Apache MxNet community.
 
+- MXNet [7b24137](https://github.com/apache/incubator-mxnet/commit/7b24137ed45df605defa4ce72ec91554f6e445f0). See Instructions in [Setup and Installation]({{'/get_started'|relative_url}}). 
 The only instance method needed to be implemented is [forward(self, x)](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/block.py#L415), which defines what exactly your layer is going to do during forward propagation. Notice, that it doesn't require to provide what the block should do during back propogation. Back propogation pass for blocks is done by Apache MxNet for you. 
 
 In the example below, we define a new layer and implement `forward()` method to normalize input data by fitting it into a range of [0, 1].
@@ -86,12 +87,11 @@ layer = NormalizationHybridLayer()
 layer(nd.array([1, 2, 3], ctx=mx.cpu()))
 ```
 
+Output:
 
-
-
-```text
-    [0.  0.5 1. ]
-    <NDArray 3 @cpu(0)>
+```bash
+[0.  0.5 1. ]
+<NDArray 3 @cpu(0)>
 ```
 
 
@@ -125,15 +125,15 @@ net(input)
 ```
 
 
+Output:
 
-
-```text
-    [[-0.13601446]
-     [ 0.26103732]
-     [-0.05046433]
-     [-1.2375476 ]
-     [-0.15506986]]
-    <NDArray 5x1 @cpu(0)>
+```bash
+[[-0.13601446]
+ [ 0.26103732]
+ [-0.05046433]
+ [-1.2375476 ]
+ [-0.15506986]]
+<NDArray 5x1 @cpu(0)>
 ```
 
 
@@ -223,37 +223,38 @@ loss.backward()                                               # Backward compute
 trainer.step(input.shape[0])                                  # Trainer updates parameters of every block, using .grad field using oprimization method (sgd in this example)
                                                               # We provide batch size that is used as a divider in cost function formula
 print_params("=========== Parameters after backward pass ===========\n", net)
-
 ```
 
-```text
-    =========== Parameters after forward pass ===========
-    
-    hybridsequential94_normalizationhybridlayer0_weights = 
-    [[-0.3983642  -0.505708   -0.02425683 -0.3133553  -0.35161012]
-     [ 0.6467543   0.3918715  -0.6154656  -0.20702496 -0.4243446 ]
-     [ 0.6077331   0.03922009  0.13425875  0.5729856  -0.14446527]
-     [-0.3572498   0.18545026 -0.09098256  0.5106366  -0.35151464]
-     [-0.39846328  0.22245121  0.13075739  0.33387476 -0.10088372]]
-    <NDArray 5x5 @cpu(0)>
-    
-    hybridsequential94_normalizationhybridlayer0_scales = 
-    [2.]
-    <NDArray 1 @cpu(0)>
-    
-    =========== Parameters after backward pass ===========
-    
-    hybridsequential94_normalizationhybridlayer0_weights = 
-    [[-0.29839832 -0.47213346  0.08348035 -0.2324698  -0.27368504]
-     [ 0.76268613  0.43080837 -0.49052125 -0.11322092 -0.3339738 ]
-     [ 0.48665082 -0.00144657  0.00376363  0.47501418 -0.23885089]
-     [-0.22626656  0.22944227  0.05018325  0.6166192  -0.24941102]
-     [-0.44946212  0.20532274  0.07579394  0.29261002 -0.14063817]]
-    <NDArray 5x5 @cpu(0)>
-    
-    hybridsequential94_normalizationhybridlayer0_scales = 
-    [2.]
-    <NDArray 1 @cpu(0)>
+Output:
+
+```bash
+=========== Parameters after forward pass ===========
+
+hybridsequential94_normalizationhybridlayer0_weights = 
+[[-0.3983642  -0.505708   -0.02425683 -0.3133553  -0.35161012]
+ [ 0.6467543   0.3918715  -0.6154656  -0.20702496 -0.4243446 ]
+ [ 0.6077331   0.03922009  0.13425875  0.5729856  -0.14446527]
+ [-0.3572498   0.18545026 -0.09098256  0.5106366  -0.35151464]
+ [-0.39846328  0.22245121  0.13075739  0.33387476 -0.10088372]]
+<NDArray 5x5 @cpu(0)>
+
+hybridsequential94_normalizationhybridlayer0_scales = 
+[2.]
+<NDArray 1 @cpu(0)>
+
+=========== Parameters after backward pass ===========
+
+hybridsequential94_normalizationhybridlayer0_weights = 
+[[-0.29839832 -0.47213346  0.08348035 -0.2324698  -0.27368504]
+ [ 0.76268613  0.43080837 -0.49052125 -0.11322092 -0.3339738 ]
+ [ 0.48665082 -0.00144657  0.00376363  0.47501418 -0.23885089]
+ [-0.22626656  0.22944227  0.05018325  0.6166192  -0.24941102]
+ [-0.44946212  0.20532274  0.07579394  0.29261002 -0.14063817]]
+<NDArray 5x5 @cpu(0)>
+
+hybridsequential94_normalizationhybridlayer0_scales = 
+[2.]
+<NDArray 1 @cpu(0)>
 ``` 
 
 
@@ -262,5 +263,3 @@ As it is seen from the output above, `weights` parameter has been changed by the
 ## Conclusion
 
 One important quality of a Deep learning framework is extensibility. Empowered by flexible abstractions, like `Block` and `HybridBlock`, one can easily extend Apache MxNet functionality to match its needs.
-
-<!-- INSERT SOURCE DOWNLOAD BUTTONS -->

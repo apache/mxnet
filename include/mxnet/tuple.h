@@ -766,7 +766,7 @@ namespace dmlc {
 DMLC_DECLARE_TYPE_NAME(optional<mxnet::TShape>, "Shape or None");
 DMLC_DECLARE_TYPE_NAME(optional<mxnet::Tuple<int>>, "Shape or None");
 // avoid low version of MSVC
-#if !defined(_MSC_VER)
+#if !(defined(_MSC_VER) && _MSC_VER < 1900)
 template<typename T>
 struct type_name_helper<mxnet::Tuple<T> > {
   static inline std::string value() {

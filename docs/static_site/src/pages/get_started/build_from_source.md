@@ -1,3 +1,10 @@
+---
+layout: page
+title: Building From Source
+action: Get Started
+action_url: /get_started
+permalink: /get_started/build_from_source
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,20 +21,13 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page
-title: Building From Source
-action: Get Started
-action_url: /get_started
-permalink: /get_started/build_from_source
----
 
 
 # Build MXNet from Source
 
 This document explains how to build MXNet from source code.
 
-**For Java/Scala/Clojure, please follow [this guide instead](./scala_setup.md)**
+**For Java/Scala/Clojure, please follow [this guide instead](scala_setup)**
 
 ## Overview
 
@@ -50,14 +50,14 @@ Building from source follows this general two-step flow of building the shared l
             * [non-Intel CPUs](#recommended-for-Systems-with-non-Intel-CPUs)
 2. [Install the language API binding(s)](#installing-mxnet-language-bindings) you would like to use for MXNet.
 MXNet's newest and most popular API is Gluon. Gluon is built into the Python binding. If Python isn't your preference, you still have more options. MXNet supports several other language APIs:
-    - [Python (includes Gluon)](../api/python/index.md)
-    - [C++](../api/cpp/index.md)
-    - [Clojure](../api/clojure/index.md)
-    - [Java](../api/java/index.md)
-    - [Julia](../api/julia/index.md)
-    - [Perl](../api/perl/index.md)
-    - [R](../api/r/index.md)
-    - [Scala](../api/scala/index.md)
+    - [Python (includes Gluon)]({{'/api/python/index'|relative_url}})
+    - [C++]({{'/api/cpp'|relative_url}})
+    - [Clojure]({{'/api/clojure'|relative_url}})
+    - [Java]({{'/api/java'|relative_url}})
+    - [Julia]({{'/api/julia'|relative_url}})
+    - [Perl]({{'/api/perl'|relative_url}})
+    - [R]({{'/api/r'|relative_url}})
+    - [Scala]({{'/api/scala'|relative_url}})
 
 <hr>
 
@@ -66,11 +66,11 @@ MXNet's newest and most popular API is Gluon. Gluon is built into the Python bin
 Detailed instructions are provided per operating system. Each of these guides also covers how to install the specific [Language Bindings](#installing-mxnet-language-bindings) you require.
 You may jump to those, but it is recommended that you continue reading to understand more general "build from source" options.
 
-* [Amazon Linux / CentOS / RHEL](centos_setup.md)
-* [macOS](osx_setup.md)
-* [Devices](https://mxnet.incubator.apache.org/versions/master/install/index.html?platform=Devices&language=Python&processor=CPU)
-* [Ubuntu](ubuntu_setup.md)
-* [Windows](windows_setup.md)
+* [Amazon Linux / CentOS / RHEL](centos_setup)
+* [macOS](osx_setup)
+* [Devices](index.html?&platform=devices&language=python&environ=pip&processor=cpu)
+* [Ubuntu](ubuntu_setup)
+* [Windows](windows_setup)
 
 
 <hr>
@@ -98,10 +98,10 @@ Those can be extended with [LAPACK (Linear Algebra Package)](https://github.com/
 
 MXNet supports multiple mathematical backends for computations on the CPU:
 * [Apple Accelerate](https://developer.apple.com/documentation/accelerate)
-* [ATLAS](http://math-atlas.sourceforge.net/)
+* [ATLAS](https://math-atlas.sourceforge.net/)
 * [MKL](https://software.intel.com/en-us/intel-mkl) (MKL, MKLML)
 * [MKL-DNN](https://github.com/intel/mkl-dnn)
-* [OpenBLAS](http://www.openblas.net/)
+* [OpenBLAS](https://www.openblas.net/)
 
 The default order of choice for the libraries if found follows the path from the most
 (recommended) to less performant backends.
@@ -205,7 +205,7 @@ There is a configuration file for make,
 
 ``` bash
 echo "USE_NCCL=1" >> make/config.mk
-echo "USE_NCCP_PATH=path-to-nccl-installation-folder" >> make/config.mk
+echo "USE_NCCL_PATH=path-to-nccl-installation-folder" >> make/config.mk
 cp make/config.mk .
 ```
 - Run make command
@@ -314,13 +314,13 @@ ninja -v
 ## Installing MXNet Language Bindings
 After building MXNet's shared library, you can install other language bindings.
 
-**NOTE:** The C++ API binding must be built when you build MXNet from source. See [Build MXNet with C++](#build-mxnet-with-c++).
+**NOTE:** The C++ API binding must be built when you build MXNet from source. See [Build MXNet with C++]({{'/api/cpp'|relative_url}}).
 
 The following table provides links to each language binding by operating system:
-| | [Ubuntu](ubuntu_setup.html) | [macOS](osx_setup.html) | [Windows](windows_setup.html) |
+| | [Ubuntu](ubuntu_setup) | [macOS](osx_setup) | [Windows](windows_setup) |
 | --- | ----  | --- | ------- |
-| Python | [Ubuntu guide](ubuntu_setup.html#install-mxnet-for-python) | [OSX guide](osx_setup.html) | [Windows guide](windows_setup.html#install-mxnet-for-python) |
-| C++ | [C++ guide](c_plus_plus.html) | [C++ guide](c_plus_plus.html) | [C++ guide](c_plus_plus.html) |
+| Python | [Ubuntu guide](ubuntu_setup.html#install-mxnet-for-python) | [OSX guide](osx_setup) | [Windows guide](windows_setup.html#install-mxnet-for-python) |
+| C++ | [C++ guide](cpp_setup) | [C++ guide](cpp_setup) | [C++ guide](cpp_setup) |
 | Clojure | [Clojure guide](https://github.com/apache/incubator-mxnet/tree/master/contrib/clojure-package) | [Clojure guide](https://github.com/apache/incubator-mxnet/tree/master/contrib/clojure-package) | n/a |
 | Julia | [Ubuntu guide](ubuntu_setup.html#install-the-mxnet-package-for-julia) | [OSX guide](osx_setup.html#install-the-mxnet-package-for-julia) | [Windows guide](windows_setup.html#install-the-mxnet-package-for-julia) |
 | Perl | [Ubuntu guide](ubuntu_setup.html#install-the-mxnet-package-for-perl) | [OSX guide](osx_setup.html#install-the-mxnet-package-for-perl) | n/a |

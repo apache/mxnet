@@ -37,6 +37,7 @@ from common import run_in_spawned_process
 from test_operator import *
 from test_numpy_ndarray import *
 from test_numpy_op import *
+from test_numpy_interoperability import *
 from test_optimizer import *
 from test_random import *
 from test_exc_handling import *
@@ -2345,7 +2346,7 @@ def test_arange_like_dtype():
         out = mod.forward(is_train=False)
         for v in out:
             assert v.dtype == t
-    
+
 
 if __name__ == '__main__':
     import nose

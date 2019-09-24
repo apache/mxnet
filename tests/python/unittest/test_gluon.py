@@ -21,6 +21,7 @@ import tempfile
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
+from mxnet.base import py_str
 from mxnet.test_utils import assert_almost_equal
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from common import (setup_module, with_seed, assertRaises, teardown,
@@ -1222,7 +1223,7 @@ def test_activations():
         return [elu(x_i) for x_i in x]
 
     for test_point, ref_point in zip(elu_test(point_to_validate), elu(point_to_validate)):
-        assert test_point == ref_point
+        assert_almost_equal(test_point.asnumpy(), ref_point.asnumpy())
 
     selu = mx.gluon.nn.SELU()
     def selu_test(x):
@@ -1502,6 +1503,74 @@ def test_hook():
     block(mx.nd.ones((3, 5)))
     assert hook_call_count == 1
     assert pre_hook_call_count == 2
+
+@with_seed()
+def test_op_hook_output_names():
+    def check_name(block, expected_names, inputs=None, expected_opr_names=None, monitor_all=False):
+        opr_names = []
+        output_names = []
+
+        def mon_callback(node_name, opr_name, arr):
+            output_names.append(py_str(node_name))
+            opr_names.append(py_str(opr_name))
+
+        block.register_op_hook(mon_callback, monitor_all)
+        if not inputs:
+            block(mx.nd.ones((2, 3, 4)))
+        else:
+            block(inputs)
+
+        for output_name, expected_name in zip(output_names, expected_names):
+            print(output_name)
+            assert output_name == expected_name
+
+        if expected_opr_names:
+            for opr_name, expected_opr_name in zip(opr_names, expected_opr_names):
+                assert opr_name == expected_opr_name
+
+    # Test with Dense layer
+    model = mx.gluon.nn.HybridSequential(prefix="dense_")
+    with model.name_scope():
+        model.add(mx.gluon.nn.Dense(2))
+    model.initialize()
+    model.hybridize()
+    check_name(model, ["dense_dense0_fwd_output"])
+
+    # Test with Activation, FListInputNames not registered, input name will have _input appended
+    model = mx.gluon.nn.HybridSequential(prefix="relu_")
+    with model.name_scope():
+        model.add(mx.gluon.nn.Activation("relu"))
+    model.initialize()
+    model.hybridize()
+    check_name(model, ["relu_relu0_fwd_output"])
+
+    # Test with Pooling, monitor_all is set to True
+    model = mx.gluon.nn.HybridSequential("pool_")
+    with model.name_scope():
+        model.add(mx.gluon.nn.AvgPool1D())
+    model.initialize()
+    model.hybridize()
+    check_name(model, ['pool_pool0_fwd_data', 'pool_pool0_fwd_output'], expected_opr_names=["Pooling"],
+               monitor_all=True)
+
+    # stack two layers and test
+    model = mx.gluon.nn.HybridSequential("dense_")
+    with model.name_scope():
+        model.add(mx.gluon.nn.Dense(2))
+        model.add(mx.gluon.nn.Activation("relu"))
+    model.initialize()
+    model.hybridize()
+    check_name(model,
+               ['dense_dense0_fwd_data', 'dense_dense0_fwd_weight',
+                'dense_dense0_fwd_bias', 'dense_dense0_fwd_output',
+                'dense_relu0_fwd_input0', 'dense_relu0_fwd_output'], monitor_all=True)
+
+    # check with different hybridize modes
+    model.hybridize(static_alloc=True)
+    check_name(model,
+               ['dense_dense0_fwd_data', 'dense_dense0_fwd_weight',
+                'dense_dense0_fwd_bias', 'dense_dense0_fwd_output',
+                'dense_relu0_fwd_input0', 'dense_relu0_fwd_output'], monitor_all=True)
 
 
 @with_seed()

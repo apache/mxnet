@@ -1,3 +1,9 @@
+---
+layout: page_category
+title:  Deep Learning Programming Paradigm
+category: architecture
+permalink: /api/architecture/program_model
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,12 +20,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title:  Deep Learning Programming Paradigm
-category: architecture
-permalink: /api/architecture/program_model
----
 
 # Deep Learning Programming Paradigm
 
@@ -617,13 +617,12 @@ to create more interesting and intelligent deep learning libraries.
 
 ## Contribute to MXNet
 
-This document is part of our effort to provide [open-source system design notes](index.md)
+This document is part of our effort to provide [open-source system design notes](overview)
 for deep learning libraries. If you're interested in contributing to _MXNet_ or its
-documentation, [fork us on GitHub](http://github.com/dmlc/mxnet).
+documentation, [fork us on GitHub](http://github.com/apache/incubator-mxnet).
 
 ## Next Steps
 
-* [Dependency Engine for Deep Learning](http://mxnet.io/architecture/note_engine.html)
-* [Squeeze the Memory Consumption of Deep Learning](http://mxnet.io/architecture/note_memory.html)
-* [Efficient Data Loading Module for Deep Learning](http://mxnet.io/architecture/note_data_loading.html)
-* [Survey of RNN Interface](http://mxnet.io/architecture/rnn_interface.html)
+* [Dependency Engine for Deep Learning](note_engine)
+* [Squeeze the Memory Consumption of Deep Learning](note_memory)
+* [Efficient Data Loading Module for Deep Learning](note_data_loading)
