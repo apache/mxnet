@@ -37,7 +37,7 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'vstack', 'mean',
            'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign',
            'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'hypot', 'rad2deg', 'deg2rad',
-           'unique', 'lcm', 'tril', 'identity']
+           'unique', 'lcm', 'tril', 'identity', 'take']
 
 
 def _num_outputs(sym):
@@ -347,13 +347,13 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute slice_like')
 
-    def take(self, *args, **kwargs):
+    def take(self, indices, axis=None, mode='raise'):  # pylint: disable=arguments-differ, redefined-outer-name
         """Convenience fluent method for :py:func:`take`.
 
         The arguments are the same as for :py:func:`take`, with
         this array as data.
         """
-        raise NotImplementedError
+        return take(self, indices, axis, mode=mode)
 
     def one_hot(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`one_hot`.
@@ -1024,6 +1024,74 @@ def identity(n, dtype=None, ctx=None):
         ctx = current_context()
     dtype = _np.float32 if dtype is None else dtype
     return _npi.identity(shape=(n, n), ctx=ctx, dtype=dtype)
+
+
+# pylint: disable=redefined-outer-name
+@set_module('mxnet.symbol.numpy')
+def take(a, indices, axis=None, mode='raise', out=None):
+    r"""
+    Take elements from an array along an axis.
+
+    When axis is not None, this function does the same thing as "fancy"
+    indexing (indexing arrays using arrays); however, it can be easier to use
+    if you need elements along a given axis. A call such as
+    ``np.take(arr, indices, axis=3)`` is equivalent to
+    ``arr[:,:,:,indices,...]``.
+
+    Explained without fancy indexing, this is equivalent to the following use
+    of `ndindex`, which sets each of ``ii``, ``jj``, and ``kk`` to a tuple of
+    indices::
+
+        Ni, Nk = a.shape[:axis], a.shape[axis+1:]
+        Nj = indices.shape
+        for ii in ndindex(Ni):
+            for jj in ndindex(Nj):
+                for kk in ndindex(Nk):
+                    out[ii + jj + kk] = a[ii + (indices[jj],) + kk]
+
+    Parameters
+    ----------
+    a : _Symbol
+        The source array.
+    indices : _Symbol
+        The indices of the values to extract. Also allow scalars for indices.
+    axis : int, optional
+        The axis over which to select values. By default, the flattened
+        input array is used.
+    out : _Symbol or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    mode : {'clip', 'wrap'}, optional
+        Specifies how out-of-bounds indices will behave.
+
+        * 'clip' -- clip to the range (default)
+        * 'wrap' -- wrap around
+
+        'clip' mode means that all indices that are too large are replaced
+        by the index that addresses the last element along that axis. Note
+        that this disables indexing with negative numbers.
+
+    Returns
+    -------
+    out : _Symbol
+        The returned array has the same type as `a`.
+
+    Notes
+    -----
+
+    This function differs from the original `numpy.take
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.take.html>`_ in
+    the following way(s):
+
+    - Only ndarray or scalar ndarray is accepted as valid input.
+    """
+    if mode not in ('wrap', 'clip', 'raise'):
+        raise NotImplementedError(
+            "function take does not support mode '{}'".format(mode))
+    if axis:
+        return _npi.take(a, indices, axis, mode, out)
+    else:
+        return _npi.take(_npi.reshape(a, -1), indices, 0, mode, out)
+# pylint: enable=redefined-outer-name
 
 
 #pylint: disable= too-many-arguments, no-member, protected-access
