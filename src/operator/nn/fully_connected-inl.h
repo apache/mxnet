@@ -91,6 +91,7 @@ namespace {
   constexpr int nthreads_addbias = 256;
   constexpr int nthreads_addbiasgrad_phase1 = 512;
   constexpr int nthreads_addbiasgrad_phase2 = 128;
+  constexpr int threads_per_warp = 32;
 
   inline int ceil_div(int x, int y) {
     return (x + y - 1) / y;
@@ -192,7 +193,6 @@ void FCForward(const OpContext &ctx, const FullyConnectedParam &param,
 template<typename LType, typename DType, typename AType>
 __global__ void AddBiasGradKernelPhase1(AType * temp_space, const DType* grad,
                                         const size_t lead_dim, const size_t other_dim) {
-  constexpr int threads_per_warp = 32;
   constexpr int num_warps = nthreads_addbiasgrad_phase1 / threads_per_warp;
   const int values_per_read = sizeof(LType) >= sizeof(DType) ? sizeof(LType) / sizeof(DType) : 1;
   const size_t stride = lead_dim / values_per_read;
@@ -284,7 +284,8 @@ void AddBiasGrad(const TBlob& in_grad,
   int ltype = mxnet::common::cuda::get_load_type(N * sizeof(DType));
   const int M = grad_blob.shape_.Size() / N;
   MXNET_LOAD_TYPE_SWITCH(ltype, LType, {
-    const unsigned int blocks_x = ceil_div(N * sizeof(DType), 32 * sizeof(LType));
+    const unsigned int blocks_x = ceil_div(N * sizeof(DType),
+                                           threads_per_warp * sizeof(LType));
     const unsigned int preferred_number_of_blocks = 2 *
                                                     MultiprocessorCount(ctx.run_ctx.ctx.dev_id);
     const unsigned int blocks_y = std::max(preferred_number_of_blocks / blocks_x, 1u);
