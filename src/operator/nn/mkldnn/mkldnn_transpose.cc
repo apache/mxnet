@@ -110,7 +110,7 @@ class MKLDNNTransposeForward {
 
   void Execute() const {
     auto stream = MKLDNNStream::Get();
-    std::unordered_map<int, mkldnn::memory> net_args;
+    mkldnn_args_map_t net_args;
     net_args.insert({{MKLDNN_ARG_FROM, *(data_)}, {MKLDNN_ARG_TO, *(out_)}});
     stream->RegisterPrimArgs(*transpose_, net_args);
     stream->Submit();
