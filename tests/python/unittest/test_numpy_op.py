@@ -295,8 +295,8 @@ def test_np_linalg_slogdet():
                     mx_out = test_slogdet(a)
                 assert mx_out[0].shape == np_out[0].shape
                 assert mx_out[1].shape == np_out[1].shape
-                assert_almost_equal(mx_out[0].asnumpy(), np_out[0], rtol = 1e-1, atol = 1e-1)
-                assert_almost_equal(mx_out[1].asnumpy(), np_out[1], rtol = 1e-1, atol = 1e-1)
+                assert_almost_equal(mx_out[0].asnumpy(), np_out[0], rtol=1e-1, atol=1e-1)
+                assert_almost_equal(mx_out[1].asnumpy(), np_out[1], rtol=1e-1, atol=1e-1)
                 mx_out[1].backward()
 
                 # Test imperative once again

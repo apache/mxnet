@@ -20,7 +20,7 @@
 """Doc placeholder for numpy ops with prefix _np."""
 
 
-def _np_linalg_det(a):
+def _np__linalg_det(a):
     """
     det(a)
 
@@ -69,7 +69,7 @@ def _np_linalg_det(a):
     pass
 
 
-def _np_linalg_slogdet(a):
+def _np__linalg_slogdet(a):
     """
     slogdet(a)
 
