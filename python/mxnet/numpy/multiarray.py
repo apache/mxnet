@@ -4834,8 +4834,7 @@ def ldexp(x1, x2, out=None):
 
 @set_module('mxnet.numpy')
 def inner(a, b):
-    r"""
-    Inner product of two arrays.
+    r"""Inner product of two arrays.
     Ordinary inner product of vectors for 1-D arrays (without complex
     conjugation), in higher dimensions a sum product over the last axes.
 
@@ -4891,8 +4890,7 @@ def inner(a, b):
 
 @set_module('mxnet.numpy')
 def outer(a, b):
-    r"""
-    Compute the outer product of two vectors.
+    r"""Compute the outer product of two vectors.
     Given two vectors, ``a = [a0, a1, ..., aM]`` and
     ``b = [b0, b1, ..., bN]``,
     the outer product [1]_ is::
@@ -4920,11 +4918,13 @@ def outer(a, b):
     einsum : ``einsum('i,j->ij', a.ravel(), b.ravel())`` is the equivalent.
     ufunc.outer : A generalization to N dimensions and other operations.
                 ``np.multiply.outer(a.ravel(), b.ravel())`` is the equivalent.
+
     References
     ----------
     .. [1] : G. H. Golub and C. F. Van Loan, *Matrix Computations*, 3rd
             ed., Baltimore, MD, Johns Hopkins University Press, 1996,
             pg. 8.
+
     Examples
     --------
     Make a (*very* coarse) grid for computing a Mandelbrot set:
