@@ -281,6 +281,201 @@ def test_np_ldexp():
 
 @with_seed()
 @use_np
+def test_np_vdot():
+    class TestVdot(HybridBlock):
+        def __init__(self):
+            super(TestVdot, self).__init__()
+
+        def hybrid_forward(self, F, a, b):
+            return F.np.vdot(a, b)
+
+    def vdot_backward(a, b):
+        return [b, a]
+
+    # test different size inputs
+    tensor_shapes = [(), (5,), (3, 3)]
+
+    for hybridize in [True, False]:
+        for shape in tensor_shapes:
+            for dtype in [_np.float32, _np.float64]:
+                test_vdot = TestVdot()
+                if hybridize:
+                    test_vdot.hybridize()
+                a = rand_ndarray(shape=shape, dtype=dtype).as_np_ndarray()
+                b = rand_ndarray(shape=shape, dtype=dtype).as_np_ndarray()
+                a.attach_grad()
+                b.attach_grad()
+
+                np_out = _np.vdot(a.asnumpy(), b.asnumpy())
+                with mx.autograd.record():
+                    mx_out = test_vdot(a, b)
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol = 1e-3, atol = 1e-5)
+                mx_out.backward()
+                np_backward = vdot_backward(a.asnumpy(), b.asnumpy())
+                assert_almost_equal(a.grad.asnumpy(), np_backward[0], rtol = 1e-2, atol=1e-2)
+                assert_almost_equal(b.grad.asnumpy(), np_backward[1], rtol = 1e-2, atol=1e-2)
+
+                # Test imperative once again
+                mx_out = np.vdot(a, b)
+                np_out = _np.vdot(a.asnumpy(), b.asnumpy())
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+                # test numeric gradient
+                if len(shape) > 0 and _np.prod(shape) > 0:
+                    a_sym = mx.sym.Variable("a").as_np_ndarray()
+                    b_sym = mx.sym.Variable("b").as_np_ndarray()
+                    mx_sym = mx.sym.np.vdot(a_sym, b_sym).as_nd_ndarray()
+                    check_numeric_gradient(mx_sym, [a.as_nd_ndarray(), b.as_nd_ndarray()],
+                      rtol=1e-1, atol=1e-1, dtype=dtype)
+
+
+@with_seed()
+@use_np
+def test_np_inner():
+    class TestInner(HybridBlock):
+        def __init__(self):
+            super(TestInner, self).__init__()
+
+        def hybrid_forward(self, F, a, b):
+            return F.np.inner(a, b)
+
+    def inner_backward(a, b):
+        a_axes_summed = [a.ndim - 1]
+        b_axes_summed = [b.ndim - 1]
+
+        a_axes_remained = []
+        for i in range(a.ndim):
+            if not (i in a_axes_summed):
+                a_axes_remained.append(i)
+        a_axes = a_axes_remained[:] + a_axes_summed[:]
+
+        b_axes_remained = []
+        for i in range(b.ndim):
+            if not (i in b_axes_summed):
+                b_axes_remained.append(i)
+        b_axes = b_axes_summed[:] + b_axes_remained[:]
+
+        ad1 = _np.prod([a.shape[i] for i in a_axes_remained]) if len(a_axes_remained) > 0 else 1
+        ad2 = _np.prod([a.shape[i] for i in a_axes_summed]) if len(a_axes_summed) > 0 else 1
+        bd1 = _np.prod([b.shape[i] for i in b_axes_summed]) if len(b_axes_summed) > 0 else 1
+        bd2 = _np.prod([b.shape[i] for i in b_axes_remained]) if len(b_axes_remained) > 0 else 1
+
+        out_grad = _np.ones((ad1, bd2))
+
+        new_a = _np.transpose(a, a_axes)
+        new_a_shape = new_a.shape[:]
+        new_a = new_a.reshape((ad1, ad2))
+        new_b = _np.transpose(b, b_axes)
+        new_b_shape = new_b.shape[:]
+        new_b = new_b.reshape((bd1, bd2))
+
+        reverse_a_axes = [0 for i in a_axes]
+        for i in range(len(a_axes)):
+            reverse_a_axes[a_axes[i]] = i
+
+        reverse_b_axes = [0 for i in b_axes]
+        for i in range(len(b_axes)):
+            reverse_b_axes[b_axes[i]] = i
+
+        grad_b = _np.dot(new_a.T, out_grad).reshape(new_b_shape)
+        grad_b = _np.transpose(grad_b, reverse_b_axes)
+        grad_a = _np.dot(out_grad, new_b.T).reshape(new_a_shape)
+        grad_a = _np.transpose(grad_a, reverse_a_axes)
+
+        return [grad_a, grad_b]
+
+    # test non zero size input
+    tensor_shapes = [
+        ((3,), (3,)),
+        ((2, 3), (3,)),
+        ((3,), (2, 3))
+    ]
+
+    for hybridize in [True, False]:
+        for a_shape, b_shape in tensor_shapes:
+            for dtype in [_np.float32, _np.float64]:
+                test_inner = TestInner()
+                if hybridize:
+                    test_inner.hybridize()
+                a = rand_ndarray(shape=a_shape, dtype=dtype).as_np_ndarray()
+                b = rand_ndarray(shape=b_shape, dtype=dtype).as_np_ndarray()
+                a.attach_grad()
+                b.attach_grad()
+
+                np_out = _np.inner(a.asnumpy(), b.asnumpy())
+                with mx.autograd.record():
+                    mx_out = test_inner(a, b)
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol = 1e-3, atol = 1e-5)
+                mx_out.backward()
+                np_backward = inner_backward(a.asnumpy(), b.asnumpy())
+                assert_almost_equal(a.grad.asnumpy(), np_backward[0], rtol = 1e-2, atol=1e-2)
+                assert_almost_equal(b.grad.asnumpy(), np_backward[1], rtol = 1e-2, atol=1e-2)
+
+                # Test imperative once again
+                mx_out = np.inner(a, b)
+                np_out = _np.inner(a.asnumpy(), b.asnumpy())
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+                # test numeric gradient
+                a_sym = mx.sym.Variable("a").as_np_ndarray()
+                b_sym = mx.sym.Variable("b").as_np_ndarray()
+                mx_sym = mx.sym.np.inner(a_sym, b_sym).as_nd_ndarray()
+                check_numeric_gradient(mx_sym, [a.as_nd_ndarray(), b.as_nd_ndarray()],
+                  rtol=1e-1, atol=1e-1, dtype=dtype)
+
+
+@with_seed()
+@use_np
+def test_np_outer():
+    class TestOuter(HybridBlock):
+        def __init__(self):
+            super(TestOuter, self).__init__()
+
+        def hybrid_forward(self, F, a, b):
+            return F.np.outer(a, b)
+
+    # test non zero size input
+    tensor_shapes = [
+        ((3,), (3,)),
+        ((2, 3), (6,)),
+        ((6,), (2, 3))
+    ]
+
+    for hybridize in [True, False]:
+        for a_shape, b_shape in tensor_shapes:
+            for dtype in [_np.float32, _np.float64]:
+                test_outer = TestOuter()
+                if hybridize:
+                    test_outer.hybridize()
+                a = rand_ndarray(shape=a_shape, dtype=dtype).as_np_ndarray()
+                b = rand_ndarray(shape=b_shape, dtype=dtype).as_np_ndarray()
+                a.attach_grad()
+                b.attach_grad()
+
+                np_out = _np.outer(a.asnumpy(), b.asnumpy())
+                with mx.autograd.record():
+                    mx_out = test_outer(a, b)
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+                mx_out.backward()
+
+                # Test imperative once again
+                mx_out = np.outer(a, b)
+                np_out = _np.outer(a.asnumpy(), b.asnumpy())
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+                # test numeric gradient
+                a_sym = mx.sym.Variable("a").as_np_ndarray()
+                b_sym = mx.sym.Variable("b").as_np_ndarray()
+                mx_sym = mx.sym.np.outer(a_sym, b_sym).as_nd_ndarray()
+                check_numeric_gradient(mx_sym, [a.as_nd_ndarray(), b.as_nd_ndarray()],
+                                       rtol=1e-1, atol=1e-1, dtype=dtype)
+
+
+@with_seed()
+@use_np
 def test_np_sum():
     class TestSum(HybridBlock):
         def __init__(self, axis=None, dtype=None, keepdims=False):
