@@ -7614,7 +7614,7 @@ def test_softmax_output_normalization():
 
 @with_seed()
 def test_argmax():
-    ci_test = False       # Use False if you need to collect aggregated information about argmax performance
+    ci_test = True       # Use False if you need to collect aggregated information about argmax performance
     def getNumWorkers(shape, axis, ctx=mx.gpu()):
         if ctx == mx.cpu():
             return 1
