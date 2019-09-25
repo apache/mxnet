@@ -1740,6 +1740,23 @@ def test_np_cumsum():
 
 @with_seed()
 @use_np
+def test_np_histogram():
+    shapes = [(), (3, 4), (3, 0)]
+
+    for shape in shapes:
+        mx_a = np.random.uniform(0.0, 10.0, size=shape)
+        np_a = mx_a.asnumpy()
+        mx_bins = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5., 6., 7., 8., 9., 10.])
+        np_bins = mx_bins.asnumpy()
+        for bins, _range in [(20, (0.0, 10.0)), (mx_bins, None)]:
+            mx_cnts, mx_bins = np.histogram(mx_a, bins=bins, range=_range)
+            np_cnts, np_bins = _np.histogram(np_a, bins=bins if isinstance(bins, mx.base.numeric_types) else bins.asnumpy(), range=_range)
+            assert_almost_equal(mx_cnts.asnumpy(), np_cnts, rtol=1e-3, atol=1e-5)
+            assert_almost_equal(mx_bins.asnumpy(), np_bins, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@use_np
 def test_np_choice():
     class TestUniformChoice(HybridBlock):
         def __init__(self, sample_size, replace):
