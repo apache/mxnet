@@ -220,14 +220,18 @@ ifeq ($(USE_LAPACK), 1)
 ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas mkl))
 ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.a))
 ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.so))
+ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.dylib))
 ifeq (,$(wildcard /lib/liblapack.a))
 ifeq (,$(wildcard /lib/liblapack.so))
 ifeq (,$(wildcard /usr/lib/liblapack.a))
 ifeq (,$(wildcard /usr/lib/liblapack.so))
+ifeq (,$(wildcard /usr/lib/liblapack.dylib))
 ifeq (,$(wildcard /usr/lib64/liblapack.a))
 ifeq (,$(wildcard /usr/lib64/liblapack.so))
 	USE_LAPACK = 0
         $(warning "USE_LAPACK disabled because libraries were not found")
+endif
+endif
 endif
 endif
 endif
@@ -453,7 +457,7 @@ ifeq ($(USE_DIST_KVSTORE), 1)
 	LDFLAGS += $(PS_LDFLAGS_A)
 endif
 
-.PHONY: clean all extra-packages test lint docs clean_all rcpplint rcppexport roxygen\
+.PHONY: clean all extra-packages test lint clean_all rcpplint rcppexport roxygen\
 	cython2 cython3 cython cyclean
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages sample_lib
@@ -664,20 +668,6 @@ cpplint:
 pylint:
 	python3 -m pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py
 
-sample_lib:
-	$(CXX) -shared -fPIC example/lib_api/mylib.cc -o libsample_lib.so -I include/mxnet
-
-doc: docs
-
-docs:
-	make -C docs html
-
-clean_docs:
-	make -C docs clean
-
-doxygen:
-	doxygen docs/Doxyfile
-
 # Cython build
 cython:
 	cd python; $(PYTHON) setup.py build_ext --inplace --with-cython
@@ -727,6 +717,10 @@ rpkgtest:
 	Rscript -e 'require(testthat);res<-test_dir("R-package/tests/testthat");if(!testthat:::all_passed(res)){stop("Test failures", call. = FALSE)}'
 	Rscript -e 'res<-covr:::package_coverage("R-package");fileConn<-file(paste("r-package_coverage_",toString(runif(1)),".json"));writeLines(covr:::to_codecov(res), fileConn);close(fileConn)'
 
+
+sample_lib:
+	$(CXX) -shared -fPIC example/lib_api/mylib.cc -o libsample_lib.so -I include/mxnet
+
 scalaclean:
 	(cd $(ROOTDIR)/scala-package && mvn clean)
 
@@ -771,7 +765,7 @@ ratcheck: build/rat/apache-rat/target/apache-rat-0.13.jar
 
 ifneq ($(EXTRA_OPERATORS),)
 clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
-	$(RM) -r build lib bin deps *~ */*~ */*/*~ */*/*/*~ 
+	$(RM) -r build lib bin deps *~ */*~ */*/*~ */*/*/*~
 	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
@@ -782,7 +776,7 @@ clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
 clean: rclean mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
-	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ 
+	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
 	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -

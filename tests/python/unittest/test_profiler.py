@@ -112,7 +112,6 @@ def test_profile_task():
     var.asnumpy()
     stop = time.time()
     task.stop()
-    assert stop > start
     profiler.set_state('stop')
 
 

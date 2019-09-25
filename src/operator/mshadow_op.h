@@ -322,6 +322,16 @@ MXNET_BINARY_MATH_OP(rpower, math::pow(b, a));
 
 MXNET_BINARY_MATH_OP(rpower_grad, math::id(a) * math::log(b));
 
+MXNET_BINARY_MATH_OP(arctan2, math::atan2(a, b));
+
+MXNET_BINARY_MATH_OP(arctan2_grad, math::id(b) / (math::id(a * a + b * b)));
+
+MXNET_BINARY_MATH_OP(arctan2_rgrad, -math::id(a) / (math::id(a * a + b * b)));
+
+MXNET_BINARY_MATH_OP(rarctan2, math::atan2(b, a));
+
+MXNET_BINARY_MATH_OP(rarctan2_grad, math::id(a) / (math::id(a * a + b * b)));
+
 MXNET_UNARY_MATH_OP_NC(nt, a != DType(0) ? DType(0) : DType(1));
 
 MXNET_BINARY_MATH_OP_NC(ge, a >= b ? DType(1) : DType(0));
@@ -416,6 +426,16 @@ MSHADOW_XINLINE mshadow::half::half2_t div_rgrad::Map<mshadow::half::half2_t>
 MXNET_BINARY_MATH_OP(rdiv, math::id(b) / math::id(a));
 
 MXNET_BINARY_MATH_OP(rdiv_grad, -math::id(b) / math::sqr(a));
+
+MXNET_BINARY_MATH_OP(copysign, (a >= 0 && b >= 0) || (a < 0 && b < 0) ? a : -a);
+
+MXNET_BINARY_MATH_OP(copysign_grad, (a >= 0 && b >= 0) || (a < 0 && b < 0) ? 1: -1);
+
+MXNET_BINARY_MATH_OP(copysign_rgrad, 0);
+
+MXNET_BINARY_MATH_OP(rcopysign, (b >= 0 && a >= 0) || (b < 0 && a < 0) ? b : -b);
+
+MXNET_BINARY_MATH_OP(rcopysign_grad, 0);
 
 struct mod : public mxnet_op::tunable {
   template<typename DType>

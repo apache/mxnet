@@ -1,3 +1,10 @@
+---
+layout: page
+title: C++ Setup
+action: Get Started
+action_url: /get_started
+permalink: /get_started/cpp_setup
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,19 +21,12 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page
-title: C++ Setup
-action: Get Started
-action_url: /get_started
-permalink: /get_started/cpp_setup
----
 
 
 ## Build the C++ package
 The C++ package has the same prerequisites as the MXNet library.
 
-To enable C++ package, just add `USE_CPP_PACKAGE=1` in the [build from source](build_from_source.md) options when building the MXNet shared library.
+To enable C++ package, just add `USE_CPP_PACKAGE=1` in the [build from source](build_from_source) options when building the MXNet shared library.
 
 For example to build MXNet with GPU support and the C++ package, OpenCV, and OpenBLAS, from the project root you would run:
 
@@ -48,7 +48,7 @@ You can find C++ code examples in the `cpp-package/example` folder of the MXNet 
 
 ## Tutorials
 
-* [MXNet C++ API Basics](../api/cpp/docs/tutorials/basics)
+* [MXNet C++ API Basics]({{'/api/cpp/docs/tutorials/basics'|relative_url}})
 
 ## Related Topics
 

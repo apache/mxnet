@@ -3302,8 +3302,8 @@ def arange(start, stop=None, step=1.0, repeat=1, infer_range=None, ctx=None, dty
     repeat : int, optional
         Number of times to repeat each element. The default repeat count is 1.
     infer_range : boolean, optional
-        When set to True, infer the stop position from the start, step,
-        repeat, and output tensor size.
+        Infer the stop position from the start, step, repeat, and output tensor size.
+        Deprecated. Only False is supported.
     ctx : Context, optional
         Device context. Default context is the current default context.
     dtype : str or numpy.dtype, optional
