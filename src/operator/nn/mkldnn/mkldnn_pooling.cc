@@ -292,7 +292,13 @@ MKLDNNPoolingBwd &GetPoolingBwd(const PoolingParam &param,
 
   auto it = pooling_bwds.find(key);
   if (it == pooling_bwds.end()) {
-    auto diff_dst_mem = out_grad.GetMKLDNNData();
+    // mkldnn v1.0 add reoder to workaround testcase:test_make_subgraph; 
+    // alread fixed in v1.1, will remove after v1.1 is integrated.
+    NDArray diff_dst_buff = out_grad;
+    if (in_data.IsMKLDNNData() == false && diff_dst_buff.IsMKLDNNData() == true) {
+      diff_dst_buff = out_grad.Reorder2Default();
+    }
+    auto diff_dst_mem = diff_dst_buff.GetMKLDNNData();
     auto input_mem = in_data.GetMKLDNNData();
     const mkldnn::memory::desc data_md = input_mem->get_desc();
     const mkldnn::memory::dims dims = {data_md.data.dims[0], data_md.data.dims[1],
