@@ -8641,6 +8641,9 @@ def test_op_rroi_align():
 
 @with_seed()
 def test_op_mrcnn_target():
+    if default_context().device_type != 'gpu':
+        return
+
     num_rois = 2
     num_classes = 4
     mask_size = 3
