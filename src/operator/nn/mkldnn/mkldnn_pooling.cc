@@ -84,7 +84,7 @@ void MKLDNNPoolingFwd::Execute(const NDArray &in_data,
   auto input_mem = in_buffer.GetMKLDNNData();
   auto output_mem_t_ = CreateMKLDNNMem(out_data, this->fwd_pd_->dst_desc(), req);
 
-  std::unordered_map<int, mkldnn::memory> args = {
+  mkldnn_args_map_t args = {
     {MKLDNN_ARG_SRC, *input_mem },
     {MKLDNN_ARG_DST, *(output_mem_t_.second) },
   };
@@ -93,7 +93,7 @@ void MKLDNNPoolingFwd::Execute(const NDArray &in_data,
     auto engine = CpuEngine::Get()->get_engine();
     auto ws = std::make_shared<mkldnn::memory>((*(this->fwd_pd_)).workspace_desc(),
                       engine, workspace->GetMKLDNNData()->get_data_handle());
-    args.insert({MKLDNN_ARG_WORKSPACE, *ws});
+    args[MKLDNN_ARG_WORKSPACE] = *ws;
   }
   if (this->fwd_) {
     MKLDNNStream::Get()->RegisterPrimArgs(*(this->fwd_), args);
@@ -308,7 +308,6 @@ MKLDNNPoolingBwd &GetPoolingBwd(const PoolingParam &param,
         {dims}, static_cast<mkldnn::memory::data_type>(data_md.data.data_type),
         mkldnn::memory::format_tag::any);
     auto fwd_pd = GetPoolingFwdPdesc(param, true, data_md, out_md);
-    auto fwd_workspace = fwd_pd.workspace_desc();
     const mkldnn::memory::desc diff_md =
         diff_dst_mem->get_desc();
     const mkldnn::memory::dims dims1 = {diff_md.data.dims[0], diff_md.data.dims[1],
@@ -366,12 +365,12 @@ void MKLDNNPoolingGradCompute(const OpContext &ctx, const PoolingParam &param,
   auto diff_src_mem =
       CreateMKLDNNMem(in_grad, bwd.pd.diff_src_desc(), req);
 
-  std::unordered_map<int, mkldnn::memory> args = {
+  mkldnn_args_map_t args = {
     {MKLDNN_ARG_DIFF_DST, *(out_grad.GetMKLDNNData())},
     {MKLDNN_ARG_DIFF_SRC, *diff_src_mem.second },
   };
   if (workspace != nullptr) {
-    args.insert({MKLDNN_ARG_WORKSPACE, *(workspace->GetMKLDNNData())});
+    args[MKLDNN_ARG_WORKSPACE] = *(workspace->GetMKLDNNData());
   }
 
   MKLDNNStream::Get()->RegisterPrimArgs(bwd.GetBwd(), args);
