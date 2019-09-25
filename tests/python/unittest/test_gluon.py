@@ -136,6 +136,20 @@ def test_parameter_dict():
     mx.test_utils.assert_almost_equal(prev_w0.asnumpy(), cur_w0.asnumpy())
     mx.test_utils.assert_almost_equal(prev_w1.asnumpy(), cur_w1.asnumpy())
 
+    # test reset_ctx
+    params3 = gluon.ParameterDict('net_')
+    params3.get('w0', shape=(10, 10))
+    params3.get('w1', shape=(10, 10))
+    params3.initialize(ctx=ctx)
+    list_contexts = [mx.cpu(42), mx.cpu(24)]
+    params3.reset_ctx(list_contexts)
+    for p in params3.values():
+        assert set(p.list_ctx()) == set(list_contexts)
+
+    # and test list_ctx
+    assert set(params3.list_ctx()) == set(list_contexts)
+
+
     # test the dtype casting functionality
     params0 = gluon.ParameterDict('')
     params0.get('w0', shape=(10, 10), dtype='float32')
