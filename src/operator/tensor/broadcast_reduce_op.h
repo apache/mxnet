@@ -559,12 +559,20 @@ inline bool ReduceAxesOpForwardStorage(const nnvm::NodeAttrs& attrs,
 
 using namespace mshadow_op::isnan_typed;
 
+// Type of memory used for indices storage
+typedef enum {
+  int64_st,
+  uint32_st,
+  uint16_st,
+  undefined_st
+} idxStorageType;
+
 struct argmax {
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, const int nWorkers,
                                   const DType *in_data, DType *out_data,
-                                  uint32_t nSteps, uint32_t step, size_t shift,
-                                  void *pIdxStorage, bool use_uint16) {
+                                  size_t nSteps, size_t step, size_t shift,
+                                  void *pIdxStorage, const idxStorageType storageType) {
     // i - index of launched thread
     // nWorkers - number of threads, assigned to work on one row/column
     // iw - index of current thread among workers assigned to the same vector
@@ -581,13 +589,13 @@ struct argmax {
       pCurr += i % step + shift * (i / step);
     }
 
-    uint32_t maxIdx = 0;
+    size_t maxIdx = 0;
     DType maxVal = *pCurr;
     while (IsNan(maxVal) && ++maxIdx < nSteps)
       maxVal = *(pCurr += step);
 
     if (maxIdx < nSteps) {
-      for (uint32_t j = maxIdx + 1; j < nSteps; ++j) {
+      for (size_t j = maxIdx + 1; j < nSteps; ++j) {
         const auto val = *(pCurr += step);
         if (IsNan(val) || maxVal >= val)
           continue;
@@ -601,10 +609,16 @@ struct argmax {
 
     if (nWorkers > 1) {
       // saving index of best element found by current thread
-      if (use_uint16) {
-        *(static_cast<uint16_t *>(pIdxStorage) + i) = maxIdx * nWorkers + iw;
-      } else {
-        *(static_cast<uint32_t *>(pIdxStorage) + i) = maxIdx * nWorkers + iw;
+      maxIdx = maxIdx * nWorkers + iw;
+      switch (storageType) {
+        case int64_st:
+          *(static_cast<index_t *>(pIdxStorage) + i) = maxIdx;
+          break;
+        case uint32_st:
+          *(static_cast<uint32_t *>(pIdxStorage) + i) = maxIdx;
+          break;
+        default:  // uint16_st
+          *(static_cast<uint16_t *>(pIdxStorage) + i) = maxIdx;
       }
     } else {
       out_data[i] = maxIdx;    // output of argmax
@@ -614,9 +628,9 @@ struct argmax {
 
 struct argmax_reduce {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static uint32_t BestIdx(const int nWorkers, const DType *pCurr,
-                                          const uint32_t step, const IType *pIdxStorage) {
-    uint32_t maxIdx = *pIdxStorage;
+  MSHADOW_XINLINE static size_t BestIdx(const int nWorkers, const DType *pCurr,
+                                        const size_t step, const IType *pIdxStorage) {
+    size_t maxIdx = *pIdxStorage;
     DType maxVal = *(pCurr + step * maxIdx);
     int j = 0;
     while (IsNan(maxVal) && ++j < nWorkers)
@@ -640,12 +654,21 @@ struct argmax_reduce {
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, const int nWorkers,
                                   const DType *in_data, DType *out_data,
-                                  const uint32_t step, const size_t shift,
-                                  void *pIdx, const bool use_uin16) {
+                                  const size_t step, const size_t shift,
+                                  void *pIdx, const idxStorageType storageType) {
     const DType *pCurr = in_data + i % step + shift * (i / step);
-    out_data[i] = use_uin16?
-                  BestIdx(nWorkers, pCurr, step, static_cast<uint16_t*>(pIdx) + i * nWorkers):
-                  BestIdx(nWorkers, pCurr, step, static_cast<uint32_t*>(pIdx) + i * nWorkers);
+    switch (storageType) {
+      case int64_st:
+        out_data[i] = BestIdx(nWorkers, pCurr, step, static_cast<index_t *>(pIdx) + i * nWorkers);
+        break;
+      case uint32_st:
+        out_data[i] = BestIdx(nWorkers, pCurr, step, static_cast<uint32_t *>(pIdx) + i * nWorkers);
+        break;
+      case uint16_st:
+        out_data[i] = BestIdx(nWorkers, pCurr, step, static_cast<uint16_t *>(pIdx) + i * nWorkers);
+        break;
+      default: break;  // That should never have happened
+    }
   }
 };
 
@@ -660,7 +683,7 @@ DType *AllocateDTypeMemory(const OpContext& ctx, const size_t num_items) {
 
 template<typename xpu, typename DType>
 void ArgMax(const OpContext& ctx, const TShape &shape, int axis, size_t step, size_t shift,
-            const int nWorkers, void *pIdxStorage, bool use_uin16,
+            const int nWorkers, void *pIdxStorage, const idxStorageType storageType,
             const TBlob& input, const TBlob& output) {
   using namespace mxnet_op;
   const auto pIn = input.dptr<DType>();
@@ -669,10 +692,10 @@ void ArgMax(const OpContext& ctx, const TShape &shape, int axis, size_t step, si
   const auto num_threads = shape.Size() / nSize;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   Kernel<argmax, xpu>::Launch(s, num_threads * nWorkers, nWorkers, pIn, pOut, nSize,
-                              step, shift, pIdxStorage, use_uin16);
+                              step, shift, pIdxStorage, storageType);
   if (nWorkers > 1) {
     Kernel<argmax_reduce, xpu>::Launch(s, num_threads, nWorkers, pIn, pOut,
-                                       step, shift, pIdxStorage, use_uin16);
+                                       step, shift, pIdxStorage, storageType);
   }
 }
 
@@ -686,27 +709,60 @@ void ArgMax(const nnvm::NodeAttrs& attrs,
             const std::vector<OpReqType>& req,
             const std::vector<TBlob>& outputs) {
   const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
-  if (!param.axis) LOG(FATAL) << "Global reduction not supported yet";
-
   auto shape = inputs[0].shape_;
-  auto axis = CheckAxis(param.axis.value(), shape.ndim());
-  if (shape.ndim() == 1)
-    shape = AxisShapeCompact(shape, &axis, true);
+  size_t shift = shape.Size();     // to reading data starting of each thread
+  CHECK_NE(shift, 0U) << "attempt to search an empty sequence";
+
+  size_t step = 1;  // step over the input array which will be used by each thread in kernel
+  int axis;
+  if (param.axis.has_value()) {
+    axis = CheckAxis(param.axis.value(), shape.ndim());
+    // cannot do argmax in an empty dimension
+    CHECK_NE(shape[axis], 0)
+      << "searching input tensor of shape " << shape
+      << " along axis = " << axis << " of zero dim-size is not allowed";
+
+    if (shape.ndim() == 1)
+      shape = AxisShapeCompact(shape, &axis, true);
+
+    // Calculate step & shift
+    auto i = shape.ndim();
+    while (--i > axis)
+      step *= shape[i];
+
+    shift = i? step*shape[i] : 1;
+  } else {
+    // If global reduction, reshape the input tensor into 2D shape (1, inputs[0].shape_.Size())
+    // and search on axis = 1.
+    shape = mxnet::TShape(2, 1);
+    shape[1] = shift;
+    axis = 1;
+  }
 
   void *pIdxMemory = nullptr;
   auto nWorkers = DefineNumbWorkers<xpu>(shape, axis);
-  bool use_uint16 = false;
+  idxStorageType storageType = undefined_st;
   while (nWorkers > 1) {
     const size_t num_items = nWorkers * shape.Size() / shape[axis];
-    pIdxMemory = AllocateDTypeMemory<xpu, uint32_t>(ctx, num_items);
-    if (pIdxMemory)
+#if MXNET_USE_INT64_TENSOR_SIZE
+    pIdxMemory = AllocateDTypeMemory<xpu, index_t>(ctx, num_items);
+    if (pIdxMemory) {
+      storageType = int64_st;
       break;
-
+    }
+#endif
+    if (shape[axis] <= UINT32_MAX) {
+      pIdxMemory = AllocateDTypeMemory<xpu, uint32_t>(ctx, num_items);
+      if (pIdxMemory) {
+        storageType = uint32_st;
+        break;
+      }
+    }
     // Check if indexes can be stored in uint16 format
     if (shape[axis] <= UINT16_MAX) {
       pIdxMemory = AllocateDTypeMemory<xpu, uint16_t>(ctx, num_items);
       if (pIdxMemory) {
-        use_uint16 = true;
+        storageType = uint16_st;
         break;
       }
     }
@@ -715,16 +771,8 @@ void ArgMax(const nnvm::NodeAttrs& attrs,
     nWorkers >>= 1;
   }
 
-  // Calculate step over the input array which will be used by each thread in kernel
-  uint32_t step = 1;
-  auto i = shape.ndim();
-  while (--i > axis)
-    step *= shape[i];
-
-  // Shift will be used for each thread in determination of reading data starting point
-  const size_t shift = i? step*shape[i] : 1;
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType,
-      ArgMax<xpu, DType>(ctx, shape, axis, step, shift, nWorkers, pIdxMemory, use_uint16,
+      ArgMax<xpu, DType>(ctx, shape, axis, step, shift, nWorkers, pIdxMemory, storageType,
                          inputs[0], outputs[0]);
   )
 }

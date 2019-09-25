@@ -58,7 +58,8 @@ return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 
 template<>
 int DefineNumbWorkers<cpu>(const TShape &shape, int axis) {
-  return 1;              // We will not use extra workers on CPU
+  // We will not use extra workers on CPU when it's NOT a global reduction
+  return axis == 1 && shape[0] == 1 && shape.ndim() == 2? 4 : 1;
 }
 
 MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmin)

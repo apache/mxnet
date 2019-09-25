@@ -7614,6 +7614,7 @@ def test_softmax_output_normalization():
 
 @with_seed()
 def test_argmax():
+    ci_test = False       # Use False if you need to collect aggregated information about argmax performance
     def getNumWorkers(shape, axis, ctx=mx.gpu()):
         if ctx == mx.cpu():
             return 1
@@ -7629,7 +7630,23 @@ def test_argmax():
         return numbWorkers if 2 * numbWorkers <= nSteps else 1
 
     def calc_argmax(tensor, axis, checkResult=False, nWorkers=1):
-        max = mx.nd.argmax(tensor, axis=axis)
+        if not ci_test:
+            if axis is not None:
+                if nWorkers > 0:
+                    # To use a predefined number of workers you need to recompile MxNet with following
+                    # lines added to broadcast_reduce_op.h:
+                    #
+                    #  struct ReduceAxisParam : public dmlc::Parameter<ReduceAxisParam> {
+                    #    ...
+                    #   int nWorkers;
+                    #    ...
+                    #   DMLC_DECLARE_FIELD(nWorkers).set_default(1) \
+                    #       .describe("Number of workers assigned for each vector processing on GPU");
+                    max = mx.nd.argmax(tensor, axis=axis, nWorkers=nWorkers)
+                else:
+                    max = mx.nd.argmax(tensor, axis=axis, nWorkers=-1)
+        else:
+            max = mx.nd.argmax(tensor, axis=axis)
 
         if checkResult:
             topk_data = mx.nd.topk(tensor, axis=axis, is_ascend=0, k=1)
@@ -7638,7 +7655,7 @@ def test_argmax():
             max.wait_to_read()
         return max
 
-    # Useful function used for collection of information about performance of argmax and other MxNet operators
+    # Useful function for collection of information about performance of argmax and other MxNet operators
     def runTest(a, b, shape = None, ctx=mx.gpu(), testArgmax=1, checkResult=False, lenTest=1000, nWorkers=1):
         debug = True #False
         iFirst = 5 if lenTest > 5 else 0
@@ -7691,7 +7708,7 @@ def test_argmax():
                 print(buff)
 
 
-    def run_test_argmax(multi_output, ctx, axis, numb=1, checkResult=True):
+    def run_test_argmax(multi_output, ctx, axis=None, numb=1, checkResult=True):
         batch_size = 8
         num_labels =  6
         if multi_output:
@@ -7708,13 +7725,15 @@ def test_argmax():
         else:
             calc_argmax(data, axis, checkResult=checkResult)
 
-    ci_test = True       # Use False if you need to collect aggregated information about argmax performance
     if ci_test:
         ctx = default_context()
         for multi_output in [False, True]:
             axisMax = 4 if multi_output else 2
             for axis in range(axisMax):
                 run_test_argmax(multi_output, ctx, axis)
+
+            # Global reduction test
+            run_test_argmax(multi_output, ctx)
     else:
         testArgmax = 1
         lenTest = 10000
