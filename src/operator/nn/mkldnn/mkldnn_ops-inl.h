@@ -95,12 +95,6 @@ void MKLDNNConcatBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                           const std::vector<OpReqType>& req,
                           const std::vector<NDArray>& outputs);
 
-void MKLDNNTransposeForward(const nnvm::NodeAttrs& attrs,
-                            const OpContext &ctx,
-                            const NDArray &data,
-                            const OpReqType &req,
-                            const NDArray &output);
-
 void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
                           const OpContext &ctx,
                           const NDArray &input,
@@ -135,6 +129,12 @@ void MKLDNNActivationBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx
 
 void MKLDNNSum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
          const mkldnn::memory &out);
+
+void MKLDNNTransposeForward(const nnvm::NodeAttrs& attrs,
+                            const OpContext &ctx,
+                            const NDArray &data,
+                            const OpReqType &req,
+                            const NDArray &output);
 #endif
 
 }  // namespace op
