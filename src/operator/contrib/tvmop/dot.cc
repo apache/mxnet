@@ -74,7 +74,7 @@ std::string DotSch(const std::string name,
   return "index_" + std::to_string(idx);
 }
 
-void DotForward(const nnvm::NodeAttrs& attrs,
+void TVMDotForward(const nnvm::NodeAttrs& attrs,
                 const mxnet::OpContext& ctx,
                 const std::vector<TBlob>& inputs,
                 const std::vector<OpReqType>& req,
@@ -87,7 +87,7 @@ void DotForward(const nnvm::NodeAttrs& attrs,
   tvm::runtime::TVMOpModule::Get()->Call(funcname + sch, ctx, {inputs[0], inputs[1], outputs[0]});
 }
 
-void DotFallbackForward(const nnvm::NodeAttrs& attrs,
+void TVMDotFallbackForward(const nnvm::NodeAttrs& attrs,
                         const mxnet::OpContext& ctx,
                         const std::vector<TBlob>& inputs,
                         const std::vector<OpReqType>& req,
@@ -99,7 +99,7 @@ void DotFallbackForward(const nnvm::NodeAttrs& attrs,
   tvm::runtime::TVMOpModule::Get()->Call(funcname + sch, ctx, {inputs[0], inputs[1], outputs[0]});
 }
 
-bool DotShape(const nnvm::NodeAttrs& attrs,
+bool TVMDotShape(const nnvm::NodeAttrs& attrs,
               mxnet::ShapeVector *in_attrs,
               mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
@@ -131,9 +131,9 @@ NNVM_REGISTER_OP(_contrib_tvm_dot)
       [](const NodeAttrs& attrs) {
         return std::vector<std::string>{"a", "b"};
       })
-    .set_attr<mxnet::FInferShape>("FInferShape", DotShape)
+    .set_attr<mxnet::FInferShape>("FInferShape", TVMDotShape)
     .set_attr<nnvm::FInferType>("FInferType", mxnet::op::ElemwiseType<2, 1>)
-    .set_attr<mxnet::FCompute>("FCompute<cpu>", DotForward);
+    .set_attr<mxnet::FCompute>("FCompute<cpu>", TVMDotForward);
 
 NNVM_REGISTER_OP(_contrib_tvm_dot_fallback)
     .set_num_inputs(2)
@@ -144,9 +144,9 @@ NNVM_REGISTER_OP(_contrib_tvm_dot_fallback)
       [](const NodeAttrs& attrs) {
         return std::vector<std::string>{"a", "b"};
       })
-    .set_attr<mxnet::FInferShape>("FInferShape", DotShape)
+    .set_attr<mxnet::FInferShape>("FInferShape", TVMDotShape)
     .set_attr<nnvm::FInferType>("FInferType", mxnet::op::ElemwiseType<2, 1>)
-    .set_attr<mxnet::FCompute>("FCompute<cpu>", DotFallbackForward);
+    .set_attr<mxnet::FCompute>("FCompute<cpu>", TVMDotFallbackForward);
 
 }  // namespace op
 }  // namespace mxnet
