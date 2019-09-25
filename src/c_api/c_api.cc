@@ -631,7 +631,7 @@ int MXNDArrayGetData(NDArrayHandle handle,
   NDArray temp = *arr;
   if (arr->IsMKLDNNData()) {
     temp = arr->Reorder2Default();
-    arr = &temp; 
+    arr = &temp;
   }
 #endif
   if (!arr->is_none()) {
