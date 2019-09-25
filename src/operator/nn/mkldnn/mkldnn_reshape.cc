@@ -55,10 +55,10 @@ MKLDNNReshapeFwd::MKLDNNReshapeFwd(const OpReqType &req,
 
   // temp_
   auto temp_md = GetDesc(in_md, GetDefaultFormat(in_md));
-  temp_ = std::make_shared<mkldnn::memory>(temp_md, engine);
+  temp_ = std::make_shared<mkldnn::memory>(temp_md, engine, nullptr);
 
   // destination
-  out_ = std::make_shared<mkldnn::memory>(temp_md, engine);
+  out_ = std::make_shared<mkldnn::memory>(temp_md, engine, nullptr);
 
   if (req == kWriteInplace) {
     // If the input has MKL-DNN internal layout, we need reorder it to a temporal buffer with
@@ -68,18 +68,15 @@ MKLDNNReshapeFwd::MKLDNNReshapeFwd(const OpReqType &req,
     if (input.IsMKLDNNData()) {
       prims_.push_back(mkldnn::reorder(*in_mem, *temp_));  // reorder to default
       prims_.push_back(mkldnn::reorder(*temp_, *out_));   // copy back
-
       needInvalidateInput = true;
     }
   } else if (req == kWriteTo) {
     if (input.IsMKLDNNData()) {
       prims_.push_back(mkldnn::reorder(*in_mem, *temp_));   // reorder to default
       prims_.push_back(mkldnn::reorder(*temp_, *out_));     // copy to the output buffer
-
       needInvalidateInput = false;
     } else {
       prims_.push_back(mkldnn::reorder(*in_mem, *out_));    // copy directly from input to output
-
       needInvalidateInput = false;
     }
   } else {
@@ -97,20 +94,19 @@ void MKLDNNReshapeFwd::Execute(const NDArray &input,
                                void* workspace) {
   auto stream = MKLDNNStream::Get();
   auto in_mem = input.GetMKLDNNData();
-  auto in_md = in_mem->get_desc();
   // register primitives and arguments
-  std::vector<mkldnn_args_map_t> args_map_;
+  std::vector<mkldnn_args_map_t> args_map;
   size_t prims_size = prims_.size();
   if (prims_size == 1) {
-    args_map_.push_back({{MKLDNN_ARG_FROM, *in_mem},
-                         {MKLDNN_ARG_TO, *output.GetMKLDNNData()}});
+    args_map.push_back({{MKLDNN_ARG_FROM, *in_mem},
+                        {MKLDNN_ARG_TO, *output.GetMKLDNNData()}});
   } else if (prims_size == 2) {
-    auto temp_md = GetDesc(in_md, GetDefaultFormat(in_md));
-    temp_ = std::make_shared<mkldnn::memory>(temp_md, CpuEngine::Get()->get_engine(),
-            workspace);
-    args_map_.push_back({{MKLDNN_ARG_FROM, *in_mem},
+    if (workspace) {
+      temp_->set_data_handle(workspace);
+    }
+    args_map.push_back({{MKLDNN_ARG_FROM, *in_mem},
                         {MKLDNN_ARG_TO, *temp_}});
-    args_map_.push_back({{MKLDNN_ARG_FROM, *temp_},
+    args_map.push_back({{MKLDNN_ARG_FROM, *temp_},
                         {MKLDNN_ARG_TO, *output.GetMKLDNNData()}});
   } else {
     CHECK(prims_size == 0 && req != kWriteTo)
@@ -118,7 +114,7 @@ void MKLDNNReshapeFwd::Execute(const NDArray &input,
   }
 
   for (size_t i = 0; i < prims_size; i++) {
-    stream->RegisterPrimArgs(prims_[i], args_map_[i]);
+    stream->RegisterPrimArgs(prims_[i], args_map[i]);
   }
   stream->Submit();
   // invalidate mkldnn memory in input
