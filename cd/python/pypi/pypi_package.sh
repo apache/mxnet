@@ -54,6 +54,7 @@ popd
 echo "Building python package with environment:"
 printenv
 echo "-----------------------------------------"
+pip install --user pypandoc
 
 # Build wheel file - placed in wheel_build/dist
 python setup.py bdist_wheel
