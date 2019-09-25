@@ -144,5 +144,124 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_backward_npi_rcopysign_scalar)
 .set_attr<FCompute>("FCompute<cpu>",
                     BinaryScalarOp::Backward<cpu, mshadow_op::rcopysign_grad>);
 
+inline bool IsFloatType(const int dtype) {
+  return (dtype == mshadow::kFloat16 ||
+          dtype == mshadow::kFloat32 ||
+          dtype == mshadow::kFloat64);
+}
+
+inline bool Arctan2OpType(const nnvm::NodeAttrs& attrs,
+                          std::vector<int>* in_attrs,
+                          std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(1));
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+  TYPE_ASSIGN_CHECK(*in_attrs, 1, out_attrs->at(0));
+  // check if it is float16, float32 or float64. If not, raise error.
+  CHECK(IsFloatType(in_attrs->at(0))) << "Do not support `int` as input.\n";
+  return out_attrs->at(0) != -1;
+}
+
+NNVM_REGISTER_OP(_npi_arctan2)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"x1", "x2"};
+  })
+.set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
+.set_attr<nnvm::FInferType>("FInferType", Arctan2OpType)
+.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::arctan2>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_arctan2"})
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::pair<int, int> >{{0, 0}};
+  })
+.add_argument("x1", "NDArray-or-Symbol", "The input array")
+.add_argument("x2", "NDArray-or-Symbol", "The input array");
+
+NNVM_REGISTER_OP(_backward_npi_arctan2)
+.set_num_inputs(3)
+.set_num_outputs(2)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::arctan2_grad,
+                                                                  mshadow_op::arctan2_rgrad>);
+
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_arctan2_scalar)
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::arctan2>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_arctan2_scalar"});
+
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_rarctan2_scalar)
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::rarctan2>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_rarctan2_scalar"});
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_arctan2_scalar)
+.add_argument("scalar", "float", "scalar value")
+.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
+.set_attr<FCompute>("FCompute<cpu>",
+                    BinaryScalarOp::Backward<cpu, mshadow_op::arctan2_grad>);
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_rarctan2_scalar)
+.add_argument("scalar", "float", "scalar value")
+.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
+.set_attr<FCompute>("FCompute<cpu>",
+                    BinaryScalarOp::Backward<cpu, mshadow_op::arctan2_rgrad>);
+
+bool HypotOpType(const nnvm::NodeAttrs& attrs,
+                 std::vector<int>* in_attrs,
+                 std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(1));
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+  TYPE_ASSIGN_CHECK(*in_attrs, 1, out_attrs->at(0));
+
+  CHECK(IsFloatType(in_attrs->at(0))) << "Do not support `int` as input.\n";
+  return out_attrs->at(0) != -1;
+}
+
+// rigister hypot that do not support int here
+NNVM_REGISTER_OP(_npi_hypot)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"x1", "x2"};
+  })
+.set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
+.set_attr<nnvm::FInferType>("FInferType", HypotOpType)
+.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::hypot>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_hypot"})
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};
+  })
+.add_argument("x1", "NDArray-or-Symbol", "The input array")
+.add_argument("x2", "NDArray-or-Symbol", "The input array");
+
+NNVM_REGISTER_OP(_backward_npi_hypot)
+.set_num_inputs(3)
+.set_num_outputs(2)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::pair<int, int> > {{0, 1}};
+  })
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::hypot_grad_left,
+                                                                  mshadow_op::hypot_grad_right>);
+
 }  // namespace op
 }  // namespace mxnet

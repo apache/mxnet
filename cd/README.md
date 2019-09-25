@@ -61,8 +61,17 @@ The [release job](Jenkinsfile_release_job) takes five parameters:
  * **MXNET_VARIANTS**: A comma separated list of variants to build. Defaults to *all* variants.
  * **RELEASE\_JOB\_NAME**: A name for this release job (Optional). Defaults to "Generic release job". It is used for debug output purposes.
  * **RELEASE\_JOB\_TYPE**: Defines the release pipeline you want to execute.
+ * **COMMIT_ID**: The commit id to build
 
 The release job executes, in parallel, the release pipeline for each of the variants (**MXNET_VARIANTS**) for the job type (**RELEASE\_JOB\_TYPE**). The job type the path to a directory (relative to the `cd` directory) that includes a `Jenkins_pipeline.groovy` file ([e.g.](mxnet_lib/static/Jenkins_pipeline.groovy)).
+
+NOTE: The **COMMIT_ID** is a little tricky and we must be very careful with it. It is necessary to ensure that the same commit is built through out the pipeline, but at the same time, it has the potential to change the current state of the release job configuration - specifically the parameter configuration. Any changes to this configuration will require a "dry-run" of the release job to ensure Jenkins has the current (master) version. This is acceptable as there will be few changes to the parameter configuration for the job, if any at all. But, it's something to keep in mind.
+
+To avoid potential issues as much as possible, the CD pipeline executes this "dry run" and ensures that Jenkins' state of the release job matches what is defined for the release job in the specified COMMIT_ID. This is done by setting the **RELEASE_JOB_TYPE** to *Status Update*.
+
+It should be noted that the 'Pipeline' section of the configuration should use the *$COMMIT_ID* parameter as the specifier and 'lightweight checkout' unchecked. For example:
+
+![job setup example](img/job_setup.png)
 
 ### Release Pipelines: Jenkins_pipeline.groovy
 

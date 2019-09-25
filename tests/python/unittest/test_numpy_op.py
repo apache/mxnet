@@ -27,8 +27,12 @@ from mxnet.test_utils import check_numeric_gradient, use_np, collapse_sum_like
 from common import assertRaises, with_seed
 import random
 import scipy.stats as ss
-from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
+from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, retry
+from mxnet.runtime import Features
 import platform
+
+
+_features = Features()
 
 
 @with_seed()
@@ -1015,6 +1019,9 @@ def test_np_unary_funcs():
         'arccosh' : (lambda x: 1./(x**2 - 1.)**(1./2.), 2.0, 5.0),
         'arctanh' : (lambda x: -1./(x**2 - 1.), -0.99, 0.99)
     }
+    if _features.is_enabled("TVM_OP"):
+        funcs['rad2deg'] = (lambda x: 180. / _np.pi * _np.ones(x.shape), -1.0, 1.0)
+        funcs['deg2rad'] = (lambda x: _np.pi / 180. * _np.ones(x.shape), -1.0, 1.0)
     ndim = random.choice([2, 3, 4])
     shape = random.choice([rand_shape_nd(ndim, dim=3), (1, 0, 2)])
     for shape in [rand_shape_nd(ndim, dim=3), (1, 0, 2)]:
@@ -2377,7 +2384,220 @@ def test_np_around():
 
                     mx_out = np.around(x, d)
                     np_out = _np.around(x.asnumpy(), d)
-                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)    
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+
+@with_seed()
+@use_np
+def test_np_arctan2():
+    class TestArctan2(HybridBlock):
+        def __init__(self):
+            super(TestArctan2, self).__init__()
+
+        def hybrid_forward(self, F, x1, x2):
+            return F.np.arctan2(x1, x2)
+
+    # Reduce dimension of src to dimension of des.
+    def dimReduce(src, des):
+        srcShape = src.shape
+        desShape = des.shape
+        if len(desShape) == 0:
+            return src.sum()
+        redu = []
+        for i, j in zip(range(len(srcShape)-1, -1, -1), range(len(desShape)-1, -1, -1)):
+            if srcShape[i] != desShape[j] and desShape[j] == 1:
+                redu.append(i)
+            if j == 0:
+                for k in range(0, i):
+                    redu.append(k)
+                break
+        if len(redu) > 0:
+            src = _np.reshape(src.sum(axis=tuple(redu)), desShape)
+        return src
+
+    types = ['float64', 'float32', 'float16']
+    for hybridize in [True, False]:
+        for shape1, shape2 in [[(3, 2), (3, 2)],  # tall matrices
+                               [(), ()],  # scalar only
+                               [(3, 0, 2), (3, 0, 2)],  # zero-dim
+                               [(3, 4, 5), (4, 1)],  # trailing dim broadcasting
+                               [(3, 4, 5), ()],  # scalar broadcasting
+                               [(), (1, 2, 3)],  # scalar broadcasting
+                               ]:
+            for oneType in types:
+                rtol = 1e-2 if oneType == 'float16' else 1e-3
+                atol = 1e-2 if oneType == 'float16' else 1e-5
+                test_arctan2 = TestArctan2()
+                if hybridize:
+                    test_arctan2.hybridize()
+                x1 = rand_ndarray(shape1, dtype=oneType).as_np_ndarray()
+                x2 = rand_ndarray(shape2, dtype=oneType).as_np_ndarray()
+                x11 = x1.asnumpy()
+                x21 = x2.asnumpy()
+                x1.attach_grad()
+                x2.attach_grad()
+                np_out = _np.arctan2(x1.asnumpy(), x2.asnumpy())
+                with mx.autograd.record():
+                    mx_out = test_arctan2(x1, x2)
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+                mx_out.backward()
+                np_backward_1 = x21 / (x11 * x11 + x21 * x21)
+                np_backward_2 = -1 * x11 / (x11 * x11 + x21 * x21)
+                np_backward_1 = dimReduce(np_backward_1, x11)
+                np_backward_2 = dimReduce(np_backward_2, x21)
+                assert_almost_equal(x1.grad.asnumpy(), np_backward_1, rtol=rtol, atol=atol)
+                assert_almost_equal(x2.grad.asnumpy(), np_backward_2, rtol=rtol, atol=atol)
+
+                mx_out = np.arctan2(x1, x2)
+                np_out = _np.arctan2(x1.asnumpy(), x2.asnumpy())
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+
+@with_seed()
+@use_np
+def test_np_nonzero():
+    class TestNonzero(HybridBlock):
+        def __init__(self):
+            super(TestNonzero, self).__init__()
+
+        def hybrid_forward(self, F, x):
+            return F.npx.nonzero(x)
+
+    types = ['int32', 'int64', 'float64', 'float32', 'float16']
+    for hybridize in [True, False]:
+        for shape in [(), (1, 2, 3), (1, 0)]:
+            for oneType in types:
+                rtol, atol = 1e-3, 1e-5
+                test_nonzero = TestNonzero()
+                if hybridize:
+                    test_nonzero.hybridize()
+                x = rand_ndarray(shape, dtype=oneType).as_np_ndarray()
+                np_out = _np.nonzero(x.asnumpy())
+                np_out = _np.transpose(np_out)
+                mx_out = test_nonzero(x)
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol, atol)
+
+                # Test imperative once again
+                mx_out = npx.nonzero(x)
+                np_out = _np.nonzero(x.asnumpy())
+                np_out = _np.transpose(np_out)
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol, atol)
+
+
+@with_seed()
+@use_np
+def test_np_hypot():
+    class TestHypot(HybridBlock):
+        def __init__(self):
+            super(TestHypot, self).__init__()
+
+        def hybrid_forward(self, F, x1, x2):
+            return F.np.hypot(x1, x2)
+
+    def dimReduce(src, des):
+        srcShape = src.shape
+        desShape = des.shape
+        if len(desShape) == 0:
+            return src.sum()
+        redu = []
+        for i, j in zip(range(len(srcShape)-1, -1, -1), range(len(desShape)-1, -1, -1)):
+            if srcShape[i] != desShape[j] and desShape[j] == 1:
+                redu.append(i)
+            if j == 0:
+                for k in range(0, i):
+                    redu.append(k)
+                break
+        if len(redu) > 0:
+            src = _np.reshape(src.sum(axis=tuple(redu)), desShape)
+        return src
+
+    types = ['float64', 'float32', 'float16']
+    for hybridize in [True, False]:
+        for shape1, shape2 in [[(3, 2), (3, 2)],  # tall matrices
+                               [(), ()],  # scalar only
+                               [(3, 0, 2), (3, 0, 2)],  # zero-dim
+                               [(3, 4, 5), (4, 1)],  # trailing dim broadcasting
+                               [(3, 4, 5), ()],  # scalar broadcasting
+                               [(), (1, 2, 3)],  # scalar broadcasting
+                               ]:
+            for oneType in types:
+                rtol = 1e-2 if oneType == 'float16' else 1e-3
+                atol = 1e-2 if oneType == 'float16' else 1e-5
+                test_hypot = TestHypot()
+                if hybridize:
+                    test_hypot.hybridize()
+                x1 = rand_ndarray(shape1, dtype=oneType).as_np_ndarray()
+                x2 = rand_ndarray(shape2, dtype=oneType).as_np_ndarray()
+                x11 = x1.asnumpy()
+                x21 = x2.asnumpy()
+                x1.attach_grad()
+                x2.attach_grad()
+                np_out = _np.hypot(x1.asnumpy(), x2.asnumpy())
+                with mx.autograd.record():
+                    mx_out = test_hypot(x1, x2)
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+                mx_out.backward()
+                np_backward_1 = x11 / np_out
+                np_backward_2 = x21 / np_out
+                np_backward_1 = dimReduce(np_backward_1, x11)
+                np_backward_2 = dimReduce(np_backward_2, x21)
+                assert_almost_equal(x1.grad.asnumpy(), np_backward_1, rtol=rtol, atol=atol)
+                assert_almost_equal(x2.grad.asnumpy(), np_backward_2, rtol=rtol, atol=atol)
+
+                mx_out = np.hypot(x1, x2)
+                np_out = _np.hypot(x1.asnumpy(), x2.asnumpy())
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+
+@with_seed()
+@use_np
+def test_np_unique():
+    class TestUnique(HybridBlock):
+        def __init__(self, return_index=False, return_inverse=False, return_counts=False, axis=None):
+            super(TestUnique, self).__init__()
+            self._return_index = return_index
+            self._return_inverse = return_inverse
+            self._return_counts = return_counts
+            self._axis = axis
+
+        def hybrid_forward(self, F, a):
+            return F.np.unique(a, self._return_index, self._return_inverse, self._return_counts, self._axis)
+
+    configs = [
+        ((), True, True, True, None),
+        ((1, ), True, True, True, -1),
+        ((5, ), True, True, True, 0),
+        ((5, ), True, True, True, None),
+        ((5, 4), True, True, True, None),
+        ((5, 4), True, True, True, -1),
+        ((5, 0, 4), True, True, True, None),
+        ((0, 0, 0), True, True, True, None),
+        # ((5, 3, 4), True, True, True, -1), # waiting for numpy 1.18, details in pr 14255
+        ((5, 3, 4), True, True, True, None),
+        ((5, 3, 4), True, True, True, 1),
+    ]
+    for dtype in ['float32', 'float64', 'int8', 'uint8', 'int32', 'int64']:
+        for hybridize in [False]:
+            for config in configs:
+                test_unique = TestUnique(*config[1:])
+                if hybridize:
+                    test_unique.hybridize()
+                x = _np.random.uniform(-8.0, 8.0, size=config[0])
+                x = np.array(x, dtype=dtype)
+                np_out = _np.unique(x.asnumpy(), *config[1:])
+                mx_out = test_unique(x)
+                assert mx_out[0].shape == np_out[0].shape
+                for i in range(4):
+                    assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
+
+                # Test imperative once again
+                mx_out = np.unique(x, *config[1:])
+                np_out = _np.unique(x.asnumpy(), *config[1:])
+                for i in range(4):
+                    assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
 
 
 if __name__ == '__main__':

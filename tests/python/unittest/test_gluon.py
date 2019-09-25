@@ -1223,7 +1223,7 @@ def test_activations():
         return [elu(x_i) for x_i in x]
 
     for test_point, ref_point in zip(elu_test(point_to_validate), elu(point_to_validate)):
-        assert test_point == ref_point
+        assert_almost_equal(test_point.asnumpy(), ref_point.asnumpy())
 
     selu = mx.gluon.nn.SELU()
     def selu_test(x):

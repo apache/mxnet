@@ -109,7 +109,55 @@ def _np_cumsum(a, axis=None, dtype=None, out=None):
     >>> np.cumsum(a,axis=1)      # sum over columns for each of the 2 rows
     array([[ 1,  3,  6],
            [ 4,  9, 15]])
+    """
+    pass
 
+
+def _npx_nonzero(a):
+    """
+    nonzero(a)
+
+    Return the indices of the elements that are non-zero.
+
+    Returns a ndarray with ndim is 2. Each row contains the indices 
+    of the non-zero elements. The values in `a` are always tested and returned in
+    row-major, C-style order.
+
+    The result of this is always a 2-D array, with a row for
+    each non-zero element.
+
+    Parameters
+    ----------
+    a : array_like
+        Input array.
+
+    Returns
+    -------
+    array : ndarray
+        Indices of elements that are non-zero.
+
+    Notes
+    -----
+    This function differs from the original numpy.prod in the following aspects:
+        - Do not support python numeric.
+        - The return value is same as numpy.transpose(numpy.nonzero(a)).
+
+    Examples
+    --------
+    >>> x = np.array([[3, 0, 0], [0, 4, 0], [5, 6, 0]])
+    >>> x
+    array([[3, 0, 0],
+           [0, 4, 0],
+           [5, 6, 0]])
+    >>> npx.nonzero(x)
+    array([[0, 0],
+           [1, 1],
+           [2, 0],
+           [2, 1]], dtype=int64)
+
+    >>> np.transpose(npx.nonzero(x))
+    array([[0, 1, 2, 2],
+           [0, 1, 0, 1]], dtype=int64)
     """
     pass
 

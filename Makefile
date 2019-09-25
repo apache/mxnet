@@ -220,14 +220,18 @@ ifeq ($(USE_LAPACK), 1)
 ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas mkl))
 ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.a))
 ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.so))
+ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.dylib))
 ifeq (,$(wildcard /lib/liblapack.a))
 ifeq (,$(wildcard /lib/liblapack.so))
 ifeq (,$(wildcard /usr/lib/liblapack.a))
 ifeq (,$(wildcard /usr/lib/liblapack.so))
+ifeq (,$(wildcard /usr/lib/liblapack.dylib))
 ifeq (,$(wildcard /usr/lib64/liblapack.a))
 ifeq (,$(wildcard /usr/lib64/liblapack.so))
 	USE_LAPACK = 0
         $(warning "USE_LAPACK disabled because libraries were not found")
+endif
+endif
 endif
 endif
 endif
@@ -761,7 +765,7 @@ ratcheck: build/rat/apache-rat/target/apache-rat-0.13.jar
 
 ifneq ($(EXTRA_OPERATORS),)
 clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
-	$(RM) -r build lib bin deps *~ */*~ */*/*~ */*/*/*~ 
+	$(RM) -r build lib bin deps *~ */*~ */*/*~ */*/*/*~
 	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
@@ -772,7 +776,7 @@ clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
 clean: rclean mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
-	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ 
+	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
 	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -

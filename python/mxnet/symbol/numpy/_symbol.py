@@ -29,14 +29,15 @@ from ..symbol import Symbol
 from .._internal import _set_np_symbol_class
 from . import _internal as _npi
 
-__all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'sin',
-           'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
+__all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'arctan2',
+           'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot',
            'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'vstack', 'mean',
            'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign',
-           'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around']
+           'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'hypot', 'rad2deg', 'deg2rad',
+           'unique']
 
 
 def _num_outputs(sym):
@@ -1715,6 +1716,36 @@ def degrees(x, out=None, **kwargs):
     return _unary_func_helper(x, _npi.degrees, _np.degrees, out=out, **kwargs)
 
 
+@set_module('mxnet.symbol.numpy')
+def rad2deg(x, out=None):
+    r"""
+    rad2deg(x, out=None)
+
+    Convert angles from radians to degrees.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Angles in degrees.
+    out : _Symbol or None, optional
+        A location into which the result is stored.
+
+    Returns
+    -------
+    y : _Symbol or scalar
+        The corresponding angle in radians.
+        This is a scalar if `x` is a scalar.
+
+    Notes
+    -----
+    "rad2deg(x)" is "x * 180 / pi".
+
+    This function differs from the original numpy.arange in the following aspects:
+        - Only support float32 and float64.
+        - `out` must be in the same size of input.
+    """
+    return _unary_func_helper(x, _npi.rad2deg, _np.rad2deg, out=out)
+
+
 def rint(x, out=None, **kwargs):
     """
     Round elements of the array to the nearest integer.
@@ -1838,6 +1869,36 @@ def radians(x, out=None, **kwargs):
            dtype=float32)
     """
     return _unary_func_helper(x, _npi.radians, _np.radians, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def deg2rad(x, out=None):
+    r"""
+    deg2rad(x, out=None)
+
+    Convert angles from degrees to radians.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Angles in degrees.
+    out : _Symbol or None, optional
+        A location into which the result is stored.
+
+    Returns
+    -------
+    y : _Symbol or scalar
+        The corresponding angle in radians.
+        This is a scalar if `x` is a scalar.
+
+    Notes
+    -----
+    "deg2rad(x)" is "x * pi / 180".
+
+    This function differs from the original numpy.arange in the following aspects:
+        - Only support float32 and float64.
+        - `out` must be in the same size of input.
+    """
+    return _unary_func_helper(x, _npi.deg2rad, _np.deg2rad, out=out)
 
 
 @set_module('mxnet.symbol.numpy')
@@ -3170,6 +3231,167 @@ def around(x, decimals=0, out=None, **kwargs):
         return _npi.around(x, decimals, out=out, **kwargs)
     else:
         raise TypeError('type {} not supported'.format(str(type(x))))
+
+
+@set_module('mxnet.symbol.numpy')
+def arctan2(x1, x2, out=None):
+    r"""
+    arctan2(x1, x2, out=None)
+
+    Element-wise arc tangent of ``x1/x2`` choosing the quadrant correctly.
+
+    The quadrant (i.e., branch) is chosen so that ``arctan2(x1, x2)`` is
+    the signed angle in radians between the ray ending at the origin and
+    passing through the point (1,0), and the ray ending at the origin and
+    passing through the point (`x2`, `x1`).  (Note the role reversal: the
+    "`y`-coordinate" is the first function parameter, the "`x`-coordinate"
+    is the second.)  By IEEE convention, this function is defined for
+    `x2` = +/-0 and for either or both of `x1` and `x2` = +/-inf (see
+    Notes for specific values).
+
+    This function is not defined for complex-valued arguments; for the
+    so-called argument of complex values, use `angle`.
+
+    Parameters
+    ----------
+    x1 : _Symbol or scalar
+        `y`-coordinates.
+    x2 : _Symbol or scalar
+        `x`-coordinates. `x2` must be broadcastable to match the shape of
+        `x1` or vice versa.
+    out : _Symbol or None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : _Symbol or scalar
+        Array of angles in radians, in the range ``[-pi, pi]``. This is a scalar if
+        `x1` and `x2` are scalars.
+
+    Notes
+    -----
+    *arctan2* is identical to the `atan2` function of the underlying
+    C library.  The following special values are defined in the C
+    standard: [1]_
+
+    ====== ====== ================
+    `x1`   `x2`   `arctan2(x1,x2)`
+    ====== ====== ================
+    +/- 0  +0     +/- 0
+    +/- 0  -0     +/- pi
+        > 0   +/-inf +0 / +pi
+        < 0   +/-inf -0 / -pi
+    +/-inf +inf   +/- (pi/4)
+    +/-inf -inf   +/- (3*pi/4)
+    ====== ====== ================
+
+    Note that +0 and -0 are distinct floating point numbers, as are +inf
+    and -inf.
+
+    This function differs from the original numpy.arange in the following aspects:
+        - Only support float16, float32 and float64.
+
+    References
+    ----------
+    .. [1] ISO/IEC standard 9899:1999, "Programming language C."
+    """
+    return _ufunc_helper(x1, x2, _npi.arctan2, _np.arctan2,
+                         _npi.arctan2_scalar, _npi.rarctan2_scalar, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def hypot(x1, x2, out=None):
+    r"""
+    Given the "legs" of a right triangle, return its hypotenuse.
+
+    Equivalent to ``sqrt(x1**2 + x2**2)``, element-wise.  If `x1` or
+    `x2` is scalar_like (i.e., unambiguously cast-able to a scalar type),
+    it is broadcast for use with each element of the other argument.
+
+    Parameters
+    ----------
+    x1, x2 : array_like
+        Leg of the triangle(s).
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned. A tuple (possible only as a
+        keyword argument) must have length equal to the number of outputs.
+
+    Returns
+    -------
+    z : ndarray
+        The hypotenuse of the triangle(s).
+        This is a scalar if both `x1` and `x2` are scalars.
+
+    Notes
+    -----
+    This function differs from the original numpy.arange in the following aspects:
+        - Only support float16, float32 and float64.
+    """
+    return _ufunc_helper(x1, x2, _npi.hypot, _np.hypot, _npi.hypot_scalar, None, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def unique(ar, return_index=False, return_inverse=False, return_counts=False, axis=None):
+    """
+    Find the unique elements of an array.
+
+    Returns the sorted unique elements of an array. There are three optional
+    outputs in addition to the unique elements:
+
+    * the indices of the input array that give the unique values
+    * the indices of the unique array that reconstruct the input array
+    * the number of times each unique value comes up in the input array
+
+    Parameters
+    ----------
+    ar : _Symbol
+        Input array. Unless `axis` is specified, this will be flattened if it
+        is not already 1-D.
+    return_index : bool, optional
+        If True, also return the indices of `ar` (along the specified axis,
+        if provided, or in the flattened array) that result in the unique array.
+    return_inverse : bool, optional
+        If True, also return the indices of the unique array (for the specified
+        axis, if provided) that can be used to reconstruct `ar`.
+    return_counts : bool, optional
+        If True, also return the number of times each unique item appears
+        in `ar`.
+    axis : int or None, optional
+        The axis to operate on. If None, `ar` will be flattened. If an integer,
+        the subarrays indexed by the given axis will be flattened and treated
+        as the elements of a 1-D array with the dimension of the given axis,
+        see the notes for more details. The default is None.
+
+    Returns
+    -------
+    unique : _Symbol
+        The sorted unique values.
+    unique_indices : _Symbol, optional
+        The indices of the first occurrences of the unique values in the
+        original array. Only provided if `return_index` is True.
+    unique_inverse : _Symbol, optional
+        The indices to reconstruct the original array from the
+        unique array. Only provided if `return_inverse` is True.
+    unique_counts : _Symbol, optional
+        The number of times each of the unique values comes up in the
+        original array. Only provided if `return_counts` is True.
+
+    Notes
+    -----
+    When an axis is specified the subarrays indexed by the axis are sorted.
+    This is done by making the specified axis the first dimension of the array
+    and then flattening the subarrays in C order. The flattened subarrays are
+    then viewed as a structured type with each element given a label, with the
+    effect that we end up with a 1-D array of structured types that can be
+    treated in the same way as any other 1-D array. The result is that the
+    flattened subarrays are sorted in lexicographic order starting with the
+    first element.
+    """
+    return _npi.unique(ar, return_index, return_inverse, return_counts, axis)
 
 
 _set_np_symbol_class(_Symbol)
