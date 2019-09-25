@@ -54,7 +54,7 @@ void MKLDNNSum(const mkldnn::memory &arr1,
     in_mem2 = tmp_memory2;
   }
   mkldnn::sum::primitive_desc sum_pd(output_pd, scales, input_pds, CpuEngine::Get()->get_engine());
-  std::unordered_map<int, mkldnn::memory> args = {
+  mkldnn_args_map_t args = {
     { MKLDNN_ARG_MULTIPLE_SRC, *in_mem1 },
     { MKLDNN_ARG_MULTIPLE_SRC + 1, *in_mem2 },
     { MKLDNN_ARG_DST, out },
@@ -62,33 +62,25 @@ void MKLDNNSum(const mkldnn::memory &arr1,
   MKLDNNStream::Get()->RegisterPrimArgs(mkldnn::sum(sum_pd), args);
 }
 
-#endif
-
-#if MXNET_USE_MKLDNN == 1
 class MKLDNNSumFwd {
  public:
   mkldnn::sum::primitive_desc fwd_pd;
 
   MKLDNNSumFwd(const std::vector<float> &scales,
-               const std::vector<mkldnn::memory::primitive_desc> &data_md)
-      : fwd_pd(scales, data_md) {
-    data_.resize(data_md.size());
+               const std::vector<mkldnn::memory::desc> &data_md)
+      : fwd_pd(scales, data_md, CpuEngine::Get()->get_engine()) {
+    fwd_ = std::make_shared<mkldnn::sum>(fwd_pd);
   }
-
-  void SetNewMem(const std::vector<const mkldnn::memory *> &in_data, const mkldnn::memory &output);
 
   const mkldnn::sum &GetFwd() const { return *fwd_; }
 
  private:
   std::shared_ptr<mkldnn::sum> fwd_;
-  std::vector<std::shared_ptr<mkldnn::memory>> data_;
-  std::vector<mkldnn::primitive::at> data_mem_;
-  std::shared_ptr<mkldnn::memory> out_;
 };
 
 static MKLDNNSumFwd &GetSumForward(
     const std::vector<float> &scales, const std::vector<NDArray> &in_data,
-    const std::vector<mkldnn::memory::primitive_desc> &data_md) {
+    const std::vector<mkldnn::memory::desc> &data_md) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<OpSignature, MKLDNNSumFwd, OpHash> fwds;
 #else
@@ -105,35 +97,12 @@ static MKLDNNSumFwd &GetSumForward(
   return it->second;
 }
 
-void MKLDNNSumFwd::SetNewMem(const std::vector<const mkldnn::memory *> &in_data,
-                             const mkldnn::memory &output) {
-  auto num_inputs = data_.size();
-  CHECK_EQ(in_data.size(), num_inputs);
-  for (index_t i = 0; i < static_cast<index_t>(num_inputs); ++i) {
-    if (this->data_[i] == nullptr) {
-      this->data_[i] = std::shared_ptr<mkldnn::memory>(
-          new mkldnn::memory(in_data[i]->get_primitive_desc(), in_data[i]->get_data_handle()));
-      this->data_mem_.push_back(*this->data_[i]);
-    } else {
-      this->data_[i]->set_data_handle(in_data[i]->get_data_handle());
-    }
-  }
-  if (this->out_ == nullptr)
-    this->out_ = std::shared_ptr<mkldnn::memory>(
-        new mkldnn::memory(fwd_pd.dst_primitive_desc(), output.get_data_handle()));
-  else
-    this->out_->set_data_handle(output.get_data_handle());
-
-  if (this->fwd_ == nullptr)
-    this->fwd_.reset(new mkldnn::sum(fwd_pd, this->data_mem_, *this->out_));
-}
-
 void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                       const std::vector<NDArray> &inputs, const OpReqType &req,
                       const NDArray &out_data) {
   TmpMemMgr::Get()->Init(ctx.requested[0]);
-  auto num_inputs = inputs.size();
-  std::vector<mkldnn::memory::primitive_desc> data_md;
+  const int num_inputs = inputs.size();
+  std::vector<mkldnn::memory::desc> data_md;
   std::vector<const mkldnn::memory *> data_mem;
   std::vector<float> scales(num_inputs, 1);
   std::vector<NDArray> in_bufs(num_inputs);
@@ -141,7 +110,7 @@ void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   data_md.reserve(num_inputs);
   data_mem.reserve(num_inputs);
 
-  for (index_t i = 0; i < static_cast<index_t>(num_inputs); ++i) {
+  for (int i = 0; i < num_inputs; ++i) {
     const mkldnn::memory *in_mem;
     if (inputs[i].IsMKLDNNData() && inputs[i].IsView()) {
       in_bufs[i] = inputs[i].Reorder2Default();
@@ -150,18 +119,22 @@ void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
       in_bufs[i] = inputs[i];
       in_mem = inputs[i].GetMKLDNNData();
     }
-    mkldnn::memory::primitive_desc tmp_pd = in_mem->get_primitive_desc();
-    data_md.push_back(tmp_pd);
+    mkldnn::memory::desc tmp_md = in_mem->get_desc();
+    data_md.push_back(tmp_md);
     data_mem.push_back(in_mem);
   }
 
   MKLDNNSumFwd &fwd = GetSumForward(scales, in_bufs, data_md);
   mxnet::mkldnn_output_t out_mem = CreateMKLDNNMem(out_data,
-                                                   fwd.fwd_pd.dst_primitive_desc(),
+                                                   fwd.fwd_pd.dst_desc(),
                                                    req,
                                                    &in_bufs[0]);
-  fwd.SetNewMem(data_mem, *out_mem.second);
-  MKLDNNStream::Get()->RegisterPrim(fwd.GetFwd());
+  mkldnn_args_map_t net_args;
+  net_args.insert({MKLDNN_ARG_DST, *out_mem.second});
+  for (int i = 0; i < num_inputs; ++i) {
+    net_args.insert({MKLDNN_ARG_MULTIPLE_SRC + i, *data_mem[i]});
+  }
+  MKLDNNStream::Get()->RegisterPrimArgs(fwd.GetFwd(), net_args);
   CommitOutput(out_data, out_mem);
   MKLDNNStream::Get()->Submit();
 }

@@ -44,25 +44,17 @@ namespace mxnet {
 namespace op {
 
 #if MXNET_USE_MKLDNN == 1
-/* For sum */
-void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                      const std::vector<NDArray> &inputs, const OpReqType &req,
-                      const NDArray &out_data);
+void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
+                          const OpContext &ctx,
+                          const NDArray &input,
+                          const OpReqType &req,
+                          const NDArray &output);
 
-/* For copy */
-void MKLDNNCopy(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                const NDArray &in_data, const OpReqType &req,
-                const NDArray &out_data);
-
-/* For concat */
-void MKLDNNConcatForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                         const std::vector<NDArray> &in_data,
-                         const std::vector<OpReqType> &req,
-                         const std::vector<NDArray> &out_data);
-void MKLDNNConcatBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                          const std::vector<NDArray>& inputs,
-                          const std::vector<OpReqType>& req,
-                          const std::vector<NDArray>& outputs);
+void MKLDNNFlattenForward(const nnvm::NodeAttrs &attrs,
+                          const OpContext &ctx,
+                          const NDArray &input,
+                          const OpReqType &req,
+                          const NDArray &output);
 #endif
 
 #if MXNET_USE_MKLDNN == 100
@@ -121,6 +113,26 @@ void MKLDNNSoftmaxOutputForward(const nnvm::NodeAttrs& attrs, const OpContext &c
                                 const std::vector<NDArray> &in_data,
                                 const std::vector<OpReqType> &req,
                                 const std::vector<NDArray> &out_data);
+
+/* For sum */
+void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                      const std::vector<NDArray> &inputs, const OpReqType &req,
+                      const NDArray &out_data);
+
+/* For copy */
+void MKLDNNCopy(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                const NDArray &in_data, const OpReqType &req,
+                const NDArray &out_data);
+
+/* For concat */
+void MKLDNNConcatForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                         const std::vector<NDArray> &in_data,
+                         const std::vector<OpReqType> &req,
+                         const std::vector<NDArray> &out_data);
+void MKLDNNConcatBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                          const std::vector<NDArray>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<NDArray>& outputs);
 
 void MKLDNNSum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
                const mkldnn::memory &out);
