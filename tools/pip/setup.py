@@ -106,7 +106,7 @@ shutil.copytree(os.path.join(CURRENT_DIR, '../3rdparty/tvm/nnvm/include/nnvm'),
 
 package_name = 'mxnet'
 
-variant = os.environ['mxnet_variant'].upper()
+variant = os.environ['VARIANT'].upper()
 if variant != 'CPU':
     package_name = 'mxnet_{0}'.format(variant.lower())
 

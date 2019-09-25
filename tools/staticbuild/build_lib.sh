@@ -38,6 +38,7 @@ if [[ $VARIANT == *mkl ]]; then
 fi
 
 >&2 echo "Now building mxnet..."
+make clean 
 $MAKE DEPS_PATH=$DEPS_PATH
 
 if [[ $PLATFORM == 'linux' ]]; then

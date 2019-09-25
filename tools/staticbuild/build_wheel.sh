@@ -24,5 +24,5 @@ cd python/
 # Make wheel for testing
 python setup.py bdist_wheel
 
-wheel_name=$(ls -t dist | head -n 1)
-pip install -U --user --force-reinstall dist/$wheel_name
+#wheel_name=$(ls -t dist | head -n 1)
+#pip install -U --user --force-reinstall dist/$wheel_name
