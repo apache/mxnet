@@ -639,12 +639,10 @@ ifneq ($(CUDA_ARCH),)
 endif
 lib/libtvmop.so: lib/libtvm_runtime.so $(wildcard contrib/tvmop/*/*.py contrib/tvmop/*.py)
 	echo "Compile TVM operators"
-	python3 -m pip install --user psutil
 	@mkdir -p $(@D)
 	PYTHONPATH=$(TVM_PATH)/python:$(TVM_PATH)/topi/python:$(ROOTDIR)/contrib \
 		LD_LIBRARY_PATH=$(ROOTDIR)/lib \
 	    python3 $(ROOTDIR)/contrib/tvmop/compile.py $(TVM_OP_COMPILE_OPTIONS)
-	cp $(ROOTDIR)/contrib/tvmop/space.py $(ROOTDIR)/python/mxnet/space.py
 
 NNVM_INC = $(wildcard $(NNVM_PATH)/include/*/*.h)
 NNVM_SRC = $(wildcard $(NNVM_PATH)/src/*/*/*.cc $(NNVM_PATH)/src/*/*.cc $(NNVM_PATH)/src/*.cc)
