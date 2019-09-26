@@ -1684,4 +1684,19 @@ def test_artifact_repository() {
     }]
 }
 
+def upload_s3(){
+  return ['Upload s3': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          sh 'pwd'
+          sh 'echo ${env.MXNET_CI_UNITTEST_ARTIFACT_BUCKET}'
+            sh 'touch a.txt'    
+            // archiveArtifacts 'docs/_build/full_website.tgz'
+            s3Upload(file:'a.txt', bucket:env.MXNET_CI_UNITTEST_ARTIFACT_BUCKET, path:'.')            
+            sh 'echo done'
+        }
+      }
+    }]
+}
+
 return this
