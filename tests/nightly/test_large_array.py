@@ -212,8 +212,12 @@ def test_dot():
 def test_FullyConnected():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     b = nd.ones(shape=(SMALL_Y, SMALL_Y))
-    res = nd.FullyConnected(a, b, num_hidden=b.shape[1], no_bias=True)
-    assert np.sum(res[-1].asnumpy() == SMALL_Y) == b.shape[1]
+    c = nd.ones(shape=(b.shape[0],))
+    res = nd.FullyConnected(a, b, num_hidden=b.shape[0], no_bias=True)
+    assert np.sum(res[-1].asnumpy() == a.shape[1]) == b.shape[0]
+
+    res = nd.FullyConnected(a, b, c, num_hidden=b.shape[0], no_bias=False)
+    assert np.sum(res[-1].asnumpy() == a.shape[1] + 1) == b.shape[0]
 
 
 def test_broadcast():
@@ -401,10 +405,14 @@ def test_unravel_index():
 
 
 def test_transpose():
-    b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
-    t = b.T
-    assert np.sum(t[:, -1].asnumpy() == (LARGE_X - 1)) == b.shape[1]
-    assert t.shape == (SMALL_Y, LARGE_X)
+    test_dtypes = [np.float32, np.int64]
+    for dtype in test_dtypes:
+        b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=dtype)
+        t = b.T
+        assert t.shape == (SMALL_Y, LARGE_X)
+        ref_out = np.transpose(b.asnumpy())
+        assert_almost_equal(t.asnumpy(), ref_out, rtol=1e-10)
+        
 
 
 def test_swapaxes():
@@ -423,9 +431,10 @@ def test_flip():
 
 def test_softmax():
     input_data = mx.nd.ones((SMALL_Y, LARGE_X))
-    true_output = np.full((SMALL_Y, LARGE_X), (1 / SMALL_Y))
-    output = nd.softmax(input_data, axis=0)
-    assert_almost_equal(output.asnumpy(), true_output, rtol=1e-5, atol=1e-5)
+    for axis in [0, 1]:
+        true_output = np.full((SMALL_Y, LARGE_X), (1 / input_data.shape[axis]))
+        output = nd.softmax(input_data, axis=axis)
+        assert_almost_equal(output.asnumpy(), true_output, rtol=1e-5, atol=1e-5)
 
 
 def test_argsort():
@@ -619,9 +628,16 @@ def testSoftmaxOutput():
 
     sym = mx.sym.SoftmaxOutput(data=x, label=label, ignore_label=0,
                                use_ignore=False)
+
+    ex = sym.bind(ctx=default_context(), args={'x': x_nd, 'label': label_nd},
+                  args_grad=None)
+    ex.forward(is_train=False)
+    softmax_out = ex.outputs[0][0].asnumpy()
+    expected_softmax_out = (1/SMALL_Y)*mx.nd.ones((SMALL_Y)).asnumpy()
+    assert np.isclose(softmax_out, expected_softmax_out).all()
+
     ex = sym.bind(ctx=default_context(), args={'x': x_nd, 'label': label_nd},
                   args_grad={'x': grad_x})
-
     ex.forward(is_train=True)
     softmax_out = ex.outputs[0][0].asnumpy()
     expected_softmax_out = (1/SMALL_Y)*mx.nd.ones((SMALL_Y)).asnumpy()
@@ -782,8 +798,29 @@ def test_activation():
 # in future, we could test if mean, var of output
 # matches target output's mean, var
 def test_batchnorm():
-    shape = (LARGE_X, SMALL_Y)
+    def get_ref_mean_var(data, running_mean, running_var, eps, use_global_status=True):
+        if not use_global_status:
+            # train mode, calculate the real mean and var
+            mean = nd.mean(data, axis=1, exclude=1)
+            mean_broad = nd.expand_dims(mean, axis=0)
+            mean_broad = nd.expand_dims(mean_broad, axis=2)
+            mean_broad = nd.expand_dims(mean_broad, axis=3)
+            mean_broad = nd.broadcast_like(mean_broad, data)
+            var = nd.multiply(data - mean_broad, data - mean_broad)
+            var = nd.mean(var, axis=1, exclude=1)
+        else:
+            # inference mode, use running_mean and running_var instead
+            mean = nd.full((data.shape[1],), running_mean)
+            var = nd.full((data.shape[1],), running_var)
+        
+        # calculate the inverse of standard variance
+        stdvar = 1. / nd.sqrt(var + eps)
+        nd.waitall()
+        return mean, stdvar
+
+    shape = (MEDIUM_X, MEDIUM_X, SMALL_Y, SMALL_Y)
     axis = 1  # default
+    eps = 1e-3
 
     nch = shape[axis]
     data = mx.nd.ones(shape=shape)
@@ -793,8 +830,20 @@ def test_batchnorm():
     bn_running_var = mx.nd.ones(nch)
 
     output = mx.nd.BatchNorm(data, bn_gamma, bn_beta,
-                             bn_running_mean, bn_running_var)
-    assert output.shape == shape
+                             bn_running_mean, bn_running_var, output_mean_var=True)
+    assert output[0].shape == shape
+    mean, stdvar = output[1], output[2]
+
+    ref_mean, ref_stdvar = get_ref_mean_var(data, bn_running_mean, bn_running_var, eps)
+    assert_almost_equal(mean.asnumpy(), ref_mean.asnumpy())
+    assert_almost_equal(stdvar.asnumpy(), ref_stdvar.asnumpy())
+
+
+def test_elemwise_add():
+    a = nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = nd.ones(shape=(LARGE_X, SMALL_Y))
+    res = nd.elemwise_add(a, b)
+    assert np.sum(res[-1].asnumpy() == 2) == a.shape[1]
 
 
 def test_add():
@@ -944,11 +993,11 @@ def test_reshape_like():
 
 
 def test_flatten():
-    a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y).reshape((LARGE_X//2, 2, SMALL_Y))
-    b = nd.flatten(a)
-    assert b[-1][-1] == (LARGE_X-1)
-    assert b[-1][0] == (LARGE_X-2)
-    assert b.shape == (LARGE_X//2, SMALL_Y*2)
+    test_dtypes = [np.float32, np.int64]
+    for dtype in test_dtypes:
+        a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=dtype).reshape((LARGE_X//2, 2, SMALL_Y))
+        b = nd.flatten(a)
+        assert b.shape == (LARGE_X//2, SMALL_Y*2)
 
 
 def test_concat():
@@ -956,6 +1005,23 @@ def test_concat():
     b = nd.array(np.zeros((SMALL_Y, LARGE_X)))
     c = nd.concat(a, b, dim=0)
     assert c.shape == (b.shape[0]*2, LARGE_X)
+
+def test_expand_dims():
+    a = nd.array(np.ones((SMALL_Y, LARGE_X)))
+    b = nd.expand_dims(a, axis=1)
+    nd.waitall()
+    ref_out = np.expand_dims(a.asnumpy(), axis=1)
+    assert b.shape == (SMALL_Y, 1, LARGE_X)
+    assert_almost_equal(b.asnumpy(), ref_out, rtol=1e-10)
+
+
+def test_concat():
+    a = nd.array(np.ones((SMALL_Y, LARGE_X)))
+    b = nd.array(np.zeros((SMALL_Y, LARGE_X)))
+    for axis in [0, 1]:
+        c = nd.concat(a, b, dim=axis)
+        assert c.shape[axis] == b.shape[axis] * 2
+        assert c.shape[1-axis] == b.shape[1-axis]
 
 
 def test_stack():
