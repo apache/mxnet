@@ -18,37 +18,21 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
- * \file np_init_op.cu
- * \brief GPU Implementation of numpy init op
+ * Copyright (c) 2019 by Contributors
+ * \file np_tril_op.cu
+ * \brief GPU implementation of numpy tril operator
  */
 
-#include "../tensor/init_op.h"
-#include "./np_init_op.h"
+#include "./np_tril_op-inl.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_zeros)
-.set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 0>);
+NNVM_REGISTER_OP(_npi_tril)
+.set_attr<FCompute>("FCompute<gpu>", TrilOpForward<gpu>);
 
-NNVM_REGISTER_OP(_npi_ones)
-.set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 1>);
-
-NNVM_REGISTER_OP(_npi_identity)
-.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
-
-NNVM_REGISTER_OP(_np_zeros_like)
-.set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 0>);
-
-NNVM_REGISTER_OP(_np_ones_like)
-.set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 1>);
-
-NNVM_REGISTER_OP(_npi_arange)
-.set_attr<FCompute>("FCompute<gpu>", RangeCompute<gpu, RangeParam>);
-
-NNVM_REGISTER_OP(_npi_indices)
-.set_attr<FCompute>("FCompute<gpu>", IndicesCompute<gpu>);
+NNVM_REGISTER_OP(_backward_tril)
+.set_attr<FCompute>("FCompute<gpu>", TrilOpBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

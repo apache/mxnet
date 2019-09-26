@@ -479,6 +479,10 @@ void TakeOpForward<gpu>(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape& arrshape = inputs[take_::kArr].shape_;
   const mxnet::TShape& oshape = outputs[take_::kOut].shape_;
 
+  if (idxshape.Size() == 0) {
+    return;
+  }
+
   Stream<gpu> *s = ctx.get_stream<gpu>();
   const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
 
