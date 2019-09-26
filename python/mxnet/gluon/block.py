@@ -829,9 +829,16 @@ class HybridBlock(Block):
             flatten_inputs = []
             symbol_inputs = []
             cnt = 0
+            real_arg_num = sum([ele is not None for ele in flatten_args])
+            if real_arg_num == 0:
+                raise ValueError('All args are None and we do not support such a case.'
+                                 ' Received args={}'.format(args))
             for arg in flatten_args:
                 if arg is not None:
-                    arg_sym = symbol.var('data{}'.format(cnt))
+                    if real_arg_num > 1:
+                        arg_sym = symbol.var('data{}'.format(cnt))
+                    else:
+                        arg_sym = symbol.var('data')
                     if isinstance(arg, _mx_np.ndarray):
                         arg_sym = arg_sym.as_np_ndarray()
                     cnt += 1
