@@ -69,7 +69,7 @@ nd_y = nd.ones(shape=(6,)) * 10
 np.array_equal(np_y, nd_y.asnumpy())
 ```
 
-    True <!--notebook-skip-line-->
+```True``` <!--notebook-skip-line-->
 
 ### Find similar operator with different name and/or signature
 
@@ -96,9 +96,10 @@ def pad_array(data, max_length):
 pad_array(nd.array([1, 2, 3]), max_length=10)
 ```
     
-    [ 1.  2.  3.  0.  0.  0.  0.  0.  0.  0.] <!--notebook-skip-line-->
+`[ 1.  2.  3.  0.  0.  0.  0.  0.  0.  0.]` <!--notebook-skip-line-->
 
-    <NDArray 10 @cpu(0)> <!--notebook-skip-line-->
+
+`<NDArray 10 @cpu(0)>` <!--notebook-skip-line-->
 
 
 ### Search for an operator on [Github](https://github.com/apache/incubator-mxnet/labels/Operator)
@@ -163,6 +164,7 @@ for data, label in train_data:
         print("Loss: {}".format(np.mean(prev_loss.asnumpy())))
 ```
 
+```text
     Loss: 2.310760974884033 <!--notebook-skip-line-->
 
     Loss: 2.334498643875122 <!--notebook-skip-line-->
@@ -176,7 +178,7 @@ for data, label in train_data:
     Loss: 2.3236165046691895 <!--notebook-skip-line-->
 
     Loss: 2.3178648948669434 <!--notebook-skip-line-->
-
+```
 
 ## Conclusion
 

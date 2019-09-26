@@ -310,13 +310,13 @@ happens to the gradients is quite ingenious. Since the model parameters contain
 gradients, the gradients of the second hidden layer and the third hidden layer
 are accumulated in `shared.params.grad` during backpropagation.
 
-# Conclusion
+## Conclusion
 
 In this tutorial you learnt how to initialize a neural network, and should now
 understand the difference between deferred and forced initialization. Some more advanced
 cases you should now be aware of include custom initialization and tied parameters.
 
-# Recommended Next Steps
+## Recommended Next Steps
 
 * Check out the [API Docs](https://mxnet.incubator.apache.org/versions/master/api/python/optimization/optimization.html) on initialization for a list of available initialization methods.
 * See [this tutorial](https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/naming.html) for more information on Gluon Parameters.

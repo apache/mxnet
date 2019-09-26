@@ -112,7 +112,7 @@ Security
 
 .. toctree::
    :hidden:
-   :maxdepth: 0
+   :maxdepth: 1
 
    export/index
    inference/index

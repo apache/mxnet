@@ -15,7 +15,7 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-# Optimization Algorithms
+# Optimizers
 
 Deep learning models are comprised of a model architecture and the model parameters. The model architecture is chosen based on the task - for example Convolutional Neural Networks (CNNs) are very successful in handling image based tasks and Recurrent Neural Networks (RNNs) are better suited for sequential prediction tasks. However, the values of the model parameters are learned by solving an optimization problem during model training.
 

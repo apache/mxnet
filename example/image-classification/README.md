@@ -242,7 +242,7 @@ For more usages:
 - One can use
   [benchmark.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/benchmark.py)
   to run distributed benchmarks (also for multiple GPUs with single machine)
-- A how-to [tutorial](https://mxnet.io/faq/multi_devices.html) with more
+- A how-to [tutorial](https://mxnet.io/api/faq/distributed_training.html) with more
   explanation.
 - A
   [blog](https://aws.amazon.com/blogs/compute/distributed-deep-learning-made-easy/)

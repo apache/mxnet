@@ -50,17 +50,18 @@ print('{:,.0f} elements'.format(np.product(data.shape)))
 print('{:,.0f} non-zero elements'.format(data.data.size))
 ```
 
-    <class 'mxnet.ndarray.sparse.CSRNDArray'>
-    [[0. 0. 0. ... 0. 0. 0.]
-     [0. 0. 0. ... 0. 0. 0.]
-     [0. 0. 0. ... 0. 0. 0.]
-     ...
-     [0. 0. 0. ... 0. 0. 0.]
-     [0. 0. 0. ... 0. 0. 0.]
-     [0. 0. 0. ... 0. 0. 0.]]
-    1,000,000,000 elements
-    10,000 non-zero elements
-
+```
+<class 'mxnet.ndarray.sparse.CSRNDArray'>
+[[0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]
+ ...
+ [0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]
+ [0. 0. 0. ... 0. 0. 0.]]
+1,000,000,000 elements
+10,000 non-zero elements
+```
 
 Our storage type is CSR (Compressed Sparse Row) which is the ideal type for sparse data along multiple axes. See [this in-depth tutorial](https://mxnet.incubator.apache.org/versions/master/tutorials/sparse/csr.html) for more information. Just to confirm the generation process ran correctly, we can see that the vast majority of values are indeed zero. One of the first questions to ask would be how much memory is saved by storing this data in a [`CSRNDArray`](https://mxnet.incubator.apache.org/api/python/ndarray/sparse.html?highlight=csrndarray#mxnet.ndarray.sparse.CSRNDArray) versus a standard [`NDArray`](https://mxnet.incubator.apache.org/versions/master/api/python/ndarray/sparse.html?highlight=ndarray#module-mxnet.ndarray). Since sparse arrays are constructed from many components (e.g. `data`, `indices` and `indptr`) we define a function called `get_nbytes` to calculate the number of bytes taken in memory to store an array. We compare the same data stored in a standard [`NDArray`](https://mxnet.incubator.apache.org/versions/master/api/python/ndarray/sparse.html?highlight=ndarray#module-mxnet.ndarray) (with `data.tostype('default')`) to the [`CSRNDArray`](https://mxnet.incubator.apache.org/api/python/ndarray/sparse.html?highlight=csrndarray#mxnet.ndarray.sparse.CSRNDArray).
 
@@ -84,9 +85,10 @@ print('NDarray:', get_nbytes(data.tostype('default'))/1000000, 'MBs')
 print('CSRNDArray', get_nbytes(data)/1000000, 'MBs')
 ```
 
-    NDarray: 4000.0 MBs
-    CSRNDArray 0.128008 MBs
-
+```
+NDarray: 4000.0 MBs
+CSRNDArray 0.128008 MBs
+```
 
 Given the extremely high sparsity of the data, we observe a huge memory saving here! 0.13 MBs versus 4 GBs: ~30,000 times smaller. You can experiment with the amount of sparsity and see how these two storage types compare. When the number of non-zero values increases, this difference will reduce. And when the number of non-zero values exceeds ~1/3 you will find that this sparse storage type take more memory than dense! So use wisely.
 
@@ -128,17 +130,18 @@ for line in lines:
     print(line[:80] + '...' if len(line) > 80 else line)
 ```
 
-    0.0 35454:0.22486156225204468 80954:0.39130592346191406 81941:0.1988530308008194...
-    1.0 37029:0.5980494618415833 52916:0.15797750651836395 71623:0.32251599431037903...
-    1.0 89962:0.47770974040031433 216426:0.21326342225074768 271027:0.18589609861373...
-    1.0 7071:0.9432336688041687 81664:0.7788773775100708 117459:0.8166475296020508 4...
-    0.0 380966:0.16906292736530304 394363:0.7987179756164551 458442:0.56873309612274...
-    0.0 89361:0.9099966287612915 141813:0.5927085280418396 282489:0.293381005525589 ...
-    0.0 150427:0.4747847020626068 169376:0.2603490948677063 179377:0.237988427281379...
-    0.0 49774:0.2822582423686981 91245:0.5794865489006042 102970:0.7004560232162476 ...
-    1.0 97133:0.0024336236529052258 109855:0.9895315766334534 116765:0.2465638816356...
-    0.0 803440:0.4020800292491913
-    
+```
+0.0 35454:0.22486156225204468 80954:0.39130592346191406 81941:0.1988530308008194...
+1.0 37029:0.5980494618415833 52916:0.15797750651836395 71623:0.32251599431037903...
+1.0 89962:0.47770974040031433 216426:0.21326342225074768 271027:0.18589609861373...
+1.0 7071:0.9432336688041687 81664:0.7788773775100708 117459:0.8166475296020508 4...
+0.0 380966:0.16906292736530304 394363:0.7987179756164551 458442:0.56873309612274...
+0.0 89361:0.9099966287612915 141813:0.5927085280418396 282489:0.293381005525589 ...
+0.0 150427:0.4747847020626068 169376:0.2603490948677063 179377:0.237988427281379...
+0.0 49774:0.2822582423686981 91245:0.5794865489006042 102970:0.7004560232162476 ...
+1.0 97133:0.0024336236529052258 109855:0.9895315766334534 116765:0.2465638816356...
+0.0 803440:0.4020800292491913
+```
 
 
 Some storage overhead is introduced by serializing the data as characters (with spaces and colons). `dataset.libsvm` is 250 KBs but the original `data` and `label` were 132 KBs combined. Compared with the 4GB dense `NDArray` though, this isn't a huge issue.
@@ -160,9 +163,10 @@ for batch in data_iter:
     break
 ```
 
-    data.stype: csr
-    label.stype: default
-
+```
+data.stype: csr
+label.stype: default
+```
 
 We can see that `data` and `label` are in the appropriate storage formats, given their sparse and dense values respectively. We can avoid out-of-memory issues that might have occurred if `data` was in dense storage format. Another benefit of storing the data efficiently is the reduced data transfer time when using GPUs. Although the transfer time for a single batch is small, we transfer `data` and `label` to the GPU every iteration so this time can become significant. We will time the transfer of the sparse `data` to GPU (if available) and compare to the time for its dense counterpart.
 
@@ -178,8 +182,9 @@ data_on_ctx = data.as_in_context(ctx)
 data_on_ctx.wait_to_read()
 ```
 
-    192 microseconds +- 51.1 microseconds per loop (mean +- std. dev. of 7 runs, 1 loop each)
-
+```
+192 microseconds +- 51.1 microseconds per loop (mean +- std. dev. of 7 runs, 1 loop each)
+```
 
 
 ```python
@@ -188,9 +193,10 @@ data = data.tostype('default')  # avoid timing this sparse to dense conversion
 print('dense batch: {} MBs'.format(get_nbytes(data)/1000000))
 ```
 
-    sparse batch: 0.001348 MBs
-    dense batch: 40.0 MBs
-
+```
+sparse batch: 0.001348 MBs
+dense batch: 40.0 MBs
+```
 
 
 ```python
@@ -199,8 +205,9 @@ data_on_ctx = data.as_in_context(ctx)
 data_on_ctx.wait_to_read()
 ```
 
-    4 ms +- 36.8 microseconds per loop (mean +- std. dev. of 7 runs, 100 loops each)
-
+```
+4 ms +- 36.8 microseconds per loop (mean +- std. dev. of 7 runs, 100 loops each)
+```
 
 Although results will change depending on system specifications and degree of sparsity, the sparse array can be transferred from CPU to GPU significantly faster than the dense array. We see a ~25x speed up for sparse vs dense for this specific batch of data.
 
@@ -311,8 +318,9 @@ for batch in data_iter:
     loss.wait_to_read()
 ```
 
-    532 ms +- 3.47 ms per loop (mean +- std. dev. of 7 runs, 1 loop each)
-
+```
+532 ms +- 3.47 ms per loop (mean +- std. dev. of 7 runs, 1 loop each)
+```
 
 ![fully connected](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/ndarray/sparse/fully_connected.png)
 
@@ -323,15 +331,16 @@ We can see the first [`FullyConnected`](https://mxnet.incubator.apache.org/versi
 print_memory_allocation(net, block_idxs=[0, 2, 4])
 ```
 
-    Memory Allocation for Weight:
-    512.000 MBs ( 99.999%) for dense0                                  
-      0.004 MBs (  0.001%) for dense1                                  
-      0.000 MBs (  0.000%) for dense2                                  
-    Memory Allocation for Weight Gradient:
-    512.000 MBs ( 99.999%) for dense0                                  
-      0.004 MBs (  0.001%) for dense1                                  
-      0.000 MBs (  0.000%) for dense2                                  
-
+```
+Memory Allocation for Weight:
+512.000 MBs ( 99.999%) for dense0                                  
+  0.004 MBs (  0.001%) for dense1                                  
+  0.000 MBs (  0.000%) for dense2                                  
+Memory Allocation for Weight Gradient:
+512.000 MBs ( 99.999%) for dense0                                  
+  0.004 MBs (  0.001%) for dense1                                  
+  0.000 MBs (  0.000%) for dense2                                  
+```
 
 ### Benchmark: `FullyConnectedSparse`
 
@@ -369,8 +378,9 @@ for batch in data_iter:
     loss.wait_to_read()
 ```
 
-    528 ms +- 22.7 ms per loop (mean +- std. dev. of 7 runs, 1 loop each)
-
+```
+528 ms +- 22.7 ms per loop (mean +- std. dev. of 7 runs, 1 loop each)
+```
 
 ![fully connected sparse](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/ndarray/sparse/fully_connected_sparse.png)
 
@@ -385,15 +395,16 @@ Our first weight matrix and its gradients still take up the same amount of memor
 print_memory_allocation(net, block_idxs=[0, 2, 4])
 ```
 
-    Memory Allocation for Weight:
-    512.000 MBs ( 99.999%) for fullyconnectedsparse0                   
-      0.004 MBs (  0.001%) for fullyconnected0                         
-      0.000 MBs (  0.000%) for fullyconnected1                         
-    Memory Allocation for Weight Gradient:
-    512.000 MBs ( 99.999%) for fullyconnectedsparse0                   
-      0.004 MBs (  0.001%) for fullyconnected0                         
-      0.000 MBs (  0.000%) for fullyconnected1                         
-
+```
+Memory Allocation for Weight:
+512.000 MBs ( 99.999%) for fullyconnectedsparse0                   
+  0.004 MBs (  0.001%) for fullyconnected0                         
+  0.000 MBs (  0.000%) for fullyconnected1                         
+Memory Allocation for Weight Gradient:
+512.000 MBs ( 99.999%) for fullyconnectedsparse0                   
+  0.004 MBs (  0.001%) for fullyconnected0                         
+  0.000 MBs (  0.000%) for fullyconnected1                         
+```
 
 ### Benchmark: `FullyConnectedSparse` with `grad_stype=row_sparse` 
 
@@ -431,8 +442,9 @@ for batch in data_iter:
     loss.wait_to_read()
 ```
 
-    334 ms +- 16.9 ms per loop (mean +- std. dev. of 7 runs, 1 loop each)
-
+```
+334 ms +- 16.9 ms per loop (mean +- std. dev. of 7 runs, 1 loop each)
+```
 
 ![fully connected sparse grad backward](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/ndarray/sparse/fully_connected_sparse_grad_backward.png)
 
@@ -443,21 +455,22 @@ We can see a huge reduction in the time taken for the backward pass and paramete
 print_memory_allocation(net, block_idxs=[0, 2, 4])
 ```
 
-    Memory Allocation for Weight:
-    512.000 MBs ( 99.999%) for fullyconnectedsparse1                   
-      0.004 MBs (  0.001%) for fullyconnected2                         
-      0.000 MBs (  0.000%) for fullyconnected3                         
-    Memory Allocation for Weight Gradient:
-      0.059 MBs ( 93.490%) for fullyconnectedsparse1                   
-      0.004 MBs (  6.460%) for fullyconnected2                         
-      0.000 MBs (  0.050%) for fullyconnected3                         
-
+```
+Memory Allocation for Weight:
+512.000 MBs ( 99.999%) for fullyconnectedsparse1                   
+  0.004 MBs (  0.001%) for fullyconnected2                         
+  0.000 MBs (  0.000%) for fullyconnected3                         
+Memory Allocation for Weight Gradient:
+  0.059 MBs ( 93.490%) for fullyconnectedsparse1                   
+  0.004 MBs (  6.460%) for fullyconnected2                         
+  0.000 MBs (  0.050%) for fullyconnected3                         
+```
 
 ### Advanced: Sparse `weight`
 
 You can optimize this example further by setting the weight's `stype` to `'row_sparse'`, but whether `'row_sparse'` weights make sense or not will depends on your specific task. See [`contrib.SparseEmbedding `](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/contrib/nn/basic_layers.py#L118) for an example of this.
 
-# Conclusion
+## Conclusion
 
 As part of this tutorial, we learned how to write sparse data to disk in LibSVM format and load it back in sparse batches with the [`LibSVMIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=libsvmiter). We learned how to improve the performance of Gluon's [`nn.Dense`](https://mxnet.incubator.apache.org/versions/master/api/python/gluon/nn.html?highlight=dense#mxnet.gluon.nn.Dense) on sparse arrays using `mx.nd.sparse`. And lastly, we set `grad_stype` to `'row_sparse'` to reduce the size of the gradient and speed up the parameter update step.
 

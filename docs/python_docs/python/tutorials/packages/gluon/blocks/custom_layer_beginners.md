@@ -15,7 +15,7 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-# How to write a custom layer in Apache MxNet Gluon API
+# Customer Layers (Beginners)
 
 While Gluon API for Apache MxNet comes with [a decent number of pre-defined layers](https://mxnet.incubator.apache.org/api/python/gluon/nn.html), at some point one may find that a new layer is needed. Adding a new layer in Gluon API is straightforward, yet there are a few things that one needs to keep in mind.
 

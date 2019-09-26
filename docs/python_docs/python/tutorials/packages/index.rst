@@ -95,4 +95,4 @@ Shared APIs
    :hidden:
    :glob:
 
-   *
+   */index*

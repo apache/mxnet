@@ -100,6 +100,6 @@ These tutorials link to the MXNet GluonCV Toolkit website.
 .. toctree::
    :hidden:
    :maxdepth: 1
+   :glob:
 
-   mnist
-   pretrained_models
+   *

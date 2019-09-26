@@ -27,9 +27,9 @@ then train a linear regression model using sparse symbols with the Module API.
 
 To complete this tutorial, we need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/install/index.html).  
+- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.io/get_started).  
 
-- [Jupyter Notebook](http://jupyter.org/index.html) and [Python Requests](http://docs.python-requests.org/en/master/) packages.
+- [Jupyter Notebook](https://jupyter.org/index.html) and [Python Requests](http://docs.python-requests.org/en/master/) packages.
 ```
 pip install jupyter requests
 ```
@@ -99,10 +99,11 @@ c_exec.forward()
 print(b_exec.outputs, c_exec.outputs)
 ```
 
-    ([
-    <CSRNDArray 2x2 @cpu(0)>], [
-    <RowSparseNDArray 2x2 @cpu(0)>])
-
+```
+([
+<CSRNDArray 2x2 @cpu(0)>], [
+<RowSparseNDArray 2x2 @cpu(0)>])
+```
 
 You can update the array held by the variable by accessing executor's `arg_dict` and assigning new values.
 
@@ -117,11 +118,11 @@ eval_b = b_exec.outputs[0]
 
 
 
-
-    {'eval_b':
-     <CSRNDArray 2x2 @cpu(0)>, 'eval_b.asnumpy()': array([[ 1.,  1.],
-            [ 1.,  1.]], dtype=float32)}
-
+```
+{'eval_b':
+ <CSRNDArray 2x2 @cpu(0)>, 'eval_b.asnumpy()': array([[ 1.,  1.],
+        [ 1.,  1.]], dtype=float32)}
+```
 
 
 ## Symbol Composition and Storage Type Inference
@@ -144,11 +145,11 @@ f = mx.sym.sparse.elemwise_add(c, c)
 
 
 
-
-    {'d': <Symbol elemwise_add0>,
-     'e': <Symbol negative0>,
-     'f': <Symbol elemwise_add1>}
-
+```
+{'d': <Symbol elemwise_add0>,
+ 'e': <Symbol negative0>,
+ 'f': <Symbol elemwise_add1>}
+```
 
 
 ### Storage Type Inference
@@ -170,11 +171,11 @@ rsp_add = add_exec.outputs[2]
 
 
 
-
-    {'csr_add.stype': 'csr',
-     'dense_add.stype': 'default',
-     'rsp_add.stype': 'row_sparse'}
-
+```
+{'csr_add.stype': 'csr',
+ 'dense_add.stype': 'default',
+ 'rsp_add.stype': 'row_sparse'}
+```
 
 
 ### Storage Type Fallback
@@ -196,15 +197,15 @@ fallback_log = fallback_exec.outputs[1]
 
 
 
-
-    {'fallback_add':
-     [[ 0.  0.]
-      [ 0.  0.]]
-     <NDArray 2x2 @cpu(0)>, 'fallback_log':
-     [[-inf -inf]
-      [-inf -inf]]
-     <NDArray 2x2 @cpu(0)>}
-
+```
+{'fallback_add':
+ [[ 0.  0.]
+  [ 0.  0.]]
+ <NDArray 2x2 @cpu(0)>, 'fallback_log':
+ [[-inf -inf]
+  [-inf -inf]]
+ <NDArray 2x2 @cpu(0)>}
+```
 
 
 ### Inspecting Storage Types of the Symbol Graph

@@ -34,15 +34,16 @@ Y = mx.nd.dot(X, W)
 {'X': X, 'W': W, 'Y': Y}
 ```
 
-    {'W': 
-     [[ 3.  4.  5.]
-      [ 6.  7.  8.]]
-     <NDArray 2x3 @cpu(0)>, 'X': 
-     [[ 1.  0.]]
-     <NDArray 1x2 @cpu(0)>, 'Y': 
-     [[ 3.  4.  5.]]
-     <NDArray 1x3 @cpu(0)>}
-
+```
+{'W': 
+ [[ 3.  4.  5.]
+  [ 6.  7.  8.]]
+ <NDArray 2x3 @cpu(0)>, 'X': 
+ [[ 1.  0.]]
+ <NDArray 1x2 @cpu(0)>, 'Y': 
+ [[ 3.  4.  5.]]
+ <NDArray 1x3 @cpu(0)>}
+```
 
 As you can see,
 
@@ -74,10 +75,11 @@ grad_W
 
 
 
-    
-    [[ 1.  1.  1.]
-     [ 0.  0.  0.]]
-    <NDArray 2x3 @cpu(0)>
+```
+[[ 1.  1.  1.]
+ [ 0.  0.  0.]]
+<NDArray 2x3 @cpu(0)>
+```
 
 
 
@@ -241,14 +243,14 @@ a.asnumpy()
 
 
 
-
-    array([[ 0.,  0.],
-           [ 1.,  2.],
-           [ 0.,  0.],
-           [ 0.,  0.],
-           [ 3.,  4.],
-           [ 0.,  0.]], dtype=float32)
-
+```
+array([[ 0.,  0.],
+       [ 1.,  2.],
+       [ 0.,  0.],
+       [ 0.,  0.],
+       [ 3.,  4.],
+       [ 0.,  0.]], dtype=float32)
+```
 
 
 You can inspect the internal storage of a RowSparseNDArray by accessing attributes such as `indices` and `data`:
@@ -264,14 +266,14 @@ indices = a.indices
 
 
 
-
-    {'a.stype': 'row_sparse', 'data': 
-     [[ 1.  2.]
-      [ 3.  4.]]
-     <NDArray 2x2 @cpu(0)>, 'indices': 
-     [1 4]
-     <NDArray 2 @cpu(0)>}
-
+```
+{'a.stype': 'row_sparse', 'data': 
+ [[ 1.  2.]
+  [ 3.  4.]]
+ <NDArray 2x2 @cpu(0)>, 'indices': 
+ [1 4]
+ <NDArray 2 @cpu(0)>}
+```
 
 
 ## Storage Type Conversion
@@ -291,13 +293,13 @@ dense = rsp.tostype('default')
 
 
 
-
-    {'dense': 
-     [[ 1.  1.]
-      [ 1.  1.]]
-     <NDArray 2x2 @cpu(0)>, 'rsp': 
-     <RowSparseNDArray 2x2 @cpu(0)>}
-
+```
+{'dense': 
+ [[ 1.  1.]
+  [ 1.  1.]]
+ <NDArray 2x2 @cpu(0)>, 'rsp': 
+ <RowSparseNDArray 2x2 @cpu(0)>}
+```
 
 
 You can also convert the storage type by using the `cast_storage` operator:
@@ -315,13 +317,13 @@ dense = mx.nd.sparse.cast_storage(rsp, 'default')
 
 
 
-
-    {'dense': 
-     [[ 1.  1.]
-      [ 1.  1.]]
-     <NDArray 2x2 @cpu(0)>, 'rsp': 
-     <RowSparseNDArray 2x2 @cpu(0)>}
-
+```
+{'dense': 
+ [[ 1.  1.]
+  [ 1.  1.]]
+ <NDArray 2x2 @cpu(0)>, 'rsp': 
+ <RowSparseNDArray 2x2 @cpu(0)>}
+```
 
 
 ## Copies
@@ -342,12 +344,12 @@ a.copyto(d)
 
 
 
-
-    {'b is a': False, 'b.asnumpy()': array([[ 1.,  1.],
-            [ 1.,  1.]], dtype=float32), 'c.asnumpy()': array([[ 1.,  1.],
-            [ 1.,  1.]], dtype=float32), 'd.asnumpy()': array([[ 1.,  1.],
-            [ 1.,  1.]], dtype=float32)}
-
+```
+{'b is a': False, 'b.asnumpy()': array([[ 1.,  1.],
+        [ 1.,  1.]], dtype=float32), 'c.asnumpy()': array([[ 1.,  1.],
+        [ 1.,  1.]], dtype=float32), 'd.asnumpy()': array([[ 1.,  1.],
+        [ 1.,  1.]], dtype=float32)}
+```
 
 
 If the storage types of source array and destination array do not match,
@@ -386,18 +388,18 @@ rsp_retained = mx.nd.sparse.retain(rsp, mx.nd.array([0, 1]))
 
 
 
-
-    {'rsp.asnumpy()': array([[ 1.,  2.],
-            [ 0.,  0.],
-            [ 3.,  4.],
-            [ 5.,  6.],
-            [ 0.,  0.]], dtype=float32), 'rsp_retained': 
-     <RowSparseNDArray 5x2 @cpu(0)>, 'rsp_retained.asnumpy()': array([[ 1.,  2.],
-            [ 0.,  0.],
-            [ 0.,  0.],
-            [ 0.,  0.],
-            [ 0.,  0.]], dtype=float32)}
-
+```
+{'rsp.asnumpy()': array([[ 1.,  2.],
+        [ 0.,  0.],
+        [ 3.,  4.],
+        [ 5.,  6.],
+        [ 0.,  0.]], dtype=float32), 'rsp_retained': 
+ <RowSparseNDArray 5x2 @cpu(0)>, 'rsp_retained.asnumpy()': array([[ 1.,  2.],
+        [ 0.,  0.],
+        [ 0.,  0.],
+        [ 0.,  0.],
+        [ 0.,  0.]], dtype=float32)}
+```
 
 
 ## Sparse Operators and Storage Type Inference
@@ -421,14 +423,14 @@ transpose_dot = mx.nd.sparse.dot(lhs, rhs, transpose_a=True)
 
 
 
-
-    {'transpose_dot': 
-     <RowSparseNDArray 5x2 @cpu(0)>, 'transpose_dot.asnumpy()': array([[ 7.,  7.],
-            [ 9.,  9.],
-            [ 8.,  8.],
-            [ 0.,  0.],
-            [ 0.,  0.]], dtype=float32)}
-
+```
+{'transpose_dot': 
+ <RowSparseNDArray 5x2 @cpu(0)>, 'transpose_dot.asnumpy()': array([[ 7.,  7.],
+        [ 9.,  9.],
+        [ 8.,  8.],
+        [ 0.,  0.],
+        [ 0.,  0.]], dtype=float32)}
+```
 
 
 For any sparse operator, the storage type of output array is inferred based on inputs. You can either read the documentation or inspect the `stype` attribute of output array to know what storage type is inferred:
@@ -516,17 +518,18 @@ momentum = sgd.create_state(0, weight)
 
 
 
-
-    {'grad.asnumpy()': array([[ 0.,  0.],
-            [ 1.,  2.],
-            [ 4.,  5.],
-            [ 0.,  0.]], dtype=float32), 'momentum.asnumpy()': array([[ 0.,  0.],
-            [ 0.,  0.],
-            [ 0.,  0.],
-            [ 0.,  0.]], dtype=float32), 'weight.asnumpy()': array([[ 1.,  1.],
-            [ 1.,  1.],
-            [ 1.,  1.],
-            [ 1.,  1.]], dtype=float32)}
+```
+{'grad.asnumpy()': array([[ 0.,  0.],
+        [ 1.,  2.],
+        [ 4.,  5.],
+        [ 0.,  0.]], dtype=float32), 'momentum.asnumpy()': array([[ 0.,  0.],
+        [ 0.,  0.],
+        [ 0.,  0.],
+        [ 0.,  0.]], dtype=float32), 'weight.asnumpy()': array([[ 1.,  1.],
+        [ 1.,  1.],
+        [ 1.,  1.],
+        [ 1.,  1.]], dtype=float32)}
+```
 
 
 
@@ -539,16 +542,16 @@ sgd.update(0, weight, grad, momentum)
 
 
 
-
-    {'momentum.asnumpy()': array([[ 0.  ,  0.  ],
-            [-0.01, -0.02],
-            [-0.04, -0.05],
-            [ 0.  ,  0.  ]], dtype=float32),
-     'weight.asnumpy()': array([[ 1.        ,  1.        ],
-            [ 0.99000001,  0.98000002],
-            [ 0.95999998,  0.94999999],
-            [ 1.        ,  1.        ]], dtype=float32)}
-
+```
+{'momentum.asnumpy()': array([[ 0.  ,  0.  ],
+        [-0.01, -0.02],
+        [-0.04, -0.05],
+        [ 0.  ,  0.  ]], dtype=float32),
+ 'weight.asnumpy()': array([[ 1.        ,  1.        ],
+        [ 0.99000001,  0.98000002],
+        [ 0.95999998,  0.94999999],
+        [ 1.        ,  1.        ]], dtype=float32)}
+```
 
 
 Note that only [mxnet.optimizer.SGD](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.SGD), [mxnet.optimizer.Adam](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.Adam), and

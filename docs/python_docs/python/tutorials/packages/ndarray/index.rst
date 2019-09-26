@@ -51,3 +51,4 @@ NDArray
    :glob:
 
    *
+   sparse/index

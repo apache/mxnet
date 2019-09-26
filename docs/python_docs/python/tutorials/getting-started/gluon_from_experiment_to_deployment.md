@@ -16,7 +16,7 @@
 <!--- under the License. -->
 
 
-# Gluon: from experiment to deployment, an end to end tutorial
+# Gluon: from experiment to deployment
 
 ## Overview
 MXNet Gluon API comes with a lot of great features, and it can provide you everything you need: from experimentation to deploying the model. In this tutorial, we will walk you through a common use case on how to build a model using gluon, train it on your data, and deploy it for inference.

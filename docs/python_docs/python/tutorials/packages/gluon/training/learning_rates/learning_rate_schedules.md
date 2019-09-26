@@ -196,8 +196,10 @@ steps_iterations = [s*iterations_per_epoch for s in steps_epochs]
 print("Learning rate drops after iterations: {}".format(steps_iterations))
 ```
 
-    Learning rate drops after iterations: [3752, 6566, 8442]
 
+```
+Learning rate drops after iterations: [3752, 6566, 8442]
+```
 
 
 ```python

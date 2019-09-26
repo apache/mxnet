@@ -21,7 +21,7 @@ Text Tutorials
 These tutorials will help you learn how to create and use models that work with text and other natural language processing tasks.
 
 Word Embedding
----------------------
+--------------
 
 .. container:: cards
 
@@ -38,7 +38,7 @@ Word Embedding
       Learn how to train fastText and word2vec embeddings on your own dataset, and determine embedding quality through intrinsic evaluation.
 
 Language Model
-==============
+--------------
 
 
 .. container:: cards
@@ -50,7 +50,7 @@ Language Model
       Learn what a language model is, what it can do, and how to train a word-level language model with truncated back-propagation-through-time (BPTT).
 
 Machine Translation
----------------------
+-------------------
 
 .. container:: cards
 
@@ -90,7 +90,7 @@ Sentence Embedding
       See how to use GluonNLP to fine-tune a sentence pair classification model with pre-trained BERT parameters.
 
 Sentiment Analysis
----------------------
+------------------
 
 .. container:: cards
 
@@ -101,7 +101,7 @@ Sentiment Analysis
       See how to fine-tune a pre-trained language model to perform sentiment analysis on movie reviews.
 
 Sequence Sampling
----------------------
+-----------------
 
 .. container:: cards
 
@@ -114,3 +114,6 @@ Sequence Sampling
 .. toctree::
    :hidden:
    :maxdepth: 1
+   :glob:
+
+   *

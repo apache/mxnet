@@ -68,7 +68,7 @@ What's New
 * [Version 0.8.0 Release](https://github.com/dmlc/mxnet/releases/tag/v0.8.0)
 * [Updated Image Classification with new Pre-trained Models](./example/image-classification)
 * [Notebooks How to Use MXNet](https://github.com/d2l-ai/d2l-en)
-* [MKLDNN for Faster CPU Performance](./docs/tutorials/mkldnn/MKLDNN_README.md)
+* [MKLDNN for Faster CPU Performance](docs/python_docs/python/tutorials/performance/backend/mkldnn/mkldnn_readme.md)
 * [MXNet Memory Monger, Training Deeper Nets with Sublinear Memory Cost](https://github.com/dmlc/mxnet-memonger)
 * [Tutorial for NVidia GTC 2016](https://github.com/dmlc/mxnet-gtc-tutorial)
 * [MXNet.js: Javascript Package for Deep Learning in Browser (without server)](https://github.com/dmlc/mxnet.js/)

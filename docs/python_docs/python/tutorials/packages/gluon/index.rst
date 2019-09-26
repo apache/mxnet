@@ -241,4 +241,4 @@ Applications Topics
    :maxdepth: 3
    :glob:
 
-   *
+   */index*

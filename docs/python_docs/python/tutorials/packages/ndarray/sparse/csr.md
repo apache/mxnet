@@ -38,7 +38,7 @@ The introduction of `CSRNDArray` also brings a new attribute, `stype` as a holde
 
 To complete this tutorial, you will need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.io/install/index.html)
+- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.io/get_started)
 - [Jupyter](http://jupyter.org/)
     ```
     pip install jupyter
@@ -68,15 +68,21 @@ We can compress this matrix using CSR, and to do so we need to calculate `data`,
 
 The `data` array holds all the non-zero entries of the matrix in row-major order. Put another way, you create a data array that has all of the zeros removed from the matrix, row by row, storing the numbers in that order. Your result:
 
-    data = [7, 8, 9]
+```
+data = [7, 8, 9]
+```
 
 The `indices` array stores the column index for each non-zero element in `data`. As you cycle through the data array, starting with 7, you can see it is in column 0. Then looking at 8, you can see it is in column 2. Lastly 9 is in column 1. Your result:
 
-    indices = [0, 2, 1]
+```
+indices = [0, 2, 1]
+```
 
 The `indptr` array is what will help identify the rows where the data appears. It stores the offset into `data` of the first non-zero element number of each row of the matrix. This array always starts with 0 (reasons can be explored later), so indptr[0] is 0. Each subsequent value in the array is the aggregate number of non-zero elements up to that row. Looking at the first row of the matrix you can see two non-zero values, so indptr[1] is 2. The next row contains all zeros, so the aggregate is still 2, so indptr[2] is 2. Finally, you see the last row contains one non-zero element bring the aggregate to 3, so indptr[3] is 3. To reconstruct the dense matrix, you will use `data[0:2]` and `indices[0:2]` for the first row, `data[2:2]` and `indices[2:2]` for the second row (which contains all zeros), and `data[2:3]` and `indices[2:3]` for the third row. Your result:
 
-    indptr = [0, 2, 2, 3]
+```text
+indptr = [0, 2, 2, 3]
+```
 
 Note that in MXNet, the column indices for a given row are always sorted in ascending order,
 and duplicated column indices for the same row are not allowed.
@@ -102,11 +108,11 @@ a.asnumpy()
 
 
 
-
-    array([[ 7.,  0.,  8.,  0.],
-           [ 0.,  0.,  0.,  0.],
-           [ 0.,  9.,  0.,  0.]], dtype=float32)
-
+```
+array([[ 7.,  0.,  8.,  0.],
+       [ 0.,  0.,  0.,  0.],
+       [ 0.,  9.,  0.,  0.]], dtype=float32)
+```
 
 
 
@@ -122,11 +128,11 @@ b.asnumpy()
 
 
 
-
-    array([[7, 0, 8, 0],
-           [0, 0, 0, 0],
-           [0, 9, 0, 0]])
-
+```
+array([[7, 0, 8, 0],
+       [0, 0, 0, 0],
+       [0, 9, 0, 0]])
+```
 
 
 
@@ -137,13 +143,13 @@ b.asnumpy()
 
 
 
-
-    {'a': array([[ 7.,  0.,  8.,  0.],
-            [ 0.,  0.,  0.,  0.],
-            [ 0.,  9.,  0.,  0.]], dtype=float32), 'b': array([[7, 0, 8, 0],
-            [0, 0, 0, 0],
-            [0, 9, 0, 0]])}
-
+```
+{'a': array([[ 7.,  0.,  8.,  0.],
+        [ 0.,  0.,  0.,  0.],
+        [ 0.,  9.,  0.,  0.]], dtype=float32), 'b': array([[7, 0, 8, 0],
+        [0, 0, 0, 0],
+        [0, 9, 0, 0]])}
+```
 
 
 You can create an MXNet CSRNDArray from a `scipy.sparse.csr.csr_matrix` object by using the `array` function:
@@ -161,9 +167,11 @@ except ImportError:
     print("scipy package is required")
 ```
 
-    d:[[7 0 8 0]
-     [0 0 0 0]
-     [0 9 0 0]]
+```
+d:[[7 0 8 0]
+ [0 0 0 0]
+ [0 9 0 0]]
+```
 
 
 What if you have a big set of data and you haven't calculated indices or indptr yet? Let's try a simple CSRNDArray from an existing array of data and derive those values with some built-in functions. We can mockup a "big" dataset with a random amount of the data being non-zero, then compress it by using the `tostype` function, which is explained further in the [Storage Type Conversion](#storage-type-conversion) section:
@@ -182,16 +190,16 @@ data = big_array_csr.data
 # The total size of `data`, `indices` and `indptr` arrays is much lesser than the dense big_array!
 ```
 
-    
-    [[ 1.  1.  0. ...,  0.  1.  1.]
-     [ 0.  0.  0. ...,  0.  0.  1.]
-     [ 1.  0.  0. ...,  1.  0.  0.]
-     ..., 
-     [ 0.  1.  1. ...,  0.  0.  0.]
-     [ 1.  1.  0. ...,  1.  0.  1.]
-     [ 1.  0.  1. ...,  1.  0.  0.]]
-    <NDArray 1000x100 @cpu(0)>
-
+```
+[[ 1.  1.  0. ...,  0.  1.  1.]
+ [ 0.  0.  0. ...,  0.  0.  1.]
+ [ 1.  0.  0. ...,  1.  0.  0.]
+ ..., 
+ [ 0.  1.  1. ...,  0.  0.  0.]
+ [ 1.  1.  0. ...,  1.  0.  1.]
+ [ 1.  0.  1. ...,  1.  0.  0.]]
+<NDArray 1000x100 @cpu(0)>
+```
 
 You can also create a CSRNDArray from another using the `array` function specifying the element data type with the option `dtype`,
 which accepts a numpy type. By default, `float32` is used.
@@ -207,8 +215,9 @@ f = mx.nd.array(a, dtype=np.float16)
 
 
 
-
-    (numpy.float32, numpy.float16)
+```
+(numpy.float32, numpy.float16)
+```
 
 
 
@@ -230,11 +239,11 @@ a.asnumpy()
 
 
 
-
-    array([[ 7.,  0.,  8.,  0.],
-           [ 0.,  0.,  0.,  0.],
-           [ 0.,  9.,  0.,  0.]], dtype=float32)
-
+```
+array([[ 7.,  0.,  8.,  0.],
+       [ 0.,  0.,  0.,  0.],
+       [ 0.,  9.,  0.,  0.]], dtype=float32)
+```
 
 
 You can also inspect the internal storage of a CSRNDArray by accessing attributes such as `indptr`, `indices` and `data`:
@@ -252,15 +261,15 @@ indptr = a.indptr
 
 
 
-
-    {'a.stype': 'csr', 'data': 
-     [ 7.  8.  9.]
-     <NDArray 3 @cpu(0)>, 'indices': 
-     [0 2 1]
-     <NDArray 3 @cpu(0)>, 'indptr': 
-     [0 2 2 3]
-     <NDArray 4 @cpu(0)>}
-
+```
+{'a.stype': 'csr', 'data': 
+ [ 7.  8.  9.]
+ <NDArray 3 @cpu(0)>, 'indices': 
+ [0 2 1]
+ <NDArray 3 @cpu(0)>, 'indptr': 
+ [0 2 2 3]
+ <NDArray 4 @cpu(0)>}
+```
 
 
 ## Storage Type Conversion
@@ -284,13 +293,13 @@ dense = csr.tostype('default')
 
 
 
-
-    {'csr': 
-     <CSRNDArray 2x2 @cpu(0)>, 'dense': 
-     [[ 1.  1.]
-      [ 1.  1.]]
-     <NDArray 2x2 @cpu(0)>}
-
+```
+{'csr': 
+ <CSRNDArray 2x2 @cpu(0)>, 'dense': 
+ [[ 1.  1.]
+  [ 1.  1.]]
+ <NDArray 2x2 @cpu(0)>}
+```
 
 
 To convert the storage type by using the `cast_storage` operator:
@@ -308,13 +317,13 @@ dense = mx.nd.sparse.cast_storage(csr, 'default')
 
 
 
-
-    {'csr': 
-     <CSRNDArray 2x2 @cpu(0)>, 'dense': 
-     [[ 1.  1.]
-      [ 1.  1.]]
-     <NDArray 2x2 @cpu(0)>}
-
+```
+{'csr': 
+ <CSRNDArray 2x2 @cpu(0)>, 'dense': 
+ [[ 1.  1.]
+  [ 1.  1.]]
+ <NDArray 2x2 @cpu(0)>}
+```
 
 
 ## Copies
@@ -335,12 +344,12 @@ a.copyto(d)
 
 
 
-
-    {'b is a': False, 'b.asnumpy()': array([[ 1.,  1.],
-            [ 1.,  1.]], dtype=float32), 'c.asnumpy()': array([[ 1.,  1.],
-            [ 1.,  1.]], dtype=float32), 'd.asnumpy()': array([[ 1.,  1.],
-            [ 1.,  1.]], dtype=float32)}
-
+```
+{'b is a': False, 'b.asnumpy()': array([[ 1.,  1.],
+        [ 1.,  1.]], dtype=float32), 'c.asnumpy()': array([[ 1.,  1.],
+        [ 1.,  1.]], dtype=float32), 'd.asnumpy()': array([[ 1.,  1.],
+        [ 1.,  1.]], dtype=float32)}
+```
 
 
 If the storage types of source array and destination array do not match,
@@ -359,9 +368,9 @@ g.copyto(f)
 
 
 
-
-    {'e.stype': 'csr', 'f.stype': 'csr', 'g.stype': 'default'}
-
+```
+{'e.stype': 'csr', 'f.stype': 'csr', 'g.stype': 'default'}
+```
 
 
 ## Indexing and Slicing
@@ -377,14 +386,14 @@ c = a[:].asnumpy()
 
 
 
-
-    {'a': 
-     <CSRNDArray 3x2 @cpu(0)>,
-     'b': array([[ 2.,  3.]], dtype=float32),
-     'c': array([[ 0.,  1.],
-            [ 2.,  3.],
-            [ 4.,  5.]], dtype=float32)}
-
+```
+{'a': 
+ <CSRNDArray 3x2 @cpu(0)>,
+ 'b': array([[ 2.,  3.]], dtype=float32),
+ 'c': array([[ 0.,  1.],
+        [ 2.,  3.],
+        [ 4.,  5.]], dtype=float32)}
+```
 
 
 Note that multi-dimensional indexing or slicing along a particular axis is currently not supported for a CSRNDArray.
@@ -407,13 +416,13 @@ out = mx.nd.sparse.dot(a, rhs)  # invoke sparse dot operator specialized for dot
 
 
 
-
-    {'out': 
-     [[ 15.]
-      [  0.]
-      [  9.]]
-     <NDArray 3x1 @cpu(0)>}
-
+```
+{'out': 
+ [[ 15.]
+  [  0.]
+  [  9.]]
+ <NDArray 3x1 @cpu(0)>}
+```
 
 
 For any sparse operator, the storage type of output array is inferred based on inputs. You can either read the documentation or inspect the `stype` attribute of the output array to know what storage type is inferred:
@@ -427,9 +436,9 @@ c = a + mx.nd.ones(shape=(3, 4))  # c will be a dense NDArray
 
 
 
-
-    {'b.stype': 'csr', 'c.stype': 'default'}
-
+```
+{'b.stype': 'csr', 'c.stype': 'default'}
+```
 
 
 For operators that don't specialize in sparse arrays, we can still use them with sparse inputs with some performance penalty. In MXNet, dense operators require all inputs and outputs to be in the dense format.
@@ -448,9 +457,9 @@ e = mx.nd.log(a, out=e) # dense operator with a sparse output
 
 
 
-
-    {'a.stype': 'csr', 'd.stype': 'default', 'e.stype': 'csr'}
-
+```
+{'a.stype': 'csr', 'd.stype': 'default', 'e.stype': 'csr'}
+```
 
 
 Note that warning messages will be printed when such a storage fallback event happens. If you are using jupyter notebook, the warning message will be printed in your terminal console.
@@ -472,12 +481,12 @@ dataiter = mx.io.NDArrayIter(data, labels, batch_size, last_batch_handle='discar
 
 
 
-
-    [
-     <CSRNDArray 3x4 @cpu(0)>, 
-     <CSRNDArray 3x4 @cpu(0)>, 
-     <CSRNDArray 3x4 @cpu(0)>]
-
+```
+[
+ <CSRNDArray 3x4 @cpu(0)>, 
+ <CSRNDArray 3x4 @cpu(0)>, 
+ <CSRNDArray 3x4 @cpu(0)>]
+```
 
 
 You can also load data stored in the [libsvm file format](https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/) using `mx.io.LibSVMIter`, where the format is: ``<label> <col_idx1>:<value1> <col_idx2>:<value2> ... <col_idxN>:<valueN>``. Each line in the file records the label and the column indices and data for non-zero entries. For example, for a matrix with 6 columns, ``1 2:1.5 4:-3.5`` means the label is ``1``, the data is ``[[0, 0, 1,5, 0, -3.5, 0]]``. More detailed examples of `mx.io.LibSVMIter` are available in the [API documentation](https://mxnet.incubator.apache.org/versions/master/api/python/io/io.html#mxnet.io.LibSVMIter).
@@ -506,21 +515,22 @@ for batch in data_train:
     print(data_train.getlabel())
 ```
 
-    
-    <CSRNDArray 3x10 @cpu(0)>
-    
-    [ 1.  1.  1.]
-    <NDArray 3 @cpu(0)>
-    
-    <CSRNDArray 3x10 @cpu(0)>
-    
-    [ 1. -1. -2.]
-    <NDArray 3 @cpu(0)>
-    
-    <CSRNDArray 3x10 @cpu(0)>
-    
-    [-3. -3.  4.]
-    <NDArray 3 @cpu(0)>
+```
+<CSRNDArray 3x10 @cpu(0)>
+
+[ 1.  1.  1.]
+<NDArray 3 @cpu(0)>
+
+<CSRNDArray 3x10 @cpu(0)>
+
+[ 1. -1. -2.]
+<NDArray 3 @cpu(0)>
+
+<CSRNDArray 3x10 @cpu(0)>
+
+[-3. -3.  4.]
+<NDArray 3 @cpu(0)>
+```
 
 
 Note that in the file the column indices are expected to be sorted in ascending order per row, and be zero-based instead of one-based.

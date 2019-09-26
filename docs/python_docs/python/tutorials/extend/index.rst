@@ -54,4 +54,4 @@ The following tutorials will help you learn how to customize MXNet.
 
    *
    New Operator Creation <https://mxnet.incubator.apache.org/api/faq/new_op>
-   Adding Operator in MXNet Backend <https://mxnet.incubator.apache.org/api/faq/add_op_in_backend>
+   New Operator in MXNet Backend <https://mxnet.incubator.apache.org/api/faq/add_op_in_backend>
