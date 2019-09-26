@@ -220,6 +220,21 @@ static inline mkldnn::memory::data_type get_mkldnn_type(int dtype) {
   }
 }
 
+template<typename T>
+static inline mkldnn::memory::data_type get_mkldnn_type() {
+  return static_cast<mkldnn::memory::data_type>(data_type_enum<T>::type);
+}
+
+static inline mkldnn_data_type_t get_mkldnn_type_t(int dtype) {
+  return static_cast<mkldnn_data_type_t>(get_mkldnn_type(dtype));
+}
+
+template<typename T>
+static inline mkldnn_data_type_t get_mkldnn_type_t() {
+  return static_cast<mkldnn_data_type_t>(data_type_enum<T>::type);
+}
+
+
 static inline int get_mxnet_type(mkldnn_data_type_t dtype) {
   auto mkldnn_dtype = static_cast<mkldnn::memory::data_type>(dtype);
   switch (mkldnn_dtype) {

@@ -724,16 +724,14 @@ mkldnn::memory *NDArray::CreateMKLDNNData(const mkldnn::memory::desc &desc) {
   return ptr_->mkl_mem_->GetRaw();
 }
 
-void NDArray::UpdateMKLDNNMemDesc(mkldnn::memory::format_tag format) {
-  const mkldnn::memory *mem = GetMKLDNNData();
-  auto mem_desc = mem->get_desc();
+void NDArray::UpdateMKLDNNMemDesc(const mkldnn::memory::desc &desc) {
+  auto new_desc = desc;
   auto this_dtype = get_mkldnn_type(dtype());
-  mkldnn::memory::desc data_md(
-      mkldnn::memory::dims(mem_desc.data.dims, mem_desc.data.dims + mem_desc.data.ndims),
-      this_dtype, format);
-  ptr_->mkl_mem_.reset(new MKLDNNMemory(data_md, ptr_->shandle.dptr));
+  new_desc.data.data_type = static_cast<mkldnn_data_type_t>(this_dtype);
+  ptr_->mkl_mem_.reset(new MKLDNNMemory(new_desc, ptr_->shandle.dptr));
   MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_->GetMem());
 }
+
 #endif
 
 void NDArray::SetTBlob() const {
