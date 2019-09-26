@@ -1690,9 +1690,9 @@ def upload_s3(){
         ws('workspace/docs') {
           sh 'pwd'
           // sh 'echo ${env.MXNET_CI_UNITTEST_ARTIFACT_BUCKET}'
-            sh 'touch a.txt'    
+            sh 'touch a.txt'
             // archiveArtifacts 'docs/_build/full_website.tgz'
-            s3Upload(file:'a.txt', bucket:'mxnet-ci-unittest-artifact')
+            s3Upload(file:'a.txt', bucket:env.MXNET_CI_UNITTEST_ARTIFACT_BUCKET)
             sh 'echo done'
         }
       }
