@@ -7625,7 +7625,7 @@ def test_argmax():
 
         max = mx.nd.argmax(tensor, axis=axis)
         topk_data = mx.nd.topk(tensor, axis=axis, is_ascend=0, k=1)
-        assert_almost_equal(max.reshape(-1), topk_data.reshape(-1))
+        assert_almost_equal(max.reshape(-1).asnumpy(), topk_data.reshape(-1).asnumpy())
 
     ctx = default_context()
     for multi_output in [False, True]:
