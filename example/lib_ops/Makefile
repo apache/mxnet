@@ -15,13 +15,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-all: warpctc_lib subgraph_lib gemm_lib
+all: subgraph_lib gemm_lib
 
 gemm_lib:
 	g++ -shared -fPIC -std=gnu++0x gemm_lib.cc -o gemm_lib.so -I ../../include/mxnet
-
-warpctc_lib:
-	g++ -shared -fPIC -std=gnu++0x warpctc_lib.cc -o warpctc_lib.so -I ../../include/mxnet
 
 subgraph_lib:
 	g++ -shared -fPIC -std=gnu++0x subgraph_lib.cc -o subgraph_lib.so -I ../../include/mxnet
@@ -33,4 +30,4 @@ win_test:
 	cl libtest.cc
 
 clean:
-	rm -rf *.so libtest
+	rm -rf *.so

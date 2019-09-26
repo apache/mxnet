@@ -664,6 +664,7 @@ cpplint:
 pylint:
 	python3 -m pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py
 
+# sample lib for dynamically loading custom operator
 sample_lib:
 	$(CXX) -shared -fPIC -std=c++11 example/lib_ops/gemm_lib.cc -o libsample_lib.so -I include/mxnet
 
@@ -716,10 +717,6 @@ rpkgtest:
 	Rscript -e 'require(testthat);res<-test_dir("R-package/tests/testthat");if(!testthat:::all_passed(res)){stop("Test failures", call. = FALSE)}'
 	Rscript -e 'res<-covr:::package_coverage("R-package");fileConn<-file(paste("r-package_coverage_",toString(runif(1)),".json"));writeLines(covr:::to_codecov(res), fileConn);close(fileConn)'
 
-
-sample_lib:
-	$(CXX) -shared -fPIC example/lib_api/mylib.cc -o libsample_lib.so -I include/mxnet
-
 scalaclean:
 	(cd $(ROOTDIR)/scala-package && mvn clean)
 
@@ -764,7 +761,7 @@ ratcheck: build/rat/apache-rat/target/apache-rat-0.13.jar
 
 ifneq ($(EXTRA_OPERATORS),)
 clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
-	$(RM) -r build lib bin deps *~ */*~ */*/*~ */*/*/*~ 
+	$(RM) -r build lib bin deps libsample_lib.so *~ */*~ */*/*~ */*/*/*~
 	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
@@ -775,7 +772,7 @@ clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
 clean: rclean mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
-	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ 
+	$(RM) -r build lib bin libsample_lib.so *~ */*~ */*/*~ */*/*/*~
 	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -

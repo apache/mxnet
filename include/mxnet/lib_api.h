@@ -29,6 +29,7 @@
 #define MXNET_LIB_API_H_
 
 #include <stdint.h>
+#include <stdlib.h>
 #include <vector>
 #include <map>
 #include <string>
@@ -58,10 +59,10 @@ enum MXReturnValue {
  * \brief External Tensor data structure
  */
 struct MXTensor {
-  MXTensor() : data(nullptr) {}
+  MXTensor() : data(NULL) {}
 
   MXTensor(void *data, const std::vector<int64_t> &shape, MXDType dtype)
-  : data{data}, shape{shape}, dtype{dtype} {}
+  : data(data), shape(shape), dtype(dtype) {}
 
   /*!
    * \brief helper function to cast data pointer
@@ -71,9 +72,19 @@ struct MXTensor {
     return reinterpret_cast<data_type*>(data);
   }
 
-  void *data;  // not owned
+  // data is flatten 1D repr of tensor, elements are in continuous memory
+  // user can access each element using the shape of tensor
+  // it may also point to data allocated on gpu
+  void *data;
+
+  // shape is in [2,3,4] format to represent high-dim tensor
   std::vector<int64_t> shape;
+
+  // type can only be MXDType enum types
   MXDType dtype;
+
+  // gpu flag to specify the data tensor storage location
+  bool is_gpu;
 };
 
 /*!
@@ -147,8 +158,8 @@ typedef MXReturnValue (*parseAttrs_t)(std::map<std::string, std::string>,
 typedef MXReturnValue (*inferType_t)(std::map<std::string, std::string>,
                                      std::vector<int>&, std::vector<int>&);
 typedef MXReturnValue (*inferShape_t)(std::map<std::string, std::string>,
-                                      std::vector<std::vector<unsigned int>>&,
-                                      std::vector<std::vector<unsigned int>>&);
+                                      std::vector<std::vector<unsigned int> >&,
+                                      std::vector<std::vector<unsigned int> >&);
 typedef MXReturnValue (*mutateInputs_t)(std::map<std::string, std::string>,
                                       std::vector<int>&);
 typedef MXReturnValue (*createOpState_t)(std::map<std::string, std::string>,
@@ -159,9 +170,9 @@ typedef MXReturnValue (*createOpState_t)(std::map<std::string, std::string>,
  */
 class CustomOp {
  public:
-  explicit CustomOp(const char* op_name) : name(op_name), forward(nullptr),
-    backward(nullptr), parse_attrs(nullptr), infer_type(nullptr), infer_shape(nullptr),
-    mutate_inputs(nullptr), create_opstate(nullptr) {}
+  explicit CustomOp(const char* op_name) : name(op_name), forward(NULL),
+    backward(NULL), parse_attrs(NULL), infer_type(NULL), infer_shape(NULL),
+    mutate_inputs(NULL), create_opstate(NULL) {}
   ~CustomOp() {}
   CustomOp& setForward(fcomp_t fcomp) {
     forward = fcomp;
