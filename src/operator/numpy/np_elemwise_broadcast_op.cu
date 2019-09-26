@@ -24,6 +24,8 @@
  */
 #include "../tensor/elemwise_binary_broadcast_op.h"
 #include "../tensor/elemwise_binary_scalar_op.h"
+#include "./np_elemwise_binary_broadcast_op.h"
+#include "./np_elemwise_binary_scalar_op.h"
 
 namespace mxnet {
 namespace op {
@@ -61,6 +63,12 @@ NNVM_REGISTER_OP(_npi_hypot)
 NNVM_REGISTER_OP(_backward_npi_hypot)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseIn<gpu, mshadow_op::hypot_grad_left,
                                                                   mshadow_op::hypot_grad_right>);
+
+NNVM_REGISTER_OP(_npi_left_shift)
+.set_attr<FCompute>("FCompute<gpu>", BitBinaryBroadcastCompute<gpu, mshadow_op::left_shift>);
+
+NNVM_REGISTER_OP(_npi_right_shift)
+.set_attr<FCompute>("FCompute<gpu>", BitBinaryBroadcastCompute<gpu, mshadow_op::right_shift>);
 
 NNVM_REGISTER_OP(_npi_add_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, op::mshadow_op::plus>);
@@ -111,6 +119,18 @@ NNVM_REGISTER_OP(_npi_rarctan2_scalar)
 
 NNVM_REGISTER_OP(_backward_npi_rarctan2_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::rarctan2_grad>);
+
+NNVM_REGISTER_OP(_npi_left_shift_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BitScalarCompute<gpu, mshadow_op::left_shift>);
+
+NNVM_REGISTER_OP(_npi_rleft_shift_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BitScalarCompute<gpu, mshadow_op::rleft_shift>);
+
+NNVM_REGISTER_OP(_npi_right_shift_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BitScalarCompute<gpu, mshadow_op::right_shift>);
+
+NNVM_REGISTER_OP(_npi_rright_shift_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BitScalarCompute<gpu, mshadow_op::rright_shift>);
 
 }  // namespace op
 }  // namespace mxnet

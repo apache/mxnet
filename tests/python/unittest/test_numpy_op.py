@@ -2600,6 +2600,54 @@ def test_np_unique():
                     assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
 
 
+@with_seed()
+@use_np
+def test_np_shifts():
+    class TestShift(HybridBlock):
+            def __init__(self, func):
+                super(TestShift, self).__init__()
+                self._func = func
+
+            def hybrid_forward(self, F, a, b):
+                return getattr(F.np, self._func)(a, b)
+
+    shapes = [
+        ((), ()),
+        ((), (2,)),
+        ((3,), ()),
+        ((3, 4), (3, 4)),
+        ((3, 4, 5, 6), (6,)),
+        ((2, 0, 3), (3,)),
+        ((2, 1, 3), (2, 3))
+    ]
+    dtypes = ['uint8', 'int8', 'int32', 'int64']
+    funcs = ['left_shift', 'right_shift']
+    for shape in shapes:
+        a, b = shape[0], shape[1]
+        for dtype in dtypes:
+            for func in funcs:
+                for hybridize in [True, False]:
+                    np_func = getattr(_np, func)
+                    mx_func = TestShift(func)
+                    x1 = mx.nd.random.uniform(-10.0, 10.0, a).astype(dtype).as_np_ndarray()
+                    x2 = mx.nd.random.uniform(0, 10.0, b).astype(dtype).as_np_ndarray()
+                    if hybridize:
+                        mx_func.hybridize()
+                    mx_out = mx_func(x1, x2)
+                    np_out = np_func(x1.asnumpy(), x2.asnumpy())
+                    assert same(mx_out.asnumpy(), np_out)
+                    assert mx_out.shape == np_out.shape
+                    assert mx_out.dtype == np_out.dtype
+
+                    # test imperative
+                    mx_func = getattr(np, func)
+                    mx_out = mx_func(x1, x2)
+                    np_out = np_func(x1.asnumpy(), x2.asnumpy())
+                    assert same(mx_out.asnumpy(), np_out)
+                    assert mx_out.shape == np_out.shape
+                    assert mx_out.dtype == np_out.dtype
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
