@@ -44,9 +44,9 @@ print('Time for converting to numpy: %f sec' % (time() - start))
 
 From the timings above, it seems as if converting to numpy takes lot more time than multiplying two large matrices. That doesn't seem right.
 
-This is because, in MXNet, all operations are executed asynchronously. So, when `nd.dot(x, x)` returns, the matrix multiplication is not complete, it has only been queued for execution. However, [`asnumpy`](http://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html?highlight=asnumpy#mxnet.ndarray.NDArray.asnumpy) has to wait for the result to be calculated in order to convert it to numpy array on CPU, hence taking a longer time. Other examples of 'blocking' operations include [`asscalar`](http://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html?highlight=asscalar#mxnet.ndarray.NDArray.asscalar) and [`wait_to_read`](http://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html?highlight=wait_to_read#mxnet.ndarray.NDArray.wait_to_read).
+This is because, in MXNet, all operations are executed asynchronously. So, when `nd.dot(x, x)` returns, the matrix multiplication is not complete, it has only been queued for execution. However, [`asnumpy`](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html?highlight=asnumpy#mxnet.ndarray.NDArray.asnumpy) has to wait for the result to be calculated in order to convert it to numpy array on CPU, hence taking a longer time. Other examples of 'blocking' operations include [`asscalar`](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html?highlight=asscalar#mxnet.ndarray.NDArray.asscalar) and [`wait_to_read`](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html?highlight=wait_to_read#mxnet.ndarray.NDArray.wait_to_read).
 
-While it is possible to use [`NDArray.waitall()`](http://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html?highlight=waitall#mxnet.ndarray.waitall) before and after operations to get running time of operations, it is not a scalable method to measure running time of multiple sets of operations, especially in a [`Sequential`](http://mxnet.incubator.apache.org/api/python/gluon/gluon.html?highlight=sequential#mxnet.gluon.nn.Sequential) or hybridized network.
+While it is possible to use [`NDArray.waitall()`](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html?highlight=waitall#mxnet.ndarray.waitall) before and after operations to get running time of operations, it is not a scalable method to measure running time of multiple sets of operations, especially in a [`Sequential`](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html?highlight=sequential#mxnet.gluon.nn.Sequential) or hybridized network.
 
 ## The correct way to profile
 
@@ -330,7 +330,7 @@ Nsight Compute is available in CUDA 10 toolkit, but can be used to profile code 
 ### Further reading
 
 - [Examples using MXNet profiler.](https://github.com/apache/incubator-mxnet/tree/master/example/profiler)
-- [Some tips for improving MXNet performance.](https://mxnet.incubator.apache.org/faq/perf.html)
+- [Some tips for improving MXNet performance.](https://mxnet.incubator.apache.org/api/faq/perf)
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
 

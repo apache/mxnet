@@ -45,7 +45,7 @@ If you want to train on your own classification problem from scratch, you can ge
 We can specify the *context* where we want to run the model: the default behavior is to use a CPU context. There are two reasons for this:
 * First, this will allow you to test the notebook even if your machine is not equipped with a GPU :)
 * Second, we're going to predict a single image and we don't have any specific performance requirements. For production applications where you'd want to predict large batches of images with the best possible throughput, a GPU could definitely be the way to go.
-* If you want to use a GPU, make sure you have pip installed the right version of mxnet, or you will get an error when using the `mx.gpu()` context. Refer to the [install instructions](http://mxnet.incubator.apache.org/install/index.html)
+* If you want to use a GPU, make sure you have pip installed the right version of mxnet, or you will get an error when using the `mx.gpu()` context. Refer to the [install instructions](https://mxnet.incubator.apache.org/install/index.html)
 
 
 ```python

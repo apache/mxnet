@@ -245,7 +245,7 @@ Alternatively you can create a whl package installable with pip with the followi
 You are now ready to run MXNet on your Raspberry Pi device. You can get started by following
 the tutorial on
 [Real-time Object Detection with MXNet On The Raspberry
-Pi](http://mxnet.io/tutorials/embedded/wine_detector.html).
+Pi](https://mxnet.io/tutorials/embedded/wine_detector.html).
 
 *Note - Because the complete MXNet library takes up a significant amount of the Raspberry
 Pi's limited RAM,

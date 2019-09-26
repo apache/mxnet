@@ -318,5 +318,5 @@ cases you should now be aware of include custom initialization and tied paramete
 
 # Recommended Next Steps
 
-* Check out the [API Docs](http://mxnet.incubator.apache.org/versions/master/api/python/optimization/optimization.html) on initialization for a list of available initialization methods.
+* Check out the [API Docs](https://mxnet.incubator.apache.org/versions/master/api/python/optimization/optimization.html) on initialization for a list of available initialization methods.
 * See [this tutorial](https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/naming.html) for more information on Gluon Parameters.

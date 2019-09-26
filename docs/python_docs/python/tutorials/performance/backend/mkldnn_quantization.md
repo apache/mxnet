@@ -155,7 +155,7 @@ cqsym, cqarg_params, aux_params, collector = quantize_graph(sym=sym, arg_params=
                                                           quantized_dtype=quantized_dtype, logger=logger)
 
 # download imagenet validation dataset
-mx.test_utils.download('http://data.mxnet.io/data/val_256_q90.rec', 'dataset.rec')
+mx.test_utils.download('https://data.mxnet.io/data/val_256_q90.rec', 'dataset.rec')
 # set rgb info for data
 mean_std = {'mean_r': 123.68, 'mean_g': 116.779, 'mean_b': 103.939, 'std_r': 58.393, 'std_g': 57.12, 'std_b': 57.375}
 # set batch size

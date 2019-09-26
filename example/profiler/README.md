@@ -18,7 +18,7 @@
 # MXNet Profiler Examples
 
 This folder contains examples of using MXNet profiler to generate profiling results in json files.
-Please refer to [this link](http://mxnet.incubator.apache.org/faq/perf.html?highlight=profiler#profiler)
+Please refer to [this link](https://mxnet.incubator.apache.org/api/faq/perf?highlight=profiler#profiler)
 for visualizing profiling results.
 
 - profiler_executor.py. To run this example,

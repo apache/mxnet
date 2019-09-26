@@ -225,7 +225,7 @@ sum(abs(test.y - pred6[1,])) / length(test.y)
 
 
 ## Next Steps
-* [Neural Networks with MXNet in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
-* [Classify Real-World Images with a PreTrained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
-* [Handwritten Digits Classification Competition](http://mxnet.io/tutorials/r/mnistCompetition.html)
-* [Character Language Model Using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)
+* [Neural Networks with MXNet in Five Minutes](https://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
+* [Classify Real-World Images with a PreTrained Model](https://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
+* [Handwritten Digits Classification Competition](https://mxnet.io/tutorials/r/mnistCompetition.html)
+* [Character Language Model Using RNN](https://mxnet.io/tutorials/r/charRnnModel.html)

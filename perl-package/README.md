@@ -27,7 +27,7 @@ computing and state-of-art deep learning to Perl.
 
 Installation
 ---------
-* [MXNet Setup Document](http://mxnet.incubator.apache.org/install/ubuntu_setup.html#install-the-mxnet-package-for-perl)
+* [MXNet Setup Document](https://mxnet.incubator.apache.org/get_started/ubuntu_setup#install-the-mxnet-package-for-perl)
   - Check this out for detailed documents, examples and installation guides.
 
 License

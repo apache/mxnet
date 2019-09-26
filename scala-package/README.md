@@ -133,7 +133,7 @@ Also, add the dependency which corresponds to your platform to the ```dependenci
 Build From Source
 -----------------
 
-The [Installation Guide](http://mxnet.incubator.apache.org/install/index.html) contains instructions to install mxnet or build it from source. The Scala/Java package is built from source using Maven. The maven build assumes you already have a ``lib/libmxnet.so`` file.
+The [Installation Guide](https://mxnet.incubator.apache.org/install/index.html) contains instructions to install mxnet or build it from source. The Scala/Java package is built from source using Maven. The maven build assumes you already have a ``lib/libmxnet.so`` file.
 If you have built MXNet from source and are looking to set up Scala\Java from that point, you may simply run the following from the MXNet source root, the build will detect your platform (OSX/Linux) and libmxnet.so flavor (CPU/GPU):
 
 ```bash
@@ -233,7 +233,7 @@ The [Scala Inference APIs](https://mxnet.incubator.apache.org/api/scala/infer.ht
 
 Java Inference APIs
 -------
-The [Java Inference APIs](http://mxnet.incubator.apache.org/api/java/index.html) also provide an easy, out of the box solution to load a pre-trained MXNet model and run inference on it. The Inference APIs are present in the [Infer Package](https://github.com/apache/incubator-mxnet/tree/master/scala-package/infer/src/main/scala/org/apache/mxnet/infer/javaapi) under the MXNet Scala Package repository, while the documentation for the Infer API is available [here](https://mxnet.incubator.apache.org/api/java/docs/index.html#org.apache.mxnet.infer.package).
+The [Java Inference APIs](https://mxnet.incubator.apache.org/api/java/index.html) also provide an easy, out of the box solution to load a pre-trained MXNet model and run inference on it. The Inference APIs are present in the [Infer Package](https://github.com/apache/incubator-mxnet/tree/master/scala-package/infer/src/main/scala/org/apache/mxnet/infer/javaapi) under the MXNet Scala Package repository, while the documentation for the Infer API is available [here](https://mxnet.incubator.apache.org/api/java/docs/index.html#org.apache.mxnet.infer.package).
 More APIs will be added to the Java Inference APIs soon.
 
 JVM Memory Management

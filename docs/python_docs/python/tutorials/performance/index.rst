@@ -26,7 +26,7 @@ Essential
 
    .. card::
       :title: Improving Performance
-      :link: https://mxnet.incubator.apache.org/versions/master/faq/perf.html
+      :link: https://mxnet.incubator.apache.org/api/faq/perf
 
       How to get the best performance from MXNet.
 

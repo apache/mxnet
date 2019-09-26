@@ -1756,7 +1756,7 @@ For more information and examples, see [full release notes](https://cwiki.apache
 
 ### New Features - Clojure package (experimental)
 - MXNet now supports the Clojure programming language. The MXNet Clojure package brings flexible and efficient GPU computing and state-of-art deep learning to Clojure. It enables you to write seamless tensor/matrix computation with multiple GPUs in Clojure. It also lets you construct and customize the state-of-art deep learning models in Clojure, and apply them to tasks, such as image classification and data science challenges.([#11205](https://github.com/apache/incubator-mxnet/pull/11205))
-- Checkout examples and API documentation [here](http://mxnet.incubator.apache.org/api/clojure/index.html).
+- Checkout examples and API documentation [here](https://mxnet.incubator.apache.org/api/clojure/index.html).
 
 ### New Features - Synchronized Cross-GPU Batch Norm (experimental)
 - Gluon now supports Synchronized Batch Normalization (#11502).
@@ -1786,8 +1786,8 @@ For more information and examples, see [full release notes](https://cwiki.apache
 - Set environment variable `MXNET_KVSTORE_USETREE=1` to enable.
 
 ### New Features - Export MXNet models to ONNX format (experimental)
-- With this feature, now MXNet models can be exported to ONNX format([#11213](https://github.com/apache/incubator-mxnet/pull/11213)). Currently, MXNet supports ONNX v1.2.1. [API documentation](http://mxnet.incubator.apache.org/api/python/contrib/onnx.html).
-- Checkout this [tutorial](http://mxnet.incubator.apache.org/tutorials/onnx/export_mxnet_to_onnx.html) which shows how to use MXNet to ONNX exporter APIs. ONNX protobuf so that those models can be imported in other frameworks for inference.
+- With this feature, now MXNet models can be exported to ONNX format([#11213](https://github.com/apache/incubator-mxnet/pull/11213)). Currently, MXNet supports ONNX v1.2.1. [API documentation](https://mxnet.incubator.apache.org/api/python/contrib/onnx.html).
+- Checkout this [tutorial](https://mxnet.incubator.apache.org/tutorials/onnx/export_mxnet_to_onnx.html) which shows how to use MXNet to ONNX exporter APIs. ONNX protobuf so that those models can be imported in other frameworks for inference.
 
 ### New Features - TensorRT Runtime Integration (experimental)
 - [TensorRT](https://developer.nvidia.com/tensorrt) provides significant acceleration of model inference on NVIDIA GPUs compared to running the full graph in MxNet using unfused GPU operators. In addition to faster fp32 inference, TensorRT optimizes fp16 inference, and is capable of int8 inference (provided the quantization steps are performed). Besides increasing throughput, TensorRT significantly reduces inference latency, especially for small batches.

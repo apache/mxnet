@@ -84,13 +84,13 @@ If your tutorial depends on specific packages, simply add them to this provision
 
 ### <a name="language-binding-examples"></a>Languages Binding Examples
 ------------------
-* [MXNet C++ API](http://mxnet.incubator.apache.org/api/c++/index.html)
+* [MXNet C++ API](https://mxnet.incubator.apache.org/api/c++/index.html)
    - [C++ examples](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification/predict-cpp) - Example code for using C++ interface, including NDArray, symbolic layer and models.
-* [MXNet Python API](http://mxnet.incubator.apache.org/api/python/index.html)
-* [MXNet Java API](http://mxnet.incubator.apache.org/api/java/index.html)
-* [MXNet Scala API](http://mxnet.incubator.apache.org/api/scala/index.html)
-* [MXNet R API](http://mxnet.incubator.apache.org/api/r/index.html)
-* [MXNet Julia API](http://mxnet.incubator.apache.org/api/julia/index.html)
+* [MXNet Python API](https://mxnet.incubator.apache.org/api/python/index.html)
+* [MXNet Java API](https://mxnet.incubator.apache.org/api/java/index.html)
+* [MXNet Scala API](https://mxnet.incubator.apache.org/api/scala/index.html)
+* [MXNet R API](https://mxnet.incubator.apache.org/api/r/index.html)
+* [MXNet Julia API](https://mxnet.incubator.apache.org/api/julia/index.html)
 * [MXNet Perl API](https://mxnet.incubator.apache.org/api/perl/index.html)
 * [go-mxnet-predictor](https://github.com/songtianyi/go-mxnet-predictor) - Go binding for inference
 * [MXNet JNI](https://github.com/dmlc/mxnet/tree/master/amalgamation/jni) - JNI(Android) library

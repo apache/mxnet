@@ -36,7 +36,7 @@ class Context(with_metaclass(_MXClassPropertyMetaClass, object)):
 
     See also
     ----------
-    `How to run MXNet on multiple CPU/GPUs <http://mxnet.io/faq/multi_devices.html>`
+    `How to run MXNet on multiple CPU/GPUs <https://mxnet.io/faq/multi_devices.html>`
     for more details.
 
     Parameters
