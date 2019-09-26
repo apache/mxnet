@@ -15,7 +15,7 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-# Build/Install MXNet with MKL-DNN
+# Install MXNet with MKL-DNN
 
 A better training and inference performance is expected to be achieved on Intel-Architecture CPUs with MXNet built with [Intel MKL-DNN](https://github.com/intel/mkl-dnn) on multiple operating system, including Linux, Windows and MacOS.
 In the following sections, you will find build instructions for MXNet with Intel MKL-DNN on Linux, MacOS and Windows.

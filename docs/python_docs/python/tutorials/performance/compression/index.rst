@@ -39,21 +39,18 @@ The following tutorials will help you learn how to use compression techniques wi
 
       How to use quantized GluonCV models for inference on Intel Xeon Processors to gain higher performance.
 
-   ..
-      TBD Content
-      .. card::
-         :title: Compression: int8
-         :link: int8.html
+   .. card::
+      :title: Compression: int8
+      :link: int8.html
 
-         How to use int8 in your model to boost training speed.
-   ..
+      How to use int8 in your model to boost training speed.
+
 
 .. toctree::
    :hidden:
    :glob:
 
    *
-   
-   ..
-      int8
-   ..
+   Float16 <https://mxnet.incubator.apache.org/api/faq/float16>
+   Gradient Compression  <https://mxnet.incubator.apache.org/api/faq/gradient_compression>
+   GluonCV with Quantized Models <https://gluon-cv.mxnet.io/build/examples_deployment/int8_inference.html>

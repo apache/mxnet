@@ -104,7 +104,7 @@ def get_network():
     return net
 ```
 
-# Training in FP32
+## Training in FP32
 
 First, let us create the network.
 

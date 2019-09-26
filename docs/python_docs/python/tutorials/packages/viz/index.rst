@@ -36,3 +36,4 @@ References
    :glob:
 
    *
+   Visualize networks <https://mxnet.incubator.apache.org/api/faq/visualize_graph>

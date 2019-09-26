@@ -15,38 +15,26 @@
    specific language governing permissions and limitations
    under the License.
 
-Module
-======
+Intel MKL-DNN
+=============
 
 .. container:: cards
 
    .. card::
-      :title: Module API Intro
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/basic/module.html
+      :title: MKL-DNN Installation and Verification
+      :link: mkldnn_readme
 
-      How to use MXNet's Module API.
-
-   .. card::
-      :title: Converting Module API code to the Gluon API
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/python/module_to_gluon.html
-
-      How to transform models written using Module code to Gluon code.
+      A guide on using MKL-DNN with MXNet.
 
    .. card::
-      :title: Data Augmentation
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/python/data_augmentation.html
+      :title: MKL-DNN Quantization
+      :link: mkldnn_quantization
 
-      How to augment data with the Module API.
-
-   .. card::
-      :title: Predict with pre-trained models
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/python/predict_image.html
-
-      How to recognize objects in an image with a pre-trained model.
-
+      How to perform quantization with MKLDNN
 
 .. toctree::
    :hidden:
+   :maxdepth: 1
+   :glob:
 
-   module
-   data_augmentation
+   *

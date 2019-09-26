@@ -15,7 +15,7 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-# Quantize custom models with MKL-DNN backend
+# Quantize with MKL-DNN backend
 
 This document is to introduce how to quantize the customer models from FP32 to INT8 with Apache/MXNet toolkit and APIs under Intel CPU.
 

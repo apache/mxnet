@@ -26,9 +26,9 @@ but you also have the option to export most models to the ONNX format.
 
    .. card::
       :title: Export ONNX Models
+      :link: onnx.html
 
-
-      Coming Soon!
+      Export your MXNet model to the Open Neural Exchange Format
 
    .. card::
       :title: Export with GluonCV
@@ -39,4 +39,7 @@ but you also have the option to export most models to the ONNX format.
 .. toctree::
    :hidden:
    :maxdepth: 1
+   :glob:
 
+   *
+   Export Gluon CV Models <https://gluon-cv.mxnet.io/build/examples_deployment/export_network.html>

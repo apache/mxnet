@@ -190,7 +190,7 @@ If you have previous builds and other unwanted files lying around in the working
 Detailed instructions for building MXNet core from source can be found [in the MXNet installation documentation](https://mxnet.incubator.apache.org/install/index.html). The relevant sections are:
 
 - For Ubuntu Linux: [CUDA Dependencies](https://mxnet.incubator.apache.org/get_started/ubuntu_setup#cuda-dependencies) and [Building MXNet from Source](https://mxnet.incubator.apache.org/get_started/ubuntu_setup#build-mxnet-from-source)
-- For Mac OSX: [Build the Shared Library](https://mxnet.incubator.apache.org/install/osx_setup.html#build-the-shared-library)
+- For Mac OSX: [Build the Shared Library](https://mxnet.incubator.apache.org/get_started/osx_setup.html#build-the-shared-library)
 
 In particular, ignore all of the language-interface-specific sections.
 
