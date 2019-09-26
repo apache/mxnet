@@ -60,3 +60,12 @@ Redirect 301 /api/python/tools/visualization.html /api/python/docs/api/symbol-re
 Redirect 301 /api/python/executor/executor.html /api/python/docs/api/advanced/mxnet.executor.html
 Redirect 301 /api/python/rtc/rtc.html /api/python/docs/api/advanced/mxnet.rtc.html
 Redirect 301 /api/python/tools/test_utils.html /api/python/docs/api/advanced/mxnet.test_utils.html
+
+# Top Level Nav bar
+Redirect 301 /install/index.html /get_started
+Redirect 301 /test/get_started/install.html /get_started
+Redirect 301 /faq/index.html /api
+Redirect 301 /tutorials/index.html /api
+Redirect 301 /architecture/index.html /api/architecture/overview
+Redirect 301 /community/ecosystem.html /ecosystem
+Redirect 301 community/powered_by.html /ecosystem
