@@ -1692,7 +1692,7 @@ def upload_s3(){
           // sh 'echo ${env.MXNET_CI_UNITTEST_ARTIFACT_BUCKET}'
             sh 'touch a.txt'    
             // archiveArtifacts 'docs/_build/full_website.tgz'
-            s3Upload(file:'a.txt', bucket:'mxnet-ci-unittest-artifact', path:'.')     
+            s3Upload(file:'a.txt', bucket:'mxnet-ci-unittest-artifact')
             sh 'echo done'
         }
       }
