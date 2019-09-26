@@ -63,4 +63,4 @@ MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNPostQuantizeAlignScale
 #if MXNET_USE_MKLDNN == 100
 }  // namespace op
 }  // namespace mxnet
-#endif // MXNET_USE_MKLDNN == 100
+#endif  // MXNET_USE_MKLDNN == 100

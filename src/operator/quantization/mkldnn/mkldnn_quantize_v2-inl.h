@@ -142,7 +142,8 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
         o_desc_ = i_desc;
         o_desc_.data.data_type = get_mkldnn_type_t(out_type);
       }
-      auto reorder_pd = mkldnn::reorder::primitive_desc(cpu_engine, i_desc, cpu_engine, o_desc_, attr);
+      auto reorder_pd =
+          mkldnn::reorder::primitive_desc(cpu_engine, i_desc, cpu_engine, o_desc_, attr);
       fwd_pd_ = std::make_shared<mkldnn::reorder>(reorder_pd);
       initalized_ = true;
     }

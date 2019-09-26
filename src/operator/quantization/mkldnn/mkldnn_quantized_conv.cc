@@ -65,7 +65,8 @@ static void MKLDNNQuantizedConvForward(const nnvm::NodeAttrs& attrs,
                                  req[conv::kOut]);
   mkldnn_args_map_t net_args;
   if (!param.no_bias) {
-    const mkldnn::memory *bias_mem = in_data[conv::kBias].GetMKLDNNDataReorder(fwd.GetPd().bias_desc());
+    const mkldnn::memory *bias_mem =
+        in_data[conv::kBias].GetMKLDNNDataReorder(fwd.GetPd().bias_desc());
     net_args.insert({MKLDNN_ARG_BIAS, *bias_mem});
   }
   net_args.insert({MKLDNN_ARG_SRC, *data_mem});
