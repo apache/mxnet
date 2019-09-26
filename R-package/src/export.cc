@@ -76,6 +76,15 @@ std::string ExportDocString(const std::string& docstring) {
   return os.str();
 }
 
+std::string ReplaceAll(std::string str, const std::string& from, const std::string& to) {
+    size_t start_pos = 0;
+    while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
+        str.replace(start_pos, from.length(), to);
+        start_pos += to.length();  // Handles case where 'to' is a substring of 'from'
+    }
+    return str;
+}
+
 void ExportVArgFunction(std::ostream& os,  // NOLINT(*)
                         const std::string& func_name,
                         const std::string& docstr) {
@@ -118,6 +127,10 @@ void Exporter::Export(const std::string& path) {
       || fname == "mx.varg.symbol.min") continue;
     Rcpp::List func_info(scope->get_function(fname));
     std::string docstr = Rcpp::as<std::string>(func_info[2]);
+
+    docstr = ReplaceAll(docstr, std::string("\a"), std::string("\\a"));
+    docstr = ReplaceAll(docstr, std::string("\b"), std::string("\\b"));
+
     if (docstr.find("@export") == std::string::npos) continue;
     if (fname.find("mx.varg.") == 0) {
       ExportVArgFunction(script, fname, docstr);

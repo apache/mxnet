@@ -28,6 +28,7 @@ from .profiler_utils import cpp_profile,python_profile
 
 
 def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
+    mx.random.seed(41)
     kwargs_list = []
     args_list = []
 

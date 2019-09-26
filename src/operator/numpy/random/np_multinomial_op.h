@@ -107,7 +107,7 @@ void CheckPval(DType* input, int prob_length) {
   DType sum = DType(0.0);
   for (int i = 0; i < prob_length; ++i) {
     sum += input[i];
-    CHECK_LE(sum, 1.0)
+    CHECK_LE(sum, 1.0 + 1e-12)
       << "sum(pvals[:-1]) > 1.0";
   }
 }
@@ -178,7 +178,7 @@ void NumpyMultinomialForward(const nnvm::NodeAttrs& attrs,
         sum += param.pvals.value()[i];
         // copy the tuple to data for later kernel usage
         pvals_[i] = param.pvals.value()[i];
-        CHECK_LE(sum, 1.0)
+        CHECK_LE(sum, 1.0 + 1e-12)
           << "sum(pvals[:-1]) > 1.0";
     }
     Kernel<multinomial_kernel, xpu>::Launch(

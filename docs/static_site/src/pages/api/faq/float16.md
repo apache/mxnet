@@ -1,3 +1,11 @@
+---
+layout: page_category
+title:  Float16
+category: faq
+faq_c: Speed
+question: How do I use mixed precision (float16) with MXNet or Gluon? 
+permalink: /api/faq/float16
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title:  Float16
-category: faq
-faq_c: Speed
-question: How do I use mixed precision (float16) with MXNet or Gluon?
-permalink: /api/faq/floa16
----
 
 # Mixed precision training using float16
 
@@ -47,19 +47,19 @@ This tutorial also assumes understanding of how to train a network with float32 
 
 With Gluon API, you need to take care of three things to convert a model to support computation with float16.
 
-1. Cast Gluon `Block`'s parameters and expected input type to float16 by calling the [cast](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Block.cast) method of the `Block` representing the network.
+1. Cast Gluon `Block`'s parameters and expected input type to float16 by calling the [cast]({{'/api/python/docs/api/gluon/mxnet.gluon.nn.Block.html#mxnet.gluon.nn.Block.cast'|relative_url}}) method of the `Block` representing the network.
 
 ```python
 net.cast('float16')
 ```
 
-2. Ensure the data input to the network is of float16 type. If your `DataLoader` or `Iterator` produces output in another datatype, then you would have to cast your data. There are different ways you can do this. The easiest would be to use the [astype](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.astype) method of NDArrays.
+2. Ensure the data input to the network is of float16 type. If your `DataLoader` or `Iterator` produces output in another datatype, then you would have to cast your data. There are different ways you can do this. The easiest would be to use the [astype]({{'/api/python/docs/api/ndarray/_autogen/mxnet.ndarray.NDArray.astype.html#mxnet.ndarray.NDArray.astype'|relative_url}}) method of NDArrays.
 
 ```python
 data = data.astype('float16', copy=False)
 ```
 
-If you are using images and DataLoader, you can also use a [Cast transform](https://mxnet.incubator.apache.org/api/python/gluon/data.html#mxnet.gluon.data.vision.transforms.Cast).
+If you are using images and DataLoader, you can also use a [Cast transform]({{'/api/python/docs/api/gluon/_autogen/mxnet.gluon.data.vision.transforms.Cast.html#mxnet.gluon.data.vision.transforms.Cast'|relative_url}}).
 
 3. It is preferable to use **multi_precision mode of optimizer** when training in float16. This mode of optimizer maintains a master copy of the weights in float32 even when the training (i.e. forward and backward pass) is in float16. This helps increase precision of the weight updates and can lead to faster convergence in some scenarios.
 
@@ -98,7 +98,7 @@ net.features = pretrained_net.features
 net.cast('float16')
 ```
 
-You can check the parameters of the model by calling [summary](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Block.summary) with some fake data. Notice the provided `dtype=np.float16` in the line below. As it was mentioned earlier, we have to provide data as float16 as well.
+You can check the parameters of the model by calling [summary]({{'/api/python/docs/api/gluon/mxnet.gluon.nn.Block.html#mxnet.gluon.nn.Block.summary'|relative_url}}) with some fake data. Notice the provided `dtype=np.float16` in the line below. As it was mentioned earlier, we have to provide data as float16 as well.
 
 ```python
 net.summary(mx.nd.uniform(shape=(1, 3, 224, 224), dtype=np.float16))

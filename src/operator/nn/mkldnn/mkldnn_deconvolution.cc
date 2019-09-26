@@ -559,10 +559,13 @@ void MKLDNNDeconvolutionBackward(const nnvm::NodeAttrs &attrs,
     Stream<cpu> *s = ctx.get_stream<cpu>();
     Tensor<cpu, 1, DType> gbias =
         in_grad[deconv::kBias].data().get<cpu, 1, DType>(s);
-    // If there is bias, the out grad has already been converted to the default
-    // format, so this shouldn't cause any performance issues.
-    Tensor<cpu, 4, DType> grad =
-        inputs[deconv::kOut].data().get<cpu, 4, DType>(s);
+
+    NDArray temp = inputs[deconv::kOut];
+    if (temp.IsMKLDNNData()) {
+      temp = temp.Reorder2Default();
+    }
+
+    Tensor<cpu, 4, DType> grad = temp.data().get<cpu, 4, DType>(s);
     Assign(gbias, req[deconv::kBias],
            mshadow::expr::sumall_except_dim<1>(grad));
   }

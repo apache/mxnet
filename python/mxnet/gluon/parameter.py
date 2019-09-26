@@ -902,6 +902,14 @@ class ParameterDict(object):
         for i in self.values():
             i.reset_ctx(ctx)
 
+    def list_ctx(self):
+        """Returns a list of all the contexts on which the underlying Parameters
+        are initialized."""
+        s = set()
+        for i in self.values():
+            s.update(i.list_ctx())
+        return list(s)
+
     def setattr(self, name, value):
         """Set an attribute to a new value for all Parameters.
 
