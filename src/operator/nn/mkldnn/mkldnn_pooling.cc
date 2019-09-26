@@ -292,7 +292,7 @@ MKLDNNPoolingBwd &GetPoolingBwd(const PoolingParam &param,
 
   auto it = pooling_bwds.find(key);
   if (it == pooling_bwds.end()) {
-    // mkldnn v1.0 add reoder to workaround testcase:test_make_subgraph; 
+    // mkldnn v1.0 add reoder to workaround testcase:test_make_subgraph;
     // alread fixed in v1.1, will remove after v1.1 is integrated.
     NDArray diff_dst_buff = out_grad;
     if (in_data.IsMKLDNNData() == false && diff_dst_buff.IsMKLDNNData() == true) {
