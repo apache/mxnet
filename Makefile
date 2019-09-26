@@ -666,7 +666,7 @@ pylint:
 
 # sample lib for dynamically loading custom operator
 sample_lib:
-	$(CXX) -shared -fPIC -std=c++11 example/lib_ops/gemm_lib.cc -o libsample_lib.so -I include/mxnet
+	$(CXX) -shared -fPIC -std=gnu++0x example/lib_ops/gemm_lib.cc -o libsample_lib.so -I include/mxnet
 
 # Cython build
 cython:
@@ -761,23 +761,25 @@ ratcheck: build/rat/apache-rat/target/apache-rat-0.13.jar
 
 ifneq ($(EXTRA_OPERATORS),)
 clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
-	$(RM) -r build lib bin deps libsample_lib.so *~ */*~ */*/*~ */*/*/*~
+	$(RM) -r build lib bin deps *~ */*~ */*/*~ */*/*/*~
 	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(TVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
+	$(RM) libsample_lib.so
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
 clean: rclean mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
-	$(RM) -r build lib bin libsample_lib.so *~ */*~ */*/*~ */*/*/*~
+	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
 	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
+	$(RM) libsample_lib.so
 endif
 
 clean_all: clean
