@@ -582,6 +582,7 @@ inline static const std::vector<NDArray> GetMKLDNNInputArray(const std::vector<N
   }
   return ret;
 }
+
 void MKLDNNRun(mxnet::FComputeEx fn,
                const nnvm::NodeAttrs &attrs,
                const mxnet::OpContext &ctx,

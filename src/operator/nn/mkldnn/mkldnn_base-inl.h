@@ -648,6 +648,7 @@ struct MKLDNNPostEltwiseParam {
   float alpha = 0.f;
   float beta = 1.f;
 };
+
 void MKLDNNRun(mxnet::FComputeEx fn,
                const nnvm::NodeAttrs &attrs,
                const mxnet::OpContext &ctx,
