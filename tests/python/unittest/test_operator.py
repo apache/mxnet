@@ -7614,7 +7614,29 @@ def test_softmax_output_normalization():
 
 @with_seed()
 def test_argmax():
-    ci_test = True       # Use False if you need to collect aggregated information about argmax performance
+    def run_test_argmax(multi_output, ctx, axis=None):
+        batch_size = 8
+        num_labels =  6
+        if multi_output:
+            H, W = 3, 3
+            tensor = create_data(batch_size, num_labels, ctx=ctx, H=H, W=W)
+        else:
+            tensor = create_data(batch_size, num_labels, ctx=ctx)
+
+        max = mx.nd.argmax(tensor, axis=axis)
+        topk_data = mx.nd.topk(tensor, axis=axis, is_ascend=0, k=1)
+        assert_almost_equal(max.reshape(-1), topk_data.reshape(-1))
+
+    ctx = default_context()
+    for multi_output in [False, True]:
+        axisMax = 4 if multi_output else 2
+        for axis in range(axisMax):
+            run_test_argmax(multi_output, ctx, axis)
+
+        # Global reduction test
+        run_test_argmax(multi_output, ctx)
+
+def profiling_argmax():
     def getNumWorkers(shape, axis, ctx=mx.gpu()):
         if ctx == mx.cpu():
             return 1
@@ -7630,21 +7652,20 @@ def test_argmax():
         return numbWorkers if 2 * numbWorkers <= nSteps else 1
 
     def calc_argmax(tensor, axis, checkResult=False, nWorkers=1):
-        if not ci_test:
-            if axis is not None:
-                if nWorkers > 0:
-                    # To use a predefined number of workers you need to recompile MxNet with following
-                    # lines added to broadcast_reduce_op.h:
-                    #
-                    #  struct ReduceAxisParam : public dmlc::Parameter<ReduceAxisParam> {
-                    #    ...
-                    #   int nWorkers;
-                    #    ...
-                    #   DMLC_DECLARE_FIELD(nWorkers).set_default(1) \
-                    #       .describe("Number of workers assigned for each vector processing on GPU");
-                    max = mx.nd.argmax(tensor, axis=axis, nWorkers=nWorkers)
-                else:
-                    max = mx.nd.argmax(tensor, axis=axis, nWorkers=-1)
+        if axis is not None:
+            if nWorkers > 0:
+                # To use a predefined number of workers you need to recompile MxNet with following
+                # lines added to broadcast_reduce_op.h:
+                #
+                #  struct ReduceAxisParam : public dmlc::Parameter<ReduceAxisParam> {
+                #    ...
+                #   int nWorkers;
+                #    ...
+                #   DMLC_DECLARE_FIELD(nWorkers).set_default(1) \
+                #       .describe("Number of workers assigned for each vector processing on GPU");
+                max = mx.nd.argmax(tensor, axis=axis, nWorkers=nWorkers)
+            else:
+                max = mx.nd.argmax(tensor, axis=axis, nWorkers=-1)
         else:
             max = mx.nd.argmax(tensor, axis=axis)
 
@@ -7707,65 +7728,38 @@ def test_argmax():
                     buff += "   ** %3d" % getNumWorkers(shape, axis, ctx=ctx)
                 print(buff)
 
-
-    def run_test_argmax(multi_output, ctx, axis=None, numb=1, checkResult=True):
-        batch_size = 8
-        num_labels =  6
-        if multi_output:
-            H, W = 3, 3
-            data = create_data(batch_size, num_labels, ctx=ctx, H=H, W=W)
-        else:
-            data = create_data(batch_size, num_labels, ctx=ctx)
-
-        if numb > 1:
-            axisMax = axis
-            for axis in range(axisMax):
-                for _ in range(numb):
-                    calc_argmax(data, axis, checkResult=checkResult)
-        else:
-            calc_argmax(data, axis, checkResult=checkResult)
-
-    if ci_test:
-        ctx = default_context()
-        for multi_output in [False, True]:
-            axisMax = 4 if multi_output else 2
-            for axis in range(axisMax):
-                run_test_argmax(multi_output, ctx, axis)
-
-            # Global reduction test
-            run_test_argmax(multi_output, ctx)
-    else:
-        testArgmax = 1
-        lenTest = 10000
-        dim_2 = False       # 2- or 3-dimensional shapes will be tested
-        nWorkerLoop = False # Run tests for different nWorkers (to define best value)
-        checkResult = True  # Check results on first iteration of each test
-        n = 32              # Size of 0th-dimesion
-        for ctx in [mx.cpu(), mx.gpu()]:
-            # Loop for determining the optimal number of workers assigned to one vector
-            # ... for different 2-dimensional and 3-dimesional shapes
-            iMax = 1 if dim_2 else 3
-            for i in range(iMax):
-                for j in [1, 2, 4, 6, 8, 10, 12, 14]:
-                    nCol = n * 2**j
-                    shape = (n, nCol) if dim_2 else (n, (i + 1) * n, n * 2**j)
-                    if nWorkerLoop:
-                        nWorkersTheory = getNumWorkers(shape, 1, ctx=ctx)
-                        nWorkers = 1
-                        while 2 * nWorkers <= nCol and nWorkers < 8 * nWorkersTheory:
-                            if dim_2:
-                                runTest(n, nCol, ctx=ctx, testArgmax=testArgmax, lenTest=lenTest, nWorkers=nWorkers)
-                            else:
-                                runTest(0, 0, shape = shape, ctx=ctx, testArgmax=testArgmax, lenTest=lenTest, nWorkers=nWorkers)
-                            if nWorkers > 0:
-                                nWorkers *= 2
-                            else:
-                                break
-                    else:
+    testArgmax = 1
+    lenTest = 100
+    dim_2 = False       # 2- or 3-dimensional shapes will be tested
+    nWorkerLoop = False # Run tests for different nWorkers (to define best value)
+    checkResult = False #False # Check results on first iteration of each test
+    n = 32              # Size of 0th-dimesion
+    for ctx in [mx.cpu(), mx.gpu()]:
+        print("\n\nProfiling %s version" %("CPU" if ctx == mx.cpu() else "GPU"))
+        iMax = 1 if dim_2 else 3
+        for i in range(iMax):
+            for j in [1, 2, 4, 6, 8, 10, 12, 14]:
+                nCol = n * 2**j
+                shape = (n, nCol) if dim_2 else (n, (i + 1) * n, n * 2**j)
+                if nWorkerLoop:
+                    # Loop for determining the optimal number of workers assigned to one vector
+                    # ... for different 2-dimensional and 3-dimesional shapes
+                    nWorkersTheory = getNumWorkers(shape, 1, ctx=ctx)
+                    nWorkers = 1
+                    while 2 * nWorkers <= nCol and nWorkers < 8 * nWorkersTheory:
                         if dim_2:
-                            runTest(n, nCol, ctx=ctx, testArgmax=testArgmax, checkResult=checkResult, lenTest=lenTest, nWorkers=-1)
+                            runTest(n, nCol, ctx=ctx, testArgmax=testArgmax, lenTest=lenTest, nWorkers=nWorkers)
                         else:
-                            runTest(0, 0, shape = shape, ctx=ctx, testArgmax=testArgmax, checkResult=checkResult, lenTest=lenTest, nWorkers=-1)
+                            runTest(0, 0, shape = shape, ctx=ctx, testArgmax=testArgmax, lenTest=lenTest, nWorkers=nWorkers)
+                        if nWorkers > 0:
+                            nWorkers *= 2
+                        else:
+                            break
+                else:
+                    if dim_2:
+                        runTest(n, nCol, ctx=ctx, testArgmax=testArgmax, checkResult=checkResult, lenTest=lenTest, nWorkers=-1)
+                    else:
+                        runTest(0, 0, shape = shape, ctx=ctx, testArgmax=testArgmax, checkResult=checkResult, lenTest=lenTest, nWorkers=-1)
 
 @with_seed()
 def test_slice():
