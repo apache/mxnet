@@ -187,7 +187,7 @@ void MKLDNNLeakyReluForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   stream->Submit();
 }
 
-static mkldnn::eltwise_backward::primitive_desc GetActBwdDescImpl(
+mkldnn::eltwise_backward::primitive_desc GetActBwdDescImpl(
     const MKLDNNActParam &param, const mkldnn::memory &input_mem,
     const mkldnn::memory &diff_dst_memory, int dtype) {
   mkldnn::memory::desc data_md = input_mem.get_desc();
