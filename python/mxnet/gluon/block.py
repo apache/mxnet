@@ -915,9 +915,22 @@ class HybridBlock(Block):
 
         args, fmt = _flatten(args, "input")
         if fmt != self._in_format:
-            raise ValueError("The argument structure of HybridBlock does not match"
-                             " the cached version. Stored format = {}, input format = {}"
-                             .format(fmt, self._in_format))
+            # Do not raise in the case that the fmt or stored_fmt ends with None and
+            # We are relying on the default values.
+            if len(self._in_format) > len(fmt):
+                valid = all([self._in_format[i] == -1
+                             for i in range(len(fmt), len(self._in_format))])
+                valid = valid and (fmt == self._in_format[:len(fmt)])
+            elif len(self._in_format) < len(fmt):
+                valid = all([fmt[i] == -1
+                             for i in range(len(self._in_format), len(fmt))])
+                valid = valid and (fmt[:len(self._in_format)] == self._in_format)
+            else:
+                valid = False
+            if not valid:
+                raise ValueError("The argument structure of HybridBlock does not match"
+                                 " the cached version. Stored format = {}, input format = {}"
+                                 .format(fmt, self._in_format))
         args_without_none = [ele for ele in args if ele is not None]
         try:
             cargs = [args_without_none[i] if is_arg else i.data()

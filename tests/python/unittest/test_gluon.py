@@ -454,6 +454,18 @@ def test_hybrid_block_none_args():
             else:
                 raise NotImplementedError
 
+    class FooDefault(gluon.HybridBlock):
+        def hybrid_forward(self, F, a, b=None):
+            if a is None and b is not None:
+                return b
+            elif b is None and a is not None:
+                return a
+            elif a is not None and b is not None:
+                return a + b
+            else:
+                raise NotImplementedError
+
+
     class FooNested(gluon.HybridBlock):
         def __init__(self, prefix=None, params=None):
             super(FooNested, self).__init__(prefix=prefix, params=params)
@@ -496,6 +508,25 @@ def test_hybrid_block_none_args():
     assert_raises(ValueError, lambda: foo(mx.nd.ones((10,)), mx.sym.var('a')))
     foo = FooNested()
     assert_raises(ValueError, lambda: foo(mx.sym.var('a'), mx.nd.ones((10,))))
+
+    # Test the case of the default values
+    foo1 = FooDefault()
+    foo1.hybridize()
+    foo2 = FooDefault()
+    out1 = foo1(mx.nd.ones((10,)))
+    out2 = foo2(mx.nd.ones((10,)))
+    out3 = foo1(mx.nd.ones((10,)), None)
+    out4 = foo2(mx.nd.ones((10,)), None)
+    assert_almost_equal(out1.asnumpy(), out2.asnumpy())
+    assert_almost_equal(out1.asnumpy(), out3.asnumpy())
+    assert_almost_equal(out1.asnumpy(), out4.asnumpy())
+    foo1 = FooDefault()
+    foo1.hybridize()
+    out1 = foo1(mx.nd.ones((10,)), None)
+    out2 = foo1(mx.nd.ones((10,)))
+    assert_almost_equal(out1.asnumpy(), out2.asnumpy())
+    assert_raises(ValueError, lambda: foo1(mx.nd.ones((10,)), mx.nd.ones((10,))))
+
 
 
 @with_seed()
