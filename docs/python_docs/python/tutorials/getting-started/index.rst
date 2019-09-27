@@ -42,7 +42,7 @@ The following tutorials teach how to use MXNet.
 
    .. card::
       :title: MNIST Training
-      :link: https://mxnet.incubator.apache.org/api/python/docs/tutorials/packages/gluon/image/mnist.html
+      :link: https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/image/mnist.html
 
       MNIST Training with MXNet
 
@@ -60,5 +60,5 @@ The following tutorials teach how to use MXNet.
    to-mxnet/index
    gluon_from_experiment_to_deployment
    logistic_regression_explained.md
-   MNIST <https://mxnet.incubator.apache.org/api/python/docs/tutorials/packages/gluon/image/mnist.html>
+   MNIST <https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/image/mnist.html>
 

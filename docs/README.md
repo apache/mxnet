@@ -17,8 +17,8 @@
 
 # Building and Updating MXNet Documentation
 
-The website is hosted at https://mxnet.incubator.apache.org/.
-https://mxnet.io redirects to this site and advised to use links with https://mxnet.incubator.apache.org/ instead of https://mxnet.io/.
+The website is hosted at https://mxnet.apache.org/.
+https://mxnet.io redirects to this site and advised to use links with https://mxnet.apache.org/ instead of https://mxnet.io/.
 
 ## Website & Documentation Contributions
 

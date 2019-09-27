@@ -39,7 +39,7 @@ nvidia-docker run -ti mxnet/tensorrt python
 
 ## Sample Models
 ### Resnet 18
-TensorRT is an inference only library, so for the purposes of this blog post we will be using a pre-trained network, in this case a Resnet 18.  Resnets are a computationally intensive model architecture that are often used as a backbone for various computer vision tasks. Resnets are also commonly used as a reference for benchmarking deep learning library performance.  In this section we'll use a pretrained Resnet 18 from the [Gluon Model Zoo](https://mxnet.incubator.apache.org/versions/master/api/python/gluon/model_zoo.html) and compare its inference speed with TensorRT using MXNet with TensorRT integration turned off as a baseline.
+TensorRT is an inference only library, so for the purposes of this blog post we will be using a pre-trained network, in this case a Resnet 18.  Resnets are a computationally intensive model architecture that are often used as a backbone for various computer vision tasks. Resnets are also commonly used as a reference for benchmarking deep learning library performance.  In this section we'll use a pretrained Resnet 18 from the [Gluon Model Zoo](https://mxnet.apache.org/versions/master/api/python/gluon/model_zoo.html) and compare its inference speed with TensorRT using MXNet with TensorRT integration turned off as a baseline.
 
 ## Model Initialization
 ```python

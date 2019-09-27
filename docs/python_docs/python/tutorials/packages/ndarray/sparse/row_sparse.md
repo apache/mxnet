@@ -95,12 +95,12 @@ In this tutorial, we will describe what the row sparse format is and how to use 
 
 To complete this tutorial, we need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.incubator.apache.org/install/index.html)
+- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.apache.org/install/index.html)
 - [Jupyter](http://jupyter.org/)
     ```
     pip install jupyter
     ```
-- Basic knowledge of NDArray in MXNet. See the detailed tutorial for NDArray in [NDArray - Imperative tensor operations on CPU/GPU](https://mxnet.incubator.apache.org/tutorials/basic/ndarray.html)
+- Basic knowledge of NDArray in MXNet. See the detailed tutorial for NDArray in [NDArray - Imperative tensor operations on CPU/GPU](https://mxnet.apache.org/tutorials/basic/ndarray.html)
 - Understanding of [automatic differentiation with autograd](http://gluon.mxnet.io/chapter01_crashcourse/autograd.html)
 - GPUs - A section of this tutorial uses GPUs. If you don't have GPUs on your
 machine, simply set the variable `gpu_device` (set in the GPUs section of this
@@ -404,7 +404,7 @@ rsp_retained = mx.nd.sparse.retain(rsp, mx.nd.array([0, 1]))
 
 ## Sparse Operators and Storage Type Inference
 
-Operators that have specialized implementation for sparse arrays can be accessed in ``mx.nd.sparse``. You can read the [mxnet.ndarray.sparse API documentation](http://mxnet.incubator.apache.org/api/python/ndarray/sparse.html) to find what sparse operators are available.
+Operators that have specialized implementation for sparse arrays can be accessed in ``mx.nd.sparse``. You can read the [mxnet.ndarray.sparse API documentation](http://mxnet.apache.org/api/python/ndarray/sparse.html) to find what sparse operators are available.
 
 
 ```python
@@ -554,8 +554,8 @@ sgd.update(0, weight, grad, momentum)
 ```
 
 
-Note that only [mxnet.optimizer.SGD](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.SGD), [mxnet.optimizer.Adam](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.Adam), and
-[mxnet.optimizer.AdaGrad](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.AdaGrad) support sparse updates in MXNet.
+Note that only [mxnet.optimizer.SGD](https://mxnet.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.SGD), [mxnet.optimizer.Adam](https://mxnet.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.Adam), and
+[mxnet.optimizer.AdaGrad](https://mxnet.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.AdaGrad) support sparse updates in MXNet.
 
 ## Advanced Topics
 
@@ -578,7 +578,7 @@ except mx.MXNetError as err:
 
 ## Next 
 
-[Train a Linear Regression Model with Sparse Symbols](http://mxnet.incubator.apache.org/tutorials/sparse/train.html)
+[Train a Linear Regression Model with Sparse Symbols](http://mxnet.apache.org/tutorials/sparse/train.html)
 
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

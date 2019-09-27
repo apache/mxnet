@@ -102,7 +102,7 @@ virtualenv -p `which python` mxnet_py27
 {% endhighlight %}
 
 You may use Python 3, however the [wine bottle detection
-example](https://mxnet.incubator.apache.org/api/python/docs/tutorials/deploy/inference/wine_detector.html)
+example](https://mxnet.apache.org/api/python/docs/tutorials/deploy/inference/wine_detector.html)
 for the
 Pi with camera requires Python 2.7.
 
@@ -219,7 +219,7 @@ If loading the cython modules fails, the default behavior is falling back to cty
 any warning. To
 raise an exception at the failure, set the environment variable `MXNET_ENFORCE_CYTHON` to
 `1`. See
-[here](https://mxnet.incubator.apache.org/api/faq/env_var) for more details.
+[here](https://mxnet.apache.org/api/faq/env_var) for more details.
 
 
 **Step 3** Install MXNet Python Bindings

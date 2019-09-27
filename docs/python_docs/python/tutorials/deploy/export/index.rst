@@ -50,4 +50,4 @@ but you also have the option to export most models to the ONNX format.
 
    *
    Export Gluon CV Models <https://gluon-cv.mxnet.io/build/examples_deployment/export_network.html>
-   Save / Load Parameters <https://mxnet.incubator.apache.org/api/python/docs/tutorials/packages/gluon/blocks/save_load_params.html>
+   Save / Load Parameters <https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/blocks/save_load_params.html>

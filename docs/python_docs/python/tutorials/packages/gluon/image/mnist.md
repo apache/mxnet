@@ -28,7 +28,7 @@ MNIST is a widely used dataset for the hand-written digit classification task. I
 This tutorial uses MXNet's new high-level interface, gluon package to implement MLP using
 imperative fashion.
 
-This is based on the Mnist tutorial with symbolic approach. You can find it [here](https://mxnet.incubator.apache.org/api/python/docs/tutorials/packages/gluon/image/mnist.html).
+This is based on the Mnist tutorial with symbolic approach. You can find it [here](https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/image/mnist.html).
 
 ## Prerequisites
 To complete this tutorial, we need:

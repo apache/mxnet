@@ -143,7 +143,7 @@ trainer.learning_rate
 
 
 
-In addition, there are multiple pre-defined learning rate scheduling methods that are already implemented in the [`mxnet.lr_scheduler`](https://mxnet.incubator.apache.org/api/python/docs/api/gluon-related/mxnet.lr_scheduler.html) module. The learning rate schedulers can be incorporated into your trainer by passing them in as an `optimizer_param` entry. Please refer to the [LR scheduler guide](https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/learning_rate_schedules.html) to learn more.
+In addition, there are multiple pre-defined learning rate scheduling methods that are already implemented in the [`mxnet.lr_scheduler`](https://mxnet.apache.org/api/python/docs/api/gluon-related/mxnet.lr_scheduler.html) module. The learning rate schedulers can be incorporated into your trainer by passing them in as an `optimizer_param` entry. Please refer to the [LR scheduler guide](https://mxnet.apache.org/versions/master/tutorials/gluon/learning_rate_schedules.html) to learn more.
 
 
 
@@ -160,9 +160,9 @@ In addition, there are multiple pre-defined learning rate scheduling methods tha
 
 While optimization and optimizers play a significant role in deep learning model training, there are still other important components to model training. Here are a few suggestions about where to look next.
 
-* The [Optimizer API](https://mxnet.incubator.apache.org/api/python/docs/api/gluon-related/mxnet.optimizer.html) and [guide](https://mxnet.incubator.apache.org/api/python/docs/tutorials/packages/optimizer/optimizer.html) have information about all the different optimizers implemented in MXNet and their update steps. The [Dive into Deep Learning](https://en.diveintodeeplearning.org/chapter_optimization/index.html) book also has a chapter dedicated to optimization methods and explains various key optimizers in great detail.
+* The [Optimizer API](https://mxnet.apache.org/api/python/docs/api/gluon-related/mxnet.optimizer.html) and [guide](https://mxnet.apache.org/api/python/docs/tutorials/packages/optimizer/optimizer.html) have information about all the different optimizers implemented in MXNet and their update steps. The [Dive into Deep Learning](https://en.diveintodeeplearning.org/chapter_optimization/index.html) book also has a chapter dedicated to optimization methods and explains various key optimizers in great detail.
 
-- Take a look at the [guide to parameter initialization](https://mxnet.incubator.apache.org/api/python/docs/tutorials/packages/gluon/init.html) in MXNet to learn about what initialization schemes are already implemented, and how to implement your custom initialization schemes.
-- Also check out this  [guide on parameter management](https://mxnet.incubator.apache.org/api/python/docs/tutorials/packages/gluon/parameters.html) to learn about how to manage model parameters in gluon.
-- Make sure to take a look at the [guide to scheduling learning rates](https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/learning_rate_schedules.html) to learn how to create learning rate schedules to make your training converge faster.
-- Finally take a look at the [KVStore API](https://mxnet.incubator.apache.org/api/python/docs/api/gluon-related/mxnet.kvstore.KVStore.html#mxnet.kvstore.KVStore) to learn how parameter values are synchronized over multiple devices.
+- Take a look at the [guide to parameter initialization](https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/init.html) in MXNet to learn about what initialization schemes are already implemented, and how to implement your custom initialization schemes.
+- Also check out this  [guide on parameter management](https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/parameters.html) to learn about how to manage model parameters in gluon.
+- Make sure to take a look at the [guide to scheduling learning rates](https://mxnet.apache.org/versions/master/tutorials/gluon/learning_rate_schedules.html) to learn how to create learning rate schedules to make your training converge faster.
+- Finally take a look at the [KVStore API](https://mxnet.apache.org/api/python/docs/api/gluon-related/mxnet.kvstore.KVStore.html#mxnet.kvstore.KVStore) to learn how parameter values are synchronized over multiple devices.

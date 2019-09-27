@@ -23,13 +23,13 @@ The following tutorials will help you learn how to use compression techniques wi
 
    .. card::
       :title: Compression: float16
-      :link: https://mxnet.incubator.apache.org/api/faq/float16
+      :link: https://mxnet.apache.org/api/faq/float16
 
       How to use float16 in your model to boost training speed.
 
    .. card::
       :title: Gradient Compression
-      :link: https://mxnet.incubator.apache.org/api/faq/gradient_compression
+      :link: https://mxnet.apache.org/api/faq/gradient_compression
 
       How to use gradient compression to reduce communication bandwidth and increase speed.
 
@@ -51,6 +51,6 @@ The following tutorials will help you learn how to use compression techniques wi
    :glob:
 
    *
-   Float16 <https://mxnet.incubator.apache.org/api/faq/float16>
-   Gradient Compression  <https://mxnet.incubator.apache.org/api/faq/gradient_compression>
+   Float16 <https://mxnet.apache.org/api/faq/float16>
+   Gradient Compression  <https://mxnet.apache.org/api/faq/gradient_compression>
    GluonCV with Quantized Models <https://gluon-cv.mxnet.io/build/examples_deployment/int8_inference.html>

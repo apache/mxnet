@@ -350,7 +350,7 @@ class Block(object):
         warnings.warn("save_params is deprecated. Please use save_parameters. "
                       "Note that if you want load from SymbolBlock later, please "
                       "use export instead. For details, see "
-                      "https://mxnet.incubator.apache.org/tutorials/gluon/save_lo"
+                      "https://mxnet.apache.org/tutorials/gluon/save_lo"
                       "ad_params.html")
         try:
             self.collect_params().save(filename, strip_prefix=self.prefix)

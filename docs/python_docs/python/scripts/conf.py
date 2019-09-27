@@ -33,7 +33,7 @@ project = u'Apache MXNet'
 author = u'%s developers' % project
 copyright = u'2015-2019, %s' % author
 github_doc_root = 'https://github.com/apache/incubator-mxnet/tree/master/docs/'
-doc_root = 'https://mxnet.incubator.apache.org/'
+doc_root = 'https://mxnet.apache.org/'
 
 # add markdown parser
 source_parsers = {

@@ -22,7 +22,7 @@ In the following sections, you will find build instructions for MXNet with Intel
 
 Please find MKL-DNN optimized operators and other features in the [MKL-DNN operator list](../mkldnn/operator_list.md).
 
-The detailed performance data collected on Intel Xeon CPU with MXNet built with Intel MKL-DNN can be found [here](https://mxnet.incubator.apache.org/api/faq/perf#intel-cpu).
+The detailed performance data collected on Intel Xeon CPU with MXNet built with Intel MKL-DNN can be found [here](https://mxnet.apache.org/api/faq/perf#intel-cpu).
 
 
 <h2 id="0">Contents</h2>

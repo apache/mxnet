@@ -190,7 +190,7 @@ Advanced Topics
 
    .. card::
       :title: Custom Operators
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/customop.html
+      :link: https://mxnet.apache.org/versions/master/tutorials/gluon/customop.html
 
       Building custom operators with numpy.
 
@@ -202,7 +202,7 @@ Advanced Topics
 
    .. card::
       :title: Gotchas using NumPy in Apache MXNet
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/gotchas_numpy_in_mxnet.html
+      :link: https://mxnet.apache.org/versions/master/tutorials/gluon/gotchas_numpy_in_mxnet.html
 
       Common misconceptions when using NumPy in Apache MXNet.
 

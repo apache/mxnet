@@ -20,7 +20,7 @@ MXNet Python Package
 This directory and nested files contain MXNet Python package and language binding.
 
 ## Installation
-To install MXNet Python package, visit MXNet [Install Instruction](https://mxnet.incubator.apache.org/get_started)
+To install MXNet Python package, visit MXNet [Install Instruction](https://mxnet.apache.org/get_started)
 
 
 ## Running the unit tests

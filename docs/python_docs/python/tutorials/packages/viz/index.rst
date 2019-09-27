@@ -22,7 +22,7 @@ Visualization
 
    .. card::
       :title: How to Visualize Neural Networks as Computation Graph
-      :link: https://mxnet.incubator.apache.org/api/faq/visualize_graph
+      :link: https://mxnet.apache.org/api/faq/visualize_graph
 
       A demonstration how to use ``mx.viz.plot_network`` for visualizing your neural networks.
 
@@ -36,4 +36,4 @@ References
    :glob:
 
    *
-   Visualize networks <https://mxnet.incubator.apache.org/api/faq/visualize_graph>
+   Visualize networks <https://mxnet.apache.org/api/faq/visualize_graph>

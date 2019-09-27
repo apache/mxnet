@@ -46,7 +46,7 @@ Advanced Image Tutorials
 
    .. card::
       :title: Image similarity search with InfoGAN
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/info_gan.html
+      :link: https://mxnet.apache.org/versions/master/tutorials/gluon/info_gan.html
 
       Implementing an InfoGAN based on the MXNet Gluon.
 

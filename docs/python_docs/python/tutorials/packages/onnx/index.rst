@@ -40,7 +40,7 @@ ONNX
 
    .. card::
       :title: Export ONNX Models
-      :link: https://mxnet.incubator.apache.org/api/python/docs/tutorials/deploy/export/onnx.html
+      :link: https://mxnet.apache.org/api/python/docs/tutorials/deploy/export/onnx.html
 
       How to export an MXNet model to the ONNX model format.
 
@@ -50,4 +50,4 @@ ONNX
    :glob:
 
    *
-   Export ONNX Models <https://mxnet.incubator.apache.org/api/python/docs/tutorials/deploy/export/onnx.html>
+   Export ONNX Models <https://mxnet.apache.org/api/python/docs/tutorials/deploy/export/onnx.html>

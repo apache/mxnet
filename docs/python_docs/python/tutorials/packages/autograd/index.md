@@ -159,7 +159,7 @@ print('is_training:', is_training, output)
 
 We called `dropout` while `autograd` was recording this time, so our network was in training mode and we see dropout of the input this time. Since the probability of dropout was 50%, the output is automatically scaled by 1/0.5=2 to preserve the average activation.
 
-We can force some operators to behave as they would during training, even in inference mode. One example is setting `mode='always'` on the [Dropout](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html?highlight=dropout#mxnet.ndarray.Dropout) operator, but this usage is uncommon.
+We can force some operators to behave as they would during training, even in inference mode. One example is setting `mode='always'` on the [Dropout](https://mxnet.apache.org/api/python/ndarray/ndarray.html?highlight=dropout#mxnet.ndarray.Dropout) operator, but this usage is uncommon.
 
 ## Advanced: Skipping the calculation of parameter gradients
 
@@ -196,7 +196,7 @@ print(x.grad)
 
 ## Advanced: Using Python control flow
 
-As mentioned before, one of the main advantages of `autograd` is the ability to automatically calculate gradients of dynamic graphs (i.e. graphs where the operators could be different on every forward pass). One example of this would be applying a tree structured recurrent network to parse a sentence using its parse tree. And we can use Python control flow operators to create a dynamic flow that depends on the data, rather than using [MXNet's control flow operators](https://mxnet.incubator.apache.org/versions/master/tutorials/control_flow/ControlFlowTutorial.html).
+As mentioned before, one of the main advantages of `autograd` is the ability to automatically calculate gradients of dynamic graphs (i.e. graphs where the operators could be different on every forward pass). One example of this would be applying a tree structured recurrent network to parse a sentence using its parse tree. And we can use Python control flow operators to create a dynamic flow that depends on the data, rather than using [MXNet's control flow operators](https://mxnet.apache.org/versions/master/tutorials/control_flow/ControlFlowTutorial.html).
 
 We'll write a function as a toy example of a dynamic network. We'll add an `if` condition and a loop with a variable number of iterations, both of which will depend on the input data. Although these can now be used in static graphs (with conditional operators) it's still much more natural to use native control flow.
 

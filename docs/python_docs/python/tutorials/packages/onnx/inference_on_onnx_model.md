@@ -29,7 +29,7 @@ In this tutorial we will:
 ## Pre-requisite
 
 To run the tutorial you will need to have installed the following python modules:
-- [MXNet > 1.1.0](http://mxnet.incubator.apache.org/install/index.html)
+- [MXNet > 1.1.0](http://mxnet.apache.org/install/index.html)
 - [onnx](https://github.com/onnx/onnx) (follow the install guide)
 - matplotlib
 
@@ -157,7 +157,7 @@ for param in aux_params:
         net_params[param]._load_init(aux_params[param], ctx=ctx)
 ```
 
-We can now cache the computational graph through [hybridization](https://mxnet.incubator.apache.org/tutorials/gluon/hybrid.html) to gain some performance
+We can now cache the computational graph through [hybridization](https://mxnet.apache.org/tutorials/gluon/hybrid.html) to gain some performance
 
 
 
@@ -251,6 +251,6 @@ Lucky for us, the [Caltech101 dataset](http://www.vision.caltech.edu/Image_Datas
 We show that in our next tutorial:
 
 
-- [Fine-tuning an ONNX Model using the modern imperative MXNet/Gluon](http://mxnet.incubator.apache.org/tutorials/onnx/fine_tuning_gluon.html)
+- [Fine-tuning an ONNX Model using the modern imperative MXNet/Gluon](http://mxnet.apache.org/tutorials/onnx/fine_tuning_gluon.html)
     
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

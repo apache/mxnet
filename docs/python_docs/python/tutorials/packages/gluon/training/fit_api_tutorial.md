@@ -17,7 +17,7 @@
 
 # MXNet Gluon Fit API
 
-In this tutorial, you will learn how to use the [Gluon Fit API](https://cwiki.apache.org/confluence/display/MXNET/Gluon+Fit+API+-+Tech+Design) which is the easiest way to train deep learning models using the [Gluon API](https://mxnet.incubator.apache.org/versions/master/gluon/index.html) in Apache MXNet. 
+In this tutorial, you will learn how to use the [Gluon Fit API](https://cwiki.apache.org/confluence/display/MXNET/Gluon+Fit+API+-+Tech+Design) which is the easiest way to train deep learning models using the [Gluon API](https://mxnet.apache.org/versions/master/gluon/index.html) in Apache MXNet. 
 
 With the Fit API, you can train a deep learning model with a minimal amount of code. Just specify the network, loss function and the data you want to train on. You don't need to worry about the boiler plate code to loop through the dataset in batches (often called as 'training loop'). Advanced users can train with bespoke training loops, and many of these use cases will be covered by the Fit API.
 
@@ -27,7 +27,7 @@ To demonstrate the Fit API, you will train an image classification model using t
 
 To complete this tutorial, you will need:
 
-- [MXNet](https://mxnet.incubator.apache.org/install/#overview) (The version of MXNet will be >= 1.5.0, you can use `pip install mxnet` to get 1.5.0 release pip package or build from source with master, refer to [MXNet installation](https://mxnet.incubator.apache.org/versions/master/install/index.html?platform=Linux&language=Python&processor=CPU)
+- [MXNet](https://mxnet.apache.org/install/#overview) (The version of MXNet will be >= 1.5.0, you can use `pip install mxnet` to get 1.5.0 release pip package or build from source with master, refer to [MXNet installation](https://mxnet.apache.org/versions/master/install/index.html?platform=Linux&language=Python&processor=CPU)
 - [Jupyter Notebook](https://jupyter.org/index.html) (For interactively running the provided .ipynb file)
 
 
@@ -98,7 +98,7 @@ resnet_18_v1.initialize(init = mx.init.Xavier(), ctx=ctx)
 ```
 
 We will be using `SoftmaxCrossEntropyLoss` as the loss function since this is a multi-class classification problem. We will be using `sgd` (Stochastic Gradient Descent) as the optimizer. 
-You can experiment with a [different loss](https://mxnet.incubator.apache.org/versions/master/api/python/gluon/loss.html) or [optimizer](https://mxnet.incubator.apache.org/versions/master/api/python/optimization/optimization.html) as well. 
+You can experiment with a [different loss](https://mxnet.apache.org/versions/master/api/python/gluon/loss.html) or [optimizer](https://mxnet.apache.org/versions/master/api/python/optimization/optimization.html) as well. 
 
 
 ```python
