@@ -305,7 +305,7 @@ def _np_dot(a, b, out=None):
     pass
 
 
-def _np_sum(a, axis=None, dtype=None, keepdims=None, initial=None, out=None):
+def _np_sum(a, axis=None, dtype=None, keepdims=False, initial=None, out=None):
     r"""
     Sum of array elements over a given axis.
 
