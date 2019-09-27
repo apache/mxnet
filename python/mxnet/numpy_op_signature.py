@@ -18,7 +18,6 @@
 """Make builtin ops' signatures compatible with NumPy."""
 
 from __future__ import absolute_import
-import inspect
 import sys
 import warnings
 from . import _numpy_op_doc
@@ -63,6 +62,7 @@ def _register_op_signatures():
                       .format(str(sys.version)))
         return
 
+    import inspect
     for op_name in dir(_numpy_op_doc):
         op = _get_builtin_op(op_name)
         if op is not None:
