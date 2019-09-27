@@ -189,7 +189,7 @@ void MKLDNNLeakyReluForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
 
 mkldnn::eltwise_backward::primitive_desc GetActBwdDescImpl(
     const MKLDNNActParam &param, const mkldnn::memory &input_mem,
-    const mkldnn::memory &diff_dst_memory, int dtype) {
+    const mkldnn::memory &diff_dst_memory) {
   mkldnn::memory::desc data_md = input_mem.get_desc();
   mkldnn::memory::desc diff_md = diff_dst_memory.get_desc();
   auto cpu_engine = CpuEngine::Get()->get_engine();
