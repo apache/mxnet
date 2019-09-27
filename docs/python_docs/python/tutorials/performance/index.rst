@@ -26,7 +26,7 @@ Essential
 
    .. card::
       :title: Improving Performance
-      :link: https://mxnet.incubator.apache.org/versions/master/faq/perf.html
+      :link: https://mxnet.apache.org/api/faq/perf
 
       How to get the best performance from MXNet.
 
@@ -38,7 +38,7 @@ Essential
 
    .. card::
       :title: Tuning NumPy Operations
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/gotchas_numpy_in_mxnet.html
+      :link: https://mxnet.apache.org/versions/master/tutorials/gluon/gotchas_numpy_in_mxnet.html
 
       Gotchas using NumPy in MXNet.
 
@@ -100,19 +100,19 @@ Distributed Training
 
    .. card::
       :title: Distributed Training Using the KVStore API
-      :link: https://mxnet.incubator.apache.org/versions/master/faq/distributed_training.html
+      :link: https://mxnet.apache.org/versions/master/faq/distributed_training.html
 
       How to use the KVStore API to use multiple GPUs when training a model.
 
    .. card::
       :title: Training with Multiple GPUs Using Model Parallelism
-      :link: https://mxnet.incubator.apache.org/versions/master/faq/model_parallel_lstm.html
+      :link: https://mxnet.apache.org/versions/master/faq/model_parallel_lstm.html
 
       An overview of using multiple GPUs when training an LSTM.
 
    .. card::
       :title: Data Parallelism in MXNet
-      :link: https://mxnet.incubator.apache.org/versions/master/faq/multi_devices.html
+      :link: https://mxnet.apache.org/versions/master/faq/multi_devices.html
 
       An overview of distributed training strategies.
 

@@ -223,9 +223,9 @@ The actual computations are finished, allowing us to copy the results someplace 
 the results.
 
 ## Next Steps
-* [Symbol](http://mxnet.io/tutorials/r/symbol.html)
-* [Write and use callback functions](http://mxnet.io/tutorials/r/CallbackFunction.html)
-* [Neural Networks with MXNet in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
-* [Classify Real-World Images with Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
-* [Handwritten Digits Classification Competition](http://mxnet.io/tutorials/r/mnistCompetition.html)
-* [Character Language Model using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)
+* [Symbol](https://mxnet.io/tutorials/r/symbol.html)
+* [Write and use callback functions](https://mxnet.io/tutorials/r/CallbackFunction.html)
+* [Neural Networks with MXNet in Five Minutes](https://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
+* [Classify Real-World Images with Pre-trained Model](https://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
+* [Handwritten Digits Classification Competition](https://mxnet.io/tutorials/r/mnistCompetition.html)
+* [Character Language Model using RNN](https://mxnet.io/tutorials/r/charRnnModel.html)

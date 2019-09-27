@@ -30,7 +30,7 @@ There are many documents that explain LSTM concepts. If you aren't familiar with
 - Christopher Olah's [Understanding LSTM blog post](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)
 - [Training a LSTM char-rnn in Julia to Generate Random Sentences](http://dmlc.ml/mxnet/2015/11/15/char-lstm-in-julia.html)
 - [Bucketing in MXNet in Python](https://github.com/dmlc/mxnet-notebooks/blob/master/python/tutorials/char_lstm.ipynb)
-- [Bucketing in MXNet](http://mxnet.io/faq/bucketing.html)
+- [Bucketing in MXNet](https://mxnet.io/faq/bucketing.html)
 
 ## How to Use This Tutorial
 

@@ -18,7 +18,7 @@
 # Using pre-trained models in MXNet
 
 
-In this tutorial we will see how to use multiple pre-trained models with Apache MXNet. First, let's download three image classification models from the Apache MXNet [Gluon model zoo](https://mxnet.incubator.apache.org/api/python/gluon/model_zoo.html).
+In this tutorial we will see how to use multiple pre-trained models with Apache MXNet. First, let's download three image classification models from the Apache MXNet [Gluon model zoo](https://mxnet.apache.org/api/python/gluon/model_zoo.html).
 * **DenseNet-121** ([research paper](https://arxiv.org/abs/1608.06993)), improved state of the art on [ImageNet dataset](http://image-net.org/challenges/LSVRC) in 2016.
 * **MobileNet** ([research paper](https://arxiv.org/abs/1704.04861)), MobileNets are based on a streamlined architecture that uses depth-wise separable convolutions to build light weight deep neural networks, suitable for mobile applications.
 * **ResNet-18** ([research paper](https://arxiv.org/abs/1512.03385v1)), the -152 version is the 2015 winner in multiple categories.
@@ -39,13 +39,13 @@ import numpy as np
 
 ## Loading the model
 
-The [Gluon Model Zoo](https://mxnet.incubator.apache.org/api/python/gluon/model_zoo.html) provides a collection of off-the-shelf models. You can get the ImageNet pre-trained model by using `pretrained=True`. 
+The [Gluon Model Zoo](https://mxnet.apache.org/api/python/gluon/model_zoo.html) provides a collection of off-the-shelf models. You can get the ImageNet pre-trained model by using `pretrained=True`. 
 If you want to train on your own classification problem from scratch, you can get an untrained network with a specific number of classes using the `classes` parameter: for example `net = vision.resnet18_v1(classes=10)`. However note that you cannot use the `pretrained` and `classes` parameter at the same time. If you want to use pre-trained weights as initialization of your network except for the last layer, have a look at the last section of this tutorial.
 
 We can specify the *context* where we want to run the model: the default behavior is to use a CPU context. There are two reasons for this:
 * First, this will allow you to test the notebook even if your machine is not equipped with a GPU :)
 * Second, we're going to predict a single image and we don't have any specific performance requirements. For production applications where you'd want to predict large batches of images with the best possible throughput, a GPU could definitely be the way to go.
-* If you want to use a GPU, make sure you have pip installed the right version of mxnet, or you will get an error when using the `mx.gpu()` context. Refer to the [install instructions](http://mxnet.incubator.apache.org/install/index.html)
+* If you want to use a GPU, make sure you have pip installed the right version of mxnet, or you will get an error when using the `mx.gpu()` context. Refer to the [install instructions](https://mxnet.apache.org/install/index.html)
 
 
 ```python
@@ -237,7 +237,7 @@ print(resnet18.output)
 Now you can train your model on your new data using the pre-trained weights as initialization. This is called transfer learning and it has proved to be very useful especially in the cases where you only have access to a small dataset. Your network will have already learned how to perform general pattern detection and feature extraction on the larger dataset.
 You can learn more about transfer learning and fine-tuning with MXNet in these tutorials:
 - [Transferring knowledge through fine-tuning](http://gluon.mxnet.io/chapter08_computer-vision/fine-tuning.html)
-- [Fine Tuning an ONNX Model](https://mxnet.incubator.apache.org/tutorials/onnx/fine_tuning_gluon.html)
+- [Fine Tuning an ONNX Model](https://mxnet.apache.org/tutorials/onnx/fine_tuning_gluon.html)
 
 
 That's it! Explore the model zoo, have fun with pre-trained models!

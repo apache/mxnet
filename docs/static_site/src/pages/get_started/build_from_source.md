@@ -317,7 +317,8 @@ After building MXNet's shared library, you can install other language bindings.
 **NOTE:** The C++ API binding must be built when you build MXNet from source. See [Build MXNet with C++]({{'/api/cpp'|relative_url}}).
 
 The following table provides links to each language binding by operating system:
-| | [Ubuntu](ubuntu_setup) | [macOS](osx_setup) | [Windows](windows_setup) |
+
+| Language | [Ubuntu](ubuntu_setup) | [macOS](osx_setup) | [Windows](windows_setup) |
 | --- | ----  | --- | ------- |
 | Python | [Ubuntu guide](ubuntu_setup.html#install-mxnet-for-python) | [OSX guide](osx_setup) | [Windows guide](windows_setup.html#install-mxnet-for-python) |
 | C++ | [C++ guide](cpp_setup) | [C++ guide](cpp_setup) | [C++ guide](cpp_setup) |
@@ -327,3 +328,4 @@ The following table provides links to each language binding by operating system:
 | R | [Ubuntu guide](ubuntu_setup.html#install-the-mxnet-package-for-r) | [OSX guide](osx_setup.html#install-the-mxnet-package-for-r) | [Windows guide](windows_setup.html#install-the-mxnet-package-for-r) |
 | Scala | [Scala guide](scala_setup.html) | [Scala guide](scala_setup.html) | n/a |
 | Java | [Java guide](java_setup.html) | [Java Guide](java_setup.html) | n/a |
+

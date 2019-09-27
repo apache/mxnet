@@ -165,7 +165,7 @@ class Block(object):
         Prefix acts like a name space. All children blocks created in parent block's
         :py:meth:`name_scope` will have parent block's prefix in their name.
         Please refer to
-        `naming tutorial <http://mxnet.incubator.apache.org/tutorials/gluon/naming.html>`_
+        `naming tutorial <https://mxnet.incubator.apache.org/api/python/docs/tutorials/packages/gluon/naming.html>`_
         for more info on prefix and naming.
     params : ParameterDict or None
         :py:class:`ParameterDict` for sharing weights with the new :py:class:`Block`. For example,
@@ -261,7 +261,7 @@ class Block(object):
                 self.dense = nn.Dense(20)
 
         Please refer to
-        `naming tutorial <http://mxnet.incubator.apache.org/tutorials/gluon/naming.html>`_
+        `naming tutorial <https://mxnet.incubator.apache.org/tutorials/gluon/naming.html>`_
         for more info on prefix and naming.
         """
         return self._scope
@@ -350,7 +350,7 @@ class Block(object):
         warnings.warn("save_params is deprecated. Please use save_parameters. "
                       "Note that if you want load from SymbolBlock later, please "
                       "use export instead. For details, see "
-                      "https://mxnet.incubator.apache.org/tutorials/gluon/save_lo"
+                      "https://mxnet.apache.org/tutorials/gluon/save_lo"
                       "ad_params.html")
         try:
             self.collect_params().save(filename, strip_prefix=self.prefix)
@@ -757,7 +757,7 @@ class HybridBlock(Block):
     References
     ----------
         `Hybrid - Faster training and easy deployment
-        <http://mxnet.io/tutorials/gluon/hybrid.html>`_
+        <https://mxnet.io/tutorials/gluon/hybrid.html>`_
     """
     def __init__(self, prefix=None, params=None):
         super(HybridBlock, self).__init__(prefix=prefix, params=params)

@@ -45,7 +45,7 @@ pdl> print $z,"\n"
 ```
 
 A detailed tutorial is available at
-[http://mxnet.io/tutorials/basic/ndarray.html](http://mxnet.io/tutorials/basic/ndarray.html).
+[https://mxnet.io/tutorials/basic/ndarray.html](https://mxnet.io/tutorials/basic/ndarray.html).
 
 Note: AI::MXNet::NDarray is similar to numpy.ndarray in some aspects. But the difference is not negligible. For example
 
