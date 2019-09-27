@@ -145,7 +145,6 @@ inline bool TwoparamsDistOpShape(const nnvm::NodeAttrs &attrs,
                                  std::vector<TShape> *in_attrs,
                                  std::vector<TShape> *out_attrs) {
   const DistParam &param = nnvm::get<DistParam>(attrs.parsed);
-  CHECK_EQ(out_attrs->size(), 1U);
   if (param.size.has_value()) {
     // Size declared.
     std::vector<dim_t> oshape_vec;
@@ -172,10 +171,12 @@ inline bool TwoparamsDistOpShape(const nnvm::NodeAttrs &attrs,
     } else if (in_attrs->size() == 0) {
       // Two scalar case.
       SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(0, -1))
-      return true;
     }
   }
-  return out_attrs->at(0).ndim() != 0U;
+  if (out_attrs->size() == 2U) {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 1, out_attrs->at(0));
+  }
+  return true;
 }
 
 }  // namespace op

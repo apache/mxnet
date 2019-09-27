@@ -26,6 +26,7 @@
 #define MXNET_OPERATOR_NUMPY_RANDOM_NP_NORMAL_OP_H_
 
 #include <mxnet/operator_util.h>
+#include <cstdio>
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -78,6 +79,7 @@ inline bool NumpyNormalOpType(const nnvm::NodeAttrs &attrs,
   } else {
     (*out_attrs)[0] = mshadow::kFloat32;
   }
+  (*out_attrs)[1] = mshadow::kFloat32;
   return true;
 }
 
@@ -146,16 +148,16 @@ void NumpyNormalForward(const nnvm::NodeAttrs &attrs,
   using namespace mshadow;
   using namespace mxnet_op;
   const NumpyNormalParam &param = nnvm::get<NumpyNormalParam>(attrs.parsed);
-  CHECK_EQ(outputs.size(), 1);
+  // CHECK_EQ(outputs.size(), 1);
   Stream<xpu> *s = ctx.get_stream<xpu>();
 
   // Generate base random number.
   Random<xpu, float> *prnd = ctx.requested[0].get_random<xpu, float>(s);
   index_t output_len = outputs[0].Size();
   Tensor<xpu, 1, float> workspace =
-      ctx.requested[1].get_space_typed<xpu, 1, float>(Shape1(output_len + 1), s);
-  Tensor<xpu, 1, float> normal_tensor = workspace.Slice(0, output_len);
-  Tensor<xpu, 1, float> indicator_device = workspace.Slice(output_len, output_len + 1);
+      ctx.requested[1].get_space_typed<xpu, 1, float>(Shape1(1), s);
+  Tensor<xpu, 1, float> normal_tensor = outputs[1].FlatTo1D<xpu, float>(s);
+  Tensor<xpu, 1, float> indicator_device = workspace;
   float indicator_host = 1.0;
   float *indicator_device_ptr = indicator_device.dptr_;
   prnd->SampleGaussian(&normal_tensor, 0.0, 1.0);
@@ -225,6 +227,76 @@ void NumpyNormalForward(const nnvm::NodeAttrs &attrs,
       });
     });
   }
+}
+
+template<typename xpu, int ndim, typename DType>
+inline void NormalReparamBackwardImpl(const OpContext& ctx,
+                                      const std::vector<TBlob>& inputs,
+                                      const std::vector<OpReqType>& req,
+                                      const std::vector<TBlob>& outputs,
+                                      const mxnet::TShape& new_lshape,
+                                      const mxnet::TShape& new_rshape,
+                                      const mxnet::TShape& new_oshape) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace broadcast;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob lgrad = outputs[0].reshape(new_lshape);
+  const TBlob rgrad = outputs[1].reshape(new_rshape);
+  const TBlob ograd = inputs[0].reshape(new_oshape);
+  // Mean
+  const TBlob lhs = inputs[1].reshape(new_lshape);
+  // Variance
+  const TBlob rhs = inputs[2].reshape(new_rshape);
+  const TBlob samples = inputs[3].reshape(new_oshape);
+  const TBlob noise = inputs[4].reshape(new_oshape);
+  size_t workspace_size_l = ReduceWorkspaceSize<ndim, DType>(
+      s, lgrad.shape_, req[0], ograd.shape_, lhs.shape_, rhs.shape_);
+  size_t workspace_size_r = ReduceWorkspaceSize<ndim, DType>(
+      s, rgrad.shape_, req[1], ograd.shape_, lhs.shape_, rhs.shape_);
+  size_t workspace_size = std::max(workspace_size_l, workspace_size_r);
+  Tensor<xpu, 1, char> workspace =
+      ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
+  Reduce<red::sum, ndim, DType, op::mshadow_op::identity_grad>(s,
+          lgrad, req[0], workspace, ograd);
+  Reduce<red::sum, ndim, DType, op::mshadow_op::mul,
+         op::mshadow_op::left>(s, rgrad, req[1], workspace, ograd, noise, rhs);
+}
+
+// Allow normal sampling to be differentiable,
+// using reparameterization trick described in:
+// Auto-encoding variational bayes.
+// Kingma, D. P., & Welling, M. (2013).
+template<typename xpu>
+void NormalReparamBackward(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx,
+                           const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs) {
+  // skip kernel launch for zero-size tensors
+  printf("1:%d", inputs.size());
+  if (inputs[0].shape_.Size() == 0U) {
+    return;
+  }
+  printf("2:%d", inputs.size());
+  if (outputs.size() == 0U) {
+    return;
+  }
+  // [tensor tensor] case
+  printf("%d", inputs.size());
+  if (inputs.size() == 5U) {
+    printf("hello!\n");
+    mxnet::TShape new_lshape, new_rshape, new_oshape;
+    int ndim = FillShape(outputs[0].shape_, outputs[1].shape_, inputs[0].shape_,
+                         &new_lshape, &new_rshape, &new_oshape);
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      BROADCAST_NDIM_SWITCH(ndim, NDim, {
+        NormalReparamBackwardImpl<xpu, NDim, DType>(
+          ctx, inputs, req, outputs, new_lshape, new_rshape, new_oshape);
+      });
+    });
+  }
+
 }
 
 }  // namespace op
