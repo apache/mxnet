@@ -25,6 +25,16 @@
 #include "../operator/operator_common.h"
 #include "../operator/subgraph/common.h"
 
+#if MXNET_USE_TVM_OP
+#include <tvm/node/node.h>
+namespace mxnet {
+namespace v3 {
+namespace nnvm_relay_bridge {
+tvm::NodeRef NNVMToRelay(const nnvm::Graph &g);
+}  // namespace nnvm_relay_bridge
+}  // namespace v3
+}  // namespace mxnet
+#endif  // MXNET_USE_TVM_OP
 
 namespace mxnet {
 
@@ -269,41 +279,6 @@ std::vector<nnvm::NodeEntry> CachedOp::Gradient(
   return ret;
 }
 
-bool CachedOp::CheckDynamicShapeExists(const Context& default_ctx,
-                                       const std::vector<NDArray*>& inputs,
-                                       bool erase_result) {
-  using namespace nnvm;
-  using namespace imperative;
-  if (this->dynamic_shape_checked_) {
-    return config_.is_dynamic;
-  } else {
-    this->dynamic_shape_checked_ = true;
-  }
-  CHECK_EQ(inputs.size(), num_inputs());
-
-  auto state_ptr = GetCachedOpState(default_ctx);
-  auto& state = state_ptr.get_state<CachedOpState>();
-
-  nnvm::Graph& g = state.info.fwd_graph;
-  ShapeVector shape_inputs;
-  shape_inputs.reserve(inputs.size());
-  for (auto input : inputs) {
-    shape_inputs.emplace_back(input->shape());
-  }
-  // We leverage the shape inference pass to detect whether dynamic shape exists.
-  // If so, the pass will fail with `contain_dynamic_shape = true`,
-  // This method is only called once, so the overhead is negligible.
-  bool contain_dynamic_shape = false;
-  CheckAndInferShape(&g, std::move(shape_inputs), true,
-                     {0, 0}, {0, 0},
-                     &contain_dynamic_shape);
-  if (!config_.static_shape && erase_result) {
-    g.attrs.erase("shape");
-    g.attrs.erase("shape_inputs");
-  }
-  return contain_dynamic_shape;
-}
-
 bool CachedOp::SetForwardGraph(
     GraphInfo* info,
     const bool recording,
@@ -312,7 +287,9 @@ bool CachedOp::SetForwardGraph(
   using namespace imperative;
   CHECK_EQ(inputs.size(), num_inputs());
   nnvm::Graph& g = info->fwd_graph;
-
+#if MXNET_USE_TVM_OP
+  v3::nnvm_relay_bridge::NNVMToRelay(g);
+#endif  // MXNET_USE_TVM_OP
   ShapeVector shape_inputs;
   DTypeVector dtype_inputs;
   StorageTypeVector storage_type_inputs;
@@ -515,310 +492,6 @@ OpStatePtr CachedOp::GetCachedOpState(
   return state_ptr;
 }
 
-void CachedOp::StaticAllocMemory(
-    const OpStatePtr& state_ptr,
-    bool recording,
-    bool keep_fwd) {
-  using namespace nnvm;
-  using namespace imperative;
-
-  auto& state = state_ptr.get_state<CachedOpState>();
-  const auto& default_ctx = state.context;
-  nnvm::Graph& g = keep_fwd ? state.info.full_graph : state.info.fwd_graph;
-  const auto& idx = g.indexed_graph();
-  const auto& vstorage_inplace = g.GetAttr<std::vector<int> >("storage_inplace_index");
-  const auto& mem_plan = g.GetAttr<MemoryPlanVector>(
-      keep_fwd ? "backward_mem_plan" : (recording ? "full_mem_plan" : "forward_mem_plan"));
-  std::vector<int> addto_entry;
-  if (g.attrs.count("addto_entry")) {
-    addto_entry = g.GetAttr<std::vector<int> >("addto_entry");
-  }
-  size_t start_eid =
-      keep_fwd ? state.info.fwd_graph.indexed_graph().num_node_entries() : 0;
-  size_t end_eid = idx.num_node_entries();
-
-  if (!keep_fwd) state.fwd_alloc = false;
-  state.bwd_alloc = false;
-  for (size_t i = start_eid; i < state.buff.size(); ++i) {
-    state.buff[i] = NDArray();
-    state.arrays[i] = &state.buff[i];
-    state.array_reqs[i] = kNullOp;
-    state.dynamic_entries[i] = false;
-  }
-
-  for (auto i : idx.input_nodes()) {
-    auto eid = idx.entry_id(i, 0);
-    if (eid >= start_eid) state.dynamic_entries[eid] = true;
-  }
-  for (auto i : idx.outputs()) {
-    auto eid = idx.entry_id(i);
-    if (eid >= start_eid) state.dynamic_entries[eid] = true;
-  }
-
-  for (size_t i = start_eid; i < end_eid; ++i) {
-    if (addto_entry.size() && addto_entry[i]) {
-      state.array_reqs[i] = kAddTo;
-    } else if (vstorage_inplace[i] >= 0) {
-      state.array_reqs[i] = kWriteInplace;
-    } else if (vstorage_inplace[i] == -2) {
-      // -2 indicate that the entry is never referenced.
-      state.array_reqs[i] = kNullOp;
-    } else {
-      state.array_reqs[i] = kWriteTo;
-    }
-  }
-
-  auto& reuse_pool = keep_fwd ? state.bwd_reuse_pool : state.fwd_reuse_pool;
-  reuse_pool = imperative::AllocateMemory(
-      g, idx, default_ctx, start_eid, end_eid, mem_plan,
-      state.arrays, &state.array_reqs, std::move(reuse_pool));
-
-  state.recording = recording;
-  if (keep_fwd) {
-    state.bwd_alloc = true;
-  } else {
-    state.fwd_alloc = true;
-  }
-}
-
-void CachedOp::StaticInitExec(
-    const OpStatePtr& state_ptr,
-    bool recording,
-    bool keep_fwd) {
-  using namespace nnvm;
-  using namespace imperative;
-
-  auto& state = state_ptr.get_state<CachedOpState>();
-  const auto& default_ctx = state.context;
-  nnvm::Graph& g = keep_fwd ? state.info.full_graph : state.info.fwd_graph;
-  const auto& idx = g.indexed_graph();
-  std::vector<int> skip_plus_node;
-  if (g.attrs.count("skip_plus_node")) {
-    skip_plus_node = g.GetAttr<std::vector<int> >("skip_plus_node");
-  }
-  size_t start_nid =
-      keep_fwd ? state.info.fwd_graph.indexed_graph().num_nodes() : 0;
-  size_t end_nid = idx.num_nodes();
-
-  if (!keep_fwd) state.fwd_exec_init = false;
-  state.bwd_exec_init = false;
-
-  for (size_t i = start_nid; i < state.execs.size(); ++i) {
-    state.execs[i].reset();
-    state.opr_segs[i] = EngineOprSeg();
-  }
-
-  if (!config_.static_shape) {
-    for (size_t i = start_nid; i < end_nid; ++i) {
-      state.opr_segs[i].next_nid = i + 1;
-      state.opr_segs[i].skip = skip_plus_node.size() && skip_plus_node[i];
-    }
-  } else {
-    for (size_t i = start_nid; i < end_nid; ++i) {
-      exec::CreateOpExecs(g, &state.execs, &state.op_states, i);
-    }
-    exec::AttachOpResources(g, state.execs, start_nid, end_nid);
-
-    for (size_t i = start_nid; i < end_nid; ++i) {
-      bool skip = idx[i].source->is_variable();
-      for (size_t j = 0; !skip && j < idx[i].inputs.size(); ++j) {
-        skip = state.dynamic_entries[idx.entry_id(idx[i].inputs[j])];
-      }
-      for (size_t j = 0; !skip && j < idx[i].source->num_outputs(); ++j) {
-        skip = state.dynamic_entries[idx.entry_id(i, j)];
-      }
-      if (skip) continue;
-      SetupOpExec(g, i, state.execs[i], state.arrays, state.array_reqs);
-    }
-
-    // Init bulk_size for Inference mode with bulking enabled (= entire forward graph).
-    size_t bulk_size = idx.num_nodes();
-    if (recording || keep_fwd) {
-      // Training mode
-      if (!Imperative::PreferBulkExecTrain())
-        bulk_size = 0;
-      else
-        bulk_size = keep_fwd ? config_.backward_bulk_size : config_.forward_bulk_size;
-    } else {
-      // Inference mode
-      if (!Imperative::PreferBulkExecInference())
-        bulk_size = 0;
-    }
-
-    CreateEngineOpSeg(idx, default_ctx, start_nid, end_nid, bulk_size,
-                      state.execs, skip_plus_node, &state.opr_segs);
-  }
-
-  if (keep_fwd) {
-    state.bwd_exec_init = true;
-  } else {
-    state.fwd_exec_init = true;
-  }
-}
-
-void CachedOp::StaticRunOps(
-    const Context& default_ctx,
-    const nnvm::Graph& g,
-    const OpStatePtr& state_ptr,
-    const std::vector<NDArray *> &state_arrays,
-    size_t start_nid,
-    size_t end_nid) {
-  static auto& createop = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
-  static auto& is_layer_backward = Op::GetAttr<bool>("TIsLayerOpBackward");
-
-  bool profiling = profiler::Profiler::Get()->GetState() == profiler::Profiler::kRunning;
-  bool is_training = Imperative::Get()->is_training();
-  auto& state = state_ptr.get_state<CachedOpState>();
-  const auto& idx = g.indexed_graph();
-  const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
-  const auto& op_execs = state.execs;
-
-  std::vector<NDArray*> ndinputs, ndoutputs;
-  mxnet::ShapeVector arg_shapes;
-  nnvm::DTypeVector arg_dtypes;
-  std::vector<OpReqType> req;
-
-  for (size_t i = start_nid; config_.static_shape && i < end_nid; ++i) {
-    if (op_execs[i]) op_execs[i]->op_ctx.is_train = is_training;
-  }
-
-  for (size_t i = start_nid; i < end_nid; i = state.opr_segs[i].next_nid) {
-    const auto& opr_seg = state.opr_segs[i];
-    if (opr_seg.skip) continue;
-    if (opr_seg.opr != nullptr) {
-      Engine::Get()->Push(opr_seg.opr.get(), default_ctx, 0, profiling);
-    } else {
-      const nnvm::IndexedGraph::Node& node = idx[i];
-      if (node.source->is_variable()) continue;
-      auto num_outputs = node.source->num_outputs();
-      ndinputs.clear();
-      ndinputs.reserve(node.inputs.size());
-      for (const auto& j : node.inputs) {
-        ndinputs.emplace_back(state_arrays[idx.entry_id(j)]);
-        CHECK(!ndinputs.back()->is_none());
-      }
-      if (monitor_callback_ && monitor_all_) {
-          mxnet::common::ExecuteMonInputCallback(idx, state_arrays, i, monitor_callback_);
-      }
-      ndoutputs.clear();
-      ndoutputs.reserve(num_outputs);
-      req.clear();
-      req.reserve(num_outputs);
-      for (size_t j = 0; j < num_outputs; ++j) {
-        size_t eid = idx.entry_id(i, j);
-        ndoutputs.emplace_back(state_arrays[eid]);
-        req.push_back(state.array_reqs[eid]);
-        CHECK(req.back() == kNullOp || !ndoutputs.back()->is_none());
-      }
-      const DispatchMode dispatch_mode = dispatch_modes[i];
-
-      if (createop.count(node.source->op())) {
-        arg_shapes.clear();
-        arg_dtypes.clear();
-        arg_shapes.reserve(ndinputs.size());
-        arg_dtypes.reserve(ndinputs.size());
-        for (auto& ndinput : ndinputs) {
-          arg_shapes.emplace_back(ndinput->shape());
-          arg_dtypes.emplace_back(ndinput->dtype());
-        }
-        if (!config_.static_shape) {
-          state.op_states[i] =
-              createop[node.source->op()](node.source->attrs, default_ctx, arg_shapes, arg_dtypes);
-        }
-        Imperative::Get()->InvokeOp(
-            default_ctx, node.source->attrs, ndinputs, ndoutputs, req,
-            dispatch_mode, state.op_states[i]);
-      } else if (is_layer_backward.get(node.source->op(), false)) {
-        nnvm::Node* fwd_node = node.source->control_deps[0].get();
-        auto fwd_node_id = idx.node_id(fwd_node);
-        Imperative::Get()->InvokeOp(
-            default_ctx, node.source->attrs, ndinputs, ndoutputs,
-            req, dispatch_mode, state.op_states[fwd_node_id]);
-      } else {
-        Imperative::Get()->InvokeOp(
-            default_ctx, node.source->attrs, ndinputs, ndoutputs, req,
-            dispatch_mode);
-      }
-      if (monitor_callback_) {
-          mxnet::common::ExecuteMonOutputCallback(idx, state_arrays, i, monitor_callback_);
-      }
-    }
-  }
-}
-
-OpStatePtr CachedOp::StaticForward(
-    const Context& default_ctx,
-    const std::vector<NDArray*>& inputs,
-    const std::vector<NDArray*>& outputs) {
-  using namespace nnvm;
-  using namespace imperative;
-
-  bool recording = Imperative::Get()->is_recording();
-  auto state_ptr = GetCachedOpState(default_ctx);
-  auto& state = state_ptr.get_state<CachedOpState>();
-  std::lock_guard<std::mutex> lock(state.mutex);
-
-  bool match = SetForwardGraph(&state.info, recording, inputs);
-  match = match && state.recording == recording;
-
-  nnvm::Graph& g = state.info.fwd_graph;
-  const auto& idx = g.indexed_graph();
-  if (!state.fwd_alloc || !match)  {
-    StaticAllocMemory(state_ptr, recording, false);
-  }
-
-  // We are going to add input and output arrays to the array list.
-  // The input and output arrays should only be valid for this run,
-  // so we shouldn't modify the state's array list.
-  state.arrays_with_in_out = state.arrays;
-  auto& arrays = state.arrays_with_in_out;
-  if (config_.static_shape) {
-    for (auto i : config_.param_indices) {
-      auto nid = idx.input_nodes()[i];
-      if (!arrays[idx.entry_id(nid, 0)]->IsSame(*inputs[i])) {
-        match = false;
-        auto ptr = &state.buff[idx.entry_id(nid, 0)];
-        CHECK_EQ(arrays[idx.entry_id(nid, 0)], ptr);
-        *arrays[idx.entry_id(nid, 0)] = *inputs[i];
-        state.dynamic_entries[idx.entry_id(nid, 0)] = false;
-      }
-    }
-    for (auto i : config_.data_indices) {
-      auto eid = idx.entry_id(idx.input_nodes()[i], 0);
-      arrays[eid] = inputs[i];
-    }
-  } else {
-    for (size_t i = 0; i < num_inputs(); ++i) {
-      auto nid = idx.input_nodes()[i];
-      arrays[idx.entry_id(nid, 0)] = inputs[i];
-    }
-  }
-
-  if (!state.fwd_exec_init || !match) {
-    StaticInitExec(state_ptr, recording, false);
-  }
-
-  const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
-  const auto& shapes = g.GetAttr<mxnet::ShapeVector>("shape");
-  const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
-
-  for (size_t i = 0; i < outputs.size(); ++i) {
-    auto eid = idx.entry_id(idx.outputs()[i]);
-    // An input and an output may share the same array.
-    if (!arrays[eid]->is_none())
-      *outputs[i] = arrays[eid]->Detach();
-    arrays[eid] = outputs[i];
-    if (!outputs[i]->is_none()) continue;
-    *outputs[i] = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
-                          shapes[eid], default_ctx, true, dtypes[eid]);
-  }
-
-  StaticRunOps(default_ctx, g, state_ptr, arrays, 0, idx.num_nodes());
-
-  return recording ? state_ptr : OpStatePtr();
-}
-
-
 OpStatePtr CachedOp::DynamicForward(
     const Context& default_ctx,
     const std::vector<NDArray*>& inputs,
@@ -932,15 +605,7 @@ OpStatePtr CachedOp::Forward(
 
   OpStatePtr op_state;
   try {
-    if (config_.is_dynamic || CheckDynamicShapeExists(default_ctx, inputs, true)) {
-      config_.is_dynamic = true;
-      config_.static_alloc = false;
-      op_state = DynamicForward(default_ctx, inputs, outputs, true);
-    } else if (config_.static_alloc) {
-      op_state = StaticForward(default_ctx, inputs, outputs);
-    } else {
-      op_state = DynamicForward(default_ctx, inputs, outputs, false);
-    }
+    op_state = DynamicForward(default_ctx, inputs, outputs, false);
   } catch (const dmlc::Error& e) {
     Engine::Get()->set_bulk_size(prev_bulk_size);
     throw e;
@@ -1045,93 +710,6 @@ void CachedOp::DynamicBackward(
   }
 }
 
-void CachedOp::StaticBackward(
-    const bool retain_graph,
-    const OpStatePtr& state_ptr,
-    const std::vector<NDArray*>& inputs,
-    const std::vector<OpReqType>& reqs,
-    const std::vector<NDArray*>& outputs) {
-  using namespace nnvm;
-  using namespace imperative;
-
-  Context default_ctx = outputs[0]->ctx();
-
-  auto& state = state_ptr.get_state<CachedOpState>();
-  std::lock_guard<std::mutex> lock(state.mutex);
-
-  bool match = SetBackwardGraph(&state.info, reqs, inputs, true);
-
-  nnvm::Graph& g = state.info.full_graph;
-  const auto& idx = g.indexed_graph();
-  auto num_forward_nodes = state.info.fwd_graph.indexed_graph().num_nodes();
-
-  if (!state.bwd_alloc || !match) {
-    StaticAllocMemory(state_ptr, true, true);
-  }
-
-  // We are going to add input and output arrays to the array list.
-  // The input and output arrays should only be valid for this run,
-  // so we shouldn't modify the state's array list.
-  state.arrays_with_in_out = state.arrays;
-  auto& arrays = state.arrays_with_in_out;
-  for (size_t i = 0; i < state.info.bwd_input_eid.size(); ++i) {
-    auto eid = state.info.bwd_input_eid[i];
-    if (eid == kEidNotExist) {
-      continue;
-    }
-    if (state.dynamic_entries[eid]) arrays[eid] = inputs[i];
-  }
-
-  if (config_.static_shape) {
-    for (auto i : config_.param_indices) {
-      const auto iter = fwd_input_to_grad_output_.find(i);
-      if (iter == fwd_input_to_grad_output_.end()) continue;
-      auto entry = grad_graph_.outputs[iter->second];
-      if (!idx.exist(entry.node.get())) continue;
-      auto eid = idx.entry_id(entry);
-      if (!arrays[eid]->IsSame(*outputs[iter->second]) ||
-          !(state.array_reqs[eid] == reqs[iter->second])) {
-        match = false;
-        state.array_reqs[eid] = reqs[iter->second];
-        // An input and an output may share the same array.
-        if (!arrays[eid]->is_none())
-          *outputs[iter->second] = arrays[eid]->Detach();
-        *arrays[eid] = *outputs[iter->second];
-        state.dynamic_entries[eid] = false;
-      }
-    }
-    for (auto i : config_.data_indices) {
-      const auto iter = fwd_input_to_grad_output_.find(i);
-      if (iter == fwd_input_to_grad_output_.end()) continue;
-      auto entry = grad_graph_.outputs[iter->second];
-      if (!idx.exist(entry.node.get())) continue;
-      auto eid = idx.entry_id(entry);
-      state.array_reqs[eid] = reqs[iter->second];
-      // An input and an output may share the same array.
-      if (!arrays[eid]->is_none())
-        *outputs[iter->second] = arrays[eid]->Detach();
-      arrays[eid] = outputs[iter->second];
-    }
-  } else {
-    for (size_t i = 0; i < grad_graph_.outputs.size(); ++i) {
-      auto entry = grad_graph_.outputs[i];
-      if (!idx.exist(entry.node.get())) continue;
-      auto eid = idx.entry_id(entry);
-      state.array_reqs[eid] = reqs[i];
-      // An input and an output may share the same array.
-      if (!arrays[eid]->is_none())
-        *outputs[i] = arrays[eid]->Detach();
-      arrays[eid] = outputs[i];
-    }
-  }
-
-  if (!state.bwd_exec_init || !match) {
-    StaticInitExec(state_ptr, true, true);
-  }
-
-  StaticRunOps(default_ctx, g, state_ptr, arrays, num_forward_nodes, idx.num_nodes());
-}
-
 void CachedOp::Backward(
     const bool retain_graph,
     const OpStatePtr& state,
@@ -1147,11 +725,7 @@ void CachedOp::Backward(
   int prev_bulk_size = Engine::Get()->set_bulk_size(config_.backward_bulk_size);
 
   try {
-    if (config_.static_alloc) {
-      StaticBackward(retain_graph, state, inputs, reqs, outputs);
-    } else {
-      DynamicBackward(retain_graph, state, inputs, reqs, outputs);
-    }
+    DynamicBackward(retain_graph, state, inputs, reqs, outputs);
   } catch (const dmlc::Error& e) {
     Engine::Get()->set_bulk_size(prev_bulk_size);
     throw e;

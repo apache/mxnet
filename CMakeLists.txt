@@ -744,7 +744,7 @@ endif()
 
 if(USE_TVM_OP)
   add_definitions(-DMXNET_USE_TVM_OP=1)
-  list(APPEND mxnet_LINKER_LIBS ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm/libtvm_runtime.so)
+  list(APPEND mxnet_LINKER_LIBS ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm/libtvm.so)
   include(cmake/BuildTVM.cmake)
   add_subdirectory("3rdparty/tvm")
 
