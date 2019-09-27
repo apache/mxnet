@@ -201,7 +201,7 @@ class BaseModule(object):
         """Runs prediction on ``eval_data`` and evaluates the performance according to
         the given ``eval_metric``.
 
-        Checkout `Module Tutorial <https://mxnet.io/tutorials/basic/module.html>`_ to see
+        Checkout `Module Tutorial <https://mxnet.incubator.apache.org/api/python/tutorials/packages/module/index.html>`_ to see
         a end-to-end use-case.
 
         Parameters
@@ -416,7 +416,7 @@ class BaseModule(object):
             validation_metric=None, monitor=None, sparse_row_id_fn=None):
         """Trains the module parameters.
 
-        Checkout `Module Tutorial <https://mxnet.io/tutorials/basic/module.html>`_ to see
+        Checkout `Module Tutorial <https://mxnet.incubator.apache.org/api/python/tutorials/packages/module/index.html>`_ to see
         a end-to-end use-case.
 
         Parameters

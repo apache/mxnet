@@ -133,7 +133,7 @@ Also, add the dependency which corresponds to your platform to the ```dependenci
 Build From Source
 -----------------
 
-The [Installation Guide](https://mxnet.incubator.apache.org/install/index.html) contains instructions to install mxnet or build it from source. The Scala/Java package is built from source using Maven. The maven build assumes you already have a ``lib/libmxnet.so`` file.
+The [Installation Guide](https://mxnet.incubator.apache.org/get_started) contains instructions to install mxnet or build it from source. The Scala/Java package is built from source using Maven. The maven build assumes you already have a ``lib/libmxnet.so`` file.
 If you have built MXNet from source and are looking to set up Scala\Java from that point, you may simply run the following from the MXNet source root, the build will detect your platform (OSX/Linux) and libmxnet.so flavor (CPU/GPU):
 
 ```bash

@@ -142,7 +142,7 @@ use Scalar::Util qw(refaddr);
     Prefix acts like a name space. All children blocks created in parent block's
     name_scope will have parent block's prefix in their name.
     Please refer to
-    naming tutorial https://mxnet.incubator.apache.org/tutorials/gluon/naming.html
+    naming tutorial https://mxnet.incubator.apache.org/api/python/docs/tutorials/packages/gluon/naming.html
     for more info on prefix and naming.
 
     params : AI::MXNet::Gluon::ParameterDict or undef
