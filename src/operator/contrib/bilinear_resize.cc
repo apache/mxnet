@@ -33,7 +33,8 @@ using namespace mshadow;
 template<typename xpu, typename DType, typename AccReal>
 void SpatialUpSamplingBilinearUpdateOutput(mshadow::Stream<cpu> *s,
                                            const std::vector<TBlob> &input,
-                                           const std::vector<TBlob> &output) {
+                                           const std::vector<TBlob> &output,
+                                           bool align_corners) {
   Tensor<xpu, 4, DType> itensor = input[0].get<xpu, 4, DType>(s);
   Tensor<xpu, 4, DType> otensor = output[0].get<xpu, 4, DType>(s);
   int nbatch = otensor.size(0);
@@ -69,23 +70,25 @@ void SpatialUpSamplingBilinearUpdateOutput(mshadow::Stream<cpu> *s,
     }
     return;
   }
+  const DType rheight = area_pixel_compute_scale<DType>(
+	  inputHeight, outputHeight, align_corners);
+  const DType rwidth = area_pixel_compute_scale<DType>(
+	  inputWidth, outputWidth, align_corners);
 
-  const float rheight =(outputHeight > 1) ? static_cast<float>(inputHeight - 1)/
-                       (outputHeight - 1) : 0.f;
-  const float rwidth = (outputWidth > 1) ? static_cast<float>(inputWidth - 1) /
-                       (outputWidth - 1) : 0.f;
 #pragma omp parallel for num_threads(nthreads)
   for (int index = 0; index < output_elems_per_channel; index++) {
     const int h2 = index / outputWidth;
     const int w2 = index % outputWidth;
 
-    const float h1r = rheight * h2;
+	const DType h1r = area_pixel_compute_source_index<DType>(
+		rheight, h2, align_corners, /*cubic=*/false);
     const int h1 = h1r;
     const int h1p = (h1 < inputHeight - 1) ? 1 : 0;
     const DType h1lambda = h1r - h1;
     const DType h0lambda = (DType)1. - h1lambda;
 
-    const float w1r = rwidth * w2;
+	const DType w1r = area_pixel_compute_source_index<DType>(
+		rwidth, w2, align_corners, /*cubic=*/false);
     const int w1 = w1r;
     const int w1p = (w1 < inputWidth - 1) ? 1 : 0;
     const DType w1lambda = w1r - w1;
@@ -107,7 +110,8 @@ template<typename xpu, typename DType, typename AccReal>
 void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<cpu> *s,
                                               const std::vector<TBlob> &input,
                                               const std::vector<TBlob> &output,
-                                              bool modeLike) {
+                                              bool modeLike,
+                                              bool align_corners) {
   Tensor<xpu, 4, DType> gradOutput = input[0].get<xpu, 4, DType>(s);
   Tensor<xpu, 4, DType> gradInput = output[0].get<xpu, 4, DType>(s);
 
@@ -144,23 +148,24 @@ void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<cpu> *s,
     }
     return;
   }
-  const float rheight =(outputHeight > 1) ? static_cast<float>(inputHeight - 1)/
-                       (outputHeight - 1) : 0.f;
-  const float rwidth = (outputWidth > 1) ? static_cast<float>(inputWidth - 1)/
-                       (outputWidth - 1) : 0.f;
-
+  const DType rheight = area_pixel_compute_scale<DType>(
+	  inputHeight, outputHeight, align_corners);
+  const DType rwidth = area_pixel_compute_scale<DType>(
+	  inputWidth, outputWidth, align_corners);
 #pragma omp parallel for num_threads(nthreads)
   for (int index = 0; index < output_elems_per_channel; index++) {
     const int h2 = index / outputWidth;
     const int w2 = index % outputWidth;
 
-    const float h1r = rheight * h2;
+    const DType h1r = area_pixel_compute_source_index<DType>(
+        rheight, h2, align_corners, /*cubic=*/false);
     const int h1 = h1r;
     const int h1p = (h1 < inputHeight - 1) ? 1 : 0;
     const DType h1lambda = h1r - h1;
     const DType h0lambda = (DType)1. - h1lambda;
 
-    const float w1r = rwidth * w2;
+    const DType w1r = area_pixel_compute_source_index<DType>(
+        rwidth, w2, align_corners, /*cubic=*/false);
     const int w1 = w1r;
     const int w1p = (w1 < inputWidth - 1) ? 1 : 0;
     const DType w1lambda = w1r - w1;

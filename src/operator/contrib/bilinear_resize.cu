@@ -56,6 +56,7 @@ __global__ void like_mode_kernel_backward(const int n,
 template<typename xpu, typename Dtype, typename Acctype>
 __global__ void caffe_gpu_interp2_kernel_backward(const int n,
     const Acctype rheight, const Acctype rwidth,
+	const bool align_corners,
     Tensor<xpu, 4, Dtype> data1, const Tensor<xpu, 4, Dtype> data2) {
   int index = threadIdx.x + blockIdx.x * blockDim.x;
   const int batchsize = data1.size(0);
@@ -80,13 +81,15 @@ __global__ void caffe_gpu_interp2_kernel_backward(const int n,
       return;
     }
     //
-    const Acctype h1r = rheight * h2;
+    const Acctype h1r = cu_area_pixel_compute_source_index<Acctype>(
+		rheight, h2, align_corners, /*cubic=*/false);
     const int h1 = h1r;
     const int h1p = (h1 < height1 - 1) ? 1 : 0;
     const Acctype h1lambda = h1r - h1;
     const Acctype h0lambda = Acctype(1) - h1lambda;
     //
-    const Acctype w1r = rwidth * w2;
+    const Acctype w1r = cu_area_pixel_compute_source_index<Acctype>(
+		rwidth, w2, align_corners, /*cubic=*/false);
     const int w1 = w1r;
     const int w1p = (w1 < width1 - 1) ? 1 : 0;
     const Acctype w1lambda = w1r - w1;
@@ -111,7 +114,8 @@ __global__ void caffe_gpu_interp2_kernel_backward(const int n,
 template<typename xpu, typename DType, typename AccReal>
 void SpatialUpSamplingBilinearUpdateOutput(mshadow::Stream<gpu> *s,
                                            const std::vector<TBlob> &input,
-                                           const std::vector<TBlob> &output) {
+                                           const std::vector<TBlob> &output,
+	                                       bool align_corners) {
   Tensor<xpu, 4, DType> idata = input[0].get<xpu, 4, DType>(s);
   Tensor<xpu, 4, DType> odata = output[0].get<xpu, 4, DType>(s);
   int outputHeight = odata.size(2);
@@ -119,10 +123,11 @@ void SpatialUpSamplingBilinearUpdateOutput(mshadow::Stream<gpu> *s,
   int inputHeight = idata.size(2);
   int inputWidth = idata.size(3);
 
-  const AccReal rheight = (outputHeight > 1) ? (AccReal)(inputHeight - 1)/
-                         (outputHeight - 1) : AccReal(0);
-  const AccReal rwidth = (outputWidth > 1) ? (AccReal)(inputWidth - 1)/
-                         (outputWidth - 1) : AccReal(0);
+  const AccReal rheight = cu_area_pixel_compute_scale<AccReal>(
+	  inputHeight, outputHeight, align_corners);
+  const AccReal rwidth = cu_area_pixel_compute_scale<AccReal>(
+	  inputWidth, outputWidth, align_corners);
+
   const int num_kernels = outputHeight * outputWidth;
   const int num_threads = getNumThreads(inputHeight*inputWidth, false);
   dim3 blocks(static_cast<int>(num_kernels / num_threads) + 1);
@@ -131,7 +136,7 @@ void SpatialUpSamplingBilinearUpdateOutput(mshadow::Stream<gpu> *s,
   ImageLayout layout = NCHW;
   caffe_gpu_interp2_kernel<xpu, DType, AccReal>
   <<<blocks, threads , 0, stream>>>(
-    num_kernels, rheight, rwidth, idata, odata, layout);
+    num_kernels, rheight, rwidth, align_corners, idata, odata, layout);
   MSHADOW_CUDA_POST_KERNEL_CHECK(SpatialUpSamplingBilinearUpdateOutput);
 }
 
@@ -139,23 +144,26 @@ template<typename xpu, typename DType, typename AccReal>
 void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<gpu> *s,
                                               const std::vector<TBlob> &input,
                                               const std::vector<TBlob> &output,
-                                              bool modeLike) {
-  Tensor<xpu, 4, DType> data1 = output[0].get<xpu, 4, DType>(s);
-  Tensor<xpu, 4, DType> data2 = input[0].get<xpu, 4, DType>(s);
-  int height1 = data1.size(2);
-  int width1 = data1.size(3);
-  int height2 = data2.size(2);
-  int width2 = data2.size(3);
-  const AccReal rheight = (height2 > 1) ? (AccReal)(height1 - 1)/(height2 - 1) : AccReal(0);
-  const AccReal rwidth = (width2 > 1) ? (AccReal)(width1 - 1) / (width2 - 1) : AccReal(0);
-  const int num_kernels = height2 * width2;
-  const int num_threads = getNumThreads(height1*width1, false);
+                                              bool modeLike,
+	                                          bool align_corners) {
+  Tensor<xpu, 4, DType> gradOutput = input[0].get<xpu, 4, DType>(s);
+  Tensor<xpu, 4, DType> gradInput = output[0].get<xpu, 4, DType>(s);
+  int outputHeight = gradOutput.size(2);
+  int outputWidth = gradOutput.size(3);
+  int inputHeight = gradInput.size(2);
+  int inputWidth = gradInput.size(3);
+  const AccReal rheight = cu_area_pixel_compute_scale<AccReal>(
+	  inputHeight, outputHeight, align_corners);
+  const AccReal rwidth = cu_area_pixel_compute_scale<AccReal>(
+	  inputWidth, outputWidth, align_corners);
+  const int num_kernels = outputHeight * outputWidth;
+  const int num_threads = getNumThreads(inputHeight*inputWidth, false);
   dim3 blocks(static_cast<int>(num_kernels / num_threads) + 1);
   dim3 threads(num_threads);
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
   caffe_gpu_interp2_kernel_backward<xpu, DType, AccReal>
   <<<blocks, threads, 0, stream>>>(
-    num_kernels, rheight, rwidth, data1, data2);
+    num_kernels, rheight, rwidth, align_corners, gradInput, gradOutput);
 
   if (modeLike) {
     Tensor<xpu, 4, DType> dataLike = output[1].get<xpu, 4, DType>(s);

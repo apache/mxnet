@@ -60,10 +60,44 @@ static unsigned getNumThreads(int nElem, const bool smaller) {
   return smaller ? (MAX_BLOCK_SIZE >> 1) : MAX_BLOCK_SIZE;
 }
 
+template <typename Acctype>
+__host__ __forceinline__ static Acctype cu_area_pixel_compute_scale(
+	int input_size,
+	int output_size,
+	bool align_corners) {
+	if (output_size > 1) {
+		return align_corners ? (Acctype)(input_size - 1) / (output_size - 1)
+			: (Acctype)input_size / output_size;
+	}
+	else {
+		return static_cast<Acctype>(0);
+	}
+}
+
+template <typename Acctype>
+__device__ __forceinline__ static Acctype cu_area_pixel_compute_source_index(
+	Acctype scale,
+	int dst_index,
+	bool align_corners,
+	bool cubic) {
+	if (align_corners) {
+		return scale * dst_index;
+	}
+	else {
+		Acctype src_idx = scale * (dst_index + static_cast<Acctype>(0.5)) -
+			static_cast<Acctype>(0.5);
+		// See Note[Follow Opencv resize logic]
+		return (!cubic && src_idx < static_cast<Acctype>(0))
+			? static_cast<Acctype>(0)
+			: src_idx;
+	}
+}
+
 // caffe_gpu_interp2_kernel overloading with Tensor<xpu, 3, DType>
 template<typename xpu, typename Dtype, typename Acctype>
 __global__ void caffe_gpu_interp2_kernel(const int n,
     const Acctype rheight, const Acctype rwidth,
+	const bool align_corners,
     const Tensor<xpu, 3, Dtype> data1,
     Tensor<xpu, 3, Dtype> data2,
     ImageLayout layout) {
@@ -88,13 +122,15 @@ __global__ void caffe_gpu_interp2_kernel(const int n,
       return;
     }
     //
-    const Acctype h1r = rheight * h2;
+    const Acctype h1r = cu_area_pixel_compute_source_index<Acctype>(
+		rheight, h2, align_corners, /*cubic=*/false);
     const int h1 = h1r;
     const int h1p = (h1 < height1 - 1) ? 1 : 0;
     const Acctype h1lambda = h1r - h1;
     const Acctype h0lambda = Acctype(1) - h1lambda;
     //
-    const Acctype w1r = rwidth * w2;
+    const Acctype w1r = cu_area_pixel_compute_source_index<Acctype>(
+		rwidth, w2, align_corners, /*cubic=*/false);
     const int w1 = w1r;
     const int w1p = (w1 < width1 - 1) ? 1 : 0;
     const Acctype w1lambda = w1r - w1;
@@ -113,6 +149,7 @@ __global__ void caffe_gpu_interp2_kernel(const int n,
 template<typename xpu, typename Dtype, typename Acctype>
 __global__ void caffe_gpu_interp2_kernel(const int n,
     const Acctype rheight, const Acctype rwidth,
+	const bool align_corners,
     const Tensor<xpu, 4, Dtype> data1,
     Tensor<xpu, 4, Dtype> data2,
     ImageLayout layout) {
@@ -146,13 +183,15 @@ __global__ void caffe_gpu_interp2_kernel(const int n,
       return;
     }
     //
-    const Acctype h1r = rheight * h2;
+    const Acctype h1r = cu_area_pixel_compute_source_index<Acctype>(
+		rheight, h2, align_corners, /*cubic=*/false);
     const int h1 = h1r;
     const int h1p = (h1 < height1 - 1) ? 1 : 0;
     const Acctype h1lambda = h1r - h1;
     const Acctype h0lambda = Acctype(1) - h1lambda;
     //
-    const Acctype w1r = rwidth * w2;
+    const Acctype w1r = cu_area_pixel_compute_source_index<Acctype>(
+		rwidth, w2, align_corners, /*cubic=*/false);
     const int w1 = w1r;
     const int w1p = (w1 < width1 - 1) ? 1 : 0;
     const Acctype w1lambda = w1r - w1;
