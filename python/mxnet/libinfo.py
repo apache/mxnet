@@ -130,7 +130,7 @@ def find_conf_path(prefix='tvmop'):
             logging.warning("MXNET_CONF_PATH '%s' doesn't exist", conf_from_env)
 
     curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-    makefile_path = os.path.join(curr_path, '../../')
+    makefile_path = os.path.join(curr_path, '../../lib/')
     cmake_build_path = os.path.join(curr_path, '../../build/')
     candidates_path = [makefile_path, cmake_build_path]
     candidates_path = [p + prefix + '.conf' for p in candidates_path]
