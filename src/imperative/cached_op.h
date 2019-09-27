@@ -166,6 +166,35 @@ class CachedOp {
       const std::vector<NDArray*>& inputs,
       const std::vector<OpReqType>& reqs,
       const std::vector<NDArray*>& outputs);
+  void StaticAllocMemory(
+      const OpStatePtr& state_ptr,
+      bool recording,
+      bool keep_fwd);
+  void StaticInitExec(
+      const OpStatePtr& state_ptr,
+      bool recording,
+      bool keep_fwd);
+  void StaticRunOps(
+      const Context& default_ctx,
+      const nnvm::Graph& g,
+      const OpStatePtr& state_ptr,
+      const std::vector<NDArray *> &state_arrays,
+      size_t start_nid,
+      size_t end_nid);
+  OpStatePtr StaticForward(
+      const Context& default_ctx,
+      const std::vector<NDArray*>& inputs,
+      const std::vector<NDArray*>& outputs);
+  void StaticBackward(
+      const bool retain_graph,
+      const OpStatePtr& state_ptr,
+      const std::vector<NDArray*>& inputs,
+      const std::vector<OpReqType>& reqs,
+      const std::vector<NDArray*>& outputs);
+  bool CheckDynamicShapeExists(
+      const Context& default_ctx,
+      const std::vector<NDArray*>& inputs,
+      bool erase_result);
 
   CachedOpConfig config_;
   nnvm::Graph fwd_graph_;
