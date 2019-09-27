@@ -44,7 +44,6 @@ using tvm::relay::LetNode;
 using tvm::NodeRef;
 using tvm::Array;
 
-
 static void PrintIndexedGraph(const nnvm::Graph &g) {
   const auto &idx = g.indexed_graph();
   std::unordered_set<int> input_nodes(idx.input_nodes().begin(),
@@ -172,13 +171,10 @@ NodeRef NNVMToRelay(const nnvm::Graph &g) {
     }
   }
   // Then we are able to construct the function
-  NodeRef result = FunctionNode::make(std::move(params), std::move(body), {}, {}, {});
-  LOG(INFO) << tvm::relay::AsText(result, false);
-  return result;
+  return FunctionNode::make(std::move(params), std::move(body), {}, {}, {});
 }
 
 }  // namespace nnvm_relay_bridge
 }  // namespace v3
 }  // namespace mxnet
 #endif  // MXNET_USE_TVM_OP
-
