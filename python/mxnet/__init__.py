@@ -98,6 +98,4 @@ __version__ = base.__version__
 from . import kvstore_server
 
 from . import numpy_op_signature
-from .numpy_dispatch_protocol import _register_array_function, _register_array_ufunc
-_register_array_function()
-_register_array_ufunc()
+from . import numpy_dispatch_protocol
