@@ -622,7 +622,8 @@ lib/libtvm.so:
 	echo "Compile TVM"
 	[ -e $(LLVM_PATH)/bin/llvm-config ] || sh $(ROOTDIR)/contrib/tvmop/prepare_tvm.sh; \
 	cd $(TVM_PATH)/build; \
-	cmake -DUSE_LLVM="$(LLVM_PATH)/bin/llvm-config" \
+	cmake -DUSE_LLVM="$(LLVM_PATH)/bin/llvm-config --ignore-libllvm" -DHIDE_PRIVATE_SYMBOLS=ON \
+			-DCMAKE_SHARED_LINKER_FLAGS="-Wl,--exclude-libs,ALL" \
 		  -DUSE_SORT=OFF -DUSE_CUDA=$(TVM_USE_CUDA) -DUSE_CUDNN=OFF ..; \
 	$(MAKE) VERBOSE=1; \
 	mkdir -p $(ROOTDIR)/lib; \
