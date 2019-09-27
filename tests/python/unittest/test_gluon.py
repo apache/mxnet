@@ -443,7 +443,7 @@ def test_sparse_hybrid_block():
 
 @with_seed()
 def test_hybrid_block_none_args():
-    class Foo(HybridBlock):
+    class Foo(gluon.HybridBlock):
         def hybrid_forward(self, F, a, b):
             if a is None and b is not None:
                 return b
@@ -454,7 +454,7 @@ def test_hybrid_block_none_args():
             else:
                 raise NotImplementedError
 
-    class FooNested(HybridBlock):
+    class FooNested(gluon.HybridBlock):
         def __init__(self, prefix=None, params=None):
             super(FooNested, self).__init__(prefix=prefix, params=params)
             self.f1 = Foo(prefix='foo1')
