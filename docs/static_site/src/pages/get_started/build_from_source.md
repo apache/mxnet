@@ -241,7 +241,7 @@ For example, you can specify using all cores on Linux as follows:
 
 ```bash
 mkdir build && cd build
-cmake -GNinja ..
+cmake -DCMAKE_BUILD_TYPE=Release -GNinja ..
 ninja -v
 ```
 
@@ -251,7 +251,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -DUSE_MKLDNN=1 -GNinja ..
+cmake -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -DUSE_MKLDNN=1 -DCMAKE_BUILD_TYPE=Release -GNinja ..
 ninja -v
 ```
 
@@ -260,7 +260,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DBLAS=open -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -GNinja ..
+cmake -DBLAS=open -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -DCMAKE_BUILD_TYPE=Release -GNinja ..
 ninja -v
 ```
 
@@ -269,7 +269,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DUSE_CUDA=0 -DUSE_MKLDNN=1 -GNinja ..
+cmake -DUSE_CUDA=0 -DUSE_MKLDNN=1 -DCMAKE_BUILD_TYPE=Release -GNinja ..
 ninja -v
 ```
 
@@ -278,7 +278,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DUSE_CUDA=0 -DBLAS=open -GNinja ..
+cmake -DUSE_CUDA=0 -DBLAS=open -DCMAKE_BUILD_TYPE=Release -GNinja ..
 ninja -v
 ```
 
@@ -288,7 +288,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DUSE_OPENCV=0 -GNinja ..
+cmake -DUSE_OPENCV=0 -DCMAKE_BUILD_TYPE=Release -GNinja ..
 ninja -v
 ```
 
@@ -296,7 +296,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DBLAS=apple -DUSE_OPENCV=0 -DUSE_OPENMP=0 -GNinja ..
+cmake -DBLAS=apple -DUSE_OPENCV=0 -DUSE_OPENMP=0 -DCMAKE_BUILD_TYPE=Release -GNinja ..
 ninja -v
 ```
 
@@ -305,7 +305,7 @@ ninja -v
 ```bash
 brew install llvm
 mkdir build && cd build
-cmake -DBLAS=apple -DUSE_OPENMP=1 -GNinja ..
+cmake -DBLAS=apple -DUSE_OPENMP=1 -DCMAKE_BUILD_TYPE=Release -GNinja ..
 ninja -v
 ```
 
