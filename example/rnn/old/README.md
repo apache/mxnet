@@ -32,4 +32,4 @@ Run `get_sherlockholmes_data.sh` to download Sherlock Holmes data.
 
 
 Performance Note:
-More ```MXNET_GPU_WORKER_NTHREADS``` may lead to better performance. For setting ```MXNET_GPU_WORKER_NTHREADS```, please refer to [Environment Variables](https://mxnet.readthedocs.org/en/latest/faq/env_var.html).
+More ```MXNET_GPU_WORKER_NTHREADS``` may lead to better performance. For setting ```MXNET_GPU_WORKER_NTHREADS```, please refer to [Environment Variables](https://mxnet.apache.org/api/faq/env_var).

@@ -15,8 +15,8 @@
    specific language governing permissions and limitations
    under the License.
 
-Customization
-=============
+Extend
+======
 
 The following tutorials will help you learn how to customize MXNet.
 
@@ -35,14 +35,14 @@ The following tutorials will help you learn how to customize MXNet.
       How to use Numpy to create custom MXNet operators.
 
    .. card::
-      :title: New Layer Creation
-      :link: https://mxnet.incubator.apache.org/api/faq/new_op
+      :title: New Operator Creation
+      :link: https://mxnet.apache.org/api/faq/new_op
 
       How to create new MXNet operators using CustomOp (Python) or NNVM (C++).
 
    .. card::
       :title: A Beginner’s Guide to Implementing Operators in MXNet Backend
-      :link: https://mxnet.incubator.apache.org/api/faq/add_op_in_backend
+      :link: https://mxnet.apache.org/api/faq/add_op_in_backend
 
       How to create new MXNet operators in MXNet's backend using C++.
       An example custom quadratic function op.
@@ -53,3 +53,5 @@ The following tutorials will help you learn how to customize MXNet.
    :glob:
 
    *
+   New Operator Creation <https://mxnet.apache.org/api/faq/new_op>
+   New Operator in MXNet Backend <https://mxnet.apache.org/api/faq/add_op_in_backend>

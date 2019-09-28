@@ -217,7 +217,7 @@ Build with CMake and ninja, without GPU and without MKL.
     ninja
 ```
 
-If building on CPU and using MKL and MKL-DNN (make sure MKL is installed according to [Math Library Selection](build_from_source#math-library-selection) and [MKL-DNN README](https://github.com/apache/incubator-mxnet/blob/master/docs/tutorials/mkldnn/MKLDNN_README.md)):
+If building on CPU and using MKL and MKL-DNN (make sure MKL is installed according to [Math Library Selection](build_from_source#math-library-selection) and [MKL-DNN README](https://mxnet.apache.org/api/python/docs/tutorials/performance/backend/mkldnn/mkldnn_readme.html)):
 
 ```bash
     rm -rf build

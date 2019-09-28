@@ -50,7 +50,7 @@ Hence, in this utility, we will build the functionality to allow users and devel
 Provided you have MXNet installed (any version >= 1.5.1), all you need to use opperf utility is to add path to your cloned MXNet repository to the PYTHONPATH.
 
 Note: 
-To install MXNet, refer [Installing MXNet page](https://mxnet.incubator.apache.org/versions/master/install/index.html)
+To install MXNet, refer [Installing MXNet page](https://mxnet.apache.org/versions/master/install/index.html)
 
 ```
 export PYTHONPATH=$PYTHONPATH:/path/to/incubator-mxnet/

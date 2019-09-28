@@ -670,9 +670,9 @@ struct TakeParam: public dmlc::Parameter<TakeParam> {
     .set_default(take_::kClip)
     .describe("Specify how out-of-bound indices bahave. Default is \"clip\"."
               " \"clip\" means clip to the range. So, if all indices mentioned are too large,"
-              " they are replaced by the index that addresses the last element along an axis. "
-              " \"wrap\" means to wrap around. "
-              " \"raise\" means to raise an error, not supported yet.");
+              " they are replaced by the index that addresses the last element along an axis."
+              " \"wrap\" means to wrap around."
+              " \"raise\" means to raise an error when index out of range.");
   }
 };
 
@@ -1029,6 +1029,10 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
       const mxnet::TShape& idxshape = inputs[1].shape_;
       const mxnet::TShape& arrshape = outputs[0].shape_;
       const mxnet::TShape& oshape = inputs[0].shape_;
+
+      if (idxshape.Size() == 0) {
+        return;
+      }
 
       if (req[take_::kIdx] != kNullOp) {
         mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(

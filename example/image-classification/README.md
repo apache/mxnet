@@ -2,7 +2,7 @@
 
 This fold contains examples for image classification. The goal of image
 classifcation is to identify the objects contained in images. The following
-[example](http://mxnet.io/tutorials/python/predict_image.html) shows
+[example](https://mxnet.io/tutorials/python/predict_image.html) shows
 recognized object classes with corresponding probabilities using a pre-trained
 model.
 
@@ -52,7 +52,7 @@ commonly used options are listed as following:
 ## Prepare Datasets
 
 The recommended data format is
-[RecordIO](http://mxnet.io/architecture/note_data_loading.html), which
+[RecordIO](https://mxnet.io/architecture/note_data_loading.html), which
 concatenates multiple examples into seekable binary files for better read
 efficiency. We provide a tool `im2rec.py` located in `tools/` to convert
 individual images into `.rec` files.
@@ -102,7 +102,7 @@ We provide multiple pre-trained models on various datasets. Use
 [common/modelzone.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/common/modelzoo.py)
 to download these models. These models can be used in any front-end language
 MXNet supports. For example,
-[the tutorial](http://mxnet.io/tutorials/python/predict_image.html) shows how
+[the tutorial](https://mxnet.io/tutorials/python/predict_image.html) shows how
 to classify an image with jupyter notebook.
 
 ### ImageNet 1K
@@ -205,7 +205,7 @@ python fine-tune.py --pretrained-model imagenet11k-resnet-152 --gpus 0,1,2,3,4,5
 
 We obtained 87.3% top-1 validation accuracy, and the training log is available
 [here](https://gist.github.com/mli/900b810258e2e0bc26fa606977a3b043#file-finetune-caltech265). See
-the [python notebook](http://mxnet.io/faq/finetune.html) for more
+the [python notebook](https://mxnet.io/faq/finetune.html) for more
 explanations.
 
 ## Distributed Training
@@ -242,7 +242,7 @@ For more usages:
 - One can use
   [benchmark.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/benchmark.py)
   to run distributed benchmarks (also for multiple GPUs with single machine)
-- A how-to [tutorial](http://mxnet.io/faq/multi_devices.html) with more
+- A how-to [tutorial](https://mxnet.io/api/faq/distributed_training.html) with more
   explanation.
 - A
   [blog](https://aws.amazon.com/blogs/compute/distributed-deep-learning-made-easy/)
@@ -357,7 +357,7 @@ aspects:
     codes, check if it is configured correctly.
   - Use `--benchmark 1` to use randomly generated data rather than real data.
 
-Refer to [faq/performance](http://mxnet.io/faq/perf.html) for more details
+Refer to [faq/performance](https://mxnet.io/api/faq/perf) for more details
 about CPU, GPU and multi-device performance.
 
 ### Memory

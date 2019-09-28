@@ -386,7 +386,6 @@ void FCBackward(const OpContext &ctx, const FullyConnectedParam &param,
   CHECK_EQ(stream->blas_handle_ownership_, Stream<xpu>::OwnHandle)
       << "Must init CuBLAS handle in stream";
 #endif
-
   //  backprop
   CHECK_NE(req[fullc::kWeight], kWriteInplace) << "cannot write weight inplace";
   // gradient of weight
@@ -396,21 +395,7 @@ void FCBackward(const OpContext &ctx, const FullyConnectedParam &param,
   linalg_gemm(y_grad, x, w_grad, true, false, stream, req[fullc::kWeight]);
   // gradient of bias
   if (!param.no_bias) {
-    Tensor<xpu, 1, DType> gbias = in_grad[fullc::kBias].get<xpu, 1, DType>(stream);
-    TBlob grad_blob = TBlob(y_grad);
-    TBlob gbias_blob = TBlob(gbias);
-    mxnet::TShape axis(1, 0);
-    mxnet::TShape small;
-    if (shape_assign(&gbias_blob.shape_, Shape2(param.num_hidden, 1))) {
-      small = gbias_blob.shape_;
-    } else {
-      small = ReduceAxesShapeImpl(grad_blob.shape_,
-          dmlc::optional<mxnet::TShape>(axis), true, false);
-    }
-    ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, false,
-        mshadow_op::identity>(ctx, {grad_blob}, {req[fullc::kBias]},
-            {in_grad[fullc::kBias]}, small);
-      AddBiasGrad(in_grad[fullc::kBias], grad, req[fullc::kBias], param.num_hidden, ctx);
+      AddBiasGrad(in_grad[fullc::kBias], y_grad, req[fullc::kBias], param.num_hidden, ctx);
   }
   // gradient of data
   // Legacy approach shown here for comparison:

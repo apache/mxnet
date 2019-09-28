@@ -30,7 +30,7 @@ This tutorial provides a guideline on how to use and write custom iterators, whi
 
 Getting the data
 ----------
-The data we are going to use is the [MNIST dataset](http://yann.lecun.com/exdb/mnist/) in CSV format, the data can be found in this [web](http://pjreddie.com/projects/mnist-in-csv/).
+The data we are going to use is the [MNIST dataset](https://yann.lecun.com/exdb/mnist/) in CSV format, the data can be found in this [web](https://pjreddie.com/projects/mnist-in-csv/).
 
 To download the data:
 
