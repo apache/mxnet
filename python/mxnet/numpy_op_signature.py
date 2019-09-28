@@ -49,7 +49,7 @@ def _get_builtin_op(op_name):
 
     op = getattr(op_module, op_name[(len(op_name_prefix)+len(submodule_name)):], None)
     if op is None:
-        raise ValueError('Cannot find operator {} in module'
+        raise ValueError('Cannot find operator {} in module {}'
                          .format(op_name[op_name_prefix:], root_module.__name__))
     return op
 
@@ -58,7 +58,7 @@ def _register_op_signatures():
     if sys.version_info.major < 3 or sys.version_info.minor < 5:
         warnings.warn('Some mxnet.numpy operator signatures may not be displayed consistently with '
                       'their counterparts in the official NumPy package due to too-low Python '
-                      'version {}. Python >= 3.5 is required to make the display correct.'
+                      'version {}. Python >= 3.5 is required to make the signatures display correctly.'
                       .format(str(sys.version)))
         return
 
