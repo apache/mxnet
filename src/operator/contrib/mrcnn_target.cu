@@ -196,15 +196,15 @@ __global__ void MRCNNTargetKernel(const DType *rois,
                                   int num_gtmasks,
                                   int gt_height,
                                   int gt_width,
-                                  int m) {
+                                  int mask_size,
+                                  int sample_ratio) {
   // computing sampled_masks
-  const int sampling_ratio = 2;
   RoIAlignForward(gt_masks, rois, matches, total_out_el,
-                  num_classes, gt_height, gt_width, m, m,
-                  sampling_ratio, num_rois, num_gtmasks, sampled_masks);
+                  num_classes, gt_height, gt_width, mask_size, mask_size,
+                  sample_ratio, num_rois, num_gtmasks, sampled_masks);
   // computing mask_cls
   int num_masks = batch_size * num_rois * num_classes;
-  int mask_vol = m * m;
+  int mask_vol = mask_size * mask_size;
   for (int mask_idx = blockIdx.x; mask_idx < num_masks; mask_idx += gridDim.x) {
     int cls_idx = mask_idx % num_classes;
     int roi_idx = (mask_idx / num_classes) % num_rois;
@@ -213,8 +213,9 @@ __global__ void MRCNNTargetKernel(const DType *rois,
     DType* mask_cls_out = mask_cls + mask_idx * mask_vol;
 
     DType cls_target = cls_targets[batch_idx * num_rois + roi_idx];
+    DType out_val = (cls_target == cls_idx);
     for (int mask_pixel = threadIdx.x; mask_pixel < mask_vol; mask_pixel += blockDim.x) {
-      mask_cls_out[mask_pixel] = (cls_target == cls_idx);
+      mask_cls_out[mask_pixel] = out_val;
     }
   }
 }
@@ -251,7 +252,7 @@ void MRCNNTargetRun<gpu>(const MRCNNTargetParam& param, const std::vector<TBlob>
     (rois.dptr_, gt_masks.dptr_, matches.dptr_, cls_targets.dptr_,
     out_masks.dptr_, out_mask_cls.dptr_,
     num_el, batch_size, param.num_classes, param.num_rois,
-    num_gtmasks, gt_height, gt_width, param.mask_size);
+    num_gtmasks, gt_height, gt_width, param.mask_size, param.sample_ratio);
     MSHADOW_CUDA_POST_KERNEL_CHECK(MRCNNTargetKernel);
   });
 }
