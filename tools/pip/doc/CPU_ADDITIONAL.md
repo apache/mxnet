@@ -30,7 +30,7 @@ This package supports Linux, Mac OSX, and Windows platforms. You may also want t
 - [mxnet-cu75mkl](https://pypi.python.org/pypi/mxnet-cu75mkl/) with CUDA-7.5 support and MKLDNN support.
 - [mxnet-mkl](https://pypi.python.org/pypi/mxnet-mkl/) with MKLDNN support.
 
-To install for other platforms (e.g. Windows, Raspberry Pi/ARM) or other versions, check [Installing MXNet](https://mxnet.incubator.apache.org/versions/master/install/index.html) for instructions on building from source.
+To install for other platforms (e.g. Windows, Raspberry Pi/ARM) or other versions, check [Installing MXNet](https://mxnet.apache.org/versions/master/install/index.html) for instructions on building from source.
 
 Installation
 ------------

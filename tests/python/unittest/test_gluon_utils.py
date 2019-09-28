@@ -98,7 +98,7 @@ def test_download_ssl_verify():
     """ test download verify_ssl parameter """
     with warnings.catch_warnings(record=True) as warnings_:
         mx.gluon.utils.download(
-            "https://mxnet.incubator.apache.org/index.html", verify_ssl=False)
+            "https://mxnet.apache.org/index.html", verify_ssl=False)
     assert any(
         str(w.message).startswith('Unverified HTTPS request')
         for w in warnings_)

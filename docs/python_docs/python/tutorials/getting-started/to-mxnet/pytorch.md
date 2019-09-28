@@ -106,7 +106,7 @@ mx_train_data = gluon.data.DataLoader(
 
 Both frameworks allows you to download MNIST data set from their sources and specify that only training part of the data set is required.
 
-The main difference between the code snippets is that MXNet uses [transform_first](http://beta.mxnet.io/api/gluon/_autogen/mxnet.gluon.data.Dataset.html) method to indicate that the data transformation is done on the first element of the data batch, the MNIST picture, rather than the second element, the label.
+The main difference between the code snippets is that MXNet uses [transform_first](https://mxnet.apache.org/api/python/docs/api/gluon/_autogen/mxnet.gluon.data.Dataset.html) method to indicate that the data transformation is done on the first element of the data batch, the MNIST picture, rather than the second element, the label.
 
 ### 2. Creating the model
 
@@ -143,7 +143,7 @@ We used the Sequential container to stack layers one after the other in order to
 
 * After the model structure is defined, Apache MXNet requires you to explicitly call the model initialization function.
 
-With a Sequential block, layers are executed one after the other. To have a different execution model, with PyTorch you can inherit from `nn.Module` and then customize how the `.forward()` function is executed. Similarly, in Apache MXNet you can inherit from [nn.Block](http://beta.mxnet.io/api/gluon/mxnet.gluon.nn.Block.html) to achieve similar results.
+With a Sequential block, layers are executed one after the other. To have a different execution model, with PyTorch you can inherit from `nn.Module` and then customize how the `.forward()` function is executed. Similarly, in Apache MXNet you can inherit from [nn.Block](https://mxnet.apache.org/api/python/docs/api/gluon/mxnet.gluon.nn.Block.html) to achieve similar results.
 
 ### 3. Loss function and optimization algorithm
 
@@ -164,7 +164,7 @@ mx_trainer = gluon.Trainer(mx_net.collect_params(),
                            'sgd', {'learning_rate': 0.1})
 ```
 
-The code difference between frameworks is small. The main difference is that in Apache MXNet we use [Trainer](http://beta.mxnet.io/api/gluon/mxnet.gluon.Trainer.html) class, which accepts optimization algorithm as an argument. We also use [.collect_params()](/api/python/docs/api/gluon/_autogen/mxnet.gluon.nn.Block.collect_params.html) method to get parameters of the network.
+The code difference between frameworks is small. The main difference is that in Apache MXNet we use [Trainer](https://mxnet.apache.org/api/python/docs/api/gluon/mxnet.gluon.Trainer.html) class, which accepts optimization algorithm as an argument. We also use [.collect_params()](/api/python/docs/api/gluon/_autogen/mxnet.gluon.nn.Block.collect_params.html) method to get parameters of the network.
 
 ### 4. Training
 

@@ -17,8 +17,8 @@
 
 # Building and Updating MXNet Documentation
 
-The website is hosted at http://mxnet.incubator.apache.org/.
-http://mxnet.io redirects to this site and advised to use links with http://mxnet.incubator.apache.org/ instead of http://mxnet.io/.
+The website is hosted at https://mxnet.apache.org/.
+https://mxnet.io redirects to this site and advised to use links with https://mxnet.apache.org/ instead of https://mxnet.io/.
 
 ## Website & Documentation Contributions
 
@@ -36,7 +36,7 @@ If you plan to contribute changes to the documentation or website, please submit
 
 ## Python Docs
 
-MXNet's Python documentation is built with [Sphinx](http://www.sphinx-doc.org) and a variety of plugins including [pandoc](https://pandoc.org/), and [recommonmark](https://github.com/rtfd/recommonmark).
+MXNet's Python documentation is built with [Sphinx](https://www.sphinx-doc.org) and a variety of plugins including [pandoc](https://pandoc.org/), and [recommonmark](https://github.com/rtfd/recommonmark).
 
 More information on the dependencies can be found in the [CI folder's installation scripts](https://github.com/apache/incubator-mxnet/tree/master/ci/docker/install/ubuntu_docs.sh).
 

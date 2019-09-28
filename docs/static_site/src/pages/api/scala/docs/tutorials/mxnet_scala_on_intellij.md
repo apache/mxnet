@@ -29,7 +29,7 @@ This tutorial guides you through setting up a Scala project in the IntelliJ IDE 
 ## Prerequisites:
 To use this tutorial you need the following software:
 
-- [Java 8 JDK](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
+- [Java 8 JDK](https:///www.oracle.com/technetwork/java/javase/downloads/index.html)
 - [Maven](https://maven.apache.org/install.html)
 - [Scala](https://www.scala-lang.org/download/) - comes with IntelliJ, so you don't need to install it separately
 - [OpenCV](https://opencv.org/)
@@ -197,7 +197,7 @@ The project's `pom.xml` will be open for editing.
   <licenses>
     <license>
       <name>Apache2</name>
-      <url>http://mxnet.apache.org</url>
+      <url>https://mxnet.apache.org</url>
       <distribution>repo</distribution>
     </license>
   </licenses>

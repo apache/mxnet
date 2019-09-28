@@ -25,7 +25,7 @@ permalink: /api/r/docs/tutorials/five_minutes_neural_network
 Develop a Neural Network with MXNet in Five Minutes
 =============================================
 
-This tutorial is designed for new users of the `mxnet` package for R. It shows how to construct a neural network to do regression in 5 minutes. It shows how to perform classification and regression tasks, respectively. The data we use is in the `mlbench` package. Instructions to install R and MXNet's R package in different environments can be found [here](http://mxnet.incubator.apache.org/install/index.html?platform=Linux&language=R&processor=CPU).
+This tutorial is designed for new users of the `mxnet` package for R. It shows how to construct a neural network to do regression in 5 minutes. It shows how to perform classification and regression tasks, respectively. The data we use is in the `mlbench` package. Instructions to install R and MXNet's R package in different environments can be found [here](https://mxnet.apache.org/install/index.html?platform=Linux&language=R&processor=CPU).
 
 ## Classification
 
@@ -336,6 +336,6 @@ Congratulations! You've learned the basics for using MXNet in R. To learn how to
 
 
 ## Next Steps
-* [Classify Real-World Images with Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
-* [Handwritten Digits Classification Competition](http://mxnet.io/tutorials/r/mnistCompetition.html)
-* [Character Language Model using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)
+* [Classify Real-World Images with Pre-trained Model](https://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
+* [Handwritten Digits Classification Competition](https://mxnet.io/tutorials/r/mnistCompetition.html)
+* [Character Language Model using RNN](https://mxnet.io/tutorials/r/charRnnModel.html)
