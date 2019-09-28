@@ -46,6 +46,7 @@ struct MRCNNTargetParam : public dmlc::Parameter<MRCNNTargetParam> {
   int num_rois;
   int num_classes;
   int mask_size;
+  int sample_ratio;
 
   DMLC_DECLARE_PARAMETER(MRCNNTargetParam) {
     DMLC_DECLARE_FIELD(num_rois)
@@ -54,6 +55,8 @@ struct MRCNNTargetParam : public dmlc::Parameter<MRCNNTargetParam> {
     .describe("Number of classes.");
     DMLC_DECLARE_FIELD(mask_size)
     .describe("Size of the pooled masks.");
+    DMLC_DECLARE_FIELD(sample_ratio).set_default(2)
+    .describe("Sampling ratio of ROI align. Set to -1 to use adaptative size.");
   }
 };
 
