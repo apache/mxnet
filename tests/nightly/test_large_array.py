@@ -745,32 +745,32 @@ def test_dropout():
 
 
 def test_activation():
-    a = mx.nd.ones((LARGE_X, SMALL_Y))
+    x = mx.nd.ones((LARGE_X, SMALL_Y))
     test_x = -2
-    a[-1, -1] = test_x
+    x[-1, -1] = test_x
 
     # Hyperbolic tangent (tanh)
     # y = (exp(x)-exp(-x))/(exp(x)+exp(-x))
-    a = mx.nd.Activation(a, act_type="tanh")
-    tanh_x = (np.exp(test_x)-np.exp(-test_x))/(np.exp(test_x)+np.exp(-test_x))
-    assert a[-1][-1] == tanh_x
+    y = mx.nd.Activation(x, act_type="tanh")
+    tanh_x = ((np.exp(test_x)-np.exp(-test_x))/(np.exp(test_x)+np.exp(-test_x)))#.astype('float32')
+    assert y[-1][-1] == np.float32(tanh_x)#.astype('float32')
 
     # Recitified Linear Unit (relu)
     # y = max(x,0)
-    a = mx.nd.Activation(a, act_type="relu")
-    assert a[-1][-1] == 0
+    y = mx.nd.Activation(x, act_type="relu")
+    assert y[-1][-1] == 0
 
     # Sigmoid
     # y = x/(1+abs(x))
-    a = mx.nd.Activation(a, act_type="sigmoid")
-    sigmoid_x = 1/(1+math.exp(-test_x))
-    assert a[-1][-1] == sigmoid_x
+    y = mx.nd.Activation(x, act_type="sigmoid")
+    sigmoid_x = (1/(1+math.exp(-test_x)))#.astype('float32')
+    assert y[-1][-1] == np.float32(sigmoid_x)
 
     # Soft Sign
     # y = 1/(1+exp(-x))
-    a = mx.nd.Activation(a, act_type="softsign")
-    softsign_x = test_x/(1+abs(test_x))
-    assert a[-1][-1] == softsign_x
+    y = mx.nd.Activation(x, act_type="softsign")
+    softsign_x = (test_x/(1+abs(test_x)))#.astype('float32')
+    assert y[-1][-1] == np.float32(softsign_x)
 
 
 # TODO: correctness of batchnorm
