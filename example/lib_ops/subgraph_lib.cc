@@ -29,8 +29,23 @@
 
 MXReturnValue parseAttrs(std::map<std::string,std::string> attrs,
                          int* num_in, int* num_out) {
-  *num_in = 1;
-  *num_out = 1;
+  std::string serialized_subgraph;
+  if (attrs.count(SUBGRAPH_SYM_JSON)) {
+    serialized_subgraph = attrs[SUBGRAPH_SYM_JSON];
+    //parse string to json
+    json_val val = parse_json(serialized_subgraph);
+    int input = 0;
+    for(auto &item : val.map[json_val("nodes")].list) {
+      if(item.map[json_val("op")].str == "null")
+        input++;
+    }
+    int output = val.map[json_val("heads")].list.size();
+    *num_in = input;
+    *num_out = output;
+  } else {
+    *num_in = 1;
+    *num_out = 1;
+  }
   return MX_SUCCESS;
 }
 
@@ -66,7 +81,6 @@ class MyStatefulOp : public CustomStatefulOp {
 MXReturnValue createOpState(std::map<std::string,std::string> attrs,
                             CustomStatefulOp** op_inst) {
   std::string serialized_subgraph = "[empty]";
-
   // MXNet subgraph is stored as Symbol in operator node attributes subgraphs field
   // custom subgraph is stored as json string in custom operator attrs map entry
   if (attrs.count(SUBGRAPH_SYM_JSON)) {

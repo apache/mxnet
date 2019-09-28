@@ -191,6 +191,15 @@ int MXLoadLib(const char *path) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
+      // convert subgraph symbol from node attributes to char*
+      std::string subgraph_json;
+      if (!attrs->subgraphs.empty()) {
+        nnvm::Graph g;
+        g.outputs = attrs->subgraphs[0].get()->outputs;
+        subgraph_json = nnvm::pass::SaveJSON(g);
+        attr_keys.push_back(SUBGRAPH_SYM_JSON);
+        attr_vals.push_back(subgraph_json.c_str());
+      }
 
       int num_in = -1;
       int num_out = -1;
