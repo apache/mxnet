@@ -134,6 +134,9 @@ def collect_test_results_unix(original_file_name, new_file_name) {
         // Thus, we have to pick a name manually and rename the files so that they can be stored separately.
         sh 'cp ' + original_file_name + ' ' + new_file_name
         archiveArtifacts artifacts: new_file_name
+        if (env.BRANCH_NAME == "master") {
+          s3Upload(file:new_file_name, bucket:env.MXNET_CI_UNITTEST_ARTIFACT_BUCKET, path:utils.get_git_commit_hash().trim()+"-"+env.BUILD_TAG+"/"+new_file_name)
+        }
     }
 }
 
@@ -143,6 +146,9 @@ def collect_test_results_windows(original_file_name, new_file_name) {
     if (fileExists(original_file_name)) {
         bat 'xcopy ' + original_file_name + ' ' + new_file_name + '*'
         archiveArtifacts artifacts: new_file_name
+        if (env.BRANCH_NAME == "master") {
+          s3Upload(file:new_file_name, bucket:env.MXNET_CI_UNITTEST_ARTIFACT_BUCKET, path:utils.get_git_commit_hash().trim()+"-"+env.BUILD_TAG+"/"+new_file_name)
+        }
     }
 }
 
