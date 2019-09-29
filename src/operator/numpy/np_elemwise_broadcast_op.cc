@@ -96,6 +96,23 @@ NNVM_REGISTER_OP(_backward_npi_copysign)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::copysign_grad,
                                                                   mshadow_op::copysign_rgrad>);
 
+NNVM_REGISTER_OP(_npi_lcm)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+[](const NodeAttrs& attrs) {
+     return std::vector<std::string>{"lhs", "rhs"};
+})
+.set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseIntType<2, 1>)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+[](const NodeAttrs& attrs){
+     return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};
+})
+.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::lcm>)
+.add_argument("lhs", "NDArray-or-Symbol", "First input to the function")
+.add_argument("rhs", "NDArray-or-Symbol", "Second input to the function");
+
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_add_scalar)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, op::mshadow_op::plus>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"});
@@ -262,6 +279,22 @@ NNVM_REGISTER_OP(_backward_npi_hypot)
   })
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::hypot_grad_left,
                                                                   mshadow_op::hypot_grad_right>);
+
+NNVM_REGISTER_OP(_npi_lcm_scalar)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser([](NodeAttrs* attrs) {
+    attrs->parsed = std::stod(attrs->dict["scalar"]);
+  })
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseIntType<1, 1>)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 0}};
+  })
+.add_argument("data", "NDArray-or-Symbol", "source input")
+.add_argument("scalar", "int", "scalar input")
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::lcm>);
 
 }  // namespace op
 }  // namespace mxnet

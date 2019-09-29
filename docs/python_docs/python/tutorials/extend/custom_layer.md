@@ -16,9 +16,9 @@
 <!--- under the License. -->
 
 
-# How to write a custom layer in Apache MxNet Gluon API
+# Custom Layers
 
-While Gluon API for Apache MxNet comes with [a decent number of pre-defined layers](https://mxnet.incubator.apache.org/api/python/gluon/nn.html), at some point one may find that a new layer is needed. Adding a new layer in Gluon API is straightforward, yet there are a few things that one needs to keep in mind.
+While Gluon API for Apache MxNet comes with [a decent number of pre-defined layers](https://mxnet.apache.org/api/python/gluon/nn.html), at some point one may find that a new layer is needed. Adding a new layer in Gluon API is straightforward, yet there are a few things that one needs to keep in mind.
 
 In this article, I will cover how to create a new layer from scratch, how to use it, what are possible pitfalls and how to avoid them.
 
@@ -55,15 +55,15 @@ The rest of methods of the `Block` class are already implemented, and majority o
 
 ## Hybridization and the difference between Block and HybridBlock
 
-Looking into implementation of [existing layers](https://mxnet.incubator.apache.org/api/python/gluon/nn.html), one may find that more often a block inherits from a [HybridBlock](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/block.py#L428), instead of directly inheriting from `Block`.
+Looking into implementation of [existing layers](https://mxnet.apache.org/api/python/gluon/nn.html), one may find that more often a block inherits from a [HybridBlock](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/block.py#L428), instead of directly inheriting from `Block`.
 
-The reason for that is that `HybridBlock` allows to write custom layers that can be used in imperative programming as well as in symbolic programming. It is convinient to support both ways, because the imperative programming eases the debugging of the code and the symbolic one provides faster execution speed. You can learn more about the difference between symbolic vs. imperative programming from [this article](https://mxnet.incubator.apache.org/architecture/program_model.html).
+The reason for that is that `HybridBlock` allows to write custom layers that can be used in imperative programming as well as in symbolic programming. It is convinient to support both ways, because the imperative programming eases the debugging of the code and the symbolic one provides faster execution speed. You can learn more about the difference between symbolic vs. imperative programming from [this article](https://mxnet.apache.org/architecture/program_model.html).
 
 Hybridization is a process that Apache MxNet uses to create a symbolic graph of a forward computation. This allows to increase computation performance by optimizing the computational symbolic graph. Once the symbolic graph is created, Apache MxNet caches and reuses it for subsequent computations.
 
-To simplify support of both imperative and symbolic programming, Apache MxNet introduce the `HybridBlock` class. Compare to the `Block` class, `HybridBlock` already has its [forward()](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#mxnet.gluon.HybridBlock.forward) method implemented, but it defines a [hybrid_forward()](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#mxnet.gluon.HybridBlock.hybrid_forward) method that needs to be implemented.
+To simplify support of both imperative and symbolic programming, Apache MxNet introduce the `HybridBlock` class. Compare to the `Block` class, `HybridBlock` already has its [forward()](https://mxnet.apache.org/api/python/gluon/gluon.html#mxnet.gluon.HybridBlock.forward) method implemented, but it defines a [hybrid_forward()](https://mxnet.apache.org/api/python/gluon/gluon.html#mxnet.gluon.HybridBlock.hybrid_forward) method that needs to be implemented.
 
-The main difference between `forward()` and `hybrid_forward()` is an `F` argument. This argument sometimes is refered as a `backend` in the Apache MxNet community. Depending on if hybridization has been done or not, `F` can refer either to [mxnet.ndarray API](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html) or [mxnet.symbol API](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html). The former is used for imperative programming, and the latter for symbolic programming. 
+The main difference between `forward()` and `hybrid_forward()` is an `F` argument. This argument sometimes is refered as a `backend` in the Apache MxNet community. Depending on if hybridization has been done or not, `F` can refer either to [mxnet.ndarray API](https://mxnet.apache.org/api/python/ndarray/ndarray.html) or [mxnet.symbol API](https://mxnet.apache.org/api/python/symbol/symbol.html). The former is used for imperative programming, and the latter for symbolic programming. 
 
 To support hybridization, it is important to use only methods avaible directly from `F` parameter. Usually, there are equivalent methods in both APIs, but sometimes there are mismatches or small variations. For example, by default, subtraction and division of NDArrays support broadcasting, while in Symbol API broadcasting is supported in a separate operators. 
 
@@ -97,7 +97,7 @@ Output:
 
 As a rule of thumb, one should always implement custom layers by inheriting from `HybridBlock`. This allows to have more flexibility, and doesn't affect execution speed once hybridization is done. 
 
-Unfortunately, at the moment of writing this tutorial, NLP related layers such as [RNN](https://mxnet.incubator.apache.org/api/python/gluon/rnn.html#mxnet.gluon.rnn.RNN), [GRU](https://mxnet.incubator.apache.org/api/python/gluon/rnn.html#mxnet.gluon.rnn.GRU) and [LSTM](https://mxnet.incubator.apache.org/api/python/gluon/rnn.html#mxnet.gluon.rnn.LSTM) are directly inhereting from the `Block` class via common `_RNNLayer` class. That means that networks with such layers cannot be hybridized. But this might change in the future, so stay tuned.
+Unfortunately, at the moment of writing this tutorial, NLP related layers such as [RNN](https://mxnet.apache.org/api/python/gluon/rnn.html#mxnet.gluon.rnn.RNN), [GRU](https://mxnet.apache.org/api/python/gluon/rnn.html#mxnet.gluon.rnn.GRU) and [LSTM](https://mxnet.apache.org/api/python/gluon/rnn.html#mxnet.gluon.rnn.LSTM) are directly inhereting from the `Block` class via common `_RNNLayer` class. That means that networks with such layers cannot be hybridized. But this might change in the future, so stay tuned.
 
 It is important to notice that hybridization has nothing to do with computation on GPU. One can train both hybridized and non-hybridized networks on both CPU and GPU, though hybridized networks would work faster. Though, it is hard to say in advance how much faster it is going to be.
 
@@ -105,7 +105,7 @@ It is important to notice that hybridization has nothing to do with computation 
 
 While it is possible, custom layers are rarely used separately. Most often they are used with predefined layers to create a neural network. Output of one layer is used as an input of another layer.
 
-Depending on which class you used as a base one, you can use either [Sequential](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#mxnet.gluon.nn.Sequential) or [HybridSequential](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#mxnet.gluon.nn.HybridSequential) container to form a sequential neural network. By adding layers one by one, one adds dependencies of one layer's input from another layer's output. It is worth noting, that both `Sequential` and `HybridSequential` containers inherit from `Block` and `HybridBlock` respectively. 
+Depending on which class you used as a base one, you can use either [Sequential](https://mxnet.apache.org/api/python/gluon/gluon.html#mxnet.gluon.nn.Sequential) or [HybridSequential](https://mxnet.apache.org/api/python/gluon/gluon.html#mxnet.gluon.nn.HybridSequential) container to form a sequential neural network. By adding layers one by one, one adds dependencies of one layer's input from another layer's output. It is worth noting, that both `Sequential` and `HybridSequential` containers inherit from `Block` and `HybridBlock` respectively. 
 
 Below is an example of how to create a simple neural network with a custom layer. In this example, `NormalizationHybridLayer` gets as an input the output from `Dense(5)` layer and pass its output as an input to `Dense(1)` layer.
 
@@ -141,7 +141,7 @@ Output:
 
 Usually, a layer has a set of associated parameters, sometimes also referred as weights. This is an internal state of a layer. Most often, these parameters are the ones, that we want to learn during backpropogation step, but sometimes these parameters might be just constants we want to use during forward pass.
 
-All parameters of a block are stored and accessed via [ParameterDict](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/parameter.py#L508) class. This class helps with initialization, updating, saving and loading of the parameters. Each layer can have multiple set of parameters, and all of them can be stored in a single instance of the `ParameterDict` class. On a block level, the instance of the `ParameterDict` class is accessible via `self.params` field, and outside of a block one can access all parameters of the network via [collect_params()](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Block.collect_params) method called on a `container`. `ParameterDict` uses [Parameter](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Parameter) class to represent parameters inside of Apache MxNet neural network. If parameter doesn't exist, trying to get a parameter via `self.params` will create it automatically.
+All parameters of a block are stored and accessed via [ParameterDict](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/parameter.py#L508) class. This class helps with initialization, updating, saving and loading of the parameters. Each layer can have multiple set of parameters, and all of them can be stored in a single instance of the `ParameterDict` class. On a block level, the instance of the `ParameterDict` class is accessible via `self.params` field, and outside of a block one can access all parameters of the network via [collect_params()](https://mxnet.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Block.collect_params) method called on a `container`. `ParameterDict` uses [Parameter](https://mxnet.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Parameter) class to represent parameters inside of Apache MxNet neural network. If parameter doesn't exist, trying to get a parameter via `self.params` will create it automatically.
 
 
 ```python
