@@ -25,7 +25,8 @@
 #include "../operator/operator_common.h"
 #include "../operator/subgraph/common.h"
 
-#if MXNET_USE_TVM_OP && !defined MXNET_AMALGAMATION
+#if MXNET_USE_TVM_OP
+#ifndef MXNET_AMALGAMATION
 #include <tvm/node/node.h>
 namespace mxnet {
 namespace v3 {
@@ -34,7 +35,8 @@ tvm::NodeRef NNVMToRelay(const nnvm::Graph &g);
 }  // namespace nnvm_relay_bridge
 }  // namespace v3
 }  // namespace mxnet
-#endif  // MXNET_USE_TVM_OP && !defined MXNET_AMALGAMATION
+#endif  // MXNET_AMALGAMATION
+#endif  // MXNET_USE_TVM_OP
 
 namespace mxnet {
 

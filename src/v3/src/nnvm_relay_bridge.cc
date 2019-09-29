@@ -22,7 +22,8 @@
  * \file nnvm_relay_bridge.cc
  * \author Junru Shao
  */
-#if MXNET_USE_TVM_OP && !defined MXNET_AMALGAMATION
+#if MXNET_USE_TVM_OP
+#ifndef MXNET_AMALGAMATION
 #include <nnvm/graph.h>
 #include <tvm/relay/expr.h>
 #include <tvm/relay/op.h>
@@ -177,4 +178,5 @@ NodeRef NNVMToRelay(const nnvm::Graph &g) {
 }  // namespace nnvm_relay_bridge
 }  // namespace v3
 }  // namespace mxnet
-#endif  // MXNET_USE_TVM_OP && !defined MXNET_AMALGAMATION
+#endif  // MXNET_AMALGAMATION
+#endif  // MXNET_USE_TVM_OP
