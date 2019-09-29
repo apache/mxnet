@@ -2600,6 +2600,46 @@ def test_np_unique():
                     assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
 
 
+@with_seed()
+@use_np
+def test_np_normal_grad():
+    class TestNormalGrad(HybridBlock):
+        def __init__(self, shape):
+            super(TestNormalGrad, self).__init__()
+            self._shape = shape
+
+        def hybrid_forward(self, F, loc, scale):
+            return F.np.random.normal(loc, scale, self._shape)
+
+    dtypes = ['float16', 'float32', 'float64']
+    param_shape = [
+        [(3, 2), (3, 2)],
+        [(3, 2, 2), (3, 2, 2)],
+        [(3, 4, 5), (4, 1)],
+    ]
+    output_shapes = [
+        (3, 2),
+        (4, 3, 2, 2),
+        (3, 4, 5)
+    ]
+    for hybridize in [False, True]:
+        for dtype in dtypes:
+            for ((shape1, shape2), out_shape) in zip(param_shape, output_shapes):
+                test_normal_grad = TestNormalGrad(out_shape)
+                if hybridize:
+                    test_normal_grad.hybridize()
+                loc = np.zeros(shape1)
+                loc.attach_grad()
+                scale = np.ones(shape2)
+                scale.attach_grad()
+                with mx.autograd.record():
+                    samples = test_normal_grad(loc, scale)
+                samples.backward()
+                assert loc.grad.shape == shape1
+                assert scale.grad.shape == shape2
+                assert_almost_equal(loc.grad.asnumpy().sum(), _np.ones(out_shape).sum(), rtol=1e-3, atol=1e-5)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
