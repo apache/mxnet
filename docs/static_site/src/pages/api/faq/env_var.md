@@ -1,3 +1,11 @@
+---
+layout: page_category
+title:  Environment Variables
+category: faq
+faq_c: Deployment Environments
+question: What are MXNet environment variables?
+permalink: /api/faq/env_var
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title:  Environment Variables
-category: faq
-faq_c: Deployment Environments
-question: What are MXNet environment variables?
-permalink: /api/faq/env_var
----
 
 Environment Variables
 =====================
@@ -61,7 +61,7 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - The number of threads given to prioritized CPU jobs.
 * MXNET_CPU_NNPACK_NTHREADS
   - Values: Int ```(default=4)```
-  - The number of threads used for NNPACK. NNPACK package aims to provide high-performance implementations of some layers for multi-core CPUs. Checkout [NNPACK](http://mxnet.io/faq/nnpack.html) to know more about it.
+  - The number of threads used for NNPACK. NNPACK package aims to provide high-performance implementations of some layers for multi-core CPUs. Checkout [NNPACK]({{'/api/faq/nnpack'|relative_url}}) to know more about it.
 * MXNET_MP_WORKER_NTHREADS
   - Values: Int ```(default=1)```
   - The number of scheduling threads on CPU given to multiprocess workers. Enlarge this number allows more operators to run in parallel in individual workers but please consider reducing the overall `num_workers` to avoid thread contention (not available on Windows).
@@ -73,7 +73,7 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 
 * MXNET_EXEC_ENABLE_INPLACE
   - Values: true or false ```(default=true)```
-  - Whether to enable in-place optimization in symbolic execution. Checkout [in-place optimization](http://mxnet.io/architecture/note_memory.html#in-place-operations) to know more about it.
+    - Whether to enable in-place optimization in symbolic execution. Checkout [in-place optimization]({{'/api/architecture/note_memory#in-place-operations'|relative_url}}) to know more about it.
 * NNVM_EXEC_MATCH_RANGE
   - Values: Int ```(default=16)```
   - The approximate matching scale in the symbolic execution memory allocator.
@@ -83,7 +83,7 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - Values: Int ```(default=1)```
   - The maximum number of temporary workspaces to allocate to each device. This controls space replicas and in turn reduces the memory usage.
   - Setting this to a small number can save GPU memory. It will also likely decrease the level of parallelism, which is usually acceptable.
-  - MXNet internally uses graph coloring algorithm to [optimize memory consumption](http://mxnet.io/architecture/note_memory.html).
+    - MXNet internally uses graph coloring algorithm to [optimize memory consumption]({{'/api/architecture/note_memory'|relative_url}}).
   - This parameter is also used to get number of matching colors in graph and in turn how much parallelism one can get in each GPU. Color based match usually costs more memory but also enables more parallelism.
 * MXNET_GPU_MEM_POOL_RESERVE
   - Values: Int ```(default=5)```
@@ -129,10 +129,10 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - Values: Int ```(default=15)```
   - The maximum number of nodes in the subgraph executed in bulk during training (not inference). Setting this to a larger number may reduce the degree of parallelism for multi-GPU training.
 * MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD
-  - Values: Int ```(default=<value of MXNET_EXEC_BULK_MAX_NODE_TRAIN>)```
+  - Values: Int ```(default=<value of MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN>)```
   - The maximum number of nodes in the subgraph executed in bulk during training (not inference) in the forward pass.
 * MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD
-  - Values: Int ```(default=<value of MXNET_EXEC_BULK_MAX_NODE_TRAIN>)```
+  - Values: Int ```(default=<value of MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN>)```
   - The maximum number of nodes in the subgraph executed in bulk during training (not inference) in the backward pass.
 
 ## Control the Data Communication

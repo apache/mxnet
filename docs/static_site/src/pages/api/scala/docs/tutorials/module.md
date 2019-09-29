@@ -1,3 +1,10 @@
+---
+layout: page_api
+title: Module API
+permalink: /api/scala/docs/tutorials/module
+is_tutorial: true
+tag: scala
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,13 +21,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: Module API
-permalink: /api/scala/docs/tutorials/module
-is_tutorial: true
-tag: scala
----
 
 # Module API
 The module API provides an intermediate and high-level interface for performing computation with neural networks in MXNet. A *module* is an instance of subclasses of the `BaseModule`. The most widely used module class is called `Module`. Module wraps a `Symbol` and one or more `Executors`. For a full list of functions, see `BaseModule`.
@@ -72,13 +72,13 @@ Modules provide high-level APIs for training, predicting, and evaluating. To fit
     .setOptimizer(new SGD(learningRate = 0.1f, momentum = 0.9f, wd = 0.0001f)))
 ```
 
-The interface is very similar to the old `FeedForward` class. You can pass in batch-end callbacks using `setBatchEndCallback` and epoch-end callbacks using `setEpochEndCallback`. You can also set parameters using methods like `setOptimizer` and `setEvalMetric`. To learn more about the `FitParams()`, see the [API page](http://mxnet.io/api/scala/docs/index.html#org.apache.mxnet.module.FitParams). To predict with a module, call `predict()` with a `DataIter`:
+The interface is very similar to the old `FeedForward` class. You can pass in batch-end callbacks using `setBatchEndCallback` and epoch-end callbacks using `setEpochEndCallback`. You can also set parameters using methods like `setOptimizer` and `setEvalMetric`. To learn more about the `FitParams()`, see the [API page]({{'/api/scala/docs/api/#org.apache.mxnet.module.FitParams'|relative_url}}). To predict with a module, call `predict()` with a `DataIter`:
 
 ```scala
     mod.predict(val_dataiter)
 ```
 
-The module collects and returns all of the prediction results. For more details about the format of the return values, see the documentation for the [`predict()` function](http://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.module.BaseModule).
+The module collects and returns all of the prediction results. For more details about the format of the return values, see the documentation for the [`predict()` function]({{'/api/scala/docs/api/#org.apache.mxnet.module.BaseModule'|relative_url}}).
 
 When prediction results might be too large to fit in memory, use the `predictEveryBatch` API:
 
@@ -155,8 +155,8 @@ To resume training from a saved checkpoint, instead of calling `setParams()`, di
 Create an object of the `FitParams()` class, and then use it to call the `setBeginEpoch()` method to pass `beginEpoch` so that `fit()` knows to resume from a saved epoch.
 
 ## Next Steps
-* See [Model API](model.md) for an alternative simple high-level interface for training neural networks.
-* See [Symbolic API](symbol.md) for operations on NDArrays that assemble neural networks from layers.
-* See [IO Data Loading API](io.md) for parsing and loading data.
-* See [NDArray API](ndarray.md) for vector/matrix/tensor operations.
-* See [KVStore API](kvstore.md) for multi-GPU and multi-host distributed training.
+* See [Model API](model) for an alternative simple high-level interface for training neural networks.
+* See [Symbolic API](symbol) for operations on NDArrays that assemble neural networks from layers.
+* See [IO Data Loading API](io) for parsing and loading data.
+* See [NDArray API](ndarray) for vector/matrix/tensor operations.
+* See [KVStore API](kvstore) for multi-GPU and multi-host distributed training.

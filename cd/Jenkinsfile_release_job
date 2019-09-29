@@ -37,7 +37,12 @@ pipeline {
   parameters {
     // Release parameters
     string(defaultValue: "Generic release job", description: "Optional Job name", name: "RELEASE_JOB_NAME")
-    choice(choices: ["mxnet_lib/static", "mxnet_lib/dynamic"], description: "Pipeline to build", name: "RELEASE_JOB_TYPE")
+    string(defaultValue: "master", description: "Git Commit to Build", name: "COMMIT_ID")
+
+    // Using string instead of choice parameter to keep the changes to the parameters minimal to avoid
+    // any disruption caused by different COMMIT_ID values chaning the job parameter configuration on 
+    // Jenkins.
+    string(defaultValue: "mxnet_lib/static", description: "Pipeline to build", name: "RELEASE_JOB_TYPE")
     string(defaultValue: "cpu,mkl,cu90,cu90mkl,cu92,cu92mkl,cu100,cu100mkl,cu101,cu101mkl", description: "Comma separated list of variants", name: "MXNET_VARIANTS")
     booleanParam(defaultValue: false, description: 'Whether this is a release build or not', name: "RELEASE_BUILD")
   }
@@ -45,7 +50,7 @@ pipeline {
   stages {
     stage("Init") {
       steps {
-        script{
+        script {
           cd_utils = load('cd/Jenkinsfile_utils.groovy')
           ci_utils = load('ci/Jenkinsfile_utils.groovy')
           ci_utils.assign_node_labels(
@@ -57,23 +62,52 @@ pipeline {
             windows_gpu: 'restricted-mxnetwindows-gpu'
           )
 
-          echo """\
+          // Skip Jenkins state update jobs
+          if (env.RELEASE_JOB_TYPE == cd_utils.STATE_UPDATE) {
+            echo """\
+            |Job Type: ${env.RELEASE_JOB_TYPE}
+            |Commit Id: ${env.GIT_COMMIT}""".stripMargin()
+          } else {
+            echo """\
             |Job Name: ${env.RELEASE_JOB_NAME}
             |Job Type: ${env.RELEASE_JOB_TYPE}
             |Release Build: ${params.RELEASE_BUILD}
             |Commit Id: ${env.GIT_COMMIT}
             |Branch: ${env.GIT_BRANCH}
             |Variants: ${env.MXNET_VARIANTS}""".stripMargin()
+          }
         }
       }
     }
     stage("Release Job") {
       steps {
         script {
+          // Skip builds for state update job
+          if (env.RELEASE_JOB_TYPE == cd_utils.STATE_UPDATE) {
+            currentBuild.result = "SUCCESS"
+            return
+          }
+
+          // Add new job types here
+          def valid_job_types = [
+            "mxnet_lib/static",
+            "mxnet_lib/dynamic", 
+            "python/pypi"
+          ]
           
           // Convert mxnet variants to a list
-          def mxnet_variants = params.MXNET_VARIANTS.split(',').inject([]) { list, item ->
+          def mxnet_variants = params.MXNET_VARIANTS.trim().split(',').inject([]) { list, item ->
             list << item.trim()
+          }.findAll { item -> ! (item == null || item.isEmpty()) }
+
+          // Exit successfully if there are no variants to build
+          if (mxnet_variants.size() == 0) {
+            error "No variants to build..."
+          }
+
+          // Only execute from allowed release job types
+          if (! (valid_job_types.contains(params.RELEASE_JOB_TYPE))) {
+            error "Unknown release job type '${params.RELEASE_JOB_TYPE}'"
           }
 
           // Load script for the supplied job type

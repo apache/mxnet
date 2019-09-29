@@ -101,6 +101,5 @@ credentials:
 http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSGettingStartedGuide/AWSCredentials.html
 .. \_s3cmd: http://s3tools.org/s3cmd .. *Deep Learning AMI:
 https://aws.amazon.com/marketplace/pp/B01M0AXXQB?qid=1475211685369&sr=0-1&ref*\ =srh\_res\_product\_title
-.. \_MXNet-v0.9.3 tag: https://github.com/dmlc/mxnet .. \_Jupyter:
-http://jupyter.org .. \_good tutorial:
-https://github.com/dmlc/mxnet-notebooks
+.. \_MXNet-v0.9.3 tag: https://github.com/apache/incubator-mxnet .. \_Jupyter:
+http://jupyter.org

@@ -24,6 +24,7 @@
 #include <string>
 #include <vector>
 #include "../../nn/activation-inl.h"
+#include "../../leaky_relu-inl.h"
 #include "../../nn/convolution-inl.h"
 #include "../../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../../tensor/matrix_op-inl.h"
@@ -121,6 +122,15 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
             status_ = kSuccess;
             return true;
           }
+        } else if ((!disable_conv_act_) && new_node.op()->name == "LeakyReLU") {
+          const LeakyReLUParam &param =
+              nnvm::get<LeakyReLUParam>(new_node.attrs.parsed);
+          if (param.act_type == leakyrelu::kLeakyReLU) {
+            matched_list_.push_back(&new_node);
+            // not support conv+relu+sum yet.
+            status_ = kSuccess;
+            return true;
+          }
         } else if ((!disable_conv_act_) && new_node.op()->name == "clip") {
           if (!(quantize_ && (status_ == kSum))) {
             // TODO(zhennan): doesn't support int8 conv+sum+relu6 at moment. To support this, we
@@ -208,7 +218,7 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
         n->attrs.dict["with_sum"] = "true";
         _with_sum = true;
 
-      } else if (sub_name == "Activation" || sub_name == "clip") {
+      } else if (sub_name == "Activation" || sub_name == "LeakyReLU" || sub_name == "clip") {
         node_name << "act_";
         if (!_with_sum) {
           n->attrs.dict["with_act"] = "true";

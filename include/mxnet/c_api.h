@@ -675,12 +675,6 @@ MXNET_DLL int MXNDArrayLoad(const char* fname,
                             uint32_t *out_name_size,
                             const char*** out_names);
 
-MXNET_DLL int MXNDArrayLoad64(const char* fname,
-                              int64_t *out_size,
-                              NDArrayHandle** out_arr,
-                              int64_t *out_name_size,
-                              const char*** out_names);
-
 /*!
  * \brief Load list / dictionary of narrays from file content loaded into memory.
  * This will load a list of ndarrays in a similar
@@ -701,13 +695,6 @@ MXNET_DLL int MXNDArrayLoadFromBuffer(const void *ndarray_buffer,
                                       NDArrayHandle** out_arr,
                                       uint32_t *out_name_size,
                                       const char*** out_names);
-
-MXNET_DLL int MXNDArrayLoadFromBuffer64(const void *ndarray_buffer,
-                                        size_t size,
-                                        int64_t *out_size,
-                                        NDArrayHandle** out_arr,
-                                        int64_t *out_name_size,
-                                        const char*** out_names);
 
 /*!
  * \brief Perform a synchronize copy from a continugous CPU memory region.
