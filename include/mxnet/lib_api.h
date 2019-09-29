@@ -68,8 +68,19 @@ struct MXTensor {
    * \brief helper function to cast data pointer
    */
   template<typename data_type>
-  data_type* getData() {
+  inline data_type* getData() {
     return reinterpret_cast<data_type*>(data);
+  }
+
+  /*!
+   * \brief helper function to get data size
+   */
+  inline int64_t getDataSize() {
+    int64_t size = 1;
+    for (unsigned int i = 0; i < shape.size(); i++) {
+      size *= shape[i];
+    }
+    return size;
   }
 
   // data is flatten 1D repr of tensor, elements are in continuous memory
@@ -118,6 +129,7 @@ class OpResource {
 /*!
  * \brief Simple Json parser to parse serialized subgraph symbol
  */
+
 //Types of JSON objects
 enum json_type {ERR,STR,NUM,LIST,MAP};
 //forward declaration of struct for JSON objects
@@ -135,7 +147,7 @@ typedef struct json_val_t {
     if(type == NUM) return type == o.type && num < o.num; ///for number JSON objects compare the number
     if(type == LIST) { //for list JSON objects, compare the size of the list, and then each object in the lists
       if(list.size() != o.list.size()) return false;
-      for(int i=0; i< list.size(); i++)	if(list[i] < o.list[i]) return false; //if we find an object that doesnt match return
+      for(unsigned int i=0; i< list.size(); i++)	if(list[i] < o.list[i]) return false; //if we find an object that doesnt match return
       return true; //all objects in lists matched
     }
     if(type == MAP) { //for map JSON objects, compare the size of the map, and then each key/value in the maps
@@ -155,7 +167,7 @@ typedef struct json_val_t {
   json_type type;
 } json_val;
 //forward declaration of generic parse function
-json_val parse(std::string json, int *idx);
+json_val parse(std::string json, unsigned int *idx);
 //debug function to convert a JSON object to a string
 std::string json_val_string(const json_val &val) {
   std::string ret;
@@ -189,7 +201,7 @@ void print_json_val(json_val val) {
   std::cout << json_val_string(val) << std::endl;
 }
 //parse a string JSON object
-json_val parse_string(std::string json, int* idx) {
+json_val parse_string(std::string json, unsigned int* idx) {
   json_val ret(STR);
   while(*idx < json.size()) {
     if(json[*idx] == '"') {++(*idx); return ret;
@@ -199,7 +211,7 @@ json_val parse_string(std::string json, int* idx) {
   return json_val();
 }
 //parse a number JSON object
-json_val parse_num(std::string json, int* idx) {
+json_val parse_num(std::string json, unsigned int* idx) {
   json_val ret(NUM);
   while(*idx < json.size()) {
     if(json[*idx] >= '0' && json[*idx] <= '9') {ret.str += json[*idx]; ++(*idx);
@@ -209,7 +221,7 @@ json_val parse_num(std::string json, int* idx) {
   return ret;
 }
 //parse a list of JSON objects
-json_val parse_list(std::string json, int* idx) {
+json_val parse_list(std::string json, unsigned int* idx) {
   json_val ret(LIST);
   while(*idx < json.size()) {
     if(json[*idx] == ']') {++(*idx); return ret;
@@ -223,7 +235,7 @@ json_val parse_list(std::string json, int* idx) {
   return json_val();
 }
 //parse a map of JSON objects
-json_val parse_map(std::string json, int* idx) {
+json_val parse_map(std::string json, unsigned int* idx) {
   json_val ret(MAP),key;
   while(*idx < json.size()) {
     if(json[*idx] == '}') { ++(*idx); return ret;
@@ -237,7 +249,7 @@ json_val parse_map(std::string json, int* idx) {
   return json_val();
 }
 //generic parse function
-json_val parse(std::string json, int *idx) {
+json_val parse(std::string json, unsigned int *idx) {
   json_val ret;
   while(*idx < json.size()) {
     if(json[*idx] == '"') {++(*idx); ret = parse_string(json,idx);
@@ -252,7 +264,7 @@ json_val parse(std::string json, int *idx) {
 }
 // Main entry point to parse a string to JSON
 json_val parse_json(std::string json) {
-  int idx=0;
+  unsigned int idx=0;
   return parse(json,&idx);
 }
 

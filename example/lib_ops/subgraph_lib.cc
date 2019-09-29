@@ -71,6 +71,11 @@ class MyStatefulOp : public CustomStatefulOp {
                         std::vector<MXTensor> outputs,
                         OpResource op_res) {
     std::cout << "subgraph " << subgraph_sym << " forwarding" << std::endl;
+    float* in_data = inputs[0].getData<float>();
+    float* out_data = outputs[0].getData<float>();
+    for (int i = 0; i < inputs[0].getDataSize(); i++) {
+      out_data[i] = in_data[i];
+    }
     return MX_SUCCESS;
   }
 
