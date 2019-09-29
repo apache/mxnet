@@ -17,6 +17,7 @@
 
 # coding: utf-8
 import tvm
+import topi
 from .. import defop, AllTypes, RealTypes
 from .. import assign_by_req, reduce_axes
 
