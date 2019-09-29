@@ -25,7 +25,7 @@
 #include "../operator/operator_common.h"
 #include "../operator/subgraph/common.h"
 
-#if MXNET_USE_TVM_OP
+#if MXNET_USE_TVM_OP && !defined MXNET_AMALGAMATION
 #include <tvm/node/node.h>
 namespace mxnet {
 namespace v3 {
@@ -34,7 +34,7 @@ tvm::NodeRef NNVMToRelay(const nnvm::Graph &g);
 }  // namespace nnvm_relay_bridge
 }  // namespace v3
 }  // namespace mxnet
-#endif  // MXNET_USE_TVM_OP
+#endif  // MXNET_USE_TVM_OP && !defined MXNET_AMALGAMATION
 
 namespace mxnet {
 
@@ -322,9 +322,9 @@ bool CachedOp::SetForwardGraph(
   using namespace imperative;
   CHECK_EQ(inputs.size(), num_inputs());
   nnvm::Graph& g = info->fwd_graph;
-#if MXNET_USE_TVM_OP
+#if MXNET_USE_TVM_OP && !defined MXNET_AMALGAMATION
   v3::nnvm_relay_bridge::NNVMToRelay(g);
-#endif  // MXNET_USE_TVM_OP
+#endif  // MXNET_USE_TVM_OP && !define MXNET_AMALGAMATION
   ShapeVector shape_inputs;
   DTypeVector dtype_inputs;
   StorageTypeVector storage_type_inputs;
