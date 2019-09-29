@@ -70,11 +70,12 @@ NNVM_REGISTER_OP(_npi_normal)
 .add_arguments(NumpyNormalParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_broadcast_normal)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr_parser(ParamParser<NumpyNormalParam>)
 .set_num_inputs(
   [](const nnvm::NodeAttrs& attrs) {
     const NumpyNormalParam& param = nnvm::get<NumpyNormalParam>(attrs.parsed);
-    int num_inputs = 5;
+    int num_inputs = 6;
     if (param.loc.has_value()) num_inputs -= 1;
     if (param.scale.has_value()) num_inputs -= 1;
     return num_inputs;
@@ -89,7 +90,6 @@ NNVM_REGISTER_OP(_backward_broadcast_normal)
     return num_outputs;
   }
 )
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};

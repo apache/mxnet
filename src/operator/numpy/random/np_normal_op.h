@@ -245,11 +245,11 @@ inline void NormalReparamBackwardImpl(const OpContext& ctx,
   const TBlob rgrad = outputs[1].reshape(new_rshape);
   const TBlob ograd = inputs[0].reshape(new_oshape);
   // Mean
-  const TBlob lhs = inputs[1].reshape(new_lshape);
+  const TBlob lhs = inputs[2].reshape(new_lshape);
   // Variance
-  const TBlob rhs = inputs[2].reshape(new_rshape);
-  const TBlob samples = inputs[3].reshape(new_oshape);
-  const TBlob noise = inputs[4].reshape(new_oshape);
+  const TBlob rhs = inputs[3].reshape(new_rshape);
+  const TBlob samples = inputs[4].reshape(new_oshape);
+  const TBlob noise = inputs[5].reshape(new_oshape);
   size_t workspace_size_l = ReduceWorkspaceSize<ndim, DType>(
       s, lgrad.shape_, req[0], ograd.shape_, lhs.shape_, rhs.shape_);
   size_t workspace_size_r = ReduceWorkspaceSize<ndim, DType>(
@@ -274,18 +274,14 @@ void NormalReparamBackward(const nnvm::NodeAttrs& attrs,
                            const std::vector<OpReqType>& req,
                            const std::vector<TBlob>& outputs) {
   // skip kernel launch for zero-size tensors
-  printf("1:%d", inputs.size());
   if (inputs[0].shape_.Size() == 0U) {
     return;
   }
-  printf("2:%d", inputs.size());
   if (outputs.size() == 0U) {
     return;
   }
   // [tensor tensor] case
-  printf("%d", inputs.size());
-  if (inputs.size() == 5U) {
-    printf("hello!\n");
+  if (inputs.size() == 6U) {
     mxnet::TShape new_lshape, new_rshape, new_oshape;
     int ndim = FillShape(outputs[0].shape_, outputs[1].shape_, inputs[0].shape_,
                          &new_lshape, &new_rshape, &new_oshape);
