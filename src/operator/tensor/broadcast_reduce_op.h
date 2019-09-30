@@ -571,7 +571,7 @@ struct argmax {
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, const int nWorkers,
                                   const DType *in_data, DType *out_data,
-                                  size_t nSteps, size_t step, size_t shift,
+                                  index_t nSteps, size_t step, size_t shift,
                                   void *pIdxStorage, const idxStorageType storageType) {
     // i - index of launched thread
     // nWorkers - number of threads, assigned to work on one row/column
@@ -589,13 +589,13 @@ struct argmax {
       pCurr += i % step + shift * (i / step);
     }
 
-    size_t maxIdx = 0;
+    index_t maxIdx = 0;
     DType maxVal = *pCurr;
     while (IsNan(maxVal) && ++maxIdx < nSteps)
       maxVal = *(pCurr += step);
 
     if (maxIdx < nSteps) {
-      for (size_t j = maxIdx + 1; j < nSteps; ++j) {
+      for (index_t j = maxIdx + 1; j < nSteps; ++j) {
         const auto val = *(pCurr += step);
         if (IsNan(val) || maxVal >= val)
           continue;
@@ -628,9 +628,9 @@ struct argmax {
 
 struct argmax_reduce {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static size_t BestIdx(const int nWorkers, const DType *pCurr,
+  MSHADOW_XINLINE static index_t BestIdx(const int nWorkers, const DType *pCurr,
                                         const size_t step, const IType *pIdxStorage) {
-    size_t maxIdx = *pIdxStorage;
+    index_t maxIdx = *pIdxStorage;
     DType maxVal = *(pCurr + step * maxIdx);
     int j = 0;
     while (IsNan(maxVal) && ++j < nWorkers)
