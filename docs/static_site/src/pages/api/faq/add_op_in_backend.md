@@ -47,7 +47,9 @@ C++ in the MXNet backend. After finishing the implementation,
 we will add unit tests using Python for the operator we just implemented.
 
 ## Implementation
+
 ### An Operator Example
+
 Let's take the [quadratic function](https://en.wikipedia.org/wiki/Quadratic_function)
 as an example: `f(x) = ax^2+bx+c`. We want to implement an operator called `quadratic`
 taking `x`, which is a tensor, as an input and generating an output tensor `y`
@@ -55,11 +57,13 @@ satisfying `y.shape=x.shape` and each element of `y` is calculated by feeding th
 corresponding element of `x` into the quadratic function `f`.
 Here variables `a`, `b`, and `c` are user input parameters.
 In frontend, the operator works like this:
+
 ```python
 x = [[1, 2], [3, 4]]
 y = quadratic(data=x, a=1, b=2, c=3)
 y = [[6, 11], [18, 27]]
 ```
+
 To implement this, we first create three files: `quadratic_op-inl.h`,
 `quadratic_op.cc`, and `quadratic_op.cu`. The header file's name
 is prefixed by the operator name and followed by `op` and `-inl`
@@ -148,6 +152,7 @@ using the attribute inference functions defined in the operators building up
 the neural network.
 
 Let's consider the following example.
+
 ```python
 >>> import mxnet as mx
 >>> a = mx.sym.Variable('a', shape=(2, 0))
@@ -157,6 +162,7 @@ Let's consider the following example.
 >>> print d.infer_shape()
 ([(2L, 3L), (2L, 3L), (2L, 3L)], [(2L, 3L)], [])
 ```
+
 The last line of the above code snippet is a tuple of three lists returned
 by `d.infer_shape()`. The first list contains all the argument shapes
 of `a`, `b`, and `c`. The second contains the output shape of `d`. The
@@ -182,6 +188,7 @@ It is actually implemented in the shape inference functions of the operators for
 element-wise multiplication and addition.
 
 For our `quadratic` operator, shape inference possesses quite similar logic.
+
 ```cpp
 inline bool QuadraticOpShape(const nnvm::NodeAttrs& attrs,
                              mxnet::ShapeVector* in_attrs,
@@ -194,6 +201,7 @@ inline bool QuadraticOpShape(const nnvm::NodeAttrs& attrs,
   return out_attrs->at(0).ndim() != 0U && out_attrs->at(0).Size() != 0U;
 }
 ```
+
 Here are a few things to note about the above function:
 
 1. `attrs` contains parameters `a`, `b`, and `c` from user input.
@@ -222,6 +230,7 @@ for general element-wise operators with the following interface. Users can
 instantiate this function with `n_in=1` and `n_out=1` to replace the above
 function `QuadraticOpShape` in operator registration (explained later).
 The function `QuadraticOpShape` posted here is for the purpose of illustration only.
+
 ```cpp
 template<int n_in, int n_out>
 inline bool ElemwiseShape(const nnvm::NodeAttrs& attrs,
@@ -232,6 +241,7 @@ inline bool ElemwiseShape(const nnvm::NodeAttrs& attrs,
 The same logic goes for data type inference. We will leave the analysis of
 the following code sample to users. Note that `-1` means the data type
 is unknown and must be inferred from other input or output data types.
+
 ```cpp
 inline bool QuadraticOpType(const nnvm::NodeAttrs& attrs,
                             std::vector<int>* in_attrs,
@@ -248,6 +258,7 @@ inline bool QuadraticOpType(const nnvm::NodeAttrs& attrs,
 Again, MXNet provides the following convenience function for mutual
 type inference of element-wise operators. Users can use that
 in operator registration (explained later).
+
 ```cpp
 template<int n_in, int n_out>
 inline bool ElemwiseType(const nnvm::NodeAttrs& attrs,
@@ -261,6 +272,7 @@ of neural networks. For our `quadratic` operator, it simply implements
 the logic of running a tensor through the quadratic function by performing
 a few element-wise operations. The forward function's signature is fixed
 in MXNet as follows:
+
 ```cpp
 void (const nnvm::NodeAttrs& attrs,
       const OpContext& ctx,
@@ -268,8 +280,13 @@ void (const nnvm::NodeAttrs& attrs,
       const std::vector<OpReqType>& req,
       const std::vector<TBlob>& outputs);
 ```
+
 We first paste the whole forward function code here
 and then go through it line by line.
+
+
+{% raw %}
+
 ```cpp
 template<typename xpu>                                                        // 1
 void QuadraticOpForward(const nnvm::NodeAttrs& attrs,                         // 2
@@ -294,6 +311,9 @@ void QuadraticOpForward(const nnvm::NodeAttrs& attrs,                         //
   });                                                                         // 21
 }                                                                             // 22
 ```
+
+{% endraw %}
+
 - Line 1: `xpu` stands for a generic device type so that the function can be instantiated
 for both CPU and GPU computing using concrete types `cpu` and `gpu`. The instantiation happens
 at the time when the operator is registered in `.cc` and `.cu` files.
@@ -385,14 +405,19 @@ since they are not learnable parameters in the network. To formulate the problem
 given `dL/dy` and `y = a*x^2 + b*x + c`, where `L` represents the loss function and
 `y` stands for the output of the quadratic tensor, we need to solve for
 `dL/dx`. Using the chain-rule, it is obvious to find that
+
 ```
 dL/dx = dL/dy * dy/dx = dL/dy * (2*a*x + b).
 ```
+
 The above equation indicates that `dL/dx` depends on the gradient
 of the output tensor and value of the input tensor.
 The backward function's signature is the same as the forward function's.
 With the aforementioned information in mind,
 let's breakdown the following backward function line by line.
+
+{% raw %}
+
 ```cpp
 template<typename xpu>                                                       // 1
 void QuadraticOpBackward(const nnvm::NodeAttrs& attrs,                       // 2
@@ -418,6 +443,9 @@ void QuadraticOpBackward(const nnvm::NodeAttrs& attrs,                       // 
   });                                                                        // 22
 }                                                                            // 23
 ```
+
+{% endraw %}
+
 - Lines 1-6: Backward function has the same signature as forward function.
 - Lines 7-9: Check the sizes of the function arguments. One thing to note
 that since the gradient of the input depends on both the gradient of the output and
@@ -569,6 +597,7 @@ So far, we have acquired an operator working on CPU in frontend.
 In order to register the operator working on GPUs, we just need to add the following
 code to `quadratic_op.cu`. Note that forward and backward functions
 are registered with attribute key `FCompute<gpu>`, rather than `FCompute<cpu>`.
+
 ```cpp
 NNVM_REGISTER_OP(quadratic)
 .set_attr<FCompute>("FCompute<gpu>", QuadraticOpForward<gpu>);
@@ -648,6 +677,7 @@ once the comparison satisfies user specified `rtol` and `atol` values. Here `rto
 and `atol` expand to relative tolerance and absolute tolerance respectively. They
 are used to specify how far the computed values can deviate from the expected values.
 They are defined as follows
+
 ```
 abs(Expected_Value - Computed_Value) < RTOL * abs(Expected_Value) + ATOL
 ```

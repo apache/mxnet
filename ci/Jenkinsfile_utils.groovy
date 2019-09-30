@@ -18,7 +18,7 @@
 // under the License.
 
 // initialize source codes
-def init_git(git_sha = '') {
+def init_git() {
   deleteDir()
   retry(5) {
     try {
@@ -80,8 +80,8 @@ return 0
 }
 
 // unpack libraries saved before
-def unpack_and_init(name, libs, include_gcov_data = false, git_sha = '') {
-  init_git(git_sha)
+def unpack_and_init(name, libs, include_gcov_data = false) {
+  init_git()
   unstash name
   sh returnStatus: true, script: """
 set +e
@@ -186,27 +186,19 @@ def update_github_commit_status(state, message) {
     context = get_github_context()
     echo "context=${context}"
 
-    // a few attempts need to be made: https://github.com/apache/incubator-mxnet/issues/11654
-    for (int attempt = 1; attempt <= 3; attempt++) {
-      echo "Sending GitHub status attempt ${attempt}..."
-
-      step([
-        $class: 'GitHubCommitStatusSetter',
-        reposSource: [$class: "ManuallyEnteredRepositorySource", url: repoUrl],
-        contextSource: [$class: "ManuallyEnteredCommitContextSource", context: context],
-        commitShaSource: [$class: "ManuallyEnteredShaSource", sha: commitSha],
-        statusBackrefSource: [$class: "ManuallyEnteredBackrefSource", backref: "${env.RUN_DISPLAY_URL}"],
-        errorHandlers: [[$class: 'ShallowAnyErrorHandler']],
-        statusResultSource: [
-          $class: 'ConditionalStatusResultSource',
-          results: [[$class: "AnyBuildResult", message: message, state: state]]
-        ]
-      ])
-
-      if (attempt <= 2) {
-        sleep 1
-      }
-    }
+    echo "Publishing commit status..."
+    step([
+      $class: 'GitHubCommitStatusSetter',
+      reposSource: [$class: "ManuallyEnteredRepositorySource", url: repoUrl],
+      contextSource: [$class: "ManuallyEnteredCommitContextSource", context: context],
+      commitShaSource: [$class: "ManuallyEnteredShaSource", sha: commitSha],
+      statusBackrefSource: [$class: "ManuallyEnteredBackrefSource", backref: "${env.RUN_DISPLAY_URL}"],
+      errorHandlers: [[$class: 'ShallowAnyErrorHandler']],
+      statusResultSource: [
+        $class: 'ConditionalStatusResultSource',
+        results: [[$class: "AnyBuildResult", message: message, state: state]]
+      ]
+    ])
 
     echo "Publishing commit status done."
 
