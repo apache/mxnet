@@ -170,6 +170,7 @@ def expand(x, pending, stage):
             if not source:
                 if (h not in blacklist and
                     h not in sysheaders and
+                    'tvm' not in h and
                     'mkl' not in h and
                     'nnpack' not in h and
                     'tensorrt' not in h and
