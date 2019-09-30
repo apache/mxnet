@@ -71,24 +71,24 @@ void SpatialUpSamplingBilinearUpdateOutput(mshadow::Stream<cpu> *s,
     return;
   }
   const DType rheight = area_pixel_compute_scale<DType>(
-	  inputHeight, outputHeight, align_corners);
+    inputHeight, outputHeight, align_corners);
   const DType rwidth = area_pixel_compute_scale<DType>(
-	  inputWidth, outputWidth, align_corners);
+    inputWidth, outputWidth, align_corners);
 
 #pragma omp parallel for num_threads(nthreads)
   for (int index = 0; index < output_elems_per_channel; index++) {
     const int h2 = index / outputWidth;
     const int w2 = index % outputWidth;
 
-	const DType h1r = area_pixel_compute_source_index<DType>(
-		rheight, h2, align_corners, /*cubic=*/false);
+  const DType h1r = area_pixel_compute_source_index<DType>(
+    rheight, h2, align_corners, /*cubic=*/false);
     const int h1 = h1r;
     const int h1p = (h1 < inputHeight - 1) ? 1 : 0;
     const DType h1lambda = h1r - h1;
     const DType h0lambda = (DType)1. - h1lambda;
 
-	const DType w1r = area_pixel_compute_source_index<DType>(
-		rwidth, w2, align_corners, /*cubic=*/false);
+  const DType w1r = area_pixel_compute_source_index<DType>(
+    rwidth, w2, align_corners, /*cubic=*/false);
     const int w1 = w1r;
     const int w1p = (w1 < inputWidth - 1) ? 1 : 0;
     const DType w1lambda = w1r - w1;
@@ -98,8 +98,8 @@ void SpatialUpSamplingBilinearUpdateOutput(mshadow::Stream<cpu> *s,
 
     for (int c = 0; c < channels; ++c) {
       *pos2 = h0lambda * (w0lambda * (*pos1) + w1lambda * *(pos1 + w1p))
-                  + h1lambda * (w0lambda * *(pos1 + h1p * inputWidth)
-                  + w1lambda * *(pos1 + h1p * inputWidth + w1p));
+            + h1lambda * (w0lambda * *(pos1 + h1p * inputWidth)
+            + w1lambda * *(pos1 + h1p * inputWidth + w1p));
       pos1 += input_elems_per_channel;
       pos2 += output_elems_per_channel;
     }
@@ -149,9 +149,9 @@ void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<cpu> *s,
     return;
   }
   const DType rheight = area_pixel_compute_scale<DType>(
-	  inputHeight, outputHeight, align_corners);
+    inputHeight, outputHeight, align_corners);
   const DType rwidth = area_pixel_compute_scale<DType>(
-	  inputWidth, outputWidth, align_corners);
+    inputWidth, outputWidth, align_corners);
 #pragma omp parallel for num_threads(nthreads)
   for (int index = 0; index < output_elems_per_channel; index++) {
     const int h2 = index / outputWidth;
