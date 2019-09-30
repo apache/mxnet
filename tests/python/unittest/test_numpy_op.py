@@ -17,6 +17,8 @@
 
 # pylint: skip-file
 from __future__ import absolute_import
+import sys
+import unittest
 import numpy as _np
 import mxnet as mx
 from mxnet import np, npx
@@ -29,6 +31,7 @@ import random
 import scipy.stats as ss
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, retry
 from mxnet.runtime import Features
+from mxnet.numpy_op_signature import _get_builtin_op
 import platform
 
 
@@ -2808,6 +2811,18 @@ def test_np_take():
 
             for config in configs:
                 check_output_n_grad(config[0], config[1], config[2], mode)
+
+
+@unittest.skipUnless(sys.version_info.major >= 3 and sys.version_info.minor >= 5,
+                     'inspect package requires Python >= 3.5 to work properly')
+@with_seed()
+def test_np_builtin_op_signature():
+    import inspect
+    from mxnet import _numpy_op_doc
+    for op_name in dir(_numpy_op_doc):
+        op = _get_builtin_op(op_name)
+        if op is not None:
+            assert str(op.__signature__) == str(inspect.signature(getattr(_numpy_op_doc, op_name)))
 
 
 if __name__ == '__main__':
