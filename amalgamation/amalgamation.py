@@ -170,6 +170,7 @@ def expand(x, pending, stage):
             if not source:
                 if (h not in blacklist and
                     h not in sysheaders and
+                    'tvm' not in h and
                     'mkl' not in h and
                     'nnpack' not in h and
                     'tensorrt' not in h and
@@ -190,7 +191,8 @@ expand.fileCount = 0
 
 # Expand the stages
 expand(sys.argv[2], [], "3rdparty/dmlc-core")
-expand(sys.argv[3], [], "3rdparty/tvm/nnvm")
+expand(sys.argv[3], [], "3rdparty/tvm")
+expand(sys.argv[3], [], "3rdparty/nnvm")
 expand(sys.argv[4], [], "src")
 
 # Write to amalgamation file
