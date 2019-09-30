@@ -44,16 +44,6 @@ namespace mxnet {
 namespace op {
 
 #if MXNET_USE_MKLDNN == 1
-/* For fully connected. */
-void MKLDNNFCForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                     const std::vector<NDArray> &in_data,
-                     const std::vector<OpReqType> &req,
-                     const std::vector<NDArray> &out_data);
-void MKLDNNFCBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                      const std::vector<NDArray> &inputs,
-                      const std::vector<OpReqType> &req,
-                      const std::vector<NDArray> &outputs);
-
 /* For deconvolution */
 void MKLDNNDeconvolutionForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                                 const std::vector<NDArray> &in_data,
@@ -104,6 +94,16 @@ void MKLDNNFlattenForward(const nnvm::NodeAttrs &attrs,
 #endif
 
 #if MXNET_USE_MKLDNN == 100
+/* For fully connected. */
+void MKLDNNFCForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                     const std::vector<NDArray> &in_data,
+                     const std::vector<OpReqType> &req,
+                     const std::vector<NDArray> &out_data);
+void MKLDNNFCBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                      const std::vector<NDArray> &inputs,
+                      const std::vector<OpReqType> &req,
+                      const std::vector<NDArray> &outputs);
+
 /* For convolution. */
 void MKLDNNConvolutionForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                               const std::vector<NDArray> &in_data,
