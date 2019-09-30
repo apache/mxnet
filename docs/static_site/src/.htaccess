@@ -26,7 +26,6 @@ RewriteRule ^(.*) $1/index.html [NC,L]
 ErrorDocument 404 /404.html
 
 # Redirects
-
 # Python API
 Redirect 301 /versions/master/api/python/index.html /api/python/docs/api/index.html
 Redirect 301 /api/python/ndarray/ndarray.html /api/python/docs/api/ndarray/index.html
