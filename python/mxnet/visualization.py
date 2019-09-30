@@ -417,7 +417,7 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, dtype=None
     dot = Digraph(name=title, format=save_format)
     # color map
     cm = ("#8dd3c7", "#fb8072", "#ffffb3", "#bebada", "#80b1d3",
-          "#fdb462", "#b3de69", "#fccde5")
+          "#fdb462", "#b3de69", "#fccde5", "#fdbcb5")
 
     def looks_like_weight(name):
         """Internal helper to figure out if node should be hidden with `hide_weights`.
@@ -460,6 +460,10 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, dtype=None
                 filter=node["attrs"]["num_filter"]
             )
             attr["fillcolor"] = cm[1]
+            num_group = int(node["attrs"]["num_group"])
+            if num_group > 1:
+                label = "{}\n({num_group} groups)".format(label, num_group=num_group)
+                attr["fillcolor"] = cm[8]
         elif op == "FullyConnected":
             label = "FullyConnected\n{hidden}".format(hidden=node["attrs"]["num_hidden"])
             attr["fillcolor"] = cm[1]
