@@ -31,11 +31,11 @@
  * main matrix multiplication routine
  */
 void gemm(float* A, float* B, float* C, unsigned n, unsigned k, unsigned m) {
-  unsigned i,j,kk;
-  for (i=0;i<n;i++) {
-    for (j=0;j<m;j++) {
+  unsigned i, j, kk;
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < m; j++) {
       C[i*m+j] = 0;
-      for (kk=0;kk<k;kk++) {
+      for (kk = 0; kk < k; kk++) {
         C[i*m+j] += A[i*k+kk] * B[kk*m+j];
       }
     }
@@ -43,7 +43,7 @@ void gemm(float* A, float* B, float* C, unsigned n, unsigned k, unsigned m) {
 }
 
 void transpose(float* A, float* At, unsigned n, unsigned m) {
-  unsigned i,j;
+  unsigned i, j;
   for (i=0; i < n; i++) {
     for (j=0; j < m; j++) {
       At[i*n+j] = A[j*m+i];
@@ -57,24 +57,24 @@ void transpose(float* A, float* At, unsigned n, unsigned m) {
  * inputs[1] = B
  * outputs[0] = C
  */
-MXReturnValue forward(std::map<std::string,std::string> attrs,
+MXReturnValue forward(std::map<std::string, std::string> attrs,
                       std::vector<MXTensor> inputs,
                       std::vector<MXTensor> outputs,
                       OpResource res) {
-  //validate inputs
-  for(int i=0; i<inputs.size(); i++) {
-    if(inputs[i].dtype != kFloat32) {
+  // validate inputs
+  for (unsigned i = 0; i < inputs.size(); i++) {
+    if (inputs[i].dtype != kFloat32) {
       std::cout << "Expected input " << i << " to have float32 type" << std::endl;
       return MX_FAIL;
     }
   }
 
-  //extract data pointers from tensors
+  // extract data pointers from tensors
   float* A = inputs[0].getData<float>();
   float* B = inputs[1].getData<float>();
   float* C = outputs[0].getData<float>();
 
-  //set tensor shapes
+  // set tensor shapes
   unsigned n = inputs[0].shape[0];
   unsigned k = inputs[0].shape[1];
   unsigned m = inputs[1].shape[1];
@@ -98,25 +98,25 @@ MXReturnValue forward(std::map<std::string,std::string> attrs,
  * outputs[0] = dA
  * outputs[1] = dB
  */
-MXReturnValue backward(std::map<std::string,std::string> attrs,
+MXReturnValue backward(std::map<std::string, std::string> attrs,
                        std::vector<MXTensor> inputs,
                        std::vector<MXTensor> outputs,
                        OpResource res) {
-  //validate inputs
-  for(int i=0; i<inputs.size(); i++) {
-    if(inputs[i].dtype != kFloat32) {
+  // validate inputs
+  for (unsigned i = 0; i < inputs.size(); i++) {
+    if (inputs[i].dtype != kFloat32) {
       std::cout << "Expected input " << i << " to have float32 type" << std::endl;
       return MX_FAIL;
     }
   }
 
-  //extract data pointers from tensors
+  // extract data pointers from tensors
   float* dC = inputs[0].getData<float>();
   float* A = inputs[1].getData<float>();
   float* B = inputs[2].getData<float>();
   float* dA = outputs[0].getData<float>();
   float* dB = outputs[1].getData<float>();
-  //set tensor shapes
+  // set tensor shapes
   unsigned n = inputs[1].shape[0];
   unsigned k = inputs[1].shape[1];
   unsigned m = inputs[2].shape[1];
@@ -133,13 +133,14 @@ MXReturnValue backward(std::map<std::string,std::string> attrs,
   return MX_SUCCESS;
 }
 
-MXReturnValue parseAttrs(std::map<std::string,std::string> attrs, int* num_in, int* num_out) {
+MXReturnValue parseAttrs(std::map<std::string, std::string> attrs, int* num_in, int* num_out) {
   *num_in = 2;
   *num_out = 1;
   return MX_SUCCESS;
 }
 
-MXReturnValue inferType(std::map<std::string,std::string> attrs, std::vector<int> &intypes,
+MXReturnValue inferType(std::map<std::string, std::string> attrs,
+                        std::vector<int> &intypes,
                         std::vector<int> &outtypes) {
   // validate inputs
   if (intypes.size() != 2) {
@@ -160,7 +161,7 @@ MXReturnValue inferType(std::map<std::string,std::string> attrs, std::vector<int
   return MX_SUCCESS;
 }
 
-MXReturnValue inferShape(std::map<std::string,std::string> attrs,
+MXReturnValue inferShape(std::map<std::string, std::string> attrs,
                          std::vector<std::vector<unsigned int>> &inshapes,
                          std::vector<std::vector<unsigned int>> &outshapes) {
   // validate inputs
@@ -206,10 +207,10 @@ REGISTER_OP(my_gemm)
 
 /* ------------------------------------------------------------------------- */
 
-MXReturnValue mutateInputs(std::map<std::string,std::string> attrs,
-               std::vector<int> &input_indices) {
-  //input_indices.push_back(1);
-  //std::cout << "the 1st input is marked as mutate input by library author" << std::endl;
+MXReturnValue mutateInputs(std::map<std::string, std::string> attrs,
+                           std::vector<int> &input_indices) {
+  // input_indices.push_back(1);
+  // std::cout << "the 1st input is marked as mutate input by library author" << std::endl;
   return MX_SUCCESS;
 }
 
@@ -225,14 +226,14 @@ class MyStatefulGemm : public CustomStatefulOp {
     *p = count;
     std::cout << "test op resource " << *p << std::endl;
 
-    std::map<std::string,std::string> attrs;
+    std::map<std::string, std::string> attrs;
     return forward(attrs, inputs, outputs, op_res);
   }
 
   MXReturnValue Backward(std::vector<MXTensor> inputs,
                std::vector<MXTensor> outputs,
                OpResource op_res) {
-    std::map<std::string,std::string> attrs;
+    std::map<std::string, std::string> attrs;
     return backward(attrs, inputs, outputs, op_res);
   }
 
@@ -242,7 +243,7 @@ class MyStatefulGemm : public CustomStatefulOp {
   int count;
 };
 
-MXReturnValue createOpState(std::map<std::string,std::string> attrs,
+MXReturnValue createOpState(std::map<std::string, std::string> attrs,
                             CustomStatefulOp** op_inst) {
   *op_inst = new MyStatefulGemm(58);
   std::cout << "create op state successful" << std::endl;

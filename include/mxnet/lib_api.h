@@ -34,6 +34,7 @@
 #include <map>
 #include <string>
 #include <iostream>
+#include <utility>
 
 #define MX_LIBRARY_VERSION 1
 
@@ -122,151 +123,171 @@ class OpResource {
 };
 
 /*!
- * \brief Macro to help passing serialized subgraph through attribute dict
+ * \brief Json utility to parse serialized subgraph symbol
  */
+// Macro to help passing serialized subgraph through attribute dict
 #define SUBGRAPH_SYM_JSON "subgraph_sym_json"
 
-/*!
- * \brief Simple Json parser to parse serialized subgraph symbol
- */
+// Types of JSON objects
+enum json_type {ERR, STR, NUM, LIST, MAP};
 
-//Types of JSON objects
-enum json_type {ERR,STR,NUM,LIST,MAP};
-//forward declaration of struct for JSON objects
-struct json_val_t;
-typedef struct json_val_t json_val;
-//definition of struct for JSON objects
-typedef struct json_val_t {
-  json_val_t() : type(ERR),num(-1),str("") {} //default constructor
-  json_val_t(json_type t) : type(t),num(-1),str("") {} //construct a JSON object by type
-  json_val_t(std::string s) : type(STR), num(-1), str(s) {} //construct a string JSON object
-  json_val_t(int n) : type(NUM), num(n), str(std::to_string(n)) {} //construct a number JSON object
-  json_val_t(json_type t, int n, std::string s) : type(t),num(n),str(s) {}  //complex constructor
+// definition of struct for JSON objects
+struct json_val {
+  json_val() : type(ERR), num(-1), str("") {}  // default constructor
+  explicit json_val(json_type t) : type(t), num(-1), str("") {}  // construct a JSON object by type
+  explicit json_val(std::string s) : type(STR), num(-1), str(s) {}  // construct a string JSON object
+  explicit json_val(int n) : type(NUM), num(n), str(std::to_string(n)) {}  // construct a number JSON object
+  json_val(json_type t, int n, std::string s) : type(t), num(n), str(s) {}  // complex constructor
   bool operator<(const json_val &o) const {
-    if(type == STR) return type == o.type && str < o.str; //for string JSON objects compare the string
-    if(type == NUM) return type == o.type && num < o.num; ///for number JSON objects compare the number
-    if(type == LIST) { //for list JSON objects, compare the size of the list, and then each object in the lists
-      if(list.size() != o.list.size()) return false;
-      for(unsigned int i=0; i< list.size(); i++)	if(list[i] < o.list[i]) return false; //if we find an object that doesnt match return
-      return true; //all objects in lists matched
+    if (type == STR) return type == o.type && str < o.str;  // for string JSON objects compare the string
+    if (type == NUM) return type == o.type && num < o.num;  // for number JSON objects compare the number
+    if (type == LIST) {  // for list JSON objects, compare the size of the list, and then each object in the lists
+      if (list.size() != o.list.size()) return false;
+      for (unsigned int i=0; i< list.size(); i++)
+        if (list[i] < o.list[i])
+          return false;  // if we find an object that doesnt match return
+      return true;  // all objects in lists matched
     }
-    if(type == MAP) { //for map JSON objects, compare the size of the map, and then each key/value in the maps
-      if(map.size() != o.map.size()) return false;
-      for(auto &item : map) {
-	if(o.map.find(item.first) == o.map.end()) return false; //if one map is missing a key in another return
-	if(item.second < o.map.at(item.first)) return false;
+    if (type == MAP) {  // for map JSON objects, compare the size of the map, and then each key/value in the maps
+      if (map.size() != o.map.size()) return false;
+      for (auto &item : map) {
+        if (o.map.find(item.first) == o.map.end()) return false;  // if one map is missing a key in another return
+        if (item.second < o.map.at(item.first)) return false;
       }
       return true;
     }
     return type < o.type;
   }
-  std::string str;
+  json_type type;
   int num;
+  std::string str;
   std::vector<json_val> list;
   std::map<json_val, json_val> map;
-  json_type type;
-} json_val;
-//forward declaration of generic parse function
-json_val parse(std::string json, unsigned int *idx);
-//debug function to convert a JSON object to a string
-std::string json_val_string(const json_val &val) {
-  std::string ret;
-  switch(val.type) {
-  case ERR:
-    ret = "json(Error)";
-    break;
-  case STR:
-    ret = "json(STR:" + val.str + ")";
-    break;
-  case NUM:
-    ret = "json(INT:" + val.str + ")";
-    break;
-  case LIST:
-    ret = "json(LIST:[";
-    for(auto &item : val.list)
-      ret += json_val_string(item) + ",";
-    ret += "])";
-    break;
-  case MAP:
-    ret = "json(MAP:{";
-    for(auto &item : val.map)
-      ret += json_val_string(item.first) + " : " + json_val_string(item.second) + ",";
-    ret += "})";
-    break;
+};
+
+struct Json_Parser {
+  json_val parse_to_json(std::string json) {
+    unsigned int idx = 0;
+    return parse(json, &idx);
   }
-  return ret;
-}
-//debug function to print a JSON object
-void print_json_val(json_val val) {
-  std::cout << json_val_string(val) << std::endl;
-}
-//parse a string JSON object
-json_val parse_string(std::string json, unsigned int* idx) {
-  json_val ret(STR);
-  while(*idx < json.size()) {
-    if(json[*idx] == '"') {++(*idx); return ret;
-    } else {ret.str += json[*idx]; ++(*idx);}
+  void print_json_val(json_val val) {
+    std::cout << json_val_string(val) << std::endl;
   }
-  std::cout << "Error! Unable to parse string" << std::endl;
-  return json_val();
-}
-//parse a number JSON object
-json_val parse_num(std::string json, unsigned int* idx) {
-  json_val ret(NUM);
-  while(*idx < json.size()) {
-    if(json[*idx] >= '0' && json[*idx] <= '9') {ret.str += json[*idx]; ++(*idx);
-    } else break;
-  }
-  ret.num = std::stoi(ret.str);
-  return ret;
-}
-//parse a list of JSON objects
-json_val parse_list(std::string json, unsigned int* idx) {
-  json_val ret(LIST);
-  while(*idx < json.size()) {
-    if(json[*idx] == ']') {++(*idx); return ret;
-    } else {
-      json_val item = parse(json,idx);
-      if(item.type != ERR)
-	ret.list.push_back(item);
+  // debug function to convert a JSON object to a string
+  std::string json_val_string(const json_val &val) {
+    std::string ret;
+    switch (val.type) {
+    case ERR:
+      ret = "json(Error)";
+      break;
+    case STR:
+      ret = "json(STR:" + val.str + ")";
+      break;
+    case NUM:
+      ret = "json(INT:" + val.str + ")";
+      break;
+    case LIST:
+      ret = "json(LIST:[";
+      for (auto &item : val.list)
+        ret += json_val_string(item) + ",";
+      ret += "])";
+      break;
+    case MAP:
+      ret = "json(MAP:{";
+      for (auto &item : val.map)
+        ret += json_val_string(item.first) + " : " + json_val_string(item.second) + ",";
+      ret += "})";
+      break;
     }
+    return ret;
   }
-  std::cout << "Error! Unable to parse list" << std::endl;
-  return json_val();
-}
-//parse a map of JSON objects
-json_val parse_map(std::string json, unsigned int* idx) {
-  json_val ret(MAP),key;
-  while(*idx < json.size()) {
-    if(json[*idx] == '}') { ++(*idx); return ret;
-    } else {
-      json_val item = parse(json,idx);
-      if(key.type == ERR) key = item;
-      else {ret.map[key]=item; key.type = ERR;}
+  // parse a string JSON object
+  json_val parse_string(std::string json, unsigned int* idx) {
+    json_val ret(STR);
+    while (*idx < json.size()) {
+      if (json[*idx] == '"') {
+        ++(*idx);
+        return ret;
+      } else {
+        ret.str += json[*idx];
+        ++(*idx);
+      }
     }
+    std::cout << "Error! Unable to parse string" << std::endl;
+    return json_val();
   }
-  std::cout << "Error! Unable to parse map" << std::endl;
-  return json_val();
-}
-//generic parse function
-json_val parse(std::string json, unsigned int *idx) {
-  json_val ret;
-  while(*idx < json.size()) {
-    if(json[*idx] == '"') {++(*idx); ret = parse_string(json,idx);
-    } else if(json[*idx] >= '0' && json[*idx] <= '9') {ret = parse_num(json,idx);
-    } else if(json[*idx] == '[') {++(*idx); ret = parse_list(json,idx);
-    } else if(json[*idx] == '{') {++(*idx); ret = parse_map(json,idx);
-    } else if(json[*idx] == ']' || json[*idx] == '}') {return ret;}
-    if(ret.type != ERR) return ret;
-    else ++(*idx);
+  // parse a number JSON object
+  json_val parse_num(std::string json, unsigned int* idx) {
+    json_val ret(NUM);
+    while (*idx < json.size()) {
+      if (json[*idx] >= '0' && json[*idx] <= '9') {
+        ret.str += json[*idx];
+        ++(*idx);
+      } else {
+        break;
+      }
+    }
+    ret.num = std::stoi(ret.str);
+    return ret;
   }
-  return ret;
-}
-// Main entry point to parse a string to JSON
-json_val parse_json(std::string json) {
-  unsigned int idx=0;
-  return parse(json,&idx);
-}
+  // parse a list of JSON objects
+  json_val parse_list(std::string json, unsigned int* idx) {
+    json_val ret(LIST);
+    while (*idx < json.size()) {
+      if (json[*idx] == ']') {
+        ++(*idx);
+        return ret;
+      } else {
+        json_val item = parse(json, idx);
+        if (item.type != ERR)
+          ret.list.push_back(item);
+      }
+    }
+    std::cout << "Error! Unable to parse list" << std::endl;
+    return json_val();
+  }
+  // parse a map of JSON objects
+  json_val parse_map(std::string json, unsigned int* idx) {
+    json_val ret(MAP), key;
+    while (*idx < json.size()) {
+      if (json[*idx] == '}') {
+        ++(*idx);
+        return ret;
+      } else {
+        json_val item = parse(json, idx);
+        if (key.type == ERR) {
+          key = item;
+        } else {
+          ret.map[key] = item;
+          key.type = ERR;
+        }
+      }
+    }
+    std::cout << "Error! Unable to parse map" << std::endl;
+    return json_val();
+  }
+  // generic parse function
+  json_val parse(std::string json, unsigned int *idx) {
+    json_val ret;
+    while (*idx < json.size()) {
+      if (json[*idx] == '"') {
+        ++(*idx);
+        ret = parse_string(json, idx);
+      } else if (json[*idx] >= '0' && json[*idx] <= '9') {
+        ret = parse_num(json, idx);
+      } else if (json[*idx] == '[') {
+        ++(*idx);
+        ret = parse_list(json, idx);
+      } else if (json[*idx] == '{') {
+        ++(*idx);
+        ret = parse_map(json, idx);
+      } else if (json[*idx] == ']' || json[*idx] == '}') {return ret;}
+      if (ret.type != ERR) return ret;
+      ++(*idx);
+    }
+    return ret;
+  }
+};
 
 /*!
  * \brief An abstract class for library author creating stateful op
@@ -323,9 +344,9 @@ typedef MXReturnValue (*createOpState_t)(std::map<std::string, std::string>,
  */
 class CustomOp {
  public:
-  explicit CustomOp(const char* op_name) : name(op_name), forward(NULL),
-    backward(NULL), parse_attrs(NULL), infer_type(NULL), infer_shape(NULL),
-    mutate_inputs(NULL), create_opstate(NULL) {}
+  explicit CustomOp(const char* op_name) : name(op_name),
+    forward(NULL), backward(NULL), parse_attrs(NULL), infer_type(NULL),
+    infer_shape(NULL), mutate_inputs(NULL), create_opstate(NULL) {}
   ~CustomOp() {}
   CustomOp& setForward(fcomp_t fcomp) {
     forward = fcomp;

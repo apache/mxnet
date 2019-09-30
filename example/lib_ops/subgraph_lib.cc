@@ -27,36 +27,34 @@
 #include <iostream>
 #include "lib_api.h"
 
-MXReturnValue parseAttrs(std::map<std::string,std::string> attrs,
+MXReturnValue parseAttrs(std::map<std::string, std::string> attrs,
                          int* num_in, int* num_out) {
-  std::string serialized_subgraph;
+  *num_in = 1;
+  *num_out = 1;
   if (attrs.count(SUBGRAPH_SYM_JSON)) {
-    serialized_subgraph = attrs[SUBGRAPH_SYM_JSON];
-    //parse string to json
-    json_val val = parse_json(serialized_subgraph);
+    std::string serialized_subgraph = attrs[SUBGRAPH_SYM_JSON];
+    Json_Parser jp;
+    json_val val = jp.parse_to_json(serialized_subgraph);
     int input = 0;
-    for(auto &item : val.map[json_val("nodes")].list) {
-      if(item.map[json_val("op")].str == "null")
+    for (auto &item : val.map[json_val("nodes")].list) {
+      if (item.map[json_val("op")].str == "null")
         input++;
     }
     int output = val.map[json_val("heads")].list.size();
     *num_in = input;
     *num_out = output;
-  } else {
-    *num_in = 1;
-    *num_out = 1;
   }
   return MX_SUCCESS;
 }
 
-MXReturnValue inferType(std::map<std::string,std::string> attrs,
+MXReturnValue inferType(std::map<std::string, std::string> attrs,
                         std::vector<int> &intypes,
                         std::vector<int> &outtypes) {
   outtypes[0] = intypes[0];
   return MX_SUCCESS;
 }
 
-MXReturnValue inferShape(std::map<std::string,std::string> attrs,
+MXReturnValue inferShape(std::map<std::string, std::string> attrs,
                          std::vector<std::vector<unsigned int>> &inshapes,
                          std::vector<std::vector<unsigned int>> &outshapes) {
   outshapes[0] = inshapes[0];
@@ -65,7 +63,7 @@ MXReturnValue inferShape(std::map<std::string,std::string> attrs,
 
 class MyStatefulOp : public CustomStatefulOp {
  public:
-  explicit MyStatefulOp(std::string sym) : subgraph_sym(sym){}
+  explicit MyStatefulOp(std::string sym) : subgraph_sym(sym) {}
 
   MXReturnValue Forward(std::vector<MXTensor> inputs,
                         std::vector<MXTensor> outputs,
@@ -83,10 +81,10 @@ class MyStatefulOp : public CustomStatefulOp {
   std::string subgraph_sym;
 };
 
-MXReturnValue createOpState(std::map<std::string,std::string> attrs,
+MXReturnValue createOpState(std::map<std::string, std::string> attrs,
                             CustomStatefulOp** op_inst) {
   std::string serialized_subgraph = "[empty]";
-  // MXNet subgraph is stored as Symbol in operator node attributes subgraphs field
+  // MXNet subgraph is stored as Symbol in operator node attrs subgraphs field
   // custom subgraph is stored as json string in custom operator attrs map entry
   if (attrs.count(SUBGRAPH_SYM_JSON)) {
     serialized_subgraph = attrs[SUBGRAPH_SYM_JSON];
