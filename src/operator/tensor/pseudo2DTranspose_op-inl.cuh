@@ -261,6 +261,25 @@ inline int32_t getBestCopyTypeSize(size_t dTypeSize, uint32_t sizeM, uint32_t si
 }
 
 
+inline std::pair<dim3, dim3> calculateKernelParams(pseudo2DSizes sizes, const uint32_t TSR) {
+  uint32_t nThreadsPerBlock = 32*32/4;  // value chosen empirically
+  uint32_t thdsY = 1;
+  uint32_t thdsX = 1;
+  while(sizes.N/TSR > thdsX && thdsX < 32) {
+    thdsX *= 2;
+  }
+  thdsY = nThreadsPerBlock/thdsX;
+  // number of threads per block in x dimension should stay divisible by 2^n
+  thdsY = std::min(sizes.M/TSR, thdsY);
+  uint32_t blocksY = (sizes.M/TSR-1)/thdsY + 1;
+  uint32_t blocksX = (sizes.N/TSR-1)/thdsX + 1;
+
+  dim3 grid(blocksX, blocksY, sizes.leadDimS);
+  dim3 block(thdsX, thdsY, 1);
+  return {grid, block};
+}
+
+
 /*!
  * \brief Transpose given tensor according to params.
  *        Supports only transposes that satisfy:
@@ -286,26 +305,9 @@ void transpose_pseudo2D(const TBlob& outBlob, const TBlob& inpBlob,
   const uint32_t TSR = cTypeSize/sizeof(DType);
   CHECK_EQ(cTypeSize, sizeof(DType)*TSR);
 
-  // calculate kernel params
-  uint32_t nThreadsPerBlock = 32*32/4;  // value chosen empirically
-  uint32_t thdsY = 1;
-  uint32_t thdsX = 1;
-  if(sizes.M < sizes.N) {
-    while(sizes.M > thdsY && thdsY < 32) {
-      thdsY *= 2;
-    }
-    thdsX = nThreadsPerBlock/thdsY;
-  } else {
-    while(sizes.N > thdsX && thdsX < 32) {
-      thdsX *= 2;
-    }
-    thdsY = nThreadsPerBlock/thdsX;
-  }
-  uint32_t blocksY = (sizes.M-1)/(thdsY*TSR) + 1;
-  uint32_t blocksX = (sizes.N-1)/(thdsX*TSR) + 1;
-
-  dim3 grid(blocksX, blocksY, sizes.leadDimS);
-  dim3 block(thdsX, thdsY, 1);
+  auto pair = calculateKernelParams(sizes, TSR);
+  dim3 grid = pair.first;
+  dim3 block = pair.second;
 
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
   call_transpose_pseudo2D(sizeof(DType), cTypeSize,
