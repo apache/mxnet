@@ -621,7 +621,7 @@ struct argmax {
           *(static_cast<uint16_t *>(pIdxStorage) + i) = maxIdx;
       }
     } else {
-      out_data[i] = maxIdx;    // output of argmax
+      out_data[i] = static_cast<DType>(maxIdx);    // output of argmax
     }
   }
 };
@@ -771,7 +771,7 @@ void ArgMax(const nnvm::NodeAttrs& attrs,
     nWorkers >>= 1;
   }
 
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType,
+  MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType,
       ArgMax<xpu, DType>(ctx, shape, axis, step, shift, nWorkers, pIdxMemory, storageType,
                          inputs[0], outputs[0]);
   )
