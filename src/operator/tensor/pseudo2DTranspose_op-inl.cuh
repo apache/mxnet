@@ -292,8 +292,8 @@ inline std::pair<dim3, dim3> calculateKernelParams(pseudo2DSizes sizes, const ui
  * \param s Poinster to GPU stream.
  */
 template <typename DType, typename gpu>
-void transpose_pseudo2D(const TBlob& outBlob, const TBlob& inpBlob,
-                        const TShape& params, mshadow::Stream<gpu>* s) {
+int transpose_pseudo2D(const TBlob& outBlob, const TBlob& inpBlob,
+                       const TShape& params, mshadow::Stream<gpu>* s) {
   const TShape& shape = inpBlob.shape_;
   CHECK_EQ(shape.ndim(), params.ndim());
   auto ndim = params.ndim();
@@ -309,10 +309,17 @@ void transpose_pseudo2D(const TBlob& outBlob, const TBlob& inpBlob,
   dim3 grid = pair.first;
   dim3 block = pair.second;
 
-  cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
-  call_transpose_pseudo2D(sizeof(DType), cTypeSize,
-                          grid, block, stream,
-                          outBlob.dptr_, inpBlob.dptr_, sizes.M, sizes.N);
+  if (block.x*grid.x >= sizes.N/TSR && grid.x < std::numeric_limits<uint32_t>::max()
+   && block.y*grid.y >= sizes.M/TSR && grid.y < std::numeric_limits<uint16_t>::max()
+   && grid.z == sizes.leadDimS && grid.z <= std::numeric_limits<uint16_t>::max()) {
+    cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
+    call_transpose_pseudo2D(sizeof(DType), cTypeSize,
+                            grid, block, stream,
+                            outBlob.dptr_, inpBlob.dptr_, sizes.M, sizes.N);
+    return 0;
+  } else {
+    return -1;
+  }
 }
 
 }  // namespace op

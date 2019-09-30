@@ -275,12 +275,14 @@ void TransposeImpl(RunContext ctx,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(ret.type_flag_, DType, {
 #ifdef __CUDACC__
-    //  This transpose can be used only if there exist n and m such that:
-    //  params = (0, ..., n-1, n+m, ..., params.size, n, ..., n+m-1)
-    //  Example: (0, 2, 3, 1) or (0, 3, 1, 2), but not (0, 2, 1, 3).
+    // This transpose can be used only if there exist n and m such that:
+    // params = (0, ..., n-1, n+m, ..., params.size, n, ..., n+m-1)
+    // Example: (0, 2, 3, 1) or (0, 3, 1, 2), but not (0, 2, 1, 3).
     if (isPseudo2DTranspose(axes)) {
-       transpose_pseudo2D<DType>(ret, src, axes, s);
-       return;
+      // This kernel supports only transposes with dimensions limited by dim3 struct sizes.
+      // If dimensions are too big no operation is perfomed; use `transpose` instead.
+      if (transpose_pseudo2D<DType>(ret, src, axes, s) == 0)
+        return;
     }
 #endif
     switch (axes.ndim()) {
