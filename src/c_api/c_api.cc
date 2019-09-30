@@ -634,44 +634,46 @@ int MXLoadLib(const char *path) {
     regOp.set_attr_parser(attr_parser);
     regOp.set_num_inputs(num_inputs);
     regOp.set_num_outputs(num_outputs);
-    int priority = 10;
+    int plevel = 10;
     if (regOpPtr != nullptr) {
       // overwrite registration of existing op with custom op
       regOp.arguments.clear();
       // set attribute with higher plevel (11) to allow re-registering once
       // TODO(samskalicky): enable constant overwriting of registertion multiple times
-      priority++;
+      plevel++;
     }
-    regOp.set_attr<nnvm::FInferType>("FInferType", infer_type, priority);
-    regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape, priority);
-    regOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, priority);
-    regOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, priority);
+    regOp.set_attr<nnvm::FInferType>("FInferType", infer_type, plevel);
+    regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape, plevel);
+    regOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, plevel);
+    regOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, plevel);
     // optionally add stateful forward
     if (create_opstate_fp != nullptr) {
-      regOp.set_attr<FCreateOpState>("FCreateOpState", create_opstate, priority);
-      regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstateful_forward, priority);
+      regOp.set_attr<FCreateOpState>("FCreateOpState", create_opstate, plevel);
+      regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>",
+                                        fstateful_forward, plevel);
     } else {
-      regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda, priority);
+      regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda, plevel);
     }
     // optionally add fmutate inputs if user specified a function
     if (mutate_fp != nullptr)
-      regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs, priority);
+      regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs, plevel);
     // optionally add fgradient if user specified a function
     if (fgrad_fp != nullptr || create_opstate_fp != nullptr) {
-      regOp.set_attr<nnvm::FGradient>("FGradient", grad_reg, priority);
+      regOp.set_attr<nnvm::FGradient>("FGradient", grad_reg, plevel);
       std::string grad_name = "_backward_" + name_str;
       nnvm::Op &gradOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(grad_name);
-      gradOp.set_attr<nnvm::TIsBackward>("TIsBackward", true, priority);
+      gradOp.set_attr<nnvm::TIsBackward>("TIsBackward", true, plevel);
       gradOp.set_attr_parser(attr_parser);
       gradOp.set_num_inputs(num_inouts);
       gradOp.set_num_outputs(num_inputs);
-      gradOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, priority);
-      gradOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, priority);
+      gradOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, plevel);
+      gradOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, plevel);
       if (create_opstate_fp != nullptr) {
-        gradOp.set_attr<bool>("TIsLayerOpBackward", true, priority);
-        gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstateful_backward, priority);
+        gradOp.set_attr<bool>("TIsLayerOpBackward", true, plevel);
+        gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>",
+                                            fstateful_backward, plevel);
       } else {
-        gradOp.set_attr<FComputeEx>("FComputeEx<cpu>", backward_lambda, priority);
+        gradOp.set_attr<FComputeEx>("FComputeEx<cpu>", backward_lambda, plevel);
       }
     }
     regOp.add_argument("data", "NDArray[]", "Source inputs");

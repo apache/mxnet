@@ -65,17 +65,13 @@ struct MXTensor {
   MXTensor(void *data, const std::vector<int64_t> &shape, MXDType dtype)
   : data(data), shape(shape), dtype(dtype) {}
 
-  /*!
-   * \brief helper function to cast data pointer
-   */
+  /*! \brief helper function to cast data pointer */
   template<typename data_type>
   inline data_type* getData() {
     return reinterpret_cast<data_type*>(data);
   }
 
-  /*!
-   * \brief helper function to get data size
-   */
+  /*! \brief helper function to get data size */
   inline int64_t getDataSize() {
     int64_t size = 1;
     for (unsigned int i = 0; i < shape.size(); i++) {
@@ -111,12 +107,11 @@ class OpResource {
  public:
   OpResource(xpu_malloc_t xm, void* _xm) : xpu_malloc(xm), _xpu_malloc(_xm) {}
 
-  /*!
-   * \brief allocate memory controlled by MXNet
-   */
+  /*! \brief allocate memory controlled by MXNet */
   void* alloc(int size) {
     return xpu_malloc(_xpu_malloc, size);
   }
+
  private:
   xpu_malloc_t xpu_malloc;
   void* _xpu_malloc;
@@ -125,33 +120,42 @@ class OpResource {
 /*!
  * \brief Json utility to parse serialized subgraph symbol
  */
-// Macro to help passing serialized subgraph through attribute dict
+/*! \brief Macro to help passing serialized subgraph through attribute dict */
 #define SUBGRAPH_SYM_JSON "subgraph_sym_json"
 
-// Types of JSON objects
+/*! \brief Types of JSON objects */
 enum json_type {ERR, STR, NUM, LIST, MAP};
 
-// definition of struct for JSON objects
+/*! \brief definition of JSON objects */
 struct json_val {
   json_val() : type(ERR), num(-1), str("") {}  // default constructor
-  explicit json_val(json_type t) : type(t), num(-1), str("") {}  // construct a JSON object by type
-  explicit json_val(std::string s) : type(STR), num(-1), str(s) {}  // construct a string JSON object
-  explicit json_val(int n) : type(NUM), num(n), str(std::to_string(n)) {}  // construct a number JSON object
-  json_val(json_type t, int n, std::string s) : type(t), num(n), str(s) {}  // complex constructor
+  // construct a JSON object by type
+  explicit json_val(json_type t) : type(t), num(-1), str("") {}
+  // construct a string JSON object
+  explicit json_val(std::string s) : type(STR), num(-1), str(s) {}
+  // construct a number JSON object
+  explicit json_val(int n) : type(NUM), num(n), str(std::to_string(n)) {}
+  // complex constructor
+  json_val(json_type t, int n, std::string s) : type(t), num(n), str(s) {}
   bool operator<(const json_val &o) const {
-    if (type == STR) return type == o.type && str < o.str;  // for string JSON objects compare the string
-    if (type == NUM) return type == o.type && num < o.num;  // for number JSON objects compare the number
-    if (type == LIST) {  // for list JSON objects, compare the size of the list, and then each object in the lists
+    // for string JSON objects compare the string
+    if (type == STR) return type == o.type && str < o.str;
+    // for number JSON objects compare the number
+    if (type == NUM) return type == o.type && num < o.num;
+    // for list JSON objects, compare the size of list, and then each object in the list
+    if (type == LIST) {
       if (list.size() != o.list.size()) return false;
       for (unsigned int i=0; i< list.size(); i++)
         if (list[i] < o.list[i])
           return false;  // if we find an object that doesnt match return
       return true;  // all objects in lists matched
     }
-    if (type == MAP) {  // for map JSON objects, compare the size of the map, and then each key/value in the maps
+    // for map JSON objects, compare the size of map, and then each key/value in the maps
+    if (type == MAP) {
       if (map.size() != o.map.size()) return false;
       for (auto &item : map) {
-        if (o.map.find(item.first) == o.map.end()) return false;  // if one map is missing a key in another return
+        // if one map is missing a key in another return
+        if (o.map.find(item.first) == o.map.end()) return false;
         if (item.second < o.map.at(item.first)) return false;
       }
       return true;
@@ -165,6 +169,7 @@ struct json_val {
   std::map<json_val, json_val> map;
 };
 
+/*! \brief functions used for parsing JSON */
 struct Json_Parser {
   json_val parse_to_json(std::string json) {
     unsigned int idx = 0;
@@ -310,9 +315,7 @@ class CustomStatefulOp {
 
 CustomStatefulOp::~CustomStatefulOp() {}
 
-/*!
- * \brief StatefulOp wrapper class to pass to backend OpState
- */
+/*! \brief StatefulOp wrapper class to pass to backend OpState */
 class CustomStatefulOpWrapper {
  public:
   explicit CustomStatefulOpWrapper(CustomStatefulOp* inst) : instance(inst) {}
@@ -321,9 +324,7 @@ class CustomStatefulOpWrapper {
   CustomStatefulOp* instance;
 };
 
-/*!
- * Custom Operator function templates
- */
+/*! \brief Custom Operator function templates */
 typedef MXReturnValue (*fcomp_t)(std::map<std::string, std::string>,
                                  std::vector<MXTensor>, std::vector<MXTensor>,
                                  OpResource res);
@@ -391,7 +392,7 @@ class CustomOp {
 
 /*!
  * \brief Registry class to registers things (ops, properties)
- *       Singleton class
+ *        Singleton class
  */
 template <class T>
 class Registry {
@@ -429,29 +430,23 @@ class Registry {
   std::vector<T*> entries;
 };
 
-/*
- * Macros to help with string concat
+/*!
+ * \brief Macros to help with string concat
  * Annoyingly, the concat_ and concat macros are necessary to
  * be able to use __COUNTER__ in an identifier name 
  */
 #define _STR_CONCAT_(__a, __b) __a ## __b
 #define _STR_CONCAT(__a, __b) _STR_CONCAT_(__a, __b)
 
-/*!
- * \brief convert a token to a string
- */
+/*! \brief convert a token to a string */
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
-/*!
- * \brief declare a variable with custom name
- */
+/*! \brief declare a variable with custom name */
 #define _REGISTER_NAME_(Name) MXNet ## _CustomOp ## _
 #define _REGISTER_DEF_(Name) CustomOp _REGISTER_NAME_(Name)
 
-/*!
- * \brief assign a var to a value
- */
+/*! \brief assign a var to a value */
 #define REGISTER_OP(Name) _STR_CONCAT(_REGISTER_DEF_(Name), __COUNTER__) = \
     Registry<CustomOp>::get()->add(TOSTRING(Name))
 
@@ -464,7 +459,6 @@ class Registry {
  * Each API has a #define string that is used to lookup the function in the library
  * Followed by the function declaration
  */
-
 #define MXLIB_OPREGSIZE_STR "_opRegSize"
 typedef int (*opRegSize_t)(void);
 
@@ -517,9 +511,7 @@ typedef int (*initialize_t)(int);
 typedef int (*opVersion_t)();
 
 extern "C" {
-  /*!
-   * \brief returns MXNet library version 
-   */
+  /*! \brief returns MXNet library version */
   #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) int __cdecl
 #else
@@ -529,9 +521,7 @@ extern "C" {
     return MX_LIBRARY_VERSION;
   }
 
-  /*!
-   * \brief returns number of ops registered in this library
-   */
+  /*! \brief returns number of ops registered in this library */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) int __cdecl
 #else
@@ -541,9 +531,7 @@ extern "C" {
     return Registry<CustomOp>::get()->size();
   }
 
-  /*!
-   * \brief returns operator registration at specified index
-   */
+  /*! \brief returns operator registration at specified index */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) void __cdecl
 #else
@@ -564,10 +552,8 @@ extern "C" {
     *create_op = op.create_opstate;
   }
 
-  /*!
-   * \brief calls free from the external library for library allocated arrays
-   */
-  #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  /*! \brief calls free from the external library for library allocated arrays */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) void __cdecl
 #else
   void
@@ -576,9 +562,7 @@ extern "C" {
     free(ptr);
   }
 
-  /*!
-   * \brief returns status of calling parse attributes function for operator from library
-   */
+  /*! \brief returns status of calling parse attributes function for operator from library */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) int __cdecl
 #else
@@ -596,9 +580,7 @@ extern "C" {
     return parseAttrs(attrs, num_in, num_out);
   }
 
-  /*!
-   * \brief returns status of calling infer shape function for operator from library
-   */
+  /*! \brief returns status of calling inferShape function for operator from library */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) int __cdecl
 #else
@@ -645,9 +627,7 @@ extern "C" {
     return retval;
   }
 
-  /*!
-   * \brief returns status of calling InferType function for operator from library
-   */
+  /*! \brief returns status of calling inferType function for operator from library */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) int __cdecl
 #else
@@ -683,10 +663,7 @@ extern "C" {
     return retval;
   }
 
-  /*!
-   * \brief returns status of calling Forward function for operator from library
-   */
-
+  /*! \brief returns status of calling Forward function for operator from library */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) int __cdecl
 #else
@@ -730,9 +707,7 @@ extern "C" {
     return fcomp(attrs, inputs, outputs, res);
   }
 
-  /*!
-   * \brief returns status of calling mutate inputs function for operator from library
-   */
+  /*! \brief returns status of calling mutateInputs function for operator from library */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) int __cdecl
 #else
@@ -764,9 +739,7 @@ extern "C" {
     return retval;
   }
 
-  /*!
-   * \brief returns status of calling create stateful op function for operator from library
-   */
+  /*! \brief returns status of calling createStatefulOp function for operator from library */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) int __cdecl
 #else

@@ -19,17 +19,14 @@
 
 /*!
  * Copyright (c) 2019 by Contributors
- * \file mylib.cc
- * \brief Sample custom operator implementation
- * library file
+ * \file gemm_lib.cc
+ * \brief Sample custom operator implementation library file
  */
 
 #include <iostream>
 #include "lib_api.h"
 
-/*
- * main matrix multiplication routine
- */
+// main matrix multiplication routine
 void gemm(float* A, float* B, float* C, unsigned n, unsigned k, unsigned m) {
   unsigned i, j, kk;
   for (i = 0; i < n; i++) {
@@ -53,9 +50,7 @@ void transpose(float* A, float* At, unsigned n, unsigned m) {
 
 /*
  * Executes C = A * B
- * inputs[0] = A
- * inputs[1] = B
- * outputs[0] = C
+ * inputs[0] = A; inputs[1] = B; outputs[0] = C
  */
 MXReturnValue forward(std::map<std::string, std::string> attrs,
                       std::vector<MXTensor> inputs,
@@ -73,7 +68,6 @@ MXReturnValue forward(std::map<std::string, std::string> attrs,
   float* A = inputs[0].getData<float>();
   float* B = inputs[1].getData<float>();
   float* C = outputs[0].getData<float>();
-
   // set tensor shapes
   unsigned n = inputs[0].shape[0];
   unsigned k = inputs[0].shape[1];
@@ -85,18 +79,15 @@ MXReturnValue forward(std::map<std::string, std::string> attrs,
 }
 
 /*
- * Executes dA = dC * B.T
- * Executes dB = A.T * dC
+ * Executes dA = dC * B.T; Executes dB = A.T * dC
  ***** gradient inputs
  * inputs[0] = dC
  ***** original inputs
- * inputs[1] = A
- * inputs[2] = B
+ * inputs[1] = A; inputs[2] = B
  ***** original outputs
  * inputs[3] = C
  ***** gradient outputs
- * outputs[0] = dA
- * outputs[1] = dB
+ * outputs[0] = dA; outputs[1] = dB
  */
 MXReturnValue backward(std::map<std::string, std::string> attrs,
                        std::vector<MXTensor> inputs,
@@ -123,13 +114,17 @@ MXReturnValue backward(std::map<std::string, std::string> attrs,
 
   std::cout << "n: " << n << " k: " << k << " m: " << m << std::endl;
 
-  float At[n*k], Bt[k*m];
+  float *At = new float[n*k];
+  float *Bt = new float[k*m];
+
   transpose(A, At, n, k);
   transpose(B, Bt, k, m);
 
   gemm(dC, Bt, dA, n, k, m);
   gemm(At, dC, dB, n, k, m);
 
+  free(At);
+  free(Bt);
   return MX_SUCCESS;
 }
 
@@ -147,7 +142,6 @@ MXReturnValue inferType(std::map<std::string, std::string> attrs,
     std::cout << "Expected 2 inputs to inferType" << std::endl;
     return MX_FAIL;
   }
-
   if (intypes[0] != intypes[1]) {
     std::cout << "Expected 2 inputs to have same data type for inferType" << std::endl;
     return MX_FAIL;
@@ -169,12 +163,10 @@ MXReturnValue inferShape(std::map<std::string, std::string> attrs,
     std::cout << "Expected 2 inputs to inferShape" << std::endl;
     return MX_FAIL;
   }
-
   if (inshapes[0].size() != 2) {
     std::cout << "Expected 2D for first input to inferShape" << std::endl;
     return MX_FAIL;
   }
-
   if (inshapes[1].size() != 2) {
     std::cout << "Expected 2D for second input to inferShape" << std::endl;
     return MX_FAIL;
@@ -184,12 +176,11 @@ MXReturnValue inferShape(std::map<std::string, std::string> attrs,
   unsigned k = inshapes[0][1];
   unsigned kk = inshapes[1][0];
   unsigned m = inshapes[1][1];
+  if (k != kk)
+    return MX_FAIL;
 
   std::cout << "inshapes[0][0]=" << n << "  inshapes[0][1]=" << k << std::endl;
   std::cout << "inshapes[1][0]=" << kk << "  inshapes[1][1]=" << m << std::endl;
-
-  if (k != kk)
-    return MX_FAIL;
 
   outshapes[0].push_back(n);
   outshapes[0].push_back(m);
@@ -204,35 +195,26 @@ REGISTER_OP(my_gemm)
 .setInferType(inferType)
 .setInferShape(inferShape);
 
-
 /* ------------------------------------------------------------------------- */
-
-MXReturnValue mutateInputs(std::map<std::string, std::string> attrs,
-                           std::vector<int> &input_indices) {
-  // input_indices.push_back(1);
-  // std::cout << "the 1st input is marked as mutate input by library author" << std::endl;
-  return MX_SUCCESS;
-}
 
 class MyStatefulGemm : public CustomStatefulOp {
  public:
   explicit MyStatefulGemm(int count) : count(count) {}
 
   MXReturnValue Forward(std::vector<MXTensor> inputs,
-              std::vector<MXTensor> outputs,
-              OpResource op_res) {
-    count++;
+                        std::vector<MXTensor> outputs,
+                        OpResource op_res) {
     int* p = static_cast<int*>(op_res.alloc(sizeof(int)));
-    *p = count;
-    std::cout << "test op resource " << *p << std::endl;
+    *p = ++count;
+    std::cout << "Op resource testing: " << *p << std::endl;
 
     std::map<std::string, std::string> attrs;
     return forward(attrs, inputs, outputs, op_res);
   }
 
   MXReturnValue Backward(std::vector<MXTensor> inputs,
-               std::vector<MXTensor> outputs,
-               OpResource op_res) {
+                         std::vector<MXTensor> outputs,
+                         OpResource op_res) {
     std::map<std::string, std::string> attrs;
     return backward(attrs, inputs, outputs, op_res);
   }
@@ -250,13 +232,19 @@ MXReturnValue createOpState(std::map<std::string, std::string> attrs,
   return MX_SUCCESS;
 }
 
+MXReturnValue mutateInputs(std::map<std::string, std::string> attrs,
+                           std::vector<int> &input_indices) {
+  // input_indices.push_back(1);
+  // std::cout << "the 1st input is marked as mutate input by library author" << std::endl;
+  return MX_SUCCESS;
+}
+
 REGISTER_OP(state_gemm)
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
 .setInferShape(inferShape)
 .setMutateInputs(mutateInputs)
 .setCreateOpState(createOpState);
-
 
 MXReturnValue initialize(int version) {
   if (version >= 10400) {
