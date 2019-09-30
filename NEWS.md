@@ -216,7 +216,7 @@ MXNet now supports Dynamic Shape in both imperative and symbolic mode. MXNet use
 * while_loop: its output size depends on the number of iterations in the loop.
 * boolean indexing: its output size depends on the value of the input data.
 * many operators can be extended to take a shape symbol as input and the shape symbol can determine the output shape of these operators (with this extension, the symbol interface of MXNet can fully support shape).
-To support dynamic shape and such operators, we have modified MXNet backend. Now MXNet supports operators with dynamic shape such as [`contrib.while_loop`](https://mxnet.incubator.apache.org/api/python/ndarray/contrib.html#mxnet.ndarray.contrib.while_loop), [`contrib.cond`](https://mxnet.incubator.apache.org/api/python/ndarray/contrib.html#mxnet.ndarray.contrib.cond), and [`mxnet.ndarray.contrib.boolean_mask`](https://mxnet.incubator.apache.org/api/python/ndarray/contrib.html#contrib)
+To support dynamic shape and such operators, we have modified MXNet backend. Now MXNet supports operators with dynamic shape such as [`contrib.while_loop`](https://mxnet.apache.org/api/python/ndarray/contrib.html#mxnet.ndarray.contrib.while_loop), [`contrib.cond`](https://mxnet.apache.org/api/python/ndarray/contrib.html#mxnet.ndarray.contrib.cond), and [`mxnet.ndarray.contrib.boolean_mask`](https://mxnet.apache.org/api/python/ndarray/contrib.html#contrib)
 Note: Currently dynamic shape does not work with Gluon deferred initialization.
 
 #### Large Tensor Support
@@ -233,7 +233,7 @@ For more details please refer to the [design document](https://cwiki.apache.org/
 
 #### Dependency Update
 MXNet has added support for CUDA 10, CUDA 10.1, cudnn7.5, NCCL 2.4.2, and numpy 1.16.0.
-These updates are available through PyPI packages and build from source, refer to [installation guid](https://mxnet.incubator.apache.org/versions/master/install/index.html) for more details.
+These updates are available through PyPI packages and build from source, refer to [installation guid](https://mxnet.apache.org/versions/master/install/index.html) for more details.
 
 #### Gluon Fit API(experimental)
 Training a model in Gluon requires users to write the training loop. This is useful because of its imperative nature, however repeating the same code across multiple models can become tedious and repetitive with boilerplate code. 
@@ -1213,7 +1213,7 @@ MKLDNN backend takes advantage of MXNet subgraph to implement the most of possib
 ##### Quantization
 Performance of reduced-precision (INT8) computation is also dramatically improved after the graph optimization feature is applied on CPU Platforms. Various models are supported and can benefit from reduced-precision computation, including symbolic models, Gluon models and even custom models. Users can run most of the pre-trained models with only a few lines of commands and a new quantization script imagenet_gen_qsym_mkldnn.py. The observed accuracy loss is less than 0.5% for popular CNN networks, like ResNet-50, Inception-BN, MobileNet, etc.
 
-Please find detailed information and performance/accuracy numbers here: [MKLDNN README](https://github.com/apache/incubator-mxnet/blob/master/docs/tutorials/mkldnn/MKLDNN_README.md), [quantization README](https://github.com/apache/incubator-mxnet/tree/master/example/quantization#1) and [design proposal](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN)
+Please find detailed information and performance/accuracy numbers here: [MKLDNN README](https://mxnet.apache.org/api/python/docs/tutorials/performance/backend/mkldnn/mkldnn_readme.html), [quantization README](https://github.com/apache/incubator-mxnet/tree/master/example/quantization#1) and [design proposal](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN)
 
 ### New Operators
 
@@ -1624,7 +1624,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * Updated CONTRIBUTORS.md to include mxnet-label-bot  (#13048)
 
 ### How to build MXNet
-Please follow the instructions at https://mxnet.incubator.apache.org/install/index.html
+Please follow the instructions at https://mxnet.apache.org/install/index.html
 
 ### List of submodules used by Apache MXNet (Incubating) and when they were updated last
 Submodule@commit ID::Last updated by MXNet:: Last update in submodule
@@ -1756,7 +1756,7 @@ For more information and examples, see [full release notes](https://cwiki.apache
 
 ### New Features - Clojure package (experimental)
 - MXNet now supports the Clojure programming language. The MXNet Clojure package brings flexible and efficient GPU computing and state-of-art deep learning to Clojure. It enables you to write seamless tensor/matrix computation with multiple GPUs in Clojure. It also lets you construct and customize the state-of-art deep learning models in Clojure, and apply them to tasks, such as image classification and data science challenges.([#11205](https://github.com/apache/incubator-mxnet/pull/11205))
-- Checkout examples and API documentation [here](http://mxnet.incubator.apache.org/api/clojure/index.html).
+- Checkout examples and API documentation [here](https://mxnet.apache.org/api/clojure/index.html).
 
 ### New Features - Synchronized Cross-GPU Batch Norm (experimental)
 - Gluon now supports Synchronized Batch Normalization (#11502).
@@ -1786,8 +1786,8 @@ For more information and examples, see [full release notes](https://cwiki.apache
 - Set environment variable `MXNET_KVSTORE_USETREE=1` to enable.
 
 ### New Features - Export MXNet models to ONNX format (experimental)
-- With this feature, now MXNet models can be exported to ONNX format([#11213](https://github.com/apache/incubator-mxnet/pull/11213)). Currently, MXNet supports ONNX v1.2.1. [API documentation](http://mxnet.incubator.apache.org/api/python/contrib/onnx.html).
-- Checkout this [tutorial](http://mxnet.incubator.apache.org/tutorials/onnx/export_mxnet_to_onnx.html) which shows how to use MXNet to ONNX exporter APIs. ONNX protobuf so that those models can be imported in other frameworks for inference.
+- With this feature, now MXNet models can be exported to ONNX format([#11213](https://github.com/apache/incubator-mxnet/pull/11213)). Currently, MXNet supports ONNX v1.2.1. [API documentation](https://mxnet.apache.org/api/python/contrib/onnx.html).
+- Checkout this [tutorial](https://mxnet.apache.org/tutorials/onnx/export_mxnet_to_onnx.html) which shows how to use MXNet to ONNX exporter APIs. ONNX protobuf so that those models can be imported in other frameworks for inference.
 
 ### New Features - TensorRT Runtime Integration (experimental)
 - [TensorRT](https://developer.nvidia.com/tensorrt) provides significant acceleration of model inference on NVIDIA GPUs compared to running the full graph in MxNet using unfused GPU operators. In addition to faster fp32 inference, TensorRT optimizes fp16 inference, and is capable of int8 inference (provided the quantization steps are performed). Besides increasing throughput, TensorRT significantly reduces inference latency, especially for small batches.

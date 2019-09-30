@@ -97,6 +97,5 @@ __version__ = base.__version__
 # fact that kvstore-server module is imported before the __version__ attr is set.
 from . import kvstore_server
 
-from .numpy_dispatch_protocol import _register_array_function, _register_array_ufunc
-_register_array_function()
-_register_array_ufunc()
+from . import numpy_op_signature
+from . import numpy_dispatch_protocol

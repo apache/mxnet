@@ -214,3 +214,7 @@ def _register_array_ufunc():
             _NUMPY_ARRAY_UFUNC_DICT[op_name] = mx_np_op
         except AttributeError:
             raise AttributeError('mxnet.numpy does not have operator named {}'.format(op_name))
+
+
+_register_array_function()
+_register_array_ufunc()

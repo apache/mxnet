@@ -55,7 +55,7 @@ class NDArray;
  * \brief tensor blob class that can be used to hold tensor of any dimension,
  *  any device and any data type,
  *  This is a weak type that can be used to transfer data through interface
- *  TBlob itself do not involve any arithmentic operations,
+ *  TBlob itself doesn't involve any arithmetic operations,
  *  but it can be converted to tensor of fixed dimension for further operations
  *
  *  Like tensor, this data structure is like a pointer class and do not

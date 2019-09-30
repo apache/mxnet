@@ -22,8 +22,6 @@
 
 def _np_ones_like(a):
     """
-    ones_like(a)
-
     Return an array of ones with the same shape and type as a given array.
 
     Parameters
@@ -42,8 +40,6 @@ def _np_ones_like(a):
 
 def _np_zeros_like(a):
     """
-    zeros_like(a)
-
     Return an array of zeros with the same shape and type as a given array.
 
     Parameters
@@ -62,8 +58,6 @@ def _np_zeros_like(a):
 
 def _np_cumsum(a, axis=None, dtype=None, out=None):
     """
-    cumsum(a, axis=None, dtype=None, out=None)
-
     Return the cumulative sum of the elements along a given axis.
 
     Parameters
@@ -115,8 +109,6 @@ def _np_cumsum(a, axis=None, dtype=None, out=None):
 
 def _npx_nonzero(a):
     """
-    nonzero(a)
-
     Return the indices of the elements that are non-zero.
 
     Returns a ndarray with ndim is 2. Each row contains the indices 
@@ -164,8 +156,6 @@ def _npx_nonzero(a):
 
 def _np_repeat(a, repeats, axis=None):
     """
-    repeat(a, repeats, axis=None)
-
     Repeat elements of an array.
 
     Parameters
@@ -213,8 +203,6 @@ def _np_repeat(a, repeats, axis=None):
 
 def _np_transpose(a, axes=None):
     """
-    transpose(a, axes=None)
-
     Permute the dimensions of an array.
 
     Parameters
@@ -256,8 +244,7 @@ def _np_transpose(a, axes=None):
 
 
 def _np_dot(a, b, out=None):
-    """dot(a, b, out=None)
-
+    """
     Dot product of two arrays. Specifically,
 
     - If both `a` and `b` are 1-D arrays, it is inner product of vectors
@@ -318,10 +305,8 @@ def _np_dot(a, b, out=None):
     pass
 
 
-def _np_sum(a, axis=0, dtype=None, keepdims=None, initial=None, out=None):
+def _np_sum(a, axis=None, dtype=None, keepdims=False, initial=None, out=None):
     r"""
-    sum(a, axis=None, dtype=None, keepdims=_Null, initial=_Null, out=None)
-
     Sum of array elements over a given axis.
 
     Parameters
@@ -414,8 +399,6 @@ def _np_sum(a, axis=0, dtype=None, keepdims=None, initial=None, out=None):
 
 def _np_copy(a, out=None):
     """
-    copy(a, out=None)
-
     Return an array copy of the given object.
 
     Parameters
@@ -463,8 +446,6 @@ def _np_copy(a, out=None):
 
 def _np_reshape(a, newshape, order='C', out=None):
     """
-    reshape(a, newshape, order='C')
-
     Gives a new shape to an array without changing its data.
     This function always returns a copy of the input array if
     ``out`` is not provided.
@@ -501,8 +482,6 @@ def _np_reshape(a, newshape, order='C', out=None):
 
 def _np__linalg_svd(a):
     r"""
-    svd(a)
-
     Singular Value Decomposition.
 
     When `a` is a 2D array, it is factorized as ``ut @ np.diag(s) @ v``,
@@ -568,8 +547,6 @@ def _np__linalg_svd(a):
 
 def _np_roll(a, shift, axis=None):
     """
-    roll(a, shift, axis=None):
-
     Roll array elements along a given axis.
     
     Elements that roll beyond the last position are re-introduced at
@@ -633,8 +610,7 @@ def _np_roll(a, shift, axis=None):
 
 
 def _np_trace(a, offset=0, axis1=0, axis2=1, out=None):
-    """trace(a, offset=0, axis1=0, axis2=1, out=None)
-
+    """
     Return the sum along diagonals of the array.
     If `a` is 2-D, the sum along its diagonal with the given offset
     is returned, i.e., the sum of elements ``a[i,i+offset]`` for all i.
