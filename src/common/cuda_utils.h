@@ -57,6 +57,8 @@ extern __cuda_fake_struct blockIdx;
 #include <cublas_v2.h>
 #include <curand.h>
 
+#include <vector>
+
 #define STATIC_ASSERT_CUDA_VERSION_GE(min_version) \
   static_assert(CUDA_VERSION >= min_version, "Compiled-against CUDA version " \
       QUOTEVALUE(CUDA_VERSION) " is too old, please upgrade system to version " \
@@ -353,16 +355,41 @@ int get_rows_per_block(size_t row_size, int num_threads_per_block);
 }  // namespace common
 }  // namespace mxnet
 
+/*! \brief Maximum number of GPUs */
+constexpr size_t kMaxNumGpus = 64;
+
+// The implementations below assume that accesses of 32-bit ints are inherently atomic and
+// can be read/written by multiple threads without locks.  The values held should be < 2^31.
+
+/*!
+ * \brief Return an attribute GPU `device_id`.
+ * \param device_id The device index of the cuda-capable gpu of interest.
+ * \param cached_values An array of attributes for already-looked-up GPUs.
+ * \param attr The attribute, by number.
+ * \param attr_name A string representation of the attribute, for error messages.
+ * \return the gpu's attribute value.
+ */
+inline int cudaAttributeLookup(int device_id, std::vector<int32_t> *cached_values,
+                               cudaDeviceAttr attr, const char *attr_name) {
+  if (device_id < 0 || device_id >= static_cast<int>(cached_values->size())) {
+    LOG(FATAL) << attr_name << "(device_id) called with invalid id: " << device_id;
+  } else if ((*cached_values)[device_id] < 0) {
+    int temp = -1;
+    CUDA_CALL(cudaDeviceGetAttribute(&temp, attr, device_id));
+    (*cached_values)[device_id] = static_cast<int32_t>(temp);
+  }
+  return (*cached_values)[device_id];
+}
+
 /*!
  * \brief Determine major version number of the gpu's cuda compute architecture.
  * \param device_id The device index of the cuda-capable gpu of interest.
  * \return the major version number of the gpu's cuda compute architecture.
  */
 inline int ComputeCapabilityMajor(int device_id) {
-  int major = 0;
-  CUDA_CALL(cudaDeviceGetAttribute(&major,
-                                   cudaDevAttrComputeCapabilityMajor, device_id));
-  return major;
+  static std::vector<int32_t> capability_major(kMaxNumGpus, -1);
+  return cudaAttributeLookup(device_id, &capability_major,
+                             cudaDevAttrComputeCapabilityMajor, "ComputeCapabilityMajor");
 }
 
 /*!
@@ -371,10 +398,9 @@ inline int ComputeCapabilityMajor(int device_id) {
  * \return the minor version number of the gpu's cuda compute architecture.
  */
 inline int ComputeCapabilityMinor(int device_id) {
-  int minor = 0;
-  CUDA_CALL(cudaDeviceGetAttribute(&minor,
-                                   cudaDevAttrComputeCapabilityMinor, device_id));
-  return minor;
+  static std::vector<int32_t> capability_minor(kMaxNumGpus, -1);
+  return cudaAttributeLookup(device_id, &capability_minor,
+                             cudaDevAttrComputeCapabilityMinor, "ComputeCapabilityMinor");
 }
 
 /*!
@@ -386,6 +412,40 @@ inline int SMArch(int device_id) {
   auto major = ComputeCapabilityMajor(device_id);
   auto minor = ComputeCapabilityMinor(device_id);
   return 10 * major + minor;
+}
+
+/*!
+ * \brief Return the number of streaming multiprocessors of GPU `device_id`.
+ * \param device_id The device index of the cuda-capable gpu of interest.
+ * \return the gpu's count of streaming multiprocessors.
+ */
+inline int MultiprocessorCount(int device_id) {
+  static std::vector<int32_t> sm_counts(kMaxNumGpus, -1);
+  return cudaAttributeLookup(device_id, &sm_counts,
+                             cudaDevAttrMultiProcessorCount, "MultiprocessorCount");
+}
+
+/*!
+ * \brief Return the shared memory size in bytes of each of the GPU's streaming multiprocessors.
+ * \param device_id The device index of the cuda-capable gpu of interest.
+ * \return the shared memory size per streaming multiprocessor.
+ */
+inline int MaxSharedMemoryPerMultiprocessor(int device_id) {
+  static std::vector<int32_t> max_smem_per_mutiprocessor(kMaxNumGpus, -1);
+  return cudaAttributeLookup(device_id, &max_smem_per_mutiprocessor,
+                             cudaDevAttrMaxSharedMemoryPerMultiprocessor,
+                             "MaxSharedMemoryPerMultiprocessor");
+}
+
+/*!
+ * \brief Return whether the GPU `device_id` supports cooperative-group kernel launching.
+ * \param device_id The device index of the cuda-capable gpu of interest.
+ * \return the gpu's ability to run cooperative-group kernels.
+ */
+inline bool SupportsCooperativeLaunch(int device_id) {
+  static std::vector<int32_t> coop_launch(kMaxNumGpus, -1);
+  return cudaAttributeLookup(device_id, &coop_launch,
+                             cudaDevAttrCooperativeLaunch, "SupportsCooperativeLaunch");
 }
 
 /*!

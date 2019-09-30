@@ -396,5 +396,5 @@ NNVM_REGISTER_OP(_backward_abs)
 ### Legacy Operators
 
 For the legacy (pre 0.9) way of defining operators with C++, please see:
-- [Developer Guide - Operators](http://mxnet.io/architecture/overview.html#operators-in-mxnet)
-- [Developer Guide - SimpleOp](http://mxnet.io/architecture/overview.html#simpleop-the-unified-operator-api)
+- [Developer Guide - Operators]({{'/api/architecture/overview.html#operators-in-mxnet'|relative_url}})
+- [Developer Guide - SimpleOp]({{'/api/architecture/overview.html#simpleop-the-unified-operator-api'|relative_url}})

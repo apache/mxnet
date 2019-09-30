@@ -2346,7 +2346,7 @@ def test_arange_like_dtype():
         out = mod.forward(is_train=False)
         for v in out:
             assert v.dtype == t
-    
+
 
 if __name__ == '__main__':
     import nose
