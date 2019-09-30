@@ -468,9 +468,9 @@ CUSRC = $(wildcard src/*/*/*/*.cu src/*/*/*.cu src/*/*.cu src/*.cu)
 CUOBJ = $(patsubst %.cu, build/%_gpu.o, $(CUSRC))
 
 ifeq ($(USE_TVM_OP), 1)
-LIB_DEP += lib/libtvm_runtime.so lib/libtvmop.so
+LIB_DEP += lib/libtvm.so lib/libtvmop.so
 CFLAGS += -I$(TVM_PATH)/include -DMXNET_USE_TVM_OP=1
-LDFLAGS += -L$(ROOTDIR)/lib -ltvm_runtime -Wl,-rpath,'$${ORIGIN}'
+LDFLAGS += -L$(ROOTDIR)/lib -ltvm -Wl,-rpath,'$${ORIGIN}'
 
 TVM_USE_CUDA := OFF
 ifeq ($(USE_CUDA), 1)
@@ -618,15 +618,16 @@ $(DMLC_CORE)/libdmlc.a: DMLCCORE
 DMLCCORE:
 	+ cd $(DMLC_CORE); $(MAKE) libdmlc.a USE_SSE=$(USE_SSE) config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
-lib/libtvm_runtime.so:
+lib/libtvm.so:
 	echo "Compile TVM"
 	[ -e $(LLVM_PATH)/bin/llvm-config ] || sh $(ROOTDIR)/contrib/tvmop/prepare_tvm.sh; \
 	cd $(TVM_PATH)/build; \
-	cmake -DUSE_LLVM="$(LLVM_PATH)/bin/llvm-config" \
+	cmake -DUSE_LLVM="$(LLVM_PATH)/bin/llvm-config --ignore-libllvm" -DHIDE_PRIVATE_SYMBOLS=ON \
+			-DCMAKE_SHARED_LINKER_FLAGS="-Wl,--exclude-libs,ALL" \
 		  -DUSE_SORT=OFF -DUSE_CUDA=$(TVM_USE_CUDA) -DUSE_CUDNN=OFF ..; \
 	$(MAKE) VERBOSE=1; \
 	mkdir -p $(ROOTDIR)/lib; \
-	cp $(TVM_PATH)/build/libtvm_runtime.so $(ROOTDIR)/lib/libtvm_runtime.so; \
+	cp $(TVM_PATH)/build/libtvm.so $(ROOTDIR)/lib/libtvm.so; \
 	ls $(ROOTDIR)/lib; \
 	cd $(ROOTDIR)
 
@@ -634,7 +635,7 @@ TVM_OP_COMPILE_OPTIONS = -o $(ROOTDIR)/lib/libtvmop.so
 ifneq ($(CUDA_ARCH),)
 	TVM_OP_COMPILE_OPTIONS += --cuda-arch "$(CUDA_ARCH)"
 endif
-lib/libtvmop.so: lib/libtvm_runtime.so $(wildcard contrib/tvmop/*/*.py contrib/tvmop/*.py)
+lib/libtvmop.so: lib/libtvm.so $(wildcard contrib/tvmop/*/*.py contrib/tvmop/*.py)
 	echo "Compile TVM operators"
 	PYTHONPATH=$(TVM_PATH)/python:$(TVM_PATH)/topi/python:$(ROOTDIR)/contrib \
 		LD_LIBRARY_PATH=$(ROOTDIR)/lib \
@@ -700,8 +701,8 @@ rpkg:
 		cp -rf lib/libmklml_intel.so R-package/inst/libs; \
 	fi
 
-	if [ -e "lib/libtvm_runtime.so" ]; then \
-		cp -rf lib/libtvm_runtime.so R-package/inst/libs; \
+	if [ -e "lib/libtvm.so" ]; then \
+		cp -rf lib/libtvm.so R-package/inst/libs; \
 	fi
 
 	mkdir -p R-package/inst/include
