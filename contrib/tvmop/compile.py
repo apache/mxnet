@@ -18,6 +18,7 @@
 # coding: utf-8
 """TVM Operator compile entry point"""
 import tvm
+from tvm import autotvm
 
 import os
 import argparse
@@ -38,6 +39,8 @@ if __name__ == "__main__":
     parser.add_argument("-o", action="store", required=True, dest="target_path",
                         help="Target path which stores compiled library")
     arguments = parser.parse_args()
+
+    autotvm.set_cuda_target_arch("sm_70")
 
     func_list_llvm = []
     func_list_cuda = []
