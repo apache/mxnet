@@ -310,10 +310,7 @@ class CustomStatefulOp {
     std::cout << "Error! Operator does not support backward" << std::endl;
     return MX_FAIL;
   }
-  virtual ~CustomStatefulOp() = 0;
 };
-
-CustomStatefulOp::~CustomStatefulOp() {}
 
 /*! \brief StatefulOp wrapper class to pass to backend OpState */
 class CustomStatefulOpWrapper {
