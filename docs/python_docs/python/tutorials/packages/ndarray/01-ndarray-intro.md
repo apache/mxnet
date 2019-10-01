@@ -79,7 +79,7 @@ values of any of its entries. This means that the entries can have any form of
 values, including very big ones! Typically, we'll want our matrices initialized
 and very often we want a matrix of all zeros, so we can use the `.zeros`
 function. If you're feeling experimental, try one of the several [array creation
-functions](https://mxnet.incubator.apache.org/api/{.python
+functions](https://mxnet.apache.org/api/{.python
 .input}/ndarray/ndarray.html#array-creation-routines).
 
 <!-- showing something
@@ -93,7 +93,7 @@ print(x)
 ```
 
 Similarly, `ndarray` has a function to create a matrix of all ones aptly named
-[ones](https://mxnet.incubator.apache.org/api/{.python
+[ones](https://mxnet.apache.org/api/{.python
 .input}/ndarray.html?highlight=random_normal#mxnet.ndarray.ones).
 
 ```python
@@ -105,7 +105,7 @@ Often, we'll want to create arrays whose values are sampled randomly. This is
 especially common when we intend to use the array as a parameter in a neural
 network. In this snippet, we initialize with values drawn from a standard normal
 distribution with zero mean and unit variance using
-[random_normal](https://mxnet.incubator.apache.org/api/{.python
+[random_normal](https://mxnet.apache.org/api/{.python
 .input}/ndarray.html?highlight=random_normal#mxnet.ndarray.random_normal).
 
 <!--

@@ -1,3 +1,11 @@
+---
+layout: page_category
+title: MXNet Security Best Practices
+category: faq
+faq_c: Security
+question: How to run MXNet securely?
+permalink: /api/faq/security
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title: MXNet Security Best Practices
-category: faq
-faq_c: Security
-question: How to run MXNet securely?
-permalink: /api/faq/security
----
 
 # MXNet Security Best Practices
 

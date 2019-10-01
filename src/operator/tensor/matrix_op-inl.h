@@ -2656,7 +2656,7 @@ inline bool SplitOpShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape ishape = in_attrs->at(split_enum::kData);
   if (!mxnet::ndim_is_known(dshape)) return false;
   if (param.axis >= 0) {
-    CHECK_LT(static_cast<size_t>(param.axis), dshape.ndim());
+    CHECK_LT(param.axis, dshape.ndim());
   } else {
     CHECK_LT(param.axis + dshape.ndim(), dshape.ndim());
   }

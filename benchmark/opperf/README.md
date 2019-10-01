@@ -50,7 +50,7 @@ Hence, in this utility, we will build the functionality to allow users and devel
 Provided you have MXNet installed (any version >= 1.5.1), all you need to use opperf utility is to add path to your cloned MXNet repository to the PYTHONPATH.
 
 Note: 
-To install MXNet, refer [Installing MXNet page](https://mxnet.incubator.apache.org/versions/master/install/index.html)
+To install MXNet, refer [Installing MXNet page](https://mxnet.apache.org/versions/master/install/index.html)
 
 ```
 export PYTHONPATH=$PYTHONPATH:/path/to/incubator-mxnet/
@@ -129,7 +129,7 @@ Output for the above benchmark run, on a CPU machine, would look something like 
 
 ```
 
-## Usecase 3.1 - Run benchmarks for group of operators with same input
+## Usecase 4 - Run benchmarks for group of operators with same input
 For example, you want to run benchmarks for `nd.add`, `nd.sub` operator in MXNet, with the same set of inputs. You just run the following python script.
 
 ```
@@ -172,6 +172,22 @@ See the design proposal document for more details - https://cwiki.apache.org/con
 This utility queries MXNet operator registry to fetch all operators registered with MXNet, generate inputs and run benchmarks.
 However, fully automated tests are enabled only for simpler operators such as - broadcast operators, element_wise operators etc... For the purpose of readability and giving more control to the users, complex operators such as convolution (2D, 3D), Pooling, Recurrent are not fully automated but expressed as default rules.
 See `utils/op_registry_utils.py` for more details.
+
+## Use python timer
+Optionally, you could use the python time package as the profiler engine to caliberate runtime in each operator.
+To use python timer for all operators, use the argument --profiler 'python':
+```
+python incubator-mxnet/benchmark/opperf/opperf.py --profiler='python'
+```
+
+To use python timer for a specific operator, pass the argument profiler to the run_performance_test method:
+```
+add_res = run_performance_test([nd.add, nd.subtract], run_backward=True, dtype='float32', ctx=mx.cpu(),
+                               inputs=[{"lhs": (1024, 1024),
+                                        "rhs": (1024, 1024)}],
+                               warmup=10, runs=25, profiler='python')
+```
+By default, MXNet profiler is used as the profiler engine.
 
 # TODO
 

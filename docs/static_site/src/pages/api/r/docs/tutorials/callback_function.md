@@ -1,3 +1,10 @@
+---
+layout: page_api
+title: Callback Function
+is_tutorial: true
+tag: r
+permalink: /api/r/docs/tutorials/callback_function
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,13 +21,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: Callback Function
-is_tutorial: true
-tag: r
-permalink: /api/r/docs/tutorials/callback_function
----
 
 Callback Function
 ======================================
@@ -272,7 +272,7 @@ Yes! You can stop the training early with `return(FALSE)`. See the following exa
 When the validation metric dips below the threshold we set, the training process stops.
 
 ## Next Steps
-* [Neural Networks with MXNet in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
-* [Classify Real-World Images with a Pretrained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
-* [Handwritten Digits Classification Competition](http://mxnet.io/tutorials/r/mnistCompetition.html)
-* [Character Language Model Using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)
+* [Neural Networks with MXNet in Five Minutes](https://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
+* [Classify Real-World Images with a Pretrained Model](https://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
+* [Handwritten Digits Classification Competition](https://mxnet.io/tutorials/r/mnistCompetition.html)
+* [Character Language Model Using RNN](https://mxnet.io/tutorials/r/charRnnModel.html)

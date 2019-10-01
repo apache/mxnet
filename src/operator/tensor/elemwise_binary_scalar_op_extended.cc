@@ -74,6 +74,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_rpower_scalar)
   cpu, mshadow_op::rpower_grad>);
 
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_hypot_scalar)
+.add_alias("_npi_hypot_scalar")
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<
   cpu, mshadow_op::hypot>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_hypot_scalar" })

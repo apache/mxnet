@@ -137,7 +137,9 @@ void RunGraph(
     std::vector<OpStatePtr> *p_states,
     const DispatchModeVector &dispatch_modes,
     bool recording,
-    mxnet::ShapeVector *shapes) {
+    mxnet::ShapeVector *shapes,
+    const imperative::CachedOpMonCallback& callback,
+    const bool monitor_all) {
   CHECK(shapes == nullptr);
   for (size_t i = node_start; i < node_end; ++i) {
     const nnvm::IndexedGraph::Node& node = idx[i];
@@ -148,6 +150,9 @@ void RunGraph(
     std::vector<NDArray*> ndoutputs = NodeOutputs(idx, i, arrays);
     std::vector<OpReqType> req = NodeReq(idx, i, array_reqs);
     Context ctx = ndoutputs[0]->ctx();
+    if (callback && monitor_all) {
+        mxnet::common::ExecuteMonInputCallback(idx, arrays, i, callback);
+    }
     auto invoke = [&](const OpStatePtr &state) {
       const nnvm::IndexedGraph::Node& node = idx[i];
       DispatchMode dispatch_mode = dispatch_modes[i];
@@ -159,6 +164,9 @@ void RunGraph(
     };
     InvokeOperator(idx, i, retain_graph, arrays, ctx, p_states, ndinputs, ndoutputs,
                    &req, &ref_count, invoke);
+    if (callback) {
+        mxnet::common::ExecuteMonOutputCallback(idx, arrays, i, callback);
+    }
   }
 }
 
@@ -173,7 +181,9 @@ void NaiveRunGraph(
     std::vector<OpStatePtr> *p_states,
     const DispatchModeVector &dispatch_modes,
     bool recording,
-    mxnet::ShapeVector *shapes) {
+    mxnet::ShapeVector *shapes,
+    const imperative::CachedOpMonCallback& callback,
+    const bool monitor_all) {
   for (size_t i = node_start; i < node_end; ++i) {
     const nnvm::IndexedGraph::Node& node = idx[i];
     if (node.source->op() == nullptr) {
@@ -183,6 +193,9 @@ void NaiveRunGraph(
     std::vector<NDArray*> ndoutputs = NodeOutputs(idx, i, arrays);
     std::vector<OpReqType> req;
     Context ctx = GetContext(node.source->attrs, ndinputs, ndoutputs, default_ctx);
+    if (callback && monitor_all) {
+        mxnet::common::ExecuteMonInputCallback(idx, arrays, i, callback);
+    }
     auto invoke = [&](const OpStatePtr &state) {
       const nnvm::IndexedGraph::Node& node = idx[i];
       DispatchMode dispatch_mode = DispatchMode::kUndefined;
@@ -205,6 +218,9 @@ void NaiveRunGraph(
     };
     InvokeOperator(idx, i, retain_graph, arrays, ctx, p_states, ndinputs, ndoutputs,
                    &req, &ref_count, invoke);
+    if (callback) {
+        mxnet::common::ExecuteMonOutputCallback(idx, arrays, i, callback);
+    }
   }
 }
 

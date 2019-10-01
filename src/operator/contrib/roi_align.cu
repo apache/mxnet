@@ -24,14 +24,11 @@
  * Adapted from Caffe2
 */
 #include "./roi_align-inl.h"
+#include "../mxnet_op.h"
 
 
 namespace mxnet {
 namespace op {
-
-#define CUDA_1D_KERNEL_LOOP(i, n)                                 \
-  for (size_t i = blockIdx.x * blockDim.x + threadIdx.x; i < (n); \
-       i += blockDim.x * gridDim.x)
 
 using namespace mshadow::cuda;
 
@@ -120,7 +117,7 @@ __global__ void RoIAlignForwardKernel(
     const int sampling_ratio,
     const T* bottom_rois,
     T* top_data) {
-  CUDA_1D_KERNEL_LOOP(index, nthreads) {
+  CUDA_KERNEL_LOOP(index, nthreads) {
     // (n, c, ph, pw) is an element in the pooled output
     int pw = index % pooled_width;
     int ph = (index / pooled_width) % pooled_height;
@@ -259,7 +256,7 @@ __global__ void RoIAlignBackwardKernel(
     const int sampling_ratio,
     T* bottom_diff,
     const T* bottom_rois) {
-  CUDA_1D_KERNEL_LOOP(index, nthreads) {
+  CUDA_KERNEL_LOOP(index, nthreads) {
     // (n, c, ph, pw) is an element in the pooled output
     int pw = index % pooled_width;
     int ph = (index / pooled_width) % pooled_height;
@@ -353,7 +350,7 @@ __global__ void RoIAlignBackwardKernel(
         }  // if
       }  // ix
     }  // iy
-  }  // CUDA_1D_KERNEL_LOOP
+  }  // CUDA_KERNEL_LOOP
 }  // RoIAlignBackward
 
 template<typename xpu>

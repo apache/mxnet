@@ -27,6 +27,19 @@
 namespace mxnet {
 namespace op {
 
+template<typename DType>
+void CheckPvalGPU(DType* input, int prob_length) {
+  std::vector<DType> pvals_(prob_length);
+  CUDA_CALL(cudaMemcpy(&pvals_[0], input, sizeof(DType) * prob_length,
+    cudaMemcpyDeviceToHost));
+  DType sum = DType(0.0);
+  for (int i = 0; i < prob_length; ++i) {
+    sum += pvals_[i];
+    CHECK(sum <= DType(1.0 + 1e-12))
+      << "sum(pvals[:-1]) > 1.0";
+  }
+}
+
 NNVM_REGISTER_OP(_npi_multinomial)
 .set_attr<FCompute>("FCompute<gpu>", NumpyMultinomialForward<gpu>);
 
