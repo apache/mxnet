@@ -296,13 +296,14 @@ class ModulatedDeformableConvolution(HybridBlock):
                  num_deformable_group=1, layout='NCHW', use_bias=True, in_channels=0, activation=None,
                  weight_initializer=None, bias_initializer='zeros',
                  offset_weight_initializer='zeros', offset_bias_initializer='zeros', offset_use_bias=True,
-                 op_name='DeformableConvolution', adj=None, prefix=None, params=None):
+                 op_name='ModulatedDeformableConvolution', adj=None, prefix=None, params=None):
         super(ModulatedDeformableConvolution, self).__init__(
             channels=channels, kernel_size=kernel_size, strides=strides, padding=padding, dilation=dilation,
             groups=groups, num_deformable_group=num_deformable_group, layout=layout, use_bias=use_bias,
-            in_channels=in_channels, activation=activation, weight_initializer=weight_initializer, bias_initializer=bias_initializer,
+            in_channels=in_channels, activation=activation, 
+            weight_initializer=weight_initializer, bias_initializer=bias_initializer,
             offset_weight_initializer=offset_weight_initializer, offset_bias_initializer=offset_bias_initializer,
-            offset_use_bias=offset_use_bias, op_name='ModulatedDeformableConvolution', adj=adj, prefix=prefix, params=params)
+            offset_use_bias=offset_use_bias, op_name=op_name, adj=adj, prefix=prefix, params=params)
 
     def hybrid_forward(self, F, x, offset_weight, deformable_conv_weight, offset_bias=None, deformable_conv_bias=None):
         self._kwargs_offset['num_filter'] = 27
@@ -316,12 +317,14 @@ class ModulatedDeformableConvolution(HybridBlock):
         mask = F.sigmoid(mask) * 2
 
         if deformable_conv_bias is None:
-            act = F.contrib.ModulatedDeformableConvolution(data=x, offset=offset_t, mask=mask, weight=deformable_conv_weight,
-                                                  name='fwd', **self._kwargs_deformable_conv)
+            act = F.contrib.ModulatedDeformableConvolution(data=x, offset=offset_t, mask=mask, 
+                                                           weight=deformable_conv_weight,
+                                                           name='fwd', **self._kwargs_deformable_conv)
         else:
-            act = F.contrib.ModulatedDeformableConvolution(data=x, offset=offset_t, mask=mask, weight=deformable_conv_weight,
-                                                  bias=deformable_conv_bias, name='fwd',
-                                                  **self._kwargs_deformable_conv)
+            act = F.contrib.ModulatedDeformableConvolution(data=x, offset=offset_t, mask=mask, 
+                                                           weight=deformable_conv_weight,
+                                                           bias=deformable_conv_bias, name='fwd',
+                                                           **self._kwargs_deformable_conv)
 
         if self.act:
             act = self.act(act)
