@@ -752,8 +752,8 @@ def test_activation():
     # Hyperbolic tangent (tanh)
     # y = (exp(x)-exp(-x))/(exp(x)+exp(-x))
     y = mx.nd.Activation(x, act_type="tanh")
-    tanh_x = ((np.exp(test_x)-np.exp(-test_x))/(np.exp(test_x)+np.exp(-test_x)))#.astype('float32')
-    assert y[-1][-1] == np.float32(tanh_x)#.astype('float32')
+    tanh_x = ((np.exp(test_x)-np.exp(-test_x))/(np.exp(test_x)+np.exp(-test_x)))
+    assert y[-1][-1] == np.float32(tanh_x)
 
     # Recitified Linear Unit (relu)
     # y = max(x,0)
@@ -763,13 +763,13 @@ def test_activation():
     # Sigmoid
     # y = x/(1+abs(x))
     y = mx.nd.Activation(x, act_type="sigmoid")
-    sigmoid_x = (1/(1+math.exp(-test_x)))#.astype('float32')
+    sigmoid_x = (1/(1+math.exp(-test_x)))
     assert y[-1][-1] == np.float32(sigmoid_x)
 
     # Soft Sign
     # y = 1/(1+exp(-x))
     y = mx.nd.Activation(x, act_type="softsign")
-    softsign_x = (test_x/(1+abs(test_x)))#.astype('float32')
+    softsign_x = (test_x/(1+abs(test_x)))
     assert y[-1][-1] == np.float32(softsign_x)
 
 
