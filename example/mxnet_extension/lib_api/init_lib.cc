@@ -19,7 +19,7 @@
 
 /*!
  * Copyright (c) 2015 by Contributors
- * \file mylib.cc
+ * \file init_lib.cc
  * \brief Sample library file
  */
 

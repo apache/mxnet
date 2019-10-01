@@ -40,10 +40,10 @@ int main(void) {
   // Get a handle to the library.
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   HINSTANCE handle;
-  handle = LoadLibrary(TEXT("mylib.dll"));
+  handle = LoadLibrary(TEXT("init_lib.dll"));
 #else
   void *handle;
-  handle = dlopen("mylib.so", RTLD_LAZY);
+  handle = dlopen("init_lib.so", RTLD_LAZY);
 #endif
 
   if (!handle) {
