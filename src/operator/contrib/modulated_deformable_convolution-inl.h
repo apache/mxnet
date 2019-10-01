@@ -57,7 +57,7 @@ namespace dmconv {
 }
 
 struct ModulatedDeformableConvolutionParam
- : public dmlc::Parameter<ModulatedDeformableConvolutionParam> {
+  : public dmlc::Parameter<ModulatedDeformableConvolutionParam> {
   mxnet::TShape kernel;
   mxnet::TShape stride;
   mxnet::TShape dilate;
@@ -137,7 +137,7 @@ class ModulatedDeformableConvolutionOp : public Operator {
     // calculate the shape of col_buffer
     mxnet::TShape col_buffer_shape(num_spatial_axes_ + 2, -1);
     col_buffer_shape[0] = conv_in_channels_ * param_.kernel.Size();
-    //for (index_t i = 1; i < col_buffer_shape.ndim(); ++i) {
+    //  for (index_t i = 1; i < col_buffer_shape.ndim(); ++i) {
     //  col_buffer_shape[i] = out_data[0].shape_[i + 1];
     col_buffer_shape[1] = im2col_step_;
     for (index_t i = 2; i < col_buffer_shape.ndim(); ++i) {
@@ -441,7 +441,7 @@ class ModulatedDeformableConvolutionProp : public OperatorProperty {
 
       const index_t ksize_y = static_cast<index_t>(param_.kernel[0]);
       const index_t ksize_x = static_cast<index_t>(param_.kernel[1]);
-      if (static_cast<index_t>(dshape[0]) > param_.im2col_step) {
+      if (dshape[0] > static_cast<index_t>(param_.im2col_step)) {
            CHECK_EQ(dshape[0] % param_.im2col_step, 0U) \
            << "input batchsize must be smaller than or divide im2col_step";
       }
