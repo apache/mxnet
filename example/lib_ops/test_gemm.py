@@ -28,10 +28,10 @@ import os
 
 #load library
 if (os.name=='posix'):
-    path = os.path.abspath('mylib.so')
+    path = os.path.abspath('gemm_lib.so')
     mx.library.load(path)
 elif (os.name=='nt'):
-    path = os.path.abspath('mylib.so')
+    path = os.path.abspath('gemm_lib.so')
     mx.library.load(path)
 
 #setup inputs to call test operator
@@ -41,15 +41,37 @@ b = mx.nd.array([[5,6],[7,8]])
 #print inputs
 print(a)
 print(b)
-print('--------------')
 
 #compute and print output
-print(mx.nd.gemm(a,b))
+print("--------start ndarray---------")
+print(mx.nd.my_gemm(a,b))
+print(mx.nd.state_gemm(a,b))
 
-# symbol api
+# symbolic compute
+print("---------start symbol--------")
 s = mx.sym.Variable('s')
 t = mx.sym.Variable('t')
-c = mx.sym.warpctc(s,t)
-exe = c.bind(ctx=mx.cpu(),args={'s':a,'t':b})
+c = mx.sym.my_gemm(s,t)
+d = mx.sym.state_gemm(s,t)
+
+in_grad = [mx.nd.empty((2,2)),mx.nd.empty((2,2))]
+in_grad2 = [mx.nd.empty((2,2)),mx.nd.empty((2,2))]
+
+exe = c.bind(ctx=mx.cpu(),args={'s':a,'t':b},args_grad=in_grad)
+exe2 = d.bind(ctx=mx.cpu(),args={'s':a,'t':b},args_grad=in_grad2)
+
 out = exe.forward()
 print(out)
+
+out2 = exe2.forward()
+out2 = exe2.forward()
+print(out2)
+
+print("---------start backward--------")
+out_grad = mx.nd.ones((2,2))
+exe.backward([out_grad])
+print(in_grad)
+
+out_grad2 = mx.nd.ones((2,2))
+exe2.backward([out_grad2])
+print(in_grad2)

@@ -29,10 +29,12 @@
 #define MXNET_LIB_API_H_
 
 #include <stdint.h>
+#include <stdlib.h>
 #include <vector>
 #include <map>
 #include <string>
 #include <iostream>
+#include <utility>
 
 #define MX_LIBRARY_VERSION 1
 
@@ -58,22 +60,39 @@ enum MXReturnValue {
  * \brief External Tensor data structure
  */
 struct MXTensor {
-  MXTensor() : data(nullptr) {}
+  MXTensor() : data(NULL) {}
 
   MXTensor(void *data, const std::vector<int64_t> &shape, MXDType dtype)
-  : data{data}, shape{shape}, dtype{dtype} {}
+  : data(data), shape(shape), dtype(dtype) {}
 
-  /*!
-   * \brief helper function to cast data pointer
-   */
+  /*! \brief helper function to cast data pointer */
   template<typename data_type>
-  data_type* getData() {
+  inline data_type* getData() {
     return reinterpret_cast<data_type*>(data);
   }
 
-  void *data;  // not owned
+  /*! \brief helper function to get data size */
+  inline int64_t getDataSize() {
+    int64_t size = 1;
+    for (unsigned int i = 0; i < shape.size(); i++) {
+      size *= shape[i];
+    }
+    return size;
+  }
+
+  // data is flatten 1D repr of tensor, elements are in continuous memory
+  // user can access each element using the shape of tensor
+  // it may also point to data allocated on gpu
+  void *data;
+
+  // shape is in [2,3,4] format to represent high-dim tensor
   std::vector<int64_t> shape;
+
+  // type can only be MXDType enum types
   MXDType dtype;
+
+  // gpu flag to specify the data tensor storage location
+  bool is_gpu;
 };
 
 /*!
@@ -88,42 +107,215 @@ class OpResource {
  public:
   OpResource(xpu_malloc_t xm, void* _xm) : xpu_malloc(xm), _xpu_malloc(_xm) {}
 
-  /*!
-   * \brief allocate memory controlled by MXNet
-   */
+  /*! \brief allocate memory controlled by MXNet */
   void* alloc(int size) {
     return xpu_malloc(_xpu_malloc, size);
   }
+
  private:
   xpu_malloc_t xpu_malloc;
   void* _xpu_malloc;
 };
 
 /*!
- * \brief Macro to help passing serialized subgraph through attribute dict
+ * \brief Json utility to parse serialized subgraph symbol
  */
+/*! \brief Macro to help passing serialized subgraph through attribute dict */
 #define SUBGRAPH_SYM_JSON "subgraph_sym_json"
 
+/*! \brief Types of JSON objects */
+enum json_type {ERR, STR, NUM, LIST, MAP};
+
+/*! \brief definition of JSON objects */
+struct json_val {
+  json_val() : type(ERR), num(-1), str("") {}  // default constructor
+  // construct a JSON object by type
+  explicit json_val(json_type t) : type(t), num(-1), str("") {}
+  // construct a string JSON object
+  explicit json_val(std::string s) : type(STR), num(-1), str(s) {}
+  // construct a number JSON object
+  explicit json_val(int n) : type(NUM), num(n), str(std::to_string(n)) {}
+  // complex constructor
+  json_val(json_type t, int n, std::string s) : type(t), num(n), str(s) {}
+  bool operator<(const json_val &o) const {
+    // for string JSON objects compare the string
+    if (type == STR) return type == o.type && str < o.str;
+    // for number JSON objects compare the number
+    if (type == NUM) return type == o.type && num < o.num;
+    // for list JSON objects, compare the size of list, and then each object in the list
+    if (type == LIST) {
+      if (list.size() != o.list.size()) return false;
+      for (unsigned int i=0; i< list.size(); i++)
+        if (list[i] < o.list[i])
+          return false;  // if we find an object that doesnt match return
+      return true;  // all objects in lists matched
+    }
+    // for map JSON objects, compare the size of map, and then each key/value in the maps
+    if (type == MAP) {
+      if (map.size() != o.map.size()) return false;
+      for (auto &item : map) {
+        // if one map is missing a key in another return
+        if (o.map.find(item.first) == o.map.end()) return false;
+        if (item.second < o.map.at(item.first)) return false;
+      }
+      return true;
+    }
+    return type < o.type;
+  }
+  json_type type;
+  int num;
+  std::string str;
+  std::vector<json_val> list;
+  std::map<json_val, json_val> map;
+};
+
+/*! \brief functions used for parsing JSON */
+struct Json_Parser {
+  json_val parse_to_json(std::string json) {
+    unsigned int idx = 0;
+    return parse(json, &idx);
+  }
+  void print_json_val(json_val val) {
+    std::cout << json_val_string(val) << std::endl;
+  }
+  // debug function to convert a JSON object to a string
+  std::string json_val_string(const json_val &val) {
+    std::string ret;
+    switch (val.type) {
+    case ERR:
+      ret = "json(Error)";
+      break;
+    case STR:
+      ret = "json(STR:" + val.str + ")";
+      break;
+    case NUM:
+      ret = "json(INT:" + val.str + ")";
+      break;
+    case LIST:
+      ret = "json(LIST:[";
+      for (auto &item : val.list)
+        ret += json_val_string(item) + ",";
+      ret += "])";
+      break;
+    case MAP:
+      ret = "json(MAP:{";
+      for (auto &item : val.map)
+        ret += json_val_string(item.first) + " : " + json_val_string(item.second) + ",";
+      ret += "})";
+      break;
+    }
+    return ret;
+  }
+  // parse a string JSON object
+  json_val parse_string(std::string json, unsigned int* idx) {
+    json_val ret(STR);
+    while (*idx < json.size()) {
+      if (json[*idx] == '"') {
+        ++(*idx);
+        return ret;
+      } else {
+        ret.str += json[*idx];
+        ++(*idx);
+      }
+    }
+    std::cout << "Error! Unable to parse string" << std::endl;
+    return json_val();
+  }
+  // parse a number JSON object
+  json_val parse_num(std::string json, unsigned int* idx) {
+    json_val ret(NUM);
+    while (*idx < json.size()) {
+      if (json[*idx] >= '0' && json[*idx] <= '9') {
+        ret.str += json[*idx];
+        ++(*idx);
+      } else {
+        break;
+      }
+    }
+    ret.num = std::stoi(ret.str);
+    return ret;
+  }
+  // parse a list of JSON objects
+  json_val parse_list(std::string json, unsigned int* idx) {
+    json_val ret(LIST);
+    while (*idx < json.size()) {
+      if (json[*idx] == ']') {
+        ++(*idx);
+        return ret;
+      } else {
+        json_val item = parse(json, idx);
+        if (item.type != ERR)
+          ret.list.push_back(item);
+      }
+    }
+    std::cout << "Error! Unable to parse list" << std::endl;
+    return json_val();
+  }
+  // parse a map of JSON objects
+  json_val parse_map(std::string json, unsigned int* idx) {
+    json_val ret(MAP), key;
+    while (*idx < json.size()) {
+      if (json[*idx] == '}') {
+        ++(*idx);
+        return ret;
+      } else {
+        json_val item = parse(json, idx);
+        if (key.type == ERR) {
+          key = item;
+        } else {
+          ret.map[key] = item;
+          key.type = ERR;
+        }
+      }
+    }
+    std::cout << "Error! Unable to parse map" << std::endl;
+    return json_val();
+  }
+  // generic parse function
+  json_val parse(std::string json, unsigned int *idx) {
+    json_val ret;
+    while (*idx < json.size()) {
+      if (json[*idx] == '"') {
+        ++(*idx);
+        ret = parse_string(json, idx);
+      } else if (json[*idx] >= '0' && json[*idx] <= '9') {
+        ret = parse_num(json, idx);
+      } else if (json[*idx] == '[') {
+        ++(*idx);
+        ret = parse_list(json, idx);
+      } else if (json[*idx] == '{') {
+        ++(*idx);
+        ret = parse_map(json, idx);
+      } else if (json[*idx] == ']' || json[*idx] == '}') {return ret;}
+      if (ret.type != ERR) return ret;
+      ++(*idx);
+    }
+    return ret;
+  }
+};
+
 /*!
- * \brief An prototype interface class for library author creating stateful op
+ * \brief An abstract class for library author creating stateful op
+ * custom library should override Forward and destructor, and has an
+ * option to implement Backward
  */
 class CustomStatefulOp {
  public:
-  virtual int Forward(std::vector<MXTensor>& inputs,
-                      std::vector<MXTensor>& outputs,
-                      OpResource op_res) = 0;
-  virtual int Backward(std::vector<MXTensor>& inputs,
-                       std::vector<MXTensor>& outputs,
-                       OpResource op_res) {
+  virtual MXReturnValue Forward(std::vector<MXTensor> inputs,
+                                std::vector<MXTensor> outputs,
+                                OpResource op_res) = 0;
+  virtual MXReturnValue Backward(std::vector<MXTensor> inputs,
+                                 std::vector<MXTensor> outputs,
+                                 OpResource op_res) {
     std::cout << "Error! Operator does not support backward" << std::endl;
     return MX_FAIL;
   }
   virtual ~CustomStatefulOp() = 0;
 };
 
-/*!
- * \brief StatefulOp wrapper class to pass to backend OpState
- */
+CustomStatefulOp::~CustomStatefulOp() {}
+
+/*! \brief StatefulOp wrapper class to pass to backend OpState */
 class CustomStatefulOpWrapper {
  public:
   explicit CustomStatefulOpWrapper(CustomStatefulOp* inst) : instance(inst) {}
@@ -132,9 +324,7 @@ class CustomStatefulOpWrapper {
   CustomStatefulOp* instance;
 };
 
-/*!
- * Custom Operator function templates
- */
+/*! \brief Custom Operator function templates */
 typedef MXReturnValue (*fcomp_t)(std::map<std::string, std::string>,
                                  std::vector<MXTensor>, std::vector<MXTensor>,
                                  OpResource res);
@@ -143,8 +333,8 @@ typedef MXReturnValue (*parseAttrs_t)(std::map<std::string, std::string>,
 typedef MXReturnValue (*inferType_t)(std::map<std::string, std::string>,
                                      std::vector<int>&, std::vector<int>&);
 typedef MXReturnValue (*inferShape_t)(std::map<std::string, std::string>,
-                                      std::vector<std::vector<unsigned int>>&,
-                                      std::vector<std::vector<unsigned int>>&);
+                                      std::vector<std::vector<unsigned int> >&,
+                                      std::vector<std::vector<unsigned int> >&);
 typedef MXReturnValue (*mutateInputs_t)(std::map<std::string, std::string>,
                                       std::vector<int>&);
 typedef MXReturnValue (*createOpState_t)(std::map<std::string, std::string>,
@@ -155,9 +345,9 @@ typedef MXReturnValue (*createOpState_t)(std::map<std::string, std::string>,
  */
 class CustomOp {
  public:
-  explicit CustomOp(const char* op_name) : name(op_name), forward(nullptr),
-    backward(nullptr), parse_attrs(nullptr), infer_type(nullptr), infer_shape(nullptr),
-    mutate_inputs(nullptr), create_opstate(nullptr) {}
+  explicit CustomOp(const char* op_name) : name(op_name),
+    forward(NULL), backward(NULL), parse_attrs(NULL), infer_type(NULL),
+    infer_shape(NULL), mutate_inputs(NULL), create_opstate(NULL) {}
   ~CustomOp() {}
   CustomOp& setForward(fcomp_t fcomp) {
     forward = fcomp;
@@ -202,7 +392,7 @@ class CustomOp {
 
 /*!
  * \brief Registry class to registers things (ops, properties)
- *       Singleton class
+ *        Singleton class
  */
 template <class T>
 class Registry {
@@ -240,29 +430,23 @@ class Registry {
   std::vector<T*> entries;
 };
 
-/*
- * Macros to help with string concat
+/*!
+ * \brief Macros to help with string concat
  * Annoyingly, the concat_ and concat macros are necessary to
  * be able to use __COUNTER__ in an identifier name 
  */
 #define _STR_CONCAT_(__a, __b) __a ## __b
 #define _STR_CONCAT(__a, __b) _STR_CONCAT_(__a, __b)
 
-/*!
- * \brief convert a token to a string
- */
+/*! \brief convert a token to a string */
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
-/*!
- * \brief declare a variable with custom name
- */
+/*! \brief declare a variable with custom name */
 #define _REGISTER_NAME_(Name) MXNet ## _CustomOp ## _
 #define _REGISTER_DEF_(Name) CustomOp _REGISTER_NAME_(Name)
 
-/*!
- * \brief assign a var to a value
- */
+/*! \brief assign a var to a value */
 #define REGISTER_OP(Name) _STR_CONCAT(_REGISTER_DEF_(Name), __COUNTER__) = \
     Registry<CustomOp>::get()->add(TOSTRING(Name))
 
@@ -275,7 +459,6 @@ class Registry {
  * Each API has a #define string that is used to lookup the function in the library
  * Followed by the function declaration
  */
-
 #define MXLIB_OPREGSIZE_STR "_opRegSize"
 typedef int (*opRegSize_t)(void);
 
@@ -328,9 +511,7 @@ typedef int (*initialize_t)(int);
 typedef int (*opVersion_t)();
 
 extern "C" {
-  /*!
-   * \brief returns MXNet library version 
-   */
+  /*! \brief returns MXNet library version */
   #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) int __cdecl
 #else
@@ -340,9 +521,7 @@ extern "C" {
     return MX_LIBRARY_VERSION;
   }
 
-  /*!
-   * \brief returns number of ops registered in this library
-   */
+  /*! \brief returns number of ops registered in this library */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) int __cdecl
 #else
@@ -352,9 +531,7 @@ extern "C" {
     return Registry<CustomOp>::get()->size();
   }
 
-  /*!
-   * \brief returns operator registration at specified index
-   */
+  /*! \brief returns operator registration at specified index */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) void __cdecl
 #else
@@ -375,10 +552,8 @@ extern "C" {
     *create_op = op.create_opstate;
   }
 
-  /*!
-   * \brief calls free from the external library for library allocated arrays
-   */
-  #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  /*! \brief calls free from the external library for library allocated arrays */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) void __cdecl
 #else
   void
@@ -387,9 +562,7 @@ extern "C" {
     free(ptr);
   }
 
-  /*!
-   * \brief returns status of calling parse attributes function for operator from library
-   */
+  /*! \brief returns status of calling parse attributes function for operator from library */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) int __cdecl
 #else
@@ -407,9 +580,7 @@ extern "C" {
     return parseAttrs(attrs, num_in, num_out);
   }
 
-  /*!
-   * \brief returns status of calling infer shape function for operator from library
-   */
+  /*! \brief returns status of calling inferShape function for operator from library */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) int __cdecl
 #else
@@ -456,9 +627,7 @@ extern "C" {
     return retval;
   }
 
-  /*!
-   * \brief returns status of calling InferType function for operator from library
-   */
+  /*! \brief returns status of calling inferType function for operator from library */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) int __cdecl
 #else
@@ -494,10 +663,7 @@ extern "C" {
     return retval;
   }
 
-  /*!
-   * \brief returns status of calling Forward function for operator from library
-   */
-
+  /*! \brief returns status of calling Forward function for operator from library */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) int __cdecl
 #else
@@ -541,9 +707,7 @@ extern "C" {
     return fcomp(attrs, inputs, outputs, res);
   }
 
-  /*!
-   * \brief returns status of calling mutate inputs function for operator from library
-   */
+  /*! \brief returns status of calling mutateInputs function for operator from library */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) int __cdecl
 #else
@@ -575,9 +739,7 @@ extern "C" {
     return retval;
   }
 
-  /*!
-   * \brief returns status of calling create stateful op function for operator from library
-   */
+  /*! \brief returns status of calling createStatefulOp function for operator from library */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) int __cdecl
 #else
