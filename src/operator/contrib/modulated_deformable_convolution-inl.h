@@ -56,7 +56,8 @@ namespace dmconv {
   enum ModulatedDeformableConvolutionOpResource { kTempSpace };
 }
 
-struct ModulatedDeformableConvolutionParam : public dmlc::Parameter<ModulatedDeformableConvolutionParam> {
+struct ModulatedDeformableConvolutionParam
+ : public dmlc::Parameter<ModulatedDeformableConvolutionParam> {
   mxnet::TShape kernel;
   mxnet::TShape stride;
   mxnet::TShape dilate;
@@ -87,7 +88,10 @@ struct ModulatedDeformableConvolutionParam : public dmlc::Parameter<ModulatedDef
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
       .describe("Whether to disable bias parameter.");
     DMLC_DECLARE_FIELD(im2col_step).set_default(64)
-          .describe("Maximum number of images per im2col computation; The total batch size should be divisable by this value or smaller than this value; if you face out of memory problem, you can try to use a smaller value here.");
+      .describe("Maximum number of images per im2col computation; "
+                "The total batch size should be divisable by this value or "
+                "smaller than this value; if you face out of memory problem, "
+                "you can try to use a smaller value here.");
     DMLC_DECLARE_FIELD(layout)
       .add_enum("NCW", mshadow::kNCW)
       .add_enum("NCHW", mshadow::kNCHW)
@@ -143,7 +147,8 @@ class ModulatedDeformableConvolutionOp : public Operator {
     TBlob col_buffer(workspace.dptr_, col_buffer_shape, xpu::kDevMask, DataType<DType>::kFlag);
     mxnet::TShape output_buffer_shape(1, -1);
     output_buffer_shape[0] = num_*output_dim_;
-    TBlob output_buffer(workspace.dptr_ + col_buffer_size_, output_buffer_shape, xpu::kDevMask, DataType<DType>::kFlag);
+    TBlob output_buffer(workspace.dptr_ + col_buffer_size_, output_buffer_shape,
+                        xpu::kDevMask, DataType<DType>::kFlag);
 
     // initialize weight and col_buffer 3D tensors for using gemm
     index_t M = conv_out_channels_ / group_;
@@ -157,7 +162,8 @@ class ModulatedDeformableConvolutionOp : public Operator {
                 Shape4(num_ / im2col_step_, group_, M, N), s);
     for (index_t n = 0; n < num_ / im2col_step_; ++n) {
       // transform image to col_buffer in order to use gemm
-      modulated_deformable_im2col(s, in_data[dmconv::kData].dptr<DType>() + n*im2col_step_*input_dim_,
+      modulated_deformable_im2col(s,
+              in_data[dmconv::kData].dptr<DType>() + n*im2col_step_*input_dim_,
               in_data[dmconv::kOffset].dptr<DType>() + n*im2col_step_*input_offset_dim_,
               in_data[dmconv::kMask].dptr<DType>() + n*im2col_step_ * input_mask_dim_,
               in_data[dmconv::kData].shape_,
@@ -171,9 +177,9 @@ class ModulatedDeformableConvolutionOp : public Operator {
       }
     }
     Tensor<xpu, 4, DType> trans_output_4d = output_buffer.get_with_shape<xpu, 4, DType>(
-                Shape4(num_ / im2col_step_, conv_out_channels_, im2col_step_, conv_out_spatial_dim_), s);
+        Shape4(num_ / im2col_step_, conv_out_channels_, im2col_step_, conv_out_spatial_dim_), s);
     Tensor<xpu, 4, DType> original_output_4d = out_data[dmconv::kOut].get_with_shape<xpu, 4, DType>(
-                Shape4(num_ / im2col_step_, im2col_step_, conv_out_channels_, conv_out_spatial_dim_), s);
+        Shape4(num_ / im2col_step_, im2col_step_, conv_out_channels_, conv_out_spatial_dim_), s);
     original_output_4d = swapaxis<2, 1>(trans_output_4d);
 
     if (bias_term_) {
@@ -218,12 +224,13 @@ class ModulatedDeformableConvolutionOp : public Operator {
     TBlob col_buffer(workspace.dptr_, col_buffer_shape, xpu::kDevMask, DataType<DType>::kFlag);
     mxnet::TShape output_buffer_shape(1, -1);
     output_buffer_shape[0] = num_*output_dim_;
-    TBlob output_buffer(workspace.dptr_ + col_buffer_size_, output_buffer_shape, xpu::kDevMask, DataType<DType>::kFlag);
+    TBlob output_buffer(workspace.dptr_ + col_buffer_size_,
+      output_buffer_shape, xpu::kDevMask, DataType<DType>::kFlag);
 
     Tensor<xpu, 4, DType> trans_output_4d = output_buffer.get_with_shape<xpu, 4, DType>(
-                    Shape4(num_ / im2col_step_, conv_out_channels_, im2col_step_, conv_out_spatial_dim_), s);
+        Shape4(num_ / im2col_step_, conv_out_channels_, im2col_step_, conv_out_spatial_dim_), s);
     Tensor<xpu, 4, DType> original_output_4d = out_grad[dmconv::kOut].get_with_shape<xpu, 4, DType>(
-                    Shape4(num_ / im2col_step_, im2col_step_, conv_out_channels_, conv_out_spatial_dim_), s);
+        Shape4(num_ / im2col_step_, im2col_step_, conv_out_channels_, conv_out_spatial_dim_), s);
     trans_output_4d = swapaxis<2, 1>(original_output_4d);
 
     // initialize weight and col_buffer 3D tensors for using gemm
@@ -275,9 +282,11 @@ class ModulatedDeformableConvolutionOp : public Operator {
         req[dmconv::kData]);
 
       // gradient w.r.t. weight, dWeight should accumulate across the batch and group
-      modulated_deformable_im2col(s, in_data[dmconv::kData].dptr<DType>() + n*im2col_step_*input_dim_,
+      modulated_deformable_im2col(s,
+        in_data[dmconv::kData].dptr<DType>() + n*im2col_step_*input_dim_,
         in_data[dmconv::kOffset].dptr<DType>() + n*im2col_step_*input_offset_dim_,
-        in_data[dmconv::kMask].dptr<DType>() + n*im2col_step_*input_mask_dim_, in_data[dmconv::kData].shape_,
+        in_data[dmconv::kMask].dptr<DType>() + n*im2col_step_*input_mask_dim_,
+        in_data[dmconv::kData].shape_,
         col_buffer.shape_, param_.kernel, param_.pad, param_.stride, param_.dilate,
         param_.num_deformable_group, col_buffer.dptr<DType>());
 
@@ -299,7 +308,8 @@ class ModulatedDeformableConvolutionOp : public Operator {
   }
 
  private:
-  void LayerSetUp(const mxnet::TShape& ishape, const mxnet::TShape& offset_shape, const mxnet::TShape& mask_shape, const mxnet::TShape& oshape) {
+  void LayerSetUp(const mxnet::TShape& ishape, const mxnet::TShape& offset_shape,
+                  const mxnet::TShape& mask_shape, const mxnet::TShape& oshape) {
     channel_axis_ = 1;  // hard code channel axis
     const index_t first_spatial_axis = channel_axis_ + 1;
     const index_t num_axes = param_.kernel.ndim() + 2;
@@ -431,7 +441,7 @@ class ModulatedDeformableConvolutionProp : public OperatorProperty {
 
       const index_t ksize_y = static_cast<index_t>(param_.kernel[0]);
       const index_t ksize_x = static_cast<index_t>(param_.kernel[1]);
-      if (dshape[0] > param_.im2col_step) {
+      if (static_cast<index_t>(dshape[0]) > param_.im2col_step) {
            CHECK_EQ(dshape[0] % param_.im2col_step, 0U) \
            << "input batchsize must be smaller than or divide im2col_step";
       }
@@ -508,7 +518,7 @@ class ModulatedDeformableConvolutionProp : public OperatorProperty {
     CHECK_GE(in_type->size(), 1U);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "First input must have specified type";
-    for (index_t i = 0; i < in_type->size(); ++i) {
+    for (std::size_t i = 0; i < in_type->size(); ++i) {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype;
       } else {
@@ -563,4 +573,4 @@ class ModulatedDeformableConvolutionProp : public OperatorProperty {
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_CONTRIB_DEFORMABLE_MASKED_CONVOLUTION_INL_H_
+#endif  // MXNET_OPERATOR_CONTRIB_MODULATED_DEFORMABLE_CONVOLUTION_INL_H_

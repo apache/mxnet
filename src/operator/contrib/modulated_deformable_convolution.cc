@@ -54,7 +54,8 @@ Operator *ModulatedDeformableConvolutionProp::CreateOperatorEx(Context ctx,
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], in_shape, &out_shape, ctx);
 }
 
-MXNET_REGISTER_OP_PROPERTY(_contrib_ModulatedDeformableConvolution, ModulatedDeformableConvolutionProp)
+MXNET_REGISTER_OP_PROPERTY(
+  _contrib_ModulatedDeformableConvolution, ModulatedDeformableConvolutionProp)
 .describe(R"code(Compute 2-D modulated deformable convolution on 4-D input.
 
 The modulated deformable convolution operation is described in https://arxiv.org/abs/1811.11168
@@ -100,7 +101,7 @@ Both ``weight`` and ``bias`` are learnable parameters.
 
 )code" ADD_FILELINE)
 .add_argument("data", "NDArray-or-Symbol", "Input data to the ModulatedDeformableConvolutionOp.")
-.add_argument("offset", "NDArray-or-Symbol", "Input offset to the ModulatedDeformableConvolutionOp.")
+.add_argument("offset", "NDArray-or-Symbol", "Input offset to ModulatedDeformableConvolutionOp.")
 .add_argument("mask", "NDArray-or-Symbol", "Input mask to the ModulatedDeformableConvolutionOp.")
 .add_argument("weight", "NDArray-or-Symbol", "Weight matrix.")
 .add_argument("bias", "NDArray-or-Symbol", "Bias parameter.")

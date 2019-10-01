@@ -173,4 +173,4 @@ inline void modulated_deformable_col2im_coord(mshadow::Stream<cpu>* s,
 #ifdef __CUDACC__
 #include "./modulated_deformable_im2col.cuh"
 #endif
-#endif  // MXNET_OPERATOR_CONTRIB_NN_DEFORMABLE_MASKED_IM2COL_H_
+#endif  // MXNET_OPERATOR_CONTRIB_NN_MODULATED_DEFORMABLE_IM2COL_H_
