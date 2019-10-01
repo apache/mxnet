@@ -29,5 +29,5 @@ if (os.name=='posix'):
     path = os.path.abspath('mylib.so')
     mx.library.load(path)
 elif (os.name=='nt'):
-    path = os.path.abspath('mylib.so')
+    path = os.path.abspath('mylib.dll')
     mx.library.load(path)
