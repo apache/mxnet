@@ -30,10 +30,10 @@ import ctypes
 
 # load library
 if (os.name=='posix'):
-    path = os.path.abspath('subgraph_lib.so')
+    path = os.path.abspath('libsubgraph_lib.so')
     mx.library.load(path)
 elif (os.name=='nt'):
-    path = os.path.abspath('subgraph_lib.so')
+    path = os.path.abspath('libsubgraph_lib.dll')
     mx.library.load(path)
 
 a = mx.sym.var('a')

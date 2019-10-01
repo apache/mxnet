@@ -16,7 +16,7 @@
 # under the License.
 
 all:
-	g++ -std=c++11 -shared -fPIC mylib.cc -o mylib.so -I ../../include/mxnet
+	g++ -std=c++11 -shared -fPIC mylib.cc -o libmylib.so -I ../../include/mxnet
 
 test:
 	g++ -std=c++11 -O3 -o libtest libtest.cc -ldl -I ../../include/mxnet
@@ -28,4 +28,4 @@ win_test:
 	cl libtest.cc
 
 clean:
-	rm -rf mylib.so libtest
+	rm -rf libmylib.so libtest

@@ -28,10 +28,10 @@ import os
 
 #load library
 if (os.name=='posix'):
-    path = os.path.abspath('gemm_lib.so')
+    path = os.path.abspath('libgemm_lib.so')
     mx.library.load(path)
 elif (os.name=='nt'):
-    path = os.path.abspath('gemm_lib.so')
+    path = os.path.abspath('libgemm_lib.dll')
     mx.library.load(path)
 
 #setup inputs to call test operator
