@@ -221,7 +221,7 @@ class DeformableConvolution(HybridBlock):
                         **self._kwargs_deformable_conv)
 
 
-class ModulatedDeformableConvolution(HybridBlock):
+class ModulatedDeformableConvolution(DeformableConvolution):
     """2-D Deformable Convolution v2 (Dai, 2018).
 
     The modulated deformable convolution operation is described in https://arxiv.org/abs/1811.11168
