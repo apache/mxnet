@@ -117,7 +117,7 @@ def prepare_op_inputs(op, arg_params):
     inputs = []
 
     # 4d tensor is needed only by following two ops
-    ops_4d = ['depth_to_space','space_to_depth']
+    ops_4d = ['depth_to_space', 'space_to_depth']
 
     # Prepare op to default input mapping
     arg_values = {}

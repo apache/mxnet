@@ -24,7 +24,7 @@ from .ndarray_utils import get_mx_ndarray, nd_forward_and_profile, nd_forward_ba
 from .common_utils import merge_map_list
 from .op_registry_utils import prepare_op_inputs
 from benchmark.opperf.rules.default_params import PARAMS_OF_TYPE_NDARRAY
-from .profiler_utils import cpp_profile,python_profile
+from .profiler_utils import cpp_profile, python_profile
 
 
 def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
@@ -35,7 +35,7 @@ def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
     for inp in inputs:
         kwargs = {}
         for key, value in inp.items():
-            if key in PARAMS_OF_TYPE_NDARRAY and key=='args':
+            if key in PARAMS_OF_TYPE_NDARRAY and key =='args':
                 args_list.append(get_mx_ndarray(ctx=ctx, in_tensor=value,
                                                 dtype=dtype,
                                                 initializer=nd.normal,
@@ -82,7 +82,7 @@ def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, ar
             profiler_output["inputs"] = inputs[idx]
             op_benchmark_result[op.__name__].append(profiler_output)
     else:
-        for idx, (args,kwargs) in enumerate(zip(args_list,kwargs_list)):
+        for idx, (args, kwargs) in enumerate(zip(args_list, kwargs_list)):
             _, profiler_output = benchmark_helper_func(op, runs, args, **kwargs)
 
             # Add inputs used for profiling this operator into result
