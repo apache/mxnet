@@ -300,7 +300,7 @@ class ModulatedDeformableConvolution(HybridBlock):
         super(ModulatedDeformableConvolution, self).__init__(
             channels=channels, kernel_size=kernel_size, strides=strides, padding=padding, dilation=dilation,
             groups=groups, num_deformable_group=num_deformable_group, layout=layout, use_bias=use_bias,
-            in_channels=in_channels, activation=activation, 
+            in_channels=in_channels, activation=activation,
             weight_initializer=weight_initializer, bias_initializer=bias_initializer,
             offset_weight_initializer=offset_weight_initializer, offset_bias_initializer=offset_bias_initializer,
             offset_use_bias=offset_use_bias, op_name=op_name, adj=adj, prefix=prefix, params=params)
@@ -317,11 +317,11 @@ class ModulatedDeformableConvolution(HybridBlock):
         mask = F.sigmoid(mask) * 2
 
         if deformable_conv_bias is None:
-            act = F.contrib.ModulatedDeformableConvolution(data=x, offset=offset_t, mask=mask, 
+            act = F.contrib.ModulatedDeformableConvolution(data=x, offset=offset_t, mask=mask,
                                                            weight=deformable_conv_weight,
                                                            name='fwd', **self._kwargs_deformable_conv)
         else:
-            act = F.contrib.ModulatedDeformableConvolution(data=x, offset=offset_t, mask=mask, 
+            act = F.contrib.ModulatedDeformableConvolution(data=x, offset=offset_t, mask=mask,
                                                            weight=deformable_conv_weight,
                                                            bias=deformable_conv_bias, name='fwd',
                                                            **self._kwargs_deformable_conv)
