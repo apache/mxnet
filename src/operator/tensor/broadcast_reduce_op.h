@@ -562,8 +562,7 @@ using namespace mshadow_op::isnan_typed;
 // Type of memory used for indices storage
 typedef enum {
   int64_st,
-  uint32_st,
-  uint16_st,
+  int32_st,
   undefined_st
 } idxStorageType;
 
@@ -612,13 +611,12 @@ struct argmax {
       maxIdx = maxIdx * nWorkers + iw;
       switch (storageType) {
         case int64_st:
-          *(static_cast<index_t *>(pIdxStorage) + i) = maxIdx;
+          *(static_cast<int64_t *>(pIdxStorage) + i) = maxIdx;
           break;
-        case uint32_st:
-          *(static_cast<uint32_t *>(pIdxStorage) + i) = maxIdx;
+        case int32_st:
+          *(static_cast<int32_t *>(pIdxStorage) + i) = maxIdx;
           break;
-        default:  // uint16_st
-          *(static_cast<uint16_t *>(pIdxStorage) + i) = maxIdx;
+        default: break;   // this should not happen
       }
     } else {
       out_data[i] = static_cast<DType>(maxIdx);    // output of argmax
@@ -661,11 +659,8 @@ struct argmax_reduce {
       case int64_st:
         out_data[i] = BestIdx(nWorkers, pCurr, step, static_cast<index_t *>(pIdx) + i * nWorkers);
         break;
-      case uint32_st:
-        out_data[i] = BestIdx(nWorkers, pCurr, step, static_cast<uint32_t *>(pIdx) + i * nWorkers);
-        break;
-      case uint16_st:
-        out_data[i] = BestIdx(nWorkers, pCurr, step, static_cast<uint16_t *>(pIdx) + i * nWorkers);
+      case int32_st:
+        out_data[i] = BestIdx(nWorkers, pCurr, step, static_cast<int32_t *>(pIdx) + i * nWorkers);
         break;
       default: break;  // That should never have happened
     }
@@ -751,18 +746,10 @@ void ArgMax(const nnvm::NodeAttrs& attrs,
       break;
     }
 #endif
-    if (shape[axis] <= UINT32_MAX) {
+    if (shape[axis] <= INT32_MAX) {
       pIdxMemory = AllocateDTypeMemory<xpu, uint32_t>(ctx, num_items);
       if (pIdxMemory) {
-        storageType = uint32_st;
-        break;
-      }
-    }
-    // Check if indexes can be stored in uint16 format
-    if (shape[axis] <= UINT16_MAX) {
-      pIdxMemory = AllocateDTypeMemory<xpu, uint16_t>(ctx, num_items);
-      if (pIdxMemory) {
-        storageType = uint16_st;
+        storageType = int32_st;
         break;
       }
     }
