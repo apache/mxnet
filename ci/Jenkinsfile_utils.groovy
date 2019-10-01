@@ -135,7 +135,11 @@ def collect_test_results_unix(original_file_name, new_file_name) {
         sh 'cp ' + original_file_name + ' ' + new_file_name
         archiveArtifacts artifacts: new_file_name
         if (env.BRANCH_NAME == "master") {
-          s3Upload(file:new_file_name, bucket:env.MXNET_CI_UNITTEST_ARTIFACT_BUCKET, path:utils.get_git_commit_hash().trim()+"-"+env.BUILD_TAG+"/"+new_file_name)
+          try {
+            s3Upload(file:new_file_name, bucket:env.MXNET_CI_UNITTEST_ARTIFACT_BUCKET, path:utils.get_git_commit_hash().trim()+"-"+env.BUILD_TAG+"/"+new_file_name)
+          } catch (Exception e) {
+            sh "S3 Upload failed ${e}"
+          }
         }
     }
 }
@@ -147,7 +151,11 @@ def collect_test_results_windows(original_file_name, new_file_name) {
         bat 'xcopy ' + original_file_name + ' ' + new_file_name + '*'
         archiveArtifacts artifacts: new_file_name
         if (env.BRANCH_NAME == "master") {
-          s3Upload(file:new_file_name, bucket:env.MXNET_CI_UNITTEST_ARTIFACT_BUCKET, path:utils.get_git_commit_hash().trim()+"-"+env.BUILD_TAG+"/"+new_file_name)
+          try {
+            s3Upload(file:new_file_name, bucket:env.MXNET_CI_UNITTEST_ARTIFACT_BUCKET, path:utils.get_git_commit_hash().trim()+"-"+env.BUILD_TAG+"/"+new_file_name)
+          } catch (Exception e) {
+            sh "S3 Upload failed ${e}"
+          }
         }
     }
 }
