@@ -20,89 +20,108 @@ import numpy as np
 from itertools import product
 import copy
 
-from mxnet.test_utils import assert_almost_equal
+from mxnet.test_utils import assert_allclose
+
+import sys
+import os
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(curr_path, '../unittest'))
+from common import setup_module, with_seed
 
 def check_unsupported_single_sym(sym):
     wrapped_sym = mx.sym.Group([mx.sym.identity(s) for s in sym])
     trt_sym = wrapped_sym.get_backend_symbol('TensorRT')
     assert len(wrapped_sym.get_internals()) == len(trt_sym.get_internals())
 
-def check_single_sym(sym, arg_params_shapes=None, aux_params_shapes=None,
+def check_single_sym(sym, data_shapes, arg_params_shapes=None, aux_params_shapes=None,
                      rtol_fp32=1e-5, atol_fp32=0., rtol_fp16=1e-3, atol_fp16=0.):
     if arg_params_shapes is None:
         arg_params_shapes = {}
     if aux_params_shapes is None:
         aux_params_shapes = {}
     for i in range(3):
-        arg_params = {k: mx.nd.array(np.random.rand(*v), dtype='float32', ctx=mx.cpu())
+        data = {k: mx.nd.array(np.random.rand(*v) + 0.01, dtype='float32', ctx=mx.cpu())
+                for k, v in data_shapes.items()}
+        arg_params = {k: mx.nd.array(np.random.rand(*v) + 0.01, dtype='float32', ctx=mx.cpu())
                       for k, v in arg_params_shapes.items()}
-        aux_params = {k: mx.nd.array(np.random.rand(*v), dtype='float32', ctx=mx.cpu())
+        aux_params = {k: mx.nd.array(np.random.rand(*v) + 0.01, dtype='float32', ctx=mx.cpu())
                       for k, v in aux_params_shapes.items()}
         wrapped_sym = mx.sym.Group([mx.sym.identity(s) for s in sym])
+
+        # Test FP32 MXNet Native
         shapes = {}
+        shapes.update(data_shapes)
         shapes.update(arg_params_shapes)
         shapes.update(aux_params_shapes)
         orig_executor = wrapped_sym.simple_bind(ctx=mx.gpu(0), **shapes, grad_req='null',
                                                 force_rebind=True)
         orig_executor.copy_params_from(arg_params, aux_params)
-        orig_executor.forward(is_train=False)
+        orig_executor.forward(**data, is_train=False)
         orig_outputs = [arr.asnumpy() for arr in orig_executor.outputs]
 
+        # Test FP32 MXNet-TRT
+        mx.contrib.tensorrt.set_use_fp16(False)
         trt_sym = wrapped_sym.get_backend_symbol('TensorRT')
         assert len(trt_sym.get_internals()) < len(wrapped_sym.get_internals())
         remaining_arg_params, remaining_aux_params = \
             mx.contrib.tensorrt.init_tensorrt_params(trt_sym, arg_params, aux_params)
-        shapes = {k: v.shape for k, v in remaining_arg_params.items()}
+        shapes = {}
+        shapes.update(data_shapes)
+        shapes.update({k: v.shape for k, v in remaining_arg_params.items()})
         shapes.update({k: v.shape for k, v in remaining_aux_params.items()})
-        fp16_type_dict = {k: 'float16' for k in shapes.keys()}
-
-        mx.contrib.tensorrt.set_use_fp16(True)
-        remaining_fp16_arg_params = {k: v.astype('float16')
-                                     for k, v in remaining_arg_params.items()}
-        remaining_fp16_aux_params = {k: v.astype('float16')
-                                     for k, v in remaining_aux_params.items()}
-        trt_fp16_executor = trt_sym.simple_bind(ctx=mx.gpu(0), **shapes, grad_req='null',
-                                                type_dict=fp16_type_dict, force_rebind=True)
-        trt_fp16_executor.copy_params_from(remaining_fp16_arg_params, remaining_fp16_aux_params)
-        trt_fp16_executor.forward(is_train=False)
-        trt_fp16_outputs = [arr.asnumpy() for arr in trt_fp16_executor.outputs]
-        mx.contrib.tensorrt.set_use_fp16(False)
-        trt_fp32_executor = trt_sym.simple_bind(ctx=mx.gpu(0), **shapes, grad_req='null',
-                                                force_rebind=True)
+        trt_fp32_executor = trt_sym.simple_bind(ctx=mx.gpu(0), **shapes,
+                                                grad_req='null', force_rebind=True)
         trt_fp32_executor.copy_params_from(remaining_arg_params, remaining_aux_params)
-        trt_fp32_executor.forward(is_train=False)
-
+        trt_fp32_executor.forward(**data, is_train=False)
         trt_fp32_outputs = [arr.asnumpy() for arr in trt_fp32_executor.outputs]
-        for j, (orig, fp16, fp32) in enumerate(zip(orig_outputs, trt_fp16_outputs, trt_fp32_outputs)):
-            assert_almost_equal(fp32, orig, rtol=rtol_fp32, atol=atol_fp32)
-            assert_almost_equal(fp16.astype('float32'), orig, rtol=rtol_fp16, atol=atol_fp16)
 
+        # Test FP16 MXNet-TRT
+        mx.contrib.tensorrt.set_use_fp16(True)
+        data = {k: v.astype('float16') for k, v in data.items()}
+        arg_params = {k: v.astype('float16') for k, v in arg_params.items()}
+        aux_params = {k: v.astype('float16') for k, v in aux_params.items()}
+        trt_sym = wrapped_sym.get_backend_symbol('TensorRT')
+        assert len(trt_sym.get_internals()) < len(wrapped_sym.get_internals())
+        remaining_arg_params, remaining_aux_params = \
+            mx.contrib.tensorrt.init_tensorrt_params(trt_sym, arg_params, aux_params)
+        shapes = {}
+        shapes.update(data_shapes)
+        shapes.update({k: v.shape for k, v in remaining_arg_params.items()})
+        shapes.update({k: v.shape for k, v in remaining_aux_params.items()})
+
+        trt_fp16_executor = trt_sym.simple_bind(ctx=mx.gpu(0), **shapes,
+                                                type_dict={k: 'float16' for k in shapes.keys()},
+                                                grad_req='null', force_rebind=True)
+        trt_fp16_executor.copy_params_from(remaining_arg_params, remaining_aux_params)
+        trt_fp16_executor.forward(**data, is_train=False)
+        trt_fp16_outputs = [arr.asnumpy() for arr in trt_fp16_executor.outputs]
+
+        for j, (orig, fp16, fp32) in enumerate(zip(orig_outputs, trt_fp16_outputs, trt_fp32_outputs)):
+            abs_orig = abs(orig)
+            diff32 = abs(fp32 - orig)
+            diff16 = abs(fp16.astype('float32') - orig)
+            _atol32 = diff32 - rtol_fp32 * abs_orig
+            _atol16 = diff16 - rtol_fp16 * abs_orig
+            print("{}: diff32({:.2E}) | diff16({:.2E}) | atol32({:.2E}) | atol16({:.2E}) | orig.min({:.2E})".format(
+                  j, diff32.max(), diff16.max(), _atol32.max(), _atol16.max(), abs_orig.min()))
+            assert_allclose(fp32, orig, rtol=rtol_fp32, atol=atol_fp32)
+            assert_allclose(fp16, orig, rtol=rtol_fp16, atol=atol_fp16)
+
+@with_seed()
 def test_noop():
     data = mx.sym.Variable('data')
     check_unsupported_single_sym(data)
 
+
+@with_seed()
 def test_identity():
     data = mx.sym.Variable('data')
     sym = mx.sym.identity(data)
-    check_single_sym(sym, arg_params_shapes={'data': (8,3,32,32)},
+    check_single_sym(sym, data_shapes={'data': (8,3,32,32)},
                      rtol_fp32=0., atol_fp32=0., rtol_fp16=1e-3, atol_fp16=1e-7)
 
-def test_fp16():
-    data = mx.sym.Variable('data')
-    sym = mx.sym.identity(data)
-    sym = mx.sym.identity(sym)
-    input_shape = (4,3,32,32)
-    arr = np.random.rand(*input_shape).astype('float16')
-    arg_params = {'data': mx.nd.array(arr, dtype='float16')}
-    trt_sym = sym.get_backend_symbol('TensorRT')
-    mx.contrib.tensorrt.init_tensorrt_params(trt_sym, arg_params, {})
-    executor = trt_sym.simple_bind(ctx=mx.gpu(0), grad_req='null', data=input_shape,
-                                   type_dict={'data': 'float16'})
-    executor.copy_params_from(arg_params, {})
-    executor.forward(is_train=False)
-    outputs = executor.outputs[0].asnumpy()
-    assert_almost_equal(outputs, arr, rtol=0., atol=0.)
 
+@with_seed()
 def test_convolution2d():
     data = mx.sym.Variable('data')
     weight = mx.sym.Variable('weight')
@@ -116,13 +135,13 @@ def test_convolution2d():
             if kernel == (3, 3) and stride == (1, 1):
                 atol_fp32 = 0.
                 rtol_fp32 = 1e-5
-                atol_fp16 = 0
-                rtol_fp16 = 5e-3
+                atol_fp16 = 0.
+                rtol_fp16 = 1e-2
             else:
                 atol_fp32 = 0.
                 rtol_fp32 = 0.
                 atol_fp16 = 0.
-                rtol_fp16 = 5e-3
+                rtol_fp16 = 1e-2
             for pad in [(1, 1), (0, 0), (1, 0)]:
                 for group in [1, 2]:
                     for layout in ['NCHW', 'NHWC']:
@@ -134,9 +153,8 @@ def test_convolution2d():
                         if layout == 'NCHW':
                             print("kernel: {} | stride: {} | pad: {} | group: {} | layout: {} | with_bias".format(
                                   kernel, stride, pad, group, layout))
-                            check_single_sym(sym, {'data': data_shape,
-                                                   'weight': weight_shape,
-                                                   'bias': bias_shape},
+                            check_single_sym(sym, {'data': data_shape},
+                                             {'weight': weight_shape, 'bias': bias_shape},
                                              rtol_fp32=rtol_fp32, atol_fp32=atol_fp32,
                                              rtol_fp16=rtol_fp16, atol_fp16=atol_fp16)
                         else:
@@ -147,7 +165,8 @@ def test_convolution2d():
                         if layout == 'NCHW':
                             print("kernel: {} | stride: {} | pad: {} | group: {} | layout: {} | without_bias".format(
                                   kernel, stride, pad, group, layout))
-                            check_single_sym(sym, {'data': data_shape, 'weight': weight_shape},
+                            check_single_sym(sym, {'data': data_shape},
+                                             {'weight': weight_shape},
                                              rtol_fp32=rtol_fp32, atol_fp32=atol_fp32,
                                              rtol_fp16=rtol_fp16, atol_fp16=atol_fp16)
                         else:
@@ -215,18 +234,22 @@ def test_fully_connected(): # TODO(cfujitsang): take care of flatten option
     bias_shape = (num_hidden,)
     sym = mx.sym.FullyConnected(data, weight=weight, bias=bias, no_bias=False,
                                 num_hidden=num_hidden)
-    check_single_sym(sym, {'data': data_shape, 'weight': weight_shape, 'bias': bias_shape},
+    check_single_sym(sym, {'data': data_shape}, {'weight': weight_shape, 'bias': bias_shape},
                      rtol_fp16=5e-3, atol_fp16=0.)
     sym = mx.sym.FullyConnected(data, weight=weight, no_bias=True, num_hidden=num_hidden)
     check_unsupported_single_sym(sym)
 
+
+@with_seed()
 def test_relu():
     data = mx.sym.Variable('data')
     sym = mx.sym.relu(data)
-    for data_shape in [(10, 32), (10, 3, 32), (10, 3, 32, 32), (10,3,7,32,32)]:
+    for data_shape in [(10, 32), (10, 3, 32), (10, 3, 32, 32), (10, 3, 7, 32, 32)]:
         check_single_sym(sym, {'data': data_shape}, rtol_fp32=0., atol_fp32=0.,
                          rtol_fp16=1e-3, atol_fp16=1e-7)
 
+
+@with_seed()
 def test_activation():
     data = mx.sym.Variable('data')
     for act_type in ['relu', 'sigmoid', 'tanh']:
@@ -238,6 +261,8 @@ def test_activation():
         sym = mx.sym.Activation(data, act_type=act_type)
         check_unsupported_single_sym(sym)
 
+
+@with_seed()
 def test_pooling2d():
     data = mx.sym.Variable('data')
     data_shape = (4, 3, 32,32)
@@ -290,6 +315,8 @@ def test_pooling2d():
                 check_single_sym(sym, {'data': data_shape}, rtol_fp32=rtol_fp32,
                                  atol_fp32=atol_fp32, rtol_fp16=rtol_fp16, atol_fp16=atol_fp16)
 
+
+@with_seed()
 def test_softmax_output():
     data = mx.sym.Variable('data')
     label = mx.sym.Variable('label')
@@ -303,16 +330,19 @@ def test_softmax_output():
                      rtol_fp32=1e-6, atol_fp32=0., rtol_fp16=5e-3, atol_fp16=0.)
 
 
-def check_batch_norm(sym, arg_params_shapes=None, aux_params_shapes=None,
+
+def check_batch_norm(sym, data_shapes, arg_params_shapes=None, aux_params_shapes=None,
                      rtol_fp32=1e-5, atol_fp32=1e-7, rtol_fp16=1e-2, atol_fp16=1e-3):
     if arg_params_shapes is None:
         arg_params_shapes = {}
     if aux_params_shapes is None:
         aux_params_shapes = {}
     for i in range(3):
+        data = {
+            'data': mx.nd.array(np.random.rand(*data_shapes['data']) + 0.01,
+                                dtype='float32', ctx=mx.cpu())
+        }
         arg_params = {
-            'data': mx.nd.array(np.random.rand(*arg_params_shapes['data']),
-                                dtype='float32', ctx=mx.cpu()),
             'gamma': mx.nd.array(np.random.rand(*arg_params_shapes['gamma']) * 0.1 + 1.,
                                  dtype='float32', ctx=mx.cpu()),
             'beta': mx.nd.array(np.random.rand(*arg_params_shapes['beta']),
@@ -320,52 +350,76 @@ def check_batch_norm(sym, arg_params_shapes=None, aux_params_shapes=None,
         }
         aux_params = {
             'moving_mean': mx.nd.array(
-                0.45 + np.random.rand(*aux_params_shapes['moving_mean']) * 0.1,
+                0.45 + np.random.rand(*aux_params_shapes['moving_mean']) * 0.1 + 0.01,
                                       dtype='float32', ctx=mx.cpu()),
             'moving_var': mx.nd.array(
                 0.95 + np.random.rand(*aux_params_shapes['moving_var']) * 0.1,
                                       dtype='float32', ctx=mx.cpu())
         }
         wrapped_sym = mx.sym.Group([mx.sym.identity(s) for s in sym])
+
+        # Test FP32 MXNet Native
         shapes = {}
+        shapes.update(data_shapes)
         shapes.update(arg_params_shapes)
         shapes.update(aux_params_shapes)
         orig_executor = wrapped_sym.simple_bind(ctx=mx.gpu(0), **shapes, grad_req='null',
                                                 force_rebind=True)
         orig_executor.copy_params_from(arg_params, aux_params)
-        orig_executor.forward(is_train=False)
+        orig_executor.forward(**data, is_train=False)
         orig_outputs = [arr.asnumpy() for arr in orig_executor.outputs]
 
+        # Test FP32 MXNet-TRT
+        mx.contrib.tensorrt.set_use_fp16(False)
         trt_sym = wrapped_sym.get_backend_symbol('TensorRT')
         assert len(trt_sym.get_internals()) < len(wrapped_sym.get_internals())
         remaining_arg_params, remaining_aux_params = \
             mx.contrib.tensorrt.init_tensorrt_params(trt_sym, arg_params, aux_params)
-        shapes = {k: v.shape for k, v in remaining_arg_params.items()}
+        shapes = {}
+        shapes.update(data_shapes)
+        shapes.update({k: v.shape for k, v in remaining_arg_params.items()})
         shapes.update({k: v.shape for k, v in remaining_aux_params.items()})
-        fp16_type_dict = {k: 'float16' for k in shapes.keys()}
-        mx.contrib.tensorrt.set_use_fp16(True)
-        remaining_fp16_arg_params = {k: v.astype('float16')
-                                     for k, v in remaining_arg_params.items()}
-        remaining_fp16_aux_params = {k: v.astype('float16')
-                                     for k, v in remaining_aux_params.items()}
-        trt_fp16_executor = trt_sym.simple_bind(ctx=mx.gpu(0), **shapes, grad_req='null',
-                                                type_dict=fp16_type_dict, force_rebind=True)
-        trt_fp16_executor.copy_params_from(remaining_fp16_arg_params, remaining_fp16_aux_params)
-        trt_fp16_executor.forward(is_train=False)
-        trt_fp16_outputs = [arr.asnumpy() for arr in trt_fp16_executor.outputs]
-        mx.contrib.tensorrt.set_use_fp16(False)
-        trt_fp32_executor = trt_sym.simple_bind(ctx=mx.gpu(0), **shapes, grad_req='null',
-                                                force_rebind=True)
+        trt_fp32_executor = trt_sym.simple_bind(ctx=mx.gpu(0), **shapes,
+                                                grad_req='null', force_rebind=True)
         trt_fp32_executor.copy_params_from(remaining_arg_params, remaining_aux_params)
-        trt_fp32_executor.forward(is_train=False)
-
+        trt_fp32_executor.forward(**data, is_train=False)
         trt_fp32_outputs = [arr.asnumpy() for arr in trt_fp32_executor.outputs]
+
+        # Test FP16 MXNet-TRT
+        mx.contrib.tensorrt.set_use_fp16(True)
+        data = {k: v.astype('float16') for k, v in data.items()}
+        arg_params = {k: v.astype('float32') for k, v in arg_params.items()}
+        aux_params = {k: v.astype('float32') for k, v in aux_params.items()}
+        trt_sym = wrapped_sym.get_backend_symbol('TensorRT')
+        remaining_arg_params, remaining_aux_params = \
+            mx.contrib.tensorrt.init_tensorrt_params(trt_sym, arg_params, aux_params)
+        shapes = {}
+        shapes.update(data_shapes)
+        shapes.update({k: v.shape for k, v in remaining_arg_params.items()})
+        shapes.update({k: v.shape for k, v in remaining_aux_params.items()})
+
+        trt_fp16_executor = trt_sym.simple_bind(ctx=mx.gpu(0), **shapes,
+                                                type_dict={k: 'float16' for k in shapes.keys()},
+                                                grad_req='null', force_rebind=True)
+        trt_fp16_executor.copy_params_from(remaining_arg_params, remaining_aux_params)
+        trt_fp16_executor.forward(**data, is_train=False)
+        trt_fp16_outputs = [arr.asnumpy() for arr in trt_fp16_executor.outputs]
+
+
         for j, (orig, fp16, fp32) in enumerate(zip(orig_outputs,
                                                    trt_fp16_outputs,
                                                    trt_fp32_outputs)):
-            assert_almost_equal(fp32, orig, rtol=rtol_fp32, atol=atol_fp32)
-            assert_almost_equal(fp16.astype('float32'), orig, rtol=rtol_fp16, atol=atol_fp16)
+            abs_orig = abs(orig)
+            diff32 = abs(fp32 - orig)
+            diff16 = abs(fp16.astype('float32') - orig)
+            _atol32 = diff32 - rtol_fp32 * abs_orig
+            _atol16 = diff16 - rtol_fp16 * abs_orig
+            print("{}: diff32({:.2E}) | diff16({:.2E}) | atol32({:.2E}) | atol16({:.2E}) | orig.min({:.2E})".format(
+                  j, diff32.max(), diff16.max(), _atol32.max(), _atol16.max(), abs_orig.min()))
+            assert_allclose(fp32, orig, rtol=rtol_fp32, atol=atol_fp32)
+            assert_allclose(fp16.astype('float32'), orig, rtol=rtol_fp16, atol=atol_fp16)
 
+@with_seed()
 def test_batch_norm():
     data = mx.sym.Variable('data')
     gamma = mx.sym.Variable('gamma')
@@ -385,11 +439,14 @@ def test_batch_norm():
                                        axis=axis, use_global_stats=use_global_stats, eps=1e-5)
                 if axis == 1:
                     check_batch_norm(sym,
-                        {'data': data_shape, 'gamma': gamma_shape, 'beta': beta_shape},
-                        {'moving_mean': moving_mean_shape, 'moving_var': moving_var_shape})
+                        {'data': data_shape}, {'gamma': gamma_shape, 'beta': beta_shape},
+                        {'moving_mean': moving_mean_shape, 'moving_var': moving_var_shape},
+                        atol_fp32=2e-7)
                 else:
                     check_unsupported_single_sym(sym)
 
+
+@with_seed()
 def test_clip():
     data = mx.sym.Variable('data')
     sym = mx.sym.clip(data, 0.25, 0.75)
@@ -398,6 +455,8 @@ def test_clip():
                          rtol_fp32=0., atol_fp32=0.,
                          rtol_fp16=1e-3, atol_fp16=0.)
 
+
+@with_seed()
 def test_concat():
     lhs = mx.sym.Variable('lhs')
     rhs = mx.sym.Variable('rhs')
@@ -411,6 +470,8 @@ def test_concat():
         check_single_sym(sym, {'lhs': lhs_shape, 'rhs': rhs_shape},
                          rtol_fp32=0., atol_fp32=0., rtol_fp16=1e-3, atol_fp16=1e-7)
 
+
+@with_seed()
 def test_elemwise_ops():
     lhs = mx.sym.Variable('lhs')
     rhs = mx.sym.Variable('rhs')
@@ -419,17 +480,17 @@ def test_elemwise_ops():
     sym = mx.sym.elemwise_add(lhs, rhs)
     check_single_sym(sym, {'lhs': shape, 'rhs': shape},
                      rtol_fp32=0., atol_fp32=0.)
+
     sym = mx.sym.elemwise_sub(lhs, rhs)
     # TODO(cfujitsang): is atol_fp16 ok ?
     check_single_sym(sym, {'lhs': shape, 'rhs': shape},
                      rtol_fp32=0., atol_fp32=0., rtol_fp16=1e-3, atol_fp16=1e-3)
+
     sym = mx.sym.elemwise_mul(lhs, rhs)
     check_single_sym(sym, {'lhs': shape, 'rhs': shape},
                      rtol_fp32=0., atol_fp32=0., rtol_fp16=5e-3, atol_fp16=1e-7)
-    # TODO(cfujitsang):
-    #sym = mx.sym.elemwise_div(lhs, rhs)
-    #check_single_sym(sym, {'lhs': shape, 'rhs': shape})
 
+@with_seed()
 def test_flatten():
     data = mx.sym.Variable('data')
     sym = mx.sym.flatten(data)
@@ -437,6 +498,7 @@ def test_flatten():
         check_single_sym(sym, {'data': data_shape},
                          rtol_fp32=0., atol_fp32=0., atol_fp16=1e-7)
 
+@with_seed()
 def test_dropout():
     data = mx.sym.Variable('data')
     for data_shape in [(3, 5), (3, 5, 7), (3, 5, 7, 9)]:
