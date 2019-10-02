@@ -41,12 +41,12 @@ using std::isnan;
 #endif
 
 struct NumpyWindowsParam : public dmlc::Parameter<NumpyWindowsParam> {
-  dmlc::optional<nnvm::dim_t> M;
+  dmlc::optional<int> M;
   std::string ctx;
   int dtype;
   DMLC_DECLARE_PARAMETER(NumpyWindowsParam) {
     DMLC_DECLARE_FIELD(M)
-    .set_default(dmlc::optional<nnvm::dim_t>())
+    .set_default(dmlc::optional<int>())
     .describe("Number of points in the output window. "
               "If zero or less, an empty array is returned.");
     DMLC_DECLARE_FIELD(ctx)
