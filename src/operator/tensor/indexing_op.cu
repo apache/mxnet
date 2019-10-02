@@ -545,13 +545,22 @@ void TakeOpForward<gpu>(const nnvm::NodeAttrs& attrs,
   });
 }
 
-// Returns integer log2(a) rounded up
+/*
+ * \brief returns integer log2(a) rounded up
+ */
 inline int ilog2(unsigned int a) {
   int k = 1;
   while (a >>= 1) k++;
   return k;
 }
 
+/*
+ * \brief finds the lower and upper-bound positions of each unique element within a sorted input array
+ * \param sorted_data input elements previously sorted
+ * \param bounds output containing all lower-bound followed by all upper-bound positions
+ * \param data_dim total number of elements in the input array
+ * \param vocab_dim maximum number of unique elements
+ */
 template <typename IType>
 __global__ void EmbeddingFindBounds ( const IType *sorted_data,
                                       IType *bounds,
@@ -593,14 +602,23 @@ __global__ void EmbeddingFindBounds ( const IType *sorted_data,
   }
 }
 
+/*
+ * \brief kernel to compute gradient of EmbeddingOp
+ * \param grad_in input gradient data
+ * \param original_index reference to the position at original input data for each index
+ * \param index_bounds lower and upper-bounds positions of each unique index
+ * \param grad_out output gradient data
+ * \param embbedding_dim dimension of the dense embedding
+ * \param vocab_dim maximum number of unique indices in the data array: tokens vocabulary size
+ * \param rows_per_block number of grad_in rows to be computed by each block
+ * \param req write/add/null
+ */
 template <typename LType, typename DType, typename IType>
 __global__ void EmbeddingGradKernel(DType *grad_in,
-                                      const IType *sorted_data,
                                       const IType *original_index,
                                       const IType *index_bounds,
                                       const DType *grad_out,
                                       const index_t embbedding_dim,
-                                      const index_t data_dim,
                                       const index_t vocab_dim,
                                       const int rows_per_block,
                                       const int req) {
@@ -680,9 +698,11 @@ void EmbeddingGradKernelCaller(const OpContext& ctx,
   Tensor<gpu, 1, int> sorted_data(reinterpret_cast<int*>(&workspace[pos]),
     Shape1(data_dim), s);
   pos += data_dim * sizeof(int);
+  // Reference to input data positions for each element of sorted_data
   Tensor<gpu, 1, int> original_index(reinterpret_cast<int*>(&workspace[pos]),
     Shape1(data_dim), s);
   pos += data_dim * sizeof(int);
+  // lower and upper bound positions of each index within sorted_data
   Tensor<gpu, 1, int> bounds_index(reinterpret_cast<int*>(&workspace[pos]),
     Shape1(2 * vocab_dim), s);
   pos += 2 * vocab_dim * sizeof(int);
@@ -699,7 +719,7 @@ void EmbeddingGradKernelCaller(const OpContext& ctx,
   int num_bits = ilog2((vocab_dim - 1));
   mxnet::op::SortByKey(sorted_data, original_index, true, &Sort_temp_storage, 0, num_bits);
 
-  // Find lower & upper bounds of each index
+  // Find lower & upper bounds of each possible index
   const int threads_block_bounds = 128;
   const int nblocks_bounds = (vocab_dim + threads_block_bounds - 1) / threads_block_bounds;
   EmbeddingFindBounds<<<nblocks_bounds, threads_block_bounds, 0, Stream<gpu>::GetStream(s)>>>(
@@ -717,9 +737,9 @@ void EmbeddingGradKernelCaller(const OpContext& ctx,
     size_t required_shared = threads_block_grad * sizeof(LType);
     dim3 blocks((vocab_dim + rows_per_block - 1) / rows_per_block, 1);
     EmbeddingGradKernel<LType><<<blocks, threads_block_grad, required_shared, Stream<gpu>::GetStream(s)>>>(
-                  grad_in.dptr_, sorted_data.dptr_, original_index.dptr_,
+                  grad_in.dptr_, original_index.dptr_,
                   bounds_index.dptr_, grad_out.dptr_,
-                  embbedding_dim, data_dim, vocab_dim,
+                  embbedding_dim, vocab_dim,
                   rows_per_block, req[embedding::kWeight]);
   });
 }
