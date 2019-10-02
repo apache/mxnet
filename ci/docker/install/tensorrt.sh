@@ -41,7 +41,7 @@ popd
 
 # Install TensorRT
 echo "TensorRT build enabled. Installing TensorRT."
-iwget -qO tensorrt.deb https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1604/x86_64/libnvinfer5_5.1.5-1+cuda10.0_amd64.deb
+wget -qO tensorrt.deb https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1604/x86_64/libnvinfer5_5.1.5-1+cuda10.0_amd64.deb
 dpkg -i tensorrt.deb
 apt-get update
 apt-get install -y --allow-downgrades libnvinfer5=5.1.5-1+cuda10.0
