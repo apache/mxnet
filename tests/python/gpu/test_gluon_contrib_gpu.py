@@ -76,13 +76,7 @@ def test_ModulatedDeformableConvolution():
         DeformableConvolution(12, kernel_size=(3, 2), strides=1, padding=0, use_bias=False, num_deformable_group=4),
     )
 
-    try:
-        ctx = mx.gpu()
-        _ = mx.nd.array([0], ctx=ctx)
-    except mx.base.MXNetError:
-        print("deformable_convolution only supports GPU")
-        return
-
+    ctx = mx.gpu()
     net.initialize(force_reinit=True, ctx=ctx)
     net.hybridize()
 
