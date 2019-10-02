@@ -24,17 +24,11 @@
 # and checks the end of end computation of custom operator
 
 import mxnet as mx
-import os
+import os, ctypes
 from mxnet.base import _LIB, check_call, mx_uint, c_str, c_str_array, SymbolHandle
-import ctypes
 
-# load library
-if (os.name=='posix'):
-    path = os.path.abspath('subgraph_lib.so')
-    mx.library.load(path)
-elif (os.name=='nt'):
-    path = os.path.abspath('subgraph_lib.so')
-    mx.library.load(path)
+path = os.path.abspath('subgraph_lib.so')
+mx.library.load(path)
 
 a = mx.sym.var('a')
 b = mx.sym.var('b')
@@ -53,9 +47,7 @@ check_call(_LIB.MXBuildSubgraphByOpNames(ret.handle,
 partitioned_sym = mx.sym.Symbol(out)
 json_sym = partitioned_sym.tojson()
 
-mystr = json_sym
 mystr = json_sym.replace("_CachedOp","_custom_subgraph_op")
-
 mysym = mx.sym.load_json(mystr)
 
 exe = mysym.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
