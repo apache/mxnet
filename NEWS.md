@@ -233,7 +233,7 @@ For more details please refer to the [design document](https://cwiki.apache.org/
 
 #### Dependency Update
 MXNet has added support for CUDA 10, CUDA 10.1, cudnn7.5, NCCL 2.4.2, and numpy 1.16.0.
-These updates are available through PyPI packages and build from source, refer to [installation guid](https://mxnet.apache.org/versions/master/install/index.html) for more details.
+These updates are available through PyPI packages and build from source, refer to [installation guide](https://mxnet.apache.org/versions/master/install/index.html) for more details.
 
 #### Gluon Fit API(experimental)
 Training a model in Gluon requires users to write the training loop. This is useful because of its imperative nature, however repeating the same code across multiple models can become tedious and repetitive with boilerplate code. 
