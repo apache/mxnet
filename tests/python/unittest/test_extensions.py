@@ -74,13 +74,13 @@ def test_custom_op():
     out2 = exe2.forward()  # stateful
     out_base = exe_base.forward()
 
-    assert_almost_equal(out_base[0].asnumpy(), out1[0].asnumpy())
-    assert_almost_equal(out_base[0].asnumpy(), out2[0].asnumpy())
+    assert_almost_equal(out_base[0].asnumpy(), out1[0].asnumpy(), rtol=1e-3, atol=1e-3)
+    assert_almost_equal(out_base[0].asnumpy(), out2[0].asnumpy(), rtol=1e-3, atol=1e-3)
 
     out_grad = mx.nd.ones((dim_n, dim_m))
     exe1.backward([out_grad])
     exe2.backward([out_grad])
     exe_base.backward([out_grad])
 
-    assert_almost_equal(in_grad_base[0].asnumpy(), in_grad1[0].asnumpy())
-    assert_almost_equal(in_grad_base[0].asnumpy(), in_grad2[0].asnumpy())
+    assert_almost_equal(in_grad_base[0].asnumpy(), in_grad1[0].asnumpy(), rtol=1e-3, atol=1e-3)
+    assert_almost_equal(in_grad_base[0].asnumpy(), in_grad2[0].asnumpy(), rtol=1e-3, atol=1e-3)
