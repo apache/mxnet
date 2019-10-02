@@ -2839,6 +2839,7 @@ def test_transpose():
             y = mx.nd.transpose(x)
             assert_allclose(np.transpose(x.asnumpy()), y.asnumpy())
 
+
 @with_seed()
 def test_pseudo2dtranspose():
     def getTwoInts(mn, mx):
@@ -2860,6 +2861,23 @@ def test_pseudo2dtranspose():
                 x = mx.nd.array(np.random.normal(size=dims), dtype=dt)
                 y = mx.nd.transpose(x, axes=axes)
                 assert_allclose(np.transpose(x.asnumpy(), axes=axes), y.asnumpy())
+
+import sys
+@with_seed()
+def test_big_transpose():
+    n = [1]
+    d = list(np.random.randint(132, 160, size=1))
+    hw = list(np.random.randint(256, 320, size=2))
+    c = [10]
+    dims = n + d + hw + c
+    axes = (0,4,1,2,3)
+    x_np = np.random.normal(size=dims).astype('uint8')
+    x = mx.nd.array(x_np, dtype='uint8')
+    y = mx.nd.transpose(x, axes=axes)
+    assert_allclose(np.transpose(x_np, axes=axes), y.asnumpy().astype('uint8'))
+    axes = (0,2,3,4,1)
+    z = mx.nd.transpose(y, axes=axes)
+    assert_allclose(x_np, z.asnumpy().astype('uint8'))
 
 
 @with_seed()
