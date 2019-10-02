@@ -668,20 +668,9 @@ cpplint:
 pylint:
 	python3 -m pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py
 
-# sample lib for dynamically loading custom operator
+# sample lib for MXNet extension dynamically loading custom operator
 sample_lib:
-	$(CXX) -shared -fPIC -std=gnu++0x example/lib_ops/gemm_lib.cc -o libsample_lib.so -I include/mxnet
-
-doc: docs
-
-docs:
-	make -C docs html
-
-clean_docs:
-	make -C docs clean
-
-doxygen:
-	doxygen docs/Doxyfile
+	$(CXX) -shared -fPIC -std=gnu++0x example/mxnet_extension/lib_custom_op/gemm_lib.cc -o libsample_lib.so -I include/mxnet
 
 # Cython build
 cython:

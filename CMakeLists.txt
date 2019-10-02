@@ -693,7 +693,7 @@ else()
 
 endif()
 
-add_library(sample_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/lib_ops/gemm_lib.cc)
+add_library(sample_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/mxnet_extension/lib_custom_op/gemm_lib.cc)
 target_include_directories(sample_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
 set(MXNET_INSTALL_TARGETS mxnet)
 if(UNIX)

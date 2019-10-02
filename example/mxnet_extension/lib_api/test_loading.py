@@ -21,43 +21,13 @@
 # pylint: disable=arguments-differ
 
 # This test checks if dynamic loading of library into MXNet is successful
-# and checks the end of end computation of custom operator
 
 import mxnet as mx
 import os
-from mxnet.base import _LIB, check_call, mx_uint, c_str, c_str_array, SymbolHandle
-import ctypes
 
-# load library
 if (os.name=='posix'):
-    path = os.path.abspath('libsubgraph_lib.so')
+    path = os.path.abspath('libinit_lib.so')
     mx.library.load(path)
 elif (os.name=='nt'):
-    path = os.path.abspath('libsubgraph_lib.dll')
+    path = os.path.abspath('libinit_lib.dll')
     mx.library.load(path)
-
-a = mx.sym.var('a')
-b = mx.sym.var('b')
-c = a + b
-d = mx.sym.exp(c)
-ret = mx.sym.log(d)
-
-op_names = ['exp','log']
-out = SymbolHandle()
-
-check_call(_LIB.MXBuildSubgraphByOpNames(ret.handle,
-                                         c_str('default'),
-                                         mx_uint(len(op_names)),
-                                         c_str_array(op_names),
-                                         ctypes.byref(out)))
-partitioned_sym = mx.sym.Symbol(out)
-json_sym = partitioned_sym.tojson()
-
-mystr = json_sym
-mystr = json_sym.replace("_CachedOp","_custom_subgraph_op")
-
-mysym = mx.sym.load_json(mystr)
-
-exe = mysym.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
-out = exe.forward()
-print(out)

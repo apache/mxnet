@@ -20,8 +20,7 @@
 /*!
  * Copyright (c) 2019 by Contributors
  * \file subgraph_lib.cc
- * \brief subgraph operator implementation
- * library file
+ * \brief subgraph operator implementation library file
  */
 
 #include <iostream>
@@ -32,9 +31,9 @@ MXReturnValue parseAttrs(std::map<std::string, std::string> attrs,
   *num_in = 1;
   *num_out = 1;
   if (attrs.count(SUBGRAPH_SYM_JSON)) {
-    std::string serialized_subgraph = attrs[SUBGRAPH_SYM_JSON];
+    // example of subgraph json parsing
     Json_Parser jp;
-    json_val val = jp.parse_to_json(serialized_subgraph);
+    json_val val = jp.parse_to_json(attrs[SUBGRAPH_SYM_JSON]);
     int input = 0;
     for (auto &item : val.map[json_val("nodes")].list) {
       if (item.map[json_val("op")].str == "null")
@@ -68,7 +67,7 @@ class MyStatefulOp : public CustomStatefulOp {
   MXReturnValue Forward(std::vector<MXTensor> inputs,
                         std::vector<MXTensor> outputs,
                         OpResource op_res) {
-    std::cout << "subgraph " << subgraph_sym << " forwarding" << std::endl;
+    std::cout << "Info: subgraph symbol is: " << subgraph_sym << std::endl;
     float* in_data = inputs[0].getData<float>();
     float* out_data = outputs[0].getData<float>();
     for (int i = 0; i < inputs[0].getDataSize(); i++) {
@@ -87,10 +86,11 @@ MXReturnValue createOpState(std::map<std::string, std::string> attrs,
   // MXNet subgraph is stored as Symbol in operator node attrs subgraphs field
   // custom subgraph is stored as json string in custom operator attrs map entry
   if (attrs.count(SUBGRAPH_SYM_JSON)) {
+    // user can now parse json and run other custom ops inside subgraph
     serialized_subgraph = attrs[SUBGRAPH_SYM_JSON];
   }
   *op_inst = new MyStatefulOp(serialized_subgraph);
-  std::cout << "create op state successful" << std::endl;
+  std::cout << "Info: create op state successful" << std::endl;
   return MX_SUCCESS;
 }
 

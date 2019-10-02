@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2019 by Contributors
  * \file gemm_lib.cc
- * \brief Sample custom operator implementation library file
+ * \brief Sample 2D gemm custom operator implementation library file
  */
 
 #include <iostream>
@@ -41,9 +41,9 @@ void gemm(float* A, float* B, float* C, unsigned n, unsigned k, unsigned m) {
 
 void transpose(float* A, float* At, unsigned n, unsigned m) {
   unsigned i, j;
-  for (i=0; i < n; i++) {
-    for (j=0; j < m; j++) {
-      At[i*n+j] = A[j*m+i];
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < m; j++) {
+      At[i*m+j] = A[j*n+i];
     }
   }
 }
@@ -74,7 +74,6 @@ MXReturnValue forward(std::map<std::string, std::string> attrs,
   unsigned m = inputs[1].shape[1];
 
   gemm(A, B, C, n, k, m);
-
   return MX_SUCCESS;
 }
 
@@ -112,19 +111,16 @@ MXReturnValue backward(std::map<std::string, std::string> attrs,
   unsigned k = inputs[1].shape[1];
   unsigned m = inputs[2].shape[1];
 
-  std::cout << "n: " << n << " k: " << k << " m: " << m << std::endl;
+  float *At = new float[k*n];
+  float *Bt = new float[m*k];
 
-  float *At = new float[n*k];
-  float *Bt = new float[k*m];
+  transpose(A, At, k, n);
+  transpose(B, Bt, m, k);
+  gemm(dC, Bt, dA, n, m, k);
+  gemm(At, dC, dB, k, n, m);
 
-  transpose(A, At, n, k);
-  transpose(B, Bt, k, m);
-
-  gemm(dC, Bt, dA, n, k, m);
-  gemm(At, dC, dB, n, k, m);
-
-  free(At);
-  free(Bt);
+  delete[] At;
+  delete[] Bt;
   return MX_SUCCESS;
 }
 
@@ -148,10 +144,6 @@ MXReturnValue inferType(std::map<std::string, std::string> attrs,
   }
 
   outtypes[0] = intypes[0];
-
-  std::cout << "intypes[0]=" << intypes[0] << "  outtypes[0]=" << outtypes[0] << std::endl;
-  std::cout << "intypes=" << intypes.size() << "  outtypes=" << outtypes.size() << std::endl;
-
   return MX_SUCCESS;
 }
 
@@ -176,15 +168,13 @@ MXReturnValue inferShape(std::map<std::string, std::string> attrs,
   unsigned k = inshapes[0][1];
   unsigned kk = inshapes[1][0];
   unsigned m = inshapes[1][1];
-  if (k != kk)
+  if (k != kk) {
+    std::cout << "Exected first input axis 1 equals to second input axis 0" << std::endl;
     return MX_FAIL;
-
-  std::cout << "inshapes[0][0]=" << n << "  inshapes[0][1]=" << k << std::endl;
-  std::cout << "inshapes[1][0]=" << kk << "  inshapes[1][1]=" << m << std::endl;
+  }
 
   outshapes[0].push_back(n);
   outshapes[0].push_back(m);
-
   return MX_SUCCESS;
 }
 
@@ -206,7 +196,7 @@ class MyStatefulGemm : public CustomStatefulOp {
                         OpResource op_res) {
     int* p = static_cast<int*>(op_res.alloc(sizeof(int)));
     *p = ++count;
-    std::cout << "Op resource testing: " << *p << std::endl;
+    std::cout << "Info: op resource testing: " << *p << std::endl;
 
     std::map<std::string, std::string> attrs;
     return forward(attrs, inputs, outputs, op_res);
@@ -228,14 +218,13 @@ class MyStatefulGemm : public CustomStatefulOp {
 MXReturnValue createOpState(std::map<std::string, std::string> attrs,
                             CustomStatefulOp** op_inst) {
   *op_inst = new MyStatefulGemm(58);
-  std::cout << "create op state successful" << std::endl;
+  std::cout << "Info: create op state successful" << std::endl;
   return MX_SUCCESS;
 }
 
 MXReturnValue mutateInputs(std::map<std::string, std::string> attrs,
                            std::vector<int> &input_indices) {
-  // input_indices.push_back(1);
-  // std::cout << "the 1st input is marked as mutate input by library author" << std::endl;
+  // input_indices.push_back(1);  // mark mutate input
   return MX_SUCCESS;
 }
 
