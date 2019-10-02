@@ -27,8 +27,13 @@ import mxnet as mx
 import os, ctypes
 from mxnet.base import _LIB, check_call, mx_uint, c_str, c_str_array, SymbolHandle
 
-path = os.path.abspath('subgraph_lib.so')
-mx.library.load(path)
+# load library
+if (os.name=='posix'):
+    path = os.path.abspath('libsubgraph_lib.so')
+    mx.library.load(path)
+elif (os.name=='nt'):
+    path = os.path.abspath('libsubgraph_lib.dll')
+    mx.library.load(path)
 
 a = mx.sym.var('a')
 b = mx.sym.var('b')

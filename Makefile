@@ -672,6 +672,17 @@ pylint:
 sample_lib:
 	$(CXX) -shared -fPIC -std=gnu++0x example/mxnet_extension/lib_custom_op/gemm_lib.cc -o libsample_lib.so -I include/mxnet
 
+doc: docs
+
+docs:
+	make -C docs html
+
+clean_docs:
+	make -C docs clean
+
+doxygen:
+	doxygen docs/Doxyfile
+
 # Cython build
 cython:
 	cd python; $(PYTHON) setup.py build_ext --inplace --with-cython

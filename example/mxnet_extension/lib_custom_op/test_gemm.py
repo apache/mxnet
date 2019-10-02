@@ -26,8 +26,13 @@
 import mxnet as mx
 import os
 
-path = os.path.abspath('gemm_lib.so')
-mx.library.load(path)
+#load library
+if (os.name=='posix'):
+    path = os.path.abspath('libgemm_lib.so')
+    mx.library.load(path)
+elif (os.name=='nt'):
+    path = os.path.abspath('libgemm_lib.dll')
+    mx.library.load(path)
 
 a = mx.nd.array([[1,2,3],[4,5,6]])
 b = mx.nd.array([[7],[8],[9]])
