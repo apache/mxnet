@@ -279,10 +279,8 @@ void TransposeImpl(RunContext ctx,
     // params = (0, ..., n-1, n+m, ..., params.size, n, ..., n+m-1)
     // Example: (0, 2, 3, 1) or (0, 3, 1, 2), but not (0, 2, 1, 3).
     if (isPseudo2DTranspose(axes)) {
-      // This kernel supports only transposes with dimensions limited by dim3 struct sizes.
-      // If dimensions are too big no operation is perfomed; use `transpose` instead.
-      if (transpose_pseudo2D<DType>(ret, src, axes, s) == 0)
-        return;
+      transpose_pseudo2D<DType>(ret, src, axes, s);
+      return;
     }
 #endif
     switch (axes.ndim()) {
