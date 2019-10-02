@@ -1,4 +1,3 @@
-Options -Indexes
 DirectorySlash off
 RewriteEngine on
 RewriteOptions AllowNoSlash
@@ -23,6 +22,53 @@ RewriteCond %{REQUEST_FILENAME} -d
 RewriteCond %{REQUEST_FILENAME}/index.html -f
 RewriteRule ^(.*) $1/index.html [NC,L]
 
-
 # 404
 ErrorDocument 404 /404.html
+
+# Redirects
+# Python API
+Redirect 301 /versions/master/api/python/index.html /api/python/docs/api/index.html
+Redirect 301 /api/python/ndarray/ndarray.html /api/python/docs/api/ndarray/index.html
+Redirect 301 /api/python/ndarray/random.html /api/python/docs/api/ndarray/routines.html
+Redirect 301 /api/python/ndarray/linalg.html /api/python/docs/api/ndarray/routines.html
+Redirect 301 /api/python/ndarray/contrib.html /api/python/docs/api/ndarray/routines.html
+Redirect 301 /api/python/ndarray/sparse.html /api/python/docs/api/ndarray/sparse_routines.html
+
+Redirect 301 /api/python/autograd/autograd.html /api/python/docs/api/gluon-related/mxnet.autograd.html
+
+Redirect 301 /api/python/gluon/gluon.html /api/python/docs/api/gluon/index.html
+Redirect 301 /api/python/contrib/contrib.html /api/python/docs/api/gluon/mxnet.gluon.contrib.html
+Redirect 301 /api/python/gluon/nn.html /api/python/docs/api/gluon/nn.html
+Redirect 301 /api/python/gluon/rnn.html /api/python/docs/api/gluon/rnn.html
+Redirect 301 /api/python/gluon/loss.html /api/python/docs/api/gluon/mxnet.gluon.loss.html
+Redirect 301 /api/python/gluon/data.html /api/python/docs/api/gluon/mxnet.gluon.data.html
+Redirect 301 /api/python/gluon/model_zoo.html /api/python/docs/api/gluon/mxnet.gluon.model_zoo.html
+Redirect 301 /api/python/gluon/contrib.html /api/python/docs/api/gluon/mxnet.gluon.contrib.html
+
+Redirect 301 /api/python/kvstore/kvstore.html /api/python/docs/api/gluon-related/mxnet.kvstore.html
+Redirect 301 /api/python/metric/metric.html /api/python/docs/api/gluon-related/mxnet.metric.html
+Redirect 301 /api/python/optimization/optimization.html /api/python/docs/api/gluon-related/mxnet.optimizer.html
+Redirect 301 /api/python/optimization/contrib.html /api/python/docs/api/gluon-related/mxnet.optimizer.html
+Redirect 301 /api/python/profiler/profiler.html /api/python/docs/api/gluon-related/mxnet.profiler.html
+Redirect 301 /api/python/io/io.html /api/python/docs/api/gluon-related/mxnet.io.html
+
+Redirect 301 /api/python/symbol/symbol.html /api/python/docs/api/symbol/index.html
+Redirect 301 /api/python/symbol.html /api/python/docs/api/symbol/index.html
+Redirect 301 /api/python/symbol/linalg.html /api/python/docs/api/symbol/mxnet.symbol.linalg.html
+
+Redirect 301 /api/python/module/module.html /api/python/docs/api/symbol-related/mxnet.module.html
+Redirect 301 /api/python/callback/callback.html /api/python/docs/api/symbol-related/mxnet.callback.html
+Redirect 301 /api/python/tools/visualization.html /api/python/docs/api/symbol-related/mxnet.visualization.html
+
+Redirect 301 /api/python/executor/executor.html /api/python/docs/api/advanced/mxnet.executor.html
+Redirect 301 /api/python/rtc/rtc.html /api/python/docs/api/advanced/mxnet.rtc.html
+Redirect 301 /api/python/tools/test_utils.html /api/python/docs/api/advanced/mxnet.test_utils.html
+
+# Top Level Nav bar
+Redirect 301 /install/index.html /get_started
+Redirect 301 /test/get_started/install.html /get_started
+Redirect 301 /faq/index.html /api
+Redirect 301 /tutorials/index.html /api
+Redirect 301 /architecture/index.html /api/architecture/overview
+Redirect 301 /community/ecosystem.html /ecosystem
+Redirect 301 /community/powered_by.html /ecosystem
