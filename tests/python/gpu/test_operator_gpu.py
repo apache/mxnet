@@ -397,7 +397,7 @@ def check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights):
             assert_almost_equal(lhs.asnumpy(), rhs.asnumpy(), rtol=rtol, atol=atol)
     if dtype == 'float16':
         rtol = 1e-3
-        atol = 1e-3
+        atol = 1e-2
     else:
         rtol = 1e-5
         atol = 1e-6
