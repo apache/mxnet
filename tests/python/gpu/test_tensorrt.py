@@ -385,16 +385,6 @@ def test_flatten():
         check_single_sym(sym, {'data': data_shape},
                          rtol_fp32=0., atol_fp32=0., atol_fp16=1e-7)
 
-# TODO(cfujitsang): solve
-#def test_reduction():
-#    data = mx.sym.Variable('data')
-#    shape = (3, 5, 7, 9)
-#    for axis in range(0, 4):
-#        sym = mx.sym.mean(data, axis=axis, keepdims=True)
-#        check_single_sym(sym, {'data': shape})
-#        sym = mx.sym.mean(data, axis=axis, keepdims=False)
-#        check_single_sym(sym, {'data': shape})
-
 def test_dropout():
     data = mx.sym.Variable('data')
     for data_shape in [(3, 5), (3, 5, 7), (3, 5, 7, 9)]:
@@ -407,30 +397,6 @@ def test_dropout():
                 check_unsupported_single_sym(sym)
             sym = mx.sym.Dropout(data, p=0.7, mode=mode, axes=(0,))
             check_unsupported_single_sym(sym)
-
-# TODO(cfujitsang): solve, pad Op declaration need to be updated
-#def test_pad():
-#    data = mx.sym.Variable('data')
-#    data_shape = (4, 3, 32, 32)
-#    for indexes in [(2, 0, 0, 0), (0, 2, 0, 0), (0, 0, 2, 0),
-#                    (0, 0, 0, 2), (2, 1, 0, 0), (2, 0, 1, 0),
-#                    (2, 0, 0, 1), (0, 2, 1, 0), (0, 2, 0, 1),
-#                    (0, 0, 2, 1), (0, 1, 2, 3), (1, 0, 2, 3),
-#                    (1, 2, 0, 3), (1, 2, 3, 0)]:
-#        pad_width = (0, 0, 0, 0) + indexes
-#        for mode in ['edge', 'reflect']:
-#            sym = mx.sym.pad(data, mode=mode, pad_width=pad_width)
-#            check_single_sym(sym, {'data': data_shape})
-#        for constant_value in [0., 1.]:
-#            sym = mx.sym.pad(data, mode='constant', pad_width=pad_witdh,
-#                             constant_value=constant_value)
-
-# TODO(cfujitsang): solve
-#def test_rsqrt():
-#    data = mx.sym.Variable('data')
-#    sym = mx.sym.rsqrt(data)
-#    for data_shape in [(10, 32), (10, 3, 32), (10, 3, 32, 32), (10,3,7,32,32)]:
-#        check_single_sym(sym, {'data': data_shape})
 
 if __name__ == "__main__":
     import nose
