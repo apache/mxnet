@@ -35,7 +35,9 @@ def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
     for inp in inputs:
         kwargs = {}
         for key, value in inp.items():
-            if key in PARAMS_OF_TYPE_NDARRAY and key =='args':
+            if key == 'index':
+                kwargs[key] = nd.array([1, 0], ctx=ctx, dtype=dtype)
+            elif key in PARAMS_OF_TYPE_NDARRAY and key=='args':
                 args_list.append(get_mx_ndarray(ctx=ctx, in_tensor=value,
                                                 dtype=dtype,
                                                 initializer=nd.normal,
