@@ -564,10 +564,10 @@ namespace {
  * \param vocab_dim maximum number of unique elements
  */
 template <typename IType>
-__global__ void EmbeddingFindBounds ( const IType *sorted_data,
-                                      IType *bounds,
-                                      const index_t data_dim,
-                                      const index_t vocab_dim) {
+__global__ void EmbeddingFindBounds(const IType *sorted_data,
+                                    IType *bounds,
+                                    const index_t data_dim,
+                                    const index_t vocab_dim) {
   const index_t id = blockIdx.x * blockDim.x + threadIdx.x;
 
   // Binary search to find lower bound: stored at bounds[0..vocab_dim-1]
@@ -583,7 +583,7 @@ __global__ void EmbeddingFindBounds ( const IType *sorted_data,
   }
   bool found_row = (sorted_data[lower_bound] == id);
 
-  if (id < vocab_dim){
+  if (id < vocab_dim) {
     bounds[id] = (found_row) ? lower_bound : -1;
   }
 
@@ -597,9 +597,9 @@ __global__ void EmbeddingFindBounds ( const IType *sorted_data,
     else
       upper_bound = mean - 1;
   }
-  found_row = (sorted_data[upper_bound]==id);
+  found_row = (sorted_data[upper_bound] == id);
 
-  if (id<vocab_dim){
+  if (id < vocab_dim) {
     bounds[vocab_dim + id] = (found_row) ? upper_bound : -1;
   }
 }
@@ -624,9 +624,8 @@ __global__ void EmbeddingGradKernel(DType *grad_in,
                                       const index_t vocab_dim,
                                       const int rows_per_block,
                                       const int req) {
-
   extern __shared__ int sharedmem[];
-  LType* grad_in_row = (LType*)sharedmem;
+  LType* grad_in_row =  reinterpret_cast<LType *>(sharedmem);
 
   // LType has to be bigger than DType, guarded in the launcher code
   const int n_val = sizeof(DType) < sizeof(LType) ? sizeof(LType) / sizeof(DType) : 1;
@@ -637,27 +636,26 @@ __global__ void EmbeddingGradKernel(DType *grad_in,
   LType Lvalue[1];
   DType* Dvalues = reinterpret_cast<DType*>(Lvalue);
 
-  for (index_t row=0; row < rows_per_block; ++row){
+  for (index_t row=0; row < rows_per_block; ++row) {
     IType my_row = blockIdx.x * rows_per_block + row;
-    if (my_row < vocab_dim){
-
+    if (my_row < vocab_dim) {
       // Read lower and upper bounds for current row
       IType lower_bound = index_bounds[my_row];
       IType upper_bound = index_bounds[vocab_dim + my_row];
       int nOccurrences = (lower_bound != -1) ? (upper_bound - lower_bound + 1) : 0;
 
-      for (index_t emb_id = threadIdx.x; emb_id < aligned_emb_dim; emb_id += blockDim.x){
+      for (index_t emb_id = threadIdx.x; emb_id < aligned_emb_dim; emb_id += blockDim.x) {
         // Initialize grad_in
         if (req == kAddTo) {
           grad_in_row[threadIdx.x] = aligned_grad_in[my_row * aligned_emb_dim + emb_id];
-        }else{
+        } else {
           grad_in_row[threadIdx.x] = 0.0;
         }
         // Add all rows from grad_out according to indices in data
-        if(nOccurrences){
-          for (index_t data_idx = lower_bound; data_idx < (lower_bound + nOccurrences); ++data_idx){
+        if (nOccurrences) {
+          for (index_t data_idx = lower_bound; data_idx < (lower_bound + nOccurrences); ++data_idx) {
             *Lvalue = aligned_grad_out[original_index[data_idx] * aligned_emb_dim + emb_id];
-            for (index_t val_id = 0; val_id < n_val; val_id++){
+            for (index_t val_id = 0; val_id < n_val; val_id++) {
               my_grad_in_row[val_id] += Dvalues[val_id];
             }
           }
@@ -734,11 +732,13 @@ void EmbeddingGradKernelCaller(const OpContext& ctx,
     int nelems_per_thread = sizeof(LType) / sizeof(DType);
     int threads_block_grad = 32;
     int maxThreads = 1024;
-    while (threads_block_grad < (embbedding_dim/nelems_per_thread) && (threads_block_grad < maxThreads))
+    while (threads_block_grad < (embbedding_dim/nelems_per_thread) &&
+          (threads_block_grad < maxThreads))
       threads_block_grad += 32;
     size_t required_shared = threads_block_grad * sizeof(LType);
     dim3 blocks((vocab_dim + rows_per_block - 1) / rows_per_block, 1);
-    EmbeddingGradKernel<LType><<<blocks, threads_block_grad, required_shared, Stream<gpu>::GetStream(s)>>>(
+    EmbeddingGradKernel<LType><<<blocks, threads_block_grad, required_shared,
+                  Stream<gpu>::GetStream(s)>>>(
                   grad_in.dptr_, original_index.dptr_,
                   bounds_index.dptr_, grad_out.dptr_,
                   embbedding_dim, vocab_dim,
