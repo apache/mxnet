@@ -153,6 +153,58 @@ def test_convolution2d():
                         else:
                             check_unsupported_single_sym(sym)
 
+@with_seed()
+def test_deconvolution2d():
+    data = mx.sym.Variable('data')
+    weight = mx.sym.Variable('weight')
+    bias = mx.sym.Variable('bias')
+    data_shape = (8,3,16,16)
+    num_filter = 7
+    for kernel in [(3, 3), (1, 1), (3, 1)]:
+        for stride in [(1, 1), (2, 2), (2, 1)]:
+            if stride[0] > kernel[0] or stride[1] > kernel[1]: # doesn't make any sense
+                continue
+            if kernel == (3, 3) and stride == (1, 1):
+                atol_fp32 = 0.
+                rtol_fp32 = 5e-5
+                atol_fp16 = 0.
+                rtol_fp16 = 1e-2
+            else:
+                atol_fp32 = 0.
+                rtol_fp32 = 1e-6
+                atol_fp16 = 0.
+                rtol_fp16 = 1e-2
+            for pad in [(1, 1), (0, 0), (1, 0)]:
+                for group in [1, 2]:
+                    for layout in ['NCHW', 'NHWC']:
+                        weight_shape = (data_shape[1], num_filter) + kernel
+                        bias_shape = (num_filter,)
+                        sym = mx.sym.Deconvolution(data, weight=weight, bias=bias, kernel=kernel,
+                                                 stride=stride, pad=pad, num_filter=num_filter,
+                                                 no_bias=False, layout=layout)
+                        if layout == 'NCHW':
+                            print("kernel: {} | stride: {} | pad: {} | group: {} | layout: {} | with_bias".format(
+                                  kernel, stride, pad, group, layout))
+                            check_single_sym(sym, {'data': data_shape},
+                                             {'weight': weight_shape, 'bias': bias_shape},
+                                             rtol_fp32=rtol_fp32, atol_fp32=atol_fp32,
+                                             rtol_fp16=rtol_fp16, atol_fp16=atol_fp16)
+                        else:
+                            check_unsupported_single_sym(sym)
+                        sym = mx.sym.Deconvolution(data, weight=weight, kernel=kernel, stride=stride,
+                                                 pad=pad, num_filter=num_filter, no_bias=True,
+                                                 layout=layout)
+                        if layout == 'NCHW':
+                            print("kernel: {} | stride: {} | pad: {} | group: {} | layout: {} | without_bias".format(
+                                  kernel, stride, pad, group, layout))
+                            check_single_sym(sym, {'data': data_shape},
+                                             {'weight': weight_shape},
+                                             rtol_fp32=rtol_fp32, atol_fp32=atol_fp32,
+                                             rtol_fp16=rtol_fp16, atol_fp16=atol_fp16)
+                        else:
+                            check_unsupported_single_sym(sym)
+
+@with_seed()
 def test_fully_connected(): # TODO(cfujitsang): take care of flatten option
     data = mx.sym.Variable('data')
     weight = mx.sym.Variable('weight')

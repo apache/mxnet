@@ -38,6 +38,7 @@
 #include "../../nn/batch_norm-inl.h"
 #include "../../nn/concat-inl.h"
 #include "../../nn/convolution-inl.h"
+#include "../../nn/deconvolution-inl.h"
 #include "../../nn/dropout-inl.h"
 #include "../../nn/fully_connected-inl.h"
 #include "../../nn/pooling-inl.h"
@@ -94,7 +95,6 @@ class TensorrtSelector : public SubgraphSelector {
   const std::unordered_set<std::string> unconditionalTRTops = {
     "_copy",
     "clip",
-    "Deconvolution",
     "elemwise_add",
     "elemwise_sub",
     "elemwise_mul",
@@ -158,6 +158,30 @@ class TensorrtSelector : public SubgraphSelector {
         case mshadow::kNHWC:
           LOG(INFO) << "Warning: NHWC layout (node: " << n.attrs.name
                     << ") is not supported by TensorRT";
+          return false;
+        case mshadow::kNDHWC:
+          LOG(INFO) << "Warning: NDHWC layout (node: " << n.attrs.name
+                    << ") is not supported by TensorRT";
+          return false;
+        default:
+          LOG(INFO) << "Warning: Layout (node: " << n.attrs.name
+                    << ") is unknown (so unsupported by TensorRT)";
+          return false;
+      }
+    }
+
+    if (op_name == "Deconvolution") {
+      const auto& param = nnvm::get<DeconvolutionParam>(n.attrs.parsed);
+      if (!param.layout.has_value())
+        return true;
+      switch (param.layout.value()) {
+        case mshadow::kNCHW:
+        case mshadow::kNCW:
+        case mshadow::kNCDHW:
+          return true;
+        case mshadow::kNHWC:
+          LOG(INFO) << "Warning: NHWC layout (node: " << n.attrs.name
+                    << ") is no tsupported by TensorRT";
           return false;
         case mshadow::kNDHWC:
           LOG(INFO) << "Warning: NDHWC layout (node: " << n.attrs.name
