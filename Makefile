@@ -670,7 +670,7 @@ pylint:
 
 # sample lib for MXNet extension dynamically loading custom operator
 sample_lib:
-	$(CXX) -shared -fPIC -std=gnu++0x example/mxnet_extension/lib_custom_op/gemm_lib.cc -o libsample_lib.so -I include/mxnet
+	$(CXX) -shared -fPIC -std=gnu++0x example/extensions/lib_custom_op/gemm_lib.cc -o libsample_lib.so -I include/mxnet
 
 # Cython build
 cython:
