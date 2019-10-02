@@ -924,8 +924,7 @@ def test_copy_to():
     b = nd.array(np.zeros((SMALL_Y, LARGE_X)))
     c = a.copyto(b)
     assert c is b
-    print(b)
-    assert b[0][-1] == LARGE_X-1
+    assert b[-1][-1] == SMALL_Y-1
 
 
 def test_zeros_like():
