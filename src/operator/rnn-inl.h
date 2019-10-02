@@ -1066,20 +1066,22 @@ class RNNOp {
                                       workspace_byte_,
                                       reserve_space_.dptr,
                                       reserve_space_byte_));
-    CUDNN_CALL(cudnnRNNBackwardWeightsEx(s->dnn_handle_,
-                                         rnn_desc_,
-                                         x_data_desc_,
-                                         x.dptr_,
-                                         hx_desc_,
-                                         hx.dptr_,
-                                         y_data_desc_,
-                                         y.dptr_,
-                                         temp_space.dptr_,
-                                         workspace_byte_,
-                                         dw_desc_,
-                                         dw.dptr_,
-                                         reserve_space_.dptr,
-                                         reserve_space_byte_));
+    if (req[rnn_enum::kParams] != kNullOp) {
+      CUDNN_CALL(cudnnRNNBackwardWeightsEx(s->dnn_handle_,
+                                           rnn_desc_,
+                                           x_data_desc_,
+                                           x.dptr_,
+                                           hx_desc_,
+                                           hx.dptr_,
+                                           y_data_desc_,
+                                           y.dptr_,
+                                           temp_space.dptr_,
+                                           workspace_byte_,
+                                           dw_desc_,
+                                           dw.dptr_,
+                                           reserve_space_.dptr,
+                                           reserve_space_byte_));
+    }
 #else
     CUDNN_CALL(cudnnRNNBackwardData(s->dnn_handle_,
                                     rnn_desc_,
@@ -1108,21 +1110,23 @@ class RNNOp {
                                     workspace_byte_,
                                     reserve_space_.dptr,
                                     reserve_space_byte_));
-    CUDNN_CALL(cudnnRNNBackwardWeights(s->dnn_handle_,
-                                       rnn_desc_,
-                                       param_.seq_length_,
-                                       x_desc_vec_.data(),
-                                       x.dptr_,
-                                       hx_desc_,
-                                       hx.dptr_,
-                                       y_desc_vec_.data(),
-                                       y.dptr_,
-                                       temp_space.dptr_,
-                                       workspace_byte_,
-                                       dw_desc_,
-                                       dw.dptr_,
-                                       reserve_space_.dptr,
-                                       reserve_space_byte_));
+    if (req[rnn_enum::kParams] != kNullOp) {
+      CUDNN_CALL(cudnnRNNBackwardWeights(s->dnn_handle_,
+                                         rnn_desc_,
+                                         param_.seq_length_,
+                                         x_desc_vec_.data(),
+                                         x.dptr_,
+                                         hx_desc_,
+                                         hx.dptr_,
+                                         y_desc_vec_.data(),
+                                         y.dptr_,
+                                         temp_space.dptr_,
+                                         workspace_byte_,
+                                         dw_desc_,
+                                         dw.dptr_,
+                                         reserve_space_.dptr,
+                                         reserve_space_byte_));
+    }
 #endif  // MXNET_USE_CUDNN_GE_7200
 #endif  // MXNET_USE_CUDNN == 1 && defined(__CUDACC__)
 
