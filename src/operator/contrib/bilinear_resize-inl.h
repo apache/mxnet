@@ -100,7 +100,7 @@ struct BilinearSampleParam : public dmlc::Parameter<BilinearSampleParam> {
               "(if original height is odd then result height = original height + 1);");
   DMLC_DECLARE_FIELD(align_corners).set_default(true)
     .describe("With align_corners = True, the interpolating don't proportionally align the"
-      "output and input pixels, and thus the output values can depend on the input size.");
+              "output and input pixels, and thus the output values can depend on the input size.");
   }
 };
 
@@ -124,8 +124,7 @@ static inline DType area_pixel_compute_scale(
     return align_corners
       ? static_cast<DType>(input_size - 1) / (output_size - 1)
       : static_cast<DType>(input_size) / output_size;
-  }
-  else {
+  } else {
     return DType(0);
   }
 }
@@ -138,8 +137,7 @@ static inline DType area_pixel_compute_source_index(
   bool cubic) {
   if (align_corners) {
     return scale * dst_index;
-  }
-  else {
+  } else {
     DType src_idx = scale * (dst_index + 0.5) - 0.5;
     // [Note] Follow Opencv resize logic:
     // We allow negative src_idx here and later will use
@@ -149,7 +147,7 @@ static inline DType area_pixel_compute_source_index(
     // for negative indices as they use 2 pixels to interpolate.
     // For example, [-1, 0], they both use pixel 0 value so it
     // doesn't affect if we bound the src_idx to 0 or not.
-    // TODO: Our current linear mode impls use unbound indices
+    // TODO(chinakook): Our current linear mode impls use unbound indices
     // where we should and then remove this cubic flag.
     // This matters in cubic mode, as we might need [-1, 0, 1, 2]
     // to interpolate and the weights can be affected.
@@ -233,7 +231,8 @@ inline void BilinearSampleOpBackward(const nnvm::NodeAttrs& attrs,
     })
   }
   MSHADOW_REAL_TYPE_SWITCH_EX(inputs[0].type_flag_, DType, AccReal, {
-    SpatialUpSamplingBilinearUpdateGradInput<xpu, DType, AccReal>(s, inputs, outputs, modeLike, align_corners);
+    SpatialUpSamplingBilinearUpdateGradInput<xpu, DType, AccReal>(s, inputs, outputs
+      , modeLike, align_corners);
   });
 }
 
@@ -323,7 +322,7 @@ static bool BilinearSampleOpInferShape(const nnvm::NodeAttrs& attrs,
 inline uint16_t BilinearSampleOpNumInputs(const NodeAttrs& attrs) {
   auto& param = nnvm::get<BilinearSampleParam>(attrs.parsed);
   if (param.mode == bilinear_resize::like) {
-      return 2;
+    return 2;
   } else {
     return 1;
   }

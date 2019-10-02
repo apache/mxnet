@@ -56,16 +56,13 @@ template <
     value2.x = value;
     value2.y = __int2half_rz(0);
     atomicAdd(reinterpret_cast<__half2*>(tensor) + index / 2, value2);
-
-  }
-  else if (!low_bit && index > 0) {
+  } else if (!low_bit && index > 0) {
     __half2 value2;
     value2.x = __int2half_rz(0);
     value2.y = value;
     atomicAdd(reinterpret_cast<__half2*>(tensor) + index / 2, value2);
 
-  }
-  else {
+  } else {
     atomicAdd(
       reinterpret_cast<__half*>(tensor) + index, static_cast<__half>(value));
   }
@@ -93,8 +90,7 @@ __device__ __forceinline__ void fastAtomicAdd(
   bool fast_atomics) {
   if (fast_atomics) {
     fastSpecializedAtomicAdd(tensor, index, numel, value);
-  }
-  else {
+  } else {
     atomicAdd(tensor + index, value);
   }
 }
@@ -133,15 +129,14 @@ __global__ void caffe_gpu_interp2_kernel_backward(
   const bool align_corners,
   Dtype* __restrict__ idata,
   const Dtype* __restrict__ odata) {
-    
   const size_t o_numel = nc * width2 * height2;
   const size_t i_numel = nc * width1 * height1;
   for (size_t index = blockDim.x * blockIdx.x + threadIdx.x; index < o_numel;
     index += blockDim.x * gridDim.x) {
     size_t index_temp = index;
-    const int w2 = index_temp % width2; // 0:width2-1
+    const int w2 = index_temp % width2;  // 0:width2-1
     index_temp /= width2;
-    const int h2 = index_temp % height2; // 0:height2-1
+    const int h2 = index_temp % height2;  // 0:height2-1
     const size_t nc = index_temp / height2;
     //
     const Acctype h1r = cu_area_pixel_compute_source_index<Acctype>(
@@ -157,7 +152,7 @@ __global__ void caffe_gpu_interp2_kernel_backward(
     const int w1p = (w1 < width1 - 1) ? 1 : 0;
     const Acctype w1lambda = w1r - w1;
     const Acctype w0lambda = static_cast<Acctype>(1) - w1lambda;
-  
+
     const Dtype d2val = odata[index];
     fastAtomicAdd(
       idata,
@@ -218,9 +213,9 @@ void SpatialUpSamplingBilinearUpdateOutput(mshadow::Stream<gpu> *s,
     outputHeight,
     outputWidth,
     rheight,
-    rwidth, 
-    align_corners, 
-    idata.dptr_, 
+    rwidth,
+    align_corners,
+    idata.dptr_,
     odata.dptr_);
   MSHADOW_CUDA_POST_KERNEL_CHECK(SpatialUpSamplingBilinearUpdateOutput);
 }
@@ -244,7 +239,6 @@ void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<gpu> *s,
     inputHeight, outputHeight, align_corners);
   const AccReal rwidth = cu_area_pixel_compute_scale<AccReal>(
     inputWidth, outputWidth, align_corners);
- 
   const int num_kernels = nbatch * channels * outputHeight * outputWidth;
   const int num_threads = getNumThreads(inputHeight*inputWidth, false);
   dim3 blocks(static_cast<int>(num_kernels / num_threads) + 1);
@@ -253,13 +247,13 @@ void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<gpu> *s,
   caffe_gpu_interp2_kernel_backward<xpu, DType, AccReal>
   <<<blocks, threads, 0, stream>>>(
     nbatch * channels,
-    inputHeight, 
-    inputWidth, 
-    outputHeight, 
-    outputWidth, 
-    rheight, 
-    rwidth, 
-    align_corners, 
+    inputHeight,
+    inputWidth,
+    outputHeight,
+    outputWidth,
+    rheight,
+    rwidth,
+    align_corners,
     gradInput.dptr_,
     gradOutput.dptr_);
 
