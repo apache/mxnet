@@ -545,13 +545,15 @@ void TakeOpForward<gpu>(const nnvm::NodeAttrs& attrs,
   });
 }
 
-/*
- * \brief returns integer log2(a) rounded up
- */
-inline int ilog2(unsigned int a) {
-  int k = 1;
-  while (a >>= 1) k++;
-  return k;
+namespace {
+  /*
+  * \brief returns integer log2(a) rounded up
+  */
+  inline int ilog2(unsigned int a) {
+    int k = 1;
+    while (a >>= 1) k++;
+    return k;
+  }
 }
 
 /*
