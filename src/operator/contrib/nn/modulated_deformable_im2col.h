@@ -152,10 +152,10 @@ struct modulated_deformable_col2im_cpu_kernel {
 
     DType* data_col_ptr = data_col
       + ((c_col * batch_size + b_col) * height_col + h_col) * width_col + w_col;
-    //const DType* data_im_ptr = data_im + 
-      ((b_col * num_channels + c_im) * height + h_in) * width + w_in;
+    // const DType* data_im_ptr = data_im +
+    //  ((b_col * num_channels + c_im) * height + h_in) * width + w_in;
     const DType* data_im_ptr = data_im + (b_col * num_channels + c_im) * height * width;
-    const DType* data_offset_ptr = data_offset 
+    const DType* data_offset_ptr = data_offset
       + (b_col * deformable_group + deformable_group_index) * 2
       * kernel_h * kernel_w * height_col * width_col;
 
@@ -176,18 +176,19 @@ struct modulated_deformable_col2im_cpu_kernel {
         DType val = static_cast<DType>(0);
         const DType h_im = h_in + i * dilation_h + offset_h;
         const DType w_im = w_in + j * dilation_w + offset_w;
-        //if (h_im >= 0 && w_im >= 0 && h_im < height && w_im < width) {
+        // if (h_im >= 0 && w_im >= 0 && h_im < height && w_im < width) {
         if (h_im > -1 && w_im > -1 && h_im < height && w_im < width) {
-          //const DType map_h = i * dilation_h + offset_h;
-          //const DType map_w = j * dilation_w + offset_w;
-          //const int cur_height = height - h_in;
-          //const int cur_width = width - w_in;
-          //val = dmcn_im2col_bilinear_cpu(data_im_ptr, width, cur_height, cur_width, map_h, map_w);
+          // const DType map_h = i * dilation_h + offset_h;
+          // const DType map_w = j * dilation_w + offset_w;
+          // const int cur_height = height - h_in;
+          // const int cur_width = width - w_in;
+          // val = dmcn_im2col_bilinear_cpu(
+          // data_im_ptr, width, cur_height, cur_width, map_h, map_w);
           val = dmcn_im2col_bilinear_cpu(data_im_ptr, width, height, width, h_im, w_im);
         }
         *data_col_ptr = val * mask;
         data_col_ptr += batch_size * height_col * width_col;
-        //data_col_ptr += height_col * width_col;
+        // data_col_ptr += height_col * width_col;
       }
     }
   }
