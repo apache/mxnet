@@ -234,7 +234,7 @@ Advanced Topics
 
    .. card::
       :title: Gotchas using NumPy in Apache MXNet
-      :link: gotchas_numpy_in_mxnet.html
+      :link: ../ndarray/gotchas_numpy_in_mxnet.html
 
       Common misconceptions when using NumPy in Apache MXNet.
 
