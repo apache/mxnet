@@ -20,7 +20,7 @@ import numpy as np
 from itertools import product
 import copy
 
-from mxnet.test_utils import assert_allclose
+from numpy.testing import assert_allclose
 
 import sys
 import os
