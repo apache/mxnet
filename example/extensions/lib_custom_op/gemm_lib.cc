@@ -183,7 +183,7 @@ class MyStatefulGemm : public CustomStatefulOp {
                         OpResource op_res) {
     int* p = static_cast<int*>(op_res.alloc(sizeof(int)));
     *p = ++count;
-    std::cout << "Info: op resource testing: " << *p << std::endl;
+    std::cout << "Info: cpu malloc test: keyword + number of forward: " << *p << std::endl;
 
     std::map<std::string, std::string> attrs;
     return forward(attrs, inputs, outputs, op_res);
@@ -204,8 +204,11 @@ class MyStatefulGemm : public CustomStatefulOp {
 
 MXReturnValue createOpState(std::map<std::string, std::string> attrs,
                             CustomStatefulOp** op_inst) {
-  *op_inst = new MyStatefulGemm(58);
-  std::cout << "Info: create op state successful" << std::endl;
+  int count = 0;
+  if (attrs.count("test_kw") > 0)
+    count = std::stoi(attrs["test_kw"]);
+  *op_inst = new MyStatefulGemm(count);
+  std::cout << "Info: stateful operator created" << std::endl;
   return MX_SUCCESS;
 }
 

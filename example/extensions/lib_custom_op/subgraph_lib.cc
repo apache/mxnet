@@ -67,9 +67,11 @@ class MyStatefulOp : public CustomStatefulOp {
   MXReturnValue Forward(std::vector<MXTensor> inputs,
                         std::vector<MXTensor> outputs,
                         OpResource op_res) {
-    std::cout << "Info: subgraph symbol is: " << subgraph_sym << std::endl;
+    std::cout << "Info: subgraph symbol is: " << std::endl;
+    std::cout << subgraph_sym << std::endl;
     float* in_data = inputs[0].data<float>();
     float* out_data = outputs[0].data<float>();
+    std::cout << "Info: output is: " << std::endl;
     for (int i = 0; i < inputs[0].size(); i++) {
       out_data[i] = in_data[i];
     }
@@ -90,7 +92,7 @@ MXReturnValue createOpState(std::map<std::string, std::string> attrs,
     serialized_subgraph = attrs[SUBGRAPH_SYM_JSON];
   }
   *op_inst = new MyStatefulOp(serialized_subgraph);
-  std::cout << "Info: create op state successful" << std::endl;
+  std::cout << "Info: stateful operator created" << std::endl;
   return MX_SUCCESS;
 }
 
