@@ -91,7 +91,7 @@ namespace mxnet {
 namespace op {
 
 template <typename DType>
-inline DType dmcn_im2col_bilinear(const DType* bottom_data, const int data_width,
+inline DType dmcn_im2col_bilinear_cpu(const DType* bottom_data, const int data_width,
   const int height, const int width, DType h, DType w) {
 
   int h_low = floor(h);
@@ -175,8 +175,8 @@ struct modulated_deformable_col2im_cpu_kernel {
           //const DType map_w = j * dilation_w + offset_w;
           //const int cur_height = height - h_in;
           //const int cur_width = width - w_in;
-          //val = dmcn_im2col_bilinear(data_im_ptr, width, cur_height, cur_width, map_h, map_w);
-          val = dmcn_im2col_bilinear(data_im_ptr, width, height, width, h_im, w_im);
+          //val = dmcn_im2col_bilinear_cpu(data_im_ptr, width, cur_height, cur_width, map_h, map_w);
+          val = dmcn_im2col_bilinear_cpu(data_im_ptr, width, height, width, h_im, w_im);
         }
         *data_col_ptr = val * mask;
         data_col_ptr += batch_size * height_col * width_col;
