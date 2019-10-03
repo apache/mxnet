@@ -24,7 +24,7 @@ __all__ = ['Concurrent', 'HybridConcurrent', 'Identity', 'SparseEmbedding',
            'PixelShuffle3D']
 
 import warnings
-from .... import nd, test_utils
+from .... import nd, context
 from ...block import HybridBlock, Block
 from ...nn import Sequential, HybridSequential, BatchNorm
 
@@ -233,7 +233,7 @@ class SyncBatchNorm(BatchNorm):
         warnings.warn("Caution using SyncBatchNorm: "
                       "if not using all the GPUs, please mannually set num_devices",
                       UserWarning)
-        num_devices = len(test_utils.list_gpus())
+        num_devices = context.num_gpus()
         num_devices = num_devices if num_devices > 0 else 1
         return num_devices
 

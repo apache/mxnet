@@ -411,11 +411,12 @@ void MKLDNNConvolutionForwardFullFeature(const MKLDNNConvFullParam &param,
     // For inference, we want to reorder the weight array so we don't need to
     // reorder data every time.
     if (weight.IsDefaultData()) {
-      weight_mem = GetWeights(weight, fwd->fwd_pd.weights_primitive_desc(),
-                              param.conv_param.num_group);
       // We also need to modify the layout on the original weight array. The
       // data conversion happens after the weight array is used.
       weight.MKLDNNDataReorderAsync(fwd->fwd_pd.weights_primitive_desc());
+      weight_mem = GetWeights(weight, fwd->fwd_pd.weights_primitive_desc(),
+                              param.conv_param.num_group);
+
     } else {
       weight_mem = weight.GetMKLDNNData();
       CHECK(weight_mem->get_primitive_desc() == fwd->fwd_pd.weights_primitive_desc());
@@ -506,9 +507,9 @@ class MKLDNNConvBackward {
           mkldnn::primitive::at(*this->weight), *this->in_grad));
   }
 
-void SetWeightNewMem(const mkldnn::memory &data,
-                     const mkldnn::memory &out_grad,
-                     const mkldnn::memory &in_grad_weight) {
+  void SetWeightNewMem(const mkldnn::memory &data,
+                       const mkldnn::memory &out_grad,
+                       const mkldnn::memory &in_grad_weight) {
     if (this->data == nullptr)
       this->data = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
           bwdWeights_pd.src_primitive_desc(), data.get_data_handle()));
@@ -648,7 +649,7 @@ void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ct
     MKLDNNStream::Get()->RegisterPrim(convBwd.GetBwdData());
     CommitOutput(in_grad[conv::kData], in_grad_mem);
   }
-  if (req[conv::kWeight]) {
+  if (req[conv::kWeight] || req[conv::kBias]) {
     MKLDNNConvBackward &convBwdWeight = GetConvBwd(attrs, data,
         weight, bias, out_grad, fwd_pd);
     if (convBwdWeight.bwdData_pd.diff_dst_primitive_desc() !=
@@ -661,17 +662,16 @@ void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ct
         in_grad[conv::kWeight],
         convBwdWeight.bwdWeights_pd.diff_weights_primitive_desc(),
         req[conv::kWeight]);
-    mkldnn_output_t in_grad_bias;
     if (param.no_bias) {
       convBwdWeight.SetWeightNewMem(*data_mem, *out_grad_mem,
-                              *in_grad_weight.second);
+          *in_grad_weight.second);
       MKLDNNStream::Get()->RegisterPrim(convBwdWeight.GetBwdWeights());
     } else {
-      in_grad_bias = CreateMKLDNNMem(
+      auto in_grad_bias = CreateMKLDNNMem(
           in_grad[conv::kBias],
           convBwdWeight.bwdWeights_pd.diff_bias_primitive_desc(), req[conv::kBias]);
       convBwdWeight.SetWeightNewMem(*data_mem, *out_grad_mem,
-                              *in_grad_weight.second, *in_grad_bias.second);
+          *in_grad_weight.second, *in_grad_bias.second);
       MKLDNNStream::Get()->RegisterPrim(convBwdWeight.GetBwdWeights());
       CommitOutput(in_grad[conv::kBias], in_grad_bias);
     }

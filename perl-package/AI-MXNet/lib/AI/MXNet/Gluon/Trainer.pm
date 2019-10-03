@@ -18,6 +18,7 @@
 use strict;
 use warnings;
 package AI::MXNet::Gluon::Trainer;
+use AI::MXNet::NS;
 use AI::MXNet::Base;
 use AI::MXNet::Function::Parameters;
 use IO::File;
@@ -40,7 +41,7 @@ use Mouse;
         The set of parameters to optimize.
     optimizer : str or Optimizer
         The optimizer to use. See
-        `help <http://mxnet.io/api/python/optimization/optimization.html#the-mxnet-optimizer-package>`_
+        `help <https://mxnet.io/api/python/optimization/optimization.html#the-mxnet-optimizer-package>`_
         on Optimizer for a list of available optimizers.
     optimizer_params : hash ref
         Key-word arguments to be passed to optimizer constructor. For example,
@@ -553,5 +554,7 @@ method load_states(Str $fname)
         $self->_optimizer($self->_updaters->[0]->optimizer);
     }
 }
+
+__PACKAGE__->AI::MXNet::NS::register('AI::MXNet::Gluon');
 
 1;

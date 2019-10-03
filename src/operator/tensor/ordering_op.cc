@@ -34,6 +34,7 @@ DMLC_REGISTER_PARAMETER(SortParam);
 DMLC_REGISTER_PARAMETER(ArgSortParam);
 
 NNVM_REGISTER_OP(topk)
+.add_alias("_npx_topk")
 .describe(R"code(Returns the top *k* elements in an input array along the given axis.
  The returned elements will be sorted.
 
@@ -114,7 +115,7 @@ Examples::
              [ 1.,  3.]]
 
   // flattens and then sorts
-  sort(x) = [ 1.,  1.,  3.,  4.]
+  sort(x, axis=None) = [ 1.,  1.,  3.,  4.]
 
   // sorts along the first axis
   sort(x, axis=0) = [[ 1.,  1.],
@@ -173,7 +174,7 @@ Examples::
                         [ 0.,  1.,  0.]]
 
   // flatten and then sort
-  argsort(x) = [ 3.,  1.,  5.,  0.,  4.,  2.]
+  argsort(x, axis=None) = [ 3.,  1.,  5.,  0.,  4.,  2.]
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)

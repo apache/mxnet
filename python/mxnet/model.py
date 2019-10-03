@@ -423,6 +423,22 @@ def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params, remove_amp_ca
     logging.info('Saved checkpoint to \"%s\"', param_name)
 
 
+def load_params(prefix, epoch):
+    """Load params from a file
+    """
+    save_dict = nd.load("%s-%04d.params" % (prefix, epoch))
+    arg_params = {}
+    aux_params = {}
+    if not save_dict:
+        logging.warning("Params file '%s' is empty", '%s-%04d.params' % (prefix, epoch))
+    for k, v in save_dict.items():
+        tp, name = k.split(":", 1)
+        if tp == "arg":
+            arg_params[name] = v
+        if tp == "aux":
+            aux_params[name] = v
+    return (arg_params, aux_params)
+
 def load_checkpoint(prefix, epoch):
     """Load model checkpoint from file.
 
@@ -448,15 +464,7 @@ def load_checkpoint(prefix, epoch):
     - Parameters will be loaded from ``prefix-epoch.params``.
     """
     symbol = sym.load('%s-symbol.json' % prefix)
-    save_dict = nd.load('%s-%04d.params' % (prefix, epoch))
-    arg_params = {}
-    aux_params = {}
-    for k, v in save_dict.items():
-        tp, name = k.split(':', 1)
-        if tp == 'arg':
-            arg_params[name] = v
-        if tp == 'aux':
-            aux_params[name] = v
+    arg_params, aux_params = load_params(prefix, epoch)
     return (symbol, arg_params, aux_params)
 
 from .callback import LogValidationMetricsCallback # pylint: disable=wrong-import-position
@@ -642,10 +650,9 @@ class FeedForward(BASE_ESTIMATOR):
         """Initialize the iterator given input."""
         if isinstance(X, (np.ndarray, nd.NDArray)):
             if y is None:
-                if is_train: # pylint: disable=no-else-raise
+                if is_train:
                     raise ValueError('y must be specified when X is numpy.ndarray')
-                else:
-                    y = np.zeros(X.shape[0])
+                y = np.zeros(X.shape[0])
             if not isinstance(y, (np.ndarray, nd.NDArray)):
                 raise TypeError('y must be ndarray when X is numpy.ndarray')
             if X.shape[0] != y.shape[0]:

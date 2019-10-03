@@ -356,17 +356,18 @@ class TestImage(unittest.TestCase):
             pass
 
     @with_seed()
-    @unittest.skip('Flaky test. Skipping until a solution can be found. Tracked by https://github.com/apache/incubator-mxnet/issues/14718')
     def test_random_size_crop(self):
         # test aspect ratio within bounds
         width = np.random.randint(100, 500)
         height = np.random.randint(100, 500)
         src = np.random.rand(height, width, 3) * 255.
         ratio = (0.75, 1)
+        epsilon = 0.05
         out, (x0, y0, new_w, new_h) = mx.image.random_size_crop(mx.nd.array(src), size=(width, height), area=0.08, ratio=ratio)
         _, pts = mx.image.center_crop(mx.nd.array(src), size=(width, height))
         if (x0, y0, new_w, new_h) != pts:
-            assert ratio[0] <= float(new_w)/new_h <= ratio[1]
+            assert ratio[0] - epsilon <= float(new_w)/new_h <= ratio[1] + epsilon, \
+            'ration of new width and height out of the bound{}/{}={}'.format(new_w, new_h, float(new_w)/new_h)
 
 
 if __name__ == '__main__':

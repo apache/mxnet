@@ -81,6 +81,7 @@ struct CachedOp::CachedOpState {
 
   std::vector<NDArray> buff;
   std::vector<NDArray*> arrays;
+  std::vector<NDArray*> arrays_with_in_out;
   std::vector<OpReqType> array_reqs;
 
   std::vector<OpStatePtr> op_states;
@@ -100,6 +101,7 @@ CachedOp::CachedOp(
   static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
   static const auto _copy_op = Op::Get("_copy");
   config_.Init(flags);
+  this->dynamic_shape_checked_ = false;
 
   if (config_.static_shape) {
     CHECK(config_.static_alloc) << "static_alloc must be True when static_shape is True";
@@ -272,6 +274,11 @@ bool CachedOp::CheckDynamicShapeExists(const Context& default_ctx,
                                        bool erase_result) {
   using namespace nnvm;
   using namespace imperative;
+  if (this->dynamic_shape_checked_) {
+    return config_.is_dynamic;
+  } else {
+    this->dynamic_shape_checked_ = true;
+  }
   CHECK_EQ(inputs.size(), num_inputs());
 
   auto state_ptr = GetCachedOpState(default_ctx);
@@ -290,7 +297,7 @@ bool CachedOp::CheckDynamicShapeExists(const Context& default_ctx,
   CheckAndInferShape(&g, std::move(shape_inputs), true,
                      {0, 0}, {0, 0},
                      &contain_dynamic_shape);
-  if (contain_dynamic_shape && erase_result) {
+  if (!config_.static_shape && erase_result) {
     g.attrs.erase("shape");
     g.attrs.erase("shape_inputs");
   }
@@ -690,6 +697,9 @@ void CachedOp::StaticRunOps(
         ndinputs.emplace_back(state_arrays[idx.entry_id(j)]);
         CHECK(!ndinputs.back()->is_none());
       }
+      if (monitor_callback_ && monitor_all_) {
+          mxnet::common::ExecuteMonInputCallback(idx, state_arrays, i, monitor_callback_);
+      }
       ndoutputs.clear();
       ndoutputs.reserve(num_outputs);
       req.clear();
@@ -701,6 +711,7 @@ void CachedOp::StaticRunOps(
         CHECK(req.back() == kNullOp || !ndoutputs.back()->is_none());
       }
       const DispatchMode dispatch_mode = dispatch_modes[i];
+
       if (createop.count(node.source->op())) {
         arg_shapes.clear();
         arg_dtypes.clear();
@@ -727,6 +738,9 @@ void CachedOp::StaticRunOps(
         Imperative::Get()->InvokeOp(
             default_ctx, node.source->attrs, ndinputs, ndoutputs, req,
             dispatch_mode);
+      }
+      if (monitor_callback_) {
+          mxnet::common::ExecuteMonOutputCallback(idx, state_arrays, i, monitor_callback_);
       }
     }
   }
@@ -756,7 +770,8 @@ OpStatePtr CachedOp::StaticForward(
   // We are going to add input and output arrays to the array list.
   // The input and output arrays should only be valid for this run,
   // so we shouldn't modify the state's array list.
-  auto arrays = state.arrays;
+  state.arrays_with_in_out = state.arrays;
+  auto& arrays = state.arrays_with_in_out;
   if (config_.static_shape) {
     for (auto i : config_.param_indices) {
       auto nid = idx.input_nodes()[i];
@@ -875,12 +890,12 @@ OpStatePtr CachedOp::DynamicForward(
     // So if it's not the inline mode, we disable recording.
     RunGraph(false, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
             std::move(ref_count), &states, dispatch_modes,
-            recording && inlining_);
+            recording && inlining_, nullptr, monitor_callback_, monitor_all_);
   } else {
     mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
     NaiveRunGraph(false, default_ctx, idx, arrays, 0, idx.num_nodes(),
                   std::move(array_reqs), std::move(ref_count), &states,
-                  dispatch_modes, recording && inlining_, &shapes);
+                  dispatch_modes, recording && inlining_, &shapes, monitor_callback_, monitor_all_);
     {
       auto state_ptr = GetCachedOpState(default_ctx);
       auto& state = state_ptr.get_state<CachedOpState>();
@@ -1020,7 +1035,7 @@ void CachedOp::DynamicBackward(
 
   RunGraph(retain_graph, idx, arrays, num_forward_nodes, idx.num_nodes(),
            std::move(array_reqs), std::move(ref_count), &states, dispatch_modes,
-           Imperative::Get()->is_recording());
+           Imperative::Get()->is_recording(), nullptr, monitor_callback_);
 
   if (retain_graph) {
     buff.resize(num_forward_entries);
@@ -1057,7 +1072,8 @@ void CachedOp::StaticBackward(
   // We are going to add input and output arrays to the array list.
   // The input and output arrays should only be valid for this run,
   // so we shouldn't modify the state's array list.
-  auto arrays = state.arrays;
+  state.arrays_with_in_out = state.arrays;
+  auto& arrays = state.arrays_with_in_out;
   for (size_t i = 0; i < state.info.bwd_input_eid.size(); ++i) {
     auto eid = state.info.bwd_input_eid[i];
     if (eid == kEidNotExist) {
@@ -1284,6 +1300,16 @@ void CachedOpBackward(const OpStatePtr& state_ptr,
   for (size_t i = 0; i < out_bufs.size(); i++)
     if (!out_bufs[i].IsSame(outputs[i]))
       CopyFromTo(out_bufs[i], outputs[i]);
+}
+
+/*
+ * Register the callback to be called when the operator is executed
+ */
+void CachedOp::RegisterOpHook(const CachedOp::CachedOpMonCallback& callback,
+                              bool monitor_all) {
+    CHECK(callback) << "invalid callback";
+    monitor_callback_ = callback;
+    monitor_all_ = monitor_all;
 }
 
 OpStatePtr CreateCachedOpState(const NodeAttrs& attrs,

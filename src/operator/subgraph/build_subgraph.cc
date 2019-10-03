@@ -24,7 +24,6 @@
  */
 #include <nnvm/graph.h>
 #include <nnvm/pass.h>
-#include <mxnet/op_attr_types.h>
 #include <unordered_set>
 #include <stack>
 #include <queue>
@@ -105,6 +104,28 @@ void ResetNodeLabels(const nnvm::Graph& g,
   subgraph_nodes->clear();
 }
 
+/*
+ * \brief Prepare NodeAttr for node. NodeAttr will be used in SubgraphSelectorV2.
+ */
+static const std::shared_ptr<NodeAttr> PrepareNodeAttr(const nnvm::Graph& g,
+                                                       const BiDirectedNode& node) {
+  const auto& indexed_graph = g.indexed_graph();
+  if (g.HasAttr("dtype") && g.HasAttr("shape") && g.HasAttr("dispatch_mode")) {
+    const auto& vdtype = g.GetAttr<nnvm::DTypeVector>("dtype");
+    const auto& vshape = g.GetAttr<mxnet::ShapeVector>("shape");
+    const auto& dispatch_modes = g.GetAttr<mxnet::DispatchModeVector>("dispatch_mode");
+    auto ret = std::make_shared<NodeAttr>();
+    ret->dispatch_mode = dispatch_modes[indexed_graph.node_id(node.node)];
+    for (const auto& e : node.node->inputs) {
+      ret->ishape.emplace_back(vshape[indexed_graph.entry_id(e)]);
+      ret->itype.emplace_back(vdtype[indexed_graph.entry_id(e)]);
+    }
+    return ret;
+  } else {
+    return nullptr;
+  }
+}
+
 /*!
  * \brief This function traverses the nodes in a computation graph from a starting
  * node following the input edges and output edges, and marks all nodes that
@@ -153,7 +174,7 @@ bool LabelSubgraph(const nnvm::Graph& g, SubgraphSelectorV2Ptr subgraph_selector
       CHECK_LT(nid, simple_nodes.size());
       const bool select_input =
           (snode->label == -1) && (!excluded_nodes || !excluded_nodes->count(snode)) &&
-          subgraph_selector->SelectInput(*cur_node, *snode);
+          subgraph_selector->SelectInput(*cur_node, *snode, PrepareNodeAttr(g, *snode));
       if (select_input) {
         // e.node is a subgraph node
         snode->label = label;
@@ -170,7 +191,7 @@ bool LabelSubgraph(const nnvm::Graph& g, SubgraphSelectorV2Ptr subgraph_selector
       CHECK_LT(nid, simple_nodes.size());
       const bool select_output =
           (snode->label == -1) && (!excluded_nodes || !excluded_nodes->count(snode)) &&
-          subgraph_selector->SelectOutput(*cur_node, *snode);
+          subgraph_selector->SelectOutput(*cur_node, *snode, PrepareNodeAttr(g, *snode));
       if (select_output) {
         // it->first is a subgraph node
         snode->label = label;
@@ -297,8 +318,11 @@ void PreSelectSubgraphNodes(const nnvm::Graph& g, SubgraphSelectorV2Ptr subgraph
       for (auto node : excluded_nodes) {
         excluded_node_names += node->node->attrs.name + ", ";
       }
-      LOG(INFO) << "Found a cycle when BFS from node " << simple_nodes[snid]->node->attrs.name
-                << ". Excluding nodes " << excluded_node_names << "and retrying";
+      static bool verbose = dmlc::GetEnv("MXNET_SUBGRAPH_VERBOSE", false);
+      if (verbose) {
+        LOG(INFO) << "Found a cycle when BFS from node " << simple_nodes[snid]->node->attrs.name
+                  << ". Excluding nodes " << excluded_node_names << "and retrying";
+      }
       subgraph_selector->Reset();
     }
     ++count;
@@ -322,14 +346,16 @@ void SelectSubgraphNodes(nnvm::Graph* g, SubgraphSelectorV2Ptr subgraph_selector
                          std::vector<SubgraphSelectorV2Ptr>* subgraph_selectors,
                          const BiDirectedNode* node, const size_t snid, size_t* subgraph_id) {
   const auto& indexed_graph = g->indexed_graph();
+
   auto node_cmp = [&] (const BiDirectedNode* node1, const BiDirectedNode* node2) {
     return indexed_graph.node_id(node1->node) < indexed_graph.node_id(node2->node);
   };
-  if (simple_nodes[snid]->label == -1 && subgraph_selector->Select(*node)) {
+  if ((simple_nodes[snid]->label == -1) &&
+      subgraph_selector->Select(*node, PrepareNodeAttr(*g, *node))) {
     // pre-select nodes that can be grouped in a subgraph
     std::vector<BiDirectedNode*> preselected_nodes;
     PreSelectSubgraphNodes(*g, subgraph_selector, *subgraph_id, snid, simple_nodes,
-                           &preselected_nodes);
+                            &preselected_nodes);
 
     // filter out unqualified pre-selected nodes
     std::vector<BiDirectedNode*> filtered_nodes = subgraph_selector->Filter(preselected_nodes);
@@ -569,30 +595,37 @@ void CreateSubgraphNode(nnvm::Graph* g,
   }
   const SubgraphPropertyPtr& subg_prop = g->GetAttr<SubgraphPropertyPtr>("subgraph_property");
   nnvm::NodePtr n = subg_prop->CreateSubgraphNode(sym, subgraph_selector, subgraph_id);
+  // CreateSubgraphNode returns NULL if subgraph property determines that subgraph is sub-optimal
+  // In that case, subgraph node is not created and graph is not modified
+  if (n) {
+    // Connect the external nodes to the subgraph node.
+    subg_prop->ConnectSubgraphOutputs(n, &output_entries);
+    subg_prop->ConnectSubgraphInputs(n, &input_entries, &orig_input_entries);
 
-  // Connect the external nodes to the subgraph node.
-  subg_prop->ConnectSubgraphOutputs(n, &output_entries);
-  subg_prop->ConnectSubgraphInputs(n, &input_entries, &orig_input_entries);
-
-  const auto& indexed_graph = g->indexed_graph();
-  for (size_t i = 0; i < n->inputs.size(); ++i) {
-    auto& e = n->inputs[i];
-    // update entry_top_order_map with newly created orig_input_entries
-    auto it = entry_top_order_map->find(input_entries[i]);
-    CHECK(it != entry_top_order_map->end());
-    entry_top_order_map->emplace(&e, it->second);
-    // update input entries' source simple nodes' outputs map
-    nnvm::Node* node = e.node.get();
-    if (indexed_graph.exist(node)) {
-      const auto nid = indexed_graph.node_id(node);
-      BiDirectedNode* sn = simple_nodes[nid].get();
-      for (BiDirectedNode* dest_node : subgraph_nodes) {
-        sn->outputs.erase(dest_node->node);
+    const auto& indexed_graph = g->indexed_graph();
+    for (size_t i = 0; i < n->inputs.size(); ++i) {
+      auto& e = n->inputs[i];
+      // update entry_top_order_map with newly created orig_input_entries
+      auto it = entry_top_order_map->find(input_entries[i]);
+      CHECK(it != entry_top_order_map->end());
+      entry_top_order_map->emplace(&e, it->second);
+      // update input entries' source simple nodes' outputs map
+      nnvm::Node* node = e.node.get();
+      if (indexed_graph.exist(node)) {
+        const auto nid = indexed_graph.node_id(node);
+        BiDirectedNode* sn = simple_nodes[nid].get();
+        for (BiDirectedNode* dest_node : subgraph_nodes) {
+          sn->outputs.erase(dest_node->node);
+        }
+        sn->outputs[n.get()].push_back(i);
       }
-      sn->outputs[n.get()].push_back(i);
     }
   }
 #if DEBUG_SUBGRAPH
+  if (n)
+    LOG(INFO) << "Subgraph node created and output_entries updated.";
+  else
+    LOG(INFO) << "Subgraph node not created, output_entries not updated.";
   PrintNodeEntries(output_entries);
 #endif
 }
@@ -673,17 +706,23 @@ void TopSortEntries(const nnvm::Graph& g,
 }
 
 nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
+    static bool verbose = dmlc::GetEnv("MXNET_SUBGRAPH_VERBOSE", false);
   if (!g.HasAttr("subgraph_property")) {  // treat the whole graph as a subgraph
-    LOG(INFO) << "The graph has no attribute of subgraph_property attached. "
-                 "The original graph is returned.";
+    if (verbose) {
+      LOG(INFO) << "The graph has no attribute of subgraph_property attached. "
+                   "The original graph is returned.";
+    }
     return g;
   }
   using namespace sg;
+
   const SubgraphPropertyPtr& subg_prop = g.GetAttr<SubgraphPropertyPtr>("subgraph_property");
-  const std::string& prop_name = subg_prop->HasAttr("property_name")
-                                     ? subg_prop->GetAttr<std::string>("property_name")
-                                     : "partition graph";
-  LOG(INFO) << "start to execute " << prop_name << ".";
+  if (verbose) {
+    const std::string& prop_name = subg_prop->HasAttr("property_name")
+                                       ? subg_prop->GetAttr<std::string>("property_name")
+                                       : "partition graph";
+    LOG(INFO) << "start to execute " << prop_name << ".";
+  }
   // top sort NodeEntry of all the nodes' inputs
   std::unordered_map<const nnvm::NodeEntry*, size_t> entry_top_order_map;
   TopSortEntries(g, &entry_top_order_map);

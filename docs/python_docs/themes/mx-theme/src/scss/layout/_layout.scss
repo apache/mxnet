@@ -1,0 +1,84 @@
+/**
+ * Layout Styles
+ */
+ $layout: (
+    document: (
+        xl: (
+            width: 1400px,
+        )
+    ),
+    drawer-container: (
+        width: $layout-drawer-width,
+    ),
+    side-doc-outline: (
+        width: 230px,
+    ),
+    page-content: (
+        md: (
+            width: 90%,
+            padding: 0 5%
+        ),
+        lg: (
+            width: calc( 90% - 230px ),
+            padding: 0 5%
+        )
+    )
+);
+
+.mdl-layout {
+    margin-top: 76px;
+}
+
+
+.document {
+    width: 100%;
+    margin: 0 auto;
+    display: flex;
+
+    @media (min-width: $xl-breakpoint) {
+        width: map-get(map-get(map-get($layout, document), xl), width);
+    }
+    .page-content {
+        width: 100%;
+        margin: 0 auto;
+        padding: 0 12px;
+
+        @media (min-width: $md-breakpoint) {
+            width: map-get(map-get(map-get($layout, page-content), md), width);
+            padding: map-get(map-get(map-get($layout, page-content), md), padding);
+        }
+
+        @media (min-width: $lg-breakpoint) {
+            width: map-get(map-get(map-get($layout, page-content), lg), width);
+            padding: map-get(map-get(map-get($layout, page-content), lg), padding);
+        }
+    }
+
+    .side-doc-outline {
+        width: map-get(map-get($layout, side-doc-outline), width);
+
+        @media (max-width: $lg-breakpoint - 1) {
+            display: none;
+        } 
+        &--content {
+            position: fixed;
+            overflow-x: auto;
+            overflow-y: auto;
+            width: inherit;
+            &::-webkit-scrollbar {
+                width: 6px;
+            }
+    
+            &::-webkit-scrollbar-track {
+                border-radius: 6px;
+            }
+    
+            &::-webkit-scrollbar-thumb {
+                background-color: rgba(0, 0, 0, .3);
+                border-radius: 6px;
+                box-shadow:0 0 0 1px rgba(255, 255, 255, .3);
+            }
+        }
+    }
+
+}

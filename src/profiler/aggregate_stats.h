@@ -57,10 +57,25 @@ class AggregateStats {
    */
   void OnProfileStat(const ProfileStat& stat);
   /*!
-   * \brief Print profliing statistics to console
-   * \param clear Delete all of the current statistics after printing
+   * \brief Print profliing statistics to console in a tabular format
+   * \param sort_by by which stat to sort the entries, can be "avg", "min", "max", or "count"
+   * \param ascending whether to sort ascendingly
    */
-  void Dump(std::ostream& os, bool clear);
+  void DumpTable(std::ostream& os, int sort_by, int ascending);
+  /*!
+   * \brief Print profliing statistics to console in json format
+   *    * \param sort_by by which stat to sort the entries, can be "avg", "min", "max", or "count"
+   * \param ascending whether to sort ascendingly
+   */
+  void DumpJson(std::ostream& os, int sort_by, int ascending);
+  /*!
+   * \brief Delete all of the current statistics
+   */
+  void clear();
+  /* !\brief by which stat to sort */
+  enum class SortBy {
+    Total, Avg, Min, Max, Count
+  };
 
  private:
   /*! \brief Should rarely collide, so most locks should occur only in user-space (futex) */

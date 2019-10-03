@@ -29,6 +29,7 @@
 #include "../profiler/profiler.h"
 #include "./openmp.h"
 #include "../common/object_pool.h"
+#include "../profiler/custom_op_profiler.h"
 
 namespace mxnet {
 namespace engine {
@@ -127,7 +128,7 @@ class NaiveEngine final : public Engine {
             attrs.reset(new profiler::ProfileOperator::Attributes());
           }
           opr->opr_profile.reset(new profiler::ProfileOperator(opr->opr_name, attrs.release()));
-          opr->opr_profile->start(exec_ctx.dev_type, exec_ctx.dev_id);
+          opr->opr_profile->startForDevice(exec_ctx.dev_type, exec_ctx.dev_id);
         }
         opr->fn(ctx, on_complete);
         if (opr->profiling) {
@@ -142,6 +143,10 @@ class NaiveEngine final : public Engine {
       opr->opr_name);
   }
 
+/*!
+ * \brief NaiveEngine's PushAsync was intentionally synchronous. 
+ * User should not make any assumption about execution order when using async interface of any engine.
+ */
   void PushAsync(AsyncFn exec_fun,
                  Context exec_ctx,
                  std::vector<VarHandle> const& const_vars,
@@ -150,26 +155,29 @@ class NaiveEngine final : public Engine {
                  int priority = 0,
                  const char* opr_name = nullptr,
                  bool wait = false) override {
+    bool req_completed = false;
     CallbackOnComplete callback = CreateCallback(
-        NaiveEngine::OnComplete, nullptr);
-    this->req_completed_ = false;
+        NaiveEngine::OnComplete, &req_completed);
     profiler::Profiler *profiler = profiler::Profiler::Get();
-    NaiveOpr *opr = nullptr;
+    auto opr_deleter = [this](NaiveOpr* p) {
+      this->DeleteOperator(p);
+    };
+    std::unique_ptr<NaiveOpr, decltype(opr_deleter)> opr(nullptr, opr_deleter);
     const bool profiling = opr_name && profiler->IsProfiling(profiler::Profiler::kImperative);
+    // GenerateDisplayName() will return a pointer to the correct name of the operator
+    const char* display_name = profiling ?
+                               profiler::CustomOpProfiler::Get()->GenerateDisplayName(opr_name) :
+                               opr_name;
     if (profiling) {
-      opr = NewOperator(exec_fun, const_vars, mutable_vars,
-                        prop, opr_name)->Cast<NaiveOpr>();
+      opr.reset(NewOperator(exec_fun, const_vars, mutable_vars,
+                        prop, display_name)->Cast<NaiveOpr>());
       opr->profiling = profiling;
       std::unique_ptr<profiler::ProfileOperator::Attributes> attrs;
       if (profiler->AggregateEnabled()) {
         attrs.reset(new profiler::ProfileOperator::Attributes());
       }
       opr->opr_profile.reset(new profiler::ProfileOperator(opr->opr_name, attrs.release()));
-      opr->opr_profile->start(exec_ctx.dev_type, exec_ctx.dev_id);
-    }
-    // increment mutable var version
-    for (auto var : mutable_vars) {
-      ++var->version_;
+      opr->opr_profile->startForDevice(exec_ctx.dev_type, exec_ctx.dev_id);
     }
     if (exec_ctx.dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
@@ -190,7 +198,11 @@ class NaiveEngine final : public Engine {
     } else {
       exec_fun(RunContext{exec_ctx, &cpu_stream_, nullptr, false}, callback);
     }
-    CHECK(this->req_completed_)
+    // increment mutable var version
+    for (auto var : mutable_vars) {
+      ++var->version_;
+    }
+    CHECK(req_completed)
         << "NaiveEngine only support synchronize Push so far";
     if (profiling) {
       opr->opr_profile->stop();
@@ -223,10 +235,9 @@ class NaiveEngine final : public Engine {
   // callback to oncomplete
   static void OnComplete(Engine *engine, void *param,
                          const dmlc::Error* error) {
-    static_cast<NaiveEngine*>(engine)->req_completed_ = true;
+    bool *req_completed = static_cast<bool*>(param);
+    *req_completed = true;
   }
-  // whether action is completed
-  bool req_completed_;
   /*! \brief whether it is during shutdown phase*/
   std::atomic<bool> shutdown_phase_{false};
   // CPU stream
@@ -249,5 +260,6 @@ class NaiveEngine final : public Engine {
 Engine *CreateNaiveEngine() {
   return new NaiveEngine();
 }
+
 }  // namespace engine
 }  // namespace mxnet

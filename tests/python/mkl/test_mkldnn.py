@@ -24,6 +24,7 @@ import numpy as np
 import mxnet as mx
 import unittest
 from mxnet.test_utils import rand_ndarray, assert_almost_equal
+from mxnet.module import Module
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.test_utils import *
@@ -232,6 +233,26 @@ def test_slice_reshape_before_conv():
     mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-5, atol=1e-6)
 
 
+@with_seed()
+def test_flatten_slice_after_conv():
+    data = mx.symbol.Variable('data')
+    weight = mx.symbol.Variable('weight')
+    bias = mx.symbol.Variable('bias')
+    conv1= mx.symbol.Convolution(data = data, weight=weight, bias=bias, name='conv1', num_filter=64, kernel=(3,3), stride=(1,1))
+    flatten1 = mx.symbol.flatten(data = conv1)
+    slice1 = mx.symbol.slice(data = flatten1, begin=0, end=1)
+
+    shape = (2, 16, 16, 16)
+    val = np.random.rand(2, 16, 16, 16).astype(np.float32)
+    exe = slice1.simple_bind(Context.default_ctx, data=shape)
+    exe.arg_arrays[0][:] = val
+    exe.arg_arrays[1][:] = np.random.normal(size=exe.arg_arrays[1].shape)
+    exe.arg_arrays[2][:] = np.random.normal(size=exe.arg_arrays[2].shape)
+    p = exe.forward(is_train=False)
+    p[0].wait_to_read()
+    print(p[0])
+
+
 def test_mkldnn_sum_inplace_with_cpu_layout():
 
     x_shape = (32, 3, 224, 224)
@@ -316,13 +337,17 @@ def test_pooling():
 def test_activation():
     def check_activation_training(stype):
         for shape in [(2, 3, 3), (2, 3, 2, 2)]:
+            eps = 1e-5
             data_tmp = np.random.normal(-0.1, 1, size=shape)
+            # Avoid finite difference method inaccuracies due to discontinuous gradient at the origin.
+            # Here we replace small problematic inputs with 1.0.  Repro issue with seed 851486559.
+            data_tmp[abs(data_tmp) < eps] = 1.0
 
             data = mx.symbol.Variable('data', stype=stype)
             in_location = [mx.nd.array(data_tmp).tostype(stype)]
 
             test = mx.symbol.Activation(data, act_type="relu")
-            check_numeric_gradient(test, in_location, numeric_eps=1e-5, rtol=0.16, atol=1e-4)
+            check_numeric_gradient(test, in_location, numeric_eps=eps, rtol=0.16, atol=1e-4)
 
     stypes = ['row_sparse', 'default']
     for stype in stypes:
@@ -496,7 +521,7 @@ def test_reshape_transpose_6d():
         def __init__(self, factor):
             super(Reshape2D, self).__init__()
             self._factors = (int(factor),) * 2
-     
+
         def hybrid_forward(self, F, x):
             f1, f2 = self._factors
                                                           # (N, f1*f2*C, H, W)
@@ -505,26 +530,43 @@ def test_reshape_transpose_6d():
             x = F.transpose(x, (0, 1, 4, 2, 5, 3))        # (N, C, H, f1, W, f2)
             x = F.reshape(x, (0, 0, -3, -3))              # (N, C, H*f1, W*f2)
             return x
-     
-     
+
+
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
             with self.name_scope():
                 self.conv1 = nn.Conv2D(8, kernel_size=5)
                 self.reshape2D = Reshape2D(2)
-     
+
         def hybrid_forward(self, F, x):
             x = self.conv1(x)
             x = self.reshape2D(x)
             return x
-     
+
     net = Net()
     net.initialize(mx.init.Xavier(), ctx=mx.cpu())
     net.hybridize()
     data = mx.nd.random_normal(shape=(1, 3, 600, 600))
     output = net(data)
     a = output.asnumpy()
+
+@with_seed()
+def test_weight_async_reorder():
+    data = mx.sym.Variable("data")
+    w1 = mx.sym.Variable("1_weight")
+    w2 = mx.sym.Variable("2_weight")
+    conv1 = mx.sym.Convolution(data=data, weight=w1 + w1, num_filter=32, no_bias=True, kernel=(3, 3))
+    conv2 = mx.sym.Convolution(data=conv1, weight=w2 + w2, num_filter=32, no_bias=True, kernel=(1, 1))
+    mod = Module(symbol=conv2, label_names=None, context=mx.current_context())
+    mod.bind(for_training=False, data_shapes=[('data', (10, 16, 50, 50))])
+    mod.init_params(initializer=mx.init.Xavier(magnitude=2.))
+    data = [mx.random.uniform(-1.0, 1.0, shape=(10, 16, 50, 50), ctx=mx.current_context())]
+    batch=mx.io.DataBatch(data, [])
+    for i in range(2):
+        mod.forward(batch, is_train=False)
+        for output in mod.get_outputs():
+            output.wait_to_read()
 
 if __name__ == '__main__':
     install.test_mkldnn_install()

@@ -54,6 +54,7 @@
       <directory>${MXNET_DIR}/lib</directory>
       <includes>
         <include>libmxnet.so</include>
+        <include>libtvm_runtime.so</include>
         <include>libgfortran.so.3</include>
         <include>libquadmath.so.0</include>
         <include>libiomp5.so</include>

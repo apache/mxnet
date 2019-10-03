@@ -634,32 +634,33 @@ def test_layer_fill_shape():
 
 
 def test_bidirectional_unroll_valid_length():
-    # Test BidirectionalCell.
-    # In 1.3.1 version, after hybridize( ), BidirectionalCell would failed when pass valid_length to unroll( ).
-    
-    class BiLSTM(gluon.nn.HybridBlock):
-        def __init__(self, rnn_size, time_step, **kwargs):
-            super(BiLSTM, self).__init__(**kwargs)
-            self.time_step = time_step
-            with self.name_scope():
-                self.bi_lstm = gluon.rnn.BidirectionalCell(
-                    gluon.rnn.LSTMCell(rnn_size, prefix='rnn_l0_'),
-                    gluon.rnn.LSTMCell(rnn_size, prefix='rnn_r0_'),
-                    output_prefix='lstm_bi_')
+    def _check_bidirectional_unroll_valid_length(length):
+        class BiLSTM(gluon.nn.HybridBlock):
+            def __init__(self, rnn_size, time_step, **kwargs):
+                super(BiLSTM, self).__init__(**kwargs)
+                self.time_step = time_step
+                with self.name_scope():
+                    self.bi_lstm = gluon.rnn.BidirectionalCell(
+                        gluon.rnn.LSTMCell(rnn_size, prefix='rnn_l0_'),
+                        gluon.rnn.LSTMCell(rnn_size, prefix='rnn_r0_'),
+                        output_prefix='lstm_bi_')
 
-        def hybrid_forward(self, F, inputs, valid_len):
-            outputs, states = self.bi_lstm.unroll(self.time_step, inputs, valid_length=valid_len,
-                                                  layout='NTC', merge_outputs=True)
-            return outputs, states
+            def hybrid_forward(self, F, inputs, valid_len):
+                outputs, states = self.bi_lstm.unroll(self.time_step, inputs, valid_length=valid_len,
+                                                      layout='NTC', merge_outputs=True)
+                return outputs, states
 
-    rnn_size, time_step = 100, 3
-    net = BiLSTM(rnn_size, time_step)
-    net.initialize()
-    net.hybridize()
-    inputs_data = mx.nd.random.uniform(shape=(10, 3, 50))
-    valid_len = mx.nd.array([1]*10)
-    outputs, _ = net(inputs_data, valid_len)
-    assert outputs.shape == (10, 3, 200)
+        rnn_size = 100
+        net = BiLSTM(rnn_size, length)
+        net.initialize()
+        net.hybridize()
+        inputs_data = mx.nd.random.uniform(shape=(10, length, 50))
+        valid_len = mx.nd.array([length]*10)
+        outputs, _ = net(inputs_data, valid_len)
+        assert outputs.shape == (10, length, 200)
+
+    _check_bidirectional_unroll_valid_length(1)
+    _check_bidirectional_unroll_valid_length(3)
 
 
 if __name__ == '__main__':

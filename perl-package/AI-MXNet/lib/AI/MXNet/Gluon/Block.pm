@@ -142,7 +142,7 @@ use Scalar::Util qw(refaddr);
     Prefix acts like a name space. All children blocks created in parent block's
     name_scope will have parent block's prefix in their name.
     Please refer to
-    naming tutorial http://mxnet.incubator.apache.org/tutorials/gluon/naming.html
+    naming tutorial https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/naming.html
     for more info on prefix and naming.
 
     params : AI::MXNet::Gluon::ParameterDict or undef
@@ -731,8 +731,13 @@ method forward(@args)
 method register(Str $container)
 {
     my $sub_name = $self->_class_name;
+    my $dest = $self->can('new');
+    my $func = sub {
+        splice @_, 0, 1, $self;
+        goto $dest;
+    };
     no strict 'refs';
-    *{$container.'_::'.$sub_name} = sub { shift; $self->new(@_) };
+    *{"$container\::$sub_name"} = $func;
 }
 
 =head2 summary
@@ -871,7 +876,7 @@ package AI::MXNet::Gluon::HybridBlock;
     representing the forward computation and cache it. On subsequent forwards,
     the cached graph will be used instead of hybrid_forward.
 
-    Refer Hybrid tutorial L<http://mxnet.io/tutorials/gluon/hybrid.html> to see
+    Refer Hybrid tutorial L<https://mxnet.io/tutorials/gluon/hybrid.html> to see
     the end-to-end usage.
 =cut
 

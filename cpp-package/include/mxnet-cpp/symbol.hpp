@@ -172,6 +172,41 @@ inline std::vector<std::string> Symbol::ListAuxiliaryStates() const {
   return ret;
 }
 
+inline std::map<std::string, std::string> Symbol::ListAttributes() const {
+    mx_uint size;
+    const char** pairs;
+    CHECK_EQ(MXSymbolListAttrShallow(GetHandle(), &size, &pairs), 0);
+    std::map<std::string, std::string> attributes;
+    for (mx_uint i = 0; i < size; ++i) {
+        // pairs is 2 * size with key, value pairs according to
+        //   https://github.com/apache/incubator-mxnet/blob/master/include/mxnet/c_api.h#L1428
+        attributes[pairs[2 * i]] = pairs[2 * i + 1];
+    }
+    return attributes;
+}
+
+inline void Symbol::SetAttribute(const std::string &key, const std::string &value) {
+    CHECK_EQ(MXSymbolSetAttr(GetHandle(), key.c_str(), value.c_str()), 0);
+}
+
+inline void Symbol::SetAttributes(const std::map<std::string, std::string> &attrs) {
+    for (const auto& kv : attrs) {
+        SetAttribute(kv.first, kv.second);
+    }
+}
+
+inline mx_uint Symbol::GetNumOutputs() const {
+    mx_uint numOutputs;
+    CHECK_EQ(MXSymbolGetNumOutputs(GetHandle(), &numOutputs), 0);
+    return numOutputs;
+}
+
+inline mxnet::cpp::Symbol Symbol::GetBackendSymbol(const std::string &backendName) const {
+    SymbolHandle symbolHandle;
+    CHECK_EQ(MXGenBackendSubgraph(GetHandle(), backendName.c_str(), &symbolHandle), 0);
+    return mxnet::cpp::Symbol(symbolHandle);
+}
+
 inline std::string Symbol::GetName() const {
   int success;
   const char* out_name;

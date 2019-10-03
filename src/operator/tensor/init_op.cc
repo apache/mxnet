@@ -32,6 +32,7 @@ DMLC_REGISTER_PARAMETER(InitOpParam);
 DMLC_REGISTER_PARAMETER(InitOpWithScalarParam);
 DMLC_REGISTER_PARAMETER(InitOpWithoutDTypeParam);
 DMLC_REGISTER_PARAMETER(RangeParam);
+DMLC_REGISTER_PARAMETER(RangeLikeParam);
 DMLC_REGISTER_PARAMETER(EyeParam);
 DMLC_REGISTER_PARAMETER(LinspaceParam);
 
@@ -81,6 +82,7 @@ NNVM_REGISTER_OP(_ones)
 .add_arguments(InitOpParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_full)
+.add_alias("_npi_full")
   .describe("fill target with a scalar value")
   .set_num_inputs(0)
   .set_num_outputs(1)
@@ -97,10 +99,47 @@ NNVM_REGISTER_OP(_arange)
 .set_attr_parser(RangeParamParser)
 .set_attr<mxnet::FInferShape>("FInferShape", RangeShape)
 .set_attr<nnvm::FInferType>("FInferType", InitType<RangeParam>)
-.set_attr<FCompute>("FCompute<cpu>", RangeCompute<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", RangeCompute<cpu, RangeParam>)
 .add_arguments(RangeParam::__FIELDS__());
 
+NNVM_REGISTER_OP(_contrib_arange_like)
+.describe(R"code(Return an array with evenly spaced values. If axis is not given, the output will 
+have the same shape as the input array. Otherwise, the output will be a 1-D array with size of 
+the specified axis in input shape.
+
+Examples::
+
+  x = [[0.14883883 0.7772398  0.94865847 0.7225052 ]
+       [0.23729339 0.6112595  0.66538996 0.5132841 ]
+       [0.30822644 0.9912457  0.15502319 0.7043658 ]]
+       <NDArray 3x4 @cpu(0)>
+
+  out = mx.nd.contrib.arange_like(x, start=0)
+
+    [[ 0.  1.  2.  3.]
+     [ 4.  5.  6.  7.]
+     [ 8.  9. 10. 11.]]
+     <NDArray 3x4 @cpu(0)>
+
+  out = mx.nd.contrib.arange_like(x, start=0, axis=-1)
+
+    [0. 1. 2. 3.]
+    <NDArray 4 @cpu(0)>
+)code")
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<RangeLikeParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", RangeLikeShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",
+    [](const NodeAttrs& attrs) { return std::vector<uint32_t>(1, 0); })
+.set_attr<FCompute>("FCompute<cpu>", RangeCompute<cpu, RangeLikeParam>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.add_argument("data", "NDArray-or-Symbol", "The input")
+.add_arguments(RangeLikeParam::__FIELDS__());
+
 NNVM_REGISTER_OP(_linspace)
+.add_alias("_npi_linspace")
 .describe("Return evenly spaced numbers over a specified interval. Similar to Numpy")
 .set_num_inputs(0)
 .set_num_outputs(1)

@@ -262,10 +262,11 @@ void MKLDNNDeconvForward::SetDataHandle(const DeconvolutionParam& param,
     // For inference, we want to reorder the weight array so we don't need to
     // reorder data every time.
     if (weight.IsDefaultData()) {
-      weight_mem = GetWeights(weight, fwd_pd.weights_primitive_desc(), param.num_group);
-      // We also need to modify the layout on the original weight array. The
-      // data conversion happens after the weight array is used.
+      // We also need to modify the layout on the original weight array.
+      // Don't switch below sequence because naive engine will executes
+      // pushAsync synchronously.
       const_cast<NDArray&>(weight).MKLDNNDataReorderAsync(fwd_pd.weights_primitive_desc());
+      weight_mem = GetWeights(weight, fwd_pd.weights_primitive_desc(), param.num_group);
     } else {
       weight_mem = weight.GetMKLDNNData();
       CHECK(weight_mem->get_primitive_desc() == fwd_pd.weights_primitive_desc());
@@ -558,10 +559,13 @@ void MKLDNNDeconvolutionBackward(const nnvm::NodeAttrs &attrs,
     Stream<cpu> *s = ctx.get_stream<cpu>();
     Tensor<cpu, 1, DType> gbias =
         in_grad[deconv::kBias].data().get<cpu, 1, DType>(s);
-    // If there is bias, the out grad has already been converted to the default
-    // format, so this shouldn't cause any performance issues.
-    Tensor<cpu, 4, DType> grad =
-        inputs[deconv::kOut].data().get<cpu, 4, DType>(s);
+
+    NDArray temp = inputs[deconv::kOut];
+    if (temp.IsMKLDNNData()) {
+      temp = temp.Reorder2Default();
+    }
+
+    Tensor<cpu, 4, DType> grad = temp.data().get<cpu, 4, DType>(s);
     Assign(gbias, req[deconv::kBias],
            mshadow::expr::sumall_except_dim<1>(grad));
   }

@@ -28,6 +28,7 @@
 #include <dmlc/logging.h>
 #include <dmlc/omp.h>
 #include <nnvm/graph.h>
+#include <nnvm/node.h>
 #include <mxnet/engine.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/op_attr_types.h>
@@ -50,9 +51,21 @@
 #include "../operator/nn/mkldnn/mkldnn_base-inl.h"
 #endif
 
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
+
+
 namespace mxnet {
 namespace common {
 
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+inline size_t current_process_id() { return ::GetCurrentProcessId(); }
+#else
+inline size_t current_process_id() { return getpid(); }
+#endif
 /*!
  * \brief IndPtr should be non-negative, in non-decreasing order, start with 0
  *           and end with value equal with size of indices.
@@ -790,6 +803,24 @@ inline void ConvertToLegacyShape(mxnet::ShapeVector* shapes) {
   for (size_t i = 0; i < shapes->size(); ++i) {
     ConvertToLegacyShape(&(shapes->at(i)));
   }
+}
+void ExecuteMonInputCallback(
+    const nnvm::IndexedGraph &idx, const std::vector<NDArray *> &state_arrays,
+    size_t nid, const std::function<void(const char *, const char *, void *)>
+                    &monitor_callback);
+
+void ExecuteMonOutputCallback(
+    const nnvm::IndexedGraph &idx, const std::vector<NDArray *> &state_arrays,
+    size_t nid, const std::function<void(const char *, const char *, void *)>
+                    &monitor_callback);
+
+/*!
+ * \brief This is function can return the output names of a NodeEntry.
+ */
+static inline std::string GetOutputName(const nnvm::NodeEntry& e) {
+  nnvm::Symbol sym;
+  sym.outputs.push_back(e);
+  return sym.ListOutputNames()[0];
 }
 
 }  // namespace common

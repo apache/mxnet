@@ -364,7 +364,8 @@ inline static bool BackwardPoolingStorageType(const nnvm::NodeAttrs &attrs,
 DMLC_REGISTER_PARAMETER(PoolingParam);
 
 NNVM_REGISTER_OP(Pooling)
-    .describe(R"code(Performs pooling on the input.
+.add_alias("_npx_pooling")
+.describe(R"code(Performs pooling on the input.
 
 The shapes for 1-D pooling are
 
@@ -389,8 +390,8 @@ The definition of *f* depends on ``pooling_convention``, which has two options:
 
     f(x, k, p, s) = ceil((x+2*p-k)/s)+1
 
-But ``global_pool`` is set to be true, then do a global pooling, namely reset
-``kernel=(height, width)``.
+When ``global_pool`` is set to be true, then global pooling is performed. It will reset
+``kernel=(height, width)`` and set the appropiate padding to 0.
 
 Three pooling options are supported by ``pool_type``:
 

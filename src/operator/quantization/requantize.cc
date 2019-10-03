@@ -77,6 +77,9 @@ inference accuracy.
 #else
 .set_attr<FCompute>("FCompute<cpu>", RequantizeForward<cpu>)
 #endif
+.set_attr<FNeedCalibrateInput>("FNeedCalibrateInput", [](const NodeAttrs& attrs){
+  return std::vector<int>{0};
+})
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
     const RequantizeParam& param =
       nnvm::get<RequantizeParam>(attrs.parsed);

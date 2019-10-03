@@ -29,6 +29,9 @@ from .ndarray import NDArray, load
 from . import random
 from . import registry
 from . import ndarray
+from . util import is_np_array
+from . import numpy as _mx_np  # pylint: disable=reimported
+
 
 # inherit str for backward compatibility
 class InitDesc(str):
@@ -464,6 +467,12 @@ class Constant(Initializer):
     def _init_weight(self, _, arr):
         arr[:] = self.value
 
+    def dumps(self):
+        val = self._kwargs['value']
+        if not np.isscalar(val):
+            self._kwargs['value'] = val.tolist() if isinstance(val, np.ndarray) else val.asnumpy().tolist()
+        return json.dumps([self.__class__.__name__.lower(), self._kwargs])
+
 @register
 class Uniform(Initializer):
     """Initializes weights with random values uniformly sampled from a given range.
@@ -495,7 +504,8 @@ class Uniform(Initializer):
         self.scale = scale
 
     def _init_weight(self, _, arr):
-        random.uniform(-self.scale, self.scale, out=arr)
+        uniform_fn = _mx_np.random.uniform if is_np_array() else random.uniform
+        uniform_fn(-self.scale, self.scale, out=arr)
 
 @register
 class Normal(Initializer):
@@ -528,7 +538,8 @@ class Normal(Initializer):
         self.sigma = sigma
 
     def _init_weight(self, _, arr):
-        random.normal(0, self.sigma, out=arr)
+        normal_fn = _mx_np.random.normal if is_np_array() else random.normal
+        normal_fn(0, self.sigma, out=arr)
 
 @register
 class Orthogonal(Initializer):
@@ -627,9 +638,11 @@ class Xavier(Initializer):
             raise ValueError("Incorrect factor type")
         scale = np.sqrt(self.magnitude / factor)
         if self.rnd_type == "uniform":
-            random.uniform(-scale, scale, out=arr)
+            uniform_fn = _mx_np.random.uniform if is_np_array() else random.uniform
+            uniform_fn(-scale, scale, out=arr)
         elif self.rnd_type == "gaussian":
-            random.normal(0, scale, out=arr)
+            normal_fn = _mx_np.random.normal if is_np_array() else random.normal
+            normal_fn(0, scale, out=arr)
         else:
             raise ValueError("Unknown random type")
 
@@ -642,7 +655,7 @@ class MSRAPrelu(Xavier):
     https://arxiv.org/abs/1502.01852.
 
     This initializer is proposed for initialization related to ReLu activation,
-    it maked some changes on top of Xavier method.
+    it makes some changes on top of Xavier method.
 
     Parameters
     ----------

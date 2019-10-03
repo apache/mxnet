@@ -18,9 +18,8 @@
 # MXNet Profiler Examples
 
 This folder contains examples of using MXNet profiler to generate profiling results in json files.
-Please refer to [this link](http://mxnet.incubator.apache.org/faq/perf.html?highlight=profiler#profiler)
-for visualizing profiling results and make sure that you have installed a version of MXNet compiled
-with `USE_PROFILER=1`.
+Please refer to [this link](https://mxnet.apache.org/api/faq/perf?highlight=profiler#profiler)
+for visualizing profiling results.
 
 - profiler_executor.py. To run this example,
     - clone mxnet-memonger (git clone https://github.com/dmlc/mxnet-memonger.git).
@@ -32,7 +31,7 @@ with `USE_PROFILER=1`.
 - profiler_imageiter.py. You first need to create a file named `test.rec`,
 which is an image dataset file before running this example.
 Please follow
-[this tutorial](https://mxnet.incubator.apache.org/faq/recordio.html?highlight=rec%20file#create-a-dataset-using-recordio)
+[this tutorial](https://mxnet.apache.org/faq/recordio.html?highlight=rec%20file#create-a-dataset-using-recordio)
 on how to create `.rec` files using an existing tool in MXNet. After you created 'test.rec',
 type `python profiler_imageiter.py` in terminal. It will generate `profile_imageiter.json`.
 

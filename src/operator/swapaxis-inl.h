@@ -47,7 +47,7 @@ enum SwapAxisOpOutputs {kOut};
 
 struct SwapAxisParam : public dmlc::Parameter<SwapAxisParam> {
   // use int for enumeration
-  uint32_t dim1, dim2;
+  int dim1, dim2;
   DMLC_DECLARE_PARAMETER(SwapAxisParam) {
     DMLC_DECLARE_FIELD(dim1)
     .set_default(0)
@@ -106,8 +106,6 @@ class SwapAxisOp : public Operator {
                 const std::vector<OpReqType> &req) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    int dim1 = param_.dim1;
-    int dim2 = param_.dim2;
 
     TBlob data_in = in_data[swapaxisenum::kData];
     TBlob data_out = out_data[swapaxisenum::kData];
@@ -115,10 +113,27 @@ class SwapAxisOp : public Operator {
 
     mxnet::TShape shape_in = data_in.shape_;
     mxnet::TShape shape_out = data_out.shape_;
+    int axis1 = param_.dim1;
+    if (axis1 < 0) {
+      axis1 += shape_in.ndim();
+    }
+    CHECK(axis1 >= 0 && axis1 < shape_in.ndim())
+        << "axis1: axis " << param_.dim1 << " is out of bounds for array of ndim "
+        << shape_in.ndim();
+
+    int axis2 = param_.dim2;
+    if (axis2 < 0) {
+      axis2 += shape_in.ndim();
+    }
+    CHECK(axis2 >= 0 && axis2 < shape_in.ndim())
+        << "axis2: axis " << param_.dim2 << " is out of bounds for array of ndim "
+        << shape_in.ndim();
+
+    if (shape_in.Size() == 0U) return;
 
     Shape<5> inter_shape;
 
-    Reshape2Five(&inter_shape, shape_in, dim1, dim2);
+    Reshape2Five(&inter_shape, shape_in, axis1, axis2);
 
     Tensor<xpu, 5, DType> inter_data_in = data_in.get_with_shape<xpu, 5, DType>(inter_shape, s);
 
@@ -187,13 +202,28 @@ class SwapAxisProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), 1U);
 
     mxnet::TShape &shape0 = (*in_shape)[swapaxisenum::kData];
+    if (!ndim_is_known(shape0)) return false;
+    int axis1 = param_.dim1;
+    if (axis1 < 0) {
+      axis1 += shape0.ndim();
+    }
+    CHECK(axis1 >= 0 && axis1 < shape0.ndim())
+        << "axis1: axis " << param_.dim1 << " is out of bounds for array of ndim " << shape0.ndim();
+
+    int axis2 = param_.dim2;
+    if (axis2 < 0) {
+      axis2 += shape0.ndim();
+    }
+    CHECK(axis2 >= 0 && axis2 < shape0.ndim())
+        << "axis2: axis " << param_.dim2 << " is out of bounds for array of ndim " << shape0.ndim();
+
     out_shape->clear();
     out_shape->push_back(shape0);
     mxnet::TShape &shape1 = (*out_shape)[swapaxisenum::kOut];
 
-    std::swap(shape1[param_.dim1], shape1[param_.dim2]);
+    std::swap(shape1[axis1], shape1[axis2]);
 
-    return true;
+    return shape_is_known(*out_shape);
   }
 
   bool InferType(std::vector<int> *in_type,

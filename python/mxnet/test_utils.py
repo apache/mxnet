@@ -29,6 +29,7 @@ import errno
 import logging
 import bz2
 import zipfile
+import json
 from contextlib import contextmanager
 import numpy as np
 import numpy.testing as npt
@@ -47,6 +48,8 @@ from .context import Context, current_context
 from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from .ndarray import array
 from .symbol import Symbol
+from .symbol.numpy import _Symbol as np_symbol
+from .util import use_np  # pylint: disable=unused-import
 
 
 def default_context():
@@ -88,7 +91,8 @@ def get_etol(etol=None):
 
 def random_arrays(*shapes):
     """Generate some random numpy arrays."""
-    arrays = [np.random.randn(*s).astype(default_dtype())
+    arrays = [np.array(np.random.randn(), dtype=default_dtype())
+              if len(s) == 0 else np.random.randn(*s).astype(default_dtype())
               for s in shapes]
     if len(arrays) == 1:
         return arrays[0]
@@ -211,11 +215,11 @@ def _get_powerlaw_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
                 return mx.nd.array(output_arr).tostype("csr")
         col_max = col_max * 2
 
-    if unused_nnz > 0: # pylint: disable=no-else-raise
+    if unused_nnz > 0:
         raise ValueError("not supported for this density: %s"
                          " for this shape (%s,%s)" % (density, num_rows, num_cols))
-    else:
-        return mx.nd.array(output_arr).tostype("csr")
+
+    return mx.nd.array(output_arr).tostype("csr")
 
 
 def assign_each(the_input, function):
@@ -257,6 +261,17 @@ def assign_each2(input1, input2, function):
             it_out.iternext()
 
     return output
+
+# For testing Large Tensors having total size > 2^32 elements
+def create_2d_tensor(rows, columns, dtype=np.int64):
+    a = mx.nd.arange(0, rows, dtype=dtype).reshape(rows, 1)
+    b = mx.nd.broadcast_to(a, shape=(a.shape[0], columns))
+    return b
+
+# For testing Large Vectors having total size > 2^32 elements
+def create_vector(size, dtype=np.int64):
+    a = mx.nd.arange(0, size, dtype=dtype)
+    return a
 
 def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=None,
                         data_init=None, rsp_indices=None, modifier_func=None,
@@ -407,16 +422,26 @@ def create_sparse_array_zd(shape, stype, density, data_init=None,
                                density=density,
                                shuffle_csr_indices=shuffle_csr_indices)
 
-def rand_shape_2d(dim0=10, dim1=10):
-    return rnd.randint(1, dim0 + 1), rnd.randint(1, dim1 + 1)
+
+def rand_shape_2d(dim0=10, dim1=10, allow_zero_size=False):
+    low = 0 if allow_zero_size else 1
+    return rnd.randint(low, dim0 + 1), rnd.randint(low, dim1 + 1)
 
 
-def rand_shape_3d(dim0=10, dim1=10, dim2=10):
-    return rnd.randint(1, dim0 + 1), rnd.randint(1, dim1 + 1), rnd.randint(1, dim2 + 1)
+def rand_shape_3d(dim0=10, dim1=10, dim2=10, allow_zero_size=False):
+    low = 0 if allow_zero_size else 1
+    return rnd.randint(low, dim0 + 1), rnd.randint(low, dim1 + 1), rnd.randint(low, dim2 + 1)
 
 
-def rand_shape_nd(num_dim, dim=10):
-    return tuple(rnd.randint(1, dim+1, size=num_dim))
+def rand_shape_nd(num_dim, dim=10, allow_zero_size=False):
+    low = 0 if allow_zero_size else 1
+    return tuple(rnd.randint(low, dim+1, size=num_dim))
+
+
+def rand_coord_2d(x_low, x_high, y_low, y_high):
+    x = np.random.randint(x_low, x_high, dtype=np.int64)
+    y = np.random.randint(y_low, y_high, dtype=np.int64)
+    return x, y
 
 
 def np_reduce(dat, axis, keepdims, numpy_reduce_func):
@@ -473,13 +498,18 @@ def same(a, b):
     """
     return np.array_equal(a, b)
 
-def almost_equal(a, b, rtol=None, atol=None, equal_nan=False):
+def almost_equal(a, b, rtol=None, atol=None, equal_nan=False, use_broadcast=True):
     """Test if two numpy arrays are almost equal."""
     # pylint: disable=unexpected-keyword-arg
+    if (not use_broadcast) and a.shape != b.shape:
+        msg = npt.build_err_msg([a, b],
+                                err_msg="a.shape = {} and b.shape = {} are not equal"
+                                .format(str(a.shape), str(b.shape)))
+        raise AssertionError(msg)
     return np.allclose(a, b, rtol=get_rtol(rtol), atol=get_atol(atol), equal_nan=equal_nan)
     # pylint: enable=unexpected-keyword-arg
 
-def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=False):
+def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=False, use_broadcast=True):
     """Test that two numpy arrays are almost equal. Raise exception message if not.
 
     Parameters
@@ -491,7 +521,7 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
     """
     rtol = get_rtol(rtol)
     atol = get_atol(atol)
-    if almost_equal(a, b, rtol, atol, equal_nan=equal_nan):
+    if almost_equal(a, b, rtol, atol, equal_nan=equal_nan, use_broadcast=use_broadcast):
         return
     index, rel = find_max_violation(a, b, rtol, atol)
     np.set_printoptions(threshold=4, suppress=True)
@@ -822,7 +852,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
             continue
         stype = executor.arg_dict[k].stype
         old_value = v.copy()
-        for i in range(np.prod(v.shape)):
+        for i in range(int(np.prod(v.shape))):
             # inplace update
             v.ravel()[i] += eps/2.0
             executor.arg_dict[k][:] = as_stype(v, stype, dtype=dtype)
@@ -934,7 +964,12 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     input_shape = {k: v.shape for k, v in location.items()}
     _, out_shape, _ = sym.infer_shape(**input_shape)
     proj = mx.sym.Variable("__random_proj")
+    is_np_sym = bool(isinstance(sym, np_symbol))
+    if is_np_sym:  # convert to np symbol for using element-wise multiplication
+        proj = proj.as_np_ndarray()
     out = sym * proj
+    if is_np_sym:  # convert to classic symbol so that make_loss can be used
+        out = out.as_nd_ndarray()
     out = mx.sym.make_loss(out)
 
     location = dict(list(location.items()) +
@@ -1055,7 +1090,10 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
 
     executor = sym.bind(ctx=ctx, args=location, args_grad=args_grad_data, aux_states=aux_states)
     for g in executor.grad_arrays:
-        g[:] = 0
+        if g.ndim == 0:
+            g[()] = 0
+        else:
+            g[:] = 0
 
     executor.forward(is_train=False)
 
@@ -1127,7 +1165,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     >>> grad_expected = ograd.copy().asnumpy()
     >>> check_symbolic_backward(sym_add, [mat1, mat2], [ograd], [grad_expected, grad_expected])
     """
-    assert dtype in (np.float16, np.float32, np.float64)
+    assert dtype == 'asnumpy' or dtype in (np.float16, np.float32, np.float64)
     if ctx is None:
         ctx = default_context()
 
@@ -1140,7 +1178,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     args_grad_npy = {k:np.random.normal(size=v.shape) for k, v in expected.items()}
     args_grad_data = {}
     for k, v in args_grad_npy.items():
-        nd = mx.nd.array(v, ctx=ctx, dtype=dtype)
+        nd = mx.nd.array(v, ctx=ctx, dtype=expected[k].dtype if dtype == "asnumpy" else dtype)
         if grad_stypes is not None and k in grad_stypes:
             stype = grad_stypes[k]
             if stype is not None and stype != 'default':
@@ -1164,7 +1202,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
         outg = list()
         for arr in out_grads:
             if isinstance(arr, np.ndarray):
-                outg.append(mx.nd.array(arr, ctx=ctx, dtype=dtype))
+                outg.append(mx.nd.array(arr, ctx=ctx, dtype=arr.dtype if dtype == "asnumpy" else dtype))
             else:
                 outg.append(arr)
         out_grads = outg
@@ -1172,7 +1210,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
         outg = dict()
         for k, v in out_grads.items():
             if isinstance(v, np.ndarray):
-                outg[k] = mx.nd.array(v, ctx=ctx, dtype=dtype)
+                outg[k] = mx.nd.array(v, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype)
             else:
                 outg[k] = v
         out_grads = outg
@@ -1400,10 +1438,10 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             except AssertionError as e:
                 print('Predict Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                 traceback.print_exc()
-                if raise_on_err: # pylint: disable=no-else-raise
+                if raise_on_err:
                     raise e
-                else:
-                    print(str(e))
+
+                print(str(e))
 
     # train
     if grad_req != 'null':
@@ -1427,10 +1465,10 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                 except AssertionError as e:
                     print('Train Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                     traceback.print_exc()
-                    if raise_on_err: # pylint: disable=no-else-raise
+                    if raise_on_err:
                         raise e
-                    else:
-                        print(str(e))
+
+                    print(str(e))
 
     return gt
 
@@ -1507,13 +1545,79 @@ def download(url, fname=None, dirname=None, overwrite=False, retries=5):
                 break
         except Exception as e:
             retries -= 1
-            if retries <= 0: # pylint: disable=no-else-raise
+            if retries <= 0:
                 raise e
-            else:
-                print("download failed, retrying, {} attempt{} left"
-                      .format(retries, 's' if retries > 1 else ''))
+
+            print("download failed, retrying, {} attempt{} left"
+                  .format(retries, 's' if retries > 1 else ''))
     logging.info("downloaded %s into %s successfully", url, fname)
     return fname
+
+def download_model(model_name, dst_dir='./', meta_info=None):
+    """Download a model from data.mxnet.io
+
+    Parameters
+    ----------
+    model_name : str
+        Model name to download
+    dst_dir : str
+        Destination Directory to download the model
+    meta_info : dict of dict
+        Mapping from model_name to dict of the following structure:
+        {'symbol': url, 'params': url}
+
+    Returns
+    -------
+    Two element tuple containing model_name and epoch for the params saved
+    """
+    _base_model_url = 'http://data.mxnet.io/models/'
+    _default_model_info = {
+        'imagenet1k-inception-bn': {'symbol':_base_model_url+'imagenet/inception-bn/Inception-BN-symbol.json',
+                                    'params':_base_model_url+'imagenet/inception-bn/Inception-BN-0126.params'},
+        'imagenet1k-resnet-18': {'symbol':_base_model_url+'imagenet/resnet/18-layers/resnet-18-symbol.json',
+                                 'params':_base_model_url+'imagenet/resnet/18-layers/resnet-18-0000.params'},
+        'imagenet1k-resnet-34': {'symbol':_base_model_url+'imagenet/resnet/34-layers/resnet-34-symbol.json',
+                                 'params':_base_model_url+'imagenet/resnet/34-layers/resnet-34-0000.params'},
+        'imagenet1k-resnet-50': {'symbol':_base_model_url+'imagenet/resnet/50-layers/resnet-50-symbol.json',
+                                 'params':_base_model_url+'imagenet/resnet/50-layers/resnet-50-0000.params'},
+        'imagenet1k-resnet-101': {'symbol':_base_model_url+'imagenet/resnet/101-layers/resnet-101-symbol.json',
+                                  'params':_base_model_url+'imagenet/resnet/101-layers/resnet-101-0000.params'},
+        'imagenet1k-resnet-152': {'symbol':_base_model_url+'imagenet/resnet/152-layers/resnet-152-symbol.json',
+                                  'params':_base_model_url+'imagenet/resnet/152-layers/resnet-152-0000.params'},
+        'imagenet1k-resnext-50': {'symbol':_base_model_url+'imagenet/resnext/50-layers/resnext-50-symbol.json',
+                                  'params':_base_model_url+'imagenet/resnext/50-layers/resnext-50-0000.params'},
+        'imagenet1k-resnext-101': {'symbol':_base_model_url+'imagenet/resnext/101-layers/resnext-101-symbol.json',
+                                   'params':_base_model_url+'imagenet/resnext/101-layers/resnext-101-0000.params'},
+        'imagenet1k-resnext-101-64x4d':
+            {'symbol':_base_model_url+'imagenet/resnext/101-layers/resnext-101-64x4d-symbol.json',
+             'params':_base_model_url+'imagenet/resnext/101-layers/resnext-101-64x4d-0000.params'},
+        'imagenet11k-resnet-152':
+            {'symbol':_base_model_url+'imagenet-11k/resnet-152/resnet-152-symbol.json',
+             'params':_base_model_url+'imagenet-11k/resnet-152/resnet-152-0000.params'},
+        'imagenet11k-place365ch-resnet-152':
+            {'symbol':_base_model_url+'imagenet-11k-place365-ch/resnet-152-symbol.json',
+             'params':_base_model_url+'imagenet-11k-place365-ch/resnet-152-0000.params'},
+        'imagenet11k-place365ch-resnet-50':
+            {'symbol':_base_model_url+'imagenet-11k-place365-ch/resnet-50-symbol.json',
+             'params':_base_model_url+'imagenet-11k-place365-ch/resnet-50-0000.params'},
+    }
+
+
+    if meta_info is None:
+        meta_info = _default_model_info
+    meta_info = dict(meta_info)
+    if model_name not in meta_info:
+        return (None, 0)
+    if not os.path.isdir(dst_dir):
+        os.mkdir(dst_dir)
+    meta = dict(meta_info[model_name])
+    assert 'symbol' in meta, "missing symbol url"
+    model_name = os.path.join(dst_dir, model_name)
+    mx.test_utils.download(meta['symbol'], model_name+'-symbol.json')
+    assert 'params' in meta, "mssing parameter file url"
+    mx.test_utils.download(meta['params'], model_name+'-0000.params')
+    return (model_name, 0)
+
 
 def get_mnist():
     """Download and load the MNIST dataset
@@ -1588,7 +1692,7 @@ def get_mnist_iterator(batch_size, input_shape, num_parts=1, part_index=0):
     """
 
     get_mnist_ubyte()
-    flat = False if len(input_shape) == 3 else True # pylint: disable=simplifiable-if-expression
+    flat = not bool(len(input_shape) == 3)
 
     train_dataiter = mx.io.MNISTIter(
         image="data/train-images-idx3-ubyte",
@@ -2067,6 +2171,22 @@ def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='defa
         compare_ndarray_tuple(state1, state2, rtol=rtol, atol=atol)
     assert_almost_equal(w1.asnumpy(), w2.asnumpy(), rtol=rtol, atol=atol)
 
+
+def same_symbol_structure(sym1, sym2):
+    """Compare two symbols to check if they have the same computation graph structure.
+    Returns true if operator corresponding to a particular node id is same in both
+    symbols for all nodes
+    """
+    conf = json.loads(sym1.tojson())
+    nodes = conf["nodes"]
+    conf2 = json.loads(sym2.tojson())
+    nodes2 = conf2["nodes"]
+    for node1, node2 in zip(nodes, nodes2):
+        if node1["op"] != node2["op"]:
+            return False
+    return True
+
+
 class EnvManager(object):
     """Environment variable setter and unsetter via with idiom"""
     def __init__(self, key, val):
@@ -2083,3 +2203,25 @@ class EnvManager(object):
             os.environ[self._key] = self._prev_val
         else:
             del os.environ[self._key]
+
+
+def collapse_sum_like(a, shape):
+    """Given `a` as a numpy ndarray, perform reduce_sum on `a` over the axes that do not
+    exist in `shape`. Note that an ndarray with `shape` must be broadcastable to `a`."""
+    assert len(a.shape) >= len(shape)
+    if np.prod(shape) == 0 or a.size == 0:
+        return np.zeros(shape, dtype=a.dtype)
+    axes = []
+    ndim_diff = len(a.shape) - len(shape)
+    for i in range(ndim_diff):
+        axes.append(i)
+    for i, s in enumerate(shape):
+        if s != a.shape[i+ndim_diff]:
+            assert s == 1
+            axes.append(i+ndim_diff)
+    return np.sum(a, axis=tuple(axes)).reshape(shape)
+
+
+def is_cd_run():
+    """Checks if the test is running as part of a Continuous Delivery run"""
+    return os.environ.get("CD_JOB", 0) == "1"

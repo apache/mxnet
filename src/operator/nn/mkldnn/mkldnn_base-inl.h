@@ -47,17 +47,18 @@
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_BASE_INL_H_
 
 #if MXNET_USE_MKLDNN == 1
+#include <algorithm>
 #include <iterator>
+#include <memory>
 #include <string>
 #include <unordered_map>
-#include <vector>
 #include <utility>
-#include <algorithm>
-#include <memory>
+#include <vector>
 #include "mkldnn.hpp"
+#include "mxnet/graph_attr_types.h"
 #include "mxnet/ndarray.h"
-#include "mxnet/resource.h"
 #include "mxnet/op_attr_types.h"
+#include "mxnet/resource.h"
 using namespace mkldnn;
 namespace mxnet {
 
@@ -132,6 +133,11 @@ static inline bool SupportMKLDNN(int dtype, const mxnet::TShape &shape) {
   return dtype == mshadow::kFloat32 && (ndim == 1 || ndim == 2 || ndim == 4);
 }
 
+static inline bool SupportMKLDNNRNN(const NDArray &input) {
+  int ndim = input.shape().ndim();
+  return (input.dtype() == mshadow::kFloat32) && (ndim == 3);
+}
+
 static inline bool SupportMKLDNNQuantize(int dtype) {
   return dtype == mshadow::kFloat32 || dtype == mshadow::kInt8 ||
          dtype == mshadow::kUint8;
@@ -171,19 +177,24 @@ void *AlignMem(void *mem, size_t size, size_t alignment, size_t *space);
 
 namespace op {
 struct ActivationParam;
+struct LeakyReLUParam;
 struct ConvolutionParam;
 struct DeconvolutionParam;
 struct SoftmaxParam;
 struct SoftmaxOutputParam;
 struct TransposeParam;
+struct ReshapeParam;
 bool SupportMKLDNNAct(const ActivationParam& param);
 bool SupportMKLDNNAct(const ActivationParam& param, const NDArray &input);
+bool SupportMKLDNNLeakyRelu(const LeakyReLUParam& param);
+bool SupportMKLDNNLeakyRelu(const LeakyReLUParam& param, const NDArray &input);
 bool SupportQuantizedMKLDNNAct(const ActivationParam &param);
 bool SupportMKLDNNConv(const ConvolutionParam &params, const NDArray &input);
 bool SupportMKLDNNDeconv(const DeconvolutionParam& params, const NDArray &input);
 bool SupportMKLDNNSoftmax(const SoftmaxParam& param, const NDArray &input, const NDArray &output);
 bool SupportMKLDNNSoftmaxOutput(const SoftmaxOutputParam &param);
 bool SupportMKLDNNTranspose(const TransposeParam& param, const NDArray &data);
+bool SupportMKLDNNReshape(const ReshapeParam &param, const NDArray &data);
 }  // namespace op
 
 static int GetTypeSize(int dtype) {
@@ -567,7 +578,8 @@ class MKLDNNMemory {
   }
 };
 
-void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
+template <typename Compute, typename AttrState>
+void FallBackCompute(Compute fn, const AttrState &attrs,
                      const OpContext &ctx,
                      const std::vector<NDArray> &inputs,
                      const std::vector<OpReqType> &req,
@@ -617,6 +629,13 @@ bool MKLDNNStorageType(const nnvm::NodeAttrs &attrs,
     if (debug) check.Run(fn, attrs, ctx, inputs, req, outputs);
 #define MKLDNN_OPCHECK_COPY_RESULT(outputs, indice) \
     if (debug) check.CopyResult(outputs, indice);
+
+struct MKLDNNPostEltwiseParam {
+  mkldnn::algorithm alg = mkldnn::algorithm::algorithm_undef;
+  float scale = 1.f;
+  float alpha = 0.f;
+  float beta = 1.f;
+};
 
 }  // namespace mxnet
 #endif

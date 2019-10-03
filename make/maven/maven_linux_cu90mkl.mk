@@ -33,9 +33,6 @@ DEV = 0
 # whether compile with debug
 DEBUG = 0
 
-# whether compiler with profiler
-USE_PROFILER = 1
-
 # whether to turn on signal handler (e.g. segfault logger)
 USE_SIGNAL_HANDLER = 1
 
@@ -82,6 +79,7 @@ USE_NCCL = 1
 # CUDA_ARCH :=
 
 # whether use cuda runtime compiling for writing kernels in native language (i.e. Python)
+USE_NVTX=1
 USE_NVRTC = 1
 
 # use openmp for parallelization

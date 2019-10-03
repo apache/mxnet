@@ -29,6 +29,7 @@
 #include <gtest/gtest.h>
 #include <mxnet/c_api.h>
 #include <mxnet/engine.h>
+#include <mxnet/ndarray.h>
 #include <dmlc/timer.h>
 #include <cstdio>
 #include <thread>
@@ -252,6 +253,84 @@ TEST(Engine, PushFunc) {
   LOG(INFO) << "===== Test #8: PushSync invalid number of mutable vars =====";
   res = MXEnginePushSync(FooSyncFunc, nullptr, nullptr, &ctx, nullptr, 0, &var, -1);
   EXPECT_EQ(res, -1);
+}
+
+TEST(Engine, PushFuncND) {
+  auto ctx = mxnet::Context{};
+  std::vector<mxnet::NDArray*> nds;
+  const int num_nds = 5;
+  for (int i = 0; i < num_nds; ++i) {
+      mxnet::NDArray *pnd = new mxnet::NDArray(ctx);
+      nds.push_back(pnd);
+  }
+  for (int num_const_nds = 0; num_const_nds <= num_nds; ++num_const_nds) {
+      int num_mutable_nds = num_nds - num_const_nds;
+      void** const_nds_handle = num_const_nds > 0 ?
+          reinterpret_cast<void**>(nds.data()) : nullptr;
+      void** mutable_nds_handle = num_mutable_nds > 0 ?
+          reinterpret_cast<void**>(nds.data() + num_const_nds) : nullptr;
+
+      // Test #1
+      LOG(INFO) << "===== Test #1: PushAsyncND param and deleter =====";
+      int* a = new int(100);
+      int res = MXEnginePushAsyncND(FooAsyncFunc, a, FooFuncDeleter, &ctx,
+              const_nds_handle, num_const_nds,
+              mutable_nds_handle, num_mutable_nds);
+      EXPECT_EQ(res, 0);
+
+      // Test #2
+      LOG(INFO) << "===== Test #2: PushAsyncND NULL param and NULL deleter =====";
+      res = MXEnginePushAsyncND(FooAsyncFunc, nullptr, nullptr, &ctx,
+              const_nds_handle, num_const_nds,
+              mutable_nds_handle, num_mutable_nds);
+      EXPECT_EQ(res, 0);
+
+      // Test #3
+      LOG(INFO) << "===== Test #3: PushAsyncND invalid number of const nds =====";
+      res = MXEnginePushAsyncND(FooAsyncFunc, nullptr, nullptr, &ctx,
+              const_nds_handle, -1,
+              mutable_nds_handle, num_mutable_nds);
+      EXPECT_EQ(res, -1);
+
+      // Test #4
+      LOG(INFO) << "===== Test #4: PushAsyncND invalid number of mutable nds =====";
+      res = MXEnginePushAsyncND(FooAsyncFunc, nullptr, nullptr, &ctx,
+              const_nds_handle, num_const_nds,
+              mutable_nds_handle, -1);
+      EXPECT_EQ(res, -1);
+
+      // Test #5
+      LOG(INFO) << "===== Test #5: PushSyncND param and deleter =====";
+      int* b = new int(101);
+      res = MXEnginePushSyncND(FooSyncFunc, b, FooFuncDeleter, &ctx,
+              const_nds_handle, num_const_nds,
+              mutable_nds_handle, num_mutable_nds);
+      EXPECT_EQ(res, 0);
+
+      // Test #6
+      LOG(INFO) << "===== Test #6: PushSyncND NULL param and NULL deleter =====";
+      res = MXEnginePushSyncND(FooSyncFunc, nullptr, nullptr, &ctx,
+              const_nds_handle, num_const_nds,
+              mutable_nds_handle, num_mutable_nds);
+      EXPECT_EQ(res, 0);
+
+      // Test #7
+      LOG(INFO) << "===== Test #7: PushSyncND invalid number of const nds =====";
+      res = MXEnginePushSyncND(FooSyncFunc, nullptr, nullptr, &ctx,
+              const_nds_handle, -1,
+              mutable_nds_handle, num_mutable_nds);
+      EXPECT_EQ(res, -1);
+
+      // Test #8
+      LOG(INFO) << "===== Test #8: PushSyncND invalid number of mutable nds =====";
+      res = MXEnginePushSyncND(FooSyncFunc, nullptr, nullptr, &ctx,
+              const_nds_handle, num_const_nds,
+              mutable_nds_handle, -1);
+      EXPECT_EQ(res, -1);
+  }
+  for (mxnet::NDArray* pnd : nds) {
+      delete pnd;
+  }
 }
 
 TEST(Engine, basics) {

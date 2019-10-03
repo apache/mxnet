@@ -26,37 +26,37 @@ Committers are people who have made substantial contribution to the project and 
 The committers are the granted write access to the project.
 
 * [Bing Xu](https://github.com/antinucleon)
-  - Bing is the initiator and major contributor of operators and ndarray modules of mxnet.
+  - Bing is the initiator and major contributor of operators and ndarray modules of MXNet.
 * [Tianjun Xiao](https://github.com/sneakerkg)
   - Tianqjun is the master behind the fast data loading and preprocessing.
 * [Yutian Li](https://github.com/hotpxl)
-  - Yutian is the ninja behind the dependency and storage engine of mxnet.
+  - Yutian is the ninja behind the dependency and storage engine of MXNet.
 * [Mu Li](https://github.com/mli)
-  - Mu is the contributor of the distributed key-value store in mxnet.
+  - Mu is the contributor of the distributed key-value store in MXNet.
 * [Tianqi Chen](https://github.com/tqchen)
-  - Tianqi is one of the initiator of the mxnet project.
+  - Tianqi is one of the initiator of the MXNet project.
 * [Min Lin](https://github.com/mavenlin)
-  - Min is the guy behind the symbolic magics of mxnet.
+  - Min is the guy behind the symbolic magics of MXNet.
 * [Naiyan Wang](https://github.com/winstywang)
-  - Naiyan is the creator of static symbolic graph module of mxnet.
+  - Naiyan is the creator of static symbolic graph module of MXNet.
 * [Mingjie Wang](https://github.com/jermainewang)
   - Mingjie is the initiator, and contributes the design of the dependency engine.
 * [Chuntao Hong](https://github.com/hjk41)
   - Chuntao is the initiator and provides the initial design of engine.
 * [Chiyuan Zhang](https://github.com/pluskid)
-  - Chiyuan is the creator of MXNet Julia Package.
+  - Chiyuan is the creator of MXNet Julia package.
 * [Junyuan Xie](https://github.com/piiswrong)
 * [Haibin Lin](https://github.com/eric-haibin-lin)
 * [Qiang Kou](https://github.com/thirdwing)
   - KK is a R ninja, he makes mxnet available for R users.
 * [Tong He](https://github.com/hetong007)
-  - Tong is the major maintainer of MXNetR, he designs the mxnet interface and wrote many of the tutorials on R.
+  - Tong is the major maintainer of MXNet R package, he designs the MXNet interface and wrote many of the tutorials on R.
 * [Yizhi Liu](https://github.com/yzhliu)
   - Yizhi is the main creator on mxnet scala project to make deep learning available for JVM stacks.
 * [Zixuan Huang](https://github.com/yanqingmen)
-  - Zixuan is one of major maintainers of mxnet scala package.
+  - Zixuan is one of major maintainers of MXNet Scala package.
 * [Yuan Tang](https://github.com/terrytangyuan)
-  - Yuan is one of major maintainers of mxnet scala package.
+  - Yuan is one of major maintainers of MXNet Scala package.
 * [Chris Olivier](https://github.com/cjolivier01)
 * [Sergey Kolychev](https://github.com/sergeykolychev)
   - Sergey is original author and current maintainer of Perl5 interface.
@@ -71,6 +71,8 @@ The committers are the granted write access to the project.
   - Tao is a major contributor to the MXNet MKL-DNN backend and performance on CPU.
 * [Zach Kimberg](https://github.com/zachgk)
   - Zach is one of the major maintainers of the MXNet Scala package.
+* [Lin Yuan](https://github.com/apeforest)
+  - Lin supports MXNet distributed training using Horovod and is also a major contributor to higher order gradients.
 
 
 ### Become a Committer
@@ -87,9 +89,9 @@ List of Contributors
 * [Full List of Contributors](https://github.com/apache/incubator-mxnet/graphs/contributors)
   - To contributors: please add your name to the list when you submit a patch to the project:)
 * [Feng Wang](https://github.com/happynear)
-  - Feng makes mxnet compatible with Windows Visual Studio.
+  - Feng makes MXNet compatible with Windows Visual Studio.
 * [Jack Deng](https://github.com/jdeng)
-  - Jack created the amalgamation script and Go bind for mxnet.
+  - Jack created the amalgamation script and Go bind for MXNet.
 * [Li Dong](https://github.com/donglixp)
 * [Piji Li](https://github.com/lipiji)
 * [Hu Shiwen](https://github.com/yajiedesign)
@@ -101,7 +103,7 @@ List of Contributors
 * [Nan Xiao](https://github.com/road2stat)
 * [Wei Wu](https://github.com/tornadomeet)
 * [Michaël Benesty](https://github.com/pommedeterresautee)
-  -Michaël contributes the R visualization module of mxnet
+  -Michaël contributes the R visualization module of MXNet
 * [Kublai Jing](https://github.com/Kublai-Jing)
 * [chenjx1005](https://github.com/chenjx1005)
 * [ry](https://github.com/ry)
@@ -199,7 +201,6 @@ List of Contributors
 * [Thomas Delteil](https://github.com/ThomasDelteil)
 * [Jesse Brizzi](https://github.com/jessebrizzi)
 * [Hang Zhang](http://hangzh.com)
-* [Lin Yuan](https://github.com/apeforest)
 * [Kou Ding](https://github.com/chinakook)
 * [Istvan Fehervari](https://github.com/ifeherva)
 * [Aaron Markham](https://github.com/aaronmarkham)
@@ -243,6 +244,8 @@ List of Contributors
 * [Shoubhik Bhattacharya](https://github.com/shoubhik)
 * [Rohit Srivastava](https://github.com/access2rohit)
 * [Caner Turkmen](https://github.com/canerturkmen)
+* [Disi A](https://github.com/adis300)
+* [Vandana Kannan](https://github.com/vandanavk)
 
 Label Bot
 ---------

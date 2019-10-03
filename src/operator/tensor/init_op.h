@@ -174,6 +174,36 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
   }
 };
 
+struct RangeLikeParam : public dmlc::Parameter<RangeLikeParam> {
+  double start;
+  double step;
+  int repeat;
+  std::string ctx;
+  dmlc::optional<int> axis;
+
+  DMLC_DECLARE_PARAMETER(RangeLikeParam) {
+    DMLC_DECLARE_FIELD(start)
+    .set_default(0)
+    .describe("Start of interval. The interval includes this value. The default start value is 0.");
+    DMLC_DECLARE_FIELD(step)
+    .set_default(1)
+    .describe("Spacing between values.");
+    DMLC_DECLARE_FIELD(repeat)
+    .set_default(1)
+    .describe("The repeating time of all elements."
+              " E.g repeat=3, the element a will be repeated three times --> a, a, a.");
+    DMLC_DECLARE_FIELD(ctx)
+    .set_default("")
+    .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
+              "Only used for imperative calls.");
+    DMLC_DECLARE_FIELD(axis)
+    .set_default(dmlc::optional<int>())
+    .describe("Arange elements according to the size of a certain axis of input array."
+              " The negative numbers are interpreted counting from the backward."
+              " If not provided, will arange elements according to the input shape.");
+  }
+};
+
 /*! \brief Initialize and fill output with an arbitrary value */
 struct InitOpWithScalarParam : dmlc::Parameter<InitOpWithScalarParam> {
   mxnet::TShape shape;
@@ -250,12 +280,12 @@ inline bool InitShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(out_attrs->at(0));
 }
 
-template<typename ParamType>
+template<typename ParamType, int num_in = 0U>
 inline bool InitType(const nnvm::NodeAttrs& attrs,
                        std::vector<int> *in_attrs,
                        std::vector<int> *out_attrs) {
   const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 0U);
+  CHECK_EQ(in_attrs->size(), num_in);
   CHECK_EQ(out_attrs->size(), 1U);
   TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype);
   return true;
@@ -487,13 +517,13 @@ void EyeFill(const nnvm::NodeAttrs& attrs,
 
 struct range_fwd {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(index_t i, int repeat, DType start, DType step,
+  MSHADOW_XINLINE static void Map(index_t i, index_t repeat, DType start, DType step,
                                   int req, DType* out) {
     KERNEL_ASSIGN(out[i], req, start + (i/repeat) * step);
   }
 };
 
-template<typename xpu>
+template<typename xpu, typename ParamType>
 void RangeCompute(const nnvm::NodeAttrs& attrs,
                   const OpContext& ctx,
                   const std::vector<TBlob>& inputs,
@@ -501,7 +531,7 @@ void RangeCompute(const nnvm::NodeAttrs& attrs,
                   const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  const RangeParam& param = nnvm::get<RangeParam>(attrs.parsed);
+  const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       // Force unsigned params to take two's complement form on ARM to ensure consistency with x86
       // results.  Casting negative floats to unsigned types is undefined in the CPP standard.
@@ -585,6 +615,28 @@ inline bool LinspaceShape(const nnvm::NodeAttrs& attrs,
   CHECK_GE(param.num, 0)
     << "Number of sequence should be non-negative, received " << param.num;
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape({static_cast<nnvm::dim_t>(param.num)}));
+  return true;
+}
+
+inline bool RangeLikeShape(const nnvm::NodeAttrs& attrs,
+                           mxnet::ShapeVector *in_attrs,
+                           mxnet::ShapeVector *out_attrs) {
+  const RangeLikeParam& param = nnvm::get<RangeLikeParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  int real_axis = -1;
+  if (param.axis.has_value()) {
+    real_axis = param.axis.value() < 0 ?
+        (param.axis.value() + (*in_attrs)[0].ndim()) : param.axis.value();
+    CHECK(real_axis >=0 && real_axis < (*in_attrs)[0].ndim())
+        << "cannot handle param.axis " << param.axis.value() << ".";
+  }
+  if (real_axis == -1) {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
+  } else {
+    const index_t out_size = (*in_attrs)[0][real_axis];
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape({static_cast<nnvm::dim_t>(out_size)}));
+  }
   return true;
 }
 

@@ -57,6 +57,7 @@
     <scala.version>2.11.8</scala.version>
     <build.platform/>
     <scala.binary.version>2.11</scala.binary.version>
+    <base.revision>1.6.0</base.revision>
     <build.platform />
     <cxx>g++</cxx>
     <dollar>$</dollar>
@@ -76,6 +77,7 @@
     <module>examples</module>
     <module>spark</module>
     <module>assembly</module>
+    <module>externalPom</module>
     <module>deploy</module>
   </modules>
 

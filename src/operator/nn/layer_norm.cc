@@ -86,8 +86,9 @@ void LayerNormComputeMKL(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 3U);
   int axis = GetRealAxis(param.axis, inputs[0].ndim());
 
-  if (axis == (inputs[layernorm::kData].ndim() - 1) ||
-      (inputs[0].type_flag_ != kFloat32 && inputs[0].type_flag_ != kFloat64)) {
+  // This optimization only applys for LayerNorm on the last dimension with dtype FP32 or FP64.
+  if (axis == (inputs[layernorm::kData].ndim() - 1) &&
+      (inputs[0].type_flag_ == kFloat32 || inputs[0].type_flag_ == kFloat64)) {
     // Compute necessary data for the reduce operation.
     mxnet::TShape red_src_shape, red_dst_shape;
     BroadcastReduceShapeCompact(inputs[layernorm::kData].shape_, outputs[layernorm::kMean].shape_,
@@ -126,6 +127,7 @@ void LayerNormGradCompute<cpu>(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(LayerNorm)
+.add_alias("_npx_layer_norm")
 .describe(R"code(Layer normalization.
 
 Normalizes the channels of the input tensor by mean and variance, and applies a scale ``gamma`` as

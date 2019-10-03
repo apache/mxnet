@@ -24,10 +24,12 @@
 #include <string>
 #include <vector>
 #include "../../nn/activation-inl.h"
+#include "../../leaky_relu-inl.h"
+#include "../../nn/convolution-inl.h"
 #include "../../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../../tensor/matrix_op-inl.h"
 #include "../common.h"
-#include "../subgraph_property.h"
+#include "mkldnn_subgraph_base-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -60,12 +62,15 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
         disable_conv_sum_(dis_conv_sum),
         quantize_(quantize) {}
 
-  bool Select(const nnvm::Node &n) override {
+  bool Select(const nnvm::Node& n, const std::shared_ptr<NodeAttr>& node_attr) override {
     if (n.op() && n.op()->name == "Convolution") {
-      status_ = disable_all_ ? kSuccess : kStart;
-      matched_list_.clear();
-      matched_list_.push_back(&n);
-      return true;
+      const auto &param = nnvm::get<ConvolutionParam>(n.attrs.parsed);
+      if (param.kernel.ndim() == 2 && SupportMKLDNNAttr(node_attr)) {
+        status_ = disable_all_ ? kSuccess : kStart;
+        matched_list_.clear();
+        matched_list_.push_back(&n);
+        return true;
+        }
     }
     return false;
   }
@@ -117,6 +122,15 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
             status_ = kSuccess;
             return true;
           }
+        } else if ((!disable_conv_act_) && new_node.op()->name == "LeakyReLU") {
+          const LeakyReLUParam &param =
+              nnvm::get<LeakyReLUParam>(new_node.attrs.parsed);
+          if (param.act_type == leakyrelu::kLeakyReLU) {
+            matched_list_.push_back(&new_node);
+            // not support conv+relu+sum yet.
+            status_ = kSuccess;
+            return true;
+          }
         } else if ((!disable_conv_act_) && new_node.op()->name == "clip") {
           if (!(quantize_ && (status_ == kSum))) {
             // TODO(zhennan): doesn't support int8 conv+sum+relu6 at moment. To support this, we
@@ -157,7 +171,7 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
     CHECK_GE(matched_list_.size(), 1);
     auto new_selector = SgMKLDNNConvSelector(disable_all_, disable_conv_bn_, disable_conv_act_,
                                              disable_conv_sum_, quantize_);
-    new_selector.Select(*matched_list_[0]);
+    new_selector.Select(*matched_list_[0], nullptr);
     *this = new_selector;
   }
 };
@@ -173,13 +187,12 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
   }
   static SubgraphPropertyPtr Create() {
     static const std::string &name = "MKLDNN convolution optimization pass";
-    if (dmlc::GetEnv("MXNET_DISABLE_MKLDNN_CONV_OPT", 0)) {
-      LOG(INFO) << name << " is disabled.";
-      return nullptr;
-    }
     auto property = std::make_shared<SgMKLDNNConvProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
+    if (dmlc::GetEnv("MXNET_DISABLE_MKLDNN_CONV_OPT", 0)) {
+      property->SetAttr<bool>("disable", true);
+    }
     return property;
   }
   nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
@@ -205,7 +218,7 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
         n->attrs.dict["with_sum"] = "true";
         _with_sum = true;
 
-      } else if (sub_name == "Activation" || sub_name == "clip") {
+      } else if (sub_name == "Activation" || sub_name == "LeakyReLU" || sub_name == "clip") {
         node_name << "act_";
         if (!_with_sum) {
           n->attrs.dict["with_act"] = "true";
@@ -224,7 +237,7 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
   }
 
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
-    int quantize = HasAttr("quantize") ? GetAttr<int>("quantize") : 0;
+    bool quantize = HasAttr("quantize") ? GetAttr<bool>("quantize") : false;
     auto selector = std::make_shared<SgMKLDNNConvSelector>(
         disable_all_, disable_conv_bn_, disable_conv_act_, disable_conv_sum_, quantize);
     return selector;
