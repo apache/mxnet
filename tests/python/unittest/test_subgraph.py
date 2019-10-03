@@ -20,19 +20,16 @@ from __future__ import print_function
 import numpy as np
 import mxnet as mx
 import copy
-import os
 import math
 import ctypes
 import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
-from mxnet.base import py_str, MXNetError, _as_list, SymbolHandle, check_call, _LIB, c_handle_array, mx_uint, c_str, c_str_array
+from mxnet.base import py_str, MXNetError, _as_list, SymbolHandle, check_call, _LIB, c_handle_array, mx_uint
 from common import setup_module, with_seed, teardown
 import unittest
 from mxnet.gluon.model_zoo.vision import get_model
-from collections import namedtuple
-import gluoncv
 
 def make_subgraph(subg, *args):
     js = subg.tojson()
