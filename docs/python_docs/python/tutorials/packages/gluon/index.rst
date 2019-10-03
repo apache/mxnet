@@ -131,7 +131,7 @@ Training
 
    .. card::
       :title: Loss Functions
-      :link: loss.html
+      :link: loss/loss.html
 
       How to use loss functions for predicting outputs.
 
