@@ -258,7 +258,7 @@ Advanced Topics
 
    .. card::
       :title: Hybridize Gluon models with control flows
-      :link: control_flow/ControlFlowTutorial.html
+      :link: ../../extend/control_flow.html
 
       Using control flow operators in Gluon.
 
