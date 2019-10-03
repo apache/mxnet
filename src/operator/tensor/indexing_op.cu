@@ -569,6 +569,7 @@ __global__ void EmbeddingFindBounds(const IType *sorted_data,
                                     const index_t data_dim,
                                     const index_t vocab_dim) {
   const index_t id = blockIdx.x * blockDim.x + threadIdx.x;
+  if (id>=vocab_dim) return;
 
   // Binary search to find lower bound: stored at bounds[0..vocab_dim-1]
   IType lower_bound = 0;
@@ -582,9 +583,12 @@ __global__ void EmbeddingFindBounds(const IType *sorted_data,
       lower_bound = mean + 1;
   }
   bool found_row = (sorted_data[lower_bound] == id);
-
-  if (id < vocab_dim) {
-    bounds[id] = (found_row) ? lower_bound : -1;
+  if (!found_row) {
+    bounds[id] = -1;
+    bounds[vocab_dim + id] = -2;
+    return;
+  } else {
+    bounds[id] = lower_bound;
   }
 
   // Binary search to find upper bound: stored at bounds[vocab_dim..2*vocab_dim-1]
@@ -597,11 +601,7 @@ __global__ void EmbeddingFindBounds(const IType *sorted_data,
     else
       upper_bound = mean - 1;
   }
-  found_row = (sorted_data[upper_bound] == id);
-
-  if (id < vocab_dim) {
-    bounds[vocab_dim + id] = (found_row) ? upper_bound : -1;
-  }
+  bounds[vocab_dim + id] = upper_bound;
 }
 
 /*
@@ -612,7 +612,6 @@ __global__ void EmbeddingFindBounds(const IType *sorted_data,
  * \param grad_out output gradient data
  * \param embbedding_dim dimension of the dense embedding
  * \param vocab_dim maximum number of unique indices in the data array: tokens vocabulary size
- * \param rows_per_block number of grad_in rows to be computed by each block
  * \param req write/add/null
  */
 template <typename LType, typename DType, typename IType>
@@ -622,7 +621,6 @@ __global__ void EmbeddingGradKernel(DType *grad_in,
                                       const DType *grad_out,
                                       const index_t embbedding_dim,
                                       const index_t vocab_dim,
-                                      const int rows_per_block,
                                       const int req) {
   extern __shared__ int sharedmem[];
   LType* grad_in_row =  reinterpret_cast<LType *>(sharedmem);
@@ -636,34 +634,29 @@ __global__ void EmbeddingGradKernel(DType *grad_in,
   LType Lvalue[1];
   DType* Dvalues = reinterpret_cast<DType*>(Lvalue);
 
-  for (index_t row=0; row < rows_per_block; ++row) {
-    IType my_row = blockIdx.x * rows_per_block + row;
-    if (my_row < vocab_dim) {
-      // Read lower and upper bounds for current row
-      IType lower_bound = index_bounds[my_row];
-      IType upper_bound = index_bounds[vocab_dim + my_row];
-      int nOccurrences = (lower_bound != -1) ? (upper_bound - lower_bound + 1) : 0;
+  IType my_row = blockIdx.x;
+  if (my_row < vocab_dim) {
+    // Read lower and upper bounds for current row
+    IType lower_bound = index_bounds[my_row];
+    IType upper_bound = index_bounds[vocab_dim + my_row];
+    int nOccurrences = upper_bound - lower_bound + 1;
 
-      for (index_t emb_id=threadIdx.x; emb_id < aligned_emb_dim; emb_id += blockDim.x) {
-        // Initialize grad_in
-        if (req == kAddTo) {
-          grad_in_row[threadIdx.x] = aligned_grad_in[my_row * aligned_emb_dim + emb_id];
-        } else {
-          grad_in_row[threadIdx.x] = 0.0;
-        }
-        // Add all rows from grad_out according to indices in data
-        if (nOccurrences) {
-          for (index_t data_idx=lower_bound; data_idx < (lower_bound + nOccurrences); ++data_idx) {
-            *Lvalue = aligned_grad_out[original_index[data_idx] * aligned_emb_dim + emb_id];
-            for (index_t val_id = 0; val_id < n_val; val_id++) {
-              my_grad_in_row[val_id] += Dvalues[val_id];
-            }
-          }
-        }
-
-        // Save results
-        aligned_grad_in[my_row * aligned_emb_dim + emb_id] = grad_in_row[threadIdx.x];
+    for (index_t emb_id=threadIdx.x; emb_id < aligned_emb_dim; emb_id += blockDim.x) {
+      // Initialize grad_in
+      if (req == kAddTo) {
+        grad_in_row[threadIdx.x] = aligned_grad_in[my_row * aligned_emb_dim + emb_id];
+      } else {
+        grad_in_row[threadIdx.x] = 0.0;
       }
+      // Add all rows from grad_out according to indices in data
+      for (index_t data_idx=lower_bound; data_idx < (lower_bound + nOccurrences); ++data_idx) {
+        *Lvalue = aligned_grad_out[original_index[data_idx] * aligned_emb_dim + emb_id];
+        for (index_t val_id = 0; val_id < n_val; val_id++) {
+          my_grad_in_row[val_id] += Dvalues[val_id];
+        }
+      }
+      // Save results
+      aligned_grad_in[my_row * aligned_emb_dim + emb_id] = grad_in_row[threadIdx.x];
     }
   }
 }
@@ -728,7 +721,6 @@ void EmbeddingGradKernelCaller(const OpContext& ctx,
   // Compute Gradient
   int ltype = mxnet::common::cuda::get_load_type(embbedding_dim * sizeof(DType));
   MXNET_LOAD_TYPE_SWITCH(ltype, LType, {
-    const int rows_per_block = 1;
     int nelems_per_thread = sizeof(LType) / sizeof(DType);
     int threads_block_grad = 32;
     int maxThreads = 1024;
@@ -736,13 +728,13 @@ void EmbeddingGradKernelCaller(const OpContext& ctx,
           (threads_block_grad < maxThreads))
       threads_block_grad += 32;
     size_t required_shared = threads_block_grad * sizeof(LType);
-    dim3 blocks((vocab_dim + rows_per_block - 1) / rows_per_block, 1);
+    dim3 blocks(vocab_dim, 1);
     EmbeddingGradKernel<LType><<<blocks, threads_block_grad, required_shared,
                   Stream<gpu>::GetStream(s)>>>(
                   grad_in.dptr_, original_index.dptr_,
                   bounds_index.dptr_, grad_out.dptr_,
                   embbedding_dim, vocab_dim,
-                  rows_per_block, req[embedding::kWeight]);
+                  req[embedding::kWeight]);
   });
 }
 
