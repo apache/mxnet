@@ -32,11 +32,6 @@ Intel MKL-DNN
 
       How to perform quantization with MKLDNN
 
-   .. card::
-      :title: Connectionist Temporal Classification
-      :link: speech_recognition/ctc.html
-
-      Using Connectionist Temporal Classification (CTC) to train Recurrent Neural Networks (RNNs).
 
 .. toctree::
    :hidden:
