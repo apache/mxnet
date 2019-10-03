@@ -25,7 +25,7 @@ Getting started
 
    .. card::
       :title: A 60-minute Gluon crash course
-      :link: ../../getting-started/crash-course/index.html
+      :link: ../../crash-course/index.html
 
       Six 10-minute tutorials covering the core concepts of MXNet using the Gluon API.
 
@@ -78,7 +78,7 @@ Data
 
    .. card::
       :title: Image Augmentation
-      :link: image-augmentation.html
+      :link: image_augmentation.html
 
       Boost your training dataset with image augmentation.
 
@@ -90,7 +90,7 @@ Data
 
    .. card::
       :title: Gluon Datasets and DataLoader
-      :link: data/datasets.html
+      :link: datasets.html
 
       A guide to loading data using the Gluon API.
 
@@ -99,6 +99,12 @@ Data
       :link: ../ndarray/index.html
 
       A guide to the NDArray data structure.
+
+   .. card::
+      :title: Data Transforms
+      :link: transforms.html
+
+      Transforming data before passing it to a network.
 
 Training
 --------
@@ -125,7 +131,7 @@ Training
 
    .. card::
       :title: Loss Functions
-      :link: loss/loss.html
+      :link: loss.html
 
       How to use loss functions for predicting outputs.
 
@@ -159,6 +165,14 @@ Training
 
       How to schedule Learning Rate change over time.
 
+   ..
+      .. card::
+         :title: Optimizer
+         :link: ../optimizer/optimizer.html
+
+         How to use optimizer.
+   ..
+
    .. card::
       :title: Trainer
       :link: training/trainer.html
@@ -170,6 +184,24 @@ Training
       :link: ../autograd/autograd.html
 
       How to use Automatic Differentiation with the Autograd API.
+
+   .. card::
+      :title: Multiple GPUs training with Gluon API
+      :link: multi_gpu.html
+
+      Training deep learning neural networks on multiple GPUs in a single machine.
+
+   .. card::
+      :title: Using AMP (Automatic Mixed Precision) in MXNet
+      :link: ../../performance/backend/amp.html
+
+      Getting started with mixed precision training using AMP for MXNet.
+
+   .. card::
+      :title: Generative Adversarial Network (GAN)¶
+      :link: unsupervised_learning/gan.html
+
+      An introduction to using Generative Adversarial Networks (GANs) in unsupervised learning.
 
 Advanced Topics
 ---------------
@@ -184,27 +216,33 @@ Advanced Topics
 
    .. card::
       :title: Custom Layers
-      :link: custom-layer.html
+      :link: custom_layer.html
 
       A guide to implementing custom layers.
 
    .. card::
       :title: Custom Operators
-      :link: https://mxnet.apache.org/versions/master/tutorials/gluon/customop.html
+      :link: customop.html
 
       Building custom operators with numpy.
 
    .. card::
       :title: Custom Loss
-      :link: custom-loss/custom-loss.html
+      :link: custom_loss/custom_loss.html
 
       A guide to implementing custom losses.
 
    .. card::
       :title: Gotchas using NumPy in Apache MXNet
-      :link: https://mxnet.apache.org/versions/master/tutorials/gluon/gotchas_numpy_in_mxnet.html
+      :link: gotchas_numpy_in_mxnet.html
 
       Common misconceptions when using NumPy in Apache MXNet.
+
+   .. card::
+      :title: Hybrid- Faster training and easy deployment
+      :link: hybrid.html
+
+      Combines declarative and imperative programming using HybridBlock.
 
    .. card::
       :title: Hybridize
@@ -213,10 +251,22 @@ Advanced Topics
       Speed up training with hybrid networks.
 
    .. card::
-      :title: Learning Rate Schedules (Advanced)
+      :title: Advanced Learning Rate Schedules
       :link: training/learning_rates/learning_rate_schedules_advanced.html
 
-      How to schedule Learning Rate change over time (advanced)
+      Advanced exploration of Learning Rate shapes.
+
+   .. card::
+      :title: Hybridize Gluon models with control flows
+      :link: control_flow/ControlFlowTutorial.html
+
+      Using control flow operators in Gluon.
+
+   .. card::
+      :title: Gluon Performance Tips & Tricks
+      :link: /api/faq/perf.html
+
+      Tips for speeding up training and inference.
 
 Applications Topics
 -------------------
