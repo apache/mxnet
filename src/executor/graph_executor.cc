@@ -414,7 +414,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   // create arg_shapes and arg_dtypes for shape and type inferences
   const auto& idx = g.indexed_graph();
   // build name/index map for graph input nodes
-  std::map<std::string, uint32_t> inv_name_map;
+  std::unordered_map<std::string, uint32_t> inv_name_map;
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
     const uint32_t nid = idx.input_nodes().at(i);
     const std::string& arg_name = idx[nid].source->attrs.name;
@@ -516,7 +516,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
                                   std::vector<NDArray>* arg_grad_vec,
                                   std::vector<NDArray>* aux_state_vec) {
   // build name/index map for graph input nodes
-  std::map<std::string, uint32_t> inv_name_map;
+  std::unordered_map<std::string, uint32_t> inv_name_map;
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
     const uint32_t nid = idx.input_nodes().at(i);
     const std::string& arg_name = idx[nid].source->attrs.name;
@@ -603,7 +603,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
                                   std::vector<NDArray>* arg_grad_vec,
                                   std::vector<NDArray>* aux_state_vec) {
   // build name/index map for graph input nodes
-  std::map<std::string, uint32_t> inv_name_map;
+  std::unordered_map<std::string, uint32_t> inv_name_map;
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
     const uint32_t nid = idx.input_nodes().at(i);
     const std::string& arg_name = idx[nid].source->attrs.name;
