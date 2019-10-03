@@ -93,7 +93,6 @@ namespace op {
 template <typename DType>
 inline DType dmcn_im2col_bilinear_cpu(const DType* bottom_data, const int data_width,
   const int height, const int width, DType h, DType w) {
-
   int h_low = floor(h);
   int w_low = floor(w);
   int h_high = h_low + 1;
@@ -151,17 +150,25 @@ struct modulated_deformable_col2im_cpu_kernel {
     const int h_in = h_col * stride_h - pad_h;
     const int w_in = w_col * stride_w - pad_w;
 
-    DType* data_col_ptr = data_col + ((c_col * batch_size + b_col) * height_col + h_col) * width_col + w_col;
-    //const DType* data_im_ptr = data_im + ((b_col * num_channels + c_im) * height + h_in) * width + w_in;
+    DType* data_col_ptr = data_col
+      + ((c_col * batch_size + b_col) * height_col + h_col) * width_col + w_col;
+    //const DType* data_im_ptr = data_im + 
+      ((b_col * num_channels + c_im) * height + h_in) * width + w_in;
     const DType* data_im_ptr = data_im + (b_col * num_channels + c_im) * height * width;
-    const DType* data_offset_ptr = data_offset + (b_col * deformable_group + deformable_group_index) * 2 * kernel_h * kernel_w * height_col * width_col;
+    const DType* data_offset_ptr = data_offset 
+      + (b_col * deformable_group + deformable_group_index) * 2
+      * kernel_h * kernel_w * height_col * width_col;
 
-    const DType* data_mask_ptr = data_mask + (b_col *  deformable_group + deformable_group_index) * kernel_h * kernel_w * height_col * width_col;
+    const DType* data_mask_ptr = data_mask
+      + (b_col *  deformable_group + deformable_group_index) * kernel_h
+      * kernel_w * height_col * width_col;
 
     for (int i = 0; i < kernel_h; ++i) {
       for (int j = 0; j < kernel_w; ++j) {
-        const int data_offset_h_ptr = ((2 * (i * kernel_w + j)) * height_col + h_col) * width_col + w_col;
-        const int data_offset_w_ptr = ((2 * (i * kernel_w + j) + 1) * height_col + h_col) * width_col + w_col;
+        const int data_offset_h_ptr = ((2 * (i * kernel_w + j)) * height_col + h_col)
+          * width_col + w_col;
+        const int data_offset_w_ptr = ((2 * (i * kernel_w + j) + 1) * height_col + h_col)
+          * width_col + w_col;
         const int data_mask_hw_ptr = ((i * kernel_w + j) * height_col + h_col) * width_col + w_col;
         const DType offset_h = data_offset_ptr[data_offset_h_ptr];
         const DType offset_w = data_offset_ptr[data_offset_w_ptr];
@@ -212,9 +219,12 @@ inline void modulated_deformable_im2col(mshadow::Stream<cpu>* s,
   index_t num_kernels = im_shape[1] * col_shape.ProdShape(1, col_shape.ndim());
   using namespace mxnet_op;
   if (2 == num_spatial_axes) {
-    Kernel<modulated_deformable_col2im_cpu_kernel, cpu>::Launch(s, num_kernels, data_im, data_offset, data_mask, im_shape[2], im_shape[3], kernel_shape[0], kernel_shape[1],
-        pad[0], pad[1], stride[0], stride[1], dilation[0], dilation[1], channel_per_deformable_group,
-        col_shape[1], im_shape[1], deformable_group, col_shape[2], col_shape[3], data_col);
+    Kernel<modulated_deformable_col2im_cpu_kernel, cpu>::Launch(
+        s, num_kernels, data_im, data_offset, data_mask,
+        im_shape[2], im_shape[3], kernel_shape[0], kernel_shape[1],
+        pad[0], pad[1], stride[0], stride[1], dilation[0], dilation[1],
+        channel_per_deformable_group, col_shape[1], im_shape[1], deformable_group,
+        col_shape[2], col_shape[3], data_col);
   } else {
     LOG(FATAL) << "not implemented";
   }
