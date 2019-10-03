@@ -418,7 +418,10 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
     const uint32_t nid = idx.input_nodes().at(i);
     const std::string& arg_name = idx[nid].source->attrs.name;
-    inv_name_map[arg_name] = nid;
+    if (inv_name_map.find(arg_name) != inv_name_map.end())
+      LOG(FATAL) << "multiple inputs with the name '" << arg_name << "' found. Please use different names for each input";
+    else
+      inv_name_map[arg_name] = nid;
   }
 
   const auto& mutable_nodes = idx.mutable_input_nodes();
@@ -517,7 +520,10 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
     const uint32_t nid = idx.input_nodes().at(i);
     const std::string& arg_name = idx[nid].source->attrs.name;
-    inv_name_map[arg_name] = nid;
+    if (inv_name_map.find(arg_name) != inv_name_map.end())
+      LOG(FATAL) << "multiple inputs with the name '" << arg_name << "' found. Please use different names for each input";
+    else
+      inv_name_map[arg_name] = nid;
   }
 
   // initialize in_args, arg_grads, and aux_states
@@ -601,7 +607,10 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
     const uint32_t nid = idx.input_nodes().at(i);
     const std::string& arg_name = idx[nid].source->attrs.name;
-    inv_name_map[arg_name] = nid;
+    if (inv_name_map.find(arg_name) != inv_name_map.end())
+      LOG(FATAL) << "multiple inputs with the name '" << arg_name << "' found. Please use different names for each input";
+    else
+      inv_name_map[arg_name] = nid;
   }
 
   // initialize in_args, arg_grads, and aux_states and populate grad_store_
