@@ -57,16 +57,20 @@ MXReturnValue forward(std::map<std::string, std::string> attrs,
                       std::vector<MXTensor> inputs,
                       std::vector<MXTensor> outputs,
                       OpResource res) {
-  // extract data pointers from tensors
-  float* A = inputs[0].data<float>();
-  float* B = inputs[1].data<float>();
-  float* C = outputs[0].data<float>();
-  // set tensor shapes
-  unsigned n = inputs[0].shape[0];
-  unsigned k = inputs[0].shape[1];
-  unsigned m = inputs[1].shape[1];
+  // simple example of using runtime data type
+  if (inputs[0].dtype == kFloat32) {
+    typedef float DType;
+    // extract data pointers from tensors
+    DType* A = inputs[0].data<DType>();
+    DType* B = inputs[1].data<DType>();
+    DType* C = outputs[0].data<DType>();
+    // set tensor shapes
+    unsigned n = inputs[0].shape[0];
+    unsigned k = inputs[0].shape[1];
+    unsigned m = inputs[1].shape[1];
 
-  gemm(A, B, C, n, k, m);
+    gemm(A, B, C, n, k, m);
+  }
   return MX_SUCCESS;
 }
 
