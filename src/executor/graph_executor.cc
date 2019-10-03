@@ -419,7 +419,8 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
     const uint32_t nid = idx.input_nodes().at(i);
     const std::string& arg_name = idx[nid].source->attrs.name;
     if (inv_name_map.find(arg_name) != inv_name_map.end())
-      LOG(FATAL) << "multiple inputs with the name '" << arg_name << "' found. Please use different names for each input";
+      LOG(FATAL) << "multiple inputs with the name '" << arg_name
+                 << "' found. Please use different names for each input";
     else
       inv_name_map[arg_name] = nid;
   }
@@ -521,7 +522,8 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
     const uint32_t nid = idx.input_nodes().at(i);
     const std::string& arg_name = idx[nid].source->attrs.name;
     if (inv_name_map.find(arg_name) != inv_name_map.end())
-      LOG(FATAL) << "multiple inputs with the name '" << arg_name << "' found. Please use different names for each input";
+      LOG(FATAL) << "multiple inputs with the name '" << arg_name
+                 << "' found. Please use different names for each input";
     else
       inv_name_map[arg_name] = nid;
   }
@@ -608,7 +610,8 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
     const uint32_t nid = idx.input_nodes().at(i);
     const std::string& arg_name = idx[nid].source->attrs.name;
     if (inv_name_map.find(arg_name) != inv_name_map.end())
-      LOG(FATAL) << "multiple inputs with the name '" << arg_name << "' found. Please use different names for each input";
+      LOG(FATAL) << "multiple inputs with the name '" << arg_name
+                 << "' found. Please use different names for each input";
     else
       inv_name_map[arg_name] = nid;
   }
@@ -2071,7 +2074,8 @@ Executor *Executor::Bind(nnvm::Symbol symbol,
                                    verbose);
     }
   }
-  exec->Init(symbol, default_ctx, group2ctx, &in_names, tmp_in_args, tmp_arg_grad_store, tmp_grad_req_type,
+  exec->Init(symbol, default_ctx, group2ctx, &in_names,
+             tmp_in_args, tmp_arg_grad_store, tmp_grad_req_type,
              tmp_aux_states, reinterpret_cast<Executor*>(shared_exec));
   return exec;
 }
