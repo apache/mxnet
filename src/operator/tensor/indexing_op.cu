@@ -644,7 +644,7 @@ __global__ void EmbeddingGradKernel(DType *grad_in,
       IType upper_bound = index_bounds[vocab_dim + my_row];
       int nOccurrences = (lower_bound != -1) ? (upper_bound - lower_bound + 1) : 0;
 
-      for (index_t emb_id = threadIdx.x; emb_id < aligned_emb_dim; emb_id += blockDim.x) {
+      for (index_t emb_id=threadIdx.x; emb_id < aligned_emb_dim; emb_id += blockDim.x) {
         // Initialize grad_in
         if (req == kAddTo) {
           grad_in_row[threadIdx.x] = aligned_grad_in[my_row * aligned_emb_dim + emb_id];
@@ -653,7 +653,7 @@ __global__ void EmbeddingGradKernel(DType *grad_in,
         }
         // Add all rows from grad_out according to indices in data
         if (nOccurrences) {
-          for (index_t data_idx = lower_bound; data_idx < (lower_bound + nOccurrences); ++data_idx) {
+          for (index_t data_idx=lower_bound; data_idx < (lower_bound + nOccurrences); ++data_idx) {
             *Lvalue = aligned_grad_out[original_index[data_idx] * aligned_emb_dim + emb_id];
             for (index_t val_id = 0; val_id < n_val; val_id++) {
               my_grad_in_row[val_id] += Dvalues[val_id];
