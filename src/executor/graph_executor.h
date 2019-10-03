@@ -81,6 +81,7 @@ class GraphExecutor : public Executor {
   void Init(nnvm::Symbol symbol,
             const Context& default_ctx,
             const std::map<std::string, Context>& ctx_map,
+            std::vector<std::string>* in_names,
             const std::vector<NDArray>& in_args,
             const std::vector<NDArray>& arg_grad_store,
             const std::vector<OpReqType>& grad_req_types,
@@ -162,6 +163,7 @@ class GraphExecutor : public Executor {
                      const std::vector<Context>& arg_grad_ctxes,
                      const std::vector<Context>& aux_state_ctxes,
                      const std::vector<OpReqType>& grad_req_types,
+                     std::vector<std::string>* in_names,
                      std::vector<NDArray>* in_arg_vec,
                      std::vector<NDArray>* arg_grad_vec,
                      std::vector<NDArray>* aux_state_vec);

@@ -388,6 +388,7 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
 void GraphExecutor::Init(nnvm::Symbol symbol,
                          const Context& default_ctx,
                          const std::map<std::string, Context>& ctx_map,
+                         std::vector<std::string>* in_names,
                          const std::vector<NDArray>& in_args,
                          const std::vector<NDArray>& arg_grad_store,
                          const std::vector<OpReqType>& grad_req_types,
@@ -412,6 +413,14 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
 
   // create arg_shapes and arg_dtypes for shape and type inferences
   const auto& idx = g.indexed_graph();
+  // build name/index map for graph input nodes
+  std::map<std::string, uint32_t> inv_name_map;
+  for (size_t i = 0; i < num_forward_inputs_; ++i) {
+    const uint32_t nid = idx.input_nodes().at(i);
+    const std::string& arg_name = idx[nid].source->attrs.name;
+    inv_name_map[arg_name] = nid;
+  }
+
   const auto& mutable_nodes = idx.mutable_input_nodes();
   size_t arg_top = 0, aux_top = 0;
   data_entry_.resize(idx.num_node_entries());
@@ -419,9 +428,11 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   nnvm::DTypeVector arg_dtypes;
   StorageTypeVector arg_stypes(idx.num_node_entries(), -1);
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
-    const uint32_t nid = idx.input_nodes().at(i);
-    const std::string& arg_name = idx[nid].source->attrs.name;
+    // get name from input names vector, and lookup new index of graph input node
+    const std::string& arg_name = in_names->at(i);
+    const uint32_t nid = inv_name_map[arg_name];
     size_t eid = idx.entry_id(nid, 0);
+
     if (mutable_nodes.count(nid)) {
       CHECK_LT(aux_top, aux_states.size());
       data_entry_[eid] = aux_states[aux_top];
@@ -497,21 +508,32 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
                                   const std::vector<Context>& arg_grad_ctxes,
                                   const std::vector<Context>& aux_state_ctxes,
                                   const std::vector<OpReqType>& grad_req_types,
+                                  std::vector<std::string>* in_names,
                                   std::vector<NDArray>* in_arg_vec,
                                   std::vector<NDArray>* arg_grad_vec,
                                   std::vector<NDArray>* aux_state_vec) {
+  // build name/index map for graph input nodes
+  std::map<std::string, uint32_t> inv_name_map;
+  for (size_t i = 0; i < num_forward_inputs_; ++i) {
+    const uint32_t nid = idx.input_nodes().at(i);
+    const std::string& arg_name = idx[nid].source->attrs.name;
+    inv_name_map[arg_name] = nid;
+  }
+
   // initialize in_args, arg_grads, and aux_states
   // populate grad_store_
   data_entry_.resize(idx.num_node_entries());
   size_t arg_top = 0, aux_top = 0;
   const auto& mutable_nodes = idx.mutable_input_nodes();
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
-    const uint32_t nid = idx.input_nodes().at(i);
+    // get name from input names vector, and lookup new index of graph input node
+    const std::string& arg_name = in_names->at(i);
+    const uint32_t nid = inv_name_map[arg_name];
     const uint32_t eid = idx.entry_id(nid, 0);
     const mxnet::TShape& inferred_shape = inferred_shapes[eid];
     const int inferred_dtype = inferred_dtypes[eid];
     const NDArrayStorageType inferred_stype = (NDArrayStorageType) inferred_stypes[eid];
-    const std::string& arg_name = idx[nid].source->attrs.name;
+
     if (mutable_nodes.count(nid)) {  // aux_states
       EmplaceBackZeros(inferred_stype, inferred_shape, aux_state_ctxes[aux_top],
                        inferred_dtype, aux_state_vec);
@@ -861,7 +883,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
                   g.GetAttr<nnvm::DTypeVector>("dtype"),
                   g.GetAttr<StorageTypeVector>("storage_type"),
                   in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes,
-                  grad_req_types, in_arg_vec, arg_grad_vec, aux_state_vec);
+                  grad_req_types, in_names, in_arg_vec, arg_grad_vec, aux_state_vec);
   } else {  // simple bind using shared data arrays and shared_exec
     InitArguments(idx, g.GetAttr<mxnet::ShapeVector>("shape"),
                   g.GetAttr<nnvm::DTypeVector>("dtype"),
@@ -901,6 +923,9 @@ Executor* GraphExecutor::Reshape(const bool partial_shaping,
     graph_.outputs.begin() + num_forward_outputs_);
   nnvm::Symbol symbol;
   symbol.outputs = g.outputs;
+    // get input names from original symbol to use in returning shapes in same order
+  std::vector<std::string> in_names = symbol.ListInputNames(nnvm::Symbol::kAll);
+
   const nnvm::IndexedGraph& idx = g.indexed_graph();
   mxnet::ShapeVector arg_shapes(idx.input_nodes().size(), mxnet::TShape());
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
@@ -985,7 +1010,7 @@ Executor* GraphExecutor::Reshape(const bool partial_shaping,
     }
   }
   auto exec = new GraphExecutor();
-  exec->Init(symbol, default_ctx, ctx_map,
+  exec->Init(symbol, default_ctx, ctx_map, &in_names,
              *in_args, *arg_grads, grad_req_types, *aux_states,
              this);
   return exec;
@@ -1965,7 +1990,7 @@ Executor *Executor::SimpleBind(nnvm::Symbol symbol,
                                    &tmp_grad_req_types, &tmp_aux_state_ctxes, verbose);
       exec->Init(symbol, default_ctx, group2ctx, tmp_in_arg_ctxes, tmp_arg_grad_ctxes,
                  tmp_aux_state_ctxes, arg_shape_map, arg_dtype_map, arg_stype_map,
-                 tmp_grad_req_types, shared_arg_names, &tmp_in_args, &tmp_arg_grads,
+                 tmp_grad_req_types, shared_arg_names, &in_names, &tmp_in_args, &tmp_arg_grads,
                  &tmp_aux_states, shared_buffer, shared_exec);
       init = true;
       const auto new_arg_names = symbol.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
@@ -2004,7 +2029,7 @@ Executor *Executor::SimpleBind(nnvm::Symbol symbol,
     // init without subgraph
     exec->Init(symbol, default_ctx, group2ctx, in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes,
                arg_shape_map, arg_dtype_map, arg_stype_map, grad_req_types, shared_arg_names,
-               in_args, arg_grads, aux_states, shared_buffer, shared_exec);
+               &in_names, in_args, arg_grads, aux_states, shared_buffer, shared_exec);
   }
   return exec;
 }
@@ -2017,6 +2042,9 @@ Executor *Executor::Bind(nnvm::Symbol symbol,
                          const std::vector<OpReqType> &grad_req_type,
                          const std::vector<NDArray> &aux_states,
                          Executor* shared_exec) {
+  // get input names from original symbol to use in returning shapes in same order
+  std::vector<std::string> in_names = symbol.ListInputNames(nnvm::Symbol::kAll);
+
   auto exec = new exec::GraphExecutor();
   static bool verbose = dmlc::GetEnv("MXNET_SUBGRAPH_VERBOSE", false);
   std::vector<NDArray> tmp_in_args = in_args;
@@ -2034,7 +2062,7 @@ Executor *Executor::Bind(nnvm::Symbol symbol,
                                    verbose);
     }
   }
-  exec->Init(symbol, default_ctx, group2ctx, tmp_in_args, tmp_arg_grad_store, tmp_grad_req_type,
+  exec->Init(symbol, default_ctx, group2ctx, &in_names, tmp_in_args, tmp_arg_grad_store, tmp_grad_req_type,
              tmp_aux_states, reinterpret_cast<Executor*>(shared_exec));
   return exec;
 }
