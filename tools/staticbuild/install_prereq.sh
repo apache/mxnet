@@ -17,31 +17,37 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# This script builds the wheel for binary distribution and performs sanity check.
-# To be used only on vanilla Ubuntu-14.04 to ensure backwards compatibility
-# of all dependencies of MXNet.
+# This script install pre-requisites required for building MXNet pypi package wheel.
 
-set -e
+sudo apt-get update
+sudo apt install -y software-properties-common
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+sudo apt-get update
+sudo apt install -y \
+       build-essential \
+       git \
+       autoconf \
+       libtool \
+       unzip \
+       gcc-4.8 \
+       g++-4.8 \
+       gfortran \
+       gfortran-4.8 \
+       nasm \
+       make \
+       automake \
+       pkg-config \
+       pandoc \
+       python-dev \
+       libssl-dev \
+       python-pip
 
-echo $(pwd) > pwd.txt
-export SRC="`sed -E 's/(.*incubator\-mxnet)(.*)/\1/g' pwd.txt`"
-cd $SRC
+wget https://cmake.org/files/v3.12/cmake-3.12.3.tar.gz
+tar -xvzf cmake-3.12.3.tar.gz
+cd cmake-3.12.3
+./bootstrap
+make -j
+sudo make install
 
-source tools/staticbuild/install_prereq.sh
-
-cd $SRC
-cp tools/pip/MANIFEST.in python/
-cp -r tools/pip/doc python/
-
-source tools/staticbuild/build.sh $1 $2
-
-echo $(git rev-parse HEAD) >> python/mxnet/COMMIT_HASH
-cd python/
-
-# Make wheel for testing
-cp $SRC/tools/pip/setup.py pip_setup.py
-python pip_setup.py bdist_wheel
-rm pip_setup.py
-
-#wheel_name=$(ls -t dist | head -n 1)
-#pip install -U --user --force-reinstall dist/$wheel_name
+pip install -U pip "setuptools==36.2.0" wheel --user
+pip install pypandoc numpy==1.15.0 --user

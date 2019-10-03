@@ -46,4 +46,19 @@ It is not recommended to run this file alone since there are a bunch of variable
 After running this script, you would have everything you need ready in the `/lib` folder.
 
 ## `build_wheel.sh`
-This script builds the python package. It also runs a sanity test.
+This script builds the python package(statically linked). It also runs a sanity test.
+ The command `source tools/staticbuild/build.sh <Arg1> <Arg2>` performs `cp $HOME/incubator-mxnet/make/pip/<Arg2>_linux_<Arg1>.mk $HOME/incubator-mxnet/config.mk`
+- $1 can be 'pip' or 'maven'
+- $2 can be cu100, cu101, cu100mkl, cu101mkl, mkl etc.
+ 
+Refer to files inside folders $HOME/incubator-mxnet/make/pip and $HOME/incubator-mxnet/make/maven to know all the possible combinations
+
+#### `Usage:`
+```
+tools/staticbuild/build_wheel.sh cu92 maven
+```
+This would build the mxnet package based on CUDA9.2 and Maven (Scala) build setttings.
+```
+tools/staticbuild/build.sh cpu pip
+```
+This would build the mxnet package based on CPU and and pypi configuration settings.
