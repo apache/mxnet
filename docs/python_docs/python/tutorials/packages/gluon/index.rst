@@ -25,7 +25,7 @@ Getting started
 
    .. card::
       :title: A 60-minute Gluon crash course
-      :link: ../../crash-course/index.html
+      :link: ../../getting-started/crash-course/index.html
 
       Six 10-minute tutorials covering the core concepts of MXNet using the Gluon API.
 
@@ -78,7 +78,7 @@ Data
 
    .. card::
       :title: Image Augmentation
-      :link: image_augmentation.html
+      :link: image/image-augmentation.html
 
       Boost your training dataset with image augmentation.
 
@@ -90,7 +90,7 @@ Data
 
    .. card::
       :title: Gluon Datasets and DataLoader
-      :link: datasets.html
+      :link: datasets/datasets.html
 
       A guide to loading data using the Gluon API.
 
@@ -216,19 +216,19 @@ Advanced Topics
 
    .. card::
       :title: Custom Layers
-      :link: custom_layer.html
+      :link: blocks/custom-layer.html
 
       A guide to implementing custom layers.
 
    .. card::
       :title: Custom Operators
-      :link: customop.html
+      :link: ../../extend/customop.html
 
       Building custom operators with numpy.
 
    .. card::
       :title: Custom Loss
-      :link: custom_loss/custom_loss.html
+      :link: loss/custom-loss.html
 
       A guide to implementing custom losses.
 
