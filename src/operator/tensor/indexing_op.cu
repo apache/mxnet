@@ -569,7 +569,7 @@ __global__ void EmbeddingFindBounds(const IType *sorted_data,
                                     const index_t data_dim,
                                     const index_t vocab_dim) {
   const index_t id = blockIdx.x * blockDim.x + threadIdx.x;
-  if (id>=vocab_dim) return;
+  if (id >= vocab_dim) return;
 
   // Binary search to find lower bound: stored at bounds[0..vocab_dim-1]
   IType lower_bound = 0;
