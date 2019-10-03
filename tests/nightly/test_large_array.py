@@ -1503,6 +1503,15 @@ def test_pad():
     assert y.shape == (1, 1, SMALL_Y, LARGE_X//2)
 
 
+def test_gather():
+    arr = mx.nd.ones((LARGE_X, SMALL_Y))
+    idx = mx.nd.random.randint(0, LARGE_X, SMALL_X, dtype=np.int64)
+    tmp = arr[idx]
+    assert np.sum(tmp[0] == 1) == SMALL_Y
+    arr[idx] += 1
+    assert np.sum(arr[idx[0]] == 2) == SMALL_Y
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
