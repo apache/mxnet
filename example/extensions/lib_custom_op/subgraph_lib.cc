@@ -68,9 +68,9 @@ class MyStatefulOp : public CustomStatefulOp {
                         std::vector<MXTensor> outputs,
                         OpResource op_res) {
     std::cout << "Info: subgraph symbol is: " << subgraph_sym << std::endl;
-    float* in_data = inputs[0].getData<float>();
-    float* out_data = outputs[0].getData<float>();
-    for (int i = 0; i < inputs[0].getDataSize(); i++) {
+    float* in_data = inputs[0].data<float>();
+    float* out_data = outputs[0].data<float>();
+    for (int i = 0; i < inputs[0].size(); i++) {
       out_data[i] = in_data[i];
     }
     return MX_SUCCESS;

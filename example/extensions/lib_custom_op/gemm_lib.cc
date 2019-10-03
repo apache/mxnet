@@ -27,7 +27,8 @@
 #include "lib_api.h"
 
 // main matrix multiplication routine
-void gemm(float* A, float* B, float* C, unsigned n, unsigned k, unsigned m) {
+void gemm(const float* A, const float* B, float* C,
+          const unsigned n, const unsigned k, const unsigned m) {
   unsigned i, j, kk;
   for (i = 0; i < n; i++) {
     for (j = 0; j < m; j++) {
@@ -39,7 +40,7 @@ void gemm(float* A, float* B, float* C, unsigned n, unsigned k, unsigned m) {
   }
 }
 
-void transpose(float* A, float* At, unsigned n, unsigned m) {
+void transpose(const float* A, float* At, const unsigned n, const unsigned m) {
   unsigned i, j;
   for (i = 0; i < n; i++) {
     for (j = 0; j < m; j++) {
@@ -56,18 +57,10 @@ MXReturnValue forward(std::map<std::string, std::string> attrs,
                       std::vector<MXTensor> inputs,
                       std::vector<MXTensor> outputs,
                       OpResource res) {
-  // validate inputs
-  for (unsigned i = 0; i < inputs.size(); i++) {
-    if (inputs[i].dtype != kFloat32) {
-      std::cout << "Expected input " << i << " to have float32 type" << std::endl;
-      return MX_FAIL;
-    }
-  }
-
   // extract data pointers from tensors
-  float* A = inputs[0].getData<float>();
-  float* B = inputs[1].getData<float>();
-  float* C = outputs[0].getData<float>();
+  float* A = inputs[0].data<float>();
+  float* B = inputs[1].data<float>();
+  float* C = outputs[0].data<float>();
   // set tensor shapes
   unsigned n = inputs[0].shape[0];
   unsigned k = inputs[0].shape[1];
@@ -92,20 +85,12 @@ MXReturnValue backward(std::map<std::string, std::string> attrs,
                        std::vector<MXTensor> inputs,
                        std::vector<MXTensor> outputs,
                        OpResource res) {
-  // validate inputs
-  for (unsigned i = 0; i < inputs.size(); i++) {
-    if (inputs[i].dtype != kFloat32) {
-      std::cout << "Expected input " << i << " to have float32 type" << std::endl;
-      return MX_FAIL;
-    }
-  }
-
   // extract data pointers from tensors
-  float* dC = inputs[0].getData<float>();
-  float* A = inputs[1].getData<float>();
-  float* B = inputs[2].getData<float>();
-  float* dA = outputs[0].getData<float>();
-  float* dB = outputs[1].getData<float>();
+  float* dC = inputs[0].data<float>();
+  float* A = inputs[1].data<float>();
+  float* B = inputs[2].data<float>();
+  float* dA = outputs[0].data<float>();
+  float* dB = outputs[1].data<float>();
   // set tensor shapes
   unsigned n = inputs[1].shape[0];
   unsigned k = inputs[1].shape[1];
@@ -138,9 +123,11 @@ MXReturnValue inferType(std::map<std::string, std::string> attrs,
     std::cout << "Expected 2 inputs to inferType" << std::endl;
     return MX_FAIL;
   }
-  if (intypes[0] != intypes[1]) {
-    std::cout << "Expected 2 inputs to have same data type for inferType" << std::endl;
-    return MX_FAIL;
+  for (unsigned i = 0; i < intypes.size(); i++) {
+    if (intypes[i] != kFloat32) {
+      std::cout << "Expected input " << i << " to have float32 type" << std::endl;
+      return MX_FAIL;
+    }
   }
 
   outtypes[0] = intypes[0];

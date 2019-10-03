@@ -60,19 +60,19 @@ enum MXReturnValue {
  * \brief External Tensor data structure
  */
 struct MXTensor {
-  MXTensor() : data(NULL) {}
+  MXTensor() : data_ptr(NULL) {}
 
-  MXTensor(void *data, const std::vector<int64_t> &shape, MXDType dtype)
-  : data(data), shape(shape), dtype(dtype) {}
+  MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype)
+  : data_ptr(data_ptr), shape(shape), dtype(dtype) {}
 
   /*! \brief helper function to cast data pointer */
   template<typename data_type>
-  inline data_type* getData() {
-    return reinterpret_cast<data_type*>(data);
+  inline data_type* data() {
+    return reinterpret_cast<data_type*>(data_ptr);
   }
 
   /*! \brief helper function to get data size */
-  inline int64_t getDataSize() {
+  inline int64_t size() {
     int64_t size = 1;
     for (unsigned int i = 0; i < shape.size(); i++) {
       size *= shape[i];
@@ -83,7 +83,7 @@ struct MXTensor {
   // data is flatten 1D repr of tensor, elements are in continuous memory
   // user can access each element using the shape of tensor
   // it may also point to data allocated on gpu
-  void *data;
+  void *data_ptr;
 
   // shape is in [2,3,4] format to represent high-dim tensor
   std::vector<int64_t> shape;
@@ -682,7 +682,7 @@ extern "C" {
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
     for (int i = 0; i < num_in; i++) {
-      inputs[i].data = indata[i];
+      inputs[i].data_ptr = indata[i];
       inputs[i].dtype = (MXDType)intypes[i];
       for (int j = 0; j < indims[i]; j++) {
         inputs[i].shape.push_back(inshapes[i][j]);
@@ -692,7 +692,7 @@ extern "C" {
     // create a vector of tensors for outputs
     std::vector<MXTensor> outputs(num_out);
     for (int i = 0; i < num_out; i++) {
-      outputs[i].data = outdata[i];
+      outputs[i].data_ptr = outdata[i];
       outputs[i].dtype = (MXDType) outtypes[i];
       for (int j = 0; j < outdims[i]; j++) {
         outputs[i].shape.push_back(outshapes[i][j]);

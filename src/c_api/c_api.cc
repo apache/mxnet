@@ -556,7 +556,7 @@ int MXLoadLib(const char *path) {
       // create a vector of tensors for inputs
       std::vector<MXTensor> c_inputs(inputs.size());
       for (size_t i = 0; i < inputs.size(); i++) {
-        c_inputs[i].data = inputs[i].data().dptr_;
+        c_inputs[i].data_ptr = inputs[i].data().dptr_;
         c_inputs[i].dtype = (MXDType)inputs[i].dtype();
         for (int_least16_t j = 0; j < inputs[i].shape().ndim(); j++) {
           c_inputs[i].shape.push_back(inputs[i].shape().data()[j]);
@@ -566,7 +566,7 @@ int MXLoadLib(const char *path) {
       // create a vector of tensors for outputs
       std::vector<MXTensor> c_outputs(outputs.size());
       for (size_t i = 0; i < outputs.size(); i++) {
-        c_outputs[i].data = outputs[i].data().dptr_;
+        c_outputs[i].data_ptr = outputs[i].data().dptr_;
         c_outputs[i].dtype = (MXDType)outputs[i].dtype();
         for (int j = 0; j < outputs[i].shape().ndim(); j++) {
           c_outputs[i].shape.push_back(outputs[i].shape().data()[j]);
