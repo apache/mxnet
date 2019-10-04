@@ -39,7 +39,7 @@
 #define MX_LIBRARY_VERSION 1
 
 /*!
- * \brief External Tensor data types
+ * \brief Tensor data type, consistent with mshadow data type
  */
 enum MXDType {
   kFloat32 = 0,
@@ -57,7 +57,7 @@ enum MXReturnValue {
 };
 
 /*!
- * \brief External Tensor data structure
+ * \brief Tensor data structure used by custom operator
  */
 struct MXTensor {
   MXTensor() : data_ptr(NULL) {}
@@ -101,7 +101,7 @@ struct MXTensor {
 typedef void* (*xpu_malloc_t)(void*, int);
 
 /*!
- * \brief Class to provide resource APIs to Forward/Backward functions
+ * \brief provide resource APIs memory allocation mechanism to Forward/Backward functions
  */
 class OpResource {
  public:
@@ -447,9 +447,7 @@ class Registry {
 #define REGISTER_OP(Name) _STR_CONCAT(_REGISTER_DEF_(Name), __COUNTER__) = \
     Registry<CustomOp>::get()->add(TOSTRING(Name))
 
-/*
- * -------------- BELOW FUNCTIONS ARE USED IN MXNET BACKEND ---------------
- */
+/* -------------- BELOW ARE CTYPE FUNCTIONS PROTOTYPES --------------- */
 
 /*!
  * \brief Following are the C type APIs implemented in the external library
@@ -509,7 +507,7 @@ typedef int (*opVersion_t)();
 
 extern "C" {
   /*! \brief returns MXNet library version */
-  #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) int __cdecl
 #else
   int
