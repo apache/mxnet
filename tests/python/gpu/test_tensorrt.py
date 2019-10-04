@@ -56,7 +56,7 @@ def check_single_sym(sym, data_shapes, arg_params_shapes=None, aux_params_shapes
         orig_executor = wrapped_sym.simple_bind(ctx=mx.gpu(0), grad_req='null',
                                                 force_rebind=True, **shapes)
         orig_executor.copy_params_from(arg_params, aux_params)
-        orig_executor.forward(**data, is_train=False)
+        orig_executor.forward(is_train=False, **data)
         orig_outputs = [arr.asnumpy() for arr in orig_executor.outputs]
 
         # Test FP32 MXNet-TRT
@@ -72,7 +72,7 @@ def check_single_sym(sym, data_shapes, arg_params_shapes=None, aux_params_shapes
         trt_fp32_executor = trt_sym.simple_bind(ctx=mx.gpu(0), grad_req='null',
                                                 force_rebind=True, **shapes)
         trt_fp32_executor.copy_params_from(remaining_arg_params, remaining_aux_params)
-        trt_fp32_executor.forward(**data, is_train=False)
+        trt_fp32_executor.forward(is_train=False, **data)
         trt_fp32_outputs = [arr.asnumpy() for arr in trt_fp32_executor.outputs]
 
         # Test FP16 MXNet-TRT
@@ -93,7 +93,7 @@ def check_single_sym(sym, data_shapes, arg_params_shapes=None, aux_params_shapes
                                                 type_dict={k: 'float16' for k in shapes.keys()},
                                                 grad_req='null', force_rebind=True, **shapes)
         trt_fp16_executor.copy_params_from(remaining_arg_params, remaining_aux_params)
-        trt_fp16_executor.forward(**data, is_train=False)
+        trt_fp16_executor.forward(is_train=False, **data)
         trt_fp16_outputs = [arr.asnumpy() for arr in trt_fp16_executor.outputs]
 
         for j, (orig, fp16, fp32) in enumerate(zip(orig_outputs, trt_fp16_outputs, trt_fp32_outputs)):
@@ -363,10 +363,10 @@ def check_batch_norm(sym, data_shapes, arg_params_shapes=None, aux_params_shapes
         shapes.update(data_shapes)
         shapes.update(arg_params_shapes)
         shapes.update(aux_params_shapes)
-        orig_executor = wrapped_sym.simple_bind(ctx=mx.gpu(0), **shapes, grad_req='null',
-                                                force_rebind=True)
+        orig_executor = wrapped_sym.simple_bind(ctx=mx.gpu(0), grad_req='null',
+                                                force_rebind=True, **shapes)
         orig_executor.copy_params_from(arg_params, aux_params)
-        orig_executor.forward(**data, is_train=False)
+        orig_executor.forward(is_train=False, **data)
         orig_outputs = [arr.asnumpy() for arr in orig_executor.outputs]
 
         # Test FP32 MXNet-TRT
@@ -379,10 +379,10 @@ def check_batch_norm(sym, data_shapes, arg_params_shapes=None, aux_params_shapes
         shapes.update(data_shapes)
         shapes.update({k: v.shape for k, v in remaining_arg_params.items()})
         shapes.update({k: v.shape for k, v in remaining_aux_params.items()})
-        trt_fp32_executor = trt_sym.simple_bind(ctx=mx.gpu(0), **shapes,
-                                                grad_req='null', force_rebind=True)
+        trt_fp32_executor = trt_sym.simple_bind(ctx=mx.gpu(0), grad_req='null',
+                                                force_rebind=True, **shapes)
         trt_fp32_executor.copy_params_from(remaining_arg_params, remaining_aux_params)
-        trt_fp32_executor.forward(**data, is_train=False)
+        trt_fp32_executor.forward(is_train=False, **data)
         trt_fp32_outputs = [arr.asnumpy() for arr in trt_fp32_executor.outputs]
 
         # Test FP16 MXNet-TRT
@@ -398,11 +398,11 @@ def check_batch_norm(sym, data_shapes, arg_params_shapes=None, aux_params_shapes
         shapes.update({k: v.shape for k, v in remaining_arg_params.items()})
         shapes.update({k: v.shape for k, v in remaining_aux_params.items()})
 
-        trt_fp16_executor = trt_sym.simple_bind(ctx=mx.gpu(0), **shapes,
+        trt_fp16_executor = trt_sym.simple_bind(ctx=mx.gpu(0),
                                                 type_dict={k: 'float16' for k in shapes.keys()},
-                                                grad_req='null', force_rebind=True)
+                                                grad_req='null', force_rebind=True, **shapes)
         trt_fp16_executor.copy_params_from(remaining_arg_params, remaining_aux_params)
-        trt_fp16_executor.forward(**data, is_train=False)
+        trt_fp16_executor.forward(is_train=False, **data)
         trt_fp16_outputs = [arr.asnumpy() for arr in trt_fp16_executor.outputs]
 
 
