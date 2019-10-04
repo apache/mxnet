@@ -663,31 +663,31 @@ def test_leaky_relu():
 
 
 def test_pooling():
-    a = mx.nd.ones((MEDIUM_X, MEDIUM_X, SMALL_Y, SMALL_Y))
+    a = mx.nd.ones((MEDIUM_X, 200, SMALL_Y, SMALL_Y))
 
     def test_avg_pooling():
         res = mx.nd.Pooling(a, kernel=(5, 5), pool_type='avg')
-        assert res[-1][-1][-1][-1] == 1.0000001
-        assert res.shape == SMALL_Y - 5 + 1
+        assert_almost_equal(res[-1][-1][-1][-1].asnumpy(), 1.0000001, atol=1e-3, rtol=1e-3)
+        assert res.shape[-1] == SMALL_Y - 5 + 1
 
     def test_max_pooling():
         res = mx.nd.Pooling(a, kernel=(5, 5), pool_type='max')
-        assert res[-1][-1][-1][-1] == 1.
-        assert res.shape == SMALL_Y - 5 + 1
+        assert_almost_equal(res[-1][-1][-1][-1].asnumpy(), 1., atol=1e-3, rtol=1e-3)
+        assert res.shape[-1] == SMALL_Y - 5 + 1
 
     def test_sum_pooling():
         res = mx.nd.Pooling(a, kernel=(5, 5), pool_type='sum')
-        assert res[-1][-1][-1][-1] == 25
-        assert res.shape == SMALL_Y - 5 + 1
+        assert_almost_equal(res[-1][-1][-1][-1].asnumpy(), 25, atol=1e-3, rtol=1e-3)
+        assert res.shape[-1] == SMALL_Y - 5 + 1
 
     def test_lp_pooling():
         res = mx.nd.Pooling(a, kernel=(5, 5), pool_type='lp', p_value=2)
-        assert res[-1][-1][-1][-1] == 5.
-        assert res.shape == SMALL_Y - 5 + 1
+        assert_almost_equal(res[-1][-1][-1][-1].asnumpy(), 5., atol=1e-3, rtol=1e-3)
+        assert res.shape[-1] == SMALL_Y - 5 + 1
 
         res = mx.nd.Pooling(a, kernel=(5, 5), pool_type='lp', p_value=1)
-        assert res[-1][-1][-1][-1] == 25.
-        assert res.shape == SMALL_Y - 5 + 1
+        assert_almost_equal(res[-1][-1][-1][-1].asnumpy(), 25., atol=1e-3, rtol=1e-3)
+        assert res.shape[-1] == SMALL_Y - 5 + 1
 
     test_avg_pooling()
     test_max_pooling()
