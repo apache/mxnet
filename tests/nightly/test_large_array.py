@@ -765,7 +765,7 @@ def test_activation():
     # y = x/(1+abs(x))
     y = mx.nd.Activation(x, act_type="sigmoid")
     sigmoid_x = (1/(1+math.exp(-test_x)))
-    assert y[-1][-1] == np.float32(sigmoid_x)
+    assert_almost_equal(y[-1][-1].asnumpy(), np.float32(sigmoid_x), atol=1e-3, rtol=1e-3)
 
     # Soft Sign
     # y = 1/(1+exp(-x))
