@@ -638,23 +638,23 @@ def test_leaky_relu():
 
     def test_leaky():
         res = mx.nd.LeakyReLU(a, act_type="leaky", slope=0.3)
-        assert res[-1][-1].asnumpy() == 0.3*a[-1][-1].asnumpy()
+        assert_almost_equal(res[-1][-1].asnumpy(), 0.3*a[-1][-1].asnumpy(), atol=1e-3, rtol=1e-3)
 
     def test_elu():
         res = mx.nd.LeakyReLU(a, act_type="elu", slope=0.3)
-        assert res[-1][-1].asnumpy() == 0.3*(np.exp(a[-1][-1].asnumpy())-1)
+        assert_almost_equal(res[-1][-1].asnumpy(), 0.3*(np.exp(a[-1][-1].asnumpy())-1), atol=1e-3, rtol=1e-3)
 
     def test_selu():
         lam = 1.0507009873554804934193349852946
         alpha = 1.6732632423543772848170429916717
         res = mx.nd.LeakyReLU(a, act_type="selu")
-        assert res[-1][-1].asnumpy() == (lam * alpha * (np.exp(a[-1][-1].asnumpy())-1))
+        assert_almost_equal(res[-1][-1].asnumpy(), (lam * alpha * (np.exp(a[-1][-1].asnumpy())-1)), atol=1e-3, rtol=1e-3)
 
     def test_rrelu():
         lower = 0.125
         upper = 0.333999991
         res = mx.nd.LeakyReLU(a, act_type="rrelu")
-        assert res[-1][-1].asnumpy() == (lower + upper) / 2 * a[-1][-1].asnumpy()
+        assert_almost_equal(res[0][-1][-1].asnumpy(), (lower + upper) / 2 * a[-1][-1].asnumpy(), atol=1e-3, rtol=1e-3)
 
     test_leaky()
     test_elu()
