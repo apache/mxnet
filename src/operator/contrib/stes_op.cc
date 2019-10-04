@@ -28,57 +28,57 @@
 
 
 namespace mxnet {
-  namespace op {
+namespace op {
 
-    // Round STE
-    MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(_contrib_round_ste, cpu, mshadow_op::round)
-    .describe(R"code(Straight-through-estimator of `round()`.
+// Round STE
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(_contrib_round_ste, cpu, mshadow_op::round)
+.describe(R"code(Straight-through-estimator of `round()`.
 
-    In forward pass, returns element-wise rounded value to the nearest integer of the input (same as `round()`).
+In forward pass, returns element-wise rounded value to the nearest integer of the input (same as `round()`).
 
-    In backward pass, returns gradients of ``1`` everywhere (instead of ``0`` everywhere as in `round()`):
-    :math:`\frac{d}{dx}{round\_ste(x)} = 1` vs. :math:`\frac{d}{dx}{round(x)} = 0`.
-    This is useful for quantized training.
+In backward pass, returns gradients of ``1`` everywhere (instead of ``0`` everywhere as in `round()`):
+:math:`\frac{d}{dx}{round\_ste(x)} = 1` vs. :math:`\frac{d}{dx}{round(x)} = 0`.
+This is useful for quantized training.
 
-    Reference: Estimating or Propagating Gradients Through Stochastic Neurons for Conditional Computation.
+Reference: Estimating or Propagating Gradients Through Stochastic Neurons for Conditional Computation.
 
-    Example::
-      x = round_ste([-1.5, 1.5, -1.9, 1.9, 2.7])
-      x.backward()
-      x = [-2.,  2., -2.,  2.,  3.]
-      x.grad() = [1.,  1., 1.,  1.,  1.]
+Example::
+  x = round_ste([-1.5, 1.5, -1.9, 1.9, 2.7])
+  x.backward()
+  x = [-2.,  2., -2.,  2.,  3.]
+  x.grad() = [1.,  1., 1.,  1.,  1.]
 
-    The storage type of ``round_ste`` output depends upon the input storage type:
-      - round_ste(default) = default
-      - round_ste(row_sparse) = row_sparse
-      - round_ste(csr) = csr
-    )code" ADD_FILELINE)
-    .set_attr<nnvm::FGradient>("FGradient", CloneGradient{"_backward_round_ste"});
+The storage type of ``round_ste`` output depends upon the input storage type:
+  - round_ste(default) = default
+  - round_ste(row_sparse) = row_sparse
+  - round_ste(csr) = csr
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", CloneGradient{"_backward_round_ste"});
 
-    // sign
-    MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(_contrib_sign_ste, cpu, mshadow_op::sign)
-    .describe(R"code(Straight-through-estimator of `sign()`.
+// sign
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(_contrib_sign_ste, cpu, mshadow_op::sign)
+.describe(R"code(Straight-through-estimator of `sign()`.
 
-    In forward pass, returns element-wise sign of the input (same as `sign()`).
+In forward pass, returns element-wise sign of the input (same as `sign()`).
 
-    In backward pass, returns gradients of ``1`` everywhere (instead of ``0`` everywhere as in `sign()`):
-    :math:`\frac{d}{dx}{sign\_ste(x)} = 1` vs. :math:`\frac{d}{dx}{sign(x)} = 0`.
-    This is useful for quantized training.
+In backward pass, returns gradients of ``1`` everywhere (instead of ``0`` everywhere as in ``sign()``):
+:math:`\frac{d}{dx}{sign\_ste(x)} = 1` vs. :math:`\frac{d}{dx}{sign(x)} = 0`.
+This is useful for quantized training.
 
-    Reference: Estimating or Propagating Gradients Through Stochastic Neurons for Conditional Computation.
+Reference: Estimating or Propagating Gradients Through Stochastic Neurons for Conditional Computation.
 
-    Example::
-      x = sign_ste([-2, 0, 3])
-      x.backward()
-      x = [-1.,  0., 1.]
-      x.grad() = [1.,  1., 1.]
+Example::
+  x = sign_ste([-2, 0, 3])
+  x.backward()
+  x = [-1.,  0., 1.]
+  x.grad() = [1.,  1., 1.]
 
-    The storage type of ``sign_ste`` output depends upon the input storage type:
-      - round_ste(default) = default
-      - round_ste(row_sparse) = row_sparse
-      - round_ste(csr) = csr
-    )code" ADD_FILELINE)
-    .set_attr<nnvm::FGradient>("FGradient", CloneGradient{"_backward_sign_ste"});
+The storage type of ``sign_ste`` output depends upon the input storage type:
+  - round_ste(default) = default
+  - round_ste(row_sparse) = row_sparse
+  - round_ste(csr) = csr
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", CloneGradient{"_backward_sign_ste"});
 
-  }  // namespace op
+}  // namespace op
 }  // namespace mxnet

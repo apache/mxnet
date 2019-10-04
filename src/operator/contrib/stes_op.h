@@ -30,4 +30,4 @@
 #include <mxnet/base.h>
 #include "../tensor/elemwise_unary_op.h"
 
-#endif
+#endif  // MXNET_OPERATOR_CONTRIB_STES_OP_H_

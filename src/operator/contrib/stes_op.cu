@@ -27,17 +27,17 @@
 #include "stes_op.h"
 
 namespace mxnet {
-  namespace op {
+namespace op {
 
-    // Round STE
-    NNVM_REGISTER_OP(_contrib_round_ste)
-    .set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::round>)
-    .set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::ComputeEx<gpu, mshadow_op::round>);
+// Round STE
+NNVM_REGISTER_OP(_contrib_round_ste)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::round>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::ComputeEx<gpu, mshadow_op::round>);
 
-    // Sign STE
-    NNVM_REGISTER_OP(_contrib_sign_ste)
-    .set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::sign>)
-    .set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::ComputeEx<gpu, mshadow_op::sign>);
+// Sign STE
+NNVM_REGISTER_OP(_contrib_sign_ste)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::sign>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::ComputeEx<gpu, mshadow_op::sign>);
 
-  }  // namespace op
+}  // namespace op
 }  // namespace mxnet
