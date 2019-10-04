@@ -379,7 +379,7 @@ class ModulatedDeformableConvolution(HybridBlock):
 
         offset_t = F.slice_axis(offset, axis=1, begin=0, end=18)
         mask = F.slice_axis(offset, axis=1, begin=18, end=None)
-        mask = F.sigmoid(mask) * 2
+        mask = F.sigmoid(mask)
 
         if deformable_conv_bias is None:
             act = F.contrib.ModulatedDeformableConvolution(data=x, offset=offset_t, mask=mask,

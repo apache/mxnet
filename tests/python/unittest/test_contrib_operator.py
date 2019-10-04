@@ -410,7 +410,6 @@ def test_op_mrcnn_mask_target():
     assert_almost_equal(mask_cls.asnumpy(), gt_mask_cls.asnumpy())
 
 @with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_modulated_deformable_convolution():
     for num_batch in [1, 2]:
         for num_channel_data, num_deformable_group in itertools.product([4, 8], [1, 2]):
@@ -444,9 +443,6 @@ def test_modulated_deformable_convolution():
                             rtol, atol = 1.0, 1e-2
                         else:
                             rtol, atol = 0.05, 1e-3
-                        # By now we only have gpu implementation
-                        check_numeric_gradient(op, [im_data, offset_data, mask_data, weight, bias], rtol=rtol, atol=atol,
-                                                grad_nodes=grad_nodes, ctx=mx.gpu(0))
 
 
 if __name__ == '__main__':
