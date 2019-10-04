@@ -49,8 +49,8 @@ __global__ void transpose_pseudo2D(DType* out, DType* inp,
   const uint32_t chunked_m = m/TSR;
 
   union transp_t {
-   CType valChunk;
-   DType values[TSR];
+    CType valChunk;
+    DType values[TSR];
   };
 
   __shared__ DType d_shm[1024*TSR*TSR];
@@ -201,10 +201,9 @@ inline void call_transpose_pseudo2D(uint32_t dTypeSize, uint32_t cTypeSize,
     LOG(FATAL) << "Unsupported type combination";
   }
   auto cuErr = cudaPeekAtLastError();
-  if (cuErr != cudaSuccess) {
-      std::cerr << "Transpose kernel failure: " << cudaGetErrorString(cuErr) << std::endl;
-      exit(EXIT_FAILURE);
-  }
+  CHECK_EQ(cuErr, cudaSuccess) << "Transpose kernel failure: " << cudaGetErrorString(cuErr) << ". "
+                               << "block: (" << block.x << "," << block.y << "," << block.z << ")"
+                               << " grid: (" << grid.x << "," << grid.y << "," << grid.z << ")";
 }
 
 
@@ -288,13 +287,12 @@ inline std::pair<dim3, dim3> calculateKernelParams(pseudo2DSizes sizes, const ui
     thdsX *= 2;
   }
   thdsY = nThreadsPerBlock/thdsX;
-  // number of threads per block in x dimension should stay divisible by 2^n
   thdsY = std::min(sizes.M/TSR, thdsY);
   uint32_t blocksY = (sizes.M/TSR-1)/thdsY + 1;
   uint32_t blocksX = (sizes.N/TSR-1)/thdsX + 1;
 
   dim3 grid(blocksX, blocksY, sizes.leadDimS);
-  dim3 block(thdsX, thdsY, 1);
+  dim3 block(thdsX, thdsY);
   return {grid, block};
 }
 
@@ -308,7 +306,7 @@ inline std::pair<dim3, dim3> calculateKernelParams(pseudo2DSizes sizes, const ui
  * \param outBlob Tensor blob to store result.
  * \param inpBlob Tensor blob with input data.
  * \param params Parameters (axes) of the transpose.
- * \param s Poinster to GPU stream.
+ * \param s Pointer to GPU stream.
  */
 template <typename DType, typename gpu>
 void transpose_pseudo2D(const TBlob& outBlob, const TBlob& inpBlob,
