@@ -742,7 +742,8 @@ def test_dropout():
     exe = y.simple_bind(ctx=default_context(), data=shape)
     exe.arg_arrays[0][:] = 1
     out = exe.forward(is_train=True)
-    assert out.shape == out.shape
+    nd.waitall()
+    assert out[0].shape == shape
 
 
 def test_activation():
