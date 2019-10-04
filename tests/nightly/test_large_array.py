@@ -84,20 +84,20 @@ def test_ndarray_random_randint():
 
 @with_seed()
 def test_ndarray_random_exponential():
-    scale_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    scale_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
     a = nd.random.exponential(scale=scale_array, shape=(SMALL_X, SMALL_Y))
     assert a[-1][0][0][0] >= 0
-    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
+    assert a.shape == (MEDIUM_X, SMALL_X, SMALL_X, SMALL_Y)
 
 
 @with_seed()
 def test_ndarray_random_gamma():
-    alpha_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
-    beta_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    alpha_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
+    beta_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
     a = nd.random.gamma(alpha=alpha_array, beta=beta_array,
                         shape=(SMALL_X, SMALL_Y))
     assert a[-1][0][0][0] >= 0
-    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
+    assert a.shape == (MEDIUM_X, SMALL_X, SMALL_X, SMALL_Y)
 
 
 @with_seed()
@@ -108,50 +108,50 @@ def test_ndarray_random_multinomial():
     assert a[-1] >= 0
     assert a.shape == (LARGE_X,)
     # test for NDArray multi-dimension shape
-    a = nd.random.multinomial(probs, shape=(SMALL_X, SMALL_Y))
+    a = nd.random.multinomial(probs, shape=(2, SMALL_Y))
     assert a[-1][0][0] >= 0
-    assert a.shape == (LARGE_X, SMALL_X, SMALL_Y)
+    assert a.shape == (LARGE_X, 2, SMALL_Y)
     # test log_likelihood output shape
-    a = nd.random.multinomial(probs, shape=(SMALL_X, SMALL_Y), get_prob=True)
-    assert a[-1][0][0] >= 0
-    assert a[0].shape == (LARGE_X, SMALL_X, SMALL_Y) and a[0].shape == a[1].shape
+    a = nd.random.multinomial(probs, shape=(2, SMALL_Y), get_prob=True)
+    assert a[0][0][0][0] >= 0
+    assert a[0].shape == (LARGE_X, 2, SMALL_Y) and a[0].shape == a[1].shape
 
 
 @with_seed()
 def test_ndarray_random_generalized_negative_binomial():
-    alpha_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
-    mu_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    alpha_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
+    mu_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
     a = nd.random.generalized_negative_binomial(mu=mu_array, alpha=alpha_array,
                                                 shape=(SMALL_X, SMALL_Y))
     assert a[-1][0][0][0] >= 0
-    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
+    assert a.shape == (MEDIUM_X, SMALL_X, SMALL_X, SMALL_Y)
 
 
 @with_seed()
 def test_ndarray_random_negative_binomial():
-    k_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
-    p_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    k_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
+    p_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
     a = nd.random.negative_binomial(k=k_array, p=p_array,
                                     shape=(SMALL_X, SMALL_Y))
     assert a[-1][0][0][0] >= 0
-    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
+    assert a.shape == (MEDIUM_X, SMALL_X, SMALL_X, SMALL_Y)
 
 
 @with_seed()
 def test_ndarray_random_normal():
-    scale_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
-    loc_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    scale_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
+    loc_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
     a = nd.random.normal(loc=loc_array, scale=scale_array,
                          shape=(SMALL_X, SMALL_Y))
-    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
+    assert a.shape == (MEDIUM_X, SMALL_X, SMALL_X, SMALL_Y)
 
 
 @with_seed()
 def test_ndarray_random_poisson():
-    lambda_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    lambda_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
     a = nd.random.poisson(lam=lambda_array, shape=(SMALL_X, SMALL_Y))
     assert a[-1][0][0][0] >= 0
-    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
+    assert a.shape == (MEDIUM_X, SMALL_X, SMALL_X, SMALL_Y)
 
 
 @with_seed()
@@ -269,6 +269,7 @@ def test_slice_assign():
 def test_expand_dims():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     res = nd.expand_dims(a, axis=1)
+    assert a[0][0][0] == 1
     assert res.shape == (a.shape[0], 1, a.shape[1])
 
 
@@ -561,7 +562,7 @@ def test_sequence_last():
 
     # test if returns last sequence
     b = nd.SequenceLast(a)
-    assert_almost_equal(b.asnumpy(), a[-1].asnumpy())  # only checks for (2,SMALL_Y) tensor
+    assert_almost_equal(b.asnumpy(), a[-1].asnumpy())  # only checks for (2, SMALL_Y) tensor
     assert b.shape == (2, SMALL_Y)
 
     # test with sequence length
@@ -956,24 +957,17 @@ def test_flatten():
     assert b.shape == (LARGE_X//2, SMALL_Y*2)
 
 
-def test_expand_dims():
-    a = nd.array(np.ones((SMALL_Y, LARGE_X)))
-    b = nd.expand_dims(a, axis=1)
-    nd.waitall()
-    assert b.shape == (SMALL_Y, 1, LARGE_X)
-
-
 def test_concat():
     a = nd.array(np.ones((SMALL_Y, LARGE_X)))
     b = nd.array(np.zeros((SMALL_Y, LARGE_X)))
-    c = nd.concat(a,b, dim=0)
+    c = nd.concat(a, b, dim=0)
     assert c.shape == (b.shape[0]*2, LARGE_X)
 
 
 def test_stack():
     a = nd.array(np.ones((SMALL_Y, LARGE_X)))
     b = nd.array(np.zeros((SMALL_Y, LARGE_X)))
-    c = nd.stack(a,b, axis=1)
+    c = nd.stack(a, b, axis=1)
     assert c.shape == (b.shape[0], 2, LARGE_X)
 
 
@@ -1018,7 +1012,7 @@ def test_max():
 def test_norm():
     a = np.array(np.full((1, LARGE_X), 3))
     b = np.array(np.full((1, LARGE_X), 4))
-    c = nd.array(np.concatenate((a,b), axis=0))
+    c = nd.array(np.concatenate((a, b), axis=0))
     d = nd.norm(c, ord=2, axis=0)
     e = nd.norm(c, ord=1, axis=0)
     assert d.shape[0] == LARGE_X
@@ -1030,7 +1024,7 @@ def test_norm():
 def test_argmax():
     a = np.ones((SMALL_Y, LARGE_X))
     b = np.zeros((SMALL_Y, LARGE_X))
-    c = nd.array(np.concatenate((a,b), axis=0))
+    c = nd.array(np.concatenate((a, b), axis=0))
     d = nd.argmax(c, axis=0)
     assert d.shape[0] == LARGE_X
     assert d[-1] == d[0] == 0
@@ -1039,12 +1033,13 @@ def test_argmax():
 def test_relu():
     def frelu(x):
         return np.maximum(x, 0.0)
+
     def frelu_grad(x):
         return 1.0 * (x > 0.0)
     shape = (SMALL_Y, LARGE_X)
     x = mx.symbol.Variable("x")
     y = mx.sym.relu(x)
-    xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
+    xa = np.random.uniform(low=-1.0, high=1.0, size=shape)
     eps = 1e-4
     xa[abs(xa) < eps] = 1.0
     ya = frelu(xa)
@@ -1058,7 +1053,7 @@ def test_sigmoid():
     shape = (SMALL_Y, LARGE_X)
     x = mx.symbol.Variable("x")
     y = mx.sym.sigmoid(x)
-    xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
+    xa = np.random.uniform(low=-1.0, high=1.0, size=shape)
     ya = fsigmoid(xa)
     check_symbolic_forward(y, [xa], [ya])
 
@@ -1113,15 +1108,6 @@ def test_idiv():
     c /= b
     assert c.shape == a.shape
     assert c[0][-1] == 2
-
-
-def test_imod():
-    a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
-    b = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 2)))
-    c = a
-    c %= b
-    assert c.shape == a.shape
-    assert c[0][-1] == 1
 
 
 def test_eq():
@@ -1197,7 +1183,7 @@ def test_slice_axis():
 
 
 def test_one_hot():
-    #default dtype of ndarray is float32 which cannot index elements over 2^32
+    # default dtype of ndarray is float32 which cannot index elements over 2^32
     a = nd.array([1, (VLARGE_X - 1)], dtype=np.int64)
     b = nd.one_hot(a, VLARGE_X)
     b[0][1] == 1
