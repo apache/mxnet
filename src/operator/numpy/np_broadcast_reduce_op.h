@@ -221,6 +221,15 @@ void NumpyReduceAxesCompute(const nnvm::NodeAttrs& attrs,
   if (param.initial.has_value()) {
     LOG(FATAL) << "initial is not supported yet";
   }
+  if (inputs[0].shape_.Size() == 0) {
+    using namespace mxnet_op;
+    using namespace mshadow;
+    Stream<xpu>* s = ctx.get_stream<xpu>();
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      Kernel<set_zero, xpu>::Launch(s, outputs[0].shape_.Size(), outputs[0].dptr<DType>());
+    });
+    return;
+  }
   if (param.axis.has_value() && param.axis.value().ndim() == 0) {
     UnaryOp::IdentityCompute<xpu>(attrs, ctx, inputs, req, outputs);
   }
