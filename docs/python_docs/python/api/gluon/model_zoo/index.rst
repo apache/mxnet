@@ -15,13 +15,12 @@
    specific language governing permissions and limitations
    under the License.
 
-gluon.model_zoo.vision
-======================
+gluon.model_zoo
+===============
 
 .. automodule:: mxnet.gluon.model_zoo.vision
 
 .. autosummary::
-   :toctree: _autogen
 
     get_model
 
@@ -154,7 +153,14 @@ MobileNet
 
 API Reference
 -------------
-.. automodule:: mxnet.gluon.model_zoo.vision
+.. automodule:: mxnet.gluon.model_zoo
     :members:
     :imported-members:
     :autosummary:
+
+.. automodule:: mxnet.gluon.model_zoo.vision
+    :noindex:
+    :members:
+    :imported-members:
+    :autosummary:
+

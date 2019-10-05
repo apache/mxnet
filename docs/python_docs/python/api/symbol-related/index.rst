@@ -49,5 +49,7 @@ Symbol related modules
 
    mxnet.callback
    mxnet.module
+   mxnet.model
    mxnet.monitor
    mxnet.visualization
+

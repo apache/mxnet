@@ -18,12 +18,12 @@
  */
 
 /* Customizations to the Sphinx auto module plugin output */
-function auto_index(module) {
-    $(document).ready(function () {
-        var targets = $("dl.class>dt");
-        var li_node = $("li.current>span>a.current.reference.internal").parent().parent();
-        var html = "<ul>";
+function auto_index() {
+    var targets = $("dl.class>dt,dl.function>dt");
 
+    var li_node = $("li.current>span>a.current.reference.internal").parent().parent();
+    var html = "<ul id='autodoc'>";
+    if (li_node.length > 0) {
         for (var i = 0; i < targets.length; ++i) {
             var id = $(targets[i]).attr('id');
             if (id) {
@@ -39,10 +39,11 @@ function auto_index(module) {
                 html += "'>" + id_simple + "</a></span</li>";
             }
         }
-
         html += "</ul>";
         li_node.append(html);
-    });
+        li_node.prepend("<a><span id='autodoc_toggle' onclick='$(\"#autodoc\").toggle()'>[toggle]</span></a>")
+    } else {
+        setTimeout(auto_index, 500);
+    }
 }
-
-auto_index();
+$(document).ready(auto_index);

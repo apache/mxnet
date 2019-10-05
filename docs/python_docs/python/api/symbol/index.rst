@@ -16,7 +16,7 @@
    under the License.
 
 mxnet.symbol
-=========================
+============
 
 The Symbol API in Apache MXNet is an interface for symbolic programming. It features the use of computational graphs, reduced memory usage, and pre-use function optimization.
 
@@ -48,7 +48,7 @@ Tutorials
       The Symbol guide. Start here!
 
 Symbol Package
----------
+--------------
 
 .. container:: cards
 

@@ -16,7 +16,7 @@
    under the License.
 
 NDArray
-=================
+=======
 
 .. currentmodule:: mxnet.ndarray
 
@@ -51,10 +51,10 @@ Array creation
 
 
 Manipulation
--------------
+------------
 
 Array conversion
-^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^
 
 .. autosummary::
    :toctree: _autogen
@@ -69,7 +69,7 @@ Array conversion
 
 
 Changing shape
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^
 
 .. autosummary::
    :toctree: _autogen
@@ -85,7 +85,7 @@ Changing shape
 
 
 Expanding elements
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^
 
 .. autosummary::
    :toctree: _autogen
@@ -99,7 +99,7 @@ Expanding elements
 
 
 Rearrange elements
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^
 
 .. autosummary::
    :toctree: _autogen
@@ -113,7 +113,7 @@ Rearrange elements
 
 
 Sorting and searching
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
 
 .. autosummary::
    :toctree: _autogen
@@ -127,7 +127,7 @@ Sorting and searching
 
 
 Indexing
-^^^^^^^^^^
+^^^^^^^^
 
 .. autosummary::
    :toctree: _autogen
@@ -143,7 +143,7 @@ Indexing
 
 
 Lazy evaluation
-^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^
 
 .. autosummary::
    :toctree: _autogen
@@ -155,7 +155,7 @@ Math
 ----
 
 Arithmetic operations
-^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
 
 .. autosummary::
    :toctree: _autogen
@@ -173,7 +173,7 @@ Arithmetic operations
 
 
 Rounding
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^
 
 .. autosummary::
    :toctree: _autogen
@@ -187,7 +187,7 @@ Rounding
 
 
 Reduction
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^
 
 .. autosummary::
    :toctree: _autogen
@@ -203,7 +203,7 @@ Reduction
 
 
 In^place arithmetic operations
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autosummary::
    :toctree: _autogen
@@ -216,7 +216,7 @@ In^place arithmetic operations
 
 
 Comparison operators
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^
 
 .. autosummary::
    :toctree: _autogen
@@ -230,7 +230,7 @@ Comparison operators
 
 
 Trigonometric functions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autosummary::
    :toctree: _autogen
@@ -246,7 +246,7 @@ Trigonometric functions
 
 
 Hyperbolic functions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^
 
 .. autosummary::
    :toctree: _autogen
@@ -260,7 +260,7 @@ Hyperbolic functions
 
 
 Exponents and logarithms
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autosummary::
    :toctree: _autogen
@@ -274,7 +274,7 @@ Exponents and logarithms
 
 
 Powers
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^
 
 .. autosummary::
    :toctree: _autogen
@@ -288,7 +288,7 @@ Powers
 
 
 Miscellaneous
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^
 
 .. autosummary::
    :toctree: _autogen
@@ -298,7 +298,7 @@ Miscellaneous
 
 
 Neural network
-------------------
+--------------
 
 .. autosummary::
    :toctree: _autogen
