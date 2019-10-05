@@ -180,7 +180,7 @@ html_css_files = [
 ]
 
 html_js_files = [
-
+    'autodoc.js'
 ]
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,

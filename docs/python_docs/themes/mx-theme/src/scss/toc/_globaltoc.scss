@@ -11,12 +11,12 @@
         margin: 0;
 
         li {
-            min-height: 36px;
+            min-height: 18px;
             .link-wrapper {
                 display: flex;
                 justify-content: space-between;
                 > a {
-                    padding: 8px 0;
+                    padding: 4px 0;
                     display: block;
                     width: 100%;
                     font-size: 1rem;
