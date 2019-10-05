@@ -15,9 +15,48 @@
    specific language governing permissions and limitations
    under the License.
 
-Constant
-========
+gluon.rnn
+=========
+
+Build-in recurrent neural network layers are provided in the following two modules:
+
+
+.. autosummary::
+    :nosignatures:
+
+    mxnet.gluon.rnn
+    mxnet.gluon.contrib.rnn
 
 .. currentmodule:: mxnet.gluon
 
-.. autoclass:: Constant
+Recurrent Cells
+----------------
+
+.. autosummary::
+    :nosignatures:
+
+    rnn.LSTMCell
+    rnn.GRUCell
+    rnn.RecurrentCell
+    rnn.SequentialRNNCell
+    rnn.BidirectionalCell
+    rnn.DropoutCell
+    rnn.ZoneoutCell
+    rnn.ResidualCell
+
+Recurrent Layers
+----------------
+
+.. autosummary::
+    :nosignatures:
+
+    rnn.RNN
+    rnn.LSTM
+    rnn.GRU
+
+API Reference
+-------------
+.. automodule:: mxnet.gluon.rnn
+    :members:
+    :imported-members:
+    :autosummary:

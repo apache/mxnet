@@ -15,8 +15,8 @@
    specific language governing permissions and limitations
    under the License.
 
-model_zoo.vision
-=================
+gluon.model_zoo.vision
+======================
 
 .. automodule:: mxnet.gluon.model_zoo.vision
 
@@ -29,7 +29,6 @@ ResNet
 ------
 
 .. autosummary::
-   :toctree: _autogen
 
     resnet18_v1
     resnet34_v1
@@ -43,7 +42,6 @@ ResNet
     resnet152_v2
 
 .. autosummary::
-   :toctree: _autogen
 
     ResNetV1
     ResNetV2
@@ -57,7 +55,6 @@ VGG
 ---
 
 .. autosummary::
-   :toctree: _autogen
 
     vgg11
     vgg13
@@ -69,7 +66,6 @@ VGG
     vgg19_bn
 
 .. autosummary::
-   :toctree: _autogen
 
     VGG
     get_vgg
@@ -78,12 +74,10 @@ Alexnet
 --------
 
 .. autosummary::
-   :toctree: _autogen
 
     alexnet
 
 .. autosummary::
-   :toctree: _autogen
 
     AlexNet
 
@@ -93,7 +87,6 @@ DenseNet
 
 
 .. autosummary::
-   :toctree: _autogen
 
     densenet121
     densenet161
@@ -103,7 +96,6 @@ DenseNet
 
 
 .. autosummary::
-   :toctree: _autogen
 
     DenseNet
 
@@ -113,7 +105,6 @@ SqueezeNet
 
 
 .. autosummary::
-   :toctree: _autogen
 
     squeezenet1_0
     squeezenet1_1
@@ -121,7 +112,6 @@ SqueezeNet
 
 
 .. autosummary::
-   :toctree: _autogen
 
     SqueezeNet
 
@@ -131,14 +121,12 @@ Inception
 
 
 .. autosummary::
-   :toctree: _autogen
 
     inception_v3
 
 
 
 .. autosummary::
-   :toctree: _autogen
 
     Inception3
 
@@ -148,7 +136,6 @@ MobileNet
 
 
 .. autosummary::
-   :toctree: _autogen
 
     mobilenet1_0
     mobilenet0_75
@@ -161,7 +148,13 @@ MobileNet
 
 
 .. autosummary::
-   :toctree: _autogen
 
     MobileNet
     MobileNetV2
+
+API Reference
+-------------
+.. automodule:: mxnet.gluon.model_zoo.vision
+    :members:
+    :imported-members:
+    :autosummary:

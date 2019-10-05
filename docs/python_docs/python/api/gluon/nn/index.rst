@@ -15,8 +15,8 @@
    specific language governing permissions and limitations
    under the License.
    
-nn and contrib.nn
-=========================
+gluon.nn
+========
 
 Gluon provides a large number of build-in neural network layers in the following
 two modules:
@@ -36,16 +36,6 @@ We group all layers in these two modules according to their categories.
 
 .. currentmodule:: mxnet.gluon
 
-Blocks
-------
-
-.. autosummary::
-   :nosignatures:
-   :toctree: .
-
-   nn.Block
-   nn.HybridBlock
-   nn.SymbolBlock
 
 
 Sequential containers
@@ -53,21 +43,10 @@ Sequential containers
 
 
 .. autosummary::
-    :toctree: _autogen
     :nosignatures:
 
     nn.Sequential
     nn.HybridSequential
-
-Concurrent containers
----------------------
-
-.. autosummary::
-    :toctree: _autogen
-    :nosignatures:
-
-    contrib.nn.Concurrent
-    contrib.nn.HybridConcurrent
 
 
 Basic Layers
@@ -75,7 +54,6 @@ Basic Layers
 
 .. autosummary::
     :nosignatures:
-    :toctree: _autogen
 
     nn.Dense
     nn.Activation
@@ -89,7 +67,6 @@ Convolutional Layers
 
 .. autosummary::
     :nosignatures:
-    :toctree: _autogen
 
     nn.Conv1D
     nn.Conv2D
@@ -103,7 +80,6 @@ Pooling Layers
 
 .. autosummary::
    :nosignatures:
-   :toctree: _autogen
 
     nn.MaxPool1D
     nn.MaxPool2D
@@ -124,22 +100,18 @@ Normalization Layers
 
 .. autosummary::
     :nosignatures:
-    :toctree: _autogen
 
     nn.BatchNorm
     nn.InstanceNorm
     nn.LayerNorm
-    contrib.nn.SyncBatchNorm
 
 Embedding Layers
 ----------------
 
 .. autosummary::
     :nosignatures:
-    :toctree: _autogen
 
     nn.Embedding
-    contrib.nn.SparseEmbedding
 
 
 Advanced Activation Layers
@@ -147,10 +119,16 @@ Advanced Activation Layers
 
 .. autosummary::
     :nosignatures:
-    :toctree: _autogen
 
     nn.LeakyReLU
     nn.PReLU
     nn.ELU
     nn.SELU
     nn.Swish
+
+API Reference
+-------------
+.. automodule:: mxnet.gluon.nn
+    :members:
+    :imported-members:
+    :autosummary:
