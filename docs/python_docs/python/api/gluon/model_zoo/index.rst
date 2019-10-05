@@ -15,10 +15,11 @@
    specific language governing permissions and limitations
    under the License.
 
-gluon.model_zoo
-===============
+gluon.model_zoo.vision
+======================
 
 .. automodule:: mxnet.gluon.model_zoo.vision
+   :noindex:
 
 .. autosummary::
 
@@ -124,7 +125,6 @@ Inception
     inception_v3
 
 
-
 .. autosummary::
 
     Inception3
@@ -153,13 +153,8 @@ MobileNet
 
 API Reference
 -------------
-.. automodule:: mxnet.gluon.model_zoo
-    :members:
-    :imported-members:
-    :autosummary:
 
 .. automodule:: mxnet.gluon.model_zoo.vision
-    :noindex:
     :members:
     :imported-members:
     :autosummary:
