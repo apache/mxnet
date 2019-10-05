@@ -82,7 +82,7 @@ PackedFunc GetFunction(const std::shared_ptr<Module> &module,
 
 void TVMOpModule::Call(const std::string &func_name,
                        const mxnet::OpContext& ctx,
-                       const std::vector<mxnet::TBlob> &args) {
+                       const std::vector<mxnet::TBlob> &args) const {
   std::vector<int> type_codes;
   std::vector<TVMValue> values;
 
@@ -112,6 +112,27 @@ void TVMOpModule::Call(const std::string &func_name,
 #endif
 }
 
+void TVMOpModule::CallEx(const std::string &func_name,
+                         const mxnet::OpContext& ctx,
+                         const std::vector<mxnet::TBlob>& tblobs,
+                         TVMArgs tvm_args) const {
+  TVMRetValue rv;
+
+  #if MXNET_USE_CUDA
+    int dev_type = (ctx.run_ctx.ctx.dev_type == mxnet::Context::DeviceType::kGPU) ? kDLGPU : kDLCPU;
+    int dev_id = ctx.run_ctx.ctx.dev_id;
+    if (dev_type == kDLGPU) {
+      void *stream = static_cast<void *>(ctx.run_ctx.get_stream<mxnet::gpu>()->stream_);
+      TVMSetStream(dev_type, dev_id, stream);
+    }
+  #endif
+    GetFunction(module_ptr_, func_name, tblobs).CallPacked(tvm_args, &rv);
+  #if MXNET_USE_CUDA
+    if (dev_type == kDLGPU) {
+      TVMSetStream(dev_type, dev_id, nullptr);
+    }
+  #endif
+}
 }  // namespace runtime
 }  // namespace tvm
 #endif  // MXNET_USE_TVM_OP
