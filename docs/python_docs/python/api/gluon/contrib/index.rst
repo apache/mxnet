@@ -15,8 +15,8 @@
    specific language governing permissions and limitations
    under the License.
 
-contrib
-=======
+gluon.contrib
+=============
 
 This document lists the contrib APIs in Gluon:
 
@@ -98,8 +98,9 @@ Data
 
 .. autosummary::
     :nosignatures:
+
     IntervalSampler
-```
+
 
 Text Dataset
 ------------
@@ -146,7 +147,6 @@ API Reference
 
 .. automodule:: mxnet.gluon.contrib
     :members:
-    :imported-members:
 
 .. automodule:: mxnet.gluon.contrib.nn
     :members:

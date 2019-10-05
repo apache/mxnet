@@ -15,14 +15,13 @@
    specific language governing permissions and limitations
    under the License.
 
-SymbolBlock
-===========
+gluon.loss
+==========
 
-.. currentmodule:: mxnet.gluon.nn
+Gluon provides pre-defined loss functions in the :py:mod:`mxnet.gluon.loss`
+module.
 
-.. autoclass:: SymbolBlock
-   :members:
-   :inherited-members:
-
-   Besides the contruction method, SymbolBlock can be used as same as
-   :py:class:`mxnet.gluon.nn.HybridBlock`.
+.. automodule:: mxnet.gluon.loss
+    :members:
+    :imported-members:
+    :autosummary:
