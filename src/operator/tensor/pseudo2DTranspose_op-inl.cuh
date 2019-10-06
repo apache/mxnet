@@ -43,7 +43,7 @@ namespace cuda {
 template <typename DType, typename CType>
 __global__ void transpose_pseudo2D(DType* out, DType* inp,
                                    const uint32_t m, const uint32_t n,
-                                   const uint16_t nIterY, const uint32_t nIterX) {
+                                   const uint16_t nIterY, const uint32_t nIterZ) {
   const uint32_t TSR = sizeof(CType)/sizeof(DType);  // TypeSizeRatio
   const uint32_t chunked_n = n/TSR;
   const uint32_t chunked_m = m/TSR;
@@ -59,16 +59,16 @@ __global__ void transpose_pseudo2D(DType* out, DType* inp,
   CType* cInp = reinterpret_cast<CType*>(inp);
   CType* cOut = reinterpret_cast<CType*>(out);
 
-  for (uint32_t iterY = 0; iterY < nIterY; iterY++) {
-    const uint32_t blockIdx_y = gridDim.y*iterY + blockIdx.y;
-    for (uint32_t iterX = 0; iterX < nIterX; iterX++) {
-      const uint32_t blockIdx_x = gridDim.x*iterX + blockIdx.x;
+  for (uint32_t iterZ = 0; iterZ < nIterZ; iterZ++) {
+    const uint32_t blockIdx_z = gridDim.z*iterZ + blockIdx.z;
+    for (uint32_t iterY = 0; iterY < nIterY; iterY++) {
+      const uint32_t blockIdx_y = gridDim.y*iterY + blockIdx.y;
 
-      uint32_t offset = blockIdx.z*m*chunked_n
+      uint32_t offset = blockIdx_z*m*chunked_n
                       + blockIdx_y*blockDim.y*TSR*chunked_n
-                      + blockIdx_x*blockDim.x;
+                      + blockIdx.x*blockDim.x;
 
-      if ((blockIdx_x*blockDim.x + threadIdx.x)*TSR < n
+      if ((blockIdx.x*blockDim.x + threadIdx.x)*TSR < n
        && (blockIdx_y*blockDim.y + threadIdx.y)*TSR < m) {
         // read from global memory to shared
         #pragma unroll
@@ -91,7 +91,7 @@ __global__ void transpose_pseudo2D(DType* out, DType* inp,
         __syncthreads();
 
         // write back to global output
-        offset = blockIdx.z*m*chunked_n + blockIdx_x*blockDim.x*TSR*chunked_m + blockIdx_y*blockDim.y;
+        offset = blockIdx_z*m*chunked_n + blockIdx.x*blockDim.x*TSR*chunked_m + blockIdx_y*blockDim.y;
         #pragma unroll
         for (uint32_t i=0; i<TSR; i++) {
             cOut[offset + (TSR*threadIdx.x + i)*chunked_m + threadIdx.y] = tmp[i].valChunk;
@@ -120,7 +120,7 @@ __global__ void transpose_pseudo2D(DType* out, DType* inp,
 inline void call_transpose_pseudo2D(uint32_t dTypeSize, uint32_t cTypeSize,
                                    dim3 grid, dim3 block, cudaStream_t stream,
                                    void* out, void* inp, const uint32_t m, const uint32_t n,
-                                   const uint32_t nIterY, const uint32_t nIterX) {
+                                   const uint32_t nIterY, const uint32_t nIterZ) {
   switch (dTypeSize) {
    case (1): {
     uint8_t* d_outPtr = reinterpret_cast<uint8_t*>(out);
@@ -128,15 +128,15 @@ inline void call_transpose_pseudo2D(uint32_t dTypeSize, uint32_t cTypeSize,
     switch (cTypeSize) {
      case (1):
       cuda::transpose_pseudo2D<uint8_t, uint8_t><<<grid, block, 0, stream>>>
-                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterX);
+                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
       break;
      case (2):
       cuda::transpose_pseudo2D<uint8_t, uint16_t><<<grid, block, 0, stream>>>
-                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterX);
+                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
       break;
      case (4):
       cuda::transpose_pseudo2D<uint8_t, uint32_t><<<grid, block, 0, stream>>>
-                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterX);
+                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
       break;
      case (8):
       // case guarded against in function getBestCopyTypeSize
@@ -152,15 +152,15 @@ inline void call_transpose_pseudo2D(uint32_t dTypeSize, uint32_t cTypeSize,
     switch (cTypeSize) {
      case (2):
       cuda::transpose_pseudo2D<uint16_t, uint16_t><<<grid, block, 0, stream>>>
-                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterX);
+                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
       break;
      case (4):
       cuda::transpose_pseudo2D<uint16_t, uint32_t><<<grid, block, 0, stream>>>
-                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterX);
+                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
       break;
      case (8):
       cuda::transpose_pseudo2D<uint16_t, uint64_t><<<grid, block, 0, stream>>>
-                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterX);
+                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
       break;
      default:
       LOG(FATAL) << "Unsupported type combination";
@@ -173,11 +173,11 @@ inline void call_transpose_pseudo2D(uint32_t dTypeSize, uint32_t cTypeSize,
     switch (cTypeSize) {
      case (4):
       cuda::transpose_pseudo2D<uint32_t, uint32_t><<<grid, block, 0, stream>>>
-                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterX);
+                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
       break;
      case (8):
       cuda::transpose_pseudo2D<uint32_t, uint64_t><<<grid, block, 0, stream>>>
-                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterX);
+                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
       break;
      default:
       LOG(FATAL) << "Unsupported type combination";
@@ -190,7 +190,7 @@ inline void call_transpose_pseudo2D(uint32_t dTypeSize, uint32_t cTypeSize,
     switch (cTypeSize) {
      case (8):
       cuda::transpose_pseudo2D<uint64_t, uint64_t><<<grid, block, 0, stream>>>
-                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterX);
+                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
       break;
      default:
       LOG(FATAL) << "Unsupported type combination";
@@ -325,20 +325,20 @@ void transpose_pseudo2D(const TBlob& outBlob, const TBlob& inpBlob,
   auto pair = calculateKernelParams(sizes, TSR);
   dim3 grid = pair.first;
   dim3 block = pair.second;
-  uint32_t nIterX = 1;
-  if (grid.x > std::numeric_limits<uint32_t>::max()) {
-    nIterX = (grid.x - 1)/(std::numeric_limits<uint32_t>::max() - 1) + 1;
-    grid.x = (grid.x - 1)/nIterX + 1;
-  }
   uint32_t nIterY = 1;
   if (grid.y > std::numeric_limits<uint16_t>::max()) {
     nIterY = (grid.y - 1)/(std::numeric_limits<uint16_t>::max() - 1) + 1;
     grid.y = (grid.y - 1)/nIterY + 1;
   }
+  uint32_t nIterZ = 1;
+  if (grid.z > std::numeric_limits<uint16_t>::max()) {
+    nIterZ = (grid.z - 1)/(std::numeric_limits<uint16_t>::max() - 1) + 1;
+    grid.z = (grid.z - 1)/nIterZ + 1;
+  }
 
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
   call_transpose_pseudo2D(sizeof(DType), cTypeSize, grid, block, stream,
-                          outBlob.dptr_, inpBlob.dptr_, sizes.M, sizes.N, nIterY, nIterX);
+                          outBlob.dptr_, inpBlob.dptr_, sizes.M, sizes.N, nIterY, nIterZ);
 }
 
 }  // namespace op
