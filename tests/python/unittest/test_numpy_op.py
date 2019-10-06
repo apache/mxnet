@@ -33,6 +33,9 @@ from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, retry
 from mxnet.runtime import Features
 from mxnet.numpy_op_signature import _get_builtin_op
 import platform
+from mxnet.runtime import Features
+	
+_features = Features()
 
 
 _features = Features()
@@ -2859,6 +2862,46 @@ def test_np_builtin_op_signature():
         op = _get_builtin_op(op_name)
         if op is not None:
             assert str(op.__signature__) == str(inspect.signature(getattr(_numpy_op_doc, op_name)))
+
+
+@with_seed()
+@use_np
+def test_np_floor_divide():
+    if _features.is_enabled("TVM_OP"):
+        class TestFloorDivide(HybridBlock):
+            def __init__(self):
+                super(TestFloorDivide, self).__init__()
+
+            def hybrid_forward(self, F, x1, x2):
+                return F.np.floor_divide(x1, x2)
+
+        types = ['float64', 'float32', 'float16', 'int64', 'int32', 'int8', 'uint8']
+        for hybridize in [True, False]:
+            for shape1, shape2 in [[(3, 2), (3, 2)],
+                                   [(), ()],  # scalar only
+                                   [(3, 0, 2), (3, 0, 2)],  # zero-dim
+                                   [(3, 4, 5), (4, 1)],  # trailing dim broadcasting
+                                   [(3, 4, 5), ()],  # scalar broadcasting
+                                   [(), (1, 2, 3)],  # scalar broadcasting
+                                   ]:
+                for oneType in types:
+                    rtol = 1e-3
+                    atol = 1e-5
+                    test_floor_divide = TestFloorDivide()
+                    if hybridize:
+                        test_floor_divide.hybridize()
+                    x1 = rand_ndarray(shape1, dtype=oneType).as_np_ndarray()
+                    x2 = rand_ndarray(shape2, dtype=oneType).as_np_ndarray()
+                    if _np.any(x2.asnumpy() == 0):
+                        continue
+                    np_out = _np.floor_divide(x1.asnumpy(), x2.asnumpy())
+                    mx_out = test_floor_divide(x1, x2)
+                    assert mx_out.shape == np_out.shape
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+                    mx_out = np.floor_divide(x1, x2)
+                    np_out = _np.floor_divide(x1.asnumpy(), x2.asnumpy())
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
 if __name__ == '__main__':

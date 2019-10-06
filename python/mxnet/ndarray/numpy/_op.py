@@ -27,11 +27,11 @@ from ...context import current_context
 from . import _internal as _npi
 from ..ndarray import NDArray
 
-__all__ = ['zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power',
-           'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs',
-           'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2',
-           'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
-           'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot',
+__all__ = ['zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide', 'floor_divide', 'mod',
+           'remainder', 'power', 'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10',
+           'sqrt', 'cbrt', 'abs', 'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign',
+           'log', 'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative',
+           'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot',
            'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'vstack', 'mean',
            'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign',
            'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'hypot', 'rad2deg', 'deg2rad',
@@ -591,6 +591,51 @@ def divide(x1, x2, out=None):
     """
     return _ufunc_helper(x1, x2, _npi.true_divide, _np.divide, _npi.true_divide_scalar,
                          _npi.rtrue_divide_scalar, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def floor_divide(x1, x2, out=None):
+    r"""
+    floor_divide(x1, x2, out=None)
+
+    Return the largest integer smaller or equal to the division of the inputs.
+    It is equivalent to the Python ``//`` operator and pairs with the
+    Python ``%`` (`remainder`), function so that ``a = a % b + b * (a // b)``
+    up to roundoff.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Numerator.
+    x2 : ndarray or scalar
+        Denominator.
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        y = floor(`x1`/`x2`)
+        This is a scalar if both `x1` and `x2` are scalars.
+
+    Examples
+    --------
+    >>> x1 = np.array([7], dtype="int32")
+    >>> x2 = np.array([3], dtype="int32")
+    >>> np.floor_divide(x1, x2)
+    array([2], dtype=int32)
+    >>> x = np.array([1., 2., 3., 4.])
+    >>> np.floor_divide(x, 2.5)
+    array([ 0.,  0.,  1.,  1.])
+    >>>
+    >>>
+    >>> np.floor_divide(4, 3)
+    1
+    """
+    return _ufunc_helper(x1, x2, _npi.floor_divide, _np.floor_divide,
+                         _npi.floor_divide_scalar, _npi.rfloor_divide_scalar, out)
 
 
 @set_module('mxnet.ndarray.numpy')

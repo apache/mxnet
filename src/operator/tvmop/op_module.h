@@ -36,6 +36,7 @@
 namespace tvm {
 namespace runtime {
 
+class TVMArgs;
 class Module;
 class TVMOpModule {
  public:
@@ -44,7 +45,12 @@ class TVMOpModule {
 
   void Call(const std::string& func_name,
             const mxnet::OpContext& ctx,
-            const std::vector<mxnet::TBlob>& args);
+            const std::vector<mxnet::TBlob>& args) const;
+
+  void CallEx(const std::string &func_name,
+              const mxnet::OpContext& ctx,
+              const std::vector<mxnet::TBlob>& tblobs,
+              TVMArgs tvm_args) const;
 
   static TVMOpModule *Get() {
     static TVMOpModule inst;
