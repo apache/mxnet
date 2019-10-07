@@ -695,11 +695,9 @@ def test_np_max_min():
                         if hybridize:
                             test_gluon.hybridize()
                         if is_int(itype):
-                            x = mx.nd.arange(120).reshape((2, 3, 4, 5))
-                            x = mx.nd.array(x)
+                            x = np.arange(120).reshape((2, 3, 4, 5))
                         else:
-                            x = mx.nd.random.uniform(-1.0, 1.0, shape=shape, dtype=itype)
-                        x = x.as_np_ndarray()
+                            x = np.random.uniform(-1.0, 1.0, size=shape, dtype=itype)
                         x.attach_grad()
                         if func == 'max':
                             expected_ret = _np.amax(x.asnumpy(), axis=axis, keepdims=keepdims)
@@ -1812,6 +1810,8 @@ def test_np_randint():
         (5, None)
     ]
     shapes = [
+        None,
+        (),
         (3, 3),
         (3, 4),
         (0, 0),
@@ -1825,7 +1825,7 @@ def test_np_randint():
     for shape in shapes:
         for (low, high) in params:
             data_mx = np.random.randint(low, high, size=shape)
-            assert data_mx.shape == shape
+            assert data_mx.shape == (shape if shape is not None else ())
 
     # test generator
     for dtype in ['int32', 'int64']:

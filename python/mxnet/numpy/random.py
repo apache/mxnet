@@ -24,7 +24,7 @@ from ..ndarray import numpy as _mx_nd_np
 __all__ = ["randint", "uniform", "normal", "choice"]
 
 
-def randint(low, high=None, size=None, dtype=None, **kwargs):
+def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
     """Return random integers from `low` (inclusive) to `high` (exclusive).
 
     Return random integers from the "discrete uniform" distribution of
@@ -73,7 +73,7 @@ def randint(low, high=None, size=None, dtype=None, **kwargs):
     array([[4, 0, 2, 1],
         [3, 2, 2, 0]])
     """
-    return _mx_nd_np.random.randint(low, high, size, dtype, **kwargs)
+    return _mx_nd_np.random.randint(low, high, size, dtype, ctx, out)
 
 
 def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
@@ -110,7 +110,7 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
     return _mx_nd_np.random.uniform(low, high, size=size, ctx=ctx, dtype=dtype, out=out)
 
 
-def normal(loc=0.0, scale=1.0, size=None, dtype=None, **kwargs):
+def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     """Draw random samples from a normal (Gaussian) distribution.
 
     Samples are distributed according to a normal distribution parametrized
@@ -139,7 +139,7 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, **kwargs):
     out : ndarray
         Drawn samples from the parameterized normal distribution.
     """
-    return _mx_nd_np.random.normal(loc, scale, size, dtype, **kwargs)
+    return _mx_nd_np.random.normal(loc, scale, size, dtype, ctx, out)
 
 
 def multinomial(n, pvals, size=None, **kwargs):
