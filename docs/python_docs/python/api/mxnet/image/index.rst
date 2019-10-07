@@ -18,6 +18,11 @@
 mxnet.image
 ===========
 
+.. note:: This API is best used in conjunction with ``mxnet.io`` data iterators.
+    For augmentation and transforms in gluon with Datasets and DataLoaders see ``mxnet.gluon.data``
+
+
 .. automodule:: mxnet.image
     :members:
+    :imported-members:
     :autosummary:

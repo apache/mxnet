@@ -78,15 +78,9 @@ NDArray API of MXNet
 
    .. card::
       :title: NDArray
-      :link: mxnet.ndarray.NDArray.html
-
-      Imperative tensor operations using the NDArray API.
-
-   .. card::
-      :title: Routines
       :link: ndarray.html
 
-      Manipulating multi-dimensional, fixed-size arrays.
+      Imperative tensor operations using the NDArray API.
 
 
 Sparse NDArray API of MXNet

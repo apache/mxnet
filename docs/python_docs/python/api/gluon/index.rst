@@ -39,6 +39,9 @@ one input layer, one hidden layer, and one output layer.
        net.add(gluon.nn.Dense(num_outputs))
 
 
+.. automodule:: mxnet.gluon
+
+
 Tutorials
 ---------
 
@@ -146,5 +149,11 @@ Utilities
    :maxdepth: 2
    :glob:
 
-   gluon
+   block
+   hybrid_block
+   symbol_block
+   constant
+   parameter
+   parameter_dict
+   trainer
    */index

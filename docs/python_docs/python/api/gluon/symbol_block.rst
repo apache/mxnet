@@ -15,9 +15,11 @@
    specific language governing permissions and limitations
    under the License.
 
-mxnet.ndarray_doc
-=================
+gluon.SymbolBlock
+===========
 
-.. automodule:: mxnet.ndarray_doc
+
+.. autoclass:: mxnet.gluon.SymbolBlock
     :members:
+    :inherited-members:
     :autosummary:

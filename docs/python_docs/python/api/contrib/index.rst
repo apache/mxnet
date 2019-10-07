@@ -18,6 +18,8 @@
 mxnet.contrib
 ===============
 
+.. automodule:: mxnet.contrib
+
 Contributed modules
 -------------------
 
@@ -48,7 +50,7 @@ Contributed modules
       ONNX support.
 
    .. card::
-      :title: mxnet.quantization
+      :title: contrib.quantization
       :link: quantization/index.html
 
       Functions for quantization.

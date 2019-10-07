@@ -15,10 +15,11 @@
    specific language governing permissions and limitations
    under the License.
 
-mxnet.io
-========
+gluon.HybridBlock
+=================
 
-.. automodule:: mxnet.io
+
+.. autoclass:: mxnet.gluon.HybridBlock
     :members:
-    :imported-members:
+    :inherited-members:
     :autosummary:

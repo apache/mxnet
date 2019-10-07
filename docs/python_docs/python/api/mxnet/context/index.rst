@@ -15,9 +15,9 @@
    specific language governing permissions and limitations
    under the License.
 
-mxnet.symbol_doc
-================
+mxnet.context
+=============
 
-.. automodule:: mxnet.symbol_doc
+.. automodule:: mxnet.context
     :members:
     :autosummary:

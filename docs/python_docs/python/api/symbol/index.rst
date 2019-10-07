@@ -54,7 +54,7 @@ Symbol Package
 
    .. card::
       :title: Symbol
-      :link: mxnet.symbol.Symbol.html
+      :link: symbol.html
 
       Symbolic programming using the Symbol API.
 

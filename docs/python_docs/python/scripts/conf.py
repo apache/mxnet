@@ -70,6 +70,8 @@ import mxnet as mx
 
 autodoc_member_order = 'alphabetical'
 
+autodoc_default_flags = ['members', 'show-inheritance']
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 

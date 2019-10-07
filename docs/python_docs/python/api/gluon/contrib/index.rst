@@ -94,7 +94,7 @@ Data
 ----
 
 
-.. currentmodule:: mxnet.gluon.contrib.data
+.. currentmodule:: mxnet.gluon.contrib.data.sampler
 
 .. autosummary::
     :nosignatures:
@@ -157,7 +157,7 @@ API Reference
 .. automodule:: mxnet.gluon.contrib.rnn
     :members:
 
-.. automodule:: mxnet.gluon.contrib.data
+.. automodule:: mxnet.gluon.contrib.data.sampler
     :members:
 
 .. automodule:: mxnet.gluon.contrib.data.text
@@ -165,3 +165,4 @@ API Reference
 
 .. automodule:: mxnet.gluon.contrib.estimator
     :members:
+    :imported-members:

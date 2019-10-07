@@ -25,7 +25,6 @@ IPYNB_MARKDOWN = $(shell find . -not -path "./build/*" -not -path "*.ipynb_check
 RST = $(shell find . -not -path "./build/*" -not -path "*.ipynb_checkpoints*" -name "*.rst")
 
 OBJ = $(patsubst %.rst, build/%.rst, $(RST)) \
-	$(patsubst %.md, build/%.md, $(PURE_MARKDOWN)) \
 	$(patsubst %.md, build/%.ipynb, \
 		$(filter-out $(PURE_MARKDOWN), $(IPYNB_MARKDOWN)))
 

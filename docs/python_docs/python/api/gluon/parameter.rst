@@ -15,10 +15,11 @@
    specific language governing permissions and limitations
    under the License.
 
-mxnet.io
-========
+gluon.Parameter
+===============
 
-.. automodule:: mxnet.io
+
+.. autoclass:: mxnet.gluon.Parameter
     :members:
-    :imported-members:
+    :inherited-members:
     :autosummary:

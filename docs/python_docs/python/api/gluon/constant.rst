@@ -15,9 +15,11 @@
    specific language governing permissions and limitations
    under the License.
 
-mxnet.rnn
-=========
+gluon.Constant
+==============
 
-.. automodule:: mxnet.rnn
+
+.. autoclass:: mxnet.gluon.Constant
     :members:
+    :inherited-members:
     :autosummary:
