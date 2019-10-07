@@ -17,8 +17,7 @@
 
 """Make builtin ops' signatures compatible with NumPy."""
 
-from __future__ import absolute_import # pylint: disable=reimported
-from sys import version, version_info
+import sys
 import warnings
 from . import _numpy_op_doc
 from . import numpy as mx_np
@@ -55,11 +54,11 @@ def _get_builtin_op(op_name):
 
 
 def _register_op_signatures():
-    if version_info.major < 3 or version_info.minor < 5:
+    if sys.version_info.major < 3 or sys.version_info.minor < 5:
         warnings.warn('Some mxnet.numpy operator signatures may not be displayed consistently with '
                       'their counterparts in the official NumPy package due to too-low Python '
                       'version {}. Python >= 3.5 is required to make the signatures display correctly.'
-                      .format(str(version)))
+                      .format(str(sys.version)))
         return
 
     import inspect

@@ -26,12 +26,13 @@ from mxnet.test_utils import use_np, assert_almost_equal
 from common import with_seed
 
 
+@with_seed()
 def test_create_np_param():
     M, K, N = 10, 9, 20
 
-    def check_block_params(x, TestBlock, hybridize, expected_type):
+    def check_block_params(x, TestBlock, hybridize, expected_type, initializer):
         net = TestBlock()
-        net.initialize()
+        net.initialize(initializer())
         if hybridize:
             net.hybridize()
         net(x)
@@ -59,12 +60,14 @@ def test_create_np_param():
             return F.np.dot(x, w)
 
     x = mx.nd.random.uniform(shape=(M, K))
-    check_block_params(x, TestBlock1, False, mx.nd.NDArray)
-    check_block_params(x, TestBlock1, True, mx.nd.NDArray)
-    check_block_params(x.as_np_ndarray(), TestBlock2, False, np.ndarray)
-    check_block_params(x.as_np_ndarray(), TestBlock2, True, np.ndarray)
+    for initializer in [mx.initializer.Uniform, mx.initializer.Normal]:
+        check_block_params(x, TestBlock1, False, mx.nd.NDArray, initializer)
+        check_block_params(x, TestBlock1, True, mx.nd.NDArray, initializer)
+        check_block_params(x.as_np_ndarray(), TestBlock2, False, np.ndarray, initializer)
+        check_block_params(x.as_np_ndarray(), TestBlock2, True, np.ndarray, initializer)
 
 
+@with_seed()
 @use_np
 def test_optimizer_with_np_ndarrays():
     class LinearRegression(gluon.HybridBlock):
