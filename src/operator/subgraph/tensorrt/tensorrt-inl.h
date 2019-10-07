@@ -280,17 +280,6 @@ class TensorrtProperty : public SubgraphProperty {
     n->attrs.name = "TensorRT" + std::to_string(subgraph_id);
     n->attrs.op = Op::Get("_TensorRT");
     CHECK(n->attrs.op);
-    // prevent using Gamma value if using fix_gamma on BatchNorm
-    DFSVisit(new_sym.outputs, [&n](const nnvm::NodePtr& node) {
-      if (node->op() == Op::Get("BatchNorm")) {
-        const auto& param = nnvm::get<BatchNormParam>(node->attrs.parsed);
-        if (param.fix_gamma) {
-          n->attrs.dict.insert({"subgraph_forced_val_" +
-                                node->inputs[batchnorm::kGamma].node->attrs.name,
-                                "1."});
-        }
-      }
-    });
     n->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
     std::ostringstream params_oss;
     for (auto &e : new_sym.ListInputNames(nnvm::Symbol::kAll)) {

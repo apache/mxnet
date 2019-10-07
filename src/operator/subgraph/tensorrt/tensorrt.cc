@@ -242,7 +242,6 @@ inline bool TRTInferStorageType(const nnvm::NodeAttrs& attrs,
 void TRTParamParser(nnvm::NodeAttrs* attrs) {
   TRTParam& _param = nnvm::get<TRTParam>(attrs->parsed);
   std::string prefix = "subgraph_param_";
-  std::string prefix_forced_val = "subgraph_forced_val_";
   std::string str_dtype, str_shape, str_pointer, _tmp;
   for (auto it = attrs->dict.begin(); it != attrs->dict.end();) {
     std::string attrs_name = it->first;
@@ -252,10 +251,6 @@ void TRTParamParser(nnvm::NodeAttrs* attrs) {
       // TODO(cfujitsang): find a less dirty way to give weights
       NDArray *cache = reinterpret_cast<NDArray*>(stol(it->second));
       _param.params_map.emplace(param_name, cache->Copy(Context()));
-      const auto& val_it = attrs->dict.find(prefix_forced_val + param_name);
-      if (val_it != attrs->dict.end()) {
-        _param.params_map[param_name] = stof(val_it->second);
-      }
       _param.params_map[param_name].WaitToRead();
       it = attrs->dict.erase(it);
     } else {
