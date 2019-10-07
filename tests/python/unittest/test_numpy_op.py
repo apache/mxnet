@@ -17,6 +17,8 @@
 
 # pylint: skip-file
 from __future__ import absolute_import
+import sys
+import unittest
 import numpy as _np
 import mxnet as mx
 from mxnet import np, npx
@@ -29,6 +31,7 @@ import random
 import scipy.stats as ss
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, retry
 from mxnet.runtime import Features
+from mxnet.numpy_op_signature import _get_builtin_op
 import platform
 
 
@@ -642,6 +645,42 @@ def test_npx_slice():
             expected_grad = _np.zeros(shape)
             expected_grad[basic_index] = 1
             assert same(a.grad.asnumpy(), expected_grad)
+
+
+@with_seed()
+@use_np
+def test_npi_boolean_assign():
+    class TestBooleanAssignScalar(HybridBlock):
+        def __init__(self, val):
+            super(TestBooleanAssignScalar, self).__init__()
+            self._val = val
+
+        def hybrid_forward(self, F, a, mask):
+            return F.np._internal.boolean_mask_assign_scalar(a, mask, self._val, out=a)
+
+    class TestBooleanAssignTensor(HybridBlock):
+        def __init__(self):
+            super(TestBooleanAssignTensor, self).__init__()
+
+        def hybrid_forward(self, F, a, mask, value):
+            return F.np._internal.boolean_mask_assign_tensor(a, mask, value, out=a)
+
+    shapes = [(3, 4), (3, 0), ()]
+    for hybridize in [False]:
+        for shape in shapes:
+            test_data = np.random.uniform(size=shape)
+            mx_mask = np.around(np.random.uniform(size=shape))
+            valid_num = int(mx_mask.sum())
+            np_mask = mx_mask.asnumpy().astype(_np.bool)
+            for val in [42., np.array(42.), np.array([42.]), np.random.uniform(size=(valid_num,))]:
+                test_block = TestBooleanAssignScalar(val) if isinstance(val, float) else TestBooleanAssignTensor()
+                if hybridize:
+                    test_block.hybridize()
+                np_data = test_data.asnumpy()
+                mx_data = test_data.copy()
+                np_data[np_mask] = val
+                mx_data = test_block(mx_data, mx_mask) if isinstance(val, float) else test_block(mx_data, mx_mask, val)
+                assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
 
 @with_seed()
@@ -2808,6 +2847,18 @@ def test_np_take():
 
             for config in configs:
                 check_output_n_grad(config[0], config[1], config[2], mode)
+
+
+@unittest.skipUnless(sys.version_info.major >= 3 and sys.version_info.minor >= 5,
+                     'inspect package requires Python >= 3.5 to work properly')
+@with_seed()
+def test_np_builtin_op_signature():
+    import inspect
+    from mxnet import _numpy_op_doc
+    for op_name in dir(_numpy_op_doc):
+        op = _get_builtin_op(op_name)
+        if op is not None:
+            assert str(op.__signature__) == str(inspect.signature(getattr(_numpy_op_doc, op_name)))
 
 
 if __name__ == '__main__':
