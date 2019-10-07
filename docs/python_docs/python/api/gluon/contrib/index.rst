@@ -150,24 +150,18 @@ API Reference
 
 .. automodule:: mxnet.gluon.contrib.nn
     :members:
-    :imported-members:
 
 .. automodule:: mxnet.gluon.contrib.cnn
     :members:
-    :imported-members:
 
 .. automodule:: mxnet.gluon.contrib.rnn
     :members:
-    :imported-members:
 
 .. automodule:: mxnet.gluon.contrib.data
     :members:
-    :imported-members:
 
 .. automodule:: mxnet.gluon.contrib.data.text
     :members:
-    :imported-members:
 
 .. automodule:: mxnet.gluon.contrib.estimator
     :members:
-    :imported-members:

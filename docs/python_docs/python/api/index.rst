@@ -41,28 +41,16 @@ following categories:
       Imperative APIs to load data, construct and train neural networks.
 
    .. card::
-      :title: Gluon-related modules
-      :link: gluon-related/index.html
-
-      Modules, including context and optimizer, that can be used with Gluon.
-
-   .. card::
       :title: Symbol module
       :link: symbol/index.html
 
       Symbolic APIs for multi-dimensional arrays and neural network layers.
 
    .. card::
-      :title: Symbol-related modules
-      :link: symbol-related/index.html
+      :title: Other modules
+      :link: mxnet/index.html
 
-      Modules to train and visualize symbolic neural network models.
-
-   .. card::
-      :title: Advanced modules
-      :link: advanced/index.html
-
-      Advanced APIs for hackers.
+      Other mxnet built-in libraries and advanced APIs for hackers.
 
 
 .. toctree::
@@ -71,7 +59,5 @@ following categories:
 
    ndarray/index
    gluon/index
-   gluon-related/index
    symbol/index
-   symbol-related/index
-   advanced/index
+   mxnet/index

@@ -156,6 +156,5 @@ API Reference
 
 .. automodule:: mxnet.gluon.model_zoo.vision
     :members:
-    :imported-members:
     :autosummary:
 

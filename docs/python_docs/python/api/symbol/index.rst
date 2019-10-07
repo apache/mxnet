@@ -60,6 +60,8 @@ Symbol Package
 
 .. toctree::
    :hidden:
+   :maxdepth: 2
+   :glob:
 
-   mxnet.symbol.Symbol
-   mxnet.symbol.linalg
+   symbol
+   */index

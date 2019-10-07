@@ -20,6 +20,5 @@ gluon.utils
 
 .. automodule:: mxnet.gluon.utils
     :members:
-    :imported-members:
     :autosummary:
 
