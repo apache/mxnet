@@ -493,6 +493,7 @@ class RNNOp {
 
     CUDNN_CALL(cudnnCreateRNNDescriptor(&rnn_desc_));
     CUDNN_CALL(cudnnCreateDropoutDescriptor(&dropout_desc_));
+    CUDA_CALL(cudaEventCreateWithFlags(&dgrad_sync_event_, cudaEventDisableTiming));
 
 #if MXNET_USE_CUDNN_GE_7200
     CUDNN_CALL(cudnnCreateRNNDataDescriptor(&x_data_desc_));
@@ -537,6 +538,7 @@ class RNNOp {
     CUDNN_CALL(cudnnDestroyFilterDescriptor(dw_desc_));
     CUDNN_CALL(cudnnDestroyRNNDescriptor(rnn_desc_));
     CUDNN_CALL(cudnnDestroyDropoutDescriptor(dropout_desc_));
+    CUDA_CALL(cudaEventDestroy(dgrad_sync_event_));
 
     if (init_cudnn_) {
       for (size_t i = 0; i < x_desc_vec_.size(); ++i) {
@@ -1066,6 +1068,7 @@ class RNNOp {
                                       workspace_byte_,
                                       reserve_space_.dptr,
                                       reserve_space_byte_));
+    SyncDgrad();
     if (req[rnn_enum::kParams] != kNullOp) {
       CUDNN_CALL(cudnnRNNBackwardWeightsEx(s->dnn_handle_,
                                            rnn_desc_,
@@ -1110,6 +1113,7 @@ class RNNOp {
                                     workspace_byte_,
                                     reserve_space_.dptr,
                                     reserve_space_byte_));
+    SyncDgrad();
     if (req[rnn_enum::kParams] != kNullOp) {
       CUDNN_CALL(cudnnRNNBackwardWeights(s->dnn_handle_,
                                          rnn_desc_,
@@ -1369,6 +1373,7 @@ class RNNOp {
       // RNN descriptors
       cudnnDataType_t dtype_with_fallback_;
       cudnnRNNAlgo_t rnn_algo = CUDNN_RNN_ALGO_STANDARD;
+      dgrad_sync_needed_ = (rnn_algo == CUDNN_RNN_ALGO_STANDARD) && param_.bidirectional;
       // On arch's 50 and 52(Maxwell), the gpu doesn't support native fp16 compute.
       // Before cuDNN 7.5.0, when running fp16, cuDNN fallback to fp32 under the hood on Maxwell.
       // That's not the case begining from 7.5.0. Thereby adding fallback explicitly here.
@@ -1488,6 +1493,20 @@ class RNNOp {
     }
 #endif  // MXNET_USE_CUDNN == 1 && defined(__CUDACC__)
   }
+
+#if MXNET_USE_CUDNN == 1 && defined(__CUDACC__)
+  // cuDNN versions up to and including v7.6.4 did not sync a last dgrad kernel back to the main
+  // cudnn handle's stream (non-persistant algo, bidirectional only).  This could result in silent
+  // non-determinstic failures with very low probability, seen more often when wgrad is bypassed.
+  inline void SyncDgrad() {
+    if (CUDNN_VERSION <= 7604 && dgrad_sync_needed_) {
+      // Without blocking the CPU, create a synchronization point of all current GPU activity.
+      CUDA_CALL(cudaEventRecord(dgrad_sync_event_, cudaStreamLegacy));
+      CUDA_CALL(cudaStreamWaitEvent(cudaStreamLegacy, dgrad_sync_event_, 0));
+    }
+  }
+#endif  // MXNET_USE_CUDNN == 1 && defined(__CUDACC__)
+
 #if MXNET_USE_CUDNN == 1
   cudnnDataType_t dtype_;
   bool init_cudnn_;
@@ -1515,6 +1534,8 @@ class RNNOp {
   bool cudnn_tensor_core_;
 
   cudnnTensorFormat_t format_;
+  cudaEvent_t dgrad_sync_event_;
+  bool dgrad_sync_needed_ = false;
 #endif  // MXNET_USE_CUDNN
   bool init_space_, temp_init_space_;
   size_t reserve_cpu_space_size_, temp_cpu_space_size_;
