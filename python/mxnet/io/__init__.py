@@ -23,7 +23,7 @@
 from __future__ import absolute_import
 
 from . import io
-from .io import *
+from .io import DataDesc, DataBatch, ResizeIter, PrefetchingIter,  NDArrayIter, MXDataIter, DataIter
 
 from . import utils
-from .utils import *
+from .utils import _init_data, _getdata_by_idx, _has_instance
