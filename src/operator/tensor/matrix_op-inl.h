@@ -283,8 +283,8 @@ MSHADOW_XINLINE void Transpose2D(const DType *in, DType *out, index_t row, index
     for (index_t j = 0; j < col; j += blocksize) {
       // transpose the block
       #pragma unroll 4
-      for (index_t a = j; a < blocksize && a < col; ++a) {
-        for (index_t b = i; b < blocksize && b < row; ++b) {
+      for (index_t a = j; (a < blocksize + j) && (a < col); ++a) {
+        for (index_t b = i; (b < blocksize + i) && (b < row); ++b) {
           out[a * row + b] = in[b * col + a];
         }
       }
