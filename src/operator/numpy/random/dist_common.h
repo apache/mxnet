@@ -153,7 +153,7 @@ inline bool TwoparamsDistOpShape(const nnvm::NodeAttrs &attrs,
     for (int i = 0; i < size.ndim(); ++i) {
       oshape_vec.emplace_back(size[i]);
     }
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(oshape_vec));
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(oshape_vec.begin(), oshape_vec.end()));
     for (size_t input_idx = 0; input_idx < in_attrs->size(); input_idx++) {
       CheckBroadcastable((*in_attrs)[input_idx], (*out_attrs)[0]);
     }

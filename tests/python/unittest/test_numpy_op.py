@@ -688,6 +688,7 @@ def test_np_max_min():
                 for axis in ([i for i in range(in_data_dim)] + [(), None]):
                     for itype in ['float16', 'float32', 'float64', 'int']:
                         # test gluon
+                        print(func, hybridize, keepdims, axis, itype, shape)
                         if func == 'max':
                             test_gluon = TestMax(axis=axis, keepdims=keepdims)
                         else:
