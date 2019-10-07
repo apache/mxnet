@@ -734,7 +734,7 @@ build_ubuntu_gpu_tensorrt() {
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         ..
     make -j$(nproc)
-    make install
+    #make install
     export LIBRARY_PATH=`pwd`:$LIBRARY_PATH
     popd
 
