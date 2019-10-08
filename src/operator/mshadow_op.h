@@ -105,6 +105,14 @@ using std::is_integral;
     } \
   }
 
+#define MXNET_BINARY_COMP_OP(name, expr) \
+  struct name : public mxnet_op::tunable  { \
+    template<typename DType> \
+    MSHADOW_XINLINE static bool Map(DType a, DType b) { \
+      return bool(expr); \
+    } \
+  }
+
 #define MXNET_SIMPLE_UNARY_MATH_OP(name) MXNET_UNARY_MATH_OP(name, math::name(a))
 
 #define MXNET_SIMPLE_BINARY_MATH_OP(name) MXNET_BINARY_MATH_OP(name, math::name(a, b))
@@ -331,8 +339,8 @@ MXNET_UNARY_MATH_OP(square, math::sqr(a));
 MXNET_UNARY_MATH_OP(square_grad, 2.0f * math::id(a));
 
 /*! \brief used for generate Bernoulli mask */
-MXNET_BINARY_MATH_OP_NC(threshold, a < b ? DType(1) : DType(0));
-MXNET_BINARY_MATH_OP_NC(threshold_eq, a <= b ? DType(1) : DType(0));
+MXNET_BINARY_MATH_OP_NC(threshold, a < b ? true : false);
+MXNET_BINARY_COMP_OP(threshold_eq, a <= b ? true : false);
 
 /*! \brief used for generate element of abs */
 MXNET_UNARY_MATH_OP(abs, math::fabs(a)); // NOLINT(*)
