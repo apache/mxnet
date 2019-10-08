@@ -32,14 +32,14 @@ MXReturnValue parseAttrs(std::map<std::string, std::string> attrs,
   *num_out = 1;
   if (attrs.count(SUBGRAPH_SYM_JSON)) {
     // example of subgraph json parsing
-    Json_Parser jp;
-    json_val val = jp.parse_to_json(attrs[SUBGRAPH_SYM_JSON]);
+    JsonParser jp;
+    JsonVal val = jp.parse_to_json(attrs[SUBGRAPH_SYM_JSON]);
     int input = 0;
-    for (auto &item : val.map[json_val("nodes")].list) {
-      if (item.map[json_val("op")].str == "null")
+    for (auto &item : val.map[JsonVal("nodes")].list) {
+      if (item.map[JsonVal("op")].str == "null")
         input++;
     }
-    int output = val.map[json_val("heads")].list.size();
+    int output = val.map[JsonVal("heads")].list.size();
     *num_in = input;
     *num_out = output;
   }

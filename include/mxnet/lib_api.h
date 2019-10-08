@@ -82,7 +82,6 @@ struct MXTensor {
 
   // data is flatten 1D repr of tensor, elements are in continuous memory
   // user can access each element using the shape of tensor
-  // it may also point to data allocated on gpu
   void *data_ptr;
 
   // shape is in [2,3,4] format to represent high-dim tensor
@@ -90,9 +89,6 @@ struct MXTensor {
 
   // type can only be MXDType enum types
   MXDType dtype;
-
-  // gpu flag to specify the data tensor storage location
-  bool is_gpu;
 };
 
 /*!
@@ -105,16 +101,16 @@ typedef void* (*xpu_malloc_t)(void*, int);
  */
 class OpResource {
  public:
-  OpResource(xpu_malloc_t xm, void* _xm) : xpu_malloc(xm), _xpu_malloc(_xm) {}
+  OpResource(xpu_malloc_t cm, void* ca) : cpu_malloc(cm), cpu_alloc(ca) {}
 
   /*! \brief allocate memory controlled by MXNet */
   void* alloc(int size) {
-    return xpu_malloc(_xpu_malloc, size);
+    return cpu_malloc(cpu_alloc, size);
   }
 
  private:
-  xpu_malloc_t xpu_malloc;
-  void* _xpu_malloc;
+  xpu_malloc_t cpu_malloc;
+  void* cpu_alloc;
 };
 
 /*!
@@ -124,20 +120,20 @@ class OpResource {
 #define SUBGRAPH_SYM_JSON "subgraph_sym_json"
 
 /*! \brief Types of JSON objects */
-enum json_type {ERR, STR, NUM, LIST, MAP};
+enum JsonType {ERR, STR, NUM, LIST, MAP};
 
 /*! \brief definition of JSON objects */
-struct json_val {
-  json_val() : type(ERR), num(-1), str("") {}  // default constructor
+struct JsonVal {
+  JsonVal() : type(ERR), num(-1), str("") {}  // default constructor
   // construct a JSON object by type
-  explicit json_val(json_type t) : type(t), num(-1), str("") {}
+  explicit JsonVal(JsonType t) : type(t), num(-1), str("") {}
   // construct a string JSON object
-  explicit json_val(std::string s) : type(STR), num(-1), str(s) {}
+  explicit JsonVal(std::string s) : type(STR), num(-1), str(s) {}
   // construct a number JSON object
-  explicit json_val(int n) : type(NUM), num(n), str(std::to_string(n)) {}
+  explicit JsonVal(int n) : type(NUM), num(n), str(std::to_string(n)) {}
   // complex constructor
-  json_val(json_type t, int n, std::string s) : type(t), num(n), str(s) {}
-  bool operator<(const json_val &o) const {
+  JsonVal(JsonType t, int n, std::string s) : type(t), num(n), str(s) {}
+  bool operator<(const JsonVal &o) const {
     // for string JSON objects compare the string
     if (type == STR) return type == o.type && str < o.str;
     // for number JSON objects compare the number
@@ -162,24 +158,24 @@ struct json_val {
     }
     return type < o.type;
   }
-  json_type type;
+  JsonType type;
   int num;
   std::string str;
-  std::vector<json_val> list;
-  std::map<json_val, json_val> map;
+  std::vector<JsonVal> list;
+  std::map<JsonVal, JsonVal> map;
 };
 
 /*! \brief functions used for parsing JSON */
-struct Json_Parser {
-  json_val parse_to_json(std::string json) {
+struct JsonParser {
+  JsonVal parse_to_json(std::string json) {
     unsigned int idx = 0;
     return parse(json, &idx);
   }
-  void print_json_val(json_val val) {
+  void print_json_val(JsonVal val) {
     std::cout << json_val_string(val) << std::endl;
   }
   // debug function to convert a JSON object to a string
-  std::string json_val_string(const json_val &val) {
+  std::string json_val_string(const JsonVal &val) {
     std::string ret;
     switch (val.type) {
     case ERR:
@@ -207,8 +203,8 @@ struct Json_Parser {
     return ret;
   }
   // parse a string JSON object
-  json_val parse_string(std::string json, unsigned int* idx) {
-    json_val ret(STR);
+  JsonVal parse_string(std::string json, unsigned int* idx) {
+    JsonVal ret(STR);
     while (*idx < json.size()) {
       if (json[*idx] == '"') {
         ++(*idx);
@@ -219,11 +215,11 @@ struct Json_Parser {
       }
     }
     std::cout << "Error! Unable to parse string" << std::endl;
-    return json_val();
+    return JsonVal();
   }
   // parse a number JSON object
-  json_val parse_num(std::string json, unsigned int* idx) {
-    json_val ret(NUM);
+  JsonVal parse_num(std::string json, unsigned int* idx) {
+    JsonVal ret(NUM);
     while (*idx < json.size()) {
       if (json[*idx] >= '0' && json[*idx] <= '9') {
         ret.str += json[*idx];
@@ -236,30 +232,30 @@ struct Json_Parser {
     return ret;
   }
   // parse a list of JSON objects
-  json_val parse_list(std::string json, unsigned int* idx) {
-    json_val ret(LIST);
+  JsonVal parse_list(std::string json, unsigned int* idx) {
+    JsonVal ret(LIST);
     while (*idx < json.size()) {
       if (json[*idx] == ']') {
         ++(*idx);
         return ret;
       } else {
-        json_val item = parse(json, idx);
+        JsonVal item = parse(json, idx);
         if (item.type != ERR)
           ret.list.push_back(item);
       }
     }
     std::cout << "Error! Unable to parse list" << std::endl;
-    return json_val();
+    return JsonVal();
   }
   // parse a map of JSON objects
-  json_val parse_map(std::string json, unsigned int* idx) {
-    json_val ret(MAP), key;
+  JsonVal parse_map(std::string json, unsigned int* idx) {
+    JsonVal ret(MAP), key;
     while (*idx < json.size()) {
       if (json[*idx] == '}') {
         ++(*idx);
         return ret;
       } else {
-        json_val item = parse(json, idx);
+        JsonVal item = parse(json, idx);
         if (key.type == ERR) {
           key = item;
         } else {
@@ -269,11 +265,11 @@ struct Json_Parser {
       }
     }
     std::cout << "Error! Unable to parse map" << std::endl;
-    return json_val();
+    return JsonVal();
   }
   // generic parse function
-  json_val parse(std::string json, unsigned int *idx) {
-    json_val ret;
+  JsonVal parse(std::string json, unsigned int *idx) {
+    JsonVal ret;
     while (*idx < json.size()) {
       if (json[*idx] == '"') {
         ++(*idx);
@@ -432,20 +428,20 @@ class Registry {
  * Annoyingly, the concat_ and concat macros are necessary to
  * be able to use __COUNTER__ in an identifier name 
  */
-#define _STR_CONCAT_(__a, __b) __a ## __b
-#define _STR_CONCAT(__a, __b) _STR_CONCAT_(__a, __b)
+#define MX_STR_CONCAT_(__a, __b) __a ## __b
+#define MX_STR_CONCAT(__a, __b) MX_STR_CONCAT_(__a, __b)
 
 /*! \brief convert a token to a string */
-#define STRINGIFY(x) #x
-#define TOSTRING(x) STRINGIFY(x)
+#define MX_STRINGIFY(x) #x
+#define MX_TOSTRING(x) MX_STRINGIFY(x)
 
 /*! \brief declare a variable with custom name */
-#define _REGISTER_NAME_(Name) MXNet ## _CustomOp ## _
-#define _REGISTER_DEF_(Name) CustomOp _REGISTER_NAME_(Name)
+#define MX_REGISTER_NAME_(Name) MXNet ## _CustomOp ## _
+#define MX_REGISTER_DEF_(Name) CustomOp MX_REGISTER_NAME_(Name)
 
 /*! \brief assign a var to a value */
-#define REGISTER_OP(Name) _STR_CONCAT(_REGISTER_DEF_(Name), __COUNTER__) = \
-    Registry<CustomOp>::get()->add(TOSTRING(Name))
+#define REGISTER_OP(Name) MX_STR_CONCAT(MX_REGISTER_DEF_(Name), __COUNTER__) = \
+    Registry<CustomOp>::get()->add(MX_TOSTRING(Name))
 
 /* -------------- BELOW ARE CTYPE FUNCTIONS PROTOTYPES --------------- */
 
@@ -670,7 +666,7 @@ extern "C" {
                   void** indata, int* intypes, int num_in,
                   const int64_t** outshapes, int* outdims,
                   void** outdata, int* outtypes, int num_out,
-                  xpu_malloc_t xpu_malloc, void* _xpu_malloc) {
+                  xpu_malloc_t cpu_malloc, void* cpu_alloc) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
@@ -697,7 +693,7 @@ extern "C" {
       }
     }
 
-    OpResource res(xpu_malloc, _xpu_malloc);
+    OpResource res(cpu_malloc, cpu_alloc);
 
     return fcomp(attrs, inputs, outputs, res);
   }
