@@ -495,6 +495,11 @@ typedef int (*opCallMutateInputs_t)(mutateInputs_t, const char* const*, const ch
 typedef int (*opCallCreateOpState_t)(createOpState_t, const char* const*, const char* const*, int,
                                      void**);
 
+#define MXLIB_OPCALLFSTATEFULCOMP_STR "_opCallFStatefulCompute"
+typedef int (*opCallFStatefulComp_t)(bool, void*, const int64_t**, int*, void**, int*, int,
+                                     const int64_t**, int*, void**, int*, int,
+                                     xpu_malloc_t, void*);
+
 #define MXLIB_INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int);
 
@@ -654,7 +659,7 @@ extern "C" {
     return retval;
   }
 
-  /*! \brief returns status of calling Forward function for operator from library */
+  /*! \brief returns status of calling Forward/Backward function for operator from library */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) int __cdecl
 #else
@@ -748,6 +753,45 @@ extern "C" {
     // void pointer to hold custom state op instance created in custom library
     CustomStatefulOp** op_ptr = reinterpret_cast<CustomStatefulOp**>(state_op);
     return create_op(attrs, op_ptr);
+  }
+
+  /*! \brief returns status of calling Stateful Forward/Backward for operator from library */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) int __cdecl
+#else
+  int
+#endif
+  _opCallFStatefulCompute(bool is_forward, void* state_op,
+                          const int64_t** inshapes, int* indims,
+                          void** indata, int* intypes, int num_in,
+                          const int64_t** outshapes, int* outdims,
+                          void** outdata, int* outtypes, int num_out,
+                          xpu_malloc_t cpu_malloc, void* cpu_alloc) {
+    // create a vector of tensors for inputs
+    std::vector<MXTensor> inputs(num_in);
+    for (int i = 0; i < num_in; i++) {
+      inputs[i].data_ptr = indata[i];
+      inputs[i].dtype = (MXDType)intypes[i];
+      for (int j = 0; j < indims[i]; j++) {
+        inputs[i].shape.push_back(inshapes[i][j]);
+      }
+    }
+
+    // create a vector of tensors for outputs
+    std::vector<MXTensor> outputs(num_out);
+    for (int i = 0; i < num_out; i++) {
+      outputs[i].data_ptr = outdata[i];
+      outputs[i].dtype = (MXDType) outtypes[i];
+      for (int j = 0; j < outdims[i]; j++) {
+        outputs[i].shape.push_back(outshapes[i][j]);
+      }
+    }
+    OpResource res(cpu_malloc, cpu_alloc);
+    CustomStatefulOp* op_ptr = reinterpret_cast<CustomStatefulOp*>(state_op);
+    if (is_forward) {
+      return op_ptr->Forward(inputs, outputs, res);
+    }
+    return op_ptr->Backward(inputs, outputs, res);
   }
 
   /*!
