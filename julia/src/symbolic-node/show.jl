@@ -57,6 +57,6 @@ function Base.print(io::IO, sym::SymbolicNode)
   print(io, unsafe_string(out[]))
 end
 
-Base.print(sym::SymbolicNode) = print(STDOUT, sym)
+Base.print(sym::SymbolicNode) = print(stdout, sym)
 
 

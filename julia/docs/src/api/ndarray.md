@@ -19,7 +19,7 @@
 
 ## Arithmetic Operations
 
-In the following example `y` can be a `Real` value or another `NDArray`
+In the following example `y` can be a `Real` value or another `NDArray`.
 
 | API | Example  |                            |
 |-----|----------|----------------------------|
@@ -70,21 +70,5 @@ In the following example `y` can be a `Real` value or another `NDArray`
 
 ```@autodocs
 Modules = [MXNet.mx]
-Pages = [
-  "ndarray.jl",
-  "ndarray/activation.jl",
-  "ndarray/arithmetic.jl",
-  "ndarray/array.jl",
-  "ndarray/autoimport.jl",
-  "ndarray/comparison.jl",
-  "ndarray/context.jl",
-  "ndarray/io.jl",
-  "ndarray/linalg.jl",
-  "ndarray/reduction.jl",
-  "ndarray/remap.jl",
-  "ndarray/show.jl",
-  "ndarray/statistic.jl",
-  "ndarray/trig.jl",
-  "ndarray/type.jl",
-]
+Pages = listpages("ndarray")
 ```
