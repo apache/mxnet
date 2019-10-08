@@ -2238,7 +2238,7 @@ def has_tvm_ops():
     if current_context().device_type == 'gpu':
         try:
             import tvm
-        except:
+        except ImportError:
             return False
         return built_with_tvm_op and (int("".join(tvm.nd.gpu(0).compute_version.split('.'))) >= 53)
     return built_with_tvm_op
