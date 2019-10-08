@@ -29,13 +29,9 @@ from mxnet.test_utils import check_numeric_gradient, use_np, collapse_sum_like
 from common import assertRaises, with_seed
 import random
 import scipy.stats as ss
-from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, collapse_sum_like
-from mxnet.runtime import Features
 from mxnet.numpy_op_signature import _get_builtin_op
+from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, has_tvm_ops
 import platform
-
-
-_features = Features()
 
 
 @with_seed()
@@ -585,13 +581,14 @@ def test_np_sum():
     in_data_dim = random.choice([2, 3, 4])
     shape = rand_shape_nd(in_data_dim, dim=3)
     acc_type = {'float16': 'float32', 'float32': 'float64', 'float64': 'float64',
-                'int8': 'int32', 'int32': 'int64', 'int64': 'int64'}
+                'int8': 'int32', 'int32': 'int64', 'int64': 'int64', 'bool': 'int64'}
     for hybridize in [False, True]:
         for keepdims in [True, False]:
             for axis in ([i for i in range(in_data_dim)] + [(), None]):
-                for itype in ['float16', 'float32', 'float64', 'int8', 'int32', 'int64']:
+                for itype in ['float16', 'float32', 'float64', 'int8', 'int32', 'int64', 'bool']:
                     for dtype in ['float16', 'float32', 'float64', 'int8', 'int32', 'int64']:
-                        if is_int(dtype) and not is_int(itype):
+                        if (is_int(dtype) and not is_int(itype))\
+                                or (itype == 'bool' and dtype not in ('float32', 'float64', 'int32', 'int64')):
                             continue
                         # test gluon
                         test_sum = TestSum(axis=axis, dtype=dtype, keepdims=keepdims)
@@ -599,13 +596,23 @@ def test_np_sum():
                             test_sum.hybridize()
                         if is_int(itype):
                             x = _np.random.randint(-128, 128, shape, dtype=itype)
-                            x = mx.nd.array(x)
+                            x = np.array(x)
+                        elif itype == 'bool':
+                            x = _np.random.randint(0, 2, shape) < 1
+                            x = np.array(x, dtype='bool')
                         else:
-                            x = mx.nd.random.uniform(-1.0, 1.0, shape=shape, dtype=itype)
-                        x = x.as_np_ndarray()
-                        x.attach_grad()
+                            x = np.random.uniform(-1.0, 1.0, size=shape, dtype=itype)
                         expected_ret = _np.sum(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims)
                         expected_ret = expected_ret.astype(dtype)
+                        if itype == 'bool':  # special handling of boolean ndarray
+                            if has_tvm_ops():
+                                y = test_sum(x)
+                                assert y.dtype == expected_ret.dtype
+                                assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-4, atol=1e-5,
+                                                    use_broadcast=False)
+                            continue
+
+                        x.attach_grad()
                         with mx.autograd.record():
                             y = test_sum(x)
                         assert y.shape == expected_ret.shape
@@ -1464,7 +1471,7 @@ def test_np_unary_funcs():
         'arccosh' : (lambda x: 1./(x**2 - 1.)**(1./2.), 2.0, 5.0),
         'arctanh' : (lambda x: -1./(x**2 - 1.), -0.99, 0.99)
     }
-    if _features.is_enabled("TVM_OP"):
+    if has_tvm_ops():
         funcs['rad2deg'] = (lambda x: 180. / _np.pi * _np.ones(x.shape), -1.0, 1.0)
         funcs['deg2rad'] = (lambda x: _np.pi / 180. * _np.ones(x.shape), -1.0, 1.0)
     ndim = random.choice([2, 3, 4])
@@ -2232,7 +2239,7 @@ def test_np_indices():
         (2, 3, 4, 5, 6, 7)
     ]
     if platform.system() == 'Windows':
-        shapes = shapes[1:]  #beacuse in numpy windows version, indces not support dimensions is empty tuple.
+        shapes = shapes[1:]  # beacuse in numpy windows version, indces not support dimensions is empty tuple.
     for dtype in dtypes:
         for shape in shapes:
             np_out = _np.indices(dimensions=shape, dtype=dtype)

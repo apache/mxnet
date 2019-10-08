@@ -228,7 +228,7 @@ build_ubuntu_gpu_mkldnn_release() {
 # $1 -> mxnet_variant: the mxnet variant to build, e.g. cpu, cu100, cu92mkl, etc.
 build_dynamic_libmxnet() {
     set -ex
-    
+
     local mxnet_variant=${1:?"This function requires a mxnet variant as the first argument"}
 
     # relevant licenses will be placed in the licenses directory
@@ -948,7 +948,7 @@ cd_unittest_ubuntu() {
     fi
 
     $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/unittest
-    $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/quantization 
+    $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/quantization
 
     # https://github.com/apache/incubator-mxnet/issues/11801
     # if [[ ${mxnet_variant} = "cpu" ]] || [[ ${mxnet_variant} = "mkl" ]]; then
