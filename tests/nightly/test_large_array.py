@@ -818,7 +818,7 @@ def test_batchnorm():
         nd.waitall()
         return mean, stdvar
 
-    shape = (MEDIUM_X, MEDIUM_X, SMALL_Y, SMALL_Y)
+    shape = (3, 3, LARGE_X, SMALL_Y)
     axis = 1  # default
     eps = 1e-3
 
