@@ -758,7 +758,7 @@ if(USE_TVM_OP)
 
   set(TVM_OP_COMPILE_OPTIONS "-o${CMAKE_CURRENT_BINARY_DIR}/libtvmop.so")
   if(CUDA_ARCH_BIN)
-    set(TVM_OP_COMPILE_OPTIONS "${TVM_OP_COMPILE_OPTIONS} --cuda-arch ${CUDA_ARCH_BIN}")
+    set(TVM_OP_COMPILE_OPTIONS "${TVM_OP_COMPILE_OPTIONS}" "--cuda-arch" "${CUDA_ARCH_BIN}")
   endif()
   add_custom_command(TARGET mxnet POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E env

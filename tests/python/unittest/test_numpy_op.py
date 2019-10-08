@@ -29,8 +29,6 @@ from mxnet.test_utils import check_numeric_gradient, use_np, collapse_sum_like
 from common import assertRaises, with_seed
 import random
 import scipy.stats as ss
-from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, collapse_sum_like
-from mxnet.runtime import Features
 from mxnet.numpy_op_signature import _get_builtin_op
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, has_tvm_ops
 import platform
