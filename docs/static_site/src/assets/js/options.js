@@ -31,7 +31,7 @@ $(document).ready(function () {
         let searchParams = searchString.substring(1).split("&");
         searchParams.forEach(function (element) {
             kvPair = element.split("=");
-            urlDict.set(kvPair[0], kvPair[1]);
+            searchDict.set(kvPair[0], kvPair[1]);
         });
         return searchDict;
     }
@@ -65,9 +65,8 @@ $(document).ready(function () {
         $('button.opt').each(function(){is_a_match($(this), environSelect)});
 
         showContent();
-        let queryString = '?version=' + versionSelect + '&platform=' + platformSelect + '&language=' + languageSelect + '&environ=' + environSelect + '&processor=' + processorSelect;
-        window.location.search = queryString;
-        if (window.location.href.indexOf("/get_started/") >= 0) {
+        let queryString = '?version=' + versionSelect + '&platform=' + platformSelect + '&language=' + languageSelect + '&environ=' + environSelect + '&processor=' + processorSelect
+        if (window.location.href.indexOf("/get_started") >= 0) {
             history.pushState(null, null, queryString);
         }
     }
