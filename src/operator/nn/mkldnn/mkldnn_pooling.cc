@@ -292,8 +292,6 @@ MKLDNNPoolingBwd &GetPoolingBwd(const PoolingParam &param,
 
   auto it = pooling_bwds.find(key);
   if (it == pooling_bwds.end()) {
-    // mkldnn v1.0 add reoder to workaround testcase:test_make_subgraph;
-    // alread fixed in v1.1, will remove after v1.1 is integrated.
     NDArray diff_dst_buff = out_grad;
     if (in_data.IsMKLDNNData() == false && diff_dst_buff.IsMKLDNNData() == true) {
       diff_dst_buff = out_grad.Reorder2Default();
@@ -369,7 +367,7 @@ void MKLDNNPoolingGradCompute(const OpContext &ctx, const PoolingParam &param,
     {MKLDNN_ARG_DIFF_DST, *(out_grad.GetMKLDNNData())},
     {MKLDNN_ARG_DIFF_SRC, *diff_src_mem.second },
   };
-  if (workspace != nullptr) {
+  if (MKLDNNRequireWorkspace(param) && workspace != nullptr) {
     args[MKLDNN_ARG_WORKSPACE] = *(workspace->GetMKLDNNData());
   }
 
@@ -380,4 +378,4 @@ void MKLDNNPoolingGradCompute(const OpContext &ctx, const PoolingParam &param,
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_USE_MKLDNN == 0
+#endif  // MXNET_USE_MKLDNN == 100
