@@ -17,8 +17,8 @@
 
 # coding: utf-8
 import tvm
-from .. import defop, AllTypes, RealTypes
-from .. import assign_by_req, reduce_axes
+from ..opdef import defop
+from ..utils import AllTypes, RealTypes, assign_by_req, reduce_axes
 
 def compute_add(dtype, ndim):
     A = tvm.placeholder([tvm.var() for _ in range(ndim)], name='A', dtype=dtype)
@@ -71,7 +71,7 @@ def compute_backward_vadd(dtype, ndim, reduce1st, req):
     return s, X, in_grad_a, in_grad, [ret, in_grad]
 
 
-@defop(name="backward_vadd", target="cpu", dtype=AllTypes, 
+@defop(name="backward_vadd", target="cpu", dtype=AllTypes,
        ndim=[5], reduce1st=[0, 1],
        req=["kWriteTo", "kAddTo"], attrs=["reduce1st", "req"])
 def backward_vadd(dtype, ndim, reduce1st, req):
@@ -114,7 +114,7 @@ def compute_degandrad(dtype, ndim, n):
 
 
 @defop(name="deg2rad", target="cpu", auto_broadcast=False,
-       dtype=["float32", "float64"], ndim=list(range(0, 6)))
+       dtype=["float32", "float64"], ndim=[5])
 def deg2rad(dtype, ndim):
     s, A, B = compute_degandrad(dtype, ndim, 0)
     axes = [axis for axis in B.op.axis]
@@ -124,7 +124,7 @@ def deg2rad(dtype, ndim):
 
 
 @defop(name="rad2deg", target="cpu", auto_broadcast=False,
-       dtype=["float32", "float64"], ndim=list(range(0, 6)))
+       dtype=["float32", "float64"], ndim=[5])
 def rad2deg(dtype, ndim):
     s, A, B = compute_degandrad(dtype, ndim, 1)
     axes = [axis for axis in B.op.axis]
@@ -134,7 +134,7 @@ def rad2deg(dtype, ndim):
 
 
 @defop(name="cuda_deg2rad", target="cuda", auto_broadcast=False,
-       dtype=["float32", "float64"], ndim=list(range(0, 6)))
+       dtype=["float32", "float64"], ndim=[5])
 def deg2rad_gpu(dtype, ndim):
     s, A, B = compute_degandrad(dtype, ndim, 0)
     s = tvm.create_schedule(B.op)
@@ -147,7 +147,7 @@ def deg2rad_gpu(dtype, ndim):
 
 
 @defop(name="cuda_rad2deg", target="cuda", auto_broadcast=False,
-       dtype=["float32", "float64"], ndim=list(range(0, 6)))
+       dtype=["float32", "float64"], ndim=[5])
 def rad2deg_gpu(dtype, ndim):
     s, A, B = compute_degandrad(dtype, ndim, 1)
     s = tvm.create_schedule(B.op)
