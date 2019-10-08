@@ -45,6 +45,7 @@ mxnet
     mxnet.metric
     mxnet.model
     mxnet.module
+    mxnet.monitor
     mxnet.name
     mxnet.ndarray
     mxnet.notebook

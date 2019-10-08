@@ -32,13 +32,13 @@ Imperative API
 
    .. card::
       :title: mxnet.ndarray
-      :link: ../ndarray/index.html
+      :link: ndarray/index.html
 
       Imperative APIs to manipulate multi-dimensional arrays.
 
    .. card::
       :title: mxnet.gluon
-      :link: ../gluon/index.html
+      :link: gluon/index.html
 
       Imperative APIs to load data, construct and train neural networks.
 
@@ -51,55 +51,55 @@ Gluon related modules
 
    .. card::
       :title: mxnet.autograd
-      :link: ../autograd/index.html
+      :link: autograd/index.html
 
       Functions for Automatic differentiation.
 
    .. card::
       :title: mxnet.optimizer
-      :link: ../optimizer/index.html
+      :link: optimizer/index.html
 
       Functions for applying an optimizer on weights.
 
    .. card::
       :title: mxnet.initializer
-      :link: ../initializer/index.html
+      :link: initializer/index.html
 
       Default behaviors to initialize parameters.
 
    .. card::
       :title: mxnet.lr_scheduler
-      :link: ../lr_scheduler/index.html
+      :link: lr_scheduler/index.html
 
       Scheduling the learning rate.
 
    .. card::
       :title: mxnet.metric
-      :link: ../metric/index.html
+      :link: metric/index.html
 
       Metrics to evaluate the performance of a learned model.
 
    .. card::
       :title: mxnet.kvstore
-      :link: ../kvstore/index.html
+      :link: kvstore/index.html
 
       Key value store interface of MXNet for parameter synchronization.
 
    .. card::
       :title: mxnet.context
-      :link: context/index.html
+      :link: mxnet/context/index.html
 
       CPU and GPU context information.
 
    .. card::
       :title: mxnet.profiler
-      :link: profiler/index.html
+      :link: mxnet/profiler/index.html
 
       Profiler setting methods.
 
    .. card::
       :title: mxnet.random
-      :link: random/index.html
+      :link: mxnet/random/index.html
 
       Imperative random distribution generator functions.
 
@@ -111,13 +111,13 @@ Symbolic API
 
    .. card::
       :title: mxnet.sym
-      :link: ../symbol/index.html
+      :link: symbol/index.html
 
       Symbolic APIs for multi-dimensional arrays and neural network layers
 
    .. card::
       :title: mxnet.module
-      :link: ../module/index.html
+      :link: module/index.html
 
       Intermediate and high-level interface for performing computation with Symbols.
 
@@ -129,36 +129,38 @@ Symbol related modules
 
    .. card::
       :title: mxnet.callback
-      :link: callback/index.html
+      :link: mxnet/callback/index.html
 
       Functions to track various statuses during an epoch.
 
    .. card::
       :title: mxnet.monitor
-      :link: monitor/index.html
+      :link: mxnet/monitor/index.html
+
+      Outputs, weights, and gradients for debugging
 
 
    .. card::
       :title: mxnet.image
-      :link: image/index.html
+      :link: mxnet/image/index.html
 
       Image iterators and image augmentation functions.
 
    .. card::
       :title: mxnet.io
-      :link: io/index.html
+      :link: mxnet/io/index.html
 
       Data iterators for common data formats and utility functions.
 
    .. card::
       :title: mxnet.recordio
-      :link: recordio/index.html
+      :link: mxnet/recordio/index.html
 
       Read and write for the RecordIO data format.
 
    .. card::
       :title: mxnet.visualization
-      :link: visualization/index.html
+      :link: mxnet/visualization/index.html
 
       Functions for Symbol visualization.
 
@@ -169,43 +171,47 @@ Advanced modules
 
    .. card::
       :title: mxnet.executor
-      :link: executor/index.html
+      :link: mxnet/executor/index.html
 
       Managing symbolic graph execution.
 
    .. card::
       :title: mxnet.kvstore_server
-      :link: kvstore_server/index.html
+      :link: mxnet/kvstore_server/index.html
 
-
+      Server node for the key value store.
 
    .. card::
       :title: mxnet.engine
-      :link: engine/index.html
+      :link: mxnet/engine/index.html
 
+      Engine properties management.
 
 
    .. card::
       :title: mxnet.executor_manager
-      :link: executor_manager/index.html
+      :link: mxnet/executor_manager/index.html
 
+      Executor manager
 
 
    .. card::
       :title: mxnet.rtc
-      :link: rtc/index.html
+      :link: mxnet/rtc/index.html
 
       Tools for compiling and running CUDA code from the python frontend.
 
    .. card::
       :title: mxnet.test_utils
-      :link: test_utils/index.html
+      :link: mxnet/test_utils/index.html
 
       Tools for using and testing MXNet.
 
    .. card::
       :title: mxnet.util
-      :link: util/index.html
+      :link: mxnet/util/index.html
+
+      General utility functions
 
 
 .. toctree::
