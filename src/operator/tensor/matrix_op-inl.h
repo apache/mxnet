@@ -274,15 +274,17 @@ MSHADOW_XINLINE void Transpose2D(const DType *in, DType *out, index_t row, index
   // Block-size - 2^6 v 2^6 (64 v 64)
 
   // But we could leverage unrolling of for loops (for parallelization)
-  // Block-size - 2^5 v 2^5 (32 v 32) with 4 pragma for loop unrolled
+  // Block-size - 2^5 v 2^5 (32 v 32) with potential 4 pragma for loop unrolled
   // blocksize * blocksize * num_threads = cache_size / dtype_size
+  // Instead of explicit unroll, let compiler figure out optimal unroll factor
   index_t blocksize = 32;
 
+  // collapse 2 parallelizes 2 for loops
+  // inner 2 for loops aren't parallelized to prevent cache miss
+  #pragma omp parallel for collapse(2)
   for (index_t i = 0; i < row; i += blocksize) {
-    #pragma omp parallel for
     for (index_t j = 0; j < col; j += blocksize) {
       // transpose the block
-      #pragma unroll 4
       for (index_t a = j; (a < blocksize + j) && (a < col); ++a) {
         for (index_t b = i; (b < blocksize + i) && (b < row); ++b) {
           out[a * row + b] = in[b * col + a];
