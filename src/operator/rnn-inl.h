@@ -1500,9 +1500,9 @@ class RNNOp {
   // non-determinstic failures with very low probability, seen more often when wgrad is bypassed.
   inline void SyncDgrad() {
     if (CUDNN_VERSION <= 7604 && dgrad_sync_needed_) {
-      // Without blocking the CPU, create a synchronization point of all current GPU activity.
+      // Without blocking the CPU, create a synchronization point of all current GPU activity.  No
+      // need to call cudaStreamWaitEvent- cudaEventRecord on the legacy default stream suffices.
       CUDA_CALL(cudaEventRecord(dgrad_sync_event_, cudaStreamLegacy));
-      CUDA_CALL(cudaStreamWaitEvent(cudaStreamLegacy, dgrad_sync_event_, 0));
     }
   }
 #endif  // MXNET_USE_CUDNN == 1 && defined(__CUDACC__)
