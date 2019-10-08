@@ -320,7 +320,7 @@ def test_np_ldexp():
 
         def hybrid_forward(self, F, x1, x2):
             return F.np.ldexp(x1, x2)
-        
+
     def _np_ldexp(x1, x2):
         return x1 * _np.power(2.0, x2)
 
@@ -627,7 +627,7 @@ def test_np_sum():
                         np_out = _np.sum(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims).astype(dtype)
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
-
+@unittest.skip('flaky')
 @with_seed()
 @use_np
 def test_np_max_min():
