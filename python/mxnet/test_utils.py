@@ -2232,4 +2232,13 @@ _features = Features()
 
 
 def has_tvm_ops():
-    return _features.is_enabled("TVM_OP")
+    """Returns True if MXNet is compiled with TVM generated operators. If current ctx
+    is GPU, it only returns True for CUDA compute capability > 52 where FP16 is supported."""
+    built_with_tvm_op = _features.is_enabled("TVM_OP")
+    if current_context().device_type == 'gpu':
+        try:
+            import tvm
+        except:
+            return False
+        return built_with_tvm_op and (int("".join(tvm.nd.gpu(0).compute_version.split('.'))) >= 53)
+    return built_with_tvm_op
