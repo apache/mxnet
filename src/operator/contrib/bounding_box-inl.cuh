@@ -202,7 +202,9 @@ void NMSApply(mshadow::Stream<gpu> *s,
               int in_format) {
   using namespace mxnet_op;
   constexpr int THRESHOLD = 1024;
+  std::cout << "TOPK " << topk << std::endl;
   for (int ref = 0; ref < topk; ref += THRESHOLD) {
+    std::cout << "REF: " << ref << std::endl;
     constexpr int block_size = 512;
     constexpr int N = THRESHOLD / block_size;
     auto stream = mshadow::Stream<gpu>::GetStream(s);
