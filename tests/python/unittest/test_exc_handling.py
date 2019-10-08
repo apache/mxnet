@@ -204,7 +204,7 @@ def test_np_reshape_exception():
 @with_seed()
 @use_np
 def test_np_random_incorrect_named_arguments():
-    random_ops = ['uniform', 'normal', 'randint']
+    random_ops = ['uniform', 'normal', 'randint', 'choice']
     for op_name in random_ops:
         op = getattr(mx.np.random, op_name, None)
         assert op is not None
