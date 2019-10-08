@@ -17,7 +17,9 @@
  * under the License.
  */
 
-/* Installation page display functions for install selector */
+/* Installation page display functions for install selector.
+   This utility allows direct links to specific install instructions.
+*/
 
 $(document).ready(function () {
     function label(lbl) {
