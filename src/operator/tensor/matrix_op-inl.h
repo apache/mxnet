@@ -281,7 +281,14 @@ MSHADOW_XINLINE void Transpose2D(const DType *in, DType *out, index_t row, index
 
   // collapse 2 parallelizes 2 for loops
   // inner 2 for loops aren't parallelized to prevent cache miss
-  #pragma omp parallel for collapse(2)
+
+  // Microsoft Visual C++ compiler does not support omp collapse
+  #ifdef _MSC_VER
+    #pragma omp parallel for
+  #else
+    #pragma omp parallel for collapse(2)
+  #endif  // _MSC_VER
+
   for (index_t i = 0; i < row; i += blocksize) {
     for (index_t j = 0; j < col; j += blocksize) {
       // transpose the block
