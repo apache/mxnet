@@ -192,8 +192,14 @@ class DropoutOp {
                                     const real_t pkeep) {
       RNG_KERNEL_LOOP(xpu, DType, id, gen, N, step, {
         const real_t rand_num = static_cast<real_t>(genImpl.uniform());
-        mask_out[i] = mshadow_op::threshold_eq::Map<real_t>(rand_num, pkeep) * (1.0f / pkeep);
-        dropout_out[i] = input_data[i] * mask_out[i];
+        auto maskVal = mshadow_op::threshold_eq::Map<real_t>(rand_num, pkeep);
+        std::cout << "size of maskVal: " << sizeof(maskVal) << std::endl;
+        int bitsPerMask = 8 * sizeof(DType);
+        int maskIndex = i / bitsPerMask;
+        int offset = i % bitsPerMask;
+        dropout_out[i] = maskVal ? input_data[i] * (1.0f / pkeep): static_cast<DType>(0);
+        auto maskPtr = reinterpret_cast<unsigned char *>(mask_out + maskIndex);
+        *maskPtr |= (1U << offset);
       });
     }
   };
