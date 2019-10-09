@@ -1,3 +1,12 @@
+---
+layout: page_api
+title: Basics
+action: Get Started
+action_url: /get_started
+permalink: /api/cpp/docs/tutorials/basics
+is_tutorial: true
+tag: cpp
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,15 +23,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: Basics
-action: Get Started
-action_url: /get_started
-permalink: /api/cpp/docs/tutorials/basics
-is_tutorial: true
-tag: cpp
----
 
 Basics
 ======
@@ -41,7 +41,7 @@ and decompress them into `data/mnist_data` folder.
 Except linking the MXNet shared library, the C++ package itself is a header-only package,
 which means all you need to do is to include the header files. Among the header files,
 `op.h` is special since it is generated dynamically. The generation should be done when
-[building the C++ package](http://mxnet.incubator.apache.org/versions/master/api/c++/index.html).
+[building the C++ package]({{'/api/cpp/'|relative_url}}).
 It is important to note that you need to **copy the shared library** (`libmxnet.so` in Linux and MacOS,
 `libmxnet.dll` in Windows) from `/path/to/mxnet/lib` to the working directory.
 We do not recommend you to use pre-built binaries because MXNet is under heavy development,
@@ -82,7 +82,7 @@ the digits with the help of C++ package.
 Multilayer Perceptron
 ---------------------
 If you are not familiar with multilayer perceptron, you can get some basic information
-[here](http://mxnet.io/tutorials/python/mnist.html#multilayer-perceptron). We only focus on
+[here](https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/image/mnist.html). We only focus on
 the implementation in this tutorial.
 
 Constructing multilayer perceptron model is straightforward, assume we store the hidden size

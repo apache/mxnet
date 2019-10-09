@@ -1,3 +1,10 @@
+---
+layout: page_api
+title: Custom Iterator Tutorial
+is_tutorial: true
+tag: r
+permalink: /api/r/docs/tutorials/custom_iterator
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,13 +21,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: Custom Iterator Tutorial
-is_tutorial: true
-tag: r
-permalink: /api/r/docs/tutorials/custom_iterator
----
 
 
 Custom Iterator Tutorial
@@ -30,7 +30,7 @@ This tutorial provides a guideline on how to use and write custom iterators, whi
 
 Getting the data
 ----------
-The data we are going to use is the [MNIST dataset](http://yann.lecun.com/exdb/mnist/) in CSV format, the data can be found in this [web](http://pjreddie.com/projects/mnist-in-csv/).
+The data we are going to use is the [MNIST dataset](https://yann.lecun.com/exdb/mnist/) in CSV format, the data can be found in this [web](https://pjreddie.com/projects/mnist-in-csv/).
 
 To download the data:
 

@@ -23,14 +23,18 @@
 // 'Jenkins_pipeline.groovy' file and has the pipeline definition for the 
 // artifact (docker image, binary, pypi or maven package, etc.) that should
 // be published.
+
+STATE_UPDATE="State Update"
+
 def trigger_release_job(job_name, job_type, mxnet_variants) {
   def run = build(
     job: env.CD_RELEASE_JOB_NAME, 
     parameters: [
-      string(name: 'RELEASE_JOB_NAME', value: "${job_name}"),
-      string(name: 'RELEASE_JOB_TYPE', value: "${job_type}"),
-      string(name: 'MXNET_VARIANTS', value: "${mxnet_variants}"),
-      booleanParam(name: 'RELEASE_BUILD', value: "${env.RELEASE_BUILD}")
+      string(name: "RELEASE_JOB_NAME", value: "${job_name}"),
+      string(name: "RELEASE_JOB_TYPE", value: "${job_type}"),
+      string(name: "MXNET_VARIANTS", value: "${mxnet_variants}"),
+      booleanParam(name: "RELEASE_BUILD", value: "${env.RELEASE_BUILD}"),
+      string(name: "COMMIT_ID", value: "${env.GIT_COMMIT}")
     ],
     // If propagate is true, any result other than successful will
     // mark this call as failure (inc. unstable).
@@ -53,6 +57,23 @@ def trigger_release_job(job_name, job_type, mxnet_variants) {
   if (result == "FAILURE") {
     error "Downstream job: ${job_name} failed"
   }
+}
+
+
+// This triggers a downstream release job with no
+// variants and not job type. This will update
+// the configuration of the release job in jenkins
+// to the configuration of release job as defined in the
+// Jenkinsfile _release_job for env.GIT_COMMIT revision
+def update_release_job_state() {
+  build(
+    job: env.CD_RELEASE_JOB_NAME, 
+    parameters: [
+      string(name: "RELEASE_JOB_TYPE", value: STATE_UPDATE),
+  
+      // Should be set to the current git commit
+      string(name: "COMMIT_ID", value: "${env.GIT_COMMIT}")
+    ])
 }
 
 // Wraps variant pipeline with error catching and

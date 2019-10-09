@@ -20,10 +20,130 @@
 """Doc placeholder for numpy ops with prefix _np."""
 
 
+def _np__linalg_det(a):
+    """
+    det(a)
+
+    Compute the determinant of an array.
+
+    Parameters
+    ----------
+    a : (..., M, M) ndarray
+        Input array to compute determinants for.
+
+    Returns
+    -------
+    det : (...) ndarray
+        Determinant of `a`.
+
+    See Also
+    --------
+    slogdet : Another way to represent the determinant, more suitable
+    for large matrices where underflow/overflow may occur.
+
+    Notes
+    -----
+
+    Broadcasting rules apply, see the `numpy.linalg` documentation for
+    details.
+
+    The determinant is computed via LU factorization using the LAPACK
+    routine z/dgetrf.
+
+    Examples
+    --------
+    The determinant of a 2-D array [[a, b], [c, d]] is ad - bc:
+
+    >>> a = np.array([[1, 2], [3, 4]])
+    >>> np.linalg.det(a)
+    -2.0
+
+    Computing determinants for a stack of matrices:
+
+    >>> a = np.array([ [[1, 2], [3, 4]], [[1, 2], [2, 1]], [[1, 3], [3, 1]] ])
+    >>> a.shape
+    (3, 2, 2)
+    >>> np.linalg.det(a)
+    array([-2., -3., -8.])
+    """
+    pass
+
+
+def _np__linalg_slogdet(a):
+    """
+    slogdet(a)
+
+    Compute the sign and (natural) logarithm of the determinant of an array.
+
+    If an array has a very small or very large determinant, then a call to
+    `det` may overflow or underflow. This routine is more robust against such
+    issues, because it computes the logarithm of the determinant rather than
+    the determinant itself.
+
+    Parameters
+    ----------
+    a : (..., M, M) ndarray
+        Input array, has to be a square 2-D array.
+
+    Returns
+    -------
+    sign : (...) ndarray
+        A number representing the sign of the determinant. For a real matrix,
+        this is 1, 0, or -1.
+    logdet : (...) array_like
+        The natural log of the absolute value of the determinant.
+
+    If the determinant is zero, then `sign` will be 0 and `logdet` will be
+    -Inf. In all cases, the determinant is equal to ``sign * np.exp(logdet)``.
+
+    See Also
+    --------
+    det
+
+    Notes
+    -----
+
+    Broadcasting rules apply, see the `numpy.linalg` documentation for
+    details.
+
+    The determinant is computed via LU factorization using the LAPACK
+    routine z/dgetrf.
+
+
+    Examples
+    --------
+    The determinant of a 2-D array ``[[a, b], [c, d]]`` is ``ad - bc``:
+
+    >>> a = np.array([[1, 2], [3, 4]])
+    >>> (sign, logdet) = np.linalg.slogdet(a)
+    >>> (sign, logdet)
+    (-1., 0.69314718055994529)
+    >>> sign * np.exp(logdet)
+    -2.0
+
+    Computing log-determinants for a stack of matrices:
+
+    >>> a = np.array([ [[1, 2], [3, 4]], [[1, 2], [2, 1]], [[1, 3], [3, 1]] ])
+    >>> a.shape
+    (3, 2, 2)
+    >>> sign, logdet = np.linalg.slogdet(a)
+    >>> (sign, logdet)
+    (array([-1., -1., -1.]), array([ 0.69314718,  1.09861229,  2.07944154]))
+    >>> sign * np.exp(logdet)
+    array([-2., -3., -8.])
+
+    This routine succeeds where ordinary `det` does not:
+
+    >>> np.linalg.det(np.eye(500) * 0.1)
+    0.0
+    >>> np.linalg.slogdet(np.eye(500) * 0.1)
+    (1., -1151.2925464970228)
+    """
+    pass
+
+
 def _np_ones_like(a):
     """
-    ones_like(a)
-
     Return an array of ones with the same shape and type as a given array.
 
     Parameters
@@ -42,8 +162,6 @@ def _np_ones_like(a):
 
 def _np_zeros_like(a):
     """
-    zeros_like(a)
-
     Return an array of zeros with the same shape and type as a given array.
 
     Parameters
@@ -62,8 +180,6 @@ def _np_zeros_like(a):
 
 def _np_cumsum(a, axis=None, dtype=None, out=None):
     """
-    cumsum(a, axis=None, dtype=None, out=None)
-
     Return the cumulative sum of the elements along a given axis.
 
     Parameters
@@ -109,15 +225,59 @@ def _np_cumsum(a, axis=None, dtype=None, out=None):
     >>> np.cumsum(a,axis=1)      # sum over columns for each of the 2 rows
     array([[ 1,  3,  6],
            [ 4,  9, 15]])
+    """
+    pass
 
+
+def _npx_nonzero(a):
+    """
+    Return the indices of the elements that are non-zero.
+
+    Returns a ndarray with ndim is 2. Each row contains the indices 
+    of the non-zero elements. The values in `a` are always tested and returned in
+    row-major, C-style order.
+
+    The result of this is always a 2-D array, with a row for
+    each non-zero element.
+
+    Parameters
+    ----------
+    a : array_like
+        Input array.
+
+    Returns
+    -------
+    array : ndarray
+        Indices of elements that are non-zero.
+
+    Notes
+    -----
+    This function differs from the original numpy.prod in the following aspects:
+        - Do not support python numeric.
+        - The return value is same as numpy.transpose(numpy.nonzero(a)).
+
+    Examples
+    --------
+    >>> x = np.array([[3, 0, 0], [0, 4, 0], [5, 6, 0]])
+    >>> x
+    array([[3, 0, 0],
+           [0, 4, 0],
+           [5, 6, 0]])
+    >>> npx.nonzero(x)
+    array([[0, 0],
+           [1, 1],
+           [2, 0],
+           [2, 1]], dtype=int64)
+
+    >>> np.transpose(npx.nonzero(x))
+    array([[0, 1, 2, 2],
+           [0, 1, 0, 1]], dtype=int64)
     """
     pass
 
 
 def _np_repeat(a, repeats, axis=None):
     """
-    repeat(a, repeats, axis=None)
-
     Repeat elements of an array.
 
     Parameters
@@ -165,8 +325,6 @@ def _np_repeat(a, repeats, axis=None):
 
 def _np_transpose(a, axes=None):
     """
-    transpose(a, axes=None)
-
     Permute the dimensions of an array.
 
     Parameters
@@ -208,8 +366,7 @@ def _np_transpose(a, axes=None):
 
 
 def _np_dot(a, b, out=None):
-    """dot(a, b, out=None)
-
+    """
     Dot product of two arrays. Specifically,
 
     - If both `a` and `b` are 1-D arrays, it is inner product of vectors
@@ -270,10 +427,8 @@ def _np_dot(a, b, out=None):
     pass
 
 
-def _np_sum(a, axis=0, dtype=None, keepdims=None, initial=None, out=None):
+def _np_sum(a, axis=None, dtype=None, keepdims=False, initial=None, out=None):
     r"""
-    sum(a, axis=None, dtype=None, keepdims=_Null, initial=_Null, out=None)
-
     Sum of array elements over a given axis.
 
     Parameters
@@ -366,8 +521,6 @@ def _np_sum(a, axis=0, dtype=None, keepdims=None, initial=None, out=None):
 
 def _np_copy(a, out=None):
     """
-    copy(a, out=None)
-
     Return an array copy of the given object.
 
     Parameters
@@ -415,8 +568,6 @@ def _np_copy(a, out=None):
 
 def _np_reshape(a, newshape, order='C', out=None):
     """
-    reshape(a, newshape, order='C')
-
     Gives a new shape to an array without changing its data.
     This function always returns a copy of the input array if
     ``out`` is not provided.
@@ -448,5 +599,179 @@ def _np_reshape(a, newshape, order='C', out=None):
     See Also
     --------
     ndarray.reshape : Equivalent method.
+    """
+
+
+def _np__linalg_svd(a):
+    r"""
+    Singular Value Decomposition.
+
+    When `a` is a 2D array, it is factorized as ``ut @ np.diag(s) @ v``,
+    where `ut` and `v` are 2D orthonormal arrays and `s` is a 1D
+    array of `a`'s singular values. When `a` is higher-dimensional, SVD is
+    applied in stacked mode as explained below.
+
+    Parameters
+    ----------
+    a : (..., M, N) ndarray 
+        A real or complex array with ``a.ndim >= 2`` and ``M <= N``.
+
+    Returns
+    -------
+    ut: (..., M, M) ndarray
+        Orthonormal array(s). The first ``a.ndim - 2`` dimensions have the same
+        size as those of the input `a`.
+    s : (..., M) ndarray
+        Vector(s) with the singular values, within each vector sorted in
+        descending order. The first ``a.ndim - 2`` dimensions have the same
+        size as those of the input `a`.
+    v : (..., M, N) ndarray
+        Orthonormal array(s). The first ``a.ndim - 2`` dimensions have the same
+        size as those of the input `a`.
+
+    Notes
+    -----
+
+    The decomposition is performed using LAPACK routine ``_gesvd``.
+
+    SVD is usually described for the factorization of a 2D matrix :math:`A`.
+    The higher-dimensional case will be discussed below. In the 2D case, SVD is
+    written as :math:`A = U^T S V`, where :math:`A = a`, :math:`U^T = ut`,
+    :math:`S= \mathtt{np.diag}(s)` and :math:`V = v`. The 1D array `s`
+    contains the singular values of `a` and `ut` and `v` are orthonormal. The rows
+    of `v` are the eigenvectors of :math:`A^T A` and the columns of `ut` are
+    the eigenvectors of :math:`A A^T`. In both cases the corresponding
+    (possibly non-zero) eigenvalues are given by ``s**2``.
+
+    If `a` has more than two dimensions, then broadcasting rules apply.
+    This means that SVD is working in "stacked" mode: it iterates over 
+    all indices of the first ``a.ndim - 2`` dimensions and for each
+    combination SVD is applied to the last two indices. The matrix `a` 
+    can be reconstructed from the decomposition with either 
+    ``(ut * s[..., None, :]) @ v`` or
+    ``ut @ (s[..., None] * v)``. (The ``@`` operator denotes batch matrix multiplication)
+
+    Examples
+    --------
+    >>> a = np.arange(54).reshape(6, 9)
+    >>> ut, s, v = np.linalg.svd(a)
+    >>> ut.shape, s.shape, v.shape
+    ((6, 6), (6,), (6, 9))
+    >>> s = s.reshape(6, 1)
+    >>> ret = np.dot(ut, s * v)
+    >>> (ret - a > 1e-3).sum()
+    array(0.)
+    >>> (ret - a < -1e-3).sum()
+    array(0.)
+    """
+    pass
+
+
+def _np_roll(a, shift, axis=None):
+    """
+    Roll array elements along a given axis.
+    
+    Elements that roll beyond the last position are re-introduced at
+    the first.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array.
+    shift : int or tuple of ints
+        The number of places by which elements are shifted.  If a tuple,
+        then `axis` must be a tuple of the same size, and each of the
+        given axes is shifted by the corresponding number.  If an int
+        while `axis` is a tuple of ints, then the same value is used for
+        all given axes.
+    axis : int or tuple of ints, optional
+        Axis or axes along which elements are shifted.  By default, the
+        array is flattened before shifting, after which the original
+        shape is restored.
+
+    Returns
+    -------
+    res : ndarray
+        Output array, with the same shape as `a`.
+
+    Notes
+    -----
+    Supports rolling over multiple dimensions simultaneously.
+
+    Examples
+    --------
+    >>> x = np.arange(10)
+    >>> np.roll(x, 2)
+    array([8., 9., 0., 1., 2., 3., 4., 5., 6., 7.])
+    >>> np.roll(x, -2)
+    array([2., 3., 4., 5., 6., 7., 8., 9., 0., 1.])
+
+    >>> x2 = np.reshape(x, (2,5))
+    >>> x2
+    array([[0., 1., 2., 3., 4.],
+           [5., 6., 7., 8., 9.]])
+    >>> np.roll(x2, 1)
+    array([[9., 0., 1., 2., 3.],
+           [4., 5., 6., 7., 8.]])
+    >>> np.roll(x2, -1)
+    array([[1., 2., 3., 4., 5.],
+           [6., 7., 8., 9., 0.]])
+    >>> np.roll(x2, 1, axis=0)
+    array([[5., 6., 7., 8., 9.],
+           [0., 1., 2., 3., 4.]])
+    >>> np.roll(x2, -1, axis=0)
+    array([[5., 6., 7., 8., 9.],
+           [0., 1., 2., 3., 4.]])
+    >>> np.roll(x2, 1, axis=1)
+    array([[4., 0., 1., 2., 3.],
+           [9., 5., 6., 7., 8.]])
+    >>> np.roll(x2, -1, axis=1)
+    array([[1., 2., 3., 4., 0.],
+           [6., 7., 8., 9., 5.]])
+   """
+
+
+def _np_trace(a, offset=0, axis1=0, axis2=1, out=None):
+    """
+    Return the sum along diagonals of the array.
+    If `a` is 2-D, the sum along its diagonal with the given offset
+    is returned, i.e., the sum of elements ``a[i,i+offset]`` for all i.
+    If `a` has more than two dimensions, then the axes specified by axis1 and
+    axis2 are used to determine the 2-D sub-arrays whose traces are returned.
+    The shape of the resulting array is the same as that of `a` with `axis1`
+    and `axis2` removed.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array, from which the diagonals are taken.
+    offset : int, optional
+        Offset of the diagonal from the main diagonal. Can be both positive
+        and negative. Defaults to 0.
+    axis1, axis2 : int, optional
+        Axes to be used as the first and second axis of the 2-D sub-arrays
+        from which the diagonals should be taken. Defaults are the first two
+        axes of `a`.
+    out : ndarray, optional
+        Array into which the output is placed. It must be of the right shape
+        and right type to hold the output.
+
+    Returns
+    -------
+    sum_along_diagonals : ndarray
+        If `a` is 2-D, the sum along the diagonal is returned.  If `a` has
+        larger dimensions, then an array of sums along diagonals is returned.
+
+    Examples
+    --------
+    >>> a = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    >>> np.trace(a)
+    array(3.)
+    >>> a = np.arange(8).reshape((2, 2, 2))
+    >>> np.trace(a)
+    array([6., 8.])
+    >>> a = np.arange(24).reshape((2, 2, 2, 3))
+    >>> np.trace(a).shape
+    (2, 3)
     """
     pass

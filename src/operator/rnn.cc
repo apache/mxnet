@@ -633,6 +633,20 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
     });
   });
 }
+
+static void RNNStatefulComputeExCPU(const OpStatePtr& state_ptr, const OpContext& ctx,
+                                    const std::vector<NDArray>& inputs,
+                                    const std::vector<OpReqType>& req,
+                                    const std::vector<NDArray>& outputs) {
+  if (SupportMKLDNNRNN(inputs[0])) {
+    RNNStatefulComputeCPU(state_ptr, ctx, inputs, req, outputs);
+    return;
+  }
+  int use_mkldnn_rnn = dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1);
+  dmlc::SetEnv("MXNET_USE_MKLDNN_RNN", 0);
+  FallBackCompute(RNNStatefulCompute<cpu>, state_ptr, ctx, inputs, req, outputs);
+  dmlc::SetEnv("MXNET_USE_MKLDNN_RNN", use_mkldnn_rnn);
+}
 #endif
 
 NNVM_REGISTER_OP(RNN)
@@ -719,7 +733,7 @@ The definition of GRU here is slightly different from paper but compatible with 
 .set_attr<FStatefulCompute>("FStatefulCompute<cpu>", RNNStatefulCompute<cpu>)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", RNNStatefulComputeCPU)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", RNNStatefulComputeExCPU)
 #endif
 .set_attr<nnvm::FGradient>("FGradient", RNNGrad{"_backward_RNN"})
 .set_attr<FResourceRequestEx>("FResourceRequestEx", RNNResourceEx)

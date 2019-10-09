@@ -50,6 +50,7 @@ from .ndarray import array
 from .symbol import Symbol
 from .symbol.numpy import _Symbol as np_symbol
 from .util import use_np  # pylint: disable=unused-import
+from .runtime import Features
 
 
 def default_context():
@@ -2225,3 +2226,19 @@ def collapse_sum_like(a, shape):
 def is_cd_run():
     """Checks if the test is running as part of a Continuous Delivery run"""
     return os.environ.get("CD_JOB", 0) == "1"
+
+
+_features = Features()
+
+
+def has_tvm_ops():
+    """Returns True if MXNet is compiled with TVM generated operators. If current ctx
+    is GPU, it only returns True for CUDA compute capability > 52 where FP16 is supported."""
+    built_with_tvm_op = _features.is_enabled("TVM_OP")
+    if current_context().device_type == 'gpu':
+        try:
+            import tvm
+        except ImportError:
+            return False
+        return built_with_tvm_op and (int("".join(tvm.nd.gpu(0).compute_version.split('.'))) >= 53)
+    return built_with_tvm_op

@@ -310,6 +310,40 @@ def test_rnnrelu_dropout():
     out = exe.forward(is_train=True)
     out[0].wait_to_read()
 
+def test_RNN_float64():
+    if default_context().device_type == 'gpu':
+        return
+    sym = mx.sym.RNN(
+        mx.sym.Variable('in'),
+        mx.sym.Variable('par'),
+        mx.sym.Variable('s'),
+        state_size = (2),
+        num_layers = 1,
+        mode = 'rnn_tanh'
+    )
+
+    dtype = 'float64'
+    explicit_grad = {
+        'in': mx.nd.ones([2, 1, 2], dtype=dtype),
+        'par': mx.nd.ones([12], dtype=dtype),
+        's': mx.nd.ones([1, 1, 2], dtype=dtype)
+    }
+
+    args_grad = explicit_grad
+    grad_req = 'write'
+
+    ex = sym.bind(default_context(),
+        {
+            'in': mx.nd.ones([2, 1, 2], dtype=dtype),
+            'par': mx.nd.ones([12], dtype=dtype),
+            's': mx.nd.ones([1, 1, 2], dtype=dtype)
+        },
+        args_grad = args_grad,
+        grad_req = grad_req
+    )
+    ex.forward()
+    ex.outputs[0].wait_to_read()
+
 def np_softmax(x, axis=-1, temperature=1.0):
     x = x - np.max(x, axis=axis, keepdims=True)
     x = np.exp(x/temperature)
@@ -9250,6 +9284,23 @@ def test_sample_normal_default_shape():
     assert s.shape == (1, 1)
     s = mx.nd.sample_normal(mu=mx.nd.array([10.0]), sigma=mx.nd.array([0.5]), shape=(1,))
     assert s.shape == (1, 1)
+
+
+def test_min_max_inf():
+    dtypes = [np.float32, np.double]
+    elem_list = [-1, 1, 0, np.inf, -np.inf]
+
+    for dtype in dtypes:
+        for a in elem_list:
+            for b in elem_list:
+                data_np = np.array([a, b], dtype=dtype)
+                data_mx = mx.nd.array(data_np, dtype=dtype)
+
+                min_data_np, max_data_np = data_np.min(), data_np.max()
+                min_data_mx, max_data_mx = data_mx.min(), data_mx.max()
+
+                assert_array_equal(min_data_np, min_data_mx.asnumpy())
+                assert_array_equal(max_data_np, max_data_mx.asnumpy())
 
 
 if __name__ == '__main__':

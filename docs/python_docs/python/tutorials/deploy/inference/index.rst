@@ -33,25 +33,35 @@ The following tutorials will help you learn how to deploy MXNet models for infer
       :link: https://gluon-cv.mxnet.io/build/examples_deployment/int8_inference.html
 
       How to use quantized GluonCV models for inference on Intel Xeon Processors to gain higher performance.
-   ..
-      PLACEHOLDER
 
-      .. card::
-         :title: Scala and Java
-         :link: scala.html
 
-         How to use MXNet models in a Scala or Java environment.
+The following tutorials will help you learn how to deploy MXNet models for inference applications.
 
-      .. card::
-         :title: C++
-         :link: cpp.html
+.. container:: cards
 
-         How to use MXNet models in a C++ environment.
-      PLACEHOLDER
-   ..
+   .. card::
+      :title: Scala and Java
+      :link: scala.html
+
+      How to use MXNet models in a Scala or Java environment.
+
+   .. card::
+      :title: C++
+      :link: cpp.html
+
+      How to use MXNet models in a C++ environment.
+
+
+   .. card::
+      :title: Raspberry Pi
+      :link: wine_detector.html
+
+      Example of running a wine detector on a raspberry pi.
+
 
 .. toctree::
    :hidden:
-   :maxdepth: 0
-
+   :maxdepth: 1
    :glob:
+
+   *
