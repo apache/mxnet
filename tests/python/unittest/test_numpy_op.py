@@ -735,6 +735,7 @@ def test_np_max_min():
                 _test_np_exception(func, shape, dim)
 
 
+@unittest.skip("flaky")
 @with_seed()
 @use_np
 def test_np_mean():
@@ -1847,6 +1848,7 @@ def test_np_randint():
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs, nrepeat=100)
 
 
+@unittest.skip("flaky")
 @with_seed()
 @use_np
 def test_np_minimum_maximum():
