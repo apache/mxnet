@@ -156,6 +156,7 @@ def _register_array_function():
 
 # https://docs.scipy.org/doc/numpy/reference/ufuncs.html#available-ufuncs
 _NUMPY_ARRAY_UFUNC_LIST = [
+    'abs',
     'add',
     'subtract',
     'multiply',

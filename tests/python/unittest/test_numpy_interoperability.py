@@ -84,6 +84,9 @@ def _prepare_workloads():
     OpArgMngr.add_workload('zeros_like', array_pool['4x1'])
 
     # workloads for array ufunc protocol
+    OpArgMngr.add_workload('abs', np.random.uniform(size=(11,)).astype(np.float32))
+    OpArgMngr.add_workload('abs', np.random.uniform(size=(5,)).astype(np.float64))
+    OpArgMngr.add_workload('abs', np.array([np.inf, -np.inf]))  # nan cannot be compared
     OpArgMngr.add_workload('add', array_pool['4x1'], array_pool['1x2'])
     OpArgMngr.add_workload('add', array_pool['4x1'], 2)
     OpArgMngr.add_workload('add', 2, array_pool['4x1'])
