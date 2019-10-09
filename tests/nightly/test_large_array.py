@@ -601,7 +601,7 @@ def test_softmax_cross_entropy():
 def test_index_copy():
     x = mx.nd.zeros((LARGE_X, SMALL_Y))
     t = mx.nd.arange(1, SMALL_Y + 1).reshape((1, SMALL_Y))
-    index = mx.nd.array([LARGE_X - 1])
+    index = mx.nd.array([LARGE_X - 1], dtype="int64")
 
     x = mx.nd.contrib.index_copy(x, index, t)
     assert x[-1][-1] == t[0][-1]
