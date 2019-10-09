@@ -799,6 +799,7 @@ def test_np_mean():
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
 
+@unittest.skip("flaky")
 @with_seed()
 @use_np
 def test_np_moment():
