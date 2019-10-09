@@ -735,6 +735,7 @@ def test_np_max_min():
                 _test_np_exception(func, shape, dim)
 
 
+@unittest.skip("flaky")
 @with_seed()
 @use_np
 def test_np_mean():
