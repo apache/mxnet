@@ -41,6 +41,17 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(less);
 MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(greater_equal);
 MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(less_equal);
 
+#define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(name)                               \
+  NNVM_REGISTER_OP(_npi_##name##_scalar)                                                       \
+  .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::ComputeLogic<gpu, mshadow_op::np_##name>)
+
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(equal);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(not_equal);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(greater);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(less);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(greater_equal);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(less_equal);
+
 #endif  // MXNET_USE_TVM_OP
 
 }  // namespace op

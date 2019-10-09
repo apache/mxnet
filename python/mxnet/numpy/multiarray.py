@@ -302,7 +302,7 @@ class ndarray(NDArray):
             except Exception as err:
                 raise TypeError('{}'.format(str(err)))
         if isinstance(key, _np.ndarray) and key.dtype == _np.bool_:
-            key = array(key, dtype='bool')
+            key = array(key, dtype='bool', ctx=self.ctx)
         if isinstance(key, ndarray) and key.dtype == _np.bool_:  # boolean indexing
             key_shape = key.shape
             key_ndim = len(key_shape)
@@ -364,6 +364,37 @@ class ndarray(NDArray):
         """
         if isinstance(value, NDArray) and not isinstance(value, ndarray):
             raise TypeError('Cannot assign mx.nd.NDArray to mxnet.numpy.ndarray')
+
+        ndim = self.ndim
+        shape = self.shape
+
+        # handle boolean indexing assign
+        if isinstance(key, list):
+            try:
+                new_key = _np.array(key)
+                if new_key.dtype == _np.bool_:
+                    key = new_key
+            except Exception as err:
+                raise TypeError('{}'.format(str(err)))
+        if isinstance(key, _np.ndarray) and key.dtype == _np.bool_:
+            key = array(key, dtype='bool', ctx=self.ctx)
+        if isinstance(key, ndarray) and key.dtype == _np.bool_:  # boolean indexing
+            key_shape = key.shape
+            key_ndim = len(key_shape)
+            if ndim < key_ndim:
+                raise IndexError('too many indices, whose ndim = {}, for array with ndim = {}'
+                                 .format(key_ndim, ndim))
+            for i in range(key_ndim):
+                if key_shape[i] != shape[i]:
+                    raise IndexError('boolean index did not match indexed array along dimension {};'
+                                     'dimension is {} but corresponding boolean dimension is {}'
+                                     .format(i, shape[i], key_shape[i]))
+            remaining_dims = shape[key_ndim:]
+            data = _reshape_view(self, -1, *remaining_dims)
+            key = _reshape_view(key, -1)
+            return _reshape_view(_npi.boolean_mask(data, key), -1, *remaining_dims)
+
+        # handle basic and advanced indexing
         if self.ndim == 0:
             if not isinstance(key, tuple) or len(key) != 0:
                 raise IndexError('scalar tensor can only accept `()` as index')
@@ -753,7 +784,7 @@ class ndarray(NDArray):
         check_call(_LIB.MXNDArrayDetach(self.handle, ctypes.byref(hdl)))
         return _np_ndarray_cls(hdl)
 
-    def astype(self, dtype, *args, **kwargs):  # pylint: disable=arguments-differ,unused-argument
+    def astype(self, dtype, **kwargs):  # pylint: disable=arguments-differ,unused-argument
         """
         Copy of the array, cast to a specified type.
 

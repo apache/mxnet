@@ -218,7 +218,7 @@ struct TVMBinaryBroadcastScalarCompute {
 };
 
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(name)                                \
-  NNVM_REGISTER_OP(_npi_##name)                                                             \
+  NNVM_REGISTER_OP(_npi_##name##_scalar)                                                    \
   .set_num_inputs(1)                                                                        \
   .set_num_outputs(1)                                                                       \
   .set_attr_parser([](NodeAttrs* attrs) {                                                   \
@@ -234,10 +234,16 @@ struct TVMBinaryBroadcastScalarCompute {
   [](const NodeAttrs& attrs) {                                                              \
     return std::vector<std::pair<int, int> >{{0, 0}};                                       \
   })                                                                                        \
-  .set_attr<FCompute>("FCompute<cpu>", TVMBinaryBroadcastScalarCompute{func_##name##_cpu})  \
   .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)                                \
   .add_argument("data", "NDArray-or-Symbol", "First input to the function")                 \
   .add_argument("scalar", "float", "scalar input")
+
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(equal);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(not_equal);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(greater);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(less);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(greater_equal);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(less_equal);
 
 static constexpr char func_equal_scalar_cpu[] = "equal_scalar_cpu";
 static constexpr char func_equal_scalar_gpu[] = "equal_scalar_gpu";
@@ -252,25 +258,39 @@ static constexpr char func_greater_equal_scalar_gpu[] = "greater_equal_scalar_gp
 static constexpr char func_less_equal_scalar_cpu[] = "less_equal_scalar_cpu";
 static constexpr char func_less_equal_scalar_gpu[] = "less_equal_scalar_gpu";
 
-MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(equal_scalar);
-MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(not_equal_scalar);
-MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(greater_scalar);
-MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(less_scalar);
-MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(greater_equal_scalar);
-MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(less_equal_scalar);
+#if MXNET_USE_TVM_OP
+#define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_CPU(name)                               \
+  NNVM_REGISTER_OP(_npi_##name##_scalar)                                                       \
+  .set_attr<FCompute>("FCompute<cpu>", TVMBinaryBroadcastScalarCompute{func_##name##scalar_cpu})
 
 #if MXNET_USE_CUDA
-#define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(name)                         \
-  NNVM_REGISTER_OP(_npi_##name)                                                          \
-  .set_attr<FCompute>("FCompute<gpu>", TVMBinaryBroadcastScalarCompute{func_##name##_gpu})
+#define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(name)                               \
+  NNVM_REGISTER_OP(_npi_##name##_scalar)                                                       \
+  .set_attr<FCompute>("FCompute<gpu>", TVMBinaryBroadcastScalarCompute{func_##name##scalar_gpu})
 
-MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(equal_scalar);
-MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(not_equal_scalar);
-MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(greater_scalar);
-MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(less_scalar);
-MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(greater_equal_scalar);
-MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(less_equal_scalar);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(equal);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(not_equal);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(greater);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(less);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(greater_equal);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(less_equal);
+
 #endif  // MXNET_USE_CUDA
+
+#else
+
+#define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_CPU(name)                               \
+  NNVM_REGISTER_OP(_npi_##name##_scalar)                                                       \
+  .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::ComputeLogic<cpu, mshadow_op::np_##name>)
+
+#endif  // MXNET_USE_TVM_OP
+
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_CPU(equal);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_CPU(not_equal);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_CPU(greater);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_CPU(less);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_CPU(greater_equal);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_CPU(less_equal);
 
 }  // namespace op
 }  // namespace mxnet
