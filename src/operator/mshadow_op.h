@@ -89,6 +89,14 @@ using std::is_integral;
     } \
   }
 
+#define MXNET_BINARY_LOGIC_OP_NC(name, expr) \
+  struct name : public mxnet_op::tunable  { \
+    template<typename DType> \
+    MSHADOW_XINLINE static bool Map(DType a, DType b) { \
+      return (expr); \
+    } \
+  }
+
 #define MXNET_SIMPLE_UNARY_MATH_OP(name) MXNET_UNARY_MATH_OP(name, math::name(a))
 
 #define MXNET_SIMPLE_BINARY_MATH_OP(name) MXNET_BINARY_MATH_OP(name, math::name(a, b))
@@ -346,6 +354,18 @@ MXNET_BINARY_MATH_OP_NC(le, a <= b ? DType(1) : DType(0));
 MXNET_BINARY_MATH_OP_NC(eq, a == b ? DType(1) : DType(0));
 
 MXNET_BINARY_MATH_OP_NC(ne, a != b ? DType(1) : DType(0));
+
+MXNET_BINARY_LOGIC_OP_NC(np_greater_equal, a >= b ? true : false);
+
+MXNET_BINARY_LOGIC_OP_NC(np_greater, a > b ? true : false);
+
+MXNET_BINARY_LOGIC_OP_NC(np_less, a < b ? true : false);
+
+MXNET_BINARY_LOGIC_OP_NC(np_less_equal, a <= b ? true : false);
+
+MXNET_BINARY_LOGIC_OP_NC(np_equal, a == b ? true : false);
+
+MXNET_BINARY_LOGIC_OP_NC(np_not_equal, a != b ? true : false);
 
 MXNET_BINARY_MATH_OP(logical_and, a && b ? DType(1) : DType(0));
 
