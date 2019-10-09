@@ -110,8 +110,9 @@ def build_docker(platform: str, docker_binary: str, registry: str, num_retries: 
 
     @retry(subprocess.CalledProcessError, tries=num_retries)
     def run_cmd():
-        logging.info("Running command: '%s'", ' '.join(cmd))
-        check_call(cmd)
+        logging.info("%s: Running command: '%s'", platform, ' '.join(cmd))
+        check_call(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        logging.info("%s: Successfully finished command: '%s'", platform, ' '.join(cmd))
 
     run_cmd()
     # Get image id by reading the tag. It's guaranteed (except race condition) that the tag exists. Otherwise, the

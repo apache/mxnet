@@ -81,7 +81,7 @@ def _build_save_container(platform, registry, load_cache) -> Optional[str]:
         load_docker_cache(registry=registry, docker_tag=docker_tag)
 
     # Start building
-    logging.debug('Building %s as %s', platform, docker_tag)
+    logging.debug('%s: Building as %s', platform, docker_tag)
     try:
         # Increase the number of retries for building the cache.
         image_id = build_util.build_docker(docker_binary='docker', platform=platform, registry=registry, num_retries=10, no_cache=False)
@@ -108,7 +108,7 @@ def _upload_image(registry, docker_tag, image_id) -> None:
     # We don't have to retag the image since it is already in the right format
     logging.info('Uploading %s (%s) to %s', docker_tag, image_id, registry)
     push_cmd = ['docker', 'push', docker_tag]
-    subprocess.check_call(push_cmd)
+    subprocess.check_call(push_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 @retry(target_exception=subprocess.TimeoutExpired, tries=DOCKER_CACHE_NUM_RETRIES,
@@ -125,12 +125,13 @@ def load_docker_cache(registry, docker_tag) -> None:
         return
     assert docker_tag
 
-    logging.info('Loading Docker cache for %s from %s', docker_tag, registry)
+    logging.info('%s: loading cache from %s', docker_tag, registry)
     pull_cmd = ['docker', 'pull', docker_tag]
 
     # Don't throw an error if the image does not exist
-    subprocess.run(pull_cmd, timeout=DOCKER_CACHE_TIMEOUT_MINS*60)
-    logging.info('Successfully pulled docker cache')
+    subprocess.run(pull_cmd, timeout=DOCKER_CACHE_TIMEOUT_MINS*60,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    logging.info('%s: Successfully pulled docker cache', docker_tag)
 
 
 def delete_local_docker_cache(docker_tag):
