@@ -1212,6 +1212,40 @@ def test_full():
     assert a[-1][-1] == 3
 
 
+def test_hyperbolic():
+    def test_arccosh(a):
+        mx_res = mx.nd.arccosh(a)
+        assert_almost_equal(mx_res[-1][-1].asnumpy(), np.arccosh(a[-1][-1].asnumpy()))
+
+    def test_arcsinh(a):
+        mx_res = mx.nd.arcsinh(a)
+        assert_almost_equal(mx_res[-1][-1].asnumpy(), np.arcsinh(a[-1][-1].asnumpy()))
+
+    def test_arctanh(a):
+        a[-1][-1] = 0   # arctanh of 1 is inf, assert_almost_equal gives "divide by 0" for comparing 2 inf values
+        mx_res = mx.nd.arctanh(a)
+        assert_almost_equal(mx_res[-1][-1].asnumpy(), np.arctanh(a[-1][-1].asnumpy()))
+
+    def test_cosh(a):
+        mx_res = mx.nd.cosh(a)
+        assert_almost_equal(mx_res[-1][-1].asnumpy(), np.cosh(a[-1][-1].asnumpy()))
+
+    def test_sinh(a):
+        mx_res = mx.nd.sinh(a)
+        assert_almost_equal(mx_res[-1][-1].asnumpy(), np.sinh(a[-1][-1].asnumpy()))
+
+    def test_tanh(a):
+        mx_res = mx.nd.tanh(a)
+        assert_almost_equal(mx_res[-1][-1].asnumpy(), np.tanh(a[-1][-1].asnumpy()))
+
+    a = mx.nd.ones((LARGE_X, SMALL_Y))
+    test_arccosh(a)
+    test_arcsinh(a)
+    test_arctanh(a)
+    test_cosh(a)
+    test_sinh(a)
+    test_tanh(a)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
