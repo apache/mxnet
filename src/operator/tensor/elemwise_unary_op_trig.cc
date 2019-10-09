@@ -203,14 +203,14 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arcsin,
       auto dydx_mul_grad_x = nnvm::NodeEntry{n};
       auto op = mxnet::util::NodeOpGen{n};
 
-      auto grad_x = op.div(dydx_mul_grad_x, dydx);
-      auto grad_x_square = op.square(grad_x);
-      auto grad_x_square_mul_x = op.mul(grad_x_square, x);
-      auto grad_grad_x = op.mul(dydx_mul_grad_x, grad_x_square_mul_x);
+      auto x_grad = op.div(dydx_mul_grad_x, dydx);
+      auto x_grad_square = op.square(x_grad);
+      auto x_grad_square_mul_x = op.mul(x_grad_square, x);
+      auto x_grad_grad = op.mul(dydx_mul_grad_x, x_grad_square_mul_x);
 
       std::vector<nnvm::NodeEntry> ret;
-      ret.emplace_back(op.mul(ograds[0], grad_x));
-      ret.emplace_back(op.mul(ograds[0], grad_grad_x));
+      ret.emplace_back(op.mul(ograds[0], x_grad));
+      ret.emplace_back(op.mul(ograds[0], x_grad_grad));
       return ret;
     });
 
@@ -246,14 +246,14 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arccos,
       auto dydx_mul_grad_x = nnvm::NodeEntry{n};
       auto op = mxnet::util::NodeOpGen{n};
 
-      auto grad_x = op.div(dydx_mul_grad_x, dydx);
-      auto grad_x_square = op.square(grad_x);
-      auto grad_x_square_mul_x = op.mul(grad_x_square, x);
-      auto grad_grad_x = op.mul(dydx_mul_grad_x, grad_x_square_mul_x);
+      auto x_grad = op.div(dydx_mul_grad_x, dydx);
+      auto x_grad_square = op.square(x_grad);
+      auto x_grad_square_mul_x = op.mul(x_grad_square, x);
+      auto x_grad_grad = op.mul(dydx_mul_grad_x, x_grad_square_mul_x);
 
       std::vector<nnvm::NodeEntry> ret;
-      ret.emplace_back(op.mul(ograds[0], grad_x));
-      ret.emplace_back(op.mul(ograds[0], grad_grad_x));
+      ret.emplace_back(op.mul(ograds[0], x_grad));
+      ret.emplace_back(op.mul(ograds[0], x_grad_grad));
       return ret;
     });
 
