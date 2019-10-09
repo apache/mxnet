@@ -1199,6 +1199,250 @@ def test_full():
     assert a[-1][-1] == 3
 
 
+def test_astype():
+    x = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
+    y = x.astype('int32')
+    assert y.dtype == np.int32
+    assert y[-1][-1] == SMALL_Y-1
+
+
+def test_cast():
+    x = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
+    y = nd.cast(x, np.int32)
+    assert y.dtype == np.int32
+    assert y[-1][-1] == SMALL_Y-1
+
+
+def test_repeat():
+    x = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X//2)
+    y = nd.repeat(x, repeats=2, axis = 1)
+    assert y.shape == (SMALL_Y, LARGE_X)
+    assert y[0][1] == 0
+    assert y[-1][-1] == SMALL_Y-1
+    x = create_2d_tensor(rows=SMALL_Y//2, columns=LARGE_X)
+    y = nd.repeat(x, repeats=2, axis = 0)
+    assert y.shape == (SMALL_Y, LARGE_X)
+    assert y[0][1] == 0
+    assert y[-1][0] == SMALL_Y//2-1
+
+
+def create_input_for_rounding_ops():
+    inp = nd.arange(-LARGE_X//2, LARGE_X//2, dtype=np.float64).reshape(1, LARGE_X)
+    inp = inp/2
+    inp = nd.broadcast_to(inp, (SMALL_Y, LARGE_X))
+    return inp
+
+
+def test_ceil():
+    x = create_input_for_rounding_ops()
+    y = nd.ceil(x)
+    assert y[1][LARGE_X//2-2] == -1
+    assert y[1][LARGE_X//2-1] == 0
+    assert y[1][LARGE_X//2] == 0
+    assert y[1][LARGE_X//2+1] == 1
+    assert y[1][LARGE_X//2+2] == 1
+
+
+def test_fix():
+    x = create_input_for_rounding_ops()
+    y = nd.fix(x)
+    assert y[1][LARGE_X//2-2] == -1
+    assert y[1][LARGE_X//2-1] == 0
+    assert y[1][LARGE_X//2] == 0
+    assert y[1][LARGE_X//2+1] == 0
+    assert y[1][LARGE_X//2+2] == 1
+
+
+def test_floor():
+    x = create_input_for_rounding_ops()
+    y = nd.floor(x)
+    assert y[1][LARGE_X//2-2] == -1
+    assert y[1][LARGE_X//2-1] == -1
+    assert y[1][LARGE_X//2] == 0
+    assert y[1][LARGE_X//2+1] == 0
+    assert y[1][LARGE_X//2+2] == 1
+
+
+def test_rint():
+    x = create_input_for_rounding_ops()
+    y = nd.rint(x)
+    assert y[1][LARGE_X//2-2] == -1
+    assert y[1][LARGE_X//2-1] == -1
+    assert y[1][LARGE_X//2] == 0
+    assert y[1][LARGE_X//2+1] == 0
+    assert y[1][LARGE_X//2+2] == 1
+
+
+def test_round():
+    x = create_input_for_rounding_ops()
+    y = nd.round(x)
+    assert y[1][LARGE_X//2-2] == -1
+    assert y[1][LARGE_X//2-1] == -1
+    assert y[1][LARGE_X//2] == 0
+    assert y[1][LARGE_X//2+1] == 1
+    assert y[1][LARGE_X//2+2] == 1
+
+
+def test_trunc():
+    x = create_input_for_rounding_ops()
+    y = nd.trunc(x)
+    assert y[1][LARGE_X//2-2] == -1
+    assert y[1][LARGE_X//2-1] == 0
+    assert y[1][LARGE_X//2] == 0
+    assert y[1][LARGE_X//2+1] == 0
+    assert y[1][LARGE_X//2+2] == 1
+
+
+def test_arcsin():
+    x = nd.array([-1, -.707, 0, .707, 1]).reshape(1, 5)
+    x = nd.broadcast_to(x, (LARGE_X*10, SMALL_Y//10))
+    y = nd.arcsin(x)
+    assert_almost_equal(y[0][0].asnumpy(), -np.pi/2, atol=1e-3)
+    assert_almost_equal(y[1][1].asnumpy(), -np.pi/4, atol=1e-3)
+    assert_almost_equal(y[2][2].asnumpy(), 0, atol=1e-3)
+    assert_almost_equal(y[-2][3].asnumpy(), np.pi/4, atol=1e-3)
+    assert_almost_equal(y[-1][-1].asnumpy(), np.pi/2, atol=1e-3)
+
+
+def test_arccos():
+    x = nd.array([-1, -.707, 0, .707, 1]).reshape(1, 5)
+    x = nd.broadcast_to(x, (LARGE_X*10, SMALL_Y//10))
+    y = nd.arccos(x)
+    assert_almost_equal(y[0][0].asnumpy(), np.pi, atol=1e-3)
+    assert_almost_equal(y[1][1].asnumpy(), 3*np.pi/4, atol=1e-3)
+    assert_almost_equal(y[2][2].asnumpy(), np.pi/2, atol=1e-3)
+    assert_almost_equal(y[-2][3].asnumpy(), np.pi/4, atol=1e-3)
+    assert_almost_equal(y[-1][-1].asnumpy(), 0, atol=1e-3)
+
+
+def test_arctan():
+    x = nd.array([-np.Inf, -1, 0, 1, np.Inf]).reshape(1, 5)
+    x = nd.broadcast_to(x, (LARGE_X*10, SMALL_Y//10))
+    y = nd.arctan(x)
+    assert_almost_equal(y[0][0].asnumpy(), -np.pi/2, atol=1e-3)
+    assert_almost_equal(y[1][1].asnumpy(), -np.pi/4, atol=1e-3)
+    assert_almost_equal(y[2][2].asnumpy(), 0, atol=1e-3)
+    assert_almost_equal(y[-2][3].asnumpy(), np.pi/4, atol=1e-3)
+    assert_almost_equal(y[-1][-1].asnumpy(), np.pi/2, atol=1e-3)
+
+
+def test_sin():
+    x = nd.array([-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2]).reshape(1, 5)
+    x = nd.broadcast_to(x, (LARGE_X*10, SMALL_Y//10))
+    y = nd.sin(x)
+    assert_almost_equal(y[0][0].asnumpy(), -1, atol=1e-3)
+    assert_almost_equal(y[1][1].asnumpy(), -.707, atol=1e-3)
+    assert_almost_equal(y[2][2].asnumpy(), 0, atol=1e-3)
+    assert_almost_equal(y[-2][3].asnumpy(), .707, atol=1e-3)
+    assert_almost_equal(y[-1][-1].asnumpy(), 1, atol=1e-3)
+
+
+def test_cos():
+    x = nd.array([0, np.pi/4, np.pi/2, 3*np.pi/4, np.pi]).reshape(1, 5)
+    x = nd.broadcast_to(x, (LARGE_X*10, SMALL_Y//10))
+    y = nd.cos(x)
+    assert_almost_equal(y[0][0].asnumpy(), 1, atol=1e-3)
+    assert_almost_equal(y[1][1].asnumpy(), .707, atol=1e-3)
+    assert_almost_equal(y[2][2].asnumpy(), 0, atol=1e-3)
+    assert_almost_equal(y[-2][3].asnumpy(), -.707, atol=1e-3)
+    assert_almost_equal(y[-1][-1].asnumpy(), -1, atol=1e-3)
+
+
+def test_tan():
+    x = nd.array([-np.pi/4, 0, np.pi/4]).reshape(1, 3)
+    x = nd.broadcast_to(x, (LARGE_X*10, x.shape[1]))
+    y = nd.tan(x)
+    assert y[0][0] == -1
+    assert y[1][1] == 0
+    assert y[-1][-1] == 1
+
+
+def test_radians():
+    x = nd.array([0, 90, 180, 270, 360]).reshape(1, 5)
+    x = nd.broadcast_to(x, (LARGE_X*10, SMALL_Y//10))
+    y = nd.radians(x)
+    assert_almost_equal(y[0][0].asnumpy(), 0, atol=1e-3)
+    assert_almost_equal(y[1][1].asnumpy(), np.pi/2, atol=1e-3)
+    assert_almost_equal(y[2][2].asnumpy(), np.pi, atol=1e-3)
+    assert_almost_equal(y[-2][3].asnumpy(), 3*np.pi/2, atol=1e-3)
+    assert_almost_equal(y[-1][-1].asnumpy(), 2*np.pi, atol=1e-3)
+
+
+def test_degrees():
+    x = nd.array([0, np.pi/2, np.pi, 3*np.pi/2, 2*np.pi]).reshape(1, 5)
+    x = nd.broadcast_to(x, (LARGE_X*10, SMALL_Y//10))
+    y = nd.degrees(x)
+    assert_almost_equal(y[0][0].asnumpy(), 0, atol=1e-3)
+    assert_almost_equal(y[1][1].asnumpy(), 90, atol=1e-3)
+    assert_almost_equal(y[2][2].asnumpy(), 180, atol=1e-3)
+    assert_almost_equal(y[-2][3].asnumpy(), 270, atol=1e-3)
+    assert_almost_equal(y[-1][-1].asnumpy(), 360, atol=1e-3)
+
+
+def test_L2Normalization():
+    x = nd.ones((2, LARGE_X*2))
+    x[0] = 3
+    x[1] = 4
+    # Channel Mode
+    z = x.reshape(1, 2, LARGE_X*2)
+    y = nd.L2Normalization(z, mode='channel')
+    assert y[0][0][0] == 0.6
+    assert y[0][0][-1] == 0.6
+    assert y[0][1][0] == 0.8
+    assert y[0][1][-1] == 0.8
+    # Instance Mode
+    z = x.T
+    y = nd.L2Normalization(z, mode='instance')
+    assert y[0][0] == 0.6
+    assert y[0][1] == 0.8
+    assert y[-1][0] == 0.6
+    assert y[-1][1] == 0.8
+    # Spatial Mode
+    z = z.reshape(1, 200000000, 2)
+    y = nd.L2Normalization(z, mode='spatial')
+    assert y[0][0][0] == 0.6
+    assert y[0][0][1] == 0.8
+    assert y[0][-1][0] == 0.6
+    assert y[0][-1][1] == 0.8
+
+
+def test_instance_norm():
+    dtype = np.float32
+    forward_check_eps = 1E-3
+    axis = -1
+    eps = 1E-5
+    in_shape = (LARGE_X, 1, SMALL_Y)
+    ctx = mx.cpu()
+
+    def npy_instance_norm(data, gamma, beta, axis, eps=1E-5):
+        if axis < 0:
+            axis += data.ndim
+        broadcast_shape = [1 for _ in range(data.ndim)]
+        broadcast_shape[axis] = data.shape[axis]
+        mean = data.mean(axis=axis, keepdims=True).astype(dtype)
+        var = data.var(axis=axis, keepdims=True).astype(dtype)
+        std = np.sqrt(var + dtype(eps)).astype(dtype)
+        out = gamma * (data - mean) / std + \
+              beta
+        return out
+    data = np.random.normal(0, 1, in_shape).astype(dtype)
+    gamma = np.random.normal(0, 1, (1,)).astype(dtype)
+    beta = np.random.normal(0, 1, (1,)).astype(dtype)
+    data_s = mx.symbol.Variable('data')
+    gamma_s = mx.symbol.Variable('gamma')
+    beta_s = mx.symbol.Variable('beta')
+    out_s = mx.symbol.InstanceNorm(data=data_s, gamma=gamma_s, beta=beta_s,
+                                   eps=eps)
+    exe = out_s.simple_bind(ctx, data=in_shape)
+    exe.arg_dict['data'][:] = data
+    exe.arg_dict['gamma'][:] = gamma
+    exe.arg_dict['beta'][:] = beta
+    out_nd = exe.forward()[0]
+    out = npy_instance_norm(data, gamma, beta, axis, eps)
+    assert_almost_equal(out, out_nd.asnumpy(), forward_check_eps,
+                        forward_check_eps)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
