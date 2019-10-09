@@ -2822,12 +2822,13 @@ def ravel(x, order='C'):
 def logaddexp(x1, x2, out=None):
     """Logarithm of the sum of exponentiations of the inputs.
     logaddexp(x1, x2, out=None)
-     Calculates ``log(exp(x1) + exp(x2))``. This function is useful in
+    Calculates ``log(exp(x1) + exp(x2))``. This function is useful in
     statistics where the calculated probabilities of events may be so small
     as to exceed the range of normal floating point numbers.  In such cases
     the logarithm of the calculated probability is stored. This function
     allows adding probabilities stored in such a fashion.
-     Parameters
+
+    Parameters
     ----------
     x1, x2 : _Symbol or scalar
         Input values.
@@ -2835,15 +2836,18 @@ def logaddexp(x1, x2, out=None):
         A location into which the result is stored. If provided, it must have
         a shape and dtype as the expected output. If not provided or `None`,
         a freshly-allocated array is returned.
-     Returns
+
+    Returns
     -------
     result : _Symbol
         Logarithm of ``exp(x1) + exp(x2)``.
         This is a scalar if both `x1` and `x2` are scalars.
-     See Also
+
+    See Also
     --------
     logaddexp2: Logarithm of the sum of exponentiations of inputs in base 2.
-     Notes
+
+    Notes
     -----
     This function differs from the original `numpy.logaddexp
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.logaddexp.html>`_ in
@@ -2852,7 +2856,8 @@ def logaddexp(x1, x2, out=None):
     - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
     - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
     - ``out`` param does not support scalar input case.
-     Examples
+
+    Examples
     --------
     >>> prob1 = np.log(1e-50)
     >>> prob2 = np.log(2.5e-50)
