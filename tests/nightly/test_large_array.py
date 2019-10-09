@@ -841,7 +841,7 @@ def test_div():
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
     c = b
     c = c.__div__(a)
-    mx_divide = nd.divide(c, a)
+    mx_divide = nd.divide(b, a)
     assert c[0][-1] == 3/2
     assert mx_divide[0][-1] == c[0][-1]
     assert c.shape == a.shape
