@@ -135,7 +135,7 @@ struct MPAdamWUpdate {
                const std::vector<TBlob> &outputs,
                const float rescale_grad) {
     using namespace mxnet_op;
-    const auto &param = nnvm::get<AdamWParam>(attrs.parsed);
+    const auto& param = nnvm::get<AdamWParam>(attrs.parsed);
     Stream<xpu>* s = ctx.get_stream<xpu>();
     MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       Tensor<xpu, 2, DType> weight = inputs[0].FlatTo2D<xpu, DType>(s);
@@ -405,7 +405,7 @@ void FillMultiAdamKernelParam(const nnvm::NodeAttrs& attrs,
 
   pParam->count = p.num_weights;
   pParam->max_size = 0;
-  const bool isSame = std::is_same<DType, MPDType>::value;
+  constexpr bool isSame = std::is_same<DType, MPDType>::value;
   for (int i = 0; i < pParam->count; ++i) {
     const auto idx = i * input_stride;
     pParam->sizes[i] = inputs[idx].shape_.Size();

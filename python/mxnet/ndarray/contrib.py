@@ -21,6 +21,7 @@
 from __future__ import absolute_import
 import math
 import numpy as np
+import mxnet as mx
 from ..context import current_context
 from ..random import uniform
 from ..base import _as_list
@@ -547,7 +548,7 @@ def isnan(data):
     """
     return data != data  # pylint: disable=comparison-with-itself
 
-def getRescaleGrad(rescale_grad, ctx):
+def getRescaleGrad(rescale_grad, ctx=mx.cpu()):
     if not isinstance(rescale_grad, ndarray.NDArray):
         return ndarray.full(shape=(1,), val=rescale_grad, ctx=ctx)
     else:
@@ -555,7 +556,7 @@ def getRescaleGrad(rescale_grad, ctx):
 
 def adamw_update(weight, grad, mean, var, rescale_grad, lr, eta, beta1=0.9, beta2=0.999,
                  epsilon=1e-8, wd=0, clip_gradient=-1, out=None, name=None, **kwargs):
-    rescale_grad = getRescaleGrad(rescale_grad, weight.context)
+    rescale_grad = getRescaleGrad(rescale_grad, ctx=weight.context)
     return ndarray._internal._adamw_update(weight=weight, grad=grad, mean=mean, var=var,
                                            rescale_grad=rescale_grad, lr=lr, eta=eta,
                                            beta1=beta1, beta2=beta2, epsilon=epsilon,
@@ -565,7 +566,7 @@ def adamw_update(weight, grad, mean, var, rescale_grad, lr, eta, beta1=0.9, beta
 def mp_adamw_update(weight, grad, mean, var, weight32, rescale_grad, lr, eta, beta1=0.9,
                     beta2=0.999, epsilon=1e-8, wd=0, clip_gradient=-1, out=None,
                     name=None, **kwargs):
-    rescale_grad = getRescaleGrad(rescale_grad, weight.context)
+    rescale_grad = getRescaleGrad(rescale_grad, ctx=weight.context)
     return ndarray._internal._mp_adamw_update(weight=weight, grad=grad, mean=mean, var=var,
                                               weight32=weight32,
                                               rescale_grad=rescale_grad, lr=lr, eta=eta,
@@ -575,10 +576,11 @@ def mp_adamw_update(weight, grad, mean, var, weight32, rescale_grad, lr, eta, be
 
 def multi_adamw_update(weights, grads, mean, var, rescale_grad, lrs, wds, etas,
                        out=None, name=None, size=0, **kwargs):
+    rescale_grad = getRescaleGrad(rescale_grad, ctx=weights[0].context)
     if not size:
         size = len(weights)
     return ndarray._internal._multi_adamw_update(*_flatten_list(zip(weights, grads, mean, var)),
-                                                 getRescaleGrad(rescale_grad, weights[0].context),
+                                                 rescale_grad,
                                                  out=out,
                                                  num_weights=size,
                                                  lrs=lrs,
@@ -589,11 +591,12 @@ def multi_adamw_update(weights, grads, mean, var, rescale_grad, lrs, wds, etas,
 
 def multi_mp_adamw_update(weights, grads, mean, var, weights32, rescale_grad, lrs, wds, etas,
                           out=None, name=None, size=0, **kwargs):
+    rescale_grad = getRescaleGrad(rescale_grad, ctx=weights[0].context)
     if not size:
         size = len(weights)
     return ndarray._internal._multi_mp_adamw_update(
         *_flatten_list(zip(weights, grads, mean, var, weights32)),
-        getRescaleGrad(rescale_grad, weights[0].context),
+        rescale_grad,
         out=out,
         num_weights=size,
         lrs=lrs,
