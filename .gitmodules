@@ -26,3 +26,6 @@
 [submodule "3rdparty/nvidia_cub"]
 	path = 3rdparty/nvidia_cub
 	url = https://github.com/NVlabs/cub.git
+[submodule "3rdparty/cutlass"]
+	path = 3rdparty/cutlass
+	url = https://github.com/NVIDIA/cutlass
