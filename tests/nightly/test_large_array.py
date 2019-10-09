@@ -1493,6 +1493,16 @@ def test_minimum():
     assert z[-1][-1] == 3
 
 
+def test_pad():
+    x = create_2d_tensor(rows=SMALL_Y-2, columns=LARGE_X//2-2, dtype=np.float32).reshape(1 , 1, SMALL_Y-2, LARGE_X//2-2)
+    y = nd.pad(x, mode="edge", pad_width=(0, 0, 0, 0, 1, 1, 1, 1))
+    assert y[0][0][1][0] == 0
+    assert y[0][0][1][-1] == 0
+    assert y[0][0][-1][0] == SMALL_Y-3
+    assert y[0][0][-1][-1] == SMALL_Y-3
+    assert y.shape == (1, 1, SMALL_Y, LARGE_X//2)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
