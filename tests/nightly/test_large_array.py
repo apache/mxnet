@@ -841,7 +841,9 @@ def test_div():
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
     c = b
     c = c.__div__(a)
+    mx_divide = nd.divide(c, a)
     assert c[0][-1] == 3/2
+    assert mx_divide[0][-1] == c[0][-1]
     assert c.shape == a.shape
 
 
@@ -1245,6 +1247,46 @@ def test_hyperbolic():
     test_cosh(a)
     test_sinh(a)
     test_tanh(a)
+
+
+def test_sign():
+    a = mx.nd.random.normal(-1,1, shape=(LARGE_X, SMALL_Y))
+    mx_res = mx.nd.sign(a)
+    assert_almost_equal(mx_res[-1][-1].asnumpy(), np.sign(a[-1][-1].asnumpy()))
+
+
+def test_logical():
+    def test_logical_and(a, b):
+        mx_res = mx.nd.logical_and(a, b)
+        assert_almost_equal(mx_res[-1][-1].asnumpy(), np.logical_and(a[-1][-1].asnumpy(), b[-1][-1].asnumpy()))
+
+    def test_logical_or(a, b):
+        mx_res = mx.nd.logical_and(a, b)
+        assert_almost_equal(mx_res[-1][-1].asnumpy(), np.logical_and(a[-1][-1].asnumpy(), b[-1][-1].asnumpy()))
+
+    def test_logical_not(a, b):
+        mx_res = mx.nd.logical_and(a, b)
+        assert_almost_equal(mx_res[-1][-1].asnumpy(), np.logical_and(a[-1][-1].asnumpy(), b[-1][-1].asnumpy()))
+
+    def test_logical_xor(a, b):
+        mx_res = mx.nd.logical_and(a, b)
+        assert_almost_equal(mx_res[-1][-1].asnumpy(), np.logical_and(a[-1][-1].asnumpy(), b[-1][-1].asnumpy()))
+
+    a = mx.nd.ones((LARGE_X, SMALL_Y))
+    b = mx.nd.zeros((LARGE_X, SMALL_Y))
+    test_logical_and(a, b)
+    test_logical_or(a, b)
+    test_logical_not(a, b)
+    test_logical_xor(a, b)
+
+
+def test_batch_dot():
+    a = mx.nd.ones((LARGE_X, 5, 10))
+    b = 2*mx.nd.ones((LARGE_X, 10, 6))
+    res = mx.nd.batch_dot(a, b)
+    assert res[0][0][0] == 20
+    assert res.shape == (LARGE_X, 5, 6)
+
 
 if __name__ == '__main__':
     import nose
