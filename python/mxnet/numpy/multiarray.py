@@ -55,7 +55,7 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'add', 'subtrac
            'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming',
            'blackman', 'flip', 'around', 'arctan2', 'hypot', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril',
            'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
-           'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum']
+           'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide']
 
 # Return code for dispatching indexing function call
 _NDARRAY_UNSUPPORTED_INDEXING = -1
@@ -2214,6 +2214,35 @@ def divide(x1, x2, out=None, **kwargs):
         This is a scalar if both x1 and x2 are scalars.
     """
     return _mx_nd_np.divide(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+def true_divide(x1, x2, out=None):
+    """Returns a true division of the inputs, element-wise.
+
+    Instead of the Python traditional 'floor division', this returns a true
+    division.  True division adjusts the output type to present the best
+    answer, regardless of input types.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Dividend array.
+
+    x2 : ndarray or scalar
+        Divisor array.
+
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        This is a scalar if both x1 and x2 are scalars.
+    """
+    return _mx_nd_np.true_divide(x1, x2, out=out)
 
 
 @set_module('mxnet.numpy')
