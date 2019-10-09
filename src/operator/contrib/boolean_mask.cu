@@ -66,7 +66,7 @@ inline void BooleanMaskForward<gpu>(const nnvm::NodeAttrs& attrs,
     ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(temp_storage_bytes), s);
   prefix_sum = reinterpret_cast<int32_t*>(workspace.dptr_);
   d_temp_storage = workspace.dptr_ + buffer_size;
-  MSHADOW_TYPE_SWITCH(idx.dtype(), IType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(idx.dtype(), IType, {
     mxnet_op::Kernel<mshadow_op::identity_with_cast, gpu>::Launch(
       s, idx.shape()[0], prefix_sum, idx.data().dptr<IType>());
   });
@@ -129,7 +129,7 @@ inline void BooleanMaskBackward<gpu>(const nnvm::NodeAttrs& attrs,
     ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(temp_storage_bytes), s);
   prefix_sum = reinterpret_cast<int32_t*>(workspace.dptr_);
   d_temp_storage = workspace.dptr_ + buffer_size;
-  MSHADOW_TYPE_SWITCH(idx.dtype(), IType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(idx.dtype(), IType, {
     mxnet_op::Kernel<mshadow_op::identity_with_cast, gpu>::Launch(
       s, idx.shape()[0], prefix_sum, idx.data().dptr<IType>());
   });

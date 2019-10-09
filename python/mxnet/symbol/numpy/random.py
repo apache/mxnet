@@ -190,7 +190,7 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
                            ctx=ctx, dtype=dtype, out=out)
 
 
-def choice(a, size=None, replace=True, p=None, **kwargs):
+def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
     """Generates a random sample from a given 1-D array
 
     Parameters
@@ -243,13 +243,10 @@ def choice(a, size=None, replace=True, p=None, **kwargs):
     array([2, 3, 0])
     """
     from ._symbol import _Symbol as np_symbol
-    ctx = kwargs.pop('ctx', None)
     if ctx is None:
         ctx = current_context()
-    out = kwargs.pop('out', None)
     if size == ():
         size = None
-
     if isinstance(a, np_symbol):
         ctx = None
         if p is None:
