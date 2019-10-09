@@ -32,7 +32,7 @@ def test_tvm_bridge():
         return
 
     def check(target, dtype):
-        shape = (20,)
+        shape = (2,)
         scale = tvm.var("scale", dtype="float32")
         x = tvm.placeholder(shape, dtype=dtype)
         y = tvm.placeholder(shape, dtype=dtype)
@@ -56,9 +56,8 @@ def test_tvm_bridge():
         np.testing.assert_allclose(
             zz.asnumpy(), (xx.asnumpy() + yy.asnumpy()) * 10)
 
-    for tgt in ["llvm", "cuda"]:
-        for dtype in ["int8", "uint8", "int64",
-                      "float32", "float64"]:
+    for tgt in ["cuda"]:
+        for dtype in ["float32"]:
             check(tgt, dtype)
 
 
