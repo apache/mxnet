@@ -337,7 +337,8 @@ void BinaryBroadcastComputeLogic(const nnvm::NodeAttrs& attrs,
             mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
             mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, DType, bool, OP>, xpu>::
             template LaunchEx(s, new_oshape.Size(), req[0], lstride, rstride, oshape,
-                              inputs[0].dptr<DType>(), inputs[1].dptr<DType>(), outputs[0].dptr<bool>());
+                              inputs[0].dptr<DType>(), inputs[1].dptr<DType>(),
+                              outputs[0].dptr<bool>());
           });
       });
     }

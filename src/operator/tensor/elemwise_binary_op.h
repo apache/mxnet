@@ -515,7 +515,8 @@ class ElemwiseBinaryOp : public OpBase {
             if (size != 0) {
               Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, size,
                                                                   outputs[0].dptr<bool>(),
-                                                                  inputs[0].dptr<DType>(), inputs[1].dptr<DType>());
+                                                                  inputs[0].dptr<DType>(),
+                                                                  inputs[1].dptr<DType>());
             }
         });
       });
