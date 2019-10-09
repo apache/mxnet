@@ -172,6 +172,7 @@ void *AlignMem(void *mem, size_t size, size_t alignment, size_t *space);
 
 namespace op {
 struct ActivationParam;
+struct LeakyReLUParam;
 struct ConvolutionParam;
 struct DeconvolutionParam;
 struct SoftmaxParam;
@@ -180,6 +181,8 @@ struct TransposeParam;
 struct ReshapeParam;
 bool SupportMKLDNNAct(const ActivationParam& param);
 bool SupportMKLDNNAct(const ActivationParam& param, const NDArray &input);
+bool SupportMKLDNNLeakyRelu(const LeakyReLUParam& param);
+bool SupportMKLDNNLeakyRelu(const LeakyReLUParam& param, const NDArray &input);
 bool SupportQuantizedMKLDNNAct(const ActivationParam &param);
 bool SupportMKLDNNConv(const ConvolutionParam &params, const NDArray &input);
 bool SupportMKLDNNDeconv(const DeconvolutionParam& params, const NDArray &input);
@@ -305,19 +308,6 @@ inline static bool CheckMKLDNNInputArrayIsView(const std::vector<NDArray> &input
     }
   }
   return false;
-}
-
-inline static const std::vector<NDArray> GetMKLDNNInputArray(const std::vector<NDArray> &inputs) {
-  std::vector<NDArray> ret;
-  ret.reserve(inputs.size());
-  for (const auto &in : inputs) {
-    if (in.IsView() && in.IsMKLDNNData()) {
-      ret.push_back(in.Reorder2Default());
-    } else {
-      ret.push_back(in);
-    }
-  }
-  return ret;
 }
 
 typedef std::shared_ptr<mkldnn::memory> mkldnn_mem_ptr;
@@ -673,6 +663,13 @@ struct MKLDNNPostEltwiseParam {
   float alpha = 0.f;
   float beta = 1.f;
 };
+
+void MKLDNNRun(mxnet::FComputeEx fn,
+               const nnvm::NodeAttrs &attrs,
+               const mxnet::OpContext &ctx,
+               const std::vector<mxnet::NDArray> &inputs_,
+               const std::vector<mxnet::OpReqType> &req,
+               const std::vector<mxnet::NDArray> &outputs_);
 
 }  // namespace mxnet
 #endif

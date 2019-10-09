@@ -1,3 +1,10 @@
+---
+layout: page_api
+title: NDArray
+is_tutorial: true
+tag: r
+permalink: /api/r/docs/tutorials/symbol
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,13 +21,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: NDArray
-is_tutorial: true
-tag: r
-permalink: /api/r/docs/tutorials/symbol
----
 
 # Symbol and Automatic Differentiation
 
@@ -147,8 +147,8 @@ be more memory efficient than CXXNet and gets to the same runtime with
 greater flexibility.
 
 ## Next Steps
-* [Write and use callback functions](http://mxnet.io/tutorials/r/CallbackFunction.html)
-* [Neural Networks with MXNet in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
-* [Classify Real-World Images with Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
-* [Handwritten Digits Classification Competition](http://mxnet.io/tutorials/r/mnistCompetition.html)
-* [Character Language Model using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)
+* [Write and use callback functions](https://mxnet.io/tutorials/r/CallbackFunction.html)
+* [Neural Networks with MXNet in Five Minutes](https://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
+* [Classify Real-World Images with Pre-trained Model](https://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
+* [Handwritten Digits Classification Competition](https://mxnet.io/tutorials/r/mnistCompetition.html)
+* [Character Language Model using RNN](https://mxnet.io/tutorials/r/charRnnModel.html)

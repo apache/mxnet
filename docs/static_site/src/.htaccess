@@ -22,3 +22,7 @@ RewriteCond %{REQUEST_URI} !\/$
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteCond %{REQUEST_FILENAME}/index.html -f
 RewriteRule ^(.*) $1/index.html [NC,L]
+
+
+# 404
+ErrorDocument 404 /404.html

@@ -50,7 +50,7 @@ inline void LogLazyUpdate() {
   common::LogOnce("Optimizer with lazy_update = True detected. "
                   "Be aware that lazy update with row_sparse gradient is different from "
                   "standard update, and may lead to different empirical results. See "
-                  "https://mxnet.incubator.apache.org/api/python/optimization/optimization.html "
+                  "https://mxnet.apache.org/api/python/optimization/optimization.html "
                   "for more details.");
 }
 

@@ -570,6 +570,33 @@ bool MKLDNNStorageType(const nnvm::NodeAttrs &attrs,
   return dispatched;
 }
 
+inline static const std::vector<NDArray> GetMKLDNNInputArray(const std::vector<NDArray> &inputs) {
+  std::vector<NDArray> ret;
+  ret.reserve(inputs.size());
+  for (const auto &in : inputs) {
+    if (in.IsView() && in.IsMKLDNNData()) {
+      ret.push_back(in.Reorder2Default());
+    } else {
+      ret.push_back(in);
+    }
+  }
+  return ret;
+}
+
+void MKLDNNRun(mxnet::FComputeEx fn,
+               const nnvm::NodeAttrs &attrs,
+               const mxnet::OpContext &ctx,
+               const std::vector<mxnet::NDArray> &inputs,
+               const std::vector<mxnet::OpReqType> &req,
+               const std::vector<mxnet::NDArray> &outputs) {
+  if (CheckMKLDNNInputArrayIsView(inputs)) {
+    const auto mkldnn_inputs = GetMKLDNNInputArray(inputs);
+    fn(attrs, ctx, mkldnn_inputs, req, outputs);
+  } else {
+    fn(attrs, ctx, inputs, req, outputs);
+  }
+}
+
 }  // namespace mxnet
 
 #endif

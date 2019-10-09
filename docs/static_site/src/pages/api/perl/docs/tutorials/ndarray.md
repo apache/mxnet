@@ -1,3 +1,10 @@
+---
+layout: page_api
+title: NDArray API
+is_tutorial: true
+tag: perl
+permalink: /api/perl/docs/tutorials/ndarray
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,13 +21,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: NDArray API
-is_tutorial: true
-tag: perl
-permalink: /api/perl/docs/tutorials/ndarray
----
 
 # NDArray API
 
@@ -45,7 +45,7 @@ pdl> print $z,"\n"
 ```
 
 A detailed tutorial is available at
-[http://mxnet.io/tutorials/basic/ndarray.html](http://mxnet.io/tutorials/basic/ndarray.html).
+[https://mxnet.io/tutorials/basic/ndarray.html](https://mxnet.io/tutorials/basic/ndarray.html).
 
 Note: AI::MXNet::NDarray is similar to numpy.ndarray in some aspects. But the difference is not negligible. For example
 

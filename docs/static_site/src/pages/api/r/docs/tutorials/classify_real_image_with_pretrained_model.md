@@ -1,3 +1,10 @@
+---
+layout: page_api
+title: Classify Images with a PreTrained Model
+is_tutorial: true
+tag: r
+permalink: /api/r/docs/tutorials/classify_real_image_with_pretrained_model
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,13 +21,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: Classify Images with a PreTrained Model
-is_tutorial: true
-tag: r
-permalink: /api/r/docs/tutorials/classify_real_image_with_pretrained_model
----
 
 Classify Images with a PreTrained Model
 =================================================
@@ -30,7 +30,7 @@ algorithm can do is classify real world images.
 In this tutorial, we show how to use a pre-trained Inception-BatchNorm network to predict the class of an
 image. For information about the network architecture, see  [1].
 
-The pre-trained Inception-BatchNorm network is able to be downloaded from [this link](http://data.mxnet.io/mxnet/data/Inception.zip)
+The pre-trained Inception-BatchNorm network is able to be downloaded from [this link](https://data.mxnet.io/mxnet/data/Inception.zip)
 This model gives the recent state-of-art prediction accuracy on image net dataset.
 
 Load the MXNet Package
@@ -204,5 +204,5 @@ Reference
 [1] Ioffe, Sergey, and Christian Szegedy. "Batch normalization: Accelerating deep network training by reducing internal covariate shift." arXiv preprint arXiv:1502.03167 (2015).
 
 ## Next Steps
-* [Handwritten Digits Classification Competition](http://mxnet.io/tutorials/r/mnistCompetition.html)
-* [Character Language Model using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)
+* [Handwritten Digits Classification Competition](https://mxnet.io/tutorials/r/mnistCompetition.html)
+* [Character Language Model using RNN](https://mxnet.io/tutorials/r/charRnnModel.html)

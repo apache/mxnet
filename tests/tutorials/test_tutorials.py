@@ -38,6 +38,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'utils'))
 from notebook_test import run_notebook
 
+# This is outdated and need to be completely redone.
 
 TUTORIAL_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'docs', '_build', 'html', 'tutorials')
 KERNEL = os.getenv('MXNET_TUTORIAL_TEST_KERNEL', None)

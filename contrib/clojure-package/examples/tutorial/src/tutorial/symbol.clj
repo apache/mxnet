@@ -17,7 +17,7 @@
 
 (ns tutorial.symbol
   "A REPL tutorial of the MXNet Clojure Symbolic API, based on
-  https://mxnet.incubator.apache.org/api/clojure/symbol.html"
+  https://mxnet.apache.org/api/clojure/symbol.html"
   (:require [org.apache.clojure-mxnet.executor :as executor]
             [org.apache.clojure-mxnet.ndarray :as ndarray]
             [org.apache.clojure-mxnet.symbol :as sym]
