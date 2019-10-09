@@ -26,7 +26,6 @@
 #define MXNET_OPERATOR_TENSOR_LA_OP_H_
 
 #include <mxnet/operator_util.h>
-#include <mxnet/imperative.h>
 #include <vector>
 #include <algorithm>
 #include "../mshadow_op.h"
@@ -429,11 +428,7 @@ inline bool DetShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in[ndim-2], in[ndim-1]) << "Input A's last two dimension must be equal";
   mxnet::TShape out;
   if (ndim == 2) {
-    if (Imperative::Get()->is_np_shape()) {
-      out = mxnet::TShape(0, 1);
-    } else {
-      out = mxnet::TShape(1, 1);
-    }
+    out = mxnet::TShape(1, 1);
   } else {
     out = mxnet::TShape(in.begin(), in.end() - 2);
   }
