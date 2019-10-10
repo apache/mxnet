@@ -49,6 +49,7 @@ def test_sparse_nd_elemwise_add():
         test = f(nds[0], nds[1])
         assert_almost_equal(test.asnumpy(), g(nds[0].asnumpy(), nds[1].asnumpy()))
 
+    os.environ['MXNET_ENGINE_TYPE'] = 'NaiveEngine'
     num_repeats = 1
     g = lambda x,y: x + y
     op = mx.nd.elemwise_add
