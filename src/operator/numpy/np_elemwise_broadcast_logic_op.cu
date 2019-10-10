@@ -28,7 +28,7 @@
 namespace mxnet {
 namespace op {
 
-#if MXNET_USE_TVM_OP == 0
+#if !defined(MXNET_USE_TVM_OP) || MXNET_USE_TVM_OP != 1
 
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(name)                                     \
   NNVM_REGISTER_OP(_npi_##name)                                                               \
