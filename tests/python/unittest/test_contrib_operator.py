@@ -333,6 +333,24 @@ def test_multibox_prior_op():
     boxes = Y.reshape((h, w, 5, 4))
     assert_allclose(boxes.asnumpy()[250, 250, 0, :], np.array([-0.948249,  0.362671,  1.636436,  0.530377]), atol=1e-5, rtol=1e-5)
 
+def test_box_encode_op():
+    anchors = mx.nd.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]).reshape((1, -1, 4))
+    refs = mx.nd.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]).reshape((1, -1, 4))
+    samples = mx.nd.array([[0, 1]])
+    matches = mx.nd.array([[0, 1]])
+    means = mx.nd.array([0.0, 0.0, 0.0, 0.0])
+    stds = mx.nd.array([0.1, 0.1, 0.2, 0.2])
+    Y, mask = mx.nd.contrib.box_encode(samples, matches, anchors, refs, means, stds)
+    assert_allclose(Y.asnumpy(), np.zeros((1, 2, 4)), atol=1e-5, rtol=1e-5)
+    assert_allclose(mask.asnumpy(), np.array([[[0., 0., 0., 0.], [1., 1., 1., 1.]]]), atol=1e-5, rtol=1e-5)
+
+def test_box_decode_op():
+    data = mx.nd.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]).reshape((1, -1, 4))
+    anchors = mx.nd.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]).reshape((1, -1, 4))
+    Y = mx.nd.contrib.box_decode(data, anchors, .1, .1, .2, .2)
+    assert_allclose(Y.asnumpy(), np.array([[[-0.0562755, -0.00865743, 0.26227552, 0.42465743], \
+        [0.13240421, 0.17859563, 0.93759584, 1.1174043 ]]]), atol=1e-5, rtol=1e-5)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
