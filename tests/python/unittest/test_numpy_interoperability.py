@@ -57,8 +57,12 @@ def _prepare_workloads():
     OpArgMngr.add_workload('concatenate', [array_pool['4x1'], array_pool['4x1']])
     OpArgMngr.add_workload('concatenate', [array_pool['4x1'], array_pool['4x1']], axis=1)
     OpArgMngr.add_workload('copy', array_pool['4x1'])
-    OpArgMngr.add_workload('cumsum', array_pool['4x1'])
-    OpArgMngr.add_workload('cumsum', array_pool['4x1'], axis=1)
+    
+    for ctype in [np.int8, np.int32, np.int64, np.uint8, np.float32, np.float64]:
+        OpArgMngr.add_workload('cumsum', np.array([1, 2, 10, 11, 6, 5, 4], dtype=ctype))
+        OpArgMngr.add_workload('cumsum', np.array([[1, 2, 3, 4], [5, 6, 7, 9], [10, 3, 4, 5]], dtype=ctype), axis=0)
+        OpArgMngr.add_workload('cumsum', np.array([[1, 2, 3, 4], [5, 6, 7, 9], [10, 3, 4, 5]], dtype=ctype), axis=1)
+
     OpArgMngr.add_workload('dot', array_pool['4x1'], array_pool['4x1'].T)
     OpArgMngr.add_workload('expand_dims', array_pool['4x1'], -1)
     OpArgMngr.add_workload('fix', array_pool['4x1'])
