@@ -118,6 +118,9 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'unique',
     'var',
     'zeros_like',
+    'linalg.norm',
+    'trace',
+    'tril',
     'meshgrid',
     'outer',
     'einsum'
