@@ -1342,6 +1342,8 @@ def test_np_unary_funcs():
                 y = mx_func(mx_test_data)
             assert y.shape == np_out.shape
             assert_almost_equal(y.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+            if np_out.dtype == np.bool_:
+                assert y.dtype == np.bool_
 
             if ref_grad:
                 y.backward()

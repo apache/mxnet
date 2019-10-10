@@ -252,6 +252,23 @@ class UnaryOp : public OpBase {
   }
 
   template<typename xpu, typename OP>
+  static void ComputeLogic(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx,
+                           const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs) {
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+        if (inputs[0].Size() != 0) {
+          mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
+              s, inputs[0].Size(), outputs[0].dptr<bool>(), inputs[0].dptr<DType>());
+        }
+      });
+    });
+  }
+
+  template<typename xpu, typename OP>
   static void ComputeEx(const nnvm::NodeAttrs& attrs,
                         const OpContext& ctx,
                         const std::vector<NDArray>& inputs,

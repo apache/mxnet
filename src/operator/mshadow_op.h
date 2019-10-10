@@ -73,6 +73,14 @@ using std::is_integral;
     } \
   }
 
+#define MXNET_UNARY_LOGIC_OP_NC(name, expr) \
+  struct name : public mxnet_op::tunable { \
+    template<typename DType> \
+    MSHADOW_XINLINE static bool Map(DType a) { \
+      return (expr); \
+    } \
+  }
+
 #define MXNET_BINARY_MATH_OP(name, expr) \
   struct name : public mxnet_op::tunable { \
     template<typename DType> \
@@ -342,6 +350,8 @@ MXNET_BINARY_MATH_OP(rarctan2, math::atan2(b, a));
 MXNET_BINARY_MATH_OP(rarctan2_grad, math::id(a) / (math::id(a * a + b * b)));
 
 MXNET_UNARY_MATH_OP_NC(nt, a != DType(0) ? DType(0) : DType(1));
+
+MXNET_UNARY_LOGIC_OP_NC(np_logical_not, !static_cast<bool>(a));
 
 MXNET_BINARY_MATH_OP_NC(ge, a >= b ? DType(1) : DType(0));
 
