@@ -1605,7 +1605,7 @@ def docs_prepare() {
 
 
 def docs_prepare_beta() {
-    return ['Prepare for publication of the full website': {
+    return ['Prepare for publication to the staging website': {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
@@ -1614,7 +1614,7 @@ def docs_prepare_beta() {
             unstash 'jekyll-artifacts'
             unstash 'python-artifacts'
 
-            utils.docker_run('ubuntu_cpu_jekyll', 'build_docs', false)
+            utils.docker_run('ubuntu_cpu_jekyll', 'build_docs_beta', false)
 
             // archive so the publish pipeline can access the artifact
             archiveArtifacts 'docs/_build/beta_website.tgz'
@@ -1662,7 +1662,7 @@ def docs_publish() {
 
 // This is for the beta website
 def docs_publish_beta() {
-    return ['Publish the full website': {
+    return ['Publish the beta website to staging': {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
