@@ -28,11 +28,20 @@
 namespace mxnet {
 namespace op {
 
-#if !defined(MXNET_USE_TVM_OP) || MXNET_USE_TVM_OP != 1
+
+#if MXNET_USE_TVM_OP
+#pragma message("In np_elemwise_broadcast_logic_op.cu, MXNET_USE_TVM_OP = " STRINGIFY(MXNET_USE_TVM_OP))
+
+#else
+#pragma message("In np_elemwise_broadcast_logic_op.cu, MXNET_USE_TVM_OP = " STRINGIFY(MXNET_USE_TVM_OP))
 
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(name)                                     \
   NNVM_REGISTER_OP(_npi_##name)                                                               \
   .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastComputeLogic<gpu, mshadow_op::np_##name>)
+
+#define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(name)                               \
+  NNVM_REGISTER_OP(_npi_##name##_scalar)                                                       \
+  .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::ComputeLogic<gpu, mshadow_op::np_##name>)
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(equal);
 MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(not_equal);
@@ -40,10 +49,6 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(greater);
 MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(less);
 MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(greater_equal);
 MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(less_equal);
-
-#define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(name)                               \
-  NNVM_REGISTER_OP(_npi_##name##_scalar)                                                       \
-  .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::ComputeLogic<gpu, mshadow_op::np_##name>)
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(equal);
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(not_equal);

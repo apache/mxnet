@@ -131,12 +131,20 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC(less);
 MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC(greater_equal);
 MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC(less_equal);
 
+#define STRINGIFY(s) XSTRINGIFY(s)
+#define XSTRINGIFY(s) #s
+
 #if MXNET_USE_TVM_OP
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_CPU(name)                          \
   NNVM_REGISTER_OP(_npi_##name)                                                    \
   .set_attr<FCompute>("FCompute<cpu>", TVMBinaryBroadcastCompute{func_##name##_cpu})
 
+#pragma message("In np_elemwise_broadcast_logic_op.cc, MXNET_USE_TVM_OP = " STRINGIFY(MXNET_USE_TVM_OP))
+
 #if MXNET_USE_CUDA
+
+#pragma message("In np_elemwise_broadcast_logic_op.cc, MXNET_USE_CUDA = " STRINGIFY(MXNET_USE_CUDA))
+
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(name)                          \
   NNVM_REGISTER_OP(_npi_##name)                                                    \
   .set_attr<FCompute>("FCompute<gpu>", TVMBinaryBroadcastCompute{func_##name##_gpu})
@@ -151,6 +159,9 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(less_equal);
 #endif  // MXNET_USE_CUDA
 
 #else
+
+#pragma message("In np_elemwise_broadcast_logic_op.cc, MXNET_USE_TVM_OP = " STRINGIFY(MXNET_USE_TVM_OP))
+#pragma message("In np_elemwise_broadcast_logic_op.cc, MXNET_USE_CUDA = " STRINGIFY(MXNET_USE_CUDA))
 
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_CPU(name)                                     \
   NNVM_REGISTER_OP(_npi_##name)                                                               \
@@ -259,11 +270,13 @@ static constexpr char func_less_equal_scalar_cpu[] = "less_equal_scalar_cpu";
 static constexpr char func_less_equal_scalar_gpu[] = "less_equal_scalar_gpu";
 
 #if MXNET_USE_TVM_OP
+
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_CPU(name)                                \
   NNVM_REGISTER_OP(_npi_##name##_scalar)                                                        \
   .set_attr<FCompute>("FCompute<cpu>", TVMBinaryBroadcastScalarCompute{func_##name##_scalar_cpu})
 
 #if MXNET_USE_CUDA
+
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(name)                                \
   NNVM_REGISTER_OP(_npi_##name##_scalar)                                                        \
   .set_attr<FCompute>("FCompute<gpu>", TVMBinaryBroadcastScalarCompute{func_##name##_scalar_gpu})
