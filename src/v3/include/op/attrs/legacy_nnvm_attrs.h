@@ -47,13 +47,15 @@ using LegacyNpiDeg2radAttrs = ir::Attrs;
 // _npi_rad2deg
 using LegacyNpiRad2degAttrs = ir::Attrs;
 // IdentityAttachKLSparseReg
-class LegacyIdentityAttachKLSparseRegAttrs : public ir::AttrsNode<LegacyIdentityAttachKLSparseRegAttrs> {
+class LegacyIdentityAttachKLSparseRegAttrs
+    : public ir::AttrsNode<LegacyIdentityAttachKLSparseRegAttrs> {
  public:
   double sparseness_target;
   double penalty;
   double momentum;
 
-  MX_V3_DECLARE_ATTRS(LegacyIdentityAttachKLSparseRegAttrs, "mxnet.v3.attrs.LegacyIdentityAttachKLSparseRegAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacyIdentityAttachKLSparseRegAttrs,
+                      "mxnet.v3.attrs.LegacyIdentityAttachKLSparseRegAttrs") {
     MX_V3_ATTR_FIELD(sparseness_target);
     MX_V3_ATTR_FIELD(penalty);
     MX_V3_ATTR_FIELD(momentum);
@@ -349,11 +351,13 @@ class LegacySoftminAttrs : public ir::AttrsNode<LegacySoftminAttrs> {
 // _np__linalg_svd
 using LegacyNpLinalgSvdAttrs = ir::Attrs;
 // _npi_boolean_mask_assign_scalar
-class LegacyNpiBooleanMaskAssignScalarAttrs : public ir::AttrsNode<LegacyNpiBooleanMaskAssignScalarAttrs> {
+class LegacyNpiBooleanMaskAssignScalarAttrs
+    : public ir::AttrsNode<LegacyNpiBooleanMaskAssignScalarAttrs> {
  public:
   double value;
 
-  MX_V3_DECLARE_ATTRS(LegacyNpiBooleanMaskAssignScalarAttrs, "mxnet.v3.attrs.LegacyNpiBooleanMaskAssignScalarAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacyNpiBooleanMaskAssignScalarAttrs,
+                      "mxnet.v3.attrs.LegacyNpiBooleanMaskAssignScalarAttrs") {
     MX_V3_ATTR_FIELD(value);
   }
 };
@@ -530,7 +534,8 @@ class LegacyNpiRsubtractScalarAttrs : public ir::AttrsNode<LegacyNpiRsubtractSca
  public:
   double scalar;
 
-  MX_V3_DECLARE_ATTRS(LegacyNpiRsubtractScalarAttrs, "mxnet.v3.attrs.LegacyNpiRsubtractScalarAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacyNpiRsubtractScalarAttrs,
+                      "mxnet.v3.attrs.LegacyNpiRsubtractScalarAttrs") {
     MX_V3_ATTR_FIELD(scalar);
   }
 };
@@ -593,7 +598,8 @@ class LegacyNpiRcopysignScalarAttrs : public ir::AttrsNode<LegacyNpiRcopysignSca
  public:
   double scalar;
 
-  MX_V3_DECLARE_ATTRS(LegacyNpiRcopysignScalarAttrs, "mxnet.v3.attrs.LegacyNpiRcopysignScalarAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacyNpiRcopysignScalarAttrs,
+                      "mxnet.v3.attrs.LegacyNpiRcopysignScalarAttrs") {
     MX_V3_ATTR_FIELD(scalar);
   }
 };
@@ -873,7 +879,8 @@ class LegacyNpiTensordotIntAxesAttrs : public ir::AttrsNode<LegacyNpiTensordotIn
  public:
   int axes;
 
-  MX_V3_DECLARE_ATTRS(LegacyNpiTensordotIntAxesAttrs, "mxnet.v3.attrs.LegacyNpiTensordotIntAxesAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacyNpiTensordotIntAxesAttrs,
+                      "mxnet.v3.attrs.LegacyNpiTensordotIntAxesAttrs") {
     MX_V3_ATTR_FIELD(axes);
   }
 };
@@ -906,7 +913,8 @@ class LegacyNpiTrueDivideScalarAttrs : public ir::AttrsNode<LegacyNpiTrueDivideS
  public:
   double scalar;
 
-  MX_V3_DECLARE_ATTRS(LegacyNpiTrueDivideScalarAttrs, "mxnet.v3.attrs.LegacyNpiTrueDivideScalarAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacyNpiTrueDivideScalarAttrs,
+                      "mxnet.v3.attrs.LegacyNpiTrueDivideScalarAttrs") {
     MX_V3_ATTR_FIELD(scalar);
   }
 };
@@ -915,7 +923,8 @@ class LegacyNpiRtrueDivideScalarAttrs : public ir::AttrsNode<LegacyNpiRtrueDivid
  public:
   double scalar;
 
-  MX_V3_DECLARE_ATTRS(LegacyNpiRtrueDivideScalarAttrs, "mxnet.v3.attrs.LegacyNpiRtrueDivideScalarAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacyNpiRtrueDivideScalarAttrs,
+                      "mxnet.v3.attrs.LegacyNpiRtrueDivideScalarAttrs") {
     MX_V3_ATTR_FIELD(scalar);
   }
 };
@@ -1083,18 +1092,21 @@ class LegacySampleNegativeBinomialAttrs : public ir::AttrsNode<LegacySampleNegat
   ir::Array<ir::Integer> shape;
   std::string dtype;
 
-  MX_V3_DECLARE_ATTRS(LegacySampleNegativeBinomialAttrs, "mxnet.v3.attrs.LegacySampleNegativeBinomialAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacySampleNegativeBinomialAttrs,
+                      "mxnet.v3.attrs.LegacySampleNegativeBinomialAttrs") {
     MX_V3_ATTR_FIELD(shape);
     MX_V3_ATTR_FIELD(dtype);
   }
 };
 // _sample_generalized_negative_binomial
-class LegacySampleGeneralizedNegativeBinomialAttrs : public ir::AttrsNode<LegacySampleGeneralizedNegativeBinomialAttrs> {
+class LegacySampleGeneralizedNegativeBinomialAttrs
+    : public ir::AttrsNode<LegacySampleGeneralizedNegativeBinomialAttrs> {
  public:
   ir::Array<ir::Integer> shape;
   std::string dtype;
 
-  MX_V3_DECLARE_ATTRS(LegacySampleGeneralizedNegativeBinomialAttrs, "mxnet.v3.attrs.LegacySampleGeneralizedNegativeBinomialAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacySampleGeneralizedNegativeBinomialAttrs,
+                      "mxnet.v3.attrs.LegacySampleGeneralizedNegativeBinomialAttrs") {
     MX_V3_ATTR_FIELD(shape);
     MX_V3_ATTR_FIELD(dtype);
   }
@@ -1131,7 +1143,8 @@ class LegacyRandomPdfExponentialAttrs : public ir::AttrsNode<LegacyRandomPdfExpo
  public:
   bool is_log;
 
-  MX_V3_DECLARE_ATTRS(LegacyRandomPdfExponentialAttrs, "mxnet.v3.attrs.LegacyRandomPdfExponentialAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacyRandomPdfExponentialAttrs,
+                      "mxnet.v3.attrs.LegacyRandomPdfExponentialAttrs") {
     MX_V3_ATTR_FIELD(is_log);
   }
 };
@@ -1145,20 +1158,24 @@ class LegacyRandomPdfPoissonAttrs : public ir::AttrsNode<LegacyRandomPdfPoissonA
   }
 };
 // _random_pdf_negative_binomial
-class LegacyRandomPdfNegativeBinomialAttrs : public ir::AttrsNode<LegacyRandomPdfNegativeBinomialAttrs> {
+class LegacyRandomPdfNegativeBinomialAttrs
+    : public ir::AttrsNode<LegacyRandomPdfNegativeBinomialAttrs> {
  public:
   bool is_log;
 
-  MX_V3_DECLARE_ATTRS(LegacyRandomPdfNegativeBinomialAttrs, "mxnet.v3.attrs.LegacyRandomPdfNegativeBinomialAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacyRandomPdfNegativeBinomialAttrs,
+                      "mxnet.v3.attrs.LegacyRandomPdfNegativeBinomialAttrs") {
     MX_V3_ATTR_FIELD(is_log);
   }
 };
 // _random_pdf_generalized_negative_binomial
-class LegacyRandomPdfGeneralizedNegativeBinomialAttrs : public ir::AttrsNode<LegacyRandomPdfGeneralizedNegativeBinomialAttrs> {
+class LegacyRandomPdfGeneralizedNegativeBinomialAttrs
+    : public ir::AttrsNode<LegacyRandomPdfGeneralizedNegativeBinomialAttrs> {
  public:
   bool is_log;
 
-  MX_V3_DECLARE_ATTRS(LegacyRandomPdfGeneralizedNegativeBinomialAttrs, "mxnet.v3.attrs.LegacyRandomPdfGeneralizedNegativeBinomialAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacyRandomPdfGeneralizedNegativeBinomialAttrs,
+                      "mxnet.v3.attrs.LegacyRandomPdfGeneralizedNegativeBinomialAttrs") {
     MX_V3_ATTR_FIELD(is_log);
   }
 };
@@ -1167,7 +1184,8 @@ class LegacyRandomPdfDirichletAttrs : public ir::AttrsNode<LegacyRandomPdfDirich
  public:
   bool is_log;
 
-  MX_V3_DECLARE_ATTRS(LegacyRandomPdfDirichletAttrs, "mxnet.v3.attrs.LegacyRandomPdfDirichletAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacyRandomPdfDirichletAttrs,
+                      "mxnet.v3.attrs.LegacyRandomPdfDirichletAttrs") {
     MX_V3_ATTR_FIELD(is_log);
   }
 };
@@ -1274,7 +1292,8 @@ class LegacyRandomNegativeBinomialAttrs : public ir::AttrsNode<LegacyRandomNegat
   std::string ctx;
   std::string dtype;
 
-  MX_V3_DECLARE_ATTRS(LegacyRandomNegativeBinomialAttrs, "mxnet.v3.attrs.LegacyRandomNegativeBinomialAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacyRandomNegativeBinomialAttrs,
+                      "mxnet.v3.attrs.LegacyRandomNegativeBinomialAttrs") {
     MX_V3_ATTR_FIELD(k);
     MX_V3_ATTR_FIELD(p);
     MX_V3_ATTR_FIELD(shape);
@@ -1283,7 +1302,8 @@ class LegacyRandomNegativeBinomialAttrs : public ir::AttrsNode<LegacyRandomNegat
   }
 };
 // _random_generalized_negative_binomial
-class LegacyRandomGeneralizedNegativeBinomialAttrs : public ir::AttrsNode<LegacyRandomGeneralizedNegativeBinomialAttrs> {
+class LegacyRandomGeneralizedNegativeBinomialAttrs
+    : public ir::AttrsNode<LegacyRandomGeneralizedNegativeBinomialAttrs> {
  public:
   double mu;
   double alpha;
@@ -1291,7 +1311,8 @@ class LegacyRandomGeneralizedNegativeBinomialAttrs : public ir::AttrsNode<Legacy
   std::string ctx;
   std::string dtype;
 
-  MX_V3_DECLARE_ATTRS(LegacyRandomGeneralizedNegativeBinomialAttrs, "mxnet.v3.attrs.LegacyRandomGeneralizedNegativeBinomialAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacyRandomGeneralizedNegativeBinomialAttrs,
+                      "mxnet.v3.attrs.LegacyRandomGeneralizedNegativeBinomialAttrs") {
     MX_V3_ATTR_FIELD(mu);
     MX_V3_ATTR_FIELD(alpha);
     MX_V3_ATTR_FIELD(shape);
@@ -1354,7 +1375,8 @@ class LegacyRandomExponentialLikeAttrs : public ir::AttrsNode<LegacyRandomExpone
  public:
   double lam;
 
-  MX_V3_DECLARE_ATTRS(LegacyRandomExponentialLikeAttrs, "mxnet.v3.attrs.LegacyRandomExponentialLikeAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacyRandomExponentialLikeAttrs,
+                      "mxnet.v3.attrs.LegacyRandomExponentialLikeAttrs") {
     MX_V3_ATTR_FIELD(lam);
   }
 };
@@ -1368,23 +1390,27 @@ class LegacyRandomPoissonLikeAttrs : public ir::AttrsNode<LegacyRandomPoissonLik
   }
 };
 // _random_negative_binomial_like
-class LegacyRandomNegativeBinomialLikeAttrs : public ir::AttrsNode<LegacyRandomNegativeBinomialLikeAttrs> {
+class LegacyRandomNegativeBinomialLikeAttrs
+    : public ir::AttrsNode<LegacyRandomNegativeBinomialLikeAttrs> {
  public:
   int k;
   double p;
 
-  MX_V3_DECLARE_ATTRS(LegacyRandomNegativeBinomialLikeAttrs, "mxnet.v3.attrs.LegacyRandomNegativeBinomialLikeAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacyRandomNegativeBinomialLikeAttrs,
+                      "mxnet.v3.attrs.LegacyRandomNegativeBinomialLikeAttrs") {
     MX_V3_ATTR_FIELD(k);
     MX_V3_ATTR_FIELD(p);
   }
 };
 // _random_generalized_negative_binomial_like
-class LegacyRandomGeneralizedNegativeBinomialLikeAttrs : public ir::AttrsNode<LegacyRandomGeneralizedNegativeBinomialLikeAttrs> {
+class LegacyRandomGeneralizedNegativeBinomialLikeAttrs
+    : public ir::AttrsNode<LegacyRandomGeneralizedNegativeBinomialLikeAttrs> {
  public:
   double mu;
   double alpha;
 
-  MX_V3_DECLARE_ATTRS(LegacyRandomGeneralizedNegativeBinomialLikeAttrs, "mxnet.v3.attrs.LegacyRandomGeneralizedNegativeBinomialLikeAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacyRandomGeneralizedNegativeBinomialLikeAttrs,
+                      "mxnet.v3.attrs.LegacyRandomGeneralizedNegativeBinomialLikeAttrs") {
     MX_V3_ATTR_FIELD(mu);
     MX_V3_ATTR_FIELD(alpha);
   }
@@ -1397,7 +1423,8 @@ class LegacySampleUniqueZipfianAttrs : public ir::AttrsNode<LegacySampleUniqueZi
   int range_max;
   ir::Array<ir::Integer> shape;
 
-  MX_V3_DECLARE_ATTRS(LegacySampleUniqueZipfianAttrs, "mxnet.v3.attrs.LegacySampleUniqueZipfianAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacySampleUniqueZipfianAttrs,
+                      "mxnet.v3.attrs.LegacySampleUniqueZipfianAttrs") {
     MX_V3_ATTR_FIELD(range_max);
     MX_V3_ATTR_FIELD(shape);
   }
@@ -1407,7 +1434,8 @@ class LegacyLinearRegressionOutputAttrs : public ir::AttrsNode<LegacyLinearRegre
  public:
   double grad_scale;
 
-  MX_V3_DECLARE_ATTRS(LegacyLinearRegressionOutputAttrs, "mxnet.v3.attrs.LegacyLinearRegressionOutputAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacyLinearRegressionOutputAttrs,
+                      "mxnet.v3.attrs.LegacyLinearRegressionOutputAttrs") {
     MX_V3_ATTR_FIELD(grad_scale);
   }
 };
@@ -1416,16 +1444,19 @@ class LegacyMAERegressionOutputAttrs : public ir::AttrsNode<LegacyMAERegressionO
  public:
   double grad_scale;
 
-  MX_V3_DECLARE_ATTRS(LegacyMAERegressionOutputAttrs, "mxnet.v3.attrs.LegacyMAERegressionOutputAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacyMAERegressionOutputAttrs,
+                      "mxnet.v3.attrs.LegacyMAERegressionOutputAttrs") {
     MX_V3_ATTR_FIELD(grad_scale);
   }
 };
 // LogisticRegressionOutput
-class LegacyLogisticRegressionOutputAttrs : public ir::AttrsNode<LegacyLogisticRegressionOutputAttrs> {
+class LegacyLogisticRegressionOutputAttrs
+    : public ir::AttrsNode<LegacyLogisticRegressionOutputAttrs> {
  public:
   double grad_scale;
 
-  MX_V3_DECLARE_ATTRS(LegacyLogisticRegressionOutputAttrs, "mxnet.v3.attrs.LegacyLogisticRegressionOutputAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacyLogisticRegressionOutputAttrs,
+                      "mxnet.v3.attrs.LegacyLogisticRegressionOutputAttrs") {
     MX_V3_ATTR_FIELD(grad_scale);
   }
 };
@@ -1980,7 +2011,8 @@ class LegacyGreaterEqualScalarAttrs : public ir::AttrsNode<LegacyGreaterEqualSca
  public:
   double scalar;
 
-  MX_V3_DECLARE_ATTRS(LegacyGreaterEqualScalarAttrs, "mxnet.v3.attrs.LegacyGreaterEqualScalarAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacyGreaterEqualScalarAttrs,
+                      "mxnet.v3.attrs.LegacyGreaterEqualScalarAttrs") {
     MX_V3_ATTR_FIELD(scalar);
   }
 };
@@ -2045,7 +2077,8 @@ class LegacyScatterMinusScalarAttrs : public ir::AttrsNode<LegacyScatterMinusSca
  public:
   double scalar;
 
-  MX_V3_DECLARE_ATTRS(LegacyScatterMinusScalarAttrs, "mxnet.v3.attrs.LegacyScatterMinusScalarAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacyScatterMinusScalarAttrs,
+                      "mxnet.v3.attrs.LegacyScatterMinusScalarAttrs") {
     MX_V3_ATTR_FIELD(scalar);
   }
 };
@@ -2452,7 +2485,8 @@ class LegacyLinalgExtracttrianAttrs : public ir::AttrsNode<LegacyLinalgExtracttr
   int offset;
   bool lower;
 
-  MX_V3_DECLARE_ATTRS(LegacyLinalgExtracttrianAttrs, "mxnet.v3.attrs.LegacyLinalgExtracttrianAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacyLinalgExtracttrianAttrs,
+                      "mxnet.v3.attrs.LegacyLinalgExtracttrianAttrs") {
     MX_V3_ATTR_FIELD(offset);
     MX_V3_ATTR_FIELD(lower);
   }
@@ -2612,9 +2646,7 @@ class LegacyTileAttrs : public ir::AttrsNode<LegacyTileAttrs> {
  public:
   ir::Array<ir::Integer> reps;
 
-  MX_V3_DECLARE_ATTRS(LegacyTileAttrs, "mxnet.v3.attrs.LegacyTileAttrs") {
-    MX_V3_ATTR_FIELD(reps);
-  }
+  MX_V3_DECLARE_ATTRS(LegacyTileAttrs, "mxnet.v3.attrs.LegacyTileAttrs") { MX_V3_ATTR_FIELD(reps); }
 };
 // reverse
 class LegacyReverseAttrs : public ir::AttrsNode<LegacyReverseAttrs> {
@@ -2802,7 +2834,8 @@ class LegacySpatialTransformerAttrs : public ir::AttrsNode<LegacySpatialTransfor
   std::string sampler_type;
   bool cudnn_off;
 
-  MX_V3_DECLARE_ATTRS(LegacySpatialTransformerAttrs, "mxnet.v3.attrs.LegacySpatialTransformerAttrs") {
+  MX_V3_DECLARE_ATTRS(LegacySpatialTransformerAttrs,
+                      "mxnet.v3.attrs.LegacySpatialTransformerAttrs") {
     MX_V3_ATTR_FIELD(target_shape);
     MX_V3_ATTR_FIELD(transform_type);
     MX_V3_ATTR_FIELD(sampler_type);
@@ -2825,3 +2858,4 @@ using LegacyOnehotEncodeAttrs = ir::Attrs;
 }  // namespace v3
 }  // namespace mxnet
 #endif
+
