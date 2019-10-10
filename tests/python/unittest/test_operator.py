@@ -2875,6 +2875,13 @@ def test_transpose():
 
 
 @with_seed()
+def test_larger_transpose():
+    x = mx.nd.random.normal(shape=(50,51))
+    y = mx.nd.transpose(x)
+    assert_allclose(np.transpose(x.asnumpy()), y.asnumpy())
+
+
+@with_seed()
 def test_expand_dims():
     for ndim in range(1, 6):
         for axis in range(-ndim + 1, ndim):
