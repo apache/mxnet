@@ -22,7 +22,7 @@
  * \brief MKLDNN(Quantized) Activation operator based on subgraph
  * /author Zhiyuan Huang
 */
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
 
 #include "../../nn/mkldnn/mkldnn_act-inl.h"
 #include "../quantization_utils.h"
