@@ -228,7 +228,7 @@ def test_np_ldexp():
 
         def hybrid_forward(self, F, x1, x2):
             return F.np.ldexp(x1, x2)
-        
+
     def _np_ldexp(x1, x2):
         return x1 * _np.power(2.0, x2)
 
@@ -427,6 +427,7 @@ def test_np_inner():
                   rtol=1e-1, atol=1e-1, dtype=dtype)
 
 
+@unittest.skip("flaky")
 @with_seed()
 @use_np
 def test_np_outer():
@@ -547,7 +548,7 @@ def test_np_sum():
                         np_out = _np.sum(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims).astype(dtype)
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
-
+@unittest.skip('flaky')
 @with_seed()
 @use_np
 def test_np_max_min():
@@ -655,6 +656,7 @@ def test_np_max_min():
                 _test_np_exception(func, shape, dim)
 
 
+@unittest.skip("flaky")
 @with_seed()
 @use_np
 def test_np_mean():
@@ -719,6 +721,7 @@ def test_np_mean():
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
+@unittest.skip("flaky")
 @with_seed()
 @use_np
 def test_np_moment():
@@ -1019,6 +1022,7 @@ def test_np_squeeze():
                                 rtol=1e-5, atol=1e-6, use_broadcast=False)
 
 
+@unittest.skip("flaky")
 @with_seed()
 @use_np
 def test_np_prod():
@@ -1764,6 +1768,7 @@ def test_np_randint():
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs, nrepeat=100)
 
 
+@unittest.skip("flaky")
 @with_seed()
 @use_np
 def test_np_minimum_maximum():

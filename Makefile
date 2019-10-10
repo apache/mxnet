@@ -462,7 +462,7 @@ endif
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages sample_lib
 
-SRC = $(wildcard src/*/*/*/*.cc src/*/*/*.cc src/*/*.cc src/*.cc)
+SRC = $(wildcard src/*/*/*/*/*/*.cc src/*/*/*/*/*.cc src/*/*/*/*.cc src/*/*/*.cc src/*/*.cc src/*.cc)
 OBJ = $(patsubst %.cc, build/%.o, $(SRC))
 CUSRC = $(wildcard src/*/*/*/*.cu src/*/*/*.cu src/*/*.cu src/*.cu)
 CUOBJ = $(patsubst %.cu, build/%_gpu.o, $(CUSRC))
@@ -795,6 +795,8 @@ clean_all: clean
 -include build/*/*.d
 -include build/*/*/*.d
 -include build/*/*/*/*.d
+-include build/*/*/*/*/*.d
+-include build/*/*/*/*/*/*.d
 ifneq ($(EXTRA_OPERATORS),)
 	-include $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 endif
