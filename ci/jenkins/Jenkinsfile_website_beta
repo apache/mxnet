@@ -19,24 +19,39 @@
 //
 // Jenkins pipeline
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
+// This pipeline will publish to https://mxnet-beta.staged.apache.org/
 
 // timeout in minutes
 max_time = 180
 
-node('utility') {
+node('restricted-utility') {
   // Loading the utilities requires a node context unfortunately
   checkout scm
   utils = load('ci/Jenkinsfile_utils.groovy')
   custom_steps = load('ci/jenkins/Jenkins_steps.groovy')
 }
-utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu')
+
+utils.assign_node_labels(utility: 'restricted-utility', linux_cpu: 'restricted-mxnetlinux-cpu', linux_gpu: 'restricted-mxnetlinux-gpu', linux_gpu_p3: 'restricted-mxnetlinux-gpu-p3', windows_cpu: 'restricted-mxnetwindows-cpu', windows_gpu: 'restricted-mxnetwindows-gpu')
 
 utils.main_wrapper(
 core_logic: {
-  utils.parallel_stage('Placeholder', [
-    // Do nothing
+  utils.parallel_stage('Build', [
+    custom_steps.compile_unix_lite()
   ])
 
+  utils.parallel_stage('Build Docs', [
+    // Only building a subset of the docs for previewing on staging
+    custom_steps.docs_jekyll(),
+    custom_steps.docs_python()
+  ])
+
+  utils.parallel_stage('Prepare', [
+    custom_steps.docs_prepare_beta()
+  ])
+
+  utils.parallel_stage('Publish', [
+    custom_steps.docs_publish_beta()
+  ])
 }
 ,
 failure_handler: {

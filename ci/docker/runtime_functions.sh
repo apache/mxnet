@@ -1832,12 +1832,12 @@ build_docs() {
     popd
 }
 
-build_docs_small() {
+build_docs_beta() {
     pushd docs/_build
     tar -xzf jekyll-artifacts.tgz
     api_folder='html/api'
     mkdir -p $api_folder/python/docs && tar -xzf python-artifacts.tgz --directory $api_folder/python/docs
-    # The folder to be published is now in /docs/_build/html
+    GZIP=-9 tar -zcvf beta_website.tgz -C html .
     popd
 }
 
