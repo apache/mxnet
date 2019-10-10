@@ -1,3 +1,10 @@
+---
+layout: page
+title: Java Setup
+action: Get Started
+action_url: /get_started
+permalink: /get_started/java_setup
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,19 +21,12 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page
-title: Java Setup
-action: Get Started
-action_url: /get_started
-permalink: /get_started/java_setup
----
 
 # Setup the MXNet Package for Java
 
 The following instructions are provided for macOS and Ubuntu. Windows is not yet available.
 
-**Note:** If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Java on IntelliJ tutorial](../tutorials/java/mxnet_java_on_intellij.md) instead of these instructions.
+**Note:** If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Java on IntelliJ tutorial]({{'/api/java/docs/tutorials/mxnet_java_on_intellij'|relative_url}}) instead of these instructions.
 
 <hr>
 
@@ -122,14 +122,14 @@ This will install both the Java Inference API and the required MXNet-Scala packa
 
 ## Documentation
 
-Javadocs are generated as part of the docs build pipeline. You can find them published in the [Java API](../api/java/index.md) section of the website or by going to the [scaladocs output](https://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.package) directly.
+Javadocs are generated as part of the docs build pipeline. You can find them published in the [Java API]({{'/api/java'|relative_url}}) section of the website or by going to the [scaladocs output]({{'/api/scala/docs/api/#org.apache.mxnet.package'|relative_url}}) directly.
 
-To build the docs yourself, follow the [developer build docs instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#developer-instructions).
+To build the docs yourself, follow the [developer build docs instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/README.md).
 
 <hr>
 
 ## Resources
 
-* [Java API](../api/java/)
-* [javadocs](https://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.package)
-* [MXNet-Java Tutorials](../tutorials/java/)
+* [Java API]({{'/api/java'|relative_url}})
+* [javadocs]({{'/api/scala/docs/api/#org.apache.mxnet.package'|relative_url}})
+* [MXNet-Java Tutorials]({{'/api/java/docs/tutorials'|relative_url}})

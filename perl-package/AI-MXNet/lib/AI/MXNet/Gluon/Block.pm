@@ -142,7 +142,7 @@ use Scalar::Util qw(refaddr);
     Prefix acts like a name space. All children blocks created in parent block's
     name_scope will have parent block's prefix in their name.
     Please refer to
-    naming tutorial http://mxnet.incubator.apache.org/tutorials/gluon/naming.html
+    naming tutorial https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/naming.html
     for more info on prefix and naming.
 
     params : AI::MXNet::Gluon::ParameterDict or undef
@@ -876,7 +876,7 @@ package AI::MXNet::Gluon::HybridBlock;
     representing the forward computation and cache it. On subsequent forwards,
     the cached graph will be used instead of hybrid_forward.
 
-    Refer Hybrid tutorial L<http://mxnet.io/tutorials/gluon/hybrid.html> to see
+    Refer Hybrid tutorial L<https://mxnet.io/tutorials/gluon/hybrid.html> to see
     the end-to-end usage.
 =cut
 

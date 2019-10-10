@@ -7,7 +7,7 @@ $ pip install mxnet
 
 MKL-DNN enabled pip packages are optimized for Intel hardware. You can find
 performance numbers
-in the <a href="http://mxnet.io/faq/perf.html#intel-cpu">MXNet tuning guide</a>.
+in the <a href="https://mxnet.io/api/faq/perf#intel-cpu">MXNet tuning guide</a>.
 
 {% highlight bash %}
 $ pip install mxnet-mkl
@@ -23,7 +23,7 @@ $ pip install mxnet==1.4.1
 
 MKL-DNN enabled pip packages are optimized for Intel hardware. You can find
 performance numbers
-in the <a href="http://mxnet.io/faq/perf.html#intel-cpu">MXNet tuning guide</a>.
+in the <a href="https://mxnet.io/api/faq/perf#intel-cpu">MXNet tuning guide</a>.
 
 {% highlight bash %}
 $ pip install mxnet-mkl==1.4.1
@@ -38,7 +38,7 @@ $ pip install mxnet==1.3.1
 
 MKL-DNN enabled pip packages are optimized for Intel hardware. You can find
 performance numbers
-in the <a href="http://mxnet.io/faq/perf.html#intel-cpu">MXNet tuning guide</a>.
+in the <a href="https://mxnet.io/api/faq/perf#intel-cpu">MXNet tuning guide</a>.
 
 {% highlight bash %}
 $ pip install mxnet-mkl==1.3.1
@@ -53,7 +53,7 @@ $ pip install mxnet==1.2.1
 
 MKL-DNN enabled pip packages are optimized for Intel hardware. You can find
 performance numbers
-in the <a href="http://mxnet.io/faq/perf.html#intel-cpu">MXNet tuning guide</a>.
+in the <a href="https://mxnet.io/api/faq/perf#intel-cpu">MXNet tuning guide</a>.
 
 {% highlight bash %}
 $ pip install mxnet-mkl==1.2.1
@@ -108,7 +108,7 @@ $ pip install mxnet --pre
 
 MKL-DNN enabled pip packages are optimized for Intel hardware. You can find
 performance numbers
-in the <a href="http://mxnet.io/faq/perf.html#intel-cpu">MXNet tuning guide</a>.
+in the <a href="https://mxnet.io/api/faq/perf#intel-cpu">MXNet tuning guide</a>.
 
 {% highlight bash %}
 $ pip install mxnet-mkl --pre

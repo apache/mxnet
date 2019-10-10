@@ -71,6 +71,16 @@ NNVM_REGISTER_OP(_npi_ones)
 .set_attr<FCompute>("FCompute<cpu>", FillCompute<cpu, 1>)
 .add_arguments(InitOpParam::__FIELDS__());
 
+NNVM_REGISTER_OP(_npi_identity)
+.describe("Return a new identity array of given shape, type, and context.")
+.set_num_inputs(0)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<InitOpParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", InitShape<InitOpParam>)
+.set_attr<nnvm::FInferType>("FInferType", InitType<InitOpParam>)
+.set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
+.add_arguments(InitOpParam::__FIELDS__());
+
 NNVM_REGISTER_OP(_np_zeros_like)
 .set_num_inputs(1)
 .set_num_outputs(1)

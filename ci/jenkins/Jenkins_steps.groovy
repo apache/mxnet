@@ -1369,16 +1369,20 @@ def test_qemu_armv7_cpu() {
     }]
 }
 
+// This is for running on PRs
 def docs_website() {
     return ['Docs': {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'deploy_docs', false)
+
+            unstash 'jekyll-artifacts'
+            unstash 'python-artifacts'
+            utils.docker_run('ubuntu_cpu_jekyll', 'build_docs_small', false)
 
             master_url = utils.get_jenkins_master_url()
             if ( master_url == 'jenkins.mxnet-ci.amazon-ml.com') {
+                // TODO: Make sure this scripts publish the website from the right folder
                 sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
             } else {
                 print "Skipping staging documentation publishing since we are not running in prod. Host: {$master_url}"
@@ -1388,6 +1392,253 @@ def docs_website() {
       }
     }]
 }
+
+
+// This creates the MXNet binary needed for generating different docs sets
+def compile_unix_lite() {
+    return ['MXNet lib': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu_lite', 'build_ubuntu_cpu_docs', false)
+            utils.pack_lib('libmxnet', 'lib/libmxnet.so', false)
+          }
+        }
+      }
+    }]
+}
+
+
+def should_pack_website() {
+  if (env.BRANCH_NAME) {
+    if (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("new_")) {
+      return true
+    }
+  } else {
+    return true 
+  }
+  return false
+}
+  
+// Each of the docs_{lang} functions will build the docs...
+// Stashing is only needed for master for website publishing or for testing "new_"
+
+// Call this function from Jenkins to generate just the Python API microsite artifacts.
+def docs_python() {
+    return ['Python Docs': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('libmxnet', mx_lib, false)
+            utils.docker_run('ubuntu_cpu_python', 'build_python_docs', false)
+            if (should_pack_website()) {
+              utils.pack_lib('python-artifacts', 'docs/_build/python-artifacts.tgz', false)
+            }
+          }
+        }
+      }
+    }]
+}
+
+
+// Call this function from Jenkins to generate just the C and C++ API microsite artifacts.
+def docs_c() {
+    return ['C Docs': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('libmxnet', 'lib/libmxnet.so', false)
+            utils.docker_run('ubuntu_cpu_c', 'build_c_docs', false)
+            if (should_pack_website()) {
+              utils.pack_lib('c-artifacts', 'docs/_build/c-artifacts.tgz', false)
+            }
+          }
+        }
+      }
+    }]
+}
+
+
+// Call this function from Jenkins to generate just the Julia API microsite artifacts.
+def docs_julia() {
+    return ['Julia Docs': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('libmxnet', mx_lib, false)
+            utils.docker_run('ubuntu_cpu_julia', 'build_julia_docs', false)
+            if (should_pack_website()) {
+              utils.pack_lib('julia-artifacts', 'docs/_build/julia-artifacts.tgz', false)
+            }
+          }
+        }
+      }
+    }]
+}
+
+
+// Call this function from Jenkins to generate just the R API PDF artifact.
+def docs_r() {
+    return ['R Docs': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('libmxnet', mx_lib, false)
+            utils.docker_run('ubuntu_cpu_r', 'build_r_docs', false)
+            if (should_pack_website()) {
+              utils.pack_lib('r-artifacts', 'docs/_build/r-artifacts.tgz', false)
+            }
+          }
+        }
+      }
+    }]
+}
+
+
+// Call this function from Jenkins to generate just the Scala API microsite artifacts.
+// It will also generate the Scala package.
+def docs_scala() {
+    return ['Scala Docs': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('libmxnet', mx_lib, false)
+            utils.docker_run('ubuntu_cpu_scala', 'build_scala_docs', false)
+            if (should_pack_website()) {
+              utils.pack_lib('scala-artifacts', 'docs/_build/scala-artifacts.tgz', false)
+            }
+          }
+        }
+      }
+    }]
+}
+
+
+// Call this function from Jenkins to generate just the Java API microsite artifacts.
+// It will also generate the Scala package.
+def docs_java() {
+    return ['Java Docs': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('libmxnet', mx_lib, false)
+            utils.docker_run('ubuntu_cpu_scala', 'build_java_docs', false)
+            if (should_pack_website()) {
+              utils.pack_lib('java-artifacts', 'docs/_build/java-artifacts.tgz', false)
+            }
+          }
+        }
+      }
+    }]
+}
+
+
+// Call this function from Jenkins to generate just the Clojure API microsite artifacts.
+// It will also generate the Scala package.
+def docs_clojure() {
+    return ['Clojure Docs': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('libmxnet', mx_lib, false)
+            utils.docker_run('ubuntu_cpu_scala', 'build_clojure_docs', false)
+            if (should_pack_website()) {
+              utils.pack_lib('clojure-artifacts', 'docs/_build/clojure-artifacts.tgz', false)
+            }
+          }
+        }
+      }
+    }]
+}
+
+
+// Call this function from Jenkins to generate just the main website artifacts.
+def docs_jekyll() {
+    return ['Main Jekyll Website': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu_jekyll', 'build_jekyll_docs', false)
+            if (should_pack_website()) {
+              utils.pack_lib('jekyll-artifacts', 'docs/_build/jekyll-artifacts.tgz', false)
+            }
+          }
+        }
+      }
+    }]
+}
+
+
+// This is for publishing the full website
+// Assumes you have run all of the docs generation functions
+// Called from Jenkins_website_full and Jenkins_website_full_pr
+def docs_prepare() {
+    return ['Prepare for publication of the full website': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+
+            unstash 'jekyll-artifacts'
+            unstash 'c-artifacts'
+            unstash 'python-artifacts'
+            unstash 'r-artifacts'
+            unstash 'julia-artifacts'
+            unstash 'scala-artifacts'
+            unstash 'java-artifacts'
+            unstash 'clojure-artifacts'
+
+            utils.docker_run('ubuntu_cpu_jekyll', 'build_docs', false)
+
+            // only stash if we're going to unstash later
+            // utils.pack_lib('full_website', 'docs/_build/full_website.tgz', false)
+
+            // archive so the publish pipeline can access the artifact
+            archiveArtifacts 'docs/_build/full_website.tgz'
+          }
+        }
+      }
+    }]
+}
+
+
+def docs_archive() {
+    return ['Archive the full website': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            archiveArtifacts 'docs/_build/full_website.tgz'
+          }
+        }
+      }
+    }]
+}
+
+
+// This is for the full website
+def docs_publish() {
+    return ['Publish the full website': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            // If used stashed files, you can retrieve them here
+            //unstash 'full_website'
+            //sh 'tar -xzf docs/_build/full_website.tgz --directory .'
+            try {
+              build 'restricted-website-publish-master'
+            }
+            catch (Exception e) {
+               println(e.getMessage())
+            }
+          }
+        }
+      }
+    }]
+}
+
+
 
 def misc_asan_cpu() {
     return ['CPU ASAN': {

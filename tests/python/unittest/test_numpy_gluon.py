@@ -26,12 +26,13 @@ from mxnet.test_utils import use_np, assert_almost_equal
 from common import with_seed
 
 
+@with_seed()
 def test_create_np_param():
     M, K, N = 10, 9, 20
 
-    def check_block_params(x, TestBlock, hybridize, expected_type):
+    def check_block_params(x, TestBlock, hybridize, expected_type, initializer):
         net = TestBlock()
-        net.initialize()
+        net.initialize(initializer())
         if hybridize:
             net.hybridize()
         net(x)
@@ -59,12 +60,14 @@ def test_create_np_param():
             return F.np.dot(x, w)
 
     x = mx.nd.random.uniform(shape=(M, K))
-    check_block_params(x, TestBlock1, False, mx.nd.NDArray)
-    check_block_params(x, TestBlock1, True, mx.nd.NDArray)
-    check_block_params(x.as_np_ndarray(), TestBlock2, False, np.ndarray)
-    check_block_params(x.as_np_ndarray(), TestBlock2, True, np.ndarray)
+    for initializer in [mx.initializer.Uniform, mx.initializer.Normal]:
+        check_block_params(x, TestBlock1, False, mx.nd.NDArray, initializer)
+        check_block_params(x, TestBlock1, True, mx.nd.NDArray, initializer)
+        check_block_params(x.as_np_ndarray(), TestBlock2, False, np.ndarray, initializer)
+        check_block_params(x.as_np_ndarray(), TestBlock2, True, np.ndarray, initializer)
 
 
+@with_seed()
 @use_np
 def test_optimizer_with_np_ndarrays():
     class LinearRegression(gluon.HybridBlock):
@@ -119,18 +122,18 @@ def test_np_loss_ndarray():
     weighting = np.array([0.5, 1, 0.5, 1])
 
     loss = gluon.loss.L1Loss()
-    assert np.sum(loss(output, label)) == 6.
+    assert float(np.sum(loss(output, label))) == 6.
     loss = gluon.loss.L1Loss(weight=0.5)
-    assert np.sum(loss(output, label)) == 3.
+    assert float(np.sum(loss(output, label))) == 3.
     loss = gluon.loss.L1Loss()
-    assert np.sum(loss(output, label, weighting)) == 5.
+    assert float(np.sum(loss(output, label, weighting))) == 5.
 
     loss = gluon.loss.L2Loss()
-    assert np.sum(loss(output, label)) == 7.
+    assert float(np.sum(loss(output, label))) == 7.
     loss = gluon.loss.L2Loss(weight=0.25)
-    assert np.sum(loss(output, label)) == 1.75
+    assert float(np.sum(loss(output, label))) == 1.75
     loss = gluon.loss.L2Loss()
-    assert np.sum(loss(output, label, weighting)) == 6
+    assert float(np.sum(loss(output, label, weighting))) == 6
 
     output = np.array([[0, 2], [1, 4]])
     label = np.array([0, 1])

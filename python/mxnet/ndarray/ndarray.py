@@ -69,6 +69,7 @@ _DTYPE_NP_TO_MX = {
     np.int32: 4,
     np.int8: 5,
     np.int64: 6,
+    np.bool_: 7,
 }
 
 _DTYPE_MX_TO_NP = {
@@ -80,6 +81,7 @@ _DTYPE_MX_TO_NP = {
     4: np.int32,
     5: np.int8,
     6: np.int64,
+    7: np.bool_,
 }
 
 _STORAGE_TYPE_STR_TO_ID = {
@@ -2995,6 +2997,10 @@ def get_indexing_dispatch_code(key):
 
     for idx in key:
         if isinstance(idx, (NDArray, np.ndarray, list, tuple)):
+            if getattr(idx, 'dtype', None) == np.bool_:
+                raise TypeError('ndarray indexing does not support boolean ndarray'
+                                ' in a tuple of indices. Only single boolean ndarray'
+                                ' as an index is supported.')
             return _NDARRAY_ADVANCED_INDEXING
         elif sys.version_info[0] > 2 and isinstance(idx, range):
             return _NDARRAY_ADVANCED_INDEXING
@@ -3302,8 +3308,8 @@ def arange(start, stop=None, step=1.0, repeat=1, infer_range=None, ctx=None, dty
     repeat : int, optional
         Number of times to repeat each element. The default repeat count is 1.
     infer_range : boolean, optional
-        When set to True, infer the stop position from the start, step,
-        repeat, and output tensor size.
+        Infer the stop position from the start, step, repeat, and output tensor size.
+        Deprecated. Only False is supported.
     ctx : Context, optional
         Device context. Default context is the current default context.
     dtype : str or numpy.dtype, optional

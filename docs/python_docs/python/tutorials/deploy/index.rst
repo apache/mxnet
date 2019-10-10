@@ -94,7 +94,7 @@ The following tutorials will show you how to use MXNet on AWS.
 
    .. card::
       :title: Training with Data from S3
-      :link: https://mxnet.incubator.apache.org/api/faq/s3_integration
+      :link: https://mxnet.apache.org/api/faq/s3_integration
 
       How to train with data from Amazon S3 buckets.
 
@@ -105,14 +105,14 @@ Security
 
    .. card::
       :title: Securing MXNet
-      :link: https://mxnet.incubator.apache.org/api/faq/security
+      :link: https://mxnet.apache.org/api/faq/security
 
       Best practices and deployment considerations.
 
 
 .. toctree::
    :hidden:
-   :maxdepth: 0
+   :maxdepth: 1
 
    export/index
    inference/index

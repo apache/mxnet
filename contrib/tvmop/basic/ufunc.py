@@ -17,7 +17,7 @@
 
 # coding: utf-8
 import tvm
-from .. import defop, AllTypes
+from .. import defop, AllTypes, RealTypes
 from .. import assign_by_req, reduce_axes
 
 def compute_add(dtype, ndim):
@@ -98,3 +98,138 @@ def backward_vadd_gpu(dtype, ndim, reduce1st, req):
         s[t].bind(bx, block_x)
         s[t].bind(tx, thread_x)
     return s, [X, in_grad_a, in_grad]
+
+
+def compute_degandrad(dtype, ndim, n):
+    A = tvm.placeholder([tvm.var() for _ in range(ndim)], name='A', dtype=dtype)
+    import math
+    if n == 0:
+        B = tvm.compute([tvm.var() for _ in range(ndim)],
+                        lambda *index: A[index] * tvm.const(math.pi, dtype) / tvm.const(180, dtype), name='B')
+    else:
+        B = tvm.compute([tvm.var() for _ in range(ndim)],
+                        lambda *index: A[index] / tvm.const(math.pi, dtype) * tvm.const(180, dtype), name='B')
+    s = tvm.create_schedule(B.op)
+    return s, A, B
+
+
+@defop(name="deg2rad", target="cpu", auto_broadcast=False,
+       dtype=["float32", "float64"], ndim=list(range(0, 6)))
+def deg2rad(dtype, ndim):
+    s, A, B = compute_degandrad(dtype, ndim, 0)
+    axes = [axis for axis in B.op.axis]
+    fused = s[B].fuse(*axes)
+    s[B].parallel(fused)
+    return s, [A, B]
+
+
+@defop(name="rad2deg", target="cpu", auto_broadcast=False,
+       dtype=["float32", "float64"], ndim=list(range(0, 6)))
+def rad2deg(dtype, ndim):
+    s, A, B = compute_degandrad(dtype, ndim, 1)
+    axes = [axis for axis in B.op.axis]
+    fused = s[B].fuse(*axes)
+    s[B].parallel(fused)
+    return s, [A, B]
+
+
+@defop(name="cuda_deg2rad", target="cuda", auto_broadcast=False,
+       dtype=["float32", "float64"], ndim=list(range(0, 6)))
+def deg2rad_gpu(dtype, ndim):
+    s, A, B = compute_degandrad(dtype, ndim, 0)
+    s = tvm.create_schedule(B.op)
+    axes = [axis for axis in B.op.axis]
+    fused = s[B].fuse(*axes)
+    bx, tx = s[B].split(fused, factor=64)
+    s[B].bind(bx, tvm.thread_axis("blockIdx.x"))
+    s[B].bind(tx, tvm.thread_axis("threadIdx.x"))
+    return s, [A, B]
+
+
+@defop(name="cuda_rad2deg", target="cuda", auto_broadcast=False,
+       dtype=["float32", "float64"], ndim=list(range(0, 6)))
+def rad2deg_gpu(dtype, ndim):
+    s, A, B = compute_degandrad(dtype, ndim, 1)
+    s = tvm.create_schedule(B.op)
+    axes = [axis for axis in B.op.axis]
+    fused = s[B].fuse(*axes)
+    bx, tx = s[B].split(fused, factor=64)
+    s[B].bind(bx, tvm.thread_axis("blockIdx.x"))
+    s[B].bind(tx, tvm.thread_axis("threadIdx.x"))
+    return s, [A, B]
+
+
+def compute_backward_degandrad(dtype, ndim, req, n):
+    ishape = [tvm.var() for _ in range(ndim)]
+    in_grad_tmp = tvm.placeholder(ishape, name='in_grad_tmp', dtype=dtype)
+    in_grad = tvm.placeholder(ishape, name='in_grad', dtype=dtype)
+    out_grad = tvm.placeholder(ishape, name='out_grad', dtype=dtype)
+    import math
+    if n == 0:
+        ret = tvm.compute(ishape, lambda *index: out_grad[index] * tvm.const(math.pi, dtype) / tvm.const(180, dtype))
+    else:
+        ret = tvm.compute(ishape, lambda *index: out_grad[index] / tvm.const(math.pi, dtype) * tvm.const(180, dtype))
+    if (req == "kAddTo"):
+        in_grad = tvm.compute(ishape, lambda *index: in_grad_tmp[index] + ret[index])
+    else:
+        in_grad = tvm.compute(ishape, lambda *index: ret[index])
+    s = tvm.create_schedule(in_grad.op)
+    return s, out_grad, in_grad_tmp, in_grad, [ret, in_grad]
+
+
+@defop(name="backward_deg2rad", target="cpu", auto_broadcast=False,
+       dtype=["float32", "float64"], ndim=list(range(0, 6)), req=["kWriteTo", "kAddTo"],
+       attrs=["req"])
+def backward_deg2rad(dtype, ndim, req):
+    s, out_grad, in_grad_tmp, in_grad, c_list = compute_backward_degandrad(dtype, ndim, req, 0)
+    for t in c_list:
+        axes = [axis for axis in t.op.axis]
+        fused = s[t].fuse(*axes)
+        s[t].parallel(fused)
+    return s, [out_grad, in_grad, in_grad_tmp]
+
+
+@defop(name="backward_rad2deg", target="cpu", auto_broadcast=False,
+       dtype=["float32", "float64"], ndim=list(range(0, 6)), req=["kWriteTo", "kAddTo"],
+       attrs=["req"])
+def backward_rad2deg(dtype, ndim, req):
+    s, out_grad, in_grad_tmp, in_grad, c_list = compute_backward_degandrad(dtype, ndim, req, 1)
+    for t in c_list:
+        axes = [axis for axis in t.op.axis]
+        fused = s[t].fuse(*axes)
+        s[t].parallel(fused)
+    return s, [out_grad, in_grad, in_grad_tmp]
+
+
+@defop(name="cuda_backward_deg2rad", target="gpu", auto_broadcast=False,
+       dtype=["float32", "float64"], ndim=list(range(0, 6)), req=["kWriteTo", "kAddTo"],
+       attrs=["req"])
+def cuda_backward_deg2rad(dtype, ndim, req):
+    s, out_grad, in_grad_tmp, in_grad, c_list = compute_backward_degandrad(dtype, ndim, req, 0)
+    num_thread = 64
+    for t in c_list:
+        block_x = tvm.thread_axis("blockIdx.x")
+        thread_x = tvm.thread_axis("threadIdx.x")
+        axes = [axis for axis in t.op.axis]
+        fused = s[t].fuse(*axes)
+        bx, tx = s[t].split(fused, factor=num_thread)
+        s[t].bind(bx, block_x)
+        s[t].bind(tx, thread_x)
+    return s, [out_grad, in_grad, in_grad_tmp]
+
+
+@defop(name="cuda_backward_rad2deg", target="gpu", auto_broadcast=False,
+       dtype=["float32", "float64"], ndim=list(range(0, 6)), req=["kWriteTo", "kAddTo"],
+       attrs=["req"])
+def cuda_backward_rad2deg(dtype, ndim, req):
+    s, out_grad, in_grad_tmp, in_grad, c_list = compute_backward_degandrad(dtype, ndim, req, 1)
+    num_thread = 64
+    for t in c_list:
+        block_x = tvm.thread_axis("blockIdx.x")
+        thread_x = tvm.thread_axis("threadIdx.x")
+        axes = [axis for axis in t.op.axis]
+        fused = s[t].fuse(*axes)
+        bx, tx = s[t].split(fused, factor=num_thread)
+        s[t].bind(bx, block_x)
+        s[t].bind(tx, thread_x)
+    return s, [out_grad, in_grad, in_grad_tmp]

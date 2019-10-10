@@ -305,7 +305,7 @@ post](http://karpathy.github.io/2015/05/21/rnn-effectiveness/) on more
 examples and links including Linux source codes, Algebraic Geometry
 Theorems, and even cooking recipes. The code for sampling can be found
 in
-[examples/char-lstm/sampler.jl](https://github.com/dmlc/MXNet.jl/blob/master/examples/char-lstm/sampler.jl).
+[examples/char-lstm/sampler.jl](https://github.com/apache/incubator-mxnet/tree/master/julia/examples/char-lstm/sampler.jl).
 
 Visualizing the LSTM
 --------------------
@@ -318,6 +318,6 @@ illustrations](http://colah.github.io/posts/2015-08-Understanding-LSTMs/),
 but could otherwise be very useful for debugging. As we can see, the
 LSTM unfolded over time is just a (very) deep neural network. The
 complete code for producing this visualization can be found in
-[examples/char-lstm/visualize.jl](https://github.com/dmlc/MXNet.jl/blob/master/examples/char-lstm/visualize.jl).
+[examples/char-lstm/visualize.jl](https://github.com/apache/incubator-mxnet/tree/master/julia/examples/char-lstmvisualize.jl).
 
 ![image](images/char-lstm-vis.svg)
