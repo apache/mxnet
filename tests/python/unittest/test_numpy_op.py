@@ -3126,6 +3126,95 @@ def test_np_builtin_op_signature():
             assert str(op.__signature__) == str(inspect.signature(getattr(_numpy_op_doc, op_name)))
 
 
+@with_seed()
+@use_np
+def test_np_logaddexp():
+    class TestLogaddexp(HybridBlock):
+        def __init__(self):
+            super(TestLogaddexp, self).__init__()
+
+        def hybrid_forward(self, F, x1, x2):
+            return F.np.logaddexp(x1, x2)
+
+    shapes = [
+        ((3, 1), (3, 1)),
+        ((3, 1, 2), (3, 1, 2)),
+        ((1, ), (1, )),
+        ((3, 0), (3, 0)),  # zero-size shape
+        ((0, 1), (0, 1)),  # zero-size shape
+        ((2, 0, 2), (2, 0, 2)),  # zero-size shape
+        ((1, ), (3, )),  # broadcast
+        ((2, 3), (2, 1)),  # broadcast
+        ((1, 3), (2, 3)),  # broadcast
+        ((1, 3), (2, 0, 3)),  # broadcast to zero-dim shape
+        ((1, 0, 1), (3, 0, 1)),  # broadcast of zero-dim shape
+        ((), ()),  # zero-dim shape
+    ]
+    eps = 1e-3
+    # Legal shape test.
+    for shape_a, shape_b in shapes:
+        for hybridize in [True, False]:
+            test_logaddexp = TestLogaddexp()
+            if hybridize:
+                test_logaddexp.hybridize()
+            lhs = rand_ndarray(shape_a).as_np_ndarray()
+            rhs = rand_ndarray(shape_b).as_np_ndarray()
+            lhs.attach_grad()
+            rhs.attach_grad()
+            np_out = _np.logaddexp(lhs.asnumpy(), rhs.asnumpy())
+            np_backward_lhs = _np.exp(
+                lhs.asnumpy()) / (_np.exp(lhs.asnumpy()) + _np.exp(rhs.asnumpy()))
+            np_backward_rhs = _np.exp(
+                rhs.asnumpy()) / (_np.exp(lhs.asnumpy()) + _np.exp(rhs.asnumpy()))
+            with mx.autograd.record():
+                mx_out = test_logaddexp(lhs, rhs)
+            assert mx_out.shape == np_out.shape
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+            mx_out.backward()
+            # For broadcast backward case,
+            # reduce sum is applied on numpy result.
+            for n_dim in range(len(shape_a)):
+                if (shape_a[n_dim] != shape_b[n_dim]):
+                    if (shape_a[n_dim] > shape_b[n_dim]):
+                        np_backward_rhs = np_backward_rhs.sum(
+                            axis=n_dim, keepdims=True)
+                    else:
+                        np_backward_lhs = np_backward_lhs.sum(
+                            axis=n_dim, keepdims=True)
+            assert_almost_equal(lhs.grad.asnumpy(),
+                                np_backward_lhs, rtol=1e-3, atol=1e-5)
+            assert_almost_equal(rhs.grad.asnumpy(),
+                                np_backward_rhs, rtol=1e-3, atol=1e-5)
+            # Test imperative once again
+            mx_out = np.logaddexp(lhs, rhs)
+            np_out = _np.logaddexp(lhs.asnumpy(), rhs.asnumpy())
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+        # Range case.
+    x = [1000000, -1000000, 1000200, -1000200]
+    y = [1000200, -1000200, 1000000, -1000000]
+    z = [1000200, -1000000, 1000200, -1000000]
+    for dt in ['float64']:
+        logxf = np.array(x, dtype=dt)
+        logyf = np.array(y, dtype=dt)
+        logzf = np.array(z, dtype=dt)
+        assert_almost_equal(np.logaddexp(logxf, logyf).asnumpy(),
+                            logzf.asnumpy())
+
+    # Bad shape case.
+    bad_shapes = [((4, 5), (2, 3)), ((3, 4, 5), (6, ))]
+    for shape_a, shape_b in bad_shapes:
+        a = mx.nd.array(random.random()) if len(
+            shape_a) == 0 else rand_ndarray(shape_a)
+        b = mx.nd.array(random.random()) if len(
+            shape_b) == 0 else rand_ndarray(shape_b)
+        try:
+            mx_res = np.logaddexp(a.as_np_ndarray(), b.as_np_ndarray())
+        except mx.base.MXNetError:
+            continue
+        assert False
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

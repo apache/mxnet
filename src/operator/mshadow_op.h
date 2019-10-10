@@ -116,6 +116,12 @@ MXNET_BINARY_MATH_OP_NC(plus, a + b);
 
 MXNET_BINARY_MATH_OP_NC(minus, a - b);
 
+MXNET_BINARY_MATH_OP_NC(logaddexp, math::id(a) + math::log1p(math::exp(b - a)));
+
+MXNET_BINARY_MATH_OP_NC(logadd_left, math::exp(a) / (math::exp(a) + math::exp(b)));
+
+MXNET_BINARY_MATH_OP_NC(logadd_right, math::exp(b) / (math::exp(a) + math::exp(b)));
+
 MXNET_UNARY_MATH_OP(negation, -a);
 
 MXNET_UNARY_MATH_OP(reciprocal, 1.0f / math::id(a));
