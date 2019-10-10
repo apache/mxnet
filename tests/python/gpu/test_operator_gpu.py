@@ -1851,6 +1851,7 @@ def test_deformable_psroipooling_with_type():
 
 
 @with_seed()
+@unittest.skip('skip deformable_convolution')
 def test_deformable_convolution_with_type():
     tol = {np.dtype(np.float32): 1e-1,
            np.dtype(np.float64): 1e-3}
@@ -1885,6 +1886,7 @@ def test_deformable_convolution_with_type():
 
 
 @with_seed()
+@unittest.skip('skip deformable_convolution')
 def test_deformable_convolution_options():
     tol = {np.dtype(np.float32): 1e-1,
            np.dtype(np.float64): 1e-3}
