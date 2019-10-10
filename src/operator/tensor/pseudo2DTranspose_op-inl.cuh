@@ -42,11 +42,11 @@ namespace cuda {
 
 template <typename DType, typename CType>
 __global__ void transpose_pseudo2D(DType* out, DType* inp,
-                                   const uint32_t m, const uint32_t n,
-                                   const uint16_t nIterY, const uint32_t nIterZ) {
-  const uint32_t TSR = sizeof(CType)/sizeof(DType);  // TypeSizeRatio
-  const uint32_t chunked_n = n/TSR;
-  const uint32_t chunked_m = m/TSR;
+                                   const index_t m, const index_t n,
+                                   const index_t nIterY, const index_t nIterZ) {
+  const index_t TSR = sizeof(CType)/sizeof(DType);  // TypeSizeRatio
+  const index_t chunked_n = n/TSR;
+  const index_t chunked_m = m/TSR;
 
   union transp_t {
     CType valChunk;
@@ -59,21 +59,21 @@ __global__ void transpose_pseudo2D(DType* out, DType* inp,
   CType* cInp = reinterpret_cast<CType*>(inp);
   CType* cOut = reinterpret_cast<CType*>(out);
 
-  for (uint32_t iterZ = 0; iterZ < nIterZ; iterZ++) {
-    const uint32_t blockIdx_z = gridDim.z*iterZ + blockIdx.z;
-    for (uint32_t iterY = 0; iterY < nIterY; iterY++) {
-      const uint32_t blockIdx_y = gridDim.y*iterY + blockIdx.y;
+  for (index_t iterZ = 0; iterZ < nIterZ; iterZ++) {
+    const index_t blockIdx_z = gridDim.z*iterZ + blockIdx.z;
+    for (index_t iterY = 0; iterY < nIterY; iterY++) {
+      const index_t blockIdx_y = gridDim.y*iterY + blockIdx.y;
 
-      uint32_t offset = blockIdx_z*m*chunked_n
-                      + blockIdx_y*blockDim.y*TSR*chunked_n
-                      + blockIdx.x*blockDim.x;
+      index_t offset = blockIdx_z*m*chunked_n
+                     + blockIdx_y*blockDim.y*TSR*chunked_n
+                     + (index_t)blockIdx.x*blockDim.x;
 
       if ((blockIdx.x*blockDim.x + threadIdx.x)*TSR < n
        && (blockIdx_y*blockDim.y + threadIdx.y)*TSR < m) {
         // read from global memory to shared
         #pragma unroll
-        for (uint32_t i=0; i<TSR; i++) {
-          uint32_t shmIdx = (TSR*threadIdx.y + i)*blockDim.x + threadIdx.x;
+        for (index_t i = 0; i < TSR; i++) {
+          index_t shmIdx = (TSR*threadIdx.y + i)*blockDim.x + threadIdx.x;
           c_shm[shmIdx] = cInp[offset + (TSR*threadIdx.y + i)*chunked_n + threadIdx.x];
         }
         __syncthreads();
@@ -81,10 +81,10 @@ __global__ void transpose_pseudo2D(DType* out, DType* inp,
         // read from shared to registers
         transp_t tmp[TSR];
         #pragma unroll
-        for (uint32_t i=0; i<TSR; i++) {
+        for (index_t i = 0; i < TSR; i++) {
           #pragma unroll
-          for (int j=0; j<TSR; j++) {
-            uint32_t shmIdx = (TSR*threadIdx.y + j)*blockDim.x*TSR + TSR*threadIdx.x + i;
+          for (int j = 0; j < TSR; j++) {
+            index_t shmIdx = (TSR*threadIdx.y + j)*blockDim.x*TSR + TSR*threadIdx.x + i;
             tmp[i].values[j] = d_shm[shmIdx];
           }
         }
@@ -93,7 +93,7 @@ __global__ void transpose_pseudo2D(DType* out, DType* inp,
         // write back to global output
         offset = blockIdx_z*m*chunked_n + blockIdx.x*blockDim.x*TSR*chunked_m + blockIdx_y*blockDim.y;
         #pragma unroll
-        for (uint32_t i=0; i<TSR; i++) {
+        for (index_t i = 0; i < TSR; i++) {
             cOut[offset + (TSR*threadIdx.x + i)*chunked_m + threadIdx.y] = tmp[i].valChunk;
         }
       }
@@ -117,10 +117,10 @@ __global__ void transpose_pseudo2D(DType* out, DType* inp,
  * \param m First of tensor dimensions.
  * \param n Second of tensor dimensions.
  */
-inline void call_transpose_pseudo2D(uint32_t dTypeSize, uint32_t cTypeSize,
+inline void call_transpose_pseudo2D(index_t dTypeSize, index_t cTypeSize,
                                    dim3 grid, dim3 block, cudaStream_t stream,
-                                   void* out, void* inp, const uint32_t m, const uint32_t n,
-                                   const uint32_t nIterY, const uint32_t nIterZ) {
+                                   void* out, void* inp, const index_t m, const index_t n,
+                                   const index_t nIterY, const index_t nIterZ) {
   switch (dTypeSize) {
    case (1): {
     uint8_t* d_outPtr = reinterpret_cast<uint8_t*>(out);
@@ -227,9 +227,9 @@ inline bool isPseudo2DTranspose(const TShape& params) {
 
 
 struct pseudo2DSizes {
-  uint32_t leadDimS;
-  uint32_t M;
-  uint32_t N;
+  index_t leadDimS;
+  index_t M;
+  index_t N;
 };
 
 /*!
@@ -263,8 +263,8 @@ inline pseudo2DSizes getPackedTransposeDimensions(const TShape& shape,
 }
 
 
-inline int32_t getBestCopyTypeSize(size_t dTypeSize, uint32_t sizeM, uint32_t sizeN) {
-  uint32_t cTypeSize = std::max((size_t)8, dTypeSize);
+inline int32_t getBestCopyTypeSize(size_t dTypeSize, index_t sizeM, index_t sizeN) {
+  index_t cTypeSize = std::max((size_t)8, dTypeSize);
   while (cTypeSize > dTypeSize) {
     auto tsr = cTypeSize/dTypeSize;
     if (sizeM % tsr != 0 || sizeN % tsr != 0)
@@ -279,17 +279,17 @@ inline int32_t getBestCopyTypeSize(size_t dTypeSize, uint32_t sizeM, uint32_t si
 }
 
 
-inline std::pair<dim3, dim3> calculateKernelParams(pseudo2DSizes sizes, const uint32_t TSR) {
-  uint32_t nThreadsPerBlock = 32*32/4;  // value chosen empirically
-  uint32_t thdsY = 1;
-  uint32_t thdsX = 1;
+inline std::pair<dim3, dim3> calculateKernelParams(pseudo2DSizes sizes, const index_t TSR) {
+  index_t nThreadsPerBlock = 32*32/4;  // value chosen empirically
+  index_t thdsY = 1;
+  index_t thdsX = 1;
   while(sizes.N/TSR > thdsX && thdsX < 32) {
     thdsX *= 2;
   }
   thdsY = nThreadsPerBlock/thdsX;
   thdsY = std::min(sizes.M/TSR, thdsY);
-  uint32_t blocksY = (sizes.M/TSR-1)/thdsY + 1;
-  uint32_t blocksX = (sizes.N/TSR-1)/thdsX + 1;
+  index_t blocksY = (sizes.M/TSR-1)/thdsY + 1;
+  index_t blocksX = (sizes.N/TSR-1)/thdsX + 1;
 
   dim3 grid(blocksX, blocksY, sizes.leadDimS);
   dim3 block(thdsX, thdsY);
@@ -317,20 +317,20 @@ void transpose_pseudo2D(const TBlob& outBlob, const TBlob& inpBlob,
 
   auto sizes = getPackedTransposeDimensions(shape, params);
 
-  uint32_t cTypeSize = getBestCopyTypeSize(sizeof(DType), sizes.M, sizes.N);
+  index_t cTypeSize = getBestCopyTypeSize(sizeof(DType), sizes.M, sizes.N);
   // Type Size Ratio
-  const uint32_t TSR = cTypeSize/sizeof(DType);
+  const index_t TSR = cTypeSize/sizeof(DType);
   CHECK_EQ(cTypeSize, sizeof(DType)*TSR);
 
   auto pair = calculateKernelParams(sizes, TSR);
   dim3 grid = pair.first;
   dim3 block = pair.second;
-  uint32_t nIterY = 1;
+  index_t nIterY = 1;
   if (grid.y > std::numeric_limits<uint16_t>::max()) {
     nIterY = (grid.y - 1)/(std::numeric_limits<uint16_t>::max() - 1) + 1;
     grid.y = (grid.y - 1)/nIterY + 1;
   }
-  uint32_t nIterZ = 1;
+  index_t nIterZ = 1;
   if (grid.z > std::numeric_limits<uint16_t>::max()) {
     nIterZ = (grid.z - 1)/(std::numeric_limits<uint16_t>::max() - 1) + 1;
     grid.z = (grid.z - 1)/nIterZ + 1;
