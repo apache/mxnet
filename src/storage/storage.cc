@@ -103,7 +103,7 @@ void StorageImpl::Alloc(Storage::Handle* handle) {
             const char *type = getenv("MXNET_GPU_MEM_POOL_TYPE");
             const bool default_pool = (type == nullptr);
             if (default_pool) type = "Naive";
-            std::string strategy = type;
+            std::string strategy = "Unpooled";
 
             if (strategy == "Round") {
               ptr = new storage::GPUPooledRoundedStorageManager(handle->ctx);
