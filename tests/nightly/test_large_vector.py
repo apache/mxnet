@@ -708,6 +708,182 @@ def test_full():
     assert a[-1] == 3
 
 
+def test_astype():
+    x = create_vector(size=LARGE_X//4)
+    x = nd.tile(x, 4)
+    y = x.astype('int32')
+    assert y.dtype == np.int32
+    assert y[-1] == LARGE_X//4-1
+
+
+def test_cast():
+    x = create_vector(size=LARGE_X//4)
+    x = nd.tile(x, 4)
+    y = nd.cast(x, np.int32)
+    assert y.dtype == np.int32
+    assert y[-1] == LARGE_X//4-1
+
+
+def test_repeat():
+    x = create_vector(size=LARGE_X//2)
+    y = nd.repeat(x, repeats=2, axis = 0)
+    assert y.shape[0] == LARGE_X
+    assert y[1] == 0
+    assert y[LARGE_X-1] == LARGE_X//2-1
+
+
+def create_input_for_rounding_ops():
+    inp = nd.arange(-LARGE_X//2, LARGE_X//2, dtype=np.float64)
+    inp = inp/2
+    return inp
+
+
+def test_ceil():
+    x = create_input_for_rounding_ops()
+    y = nd.ceil(x)
+    assert y[LARGE_X//2-2] == -1
+    assert y[LARGE_X//2-1] == 0
+    assert y[LARGE_X//2] == 0
+    assert y[LARGE_X//2+1] == 1
+    assert y[LARGE_X//2+2] == 1
+
+
+def test_fix():
+    x = create_input_for_rounding_ops()
+    y = nd.fix(x)
+    assert y[LARGE_X//2-2] == -1
+    assert y[LARGE_X//2-1] == 0
+    assert y[LARGE_X//2] == 0
+    assert y[LARGE_X//2+1] == 0
+    assert y[LARGE_X//2+2] == 1
+
+
+def test_floor():
+    x = create_input_for_rounding_ops()
+    y = nd.floor(x)
+    assert y[LARGE_X//2-2] == -1
+    assert y[LARGE_X//2-1] == -1
+    assert y[LARGE_X//2] == 0
+    assert y[LARGE_X//2+1] == 0
+    assert y[LARGE_X//2+2] == 1
+
+
+def test_rint():
+    x = create_input_for_rounding_ops()
+    y = nd.rint(x)
+    assert y[LARGE_X//2-2] == -1
+    assert y[LARGE_X//2-1] == -1
+    assert y[LARGE_X//2] == 0
+    assert y[LARGE_X//2+1] == 0
+    assert y[LARGE_X//2+2] == 1
+
+
+def test_round():
+    x = create_input_for_rounding_ops()
+    y = nd.round(x)
+    assert y[LARGE_X//2-2] == -1
+    assert y[LARGE_X//2-1] == -1
+    assert y[LARGE_X//2] == 0
+    assert y[LARGE_X//2+1] == 1
+    assert y[LARGE_X//2+2] == 1
+
+
+def test_trunc():
+    x = create_input_for_rounding_ops()
+    y = nd.trunc(x)
+    assert y[LARGE_X//2-2] == -1
+    assert y[LARGE_X//2-1] == 0
+    assert y[LARGE_X//2] == 0
+    assert y[LARGE_X//2+1] == 0
+    assert y[LARGE_X//2+2] == 1
+
+
+def test_arcsin():
+    x = nd.array([-1, -.707, 0, .707, 1])
+    x = nd.tile(x, LARGE_X//5)
+    y = nd.arcsin(x)
+    assert_almost_equal(y[0].asnumpy(), -np.pi/2, atol=1e-3)
+    assert_almost_equal(y[1].asnumpy(), -np.pi/4, atol=1e-3)
+    assert_almost_equal(y[-3].asnumpy(), 0, atol=1e-3)
+    assert_almost_equal(y[-2].asnumpy(), np.pi/4, atol=1e-3)
+    assert_almost_equal(y[-1].asnumpy(), np.pi/2, atol=1e-3)
+
+
+def test_arccos():
+    x = nd.array([-1, -.707, 0, .707, 1])
+    x = nd.tile(x, LARGE_X//5)
+    y = nd.arccos(x)
+    assert_almost_equal(y[0].asnumpy(), np.pi, atol=1e-3)
+    assert_almost_equal(y[1].asnumpy(), 3*np.pi/4, atol=1e-3)
+    assert_almost_equal(y[-3].asnumpy(), np.pi/2, atol=1e-3)
+    assert_almost_equal(y[-2].asnumpy(), np.pi/4, atol=1e-3)
+    assert_almost_equal(y[-1].asnumpy(), 0, atol=1e-3)
+
+
+def test_arctan():
+    x = nd.array([-np.Inf, -1, 0, 1, np.Inf])
+    x = nd.tile(x, LARGE_X//5)
+    y = nd.arctan(x)
+    assert_almost_equal(y[0].asnumpy(), -np.pi/2, atol=1e-3)
+    assert_almost_equal(y[1].asnumpy(), -np.pi/4, atol=1e-3)
+    assert_almost_equal(y[-3].asnumpy(), 0, atol=1e-3)
+    assert_almost_equal(y[-2].asnumpy(), np.pi/4, atol=1e-3)
+    assert_almost_equal(y[-1].asnumpy(), np.pi/2, atol=1e-3)
+
+
+def test_sin():
+    x = nd.array([-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2])
+    x = nd.tile(x, LARGE_X//5)
+    y = nd.sin(x)
+    assert_almost_equal(y[0].asnumpy(), -1, atol=1e-3)
+    assert_almost_equal(y[1].asnumpy(), -.707, atol=1e-3)
+    assert_almost_equal(y[-3].asnumpy(), 0, atol=1e-3)
+    assert_almost_equal(y[-2].asnumpy(), .707, atol=1e-3)
+    assert_almost_equal(y[-1].asnumpy(), 1, atol=1e-3)
+
+
+def test_cos():
+    x = nd.array([0, np.pi/4, np.pi/2, 3*np.pi/4, np.pi])
+    x = nd.tile(x, LARGE_X//5)
+    y = nd.cos(x)
+    assert_almost_equal(y[0].asnumpy(), 1, atol=1e-3)
+    assert_almost_equal(y[1].asnumpy(), .707, atol=1e-3)
+    assert_almost_equal(y[-3].asnumpy(), 0, atol=1e-3)
+    assert_almost_equal(y[-2].asnumpy(), -.707, atol=1e-3)
+    assert_almost_equal(y[-1].asnumpy(), -1, atol=1e-3)
+
+
+def test_tan():
+    x = nd.array([-np.pi/4, 0, np.pi/4])
+    x = nd.tile(x, LARGE_X//3)
+    y = nd.tan(x)
+    assert y[0] == -1
+    assert y[1] == 0
+    assert y[-1] == 1
+
+
+def test_radians():
+    x = nd.array([0, 90, 180, 270, 360])
+    x = nd.tile(x, LARGE_X//5)
+    y = nd.radians(x)
+    assert_almost_equal(y[0].asnumpy(), 0, atol=1e-3)
+    assert_almost_equal(y[1].asnumpy(), np.pi/2, atol=1e-3)
+    assert_almost_equal(y[-3].asnumpy(), np.pi, atol=1e-3)
+    assert_almost_equal(y[-2].asnumpy(), 3*np.pi/2, atol=1e-3)
+    assert_almost_equal(y[-1].asnumpy(), 2*np.pi, atol=1e-3)
+
+
+def test_degrees():
+    x = nd.array([0, np.pi/2, np.pi, 3*np.pi/2, 2*np.pi])
+    x = nd.tile(x, LARGE_X//5)
+    y = nd.degrees(x)
+    assert_almost_equal(y[0].asnumpy(), 0, atol=1e-3)
+    assert_almost_equal(y[1].asnumpy(), 90, atol=1e-3)
+    assert_almost_equal(y[-3].asnumpy(), 180, atol=1e-3)
+    assert_almost_equal(y[-2].asnumpy(), 270, atol=1e-3)
+    assert_almost_equal(y[-1].asnumpy(), 360, atol=1e-3)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
