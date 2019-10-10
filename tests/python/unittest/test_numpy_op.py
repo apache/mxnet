@@ -1102,6 +1102,7 @@ def test_np_squeeze():
                                 rtol=1e-5, atol=1e-6, use_broadcast=False)
 
 
+@unittest.skip("flaky")
 @with_seed()
 @use_np
 def test_np_prod():
