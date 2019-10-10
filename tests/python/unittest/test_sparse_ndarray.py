@@ -27,6 +27,7 @@ import numpy as np
 from common import assertRaises
 from mxnet.ndarray.sparse import RowSparseNDArray, CSRNDArray
 
+import unittest
 
 def sparse_nd_ones(shape, stype):
     return mx.nd.ones(shape).tostype(stype)
