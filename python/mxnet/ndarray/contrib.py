@@ -576,11 +576,12 @@ def mp_adamw_update(weight, grad, mean, var, weight32, rescale_grad, lr, eta, be
 
 def multi_adamw_update(weights, grads, mean, var, rescale_grad, lrs, wds, etas,
                        out=None, name=None, size=0, **kwargs):
-    rescale_grad = getRescaleGrad(rescale_grad, ctx=weights[0].context)
     if not size:
         size = len(weights)
-    return ndarray._internal._multi_adamw_update(*_flatten_list(zip(weights, grads, mean, var)),
-                                                 rescale_grad,
+
+    rescale_grad = getRescaleGrad(rescale_grad, ctx=weights[0].context)
+    temp_list = _flatten_list(zip(weights, grads, mean, var)) + [rescale_grad]
+    return ndarray._internal._multi_adamw_update(*temp_list,
                                                  out=out,
                                                  num_weights=size,
                                                  lrs=lrs,
@@ -591,16 +592,16 @@ def multi_adamw_update(weights, grads, mean, var, rescale_grad, lrs, wds, etas,
 
 def multi_mp_adamw_update(weights, grads, mean, var, weights32, rescale_grad, lrs, wds, etas,
                           out=None, name=None, size=0, **kwargs):
-    rescale_grad = getRescaleGrad(rescale_grad, ctx=weights[0].context)
     if not size:
         size = len(weights)
-    return ndarray._internal._multi_mp_adamw_update(
-        *_flatten_list(zip(weights, grads, mean, var, weights32)),
-        rescale_grad,
-        out=out,
-        num_weights=size,
-        lrs=lrs,
-        wds=wds,
-        etas=etas,
-        name=name,
-        **kwargs)
+
+    rescale_grad = getRescaleGrad(rescale_grad, ctx=weights[0].context)
+    temp_list = _flatten_list(zip(weights, grads, mean, var, weights32)) + [rescale_grad]
+    return ndarray._internal._multi_mp_adamw_update(*temp_list,
+                                                    out=out,
+                                                    num_weights=size,
+                                                    lrs=lrs,
+                                                    wds=wds,
+                                                    etas=etas,
+                                                    name=name,
+                                                    **kwargs)
