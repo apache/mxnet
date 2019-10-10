@@ -292,6 +292,14 @@ void ThreadedEngine::Push(OprHandle op, Context exec_ctx, int priority, bool pro
   OprBlock* opr_block = OprBlock::New();
   opr_block->opr = threaded_opr;
 
+  //huhanpeng
+  // if (threaded_opr->opr_name) {
+  //   std::cout << "src/engine/threaded_engine.cc:Push" 
+  //         << " opr_name:" << threaded_opr->opr_name
+  //         << " profiling:" << profiling
+  //         << std::endl << std::flush;
+  // }
+
   opr_block->wait.store(static_cast<int>(
       threaded_opr->const_vars.size() +
       threaded_opr->mutable_vars.size() + 1));
@@ -335,7 +343,18 @@ void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
 #endif
   ThreadedOpr *opr = NewOperator(std::move(fn), const_vars, mutable_vars, prop, opr_name, wait);
   opr->temporary = true;
-  const bool profiling = profiler_->IsProfiling(profiler::Profiler::kImperative);
+  // const bool profiling = profiler_->IsProfiling(profiler::Profiler::kImperative);
+  //huhanpeng
+  const bool profiling = profiler_->IsProfiling(profiler::Profiler::kImperative) ||
+                         profiler_->IsProfiling(profiler::Profiler::kSymbolic);
+  // if (opr_name) {
+  //   std::cout << "src/engine/threaded_engine.cc:PushAsync" 
+  //         << " opr_name:" << opr_name
+  //         << " profiling:" << profiling
+  //         << " ProfilerMode:" << profiler_->GetMode()
+  //         << " ProfilerState:" << profiler_->GetState()
+  //         << std::endl << std::flush;
+  // }
   Push(opr, exec_ctx, priority, profiling);
 }
 
@@ -345,6 +364,14 @@ void ThreadedEngine::PushSync(SyncFn exec_fn, Context exec_ctx,
                               FnProperty prop,
                               int priority,
                               const char* opr_name) {
+  //huhanpeng
+  // if (opr_name) {
+  //   std::cout << "src/engine/threaded_engine.cc:PushSync" 
+  //         << " opr_name:" << opr_name
+  //         << " bulk_size:" << bulk_size()
+  //         << " call PushAsync or not:" << (!bulk_size() || prop != FnProperty::kNormal || priority)
+  //         << std::endl << std::flush;
+  // }
   if (!bulk_size() || prop != FnProperty::kNormal || priority) {
     this->PushAsync([exec_fn](RunContext ctx, CallbackOnComplete on_complete) {
         exec_fn(ctx);

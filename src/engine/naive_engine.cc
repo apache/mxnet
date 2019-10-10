@@ -119,6 +119,15 @@ class NaiveEngine final : public Engine {
   void Push(OprHandle op, Context exec_ctx, int priority = 0, bool profiling = false) override {
     profiler::Profiler *profiler = profiler::Profiler::Get();
     NaiveOpr *opr = op->Cast<NaiveOpr>();
+
+    //huhanpeng
+    if (opr->opr_name) {
+      std::cout << "src/engine/naive_engine.cc:Push" 
+            << " opr_name:" << opr->opr_name
+            << " profiling:" << profiling
+            << std::endl << std::flush;
+    }
+
     opr->profiling = profiling && profiler->IsProfiling(profiler::Profiler::kSymbolic);
     this->PushAsync([&](RunContext ctx, CallbackOnComplete on_complete) {
         if (opr->profiling) {
@@ -160,6 +169,7 @@ class NaiveEngine final : public Engine {
     profiler::Profiler *profiler = profiler::Profiler::Get();
     NaiveOpr *opr = nullptr;
     const bool profiling = opr_name && profiler->IsProfiling(profiler::Profiler::kImperative);
+
     if (profiling) {
       opr = NewOperator(exec_fun, const_vars, mutable_vars,
                         prop, opr_name)->Cast<NaiveOpr>();
