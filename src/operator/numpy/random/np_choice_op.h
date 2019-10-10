@@ -41,7 +41,7 @@ namespace mxnet {
 namespace op {
 
 struct NumpyChoiceParam : public dmlc::Parameter<NumpyChoiceParam> {
-  dmlc::optional<int> a;
+  dmlc::optional<int64_t> a;
   std::string ctx;
   dmlc::optional<mxnet::Tuple<int64_t>> size;
   bool replace;
