@@ -98,6 +98,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'min',
     'ones_like',
     'prod',
+    'ravel',
     'repeat',
     'reshape',
     'split',
