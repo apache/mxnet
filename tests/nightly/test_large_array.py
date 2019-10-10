@@ -22,6 +22,7 @@ import mxnet as mx
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward, create_2d_tensor
 from mxnet import gluon, nd
 from tests.python.unittest.common import with_seed, teardown
+from nose.tools import with_setup
 
 # dimension constants
 MEDIUM_X = 10000
@@ -32,6 +33,7 @@ SMALL_Y = 50
 LARGE_SIZE = LARGE_X * SMALL_Y
 
 
+@with_setup(teardown)
 def test_gluon_embedding():
     m = gluon.nn.Embedding(SMALL_Y, MEDIUM_X)
     m.initialize()
@@ -41,6 +43,7 @@ def test_gluon_embedding():
     assert b.asnumpy().size == LARGE_SIZE
 
 
+@with_setup(teardown)
 def test_ndarray_zeros():
     a = nd.zeros(shape=(LARGE_X, SMALL_Y))
     assert a[-1][0] == 0
@@ -48,12 +51,14 @@ def test_ndarray_zeros():
     assert a.size == LARGE_SIZE
 
 
+@with_setup(teardown)
 def test_ndarray_ones():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     assert a[-1][0] == 1
     assert nd.sum(a).asnumpy() == LARGE_SIZE
 
 
+@with_setup(teardown)
 def test_ndarray_convert():
     a = nd.zeros(shape=(LARGE_X, SMALL_Y))
     b = a.astype(np.int32)
@@ -62,12 +67,14 @@ def test_ndarray_convert():
     assert isinstance(b, mx.nd.sparse.RowSparseNDArray)
 
 
+@with_setup(teardown)
 @with_seed()
 def test_ndarray_random_uniform():
     a = nd.random.uniform(shape=(LARGE_X, SMALL_Y))
     assert a[-1][0] != 0
 
 
+@with_setup(teardown)
 @with_seed()
 def test_ndarray_random_randint():
     a = nd.random.randint(100, 10000, shape=(LARGE_X, SMALL_Y))
@@ -82,6 +89,7 @@ def test_ndarray_random_randint():
     assert a[-1][0].dtype == np.int64
 
 
+@with_setup(teardown)
 @with_seed()
 def test_ndarray_random_exponential():
     scale_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
@@ -90,6 +98,7 @@ def test_ndarray_random_exponential():
     assert a.shape == (MEDIUM_X, SMALL_X, SMALL_X, SMALL_Y)
 
 
+@with_setup(teardown)
 @with_seed()
 def test_ndarray_random_gamma():
     alpha_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
@@ -100,6 +109,7 @@ def test_ndarray_random_gamma():
     assert a.shape == (MEDIUM_X, SMALL_X, SMALL_X, SMALL_Y)
 
 
+@with_setup(teardown)
 @with_seed()
 def test_ndarray_random_multinomial():
     # test 1 shape dimension
@@ -117,6 +127,7 @@ def test_ndarray_random_multinomial():
     assert a[0].shape == (LARGE_X, 2, SMALL_Y) and a[0].shape == a[1].shape
 
 
+@with_setup(teardown)
 @with_seed()
 def test_ndarray_random_generalized_negative_binomial():
     alpha_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
@@ -127,6 +138,7 @@ def test_ndarray_random_generalized_negative_binomial():
     assert a.shape == (MEDIUM_X, SMALL_X, SMALL_X, SMALL_Y)
 
 
+@with_setup(teardown)
 @with_seed()
 def test_ndarray_random_negative_binomial():
     k_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
@@ -137,6 +149,7 @@ def test_ndarray_random_negative_binomial():
     assert a.shape == (MEDIUM_X, SMALL_X, SMALL_X, SMALL_Y)
 
 
+@with_setup(teardown)
 @with_seed()
 def test_ndarray_random_normal():
     scale_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
@@ -146,6 +159,7 @@ def test_ndarray_random_normal():
     assert a.shape == (MEDIUM_X, SMALL_X, SMALL_X, SMALL_Y)
 
 
+@with_setup(teardown)
 @with_seed()
 def test_ndarray_random_poisson():
     lambda_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
@@ -154,6 +168,7 @@ def test_ndarray_random_poisson():
     assert a.shape == (MEDIUM_X, SMALL_X, SMALL_X, SMALL_Y)
 
 
+@with_setup(teardown)
 @with_seed()
 def test_ndarray_random_randn():
     a = nd.random.randn(LARGE_X, SMALL_Y)
@@ -162,6 +177,7 @@ def test_ndarray_random_randn():
     # Add check for (x,y,m,n) where x,y shape of loc,scale and m,n input shape
 
 
+@with_setup(teardown)
 @with_seed()
 def test_ndarray_random_shuffle():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
@@ -178,11 +194,13 @@ def test_ndarray_random_shuffle():
     assert a.shape == (LARGE_X, SMALL_Y)
 
 
+@with_setup(teardown)
 def test_ndarray_empty():
     a = nd.empty((LARGE_X, SMALL_Y))
     assert a.shape == (LARGE_X, SMALL_Y)
 
 
+@with_setup(teardown)
 def test_elementwise():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     b = nd.ones(shape=(LARGE_X, SMALL_Y))
@@ -194,11 +212,13 @@ def test_elementwise():
     assert np.sum(res[-1].asnumpy() == 2) == a.shape[1]
 
 
+@with_setup(teardown)
 def test_reduce():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     assert nd.sum(a).asnumpy() == a.shape[0] * a.shape[1]
 
 
+@with_setup(teardown)
 def test_dot():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     b = nd.ones(shape=(SMALL_Y, SMALL_Y))
@@ -206,6 +226,7 @@ def test_dot():
     assert np.sum(res[-1].asnumpy() == SMALL_Y) == b.shape[1]
 
 
+@with_setup(teardown)
 def test_FullyConnected():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     b = nd.ones(shape=(SMALL_Y, SMALL_Y))
@@ -213,6 +234,7 @@ def test_FullyConnected():
     assert np.sum(res[-1].asnumpy() == SMALL_Y) == b.shape[1]
 
 
+@with_setup(teardown)
 def test_broadcast():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     b = nd.arange(0, LARGE_X).reshape(LARGE_X, 1)
@@ -222,12 +244,14 @@ def test_broadcast():
     assert np.sum(res[-1].asnumpy() == LARGE_X) == a.shape[1]
 
 
+@with_setup(teardown)
 def test_clip():
     a = nd.arange(0, LARGE_X * SMALL_Y).reshape(LARGE_X, SMALL_Y)
     res = nd.clip(a, a_min=100, a_max=1000)
     assert np.sum(res[-1].asnumpy() == 1000) == a.shape[1]
 
 
+@with_setup(teardown)
 def test_split():
     a = nd.arange(0, LARGE_X * SMALL_Y).reshape(LARGE_X, SMALL_Y)
     outs = nd.split(a, num_outputs=SMALL_Y, axis=1)
@@ -235,18 +259,21 @@ def test_split():
     assert result == a.shape[1]
 
 
+@with_setup(teardown)
 def test_argmin():
     a = nd.arange(0, LARGE_X * SMALL_Y).reshape(LARGE_X, SMALL_Y)
     idx = mx.nd.argmin(a, axis=0)
     assert idx.shape[0] == SMALL_Y
 
 
+@with_setup(teardown)
 def test_tile():
     a = nd.arange(0, LARGE_X).reshape(LARGE_X, 1)
     b = nd.tile(a, reps=(1, SMALL_Y))
     assert np.sum(b[-1].asnumpy() == LARGE_X) == b.shape[1]
 
 
+@with_setup(teardown)
 def test_take():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     idx = nd.arange(LARGE_X - 1000, LARGE_X)
@@ -254,18 +281,21 @@ def test_take():
     assert np.sum(res[-1].asnumpy() == 1) == res.shape[1]
 
 
+@with_setup(teardown)
 def test_slice():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     res = nd.slice(a, begin=(LARGE_X-1000, 1), end=(LARGE_X, SMALL_Y))
     assert np.sum(res[-1].asnumpy() == 1) == res.shape[1]
 
 
+@with_setup(teardown)
 def test_slice_assign():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     a[LARGE_X-1:LARGE_X] = 1000
     assert np.sum(a[-1].asnumpy() == 1000) == a.shape[1]
 
 
+@with_setup(teardown)
 def test_expand_dims():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     res = nd.expand_dims(a, axis=1)
@@ -273,6 +303,7 @@ def test_expand_dims():
     assert res.shape == (a.shape[0], 1, a.shape[1])
 
 
+@with_setup(teardown)
 def test_squeeze():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     data = nd.expand_dims(a, axis=1)
@@ -280,6 +311,7 @@ def test_squeeze():
     assert res.shape == a.shape
 
 
+@with_setup(teardown)
 def test_broadcast_div():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     b = nd.ones(shape=(LARGE_X, 1)) * 2
@@ -287,6 +319,7 @@ def test_broadcast_div():
     assert np.sum(res[-1].asnumpy() == 0.5) == a.shape[1]
 
 
+@with_setup(teardown)
 def test_Dense(ctx=mx.cpu(0)):
     data = mx.nd.ones(shape=(50*1000*1000, 100))
     linear = gluon.nn.Dense(100)
@@ -295,6 +328,7 @@ def test_Dense(ctx=mx.cpu(0)):
     assert res.shape == (50000000, 100)
 
 
+@with_setup(teardown)
 def test_where():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     b = nd.arange(0, LARGE_X * SMALL_Y).reshape(LARGE_X, SMALL_Y)
@@ -305,6 +339,7 @@ def test_where():
     assert np.sum(res[0].asnumpy() == 1) == 10
 
 
+@with_setup(teardown)
 def test_pick():
     a = mx.nd.ones(shape=(256 * 35, 1024 * 1024))
     b = mx.nd.ones(shape=(256 * 35, ))
@@ -312,6 +347,7 @@ def test_pick():
     assert res.shape == b.shape
 
 
+@with_setup(teardown)
 def test_depthtospace():
     def numpy_depth_to_space(x, blocksize):
         b, c, h, w = x.shape[0], x.shape[1], x.shape[2], x.shape[3]
@@ -330,6 +366,7 @@ def test_depthtospace():
     assert_almost_equal(output.asnumpy(), expected, atol=1e-3, rtol=1e-3)
 
 
+@with_setup(teardown)
 def test_spacetodepth():
     def numpy_space_to_depth(x, blocksize):
         b, c, h, w = x.shape[0], x.shape[1], x.shape[2], x.shape[3]
@@ -348,6 +385,7 @@ def test_spacetodepth():
     assert_almost_equal(output.asnumpy(), expected, atol=1e-3, rtol=1e-3)
 
 
+@with_setup(teardown)
 @with_seed()
 def test_diag():
     a_np = np.random.random((LARGE_X, SMALL_Y)).astype(np.float32)
@@ -373,6 +411,7 @@ def test_diag():
     assert_almost_equal(r.asnumpy(), np.diag(a_np, k=k))
 
 
+@with_setup(teardown)
 @with_seed()
 def test_ravel_multi_index():
     x1, y1 = rand_coord_2d((LARGE_X - 100), LARGE_X, 10, SMALL_Y)
@@ -385,6 +424,7 @@ def test_ravel_multi_index():
     assert np.sum(1 for i in range(idx.size) if idx[i] == idx_numpy[i]) == 3
 
 
+@with_setup(teardown)
 @with_seed()
 def test_unravel_index():
     x1, y1 = rand_coord_2d((LARGE_X - 100), LARGE_X, 10, SMALL_Y)
@@ -397,6 +437,7 @@ def test_unravel_index():
     assert (indices_2d.asnumpy() == np.array(original_2d_indices)).all()
 
 
+@with_setup(teardown)
 def test_transpose():
     b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
     t = b.T
@@ -404,6 +445,7 @@ def test_transpose():
     assert t.shape == (SMALL_Y, LARGE_X)
 
 
+@with_setup(teardown)
 def test_swapaxes():
     b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
     t = nd.swapaxes(b, dim1=0, dim2=1)
@@ -411,6 +453,7 @@ def test_swapaxes():
     assert t.shape == (SMALL_Y, LARGE_X)
 
 
+@with_setup(teardown)
 def test_flip():
     b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
     t = nd.flip(b, axis=0)
@@ -418,6 +461,7 @@ def test_flip():
     assert t.shape == (LARGE_X, SMALL_Y)
 
 
+@with_setup(teardown)
 def test_softmax():
     input_data = mx.nd.ones((SMALL_Y, LARGE_X))
     true_output = np.full((SMALL_Y, LARGE_X), (1 / SMALL_Y))
@@ -425,6 +469,7 @@ def test_softmax():
     assert_almost_equal(output.asnumpy(), true_output, rtol=1e-5, atol=1e-5)
 
 
+@with_setup(teardown)
 def test_argsort():
     b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
     s = nd.argsort(b, axis=0, is_ascend=False, dtype=np.int64)
@@ -432,6 +477,7 @@ def test_argsort():
     assert (s[0].asnumpy() == (LARGE_X - 1)).all()
 
 
+@with_setup(teardown)
 def test_sort():
     b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
     s = nd.sort(b, axis=0, is_ascend=False)
@@ -440,6 +486,7 @@ def test_sort():
     assert np.sum(s[0].asnumpy() == 0).all()
 
 
+@with_setup(teardown)
 def test_topk():
     b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
     k = nd.topk(b, k=10, axis=0, dtype=np.int64)
@@ -452,6 +499,7 @@ def test_topk():
     assert l.sum() == np.sum(np.arange(0, SMALL_Y))
 
 
+@with_setup(teardown)
 def test_exponent_logarithm_operators():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     # exponent
@@ -485,6 +533,7 @@ def test_exponent_logarithm_operators():
     assert result.shape == a.shape
 
 
+@with_setup(teardown)
 def test_power_operators():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     # sqrt
@@ -518,6 +567,7 @@ def test_power_operators():
     assert result.shape == a.shape
 
 
+@with_setup(teardown)
 def test_sequence_mask():
     # Sequence Mask input [max_sequence_length, batch_size, other_feature_dims]
     # test with input batch_size = 2
@@ -541,6 +591,7 @@ def test_sequence_mask():
     assert b[-1][-1][-1] == -1
 
 
+@with_setup(teardown)
 def test_sequence_reverse():
     a = nd.arange(0, LARGE_X * SMALL_Y * 2).reshape(LARGE_X, 2, SMALL_Y)
     # test as reverse operator
@@ -557,6 +608,7 @@ def test_sequence_reverse():
     assert b.shape == a.shape
 
 
+@with_setup(teardown)
 def test_sequence_last():
     a = nd.arange(0, LARGE_X * SMALL_Y * 2).reshape(LARGE_X, 2, SMALL_Y)
 
@@ -574,6 +626,7 @@ def test_sequence_last():
     assert b[0][-1] == a[1][0][-1]
 
 
+@with_setup(teardown)
 def test_softmax_cross_entropy():
     # dtype of input data, mxnet cross entropy set explicitly to float64
     # numpy implicitly takes care of double precision
@@ -598,6 +651,7 @@ def test_softmax_cross_entropy():
                         true_softmax_cross_entropy, rtol=1e-3, atol=1e-5)
 
 
+@with_setup(teardown)
 def test_index_copy():
     x = mx.nd.zeros((LARGE_X, SMALL_Y))
     t = mx.nd.arange(1, SMALL_Y + 1).reshape((1, SMALL_Y))
@@ -607,6 +661,7 @@ def test_index_copy():
     assert x[-1][-1] == t[0][-1]
 
 
+@with_setup(teardown)
 def testSoftmaxOutput():
     x = mx.sym.Variable('x')
     label = mx.sym.Variable('label')
@@ -633,6 +688,7 @@ def testSoftmaxOutput():
 
 
 # TODO: correctness of prelu (currently flaky)
+@with_setup(teardown)
 def test_leaky_relu():
     a = -1*mx.nd.ones((LARGE_X, SMALL_Y))
 
@@ -662,6 +718,7 @@ def test_leaky_relu():
     test_rrelu()
 
 
+@with_setup(teardown)
 def test_pooling():
     a = mx.nd.ones((MEDIUM_X, 200, SMALL_Y, SMALL_Y))
 
@@ -695,6 +752,7 @@ def test_pooling():
     test_lp_pooling()
 
 
+@with_setup(teardown)
 def test_layer_norm():
     dtype = np.float32
     forward_check_eps = 1E-3
@@ -735,6 +793,7 @@ def test_layer_norm():
 # TODO: correctness of dropout
 # currently only test for dropout to work
 # since testing for correctness involves flakiness issue #14288
+@with_setup(teardown)
 def test_dropout():
     shape = (LARGE_X, SMALL_Y)
     x = mx.sym.var('data')
@@ -746,6 +805,7 @@ def test_dropout():
     assert out[0].shape == shape
 
 
+@with_setup(teardown)
 def test_activation():
     x = mx.nd.ones((LARGE_X, SMALL_Y))
     test_x = -2
@@ -778,6 +838,7 @@ def test_activation():
 # TODO: correctness of batchnorm
 # in future, we could test if mean, var of output
 # matches target output's mean, var
+@with_setup(teardown)
 def test_batchnorm():
     shape = (LARGE_X, SMALL_Y)
     axis = 1  # default
@@ -794,6 +855,7 @@ def test_batchnorm():
     assert output.shape == shape
 
 
+@with_setup(teardown)
 def test_add():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     b = nd.ones(shape=(LARGE_X, SMALL_Y))
@@ -803,6 +865,7 @@ def test_add():
     assert c.shape == a.shape
 
 
+@with_setup(teardown)
 def test_sub():
     a = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = nd.ones(shape=(LARGE_X, SMALL_Y))
@@ -812,6 +875,7 @@ def test_sub():
     assert c.shape == a.shape
 
 
+@with_setup(teardown)
 def test_rsub():
     a = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = nd.ones(shape=(LARGE_X, SMALL_Y))
@@ -821,6 +885,7 @@ def test_rsub():
     assert c.shape == a.shape
 
 
+@with_setup(teardown)
 def test_neg():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     c = a
@@ -829,6 +894,7 @@ def test_neg():
     assert c.shape == a.shape
 
 
+@with_setup(teardown)
 def test_mul():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
@@ -838,6 +904,7 @@ def test_mul():
     assert c.shape == a.shape
 
 
+@with_setup(teardown)
 def test_div():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
@@ -847,6 +914,7 @@ def test_div():
     assert c.shape == a.shape
 
 
+@with_setup(teardown)
 def test_rdiv():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
@@ -856,6 +924,7 @@ def test_rdiv():
     assert c.shape == a.shape
 
 
+@with_setup(teardown)
 def test_mod():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
@@ -865,6 +934,7 @@ def test_mod():
     assert c.shape == a.shape
 
 
+@with_setup(teardown)
 def test_rmod():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
@@ -874,6 +944,7 @@ def test_rmod():
     assert c.shape == a.shape
 
 
+@with_setup(teardown)
 def test_imod():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
@@ -883,6 +954,7 @@ def test_imod():
     assert c.shape == a.shape
 
 
+@with_setup(teardown)
 def test_pow():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
@@ -892,6 +964,7 @@ def test_pow():
     assert c.shape == a.shape
 
 
+@with_setup(teardown)
 def test_rpow():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
@@ -901,18 +974,21 @@ def test_rpow():
     assert c.shape == a.shape
 
 
+@with_setup(teardown)
 def test_shape():
     b = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
     mx.nd.waitall()
     assert b.shape == (SMALL_Y, LARGE_X)
 
 
+@with_setup(teardown)
 def test_size():
     b = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
     mx.nd.waitall()
     assert b.size == LARGE_SIZE
 
 
+@with_setup(teardown)
 def test_copy():
     a = nd.ones((SMALL_Y, LARGE_X))
     b = a.copy()
@@ -921,6 +997,7 @@ def test_copy():
     assert b.size == LARGE_SIZE
 
 
+@with_setup(teardown)
 def test_copy_to():
     a = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
     b = nd.array(np.zeros((SMALL_Y, LARGE_X)))
@@ -929,6 +1006,7 @@ def test_copy_to():
     assert b[-1][-1] == SMALL_Y-1
 
 
+@with_setup(teardown)
 def test_zeros_like():
     a = nd.array(np.ones((SMALL_Y, LARGE_X)))
     b = nd.zeros_like(a)
@@ -936,6 +1014,7 @@ def test_zeros_like():
     assert b.shape == a.shape
 
 
+@with_setup(teardown)
 def test_ones_like():
     a = nd.array(np.zeros((SMALL_Y, LARGE_X)))
     b = nd.ones_like(a)
@@ -943,6 +1022,7 @@ def test_ones_like():
     assert b.shape == a.shape
 
 
+@with_setup(teardown)
 def test_reshape_like():
     a = nd.array(np.zeros((SMALL_Y, LARGE_X)))
     b = nd.array(np.zeros((SMALL_Y//2, LARGE_X*2)))
@@ -950,6 +1030,7 @@ def test_reshape_like():
     assert c.shape == (SMALL_Y//2, LARGE_X*2)
 
 
+@with_setup(teardown)
 def test_flatten():
     a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y).reshape((LARGE_X//2, 2, SMALL_Y))
     b = nd.flatten(a)
@@ -958,6 +1039,7 @@ def test_flatten():
     assert b.shape == (LARGE_X//2, SMALL_Y*2)
 
 
+@with_setup(teardown)
 def test_concat():
     a = nd.array(np.ones((SMALL_Y, LARGE_X)))
     b = nd.array(np.zeros((SMALL_Y, LARGE_X)))
@@ -965,6 +1047,7 @@ def test_concat():
     assert c.shape == (b.shape[0]*2, LARGE_X)
 
 
+@with_setup(teardown)
 def test_stack():
     a = nd.array(np.ones((SMALL_Y, LARGE_X)))
     b = nd.array(np.zeros((SMALL_Y, LARGE_X)))
@@ -972,30 +1055,35 @@ def test_stack():
     assert c.shape == (b.shape[0], 2, LARGE_X)
 
 
+@with_setup(teardown)
 def test_broadcast_axes():
     a = create_2d_tensor(rows=1, columns=LARGE_X)
     b = nd.broadcast_axis(a, axis=[0], size=2)
     assert b.shape == (a.shape[0]*2, a.shape[1])
 
 
+@with_setup(teardown)
 def test_sum():
     a = nd.array(np.ones((SMALL_Y, LARGE_X)))
     b = nd.sum(a, axis=1)
     assert b.shape[0] == SMALL_Y
 
 
+@with_setup(teardown)
 def test_prod():
     a = nd.array(np.ones((SMALL_Y, LARGE_X)))
     b = nd.prod(a, axis=1)
     assert b.shape[0] == SMALL_Y
 
 
+@with_setup(teardown)
 def test_mean():
     a = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
     b = nd.mean(a, axis=0)
     assert b[0] == (SMALL_Y/2-1)
 
 
+@with_setup(teardown)
 def test_min():
     a = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
     b = nd.min(a, axis=0)
@@ -1003,6 +1091,7 @@ def test_min():
     assert b[-1] == 0
 
 
+@with_setup(teardown)
 def test_max():
     a = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
     b = nd.max(a, axis=0)
@@ -1010,6 +1099,7 @@ def test_max():
     assert b[-1] == (SMALL_Y-1)
 
 
+@with_setup(teardown)
 def test_norm():
     a = np.array(np.full((1, LARGE_X), 3))
     b = np.array(np.full((1, LARGE_X), 4))
@@ -1022,6 +1112,7 @@ def test_norm():
     assert e[-1] == 7
 
 
+@with_setup(teardown)
 def test_argmax():
     a = np.ones((SMALL_Y, LARGE_X))
     b = np.zeros((SMALL_Y, LARGE_X))
@@ -1031,6 +1122,7 @@ def test_argmax():
     assert d[-1] == d[0] == 0
 
 
+@with_setup(teardown)
 def test_relu():
     def frelu(x):
         return np.maximum(x, 0.0)
@@ -1048,6 +1140,7 @@ def test_relu():
     check_symbolic_forward(y, [xa], [ya])
 
 
+@with_setup(teardown)
 def test_sigmoid():
     def fsigmoid(a):
         return np.divide(1.0, (1.0 + np.exp(-a)))
@@ -1059,6 +1152,7 @@ def test_sigmoid():
     check_symbolic_forward(y, [xa], [ya])
 
 
+@with_setup(teardown)
 def np_softmax(x, axis=-1, temperature=1.0):
     x = x - np.max(x, axis=axis, keepdims=True)
     x = np.exp(x/temperature)
@@ -1066,6 +1160,7 @@ def np_softmax(x, axis=-1, temperature=1.0):
     return x
 
 
+@with_setup(teardown)
 def test_log_softmax():
     ndim = 2
     shape = (SMALL_Y, LARGE_X)
@@ -1075,6 +1170,7 @@ def test_log_softmax():
     check_symbolic_forward(sym, [data], [np.log(np_softmax(data, axis=axis)+1e-20)])
 
 
+@with_setup(teardown)
 def test_iadd():
     a = nd.array(np.ones((SMALL_Y, LARGE_X)))
     b = nd.array(np.ones((SMALL_Y, LARGE_X)))
@@ -1084,6 +1180,7 @@ def test_iadd():
     assert c[0][-1] == 2
 
 
+@with_setup(teardown)
 def test_isub():
     a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
     b = nd.array(np.ones((SMALL_Y, LARGE_X)))
@@ -1093,6 +1190,7 @@ def test_isub():
     assert c[0][-1] == 2
 
 
+@with_setup(teardown)
 def test_imul():
     a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
     b = nd.array(np.ones((SMALL_Y, LARGE_X)))
@@ -1102,6 +1200,7 @@ def test_imul():
     assert c[0][-1] == 3
 
 
+@with_setup(teardown)
 def test_idiv():
     a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 4)))
     b = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 2)))
@@ -1111,6 +1210,7 @@ def test_idiv():
     assert c[0][-1] == 2
 
 
+@with_setup(teardown)
 def test_eq():
     a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
     b = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
@@ -1118,6 +1218,7 @@ def test_eq():
     assert np.sum(c[0].asnumpy() == 1).all()
 
 
+@with_setup(teardown)
 def test_neq():
     a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 2)))
     b = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
@@ -1125,6 +1226,7 @@ def test_neq():
     assert np.sum(c[0].asnumpy() == 1).all()
 
 
+@with_setup(teardown)
 def test_lt():
     a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 2)))
     b = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
@@ -1132,6 +1234,7 @@ def test_lt():
     assert np.sum(d[0].asnumpy() == 1).all()
 
 
+@with_setup(teardown)
 def test_lte():
     a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 2)))
     b = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
@@ -1142,6 +1245,7 @@ def test_lte():
     assert np.sum(e[0].asnumpy() == 1).all()
 
 
+@with_setup(teardown)
 def test_gt():
     a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
     b = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 2)))
@@ -1149,6 +1253,7 @@ def test_gt():
     assert np.sum(d[0].asnumpy() == 1).all()
 
 
+@with_setup(teardown)
 def test_gte():
     a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
     b = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 2)))
@@ -1159,6 +1264,7 @@ def test_gte():
     assert np.sum(e[0].asnumpy() == 1).all()
 
 
+@with_setup(teardown)
 def test_slice_like():
     a = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
     b = nd.array(np.ones((SMALL_Y//2, LARGE_X//2)))
@@ -1173,6 +1279,7 @@ def test_slice_like():
     assert e[-1][-1] == (SMALL_Y-1)
 
 
+@with_setup(teardown)
 def test_slice_axis():
     a = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
     c = nd.slice_axis(a, axis=0, begin=0, end=SMALL_Y//2)
@@ -1183,6 +1290,7 @@ def test_slice_axis():
     assert d[-1][-1] == (SMALL_Y-1)
 
 
+@with_setup(teardown)
 def test_one_hot():
     # default dtype of ndarray is float32 which cannot index elements over 2^32
     a = nd.array([1, (VLARGE_X - 1)], dtype=np.int64)
@@ -1191,6 +1299,7 @@ def test_one_hot():
     b[1][-1] == 1
 
 
+@with_setup(teardown)
 def test_full():
     a = nd.full((SMALL_Y, LARGE_X), 3)
     assert a.shape == (SMALL_Y, LARGE_X)
