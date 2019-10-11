@@ -825,26 +825,46 @@ inline void NumpyEinsumForward(const OpStatePtr& state_ptr,
           TBlob max_temp_space = TBlob(temp_space.Slice(0, paths[i].tshape.Size()));
           max_temp_space.FlatTo1D<xpu, DType>(s) = 0;
           max_temp_space = max_temp_space.reshape(paths[i].tshape);
+          size_t tensordot_tempspace_size =
+            TensordotWorkspaceSize<xpu>(paths[i].left_pos,
+                                        paths[i].right_pos,
+                                        tmp_operands[0],
+                                        tmp_operands[1],
+                                        max_temp_space,
+                                        std::vector<OpReqType>{OpReqType::kWriteTo});
+          Tensor<xpu, 1, char> tensordot_tempspace =
+            ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(tensordot_tempspace_size), s);
           TensordotImpl<xpu>(paths[i].left_pos,
                              paths[i].right_pos,
                              ctx,
                              tmp_operands[0],
                              tmp_operands[1],
                              max_temp_space,
-                             std::vector<OpReqType>{OpReqType::kWriteTo});
+                             std::vector<OpReqType>{OpReqType::kWriteTo},
+                             tensordot_tempspace);
           NumpyEinsumProcess<xpu, 0>(std::vector<TBlob>{max_temp_space},
             handle_out ? req : std::vector<OpReqType>{OpReqType::kWriteTo},
             handle_out ? outputs : std::vector<TBlob>{temp_space_vec[i]},
             paths[i].blas2einsum_str.c_str(),
             1, ctx);
         } else {
+          size_t tensordot_tempspace_size =
+            TensordotWorkspaceSize<xpu>(paths[i].left_pos,
+                                        paths[i].right_pos,
+                                        tmp_operands[0],
+                                        tmp_operands[1],
+                                        temp_space_vec[i],
+                                        std::vector<OpReqType>{OpReqType::kWriteTo});
+          Tensor<xpu, 1, char> tensordot_tempspace = ctx.requested[0].get_space_typed<xpu, 1, char>(
+            Shape1(tensordot_tempspace_size), s);
           TensordotImpl<xpu>(paths[i].left_pos,
                              paths[i].right_pos,
                              ctx,
                              tmp_operands[0],
                              tmp_operands[1],
                              temp_space_vec[i],
-                             std::vector<OpReqType>{OpReqType::kWriteTo});
+                             std::vector<OpReqType>{OpReqType::kWriteTo},
+                             tensordot_tempspace);
         }
       } else {
         NumpyEinsumProcess<xpu, 0>(tmp_operands,
@@ -852,8 +872,9 @@ inline void NumpyEinsumForward(const OpStatePtr& state_ptr,
         handle_out ? outputs : std::vector<TBlob>{temp_space_vec[i]},
         paths[i].einsum_str.c_str(), tmp_operands.size(), ctx);
       }
-      if (!handle_out)
+      if (!handle_out) {
         operands.push_back(temp_space_vec[i]);
+      }
     }
   });
 }
@@ -904,14 +925,80 @@ inline void NumpyEinsumBackward(const OpStatePtr& state_ptr,
       op_idx[i].push_back(-static_cast<int>(i - 1));
     }
   }
-
-  // allocate temporary space and propagate
-  std::vector<TBlob> temp_grad(paths_len - 1), temp_data(paths_len - 1);
+  // calculate temporary space size for tensordot
+  int tensordot_max_tempspace_size = 0;
+  int begin_tensordot_tempspace = 0;
   std::vector<TBlob> temp_inputs, temp_outputs;
   std::vector<OpReqType> temp_req;
+  std::vector<size_t> tensordot_tempspace_size;
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    for (int i = 0; i < paths_len; ++i) {
+      temp_inputs.clear();
+      temp_outputs.clear();
+      temp_req.clear();
+      bool handle_out = (i == paths_len - 1);
+
+      if (handle_out) {
+        temp_inputs.push_back(inputs[0]);
+      } else {
+        temp_inputs.push_back(TBlob(reinterpret_cast<DType*>(NULL),
+                                    paths[i].oshape,
+                                    xpu::kDevMask));
+      }
+      for (auto p : paths[i].contract_inds) {
+        int idx = op_idx[i][p];
+        if (idx >= 1) {
+          temp_inputs.push_back(inputs[idx]);
+          temp_outputs.push_back(outputs[idx - 1]);
+          temp_req.push_back(req[idx - 1]);
+        } else {
+          temp_inputs.push_back(TBlob(reinterpret_cast<DType*>(NULL),
+                                      paths[-idx].oshape,
+                                      xpu::kDevMask));
+          temp_outputs.push_back(TBlob(reinterpret_cast<DType*>(NULL),
+                                      paths[-idx].oshape,
+                                      xpu::kDevMask));
+          temp_req.push_back(OpReqType::kWriteTo);
+        }
+      }
+      size_t cur_tensordot_tempspace_size = 0;
+      if (paths[i].do_blas) {
+        if (paths[i].do_einsum) {
+          cur_tensordot_tempspace_size =
+            TensordotBackwardWorkspaceSize<xpu>(paths[i].left_pos,
+                                                paths[i].right_pos,
+                                                TBlob(reinterpret_cast<DType*>(NULL),
+                                                      paths[i].tshape,
+                                                      xpu::kDevMask),
+                                                temp_inputs[1],
+                                                temp_inputs[2],
+                                                temp_outputs[0],
+                                                temp_outputs[1],
+                                                temp_req);
+        } else {
+          cur_tensordot_tempspace_size =
+            TensordotBackwardWorkspaceSize<xpu>(paths[i].left_pos,
+                                                paths[i].right_pos,
+                                                temp_inputs[0],
+                                                temp_inputs[1],
+                                                temp_inputs[2],
+                                                temp_outputs[0],
+                                                temp_outputs[1],
+                                                temp_req);
+        }
+      }
+      tensordot_tempspace_size.push_back(cur_tensordot_tempspace_size);
+      tensordot_max_tempspace_size = std::max(tensordot_max_tempspace_size,
+                                              static_cast<int>(cur_tensordot_tempspace_size));
+    }
+    begin_tensordot_tempspace = temp_space_size;
+    temp_space_size += (tensordot_max_tempspace_size + sizeof(DType) - 1) / sizeof(DType);
+  });
+  // allocate temporary space and propagate
+  std::vector<TBlob> temp_grad(paths_len - 1), temp_data(paths_len - 1);
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     // allocate temporary space for gradients of intermediate results
-    Tensor<xpu, 1, DType> temp_space = ctx.requested[2].get_space_typed<xpu, 1, DType>
+    Tensor<xpu, 1, DType> temp_space = ctx.requested[0].get_space_typed<xpu, 1, DType>
       (Shape1(temp_space_size), s);
     int begin = max_temp_space_size;
     for (int i = 0; i + 1 < paths_len; ++i) {
@@ -957,6 +1044,12 @@ inline void NumpyEinsumBackward(const OpStatePtr& state_ptr,
         CHECK_EQ(temp_inputs.size(), 3U);
         CHECK_EQ(temp_outputs.size(), 2U);
         CHECK_EQ(temp_req.size(), 2U);
+        Tensor<xpu, 1, DType> tensordot_tempspace = temp_space.Slice(begin_tensordot_tempspace,
+                                                                     temp_space_size);
+        Tensor<xpu, 1, char> char_tempspace =
+          Tensor<xpu, 1, char>(reinterpret_cast<char*>(tensordot_tempspace.dptr_),
+                                                       Shape1(tensordot_tempspace_size[i]),
+                                                       tensordot_tempspace.stream_);
         if (paths[i].do_einsum) {
           TBlob max_temp_space = TBlob(temp_space.Slice(0, paths[i].tshape.Size()));
           max_temp_space = max_temp_space.reshape(paths[i].tshape);
@@ -967,11 +1060,11 @@ inline void NumpyEinsumBackward(const OpStatePtr& state_ptr,
                                      1, ctx);
           TensordotBackwardImpl<xpu>(paths[i].left_pos, paths[i].right_pos, ctx,
                                      max_temp_space, temp_inputs[1], temp_inputs[2],
-                                     temp_outputs[0], temp_outputs[1], temp_req);
+                                     temp_outputs[0], temp_outputs[1], temp_req, char_tempspace);
         } else {
           TensordotBackwardImpl<xpu>(paths[i].left_pos, paths[i].right_pos, ctx,
                                      temp_inputs[0], temp_inputs[1], temp_inputs[2],
-                                     temp_outputs[0], temp_outputs[1], temp_req);
+                                     temp_outputs[0], temp_outputs[1], temp_req, char_tempspace);
         }
       } else {
         NumpyEinsumProcess<xpu, 1>(temp_inputs, temp_req, temp_outputs,

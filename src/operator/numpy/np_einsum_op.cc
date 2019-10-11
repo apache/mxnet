@@ -20,7 +20,7 @@
 /*
  * Copyright (c) 2005-2019, NumPy Developers.
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
@@ -207,7 +207,7 @@ NNVM_REGISTER_OP(_npi_einsum)
 .set_attr<FCreateOpState>("FCreateOpState", CreateEinsumState)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>(3, ResourceRequest::kTempSpace);
+    return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
   })
 .set_attr<FStatefulCompute>("FStatefulCompute<cpu>", NumpyEinsumForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_einsum"})
@@ -228,7 +228,7 @@ NNVM_REGISTER_OP(_backward_npi_einsum)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>(3, ResourceRequest::kTempSpace);
+    return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
   })
 .set_attr<FStatefulCompute>("FStatefulCompute<cpu>", NumpyEinsumBackward<cpu>);
 

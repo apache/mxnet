@@ -380,6 +380,11 @@ inline bool _can_dot(const std::vector<std::string>& inputs,
 
   const std::string& input_left = inputs[0];
   const std::string& input_right = inputs[1];
+
+  if (input_left.size() == 0 || input_right.size() == 0) {
+    return false;
+  }
+
   for (int i = 0; i < 2; ++i) {
     for (const char& c : inputs[i]) {
       // can't deal with repeated indices on same input or more than 2 total
