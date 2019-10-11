@@ -50,6 +50,9 @@ def _prepare_workloads():
     }
 
     # workloads for array function protocol
+    OpArgMngr.add_workload('vstack', (array_pool['4x1'], np.random.uniform(size=(5, 1))))
+    OpArgMngr.add_workload('vstack', array_pool['4x1'])
+    OpArgMngr.add_workload('vstack', array_pool['1x1x0'])
     OpArgMngr.add_workload('argmax', array_pool['4x1'])
     OpArgMngr.add_workload('broadcast_arrays', array_pool['4x1'], array_pool['1x2'])
     OpArgMngr.add_workload('broadcast_to', array_pool['4x1'], (4, 2))
