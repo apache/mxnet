@@ -25,6 +25,7 @@ from common import assertRaises, with_seed
 from mxnet.numpy_dispatch_protocol import with_array_function_protocol, with_array_ufunc_protocol
 from mxnet.numpy_dispatch_protocol import _NUMPY_ARRAY_FUNCTION_LIST, _NUMPY_ARRAY_UFUNC_LIST
 
+import itertools
 
 class OpArgMngr(object):
     """Operator argument manager for storing operator workloads."""
@@ -49,6 +50,10 @@ def _prepare_workloads():
         '1x1x0': np.array([[[]]])
     }
 
+    dt_int = [np.int8, np.int32, np.int64, np.uint8]
+    dt_float = [np.float16, np.float32, np.float64]
+    dt = dt_int + dt_float
+
     # workloads for array function protocol
     OpArgMngr.add_workload('argmax', array_pool['4x1'])
     OpArgMngr.add_workload('broadcast_arrays', array_pool['4x1'], array_pool['1x2'])
@@ -58,7 +63,7 @@ def _prepare_workloads():
     OpArgMngr.add_workload('concatenate', [array_pool['4x1'], array_pool['4x1']], axis=1)
     OpArgMngr.add_workload('copy', array_pool['4x1'])
 
-    for ctype in [np.int8, np.int32, np.int64, np.uint8, np.float32, np.float64]:
+    for ctype in dt:
         OpArgMngr.add_workload('cumsum', np.array([1, 2, 10, 11, 6, 5, 4], dtype=ctype))
         OpArgMngr.add_workload('cumsum', np.array([[1, 2, 3, 4], [5, 6, 7, 9], [10, 3, 4, 5]], dtype=ctype), axis=0)
         OpArgMngr.add_workload('cumsum', np.array([[1, 2, 3, 4], [5, 6, 7, 9], [10, 3, 4, 5]], dtype=ctype), axis=1)
@@ -74,8 +79,47 @@ def _prepare_workloads():
     OpArgMngr.add_workload('mean', array_pool['4x1'], axis=0, keepdims=True)
     OpArgMngr.add_workload('ones_like', array_pool['4x1'])
     OpArgMngr.add_workload('prod', array_pool['4x1'])
-    OpArgMngr.add_workload('repeat', array_pool['4x1'], 3)
-    OpArgMngr.add_workload('reshape', array_pool['4x1'], -1)
+
+    OpArgMngr.add_workload('repeat', [1, 2, 3], 2)
+    OpArgMngr.add_workload('repeat', np.array(_np.arange(12).reshape(4, 3)[:, 2]), 3)
+
+    m = _np.array([1, 2, 3, 4, 5, 6])
+    m_rect = m.reshape((2, 3))
+
+    A = np.array(m)
+    OpArgMngr.add_workload('repeat', A)
+    OpArgMngr.add_workload('repeat', A, 2)
+    B = np.array(m_rect)
+    OpArgMngr.add_workload('repeat', B, [2, 1], axis=0)
+    OpArgMngr.add_workload('repeat', B, [1, 3, 2], axis=1)
+    OpArgMngr.add_workload('repeat', B, 2, axis=0)
+    OpArgMngr.add_workload('repeat', B, 2, axis=1)
+
+    # test_repeat_broadcasting
+    a = _np.arange(60).reshape(3, 4, 5)
+    for axis in itertools.chain(range(-a.ndim, a.ndim), [None]):
+        OpArgMngr.add_workload('repeat', np.array(a), 2, axis=axis)
+        OpArgMngr.add_workload('repeat', np.array(a), [2], axis=axis)
+
+    arr = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]])
+    OpArgMngr.add_workload('reshape', arr, 2, 6)
+    OpArgMngr.add_workload('reshape', arr, 3, 4)
+    OpArgMngr.add_workload('reshape', arr, (3, 4), order='F')
+    OpArgMngr.add_workload('reshape', arr, (3, 4), order='C')
+    OpArgMngr.add_workload('reshape', np.array(_np.ones(100)), 100, 1, 1)
+    OpArgMngr.add_workload('reshape', np.array(_np.zeros(0, dtype=[('a', np.float32)])), (2, 1))
+    OpArgMngr.add_workload('reshape', np.array(_np.ones(20)[::2]))
+    
+    # test_reshape_order
+    a = np.array(_np.arange(6))
+    OpArgMngr.add_workload('reshape', a, 2, 3, order='F')
+    a = np.array([[1, 2], [3, 4], [5, 6], [7, 8]])
+    b = a[:, 1]
+    OpArgMngr.add_workload('reshape', 2, 2, order='F')
+
+    a = np.array(_np.ones((0, 2)))
+    OpArgMngr.add_workload('reshape', a, -1, 2)
+    
     OpArgMngr.add_workload('split', array_pool['4x1'], 2)
     OpArgMngr.add_workload('squeeze', array_pool['4x1'])
     OpArgMngr.add_workload('stack', [array_pool['4x1']] * 2)
@@ -110,10 +154,64 @@ def _prepare_workloads():
     OpArgMngr.add_workload('mod', array_pool['4x1'], 2)
     OpArgMngr.add_workload('mod', 2, array_pool['4x1'])
     OpArgMngr.add_workload('mod', array_pool['4x1'], array_pool['1x1x0'])
-    OpArgMngr.add_workload('remainder', array_pool['4x1'], array_pool['1x2'])
-    OpArgMngr.add_workload('remainder', array_pool['4x1'], 2)
-    OpArgMngr.add_workload('remainder', 2, array_pool['4x1'])
-    OpArgMngr.add_workload('remainder', array_pool['4x1'], array_pool['1x1x0'])
+
+    # test remainder basic
+    OpArgMngr.add_workload('remainder', np.array([0, 1, 2, 4, 2], dtype=np.float16),
+                            np.array([-2, 5, 1, 4, 3], dtype=np.float16))
+
+    def _signs(dt):
+        if dt in [np.uint8]:
+            return (+1,)
+        else:
+            return (+1, -1)
+
+    for ct in dt:
+        for sg1, sg2 in itertools.product(_signs(ct), _signs(ct)):
+            a = np.array(sg1*71, dtype=ct)
+            b = np.array(sg2*19, dtype=ct)
+            OpArgMngr.add_workload('remainder', a, b)
+
+    # test remainder exact
+    nlst = list(range(-127, 0))
+    plst = list(range(1, 128))
+    dividend = nlst + [0] + plst
+    divisor = nlst + plst
+    arg = list(itertools.product(dividend, divisor))
+    tgt = list(divmod(*t) for t in arg)
+    a, b = np.array(arg, dtype=int).T
+    # convert exact integer results from Python to float so that
+    # signed zero can be used, it is checked.
+    for dt in [np.float16, np.float32, np.float64]:
+        fa = a.astype(dt)
+        fb = b.astype(dt)
+        OpArgMngr.add_workload('remainder', fa, fb)
+    
+    # test_float_remainder_roundoff
+    for ct in dt_float:
+        for sg1, sg2 in itertools.product((+1, -1), (+1, -1)):
+            a = np.array(sg1*78*6e-8, dtype=ct)
+            b = np.array(sg2*6e-8, dtype=ct)
+            OpArgMngr.add_workload('remainder', a, b)
+
+    # test_float_remainder_corner_cases
+    # Check remainder magnitude.
+    for ct in dt_float:
+        b = _np.array(1.0)
+        a = np.array(_np.nextafter(_np.array(0.0), -b), dtype=ct)
+        b = np.array(b, dtype=ct)
+        OpArgMngr.add_workload('remainder', a, b)
+        OpArgMngr.add_workload('remainder', -a, -b)
+
+        # Check nans, inf
+        for ct in [np.float16, np.float32, np.float64]:
+            fone = np.array(1.0, dtype=ct)
+            fzer = np.array(0.0, dtype=ct)
+            finf = np.array(np.inf, dtype=ct)
+            fnan = np.array(np.nan, dtype=ct)
+            # OpArgMngr.add_workload('remainder', fone, fzer) # failed
+            OpArgMngr.add_workload('remainder', fone, fnan)
+            OpArgMngr.add_workload('remainder', finf, fone)
+
     OpArgMngr.add_workload('maximum', array_pool['4x1'], array_pool['1x2'])
     OpArgMngr.add_workload('maximum', array_pool['4x1'], 2)
     OpArgMngr.add_workload('maximum', 2, array_pool['4x1'])
@@ -134,7 +232,12 @@ def _prepare_workloads():
     OpArgMngr.add_workload('sqrt', array_pool['4x1'])
     OpArgMngr.add_workload('square', array_pool['4x1'])
     OpArgMngr.add_workload('cbrt', array_pool['4x1'])
-    OpArgMngr.add_workload('reciprocal', array_pool['4x1'])
+
+    for ctype in [np.float16, np.float32, np.float64]:
+        OpArgMngr.add_workload('reciprocal', np.array([-2, 5, 1, 4, 3], dtype=ctype))
+        OpArgMngr.add_workload('reciprocal', np.array([-2, 0, 1, 0, 3], dtype=ctype))
+        OpArgMngr.add_workload('reciprocal', np.array([0], dtype=ctype))
+
     OpArgMngr.add_workload('sin', array_pool['4x1'])
     OpArgMngr.add_workload('cos', array_pool['4x1'])
     OpArgMngr.add_workload('tan', array_pool['4x1'])
@@ -182,10 +285,10 @@ def _check_interoperability_helper(op_name, *args, **kwargs):
             assert isinstance(arr, np.ndarray)
         for arr, expected_arr in zip(out, expected_out):
             assert isinstance(arr, np.ndarray)
-            assert_almost_equal(arr.asnumpy(), expected_arr, rtol=1e-3, atol=1e-4, use_broadcast=False)
+            assert_almost_equal(arr.asnumpy(), expected_arr, rtol=1e-3, atol=1e-4, use_broadcast=False, equal_nan=True)
     else:
         assert isinstance(out, np.ndarray)
-        assert_almost_equal(out.asnumpy(), expected_out, rtol=1e-3, atol=1e-4, use_broadcast=False)
+        assert_almost_equal(out.asnumpy(), expected_out, rtol=1e-3, atol=1e-4, use_broadcast=False, equal_nan=True)
 
 
 def check_interoperability(op_list):
