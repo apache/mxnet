@@ -30,6 +30,7 @@ mxnet_variant=${2:?$usage}
 python_version=${3:?usage}
 
 cd_utils='cd/utils'
+ci_utils='ci/'
 
 case ${python_version} in
     py3)
@@ -58,7 +59,8 @@ fi
 
 # Builds runtime image
 build() {
-    docker build -t "${image_name}" --build-arg PYTHON_CMD=${python_cmd} --build-arg BASE_IMAGE="${base_image}" --build-arg MXNET_COMMIT_ID=${GIT_COMMIT} -f ${resources_path}/Dockerfile .
+    # NOTE: Ensure the correct context root is passed in when building - Dockerfile expects ./wheel_build
+    docker build -t "${image_name}" --build-arg PYTHON_CMD=${python_cmd} --build-arg BASE_IMAGE="${base_image}" --build-arg MXNET_COMMIT_ID=${GIT_COMMIT} -f ${resources_path}/Dockerfile ./wheel_build
 }
 
 # Tests the runtime image by executing runtime_images/test_image.sh within the image
@@ -70,7 +72,8 @@ test() {
     fi
     local test_image_name="${image_name}_test"
     
-    docker build -t "${test_image_name}" --build-arg USER_ID=`id -u` --build-arg GROUP_ID=`id -g` --build-arg BASE_IMAGE="${image_name}" -f ${resources_path}/Dockerfile.test .
+    # Ensure the correct context root is passed in when building - Dockerfile.test expects ci directory
+    docker build -t "${test_image_name}" --build-arg USER_ID=`id -u` --build-arg GROUP_ID=`id -g` --build-arg BASE_IMAGE="${image_name}" -f ${resources_path}/Dockerfile.test ./ci
     docker run ${runtime_param} -u `id -u`:`id -g` -v `pwd`:/mxnet "${test_image_name}" ${resources_path}/test_python_image.sh "${mxnet_variant}" "${python_cmd}"
 }
 
@@ -82,7 +85,7 @@ push() {
         exit 1
     fi
 
-    ./${cd_utils}/docker_login.py
+    ./${ci_utils}/docker_login.py
 
     # Push image
     docker push "${image_name}"

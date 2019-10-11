@@ -18,20 +18,22 @@
 #
 # Python MXNet Dockerfile
 
+# NOTE: Assumes wheel_build directory is the context root when building
+
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
-
-ARG MXNET_COMMIT_ID
-ENV MXNET_COMMIT_ID=${MXNET_COMMIT_ID}
-
-RUN mkdir -p /mxnet
-COPY wheel_build/dist/*.whl /mxnet/.
 
 ARG PYTHON_CMD=python
 RUN apt-get update && \
     apt-get install -y wget ${PYTHON_CMD}-dev gcc && \
     wget https://bootstrap.pypa.io/get-pip.py && \
     ${PYTHON_CMD} get-pip.py
+
+ARG MXNET_COMMIT_ID
+ENV MXNET_COMMIT_ID=${MXNET_COMMIT_ID}
+
+RUN mkdir -p /mxnet
+COPY dist/*.whl /mxnet/.
 
 WORKDIR /mxnet
 RUN WHEEL_FILE=$(ls -t /mxnet | head -n 1) && pip install ${WHEEL_FILE} && rm -f ${WHEEL_FILE}

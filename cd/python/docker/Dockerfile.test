@@ -18,18 +18,17 @@
 #
 # Python MXNet Dockerfile
 
+# NOTE: Assumes 'ci' directory is root of the context when building
+
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
 ARG USER_ID=1001
 ARG GROUP_ID=1001
 
-# Install test dependencies
-RUN pip install nose
+COPY ./docker/install/ubuntu_adduser.sh /scripts/ubuntu_adduser.sh
 
-RUN groupadd --gid $GROUP_ID --system jenkins_slave
-RUN useradd -m --no-log-init --uid $USER_ID --gid $GROUP_ID --system jenkins_slave
+RUN mkdir -p /work
+RUN /scripts/ubuntu_adduser.sh
 
-RUN mkdir -p /mxnet && chown -R jenkins_slave /mxnet
-
-WORKDIR /mxnet
+WORKDIR /work/mxnet
