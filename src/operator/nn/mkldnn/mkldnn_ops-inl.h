@@ -63,18 +63,6 @@ void MKLDNNConcatBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                           const std::vector<NDArray>& inputs,
                           const std::vector<OpReqType>& req,
                           const std::vector<NDArray>& outputs);
-
-void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
-                          const OpContext &ctx,
-                          const NDArray &input,
-                          const OpReqType &req,
-                          const NDArray &output);
-
-void MKLDNNFlattenForward(const nnvm::NodeAttrs &attrs,
-                          const OpContext &ctx,
-                          const NDArray &input,
-                          const OpReqType &req,
-                          const NDArray &output);
 #endif
 
 #if MXNET_USE_MKLDNN == 100
@@ -142,6 +130,22 @@ void MKLDNNTransposeForward(const nnvm::NodeAttrs& attrs,
                             const NDArray &data,
                             const OpReqType &req,
                             const NDArray &output);
+
+void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
+                          const OpContext &ctx,
+                          const NDArray &input,
+                          const OpReqType &req,
+                          const NDArray &output);
+void MKLDNNFlattenForward(const nnvm::NodeAttrs &attrs,
+                          const OpContext &ctx,
+                          const NDArray &input,
+                          const OpReqType &req,
+                          const NDArray &output);
+void MKLDNNExpandDimsForward(const nnvm::NodeAttrs &attrs,
+                             const OpContext &ctx,
+                             const NDArray &input,
+                             const OpReqType &req,
+                             const NDArray &output);
 #endif
 
 }  // namespace op
