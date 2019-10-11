@@ -1,6 +1,6 @@
 ---
 layout: page_category
-title:  Exception Handling in MXNet
+title: A Beginner's Guide to Implementing Operators in MXNet Backend
 category: faq
 faq_c: Extend and Contribute to MXNet
 question: How do I implement operators in MXNet backend?
