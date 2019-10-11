@@ -19,7 +19,7 @@
 
 #ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_INL_H_
 #define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_INL_H_
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
 
 #include <string>
 #include <utility>
@@ -47,10 +47,10 @@ static inline bool IsOutputUInt8(const MKLDNNConvFusionParam& param) {
             param.alg == mkldnn::algorithm::eltwise_bounded_relu);
   };
   if ((!mkldnn_param.with_sum) && mkldnn_param.with_act) {
-    CHECK(param.full_conv_param.act_param.alg != mkldnn::algorithm::algorithm_undef);
+    CHECK(param.full_conv_param.act_param.alg != mkldnn::algorithm::undef);
     result = IsOutputUInt8Helper(param.full_conv_param.act_param);
   } else if (mkldnn_param.with_postsum_act) {
-    CHECK(param.full_conv_param.postsum_act_param.alg != mkldnn::algorithm::algorithm_undef);
+    CHECK(param.full_conv_param.postsum_act_param.alg != mkldnn::algorithm::undef);
     result = IsOutputUInt8Helper(param.full_conv_param.postsum_act_param);
   }
   return result;

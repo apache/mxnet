@@ -99,6 +99,10 @@ class MKLDNNConvForward {
 
 typedef ParamOpSign<ConvolutionParam> MKLDNNConvSignature;
 
+MKLDNNConvForward &GetConvFwd(const MKLDNNConvFullParam &param, const bool is_train,
+                              const NDArray &data, const NDArray &weight, const NDArray *bias,
+                              const NDArray &output);
+
 void MKLDNNConvolutionForwardFullFeature(const MKLDNNConvFullParam &param,
                                          const OpContext &ctx,
                                          MKLDNNConvForward *fwd,
