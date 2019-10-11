@@ -650,6 +650,11 @@ template<>
 MSHADOW_XINLINE int64_t MinValue<int64_t>(void) {
   return LLONG_MIN;
 }
+/*! \brief minimum value of bool */
+template<>
+MSHADOW_XINLINE bool MinValue<bool>(void) {
+  return false;
+}
 
 /*!
  * \brief negative infinity of certain types
@@ -710,6 +715,11 @@ MSHADOW_XINLINE int MaxValue<int32_t>(void) {
 template<>
 MSHADOW_XINLINE int64_t MaxValue<int64_t>(void) {
   return LLONG_MAX;
+}
+/*! \brief maximum value of bool */
+template<>
+MSHADOW_XINLINE bool MaxValue<bool>(void) {
+  return true;
 }
 
 /*!

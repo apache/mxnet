@@ -314,6 +314,14 @@ struct AccType<mshadow::half::half_t> {
                     "floating point types, not int64";     \
     }                                                      \
     break;                                                 \
+  case mshadow::kBool:                                     \
+    {                                                      \
+      typedef bool DType;                                  \
+      typedef int64_t AType;                               \
+      LOG(FATAL) << "This operation only support "         \
+                    "floating point types, not bool";      \
+    }                                                      \
+    break;                                                 \
   default:                                                 \
     LOG(FATAL) << "Unknown type enum " << type;            \
   }
@@ -365,6 +373,13 @@ struct AccType<mshadow::half::half_t> {
   case mshadow::kInt64:                                    \
     {                                                      \
       typedef int64_t DType;                               \
+      typedef int64_t AType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kBool:                                     \
+    {                                                      \
+      typedef bool DType;                                  \
       typedef int64_t AType;                               \
       {__VA_ARGS__}                                        \
     }                                                      \
@@ -608,16 +623,11 @@ template <typename xpu>
 MSHADOW_CINLINE void copy(mshadow::Stream<xpu> *s, const TBlob& to, const TBlob& from) {
   CHECK_EQ(from.Size(), to.Size());
   CHECK_EQ(from.dev_mask(), to.dev_mask());
-  if (from.type_flag_ == mshadow::kBool || to.type_flag_ == mshadow::kBool) {
-    CHECK_EQ(from.type_flag_, to.type_flag_) << "Only supports copying between boolean ndarrays.";
-    mshadow::Copy(to.FlatTo1D<xpu, bool>(s), from.FlatTo1D<xpu, bool>(s), s);
-    return;
-  }
   MSHADOW_TYPE_SWITCH(to.type_flag_, DType, {
     if (to.type_flag_ == from.type_flag_) {
       mshadow::Copy(to.FlatTo1D<xpu, DType>(s), from.FlatTo1D<xpu, DType>(s), s);
     } else {
-      MSHADOW_TYPE_SWITCH(from.type_flag_, SrcDType, {
+      MSHADOW_TYPE_SWITCH_WITH_BOOL(from.type_flag_, SrcDType, {
         to.FlatTo1D<xpu, DType>(s) = mshadow::expr::tcast<DType>(from.FlatTo1D<xpu, SrcDType>(s));
       })
     }
