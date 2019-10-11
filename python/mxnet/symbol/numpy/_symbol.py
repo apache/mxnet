@@ -462,7 +462,7 @@ class _Symbol(Symbol):
         if len(axes) == 0:
             axes = None
         elif len(axes) == 1:
-            if isinstance(axes[0], tuple):
+            if isinstance(axes[0], (tuple, list)):
                 axes = axes[0]
             elif axes[0] is None:
                 axes = None

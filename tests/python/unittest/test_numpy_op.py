@@ -1163,7 +1163,14 @@ def test_np_transpose():
                     axeses.append(tuple(axes))
                     random.shuffle(axes)
                     axeses.append(tuple(axes))
+                    axeses.append([i - len(axes) for i in axes])
                 for axes in axeses:
+                    print('==============')
+                    print(hybridize)
+                    print(dtype)
+                    print(ndim)
+                    print(axes)
+                    print(shape)
                     test_trans = TestTranspose(axes)
                     if hybridize:
                         test_trans.hybridize()
@@ -1183,7 +1190,7 @@ def test_np_transpose():
                     np_out = x.asnumpy().transpose(axes)
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
-                    if isinstance(axes, tuple):
+                    if isinstance(axes, (list, tuple)):
                         mx_out = x.transpose(*axes)
                         np_out = x.asnumpy().transpose(*axes)
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)

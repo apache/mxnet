@@ -38,7 +38,6 @@
 #include "./init_op.h"
 #include "../../common/static_array.h"
 #include "./slice-inl.h"
-#include "../../common/utils.h"
 
 #if MXNET_USE_CUDA
 #include <thrust/device_vector.h>
@@ -408,8 +407,7 @@ void Transpose(const nnvm::NodeAttrs& attrs,
     }
     TransposeImpl<xpu>(ctx.run_ctx, inputs[0], outputs[0], axes);
   } else {
-    mxnet::TShape axes = common::CanonicalizeAxes(param.axes);
-    TransposeImpl<xpu>(ctx.run_ctx, inputs[0], outputs[0], axes);
+    TransposeImpl<xpu>(ctx.run_ctx, inputs[0], outputs[0], param.axes);
   }
 }
 
@@ -424,21 +422,12 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
   CHECK_LE(shp.ndim(), 6) << "Transpose support at most 6 dimensions";
   CHECK_NE(shp.ndim(), 0) << "Number of dimensions cannot be 0";
   CHECK_NE(out_shp.ndim(), 0) << "Number of dimensions cannot be 0";
-  int ndim = -1;
-  if (ndim_is_known(shp)) {
-    ndim = shp.ndim();
-  } else if (ndim_is_known(out_shp)) {
-    ndim = out_shp.ndim();
-  }
-  if (ndim < 0) {
-    return false;
-  }
-
-  if (out_shp.ndim() >= 0 && shp.ndim() >= 0) {
+  if (shp.ndim() == -1 && out_shp.ndim() == -1)
+    return false;  // none of the shapes is known
+  if (out_shp.ndim() > 0 && shp.ndim() > 0)
     CHECK_EQ(out_shp.ndim(), shp.ndim());
-  }
-  mxnet::TShape get(ndim, -1);
-  mxnet::TShape ret(ndim, -1);
+  mxnet::TShape get(std::max(shp.ndim(), out_shp.ndim()), -1);
+  mxnet::TShape ret(std::max(shp.ndim(), out_shp.ndim()), -1);
   if (param.axes.ndim() == 0) {
     for (int i = 0; i < shp.ndim(); ++i) {
       ret[i] = shp[shp.ndim()-1-i];
@@ -447,14 +436,13 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
       get[shp.ndim()-1-i] = out_shp[i];
     }
   } else {
-    CHECK_EQ(ndim, param.axes.ndim());
-    mxnet::TShape axes = common::CanonicalizeAxes(param.axes);
+    CHECK_EQ(std::max(shp.ndim(), out_shp.ndim()), param.axes.ndim());
     for (int i = 0; i < shp.ndim(); ++i) {
-      CHECK(axes[i] < static_cast<int64_t>(shp.ndim()));
-      ret[i] = shp[axes[i]];
+      CHECK(param.axes[i] < static_cast<int64_t>(shp.ndim()));
+      ret[i] = shp[param.axes[i]];
     }
     for (int i = 0; i < out_shp.ndim(); ++i) {
-      get[axes[i]] = out_shp[i];
+      get[param.axes[i]] = out_shp[i];
     }
   }
   SHAPE_ASSIGN_CHECK(*in_attrs, 0, get);
