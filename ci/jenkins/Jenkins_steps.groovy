@@ -263,7 +263,7 @@ def compile_unix_full_gpu() {
 }
 
 def compile_unix_full_gpu_no_tvm_op() {
-    return ['GPU: CUDA10.1+cuDNN7': {
+    return ['GPU: CUDA10.1+cuDNN7 USE_TVM_OP=OFF': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-gpu-no-tvm-op') {
           timeout(time: max_time, unit: 'MINUTES') {
