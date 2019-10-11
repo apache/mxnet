@@ -65,7 +65,7 @@ void ResizeImplCUDA(mshadow::Stream<gpu> *s,
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
   caffe_gpu_interp2_kernel<gpu, DType, AccReal>
   <<<blocks, threads , 0, stream>>>(
-    num_kernels, rheight, rwidth, /*align_corners=*/false, input, output);
+    num_kernels, rheight, rwidth, false, input, output);
   MSHADOW_CUDA_POST_KERNEL_CHECK(caffe_gpu_interp2_kernel);
 }
 
