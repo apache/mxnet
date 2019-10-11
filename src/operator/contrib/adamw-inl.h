@@ -78,17 +78,12 @@ inline bool MPUpdateInferShape(const nnvm::NodeAttrs& attrs,
                                mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), static_cast<size_t>(total_in)) << " in operator " << attrs.name;
   CHECK_EQ(out_attrs->size(), static_cast<size_t>(n_out)) << " in operator " << attrs.name;
-  // rescale_grad.shape = ()
   SHAPE_ASSIGN_CHECK(*in_attrs, total_in - 1, mxnet::TShape());
   // TODO(@reminisce): change "none" behavior in ElemwiseAttr
   return ElemwiseAttr<mxnet::TShape, shape_is_none, shape_assign, true, shape_string, n_in, n_out>(
       attrs, in_attrs, out_attrs, mxnet::TShape());
 }
 
-// rescale_grad is a reserved argument at position -1. Example:
-// n_in = 2: weight, grad (fp16)
-// n_out = 1: weight (fp16)
-// total_in = 6: weight, grad, mean, var, weight32, rescale_grad (fp32)
 template<int n_in, int n_out, int total_in>
 inline bool MPUpdateInferType(const nnvm::NodeAttrs& attrs,
                               std::vector<int> *in_attrs,
@@ -195,7 +190,6 @@ struct AdamWUpdate {
 ////
 // Multiple gradients in single kernel
 ////
-
 struct MultiAdamWParam : public dmlc::Parameter<MultiAdamWParam> {
   mxnet::Tuple<float> lrs;
   mxnet::Tuple<float> wds;
@@ -203,7 +197,6 @@ struct MultiAdamWParam : public dmlc::Parameter<MultiAdamWParam> {
   float beta1;
   float beta2;
   float epsilon;
-  float rescale_grad;
   float clip_gradient;
   int num_weights;
   DMLC_DECLARE_PARAMETER(MultiAdamWParam) {
@@ -273,7 +266,7 @@ inline bool MP_MultiAdamW_InferShape(const nnvm::NodeAttrs& attrs,
     }
     all_inferred = all_inferred && ElemwiseShape<input_stride, 1>(attrs, &input_vec, &output_vec);
   }
-  // rescale_grad.shape = ()
+
   SHAPE_ASSIGN_CHECK(*in_attrs, param.num_weights*input_stride, mxnet::TShape());
   return all_inferred;
 }
@@ -312,7 +305,7 @@ inline bool MP_MultiAdamW_InferType(const nnvm::NodeAttrs& attrs,
       TYPE_ASSIGN_CHECK(input_types, input_stride * i + input_stride - 1 - j, mshadow::kFloat32);
     }
   }
-  // rescale_grad.type = ()
+
   TYPE_ASSIGN_CHECK(input_types, param.num_weights*input_stride, mshadow::kFloat32);
   return all_inferred;
 }
