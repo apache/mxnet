@@ -341,7 +341,7 @@ class UnaryOp : public OpBase {
         break;
       case kAddTo: {
           Stream<xpu> *s = ctx.get_stream<xpu>();
-          MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+          MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[0].type_flag_, DType, {
             mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, kAddTo>, xpu>::Launch(
               s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>());
           });

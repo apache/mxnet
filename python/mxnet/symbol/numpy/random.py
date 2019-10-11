@@ -25,7 +25,7 @@ from . import _internal as _npi
 __all__ = ['randint', 'uniform', 'normal']
 
 
-def randint(low, high=None, size=None, dtype=None, **kwargs):
+def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
     """Return random integers from `low` (inclusive) to `high` (exclusive).
 
     Return random integers from the "discrete uniform" distribution of
@@ -74,14 +74,12 @@ def randint(low, high=None, size=None, dtype=None, **kwargs):
     array([[4, 0, 2, 1],
         [3, 2, 2, 0]])
     """
-    ctx = kwargs.pop('ctx', None)
-    out = kwargs.pop('out', None)
     if dtype is None:
         dtype = 'int'
     if ctx is None:
         ctx = current_context()
     if size is None:
-        size = 1
+        size = ()
     if high is None:
         high = low
         low = 0
@@ -143,7 +141,7 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
                             ctx=ctx, dtype=dtype, out=out)
 
 
-def normal(loc=0.0, scale=1.0, size=None, dtype=None, **kwargs):
+def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     """Draw random samples from a normal (Gaussian) distribution.
 
     Samples are distributed according to a normal distribution parametrized
@@ -172,15 +170,10 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, **kwargs):
     """
     from ._symbol import _Symbol as np_symbol
     input_type = (isinstance(loc, np_symbol), isinstance(scale, np_symbol))
-    ctx = kwargs.pop('ctx', None)
-    out = kwargs.pop('out', None)
     if dtype is None:
         dtype = 'float32'
     if ctx is None:
         ctx = current_context()
-    out = kwargs.pop('out', None)
-    if out is not None:
-        size = out.shape
     if size == ():
         size = None
     if input_type == (True, True):
@@ -197,7 +190,7 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, **kwargs):
                            ctx=ctx, dtype=dtype, out=out)
 
 
-def choice(a, size=None, replace=True, p=None, **kwargs):
+def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
     """Generates a random sample from a given 1-D array
 
     Parameters
@@ -250,13 +243,10 @@ def choice(a, size=None, replace=True, p=None, **kwargs):
     array([2, 3, 0])
     """
     from ._symbol import _Symbol as np_symbol
-    ctx = kwargs.pop('ctx', None)
     if ctx is None:
         ctx = current_context()
-    out = kwargs.pop('out', None)
     if size == ():
         size = None
-
     if isinstance(a, np_symbol):
         ctx = None
         if p is None:
