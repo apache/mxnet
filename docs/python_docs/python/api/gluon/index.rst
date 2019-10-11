@@ -16,7 +16,7 @@
    under the License.
 
 mxnet.gluon
-=======================
+============
 
 The Gluon library in Apache MXNet provides a clear, concise, and simple API for deep learning.
 It makes it easy to prototype, build, and train deep learning models without sacrificing training speed.
@@ -37,6 +37,9 @@ one input layer, one hidden layer, and one output layer.
        net.add(gluon.nn.Dense(256, activation="relu")) # 1st layer (256 nodes)
        net.add(gluon.nn.Dense(256, activation="relu")) # 2nd hidden layer
        net.add(gluon.nn.Dense(num_outputs))
+
+
+.. automodule:: mxnet.gluon
 
 
 Tutorials
@@ -73,13 +76,13 @@ Core Modules
 
    .. card::
       :title: gluon.nn
-      :link: nn.html
+      :link: nn/index.html
 
       Neural network components.
 
    .. card::
       :title: gluon.rnn
-      :link: rnn.html 
+      :link: rnn/index.html
 
       Recurrent neural network components.
 
@@ -90,19 +93,19 @@ Training
 
    .. card::
       :title: gluon.loss
-      :link: mxnet.gluon.loss.html
+      :link: loss/index.html
 
       Loss functions for training neural networks.
 
    .. card::
-      :title: gluon.parameter
-      :link: mxnet.gluon.parameter.html
+      :title: gluon.Parameter
+      :link: mxnet.gluon.Parameter.html
 
       Parameter getting and setting functions.
 
    .. card::
       :title: gluon.Trainer
-      :link: mxnet.gluon.trainer.html
+      :link: mxnet.gluon.Trainer.html
 
       Functions for applying an optimizer on a set of parameters.
 
@@ -113,19 +116,19 @@ Data
 
    .. card::
       :title: gluon.data
-      :link: mxnet.gluon.data.html
+      :link: data/index.html
 
       Dataset utilities.
 
    .. card::
       :title: gluon.data.vision
-      :link: mxnet.gluon.data.vision.html
+      :link: data/vision/index.html
 
       Image dataset utilities.
 
    .. card::
       :title: gluon.model_zoo.vision
-      :link: mxnet.gluon.model_zoo.vision.html
+      :link: model_zoo/index.vision.html
 
       A module for loading pre-trained neural network models.
 
@@ -137,20 +140,20 @@ Utilities
 
    .. card::
       :title: gluon.utils
-      :link: mxnet.gluon.utils.html
+      :link: utils/index.html
 
       A variety of utilities for training.
 
 .. toctree::
    :hidden:
    :maxdepth: 2
+   :glob:
 
-   nn
-   rnn
-   mxnet.gluon.loss
-   mxnet.gluon.parameter
-   mxnet.gluon.Trainer
-   mxnet.gluon.data
-   mxnet.gluon.data.vision
-   mxnet.gluon.model_zoo
-   mxnet.gluon.utils
+   block
+   hybrid_block
+   symbol_block
+   constant
+   parameter
+   parameter_dict
+   trainer
+   */index

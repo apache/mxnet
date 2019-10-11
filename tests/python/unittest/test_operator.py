@@ -68,11 +68,11 @@ def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req, rtol=1e-2, atol=1e
     dy = mx.random.uniform(shape=mod1.get_outputs()[0].shape)
     mod1.backward(out_grads=[dy])
     mod2.backward(out_grads=[dy])
-    if grad_req != 'null':
-        assert_allclose(mod1.get_input_grads()[0].asnumpy(), mod2.get_input_grads()[0].asnumpy(), rtol=rtol, atol=atol)
-    else:
+    if type(grad_req) is dict and grad_req['data'] == 'null' or grad_req == 'null':
         assert(mod1.get_input_grads()[0] == None)
         assert(mod2.get_input_grads()[0] == None)
+    else:
+        assert_allclose(mod1.get_input_grads()[0].asnumpy(), mod2.get_input_grads()[0].asnumpy(), rtol=rtol, atol=atol)
 
 
 @with_seed()
@@ -149,6 +149,7 @@ def test_lstm_bidirectional():
     check_rnn_consistency(fused, stack, T, N, I, H, 'write')
     check_rnn_consistency(fused, stack, T, N, I, H, 'add')
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
+    check_rnn_consistency(fused, stack, T, N, I, H, {'data': 'add', 'parameters': 'null'})
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
@@ -2872,6 +2873,13 @@ def test_transpose():
 
             y = mx.nd.transpose(x)
             assert_allclose(np.transpose(x.asnumpy()), y.asnumpy())
+
+
+@with_seed()
+def test_larger_transpose():
+    x = mx.nd.random.normal(shape=(50,51))
+    y = mx.nd.transpose(x)
+    assert_allclose(np.transpose(x.asnumpy()), y.asnumpy())
 
 
 @with_seed()
