@@ -213,7 +213,7 @@ inline void call_transpose_pseudo2D(index_t dTypeSize, index_t cTypeSize,
  * \param params Parameters (axes) of the transpose.
  */
 inline bool isPseudo2DTranspose(const TShape& params) {
-  size_t n_swpDims = 1;
+  index_t n_swpDims = 1;
   int i=0;
   while (i < params.ndim() && i == params[i])
     i++;  // leading dimensions
@@ -263,8 +263,8 @@ inline pseudo2DSizes getPackedTransposeDimensions(const TShape& shape,
 }
 
 
-inline int32_t getBestCopyTypeSize(size_t dTypeSize, index_t sizeM, index_t sizeN) {
-  index_t cTypeSize = std::max((size_t)8, dTypeSize);
+inline int32_t getBestCopyTypeSize(index_t dTypeSize, index_t sizeM, index_t sizeN) {
+  index_t cTypeSize = std::max((index_t)8, dTypeSize);
   while (cTypeSize > dTypeSize) {
     auto tsr = cTypeSize/dTypeSize;
     if (sizeM % tsr != 0 || sizeN % tsr != 0)
