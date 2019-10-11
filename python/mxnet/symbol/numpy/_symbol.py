@@ -33,7 +33,7 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
-           'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot',
+           'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot', 'histogram',
            'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'vstack', 'mean',
            'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign',
            'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'hypot', 'rad2deg', 'deg2rad',
@@ -1228,6 +1228,53 @@ def tensordot(a, b, axes=2):
         raise ValueError('Axes length mismatch')
 
     return _npi.tensordot(a, b, a_axes_summed, b_axes_summed)
+
+
+@set_module('mxnet.symbol.numpy')
+def histogram(a, bins=10, range=None, normed=None, weights=None, density=None):  # pylint: disable= too-many-arguments
+    """
+    Compute the histogram of a set of data.
+
+    Parameters
+    ----------
+    a : Symbol
+        Input data. The histogram is computed over the flattened array.
+    bins : int or Symbol
+        If `bins` is an int, it defines the number of equal-width
+        bins in the given range (10, by default). If `bins` is a
+        sequence, it defines a monotonically increasing array of bin edges,
+        including the rightmost edge, allowing for non-uniform bin widths.
+        .. versionadded:: 1.11.0
+        If `bins` is a string, it defines the method used to calculate the
+        optimal bin width, as defined by `histogram_bin_edges`.
+    range : (float, float)
+        The lower and upper range of the bins. Required when `bins` is an integer.
+        Values outside the range are ignored. The first element of the range must
+        be less than or equal to the second.
+    normed : bool, optional
+        Not supported yet, coming soon.
+    weights : array_like, optional
+        Not supported yet, coming soon.
+    density : bool, optional
+        Not supported yet, coming soon.
+    """
+    if normed is True:
+        raise NotImplementedError("normed is not supported yet...")
+    if weights is not None:
+        raise NotImplementedError("weights is not supported yet...")
+    if density is True:
+        raise NotImplementedError("density is not supported yet...")
+    if isinstance(bins, numeric_types):
+        if range is None:
+            raise NotImplementedError("automatic range is not avaialble yet...")
+        return _npi.histogram(a, bin_cnt=bins, range=range)
+    if isinstance(bins, (list, tuple)):
+        raise NotImplementedError("array_like bins is not supported yet...")
+    if isinstance(bins, str):
+        raise NotImplementedError("string bins is not supported yet...")
+    if isinstance(bins, Symbol):
+        return _npi.histogram(a, bins)
+    raise ValueError("histogram fails with", locals())
 
 
 @set_module('mxnet.symbol.numpy')
