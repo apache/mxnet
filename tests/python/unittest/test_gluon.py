@@ -33,6 +33,7 @@ from copy import deepcopy
 import warnings
 import json
 import unittest
+import random
 
 @with_seed()
 def test_parameter():
@@ -1521,10 +1522,11 @@ def test_zero_grad():
         # Construct the list of non-zeros arrays with random shapes
         arr = []
         for _ in range(nArrays):
+            arrType = random.choice(dtype) if isinstance(dtype, list) else dtype
             shape = ()
             for _ in range(np.random.randint(1, 5)):
                 shape = shape + (np.random.randint(1, 10),)
-            arr.append(mx.nd.random.uniform(shape=shape, dtype=dtype, ctx=ctx))
+            arr.append(mx.nd.random.uniform(shape=shape, dtype=arrType, ctx=ctx))
 
         # Reset all arrays
         mx.nd.reset_arrays(*arr, num_arrays=len(arr))
@@ -1539,8 +1541,9 @@ def test_zero_grad():
     ctx = mx.context.current_context()
 
     # Launching _test_multi_reset 10 times with different types & randomly chosen nArrays
+    testedTypes = ['float16', 'float32', 'float64']
     for _ in range(10):
-        for type in ['float16', 'float32', 'float64']:
+        for type in [testedTypes] + testedTypes:
             _test_multi_reset(np.random.randint(1, 50), type, ctx)
 
     # Saving value of environment variable, if it was defined

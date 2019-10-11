@@ -67,11 +67,8 @@ inline bool ResetArraysType(const NodeAttrs& attrs,
   CHECK_NE(dtype, -1) << "First input must have specified type";
   for (size_t i = 0; i < in_type->size(); ++i) {
     const auto currType = (*in_type)[i];
-    if (currType == -1) {
+    if (currType == -1)
       (*in_type)[i] = dtype;
-    } else {
-      UNIFORM_TYPE_CHECK((*in_type)[i], dtype, "array_" + std::to_string(i));
-    }
   }
 
   return true;
