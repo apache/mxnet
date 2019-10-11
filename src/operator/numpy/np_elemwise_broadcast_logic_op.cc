@@ -20,7 +20,8 @@
 /*!
  *  Copyright (c) 2019 by Contributors
  * \file np_elemwise_binary_logic_op.cc
- * \brief CPU Implementation of basic logic functions for elementwise numpy binary broadcast operator.
+ * \brief CPU Implementation of basic logic functions for elementwise numpy binary
+ * broadcast operator.
  */
 
 #if MXNET_USE_TVM_OP
@@ -131,19 +132,16 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC(less);
 MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC(greater_equal);
 MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC(less_equal);
 
-#define STRINGIFY(s) XSTRINGIFY(s)
-#define XSTRINGIFY(s) #s
-
 #if MXNET_USE_TVM_OP
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_CPU(name)                          \
   NNVM_REGISTER_OP(_npi_##name)                                                    \
   .set_attr<FCompute>("FCompute<cpu>", TVMBinaryBroadcastCompute{func_##name##_cpu})
 
-#pragma message("In np_elemwise_broadcast_logic_op.cc, MXNET_USE_TVM_OP = " STRINGIFY(MXNET_USE_TVM_OP))
+#pragma message("In np_elemwise_broadcast_logic_op.cc, MXNET_USE_TVM_OP ")
 
 #if MXNET_USE_CUDA
 
-#pragma message("In np_elemwise_broadcast_logic_op.cc, MXNET_USE_CUDA = " STRINGIFY(MXNET_USE_CUDA))
+#pragma message("In np_elemwise_broadcast_logic_op.cc, MXNET_USE_CUDA")
 
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(name)                          \
   NNVM_REGISTER_OP(_npi_##name)                                                    \
@@ -160,8 +158,8 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(less_equal);
 
 #else
 
-#pragma message("In np_elemwise_broadcast_logic_op.cc, MXNET_USE_TVM_OP = " STRINGIFY(MXNET_USE_TVM_OP))
-#pragma message("In np_elemwise_broadcast_logic_op.cc, MXNET_USE_CUDA = " STRINGIFY(MXNET_USE_CUDA))
+#pragma message("In np_elemwise_broadcast_logic_op.cc, MXNET_USE_TVM_OP")
+#pragma message("In np_elemwise_broadcast_logic_op.cc, MXNET_USE_CUDA")
 
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_CPU(name)                                     \
   NNVM_REGISTER_OP(_npi_##name)                                                               \

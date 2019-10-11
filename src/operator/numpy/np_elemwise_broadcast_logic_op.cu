@@ -20,7 +20,8 @@
 /*!
  *  Copyright (c) 2019 by Contributors
  * \file np_elemwise_broadcast_logic_op.cu
- * \brief GPU Implementation of basic functions for elementwise binary broadcast logic operator.
+ * \brief GPU Implementation of basic functions for elementwise binary
+ * broadcast logic operator.
  */
 #include "../tensor/elemwise_binary_broadcast_op.h"
 #include "../tensor/elemwise_binary_scalar_op.h"
@@ -30,10 +31,10 @@ namespace op {
 
 
 #if MXNET_USE_TVM_OP
-#pragma message("In np_elemwise_broadcast_logic_op.cu, MXNET_USE_TVM_OP = " STRINGIFY(MXNET_USE_TVM_OP))
+#pragma message("In np_elemwise_broadcast_logic_op.cu, MXNET_USE_TVM_OP")
 
 #else
-#pragma message("In np_elemwise_broadcast_logic_op.cu, MXNET_USE_TVM_OP = " STRINGIFY(MXNET_USE_TVM_OP))
+#pragma message("In np_elemwise_broadcast_logic_op.cu, MXNET_USE_TVM_OP")
 
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(name)                                     \
   NNVM_REGISTER_OP(_npi_##name)                                                               \
