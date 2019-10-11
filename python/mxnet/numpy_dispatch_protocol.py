@@ -101,6 +101,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'ravel',
     'repeat',
     'reshape',
+    'roll',
     'split',
     'squeeze',
     'stack',

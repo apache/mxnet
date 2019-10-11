@@ -119,6 +119,34 @@ def _prepare_workloads():
 
     a = np.array(_np.ones((0, 2)))
     OpArgMngr.add_workload('reshape', a, -1, 2)
+
+    OpArgMngr.add_workload('rint', np.array(4607998452777363968))
+    OpArgMngr.add_workload('rint', array_pool['4x1'])
+
+    # test_roll1d(self)
+    OpArgMngr.add_workload('roll', np.array(_np.arange(10)), 2)
+
+    # test_roll2d(self)
+    x2 = np.array(_np.reshape(_np.arange(10), (2, 5)))
+    OpArgMngr.add_workload('roll', x2, 1)
+    OpArgMngr.add_workload('roll', x2, 1, axis=0)
+    OpArgMngr.add_workload('roll', x2, 1, axis=1)
+    # Roll multiple axes at once.
+    OpArgMngr.add_workload('roll', x2, 1, axis=(0, 1))
+    OpArgMngr.add_workload('roll', x2, (1, 0), axis=(0, 1))
+    OpArgMngr.add_workload('roll', x2, (-1, 0), axis=(0, 1))
+    OpArgMngr.add_workload('roll', x2, (0, 1), axis=(0, 1))
+    OpArgMngr.add_workload('roll', x2, (0, -1), axis=(0, 1))
+    OpArgMngr.add_workload('roll', x2, (1, 1), axis=(0, 1))
+    OpArgMngr.add_workload('roll', x2, (-1, -1), axis=(0, 1))
+    # Roll the same axis multiple times.
+    OpArgMngr.add_workload('roll', x2, 1, axis=(0, 0))
+    OpArgMngr.add_workload('roll', x2, 1, axis=(1, 1))
+    # Roll more than one turn in either direction.
+    OpArgMngr.add_workload('roll', x2, 6, axis=1)
+    OpArgMngr.add_workload('roll', x2, -4, axis=1)
+    # test_roll_empty
+    OpArgMngr.add_workload('roll', np.array([]), 1)
     
     OpArgMngr.add_workload('split', array_pool['4x1'], 2)
     OpArgMngr.add_workload('squeeze', array_pool['4x1'])
@@ -222,8 +250,12 @@ def _prepare_workloads():
     OpArgMngr.add_workload('minimum', array_pool['4x1'], array_pool['1x1x0'])
     OpArgMngr.add_workload('negative', array_pool['4x1'])
     OpArgMngr.add_workload('absolute', array_pool['4x1'])
-    OpArgMngr.add_workload('rint', array_pool['4x1'])
+    
     OpArgMngr.add_workload('sign', array_pool['4x1'])
+    OpArgMngr.add_workload('sign', np.array([-2, 5, 1, 4, 3], dtype=np.float16))
+    OpArgMngr.add_workload('sign', np.array([-.1, 0, .1]))
+    # OpArgMngr.add_workload('sign', np.array(_np.array([_np.nan]))) # failed
+
     OpArgMngr.add_workload('exp', array_pool['4x1'])
     OpArgMngr.add_workload('log', array_pool['4x1'])
     OpArgMngr.add_workload('log2', array_pool['4x1'])
