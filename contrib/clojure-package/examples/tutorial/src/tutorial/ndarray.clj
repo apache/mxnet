@@ -17,7 +17,7 @@
 
 (ns tutorial.ndarray
   "A REPL tutorial of the MXNet Clojure API for NDArray, based on
-  https://mxnet.incubator.apache.org/api/clojure/ndarray.html"
+  https://mxnet.apache.org/api/clojure/ndarray.html"
   (:require [org.apache.clojure-mxnet.ndarray :as ndarray]
             [org.apache.clojure-mxnet.context :as context]))
 

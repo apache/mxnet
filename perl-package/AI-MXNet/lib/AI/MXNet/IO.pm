@@ -639,7 +639,7 @@ extends 'AI::MXNet::DataIter';
 
     Here are the list of currently available predefined iterators, for more custom iterators
     please check out the examples directory.
-    Also please refer to the L<Python docs|http://mxnet.incubator.apache.org/api/python/io/io.html>
+    Also please refer to the L<Python docs|https://mxnet.apache.org/api/python/io/io.html>
     mx->io->CSVIter                     Returns the CSV file iterator.
     mx->io->LibSVMIter                  Returns the LibSVM iterator which returns data with csr storage type.
     mx->io->ImageRecordIter             Iterates on image RecordIO files

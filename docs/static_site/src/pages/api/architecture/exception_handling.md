@@ -1,3 +1,9 @@
+---
+layout: page_category
+title:  Exception Handling in MXNet
+category: architecture
+permalink: /api/architecture/exception_handling
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,12 +20,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title:  Exception Handling in MXNet
-category: architecture
-permalink: /api/architecture/exception_handling
----
 
 # Exception Handling in MXNet
 
@@ -42,7 +42,7 @@ to handle exceptions for the second case.
 ## Prerequisites
 
 To complete this tutorial, we need:
-- MXNet [7b24137](https://github.com/apache/incubator-mxnet/commit/7b24137ed45df605defa4ce72ec91554f6e445f0). See Instructions in [Setup and Installation](http://mxnet.io/install/index.html).
+- MXNet [7b24137](https://github.com/apache/incubator-mxnet/commit/7b24137ed45df605defa4ce72ec91554f6e445f0). See Instructions in [Setup and Installation](https://mxnet.io/get_started).
 
 ## Exception Handling for Iterators
 

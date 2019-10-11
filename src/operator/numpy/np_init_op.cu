@@ -23,6 +23,7 @@
  * \brief GPU Implementation of numpy init op
  */
 
+#include "../tensor/init_op.h"
 #include "./np_init_op.h"
 
 namespace mxnet {
@@ -33,6 +34,9 @@ NNVM_REGISTER_OP(_npi_zeros)
 
 NNVM_REGISTER_OP(_npi_ones)
 .set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 1>);
+
+NNVM_REGISTER_OP(_npi_identity)
+.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
 
 NNVM_REGISTER_OP(_np_zeros_like)
 .set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 0>);
@@ -45,6 +49,9 @@ NNVM_REGISTER_OP(_npi_arange)
 
 NNVM_REGISTER_OP(_npi_eye)
 .set_attr<FCompute>("FCompute<gpu>", NumpyEyeFill<gpu>);
+
+NNVM_REGISTER_OP(_npi_indices)
+.set_attr<FCompute>("FCompute<gpu>", IndicesCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

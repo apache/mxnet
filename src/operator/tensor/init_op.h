@@ -57,7 +57,7 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
-    MXNET_ADD_ALL_TYPES
+    MXNET_ADD_ALL_TYPES_WITH_BOOL
     .describe("Target data type.");
   }
 };
@@ -342,12 +342,12 @@ void Fill(mshadow::Stream<xpu> *s, const TBlob& b, const OpReqType req, ValueTyp
     if (val == 0) {
       if (req != kAddTo) {
         if (b.dev_mask() == cpu::kDevMask && size < 50000) {
-          MSHADOW_TYPE_SWITCH(b.type_flag_, DType, {
+          MSHADOW_TYPE_SWITCH_WITH_BOOL(b.type_flag_, DType, {
             memset(b.dptr_, 0, size * sizeof(DType));
           });
         } else {
           // Optimize common use-case of filling with ones
-          MSHADOW_TYPE_SWITCH(b.type_flag_, DType, {
+          MSHADOW_TYPE_SWITCH_WITH_BOOL(b.type_flag_, DType, {
             MXNET_ASSIGN_REQ_SWITCH(req, Req, {
               mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::set_to_int<0>, Req>, xpu>::Launch(
                 s, b.Size(), b.dptr<DType>());
@@ -357,7 +357,7 @@ void Fill(mshadow::Stream<xpu> *s, const TBlob& b, const OpReqType req, ValueTyp
       }
     } else if (is_integer && val == 1) {
       // Optimize common use-case of filling with ones
-      MSHADOW_TYPE_SWITCH(b.type_flag_, DType, {
+      MSHADOW_TYPE_SWITCH_WITH_BOOL(b.type_flag_, DType, {
         MXNET_ASSIGN_REQ_SWITCH(req, Req, {
           mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::set_one, Req>, xpu>::Launch(
             s, b.Size(), b.dptr<DType>());
@@ -365,7 +365,7 @@ void Fill(mshadow::Stream<xpu> *s, const TBlob& b, const OpReqType req, ValueTyp
       });
     } else {
       // Generic fill kernel from variable
-      MSHADOW_TYPE_SWITCH(b.type_flag_, DType, {
+      MSHADOW_TYPE_SWITCH_WITH_BOOL(b.type_flag_, DType, {
         MXNET_ASSIGN_REQ_SWITCH(req, Req, {
           mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, Req>, xpu>::Launch(
             s, b.Size(), b.dptr<DType>(), static_cast<DType>(val));

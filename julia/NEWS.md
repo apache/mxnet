@@ -17,13 +17,13 @@
 
 # v1.6.0
 
-* Rename environment variable `MXNET_HOME` to `MXNET_ROOT` (#15568).
+* Add an abstract type `AbstractMXError` as the parent type for all MXNet-related
+  API errors. (#16235)
 
-* Environment variable `MXNET_LIBRARY_PATH` supports (#15568).
+* Porting more `context` functions from Python.
+    * `num_gpus()` (#16236)
+    * `gpu_memory_info()` (#16324)
 
-  ```shell
-  $ MXNET_LIBRARY_PATH=/path/to/libmxnet.so julia
-  ```
 
 # v1.5.0
 

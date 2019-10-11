@@ -36,22 +36,24 @@ class Sampler(object):
 
 
 class SequentialSampler(Sampler):
-    """Samples elements from [0, length) sequentially.
+    """Samples elements from [start, start+length) sequentially.
 
     Parameters
     ----------
     length : int
         Length of the sequence.
+    start : int, default is 0
+        The start of the sequence index.
     """
-    def __init__(self, length):
+    def __init__(self, length, start=0):
         self._length = length
+        self._start = start
 
     def __iter__(self):
-        return iter(range(self._length))
+        return iter(range(self._start, self._start + self._length))
 
     def __len__(self):
         return self._length
-
 
 class RandomSampler(Sampler):
     """Samples elements from [0, length) randomly without replacement.

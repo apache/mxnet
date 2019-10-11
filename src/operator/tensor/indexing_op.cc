@@ -288,6 +288,10 @@ void TakeOpForward<cpu>(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape& arrshape = inputs[take_::kArr].shape_;
   const mxnet::TShape& oshape = outputs[take_::kOut].shape_;
 
+  if (idxshape.Size() == 0) {
+    return;
+  }
+
   Stream<cpu> *s = ctx.get_stream<cpu>();
   const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
 

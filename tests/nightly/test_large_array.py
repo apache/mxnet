@@ -25,6 +25,7 @@ from tests.python.unittest.common import with_seed, teardown
 
 # dimension constants
 MEDIUM_X = 10000
+VLARGE_X = 4300000000
 LARGE_X = 100000000
 SMALL_X = 100
 SMALL_Y = 50
@@ -1197,12 +1198,11 @@ def test_slice_axis():
 
 
 def test_one_hot():
-    a = nd.array(np.zeros(SMALL_Y))
-    a[0] = 1
-    a[-1] = 1
-    b = nd.one_hot(a, LARGE_X)
+    #default dtype of ndarray is float32 which cannot index elements over 2^32
+    a = nd.array([1, (VLARGE_X - 1)], dtype=np.int64)
+    b = nd.one_hot(a, VLARGE_X)
     b[0][1] == 1
-    b[-1][1] == 1
+    b[1][-1] == 1
 
 
 def test_full():

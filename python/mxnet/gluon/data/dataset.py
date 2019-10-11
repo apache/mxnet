@@ -64,6 +64,37 @@ class Dataset(object):
         from . import FilterSampler
         return _SampledDataset(self, FilterSampler(fn, self))
 
+    def shard(self, num_shards, index):
+        """Returns a new dataset includes only 1/num_shards of this dataset.
+
+        For distributed training, be sure to shard before you randomize the dataset
+        (such as shuffle), if you want each worker to reach a unique subset.
+
+        Parameters
+        ----------
+        num_shards : int
+            A integer representing the number of data shards.
+        index : int
+            A integer representing the index of the current shard.
+
+        Returns
+        -------
+        Dataset
+            The result dataset.
+        """
+        assert index < num_shards, 'Shard index of out bound: %d out of %d'%(index, num_shards)
+        assert num_shards > 0, 'Number of shards must be greater than 0'
+        assert index >= 0, 'Index must be non-negative'
+        length = len(self)
+        shard_len = length // num_shards
+        rest = length % num_shards
+        # Compute the start index for this partition
+        start = shard_len * index + min(index, rest)
+        # Compute the end index for this partition
+        end = start + shard_len + (index < rest)
+        from . import SequentialSampler
+        return _SampledDataset(self, SequentialSampler(end - start, start))
+
     def take(self, count):
         """Returns a new dataset with at most `count` number of samples in it.
 
