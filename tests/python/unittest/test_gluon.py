@@ -1504,15 +1504,60 @@ def test_hybrid_multi_context():
 
 @with_seed()
 def test_zero_grad():
-    data = mx.nd.random.uniform(shape=(3,3))
-    net = nn.Embedding(3, 4, sparse_grad=True, prefix='test_zero_grad_')
-    net.initialize()
-    with mx.autograd.record():
-        l = net(data)
-        l.backward()
-    net.collect_params().zero_grad()
-    grad = net.collect_params()['test_zero_grad_weight'].grad()
-    assert_almost_equal(grad.asnumpy(), grad.asnumpy() * 0)
+    def _test_grad_reset(ctx, dtype='float32', sparse=False, embeddingType=None):
+        data = mx.nd.random.uniform(shape=(3,3), dtype=dtype, ctx=ctx)
+        if embeddingType is None:
+            embeddingType = dtype
+        net = nn.Embedding(3, 4, sparse_grad=sparse, prefix='test_zero_grad_', dtype=embeddingType)
+        net.initialize(ctx=ctx)
+        with mx.autograd.record():
+            l = net(data)
+            l.backward()
+        net.collect_params().zero_grad()
+        grad = net.collect_params()['test_zero_grad_weight'].grad()
+        assert_almost_equal(grad.asnumpy(), grad.asnumpy() * 0)
+
+    def _test_multi_reset(nArrays, dtype, ctx):
+        # Construct the list of non-zeros arrays with random shapes
+        arr = []
+        for _ in range(nArrays):
+            shape = ()
+            for _ in range(np.random.randint(1, 5)):
+                shape = shape + (np.random.randint(1, 10),)
+            arr.append(mx.nd.random.uniform(shape=shape, dtype=dtype, ctx=ctx))
+
+        # Reset all arrays
+        mx.nd.reset_arrays(*arr, num_arrays=len(arr))
+
+        # Check results
+        for i in range(nArrays):
+            grad = arr[i].asnumpy()
+            assert_almost_equal(grad, grad * 0)
+
+
+    # Setting context for current test
+    ctx = mx.context.current_context()
+
+    # Launching _test_multi_reset 10 times with different types & randomly chosen nArrays
+    for _ in range(10):
+        for type in ['float16', 'float32', 'float64']:
+            _test_multi_reset(np.random.randint(1, 50), type, ctx)
+
+    # Saving value of environment variable, if it was defined
+    envVarKey = 'MXNET_STORAGE_FALLBACK_LOG_VERBOSE'
+    envVarValue = os.environ[envVarKey] if envVarKey in os.environ else None
+    # Changing value of environment variable
+    os.environ[envVarKey] = '0'
+    for type in ['float16', 'float32', 'float64']:
+        for embType in ['float32', 'float64']:
+            for sparse in [True, False]:
+                _test_grad_reset(ctx, dtype=type, sparse=sparse, embeddingType=embType)
+
+    # Remove or restore the value of environment variable
+    if envVarValue is None:
+        del os.environ[envVarKey]
+    else:
+        os.environ[envVarKey] = envVarValue
 
 def check_hybrid_static_memory(**kwargs):
     x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
