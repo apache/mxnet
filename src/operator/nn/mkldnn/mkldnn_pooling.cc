@@ -91,6 +91,11 @@ void MKLDNNPoolingFwd::Execute(const NDArray &in_data,
 
   if (this->with_workspace_) {
     auto engine = CpuEngine::Get()->get_engine();
+
+    if (workspace == nullptr) {
+        LOG(FATAL) << "MKLDNN Pooling: incorrect workspace input";
+    }
+
     auto ws = std::make_shared<mkldnn::memory>((*(this->fwd_pd_)).workspace_desc(),
                       engine, workspace->GetMKLDNNData()->get_data_handle());
     args[MKLDNN_ARG_WORKSPACE] = *ws;

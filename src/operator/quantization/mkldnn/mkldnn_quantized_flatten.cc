@@ -23,7 +23,7 @@
  * \brief
  */
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
 #include "../../nn/mkldnn/mkldnn_flatten-inl.h"
 #include "../quantization_utils.h"
 
