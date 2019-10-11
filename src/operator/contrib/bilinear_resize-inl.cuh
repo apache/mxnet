@@ -77,8 +77,7 @@ __host__ MSHADOW_FORCE_INLINE static Acctype cu_area_pixel_compute_scale(
   if (output_size > 1) {
     return align_corners ? (Acctype)(input_size - 1) / (output_size - 1)
       : (Acctype)input_size / output_size;
-  }
-  else {
+  } else {
     return static_cast<Acctype>(0);
   }
 }
@@ -91,8 +90,7 @@ __device__ MSHADOW_FORCE_INLINE static Acctype cu_area_pixel_compute_source_inde
   bool cubic) {
   if (align_corners) {
     return scale * dst_index;
-  }
-  else {
+  } else {
     Acctype src_idx = scale * (dst_index + static_cast<Acctype>(0.5)) -
       static_cast<Acctype>(0.5);
     // See Note[Follow Opencv resize logic]
@@ -166,7 +164,6 @@ __global__ void caffe_gpu_interp2_kernel(const int n,
   const bool align_corners,
   const Tensor<xpu, 3, Dtype> data1,
   Tensor<xpu, 3, Dtype> data2) {
-
   int index = threadIdx.x + blockIdx.x * blockDim.x;
   const int height1 = data1.size(0);
   const int width1 = data1.size(1);
@@ -229,9 +226,9 @@ __global__ void caffe_gpu_interp2_kernel(
   for (size_t index = blockDim.x * blockIdx.x + threadIdx.x; index < o_numel;
     index += blockDim.x * gridDim.x) {
     size_t index_temp = index;
-    const int w2 = index_temp % width2; // 0:width2-1
+    const int w2 = index_temp % width2;  // 0:width2-1
     index_temp /= width2;
-    const int h2 = index_temp % height2; // 0:height2-1
+    const int h2 = index_temp % height2;  // 0:height2-1
     const size_t nc = index_temp / height2;
 
     const Acctype h1r = cu_area_pixel_compute_source_index<Acctype>(
@@ -254,7 +251,6 @@ __global__ void caffe_gpu_interp2_kernel(
                           + w1lambda * *(idata + idx(nc, height1, width1, h1 + h1p, w1 + w1p)));
         *(odata + idx(nc, height2, width2, h2, w2)) = ScalarConvert<Acctype, Dtype>::to(val);
   }
-
 }
 
 
