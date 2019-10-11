@@ -30,11 +30,7 @@ namespace mxnet {
 namespace op {
 
 
-#if MXNET_USE_TVM_OP
-#pragma message("In np_elemwise_broadcast_logic_op.cu, MXNET_USE_TVM_OP")
-
-#else
-#pragma message("In np_elemwise_broadcast_logic_op.cu, MXNET_USE_TVM_OP")
+#if MXNET_USE_TVM_OP == 0
 
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(name)                                     \
   NNVM_REGISTER_OP(_npi_##name)                                                               \
