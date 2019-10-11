@@ -53,9 +53,16 @@ image_name="${repository}:${main_tag}"
 
 resources_path='cd/python/docker'
 
+container_name=`uuidgen`
+
 if [ ! -z "${RELEASE_DOCKERHUB_REPOSITORY}" ]; then
     image_name="${RELEASE_DOCKERHUB_REPOSITORY}/${image_name}"
 fi
+
+docker_clean_up() {
+    docker rm -f "${container_name}"
+}
+    
 
 # Builds runtime image
 build() {
@@ -74,7 +81,11 @@ test() {
     
     # Ensure the correct context root is passed in when building - Dockerfile.test expects ci directory
     docker build -t "${test_image_name}" --build-arg USER_ID=`id -u` --build-arg GROUP_ID=`id -g` --build-arg BASE_IMAGE="${image_name}" -f ${resources_path}/Dockerfile.test ./ci
-    docker run ${runtime_param} -u `id -u`:`id -g` -v `pwd`:/mxnet "${test_image_name}" ${resources_path}/test_python_image.sh "${mxnet_variant}" "${python_cmd}"
+
+    # Trap the SIGINT and SIGTERM signals and quickly kill the container
+    # This avoid leaving zombie containers hanging around on the host
+    trap docker_clean_up SIGINT SIGTERM
+    docker run ${runtime_param} --name "${container_name}" -u `id -u`:`id -g` -v `pwd`:/mxnet "${test_image_name}" ${resources_path}/test_python_image.sh "${mxnet_variant}" "${python_cmd}"
 }
 
 # Pushes the runtime image to the repository
