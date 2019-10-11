@@ -1165,12 +1165,6 @@ def test_np_transpose():
                     axeses.append(tuple(axes))
                     axeses.append([i - len(axes) for i in axes])
                 for axes in axeses:
-                    print('==============')
-                    print(hybridize)
-                    print(dtype)
-                    print(ndim)
-                    print(axes)
-                    print(shape)
                     test_trans = TestTranspose(axes)
                     if hybridize:
                         test_trans.hybridize()

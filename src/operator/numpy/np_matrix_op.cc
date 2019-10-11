@@ -101,7 +101,12 @@ NNVM_REGISTER_OP(_np_transpose)
     if (ndim_is_known(param.axes)) {
       mxnet::TShape axes = mxnet::TShape(param.axes.ndim(), -1);
       for (int i = 0; i < axes.ndim(); ++i) {
-        axes[param.axes[i]] = i;
+        int axis = param.axes[i];
+        if (axis < 0) {
+          axis += param.axes.ndim();
+        }
+        CHECK(axis >= 0 && axis < param.axes.ndim());
+        axes[axis] = i;
       }
       std::ostringstream os;
       os << axes;
