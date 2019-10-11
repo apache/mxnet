@@ -1179,9 +1179,14 @@ def test_np_transpose():
                     np_backward = np_transpose_grad(np_out.shape, dtype, axes)
                     assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
-                    mx_out = np.transpose(x, axes)
-                    np_out = _np.transpose(x.asnumpy(), axes)
+                    mx_out = x.transpose(axes)
+                    np_out = x.asnumpy().transpose(axes)
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
+
+                    if isinstance(axes, tuple):
+                        mx_out = x.transpose(*axes)
+                        np_out = x.asnumpy().transpose(*axes)
+                        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
 
 @with_seed()
