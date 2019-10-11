@@ -42,7 +42,7 @@ enum ImageLayout {
 
 template<typename In, typename Out>
 struct ScalarConvert {
-  static __host__ __device__ MSHADOW_XINLINE Out to(const In v) { return (Out) v; }
+  static __host__ __device__ MSHADOW_FORCE_INLINE Out to(const In v) { return (Out) v; }
 };
 
 // The maximum number of threads in a block
@@ -60,7 +60,7 @@ static unsigned getNumThreads(int nElem, const bool smaller) {
   return smaller ? (MAX_BLOCK_SIZE >> 1) : MAX_BLOCK_SIZE;
 }
 
-__device__ __forceinline__ size_t
+__device__ MSHADOW_FORCE_INLINE size_t
 idx(const size_t nc,
   const size_t height,
   const size_t width,
@@ -70,7 +70,7 @@ idx(const size_t nc,
 }
 
 template <typename Acctype>
-__host__ MSHADOW_XINLINE static Acctype cu_area_pixel_compute_scale(
+__host__ MSHADOW_FORCE_INLINE static Acctype cu_area_pixel_compute_scale(
   int input_size,
   int output_size,
   bool align_corners) {
@@ -84,7 +84,7 @@ __host__ MSHADOW_XINLINE static Acctype cu_area_pixel_compute_scale(
 }
 
 template <typename Acctype>
-__device__ MSHADOW_XINLINE static Acctype cu_area_pixel_compute_source_index(
+__device__ MSHADOW_FORCE_INLINE static Acctype cu_area_pixel_compute_source_index(
   Acctype scale,
   int dst_index,
   bool align_corners,

@@ -32,11 +32,13 @@ namespace op {
 
 using namespace mshadow;
 
+// fastSpecializedAtomicAdd adapted from Torch
+// https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/KernelUtils.cuh
 template <
   typename Dtype,
   typename std::enable_if<std::is_same<mshadow::half::half_t, Dtype>::value>::type* =
   nullptr>
-  __device__ __forceinline__ void fastSpecializedAtomicAdd(
+  __device__ MSHADOW_FORCE_INLINE void fastSpecializedAtomicAdd(
     Dtype* tensor,
     size_t index,
     const size_t numel,
@@ -73,7 +75,7 @@ template <
   typename Dtype,
   typename std::enable_if<!std::is_same<mshadow::half::half_t, Dtype>::value>::type* =
   nullptr>
-  __device__ __forceinline__ void fastSpecializedAtomicAdd(
+  __device__ MSHADOW_FORCE_INLINE void fastSpecializedAtomicAdd(
     Dtype* tensor,
     size_t index,
     const size_t numel,
@@ -82,7 +84,7 @@ template <
 }
 
 template <class Dtype>
-__device__ __forceinline__ void fastAtomicAdd(
+__device__ MSHADOW_FORCE_INLINE void fastAtomicAdd(
   Dtype* tensor,
   size_t index,
   const size_t numel,
@@ -116,6 +118,8 @@ __global__ void like_mode_kernel_backward(const int n,
   }
 }
 
+// caffe_gpu_interp2_kernel_backward adapted from Torch
+// https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/UpSampleBilinear2d.cu
 // Backward (adjoint) operation 1 <- 2 (accumulates)
 template<typename xpu, typename Dtype, typename Acctype>
 __global__ void caffe_gpu_interp2_kernel_backward(
