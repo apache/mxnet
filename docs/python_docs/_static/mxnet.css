@@ -1,0 +1,206 @@
+/* THOMAS EDITS */
+
+.logo {
+    width: 120px !important;
+    padding: 21px !important;
+    margin: auto !important;    
+}
+
+@media only screen and (min-width: 1025px) {
+    .mdl-navigation.breadcrumb {
+        margin-left: 100px !important;
+    }
+    .mdl-layout__drawer {
+        width: 300px !important;
+    }
+}
+
+.mdl-layout {
+    visibility: hidden;
+}
+
+.document .page-content {
+    padding: 0 10% !important;
+}
+
+.mdl-layout__header--waterfall.is-casting-shadow {
+    box-shadow: none !important;
+}
+
+.mdl-layout__header.is-compact {
+    max-height: inherit !important;
+}
+
+.mx-card {
+    box-shadow: none;
+    transition: box-shadow 0.3s linear;
+}
+
+.mx-card.head-card {
+    width: 100% !important;
+}
+
+.mx-card-title {
+    font-weight: 300 !important
+}
+
+.mx-card:hover .mx-card-title {
+    color: orangered !important;
+}
+
+.mdl-card:hover {
+    box-shadow: inset 0 -2px 0 0 #048ccc !important;
+}
+
+.mdl-layout__header-row {
+    height: 84px !important;
+}
+
+.mdl-shadow--2dp {
+    box-shadow: none !important;
+}
+
+
+div.mdl-layout__header-row.header-links {
+    display: none !important;
+    visibility: none !important;
+    background-color: #fafafa !important;
+}
+
+.header_links {
+    display: none !important;
+    visibility: none !important;
+    background-color: #fafafa !important;
+}
+
+
+.mdl-layout__header {
+    background-color: rgb(4,140,204);
+}
+.mdl-layout-title {
+    background-color: rgb(4,140,204);
+}
+
+
+.mdl-layout__drawer {
+    box-shadow: none !important;
+    border: none !important;
+}
+
+.pagenation {
+    visibility: hidden !important;
+}
+
+footer.mdl-mini-footer {
+    width: 100%;
+    padding-left: 150px;
+    background-color: #424242 !important;
+}
+
+    
+/* END OF THOMAS EDITS */
+
+
+body {
+    font-family: 'Roboto', sans-serif;
+}
+
+p {
+    font-size: 16px;
+    /*     font-weight: 400; */
+    line-height: 1.5em;
+    margin: 16px 0;
+}
+
+.sidebar {
+    float: right;
+    display: block;
+    width: 30%;
+    padding: 0 20px;
+    margin: 0 20px;
+    background-color: #eee;
+    border-radius: 8px;
+
+}
+
+@media (max-width: 500px) {
+    .sidebar {
+        float: none;
+        width: 100%;
+        padding: 0 10px;
+        margin: 0 10px;
+        width: 80%;
+    }
+}
+
+.sidebar .sidebar-title {
+    text-align: center;
+    display: block;
+    margin-bottom: 0px;
+    display: none;
+}
+
+.align-center {
+    text-align: center;
+    display: block;
+    /* float: right; */
+    margin: auto;
+}
+
+/* API section */
+
+.mx-api .section .hidden-section {
+    display: none;
+}
+
+.mx-api h3.mdl-color-text--primary {
+    /* display: none; */
+
+    /* border-top-style: solid; */
+    /* border-color: #ccc; */
+    /* border-top-width: 1px; */
+    padding: 1em 0 0 0;
+    margin: 2em 0 0 0;
+    height: 0;
+}
+
+/* .section .viewcode-link { */
+/*     padding-left: 2em; */
+/*     font-size: 80%; */
+/* } */
+
+.section .class dt {
+    padding-bottom: 1em;
+}
+
+.install {
+    max-width: 800px;
+}
+.install .title {
+    display: inline-block;
+    min-width: 100px;
+    text-transform: uppercase;
+    font-size: 90%;
+    color: #555;
+}
+
+.install .option {
+    margin: 5px;
+}
+
+@media (max-width: 650px) {
+    .install .option, .install .title {
+        width: 90%;
+    }
+}
+
+.install .title {
+    margin-top: 1em;
+}
+
+/* autodoc */
+#autodoc_toggle {
+    float: right;
+    margin: 4px;
+    cursor: pointer;
+}

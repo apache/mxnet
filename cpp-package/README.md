@@ -32,9 +32,9 @@ The cpp-package directory contains the implementation of C++ API. As mentioned a
 	git clone --recursive https://github.com/apache/incubator-mxnet mxnet
 	```
 
-3.  Install the [prerequisites](<https://mxnet.incubator.apache.org/install/build_from_source#prerequisites>), desired [BLAS libraries](<https://mxnet.incubator.apache.org/install/build_from_source#blas-library>) and optional [OpenCV, CUDA, and cuDNN](<https://mxnet.incubator.apache.org/install/build_from_source#optional>) for building MXNet from source.
+3.  Install the [prerequisites](<https://mxnet.apache.org/install/build_from_source#prerequisites>), desired [BLAS libraries](<https://mxnet.apache.org/install/build_from_source#blas-library>) and optional [OpenCV, CUDA, and cuDNN](<https://mxnet.apache.org/install/build_from_source#optional>) for building MXNet from source.
 4.  There is a configuration file for make, [make/config.mk](<https://github.com/apache/incubator-mxnet/blob/master/make/config.mk>) that contains all the compilation options. You can edit this file and set the appropriate options prior to running the **make** command.
-5.  Please refer to  [platform specific build instructions](<https://mxnet.incubator.apache.org/install/build_from_source#build-instructions-by-operating-system>) and available [build configurations](https://mxnet.incubator.apache.org/install/build_from_source#build-configurations) for more details.
+5.  Please refer to  [platform specific build instructions](<https://mxnet.apache.org/install/build_from_source#build-instructions-by-operating-system>) and available [build configurations](https://mxnet.apache.org/install/build_from_source#build-configurations) for more details.
 5.  For enabling the build of C++ Package, set the **USE\_CPP\_PACKAGE = 1** in [make/config.mk](<https://github.com/apache/incubator-mxnet/blob/master/make/config.mk>). Optionally, the compilation flag can also be specified on **make** command line as follows.
 	```
 	make -j USE_CPP_PACKAGE=1
@@ -55,7 +55,7 @@ In order to consume the C++ API please follow the steps below.
 
 ## Tutorial
 
-A basic tutorial can be found at <https://mxnet.incubator.apache.org/tutorials/c++/basics.html>.
+A basic tutorial can be found at <https://mxnet.apache.org/tutorials/c++/basics.html>.
 
 ## Examples
 

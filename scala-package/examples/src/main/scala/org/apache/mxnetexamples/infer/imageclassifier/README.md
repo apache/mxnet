@@ -36,7 +36,7 @@ The following example shows recognized object classes with corresponding probabi
 
 1. MXNet
 2. MXNet Scala Package
-3. [IntelliJ IDE (or alternative IDE) project setup](http://mxnet.incubator.apache.org/tutorials/scala/mxnet_scala_on_intellij.html) with the MXNet Scala Package
+3. [IntelliJ IDE (or alternative IDE) project setup](https://mxnet.apache.org/api/scala/docs/tutorials/mxnet_scala_on_intellij) with the MXNet Scala Package
 4. wget
 
 

@@ -62,7 +62,7 @@ template<typename FunRegType>
 inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
                                    const char **name,
                                    const char **description,
-                                   mx_uint *num_args,
+                                   uint32_t *num_args,
                                    const char ***arg_names,
                                    const char ***arg_type_infos,
                                    const char ***arg_descriptions,
@@ -72,7 +72,7 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
   API_BEGIN();
   *name = e->name.c_str();
   *description = e->description.c_str();
-  *num_args = static_cast<mx_uint>(e->arguments.size());
+  *num_args = static_cast<uint32_t>(e->arguments.size());
   if (return_type) *return_type = e->return_type.c_str();
   ret->ret_vec_charp.clear();
   for (size_t i = 0; i < e->arguments.size(); ++i) {
@@ -202,8 +202,8 @@ void CreateNDArray(const DataType* shape,
                      delay_alloc != 0, dtype);
 }
 
-int MXNDArrayCreate(const mx_uint *shape,
-                    mx_uint ndim,
+int MXNDArrayCreate(const uint32_t *shape,
+                    uint32_t ndim,
                     int dev_type,
                     int dev_id,
                     int delay_alloc,
@@ -215,7 +215,7 @@ int MXNDArrayCreate(const mx_uint *shape,
   API_END();
 }
 
-int MXNDArrayCreateEx64(const mx_int64 *shape,
+int MXNDArrayCreateEx64(const int64_t *shape,
                         int ndim,
                         int dev_type,
                         int dev_id,
@@ -223,33 +223,33 @@ int MXNDArrayCreateEx64(const mx_int64 *shape,
                         int dtype,
                         NDArrayHandle *out) {
   API_BEGIN();
-  CreateNDArray<mx_int64, int>(shape, ndim, dev_type, dev_id, delay_alloc, dtype, out);
+  CreateNDArray<int64_t, int>(shape, ndim, dev_type, dev_id, delay_alloc, dtype, out);
   API_END();
 }
 
-int MXNDArrayCreateEx(const mx_uint *shape,
-                      mx_uint ndim,
+int MXNDArrayCreateEx(const uint32_t *shape,
+                      uint32_t ndim,
                       int dev_type,
                       int dev_id,
                       int delay_alloc,
                       int dtype,
                       NDArrayHandle *out) {
   API_BEGIN();
-  CreateNDArray<mx_uint, mx_uint>(shape, ndim, dev_type, dev_id, delay_alloc, dtype, out);
+  CreateNDArray<uint32_t, uint32_t>(shape, ndim, dev_type, dev_id, delay_alloc, dtype, out);
   API_END();
 }
 
 int MXNDArrayCreateSparseEx(int storage_type,
-                            const mx_uint *shape,
-                            mx_uint ndim,
+                            const uint32_t *shape,
+                            uint32_t ndim,
                             int dev_type,
                             int dev_id,
                             int delay_alloc,
                             int dtype,
-                            mx_uint num_aux,
+                            uint32_t num_aux,
                             int *aux_type,
-                            mx_uint *aux_ndims,
-                            const mx_uint *aux_shape,
+                            uint32_t *aux_ndims,
+                            const uint32_t *aux_shape,
                             NDArrayHandle *out) {
   API_BEGIN();
   std::vector<int> aux_types;
@@ -358,18 +358,18 @@ int MXNDArrayWaitAll() {
 }
 
 int MXNDArraySave(const char* fname,
-                  mx_uint num_args,
+                  uint32_t num_args,
                   NDArrayHandle* args,
                   const char** keys) {
   API_BEGIN();
   std::vector<NDArray> data(num_args);
   std::vector<std::string> names;
-  for (mx_uint i = 0; i < num_args; ++i) {
+  for (uint32_t i = 0; i < num_args; ++i) {
     data[i] = *static_cast<NDArray*>(args[i]);
   }
   if (keys != nullptr) {
     names.resize(num_args);
-    for (mx_uint i = 0; i < num_args; ++i) {
+    for (uint32_t i = 0; i < num_args; ++i) {
       names[i] = keys[i];
     }
   }
@@ -381,9 +381,9 @@ int MXNDArraySave(const char* fname,
 }
 
 int MXNDArrayLoad(const char* fname,
-                  mx_uint *out_size,
+                  uint32_t *out_size,
                   NDArrayHandle** out_arr,
-                  mx_uint *out_name_size,
+                  uint32_t *out_name_size,
                   const char*** out_names) {
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   ret->ret_vec_str.clear();
@@ -404,18 +404,18 @@ int MXNDArrayLoad(const char* fname,
   for (size_t i = 0; i < names.size(); ++i) {
     ret->ret_vec_charp[i] = names[i].c_str();
   }
-  *out_size = static_cast<mx_uint>(data.size());
+  *out_size = static_cast<uint32_t>(data.size());
   *out_arr = dmlc::BeginPtr(ret->ret_handles);
-  *out_name_size = static_cast<mx_uint>(names.size());
+  *out_name_size = static_cast<uint32_t>(names.size());
   *out_names = dmlc::BeginPtr(ret->ret_vec_charp);
   API_END();
 }
 
 int MXNDArrayLoadFromBuffer(const void *ndarray_buffer,
                             size_t size,
-                            mx_uint *out_size,
+                            uint32_t *out_size,
                             NDArrayHandle** out_arr,
-                            mx_uint *out_name_size,
+                            uint32_t *out_name_size,
                             const char*** out_names) {
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   ret->ret_vec_str.clear();
@@ -438,9 +438,9 @@ int MXNDArrayLoadFromBuffer(const void *ndarray_buffer,
   for (size_t i = 0; i < names.size(); ++i) {
     ret->ret_vec_charp[i] = names[i].c_str();
   }
-  *out_size = static_cast<mx_uint>(data.size());
+  *out_size = static_cast<uint32_t>(data.size());
   *out_arr = dmlc::BeginPtr(ret->ret_handles);
-  *out_name_size = static_cast<mx_uint>(names.size());
+  *out_name_size = static_cast<uint32_t>(names.size());
   *out_names = dmlc::BeginPtr(ret->ret_vec_charp);
   API_END();
 }
@@ -451,21 +451,46 @@ int MXNDArrayFree(NDArrayHandle handle) {
   API_END();
 }
 
+template<typename dtype>
+void SliceArray(NDArrayHandle handle, dtype slice_begin, dtype slice_end, NDArray* ptr,
+                NDArrayHandle* out) {
+  *ptr = static_cast<NDArray*>(handle)->SliceWithRecord(slice_begin, slice_end);
+  *out = ptr;
+}
+
 int MXNDArraySlice(NDArrayHandle handle,
-                   mx_uint slice_begin,
-                   mx_uint slice_end,
+                   uint32_t slice_begin,
+                   uint32_t slice_end,
                    NDArrayHandle *out) {
   NDArray *ptr = new NDArray();
   API_BEGIN();
-  *ptr = static_cast<NDArray*>(handle)->SliceWithRecord(
-      slice_begin, slice_end);
-  *out = ptr;
+  SliceArray<uint32_t>(handle, slice_begin, slice_end, ptr, out);
+  API_END_HANDLE_ERROR(delete ptr);
+}
+
+int MXNDArraySlice64(NDArrayHandle handle,
+                     int64_t slice_begin,
+                     int64_t slice_end,
+                     NDArrayHandle *out) {
+  NDArray *ptr = new NDArray();
+  API_BEGIN();
+  SliceArray<int64_t>(handle, slice_begin, slice_end, ptr, out);
   API_END_HANDLE_ERROR(delete ptr);
 }
 
 int MXNDArrayAt(NDArrayHandle handle,
-                mx_uint idx,
+                uint32_t idx,
                 NDArrayHandle *out) {
+  NDArray *ptr = new NDArray();
+  API_BEGIN();
+  *ptr = static_cast<NDArray*>(handle)->AtWithRecord(idx);
+  *out = ptr;
+  API_END_HANDLE_ERROR(delete ptr);
+}
+
+int MXNDArrayAt64(NDArrayHandle handle,
+                  int64_t idx,
+                  NDArrayHandle *out) {
   NDArray *ptr = new NDArray();
   API_BEGIN();
   *ptr = static_cast<NDArray*>(handle)->AtWithRecord(idx);
@@ -518,8 +543,6 @@ MXNET_DLL int MXNDArrayReshape64(NDArrayHandle handle,
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
   mxnet::Tuple<dim_t> shape(dims, dims+ndim);
-  CHECK_GT(arr->shape().Size(), 0) << "Source ndarray's shape is undefined. Input shape: "
-    << arr->shape();
   mxnet::TShape new_shape = mxnet::op::InferReshapeShape(shape, arr->shape(), reverse);
   *ptr = arr->ReshapeWithRecord(new_shape);
   *out = ptr;
@@ -539,8 +562,8 @@ int MXNDArrayGetStorageType(NDArrayHandle handle,
 }
 
 int MXNDArrayGetShape(NDArrayHandle handle,
-                      mx_uint *out_dim,
-                      const mx_uint **out_pdata) {
+                      uint32_t *out_dim,
+                      const uint32_t **out_pdata) {
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
@@ -593,10 +616,10 @@ int MXNDArrayGetShapeEx(NDArrayHandle handle,
 
 int MXNDArrayGetShapeEx64(NDArrayHandle handle,
                           int *out_dim,
-                          const mx_int64 **out_pdata) {
+                          const int64_t **out_pdata) {
   MXAPIThreadLocalEntry<int64_t> *ret = MXAPIThreadLocalStore<int64_t>::Get();
   API_BEGIN();
-  GetShape<mx_int64>(handle, out_pdata, out_dim, ret);
+  GetShape<int64_t>(handle, out_pdata, out_dim, ret);
   API_END();
 }
 
@@ -604,6 +627,12 @@ int MXNDArrayGetData(NDArrayHandle handle,
                      void **out_pdata) {
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
+#if MXNET_USE_MKLDNN == 1
+  if (arr->IsMKLDNNData()) {
+    arr->Reorder2DefaultAsync();
+    arr->WaitToRead();
+  }
+#endif
   if (!arr->is_none()) {
     *out_pdata = arr->data().dptr_;
   } else {
@@ -657,7 +686,7 @@ int MXNDArrayGetDType(NDArrayHandle handle,
 }
 
 int MXNDArrayGetAuxType(NDArrayHandle handle,
-                        mx_uint i,
+                        uint32_t i,
                         int *out_type) {
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
@@ -671,7 +700,7 @@ int MXNDArrayGetAuxType(NDArrayHandle handle,
  * This function blocks. Do not use it in performance critical code.
  */
 int MXNDArrayGetAuxNDArray(NDArrayHandle handle,
-                           mx_uint i,
+                           uint32_t i,
                            NDArrayHandle *out) {
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
@@ -742,11 +771,11 @@ int MXNDArrayGetGradState(NDArrayHandle handle, int *out) {
   API_END();
 }
 
-int MXListFunctions(mx_uint *out_size,
+int MXListFunctions(uint32_t *out_size,
                     FunctionHandle **out_array) {
   API_BEGIN();
   auto &vec = dmlc::Registry<NDArrayFunctionReg>::List();
-  *out_size = static_cast<mx_uint>(vec.size());
+  *out_size = static_cast<uint32_t>(vec.size());
   *out_array = (FunctionHandle*)(dmlc::BeginPtr(vec));  //  NOLINT(*)
   API_END();
 }
@@ -761,7 +790,7 @@ int MXGetFunction(const char *name,
 int MXFuncGetInfo(FunctionHandle fun,
                   const char **name,
                   const char **description,
-                  mx_uint *num_args,
+                  uint32_t *num_args,
                   const char ***arg_names,
                   const char ***arg_type_infos,
                   const char ***arg_descriptions,
@@ -773,9 +802,9 @@ int MXFuncGetInfo(FunctionHandle fun,
 }
 
 int MXFuncDescribe(FunctionHandle fun,
-                   mx_uint *num_use_vars,
-                   mx_uint *num_scalars,
-                   mx_uint *num_mutate_vars,
+                   uint32_t *num_use_vars,
+                   uint32_t *num_scalars,
+                   uint32_t *num_mutate_vars,
                    int *type_mask) {
   API_BEGIN();
   auto *f = static_cast<const NDArrayFunctionReg*>(fun);
@@ -788,7 +817,7 @@ int MXFuncDescribe(FunctionHandle fun,
 
 int MXFuncInvoke(FunctionHandle fun,
                  NDArrayHandle *use_vars,
-                 mx_float *scalar_args,
+                 float *scalar_args,
                  NDArrayHandle *mutate_vars) {
   API_BEGIN();
   auto *f = static_cast<const NDArrayFunctionReg*>(fun);
@@ -803,7 +832,7 @@ int MXFuncInvoke(FunctionHandle fun,
 
 int MXFuncInvokeEx(FunctionHandle fun,
                  NDArrayHandle *use_vars,
-                 mx_float *scalar_args,
+                 float *scalar_args,
                  NDArrayHandle *mutate_vars,
                  int num_params,
                  char **param_keys,
@@ -822,11 +851,11 @@ int MXFuncInvokeEx(FunctionHandle fun,
 //--------------------------------------------
 // Part 5: IO Interface
 //--------------------------------------------
-int MXListDataIters(mx_uint *out_size,
+int MXListDataIters(uint32_t *out_size,
                     DataIterCreator **out_array) {
   API_BEGIN();
   auto &vec = dmlc::Registry<DataIteratorReg>::List();
-  *out_size = static_cast<mx_uint>(vec.size());
+  *out_size = static_cast<uint32_t>(vec.size());
   *out_array = (DataIterCreator*)(dmlc::BeginPtr(vec));  //  NOLINT(*)
   API_END();
 }
@@ -834,7 +863,7 @@ int MXListDataIters(mx_uint *out_size,
 int MXDataIterGetIterInfo(DataIterCreator creator,
                           const char **name,
                           const char **description,
-                          mx_uint *num_args,
+                          uint32_t *num_args,
                           const char ***arg_names,
                           const char ***arg_type_infos,
                           const char ***arg_descriptions) {
@@ -845,7 +874,7 @@ int MXDataIterGetIterInfo(DataIterCreator creator,
 }
 
 int MXDataIterCreateIter(DataIterCreator creator,
-                         mx_uint num_param,
+                         uint32_t num_param,
                          const char **keys,
                          const char **vals,
                          DataIterHandle *out) {
@@ -854,7 +883,7 @@ int MXDataIterCreateIter(DataIterCreator creator,
   DataIteratorReg *e = static_cast<DataIteratorReg *>(creator);
   iter = e->body();
   std::vector<std::pair<std::string, std::string> > kwargs;
-  for (mx_uint i = 0; i < num_param; ++i) {
+  for (uint32_t i = 0; i < num_param; ++i) {
     kwargs.push_back({std::string(keys[i]), std::string(vals[i])});
   }
   iter->Init(kwargs);
@@ -927,11 +956,11 @@ int MXKVStoreCreate(const char *type,
   API_END();
 }
 
-int MXKVStoreSetGradientCompression(KVStoreHandle handle, mx_uint num_params,
+int MXKVStoreSetGradientCompression(KVStoreHandle handle, uint32_t num_params,
                                     const char** keys, const char** vals) {
   API_BEGIN();
   std::vector<std::pair<std::string, std::string> > params;
-  for (mx_uint i = 0; i < num_params; ++i) {
+  for (uint32_t i = 0; i < num_params; ++i) {
     std::pair<std::string, std::string> p;
     p.first = keys[i];
     p.second = vals[i];
@@ -948,13 +977,13 @@ int MXKVStoreFree(KVStoreHandle handle) {
 }
 
 int MXKVStoreInit(KVStoreHandle handle,
-                  mx_uint num,
+                  uint32_t num,
                   const int* keys,
                   NDArrayHandle* vals) {
   API_BEGIN();
   std::vector<int> v_keys(num);
   std::vector<NDArray> v_vals(num);
-  for (mx_uint i = 0; i < num; ++i) {
+  for (uint32_t i = 0; i < num; ++i) {
     v_keys[i] = keys[i];
     v_vals[i] = *static_cast<NDArray*>(vals[i]);
   }
@@ -963,13 +992,13 @@ int MXKVStoreInit(KVStoreHandle handle,
 }
 
 int MXKVStoreInitEx(KVStoreHandle handle,
-                  mx_uint num,
+                  uint32_t num,
                   const char** keys,
                   NDArrayHandle* vals) {
   API_BEGIN();
   std::vector<std::string> v_keys(num);
   std::vector<NDArray> v_vals(num);
-  for (mx_uint i = 0; i < num; ++i) {
+  for (uint32_t i = 0; i < num; ++i) {
     v_keys[i] = keys[i];
     v_vals[i] = *static_cast<NDArray*>(vals[i]);
   }
@@ -978,14 +1007,14 @@ int MXKVStoreInitEx(KVStoreHandle handle,
 }
 
 int MXKVStorePush(KVStoreHandle handle,
-                  mx_uint num,
+                  uint32_t num,
                   const int* keys,
                   NDArrayHandle* vals,
                   int priority) {
   API_BEGIN();
   std::vector<int> v_keys(num);
   std::vector<NDArray> v_vals(num);
-  for (mx_uint i = 0; i < num; ++i) {
+  for (uint32_t i = 0; i < num; ++i) {
     v_keys[i] = keys[i];
     v_vals[i] = *static_cast<NDArray*>(vals[i]);
   }
@@ -994,14 +1023,14 @@ int MXKVStorePush(KVStoreHandle handle,
 }
 
 int MXKVStorePushEx(KVStoreHandle handle,
-                  mx_uint num,
+                  uint32_t num,
                   const char** keys,
                   NDArrayHandle* vals,
                   int priority) {
   API_BEGIN();
   std::vector<std::string> v_keys(num);
   std::vector<NDArray> v_vals(num);
-  for (mx_uint i = 0; i < num; ++i) {
+  for (uint32_t i = 0; i < num; ++i) {
     v_keys[i] = keys[i];
     v_vals[i] = *static_cast<NDArray*>(vals[i]);
   }
@@ -1010,14 +1039,14 @@ int MXKVStorePushEx(KVStoreHandle handle,
 }
 
 int MXKVStorePull(KVStoreHandle handle,
-                  mx_uint num,
+                  uint32_t num,
                   const int* keys,
                   NDArrayHandle* vals,
                   int priority) {
   API_BEGIN();
   std::vector<int> v_keys(num);
   std::vector<NDArray*> v_vals(num);
-  for (mx_uint i = 0; i < num; ++i) {
+  for (uint32_t i = 0; i < num; ++i) {
     v_keys[i] = keys[i];
     v_vals[i] = static_cast<NDArray*>(vals[i]);
   }
@@ -1026,14 +1055,14 @@ int MXKVStorePull(KVStoreHandle handle,
 }
 
 int MXKVStorePullEx(KVStoreHandle handle,
-                    mx_uint num,
+                    uint32_t num,
                     const char** keys,
                     NDArrayHandle* vals,
                     int priority) {
   API_BEGIN();
   std::vector<std::string> v_keys(num);
   std::vector<NDArray*> v_vals(num);
-  for (mx_uint i = 0; i < num; ++i) {
+  for (uint32_t i = 0; i < num; ++i) {
     v_keys[i] = keys[i];
     v_vals[i] = static_cast<NDArray*>(vals[i]);
   }
@@ -1041,8 +1070,60 @@ int MXKVStorePullEx(KVStoreHandle handle,
   API_END();
 }
 
+int MXKVStorePushPull(KVStoreHandle handle,
+                      mx_uint vnum,
+                      const int* vkeys,
+                      mx_uint onum,
+                      const int* okeys,
+                      NDArrayHandle* vals,
+                      NDArrayHandle* outs,
+                      int priority) {
+  API_BEGIN();
+  std::vector<int> v_vkeys(vnum);
+  std::vector<int> v_okeys(onum);
+  std::vector<NDArray> v_vals(vnum);
+  std::vector<NDArray*> v_outs(onum);
+  for (mx_uint i = 0; i < vnum; ++i) {
+    v_vkeys[i] = vkeys[i];
+    v_vals[i] = *static_cast<NDArray*>(vals[i]);
+  }
+  for (mx_uint i = 0; i < onum; ++i) {
+    v_okeys[i] = okeys[i];
+    v_outs[i] = static_cast<NDArray*>(outs[i]);
+  }
+  static_cast<KVStore*>(handle)->PushPull(v_vkeys, v_okeys, v_vals, v_outs,
+    priority);
+  API_END();
+}
+
+int MXKVStorePushPullEx(KVStoreHandle handle,
+                        mx_uint vnum,
+                        const char** vkeys,
+                        mx_uint onum,
+                        const char** okeys,
+                        NDArrayHandle* vals,
+                        NDArrayHandle* outs,
+                        int priority) {
+  API_BEGIN();
+  std::vector<std::string> v_vkeys(vnum);
+  std::vector<std::string> v_okeys(onum);
+  std::vector<NDArray> v_vals(vnum);
+  std::vector<NDArray*> v_outs(onum);
+  for (mx_uint i = 0; i < vnum; ++i) {
+    v_vkeys[i] = vkeys[i];
+    v_vals[i] = *static_cast<NDArray*>(vals[i]);
+  }
+  for (mx_uint i = 0; i < onum; ++i) {
+    v_okeys[i] = okeys[i];
+    v_outs[i] = static_cast<NDArray*>(outs[i]);
+  }
+  static_cast<KVStore*>(handle)->PushPull(v_vkeys, v_okeys, v_vals, v_outs,
+    priority);
+  API_END();
+}
+
 int MXKVStorePullWithSparse(KVStoreHandle handle,
-                            mx_uint num,
+                            uint32_t num,
                             const int* keys,
                             NDArrayHandle* vals,
                             int priority,
@@ -1050,7 +1131,7 @@ int MXKVStorePullWithSparse(KVStoreHandle handle,
   API_BEGIN();
   std::vector<int> v_keys(num);
   std::vector<NDArray*> v_vals(num);
-  for (mx_uint i = 0; i < num; ++i) {
+  for (uint32_t i = 0; i < num; ++i) {
     v_keys[i] = keys[i];
     v_vals[i] = static_cast<NDArray*>(vals[i]);
   }
@@ -1059,7 +1140,7 @@ int MXKVStorePullWithSparse(KVStoreHandle handle,
 }
 
 int MXKVStorePullWithSparseEx(KVStoreHandle handle,
-                              mx_uint num,
+                              uint32_t num,
                               const char** keys,
                               NDArrayHandle* vals,
                               int priority,
@@ -1067,7 +1148,7 @@ int MXKVStorePullWithSparseEx(KVStoreHandle handle,
   API_BEGIN();
   std::vector<std::string> v_keys(num);
   std::vector<NDArray*> v_vals(num);
-  for (mx_uint i = 0; i < num; ++i) {
+  for (uint32_t i = 0; i < num; ++i) {
     v_keys[i] = keys[i];
     v_vals[i] = static_cast<NDArray*>(vals[i]);
   }
@@ -1076,7 +1157,7 @@ int MXKVStorePullWithSparseEx(KVStoreHandle handle,
 }
 
 int MXKVStorePullRowSparse(KVStoreHandle handle,
-                           mx_uint num,
+                           uint32_t num,
                            const int* keys,
                            NDArrayHandle* vals,
                            const NDArrayHandle* row_ids,
@@ -1084,7 +1165,7 @@ int MXKVStorePullRowSparse(KVStoreHandle handle,
   API_BEGIN();
   std::vector<int> v_keys(num);
   std::vector<std::pair<NDArray*, NDArray>> v_val_rowids(num);
-  for (mx_uint i = 0; i < num; ++i) {
+  for (uint32_t i = 0; i < num; ++i) {
     v_keys[i] = keys[i];
     v_val_rowids[i] = std::make_pair(static_cast<NDArray*>(vals[i]),
                                      *static_cast<NDArray*>(row_ids[i]));
@@ -1094,7 +1175,7 @@ int MXKVStorePullRowSparse(KVStoreHandle handle,
 }
 
 int MXKVStorePullRowSparseEx(KVStoreHandle handle,
-                             mx_uint num,
+                             uint32_t num,
                              const char** keys,
                              NDArrayHandle* vals,
                              const NDArrayHandle* row_ids,
@@ -1102,7 +1183,7 @@ int MXKVStorePullRowSparseEx(KVStoreHandle handle,
   API_BEGIN();
   std::vector<std::string> v_keys(num);
   std::vector<std::pair<NDArray*, NDArray>> v_val_rowids(num);
-  for (mx_uint i = 0; i < num; ++i) {
+  for (uint32_t i = 0; i < num; ++i) {
     v_keys[i] = keys[i];
     v_val_rowids[i] = std::make_pair(static_cast<NDArray*>(vals[i]),
                                      *static_cast<NDArray*>(row_ids[i]));
@@ -1183,12 +1264,12 @@ int MXKVStoreSetBarrierBeforeExit(KVStoreHandle handle,
   API_END();
 }
 
-int MXInitPSEnv(mx_uint num_vars,
+int MXInitPSEnv(uint32_t num_vars,
                 const char **keys,
                 const char **vals) {
   API_BEGIN();
   std::unordered_map<std::string, std::string> kwargs;
-  for (mx_uint i = 0; i < num_vars; ++i) {
+  for (uint32_t i = 0; i < num_vars; ++i) {
     kwargs[std::string(keys[i])] = std::string(vals[i]);
   }
   KVStore::InitPSEnv(kwargs);
@@ -1353,7 +1434,7 @@ int MXRecordIOReaderTell(RecordIOHandle handle, size_t *pos) {
   API_END();
 }
 
-int MXRtcCreate(char* name, mx_uint num_input, mx_uint num_output,
+int MXRtcCreate(char* name, uint32_t num_input, uint32_t num_output,
                 char** input_names, char** output_names,
                 NDArrayHandle* inputs, NDArrayHandle* outputs,
                 char* kernel, RtcHandle *out) {
@@ -1362,14 +1443,14 @@ int MXRtcCreate(char* name, mx_uint num_input, mx_uint num_output,
   API_END();
 }
 
-int MXRtcPush(RtcHandle handle, mx_uint num_input, mx_uint num_output,
+int MXRtcPush(RtcHandle handle, uint32_t num_input, uint32_t num_output,
               NDArrayHandle* inputs, NDArrayHandle* outputs,
-              mx_uint gridDimX,
-              mx_uint gridDimY,
-              mx_uint gridDimZ,
-              mx_uint blockDimX,
-              mx_uint blockDimY,
-              mx_uint blockDimZ) {
+              uint32_t gridDimX,
+              uint32_t gridDimY,
+              uint32_t gridDimZ,
+              uint32_t blockDimX,
+              uint32_t blockDimY,
+              uint32_t blockDimZ) {
   API_BEGIN();
   LOG(FATAL) << "Old rtc API is deprecated. Please use CudaModule";
   API_END();
@@ -1445,10 +1526,10 @@ int MXRtcCudaKernelFree(CudaKernelHandle handle) {
 }
 
 int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** args,
-                        mx_uint grid_dim_x, mx_uint grid_dim_y,
-                        mx_uint grid_dim_z, mx_uint block_dim_x,
-                        mx_uint block_dim_y, mx_uint block_dim_z,
-                        mx_uint shared_mem) {
+                        uint32_t grid_dim_x, uint32_t grid_dim_y,
+                        uint32_t grid_dim_z, uint32_t block_dim_x,
+                        uint32_t block_dim_y, uint32_t block_dim_z,
+                        uint32_t shared_mem) {
   API_BEGIN();
 #if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
   auto kernel = reinterpret_cast<std::shared_ptr<rtc::CudaModule::Kernel>*>(handle);
@@ -1491,8 +1572,8 @@ int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid, int* shar
   API_END();
 }
 
-int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const mx_uint *shape,
-                                 mx_uint ndim, int dtype, NDArrayHandle *out) {
+int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const uint32_t *shape,
+                                 uint32_t ndim, int dtype, NDArrayHandle *out) {
   API_BEGIN();
   *out = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
   API_END();

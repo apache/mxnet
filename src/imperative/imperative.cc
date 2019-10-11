@@ -25,11 +25,11 @@ namespace mxnet {
 #if DMLC_CXX11_THREAD_LOCAL
 thread_local bool Imperative::is_train_ = false;
 thread_local bool Imperative::is_recording_ = false;
-thread_local bool Imperative::is_np_shape_ = false;
+thread_local bool Imperative::is_np_shape_thread_local_ = false;
 #else
 MX_THREAD_LOCAL bool Imperative::is_train_ = false;
 MX_THREAD_LOCAL bool Imperative::is_recording_ = false;
-MX_THREAD_LOCAL bool Imperative::is_np_shape_ = false;
+MX_THREAD_LOCAL bool Imperative::is_np_shape_thread_local_ = false;
 #endif
 
 Imperative* Imperative::Get() {
@@ -122,7 +122,7 @@ OpStatePtr Imperative::Invoke(
 
 void Imperative::MarkVariables(
     const std::vector<NDArray*>& variables,
-    const std::vector<mx_uint>& grad_reqs,
+    const std::vector<uint32_t>& grad_reqs,
     const std::vector<NDArray*>& gradients) {
   for (uint32_t i = 0; i < variables.size(); ++i) {
     std::string str_c(std::to_string(variable_count_++));

@@ -281,7 +281,7 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
   CHECK_EQ(storage_type(), kDefaultStorage);
   NDArray ret = this->Detach();
   size_t length = shape_.ProdShape(1, shape_.ndim());
-  MSHADOW_TYPE_SWITCH(ret.dtype(), DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(ret.dtype(), DType, {
     ret.byte_offset_ += begin * length * sizeof(DType);
   });
   ret.reuse_ = false;
@@ -2110,6 +2110,7 @@ void CopyFromToSimple(
 // copy function is special
 // that we need to remove kAcceptEmptyMutateTarget from it
 NNVM_REGISTER_OP(_copyto)
+.add_alias("_npi_copyto")
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<mxnet::FInferShape>("FInferShape", op::ElemwiseShape<1, 1>)

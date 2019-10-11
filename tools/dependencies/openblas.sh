@@ -18,9 +18,8 @@
 # under the License.
 
 # This script builds the static library of openblas that can be used as dependency of mxnet.
-set +e # This script throws an error but otherwise works
-set -x
-OPENBLAS_VERSION=0.3.3
+set -ex
+OPENBLAS_VERSION=0.3.7
 if [[ ! -e $DEPS_PATH/lib/libopenblas.a ]]; then
     # download and build openblas
     >&2 echo "Building openblas..."
@@ -32,8 +31,13 @@ if [[ ! -e $DEPS_PATH/lib/libopenblas.a ]]; then
     pushd .
     cd $DEPS_PATH/OpenBLAS-$OPENBLAS_VERSION
 
-    $MAKE DYNAMIC_ARCH=1 NO_SHARED=1 USE_OPENMP=1
+    # Adding NO_DYNAMIC=1 flag causes make install to fail
+    $MAKE DYNAMIC_ARCH=1 USE_OPENMP=1
     $MAKE PREFIX=$DEPS_PATH install
+
+    # Manually removing .so to avoid linking against it
+    rm $DEPS_PATH/lib/libopenblasp-r${OPENBLAS_VERSION}.so
+
     popd
     ln -s libopenblas.a $DEPS_PATH/lib/libcblas.a
     ln -s libopenblas.a $DEPS_PATH/lib/liblapack.a

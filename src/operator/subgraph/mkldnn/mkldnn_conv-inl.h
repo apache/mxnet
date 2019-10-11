@@ -40,18 +40,18 @@ struct MKLDNNConvFusionParam {
 static inline bool IsOutputUInt8(const MKLDNNConvFusionParam& param) {
   bool result = false;
   const auto& mkldnn_param = param.full_conv_param.mkldnn_param;
-  auto IsOutputUInt8Helper = [](const mkldnn::algorithm& act_alg) {
-    return (act_alg == mkldnn::algorithm::eltwise_relu ||
-            act_alg == mkldnn::algorithm::eltwise_logistic ||
-            act_alg == mkldnn::algorithm::eltwise_soft_relu ||
-            act_alg == mkldnn::algorithm::eltwise_bounded_relu);
+  auto IsOutputUInt8Helper = [](const MKLDNNPostEltwiseParam &param) {
+    return ((param.alg == mkldnn::algorithm::eltwise_relu && param.alpha == 0.f) ||
+            param.alg == mkldnn::algorithm::eltwise_logistic ||
+            param.alg == mkldnn::algorithm::eltwise_soft_relu ||
+            param.alg == mkldnn::algorithm::eltwise_bounded_relu);
   };
   if ((!mkldnn_param.with_sum) && mkldnn_param.with_act) {
     CHECK(param.full_conv_param.act_param.alg != mkldnn::algorithm::algorithm_undef);
-    result = IsOutputUInt8Helper(param.full_conv_param.act_param.alg);
+    result = IsOutputUInt8Helper(param.full_conv_param.act_param);
   } else if (mkldnn_param.with_postsum_act) {
     CHECK(param.full_conv_param.postsum_act_param.alg != mkldnn::algorithm::algorithm_undef);
-    result = IsOutputUInt8Helper(param.full_conv_param.postsum_act_param.alg);
+    result = IsOutputUInt8Helper(param.full_conv_param.postsum_act_param);
   }
   return result;
 }
