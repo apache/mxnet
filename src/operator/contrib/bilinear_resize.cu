@@ -144,14 +144,14 @@ __global__ void caffe_gpu_interp2_kernel_backward(
     const size_t nc = index_temp / height2;
     //
     const Acctype h1r = cu_area_pixel_compute_source_index<Acctype>(
-      rheight, h2, align_corners, /*cubic=*/false);
+      rheight, h2, align_corners, false);
     const int h1 = h1r;
     const int h1p = (h1 < height1 - 1) ? 1 : 0;
     const Acctype h1lambda = h1r - h1;
     const Acctype h0lambda = static_cast<Acctype>(1) - h1lambda;
     //
     const Acctype w1r = cu_area_pixel_compute_source_index<Acctype>(
-      rwidth, w2, align_corners, /*cubic=*/false);
+      rwidth, w2, align_corners, false);
     const int w1 = w1r;
     const int w1p = (w1 < width1 - 1) ? 1 : 0;
     const Acctype w1lambda = w1r - w1;

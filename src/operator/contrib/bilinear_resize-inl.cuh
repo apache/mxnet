@@ -75,7 +75,8 @@ __host__ MSHADOW_FORCE_INLINE static Acctype cu_area_pixel_compute_scale(
   int output_size,
   bool align_corners) {
   if (output_size > 1) {
-    return align_corners ? (Acctype)(input_size - 1) / (output_size - 1)
+    return align_corners
+      ? (Acctype)(input_size - 1) / (output_size - 1)
       : (Acctype)input_size / output_size;
   } else {
     return static_cast<Acctype>(0);

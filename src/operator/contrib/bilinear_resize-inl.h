@@ -99,7 +99,7 @@ struct BilinearSampleParam : public dmlc::Parameter<BilinearSampleParam> {
               "\"to_odd_up\" - resize input to nearest odd height and width "
               "(if original height is odd then result height = original height + 1);");
   DMLC_DECLARE_FIELD(align_corners).set_default(true)
-    .describe("With align_corners = True, the interpolating don't proportionally align the"
+    .describe("With align_corners = True, the interpolating doesn't proportionally align the"
               "output and input pixels, and thus the output values can depend on the input size.");
   }
 };
