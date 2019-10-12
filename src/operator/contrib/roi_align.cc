@@ -167,6 +167,10 @@ num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
     int roi_batch_ind = 0;
     if (roi_cols == 5) {
       roi_batch_ind = offset_bottom_rois[0];
+      if (roi_batch_ind < 0) {
+        top_data[n] = 0;
+        continue;
+      }
       offset_bottom_rois++;
     }
 
@@ -340,6 +344,7 @@ void ROIAlignBackward(
     int roi_batch_ind = 0;
     if (rois_cols == 5) {
       roi_batch_ind = offset_bottom_rois[0];
+      if (roi_batch_ind < 0) continue;
       offset_bottom_rois++;
     }
 
@@ -520,7 +525,8 @@ NNVM_REGISTER_OP(_contrib_ROIAlign)
 .describe(R"code(
 This operator takes a 4D feature map as an input array and region proposals as `rois`,
 then align the feature map over sub-regions of input and produces a fixed-sized output array.
-This operator is typically used in Faster R-CNN & Mask R-CNN networks.
+This operator is typically used in Faster R-CNN & Mask R-CNN networks. If roi batchid is less 
+than 0, it will be ignored, and the corresponding output will be set to 0.
 
 Different from ROI pooling, ROI Align removes the harsh quantization, properly aligning
 the extracted features with the input. RoIAlign computes the value of each sampling point
@@ -594,7 +600,8 @@ He, Kaiming, et al. "Mask R-CNN." ICCV, 2017
     return MakeGradNode("_backward_ROIAlign", n, heads, n->attrs.dict);
   })
 .add_argument("data", "NDArray-or-Symbol", "Input data to the pooling operator, a 4D Feature maps")
-.add_argument("rois", "NDArray-or-Symbol", "Bounding box coordinates, a 2D array")
+.add_argument("rois", "NDArray-or-Symbol", "Bounding box coordinates, a 2D array, "
+              "if batchid is less than 0, it will be ignored.")
 .add_arguments(ROIAlignParam::__FIELDS__());
 
 

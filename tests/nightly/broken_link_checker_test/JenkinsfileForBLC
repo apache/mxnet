@@ -48,7 +48,7 @@ core_logic: {
 failure_handler:
 {
   if (currentBuild.result == "FAILURE") {
-    emailext body: '''https://mxnet.incubator.apache.org  broken link test summary:
+    emailext body: '''https://mxnet.apache.org  broken link test summary:
           |
           |Please view the logs at ${BUILD_URL}
           |

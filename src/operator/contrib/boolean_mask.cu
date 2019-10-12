@@ -66,7 +66,7 @@ inline void BooleanMaskForward<gpu>(const nnvm::NodeAttrs& attrs,
     ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(temp_storage_bytes), s);
   prefix_sum = reinterpret_cast<int32_t*>(workspace.dptr_);
   d_temp_storage = workspace.dptr_ + buffer_size;
-  MSHADOW_TYPE_SWITCH(idx.dtype(), IType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(idx.dtype(), IType, {
     mxnet_op::Kernel<mshadow_op::identity_with_cast, gpu>::Launch(
       s, idx.shape()[0], prefix_sum, idx.data().dptr<IType>());
   });
@@ -79,7 +79,6 @@ inline void BooleanMaskForward<gpu>(const nnvm::NodeAttrs& attrs,
                                 Stream<gpu>::GetStream(s));
   CUDA_CALL(cudaMemcpy(&valid_num, &prefix_sum[idx_size - 1], sizeof(int32_t),
                        cudaMemcpyDeviceToHost));
-  CHECK(valid_num > 0) << "boolean_mask behavior not defined when all masks are 0";
   // Set the output shape forcefully
   mxnet::TShape data_shape = data.shape();
   data_shape[axis] = valid_num;
@@ -88,8 +87,10 @@ inline void BooleanMaskForward<gpu>(const nnvm::NodeAttrs& attrs,
   size_t col_size = input_size / idx.shape()[0];
   // Do the copy
   MSHADOW_TYPE_SWITCH(out.dtype(), DType, {
-    mxnet_op::Kernel<BooleanMaskForwardKernel, gpu>::Launch(
-      s, input_size, out.data().dptr<DType>(), data.data().dptr<DType>(), prefix_sum, col_size);
+    if (valid_num > 0) {
+      mxnet_op::Kernel<BooleanMaskForwardKernel, gpu>::Launch(
+        s, input_size, out.data().dptr<DType>(), data.data().dptr<DType>(), prefix_sum, col_size);
+    }
   });
 }
 
@@ -128,7 +129,7 @@ inline void BooleanMaskBackward<gpu>(const nnvm::NodeAttrs& attrs,
     ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(temp_storage_bytes), s);
   prefix_sum = reinterpret_cast<int32_t*>(workspace.dptr_);
   d_temp_storage = workspace.dptr_ + buffer_size;
-  MSHADOW_TYPE_SWITCH(idx.dtype(), IType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(idx.dtype(), IType, {
     mxnet_op::Kernel<mshadow_op::identity_with_cast, gpu>::Launch(
       s, idx.shape()[0], prefix_sum, idx.data().dptr<IType>());
   });
@@ -143,9 +144,11 @@ inline void BooleanMaskBackward<gpu>(const nnvm::NodeAttrs& attrs,
   size_t col_size = input_size / idx_size;
   // Backward pass
   MSHADOW_TYPE_SWITCH(igrad_data.dtype(), DType, {
-    mxnet_op::Kernel<BooleanMaskBackwardKernel, gpu>::Launch(
-      s, input_size, igrad_data.data().dptr<DType>(), req[0], ograd.data().dptr<DType>(),
-      prefix_sum, col_size);
+    if (input_size > 0) {
+      mxnet_op::Kernel<BooleanMaskBackwardKernel, gpu>::Launch(
+        s, input_size, igrad_data.data().dptr<DType>(), req[0], ograd.data().dptr<DType>(),
+        prefix_sum, col_size);
+    }
   });
 }
 

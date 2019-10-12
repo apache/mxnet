@@ -31,6 +31,8 @@ import numpy as np
 from .. import dataset
 from ...utils import download, check_sha1, _get_repo_file_url
 from .... import nd, image, recordio, base
+from .... import numpy as _mx_np  # pylint: disable=reimported
+from ....util import is_np_array
 
 
 class MNIST(dataset._DownloadedDataset):
@@ -81,13 +83,16 @@ class MNIST(dataset._DownloadedDataset):
         with gzip.open(label_file, 'rb') as fin:
             struct.unpack(">II", fin.read(8))
             label = np.frombuffer(fin.read(), dtype=np.uint8).astype(np.int32)
+            if is_np_array():
+                label = _mx_np.array(label, dtype=label.dtype)
 
         with gzip.open(data_file, 'rb') as fin:
             struct.unpack(">IIII", fin.read(16))
             data = np.frombuffer(fin.read(), dtype=np.uint8)
             data = data.reshape(len(label), 28, 28, 1)
 
-        self._data = nd.array(data, dtype=data.dtype)
+        array_fn = _mx_np.array if is_np_array() else nd.array
+        self._data = array_fn(data, dtype=data.dtype)
         self._label = label
 
 
@@ -183,8 +188,9 @@ class CIFAR10(dataset._DownloadedDataset):
         data = np.concatenate(data)
         label = np.concatenate(label)
 
-        self._data = nd.array(data, dtype=data.dtype)
-        self._label = label
+        array_fn = _mx_np.array if is_np_array() else nd.array
+        self._data = array_fn(data, dtype=data.dtype)
+        self._label = array_fn(label, dtype=label.dtype) if is_np_array() else label
 
 
 class CIFAR100(CIFAR10):

@@ -1370,24 +1370,13 @@ void GraphExecutor::ExecuteMonInputCallback(size_t nid) {
 }
 
 void GraphExecutor::ExecuteMonOutputCallback(size_t nid) {
-  static const auto& flist_outputs =
-      nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
   const auto& idx = graph_.indexed_graph();
-  std::vector<std::string> output_names;
   OpNode& opnode = op_nodes_[nid];
-  const auto& inode = idx[nid];
   const auto& node = idx[nid].source;
-  if (flist_outputs.count(node->op())) {
-    output_names = flist_outputs[node->op()](node->attrs);
-  } else {
-    for (size_t i = 0; i < node->num_outputs(); ++i) {
-      output_names.emplace_back(std::to_string(i));
-    }
-  }
-  CHECK_EQ(opnode.exec->out_array.size(), output_names.size());
   for (size_t i = 0; i < opnode.exec->out_array.size(); ++i) {
     NDArray *cpy = new NDArray(opnode.exec->out_array[i]);
-    std::string name = inode.source->attrs.name + "_" + output_names[i];
+    nnvm::NodePtr node_ptr = std::make_shared<nnvm::Node>(*node);
+    std::string name = GetOutputName({node_ptr, static_cast<uint32_t >(i), 0});
     this->monitor_callback_(name.c_str(), reinterpret_cast<void*>(cpy));
   }
 }
@@ -1659,10 +1648,15 @@ static bool SubgraphBackendCheck(const op::SubgraphBackendPtr& backend,
 static bool SubgraphPropertyCheck(const std::string& backend_name,
                                   const op::SubgraphPropertyPtr& prop, bool need_grad,
                                   bool verbose = false) {
+  auto full_name =
+      prop->HasAttr("property_name") ? prop->GetAttr<std::string>("property_name") : std::string();
+  if (prop->HasAttr("disable") && prop->GetAttr<bool>("disable") == true) {
+    LOG(INFO) << "subgraph property " << full_name << " from backend " << backend_name
+              << " is disabled.";
+    return false;
+  }
   if (prop->HasAttr("inference_only") && prop->GetAttr<bool>("inference_only") == true) {
     if (need_grad) {
-      auto full_name = prop->HasAttr("property_name") ? prop->GetAttr<std::string>("property_name")
-                                                      : std::string();
       if (verbose) {
         LOG(INFO) << "skip partitioning graph with subgraph property " << full_name
                   << " from backend " << backend_name << " as it requires `grad_req=null`.";
@@ -1688,8 +1682,10 @@ static nnvm::Symbol BuildSubgraph(const nnvm::Symbol& src, op::SubgraphPropertyP
   g = InferForwardAttrs(g, arg_shapes, arg_dtypes, arg_stypes, default_ctx, ctx_map, in_arg_ctxes,
                         aux_state_ctxes, true);
   subgraph_prop->SetAttr("graph", g);
-  g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(std::move(subgraph_prop));
+  g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(subgraph_prop);
   g = ApplyPass(std::move(g), "BuildSubgraph");
+  subgraph_prop->RemoveAttr("graph");
+  g.attrs.erase("subgraph_property");
   ret.outputs = g.outputs;
   return ret;
 }

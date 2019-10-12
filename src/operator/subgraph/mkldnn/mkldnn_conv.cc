@@ -426,15 +426,12 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
     MKLDNNStream::Get()->Submit();
   } else {
     std::vector<NDArray> new_inputs;
-    std::vector<OpReqType> new_req;
     if (has_bias) {
       new_inputs = {data, cached_weight_, cached_bias_};
-      new_req = {req[in_data], req[in_weight], req[in_bias]};
     } else {
       new_inputs = {data, cached_weight_};
-      new_req = {req[in_data], req[in_weight]};
     }
-    MKLDNNConvolutionForwardFullFeature(full_conv_param, ctx, fwd_.get(), new_inputs, new_req,
+    MKLDNNConvolutionForwardFullFeature(full_conv_param, ctx, fwd_.get(), new_inputs, req,
                                         {output});
   }
 
@@ -514,7 +511,7 @@ static void SgMKLDNNConvParamParser(nnvm::NodeAttrs *attrs) {
     } else if (node_name == "Convolution") {
       param_.full_conv_param.conv_param =
           nnvm::get<ConvolutionParam>(node->attrs.parsed);
-    } else if (node_name == "Activation" || node_name == "clip") {
+    } else if (node_name == "Activation" || node_name == "LeakyReLU" || node_name == "clip") {
       auto &post_act_param =
           (param_.full_conv_param.mkldnn_param.with_act && !with_act)
               ? param_.full_conv_param.act_param
@@ -522,6 +519,10 @@ static void SgMKLDNNConvParamParser(nnvm::NodeAttrs *attrs) {
       with_act = true;
       if (node_name == "Activation") {
         const auto act_param = nnvm::get<ActivationParam>(node->attrs.parsed);
+        post_act_param.alg = GetMKLDNNActAlgo(act_param);
+      } else if (node_name == "LeakyReLU") {
+        const auto act_param = nnvm::get<LeakyReLUParam>(node->attrs.parsed);
+        post_act_param.alpha = act_param.slope;
         post_act_param.alg = GetMKLDNNActAlgo(act_param);
       } else {
         const auto clip_param = nnvm::get<ClipParam>(node->attrs.parsed);
@@ -792,6 +793,9 @@ NNVM_REGISTER_OP(_sg_mkldnn_conv)
                                 DefaultSubgraphOpMutableInputs)
 .set_attr<std::string>("key_var_num_args", "num_args")
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", SgMKLDNNConvInplaceOption)
+.set_attr<FQuantizable>("FQuantizable", [](const NodeAttrs& attrs) {
+    return QuantizeType::kMust;
+})
 .set_attr<FQuantizedOp>("FQuantizedOp", SgMKLDNNConvQuantizedOp)
 .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
 .set_attr<FAvoidQuantizeInput>("FAvoidQuantizeInput", SgMKLDNNAvoidQuantizeInput);

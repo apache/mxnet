@@ -171,7 +171,7 @@ static std::vector<ResourceRequest> RNNResourceEx(const NodeAttrs& attrs, const 
                                                   const DispatchMode dispatch_mode) {
   std::vector<ResourceRequest> request;
   if (dev_mask == kGPU) {
-#if MXNET_USE_CUDNN_RNN
+#if MXNET_USE_CUDNN == 1
     request.emplace_back(ResourceRequest::kTempSpace);
 
     const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
@@ -270,22 +270,24 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
 
       const size_t r_size = GetMKLDNNRNNCacheMemorySize(L, D, T, N, I, H, param.mode);
       if (op.init_mem_ && op.reserve_mem_size_ < r_size) {
-        Storage::Get()->Free(op.mem_space_);
         op.init_mem_ = false;
       }
+      const size_t weights_version = inputs[rnn_enum::kParams].version();
       if (!op.init_mem_) {
-        op.mem_space_ = Storage::Get()->Alloc(
-            r_size * sizeof(DType),
-            Context::CPU());
+        op.mem_space_ = NDArray(TShape({static_cast<dim_t>(r_size)}), op.ctx_, false, dtype);
         op.reserve_mem_size_ = r_size;
         op.init_mem_ = true;
         op.has_cache = false;
+        // Assign weights_version
+        op.weights_version = weights_version;
       }
-      if (op.has_cache && op.x_memory.size() == 0) {
+      // Check if NDArray was changed.
+      if (op.weights_version != weights_version) {
         op.has_cache = false;
+        op.weights_version = weights_version;
       }
 
-      DType* workptr = static_cast<DType*>(op.mem_space_.dptr);
+      DType* workptr = static_cast<DType*>(op.mem_space_.data().dptr_);
       mkldnn::memory::dims src_layer_tz_0 = {T, N, I};
       mkldnn::memory::dims src_layer_tz = {T, N, D * H};
       mkldnn::memory::dims dst_layer_tz = {T, N, D * H};
@@ -631,9 +633,24 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
     });
   });
 }
+
+static void RNNStatefulComputeExCPU(const OpStatePtr& state_ptr, const OpContext& ctx,
+                                    const std::vector<NDArray>& inputs,
+                                    const std::vector<OpReqType>& req,
+                                    const std::vector<NDArray>& outputs) {
+  if (SupportMKLDNNRNN(inputs[0])) {
+    RNNStatefulComputeCPU(state_ptr, ctx, inputs, req, outputs);
+    return;
+  }
+  int use_mkldnn_rnn = dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1);
+  dmlc::SetEnv("MXNET_USE_MKLDNN_RNN", 0);
+  FallBackCompute(RNNStatefulCompute<cpu>, state_ptr, ctx, inputs, req, outputs);
+  dmlc::SetEnv("MXNET_USE_MKLDNN_RNN", use_mkldnn_rnn);
+}
 #endif
 
 NNVM_REGISTER_OP(RNN)
+.add_alias("_npx_rnn")
 .describe(R"code(Applies recurrent layers to input data. Currently, vanilla RNN, LSTM and GRU are
 implemented, with both multi-layer and bidirectional support.
 
@@ -716,7 +733,7 @@ The definition of GRU here is slightly different from paper but compatible with 
 .set_attr<FStatefulCompute>("FStatefulCompute<cpu>", RNNStatefulCompute<cpu>)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", RNNStatefulComputeCPU)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", RNNStatefulComputeExCPU)
 #endif
 .set_attr<nnvm::FGradient>("FGradient", RNNGrad{"_backward_RNN"})
 .set_attr<FResourceRequestEx>("FResourceRequestEx", RNNResourceEx)
