@@ -125,7 +125,7 @@ then compress into JPEG format.
 After that, we save a header that indicates the index and label
 for that image to be used when constructing the *Data* field for that record.
 We then pack several images together into a file.
-You may want to also review the [example using im2rec.py to create a RecordIO dataset](https://mxnet.incubator.apache.org/tutorials/basic/data.html#loading-data-using-image-iterators).
+You may want to also review the [example using im2rec.py to create a RecordIO dataset](https://mxnet.apache.org/tutorials/basic/data.html#loading-data-using-image-iterators).
 
 ### Access Arbitrary Parts Of Data
 

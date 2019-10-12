@@ -186,6 +186,25 @@ inline bool ElemwiseType(const nnvm::NodeAttrs& attrs,
     attrs, in_attrs, out_attrs, -1);
 }
 
+// Special case of ElemwiseType. Constrains dtype to integer types
+template<index_t n_in, index_t n_out>
+inline bool ElemwiseIntType(const nnvm::NodeAttrs& attrs,
+                            std::vector<int> *in_attrs,
+                            std::vector<int> *out_attrs) {
+  CHECK(in_attrs->at(0) == mshadow::kInt64 ||
+        in_attrs->at(0) == mshadow::kInt32 ||
+        in_attrs->at(0) == mshadow::kInt8 ||
+        in_attrs->at(0) == mshadow::kUint8) << "Only supports integer types.";
+  if (n_in != -1) {
+    CHECK_EQ(in_attrs->size(), static_cast<size_t>(n_in)) << " in operator " << attrs.name;
+  }
+  if (n_out != -1) {
+    CHECK_EQ(out_attrs->size(), static_cast<size_t>(n_out)) << " in operator " << attrs.name;
+  }
+  return ElemwiseAttr<int, type_is_none, type_assign, true, type_string>(
+    attrs, in_attrs, out_attrs, -1);
+}
+
 // Transfer gradient and input to FGradient function
 struct ElemwiseGradUseIn {
   const char *op_name;

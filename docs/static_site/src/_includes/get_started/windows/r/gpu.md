@@ -1,4 +1,4 @@
-You can [build MXNet-R from source](windows_setup.html#install-mxnet-package-for-r), or
+You can [build MXNet-R from source](get_started/windows_setup.html#install-mxnet-package-for-r), or
 you can use a
 pre-built binary:
 
