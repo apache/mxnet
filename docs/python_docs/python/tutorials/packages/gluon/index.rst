@@ -31,37 +31,37 @@ Getting started
 
    .. card::
       :title: Gluon - Neural network building blocks
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/gluon.html
+      :link: blocks/nn.html
 
       An introduction to defining and training neural networks with Gluon.
 
    .. card::
       :title: Gluon: from experiment to deployment
-      :link: gluon_from_experiment_to_deployment.html
+      :link: ../../getting-started/gluon_from_experiment_to_deployment.html
 
       An end to end tutorial on working with the MXNet Gluon API.
 
    .. card::
       :title: Custom Layers for Beginners
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/custom_layer.html
+      :link: blocks/custom_layer_beginners.html
 
       A guide to implementing custom layers for beginners.
 
    .. card::
       :title: Logistic regression using Gluon API explained
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/logistic_regression_explained.html
+      :link: ../../getting-started/logistic_regression_explained.html
 
       Implementing logistic regression using the Gluon API.
 
    .. card::
       :title: Saving and Loading Gluon Models
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/save_load_params.html
+      :link: blocks/save_load_params.html
 
       Saving and loading trained models.
 
    .. card::
       :title: Using pre-trained models in MXNet
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/pretrained_models.html
+      :link: image/pretrained_models.html
 
       Using pre-trained models with Apache MXNet.
 
@@ -84,19 +84,19 @@ Data
 
    .. card::
       :title: Data Augmentation
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/data_augmentation.html
+      :link: image/image-augmentation.html
 
       A guide to data augmentation.
 
    .. card::
       :title: Gluon Datasets and DataLoader
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/datasets.html
+      :link: data/datasets.html
 
       A guide to loading data using the Gluon API.
 
    .. card::
       :title: NDArray - Scientific computing on CPU and GPU
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/ndarray.html
+      :link: ../ndarray/index.html
 
       A guide to the NDArray data structure.
 
@@ -107,19 +107,19 @@ Training
 
    .. card::
       :title: Neural Networks
-      :link: nn.html
+      :link: blocks/nn.html
 
       How to use Layers and Blocks.
 
    .. card::
       :title: Normalization Blocks
-      :link: normalization/normalization.html
+      :link: data/normalization/normalization.html
 
       Understand usage of normalization layers (such as BatchNorm).
 
    .. card::
       :title: Activation Blocks
-      :link: activations/activations.html
+      :link: blocks/activations/activations.html
 
       Understand usage of activation layers (such as ReLU).
 
@@ -131,45 +131,37 @@ Training
 
    .. card::
       :title: Initializing Parameters
-      :link: init.html
+      :link: blocks/init.html
 
       How to use the init function.
 
    .. card::
       :title: Parameter Management
-      :link: parameters.html
+      :link: blocks/parameters.html
 
       How to manage parameters.
 
    .. card::
       :title: Fit API Tutorial
-      :link: fit_api_tutorial.html
+      :link: training/fit_api_tutorial.html
 
       How to use the fit API
 
    .. card::
       :title: Learning Rate Finder
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/learning_rate_finder.html
+      :link: training/learning_rates/learning_rate_finder.html
 
       How to use the Learning Rate Finder to find a good learning rate.
 
    .. card::
       :title: Learning Rate Schedules
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/learning_rate_schedules.html
+      :link: training/learning_rates/learning_rate_schedules.html
 
       How to schedule Learning Rate change over time.
 
-   ..
-      .. card::
-         :title: Optimizer
-         :link: optimizer.html
-
-         How to use optimizer.
-   ..
-
    .. card::
       :title: Trainer
-      :link: trainer.html
+      :link: training/trainer.html
 
       How to update neural network parameters using an optimization method.
 
@@ -198,7 +190,7 @@ Advanced Topics
 
    .. card::
       :title: Custom Operators
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/customop.html
+      :link: https://mxnet.apache.org/versions/master/tutorials/gluon/customop.html
 
       Building custom operators with numpy.
 
@@ -210,28 +202,21 @@ Advanced Topics
 
    .. card::
       :title: Gotchas using NumPy in Apache MXNet
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/gotchas_numpy_in_mxnet.html
+      :link: https://mxnet.apache.org/versions/master/tutorials/gluon/gotchas_numpy_in_mxnet.html
 
       Common misconceptions when using NumPy in Apache MXNet.
 
    .. card::
-      :title: Hybrid- Faster training and easy deployment
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/hybrid.html
-
-      Combines declarative and imperative programming using HybridBlock.
-
-   .. card::
       :title: Hybridize
-      :link: hybridize.html
+      :link: blocks/hybridize.html
 
       Speed up training with hybrid networks.
 
    .. card::
-      :title: Advanced Learning Rate Schedules
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/learning_rate_schedules_advanced.html
+      :title: Learning Rate Schedules (Advanced)
+      :link: training/learning_rates/learning_rate_schedules_advanced.html
 
-      Advanced exploration of Learning Rate shapes.
-
+      How to schedule Learning Rate change over time (advanced)
 
 Applications Topics
 -------------------
@@ -253,24 +238,7 @@ Applications Topics
 
 .. toctree::
    :hidden:
-   :maxdepth: 2
+   :maxdepth: 3
+   :glob:
 
-   ../../getting-started/crash-course
-   custom_layer_beginners
-   data
-   image-augmentation
-   data_augmentation
-   nn
-   normalization/normalization
-   activations/activations
-   loss
-   custom-loss/custom-loss
-   init
-   parameters
-   trainer
-   naming
-   custom-layer
-   customop
-   hybridize
-   image/index
-   text/index
+   */index*

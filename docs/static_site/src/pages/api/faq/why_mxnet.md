@@ -133,6 +133,7 @@ In either case, the dataset typically must be managed by the CPU.
 To compute the transformation of a neural network quickly, we need both the parameters and data points to make it into GPU memory. For any example _X_, the parameters _W_ are the same. Moreover the size of the model tends to dwarf the size of an individual example. So we might arrive at the natural insight that parameters should always live on the GPU, even if the dataset itself must live on the CPU or stream in. This prevents IO from becoming the bottleneck during training or inference.
 
 Fortunately, _MXNet_ makes this kind of assignment easy.
+
 ```python
 import mxnet.ndarray as nd
 

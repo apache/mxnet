@@ -1,7 +1,7 @@
 You can use the Maven packages defined in the following dependency to include MXNet in
 your Java project. The Java API is provided as a subset of the Scala API and is intended for
 inference only.
-Please refer to the [MXNet-Java setup guide](java_setup.html) for a detailed set of instructions to help you with the setup process.
+Please refer to the [MXNet-Java setup guide](get_started/java_setup.html) for a detailed set of instructions to help you with the setup process.
 
 <a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.5.0~~"><img
 src="https://img.shields.io/badge/org.apache.mxnet-mac cpu-green.svg"

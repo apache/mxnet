@@ -177,6 +177,7 @@ void *AlignMem(void *mem, size_t size, size_t alignment, size_t *space);
 
 namespace op {
 struct ActivationParam;
+struct LeakyReLUParam;
 struct ConvolutionParam;
 struct DeconvolutionParam;
 struct SoftmaxParam;
@@ -185,6 +186,8 @@ struct TransposeParam;
 struct ReshapeParam;
 bool SupportMKLDNNAct(const ActivationParam& param);
 bool SupportMKLDNNAct(const ActivationParam& param, const NDArray &input);
+bool SupportMKLDNNLeakyRelu(const LeakyReLUParam& param);
+bool SupportMKLDNNLeakyRelu(const LeakyReLUParam& param, const NDArray &input);
 bool SupportQuantizedMKLDNNAct(const ActivationParam &param);
 bool SupportMKLDNNConv(const ConvolutionParam &params, const NDArray &input);
 bool SupportMKLDNNDeconv(const DeconvolutionParam& params, const NDArray &input);

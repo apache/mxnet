@@ -42,7 +42,7 @@ to handle exceptions for the second case.
 ## Prerequisites
 
 To complete this tutorial, we need:
-- MXNet [7b24137](https://github.com/apache/incubator-mxnet/commit/7b24137ed45df605defa4ce72ec91554f6e445f0). See Instructions in [Setup and Installation](http://mxnet.io/install/index.html).
+- MXNet [7b24137](https://github.com/apache/incubator-mxnet/commit/7b24137ed45df605defa4ce72ec91554f6e445f0). See Instructions in [Setup and Installation](https://mxnet.io/get_started).
 
 ## Exception Handling for Iterators
 
