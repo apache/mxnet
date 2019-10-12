@@ -2255,6 +2255,8 @@ def is_op_runnable():
             try:
                 import tvm
             except ImportError:
-                return True
-            return int("".join(tvm.nd.gpu(0).compute_version.split('.'))) >= 53
+                return False
+            cuda_comp_cap = int("".join(tvm.nd.gpu(0).compute_version.split('.')))
+            print('Cuda arch compute capability: sm_{}'.format(str(cuda_comp_cap)))
+            return cuda_comp_cap >= 53
     return True
