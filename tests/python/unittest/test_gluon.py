@@ -21,6 +21,7 @@ import tempfile
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
+from mxnet.base import py_str
 from mxnet.test_utils import assert_almost_equal
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from common import (setup_module, with_seed, assertRaises, teardown,
@@ -134,6 +135,20 @@ def test_parameter_dict():
     cur_w1 = params2.get('w1').data(ctx)
     mx.test_utils.assert_almost_equal(prev_w0.asnumpy(), cur_w0.asnumpy())
     mx.test_utils.assert_almost_equal(prev_w1.asnumpy(), cur_w1.asnumpy())
+
+    # test reset_ctx
+    params3 = gluon.ParameterDict('net_')
+    params3.get('w0', shape=(10, 10))
+    params3.get('w1', shape=(10, 10))
+    params3.initialize(ctx=ctx)
+    list_contexts = [mx.cpu(42), mx.cpu(24)]
+    params3.reset_ctx(list_contexts)
+    for p in params3.values():
+        assert set(p.list_ctx()) == set(list_contexts)
+
+    # and test list_ctx
+    assert set(params3.list_ctx()) == set(list_contexts)
+
 
     # test the dtype casting functionality
     params0 = gluon.ParameterDict('')
@@ -425,6 +440,94 @@ def test_sparse_hybrid_block():
     x = mx.nd.ones((2,5))
     # an exception is expected when forwarding a HybridBlock w/ sparse param
     y = net(x)
+
+@with_seed()
+def test_hybrid_block_none_args():
+    class Foo(gluon.HybridBlock):
+        def hybrid_forward(self, F, a, b):
+            if a is None and b is not None:
+                return b
+            elif b is None and a is not None:
+                return a
+            elif a is not None and b is not None:
+                return a + b
+            else:
+                raise NotImplementedError
+
+    class FooDefault(gluon.HybridBlock):
+        def hybrid_forward(self, F, a, b=None):
+            if a is None and b is not None:
+                return b
+            elif b is None and a is not None:
+                return a
+            elif a is not None and b is not None:
+                return a + b
+            else:
+                raise NotImplementedError
+
+
+    class FooNested(gluon.HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super(FooNested, self).__init__(prefix=prefix, params=params)
+            self.f1 = Foo(prefix='foo1')
+            self.f2 = Foo(prefix='foo2')
+            self.f3 = Foo(prefix='foo3')
+
+        def hybrid_forward(self, F, a, b):
+            data = self.f1(a, b)
+            data = self.f2(a, data)
+            data = self.f3(data, b)
+            return data
+
+    for arg_inputs in [(None, mx.nd.ones((10,))),
+                       (mx.nd.ones((10,)), mx.nd.ones((10,))),
+                       (mx.nd.ones((10,)), None)]:
+        foo1 = FooNested(prefix='foo_nested_hybridized')
+        foo1.hybridize()
+        foo2 = FooNested(prefix='foo_nested_nohybrid')
+        for _ in range(2): # Loop for 2 times to trigger forwarding of the cached version
+            out1 = foo1(*arg_inputs)
+            out2 = foo2(*arg_inputs)
+            if isinstance(out1, tuple):
+                for lhs, rhs in zip(out1, out2):
+                    assert_almost_equal(lhs.asnumpy(), rhs.asnumpy())
+            else:
+                assert_almost_equal(out1.asnumpy(), out2.asnumpy())
+    for do_hybridize in [True, False]:
+        foo = FooNested()
+        if do_hybridize:
+            foo.hybridize()
+        assert_raises(ValueError, foo, None, None)
+
+    # Make sure the ValueError is correctly raised
+    foo = FooNested()
+    foo.hybridize()
+    foo(None, mx.nd.ones((10,)))  # Pass for the first time to initialize the cached op
+    assert_raises(ValueError, lambda: foo(mx.nd.ones((10,)), mx.nd.ones((10,))))
+    foo = FooNested()
+    assert_raises(ValueError, lambda: foo(mx.nd.ones((10,)), mx.sym.var('a')))
+    foo = FooNested()
+    assert_raises(ValueError, lambda: foo(mx.sym.var('a'), mx.nd.ones((10,))))
+
+    # Test the case of the default values
+    foo1 = FooDefault()
+    foo1.hybridize()
+    foo2 = FooDefault()
+    out1 = foo1(mx.nd.ones((10,)))
+    out2 = foo2(mx.nd.ones((10,)))
+    out3 = foo1(mx.nd.ones((10,)), None)
+    out4 = foo2(mx.nd.ones((10,)), None)
+    assert_almost_equal(out1.asnumpy(), out2.asnumpy())
+    assert_almost_equal(out1.asnumpy(), out3.asnumpy())
+    assert_almost_equal(out1.asnumpy(), out4.asnumpy())
+    foo1 = FooDefault()
+    foo1.hybridize()
+    out1 = foo1(mx.nd.ones((10,)), None)
+    out2 = foo1(mx.nd.ones((10,)))
+    assert_almost_equal(out1.asnumpy(), out2.asnumpy())
+    assert_raises(ValueError, lambda: foo1(mx.nd.ones((10,)), mx.nd.ones((10,))))
+
+
 
 @with_seed()
 def check_layer_forward(layer, dshape):
@@ -1222,7 +1325,7 @@ def test_activations():
         return [elu(x_i) for x_i in x]
 
     for test_point, ref_point in zip(elu_test(point_to_validate), elu(point_to_validate)):
-        assert test_point == ref_point
+        assert_almost_equal(test_point.asnumpy(), ref_point.asnumpy())
 
     selu = mx.gluon.nn.SELU()
     def selu_test(x):
@@ -1502,6 +1605,74 @@ def test_hook():
     block(mx.nd.ones((3, 5)))
     assert hook_call_count == 1
     assert pre_hook_call_count == 2
+
+@with_seed()
+def test_op_hook_output_names():
+    def check_name(block, expected_names, inputs=None, expected_opr_names=None, monitor_all=False):
+        opr_names = []
+        output_names = []
+
+        def mon_callback(node_name, opr_name, arr):
+            output_names.append(py_str(node_name))
+            opr_names.append(py_str(opr_name))
+
+        block.register_op_hook(mon_callback, monitor_all)
+        if not inputs:
+            block(mx.nd.ones((2, 3, 4)))
+        else:
+            block(inputs)
+
+        for output_name, expected_name in zip(output_names, expected_names):
+            print(output_name)
+            assert output_name == expected_name
+
+        if expected_opr_names:
+            for opr_name, expected_opr_name in zip(opr_names, expected_opr_names):
+                assert opr_name == expected_opr_name
+
+    # Test with Dense layer
+    model = mx.gluon.nn.HybridSequential(prefix="dense_")
+    with model.name_scope():
+        model.add(mx.gluon.nn.Dense(2))
+    model.initialize()
+    model.hybridize()
+    check_name(model, ["dense_dense0_fwd_output"])
+
+    # Test with Activation, FListInputNames not registered, input name will have _input appended
+    model = mx.gluon.nn.HybridSequential(prefix="relu_")
+    with model.name_scope():
+        model.add(mx.gluon.nn.Activation("relu"))
+    model.initialize()
+    model.hybridize()
+    check_name(model, ["relu_relu0_fwd_output"])
+
+    # Test with Pooling, monitor_all is set to True
+    model = mx.gluon.nn.HybridSequential("pool_")
+    with model.name_scope():
+        model.add(mx.gluon.nn.AvgPool1D())
+    model.initialize()
+    model.hybridize()
+    check_name(model, ['pool_pool0_fwd_data', 'pool_pool0_fwd_output'], expected_opr_names=["Pooling"],
+               monitor_all=True)
+
+    # stack two layers and test
+    model = mx.gluon.nn.HybridSequential("dense_")
+    with model.name_scope():
+        model.add(mx.gluon.nn.Dense(2))
+        model.add(mx.gluon.nn.Activation("relu"))
+    model.initialize()
+    model.hybridize()
+    check_name(model,
+               ['dense_dense0_fwd_data', 'dense_dense0_fwd_weight',
+                'dense_dense0_fwd_bias', 'dense_dense0_fwd_output',
+                'dense_relu0_fwd_input0', 'dense_relu0_fwd_output'], monitor_all=True)
+
+    # check with different hybridize modes
+    model.hybridize(static_alloc=True)
+    check_name(model,
+               ['dense_dense0_fwd_data', 'dense_dense0_fwd_weight',
+                'dense_dense0_fwd_bias', 'dense_dense0_fwd_output',
+                'dense_relu0_fwd_input0', 'dense_relu0_fwd_output'], monitor_all=True)
 
 
 @with_seed()

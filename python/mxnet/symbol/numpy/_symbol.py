@@ -23,19 +23,23 @@ import ctypes
 import numpy as _np
 from . import _op as _mx_np_op
 from ...base import _LIB, SymbolHandle, numeric_types, mx_uint
-from ...util import check_call, set_module
+from ...util import check_call, _sanity_check_params, set_module
 from ...context import current_context
 from ..symbol import Symbol
 from .._internal import _set_np_symbol_class
 from . import _internal as _npi
 
-
-__all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'sin', 'cos',
-           'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
+__all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'arctan2',
+           'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
-           'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot',
-           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'vsplit', 'concatenate', 'stack']
+           'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot', 'histogram', 'eye',
+           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'vsplit', 'concatenate', 'stack', 'vstack',
+           'dstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices',
+           'copysign', 'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'hypot',
+           'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot',
+           'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal']
+
 
 def _num_outputs(sym):
     return len(sym.as_nd_ndarray())
@@ -135,63 +139,27 @@ class _Symbol(Symbol):
 
     def __eq__(self, other):
         """x.__eq__(y) <=> x == y"""
-        # TODO(junwu): Return boolean ndarray when dtype=bool_ is supported
-        if isinstance(other, _Symbol):
-            return _npi.equal(self, other)
-        elif isinstance(other, numeric_types):
-            return _npi.equal_scalar(self, float(other))
-        else:
-            raise TypeError("_Symbol does not support type {} as operand".format(str(type(other))))
+        return equal(self, other)
 
     def __ne__(self, other):
         """x.__ne__(y) <=> x != y"""
-        # TODO(junwu): Return boolean ndarray when dtype=bool_ is supported
-        if isinstance(other, _Symbol):
-            return _npi.not_equal(self, other)
-        elif isinstance(other, numeric_types):
-            return _npi.not_equal_scalar(self, float(other))
-        else:
-            raise TypeError("_Symbol does not support type {} as operand".format(str(type(other))))
+        return not_equal(self, other)
 
     def __gt__(self, other):
         """x.__gt__(y) <=> x > y"""
-        # TODO(junwu): Return boolean ndarray when dtype=bool_ is supported
-        if isinstance(other, _Symbol):
-            return _npi.greater(self, other)
-        elif isinstance(other, numeric_types):
-            return _npi.greater_scalar(self, float(other))
-        else:
-            raise TypeError("_Symbol does not support type {} as operand".format(str(type(other))))
+        return greater(self, other)
 
     def __ge__(self, other):
         """x.__ge__(y) <=> x >= y"""
-        # TODO(junwu): Return boolean ndarray when dtype=bool_ is supported
-        if isinstance(other, _Symbol):
-            return _npi.greater_equal(self, other)
-        elif isinstance(other, numeric_types):
-            return _npi.greater_equal_scalar(self, float(other))
-        else:
-            raise TypeError("_Symbol does not support type {} as operand".format(str(type(other))))
+        return greater_equal(self, other)
 
     def __lt__(self, other):
         """x.__lt__(y) <=> x < y"""
-        # TODO(junwu): Return boolean ndarray when dtype=bool_ is supported
-        if isinstance(other, _Symbol):
-            return _npi.less(self, other)
-        elif isinstance(other, numeric_types):
-            return _npi.less_scalar(self, float(other))
-        else:
-            raise TypeError("_Symbol does not support type {} as operand".format(str(type(other))))
+        return less(self, other)
 
     def __le__(self, other):
         """x.__le__(y) <=> x <= y"""
-        # TODO(junwu): Return boolean ndarray when dtype=bool_ is supported
-        if isinstance(other, _Symbol):
-            return _npi.less_equal(self, other)
-        elif isinstance(other, numeric_types):
-            return _npi.less_equal_scalar(self, float(other))
-        else:
-            raise TypeError("_Symbol does not support type {} as operand".format(str(type(other))))
+        return less_equal(self, other)
 
     def __len__(self):
         raise NotImplementedError
@@ -217,14 +185,16 @@ class _Symbol(Symbol):
         raise NotImplementedError
 
     def dot(self, b, out=None):
-        raise NotImplementedError
+        """Dot product of two arrays.
+        Refer to ``numpy.dot`` for full documentation."""
+        return _mx_np_op.dot(self, b, out=out)
 
     def reshape(self, *args, **kwargs):  # pylint: disable=arguments-differ
-        """Returns an array containing the same data with a new shape.
+        """Returns a copy of the array with a new shape.
 
         Notes
         -----
-        Unlike the free function `numpy.reshape`, this method on `ndarray` allows
+        Unlike the free function `mxnet.numpy.reshape`, this method on `ndarray` allows
         the elements of the shape parameter to be passed in as separate arguments.
         For example, ``a.reshape(10, 11)`` is equivalent to
         ``a.reshape((10, 11))``.
@@ -248,7 +218,9 @@ class _Symbol(Symbol):
             return _mx_np_op.reshape(self, newshape=args, order=order)
 
     def argmax(self, axis=None, out=None):  # pylint: disable=arguments-differ
-        raise NotImplementedError
+        """Return indices of the maximum values along the given axis.
+        Refer to `mxnet.numpy.argmax` for full documentation."""
+        return argmax(self, axis, out)
 
     def reshape_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape_like`.
@@ -284,7 +256,7 @@ class _Symbol(Symbol):
 
     def repeat(self, repeats, axis=None):  # pylint: disable=arguments-differ
         """Repeat elements of an array."""
-        raise NotImplementedError
+        return _mx_np_op.repeat(self, repeats=repeats, axis=axis)
 
     def pad(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`pad`.
@@ -298,7 +270,7 @@ class _Symbol(Symbol):
         """Return a copy of the array with axis1 and axis2 interchanged.
         Refer to `mxnet.numpy.swapaxes` for full documentation.
         """
-        raise NotImplementedError
+        return swapaxes(self, axis1, axis2)
 
     def split(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`split`.
@@ -340,13 +312,13 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute slice_like')
 
-    def take(self, *args, **kwargs):
+    def take(self, indices, axis=None, mode='raise'):  # pylint: disable=arguments-differ, redefined-outer-name
         """Convenience fluent method for :py:func:`take`.
 
         The arguments are the same as for :py:func:`take`, with
         this array as data.
         """
-        raise NotImplementedError
+        return take(self, indices, axis, mode=mode)
 
     def one_hot(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`one_hot`.
@@ -408,7 +380,7 @@ class _Symbol(Symbol):
         """Return an array whose values are limited to [min, max].
         One of max or min must be given.
         """
-        raise NotImplementedError
+        return clip(self, min, max, out=out)
 
     def abs(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`abs`.
@@ -525,28 +497,28 @@ class _Symbol(Symbol):
         raise AttributeError('_Symbol object has no attribute nanprod')
 
     def mean(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
-        """Convenience fluent method for :py:func:`mean`.
+        """Returns the average of the array elements along given axis."""
+        return mean(self, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
-        The arguments are the same as for :py:func:`mean`, with
-        this array as data.
-        """
-        raise NotImplementedError
+    def std(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=arguments-differ,too-many-arguments
+        """Returns the standard deviation of the array elements along given axis."""
+        return std(self, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+
+    def var(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=arguments-differ,too-many-arguments
+        """Returns the variance of the array elements, along given axis."""
+        return var(self, axis=axis, dtype=dtype, out=out, ddof=ddof, keepdims=keepdims)
 
     def cumsum(self, axis=None, dtype=None, out=None):
         """Return the cumulative sum of the elements along the given axis."""
-        raise NotImplementedError
+        return _mx_np_op.cumsum(self, axis=axis, dtype=dtype, out=out)
 
     def max(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return the maximum along a given axis."""
-        raise NotImplementedError
+        return _mx_np_op.max(self, axis=axis, keepdims=keepdims, out=out)
 
-    def min(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`min`.
-
-        The arguments are the same as for :py:func:`min`, with
-        this array as data.
-        """
-        raise NotImplementedError
+    def min(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
+        """Return the minimum along a given axis."""
+        return _mx_np_op.min(self, axis=axis, keepdims=keepdims, out=out)
 
     def norm(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`norm`.
@@ -899,7 +871,7 @@ def zeros(shape, dtype=_np.float32, order='C', ctx=None):
 
 @set_module('mxnet.symbol.numpy')
 def ones(shape, dtype=_np.float32, order='C', ctx=None):
-    """Return a new array of given shape and type, filled with zeros.
+    """Return a new array of given shape and type, filled with ones.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
 
@@ -921,7 +893,7 @@ def ones(shape, dtype=_np.float32, order='C', ctx=None):
     Returns
     -------
     out : ndarray
-        Array of zeros with the given shape, dtype, and ctx.
+        Array of ones with the given shape, dtype, and ctx.
     """
     if order != 'C':
         raise NotImplementedError
@@ -929,6 +901,162 @@ def ones(shape, dtype=_np.float32, order='C', ctx=None):
         ctx = current_context()
     dtype = _np.float32 if dtype is None else dtype
     return _npi.ones(shape=shape, ctx=ctx, dtype=dtype)
+
+
+@set_module('mxnet.symbol.numpy')
+def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylint: disable=too-many-arguments
+    """
+    Return a new array of given shape and type, filled with `fill_value`.
+    Parameters
+    ----------
+    shape : int or sequence of ints
+        Shape of the new array, e.g., ``(2, 3)`` or ``2``.
+    fill_value : scalar
+        Fill value.
+    dtype : data-type, optional
+        The desired data-type for the array. The default, `None`, means
+        `np.array(fill_value).dtype`.
+    order : {'C'}, optional
+        Whether to store multidimensional data in C- or Fortran-contiguous
+        (row- or column-wise) order in memory. Currently only supports C order.
+    ctx: to specify the device, e.g. the i-th GPU.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+    Returns
+    -------
+    out : ndarray
+        Array of `fill_value` with the given shape, dtype, and order.
+    Notes
+    -----
+    This function differs from the original `numpy.full
+    https://docs.scipy.org/doc/numpy/reference/generated/numpy.full.html`_ in
+    the following way(s):
+    - Have an additional `ctx` argument to specify the device
+    - Have an additional `out` argument
+    - Currently does not support `order` selection
+    See Also
+    --------
+    empty : Return a new uninitialized array.
+    ones : Return a new array setting values to one.
+    zeros : Return a new array setting values to zero.
+    Examples
+    --------
+    >>> np.full((2, 2), 10)
+    array([[10., 10.],
+           [10., 10.]])
+    >>> np.full((2, 2), 2, dtype=np.int32, ctx=mx.cpu(0))
+    array([[2, 2],
+           [2, 2]], dtype=int32)
+    """
+    if order != 'C':
+        raise NotImplementedError
+    if ctx is None:
+        ctx = current_context()
+    dtype = _np.float32 if dtype is None else dtype
+    return _npi.full(shape=shape, value=fill_value, ctx=ctx, dtype=dtype, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def identity(n, dtype=None, ctx=None):
+    """
+    Return the identity array.
+
+    The identity array is a square array with ones on
+    the main diagonal.
+
+    Parameters
+    ----------
+    n : int
+        Number of rows (and columns) in `n` x `n` output.
+    dtype : data-type, optional
+        Data-type of the output.  Defaults to ``numpy.float32``.
+    ctx : Context, optional
+        An optional device context (default is the current default context).
+
+    Returns
+    -------
+    out : _Symbol
+        `n` x `n` array with its main diagonal set to one,
+        and all other elements 0.
+    """
+    if not isinstance(n, int):
+        raise TypeError("Input 'n' should be an integer")
+    if n < 0:
+        raise ValueError("Input 'n' cannot be negative")
+    if ctx is None:
+        ctx = current_context()
+    dtype = _np.float32 if dtype is None else dtype
+    return _npi.identity(shape=(n, n), ctx=ctx, dtype=dtype)
+
+
+# pylint: disable=redefined-outer-name
+@set_module('mxnet.symbol.numpy')
+def take(a, indices, axis=None, mode='raise', out=None):
+    r"""
+    Take elements from an array along an axis.
+
+    When axis is not None, this function does the same thing as "fancy"
+    indexing (indexing arrays using arrays); however, it can be easier to use
+    if you need elements along a given axis. A call such as
+    ``np.take(arr, indices, axis=3)`` is equivalent to
+    ``arr[:,:,:,indices,...]``.
+
+    Explained without fancy indexing, this is equivalent to the following use
+    of `ndindex`, which sets each of ``ii``, ``jj``, and ``kk`` to a tuple of
+    indices::
+
+        Ni, Nk = a.shape[:axis], a.shape[axis+1:]
+        Nj = indices.shape
+        for ii in ndindex(Ni):
+            for jj in ndindex(Nj):
+                for kk in ndindex(Nk):
+                    out[ii + jj + kk] = a[ii + (indices[jj],) + kk]
+
+    Parameters
+    ----------
+    a : _Symbol
+        The source array.
+    indices : _Symbol
+        The indices of the values to extract. Also allow scalars for indices.
+    axis : int, optional
+        The axis over which to select values. By default, the flattened
+        input array is used.
+    out : _Symbol or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    mode : {'clip', 'wrap'}, optional
+        Specifies how out-of-bounds indices will behave.
+
+        * 'clip' -- clip to the range (default)
+        * 'wrap' -- wrap around
+
+        'clip' mode means that all indices that are too large are replaced
+        by the index that addresses the last element along that axis. Note
+        that this disables indexing with negative numbers.
+
+    Returns
+    -------
+    out : _Symbol
+        The returned array has the same type as `a`.
+
+    Notes
+    -----
+
+    This function differs from the original `numpy.take
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.take.html>`_ in
+    the following way(s):
+
+    - Only ndarray or scalar ndarray is accepted as valid input.
+    """
+    if mode not in ('wrap', 'clip', 'raise'):
+        raise NotImplementedError(
+            "function take does not support mode '{}'".format(mode))
+    if axis:
+        return _npi.take(a, indices, axis, mode, out)
+    else:
+        return _npi.take(_npi.reshape(a, -1), indices, 0, mode, out)
+# pylint: enable=redefined-outer-name
 
 
 #pylint: disable= too-many-arguments, no-member, protected-access
@@ -1008,8 +1136,43 @@ def mod(x1, x2, out=None):
 
 
 @set_module('mxnet.symbol.numpy')
+def remainder(x1, x2, out=None):
+    return _ufunc_helper(x1, x2, _npi.mod, _np.mod, _npi.mod_scalar, _npi.rmod_scalar, out)
+
+
+@set_module('mxnet.symbol.numpy')
 def power(x1, x2, out=None):
     return _ufunc_helper(x1, x2, _npi.power, _np.power, _npi.power_scalar, _npi.rpower_scalar, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def lcm(x1, x2, out=None):
+    """
+    Returns the lowest common multiple of ``|x1|`` and ``|x2|``
+
+    Parameters
+    ----------
+    x1, x2 : ndarrays or scalar values
+        The arrays for computing lowest common multiple. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which may be the shape of
+        one or the other).
+
+    out : ndarray or None, optional
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        The lowest common multiple of the absolute value of the inputs
+        This is a scalar if both `x1` and `x2` are scalars.
+
+    See Also
+    --------
+    gcd : The greatest common divisor
+    """
+    return _ufunc_helper(x1, x2, _npi.lcm, _np.lcm, _npi.lcm_scalar, None, out)
 
 
 @set_module('mxnet.symbol.numpy')
@@ -1065,6 +1228,84 @@ def tensordot(a, b, axes=2):
         raise ValueError('Axes length mismatch')
 
     return _npi.tensordot(a, b, a_axes_summed, b_axes_summed)
+
+
+@set_module('mxnet.symbol.numpy')
+def histogram(a, bins=10, range=None, normed=None, weights=None, density=None):  # pylint: disable= too-many-arguments
+    """
+    Compute the histogram of a set of data.
+
+    Parameters
+    ----------
+    a : Symbol
+        Input data. The histogram is computed over the flattened array.
+    bins : int or Symbol
+        If `bins` is an int, it defines the number of equal-width
+        bins in the given range (10, by default). If `bins` is a
+        sequence, it defines a monotonically increasing array of bin edges,
+        including the rightmost edge, allowing for non-uniform bin widths.
+        .. versionadded:: 1.11.0
+        If `bins` is a string, it defines the method used to calculate the
+        optimal bin width, as defined by `histogram_bin_edges`.
+    range : (float, float)
+        The lower and upper range of the bins. Required when `bins` is an integer.
+        Values outside the range are ignored. The first element of the range must
+        be less than or equal to the second.
+    normed : bool, optional
+        Not supported yet, coming soon.
+    weights : array_like, optional
+        Not supported yet, coming soon.
+    density : bool, optional
+        Not supported yet, coming soon.
+    """
+    if normed is True:
+        raise NotImplementedError("normed is not supported yet...")
+    if weights is not None:
+        raise NotImplementedError("weights is not supported yet...")
+    if density is True:
+        raise NotImplementedError("density is not supported yet...")
+    if isinstance(bins, numeric_types):
+        if range is None:
+            raise NotImplementedError("automatic range is not avaialble yet...")
+        return _npi.histogram(a, bin_cnt=bins, range=range)
+    if isinstance(bins, (list, tuple)):
+        raise NotImplementedError("array_like bins is not supported yet...")
+    if isinstance(bins, str):
+        raise NotImplementedError("string bins is not supported yet...")
+    if isinstance(bins, Symbol):
+        return _npi.histogram(a, bins)
+    raise ValueError("histogram fails with", locals())
+
+
+@set_module('mxnet.symbol.numpy')
+def eye(N, M=None, k=0, dtype=_np.float32, **kwargs):
+    """
+    Return a 2-D array with ones on the diagonal and zeros elsewhere.
+
+    Parameters
+    ----------
+    N : int
+        Number of rows in the output.
+    M : int, optional
+        Number of columns in the output. If None, defaults to N.
+    k : int, optional
+        Index of the diagonal: 0 (the default) refers to the main diagonal,
+        a positive value refers to an upper diagonal,
+        and a negative value to a lower diagonal.
+    dtype : data-type, optional
+        Data-type of the returned array.
+
+    Returns
+    -------
+    I : ndarray of shape (N,M)
+        An array where all elements are equal to zero,
+        except for the k-th diagonal, whose values are equal to one.
+    """
+    _sanity_check_params('eye', ['order'], kwargs)
+    ctx = kwargs.pop('ctx', current_context())
+    if ctx is None:
+        ctx = current_context()
+    return _npi.eye(N, M, k, ctx, dtype)
 
 
 @set_module('mxnet.symbol.numpy')
@@ -1160,6 +1401,33 @@ def expand_dims(a, axis):
         the input array.
     """
     return _npi.expand_dims(a, axis)
+
+
+@set_module('mxnet.symbol.numpy')
+def tril(m, k=0):
+    r"""
+    Lower triangle of an array.
+
+    Return a copy of an array with elements above the `k`-th diagonal zeroed.
+
+    Parameters
+    ----------
+    m : _Symbol, shape (M, N)
+        Input array.
+    k : int, optional
+        Diagonal above which to zero elements.  `k = 0` (the default) is the
+        main diagonal, `k < 0` is below it and `k > 0` is above.
+
+    Returns
+    -------
+    tril : _Symbol, shape (M, N)
+        Lower triangle of `m`, of same shape and data-type as `m`.
+
+    See Also
+    --------
+    triu : same thing, only for the upper triangle
+    """
+    return _npi.tril(m, k)
 
 
 def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
@@ -1402,6 +1670,7 @@ def absolute(x, out=None, **kwargs):
     r"""
     Calculate the absolute value element-wise.
     np.abs is a shorthand for this function.
+
     Parameters
     ----------
     x : _Symbol
@@ -1649,6 +1918,36 @@ def degrees(x, out=None, **kwargs):
     return _unary_func_helper(x, _npi.degrees, _np.degrees, out=out, **kwargs)
 
 
+@set_module('mxnet.symbol.numpy')
+def rad2deg(x, out=None):
+    r"""
+    rad2deg(x, out=None)
+
+    Convert angles from radians to degrees.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Angles in degrees.
+    out : _Symbol or None, optional
+        A location into which the result is stored.
+
+    Returns
+    -------
+    y : _Symbol or scalar
+        The corresponding angle in radians.
+        This is a scalar if `x` is a scalar.
+
+    Notes
+    -----
+    "rad2deg(x)" is "x * 180 / pi".
+
+    This function differs from the original numpy.arange in the following aspects:
+        - Only support float32 and float64.
+        - `out` must be in the same size of input.
+    """
+    return _unary_func_helper(x, _npi.rad2deg, _np.rad2deg, out=out)
+
+
 def rint(x, out=None, **kwargs):
     """
     Round elements of the array to the nearest integer.
@@ -1772,6 +2071,36 @@ def radians(x, out=None, **kwargs):
            dtype=float32)
     """
     return _unary_func_helper(x, _npi.radians, _np.radians, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def deg2rad(x, out=None):
+    r"""
+    deg2rad(x, out=None)
+
+    Convert angles from degrees to radians.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Angles in degrees.
+    out : _Symbol or None, optional
+        A location into which the result is stored.
+
+    Returns
+    -------
+    y : _Symbol or scalar
+        The corresponding angle in radians.
+        This is a scalar if `x` is a scalar.
+
+    Notes
+    -----
+    "deg2rad(x)" is "x * pi / 180".
+
+    This function differs from the original numpy.arange in the following aspects:
+        - Only support float32 and float64.
+        - `out` must be in the same size of input.
+    """
+    return _unary_func_helper(x, _npi.deg2rad, _np.deg2rad, out=out)
 
 
 @set_module('mxnet.symbol.numpy')
@@ -2236,6 +2565,7 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
     return _npi.arange(start=start, stop=stop, step=step, dtype=dtype, ctx=ctx)
 
 
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.symbol.numpy')
 def split(ary, indices_or_sections, axis=0):
     """Split an array into multiple sub-arrays.
@@ -2276,6 +2606,7 @@ def split(ary, indices_or_sections, axis=0):
         raise ValueError('indices_or_sections must either int or tuple / list / set of ints')
     ret = _npi.split(ary, indices, axis, False, sections)
     return ret
+# pylint: enable=redefined-outer-name
 
 
 @set_module('mxnet.symbol.numpy')
@@ -2377,6 +2708,1346 @@ def stack(arrays, axis=0, out=None):
 
     arrays = get_list(arrays)
     return _npi.stack(*arrays, axis=axis, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def vstack(arrays, out=None):
+    r"""Stack arrays in sequence vertically (row wise).
+
+    This is equivalent to concatenation along the first axis after 1-D arrays
+    of shape `(N,)` have been reshaped to `(1,N)`. Rebuilds arrays divided by
+    `vsplit`.
+
+    This function makes most sense for arrays with up to 3 dimensions. For
+    instance, for pixel-data with a height (first axis), width (second axis),
+    and r/g/b channels (third axis). The functions `concatenate` and `stack`
+    provide more general stacking and concatenation operations.
+
+    Parameters
+    ----------
+    tup : sequence of _Symbol
+        The arrays must have the same shape along all but the first axis.
+        1-D arrays must have the same length.
+
+    Returns
+    -------
+    stacked : _Symbol
+        The array formed by stacking the given arrays, will be at least 2-D.
+    """
+    def get_list(arrays):
+        if not hasattr(arrays, '__getitem__') and hasattr(arrays, '__iter__'):
+            raise ValueError("expected iterable for arrays but got {}".format(type(arrays)))
+        return [arr for arr in arrays]
+
+    arrays = get_list(arrays)
+    return _npi.vstack(*arrays)
+
+
+@set_module('mxnet.symbol.numpy')
+def dstack(arrays):
+    """
+    Stack arrays in sequence depth wise (along third axis).
+
+    This is equivalent to concatenation along the third axis after 2-D arrays
+    of shape `(M,N)` have been reshaped to `(M,N,1)` and 1-D arrays of shape
+    `(N,)` have been reshaped to `(1,N,1)`. Rebuilds arrays divided by
+    `dsplit`.
+
+    This function makes most sense for arrays with up to 3 dimensions. For
+    instance, for pixel-data with a height (first axis), width (second axis),
+    and r/g/b channels (third axis). The functions `concatenate`, `stack` and
+    `block` provide more general stacking and concatenation operations.
+
+    Parameters
+    ----------
+    tup : sequence of _Symbol
+        The arrays must have the same shape along all but the first axis.
+        1-D arrays must have the same length.
+
+    Returns
+    -------
+    stacked : _Symbol
+        The array formed by stacking the given arrays, will be at least 2-D.
+    """
+    return _npi.dstack(*arrays)
+
+
+@set_module('mxnet.symbol.numpy')
+def maximum(x1, x2, out=None):
+    return _ufunc_helper(x1, x2, _npi.maximum, _np.maximum, _npi.maximum_scalar, None, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def minimum(x1, x2, out=None):
+    return _ufunc_helper(x1, x2, _npi.minimum, _np.minimum, _npi.minimum_scalar, None, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def clip(a, a_min, a_max, out=None):
+    """clip(a, a_min, a_max, out=None)
+
+    Clip (limit) the values in an array.
+    Given an interval, values outside the interval are clipped to
+    the interval edges.  For example, if an interval of ``[0, 1]``
+    is specified, values smaller than 0 become 0, and values larger
+    than 1 become 1.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Array containing elements to clip.
+    a_min : scalar or `None`
+        Minimum value. If `None`, clipping is not performed on lower
+        interval edge. Not more than one of `a_min` and `a_max` may be
+        `None`.
+    a_max : scalar or `None`
+        Maximum value. If `None`, clipping is not performed on upper
+        interval edge. Not more than one of `a_min` and `a_max` may be
+        `None`.
+    out : _Symbol or `None`
+        The results will be placed in this array. It may be the input
+        array for in-place clipping.  `out` must be of the right shape
+        to hold the output.  Its type is preserved.
+
+    Returns
+    -------
+    clipped_array : _Symbol
+        An array with the elements of `a`, but where values
+        < `a_min` are replaced with `a_min`, and those > `a_max`
+        with `a_max`.
+
+    Notes
+    -----
+    array_like `a_min` and `a_max` are not supported.
+    """
+    if a_min is None and a_max is None:
+        raise ValueError('array_clip: must set either max or min')
+    if a_min is None:
+        a_min = float('-inf')
+    if a_max is None:
+        a_max = float('inf')
+    return _npi.clip(a, a_min, a_max, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def swapaxes(a, axis1, axis2):
+    """Interchange two axes of an array.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input array.
+    axis1 : int
+        First axis.
+    axis2 : int
+        Second axis.
+
+    Returns
+    -------
+    a_swapped : _Symbol
+        Swapped array symbol.
+    """
+    return _npi.swapaxes(a, dim1=axis1, dim2=axis2)
+
+
+@set_module('mxnet.symbol.numpy')
+def argmax(a, axis=None, out=None):
+    r"""
+    argmax(a, axis=None, out=None)
+
+    Returns the indices of the maximum values along an axis.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input array. Only support dtype `float16`, `float32`, and `float64`.
+    axis : int, optional
+        By default, the index is into the flattened array, otherwise
+        along the specified axis.
+    out : _Symbol or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    index_array : _Symbol of indices whose dtype is same as the input ndarray.
+        Array of indices into the array. It has the same shape as `a.shape`
+        with the dimension along `axis` removed.
+
+    Notes
+    -----
+    In case of multiple occurrences of the maximum values, the indices
+    corresponding to the first occurrence are returned.
+
+    This function differs from the original `numpy.argmax
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.argmax.html>`_ in
+    the following aspects:
+
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - Output has dtype that is same as the input ndarray.
+    - ``out`` param: cannot perform auto broadcasting. ``out`` symbol's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` symnbol's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+
+    """
+    return _npi.argmax(a, axis=axis, keepdims=False, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
+    """
+    mean(a, axis=None, dtype=None, out=None, keepdims=None)
+
+    Compute the arithmetic mean along the specified axis.
+    Returns the average of the array elements.
+    The average is taken over the flattened array by default, otherwise over the specified axis.
+
+    Parameters
+    ----------
+    a : `_Symbol`
+        _Symbol containing numbers whose mean is desired.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which the means are computed. The default is to compute the mean of the flattened array.
+        If this is a tuple of ints, a mean is performed over multiple axes,
+        instead of a single axis or all the axes as before.
+    dtype : data-type, optional
+        Type to use in computing the mean. For integer inputs, the default is float32;
+        for floating point inputs, it is the same as the input dtype.
+    out : _Symbol, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in the result
+        as dimensions with size one. With this option, the result will broadcast correctly
+        against the input array.
+        If the default value is passed, then keepdims will not be passed through to the mean
+        method of sub-classes of _Symbol, however any non-default value will be. If the sub-class
+        method does not implement keepdims any exceptions will be raised.
+
+    Returns
+    -------
+    m : _Symbol, see dtype parameter above
+        If out=None, returns a new array containing the mean values,
+        otherwise a reference to the output array is returned.
+
+    Notes
+    -----
+    This function differs from the original `numpy.mean
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.mean.html>`_ in
+    the following way(s):
+
+    - only _Symbol is accepted as valid input, python iterables or scalar is not supported
+    - default data type for integer input is float32
+
+    Examples
+    --------
+    >>> a = np.array([[1, 2], [3, 4]])
+    >>> np.mean(a)
+    array(2.5)
+    >>> a = np.zeros((2, 512*512), dtype=np.float32)
+    >>> a[0,:] = 1.0
+    >>> a[1,:] = 0.1
+    >>> np.mean(a)
+    array(0.55)
+    >>> np.mean(a, dtype=np.float64)
+    array(0.55)
+    """
+    return _npi.mean(a, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=too-many-arguments
+    """
+    Compute the standard deviation along the specified axis.
+
+    Returns the standard deviation, a measure of the spread of a distribution,
+    of the array elements. The standard deviation is computed for the
+    flattened array by default, otherwise over the specified axis.
+
+    Parameters
+    ----------
+    a : `_Symbol`
+        _Symbol containing numbers whose standard deviation is desired.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which the standard deviations are computed.
+        The default is to compute the standard deviation of the flattened array.
+        If this is a tuple of ints, computation is performed over multiple axes,
+        instead of a single axis or all the axes as before.
+    dtype : data-type, optional
+        Type to use in computing the standard deviation. For integer inputs, the default is float32;
+        for floating point inputs, it is the same as the input dtype.
+    out : _Symbol, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in the result
+        as dimensions with size one. With this option, the result will broadcast correctly
+        against the input array.
+        If the default value is passed, then keepdims will not be passed through to the mean
+        method of sub-classes of _Symbol, however any non-default value will be. If the sub-class
+        method does not implement keepdims any exceptions will be raised.
+
+    Returns
+    -------
+    m : _Symbol, see dtype parameter above
+        If out=None, returns a new array containing the standard deviation values,
+        otherwise a reference to the output array is returned.
+
+    Notes
+    -----
+    This function differs from the original `numpy.std
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.mean.html>`_ in
+    the following way(s):
+
+    - only _Symbol is accepted as valid input, python iterables or scalar is not supported
+    - default output data type for integer input is float32
+
+    """
+    return _npi.std(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=too-many-arguments
+    """
+    Compute the variance along the specified axis.
+
+    Returns the variance of the array elements, a measure of the spread of a
+    distribution.  The variance is computed for the flattened array by
+    default, otherwise over the specified axis.
+
+    Parameters
+    ----------
+    a : `_Symbol`
+        _Symbol containing numbers whose variance is desired.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which the variance is computed.
+        The default is to compute the variance of the flattened array.
+        If this is a tuple of ints, computation is performed over multiple axes,
+        instead of a single axis or all the axes as before.
+    dtype : data-type, optional
+        Type to use in computing the variance. For integer inputs, the default is float32;
+        for floating point inputs, it is the same as the input dtype.
+    out : _Symbol, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in the result
+        as dimensions with size one. With this option, the result will broadcast correctly
+        against the input array.
+        If the default value is passed, then keepdims will not be passed through to the mean
+        method of sub-classes of _Symbol, however any non-default value will be. If the sub-class
+        method does not implement keepdims any exceptions will be raised.
+
+    Returns
+    -------
+    m : _Symbol, see dtype parameter above
+        If out=None, returns a new array containing the variance values,
+        otherwise a reference to the output array is returned.
+
+    Notes
+    -----
+    This function differs from the original `numpy.var
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.mean.html>`_ in
+    the following way(s):
+
+    - only _Symbol is accepted as valid input, python iterables or scalar is not supported
+    - default output data type for integer input is float32
+
+    """
+    return _npi.var(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+
+
+# pylint: disable=redefined-outer-name
+@set_module('mxnet.symbol.numpy')
+def indices(dimensions, dtype=_np.int32, ctx=None):
+    """Return an array representing the indices of a grid.
+
+    Compute an array where the subarrays contain index values 0,1,...
+    varying only along the corresponding axis.
+
+    Parameters
+    ----------
+    dimensions : sequence of ints
+        The shape of the grid.
+    dtype : data-type, optional
+        The desired data-type for the array. Default is `float32`.
+    ctx : device context, optional
+        Device context on which the memory is allocated. Default is
+        `mxnet.context.current_context()`.
+
+    Returns
+    -------
+    grid : _Symbol
+        The array of grid indices,
+        ``grid.shape = (len(dimensions),) + tuple(dimensions)``.
+
+    Notes
+    -----
+    The output shape is obtained by prepending the number of dimensions
+    in front of the tuple of dimensions, i.e. if `dimensions` is a tuple
+    ``(r0, ..., rN-1)`` of length ``N``, the output shape is
+    ``(N,r0,...,rN-1)``.
+
+    The subarrays ``grid[k]`` contains the N-D array of indices along the
+    ``k-th`` axis. Explicitly::
+
+        grid[k,i0,i1,...,iN-1] = ik
+
+    Examples
+    --------
+    >>> grid = np.indices((2, 3))
+    >>> grid.shape
+    (2, 2, 3)
+    >>> grid[0]        # row indices
+    array([[0, 0, 0],
+           [1, 1, 1]])
+    >>> grid[1]        # column indices
+    array([[0, 0, 0],
+           [1, 1, 1]], dtype=int32)
+
+    The indices can be used as an index into an array.
+
+    >>> x = np.arange(20).reshape(5, 4)
+    >>> row, col = np.indices((2, 3))
+    >>> x[row, col]
+    array([[0., 1., 2.],
+           [4., 5., 6.]])
+
+    Note that it would be more straightforward in the above example to
+    extract the required elements directly with ``x[:2, :3]``.
+    """
+    if isinstance(dimensions, (tuple, list)):
+        if ctx is None:
+            ctx = current_context()
+        return _npi.indices(dimensions=dimensions, dtype=dtype, ctx=ctx)
+    else:
+        raise ValueError("The dimensions must be sequence of ints")
+# pylint: enable=redefined-outer-name
+
+
+@set_module('mxnet.symbol.numpy')
+def copysign(x1, x2, out=None):
+    r"""copysign(x1, x2, out=None)
+
+    Change the sign of x1 to that of x2, element-wise.
+
+    If `x2` is a scalar, its sign will be copied to all elements of `x1`.
+
+    Parameters
+    ----------
+    x1 : _Symbol or scalar
+        Values to change the sign of.
+    x2 : _Symbol or scalar
+        The sign of `x2` is copied to `x1`.
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    out : _Symbol
+        The values of `x1` with the sign of `x2`.
+        This is a scalar if both `x1` and `x2` are scalars.
+
+    Notes
+    -------
+    This function differs from the original `numpy.copysign
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.copysign.html>`_ in
+    the following aspects:
+
+    - ``where`` param is not supported.
+    """
+    return _ufunc_helper(x1, x2, _npi.copysign, _np.copysign, _npi.copysign_scalar, _npi.rcopysign_scalar, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def ravel(x, order='C'):
+    r"""
+    ravel(x)
+
+    Return a contiguous flattened array.
+    A 1-D array, containing the elements of the input, is returned.  A copy is
+    made only if needed.
+
+    Parameters
+    ----------
+    x : ndarray
+        Input array.  The elements in `x` are read in row-major, C-style order and
+        packed as a 1-D array.
+    order : `C`, optional
+        Only support row-major, C-style order.
+
+    Returns
+    -------
+    y : ndarray
+        y is an array of the same subtype as `x`, with shape ``(x.size,)``.
+        Note that matrices are special cased for backward compatibility, if `x`
+        is a matrix, then y is a 1-D ndarray.
+
+    Notes
+    -----
+    This function differs from the original numpy.arange in the following aspects:
+        - Only support row-major, C-style order.
+    """
+    if order != 'C':
+        raise NotImplementedError('order {} is not supported'.format(order))
+    if isinstance(x, numeric_types):
+        return _np.reshape(x, -1)
+    elif isinstance(x, _Symbol):
+        return _npi.reshape(x, -1)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x))))
+
+
+@set_module('mxnet.symbol.numpy')
+def hanning(M, dtype=_np.float32, ctx=None):
+    r"""Return the Hanning window.
+
+    The Hanning window is a taper formed by using a weighted cosine.
+
+    Parameters
+    ----------
+    M : int
+        Number of points in the output window. If zero or less, an
+        empty array is returned.
+    dtype : str or numpy.dtype, optional
+        An optional value type. Default is `float32`. Note that you need
+        select numpy.float32 or float64 in this operator.
+    ctx : Context, optional
+        An optional device context (default is the current default context).
+
+    Returns
+    -------
+    out : _Symbol, shape(M,)
+        The window, with the maximum value normalized to one (the value
+        one appears only if `M` is odd).
+
+    See Also
+    --------
+    blackman, hamming
+
+    Notes
+    -----
+    The Hanning window is defined as
+
+    .. math::  w(n) = 0.5 - 0.5cos\left(\frac{2\pi{n}}{M-1}\right)
+               \qquad 0 \leq n \leq M-1
+
+    The Hanning was named for Julius von Hann, an Austrian meteorologist.
+    It is also known as the Cosine Bell. Some authors prefer that it be
+    called a Hann window, to help avoid confusion with the very similar
+    Hamming window.
+
+    Most references to the Hanning window come from the signal processing
+    literature, where it is used as one of many windowing functions for
+    smoothing values.  It is also known as an apodization (which means
+    "removing the foot", i.e. smoothing discontinuities at the beginning
+    and end of the sampled signal) or tapering function.
+
+    References
+    ----------
+    .. [1] Blackman, R.B. and Tukey, J.W., (1958) The measurement of power
+           spectra, Dover Publications, New York.
+    .. [2] E.R. Kanasewich, "Time Sequence Analysis in Geophysics",
+           The University of Alberta Press, 1975, pp. 106-108.
+    .. [3] Wikipedia, "Window function",
+           http://en.wikipedia.org/wiki/Window_function
+    .. [4] W.H. Press,  B.P. Flannery, S.A. Teukolsky, and W.T. Vetterling,
+           "Numerical Recipes", Cambridge University Press, 1986, page 425.
+
+    Examples
+    --------
+    >>> np.hanning(12)
+    array([0.        , 0.07937324, 0.29229254, 0.5711574 , 0.8274304 ,
+           0.9797465 , 0.97974646, 0.82743025, 0.5711573 , 0.29229245,
+           0.07937312, 0.        ])
+
+    Plot the window and its frequency response:
+
+    >>> import matplotlib.pyplot as plt
+    >>> window = np.hanning(51)
+    >>> plt.plot(window.asnumpy())
+    [<matplotlib.lines.Line2D object at 0x...>]
+    >>> plt.title("Hann window")
+    Text(0.5, 1.0, 'Hann window')
+    >>> plt.ylabel("Amplitude")
+    Text(0, 0.5, 'Amplitude')
+    >>> plt.xlabel("Sample")
+    Text(0.5, 0, 'Sample')
+    >>> plt.show()
+    """
+    if ctx is None:
+        ctx = current_context()
+    return _npi.hanning(M, dtype=dtype, ctx=ctx)
+
+
+@set_module('mxnet.symbol.numpy')
+def hamming(M, dtype=_np.float32, ctx=None):
+    r"""Return the hamming window.
+
+    The hamming window is a taper formed by using a weighted cosine.
+
+    Parameters
+    ----------
+    M : int
+        Number of points in the output window. If zero or less, an
+        empty array is returned.
+    dtype : str or numpy.dtype, optional
+        An optional value type. Default is `float32`. Note that you need
+        select numpy.float32 or float64 in this operator.
+    ctx : Context, optional
+        An optional device context (default is the current default context).
+
+    Returns
+    -------
+    out : _Symbol, shape(M,)
+        The window, with the maximum value normalized to one (the value
+        one appears only if `M` is odd).
+
+    See Also
+    --------
+    blackman, hanning
+
+    Notes
+    -----
+    The Hamming window is defined as
+
+    .. math::  w(n) = 0.54 - 0.46cos\left(\frac{2\pi{n}}{M-1}\right)
+               \qquad 0 \leq n \leq M-1
+
+    The Hamming was named for R. W. Hamming, an associate of J. W. Tukey
+    and is described in Blackman and Tukey. It was recommended for
+    smoothing the truncated autocovariance function in the time domain.
+    Most references to the Hamming window come from the signal processing
+    literature, where it is used as one of many windowing functions for
+    smoothing values.  It is also known as an apodization (which means
+    "removing the foot", i.e. smoothing discontinuities at the beginning
+    and end of the sampled signal) or tapering function.
+
+    References
+    ----------
+    .. [1] Blackman, R.B. and Tukey, J.W., (1958) The measurement of power
+           spectra, Dover Publications, New York.
+    .. [2] E.R. Kanasewich, "Time Sequence Analysis in Geophysics", The
+           University of Alberta Press, 1975, pp. 109-110.
+    .. [3] Wikipedia, "Window function",
+           https://en.wikipedia.org/wiki/Window_function
+    .. [4] W.H. Press,  B.P. Flannery, S.A. Teukolsky, and W.T. Vetterling,
+           "Numerical Recipes", Cambridge University Press, 1986, page 425.
+
+    Examples
+    --------
+    >>> np.hamming(12)
+    array([0.08000001, 0.15302339, 0.34890914, 0.6054648 , 0.841236  ,
+           0.9813669 , 0.9813668 , 0.8412359 , 0.6054647 , 0.34890908,
+           0.15302327, 0.08000001])
+
+    Plot the window and its frequency response:
+
+    >>> import matplotlib.pyplot as plt
+    >>> window = np.hamming(51)
+    >>> plt.plot(window.asnumpy())
+    [<matplotlib.lines.Line2D object at 0x...>]
+    >>> plt.title("hamming window")
+    Text(0.5, 1.0, 'hamming window')
+    >>> plt.ylabel("Amplitude")
+    Text(0, 0.5, 'Amplitude')
+    >>> plt.xlabel("Sample")
+    Text(0.5, 0, 'Sample')
+    >>> plt.show()
+    """
+    if ctx is None:
+        ctx = current_context()
+    return _npi.hamming(M, dtype=dtype, ctx=ctx)
+
+
+@set_module('mxnet.symbol.numpy')
+def blackman(M, dtype=_np.float32, ctx=None):
+    r"""Return the Blackman window.
+
+    The Blackman window is a taper formed by using the first three
+    terms of a summation of cosines. It was designed to have close to the
+    minimal leakage possible.  It is close to optimal, only slightly worse
+    than a Kaiser window.
+
+    Parameters
+    ----------
+    M : int
+        Number of points in the output window. If zero or less, an
+        empty array is returned.
+    dtype : str or numpy.dtype, optional
+        An optional value type. Default is `float32`. Note that you need
+        select numpy.float32 or float64 in this operator.
+    ctx : Context, optional
+        An optional device context (default is the current default context).
+
+    Returns
+    -------
+    out : _Symbol
+        The window, with the maximum value normalized to one (the value one
+        appears only if the number of samples is odd).
+
+    See Also
+    --------
+    hamming, hanning
+
+    Notes
+    -----
+    The Blackman window is defined as
+
+    .. math::  w(n) = 0.42 - 0.5 \cos(2\pi n/{M-1}) + 0.08 \cos(4\pi n/{M-1})
+
+    Most references to the Blackman window come from the signal processing
+    literature, where it is used as one of many windowing functions for
+    smoothing values.  It is also known as an apodization (which means
+    "removing the foot", i.e. smoothing discontinuities at the beginning
+    and end of the sampled signal) or tapering function. It is known as a
+    "near optimal" tapering function, almost as good (by some measures)
+    as the kaiser window.
+
+    References
+    ----------
+    Blackman, R.B. and Tukey, J.W., (1958) The measurement of power spectra,
+    Dover Publications, New York.
+
+    Oppenheim, A.V., and R.W. Schafer. Discrete-Time Signal Processing.
+    Upper Saddle River, NJ: Prentice-Hall, 1999, pp. 468-471.
+
+    Examples
+    --------
+    >>> np.blackman(12)
+    array([-1.4901161e-08,  3.2606423e-02,  1.5990365e-01,  4.1439798e-01,
+            7.3604530e-01,  9.6704686e-01,  9.6704674e-01,  7.3604506e-01,
+            4.1439781e-01,  1.5990359e-01,  3.2606363e-02, -1.4901161e-08])
+
+    Plot the window and its frequency response:
+
+    >>> import matplotlib.pyplot as plt
+    >>> window = np.blackman(51)
+    >>> plt.plot(window.asnumpy())
+    [<matplotlib.lines.Line2D object at 0x...>]
+    >>> plt.title("blackman window")
+    Text(0.5, 1.0, 'blackman window')
+    >>> plt.ylabel("Amplitude")
+    Text(0, 0.5, 'Amplitude')
+    >>> plt.xlabel("Sample")
+    Text(0.5, 0, 'Sample')
+    >>> plt.show()
+    """
+    if ctx is None:
+        ctx = current_context()
+    return _npi.blackman(M, dtype=dtype, ctx=ctx)
+
+
+@set_module('mxnet.symbol.numpy')
+def flip(m, axis=None, out=None):
+    r"""
+    flip(m, axis=None, out=None)
+
+    Reverse the order of elements in an array along the given axis.
+
+    The shape of the array is preserved, but the elements are reordered.
+
+    Parameters
+    ----------
+    m : _Symbol or scalar
+        Input array.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which to flip over. The default,
+        axis=None, will flip over all of the axes of the input array.
+        If axis is negative it counts from the last to the first axis.
+
+        If axis is a tuple of ints, flipping is performed on all of the axes
+        specified in the tuple.
+    out : _Symbol or scalar, optional
+        Alternative output array in which to place the result. It must have
+        the same shape and type as the expected output.
+
+    Returns
+    -------
+    out : _Symbol or scalar
+        A view of `m` with the entries of axis reversed.  Since a view is
+        returned, this operation is done in constant time.
+    """
+    if isinstance(m, numeric_types):
+        return _np.flip(m, axis)
+    elif isinstance(m, _Symbol):
+        return _npi.flip(m, axis, out=out)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(m))))
+
+
+@set_module('mxnet.symbol.numpy')
+def around(x, decimals=0, out=None, **kwargs):
+    r"""
+    around(x, decimals=0, out=None)
+
+    Evenly round to the given number of decimals.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input data.
+    decimals : int, optional
+        Number of decimal places to round to (default: 0).  If
+        decimals is negative, it specifies the number of positions to
+        the left of the decimal point.
+    out : _Symbol, optional
+        Alternative output array in which to place the result. It must have
+        the same shape and type as the expected output.
+
+    Returns
+    -------
+    rounded_array : _Symbol or scalar
+        An array of the same type as `x`, containing the rounded values.
+        A reference to the result is returned.
+
+    Notes
+    -----
+    For values exactly halfway between rounded decimal values, NumPy
+    rounds to the nearest even value. Thus 1.5 and 2.5 round to 2.0,
+    -0.5 and 0.5 round to 0.0, etc.
+
+    This function differs from the original numpy.prod in the following aspects:
+
+        - Cannot cast type automatically. Dtype of `out` must be same as the expected one.
+        - Cannot support complex-valued number.
+    """
+    if isinstance(x, numeric_types):
+        return _np.around(x, decimals, **kwargs)
+    elif isinstance(x, _Symbol):
+        return _npi.around(x, decimals, out=out, **kwargs)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x))))
+
+
+@set_module('mxnet.symbol.numpy')
+def arctan2(x1, x2, out=None):
+    r"""
+    arctan2(x1, x2, out=None)
+
+    Element-wise arc tangent of ``x1/x2`` choosing the quadrant correctly.
+
+    The quadrant (i.e., branch) is chosen so that ``arctan2(x1, x2)`` is
+    the signed angle in radians between the ray ending at the origin and
+    passing through the point (1,0), and the ray ending at the origin and
+    passing through the point (`x2`, `x1`).  (Note the role reversal: the
+    "`y`-coordinate" is the first function parameter, the "`x`-coordinate"
+    is the second.)  By IEEE convention, this function is defined for
+    `x2` = +/-0 and for either or both of `x1` and `x2` = +/-inf (see
+    Notes for specific values).
+
+    This function is not defined for complex-valued arguments; for the
+    so-called argument of complex values, use `angle`.
+
+    Parameters
+    ----------
+    x1 : _Symbol or scalar
+        `y`-coordinates.
+    x2 : _Symbol or scalar
+        `x`-coordinates. `x2` must be broadcastable to match the shape of
+        `x1` or vice versa.
+    out : _Symbol or None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : _Symbol or scalar
+        Array of angles in radians, in the range ``[-pi, pi]``. This is a scalar if
+        `x1` and `x2` are scalars.
+
+    Notes
+    -----
+    *arctan2* is identical to the `atan2` function of the underlying
+    C library.  The following special values are defined in the C
+    standard: [1]_
+
+    ====== ====== ================
+    `x1`   `x2`   `arctan2(x1,x2)`
+    ====== ====== ================
+    +/- 0  +0     +/- 0
+    +/- 0  -0     +/- pi
+        > 0   +/-inf +0 / +pi
+        < 0   +/-inf -0 / -pi
+    +/-inf +inf   +/- (pi/4)
+    +/-inf -inf   +/- (3*pi/4)
+    ====== ====== ================
+
+    Note that +0 and -0 are distinct floating point numbers, as are +inf
+    and -inf.
+
+    This function differs from the original numpy.arange in the following aspects:
+        - Only support float16, float32 and float64.
+
+    References
+    ----------
+    .. [1] ISO/IEC standard 9899:1999, "Programming language C."
+    """
+    return _ufunc_helper(x1, x2, _npi.arctan2, _np.arctan2,
+                         _npi.arctan2_scalar, _npi.rarctan2_scalar, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def hypot(x1, x2, out=None):
+    r"""
+    Given the "legs" of a right triangle, return its hypotenuse.
+
+    Equivalent to ``sqrt(x1**2 + x2**2)``, element-wise.  If `x1` or
+    `x2` is scalar_like (i.e., unambiguously cast-able to a scalar type),
+    it is broadcast for use with each element of the other argument.
+
+    Parameters
+    ----------
+    x1, x2 : array_like
+        Leg of the triangle(s).
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned. A tuple (possible only as a
+        keyword argument) must have length equal to the number of outputs.
+
+    Returns
+    -------
+    z : ndarray
+        The hypotenuse of the triangle(s).
+        This is a scalar if both `x1` and `x2` are scalars.
+
+    Notes
+    -----
+    This function differs from the original numpy.arange in the following aspects:
+        - Only support float16, float32 and float64.
+    """
+    return _ufunc_helper(x1, x2, _npi.hypot, _np.hypot, _npi.hypot_scalar, None, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def unique(ar, return_index=False, return_inverse=False, return_counts=False, axis=None):
+    """
+    Find the unique elements of an array.
+
+    Returns the sorted unique elements of an array. There are three optional
+    outputs in addition to the unique elements:
+
+    * the indices of the input array that give the unique values
+    * the indices of the unique array that reconstruct the input array
+    * the number of times each unique value comes up in the input array
+
+    Parameters
+    ----------
+    ar : _Symbol
+        Input array. Unless `axis` is specified, this will be flattened if it
+        is not already 1-D.
+    return_index : bool, optional
+        If True, also return the indices of `ar` (along the specified axis,
+        if provided, or in the flattened array) that result in the unique array.
+    return_inverse : bool, optional
+        If True, also return the indices of the unique array (for the specified
+        axis, if provided) that can be used to reconstruct `ar`.
+    return_counts : bool, optional
+        If True, also return the number of times each unique item appears
+        in `ar`.
+    axis : int or None, optional
+        The axis to operate on. If None, `ar` will be flattened. If an integer,
+        the subarrays indexed by the given axis will be flattened and treated
+        as the elements of a 1-D array with the dimension of the given axis,
+        see the notes for more details. The default is None.
+
+    Returns
+    -------
+    unique : _Symbol
+        The sorted unique values.
+    unique_indices : _Symbol, optional
+        The indices of the first occurrences of the unique values in the
+        original array. Only provided if `return_index` is True.
+    unique_inverse : _Symbol, optional
+        The indices to reconstruct the original array from the
+        unique array. Only provided if `return_inverse` is True.
+    unique_counts : _Symbol, optional
+        The number of times each of the unique values comes up in the
+        original array. Only provided if `return_counts` is True.
+
+    Notes
+    -----
+    When an axis is specified the subarrays indexed by the axis are sorted.
+    This is done by making the specified axis the first dimension of the array
+    and then flattening the subarrays in C order. The flattened subarrays are
+    then viewed as a structured type with each element given a label, with the
+    effect that we end up with a 1-D array of structured types that can be
+    treated in the same way as any other 1-D array. The result is that the
+    flattened subarrays are sorted in lexicographic order starting with the
+    first element.
+    """
+    return _npi.unique(ar, return_index, return_inverse, return_counts, axis)
+
+
+@set_module('mxnet.symbol.numpy')
+def ldexp(x1, x2, out=None):
+    """
+    Returns x1 * 2**x2, element-wise.
+    The mantissas `x1` and twos exponents `x2` are used to construct
+    floating point numbers ``x1 * 2**x2``.
+
+    Parameters
+    ----------
+    x1 : _Symbol
+        Array of multipliers.
+    x2 : _Symbol
+        Array of twos exponents.
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    y : _Symbol
+        The result of ``x1 * 2**x2``.
+
+    Notes
+    -----
+    Complex dtypes are not supported, they will raise a TypeError.
+    Different from numpy, we allow x2 to be float besides int.
+    `ldexp` is useful as the inverse of `frexp`, if used by itself it is
+    more clear to simply use the expression ``x1 * 2**x2``.
+    """
+    return _ufunc_helper(x1, x2, _npi.ldexp, _np.ldexp, _npi.ldexp_scalar, _npi.rldexp_scalar, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def inner(a, b):
+    r"""Inner product of two arrays.
+    Ordinary inner product of vectors for 1-D arrays (without complex
+    conjugation), in higher dimensions a sum product over the last axes.
+
+    Parameters
+    ----------
+    a, b : _Symbol
+        If `a` and `b` are nonscalar, their last dimensions must match.
+
+    Returns
+    -------
+    out : _Symbol
+        `out.shape = a.shape[:-1] + b.shape[:-1]`
+
+    Raises
+    ------
+    ValueError
+        If the last dimension of `a` and `b` has different size.
+
+    See Also
+    --------
+    tensordot : Sum products over arbitrary axes.
+    dot : Generalised matrix product, using second last dimension of `b`.
+    einsum : Einstein summation convention.
+
+    Notes
+    -----
+    For vectors (1-D arrays) it computes the ordinary inner-product::
+        np.inner(a, b) = sum(a[:]*b[:])
+    More generally, if `ndim(a) = r > 0` and `ndim(b) = s > 0`::
+        np.inner(a, b) = np.tensordot(a, b, axes=(-1,-1))
+    or explicitly::
+        np.inner(a, b)[i0,...,ir-1,j0,...,js-1]
+            = sum(a[i0,...,ir-1,:]*b[j0,...,js-1,:])
+    In addition `a` or `b` may be scalars, in which case::
+    np.inner(a,b) = a*b
+
+    Examples
+    --------
+    Ordinary inner product for vectors:
+    >>> a = np.array([1,2,3])
+    >>> b = np.array([0,1,0])
+    >>> np.inner(a, b)
+    2
+    A multidimensional example:
+    >>> a = np.arange(24).reshape((2,3,4))
+    >>> b = np.arange(4)
+    >>> np.inner(a, b)
+    array([[ 14,  38,  62],
+           [ 86, 110, 134]])
+    """
+    return tensordot(a, b, [-1, -1])
+
+
+@set_module('mxnet.symbol.numpy')
+def outer(a, b):
+    r"""Compute the outer product of two vectors.
+    Given two vectors, ``a = [a0, a1, ..., aM]`` and
+    ``b = [b0, b1, ..., bN]``,
+    the outer product [1]_ is::
+    [[a0*b0  a0*b1 ... a0*bN ]
+    [a1*b0    .
+    [ ...          .
+    [aM*b0            aM*bN ]]
+
+    Parameters
+    ----------
+    a : (M,) ndarray
+        First input vector.  Input is flattened if
+        not already 1-dimensional.
+    b : (N,) ndarray
+        Second input vector.  Input is flattened if
+        not already 1-dimensional.
+
+    Returns
+    -------
+    out : (M, N) ndarray
+        ``out[i, j] = a[i] * b[j]``
+
+    See also
+    --------
+    inner
+    einsum : ``einsum('i,j->ij', a.ravel(), b.ravel())`` is the equivalent.
+    ufunc.outer : A generalization to N dimensions and other operations.
+                ``np.multiply.outer(a.ravel(), b.ravel())`` is the equivalent.
+
+    References
+    ----------
+    .. [1] : G. H. Golub and C. F. Van Loan, *Matrix Computations*, 3rd
+            ed., Baltimore, MD, Johns Hopkins University Press, 1996,
+            pg. 8.
+
+    Examples
+    --------
+    Make a (*very* coarse) grid for computing a Mandelbrot set:
+    >>> rl = np.outer(np.ones((5,)), np.linspace(-2, 2, 5))
+    >>> rl
+    array([[-2., -1.,  0.,  1.,  2.],
+        [-2., -1.,  0.,  1.,  2.],
+        [-2., -1.,  0.,  1.,  2.],
+        [-2., -1.,  0.,  1.,  2.],
+        [-2., -1.,  0.,  1.,  2.]])
+    """
+    return tensordot(a.flatten(), b.flatten(), 0)
+
+
+@set_module('mxnet.symbol.numpy')
+def vdot(a, b):
+    r"""
+    Return the dot product of two vectors.
+    Note that `vdot` handles multidimensional arrays differently than `dot`:
+    it does *not* perform a matrix product, but flattens input arguments
+    to 1-D vectors first. Consequently, it should only be used for vectors.
+
+    Parameters
+    ----------
+    a : _Symbol
+        First argument to the dot product.
+    b : _Symbol
+        Second argument to the dot product.
+
+    Returns
+    -------
+    output : _Symbol
+        Dot product of `a` and `b`.
+
+    See Also
+    --------
+    dot : Return the dot product without using the complex conjugate of the
+        first argument.
+
+    Examples
+    --------
+    Note that higher-dimensional arrays are flattened!
+    >>> a = np.array([[1, 4], [5, 6]])
+    >>> b = np.array([[4, 1], [2, 2]])
+    >>> np.vdot(a, b)
+    30
+    >>> np.vdot(b, a)
+    30
+    >>> 1*4 + 4*1 + 5*2 + 6*2
+    30
+    """
+    return tensordot(a.flatten(), b.flatten(), 1)
+
+
+@set_module('mxnet.symbol.numpy')
+def equal(x1, x2, out=None):
+    """
+    Return (x1 == x2) element-wise.
+    Parameters
+    ----------
+    x1, x2 : _Symbol or scalars
+        Input arrays. If ``x1.shape != x2.shape``, they must be broadcastable to
+        a common shape (which becomes the shape of the output).
+    out : Dummy parameter, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+    Returns
+    -------
+    out : _Symbol or scalar
+        Output array of type bool, element-wise comparison of `x1` and `x2`.
+        This is a scalar if both `x1` and `x2` are scalars.
+    See Also
+    --------
+    not_equal, greater_equal, less_equal, greater, less
+    Examples
+    --------
+    >>> np.equal(np.ones(2, 1)), np.zeros(1, 3))
+    array([[False, False, False],
+           [False, False, False]])
+    >>> np.equal(1, np.ones(1))
+    array([ True])
+    """
+    return _ufunc_helper(x1, x2, _npi.equal, _np.equal, _npi.equal_scalar, None, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def not_equal(x1, x2, out=None):
+    """
+    Return (x1 != x2) element-wise.
+    Parameters
+    ----------
+    x1, x2 : _Symbol or scalars
+        Input arrays. If ``x1.shape != x2.shape``, they must be broadcastable to
+        a common shape (which becomes the shape of the output).
+    out : Dummy parameter, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+    Returns
+    -------
+    out : _Symbol or scalar
+        Output array of type bool, element-wise comparison of `x1` and `x2`.
+        This is a scalar if both `x1` and `x2` are scalars.
+    See Also
+    --------
+    equal, greater, greater_equal, less, less_equal
+    Examples
+    --------
+    >>> np.not_equal(np.ones(2, 1)), np.zeros(1, 3))
+    array([[ True,  True,  True],
+           [ True,  True,  True]])
+    >>> np.not_equal(1, np.ones(1))
+    array([False])
+    """
+    return _ufunc_helper(x1, x2, _npi.not_equal, _np.not_equal, _npi.not_equal_scalar, None, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def greater(x1, x2, out=None):
+    """
+    Return the truth value of (x1 > x2) element-wise.
+    Parameters
+    ----------
+    x1, x2 : _Symbol or scalars
+        Input arrays. If ``x1.shape != x2.shape``, they must be broadcastable to
+        a common shape (which becomes the shape of the output).
+    out : Dummy parameter, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+    Returns
+    -------
+    out : _Symbol or scalar
+        Output array of type bool, element-wise comparison of `x1` and `x2`.
+        This is a scalar if both `x1` and `x2` are scalars.
+    See Also
+    --------
+    equal, greater, greater_equal, less, less_equal
+    Examples
+    --------
+    >>> np.greater(np.ones(2, 1)), np.zeros(1, 3))
+    array([[ True,  True,  True],
+           [ True,  True,  True]])
+    >>> np.greater(1, np.ones(1))
+    array([False])
+    """
+    return _ufunc_helper(x1, x2, _npi.greater, _np.greater, _npi.greater_scalar,
+                         _npi.less_scalar, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def less(x1, x2, out=None):
+    """
+    Return the truth value of (x1 < x2) element-wise.
+    Parameters
+    ----------
+    x1, x2 : _Symbol or scalars
+        Input arrays. If ``x1.shape != x2.shape``, they must be broadcastable to
+        a common shape (which becomes the shape of the output).
+    out : Dummy parameter, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+    Returns
+    -------
+    out : _Symbol or scalar
+        Output array of type bool, element-wise comparison of `x1` and `x2`.
+        This is a scalar if both `x1` and `x2` are scalars.
+    See Also
+    --------
+    equal, greater, greater_equal, less, less_equal
+    Examples
+    --------
+    >>> np.less(np.ones(2, 1)), np.zeros(1, 3))
+    array([[ True,  True,  True],
+           [ True,  True,  True]])
+    >>> np.less(1, np.ones(1))
+    array([False])
+    """
+    return _ufunc_helper(x1, x2, _npi.less, _np.less, _npi.less_scalar, _npi.greater_scalar, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def greater_equal(x1, x2, out=None):
+    """
+    Return the truth value of (x1 >= x2) element-wise.
+    Parameters
+    ----------
+    x1, x2 : _Symbol or scalars
+        Input arrays. If ``x1.shape != x2.shape``, they must be broadcastable to
+        a common shape (which becomes the shape of the output).
+    out : Dummy parameter, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+    Returns
+    -------
+    out : _Symbol or scalar
+        Output array of type bool, element-wise comparison of `x1` and `x2`.
+        This is a scalar if both `x1` and `x2` are scalars.
+    See Also
+    --------
+    equal, greater, greater_equal, less, less_equal
+    Examples
+    --------
+    >>> np.greater_equal(np.ones(2, 1)), np.zeros(1, 3))
+    array([[ True,  True,  True],
+           [ True,  True,  True]])
+    >>> np.greater_equal(1, np.ones(1))
+    array([True])
+    """
+    return _ufunc_helper(x1, x2, _npi.greater_equal, _np.greater_equal, _npi.greater_equal_scalar,
+                         _npi.less_equal_scalar, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def less_equal(x1, x2, out=None):
+    """
+    Return the truth value of (x1 <= x2) element-wise.
+    Parameters
+    ----------
+    x1, x2 : _Symbol or scalars
+        Input arrays. If ``x1.shape != x2.shape``, they must be broadcastable to
+        a common shape (which becomes the shape of the output).
+    out : Dummy parameter, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+    Returns
+    -------
+    out : _Symbol or scalar
+        Output array of type bool, element-wise comparison of `x1` and `x2`.
+        This is a scalar if both `x1` and `x2` are scalars.
+    See Also
+    --------
+    equal, greater, greater_equal, less, less_equal
+    Examples
+    --------
+    >>> np.less_equal(np.ones(2, 1)), np.zeros(1, 3))
+    array([[False, False, False],
+           [False, False, False]])
+    >>> np.less_equal(1, np.ones(1))
+    array([True])
+    """
+    return _ufunc_helper(x1, x2, _npi.less_equal, _np.less_equal, _npi.less_equal_scalar,
+                         _npi.greater_equal_scalar, out)
 
 
 _set_np_symbol_class(_Symbol)

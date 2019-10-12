@@ -32,7 +32,7 @@
 #include <vector>
 #include "../common.h"
 #include "../../tensor/matrix_op-inl.h"
-#include "../subgraph_property.h"
+#include "mkldnn_subgraph_base-inl.h"
 #include "mkldnn_fc-inl.h"
 
 namespace mxnet {
@@ -58,8 +58,8 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
       disable_fc_eltwise_(dis_fc_eltwise),
       quantized_(quantized) {}
 
-  bool Select(const nnvm::Node &n) override {
-    if (n.op() == Op::Get("FullyConnected")) {
+  bool Select(const nnvm::Node &n, const std::shared_ptr<NodeAttr>& node_attr) override {
+    if (n.op() == Op::Get("FullyConnected") && SupportMKLDNNAttr(node_attr)) {
       status_ = disable_fc_eltwise_ ? kSuccess : kStart;
       matched_list_.clear();
       matched_list_.push_back(&n);
@@ -150,7 +150,7 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
   void Reset() override {
     CHECK_GE(matched_list_.size(), 1);
     auto new_selector = SgMKLDNNFCSelector(disable_fc_eltwise_, quantized_);
-    new_selector.Select(*matched_list_[0]);
+    new_selector.Select(*matched_list_[0], nullptr);
     *this = new_selector;
   }
 };

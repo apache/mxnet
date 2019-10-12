@@ -28,6 +28,7 @@ from .profiler_utils import cpp_profile,python_profile
 
 
 def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
+    mx.random.seed(41)
     kwargs_list = []
     args_list = []
 
@@ -50,7 +51,7 @@ def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
     return args_list, kwargs_list
 
 
-def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, kwargs_list, profiler):
+def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, args_list, kwargs_list, profiler):
     if profiler == 'native':
         if run_backward:
             benchmark_helper_func = cpp_profile(nd_forward_backward_and_profile)

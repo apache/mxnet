@@ -41,9 +41,19 @@ exec(compile(open(libinfo_py, "rb").read(), libinfo_py, 'exec'), libinfo, libinf
 
 LIB_PATH = libinfo['find_lib_path']()
 __version__ = libinfo['__version__']
-if 'TRAVIS_TAG' not in os.environ or not os.environ['TRAVIS_TAG'].strip():
+
+# set by the CD pipeline
+is_release = os.environ.get("IS_RELEASE", "").strip()
+
+# set by the travis build pipeline
+travis_tag = os.environ.get("TRAVIS_TAG", "").strip()
+
+# nightly build tag
+if not travis_tag and not is_release:
     __version__ += 'b{0}'.format(datetime.today().strftime('%Y%m%d'))
-elif 'TRAVIS_TAG' in os.environ and os.environ['TRAVIS_TAG'].startswith('patch-'):
+
+# patch build tag
+elif travis_tag.startswith('patch-'):
     __version__ = os.environ['TRAVIS_TAG'].split('-')[1]
 
 class BinaryDistribution(Distribution):
@@ -52,8 +62,8 @@ class BinaryDistribution(Distribution):
 
 
 DEPENDENCIES = [
-    'numpy>1.16.0,<2.0.0',
-    'requests>=2.20.0',
+    'numpy<2.0.0,>1.16.0',
+    'requests>=2.20.0,<3',
     'graphviz<0.9.0,>=0.8.1'
 ]
 

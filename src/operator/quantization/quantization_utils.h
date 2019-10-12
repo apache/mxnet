@@ -32,8 +32,8 @@
 namespace mxnet {
 namespace op {
 
-static const size_t kUint8Range = 255;
-static const size_t kInt8Range = 127;
+static const float kUint8Range = 255.5;
+static const float kInt8Range = 127.5;
 static const size_t kInt32Range = 0x7fffffff;
 
 template<typename T>

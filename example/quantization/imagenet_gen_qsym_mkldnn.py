@@ -114,11 +114,11 @@ if __name__ == '__main__':
                         help='shuffle the calibration dataset')
     parser.add_argument('--shuffle-chunk-seed', type=int, default=3982304,
                         help='shuffling chunk seed, see'
-                             ' https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=imager#mxnet.io.ImageRecordIter'
+                             ' https://mxnet.apache.org/api/python/io/io.html?highlight=imager#mxnet.io.ImageRecordIter'
                              ' for more details')
     parser.add_argument('--shuffle-seed', type=int, default=48564309,
                         help='shuffling seed, see'
-                             ' https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=imager#mxnet.io.ImageRecordIter'
+                             ' https://mxnet.apache.org/api/python/io/io.html?highlight=imager#mxnet.io.ImageRecordIter'
                              ' for more details')
     parser.add_argument('--calib-mode', type=str, default='entropy',
                         help='calibration mode used for generating calibration table for the quantized symbol; supports'
@@ -193,7 +193,6 @@ if __name__ == '__main__':
     # get image shape
     image_shape = args.image_shape
 
-    calib_layer = lambda name: name.endswith('_output') or name == "data"
     exclude_first_conv = args.exclude_first_conv
     if args.quantized_dtype == "uint8":
         logger.info('quantized dtype is set to uint8, will exclude first conv.')
@@ -203,7 +202,8 @@ if __name__ == '__main__':
         if args.model == 'imagenet1k-resnet-152':
             rgb_mean = '0,0,0'
             rgb_std = '1,1,1'
-            excluded_sym_names += ['flatten0']
+            # stage1_unit1_bn1 & stage4_unit1_bn1 is excluded for the sake of accuracy
+            excluded_sym_names += ['flatten0', 'stage1_unit1_bn1', 'stage4_unit1_bn1']
             if exclude_first_conv:
                 excluded_sym_names += ['conv0']
         elif args.model == 'imagenet1k-inception-bn':
@@ -216,7 +216,8 @@ if __name__ == '__main__':
             if exclude_first_conv:
                 excluded_sym_names += ['resnetv10_conv0_fwd']
         elif args.model.find('resnet') != -1 and args.model.find('v2') != -1:
-            excluded_sym_names += ['resnetv20_flatten0_flatten0']
+            # resnetv20_stage1_batchnorm0_fwd is excluded for the sake of accuracy
+            excluded_sym_names += ['resnetv20_flatten0_flatten0', 'resnetv20_stage1_batchnorm0_fwd']
             if exclude_first_conv:
                 excluded_sym_names += ['resnetv20_conv0_fwd']
         elif args.model.find('vgg') != -1:
@@ -294,7 +295,7 @@ if __name__ == '__main__':
                                                               ctx=ctx, excluded_sym_names=excluded_sym_names,
                                                               calib_mode=calib_mode, calib_data=data,
                                                               num_calib_examples=num_calib_batches * batch_size,
-                                                              calib_layer=calib_layer, quantized_dtype=args.quantized_dtype,
+                                                              quantized_dtype=args.quantized_dtype,
                                                               label_names=(label_name,), logger=logger)
         if calib_mode == 'entropy':
             suffix = '-quantized-%dbatches-entropy' % num_calib_batches

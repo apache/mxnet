@@ -18,6 +18,7 @@
 import numpy as np
 import mxnet as mx
 import argparse
+from mxnet.contrib.amp import amp
 
 parser = argparse.ArgumentParser(description="Train RNN on Sherlock Holmes",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -67,6 +68,10 @@ parser.add_argument('--dropout', type=float, default='0.0',
                     help='dropout probability (1.0 - keep probability)')
 parser.add_argument('--rnntype', type=str, default='lstm',
                     help='rnn type: gru, lstm, rnn_tanh and rnn_relu are supported')
+parser.add_argument('--dtype', type=str, default='float32',
+                    help='if float16 is provided AMP convert model'
+                         'is used to convert model to mixed precision model'
+                         'before running inference')
 
 #buckets = [32]
 buckets = [10, 20, 30, 40, 50, 60]
@@ -234,12 +239,20 @@ def test(args):
         context             = contexts)
     model.bind(data_val.provide_data, data_val.provide_label, for_training=False)
 
-    # note here we load using SequentialRNNCell instead of FusedRNNCell.
     _, arg_params, aux_params = mx.rnn.load_rnn_checkpoint(stack, args.model_prefix, args.load_epoch)
     model.set_params(arg_params, aux_params)
 
-    model.score(data_val, mx.metric.Perplexity(invalid_label),
-                batch_end_callback=mx.callback.Speedometer(args.batch_size, 5))
+    if args.dtype == "float32":
+        model.set_params(arg_params, aux_params)
+        model.score(data_val, mx.metric.Perplexity(invalid_label),
+                    batch_end_callback=mx.callback.Speedometer(args.batch_size, 5))
+    else:
+        assert args.dtype == "float16", "Only float32 and float16 are supported currently"
+        model = amp.convert_bucketing_module(model, target_dtype="float16")
+        model.bind(data_val.provide_data, data_val.provide_label,
+                   for_training=False)
+        model.score(data_val, mx.metric.Perplexity(invalid_label),
+                    batch_end_callback=mx.callback.Speedometer(args.batch_size, 5))
 
 if __name__ == '__main__':
     import logging
