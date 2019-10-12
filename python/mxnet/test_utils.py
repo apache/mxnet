@@ -2242,3 +2242,19 @@ def has_tvm_ops():
             return False
         return built_with_tvm_op and (int("".join(tvm.nd.gpu(0).compute_version.split('.'))) >= 53)
     return built_with_tvm_op
+
+
+def is_op_runnable():
+    """Returns True for all CPU tests. Returns True for GPU tests that are either of the following.
+    1. Built with USE_TVM_OP=0.
+    2. Built with USE_TVM_OP=1, but with compute capability >= 53."""
+    if current_context().device_type == 'gpu':
+        if not _features.is_enabled("TVM_OP"):
+            return True
+        else:
+            try:
+                import tvm
+            except ImportError:
+                return True
+            return int("".join(tvm.nd.gpu(0).compute_version.split('.'))) >= 53
+    return True
