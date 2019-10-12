@@ -216,7 +216,7 @@ void MKLDNNFCForwardFullFeature(const MKLDNNFCFullParam &full_param,
   auto out_mem = CreateMKLDNNMem(out_data[fullc::kOut],
                                  fwd->fwd_pd.dst_desc(), req[fullc::kOut], &data);
 
-  std::unordered_map<int, mkldnn::memory> args = {
+  mkldnn_args_map_t args = {
       {MKLDNN_ARG_SRC, *data_mem},
       {MKLDNN_ARG_WEIGHTS, *weight_mem},
       {MKLDNN_ARG_DST, *out_mem.second},
@@ -224,7 +224,7 @@ void MKLDNNFCForwardFullFeature(const MKLDNNFCFullParam &full_param,
   if (!full_param.default_param.no_bias) {
     auto bias_mem = in_data[fullc::kBias].GetMKLDNNDataReorder(
         fwd->fwd_pd.bias_desc());
-    args.insert({ MKLDNN_ARG_BIAS, *bias_mem});
+    args[MKLDNN_ARG_BIAS] = *bias_mem;
   }
   MKLDNNStream::Get()->RegisterPrimArgs(fwd->GetFwd(), args);
   CommitOutput(out_data[fullc::kOut], out_mem);
@@ -298,7 +298,7 @@ void MKLDNNFCBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     auto in_grad_mem = CreateMKLDNNMem(in_grad[fullc::kData],
                                        ipBwdData_pd.diff_src_desc(),
                                        req[fullc::kData]);
-    std::unordered_map<int, mkldnn::memory> args = {
+    mkldnn_args_map_t args = {
       {MKLDNN_ARG_DIFF_DST, *out_grad_mem},
       {MKLDNN_ARG_WEIGHTS, *weight_mem},
       {MKLDNN_ARG_DIFF_SRC, *in_grad_mem.second}
@@ -317,7 +317,7 @@ void MKLDNNFCBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     auto in_grad_weight = CreateMKLDNNWeightGrad(in_grad[fullc::kWeight],
                                                  ipBwdWeights_pd.diff_weights_desc(),
                                                  req[fullc::kWeight]);
-    std::unordered_map<int, mkldnn::memory> args = {
+    mkldnn_args_map_t args = {
       {MKLDNN_ARG_DIFF_DST, *out_grad_mem},
       {MKLDNN_ARG_SRC, *data_mem},
       {MKLDNN_ARG_DIFF_WEIGHTS, *in_grad_weight.second},
@@ -328,7 +328,7 @@ void MKLDNNFCBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
       in_grad_bias = CreateMKLDNNMem(in_grad[fullc::kBias],
                                      ipBwdWeights_pd.diff_bias_desc(),
                                      req[fullc::kBias]);
-      args.insert({MKLDNN_ARG_DIFF_BIAS, *in_grad_bias.second});
+      args[MKLDNN_ARG_DIFF_BIAS] = *in_grad_bias.second;
     }
     MKLDNNStream::Get()->RegisterPrimArgs(
         mkldnn::inner_product_backward_weights(ipBwdWeights_pd), args);
