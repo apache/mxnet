@@ -50,9 +50,6 @@ def _prepare_workloads():
     }
 
     # workloads for array function protocol
-    OpArgMngr.add_workload('vstack', (array_pool['4x1'], np.random.uniform(size=(5, 1))))
-    OpArgMngr.add_workload('vstack', array_pool['4x1'])
-    OpArgMngr.add_workload('vstack', array_pool['1x1x0'])
     OpArgMngr.add_workload('argmax', array_pool['4x1'])
     OpArgMngr.add_workload('broadcast_arrays', array_pool['4x1'], array_pool['1x2'])
     OpArgMngr.add_workload('broadcast_to', array_pool['4x1'], (4, 2))
@@ -84,9 +81,15 @@ def _prepare_workloads():
     OpArgMngr.add_workload('tile', np.array([[[]]]), (3, 2, 5))
     OpArgMngr.add_workload('transpose', array_pool['4x1'])
     OpArgMngr.add_workload('var', array_pool['4x1'])
+    OpArgMngr.add_workload('vdot', np.random.normal(size=(2, 4)), np.random.normal(size=(4, 2)))
+    OpArgMngr.add_workload('vdot', np.random.normal(size=(2, 4)).astype(np.float64), np.random.normal(size=(2, 4)).astype(np.float64))
+    OpArgMngr.add_workload('vstack', (array_pool['4x1'], np.random.uniform(size=(5, 1))))
+    OpArgMngr.add_workload('vstack', array_pool['4x1'])
+    OpArgMngr.add_workload('vstack', array_pool['1x1x0'])
     OpArgMngr.add_workload('zeros_like', array_pool['4x1'])
     OpArgMngr.add_workload('zeros_like', np.random.uniform(size=(3, 3)).astype(np.float64))
     OpArgMngr.add_workload('zeros_like', np.random.uniform(size=(3, 3)).astype(np.float32))
+    OpArgMngr.add_workload('zeros_like', np.random.randint(2, size = (3, 3)))
 
     # workloads for array ufunc protocol
     OpArgMngr.add_workload('add', array_pool['4x1'], array_pool['1x2'])

@@ -83,7 +83,6 @@ def with_array_ufunc_protocol(func):
 
 
 _NUMPY_ARRAY_FUNCTION_LIST = [
-    'vstack',
     'argmax',
     'broadcast_arrays',
     'broadcast_to',
@@ -111,6 +110,8 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'tile',
     'transpose',
     'var',
+    'vdot',
+    'vstack',
     'zeros_like',
 ]
 
