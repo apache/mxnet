@@ -68,15 +68,15 @@
 namespace mxnet {
 namespace op {
 
-const int MAXCHAR = 128;
+const int MAXCHAR_RENAME = 128;
 
-typedef std::vector<std::bitset<MAXCHAR> > SetVector;
+typedef std::vector<std::bitset<MAXCHAR_RENAME> > SetVector;
 
 struct Contraction {
-  std::bitset<MAXCHAR> new_result;
-  std::vector<std::bitset<MAXCHAR> > remaining;
-  std::bitset<MAXCHAR> idx_removed;
-  std::bitset<MAXCHAR> idx_contract;
+  std::bitset<MAXCHAR_RENAME> new_result;
+  std::vector<std::bitset<MAXCHAR_RENAME> > remaining;
+  std::bitset<MAXCHAR_RENAME> idx_removed;
+  std::bitset<MAXCHAR_RENAME> idx_contract;
 };
 
 struct Alternative {
@@ -87,7 +87,7 @@ struct Alternative {
 
 struct Step {
   std::vector<int> contract_inds;
-  std::bitset<MAXCHAR> idx_removed;
+  std::bitset<MAXCHAR_RENAME> idx_removed;
   std::string einsum_str, blas2einsum_str, einsum2blas_str;
   std::vector<std::string> input_list;
   bool do_blas, do_einsum;
@@ -104,10 +104,10 @@ inline size_t _compute_size_by_dict(const std::string& indices,
   return ret;
 }
 
-inline size_t _compute_size_by_dict(const std::bitset<MAXCHAR>& indices,
+inline size_t _compute_size_by_dict(const std::bitset<MAXCHAR_RENAME>& indices,
                              const dim_t idx_dict[]) {
   size_t ret = 1;
-  for (int i = 0; i < MAXCHAR; ++i) {
+  for (int i = 0; i < MAXCHAR_RENAME; ++i) {
     if (indices[i]) {
       ret *= idx_dict[i];
     }
@@ -127,7 +127,7 @@ inline int _flop_count(const std::string& idx_contraction,
   return overall_size * op_factor;
 }
 
-inline int _flop_count(const std::bitset<MAXCHAR>& idx_contraction,
+inline int _flop_count(const std::bitset<MAXCHAR_RENAME>& idx_contraction,
                    bool inner,
                    int num_terms,
                    const dim_t size_dictionary[]) {
@@ -141,9 +141,9 @@ inline int _flop_count(const std::bitset<MAXCHAR>& idx_contraction,
 
 inline Contraction _find_contraction(const std::vector<int>& positions,
                               const SetVector& input_sets,
-                              const std::bitset<MAXCHAR>& output_set) {
+                              const std::bitset<MAXCHAR_RENAME>& output_set) {
   Contraction ret;
-  std::bitset<MAXCHAR> idx_remain(output_set);
+  std::bitset<MAXCHAR_RENAME> idx_remain(output_set);
   size_t size = input_sets.size();
   for (size_t i = 0; i < size; ++i) {
     if (std::find(positions.begin(), positions.end(), i) != positions.end()) {
@@ -162,7 +162,7 @@ inline Contraction _find_contraction(const std::vector<int>& positions,
 
 inline int _parse_possible_contraction(const std::vector<int>& positions,
                                 const SetVector& input_sets,
-                                const std::bitset<MAXCHAR>& output_set,
+                                const std::bitset<MAXCHAR_RENAME>& output_set,
                                 const dim_t idx_dict[],
                                 int memory_limit,
                                 int path_cost,
@@ -231,7 +231,7 @@ inline void _update_other_results(std::vector<Alternative>* results,
 }
 
 inline std::vector<std::vector<int> > _greedy_path(const SetVector* input_sets,
-                                            const std::bitset<MAXCHAR>& output_set,
+                                            const std::bitset<MAXCHAR_RENAME>& output_set,
                                             const dim_t idx_dict[],
                                             int memory_limit) {
   size_t isize = input_sets->size();
@@ -366,8 +366,8 @@ inline std::vector<std::vector<int> > _greedy_path(const SetVector* input_sets,
 }
 
 inline bool _can_dot(const std::vector<std::string>& inputs,
-              const std::bitset<MAXCHAR>& result,
-              const std::bitset<MAXCHAR>& idx_removed) {
+              const std::bitset<MAXCHAR_RENAME>& result,
+              const std::bitset<MAXCHAR_RENAME>& idx_removed) {
   // All `dot` calls remove indices
   if (!idx_removed.any()) {
     return false;
@@ -404,16 +404,16 @@ inline bool _can_dot(const std::vector<std::string>& inputs,
   }
 
   // Build a few temporaries
-  std::bitset<MAXCHAR> set_left;
-  std::bitset<MAXCHAR> set_right;
+  std::bitset<MAXCHAR_RENAME> set_left;
+  std::bitset<MAXCHAR_RENAME> set_right;
   for (const char& c : input_left) {
     set_left.set(c);
   }
   for (const char& c : input_right) {
     set_right.set(c);
   }
-  std::bitset<MAXCHAR> keep_left = set_left & ~idx_removed;
-  std::bitset<MAXCHAR> keep_right = set_right & ~idx_removed;
+  std::bitset<MAXCHAR_RENAME> keep_left = set_left & ~idx_removed;
+  std::bitset<MAXCHAR_RENAME> keep_right = set_right & ~idx_removed;
   size_t rs = idx_removed.count();
 
   // At this point we are a DOT, GEMV, or GEMM operation
@@ -479,17 +479,17 @@ inline int _count_substring(const std::string& str,
   return count;
 }
 
-inline std::bitset<MAXCHAR> str2set(const std::string& str) {
-  std::bitset<MAXCHAR> ret;
+inline std::bitset<MAXCHAR_RENAME> str2set(const std::string& str) {
+  std::bitset<MAXCHAR_RENAME> ret;
   for (const char& c : str) {
     ret.set(static_cast<int>(c));
   }
   return ret;
 }
 
-inline std::string set2str(const std::bitset<MAXCHAR>& set) {
+inline std::string set2str(const std::bitset<MAXCHAR_RENAME>& set) {
   std::string ret;
-  for (int i = 0; i < MAXCHAR; ++i) {
+  for (int i = 0; i < MAXCHAR_RENAME; ++i) {
     if (set.test(i)) {
       ret.append(1, static_cast<char>(i));
     }
@@ -515,7 +515,7 @@ inline std::vector<std::string> _parse_einsum_input(
   const std::vector<TBlob>& operands) {
   const std::string einsum_symbols =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  std::bitset<MAXCHAR> einsum_symbols_set;
+  std::bitset<MAXCHAR_RENAME> einsum_symbols_set;
   for (const char& c : einsum_symbols) {
     einsum_symbols_set.set(c);
   }
@@ -556,7 +556,7 @@ inline std::vector<std::string> _parse_einsum_input(
                                                        c == '>';}),
                used.end());
 
-    std::bitset<MAXCHAR> used_set = str2set(used);
+    std::bitset<MAXCHAR_RENAME> used_set = str2set(used);
     std::string ellipse_inds = "";
     for (const char& c : einsum_symbols) {
       if (!used_set.test(static_cast<int>(c))) {
@@ -628,7 +628,7 @@ inline std::vector<std::string> _parse_einsum_input(
       subscripts += "->" + output_sub;
     } else {
       // Special care for outputless ellipses
-      std::bitset<MAXCHAR> out_ellipse_set = str2set(out_ellipse);
+      std::bitset<MAXCHAR_RENAME> out_ellipse_set = str2set(out_ellipse);
       std::string tmp_subscripts = subscripts, output_subscript = "";
       size_t len_tmp_subscripts = tmp_subscripts.length();
       std::sort(tmp_subscripts.begin(), tmp_subscripts.end());
@@ -677,7 +677,7 @@ inline std::vector<std::string> _parse_einsum_input(
   }
 
   // Make sure output subscripts are in the input
-  std::bitset<MAXCHAR> input_subscripts_set = str2set(ret[0]);
+  std::bitset<MAXCHAR_RENAME> input_subscripts_set = str2set(ret[0]);
   for (const char& c : ret[1]) {
     CHECK(input_subscripts_set.test(c))
       << "Output character " << c
@@ -713,12 +713,12 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
   for (int i = 0; i < static_cast<int>(isize); ++i) {
     input_sets.push_back(str2set(input_list[i]));
   }
-  std::bitset<MAXCHAR> output_set = str2set(parsed_subscripts[1]);
-  std::bitset<MAXCHAR> indices = str2set(parsed_subscripts[0]);
+  std::bitset<MAXCHAR_RENAME> output_set = str2set(parsed_subscripts[1]);
+  std::bitset<MAXCHAR_RENAME> indices = str2set(parsed_subscripts[0]);
   indices.set(',', false);
 
   // Get length of each unique dimension and ensure all dimensions are correct
-  dim_t dimension_dict[MAXCHAR];
+  dim_t dimension_dict[MAXCHAR_RENAME];
   SetVector broadcast_indices(isize);
   memset(dimension_dict, -1, sizeof(dimension_dict));
   for (size_t i = 0; i < isize; ++i) {
@@ -812,7 +812,7 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
     max_i = std::max(max_i, size_list.back());
     max_scale = std::max(max_scale, scale_list.back());
 
-    std::bitset<MAXCHAR> bcast;
+    std::bitset<MAXCHAR_RENAME> bcast;
     std::vector<std::string> tmp_inputs;
     for (const int& x : contract_inds) {
       tmp_inputs.push_back(input_list[x]);
@@ -821,7 +821,7 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
       broadcast_indices.erase(broadcast_indices.begin() + x);
     }
 
-    std::bitset<MAXCHAR> new_bcast_inds = bcast & ~contract.idx_removed;
+    std::bitset<MAXCHAR_RENAME> new_bcast_inds = bcast & ~contract.idx_removed;
 
     // If we're broadcasting, nix blas
     bool do_blas;
@@ -865,9 +865,9 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
 
       // Find indices to contract over
       std::vector<int> left_pos, right_pos;
-      left_pos.reserve(MAXCHAR);
-      right_pos.reserve(MAXCHAR);
-      size_t tmp[MAXCHAR] = {0};
+      left_pos.reserve(MAXCHAR_RENAME);
+      right_pos.reserve(MAXCHAR_RENAME);
+      size_t tmp[MAXCHAR_RENAME] = {0};
       size_t length_left_input = tmp_inputs[0].length();
       size_t length_right_input = tmp_inputs[1].length();
       for (size_t j = 0; j < length_right_input; ++j) {
