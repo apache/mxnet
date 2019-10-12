@@ -21,4 +21,4 @@ jmespath==0.9.3
 joblib==0.11
 python-dateutil==2.7.2
 s3transfer==0.1.13
-six==1.12.0
+six==1.11.0
