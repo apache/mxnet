@@ -510,6 +510,21 @@ def test_bulking():
         .format(fully_bulked_time - fastest_half_bulked_time, times_str)
 
 
+@with_seed()
+def test_hybridblock_mix_ctx_raise():
+    class FooHybrid(gluon.HybridBlock):
+        def hybrid_forward(self, F, a, b):
+            if isinstance(a, (list, tuple)):
+                a = sum(a)
+            if isinstance(b, (list, tuple)):
+                b = sum(b)
+            return a + b
+    foo_hybrid = FooHybrid()
+    foo_hybrid.hybridize()
+    assert_raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,), ctx=mx.gpu()),
+                                                 mx.nd.ones((10,), ctx=mx.cpu())))
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
