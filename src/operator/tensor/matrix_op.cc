@@ -1003,7 +1003,7 @@ Examples::
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_squeeze"})
-.add_argument("data", "NDArray-or-Symbol[]", "data to squeeze")
+.add_argument("data", "NDArray-or-Symbol", "data to squeeze")
 .add_arguments(SqueezeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_squeeze)
