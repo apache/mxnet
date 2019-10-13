@@ -787,6 +787,284 @@ void BipartiteMatchingBackward(const nnvm::NodeAttrs& attrs,
   });
 }
 
+
+inline bool BoxEncodeShape(const nnvm::NodeAttrs& attrs,
+                           mxnet::ShapeVector *in_attrs,
+                           mxnet::ShapeVector *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 6U);
+  CHECK_EQ(out_attrs->size(), 2U);
+  mxnet::TShape& sshape = (*in_attrs)[0];
+  mxnet::TShape& mshape = (*in_attrs)[1];
+  mxnet::TShape& ashape = (*in_attrs)[2];
+  mxnet::TShape& rshape = (*in_attrs)[3];
+
+  CHECK_EQ(sshape.ndim(), 2)
+    << "samples shape must have dim == 2, "
+    << sshape.ndim() << " provided";
+
+  CHECK_GE(mshape.ndim(), 2)
+    << "matches shape must have dim == 2, "
+    << mshape.ndim() << " provided";
+
+  CHECK_GE(ashape.ndim(), 3)
+    << "matches shape must have dim == 3, "
+    << ashape.ndim() << " provided";
+  int ldim = ashape[ashape.ndim() - 1];
+  CHECK_EQ(ldim, 4)
+    << "last dimension of anchors must be 4, "
+    << ldim << " provided";
+
+  CHECK_GE(rshape.ndim(), 3)
+    << "refs shape must have dim == 3, "
+    << ashape.ndim() << " provided";
+  ldim = rshape[rshape.ndim() - 1];
+  CHECK_EQ(ldim, 4)
+    << "last dimension of anchors must be 4, "
+    << ldim << " provided";
+
+  // asign input shape
+  SHAPE_ASSIGN_CHECK(*in_attrs, 4, mshadow::Shape1(4));
+  SHAPE_ASSIGN_CHECK(*in_attrs, 5, mshadow::Shape1(4));
+
+  // assign output shape
+  mxnet::TShape oshape = ashape;
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 1, oshape);
+  return shape_is_known(oshape);
+}
+
+struct box_encode {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, DType *out_targets, DType *out_masks,
+                                  const DType *samples, const DType *matches,
+                                  const DType *anchors, const DType *refs,
+                                  const DType *means, const DType *stds,
+                                  const int m, const int n) {
+    index_t j = i / n;
+    index_t match = matches[i];
+    // xmin: 0, ymin:1, xmax: 2, ymax: 3
+    // x:0, y:1, w:2, h:3
+    index_t ref_index = (j * m + match) * 4;
+    DType ref_xmin = refs[ref_index + 0];
+    DType ref_ymin = refs[ref_index + 1];
+    DType ref_width = refs[ref_index + 2] - ref_xmin;
+    DType ref_height = refs[ref_index + 3] - ref_ymin;
+    DType ref_x = ref_xmin + ref_width * 0.5;
+    DType ref_y = ref_ymin + ref_height * 0.5;
+    index_t a_index = i * 4;
+    DType a_xmin = anchors[a_index + 0];
+    DType a_ymin = anchors[a_index + 1];
+    DType a_width = anchors[a_index + 2] - a_xmin;
+    DType a_height = anchors[a_index + 3] - a_ymin;
+    DType a_x = a_xmin + a_width * 0.5;
+    DType a_y = a_ymin + a_height * 0.5;
+    DType valid = samples[i] > 0.5 ? 1.0 : 0.0;
+    out_masks[a_index + 0] = valid;
+    out_masks[a_index + 1] = valid;
+    out_masks[a_index + 2] = valid;
+    out_masks[a_index + 3] = valid;
+    out_targets[a_index + 0] = valid > static_cast<DType>(0.5) ?
+        ((ref_x - a_x) / a_width - static_cast<DType>(means[0])) /
+        static_cast<DType>(stds[0]) : static_cast<DType>(0.0);
+    out_targets[a_index + 1] = valid > static_cast<DType>(0.5) ?
+        ((ref_y - a_y) / a_height - static_cast<DType>(means[1])) /
+        static_cast<DType>(stds[1]) : static_cast<DType>(0.0);
+    out_targets[a_index + 2] = valid > static_cast<DType>(0.5) ?
+        (log(ref_width / a_width) - static_cast<DType>(means[2])) /
+        static_cast<DType>(stds[2]) : static_cast<DType>(0.0);
+    out_targets[a_index + 3] = valid > static_cast<DType>(0.5) ?
+        (log(ref_height / a_height) - static_cast<DType>(means[3])) /
+        static_cast<DType>(stds[3]) : static_cast<DType>(0.0);
+  }
+};
+
+template<typename xpu>
+void BoxEncodeForward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace mxnet_op;
+  CHECK_EQ(inputs.size(), 6U);
+  CHECK_EQ(outputs.size(), 2U);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  // samples, matches, anchors, refs, means, stds
+  mxnet::TShape anchor_shape = inputs[2].shape_;
+  int loop_size = anchor_shape.ProdShape(0, 2);
+  int b = anchor_shape[0];
+  int n = anchor_shape[1];
+  int m = inputs[3].shape_[1];
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    Tensor<xpu, 2, DType> samples = inputs[0]
+     .get_with_shape<xpu, 2, DType>(Shape2(b, n), s);
+    Tensor<xpu, 2, DType> matches = inputs[1]
+     .get_with_shape<xpu, 2, DType>(Shape2(b, n), s);
+    Tensor<xpu, 3, DType> anchors = inputs[2]
+     .get_with_shape<xpu, 3, DType>(Shape3(b, n, 4), s);
+    Tensor<xpu, 3, DType> refs = inputs[3]
+     .get_with_shape<xpu, 3, DType>(Shape3(b, m, 4), s);
+    Tensor<xpu, 1, DType> means = inputs[4]
+     .get_with_shape<xpu, 1, DType>(Shape1(4), s);
+    Tensor<xpu, 1, DType> stds = inputs[5]
+     .get_with_shape<xpu, 1, DType>(Shape1(4), s);
+    Tensor<xpu, 3, DType> out_targets = outputs[0]
+     .get_with_shape<xpu, 3, DType>(Shape3(b, n, 4), s);
+    Tensor<xpu, 3, DType> out_masks = outputs[1]
+     .get_with_shape<xpu, 3, DType>(Shape3(b, n, 4), s);
+
+    Kernel<box_encode, xpu>::Launch(s, loop_size, out_targets.dptr_,
+     out_masks.dptr_, samples.dptr_, matches.dptr_, anchors.dptr_,
+     refs.dptr_, means.dptr_, stds.dptr_, m, n);
+  });
+}
+
+struct BoxDecodeParam : public dmlc::Parameter<BoxDecodeParam> {
+  float std0;
+  float std1;
+  float std2;
+  float std3;
+  float clip;
+  int format;
+  DMLC_DECLARE_PARAMETER(BoxDecodeParam) {
+    DMLC_DECLARE_FIELD(std0).set_default(1.0)
+    .describe("value to be divided from the 1st encoded values");
+    DMLC_DECLARE_FIELD(std1).set_default(1.0)
+    .describe("value to be divided from the 2nd encoded values");
+    DMLC_DECLARE_FIELD(std2).set_default(1.0)
+    .describe("value to be divided from the 3rd encoded values");
+    DMLC_DECLARE_FIELD(std3).set_default(1.0)
+    .describe("value to be divided from the 4th encoded values");
+    DMLC_DECLARE_FIELD(clip).set_default(-1.0)
+    .describe("If larger than 0, bounding box target will be clipped to this value.");
+    DMLC_DECLARE_FIELD(format).set_default(box_common_enum::kCenter)
+    .add_enum("corner", box_common_enum::kCorner)
+    .add_enum("center", box_common_enum::kCenter)
+    .describe("The box encoding type. \n"
+              " \"corner\" means boxes are encoded as [xmin, ymin, xmax, ymax],"
+              " \"center\" means boxes are encodes as [x, y, width, height].");
+  }
+};  // BoxDecodeParam
+
+inline bool BoxDecodeShape(const nnvm::NodeAttrs& attrs,
+                           mxnet::ShapeVector *in_attrs,
+                           mxnet::ShapeVector *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  mxnet::TShape& dshape = (*in_attrs)[0];
+  mxnet::TShape& ashape = (*in_attrs)[1];
+
+  CHECK_EQ(dshape.ndim(), 3)
+    << "data shape must have dim == 3, "
+    << dshape.ndim() << " provided";
+  int ldim = dshape[dshape.ndim() - 1];
+  CHECK_EQ(ldim, 4)
+    << "last dimension of data must be 4, "
+    << ldim << " provided";
+
+  CHECK_GE(ashape.ndim(), 3)
+    << "anchors shape must have dim == 3, "
+    << ashape.ndim() << " provided";
+  ldim = ashape[ashape.ndim() - 1];
+  CHECK_EQ(ldim, 4)
+    << "last dimension of anchors must be 4, "
+    << ldim << " provided";
+
+  // assign output shape
+  mxnet::TShape oshape = dshape;
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  return shape_is_known(oshape);
+}
+
+template<int anchor_encode, bool has_clip>
+struct box_decode {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *x,
+                                  const DType *anchors, const DType std0,
+                                  const DType std1, const DType std2,
+                                  const DType std3, const DType clip,
+                                  const int n) {
+    index_t index = i * 4;
+    index_t a_index = (i % n) * 4;
+    DType a_x = anchors[a_index + 0];
+    DType a_y = anchors[a_index + 1];
+    DType a_width = anchors[a_index + 2];
+    DType a_height = anchors[a_index + 3];
+    if (box_common_enum::kCorner == anchor_encode) {
+      // a_x = xmin, a_y = ymin, a_width = xmax, a_height = ymax
+      a_width = a_width - a_x;
+      a_height = a_height - a_y;
+      a_x = a_x + a_width * 0.5;
+      a_y = a_y + a_height * 0.5;
+    }
+    DType ox = x[index + 0] * std0 * a_width + a_x;
+    DType oy = x[index + 1] * std1 * a_height + a_y;
+    DType dw = x[index + 2] * std2;
+    DType dh = x[index + 3] * std3;
+    if (has_clip) {
+        dw = dw < clip ? dw : clip;
+        dh = dh < clip ? dh : clip;
+    }
+    dw = exp(dw);
+    dh = exp(dh);
+    DType ow = dw * a_width * 0.5;
+    DType oh = dh * a_height * 0.5;
+    out[index + 0] = ox - ow;
+    out[index + 1] = oy - oh;
+    out[index + 2] = ox + ow;
+    out[index + 3] = oy + oh;
+  }
+};
+
+template<typename xpu>
+void BoxDecodeForward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace mxnet_op;
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  mxnet::TShape x_shape = inputs[0].shape_;
+  int b = x_shape[0];
+  int n = x_shape[1];
+  int loop_size = b * n;
+  const BoxDecodeParam& param = nnvm::get<BoxDecodeParam>(attrs.parsed);
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    Tensor<xpu, 3, DType> data = inputs[0]
+     .get_with_shape<xpu, 3, DType>(Shape3(b, n, 4), s);
+    Tensor<xpu, 3, DType> anchors = inputs[1]
+     .get_with_shape<xpu, 3, DType>(Shape3(1, n, 4), s);
+    Tensor<xpu, 3, DType> out = outputs[0]
+     .get_with_shape<xpu, 3, DType>(Shape3(b, n, 4), s);
+    if (box_common_enum::kCorner == param.format && param.clip > 0.0) {
+      Kernel<box_decode<box_common_enum::kCorner, true>, xpu>::Launch(s, loop_size,
+        out.dptr_, data.dptr_, anchors.dptr_, static_cast<DType>(param.std0),
+        static_cast<DType>(param.std1), static_cast<DType>(param.std2),
+        static_cast<DType>(param.std3), static_cast<DType>(param.clip), n);
+    } else if (box_common_enum::kCenter == param.format && param.clip > 0.0) {
+      Kernel<box_decode<box_common_enum::kCenter, true>, xpu>::Launch(s, loop_size,
+        out.dptr_, data.dptr_, anchors.dptr_, static_cast<DType>(param.std0),
+        static_cast<DType>(param.std1), static_cast<DType>(param.std2),
+        static_cast<DType>(param.std3), static_cast<DType>(param.clip), n);
+    } else if (box_common_enum::kCorner == param.format && param.clip <= 0.0) {
+      Kernel<box_decode<box_common_enum::kCorner, false>, xpu>::Launch(s, loop_size,
+        out.dptr_, data.dptr_, anchors.dptr_, static_cast<DType>(param.std0),
+        static_cast<DType>(param.std1), static_cast<DType>(param.std2),
+        static_cast<DType>(param.std3), static_cast<DType>(param.clip), n);
+    } else {
+      Kernel<box_decode<box_common_enum::kCenter, false>, xpu>::Launch(s, loop_size,
+        out.dptr_, data.dptr_, anchors.dptr_, static_cast<DType>(param.std0),
+        static_cast<DType>(param.std1), static_cast<DType>(param.std2),
+        static_cast<DType>(param.std3), static_cast<DType>(param.clip), n);
+    }
+  });
+}
+
 }  // namespace op
 }  // namespace mxnet
 

@@ -106,5 +106,8 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_arccosh, mshadow_op::arccosh);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_arctanh, mshadow_op::arctanh);
 
+NNVM_REGISTER_OP(_npi_around)
+.set_attr<FCompute>("FCompute<gpu>", AroundOpForward<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

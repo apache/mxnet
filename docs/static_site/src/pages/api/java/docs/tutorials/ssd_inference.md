@@ -1,3 +1,10 @@
+---
+layout: page_api
+title: SSD Inference
+permalink: /api/java/docs/tutorials/ssd_inference
+is_tutorial: true
+tag: java
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,13 +21,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: SSD Inference
-permalink: /api/java/docs/tutorials/ssd_inference
-is_tutorial: true
-tag: java
----
 
 # Multi Object Detection using pre-trained SSD Model via Java Inference APIs
 
@@ -31,7 +31,7 @@ The SSD model is trained on the Pascal VOC 2012 dataset. The network is a SSD mo
 ## Prerequisites
 
 To complete this tutorial, you need the following:
-* [MXNet Java Setup on IntelliJ IDEA](mxnet_java_on_intellij.md) (Optional)
+* [MXNet Java Setup on IntelliJ IDEA](mxnet_java_on_intellij) (Optional)
 * [wget](https://www.gnu.org/software/wget/) To download model artifacts
 * SSD Model artifacts
     * Use the following script to get the SSD Model files :
@@ -55,7 +55,7 @@ wget https://cloud.githubusercontent.com/assets/3307514/20012563/cbb41382-a27d-1
 Alternately, you can get the entire SSD Model artifacts + images in one single script from the MXNet Repository by running [get_ssd_data.sh script](https://github.com/apache/incubator-mxnet/blob/master/scala-package/examples/scripts/infer/objectdetector/get_ssd_data.sh)
 
 ## Time to code!
-1\. Following the [MXNet Java Setup on IntelliJ IDEA](mxnet_java_on_intellij.md) tutorial, in the same project `JavaMXNet`, create a new empty class called : `ObjectDetectionTutorial.java`.
+1\. Following the [MXNet Java Setup on IntelliJ IDEA](mxnet_java_on_intellij) tutorial, in the same project `JavaMXNet`, create a new empty class called : `ObjectDetectionTutorial.java`.
 
 2\. In the `main` function of `ObjectDetectionTutorial.java` define the downloaded model path and the image data paths. This is the same path where we downloaded the model artifacts and images in a previous step.
 
@@ -205,6 +205,6 @@ The results returned by the inference call translate into the regions in the ima
 ## Next Steps
 For more information about MXNet Java resources, see the following:
 
-* [Java Inference API](/api/java/index.md)
+* [Java Inference API]({{'/api/java'|relative_url}})
 * [Java Inference Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
-* [MXNet Tutorials Index](/tutorials/index.md)
+* [MXNet Tutorials Index]({{'/api'|relative_url}})

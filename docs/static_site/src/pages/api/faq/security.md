@@ -1,3 +1,11 @@
+---
+layout: page_category
+title: MXNet Security Best Practices
+category: faq
+faq_c: Security
+question: How to run MXNet securely?
+permalink: /api/faq/security
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,23 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title: MXNet Security Best Practices
-category: faq
-faq_c: Security
-question: How to run MXNet securely?
-permalink: /api/faq/security
----
+
+# Reporting a security vulnerability
+The Apache Software Foundation takes a very active stance in eliminating security problems and denial of service attacks against its products.
+
+We strongly encourage folks to report such problems to our private security mailing list first, before disclosing them in a public forum.
+
+Please note that the security mailing list should only be used for reporting undisclosed security vulnerabilities and managing the process of fixing such vulnerabilities. We cannot accept regular bug reports or other queries at this address. All mail sent to this address that does not relate to an undisclosed security problem in our source code will be ignored.
+
+
+Questions about:
+* if a vulnerability applies to your particular application
+* obtaining further information on a published vulnerability
+* availability of patches and/or new releases
+should be addressed to the users mailing list. Please see the [mailing lists page](/community/contribute#mxnet-dev-communications) for details of how to subscribe.
+
+The private security mailing address is: <a href="mailto:security@apache.org">security@apache.org</a> <i class="far fa-envelope">. Feel free to consult the general [Apache Security guide](http://www.apache.org/security/) for further details about the reporting process.
+
 
 # MXNet Security Best Practices
 

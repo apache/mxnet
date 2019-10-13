@@ -511,7 +511,7 @@ static void SgMKLDNNConvParamParser(nnvm::NodeAttrs *attrs) {
     } else if (node_name == "Convolution") {
       param_.full_conv_param.conv_param =
           nnvm::get<ConvolutionParam>(node->attrs.parsed);
-    } else if (node_name == "Activation" || node_name == "clip") {
+    } else if (node_name == "Activation" || node_name == "LeakyReLU" || node_name == "clip") {
       auto &post_act_param =
           (param_.full_conv_param.mkldnn_param.with_act && !with_act)
               ? param_.full_conv_param.act_param
@@ -519,6 +519,10 @@ static void SgMKLDNNConvParamParser(nnvm::NodeAttrs *attrs) {
       with_act = true;
       if (node_name == "Activation") {
         const auto act_param = nnvm::get<ActivationParam>(node->attrs.parsed);
+        post_act_param.alg = GetMKLDNNActAlgo(act_param);
+      } else if (node_name == "LeakyReLU") {
+        const auto act_param = nnvm::get<LeakyReLUParam>(node->attrs.parsed);
+        post_act_param.alpha = act_param.slope;
         post_act_param.alg = GetMKLDNNActAlgo(act_param);
       } else {
         const auto clip_param = nnvm::get<ClipParam>(node->attrs.parsed);

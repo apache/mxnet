@@ -18,7 +18,7 @@
 // under the License.
 
 // initialize source codes
-def init_git(git_sha = '') {
+def init_git() {
   deleteDir()
   retry(5) {
     try {
@@ -67,7 +67,7 @@ def pack_lib(name, libs, include_gcov_data = false) {
   sh returnStatus: true, script: """
 set +e
 echo "Packing ${libs} into ${name}"
-for i in \$(echo ${libs} | sed -e 's/,/ /g'); do md5sum \$i; done
+for i in \$(echo ${libs} | sed -e 's/,/ /g'); do md5sum \$i; ls -lh \$i; done
 return 0
 """
   stash includes: libs, name: name
@@ -80,8 +80,8 @@ return 0
 }
 
 // unpack libraries saved before
-def unpack_and_init(name, libs, include_gcov_data = false, git_sha = '') {
-  init_git(git_sha)
+def unpack_and_init(name, libs, include_gcov_data = false) {
+  init_git()
   unstash name
   sh returnStatus: true, script: """
 set +e
@@ -114,7 +114,7 @@ def get_git_commit_hash() {
 def publish_test_coverage() {
     // CodeCovs auto detection has trouble with our CIs PR validation due the merging strategy
     git_commit_hash = get_git_commit_hash()
-   
+
     if (env.CHANGE_ID) {
       // PR execution
       codecovArgs = "-B ${env.CHANGE_TARGET} -C ${git_commit_hash} -P ${env.CHANGE_ID}"
@@ -134,6 +134,12 @@ def collect_test_results_unix(original_file_name, new_file_name) {
         // Thus, we have to pick a name manually and rename the files so that they can be stored separately.
         sh 'cp ' + original_file_name + ' ' + new_file_name
         archiveArtifacts artifacts: new_file_name
+        try {
+          s3Upload(file:new_file_name, bucket:env.MXNET_CI_UNITTEST_ARTIFACT_BUCKET, path:env.JOB_NAME+"/"+env.BUILD_NUMBER+"/"+new_file_name)
+        } catch (Exception e) {
+          echo "S3 Upload failed ${e}"
+          throw new Exception("S3 upload failed", e)
+        }
     }
 }
 
@@ -143,6 +149,12 @@ def collect_test_results_windows(original_file_name, new_file_name) {
     if (fileExists(original_file_name)) {
         bat 'xcopy ' + original_file_name + ' ' + new_file_name + '*'
         archiveArtifacts artifacts: new_file_name
+        try {
+          s3Upload(file:new_file_name, bucket:env.MXNET_CI_UNITTEST_ARTIFACT_BUCKET, path:env.JOB_NAME+"/"+env.BUILD_NUMBER+"/"+new_file_name)
+        } catch (Exception e) {
+          echo "S3 Upload failed ${e}"
+          throw new Exception("S3 upload failed", e)
+        }
     }
 }
 
@@ -168,9 +180,9 @@ def get_repo_url() {
 def update_github_commit_status(state, message) {
   node(NODE_UTILITY) {
     // NOTE: https://issues.jenkins-ci.org/browse/JENKINS-39482
-    //The GitHubCommitStatusSetter requires that the Git Server is defined under 
-    //*Manage Jenkins > Configure System > GitHub > GitHub Servers*. 
-    //Otherwise the GitHubCommitStatusSetter is not able to resolve the repository name 
+    //The GitHubCommitStatusSetter requires that the Git Server is defined under
+    //*Manage Jenkins > Configure System > GitHub > GitHub Servers*.
+    //Otherwise the GitHubCommitStatusSetter is not able to resolve the repository name
     //properly and you would see an empty list of repos:
     //[Set GitHub commit status (universal)] PENDING on repos [] (sha:xxxxxxx) with context:test/mycontext
     //See https://cwiki.apache.org/confluence/display/MXNET/Troubleshooting#Troubleshooting-GitHubcommit/PRstatusdoesnotgetpublished
@@ -182,31 +194,23 @@ def update_github_commit_status(state, message) {
 
     commitSha = get_git_commit_hash()
     echo "commitSha=${commitSha}"
-    
+
     context = get_github_context()
     echo "context=${context}"
 
-    // a few attempts need to be made: https://github.com/apache/incubator-mxnet/issues/11654
-    for (int attempt = 1; attempt <= 3; attempt++) {
-      echo "Sending GitHub status attempt ${attempt}..."
-
-      step([
-        $class: 'GitHubCommitStatusSetter',
-        reposSource: [$class: "ManuallyEnteredRepositorySource", url: repoUrl],
-        contextSource: [$class: "ManuallyEnteredCommitContextSource", context: context],
-        commitShaSource: [$class: "ManuallyEnteredShaSource", sha: commitSha],
-        statusBackrefSource: [$class: "ManuallyEnteredBackrefSource", backref: "${env.RUN_DISPLAY_URL}"],
-        errorHandlers: [[$class: 'ShallowAnyErrorHandler']],
-        statusResultSource: [
-          $class: 'ConditionalStatusResultSource',
-          results: [[$class: "AnyBuildResult", message: message, state: state]]
-        ]
-      ])
-
-      if (attempt <= 2) {
-        sleep 1
-      }
-    }
+    echo "Publishing commit status..."
+    step([
+      $class: 'GitHubCommitStatusSetter',
+      reposSource: [$class: "ManuallyEnteredRepositorySource", url: repoUrl],
+      contextSource: [$class: "ManuallyEnteredCommitContextSource", context: context],
+      commitShaSource: [$class: "ManuallyEnteredShaSource", sha: commitSha],
+      statusBackrefSource: [$class: "ManuallyEnteredBackrefSource", backref: "${env.RUN_DISPLAY_URL}"],
+      errorHandlers: [[$class: 'ShallowAnyErrorHandler']],
+      statusResultSource: [
+        $class: 'ConditionalStatusResultSource',
+        results: [[$class: "AnyBuildResult", message: message, state: state]]
+      ]
+    ])
 
     echo "Publishing commit status done."
 
@@ -216,29 +220,29 @@ def update_github_commit_status(state, message) {
 def get_github_context() {
   // Since we use multi-branch pipelines, Jenkins appends the branch name to the job name
   if (env.BRANCH_NAME) {
-    short_job_name = JOB_NAME.substring(0, JOB_NAME.lastIndexOf('/')) 
+    short_job_name = JOB_NAME.substring(0, JOB_NAME.lastIndexOf('/'))
   } else {
     short_job_name = JOB_NAME
   }
-  
+
   return "ci/jenkins/${short_job_name}"
 }
 
 def parallel_stage(stage_name, steps) {
     // Allow to pass an array of steps that will be executed in parallel in a stage
     new_map = [:]
-    
+
     for (def step in steps) {
         new_map = new_map << step
     }
-    
+
     stage(stage_name) {
       parallel new_map
     }
 }
 
 def assign_node_labels(args) {
-  // This function allows to assign instance labels to the generalized placeholders. 
+  // This function allows to assign instance labels to the generalized placeholders.
   // This serves two purposes:
   // 1. Allow generalized placeholders (e.g. NODE_WINDOWS_CPU) in the job definition
   //    in order to abstract away the underlying node label. This allows to schedule a job
@@ -263,7 +267,7 @@ def main_wrapper(args) {
   // args:
   // - core_logic: Jenkins pipeline containing core execution logic
   // - failure_handler: Failure handler
-  
+
   // assign any caught errors here
   err = null
   try {
@@ -275,7 +279,7 @@ def main_wrapper(args) {
     update_github_commit_status('SUCCESS', 'Job succeeded')
   } catch (caughtError) {
     node(NODE_UTILITY) {
-      sh "echo caught ${caughtError}"
+      echo "caught ${caughtError}"
       err = caughtError
       currentBuild.result = "FAILURE"
       update_github_commit_status('FAILURE', 'Job failed')
