@@ -360,4 +360,4 @@ Now, we can submit the result to Kaggle to see the improvement of our ranking!
 ![](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/knitr/mnistCompetition-kaggle-submission.png)
 
 ##  Next Steps
-* [Character Language Model using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)
+* [Character Language Model using RNN](https://mxnet.io/tutorials/r/charRnnModel.html)

@@ -110,7 +110,7 @@ A reference `gluon` implementation with a gradient compression option can be fou
 mod = mx.mod.Module(..., compression_params={'type’:'2bit', 'threshold':0.5})
 ```
 
-A `module` example is provided with [this guide for setting up MXNet with distributed training](https://mxnet.incubator.apache.org/versions/master/faq/multi_devices.html#distributed-training-with-multiple-machines). It comes with the option of turning on gradient compression as an argument to the [train_mnist.py script](https://github.com/apache/incubator-mxnet/blob/master/example/image-classification/train_mnist.py).
+A `module` example is provided with [this guide for setting up MXNet with distributed training](https://mxnet.apache.org/versions/master/faq/multi_devices.html#distributed-training-with-multiple-machines). It comes with the option of turning on gradient compression as an argument to the [train_mnist.py script](https://github.com/apache/incubator-mxnet/blob/master/example/image-classification/train_mnist.py).
 
 ### Configuration Details
 

@@ -36,3 +36,4 @@ dependencies:
   - breathe
   - mock
   - awscli
+  - autodocsumm

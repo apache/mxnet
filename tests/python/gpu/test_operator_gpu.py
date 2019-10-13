@@ -268,6 +268,159 @@ def test_fft():
             shape = tuple(np.random.randint(1, maxdim, size=order))
             check_fft(shape)
 
+def _make_ndarrays(input_list, ctx=mx.gpu(0)):
+    return [mx.nd.array(arr, dtype=arr.dtype, ctx=ctx) for arr in input_list]
+
+def check_fast_lars(w_dtype, g_dtype, shapes, ctx, tol1, tol2):
+    weights_arr = [np.random.rand(*shape).astype(w_dtype) * 10. for shape in shapes]
+    grads_arr = [np.random.rand(*shape).astype(g_dtype) for shape in shapes]
+
+    lrs = (np.random.rand(len(shapes)).astype('float32') + 0.1) / 100.
+    wds = (np.random.rand(len(shapes)).astype('float32') + 0.1) / 1000.
+    eta = (np.random.rand() + 0.1)
+    eps = (np.random.rand() + 0.1) / 10000.
+
+    mx_w = _make_ndarrays(weights_arr, ctx=ctx)
+    mx_g = _make_ndarrays(grads_arr, ctx=ctx)
+    mx_lrs = mx.nd.array(lrs, dtype='float32', ctx=ctx)
+    mx_wds = mx.nd.array(wds, dtype='float32', ctx=ctx)
+
+    w_sum_sq = mx.nd.multi_sum_sq(*mx_w, num_arrays=len(shapes))
+    g_sum_sq = mx.nd.multi_sum_sq(*mx_g, num_arrays=len(shapes))
+
+    ref_w_sum_sq = mx.nd.array([(w.astype('float32') ** 2).sum() for w in weights_arr],
+                                dtype='float32', ctx=ctx)
+    ref_g_sum_sq = mx.nd.array([(g.astype('float32') ** 2).sum() for g in grads_arr],
+                                dtype='float32', ctx=ctx)
+    assert_almost_equal(ref_w_sum_sq.asnumpy(), w_sum_sq.asnumpy(), atol=tol1, rtol=tol1)
+    assert_almost_equal(ref_g_sum_sq.asnumpy(), g_sum_sq.asnumpy(), atol=tol1, rtol=tol1)
+
+    rescale_grad = (np.random.rand() + 0.5) * 100.
+    mx_new_lrs = mx.nd.multi_lars(mx_lrs, w_sum_sq, g_sum_sq, mx_wds, eta=eta, eps=eps,
+                                  rescale_grad=rescale_grad)
+    ref_w_l2norm = mx.nd.sqrt(ref_w_sum_sq)
+    ref_g_l2norm = mx.nd.sqrt(ref_g_sum_sq * rescale_grad * rescale_grad)
+    ref_new_lrs = mx.nd.zeros(ref_w_l2norm.shape, dtype='float32', ctx=ctx)
+    for i in range(ref_w_l2norm.size):
+        _w = ref_w_l2norm[i]
+        _g = ref_g_l2norm[i]
+        if _w > 0.0 and _g > 0.0:
+            ref_new_lrs[i] = lrs[i] * eta * _w / (_g + wds[i] * _w + eps)
+        else:
+            ref_new_lrs[i] = lrs[i]
+    assert_almost_equal(ref_new_lrs.asnumpy(), mx_new_lrs.asnumpy(), atol=tol2, rtol=tol2)
+
+@with_seed()
+def test_fast_lars():
+    min_nparam = 50
+    max_nparam = 60
+    maxdim = 10000
+    maxndim = 1
+
+    dtypes = ['float16','float32', 'float64']
+    for ctx in [mx.cpu(0), mx.gpu(0)]:
+        for w_dtype in dtypes:
+            for g_dtype in dtypes:
+                nparam = np.random.randint(min_nparam + 1, max_nparam + 1)
+                shapes = [np.random.randint(1, maxdim + 1, size=maxndim) for i in range(nparam)]
+                lowTol = ctx == mx.cpu(0) and ('float16'in [w_dtype, g_dtype])
+                tol1 = 1e-3 if lowTol else 1e-5
+                tol2 = 1e-6 if lowTol else 1e-7
+                check_fast_lars(w_dtype, g_dtype, shapes, ctx, tol1, tol2)
+
+def check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights):
+    def _flatten_list(nested_list):
+        return [item for sublist in nested_list for item in sublist]
+    weights_arr = [np.random.rand(*shape).astype(dtype) * 100. for shape in shapes]
+    grads_arr = [np.random.rand(*shape).astype(dtype) * 100. for shape in shapes]
+    rescale_grad = (np.random.random() + 1.0)
+    mx_w = _make_ndarrays(weights_arr)
+    mx_g = _make_ndarrays(grads_arr)
+    mx_p_w = _make_ndarrays(weights_arr)
+    mx_p_g = _make_ndarrays(grads_arr)
+    lrs = list((np.random.random(size=len(shapes)).astype('float32') + 0.1) / 100.)
+    mx_lrs = mx.nd.array(lrs, dtype='float32', ctx=mx.gpu(0))
+    wds = list((np.random.random(size=len(shapes)).astype('float32') + 0.1) / 1000.)
+    mx_wds = mx.nd.array(wds, dtype='float32', ctx=mx.gpu(0))
+    if use_master_weights:
+        weights32_arr = [arr.astype('float32') for arr in weights_arr]
+        mx_w32 = _make_ndarrays(weights32_arr)
+        mx_p_w32 = _make_ndarrays(weights32_arr)
+    if momentum is None:
+        if use_master_weights:
+            mx.nd.multi_mp_sgd_update(
+                                     *_flatten_list(zip(mx_w, mx_g, mx_w32)),
+                                     num_weights=len(shapes), lrs=lrs, wds=wds,
+                                     rescale_grad=rescale_grad, out=mx_w)
+            mx.nd.preloaded_multi_mp_sgd_update(
+                                     *(_flatten_list(zip(mx_p_w, mx_p_g, mx_p_w32)) +
+                                      [mx_lrs, mx_wds]), num_weights=len(shapes),
+                                     rescale_grad=rescale_grad, out=mx_p_w)
+        else:
+            out = mx.nd.multi_sgd_update(
+                                    *_flatten_list(zip(mx_w, mx_g)),
+                                    num_weights=len(shapes), lrs=lrs, wds=wds,
+                                    rescale_grad=rescale_grad, out=mx_w)
+            preloaded_out = mx.nd.preloaded_multi_sgd_update(
+                                    *(_flatten_list(zip(mx_p_w, mx_p_g)) +
+                                     [mx_lrs, mx_wds]), num_weights=len(shapes),
+                                    rescale_grad=rescale_grad, out=mx_p_w)
+    else:
+        if use_master_weights:
+            momentums_arr = [np.random.rand(*shape).astype("float32") for shape in shapes]
+            mx_m = _make_ndarrays(momentums_arr)
+            mx_p_m = _make_ndarrays(momentums_arr)
+            out = mx.nd.multi_mp_sgd_mom_update(
+                                    *_flatten_list(zip(mx_w, mx_g, mx_m, mx_w32)),
+                                    num_weights=len(shapes), lrs=lrs, wds=wds,
+                                    rescale_grad=0.95, momentum=momentum, out=mx_w)
+            preloaded_out = mx.nd.preloaded_multi_mp_sgd_mom_update(
+                                    *(_flatten_list(zip(mx_p_w, mx_p_g, mx_p_m, mx_p_w32)) +
+                                      [mx_lrs, mx_wds]), num_weights=len(shapes),
+                                    rescale_grad=0.95, momentum=momentum, out=mx_p_w)
+        else:
+            momentums_arr = [np.random.rand(*shape).astype(dtype) for shape in shapes]
+            mx_m = _make_ndarrays(momentums_arr)
+            mx_p_m = _make_ndarrays(momentums_arr)
+            mx.nd.multi_sgd_mom_update(
+                                    *_flatten_list(zip(mx_w, mx_g, mx_m)),
+                                    num_weights=len(shapes), lrs=lrs, wds=wds,
+                                    rescale_grad=0.95, momentum=momentum, out=mx_w)
+            mx.nd.preloaded_multi_sgd_mom_update(
+                                    *(_flatten_list(zip(mx_p_w, mx_p_g, mx_p_m)) +
+                                      [mx_lrs, mx_wds]), num_weights=len(shapes),
+                                    rescale_grad=0.95, momentum=momentum, out=mx_p_w)
+
+    def _assert_all_almost_equal(lhs_list, rhs_list, rtol, atol):
+        for i, (lhs, rhs) in enumerate(zip(lhs_list, rhs_list)):
+            assert_almost_equal(lhs.asnumpy(), rhs.asnumpy(), rtol=rtol, atol=atol)
+    if dtype == 'float16':
+        rtol = 1e-3
+        atol = 1e-2
+    else:
+        rtol = 1e-5
+        atol = 1e-6
+    _assert_all_almost_equal(mx_p_w, mx_w, rtol, atol)
+    if momentum is not None:
+        _assert_all_almost_equal(mx_p_m, mx_m, rtol, atol)
+    if use_master_weights:
+        _assert_all_almost_equal(mx_p_w32, mx_w32, 1e-5, 1e-6)
+
+@with_seed()
+def test_preloaded_multi_sgd():
+    dtypes = ['float16', 'float32']
+    momentums = [None, 0.9]
+    min_nparam = 5
+    max_nparam = 10
+    maxdim = 6
+    maxndim = 4
+    for dtype in dtypes:
+        use_master_weights_list = [False,] if dtype == 'float32' else [True, False]
+        for use_master_weights in use_master_weights_list:
+            for momentum in momentums:
+                nparam = np.random.randint(min_nparam + 1, max_nparam + 1)
+                shapes = [np.random.randint(1, maxdim + 1, size=maxndim) for i in range(nparam)]
+                check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights)
 
 @with_seed()
 def test_batchnorm_with_type():

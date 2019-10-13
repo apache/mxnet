@@ -23,7 +23,9 @@
 from __future__ import absolute_import
 
 from . import io
-from .io import *
+from .io import CSVIter, DataBatch, DataDesc, DataIter, ImageDetRecordIter, ImageRecordInt8Iter, ImageRecordIter,\
+    ImageRecordIter_v1, ImageRecordUInt8Iter, ImageRecordUInt8Iter_v1, LibSVMIter, MNISTIter, MXDataIter, NDArrayIter,\
+    PrefetchingIter, ResizeIter
 
 from . import utils
-from .utils import *
+from .utils import _init_data, _getdata_by_idx, _has_instance
