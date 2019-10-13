@@ -53,5 +53,8 @@ NNVM_REGISTER_OP(_npi_eye)
 NNVM_REGISTER_OP(_npi_indices)
 .set_attr<FCompute>("FCompute<gpu>", IndicesCompute<gpu>);
 
+NNVM_REGISTER_OP(_npi_logspace)
+.set_attr<FCompute>("FCompute<gpu>", LogspaceCompute<gpu>);
+
 }  // namespace op
 }  // namespace mxnet
