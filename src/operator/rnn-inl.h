@@ -26,11 +26,6 @@
 #ifndef MXNET_OPERATOR_RNN_INL_H_
 #define MXNET_OPERATOR_RNN_INL_H_
 
-#if MXNET_USE_CUDNN == 1
-STATIC_ASSERT_CUDNN_VERSION_GE(7000);
-#endif
-#define MXNET_USE_CUDNN_GE_7200 MXNET_USE_CUDNN == 1 && CUDNN_VERSION >= 7200
-
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
@@ -46,116 +41,20 @@ STATIC_ASSERT_CUDNN_VERSION_GE(7000);
 #include "./math_functions-inl.h"
 #include "./operator_common.h"
 #include "./rnn_impl.h"
-#if MXNET_USE_MKLDNN == 1
-#include "./nn/mkldnn/mkldnn_rnn_impl.h"
+
+#if MXNET_USE_CUDNN == 1
+STATIC_ASSERT_CUDNN_VERSION_GE(7000);
 #endif
+#define MXNET_USE_CUDNN_GE_7200 MXNET_USE_CUDNN == 1 && CUDNN_VERSION >= 7200
 
 namespace mxnet {
 namespace op {
 
-inline int GetRnnParamSize(int num_layer,
-                           int input_size,
-                           int state_size,
-                           int direction,
-                           int mode,
-                           const dmlc::optional<int>& projection_size) {
-  int size = state_size * direction;
-  switch (mode) {
-    case rnn_enum::kRnnRelu:
-    case rnn_enum::kRnnTanh:
-      break;
-    case rnn_enum::kLstm:
-      size *= 4;
-      break;
-    case rnn_enum::kGru:
-      size *= 3;
-      break;
-  }
-  int size1 = (input_size + state_size + 2) * size;  // first layer size
-  int size2 = (state_size * direction + state_size + 2) * size;  // other layers size
-  if (projection_size.has_value()) {
-    int proj_size = projection_size.value();
-    size1 = (input_size + proj_size + 2) * size;
-    size2 = (proj_size * direction + proj_size + 2) * size;
-  }
-  int param_size = size1 + (num_layer - 1) * size2;
-  if (projection_size.has_value()) {
-    param_size += projection_size.value() * state_size * num_layer * direction;
-  }
-  return param_size;
-}
-
-inline int GetRnnBiasSize(int num_layer,
-                           int state_size,
-                           int direction,
-                           int mode) {
-  int size = 2 * state_size * direction * num_layer;
-  switch (mode) {
-    case rnn_enum::kRnnRelu:
-    case rnn_enum::kRnnTanh:
-      break;
-    case rnn_enum::kLstm:
-      size *= 4;
-      break;
-    case rnn_enum::kGru:
-      size *= 3;
-      break;
-  }
-  return size;
-}
-
-inline size_t GetRNNWorkspaceSize(int seq_length,
-                                  int batch_size,
-                                  int hidden_size,
-                                  int direction,
-                                  int mode) {
-  size_t size = 0;
-  switch (mode) {
-    case rnn_enum::kLstm:
-      size = (seq_length + 1) * batch_size * hidden_size * 4 + batch_size * hidden_size * 2
-             + seq_length * batch_size * hidden_size * direction + hidden_size * seq_length * 8;
-      break;
-    case rnn_enum::kGru:
-      size = seq_length * batch_size * hidden_size * direction * 4 + batch_size * hidden_size * 8;
-      break;
-    case rnn_enum::kRnnRelu:
-    case rnn_enum::kRnnTanh:
-      size = seq_length * batch_size * hidden_size * direction * 2 + batch_size * hidden_size * 4;
-      break;
-    default:
-      LOG(FATAL) << "unknown RNN mode " << mode;
-      break;
-  }
-  return size;
-}
-
-inline size_t GetRNNReserveSpaceSize(int num_layer,
-                                     int direction,
-                                     int seq_length,
-                                     int batch_size,
-                                     int hidden_size,
-                                     int mode) {
-  size_t size = 0;
-  switch (mode) {
-    case rnn_enum::kLstm:
-      size = direction * seq_length * batch_size * hidden_size * (num_layer * 7 - 1);
-      break;
-    case rnn_enum::kGru:
-      size = seq_length * batch_size * hidden_size * direction * (num_layer * 9 - 1) +
-          batch_size * hidden_size * direction * 9 + hidden_size * seq_length * 6 +
-          seq_length * batch_size * 7 * hidden_size * direction;
-      break;
-    case rnn_enum::kRnnRelu:
-    case rnn_enum::kRnnTanh:
-      size = seq_length * batch_size * hidden_size * direction * (num_layer * 6 - 1) +
-          batch_size * hidden_size * direction * 3 + hidden_size * seq_length * 2 +
-          seq_length * batch_size * 2 * hidden_size * direction;
-      break;
-    default:
-      LOG(FATAL) << "unknown RNN mode " << mode;
-      break;
-  }
-  return size;
+namespace rnn_enum {
+  enum RNNOpInputs {kData, kParams, kState, kStateCell, kSequenceLength};
+  enum RNNOpOutputs {kOut, kStateOut, kStateCellOut};
+  enum RNNModeType {kRnnRelu, kRnnTanh, kLstm, kGru};
+  enum RNNOpResource {kTempSpace, kCuDNNDropoutDescSpace};
 }
 
 struct RNNParam : public dmlc::Parameter<RNNParam> {
@@ -215,13 +114,131 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
               "If clipping range is not specified, this option is ignored.");
 
     DMLC_DECLARE_FIELD(use_sequence_length)
-        .set_default(false)
-        .describe(
-            "If set to true, this layer takes in an extra input parameter "
-            "`sequence_length` "
-            "to specify variable length sequence");
+    .set_default(false)
+    .describe(
+        "If set to true, this layer takes in an extra input parameter "
+        "`sequence_length` "
+        "to specify variable length sequence");
   }
 };
+
+inline int GetRnnParamSize(int num_layer,
+                           int input_size,
+                           int state_size,
+                           int direction,
+                           int mode,
+                           const dmlc::optional<int>& projection_size) {
+  int size = state_size * direction;
+  switch (mode) {
+    case rnn_enum::kRnnRelu:
+    case rnn_enum::kRnnTanh:
+      break;
+    case rnn_enum::kLstm:
+      size *= 4;
+      break;
+    case rnn_enum::kGru:
+      size *= 3;
+      break;
+  }
+  int size1 = (input_size + state_size + 2) * size;  // first layer size
+  int size2 = (state_size * direction + state_size + 2) * size;  // other layers size
+  if (projection_size.has_value()) {
+    int proj_size = projection_size.value();
+    size1 = (input_size + proj_size + 2) * size;
+    size2 = (proj_size * direction + proj_size + 2) * size;
+  }
+  int param_size = size1 + (num_layer - 1) * size2;
+  if (projection_size.has_value()) {
+    param_size += projection_size.value() * state_size * num_layer * direction;
+  }
+  return param_size;
+}
+
+inline int GetRnnBiasSize(int num_layer,
+                          int state_size,
+                          int direction,
+                          int mode) {
+  int size = 2 * state_size * direction * num_layer;
+  switch (mode) {
+    case rnn_enum::kRnnRelu:
+    case rnn_enum::kRnnTanh:
+      break;
+    case rnn_enum::kLstm:
+      size *= 4;
+      break;
+    case rnn_enum::kGru:
+      size *= 3;
+      break;
+  }
+  return size;
+}
+
+/*
+ * Calculate the space size of the intermediate results for RNN inference.
+ * The inference procedure of a fusion RNN operator calculates the outputs
+ * layer by layer. In one layer calculation, the steps are:
+ *  - wx[1...Ngates] * x[1...T] among all time stamp(sz: TxNxHxNgates)
+ *  - wh[1...Ngates] * h[t] time by time(sz: NxHxNgates)
+ *  - output -> h[t](, c[t] additionally with Lstm) time by time(sz: NxH(x2))
+ *  - intermediate y[1...T] as next layer's inputs(sz: TxNxHxD)
+ */ 
+inline size_t GetRNNWorkspaceSize(int seq_length,
+                                  int batch_size,
+                                  int hidden_size,
+                                  int direction,
+                                  int mode) {
+  size_t size = 0;
+  switch (mode) {
+    case rnn_enum::kLstm:
+      size = seq_length * batch_size * hidden_size * (4 + direction) +  // wx*x + inter-y
+          batch_size * hidden_size * 6 +                                // wh*h + h + c
+          seq_length * hidden_size * 8;                    // Used in Backward, Δbx, Δbh
+      break;
+    case rnn_enum::kGru:
+      // Differs with Lstm, the outputs of three gates are also held in memory
+      size = seq_length * batch_size * hidden_size * direction * (3 + 1) +  // wx*x + inter-y
+          batch_size * hidden_size * (6 + direction);                       // wh*h + h + Ngates
+      break;
+    case rnn_enum::kRnnRelu:
+    case rnn_enum::kRnnTanh:
+      size = seq_length * batch_size * hidden_size * direction * 2 +  // wx*x + inter-y
+          batch_size * hidden_size * (1 + direction);                 // h + Ngates
+      break;
+    default:
+      LOG(FATAL) << "unknown RNN mode " << mode;
+      break;
+  }
+  return size;
+}
+
+inline size_t GetRNNReserveSpaceSize(int num_layer,
+                                     int direction,
+                                     int seq_length,
+                                     int batch_size,
+                                     int hidden_size,
+                                     int mode) {
+  size_t size = 0;
+  switch (mode) {
+    case rnn_enum::kLstm:
+      size = direction * seq_length * batch_size * hidden_size * (num_layer * 7 - 1);
+      break;
+    case rnn_enum::kGru:
+      size = seq_length * batch_size * hidden_size * direction * (num_layer * 9 - 1) +
+          batch_size * hidden_size * direction * 9 + hidden_size * seq_length * 6 +
+          seq_length * batch_size * 7 * hidden_size * direction;
+      break;
+    case rnn_enum::kRnnRelu:
+    case rnn_enum::kRnnTanh:
+      size = seq_length * batch_size * hidden_size * direction * (num_layer * 6 - 1) +
+          batch_size * hidden_size * direction * 3 + hidden_size * seq_length * 2 +
+          seq_length * batch_size * 2 * hidden_size * direction;
+      break;
+    default:
+      LOG(FATAL) << "unknown RNN mode " << mode;
+      break;
+  }
+  return size;
+}
 
 inline size_t GetNumInputArguments(RNNParam param_) {
   size_t num_inputs = (param_.mode == rnn_enum::kLstm) ? 4U : 3U;
@@ -398,30 +415,11 @@ class RNNOp {
  public:
   RNNParam param_;
   Context ctx_;
-#if MXNET_USE_MKLDNN == 1
-  std::vector<mkldnn::memory> concat_weight_memory;
-  std::vector<mkldnn::memory> concat_iter_memory;
-  std::vector<primitive> rnn_forward_prim;
-  std::vector<mkldnn::memory> x_memory;
-  std::vector<mkldnn::memory> hcx_memory;
-  std::vector<mkldnn::memory> wx_memory;
-  std::vector<mkldnn::memory> wh_memory;
-  std::vector<mkldnn::memory> bias_memory;
-  std::vector<mkldnn::memory> y_memory;
-  std::vector<mkldnn::memory> hcy_memory;
-  size_t weights_version;
-  bool has_cache;
-  bool init_mem_;
-  size_t reserve_mem_size_;
-  NDArray mem_space_;
-#endif
+
   explicit RNNOp(RNNParam param, Context ctx) {
     this->param_ = param;
     this->ctx_ = ctx;
-#if MXNET_USE_MKLDNN == 1
-    init_mem_ = false;
-    reserve_mem_size_ = 0;
-#endif
+
 #if MXNET_USE_CUDNN == 1
     init_cudnn_ = false;
     dtype_ = mshadow::DataType<DType>::kCudnnFlag;
@@ -500,7 +498,7 @@ class RNNOp {
     CUDNN_CALL(cudnnCreateRNNDataDescriptor(&y_data_desc_));
     CUDNN_CALL(cudnnCreateRNNDataDescriptor(&dx_data_desc_));
     CUDNN_CALL(cudnnCreateRNNDataDescriptor(&dy_data_desc_));
-#endif
+#endif  // MXNET_USE_CUDNN_GE_7200
 #else
     if (ctx_.dev_type == kGPU) {
       LOG(FATAL) << "RNN on GPU is only available for cuDNN at the moment.";
@@ -886,64 +884,23 @@ class RNNOp {
                                   param_.p,
                                   param_.mode);
       } else {
-#if MXNET_USE_MKLDNN == 1
-        if (dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1) && param_.mode != rnn_enum::kGru) {
-          // TODO(zixuanweeei): MKLDNN GRU has precision issue. A stable one
-          //   will be added to MXNet when we figure out the issue.
-          int dtype = in_data[rnn_enum::kData].type_flag_;
-          MKLDNNRNNForwardInference<DType>(param_.state_outputs,
-                                           param_.num_layers,
-                                           direction,
-                                           param_.seq_length_,
-                                           param_.batch_size_,
-                                           param_.input_size_,
-                                           param_.state_size,
-                                           x.dptr_,
-                                           hx.dptr_,
-                                           cx_ptr,
-                                           w.dptr_,
-                                           b_ptr,
-                                           y.dptr_,
-                                           hy_ptr,
-                                           cy_ptr,
-                                           &concat_weight_memory,
-                                           &concat_iter_memory,
-                                           &x_memory,
-                                           &hcx_memory,
-                                           &wx_memory,
-                                           &wh_memory,
-                                           &bias_memory,
-                                           &y_memory,
-                                           &hcy_memory,
-                                           &rnn_forward_prim,
-                                           &has_cache,
-                                           dtype,
-                                           ctx.is_train,
-                                           param_.mode);
-        } else {
-#endif  // MXNET_USE_MKLDNN == 1
-          //  Before integrating MKLDNN GRU fp32 inference
-          //  using below code for keep func being OK
-          RNNForwardInference<DType>(work_cpu_space,
-                                     param_.state_outputs,
-                                     param_.num_layers,
-                                     direction,
-                                     param_.seq_length_,
-                                     param_.batch_size_,
-                                     param_.input_size_,
-                                     param_.state_size,
-                                     x.dptr_,
-                                     hx.dptr_,
-                                     cx_ptr,
-                                     w.dptr_,
-                                     b_ptr,
-                                     y.dptr_,
-                                     hy_ptr,
-                                     cy_ptr,
-                                     param_.mode);
-#if MXNET_USE_MKLDNN == 1
-        }
-#endif
+        RNNForwardInference<DType>(work_cpu_space,
+                                   param_.state_outputs,
+                                   param_.num_layers,
+                                   direction,
+                                   param_.seq_length_,
+                                   param_.batch_size_,
+                                   param_.input_size_,
+                                   param_.state_size,
+                                   x.dptr_,
+                                   hx.dptr_,
+                                   cx_ptr,
+                                   w.dptr_,
+                                   b_ptr,
+                                   y.dptr_,
+                                   hy_ptr,
+                                   cy_ptr,
+                                   param_.mode);
       }
     }
   }
@@ -1493,6 +1450,10 @@ class RNNOp {
     }
 #endif  // MXNET_USE_CUDNN == 1 && defined(__CUDACC__)
   }
+  // naive private variables used in CPU Context
+  bool init_space_, temp_init_space_;
+  size_t reserve_cpu_space_size_, temp_cpu_space_size_;
+  NDArray reserve_cpu_space_, temp_cpu_space_;
 
 #if MXNET_USE_CUDNN == 1 && defined(__CUDACC__)
   // cuDNN versions up to and including v7.6.4 did not sync a last dgrad kernel back to the main
@@ -1537,38 +1498,7 @@ class RNNOp {
   cudaEvent_t dgrad_sync_event_;
   bool dgrad_sync_needed_ = false;
 #endif  // MXNET_USE_CUDNN
-  bool init_space_, temp_init_space_;
-  size_t reserve_cpu_space_size_, temp_cpu_space_size_;
-  NDArray reserve_cpu_space_, temp_cpu_space_;
 };  //  class RNNOp
-
-static OpStatePtr CreateRNNState(const nnvm::NodeAttrs &attrs,
-                                 const Context ctx,
-                                 const mxnet::ShapeVector &in_shapes,
-                                 const std::vector<int> &in_types) {
-  const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
-  OpStatePtr state = OpStatePtr();
-  int dtype = in_types[rnn_enum::kData];
-  int itype = dtype;
-  if (param.use_sequence_length) {
-      size_t seq_len_input_idx = rnn_enum::kSequenceLength;
-      if  (param.mode != rnn_enum::kLstm) {
-        seq_len_input_idx -= 1;
-      }
-    itype = in_types[seq_len_input_idx];
-  }
-
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-      MSHADOW_TYPE_SWITCH(itype, IType, {
-    if (ctx.dev_type == kGPU) {
-      state = OpStatePtr::Create<RNNOp<gpu, DType, IType>>(param, ctx);
-    } else {
-      state = OpStatePtr::Create<RNNOp<cpu, DType, IType>>(param, ctx);
-    }
-  });
-    });
-  return state;
-}
 
 template<typename xpu>
 void RNNStatefulCompute(const OpStatePtr& state,
@@ -1581,14 +1511,14 @@ void RNNStatefulCompute(const OpStatePtr& state,
   // Hacky. This relies on fact that seq-len type is either the last input,
   // or we aren't using seq-len input and this type should be same as dtype.
   // Would prefer direct access to RNNParam object here but not sure how to get.
-  int itype = inputs[inputs.size()-1].type_flag_;
+  int itype = inputs[inputs.size() - 1].type_flag_;
 
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-      MSHADOW_TYPE_SWITCH(itype, IType, {
-          RNNOp<xpu, DType, IType>& op = state.get_state<RNNOp<xpu, DType, IType>>();
-          op.Forward(ctx, inputs, req, outputs);
-        });
+    MSHADOW_TYPE_SWITCH(itype, IType, {
+      RNNOp<xpu, DType, IType>& op = state.get_state<RNNOp<xpu, DType, IType>>();
+      op.Forward(ctx, inputs, req, outputs);
     });
+  });
 }
 
 /*
@@ -1620,38 +1550,38 @@ void RNNStatefulGradCompute(const OpStatePtr& state,
   // Hacky. This relies on fact that seq-len type is either the last input,
   // or we aren't using seq-len input and this type should be same as dtype.
   // Would prefer direct access to RNNParam object here but not sure how to get.
-  int itype = outputs[outputs.size()-1].type_flag_;
+  int itype = outputs[outputs.size() - 1].type_flag_;
 
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-      MSHADOW_TYPE_SWITCH(itype, IType, {
-          RNNOp<xpu, DType, IType>& op = state.get_state<RNNOp<xpu, DType, IType>>();
-          const RNNParam& param = op.param_;
-          int index = 5;
-          if (param.state_outputs) {
-            out_data.push_back(inputs[index++]);
-            out_grad.push_back(inputs[index++]);
-          }
+    MSHADOW_TYPE_SWITCH(itype, IType, {
+      RNNOp<xpu, DType, IType>& op = state.get_state<RNNOp<xpu, DType, IType>>();
+      const RNNParam& param = op.param_;
+      int index = 5;
+      if (param.state_outputs) {
+        out_data.push_back(inputs[index++]);
+        out_grad.push_back(inputs[index++]);
+      }
 
-          if (param.mode == rnn_enum::kLstm) {
-            in_data.push_back(inputs[index++]);
-            if (param.state_outputs) {
-              out_data.push_back(inputs[index++]);
-              out_grad.push_back(inputs[index]);
-            }
-          }
+      if (param.mode == rnn_enum::kLstm) {
+        in_data.push_back(inputs[index++]);
+        if (param.state_outputs) {
+          out_data.push_back(inputs[index++]);
+          out_grad.push_back(inputs[index]);
+        }
+      }
 
 
-          if (param.use_sequence_length) {
-            size_t seq_len_input_idx = rnn_enum::kSequenceLength;
-            if  (param.mode != rnn_enum::kLstm) {
-              seq_len_input_idx -= 1;
-            }
-            in_data.push_back(outputs[seq_len_input_idx]);
-          }
+      if (param.use_sequence_length) {
+        size_t seq_len_input_idx = rnn_enum::kSequenceLength;
+        if  (param.mode != rnn_enum::kLstm) {
+          seq_len_input_idx -= 1;
+        }
+        in_data.push_back(outputs[seq_len_input_idx]);
+      }
 
-          op.Backward(ctx, out_grad, in_data, out_data, req, in_grad);
-        });
+      op.Backward(ctx, out_grad, in_data, out_data, req, in_grad);
     });
+  });
 }
 
 }  // namespace op
