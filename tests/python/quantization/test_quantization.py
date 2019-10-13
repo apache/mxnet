@@ -407,7 +407,7 @@ def test_quantized_pooling():
 def test_quantized_fc():
     def check_quantized_fc(data_shape, num_hidden, no_bias, qdtype, flatten=True):
         if is_test_for_native_cpu():
-            hasMKL = False;
+            hasMKL = False
             for key in os.environ.keys():
                 if operator.eq(key, "BUILD_TAG"):
                     if os.environ['BUILD_TAG'].find("MKL") != -1:
