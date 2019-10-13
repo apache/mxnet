@@ -789,6 +789,15 @@ inline void NumpyEinsumForward(const OpStatePtr& state_ptr,
   std::string string_repr;
   paths = einsum_path(state.subscripts, inputs, true, ctx.run_ctx, &pos, &string_repr);
   int paths_len = paths.size(), temp_space_size = 0, max_temp_space_size = 0;
+  for (int i = 0; i < paths_len; ++i) {
+    std::cout << "step " << i << std::endl;
+    std::cout << "do_blas = " << paths[i].do_blas << std::endl;
+    std::cout << "do_einsum = " << paths[i].do_einsum << std::endl;
+    std::cout << paths[i].einsum_str << std::endl;
+    std::cout << paths[i].blas2einsum_str << std::endl;
+    std::cout << paths[i].einsum2blas_str << std::endl;
+    std::cout << std::endl;
+  }
   std::vector<TBlob> operands(inputs), tmp_operands, temp_space_vec(paths_len - 1);
   for (int i = 0; i + 1 < paths_len; ++i) {
     temp_space_size += paths[i].oshape.Size();
