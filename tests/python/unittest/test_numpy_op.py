@@ -1593,6 +1593,61 @@ def test_np_split():
 
 @with_seed()
 @use_np
+def test_np_vsplit():
+    class TestVsplit(HybridBlock):
+        def __init__(self, indices_or_sections):
+            super(TestVsplit, self).__init__()
+            self._indices_or_sections = indices_or_sections
+
+        def hybrid_forward(self, F, a, *args, **kwargs):
+            return F.np.vsplit(a, indices_or_sections=self._indices_or_sections)
+
+    def get_indices(axis_size):
+        if axis_size is 0:
+            axis_size = random.randint(3, 6)
+        samples = random.randint(1, axis_size - 1)
+        indices = sorted(random.sample([i for i in range(1, axis_size)], samples))
+        indices = tuple(indices)
+        return indices
+
+    shapes = [
+        (2, 1, 2, 9),
+        (4, 3, 3),
+        (4, 0, 2),  # zero-size shape
+        (0, 3), # first dim being zero
+    ]
+    for hybridize in [True, False]:
+        for shape in shapes:
+            axis_size = shape[0]
+            indices = get_indices(axis_size)
+            sections = 7 if axis_size is 0 else axis_size
+            for indices_or_sections in [indices, sections]:
+                # test gluon
+                test_vsplit = TestVsplit(indices_or_sections=indices_or_sections)
+                if hybridize:
+                    test_vsplit.hybridize()
+                a = rand_ndarray(shape).as_np_ndarray() # TODO: check type
+                a.attach_grad()
+                expected_ret = _np.vsplit(a.asnumpy(), indices_or_sections=indices_or_sections)
+                with mx.autograd.record():
+                    y = test_vsplit(a)
+                assert len(y) == len(expected_ret)
+                for mx_out, np_out in zip(y, expected_ret):
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+                mx.autograd.backward(y)
+
+                assert_almost_equal(a.grad.asnumpy(), _np.ones(a.shape), rtol=1e-3, atol=1e-5)
+
+                # test imperative
+                mx_outs = np.vsplit(a, indices_or_sections=indices_or_sections)
+                np_outs = _np.vsplit(a.asnumpy(), indices_or_sections=indices_or_sections)
+                for mx_out, np_out in zip(mx_outs, np_outs):
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@use_np
 def test_np_concat():
     class TestConcat(HybridBlock):
         def __init__(self, axis=None):
