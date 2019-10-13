@@ -34,11 +34,11 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot', 'histogram', 'eye',
-           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'vstack', 'dstack',
-           'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign',
-           'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'hypot', 'rad2deg', 'deg2rad',
-           'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer',
-           'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal']
+           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'vsplit', 'concatenate', 'stack', 'vstack',
+           'dstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices',
+           'copysign', 'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'hypot',
+           'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot',
+           'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal']
 
 
 def _num_outputs(sym):
@@ -2601,7 +2601,7 @@ def split(ary, indices_or_sections, axis=0):
     ----------
     ary : ndarray
         Array to be divided into sub-arrays.
-    indices_or_sections : int or 1-D array
+    indices_or_sections : int or 1-D python tuple, list or set.
         If `indices_or_sections` is an integer, N, the array will be divided
         into N equal arrays along `axis`.  If such a split is not possible,
         an error is raised.
@@ -2628,13 +2628,64 @@ def split(ary, indices_or_sections, axis=0):
     sections = 0
     if isinstance(indices_or_sections, int):
         sections = indices_or_sections
-    elif isinstance(indices_or_sections, tuple):
+    elif isinstance(indices_or_sections, (list, set, tuple)):
         indices = [0] + list(indices_or_sections)
     else:
-        raise ValueError('indices_or_sections must either int or tuple of ints')
+        raise ValueError('indices_or_sections must either int or tuple / list / set of ints')
     ret = _npi.split(ary, indices, axis, False, sections)
     return ret
 # pylint: enable=redefined-outer-name
+
+
+@set_module('mxnet.symbol.numpy')
+def vsplit(ary, indices_or_sections):
+    r"""
+    vsplit(ary, indices_or_sections)
+
+    Split an array into multiple sub-arrays vertically (row-wise).
+
+    ``vsplit`` is equivalent to ``split`` with `axis=0` (default): the array is always split
+    along the first axis regardless of the array dimension.
+
+    Parameters
+    ----------
+    ary : _Symbol
+        Array to be divided into sub-arrays.
+    indices_or_sections : int or 1 - D Python tuple, list or set.
+        If `indices_or_sections` is an integer, N, the array will be divided into N equal arrays
+        along axis 0.  If such a split is not possible, an error is raised.
+
+        If `indices_or_sections` is a 1-D array of sorted integers, the entries indicate where
+        along axis 0 the array is split.  For example, ``[2, 3]`` would result in
+
+          - ary[:2]
+          - ary[2:3]
+          - ary[3:]
+
+        If an index exceeds the dimension of the array along axis 0, an error will be thrown.
+
+    Returns
+    -------
+    sub-arrays : list of _Symbols
+        A list of sub-arrays.
+
+    See Also
+    --------
+    split : Split an array into multiple sub-arrays of equal size.
+
+    Notes
+    -------
+    This function differs from the original `numpy.degrees
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.degrees.html>`_ in
+    the following aspects:
+
+    - Currently parameter ``indices_or_sections`` does not support ndarray, but supports scalar,
+    tuple and list
+    - In ``indices_or_sections``, if an index exceeds the dimension of the array along axis 0,
+    an error will be thrown.
+
+    """
+    return split(ary, indices_or_sections, 0)
 
 
 @set_module('mxnet.symbol.numpy')
