@@ -2238,14 +2238,14 @@ def has_tvm_ops():
     built_with_tvm_op = _features.is_enabled("TVM_OP")
     ctx = current_context()
     if ctx.device_type == 'gpu':
-         try:
-             cc = get_cuda_compute_capability(ctx)
-         except:
-             print('Failed to get CUDA compute capability for context {}. The operators '
+        try:
+            cc = get_cuda_compute_capability(ctx)
+        except:  # pylint: disable=bare-except
+            print('Failed to get CUDA compute capability for context {}. The operators '
                   'built with USE_TVM_OP=1 will not be run in unit tests.'.format(ctx))
-             return False
-         print('Cuda arch compute capability: sm_{}'.format(str(cc)))
-         return built_with_tvm_op and cc >= 53
+            return False
+        print('Cuda arch compute capability: sm_{}'.format(str(cc)))
+        return built_with_tvm_op and cc >= 53
     return built_with_tvm_op
 
 
@@ -2260,7 +2260,7 @@ def is_op_runnable():
         else:
             try:
                 cc = get_cuda_compute_capability(ctx)
-            except:
+            except:  # pylint: disable=bare-except
                 print('Failed to get CUDA compute capability for context {}. The operators '
                       'built with USE_TVM_OP=1 will not be run in unit tests.'.format(ctx))
                 return False
