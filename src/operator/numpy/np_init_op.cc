@@ -33,6 +33,7 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(NumpyEyeParam);
 DMLC_REGISTER_PARAMETER(IndicesOpParam);
+DMLC_REGISTER_PARAMETER(LogspaceParam);
 
 inline bool NumpyIndicesShape(const nnvm::NodeAttrs& attrs,
                               mxnet::ShapeVector* in_shapes,
@@ -52,6 +53,18 @@ inline bool NumpyIndicesShape(const nnvm::NodeAttrs& attrs,
   }
   SHAPE_ASSIGN_CHECK(*out_shapes, 0, ret);
   return shape_is_known(out_shapes->at(0));
+}
+
+inline bool LogspaceShape(const nnvm::NodeAttrs& attrs,
+                          mxnet::ShapeVector *in_attrs,
+                          mxnet::ShapeVector *out_attrs) {
+  const LogspaceParam& param = nnvm::get<LogspaceParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 0U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  CHECK_GE(param.num, 0)
+    << "Number of sequence should be non-negative, received " << param.num;
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape({static_cast<nnvm::dim_t>(param.num)}));
+  return true;
 }
 
 NNVM_REGISTER_OP(_npi_zeros)
@@ -148,6 +161,16 @@ NNVM_REGISTER_OP(_npi_indices)
 .set_attr<nnvm::FInferType>("FInferType", InitType<IndicesOpParam>)
 .set_attr<FCompute>("FCompute<cpu>", IndicesCompute<cpu>)
 .add_arguments(IndicesOpParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_npi_logspace)
+.describe("Return numbers spaced evenly on a log scale.")
+.set_num_inputs(0)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<LogspaceParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", LogspaceShape)
+.set_attr<nnvm::FInferType>("FInferType", InitType<LogspaceParam>)
+.set_attr<FCompute>("FCompute<cpu>", LogspaceCompute<cpu>)
+.add_arguments(LogspaceParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

@@ -26,6 +26,7 @@
 #ifndef MXNET_OPERATOR_NUMPY_NP_INIT_OP_H_
 #define MXNET_OPERATOR_NUMPY_NP_INIT_OP_H_
 
+#include <algorithm>
 #include <vector>
 #include <string>
 #include "../tensor/init_op.h"
@@ -209,6 +210,65 @@ void IdentityCompute(const nnvm::NodeAttrs& attrs,
       Kernel<identity<req_type>, xpu>::Launch(
           s, out_data.Size(), out_data.dptr<DType>(), n);
     });
+  });
+}
+
+struct LogspaceParam : public dmlc::Parameter<LogspaceParam> {
+  double start;
+  double stop;
+  int num;
+  bool endpoint;
+  double base;
+  std::string ctx;
+  int dtype;
+  DMLC_DECLARE_PARAMETER(LogspaceParam) {
+    DMLC_DECLARE_FIELD(start)
+    .describe("The starting value of the sequence.");
+    DMLC_DECLARE_FIELD(stop)
+    .describe("The ending value of the sequence");
+    DMLC_DECLARE_FIELD(num)
+    .describe("Number of samples to generate. Must be non-negative.");
+    DMLC_DECLARE_FIELD(endpoint)
+    .set_default(true)
+    .describe("If True, stop is the last sample. Otherwise, it is not included.");
+    DMLC_DECLARE_FIELD(base)
+    .set_default(10.0)
+    .describe("The base of the log space. The step size between the elements in "
+    "ln(samples) / ln(base) (or log_base(samples)) is uniform.");
+    DMLC_DECLARE_FIELD(ctx)
+    .set_default("")
+    .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
+    "Only used for imperative calls.");
+    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
+    MXNET_ADD_ALL_TYPES
+    .describe("Target data type.");
+  }
+};
+
+struct logspace_fwd {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, double start, double stop, double base,
+                                  double step, int req, DType* out) {
+    KERNEL_ASSIGN(out[i], req,
+                  static_cast<DType>(math::pow(base, static_cast<double>(start + step * i))));
+  }
+};
+
+template<typename xpu>
+void LogspaceCompute(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const LogspaceParam& param = nnvm::get<LogspaceParam>(attrs.parsed);
+  if (param.num == 0) return;
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      int step_num = param.endpoint ? param.num - 1 : param.num;
+      double step = step_num > 0 ? (param.stop - param.start) / step_num : 0.0f;
+      Kernel<logspace_fwd, xpu>::Launch(s, outputs[0].Size(), param.start, param.stop, param.base,
+          step, req[0], outputs[0].dptr<DType>());
   });
 }
 
