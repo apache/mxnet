@@ -99,17 +99,17 @@ MXReturnValue backward(std::map<std::string, std::string> attrs,
   unsigned n = inputs[1].shape[0];
   unsigned k = inputs[1].shape[1];
   unsigned m = inputs[2].shape[1];
-
-  float *At = new float[k*n];
-  float *Bt = new float[m*k];
+  // allocate temporary workspace memory through resource manager
+  // for multiple arrays better to request a big memory pool
+  void *workspace = res.alloc((k*n + m*k) * sizeof(float));
+  float *At = static_cast<float*>(workspace);
+  float *Bt = static_cast<float*>(workspace) + (k*n);
 
   transpose(A, At, k, n);
   transpose(B, Bt, m, k);
   gemm(dC, Bt, dA, n, m, k);
   gemm(At, dC, dB, k, n, m);
 
-  delete[] At;
-  delete[] Bt;
   return MX_SUCCESS;
 }
 
@@ -146,12 +146,8 @@ MXReturnValue inferShape(std::map<std::string, std::string> attrs,
     std::cout << "Expected 2 inputs to inferShape" << std::endl;
     return MX_FAIL;
   }
-  if (inshapes[0].size() != 2) {
-    std::cout << "Expected 2D for first input to inferShape" << std::endl;
-    return MX_FAIL;
-  }
-  if (inshapes[1].size() != 2) {
-    std::cout << "Expected 2D for second input to inferShape" << std::endl;
+  if (inshapes[0].size() != 2 || inshapes[1].size() != 2) {
+    std::cout << "Expected 2D matrices for both inputs to inferShape" << std::endl;
     return MX_FAIL;
   }
 
@@ -164,8 +160,7 @@ MXReturnValue inferShape(std::map<std::string, std::string> attrs,
     return MX_FAIL;
   }
 
-  outshapes[0].push_back(n);
-  outshapes[0].push_back(m);
+  outshapes[0] = {n, m};
   return MX_SUCCESS;
 }
 
@@ -185,10 +180,8 @@ class MyStatefulGemm : public CustomStatefulOp {
   MXReturnValue Forward(std::vector<MXTensor> inputs,
                         std::vector<MXTensor> outputs,
                         OpResource op_res) {
-    int* p = static_cast<int*>(op_res.alloc(sizeof(int)));
-    *p = ++count;
-    std::cout << "Info: cpu malloc test: keyword + number of forward: " << *p << std::endl;
-
+    ++count;
+    std::cout << "Info: keyword + number of forward: " << count << std::endl;
     std::map<std::string, std::string> attrs;
     return forward(attrs, inputs, outputs, op_res);
   }

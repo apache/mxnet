@@ -409,11 +409,11 @@ int MXLoadLib(const char *path) {
       mshadow::Stream<mxnet::cpu> *cpu_stream = ctx.get_stream<mxnet::cpu>();
 
       // create lambda that captures stream & resource objects
-      // the memory pointer returned will eventually return to user
+      // this temp workspace holds memory allocated by custom library via OpResource
       auto cpu_alloc = [&](int size) {
-        mshadow::Tensor<mxnet::cpu, 1, char> data =
-        resource.get_space_typed<mxnet::cpu, 1, char>(mshadow::Shape1(size), cpu_stream);
-        return data.dptr_;
+        mshadow::Tensor<mxnet::cpu, 1, char> workspace =
+          resource.get_space_typed<mxnet::cpu, 1, char>(mshadow::Shape1(size), cpu_stream);
+        return workspace.dptr_;
       };
 
       // create lambda without captures so that we can cast it to function pointer
