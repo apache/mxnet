@@ -1680,6 +1680,26 @@ class ndarray(NDArray):
         """Number of elements in the array."""
         return super(ndarray, self).size
 
+    @property
+    def dtype(self):
+        """Data-type of the array's elements.
+
+        Returns
+        -------
+        numpy.dtype
+            This NDArray's data type.
+
+        Examples
+        --------
+        >>> x = np.zeros((2,3))
+        >>> x.dtype
+        dtype('float32')
+        >>> y = np.zeros((2,3), dtype='int32')
+        >>> y.dtype
+        dtype('int32')
+        """
+        return _np.dtype(super(ndarray, self).dtype)
+
     def tostype(self, stype):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute tostype')
 
