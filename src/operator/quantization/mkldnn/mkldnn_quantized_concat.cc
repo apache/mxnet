@@ -97,9 +97,9 @@ static void MKLDNNQuantizedConcatForward(const nnvm::NodeAttrs& attrs, const OpC
   mxnet::mkldnn_output_t out_mem = CreateMKLDNNMem(out_data[quantized_concat_enum::kOut],
                                                    fwd.fwd_pd.dst_desc(), req[concat_enum::kOut]);
   mkldnn_args_map_t  net_args;
-  net_args.insert({MKLDNN_ARG_DST, *out_mem.second});
+  net_args[MKLDNN_ARG_DST] = *out_mem.second;
   for (int i = 0; i < param_.num_args; i++) {
-    net_args.insert({MKLDNN_ARG_MULTIPLE_SRC + i, *data_mem[i]});
+    net_args[MKLDNN_ARG_MULTIPLE_SRC + i] = *data_mem[i];
   }
   MKLDNNStream::Get()->RegisterPrimArgs(fwd.GetFwd(), net_args);
   CommitOutput(out_data[concat_enum::kOut], out_mem);
