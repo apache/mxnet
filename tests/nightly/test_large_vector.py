@@ -21,7 +21,8 @@ import mxnet as mx
 
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, create_vector
 from mxnet import gluon, nd
-from tests.python.unittest.common import with_seed, teardown
+from tests.python.unittest.common import with_seed
+from nose.tools import with_setup
 
 # dimension constants
 LARGE_X = 4300000000
@@ -168,7 +169,7 @@ def test_topk():
     val = nd.topk(a, k=1, axis=0, dtype=np.int64, ret_typ="value")
     assert val == (LARGE_X - 1)
 
-    
+
 def test_mean():
     a = nd.arange(-LARGE_X // 2, LARGE_X // 2 + 1, dtype=np.int64)
     b = nd.mean(a, axis=0)
@@ -505,14 +506,14 @@ def test_rpow():
 
 def test_shape():
     b = create_vector(size=LARGE_X)
-    #explicit wait_to_read()
+    # explicit wait_to_read()
     assert b[0] == 0
     assert b.shape[0] == LARGE_X
 
 
 def test_size():
     b = create_vector(size=LARGE_X)
-    #explicit wait_to_read()
+    # explicit wait_to_read()
     assert b[0] == 0
     assert b.size == LARGE_X
 
@@ -552,7 +553,7 @@ def test_ones_like():
 def test_concat():
     a = nd.ones(LARGE_X)
     b = nd.zeros(LARGE_X)
-    c = nd.concat(a,b, dim=0)
+    c = nd.concat(a, b, dim=0)
     assert c[0][0] == 1
     assert c[-1][-1] == 0
     assert c.shape[0] == (2 * LARGE_X)
@@ -633,15 +634,6 @@ def test_idiv():
     c /= b
     assert c.shape == a.shape
     assert c[-1] == 2
-
-
-def test_imod():
-    a = nd.full(LARGE_X, 3)
-    b = nd.full(LARGE_X, 2)
-    c = a
-    c %= b
-    assert c.shape == a.shape
-    assert c[0][-1] == 1
 
 
 def test_eq():
