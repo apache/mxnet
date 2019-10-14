@@ -19,7 +19,7 @@
 
 #ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_INL_H_
 #define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_INL_H_
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
 
 #include <string>
 #include <utility>
@@ -55,7 +55,7 @@ static inline mkldnn::algorithm GetMKLDNNEltwiseAlgo(const std::string op_name) 
   else
     LOG(FATAL) << "Unsupported eltwise fusion op: " << op_name;
 
-  return mkldnn::algorithm::algorithm_undef;
+  return mkldnn::algorithm::undef;
 }
 
 static inline bool IsOutputUint8(const MKLDNNFCFullParam& full_param) {
@@ -79,5 +79,5 @@ static inline bool IsOutputUint8(const MKLDNNFCFullParam& full_param) {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_MKLDNN == 100
 #endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_INL_H_
