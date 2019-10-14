@@ -306,7 +306,6 @@ MSHADOW_XINLINE void Transpose2D(const DType *in, DType *out, index_t row, index
   }
 }
 
-
 template<typename xpu>
 void TransposeImpl(RunContext ctx,
                    const TBlob& src,
