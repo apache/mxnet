@@ -24,9 +24,10 @@ __all__ = ['DeferredInitializationError', 'Parameter', 'Constant',
            'ParameterDict', 'tensor_types']
 
 
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 import warnings
 import numpy as np
+import mxnet as mx
 
 from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer, context
