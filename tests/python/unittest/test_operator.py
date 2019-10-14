@@ -68,11 +68,11 @@ def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req, rtol=1e-2, atol=1e
     dy = mx.random.uniform(shape=mod1.get_outputs()[0].shape)
     mod1.backward(out_grads=[dy])
     mod2.backward(out_grads=[dy])
-    if grad_req != 'null':
-        assert_allclose(mod1.get_input_grads()[0].asnumpy(), mod2.get_input_grads()[0].asnumpy(), rtol=rtol, atol=atol)
-    else:
+    if type(grad_req) is dict and grad_req['data'] == 'null' or grad_req == 'null':
         assert(mod1.get_input_grads()[0] == None)
         assert(mod2.get_input_grads()[0] == None)
+    else:
+        assert_allclose(mod1.get_input_grads()[0].asnumpy(), mod2.get_input_grads()[0].asnumpy(), rtol=rtol, atol=atol)
 
 
 @with_seed()
@@ -149,6 +149,7 @@ def test_lstm_bidirectional():
     check_rnn_consistency(fused, stack, T, N, I, H, 'write')
     check_rnn_consistency(fused, stack, T, N, I, H, 'add')
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
+    check_rnn_consistency(fused, stack, T, N, I, H, {'data': 'add', 'parameters': 'null'})
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
@@ -2872,6 +2873,52 @@ def test_transpose():
 
             y = mx.nd.transpose(x)
             assert_allclose(np.transpose(x.asnumpy()), y.asnumpy())
+
+
+@with_seed()
+def test_pseudo2dtranspose():
+    def getTwoInts(mn, mx):
+        n1 = np.random.randint(mn, mx)
+        n2 = np.random.randint(mn, mx-1)
+        n2 = n2 if n2 < n1 else n2+1
+        return tuple(np.sort([n1, n2]))
+
+    def getTranspAxes(ndim):
+        axes = list(range(ndim))
+        n1, n2 = getTwoInts(0,ndim)
+        return tuple(axes[:n1]+axes[n2:]+axes[n1:n2])
+
+    for ndim in range(2, 7):
+        for dt in ['int8', 'half', 'int32', 'int64']:
+            for _ in range(5):
+                dims = list(np.random.randint(5, 20, size=ndim))
+                axes = getTranspAxes(ndim)
+                x = mx.nd.array(np.random.normal(size=dims), dtype=dt)
+                y = mx.nd.transpose(x, axes=axes)
+                assert_allclose(np.transpose(x.asnumpy(), axes=axes), y.asnumpy())
+
+
+@with_seed()
+def test_big_transpose():
+    n = [1]
+    d = list(np.random.randint(132, 160, size=1))
+    hw = list(np.random.randint(256, 320, size=2))
+    c = [10]
+    dims = n + d + hw + c
+    axes = (0,4,1,2,3)
+    x_np = np.random.normal(size=dims).astype('uint8')
+    x = mx.nd.array(x_np, dtype='uint8')
+    y = mx.nd.transpose(x, axes=axes)
+    assert_allclose(np.transpose(x_np, axes=axes), y.asnumpy().astype('uint8'))
+    axes = (0,2,3,4,1)
+    z = mx.nd.transpose(y, axes=axes)
+    assert_allclose(x_np, z.asnumpy().astype('uint8'))
+
+
+def test_larger_transpose():
+    x = mx.nd.random.normal(shape=(50,51))
+    y = mx.nd.transpose(x)
+    assert_allclose(np.transpose(x.asnumpy()), y.asnumpy())
 
 
 @with_seed()
@@ -8638,6 +8685,63 @@ def test_op_rroi_align():
 
     test_rroi_align_value()
     test_rroi_align_value(sampling_ratio=2)
+
+@with_seed()
+def test_op_mrcnn_target():
+    if default_context().device_type != 'gpu':
+        return
+
+    num_rois = 2
+    num_classes = 4
+    mask_size = 3
+    ctx = mx.gpu(0)
+    # (B, N, 4)
+    rois = mx.nd.array([[[2.3, 4.3, 2.2, 3.3],
+                        [3.5, 5.5, 0.9, 2.4]]], ctx=ctx)
+    gt_masks = mx.nd.arange(0, 4*32*32, ctx=ctx).reshape(1, 4, 32, 32)
+
+    # (B, N)
+    matches = mx.nd.array([[2, 0]], ctx=ctx)
+    # (B, N)
+    cls_targets = mx.nd.array([[2, 1]], ctx=ctx)
+
+    mask_targets, mask_cls = mx.nd.mrcnn_target(rois, gt_masks, matches, cls_targets,
+                                                num_rois=num_rois,
+                                                num_classes=num_classes,
+                                                mask_size=mask_size)
+
+    # Ground truth outputs were generated with GluonCV's target generator
+    # gluoncv.model_zoo.mask_rcnn.MaskTargetGenerator(1, num_rois, num_classes, mask_size)
+    gt_mask_targets = mx.nd.array([[[[[2193.4    , 2193.7332 , 2194.0667 ],
+                                      [2204.0667 , 2204.4    , 2204.7334 ],
+                                      [2214.7334 , 2215.0667 , 2215.4    ]],
+                                     [[2193.4    , 2193.7332 , 2194.0667 ],
+                                      [2204.0667 , 2204.4    , 2204.7334 ],
+                                      [2214.7334 , 2215.0667 , 2215.4    ]],
+                                     [[2193.4    , 2193.7332 , 2194.0667 ],
+                                      [2204.0667 , 2204.4    , 2204.7334 ],
+                                      [2214.7334 , 2215.0667 , 2215.4    ]],
+                                     [[2193.4    , 2193.7332 , 2194.0667 ],
+                                      [2204.0667 , 2204.4    , 2204.7334 ],
+                                      [2214.7334 , 2215.0667 , 2215.4    ]]],
+                                    [[[ 185.     ,  185.33334,  185.66667],
+                                      [ 195.66667,  196.00002,  196.33334],
+                                      [ 206.33333,  206.66666,  207.     ]],
+                                     [[ 185.     ,  185.33334,  185.66667],
+                                      [ 195.66667,  196.00002,  196.33334],
+                                      [ 206.33333,  206.66666,  207.     ]],
+                                     [[ 185.     ,  185.33334,  185.66667],
+                                      [ 195.66667,  196.00002,  196.33334],
+                                      [ 206.33333,  206.66666,  207.     ]],
+                                     [[ 185.     ,  185.33334,  185.66667],
+                                      [ 195.66667,  196.00002,  196.33334],
+                                      [  206.33333,  206.66666,  207.     ]]]]])
+
+    gt_mask_cls = mx.nd.array([[0,0,1,0], [0,1,0,0]])
+    gt_mask_cls = gt_mask_cls.reshape(1,2,4,1,1).broadcast_axes(axis=(3,4), size=(3,3))
+
+    assert_almost_equal(mask_targets.asnumpy(), gt_mask_targets.asnumpy())
+    assert_almost_equal(mask_cls.asnumpy(), gt_mask_cls.asnumpy())
 
 @with_seed()
 def test_diag():

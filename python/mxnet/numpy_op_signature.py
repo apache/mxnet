@@ -17,7 +17,6 @@
 
 """Make builtin ops' signatures compatible with NumPy."""
 
-from __future__ import absolute_import
 import sys
 import warnings
 from . import _numpy_op_doc

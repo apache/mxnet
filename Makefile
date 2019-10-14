@@ -630,11 +630,15 @@ lib/libtvm_runtime.so:
 	ls $(ROOTDIR)/lib; \
 	cd $(ROOTDIR)
 
+TVM_OP_COMPILE_OPTIONS = -o $(ROOTDIR)/lib/libtvmop.so
+ifneq ($(CUDA_ARCH),)
+	TVM_OP_COMPILE_OPTIONS += --cuda-arch "$(CUDA_ARCH)"
+endif
 lib/libtvmop.so: lib/libtvm_runtime.so $(wildcard contrib/tvmop/*/*.py contrib/tvmop/*.py)
 	echo "Compile TVM operators"
 	PYTHONPATH=$(TVM_PATH)/python:$(TVM_PATH)/topi/python:$(ROOTDIR)/contrib \
 		LD_LIBRARY_PATH=$(ROOTDIR)/lib \
-	    python3 $(ROOTDIR)/contrib/tvmop/compile.py -o $(ROOTDIR)/lib/libtvmop.so
+	    python3 $(ROOTDIR)/contrib/tvmop/compile.py $(TVM_OP_COMPILE_OPTIONS)
 
 NNVM_INC = $(wildcard $(NNVM_PATH)/include/*/*.h)
 NNVM_SRC = $(wildcard $(NNVM_PATH)/src/*/*/*.cc $(NNVM_PATH)/src/*/*.cc $(NNVM_PATH)/src/*.cc)

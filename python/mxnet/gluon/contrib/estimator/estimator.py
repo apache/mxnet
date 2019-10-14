@@ -45,7 +45,7 @@ class Estimator(object):
 
     Parameters
     ----------
-    net : Block
+    net : gluon.Block
         The model used for training.
     loss : gluon.loss.Loss or list of gluon.loss.Loss
         Loss(objective functions) to calculate during training.
