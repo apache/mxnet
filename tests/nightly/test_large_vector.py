@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import os
+import tempfile
 import math
 import numpy as np
 import mxnet as mx
@@ -874,6 +876,58 @@ def test_trigonometric_ops():
     check_tan()
     check_radians()
     check_degrees()
+
+
+def test_load_save():
+    x = create_vector(size=LARGE_X)
+    tmp = tempfile.mkdtemp()
+    tmpfile = os.path.join(tmp, 'large_vector')
+    nd.save(tmpfile, [x])
+    y = nd.load(tmpfile)
+    y = y[0]
+    assert x[0] == y[0]
+    assert x[-1] == y[-1]
+
+
+def test_add_n():
+    x = [nd.ones(LARGE_X)]
+    y = nd.add_n(*x)
+    assert y[0] == 1
+    assert y[-1] == 1
+
+
+def test_modulo():
+    x = mx.nd.ones(LARGE_X)*6
+    y = mx.nd.ones(LARGE_X)*4
+    z = (x%y)
+    assert z[0] == 2
+    assert z[-1] == 2
+    x = mx.nd.ones(LARGE_X)*5
+    z = nd.modulo(x,y)
+    assert z[0] == 1
+    assert z[-1] == 1
+
+
+def test_maximum():
+    x = mx.nd.ones(LARGE_X)*3
+    y = mx.nd.ones(LARGE_X)*4
+    z = nd.maximum(x, y)
+    assert z[0] == 4
+    assert z[-1] == 4
+    z = nd.maximum(x, 5)
+    assert z[0] == 5
+    assert z[-1] == 5
+
+
+def test_minimum():
+    x = mx.nd.ones(LARGE_X)*3
+    y = mx.nd.ones(LARGE_X)*2
+    z = nd.minimum(x, y)
+    assert z[0] == 2
+    assert z[-1] == 2
+    z = nd.minimum(x, 5)
+    assert z[0] == 3
+    assert z[-1] == 3
 
 
 if __name__ == '__main__':
