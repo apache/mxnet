@@ -62,11 +62,193 @@
 namespace mxnet {
 namespace op {
 
+inline std::vector<std::string> _parse_einsum_input(std::string subscripts,
+                                                    const mxnet::ShapeVector& shapes) {
+  const std::string einsum_symbols =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  std::bitset<MAXAXIS> einsum_symbols_set;
+  for (const char& c : einsum_symbols) {
+    einsum_symbols_set.set(c);
+  }
+
+  CHECK_NE(shapes.size(), 0U)
+    << "No input operands";
+
+  auto end_pos = std::remove(subscripts.begin(), subscripts.end(), ' ');
+  subscripts.erase(end_pos, subscripts.end());
+
+  // Ensure all characters are valid
+  for (const char& c : subscripts) {
+    if (c == '.' || c == ',' || c == '-' || c == '>') {
+      continue;
+    }
+    CHECK(einsum_symbols_set.test(c))
+      << "Character " << c
+      << " is not a valid symbol.";
+  }
+
+  // Check for proper "->"
+  if (subscripts.find('-') != std::string::npos ||
+      subscripts.find('>') != std::string::npos) {
+    bool invalid = (std::count(subscripts.begin(), subscripts.end(), '-') > 1 ||
+                    std::count(subscripts.begin(), subscripts.end(), '>') > 1);
+    CHECK(!invalid && _count_substring(subscripts, "->") == 1)
+      << "Subscripts can only contain one '->'.";
+  }
+
+  // Parse ellipses
+  if (subscripts.find('.') != std::string::npos) {
+    std::string used = subscripts;
+    used.erase(std::remove_if(used.begin(),
+                              used.end(),
+                              [](const char& c){return c == '.' ||
+                                                       c == ',' ||
+                                                       c == '-' ||
+                                                       c == '>';}),
+               used.end());
+
+    std::bitset<MAXAXIS> used_set = str2set(used);
+    std::string ellipse_inds = "";
+    for (const char& c : einsum_symbols) {
+      if (!used_set.test(static_cast<int>(c))) {
+        ellipse_inds.append(1, c);
+      }
+    }
+    int longest = 0;
+    std::string input_tmp, output_sub;
+    std::vector<std::string> split_subscripts;
+    bool out_sub;
+
+    if (subscripts.find("->") != std::string::npos) {
+      std::vector<std::string> tmp = split(subscripts, "->");
+      input_tmp = tmp[0];
+      output_sub = tmp[1];
+      split_subscripts = split(input_tmp, ",");
+      out_sub = true;
+    } else {
+      split_subscripts = split(subscripts, ",");
+      out_sub = false;
+    }
+
+    size_t size_split_subscripts = split_subscripts.size();
+    subscripts = "";
+    for (size_t i = 0; i < size_split_subscripts; ++i) {
+      const std::string& sub = split_subscripts[i];
+      if (sub.find('.') != std::string::npos) {
+        CHECK_EQ(std::count(sub.begin(), sub.end(), '.'), 3)
+          << "Invalid Ellipses";
+        CHECK_EQ(_count_substring(sub, "..."), 1)
+          << "Invalid Ellipses";
+
+        // Take into account numerical values
+        int ellipse_count = 0;
+        if (shapes[i].ndim() == 0) {
+          ellipse_count = 0;
+        } else {
+          ellipse_count = std::max(shapes[i].ndim(), 1);
+          ellipse_count -= sub.length() - 3;
+        }
+
+        if (ellipse_count > longest) {
+          longest = ellipse_count;
+        }
+
+        CHECK_GE(ellipse_count, 0)
+          << "Ellipses lengths do not match.";
+        if (ellipse_count == 0) {
+          split_subscripts[i].erase(sub.find("..."), 3);
+        } else {
+          std::string rep_inds = ellipse_inds.substr(ellipse_inds.length() - ellipse_count);
+          split_subscripts[i].replace(sub.find("..."), 3, rep_inds);
+        }
+      }
+      subscripts += split_subscripts[i];
+      if (i + 1 < size_split_subscripts) {
+        subscripts += ",";
+      }
+    }
+    std::string out_ellipse;
+    if (longest == 0) {
+      out_ellipse = "";
+    } else {
+      out_ellipse = ellipse_inds.substr(ellipse_inds.length() - longest);
+    }
+
+    if (out_sub) {
+      output_sub.replace(output_sub.find("..."), 3, out_ellipse);
+      subscripts += "->" + output_sub;
+    } else {
+      // Special care for outputless ellipses
+      std::bitset<MAXAXIS> out_ellipse_set = str2set(out_ellipse);
+      std::string tmp_subscripts = subscripts, output_subscript = "";
+      size_t len_tmp_subscripts = tmp_subscripts.length();
+      std::sort(tmp_subscripts.begin(), tmp_subscripts.end());
+      for (size_t i = 0; i < len_tmp_subscripts; ++i) {
+        const char& c = tmp_subscripts[i];
+        if (c == ',') {
+          continue;
+        }
+        CHECK(einsum_symbols_set.test(c))
+          << "Character " << c
+          << " is not a valid symbol.";
+        if ((i == 0 || tmp_subscripts[i - 1] != c) &&
+            (i == len_tmp_subscripts - 1 || tmp_subscripts[i + 1] != c) &&
+            !out_ellipse_set.test(c)) {
+          output_subscript.append(1, c);
+        }
+      }
+      subscripts += "->" + out_ellipse + output_subscript;
+    }
+  }
+
+  // Build output string if does not exist
+  std::vector<std::string> ret(2);
+  if (subscripts.find("->") != std::string::npos) {
+    ret = split(subscripts, "->");
+  } else {
+    ret[0] = subscripts;
+    ret[1] = "";
+    // Build output subscripts
+    std::string tmp_subscripts = subscripts;
+    size_t len_tmp_subscripts = tmp_subscripts.length();
+    std::sort(tmp_subscripts.begin(), tmp_subscripts.end());
+    for (size_t i = 0; i < len_tmp_subscripts; ++i) {
+      const char& c = tmp_subscripts[i];
+      if (c == ',') {
+        continue;
+      }
+      CHECK(einsum_symbols_set.test(c))
+        << "Character " << c
+        << " is not a valid symbol.";
+      if ((i == 0 || tmp_subscripts[i - 1] != c) &&
+          (i == len_tmp_subscripts - 1 || tmp_subscripts[i + 1] != c)) {
+        ret[1].append(1, c);
+      }
+    }
+  }
+
+  // Make sure output subscripts are in the input
+  std::bitset<MAXAXIS> input_subscripts_set = str2set(ret[0]);
+  for (const char& c : ret[1]) {
+    CHECK(input_subscripts_set.test(c))
+      << "Output character " << c
+      << " did not appear in the input";
+  }
+
+  // Make sure number operands is equivalent to the number of terms
+  CHECK_EQ(std::count(ret[0].begin(), ret[0].end(), ',') + 1, shapes.size())
+    << "Number of einsum subscripts must be equal to the "
+    << "number of operands.";
+
+  return ret;
+}
+
+
 bool NumpyEinsumShape(const nnvm::NodeAttrs& attrs,
-                             mxnet::ShapeVector *in_attrs,
-                             mxnet::ShapeVector *out_attrs) {
+                      mxnet::ShapeVector *in_attrs,
+                      mxnet::ShapeVector *out_attrs) {
   const NumpyEinsumParam &param = nnvm::get<NumpyEinsumParam>(attrs.parsed);
-  const char* subscripts = param.subscripts.c_str();
+  const std::string& subscripts = param.subscripts;
   int num_args = param.num_args;
   CHECK_EQ(in_attrs->size(), num_args);
   CHECK_EQ(out_attrs->size(), 1U);
@@ -76,99 +258,51 @@ bool NumpyEinsumShape(const nnvm::NodeAttrs& attrs,
     }
   }
 
-  int iop, label, min_label = 127, max_label = 0;
-  int nop = num_args;
-  char label_counts[128];
-  int label_size[128], max_broadcast = -1;
-  char op_labels[NPY_MAXARGS][NPY_MAXDIMS];
-  char output_labels[NPY_MAXDIMS];
-  int idim, ndim_output, ndim_broadcast;
+  // Parsing
+  std::vector<std::string> parsed_subscripts = _parse_einsum_input(subscripts, *in_attrs);
 
-  /* Parse the subscripts string into label_counts and op_labels */
-  memset(label_counts, 0, sizeof(label_counts));
-  for (iop = 0; iop < nop; ++iop) {
-    int length = static_cast<int>(strcspn(subscripts, ",-"));
-    CHECK(!(iop == nop-1 && subscripts[length] == ','))
-      << "more operands provided to einstein sum function "
-         "than specified in the subscripts string";
-    CHECK(!(iop < nop-1 && subscripts[length] != ','))
-      << "fewer operands provided to einstein sum function "
-         "than specified in the subscripts string";
-    CHECK_GE(parse_operand_subscripts(subscripts, length,
-                                      in_attrs->at(iop).ndim(),
-                                      iop, op_labels[iop], label_counts,
-                                      &min_label, &max_label), 0);
+  // Build a few useful list and sets
+  std::vector<std::string> input_list = split(parsed_subscripts[0], ",");
+  size_t isize = input_list.size();
 
-    /* Move subscripts to the start of the labels for the next op */
-    subscripts += length;
-    if (iop < nop - 1) {
-      subscripts++;
+  // Get length of each unique dimension and ensure all dimensions are correct
+  dim_t dimension_dict[MAXAXIS];
+  memset(dimension_dict, -1, sizeof(dimension_dict));
+  for (size_t i = 0; i < isize; ++i) {
+    const std::string& term = input_list[i];
+    const TShape& sh = in_attrs->at(i);
+    CHECK_EQ(sh.ndim(), term.length())
+      << "Einstein sum subscript " << input_list[i]
+      << " does not contain the "
+      << "correct number of indices for operand " << i << ".";
+    size_t len_term = term.length();
+    for (size_t j = 0; j < len_term; ++j) {
+      dim_t dim = sh[j];
+      const char& c = term[j];
+
+      if (dimension_dict[static_cast<int>(c)] != -1) {
+        // For broadcasting cases we always want the largest dim size
+        if (dimension_dict[static_cast<int>(c)] == 1) {
+          dimension_dict[static_cast<int>(c)] = dim;
+        }
+        CHECK(dim == 1 || dim == dimension_dict[static_cast<int>(c)])
+          << "Size of label '" << c
+          << "' for operand  " << i
+          << " (" << dimension_dict[static_cast<int>(c)]
+          << ") does not match previous terms ("
+          << dim << ").";
+      } else {
+        dimension_dict[static_cast<int>(c)] = dim;
+      }
     }
   }
 
-  /*
-   * Find the number of broadcast dimensions, which is the maximum
-   * number of labels == 0 in an op_labels array.
-   */
-  ndim_broadcast = 0;
-  for (iop = 0; iop < nop; ++iop) {
-    int count_zeros = 0;
-    int ndim;
-    char *labels = op_labels[iop];
-    ndim = in_attrs->at(iop).ndim();
-    for (idim = 0; idim < ndim; ++idim) {
-      if (labels[idim] == 0) {
-        ++count_zeros;
-      } else if (labels[idim] > 0) {
-        label_size[static_cast<int>(labels[idim])] = in_attrs->at(iop)[idim];
-      }
-    }
-    if (count_zeros > ndim_broadcast) {
-      ndim_broadcast = count_zeros;
-      max_broadcast = iop;
-    }
-  }
-
-  /*
-   * If there is no output signature, fill output_labels and ndim_output
-   * using each label that appeared once, in alphabetical order.
-   */
-  if (subscripts[0] == '\0') {
-    /* If no output was specified, always broadcast left, as usual. */
-    for (ndim_output = 0; ndim_output < ndim_broadcast; ++ndim_output) {
-      output_labels[ndim_output] = 0;
-    }
-    for (label = min_label; label <= max_label; ++label) {
-      if (label_counts[label] == 1) {
-        CHECK(ndim_output < NPY_MAXDIMS)
-          << "einstein sum subscript string has too many "
-          << "distinct labels";
-        output_labels[ndim_output++] = label;
-      }
-    }
-  } else {
-    CHECK(subscripts[0] == '-' && subscripts[1] == '>')
-      << "einstein sum subscript string does not "
-      << "contain proper '->' output specified";
-    subscripts += 2;
-
-    /* Parse the output subscript string. */
-    ndim_output = parse_output_subscripts(subscripts, strlen(subscripts),
-                                          ndim_broadcast, label_counts,
-                                          output_labels);
-    CHECK_GE(ndim_output, 0);
-  }
-
-  TShape oshape(ndim_output, -1);
-  for (int i = 0, j = 0; i < ndim_output; i++) {
-    if (output_labels[i] > 0) {
-      oshape[i] = label_size[static_cast<int>(output_labels[i])];
-    } else {
-      while (op_labels[max_broadcast][j] != 0) {
-        j++;
-      }
-      oshape[i] = in_attrs->at(max_broadcast)[j++];
-    }
+  // Get oshape
+  const std::string& output_str = parsed_subscripts[1];
+  size_t odim = output_str.size();
+  TShape oshape(odim, -1);
+  for (size_t i = 0; i < odim; ++i) {
+    oshape[i] = dimension_dict[static_cast<int>(output_str[i])];
   }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   return shape_is_known(oshape);

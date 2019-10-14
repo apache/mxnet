@@ -819,6 +819,7 @@ inline void NumpyEinsumForward(const OpStatePtr& state_ptr,
       begin = begin + paths[i].oshape.Size();
     }
     for (int i = 0; i < paths_len; ++i) {
+      std::cout << "Step " << i << std::endl;
       tmp_operands.clear();
 
       // We remove inds from right to left

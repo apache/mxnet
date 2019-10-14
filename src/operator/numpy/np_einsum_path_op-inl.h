@@ -698,11 +698,11 @@ inline bool _tensordot_type_check(int type_flag_, const RunContext& run_ctx) {
 }
 
 inline std::vector<Step> einsum_path(const std::string& subscripts,
-                              const std::vector<TBlob>& operands,
-                              bool optimize,
-                              const RunContext& run_ctx,
-                              std::vector<std::vector<int> >* ret_path,
-                              std::string* ret_string_repr) {
+                                     const std::vector<TBlob>& operands,
+                                     bool optimize,
+                                     const RunContext& run_ctx,
+                                     std::vector<std::vector<int> >* ret_path,
+                                     std::string* ret_string_repr) {
   // Parsing
   std::vector<std::string> parsed_subscripts = _parse_einsum_input(subscripts, operands);
 
