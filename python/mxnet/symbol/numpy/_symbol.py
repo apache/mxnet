@@ -4459,7 +4459,7 @@ def einsum(*operands, **kwargs):
         If provided, the calculation is done into this array.
     optimize : {False, True}, optional
         Controls if intermediate optimization should occur. No optimization
-        will occur if False.
+        will occur if False. Defaults to False.
 
     Returns
     -------
@@ -4536,6 +4536,14 @@ def einsum(*operands, **kwargs):
     Typically a 'greedy' algorithm is applied which empirical tests have shown
     returns the optimal path in the majority of cases. 'optimal' is not supported
     for now.
+
+    This function differs from the original `numpy.einsum
+    https://docs.scipy.org/doc/numpy/reference/generated/numpy.einsum.html`_ in
+    the following way(s):
+    - Does not support 'optimal' strategy
+    - Does not support the alternative subscript like
+        `einsum(op0, sublist0, op1, sublist1, ..., [sublistout])`
+    - Does not produce view in any cases
     """
     # Grab non-einsum kwargs; do not optimize by default.
     optimize_arg = kwargs.pop('optimize', False)
