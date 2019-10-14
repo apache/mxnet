@@ -78,7 +78,8 @@ static void MKLDNNQuantizedConcatForward(const nnvm::NodeAttrs& attrs, const OpC
       if (in_data[i].dtype() != out_dtype) {
         mem_desc.data.data_type = static_cast<mkldnn_data_type_t>(get_mkldnn_type(out_dtype));
       }
-      const auto rescaled_mem = std::make_shared<mkldnn::memory>(mem_desc, CpuEngine::Get()->get_engine());
+      const auto rescaled_mem =
+          std::make_shared<mkldnn::memory>(mem_desc, CpuEngine::Get()->get_engine());
       new_data_mem.push_back(rescaled_mem);
       std::vector<float> reorder_scale = {out_scale / i_scale};
       mkldnn::primitive_attr reorder_attr;
