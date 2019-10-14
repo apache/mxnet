@@ -2428,7 +2428,7 @@ fixed-size items.
         mx_dtype = ctypes.c_int()
         check_call(_LIB.MXNDArrayGetDType(
             self.handle, ctypes.byref(mx_dtype)))
-        return _DTYPE_MX_TO_NP[mx_dtype.value]
+        return np.dtype(_DTYPE_MX_TO_NP[mx_dtype.value])
 
     @property
     def stype(self):
