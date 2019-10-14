@@ -688,7 +688,6 @@ def neg_fc_relu(no_bias, data_shape, flatten=True):
   return syms, attrs, excluded_attrs
 
 @with_seed()
-@unittest.skip('skip for MKL-DNN 1.0 integration: https://github.com/apache/incubator-mxnet/projects/16')
 def test_pos_single_conv():
   for data_shape in DATA_SHAPE:
     net, attrs = single_conv(False, data_shape)
@@ -697,7 +696,6 @@ def test_pos_single_conv():
     check_fusion(net, data_shape, attrs)
 
 @with_seed()
-@unittest.skip('skip for MKL-DNN 1.0 integration: https://github.com/apache/incubator-mxnet/projects/16')
 def test_pos_conv_act():
   act_list = {"relu": True,
               "sigmoid": True,
@@ -713,7 +711,6 @@ def test_pos_conv_act():
       check_fusion(net, data_shape, attrs, check_quantization=quantize)
 
 @with_seed()
-@unittest.skip('skip for MKL-DNN 1.0 integration: https://github.com/apache/incubator-mxnet/projects/16')
 def test_pos_conv_bn():
   for data_shape in DATA_SHAPE:
     net, attrs = conv_bn(False, data_shape)
@@ -722,7 +719,6 @@ def test_pos_conv_bn():
     check_fusion(net, data_shape, attrs)
 
 @with_seed()
-@unittest.skip('skip for MKL-DNN 1.0 integration: https://github.com/apache/incubator-mxnet/projects/16')
 def test_pos_conv_add():
   for data_shape in DATA_SHAPE:
     net, attrs = conv_add(False, data_shape)
@@ -731,7 +727,6 @@ def test_pos_conv_add():
     check_fusion(net, data_shape, attrs)
 
 @with_seed()
-@unittest.skip('skip for MKL-DNN 1.0 integration: https://github.com/apache/incubator-mxnet/projects/16')
 def test_pos_conv_add2():
   for data_shape in DATA_SHAPE:
     net, attrs = conv_add2(False, data_shape)
@@ -740,7 +735,6 @@ def test_pos_conv_add2():
     check_fusion(net, data_shape, attrs)
 
 @with_seed()
-@unittest.skip('skip for MKL-DNN 1.0 integration: https://github.com/apache/incubator-mxnet/projects/16')
 def test_pos_conv_bn_act():
   act_list = {"relu": True,
               "sigmoid": True,
@@ -756,7 +750,6 @@ def test_pos_conv_bn_act():
       check_fusion(net, data_shape, attrs, check_quantization=quantize)
 
 @with_seed()
-@unittest.skip('skip for MKL-DNN 1.0 integration: https://github.com/apache/incubator-mxnet/projects/16')
 def test_pos_conv_bn_sum_act():
   act_list = {"relu": True,
               "sigmoid": True,
@@ -772,7 +765,6 @@ def test_pos_conv_bn_sum_act():
       check_fusion(net, data_shape, attrs, check_quantization=quantize)
 
 @with_seed()
-@unittest.skip('skip for MKL-DNN 1.0 integration: https://github.com/apache/incubator-mxnet/projects/16')
 def test_pos_single_concat():
   for data_shape in DATA_SHAPE:
     for out_type in ('int8', 'auto'):
@@ -801,42 +793,36 @@ def test_pos_concat_scale_align():
       check_quantize(net, data_shape, out_type, check_calibration=True, check_scale_align=True, gluon_forward=True)
 
 @with_seed()
-@unittest.skip('skip for MKL-DNN 1.0 integration: https://github.com/apache/incubator-mxnet/projects/16')
 def test_mobilenetv2_struct():
   for data_shape in DATA_SHAPE:
       net, attrs = mobilenetv2_struct(data_shape)
       check_fusion(net, data_shape, attrs, out_types=['int8', 'auto'])
 
 @with_seed()
-@unittest.skip('skip for MKL-DNN 1.0 integration: https://github.com/apache/incubator-mxnet/projects/16')
 def test_neg_conv_bn():
   for data_shape in DATA_SHAPE:
     syms, attrs, excluded_attrs = neg_conv_bn(data_shape)
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
 
 @with_seed()
-@unittest.skip('skip for MKL-DNN 1.0 integration: https://github.com/apache/incubator-mxnet/projects/16')
 def test_neg_conv_relu():
   for data_shape in DATA_SHAPE:
     syms, attrs, excluded_attrs = neg_conv_relu(data_shape)
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
 
 @with_seed()
-@unittest.skip('skip for MKL-DNN 1.0 integration: https://github.com/apache/incubator-mxnet/projects/16')
 def test_neg_conv_add():
   for data_shape in DATA_SHAPE:
     syms, attrs, excluded_attrs = neg_conv_add(data_shape)
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
 
 @with_seed()
-@unittest.skip('skip for MKL-DNN 1.0 integration: https://github.com/apache/incubator-mxnet/projects/16')
 def test_neg_conv_bn_relu():
   for data_shape in DATA_SHAPE:
     syms, attrs, excluded_attrs = neg_conv_bn_relu(data_shape)
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
 
 @with_seed()
-@unittest.skip('skip for MKL-DNN 1.0 integration: https://github.com/apache/incubator-mxnet/projects/16')
 def test_neg_conv_bn_add_relu():
   for data_shape in DATA_SHAPE:
     syms, attrs, excluded_attrs = neg_conv_bn_add_relu(data_shape)
@@ -867,7 +853,6 @@ def test_fc_eltwise():
       check_fusion(syms, dshape, attrs, check_quantization=False)
 
 @with_seed()
-@unittest.skip('skip for MKL-DNN 1.0 integration: https://github.com/apache/incubator-mxnet/projects/16')
 def test_neg_fc_relu():
   for dshape, no_bias, flatten in itertools.product(DATA_SHAPE, [True, False], [True, False]):
     syms, attrs, excluded_attrs = neg_fc_relu(no_bias, dshape, flatten)
