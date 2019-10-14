@@ -26,7 +26,7 @@ from mxnet import np, npx, autograd
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, retry, use_np
 from common import with_seed, TemporaryDirectory
-from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, has_tvm_ops, assert_exception
+from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, assert_exception, is_op_runnable
 from mxnet.ndarray.ndarray import py_slice
 from mxnet.base import integer_types
 import scipy.stats as ss
@@ -264,9 +264,10 @@ def test_np_ndarray_binary_element_wise_ops():
         '/': _np.divide,
         'mod': _np.mod,
         'pow': _np.power,
+
     }
 
-    if has_tvm_ops():
+    if is_op_runnable():
         np_op_map.update({
             '==': _np.equal,
             '!=': _np.not_equal,
@@ -468,23 +469,38 @@ def test_np_grad_ndarray_type():
 
 
 @with_seed()
+@use_np
 def test_np_ndarray_astype():
     mx_data = np.array([2, 3, 4, 5], dtype=_np.int32)
     np_data = mx_data.asnumpy()
 
-    def check_astype_equal(dtype, copy, expect_zero_copy=False):
-        mx_ret = mx_data.astype(dtype=dtype, copy=copy)
+    class TestAstype(HybridBlock):
+        def __init__(self, dtype, copy):
+            super(TestAstype, self).__init__()
+            self._dtype = dtype
+            self._copy = copy
+
+        def hybrid_forward(self, F, x):
+            return x.astype(dtype=self._dtype, copy=self._copy)
+
+    def check_astype_equal(dtype, copy, expect_zero_copy=False, hybridize=False):
+        test_astype = TestAstype(dtype, copy)
+        if hybridize:
+            test_astype.hybridize()
+        mx_ret = test_astype(mx_data)
         assert type(mx_ret) is np.ndarray
         np_ret = np_data.astype(dtype=dtype, copy=copy)
         assert mx_ret.dtype == np_ret.dtype
         assert same(mx_ret.asnumpy(), np_ret)
-        if expect_zero_copy:
+        if expect_zero_copy and not hybridize:
             assert id(mx_ret) == id(mx_data)
             assert id(np_ret) == id(np_data)
 
-    for dtype in [_np.int8, _np.uint8, _np.int32, _np.float16, _np.float32, _np.float64]:
+    for dtype in [np.int8, np.uint8, np.int32, np.float16, np.float32, np.float64, np.bool, np.bool_,
+                  'int8', 'uint8', 'int32', 'float16', 'float32', 'float64', 'bool']:
         for copy in [True, False]:
-            check_astype_equal(dtype, copy, copy is False and mx_data.dtype == dtype)
+            for hybridize in [True, False]:
+                check_astype_equal(dtype, copy, copy is False and mx_data.dtype == dtype, hybridize)
 
 
 @with_seed()
@@ -978,7 +994,8 @@ def test_np_multinomial():
 
 
 @with_seed()
-@unittest.skipUnless(has_tvm_ops(), "Comparison ops are implemented using TVM")
+@unittest.skipUnless(is_op_runnable(), "Comparison ops can only run on either CPU instances, or GPU instances with"
+                                       " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
 @use_np
 def test_np_ndarray_boolean_indexing():
     def test_single_bool_index():

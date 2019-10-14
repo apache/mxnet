@@ -23,7 +23,7 @@ import ctypes
 import numpy as _np
 from . import _op as _mx_np_op
 from ...base import _LIB, SymbolHandle, numeric_types, mx_uint
-from ...util import check_call, set_module
+from ...util import check_call, set_module, _sanity_check_params
 from ...context import current_context
 from ..symbol import Symbol
 from .._internal import _set_np_symbol_class
@@ -33,7 +33,7 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
-           'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot',
+           'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot', 'histogram',
            'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'vstack', 'mean',
            'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign',
            'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'hypot', 'rad2deg', 'deg2rad',
@@ -181,8 +181,29 @@ class _Symbol(Symbol):
         return self.transpose()
     # pylint: enable= invalid-name, undefined-variable
 
-    def astype(self, dtype, **kwargs):  # pylint: disable=arguments-differ
-        raise NotImplementedError
+    def astype(self, dtype, **kwargs):  # pylint: disable=arguments-differ,unused-argument
+        """
+        Copy of the array, cast to a specified type.
+
+        Parameters
+        ----------
+        dtype : str or dtype
+            Typecode or data-type to which the array is cast.
+        copy : bool, optional
+            Default `True`. By default, astype always returns a newly
+            allocated ndarray on the same context. If this is set to
+            `False`, and the dtype requested is the same as the ndarray's
+            dtype, the ndarray is returned instead of a copy.
+
+        Returns
+        -------
+        arr_t : ndarray
+            Unless `copy` is False and the other conditions for returning the input
+            array are satisfied (see description for `copy` input parameter), `arr_t`
+            is a new array of the same shape as the input array with `dtype`.
+        """
+        _sanity_check_params('astype', ['order', 'casting', 'subok'], kwargs)
+        return _npi.cast(self, dtype=dtype)
 
     def dot(self, b, out=None):
         """Dot product of two arrays.
@@ -438,7 +459,14 @@ class _Symbol(Symbol):
         """The arguments are the same as for :py:func:`transpose`, with
         this array as data.
         """
-        return _mx_np_op.transpose(self, axes=axes if len(axes) != 0 else None)
+        if len(axes) == 0:
+            axes = None
+        elif len(axes) == 1:
+            if isinstance(axes[0], (tuple, list)):
+                axes = axes[0]
+            elif axes[0] is None:
+                axes = None
+        return _mx_np_op.transpose(self, axes=axes)
 
     def flip(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`flip`.
@@ -1228,6 +1256,53 @@ def tensordot(a, b, axes=2):
         raise ValueError('Axes length mismatch')
 
     return _npi.tensordot(a, b, a_axes_summed, b_axes_summed)
+
+
+@set_module('mxnet.symbol.numpy')
+def histogram(a, bins=10, range=None, normed=None, weights=None, density=None):  # pylint: disable= too-many-arguments
+    """
+    Compute the histogram of a set of data.
+
+    Parameters
+    ----------
+    a : Symbol
+        Input data. The histogram is computed over the flattened array.
+    bins : int or Symbol
+        If `bins` is an int, it defines the number of equal-width
+        bins in the given range (10, by default). If `bins` is a
+        sequence, it defines a monotonically increasing array of bin edges,
+        including the rightmost edge, allowing for non-uniform bin widths.
+        .. versionadded:: 1.11.0
+        If `bins` is a string, it defines the method used to calculate the
+        optimal bin width, as defined by `histogram_bin_edges`.
+    range : (float, float)
+        The lower and upper range of the bins. Required when `bins` is an integer.
+        Values outside the range are ignored. The first element of the range must
+        be less than or equal to the second.
+    normed : bool, optional
+        Not supported yet, coming soon.
+    weights : array_like, optional
+        Not supported yet, coming soon.
+    density : bool, optional
+        Not supported yet, coming soon.
+    """
+    if normed is True:
+        raise NotImplementedError("normed is not supported yet...")
+    if weights is not None:
+        raise NotImplementedError("weights is not supported yet...")
+    if density is True:
+        raise NotImplementedError("density is not supported yet...")
+    if isinstance(bins, numeric_types):
+        if range is None:
+            raise NotImplementedError("automatic range is not avaialble yet...")
+        return _npi.histogram(a, bin_cnt=bins, range=range)
+    if isinstance(bins, (list, tuple)):
+        raise NotImplementedError("array_like bins is not supported yet...")
+    if isinstance(bins, str):
+        raise NotImplementedError("string bins is not supported yet...")
+    if isinstance(bins, Symbol):
+        return _npi.histogram(a, bins)
+    raise ValueError("histogram fails with", locals())
 
 
 @set_module('mxnet.symbol.numpy')

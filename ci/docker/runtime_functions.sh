@@ -1832,12 +1832,12 @@ build_docs() {
     popd
 }
 
-build_docs_small() {
+build_docs_beta() {
     pushd docs/_build
     tar -xzf jekyll-artifacts.tgz
     api_folder='html/api'
     mkdir -p $api_folder/python/docs && tar -xzf python-artifacts.tgz --directory $api_folder/python/docs
-    # The folder to be published is now in /docs/_build/html
+    GZIP=-9 tar -zcvf beta_website.tgz -C html .
     popd
 }
 
@@ -1884,6 +1884,50 @@ build_static_libmxnet() {
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     source tools/staticbuild/build.sh ${mxnet_variant} pip
     popd
+}
+
+# Packages libmxnet into wheel file
+cd_package_pypi() {
+    set -ex
+    pushd .
+    local mxnet_variant=${1:?"This function requires a python command as the first argument"}
+    ./cd/python/pypi/pypi_package.sh ${mxnet_variant}
+    popd
+}
+
+# Sanity checks wheel file 
+cd_integration_test_pypi() {
+    set -ex
+    local python_cmd=${1:?"This function requires a python command as the first argument"}
+    local gpu_enabled=${2:-"false"}
+
+    local test_conv_params=''
+    local mnist_params=''
+
+    local pip_cmd='pip'
+
+    if [ "${gpu_enabled}" = "true" ]; then
+        mnist_params="--gpu 0"
+        test_conv_params="--gpu"
+    fi
+
+    if [ "${python_cmd}" = "python3" ]; then
+        pip_cmd='pip3'
+    fi
+
+    # install mxnet wheel package
+    ${pip_cmd} install --user ./wheel_build/dist/*.whl
+
+    # execute tests
+    ${python_cmd} /work/mxnet/tests/python/train/test_conv.py ${test_conv_params}
+    ${python_cmd} /work/mxnet/example/image-classification/train_mnist.py ${mnist_params}
+}
+
+# Publishes wheel to PyPI
+cd_pypi_publish() {
+    set -ex
+    pip3 install --user twine
+    ./cd/python/pypi/pypi_publish.py `readlink -f wheel_build/dist/*.whl`
 }
 
 build_static_scala_mkl() {

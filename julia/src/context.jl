@@ -68,3 +68,21 @@ function num_gpus()
   @mxcall :MXGetGPUCount (Ref{Cint},) n
   n[]
 end
+
+"""
+    gpu_memory_info(dev_id = 0)::Tuple{UInt64,UInt64}
+
+Query CUDA for the free and total bytes of GPU global memory.
+It returns a tuple of `(free memory, total memory)`.
+
+```julia-repl
+julia> mx.gpu_memory_info()
+(0x00000003af240000, 0x00000003f9440000)
+```
+"""
+function gpu_memory_info(dev_id = 0)
+  free = Ref{UInt64}()
+  n = Ref{UInt64}()
+  @mxcall :MXGetGPUMemoryInformation64 (Cint, Ref{UInt64}, Ref{UInt64}) dev_id free n
+  free[], n[]
+end
