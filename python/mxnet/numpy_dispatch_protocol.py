@@ -171,6 +171,7 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'sign',
     'exp',
     'less',
+    'less_equal',
     'log',
     'log2',
     'log10',
