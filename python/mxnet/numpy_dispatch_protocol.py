@@ -159,6 +159,8 @@ def _register_array_function():
 # https://docs.scipy.org/doc/numpy/reference/ufuncs.html#available-ufuncs
 _NUMPY_ARRAY_UFUNC_LIST = [
     'add',
+    'greater',
+    'greater_equal',
     'subtract',
     'multiply',
     # Uncomment divide when mxnet.numpy.true_divide is added
