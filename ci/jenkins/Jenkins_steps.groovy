@@ -25,6 +25,7 @@ utils = load('ci/Jenkinsfile_utils.groovy')
 // mxnet libraries
 mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, libsample_lib.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 mx_lib_cython = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, libsample_lib.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so'
+mx_lib_cython_no_tvm_op = 'lib/libmxnet.so, lib/libmxnet.a, libsample_lib.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so'
 
 // Python wheels
 mx_pip = 'build/*.whl'
@@ -810,7 +811,7 @@ def test_unix_python3_gpu_no_tvm_op() {
             python3_gpu_ut_cython('ubuntu_gpu_cu101')
             utils.publish_test_coverage()
           } finally {
-            utils.collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_gpu_no_tvm_op.xml')
+            utils.collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_gpu.xml')
           }
         }
       }
@@ -856,7 +857,7 @@ def test_unix_python3_cpu_no_tvm_op() {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-cpu-no-tvm-op') {
           try {
-            utils.unpack_and_init('cpu_no_tvm_op', mx_cmake_lib_no_tvm_op)
+            utils.unpack_and_init('cpu_openblas_no_tvm_op', mx_cmake_lib_no_tvm_op)
             python3_ut('ubuntu_cpu')
           } finally {
             utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_cpu_no_tvm_op_unittest.xml')
