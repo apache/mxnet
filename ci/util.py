@@ -18,6 +18,8 @@
 import os
 import contextlib
 import logging
+import sys
+
 
 def get_mxnet_root() -> str:
     curpath = os.path.abspath(os.path.dirname(__file__))
@@ -31,6 +33,7 @@ def get_mxnet_root() -> str:
             raise RuntimeError("Got to the root and couldn't find a parent folder with .mxnet_root")
         curpath = parent
     return curpath
+
 
 @contextlib.contextmanager
 def remember_cwd():
@@ -113,3 +116,14 @@ def chdir_to_script_directory():
     os.chdir(base)
 
 
+def script_name() -> str:
+    """:returns: script name with leading paths removed"""
+    return os.path.split(sys.argv[0])[1]
+
+
+def config_logging():
+    import time
+    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger("requests").setLevel(logging.WARNING)
+    logging.basicConfig(format='{}: %(asctime)sZ %(levelname)s %(message)s'.format(script_name()))
+    logging.Formatter.converter = time.gmtime
