@@ -101,4 +101,4 @@ void MKLDNNConcatBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
 
 }  // namespace op
 }  // namespace mxnet
-#endif
+#endif  // MXNET_USE_MKLDNN == 100
