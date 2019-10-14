@@ -170,6 +170,7 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'rint',
     'sign',
     'exp',
+    'less',
     'log',
     'log2',
     'log10',
