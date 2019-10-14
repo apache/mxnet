@@ -50,11 +50,12 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'add', 'subtrac
            'sqrt', 'cbrt', 'abs', 'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative',
            'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh',
-           'tensordot', 'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate',
+           'tensordot', 'histogram', 'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate',
            'stack', 'vstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices',
            'copysign', 'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'arctan2', 'hypot',
            'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer',
            'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal']
+
 
 # Return code for dispatching indexing function call
 _NDARRAY_UNSUPPORTED_INDEXING = -1
@@ -301,7 +302,7 @@ class ndarray(NDArray):
             except Exception as err:
                 raise TypeError('{}'.format(str(err)))
         if isinstance(key, _np.ndarray) and key.dtype == _np.bool_:
-            key = array(key, dtype='bool')
+            key = array(key, dtype='bool', ctx=self.ctx)
         if isinstance(key, ndarray) and key.dtype == _np.bool_:  # boolean indexing
             key_shape = key.shape
             key_ndim = len(key_shape)
@@ -363,6 +364,8 @@ class ndarray(NDArray):
         """
         if isinstance(value, NDArray) and not isinstance(value, ndarray):
             raise TypeError('Cannot assign mx.nd.NDArray to mxnet.numpy.ndarray')
+
+        # handle basic and advanced indexing
         if self.ndim == 0:
             if not isinstance(key, tuple) or len(key) != 0:
                 raise IndexError('scalar tensor can only accept `()` as index')
@@ -752,7 +755,7 @@ class ndarray(NDArray):
         check_call(_LIB.MXNDArrayDetach(self.handle, ctypes.byref(hdl)))
         return _np_ndarray_cls(hdl)
 
-    def astype(self, dtype, *args, **kwargs):  # pylint: disable=arguments-differ,unused-argument
+    def astype(self, dtype, **kwargs):  # pylint: disable=arguments-differ,unused-argument
         """
         Copy of the array, cast to a specified type.
 
@@ -1236,7 +1239,14 @@ class ndarray(NDArray):
 
     def transpose(self, *axes):  # pylint: disable=arguments-differ
         """Permute the dimensions of an array."""
-        return _mx_np_op.transpose(self, axes=axes if len(axes) != 0 else None)
+        if len(axes) == 0:
+            axes = None
+        elif len(axes) == 1:
+            if isinstance(axes[0], (tuple, list)):
+                axes = axes[0]
+            elif axes[0] is None:
+                axes = None
+        return _mx_np_op.transpose(self, axes=axes)
 
     def flip(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`flip`.
@@ -3400,11 +3410,11 @@ def logical_not(x, out=None, **kwargs):
     --------
     >>> x= np.array([True, False, 0, 1])
     >>> np.logical_not(x)
-    array([0., 1., 1., 0.])
+    array([False,  True,  True, False])
 
     >>> x = np.arange(5)
     >>> np.logical_not(x<3)
-    array([0., 0., 0., 1., 1.])
+    array([False, False, False,  True,  True])
     """
     return _mx_nd_np.logical_not(x, out=out, **kwargs)
 
@@ -3602,6 +3612,37 @@ def tensordot(a, b, axes=2):
            [ 4928.,  5306.]])
     """
     return _mx_nd_np.tensordot(a, b, axes)
+
+
+@set_module('mxnet.numpy')
+def histogram(a, bins=10, range=None, normed=None, weights=None, density=None):  # pylint-disable=too-many-arguments
+    """
+    Compute the histogram of a set of data.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input data. The histogram is computed over the flattened array.
+    bins : int or NDArray
+        If `bins` is an int, it defines the number of equal-width
+        bins in the given range (10, by default). If `bins` is a
+        sequence, it defines a monotonically increasing array of bin edges,
+        including the rightmost edge, allowing for non-uniform bin widths.
+        .. versionadded:: 1.11.0
+        If `bins` is a string, it defines the method used to calculate the
+        optimal bin width, as defined by `histogram_bin_edges`.
+    range : (float, float)
+        The lower and upper range of the bins. Required when `bins` is an integer.
+        Values outside the range are ignored. The first element of the range must
+        be less than or equal to the second.
+    normed : bool, optional
+        Not supported yet, coming soon.
+    weights : array_like, optional
+        Not supported yet, coming soon.
+    density : bool, optional
+        Not supported yet, coming soon.
+    """
+    return _mx_nd_np.histogram(a, bins=bins, range=range, normed=normed, weights=weights, density=density)
 
 
 @set_module('mxnet.numpy')

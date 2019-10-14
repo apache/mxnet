@@ -51,6 +51,7 @@ from .symbol import Symbol
 from .symbol.numpy import _Symbol as np_symbol
 from .util import use_np  # pylint: disable=unused-import
 from .runtime import Features
+from .numpy_extension import get_cuda_compute_capability
 
 
 def default_context():
@@ -2235,10 +2236,34 @@ def has_tvm_ops():
     """Returns True if MXNet is compiled with TVM generated operators. If current ctx
     is GPU, it only returns True for CUDA compute capability > 52 where FP16 is supported."""
     built_with_tvm_op = _features.is_enabled("TVM_OP")
-    if current_context().device_type == 'gpu':
+    ctx = current_context()
+    if ctx.device_type == 'gpu':
         try:
-            import tvm
-        except ImportError:
+            cc = get_cuda_compute_capability(ctx)
+        except:  # pylint: disable=bare-except
+            print('Failed to get CUDA compute capability for context {}. The operators '
+                  'built with USE_TVM_OP=1 will not be run in unit tests.'.format(ctx))
             return False
-        return built_with_tvm_op and (int("".join(tvm.nd.gpu(0).compute_version.split('.'))) >= 53)
+        print('Cuda arch compute capability: sm_{}'.format(str(cc)))
+        return built_with_tvm_op and cc >= 53
     return built_with_tvm_op
+
+
+def is_op_runnable():
+    """Returns True for all CPU tests. Returns True for GPU tests that are either of the following.
+    1. Built with USE_TVM_OP=0.
+    2. Built with USE_TVM_OP=1, but with compute capability >= 53."""
+    ctx = current_context()
+    if ctx.device_type == 'gpu':
+        if not _features.is_enabled("TVM_OP"):
+            return True
+        else:
+            try:
+                cc = get_cuda_compute_capability(ctx)
+            except:  # pylint: disable=bare-except
+                print('Failed to get CUDA compute capability for context {}. The operators '
+                      'built with USE_TVM_OP=1 will not be run in unit tests.'.format(ctx))
+                return False
+            print('Cuda arch compute capability: sm_{}'.format(str(cc)))
+            return cc >= 53
+    return True
