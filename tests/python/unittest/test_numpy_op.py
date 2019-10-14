@@ -3357,9 +3357,9 @@ def test_np_einsum():
         (('ij,jk,kl->il'), [(2, 2), (2, 5), (5, 2)], lambda *args: (_np.dot(_np.ones((2, 2)), _np.dot(args[1], args[2]).T),
                                                                     _np.dot(args[0].T, _np.dot(_np.ones((2, 2)), args[2].T)),
                                                                     _np.dot(_np.dot(args[0], args[1]).T, _np.ones((2, 2))))),
-        # # broadcast bug
-        # (('ij, ij -> i'), [(1, 4), (2, 4)], lambda *args: (_np.sum(args[1], axis=0)[None, :],
-        #                                                    _np.tile(args[0], [2, 1]))),
+        # broadcast bug
+        (('ij, ij -> i'), [(1, 4), (2, 4)], lambda *args: (_np.sum(args[1], axis=0)[None, :],
+                                                           _np.tile(args[0], [2, 1]))),
     ]
     dtypes = ['int32', 'float16', 'float32', 'float64']
     for hybridize in [False, True]:

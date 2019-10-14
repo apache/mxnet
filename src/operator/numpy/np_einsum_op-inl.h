@@ -637,13 +637,14 @@ inline void NumpyEinsumProcess(const std::vector<TBlob>& inputs,
     reduceshape[idim - ndim_output] = itershape[idim];
   }
   for (iop = 0; iop < nop; iop++) {
-    remainshape[iop] = TShape(ndim_iter - opshape[iop].ndim(), 0);
-    int j = 0;
+    std::vector<size_t> rsh;
     for (idim = 0; idim < ndim_iter; idim++) {
-      if (op_axes_arrays[iop][idim] == -1) {
-        remainshape[iop][j++] = itershape[idim];
+      if (op_axes_arrays[iop][idim] == -1 ||
+          itershape[idim] != opshape[iop][op_axes_arrays[iop][idim]]) {
+        rsh.push_back(itershape[idim]);
       }
     }
+    remainshape[iop] = TShape(rsh.begin(), rsh.end());
   }
 
   // calculate stride
@@ -657,15 +658,17 @@ inline void NumpyEinsumProcess(const std::vector<TBlob>& inputs,
   }
   for (iop = 0; iop < nop; ++iop) {
     opstride[iop] = TShape(opshape[iop].ndim(), 0);
-    remainstride[iop] = TShape(ndim_iter - opshape[iop].ndim(), 0);
+    remainstride[iop] = TShape(remainshape[iop].ndim(), 0);
     int j = 0;
     for (idim = 0; idim < ndim_iter; ++idim) {
-      if (op_axes_arrays[iop][idim] != -1) {
+      if (op_axes_arrays[iop][idim] != -1 &&
+          itershape[idim] == opshape[iop][op_axes_arrays[iop][idim]]) {
         opstride[iop][op_axes_arrays[iop][idim]] = iterstride_true[idim];
       } else {
         remainstride[iop][j++] = iterstride_true[idim];
       }
     }
+    CHECK_EQ(j, remainstride[iop].ndim());
   }
 
   // exclude the 0-dim case
