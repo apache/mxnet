@@ -27,7 +27,6 @@ from ...util import wrap_np_unary_func, wrap_np_binary_func
 from ...context import current_context
 from . import _internal as _npi
 from ..ndarray import NDArray
-from ...numpy_utils import _einsum_path_util
 
 __all__ = ['zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power',
            'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs',
@@ -4712,4 +4711,10 @@ def einsum(*operands, **kwargs):
     >>> for iteration in range(500):
     ...     np.einsum('ijk,ilm,njm,nlk,abc->',a,a,a,a,a, optimize=True)
     """
-    return _einsum_path_util._einsum('ndarray', *operands, **kwargs)
+    # Grab non-einsum kwargs; do not optimize by default.
+    optimize_arg = kwargs.pop('optimize', False)
+    out = kwargs.pop('out', None)
+
+    subscripts = operands[0]
+    operands = operands[1:]
+    return _npi.einsum(*operands, subscripts=subscripts, out=out, optimize=int(optimize_arg))

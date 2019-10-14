@@ -29,7 +29,6 @@ from ...context import current_context
 from ..symbol import Symbol
 from .._internal import _set_np_symbol_class
 from . import _internal as _npi
-from ...numpy_utils import _einsum_path_util
 
 __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'arctan2',
            'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
@@ -4538,7 +4537,13 @@ def einsum(*operands, **kwargs):
     returns the optimal path in the majority of cases. 'optimal' is not supported
     for now.
     """
-    return _einsum_path_util._einsum('symbol', *operands, **kwargs)
+    # Grab non-einsum kwargs; do not optimize by default.
+    optimize_arg = kwargs.pop('optimize', False)
+    out = kwargs.pop('out', None)
+
+    subscripts = operands[0]
+    operands = operands[1:]
+    return _npi.einsum(*operands, subscripts=subscripts, out=out, optimize=int(optimize_arg))
 
 
 _set_np_symbol_class(_Symbol)
