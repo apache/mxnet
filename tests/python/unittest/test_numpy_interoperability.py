@@ -97,13 +97,11 @@ def _add_workload_einsum():
         ('ijk,kl,jl', [(1, 5, 4), (4, 6), (5, 6)]),
         ('ijk,kl,jl,i->i', [(1, 5, 4), (4, 6), (5, 6), (10)]),
         ('abjk,kl,jl', [(1, 1, 5, 4), (4, 6), (5, 6)]),
-        # ('abjk,kl,jl,ab->ab', [(1, 1, 5, 4), (4, 6), (5, 6), (7, 7)]),
+        ('abjk,kl,jl,ab->ab', [(1, 1, 5, 4), (4, 6), (5, 6), (7, 7)]),
         ('obk,ijk->ioj', [(2, 4, 8), (2, 4, 8)]),
     ]
     for optimize in [False, True]:
         for config in configs:
-            print("optimize = {}".format(optimize))
-            print("config = {}".format(config))
             subscripts, args = config
             if args is None:
                 args = []
