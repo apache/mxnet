@@ -1275,6 +1275,44 @@ def test_batch_dot():
     assert res.shape == (LARGE_X, 5, 6)
 
 
+def test_regression():
+    shape = (LARGE_X, SMALL_Y)
+
+    def check_regression(symbol, forward, backward, shape):
+        # init executor
+        data_s = mx.symbol.Variable('data')
+        label_s = mx.symbol.Variable('label')
+        out_s = symbol(data=data_s, label=label_s)
+        grad_req = {'data': 'write', 'label': 'null'}
+        exe = out_s.simple_bind(ctx=default_context(), data=shape, label=shape, grad_req=grad_req)
+
+        arg_map = dict(zip(out_s.list_arguments(), exe.arg_arrays))
+        grad_map = dict(zip(out_s.list_arguments(), exe.grad_arrays))
+
+        # init data
+        data = mx.random.uniform(-1, -1, shape)
+        arg_map["data"][:] = data
+        atol = 1e-5
+        density = 0.5
+        stype = 'default'
+        label = arg_map["label"]
+        label[:] = rand_ndarray(shape, stype, density=density)
+        exe.forward(is_train=True)
+        exe.backward()
+        np_out = forward(data.asnumpy())
+        out_grad = backward(np_out, label.asnumpy().reshape(np_out.shape)) / shape[1]
+        assert_almost_equal(exe.outputs[0].asnumpy(), np_out, atol=atol)
+        assert_almost_equal(grad_map["data"].asnumpy(), out_grad, atol=atol)
+
+    check_regression(mx.symbol.LogisticRegressionOutput,
+                     lambda x: 1.0 / (1.0 + np.exp(-x)),
+                     lambda x, y: x - y,
+                     shape)
+    check_regression(mx.symbol.LinearRegressionOutput,
+                     lambda x: x,
+                     lambda x, y: x - y,
+                     shape)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
