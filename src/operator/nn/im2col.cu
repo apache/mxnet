@@ -35,5 +35,11 @@ NNVM_REGISTER_OP(im2col)
 NNVM_REGISTER_OP(_backward_im2col)
 .set_attr<FCompute>("FCompute<gpu>", Im2colGradCompute<gpu>);
 
+NNVM_REGISTER_OP(col2im)
+.set_attr<FCompute>("FCompute<gpu>", Col2imCompute<gpu>);
+
+NNVM_REGISTER_OP(_backward_col2im)
+.set_attr<FCompute>("FCompute<gpu>", Col2imGradCompute<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

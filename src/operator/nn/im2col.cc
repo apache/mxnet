@@ -32,10 +32,12 @@ namespace mxnet {
 namespace op {
 
 DMLC_REGISTER_PARAMETER(Im2colParam);
+DMLC_REGISTER_PARAMETER(Col2imParam);
 
-void Im2colParser(nnvm::NodeAttrs* attrs) {
+template<typename PType>
+void SlidingParser(nnvm::NodeAttrs* attrs) {
   using namespace mshadow;
-  Im2colParam param_;
+  PType param_;
   try {
     param_.Init(attrs->dict);
   } catch (const dmlc::ParamError& e) {
@@ -84,7 +86,7 @@ NNVM_REGISTER_OP(im2col)
 )" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr_parser(Im2colParser)
+.set_attr_parser(SlidingParser<Im2colParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
     [](const NodeAttrs& attrs) {
   return std::vector<std::string>{"data"};
@@ -141,9 +143,100 @@ NNVM_REGISTER_OP(im2col)
 NNVM_REGISTER_OP(_backward_im2col)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr_parser(Im2colParser)
+.set_attr_parser(SlidingParser<Im2colParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", Im2colGradCompute<cpu>);
+
+NNVM_REGISTER_OP(col2im)
+.describe(R"(Combining the output of im2col back to input array.
+)" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(SlidingParser<Col2imParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+    [](const NodeAttrs& attrs) {
+  return std::vector<std::string>{"data"};
+})
+.set_attr<nnvm::FListOutputNames>("FListOutputNames",
+    [](const NodeAttrs& attrs) {
+  return std::vector<std::string>{"output"};
+})
+.set_attr<mxnet::FInferShape>("FInferShape", [](const nnvm::NodeAttrs& attrs,
+      mxnet::ShapeVector *in_shape, mxnet::ShapeVector *out_shape){
+  using namespace mshadow;
+  CHECK_EQ(in_shape->size(), 1U);
+  const Col2imParam& param = nnvm::get<Col2imParam>(attrs.parsed);
+  if (mxnet::op::shape_is_none(in_shape->at(0))) {
+    return false;
+  }
+
+  CHECK_EQ(param.kernel.ndim(), param.output_size.ndim())
+    << "Output size must have the same number of dimensions with kernel_size,"
+    << "but kernel_size is set to " << param.kernel << " while output size is "
+    << param.output_size;
+
+  CHECK_GT(param.output_size.Size(), 0U) \
+    << "incorrect output size: " << param.output_size;
+  CHECK_GT(param.kernel.Size(), 0U) \
+    << "incorrect kernel size: " << param.kernel;
+  CHECK_GT(param.stride.Size(), 0U) \
+    << "incorrect stride size: " << param.stride;
+  CHECK_GT(param.dilate.Size(), 0U) \
+    << "incorrect dilate size: " << param.dilate;
+
+  const int spacial_size = param.kernel.ndim();
+  mxnet::TShape dshape(in_shape->at(0));
+
+  index_t out_dim = 1;
+  for (int i = 0; i < spacial_size; ++i) {
+    const index_t pad_size = param.output_size[i] + 2 * param.pad[i];
+    const index_t dilated_kernel_size = param.DilatedKernelSize(i);
+    CHECK_LE(dilated_kernel_size, pad_size)
+      << "kernel size exceed output size";
+    const index_t output_size = (pad_size - dilated_kernel_size) / param.stride[i] + 1;
+    out_dim *= output_size;
+  }
+
+  CHECK_EQ(dshape[2], out_dim)
+    << "output size does not match convolution parameters";
+  CHECK_EQ(dshape[1] % param.kernel.Size(), 0)
+    << "the second dim of input shape should be multiples of kernel size";
+
+  mxnet::TShape oshape(param.kernel.ndim() + 2, 1);
+  oshape[0] = dshape[0];
+  oshape[1] = dshape[1] / param.kernel.Size();
+  for (int i = 0; i < spacial_size; ++i) {
+    oshape[i + 2] = param.output_size[i];
+  }
+  SHAPE_ASSIGN_CHECK(*out_shape, 0, oshape);
+  return true;
+})
+.set_attr<nnvm::FInferType>("FInferType", [](const nnvm::NodeAttrs& attrs,
+      std::vector<int> *in_type, std::vector<int> *out_type) {
+  CHECK_EQ(in_type->size(), 1U);
+  if (mxnet::op::type_is_none(in_type->at(0))) {
+    return false;
+  }
+
+  int dtype = in_type->at(0);
+  TYPE_ASSIGN_CHECK(*out_type, 0, dtype);
+  return true;
+})
+.set_attr<FCompute>("FCompute<cpu>", Col2imCompute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_col2im"})
+.add_argument("data", "NDArray-or-Symbol", "Input array to combine sliding blocks.")
+.add_arguments(Col2imParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_col2im)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(SlidingParser<Col2imParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+.set_attr<FCompute>("FCompute<cpu>", Col2imGradCompute<cpu>);
 
 }  // namespace op
 }  // namespace mxnet
