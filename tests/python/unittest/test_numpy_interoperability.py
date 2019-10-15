@@ -325,6 +325,7 @@ def _check_interoperability_helper(op_name, *args, **kwargs):
 
 def check_interoperability(op_list):
     for name in op_list:
+        print('Dispatch test:', name)
         workloads = OpArgMngr.get_workloads(name)
         assert workloads is not None, 'Workloads for operator `{}` has not been ' \
                                       'added for checking interoperability with ' \
