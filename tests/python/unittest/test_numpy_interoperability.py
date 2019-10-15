@@ -164,7 +164,6 @@ def _prepare_workloads():
     OpArgMngr.add_workload('meshgrid', np.array([1, 2, 3]), np.array([4, 5, 6, 7]))
     OpArgMngr.add_workload('meshgrid', np.array([1, 2, 3]), np.array([4, 5, 6, 7]), indexing='ij')
     OpArgMngr.add_workload('meshgrid', np.array([1, 2, 3]), np.array([4, 5, 6, 7]), sparse=True)
-    OpArgMngr.add_workload('not_equal', np.array([0, 0, 3, 2]), np.array([0, 4, 0, 2]))
 
 
 
