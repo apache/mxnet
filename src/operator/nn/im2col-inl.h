@@ -40,13 +40,16 @@ struct Im2colParam : public dmlc::Parameter<Im2colParam> {
   mxnet::TShape dilate;
   mxnet::TShape pad;
   DMLC_DECLARE_PARAMETER(Im2colParam) {
-    DMLC_DECLARE_FIELD(kernel).describe("Convolution kernel size: (w,), (h, w) or (d, h, w)");
+    DMLC_DECLARE_FIELD(kernel).describe("Sliding kernel size: (w,), (h, w) or (d, h, w).");
     DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape(0, 0))
-    .describe("Convolution stride: (w,), (h, w) or (d, h, w). Defaults to 1 for each dimension.");
+    .describe("The stride between adjacent sliding blocks in spatial dimension: "
+              "(w,), (h, w) or (d, h, w). Defaults to 1 for each dimension.");
     DMLC_DECLARE_FIELD(dilate).set_default(mxnet::TShape(0, 0))
-    .describe("Convolution dilate: (w,), (h, w) or (d, h, w). Defaults to 1 for each dimension.");
+    .describe("The spacing between adjacent kernel points: (w,), (h, w) or (d, h, w). "
+              "Defaults to 1 for each dimension.");
     DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape(0, 0))
-    .describe("Convolution padding: (w,), (h, w) or (d, h, w). Defaults to no padding.");
+    .describe("The zero-value padding size on both sides of spatial dimension: "
+              "(w,), (h, w) or (d, h, w). Defaults to no padding.");
   }
 
   index_t DilatedKernelSize(int dim) const {
@@ -134,14 +137,18 @@ struct Col2imParam : public dmlc::Parameter<Col2imParam> {
   mxnet::TShape dilate;
   mxnet::TShape pad;
   DMLC_DECLARE_PARAMETER(Col2imParam) {
-    DMLC_DECLARE_FIELD(output_size).describe("Spacial dimension of the output: (w,), (h, w) or (d, h, w)");
-    DMLC_DECLARE_FIELD(kernel).describe("Convolution kernel size: (w,), (h, w) or (d, h, w)");
+    DMLC_DECLARE_FIELD(output_size)
+    .describe("The spatial dimension of image array: (w,), (h, w) or (d, h, w).");
+    DMLC_DECLARE_FIELD(kernel).describe("Sliding kernel size: (w,), (h, w) or (d, h, w).");
     DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape(0, 0))
-    .describe("Convolution stride: (w,), (h, w) or (d, h, w). Defaults to 1 for each dimension.");
+    .describe("The stride between adjacent sliding blocks in spatial dimension: "
+              "(w,), (h, w) or (d, h, w). Defaults to 1 for each dimension.");
     DMLC_DECLARE_FIELD(dilate).set_default(mxnet::TShape(0, 0))
-    .describe("Convolution dilate: (w,), (h, w) or (d, h, w). Defaults to 1 for each dimension.");
+    .describe("The spacing between adjacent kernel points: (w,), (h, w) or (d, h, w). "
+              "Defaults to 1 for each dimension.");
     DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape(0, 0))
-    .describe("Convolution padding: (w,), (h, w) or (d, h, w). Defaults to no padding.");
+    .describe("The zero-value padding size on both sides of spatial dimension: "
+              "(w,), (h, w) or (d, h, w). Defaults to no padding.");
   }
 
   index_t DilatedKernelSize(int dim) const {

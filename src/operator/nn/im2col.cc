@@ -83,6 +83,20 @@ void SlidingParser(nnvm::NodeAttrs* attrs) {
 
 NNVM_REGISTER_OP(im2col)
 .describe(R"(Extract sliding blocks from input array.
+
+Im2col is used in vanilla convolution implementation to transform the sliding
+blocks on image to column matrix, then the convolution operation can be computed
+by matrix multiplication between column and convolution weight. Due to the close
+relation between im2col and convolution, the concept of ``kernel``, ``stride``,
+``dilate`` and ``pad`` in this operator are inherited from convolution operation.
+
+Given the input data of shape :math:`(N, C, *)`, where :math:`N` is the batch size,
+:math:`C` is the channel size, and :math:`*` is the arbitrary spatial dimension,
+the output column array is always with shape :math:`(N, C \times \prod(\text{kernel}), W)`,
+where :math:`C \times \prod(\text{kernel})` is the block size, and :math:`W` is the
+block number which is the spatial size of the convolution output with same input parameters.
+Only 1-D, 2-D and 3-D of spatial dimension is supported in this operator.
+
 )" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -148,7 +162,19 @@ NNVM_REGISTER_OP(_backward_im2col)
 .set_attr<FCompute>("FCompute<cpu>", Im2colGradCompute<cpu>);
 
 NNVM_REGISTER_OP(col2im)
-.describe(R"(Combining the output of im2col back to input array.
+.describe(R"(Combining the output column matrix of im2col back to image array.
+
+Like :class:`.im2col`, the col2im is also used in the vanilla convolution implementation.
+Despite the name, col2im is not the reverse operation of im2col. Since there may be
+overlaps between neighbouring sliding blocks, the column elements cannot be directly
+put back into image. Instead, they are accumulated (i.e., summed) in the input image
+just like the gradient computation, so col2im is the gradient of im2col and vice versa.
+
+Using the notation in im2col, given an input column array of shape
+:math:`(N, C \times  \prod(\text{kernel}), W)`, this operator accumulates the column elements
+into output array of shape :math:`(N, C, \text{output\_size}[0], \text{output\_size}[1], \dots)`.
+Only 1-D, 2-D and 3-D of spatial dimension is supported in this operator.
+
 )" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
