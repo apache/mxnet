@@ -4537,11 +4537,11 @@ def einsum(*operands, **kwargs):
     returns the optimal path in the majority of cases. 'optimal' is not supported
     for now.
 
-    This function differs from the original `numpy.einsum
-    https://docs.scipy.org/doc/numpy/reference/generated/numpy.einsum.html`_ in
-    the following way(s):
-    - Does not support 'optimal' strategy
-    - Does not support the alternative subscript like
+    This function differs from the original `numpy.einsum
+    https://docs.scipy.org/doc/numpy/reference/generated/numpy.einsum.html`_ in
+    the following way(s):
+    - Does not support 'optimal' strategy
+    - Does not support the alternative subscript like
         `einsum(op0, sublist0, op1, sublist1, ..., [sublistout])`
     - Does not produce view in any cases
     """
