@@ -554,8 +554,8 @@ def test_concat():
     a = nd.ones(LARGE_X)
     b = nd.zeros(LARGE_X)
     c = nd.concat(a, b, dim=0)
-    assert c[0][0] == 1
-    assert c[-1][-1] == 0
+    assert c[0] == 1
+    assert c[-1] == 0
     assert c.shape[0] == (2 * LARGE_X)
 
 
@@ -706,6 +706,111 @@ def test_full():
     assert a.shape[0] == LARGE_X
     assert a[LARGE_X // 2] == 3
     assert a[-1] == 3
+
+
+def test_hyperbolic():
+    def test_arccosh(a):
+        mx_res = mx.nd.arccosh(a)
+        assert_almost_equal(mx_res[-1].asnumpy(), np.arccosh(a[-1].asnumpy()))
+
+    def test_arcsinh(a):
+        mx_res = mx.nd.arcsinh(a)
+        assert_almost_equal(mx_res[-1].asnumpy(), np.arcsinh(a[-1].asnumpy()))
+
+    def test_arctanh(a):
+        a[-1] = 0   # arctanh of 1 is inf, assert_almost_equal gives "divide by 0" for comparing 2 inf values
+        mx_res = mx.nd.arctanh(a)
+        assert_almost_equal(mx_res[-1].asnumpy(), np.arctanh(a[-1].asnumpy()))
+
+    def test_cosh(a):
+        mx_res = mx.nd.cosh(a)
+        assert_almost_equal(mx_res[-1].asnumpy(), np.cosh(a[-1].asnumpy()))
+
+    def test_sinh(a):
+        mx_res = mx.nd.sinh(a)
+        assert_almost_equal(mx_res[-1].asnumpy(), np.sinh(a[-1].asnumpy()))
+
+    def test_tanh(a):
+        mx_res = mx.nd.tanh(a)
+        assert_almost_equal(mx_res[-1].asnumpy(), np.tanh(a[-1].asnumpy()))
+
+    a = mx.nd.ones(LARGE_X)
+    test_arccosh(a)
+    test_arcsinh(a)
+    test_arctanh(a)
+    test_cosh(a)
+    test_sinh(a)
+    test_tanh(a)
+
+
+def test_sign():
+    a = mx.nd.random.normal(-1, 1, shape=LARGE_X)
+    mx_res = mx.nd.sign(a)
+    assert_almost_equal(mx_res[-1].asnumpy(), np.sign(a[-1].asnumpy()))
+
+
+def test_logical():
+    def test_logical_and(a, b):
+        mx_res = mx.nd.logical_and(a, b)
+        assert_almost_equal(mx_res[-1].asnumpy(), np.logical_and(a[-1].asnumpy(), b[-1].asnumpy()))
+
+    def test_logical_or(a, b):
+        mx_res = mx.nd.logical_and(a, b)
+        assert_almost_equal(mx_res[-1].asnumpy(), np.logical_and(a[-1].asnumpy(), b[-1].asnumpy()))
+
+    def test_logical_not(a, b):
+        mx_res = mx.nd.logical_and(a, b)
+        assert_almost_equal(mx_res[-1].asnumpy(), np.logical_and(a[-1].asnumpy(), b[-1].asnumpy()))
+
+    def test_logical_xor(a, b):
+        mx_res = mx.nd.logical_and(a, b)
+        assert_almost_equal(mx_res[-1].asnumpy(), np.logical_and(a[-1].asnumpy(), b[-1].asnumpy()))
+
+    a = mx.nd.ones(LARGE_X)
+    b = mx.nd.zeros(LARGE_X)
+    test_logical_and(a, b)
+    test_logical_or(a, b)
+    test_logical_not(a, b)
+    test_logical_xor(a, b)
+
+
+def test_regression():
+    shape = LARGE_X
+
+    def check_regression(symbol, forward, backward, shape):
+        # init executor
+        data_s = mx.symbol.Variable('data')
+        label_s = mx.symbol.Variable('label')
+        out_s = symbol(data=data_s, label=label_s)
+        grad_req = {'data': 'write', 'label': 'null'}
+        exe = out_s.simple_bind(ctx=default_context(), data=shape, label=shape, grad_req=grad_req)
+
+        arg_map = dict(zip(out_s.list_arguments(), exe.arg_arrays))
+        grad_map = dict(zip(out_s.list_arguments(), exe.grad_arrays))
+
+        # init data
+        data = mx.random.uniform(-1, -1, shape)
+        arg_map["data"][:] = data
+        atol = 1e-5
+        density = 0.5
+        stype = 'default'
+        label = arg_map["label"]
+        label[:] = rand_ndarray(shape, stype, density=density)
+        exe.forward(is_train=True)
+        exe.backward()
+        np_out = forward(data.asnumpy())
+        out_grad = backward(np_out, label.asnumpy().reshape(np_out.shape)) / shape[1]
+        assert_almost_equal(exe.outputs[0].asnumpy(), np_out, atol=atol)
+        assert_almost_equal(grad_map["data"].asnumpy(), out_grad, atol=atol)
+
+    check_regression(mx.symbol.LogisticRegressionOutput,
+                     lambda x: 1.0 / (1.0 + np.exp(-x)),
+                     lambda x, y: x - y,
+                     shape)
+    check_regression(mx.symbol.LinearRegressionOutput,
+                     lambda x: x,
+                     lambda x, y: x - y,
+                     shape)
 
 
 if __name__ == '__main__':
