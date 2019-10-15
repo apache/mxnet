@@ -66,7 +66,8 @@ void MKLDNNSliceFwd::SetNewMem(const mkldnn::memory &input, const mkldnn::memory
 }
 
 void MKLDNNSliceFwd::Register() {
-  MKLDNNStream::Get()->RegisterPrimArgs(*fwd_, {{MKLDNN_ARG_FROM, *(this->data_)}, {MKLDNN_ARG_TO, *(this->out_)}});
+  MKLDNNStream::Get()->RegisterPrimArgs(*fwd_,
+      {{MKLDNN_ARG_FROM, *(this->data_)}, {MKLDNN_ARG_TO, *(this->out_)}});
 }
 
 MKLDNNSliceFwd &GetSliceForward(const SliceParam &param, const bool is_train,
