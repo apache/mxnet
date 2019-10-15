@@ -706,7 +706,7 @@ class ndarray(NDArray):
             if dtype == _np.float32:
                 array_str = array_str[:array_str.rindex(',')] + ')'
         elif dtype not in (_np.float32, _np.bool_):
-            array_str = array_str[:-1] + ', dtype={})'.format(dtype.__name__)
+            array_str = array_str[:-1] + ', dtype={})'.format(dtype)
 
         context = self.context
         if context.device_type == 'cpu':
