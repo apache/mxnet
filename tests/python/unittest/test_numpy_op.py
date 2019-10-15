@@ -855,6 +855,56 @@ def test_np_linspace():
 
 @with_seed()
 @use_np
+def test_np_logspace():
+    class TestLogspace(HybridBlock):
+        def __init__(self, start, stop, num=50, endpoint=None, base=50.0, dtype=None, axis=0):
+            super(TestLogspace, self).__init__()
+            self._start = start
+            self._stop = stop
+            self._num = num
+            self._endpoint = endpoint
+            self._base = base
+            self._dtype = dtype
+            self.axis = axis
+
+        def hybrid_forward(self, F, x):
+            return x + F.np.logspace(self._start, self._stop, self._num, self._endpoint, self._base, self._dtype, self.axis)
+
+    configs = [
+        (0.0, 1.0, 20),
+        (2, 8, 0),
+        (22, 11, 1),
+        (2.22, 9.99, 11),
+        (4.99999, 12.11111111, 111)
+    ]
+    base_configs = [0, 1, 5, 8, 10, 33]
+    dtypes = ['float32', 'float64', None]
+
+    for config in configs:
+        for dtype in dtypes:
+            for endpoint in [False, True]:
+                for hybridize in [False, True]:
+                    for base in base_configs:
+                        x = np.zeros(shape=(), dtype=dtype)
+                        net = TestLogspace(*config, endpoint=endpoint, base=base, dtype=dtype)
+                        np_out = _np.logspace(*config, endpoint=endpoint, base=base, dtype=dtype)
+                        if hybridize:
+                            net.hybridize()
+                        mx_out = net(x)
+                        assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-3, rtol=1e-5)
+                        if dtype is not None:
+                            assert mx_out.dtype == np_out.dtype
+
+                        # Test imperative once again
+                        mx_ret = np.logspace(*config, endpoint=endpoint, base=base, dtype=dtype)
+                        np_ret = _np.logspace(*config, endpoint=endpoint, base=base, dtype=dtype)
+                        assert_almost_equal(mx_ret.asnumpy(), np_ret, atol=1e-3, rtol=1e-5)
+                        if dtype is not None:
+                            assert mx_out.dtype == np_out.dtype
+
+
+@with_seed()
+@use_np
 def test_npx_slice():
     class TestSlice(HybridBlock):
         def __init__(self, begin, end, step):
@@ -1593,6 +1643,61 @@ def test_np_split():
 
 @with_seed()
 @use_np
+def test_np_vsplit():
+    class TestVsplit(HybridBlock):
+        def __init__(self, indices_or_sections):
+            super(TestVsplit, self).__init__()
+            self._indices_or_sections = indices_or_sections
+
+        def hybrid_forward(self, F, a, *args, **kwargs):
+            return F.np.vsplit(a, indices_or_sections=self._indices_or_sections)
+
+    def get_indices(axis_size):
+        if axis_size is 0:
+            axis_size = random.randint(3, 6)
+        samples = random.randint(1, axis_size - 1)
+        indices = sorted(random.sample([i for i in range(1, axis_size)], samples))
+        indices = tuple(indices)
+        return indices
+
+    shapes = [
+        (2, 1, 2, 9),
+        (4, 3, 3),
+        (4, 0, 2),  # zero-size shape
+        (0, 3), # first dim being zero
+    ]
+    for hybridize in [True, False]:
+        for shape in shapes:
+            axis_size = shape[0]
+            indices = get_indices(axis_size)
+            sections = 7 if axis_size is 0 else axis_size
+            for indices_or_sections in [indices, sections]:
+                # test gluon
+                test_vsplit = TestVsplit(indices_or_sections=indices_or_sections)
+                if hybridize:
+                    test_vsplit.hybridize()
+                a = rand_ndarray(shape).as_np_ndarray() # TODO: check type
+                a.attach_grad()
+                expected_ret = _np.vsplit(a.asnumpy(), indices_or_sections=indices_or_sections)
+                with mx.autograd.record():
+                    y = test_vsplit(a)
+                assert len(y) == len(expected_ret)
+                for mx_out, np_out in zip(y, expected_ret):
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+                mx.autograd.backward(y)
+
+                assert_almost_equal(a.grad.asnumpy(), _np.ones(a.shape), rtol=1e-3, atol=1e-5)
+
+                # test imperative
+                mx_outs = np.vsplit(a, indices_or_sections=indices_or_sections)
+                np_outs = _np.vsplit(a.asnumpy(), indices_or_sections=indices_or_sections)
+                for mx_out, np_out in zip(mx_outs, np_outs):
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@use_np
 def test_np_concat():
     class TestConcat(HybridBlock):
         def __init__(self, axis=None):
@@ -1691,6 +1796,67 @@ def test_np_stack():
                 np_out = _np.stack([np_a, np_b, np_c, np_d], axis=axis)
                 mx_out = np.stack([mx_a, mx_b, mx_c, mx_d], axis=axis)
                 assert same(mx_out.asnumpy(), np_out)
+
+
+@with_seed()
+@use_np
+def test_np_dstack():
+    class TestDStack(HybridBlock):
+        def __init__(self):
+            super(TestDStack, self).__init__()
+
+        def hybrid_forward(self, F, a, *args):
+            return F.np.dstack([a] + list(args))
+
+    def get_new_shape(shape):
+        if len(shape) < 3:
+            return shape
+        axis = 2
+        shape_lst = list(shape)
+        shape_lst[axis] = random.randint(0, 5)
+        return tuple(shape_lst)
+
+    shapes = [
+        (),
+        (1,),
+        (2,1),
+        (2,2,4),
+        (2,0,0),
+        (0,1,3),
+        (2,0,3),
+        (2,3,4,5)
+    ]
+    for hybridize in [True, False]:
+        for shape in shapes:
+            test_dstack = TestDStack()
+            if hybridize:
+                test_dstack.hybridize()
+            # test symbolic forward
+            a = mx.nd.random.uniform(shape=get_new_shape(shape)).as_np_ndarray()
+            a.attach_grad()
+            b = mx.nd.random.uniform(shape=get_new_shape(shape)).as_np_ndarray()
+            b.attach_grad()
+            c = mx.nd.random.uniform(shape=get_new_shape(shape)).as_np_ndarray()
+            c.attach_grad()
+            d = mx.nd.random.uniform(shape=get_new_shape(shape)).as_np_ndarray()
+            d.attach_grad()
+            with mx.autograd.record():
+                mx_out = test_dstack(a, b, c, d)
+            np_out = _np.dstack((a.asnumpy(), b.asnumpy(), c.asnumpy(), d.asnumpy()))
+            assert mx_out.shape == np_out.shape
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+            # test symbolic backward
+            mx_out.backward()
+            assert_almost_equal(a.grad.asnumpy(), _np.ones(a.shape), rtol=1e-3, atol=1e-5)
+            assert_almost_equal(b.grad.asnumpy(), _np.ones(b.shape), rtol=1e-3, atol=1e-5)
+            assert_almost_equal(c.grad.asnumpy(), _np.ones(c.shape), rtol=1e-3, atol=1e-5)
+            assert_almost_equal(d.grad.asnumpy(), _np.ones(d.shape), rtol=1e-3, atol=1e-5)
+
+            # test imperative
+            mx_out = np.dstack((a, b, c, d))
+            np_out = _np.dstack((a.asnumpy(),b.asnumpy(), c.asnumpy(), d.asnumpy()))
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
 @with_seed()
@@ -2159,6 +2325,74 @@ def test_np_choice():
             weight = np.array(_np.random.dirichlet([1.0] * num_classes))
             test_indexing_mode(test_choice, num_classes, num_classes // 2, replace, None)
             test_indexing_mode(test_choice_weighted, num_classes, num_classes // 2, replace, weight)
+
+
+@with_seed()
+@use_np
+def test_np_eye():
+    configs = [
+        4,
+        1000,
+        (4, 3),
+        (5, None),
+        (4, None, 1),
+        (2, 2, 1),
+        (4, 6, 1),
+        (7, 3, -3),
+        (3, 2, -2),
+        (4, 0),
+        (0, 0),
+        (0, 3),
+        (0, 0, -2)
+    ]
+    exception_configs = [
+        -1,
+        -1000,
+        (-2, None),
+        (1, -1)
+    ]
+    dtypes = ['int32', 'float16', 'float32', 'float64', None]
+    for config in configs:
+        for dtype in dtypes:
+            if isinstance(config, tuple):
+                mx_ret = np.eye(*config, dtype=dtype)
+                np_ret = _np.eye(*config, dtype=dtype)
+            else:
+                mx_ret = np.eye(config, dtype=dtype)
+                np_ret = _np.eye(config, dtype=dtype)
+            assert same(mx_ret.asnumpy(), np_ret)
+    # check for exception input
+    for config in exception_configs:
+        if isinstance(config, tuple):
+            assertRaises(MXNetError, np.eye, *config)
+        else:
+            assertRaises(MXNetError, np.eye, config)
+
+    class TestEye(HybridBlock):
+        def __init__(self, N, M=None, k=0, dtype=None):
+            super(TestEye, self).__init__()
+            self._N = N
+            self._M = M
+            self._k = k
+            self._dtype = dtype
+
+        def hybrid_forward(self, F, x):
+            return x + F.np.eye(self._N, self._M, self._k, dtype=self._dtype)
+
+    for dtype in dtypes:
+        x = np.zeros(shape=(), dtype=dtype)
+        for config in configs:
+            for hybridize in [False, True]:
+                if isinstance(config, tuple):
+                    net = TestEye(*config, dtype=dtype)
+                    np_out = _np.eye(*config, dtype=dtype)
+                else:
+                    net = TestEye(config, dtype=dtype)
+                    np_out = _np.eye(config, dtype=dtype)
+                if hybridize:
+                    net.hybridize()
+                mx_out = net(x)
+                assert same(mx_out.asnumpy(), np_out)
 
 
 @with_seed()
@@ -3149,6 +3383,154 @@ def test_np_builtin_op_signature():
         op = _get_builtin_op(op_name)
         if op is not None:
             assert str(op.__signature__) == str(inspect.signature(getattr(_numpy_op_doc, op_name)))
+
+
+@with_seed()
+@use_np
+def test_np_moveaxis():
+    class TestMoveaxis(HybridBlock):
+        def __init__(self, source=None, destination=None):
+            super(TestMoveaxis, self).__init__()
+            self._source = source
+            self._destination= destination
+
+        def hybrid_forward(self, F, x):
+            return F.np.moveaxis(x, source=self._source, destination=self._destination)
+
+    dtypes = ['int32', 'int64', 'float16', 'float32', 'float64']
+    for hybridize in [False, True]:
+        for dtype in dtypes:
+            for ndim in [0, 1, 2, 3, 4, 5, 6]:
+                shape = rand_shape_nd(ndim, dim=5, allow_zero_size=True)
+                np_data = _np.random.uniform(low=-100, high=100, size=shape).astype(dtype)
+                mx_data = np.array(np_data, dtype=dtype)
+                axis = [i for i in range(ndim)]
+                random.shuffle(axis)
+                for i in range(ndim):
+                    source = random.sample(axis, i)
+                    destination = random.sample(axis, i)
+
+                    # test gluon
+                    test_moveaxis = TestMoveaxis(source,destination)
+                    if hybridize:
+                        test_moveaxis.hybridize()
+                    np_out = _np.moveaxis(np_data, source=source, destination=destination)
+                    mx_data.attach_grad()
+                    with mx.autograd.record():
+                        mx_out = test_moveaxis(mx_data)
+                    assert mx_out.shape == np_out.shape
+                    mx_out.backward()
+                    assert same(mx_data.grad.shape, mx_data.shape)
+                    assert same(mx_data.grad.asnumpy(), _np.ones(shape))
+                    # test imperative
+                    np_out = _np.moveaxis(np_data, source=source, destination=destination)
+                    mx_out = np.moveaxis(mx_data, source=source, destination= destination)
+                    assert np_out.dtype == mx_out.dtype
+                    assert same(mx_out.asnumpy(), np_out)
+
+
+@with_seed()
+@use_np
+def test_np_rot90():
+    class TestTRot90(HybridBlock):
+        def __init__(self, k=1, axes=(0, 1)):
+            super(TestTRot90, self).__init__()
+            self._k = k
+            self._axes = axes
+
+        def hybrid_forward(self, F, a, *args):
+            return F.np.rot90(a, self._k, self._axes)
+
+    configs = [
+        ((2, 3), 1, (0, 1)),
+        ((2, 3), 3, (0, 1)),
+        ((2, 3), 1, (1, 0)),
+        ((2, 3), 2, (1, 0)),
+        ((2, 3), 3, (1, 0)),
+        ((2, 3), 0, (1, 0)),
+        ((2, 3, 4, 5), 3, (1, 2)),
+        ((2, 3, 4, 5), -3, (2, 3)),
+        ((2, 3, 0, 5), -2, (2, 3)),
+        ((2, 0, 0, 5), -3, (2, 3)),
+        ((2, 3, 0, 5), 0, (2, 1)),
+    ]
+    dtypes = ['uint8', 'int8', 'int32', 'int64', 'float16', 'float32', 'float64']
+
+    for config in configs:
+        for dtype in dtypes:
+            for hybridize in [True, False]:
+                shape, k, axes = config[0], config[1], config[2]
+                x = rand_ndarray(shape=shape, dtype=dtype).as_np_ndarray()
+                net = TestTRot90(k=k, axes=axes)
+                if hybridize:
+                    net.hybridize()
+
+                x.attach_grad()
+                np_out = _np.rot90(x.asnumpy(), k=k, axes=axes)
+                with mx.autograd.record():
+                    mx_out = net(x)
+                assert mx_out.shape == np_out.shape
+                assert same(mx_out.asnumpy(), np_out)
+                mx_out.backward()
+                np_backward = _np.ones(shape, dtype)
+
+                assert same(x.grad.asnumpy().shape, np_backward.shape)
+                assert same(x.grad.asnumpy(), np_backward)
+
+                np_out = _np.rot90(x.asnumpy(), k=k, axes=axes)
+                mx_out = np.rot90(x, k=k, axes=axes)
+                assert same(mx_out.asnumpy(), np_out)
+
+
+@with_seed()
+@use_np
+def test_np_hsplit():
+    class TestHSplit(HybridBlock):
+        def __init__(self, indices_or_sections):
+            super(TestHSplit, self).__init__()
+            self._indices_or_sections = indices_or_sections
+
+        def hybrid_forward(self, F, a, *args, **kwargs):
+            return F.np.hsplit(a, indices_or_sections=self._indices_or_sections)
+
+    shapes = [
+        (10,),
+        (3, 8, 5),
+        (3, 0, 5),
+        (3, 8, 5, 6),
+        (3, 0, 5, 6),
+    ]
+    indices_or_sections_num = [
+        (2, 4),
+        (3, 3),
+        (3,),
+        (1,),
+        2,
+    ]
+    for hybridize in [True, False]:
+        for shape in shapes:
+            for indices_or_sections in indices_or_sections_num:
+                # test gluon
+                test_hsplit = TestHSplit(indices_or_sections=indices_or_sections)
+                if hybridize:
+                    test_hsplit.hybridize()
+
+                a = mx.nd.random.uniform(-1.0, 1.0, shape=shape).as_np_ndarray()
+                a.attach_grad()
+                expected_ret = _np.hsplit(a.asnumpy(), indices_or_sections=indices_or_sections)
+                with mx.autograd.record():
+                    y = test_hsplit(a)
+                assert len(y) == len(expected_ret)
+                for mx_out, np_out in zip(y, expected_ret):
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+                mx.autograd.backward(y)
+                assert_almost_equal(a.grad.asnumpy(), _np.ones(a.shape), rtol=1e-3, atol=1e-5)
+
+                # test imperative
+                mx_outs = np.hsplit(a, indices_or_sections=indices_or_sections)
+                np_outs = _np.hsplit(a.asnumpy(), indices_or_sections=indices_or_sections)
+                for mx_out, np_out in zip(mx_outs, np_outs):
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
 if __name__ == '__main__':

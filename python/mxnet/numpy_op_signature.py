@@ -19,6 +19,7 @@
 
 import sys
 import warnings
+import inspect
 from . import _numpy_op_doc
 from . import numpy as mx_np
 from . import numpy_extension as mx_npx
@@ -38,13 +39,12 @@ def _get_builtin_op(op_name):
         return None
 
     submodule_name = _get_op_submodule_name(op_name, op_name_prefix, submodule_name_list)
+    op_module = root_module
     if len(submodule_name) > 0:
         op_module = getattr(root_module, submodule_name[1:-1], None)
         if op_module is None:
             raise ValueError('Cannot find submodule {} in module {}'
                              .format(submodule_name[1:-1], root_module.__name__))
-    else:
-        op_module = root_module
 
     op = getattr(op_module, op_name[(len(op_name_prefix)+len(submodule_name)):], None)
     if op is None:
@@ -61,7 +61,6 @@ def _register_op_signatures():
                       .format(str(sys.version)))
         return
 
-    import inspect
     for op_name in dir(_numpy_op_doc):
         op = _get_builtin_op(op_name)
         if op is not None:
