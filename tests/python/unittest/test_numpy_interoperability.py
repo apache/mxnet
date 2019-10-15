@@ -88,6 +88,15 @@ def _prepare_workloads():
     OpArgMngr.add_workload('tile', np.array([[[]]]), (3, 2, 5))
     OpArgMngr.add_workload('transpose', array_pool['4x1'])
     OpArgMngr.add_workload('var', array_pool['4x1'])
+    OpArgMngr.add_workload('var', np.array([np.float16(1.)]))
+    OpArgMngr.add_workload('var', np.array([1]))
+    OpArgMngr.add_workload('var', np.array([1.]))
+    OpArgMngr.add_workload('var', np.array([[1, 2, 3], [4, 5, 6]]))
+    OpArgMngr.add_workload('var', np.array([[1, 2, 3], [4, 5, 6]]), 0)
+    OpArgMngr.add_workload('var', np.array([[1, 2, 3], [4, 5, 6]]), 1)
+    OpArgMngr.add_workload('var', np.array([np.nan]))
+    OpArgMngr.add_workload('var', np.array([1, -1, 1, -1]))
+    OpArgMngr.add_workload('var', np.array([1,2,3,4], dtype='f8'))
     OpArgMngr.add_workload('vdot', np.random.normal(size=(2, 4)), np.random.normal(size=(4, 2)))
     OpArgMngr.add_workload('vdot', np.random.normal(size=(2, 4)).astype(np.float64), np.random.normal(size=(2, 4)).astype(np.float64))
     OpArgMngr.add_workload('vstack', (array_pool['4x1'], np.random.uniform(size=(5, 1))))
@@ -203,10 +212,10 @@ def _check_interoperability_helper(op_name, *args, **kwargs):
             assert isinstance(arr, np.ndarray)
         for arr, expected_arr in zip(out, expected_out):
             assert isinstance(arr, np.ndarray)
-            assert_almost_equal(arr.asnumpy(), expected_arr, rtol=1e-3, atol=1e-4, use_broadcast=False)
+            assert_almost_equal(arr.asnumpy(), expected_arr, rtol=1e-3, atol=1e-4, use_broadcast=False, equal_nan=True)
     else:
         assert isinstance(out, np.ndarray)
-        assert_almost_equal(out.asnumpy(), expected_out, rtol=1e-3, atol=1e-4, use_broadcast=False)
+        assert_almost_equal(out.asnumpy(), expected_out, rtol=1e-3, atol=1e-4, use_broadcast=False, equal_nan=True)
 
 
 def check_interoperability(op_list):
