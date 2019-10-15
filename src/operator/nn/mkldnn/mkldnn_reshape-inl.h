@@ -35,30 +35,21 @@ namespace mxnet {
 namespace op {
 
 class MKLDNNReshapeFwd {
- protected:
+ public:
+  MKLDNNReshapeFwd(const OpReqType &req, const NDArray &input, const NDArray &output);
+  int GetWorkspaceSize();
+  void SetNewMem(const NDArray &input, const NDArray &output, void *workspace = nullptr);
+  void Execute(const NDArray &input, const NDArray &output, void *workspace = nullptr);
+
+ private:
   std::shared_ptr<mkldnn::memory> data_;
   std::shared_ptr<mkldnn::memory> out_;
   std::shared_ptr<mkldnn::memory> temp_;
   std::vector<mkldnn::primitive> prims_;
-  bool needInvalidateInput = false;
-
- public:
-  MKLDNNReshapeFwd(const OpReqType &req,
-                   const NDArray &input,
-                   const NDArray &output);
-  int GetWorkspaceSize();
-  void SetNewMem(const NDArray &input,
-                 const NDArray &output,
-                 void* workspace = nullptr);
-  void Execute(const NDArray &input,
-               const NDArray &output,
-               void* workspace = nullptr);
 };
 
-typedef ParamOpSign<ReshapeParam> MKLDNNReshapeSignature;
-MKLDNNReshapeFwd &GetReshapeForward(const ReshapeParam& param,
-                                    const OpReqType &req,
-                                    const NDArray &input,
+typedef OpSignature MKLDNNReshapeSignature;
+MKLDNNReshapeFwd &GetReshapeForward(const OpReqType &req, const NDArray &input,
                                     const NDArray &output);
 
 }  // namespace op

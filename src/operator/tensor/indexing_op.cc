@@ -288,6 +288,10 @@ void TakeOpForward<cpu>(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape& arrshape = inputs[take_::kArr].shape_;
   const mxnet::TShape& oshape = outputs[take_::kOut].shape_;
 
+  if (idxshape.Size() == 0) {
+    return;
+  }
+
   Stream<cpu> *s = ctx.get_stream<cpu>();
   const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
 
@@ -490,8 +494,9 @@ All the input values should be integers in the range [0, input_dim).
 If the input_dim is ip0 and output_dim is op0, then shape of the embedding weight matrix must be
 (ip0, op0).
 
-By default, if any index mentioned is too large, it is replaced by the index that addresses
-the last vector in an embedding matrix.
+When "sparse_grad" is False, if any index mentioned is too large, it is replaced by the index that
+addresses the last vector in an embedding matrix.
+When "sparse_grad" is True, an error will be raised if invalid indices are found.
 
 Examples::
 
@@ -653,6 +658,7 @@ NNVM_REGISTER_OP(_backward_SparseEmbedding)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SparseEmbeddingOpBackwardEx<cpu>);
 
 NNVM_REGISTER_OP(take)
+.add_alias("_npi_take")
 .describe(R"code(Takes elements from an input array along the given axis.
 
 This function slices the input array along a particular axis with the provided indices.

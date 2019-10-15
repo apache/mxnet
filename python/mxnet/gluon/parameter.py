@@ -24,9 +24,10 @@ __all__ = ['DeferredInitializationError', 'Parameter', 'Constant',
            'ParameterDict', 'tensor_types']
 
 
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 import warnings
 import numpy as np
+import mxnet as mx
 
 from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer, context
@@ -887,8 +888,22 @@ class ParameterDict(object):
 
     def zero_grad(self):
         """Sets all Parameters' gradient buffer to 0."""
-        for i in self.values():
-            i.zero_grad()
+        # collect gradient arrays for each ctx
+        arrays = defaultdict(list)
+        for p in self.values():
+            if p.grad_req == 'null' or p._grad is None:
+                continue
+            for g in p.list_grad():
+                if g.stype == 'row_sparse':
+                    mx.ndarray.zeros_like(g, out=g)
+                else:
+                    arrays[g.context].append(g)
+
+        if len(arrays) == 0:
+            return
+
+        for arr in arrays.values():
+            mx.nd.reset_arrays(*arr, num_arrays=len(arr))
 
     def reset_ctx(self, ctx):
         """Re-assign all Parameters to other contexts.
@@ -901,6 +916,14 @@ class ParameterDict(object):
         """
         for i in self.values():
             i.reset_ctx(ctx)
+
+    def list_ctx(self):
+        """Returns a list of all the contexts on which the underlying Parameters
+        are initialized."""
+        s = set()
+        for i in self.values():
+            s.update(i.list_ctx())
+        return list(s)
 
     def setattr(self, name, value):
         """Set an attribute to a new value for all Parameters.
@@ -944,7 +967,7 @@ class ParameterDict(object):
                     "this may be due to your Block shares parameters from other "
                     "Blocks or you forgot to use 'with name_scope()' when creating "
                     "child blocks. For more info on naming, please see "
-                    "http://mxnet.incubator.apache.org/tutorials/basic/naming.html"%(
+                    "https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/naming.html"%(
                         strip_prefix, param.name, strip_prefix))
             arg_dict[param.name[len(strip_prefix):]] = weight
         ndarray.save(filename, arg_dict)

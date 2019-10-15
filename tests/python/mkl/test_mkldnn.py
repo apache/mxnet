@@ -337,13 +337,17 @@ def test_pooling():
 def test_activation():
     def check_activation_training(stype):
         for shape in [(2, 3, 3), (2, 3, 2, 2)]:
+            eps = 1e-5
             data_tmp = np.random.normal(-0.1, 1, size=shape)
+            # Avoid finite difference method inaccuracies due to discontinuous gradient at the origin.
+            # Here we replace small problematic inputs with 1.0.  Repro issue with seed 851486559.
+            data_tmp[abs(data_tmp) < eps] = 1.0
 
             data = mx.symbol.Variable('data', stype=stype)
             in_location = [mx.nd.array(data_tmp).tostype(stype)]
 
             test = mx.symbol.Activation(data, act_type="relu")
-            check_numeric_gradient(test, in_location, numeric_eps=1e-5, rtol=0.16, atol=1e-4)
+            check_numeric_gradient(test, in_location, numeric_eps=eps, rtol=0.16, atol=1e-4)
 
     stypes = ['row_sparse', 'default']
     for stype in stypes:

@@ -249,6 +249,16 @@ inline int get_num_threads<cpu>(const int N) {
     LOG(FATAL) << "Unknown type enum " << type;            \
   }
 
+template <typename T>
+struct AccType {
+  using type = T;
+};
+
+template <>
+struct AccType<mshadow::half::half_t> {
+  using type = float;
+};
+
 #define MXNET_REAL_ACC_TYPE_SWITCH(type, DType, AType, ...)\
   switch (type) {                                          \
   case mshadow::kFloat32:                                  \
@@ -481,6 +491,17 @@ inline int get_num_threads<cpu>(const int N) {
   .add_enum("int64", mshadow::kInt64)
 
 
+#define MXNET_ADD_ALL_TYPES_WITH_BOOL \
+  .add_enum("float32", mshadow::kFloat32) \
+  .add_enum("float64", mshadow::kFloat64) \
+  .add_enum("float16", mshadow::kFloat16) \
+  .add_enum("uint8", mshadow::kUint8) \
+  .add_enum("int8", mshadow::kInt8) \
+  .add_enum("int32", mshadow::kInt32) \
+  .add_enum("int64", mshadow::kInt64) \
+  .add_enum("bool", mshadow::kBool)
+
+
 /* \brief Compute flattened index given coordinates and shape. */
 template<int ndim>
 MSHADOW_XINLINE index_t ravel(const Shape<ndim>& coord, const Shape<ndim>& shape) {
@@ -587,6 +608,11 @@ template <typename xpu>
 MSHADOW_CINLINE void copy(mshadow::Stream<xpu> *s, const TBlob& to, const TBlob& from) {
   CHECK_EQ(from.Size(), to.Size());
   CHECK_EQ(from.dev_mask(), to.dev_mask());
+  if (from.type_flag_ == mshadow::kBool || to.type_flag_ == mshadow::kBool) {
+    CHECK_EQ(from.type_flag_, to.type_flag_) << "Only supports copying between boolean ndarrays.";
+    mshadow::Copy(to.FlatTo1D<xpu, bool>(s), from.FlatTo1D<xpu, bool>(s), s);
+    return;
+  }
   MSHADOW_TYPE_SWITCH(to.type_flag_, DType, {
     if (to.type_flag_ == from.type_flag_) {
       mshadow::Copy(to.FlatTo1D<xpu, DType>(s), from.FlatTo1D<xpu, DType>(s), s);
@@ -676,6 +702,26 @@ struct op_with_req {
                                   const DType *input_2,
                                   const DType *input_3) {
     KERNEL_ASSIGN(out[i], req, OP::Map(input_1[i], input_2[i], input_3[i]));
+  }
+
+  template<typename DType,
+           typename std::enable_if<!std::is_same<DType, bool>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i, bool *out, const DType *in) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(in[i]));
+  }
+
+  /*! \brief inputs are two tensors with a boolean output tensor */
+  template<typename DType,
+           typename std::enable_if<!std::is_same<DType, bool>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i, bool *out, const DType *lhs, const DType *rhs) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
+  }
+
+  /*! \brief input is tensor and two scalar value with a boolean output tensor */
+  template<typename DType,
+           typename std::enable_if<!std::is_same<DType, bool>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i, bool *out, const DType *in, const DType value) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value));
   }
 };
 

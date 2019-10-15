@@ -68,12 +68,51 @@ def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req, rtol=1e-2, atol=1e
     dy = mx.random.uniform(shape=mod1.get_outputs()[0].shape)
     mod1.backward(out_grads=[dy])
     mod2.backward(out_grads=[dy])
-    if grad_req != 'null':
-        assert_allclose(mod1.get_input_grads()[0].asnumpy(), mod2.get_input_grads()[0].asnumpy(), rtol=rtol, atol=atol)
-    else:
+    if type(grad_req) is dict and grad_req['data'] == 'null' or grad_req == 'null':
         assert(mod1.get_input_grads()[0] == None)
         assert(mod2.get_input_grads()[0] == None)
+    else:
+        assert_allclose(mod1.get_input_grads()[0].asnumpy(), mod2.get_input_grads()[0].asnumpy(), rtol=rtol, atol=atol)
 
+
+@with_seed()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+def test_rnn_with_new_param():
+    rnn_modes = ['rnn_relu', 'rnn_tanh', 'gru', 'lstm']
+    ngates_ = [1, 1, 3, 4]
+    num_layers, input_size, seq_len, batch_size, state_size = 3, 128, 5, 64, 8
+    for bidirectional in [False, True]:
+        directions = 2 if bidirectional else 1
+        for mode, ngates in zip(rnn_modes, ngates_):
+            first_layer_size = (input_size * state_size + state_size * state_size + state_size * 2) * ngates
+            rest_layer_size = (state_size * directions * state_size + state_size * state_size + state_size * 2) \
+                 * ngates * (num_layers - 1)
+            param_size = (first_layer_size + rest_layer_size) * directions
+            sym = mx.sym.RNN(mode=mode, num_layers=num_layers, bidirectional=bidirectional,
+                state_outputs=False, state_size=state_size, name='rnn')
+
+            bind_dict = {
+                'rnn_data': mx.ndarray.random.uniform(low=-1, high=1, shape=(seq_len, batch_size, input_size)),
+                'rnn_parameters': mx.ndarray.random.uniform(low=-1, high=1, shape=(param_size)),
+                'rnn_state': mx.ndarray.zeros(shape=(num_layers * directions, batch_size, state_size))
+            }
+            if mode == 'lstm':
+                bind_dict['rnn_state_cell'] = mx.ndarray.zeros(
+                    shape=(num_layers * directions, batch_size, state_size))
+
+            ex = sym.bind(default_context(), bind_dict)
+            ex.forward(is_train=True)
+            ex01 = ex.output_dict['rnn_output'].asnumpy()
+            ex.forward(is_train=False)
+            ex02 = ex.output_dict['rnn_output'].asnumpy()
+            assert_allclose(ex01, ex02, rtol=1e-2, atol=1e-4)
+            bind_dict['rnn_parameters'] = mx.ndarray.random.uniform(low=-1, high=1, shape=(param_size))
+            ex.copy_params_from(bind_dict)
+            ex.forward(is_train=True)
+            ex03 = ex.output_dict['rnn_output'].asnumpy()
+            ex.forward(is_train=False)
+            ex04 = ex.output_dict['rnn_output'].asnumpy()
+            assert_allclose(ex03, ex04, rtol=1e-2, atol=1e-4)
 
 
 @with_seed()
@@ -110,6 +149,7 @@ def test_lstm_bidirectional():
     check_rnn_consistency(fused, stack, T, N, I, H, 'write')
     check_rnn_consistency(fused, stack, T, N, I, H, 'add')
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
+    check_rnn_consistency(fused, stack, T, N, I, H, {'data': 'add', 'parameters': 'null'})
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
@@ -270,6 +310,40 @@ def test_rnnrelu_dropout():
     exe = rnn.simple_bind(ctx=mx.cpu(), x=(T, N, I))
     out = exe.forward(is_train=True)
     out[0].wait_to_read()
+
+def test_RNN_float64():
+    if default_context().device_type == 'gpu':
+        return
+    sym = mx.sym.RNN(
+        mx.sym.Variable('in'),
+        mx.sym.Variable('par'),
+        mx.sym.Variable('s'),
+        state_size = (2),
+        num_layers = 1,
+        mode = 'rnn_tanh'
+    )
+
+    dtype = 'float64'
+    explicit_grad = {
+        'in': mx.nd.ones([2, 1, 2], dtype=dtype),
+        'par': mx.nd.ones([12], dtype=dtype),
+        's': mx.nd.ones([1, 1, 2], dtype=dtype)
+    }
+
+    args_grad = explicit_grad
+    grad_req = 'write'
+
+    ex = sym.bind(default_context(),
+        {
+            'in': mx.nd.ones([2, 1, 2], dtype=dtype),
+            'par': mx.nd.ones([12], dtype=dtype),
+            's': mx.nd.ones([1, 1, 2], dtype=dtype)
+        },
+        args_grad = args_grad,
+        grad_req = grad_req
+    )
+    ex.forward()
+    ex.outputs[0].wait_to_read()
 
 def np_softmax(x, axis=-1, temperature=1.0):
     x = x - np.max(x, axis=axis, keepdims=True)
@@ -1903,7 +1977,7 @@ def test_groupnorm():
                                   num_groups=num_groups, eps=eps, output_mean_var=True)
         check_symbolic_forward(mx_sym, [mx_data, mx_gamma, mx_beta], [np_out, np_mean, np_std],
                                rtol=1e-2 if dtype == np.float16 else 1e-3,
-                               atol=5e-3 if dtype == np.float16 else 1e-5, dtype=dtype)
+                               atol=5e-3 if dtype == np.float16 else 1e-4, dtype=dtype)
         mx_sym = mx.sym.GroupNorm(data=data_sym, gamma=gamma_sym, beta=beta_sym,
                                   num_groups=num_groups, eps=eps, output_mean_var=False)
         np_ograd = np.random.uniform(-1.0, 1.0, dshape).astype(dtype)
@@ -1916,7 +1990,7 @@ def test_groupnorm():
         check_symbolic_backward(mx_sym, [mx_data, mx_gamma, mx_beta], [mx.nd.array(np_ograd)],
                                 [np_data_grad, np_gamma_grad, np_beta_grad],
                                 rtol=1e-2 if dtype == np.float16 else 1e-3,
-                                atol=5e-2 if dtype == np.float16 else 1e-5, dtype=dtype)
+                                atol=5e-2 if dtype == np.float16 else 1e-4, dtype=dtype)
 
 
 @with_seed()
@@ -2798,6 +2872,52 @@ def test_transpose():
 
             y = mx.nd.transpose(x)
             assert_allclose(np.transpose(x.asnumpy()), y.asnumpy())
+
+
+@with_seed()
+def test_pseudo2dtranspose():
+    def getTwoInts(mn, mx):
+        n1 = np.random.randint(mn, mx)
+        n2 = np.random.randint(mn, mx-1)
+        n2 = n2 if n2 < n1 else n2+1
+        return tuple(np.sort([n1, n2]))
+
+    def getTranspAxes(ndim):
+        axes = list(range(ndim))
+        n1, n2 = getTwoInts(0,ndim)
+        return tuple(axes[:n1]+axes[n2:]+axes[n1:n2])
+
+    for ndim in range(2, 7):
+        for dt in ['int8', 'half', 'int32', 'int64']:
+            for _ in range(5):
+                dims = list(np.random.randint(5, 20, size=ndim))
+                axes = getTranspAxes(ndim)
+                x = mx.nd.array(np.random.normal(size=dims), dtype=dt)
+                y = mx.nd.transpose(x, axes=axes)
+                assert_allclose(np.transpose(x.asnumpy(), axes=axes), y.asnumpy())
+
+
+@with_seed()
+def test_big_transpose():
+    n = [1]
+    d = list(np.random.randint(132, 160, size=1))
+    hw = list(np.random.randint(256, 320, size=2))
+    c = [10]
+    dims = n + d + hw + c
+    axes = (0,4,1,2,3)
+    x_np = np.random.normal(size=dims).astype('uint8')
+    x = mx.nd.array(x_np, dtype='uint8')
+    y = mx.nd.transpose(x, axes=axes)
+    assert_allclose(np.transpose(x_np, axes=axes), y.asnumpy().astype('uint8'))
+    axes = (0,2,3,4,1)
+    z = mx.nd.transpose(y, axes=axes)
+    assert_allclose(x_np, z.asnumpy().astype('uint8'))
+
+
+def test_larger_transpose():
+    x = mx.nd.random.normal(shape=(50,51))
+    y = mx.nd.transpose(x)
+    assert_allclose(np.transpose(x.asnumpy()), y.asnumpy())
 
 
 @with_seed()
@@ -8496,6 +8616,63 @@ def test_op_rroi_align():
     test_rroi_align_value(sampling_ratio=2)
 
 @with_seed()
+def test_op_mrcnn_target():
+    if default_context().device_type != 'gpu':
+        return
+
+    num_rois = 2
+    num_classes = 4
+    mask_size = 3
+    ctx = mx.gpu(0)
+    # (B, N, 4)
+    rois = mx.nd.array([[[2.3, 4.3, 2.2, 3.3],
+                        [3.5, 5.5, 0.9, 2.4]]], ctx=ctx)
+    gt_masks = mx.nd.arange(0, 4*32*32, ctx=ctx).reshape(1, 4, 32, 32)
+
+    # (B, N)
+    matches = mx.nd.array([[2, 0]], ctx=ctx)
+    # (B, N)
+    cls_targets = mx.nd.array([[2, 1]], ctx=ctx)
+
+    mask_targets, mask_cls = mx.nd.mrcnn_target(rois, gt_masks, matches, cls_targets,
+                                                num_rois=num_rois,
+                                                num_classes=num_classes,
+                                                mask_size=mask_size)
+
+    # Ground truth outputs were generated with GluonCV's target generator
+    # gluoncv.model_zoo.mask_rcnn.MaskTargetGenerator(1, num_rois, num_classes, mask_size)
+    gt_mask_targets = mx.nd.array([[[[[2193.4    , 2193.7332 , 2194.0667 ],
+                                      [2204.0667 , 2204.4    , 2204.7334 ],
+                                      [2214.7334 , 2215.0667 , 2215.4    ]],
+                                     [[2193.4    , 2193.7332 , 2194.0667 ],
+                                      [2204.0667 , 2204.4    , 2204.7334 ],
+                                      [2214.7334 , 2215.0667 , 2215.4    ]],
+                                     [[2193.4    , 2193.7332 , 2194.0667 ],
+                                      [2204.0667 , 2204.4    , 2204.7334 ],
+                                      [2214.7334 , 2215.0667 , 2215.4    ]],
+                                     [[2193.4    , 2193.7332 , 2194.0667 ],
+                                      [2204.0667 , 2204.4    , 2204.7334 ],
+                                      [2214.7334 , 2215.0667 , 2215.4    ]]],
+                                    [[[ 185.     ,  185.33334,  185.66667],
+                                      [ 195.66667,  196.00002,  196.33334],
+                                      [ 206.33333,  206.66666,  207.     ]],
+                                     [[ 185.     ,  185.33334,  185.66667],
+                                      [ 195.66667,  196.00002,  196.33334],
+                                      [ 206.33333,  206.66666,  207.     ]],
+                                     [[ 185.     ,  185.33334,  185.66667],
+                                      [ 195.66667,  196.00002,  196.33334],
+                                      [ 206.33333,  206.66666,  207.     ]],
+                                     [[ 185.     ,  185.33334,  185.66667],
+                                      [ 195.66667,  196.00002,  196.33334],
+                                      [  206.33333,  206.66666,  207.     ]]]]])
+
+    gt_mask_cls = mx.nd.array([[0,0,1,0], [0,1,0,0]])
+    gt_mask_cls = gt_mask_cls.reshape(1,2,4,1,1).broadcast_axes(axis=(3,4), size=(3,3))
+
+    assert_almost_equal(mask_targets.asnumpy(), gt_mask_targets.asnumpy())
+    assert_almost_equal(mask_cls.asnumpy(), gt_mask_cls.asnumpy())
+
+@with_seed()
 def test_diag():
 
     # Test 2d input
@@ -9109,6 +9286,36 @@ def test_transpose_infer_shape_mixed():
     x = b.bind(mx.cpu(), args={})
     y = x.forward()
     assert(y[0].shape == (2,3))
+
+
+@with_seed()
+def test_sample_normal_default_shape():
+    # Test case from https://github.com/apache/incubator-mxnet/issues/16135
+    s = mx.nd.sample_normal(mu=mx.nd.array([10.0]), sigma=mx.nd.array([0.5]))
+    assert s.shape == (1,)
+    s = mx.nd.sample_normal(mu=mx.nd.array([10.0]), sigma=mx.nd.array([0.5]), shape=())
+    assert s.shape == (1,)
+    s = mx.nd.sample_normal(mu=mx.nd.array([10.0]), sigma=mx.nd.array([0.5]), shape=1)
+    assert s.shape == (1, 1)
+    s = mx.nd.sample_normal(mu=mx.nd.array([10.0]), sigma=mx.nd.array([0.5]), shape=(1,))
+    assert s.shape == (1, 1)
+
+
+def test_min_max_inf():
+    dtypes = [np.float32, np.double]
+    elem_list = [-1, 1, 0, np.inf, -np.inf]
+
+    for dtype in dtypes:
+        for a in elem_list:
+            for b in elem_list:
+                data_np = np.array([a, b], dtype=dtype)
+                data_mx = mx.nd.array(data_np, dtype=dtype)
+
+                min_data_np, max_data_np = data_np.min(), data_np.max()
+                min_data_mx, max_data_mx = data_mx.min(), data_mx.max()
+
+                assert_array_equal(min_data_np, min_data_mx.asnumpy())
+                assert_array_equal(max_data_np, max_data_mx.asnumpy())
 
 
 if __name__ == '__main__':
