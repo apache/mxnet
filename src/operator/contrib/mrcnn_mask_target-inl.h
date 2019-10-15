@@ -19,14 +19,14 @@
 
 /*!
  *  Copyright (c) 2019 by Contributors
- * \file mrcnn_target-inl.h
+ * \file mrcnn_mask_target-inl.h
  * \brief Mask-RCNN target generator
  * \author Serge Panev
  */
 
 
-#ifndef MXNET_OPERATOR_CONTRIB_MRCNN_TARGET_INL_H_
-#define MXNET_OPERATOR_CONTRIB_MRCNN_TARGET_INL_H_
+#ifndef MXNET_OPERATOR_CONTRIB_MRCNN_MASK_TARGET_INL_H_
+#define MXNET_OPERATOR_CONTRIB_MRCNN_MASK_TARGET_INL_H_
 
 #include <mxnet/operator.h>
 #include <vector>
@@ -42,13 +42,13 @@ namespace mrcnn_index {
   enum ROIAlignOpOutputs {kMask, kMaskClasses};
 }  // namespace mrcnn_index
 
-struct MRCNNTargetParam : public dmlc::Parameter<MRCNNTargetParam> {
+struct MRCNNMaskTargetParam : public dmlc::Parameter<MRCNNMaskTargetParam> {
   int num_rois;
   int num_classes;
   int mask_size;
   int sample_ratio;
 
-  DMLC_DECLARE_PARAMETER(MRCNNTargetParam) {
+  DMLC_DECLARE_PARAMETER(MRCNNMaskTargetParam) {
     DMLC_DECLARE_FIELD(num_rois)
     .describe("Number of sampled RoIs.");
     DMLC_DECLARE_FIELD(num_classes)
@@ -60,11 +60,11 @@ struct MRCNNTargetParam : public dmlc::Parameter<MRCNNTargetParam> {
   }
 };
 
-inline bool MRCNNTargetShape(const NodeAttrs& attrs,
-                            std::vector<mxnet::TShape>* in_shape,
-                            std::vector<mxnet::TShape>* out_shape) {
+inline bool MRCNNMaskTargetShape(const NodeAttrs& attrs,
+                                 std::vector<mxnet::TShape>* in_shape,
+                                 std::vector<mxnet::TShape>* out_shape) {
   using namespace mshadow;
-  const MRCNNTargetParam& param = nnvm::get<MRCNNTargetParam>(attrs.parsed);
+  const MRCNNMaskTargetParam& param = nnvm::get<MRCNNMaskTargetParam>(attrs.parsed);
 
   CHECK_EQ(in_shape->size(), 4) << "Input:[rois, gt_masks, matches, cls_targets]";
 
@@ -98,9 +98,9 @@ inline bool MRCNNTargetShape(const NodeAttrs& attrs,
   return true;
 }
 
-inline bool MRCNNTargetType(const NodeAttrs& attrs,
-                           std::vector<int>* in_type,
-                           std::vector<int>* out_type) {
+inline bool MRCNNMaskTargetType(const NodeAttrs& attrs,
+                                std::vector<int>* in_type,
+                                std::vector<int>* out_type) {
   CHECK_EQ(in_type->size(), 4);
   int dtype = (*in_type)[1];
   CHECK_NE(dtype, -1) << "Input must have specified type";
@@ -112,21 +112,21 @@ inline bool MRCNNTargetType(const NodeAttrs& attrs,
 }
 
 template<typename xpu>
-void MRCNNTargetRun(const MRCNNTargetParam& param, const std::vector<TBlob> &inputs,
-                    const std::vector<TBlob> &outputs, mshadow::Stream<xpu> *s);
+void MRCNNMaskTargetRun(const MRCNNMaskTargetParam& param, const std::vector<TBlob> &inputs,
+                        const std::vector<TBlob> &outputs, mshadow::Stream<xpu> *s);
 
 template<typename xpu>
-void MRCNNTargetCompute(const nnvm::NodeAttrs& attrs,
-                const OpContext &ctx,
-                const std::vector<TBlob> &inputs,
-                const std::vector<OpReqType> &req,
-                const std::vector<TBlob> &outputs) {
+void MRCNNMaskTargetCompute(const nnvm::NodeAttrs& attrs,
+                            const OpContext &ctx,
+                            const std::vector<TBlob> &inputs,
+                            const std::vector<OpReqType> &req,
+                            const std::vector<TBlob> &outputs) {
   auto s = ctx.get_stream<xpu>();
-  const auto& p = dmlc::get<MRCNNTargetParam>(attrs.parsed);
-  MRCNNTargetRun<xpu>(p, inputs, outputs, s);
+  const auto& p = dmlc::get<MRCNNMaskTargetParam>(attrs.parsed);
+  MRCNNMaskTargetRun<xpu>(p, inputs, outputs, s);
 }
 
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_CONTRIB_MRCNN_TARGET_INL_H_
+#endif  // MXNET_OPERATOR_CONTRIB_MRCNN_MASK_TARGET_INL_H_
