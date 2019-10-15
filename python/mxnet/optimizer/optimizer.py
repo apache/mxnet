@@ -66,7 +66,8 @@ class Optimizer(object):
     learning_rate : float, optional, default None
         The initial learning rate. If None, the optimization will use the
         learning rate from ``lr_scheduler``. If not None, it will overwrite
-        the learning rate in ``lr_scheduler``.
+        the learning rate in ``lr_scheduler``. If None and ``lr_scheduler``
+        is also None, then it will be set to 0.01 by default.
 
     lr_scheduler : LRScheduler, optional, default None
         The learning rate scheduler.
