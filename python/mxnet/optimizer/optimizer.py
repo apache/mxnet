@@ -109,8 +109,8 @@ class Optimizer(object):
         self.lr = learning_rate
         if self.lr_scheduler is not None and learning_rate is not None:
             if self.lr_scheduler.base_lr != learning_rate:
-                raise UserWarning("learning rate from ``lr_scheduler`` has been
-                                   overwritten by ``learning_rate`` in optimizer.")
+                raise UserWarning("learning rate from ``lr_scheduler`` has been "
+                                   "overwritten by ``learning_rate`` in optimizer.")
                 self.lr_scheduler.base_lr = learning_rate
 
         self.wd = wd
