@@ -15,7 +15,7 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-[Perl API](https://mxnet.incubator.apache.org/api/perl/index.html)
+[Perl API](https://mxnet.apache.org/api/perl/index.html)
 [![GitHub license](http://dmlc.github.io/img/apache2.svg)](../LICENSE)
 
 You have found MXNet Perl Package! The MXNet Perl packages brings flexible and efficient GPU
@@ -27,7 +27,7 @@ computing and state-of-art deep learning to Perl.
 
 Installation
 ---------
-* [MXNet Setup Document](http://mxnet.incubator.apache.org/install/ubuntu_setup.html#install-the-mxnet-package-for-perl)
+* [MXNet Setup Document](https://mxnet.apache.org/get_started/ubuntu_setup#install-the-mxnet-package-for-perl)
   - Check this out for detailed documents, examples and installation guides.
 
 License

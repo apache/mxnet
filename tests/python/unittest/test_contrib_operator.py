@@ -23,6 +23,7 @@ import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
+from common import with_seed
 import unittest
 
 def test_box_nms_op():
@@ -332,6 +333,81 @@ def test_multibox_prior_op():
     Y = mx.contrib.nd.MultiBoxPrior(X, sizes=[0.75, 0.5, 0.25], ratios=[20, 2, 0.5])
     boxes = Y.reshape((h, w, 5, 4))
     assert_allclose(boxes.asnumpy()[250, 250, 0, :], np.array([-0.948249,  0.362671,  1.636436,  0.530377]), atol=1e-5, rtol=1e-5)
+
+def test_box_encode_op():
+    anchors = mx.nd.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]).reshape((1, -1, 4))
+    refs = mx.nd.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]).reshape((1, -1, 4))
+    samples = mx.nd.array([[0, 1]])
+    matches = mx.nd.array([[0, 1]])
+    means = mx.nd.array([0.0, 0.0, 0.0, 0.0])
+    stds = mx.nd.array([0.1, 0.1, 0.2, 0.2])
+    Y, mask = mx.nd.contrib.box_encode(samples, matches, anchors, refs, means, stds)
+    assert_allclose(Y.asnumpy(), np.zeros((1, 2, 4)), atol=1e-5, rtol=1e-5)
+    assert_allclose(mask.asnumpy(), np.array([[[0., 0., 0., 0.], [1., 1., 1., 1.]]]), atol=1e-5, rtol=1e-5)
+
+def test_box_decode_op():
+    data = mx.nd.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]).reshape((1, -1, 4))
+    anchors = mx.nd.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]).reshape((1, -1, 4))
+    Y = mx.nd.contrib.box_decode(data, anchors, .1, .1, .2, .2)
+    assert_allclose(Y.asnumpy(), np.array([[[-0.0562755, -0.00865743, 0.26227552, 0.42465743], \
+        [0.13240421, 0.17859563, 0.93759584, 1.1174043 ]]]), atol=1e-5, rtol=1e-5)
+
+@with_seed()
+def test_op_mrcnn_mask_target():
+    if default_context().device_type != 'gpu':
+        return
+
+    num_rois = 2
+    num_classes = 4
+    mask_size = 3
+    ctx = mx.gpu(0)
+    # (B, N, 4)
+    rois = mx.nd.array([[[2.3, 4.3, 2.2, 3.3],
+                        [3.5, 5.5, 0.9, 2.4]]], ctx=ctx)
+    gt_masks = mx.nd.arange(0, 4*32*32, ctx=ctx).reshape(1, 4, 32, 32)
+
+    # (B, N)
+    matches = mx.nd.array([[2, 0]], ctx=ctx)
+    # (B, N)
+    cls_targets = mx.nd.array([[2, 1]], ctx=ctx)
+
+    mask_targets, mask_cls = mx.nd.contrib.mrcnn_mask_target(rois, gt_masks, matches, cls_targets,
+                                                             num_rois=num_rois,
+                                                             num_classes=num_classes,
+                                                             mask_size=mask_size)
+
+    # Ground truth outputs were generated with GluonCV's target generator
+    # gluoncv.model_zoo.mask_rcnn.MaskTargetGenerator(1, num_rois, num_classes, mask_size)
+    gt_mask_targets = mx.nd.array([[[[[2193.4    , 2193.7332 , 2194.0667 ],
+                                      [2204.0667 , 2204.4    , 2204.7334 ],
+                                      [2214.7334 , 2215.0667 , 2215.4    ]],
+                                     [[2193.4    , 2193.7332 , 2194.0667 ],
+                                      [2204.0667 , 2204.4    , 2204.7334 ],
+                                      [2214.7334 , 2215.0667 , 2215.4    ]],
+                                     [[2193.4    , 2193.7332 , 2194.0667 ],
+                                      [2204.0667 , 2204.4    , 2204.7334 ],
+                                      [2214.7334 , 2215.0667 , 2215.4    ]],
+                                     [[2193.4    , 2193.7332 , 2194.0667 ],
+                                      [2204.0667 , 2204.4    , 2204.7334 ],
+                                      [2214.7334 , 2215.0667 , 2215.4    ]]],
+                                    [[[ 185.     ,  185.33334,  185.66667],
+                                      [ 195.66667,  196.00002,  196.33334],
+                                      [ 206.33333,  206.66666,  207.     ]],
+                                     [[ 185.     ,  185.33334,  185.66667],
+                                      [ 195.66667,  196.00002,  196.33334],
+                                      [ 206.33333,  206.66666,  207.     ]],
+                                     [[ 185.     ,  185.33334,  185.66667],
+                                      [ 195.66667,  196.00002,  196.33334],
+                                      [ 206.33333,  206.66666,  207.     ]],
+                                     [[ 185.     ,  185.33334,  185.66667],
+                                      [ 195.66667,  196.00002,  196.33334],
+                                      [  206.33333,  206.66666,  207.     ]]]]])
+
+    gt_mask_cls = mx.nd.array([[0,0,1,0], [0,1,0,0]])
+    gt_mask_cls = gt_mask_cls.reshape(1,2,4,1,1).broadcast_axes(axis=(3,4), size=(3,3))
+
+    assert_almost_equal(mask_targets.asnumpy(), gt_mask_targets.asnumpy())
+    assert_almost_equal(mask_cls.asnumpy(), gt_mask_cls.asnumpy())
 
 if __name__ == '__main__':
     import nose

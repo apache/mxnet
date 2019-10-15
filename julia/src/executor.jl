@@ -176,7 +176,7 @@ end
 
 function forward(self::Executor; is_train::Bool = false, kwargs...)
   for (k,v) in kwargs
-    @assert(k ∈ self.arg_dict, "Unknown argument $k")
+    @assert(k ∈ keys(self.arg_dict), "Unknown argument $k")
     @assert(isa(v, NDArray), "Keyword argument $k must be an NDArray")
     copy!(self.arg_dict[k], v)
   end

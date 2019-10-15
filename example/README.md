@@ -52,13 +52,13 @@ If you have a tutorial idea for the website, download the [Jupyter notebook tuto
 
 #### Tutorial location
 
-Notebook tutorials should be submitted in the `docs/tutorials` folder, so that they maybe rendered in the [web site's tutorial section](https://mxnet.incubator.apache.org/tutorials/index.html).
+Notebook tutorials should be submitted in the `docs/tutorials` folder, so that they maybe rendered in the [web site's tutorial section](https://mxnet.apache.org/tutorials/index.html).
 
 Do not forget to udpdate the `docs/tutorials/index.md` for your tutorial to show up on the website.
 
 #### Tutorial formatting
 
-The site expects the format to be markdown, so export your notebook as a .md via the Jupyter web interface menu (File > Download As > Markdown). Then, to enable the download notebook button in the web site's UI ([example](https://mxnet.incubator.apache.org/tutorials/python/linear-regression.html)), add the following as the last line of the file ([example](https://github.com/apache/incubator-mxnet/blame/master/docs/tutorials/python/linear-regression.md#L194)):
+The site expects the format to be markdown, so export your notebook as a .md via the Jupyter web interface menu (File > Download As > Markdown). Then, to enable the download notebook button in the web site's UI ([example](https://mxnet.apache.org/tutorials/python/linear-regression.html)), add the following as the last line of the file ([example](https://github.com/apache/incubator-mxnet/blame/master/docs/tutorials/python/linear-regression.md#L194)):
 
 ```
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
@@ -84,14 +84,14 @@ If your tutorial depends on specific packages, simply add them to this provision
 
 ### <a name="language-binding-examples"></a>Languages Binding Examples
 ------------------
-* [MXNet C++ API](http://mxnet.incubator.apache.org/api/c++/index.html)
+* [MXNet C++ API](https://mxnet.apache.org/api/c++/index.html)
    - [C++ examples](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification/predict-cpp) - Example code for using C++ interface, including NDArray, symbolic layer and models.
-* [MXNet Python API](http://mxnet.incubator.apache.org/api/python/index.html)
-* [MXNet Java API](http://mxnet.incubator.apache.org/api/java/index.html)
-* [MXNet Scala API](http://mxnet.incubator.apache.org/api/scala/index.html)
-* [MXNet R API](http://mxnet.incubator.apache.org/api/r/index.html)
-* [MXNet Julia API](http://mxnet.incubator.apache.org/api/julia/index.html)
-* [MXNet Perl API](https://mxnet.incubator.apache.org/api/perl/index.html)
+* [MXNet Python API](https://mxnet.apache.org/api/python/index.html)
+* [MXNet Java API](https://mxnet.apache.org/api/java/index.html)
+* [MXNet Scala API](https://mxnet.apache.org/api/scala/index.html)
+* [MXNet R API](https://mxnet.apache.org/api/r/index.html)
+* [MXNet Julia API](https://mxnet.apache.org/api/julia/index.html)
+* [MXNet Perl API](https://mxnet.apache.org/api/perl/index.html)
 * [go-mxnet-predictor](https://github.com/songtianyi/go-mxnet-predictor) - Go binding for inference
 * [MXNet JNI](https://github.com/dmlc/mxnet/tree/master/amalgamation/jni) - JNI(Android) library
 * [MXNet Amalgamation](https://github.com/dmlc/mxnet/tree/master/amalgamation) - Amalgamation (entire library in a single file)

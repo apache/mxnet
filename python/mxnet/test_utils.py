@@ -50,6 +50,8 @@ from .ndarray import array
 from .symbol import Symbol
 from .symbol.numpy import _Symbol as np_symbol
 from .util import use_np  # pylint: disable=unused-import
+from .runtime import Features
+from .numpy_extension import get_cuda_compute_capability
 
 
 def default_context():
@@ -261,6 +263,17 @@ def assign_each2(input1, input2, function):
             it_out.iternext()
 
     return output
+
+# For testing Large Tensors having total size > 2^32 elements
+def create_2d_tensor(rows, columns, dtype=np.int64):
+    a = mx.nd.arange(0, rows, dtype=dtype).reshape(rows, 1)
+    b = mx.nd.broadcast_to(a, shape=(a.shape[0], columns))
+    return b
+
+# For testing Large Vectors having total size > 2^32 elements
+def create_vector(size, dtype=np.int64):
+    a = mx.nd.arange(0, size, dtype=dtype)
+    return a
 
 def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=None,
                         data_init=None, rsp_indices=None, modifier_func=None,
@@ -1079,7 +1092,6 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
 
     executor = sym.bind(ctx=ctx, args=location, args_grad=args_grad_data, aux_states=aux_states)
     for g in executor.grad_arrays:
-        print(g.shape)
         if g.ndim == 0:
             g[()] = 0
         else:
@@ -2210,3 +2222,48 @@ def collapse_sum_like(a, shape):
             assert s == 1
             axes.append(i+ndim_diff)
     return np.sum(a, axis=tuple(axes)).reshape(shape)
+
+
+def is_cd_run():
+    """Checks if the test is running as part of a Continuous Delivery run"""
+    return os.environ.get("CD_JOB", 0) == "1"
+
+
+_features = Features()
+
+
+def has_tvm_ops():
+    """Returns True if MXNet is compiled with TVM generated operators. If current ctx
+    is GPU, it only returns True for CUDA compute capability > 52 where FP16 is supported."""
+    built_with_tvm_op = _features.is_enabled("TVM_OP")
+    ctx = current_context()
+    if ctx.device_type == 'gpu':
+        try:
+            cc = get_cuda_compute_capability(ctx)
+        except:  # pylint: disable=bare-except
+            print('Failed to get CUDA compute capability for context {}. The operators '
+                  'built with USE_TVM_OP=1 will not be run in unit tests.'.format(ctx))
+            return False
+        print('Cuda arch compute capability: sm_{}'.format(str(cc)))
+        return built_with_tvm_op and cc >= 53
+    return built_with_tvm_op
+
+
+def is_op_runnable():
+    """Returns True for all CPU tests. Returns True for GPU tests that are either of the following.
+    1. Built with USE_TVM_OP=0.
+    2. Built with USE_TVM_OP=1, but with compute capability >= 53."""
+    ctx = current_context()
+    if ctx.device_type == 'gpu':
+        if not _features.is_enabled("TVM_OP"):
+            return True
+        else:
+            try:
+                cc = get_cuda_compute_capability(ctx)
+            except:  # pylint: disable=bare-except
+                print('Failed to get CUDA compute capability for context {}. The operators '
+                      'built with USE_TVM_OP=1 will not be run in unit tests.'.format(ctx))
+                return False
+            print('Cuda arch compute capability: sm_{}'.format(str(cc)))
+            return cc >= 53
+    return True

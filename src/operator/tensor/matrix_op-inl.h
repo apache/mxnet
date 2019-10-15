@@ -43,6 +43,11 @@
 #include <thrust/device_vector.h>
 #endif
 
+#ifdef __CUDACC__
+#include "./pseudo2DTranspose_op-inl.cuh"
+#endif
+
+
 namespace mxnet {
 namespace op {
 
@@ -257,6 +262,50 @@ struct TransposeParam : public dmlc::Parameter<TransposeParam> {
   }
 };
 
+
+/*!
+ * \brief This function performs transpose operation on a 2D matrix by utilizing the L1 cache
+ * \param in  input tensor
+ * \param out output tensor
+ * \param row shape of dim 0 of input
+ * \param col shape of dim 1 of input
+ */
+template<typename DType>
+MSHADOW_XINLINE void Transpose2D(const DType *in, DType *out, index_t row, index_t col) {
+  // ensure cache line hits and prevent cache miss for any configuration
+  // L1 cache size to be utilized = 32kb = 2^15
+  // Largest size of a single unit of any dtype <= 8 byte = 2^3
+  // Number of elements - (2^15/2^3) = 2^12
+  // Block-size - 2^6 v 2^6 (64 v 64)
+
+  // But we could leverage unrolling of for loops (for parallelization)
+  // Block-size - 2^5 v 2^5 (32 v 32) with potential 4 pragma for loop unrolled
+  // blocksize * blocksize * num_threads = cache_size / dtype_size
+  // Instead of explicit unroll, let compiler figure out optimal unroll factor
+  index_t blocksize = 32;
+
+  // collapse 2 parallelizes 2 for loops
+  // inner 2 for loops aren't parallelized to prevent cache miss
+
+  // Microsoft Visual C++ compiler does not support omp collapse
+  #ifdef _MSC_VER
+    #pragma omp parallel for
+  #else
+    #pragma omp parallel for collapse(2)
+  #endif  // _MSC_VER
+
+  for (index_t i = 0; i < row; i += blocksize) {
+    for (index_t j = 0; j < col; j += blocksize) {
+      // transpose the block
+      for (index_t a = j; (a < blocksize + j) && (a < col); ++a) {
+        for (index_t b = i; (b < blocksize + i) && (b < row); ++b) {
+          out[a * row + b] = in[b * col + a];
+        }
+      }
+    }
+  }
+}
+
 template<typename xpu>
 void TransposeImpl(RunContext ctx,
                    const TBlob& src,
@@ -268,6 +317,17 @@ void TransposeImpl(RunContext ctx,
   // zero-size tensor, no need to compute
   if (src.shape_.Size() == 0U) return;
   Stream<xpu> *s = ctx.get_stream<xpu>();
+#ifdef __CUDACC__
+  // This transpose can be used only if there exist n and m such that:
+  // params = (0, ..., n-1, n+m, ..., params.size, n, ..., n+m-1)
+  // Example: (0, 2, 3, 1) or (0, 3, 1, 2), but not (0, 2, 1, 3).
+  if (isPseudo2DTranspose(axes)) {
+    MSHADOW_TYPE_SWITCH(ret.type_flag_, DType, {
+      transpose_pseudo2D<DType>(ret, src, axes, s);
+    });
+    return;
+  }
+#endif
   MSHADOW_TYPE_SWITCH(ret.type_flag_, DType, {
     switch (axes.ndim()) {
      case 0: {
@@ -285,8 +345,13 @@ void TransposeImpl(RunContext ctx,
      case 2: {
       mshadow::Tensor<xpu, 2, DType> in = src.FlatTo2D<xpu, DType>(s);
       mshadow::Tensor<xpu, 2, DType> out = ret.FlatTo2D<xpu, DType>(s);
+
       if (axes[0] == 1 && axes[1] == 0) {
-        out = in.T();
+        if (ctx.get_ctx().dev_mask() == cpu::kDevMask) {
+          Transpose2D<DType>(in.dptr_, out.dptr_, in.shape_[0], in.shape_[1]);
+        } else {
+          out = in.T();
+        }
       } else {
         Copy(out, in, s);
       }
@@ -330,8 +395,11 @@ void Transpose(const nnvm::NodeAttrs& attrs,
                const std::vector<TBlob>& inputs,
                const std::vector<OpReqType>& req,
                const std::vector<TBlob>& outputs) {
+  if (req[0] == kNullOp) {
+    return;
+  }
   const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
-  CHECK_EQ(req[0], kWriteTo) << "Transpose does not support inplace";
+  CHECK_EQ(req[0], kWriteTo) << "Transpose does not support kWriteInplace and kAddTo";
   if (param.axes.ndim() == 0) {
     mxnet::TShape axes(inputs[0].ndim(), -1);
     for (int i = 0; i < axes.ndim(); ++i) {
@@ -667,13 +735,15 @@ void SliceEx(const nnvm::NodeAttrs& attrs,
 }
 
 template<int ndim>
-inline void GetIndexRange(const mxnet::TShape& dshape,
+inline bool GetIndexRange(const mxnet::TShape& dshape,
                           const mxnet::Tuple<dmlc::optional<index_t>>& param_begin,
                           const mxnet::Tuple<dmlc::optional<index_t>>& param_end,
                           const mxnet::Tuple<dmlc::optional<index_t>>& param_step,
                           common::StaticArray<index_t, ndim>* begin,
                           common::StaticArray<index_t, ndim>* end,
                           common::StaticArray<index_t, ndim>* step) {
+  // Function returns false if output is zero-sized, true otherwise.
+  bool zero_size_shape = false;
   CHECK_NE(dshape.ndim(), 0U);
   CHECK_LE(param_begin.ndim(), dshape.ndim())
     << "Slicing axis exceeds data dimensions";
@@ -722,6 +792,10 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
     (*begin)[i] = b;
     (*end)[i] = e;
     (*step)[i] = s;
+    // checking begin==end
+    if (b == e) {
+      zero_size_shape = true;
+    }
   }
 
   for (int i = param_begin.ndim(); i < dshape.ndim(); ++i) {
@@ -729,11 +803,13 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
     (*end)[i] = dshape[i];
     (*step)[i] = 1;
   }
+
+  return zero_size_shape;
 }
 
 inline void SetSliceOpOutputDimSize(const mxnet::TShape& dshape,
-                                    const index_t i, const int b,
-                                    const int e, const int s,
+                                    const index_t i, const index_t b,
+                                    const index_t e, const index_t s,
                                     mxnet::TShape* oshape) {
   if (!mxnet::dim_size_is_known(dshape, i)) {
     (*oshape)[i] = -1;
@@ -765,7 +841,7 @@ inline bool SliceOpShape(const nnvm::NodeAttrs& attrs,
     common::StaticArray<index_t, ndim> begin, end, step;
     GetIndexRange(dshape, param.begin, param.end, param.step, &begin, &end, &step);
     for (int i = 0; i < param.begin.ndim(); ++i) {
-      const int b = begin[i], e = end[i], s = step[i];
+      const index_t b = begin[i], e = end[i], s = step[i];
       SetSliceOpOutputDimSize(dshape, i, b, e, s, &oshape);
     }
   })
@@ -973,7 +1049,7 @@ inline bool SliceAssignOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   const mxnet::TShape& dshape = (*in_attrs)[0];
-  if (dshape.ndim() == 0U || dshape.Size() == 0U) return false;
+  if (!mxnet::ndim_is_known(dshape)) return false;
   mxnet::TShape vshape = dshape;  // vshape is the value shape on the right hand side
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
   MXNET_NDIM_SWITCH(dshape.ndim(), ndim, {
@@ -1016,7 +1092,11 @@ void SliceAssignOpForward(const nnvm::NodeAttrs& attrs,
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
   MXNET_NDIM_SWITCH(data.ndim(), ndim, {
     common::StaticArray<index_t, ndim> begin, end, step;
-    GetIndexRange(data.shape_, param.begin, param.end, param.step, &begin, &end, &step);
+    bool zero_size_shape = GetIndexRange(data.shape_, param.begin, param.end, param.step,
+                                        &begin, &end, &step);
+    if (zero_size_shape) {
+      return;  // slice_assign of zero-sized subspace needs no operation.
+    }
     MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
         int num_threads = val.shape_.FlatTo2D()[0];
@@ -1117,7 +1197,11 @@ void SliceAssignScalarOpForward(const nnvm::NodeAttrs& attrs,
   const SliceAssignScalarParam& param = nnvm::get<SliceAssignScalarParam>(attrs.parsed);
   MXNET_NDIM_SWITCH(data.ndim(), ndim, {
     common::StaticArray<index_t, ndim> begin, end, step;
-    GetIndexRange(data.shape_, param.begin, param.end, param.step, &begin, &end, &step);
+    bool zero_size_shape = GetIndexRange(data.shape_, param.begin, param.end, param.step,
+                                        &begin, &end, &step);
+    if (zero_size_shape) {
+      return;  // slice_assign of zero-sized subspaced needs no operation.
+    }
     for (index_t i = 0; i < param.begin.ndim(); ++i) {
       const int b = begin[i], e = end[i], s = step[i];
       SetSliceOpOutputDimSize(data.shape_, i, b, e, s, &vshape);
@@ -1132,8 +1216,8 @@ void SliceAssignScalarOpForward(const nnvm::NodeAttrs& attrs,
 
 struct SliceAxisParam : public dmlc::Parameter<SliceAxisParam> {
   int axis;
-  int begin;
-  dmlc::optional<int> end;
+  index_t begin;
+  dmlc::optional<index_t> end;
   DMLC_DECLARE_PARAMETER(SliceAxisParam) {
     DMLC_DECLARE_FIELD(axis)
       .describe("Axis along which to be sliced, supports negative indexes.");
@@ -1250,6 +1334,9 @@ void SliceAxisGrad_(const nnvm::NodeAttrs& attrs,
                 const std::vector<TBlob>& inputs,
                 const std::vector<OpReqType>& req,
                 const std::vector<TBlob>& outputs) {
+  if (outputs[0].shape_.Size() == 0) {
+    return;
+  }
   const SliceAxisParam& param = nnvm::get<SliceAxisParam>(attrs.parsed);
   using namespace mshadow::op;
   using namespace mshadow::expr;
@@ -1258,7 +1345,6 @@ void SliceAxisGrad_(const nnvm::NodeAttrs& attrs,
   index_t begin, end;
   GetSliceAxisParams(param, outputs[0].shape_, &axis, &begin, &end);
   int ndim = outputs[0].shape_.ndim();
-
   if (axis + 1 == ndim) {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
         mshadow::Tensor<xpu, 2, DType> ograd =
@@ -2625,24 +2711,14 @@ inline bool SplitOpType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-inline bool SplitOpShape(const nnvm::NodeAttrs& attrs,
-                         mxnet::ShapeVector* in_attrs,
-                         mxnet::ShapeVector* out_attrs) {
+inline bool SplitOpShapeImpl(const nnvm::NodeAttrs& attrs,
+                             mxnet::ShapeVector* in_attrs,
+                             mxnet::ShapeVector* out_attrs,
+                             const int real_axis) {
   using namespace mshadow;
   const SplitParam& param = nnvm::get<SplitParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 1U);
   mxnet::TShape dshape = in_attrs->at(split_enum::kData);
   mxnet::TShape ishape = in_attrs->at(split_enum::kData);
-  if (!mxnet::ndim_is_known(dshape)) return false;
-  if (param.axis >= 0) {
-    CHECK_LT(static_cast<size_t>(param.axis), dshape.ndim());
-  } else {
-    CHECK_LT(param.axis + dshape.ndim(), dshape.ndim());
-  }
-  int real_axis = param.axis;
-  if (real_axis < 0) {
-    real_axis += dshape.ndim();
-  }
   const mxnet::TShape indices =
     (param.sections > 0) ? GetSplitIndices(ishape, real_axis, param.sections) : param.indices;
   int num_outputs = (param.sections > 0) ? indices.ndim() - 1 : indices.ndim();
@@ -2659,7 +2735,7 @@ inline bool SplitOpShape(const nnvm::NodeAttrs& attrs,
     if (ishape[real_axis] == 0U) {
       end = start;
     } else {
-      CHECK(start < end)
+      CHECK(start <= end)
         << "start " << start << " is not less than end " << end << "for subarray " << i;
       CHECK(end <= ishape[real_axis])
         << "end " << end << " is no less than the size of the axis " << ishape[real_axis];
@@ -2693,6 +2769,26 @@ inline bool SplitOpShape(const nnvm::NodeAttrs& attrs,
   }
   SHAPE_ASSIGN_CHECK(*in_attrs, split_enum::kData, back_calculate_dshape);
   return true;
+}
+
+inline bool SplitOpShape(const nnvm::NodeAttrs& attrs,
+                         mxnet::ShapeVector* in_attrs,
+                         mxnet::ShapeVector* out_attrs) {
+  using namespace mshadow;
+  const SplitParam& param = nnvm::get<SplitParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 1U);
+  mxnet::TShape dshape = in_attrs->at(split_enum::kData);
+  if (!mxnet::ndim_is_known(dshape)) return false;
+  if (param.axis >= 0) {
+    CHECK_LT(param.axis, dshape.ndim());
+  } else {
+    CHECK_LT(param.axis + dshape.ndim(), dshape.ndim());
+  }
+  int real_axis = param.axis;
+  if (real_axis < 0) {
+    real_axis += dshape.ndim();
+  }
+  return SplitOpShapeImpl(attrs, in_attrs, out_attrs, real_axis);
 }
 
 struct SplitKernel {
@@ -2760,24 +2856,19 @@ struct ConcatenateKernel {
 };
 
 template<typename xpu>
-inline void SplitOpForward(const nnvm::NodeAttrs& attrs,
-                           const OpContext& ctx,
-                           const std::vector<TBlob>& inputs,
-                           const std::vector<OpReqType>& req,
-                           const std::vector<TBlob>& outputs) {
+inline void SplitOpForwardImpl(const nnvm::NodeAttrs& attrs,
+                               const OpContext& ctx,
+                               const std::vector<TBlob>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<TBlob>& outputs,
+                               const int real_axis) {
   using namespace mshadow;
   using namespace mshadow::expr;
   using namespace mxnet_op;
   const SplitParam& param = nnvm::get<SplitParam>(attrs.parsed);
-  CHECK_EQ(inputs.size(), 1U);
-  CHECK_EQ(outputs.size(), (param.sections > 0) ? param.sections : param.indices.ndim());
   Stream<xpu> *s = ctx.get_stream<xpu>();
   const TBlob& input_data = inputs[split_enum::kData];
   size_t leading = 1, trailing = 1;
-  int real_axis = param.axis;
-  if (real_axis < 0) {
-    real_axis += input_data.ndim();
-  }
   CHECK_LT(real_axis, input_data.ndim());
   size_t mid = input_data.shape_[real_axis];
   for (int i = 0; i < real_axis; ++i) {
@@ -2823,25 +2914,39 @@ inline void SplitOpForward(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename xpu>
-inline void SplitOpBackward(const nnvm::NodeAttrs& attrs,
-                            const OpContext& ctx,
-                            const std::vector<TBlob>& inputs,
-                            const std::vector<OpReqType>& req,
-                            const std::vector<TBlob>& outputs) {
+inline void SplitOpForward(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx,
+                           const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
   using namespace mxnet_op;
   const SplitParam& param = nnvm::get<SplitParam>(attrs.parsed);
-  CHECK_EQ(inputs.size(), (param.sections > 0) ? param.sections : param.indices.ndim())
-    << "out grad vector size mush match the output size";
-  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), (param.sections > 0) ? param.sections : param.indices.ndim());
+  const TBlob& input_data = inputs[split_enum::kData];
+  int real_axis = param.axis;
+  if (real_axis < 0) {
+    real_axis += input_data.ndim();
+  }
+  SplitOpForwardImpl<xpu>(attrs, ctx, inputs, req, outputs, real_axis);
+}
+
+template<typename xpu>
+inline void SplitOpBackwardImpl(const nnvm::NodeAttrs& attrs,
+                                const OpContext& ctx,
+                                const std::vector<TBlob>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<TBlob>& outputs,
+                                const int real_axis) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace mxnet_op;
+  const SplitParam& param = nnvm::get<SplitParam>(attrs.parsed);
   Stream<xpu> *s = ctx.get_stream<xpu>();
   TBlob input_grad = outputs[split_enum::kData];
   size_t leading = 1, trailing = 1;
-  int real_axis = param.axis;
-  if (real_axis < 0) {
-      real_axis += input_grad.ndim();
-  }
   CHECK_LT(real_axis, input_grad.ndim());
   size_t mid = input_grad.shape_[real_axis];
   for (int i = 0; i < real_axis; ++i) {
@@ -2884,6 +2989,26 @@ inline void SplitOpBackward(const nnvm::NodeAttrs& attrs,
       s, input_grad.Size(), ptrs_xpu_tensor.dptr_, input_grad.dptr<DType>(),
       indices_xpu_tensor.dptr_, indices.size() - 1, mid, trailing);
   });
+}
+
+template<typename xpu>
+inline void SplitOpBackward(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<TBlob>& inputs,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace mxnet_op;
+  const SplitParam& param = nnvm::get<SplitParam>(attrs.parsed);
+  CHECK_EQ(inputs.size(), (param.sections > 0) ? param.sections : param.indices.ndim())
+    << "out grad vector size mush match the output size";
+  CHECK_EQ(outputs.size(), 1U);
+  int real_axis = param.axis;
+  if (real_axis < 0) {
+      real_axis += outputs[split_enum::kData].ndim();
+  }
+  SplitOpBackwardImpl<xpu>(attrs, ctx, inputs, req, outputs, real_axis);
 }
 
 inline uint32_t SplitNumOutputs(const NodeAttrs& attrs) {

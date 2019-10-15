@@ -249,7 +249,10 @@ def test_multi_worker_forked_data_loader():
 @with_seed()
 def test_multi_worker_dataloader_release_pool():
     # will trigger too many open file if pool is not released properly
-    for _ in range(100):
+    if os.name == 'nt':
+        print('Skip for windows since spawn on windows is too expensive.')
+        return
+    for _ in range(10):
         A = np.random.rand(999, 2000)
         D = mx.gluon.data.DataLoader(A, batch_size=8, num_workers=8)
         the_iter = iter(D)
@@ -282,6 +285,63 @@ def test_dataloader_context():
 
 def batchify(a):
     return a
+
+def test_dataset_filter():
+    length = 100
+    a = mx.gluon.data.SimpleDataset([i for i in range(length)])
+    a_filtered = a.filter(lambda x: x % 10 == 0)
+    assert(len(a_filtered) == 10)
+    for idx, sample in enumerate(a_filtered):
+        assert sample % 10 == 0
+    a_xform_filtered = a.transform(lambda x: x + 1).filter(lambda x: x % 10 == 0)
+    assert(len(a_xform_filtered) == 10)
+    # the filtered data is already transformed
+    for idx, sample in enumerate(a_xform_filtered):
+        assert sample % 10 == 0
+
+def test_dataset_shard():
+    length = 9
+    a = mx.gluon.data.SimpleDataset([i for i in range(length)])
+    shard_0 = a.shard(4, 0)
+    shard_1 = a.shard(4, 1)
+    shard_2 = a.shard(4, 2)
+    shard_3 = a.shard(4, 3)
+    assert len(shard_0) + len(shard_1) + len(shard_2) + len(shard_3) == length
+    assert len(shard_0) == 3
+    assert len(shard_1) == 2
+    assert len(shard_2) == 2
+    assert len(shard_3) == 2
+    total = 0
+    for shard in [shard_0, shard_1, shard_2, shard_3]:
+        for idx, sample in enumerate(shard):
+            total += sample
+    assert total == sum(a)
+
+def test_dataset_take():
+    length = 100
+    a = mx.gluon.data.SimpleDataset([i for i in range(length)])
+    a_take_full = a.take(1000)
+    assert len(a_take_full) == length
+    a_take_full = a.take(None)
+    assert len(a_take_full) == length
+    count = 10
+    a_take_10 = a.take(count)
+    assert len(a_take_10) == count
+    expected_total = sum([i for i in range(count)])
+    total = 0
+    for idx, sample in enumerate(a_take_10):
+        assert sample < count
+        total += sample
+    assert total == expected_total
+
+    a_xform_take_10 = a.transform(lambda x: x * 10).take(count)
+    assert len(a_xform_take_10) == count
+    expected_total = sum([i * 10 for i in range(count)])
+    total = 0
+    for idx, sample in enumerate(a_xform_take_10):
+        assert sample < count * 10
+        total += sample
+    assert total == expected_total
 
 def test_dataloader_scope():
     """
