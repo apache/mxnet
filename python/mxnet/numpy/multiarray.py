@@ -49,7 +49,7 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'add', 'subtrac
            'mod', 'remainder', 'power', 'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10',
            'sqrt', 'cbrt', 'abs', 'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative',
-           'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh',
+           'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'asarray',
            'tensordot', 'histogram', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange',
            'split', 'vsplit', 'concatenate', 'stack', 'vstack', 'dstack', 'mean', 'maximum', 'minimum',
            'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming',
@@ -190,6 +190,12 @@ class ndarray(NDArray):
         if not all(issubclass(t, ndarray) for t in types):
             return NotImplemented
         return mx_np_func(*args, **kwargs)
+
+    def __array__(self, dtype=None):
+        if dtype is None or self.dtype == dtype:
+            return self
+        else:
+            return self.astype(dtype)
 
     def _get_np_basic_indexing(self, key):
         """
@@ -1741,7 +1747,7 @@ def empty(shape, dtype=_np.float32, order='C', ctx=None):
 
 
 @set_module('mxnet.numpy')
-def array(object, dtype=None, ctx=None):
+def array(object, dtype=None, copy=True, order='C', ctx=None, **kwargs):
     """
     Create an array.
 
@@ -1761,23 +1767,88 @@ def array(object, dtype=None, ctx=None):
     out : ndarray
         An array object satisfying the specified requirements.
     """
+    _sanity_check_params('array', ['subok', 'ndmin'], kwargs)
+    if order != 'C':
+        raise NotImplementedError('`array` only supports order equal to `C`, while received {}'
+                                  .format(str(order)))
     if ctx is None:
         ctx = current_context()
     if isinstance(object, ndarray):
         dtype = object.dtype if dtype is None else dtype
+        if ctx == object.context:
+            ret = object.astype(dtype, copy=copy)
+        else:
+            ret = object.copy().astype(dtype, copy=False)
+        return ret
     else:
         dtype = _np.float32 if dtype is None else dtype
-        if not isinstance(object, (ndarray, _np.ndarray)):
+        if not isinstance(object, _np.ndarray):
             try:
                 object = _np.array(object, dtype=dtype)
             except Exception as e:
                 raise TypeError('{}'.format(str(e)))
-    ret = empty(object.shape, dtype=dtype, ctx=ctx)
-    if len(object.shape) == 0:
-        ret[()] = object
-    else:
-        ret[:] = object
-    return ret
+        ret = empty(object.shape, dtype=dtype, ctx=ctx)
+        if len(object.shape) == 0:
+            ret[()] = object
+        else:
+            ret[:] = object
+        return ret
+
+
+@set_module('mxnet.numpy')
+def asarray(a, dtype=None, order='C'):
+    """Convert the input to an ndarray, but pass ndarray subclasses through.
+
+    Parameters
+    ----------
+    a : array_like
+        Input data, in any form that can be converted to an array.  This
+        includes scalars, lists, lists of tuples, tuples, tuples of tuples,
+        tuples of lists, and ndarrays.
+    dtype : data-type, optional
+        By default, the data-type is inferred from the input data.
+    order : {'C', 'F'}, optional
+        Whether to use row-major (C-style) or column-major
+        (Fortran-style) memory representation.  Defaults to 'C'.
+
+    Returns
+    -------
+    out : ndarray or an ndarray subclass
+        Array interpretation of `a`.  If `a` is an ndarray or a subclass
+        of ndarray, it is returned as-is and no copy is performed.
+
+    See Also
+    --------
+    asarray : Similar function which always returns ndarrays.
+    ascontiguousarray : Convert input to a contiguous array.
+    asfarray : Convert input to a floating point ndarray.
+    asfortranarray : Convert input to an ndarray with column-major
+                     memory order.
+    asarray_chkfinite : Similar function which checks input for NaNs and
+                        Infs.
+    fromiter : Create an array from an iterator.
+    fromfunction : Construct an array by executing a function on grid
+                   positions.
+
+    Examples
+    --------
+    Convert a list into an array:
+
+    >>> a = [1, 2]
+    >>> np.asanyarray(a)
+    array([1, 2])
+
+    Instances of `ndarray` subclasses are passed through as-is:
+
+    >>> a = np.array([(1.0, 2), (3.0, 4)], dtype='f4,i4').view(np.recarray)
+    >>> np.asanyarray(a) is a
+    True
+
+    """
+    if order != 'C':
+        raise NotImplementedError('`asarray` only supports order equal to `C`, while received {}'
+                                  .format(str(order)))
+    return array(a, dtype, copy=False, order=order)
 
 
 @set_module('mxnet.numpy')
