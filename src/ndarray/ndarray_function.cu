@@ -76,10 +76,6 @@ void Copy<gpu, gpu>(const TBlob &from, TBlob *to,
                       from.FlatTo1D<gpu, DType>(s),
                       s);
       } else {
-        CHECK_NE(from.type_flag_, mshadow::kBool)
-            << "Copying boolean ndarray across devices is not supported";
-        CHECK_NE(to->type_flag_, mshadow::kBool)
-            << "Copying boolean ndarray across devices is not supported";
         MSHADOW_TYPE_SWITCH(from.type_flag_, SrcDType, {
           to->FlatTo1D<gpu, DType>(s) =
             mshadow::expr::tcast<DType>(from.FlatTo1D<gpu, SrcDType>(s));

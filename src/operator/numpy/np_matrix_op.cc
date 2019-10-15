@@ -40,21 +40,53 @@ bool NumpyTransposeShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& shp = (*in_attrs)[0];
+  mxnet::TShape& out_shp = (*out_attrs)[0];
   CHECK_LE(shp.ndim(), 6) << "Transpose support at most 6 dimensions";
-  mxnet::TShape ret(shp.ndim(), -1);
+
+  int ndim = -1;
+  if (ndim_is_known(shp)) {
+    ndim = shp.ndim();
+  } else if (ndim_is_known(out_shp)) {
+    ndim = out_shp.ndim();
+  }
+  if (ndim < 0) {
+    return false;
+  }
+  if (out_shp.ndim() >= 0 && shp.ndim() >= 0) {
+    CHECK_EQ(out_shp.ndim(), shp.ndim());
+  }
+
+  mxnet::TShape get(ndim, -1);
+  mxnet::TShape ret(ndim, -1);
+
   if (ndim_is_known(param.axes)) {
-    CHECK_EQ(shp.ndim(), param.axes.ndim());
-    for (int i = 0; i < shp.ndim(); ++i) {
-      CHECK(param.axes[i] < static_cast<int64_t>(shp.ndim()));
-      ret[i] = shp[param.axes[i]];
+    CHECK_EQ(ndim, param.axes.ndim());
+    mxnet::TShape axes = common::CanonicalizeAxes(param.axes);
+    if (ndim_is_known(shp)) {
+      for (int i = 0; i < ndim; ++i) {
+        ret[i] = shp[axes[i]];
+      }
+    }
+    if (ndim_is_known(out_shp)) {
+      for (int i = 0; i < ndim; ++i) {
+        get[axes[i]] = out_shp[i];
+      }
     }
   } else {
-    for (int i = 0; i < shp.ndim(); ++i) {
-      ret[i] = shp[shp.ndim()-1-i];
+    if (ndim_is_known(shp)) {
+      for (int i = 0; i < ndim; ++i) {
+        ret[i] = shp[ndim - 1 - i];
+      }
+    }
+    if (ndim_is_known(out_shp)) {
+      for (int i = 0; i < ndim; ++i) {
+        get[ndim - 1 - i] = out_shp[i];
+      }
     }
   }
+  SHAPE_ASSIGN_CHECK(*in_attrs, 0, get);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, ret);
-  return shape_is_known(ret);
+  return shape_is_known(*in_attrs) && shape_is_known(*out_attrs);
 }
 
 NNVM_REGISTER_OP(_np_transpose)
@@ -69,7 +101,12 @@ NNVM_REGISTER_OP(_np_transpose)
     if (ndim_is_known(param.axes)) {
       mxnet::TShape axes = mxnet::TShape(param.axes.ndim(), -1);
       for (int i = 0; i < axes.ndim(); ++i) {
-        axes[param.axes[i]] = i;
+        int axis = param.axes[i];
+        if (axis < 0) {
+          axis += param.axes.ndim();
+        }
+        CHECK(axis >= 0 && axis < param.axes.ndim());
+        axes[axis] = i;
       }
       std::ostringstream os;
       os << axes;
@@ -248,12 +285,73 @@ NNVM_REGISTER_OP(_np_squeeze)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_squeeze"})
-.add_argument("a", "NDArray-or-Symbol[]", "data to squeeze")
+.add_argument("a", "NDArray-or-Symbol", "data to squeeze")
 .add_arguments(SqueezeParam::__FIELDS__());
 
 bool ConcatShape(const nnvm::NodeAttrs& attrs,
                  mxnet::ShapeVector *in_shape,
                  mxnet::ShapeVector *out_shape);
+
+bool DStackShape(const nnvm::NodeAttrs& attrs,
+                 mxnet::ShapeVector *in_shape,
+                 mxnet::ShapeVector *out_shape) {
+  using namespace mshadow;
+  ConcatParam param_ = nnvm::get<ConcatParam>(attrs.parsed);
+  CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
+  mxnet::TShape dshape;
+  dim_t size = 0;
+  bool has_unknown_dim_size = false;
+  int axis = 2;
+  param_.dim = axis;
+  for (int i = 0; i < param_.num_args; ++i) {
+    if ((*in_shape)[i].ndim() == 0) {
+      (*in_shape)[i] = mxnet::TShape(3, 1);
+    } else if ((*in_shape)[i].ndim() == 1) {
+      mxnet::TShape t = mxnet::TShape(3, 1);
+      t[1] = (*in_shape)[i][0];
+      (*in_shape)[i] = t;
+    } else if ((*in_shape)[i].ndim() == 2) {
+      mxnet::TShape t = mxnet::TShape(3, 1);
+      t[0] = (*in_shape)[i][0];
+      t[1] = (*in_shape)[i][1];
+      (*in_shape)[i] = t;
+    }
+    mxnet::TShape &tmp = (*in_shape)[i];
+    if (tmp.ndim() > 0) {
+      CheckAxis(axis, tmp.ndim());
+      if (!mxnet::dim_size_is_known(tmp, axis)) {
+        has_unknown_dim_size = true;
+      } else {
+        size += tmp[axis];
+      }
+      tmp[axis] = -1;
+      shape_assign(&dshape, tmp);
+    }
+  }
+
+  mxnet::TShape tmp = (*out_shape)[0];
+  if (tmp.ndim() > 0) {
+    axis = CheckAxis(param_.dim, tmp.ndim());
+    tmp[axis] = -1;
+    shape_assign(&dshape, tmp);
+  }
+
+  if (dshape.ndim() == -1) return false;
+  CHECK_NE(dshape.ndim(), 0) << "zero-dimensional arrays cannot be concatenated";
+
+  for (int i = 0; i < param_.num_args; ++i) {
+    CHECK(shape_assign(&(*in_shape)[i], dshape))
+      << "Incompatible input shape: expected " << dshape << ", got " << (*in_shape)[i];
+  }
+
+  if (!has_unknown_dim_size) {
+    dshape[axis] = size;
+  }
+  CHECK(shape_assign(&(*out_shape)[0], dshape))
+    << "Incompatible output shape: expected " << dshape << ", got " << (*out_shape)[0];
+
+  return shape_is_known(dshape);
+}
 
 bool ConcatType(const nnvm::NodeAttrs& attrs,
                 std::vector<int> *in_type,
@@ -268,7 +366,6 @@ struct NumpyConcatGrad {
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }
 };
-
 
 NNVM_REGISTER_OP(_npi_concatenate)
 .describe(R"code(Join a sequence of arrays along an existing axis.)code" ADD_FILELINE)
@@ -489,6 +586,44 @@ NNVM_REGISTER_OP(_backward_np_vstack)
 })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", NumpyVstackBackward<cpu>);
+
+NNVM_REGISTER_OP(_npi_dstack)
+.describe(R"code(Stack tensors in sequence depthwise (in third dimension))code" ADD_FILELINE)
+.set_num_inputs([](const NodeAttrs& attrs) {
+  const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
+  return params.num_args;
+})
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<ConcatParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
+    std::vector<std::string> ret;
+    for (int i = 0; i < params.num_args; ++i) {
+      ret.push_back(std::string("data") + std::to_string(i));
+    }
+    return ret;
+})
+.set_attr<nnvm::FListOutputNames>("FListOutputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"out"};
+})
+.set_attr<std::string>("key_var_num_args", "num_args")
+.set_attr<nnvm::FInferType>("FInferType", ConcatType)
+.set_attr<mxnet::FInferShape>("FInferShape", DStackShape)
+.set_attr<FCompute>("FCompute<cpu>", DStackCompute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", NumpyConcatGrad{"_backward_np_dstack"})
+.add_argument("data", "NDArray-or-Symbol[]", "List of arrays to concatenate")
+.add_arguments(ConcatParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_np_dstack)
+.set_num_outputs([](const NodeAttrs& attrs) {
+  const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
+  return params.num_args;
+})
+.set_attr_parser(ParamParser<ConcatParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", DStackGradCompute<cpu>);
 
 inline bool NumpyRollShape(const nnvm::NodeAttrs& attrs,
                            mxnet::ShapeVector *in_attrs,

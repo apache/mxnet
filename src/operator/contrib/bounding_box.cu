@@ -47,5 +47,12 @@ NNVM_REGISTER_OP(_contrib_bipartite_matching)
 
 NNVM_REGISTER_OP(_backward_contrib_bipartite_matching)
 .set_attr<FCompute>("FCompute<gpu>", BipartiteMatchingBackward<gpu>);
+
+NNVM_REGISTER_OP(_contrib_box_encode)
+.set_attr<FCompute>("FCompute<gpu>", BoxEncodeForward<gpu>);
+
+NNVM_REGISTER_OP(_contrib_box_decode)
+.set_attr<FCompute>("FCompute<gpu>", BoxDecodeForward<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

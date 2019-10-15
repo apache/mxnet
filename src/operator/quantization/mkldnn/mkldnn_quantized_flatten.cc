@@ -24,7 +24,7 @@
  */
 
 #if MXNET_USE_MKLDNN == 1
-#include "../../nn/mkldnn/mkldnn_flatten-inl.h"
+#include "../../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../quantization_utils.h"
 
 namespace mxnet {
@@ -42,7 +42,7 @@ static void MKLDNNQuantizedFlattenForward(const nnvm::NodeAttrs& attrs, const Op
                                           const std::vector<NDArray>& inputs,
                                           const std::vector<OpReqType>& req,
                                           const std::vector<NDArray>& outputs) {
-  MKLDNNFlattenForward(attrs, ctx, inputs[0], req[0], outputs[0]);
+  MKLDNNReshapeForward(attrs, ctx, inputs[0], req[0], outputs[0]);
   outputs[1].data().dptr<float>()[0] = inputs[1].data().dptr<float>()[0];
   outputs[2].data().dptr<float>()[0] = inputs[2].data().dptr<float>()[0];
 }

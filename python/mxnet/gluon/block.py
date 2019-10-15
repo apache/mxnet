@@ -212,7 +212,7 @@ class Block(object):
         Prefix acts like a name space. All children blocks created in parent block's
         :py:meth:`name_scope` will have parent block's prefix in their name.
         Please refer to
-        `naming tutorial <https://mxnet.incubator.apache.org/api/python/docs/tutorials/packages/gluon/naming.html>`_
+        `naming tutorial </api/python/docs/tutorials/packages/gluon/blocks/naming.html>`_
         for more info on prefix and naming.
     params : ParameterDict or None
         :py:class:`ParameterDict` for sharing weights with the new :py:class:`Block`. For example,
@@ -308,7 +308,7 @@ class Block(object):
                 self.dense = nn.Dense(20)
 
         Please refer to
-        `naming tutorial <https://mxnet.incubator.apache.org/tutorials/gluon/naming.html>`_
+        `the naming tutorial </api/python/docs/tutorials/packages/gluon/blocks/naming.html>`_
         for more info on prefix and naming.
         """
         return self._scope
@@ -1003,7 +1003,7 @@ class HybridBlock(Block):
 
     def export(self, path, epoch=0, remove_amp_cast=True):
         """Export HybridBlock to json format that can be loaded by
-        `SymbolBlock.imports`, `mxnet.mod.Module` or the C++ interface.
+        `gluon.SymbolBlock.imports`, `mxnet.mod.Module` or the C++ interface.
 
         .. note:: When there are only one input, it will have name `data`. When there
                   Are more than one inputs, they will be named as `data0`, `data1`, etc.
@@ -1160,8 +1160,8 @@ class SymbolBlock(HybridBlock):
     """
     @staticmethod
     def imports(symbol_file, input_names, param_file=None, ctx=None):
-        """Import model previously saved by `HybridBlock.export` or
-        `Module.save_checkpoint` as a SymbolBlock for use in Gluon.
+        """Import model previously saved by `gluon.HybridBlock.export` or
+        `Module.save_checkpoint` as a `gluon.SymbolBlock` for use in Gluon.
 
         Parameters
         ----------
@@ -1172,12 +1172,12 @@ class SymbolBlock(HybridBlock):
         param_file : str, optional
             Path to parameter file.
         ctx : Context, default None
-            The context to initialize SymbolBlock on.
+            The context to initialize `gluon.SymbolBlock` on.
 
         Returns
         -------
-        SymbolBlock
-            SymbolBlock loaded from symbol and parameter files.
+        gluon.SymbolBlock
+            `gluon.SymbolBlock` loaded from symbol and parameter files.
 
         Examples
         --------

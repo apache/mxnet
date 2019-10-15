@@ -292,8 +292,6 @@ def gpu_memory_info(device_id=0):
     Returns
     -------
     (free, total) : (int, int)
-        The number of GPUs.
-
     """
     free = ctypes.c_uint64()
     total = ctypes.c_uint64()
