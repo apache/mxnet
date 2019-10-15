@@ -197,7 +197,6 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'trunc',
     'floor',
     'logical_not',
-    'not_equal'
 ]
 
 
