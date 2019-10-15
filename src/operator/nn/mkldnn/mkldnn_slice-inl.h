@@ -26,7 +26,7 @@
 #ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_SLICE_INL_H_
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_SLICE_INL_H_
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -45,7 +45,7 @@ class MKLDNNSliceFwd {
                  const NDArray &in,
                  const NDArray &out);
   void SetNewMem(const mkldnn::memory &input, const mkldnn::memory &output);
-  const mkldnn::reorder &GetPd() const;
+  void Register();
 
  private:
   std::shared_ptr<mkldnn::memory> data_;
@@ -62,5 +62,5 @@ void MKLDNNSlice(const SliceParam &param, const OpContext& ctx,
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_MKLDNN == 100
 #endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_SLICE_INL_H_
