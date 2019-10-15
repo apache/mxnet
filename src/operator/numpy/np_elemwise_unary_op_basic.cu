@@ -35,9 +35,9 @@ NNVM_REGISTER_OP(_npx_sigmoid)
 NNVM_REGISTER_OP(_np_copy)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
-#define MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(__name$, __kernel$)     \
-NNVM_REGISTER_OP(__name$)                                               \
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, __kernel$>)  \
+#define MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(__name$, __kernel$)       \
+  NNVM_REGISTER_OP(__name$)                                               \
+  .set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, __kernel$>)
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_negative, mshadow_op::negation);
 
@@ -76,7 +76,8 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_log1p, mshadow_op::log1p);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_expm1, mshadow_op::expm1);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_logical_not, mshadow_op::nt);
+NNVM_REGISTER_OP(_npi_logical_not)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::ComputeLogic<gpu, mshadow_op::np_logical_not>);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_sin, mshadow_op::sin);
 

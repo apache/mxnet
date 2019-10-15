@@ -40,21 +40,53 @@ bool NumpyTransposeShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& shp = (*in_attrs)[0];
+  mxnet::TShape& out_shp = (*out_attrs)[0];
   CHECK_LE(shp.ndim(), 6) << "Transpose support at most 6 dimensions";
-  mxnet::TShape ret(shp.ndim(), -1);
+
+  int ndim = -1;
+  if (ndim_is_known(shp)) {
+    ndim = shp.ndim();
+  } else if (ndim_is_known(out_shp)) {
+    ndim = out_shp.ndim();
+  }
+  if (ndim < 0) {
+    return false;
+  }
+  if (out_shp.ndim() >= 0 && shp.ndim() >= 0) {
+    CHECK_EQ(out_shp.ndim(), shp.ndim());
+  }
+
+  mxnet::TShape get(ndim, -1);
+  mxnet::TShape ret(ndim, -1);
+
   if (ndim_is_known(param.axes)) {
-    CHECK_EQ(shp.ndim(), param.axes.ndim());
-    for (int i = 0; i < shp.ndim(); ++i) {
-      CHECK(param.axes[i] < static_cast<int64_t>(shp.ndim()));
-      ret[i] = shp[param.axes[i]];
+    CHECK_EQ(ndim, param.axes.ndim());
+    mxnet::TShape axes = common::CanonicalizeAxes(param.axes);
+    if (ndim_is_known(shp)) {
+      for (int i = 0; i < ndim; ++i) {
+        ret[i] = shp[axes[i]];
+      }
+    }
+    if (ndim_is_known(out_shp)) {
+      for (int i = 0; i < ndim; ++i) {
+        get[axes[i]] = out_shp[i];
+      }
     }
   } else {
-    for (int i = 0; i < shp.ndim(); ++i) {
-      ret[i] = shp[shp.ndim()-1-i];
+    if (ndim_is_known(shp)) {
+      for (int i = 0; i < ndim; ++i) {
+        ret[i] = shp[ndim - 1 - i];
+      }
+    }
+    if (ndim_is_known(out_shp)) {
+      for (int i = 0; i < ndim; ++i) {
+        get[ndim - 1 - i] = out_shp[i];
+      }
     }
   }
+  SHAPE_ASSIGN_CHECK(*in_attrs, 0, get);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, ret);
-  return shape_is_known(ret);
+  return shape_is_known(*in_attrs) && shape_is_known(*out_attrs);
 }
 
 NNVM_REGISTER_OP(_np_transpose)
@@ -69,7 +101,12 @@ NNVM_REGISTER_OP(_np_transpose)
     if (ndim_is_known(param.axes)) {
       mxnet::TShape axes = mxnet::TShape(param.axes.ndim(), -1);
       for (int i = 0; i < axes.ndim(); ++i) {
-        axes[param.axes[i]] = i;
+        int axis = param.axes[i];
+        if (axis < 0) {
+          axis += param.axes.ndim();
+        }
+        CHECK(axis >= 0 && axis < param.axes.ndim());
+        axes[axis] = i;
       }
       std::ostringstream os;
       os << axes;
