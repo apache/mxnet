@@ -23,8 +23,7 @@ os.environ['MXNET_SUBGRAPH_BACKEND'] = 'NONE'
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../quantization'))
 
-# TODO(Tao): skip these unit tests before MKL-DNN v1.0 integration is done. https://github.com/apache/incubator-mxnet/projects/16
-# from test_quantization import *
+from test_quantization import *
 
 if __name__ == '__main__':
     import nose
