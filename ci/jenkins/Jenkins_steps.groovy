@@ -1416,11 +1416,11 @@ def should_pack_website() {
       return true
     }
   } else {
-    return true 
+    return true
   }
   return false
 }
-  
+
 // Each of the docs_{lang} functions will build the docs...
 // Stashing is only needed for master for website publishing or for testing "new_"
 
@@ -1604,6 +1604,27 @@ def docs_prepare() {
 }
 
 
+def docs_prepare_beta() {
+    return ['Prepare for publication to the staging website': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+
+            unstash 'jekyll-artifacts'
+            unstash 'python-artifacts'
+
+            utils.docker_run('ubuntu_cpu_jekyll', 'build_docs_beta', false)
+
+            // archive so the publish pipeline can access the artifact
+            archiveArtifacts 'docs/_build/beta_website.tgz'
+          }
+        }
+      }
+    }]
+}
+
+
 def docs_archive() {
     return ['Archive the full website': {
       node(NODE_LINUX_CPU) {
@@ -1638,6 +1659,24 @@ def docs_publish() {
     }]
 }
 
+
+// This is for the beta website
+def docs_publish_beta() {
+    return ['Publish the beta website to staging': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            try {
+              build 'restricted-website-publish-master-beta'
+            }
+            catch (Exception e) {
+               println(e.getMessage())
+            }
+          }
+        }
+      }
+    }]
+}
 
 
 def misc_asan_cpu() {

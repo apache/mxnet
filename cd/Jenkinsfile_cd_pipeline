@@ -61,6 +61,10 @@ pipeline {
               stage("Build") {
                 cd_utils.trigger_release_job("Build static libmxnet", "mxnet_lib/static", params.MXNET_VARIANTS)    
               }
+              stage("PyPI Release") {
+                echo "Building PyPI Release"
+                cd_utils.trigger_release_job("Release PyPI Packages", "python/pypi", params.MXNET_VARIANTS)
+              }
             },
 
             "Dynamic libmxnet based release": {

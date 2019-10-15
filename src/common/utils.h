@@ -823,6 +823,21 @@ static inline std::string GetOutputName(const nnvm::NodeEntry& e) {
   return sym.ListOutputNames()[0];
 }
 
+inline mxnet::TShape CanonicalizeAxes(const mxnet::TShape& src) {
+  // convert negative axes to positive values
+  const int ndim = src.ndim();
+  mxnet::TShape axes = src;
+  for (int i = 0; i < ndim; ++i) {
+    if (axes[i] < 0) {
+      axes[i] += ndim;
+    }
+    CHECK(axes[i] >= 0 && axes[i] < ndim) << "axes[" << i << "]="
+                                          << axes[i] << " exceeds the range ["
+                                          << 0 << ", " << ndim << ")";
+  }
+  return axes;
+}
+
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_UTILS_H_

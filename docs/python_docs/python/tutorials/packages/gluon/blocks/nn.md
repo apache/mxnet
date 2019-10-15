@@ -306,7 +306,7 @@ manifest in the form of GPU starvation when the CPUs can not provide
 instruction fast enough. We can improve this situation by deferring to a more
 performant language instead of Python when possible.
 
-Gluon does this by allowing for [Hybridization](./hybridize.md). In it, the
+Gluon does this by allowing for [Hybridization](hybridize.md). In it, the
 Python interpreter executes the block the first time it's invoked. The Gluon
 runtime records what is happening and the next time around it short circuits
 any calls to Python. This can accelerate things considerably in some cases but
