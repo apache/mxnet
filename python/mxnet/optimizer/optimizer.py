@@ -103,8 +103,6 @@ class Optimizer(object):
         self.rescale_grad = rescale_grad
         self.lr = learning_rate
         self.lr_scheduler = lr_scheduler
-        if lr_scheduler is not None:
-            self.lr_scheduler.base_lr = learning_rate
 
         self.wd = wd
         self.lr_mult = {}
