@@ -189,7 +189,6 @@ bool SupportMKLDNNDeconv(const DeconvolutionParam& params, const NDArray &input)
 bool SupportMKLDNNSoftmax(const SoftmaxParam& param, const NDArray &input, const NDArray &output);
 bool SupportMKLDNNSoftmaxOutput(const SoftmaxOutputParam &param);
 bool SupportMKLDNNTranspose(const TransposeParam& param, const NDArray &data);
-bool SupportMKLDNNReshape(const NDArray &in_data, const NDArray &out_data);
 }  // namespace op
 
 static int GetTypeSize(int dtype) {

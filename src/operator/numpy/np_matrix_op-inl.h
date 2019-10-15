@@ -29,6 +29,7 @@
 #include <algorithm>
 #include "../tensor/matrix_op-inl.h"
 #include "../nn/concat-inl.h"
+#include "../../common/utils.h"
 
 namespace mxnet {
 namespace op {
@@ -59,7 +60,8 @@ void NumpyTranspose(const nnvm::NodeAttrs& attrs,
   const NumpyTransposeParam& param = nnvm::get<NumpyTransposeParam>(attrs.parsed);
   CHECK_EQ(req[0], kWriteTo) << "Transpose does not support inplace";
   if (ndim_is_known(param.axes)) {
-    TransposeImpl<xpu>(ctx.run_ctx, inputs[0], outputs[0], param.axes);
+    mxnet::TShape axes = common::CanonicalizeAxes(param.axes);
+    TransposeImpl<xpu>(ctx.run_ctx, inputs[0], outputs[0], axes);
   } else {
     mxnet::TShape axes(inputs[0].ndim(), -1);
     for (int i = 0; i < axes.ndim(); ++i) {

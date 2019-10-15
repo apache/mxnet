@@ -228,11 +228,11 @@ def test_np_ldexp():
 
         def hybrid_forward(self, F, x1, x2):
             return F.np.ldexp(x1, x2)
-        
+
     def _np_ldexp(x1, x2):
         return x1 * _np.power(2.0, x2)
 
-    def dldx(x1, x2): 
+    def dldx(x1, x2):
         grad_a = _np.power(2.0, x2)
         grad_b = _np_ldexp(x1, x2) * _np.log(2.0)
         if len(x1) == 1:
@@ -241,7 +241,7 @@ def test_np_ldexp():
             grad_b = _np.sum(grad_b)
         return [grad_a, grad_b]
 
-    shapes = [ 
+    shapes = [
         ((3, 1), (3, 1)),
         ((3, 1, 2), (3, 1, 2)),
         ((1, ),(1, )),
@@ -250,7 +250,7 @@ def test_np_ldexp():
         ((3, 0), (3, 0)),  # zero-size shape
         ((0, 1), (0, 1)),  # zero-size shape
         ((2, 0, 2), (2, 0, 2)),  # zero-size shape
-        ] 
+        ]
 
     for hybridize in [True, False]:
         for shape1, shape2 in shapes:
@@ -258,7 +258,7 @@ def test_np_ldexp():
                 test_ldexp = TestLdexp()
                 if hybridize:
                     test_ldexp.hybridize()
-                x1 = rand_ndarray(shape=shape1, dtype=dtype).as_np_ndarray() 
+                x1 = rand_ndarray(shape=shape1, dtype=dtype).as_np_ndarray()
                 x1.attach_grad()
                 x2 = rand_ndarray(shape=shape2, dtype=dtype).as_np_ndarray()
                 x2.attach_grad()
@@ -997,13 +997,13 @@ def test_np_squeeze():
             self._axis = axis
 
         def hybrid_forward(self, F, x):
-            return F.np.squeeze(x, axis=self._axis)
+            return F.np.squeeze(x, self._axis)
 
     for shape, axis in config:
         data_np = _np.random.uniform(size=shape)
         data_mx = np.array(data_np, dtype=data_np.dtype)
-        ret_np = _np.squeeze(data_np, axis=axis)
-        ret_mx = np.squeeze(data_mx, axis=axis)
+        ret_np = _np.squeeze(data_np, axis)
+        ret_mx = np.squeeze(data_mx, axis)
         assert_almost_equal(ret_mx.asnumpy(), ret_np, rtol=1e-5, atol=1e-6, use_broadcast=False)
 
         net = TestSqueeze(axis)
@@ -1163,6 +1163,7 @@ def test_np_transpose():
                     axeses.append(tuple(axes))
                     random.shuffle(axes)
                     axeses.append(tuple(axes))
+                    axeses.append([i - len(axes) for i in axes])
                 for axes in axeses:
                     test_trans = TestTranspose(axes)
                     if hybridize:
@@ -1179,9 +1180,14 @@ def test_np_transpose():
                     np_backward = np_transpose_grad(np_out.shape, dtype, axes)
                     assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
-                    mx_out = np.transpose(x, axes)
-                    np_out = _np.transpose(x.asnumpy(), axes)
+                    mx_out = x.transpose(axes)
+                    np_out = x.asnumpy().transpose(axes)
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
+
+                    if isinstance(axes, (list, tuple)):
+                        mx_out = x.transpose(*axes)
+                        np_out = x.asnumpy().transpose(*axes)
+                        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
 
 @with_seed()
@@ -1342,6 +1348,8 @@ def test_np_unary_funcs():
                 y = mx_func(mx_test_data)
             assert y.shape == np_out.shape
             assert_almost_equal(y.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+            if np_out.dtype == np.bool_:
+                assert y.dtype == np.bool_
 
             if ref_grad:
                 y.backward()
@@ -2037,6 +2045,23 @@ def test_np_cumsum():
                         mx_out = np.cumsum(x, axis=axis, dtype=otype)
                         np_out = _np.cumsum(x.asnumpy(), axis=axis, dtype=otype)
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@use_np
+def test_np_histogram():
+    shapes = [(), (3, 4), (3, 0)]
+
+    for shape in shapes:
+        mx_a = np.random.uniform(0.0, 10.0, size=shape)
+        np_a = mx_a.asnumpy()
+        mx_bins = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5., 6., 7., 8., 9., 10.])
+        np_bins = mx_bins.asnumpy()
+        for bins, _range in [(20, (0.0, 10.0)), (mx_bins, None)]:
+            mx_cnts, mx_bins = np.histogram(mx_a, bins=bins, range=_range)
+            np_cnts, np_bins = _np.histogram(np_a, bins=bins if isinstance(bins, mx.base.numeric_types) else bins.asnumpy(), range=_range)
+            assert_almost_equal(mx_cnts.asnumpy(), np_cnts, rtol=1e-3, atol=1e-5)
+            assert_almost_equal(mx_bins.asnumpy(), np_bins, rtol=1e-3, atol=1e-5)
 
 
 @with_seed()

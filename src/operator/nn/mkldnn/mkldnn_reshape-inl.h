@@ -39,7 +39,6 @@ class MKLDNNReshapeFwd {
   std::shared_ptr<mkldnn::memory> out_;
   std::shared_ptr<mkldnn::memory> temp_;
   std::vector<mkldnn::primitive> prims_;
-  bool needInvalidateInput = false;
 
  public:
   MKLDNNReshapeFwd(const OpReqType &req,
@@ -52,40 +51,11 @@ class MKLDNNReshapeFwd {
                void* workspace = nullptr);
 };
 
-typedef ParamOpSign<ReshapeParam> MKLDNNReshapeSignature;
-
-template<typename MKLDNNOpFwdType, typename ParamType, typename MKLDNNSigatureType>
-MKLDNNOpFwdType &GetCachedForward(const ParamType& param,
-                                  const OpReqType &req,
-                                  const NDArray &input,
-                                  const NDArray &output) {
-#if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<MKLDNNSigatureType,
-                                         MKLDNNOpFwdType, OpHash> fwds;
-#else
-  static MX_THREAD_LOCAL std::unordered_map<MKLDNNSigatureType,
-                                            MKLDNNOpFwdType, OpHash> fwds;
-#endif
-  MKLDNNSigatureType key(param);
-  key.AddSign(req);
-  key.AddSign(input);
-  key.AddSign(output);
-
-  auto it = fwds.find(key);
-  if (it == fwds.end()) {
-    MKLDNNOpFwdType fwd(req, input, output);
-    it = AddToCache(&fwds, key, fwd);
-  }
-  return it->second;
-}
-
-MKLDNNReshapeFwd &GetReshapeForward(const ReshapeParam& param,
-                                    const OpReqType &req,
-                                    const NDArray &input,
+typedef OpSignature MKLDNNReshapeSignature;
+MKLDNNReshapeFwd &GetReshapeForward(const OpReqType &req, const NDArray &input,
                                     const NDArray &output);
-
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_MKLDNN == 100
 #endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_RESHAPE_INL_H_

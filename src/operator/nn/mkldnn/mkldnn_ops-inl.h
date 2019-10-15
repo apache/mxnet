@@ -38,26 +38,10 @@
 
 #if MXNET_USE_MKLDNN == 100
 #include <mkldnn.hpp>
-#endif
 
 namespace mxnet {
 namespace op {
 
-#if MXNET_USE_MKLDNN == 1
-void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
-                          const OpContext &ctx,
-                          const NDArray &input,
-                          const OpReqType &req,
-                          const NDArray &output);
-
-void MKLDNNFlattenForward(const nnvm::NodeAttrs &attrs,
-                          const OpContext &ctx,
-                          const NDArray &input,
-                          const OpReqType &req,
-                          const NDArray &output);
-#endif
-
-#if MXNET_USE_MKLDNN == 100
 /* For fully connected. */
 void MKLDNNFCForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                      const std::vector<NDArray> &in_data,
@@ -148,19 +132,8 @@ void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
                           const NDArray &input,
                           const OpReqType &req,
                           const NDArray &output);
-void MKLDNNFlattenForward(const nnvm::NodeAttrs &attrs,
-                          const OpContext &ctx,
-                          const NDArray &input,
-                          const OpReqType &req,
-                          const NDArray &output);
-void MKLDNNExpandDimsForward(const nnvm::NodeAttrs &attrs,
-                             const OpContext &ctx,
-                             const NDArray &input,
-                             const OpReqType &req,
-                             const NDArray &output);
-#endif
-
 }  // namespace op
 }  // namespace mxnet
 
+#endif  // MXNET_USE_MKLDNN == 100
 #endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_OPS_INL_H_
