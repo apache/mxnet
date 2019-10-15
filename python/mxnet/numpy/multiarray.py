@@ -706,7 +706,7 @@ class ndarray(NDArray):
             if dtype == _np.float32:
                 array_str = array_str[:array_str.rindex(',')] + ')'
         elif dtype not in (_np.float32, _np.bool_):
-            array_str = array_str[:-1] + ', dtype={})'.format(dtype.__name__)
+            array_str = array_str[:-1] + ', dtype={})'.format(dtype)
 
         context = self.context
         if context.device_type == 'cpu':
@@ -1679,6 +1679,26 @@ class ndarray(NDArray):
     def size(self):
         """Number of elements in the array."""
         return super(ndarray, self).size
+
+    @property
+    def dtype(self):
+        """Data-type of the array's elements.
+
+        Returns
+        -------
+        numpy.dtype
+            This NDArray's data type.
+
+        Examples
+        --------
+        >>> x = np.zeros((2,3))
+        >>> x.dtype
+        dtype('float32')
+        >>> y = np.zeros((2,3), dtype='int32')
+        >>> y.dtype
+        dtype('int32')
+        """
+        return _np.dtype(super(ndarray, self).dtype)
 
     def tostype(self, stype):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute tostype')
