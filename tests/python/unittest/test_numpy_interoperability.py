@@ -331,6 +331,7 @@ def check_interoperability(op_list):
                                       'added for checking interoperability with ' \
                                       'the official NumPy.'.format(name)
         for workload in workloads:
+            print('Workload: ', workload)
             _check_interoperability_helper(name, *workload['args'], **workload['kwargs'])
 
 
