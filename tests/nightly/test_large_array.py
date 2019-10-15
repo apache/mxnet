@@ -798,8 +798,7 @@ def test_batchnorm():
 def test_add():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     b = nd.ones(shape=(LARGE_X, SMALL_Y))
-    c = b
-    c = c.__add__(a)
+    c = b.__add__(a)
     assert c[0][-1] == 2
     assert c.shape == a.shape
 
@@ -807,8 +806,7 @@ def test_add():
 def test_sub():
     a = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = nd.ones(shape=(LARGE_X, SMALL_Y))
-    c = b
-    c = c.__sub__(a)
+    c = b.__sub__(a)
     assert c[0][-1] == -2
     assert c.shape == a.shape
 
@@ -816,16 +814,14 @@ def test_sub():
 def test_rsub():
     a = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = nd.ones(shape=(LARGE_X, SMALL_Y))
-    c = b
-    c = c.__rsub__(a)
+    c = b.__rsub__(a)
     assert c[0][-1] == 2
     assert c.shape == a.shape
 
 
 def test_neg():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
-    c = a
-    c = c.__neg__()
+    c = a.__neg__()
     assert c[0][-1] == -1
     assert c.shape == a.shape
 
@@ -833,8 +829,7 @@ def test_neg():
 def test_mul():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
-    c = b
-    c = c.__mul__(a)
+    c = b.__mul__(a)
     assert c[0][-1] == 6
     assert c.shape == a.shape
 
@@ -842,8 +837,7 @@ def test_mul():
 def test_div():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
-    c = b
-    c = c.__div__(a)
+    c = b.__div__(a)
     mx_divide = nd.divide(b, a)
     assert c[0][-1] == 3/2
     assert mx_divide[0][-1] == c[0][-1]
@@ -853,8 +847,7 @@ def test_div():
 def test_rdiv():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
-    c = b
-    c = c.__rdiv__(a)
+    c = b.__rdiv__(a)
     assert c[0][-1] == 2/3
     assert c.shape == a.shape
 
@@ -862,8 +855,7 @@ def test_rdiv():
 def test_mod():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
-    c = b
-    c = c.__mod__(a)
+    c = b.__mod__(a)
     assert c[0][-1] == 1
     assert c.shape == a.shape
 
@@ -871,8 +863,7 @@ def test_mod():
 def test_rmod():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
-    c = b
-    c = c.__rmod__(a)
+    c = b.__rmod__(a)
     assert c[0][-1] == 2
     assert c.shape == a.shape
 
@@ -880,8 +871,7 @@ def test_rmod():
 def test_imod():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
-    c = b
-    c = c.__imod__(a)
+    c = b.__imod__(a)
     assert c[0][-1] == 1
     assert c.shape == a.shape
 
@@ -889,8 +879,7 @@ def test_imod():
 def test_pow():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
-    c = b
-    c = c.__pow__(a)
+    c = b.__pow__(a)
     assert c[0][-1] == 9
     assert c.shape == a.shape
 
@@ -898,8 +887,7 @@ def test_pow():
 def test_rpow():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
-    c = b
-    c = c.__rpow__(a)
+    c = b.__rpow__(a)
     assert c[0][-1] == 8
     assert c.shape == a.shape
 
@@ -1081,8 +1069,7 @@ def test_log_softmax():
 def test_iadd():
     a = nd.array(np.ones((SMALL_Y, LARGE_X)))
     b = nd.array(np.ones((SMALL_Y, LARGE_X)))
-    c = b
-    c += a
+    c = b+a
     assert c.shape == a.shape
     assert c[0][-1] == 2
 
@@ -1090,8 +1077,7 @@ def test_iadd():
 def test_isub():
     a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
     b = nd.array(np.ones((SMALL_Y, LARGE_X)))
-    c = a
-    c -= b
+    c = a-b
     assert c.shape == a.shape
     assert c[0][-1] == 2
 
@@ -1099,8 +1085,7 @@ def test_isub():
 def test_imul():
     a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
     b = nd.array(np.ones((SMALL_Y, LARGE_X)))
-    c = b
-    c *= a
+    c = b*a
     assert c.shape == a.shape
     assert c[0][-1] == 3
 
@@ -1108,8 +1093,7 @@ def test_imul():
 def test_idiv():
     a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 4)))
     b = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 2)))
-    c = a
-    c /= b
+    c = a/b
     assert c.shape == a.shape
     assert c[0][-1] == 2
 
