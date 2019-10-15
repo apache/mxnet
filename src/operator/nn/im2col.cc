@@ -184,11 +184,11 @@ NNVM_REGISTER_OP(col2im)
   CHECK_GT(param.dilate.Size(), 0U) \
     << "incorrect dilate size: " << param.dilate;
 
-  const int spacial_size = param.kernel.ndim();
+  const int spatial_size = param.kernel.ndim();
   mxnet::TShape dshape(in_shape->at(0));
 
   index_t out_dim = 1;
-  for (int i = 0; i < spacial_size; ++i) {
+  for (int i = 0; i < spatial_size; ++i) {
     const index_t pad_size = param.output_size[i] + 2 * param.pad[i];
     const index_t dilated_kernel_size = param.DilatedKernelSize(i);
     CHECK_LE(dilated_kernel_size, pad_size)
@@ -205,7 +205,7 @@ NNVM_REGISTER_OP(col2im)
   mxnet::TShape oshape(param.kernel.ndim() + 2, 1);
   oshape[0] = dshape[0];
   oshape[1] = dshape[1] / param.kernel.Size();
-  for (int i = 0; i < spacial_size; ++i) {
+  for (int i = 0; i < spatial_size; ++i) {
     oshape[i + 2] = param.output_size[i];
   }
   SHAPE_ASSIGN_CHECK(*out_shape, 0, oshape);
