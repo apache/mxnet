@@ -23,7 +23,7 @@ import ctypes
 import numpy as _np
 from . import _op as _mx_np_op
 from ...base import _LIB, SymbolHandle, numeric_types, mx_uint
-from ...util import check_call, _sanity_check_params, set_module
+from ...util import check_call, set_module, _sanity_check_params
 from ...context import current_context
 from ..symbol import Symbol
 from .._internal import _set_np_symbol_class
@@ -182,8 +182,29 @@ class _Symbol(Symbol):
         return self.transpose()
     # pylint: enable= invalid-name, undefined-variable
 
-    def astype(self, dtype, **kwargs):  # pylint: disable=arguments-differ
-        raise NotImplementedError
+    def astype(self, dtype, **kwargs):  # pylint: disable=arguments-differ,unused-argument
+        """
+        Copy of the array, cast to a specified type.
+
+        Parameters
+        ----------
+        dtype : str or dtype
+            Typecode or data-type to which the array is cast.
+        copy : bool, optional
+            Default `True`. By default, astype always returns a newly
+            allocated ndarray on the same context. If this is set to
+            `False`, and the dtype requested is the same as the ndarray's
+            dtype, the ndarray is returned instead of a copy.
+
+        Returns
+        -------
+        arr_t : ndarray
+            Unless `copy` is False and the other conditions for returning the input
+            array are satisfied (see description for `copy` input parameter), `arr_t`
+            is a new array of the same shape as the input array with `dtype`.
+        """
+        _sanity_check_params('astype', ['order', 'casting', 'subok'], kwargs)
+        return _npi.cast(self, dtype=dtype)
 
     def dot(self, b, out=None):
         """Dot product of two arrays.
@@ -439,7 +460,14 @@ class _Symbol(Symbol):
         """The arguments are the same as for :py:func:`transpose`, with
         this array as data.
         """
-        return _mx_np_op.transpose(self, axes=axes if len(axes) != 0 else None)
+        if len(axes) == 0:
+            axes = None
+        elif len(axes) == 1:
+            if isinstance(axes[0], (tuple, list)):
+                axes = axes[0]
+            elif axes[0] is None:
+                axes = None
+        return _mx_np_op.transpose(self, axes=axes)
 
     def flip(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`flip`.
