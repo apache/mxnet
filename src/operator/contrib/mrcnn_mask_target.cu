@@ -19,12 +19,12 @@
 
 /*!
  *  Copyright (c) 2019 by Contributors
- * \file mrcnn_target.cu
+ * \file mrcnn_mask_target.cu
  * \brief Mask-RCNN target generator
  * \author Serge Panev
  */
 
-#include "./mrcnn_target-inl.h"
+#include "./mrcnn_mask_target-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -183,21 +183,21 @@ __device__ void RoIAlignForward(
 
 
 template<typename DType>
-__global__ void MRCNNTargetKernel(const DType *rois,
-                                  const DType *gt_masks,
-                                  const DType *matches,
-                                  const DType *cls_targets,
-                                  DType* sampled_masks,
-                                  DType* mask_cls,
-                                  const int total_out_el,
-                                  int batch_size,
-                                  int num_classes,
-                                  int num_rois,
-                                  int num_gtmasks,
-                                  int gt_height,
-                                  int gt_width,
-                                  int mask_size,
-                                  int sample_ratio) {
+__global__ void MRCNNMaskTargetKernel(const DType *rois,
+                                      const DType *gt_masks,
+                                      const DType *matches,
+                                      const DType *cls_targets,
+                                      DType* sampled_masks,
+                                      DType* mask_cls,
+                                      const int total_out_el,
+                                      int batch_size,
+                                      int num_classes,
+                                      int num_rois,
+                                      int num_gtmasks,
+                                      int gt_height,
+                                      int gt_width,
+                                      int mask_size,
+                                      int sample_ratio) {
   // computing sampled_masks
   RoIAlignForward(gt_masks, rois, matches, total_out_el,
                   num_classes, gt_height, gt_width, mask_size, mask_size,
@@ -221,8 +221,8 @@ __global__ void MRCNNTargetKernel(const DType *rois,
 }
 
 template<>
-void MRCNNTargetRun<gpu>(const MRCNNTargetParam& param, const std::vector<TBlob> &inputs,
-                         const std::vector<TBlob> &outputs, mshadow::Stream<gpu> *s) {
+void MRCNNMaskTargetRun<gpu>(const MRCNNMaskTargetParam& param, const std::vector<TBlob> &inputs,
+                             const std::vector<TBlob> &outputs, mshadow::Stream<gpu> *s) {
   const int block_dim_size = kMaxThreadsPerBlock;
   using namespace mxnet_op;
   using mshadow::Tensor;
@@ -248,31 +248,31 @@ void MRCNNTargetRun<gpu>(const MRCNNTargetParam& param, const std::vector<TBlob>
     dim3 dimGrid = dim3(CUDA_GET_BLOCKS(num_el));
     dim3 dimBlock = dim3(block_dim_size);
 
-    MRCNNTargetKernel<<<dimGrid, dimBlock, 0, stream>>>
+    MRCNNMaskTargetKernel<<<dimGrid, dimBlock, 0, stream>>>
     (rois.dptr_, gt_masks.dptr_, matches.dptr_, cls_targets.dptr_,
     out_masks.dptr_, out_mask_cls.dptr_,
     num_el, batch_size, param.num_classes, param.num_rois,
     num_gtmasks, gt_height, gt_width, param.mask_size, param.sample_ratio);
-    MSHADOW_CUDA_POST_KERNEL_CHECK(MRCNNTargetKernel);
+    MSHADOW_CUDA_POST_KERNEL_CHECK(MRCNNMaskTargetKernel);
   });
 }
 
-DMLC_REGISTER_PARAMETER(MRCNNTargetParam);
+DMLC_REGISTER_PARAMETER(MRCNNMaskTargetParam);
 
-NNVM_REGISTER_OP(mrcnn_target)
+NNVM_REGISTER_OP(_contrib_mrcnn_mask_target)
 .describe("Generate mask targets for Mask-RCNN.")
 .set_num_inputs(4)
 .set_num_outputs(2)
-.set_attr_parser(ParamParser<MRCNNTargetParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", MRCNNTargetShape)
-.set_attr<nnvm::FInferType>("FInferType", MRCNNTargetType)
-.set_attr<FCompute>("FCompute<gpu>", MRCNNTargetCompute<gpu>)
+.set_attr_parser(ParamParser<MRCNNMaskTargetParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", MRCNNMaskTargetShape)
+.set_attr<nnvm::FInferType>("FInferType", MRCNNMaskTargetType)
+.set_attr<FCompute>("FCompute<gpu>", MRCNNMaskTargetCompute<gpu>)
 .add_argument("rois", "NDArray-or-Symbol", "Bounding box coordinates, a 3D array")
 .add_argument("gt_masks", "NDArray-or-Symbol", "Input masks of full image size, a 4D array")
 .add_argument("matches", "NDArray-or-Symbol", "Index to a gt_mask, a 2D array")
 .add_argument("cls_targets", "NDArray-or-Symbol",
               "Value [0, num_class), excluding background class, a 2D array")
-.add_arguments(MRCNNTargetParam::__FIELDS__());
+.add_arguments(MRCNNMaskTargetParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet
