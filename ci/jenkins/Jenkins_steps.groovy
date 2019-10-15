@@ -32,7 +32,7 @@ mx_pip = 'build/*.whl'
 
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
-mx_cmake_lib_no_tvm_op = 'build/libmxnet.so, build/libmxnet.a, libsample_lib.so, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
+mx_cmake_lib_no_tvm_op = 'build/libmxnet.so, build/libmxnet.a, build/libsample_lib.so, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
 mx_cmake_lib_cython = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so'
 mx_cmake_lib_cython_no_tvm_op = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
@@ -138,7 +138,7 @@ def compile_unix_openblas_debug_cpu() {
 }
 
 def compile_unix_openblas_cpu_no_tvm_op() {
-    return ['CPU: Openblas, cmake, USE_TVM_OP=OFF': {
+    return ['CPU: Openblas, cmake, TVM_OP OFF': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-cpu-openblas-no-tvm-op') {
           timeout(time: max_time, unit: 'MINUTES') {
@@ -264,7 +264,7 @@ def compile_unix_full_gpu() {
 }
 
 def compile_unix_full_gpu_no_tvm_op() {
-    return ['GPU: CUDA10.1+cuDNN7 USE_TVM_OP=OFF': {
+    return ['GPU: CUDA10.1+cuDNN7 TVM_OP OFF': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-gpu-no-tvm-op') {
           timeout(time: max_time, unit: 'MINUTES') {
@@ -306,7 +306,7 @@ def compile_unix_cmake_gpu() {
 }
 
 def compile_unix_cmake_gpu_no_tvm_op() {
-    return ['GPU: CMake USE_TVM_OP=OFF': {
+    return ['GPU: CMake TVM_OP OFF': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-cmake-gpu-no-tvm-op') {
           timeout(time: max_time, unit: 'MINUTES') {
@@ -803,7 +803,7 @@ def test_unix_python3_gpu() {
 }
 
 def test_unix_python3_gpu_no_tvm_op() {
-    return ['Python3: GPU USE_TVM_OP=OFF': {
+    return ['Python3: GPU TVM_OP OFF': {
       node(NODE_LINUX_GPU) {
         ws('workspace/ut-python3-gpu-no-tvm-op') {
           try {
@@ -853,7 +853,7 @@ def test_unix_python3_debug_cpu() {
 }
 
 def test_unix_python3_cpu_no_tvm_op() {
-    return ['Python3: CPU USE_TVM_OP=OFF': {
+    return ['Python3: CPU TVM_OP OFF': {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-cpu-no-tvm-op') {
           try {
