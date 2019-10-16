@@ -50,7 +50,7 @@ static bool InterleavedMatMulSelfAttQKShape(const NodeAttrs& attrs,
 static bool InterleavedMatMulSelfAttValAttShape(const NodeAttrs& attrs,
                                                 mxnet::ShapeVector* in_shape,
                                                 mxnet::ShapeVector* out_shape) {
-  CHECK_EQ(in_shape->size(), 2U) << "Input:[queries_keys_values, attention] currently have, ";
+  CHECK_EQ(in_shape->size(), 2U) << "Input:[queries_keys_values, attention] currently have, "
                                  << in_shape->size() << " inputs";
   auto qkv_shape = in_shape->at(0);
   auto att_shape = in_shape->at(1);
