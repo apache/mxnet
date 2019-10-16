@@ -153,61 +153,21 @@ class ndarray(NDArray):
     ----------
     handle: int
         The ndarray handle in backend (C++).
-    dtype : data-type, optional
-        Any object that can be interpreted as a numpy data type.
-    buffer : object exposing buffer interface, optional
-        Used to fill the array with data.
-    offset : int, optional
-        Offset of array data in buffer.
-    strides : tuple of ints, optional
-        Strides of data in memory.
-    order : {'C', 'F'}, optional
-        Row-major (C-style) or column-major (Fortran-style) order.
+    writable: bool
+        Indicates whether inplace-assignment is allowed for the array.
 
     Attributes
     ----------
     T : ndarray
         Transpose of the array.
-    data : buffer
-        The array's elements, in memory.
     dtype : dtype object
         Describes the format of the elements in the array.
-    flags : dict
-        Dictionary containing information related to memory use, e.g.,
-        'C_CONTIGUOUS', 'OWNDATA', 'WRITEABLE', etc.
-    flat : numpy.flatiter object
-        Flattened version of the array as an iterator.  The iterator
-        allows assignments, e.g., ``x.flat = 3`` (See `ndarray.flat` for
-        assignment examples; TODO).
-    imag : ndarray
-        Imaginary part of the array.
-    real : ndarray
-        Real part of the array.
     size : int
         Number of elements in the array.
-    itemsize : int
-        The memory use of each array element in bytes.
-    nbytes : int
-        The total number of bytes required to store the array data,
-        i.e., ``itemsize * size``.
     ndim : int
         The array's number of dimensions.
     shape : tuple of ints
         Shape of the array.
-    strides : tuple of ints
-        The step-size required to move from one element to the next in
-        memory. For example, a contiguous ``(3, 4)`` array of type
-        ``int16`` in C-order has strides ``(8, 2)``.  This implies that
-        to move from element to element in memory requires jumps of 2 bytes.
-        To move from row-to-row, one needs to jump 8 bytes at a time
-        (``2 * 4``).
-    ctypes : ctypes object
-        Class containing properties of the array needed for interaction
-        with ctypes.
-    base : ndarray
-        If the array is a view into another array, that array is its `base`
-        (unless that array is also a view).  The `base` array is where the
-        array data is actually stored.
 
     See Also
     --------
@@ -215,38 +175,6 @@ class ndarray(NDArray):
     zeros : Create an array, each element of which is zero.
     empty : Create an array, but leave its allocated memory unchanged (i.e.,
             it contains "garbage").
-    dtype : Create a data-type.
-
-    Notes
-    -----
-    There are two modes of creating an array using ``__new__``:
-
-    1. If `buffer` is None, then only `shape`, `dtype`, and `order`
-       are used.
-    2. If `buffer` is an object exposing the buffer interface, then
-       all keywords are interpreted.
-
-    No ``__init__`` method is needed because the array is fully initialized
-    after the ``__new__`` method.
-
-    Examples
-    --------
-    These examples illustrate the low-level `ndarray` constructor.  Refer
-    to the `See Also` section above for easier ways of constructing an
-    ndarray.
-
-    First mode, `buffer` is None:
-
-    >>> np.ndarray(shape=(2,2), dtype=float, order='F')
-    array([[0.0e+000, 0.0e+000], # random
-           [     nan, 2.5e-323]])
-
-    Second mode:
-
-    >>> np.ndarray((2,), buffer=np.array([1,2,3]),
-    ...            offset=np.int_().itemsize,
-    ...            dtype=int) # offset = 1*itemsize, i.e. skip first element
-    array([2, 3])
     """
 
     @staticmethod
@@ -394,9 +322,139 @@ class ndarray(NDArray):
 
     # pylint: disable=too-many-return-statements
     def __getitem__(self, key):
-        """
-        Overriding the method in NDArray class in a numpy fashion.
-        Calling numpy ndarray's _get_np_basic_indexing(key) and _get_np_advanced_indexing(key).
+        """Return self[key].
+
+        Returns a sliced view of this array if the elements fetched are contiguous in memory;
+        otherwise, returns a newly created NDArray.
+        This functions supports advanced indexing defined in the following reference with
+        some restrictions. Boolean indexing is supported only for a single boolean ndarray
+        as a key. Mixing boolean ndarray with other index types is not supported in ``advanced``
+        indexing.
+
+        For basic indexing, i.e., if ``key`` consists only of integers,
+        ``slice``, ``Ellipsis`` (``...``) and ``None``, a mutable view is
+        returned that shares memory with this array if the accessed portion is
+        contiguous in memory.
+        Otherwise, a newly created ``ndarray`` is returned.
+
+        This functions supports advanced indexing as defined in `the NumPy
+        advanced indexing documentation
+        <https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#advanced-indexing>`_.
+
+        Parameters
+        ----------
+        key : int, slice, list, np.ndarray, mx.np.ndarray, or tuple of all previous types
+            Indexing key.
+
+        Examples
+        --------
+        The default is to give explicit indices for all axes:
+
+        >>> x = np.arange(6).reshape(2, 3)
+        >>> x
+        array([[0., 1., 2.],
+               [3., 4., 5.]])
+        >>> x[0, :2]
+        array([0., 1.])
+        >>> x[:, :-1]
+        array([[0., 1.],
+               [3., 4.]])
+
+        If fewer indices are given, they are automatically supplemented by an
+        appropriate number of ``slice(None)`` ("``:``") to the right. For
+        instance, a single integer indexes along the first axis:
+
+        >>> x[0]
+        array([0., 1., 2.])
+        >>> x[1:]
+        array([[3., 4., 5.]])
+
+        To omit a range of axes that should be kept as-is, an `Ellipsis`
+        ("``...``") can be used:
+
+        >>> x = np.arange(16).reshape(2, 2, 2, 2)
+        >>> x[0, ..., 1]
+        array([[1., 3.],
+               [5., 7.]])
+        >>> x[0, :, :, 1]  # equivalent
+        array([[1., 3.],
+               [5., 7.]])
+
+        New axes of length 1 can be created by inserting ``None``
+        (`numpy.newaxis`) in the index:
+
+        >>> x = np.arange(6).reshape(2, 3)
+        >>> x[None, :, :]
+        array([[[0., 1., 2.],
+                [3., 4., 5.]]])
+        >>> x[None, :, :].shape
+        (1, 2, 3)
+
+        If the indexed portion of the array is contiguous in memory, no data
+        is copied. Instead, a shared-memory view of the original array is
+        returned, and changes to that view affect the original array:
+
+        >>> x = np.arange(8).reshape(2, 2, 2)
+        >>> y = x[0]  # contiguous
+        >>> y
+        array([[0., 1.],
+               [2., 3.]])
+        >>> y[:] = -1
+        >>> x
+        array([[[-1., -1.],
+                [-1., -1.]],
+               [[ 4.,  5.],
+                [ 6.,  7.]]])
+        >>> x = np.arange(8).reshape(2, 2, 2)
+        >>> y = x[1, :1, :]  # contiguous
+        >>> y
+        array([[4., 5.]])
+        >>> y[:] = -1
+        >>> x
+        array([[[ 0.,  1.],
+                [ 2.,  3.]],
+               [[-1., -1.],
+                [ 6.,  7.]]])
+        >>> x = np.arange(0, 8).reshape(2, 2, 2)
+        >>> y = x[:, :, 1]  # not contiguous
+        >>> y
+        array([[1., 3.],
+               [5., 7.]])
+        >>> y[:] = -1
+        >>> x
+        array([[[0., 1.],
+                [2., 3.]],
+               [[4., 5.],
+                [6., 7.]]])
+
+        If the indexing key contains `list`, `numpy.ndarray` or `NDArray`
+        objects, advanced indexing is triggered, which always returns a
+        copy:
+
+        >>> x = np.arange(8).reshape(2, 2, 2)
+        >>> x[[0, 1]]
+        array([[[0., 1.],
+                [2., 3.]],
+               [[4., 5.],
+                [6., 7.]]])
+        >>> x[[0, 1], :]  # equivalent
+        array([[[0., 1.],
+                [2., 3.]],
+               [[4., 5.],
+                [6., 7.]]])
+        >>> y = np.array([0, 1], dtype='int32')
+        >>> x[1:, y]
+        array([[[4., 5.],
+                [6., 7.]]])
+        >>> y = np.array([0, 1], dtype='int32')
+        >>> x[1:, y]
+        array([[[4., 5.],
+                [6., 7.]]])
+
+        Get negative elements in an ndarray through boolean array indexing
+        >>> x = np.array([1., -1., -2., 3])
+        >>> x[x < 0]
+        array([-1., -2.])
         """
         # handling possible boolean indexing first
         ndim = self.ndim
@@ -464,11 +522,51 @@ class ndarray(NDArray):
             raise RuntimeError
 
     def __setitem__(self, key, value):
-        """
-        x.__setitem__(i, y) <=> x[i]=y
-        Sets ``self[key]`` to ``value``.
+        """Sets ``self[key]`` to ``value``.
 
-        Overriding the method in NDArray class in a numpy fashion.
+        This functions supports advanced indexing as defined in `the NumPy
+        advanced indexing documentation
+        <https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#advanced-indexing>`_,
+        with the restriction that boolean array indexing is not supported.
+
+        Parameters
+        ----------
+        key : int, slice, list, np.ndarray, mx.np.ndarray, or tuple of all previous types
+            The indexing key.
+        value : scalar or array-like object that can be broadcast to the shape of self[key]
+            The value to set.
+
+        Examples
+        --------
+        >>> x = np.zeros((2, 3))
+        >>> x[:] = 1
+        >>> x
+        array([[ 1.,  1.,  1.],
+               [ 1.,  1.,  1.]])
+        >>> x[:, 1:2] = 2
+        >>> x
+        array([[ 1.,  2.,  1.],
+               [ 1.,  2.,  1.]])
+        >>> x[1:2, 1:] = 3
+        >>> x
+        array([[ 1.,  2.,  1.],
+               [ 1.,  3.,  3.]])
+        >>> x[1:, 0:2] = np.zeros((1, 2))
+        >>> x
+        array([[ 1.,  2.,  1.],
+               [ 0.,  0.,  3.]])
+        >>> x[1, 2] = 4
+        >>> x
+        array([[ 1.,  2.,  1.],
+               [ 0.,  0.,  4.]])
+        >>> x[[0], [1, 2]] = 5
+        >>> x
+        array([[ 1.,  5.,  5.],
+               [ 0.,  0.,  4.]])
+        >>> x[::-1, 0:2:2] = [6]
+        >>> x
+        array([[ 6.,  5.,  5.],
+               [ 6.,  0.,  4.]])
         """
         if isinstance(value, NDArray) and not isinstance(value, ndarray):
             raise TypeError('Cannot assign mx.nd.NDArray to mxnet.numpy.ndarray')
