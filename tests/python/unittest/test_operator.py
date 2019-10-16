@@ -9480,6 +9480,55 @@ def test_im2col_col2im():
         pad         = 1
     )
 
+    # test gradient
+    # the grad of im2col is col2im, and vice versa
+    def test_grad(input_shape, kernel, stride=1, dilate=1, pad=0):
+        # im2col
+        data = mx.sym.Variable('data')
+        kwargs = build_kwargs(kernel, stride, dilate, pad)
+        sym = mx.sym.im2col(data, **kwargs)
+
+        im = mx.nd.uniform(shape=input_shape)
+        col = mx.nd.im2col(im, **kwargs)
+        col_shape = col.shape
+        expected = mx.nd.col2im(col, input_shape[2:], **kwargs)
+        check_symbolic_backward(sym, [im.asnumpy()], [col.asnumpy()], [expected.asnumpy()])
+
+        # col2im
+        data = mx.sym.Variable('data')
+        sym = mx.sym.col2im(data, input_shape[2:], **kwargs)
+
+        col = mx.nd.uniform(shape=col_shape)
+        im = mx.nd.col2im(col, input_shape[2:], **kwargs)
+        expected = mx.nd.im2col(im, **kwargs)
+        check_symbolic_backward(sym, [col.asnumpy()], [im.asnumpy()], [expected.asnumpy()])
+
+    test_grad(
+        input_shape = (5, 3, 30, 20),
+        kernel      = 3
+    )
+
+    test_grad(
+        input_shape = (5, 3, 30, 20),
+        kernel      = 3,
+        stride      = 2
+    )
+
+    test_grad(
+        input_shape = (5, 3, 30, 20),
+        kernel      = 3,
+        stride      = 2,
+        dilate      = 2
+    )
+
+    test_grad(
+        input_shape = (5, 3, 30, 20),
+        kernel      = 3,
+        stride      = 2,
+        dilate      = 2,
+        pad         = 1
+    )
+
 
 if __name__ == '__main__':
     import nose
