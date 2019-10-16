@@ -19,15 +19,11 @@ MXNet on the Cloud
 ==================
 
 Deep learning can require extremely powerful hardware, often for
-unpredictable durations of time. Moreover, *MXNet* can benefit from both
-multiple GPUs and multiple machines. Accordingly, cloud computing, as
-offered by AWS and others, is especially well suited to training deep
-learning models. Using AWS, we can rapidly fire up multiple machines
-with multiple GPUs each at will and maintain the resources for precisely
-the amount of time needed.
+unpredictable durations of time. Moreover, *MXNet* can benefit from both multiple GPUs and multiple machines. Accordingly, cloud computing, as offered by AWS and others, is especially well suited to training deep learning models. Using AWS, we can rapidly fire up multiple machines with multiple GPUs each at will and maintain the resources for precisely the amount of time needed.
 
 Here are some ways you can use MXNet on AWS:
+
 1. Use [Amazon SageMaker](https://aws.amazon.com/sagemaker/developer-resources/)
-1. Use the [AWS Deep Learning AMI with Conda](https://docs.aws.amazon.com/dlami/latest/devguide/overview-conda.html) (comes preinstalled!)
+1. Use the [AWS Deep Learning AMI with Conda](https://docs.aws.amazon.com/dlami/latest/devguide/overview-conda.html)
 1. Use an [AWS Deep Learning Container](https://docs.aws.amazon.com/dlami/latest/devguide/deep-learning-containers.html)
 1. Install MXNet on a [AWS Deep Learning Base AMI](https://docs.aws.amazon.com/dlami/latest/devguide/overview-base.html)
