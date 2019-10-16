@@ -96,8 +96,8 @@ WARNFLAGS= -Wall -Wsign-compare
 CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 
 ifeq ($(DEV), 1)
-	CFLAGS += -g -Werror
-	NVCCFLAGS += -Werror cross-execution-space-call
+	CFLAGS += -g -Werror -Wno-unused-function
+	NVCCFLAGS += -Werror -Wno-unused-function cross-execution-space-call
 endif
 
 # CFLAGS for debug

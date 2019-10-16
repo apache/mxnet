@@ -18,9 +18,9 @@
  */
 /*!
  * Copyright (c) 2019 by Contributors
- * \file attrs_converter.cc
+ * \file attrs_converter.cu
  * \author Junru Shao
  */
-#if !MXNET_USE_CUDA
+#if MXNET_USE_CUDA
 #include "attrs_converter-inl.h"
 #endif

@@ -27,6 +27,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <string>
 #include "../tensor/matrix_op-inl.h"
 #include "../nn/concat-inl.h"
 #include "../../common/utils.h"
