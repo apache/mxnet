@@ -26,6 +26,7 @@
 
 #ifndef MXNET_OPERATOR_NN_IM2COL_INL_H_
 #define MXNET_OPERATOR_NN_IM2COL_INL_H_
+#include <vector>
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
