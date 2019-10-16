@@ -32,7 +32,8 @@ else:
     from setuptools.extension import Extension
     kwargs = {
         'install_requires': ['requests>=2.20.0,<3', 'graphviz<0.9.0,>=0.8.1']
-            .append('numpy>=1.17.0,<2.0.0' if sys.version_info[0] > 2 else 'numpy>1.16.0,<2.0.0'),
+            .append('numpy>=1.17.0,<2.0.0' if sys.version_info.major >= 3 and sys.version_info.minor >= 5
+                    else 'numpy>1.16.0,<2.0.0'),
         'zip_safe': False
     }
 

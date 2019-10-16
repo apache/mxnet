@@ -62,7 +62,7 @@ class BinaryDistribution(Distribution):
 
 
 DEPENDENCIES = [
-    'numpy>=1.17.0,<2.0.0' if sys.version_info[0] > 2 else 'numpy>1.16.0,<2.0.0',
+    'numpy>=1.17.0,<2.0.0' if sys.version_info.major >= 3 and sys.version_info.minor >= 5 else 'numpy>1.16.0,<2.0.0',
     'requests>=2.20.0,<3',
     'graphviz<0.9.0,>=0.8.1'
 ]
