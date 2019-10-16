@@ -1797,54 +1797,6 @@ def array(object, dtype=None, copy=True, order='C', ctx=None, **kwargs):
 
 @set_module('mxnet.numpy')
 def asarray(a, dtype=None, order='C'):
-    """Convert the input to an ndarray, but pass ndarray subclasses through.
-
-    Parameters
-    ----------
-    a : array_like
-        Input data, in any form that can be converted to an array.  This
-        includes scalars, lists, lists of tuples, tuples, tuples of tuples,
-        tuples of lists, and ndarrays.
-    dtype : data-type, optional
-        By default, the data-type is inferred from the input data.
-    order : {'C', 'F'}, optional
-        Whether to use row-major (C-style) or column-major
-        (Fortran-style) memory representation.  Defaults to 'C'.
-
-    Returns
-    -------
-    out : ndarray or an ndarray subclass
-        Array interpretation of `a`.  If `a` is an ndarray or a subclass
-        of ndarray, it is returned as-is and no copy is performed.
-
-    See Also
-    --------
-    asarray : Similar function which always returns ndarrays.
-    ascontiguousarray : Convert input to a contiguous array.
-    asfarray : Convert input to a floating point ndarray.
-    asfortranarray : Convert input to an ndarray with column-major
-                     memory order.
-    asarray_chkfinite : Similar function which checks input for NaNs and
-                        Infs.
-    fromiter : Create an array from an iterator.
-    fromfunction : Construct an array by executing a function on grid
-                   positions.
-
-    Examples
-    --------
-    Convert a list into an array:
-
-    >>> a = [1, 2]
-    >>> np.asanyarray(a)
-    array([1, 2])
-
-    Instances of `ndarray` subclasses are passed through as-is:
-
-    >>> a = np.array([(1.0, 2), (3.0, 4)], dtype='f4,i4').view(np.recarray)
-    >>> np.asanyarray(a) is a
-    True
-
-    """
     if order != 'C':
         raise NotImplementedError('`asarray` only supports order equal to `C`, while received {}'
                                   .format(str(order)))
