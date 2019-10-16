@@ -149,7 +149,7 @@ def test_adamw():
 
             # weights should remain unchanged
             for j in range(nElem):
-                assert_almost_equal(weight_ref[j].asnumpy(), weight[j].asnumpy())
+                assert_almost_equal(weight_ref[j], weight[j])
 
 
         # Test 2: Same as Test 1 for multi-precision update
@@ -169,8 +169,8 @@ def test_adamw():
 
             # weights should remain unchanged
             for i in range(nElem):
-                assert_almost_equal(weight_ref[i].asnumpy(), weight[i].asnumpy())
-                assert_almost_equal(weight_fp16_refs[i].asnumpy(), weight_fp16[i].asnumpy())
+                assert_almost_equal(weight_ref[i], weight[i])
+                assert_almost_equal(weight_fp16_refs[i], weight_fp16[i])
 
 
         # Test 3: Reference normal update
@@ -195,9 +195,9 @@ def test_adamw():
         atol = 1e-4 if aggregate else 1e-5
         rtol = 1e-4 if aggregate else None
         for i in range(nElem):
-            assert_almost_equal(weight_refs[i].asnumpy(), weight_test[i].asnumpy(), rtol=rtol, atol=atol)
-            assert_almost_equal(m_refs[i].asnumpy(), m[i].asnumpy(), rtol=rtol, atol=atol)
-            assert_almost_equal(v_refs[i].asnumpy(), v[i].asnumpy(), atol=atol)
+            assert_almost_equal(weight_refs[i], weight_test[i], rtol=rtol, atol=atol)
+            assert_almost_equal(m_refs[i], m[i], rtol=rtol, atol=atol)
+            assert_almost_equal(v_refs[i], v[i], atol=atol)
 
 
         # Test 4: Reference normal multi-precision update
@@ -220,10 +220,10 @@ def test_adamw():
 
         # Compare results
         for i in range(nElem):
-            assert_almost_equal(m_refs[i].asnumpy(), m[i].asnumpy(), rtol=rtol, atol=atol)
-            assert_almost_equal(v_refs[i].asnumpy(), v[i].asnumpy(), atol=atol)
-            assert_almost_equal(weight_refs[i].asnumpy(), weight[i].asnumpy(), rtol=rtol, atol=atol)
-            assert_almost_equal(weight_fp16_refs[i].asnumpy(), weight_fp16[i].asnumpy(), rtol=1e-3, atol=atol)
+            assert_almost_equal(m_refs[i], m[i], rtol=rtol, atol=atol)
+            assert_almost_equal(v_refs[i], v[i], atol=atol)
+            assert_almost_equal(weight_refs[i], weight[i], rtol=rtol, atol=atol)
+            assert_almost_equal(weight_fp16_refs[i], weight_fp16[i], rtol=1e-3, atol=atol)
 
     # Testing aggregated Adam update for one element
     run_adamw_test(1, aggregate=True)
