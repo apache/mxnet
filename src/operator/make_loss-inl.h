@@ -98,6 +98,7 @@ class MakeLossOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
+    using mshadow::expr::broadcast;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2, DType> grad = in_grad[make_loss_enum::kData].FlatTo2D<xpu, DType>(s);
     if (param_.normalization == make_loss_enum::kValid) {

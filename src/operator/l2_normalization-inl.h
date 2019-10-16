@@ -100,7 +100,7 @@ class L2NormalizationOp : public Operator {
           s, norm.size(0), norm.dptr_, norm.dptr_, DType(param_.eps));
       });
       norm = F<mxnet::op::mshadow_op::square_root>(norm);
-      out = data / broadcast<0>(norm, out.shape_);
+      out = data / mshadow::expr::broadcast<0>(norm, out.shape_);
     } else if (param_.mode == l2_normalization::kChannel) {
       CHECK_GE(orig_shape.ndim(), 3);
       Shape<3> dshape = Shape3(orig_shape[0], orig_shape[1],
@@ -171,8 +171,8 @@ class L2NormalizationOp : public Operator {
         .get_space_typed<xpu, 1, DType>(mshadow::Shape1(data.shape_[0]), s);
       temp = sumall_except_dim<0>(grad_out * data);
       Assign(grad_in, req[l2_normalization::kData],
-        (grad_out - data * broadcast<0>(temp, data.shape_)) /
-        broadcast<0>(norm, data.shape_));
+        (grad_out - data * mshadow::expr::broadcast<0>(temp, data.shape_)) /
+        mshadow::expr::broadcast<0>(norm, data.shape_));
     } else if (param_.mode == l2_normalization::kChannel) {
       CHECK_GE(orig_shape.ndim(), 3);
       Shape<3> dshape = Shape3(orig_shape[0], orig_shape[1],

@@ -34,6 +34,25 @@
 namespace mxnet {
 namespace op {
 
+struct NumpyReshapeParam : public dmlc::Parameter<NumpyReshapeParam> {
+  mxnet::TShape newshape;
+  std::string order;
+  DMLC_DECLARE_PARAMETER(NumpyReshapeParam) {
+      DMLC_DECLARE_FIELD(newshape)
+          .describe("The new shape should be compatible with the original shape."
+                    " If an integer, then the result will be a 1-D array of that length."
+                    " One shape dimension can be -1. In this case, the value is inferred"
+                    " from the length of the array and remaining dimensions.");
+      DMLC_DECLARE_FIELD(order)
+      .set_default("C")
+      .describe("Read the elements of a using this index order, and place the elements into"
+                " the reshaped array using this index order. 'C' means to read/write the elements"
+                " using C-like index order, with the last axis index changing fastest, back to the"
+                " first axis index changing slowest. Note that currently only C-like order is"
+                " supported");
+  }
+};
+
 struct NumpyTransposeParam : public dmlc::Parameter<NumpyTransposeParam> {
   mxnet::TShape axes;
   DMLC_DECLARE_PARAMETER(NumpyTransposeParam) {

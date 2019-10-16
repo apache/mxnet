@@ -63,6 +63,7 @@ class InstanceNormOp : public Operator {
                        const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
+    using mshadow::expr::broadcast;
     CHECK_EQ(in_data.size(), 3U);
     CHECK_EQ(out_data.size(), 3U);
 
@@ -110,6 +111,7 @@ class InstanceNormOp : public Operator {
                         const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
+    using mshadow::expr::broadcast;
     CHECK_EQ(in_data.size(), 3U);
     CHECK_EQ(out_data.size(), 3U);
 

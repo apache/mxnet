@@ -96,6 +96,7 @@ class IdentityAttachKLSparseRegOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
+    using mshadow::expr::broadcast;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2> grad_in = in_grad[sparsereg::kData].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> data_in = in_data[sparsereg::kData].FlatTo2D<xpu, real_t>(s);
