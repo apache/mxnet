@@ -814,6 +814,6 @@ def _np_broadcast_to(array, shape, out=None):
     >>> np.broadcast_to(x, (3, 3))
     array([[1., 2., 3.],
            [1., 2., 3.],
-           [1., 2., 3.]]
+           [1., 2., 3.]])
     """
     pass
