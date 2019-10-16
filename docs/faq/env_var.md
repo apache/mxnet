@@ -326,6 +326,10 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
     with float32.
   - Model accuracies do not necessarily improve with this environment variable turned on.
 
+* MXNET_ELIMINATE_COMMON_EXPR
+  - Values: 0(false) or 1(true) ```(default=1)```
+  - If this variable is set, MXNet will simplify the computation graph, eliminating duplicated operations on the same inputs.
+
 Settings for Minimum Memory Usage
 ---------------------------------
 - Make sure ```min(MXNET_EXEC_NUM_TEMP, MXNET_GPU_WORKER_NTHREADS) = 1```
