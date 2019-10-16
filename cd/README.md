@@ -159,6 +159,10 @@ def get_pipeline(mxnet_variant) {
 }
 ```
 
+Examples:
+
+ * [PyPI Release](python/pypi/Jenkins_pipeline.groovy): In this pipeline, the majority of time is overwhelmingly spent on testing. Therefore, it should be ok to execute the whole pipeline on a GPU node (i.e. packaging, testing, and publishing).
+
 **Per step**
 
 Use this approach in cases where you have long running stages that don't depend on specialized/expensive hardware.
@@ -188,3 +192,7 @@ def test(mxnet_variant) {
   }
 }
 ```
+
+Examples:
+
+Both the [statically linked libmxnet](mxnet_lib/static/Jenkins_pipeline.groovy) and [dynamically linked libmxnet](mxnet_lib/dynamic/Jenkins_pipeline.groovy) pipelines have long running compilation and testing stages that **do not** require specialized/expensive hardware (e.g. GPUs). Therefore, as mush as possible, it is important to run each stage in on its own node, and design the pipeline to spend the least amount of time possible on expensive hardware. E.g. for GPU builds, only run GPU tests on GPU instances, all other stages can be executed on CPU nodes.

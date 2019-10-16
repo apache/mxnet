@@ -111,7 +111,7 @@ def run_notebook(notebook, notebook_dir, kernel=None, no_cache=False, temp_dir='
             nbformat.write(notebook, output_file)
             output_nb = io.open(output_file, mode='r', encoding='utf-8')
             for line in output_nb:
-                if "Warning:" in line:
+                if "Warning:" in line and "numpy operator signatures" not in line:
                     errors.append("Warning:\n" + line)
         if len(errors) > 0:
             logging.error('\n'.join(errors))
