@@ -31,7 +31,7 @@ Let's train a 3-layer network (i.e multilayer perceptron network) on the MNIST d
 ## Prerequisites
 To complete this tutorial, we need:
 
-- to compile the latest MXNet version. See the MXNet installation instructions for your operating system in [Setup and Installation](http://mxnet.io/install/index.html).
+- to compile the latest MXNet version. See the MXNet installation instructions for your operating system in [Setup and Installation]({{'/get_started'|relative_url}}).
 - to compile the Scala API. See Scala API build instructions in [Build](https://github.com/dmlc/mxnet/tree/master/scala-package).
 
 ## Define the Network
@@ -136,6 +136,6 @@ println(s"Final accuracy = $acc")
 Check out more MXNet Scala examples below.
 
 ## Next Steps
-* [Scala API](http://mxnet.io/api/scala/)
+* [Scala API]({{'/api/scala'|relative_url}})
 * [More Scala Examples](https://github.com/dmlc/mxnet/tree/master/scala-package/examples/)
-* [MXNet tutorials index](http://mxnet.io/tutorials/index.html)
+* [MXNet tutorials index]({{'/api'|relative_url}})

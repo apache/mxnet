@@ -118,7 +118,7 @@ ok 1
 
 After you have assembled a set of symbols into a computation graph, the MXNet engine can evaluate them.
 If you are training a neural network, this is typically
-handled by the high-level [AI::MXNet::Module package](module.md) and the [`fit()`] function.
+handled by the high-level [AI::MXNet::Module package](module) and the [`fit()`] function.
 
 For neural networks used in "feed-forward", "prediction", or "inference" mode (all terms for the same
 thing: running a trained network), the input arguments are the

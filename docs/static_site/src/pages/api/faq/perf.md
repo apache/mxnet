@@ -58,7 +58,7 @@ We also find that setting the following environment variables can help:
 | :-------- | :---------- |
 | `OMP_NUM_THREADS`            | Suggested value: `vCPUs / 2` in which `vCPUs` is the number of virtual CPUs. For more information, please see the guide for [setting the number of threads using an OpenMP environment variable](https://software.intel.com/en-us/mkl-windows-developer-guide-setting-the-number-of-threads-using-an-openmp-environment-variable) |
 | `KMP_AFFINITY`               | Suggested value: `granularity=fine,compact,1,0`.  For more information, please see the guide for [Thread Affinity Interface (Linux* and Windows*)](https://software.intel.com/en-us/node/522691). |
-| `MXNET_SUBGRAPH_BACKEND` | Set to MKLDNN to enable the [subgraph feature](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN) for better performance. For more information please see [Build/Install MXNet with MKL-DNN](https://github.com/apache/incubator-mxnet/blob/master/docs/tutorials/mkldnn/MKLDNN_README.md)|
+| `MXNET_SUBGRAPH_BACKEND` | Set to MKLDNN to enable the [subgraph feature](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN) for better performance. For more information please see [Build/Install MXNet with MKL-DNN](https://mxnet.apache.org/api/python/docs/tutorials/performance/backend/mkldnn/mkldnn_readme.html)|
 
 Note that _MXNet_ treats all CPUs on a single machine as a single device.
 So whether you specify `cpu(0)` or `cpu()`, _MXNet_ will use all CPU cores on the machine.
@@ -134,7 +134,7 @@ AWS EC2 C5.xlarge:
 
 ## Other CPU
 
-If using CPUs (not just Intel CPUs -- ARMs also), NNPACK can improve the running performance with 2x~7x, please check [nnpack.md](./nnpack.md) for details.
+If using CPUs (not just Intel CPUs -- ARMs also), NNPACK can improve the running performance with 2x~7x, please check [nnpack.md](nnpack) for details.
 
 ## Nvidia GPU
 
@@ -257,7 +257,7 @@ where the batch size for Alexnet is increased by 16x.
 
 If more than one GPU or machine are used, MXNet uses `kvstore` to communicate data.
 It's critical to use the proper type of `kvstore` to get the best performance.
-Refer to [multi_device.md](http://mxnet.io/faq/multi_devices.html) for more
+Refer to [multi_device.md](https://mxnet.io/api/faq/distributed_training.html) for more
 details.
 
 Besides, we can use [tools/bandwidth](https://github.com/dmlc/mxnet/tree/master/tools/bandwidth)
@@ -289,7 +289,7 @@ that gives detailed information about execution time at the symbol level.
 This feature complements general profiling tools like _nvprof_ and _gprof_
 by summarizing at the operator level, instead of a function, kernel, or instruction level.
 
-The profiler can be turned on with an [environment variable](http://mxnet.io/faq/env_var.html#control-the-profiler)
+The profiler can be turned on with an [environment variable]({{'/api/faq/env_var#control-the-profiler' | relative_url}})
 for an entire program run, or programmatically for just part of a run.
 See [example/profiler](https://github.com/dmlc/mxnet/tree/master/example/profiler)
 for complete examples of how to use the profiler in code, but briefly, the Python code looks like:

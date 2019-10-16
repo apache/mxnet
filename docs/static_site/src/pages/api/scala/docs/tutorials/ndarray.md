@@ -31,7 +31,7 @@ Topics:
 
 * [Create NDArray](#create-ndarray)
 * [NDArray Operations](#ndarray-operations)
-* [NDArray API Reference](http://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.NDArray)
+* [NDArray API Reference]({{'/api/scala/docs/api/#org.apache.mxnet.NDArray'|relative_url}})
 
 ## Create NDArray
 
@@ -178,4 +178,4 @@ val z = x + cpu_y
 ```
 
 ## Next Steps
-* See [KVStore API](kvstore.md) for multi-GPU and multi-host distributed training.
+* See [KVStore API](kvstore) for multi-GPU and multi-host distributed training.

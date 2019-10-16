@@ -33,7 +33,7 @@ Topics:
 * [Preparing a Module for Computation](#preparing-a-module-for-computation)
 * [Training and Predicting](#training-and-predicting)
 * [Saving and Loading](#saving-and-loading)
-* [API Reference](http://mxnet.incubator.apache.org/api/clojure/docs/org.apache.clojure-mxnet.module.html)
+* [Clojure API Reference]({{'/api/clojure/docs/api'|relative_url}})
 
 
 To follow along with this documentation, you can use this namespace to with the needed requires:
@@ -146,9 +146,10 @@ You can pass in batch-end callbacks using batch-end-callback and epoch-end callb
 (first (ndarray/->vec (first results))) ;=>0.08261358
 ```
 
-The module collects and returns all of the prediction results. For more details about the format of the return values, see the documentation for the [`predict`](docs/org.apache.clojure-mxnet.module.html#var-fit-params) function.
+The module collects and returns all of the prediction results. For more details about the format of the return values, see the documentation for the [`predict`]({{'/api/clojure/docs/api/org.apache.clojure-mxnet.module.html#var-predict'|relative_url}}) function.
 
-When prediction results might be too large to fit in memory, use the [`predict-every-batch`](docs/org.apache.clojure-mxnet.module.html#predict-every-batch) API.
+When prediction results might be too large to fit in memory, use the [`predict-every-batch`]({{'/api/clojure/docs/api/org.apache.clojure-mxnet.module.html#var-predict-every-batch'|relative_url}}) API.
+
 
 ```clojure
 (let [preds (m/predict-every-batch mod {:eval-data test-data})]
@@ -254,6 +255,6 @@ Create fit-params and then use it to set `begin-epoch` so that `fit` knows to re
 
 
 ## Next Steps
-* See [Symbolic API](symbol.md) for operations on NDArrays that assemble neural networks from layers.
-* See [NDArray API](ndarray.md) for vector/matrix/tensor operations.
-* See [KVStore API](kvstore.md) for multi-GPU and multi-host distributed training.
+* See [Symbolic API](symbol) for operations on NDArrays that assemble neural networks from layers.
+* See [NDArray API](ndarray) for vector/matrix/tensor operations.
+* See [KVStore API](kvstore) for multi-GPU and multi-host distributed training.

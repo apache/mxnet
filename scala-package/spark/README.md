@@ -28,7 +28,7 @@ The MXNet on Spark is still in *experimental stage*. Any suggestion or contribut
 Build
 ------------
 
-Checkout the [Installation Guide](http://mxnet.io/get_started/setup.html) contains instructions to install mxnet. Remember to enable the distributed training, i.e., set `USE_DIST_KVSTORE=1`.
+Checkout the [Installation Guide](http://mxnet.apache.org/get_started) contains instructions to install mxnet. Remember to enable the distributed training, i.e., set `USE_DIST_KVSTORE=1`.
 
 Compile the Scala Package by
 

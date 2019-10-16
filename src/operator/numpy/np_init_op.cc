@@ -22,6 +22,7 @@
  * \file np_init_op.cc
  * \brief CPU Implementation of numpy init op
  */
+
 #include "../tensor/init_op.h"
 #include "../tensor/elemwise_unary_op.h"
 #include "./np_init_op.h"
@@ -29,7 +30,10 @@
 namespace mxnet {
 namespace op {
 
+
+DMLC_REGISTER_PARAMETER(NumpyEyeParam);
 DMLC_REGISTER_PARAMETER(IndicesOpParam);
+DMLC_REGISTER_PARAMETER(LogspaceParam);
 
 inline bool NumpyIndicesShape(const nnvm::NodeAttrs& attrs,
                               mxnet::ShapeVector* in_shapes,
@@ -51,6 +55,18 @@ inline bool NumpyIndicesShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(out_shapes->at(0));
 }
 
+inline bool LogspaceShape(const nnvm::NodeAttrs& attrs,
+                          mxnet::ShapeVector *in_attrs,
+                          mxnet::ShapeVector *out_attrs) {
+  const LogspaceParam& param = nnvm::get<LogspaceParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 0U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  CHECK_GE(param.num, 0)
+    << "Number of sequence should be non-negative, received " << param.num;
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape({static_cast<nnvm::dim_t>(param.num)}));
+  return true;
+}
+
 NNVM_REGISTER_OP(_npi_zeros)
 .set_num_inputs(0)
 .set_num_outputs(1)
@@ -69,6 +85,16 @@ NNVM_REGISTER_OP(_npi_ones)
 .set_attr<mxnet::FInferShape>("FInferShape", InitShape<InitOpParam>)
 .set_attr<nnvm::FInferType>("FInferType", InitType<InitOpParam>)
 .set_attr<FCompute>("FCompute<cpu>", FillCompute<cpu, 1>)
+.add_arguments(InitOpParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_npi_identity)
+.describe("Return a new identity array of given shape, type, and context.")
+.set_num_inputs(0)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<InitOpParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", InitShape<InitOpParam>)
+.set_attr<nnvm::FInferType>("FInferType", InitType<InitOpParam>)
+.set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .add_arguments(InitOpParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_np_zeros_like)
@@ -107,23 +133,6 @@ NNVM_REGISTER_OP(_np_ones_like)
 .add_argument("a", "NDArray-or-Symbol",
               "The shape and data-type of a define these same attributes of the returned array.");
 
-bool NumpyRangeShape(const nnvm::NodeAttrs& attrs,
-                     mxnet::ShapeVector* in_shapes,
-                     mxnet::ShapeVector* out_shapes) {
-  const RangeParam& param = nnvm::get<RangeParam>(attrs.parsed);
-  CHECK_EQ(in_shapes->size(), 0U);
-  CHECK_EQ(out_shapes->size(), 1U);
-  CHECK_NE(param.step, 0) << "_npi_arange does not support step=0";
-  CHECK_EQ(param.repeat, 1) << "_npi_arange only supports repeat=1, received " << param.repeat;
-  CHECK(param.stop.has_value()) << "_npi_arange requires stop to have a value";
-  double out_size = std::ceil((param.stop.value() - param.start) / param.step);
-  if (out_size < 0) {
-    out_size = 0;
-  }
-  SHAPE_ASSIGN_CHECK(*out_shapes, 0, mxnet::TShape({static_cast<nnvm::dim_t>(out_size)}));
-  return true;
-}
-
 NNVM_REGISTER_OP(_npi_arange)
 .set_num_inputs(0)
 .set_num_outputs(1)
@@ -132,6 +141,16 @@ NNVM_REGISTER_OP(_npi_arange)
 .set_attr<nnvm::FInferType>("FInferType", InitType<RangeParam>)
 .set_attr<FCompute>("FCompute<cpu>", RangeCompute<cpu, RangeParam>)
 .add_arguments(RangeParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_npi_eye)
+.describe("Return a 2-D array with ones on the diagonal and zeros elsewhere.")
+.set_num_inputs(0)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<NumpyEyeParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyEyeShape)
+.set_attr<nnvm::FInferType>("FInferType", InitType<NumpyEyeParam>)
+.set_attr<FCompute>("FCompute<cpu>", NumpyEyeFill<cpu>)
+.add_arguments(NumpyEyeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_npi_indices)
 .describe("Return an array representing the indices of a grid.")
@@ -142,6 +161,16 @@ NNVM_REGISTER_OP(_npi_indices)
 .set_attr<nnvm::FInferType>("FInferType", InitType<IndicesOpParam>)
 .set_attr<FCompute>("FCompute<cpu>", IndicesCompute<cpu>)
 .add_arguments(IndicesOpParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_npi_logspace)
+.describe("Return numbers spaced evenly on a log scale.")
+.set_num_inputs(0)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<LogspaceParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", LogspaceShape)
+.set_attr<nnvm::FInferType>("FInferType", InitType<LogspaceParam>)
+.set_attr<FCompute>("FCompute<cpu>", LogspaceCompute<cpu>)
+.add_arguments(LogspaceParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

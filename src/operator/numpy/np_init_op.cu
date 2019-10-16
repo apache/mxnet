@@ -35,6 +35,9 @@ NNVM_REGISTER_OP(_npi_zeros)
 NNVM_REGISTER_OP(_npi_ones)
 .set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 1>);
 
+NNVM_REGISTER_OP(_npi_identity)
+.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
+
 NNVM_REGISTER_OP(_np_zeros_like)
 .set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 0>);
 
@@ -44,8 +47,14 @@ NNVM_REGISTER_OP(_np_ones_like)
 NNVM_REGISTER_OP(_npi_arange)
 .set_attr<FCompute>("FCompute<gpu>", RangeCompute<gpu, RangeParam>);
 
+NNVM_REGISTER_OP(_npi_eye)
+.set_attr<FCompute>("FCompute<gpu>", NumpyEyeFill<gpu>);
+
 NNVM_REGISTER_OP(_npi_indices)
 .set_attr<FCompute>("FCompute<gpu>", IndicesCompute<gpu>);
+
+NNVM_REGISTER_OP(_npi_logspace)
+.set_attr<FCompute>("FCompute<gpu>", LogspaceCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

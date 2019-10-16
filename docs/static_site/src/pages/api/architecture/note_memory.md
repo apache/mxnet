@@ -347,5 +347,4 @@ So here are two takeaways:
 
 ## Next Steps
 
-* [Efficient Data Loading Module for Deep Learning](http://mxnet.io/architecture/note_data_loading.html)
-* [Survey of RNN Interface](http://mxnet.io/architecture/rnn_interface.html)
+* [Efficient Data Loading Module for Deep Learning](note_data_loading)

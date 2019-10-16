@@ -55,6 +55,7 @@ using std::isnan;
 #endif
 using std::enable_if;
 using std::is_unsigned;
+using std::is_integral;
 
 #define MXNET_UNARY_MATH_OP(name, expr) \
   struct name : public mxnet_op::tunable { \
@@ -72,6 +73,14 @@ using std::is_unsigned;
     } \
   }
 
+#define MXNET_UNARY_LOGIC_OP_NC(name, expr) \
+  struct name : public mxnet_op::tunable { \
+    template<typename DType> \
+    MSHADOW_XINLINE static bool Map(DType a) { \
+      return (expr); \
+    } \
+  }
+
 #define MXNET_BINARY_MATH_OP(name, expr) \
   struct name : public mxnet_op::tunable { \
     template<typename DType> \
@@ -84,6 +93,14 @@ using std::is_unsigned;
   struct name : public mxnet_op::tunable  { \
     template<typename DType> \
     MSHADOW_XINLINE static DType Map(DType a, DType b) { \
+      return (expr); \
+    } \
+  }
+
+#define MXNET_BINARY_LOGIC_OP_NC(name, expr) \
+  struct name : public mxnet_op::tunable  { \
+    template<typename DType> \
+    MSHADOW_XINLINE static bool Map(DType a, DType b) { \
       return (expr); \
     } \
   }
@@ -322,7 +339,19 @@ MXNET_BINARY_MATH_OP(rpower, math::pow(b, a));
 
 MXNET_BINARY_MATH_OP(rpower_grad, math::id(a) * math::log(b));
 
+MXNET_BINARY_MATH_OP(arctan2, math::atan2(a, b));
+
+MXNET_BINARY_MATH_OP(arctan2_grad, math::id(b) / (math::id(a * a + b * b)));
+
+MXNET_BINARY_MATH_OP(arctan2_rgrad, -math::id(a) / (math::id(a * a + b * b)));
+
+MXNET_BINARY_MATH_OP(rarctan2, math::atan2(b, a));
+
+MXNET_BINARY_MATH_OP(rarctan2_grad, math::id(a) / (math::id(a * a + b * b)));
+
 MXNET_UNARY_MATH_OP_NC(nt, a != DType(0) ? DType(0) : DType(1));
+
+MXNET_UNARY_LOGIC_OP_NC(np_logical_not, !static_cast<bool>(a));
 
 MXNET_BINARY_MATH_OP_NC(ge, a >= b ? DType(1) : DType(0));
 
@@ -336,11 +365,25 @@ MXNET_BINARY_MATH_OP_NC(eq, a == b ? DType(1) : DType(0));
 
 MXNET_BINARY_MATH_OP_NC(ne, a != b ? DType(1) : DType(0));
 
+MXNET_BINARY_LOGIC_OP_NC(np_greater_equal, a >= b ? true : false);
+
+MXNET_BINARY_LOGIC_OP_NC(np_greater, a > b ? true : false);
+
+MXNET_BINARY_LOGIC_OP_NC(np_less, a < b ? true : false);
+
+MXNET_BINARY_LOGIC_OP_NC(np_less_equal, a <= b ? true : false);
+
+MXNET_BINARY_LOGIC_OP_NC(np_equal, a == b ? true : false);
+
+MXNET_BINARY_LOGIC_OP_NC(np_not_equal, a != b ? true : false);
+
 MXNET_BINARY_MATH_OP(logical_and, a && b ? DType(1) : DType(0));
 
 MXNET_BINARY_MATH_OP(logical_or, a || b ? DType(1) : DType(0));
 
 MXNET_BINARY_MATH_OP(logical_xor, (a || b) && !(a && b) ? DType(1) : DType(0));
+
+MXNET_BINARY_MATH_OP(bitwise_xor, static_cast<int64_t>(a) ^ static_cast<int64_t>(b));
 
 MXNET_UNARY_MATH_OP(square_root, math::sqrt(a));
 
@@ -356,6 +399,17 @@ MXNET_UNARY_MATH_OP(cube_root_grad, 1.0f / (3.0f * math::sqr(a)));
 MXNET_UNARY_MATH_OP(reciprocal_cube_root, 1.0f / math::cbrt(a));
 
 MXNET_UNARY_MATH_OP(reciprocal_cube_root_grad, -1.0f / (3.0f * math::cbrt(a) * math::id(a)));
+
+/*! \brief used for generate element of ldexp */
+MXNET_BINARY_MATH_OP(ldexp, math::id(a) * math::pow(2.0f, b));
+
+MXNET_BINARY_MATH_OP(ldexp_grad, math::pow(2.0f, b));
+
+MXNET_BINARY_MATH_OP(ldexp_rgrad, math::id(a) * math::pow(2.0f, b) * math::log(2.0f));
+
+MXNET_BINARY_MATH_OP(rldexp, math::id(b) * math::pow(2.0f, a));  // swap a and b if a is scalar.
+
+MXNET_BINARY_MATH_OP(rldexp_grad, math::id(b) * math::pow(2.0f, a) * math::log(2.0f));
 
 /*! \brief used for generate element of round */
 MXNET_SIMPLE_UNARY_MATH_OP(round);
@@ -1075,6 +1129,48 @@ struct nanprod_grad : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     return isnan_typed::IsNan(a) ? DType(0) : b / a;
+  }
+};
+
+/*! \brief used for computing binary lowest common multiple */
+struct lcm : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static typename enable_if<is_integral<DType>::value, DType>::type
+  Map(DType a, DType b) {
+    // minus cases.
+    if (a < 0) {
+      a = -a;
+    }
+    if (b < 0) {
+      b = -b;
+    }
+    // handle zero-valued cases.
+    DType c;
+    if (a == 0 || b == 0) {
+      c = 0;
+    } else {
+      DType tmp;
+      DType tmp_a = a;
+      DType tmp_b = b;
+      if (a < b) {
+        tmp = a;
+        a = b;
+        b = tmp;
+      }
+      while (a % b != 0) {
+        a = a % b;
+        tmp = a;
+        a = b;
+        b = tmp;
+      }
+      c = tmp_a / b * tmp_b;
+    }
+    return c;
+  }
+  template<typename DType>
+  MSHADOW_XINLINE static typename enable_if<!is_integral<DType>::value, DType>::type
+  Map(DType a, DType b) {
+    return DType(0.0f);
   }
 };
 

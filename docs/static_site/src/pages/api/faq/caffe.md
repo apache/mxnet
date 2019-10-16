@@ -104,7 +104,7 @@ are the steps of how to rebuild Caffe:
    cd caffe && wget https://github.com/BVLC/caffe/pull/4527.patch && git apply 4527.patch
    ```
 3. Build and install Caffe by following the
-   [official guide](http://caffe.berkeleyvision.org/installation.html).
+   [official guide](https://caffe.berkeleyvision.org/installation.html).
 
 Next we need to compile MXNet with Caffe supports
 

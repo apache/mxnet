@@ -23,14 +23,13 @@ The following tutorials will help you learn how to use backend tools to boost pe
 
    .. card::
       :title: TensorRT
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/tensorrt/inference_with_trt.html
+      :link: tensorrt/index.html
 
       How to use NVIDIA's TensorRT to boost inference performance.
 
-
   .. card::
      :title: MKL-DNN
-     :link: mkl-dnn.html
+     :link: mkldnn/index.html
 
      How to get the most from your CPU by using Intel's MKL-DNN.
 
@@ -45,14 +44,20 @@ The following tutorials will help you learn how to use backend tools to boost pe
      :link: amp.html
 
      How to use Automatic Mixed Precision to boost performance.
+
+  .. card::
+     :title: MXNet Operator Profiler
+     :link: profilder.html
+
+     Use the profiler to monitor the performance of individual operators
 ..
 
 .. toctree::
    :hidden:
    :maxdepth: 1
 
-   tensorRt
-
-   ..
-      mkl-dnn
-      tvm
+   mkldnn/index
+   tensorrt/index
+   tvm
+   profiler
+   amp

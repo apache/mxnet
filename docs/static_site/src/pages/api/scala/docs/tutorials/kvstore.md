@@ -27,7 +27,7 @@ tag: scala
 Topics:
 * [Basic Push and Pull](#basic-push-and-pull)
 * [List Key-Value Pairs](#list-key-value-pairs)
-* [API Reference](http://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.KVStore)
+* [API Reference]({{'/api/scala/docs/api/#org.apache.mxnet.KVStore'|relative_url}})
 
 
 ## Basic Push and Pull

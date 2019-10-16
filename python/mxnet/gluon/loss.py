@@ -424,7 +424,7 @@ class KLDivLoss(Loss):
 
         prob = \softmax({pred})
 
-        L = \sum_i {label}_i * \big[\log({label}_i) - log({pred}_i)\big]
+        L = \sum_i {label}_i * \big[\log({label}_i) - \log({prob}_i)\big]
 
 
     `label` and `pred` can have arbitrary shape as long as they have the same
