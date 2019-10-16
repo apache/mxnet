@@ -86,7 +86,8 @@ def _prepare_workloads():
     OpArgMngr.add_workload('var', array_pool['4x1'])
     OpArgMngr.add_workload('zeros_like', array_pool['4x1'])
     OpArgMngr.add_workload('outer', np.ones((5)), np.ones((2)))
-    OpArgMngr.add_workload('outer', np.ones((5,)), np.linspace(-2, 2, 5), np.zeros(shape=(5,5)))
+    OpArgMngr.add_workload('meshgrid', np.array([1, 2, 3]), np.array([4, 5, 6, 7]))
+    OpArgMngr.add_workload('meshgrid', np.array([1, 2, 3]), np.array([4, 5, 6, 7]), indexing='ij')
 
     # workloads for array ufunc protocol
     OpArgMngr.add_workload('add', array_pool['4x1'], array_pool['1x2'])
@@ -160,10 +161,8 @@ def _prepare_workloads():
     OpArgMngr.add_workload('floor', array_pool['4x1'])
     OpArgMngr.add_workload('logical_not', np.ones(10, dtype=np.int32))
     OpArgMngr.add_workload('logical_not', array_pool['4x1'])
-    OpArgMngr.add_workload('meshgrid', np.array([1, 2, 3]))
-    OpArgMngr.add_workload('meshgrid', np.array([1, 2, 3]), np.array([4, 5, 6, 7]))
-    OpArgMngr.add_workload('meshgrid', np.array([1, 2, 3]), np.array([4, 5, 6, 7]), indexing='ij')
-    OpArgMngr.add_workload('meshgrid', np.array([1, 2, 3]), np.array([4, 5, 6, 7]), sparse=True)
+    OpArgMngr.add_workload('logical_not', np.array([True, False, True, False], dtype=np.bool))
+    
 
 
 
