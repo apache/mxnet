@@ -760,11 +760,11 @@ def _np__random_shuffle(x):
     Parameters
     ----------
     x: ndarray
-    The array or list to be shuffled.
+        The array or list to be shuffled.
 
     Returns
     -------
-        None
+    None
 
     Examples
     --------
@@ -779,12 +779,12 @@ def _np__random_shuffle(x):
     >>> np.random.shuffle(arr)
     >>> arr
     array([[6., 7., 8.], # random
-            [3., 4., 5.],
-            [0., 1., 2.]])
+           [3., 4., 5.],
+           [0., 1., 2.]])
     """
     pass
 
-def _np_broadcast_to(array, shape=[], out=None):
+def _np_broadcast_to(array, shape, out=None):
     """
     Broadcast an array to a new shape.
 
