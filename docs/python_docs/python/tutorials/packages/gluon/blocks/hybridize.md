@@ -280,7 +280,7 @@ Trying to access the shape of a tensor in a hybridized block would result in thi
 Again, you cannot use the shape of the symbol at runtime as symbols only describe operations and not the underlying data they operate on.
 Note: This will change in the future as Apache MXNet will support [dynamic shape inference](https://cwiki.apache.org/confluence/display/MXNET/Dynamic+shape), and the shapes of symbols will be symbols themselves
 
-There are also a lot of operators that support special indices to help with most of the use-cases where you would want to access the shape information. For example, `F.reshape(x, (0,0,-1))` will keep the first two dimensions unchanged and collapse all further dimensions into the third dimension. See the documentation of the [`F.reshape`](/api/python/docs/api/ndarray/ndarray.htmlmxnet.ndarray.reshape.html) for more details.
+There are also a lot of operators that support special indices to help with most of the use-cases where you would want to access the shape information. For example, `F.reshape(x, (0,0,-1))` will keep the first two dimensions unchanged and collapse all further dimensions into the third dimension. See the documentation of the [F.reshape](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.reshape) for more details.
 
 ### Item assignment
 
@@ -294,7 +294,7 @@ def hybrid_forward(self, F, x):
 
 Would get you this error `TypeError: 'Symbol' object does not support item assignment`.
 
-Direct item assignment is not possible in symbolic graph since it needs to be part of a computational graph. One way is to use add more inputs to your graph and use masking or the [`F.where`](/api/python/docs/api/ndarray/ndarray.htmlmxnet.ndarray.where.html) operator.
+Direct item assignment is not possible in symbolic graph since it needs to be part of a computational graph. One way is to use add more inputs to your graph and use masking or the [F.where](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.where) operator.
 
 e.g to set the first element to 2 you can do:
 
