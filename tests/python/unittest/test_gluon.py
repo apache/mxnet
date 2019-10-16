@@ -33,6 +33,7 @@ from copy import deepcopy
 import warnings
 import json
 import unittest
+import random
 
 @with_seed()
 def test_parameter():
@@ -440,6 +441,94 @@ def test_sparse_hybrid_block():
     x = mx.nd.ones((2,5))
     # an exception is expected when forwarding a HybridBlock w/ sparse param
     y = net(x)
+
+@with_seed()
+def test_hybrid_block_none_args():
+    class Foo(gluon.HybridBlock):
+        def hybrid_forward(self, F, a, b):
+            if a is None and b is not None:
+                return b
+            elif b is None and a is not None:
+                return a
+            elif a is not None and b is not None:
+                return a + b
+            else:
+                raise NotImplementedError
+
+    class FooDefault(gluon.HybridBlock):
+        def hybrid_forward(self, F, a, b=None):
+            if a is None and b is not None:
+                return b
+            elif b is None and a is not None:
+                return a
+            elif a is not None and b is not None:
+                return a + b
+            else:
+                raise NotImplementedError
+
+
+    class FooNested(gluon.HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super(FooNested, self).__init__(prefix=prefix, params=params)
+            self.f1 = Foo(prefix='foo1')
+            self.f2 = Foo(prefix='foo2')
+            self.f3 = Foo(prefix='foo3')
+
+        def hybrid_forward(self, F, a, b):
+            data = self.f1(a, b)
+            data = self.f2(a, data)
+            data = self.f3(data, b)
+            return data
+
+    for arg_inputs in [(None, mx.nd.ones((10,))),
+                       (mx.nd.ones((10,)), mx.nd.ones((10,))),
+                       (mx.nd.ones((10,)), None)]:
+        foo1 = FooNested(prefix='foo_nested_hybridized')
+        foo1.hybridize()
+        foo2 = FooNested(prefix='foo_nested_nohybrid')
+        for _ in range(2): # Loop for 2 times to trigger forwarding of the cached version
+            out1 = foo1(*arg_inputs)
+            out2 = foo2(*arg_inputs)
+            if isinstance(out1, tuple):
+                for lhs, rhs in zip(out1, out2):
+                    assert_almost_equal(lhs.asnumpy(), rhs.asnumpy())
+            else:
+                assert_almost_equal(out1.asnumpy(), out2.asnumpy())
+    for do_hybridize in [True, False]:
+        foo = FooNested()
+        if do_hybridize:
+            foo.hybridize()
+        assert_raises(ValueError, foo, None, None)
+
+    # Make sure the ValueError is correctly raised
+    foo = FooNested()
+    foo.hybridize()
+    foo(None, mx.nd.ones((10,)))  # Pass for the first time to initialize the cached op
+    assert_raises(ValueError, lambda: foo(mx.nd.ones((10,)), mx.nd.ones((10,))))
+    foo = FooNested()
+    assert_raises(ValueError, lambda: foo(mx.nd.ones((10,)), mx.sym.var('a')))
+    foo = FooNested()
+    assert_raises(ValueError, lambda: foo(mx.sym.var('a'), mx.nd.ones((10,))))
+
+    # Test the case of the default values
+    foo1 = FooDefault()
+    foo1.hybridize()
+    foo2 = FooDefault()
+    out1 = foo1(mx.nd.ones((10,)))
+    out2 = foo2(mx.nd.ones((10,)))
+    out3 = foo1(mx.nd.ones((10,)), None)
+    out4 = foo2(mx.nd.ones((10,)), None)
+    assert_almost_equal(out1.asnumpy(), out2.asnumpy())
+    assert_almost_equal(out1.asnumpy(), out3.asnumpy())
+    assert_almost_equal(out1.asnumpy(), out4.asnumpy())
+    foo1 = FooDefault()
+    foo1.hybridize()
+    out1 = foo1(mx.nd.ones((10,)), None)
+    out2 = foo1(mx.nd.ones((10,)))
+    assert_almost_equal(out1.asnumpy(), out2.asnumpy())
+    assert_raises(ValueError, lambda: foo1(mx.nd.ones((10,)), mx.nd.ones((10,))))
+
+
 
 @with_seed()
 def check_layer_forward(layer, dshape):
@@ -1416,15 +1505,62 @@ def test_hybrid_multi_context():
 
 @with_seed()
 def test_zero_grad():
-    data = mx.nd.random.uniform(shape=(3,3))
-    net = nn.Embedding(3, 4, sparse_grad=True, prefix='test_zero_grad_')
-    net.initialize()
-    with mx.autograd.record():
-        l = net(data)
-        l.backward()
-    net.collect_params().zero_grad()
-    grad = net.collect_params()['test_zero_grad_weight'].grad()
-    assert_almost_equal(grad.asnumpy(), grad.asnumpy() * 0)
+    def _test_grad_reset(ctx, dtype='float32', sparse=False, embeddingType=None):
+        data = mx.nd.random.uniform(shape=(3,3), dtype=dtype, ctx=ctx)
+        if embeddingType is None:
+            embeddingType = dtype
+        net = nn.Embedding(3, 4, sparse_grad=sparse, prefix='test_zero_grad_', dtype=embeddingType)
+        net.initialize(ctx=ctx)
+        with mx.autograd.record():
+            l = net(data)
+            l.backward()
+        net.collect_params().zero_grad()
+        grad = net.collect_params()['test_zero_grad_weight'].grad()
+        assert_almost_equal(grad.asnumpy(), grad.asnumpy() * 0)
+
+    def _test_multi_reset(nArrays, dtype, ctx):
+        # Construct the list of non-zeros arrays with random shapes
+        arr = []
+        for _ in range(nArrays):
+            arrType = random.choice(dtype) if isinstance(dtype, list) else dtype
+            shape = ()
+            for _ in range(np.random.randint(1, 5)):
+                shape = shape + (np.random.randint(1, 10),)
+            arr.append(mx.nd.random.uniform(shape=shape, dtype=arrType, ctx=ctx))
+
+        # Reset all arrays
+        mx.nd.reset_arrays(*arr, num_arrays=len(arr))
+
+        # Check results
+        for i in range(nArrays):
+            grad = arr[i].asnumpy()
+            assert_almost_equal(grad, grad * 0)
+
+
+    # Setting context for current test
+    ctx = mx.context.current_context()
+
+    # Launching _test_multi_reset 10 times with different types & randomly chosen nArrays
+    testedTypes = ['float16', 'float32', 'float64']
+    for _ in range(10):
+        for type in [testedTypes] + testedTypes:
+            _test_multi_reset(np.random.randint(1, 50), type, ctx)
+
+    # Saving value of environment variable, if it was defined
+    envVarKey = 'MXNET_STORAGE_FALLBACK_LOG_VERBOSE'
+    envVarValue = os.environ[envVarKey] if envVarKey in os.environ else None
+    # Changing value of environment variable
+    os.environ[envVarKey] = '0'
+    for type in ['float16', 'float32', 'float64']:
+        for embType in ['float32', 'float64']:
+            for sparse in [True, False]:
+                _test_grad_reset(ctx, dtype=type, sparse=sparse, embeddingType=embType)
+
+    # Remove or restore the value of environment variable
+    if envVarValue is None:
+        del os.environ[envVarKey]
+    else:
+        os.environ[envVarKey] = envVarValue
 
 def check_hybrid_static_memory(**kwargs):
     x = mx.nd.random.uniform(shape=(2, 3, 32, 32))

@@ -22,8 +22,6 @@
 
 def _np_ones_like(a):
     """
-    ones_like(a)
-
     Return an array of ones with the same shape and type as a given array.
 
     Parameters
@@ -42,8 +40,6 @@ def _np_ones_like(a):
 
 def _np_zeros_like(a):
     """
-    zeros_like(a)
-
     Return an array of zeros with the same shape and type as a given array.
 
     Parameters
@@ -62,8 +58,6 @@ def _np_zeros_like(a):
 
 def _np_cumsum(a, axis=None, dtype=None, out=None):
     """
-    cumsum(a, axis=None, dtype=None, out=None)
-
     Return the cumulative sum of the elements along a given axis.
 
     Parameters
@@ -115,8 +109,6 @@ def _np_cumsum(a, axis=None, dtype=None, out=None):
 
 def _npx_nonzero(a):
     """
-    nonzero(a)
-
     Return the indices of the elements that are non-zero.
 
     Returns a ndarray with ndim is 2. Each row contains the indices 
@@ -164,8 +156,6 @@ def _npx_nonzero(a):
 
 def _np_repeat(a, repeats, axis=None):
     """
-    repeat(a, repeats, axis=None)
-
     Repeat elements of an array.
 
     Parameters
@@ -213,8 +203,6 @@ def _np_repeat(a, repeats, axis=None):
 
 def _np_transpose(a, axes=None):
     """
-    transpose(a, axes=None)
-
     Permute the dimensions of an array.
 
     Parameters
@@ -256,8 +244,7 @@ def _np_transpose(a, axes=None):
 
 
 def _np_dot(a, b, out=None):
-    """dot(a, b, out=None)
-
+    """
     Dot product of two arrays. Specifically,
 
     - If both `a` and `b` are 1-D arrays, it is inner product of vectors
@@ -318,10 +305,8 @@ def _np_dot(a, b, out=None):
     pass
 
 
-def _np_sum(a, axis=0, dtype=None, keepdims=None, initial=None, out=None):
+def _np_sum(a, axis=None, dtype=None, keepdims=False, initial=None, out=None):
     r"""
-    sum(a, axis=None, dtype=None, keepdims=_Null, initial=_Null, out=None)
-
     Sum of array elements over a given axis.
 
     Parameters
@@ -414,8 +399,6 @@ def _np_sum(a, axis=0, dtype=None, keepdims=None, initial=None, out=None):
 
 def _np_copy(a, out=None):
     """
-    copy(a, out=None)
-
     Return an array copy of the given object.
 
     Parameters
@@ -463,8 +446,6 @@ def _np_copy(a, out=None):
 
 def _np_reshape(a, newshape, order='C', out=None):
     """
-    reshape(a, newshape, order='C')
-
     Gives a new shape to an array without changing its data.
     This function always returns a copy of the input array if
     ``out`` is not provided.
@@ -501,8 +482,6 @@ def _np_reshape(a, newshape, order='C', out=None):
 
 def _np__linalg_svd(a):
     r"""
-    svd(a)
-
     Singular Value Decomposition.
 
     When `a` is a 2D array, it is factorized as ``ut @ np.diag(s) @ v``,
@@ -568,8 +547,6 @@ def _np__linalg_svd(a):
 
 def _np_roll(a, shift, axis=None):
     """
-    roll(a, shift, axis=None):
-
     Roll array elements along a given axis.
     
     Elements that roll beyond the last position are re-introduced at
@@ -633,8 +610,7 @@ def _np_roll(a, shift, axis=None):
 
 
 def _np_trace(a, offset=0, axis1=0, axis2=1, out=None):
-    """trace(a, offset=0, axis1=0, axis2=1, out=None)
-
+    """
     Return the sum along diagonals of the array.
     If `a` is 2-D, the sum along its diagonal with the given offset
     is returned, i.e., the sum of elements ``a[i,i+offset]`` for all i.
@@ -675,5 +651,100 @@ def _np_trace(a, offset=0, axis1=0, axis2=1, out=None):
     >>> a = np.arange(24).reshape((2, 2, 2, 3))
     >>> np.trace(a).shape
     (2, 3)
+    """
+    pass
+
+
+def _np_squeeze(a, axis=None, out=None):
+    """
+    Remove single-dimensional entries from the shape of an array.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input data.
+    axis : None or int or tuple of ints, optional
+        Selects a subset of the single-dimensional entries in the
+        shape. If an axis is selected with shape entry greater than
+        one, an error is raised.
+    out : ndarray, optional
+        Array into which the output is placed. It must have the same size
+        and dtype as the input array.
+
+    Returns
+    -------
+    squeezed : ndarray
+        The input array, but with all or a subset of the
+        dimensions of length 1 removed. It always returns a copy of `a`.
+
+    Raises
+    ------
+    MXNetError
+        If `axis` is not `None`, and an axis being squeezed is not of length 1
+
+    See Also
+    --------
+    expand_dims : The inverse operation, adding singleton dimensions
+    reshape : Insert, remove, and combine dimensions, and resize existing ones
+
+    Examples
+    --------
+    >>> x = np.array([[[0], [1], [2]]])
+    >>> x.shape
+    (1, 3, 1)
+    >>> np.squeeze(x).shape
+    (3,)
+    >>> np.squeeze(x, axis=0).shape
+    (3, 1)
+    >>> np.squeeze(x, axis=1).shape
+    Traceback (most recent call last):
+    ...
+    mxnet.base.MXNetError: cannot select an axis to squeeze out which has size=3 not equal to one
+    >>> np.squeeze(x, axis=2).shape
+    (1, 3)
+    """
+    pass
+
+
+def _np_moveaxis(a, source, destination):
+    """Move axes of an array to new positions.
+    Other axes remain in their original order.
+
+    Parameters
+    ----------
+    a : ndarray
+        The array whose axes should be reordered.
+        source : int or sequence of int
+        Original positions of the axes to move. These must be unique.
+        destination : int or sequence of int
+        Destination positions for each of the original axes. These must also be
+        unique.
+
+    Returns
+    -------
+    result : ndarray
+        Array with moved axes. This array is a view of the input array.
+
+    See Also
+    --------
+        transpose: Permute the dimensions of an array.
+        swapaxes: Interchange two axes of an array.
+
+    Examples
+    --------
+    >>> x = np.zeros((3, 4, 5))
+    >>> np.moveaxis(x, 0, -1).shape
+    (4, 5, 3)
+    >>> np.moveaxis(x, -1, 0).shape
+    (5, 3, 4)
+    These all achieve the same result:
+    >>> np.transpose(x).shape
+    (5, 4, 3)
+    >>> np.swapaxes(x, 0, -1).shape
+    (5, 4, 3)
+    >>> np.moveaxis(x, [0, 1], [-1, -2]).shape
+    (5, 4, 3)
+    >>> np.moveaxis(x, [0, 1, 2], [-1, -2, -3]).shape
+    (5, 4, 3)
     """
     pass

@@ -169,7 +169,7 @@ Our community is constantly looking for feedback to improve Apache MXNet. If you
 - It helps to estimate the effort and to design a solution that addresses your needs. <br/>
 - It allows for constructive discussions that might arise around this issue.
 
-Detailed information is also required, if you plan to contribute the improvement or feature you proposed yourself. Please read the [contributions](http://mxnet.io/community/contribute.html) guide in this case as well.
+Detailed information is also required, if you plan to contribute the improvement or feature you proposed yourself. Please read the [contributions](https://mxnet.io/community/contribute.html) guide in this case as well.
 
 
 ## Roadmap

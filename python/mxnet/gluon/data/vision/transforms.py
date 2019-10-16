@@ -112,7 +112,7 @@ class ToTensor(HybridBlock):
         - **data**: input tensor with (H x W x C) or (N x H x W x C) shape and uint8 type.
 
     Outputs:
-        - **out**: output tensor with (C x H x W) or (N x H x W x C) shape and float32 type.
+        - **out**: output tensor with (C x H x W) or (N x C x H x W) shape and float32 type.
 
     Examples
     --------

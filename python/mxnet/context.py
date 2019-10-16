@@ -36,7 +36,7 @@ class Context(with_metaclass(_MXClassPropertyMetaClass, object)):
 
     See also
     ----------
-    `How to run MXNet on multiple CPU/GPUs <http://mxnet.io/faq/multi_devices.html>`
+    `How to run MXNet on multiple CPU/GPUs <http://mxnet.incubator.apache.org/api/faq/distributed_training>`
     for more details.
 
     Parameters
@@ -292,8 +292,6 @@ def gpu_memory_info(device_id=0):
     Returns
     -------
     (free, total) : (int, int)
-        The number of GPUs.
-
     """
     free = ctypes.c_uint64()
     total = ctypes.c_uint64()

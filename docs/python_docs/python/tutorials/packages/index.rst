@@ -58,8 +58,7 @@ Shared APIs
 
    .. card::
       :title: Learning Rate
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/learning_rate_schedules.html
-
+      :link: gluon/training/learning_rates/learning_rate_schedules.html
       How to use the Learning Rate Scheduler.
 
    .. card::
@@ -86,55 +85,14 @@ Shared APIs
 
       How to use Open Neural Network Exchange (ONNX) with MXNet.
 
-   ..
-      .. card::
-         :title: Optimizer
-         :link: optimizer.html
-
-         How to use optimizer.
-   ..
-
-Old APIs
---------
-Currently supported, but not recommended APIs.
-
-.. container:: cards
-
    .. card::
-      :title: Module
-      :link: module/index.html
+      :title: Optimizer
+      :link: optimizer/index.html
 
-      MXNet's symbolic interface for Python.
-
+      How to use the optimizers.
 
 .. toctree::
    :hidden:
+   :glob:
 
-   gluon/index
-   ndarray/index
-   symbol/index
-   autograd/autograd
-   onnx/index
-
-..
-   Basic
-   -----
-
-   .. toctree::
-      :maxdepth: 1
-
-      mxboard
-      gpus
-
-   Advanced
-   --------
-
-
-   .. toctree::
-      :maxdepth: 1
-
-      symbol
-      record-io
-      sparse
-      control-flow
-      distributed-training
+   */index*

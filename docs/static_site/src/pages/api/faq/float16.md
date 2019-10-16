@@ -39,7 +39,7 @@ The float16 data type is a 16 bit floating point representation according to the
 - CUDA 9 or higher
 - cuDNN v7 or higher
 
-This tutorial also assumes understanding of how to train a network with float32 (the default). Please refer to [logistic regression tutorial](https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/logistic_regression_explained.html) to get started with Apache MXNet and Gluon API. This tutorial focuses on the changes needed to switch from float32 to mixed precision and tips on achieving the best performance with mixed precision.
+This tutorial also assumes understanding of how to train a network with float32 (the default). Please refer to [logistic regression tutorial](https://mxnet.apache.org/versions/master/tutorials/gluon/logistic_regression_explained.html) to get started with Apache MXNet and Gluon API. This tutorial focuses on the changes needed to switch from float32 to mixed precision and tips on achieving the best performance with mixed precision.
 
 ## Using the Gluon API
 

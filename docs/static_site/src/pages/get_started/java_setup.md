@@ -124,7 +124,7 @@ This will install both the Java Inference API and the required MXNet-Scala packa
 
 Javadocs are generated as part of the docs build pipeline. You can find them published in the [Java API]({{'/api/java'|relative_url}}) section of the website or by going to the [scaladocs output]({{'/api/scala/docs/api/#org.apache.mxnet.package'|relative_url}}) directly.
 
-To build the docs yourself, follow the [developer build docs instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#developer-instructions).
+To build the docs yourself, follow the [developer build docs instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/README.md).
 
 <hr>
 
