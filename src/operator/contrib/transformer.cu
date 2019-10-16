@@ -29,8 +29,8 @@
 namespace mxnet {
 namespace op {
 
-// gemm_switch_fp32accum and the functions called are almost fully copied from:
-// MLPerf v0.6 submission repository from NVIDIA by https://github.com/kevinstephano
+// Approach in gemm_switch_fp32accum is coming from MLPerf v0.6 submission repository from NVIDIA
+// by https://github.com/kevinstephano
 template<typename DType>
 void CublasStridedBatchedGemm(mshadow::Stream<gpu>* s, bool transA, bool transB,
                               int32_t m, int32_t n, int32_t k,
