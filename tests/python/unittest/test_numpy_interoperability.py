@@ -240,18 +240,18 @@ def check_interoperability(op_list):
 @use_np
 @with_array_function_protocol
 def test_np_array_function_protocol():
-    print('-------test array function start--------')
+    print('test array function start')
     check_interoperability(_NUMPY_ARRAY_FUNCTION_LIST)
-    print('-------test array function end--------')
+    print('test array function end')
 
 
 @with_seed()
 @use_np
 @with_array_ufunc_protocol
 def test_np_array_ufunc_protocol():
-    print('-------test ufunc function start--------')
+    print('test ufunc function start')
     check_interoperability(_NUMPY_ARRAY_UFUNC_LIST)
-    print('-------test ufunc function end--------')
+    print('test ufunc function end')
 
 
 if __name__ == '__main__':
