@@ -784,7 +784,6 @@ def test_pos_single_concat():
       check_quantize(net, data_shape, out_type, name='', check_calibration=False)
 
 @with_seed()
-@unittest.skip('skip for MKL-DNN 1.0 integration: https://github.com/apache/incubator-mxnet/projects/16')
 def test_pos_concat_scale_align():
   for data_shape in DATA_SHAPE:
     for out_type in ('int8', 'auto'):
@@ -829,7 +828,6 @@ def test_neg_conv_bn_add_relu():
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
 
 @with_seed()
-@unittest.skip('skip for MKL-DNN 1.0 integration: https://github.com/apache/incubator-mxnet/projects/16')
 def test_single_fc():
   for dshape, no_bias, flatten in itertools.product(DATA_SHAPE, [True, False], [True, False]):
     syms, attrs = single_fc(no_bias, dshape, flatten)
@@ -840,7 +838,6 @@ def test_single_fc():
 
 
 @with_seed()
-@unittest.skip('skip for MKL-DNN 1.0 integration: https://github.com/apache/incubator-mxnet/projects/16')
 def test_fc_eltwise():
   for dshape, no_bias, flatten, alg in itertools.product(DATA_SHAPE,
                                                         [True, False],
