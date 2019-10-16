@@ -783,3 +783,37 @@ def _np__random_shuffle(x):
             [0., 1., 2.]])
     """
     pass
+
+def _np_broadcast_to(array, shape=[], out=None):
+    """
+    Broadcast an array to a new shape.
+
+    Parameters
+    ----------
+    array : ndarray
+        The array to broadcast.
+    shape : tuple, optional, default=[]
+        The shape of the desired array.
+    out : ndarray, optional
+        The output ndarray to hold the result.
+
+    Returns
+    -------
+    out : ndarray or list of ndarrays
+
+    Raises
+    ------
+    MXNetError
+        - If the array is not compatible with the new shape according to NumPy's
+        broadcasting rules.
+        - If the shape of the output array is not consistent with the desired shape.
+
+    Examples
+    --------
+    >>> x = np.array([1, 2, 3])
+    >>> np.broadcast_to(x, (3, 3))
+    array([[1., 2., 3.],
+           [1., 2., 3.],
+           [1., 2., 3.]]
+    """
+    pass
