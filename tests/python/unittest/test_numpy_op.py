@@ -2322,7 +2322,7 @@ def test_np_choice():
             if hybridize:
                 test_choice.hybridize()
                 test_choice_weighted.hybridize()
-            weight = np.array(_np.random.dirichlet([1.0] * num_classes))
+            weight = np.array(_np.random.dirichlet([1.0] * num_classes), dtype=np.float32)
             test_indexing_mode(test_choice, num_classes, num_classes // 2, replace, None)
             test_indexing_mode(test_choice_weighted, num_classes, num_classes // 2, replace, weight)
 

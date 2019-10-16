@@ -197,6 +197,10 @@ class ndarray(NDArray):
         else:
             return self.astype(dtype)
 
+    @property
+    def __array_interface__(self):
+        return self.asnumpy().__array_interface__
+
     def _get_np_basic_indexing(self, key):
         """
         This function indexes ``self`` with a tuple of `slice` objects only.
@@ -1758,6 +1762,13 @@ def array(object, dtype=None, copy=True, order='C', ctx=None, **kwargs):
         __array__ method returns an array, or any (nested) sequence.
     dtype : data-type, optional
         The desired data-type for the array. Default is `float32`.
+    copy : bool, optional
+        If true (default), then the object is copied. Otherwise, a copy will
+        only be made if __array__ returns a copy, if obj is a nested sequence,
+        or if a copy is needed to satisfy any of the other requirements
+    order : {'C'}, optional
+        Only support to use row-major (C-style) memory representation.
+        Defaults to 'C'.
     ctx : device context, optional
         Device context on which the memory is allocated. Default is
         `mxnet.context.current_context()`.
@@ -1778,15 +1789,17 @@ def array(object, dtype=None, copy=True, order='C', ctx=None, **kwargs):
         if ctx == object.context:
             ret = object.astype(dtype, copy=copy)
         else:
-            ret = object.copy().astype(dtype, copy=False)
+            ret = object.copyto(ctx).astype(dtype, copy=False)
         return ret
     else:
-        dtype = _np.float32 if dtype is None else dtype
         if not isinstance(object, _np.ndarray):
+            dtype = _np.float32 if dtype is None else dtype
             try:
                 object = _np.array(object, dtype=dtype)
             except Exception as e:
                 raise TypeError('{}'.format(str(e)))
+        else:
+            dtype = object.dtype if dtype is None else dtype
         ret = empty(object.shape, dtype=dtype, ctx=ctx)
         if len(object.shape) == 0:
             ret[()] = object
@@ -1796,11 +1809,58 @@ def array(object, dtype=None, copy=True, order='C', ctx=None, **kwargs):
 
 
 @set_module('mxnet.numpy')
-def asarray(a, dtype=None, order='C'):
+def asarray(a, dtype=None, order='C', ctx=None):
+    """
+    Convert the input to an array.
+
+    Parameters
+    ----------
+    a : array_like
+        Input data, in any form that can be converted to an array.  This
+        includes lists, lists of tuples, tuples, tuples of tuples, tuples
+        of lists and ndarrays.
+    dtype : data-type, optional
+        By default, the data-type is inferred from the input data.
+    order : {'C'}, optional
+        Only support to use row-major (C-style) memory representation.
+        Defaults to 'C'.
+    ctx : device context, optional
+        Device context on which the memory is allocated. Default is
+        `mxnet.context.current_context()`.
+
+    Returns
+    -------
+    out : ndarray
+        Array interpretation of `a`.  No copy is performed if the input
+        is already an ndarray with matching dtype and context.  If `a` is a
+        subclass of ndarray, a base class ndarray is returned.
+
+    Examples
+    --------
+    Convert a list into an array:
+
+    >>> a = [1, 2]
+    >>> np.asarray(a)
+    array([1., 2.])
+
+    Existing arrays are not copied:
+
+    >>> a = np.array([1, 2])
+    >>> np.asarray(a) is a
+    True
+
+    If `dtype` is set, array is copied only if dtype does not match:
+
+    >>> a = np.array([1, 2], dtype=np.float32)
+    >>> np.asarray(a, dtype=np.float32) is a
+    True
+    >>> np.asarray(a, dtype=np.float64) is a
+    False
+    """
     if order != 'C':
         raise NotImplementedError('`asarray` only supports order equal to `C`, while received {}'
                                   .format(str(order)))
-    return array(a, dtype, copy=False, order=order)
+    return array(a, dtype, copy=False, order=order, ctx=ctx)
 
 
 @set_module('mxnet.numpy')

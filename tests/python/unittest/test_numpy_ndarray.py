@@ -94,11 +94,11 @@ def test_np_array_creation():
         for src in objects:
             mx_arr = np.array(src, dtype=dtype)
             assert mx_arr.ctx == mx.current_context()
-            if isinstance(src, mx.nd.NDArray):
-                np_arr = _np.array(src.asnumpy(), dtype=dtype if dtype is not None else _np.float32)
+            np_arr = _np.array(src, dtype=dtype)
+            if dtype is None and not isinstance(src, _np.ndarray):
+                assert mx_arr.dtype == np.float32
             else:
-                np_arr = _np.array(src, dtype=dtype if dtype is not None else _np.float32)
-            assert mx_arr.dtype == np_arr.dtype
+                assert mx_arr.dtype == np_arr.dtype
             assert same(mx_arr.asnumpy(), np_arr)
 
 
