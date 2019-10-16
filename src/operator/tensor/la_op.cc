@@ -941,7 +941,6 @@ NNVM_REGISTER_OP(_backward_linalg_inverse)
 
 NNVM_REGISTER_OP(_linalg_det)
 .add_alias("linalg_det")
-.add_alias("_np__linalg_det")
 .describe(R"code(Compute the determinant of a matrix.
 Input is a tensor *A* of dimension *n >= 2*.
 
@@ -992,7 +991,6 @@ NNVM_REGISTER_OP(_backward_linalg_det)
 .set_attr<FCompute>("FCompute<cpu>", LaOpDetBackward<cpu, 1, det_backward>);
 
 NNVM_REGISTER_OP(_linalg_slogdet)
-.add_alias("_np__linalg_slogdet")
 .add_alias("linalg_slogdet")
 .describe(R"code(Compute the sign and log of the determinant of a matrix.
 Input is a tensor *A* of dimension *n >= 2*.

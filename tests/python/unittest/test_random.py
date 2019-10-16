@@ -19,7 +19,7 @@ import os
 import math
 import itertools
 import mxnet as mx
-from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, retry
+from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, retry, assert_almost_equal
 import numpy as np
 import random as rnd
 from common import setup_module, with_seed, random_seed, teardown
@@ -583,14 +583,14 @@ def test_sample_multinomial():
                 prob = prob.reshape((1, prob.shape[0]))
             for i in range(x.shape[0]):
                 freq = np.bincount(y[i,:].astype('int32'), minlength=5)/np.float32(samples)*x[i,:].sum()
-                mx.test_utils.assert_almost_equal(freq, x[i], rtol=0.20, atol=1e-1)
+                assert_almost_equal(freq, x[i], rtol=0.20, atol=1e-1)
                 rprob = x[i][y[i].astype('int32')]/x[i].sum()
-                mx.test_utils.assert_almost_equal(np.log(rprob), prob.asnumpy()[i], atol=1e-5)
+                assert_almost_equal(np.log(rprob), prob.asnumpy()[i], atol=1e-5)
 
                 real_dx = np.zeros((5,))
                 for j in range(samples):
                     real_dx[int(y[i][j])] += 5.0 / rprob[j]
-                mx.test_utils.assert_almost_equal(real_dx, dx[i, :], rtol=1e-4, atol=1e-5)
+                assert_almost_equal(real_dx, dx[i, :], rtol=1e-4, atol=1e-5)
     for dtype in ['uint8', 'float16', 'float32']:
         # Bound check for the output data types. 'int32' and 'float64' require large memory so are skipped.
         x = mx.nd.zeros(2 ** 25)  # Larger than the max integer in float32 without precision loss.
@@ -883,8 +883,8 @@ def test_zipfian_generator():
     # test ndarray
     true_classes = mx.nd.random.uniform(0, range_max, shape=(num_true,)).astype('int32')
     sampled_classes, exp_cnt_true, exp_cnt_sampled = mx.nd.contrib.rand_zipfian(true_classes, num_sampled, range_max)
-    mx.test_utils.assert_almost_equal(exp_cnt_sampled.asnumpy(), exp_cnt[sampled_classes].asnumpy(), rtol=1e-1, atol=1e-2)
-    mx.test_utils.assert_almost_equal(exp_cnt_true.asnumpy(), exp_cnt[true_classes].asnumpy(), rtol=1e-1, atol=1e-2)
+    assert_almost_equal(exp_cnt_sampled, exp_cnt[sampled_classes], rtol=1e-1, atol=1e-2)
+    assert_almost_equal(exp_cnt_true, exp_cnt[true_classes], rtol=1e-1, atol=1e-2)
 
     # test symbol
     true_classes_var = mx.sym.var('true_classes')
@@ -893,8 +893,8 @@ def test_zipfian_generator():
     executor = outputs.bind(mx.context.current_context(), {'true_classes' : true_classes})
     executor.forward()
     sampled_classes, exp_cnt_true, exp_cnt_sampled = executor.outputs
-    mx.test_utils.assert_almost_equal(exp_cnt_sampled.asnumpy(), exp_cnt[sampled_classes].asnumpy(), rtol=1e-1, atol=1e-2)
-    mx.test_utils.assert_almost_equal(exp_cnt_true.asnumpy(), exp_cnt[true_classes].asnumpy(), rtol=1e-1, atol=1e-2)
+    assert_almost_equal(exp_cnt_sampled, exp_cnt[sampled_classes], rtol=1e-1, atol=1e-2)
+    assert_almost_equal(exp_cnt_true, exp_cnt[true_classes], rtol=1e-1, atol=1e-2)
 
 # Issue #10277 (https://github.com/apache/incubator-mxnet/issues/10277) discusses this test.
 @with_seed()

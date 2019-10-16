@@ -1173,7 +1173,8 @@ MXNET_DLL int MXAutogradIsTraining(bool* curr);
 MXNET_DLL int MXIsNumpyShape(bool* curr);
 /*!
  * \brief set numpy compatibility switch
- * \param is_np_shape 1 when numpy shape semantics is on, 0 when off
+ * \param is_np_shape 1 when numpy shape semantics is thread local on,
+ *        2 when numpy shape semantics is global on and 0 when off
  * \param prev returns the previous status before this set
  * \return 0 when success, -1 when failure happens
  */

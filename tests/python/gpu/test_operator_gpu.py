@@ -20,15 +20,13 @@ import sys
 import os
 import time
 import multiprocessing as mp
-import unittest
 import mxnet as mx
 import numpy as np
 import unittest
 from nose.tools import assert_raises
-from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal
+from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, assert_allclose
 from mxnet.base import MXNetError
 from mxnet import autograd
-from numpy.testing import assert_allclose
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
@@ -46,6 +44,7 @@ from test_sparse_ndarray import *
 from test_sparse_operator import *
 from test_ndarray import *
 from test_subgraph_op import *
+from test_gluon_gpu import _test_bulking
 from test_contrib_operator import test_multibox_target_op
 from test_tvm_op import *
 from test_library_loading import *
@@ -230,7 +229,7 @@ def check_fft(shape):
                     a[i,j,:,p+1] = out2[i,j+out1[0].shape[1],:,k]
                     p = p+2
 
-    assert_almost_equal(a, out1[0],rtol=1e-3, atol=1e-5)
+    assert_almost_equal(a, out1[0], rtol=1e-3, atol=1e-5)
 
     # backward
     if len(shape) == 2:
@@ -244,7 +243,7 @@ def check_fft(shape):
         for exe in exe_list:
             exe.backward([out_grad])
         a = np.fft.ifft(out_grad_complex, n=None, axis=-1, norm=None)
-        assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[1],rtol=1e-3, atol=1e-5)
+        assert_almost_equal(a.real, exe.grad_arrays[0]/shape[1],rtol=1e-3, atol=1e-5)
 
     if len(shape) == 4:
         out_grad = mx.nd.empty(out1[0].shape)
@@ -257,7 +256,7 @@ def check_fft(shape):
         for exe in exe_list:
             exe.backward([out_grad])
         a = np.fft.ifft(out_grad_complex, n=None, axis=-1, norm=None)
-        assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[3],rtol=1e-3, atol=1e-5)
+        assert_almost_equal(a.real, exe.grad_arrays[0]/shape[3],rtol=1e-3, atol=1e-5)
 
 @with_seed()
 def test_fft():
@@ -1682,7 +1681,7 @@ def check_rnn_consistency(cell1, cell2):
     mod1.forward(batch, is_train=False)
     mod2.forward(batch, is_train=False)
 
-    assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=1e-2, atol=1e-4)
+    mx.test_utils.assert_allclose(mod1.get_outputs()[0], mod2.get_outputs()[0], rtol=1e-2, atol=1e-4)
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
@@ -1716,7 +1715,7 @@ def test_lstm_forget_bias():
 
     bias_name = next(x for x in args if x.endswith('f_bias'))
     expected_bias = forget_bias * np.ones(10, )
-    assert_allclose(args[bias_name].asnumpy(), expected_bias)
+    mx.test_utils.assert_allclose(args[bias_name], expected_bias)
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
@@ -2008,9 +2007,9 @@ def check_rnn_layer(layer):
         co, cs = layer(x, states)
 
     # atol of 1e-6 required, as exposed by seed 2124685726
-    assert_almost_equal(go.asnumpy(), co.asnumpy(), rtol=1e-2, atol=1e-6)
+    assert_almost_equal(go, co, rtol=1e-2, atol=1e-6)
     for g, c in zip(gs, cs):
-        assert_almost_equal(g.asnumpy(), c.asnumpy(), rtol=1e-2, atol=1e-6)
+        assert_almost_equal(g, c, rtol=1e-2, atol=1e-6)
 
 def check_rnn_layer_w_rand_inputs(layer):
     layer.collect_params().initialize(ctx=[mx.cpu(0), mx.gpu(0)])
@@ -2025,9 +2024,9 @@ def check_rnn_layer_w_rand_inputs(layer):
         states = layer.begin_state(16)
         co, cs = layer(x, states)
 
-    assert_almost_equal(go.asnumpy(), co.asnumpy(), rtol=1e-2, atol=1e-6)
+    assert_almost_equal(go, co, rtol=1e-2, atol=1e-6)
     for g, c in zip(gs, cs):
-        assert_almost_equal(g.asnumpy(), c.asnumpy(), rtol=1e-2, atol=1e-6)
+        assert_almost_equal(g, c, rtol=1e-2, atol=1e-6)
 
 @with_seed()
 def test_sequence_reverse():
@@ -2092,7 +2091,7 @@ def test_cross_device_autograd():
 
         y.backward()
 
-    dx = x.grad.asnumpy()
+    dx = x.grad.copy()
     x.grad[:] = 0
 
     with mx.autograd.record():
@@ -2101,7 +2100,7 @@ def test_cross_device_autograd():
             y = mx.nd.tanh(y)
         y.backward()
 
-    assert_almost_equal(dx, x.grad.asnumpy())
+    assert_almost_equal(dx, x.grad)
 
 @with_seed()
 def test_multi_proposal_op():
@@ -2285,12 +2284,11 @@ def test_softmax_activation():
     with mx.autograd.record():
         gpu_y = mx.nd.SoftmaxActivation(data = gpu_a)
         cpu_y = mx.nd.SoftmaxActivation(data = cpu_a)
-        assert_almost_equal(cpu_y.asnumpy(), gpu_y.asnumpy(), atol = 1e-3, rtol = 1e-3)
+        assert_almost_equal(cpu_y, gpu_y, atol = 1e-3, rtol = 1e-3)
 
         gpu_y.backward()
         cpu_y.backward()
-        assert_almost_equal(cpu_a.grad.asnumpy(), gpu_a.grad.asnumpy(),
-                atol = 1e-3, rtol = 1e-3)
+        assert_almost_equal(cpu_a.grad, gpu_a.grad, atol = 1e-3, rtol = 1e-3)
 
 
 @with_seed()
@@ -2320,13 +2318,13 @@ def test_bilinear_sampler_versions():
             exe.arg_dict['data'][:] = test_data
             exe.arg_dict['grid'][:] = test_grid
             exe.forward(is_train=True)
-            assert_almost_equal(exe_list[ref_idx].outputs[0].asnumpy(), exe.outputs[0].asnumpy(), rtol=1e-3, atol=1e-5)
+            mx.test_utils.assert_almost_equal(exe_list[ref_idx].outputs[0], exe.outputs[0], rtol=1e-3, atol=1e-5)
 
         out_grad = np.random.uniform(low=-0.01, high=0.01,size=data_shape[:2] + grid_shape[2:]).astype(np.float32)
         for exe in exe_list:
             exe.backward(mx.nd.array(out_grad))
-            assert_almost_equal(exe.grad_dict['data'].asnumpy(), exe_list[ref_idx].grad_dict['data'].asnumpy(), rtol=1e-3, atol=1e-5)
-            assert_almost_equal(exe.grad_dict['grid'].asnumpy(), exe_list[ref_idx].grad_dict['grid'].asnumpy(), rtol=1e-3, atol=1e-5)
+            assert_almost_equal(exe.grad_dict['data'], exe_list[ref_idx].grad_dict['data'], rtol=1e-3, atol=1e-5)
+            assert_almost_equal(exe.grad_dict['grid'], exe_list[ref_idx].grad_dict['grid'], rtol=1e-3, atol=1e-5)
 
         data_grad = exe_list[ref_idx].grad_dict['data'].asnumpy()
         grid_grad = exe_list[ref_idx].grad_dict['grid'].asnumpy()
@@ -2345,10 +2343,10 @@ def test_bilinear_sampler_versions():
             exe.grad_dict['grid'][:] = grid_initial_grad
             exe.forward(is_train=True)
             exe.backward(mx.nd.array(out_grad))
-            assert_almost_equal(exe.grad_dict['data'].asnumpy(), exe_list[ref_idx].grad_dict['data'].asnumpy(), rtol=1e-3, atol=1e-5)
-            assert_almost_equal(exe.grad_dict['grid'].asnumpy(), exe_list[ref_idx].grad_dict['grid'].asnumpy(), rtol=1e-3, atol=1e-5)
-        assert_almost_equal(exe_list[ref_idx].grad_dict['data'].asnumpy(), data_grad + data_initial_grad, rtol=1e-3, atol=1e-5)
-        assert_almost_equal(exe_list[ref_idx].grad_dict['grid'].asnumpy(), grid_grad + grid_initial_grad, rtol=1e-3, atol=1e-5)
+            assert_almost_equal(exe.grad_dict['data'], exe_list[ref_idx].grad_dict['data'], rtol=1e-3, atol=1e-5)
+            assert_almost_equal(exe.grad_dict['grid'], exe_list[ref_idx].grad_dict['grid'], rtol=1e-3, atol=1e-5)
+        assert_almost_equal(exe_list[ref_idx].grad_dict['data'], data_grad + data_initial_grad, rtol=1e-3, atol=1e-5)
+        assert_almost_equal(exe_list[ref_idx].grad_dict['grid'], grid_grad + grid_initial_grad, rtol=1e-3, atol=1e-5)
 
         for req_dict in [{'data' : 'null', 'grid' : 'write'}, {'data' : 'write', 'grid' : 'null'}]:
             # Mixture of kWriteTo and kNullOp
@@ -2362,9 +2360,9 @@ def test_bilinear_sampler_versions():
                 exe.forward(is_train=True)
                 exe.backward(mx.nd.array(out_grad))
                 if req_dict['data'] is 'write':
-                    assert_almost_equal(exe.grad_dict['data'].asnumpy(), exe_list[ref_idx].grad_dict['data'].asnumpy(), rtol=1e-3, atol=1e-5)
+                    assert_almost_equal(exe.grad_dict['data'], exe_list[ref_idx].grad_dict['data'], rtol=1e-3, atol=1e-5)
                 if req_dict['grid'] is 'write':
-                    assert_almost_equal(exe.grad_dict['grid'].asnumpy(), exe_list[ref_idx].grad_dict['grid'].asnumpy(), rtol=1e-3, atol=1e-5)
+                    assert_almost_equal(exe.grad_dict['grid'], exe_list[ref_idx].grad_dict['grid'], rtol=1e-3, atol=1e-5)
 
 
 # isolated execution bulking test function to be invoked with different env var settings
@@ -2394,7 +2392,12 @@ def _test_bulking_in_process(seed, time_per_iteration):
         dx.wait_to_read()
     time_per_iteration.value = (time.time() - start) / num_iterations
 
+
 @with_seed()
+def test_bulking_operator_gpu():
+    _test_bulking(_test_bulking_in_process)
+
+
 @unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/14970')
 def test_bulking():
     # test case format: (max_fwd_segment_size, max_bwd_segment_size, enable_bulking_in_training)
@@ -2432,6 +2435,10 @@ def test_bulking():
         'The fully-bulked exec time is slower than a half-bulked time by {} secs! {}' \
             .format(fully_bulked_time - fastest_half_bulked_time, times_str)
 
+
+@with_seed()
+def test_allclose_function_gpu():
+    allclose_function([mx.cpu(), mx.gpu(0)])
 
 def test_context_num_gpus():
     # Test that num_gpus reports at least one GPU, as the test is run on a GPU host.
