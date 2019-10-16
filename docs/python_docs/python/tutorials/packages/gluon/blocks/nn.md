@@ -310,4 +310,4 @@ Gluon does this by allowing for [Hybridization](hybridize.html). In it, the
 Python interpreter executes the block the first time it's invoked. The Gluon
 runtime records what is happening and the next time around it short circuits
 any calls to Python. This can accelerate things considerably in some cases but
-care needs to be taken with [control flow](/api/python/getting-started/crash-course/3-autograd.html).
+care needs to be taken with [control flow](/api/python/docs/tutorials/packages/autograd/index.html#Advanced:-Using-Python-control-flow).

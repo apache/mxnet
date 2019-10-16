@@ -38,7 +38,7 @@ Many people are familiar with NumPy and flexible doing tensor manipulations usin
 
 That means that if we have a long computation graph and, at some point, we want to cast the result to `np.array`, it may feel like the casting takes a lot of time. But what really takes this time is `Execution Engine`, which finishes all the async calculations we have pushed into it to get the final result, which then will be converted to `np.array`.
 
-Because of the blocking nature of [.asnumpy() method](api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.NDArray.asnumpy), using it reduces the execution performance, especially if the calculations are done on GPU: Apache MXNet has to copy data from GPU to CPU to return `np.array`.
+Because of the blocking nature of [.asnumpy() method](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.NDArray.asnumpy), using it reduces the execution performance, especially if the calculations are done on GPU: Apache MXNet has to copy data from GPU to CPU to return `np.array`.
 
 The best solution is to **make manipulations directly on NDArrays by methods provided in [NDArray API](https://mxnet.apache.org/api/python/ndarray/ndarray.html)**.
 
