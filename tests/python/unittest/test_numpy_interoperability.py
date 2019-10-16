@@ -86,6 +86,7 @@ def _prepare_workloads():
     OpArgMngr.add_workload('var', array_pool['4x1'])
     OpArgMngr.add_workload('zeros_like', array_pool['4x1'])
     OpArgMngr.add_workload('outer', np.ones((5)), np.ones((2)))
+    OpArgMngr.add_workload('meshgrid', np.array([1, 2, 3]))
     OpArgMngr.add_workload('meshgrid', np.array([1, 2, 3]), np.array([4, 5, 6, 7]))
     OpArgMngr.add_workload('meshgrid', np.array([1, 2, 3]), np.array([4, 5, 6, 7]), indexing='ij')
 
