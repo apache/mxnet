@@ -40,7 +40,7 @@ static bool InterleavedMatMulSelfAttQKShape(const NodeAttrs& attrs,
   auto qkv_shape = in_shape->at(0);
   CHECK_EQ(qkv_shape.ndim(), 3U)
     << "Input queries_keys_values should be 3D in seq_length-batch-proj_dim, "
-    << "currently is: " << qkv_shape.ndim << "D";
+    << "currently is: " << qkv_shape.ndim() << "D";
   out_shape->resize(1);
   SHAPE_ASSIGN_CHECK(*out_shape, 0,
     mxnet::TShape({params.heads * qkv_shape[1], qkv_shape[0], qkv_shape[0]}));
@@ -56,8 +56,8 @@ static bool InterleavedMatMulSelfAttValAttShape(const NodeAttrs& attrs,
   auto att_shape = in_shape->at(1);
   CHECK_EQ(qkv_shape.ndim(), 3U)
     << "Input queries_keys_values should be 3D in seq_length-batch-3*proj_dim, "
-    << "currently is: " << qkv_shape.ndim << "D";
-  CHECK_EQ(att_shape.ndim(), 3U);
+    << "currently is: " << qkv_shape.ndim() << "D";
+  CHECK_EQ(att_shape.ndim(), 3U)
     << "Input attention should be 3D in batch-seq_length-seq_length, "
     << "currently is: " << att_shape.ndim() << "D";
   CHECK_EQ(qkv_shape[0], att_shape[1])
@@ -85,7 +85,7 @@ static bool InterleavedMatMulEncDecQKShape(const NodeAttrs& attrs,
   CHECK_EQ(q_shape.ndim(), 3U) << "Input queries should be 3D in seq_length-batch-proj_dim, "
                                << "currently is " << q_shape.ndim() << "D";
   CHECK_EQ(kv_shape.ndim(), 3U) << "Input queries should be 3D in seq_length-batch-2*proj_dim, "
-                                << "currently is " ,< kv_shape.ndim() << "D";
+                                << "currently is " << kv_shape.ndim() << "D";
   CHECK_EQ(q_shape[2] * 2, kv_shape[2])
     << "keys_values.shape[2] should be equal to queries.shape[2] * 2, "
     << "currently are: " << kv_shape[2] << " and " << q_shape[2];
