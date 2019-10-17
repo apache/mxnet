@@ -1617,7 +1617,7 @@ void NDArray::Save(dmlc::Stream *strm) const {
   } else {
     this->WaitToRead();
     nd_cpu = *this;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
     if (nd_cpu.IsMKLDNNData()) {
       nd_cpu = nd_cpu.Reorder2Default();
     }
