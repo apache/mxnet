@@ -187,20 +187,20 @@ def _prepare_workloads():
     OpArgMngr.add_workload('add', array_pool['4x1'], 2)
     OpArgMngr.add_workload('add', 2, array_pool['4x1'])
     OpArgMngr.add_workload('add', array_pool['4x1'], array_pool['1x1x0'])
-    """
-    OpArgMngr.add_workload('equal', np.array([0, 1, 2, 4, 2], dtype=np.float16), np.array([-2, 5, 1, 4, 3], dtype=np.float16))
+
+    #OpArgMngr.add_workload('equal', np.array([0, 1, 2, 4, 2], dtype=np.float16), np.array([-2, 5, 1, 4, 3], dtype=np.float16))
     OpArgMngr.add_workload('equal', np.array([np.nan]), np.array([np.nan]))
     OpArgMngr.add_workload('equal', array_pool['4x1'], array_pool['1x2'])
-    OpArgMngr.add_workload('not_equal', np.array([0, 1, 2, 4, 2], dtype=np.float16), np.array([-2, 5, 1, 4, 3], dtype=np.float16))
+    #OpArgMngr.add_workload('not_equal', np.array([0, 1, 2, 4, 2], dtype=np.float16), np.array([-2, 5, 1, 4, 3], dtype=np.float16))
     OpArgMngr.add_workload('not_equal', np.array([np.nan]), np.array([np.nan]))
     OpArgMngr.add_workload('not_equal', array_pool['4x1'], array_pool['1x2'])
-    OpArgMngr.add_workload('greater', np.array([0, 1, 2, 4, 2], dtype=np.float16), np.array([-2, 5, 1, 4, 3], dtype=np.float16))
+    #OpArgMngr.add_workload('greater', np.array([0, 1, 2, 4, 2], dtype=np.float16), np.array([-2, 5, 1, 4, 3], dtype=np.float16))
     OpArgMngr.add_workload('greater', array_pool['4x1'], array_pool['1x2'])
     OpArgMngr.add_workload('greater', np.array([np.nan]), np.array([np.nan]))
-    OpArgMngr.add_workload('greater_equal', np.array([0, 1, 2, 4, 2], dtype=np.float16), np.array([-2, 5, 1, 4, 3], dtype=np.float16))
+    #OpArgMngr.add_workload('greater_equal', np.array([0, 1, 2, 4, 2], dtype=np.float16), np.array([-2, 5, 1, 4, 3], dtype=np.float16))
     OpArgMngr.add_workload('greater_equal', array_pool['4x1'], array_pool['1x2'])
     OpArgMngr.add_workload('greater_equal', np.array([np.nan]), np.array([np.nan]))
-    """
+    
     OpArgMngr.add_workload('subtract', array_pool['4x1'], array_pool['1x2'])
     OpArgMngr.add_workload('subtract', array_pool['4x1'], 2)
     OpArgMngr.add_workload('subtract', 2, array_pool['4x1'])
@@ -292,14 +292,14 @@ def _prepare_workloads():
     # OpArgMngr.add_workload('sign', np.array(_np.array([_np.nan]))) # failed
 
     OpArgMngr.add_workload('exp', array_pool['4x1'])
-    """
-    OpArgMngr.add_workload('less', np.array([0, 1, 2, 4, 2], dtype=np.float16), np.array([-2, 5, 1, 4, 3], dtype=np.float16))
+    
+    #OpArgMngr.add_workload('less', np.array([0, 1, 2, 4, 2], dtype=np.float16), np.array([-2, 5, 1, 4, 3], dtype=np.float16))
     OpArgMngr.add_workload('less', array_pool['4x1'], array_pool['1x2'])
     OpArgMngr.add_workload('less', np.array([np.nan]), np.array([np.nan]))
-    OpArgMngr.add_workload('less_equal', np.array([0, 1, 2, 4, 2], dtype=np.float16), np.array([-2, 5, 1, 4, 3], dtype=np.float16))
+    #OpArgMngr.add_workload('less_equal', np.array([0, 1, 2, 4, 2], dtype=np.float16), np.array([-2, 5, 1, 4, 3], dtype=np.float16))
     OpArgMngr.add_workload('less_equal', array_pool['4x1'], array_pool['1x2'])
     OpArgMngr.add_workload('less_equal', np.array([np.nan]), np.array([np.nan]))
-    """
+    
     OpArgMngr.add_workload('log', array_pool['4x1'])
     OpArgMngr.add_workload('log2', array_pool['4x1'])
     OpArgMngr.add_workload('log10', array_pool['4x1'])
@@ -368,13 +368,11 @@ def _check_interoperability_helper(op_name, *args, **kwargs):
 
 def check_interoperability(op_list):
     for name in op_list:
-        print('op_name:', name)
         workloads = OpArgMngr.get_workloads(name)
         assert workloads is not None, 'Workloads for operator `{}` has not been ' \
                                       'added for checking interoperability with ' \
                                       'the official NumPy.'.format(name)
         for workload in workloads:
-            print('worklosd:', workload)
             _check_interoperability_helper(name, *workload['args'], **workload['kwargs'])
 
 
@@ -382,18 +380,14 @@ def check_interoperability(op_list):
 @use_np
 @with_array_function_protocol
 def test_np_array_function_protocol():
-    print('test array function start')
     check_interoperability(_NUMPY_ARRAY_FUNCTION_LIST)
-    print('test array function end')
 
 
 @with_seed()
 @use_np
 @with_array_ufunc_protocol
 def test_np_array_ufunc_protocol():
-    print('test ufunc function start')
     check_interoperability(_NUMPY_ARRAY_UFUNC_LIST)
-    print('test ufunc function end')
 
 
 if __name__ == '__main__':

@@ -161,10 +161,10 @@ def _register_array_function():
 # https://docs.scipy.org/doc/numpy/reference/ufuncs.html#available-ufuncs
 _NUMPY_ARRAY_UFUNC_LIST = [
     'add',
-    #'equal',
-    #'not_equal',
-    #'greater',
-    #'greater_equal',
+    'equal',
+    'not_equal',
+    'greater',
+    'greater_equal',
     'subtract',
     'multiply',
     # Uncomment divide when mxnet.numpy.true_divide is added
@@ -176,8 +176,8 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'rint',
     'sign',
     'exp',
-    #'less',
-    #'less_equal',
+    'less',
+    'less_equal',
     'log',
     'log2',
     'log10',
