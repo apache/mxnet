@@ -156,14 +156,19 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
       << "Workspace given to SortByKey is too small: requested " << required_storage <<
       " B and got " << workspace->size(0) << " B.";
 
+    size_t start_keys = 0;
+    size_t start_values = start_keys +
+                          sorted_keys == nullptr ? keys_bytes : 0;
+    size_t start_scratch = start_values +
+                           sorted_values == nullptr ? values_bytes : 0;
     KDType* keys_out_ptr = sorted_keys == nullptr ?
-                           reinterpret_cast<KDType *>(workspace->dptr_) :
+                           reinterpret_cast<KDType *>(workspace->dptr_ + start_keys) :
                            sorted_keys->dptr_;
     VDType* values_out_ptr = sorted_values == nullptr ?
-                             reinterpret_cast<VDType *>(workspace->dptr_ + keys_bytes) :
+                             reinterpret_cast<VDType *>(workspace->dptr_ + start_values) :
                              sorted_values->dptr_;
 
-    void* temp_storage = reinterpret_cast<void *>(workspace->dptr_ + keys_bytes + values_bytes);
+    void* temp_storage = reinterpret_cast<void *>(workspace->dptr_ + start_scratch);
     // Sort
     if (is_ascend) {
       cub::DeviceRadixSort::SortPairs(temp_storage, sortpairs_bytes,

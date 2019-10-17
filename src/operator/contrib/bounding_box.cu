@@ -170,7 +170,7 @@ void WorkspaceForSort(const int num_elem,
                       const int width_elem,
                       const int alignment,
                       TempWorkspace<DType>* workspace) {
-  const index_t sort_scores_temp_space = mxnet::op::SortByKeyWorkspaceSize<DType, index_t, gpu>(num_elem);
+  const index_t sort_scores_temp_space = mxnet::op::SortByKeyWorkspaceSize<DType, index_t, gpu>(num_elem, false, false);
   workspace->scratch_space = align(sort_scores_temp_space,
                                    alignment);
 }
@@ -411,9 +411,10 @@ __global__ void ReduceNMSResultTriangle_kernel(uint32_t* nms_results,
   const int my_lane = threadIdx.x % warp_size;
 
   __shared__ uint32_t current_valid_boxes;
-  bool valid = true;
   const uint32_t full_mask = 0xFFFFFFFF;
-  const uint32_t my_warp_mask = 1 << my_lane;
+  const uint32_t my_lane_mask = 1 << my_lane;
+  const uint32_t my_warp_mask = (1 << (my_lane + 1)) - 1;
+  uint32_t valid = my_lane_mask;
   uint32_t valid_boxes;
 
   uint32_t my_next_mask = my_element_in_batch < topk ?
@@ -421,35 +422,35 @@ __global__ void ReduceNMSResultTriangle_kernel(uint32_t* nms_results,
     full_mask;
 #pragma unroll
   for (int i = 0; i < n_threads / warp_size; ++i) {
-    const uint32_t my_mask = my_next_mask;
+    uint32_t my_mask = my_next_mask;
     my_next_mask = (((i + 1) < n_threads / warp_size) &&
                     (my_element_in_batch < topk)) ?
       nms_results[(i + 1) * topk * num_batches + my_element]:
       full_mask;
     if (my_warp == i) {
-      valid_boxes = __ballot_sync(full_mask, valid);
+      my_mask = my_mask | my_warp_mask;
+      // Loop over warp_size - 1 because the last
+      // thread does not contribute to the mask anyway
 #pragma unroll
-      for (int j = 0; j < warp_size; ++j) {
-          const uint32_t mask = __shfl_sync(full_mask, valid?my_mask:full_mask, j);
-          const uint32_t p = (1 << (j+1)) - 1;
-          const uint32_t mp = mask | p;
-          valid_boxes = valid_boxes & mp;
-          valid = (valid_boxes & my_warp_mask) != 0;
+      for (int j = 0; j < warp_size - 1; ++j) {
+          const uint32_t mask = __shfl_sync(full_mask, valid ? my_mask : full_mask, j);
+          valid = valid & mask;
       }
+      valid_boxes = __ballot_sync(full_mask, valid);
       if (my_lane == 0) {
         current_valid_boxes = valid_boxes;
       }
     }
     __syncthreads();
-    if (my_warp > i) {
-      valid = valid && (((~my_mask) & current_valid_boxes) == 0);
+    if ((my_warp > i) && (((~my_mask) & current_valid_boxes) != 0)) {
+      valid = 0;
     }
     __syncthreads();
   }
   if (my_lane == 0) {
     nms_results[my_element] = valid_boxes;
   }
-  if (!valid) {
+  if (valid == 0) {
     data[(my_batch * num_elements_per_batch + my_element_in_batch) * element_width + score_index] = -1;
   }
 }
@@ -502,8 +503,8 @@ TempWorkspace<DType> GetWorkspace(const int num_batch,
   const int alignment = 128;
 
   // Get the workspace size
-  workspace.scores_temp_space = align(num_batch * num_elem * sizeof(DType), alignment);
-  workspace.indices_temp_spaces = align(num_batch * num_elem * sizeof(index_t), alignment);
+  workspace.scores_temp_space = 2 * align(num_batch * num_elem * sizeof(DType), alignment);
+  workspace.indices_temp_spaces = 2 * align(num_batch * num_elem * sizeof(index_t), alignment);
   WorkspaceForSort(num_elem, width_elem, alignment, &workspace);
   // Place for a buffer
   workspace.buffer_space = align(num_batch * num_elem * width_elem * sizeof(DType), alignment);
@@ -549,6 +550,8 @@ void CompactNMSResults(const Tensor<gpu, 3, DType>& data,
                        Tensor<gpu, 3, DType>* out,
                        Tensor<gpu, 1, index_t>* indices,
                        Tensor<gpu, 1, DType>* scores,
+                       Tensor<gpu, 1, index_t>* sorted_indices,
+                       Tensor<gpu, 1, DType>* sorted_scores,
                        Tensor<gpu, 1, char>* scratch,
                        const int score_index,
                        Stream<gpu>* s) {
@@ -570,9 +573,18 @@ void CompactNMSResults(const Tensor<gpu, 3, DType>& data,
     Tensor<gpu, 1, index_t> indices_batch(indices->dptr_ + i * num_elements_per_batch,
                                           Shape1(num_elements_per_batch),
                                           s);
-    mxnet::op::SortByKey(scores_batch, indices_batch, false, scratch);
+    Tensor<gpu, 1, DType> sorted_scores_batch(sorted_scores->dptr_ + i * num_elements_per_batch,
+                                              Shape1(num_elements_per_batch),
+                                              s);
+    Tensor<gpu, 1, index_t> sorted_indices_batch(sorted_indices->dptr_ + i * num_elements_per_batch,
+                                                 Shape1(num_elements_per_batch),
+                                                 s);
+    mxnet::op::SortByKey(scores_batch, indices_batch, false, scratch,
+                         0, 8 * sizeof(DType), &sorted_scores_batch,
+                         &sorted_indices_batch);
   }
-  CompactData<true>(*indices, data, out, -1, score_index, s);
+  CompactData<true>(*sorted_indices, data, out, -1, score_index, s);
+  //CompactData<true>(*indices, data, out, -1, score_index, s);
 }
 
 }  // namespace
@@ -619,7 +631,9 @@ void BoxNMSForwardGPU_notemp(const nnvm::NodeAttrs& attrs,
 
     FilterAndPrepareAuxData(data, &out, workspace, param, s);
     Tensor<gpu, 1, DType> scores(workspace.scores, Shape1(num_batch * num_elem), s);
+    Tensor<gpu, 1, DType> sorted_scores(workspace.scores + scores.MSize(), Shape1(num_batch * num_elem), s);
     Tensor<gpu, 1, index_t> indices(workspace.indices, Shape1(num_batch * num_elem), s);
+    Tensor<gpu, 1, index_t> sorted_indices(workspace.indices + indices.MSize(), Shape1(num_batch * num_elem), s);
     Tensor<gpu, 1, char> scratch(reinterpret_cast<char*>(workspace.scratch),
                                         Shape1(workspace.scratch_space), s);
     Tensor<gpu, 3, DType> buffer(workspace.buffer,
@@ -637,12 +651,22 @@ void BoxNMSForwardGPU_notemp(const nnvm::NodeAttrs& attrs,
       Tensor<gpu, 1, index_t> indices_batch(indices.dptr_ + i * num_elem,
                                             Shape1(num_elem),
                                             s);
-      mxnet::op::SortByKey(scores_batch, indices_batch, false, &scratch);
+      Tensor<gpu, 1, DType> sorted_scores_batch(sorted_scores.dptr_ + i * num_elem,
+                                                Shape1(num_elem),
+                                                s);
+      Tensor<gpu, 1, index_t> sorted_indices_batch(sorted_indices.dptr_ + i * num_elem,
+                                                   Shape1(num_elem),
+                                                   s);
+      mxnet::op::SortByKey(scores_batch, indices_batch, false, &scratch, 0,
+                           8 * sizeof(DType), &sorted_scores_batch,
+                           &sorted_indices_batch);
     }
-    CompactData<false>(indices, out, &buffer, topk, -1, s);
+    CompactData<false>(sorted_indices, out, &buffer, topk, -1, s);
+    /*CompactData<false>(indices, out, &buffer, topk, -1, s);*/
     NMS<DType> nms;
     nms(&buffer, &nms_scratch,  topk, param, s);
-    CompactNMSResults(buffer, &out, &indices, &scores, &scratch, param.score_index, s);
+    CompactNMSResults(buffer, &out, &indices, &scores, &sorted_indices,
+                      &sorted_scores, &scratch, param.score_index, s);
 
     // convert encoding
     if (param.in_format != param.out_format) {
