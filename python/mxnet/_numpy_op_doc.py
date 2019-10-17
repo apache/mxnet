@@ -755,7 +755,7 @@ def _np__random_shuffle(x):
 
     This function only shuffles the array along the first axis of a
     multi-dimensional array. The order of sub-arrays is changed but
-    their contents remains the same.
+    their contents remain the same.
 
     Parameters
     ----------
