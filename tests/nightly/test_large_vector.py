@@ -930,6 +930,19 @@ def test_minimum():
     assert z[-1] == 3
 
 
+def test_gather():
+    arr = mx.nd.ones(LARGE_X)
+    # Passing dtype=np.int64 since randomly generated indices are 
+    # very large that exceeds int32 limits.
+    idx = mx.nd.random.randint(0, LARGE_X, 10, dtype=np.int64)
+    # Calls gather_nd internally
+    tmp = arr[idx]
+    assert np.sum(tmp == 1) == 10
+    # Calls gather_nd internally
+    arr[idx] += 1
+    assert np.sum(arr[idx] == 2) == 10
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
