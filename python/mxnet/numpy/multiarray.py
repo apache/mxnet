@@ -192,6 +192,9 @@ class ndarray(NDArray):
         return mx_np_func(*args, **kwargs)
 
     def __array__(self, dtype=None):
+        """
+        Interface to make DeepNumPy compatible to some libraries that use official NumPy.
+        """
         if dtype is None or self.dtype == dtype:
             return self
         else:
@@ -199,6 +202,11 @@ class ndarray(NDArray):
 
     @property
     def __array_interface__(self):
+        """
+        Interface to have another way to convert DeepNumPy ndarray to official NumPy ndarray.
+
+        It makes that `arr.asnumpy()` equals to `onp.array(arr)`.
+        """
         return self.asnumpy().__array_interface__
 
     def _get_np_basic_indexing(self, key):
