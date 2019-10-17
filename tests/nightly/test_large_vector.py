@@ -708,41 +708,6 @@ def test_full():
     assert a[-1] == 3
 
 
-def test_hyperbolic():
-    def test_arccosh(a):
-        mx_res = mx.nd.arccosh(a)
-        assert_almost_equal(mx_res[-1].asnumpy(), np.arccosh(a[-1].asnumpy()))
-
-    def test_arcsinh(a):
-        mx_res = mx.nd.arcsinh(a)
-        assert_almost_equal(mx_res[-1].asnumpy(), np.arcsinh(a[-1].asnumpy()))
-
-    def test_arctanh(a):
-        a[-1] = 0   # arctanh of 1 is inf, assert_almost_equal gives "divide by 0" for comparing 2 inf values
-        mx_res = mx.nd.arctanh(a)
-        assert_almost_equal(mx_res[-1].asnumpy(), np.arctanh(a[-1].asnumpy()))
-
-    def test_cosh(a):
-        mx_res = mx.nd.cosh(a)
-        assert_almost_equal(mx_res[-1].asnumpy(), np.cosh(a[-1].asnumpy()))
-
-    def test_sinh(a):
-        mx_res = mx.nd.sinh(a)
-        assert_almost_equal(mx_res[-1].asnumpy(), np.sinh(a[-1].asnumpy()))
-
-    def test_tanh(a):
-        mx_res = mx.nd.tanh(a)
-        assert_almost_equal(mx_res[-1].asnumpy(), np.tanh(a[-1].asnumpy()))
-
-    a = mx.nd.ones(LARGE_X)
-    test_arccosh(a)
-    test_arcsinh(a)
-    test_arctanh(a)
-    test_cosh(a)
-    test_sinh(a)
-    test_tanh(a)
-
-
 def test_sign():
     a = mx.nd.random.normal(-1, 1, shape=LARGE_X)
     mx_res = mx.nd.sign(a)
@@ -750,43 +715,41 @@ def test_sign():
 
 
 def test_logical():
-    def test_logical_and(a, b):
+    def check_logical_and(a, b):
         mx_res = mx.nd.logical_and(a, b)
         assert_almost_equal(mx_res[-1].asnumpy(), np.logical_and(a[-1].asnumpy(), b[-1].asnumpy()))
 
-    def test_logical_or(a, b):
-        mx_res = mx.nd.logical_and(a, b)
+    def check_logical_or(a, b):
+        mx_res = mx.nd.logical_or(a, b)
         assert_almost_equal(mx_res[-1].asnumpy(), np.logical_and(a[-1].asnumpy(), b[-1].asnumpy()))
 
-    def test_logical_not(a, b):
-        mx_res = mx.nd.logical_and(a, b)
+    def check_logical_not(a, b):
+        mx_res = mx.nd.logical_not(a, b)
         assert_almost_equal(mx_res[-1].asnumpy(), np.logical_and(a[-1].asnumpy(), b[-1].asnumpy()))
 
-    def test_logical_xor(a, b):
-        mx_res = mx.nd.logical_and(a, b)
+    def check_logical_xor(a, b):
+        mx_res = mx.nd.logical_xor(a, b)
         assert_almost_equal(mx_res[-1].asnumpy(), np.logical_and(a[-1].asnumpy(), b[-1].asnumpy()))
 
     a = mx.nd.ones(LARGE_X)
     b = mx.nd.zeros(LARGE_X)
-    test_logical_and(a, b)
-    test_logical_or(a, b)
-    test_logical_not(a, b)
-    test_logical_xor(a, b)
+    check_logical_and(a, b)
+    check_logical_or(a, b)
+    check_logical_not(a, b)
+    check_logical_xor(a, b)
 
 
 def test_regression():
     shape = LARGE_X
 
-    def check_regression(symbol, forward, backward, shape):
+    def check_regression(symbol, forward, shape):
         # init executor
         data_s = mx.symbol.Variable('data')
         label_s = mx.symbol.Variable('label')
         out_s = symbol(data=data_s, label=label_s)
-        grad_req = {'data': 'write', 'label': 'null'}
-        exe = out_s.simple_bind(ctx=default_context(), data=shape, label=shape, grad_req=grad_req)
+        exe = out_s.simple_bind(ctx=mx.cpu(0), data=shape, label=shape)
 
         arg_map = dict(zip(out_s.list_arguments(), exe.arg_arrays))
-        grad_map = dict(zip(out_s.list_arguments(), exe.grad_arrays))
 
         # init data
         data = mx.random.uniform(-1, -1, shape)
@@ -799,17 +762,13 @@ def test_regression():
         exe.forward(is_train=True)
         exe.backward()
         np_out = forward(data.asnumpy())
-        out_grad = backward(np_out, label.asnumpy().reshape(np_out.shape)) / shape[1]
         assert_almost_equal(exe.outputs[0].asnumpy(), np_out, atol=atol)
-        assert_almost_equal(grad_map["data"].asnumpy(), out_grad, atol=atol)
 
     check_regression(mx.symbol.LogisticRegressionOutput,
                      lambda x: 1.0 / (1.0 + np.exp(-x)),
-                     lambda x, y: x - y,
                      shape)
     check_regression(mx.symbol.LinearRegressionOutput,
                      lambda x: x,
-                     lambda x, y: x - y,
                      shape)
 
 
@@ -855,7 +814,7 @@ def assert_correctness_of_rounding_ops(output, mid, expected_vals):
 
 def test_rounding_ops():
     x = create_input_for_rounding_ops()
-    
+
     def check_ceil():
         y = nd.ceil(x)
         # expected ouput for middle 5 values after applying ceil()
@@ -957,6 +916,48 @@ def test_trigonometric_ops():
         expected_output = [-.577, -1, 0, 1, .577]
         assert_correctness_of_trigonometric_ops(y, expected_output)
 
+    def check_arcsinh():
+        x = create_input_for_trigonometric_ops([-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2])
+        y = nd.arcsinh(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying arcsinh()
+        expected_output = [np.arcsinh(-np.pi/2), np.arcsinh(-np.pi/4), 0, np.arcsinh(np.pi/4), np.arcsinh(np.pi/2)]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_arccosh():
+        x = create_input_for_trigonometric_ops([1, np.pi/2, 3*np.pi/4, np.pi])
+        y = nd.arccosh(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying arccosh()
+        expected_output = [0, np.arccosh(np.pi/2), np.arccosh(3*np.pi/4), np.arccosh(np.pi)]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_arctanh():
+        x = create_input_for_trigonometric_ops([-1/4, -1/2, 0, 1/4, 1/2])
+        y = nd.arctanh(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying arctanh()
+        expected_output = [np.arctanh(-1/4), np.arctanh(-1/2), 0, np.arctanh(1/4), np.arctanh(1/2)]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_sinh():
+        x = create_input_for_trigonometric_ops([-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2])
+        y = nd.sinh(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying sinh()
+        expected_output = [np.sinh(-np.pi/2), np.sinh(-np.pi/4), 0, np.sinh(np.pi/4), np.sinh(np.pi/2)]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_cosh():
+        x = create_input_for_trigonometric_ops([0, 1, np.pi/2, 3*np.pi/4, np.pi])
+        y = nd.cosh(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying cosh()
+        expected_output = [1, np.cosh(1), np.cosh(np.pi/2), np.cosh(3*np.pi/4), np.cosh(np.pi)]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_tanh():
+        x = create_input_for_trigonometric_ops([-1/4, -1/2, 0, 1/4, 1/2])
+        y = nd.tanh(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying tanh()
+        expected_output = [np.tanh(-1/4), np.tanh(-1/2), 0, np.tanh(1/4), np.tanh(1/2)]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
     def check_radians():
         x = create_input_for_trigonometric_ops([0, 90, 180, 270, 360])
         y = nd.radians(x)
@@ -977,6 +978,12 @@ def test_trigonometric_ops():
     check_sin()
     check_cos()
     check_tan()
+    check_arcsinh()
+    check_arccosh()
+    check_arctanh()
+    check_sinh()
+    check_cosh()
+    check_tanh()
     check_radians()
     check_degrees()
 
