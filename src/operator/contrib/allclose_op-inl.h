@@ -84,7 +84,7 @@ inline bool AllCloseType(const nnvm::NodeAttrs& attrs,
   return (*out_attrs)[0] != -1;
 }
 
-using namespace mshadow_op::isnan_typed;
+using mshadow::isnan_typed::IsNan;
 
 template<int req>
 struct allclose_forward {
