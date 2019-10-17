@@ -1988,6 +1988,22 @@ def test_large_int_rounding():
     assert np.all(a == large_integer)
 
 
+def test_load_saved_gpu_array_when_no_gpus_are_present():
+    # State obtained with mx.nd.arange(1, ctx=mx.gpu()).__getstate__()
+    # State needs to be exported manually, as running above command will only
+    # work if a gpu is present.
+    ndarray_state = {
+        'handle':
+        bytearray(
+            b'\xc9\xfa\x93\xf9\x00\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+        )
+    }
+    array = mx.nd.arange(1)
+    # Test that MXNDArrayLoadFromRawBytes works even if we have built with Cuda
+    # but there are no GPUs
+    array.__setstate__(ndarray_state)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
