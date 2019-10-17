@@ -32,6 +32,8 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(NumpyTransposeParam);
 DMLC_REGISTER_PARAMETER(NumpyRollParam);
+DMLC_REGISTER_PARAMETER(NumpyMoveaxisParam);
+DMLC_REGISTER_PARAMETER(NumpyRot90Param);
 
 bool NumpyTransposeShape(const nnvm::NodeAttrs& attrs,
                          mxnet::ShapeVector *in_attrs,
@@ -746,6 +748,172 @@ NNVM_REGISTER_OP(_backward_npi_flip)
   return std::vector<ResourceRequest> {ResourceRequest::kTempSpace};
 })
 .set_attr<FCompute>("FCompute<cpu>", NumpyFlipForward<cpu>);
+
+bool NumpyMoveaxisShape(const nnvm::NodeAttrs& attrs,
+                        mxnet::ShapeVector *in_attrs,
+                        mxnet::ShapeVector *out_attrs) {
+  const NumpyMoveaxisParam& param = nnvm::get<NumpyMoveaxisParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  mxnet::TShape& shp = (*in_attrs)[0];
+  CHECK_LE(shp.ndim(), 6) << "Transpose support at most 6 dimensions";
+  CHECK_EQ(param.source.ndim(), param.destination.ndim())
+    << "source and destination not equal.";
+  mxnet::TShape ret(shp.ndim(), -1);
+  mxnet::TShape axes;
+  axes = NumpyMoveaxisShapeImpl(attrs, shp.ndim());
+  for (int i = 0; i < shp.ndim(); ++i) {
+    CHECK(axes[i] < static_cast<int64_t>(shp.ndim()));
+    ret[i] = shp[axes[i]];
+  }
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, ret);
+  return shape_is_known(ret);
+}
+
+NNVM_REGISTER_OP(_np_moveaxis)
+.describe(R"code(Move axes of an array to new positions.
+Other axes remain in their original order.
+)code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<NumpyMoveaxisParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyMoveaxisShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+     const NumpyMoveaxisParam& param = nnvm::get<NumpyMoveaxisParam>(n->attrs.parsed);
+     std::ostringstream os1;
+     os1 << param.source;
+     std::ostringstream os2;
+     os2 << param.destination;
+     return MakeNonlossGradNode("_np_moveaxis", n, ograds, {},
+                                {{"source", os2.str()}, {"destination", os1.str()}});
+})
+.set_attr<FCompute>("FCompute<cpu>", NumpyMoveaxisCompute<cpu>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) { return std::vector<std::string>{"a"};
+})
+.add_argument("a", "NDArray-or-Symbol", "Source input")
+.add_arguments(NumpyMoveaxisParam::__FIELDS__());
+
+inline bool NumpyRot90Shape(const nnvm::NodeAttrs& attrs,
+                            mxnet::ShapeVector *in_attrs,
+                            mxnet::ShapeVector *out_attrs) {
+  using namespace mshadow;
+  const NumpyRot90Param& param = nnvm::get<NumpyRot90Param>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  mxnet::TShape& shp = (*in_attrs)[0];
+  if (!param.axes.has_value() || (param.axes.has_value() && param.axes.value().ndim() != 2)) {
+    LOG(FATAL) << "The length of axes must be 2.";
+  }
+  int real_k(param.k);
+  real_k = real_k % 4;
+  if (real_k < 0) {
+    real_k += 4;
+  }
+
+  mxnet::TShape res(shp);
+  mxnet::TShape real_axes(param.axes.value());
+  for (index_t i = 0; i < real_axes.ndim(); i++) {
+    if (real_axes[i] < 0) {
+      real_axes[i] += shp.ndim();
+    }
+  }
+
+  CHECK_NE(real_axes[0], real_axes[1])
+      << "axes have duplicates "
+      << real_axes;
+  if (real_axes[0] > shp.ndim() || real_axes[1] > shp.ndim() ||
+      real_axes[0] < 0 || real_axes[1] < 0) {
+    LOG(FATAL) << "Axes out of range for array of ndim";
+  }
+
+  if (real_k % 2 == 0) {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, res);
+    return shape_is_known(res);
+  }
+
+  res[real_axes[0]] += res[real_axes[1]];
+  res[real_axes[1]] = res[real_axes[0]] - res[real_axes[1]];
+  res[real_axes[0]] -= res[real_axes[1]];
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, res);
+  return shape_is_known(res);
+}
+
+NNVM_REGISTER_OP(_npi_rot90)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<NumpyRot90Param>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+     return std::vector<std::string>{"data"};
+})
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyRot90Shape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<mxnet::FCompute>("FCompute<cpu>", NumpyRot90Compute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+     const NumpyRot90Param& param = nnvm::get<NumpyRot90Param>(n->attrs.parsed);
+     std::ostringstream os1;
+     os1 << param.k;
+     std::ostringstream os2;
+     os2 << param.axes;
+     return MakeNonlossGradNode("_npi_rot90", n, ograds, {},
+                                {{"k", os1.str()}, {"axes", os2.str()}});
+})
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& n) {
+     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+.add_argument("data", "NDArray-or-Symbol", "Input ndarray")
+.add_arguments(NumpyRot90Param::__FIELDS__());
+
+inline bool HSplitOpShape(const nnvm::NodeAttrs& attrs,
+                          mxnet::ShapeVector* in_attrs,
+                          mxnet::ShapeVector* out_attrs) {
+  using namespace mshadow;
+  CHECK_EQ(in_attrs->size(), 1U);
+  mxnet::TShape dshape = in_attrs->at(split_enum::kData);
+  if (!mxnet::ndim_is_known(dshape)) return false;
+  int real_axis;
+  if (dshape.ndim() > 1) {
+    real_axis = 1;
+  } else {
+    real_axis = 0;
+  }
+  return SplitOpShapeImpl(attrs, in_attrs, out_attrs, real_axis);
+}
+
+NNVM_REGISTER_OP(_npi_hsplit)
+.set_attr_parser(ParamParser<SplitParam>)
+.set_num_inputs(1)
+.set_num_outputs(SplitNumOutputs)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+     return std::vector<std::string>{"data"};
+})
+.set_attr<mxnet::FInferShape>("FInferShape", HSplitOpShape)
+.set_attr<nnvm::FInferType>("FInferType", SplitOpType)
+.set_attr<FCompute>("FCompute<cpu>", HSplitOpForward<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& n) {
+     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_npi_hsplit_backward"})
+.add_argument("data", "NDArray-or-Symbol", "The input")
+.add_arguments(SplitParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_npi_hsplit_backward)
+.set_attr_parser(ParamParser<SplitParam>)
+.set_num_inputs(SplitNumOutputs)
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& n) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+.set_attr<FCompute>("FCompute<cpu>", HSplitOpBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -97,5 +97,17 @@ NNVM_REGISTER_OP(_npi_flip)
 NNVM_REGISTER_OP(_backward_npi_flip)
 .set_attr<FCompute>("FCompute<gpu>", NumpyFlipForward<gpu>);
 
+NNVM_REGISTER_OP(_np_moveaxis)
+.set_attr<FCompute>("FCompute<gpu>", NumpyMoveaxisCompute<gpu>);
+
+NNVM_REGISTER_OP(_npi_rot90)
+.set_attr<FCompute>("FCompute<gpu>", NumpyRot90Compute<gpu>);
+
+NNVM_REGISTER_OP(_npi_hsplit)
+.set_attr<FCompute>("FCompute<gpu>", HSplitOpForward<gpu>);
+
+NNVM_REGISTER_OP(_npi_hsplit_backward)
+.set_attr<FCompute>("FCompute<gpu>", HSplitOpBackward<gpu>);
+
 }  // namespace op
 }  // namespace mxnet
