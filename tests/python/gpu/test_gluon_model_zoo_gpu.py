@@ -81,16 +81,17 @@ def test_inference():
             gpu_param = gpu_params.get(k)
             gpu_param.set_data(cpu_param.data().as_in_context(mx.gpu()))
 
+        cpu_data = mx.nd.array(data, ctx=mx.cpu())
         for i in range(5):
             # Run inference.
             with autograd.record(train_mode=False):
-                cpu_out = cpu_model(mx.nd.array(data, ctx=mx.cpu()))
+                cpu_out = cpu_model(cpu_data)
                 gpu_out = gpu_model(gpu_data)
-            out = cpu_out.asnumpy()
-            max_val = np.max(np.abs(out))
+
+            max_val = np.max(np.abs(cpu_out.asnumpy()))
             gpu_max_val = np.max(np.abs(gpu_out.asnumpy()))
             eprint(model_name + ": CPU " + str(max_val) + ", GPU " + str(gpu_max_val))
-            assert_almost_equal(out / max_val, gpu_out.asnumpy() / max_val, rtol=1e-3, atol=1e-3)
+            assert_almost_equal(cpu_out / max_val, gpu_out / gpu_max_val, rtol=1e-3, atol=1e-3)
 
 def get_nn_model(name):
     if "densenet" in name:
@@ -161,7 +162,7 @@ def test_training():
         max_val = np.max(np.abs(cpu_out.asnumpy()))
         gpu_max_val = np.max(np.abs(gpu_out.asnumpy()))
         eprint(model_name + ": CPU " + str(max_val) + ", GPU " + str(gpu_max_val))
-        assert_almost_equal(cpu_out.asnumpy() / max_val, gpu_out.asnumpy() / max_val, rtol=1e-3, atol=1e-3)
+        assert_almost_equal(cpu_out / max_val, gpu_out / max_val, rtol=1e-3, atol=1e-3)
         cpu_loss.backward()
         gpu_loss.backward()
         cpu_trainer.step(batch_size)
@@ -177,8 +178,7 @@ def test_training():
                 k = k.replace(cpu_params.prefix, '')
                 cpu_param = cpu_params.get(k)
                 gpu_param = gpu_params.get(k)
-                assert_almost_equal(cpu_param.data().asnumpy(), gpu_param.data().asnumpy(),
-                        rtol=1e-3, atol=1e-3)
+                assert_almost_equal(cpu_param.data(), gpu_param.data(), rtol=1e-3, atol=1e-3)
 
 if __name__ == '__main__':
     import nose
