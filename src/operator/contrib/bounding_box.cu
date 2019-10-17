@@ -416,10 +416,15 @@ __global__ void ReduceNMSResultTriangle_kernel(uint32_t* nms_results,
   const uint32_t my_warp_mask = 1 << my_lane;
   uint32_t valid_boxes;
 
+  uint32_t my_next_mask = my_element_in_batch < topk ?
+    nms_results[my_element]:
+    full_mask;
 #pragma unroll
   for (int i = 0; i < n_threads / warp_size; ++i) {
-    const uint32_t my_mask = my_element_in_batch < topk ?
-      nms_results[i * topk * num_batches + my_element]:
+    const uint32_t my_mask = my_next_mask;
+    my_next_mask = (((i + 1) < n_threads / warp_size) &&
+                    (my_element_in_batch < topk)) ?
+      nms_results[(i + 1) * topk * num_batches + my_element]:
       full_mask;
     if (my_warp == i) {
       valid_boxes = __ballot_sync(full_mask, valid);
@@ -431,7 +436,6 @@ __global__ void ReduceNMSResultTriangle_kernel(uint32_t* nms_results,
           valid_boxes = valid_boxes & mp;
           valid = (valid_boxes & my_warp_mask) != 0;
       }
-      // valid = (valid_boxes & my_warp_mask) != 0;
       if (my_lane == 0) {
         current_valid_boxes = valid_boxes;
       }
@@ -445,7 +449,6 @@ __global__ void ReduceNMSResultTriangle_kernel(uint32_t* nms_results,
   if (my_lane == 0) {
     nms_results[my_element] = valid_boxes;
   }
-  // valid = (valid_boxes & my_warp_mask) != 0;
   if (!valid) {
     data[(my_batch * num_elements_per_batch + my_element_in_batch) * element_width + score_index] = -1;
   }
