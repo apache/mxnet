@@ -1942,7 +1942,7 @@ class Updater(object):
 
     def __call__(self, index, grad, weight):
         """Updates weight given gradient and index."""
-        allow_np = self.optimizer.allow_np_array
+        allow_np = self.optimizer.allow_np_array if hasattr(self.optimizer, "allow_np_array") else is_np_array()
         if not isinstance(index, (list, tuple)):
             indices = [index]
             grads = [_as_classic(grad, allow_np)]

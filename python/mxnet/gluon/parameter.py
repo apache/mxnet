@@ -24,9 +24,10 @@ __all__ = ['DeferredInitializationError', 'Parameter', 'Constant',
            'ParameterDict', 'tensor_types']
 
 
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 import warnings
 import numpy as np
+import mxnet as mx
 
 from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer, context
@@ -887,8 +888,22 @@ class ParameterDict(object):
 
     def zero_grad(self):
         """Sets all Parameters' gradient buffer to 0."""
-        for i in self.values():
-            i.zero_grad()
+        # collect gradient arrays for each ctx
+        arrays = defaultdict(list)
+        for p in self.values():
+            if p.grad_req == 'null' or p._grad is None:
+                continue
+            for g in p.list_grad():
+                if g.stype == 'row_sparse':
+                    mx.ndarray.zeros_like(g, out=g)
+                else:
+                    arrays[g.context].append(g)
+
+        if len(arrays) == 0:
+            return
+
+        for arr in arrays.values():
+            mx.nd.reset_arrays(*arr, num_arrays=len(arr))
 
     def reset_ctx(self, ctx):
         """Re-assign all Parameters to other contexts.
