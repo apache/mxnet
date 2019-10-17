@@ -29,13 +29,13 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_true_divide)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::div>);
+.set_attr<FCompute>("FCompute<gpu>", TrueDivideBroadcastCompute<gpu, mshadow_op::true_divide>);
 
 NNVM_REGISTER_OP(_npi_true_divide_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::div>);
+.set_attr<FCompute>("FCompute<gpu>", TrueDivideScalarCompute<gpu, mshadow_op::true_divide>);
 
 NNVM_REGISTER_OP(_npi_rtrue_divide_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::rdiv>);
+.set_attr<FCompute>("FCompute<gpu>", TrueDivideScalarCompute<gpu, mshadow_op::rtrue_divide>);
 
 }  // namespace op
 }  // namespace mxnet

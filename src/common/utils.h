@@ -838,6 +838,10 @@ inline mxnet::TShape CanonicalizeAxes(const mxnet::TShape& src) {
   return axes;
 }
 
+inline bool is_float(const int dtype) {
+  return dtype == mshadow::kFloat32 || dtype == mshadow::kFloat64 || dtype == mshadow::kFloat16;
+}
+
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_UTILS_H_
