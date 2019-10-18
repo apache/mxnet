@@ -253,16 +253,14 @@ class DropoutOp {
                            const TBlob &mask,
                            const TBlob &out) {
       Stream<xpu> *s = ctx.get_stream<xpu>();
-      // get a random seed from mxnet random on cpu
-      Stream<cpu> *stream = ctx.get_stream<cpu>();
-      Random<cpu, unsigned> *prnd = ctx.requested[1].get_random<cpu, unsigned>(stream);
-      Tensor<cpu, 1, char> workspace =
-        ctx.requested[2].get_space_typed<cpu, 1, char>(Shape1(1), stream);
+      Random<xpu, unsigned> *prnd = ctx.requested[1].get_random<xpu, unsigned>(s);
+      Tensor<xpu, 1, char> workspace =
+        ctx.requested[2].get_space_typed<xpu, 1, char>(Shape1(1), s);
       // slice workspace
       char *workspace_ptr = workspace.dptr_;
-      Tensor<cpu, 1, unsigned> random_number =
-        Tensor<cpu, 1, unsigned>(reinterpret_cast<unsigned *>(workspace_ptr),
-                                 Shape1(1), stream);
+      Tensor<xpu, 1, unsigned> random_number =
+        Tensor<xpu, 1, unsigned>(reinterpret_cast<unsigned *>(workspace_ptr),
+                                 Shape1(1), s);
       prnd->GetRandInt(random_number);
       uint64_t seed_ = 17 + reinterpret_cast<uint64_t>(&random_number) % 4096;  // NOLINT(runtime/threadsafe_fn)
       // set dropout state.
