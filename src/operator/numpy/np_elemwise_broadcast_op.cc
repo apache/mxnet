@@ -109,6 +109,7 @@ NNVM_REGISTER_OP(_npi_lcm)
 [](const NodeAttrs& attrs){
      return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};
 })
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::lcm>)
 .add_argument("lhs", "NDArray-or-Symbol", "First input to the function")
 .add_argument("rhs", "NDArray-or-Symbol", "Second input to the function");
@@ -125,6 +126,7 @@ NNVM_REGISTER_OP(_npi_lcm_scalar)
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("data", "NDArray-or-Symbol", "source input")
 .add_argument("scalar", "int", "scalar input")
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::lcm>);

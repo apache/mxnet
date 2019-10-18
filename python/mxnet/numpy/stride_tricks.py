@@ -51,6 +51,6 @@ def broadcast_arrays(*args):
 
     if all(array.shape == shape for array in args):
         # Common case where nothing needs to be broadcasted.
-        return args
+        return list(args)
 
     return [_mx_np_op.broadcast_to(array, shape) for array in args]

@@ -115,6 +115,8 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'vdot',
     'vstack',
     'zeros_like',
+    'meshgrid',
+    'outer'
 ]
 
 
@@ -204,6 +206,7 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'ceil',
     'trunc',
     'floor',
+    'logical_not',
 ]
 
 

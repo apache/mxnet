@@ -708,6 +708,174 @@ def test_full():
     assert a[-1] == 3
 
 
+def test_astype():
+    x = create_vector(size=LARGE_X//4)
+    x = nd.tile(x, 4)
+    y = x.astype('int32')
+    assert y.dtype == np.int32
+    assert y[-1] == LARGE_X//4-1
+
+
+def test_cast():
+    x = create_vector(size=LARGE_X//4)
+    x = nd.tile(x, 4)
+    y = nd.cast(x, np.int32)
+    assert y.dtype == np.int32
+    assert y[-1] == LARGE_X//4-1
+
+
+def test_repeat():
+    x = create_vector(size=LARGE_X//2)
+    y = nd.repeat(x, repeats=2, axis = 0)
+    assert y.shape[0] == LARGE_X
+    assert y[1] == 0
+    assert y[LARGE_X-1] == LARGE_X//2-1
+
+
+def create_input_for_rounding_ops():
+    # Creates an vector with values (-LARGE/2 .... -2, -1, 0, 1, 2, .... , LARGE/2-1)
+    # then divides each element by 2 i.e (-LARGE/4 .... -1, -0.5, 0, 0.5, 1, .... , LARGE/4-1)
+    inp = nd.arange(-LARGE_X//2, LARGE_X//2, dtype=np.float64)
+    inp = inp/2
+    return inp
+
+
+def assert_correctness_of_rounding_ops(output, mid, expected_vals):
+    # checks verifies 5 values at the middle positions of the input vector
+    # i.e mid-2, mid-1, mid, mid+1, mid+2
+    output_idx_to_inspect = [mid-2, mid-1, mid, mid+1, mid+2]
+    for i in range(len(output_idx_to_inspect)):
+        assert output[output_idx_to_inspect[i]] == expected_vals[i]
+
+
+def test_rounding_ops():
+    x = create_input_for_rounding_ops()
+    
+    def check_ceil():
+        y = nd.ceil(x)
+        # expected ouput for middle 5 values after applying ceil()
+        expected_output = [-1, 0, 0, 1, 1]
+        assert_correctness_of_rounding_ops(y, LARGE_X//2, expected_output)
+
+    def check_fix():
+        y = nd.fix(x)
+        # expected ouput for middle 5 values after applying fix()
+        expected_output = [-1, 0, 0, 0, 1]
+        assert_correctness_of_rounding_ops(y, LARGE_X//2, expected_output)
+
+    def check_floor():
+        y = nd.floor(x)
+        # expected ouput for middle 5 values after applying floor()
+        expected_output = [-1, -1, 0, 0, 1]
+        assert_correctness_of_rounding_ops(y, LARGE_X//2, expected_output)
+
+    def check_rint():
+        y = nd.rint(x)
+        # expected ouput for middle 5 values after applying rint()
+        expected_output = [-1, -1, 0, 0, 1]
+        assert_correctness_of_rounding_ops(y, LARGE_X//2, expected_output)
+
+    def check_round():
+        y = nd.round(x)
+        # expected ouput for middle 5 values after applying round()
+        expected_output = [-1, -1, 0, 1, 1]
+        assert_correctness_of_rounding_ops(y, LARGE_X//2, expected_output)
+
+    def check_trunc():
+        y = nd.trunc(x)
+        # expected ouput for middle 5 values after applying trunc()
+        expected_output = [-1, 0, 0, 0, 1]
+        assert_correctness_of_rounding_ops(y, LARGE_X//2, expected_output)
+
+    check_ceil()
+    check_fix()
+    check_floor()
+    check_rint()
+    check_round()
+    check_trunc()
+
+
+def create_input_for_trigonometric_ops(vals):
+    # Creates large vector input of size(LARGE_X) from vals using tile operator
+    inp = nd.array(vals)
+    inp = nd.tile(inp, LARGE_X//len(vals))
+    return inp
+
+
+def assert_correctness_of_trigonometric_ops(output, expected_vals):
+    # checks verifies 5 values at positions(0, 1, -3, -2, -1) of the input vector
+    output_idx_to_inspect = [0, 1, -3, -2, -1]
+    for i in range(len(output_idx_to_inspect)):
+        assert np.abs(output[output_idx_to_inspect[i]].asnumpy()-expected_vals[i]) <= 1e-3
+
+
+def test_trigonometric_ops():
+    def check_arcsin():
+        x = create_input_for_trigonometric_ops([-1, -.707, 0, .707, 1])
+        y = nd.arcsin(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying arcsin()
+        expected_output = [-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_arccos():
+        x = create_input_for_trigonometric_ops([-1, -.707, 0, .707, 1])
+        y = nd.arccos(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying arccos()
+        expected_output = [np.pi, 3*np.pi/4, np.pi/2, np.pi/4, 0]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_arctan():
+        x = create_input_for_trigonometric_ops([-np.Inf, -1, 0, 1, np.Inf])
+        y = nd.arctan(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying arctan()
+        expected_output = [-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_sin():
+        x = create_input_for_trigonometric_ops([-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2])
+        y = nd.sin(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying sin()
+        expected_output = [-1, -.707, 0, .707, 1]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_cos():
+        x = create_input_for_trigonometric_ops([0, np.pi/4, np.pi/2, 3*np.pi/4, np.pi])
+        y = nd.cos(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying cos()
+        expected_output = [1, .707, 0, -.707, -1]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_tan():
+        x = create_input_for_trigonometric_ops([-np.pi/6, -np.pi/4, 0, np.pi/4, np.pi/6])
+        y = nd.tan(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying tan()
+        expected_output = [-.577, -1, 0, 1, .577]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_radians():
+        x = create_input_for_trigonometric_ops([0, 90, 180, 270, 360])
+        y = nd.radians(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying radians()
+        expected_output = [0, np.pi/2, np.pi, 3*np.pi/2, 2*np.pi]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_degrees():
+        x = create_input_for_trigonometric_ops([0, np.pi/2, np.pi, 3*np.pi/2, 2*np.pi])
+        y = nd.degrees(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying degrees()
+        expected_output = [0, 90, 180, 270, 360]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    check_arcsin()
+    check_arccos()
+    check_arctan()
+    check_sin()
+    check_cos()
+    check_tan()
+    check_radians()
+    check_degrees()
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

@@ -77,6 +77,9 @@ def _prepare_workloads():
     OpArgMngr.add_workload('min', array_pool['4x1'])
     OpArgMngr.add_workload('mean', array_pool['4x1'])
     OpArgMngr.add_workload('mean', array_pool['4x1'], axis=0, keepdims=True)
+    OpArgMngr.add_workload('mean', np.array([[1, 2, 3], [4, 5, 6]]))
+    OpArgMngr.add_workload('mean', np.array([[1, 2, 3], [4, 5, 6]]), axis=0)
+    OpArgMngr.add_workload('mean', np.array([[1, 2, 3], [4, 5, 6]]), axis=1)
     OpArgMngr.add_workload('ones_like', array_pool['4x1'])
     OpArgMngr.add_workload('prod', array_pool['4x1'])
 
@@ -181,6 +184,10 @@ def _prepare_workloads():
     OpArgMngr.add_workload('zeros_like', np.random.uniform(size=(3, 3)).astype(np.float64))
     OpArgMngr.add_workload('zeros_like', np.random.uniform(size=(3, 3)).astype(np.float32))
     OpArgMngr.add_workload('zeros_like', np.random.randint(2, size = (3, 3)))
+    OpArgMngr.add_workload('outer', np.ones((5)), np.ones((2)))
+    OpArgMngr.add_workload('meshgrid', np.array([1, 2, 3]))
+    OpArgMngr.add_workload('meshgrid', np.array([1, 2, 3]), np.array([4, 5, 6, 7]))
+    OpArgMngr.add_workload('meshgrid', np.array([1, 2, 3]), np.array([4, 5, 6, 7]), indexing='ij')
 
     # workloads for array ufunc protocol
     OpArgMngr.add_workload('add', array_pool['4x1'], array_pool['1x2'])
@@ -213,6 +220,9 @@ def _prepare_workloads():
     OpArgMngr.add_workload('power', array_pool['4x1'], 2)
     OpArgMngr.add_workload('power', 2, array_pool['4x1'])
     OpArgMngr.add_workload('power', array_pool['4x1'], array_pool['1x1x0'])
+    OpArgMngr.add_workload('power', np.array([1, 2, 3], np.int32), 2.00001)
+    OpArgMngr.add_workload('power', np.array([15, 15], np.int64), np.array([15, 15], np.int64))
+    OpArgMngr.add_workload('power', 0, np.arange(1, 10))
     OpArgMngr.add_workload('mod', array_pool['4x1'], array_pool['1x2'])
     OpArgMngr.add_workload('mod', array_pool['4x1'], 2)
     OpArgMngr.add_workload('mod', 2, array_pool['4x1'])
@@ -302,6 +312,12 @@ def _prepare_workloads():
     """
     OpArgMngr.add_workload('log', array_pool['4x1'])
     OpArgMngr.add_workload('log2', array_pool['4x1'])
+    OpArgMngr.add_workload('log2', np.array(2.**65))
+    OpArgMngr.add_workload('log2', np.array(np.inf))
+    OpArgMngr.add_workload('log2', np.array(1.))
+    OpArgMngr.add_workload('log1p', np.array(-1.))
+    OpArgMngr.add_workload('log1p', np.array(np.inf))
+    OpArgMngr.add_workload('log1p', np.array(1e-6))
     OpArgMngr.add_workload('log10', array_pool['4x1'])
     OpArgMngr.add_workload('expm1', array_pool['4x1'])
     OpArgMngr.add_workload('sqrt', array_pool['4x1'])
@@ -328,6 +344,11 @@ def _prepare_workloads():
     OpArgMngr.add_workload('ceil', array_pool['4x1'])
     OpArgMngr.add_workload('trunc', array_pool['4x1'])
     OpArgMngr.add_workload('floor', array_pool['4x1'])
+    OpArgMngr.add_workload('logical_not', np.ones(10, dtype=np.int32))
+    OpArgMngr.add_workload('logical_not', array_pool['4x1'])
+    OpArgMngr.add_workload('logical_not', np.array([True, False, True, False], dtype=np.bool))
+    
+
 
 
 _prepare_workloads()

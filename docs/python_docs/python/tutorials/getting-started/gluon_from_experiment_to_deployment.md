@@ -77,7 +77,7 @@ from mxnet.gluon.data.vision import transforms
 from mxnet.gluon.model_zoo.vision import resnet50_v2
 ```
 
-Next, we define the hyper-parameters that we will use for fine-tuning. We will use the [MXNet learning rate scheduler](https://mxnet.apache.org/tutorials/gluon/learning_rate_schedules.html) to adjust learning rates during training.
+Next, we define the hyper-parameters that we will use for fine-tuning. We will use the [MXNet learning rate scheduler](../packages/gluon/training/learning_rates/learning_rate_schedules.html) to adjust learning rates during training.
 Here we set the `epochs` to 1 for quick demonstration, please change to 40 for actual training.
 
 ```python
