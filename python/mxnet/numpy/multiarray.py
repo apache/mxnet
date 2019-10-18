@@ -6008,25 +6008,25 @@ def einsum(*operands, **kwargs):
     A non-exhaustive list of these operations,
     which can be computed by `einsum`, is shown below along with examples:
 
-    * Trace of an array, :py:func:`numpy.trace`.
-    * Return a diagonal, :py:func:`numpy.diag`.
-    * Array axis summations, :py:func:`numpy.sum`.
-    * Transpositions and permutations, :py:func:`numpy.transpose`.
-    * Matrix multiplication and dot product, :py:func:`numpy.matmul` :py:func:`numpy.dot`.
-    * Vector inner and outer products, :py:func:`numpy.inner` :py:func:`numpy.outer`.
-    * Broadcasting, element-wise and scalar multiplication, :py:func:`numpy.multiply`.
-    * Tensor contractions, :py:func:`numpy.tensordot`.
+    * Trace of an array, :py:func:`np.trace`.
+    * Return a diagonal, :py:func:`np.diag`.
+    * Array axis summations, :py:func:`np.sum`.
+    * Transpositions and permutations, :py:func:`np.transpose`.
+    * Matrix multiplication and dot product, :py:func:`np.matmul` :py:func:`np.dot`.
+    * Vector inner and outer products, :py:func:`np.inner` :py:func:`np.outer`.
+    * Broadcasting, element-wise and scalar multiplication, :py:func:`np.multiply`.
+    * Tensor contractions, :py:func:`np.tensordot`.
 
     The subscripts string is a comma-separated list of subscript labels,
     where each label refers to a dimension of the corresponding operand.
     Whenever a label is repeated it is summed, so ``np.einsum('i,i', a, b)``
-    is equivalent to :py:func:`np.inner(a,b) <numpy.inner>`. If a label
+    is equivalent to :py:func:`np.inner(a,b) <np.inner>`. If a label
     appears only once, it is not summed, so ``np.einsum('i', a)`` produces a
     view of ``a`` with no changes. A further example ``np.einsum('ij,jk', a, b)``
     describes traditional matrix multiplication and is equivalent to
-    :py:func:`np.matmul(a,b) <numpy.matmul>`. Repeated subscript labels in one
+    :py:func:`np.matmul(a,b) <np.matmul>`. Repeated subscript labels in one
     operand take the diagonal. For example, ``np.einsum('ii', a)`` is equivalent
-    to :py:func:`np.trace(a) <numpy.trace>`.
+    to :py:func:`np.trace(a) <np.trace>`.
 
     In *implicit mode*, the chosen subscripts are important
     since the axes of the output are reordered alphabetically.  This
@@ -6041,8 +6041,8 @@ def einsum(*operands, **kwargs):
     identifier '->' as well as the list of output subscript labels.
     This feature increases the flexibility of the function since
     summing can be disabled or forced when required. The call
-    ``np.einsum('i->', a)`` is like :py:func:`np.sum(a, axis=-1) <numpy.sum>`,
-    and ``np.einsum('ii->i', a)`` is like :py:func:`np.diag(a) <numpy.diag>`.
+    ``np.einsum('i->', a)`` is like :py:func:`np.sum(a, axis=-1) <np.sum>`,
+    and ``np.einsum('ii->i', a)`` is like :py:func:`np.diag(a) <np.diag>`.
     The difference is that `einsum` does not allow broadcasting by default.
     Additionally ``np.einsum('ij,jh->ih', a, b)`` directly specifies the
     order of the output subscript labels and therefore returns matrix
@@ -6071,8 +6071,9 @@ def einsum(*operands, **kwargs):
     for now.
 
     This function differs from the original `numpy.einsum
-    https://docs.scipy.org/doc/numpy/reference/generated/numpy.einsum.html`_ in
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.einsum.html>`_ in
     the following way(s):
+
     - Does not support 'optimal' strategy
     - Does not support the alternative subscript like
         `einsum(op0, sublist0, op1, sublist1, ..., [sublistout])`
