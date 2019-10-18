@@ -58,12 +58,12 @@ def test_custom_op():
 
     dim_n, dim_k, dim_m = tuple(np.random.randint(1, 5, size=3))
 
-    mat1 = mx.nd.random.uniform(-10, 10, shape=(dim_n, dim_k))
-    mat2 = mx.nd.random.uniform(-10, 10, shape=(dim_k, dim_m))
+    mat1 = mx.nd.random.uniform(-10, 10, shape=(dim_n, dim_k), ctx=mx.cpu())
+    mat2 = mx.nd.random.uniform(-10, 10, shape=(dim_k, dim_m), ctx=mx.cpu())
 
-    in_grad1 = [mx.nd.empty((dim_n,dim_k)),mx.nd.empty((dim_k,dim_m))]
-    in_grad2 = [mx.nd.empty((dim_n,dim_k)),mx.nd.empty((dim_k,dim_m))]
-    in_grad_base = [mx.nd.empty((dim_n,dim_k)),mx.nd.empty((dim_k,dim_m))]
+    in_grad1 = [mx.nd.empty((dim_n,dim_k),ctx=mx.cpu()),mx.nd.empty((dim_k,dim_m),ctx=mx.cpu())]
+    in_grad2 = [mx.nd.empty((dim_n,dim_k),ctx=mx.cpu()),mx.nd.empty((dim_k,dim_m),ctx=mx.cpu())]
+    in_grad_base = [mx.nd.empty((dim_n,dim_k),ctx=mx.cpu()),mx.nd.empty((dim_k,dim_m),ctx=mx.cpu())]
 
     exe1 = c.bind(ctx=mx.cpu(),args={'s':mat1,'t':mat2},args_grad=in_grad1)
     exe2 = d.bind(ctx=mx.cpu(),args={'s':mat1,'t':mat2},args_grad=in_grad2)
@@ -74,13 +74,13 @@ def test_custom_op():
     out2 = exe2.forward()  # stateful
     out_base = exe_base.forward()
 
-    assert_almost_equal(out_base[0].asnumpy(), out1[0].asnumpy())
-    assert_almost_equal(out_base[0].asnumpy(), out2[0].asnumpy())
+    assert_almost_equal(out_base[0].asnumpy(), out1[0].asnumpy(), rtol=1e-3, atol=1e-3)
+    assert_almost_equal(out_base[0].asnumpy(), out2[0].asnumpy(), rtol=1e-3, atol=1e-3)
 
-    out_grad = mx.nd.ones((dim_n, dim_m))
+    out_grad = mx.nd.ones((dim_n, dim_m), ctx=mx.cpu())
     exe1.backward([out_grad])
     exe2.backward([out_grad])
     exe_base.backward([out_grad])
 
-    assert_almost_equal(in_grad_base[0].asnumpy(), in_grad1[0].asnumpy())
-    assert_almost_equal(in_grad_base[0].asnumpy(), in_grad2[0].asnumpy())
+    assert_almost_equal(in_grad_base[0].asnumpy(), in_grad1[0].asnumpy(), rtol=1e-3, atol=1e-3)
+    assert_almost_equal(in_grad_base[0].asnumpy(), in_grad2[0].asnumpy(), rtol=1e-3, atol=1e-3)

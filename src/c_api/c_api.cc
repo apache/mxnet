@@ -138,13 +138,16 @@ int MXLoadLib(const char *path) {
   opCallCreateOpState_t callCreateOpState =
     get_func<opCallCreateOpState_t>(lib, const_cast<char*>(MXLIB_OPCALLCREATEOPSTATE_STR));
 
+  opCallFStatefulComp_t callFStatefulComp =
+    get_func<opCallFStatefulComp_t>(lib, const_cast<char*>(MXLIB_OPCALLFSTATEFULCOMP_STR));
+
   // get number of operators registered in the library
   opRegSize_t opRegSize = get_func<opRegSize_t>(lib, const_cast<char*>(MXLIB_OPREGSIZE_STR));
   int numOps = opRegSize();
   LOG(INFO) << "Found " << numOps << " operators in library";
 
   /*
-   * The library has custom operators implementation
+   * Get all custom operators implementation from custom library
    * loop and register each operator in the library to NNVM
    */
   opRegGet_t opRegGet = get_func<opRegGet_t>(lib, const_cast<char*>(MXLIB_OPREGGET_STR));
@@ -368,11 +371,11 @@ int MXLoadLib(const char *path) {
 
     // lambda function to convert from external fcompute to internal MXNet types
     auto fcomp_lambda = [=](fcomp_t fcomp_fp,
-                     const nnvm::NodeAttrs& attrs,
-                     const OpContext& ctx,
-                     const std::vector<NDArray>& inputs,
-                     const std::vector<OpReqType>& req,
-                     const std::vector<NDArray>& outputs) {
+                            const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<NDArray>& inputs,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<NDArray>& outputs) {
       // convert attributes to vector of char*
       std::vector<const char*> attr_keys, attr_vals;
       for (auto kv : attrs.dict) {
@@ -406,10 +409,11 @@ int MXLoadLib(const char *path) {
       mshadow::Stream<mxnet::cpu> *cpu_stream = ctx.get_stream<mxnet::cpu>();
 
       // create lambda that captures stream & resource objects
+      // this temp workspace holds memory allocated by custom library via OpResource
       auto cpu_alloc = [&](int size) {
-        mshadow::Tensor<mxnet::cpu, 1, char> data =
-        resource.get_space_typed<mxnet::cpu, 1, char>(mshadow::Shape1(size), cpu_stream);
-        return data.dptr_;
+        mshadow::Tensor<mxnet::cpu, 1, char> workspace =
+          resource.get_space_typed<mxnet::cpu, 1, char>(mshadow::Shape1(size), cpu_stream);
+        return workspace.dptr_;
       };
 
       // create lambda without captures so that we can cast it to function pointer
@@ -418,6 +422,7 @@ int MXLoadLib(const char *path) {
       auto cpu_malloc = [](void* _cpu_alloc, int size) {
         // cast the void* argument to the type for the cpu_alloc lambda function
         alloc_type* cpualloc = static_cast<alloc_type*>(_cpu_alloc);
+        // call cpu_alloc to actually allocate memory and get the pointer
         void* ptr = (*cpualloc)(size);
         return ptr;
       };
@@ -547,30 +552,31 @@ int MXLoadLib(const char *path) {
     };
 
     // stateful forward and backward
-    auto fstateful_lambda = [=](bool forward,
+    auto fstateful_lambda = [=](bool is_forward,
                                 const OpStatePtr& state_ptr,
                                 const OpContext& ctx,
                                 const std::vector<NDArray>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& outputs) {
-      // create a vector of tensors for inputs
-      std::vector<MXTensor> c_inputs(inputs.size());
+      std::vector<void*> in_data, out_data;
+      std::vector<const int64_t *> in_shapes, out_shapes;
+      std::vector<int> in_dims, out_dims;
+      std::vector<int> in_types, out_types;
+
+      // convert input tensors to constituent parts
       for (size_t i = 0; i < inputs.size(); i++) {
-        c_inputs[i].data = inputs[i].data().dptr_;
-        c_inputs[i].dtype = (MXDType)inputs[i].dtype();
-        for (int_least16_t j = 0; j < inputs[i].shape().ndim(); j++) {
-          c_inputs[i].shape.push_back(inputs[i].shape().data()[j]);
-        }
+        in_data.push_back(inputs[i].data().dptr_);
+        in_shapes.push_back(inputs[i].shape().data());
+        in_dims.push_back(inputs[i].shape().ndim());
+        in_types.push_back(inputs[i].dtype());
       }
 
-      // create a vector of tensors for outputs
-      std::vector<MXTensor> c_outputs(outputs.size());
+      // convert output tensors to constituent parts
       for (size_t i = 0; i < outputs.size(); i++) {
-        c_outputs[i].data = outputs[i].data().dptr_;
-        c_outputs[i].dtype = (MXDType)outputs[i].dtype();
-        for (int j = 0; j < outputs[i].shape().ndim(); j++) {
-          c_outputs[i].shape.push_back(outputs[i].shape().data()[j]);
-        }
+        out_data.push_back(outputs[i].data().dptr_);
+        out_shapes.push_back(outputs[i].shape().data());
+        out_dims.push_back(outputs[i].shape().ndim());
+        out_types.push_back(outputs[i].dtype());
       }
 
       // get memory resource
@@ -578,6 +584,7 @@ int MXLoadLib(const char *path) {
       mshadow::Stream<mxnet::cpu> *cpu_stream = ctx.get_stream<mxnet::cpu>();
 
       // create lambda that captures stream & resource objects
+      // the memory pointer returned will eventually return to user
       auto cpu_alloc = [&](int size) {
         mshadow::Tensor<mxnet::cpu, 1, char> data =
         resource.get_space_typed<mxnet::cpu, 1, char>(mshadow::Shape1(size), cpu_stream);
@@ -590,11 +597,10 @@ int MXLoadLib(const char *path) {
       auto cpu_malloc = [](void* _cpu_alloc, int size) {
         // cast the void* argument to the type for the cpu_alloc lambda function
         alloc_type* cpualloc = static_cast<alloc_type*>(_cpu_alloc);
+        // call cpu_alloc to actually allocate memory and get the pointer
         void* ptr = (*cpualloc)(size);
         return ptr;
       };
-
-      OpResource op_res(cpu_malloc, &cpu_alloc);
 
       // retrieve op state object created from CreateOpState
       CustomStatefulOpWrapper& op = state_ptr.get_state<CustomStatefulOpWrapper>();
@@ -602,14 +608,12 @@ int MXLoadLib(const char *path) {
       CHECK(state_op_inst != nullptr)
       << "Error MXNet cannot load custom stateful operator'" << name_str << "'";
 
-      if (forward) {
-        CHECK(state_op_inst->Forward(c_inputs, c_outputs, op_res))
-        << "Error calling ForwardStateful for custom operator '" << name_str << "'";
-      } else {
-        CHECK(state_op_inst->Backward(c_inputs, c_outputs, op_res))
-        << "Error calling BackwardStateful for custom operator '" << name_str << "'";
-      }
-      // return type void
+      // call fcompute function
+      CHECK(callFStatefulComp(is_forward, state_op_inst, in_shapes.data(), in_dims.data(),
+                              in_data.data(), in_types.data(), in_data.size(),
+                              out_shapes.data(), out_dims.data(), out_data.data(),
+                              out_types.data(), out_data.size(), cpu_malloc, &cpu_alloc))
+      << "Error calling FStatefulCompute for custom operator '" << name_str << "'";
     };
 
     auto fstateful_forward = [=](const OpStatePtr& state_ptr,

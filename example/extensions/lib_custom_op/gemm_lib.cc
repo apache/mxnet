@@ -27,7 +27,8 @@
 #include "lib_api.h"
 
 // main matrix multiplication routine
-void gemm(float* A, float* B, float* C, unsigned n, unsigned k, unsigned m) {
+void gemm(const float* A, const float* B, float* C,
+          const unsigned n, const unsigned k, const unsigned m) {
   unsigned i, j, kk;
   for (i = 0; i < n; i++) {
     for (j = 0; j < m; j++) {
@@ -39,7 +40,7 @@ void gemm(float* A, float* B, float* C, unsigned n, unsigned k, unsigned m) {
   }
 }
 
-void transpose(float* A, float* At, unsigned n, unsigned m) {
+void transpose(const float* A, float* At, const unsigned n, const unsigned m) {
   unsigned i, j;
   for (i = 0; i < n; i++) {
     for (j = 0; j < m; j++) {
@@ -56,24 +57,20 @@ MXReturnValue forward(std::map<std::string, std::string> attrs,
                       std::vector<MXTensor> inputs,
                       std::vector<MXTensor> outputs,
                       OpResource res) {
-  // validate inputs
-  for (unsigned i = 0; i < inputs.size(); i++) {
-    if (inputs[i].dtype != kFloat32) {
-      std::cout << "Expected input " << i << " to have float32 type" << std::endl;
-      return MX_FAIL;
-    }
+  // simple example of using runtime data type
+  if (inputs[0].dtype == kFloat32) {
+    typedef float DType;
+    // extract data pointers from tensors
+    DType* A = inputs[0].data<DType>();
+    DType* B = inputs[1].data<DType>();
+    DType* C = outputs[0].data<DType>();
+    // set tensor shapes
+    unsigned n = inputs[0].shape[0];
+    unsigned k = inputs[0].shape[1];
+    unsigned m = inputs[1].shape[1];
+
+    gemm(A, B, C, n, k, m);
   }
-
-  // extract data pointers from tensors
-  float* A = inputs[0].getData<float>();
-  float* B = inputs[1].getData<float>();
-  float* C = outputs[0].getData<float>();
-  // set tensor shapes
-  unsigned n = inputs[0].shape[0];
-  unsigned k = inputs[0].shape[1];
-  unsigned m = inputs[1].shape[1];
-
-  gemm(A, B, C, n, k, m);
   return MX_SUCCESS;
 }
 
@@ -92,35 +89,27 @@ MXReturnValue backward(std::map<std::string, std::string> attrs,
                        std::vector<MXTensor> inputs,
                        std::vector<MXTensor> outputs,
                        OpResource res) {
-  // validate inputs
-  for (unsigned i = 0; i < inputs.size(); i++) {
-    if (inputs[i].dtype != kFloat32) {
-      std::cout << "Expected input " << i << " to have float32 type" << std::endl;
-      return MX_FAIL;
-    }
-  }
-
   // extract data pointers from tensors
-  float* dC = inputs[0].getData<float>();
-  float* A = inputs[1].getData<float>();
-  float* B = inputs[2].getData<float>();
-  float* dA = outputs[0].getData<float>();
-  float* dB = outputs[1].getData<float>();
+  float* dC = inputs[0].data<float>();
+  float* A = inputs[1].data<float>();
+  float* B = inputs[2].data<float>();
+  float* dA = outputs[0].data<float>();
+  float* dB = outputs[1].data<float>();
   // set tensor shapes
   unsigned n = inputs[1].shape[0];
   unsigned k = inputs[1].shape[1];
   unsigned m = inputs[2].shape[1];
-
-  float *At = new float[k*n];
-  float *Bt = new float[m*k];
+  // allocate temporary workspace memory through resource manager
+  // for multiple arrays better to request a big memory pool
+  void *workspace = res.alloc((k*n + m*k) * sizeof(float));
+  float *At = static_cast<float*>(workspace);
+  float *Bt = static_cast<float*>(workspace) + (k*n);
 
   transpose(A, At, k, n);
   transpose(B, Bt, m, k);
   gemm(dC, Bt, dA, n, m, k);
   gemm(At, dC, dB, k, n, m);
 
-  delete[] At;
-  delete[] Bt;
   return MX_SUCCESS;
 }
 
@@ -138,9 +127,11 @@ MXReturnValue inferType(std::map<std::string, std::string> attrs,
     std::cout << "Expected 2 inputs to inferType" << std::endl;
     return MX_FAIL;
   }
-  if (intypes[0] != intypes[1]) {
-    std::cout << "Expected 2 inputs to have same data type for inferType" << std::endl;
-    return MX_FAIL;
+  for (unsigned i = 0; i < intypes.size(); i++) {
+    if (intypes[i] != kFloat32) {
+      std::cout << "Expected input " << i << " to have float32 type" << std::endl;
+      return MX_FAIL;
+    }
   }
 
   outtypes[0] = intypes[0];
@@ -155,12 +146,8 @@ MXReturnValue inferShape(std::map<std::string, std::string> attrs,
     std::cout << "Expected 2 inputs to inferShape" << std::endl;
     return MX_FAIL;
   }
-  if (inshapes[0].size() != 2) {
-    std::cout << "Expected 2D for first input to inferShape" << std::endl;
-    return MX_FAIL;
-  }
-  if (inshapes[1].size() != 2) {
-    std::cout << "Expected 2D for second input to inferShape" << std::endl;
+  if (inshapes[0].size() != 2 || inshapes[1].size() != 2) {
+    std::cout << "Expected 2D matrices for both inputs to inferShape" << std::endl;
     return MX_FAIL;
   }
 
@@ -173,8 +160,7 @@ MXReturnValue inferShape(std::map<std::string, std::string> attrs,
     return MX_FAIL;
   }
 
-  outshapes[0].push_back(n);
-  outshapes[0].push_back(m);
+  outshapes[0] = {n, m};
   return MX_SUCCESS;
 }
 
@@ -194,10 +180,8 @@ class MyStatefulGemm : public CustomStatefulOp {
   MXReturnValue Forward(std::vector<MXTensor> inputs,
                         std::vector<MXTensor> outputs,
                         OpResource op_res) {
-    int* p = static_cast<int*>(op_res.alloc(sizeof(int)));
-    *p = ++count;
-    std::cout << "Info: op resource testing: " << *p << std::endl;
-
+    ++count;
+    std::cout << "Info: keyword + number of forward: " << count << std::endl;
     std::map<std::string, std::string> attrs;
     return forward(attrs, inputs, outputs, op_res);
   }
@@ -217,8 +201,11 @@ class MyStatefulGemm : public CustomStatefulOp {
 
 MXReturnValue createOpState(std::map<std::string, std::string> attrs,
                             CustomStatefulOp** op_inst) {
-  *op_inst = new MyStatefulGemm(58);
-  std::cout << "Info: create op state successful" << std::endl;
+  int count = 0;
+  if (attrs.count("test_kw") > 0)
+    count = std::stoi(attrs["test_kw"]);
+  *op_inst = new MyStatefulGemm(count);
+  std::cout << "Info: stateful operator created" << std::endl;
   return MX_SUCCESS;
 }
 

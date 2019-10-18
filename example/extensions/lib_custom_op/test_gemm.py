@@ -39,13 +39,14 @@ b = mx.nd.array([[7],[8],[9]])
 
 print("--------start ndarray compute---------")
 print(mx.nd.my_gemm(a,b))
-print(mx.nd.state_gemm(a,b))
+print("--------")
+print(mx.nd.state_gemm(a,b,test_kw=100))
 
 print("--------start symbolic compute--------")
 s = mx.sym.Variable('s')
 t = mx.sym.Variable('t')
 c = mx.sym.my_gemm(s,t)
-d = mx.sym.state_gemm(s,t)
+d = mx.sym.state_gemm(s,t,test_kw=200)
 
 in_grad = [mx.nd.empty((2,3)),mx.nd.empty((3,1))]
 in_grad2 = [mx.nd.empty((2,3)),mx.nd.empty((3,1))]
@@ -55,10 +56,12 @@ exe2 = d.bind(ctx=mx.cpu(),args={'s':a,'t':b},args_grad=in_grad2)
 
 out = exe.forward()
 print(out)
+print("-------")
 
 out2 = exe2.forward()
 out2 = exe2.forward()
 print(out2)
+print("-------")
 
 # baseline forward
 e = mx.sym.linalg.gemm2(s,t)
@@ -71,7 +74,9 @@ print("--------start backward compute--------")
 out_grad = mx.nd.ones((2,1))
 exe.backward([out_grad])
 print(in_grad)
+print("-------")
 exe2.backward([out_grad])
 print(in_grad2)
+print("-------")
 exe3.backward([out_grad])
 print(in_grad3)
