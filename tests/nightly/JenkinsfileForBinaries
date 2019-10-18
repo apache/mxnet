@@ -75,6 +75,7 @@ core_logic: {
           utils.unpack_and_init('gpu', mx_lib)
           utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_imagenet_inference', true)
         }
+      }
     },
     'KVStore_SingleNode: GPU': {
       node('mxnetlinux-gpu-p3-8xlarge') {
