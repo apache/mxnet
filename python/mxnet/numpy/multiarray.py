@@ -55,7 +55,8 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'add', 'subtrac
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming',
            'blackman', 'flip', 'around', 'arctan2', 'hypot', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril',
            'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
-           'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero']
+           'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero', 'shares_memory',
+           'may_share_memory']
 
 # Return code for dispatching indexing function call
 _NDARRAY_UNSUPPORTED_INDEXING = -1
@@ -6900,3 +6901,13 @@ def nonzero(a):
     (array([1, 1, 1, 2, 2, 2], dtype=int64), array([0, 1, 2, 0, 1, 2], dtype=int64))
     """
     return _mx_nd_np.nonzero(a)
+
+
+@set_module('mxnet.numpy')
+def shares_memory(a, b, max_work=None):
+    return _mx_nd_np.shares_memory(a, b, max_work)
+
+
+@set_module('mxnet.numpy')
+def may_share_memory(a, b, max_work=None):
+    return _mx_nd_np.may_share_memory(a, b, max_work)

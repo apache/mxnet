@@ -38,7 +38,7 @@ __all__ = ['zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide', 'mo
            'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming', 'blackman', 'flip',
            'around', 'hypot', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take',
            'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal',
-           'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero']
+           'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero', 'shares_memory', 'may_share_memory']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4909,3 +4909,13 @@ def nonzero(a):
     """
     out = _npi.nonzero(a).transpose()
     return tuple([out[i] for i in range(len(out))])
+
+
+@set_module('mxnet.ndarray.numpy')
+def shares_memory(a, b, max_work=None):
+    return _npi.share_memory(a, b).item()
+
+
+@set_module('mxnet.ndarray.numpy')
+def may_share_memory(a, b, max_work=None):
+    return _npi.share_memory(a, b).item()
