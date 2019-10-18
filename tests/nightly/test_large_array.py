@@ -1218,14 +1218,6 @@ def test_logical():
     test_logical_xor(a, b)
 
 
-def test_batch_dot():
-    a = mx.nd.ones((LARGE_X, 5, 10))
-    b = 2*mx.nd.ones((LARGE_X, 10, 6))
-    res = mx.nd.batch_dot(a, b)
-    assert res[0][0][0] == 20
-    assert res.shape == (LARGE_X, 5, 6)
-
-
 def test_regression():
     shape = (LARGE_X, SMALL_Y)
 
