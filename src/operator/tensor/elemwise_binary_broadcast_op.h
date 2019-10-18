@@ -151,9 +151,10 @@ inline int BinaryBroadcastShapeCompact(const mxnet::TShape& lshape, const mxnet:
   *new_oshape = mxnet::TShape(odim, 1);
   int bl = oshape.ndim() - lshape.ndim();
   int br = oshape.ndim() - rshape.ndim();
-  int j = 0, lprod = 1, rprod = 1, oprod = 1;
+  int j = 0;
+  index_t lprod = 1, rprod = 1, oprod = 1;
   for (int i = 0; i < oshape.ndim(); ++i) {
-    int l = 1, r = 1, o = oshape[i];
+    index_t l = 1, r = 1, o = oshape[i];
     if (i >= bl) l = lshape[i-bl];
     if (i >= br) r = rshape[i-br];
     if ((lprod != rprod || l != r) &&
