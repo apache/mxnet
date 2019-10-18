@@ -220,7 +220,7 @@ struct MXTensor {
     dltensor.strides = NULL;
     dltensor.byte_offset = 0;
     dltensor.dtype.lanes = 1;
-    switch(dtype) {
+    switch (dtype) {
     case kFloat32:
       dltensor.dtype.code = kDLFloat;
       dltensor.dtype.bits = 32;
