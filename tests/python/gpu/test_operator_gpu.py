@@ -2508,19 +2508,6 @@ def test_arange_like_dtype():
         for v in out:
             assert v.dtype == t
 
-# do not remove seed
-@with_seed(1234)
-def test_dropout_with_seed():
-    a = mx.nd.ones((10, 10), ctx=mx.gpu())
-    dropout = mx.gluon.nn.Dropout(0.5)
-    with mx.autograd.record():
-        b = dropout(a)
-
-    with mx.autograd.record():
-        c = dropout(a)
-    # dropout on gpu should return same result with fixed seed
-    assert_almost_equal(b.asnumpy(), c.asnumpy())
-
 if __name__ == '__main__':
     import nose
     nose.runmodule()
