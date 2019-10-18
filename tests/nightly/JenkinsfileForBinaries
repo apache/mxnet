@@ -69,6 +69,13 @@ core_logic: {
         }
       }
     },
+    'ImageNet Inference: GPU': {
+      node(NODE_LINUX_GPU) {
+        ws('workspace/nt-ImageInferenceTest') {
+          utils.unpack_and_init('gpu', mx_lib)
+          utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_imagenet_inference', true)
+        }
+    },
     'KVStore_SingleNode: GPU': {
       node('mxnetlinux-gpu-p3-8xlarge') {
         ws('workspace/nt-KVStoreTest') {
