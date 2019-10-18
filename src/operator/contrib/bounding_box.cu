@@ -331,6 +331,7 @@ __global__ void CalculateGreedyNMSResults_kernel(const DType* data, uint32_t* re
   constexpr int max_elem_width = 20;
   constexpr int num_other_boxes = sizeof(uint32_t) * 8;
   __shared__ DType other_boxes[max_elem_width * num_other_boxes];
+  __shared__ DType other_boxes_areas[num_other_boxes];
   const index_t my_row = blockIdx.x / num_blocks_per_row;
   const index_t my_block_offset_in_row = blockIdx.x % num_blocks_per_row;
   const index_t my_block_offset_in_batch = my_block_offset_in_row % num_blocks_per_row_batch;
@@ -343,6 +344,17 @@ __global__ void CalculateGreedyNMSResults_kernel(const DType* data, uint32_t* re
                          element_width;
   for (int i = threadIdx.x; i < element_width * num_other_boxes; i += blockDim.x) {
     other_boxes[i] = data[offset + i];
+  }
+  __syncthreads();
+
+  if (threadIdx.x < num_other_boxes) {
+    const int other_boxes_offset = element_width * threadIdx.x;
+    const DType their_area = calculate_area<encode>(
+        other_boxes[other_boxes_offset + coord_index + 0],
+        other_boxes[other_boxes_offset + coord_index + 1],
+        other_boxes[other_boxes_offset + coord_index + 2],
+        other_boxes[other_boxes_offset + coord_index + 3]);
+    other_boxes_areas[threadIdx.x] = their_area;
   }
   __syncthreads();
 
@@ -368,13 +380,9 @@ __global__ void CalculateGreedyNMSResults_kernel(const DType* data, uint32_t* re
 #pragma unroll
     for (int i = 0; i < num_other_boxes; ++i) {
       const int other_boxes_offset = element_width * i;
-      if ((class_index == -1 ||  my_class == other_boxes[other_boxes_offset + class_index]) &&
+      if ((class_index == -1 || my_class == other_boxes[other_boxes_offset + class_index]) &&
           other_boxes[other_boxes_offset + score_index] != -1){
-        const DType their_area = calculate_area<encode>(
-            other_boxes[other_boxes_offset + coord_index + 0],
-            other_boxes[other_boxes_offset + coord_index + 1],
-            other_boxes[other_boxes_offset + coord_index + 2],
-            other_boxes[other_boxes_offset + coord_index + 3]);
+        const DType their_area = other_boxes_areas[i];
 
         const DType intersect = calculate_intersection<encode>(
             my_box[0], my_box[1], my_box[2], my_box[3],
@@ -382,8 +390,8 @@ __global__ void CalculateGreedyNMSResults_kernel(const DType* data, uint32_t* re
             other_boxes[other_boxes_offset + coord_index + 1],
             other_boxes[other_boxes_offset + coord_index + 2],
             other_boxes[other_boxes_offset + coord_index + 3]);
-        const DType iou = intersect / (my_area + their_area - intersect);
-        if (iou > threshold) {
+        //const DType iou = intersect / (my_area + their_area - intersect);
+        if (intersect > threshold * (my_area + their_area - intersect)) {
           ret = ret | (1u << i);
         }
       }
