@@ -74,11 +74,12 @@ class OpDef:
 
     def invoke_all(self):
         for each_kwargs in self.arg_combination:
-            if (self.attrs_valid(**each_kwargs)):
+            if self.attrs_valid(**each_kwargs):
                 sch, args = self.func(**each_kwargs)
                 name = self.name \
                     + ''.join(["{}_{}".format(key, each_kwargs[key]) for key in self.attrs]) \
-                    + ''.join(["%s_%d" % (arg.dtype, len(arg.shape)) for arg in args])
+                    + ''.join(["%s_%d" % (arg.dtype, len(arg.shape))
+                               for arg in args if hasattr(arg, 'shape')])
                 yield sch, args, name
 
     def get_binds(self, args):
@@ -107,6 +108,7 @@ def defop(name, target=None, auto_broadcast=False, **kwargs):
     """
     assert name is not None and len(name) > 0
     target = "cpu" if target is None else target
+
     def _defop(func):
         opdef = OpDef(func, name, target, auto_broadcast, **kwargs)
         __OP_DEF__.append(opdef)

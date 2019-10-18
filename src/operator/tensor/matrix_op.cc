@@ -111,17 +111,12 @@ static void ReshapeComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const std::vector<NDArray>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& outputs) {
-  const ReshapeParam& param = nnvm::get<ReshapeParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   // If inputs are supposed to be in MKLDNN format and
   // MKLDNNsupport the data type or the shape. Then convert
   // it to the output format and shape
-  if (SupportMKLDNNReshape(param, inputs[0])) {
-    MKLDNNReshapeForward(attrs, ctx, inputs[0], req[0], outputs[0]);
-    return;
-  }
-  FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
+  MKLDNNReshapeForward(attrs, ctx, inputs[0], req[0], outputs[0]);
 }
 
 inline static bool ReshapeStorageType(const nnvm::NodeAttrs& attrs,
@@ -226,6 +221,7 @@ If the argument `reverse` is set to 1, then the special values are inferred from
 .add_argument("data", "NDArray-or-Symbol", "Input data to reshape.")
 .add_arguments(ReshapeParam::__FIELDS__());
 
+#if MXNET_USE_MKLDNN == 1
 static void FlattenEx(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx,
                       const std::vector<NDArray>& inputs,
@@ -233,22 +229,12 @@ static void FlattenEx(const nnvm::NodeAttrs& attrs,
                       const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
-#if MXNET_USE_MKLDNN == 1
-  auto data_ndim = inputs[0].shape().ndim();
-  if (data_ndim <= 4 && inputs[0].dtype() == mshadow::kFloat32) {
-    MKLDNNFlattenForward(attrs, ctx, inputs[0], req[0], outputs[0]);
-    return;
-  } else {
-    // This happens if inputs are supposed to be in MKLDNN format
-    // but MKLDNN doesn't support the data type or the shape. We're
-    // forced to convert it to the default format.
-    FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
-    return;
-  }
-#endif
+  // If inputs are supposed to be in MKLDNN format and
+  // MKLDNNsupport the data type or the shape. Then convert
+  // it to the output format and shape
+  MKLDNNReshapeForward(attrs, ctx, inputs[0], req[0], outputs[0]);
 }
 
-#if MXNET_USE_MKLDNN == 1
 static inline bool FlattenStorageType(const nnvm::NodeAttrs& attrs,
                                       const int dev_mask,
                                       DispatchMode* dispatch_mode,
@@ -294,14 +280,12 @@ Example::
 .set_num_outputs(1)
 .set_attr<mxnet::FInferShape>("FInferShape", FlattenShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-#if MXNET_USE_MKLDNN == 1
-.set_attr<FInferStorageType>("FInferStorageType", FlattenStorageType)
-#endif
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_backward_copy" })
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", FlattenEx)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
+.set_attr<FComputeEx>("FComputeEx<cpu>", FlattenEx)
+.set_attr<FInferStorageType>("FInferStorageType", FlattenStorageType)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
@@ -1019,7 +1003,7 @@ Examples::
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_squeeze"})
-.add_argument("data", "NDArray-or-Symbol[]", "data to squeeze")
+.add_argument("data", "NDArray-or-Symbol", "data to squeeze")
 .add_arguments(SqueezeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_squeeze)
@@ -1033,7 +1017,7 @@ NNVM_REGISTER_OP(depth_to_space)
 .describe(R"code(Rearranges(permutes) data from depth into blocks of spatial data.
 Similar to ONNX DepthToSpace operator:
 https://github.com/onnx/onnx/blob/master/docs/Operators.md#DepthToSpace.
-The output is a new tensor where the values from depth dimension are moved in spatial blocks 
+The output is a new tensor where the values from depth dimension are moved in spatial blocks
 to height and width dimension. The reverse of this operation is ``space_to_depth``.
 
 .. math::
@@ -1044,7 +1028,7 @@ to height and width dimension. The reverse of this operation is ``space_to_depth
     y = reshape(x \prime \prime, [N, C / (block\_size ^ 2), H * block\_size, W * block\_size])
     \end{gather*}
 
-where :math:`x` is an input tensor with default layout as :math:`[N, C, H, W]`: [batch, channels, height, width] 
+where :math:`x` is an input tensor with default layout as :math:`[N, C, H, W]`: [batch, channels, height, width]
 and :math:`y` is the output tensor of layout :math:`[N, C / (block\_size ^ 2), H * block\_size, W * block\_size]`
 
 Example::
@@ -1084,9 +1068,9 @@ Example::
 NNVM_REGISTER_OP(space_to_depth)
 .describe(R"code(Rearranges(permutes) blocks of spatial data into depth.
 Similar to ONNX SpaceToDepth operator:
-https://github.com/onnx/onnx/blob/master/docs/Operators.md#SpaceToDepth 
+https://github.com/onnx/onnx/blob/master/docs/Operators.md#SpaceToDepth
 
-The output is a new tensor where the values from height and width dimension are 
+The output is a new tensor where the values from height and width dimension are
 moved to the depth dimension. The reverse of this operation is ``depth_to_space``.
 
 .. math::
@@ -1097,7 +1081,7 @@ moved to the depth dimension. The reverse of this operation is ``depth_to_space`
     y = reshape(x \prime \prime, [N, C * (block\_size ^ 2), H / block\_size, W / block\_size])
     \end{gather*}
 
-where :math:`x` is an input tensor with default layout as :math:`[N, C, H, W]`: [batch, channels, height, width] 
+where :math:`x` is an input tensor with default layout as :math:`[N, C, H, W]`: [batch, channels, height, width]
 and :math:`y` is the output tensor of layout :math:`[N, C * (block\_size ^ 2), H / block\_size, W / block\_size]`
 
 Example::
