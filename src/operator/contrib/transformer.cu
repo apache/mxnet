@@ -44,6 +44,7 @@ void CublasStridedBatchedGemm(mshadow::Stream<gpu>* s, bool transA, bool transB,
                               const DType *b, int32_t ldb, int32_t strideB, float beta,
                               DType *c, int32_t ldc, int32_t strideC, int32_t batchCount,
                               cublasGemmAlgo_t algo = CUBLAS_GEMM_DEFAULT_TENSOR_OP) {
+#if CUDA_VERSION >= 9010
   using namespace mxnet::common::cuda;
   CHECK_EQ(s->blas_handle_ownership_, mshadow::Stream<gpu>::OwnHandle)
       << "Must init CuBLAS handle in stream";
@@ -61,6 +62,9 @@ void CublasStridedBatchedGemm(mshadow::Stream<gpu>* s, bool transA, bool transB,
       c, CublasType<DType>::kCudaFlag, static_cast<int>(ldc), strideC,
       static_cast<int>(batchCount), CUDA_R_32F, algo);
   CHECK_EQ(err, CUBLAS_STATUS_SUCCESS) << "Cublas gemmEx fail.";
+#else
+  LOG(FATAL) << "Not implemented with CUDA < 9.1";
+#endif
 }
 
 template<typename DType>
