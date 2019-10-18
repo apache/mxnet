@@ -3532,6 +3532,15 @@ def test_np_true_divide():
         out_np = a.asnumpy() / b.asnumpy()
         assert_almost_equal(out_mx.asnumpy(), out_np, rtol=1e-3, atol=1e-3, use_broadcast=False)
 
+        val = _np.random.randint(3, 50)
+        out_mx = a / val
+        out_np = a.asnumpy() / val
+        assert_almost_equal(out_mx.asnumpy(), out_np, rtol=1e-3, atol=1e-3, use_broadcast=False)
+
+        out_mx = val / a
+        out_np = val / a.asnumpy()
+        assert_almost_equal(out_mx.asnumpy(), out_np, rtol=1e-3, atol=1e-3, use_broadcast=False)
+
 
 if __name__ == '__main__':
     import nose

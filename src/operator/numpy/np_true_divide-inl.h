@@ -40,7 +40,7 @@ void TrueDivideScalarCompute(const nnvm::NodeAttrs &attrs,
                              const std::vector<TBlob> &outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
-  if (outputs[0].Size() == 0U) return;
+  if (req[0] == kNullOp || outputs[0].Size() == 0U) return;
   using namespace mshadow;
   using namespace mshadow::expr;
   Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -72,7 +72,7 @@ void TrueDivideElemwiseCompute(const nnvm::NodeAttrs &attrs,
                                const std::vector<OpReqType> &req,
                                const std::vector<TBlob> &outputs) {
   using namespace mxnet_op;
-  if (req[0] != kNullOp || outputs[0].Size() == 0U) return;
+  if (req[0] == kNullOp || outputs[0].Size() == 0U) return;
   Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
