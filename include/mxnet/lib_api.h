@@ -35,7 +35,7 @@
 #include <string>
 #include <iostream>
 #include <utility>
-#include <exception>
+#include <stdexcept>
 
 #define MX_LIBRARY_VERSION 1
 
