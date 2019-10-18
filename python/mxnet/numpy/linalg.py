@@ -104,7 +104,7 @@ def svd(a):
     (possibly non-zero) eigenvalues are given by ``s**2``.
 
     The sign of rows of `u` and `v` are determined as described in
-    `Auto-Differentiating Linear Algebra https://arxiv.org/pdf/1710.08717.pdf`_.
+    `Auto-Differentiating Linear Algebra <https://arxiv.org/pdf/1710.08717.pdf>`_.
 
     If `a` has more than two dimensions, then broadcasting rules apply.
     This means that SVD is working in "stacked" mode: it iterates over
@@ -115,7 +115,7 @@ def svd(a):
     ``ut @ (s[..., None] * v)``. (The ``@`` operator denotes batch matrix multiplication)
 
     This function differs from the original `numpy.linalg.svd
-    https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.svd.html`_ in
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.svd.html>`_ in
     the following way(s):
      - The sign of rows of `u` and `v` may differ.
      - Does not support complex input.
