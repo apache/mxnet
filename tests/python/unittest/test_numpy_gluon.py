@@ -115,6 +115,15 @@ def test_optimizer_with_np_ndarrays():
 
 @with_seed()
 @use_np
+def test_optimizer_backward_compat():
+    optimizer = mx.optimizer.SGD()
+    delattr(optimizer, "allow_np_array")
+    updater = mx.optimizer.Updater(optimizer)
+    updater(0, np.ones((0, 0)), np.zeros((0, 0)))
+
+
+@with_seed()
+@use_np
 def test_np_loss_ndarray():
     # Ported from test_loss.test_loss_ndarray
     output = np.array([1, 2, 3, 4])

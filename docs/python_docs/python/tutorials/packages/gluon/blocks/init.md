@@ -27,7 +27,7 @@ work:
   dimensionality.
 * We added layers without regard to the output dimension of the previous layer.
 * We even 'initialized' these parameters without knowing how many parameters
-  were were to initialize.
+  we were going to initialize.
 
 All of those things sound impossible and indeed, they are. After all, there's
 no way MXNet (or any other framework for that matter) could predict what the
@@ -36,7 +36,7 @@ convolutional networks and images this problem will become even more pertinent,
 since the input dimensionality (i.e. the resolution of an image) will affect
 the dimensionality of subsequent layers. The ability to
 determine parameter dimensionality during run-time rather than at coding time
-greatly simplifies the process of doing deep learning. 
+greatly simplifies the process of doing deep learning.
 
 ## Instantiating a Network
 
@@ -65,10 +65,10 @@ accessing the parameters, that's exactly what happens.
 print(net.collect_params())
 ```
 
-You'll notice `None` here in each `Dense` layer. This absense of value is how
+You'll notice `None` here in each `Dense` layer. This absence of value is how
 MXNet keeps track of unspecified dimensionality. In particular, trying to access
 `net[0].weight.data()` at this point would trigger a runtime error stating that
-the network needs initializing before it can do anything. 
+the network needs initializing before it can do anything.
 
 Note that if we did want to specify dimensionality, we could have done so by
 using the kwarg `in_units`, e.g. `Dense(256, activiation='relu', in_units=20)`.
@@ -318,5 +318,5 @@ cases you should now be aware of include custom initialization and tied paramete
 
 ## Recommended Next Steps
 
-* Check out the [API Docs](https://mxnet.apache.org/versions/master/api/python/optimization/optimization.html) on initialization for a list of available initialization methods.
-* See [this tutorial](https://mxnet.apache.org/versions/master/tutorials/gluon/naming.html) for more information on Gluon Parameters.
+* Check out the [API Docs](/api/python/docs/api/optimizer/index.html) on initialization for a list of available initialization methods.
+* See [this tutorial](/api/python/docs/tutorials/packages/gluon/blocks/naming.html) for more information on Gluon Parameters.

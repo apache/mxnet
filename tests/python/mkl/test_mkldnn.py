@@ -161,8 +161,8 @@ def test_reshape_before_conv():
     with mx.autograd.record():
         out2 = net(x)
     out2.backward()
-    mx.test_utils.assert_almost_equal(dx1.asnumpy(), x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
-    mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-5, atol=1e-6)
+    assert_almost_equal(dx1, x.grad, rtol=1e-5, atol=1e-6)
+    assert_almost_equal(out1, out2, rtol=1e-5, atol=1e-6)
 
 
 @with_seed()
@@ -195,8 +195,8 @@ def test_slice_before_conv():
     with mx.autograd.record():
         out2 = net(x)
     out2.backward()
-    mx.test_utils.assert_almost_equal(dx1.asnumpy(), x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
-    mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-5, atol=1e-6)
+    assert_almost_equal(dx1, x.grad, rtol=1e-5, atol=1e-6)
+    assert_almost_equal(out1, out2, rtol=1e-5, atol=1e-6)
 
 
 @with_seed()
@@ -229,8 +229,8 @@ def test_slice_reshape_before_conv():
     with mx.autograd.record():
         out2 = net(x)
     out2.backward()
-    mx.test_utils.assert_almost_equal(dx1.asnumpy(), x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
-    mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-5, atol=1e-6)
+    assert_almost_equal(dx1, x.grad, rtol=1e-5, atol=1e-6)
+    assert_almost_equal(out1, out2, rtol=1e-5, atol=1e-6)
 
 
 @with_seed()

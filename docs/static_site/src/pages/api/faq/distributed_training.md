@@ -69,7 +69,7 @@ The distributed mode of KVStore is enabled by calling `mxnet.kvstore.create` fun
 with a string argument which contains the word `dist` as follows:
 > kv = mxnet.kvstore.create('dist_sync')
 
-Refer [KVStore API]({{'/api/python/docs/api/gluon-related/mxnet.kvstore.KVStore.html#mxnet.kvstore.KVStore'|relative_url}}) for more information about KVStore.
+Refer [KVStore API]({{'/api/python/docs/api/kvstore/index.html#mxnet.kvstore.KVStore'|relative_url}}) for more information about KVStore.
 
 ### Distribution of Keys
 Each server doesn't necessarily store all the keys or parameter arrays.
@@ -91,7 +91,7 @@ In the case of distributed training though, we would need to divide the dataset 
 
 Typically, this split of data for each worker happens through the data iterator,
 on passing the number of parts and the index of parts to iterate over.
-Some iterators in MXNet that support this feature are [mxnet.io.MNISTIterator]({{'/api/python/docs/api/gluon-related/_autogen/mxnet.io.MNISTIter.html#mxnet.io.MNISTIter'|relative_url}}) and [mxnet.io.ImageRecordIter]({{'/api/python/docs/api/gluon-related/_autogen/mxnet.io.ImageRecordIter.html#mxnet.io.ImageRecordIter'|relative_url}}).
+Some iterators in MXNet that support this feature are [mxnet.io.MNISTIterator]({{'//api/mxnet/io/index.html#mxnet.io.MNISTIter'|relative_url}}) and [mxnet.io.ImageRecordIter]({{'/api/mxnet/io/index.html#mxnet.io.ImageRecordIter'|relative_url}}).
 If you are using a different iterator, you can look at how the above iterators implement this.
 We can use the kvstore object to get the number of workers (`kv.num_workers`) and rank of the current worker (`kv.rank`).
 These can be passed as arguments to the iterator.

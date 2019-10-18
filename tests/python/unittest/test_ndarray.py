@@ -41,6 +41,10 @@ def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=
         assert dim
         shape = tuple(np.random.randint(1, int(1000**(1.0/dim)), size=dim))
         arg_shapes = [shape] * arg_shapes
+
+    if npuf is None:
+        npuf = uf
+
     for dtype in type_list:
         ndarray_arg = []
         numpy_arg = []
@@ -50,10 +54,7 @@ def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=
             ndarray_arg.append(narr)
             numpy_arg.append(npy)
         out1 = uf(*ndarray_arg)
-        if npuf is None:
-            out2 = uf(*numpy_arg).astype(dtype)
-        else:
-            out2 = npuf(*numpy_arg).astype(dtype)
+        out2 = npuf(*numpy_arg).astype(dtype)
 
         assert out1.shape == out2.shape
         if isinstance(out1, mx.nd.NDArray):
@@ -1712,13 +1713,13 @@ def test_norm(ctx=default_context()):
                         np_arr, i, keep_dims)
                     mx_out = mx.nd.norm(mx_arr, ord=ord, axis=i, keepdims=keep_dims)
                     assert npy_out.shape == mx_out.shape
-                    mx.test_utils.assert_almost_equal(npy_out, mx_out.asnumpy())
+                    assert_almost_equal(npy_out, mx_out)
                     if (i < 3):
                         npy_out = l1norm(np_arr, (i, i + 1), keep_dims) if ord == 1 else l2norm(
                             np_arr, (i, i + 1), keep_dims)
                         mx_out = mx.nd.norm(mx_arr, ord=ord, axis=(i, i + 1), keepdims=keep_dims)
                         assert npy_out.shape == mx_out.shape
-                        mx.test_utils.assert_almost_equal(npy_out, mx_out.asnumpy())
+                        assert_almost_equal(npy_out, mx_out)
 
 
 @with_seed()
@@ -1732,7 +1733,7 @@ def test_dlpack():
     for dtype in [np.float32, np.int32]:
         for shape in [(3, 4, 5, 6), (2, 10), (15,)]:
             a = mx.nd.random.uniform(shape = shape)
-            a_np = a.asnumpy()
+            a_np = a.copy()
 
             pack = a.to_dlpack_for_read()
             b = mx.nd.from_dlpack(pack)
@@ -1750,14 +1751,10 @@ def test_dlpack():
 
             del a, pack, pack2, pack3, pack4
 
-            b_np = b.asnumpy()
-            c_np = c.asnumpy()
-            d_np = d.asnumpy()
-            e_np = e.asnumpy()
-            mx.test_utils.assert_almost_equal(a_np, b_np)
-            mx.test_utils.assert_almost_equal(a_np, c_np)
-            mx.test_utils.assert_almost_equal(a_np, d_np)
-            mx.test_utils.assert_almost_equal(a_np, e_np)
+            assert_almost_equal(a_np, b)
+            assert_almost_equal(a_np, c)
+            assert_almost_equal(a_np, d)
+            assert_almost_equal(a_np, e)
 
 @with_seed()
 def test_ndarray_is_inf():
@@ -1986,6 +1983,22 @@ def test_large_int_rounding():
 
     a = mx.nd.array([large_integer], dtype='int32').trunc()
     assert np.all(a == large_integer)
+
+
+def test_load_saved_gpu_array_when_no_gpus_are_present():
+    # State obtained with mx.nd.arange(1, ctx=mx.gpu()).__getstate__()
+    # State needs to be exported manually, as running above command will only
+    # work if a gpu is present.
+    ndarray_state = {
+        'handle':
+        bytearray(
+            b'\xc9\xfa\x93\xf9\x00\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+        )
+    }
+    array = mx.nd.arange(1)
+    # Test that MXNDArrayLoadFromRawBytes works even if we have built with Cuda
+    # but there are no GPUs
+    array.__setstate__(ndarray_state)
 
 
 if __name__ == '__main__':
