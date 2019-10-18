@@ -409,7 +409,7 @@ __global__ void ReduceNMSResultTriangle_kernel(uint32_t* nms_results,
   const int my_warp = threadIdx.x / warp_size;
   const int my_lane = threadIdx.x % warp_size;
 
-  __shared__ uint32_t current_valid_boxes;
+  __shared__ uint32_t current_valid_boxes[n_threads / warp_size];
   const uint32_t full_mask = 0xFFFFFFFF;
   const uint32_t my_lane_mask = 1 << my_lane;
   const uint32_t my_warp_mask = (1 << (my_lane + 1)) - 1;
@@ -436,15 +436,14 @@ __global__ void ReduceNMSResultTriangle_kernel(uint32_t* nms_results,
           valid = valid & mask;
       }
       valid_boxes = __ballot_sync(full_mask, valid);
-      if (my_lane == 0) {
-        current_valid_boxes = valid_boxes;
-      }
+    }
+    if (my_lane == 0 && my_warp == i) {
+      current_valid_boxes[i] = valid_boxes;
     }
     __syncthreads();
-    if ((my_warp > i) && (((~my_mask) & current_valid_boxes) != 0)) {
+    if ((my_warp > i) && (((~my_mask) & current_valid_boxes[i]) != 0)) {
       valid = 0;
     }
-    __syncthreads();
   }
   if (my_lane == 0) {
     nms_results[my_element] = valid_boxes;
