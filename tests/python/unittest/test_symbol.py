@@ -18,11 +18,13 @@
 import copy
 import os
 import re
+import json
 import mxnet as mx
 import numpy as np
-from common import assertRaises, models
+from common import assertRaises, models, TemporaryDirectory
 from mxnet.base import NotImplementedForSymbol
-from mxnet.test_utils import discard_stderr, rand_shape_nd
+from mxnet.test_utils import discard_stderr, rand_shape_nd, use_np
+from mxnet.util import np_shape
 import pickle as pkl
 
 def test_symbol_basic():
@@ -413,6 +415,49 @@ def test_gen_atomic_symbol_multiple_outputs():
     s = mx.sym.RNN(data, p, h0, h1, state_size=10, num_layers=2, 
                    bidirectional=True, state_outputs=True, mode='lstm')
     atomic_sym = s._gen_atomic_symbol()
+
+
+def test_load_save_symbol():
+    batch_size = 10
+    num_hdidden = 128
+    num_features = 784
+
+    def get_net():
+        data = mx.sym.var('data')
+        weight = mx.sym.var('weight', shape=(num_hdidden, 0))
+        return mx.sym.FullyConnected(data, weight, num_hidden=num_hdidden)
+
+    with TemporaryDirectory() as work_dir:
+        for is_old_format in [True, False]:
+            net_json_str = get_net().tojson()
+            net_data = json.loads(net_json_str)
+            assert "attrs" in net_data
+            assert "is_np_shape" in net_data["attrs"]
+            np_shape_flag = net_data["attrs"]["is_np_shape"]
+
+            assert len(np_shape_flag) == 2
+            assert np_shape_flag[0] == 'int'
+            assert np_shape_flag[1] == 0
+
+            if is_old_format:
+                net_data["attrs"].pop("is_np_shape")  # delete is_np_shape key-value to simulate 1.5.0 format
+
+            fname = os.path.join(work_dir, 'test_sym.json')
+            with open(fname, 'w') as fp:
+                json.dump(net_data, fp)
+
+            # test loading 1.5.0 symbol file since 1.6.0
+            # w/ or w/o np_shape semantics
+            for flag in [False, True]:
+                with np_shape(flag):
+                    net = mx.sym.load(fname)
+                    arg_shapes, out_shapes, aux_shapes = net.infer_shape(data=(batch_size, num_features))
+                    assert arg_shapes[0] == (batch_size, num_features)  # data
+                    assert arg_shapes[1] == (num_hdidden, num_features)  # weight
+                    assert arg_shapes[2] == (num_hdidden,)  # bias
+                    assert out_shapes[0] == (batch_size, num_hdidden)  # output
+                    assert len(aux_shapes) == 0
+
 
 if __name__ == '__main__':
     import nose
