@@ -43,7 +43,7 @@ class Trainer(object):
         The set of parameters to optimize.
     optimizer : str or Optimizer
         The optimizer to use. See
-        `help <https://mxnet.incubator.apache.org/api/python/tutorials/packages/optimizer/optimizer.html>`_
+        `help <https://mxnet.apache.org/api/python/docs/api/optimizer/index.html#mxnet.optimizer.Optimizer>`_
         on Optimizer for a list of available optimizers.
     optimizer_params : dict
         Key-word arguments to be passed to optimizer constructor. For example,
