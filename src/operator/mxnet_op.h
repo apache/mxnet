@@ -750,6 +750,7 @@ struct op_with_req {
     KERNEL_ASSIGN(out[i], req, OP::Map(input_1[i], input_2[i], input_3[i]));
   }
 
+  /*! \brief input is a tensor and the output is a boolean tensor */
   template<typename DType,
            typename std::enable_if<!std::is_same<DType, bool>::value, int>::type = 0>
   MSHADOW_XINLINE static void Map(index_t i, bool *out, const DType *in) {
@@ -767,6 +768,20 @@ struct op_with_req {
   template<typename DType,
            typename std::enable_if<!std::is_same<DType, bool>::value, int>::type = 0>
   MSHADOW_XINLINE static void Map(index_t i, bool *out, const DType *in, const DType value) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value));
+  }
+
+  /*! \brief inputs are two tensors with a float output tensor */
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i, float *out, const DType *lhs, const DType *rhs) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
+  }
+
+  /*! \brief input is a tensor and a scalar value with a float output tensor */
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i, float *out, const DType *in, const DType value) {
     KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value));
   }
 };

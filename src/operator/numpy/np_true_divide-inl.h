@@ -79,24 +79,20 @@ void TrueDivideElemwiseCompute(const nnvm::NodeAttrs &attrs,
   MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
     if (common::is_float(inputs[0].type_flag_)) {
       MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-        const size_t size = (ElemwiseBinaryOp::minthree(
-            outputs[0].Size(), inputs[0].Size(), inputs[1].Size())
-            + DataType<DType>::kLanes - 1) / DataType<DType>::kLanes;
-        Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, size,
+        Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, outputs[0].Size(),
                                                             outputs[0].dptr<DType>(),
-                                                            inputs[0].dptr<DType>(), inputs[1].dptr<DType>());
+                                                            inputs[0].dptr<DType>(),
+                                                            inputs[1].dptr<DType>());
       });
     } else {
       CHECK_EQ(outputs[0].type_flag_, kFloat32) << "true_divide only supports float32 output "
                                                    "when input's dtype is "
                                                 << type_string(inputs[0].type_flag_);
       MXNET_INT_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-        const size_t size = (ElemwiseBinaryOp::minthree(
-            outputs[0].Size(), inputs[0].Size(), inputs[1].Size())
-            + DataType<DType>::kLanes - 1) / DataType<DType>::kLanes;
-        Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, size,
+        Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, outputs[0].Size(),
                                                             outputs[0].dptr<float>(),
-                                                            inputs[0].dptr<DType>(), inputs[1].dptr<DType>());
+                                                            inputs[0].dptr<DType>(),
+                                                            inputs[1].dptr<DType>());
       });
     }
   });
@@ -130,9 +126,9 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
                               inputs[0].dptr<DType>(), inputs[1].dptr<DType>(), outputs[0].dptr<DType>());
         });
       } else {
-        CHECK_EQ(outputs[0].type_flag_, kFloat32) << "true_divide only supports float32 output "
-                                                     "when input's dtype is "
-                                                  << type_string(inputs[0].type_flag_);
+        CHECK_EQ(outputs[0].type_flag_, mshadow::kFloat32)
+            << "true_divide only supports float32 output when input's dtype is "
+            << type_string(inputs[0].type_flag_);
         MXNET_INT_TYPE_SWITCH(inputs[0].type_flag_, DType, {
           mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, DType, float, OP>, xpu>::
             template LaunchEx(s, new_oshape.Size(), req[0], lstride, rstride, oshape,
