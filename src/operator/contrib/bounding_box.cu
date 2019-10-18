@@ -166,12 +166,13 @@ void CompactData(const Tensor<gpu, 1, index_t>& indices,
 }
 
 template <typename DType>
-void WorkspaceForSort(const int num_elem,
-                      const int width_elem,
+void WorkspaceForSort(const index_t num_elem,
+                      const index_t topk,
                       const int alignment,
                       TempWorkspace<DType>* workspace) {
   const index_t sort_scores_temp_space = mxnet::op::SortByKeyWorkspaceSize<DType, index_t, gpu>(num_elem, false, false);
-  workspace->scratch_space = align(sort_scores_temp_space,
+  const index_t sort_topk_scores_temp_space = mxnet::op::SortByKeyWorkspaceSize<DType, index_t, gpu>(topk, false, false);
+  workspace->scratch_space = align(std::max(sort_scores_temp_space, sort_topk_scores_temp_space),
                                    alignment);
 }
 
@@ -500,8 +501,8 @@ __global__ void ReduceNMSResultRest_kernel(DType* data,
 }
 
 template <typename DType>
-TempWorkspace<DType> GetWorkspace(const int num_batch,
-                                  const int num_elem,
+TempWorkspace<DType> GetWorkspace(const index_t num_batch,
+                                  const index_t num_elem,
                                   const int width_elem,
                                   const index_t topk,
                                   const OpContext& ctx) {
@@ -512,7 +513,7 @@ TempWorkspace<DType> GetWorkspace(const int num_batch,
   // Get the workspace size
   workspace.scores_temp_space = 2 * align(num_batch * num_elem * sizeof(DType), alignment);
   workspace.indices_temp_spaces = 2 * align(num_batch * num_elem * sizeof(index_t), alignment);
-  WorkspaceForSort(num_elem, width_elem, alignment, &workspace);
+  WorkspaceForSort(num_elem, topk, alignment, &workspace);
   // Place for a buffer
   workspace.buffer_space = align(num_batch * num_elem * width_elem * sizeof(DType), alignment);
   workspace.nms_scratch_space = align(NMS<DType>::THRESHOLD / (sizeof(uint32_t) * 8) *
@@ -561,6 +562,7 @@ void CompactNMSResults(const Tensor<gpu, 3, DType>& data,
                        Tensor<gpu, 1, DType>* sorted_scores,
                        Tensor<gpu, 1, char>* scratch,
                        const int score_index,
+                       const index_t topk,
                        Stream<gpu>* s) {
   using mshadow::Shape1;
   constexpr int n_threads = 512;
@@ -575,22 +577,22 @@ void CompactNMSResults(const Tensor<gpu, 3, DType>& data,
   for (index_t i = 0; i < num_batches; ++i) {
     // Sort each batch separately
     Tensor<gpu, 1, DType> scores_batch(scores->dptr_ + i * num_elements_per_batch,
-                                       Shape1(num_elements_per_batch),
+                                       Shape1(topk),
                                        s);
     Tensor<gpu, 1, index_t> indices_batch(indices->dptr_ + i * num_elements_per_batch,
-                                          Shape1(num_elements_per_batch),
+                                          Shape1(topk),
                                           s);
     Tensor<gpu, 1, DType> sorted_scores_batch(sorted_scores->dptr_ + i * num_elements_per_batch,
-                                              Shape1(num_elements_per_batch),
+                                              Shape1(topk),
                                               s);
     Tensor<gpu, 1, index_t> sorted_indices_batch(sorted_indices->dptr_ + i * num_elements_per_batch,
-                                                 Shape1(num_elements_per_batch),
+                                                 Shape1(topk),
                                                  s);
     mxnet::op::SortByKey(scores_batch, indices_batch, false, scratch,
                          0, 8 * sizeof(DType), &sorted_scores_batch,
                          &sorted_indices_batch);
   }
-  CompactData<true>(*sorted_indices, data, out, -1, score_index, s);
+  CompactData<true>(*sorted_indices, data, out, topk, score_index, s);
   //CompactData<true>(*indices, data, out, -1, score_index, s);
 }
 
@@ -673,7 +675,7 @@ void BoxNMSForwardGPU_notemp(const nnvm::NodeAttrs& attrs,
     NMS<DType> nms;
     nms(&buffer, &nms_scratch,  topk, param, s);
     CompactNMSResults(buffer, &out, &indices, &scores, &sorted_indices,
-                      &sorted_scores, &scratch, param.score_index, s);
+                      &sorted_scores, &scratch, param.score_index, topk, s);
 
     // convert encoding
     if (param.in_format != param.out_format) {
