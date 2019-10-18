@@ -26,6 +26,7 @@
 #ifndef MXNET_OPERATOR_NUMPY_NP_TRUE_DIVIDE_INL_H_
 #define MXNET_OPERATOR_NUMPY_NP_TRUE_DIVIDE_INL_H_
 
+#include <vector>
 #include "../../common/utils.h"
 #include "../tensor/elemwise_binary_broadcast_op.h"
 
@@ -98,8 +99,6 @@ void TrueDivideElemwiseCompute(const nnvm::NodeAttrs &attrs,
   });
 }
 
-
-
 template<typename xpu, typename OP>
 void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
                                 const OpContext& ctx,
@@ -123,7 +122,8 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
         MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
           mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, DType, DType, OP>, xpu>::
             template LaunchEx(s, new_oshape.Size(), req[0], lstride, rstride, oshape,
-                              inputs[0].dptr<DType>(), inputs[1].dptr<DType>(), outputs[0].dptr<DType>());
+                              inputs[0].dptr<DType>(), inputs[1].dptr<DType>(),
+                              outputs[0].dptr<DType>());
         });
       } else {
         CHECK_EQ(outputs[0].type_flag_, mshadow::kFloat32)
@@ -132,7 +132,8 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
         MXNET_INT_TYPE_SWITCH(inputs[0].type_flag_, DType, {
           mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, DType, float, OP>, xpu>::
             template LaunchEx(s, new_oshape.Size(), req[0], lstride, rstride, oshape,
-                              inputs[0].dptr<DType>(), inputs[1].dptr<DType>(), outputs[0].dptr<float>());
+                              inputs[0].dptr<DType>(), inputs[1].dptr<DType>(),
+                              outputs[0].dptr<float>());
         });
       }
     });
