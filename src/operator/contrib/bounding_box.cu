@@ -169,8 +169,10 @@ void WorkspaceForSort(const index_t num_elem,
                       const index_t topk,
                       const int alignment,
                       TempWorkspace<DType>* workspace) {
-  const index_t sort_scores_temp_space = mxnet::op::SortByKeyWorkspaceSize<DType, index_t, gpu>(num_elem, false, false);
-  const index_t sort_topk_scores_temp_space = mxnet::op::SortByKeyWorkspaceSize<DType, index_t, gpu>(topk, false, false);
+  const index_t sort_scores_temp_space =
+    mxnet::op::SortByKeyWorkspaceSize<DType, index_t, gpu>(num_elem, false, false);
+  const index_t sort_topk_scores_temp_space =
+    mxnet::op::SortByKeyWorkspaceSize<DType, index_t, gpu>(topk, false, false);
   workspace->scratch_space = align(std::max(sort_scores_temp_space, sort_topk_scores_temp_space),
                                    alignment);
 }
@@ -336,7 +338,8 @@ __global__ void CalculateGreedyNMSResults_kernel(const DType* data, uint32_t* re
   const index_t my_block_offset_in_row = blockIdx.x % num_blocks_per_row;
   const index_t my_block_offset_in_batch = my_block_offset_in_row % num_blocks_per_row_batch;
   const index_t my_batch = (my_block_offset_in_row) / num_blocks_per_row_batch;
-  const index_t my_element_in_batch = my_block_offset_in_batch * blockDim.x + current_start + threadIdx.x;
+  const index_t my_element_in_batch = my_block_offset_in_batch * blockDim.x +
+                                      current_start + threadIdx.x;
 
   // Load other boxes
   const index_t offset = (my_batch * num_elements_per_batch +
@@ -458,7 +461,8 @@ __global__ void ReduceNMSResultTriangle_kernel(uint32_t* nms_results,
     nms_results[my_element] = valid_boxes;
   }
   if (valid == 0) {
-    data[(my_batch * num_elements_per_batch + my_element_in_batch) * element_width + score_index] = -1;
+    data[(my_batch * num_elements_per_batch + my_element_in_batch) * element_width +
+         score_index] = -1;
   }
 }
 
@@ -478,7 +482,8 @@ __global__ void ReduceNMSResultRest_kernel(DType* data,
   constexpr int warp_size = 32;
   const index_t my_block_offset_in_batch = blockIdx.x % num_blocks_per_batch;
   const index_t my_batch = blockIdx.x / num_blocks_per_batch;
-  const index_t my_element_in_batch = my_block_offset_in_batch * blockDim.x + start_index + NMS<DType>::THRESHOLD + threadIdx.x;
+  const index_t my_element_in_batch = my_block_offset_in_batch * blockDim.x +
+                                      start_index + NMS<DType>::THRESHOLD + threadIdx.x;
   const index_t my_element = my_batch * topk + my_element_in_batch;
 
   if (my_element_in_batch >= topk) return;
@@ -495,7 +500,8 @@ __global__ void ReduceNMSResultRest_kernel(DType* data,
   }
 
   if (!valid) {
-    data[(my_batch * num_elements_per_batch + my_element_in_batch) * element_width + score_index] = -1;
+    data[(my_batch * num_elements_per_batch + my_element_in_batch) * element_width +
+          score_index] = -1;
   }
 }
 
@@ -592,7 +598,6 @@ void CompactNMSResults(const Tensor<gpu, 3, DType>& data,
                          &sorted_indices_batch);
   }
   CompactData<true>(*sorted_indices, data, out, topk, score_index, s);
-  //CompactData<true>(*indices, data, out, -1, score_index, s);
 }
 
 }  // namespace
@@ -617,13 +622,12 @@ void BoxNMSForwardGPU_notemp(const nnvm::NodeAttrs& attrs,
   int num_elem = in_shape[indim - 2];
   int width_elem = in_shape[indim - 1];
 
-  //MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, 
-  using DType = float;
-  {
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<gpu, 3, DType> data = inputs[box_nms_enum::kData]
      .get_with_shape<gpu, 3, DType>(Shape3(num_batch, num_elem, width_elem), s);
     Tensor<gpu, 3, DType> out = outputs[box_nms_enum::kOut]
      .get_with_shape<gpu, 3, DType>(Shape3(num_batch, num_elem, width_elem), s);
+
     // Special case for topk == 0
     if (param.topk == 0) {
       if (req[0] != kNullOp &&
@@ -639,9 +643,11 @@ void BoxNMSForwardGPU_notemp(const nnvm::NodeAttrs& attrs,
 
     FilterAndPrepareAuxData(data, &out, workspace, param, s);
     Tensor<gpu, 1, DType> scores(workspace.scores, Shape1(num_batch * num_elem), s);
-    Tensor<gpu, 1, DType> sorted_scores(workspace.scores + scores.MSize(), Shape1(num_batch * num_elem), s);
+    Tensor<gpu, 1, DType> sorted_scores(workspace.scores + scores.MSize(),
+                                        Shape1(num_batch * num_elem), s);
     Tensor<gpu, 1, index_t> indices(workspace.indices, Shape1(num_batch * num_elem), s);
-    Tensor<gpu, 1, index_t> sorted_indices(workspace.indices + indices.MSize(), Shape1(num_batch * num_elem), s);
+    Tensor<gpu, 1, index_t> sorted_indices(workspace.indices + indices.MSize(),
+                                           Shape1(num_batch * num_elem), s);
     Tensor<gpu, 1, char> scratch(reinterpret_cast<char*>(workspace.scratch),
                                         Shape1(workspace.scratch_space), s);
     Tensor<gpu, 3, DType> buffer(workspace.buffer,
@@ -670,7 +676,6 @@ void BoxNMSForwardGPU_notemp(const nnvm::NodeAttrs& attrs,
                            &sorted_indices_batch);
     }
     CompactData<false>(sorted_indices, out, &buffer, topk, -1, s);
-    /*CompactData<false>(indices, out, &buffer, topk, -1, s);*/
     NMS<DType> nms;
     nms(&buffer, &nms_scratch,  topk, param, s);
     CompactNMSResults(buffer, &out, &indices, &scores, &sorted_indices,
@@ -686,7 +691,7 @@ void BoxNMSForwardGPU_notemp(const nnvm::NodeAttrs& attrs,
           out.dptr_ + param.coord_start, width_elem);
       }
     }
-  };//);
+  });
 }
 
 void BoxNMSForwardGPU(const nnvm::NodeAttrs& attrs,
