@@ -35,6 +35,7 @@
 #include <string>
 #include <iostream>
 #include <utility>
+#include <exception>
 
 #define MX_LIBRARY_VERSION 1
 
@@ -252,7 +253,9 @@ struct MXTensor {
     default:
       dltensor.dtype.code = 0;
       dltensor.dtype.bits = 0;
-      std::cout << "Error! Invalid dtype flag: " << dtype " when constructing MXTensor" << std::endl;  
+      throw std::runtime_error("Error! Invalid dtype flag: "
+                               + std::to_string(static_cast<int>(dtype))
+                               + " when constructing MXTensor");
     }
   }
 
