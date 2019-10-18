@@ -6930,10 +6930,10 @@ def test_stack():
 
 @with_seed()
 def test_dropout_with_seed():
-    a = mx.nd.ones((10, 10))
+    a = mx.nd.ones((100, 100))
     dropout = mx.gluon.nn.Dropout(0.5)
 
-    info = np.iinfo(np.int64)
+    info = np.iinfo(np.int32)
     seed = np.random.randint(info.min, info.max)
     mx.random.seed(seed)
     with mx.autograd.record():
