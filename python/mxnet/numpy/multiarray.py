@@ -135,7 +135,7 @@ _NUMPY_ARRAY_UFUNC_DICT = {}
 class ndarray(NDArray):
     """
     ndarray(handle, writable=True):
-    
+
     An array object represents a multidimensional, homogeneous array of fixed-size items.
     An associated data-type object describes the format of each element in the array
     (its byte-order, how many bytes it occupies in memory, whether it is an integer, a
