@@ -2018,9 +2018,11 @@ def test_np_randint():
 @with_seed()
 @use_np
 def test_np_swapaxes():
-    config = [((0, 1, 2), 0, 1),
-              ((0, 1, 2), -1, -2),
-              ((4, 5, 6, 7), 2, 3),
+    config = [((0, 1, 2), 0, 0),
+              ((0, 1, 2), 1, 2),
+              ((0, 1, 2), 1, -2),
+              ((4, 5, 6, 7), 1, 1),
+              ((4, 5, 6, 7), 2, -2),
               ((4, 5, 6, 7), -2, -3)]
 
     class TestSwapaxes(HybridBlock):
