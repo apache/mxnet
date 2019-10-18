@@ -2562,7 +2562,7 @@ def test_np_linalg_norm():
 
 @with_seed()
 @use_np
-def test_np_svd():
+def test_np_linalg_svd():
     class TestSVD(HybridBlock):
         def __init__(self):
             super(TestSVD, self).__init__()
@@ -2589,6 +2589,28 @@ def test_np_svd():
         G2 = _np.eye(m) + (X + _np.swapaxes(X, -2, -1)) * L[..., None, :] - 1.0 / L[..., None] * _np.matmul(dV, _np.swapaxes(V, -2, -1)) * _np.eye(m)
         dA = _np.matmul(UT, _np.matmul(G2, V) + 1.0 / L[..., None] * dV)
         return dA
+
+    def check_svd(UT, L, V, data_np):
+        shape = data_np.shape
+        # check UT @ L @ V == A
+        t = _np.matmul(UT * L[..., None, :], V)
+        assert t.shape == data_np.shape
+        assert_almost_equal(t, data_np, rtol=rtol, atol=atol)
+        # check UT @ U == I
+        I = _np.matmul(UT, _np.swapaxes(UT, -2, -1))
+        I_np = _np.ones_like(UT) * _np.eye(shape[-2])
+        assert I.shape == I_np.shape
+        assert_almost_equal(I, I_np, rtol=rtol, atol=atol)
+        # check U @ UT == I
+        I = _np.matmul(_np.swapaxes(UT, -2, -1), UT)
+        I_np = _np.ones_like(UT) * _np.eye(shape[-2])
+        assert I.shape == I_np.shape
+        assert_almost_equal(I, I_np, rtol=rtol, atol=atol)
+        # check V @ VT == I
+        I = _np.matmul(V, _np.swapaxes(V, -2, -1))
+        I_np = _np.ones_like(UT) * _np.eye(shape[-2])
+        assert I.shape == I_np.shape
+        assert_almost_equal(I, I_np, rtol=rtol, atol=atol)
 
     shapes = [
         (3, 3),
@@ -2623,25 +2645,8 @@ def test_np_svd():
                 UT = ret[0].asnumpy()
                 L = ret[1].asnumpy()
                 V = ret[2].asnumpy()
-                # check UT @ L @ V == A
-                t = _np.matmul(UT * L[..., None, :], V)
-                assert t.shape == data_np.shape
-                assert_almost_equal(t, data_np, rtol=rtol, atol=atol)
-                # check UT @ U == I
-                I = _np.matmul(UT, _np.swapaxes(UT, -2, -1))
-                I_np = _np.ones_like(UT) * _np.eye(shape[-2])
-                assert I.shape == I_np.shape
-                assert_almost_equal(I, I_np, rtol=rtol, atol=atol)
-                # check U @ UT == I
-                I = _np.matmul(_np.swapaxes(UT, -2, -1), UT)
-                I_np = _np.ones_like(UT) * _np.eye(shape[-2])
-                assert I.shape == I_np.shape
-                assert_almost_equal(I, I_np, rtol=rtol, atol=atol)
-                # check V @ VT == I
-                I = _np.matmul(V, _np.swapaxes(V, -2, -1))
-                I_np = _np.ones_like(UT) * _np.eye(shape[-2])
-                assert I.shape == I_np.shape
-                assert_almost_equal(I, I_np, rtol=rtol, atol=atol)
+                # check svd validity
+                check_svd(UT, L, V, data_np)
                 # check descending singular values
                 s = [L[..., i] - L[..., i + 1] for i in range(L.shape[-1] - 1)]
                 s = _np.array(s)
@@ -2653,6 +2658,12 @@ def test_np_svd():
                 if ((s > 1e-5).all() and (L.size == 0 or (L > 1e-5).all())):
                     backward_expected = get_grad(ret[0].asnumpy(), ret[1].asnumpy(), ret[2].asnumpy())
                     assert_almost_equal(data.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+                # Test imperative once again
+                ret = np.linalg.svd(data)
+                UT = ret[0].asnumpy()
+                L = ret[1].asnumpy()
+                V = ret[2].asnumpy()
+                check_svd(UT, L, V, data_np)
 
 
 @with_seed()
