@@ -3529,16 +3529,16 @@ def test_np_true_divide():
             assert out_mx.dtype == np.float32
         else:
             assert out_mx.dtype == dtype
-        out_np = a.asnumpy() / b.asnumpy()
+        out_np = _np.true_divide(a.asnumpy(), b.asnumpy())
         assert_almost_equal(out_mx.asnumpy(), out_np, rtol=1e-3, atol=1e-3, use_broadcast=False)
 
         val = _np.random.randint(3, 50)
         out_mx = a / val
-        out_np = a.asnumpy() / val
+        out_np = _np.true_divide(a.asnumpy(), val)
         assert_almost_equal(out_mx.asnumpy(), out_np, rtol=1e-3, atol=1e-3, use_broadcast=False)
 
         out_mx = val / a
-        out_np = val / a.asnumpy()
+        out_np = _np.true_divide(val, a.asnumpy())
         assert_almost_equal(out_mx.asnumpy(), out_np, rtol=1e-3, atol=1e-3, use_broadcast=False)
 
 
