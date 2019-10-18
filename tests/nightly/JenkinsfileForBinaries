@@ -20,6 +20,7 @@
 
 mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
+mx_lib_cpp_examples = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, libsample_lib.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a, build/cpp-package/example/*, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so'
 
 node('utility') {
   // Loading the utilities requires a node context unfortunately
@@ -72,7 +73,7 @@ core_logic: {
     parallel 'ImageNet Inference: GPU': {
       node(NODE_LINUX_GPU) {
         ws('workspace/nt-ImageInferenceTest') {
-          utils.unpack_and_init('gpu', mx_lib)
+          utils.unpack_and_init('gpu', mx_lib_cpp_examples)
           utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_imagenet_inference', true)
         }
       }
