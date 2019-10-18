@@ -249,6 +249,10 @@ struct MXTensor {
       dltensor.dtype.code = kDLInt;
       dltensor.dtype.bits = 64;
       break;
+    default:
+      dltensor.dtype.code = 0;
+      dltensor.dtype.bits = 0;
+      std::cout << "Error! Invalid dtype flag: " << dtype " when constructing MXTensor" << std::endl;  
     }
   }
 
