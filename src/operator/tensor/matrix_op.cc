@@ -425,7 +425,7 @@ void SliceExCPU(const nnvm::NodeAttrs& attrs,
   auto in_stype = inputs[0].storage_type();
   if (in_stype == kCSRStorage) {
     SliceCsrImpl<cpu>(param, ctx, inputs[0], req[0], outputs[0]);
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
   } else if (in_stype == kDefaultStorage) {
     if (SupportMKLDNN(inputs[0])) {
       MKLDNNSlice(param, ctx, inputs[0], req[0], outputs[0]);
@@ -488,7 +488,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice"})
 .set_attr<FCompute>("FCompute<cpu>", SliceOpForward<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SliceExCPU)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 100
 .set_attr<bool>("TIsMKLDNN", true)
 #endif
 .add_argument("data", "NDArray-or-Symbol", "Source input")
