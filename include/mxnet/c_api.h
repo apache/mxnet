@@ -596,12 +596,12 @@ MXNET_DLL int MXNDArrayCreate(const uint32_t *shape,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayCreateEx(const uint32_t *shape,
-                              uint32_t ndim,
-                              int dev_type,
-                              int dev_id,
-                              int delay_alloc,
-                              int dtype,
-                              NDArrayHandle *out);
+                                uint32_t ndim,
+                                int dev_type,
+                                int dev_id,
+                                int delay_alloc,
+                                int dtype,
+                                NDArrayHandle *out);
 
 MXNET_DLL int MXNDArrayCreateEx64(const int64_t *shape,
                                   int ndim,

@@ -1884,6 +1884,8 @@ NDArray NDArray::Copy(Context ctx) const {
 
 void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
   mxnet::TShape dshape = this->shape();
+  CHECK_LT(size, 1 >> 31) << "Size of tensor you are trying to allocate is larger than "
+                             "2^32 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
   // zero-size array, no need to copy
@@ -2019,6 +2021,8 @@ void NDArray::SyncCopyFromNDArray(const NDArray& src, int i, int j) {
 
 void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   mxnet::TShape dshape = this->shape();
+  CHECK_LT(size, 1 >> 31) << "Size of tensor you are trying to allocate is larger than "
+                             "2^32 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
   // zero-size array, no need to copy
