@@ -116,6 +116,9 @@ class SafeDockerClient:
 
         ret = 0
         try:
+            # Race condition:
+            # If the call to docker_client.containers.run is interrupted, it is possible that
+            # the container won't be cleaned up. We avoid this by temporarily masking the signals.
             signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGINT, signal.SIGTERM})
             container = self._add_container(self._docker_client.containers.run(*args, **kwargs))
             signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGINT, signal.SIGTERM})
