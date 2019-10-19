@@ -42,7 +42,7 @@ def get_environment(mxnet_variant) {
 def build(mxnet_variant) {
   ws("workspace/python_docker/${mxnet_variant}/${env.BUILD_NUMBER}") {
     ci_utils.init_git()
-    cd_utils.restore_artifact(mxnet_variant, 'static')
+    cd_utils.restore_static_libmxnet(mxnet_variant)
 
     // package wheel file
     def nvidia_docker = mxnet_variant.startsWith('cu')
