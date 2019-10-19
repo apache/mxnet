@@ -425,9 +425,9 @@ __global__ void ReduceNMSResultTriangle_kernel(uint32_t* nms_results,
   __shared__ uint32_t current_valid_boxes[n_threads / warp_size];
   const uint32_t full_mask = 0xFFFFFFFF;
   const uint32_t my_lane_mask = 1 << my_lane;
-  const uint32_t my_warp_mask = (1 << (my_lane + 1)) - 1;
+  const uint32_t earlier_threads_mask = (1 << (my_lane + 1)) - 1;
   uint32_t valid = my_lane_mask;
-  uint32_t valid_boxes;
+  uint32_t valid_boxes = full_mask;
 
   uint32_t my_next_mask = my_element_in_batch < topk ?
     nms_results[my_element]:
@@ -439,8 +439,8 @@ __global__ void ReduceNMSResultTriangle_kernel(uint32_t* nms_results,
                     (my_element_in_batch < topk)) ?
       nms_results[(i + 1) * topk * num_batches + my_element]:
       full_mask;
-    if (my_warp == i) {
-      my_mask = my_mask | my_warp_mask;
+    if (my_warp == i && !__all_sync(full_mask, my_mask == full_mask)) {
+      my_mask = my_mask | earlier_threads_mask;
       // Loop over warp_size - 1 because the last
       // thread does not contribute to the mask anyway
 #pragma unroll
