@@ -116,7 +116,8 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'vstack',
     'zeros_like',
     'meshgrid',
-    'outer'
+    'outer',
+    'einsum'
 ]
 
 
