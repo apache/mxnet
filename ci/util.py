@@ -18,6 +18,7 @@
 import os
 import contextlib
 import logging
+import logging.config
 import sys
 
 
@@ -122,8 +123,6 @@ def script_name() -> str:
 
 
 def config_logging():
-    import time
-    logging.getLogger().setLevel(logging.INFO)
+    conf_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logging.conf")
+    logging.config.fileConfig(os.getenv('LOGGING_CONF', conf_path))
     logging.getLogger("requests").setLevel(logging.WARNING)
-    logging.basicConfig(format='{}: %(asctime)sZ %(levelname)s %(message)s'.format(script_name()))
-    logging.Formatter.converter = time.gmtime
