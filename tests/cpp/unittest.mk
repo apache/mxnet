@@ -61,6 +61,11 @@ build/tests/cpp/engine/%.o : tests/cpp/engine/%.cc | mkldnn
 	$(CXX) -std=c++11 $(TEST_CFLAGS) -I$(GTEST_INC) -MM -MT tests/cpp/engine/$* $< > build/tests/cpp/engine/$*.d
 	$(CXX) -c -std=c++11 $(TEST_CFLAGS) -I$(GTEST_INC) -o build/tests/cpp/engine/$*.o $(filter %.cc %.a, $^)
 
+build/tests/cpp/thread_safety/%.o : tests/cpp/thread_safety/%.cc | mkldnn
+	@mkdir -p $(@D)
+	$(CXX) -std=c++11 $(TEST_CFLAGS) -I$(GTEST_INC) -MM -MT tests/cpp/thread_safety/$* $< > build/tests/cpp/thread_safety/$*.d
+	$(CXX) -c -std=c++11 $(TEST_CFLAGS) -I$(GTEST_INC) -o build/tests/cpp/thread_safety/$*.o $(filter %.cc %.a, $^)
+
 $(TEST): $(TEST_OBJ) lib/libmxnet.so gtest.a
 	$(CXX) -std=c++11 $(TEST_CFLAGS) -I$(GTEST_INC) -o $@ $^ $(TEST_LDFLAGS)
 
@@ -74,3 +79,4 @@ testclean:
 -include build/tests/cpp/operator/*.d
 -include build/tests/cpp/storage/*.d
 -include build/tests/cpp/engine/*.d
+-include build/tests/cpp/thread_safety/*.d

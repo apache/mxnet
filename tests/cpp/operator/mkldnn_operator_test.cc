@@ -38,8 +38,10 @@
 #include "../../src/operator/nn/convolution-inl.h"
 #include "../../src/operator/nn/deconvolution-inl.h"
 #include "../include/test_mkldnn.h"
+#include "../include/test_util.h"
 
 using namespace mxnet;
+using namespace mxnet::test;
 
 OpAttrs GetCopyOp() {
   OpAttrs attrs;
@@ -370,22 +372,6 @@ OpAttrs GetBNBackwardOp() {
   attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.requests.insert(OpReqType::kWriteTo);
   return attrs;
-}
-
-void AssertEqual(const std::vector<NDArray *> &in_arrs,
-                 const std::vector<NDArray *> &out_arrs,
-                 float rtol = 1e-5, float atol = 1e-8) {
-  NDArray tmp1 = in_arrs[0]->Reorder2Default();
-  NDArray tmp2 = out_arrs[0]->Reorder2Default();
-  EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
-  TBlob blob1 = tmp1.data();
-  TBlob blob2 = tmp2.data();
-  mshadow::default_real_t *d1 = static_cast<mshadow::default_real_t*>(blob1.dptr_);
-  mshadow::default_real_t *d2 = static_cast<mshadow::default_real_t*>(blob2.dptr_);
-  for (int i = 0; i < tmp1.shape().Size(); i++) {
-    float abs_err = fabs((d1[i]) - (d2[i]));
-    ASSERT_LE(abs_err, (atol + rtol * fabs(d2[i])));
-  }
 }
 
 void VerifyActResult(const std::vector<NDArray *> &in_arrs,
