@@ -713,11 +713,8 @@ void BoxNMSForwardGPU(const nnvm::NodeAttrs& attrs,
 }
 
 
-NNVM_REGISTER_OP(_contrib_box_nms2)
-.set_attr<FCompute>("FCompute<gpu>", BoxNMSForwardGPU);
-
 NNVM_REGISTER_OP(_contrib_box_nms)
-.set_attr<FCompute>("FCompute<gpu>", BoxNMSForward<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", BoxNMSForwardGPU);
 
 NNVM_REGISTER_OP(_backward_contrib_box_nms)
 .set_attr<FCompute>("FCompute<gpu>", BoxNMSBackward<gpu>);
