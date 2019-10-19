@@ -111,7 +111,7 @@ inline void NumpyDotBackward(const nnvm::NodeAttrs& attrs,
         ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size),
                                                        ctx.get_stream<xpu>());
       TensordotBackwardImpl<xpu>(a_axes_summed, b_axes_summed, ctx, ograd, a, b, grad_a,
-          grad_b, req, workspace);
+                                 grad_b, req, workspace);
     }
   });
 }

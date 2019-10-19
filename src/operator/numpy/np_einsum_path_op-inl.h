@@ -96,7 +96,7 @@ struct Step {
 };
 
 inline size_t _compute_size_by_dict(const std::string& indices,
-                             const dim_t idx_dict[]) {
+                                    const dim_t idx_dict[]) {
   size_t ret = 1;
   for (const char& c : indices) {
     ret *= idx_dict[static_cast<int>(c)];
@@ -105,7 +105,7 @@ inline size_t _compute_size_by_dict(const std::string& indices,
 }
 
 inline size_t _compute_size_by_dict(const std::bitset<MAXAXIS>& indices,
-                             const dim_t idx_dict[]) {
+                                    const dim_t idx_dict[]) {
   size_t ret = 1;
   for (int i = 0; i < MAXAXIS; ++i) {
     if (indices[i]) {
@@ -116,9 +116,9 @@ inline size_t _compute_size_by_dict(const std::bitset<MAXAXIS>& indices,
 }
 
 inline int _flop_count(const std::string& idx_contraction,
-                   bool inner,
-                   int num_terms,
-                   const dim_t size_dictionary[]) {
+                       bool inner,
+                       int num_terms,
+                       const dim_t size_dictionary[]) {
   size_t overall_size = _compute_size_by_dict(idx_contraction, size_dictionary);
   int op_factor = std::max(1, num_terms - 1);
   if (inner) {
@@ -128,9 +128,9 @@ inline int _flop_count(const std::string& idx_contraction,
 }
 
 inline int _flop_count(const std::bitset<MAXAXIS>& idx_contraction,
-                   bool inner,
-                   int num_terms,
-                   const dim_t size_dictionary[]) {
+                       bool inner,
+                       int num_terms,
+                       const dim_t size_dictionary[]) {
   size_t overall_size = _compute_size_by_dict(idx_contraction, size_dictionary);
   int op_factor = std::max(1, num_terms - 1);
   if (inner) {
@@ -140,8 +140,8 @@ inline int _flop_count(const std::bitset<MAXAXIS>& idx_contraction,
 }
 
 inline Contraction _find_contraction(const std::vector<int>& positions,
-                              const SetVector& input_sets,
-                              const std::bitset<MAXAXIS>& output_set) {
+                                     const SetVector& input_sets,
+                                     const std::bitset<MAXAXIS>& output_set) {
   Contraction ret;
   std::bitset<MAXAXIS> idx_remain(output_set);
   size_t size = input_sets.size();
@@ -161,13 +161,13 @@ inline Contraction _find_contraction(const std::vector<int>& positions,
 }
 
 inline int _parse_possible_contraction(const std::vector<int>& positions,
-                                const SetVector& input_sets,
-                                const std::bitset<MAXAXIS>& output_set,
-                                const dim_t idx_dict[],
-                                int memory_limit,
-                                int path_cost,
-                                int naive_cost,
-                                Alternative* ret) {
+                                       const SetVector& input_sets,
+                                       const std::bitset<MAXAXIS>& output_set,
+                                       const dim_t idx_dict[],
+                                       int memory_limit,
+                                       int path_cost,
+                                       int naive_cost,
+                                       Alternative* ret) {
   // Find the contraction
   Contraction contract = _find_contraction(positions, input_sets, output_set);
 
@@ -201,7 +201,7 @@ inline int _parse_possible_contraction(const std::vector<int>& positions,
 }
 
 inline void _update_other_results(std::vector<Alternative>* results,
-                           const Alternative& best) {
+                                  const Alternative& best) {
   const std::vector<int>& best_con = best.positions;
   int bx = best_con[0], by = best_con[1];
   size_t size = results->size();
@@ -231,9 +231,9 @@ inline void _update_other_results(std::vector<Alternative>* results,
 }
 
 inline std::vector<std::vector<int> > _greedy_path(const SetVector* input_sets,
-                                            const std::bitset<MAXAXIS>& output_set,
-                                            const dim_t idx_dict[],
-                                            int memory_limit) {
+                                                   const std::bitset<MAXAXIS>& output_set,
+                                                   const dim_t idx_dict[],
+                                                   int memory_limit) {
   size_t isize = input_sets->size();
   size_t iteration_num = isize;
   // Handle trivial cases that leaked through
@@ -366,8 +366,8 @@ inline std::vector<std::vector<int> > _greedy_path(const SetVector* input_sets,
 }
 
 inline bool _can_dot(const std::vector<std::string>& inputs,
-              const std::bitset<MAXAXIS>& result,
-              const std::bitset<MAXAXIS>& idx_removed) {
+                     const std::bitset<MAXAXIS>& result,
+                     const std::bitset<MAXAXIS>& idx_removed) {
   // All `dot` calls remove indices
   if (!idx_removed.any()) {
     return false;
@@ -469,7 +469,7 @@ inline bool _can_dot(const std::vector<std::string>& inputs,
 
 
 inline int _count_substring(const std::string& str,
-                     const std::string& sub) {
+                            const std::string& sub) {
   int count = 0;
   std::string::size_type pos = 0;
   while ((pos = str.find(sub, pos)) != std::string::npos) {
@@ -498,7 +498,7 @@ inline std::string set2str(const std::bitset<MAXAXIS>& set) {
 }
 
 inline std::vector<std::string> split(const std::string& str,
-                               const std::string& sub) {
+                                      const std::string& sub) {
   std::string::size_type pos = 0;
   std::string::size_type start = 0;
   std::vector<std::string> ret;

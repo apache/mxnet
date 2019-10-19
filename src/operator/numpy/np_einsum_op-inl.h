@@ -152,7 +152,7 @@ inline int parse_operand_subscripts(const char *subscripts, int length,
           << "' in einstein sum "
           << "subscripts string, subscripts must "
           << "be letters";
-      }
+    }
   }
 
   /* No ellipsis found, labels must match dimensions exactly. */
@@ -174,13 +174,13 @@ inline int parse_operand_subscripts(const char *subscripts, int length,
   }
 
   /*
-    * Find any labels duplicated for this operand, and turn them
-    * into negative offsets to the axis to merge with.
-    *
-    * In C, the char type may be signed or unsigned, but with
-    * twos complement arithmetic the char is ok either way here, and
-    * later where it matters the char is cast to a signed char.
-    */
+   * Find any labels duplicated for this operand, and turn them
+   * into negative offsets to the axis to merge with.
+   *
+   * In C, the char type may be signed or unsigned, but with
+   * twos complement arithmetic the char is ok either way here, and
+   * later where it matters the char is cast to a signed char.
+   */
   for (idim = 0; idim < ndim - 1; ++idim) {
     int label = op_labels[idim];
     /* If it is a proper label, find any duplicates of it. */
@@ -387,7 +387,8 @@ struct NumpyEinsumParam: public dmlc::Parameter<NumpyEinsumParam> {
   int optimize;
   std::string  subscripts;
   DMLC_DECLARE_PARAMETER(NumpyEinsumParam) {
-    DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
+    DMLC_DECLARE_FIELD(num_args)
+      .set_lower_bound(1)
       .describe("Number of input arrays.");
     DMLC_DECLARE_FIELD(subscripts)
       .set_default("")
