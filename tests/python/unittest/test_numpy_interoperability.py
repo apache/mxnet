@@ -42,6 +42,78 @@ class OpArgMngr(object):
         return OpArgMngr._args.get(name, None)
 
 
+def _add_workload_einsum():
+    chars = 'abcdefghij'
+    sizes = [2, 3, 4, 5, 4, 3, 2, 6, 5, 4]
+    size_dict = dict(zip(chars, sizes))
+
+    configs = [
+        ('ij...,j...->ij...', [(2, 3, 4), (3,)]),
+        ('ij...,...j->ij...', [(2, 3, 4), (3,)]),
+        ('ij...,j->ij...', [(2, 3, 4), (3,)]),
+        ('cl, cpx->lpx', [(2, 3), (2, 3, 2731)]),
+        ('aabb->ab', [(5, 5, 5, 5)]),
+        ('mi,mi,mi->m', [(5, 5), (5, 5), (5, 5)]),
+        ('a,ab,abc->abc', None),
+        ('a,b,ab->ab', None),
+        ('ea,fb,gc,hd,abcd->efgh', None),
+        ('ea,fb,abcd,gc,hd->efgh', None),
+        ('abcd,ea,fb,gc,hd->efgh', None),
+        # test_complex
+        ('acdf,jbje,gihb,hfac,gfac,gifabc,hfac', None),
+        ('acdf,jbje,gihb,hfac,gfac,gifabc,hfac', None),
+        ('cd,bdhe,aidb,hgca,gc,hgibcd,hgac', None),
+        ('abhe,hidj,jgba,hiab,gab', None),
+        ('bde,cdh,agdb,hica,ibd,hgicd,hiac', None),
+        ('chd,bde,agbc,hiad,hgc,hgi,hiad', None),
+        ('chd,bde,agbc,hiad,bdi,cgh,agdb', None),
+        ('bdhe,acad,hiab,agac,hibd', None),
+        # test_collapse
+        ('ab,ab,c->', None),
+        ('ab,ab,c->c', None),
+        ('ab,ab,cd,cd->', None),
+        ('ab,ab,cd,cd->ac', None),
+        ('ab,ab,cd,cd->cd', None),
+        ('ab,ab,cd,cd,ef,ef->', None),
+        # test_inner_product
+        ('ab,ab', None),
+        ('ab,ba', None),
+        ('abc,abc', None),
+        ('abc,bac', None),
+        ('abc,cba', None),
+        # test_random_cases
+        ('aab,fa,df,ecc->bde', None),
+        ('ecb,fef,bad,ed->ac', None),
+        ('bcf,bbb,fbf,fc->', None),
+        ('bb,ff,be->e', None),
+        ('bcb,bb,fc,fff->', None),
+        ('fbb,dfd,fc,fc->', None),
+        ('afd,ba,cc,dc->bf', None),
+        ('adb,bc,fa,cfc->d', None),
+        ('bbd,bda,fc,db->acf', None),
+        ('dba,ead,cad->bce', None),
+        ('aef,fbc,dca->bde', None),
+        # test_broadcasting_dot_cases
+        ('ijk,kl,jl', [(1, 5, 4), (4, 6), (5, 6)]),
+        ('ijk,kl,jl,i->i', [(1, 5, 4), (4, 6), (5, 6), (10)]),
+        ('abjk,kl,jl', [(1, 1, 5, 4), (4, 6), (5, 6)]),
+        ('abjk,kl,jl,ab->ab', [(1, 1, 5, 4), (4, 6), (5, 6), (7, 7)]),
+        ('obk,ijk->ioj', [(2, 4, 8), (2, 4, 8)]),
+    ]
+    for optimize in [False, True]:
+        for config in configs:
+            subscripts, args = config
+            if args is None:
+                args = []
+                terms = subscripts.split('->')[0].split(',')
+                for term in terms:
+                    dims = [size_dict[x] for x in term]
+                    args.append(np.random.uniform(size=dims))
+            else:
+                args = [np.random.uniform(size=arg) for arg in args]
+            OpArgMngr.add_workload('einsum', subscripts, *args, optimize=optimize)
+
+
 @use_np
 def _prepare_workloads():
     array_pool = {
@@ -77,6 +149,9 @@ def _prepare_workloads():
     OpArgMngr.add_workload('min', array_pool['4x1'])
     OpArgMngr.add_workload('mean', array_pool['4x1'])
     OpArgMngr.add_workload('mean', array_pool['4x1'], axis=0, keepdims=True)
+    OpArgMngr.add_workload('mean', np.array([[1, 2, 3], [4, 5, 6]]))
+    OpArgMngr.add_workload('mean', np.array([[1, 2, 3], [4, 5, 6]]), axis=0)
+    OpArgMngr.add_workload('mean', np.array([[1, 2, 3], [4, 5, 6]]), axis=1)
     OpArgMngr.add_workload('ones_like', array_pool['4x1'])
     OpArgMngr.add_workload('prod', array_pool['4x1'])
 
@@ -157,6 +232,11 @@ def _prepare_workloads():
     OpArgMngr.add_workload('transpose', array_pool['4x1'])
     OpArgMngr.add_workload('var', array_pool['4x1'])
     OpArgMngr.add_workload('zeros_like', array_pool['4x1'])
+    OpArgMngr.add_workload('outer', np.ones((5)), np.ones((2)))
+    OpArgMngr.add_workload('meshgrid', np.array([1, 2, 3]))
+    OpArgMngr.add_workload('meshgrid', np.array([1, 2, 3]), np.array([4, 5, 6, 7]))
+    OpArgMngr.add_workload('meshgrid', np.array([1, 2, 3]), np.array([4, 5, 6, 7]), indexing='ij')
+    _add_workload_einsum()
 
     # workloads for array ufunc protocol
     OpArgMngr.add_workload('add', array_pool['4x1'], array_pool['1x2'])
@@ -175,6 +255,9 @@ def _prepare_workloads():
     OpArgMngr.add_workload('power', array_pool['4x1'], 2)
     OpArgMngr.add_workload('power', 2, array_pool['4x1'])
     OpArgMngr.add_workload('power', array_pool['4x1'], array_pool['1x1x0'])
+    OpArgMngr.add_workload('power', np.array([1, 2, 3], np.int32), 2.00001)
+    OpArgMngr.add_workload('power', np.array([15, 15], np.int64), np.array([15, 15], np.int64))
+    OpArgMngr.add_workload('power', 0, np.arange(1, 10))
     OpArgMngr.add_workload('mod', array_pool['4x1'], array_pool['1x2'])
     OpArgMngr.add_workload('mod', array_pool['4x1'], 2)
     OpArgMngr.add_workload('mod', 2, array_pool['4x1'])
@@ -256,6 +339,12 @@ def _prepare_workloads():
     OpArgMngr.add_workload('exp', array_pool['4x1'])
     OpArgMngr.add_workload('log', array_pool['4x1'])
     OpArgMngr.add_workload('log2', array_pool['4x1'])
+    OpArgMngr.add_workload('log2', np.array(2.**65))
+    OpArgMngr.add_workload('log2', np.array(np.inf))
+    OpArgMngr.add_workload('log2', np.array(1.))
+    OpArgMngr.add_workload('log1p', np.array(-1.))
+    OpArgMngr.add_workload('log1p', np.array(np.inf))
+    OpArgMngr.add_workload('log1p', np.array(1e-6))
     OpArgMngr.add_workload('log10', array_pool['4x1'])
     OpArgMngr.add_workload('expm1', array_pool['4x1'])
     OpArgMngr.add_workload('sqrt', array_pool['4x1'])
@@ -282,6 +371,11 @@ def _prepare_workloads():
     OpArgMngr.add_workload('ceil', array_pool['4x1'])
     OpArgMngr.add_workload('trunc', array_pool['4x1'])
     OpArgMngr.add_workload('floor', array_pool['4x1'])
+    OpArgMngr.add_workload('logical_not', np.ones(10, dtype=np.int32))
+    OpArgMngr.add_workload('logical_not', array_pool['4x1'])
+    OpArgMngr.add_workload('logical_not', np.array([True, False, True, False], dtype=np.bool))
+    
+
 
 
 _prepare_workloads()
