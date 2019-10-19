@@ -38,7 +38,7 @@ __all__ = ['zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide', 'mo
            'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming', 'blackman', 'flip',
            'around', 'hypot', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take',
            'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal',
-           'hsplit', 'rot90', 'einsum']
+           'hsplit', 'rot90', 'einsum', 'true_divide']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -337,10 +337,10 @@ def take(a, indices, axis=None, mode='raise', out=None):
     if mode not in ('wrap', 'clip', 'raise'):
         raise NotImplementedError(
             "function take does not support mode '{}'".format(mode))
-    if axis:
-        return _npi.take(a, indices, axis, mode, out)
-    else:
+    if axis is None:
         return _npi.take(_npi.reshape(a, -1), indices, 0, mode, out)
+    else:
+        return _npi.take(a, indices, axis, mode, out)
 # pylint: enable=redefined-outer-name
 
 
@@ -495,7 +495,11 @@ def unique(ar, return_index=False, return_inverse=False, return_counts=False, ax
     >>> u[indices]
     array([1., 2., 6., 4., 2., 3., 2.])
     """
-    return _npi.unique(ar, return_index, return_inverse, return_counts, axis)
+    ret = _npi.unique(ar, return_index, return_inverse, return_counts, axis)
+    if isinstance(ret, list):
+        return tuple(ret)
+    else:
+        return ret
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -581,6 +585,36 @@ def multiply(x1, x2, out=None, **kwargs):
 def divide(x1, x2, out=None, **kwargs):
     """
     Returns a true division of the inputs, element-wise.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Dividend array.
+
+    x2 : ndarray or scalar
+        Divisor array.
+
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        This is a scalar if both x1 and x2 are scalars.
+    """
+    return _ufunc_helper(x1, x2, _npi.true_divide, _np.divide, _npi.true_divide_scalar,
+                         _npi.rtrue_divide_scalar, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def true_divide(x1, x2, out=None):
+    """Returns a true division of the inputs, element-wise.
+
+    Instead of the Python traditional 'floor division', this returns a true
+    division.  True division adjusts the output type to present the best
+    answer, regardless of input types.
 
     Parameters
     ----------
