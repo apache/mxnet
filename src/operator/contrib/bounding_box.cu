@@ -63,29 +63,33 @@ inline index_t align(index_t x, index_t alignment) {
 template <typename DType>
 __global__ void FilterAndPrepareAuxData_kernel(const DType* data, DType* out, DType* scores,
                                                index_t num_elements_per_batch,
-                                               const index_t element_width, const float threshold,
+                                               const index_t element_width,
+                                               const index_t N,
+                                               const float threshold,
                                                const int id_index, const int score_index,
                                                const int background_id) {
   index_t tid = blockIdx.x * blockDim.x + threadIdx.x;
   bool first_in_element = (tid % element_width == 0);
   index_t start_of_my_element = tid - (tid % element_width);
 
-  DType my_score = data[start_of_my_element + score_index];
-  bool filtered_out = my_score <= threshold;
-  if (id_index != -1 && background_id != -1) {
-    DType my_id = data[start_of_my_element + id_index];
-    filtered_out = filtered_out || (my_id == background_id);
-  }
-  if (!filtered_out) {
-    out[tid] = data[tid];
-  } else {
-    out[tid] = -1;
-    my_score = -1;
-  }
+  if (tid < N) {
+    DType my_score = data[start_of_my_element + score_index];
+    bool filtered_out = my_score <= threshold;
+    if (id_index != -1 && background_id != -1) {
+      DType my_id = data[start_of_my_element + id_index];
+      filtered_out = filtered_out || (my_id == background_id);
+    }
+    if (!filtered_out) {
+      out[tid] = data[tid];
+    } else {
+      out[tid] = -1;
+      my_score = -1;
+    }
 
-  if (first_in_element) {
-    index_t offset = tid / element_width;
-    scores[offset] = my_score;
+    if (first_in_element) {
+      index_t offset = tid / element_width;
+      scores[offset] = my_score;
+    }
   }
 }
 
@@ -103,7 +107,7 @@ void FilterAndPrepareAuxData(const Tensor<gpu, 3, DType>& data,
                                    0,
                                    Stream<gpu>::GetStream(s)>>>(
     data.dptr_, out->dptr_, workspace.scores,
-    data.shape_[1], data.shape_[2],
+    data.shape_[1], data.shape_[2], N,
     param.valid_thresh, param.id_index,
     param.score_index, param.background_id);
 }
@@ -401,7 +405,7 @@ __global__ void CalculateGreedyNMSResults_kernel(const DType* data, uint32_t* re
       }
     }
   }
-  result[my_row * topk * num_batches + my_element_in_batch] = ~ret;
+  result[(my_row * num_batches + my_batch) * topk + my_element_in_batch] = ~ret;
 }
 
 template <typename DType>
@@ -678,7 +682,7 @@ void BoxNMSForwardGPU_notemp(const nnvm::NodeAttrs& attrs,
     }
     CompactData<false>(sorted_indices, out, &buffer, topk, -1, s);
     NMS<DType> nms;
-    nms(&buffer, &nms_scratch,  topk, param, s);
+    nms(&buffer, &nms_scratch, topk, param, s);
     CompactNMSResults(buffer, &out, &indices, &scores, &sorted_indices,
                       &sorted_scores, &scratch, param.score_index, topk, s);
 
