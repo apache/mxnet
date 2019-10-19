@@ -103,7 +103,7 @@ SortByKeyWorkspaceSize(const size_t num_keys,
 #else
   size_t keys_bytes, values_bytes;
   WorkspaceSize4KeysAndValues<KDType, VDType>(num_keys, &keys_bytes, &values_bytes);
-  size_t ret = SortPairsWorkspaseSize<KDType, VDType>(num_keys);
+  size_t ret = SortPairsWorkspaceSize<KDType, VDType>(num_keys);
   if (keys_in_place) {
     ret += keys_bytes;
   }
