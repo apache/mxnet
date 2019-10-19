@@ -226,6 +226,7 @@ void MKLDNNFCForwardFullFeature(const MKLDNNFCFullParam &full_param,
         fwd->fwd_pd.bias_desc());
     args[MKLDNN_ARG_BIAS] = *bias_mem;
   }
+
   MKLDNNStream::Get()->RegisterPrimArgs(fwd->GetFwd(), args);
   CommitOutput(out_data[fullc::kOut], out_mem);
   MKLDNNStream::Get()->Submit();

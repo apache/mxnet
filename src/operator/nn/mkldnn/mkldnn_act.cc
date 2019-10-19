@@ -159,7 +159,8 @@ void MKLDNNActivationForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   MKLDNNActForward &fwd = GetActForward(param_, ctx, in_buffer, *input_mem);
   auto out_mem_t = CreateMKLDNNMem(out_data, fwd.fwd_pd.dst_desc(), req, &in_buffer);
   stream->RegisterPrimArgs(fwd.GetFwd(),
-                           {{ MKLDNN_ARG_SRC, *input_mem}, { MKLDNN_ARG_DST, *out_mem_t.second}});
+                           {{ MKLDNN_ARG_SRC, *input_mem},
+                            { MKLDNN_ARG_DST, *out_mem_t.second}});
   CommitOutput(out_data, out_mem_t);
   stream->Submit();
 }
