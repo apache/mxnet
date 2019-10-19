@@ -191,8 +191,8 @@ def _add_workload_copy(array_pool):
 def _add_workload_cumsum():
     for ctype in _DTYPES:
         OpArgMngr.add_workload('cumsum', np.array([1, 2, 10, 11, 6, 5, 4], dtype=ctype))
-    OpArgMngr.add_workload('cumsum', np.array([[1, 2, 3, 4], [5, 6, 7, 9], [10, 3, 4, 5]], dtype=ctype), axis=0)
-    OpArgMngr.add_workload('cumsum', np.array([[1, 2, 3, 4], [5, 6, 7, 9], [10, 3, 4, 5]], dtype=ctype), axis=1)
+        OpArgMngr.add_workload('cumsum', np.array([[1, 2, 3, 4], [5, 6, 7, 9], [10, 3, 4, 5]], dtype=ctype), axis=0)
+        OpArgMngr.add_workload('cumsum', np.array([[1, 2, 3, 4], [5, 6, 7, 9], [10, 3, 4, 5]], dtype=ctype), axis=1)
 
 
 def _add_workload_ravel():
@@ -618,15 +618,15 @@ def _add_workload_remainder():
         OpArgMngr.add_workload('remainder', a, b)
         OpArgMngr.add_workload('remainder', -a, -b)
 
-        # Check nans, inf
-        for ct in [np.float16, np.float32, np.float64]:
-            fone = np.array(1.0, dtype=ct)
-            fzer = np.array(0.0, dtype=ct)
-            finf = np.array(np.inf, dtype=ct)
-            fnan = np.array(np.nan, dtype=ct)
-            # OpArgMngr.add_workload('remainder', fone, fzer) # failed
-            OpArgMngr.add_workload('remainder', fone, fnan)
-            OpArgMngr.add_workload('remainder', finf, fone)
+    # Check nans, inf
+    for ct in [np.float16, np.float32, np.float64]:
+        fone = np.array(1.0, dtype=ct)
+        fzer = np.array(0.0, dtype=ct)
+        finf = np.array(np.inf, dtype=ct)
+        fnan = np.array(np.nan, dtype=ct)
+        # OpArgMngr.add_workload('remainder', fone, fzer)  # failed
+        OpArgMngr.add_workload('remainder', fone, fnan)
+        OpArgMngr.add_workload('remainder', finf, fone)
 
 
 def _add_workload_maximum(array_pool):
