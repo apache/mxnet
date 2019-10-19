@@ -702,25 +702,16 @@ class ndarray(NDArray):
         return self.__mul__(other)
 
     def __div__(self, other):
-        raise AttributeError('ndarray.__div__ is replaced by __truediv__. If you are using'
-                             ' Python2, please use the statement from __future__ import division'
-                             ' to change the / operator to mean true division throughout the'
-                             ' module. If you are using Python3, this error should not have'
-                             ' been encountered.')
+        """x.__div__(y) <=> x / y"""
+        return divide(self, other)
 
     def __rdiv__(self, other):
-        raise AttributeError('ndarray.__rdiv__ is replaced by __rtruediv__. If you are using'
-                             ' Python2, please use the statement from __future__ import division'
-                             ' to change the / operator to mean true division throughout the'
-                             ' module. If you are using Python3, this error should not have'
-                             ' been encountered.')
+        """x.__rdiv__(y) <=> y / x"""
+        return divide(other, self)
 
     def __idiv__(self, other):
-        raise AttributeError('ndarray.__idiv__ is replaced by __irtruediv__. If you are using'
-                             ' Python2, please use the statement from __future__ import division'
-                             ' to change the / operator to mean true division throughout the'
-                             ' module. If you are using Python3, this error should not have'
-                             ' been encountered.')
+        """x.__idiv__(y) <=> x /= y"""
+        return divide(self, other, out=self)
 
     def __truediv__(self, other):
         """x.__truediv__(y) <=> x / y"""
@@ -731,6 +722,7 @@ class ndarray(NDArray):
         return divide(other, self)
 
     def __itruediv__(self, other):
+        """x.__itruediv__(y) <=> x /= y"""
         return divide(self, other, out=self)
 
     def __mod__(self, other):
