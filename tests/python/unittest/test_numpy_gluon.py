@@ -115,6 +115,15 @@ def test_optimizer_with_np_ndarrays():
 
 @with_seed()
 @use_np
+def test_optimizer_backward_compat():
+    optimizer = mx.optimizer.SGD()
+    delattr(optimizer, "allow_np_array")
+    updater = mx.optimizer.Updater(optimizer)
+    updater(0, np.ones((0, 0)), np.zeros((0, 0)))
+
+
+@with_seed()
+@use_np
 def test_np_loss_ndarray():
     # Ported from test_loss.test_loss_ndarray
     output = np.array([1, 2, 3, 4])
@@ -122,18 +131,18 @@ def test_np_loss_ndarray():
     weighting = np.array([0.5, 1, 0.5, 1])
 
     loss = gluon.loss.L1Loss()
-    assert np.sum(loss(output, label)) == 6.
+    assert float(np.sum(loss(output, label))) == 6.
     loss = gluon.loss.L1Loss(weight=0.5)
-    assert np.sum(loss(output, label)) == 3.
+    assert float(np.sum(loss(output, label))) == 3.
     loss = gluon.loss.L1Loss()
-    assert np.sum(loss(output, label, weighting)) == 5.
+    assert float(np.sum(loss(output, label, weighting))) == 5.
 
     loss = gluon.loss.L2Loss()
-    assert np.sum(loss(output, label)) == 7.
+    assert float(np.sum(loss(output, label))) == 7.
     loss = gluon.loss.L2Loss(weight=0.25)
-    assert np.sum(loss(output, label)) == 1.75
+    assert float(np.sum(loss(output, label))) == 1.75
     loss = gluon.loss.L2Loss()
-    assert np.sum(loss(output, label, weighting)) == 6
+    assert float(np.sum(loss(output, label, weighting))) == 6
 
     output = np.array([[0, 2], [1, 4]])
     label = np.array([0, 1])

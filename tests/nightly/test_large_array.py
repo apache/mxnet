@@ -15,13 +15,16 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import os
+import tempfile
 import math
 import numpy as np
 import mxnet as mx
 
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward, create_2d_tensor
 from mxnet import gluon, nd
-from tests.python.unittest.common import with_seed, teardown
+from tests.python.unittest.common import with_seed, with_post_test_cleanup
+from nose.tools import with_setup
 
 # dimension constants
 MEDIUM_X = 10000
@@ -84,20 +87,20 @@ def test_ndarray_random_randint():
 
 @with_seed()
 def test_ndarray_random_exponential():
-    scale_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    scale_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
     a = nd.random.exponential(scale=scale_array, shape=(SMALL_X, SMALL_Y))
     assert a[-1][0][0][0] >= 0
-    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
+    assert a.shape == (MEDIUM_X, SMALL_X, SMALL_X, SMALL_Y)
 
 
 @with_seed()
 def test_ndarray_random_gamma():
-    alpha_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
-    beta_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    alpha_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
+    beta_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
     a = nd.random.gamma(alpha=alpha_array, beta=beta_array,
                         shape=(SMALL_X, SMALL_Y))
     assert a[-1][0][0][0] >= 0
-    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
+    assert a.shape == (MEDIUM_X, SMALL_X, SMALL_X, SMALL_Y)
 
 
 @with_seed()
@@ -108,50 +111,50 @@ def test_ndarray_random_multinomial():
     assert a[-1] >= 0
     assert a.shape == (LARGE_X,)
     # test for NDArray multi-dimension shape
-    a = nd.random.multinomial(probs, shape=(SMALL_X, SMALL_Y))
+    a = nd.random.multinomial(probs, shape=(2, SMALL_Y))
     assert a[-1][0][0] >= 0
-    assert a.shape == (LARGE_X, SMALL_X, SMALL_Y)
+    assert a.shape == (LARGE_X, 2, SMALL_Y)
     # test log_likelihood output shape
-    a = nd.random.multinomial(probs, shape=(SMALL_X, SMALL_Y), get_prob=True)
-    assert a[-1][0][0] >= 0
-    assert a[0].shape == (LARGE_X, SMALL_X, SMALL_Y) and a[0].shape == a[1].shape
+    a = nd.random.multinomial(probs, shape=(2, SMALL_Y), get_prob=True)
+    assert a[0][0][0][0] >= 0
+    assert a[0].shape == (LARGE_X, 2, SMALL_Y) and a[0].shape == a[1].shape
 
 
 @with_seed()
 def test_ndarray_random_generalized_negative_binomial():
-    alpha_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
-    mu_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    alpha_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
+    mu_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
     a = nd.random.generalized_negative_binomial(mu=mu_array, alpha=alpha_array,
                                                 shape=(SMALL_X, SMALL_Y))
     assert a[-1][0][0][0] >= 0
-    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
+    assert a.shape == (MEDIUM_X, SMALL_X, SMALL_X, SMALL_Y)
 
 
 @with_seed()
 def test_ndarray_random_negative_binomial():
-    k_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
-    p_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    k_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
+    p_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
     a = nd.random.negative_binomial(k=k_array, p=p_array,
                                     shape=(SMALL_X, SMALL_Y))
     assert a[-1][0][0][0] >= 0
-    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
+    assert a.shape == (MEDIUM_X, SMALL_X, SMALL_X, SMALL_Y)
 
 
 @with_seed()
 def test_ndarray_random_normal():
-    scale_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
-    loc_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    scale_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
+    loc_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
     a = nd.random.normal(loc=loc_array, scale=scale_array,
                          shape=(SMALL_X, SMALL_Y))
-    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
+    assert a.shape == (MEDIUM_X, SMALL_X, SMALL_X, SMALL_Y)
 
 
 @with_seed()
 def test_ndarray_random_poisson():
-    lambda_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_Y))
+    lambda_array = nd.random.uniform(shape=(MEDIUM_X, SMALL_X))
     a = nd.random.poisson(lam=lambda_array, shape=(SMALL_X, SMALL_Y))
     assert a[-1][0][0][0] >= 0
-    assert a.shape == (MEDIUM_X, SMALL_Y, SMALL_X, SMALL_Y)
+    assert a.shape == (MEDIUM_X, SMALL_X, SMALL_X, SMALL_Y)
 
 
 @with_seed()
@@ -165,7 +168,7 @@ def test_ndarray_random_randn():
 @with_seed()
 def test_ndarray_random_shuffle():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
-    a[-1] == 3  # assign 3 to entire last row
+    a[-1] = 3  # assign 3 to entire last row
     a = nd.random.shuffle(a)
     # slice first column from shuffled array
     # pass LARGE_X values to numpy instead of LARGE_X*SMALL_Y
@@ -175,7 +178,7 @@ def test_ndarray_random_shuffle():
     assert len(unique_a) == 2  # only 2 unique values
     assert unique_a[0] == 1  # first unique value is 1
     assert unique_a[1] == 3  # second unique value is 3
-    assert a.shape[0] == (LARGE_X, SMALL_Y)
+    assert a.shape == (LARGE_X, SMALL_Y)
 
 
 def test_ndarray_empty():
@@ -269,6 +272,7 @@ def test_slice_assign():
 def test_expand_dims():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     res = nd.expand_dims(a, axis=1)
+    assert a[0][0][0] == 1
     assert res.shape == (a.shape[0], 1, a.shape[1])
 
 
@@ -561,7 +565,7 @@ def test_sequence_last():
 
     # test if returns last sequence
     b = nd.SequenceLast(a)
-    assert_almost_equal(b.asnumpy(), a[-1].asnumpy())  # only checks for (2,SMALL_Y) tensor
+    assert_almost_equal(b.asnumpy(), a[-1].asnumpy())  # only checks for (2, SMALL_Y) tensor
     assert b.shape == (2, SMALL_Y)
 
     # test with sequence length
@@ -600,7 +604,7 @@ def test_softmax_cross_entropy():
 def test_index_copy():
     x = mx.nd.zeros((LARGE_X, SMALL_Y))
     t = mx.nd.arange(1, SMALL_Y + 1).reshape((1, SMALL_Y))
-    index = mx.nd.array([LARGE_X - 1])
+    index = mx.nd.array([LARGE_X - 1], dtype="int64")
 
     x = mx.nd.contrib.index_copy(x, index, t)
     assert x[-1][-1] == t[0][-1]
@@ -637,23 +641,23 @@ def test_leaky_relu():
 
     def test_leaky():
         res = mx.nd.LeakyReLU(a, act_type="leaky", slope=0.3)
-        assert res[-1][-1].asnumpy() == 0.3*a[-1][-1].asnumpy()
+        assert_almost_equal(res[-1][-1].asnumpy(), 0.3*a[-1][-1].asnumpy(), atol=1e-3, rtol=1e-3)
 
     def test_elu():
         res = mx.nd.LeakyReLU(a, act_type="elu", slope=0.3)
-        assert res[-1][-1].asnumpy() == 0.3*(np.exp(a[-1][-1].asnumpy())-1)
+        assert_almost_equal(res[-1][-1].asnumpy(), 0.3*(np.exp(a[-1][-1].asnumpy())-1), atol=1e-3, rtol=1e-3)
 
     def test_selu():
         lam = 1.0507009873554804934193349852946
         alpha = 1.6732632423543772848170429916717
         res = mx.nd.LeakyReLU(a, act_type="selu")
-        assert res[-1][-1].asnumpy() == (lam * alpha * (np.exp(a[-1][-1].asnumpy())-1))
+        assert_almost_equal(res[-1][-1].asnumpy(), (lam * alpha * (np.exp(a[-1][-1].asnumpy())-1)), atol=1e-3, rtol=1e-3)
 
     def test_rrelu():
         lower = 0.125
         upper = 0.333999991
         res = mx.nd.LeakyReLU(a, act_type="rrelu")
-        assert res[-1][-1].asnumpy() == (lower + upper) / 2 * a[-1][-1].asnumpy()
+        assert_almost_equal(res[0][-1][-1].asnumpy(), (lower + upper) / 2 * a[-1][-1].asnumpy(), atol=1e-3, rtol=1e-3)
 
     test_leaky()
     test_elu()
@@ -662,31 +666,31 @@ def test_leaky_relu():
 
 
 def test_pooling():
-    a = mx.nd.ones((MEDIUM_X, MEDIUM_X, SMALL_Y, SMALL_Y))
+    a = mx.nd.ones((MEDIUM_X, 200, SMALL_Y, SMALL_Y))
 
     def test_avg_pooling():
         res = mx.nd.Pooling(a, kernel=(5, 5), pool_type='avg')
-        assert res[-1][-1][-1][-1] == 1.0000001
-        assert res.shape == SMALL_Y - 5 + 1
+        assert_almost_equal(res[-1][-1][-1][-1].asnumpy(), 1.0000001, atol=1e-3, rtol=1e-3)
+        assert res.shape[-1] == SMALL_Y - 5 + 1
 
     def test_max_pooling():
         res = mx.nd.Pooling(a, kernel=(5, 5), pool_type='max')
-        assert res[-1][-1][-1][-1] == 1.
-        assert res.shape == SMALL_Y - 5 + 1
+        assert_almost_equal(res[-1][-1][-1][-1].asnumpy(), 1., atol=1e-3, rtol=1e-3)
+        assert res.shape[-1] == SMALL_Y - 5 + 1
 
     def test_sum_pooling():
         res = mx.nd.Pooling(a, kernel=(5, 5), pool_type='sum')
-        assert res[-1][-1][-1][-1] == 25
-        assert res.shape == SMALL_Y - 5 + 1
+        assert_almost_equal(res[-1][-1][-1][-1].asnumpy(), 25, atol=1e-3, rtol=1e-3)
+        assert res.shape[-1] == SMALL_Y - 5 + 1
 
     def test_lp_pooling():
         res = mx.nd.Pooling(a, kernel=(5, 5), pool_type='lp', p_value=2)
-        assert res[-1][-1][-1][-1] == 5.
-        assert res.shape == SMALL_Y - 5 + 1
+        assert_almost_equal(res[-1][-1][-1][-1].asnumpy(), 5., atol=1e-3, rtol=1e-3)
+        assert res.shape[-1] == SMALL_Y - 5 + 1
 
         res = mx.nd.Pooling(a, kernel=(5, 5), pool_type='lp', p_value=1)
-        assert res[-1][-1][-1][-1] == 25.
-        assert res.shape == SMALL_Y - 5 + 1
+        assert_almost_equal(res[-1][-1][-1][-1].asnumpy(), 25., atol=1e-3, rtol=1e-3)
+        assert res.shape[-1] == SMALL_Y - 5 + 1
 
     test_avg_pooling()
     test_max_pooling()
@@ -741,36 +745,37 @@ def test_dropout():
     exe = y.simple_bind(ctx=default_context(), data=shape)
     exe.arg_arrays[0][:] = 1
     out = exe.forward(is_train=True)
-    assert out.shape == out.shape
+    nd.waitall()
+    assert out[0].shape == shape
 
 
 def test_activation():
-    a = mx.nd.ones((LARGE_X, SMALL_Y))
+    x = mx.nd.ones((LARGE_X, SMALL_Y))
     test_x = -2
-    a[-1, -1] = test_x
+    x[-1, -1] = test_x
 
     # Hyperbolic tangent (tanh)
     # y = (exp(x)-exp(-x))/(exp(x)+exp(-x))
-    a = mx.nd.Activation(a, act_type="tanh")
-    tanh_x = (np.exp(test_x)-np.exp(-test_x))/(np.exp(test_x)+np.exp(-test_x))
-    assert a[-1][-1] == tanh_x
+    y = mx.nd.Activation(x, act_type="tanh")
+    tanh_x = ((np.exp(test_x)-np.exp(-test_x))/(np.exp(test_x)+np.exp(-test_x)))
+    assert y[-1][-1] == np.float32(tanh_x)
 
     # Recitified Linear Unit (relu)
     # y = max(x,0)
-    a = mx.nd.Activation(a, act_type="relu")
-    assert a[-1][-1] == 0
+    y = mx.nd.Activation(x, act_type="relu")
+    assert y[-1][-1] == 0
 
     # Sigmoid
     # y = x/(1+abs(x))
-    a = mx.nd.Activation(a, act_type="sigmoid")
-    sigmoid_x = 1/(1+math.exp(-test_x))
-    assert a[-1][-1] == sigmoid_x
+    y = mx.nd.Activation(x, act_type="sigmoid")
+    sigmoid_x = (1/(1+math.exp(-test_x)))
+    assert_almost_equal(y[-1][-1].asnumpy(), np.float32(sigmoid_x), atol=1e-3, rtol=1e-3)
 
     # Soft Sign
     # y = 1/(1+exp(-x))
-    a = mx.nd.Activation(a, act_type="softsign")
-    softsign_x = test_x/(1+abs(test_x))
-    assert a[-1][-1] == softsign_x
+    y = mx.nd.Activation(x, act_type="softsign")
+    softsign_x = (test_x/(1+abs(test_x)))
+    assert y[-1][-1] == np.float32(softsign_x)
 
 
 # TODO: correctness of batchnorm
@@ -924,8 +929,7 @@ def test_copy_to():
     b = nd.array(np.zeros((SMALL_Y, LARGE_X)))
     c = a.copyto(b)
     assert c is b
-    print(b)
-    assert b[0][-1] == LARGE_X-1
+    assert b[-1][-1] == SMALL_Y-1
 
 
 def test_zeros_like():
@@ -957,24 +961,17 @@ def test_flatten():
     assert b.shape == (LARGE_X//2, SMALL_Y*2)
 
 
-def test_expand_dims():
-    a = nd.array(np.ones((SMALL_Y, LARGE_X)))
-    b = nd.expand_dims(a, axis=1)
-    nd.waitall()
-    assert b.shape == (SMALL_Y, 1, LARGE_X)
-
-
 def test_concat():
     a = nd.array(np.ones((SMALL_Y, LARGE_X)))
     b = nd.array(np.zeros((SMALL_Y, LARGE_X)))
-    c = nd.concat(a,b, dim=0)
+    c = nd.concat(a, b, dim=0)
     assert c.shape == (b.shape[0]*2, LARGE_X)
 
 
 def test_stack():
     a = nd.array(np.ones((SMALL_Y, LARGE_X)))
     b = nd.array(np.zeros((SMALL_Y, LARGE_X)))
-    c = nd.stack(a,b, axis=1)
+    c = nd.stack(a, b, axis=1)
     assert c.shape == (b.shape[0], 2, LARGE_X)
 
 
@@ -1019,7 +1016,7 @@ def test_max():
 def test_norm():
     a = np.array(np.full((1, LARGE_X), 3))
     b = np.array(np.full((1, LARGE_X), 4))
-    c = nd.array(np.concatenate((a,b), axis=0))
+    c = nd.array(np.concatenate((a, b), axis=0))
     d = nd.norm(c, ord=2, axis=0)
     e = nd.norm(c, ord=1, axis=0)
     assert d.shape[0] == LARGE_X
@@ -1031,7 +1028,7 @@ def test_norm():
 def test_argmax():
     a = np.ones((SMALL_Y, LARGE_X))
     b = np.zeros((SMALL_Y, LARGE_X))
-    c = nd.array(np.concatenate((a,b), axis=0))
+    c = nd.array(np.concatenate((a, b), axis=0))
     d = nd.argmax(c, axis=0)
     assert d.shape[0] == LARGE_X
     assert d[-1] == d[0] == 0
@@ -1040,12 +1037,13 @@ def test_argmax():
 def test_relu():
     def frelu(x):
         return np.maximum(x, 0.0)
+
     def frelu_grad(x):
         return 1.0 * (x > 0.0)
     shape = (SMALL_Y, LARGE_X)
     x = mx.symbol.Variable("x")
     y = mx.sym.relu(x)
-    xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
+    xa = np.random.uniform(low=-1.0, high=1.0, size=shape)
     eps = 1e-4
     xa[abs(xa) < eps] = 1.0
     ya = frelu(xa)
@@ -1059,7 +1057,7 @@ def test_sigmoid():
     shape = (SMALL_Y, LARGE_X)
     x = mx.symbol.Variable("x")
     y = mx.sym.sigmoid(x)
-    xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
+    xa = np.random.uniform(low=-1.0, high=1.0, size=shape)
     ya = fsigmoid(xa)
     check_symbolic_forward(y, [xa], [ya])
 
@@ -1114,15 +1112,6 @@ def test_idiv():
     c /= b
     assert c.shape == a.shape
     assert c[0][-1] == 2
-
-
-def test_imod():
-    a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
-    b = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 2)))
-    c = a
-    c %= b
-    assert c.shape == a.shape
-    assert c[0][-1] == 1
 
 
 def test_eq():
@@ -1198,7 +1187,7 @@ def test_slice_axis():
 
 
 def test_one_hot():
-    #default dtype of ndarray is float32 which cannot index elements over 2^32
+    # default dtype of ndarray is float32 which cannot index elements over 2^32
     a = nd.array([1, (VLARGE_X - 1)], dtype=np.int64)
     b = nd.one_hot(a, VLARGE_X)
     b[0][1] == 1
@@ -1210,6 +1199,308 @@ def test_full():
     assert a.shape == (SMALL_Y, LARGE_X)
     assert a[SMALL_Y//2][LARGE_X//2] == 3
     assert a[-1][-1] == 3
+
+
+def test_astype():
+    x = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
+    y = x.astype('int32')
+    assert y.dtype == np.int32
+    assert y[-1][-1] == SMALL_Y-1
+
+
+def test_cast():
+    x = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
+    y = nd.cast(x, np.int32)
+    assert y.dtype == np.int32
+    assert y[-1][-1] == SMALL_Y-1
+
+
+def test_repeat():
+    x = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X//2)
+    y = nd.repeat(x, repeats=2, axis = 1)
+    assert y.shape == (SMALL_Y, LARGE_X)
+    assert y[0][1] == 0
+    assert y[-1][-1] == SMALL_Y-1
+    x = create_2d_tensor(rows=SMALL_Y//2, columns=LARGE_X)
+    y = nd.repeat(x, repeats=2, axis = 0)
+    assert y.shape == (SMALL_Y, LARGE_X)
+    assert y[0][1] == 0
+    assert y[-1][0] == SMALL_Y//2-1
+
+
+def create_input_for_rounding_ops():
+    # Creates an vector with values (-LARGE_X/2 .... -2, -1, 0, 1, 2, .... , LARGE_X/2-1)
+    # then divides each element by 2 i.e (-LARGE_X/4 .... -1, -0.5, 0, 0.5, 1, .... , LARGE_X/4-1)
+    # and finally broadcasts to 
+    inp = nd.arange(-LARGE_X//2, LARGE_X//2, dtype=np.float64).reshape(1, LARGE_X)
+    inp = inp/2
+    inp = nd.broadcast_to(inp, (SMALL_Y, LARGE_X))
+    return inp
+
+
+def assert_correctness_of_rounding_ops(output, mid, expected_vals):
+    # checks verifies 5 values at the middle positions of the input vector
+    # i.e mid-2, mid-1, mid, mid+1, mid+2
+    output_idx_to_inspect = [mid-2, mid-1, mid, mid+1, mid+2]
+    for i in range(len(output_idx_to_inspect)):
+        assert output[1][output_idx_to_inspect[i]] == expected_vals[i]
+
+
+# TODO(access2rohit): merge similar tests in large vector and array into one file. 
+def test_rounding_ops():
+    x = create_input_for_rounding_ops()
+
+    def check_ceil():
+        y = nd.ceil(x)
+        # expected ouput for middle 5 values after applying ceil()
+        expected_output = [-1, 0, 0, 1, 1]
+        assert_correctness_of_rounding_ops(y, LARGE_X//2, expected_output)
+
+    def check_fix():
+        y = nd.fix(x)
+        # expected ouput for middle 5 values after applying fix()
+        expected_output = [-1, 0, 0, 0, 1]
+        assert_correctness_of_rounding_ops(y, LARGE_X//2, expected_output)
+
+    def check_floor():
+        y = nd.floor(x)
+        # expected ouput for middle 5 values after applying floor()
+        expected_output = [-1, -1, 0, 0, 1]
+        assert_correctness_of_rounding_ops(y, LARGE_X//2, expected_output)
+
+    def check_rint():
+        y = nd.rint(x)
+        # expected ouput for middle 5 values after applying rint()
+        expected_output = [-1, -1, 0, 0, 1]
+        assert_correctness_of_rounding_ops(y, LARGE_X//2, expected_output)
+
+    def check_round():
+        y = nd.round(x)
+        # expected ouput for middle 5 values after applying round()
+        expected_output = [-1, -1, 0, 1, 1]
+        assert_correctness_of_rounding_ops(y, LARGE_X//2, expected_output)
+
+    def check_trunc():
+        y = nd.trunc(x)
+        # expected ouput for middle 5 values after applying trunc()
+        expected_output = [-1, 0, 0, 0, 1]
+        assert_correctness_of_rounding_ops(y, LARGE_X//2, expected_output)
+
+    check_ceil()
+    check_fix()
+    check_floor()
+    check_rint()
+    check_round()
+    check_trunc()
+
+
+def create_input_for_trigonometric_ops(vals):
+    # Creates large vector input of size(LARGE_X*10, SMALL_Y/10) from vals using tile operator
+    inp = nd.array(vals).reshape(1, 5)
+    inp = nd.broadcast_to(inp, (LARGE_X*10, SMALL_Y//10))
+    return inp
+
+
+def assert_correctness_of_trigonometric_ops(output, expected_vals):
+    # checks verifies 5 values at positions(0, 1, -3, -2, -1) of the input vector
+    output_idx_to_inspect = [0, 1, -3, -2, -1]
+    for i in range(len(output_idx_to_inspect)):
+        assert np.abs(output[1][output_idx_to_inspect[i]].asnumpy()-expected_vals[i]) <= 1e-3
+
+
+def test_trigonometric_ops():
+    def check_arcsin():
+        x = create_input_for_trigonometric_ops([-1, -.707, 0, .707, 1])
+        y = nd.arcsin(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying arcsin()
+        expected_output = [-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_arccos():
+        x = create_input_for_trigonometric_ops([-1, -.707, 0, .707, 1])
+        y = nd.arccos(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying arccos()
+        expected_output = [np.pi, 3*np.pi/4, np.pi/2, np.pi/4, 0]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_arctan():
+        x = create_input_for_trigonometric_ops([-np.Inf, -1, 0, 1, np.Inf])
+        y = nd.arctan(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying arctan()
+        expected_output = [-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_sin():
+        x = create_input_for_trigonometric_ops([-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2])
+        y = nd.sin(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying sin()
+        expected_output = [-1, -.707, 0, .707, 1]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_cos():
+        x = create_input_for_trigonometric_ops([0, np.pi/4, np.pi/2, 3*np.pi/4, np.pi])
+        y = nd.cos(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying cos()
+        expected_output = [1, .707, 0, -.707, -1]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_tan():
+        x = create_input_for_trigonometric_ops([-np.pi/6, -np.pi/4, 0, np.pi/4, np.pi/6])
+        y = nd.tan(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying tan()
+        expected_output = [-.577, -1, 0, 1, .577]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_radians():
+        x = create_input_for_trigonometric_ops([0, 90, 180, 270, 360])
+        y = nd.radians(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying radians()
+        expected_output = [0, np.pi/2, np.pi, 3*np.pi/2, 2*np.pi]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_degrees():
+        x = create_input_for_trigonometric_ops([0, np.pi/2, np.pi, 3*np.pi/2, 2*np.pi])
+        y = nd.degrees(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying degrees()
+        expected_output = [0, 90, 180, 270, 360]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    check_arcsin()
+    check_arccos()
+    check_arctan()
+    check_sin()
+    check_cos()
+    check_tan()
+    check_radians()
+    check_degrees()
+
+
+def test_L2Normalization():
+    x = nd.ones((2, LARGE_X*2))
+    x[0] = 3
+    x[1] = 4
+    # Channel Mode
+    z = x.reshape(1, 2, LARGE_X*2)
+    y = nd.L2Normalization(z, mode='channel')
+    assert y[0][0][0] == 0.6
+    assert y[0][0][-1] == 0.6
+    assert y[0][1][0] == 0.8
+    assert y[0][1][-1] == 0.8
+    # Instance Mode
+    z = x.T
+    y = nd.L2Normalization(z, mode='instance')
+    assert y[0][0] == 0.6
+    assert y[0][1] == 0.8
+    assert y[-1][0] == 0.6
+    assert y[-1][1] == 0.8
+    # Spatial Mode
+    z = z.reshape(1, 200000000, 2)
+    y = nd.L2Normalization(z, mode='spatial')
+    assert y[0][0][0] == 0.6
+    assert y[0][0][1] == 0.8
+    assert y[0][-1][0] == 0.6
+    assert y[0][-1][1] == 0.8
+
+
+def test_instance_norm():
+    dtype = np.float32
+    forward_check_eps = 1E-3
+    axis = -1
+    eps = 1E-5
+    in_shape = (LARGE_X, 1, SMALL_Y)
+    ctx = mx.cpu()
+
+    # Implementation of instance normalization using numpy
+    def npy_instance_norm(data, gamma, beta, axis, eps=1E-5):
+        if axis < 0:
+            axis += data.ndim
+        broadcast_shape = [1 for _ in range(data.ndim)]
+        broadcast_shape[axis] = data.shape[axis]
+        mean = data.mean(axis=axis, keepdims=True).astype(dtype)
+        var = data.var(axis=axis, keepdims=True).astype(dtype)
+        std = np.sqrt(var + dtype(eps)).astype(dtype)
+        out = gamma * (data - mean) / std + \
+              beta
+        return out
+    data = np.random.normal(0, 1, in_shape).astype(dtype)
+    gamma = np.random.normal(0, 1, (1,)).astype(dtype)
+    beta = np.random.normal(0, 1, (1,)).astype(dtype)
+    data_s = mx.symbol.Variable('data')
+    gamma_s = mx.symbol.Variable('gamma')
+    beta_s = mx.symbol.Variable('beta')
+    out_s = mx.symbol.InstanceNorm(data=data_s, gamma=gamma_s, beta=beta_s,
+                                   eps=eps)
+    exe = out_s.simple_bind(ctx, data=in_shape)
+    exe.arg_dict['data'][:] = data
+    exe.arg_dict['gamma'][:] = gamma
+    exe.arg_dict['beta'][:] = beta
+    out_nd = exe.forward()[0]
+    # Calls implementation of instance norm in numpy and compares the output
+    out = npy_instance_norm(data, gamma, beta, axis, eps)
+    assert_almost_equal(out, out_nd.asnumpy(), forward_check_eps,
+                        forward_check_eps)
+
+
+def test_load_save():
+    x = create_2d_tensor(SMALL_Y, LARGE_X)
+    tmp = tempfile.mkdtemp()
+    tmpfile = os.path.join(tmp, 'large_tensor')
+    nd.save(tmpfile, [x])
+    y = nd.load(tmpfile)
+    y = y[0]
+    assert x[0][0] == y[0][0]
+    assert x[-1][-1]== y[-1][-1]
+
+
+def test_add_n():
+    x = [nd.ones(LARGE_X) for j in range(SMALL_Y)]
+    y = nd.add_n(*x)
+    assert y[0] == SMALL_Y
+    assert y[-1] == SMALL_Y
+
+
+def test_modulo():
+    x = mx.nd.ones((SMALL_Y, LARGE_X))*6
+    y = mx.nd.ones(LARGE_X)*4
+    z = (x%y)
+    assert z[0][0] == 2
+    assert z[-1][-1] == 2
+    x = mx.nd.ones((SMALL_Y, LARGE_X))*5
+    z = nd.modulo(x,y)
+    assert z[0][0] == 1
+    assert z[-1][-1] == 1
+
+
+def test_maximum():
+    x = mx.nd.ones((SMALL_Y, LARGE_X))*3
+    y = mx.nd.ones(LARGE_X)*4
+    z = nd.maximum(x, y)
+    assert z[0][0] == 4
+    assert z[-1][-1] == 4
+    z = nd.maximum(x, 5)
+    assert z[0][0] == 5
+    assert z[-1][-1] == 5
+
+
+def test_minimum():
+    x = mx.nd.ones((SMALL_Y, LARGE_X))*3
+    y = mx.nd.ones(LARGE_X)*2
+    z = nd.minimum(x, y)
+    assert z[0][0] == 2
+    assert z[-1][-1] == 2
+    z = nd.minimum(x, 5)
+    assert z[0][0] == 3
+    assert z[-1][-1] == 3
+
+
+def test_pad():
+    x = create_2d_tensor(rows=SMALL_Y-2, columns=LARGE_X//2-2, dtype=np.float32).reshape(1 , 1, SMALL_Y-2, LARGE_X//2-2)
+    y = nd.pad(x, mode="edge", pad_width=(0, 0, 0, 0, 1, 1, 1, 1))
+    assert y[0][0][1][0] == 0
+    assert y[0][0][1][-1] == 0
+    assert y[0][0][-1][0] == SMALL_Y-3
+    assert y[0][0][-1][-1] == SMALL_Y-3
+    assert y.shape == (1, 1, SMALL_Y, LARGE_X//2)
 
 
 if __name__ == '__main__':

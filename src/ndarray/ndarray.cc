@@ -281,7 +281,7 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
   CHECK_EQ(storage_type(), kDefaultStorage);
   NDArray ret = this->Detach();
   size_t length = shape_.ProdShape(1, shape_.ndim());
-  MSHADOW_TYPE_SWITCH(ret.dtype(), DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(ret.dtype(), DType, {
     ret.byte_offset_ += begin * length * sizeof(DType);
   });
   ret.reuse_ = false;
@@ -1819,7 +1819,13 @@ bool NDArray::Load(dmlc::Stream *strm) {
     *this = std::move(temp); return true;
   } else {
 #if MXNET_USE_CUDA
-    *this = temp.Copy(ctx); return true;
+    int device_count = -1;
+    cudaGetDeviceCount(&device_count);
+    if (device_count > 0) {
+      *this = temp.Copy(ctx); return true;
+    } else {
+      *this = std::move(temp); return true;
+    }
 #else
     *this = std::move(temp); return true;
 #endif

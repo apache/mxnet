@@ -39,6 +39,10 @@ def test_learning_rate():
     o2.lr_scheduler.base_lr = 0.4
     assert o2.learning_rate == 0.4
 
+    lr_s = lr_scheduler.FactorScheduler(step=1, base_lr=1024)
+    o3 = mx.optimizer.Optimizer(lr_scheduler=lr_s)
+    assert o3.learning_rate == 1024
+
 
 @raises(UserWarning)
 @with_seed()

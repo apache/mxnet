@@ -29,7 +29,7 @@ In this tutorial we will:
 ## Pre-requisite
 
 To run the tutorial you will need to have installed the following python modules:
-- [MXNet > 1.1.0](http://mxnet.apache.org/install/index.html)
+- [MXNet > 1.1.0](/get_started)
 - [onnx](https://github.com/onnx/onnx) (follow the install guide)
 - matplotlib
 

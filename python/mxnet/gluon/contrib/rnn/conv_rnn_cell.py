@@ -250,7 +250,7 @@ class Conv1DRNNCell(_ConvRNNCell):
         Initializer for the recurrent convolution bias vectors.
     conv_layout : str, default 'NCW'
         Layout for all convolution inputs, outputs and weights. Options are 'NCW' and 'NWC'.
-    activation : str or Block, default 'tanh'
+    activation : str or gluon.Block, default 'tanh'
         Type of activation function.
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
@@ -317,7 +317,7 @@ class Conv2DRNNCell(_ConvRNNCell):
         Initializer for the recurrent convolution bias vectors.
     conv_layout : str, default 'NCHW'
         Layout for all convolution inputs, outputs and weights. Options are 'NCHW' and 'NHWC'.
-    activation : str or Block, default 'tanh'
+    activation : str or gluon.Block, default 'tanh'
         Type of activation function.
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
@@ -384,7 +384,7 @@ class Conv3DRNNCell(_ConvRNNCell):
         Initializer for the recurrent convolution bias vectors.
     conv_layout : str, default 'NCDHW'
         Layout for all convolution inputs, outputs and weights. Options are 'NCDHW' and 'NDHWC'.
-    activation : str or Block, default 'tanh'
+    activation : str or gluon.Block, default 'tanh'
         Type of activation function.
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
@@ -514,7 +514,7 @@ class Conv1DLSTMCell(_ConvLSTMCell):
         Initializer for the recurrent convolution bias vectors.
     conv_layout : str, default 'NCW'
         Layout for all convolution inputs, outputs and weights. Options are 'NCW' and 'NWC'.
-    activation : str or Block, default 'tanh'
+    activation : str or gluon.Block, default 'tanh'
         Type of activation function used in c^\prime_t.
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
@@ -591,7 +591,7 @@ class Conv2DLSTMCell(_ConvLSTMCell):
         Initializer for the recurrent convolution bias vectors.
     conv_layout : str, default 'NCHW'
         Layout for all convolution inputs, outputs and weights. Options are 'NCHW' and 'NHWC'.
-    activation : str or Block, default 'tanh'
+    activation : str or gluon.Block, default 'tanh'
         Type of activation function used in c^\prime_t.
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
@@ -668,7 +668,7 @@ class Conv3DLSTMCell(_ConvLSTMCell):
         Initializer for the recurrent convolution bias vectors.
     conv_layout : str, default 'NCDHW'
         Layout for all convolution inputs, outputs and weights. Options are 'NCDHW' and 'NDHWC'.
-    activation : str or Block, default 'tanh'
+    activation : str or gluon.Block, default 'tanh'
         Type of activation function used in c^\prime_t.
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
@@ -798,7 +798,7 @@ class Conv1DGRUCell(_ConvGRUCell):
         Initializer for the recurrent convolution bias vectors.
     conv_layout : str, default 'NCW'
         Layout for all convolution inputs, outputs and weights. Options are 'NCW' and 'NWC'.
-    activation : str or Block, default 'tanh'
+    activation : str or gluon.Block, default 'tanh'
         Type of activation function used in n_t.
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
@@ -870,7 +870,7 @@ class Conv2DGRUCell(_ConvGRUCell):
         Initializer for the recurrent convolution bias vectors.
     conv_layout : str, default 'NCHW'
         Layout for all convolution inputs, outputs and weights. Options are 'NCHW' and 'NHWC'.
-    activation : str or Block, default 'tanh'
+    activation : str or gluon.Block, default 'tanh'
         Type of activation function used in n_t.
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
@@ -942,7 +942,7 @@ class Conv3DGRUCell(_ConvGRUCell):
         Initializer for the recurrent convolution bias vectors.
     conv_layout : str, default 'NCDHW'
         Layout for all convolution inputs, outputs and weights. Options are 'NCDHW' and 'NDHWC'.
-    activation : str or Block, default 'tanh'
+    activation : str or gluon.Block, default 'tanh'
         Type of activation function used in n_t.
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.

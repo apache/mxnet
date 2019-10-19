@@ -27,6 +27,15 @@ import threading
 from .base import _LIB, check_call
 
 
+_np_ufunc_default_kwargs = {
+    'where': True,
+    'casting': 'same_kind',
+    'order': 'K',
+    'dtype': None,
+    'subok': True,
+}
+
+
 def makedirs(d):
     """Create directories recursively if they don't exist. os.makedirs(exist_ok=True) is not
     available in Python2"""
@@ -558,6 +567,103 @@ def use_np(func):
     return use_np_shape(use_np_array(func))
 
 
+def np_ufunc_legal_option(key, value):
+    """
+    Checking if ufunc arguments are legal inputs
+
+    Parameters
+    ----------
+    key : string
+        the key of the ufunc argument.
+    value : string
+        the value of the ufunc argument.
+
+    Returns
+    -------
+    legal : boolean
+        Whether or not the argument is a legal one. True when the key is one of the ufunc
+        arguments and value is an allowed value. False when the key is not one of the ufunc
+        arugments or the value is not an allowed value even when the key is a legal one.
+    """
+    if key == 'where':
+        return True
+    elif key == 'casting':
+        return (value in set(['no', 'equiv', 'safe', 'same_kind', 'unsafe']))
+    elif key == 'order':
+        if isinstance(value, str):
+            return True
+    elif key == 'dtype':
+        import numpy as _np
+        return (value in set([_np.int8, _np.uint8, _np.int32, _np.int64,
+                              _np.float16, _np.float32, _np.float64,
+                              'int8', 'uint8', 'int32', 'int64',
+                              'float16', 'float32', 'float64']))
+    elif key == 'subok':
+        return isinstance(value, bool)
+    return False
+
+
+def wrap_np_unary_func(func):
+    """A convenience decorator for wrapping numpy-compatible unary ufuncs to provide uniform
+    error handling.
+
+    Parameters
+    ----------
+    func : a numpy-compatible unary function to be wrapped for better error handling.
+
+    Returns
+    -------
+    Function
+        A function wrapped with proper error handling.
+    """
+    @wraps_safely(func)
+    def _wrap_np_unary_func(x, out=None, **kwargs):
+        if len(kwargs) != 0:
+            for key, value in kwargs.items():
+                # if argument is not in the set of ufunc arguments
+                if key not in _np_ufunc_default_kwargs:
+                    raise TypeError("{} is an invalid keyword to function \'{}\'".format(key, func.__name__))
+                # if argument is one of the ufunc arguments, but not with the default value
+                if value != _np_ufunc_default_kwargs[key]:
+                    # if the provided value of the argument is a legal option, raise NotImplementedError
+                    if np_ufunc_legal_option(key, value):
+                        raise NotImplementedError("{}={} is not implemented yet".format(key, str(value)))
+                    # otherwise raise TypeError with not understood error message
+                    raise TypeError("{} {} not understood".format(key, value))
+        return func(x, out=out)
+    return _wrap_np_unary_func
+
+
+def wrap_np_binary_func(func):
+    """A convenience decorator for wrapping numpy-compatible binary ufuncs to provide uniform
+    error handling.
+
+    Parameters
+    ----------
+    func : a numpy-compatible binary function to be wrapped for better error handling.
+
+    Returns
+    -------
+    Function
+        A function wrapped with proper error handling.
+    """
+    @wraps_safely(func)
+    def _wrap_np_binary_func(x1, x2, out=None, **kwargs):
+        if len(kwargs) != 0:
+            for key, value in kwargs.items():
+                # if argument is not in the set of ufunc arguments
+                if key not in _np_ufunc_default_kwargs:
+                    raise TypeError("{} is an invalid keyword to function \'{}\'".format(key, func.__name__))
+                # if argument is one of the ufunc arguments, but not with the default value
+                if value != _np_ufunc_default_kwargs[key]:
+                    # if the provided value of the argument is a legal option, raise NotImplementedError
+                    if np_ufunc_legal_option(key, value):
+                        raise NotImplementedError("{}={} is not implemented yet".format(key, str(value)))
+                    # otherwise raise TypeError with not understood error message
+                    raise TypeError("{} {} not understood".format(key, value))
+        return func(x1, x2, out=out)
+    return _wrap_np_binary_func
+
 def _set_np_array(active):
     """Turns on/off NumPy array semantics for the current thread in which `mxnet.numpy.ndarray`
     is expected to be created, instead of the legacy `mx.nd.NDArray`.
@@ -602,3 +708,64 @@ def set_np(shape=True, array=True):
 def reset_np():
     """Deactivate NumPy shape and array semantics at the same time."""
     set_np(shape=False, array=False)
+
+
+_CUDA_SUCCESS = 0
+
+
+def get_cuda_compute_capability(ctx):
+    """Returns the cuda compute capability of the input `ctx`.
+
+    Parameters
+    ----------
+    ctx : Context
+        GPU context whose corresponding cuda compute capability is to be retrieved.
+
+    Returns
+    -------
+    cuda_compute_capability : int
+        CUDA compute capability. For example, it returns 70 for CUDA arch equal to `sm_70`.
+
+    References
+    ----------
+    https://gist.github.com/f0k/63a664160d016a491b2cbea15913d549#file-cuda_check-py
+    """
+    if ctx.device_type != 'gpu':
+        raise ValueError('Expecting a gpu context to get cuda compute capability, '
+                         'while received ctx {}'.format(str(ctx)))
+
+    libnames = ('libcuda.so', 'libcuda.dylib', 'cuda.dll')
+    for libname in libnames:
+        try:
+            cuda = ctypes.CDLL(libname)
+        except OSError:
+            continue
+        else:
+            break
+    else:
+        raise OSError("could not load any of: " + ' '.join(libnames))
+
+    # Some constants taken from cuda.h
+
+    cc_major = ctypes.c_int()
+    cc_minor = ctypes.c_int()
+    device = ctypes.c_int()
+    error_str = ctypes.c_char_p()
+
+    ret = cuda.cuInit(0)
+    if ret != _CUDA_SUCCESS:
+        cuda.cuGetErrorString(ret, ctypes.byref(error_str))
+        raise RuntimeError('cuInit failed with erro code {}: {}'
+                           .format(ret, error_str.value.decode()))
+
+    ret = cuda.cuDeviceGet(ctypes.byref(device), ctx.device_id)
+    if ret != _CUDA_SUCCESS:
+        cuda.cuGetErrorString(ret, ctypes.byref(error_str))
+        raise RuntimeError('cuDeviceGet failed with error code {}: {}'
+                           .format(ret, error_str.value.decode()))
+    ret = cuda.cuDeviceComputeCapability(ctypes.byref(cc_major), ctypes.byref(cc_minor), device)
+    if ret != _CUDA_SUCCESS:
+        cuda.cuGetErrorString(ret, ctypes.byref(error_str))
+        raise RuntimeError('cuDeviceComputeCapability failed with error code {}: {}'
+                           .format(ret, error_str.value.decode()))
+    return cc_major.value * 10 + cc_minor.value

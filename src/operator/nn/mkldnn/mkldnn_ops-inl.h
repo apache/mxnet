@@ -131,11 +131,6 @@ void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
                           const OpReqType &req,
                           const NDArray &output);
 
-void MKLDNNFlattenForward(const nnvm::NodeAttrs &attrs,
-                          const OpContext &ctx,
-                          const NDArray &input,
-                          const OpReqType &req,
-                          const NDArray &output);
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_USE_MKLDNN == 1
