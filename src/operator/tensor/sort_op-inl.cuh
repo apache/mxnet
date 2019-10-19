@@ -347,7 +347,6 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
 template<typename KDType, typename VDType>
 inline void SortByKey(mshadow::Tensor<gpu, 1, KDType> keys, mshadow::Tensor<gpu, 1, VDType> values,
                       bool is_ascend, mshadow::Tensor<gpu, 1, char>* workspace,
-                      const int begin_bit, const int end_bit) {
                       const int begin_bit, const int end_bit,
                       mshadow::Tensor<gpu, 1, KDType>* sorted_keys,
                       mshadow::Tensor<gpu, 1, VDType>* sorted_values) {

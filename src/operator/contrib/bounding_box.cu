@@ -24,6 +24,8 @@
   * \author Joshua Zhang
   */
 
+#include <cub/cub.cuh>
+
 #include "./bounding_box-inl.cuh"
 #include "./bounding_box-inl.h"
 #include "../elemwise_op_common.h"
@@ -384,7 +386,7 @@ __global__ void CalculateGreedyNMSResults_kernel(const DType* data, uint32_t* re
     for (int i = 0; i < num_other_boxes; ++i) {
       const int other_boxes_offset = element_width * i;
       if ((class_index == -1 || my_class == other_boxes[other_boxes_offset + class_index]) &&
-          other_boxes[other_boxes_offset + score_index] != -1){
+          other_boxes[other_boxes_offset + score_index] != -1) {
         const DType their_area = other_boxes_areas[i];
 
         const DType intersect = calculate_intersection<encode>(
@@ -393,7 +395,6 @@ __global__ void CalculateGreedyNMSResults_kernel(const DType* data, uint32_t* re
             other_boxes[other_boxes_offset + coord_index + 1],
             other_boxes[other_boxes_offset + coord_index + 2],
             other_boxes[other_boxes_offset + coord_index + 3]);
-        //const DType iou = intersect / (my_area + their_area - intersect);
         if (intersect > threshold * (my_area + their_area - intersect)) {
           ret = ret | (1u << i);
         }
