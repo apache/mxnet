@@ -103,6 +103,9 @@ push() {
 
         docker tag "${image_name}" "${latest_image_name}"
         docker push "${latest_image_name}"
+        echo "Successfully pushed ${latest_image_name}. Pull it with:"
+        echo "docker pull ${latest_image_name}"
+        echo "For a complete list of tags see https://hub.docker.com/u/${RELEASE_DOCKERHUB_REPOSITORY}/${repository}"
     done    
 }
 
