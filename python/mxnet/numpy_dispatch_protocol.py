@@ -114,7 +114,8 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'var',
     'zeros_like',
     'meshgrid',
-    'outer'
+    'outer',
+    'einsum'
 ]
 
 
