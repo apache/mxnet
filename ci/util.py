@@ -125,4 +125,8 @@ def script_name() -> str:
 def config_logging():
     conf_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logging.conf")
     logging.config.fileConfig(os.getenv('LOGGING_CONF', conf_path))
+
+    # Force botocore and requests are set to WARNING to avoid leaking any credentials
+    # or sensitive information
+    logging.getLogger("botocore").setLevel(logging.WARNING)
     logging.getLogger("requests").setLevel(logging.WARNING)
