@@ -364,7 +364,8 @@ bool CachedOp::SetForwardGraph(
 
   auto mem_plan = PlanMemory(
       &g, std::move(storage), g.GetAttr<std::vector<uint32_t> >(
-          recording ? "full_ref_count" : "forward_ref_count"));
+          recording ? "full_ref_count" : "forward_ref_count"),
+      recording ? "full" : "forward");
   g.attrs[recording ? "full_mem_plan" : "forward_mem_plan"] =
       std::make_shared<dmlc::any>(std::move(mem_plan));
 
@@ -492,6 +493,7 @@ bool CachedOp::SetBackwardGraph(
 
   auto mem_plan = PlanMemory(
       &g, std::move(storage), g.GetAttr<std::vector<uint32_t> >("backward_ref_count"),
+      "backward",
       {num_forward_nodes, idx.num_nodes()},
       {num_forward_entries, idx.num_node_entries()},
       detect_inplace_addto);
@@ -526,9 +528,10 @@ void CachedOp::StaticAllocMemory(
   const auto& default_ctx = state.context;
   nnvm::Graph& g = keep_fwd ? state.info.full_graph : state.info.fwd_graph;
   const auto& idx = g.indexed_graph();
-  const auto& vstorage_inplace = g.GetAttr<std::vector<int> >("storage_inplace_index");
-  const auto& mem_plan = g.GetAttr<MemoryPlanVector>(
-      keep_fwd ? "backward_mem_plan" : (recording ? "full_mem_plan" : "forward_mem_plan"));
+  const std::string mem_plan_type = keep_fwd ? "backward" : (recording ? "full" : "forward");
+  const auto& storage_inplace_attr = "storage_inplace_index_" + mem_plan_type;
+  const auto& vstorage_inplace = g.GetAttr<std::vector<int> >(storage_inplace_attr);
+  const auto& mem_plan = g.GetAttr<MemoryPlanVector>(mem_plan_type + "_mem_plan");
   std::vector<int> addto_entry;
   if (g.attrs.count("addto_entry")) {
     addto_entry = g.GetAttr<std::vector<int> >("addto_entry");
