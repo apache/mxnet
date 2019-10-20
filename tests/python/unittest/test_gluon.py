@@ -529,6 +529,50 @@ def test_hybrid_block_none_args():
     assert_raises(ValueError, lambda: foo1(mx.nd.ones((10,)), mx.nd.ones((10,))))
 
 
+@with_seed()
+def test_hybrid_block_hybrid_no_hybrid():
+    class FooHybrid(gluon.HybridBlock):
+        def hybrid_forward(self, F, a, b):
+            if isinstance(a, (list, tuple)):
+                a = sum(a)
+            if isinstance(b, (list, tuple)):
+                b = sum(b)
+            return a + b
+
+    class Foo(gluon.Block):
+        def forward(self, a, b):
+            if isinstance(a, (list, tuple)):
+                a = sum(a)
+            if isinstance(b, (list, tuple)):
+                b = sum(b)
+            return a + b
+    # When hybridize is not called, HybridBlock acts the same as Block
+    foo_hybrid = FooHybrid()
+    foo = Foo()
+    for a, b in [(mx.nd.ones((10,)), 1),
+                 (mx.nd.ones((20,)), 2),
+                 ([mx.nd.ones((10,)), mx.nd.ones((10,))],
+                  [mx.nd.ones((10)), mx.nd.ones((10,)), mx.nd.ones((10,))]),
+                 ([mx.nd.ones((10,)), mx.nd.ones((10,))], 3)]:
+        hybrid_block_out = foo_hybrid(a, b)
+        block_out = foo(a, b)
+        assert_almost_equal(hybrid_block_out.asnumpy(), block_out.asnumpy())
+    # When hybridize is called, we need to make sure that the model raises for the unsupported cases
+    # 1. Scalar values in the input
+    # 2. No mixing of sym/ndarray
+    # 3. No mixing of cpu ndarray and gpu ndarray  (Tested in gpu/test_gluon_gpu.py)
+    # 4. Allow mixing of cpu_pinned and cpu
+    foo_hybrid = FooHybrid()
+    foo_hybrid.hybridize()
+    assert_raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,)), 1))
+    foo_hybrid = FooHybrid()
+    foo_hybrid.hybridize()
+    assert_raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,)), mx.sym.var('a')))
+    foo_hybrid = FooHybrid()
+    foo_hybrid.hybridize()
+    assert_raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,), ctx=mx.cpu(1)),
+                                                 mx.nd.ones((10,), ctx=mx.cpu(2))))
+
 
 @with_seed()
 def check_layer_forward(layer, dshape):

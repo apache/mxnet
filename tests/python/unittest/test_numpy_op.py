@@ -32,7 +32,8 @@ import scipy.stats as ss
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, retry
 from mxnet.runtime import Features
 from mxnet.numpy_op_signature import _get_builtin_op
-from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, has_tvm_ops
+from mxnet.test_utils import current_context, verify_generator, gen_buckets_probs_with_ppf
+from mxnet.test_utils import is_op_runnable, has_tvm_ops
 import platform
 
 
@@ -434,13 +435,15 @@ def test_np_sum():
     shape = rand_shape_nd(in_data_dim, dim=3)
     acc_type = {'float16': 'float32', 'float32': 'float64', 'float64': 'float64',
                 'int8': 'int32', 'int32': 'int64', 'int64': 'int64', 'bool': 'int64'}
+    is_windows = sys.platform.startswith('win')
     for hybridize in [False, True]:
         for keepdims in [True, False]:
             for axis in ([i for i in range(in_data_dim)] + [(), None]):
                 for itype in ['float16', 'float32', 'float64', 'int8', 'int32', 'int64', 'bool']:
                     for dtype in ['float16', 'float32', 'float64', 'int8', 'int32', 'int64']:
                         if (is_int(dtype) and not is_int(itype))\
-                                or (itype == 'bool' and dtype not in ('float32', 'float64', 'int32', 'int64')):
+                                or (itype == 'bool' and\
+                                    (dtype not in ('float32', 'float64', 'int32', 'int64') or is_windows)):
                             continue
                         # test gluon
                         test_sum = TestSum(axis=axis, dtype=dtype, keepdims=keepdims)
@@ -456,8 +459,8 @@ def test_np_sum():
                             x = np.random.uniform(-1.0, 1.0, size=shape, dtype=itype)
                         expected_ret = _np.sum(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims)
                         expected_ret = expected_ret.astype(dtype)
-                        if itype == 'bool':  # special handling of boolean ndarray
-                            if has_tvm_ops():
+                        if itype == 'bool':
+                            if is_op_runnable() and (not is_windows):  # special handling of boolean ndarray
                                 y = test_sum(x)
                                 assert y.dtype == expected_ret.dtype
                                 assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-4, atol=1e-5,
@@ -479,7 +482,7 @@ def test_np_sum():
                             x_sym = mx.sym.Variable("x").as_np_ndarray()
                             mx_sym = mx.sym.np.sum(x_sym, axis=axis, dtype=dtype, keepdims=keepdims).as_nd_ndarray()
                             check_numeric_gradient(mx_sym, [x.as_nd_ndarray()],
-                                                   numeric_eps=1e-3, rtol=1e-3, atol=1e-4, dtype=_np.float32)
+                                                   numeric_eps=1e-3, rtol=1e-2, atol=1e-3, dtype=_np.float32)
 
                         # test imperative
                         mx_out = np.sum(x, axis=axis, dtype=dtype, keepdims=keepdims)
@@ -2562,7 +2565,7 @@ def test_np_linalg_norm():
 
 @with_seed()
 @use_np
-def test_np_svd():
+def test_np_linalg_svd():
     class TestSVD(HybridBlock):
         def __init__(self):
             super(TestSVD, self).__init__()
@@ -2589,6 +2592,28 @@ def test_np_svd():
         G2 = _np.eye(m) + (X + _np.swapaxes(X, -2, -1)) * L[..., None, :] - 1.0 / L[..., None] * _np.matmul(dV, _np.swapaxes(V, -2, -1)) * _np.eye(m)
         dA = _np.matmul(UT, _np.matmul(G2, V) + 1.0 / L[..., None] * dV)
         return dA
+
+    def check_svd(UT, L, V, data_np):
+        shape = data_np.shape
+        # check UT @ L @ V == A
+        t = _np.matmul(UT * L[..., None, :], V)
+        assert t.shape == data_np.shape
+        assert_almost_equal(t, data_np, rtol=rtol, atol=atol)
+        # check UT @ U == I
+        I = _np.matmul(UT, _np.swapaxes(UT, -2, -1))
+        I_np = _np.ones_like(UT) * _np.eye(shape[-2])
+        assert I.shape == I_np.shape
+        assert_almost_equal(I, I_np, rtol=rtol, atol=atol)
+        # check U @ UT == I
+        I = _np.matmul(_np.swapaxes(UT, -2, -1), UT)
+        I_np = _np.ones_like(UT) * _np.eye(shape[-2])
+        assert I.shape == I_np.shape
+        assert_almost_equal(I, I_np, rtol=rtol, atol=atol)
+        # check V @ VT == I
+        I = _np.matmul(V, _np.swapaxes(V, -2, -1))
+        I_np = _np.ones_like(UT) * _np.eye(shape[-2])
+        assert I.shape == I_np.shape
+        assert_almost_equal(I, I_np, rtol=rtol, atol=atol)
 
     shapes = [
         (3, 3),
@@ -2623,25 +2648,8 @@ def test_np_svd():
                 UT = ret[0].asnumpy()
                 L = ret[1].asnumpy()
                 V = ret[2].asnumpy()
-                # check UT @ L @ V == A
-                t = _np.matmul(UT * L[..., None, :], V)
-                assert t.shape == data_np.shape
-                assert_almost_equal(t, data_np, rtol=rtol, atol=atol)
-                # check UT @ U == I
-                I = _np.matmul(UT, _np.swapaxes(UT, -2, -1))
-                I_np = _np.ones_like(UT) * _np.eye(shape[-2])
-                assert I.shape == I_np.shape
-                assert_almost_equal(I, I_np, rtol=rtol, atol=atol)
-                # check U @ UT == I
-                I = _np.matmul(_np.swapaxes(UT, -2, -1), UT)
-                I_np = _np.ones_like(UT) * _np.eye(shape[-2])
-                assert I.shape == I_np.shape
-                assert_almost_equal(I, I_np, rtol=rtol, atol=atol)
-                # check V @ VT == I
-                I = _np.matmul(V, _np.swapaxes(V, -2, -1))
-                I_np = _np.ones_like(UT) * _np.eye(shape[-2])
-                assert I.shape == I_np.shape
-                assert_almost_equal(I, I_np, rtol=rtol, atol=atol)
+                # check svd validity
+                check_svd(UT, L, V, data_np)
                 # check descending singular values
                 s = [L[..., i] - L[..., i + 1] for i in range(L.shape[-1] - 1)]
                 s = _np.array(s)
@@ -2653,6 +2661,12 @@ def test_np_svd():
                 if ((s > 1e-5).all() and (L.size == 0 or (L > 1e-5).all())):
                     backward_expected = get_grad(ret[0].asnumpy(), ret[1].asnumpy(), ret[2].asnumpy())
                     assert_almost_equal(data.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+                # Test imperative once again
+                ret = np.linalg.svd(data)
+                UT = ret[0].asnumpy()
+                L = ret[1].asnumpy()
+                V = ret[2].asnumpy()
+                check_svd(UT, L, V, data_np)
 
 
 @with_seed()
