@@ -269,7 +269,7 @@ if(USE_MKLDNN)
 
   include_directories(3rdparty/mkldnn/include)
   include_directories(${PROJECT_BINARY_DIR}/3rdparty/mkldnn/include)
-  add_definitions(-DMXNET_USE_MKLDNN=100)
+  add_definitions(-DMXNET_USE_MKLDNN=1)
   list(APPEND mxnet_LINKER_LIBS mkldnn)
 endif()
 

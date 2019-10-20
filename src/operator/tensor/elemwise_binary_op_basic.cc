@@ -43,7 +43,7 @@ static void ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
                           const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
-#if MXNET_USE_MKLDNN == 100
+#if MXNET_USE_MKLDNN == 1
   if (SupportMKLDNNSum(inputs[0]) && SupportMKLDNNSum(inputs[1])) {
     MKLDNNSumForward(attrs, ctx, inputs, req[0], outputs[0]);
     return;
@@ -67,7 +67,7 @@ static inline bool ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1);
   bool ret = ElemwiseBinaryOp::PreferDenseStorageType<true, true, true>(
                attrs, dev_mask, dispatch_mode, in_attrs, out_attrs);
-#if MXNET_USE_MKLDNN == 100
+#if MXNET_USE_MKLDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask && !MKLDNNEnvSet()) {
     *dispatch_mode = DispatchMode::kFComputeFallback;
   } else if (dev_mask == mshadow::cpu::kDevMask
@@ -82,7 +82,7 @@ static inline bool ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs,
 MXNET_OPERATOR_REGISTER_BINARY(elemwise_add)
 .set_attr<FInferStorageType>("FInferStorageType", ElemwiseAddStorageType)
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, op::mshadow_op::plus>)
-#if MXNET_USE_MKLDNN == 100
+#if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 #endif
 .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseAddEx)
@@ -120,7 +120,7 @@ static void _backward_ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
                                     const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 2U);
-#if MXNET_USE_MKLDNN == 100
+#if MXNET_USE_MKLDNN == 1
   if (inputs[0].IsMKLDNNData()) {
     MKLDNNCopy(attrs, ctx, inputs[0], req[0], outputs[0]);
     MKLDNNCopy(attrs, ctx, inputs[0], req[1], outputs[1]);
@@ -145,7 +145,7 @@ static inline bool ElemwiseAddBackwardStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 2);
   bool ret = ElemwiseStorageType<1, 2, true, true, true>(attrs, dev_mask, dispatch_mode,
                                                          in_attrs, out_attrs);
-#if MXNET_USE_MKLDNN == 100
+#if MXNET_USE_MKLDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask && !MKLDNNEnvSet()) {
     *dispatch_mode = DispatchMode::kFComputeFallback;
   } else if (dev_mask == mshadow::cpu::kDevMask) {
@@ -164,7 +164,7 @@ NNVM_REGISTER_OP(_backward_add)
                                   return std::vector<std::pair<int, int> >{{0, 0},
                                                                            {0, 1}};
                                 })
-#if MXNET_USE_MKLDNN == 100
+#if MXNET_USE_MKLDNN == 1
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })

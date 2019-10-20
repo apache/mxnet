@@ -27,9 +27,9 @@
 #include <iterator>
 
 #include "./rnn-inl.h"
-#if MXNET_USE_MKLDNN == 100
+#if MXNET_USE_MKLDNN == 1
 #include "./nn/mkldnn/mkldnn_rnn-inl.h"
-#endif  // MXNET_USE_MKLDNN == 100
+#endif  // MXNET_USE_MKLDNN == 1
 
 namespace mxnet {
 namespace op {
@@ -193,9 +193,9 @@ inline static bool RNNStorageType(const nnvm::NodeAttrs& attrs,
                                   std::vector<int> *out_attrs) {
   DispatchMode wanted_mode = DispatchMode::kFCompute;
 
-#if MXNET_USE_MKLDNN == 100
+#if MXNET_USE_MKLDNN == 1
   wanted_mode = DispatchMode::kFComputeEx;
-#endif  // MXNET_USE_MKLDNN == 100
+#endif  // MXNET_USE_MKLDNN == 1
 
   return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                              dispatch_mode, wanted_mode);
@@ -241,7 +241,7 @@ static OpStatePtr CreateRNNState(const nnvm::NodeAttrs &attrs,
     itype = in_types[seq_len_input_idx];
   }
 
-#if MXNET_USE_MKLDNN == 100
+#if MXNET_USE_MKLDNN == 1
   if ((in_types[0] == mshadow::kFloat32 || in_types[0] == mshadow::kFloat16)
       && in_shapes[0].ndim() == 3 && ctx.dev_type == kCPU) {
     const mxnet::TShape& data_shape = in_shapes[rnn_enum::kData];
@@ -249,7 +249,7 @@ static OpStatePtr CreateRNNState(const nnvm::NodeAttrs &attrs,
         data_shape[1], data_shape[2]);
     return state;
   }
-#endif  // MXNET_USE_MKLDNN == 100
+#endif  // MXNET_USE_MKLDNN == 1
 
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     MSHADOW_TYPE_SWITCH(itype, IType, {
@@ -263,7 +263,7 @@ static OpStatePtr CreateRNNState(const nnvm::NodeAttrs &attrs,
   return state;
 }
 
-#if MXNET_USE_MKLDNN == 100
+#if MXNET_USE_MKLDNN == 1
 static void RNNStatefulComputeExCPU(const OpStatePtr& state_ptr,
                                     const OpContext& ctx,
                                     const std::vector<NDArray>& inputs,
@@ -291,7 +291,7 @@ static void RNNStatefulGradComputeExCPU(const OpStatePtr& state_ptr,
     FallBackCompute(RNNStatefulGradCompute<cpu>, state_ptr, ctx, inputs, req, outputs);
   }
 }
-#endif  // MXNET_USE_MKLDNN == 100
+#endif  // MXNET_USE_MKLDNN == 1
 
 NNVM_REGISTER_OP(RNN)
 .add_alias("_npx_rnn")
@@ -385,7 +385,7 @@ The definition of GRU here is slightly different from paper but compatible with 
 .set_attr<FInferStorageType>("FInferStorageType", RNNStorageType)
 .set_attr<FCreateOpState>("FCreateOpState", CreateRNNState)
 .set_attr<FStatefulCompute>("FStatefulCompute<cpu>", RNNStatefulCompute<cpu>)
-#if MXNET_USE_MKLDNN == 100
+#if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", RNNStatefulComputeExCPU)
 #endif
@@ -412,7 +412,7 @@ NNVM_REGISTER_OP(_backward_RNN)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FInferStorageType>("FInferStorageType", RNNStorageType)
 .set_attr<FStatefulCompute>("FStatefulCompute<cpu>", RNNStatefulGradCompute<cpu>)
-#if MXNET_USE_MKLDNN == 100
+#if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", RNNStatefulGradComputeExCPU)
 #endif

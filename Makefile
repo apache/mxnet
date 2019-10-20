@@ -146,7 +146,7 @@ ifndef LINT_LANG
 endif
 
 ifeq ($(USE_MKLDNN), 1)
-	CFLAGS += -DMXNET_USE_MKLDNN=100
+	CFLAGS += -DMXNET_USE_MKLDNN=1
 	CFLAGS += -I$(ROOTDIR)/src/operator/nn/mkldnn/
 	CFLAGS += -I$(MKLDNNROOT)/include
 	LDFLAGS += -L$(MKLDNNROOT)/lib -L$(MKLDNNROOT)/lib64 -lmkldnn -Wl,-rpath,'$${ORIGIN}'

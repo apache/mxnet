@@ -23,7 +23,7 @@
  * \author Tao Lv
 */
 
-#if MXNET_USE_MKLDNN == 100
+#if MXNET_USE_MKLDNN == 1
 
 #include "./mkldnn_pooling-inl.h"
 
@@ -383,4 +383,4 @@ void MKLDNNPoolingGradCompute(const OpContext &ctx, const PoolingParam &param,
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_USE_MKLDNN == 100
+#endif  // MXNET_USE_MKLDNN == 1

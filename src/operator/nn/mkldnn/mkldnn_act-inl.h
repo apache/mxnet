@@ -28,7 +28,7 @@
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_ACT_INL_H_
 
 
-#if MXNET_USE_MKLDNN == 100
+#if MXNET_USE_MKLDNN == 1
 #include <vector>
 #include <utility>
 #include "../activation-inl.h"
@@ -115,5 +115,5 @@ struct hash<mxnet::op::MKLDNNActParam> {
 };
 }  // namespace std
 
-#endif  // MXNET_USE_MKLDNN == 100
+#endif  // MXNET_USE_MKLDNN == 1
 #endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_ACT_INL_H_

@@ -24,7 +24,7 @@
  * \author Da Zheng, Ciyong Chen
 */
 
-#if MXNET_USE_MKLDNN == 100
+#if MXNET_USE_MKLDNN == 1
 #include "mkldnn_fully_connected-inl.h"
 
 namespace mxnet {
@@ -340,4 +340,4 @@ void MKLDNNFCBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_USE_MKLDNN == 100
+#endif  // MXNET_USE_MKLDNN == 1

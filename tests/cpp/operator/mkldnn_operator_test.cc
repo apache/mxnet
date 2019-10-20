@@ -23,7 +23,7 @@
  *  \author Alex Zai
  */
 
-#if MXNET_USE_MKLDNN == 100
+#if MXNET_USE_MKLDNN == 1
 
 #include <mkldnn_types.h>
 #include <cmath>
@@ -1353,4 +1353,4 @@ TEST(IMPERATIVE, BNOp) {
   TestOpExBN(forward_attrs, backwards_attrs);
 }
 
-#endif  // MXNET_USE_MKLDNN == 100
+#endif  // MXNET_USE_MKLDNN == 1
