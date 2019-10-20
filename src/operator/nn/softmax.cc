@@ -26,7 +26,7 @@
 #include "../tensor/elemwise_unary_op.h"
 #include "../tensor/elemwise_binary_op.h"
 #include "../operator_common.h"
-#if MXNET_USE_MKLDNN == 100
+#if MXNET_USE_MKLDNN == 1
 #include "mkldnn/mkldnn_base-inl.h"
 #include "mkldnn/mkldnn_ops-inl.h"
 #endif
@@ -35,7 +35,7 @@ namespace mxnet {
 namespace op {
 DMLC_REGISTER_PARAMETER(SoftmaxParam);
 
-#if MXNET_USE_MKLDNN == 100
+#if MXNET_USE_MKLDNN == 1
 static void SoftmaxComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const OpContext& ctx,
                                 const std::vector<NDArray>& inputs,
@@ -114,7 +114,7 @@ Example::
     return std::vector<std::string>{"output"};
 })
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxCompute<cpu, mxnet_op::softmax_fwd>)
-#if MXNET_USE_MKLDNN == 100
+#if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SoftmaxComputeExCPU)
 .set_attr<FInferStorageType>("FInferStorageType", SoftmaxStorageType)

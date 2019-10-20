@@ -27,7 +27,7 @@
 #ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_RNN_INL_H_
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_RNN_INL_H_
 
-#if MXNET_USE_MKLDNN == 100
+#if MXNET_USE_MKLDNN == 1
 
 #include <vector>
 #include "../../rnn-inl.h"
@@ -440,5 +440,5 @@ class MKLDNNRnnOp {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_USE_MKLDNN == 100
+#endif  // MXNET_USE_MKLDNN == 1
 #endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_RNN_INL_H_

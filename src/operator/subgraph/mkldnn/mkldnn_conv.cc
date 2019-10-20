@@ -17,7 +17,7 @@
 * under the License.
 */
 
-#if MXNET_USE_MKLDNN == 100
+#if MXNET_USE_MKLDNN == 1
 
 #include <utility>
 #include <vector>
