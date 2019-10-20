@@ -427,29 +427,27 @@ def test_load_save_symbol():
         weight = mx.sym.var('weight', shape=(num_hdidden, 0))
         return mx.sym.FullyConnected(data, weight, num_hidden=num_hdidden)
 
-    with TemporaryDirectory() as work_dir:
-        for is_old_format in [True, False]:
+    for flag1 in [False, True]:
+        with np_shape(flag1):
             net_json_str = get_net().tojson()
             net_data = json.loads(net_json_str)
             assert "attrs" in net_data
-            assert "is_np_shape" in net_data["attrs"]
-            np_shape_flag = net_data["attrs"]["is_np_shape"]
+            if flag1:
+                assert "is_np_shape" in net_data["attrs"]
+            else:
+                assert "is_np_shape" not in net_data["attrs"]
 
-            assert len(np_shape_flag) == 2
-            assert np_shape_flag[0] == 'int'
-            assert np_shape_flag[1] == 0
-
-            if is_old_format:
-                net_data["attrs"].pop("is_np_shape")  # delete is_np_shape key-value to simulate 1.5.0 format
-
+        with TemporaryDirectory() as work_dir:
             fname = os.path.join(work_dir, 'test_sym.json')
             with open(fname, 'w') as fp:
                 json.dump(net_data, fp)
 
             # test loading 1.5.0 symbol file since 1.6.0
             # w/ or w/o np_shape semantics
-            for flag in [False, True]:
-                with np_shape(flag):
+            for flag2 in [False, True]:
+                if flag1:  # Do not need to test this case since 0 indicates zero-size dim
+                    continue
+                with np_shape(flag2):
                     net = mx.sym.load(fname)
                     arg_shapes, out_shapes, aux_shapes = net.infer_shape(data=(batch_size, num_features))
                     assert arg_shapes[0] == (batch_size, num_features)  # data
