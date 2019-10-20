@@ -23,6 +23,7 @@ import numpy as _np
 from mxnet import np
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import use_np
+from mxnet.test_utils import is_op_runnable
 from common import assertRaises, with_seed
 from mxnet.numpy_dispatch_protocol import with_array_function_protocol, with_array_ufunc_protocol
 from mxnet.numpy_dispatch_protocol import _NUMPY_ARRAY_FUNCTION_LIST, _NUMPY_ARRAY_UFUNC_LIST
@@ -892,11 +893,6 @@ def _prepare_workloads():
     _add_workload_arctan2()
     _add_workload_copysign()
     _add_workload_degrees()
-    #_add_workload_equal(array_pool)
-    #_add_workload_greater(array_pool)
-    #_add_workload_greater_equal(array_pool)
-    #_add_workload_less(array_pool)
-    #_add_workload_less_equal(array_pool)
     _add_workload_true_divide()
     _add_workload_inner()
     _add_workload_hypot()
@@ -910,7 +906,6 @@ def _prepare_workloads():
     _add_workload_maximum(array_pool)
     _add_workload_minimum(array_pool)
     _add_workload_negative(array_pool)
-    #_add_workload_not_equal(array_pool)
     _add_workload_absolute(array_pool)
     _add_workload_sign(array_pool)
     _add_workload_exp(array_pool)
@@ -939,6 +934,13 @@ def _prepare_workloads():
     _add_workload_turnc(array_pool)
     _add_workload_floor(array_pool)
     _add_workload_logical_not(array_pool)
+    if is_op_runnable():
+        _add_workload_equal(array_pool)
+        _add_workload_greater(array_pool)
+        _add_workload_greater_equal(array_pool)
+        _add_workload_less(array_pool)
+        _add_workload_less_equal(array_pool)
+        _add_workload_not_equal(array_pool)
 
 
 _prepare_workloads()

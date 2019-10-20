@@ -22,6 +22,7 @@ import functools
 import numpy as _np
 from . import numpy as mx_np  # pylint: disable=reimported
 from .numpy.multiarray import _NUMPY_ARRAY_FUNCTION_DICT, _NUMPY_ARRAY_UFUNC_DICT
+from mxnet.test_utils import is_op_runnable
 
 
 def _find_duplicate(strs):
@@ -170,10 +171,6 @@ def _register_array_function():
 _NUMPY_ARRAY_UFUNC_LIST = [
     'abs',
     'add',
-    #'equal',
-    #'not_equal',
-    #'greater',
-    #'greater_equal',
     'arctan2',
     'copysign',
     'degrees',
@@ -190,8 +187,6 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'rint',
     'sign',
     'exp',
-    #'less',
-    #'less_equal',
     'log',
     'log2',
     'log10',
@@ -230,6 +225,13 @@ def _register_array_ufunc():
     ----------
     https://numpy.org/neps/nep-0013-ufunc-overrides.html
     """
+    if is_op_runnable():
+        _NUMPY_ARRAY_UFUNC_LIST.extend(['equal',
+                                        'not_equal',
+                                        'greater',
+                                        'greater_equal',
+                                        'less',
+                                        'less_equal'])
     dup = _find_duplicate(_NUMPY_ARRAY_UFUNC_LIST)
     if dup is not None:
         raise ValueError('Duplicate operator name {} in _NUMPY_ARRAY_UFUNC_LIST'.format(dup))
