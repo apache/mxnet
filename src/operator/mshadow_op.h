@@ -120,6 +120,34 @@ struct identity_with_cast {
   }
 };
 
+struct true_divide : public mxnet_op::tunable  {
+  template<typename DType,
+           typename std::enable_if<!std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return a / b;
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, DType b) {
+    return static_cast<float>(a) / static_cast<float>(b);
+  }
+};
+
+struct rtrue_divide : public mxnet_op::tunable  {
+  template<typename DType,
+           typename std::enable_if<!std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return b / a;
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, DType b) {
+    return static_cast<float>(b) / static_cast<float>(a);
+  }
+};
+
 MXNET_BINARY_MATH_OP_NC(left, a);
 
 MXNET_BINARY_MATH_OP_NC(right, b);

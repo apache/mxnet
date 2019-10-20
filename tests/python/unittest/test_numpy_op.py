@@ -19,6 +19,7 @@
 from __future__ import absolute_import
 import sys
 import unittest
+import itertools
 import numpy as _np
 import platform
 import mxnet as mx
@@ -3496,6 +3497,49 @@ def test_np_rand():
                     for _ in range(10)])
         verify_generator(generator=generator_mx_same_seed, buckets=buckets,
                          probs=probs, nsamples=samples, nrepeat=trials)
+
+
+@with_seed()
+@use_np
+def test_np_true_divide():
+    shapes = [
+        [()],
+        [(0,)],
+        [(2, 0, 3)],
+        [(0, 0, 0)],
+        [(10,)],
+        [(3, 4)],
+        [(2, 3, 4)],
+        [(2, 3, 4, 5)],
+        [(2, 3, 4, 5, 6)],
+        [(0,), (0,)],
+        [(0,), (1,)],
+        [(2, 0, 3), (1, 1)],
+        [(), (2, 3)],
+        [(2, 3), ()],
+        [(2, 3, 1), (1, 4)],
+        [(2, 1, 4, 1), (3, 1, 5)],
+    ]
+    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
+    for shape_pair, dtype in itertools.product(shapes, dtypes):
+        a = np.random.uniform(3, 50, size=shape_pair[0]).astype(dtype)
+        b = np.random.uniform(3, 50, size=shape_pair[-1]).astype(dtype)
+        out_mx = a / b
+        if _np.issubdtype(dtype, _np.integer):
+            assert out_mx.dtype == np.float32
+        else:
+            assert out_mx.dtype == dtype
+        out_np = _np.true_divide(a.asnumpy(), b.asnumpy())
+        assert_almost_equal(out_mx.asnumpy(), out_np, rtol=1e-3, atol=1e-3, use_broadcast=False)
+
+        val = _np.random.randint(3, 50)
+        out_mx = a / val
+        out_np = _np.true_divide(a.asnumpy(), val)
+        assert_almost_equal(out_mx.asnumpy(), out_np, rtol=1e-3, atol=1e-3, use_broadcast=False)
+
+        out_mx = val / a
+        out_np = _np.true_divide(val, a.asnumpy())
+        assert_almost_equal(out_mx.asnumpy(), out_np, rtol=1e-3, atol=1e-3, use_broadcast=False)
 
 
 if __name__ == '__main__':

@@ -737,6 +737,19 @@ fixed-size items.
             squeeze_axes = tuple([ax for ax in squeeze_axes if ax < len(value_nd.shape)])
             value_nd = value_nd.squeeze(axis=tuple(squeeze_axes))
 
+        # handle the cases like the following
+        # a = nd.zeros((3, 3)), b = nd.ones((1, 1, 1, 1, 3)), a[0] = b
+        # b cannot broadcast directly to a[0].shape unless its leading 1-size axes are trimmed
+        if value_nd.ndim > len(bcast_shape):
+            squeeze_axes = []
+            for i in range(value_nd.ndim - len(bcast_shape)):
+                if value_nd.shape[i] == 1:
+                    squeeze_axes.append(i)
+                else:
+                    break
+            if squeeze_axes:
+                value_nd = value_nd.squeeze(squeeze_axes)
+
         if value_nd.shape != bcast_shape:
             if value_nd.size == 0:
                 value_nd = value_nd.reshape(bcast_shape)
