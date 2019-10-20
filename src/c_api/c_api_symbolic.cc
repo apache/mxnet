@@ -56,7 +56,7 @@ nnvm::Graph Symbol2Graph(const nnvm::Symbol &s) {
   nnvm::Graph g;
   g.outputs = s.outputs;
   g.attrs["mxnet_version"] = std::make_shared<nnvm::any>(static_cast<int>(MXNET_VERSION));
-  if (Imperative::Get()->is_np_shape())) {
+  if (Imperative::Get()->is_np_shape()) {
     g.attrs["is_np_shape"] = std::make_shared<nnvm::any>(
         static_cast<int>(Imperative::Get()->is_np_shape()));
   }
