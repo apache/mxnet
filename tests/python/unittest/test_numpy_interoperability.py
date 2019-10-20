@@ -23,6 +23,7 @@ import numpy as _np
 from mxnet import np
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import use_np
+from mxnet.test_utils import is_op_runnable
 from common import assertRaises, with_seed
 from mxnet.numpy_dispatch_protocol import with_array_function_protocol, with_array_ufunc_protocol
 from mxnet.numpy_dispatch_protocol import _NUMPY_ARRAY_FUNCTION_LIST, _NUMPY_ARRAY_UFUNC_LIST
@@ -46,6 +47,201 @@ class OpArgMngr(object):
     @staticmethod
     def get_workloads(name):
         return OpArgMngr._args.get(name, None)
+
+
+def _add_workload_concatenate(array_pool):
+    OpArgMngr.add_workload('concatenate', [array_pool['4x1'], array_pool['4x1']])
+    OpArgMngr.add_workload('concatenate', [array_pool['4x1'], array_pool['4x1']], axis=1)
+    OpArgMngr.add_workload('concatenate', [np.random.uniform(size=(3, 3))])
+    OpArgMngr.add_workload('concatenate', (np.arange(4).reshape((2, 2)), np.arange(4).reshape((2, 2))))
+    OpArgMngr.add_workload('concatenate', (np.arange(4),))
+    OpArgMngr.add_workload('concatenate', (np.array(np.arange(4)),))
+    OpArgMngr.add_workload('concatenate', (np.arange(4), np.arange(3)))
+    OpArgMngr.add_workload('concatenate', (np.array(np.arange(4)), np.arange(3)))
+    OpArgMngr.add_workload('concatenate', (np.arange(4), np.arange(3)), axis=0)
+    OpArgMngr.add_workload('concatenate', (np.arange(4), np.arange(3)), axis=-1)
+    a23 = np.random.uniform(size=(2, 3))
+    a13 = np.random.uniform(size=(1, 3))
+    OpArgMngr.add_workload('concatenate', (a23, a13))
+    OpArgMngr.add_workload('concatenate', (a23, a13), axis=0)
+    OpArgMngr.add_workload('concatenate', (a23.T, a13.T), axis=1)
+    OpArgMngr.add_workload('concatenate', (a23.T, a13.T), axis=-1)
+    res = np.arange(2*3*7).reshape((2, 3, 7))
+    a0 = res[..., :4]
+    a1 = res[..., 4:6]
+    a2 = res[..., 6:]
+    OpArgMngr.add_workload('concatenate', (a0, a1, a2), axis=2)
+    OpArgMngr.add_workload('concatenate', (a0, a1, a2), axis=-1)
+    OpArgMngr.add_workload('concatenate', (a0.T, a1.T, a2.T), axis=0)
+    out = np.empty(4, np.float32)
+    OpArgMngr.add_workload('concatenate', (np.array([1, 2]), np.array([3, 4])), out=out)
+
+
+def _add_workload_copy():
+    OpArgMngr.add_workload('copy', np.random.uniform(size=(4, 1)))
+    OpArgMngr.add_workload('copy', np.random.uniform(size=(2, 2)))
+    OpArgMngr.add_workload('copy', np.random.uniform(size=(2,2)))
+
+
+def _add_workload_expand_dims():
+    OpArgMngr.add_workload('expand_dims', np.random.uniform(size=(4, 1)), -1)
+    for axis in range(-5, 4):
+        OpArgMngr.add_workload('expand_dims', np.empty((2, 3, 4, 5)), axis)
+
+
+def _add_workload_split():
+    OpArgMngr.add_workload('split', np.random.uniform(size=(4, 1)), 2)
+    OpArgMngr.add_workload('split', np.arange(10), 2)
+    assertRaises(ValueError, np.split, np.arange(10), 3)
+
+
+def _add_workload_squeeze():
+    OpArgMngr.add_workload('squeeze', np.random.uniform(size=(4, 1)))
+    OpArgMngr.add_workload('squeeze', np.random.uniform(size=(20, 10, 10, 1, 1)))
+    OpArgMngr.add_workload('squeeze', np.random.uniform(size=(20, 1, 10, 1, 20)))
+    OpArgMngr.add_workload('squeeze', np.random.uniform(size=(1, 1, 20, 10)))
+    OpArgMngr.add_workload('squeeze', np.array([[[1.5]]]))
+
+
+def _add_workload_std():
+    OpArgMngr.add_workload('std', np.random.uniform(size=(4, 1)))
+    A = np.array([[1, 2, 3], [4, 5, 6]])
+    OpArgMngr.add_workload('std', A)
+    OpArgMngr.add_workload('std', A, 0)
+    OpArgMngr.add_workload('std', A, 1)
+    OpArgMngr.add_workload('std', np.array([1, -1, 1, -1]))
+    OpArgMngr.add_workload('std', np.array([1, -1, 1, -1]), ddof=1)
+    OpArgMngr.add_workload('std', np.array([1, -1, 1, -1]), ddof=2)
+    OpArgMngr.add_workload('std', np.arange(10), out=np.array(0.))
+
+
+def _add_workload_swapaxes():
+    OpArgMngr.add_workload('swapaxes', np.random.uniform(size=(4, 1)), 0, 1)
+    OpArgMngr.add_workload('swapaxes', np.array([[[0, 1], [2, 3]], [[4, 5], [6, 7]]]), 0, 2)
+    a = np.arange(1*2*3*4).reshape(1, 2, 3, 4).copy()
+    b = a.copy()
+    # no AxisError defined in mxnet numpy
+    # assertRaises(np.AxisError, np.swapaxes, -5, 0)
+    for i in range(-4, 4):
+        for j in range(-4, 4):
+            for k, src in enumerate((a, b)):
+                OpArgMngr.add_workload('swapaxes', src, i, j)
+
+
+def _add_workload_tensordot():
+    OpArgMngr.add_workload('tensordot', np.random.uniform(size=(4, 1)), np.random.uniform(size=(4, 1)))
+    OpArgMngr.add_workload('tensordot', np.random.uniform(size=(3, 0)), np.random.uniform(size=(0, 4)), (1, 0))
+    OpArgMngr.add_workload('tensordot', np.array(1), np.array(1), ([], []))
+
+
+def _add_workload_tile():
+    OpArgMngr.add_workload('tile', np.random.uniform(size=(4, 1)), 2)
+    a = np.array([0, 1, 2])
+    b = np.array([[1, 2], [3, 4]])
+    OpArgMngr.add_workload('tile', a, 2)
+    OpArgMngr.add_workload('tile', a, (2, 2))
+    OpArgMngr.add_workload('tile', a, (1, 2))
+    OpArgMngr.add_workload('tile', b, 2)
+    OpArgMngr.add_workload('tile', b, (2, 1))
+    OpArgMngr.add_workload('tile', b, (2, 2))
+    OpArgMngr.add_workload('tile', np.arange(5), 1)
+    OpArgMngr.add_workload('tile', np.array([[], []]), 2)
+    OpArgMngr.add_workload('tile', np.array([[[]]]), (3, 2, 5))
+    reps = [(2,), (1, 2), (2, 1), (2, 2), (2, 3, 2), (3, 2)]
+    shape = [(3,), (2, 3), (3, 4, 3), (3, 2, 3), (4, 3, 2, 4), (2, 2)]
+    for s in shape:
+        b = np.random.randint(0, 10, size=s)
+        for r in reps:
+            # RuntimeError to be tracked
+            # where s = (3, 4, 3), r = (2, 3, 2)
+            # OpArgMngr.add_workload('tile', b, r)
+            pass
+
+
+def _add_workload_transpose():
+    OpArgMngr.add_workload('transpose', np.random.uniform(size=(4, 1)))
+    OpArgMngr.add_workload('transpose', np.array([[]]))
+    OpArgMngr.add_workload('transpose', np.array([[1, 2]]))
+    OpArgMngr.add_workload('transpose', np.array([[1, 2, 3], [4, 5, 6]]))
+    OpArgMngr.add_workload('transpose', np.array([[1, 2], [3, 4], [5, 6]]), (1, 0))
+    OpArgMngr.add_workload('transpose', np.array([[1, 2], [3, 4]]))
+
+
+def _add_workload_linalg_norm():
+    OpArgMngr.add_workload('linalg.norm', np.random.uniform(size=(4, 1)))
+    for dt in ["double", "float32", "int64"]:
+        OpArgMngr.add_workload('linalg.norm', np.array([], dtype=dt))
+        OpArgMngr.add_workload('linalg.norm', np.array([np.array([]), np.array([])], dtype=dt))
+        # numerical error exceed the tolerance
+        if dt == "int64":
+            continue
+        for v in ([1, 2, 3, 4], [-1, -2, -3, -4], [-1, 2, -3, 4]):
+            OpArgMngr.add_workload('linalg.norm', np.array(v, dtype=dt))
+        A = np.array([[1, 2, 3], [4, 5, 6]], dtype=dt)
+        [OpArgMngr.add_workload('linalg.norm', A[:, k]) for k in range(A.shape[1])]
+        OpArgMngr.add_workload('linalg.norm', A, axis=0)
+        [OpArgMngr.add_workload('linalg.norm', A[k, :]) for k in range(A.shape[0])]
+        OpArgMngr.add_workload('linalg.norm', A, axis=1)
+        B = np.arange(1, 25).reshape(2, 3, 4).astype(dt)
+        for axis in itertools.combinations(range(-B.ndim, B.ndim), 2):
+            row_axis, col_axis = axis
+            if row_axis < 0:
+                row_axis += B.ndim
+            if col_axis < 0:
+                col_axis += B.ndim
+            if row_axis == col_axis:
+                # improper assertion behavior
+                # assertRaises(ValueError, np.linalg.norm, B, axis=axis)
+                pass
+            else:
+                OpArgMngr.add_workload('linalg.norm', B, axis=axis)
+                k_index = B.ndim - row_axis - col_axis
+                for k in range(B.shape[k_index]):
+                    if row_axis < col_axis:
+                        OpArgMngr.add_workload('linalg.norm', np.take(B[:], np.array(k), axis=k_index))
+                    else:
+                        OpArgMngr.add_workload('linalg.norm', np.take(B[:], np.array(k), axis=k_index).T)
+        A = np.arange(1, 25, dtype=dt).reshape(2, 3, 4)
+        OpArgMngr.add_workload('linalg.norm', A, ord=None, axis=None)
+        OpArgMngr.add_workload('linalg.norm', A, ord=None,axis=None, keepdims=True)
+        for k in range(A.ndim):
+            OpArgMngr.add_workload('linalg.norm', A, axis=k)
+            OpArgMngr.add_workload('linalg.norm', A, axis=k, keepdims=True)
+        for k in itertools.permutations(range(A.ndim), 2):
+            OpArgMngr.add_workload('linalg.norm', A, axis=k)
+            OpArgMngr.add_workload('linalg.norm', A, axis=k, keepdims=True)
+        OpArgMngr.add_workload('linalg.norm', np.array([[]], dtype=dt))
+        A = np.array([[1, 3], [5, 7]], dtype=dt)
+        OpArgMngr.add_workload('linalg.norm', A)
+        OpArgMngr.add_workload('linalg.norm', A, 'fro')
+        A = (1 / 10) * np.array([[1, 2, 3], [6, 0, 5], [3, 2, 1]], dtype=dt)
+        OpArgMngr.add_workload('linalg.norm', A)
+        OpArgMngr.add_workload('linalg.norm', A, 'fro')
+    for dt in [np.float16, np.float32, np.float64]:
+        OpArgMngr.add_workload('linalg.norm', np.array([[1, 0, 1], [0, 1, 1]], dtype=dt))
+        OpArgMngr.add_workload('linalg.norm', np.array([[1, 0, 1], [0, 1, 1]], dtype=dt), 'fro')
+
+
+def _add_workload_trace():
+    OpArgMngr.add_workload('trace', np.random.uniform(size=(4, 1)))
+    OpArgMngr.add_workload('trace', np.random.uniform(size=(3, 2)))
+
+
+def _add_workload_tril():
+    OpArgMngr.add_workload('tril', np.random.uniform(size=(4, 1)))
+    for dt in ['float16', 'float32', 'float64', 'int32', 'int64', 'int8', 'uint8']:
+        OpArgMngr.add_workload('tril', np.ones((2, 2), dtype=dt))
+        a = np.array([
+            [[1, 1], [1, 1]],
+            [[1, 1], [1, 0]],
+            [[1, 1], [0, 0]],
+        ], dtype=dt)
+        OpArgMngr.add_workload('tril', a)
+        arr = np.array([[1, 1, np.inf],
+                        [1, 1, 1],
+                        [np.inf, 1, 1]])
+        OpArgMngr.add_workload('tril', arr)
+        OpArgMngr.add_workload('tril', np.zeros((3, 3), dtype=dt))
 
 
 def _add_workload_einsum():
@@ -120,6 +316,15 @@ def _add_workload_einsum():
             OpArgMngr.add_workload('einsum', subscripts, *args, optimize=optimize)
 
 
+def _add_workload_expm1():
+    OpArgMngr.add_workload('expm1', np.random.uniform(size=(4, 1)))
+    OpArgMngr.add_workload('expm1', np.random.uniform(size=(1, 1)))
+    OpArgMngr.add_workload('expm1', np.array([np.inf]))
+    OpArgMngr.add_workload('expm1', np.array([-np.inf]))
+    OpArgMngr.add_workload('expm1', np.array([0.]))
+    OpArgMngr.add_workload('expm1', np.array([-0.]))
+
+
 def _add_workload_argmax():
     OpArgMngr.add_workload('argmax', np.random.uniform(size=(4, 5, 6, 7, 8)), 0)
     OpArgMngr.add_workload('argmax', np.random.uniform(size=(4, 5, 6, 7, 8)), 1)
@@ -179,15 +384,6 @@ def _add_workload_clip():
     OpArgMngr.add_workload('clip', np.array([-2., np.nan, 0.5, 3., 0.25, np.nan]), -1, 1)
 
 
-def _add_workload_concatenate(array_pool):
-    OpArgMngr.add_workload('concatenate', [array_pool['4x1'], array_pool['4x1']])
-    OpArgMngr.add_workload('concatenate', [array_pool['4x1'], array_pool['4x1']], axis=1)
-
-
-def _add_workload_copy(array_pool):
-    OpArgMngr.add_workload('copy', array_pool['4x1'])
-
-
 def _add_workload_cumsum():
     for ctype in _DTYPES:
         OpArgMngr.add_workload('cumsum', np.array([1, 2, 10, 11, 6, 5, 4], dtype=ctype))
@@ -218,10 +414,6 @@ def _add_workload_dot():
         OpArgMngr.add_workload('dot', b1, b2)
     OpArgMngr.add_workload('dot', np.array([[1, 2], [3, 4]], dtype=float), np.array([[1, 0], [1, 1]], dtype=float))
     OpArgMngr.add_workload('dot', np.random.normal(size=(1024, 16)), np.random.normal(size=(16, 32)))
-
-
-def _add_workload_expand_dims(array_pool):
-    OpArgMngr.add_workload('expand_dims', array_pool['4x1'], -1)
 
 
 def _add_workload_fix():
@@ -341,20 +533,8 @@ def _add_workload_roll():
     OpArgMngr.add_workload('roll', np.array([]), 1)
 
 
-def _add_workload_split(array_pool):
-    OpArgMngr.add_workload('split', array_pool['4x1'], 2)
-
-
-def _add_workload_squeeze(array_pool):
-    OpArgMngr.add_workload('squeeze', array_pool['4x1'])
-
-
 def _add_workload_stack(array_pool):
     OpArgMngr.add_workload('stack', [array_pool['4x1']] * 2)
-
-
-def _add_workload_std(array_pool):
-    OpArgMngr.add_workload('std', array_pool['4x1'])
 
 
 def _add_workload_sum():
@@ -383,10 +563,6 @@ def _add_workload_sum():
     # OpArgMngr.add_workload('sum', np.array([0.2]), initial=0.1)
 
 
-def _add_workload_swapaxes(array_pool):
-    OpArgMngr.add_workload('swapaxes', array_pool['4x1'], 0, 1)
-
-
 def _add_workload_take():
     OpArgMngr.add_workload('take', np.array([[1, 2], [3, 4]], dtype=int), np.array([], int))
     for mode in ['wrap', 'clip']:
@@ -401,19 +577,6 @@ def _add_workload_take():
     OpArgMngr.add_workload('take', x, np.array([-1], int), axis=0, mode='wrap')
     OpArgMngr.add_workload('take', x, np.array([2], int), axis=0, mode='wrap')
     OpArgMngr.add_workload('take', x, np.array([3], int), axis=0, mode='wrap')
-
-
-def _add_workload_tensordot(array_pool):
-    OpArgMngr.add_workload('tensordot', array_pool['4x1'], array_pool['4x1'])
-
-
-def _add_workload_tile(array_pool):
-    OpArgMngr.add_workload('tile', array_pool['4x1'], 2)
-    OpArgMngr.add_workload('tile', np.array([[[]]]), (3, 2, 5))
-
-
-def _add_workload_transpose(array_pool):
-    OpArgMngr.add_workload('transpose', array_pool['4x1'])
 
 
 def _add_workload_unique():
@@ -683,10 +846,6 @@ def _add_workload_log10(array_pool):
     OpArgMngr.add_workload('log10', array_pool['4x1'])
 
 
-def _add_workload_expm1(array_pool):
-    OpArgMngr.add_workload('expm1', array_pool['4x1'])
-
-
 def _add_workload_sqrt():
     OpArgMngr.add_workload('sqrt', np.array([1, np.PZERO, np.NZERO, np.inf, np.nan]))
 
@@ -788,11 +947,11 @@ def _prepare_workloads():
     _add_workload_broadcast_to()
     _add_workload_clip()
     _add_workload_concatenate(array_pool)
-    _add_workload_copy(array_pool)
+    _add_workload_copy()
     _add_workload_cumsum()
     _add_workload_ravel()
     _add_workload_dot()
-    _add_workload_expand_dims(array_pool)
+    _add_workload_expand_dims()
     _add_workload_fix()
     _add_workload_flip()
     _add_workload_max(array_pool)
@@ -804,19 +963,22 @@ def _prepare_workloads():
     _add_workload_reshape()
     _add_workload_rint(array_pool)
     _add_workload_roll()
-    _add_workload_split(array_pool)
-    _add_workload_squeeze(array_pool)
+    _add_workload_split()
+    _add_workload_squeeze()
     _add_workload_stack(array_pool)
-    _add_workload_std(array_pool)
+    _add_workload_std()
     _add_workload_sum()
-    _add_workload_swapaxes(array_pool)
+    _add_workload_swapaxes()
     _add_workload_take()
-    _add_workload_tensordot(array_pool)
-    _add_workload_tile(array_pool)
-    _add_workload_transpose(array_pool)
+    _add_workload_tensordot()
+    _add_workload_tile()
+    _add_workload_transpose()
     _add_workload_unique()
     _add_workload_var(array_pool)
     _add_workload_zeros_like(array_pool)
+    _add_workload_linalg_norm()
+    _add_workload_trace()
+    _add_workload_tril()
     _add_workload_outer()
     _add_workload_meshgrid()
     _add_workload_einsum()
@@ -845,7 +1007,7 @@ def _prepare_workloads():
     _add_workload_log2(array_pool)
     _add_workload_log1p()
     _add_workload_log10(array_pool)
-    _add_workload_expm1(array_pool)
+    _add_workload_expm1()
     _add_workload_sqrt()
     _add_workload_square()
     _add_workload_cbrt()
@@ -890,6 +1052,8 @@ def _check_interoperability_helper(op_name, *args, **kwargs):
         onp_op = getattr(getattr(_np, strs[0]), strs[1])
     else:
         assert False
+    if not is_op_runnable():
+        return
     out = onp_op(*args, **kwargs)
     expected_out = _get_numpy_op_output(onp_op, *args, **kwargs)
     if isinstance(out, (tuple, list)):
