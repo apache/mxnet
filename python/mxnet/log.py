@@ -81,7 +81,7 @@ def getLogger(name=None, filename=None, filemode=None, level=WARNING):
     """Gets a customized logger.
 
     .. note:: `getLogger` is deprecated. Use `get_logger` instead.
-    
+
     """
     warnings.warn("getLogger is deprecated, Use get_logger instead.",
                   DeprecationWarning, stacklevel=2)
