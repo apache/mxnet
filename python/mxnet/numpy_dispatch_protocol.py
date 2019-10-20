@@ -22,7 +22,6 @@ import functools
 import numpy as _np
 from . import numpy as mx_np  # pylint: disable=reimported
 from .numpy.multiarray import _NUMPY_ARRAY_FUNCTION_DICT, _NUMPY_ARRAY_UFUNC_DICT
-from mxnet.test_utils import is_op_runnable
 
 
 def _find_duplicate(strs):
@@ -214,6 +213,12 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'trunc',
     'floor',
     'logical_not',
+    'equal',
+    'not_equal',
+    'greater',
+    'greater_equal',
+    'less',
+    'less_equal',
 ]
 
 
@@ -225,13 +230,6 @@ def _register_array_ufunc():
     ----------
     https://numpy.org/neps/nep-0013-ufunc-overrides.html
     """
-    if is_op_runnable():
-        _NUMPY_ARRAY_UFUNC_LIST.extend(['equal',
-                                        'not_equal',
-                                        'greater',
-                                        'greater_equal',
-                                        'less',
-                                        'less_equal'])
     dup = _find_duplicate(_NUMPY_ARRAY_UFUNC_LIST)
     if dup is not None:
         raise ValueError('Duplicate operator name {} in _NUMPY_ARRAY_UFUNC_LIST'.format(dup))
