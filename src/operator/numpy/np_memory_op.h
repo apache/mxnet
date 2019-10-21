@@ -51,15 +51,19 @@ void NumpyShareMemoryCompute(const nnvm::NodeAttrs& attrs,
     *(outdata.dptr<bool>()) = false;
     return;
   }
-  uint64_t start1 = reinterpret_cast<uint64_t>(a.dptr_);
-  uint64_t end1 = start1 + a.Size();
-  uint64_t start2 = reinterpret_cast<uint64_t>(b.dptr_);
-  uint64_t end2 = start2 + b.Size();
-  if (!(start1 < end2 && start2 < end1 && start1 < end1 && start2 < end2)) {
-    *(outdata.dptr<bool>()) = false;
-  } else {
-    *(outdata.dptr<bool>()) = true;
-  }
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(a.type_flag_, AType, {
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(b.type_flag_, BType, {
+      uint64_t start1 = reinterpret_cast<uint64_t>(a.dptr_);
+      uint64_t end1 = start1 + a.Size() * sizeof(AType);
+      uint64_t start2 = reinterpret_cast<uint64_t>(b.dptr_);
+      uint64_t end2 = start2 + b.Size() * sizeof(BType);
+      if (!(start1 < end2 && start2 < end1 && start1 < end1 && start2 < end2)) {
+        *(outdata.dptr<bool>()) = false;
+      } else {
+        *(outdata.dptr<bool>()) = true;
+      }
+    });
+  });
   return;
 }
 

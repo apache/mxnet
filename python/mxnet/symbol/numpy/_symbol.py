@@ -40,7 +40,7 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming', 'blackman', 'flip',
            'around', 'hypot', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take',
            'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal',
-           'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide']
+           'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'shares_memory', 'may_share_memory']
 
 
 def _num_outputs(sym):
@@ -4588,6 +4588,45 @@ def einsum(*operands, **kwargs):
     subscripts = operands[0]
     operands = operands[1:]
     return _npi.einsum(*operands, subscripts=subscripts, out=out, optimize=int(optimize_arg))
+
+
+@set_module('mxnet.symbol.numpy')
+def shares_memory(a, b, max_work=None):
+    """
+    Determine if two arrays share memory
+
+    Parameters
+    ----------
+    a, b : _Symbol
+        Input arrays
+
+    Returns
+    -------
+    out : _Symbol
+    """
+    return _npi.share_memory(a, b)
+
+
+@set_module('mxnet.symbol.numpy')
+def may_share_memory(a, b, max_work=None):
+    """
+    Determine if two arrays might share memory
+
+    A return of True does not necessarily mean that the two arrays
+    share any element.  It just means that they *might*.
+
+    Only the memory bounds of a and b are checked by default.
+
+    Parameters
+    ----------
+    a, b : _Symbol
+        Input arrays
+
+    Returns
+    -------
+    out : _Symbol
+    """
+    return _npi.share_memory(a, b)
 
 
 _set_np_symbol_class(_Symbol)

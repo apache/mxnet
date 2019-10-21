@@ -1331,7 +1331,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`take`, with
         this array as data.
         """
-        take(self, indices, axis, mode=mode)
+        return take(self, indices, axis, mode=mode)
 
     def one_hot(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`one_hot`.
@@ -6905,9 +6905,73 @@ def nonzero(a):
 
 @set_module('mxnet.numpy')
 def shares_memory(a, b, max_work=None):
+    """
+    Determine if two arrays share memory
+
+    Parameters
+    ----------
+    a, b : ndarray
+        Input arrays
+
+    Returns
+    -------
+    out : bool
+
+    See Also
+    --------
+    may_share_memory
+
+    Examples
+    --------
+    >>> np.may_share_memory(np.array([1,2]), np.array([5,8,9]))
+    False
+
+    This function differs from the original `numpy.shares_memory
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.shares_memory.html>`_ in
+    the following way(s):
+
+    - Does not support `max_work`, it is a dummy argument
+    - Actually it is same as `may_share_memory` in MXNet DeepNumPy
+    """
     return _mx_nd_np.shares_memory(a, b, max_work)
 
 
 @set_module('mxnet.numpy')
 def may_share_memory(a, b, max_work=None):
+    """
+    Determine if two arrays might share memory
+
+    A return of True does not necessarily mean that the two arrays
+    share any element.  It just means that they *might*.
+
+    Only the memory bounds of a and b are checked by default.
+
+    Parameters
+    ----------
+    a, b : ndarray
+        Input arrays
+
+    Returns
+    -------
+    out : bool
+
+    See Also
+    --------
+    shares_memory
+
+    Examples
+    --------
+    >>> np.may_share_memory(np.array([1,2]), np.array([5,8,9]))
+    False
+    >>> x = np.zeros([3, 4])
+    >>> np.may_share_memory(x[:,0], x[:,1])
+    True
+
+    This function differs from the original `numpy.may_share_memory
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.may_share_memory.html>`_ in
+    the following way(s):
+
+    - Does not support `max_work`, it is a dummy argument
+    - Actually it is same as `shares_memory` in MXNet DeepNumPy
+    """
     return _mx_nd_np.may_share_memory(a, b, max_work)
