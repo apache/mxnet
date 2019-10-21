@@ -558,16 +558,16 @@ void BackwardInterleavedMatMulEncDecValAttGPU(const nnvm::NodeAttrs& attrs,
   })
 }
 
-NNVM_REGISTER_OP(interleaved_matmul_selfatt_qk)
+NNVM_REGISTER_OP(_contrib_interleaved_matmul_selfatt_qk)
 .set_attr<FCompute>("FCompute<gpu>", InterleavedMatMulSelfAttQKGPU);
 
-NNVM_REGISTER_OP(interleaved_matmul_selfatt_valatt)
+NNVM_REGISTER_OP(_contrib_interleaved_matmul_selfatt_valatt)
 .set_attr<FCompute>("FCompute<gpu>", InterleavedMatMulSelfAttValAttGPU);
 
-NNVM_REGISTER_OP(interleaved_matmul_encdec_qk)
+NNVM_REGISTER_OP(_contrib_interleaved_matmul_encdec_qk)
 .set_attr<FCompute>("FCompute<gpu>", InterleavedMatMulEncDecQKGPU);
 
-NNVM_REGISTER_OP(interleaved_matmul_encdec_valatt)
+NNVM_REGISTER_OP(_contrib_interleaved_matmul_encdec_valatt)
 .set_attr<FCompute>("FCompute<gpu>", InterleavedMatMulEncDecValAttGPU);
 
 NNVM_REGISTER_OP(_backward_interleaved_matmul_selfatt_qk)
