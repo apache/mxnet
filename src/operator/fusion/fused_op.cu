@@ -518,6 +518,7 @@ void FusedOp::GenerateCode(int kernel_index, const std::vector<OpReqType> &req,
           fusion::function_definitions + "\n" +
           fusion::backward_function_definitions + "\n" +
           aux_code + "\n" +
+          "__launch_bounds__(" + std::to_string(FusedOp::NTHREADS) + ")\n" +
           "__global__ void FusedKernel_" + kernel_name +
           "(size_t N, " + kernel_params + ") {\n" +
           fusion::kernel_begin + "\n" +
