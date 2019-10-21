@@ -2508,6 +2508,7 @@ def test_arange_like_dtype():
         for v in out:
             assert v.dtype == t
 
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
