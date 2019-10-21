@@ -20,7 +20,7 @@
 <!-- adapted from diveintodeeplearning -->
 
 As network complexity increases, we move from designing single to entire layers
-of neurons. 
+of neurons.
 
 Neural network designs like
 [ResNet-152](https://www.cv-foundation.org/openaccess/content_cvpr_2016/papers/He_Deep_Residual_Learning_CVPR_2016_paper.pdf)
@@ -52,7 +52,7 @@ net(x)
 
 This generates a network with a hidden layer of $256$ units, followed by a ReLU
 activation and another $10$ units governing the output. In particular, we used
-the [`nn.Sequential`](/api/gluon/_autogen/mxnet.gluon.nn.Sequential.html#mxnet.gluon.nn.Sequential)
+the [`nn.Sequential`](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Sequential)
 constructor to generate an empty network into which we then inserted both
 layers. What exactly happens inside `nn.Sequential`
 has remained rather mysterious so far. In the following we will see that this
@@ -81,11 +81,11 @@ layers to defining blocks (of one or more layers):
 
 ## A Sequential Block
 
-The [`Block`](/api/gluon/nn.html#blocks) class is a generic component
+The [`Block`](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Block) class is a generic component
 describing data flow. When the data flows through a sequence of blocks, each
 block applied to the output of the one before with the first block being
 applied on the input data itself, we have a special kind of block, namely the
-`Sequential` block. 
+`Sequential` block.
 
 `Sequential` has helper methods to manage the sequence, with `add` being the
 main one of interest allowing you to append blocks in sequence. Once the
@@ -172,8 +172,8 @@ initializes all of the Block-related parameters and then constructs the
 requisite layers. This attaches the coresponding layers and the required
 parameters to the class. Note that there is no need to define a backpropagation
 method in the class. The system automatically generates the `backward` method
-needed for back propagation by automatically finding the gradient (see the guide on [autograd](guide/packages/autograd.html)). The same
-applies to the [`initialize`](/api/gluon/_autogen/mxnet.gluon.nn.Block.initialize.html) method, which is generated automatically. Let's try
+needed for back propagation by automatically finding the gradient (see the tutorial on [autograd](/api/python/docs/tutorials/packages/autograd/index.html)). The same
+applies to the [`initialize`](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Block.initialize) method, which is generated automatically. Let's try
 this out:
 
 ```{.python .input  n=2}
@@ -193,12 +193,12 @@ great flexibility.
 ## Coding with `Blocks`
 
 ### Blocks
-The [`Sequential`](/api/gluon/_autogen/mxnet.gluon.nn.Sequential.html) class
+The [`Sequential`](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Sequential) class
 can make model construction easier and does not require you to define the
 `forward` method; however, directly inheriting from
-its parent class, [`Block`](/api/gluon/mxnet.gluon.nn.Block.html), can greatly
+its parent class, [`Block`](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Block), can greatly
 expand the flexibility of model construction. For example, implementing the
-`forward` method means you can introduce control flow in the network. 
+`forward` method means you can introduce control flow in the network.
 
 ### Constant parameters
 Now we'd like to introduce the notation of a *constant* parameter. These are
@@ -298,7 +298,7 @@ After all, we have lots of dictionary lookups, code execution, and lots of
 other Pythonic things going on in what is supposed to be a high performance
 deep learning library. The problems of Python's [Global Interpreter
 Lock](https://wiki.python.org/moin/GlobalInterpreterLock) are well
-known. 
+known.
 
 In the context of deep learning, we often have highly performant GPUs that
 depend on CPUs running Python to tell them what to do. This mismatch can
@@ -306,8 +306,8 @@ manifest in the form of GPU starvation when the CPUs can not provide
 instruction fast enough. We can improve this situation by deferring to a more
 performant language instead of Python when possible.
 
-Gluon does this by allowing for [Hybridization](./hybridize.md). In it, the
+Gluon does this by allowing for [Hybridization](hybridize.html). In it, the
 Python interpreter executes the block the first time it's invoked. The Gluon
 runtime records what is happening and the next time around it short circuits
 any calls to Python. This can accelerate things considerably in some cases but
-care needs to be taken with [control flow](../../crash-course/3-autograd.md).
+care needs to be taken with [control flow](/api/python/docs/tutorials/packages/autograd/index.html#Advanced:-Using-Python-control-flow).

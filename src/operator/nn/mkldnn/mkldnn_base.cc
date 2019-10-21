@@ -428,6 +428,7 @@ void FallBackCompute(Compute fn, const AttrState &attrs_states,
                      const std::vector<NDArray> &outputs) {
   std::vector<TBlob> in_blobs(inputs.size());
   std::vector<NDArray> in_bufs;
+  std::vector<OpReqType> new_req = req;
   for (size_t i = 0; i < in_blobs.size(); i++) {
     // If the input data isn't stored in the default format, we shouldn't
     // call data() directly, which will change the layout of the NDArray.
@@ -452,6 +453,9 @@ void FallBackCompute(Compute fn, const AttrState &attrs_states,
     // for inplace, we already converted & copied input above.
     if ((req[i] == kWriteTo) || (req[i] == kWriteInplace)) {
       const_cast<NDArray &>(output).InvalidateMKLDNNData();
+      if (req[i] == kWriteInplace) {
+        new_req[i] = kWriteTo;
+      }
     } else if (req[i] == kAddTo && output.IsMKLDNNData()) {
       NDArray temp = outputs[i].Reorder2Default();
       temp_src.emplace_back(temp);
@@ -462,7 +466,7 @@ void FallBackCompute(Compute fn, const AttrState &attrs_states,
     out_blobs[i] = output.data();
   }
 
-  fn(attrs_states, ctx, in_blobs, req, out_blobs);
+  fn(attrs_states, ctx, in_blobs, new_req, out_blobs);
   for (size_t i = 0; i < out_blobs.size(); i++) {
     if (req[i] == kAddTo && outputs[i].IsMKLDNNData())
       mxnet::common::CastNonDefaultStorage(temp_src, temp_dst, ctx, false);

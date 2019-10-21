@@ -35,13 +35,14 @@ def get_classif_model(model_name, use_tensorrt, ctx=mx.gpu(0), batch_size=128):
     net.export(model_name)
     _sym, arg_params, aux_params = mx.model.load_checkpoint(model_name, 0)
     if use_tensorrt:
-        sym = _sym.get_backend_symbol('TensorRT') 
-        mx.contrib.tensorrt.init_tensorrt_params(sym, arg_params, aux_params)
+        sym = _sym.get_backend_symbol('TensorRT')
+        arg_params, aux_params = mx.contrib.tensorrt.init_tensorrt_params(sym, arg_params,
+                                                                          aux_params)
     else:
         sym = _sym
     executor = sym.simple_bind(ctx=ctx, data=(batch_size, 3, h, w),
                                softmax_label=(batch_size,),
-			       grad_req='null', force_rebind=True)
+                               grad_req='null', force_rebind=True)
     executor.copy_params_from(arg_params, aux_params)
     return executor
 

@@ -73,6 +73,14 @@ using std::is_integral;
     } \
   }
 
+#define MXNET_UNARY_LOGIC_OP_NC(name, expr) \
+  struct name : public mxnet_op::tunable { \
+    template<typename DType> \
+    MSHADOW_XINLINE static bool Map(DType a) { \
+      return (expr); \
+    } \
+  }
+
 #define MXNET_BINARY_MATH_OP(name, expr) \
   struct name : public mxnet_op::tunable { \
     template<typename DType> \
@@ -89,6 +97,14 @@ using std::is_integral;
     } \
   }
 
+#define MXNET_BINARY_LOGIC_OP_NC(name, expr) \
+  struct name : public mxnet_op::tunable  { \
+    template<typename DType> \
+    MSHADOW_XINLINE static bool Map(DType a, DType b) { \
+      return (expr); \
+    } \
+  }
+
 #define MXNET_SIMPLE_UNARY_MATH_OP(name) MXNET_UNARY_MATH_OP(name, math::name(a))
 
 #define MXNET_SIMPLE_BINARY_MATH_OP(name) MXNET_BINARY_MATH_OP(name, math::name(a, b))
@@ -101,6 +117,34 @@ struct identity_with_cast {
   template<typename DTypeIn, typename DTypeOut>
   MSHADOW_XINLINE static void Map(index_t i, DTypeOut *out, DTypeIn *in) {
     out[i] = DTypeOut(in[i]);
+  }
+};
+
+struct true_divide : public mxnet_op::tunable  {
+  template<typename DType,
+           typename std::enable_if<!std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return a / b;
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, DType b) {
+    return static_cast<float>(a) / static_cast<float>(b);
+  }
+};
+
+struct rtrue_divide : public mxnet_op::tunable  {
+  template<typename DType,
+           typename std::enable_if<!std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return b / a;
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, DType b) {
+    return static_cast<float>(b) / static_cast<float>(a);
   }
 };
 
@@ -335,6 +379,8 @@ MXNET_BINARY_MATH_OP(rarctan2_grad, math::id(a) / (math::id(a * a + b * b)));
 
 MXNET_UNARY_MATH_OP_NC(nt, a != DType(0) ? DType(0) : DType(1));
 
+MXNET_UNARY_LOGIC_OP_NC(np_logical_not, !static_cast<bool>(a));
+
 MXNET_BINARY_MATH_OP_NC(ge, a >= b ? DType(1) : DType(0));
 
 MXNET_BINARY_MATH_OP_NC(gt, a > b ? DType(1) : DType(0));
@@ -347,11 +393,25 @@ MXNET_BINARY_MATH_OP_NC(eq, a == b ? DType(1) : DType(0));
 
 MXNET_BINARY_MATH_OP_NC(ne, a != b ? DType(1) : DType(0));
 
+MXNET_BINARY_LOGIC_OP_NC(np_greater_equal, a >= b ? true : false);
+
+MXNET_BINARY_LOGIC_OP_NC(np_greater, a > b ? true : false);
+
+MXNET_BINARY_LOGIC_OP_NC(np_less, a < b ? true : false);
+
+MXNET_BINARY_LOGIC_OP_NC(np_less_equal, a <= b ? true : false);
+
+MXNET_BINARY_LOGIC_OP_NC(np_equal, a == b ? true : false);
+
+MXNET_BINARY_LOGIC_OP_NC(np_not_equal, a != b ? true : false);
+
 MXNET_BINARY_MATH_OP(logical_and, a && b ? DType(1) : DType(0));
 
 MXNET_BINARY_MATH_OP(logical_or, a || b ? DType(1) : DType(0));
 
 MXNET_BINARY_MATH_OP(logical_xor, (a || b) && !(a && b) ? DType(1) : DType(0));
+
+MXNET_BINARY_MATH_OP(bitwise_xor, static_cast<int64_t>(a) ^ static_cast<int64_t>(b));
 
 MXNET_UNARY_MATH_OP(square_root, math::sqrt(a));
 
