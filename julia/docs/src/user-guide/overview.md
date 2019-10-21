@@ -269,7 +269,7 @@ symbolic composition system. It is like
 [Theano](http://deeplearning.net/software/theano/), except that we
 avoided long expression compilation time by providing *larger* neural
 network related building blocks to guarantee computation performance.
-See also [this note](http://mxnet.readthedocs.org/en/latest/program_model.html)
+See also [this note](https://mxnet.readthedocs.org/en/latest/program_model.html)
 for the design and trade-off of the MXNet symbolic composition system.
 
 The basic type is `mx.SymbolicNode`. The following is a trivial example of

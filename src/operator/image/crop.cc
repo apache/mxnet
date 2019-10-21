@@ -35,6 +35,7 @@ namespace image {
 DMLC_REGISTER_PARAMETER(CropParam);
 
 NNVM_REGISTER_OP(_image_crop)
+.add_alias("_npx__image_crop")
 .describe(R"code(Crop an image NDArray of shape (H x W x C) or (N x H x W x C) 
 to the given size.
 Example:
@@ -68,7 +69,7 @@ Example:
 .set_attr_parser(ParamParser<CropParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", CropShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FCompute>("FCompute<cpu>", CropOpForward)
+.set_attr<FCompute>("FCompute<cpu>", CropOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_backward_image_crop" })
 .add_argument("data", "NDArray-or-Symbol", "The input.")
 .add_arguments(CropParam::__FIELDS__());
@@ -78,7 +79,7 @@ NNVM_REGISTER_OP(_backward_image_crop)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", CropOpBackward);
+.set_attr<FCompute>("FCompute<cpu>", CropOpBackward<cpu>);
 
 }  // namespace image
 }  // namespace op

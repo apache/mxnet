@@ -55,8 +55,14 @@ You can check this improved [Gluon implementation](http://gluon-nlp.mxnet.io/mod
 
       $ python3 [cudnn_rnn_bucketing.py](cudnn_rnn_bucketing.py) --gpus 0,1,2,3
 
+- To run the mixed precision inference for the trained model, you should use the `--dtype`.
+
+  This uses AMP conversion API for bucketing module to convert to a mixed precision module.
+
+    $ python [cudnn_rnn_bucketing.py](cudnn_rnn_bucketing.py) --gpus 0 --model-prefix saved_rnn_model --load-epoch 12 --test --dtype float16
+
 
 ### Performance Note:
 
-More ```MXNET_GPU_WORKER_NTHREADS``` may lead to better performance. For setting ```MXNET_GPU_WORKER_NTHREADS```, please refer to [Environment Variables](http://mxnet.incubator.apache.org/faq/env_var.html).
+More ```MXNET_GPU_WORKER_NTHREADS``` may lead to better performance. For setting ```MXNET_GPU_WORKER_NTHREADS```, please refer to [Environment Variables](https://mxnet.apache.org/api/faq/env_var).
 

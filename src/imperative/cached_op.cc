@@ -784,6 +784,9 @@ void CachedOp::StaticRunOps(
         ndinputs.emplace_back(state_arrays[idx.entry_id(j)]);
         CHECK(!ndinputs.back()->is_none());
       }
+      if (monitor_callback_ && monitor_all_) {
+          mxnet::common::ExecuteMonInputCallback(idx, state_arrays, i, monitor_callback_);
+      }
       ndoutputs.clear();
       ndoutputs.reserve(num_outputs);
       req.clear();
@@ -795,6 +798,7 @@ void CachedOp::StaticRunOps(
         CHECK(req.back() == kNullOp || !ndoutputs.back()->is_none());
       }
       const DispatchMode dispatch_mode = dispatch_modes[i];
+
       if (createop.count(node.source->op())) {
         arg_shapes.clear();
         arg_dtypes.clear();
@@ -821,6 +825,9 @@ void CachedOp::StaticRunOps(
         Imperative::Get()->InvokeOp(
             default_ctx, node.source->attrs, ndinputs, ndoutputs, req,
             dispatch_mode);
+      }
+      if (monitor_callback_) {
+          mxnet::common::ExecuteMonOutputCallback(idx, state_arrays, i, monitor_callback_);
       }
     }
   }
@@ -970,12 +977,12 @@ OpStatePtr CachedOp::DynamicForward(
     // So if it's not the inline mode, we disable recording.
     RunGraph(false, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
             std::move(ref_count), &states, dispatch_modes,
-            recording && inlining_);
+            recording && inlining_, nullptr, monitor_callback_, monitor_all_);
   } else {
     mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
     NaiveRunGraph(false, default_ctx, idx, arrays, 0, idx.num_nodes(),
                   std::move(array_reqs), std::move(ref_count), &states,
-                  dispatch_modes, recording && inlining_, &shapes);
+                  dispatch_modes, recording && inlining_, &shapes, monitor_callback_, monitor_all_);
     {
       auto state_ptr = GetCachedOpState(default_ctx);
       auto& state = state_ptr.get_state<CachedOpState>();
@@ -1117,7 +1124,7 @@ void CachedOp::DynamicBackward(
 
   RunGraph(retain_graph, idx, arrays, num_forward_nodes, idx.num_nodes(),
            std::move(array_reqs), std::move(ref_count), &states, dispatch_modes,
-           Imperative::Get()->is_recording());
+           Imperative::Get()->is_recording(), nullptr, monitor_callback_);
 
   if (retain_graph) {
     buff.resize(num_forward_entries);
@@ -1382,6 +1389,16 @@ void CachedOpBackward(const OpStatePtr& state_ptr,
   for (size_t i = 0; i < out_bufs.size(); i++)
     if (!out_bufs[i].IsSame(outputs[i]))
       CopyFromTo(out_bufs[i], outputs[i]);
+}
+
+/*
+ * Register the callback to be called when the operator is executed
+ */
+void CachedOp::RegisterOpHook(const CachedOp::CachedOpMonCallback& callback,
+                              bool monitor_all) {
+    CHECK(callback) << "invalid callback";
+    monitor_callback_ = callback;
+    monitor_all_ = monitor_all;
 }
 
 OpStatePtr CreateCachedOpState(const NodeAttrs& attrs,

@@ -18,7 +18,7 @@
 //
 //This is a Jenkinsfile for the model backwards compatibility checker. The format and some functions have been picked up from the top-level Jenkinsfile.
 
-mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
+mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so,lib/libtvmop.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 
 node('restricted-utility') {
   // Loading the utilities requires a node context unfortunately

@@ -19,11 +19,13 @@
 
 import sys
 import unittest
+import warnings
 
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.gluon.contrib.estimator import *
+from mxnet.gluon.contrib.estimator.event_handler import *
 from nose.tools import assert_raises
 
 
@@ -335,10 +337,9 @@ def test_default_handlers():
                     metrics=train_acc,
                     trainer=trainer,
                     context=ctx)
-    # no handler
+    # no handler(all default handlers), no warning
     with warnings.catch_warnings(record=True) as w:
         est.fit(train_data=train_data, epochs=num_epochs)
-        assert 'You are training with the' in str(w[-1].message)
 
     # handler with prepared loss and metrics
     # use mix of default and user defined handlers
@@ -353,7 +354,7 @@ def test_default_handlers():
     # handler with all user defined metrics
     # use mix of default and user defined handlers
     metric = MetricHandler(train_metrics=[train_acc])
-    logging = LoggingHandler(train_metrics=[train_acc], val_metrics=[mx.metric.RMSE("val acc")])
+    logging = LoggingHandler(train_metrics=[train_acc])
     est.fit(train_data=train_data, epochs=num_epochs, event_handlers=[metric, logging])
 
     # handler with mixed metrics, some handler use metrics prepared by estimator

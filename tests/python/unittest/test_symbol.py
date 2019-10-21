@@ -18,11 +18,13 @@
 import copy
 import os
 import re
+import json
 import mxnet as mx
 import numpy as np
-from common import assertRaises, models
+from common import assertRaises, models, TemporaryDirectory
 from mxnet.base import NotImplementedForSymbol
-from mxnet.test_utils import discard_stderr
+from mxnet.test_utils import discard_stderr, rand_shape_nd, use_np
+from mxnet.util import np_shape
 import pickle as pkl
 
 def test_symbol_basic():
@@ -188,6 +190,21 @@ def test_symbol_infer_shape_var():
     assert arg_shapes[1] == overwrite_shape
     assert out_shapes[0] == overwrite_shape
 
+
+def test_symbol_magic_abs():
+    for dim in range(1, 7):
+        with mx.name.NameManager():
+            data = mx.symbol.Variable('data')
+            method = data.abs(name='abs0')
+            magic = abs(data)
+            regular = mx.symbol.abs(data, name='abs0')
+            ctx = {'ctx': mx.context.current_context(), 'data': rand_shape_nd(dim)}
+            mx.test_utils.check_consistency(
+                [method, magic], ctx_list=[ctx, ctx])
+            mx.test_utils.check_consistency(
+                [regular, magic], ctx_list=[ctx, ctx])
+
+
 def test_symbol_fluent():
     has_grad = set(['flatten', 'expand_dims', 'flip', 'tile', 'transpose', 'sum', 'nansum', 'prod',
                     'nanprod', 'mean', 'max', 'min', 'reshape', 'broadcast_to', 'split',
@@ -242,6 +259,7 @@ def test_symbol_fluent():
     check_fluent_regular('reshape', {'shape': (17, 1, 5)})
     check_fluent_regular('broadcast_to', {'shape': (5, 17, 47)})
     check_fluent_regular('squeeze', {'axis': (1, 3)}, shape=(2, 1, 3, 1, 4))
+    check_fluent_regular('squeeze', {}, shape=(2, 1, 3, 1, 4))
 
 def check_symbol_consistency(sym1, sym2, ctx, skip_grad=False, equal_nan=False):
     assert sym1.list_arguments() == sym2.list_arguments()
@@ -372,6 +390,72 @@ def test_children_same_name():
     b = a + a
     for c in b.get_children():
         pass
+
+
+def test_transpose_nullop():
+    for dim in range(1, 7):
+        a = mx.sym.Variable('a')
+        b = mx.sym.transpose(a, axes=tuple(np.random.permutation(dim)))
+        c = mx.sym.zeros_like(b)
+
+        shape = rand_shape_nd(dim)
+        nd_a = mx.nd.random.normal(shape=shape)
+        c_out = c.eval(ctx=mx.cpu(), a=nd_a)
+        b_out = b.eval(ctx=mx.cpu(), a=nd_a)
+
+        assert mx.test_utils.same(c_out[0].asnumpy(),
+                                  np.zeros_like(b_out[0].asnumpy()))
+
+
+def test_gen_atomic_symbol_multiple_outputs():
+    data=mx.sym.Variable('data')
+    p = mx.sym.Variable('param')
+    h0 = mx.sym.Variable('h0')
+    h1 = mx.sym.Variable('h1')
+    s = mx.sym.RNN(data, p, h0, h1, state_size=10, num_layers=2, 
+                   bidirectional=True, state_outputs=True, mode='lstm')
+    atomic_sym = s._gen_atomic_symbol()
+
+
+def test_load_save_symbol():
+    batch_size = 10
+    num_hdidden = 128
+    num_features = 784
+
+    def get_net():
+        data = mx.sym.var('data')
+        weight = mx.sym.var('weight', shape=(num_hdidden, 0))
+        return mx.sym.FullyConnected(data, weight, num_hidden=num_hdidden)
+
+    for flag1 in [False, True]:
+        with np_shape(flag1):
+            net_json_str = get_net().tojson()
+            net_data = json.loads(net_json_str)
+            assert "attrs" in net_data
+            if flag1:
+                assert "is_np_shape" in net_data["attrs"]
+            else:
+                assert "is_np_shape" not in net_data["attrs"]
+
+        with TemporaryDirectory() as work_dir:
+            fname = os.path.join(work_dir, 'test_sym.json')
+            with open(fname, 'w') as fp:
+                json.dump(net_data, fp)
+
+            # test loading 1.5.0 symbol file since 1.6.0
+            # w/ or w/o np_shape semantics
+            for flag2 in [False, True]:
+                if flag1:  # Do not need to test this case since 0 indicates zero-size dim
+                    continue
+                with np_shape(flag2):
+                    net = mx.sym.load(fname)
+                    arg_shapes, out_shapes, aux_shapes = net.infer_shape(data=(batch_size, num_features))
+                    assert arg_shapes[0] == (batch_size, num_features)  # data
+                    assert arg_shapes[1] == (num_hdidden, num_features)  # weight
+                    assert arg_shapes[2] == (num_hdidden,)  # bias
+                    assert out_shapes[0] == (batch_size, num_hdidden)  # output
+                    assert len(aux_shapes) == 0
+
 
 if __name__ == '__main__':
     import nose

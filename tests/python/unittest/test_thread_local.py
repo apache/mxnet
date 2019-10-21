@@ -16,13 +16,16 @@
 # under the License.
 
 import threading
+import numpy as np
 import mxnet as mx
 from mxnet import context, attribute, name
 from mxnet.gluon import block
 from mxnet.context import Context
 from mxnet.attribute import AttrScope
 from mxnet.name import NameManager
-from mxnet.test_utils import set_default_context
+from mxnet.test_utils import assert_almost_equal, set_default_context
+from mxnet.util import _NumpyArrayScope, set_np_shape
+
 
 def test_context():
     ctx_list = []
@@ -162,6 +165,61 @@ def test_symbol():
     thread.start()
     thread.join()
     assert status[0], "Failed to execute a symbolic graph within a thread"
+
+
+def test_np_array_scope():
+    np_array_scope_list = []
+    _NumpyArrayScope._current = _NumpyArrayScope(False)
+    np_array_scope_list.append(_NumpyArrayScope._current)
+
+    def f():
+        _NumpyArrayScope._current = _NumpyArrayScope(True)
+        np_array_scope_list.append(_NumpyArrayScope._current)
+
+    thread = threading.Thread(target=f)
+    thread.start()
+    thread.join()
+    assert len(np_array_scope_list) == 2
+    assert not np_array_scope_list[0]._is_np_array
+    assert np_array_scope_list[1]._is_np_array
+
+    event = threading.Event()
+    status = [False]
+
+    def g():
+        with mx.np_array(False):
+            event.wait()
+            if not mx.is_np_array():
+                status[0] = True
+
+    thread = threading.Thread(target=g)
+    thread.start()
+    _NumpyArrayScope._current = _NumpyArrayScope(True)
+    event.set()
+    thread.join()
+    event.clear()
+    assert status[0], "Spawned thread didn't set status correctly"
+
+
+def test_np_global_shape():
+    set_np_shape(2)
+    data = []
+
+    def f():
+        # scalar
+        data.append(mx.np.ones(shape=()))
+        # zero-dim
+        data.append(mx.np.ones(shape=(0, 1, 2)))
+    try:
+        thread = threading.Thread(target=f)
+        thread.start()
+        thread.join()
+
+        assert_almost_equal(data[0].asnumpy(), np.ones(shape=()))
+        assert_almost_equal(data[1].asnumpy(), np.ones(shape=(0, 1, 2)))
+    finally:
+        set_np_shape(0)
+
 
 if __name__ == '__main__':
     import nose

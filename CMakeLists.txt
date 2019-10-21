@@ -58,6 +58,11 @@ message(STATUS "CMAKE_HOST_SYSTEM_PROCESSOR ${CMAKE_HOST_SYSTEM_PROCESSOR}")
 message(STATUS "CMAKE_SYSTEM_PROCESSOR ${CMAKE_SYSTEM_PROCESSOR}")
 
 message(STATUS "CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
+
+if(USE_TVM_OP)
+  add_definitions(-DMXNET_USE_TVM_OP=1)
+endif()
+
 if(USE_CUDA AND NOT USE_OLDCMAKECUDA)
   message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
   if(
@@ -95,6 +100,9 @@ if("$ENV{VERBOSE}" STREQUAL "1")
   message(STATUS " Verbose Makefile ACTIVATED")
   set(CMAKE_VERBOSE_MAKEFILE ON)
 endif()
+
+#Switch off modern thread local for dmlc-core, please see: https://github.com/dmlc/dmlc-core/issues/571#issuecomment-543467484
+add_definitions(-DDMLC_MODERN_THREAD_LOCAL=0)
 
 
 if(MSVC)
@@ -232,6 +240,8 @@ if(USE_TENSORRT)
           ${ONNX_PROTO_LIBRARY} ${ONNX_LIBRARY} ${PROTOBUF_LIBRARY})
 endif()
 
+# please note that when you enable this, you might run into an linker not being able to work properly due to large code injection.
+# you can find more information here https://github.com/apache/incubator-mxnet/issues/15971 
 if(ENABLE_TESTCOVERAGE)
   message(STATUS "Compiling with test coverage support enabled. This will result in additional files being written to your source directory!")
   find_program( GCOV_PATH gcov )
@@ -691,6 +701,8 @@ else()
 
 endif()
 
+add_library(sample_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/lib_api/mylib.cc)
+target_include_directories(sample_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
 set(MXNET_INSTALL_TARGETS mxnet)
 if(UNIX)
   # Create dummy file since we want an empty shared library before linking
@@ -701,9 +713,13 @@ if(UNIX)
   add_library(mxnet SHARED ${DUMMY_SOURCE})
   target_link_libraries(mxnet PRIVATE ${BEGIN_WHOLE_ARCHIVE} $<TARGET_FILE:mxnet_static> ${END_WHOLE_ARCHIVE})
   target_link_libraries(mxnet PRIVATE mxnet_static)
+  target_link_libraries(mxnet_static PUBLIC ${CMAKE_DL_LIBS})
+  target_compile_options(sample_lib PUBLIC -shared)
   set_target_properties(mxnet_static PROPERTIES OUTPUT_NAME mxnet)
 else()
   add_library(mxnet SHARED ${SOURCE})
+  target_compile_options(sample_lib PUBLIC /LD)
+  set_target_properties(sample_lib PROPERTIES PREFIX "lib")
 endif()
 
 if(USE_CUDA)
@@ -735,7 +751,6 @@ if(USE_DIST_KVSTORE)
 endif()
 
 if(USE_TVM_OP)
-  add_definitions(-DMXNET_USE_TVM_OP=1)
   list(APPEND mxnet_LINKER_LIBS ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm/libtvm_runtime.so)
   include(cmake/BuildTVM.cmake)
   add_subdirectory("3rdparty/tvm")
@@ -748,11 +763,15 @@ if(USE_TVM_OP)
     endif()
   endif()
 
+  set(TVM_OP_COMPILE_OPTIONS "-o${CMAKE_CURRENT_BINARY_DIR}/libtvmop.so")
+  if(CUDA_ARCH_BIN)
+    set(TVM_OP_COMPILE_OPTIONS "${TVM_OP_COMPILE_OPTIONS}" "--cuda-arch" "${CUDA_ARCH_BIN}")
+  endif()
   add_custom_command(TARGET mxnet POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E env
           PYTHONPATH="${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/python:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/topi/python:${CMAKE_CURRENT_SOURCE_DIR}/contrib"
-          LD_LIBRARY_PATH="${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm/build"
-          ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/tvmop/compile.py -o${CMAKE_CURRENT_BINARY_DIR}/libtvmop.so
+          LD_LIBRARY_PATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm:$ENV{LD_LIBRARY_PATH}
+          ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/tvmop/compile.py ${TVM_OP_COMPILE_OPTIONS}
     )
 endif()
 

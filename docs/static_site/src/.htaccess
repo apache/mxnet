@@ -1,0 +1,75 @@
+Options -Indexes
+DirectorySlash off
+RewriteEngine on
+RewriteOptions AllowNoSlash
+
+# Show file instead of folder for example /api/docs/tutorials.html
+# instead of /api/docs/tutorials/
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteCond %{REQUEST_FILENAME}\.html -f
+RewriteRule ^(.*) $1.html [NC,L]
+
+# Prettify some files like tutorials/io to tutorials/io.html
+RewriteCond %{REQUEST_FILENAME}\.html -f
+RewriteRule ^(.*) $1.html [NC,L]
+
+#API docs needs specific root
+RewriteCond %{REQUEST_URI} \/docs\/api$|\/docs\/tutorials$
+RewriteRule ^(.*) %{REQUEST_URI}/ [R,NC,L]
+
+# Prettify folders like /get_started
+RewriteCond %{REQUEST_URI} !\/$
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteCond %{REQUEST_FILENAME}/index.html -f
+RewriteRule ^(.*) $1/index.html [NC,L]
+
+# 404
+ErrorDocument 404 /404.html
+
+# Redirects
+# Python API
+Redirect 301 /versions/master/api/python/index.html /api/python/docs/api/index.html
+Redirect 301 /api/python/ndarray/ndarray.html /api/python/docs/api/ndarray/index.html
+Redirect 301 /api/python/ndarray/random.html /api/python/docs/api/ndarray/random/index.html
+Redirect 301 /api/python/ndarray/linalg.html /api/python/docs/api/ndarray/linalg/index.html
+Redirect 301 /api/python/ndarray/contrib.html /api/python/docs/api/ndarray/contrib/index.html
+Redirect 301 /api/python/ndarray/sparse.html /api/python/docs/api/ndarray/sparse/index.html
+
+Redirect 301 /api/python/autograd/autograd.html /api/python/docs/api/autograd/index.html
+
+Redirect 301 /api/python/gluon/gluon.html /api/python/docs/api/gluon/index.html
+Redirect 301 /api/python/gluon/nn.html /api/python/docs/api/gluon/nn/index.html
+Redirect 301 /api/python/gluon/rnn.html /api/python/docs/api/gluon/rnn/index.html
+Redirect 301 /api/python/gluon/loss.html /api/python/docs/api/gluon/loss/index.html
+Redirect 301 /api/python/gluon/data.html /api/python/docs/api/gluon/data/index.html
+Redirect 301 /api/python/gluon/model_zoo.html /api/python/docs/api/gluon/model_zoo/index.html
+Redirect 301 /api/python/gluon/contrib.html /api/python/docs/api/gluon/contrib/index.html
+
+Redirect 301 /api/python/kvstore/kvstore.html /api/python/docs/api/kvstore/index.html
+Redirect 301 /api/python/metric/metric.html /api/python/docs/api/metric/index.html
+Redirect 301 /api/python/optimization/optimization.html /api/python/docs/api/optimizer/index.html
+Redirect 301 /api/python/optimization/contrib.html /api/python/docs/api/optimizer/index.html
+Redirect 301 /api/python/profiler/profiler.html /api/python/docs/api/mxnet/profiler/index.html
+Redirect 301 /api/python/io/io.html /api/python/docs/api/mxnet/io/index.html
+Redirect 301 /api/python/contrib/contrib.html /api/python/docs/api/contrib/index.html
+
+Redirect 301 /api/python/symbol/symbol.html /api/python/docs/api/symbol/index.html
+Redirect 301 /api/python/symbol.html /api/python/docs/api/symbol/index.html
+Redirect 301 /api/python/symbol/linalg.html /api/python/docs/api/symbol/linalg/index.html
+
+Redirect 301 /api/python/module/module.html /api/python/docs/api/module/index.html
+Redirect 301 /api/python/callback/callback.html /api/python/docs/api/mxnet/callback/index.html
+Redirect 301 /api/python/tools/visualization.html /api/python/docs/api/mxnet/visualization/index.html
+
+Redirect 301 /api/python/executor/executor.html /api/python/docs/api/mxnet/executor/index.html
+Redirect 301 /api/python/rtc/rtc.html /api/python/docs/api/mxnet/rtc/index.html
+Redirect 301 /api/python/tools/test_utils.html /api/python/docs/api/mxnet/test_utils/index.html
+
+# Top Level Nav bar
+Redirect 301 /install/index.html /get_started
+Redirect 301 /test/get_started/install.html /get_started
+Redirect 301 /faq/index.html /api
+Redirect 301 /tutorials/index.html /api
+Redirect 301 /architecture/index.html /api/architecture/overview
+Redirect 301 /community/ecosystem.html /ecosystem
+Redirect 301 /community/powered_by.html /ecosystem

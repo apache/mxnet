@@ -29,7 +29,7 @@ include:
   state-of-the-art deep learning models.
 
 For more details, see documentation below. Please also checkout the
-[examples](https://github.com/dmlc/MXNet.jl/tree/master/examples) directory.
+[examples](https://github.com/apache/incubator-mxnet/tree/master/julia/examples) directory.
 
 ## Tutorials
 

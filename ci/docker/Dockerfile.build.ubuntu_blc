@@ -25,6 +25,7 @@ WORKDIR /work/deps
 COPY install/ubuntu_core.sh /work/
 RUN /work/ubuntu_core.sh
 COPY install/ubuntu_python.sh /work/
+COPY install/requirements /work/
 RUN /work/ubuntu_python.sh
 COPY install/ubuntu_npm_blc.sh /work/
 RUN /work/ubuntu_npm_blc.sh

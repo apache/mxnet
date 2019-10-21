@@ -28,9 +28,7 @@
 6. reshape
 7. one_hot
 8. linalg_potri
-9. mp_sgd_update
 10. multi_sgd_update
-11. signum_update
 12. Convolution_v1
 13. repeat
 14. Custom
@@ -38,7 +36,6 @@
 16. SwapAxis
 17. norm
 18. Softmax
-19. rmspropalex_update
 20. fill_element_0index
 21. cast
 22. UpSampling
@@ -52,7 +49,6 @@
 30. Activation
 31. LinearRegressionOutput
 32. Pooling_v1
-33. ftml_update
 34. Crop
 35. ElementWiseSum
 36. diag
@@ -60,24 +56,20 @@
 38. Pad
 39. linalg_gemm2
 40. crop
-41. rmsprop_update
 43. RNN
 45. SoftmaxOutput
 46. linalg_extractdiag
-47. sgd_mom_update
 48. SequenceLast
 51. SequenceReverse
 53. SVMOutput
 54. linalg_trsm
 55. where
 56. SoftmaxActivation
-57. signsgd_update
 58. slice
 59. linalg_gelqf
 60. softmin
 61. linalg_gemm
 62. BilinearSampler
-63. mp_sgd_mom_update
 64. choose_element_0index
 65. tile
 67. gather_nd
@@ -110,7 +102,6 @@
 98. linalg_syrk
 99. squeeze
 101. ROIPooling
-102. ftrl_update
 103. SliceChannel
 104. slice_like
 106. linalg_maketrian
@@ -127,6 +118,4 @@
 119. normal
 120. take
 121. MakeLoss
-122. sgd_update
-123. adam_update
 124. concat

@@ -56,6 +56,8 @@ class OpDef:
         #   {"ldtype": "int32", "rdtype": "float16"},
         #   {"ldtype": "int32", "rdtype": "int16"},
         # ]
+        self.attrs = kwargs.pop('attrs', [])
+        self.attrs_valid = kwargs.pop('attrs_valid', lambda **kwargs: True)
         args = [k for k in kwargs]
         values = [kwargs[k] if isinstance(kwargs[k], (list, tuple)) else [kwargs[k]]
                   for k in args]
@@ -72,10 +74,13 @@ class OpDef:
 
     def invoke_all(self):
         for each_kwargs in self.arg_combination:
-            yield self.func(**each_kwargs)
-
-    def get_op_name(self, args):
-        return self.name + ''.join(["%s_%d" % (arg.dtype, len(arg.shape)) for arg in args])
+            if self.attrs_valid(**each_kwargs):
+                sch, args = self.func(**each_kwargs)
+                name = self.name \
+                    + ''.join(["{}_{}".format(key, each_kwargs[key]) for key in self.attrs]) \
+                    + ''.join(["%s_%d" % (arg.dtype, len(arg.shape))
+                               for arg in args if hasattr(arg, 'shape')])
+                yield sch, args, name
 
     def get_binds(self, args):
         if self.auto_broadcast:
@@ -103,6 +108,7 @@ def defop(name, target=None, auto_broadcast=False, **kwargs):
     """
     assert name is not None and len(name) > 0
     target = "cpu" if target is None else target
+
     def _defop(func):
         opdef = OpDef(func, name, target, auto_broadcast, **kwargs)
         __OP_DEF__.append(opdef)

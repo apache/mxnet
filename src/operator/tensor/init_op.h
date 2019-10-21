@@ -57,7 +57,7 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
-    MXNET_ADD_ALL_TYPES
+    MXNET_ADD_ALL_TYPES_WITH_BOOL
     .describe("Target data type.");
   }
 };
@@ -179,7 +179,6 @@ struct RangeLikeParam : public dmlc::Parameter<RangeLikeParam> {
   double step;
   int repeat;
   std::string ctx;
-  int dtype;
   dmlc::optional<int> axis;
 
   DMLC_DECLARE_PARAMETER(RangeLikeParam) {
@@ -197,9 +196,6 @@ struct RangeLikeParam : public dmlc::Parameter<RangeLikeParam> {
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
-    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
-    MXNET_ADD_ALL_TYPES
-    .describe("Target data type.");
     DMLC_DECLARE_FIELD(axis)
     .set_default(dmlc::optional<int>())
     .describe("Arange elements according to the size of a certain axis of input array."
@@ -346,12 +342,12 @@ void Fill(mshadow::Stream<xpu> *s, const TBlob& b, const OpReqType req, ValueTyp
     if (val == 0) {
       if (req != kAddTo) {
         if (b.dev_mask() == cpu::kDevMask && size < 50000) {
-          MSHADOW_TYPE_SWITCH(b.type_flag_, DType, {
+          MSHADOW_TYPE_SWITCH_WITH_BOOL(b.type_flag_, DType, {
             memset(b.dptr_, 0, size * sizeof(DType));
           });
         } else {
           // Optimize common use-case of filling with ones
-          MSHADOW_TYPE_SWITCH(b.type_flag_, DType, {
+          MSHADOW_TYPE_SWITCH_WITH_BOOL(b.type_flag_, DType, {
             MXNET_ASSIGN_REQ_SWITCH(req, Req, {
               mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::set_to_int<0>, Req>, xpu>::Launch(
                 s, b.Size(), b.dptr<DType>());
@@ -361,7 +357,7 @@ void Fill(mshadow::Stream<xpu> *s, const TBlob& b, const OpReqType req, ValueTyp
       }
     } else if (is_integer && val == 1) {
       // Optimize common use-case of filling with ones
-      MSHADOW_TYPE_SWITCH(b.type_flag_, DType, {
+      MSHADOW_TYPE_SWITCH_WITH_BOOL(b.type_flag_, DType, {
         MXNET_ASSIGN_REQ_SWITCH(req, Req, {
           mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::set_one, Req>, xpu>::Launch(
             s, b.Size(), b.dptr<DType>());
@@ -369,7 +365,7 @@ void Fill(mshadow::Stream<xpu> *s, const TBlob& b, const OpReqType req, ValueTyp
       });
     } else {
       // Generic fill kernel from variable
-      MSHADOW_TYPE_SWITCH(b.type_flag_, DType, {
+      MSHADOW_TYPE_SWITCH_WITH_BOOL(b.type_flag_, DType, {
         MXNET_ASSIGN_REQ_SWITCH(req, Req, {
           mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, Req>, xpu>::Launch(
             s, b.Size(), b.dptr<DType>(), static_cast<DType>(val));
@@ -487,6 +483,29 @@ void FillComputeZerosEx(const nnvm::NodeAttrs& attrs,
   }
 }
 
+template<typename xpu>
+inline void EyeFillImpl(const TBlob& out_data,
+                        const OpContext& ctx,
+                        const std::vector<OpReqType>& req,
+                        const nnvm::dim_t num_cols,
+                        const nnvm::dim_t N,
+                        const nnvm::dim_t k) {
+  using namespace mxnet_op;
+  const nnvm::dim_t cnnz = std::max(num_cols - std::abs(k), (nnvm::dim_t)0);
+  const nnvm::dim_t rnnz = std::max(N - std::abs(k), (nnvm::dim_t)0);
+  const nnvm::dim_t nnz = k > 0 ? std::min(cnnz, N) :
+                          std::min(rnnz, num_cols);
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+        Fill(s, out_data, req[0], static_cast<DType>(0));
+        if (nnz > 0) {
+          Kernel<eye_dns_fill<req_type>, xpu>::Launch(s, nnz, out_data.dptr<DType>(),
+            std::max(static_cast<nnvm::dim_t>(0), k), k, num_cols);
+        }
+      });
+  });
+}
 
 template<typename xpu>
 void EyeFill(const nnvm::NodeAttrs& attrs,
@@ -497,25 +516,10 @@ void EyeFill(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 0U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const EyeParam& param = nnvm::get<EyeParam>(attrs.parsed);
   const TBlob& out_data = outputs[0];
   const nnvm::dim_t num_cols = param.M > 0 ? param.M : param.N;
-
-  const nnvm::dim_t cnnz = std::max(num_cols - std::abs(param.k), (nnvm::dim_t)0);
-  const nnvm::dim_t rnnz = std::max(param.N - std::abs(param.k), (nnvm::dim_t)0);
-  const nnvm::dim_t nnz = param.k > 0 ? std::min(cnnz, param.N) :
-                                        std::min(rnnz, num_cols);
-  using namespace mxnet_op;
-  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
-    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-      Fill(s, out_data, req[0], static_cast<DType>(0));
-      if (nnz > 0) {
-        Kernel<eye_dns_fill<req_type>, xpu>::Launch(s, nnz, out_data.dptr<DType>(),
-          std::max(static_cast<nnvm::dim_t>(0), param.k), param.k, num_cols);
-      }
-    });
-  });
+  EyeFillImpl<xpu>(out_data, ctx, req, num_cols, param.N, param.k);
 }
 
 
