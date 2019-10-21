@@ -23,7 +23,7 @@ from . import _internal as _npi
 from ..ndarray import NDArray
 
 
-__all__ = ['randint', 'uniform', 'normal', "choice", "rand"]
+__all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial"]
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):

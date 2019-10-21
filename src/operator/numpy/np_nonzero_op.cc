@@ -91,7 +91,7 @@ void NonzeroForwardCPU(const nnvm::NodeAttrs& attrs,
   std::vector<int32_t> prefix_sum(in_size, 0);
   size_t valid_num = 0;
   // Calculate prefix sum
-  MSHADOW_TYPE_SWITCH(in.dtype(), DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(in.dtype(), DType, {
     DType* in_dptr = in.data().dptr<DType>();
     for (size_t i = 0; i < in_size; i++) {
       prefix_sum[i] = (i == 0) ? 0 : prefix_sum[i - 1];
@@ -113,6 +113,7 @@ void NonzeroForwardCPU(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_npx_nonzero)
+.add_alias("_npi_nonzero")
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
