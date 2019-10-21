@@ -1394,6 +1394,7 @@ nightly_test_installation() {
 # Runs Imagenet inference
 nightly_test_imagenet_inference() {
     set -ex
+    echo $PWD
     cp /work/mxnet/build/cpp-package/example/imagenet_inference .
     ./unit_test_imagenet_inference.sh
 }
