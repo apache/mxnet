@@ -341,7 +341,12 @@ struct Shape {
            x[i] = def;
        }
    }
- };
+};
+
+template <>
+struct Shape<0> {
+   size_t size;
+};
 
 template <int nvec, typename DType, int ndim>
 inline VectorType<DType, nvec> load_index(const DType * input, int i, const Shape<ndim> &shape) {

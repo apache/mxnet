@@ -555,7 +555,8 @@ void FusedOp::CompileCode(int kernel_index, const std::string &kernel_name) {
   NVRTC_CALL(nvrtcGetProgramLogSize(program, &log_size));
   std::string log(log_size, '\0');
   NVRTC_CALL(nvrtcGetProgramLog(program, &log[0]));
-  CHECK_EQ(compileResult, NVRTC_SUCCESS) << "NVRTC Compilation failed.\n" << log;
+  CHECK_EQ(compileResult, NVRTC_SUCCESS)
+    << "NVRTC Compilation failed. Please set environment variable MXNET_USE_FUSION to 0.\n" << log;
   // Obtain PTX from the program.
   size_t ptx_size;
   NVRTC_CALL(nvrtcGetPTXSize(program, &ptx_size));
