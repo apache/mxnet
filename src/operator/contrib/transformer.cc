@@ -122,7 +122,7 @@ static bool InterleavedMatMulEncDecValAttShape(const NodeAttrs& attrs,
   return true;
 }
 
-NNVM_REGISTER_OP(interleaved_matmul_selfatt_qk)
+NNVM_REGISTER_OP(_contrib_interleaved_matmul_selfatt_qk)
 .describe(R"code(Compute the matrix multiplication between the projections of
 queries and keys in multihead attention use as self attention.
 
@@ -139,6 +139,7 @@ k_proj = mx.nd.transpose(tmp[:,:,:,1,:], axes=(1, 2, 0, 3))
 k_proj = mx.nd.reshap(k_proj, shape=(-1, 0, 0), reverse=True)
 output = mx.nd.batch_dot(q_proj, k_proj, transpose_b=True)
 
+This Op is GPU only
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -162,7 +163,7 @@ NNVM_REGISTER_OP(_backward_interleaved_matmul_selfatt_qk)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr_parser(ParamParser<InterleavedMatMulParam>);
 
-NNVM_REGISTER_OP(interleaved_matmul_selfatt_valatt)
+NNVM_REGISTER_OP(_contrib_interleaved_matmul_selfatt_valatt)
 .describe(R"code(Compute the matrix multiplication between the projections of
 values and the attention weights in multihead attention use as self attention.
 
@@ -182,6 +183,7 @@ output = mx.nd.reshape(output, shape=(-1, num_heads, 0, 0), reverse=True)
 output = mx.nd.transpose(output, axes=(0, 2, 1, 3))
 output = mx.nd.reshape(output, shape=(0, 0, -1))
 
+This Op is GPU only
 )code" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
@@ -206,7 +208,7 @@ NNVM_REGISTER_OP(_backward_interleaved_matmul_selfatt_valatt)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr_parser(ParamParser<InterleavedMatMulParam>);
 
-NNVM_REGISTER_OP(interleaved_matmul_encdec_qk)
+NNVM_REGISTER_OP(_contrib_interleaved_matmul_encdec_qk)
 .describe(R"code(Compute the matrix multiplication between the projections of
 queries and keys in multihead attention use as encoder-decoder.
 
@@ -225,6 +227,7 @@ k_proj = mx.nd.transpose(tmp[:,:,:,0,:], axes=(1, 2, 0, 3))
 k_proj = mx.nd.reshap(k_proj, shape=(-1, 0, 0), reverse=True)
 output = mx.nd.batch_dot(q_proj, k_proj, transpose_b=True)
 
+This Op is GPU only
 )code" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
@@ -249,7 +252,7 @@ NNVM_REGISTER_OP(_backward_interleaved_matmul_encdec_qk)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr_parser(ParamParser<InterleavedMatMulParam>);
 
-NNVM_REGISTER_OP(interleaved_matmul_encdec_valatt)
+NNVM_REGISTER_OP(_contrib_interleaved_matmul_encdec_valatt)
 .describe(R"code(Compute the matrix multiplication between the projections of
 values and the attention weights in multihead attention use as encoder-decoder.
 
@@ -270,6 +273,7 @@ output = mx.nd.reshape(output, shape=(-1, num_heads, 0, 0), reverse=True)
 output = mx.nd.transpose(output, axes=(0, 2, 1, 3))
 output = mx.nd.reshape(output, shape=(0, 0, -1))
 
+This Op is GPU only
 )code" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)

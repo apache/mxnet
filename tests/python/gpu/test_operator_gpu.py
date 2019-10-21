@@ -2554,11 +2554,11 @@ def check_multihead_attention_selfatt(bwd_ignore_zero_init):
     qkv = mx.sym.transpose(qkv, axes=(1, 0, 2))
     qkv_proj = mx.sym.FullyConnected(qkv, weight=qkv_weight, bias=qkv_bias, flatten=False,
                                      num_hidden=qkv_units * 3, no_bias=False)
-    att_score = mx.sym.interleaved_matmul_selfatt_qk(qkv_proj, heads=num_heads,
-                                                     bwd_ignore_zero_init=bwd_ignore_zero_init)
+    att_score = mx.sym.contrib.interleaved_matmul_selfatt_qk(
+            qkv_proj, heads=num_heads, bwd_ignore_zero_init=bwd_ignore_zero_init)
     att_score = att_score + sonde
-    weighted_value = mx.sym.interleaved_matmul_selfatt_valatt(qkv_proj, att_score, heads=num_heads,
-                                                              bwd_ignore_zero_init=bwd_ignore_zero_init)
+    weighted_value = mx.sym.contrib.interleaved_matmul_selfatt_valatt(
+            qkv_proj, att_score, heads=num_heads, bwd_ignore_zero_init=bwd_ignore_zero_init)
     output = mx.sym.FullyConnected(weighted_value, weight=out_weight, bias=out_bias, flatten=False,
                                    num_hidden=out_dim, no_bias=False)
     output = mx.sym.transpose(output, axes=(1, 0, 2))
@@ -2711,11 +2711,11 @@ def check_multihead_attention_encdec(bwd_ignore_zero_init):
     q = mx.sym.transpose(q, axes=(1, 0, 2))
     q_proj = mx.sym.FullyConnected(q, weight=q_weight, bias=q_bias, flatten=False,
                                    num_hidden=qkv_units, no_bias=False)
-    att_score = mx.sym.interleaved_matmul_encdec_qk(q_proj, kv_proj, heads=num_heads,
-                                                    bwd_ignore_zero_init=bwd_ignore_zero_init)
+    att_score = mx.sym.contrib.interleaved_matmul_encdec_qk(
+            q_proj, kv_proj, heads=num_heads, bwd_ignore_zero_init=bwd_ignore_zero_init)
     att_score = att_score + sonde
-    weighted_value = mx.sym.interleaved_matmul_encdec_valatt(kv_proj, att_score, heads=num_heads,
-                                                             bwd_ignore_zero_init=bwd_ignore_zero_init)
+    weighted_value = mx.sym.contrib.interleaved_matmul_encdec_valatt(
+            kv_proj, att_score, heads=num_heads, bwd_ignore_zero_init=bwd_ignore_zero_init)
     output = mx.sym.FullyConnected(weighted_value, weight=out_weight, bias=out_bias, flatten=False,
                                    num_hidden=out_dim, no_bias=False)
     output = mx.sym.transpose(output, axes=(1, 0, 2))
