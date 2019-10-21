@@ -40,7 +40,7 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming', 'blackman', 'flip',
            'around', 'hypot', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take',
            'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal',
-           'less_equal', 'hsplit', 'rot90', 'einsum']
+           'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide']
 
 
 def _num_outputs(sym):
@@ -90,18 +90,12 @@ class _Symbol(Symbol):
         return multiply(other, self)
 
     def __div__(self, other):
-        raise AttributeError('_Symbol.__div__ is replaced by __truediv__. If you are using'
-                             ' Python2, please use the statement from __future__ import division'
-                             ' to change the / operator to mean true division throughout the'
-                             ' module. If you are using Python3, this error should not have'
-                             ' been encountered.')
+        """x.__truediv__(y) <=> x / y"""
+        return divide(self, other)
 
     def __rdiv__(self, other):
-        raise AttributeError('_Symbol.__rdiv__ is replaced by __rtruediv__. If you are using'
-                             ' Python2, please use the statement from __future__ import division'
-                             ' to change the / operator to mean true division throughout the'
-                             ' module. If you are using Python3, this error should not have'
-                             ' been encountered.')
+        """x.__rdiv__(y) <=> y / x"""
+        return divide(other, self)
 
     def __mod__(self, other):
         """x.__mod__(y) <=> x % y"""
@@ -1082,10 +1076,10 @@ def take(a, indices, axis=None, mode='raise', out=None):
     if mode not in ('wrap', 'clip', 'raise'):
         raise NotImplementedError(
             "function take does not support mode '{}'".format(mode))
-    if axis:
-        return _npi.take(a, indices, axis, mode, out)
-    else:
+    if axis is None:
         return _npi.take(_npi.reshape(a, -1), indices, 0, mode, out)
+    else:
+        return _npi.take(a, indices, axis, mode, out)
 # pylint: enable=redefined-outer-name
 
 
@@ -1160,6 +1154,12 @@ def multiply(x1, x2, out=None, **kwargs):
 @set_module('mxnet.symbol.numpy')
 @wrap_np_binary_func
 def divide(x1, x2, out=None, **kwargs):
+    return _ufunc_helper(x1, x2, _npi.true_divide, _np.divide, _npi.true_divide_scalar,
+                         _npi.rtrue_divide_scalar, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def true_divide(x1, x2, out=None):
     return _ufunc_helper(x1, x2, _npi.true_divide, _np.divide, _npi.true_divide_scalar,
                          _npi.rtrue_divide_scalar, out)
 

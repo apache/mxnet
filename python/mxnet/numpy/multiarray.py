@@ -55,7 +55,7 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'add', 'subtrac
            'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming',
            'blackman', 'flip', 'around', 'arctan2', 'hypot', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril',
            'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
-           'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum']
+           'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide']
 
 # Return code for dispatching indexing function call
 _NDARRAY_UNSUPPORTED_INDEXING = -1
@@ -134,11 +134,47 @@ _NUMPY_ARRAY_UFUNC_DICT = {}
 @set_module('mxnet.numpy')  # pylint: disable=invalid-name
 class ndarray(NDArray):
     """
+    ndarray(handle, writable=True):
+
     An array object represents a multidimensional, homogeneous array of fixed-size items.
     An associated data-type object describes the format of each element in the array
     (its byte-order, how many bytes it occupies in memory, whether it is an integer, a
     floating point number, or something else, etc.). Arrays should be constructed using
     `array`, `zeros` or `empty`. Currently, only c-contiguous arrays are supported.
+
+    Arrays should be constructed using `array`, `zeros` or `empty` (refer
+    to the See Also section below).  The parameters given here refer to
+    a low-level method (`ndarray(...)`) for instantiating an array.
+
+    For more information, refer to the `mxnet.numpy` module and examine the
+    methods and attributes of an array.
+
+    Parameters
+    ----------
+    handle: int
+        The ndarray handle in backend (C++).
+    writable: bool
+        Indicates whether inplace-assignment is allowed for the array.
+
+    Attributes
+    ----------
+    T : ndarray
+        Transpose of the array.
+    dtype : dtype object
+        Describes the format of the elements in the array.
+    size : int
+        Number of elements in the array.
+    ndim : int
+        The array's number of dimensions.
+    shape : tuple of ints
+        Shape of the array.
+
+    See Also
+    --------
+    array : Construct an array.
+    zeros : Create an array, each element of which is zero.
+    empty : Create an array, but leave its allocated memory unchanged (i.e.,
+            it contains "garbage").
     """
 
     @staticmethod
@@ -286,9 +322,139 @@ class ndarray(NDArray):
 
     # pylint: disable=too-many-return-statements
     def __getitem__(self, key):
-        """
-        Overriding the method in NDArray class in a numpy fashion.
-        Calling numpy ndarray's _get_np_basic_indexing(key) and _get_np_advanced_indexing(key).
+        """Return self[key].
+
+        Returns a sliced view of this array if the elements fetched are contiguous in memory;
+        otherwise, returns a newly created NDArray.
+        This functions supports advanced indexing defined in the following reference with
+        some restrictions. Boolean indexing is supported only for a single boolean ndarray
+        as a key. Mixing boolean ndarray with other index types is not supported in ``advanced``
+        indexing.
+
+        For basic indexing, i.e., if ``key`` consists only of integers,
+        ``slice``, ``Ellipsis`` (``...``) and ``None``, a mutable view is
+        returned that shares memory with this array if the accessed portion is
+        contiguous in memory.
+        Otherwise, a newly created ``ndarray`` is returned.
+
+        This functions supports advanced indexing as defined in `the NumPy
+        advanced indexing documentation
+        <https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#advanced-indexing>`_.
+
+        Parameters
+        ----------
+        key : int, slice, list, np.ndarray, mx.np.ndarray, or tuple of all previous types
+            Indexing key.
+
+        Examples
+        --------
+        The default is to give explicit indices for all axes:
+
+        >>> x = np.arange(6).reshape(2, 3)
+        >>> x
+        array([[0., 1., 2.],
+               [3., 4., 5.]])
+        >>> x[0, :2]
+        array([0., 1.])
+        >>> x[:, :-1]
+        array([[0., 1.],
+               [3., 4.]])
+
+        If fewer indices are given, they are automatically supplemented by an
+        appropriate number of ``slice(None)`` ("``:``") to the right. For
+        instance, a single integer indexes along the first axis:
+
+        >>> x[0]
+        array([0., 1., 2.])
+        >>> x[1:]
+        array([[3., 4., 5.]])
+
+        To omit a range of axes that should be kept as-is, an `Ellipsis`
+        ("``...``") can be used:
+
+        >>> x = np.arange(16).reshape(2, 2, 2, 2)
+        >>> x[0, ..., 1]
+        array([[1., 3.],
+               [5., 7.]])
+        >>> x[0, :, :, 1]  # equivalent
+        array([[1., 3.],
+               [5., 7.]])
+
+        New axes of length 1 can be created by inserting ``None``
+        (`numpy.newaxis`) in the index:
+
+        >>> x = np.arange(6).reshape(2, 3)
+        >>> x[None, :, :]
+        array([[[0., 1., 2.],
+                [3., 4., 5.]]])
+        >>> x[None, :, :].shape
+        (1, 2, 3)
+
+        If the indexed portion of the array is contiguous in memory, no data
+        is copied. Instead, a shared-memory view of the original array is
+        returned, and changes to that view affect the original array:
+
+        >>> x = np.arange(8).reshape(2, 2, 2)
+        >>> y = x[0]  # contiguous
+        >>> y
+        array([[0., 1.],
+               [2., 3.]])
+        >>> y[:] = -1
+        >>> x
+        array([[[-1., -1.],
+                [-1., -1.]],
+               [[ 4.,  5.],
+                [ 6.,  7.]]])
+        >>> x = np.arange(8).reshape(2, 2, 2)
+        >>> y = x[1, :1, :]  # contiguous
+        >>> y
+        array([[4., 5.]])
+        >>> y[:] = -1
+        >>> x
+        array([[[ 0.,  1.],
+                [ 2.,  3.]],
+               [[-1., -1.],
+                [ 6.,  7.]]])
+        >>> x = np.arange(0, 8).reshape(2, 2, 2)
+        >>> y = x[:, :, 1]  # not contiguous
+        >>> y
+        array([[1., 3.],
+               [5., 7.]])
+        >>> y[:] = -1
+        >>> x
+        array([[[0., 1.],
+                [2., 3.]],
+               [[4., 5.],
+                [6., 7.]]])
+
+        If the indexing key contains `list`, `numpy.ndarray` or `NDArray`
+        objects, advanced indexing is triggered, which always returns a
+        copy:
+
+        >>> x = np.arange(8).reshape(2, 2, 2)
+        >>> x[[0, 1]]
+        array([[[0., 1.],
+                [2., 3.]],
+               [[4., 5.],
+                [6., 7.]]])
+        >>> x[[0, 1], :]  # equivalent
+        array([[[0., 1.],
+                [2., 3.]],
+               [[4., 5.],
+                [6., 7.]]])
+        >>> y = np.array([0, 1], dtype='int32')
+        >>> x[1:, y]
+        array([[[4., 5.],
+                [6., 7.]]])
+        >>> y = np.array([0, 1], dtype='int32')
+        >>> x[1:, y]
+        array([[[4., 5.],
+                [6., 7.]]])
+
+        Get negative elements in an ndarray through boolean array indexing
+        >>> x = np.array([1., -1., -2., 3])
+        >>> x[x < 0]
+        array([-1., -2.])
         """
         # handling possible boolean indexing first
         ndim = self.ndim
@@ -356,11 +522,51 @@ class ndarray(NDArray):
             raise RuntimeError
 
     def __setitem__(self, key, value):
-        """
-        x.__setitem__(i, y) <=> x[i]=y
-        Sets ``self[key]`` to ``value``.
+        """Sets ``self[key]`` to ``value``.
 
-        Overriding the method in NDArray class in a numpy fashion.
+        This functions supports advanced indexing as defined in `the NumPy
+        advanced indexing documentation
+        <https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#advanced-indexing>`_,
+        with the restriction that boolean array indexing is not supported.
+
+        Parameters
+        ----------
+        key : int, slice, list, np.ndarray, mx.np.ndarray, or tuple of all previous types
+            The indexing key.
+        value : scalar or array-like object that can be broadcast to the shape of self[key]
+            The value to set.
+
+        Examples
+        --------
+        >>> x = np.zeros((2, 3))
+        >>> x[:] = 1
+        >>> x
+        array([[ 1.,  1.,  1.],
+               [ 1.,  1.,  1.]])
+        >>> x[:, 1:2] = 2
+        >>> x
+        array([[ 1.,  2.,  1.],
+               [ 1.,  2.,  1.]])
+        >>> x[1:2, 1:] = 3
+        >>> x
+        array([[ 1.,  2.,  1.],
+               [ 1.,  3.,  3.]])
+        >>> x[1:, 0:2] = np.zeros((1, 2))
+        >>> x
+        array([[ 1.,  2.,  1.],
+               [ 0.,  0.,  3.]])
+        >>> x[1, 2] = 4
+        >>> x
+        array([[ 1.,  2.,  1.],
+               [ 0.,  0.,  4.]])
+        >>> x[[0], [1, 2]] = 5
+        >>> x
+        array([[ 1.,  5.,  5.],
+               [ 0.,  0.,  4.]])
+        >>> x[::-1, 0:2:2] = [6]
+        >>> x
+        array([[ 6.,  5.,  5.],
+               [ 6.,  0.,  4.]])
         """
         if isinstance(value, NDArray) and not isinstance(value, ndarray):
             raise TypeError('Cannot assign mx.nd.NDArray to mxnet.numpy.ndarray')
@@ -496,25 +702,16 @@ class ndarray(NDArray):
         return self.__mul__(other)
 
     def __div__(self, other):
-        raise AttributeError('ndarray.__div__ is replaced by __truediv__. If you are using'
-                             ' Python2, please use the statement from __future__ import division'
-                             ' to change the / operator to mean true division throughout the'
-                             ' module. If you are using Python3, this error should not have'
-                             ' been encountered.')
+        """x.__div__(y) <=> x / y"""
+        return divide(self, other)
 
     def __rdiv__(self, other):
-        raise AttributeError('ndarray.__rdiv__ is replaced by __rtruediv__. If you are using'
-                             ' Python2, please use the statement from __future__ import division'
-                             ' to change the / operator to mean true division throughout the'
-                             ' module. If you are using Python3, this error should not have'
-                             ' been encountered.')
+        """x.__rdiv__(y) <=> y / x"""
+        return divide(other, self)
 
     def __idiv__(self, other):
-        raise AttributeError('ndarray.__idiv__ is replaced by __irtruediv__. If you are using'
-                             ' Python2, please use the statement from __future__ import division'
-                             ' to change the / operator to mean true division throughout the'
-                             ' module. If you are using Python3, this error should not have'
-                             ' been encountered.')
+        """x.__idiv__(y) <=> x /= y"""
+        return divide(self, other, out=self)
 
     def __truediv__(self, other):
         """x.__truediv__(y) <=> x / y"""
@@ -525,6 +722,7 @@ class ndarray(NDArray):
         return divide(other, self)
 
     def __itruediv__(self, other):
+        """x.__itruediv__(y) <=> x /= y"""
         return divide(self, other, out=self)
 
     def __mod__(self, other):
@@ -2214,6 +2412,35 @@ def divide(x1, x2, out=None, **kwargs):
         This is a scalar if both x1 and x2 are scalars.
     """
     return _mx_nd_np.divide(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+def true_divide(x1, x2, out=None):
+    """Returns a true division of the inputs, element-wise.
+
+    Instead of the Python traditional 'floor division', this returns a true
+    division.  True division adjusts the output type to present the best
+    answer, regardless of input types.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Dividend array.
+
+    x2 : ndarray or scalar
+        Divisor array.
+
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        This is a scalar if both x1 and x2 are scalars.
+    """
+    return _mx_nd_np.true_divide(x1, x2, out=out)
 
 
 @set_module('mxnet.numpy')

@@ -131,7 +131,7 @@ inline bool TRTInferType(const nnvm::NodeAttrs& attrs,
     auto it_params = params_map.find(node->attrs.name);
     auto it_inputs = inputs_to_idx.find(node->attrs.name);
     if (it_params != params_map.end()) {
-      types[eid] = it_params->second.dtype();
+      types[eid] = -1;
     } else if (it_inputs != inputs_to_idx.end()) {
       types[eid] = in_types->at(it_inputs->second);
     } else {
