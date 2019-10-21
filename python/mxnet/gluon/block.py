@@ -24,7 +24,7 @@ import threading
 import copy
 import warnings
 import re
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer
@@ -431,6 +431,15 @@ class Block(object):
         <https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/blocks/save_load_params.html>`_
         """
         params = self._collect_params_with_prefix()
+
+        # Shared parameters are stored only a single time as of MXNet 1.6.
+        # Shared parameters are registered under multiple prefixes returned by
+        # _collect_params_with_prefix. We select a single one and only store
+        # it. In load_parameters it is sufficient for a shared parameter to
+        # only set it for a single prefix.
+        reverse_params = {v: k for k, v in params.items()}
+        params = {v: k for k, v in reverse_params.items()}
+
         arg_dict = {key : val._reduce() for key, val in params.items()}
         save_fn = _mx_npx.save if is_np_array() else ndarray.save
         save_fn(filename, arg_dict)
@@ -517,8 +526,17 @@ class Block(object):
             return
 
         if not allow_missing:
-            for name in params.keys():
-                assert name in loaded, \
+            # Shared parameters are stored only a single time as of MXNet 1.6.
+            # We thus retrieve all prefixes (à la _collect_params_with_prefix)
+            # that a shared parameter is used with. Check that there are no
+            # missing parameters that were not yet already loaded from the
+            # shared version.
+            params_inv = defaultdict(list)
+            for k, v in params.items():
+                params_inv[v].append(k)
+
+            for name, param in params.items():
+                assert any(p in loaded for p in params_inv[param]), \
                     "Parameter '%s' is missing in file '%s', which contains parameters: %s. " \
                     "Set allow_missing=True to ignore missing parameters."%(
                         name, filename, _brief_print_list(loaded.keys()))
