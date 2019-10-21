@@ -37,7 +37,7 @@ core_logic: {
         ws('workspace/build-gpu') {
           utils.init_git()
           utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda101_cudnn7', false)
-          utils.pack_lib('gpu', mx_lib_cpp_examples)
+          utils.pack_lib('gpu', mx_lib_cpp_example)
         }
       }
     }/*,
