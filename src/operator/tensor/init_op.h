@@ -336,6 +336,8 @@ inline bool InitStorageType(const nnvm::NodeAttrs& attrs,
 template <bool is_integer = false, typename ValueType, typename xpu>
 void Fill(mshadow::Stream<xpu> *s, const TBlob& b, const OpReqType req, ValueType val) {
   // If b is a zero-size tensor, do nothing.
+  CHECK_LT(b.Size(), (uint32_t{1} << 31) - 1) << "Size of tensor you are trying to allocate is larger than "
+                                 "2^32 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
   if (b.Size() == 0) return;
   if (req != kNullOp) {
     const size_t size = b.Size();

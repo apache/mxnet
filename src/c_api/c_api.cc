@@ -221,7 +221,7 @@ void CreateNDArray(const DataType* shape,
                    int dtype,
                    NDArrayHandle* out) {
   mxnet::TShape requested_shape = mxnet::TShape(shape, shape + ndim);
-  CHECK_LT(requested_shape.Size(), 1 >> 31)
+  CHECK_LT(requested_shape.Size(), (uint32_t{1} << 31) - 1)
            << "Size of tensor you are trying to allocate is larger than "
               "2^32 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
   *out = new NDArray(requested_shape,
