@@ -26,6 +26,7 @@
 #ifndef MXNET_OPERATOR_NUMPY_NP_MEMORY_OP_H_
 #define MXNET_OPERATOR_NUMPY_NP_MEMORY_OP_H_
 
+#include <mxnet/operator_util.h>
 #include <vector>
 #include <string>
 #include "../operator_common.h"
@@ -43,12 +44,13 @@ void NumpyShareMemoryCompute(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
   const TBlob& a = inputs[0];
   const TBlob& b = inputs[1];
-  const TBlob& outdata = outputs[0];
+  Tensor<xpu, 1, bool> outdata = outputs[0].FlatTo1D<xpu, bool>(s);
 
   if (a.Size() == 0 || b.Size() == 0) {
-    *(outdata.dptr<bool>()) = false;
+    ASSIGN_DISPATCH(outdata, OpReqType::kWriteTo, false);
     return;
   }
   MSHADOW_TYPE_SWITCH_WITH_BOOL(a.type_flag_, AType, {
@@ -58,9 +60,9 @@ void NumpyShareMemoryCompute(const nnvm::NodeAttrs& attrs,
       uint64_t start2 = reinterpret_cast<uint64_t>(b.dptr_);
       uint64_t end2 = start2 + b.Size() * sizeof(BType);
       if (!(start1 < end2 && start2 < end1 && start1 < end1 && start2 < end2)) {
-        *(outdata.dptr<bool>()) = false;
+        ASSIGN_DISPATCH(outdata, OpReqType::kWriteTo, false);
       } else {
-        *(outdata.dptr<bool>()) = true;
+        ASSIGN_DISPATCH(outdata, OpReqType::kWriteTo, true);
       }
     });
   });

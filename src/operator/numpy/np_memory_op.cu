@@ -22,13 +22,13 @@
  * \file np_memory_op.cu
  */
 
- #include "./np_memory_op.h"
+#include "./np_memory_op.h"
 
- namespace mxnet {
- namespace op {
+namespace mxnet {
+namespace op {
 
- NNVM_REGISTER_OP(_npi_share_memory)
- .set_attr<FCompute>("FCompute<gpu>", NumpyShareMemoryCompute<gpu>);
+NNVM_REGISTER_OP(_npi_share_memory)
+.set_attr<FCompute>("FCompute<gpu>", NumpyShareMemoryCompute<gpu>);
 
- }  // namespace op
- }  // namespace mxnet
+}  // namespace op
+}  // namespace mxnet
