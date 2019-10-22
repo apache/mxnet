@@ -136,11 +136,11 @@ core_logic: {
         }
       }
     },
-    'Nightly Python: GPU': {
+    'Gluon estimator: GPU': {
       node(NODE_LINUX_GPU) {
-        ws('workspace/nightly-test-python-gpu') {
+        ws('workspace/estimator-test-gpu') {
           utils.unpack_and_init('gpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_gpu', 'nightly_python', true)
+          utils.docker_run('ubuntu_nightly_gpu', 'nightly_estimator', true)
         }
       }
     }

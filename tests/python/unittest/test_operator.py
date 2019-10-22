@@ -6928,6 +6928,21 @@ def test_stack():
         check_symbolic_forward(out, inputs, [output])
         check_numeric_gradient(out, inputs)
 
+@with_seed()
+def test_dropout_with_seed():
+    info = np.iinfo(np.int32)
+    seed = np.random.randint(info.min, info.max)
+    data = mx.nd.ones((100, 100))
+    dropout = mx.gluon.nn.Dropout(0.5)
+    mx.random.seed(seed)
+    with mx.autograd.record():
+        result1 = dropout(data)
+
+    mx.random.seed(seed)
+    with mx.autograd.record():
+        result2 = dropout(data)
+    # dropout on gpu should return same result with fixed seed
+    assert_almost_equal(result1.asnumpy(), result2.asnumpy())
 
 @with_seed()
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/14288")

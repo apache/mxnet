@@ -1603,11 +1603,8 @@ nightly_scala_demo_test_cpu() {
     bash bin/run_im.sh
 }
 
-nightly_python() {
+nightly_estimator() {
     set -ex
-    cd /work/mxnet/tests/nightly/
-    export PYTHONPATH=/work/mxnet/python/
-    nosetests test_dropout_with_seed.py
     cd /work/mxnet/tests/nightly/estimator
     export PYTHONPATH=/work/mxnet/python/
     nosetests test_estimator_cnn.py
