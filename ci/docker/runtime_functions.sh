@@ -522,6 +522,29 @@ build_ubuntu_cpu_cmake_debug() {
     popd
 }
 
+build_ubuntu_cpu_cmake_no_tvm_op() {
+    set -ex
+    pushd .
+    cd /work/build
+    build_ccache_wrappers
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DUSE_CUDA=OFF \
+        -DUSE_TVM_OP=OFF \
+        -DPython3_EXECUTABLE=/usr/bin/python3 \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_OPENMP=OFF \
+        -DUSE_OPENCV=ON \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DCMAKE_BUILD_TYPE=Release \
+        -G Ninja \
+        /work/mxnet
+
+    ninja -v
+    popd
+}
+
 build_ubuntu_cpu_cmake_asan() {
     set -ex
 
@@ -793,6 +816,27 @@ build_ubuntu_gpu_cuda101_cudnn7() {
     make cython PYTHON=python3
 }
 
+build_ubuntu_gpu_cuda101_cudnn7_no_tvm_op() {
+    set -ex
+    build_ccache_wrappers
+    make \
+        DEV=1                                     \
+        USE_BLAS=openblas                         \
+        USE_MKLDNN=0                              \
+        USE_CUDA=1                                \
+        USE_CUDA_PATH=/usr/local/cuda             \
+        USE_CUDNN=1                               \
+        USE_TVM_OP=0                              \
+        USE_CPP_PACKAGE=1                         \
+        USE_DIST_KVSTORE=1                        \
+        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
+        USE_SIGNAL_HANDLER=1                      \
+        -j$(nproc)
+
+    make cython PYTHON=python2
+    make cython PYTHON=python3
+}
+
 build_ubuntu_amalgamation() {
     set -ex
     # Amalgamation can not be run with -j nproc
@@ -850,6 +894,33 @@ build_ubuntu_gpu_cmake() {
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
         -DUSE_TVM_OP=ON                         \
+        -DPython3_EXECUTABLE=/usr/bin/python3   \
+        -DUSE_MKL_IF_AVAILABLE=OFF              \
+        -DUSE_MKLML_MKL=OFF                     \
+        -DUSE_MKLDNN=OFF                        \
+        -DUSE_DIST_KVSTORE=ON                   \
+        -DCMAKE_BUILD_TYPE=Release              \
+        -DCUDA_ARCH_NAME=Manual                 \
+        -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+        -DBUILD_CYTHON_MODULES=1                \
+        -G Ninja                                \
+        /work/mxnet
+
+    ninja -v
+}
+
+build_ubuntu_gpu_cmake_no_tvm_op() {
+    set -ex
+    cd /work/build
+    build_ccache_wrappers
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
+        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache   \
+        -DUSE_SIGNAL_HANDLER=ON                 \
+        -DUSE_CUDA=ON                           \
+        -DUSE_CUDNN=ON                          \
+        -DUSE_TVM_OP=OFF                        \
         -DPython3_EXECUTABLE=/usr/bin/python3   \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
         -DUSE_MKLML_MKL=OFF                     \
@@ -1311,8 +1382,8 @@ integrationtest_ubuntu_gpu_dist_kvstore() {
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     cd tests/nightly/
-    ../../tools/launch.py -n 7 --launcher local python dist_device_sync_kvstore.py
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=init_gpu
+    ../../tools/launch.py -n 4 --launcher local python dist_device_sync_kvstore.py
+    ../../tools/launch.py -n 4 --launcher local python dist_sync_kvstore.py --type=init_gpu
     popd
 }
 

@@ -1597,6 +1597,27 @@ def test_minimum():
     assert z[-1][-1] == 3
 
 
+def test_pad():
+    x = create_2d_tensor(rows=SMALL_Y-2, columns=LARGE_X//2-2, dtype=np.float32).reshape(1 , 1, SMALL_Y-2, LARGE_X//2-2)
+    y = nd.pad(x, mode="edge", pad_width=(0, 0, 0, 0, 1, 1, 1, 1))
+    assert y[0][0][1][0] == 0
+    assert y[0][0][1][-1] == 0
+    assert y[0][0][-1][0] == SMALL_Y-3
+    assert y[0][0][-1][-1] == SMALL_Y-3
+    assert y.shape == (1, 1, SMALL_Y, LARGE_X//2)
+
+
+def test_gather():
+    arr = mx.nd.ones((LARGE_X, SMALL_Y))
+    idx = mx.nd.random.randint(0, LARGE_X, SMALL_X)
+    # Calls gather_nd internally
+    tmp = arr[idx]
+    assert np.sum(tmp[0] == 1) == SMALL_Y
+    # Calls gather_nd internally
+    arr[idx] += 1
+    assert np.sum(arr[idx[0]] == 2) == SMALL_Y
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

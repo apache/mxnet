@@ -21,8 +21,7 @@ from __future__ import absolute_import
 from ...context import current_context
 from . import _internal as _npi
 
-
-__all__ = ['randint', 'uniform', 'normal']
+__all__ = ['randint', 'uniform', 'normal', 'rand']
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -84,6 +83,33 @@ def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
         high = low
         low = 0
     return _npi.random_randint(low, high, shape=size, dtype=dtype, ctx=ctx, out=out)
+
+
+def rand(*size, **kwargs):
+    r"""Random values in a given shape.
+
+    Create an array of the given shape and populate it with random
+    samples from a uniform distribution over [0, 1).
+    Parameters
+    ----------
+    d0, d1, ..., dn : int, optional
+        The dimensions of the returned array, should be all positive.
+        If no argument is given a single Python float is returned.
+    Returns
+    -------
+    out : ndarray
+       Random values.
+    Examples
+    --------
+    >>> np.random.rand(3,2)
+    array([[ 0.14022471,  0.96360618],  #random
+           [ 0.37601032,  0.25528411],  #random
+           [ 0.49313049,  0.94909878]]) #random
+    """
+    output_shape = ()
+    for s in size:
+        output_shape += (s,)
+    return uniform(0, 1, size=output_shape, **kwargs)
 
 
 def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):

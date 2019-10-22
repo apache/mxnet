@@ -55,7 +55,7 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'add', 'subtrac
            'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming',
            'blackman', 'flip', 'around', 'arctan2', 'hypot', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril',
            'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
-           'greater_equal', 'less_equal', 'hsplit', 'rot90']
+           'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide']
 
 # Return code for dispatching indexing function call
 _NDARRAY_UNSUPPORTED_INDEXING = -1
@@ -134,11 +134,47 @@ _NUMPY_ARRAY_UFUNC_DICT = {}
 @set_module('mxnet.numpy')  # pylint: disable=invalid-name
 class ndarray(NDArray):
     """
+    ndarray(handle, writable=True):
+
     An array object represents a multidimensional, homogeneous array of fixed-size items.
     An associated data-type object describes the format of each element in the array
     (its byte-order, how many bytes it occupies in memory, whether it is an integer, a
     floating point number, or something else, etc.). Arrays should be constructed using
     `array`, `zeros` or `empty`. Currently, only c-contiguous arrays are supported.
+
+    Arrays should be constructed using `array`, `zeros` or `empty` (refer
+    to the See Also section below).  The parameters given here refer to
+    a low-level method (`ndarray(...)`) for instantiating an array.
+
+    For more information, refer to the `mxnet.numpy` module and examine the
+    methods and attributes of an array.
+
+    Parameters
+    ----------
+    handle: int
+        The ndarray handle in backend (C++).
+    writable: bool
+        Indicates whether inplace-assignment is allowed for the array.
+
+    Attributes
+    ----------
+    T : ndarray
+        Transpose of the array.
+    dtype : dtype object
+        Describes the format of the elements in the array.
+    size : int
+        Number of elements in the array.
+    ndim : int
+        The array's number of dimensions.
+    shape : tuple of ints
+        Shape of the array.
+
+    See Also
+    --------
+    array : Construct an array.
+    zeros : Create an array, each element of which is zero.
+    empty : Create an array, but leave its allocated memory unchanged (i.e.,
+            it contains "garbage").
     """
 
     @staticmethod
@@ -286,9 +322,139 @@ class ndarray(NDArray):
 
     # pylint: disable=too-many-return-statements
     def __getitem__(self, key):
-        """
-        Overriding the method in NDArray class in a numpy fashion.
-        Calling numpy ndarray's _get_np_basic_indexing(key) and _get_np_advanced_indexing(key).
+        """Return self[key].
+
+        Returns a sliced view of this array if the elements fetched are contiguous in memory;
+        otherwise, returns a newly created NDArray.
+        This functions supports advanced indexing defined in the following reference with
+        some restrictions. Boolean indexing is supported only for a single boolean ndarray
+        as a key. Mixing boolean ndarray with other index types is not supported in ``advanced``
+        indexing.
+
+        For basic indexing, i.e., if ``key`` consists only of integers,
+        ``slice``, ``Ellipsis`` (``...``) and ``None``, a mutable view is
+        returned that shares memory with this array if the accessed portion is
+        contiguous in memory.
+        Otherwise, a newly created ``ndarray`` is returned.
+
+        This functions supports advanced indexing as defined in `the NumPy
+        advanced indexing documentation
+        <https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#advanced-indexing>`_.
+
+        Parameters
+        ----------
+        key : int, slice, list, np.ndarray, mx.np.ndarray, or tuple of all previous types
+            Indexing key.
+
+        Examples
+        --------
+        The default is to give explicit indices for all axes:
+
+        >>> x = np.arange(6).reshape(2, 3)
+        >>> x
+        array([[0., 1., 2.],
+               [3., 4., 5.]])
+        >>> x[0, :2]
+        array([0., 1.])
+        >>> x[:, :-1]
+        array([[0., 1.],
+               [3., 4.]])
+
+        If fewer indices are given, they are automatically supplemented by an
+        appropriate number of ``slice(None)`` ("``:``") to the right. For
+        instance, a single integer indexes along the first axis:
+
+        >>> x[0]
+        array([0., 1., 2.])
+        >>> x[1:]
+        array([[3., 4., 5.]])
+
+        To omit a range of axes that should be kept as-is, an `Ellipsis`
+        ("``...``") can be used:
+
+        >>> x = np.arange(16).reshape(2, 2, 2, 2)
+        >>> x[0, ..., 1]
+        array([[1., 3.],
+               [5., 7.]])
+        >>> x[0, :, :, 1]  # equivalent
+        array([[1., 3.],
+               [5., 7.]])
+
+        New axes of length 1 can be created by inserting ``None``
+        (`numpy.newaxis`) in the index:
+
+        >>> x = np.arange(6).reshape(2, 3)
+        >>> x[None, :, :]
+        array([[[0., 1., 2.],
+                [3., 4., 5.]]])
+        >>> x[None, :, :].shape
+        (1, 2, 3)
+
+        If the indexed portion of the array is contiguous in memory, no data
+        is copied. Instead, a shared-memory view of the original array is
+        returned, and changes to that view affect the original array:
+
+        >>> x = np.arange(8).reshape(2, 2, 2)
+        >>> y = x[0]  # contiguous
+        >>> y
+        array([[0., 1.],
+               [2., 3.]])
+        >>> y[:] = -1
+        >>> x
+        array([[[-1., -1.],
+                [-1., -1.]],
+               [[ 4.,  5.],
+                [ 6.,  7.]]])
+        >>> x = np.arange(8).reshape(2, 2, 2)
+        >>> y = x[1, :1, :]  # contiguous
+        >>> y
+        array([[4., 5.]])
+        >>> y[:] = -1
+        >>> x
+        array([[[ 0.,  1.],
+                [ 2.,  3.]],
+               [[-1., -1.],
+                [ 6.,  7.]]])
+        >>> x = np.arange(0, 8).reshape(2, 2, 2)
+        >>> y = x[:, :, 1]  # not contiguous
+        >>> y
+        array([[1., 3.],
+               [5., 7.]])
+        >>> y[:] = -1
+        >>> x
+        array([[[0., 1.],
+                [2., 3.]],
+               [[4., 5.],
+                [6., 7.]]])
+
+        If the indexing key contains `list`, `numpy.ndarray` or `NDArray`
+        objects, advanced indexing is triggered, which always returns a
+        copy:
+
+        >>> x = np.arange(8).reshape(2, 2, 2)
+        >>> x[[0, 1]]
+        array([[[0., 1.],
+                [2., 3.]],
+               [[4., 5.],
+                [6., 7.]]])
+        >>> x[[0, 1], :]  # equivalent
+        array([[[0., 1.],
+                [2., 3.]],
+               [[4., 5.],
+                [6., 7.]]])
+        >>> y = np.array([0, 1], dtype='int32')
+        >>> x[1:, y]
+        array([[[4., 5.],
+                [6., 7.]]])
+        >>> y = np.array([0, 1], dtype='int32')
+        >>> x[1:, y]
+        array([[[4., 5.],
+                [6., 7.]]])
+
+        Get negative elements in an ndarray through boolean array indexing
+        >>> x = np.array([1., -1., -2., 3])
+        >>> x[x < 0]
+        array([-1., -2.])
         """
         # handling possible boolean indexing first
         ndim = self.ndim
@@ -356,11 +522,51 @@ class ndarray(NDArray):
             raise RuntimeError
 
     def __setitem__(self, key, value):
-        """
-        x.__setitem__(i, y) <=> x[i]=y
-        Sets ``self[key]`` to ``value``.
+        """Sets ``self[key]`` to ``value``.
 
-        Overriding the method in NDArray class in a numpy fashion.
+        This functions supports advanced indexing as defined in `the NumPy
+        advanced indexing documentation
+        <https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#advanced-indexing>`_,
+        with the restriction that boolean array indexing is not supported.
+
+        Parameters
+        ----------
+        key : int, slice, list, np.ndarray, mx.np.ndarray, or tuple of all previous types
+            The indexing key.
+        value : scalar or array-like object that can be broadcast to the shape of self[key]
+            The value to set.
+
+        Examples
+        --------
+        >>> x = np.zeros((2, 3))
+        >>> x[:] = 1
+        >>> x
+        array([[ 1.,  1.,  1.],
+               [ 1.,  1.,  1.]])
+        >>> x[:, 1:2] = 2
+        >>> x
+        array([[ 1.,  2.,  1.],
+               [ 1.,  2.,  1.]])
+        >>> x[1:2, 1:] = 3
+        >>> x
+        array([[ 1.,  2.,  1.],
+               [ 1.,  3.,  3.]])
+        >>> x[1:, 0:2] = np.zeros((1, 2))
+        >>> x
+        array([[ 1.,  2.,  1.],
+               [ 0.,  0.,  3.]])
+        >>> x[1, 2] = 4
+        >>> x
+        array([[ 1.,  2.,  1.],
+               [ 0.,  0.,  4.]])
+        >>> x[[0], [1, 2]] = 5
+        >>> x
+        array([[ 1.,  5.,  5.],
+               [ 0.,  0.,  4.]])
+        >>> x[::-1, 0:2:2] = [6]
+        >>> x
+        array([[ 6.,  5.,  5.],
+               [ 6.,  0.,  4.]])
         """
         if isinstance(value, NDArray) and not isinstance(value, ndarray):
             raise TypeError('Cannot assign mx.nd.NDArray to mxnet.numpy.ndarray')
@@ -496,25 +702,16 @@ class ndarray(NDArray):
         return self.__mul__(other)
 
     def __div__(self, other):
-        raise AttributeError('ndarray.__div__ is replaced by __truediv__. If you are using'
-                             ' Python2, please use the statement from __future__ import division'
-                             ' to change the / operator to mean true division throughout the'
-                             ' module. If you are using Python3, this error should not have'
-                             ' been encountered.')
+        """x.__div__(y) <=> x / y"""
+        return divide(self, other)
 
     def __rdiv__(self, other):
-        raise AttributeError('ndarray.__rdiv__ is replaced by __rtruediv__. If you are using'
-                             ' Python2, please use the statement from __future__ import division'
-                             ' to change the / operator to mean true division throughout the'
-                             ' module. If you are using Python3, this error should not have'
-                             ' been encountered.')
+        """x.__rdiv__(y) <=> y / x"""
+        return divide(other, self)
 
     def __idiv__(self, other):
-        raise AttributeError('ndarray.__idiv__ is replaced by __irtruediv__. If you are using'
-                             ' Python2, please use the statement from __future__ import division'
-                             ' to change the / operator to mean true division throughout the'
-                             ' module. If you are using Python3, this error should not have'
-                             ' been encountered.')
+        """x.__idiv__(y) <=> x /= y"""
+        return divide(self, other, out=self)
 
     def __truediv__(self, other):
         """x.__truediv__(y) <=> x / y"""
@@ -525,6 +722,7 @@ class ndarray(NDArray):
         return divide(other, self)
 
     def __itruediv__(self, other):
+        """x.__itruediv__(y) <=> x /= y"""
         return divide(self, other, out=self)
 
     def __mod__(self, other):
@@ -2214,6 +2412,35 @@ def divide(x1, x2, out=None, **kwargs):
         This is a scalar if both x1 and x2 are scalars.
     """
     return _mx_nd_np.divide(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+def true_divide(x1, x2, out=None):
+    """Returns a true division of the inputs, element-wise.
+
+    Instead of the Python traditional 'floor division', this returns a true
+    division.  True division adjusts the output type to present the best
+    answer, regardless of input types.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Dividend array.
+
+    x2 : ndarray or scalar
+        Divisor array.
+
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        This is a scalar if both x1 and x2 are scalars.
+    """
+    return _mx_nd_np.true_divide(x1, x2, out=out)
 
 
 @set_module('mxnet.numpy')
@@ -5959,3 +6186,236 @@ def hsplit(ary, indices_or_sections):
     [array([0., 1.]), array([], dtype=float32), array([2., 3.])]
     """
     return _mx_nd_np.hsplit(ary, indices_or_sections)
+
+
+@set_module('mxnet.numpy')
+def einsum(*operands, **kwargs):
+    r"""
+    einsum(subscripts, *operands, out=None, optimize=False)
+
+    Evaluates the Einstein summation convention on the operands.
+
+    Using the Einstein summation convention, many common multi-dimensional,
+    linear algebraic array operations can be represented in a simple fashion.
+    In *implicit* mode `einsum` computes these values.
+
+    In *explicit* mode, `einsum` provides further flexibility to compute
+    other array operations that might not be considered classical Einstein
+    summation operations, by disabling, or forcing summation over specified
+    subscript labels.
+
+    See the notes and examples for clarification.
+
+    Parameters
+    ----------
+    subscripts : str
+        Specifies the subscripts for summation as comma separated list of
+        subscript labels. An implicit (classical Einstein summation)
+        calculation is performed unless the explicit indicator '->' is
+        included as well as subscript labels of the precise output form.
+    operands : list of ndarray
+        These are the arrays for the operation.
+    out : ndarray, optional
+        If provided, the calculation is done into this array.
+    optimize : {False, True}, optional
+        Controls if intermediate optimization should occur. No optimization
+        will occur if False. Defaults to False.
+
+    Returns
+    -------
+    output : ndarray
+        The calculation based on the Einstein summation convention.
+
+    Notes
+    -----
+    The Einstein summation convention can be used to compute
+    many multi-dimensional, linear algebraic array operations. `einsum`
+    provides a succinct way of representing these.
+
+    A non-exhaustive list of these operations,
+    which can be computed by `einsum`, is shown below along with examples:
+
+    * Trace of an array, :py:func:`np.trace`.
+    * Return a diagonal, :py:func:`np.diag`.
+    * Array axis summations, :py:func:`np.sum`.
+    * Transpositions and permutations, :py:func:`np.transpose`.
+    * Matrix multiplication and dot product, :py:func:`np.matmul` :py:func:`np.dot`.
+    * Vector inner and outer products, :py:func:`np.inner` :py:func:`np.outer`.
+    * Broadcasting, element-wise and scalar multiplication, :py:func:`np.multiply`.
+    * Tensor contractions, :py:func:`np.tensordot`.
+
+    The subscripts string is a comma-separated list of subscript labels,
+    where each label refers to a dimension of the corresponding operand.
+    Whenever a label is repeated it is summed, so ``np.einsum('i,i', a, b)``
+    is equivalent to :py:func:`np.inner(a,b) <np.inner>`. If a label
+    appears only once, it is not summed, so ``np.einsum('i', a)`` produces a
+    view of ``a`` with no changes. A further example ``np.einsum('ij,jk', a, b)``
+    describes traditional matrix multiplication and is equivalent to
+    :py:func:`np.matmul(a,b) <np.matmul>`. Repeated subscript labels in one
+    operand take the diagonal. For example, ``np.einsum('ii', a)`` is equivalent
+    to :py:func:`np.trace(a) <np.trace>`.
+
+    In *implicit mode*, the chosen subscripts are important
+    since the axes of the output are reordered alphabetically.  This
+    means that ``np.einsum('ij', a)`` doesn't affect a 2D array, while
+    ``np.einsum('ji', a)`` takes its transpose. Additionally,
+    ``np.einsum('ij,jk', a, b)`` returns a matrix multiplication, while,
+    ``np.einsum('ij,jh', a, b)`` returns the transpose of the
+    multiplication since subscript 'h' precedes subscript 'i'.
+
+    In *explicit mode* the output can be directly controlled by
+    specifying output subscript labels.  This requires the
+    identifier '->' as well as the list of output subscript labels.
+    This feature increases the flexibility of the function since
+    summing can be disabled or forced when required. The call
+    ``np.einsum('i->', a)`` is like :py:func:`np.sum(a, axis=-1) <np.sum>`,
+    and ``np.einsum('ii->i', a)`` is like :py:func:`np.diag(a) <np.diag>`.
+    The difference is that `einsum` does not allow broadcasting by default.
+    Additionally ``np.einsum('ij,jh->ih', a, b)`` directly specifies the
+    order of the output subscript labels and therefore returns matrix
+    multiplication, unlike the example above in implicit mode.
+
+    To enable and control broadcasting, use an ellipsis.  Default
+    NumPy-style broadcasting is done by adding an ellipsis
+    to the left of each term, like ``np.einsum('...ii->...i', a)``.
+    To take the trace along the first and last axes,
+    you can do ``np.einsum('i...i', a)``, or to do a matrix-matrix
+    product with the left-most indices instead of rightmost, one can do
+    ``np.einsum('ij...,jk...->ik...', a, b)``.
+
+    When there is only one operand, no axes are summed, and no output
+    parameter is provided, a view into the operand is returned instead
+    of a new array.  Thus, taking the diagonal as ``np.einsum('ii->i', a)``
+    produces a view.
+
+    The ``optimize`` argument which will optimize the contraction order
+    of an einsum expression. For a contraction with three or more operands this
+    can greatly increase the computational efficiency at the cost of a larger
+    memory footprint during computation.
+
+    Typically a 'greedy' algorithm is applied which empirical tests have shown
+    returns the optimal path in the majority of cases. 'optimal' is not supported
+    for now.
+
+    This function differs from the original `numpy.einsum
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.einsum.html>`_ in
+    the following way(s):
+
+    - Does not support 'optimal' strategy
+    - Does not support the alternative subscript like
+        `einsum(op0, sublist0, op1, sublist1, ..., [sublistout])`
+    - Does not produce view in any cases
+
+    Examples
+    --------
+    >>> a = np.arange(25).reshape(5,5)
+    >>> b = np.arange(5)
+    >>> c = np.arange(6).reshape(2,3)
+
+    Trace of a matrix:
+
+    >>> np.einsum('ii', a)
+    array(60.)
+
+    Extract the diagonal (requires explicit form):
+
+    >>> np.einsum('ii->i', a)
+    array([ 0.,  6., 12., 18., 24.])
+
+    Sum over an axis (requires explicit form):
+
+    >>> np.einsum('ij->i', a)
+    array([ 10.,  35.,  60.,  85., 110.])
+    >>> np.sum(a, axis=1)
+    array([ 10.,  35.,  60.,  85., 110.])
+
+    For higher dimensional arrays summing a single axis can be done with ellipsis:
+
+    >>> np.einsum('...j->...', a)
+    array([ 10.,  35.,  60.,  85., 110.])
+
+    Compute a matrix transpose, or reorder any number of axes:
+
+    >>> np.einsum('ji', c)
+    array([[0., 3.],
+           [1., 4.],
+           [2., 5.]])
+    >>> np.einsum('ij->ji', c)
+    array([[0., 3.],
+           [1., 4.],
+           [2., 5.]])
+    >>> np.transpose(c)
+    array([[0., 3.],
+           [1., 4.],
+           [2., 5.]])
+
+    Vector inner products:
+
+    >>> np.einsum('i,i', b, b)
+    array(30.)
+
+    Matrix vector multiplication:
+
+    >>> np.einsum('ij,j', a, b)
+    array([ 30.,  80., 130., 180., 230.])
+    >>> np.dot(a, b)
+    array([ 30.,  80., 130., 180., 230.])
+    >>> np.einsum('...j,j', a, b)
+    array([ 30.,  80., 130., 180., 230.])
+
+    Broadcasting and scalar multiplication:
+
+    >>> np.einsum('..., ...', np.array(3), c)
+    array([[ 0.,  3.,  6.],
+           [ 9., 12., 15.]])
+    >>> np.einsum(',ij', np.array(3), c)
+    array([[ 0.,  3.,  6.],
+           [ 9., 12., 15.]])
+    >>> np.multiply(3, c)
+    array([[ 0.,  3.,  6.],
+           [ 9., 12., 15.]])
+
+    Vector outer product:
+
+    >>> np.einsum('i,j', np.arange(2)+1, b)
+    array([[0., 1., 2., 3., 4.],
+           [0., 2., 4., 6., 8.]])
+
+    Tensor contraction:
+
+    >>> a = np.arange(60.).reshape(3,4,5)
+    >>> b = np.arange(24.).reshape(4,3,2)
+    >>> np.einsum('ijk,jil->kl', a, b)
+    array([[4400., 4730.],
+           [4532., 4874.],
+           [4664., 5018.],
+           [4796., 5162.],
+           [4928., 5306.]])
+
+    Example of ellipsis use:
+
+    >>> a = np.arange(6).reshape((3,2))
+    >>> b = np.arange(12).reshape((4,3))
+    >>> np.einsum('ki,jk->ij', a, b)
+    array([[10., 28., 46., 64.],
+           [13., 40., 67., 94.]])
+    >>> np.einsum('ki,...k->i...', a, b)
+    array([[10., 28., 46., 64.],
+           [13., 40., 67., 94.]])
+    >>> np.einsum('k...,jk', a, b)
+    array([[10., 28., 46., 64.],
+           [13., 40., 67., 94.]])
+
+    Chained array operations. For more complicated contractions, speed ups
+    might be achieved by repeatedly computing a 'greedy' path. Performance
+    improvements can be particularly significant with larger arrays:
+
+    >>> a = np.ones(64).reshape(2,4,8)
+    # Basic `einsum`: ~42.22ms  (benchmarked on 3.4GHz Intel Xeon.)
+    >>> for iteration in range(500):
+    ...     np.einsum('ijk,ilm,njm,nlk,abc->',a,a,a,a,a)
+    # Greedy `einsum` (faster optimal path approximation): ~0.117ms
+    >>> for iteration in range(500):
+    ...     np.einsum('ijk,ilm,njm,nlk,abc->',a,a,a,a,a, optimize=True)
+    """
+    return _mx_nd_np.einsum(*operands, **kwargs)
