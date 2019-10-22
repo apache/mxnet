@@ -415,40 +415,80 @@ class EinsumOp {
   }
 };  // class EinsumOp
 
+// template<int dimension, int req, bool back>
+// struct numpy_einsum {
+//   template<typename DType>
+//   MSHADOW_XINLINE static void Map(index_t i, DType* out,
+//                                   common::StaticArray<DType*, NPY_MAXARGS> op,
+//                                   mshadow::Shape<dimension> oshape,
+//                                   mshadow::Shape<dimension> ostride,
+//                                   mshadow::Shape<dimension> reduceshape,
+//                                   mshadow::Shape<dimension> reducestride,
+//                                   mshadow::Shape<dimension> itershape,
+//                                   common::StaticArray<mshadow::Shape<dimension>,
+//                                                       NPY_MAXARGS> iterstride,
+//                                   int nop,
+//                                   int iop0,
+//                                   const DType* out_grad) {
+//     using namespace mxnet_op;
+//     index_t oidx = back ? dot(unravel(dot(unravel(i, oshape), ostride), itershape),
+//                               iterstride[iop0]) : i;
+//     if (req == kWriteTo) {
+//       out[oidx] = (DType)0;
+//     }
+//     for (index_t j = 0; j < reduceshape.Size(); j++) {
+//       mshadow::Shape<dimension> idx = unravel(dot(unravel(j, reduceshape), reducestride) +
+//                                               dot(unravel(i, oshape), ostride),
+//                                               itershape);
+//       DType tmp = back ? out_grad[dot(idx, iterstride[nop])] :  (DType)1;
+//       for (int iop = 0; iop < nop; ++iop) {
+//         if (iop != iop0) {
+//           index_t k = dot(idx, iterstride[iop]);
+//           tmp = tmp * op[iop][k];
+//         }
+//       }
+//       out[oidx] = out[oidx] + tmp;
+//     }
+//   }
+// };
+
 template<int dimension, int req, bool back>
-struct numpy_einsum {
+struct numpy_einsum{
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType* out,
                                   common::StaticArray<DType*, NPY_MAXARGS> op,
                                   mshadow::Shape<dimension> oshape,
-                                  mshadow::Shape<dimension> ostride,
-                                  mshadow::Shape<dimension> reduceshape,
-                                  mshadow::Shape<dimension> reducestride,
-                                  mshadow::Shape<dimension> itershape,
                                   common::StaticArray<mshadow::Shape<dimension>,
-                                                      NPY_MAXARGS> iterstride,
+                                                      NPY_MAXARGS> ostride,
+                                  mshadow::Shape<dimension> reduceshape,
+                                  common::StaticArray<mshadow::Shape<dimension>,
+                                                      NPY_MAXARGS> rstride,
                                   int nop,
                                   int iop0,
                                   const DType* out_grad) {
     using namespace mxnet_op;
-    index_t oidx = back ? dot(unravel(dot(unravel(i, oshape), ostride), itershape),
-                              iterstride[iop0]) : i;
+    mshadow::Shape<dimension> oidx = unravel(i, oshape);
+    i = back ? dot(oidx, ostride[iop0]) : i;
     if (req == kWriteTo) {
-      out[oidx] = (DType)0;
+      out[i] = (DType)0;
     }
-    for (int j = 0; j < reduceshape.Size(); j++) {
-      mshadow::Shape<dimension> idx = unravel(dot(unravel(j, reduceshape), reducestride) +
-                                              dot(unravel(i, oshape), ostride),
-                                              itershape);
-      DType tmp = back ? out_grad[dot(idx, iterstride[nop])] :  (DType)1;
+    for (int rdim = 0; rdim < dimension; ++rdim) {
+      if (reduceshape[rdim] == 0) {
+        return;
+      }
+    }
+    mshadow::Shape<dimension> ridx = unravel(0, reduceshape);
+    do {
+      DType tmp = back ? out_grad[dot(oidx, ostride[nop]) +
+                                  dot(ridx, rstride[nop])]: (DType) 1;
       for (int iop = 0; iop < nop; ++iop) {
         if (iop != iop0) {
-          index_t k = dot(idx, iterstride[iop]);
+          index_t k = dot(oidx, ostride[iop]) + dot(ridx, rstride[iop]);
           tmp = tmp * op[iop][k];
         }
       }
-      out[oidx] = out[oidx] + tmp;
-    }
+      out[i] = out[i] + tmp;
+    }while (inc(&ridx, reduceshape));
   }
 };
 
@@ -606,9 +646,9 @@ inline void NumpyEinsumProcess(const std::vector<TBlob>& inputs,
   TShape itershape(ndim_iter, -1), iterstride_true(ndim_iter, -1);
   TShape oshape = back ? inputs[0].shape_ : outputs[0].shape_;
   TShape ostride_true = get_stride(oshape);
-  TShape reduceshape, ostride, reducestride;
+  TShape reduceshape;
   std::vector<TShape> iterstride(nop + 1, TShape(ndim_iter, 0));
-  std::vector<TShape> remainshape(nop), opstride(nop), remainstride(nop);
+  std::vector<TShape> remainshape(nop);
   int op_axes_arrays[NPY_MAXARGS][NPY_MAXDIMS];
   int *op_axes[NPY_MAXARGS];
 
@@ -648,30 +688,6 @@ inline void NumpyEinsumProcess(const std::vector<TBlob>& inputs,
     remainshape[iop] = TShape(rsh.begin(), rsh.end());
   }
 
-  // calculate stride
-  ostride = TShape(ndim_output, 0);
-  for (idim = 0; idim < ndim_output; ++idim) {
-    ostride[idim] = iterstride_true[idim];
-  }
-  reducestride = TShape(ndim_iter - ndim_output, 0);
-  for (idim = ndim_output; idim < ndim_iter; ++idim) {
-    reducestride[idim - ndim_output] = iterstride_true[idim];
-  }
-  for (iop = 0; iop < nop; ++iop) {
-    opstride[iop] = TShape(opshape[iop].ndim(), 0);
-    remainstride[iop] = TShape(remainshape[iop].ndim(), 0);
-    int j = 0;
-    for (idim = 0; idim < ndim_iter; ++idim) {
-      if (op_axes_arrays[iop][idim] != -1 &&
-          itershape[idim] == opshape[iop][op_axes_arrays[iop][idim]]) {
-        opstride[iop][op_axes_arrays[iop][idim]] = iterstride_true[idim];
-      } else {
-        remainstride[iop][j++] = iterstride_true[idim];
-      }
-    }
-    CHECK_EQ(j, remainstride[iop].ndim());
-  }
-
   // exclude the 0-dim case
   if (ndim_iter == 0) {
     ndim_iter = 1;
@@ -681,14 +697,10 @@ inline void NumpyEinsumProcess(const std::vector<TBlob>& inputs,
     iterstride[iop] = pad(iterstride[iop], ndim_iter);
   }
   oshape = pad(oshape, ndim_iter);
-  ostride = pad(ostride, ndim_iter);
   reduceshape = pad(reduceshape, ndim_iter);
-  reducestride = pad(reducestride, ndim_iter);
   for (iop = 0; iop < nop; ++iop) {
     opshape[iop] = pad(opshape[iop], ndim_iter);
-    opstride[iop] = pad(opstride[iop], ndim_iter);
     remainshape[iop] = pad(remainshape[iop], ndim_iter);
-    remainstride[iop] = pad(remainstride[iop], ndim_iter);
   }
 
   if (!back) {
@@ -703,9 +715,16 @@ inline void NumpyEinsumProcess(const std::vector<TBlob>& inputs,
       }
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         MXNET_NDIM_SWITCH_EX(ndim_iter, dimension, {
-          mxnet::common::StaticArray<mshadow::Shape<dimension>, NPY_MAXARGS> iterstride_arr;
-          for (iop = 0; iop <= nop; ++iop) {
-            iterstride_arr[iop] = iterstride[iop].get<dimension>();
+          mxnet::common::StaticArray<mshadow::Shape<dimension>, NPY_MAXARGS> ostride_arr;
+          mxnet::common::StaticArray<mshadow::Shape<dimension>, NPY_MAXARGS> rstride_arr;
+          for (iop = 0; iop < nop; ++iop) {
+            mshadow::Shape<dimension> otmp, rtmp;
+            for (idim = 0; idim < dimension; ++idim) {
+              otmp[idim] = idim < ndim_output ? iterstride[iop][idim] : 1;
+              rtmp[idim] = idim < dimension - ndim_output ? iterstride[iop][idim + ndim_output] : 1;
+            }
+            ostride_arr[iop] = otmp;
+            rstride_arr[iop] = rtmp;
           }
           Kernel<numpy_einsum<dimension, req_type, 0>,
                  xpu>::Launch(ctx.get_stream<xpu>(),
@@ -713,11 +732,9 @@ inline void NumpyEinsumProcess(const std::vector<TBlob>& inputs,
                               out_data.dptr<DType>(),
                               op,
                               oshape.get<dimension>(),
-                              ostride.get<dimension>(),
+                              ostride_arr,
                               reduceshape.get<dimension>(),
-                              reducestride.get<dimension>(),
-                              itershape.get<dimension>(),
-                              iterstride_arr,
+                              rstride_arr,
                               nop,
                               -1,
                               reinterpret_cast<DType*>(NULL));
@@ -743,6 +760,19 @@ inline void NumpyEinsumProcess(const std::vector<TBlob>& inputs,
     for (int i = 0; i < nop; ++i) {
       const TBlob &out_data = outputs[i];
       const TBlob &out_grad = inputs[0];
+      std::vector<TShape> opstride(nop + 1, TShape(ndim_iter, 0));
+      std::vector<TShape> remainstride(nop + 1, TShape(ndim_iter, 0));
+      for (iop = 0; iop <= nop; ++iop) {
+        int j = 0;
+        for (idim = 0; idim < ndim_iter; ++idim) {
+          if (op_axes_arrays[i][idim] == -1 ||
+              opshape[i][op_axes_arrays[i][idim]] == 1) {
+            remainstride[iop][j++] = iterstride[iop][idim];
+          } else {
+            opstride[iop][op_axes_arrays[i][idim]] = iterstride[iop][idim];
+          }
+        }
+      }
       MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
         mxnet::common::StaticArray<DType*, NPY_MAXARGS> op;
         for (iop = 0; iop < nop; ++iop) {
@@ -750,24 +780,24 @@ inline void NumpyEinsumProcess(const std::vector<TBlob>& inputs,
         }
         MXNET_ASSIGN_REQ_SWITCH(req[i], req_type, {
           MXNET_NDIM_SWITCH_EX(ndim_iter, dimension, {
-            mxnet::common::StaticArray<mshadow::Shape<dimension>, NPY_MAXARGS> iterstride_arr;
+            mxnet::common::StaticArray<mshadow::Shape<dimension>, NPY_MAXARGS> opstride_arr;
+            mxnet::common::StaticArray<mshadow::Shape<dimension>, NPY_MAXARGS> remainstride_arr;
             for (iop = 0; iop <= nop; ++iop) {
-              iterstride_arr[iop] = iterstride[iop].get<dimension>();
+              opstride_arr[iop] = opstride[iop].get<dimension>();
+              remainstride_arr[iop] = remainstride[iop].get<dimension>();
             }
             Kernel<numpy_einsum<dimension, req_type, 1>,
                   xpu>::Launch(ctx.get_stream<xpu>(),
-                              opshape[i].Size(),
-                              out_data.dptr<DType>(),
-                              op,
-                              opshape[i].get<dimension>(),
-                              opstride[i].get<dimension>(),
-                              remainshape[i].get<dimension>(),
-                              remainstride[i].get<dimension>(),
-                              itershape.get<dimension>(),
-                              iterstride_arr,
-                              nop,
-                              i,
-                              out_grad.dptr<DType>());
+                               opshape[i].Size(),
+                               out_data.dptr<DType>(),
+                               op,
+                               opshape[i].get<dimension>(),
+                               opstride_arr,
+                               remainshape[i].get<dimension>(),
+                               remainstride_arr,
+                               nop,
+                               i,
+                               out_grad.dptr<DType>());
           })
         })
       })
@@ -798,13 +828,14 @@ inline void NumpyEinsumForward(const OpStatePtr& state_ptr,
   std::vector<std::vector<int> > pos;
   std::string string_repr;
   paths = einsum_path(state.subscripts, inputs, true, ctx.run_ctx, &pos, &string_repr);
-  int paths_len = paths.size(), temp_space_size = 0, max_temp_space_size = 0;
+  int paths_len = paths.size();
+  size_t temp_space_size = 0, max_temp_space_size = 0;
   std::vector<TBlob> operands(inputs), tmp_operands, temp_space_vec(paths_len - 1);
   for (int i = 0; i + 1 < paths_len; ++i) {
     temp_space_size += paths[i].oshape.Size();
   }
   for (int i = 0; i < paths_len; ++i) {
-    max_temp_space_size = std::max(max_temp_space_size, static_cast<int>(paths[i].oshape.Size()));
+    max_temp_space_size = std::max(max_temp_space_size, paths[i].oshape.Size());
   }
   temp_space_size += max_temp_space_size;
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
@@ -813,7 +844,7 @@ inline void NumpyEinsumForward(const OpStatePtr& state_ptr,
                                                false,
                                                outputs[0].type_flag_));
     Tensor<xpu, 1, DType> temp_space = state.tempspace->data().FlatTo1D<xpu, DType>();
-    int begin = max_temp_space_size;
+    size_t begin = max_temp_space_size;
     for (int i = 0; i < paths_len - 1; ++i) {
       TBlob tblob = TBlob(temp_space.Slice(begin, begin + paths[i].oshape.Size()));
       temp_space_vec[i] = tblob.reshape(paths[i].oshape);
@@ -910,12 +941,13 @@ inline void NumpyEinsumBackward(const OpStatePtr& state_ptr,
   }
   // calculate temporary space size for temp_grad
   const std::vector<Step>& paths = state.paths;
-  int paths_len = paths.size(), temp_space_size = 0, max_temp_space_size = 0;
+  int paths_len = paths.size();
+  size_t temp_space_size = 0, max_temp_space_size = 0;
   for (int i = 0; i < paths_len - 1; ++i) {
     temp_space_size += paths[i].oshape.Size();
   }
   for (int i = 0; i < paths_len; ++i) {
-    max_temp_space_size = std::max(max_temp_space_size, static_cast<int>(paths[i].oshape.Size()));
+    max_temp_space_size = std::max(max_temp_space_size, paths[i].oshape.Size());
   }
   temp_space_size += max_temp_space_size;
   // replay the forward process
@@ -936,8 +968,8 @@ inline void NumpyEinsumBackward(const OpStatePtr& state_ptr,
     }
   }
   // calculate temporary space size for tensordot
-  int tensordot_max_tempspace_size = 0;
-  int begin_tensordot_tempspace = 0;
+  size_t tensordot_max_tempspace_size = 0;
+  size_t begin_tensordot_tempspace = 0;
   std::vector<TBlob> temp_inputs, temp_outputs;
   std::vector<OpReqType> temp_req;
   std::vector<size_t> tensordot_tempspace_size;
@@ -999,7 +1031,7 @@ inline void NumpyEinsumBackward(const OpStatePtr& state_ptr,
       }
       tensordot_tempspace_size.push_back(cur_tensordot_tempspace_size);
       tensordot_max_tempspace_size = std::max(tensordot_max_tempspace_size,
-                                              static_cast<int>(cur_tensordot_tempspace_size));
+                                              cur_tensordot_tempspace_size);
     }
     begin_tensordot_tempspace = temp_space_size;
     temp_space_size += (tensordot_max_tempspace_size + sizeof(DType) - 1) / sizeof(DType);
@@ -1010,7 +1042,7 @@ inline void NumpyEinsumBackward(const OpStatePtr& state_ptr,
     // allocate temporary space for gradients of intermediate results
     Tensor<xpu, 1, DType> temp_space = ctx.requested[0].get_space_typed<xpu, 1, DType>
       (Shape1(temp_space_size), s);
-    int begin = max_temp_space_size;
+    size_t begin = max_temp_space_size;
     for (int i = 0; i + 1 < paths_len; ++i) {
       TBlob tblob = TBlob(temp_space.Slice(begin, begin + paths[i].oshape.Size()));
       temp_grad[i] = tblob.reshape(paths[i].oshape);
