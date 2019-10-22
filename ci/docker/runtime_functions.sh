@@ -1396,8 +1396,7 @@ nightly_test_imagenet_inference() {
     set -ex
     echo $PWD
     cp /work/mxnet/build/cpp-package/example/imagenet_inference .
-    cd /work/mxnet/build/cpp-package/example/inference
-    ./unit_test_imagenet_inference.sh
+    /work/mxnet/cpp-package/example/inference/unit_test_imagenet_inference.sh
 }
 
 #Runs a simple MNIST training example
