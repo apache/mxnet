@@ -38,7 +38,11 @@ wget -nc https://raw.githubusercontent.com/dmlc/gluon-cv/master/gluoncv/model_zo
 cd ../data
 wget -nc http://data.mxnet.io/data/val_256_q90.rec
 cd ..
-
+echo $PWD
+echo "lib path"
+ls -al ../../../lib
+echo "current file"
+ls -al .
 # Running inference on imagenet.
 if [ "$(uname)" == "Darwin" ]; then
     echo ">>> INFO: FP32 real data"
