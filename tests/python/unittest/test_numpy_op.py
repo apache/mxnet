@@ -34,6 +34,7 @@ import random
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
 from mxnet.numpy_op_signature import _get_builtin_op
 from mxnet.test_utils import is_op_runnable, has_tvm_ops
+from mxnet.operator import get_all_registered_operators
 
 
 @with_seed()
@@ -3164,10 +3165,15 @@ def test_np_take():
 def test_np_builtin_op_signature():
     import inspect
     from mxnet import _numpy_op_doc
-    for op_name in dir(_numpy_op_doc):
+    builtin_np_op_names = [name for name in get_all_registered_operators() if name.startswith('_np_')]
+    for op_name in builtin_np_op_names:
+        _op_from_doc = getattr(_numpy_op_doc, op_name, None)
+        assert _op_from_doc is not None, "Failed to find documentation for operator {}. " \
+                                         "Please add the documentation in _numpy_op_doc.py for this operator."\
+            .format(op_name)
         op = _get_builtin_op(op_name)
-        if op is not None:
-            assert str(op.__signature__) == str(inspect.signature(getattr(_numpy_op_doc, op_name)))
+        assert op is not None
+        assert str(op.__signature__) == str(inspect.signature(_op_from_doc))
 
 
 @with_seed()
