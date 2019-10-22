@@ -1071,7 +1071,7 @@ def test_log_softmax():
 def test_iadd():
     a = nd.array(np.ones((SMALL_Y, LARGE_X)))
     b = nd.array(np.ones((SMALL_Y, LARGE_X)))
-    c = b+a
+    c = b + a
     assert c.shape == a.shape
     assert c[0][-1] == 2
 
@@ -1079,7 +1079,7 @@ def test_iadd():
 def test_isub():
     a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
     b = nd.array(np.ones((SMALL_Y, LARGE_X)))
-    c = a-b
+    c = a - b
     assert c.shape == a.shape
     assert c[0][-1] == 2
 
@@ -1087,7 +1087,7 @@ def test_isub():
 def test_imul():
     a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
     b = nd.array(np.ones((SMALL_Y, LARGE_X)))
-    c = b*a
+    c = b * a
     assert c.shape == a.shape
     assert c[0][-1] == 3
 
@@ -1095,7 +1095,7 @@ def test_imul():
 def test_idiv():
     a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 4)))
     b = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 2)))
-    c = a/b
+    c = a / b
     assert c.shape == a.shape
     assert c[0][-1] == 2
 
