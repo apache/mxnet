@@ -1200,15 +1200,15 @@ def test_logical():
 
     def test_logical_or(a, b):
         mx_res = mx.nd.logical_or(a, b)
-        assert_almost_equal(mx_res[-1][-1].asnumpy(), np.logical_and(a[-1][-1].asnumpy(), b[-1][-1].asnumpy()))
+        assert_almost_equal(mx_res[-1][-1].asnumpy(), np.logical_or(a[-1][-1].asnumpy(), b[-1][-1].asnumpy()))
 
     def test_logical_not(a, b):
         mx_res = mx.nd.logical_not(a, b)
-        assert_almost_equal(mx_res[-1][-1].asnumpy(), np.logical_and(a[-1][-1].asnumpy(), b[-1][-1].asnumpy()))
+        assert_almost_equal(mx_res[-1][-1].asnumpy(), np.logical_not(a[-1][-1].asnumpy(), b[-1][-1].asnumpy()))
 
     def test_logical_xor(a, b):
         mx_res = mx.nd.logical_xor(a, b)
-        assert_almost_equal(mx_res[-1][-1].asnumpy(), np.logical_and(a[-1][-1].asnumpy(), b[-1][-1].asnumpy()))
+        assert_almost_equal(mx_res[-1][-1].asnumpy(), np.logical_xor(a[-1][-1].asnumpy(), b[-1][-1].asnumpy()))
 
     a = mx.nd.ones((LARGE_X, SMALL_Y))
     b = mx.nd.zeros((LARGE_X, SMALL_Y))
