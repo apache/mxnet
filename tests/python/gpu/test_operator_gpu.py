@@ -2508,37 +2508,6 @@ def test_arange_like_dtype():
         for v in out:
             assert v.dtype == t
 
-@with_seed()
-@unittest.skipIf(mx.context.num_gpus() < 2,
-                 "test_dropout_with_seed_multi_gpu needs more than 1 GPU")
-def test_dropout_with_seed_multi_gpu():
-    assert mx.context.num_gpus() > 1
-    data1 = mx.nd.ones((100, 100), ctx=mx.gpu(0))
-    data2 = mx.nd.ones((100, 100), ctx=mx.gpu(1))
-
-    dropout = mx.gluon.nn.Dropout(0.5)
-
-    info = np.iinfo(np.int32)
-    seed = np.random.randint(info.min, info.max)
-
-    mx.random.seed(seed, ctx=mx.gpu(0))
-    with mx.autograd.record():
-        result1 = dropout(data1)
-
-    mx.random.seed(seed, ctx=mx.gpu(0))
-    with mx.autograd.record():
-        result2 = dropout(data1)
-
-    mx.random.seed(seed, ctx=mx.gpu(0))
-    with mx.autograd.record():
-        result3 = dropout(data2)
-
-    assert_almost_equal(result1.asnumpy(), result2.asnumpy())
-    # dropout on gpu1 should return different result
-    # with fixed seed only on gpu0
-    with assert_raises(AssertionError):
-        assert_almost_equal(result2.asnumpy(), result3.asnumpy())
-
 
 if __name__ == '__main__':
     import nose
