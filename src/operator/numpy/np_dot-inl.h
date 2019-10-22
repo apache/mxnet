@@ -63,7 +63,13 @@ inline void NumpyDotForward(const nnvm::NodeAttrs& attrs,
       //         of a and the 2nd-to-last axis of b
       const Tuple<int> a_axes_summed({a_shape.ndim() - 1});
       const Tuple<int> b_axes_summed({b_shape.ndim() - 2});
-      TensordotImpl<xpu>(a_axes_summed, b_axes_summed, ctx, a, b, out, req);
+      size_t workspace_size = TensordotWorkspaceSize<xpu>(a_axes_summed,
+                                                          b_axes_summed,
+                                                          a, b, out,
+                                                          req);
+      Tensor<xpu, 1, char> workspace = ctx.requested[0].get_space_typed<xpu, 1, char>(
+        Shape1(workspace_size), ctx.get_stream<xpu>());
+      TensordotImpl<xpu>(a_axes_summed, b_axes_summed, ctx, a, b, out, req, workspace);
     }
   });
 }
@@ -98,8 +104,14 @@ inline void NumpyDotBackward(const nnvm::NodeAttrs& attrs,
       //         of a and the 2nd-to-last axis of b
       const Tuple<int> a_axes_summed({a_shape.ndim() - 1});
       const Tuple<int> b_axes_summed({b_shape.ndim() - 2});
+      size_t workspace_size = TensordotBackwardWorkspaceSize<xpu>(a_axes_summed, b_axes_summed,
+                                                                  ograd, a, b, grad_a,
+                                                                  grad_b, req);
+      Tensor<xpu, 1, char> workspace =
+        ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size),
+                                                       ctx.get_stream<xpu>());
       TensordotBackwardImpl<xpu>(a_axes_summed, b_axes_summed, ctx, ograd, a, b, grad_a,
-          grad_b, req);
+                                 grad_b, req, workspace);
     }
   });
 }

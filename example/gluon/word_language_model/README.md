@@ -29,7 +29,7 @@ The following techniques have been adopted for SOTA results:
 
 ### Wiki Text
 
-The wikitext-2 data is from [(The wikitext long term dependency language modeling dataset)](https://www.salesforce.com/products/einstein/ai-research/the-wikitext-dependency-language-modeling-dataset/). The training script automatically loads the dataset into `$PWD/data`.
+The wikitext-2 data is from [(The wikitext long term dependency language modeling dataset)](https://blog.einstein.ai/the-wikitext-long-term-dependency-language-modeling-dataset/). The training script automatically loads the dataset into `$PWD/data`.
 
 
 ## Usage

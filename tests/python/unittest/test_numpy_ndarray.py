@@ -1098,6 +1098,18 @@ def test_np_get_dtype():
             assert type(mx_arr.dtype) == type(np_arr.dtype)
 
 
+@use_np
+def test_np_ndarray_pickle():
+    a = np.random.uniform(size=(4, 5))
+    a_copy = a.copy()
+    import pickle
+    with open("np_ndarray_pickle_test_file", 'wb') as f:
+        pickle.dump(a_copy, f)
+    with open("np_ndarray_pickle_test_file", 'rb') as f:
+        a_load = pickle.load(f)
+    same(a.asnumpy(), a_load.asnumpy())
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

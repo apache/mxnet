@@ -27,6 +27,15 @@ import threading
 from .base import _LIB, check_call
 
 
+_np_ufunc_default_kwargs = {
+    'where': True,
+    'casting': 'same_kind',
+    'order': 'K',
+    'dtype': None,
+    'subok': True,
+}
+
+
 def makedirs(d):
     """Create directories recursively if they don't exist. os.makedirs(exist_ok=True) is not
     available in Python2"""
@@ -556,6 +565,106 @@ def use_np(func):
         A function or class wrapped in the Numpy-shape and NumPy-array scope.
     """
     return use_np_shape(use_np_array(func))
+
+
+def np_ufunc_legal_option(key, value):
+    """
+    Checking if ufunc arguments are legal inputs
+
+    Parameters
+    ----------
+    key : string
+        the key of the ufunc argument.
+    value : string
+        the value of the ufunc argument.
+
+    Returns
+    -------
+    legal : boolean
+        Whether or not the argument is a legal one. True when the key is one of the ufunc
+        arguments and value is an allowed value. False when the key is not one of the ufunc
+        arugments or the value is not an allowed value even when the key is a legal one.
+    """
+    if key == 'where':
+        return True
+    elif key == 'casting':
+        return (value in set(['no', 'equiv', 'safe', 'same_kind', 'unsafe']))
+    elif key == 'order':
+        if isinstance(value, str):
+            return True
+    elif key == 'dtype':
+        import numpy as _np
+        return (value in set([_np.int8, _np.uint8, _np.int32, _np.int64,
+                              _np.float16, _np.float32, _np.float64,
+                              'int8', 'uint8', 'int32', 'int64',
+                              'float16', 'float32', 'float64']))
+    elif key == 'subok':
+        return isinstance(value, bool)
+    return False
+
+
+def wrap_np_unary_func(func):
+    """A convenience decorator for wrapping numpy-compatible unary ufuncs to provide uniform
+    error handling.
+
+    Parameters
+    ----------
+    func : a numpy-compatible unary function to be wrapped for better error handling.
+
+    Returns
+    -------
+    Function
+        A function wrapped with proper error handling.
+    """
+    @wraps_safely(func)
+    def _wrap_np_unary_func(x, out=None, **kwargs):
+        if len(kwargs) != 0:
+            for key, value in kwargs.items():
+                # if argument is not in the set of ufunc arguments
+                if key not in _np_ufunc_default_kwargs:
+                    raise TypeError("{} is an invalid keyword to function \'{}\'".format(key, func.__name__))
+                # if argument is one of the ufunc arguments, but not with the default value
+                if value != _np_ufunc_default_kwargs[key]:
+                    # if the provided value of the argument is a legal option, raise NotImplementedError
+                    if np_ufunc_legal_option(key, value):
+                        raise NotImplementedError("{}={} is not implemented yet for operator {}"
+                                                  .format(key, str(value), func.__name__))
+                    # otherwise raise TypeError with not understood error message
+                    raise TypeError("{}={} not understood for operator {}"
+                                    .format(key, value, func.__name__))
+        return func(x, out=out)
+    return _wrap_np_unary_func
+
+
+def wrap_np_binary_func(func):
+    """A convenience decorator for wrapping numpy-compatible binary ufuncs to provide uniform
+    error handling.
+
+    Parameters
+    ----------
+    func : a numpy-compatible binary function to be wrapped for better error handling.
+
+    Returns
+    -------
+    Function
+        A function wrapped with proper error handling.
+    """
+    @wraps_safely(func)
+    def _wrap_np_binary_func(x1, x2, out=None, **kwargs):
+        if len(kwargs) != 0:
+            for key, value in kwargs.items():
+                # if argument is not in the set of ufunc arguments
+                if key not in _np_ufunc_default_kwargs:
+                    raise TypeError("{} is an invalid keyword to function \'{}\'".format(key, func.__name__))
+                # if argument is one of the ufunc arguments, but not with the default value
+                if value != _np_ufunc_default_kwargs[key]:
+                    # if the provided value of the argument is a legal option, raise NotImplementedError
+                    if np_ufunc_legal_option(key, value):
+                        raise NotImplementedError("{}={} is not implemented yet".format(key, str(value)))
+                    # otherwise raise TypeError with not understood error message
+                    raise TypeError("{} {} not understood".format(key, value))
+        return func(x1, x2, out=out)
+    return _wrap_np_binary_func
 
 
 def _set_np_array(active):
