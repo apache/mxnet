@@ -2931,6 +2931,7 @@ def test_big_transpose():
     assert_allclose(x_np, z.asnumpy().astype('uint8'))
 
 
+@with_seed()
 def test_larger_transpose():
     x = mx.nd.random.normal(shape=(50,51))
     y = mx.nd.transpose(x)
