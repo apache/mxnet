@@ -1462,6 +1462,14 @@ nightly_test_installation() {
     source ./tests/jenkins/run_test_installation_docs.sh docs/install/index.md 1 1686; ${1}
 }
 
+# Runs Imagenet inference
+nightly_test_imagenet_inference() {
+    set -ex
+    echo $PWD
+    cp /work/mxnet/build/cpp-package/example/imagenet_inference .
+    /work/mxnet/cpp-package/example/inference/unit_test_imagenet_inference.sh
+}
+
 #Runs a simple MNIST training example
 nightly_test_image_classification() {
     set -ex
