@@ -20,7 +20,7 @@
 
 Setting the learning rate for stochastic gradient descent (SGD) is crucially important when training neural network because it controls both the speed of convergence and the ultimate performance of the network. Set the learning too low and you could be twiddling your thumbs for quite some time as the parameters update very slowly. Set it too high and the updates will skip over optimal solutions, or worse the optimizer might not converge at all!
 
-Leslie Smith from the U.S. Naval Research Laboratory presented a method for finding a good learning rate in a paper called ["Cyclical Learning Rates for Training Neural Networks"](https://arxiv.org/abs/1506.01186). We implement this method in MXNet (with the Gluon API) and create a 'Learning Rate Finder' which you can use while training your own networks. We take a look at the central idea of the paper, cyclical learning rate schedules, in the ['Advanced Learning Rate Schedules'](https://mxnet.apache.org/tutorials/gluon/learning_rate_schedules_advanced.html) tutorial.
+Leslie Smith from the U.S. Naval Research Laboratory presented a method for finding a good learning rate in a paper called ["Cyclical Learning Rates for Training Neural Networks"](https://arxiv.org/abs/1506.01186). We implement this method in MXNet (with the Gluon API) and create a 'Learning Rate Finder' which you can use while training your own networks. We take a look at the central idea of the paper, cyclical learning rate schedules, in the ['Advanced Learning Rate Schedules'](/api/python/docs/tutorials/packages/gluon/training/learning_rates/learning_rate_schedules_advanced.html) tutorial.
 
 ## Simple Idea
 
@@ -63,7 +63,7 @@ class Learner():
         self.net.initialize(mx.init.Xavier(), ctx=self.ctx)
         self.loss_fn = mx.gluon.loss.SoftmaxCrossEntropyLoss()
         self.trainer = mx.gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': .001})
-        
+
     def iteration(self, lr=None, take_step=True):
         """
         :param lr: learning rate to use for iteration (float)
@@ -81,9 +81,9 @@ class Learner():
         with mx.autograd.record():
             output = self.net(data)
             loss = self.loss_fn(output, label)
-        loss.backward()     
+        loss.backward()
         # Update parameters
-        if take_step: self.trainer.step(data.shape[0])  
+        if take_step: self.trainer.step(data.shape[0])
         # Set and return loss.
         self.iteration_loss = mx.nd.mean(loss).asscalar()
         return self.iteration_loss
@@ -102,7 +102,7 @@ from mxnet.gluon.data.vision import transforms
 transform = transforms.Compose([
     # Switches HWC to CHW, and converts to `float32`
     transforms.ToTensor(),
-    # Channel-wise, using pre-computed means and stds 
+    # Channel-wise, using pre-computed means and stds
     transforms.Normalize(mean=[0.4914, 0.4822, 0.4465],
                          std=[0.2023, 0.1994, 0.2010])
 ])
@@ -143,7 +143,7 @@ class LRFinder():
            and save and load parameters of the network (Learner)
         """
         self.learner = learner
-        
+
     def find(self, lr_start=1e-6, lr_multiplier=1.1, smoothing=0.3):
         """
         :param lr_start: learning rate to start search (float)
@@ -175,7 +175,7 @@ class LRFinder():
         self.learner.net.load_parameters("lr_finder.params", ctx=self.learner.ctx)
         self.learner.trainer.load_states("lr_finder.state")
         return self.results
-        
+
     def plot(self):
         lrs = [e[0] for e in self.results]
         losses = [e[1] for e in self.results]
@@ -209,7 +209,7 @@ class LRFinderStoppingCriteria():
         self.first_loss = None
         self.running_mean = None
         self.counter = 0
-        
+
     def __call__(self, loss):
         """
         :param loss: from single iteration (float)
@@ -327,6 +327,6 @@ Although we get quite similar results to when we set the learning rate at 0.05 (
 
 ## Wrap Up
 
-Give Learning Rate Finder a try on your current projects, and experiment with the different learning rate schedules found in the tutorials [here](https://mxnet.apache.org/tutorials/gluon/learning_rate_schedules.html) and [here](https://mxnet.apache.org/tutorials/gluon/learning_rate_schedules_advanced.html).
+Give Learning Rate Finder a try on your current projects, and experiment with the different learning rate schedules found in the [basic learning rate tutorial](/api/python/docs/tutorials/packages/gluon/training/learning_rates/learning_rate_schedules.html) and the [advanced learning rate tutorial](/api/python/docs/tutorials/packages/gluon/training/learning_rates/learning_rate_schedules_advanced.html).
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

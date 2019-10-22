@@ -21,10 +21,10 @@
 This guide will introduce you to managing CPU versus GPU contexts for handling data.
 
 This content was extracted and simplified from the gluon tutorials in
-[Dive Into Deep Learning](http://gluon.io/).
+[Dive Into Deep Learning](https://d2l.ai/).
 
 ## Prerequisites
-* [MXNet installed (with GPU support) in a Python environment](../../../install/index.html?language=Python).
+* [MXNet installed (with GPU support) in a Python environment](/get_started).
 * Python 2.7.x or Python 3.x
 * **One or more GPUs**
 

@@ -101,6 +101,9 @@ if("$ENV{VERBOSE}" STREQUAL "1")
   set(CMAKE_VERBOSE_MAKEFILE ON)
 endif()
 
+#Switch off modern thread local for dmlc-core, please see: https://github.com/dmlc/dmlc-core/issues/571#issuecomment-543467484
+add_definitions(-DDMLC_MODERN_THREAD_LOCAL=0)
+
 
 if(MSVC)
   add_definitions(-DWIN32_LEAN_AND_MEAN)

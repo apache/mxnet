@@ -160,6 +160,18 @@ def restore_artifact(variant, libtype) {
   }
 }
 
+
+// Restores the statically linked libmxnet for the given variant
+def restore_static_libmxnet(variant) {
+  restore_artifact(variant, 'static')
+}
+
+
+// Restores the dynamically linked libmxnet for the given variant
+def restore_dynamic_libmxnet(variant) {
+  restore_artifact(variant, 'dynamic')
+}
+
 // A generic pipeline that can be used by *most* CD jobs
 // It can be used when implementing the pipeline steps in the Jenkins_steps.groovy
 // script for a particular delivery channel. However, it should also implement the

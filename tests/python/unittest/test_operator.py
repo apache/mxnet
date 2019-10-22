@@ -716,6 +716,23 @@ def test_swapaxes():
 
     assert_almost_equal(out, swap_)
 
+    config = [((1, 1, 2), 0, 1),
+              ((1, 1, 2), -1, -2),
+              ((4, 5, 6, 7), 1, 1),
+              ((4, 5, 6, 7), 2, 3),
+              ((4, 5, 6, 7), -2, 2),
+              ((4, 5, 6, 7), -2, -3)]
+
+    for shape, axis1, axis2 in config:
+        data_np = np.random.uniform(size=shape)
+        data_mx = mx.nd.array(data_np, dtype=data_np.dtype)
+        ret_np = np.swapaxes(data_np, axis1=axis1, axis2=axis2)
+        ret_mx = mx.symbol.SwapAxis(data, dim1=axis1, dim2=axis2)
+        exe_c = ret_mx.bind(default_context(), args=[data_mx])
+        exe_c.forward(is_train=True)
+        out = exe_c.outputs[0]
+        assert_almost_equal(out, ret_np)
+
 
 @with_seed()
 def test_scalarop():
