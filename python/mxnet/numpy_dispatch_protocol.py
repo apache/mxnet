@@ -84,6 +84,7 @@ def with_array_ufunc_protocol(func):
 
 _NUMPY_ARRAY_FUNCTION_LIST = [
     'argmax',
+    'around',
     'broadcast_arrays',
     'broadcast_to',
     'clip',
@@ -93,6 +94,8 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'dot',
     'expand_dims',
     'fix',
+    'flip',
+    'inner',
     'max',
     'mean',
     'min',
@@ -108,13 +111,21 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'std',
     'sum',
     'swapaxes',
+    'take',
     'tensordot',
     'tile',
     'transpose',
+    'unique',
     'var',
+    'vdot',
+    'vstack',
     'zeros_like',
+    'linalg.norm',
+    'trace',
+    'tril',
     'meshgrid',
-    'outer'
+    'outer',
+    'einsum'
 ]
 
 
@@ -160,11 +171,17 @@ def _register_array_function():
 
 # https://docs.scipy.org/doc/numpy/reference/ufuncs.html#available-ufuncs
 _NUMPY_ARRAY_UFUNC_LIST = [
+    'abs',
     'add',
+    'arctan2',
+    'copysign',
+    'degrees',
+    'hypot',
+    'lcm',
+    # 'ldexp',
     'subtract',
     'multiply',
-    # Uncomment divide when mxnet.numpy.true_divide is added
-    # 'divide',
+    'true_divide',
     'negative',
     'power',
     'mod',
@@ -199,6 +216,12 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'trunc',
     'floor',
     'logical_not',
+    'equal',
+    'not_equal',
+    'less',
+    'less_equal',
+    'greater',
+    'greater_equal'
 ]
 
 

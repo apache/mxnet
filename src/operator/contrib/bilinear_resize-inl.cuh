@@ -62,7 +62,9 @@ static unsigned getNumThreads(int nElem, const bool smaller) {
 
 // caffe_gpu_interp2_kernel overloading with Tensor<xpu, 3, DType>
 template<typename xpu, typename Dtype, typename Acctype>
-__global__ void caffe_gpu_interp2_kernel(const int n,
+__global__ void
+__launch_bounds__(cuda::kMaxThreadsPerBlock, 1)
+caffe_gpu_interp2_kernel(const int n,
     const Acctype rheight, const Acctype rwidth,
     const Tensor<xpu, 3, Dtype> data1,
     Tensor<xpu, 3, Dtype> data2,
@@ -111,7 +113,9 @@ __global__ void caffe_gpu_interp2_kernel(const int n,
 
 // caffe_gpu_interp2_kernel overloading with Tensor<xpu, 4, DType>
 template<typename xpu, typename Dtype, typename Acctype>
-__global__ void caffe_gpu_interp2_kernel(const int n,
+__global__ void
+__launch_bounds__(cuda::kMaxThreadsPerBlock, 1)
+caffe_gpu_interp2_kernel(const int n,
     const Acctype rheight, const Acctype rwidth,
     const Tensor<xpu, 4, Dtype> data1,
     Tensor<xpu, 4, Dtype> data2,

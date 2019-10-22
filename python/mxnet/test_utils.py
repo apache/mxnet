@@ -565,6 +565,9 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
                 b = b.asnumpy()
 
     if use_np_allclose:
+        if hasattr(a, 'dtype') and a.dtype == np.bool_ and hasattr(b, 'dtype') and b.dtype == np.bool_:
+            np.testing.assert_equal(a, b)
+            return
         if almost_equal(a, b, rtol, atol, equal_nan=equal_nan):
             return
     else:

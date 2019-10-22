@@ -94,6 +94,8 @@ include $(DMLC_CORE)/make/dmlc.mk
 # all tge possible warning tread
 WARNFLAGS= -Wall -Wsign-compare
 CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
+# use old thread local implementation in DMLC-CORE
+CFLAGS += -DDMLC_MODERN_THREAD_LOCAL=0
 
 ifeq ($(DEV), 1)
 	CFLAGS += -g -Werror
@@ -670,7 +672,7 @@ cpplint:
 	--exclude_path src/operator/contrib/ctc_include include/mkldnn
 
 pylint:
-	python3 -m pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py
+	python3 -m pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet
 
 # sample lib for MXNet extension dynamically loading custom operator
 sample_lib:
