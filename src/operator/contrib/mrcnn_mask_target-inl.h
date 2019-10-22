@@ -45,8 +45,8 @@ namespace mrcnn_index {
 struct MRCNNMaskTargetParam : public dmlc::Parameter<MRCNNMaskTargetParam> {
   int num_rois;
   int num_classes;
-  int mask_size;
   int sample_ratio;
+  mxnet::TShape mask_size;
 
   DMLC_DECLARE_PARAMETER(MRCNNMaskTargetParam) {
     DMLC_DECLARE_FIELD(num_rois)
@@ -54,7 +54,8 @@ struct MRCNNMaskTargetParam : public dmlc::Parameter<MRCNNMaskTargetParam> {
     DMLC_DECLARE_FIELD(num_classes)
     .describe("Number of classes.");
     DMLC_DECLARE_FIELD(mask_size)
-    .describe("Size of the pooled masks.");
+    .set_expect_ndim(2).enforce_nonzero()
+    .describe("Size of the pooled masks height and width: (h, w).");
     DMLC_DECLARE_FIELD(sample_ratio).set_default(2)
     .describe("Sampling ratio of ROI align. Set to -1 to use adaptative size.");
   }
@@ -91,7 +92,8 @@ inline bool MRCNNMaskTargetShape(const NodeAttrs& attrs,
   CHECK_EQ(tshape[0], batch_size) << " batch size should be the same for all the inputs.";
 
   // out: 2 * (B, N, C, MS, MS)
-  auto oshape = Shape5(batch_size, num_rois, param.num_classes, param.mask_size, param.mask_size);
+  auto oshape = Shape5(batch_size, num_rois, param.num_classes,
+                       param.mask_size[0], param.mask_size[1]);
   out_shape->clear();
   out_shape->push_back(oshape);
   out_shape->push_back(oshape);

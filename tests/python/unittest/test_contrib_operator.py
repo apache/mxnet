@@ -359,7 +359,7 @@ def test_op_mrcnn_mask_target():
 
     num_rois = 2
     num_classes = 4
-    mask_size = 3
+    mask_size = (3, 3)
     ctx = mx.gpu(0)
     # (B, N, 4)
     rois = mx.nd.array([[[2.3, 4.3, 2.2, 3.3],
