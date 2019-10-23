@@ -415,43 +415,6 @@ class EinsumOp {
   }
 };  // class EinsumOp
 
-// template<int dimension, int req, bool back>
-// struct numpy_einsum {
-//   template<typename DType>
-//   MSHADOW_XINLINE static void Map(index_t i, DType* out,
-//                                   common::StaticArray<DType*, NPY_MAXARGS> op,
-//                                   mshadow::Shape<dimension> oshape,
-//                                   mshadow::Shape<dimension> ostride,
-//                                   mshadow::Shape<dimension> reduceshape,
-//                                   mshadow::Shape<dimension> reducestride,
-//                                   mshadow::Shape<dimension> itershape,
-//                                   common::StaticArray<mshadow::Shape<dimension>,
-//                                                       NPY_MAXARGS> iterstride,
-//                                   int nop,
-//                                   int iop0,
-//                                   const DType* out_grad) {
-//     using namespace mxnet_op;
-//     index_t oidx = back ? dot(unravel(dot(unravel(i, oshape), ostride), itershape),
-//                               iterstride[iop0]) : i;
-//     if (req == kWriteTo) {
-//       out[oidx] = (DType)0;
-//     }
-//     for (index_t j = 0; j < reduceshape.Size(); j++) {
-//       mshadow::Shape<dimension> idx = unravel(dot(unravel(j, reduceshape), reducestride) +
-//                                               dot(unravel(i, oshape), ostride),
-//                                               itershape);
-//       DType tmp = back ? out_grad[dot(idx, iterstride[nop])] :  (DType)1;
-//       for (int iop = 0; iop < nop; ++iop) {
-//         if (iop != iop0) {
-//           index_t k = dot(idx, iterstride[iop]);
-//           tmp = tmp * op[iop][k];
-//         }
-//       }
-//       out[oidx] = out[oidx] + tmp;
-//     }
-//   }
-// };
-
 template<int dimension, int req, bool back>
 struct numpy_einsum{
   template<typename DType>
@@ -643,11 +606,11 @@ inline void NumpyEinsumProcess(const std::vector<TBlob>& inputs,
   }
 
   /* Step 4: Set up the op_axes for the iterator */
-  TShape itershape(ndim_iter, -1), iterstride_true(ndim_iter, -1);
+  TShape itershape(ndim_iter, -1);
+  std::vector<TShape> iterstride(nop + 1, TShape(ndim_iter, 0));
   TShape oshape = back ? inputs[0].shape_ : outputs[0].shape_;
   TShape ostride_true = get_stride(oshape);
   TShape reduceshape;
-  std::vector<TShape> iterstride(nop + 1, TShape(ndim_iter, 0));
   std::vector<TShape> remainshape(nop);
   int op_axes_arrays[NPY_MAXARGS][NPY_MAXDIMS];
   int *op_axes[NPY_MAXARGS];
@@ -672,7 +635,6 @@ inline void NumpyEinsumProcess(const std::vector<TBlob>& inputs,
   for (idim = 0; idim < ndim_output; ++idim) {
     iterstride[nop][idim] = ostride_true[idim];
   }
-  iterstride_true = get_stride(itershape);
   reduceshape = TShape(ndim_iter - ndim_output, 0);
   for (idim = ndim_output; idim < ndim_iter; ++idim) {
     reduceshape[idim - ndim_output] = itershape[idim];
