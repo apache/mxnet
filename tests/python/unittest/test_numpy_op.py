@@ -998,7 +998,7 @@ def test_npx_batch_dot():
                         with mx.autograd.record():
                             out = f_batch_dot(lhs_val, rhs_val)
                         out.backward(o_grad)
-                        assert_almost_equal(out.asnumpy(), gt_out, rtol=1E-5, atol=1E-5)
+                        assert_almost_equal(out.asnumpy(), gt_out, rtol=1E-4, atol=1E-4)
                         gt_lhs_grad, gt_rhs_grad = gt_grad_batch_dot_numpy(lhs_val.asnumpy(),
                                                               rhs_val.asnumpy(),
                                                               o_grad.asnumpy(),
@@ -1008,8 +1008,8 @@ def test_npx_batch_dot():
                                                               rhs_req=rhs_grad_req,
                                                               init_lhs_grad=init_lhs_grad.asnumpy(),
                                                               init_rhs_grad=init_rhs_grad.asnumpy())
-                        assert_almost_equal(lhs_val.grad.asnumpy(), gt_lhs_grad, rtol=1E-5, atol=1E-5)
-                        assert_almost_equal(rhs_val.grad.asnumpy(), gt_rhs_grad, rtol=1E-5, atol=1E-5)
+                        assert_almost_equal(lhs_val.grad.asnumpy(), gt_lhs_grad, rtol=1E-4, atol=1E-4)
+                        assert_almost_equal(rhs_val.grad.asnumpy(), gt_rhs_grad, rtol=1E-4, atol=1E-4)
     for lhs_shape, rhs_shape, transpose_a, transpose_b in bad_configs:
         for dtype in dtypes:
             lhs_val = mx.np.array(_np.random.uniform(-1.0, 1.0, lhs_shape), dtype=dtype)
