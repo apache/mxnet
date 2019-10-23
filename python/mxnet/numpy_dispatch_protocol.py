@@ -117,6 +117,8 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'transpose',
     'unique',
     'var',
+    'vdot',
+    'vstack',
     'zeros_like',
     'linalg.norm',
     'trace',
@@ -214,6 +216,12 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'trunc',
     'floor',
     'logical_not',
+    'equal',
+    'not_equal',
+    'less',
+    'less_equal',
+    'greater',
+    'greater_equal'
 ]
 
 

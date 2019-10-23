@@ -1063,7 +1063,10 @@ fixed-size items.
 
         The ``ax_len`` is used to convert `slice` objects to integer arrays.
         """
-        idx_dtype = 'int32'
+        if sys.version_info[0] > 2 and _int64_enabled():
+            idx_dtype = 'int64'
+        else:
+            idx_dtype = 'int32'
         if isinstance(idx, NDArray):
             if idx.dtype != idx_dtype:
                 idx = idx.astype(idx_dtype)

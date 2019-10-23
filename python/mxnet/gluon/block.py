@@ -428,7 +428,7 @@ class Block(object):
         References
         ----------
         `Saving and Loading Gluon Models \
-        <https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html>`_
+        <https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/blocks/save_load_params.html>`_
         """
         params = self._collect_params_with_prefix()
         arg_dict = {key : val._reduce() for key, val in params.items()}
@@ -480,7 +480,7 @@ class Block(object):
         References
         ----------
         `Saving and Loading Gluon Models \
-        <https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html>`_
+        <https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/blocks/save_load_params.html>`_
         """
         if is_np_array():
             # failure may happen when loading parameters saved as NDArrays within
