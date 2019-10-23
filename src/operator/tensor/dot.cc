@@ -202,7 +202,6 @@ which is computed by::
   ret.emplace_back(nnvm::NodeEntry{rhs_grad, 0, 0});
   return ret;
 })
-//.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_batch_dot"})
 .add_argument("lhs", "NDArray-or-Symbol", "The first input")
 .add_argument("rhs", "NDArray-or-Symbol", "The second input")
 .add_arguments(DotParam::__FIELDS__());
