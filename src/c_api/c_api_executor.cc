@@ -519,7 +519,7 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
 namespace mxnet {
 
 template<typename DType>
-int SimpleBindExMaster(SymbolHandle symbol_handle,
+int _SimpleBindImpl(SymbolHandle symbol_handle,
                            int dev_type,
                            int dev_id,
                            const uint32_t num_g2c_keys,
@@ -820,7 +820,8 @@ int SimpleBindExMaster(SymbolHandle symbol_handle,
 
 
 /*!
- * \brief
+ * \brief Executor for simple_bind
+ * when INT64_TENSOR_SIZE = OFF
  * \param symbol_handle symbol handle
  * \param dev_type default device type
  * \param dev_id default device id
@@ -890,7 +891,7 @@ int MXExecutorSimpleBindEx(SymbolHandle symbol_handle,
                            NDArrayHandle** aux_states,
                            ExecutorHandle shared_exec_handle,
                            ExecutorHandle* out) {
-  return mxnet::SimpleBindExMaster(symbol_handle,
+  return mxnet::_SimpleBindImpl(symbol_handle,
                             dev_type, dev_id,
                             num_g2c_keys, g2c_keys, g2c_dev_types, g2c_dev_ids,
                             provided_grad_req_list_len, provided_grad_req_names,
@@ -909,6 +910,45 @@ int MXExecutorSimpleBindEx(SymbolHandle symbol_handle,
 }
 
 
+// TODO(ChaiBapchya): add API doc for rest of C APIs for int64
+/*!
+ * \brief Large tensor specific implementation for simple_bind executor
+ * when USE_INT64_TENSOR_SIZE = ON
+ * \param symbol_handle symbol handle
+ * \param dev_type default device type
+ * \param dev_id default device id
+ * \param num_g2c_keys number of group2ctx keys
+ * \param g2c_keys key list of group2ctx
+ * \param g2c_dev_types device type list of group2ctx
+ * \param g2c_dev_ids id list of group2ctx
+ * \param provided_grad_req_list_len grad_req length provided by users in front-end
+ * \param provided_grad_req_names grad_req names provided by users in front-end
+ * \param provided_grad_req_types req types provided by users in front-end
+ * \param num_provided_arg_shapes number of user provided in_arg and aux_state shapes
+ * \param provided_arg_shape_names name list of provided shapes
+ * \param provided_arg_shape_data provided shape data
+ * \param provided_arg_shape_idx provided shape data index
+ * \param num_provided_arg_dtypes number of user provided in_arg and axu_state dtypes
+ * \param provided_arg_dtype_names argument name list of provided dtypes
+ * \param provided_arg_dtypes data of provided dtypes
+ * \param num_provided_arg_stypes number of user provided in_arg and axu_state storage types
+ * \param provided_arg_stype_names argument name list of provided storage types
+ * \param provided_arg_stypes data of provided storage types
+ * \param num_shared_arg_names number of parameter names passed from _bind_ith_exec
+ * \param shared_arg_name_list parameter name list passed from _bind_ith_exec
+ * \param shared_buffer_len number of shared data arrays passed from _bind_ith_exec
+ * \param shared_buffer_name_list shared data array names passed from _bind_ith_exec
+ * \param shared_buffer_handle_list shared data array handles passed from _bind_ith_exec
+ * \param updated_shared_buffer_name_list updated shared data array names after binding
+ * \param updated_shared_buffer_handle_list updated shared data arrays after binding
+ * \param num_in_args number of input arguments of this sym
+ * \param in_args list_arguments associated with the current executor
+ * \param arg_grads list of gradients of in_args associated with the current executor
+ * \param num_aux_states number of aux states of this sym
+ * \param aux_states list_auxiliary_states associated with the current executor
+ * \param shared_exec_handle shared excutor handle passed from _bind_ith_exec
+ * \param out the handle of the executor to be created
+ */
 int MXExecutorSimpleBindEx64(SymbolHandle symbol_handle,
                            int dev_type,
                            int dev_id,
@@ -943,7 +983,7 @@ int MXExecutorSimpleBindEx64(SymbolHandle symbol_handle,
                            NDArrayHandle** aux_states,
                            ExecutorHandle shared_exec_handle,
                            ExecutorHandle* out) {
-  return mxnet::SimpleBindExMaster(symbol_handle,
+  return mxnet::_SimpleBindImpl(symbol_handle,
                             dev_type, dev_id,
                             num_g2c_keys, g2c_keys, g2c_dev_types, g2c_dev_ids,
                             provided_grad_req_list_len, provided_grad_req_names,
