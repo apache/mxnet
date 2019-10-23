@@ -42,10 +42,10 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot', 'histogram', 'eye',
            'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'split', 'vsplit', 'concatenate', 'append',
-           'stack', 'vstack', 'column_stack', 'dstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax',
-           'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index', 'hanning', 'hamming', 'blackman',
-           'flip', 'around', 'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril',
-           'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
+           'stack', 'vstack', 'column_stack', 'dstack', 'average', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip',
+           'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index', 'hanning', 'hamming',
+           'blackman', 'flip', 'around', 'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
+           'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
            'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'shares_memory',
            'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where']
 
@@ -3468,6 +3468,96 @@ def argmin(a, axis=None, out=None):
 
     """
     return _npi.argmin(a, axis=axis, keepdims=False, out=out)
+
+
+def average(a, axis=None, weights=None, returned=False, out=None):
+    """
+    Compute the weighted average along the specified axis.
+
+    Parameters
+    --------
+    a : _Symbol
+        Array containing data to be averaged.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which to average a.
+        The default, axis=None, will average over
+        all of the elements of the input array.
+        If axis is negative it counts from the last to the first axis.
+        New in version 1.7.0.
+        If axis is a tuple of ints, averaging is
+        performed on all of the axes specified in the tuple
+        instead of a single axis or all the axes as before.
+    weights : _Symbol, optional
+        An array of weights associated with the values in a, must be the same dtype with a.
+        Each value in a contributes to the average according to its associated weight.
+        The weights array can either be 1-D (in which case its length must be
+        the size of a along the given axis) or of the same shape as a.
+        If weights=None, then all data in a are assumed to have a weight equal to one.
+        The 1-D calculation is: avg = sum(a * weights) / sum(weights)
+        The only constraint on weights is that sum(weights) must not be 0.
+    returned : bool, optional
+        Default is False.
+        If True, the tuple (average, sum_of_weights) is returned,
+        otherwise only the average is returned.
+        If weights=None, sum_of_weights is equivalent to
+        the number of elements over which the average is taken.
+    out : _Symbol, optional
+        If provided, the calculation is done into this array.
+
+    Returns
+    --------
+    retval, [sum_of_weights] : _Symbol
+        Return the average along the specified axis.
+        When returned is True, return a tuple with the average as the first element
+        and the sum of the weights as the second element. sum_of_weights is of the same type as retval.
+        If a is integral, the result dtype will be float32, otherwise it will be the same as dtype of a.
+
+    Raises
+    --------
+        MXNetError
+        - When all weights along axis sum to zero.
+        - When the length of 1D weights is not the same as the shape of a along axis.
+        - When given 1D weights, the axis is not specified or is not int.
+        - When the shape of weights and a differ, but weights are not 1D.
+
+    See also
+    --------
+        mean
+
+    Notes
+    --------
+    This function differs from the original `numpy.average`
+    <https://numpy.org/devdocs/reference/generated/numpy.average.html>`_ in
+    the following way(s):
+
+    - Does not guarantee the same behavior with numpy when given float16 dtype and overflow happens
+    - Does not support complex dtype
+    - The dtypes of a and weights must be the same
+    - Integral a results in float32 returned dtype, not float64
+
+    Examples
+    --------
+    >>> data = np.arange(1, 5)
+    >>> data
+    array([1., 2., 3., 4.])
+    >>> np.average(data)
+    array(2.5)
+    >>> np.average(np.arange(1, 11), weights=np.arange(10, 0, -1))
+    array(4.)
+    >>> data = np.arange(6).reshape((3,2))
+    >>> data
+    array([[0., 1.],
+           [2., 3.],
+           [4., 5.]])
+    >>> weights = np.array([0.25, 0.75])
+    array([0.25, 0.75])
+    >>> np.average(data, axis=1, weights=weights)
+    array([0.75, 2.75, 4.75])
+    """
+    if weights is None:
+        return _npi.average(a, axis=axis, weights=None, returned=returned, weighted=False, out=out)
+    else:
+        return _npi.average(a, axis=axis, weights=weights, returned=returned, out=out)
 
 
 @set_module('mxnet.symbol.numpy')
