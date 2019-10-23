@@ -741,39 +741,6 @@ def test_logical():
     check_logical_xor(a, b)
 
 
-def test_regression():
-    shape = (LARGE_X, )
-
-    def check_regression(symbol, forward, shape):
-        # init executor
-        data_s = mx.symbol.Variable('data')
-        label_s = mx.symbol.Variable('label')
-        out_s = symbol(data=data_s, label=label_s)
-        exe = out_s.simple_bind(ctx=mx.cpu(0), data=shape, label=shape)
-
-        arg_map = dict(zip(out_s.list_arguments(), exe.arg_arrays))
-
-        # init data
-        data = mx.random.uniform(-1, -1, shape)
-        arg_map["data"][:] = data
-        atol = 1e-5
-        density = 0.5
-        stype = 'default'
-        label = arg_map["label"]
-        label[:] = rand_ndarray(shape, stype, density=density)
-        exe.forward(is_train=True)
-        exe.backward()
-        np_out = forward(data.asnumpy())
-        assert_almost_equal(exe.outputs[0].asnumpy(), np_out, atol=atol)
-
-    check_regression(mx.symbol.LogisticRegressionOutput,
-                     lambda x: 1.0 / (1.0 + np.exp(-x)),
-                     shape)
-    check_regression(mx.symbol.LinearRegressionOutput,
-                     lambda x: x,
-                     shape)
-
-
 def test_astype():
     x = create_vector(size=LARGE_X//4)
     x = nd.tile(x, 4)
