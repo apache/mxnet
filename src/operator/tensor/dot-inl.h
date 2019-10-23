@@ -30,7 +30,7 @@
 #include <algorithm>
 #include <utility>
 #include <type_traits>
-#include <mshadow/tensor.h>
+
 #include "./util/tensor_util-inl.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
@@ -1368,7 +1368,6 @@ void BatchDotForward_(const nnvm::NodeAttrs& attrs,
     if (outputs[0].shape_.Size() == 0 || inputs[0].shape_.Size() == 0
                                       || inputs[1].shape_.Size() == 0) {
       if (outputs[0].shape_.Size() != 0 && req[0] != kAddTo) {
-
         mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(s, outputs[0].shape_.Size(),
                                                           outputs[0].dptr<DType>());
       }
