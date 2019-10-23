@@ -140,6 +140,13 @@ class CachedOp {
   void RegisterOpHook(const CachedOp::CachedOpMonCallback& callback,
                       bool monitor_all = false);
 
+  static const std::string FULL;
+  static const std::string FORWARD;
+  static const std::string BACKWARD;
+  static const std::string REF_COUNT;
+  static const std::string MEM_PLAN;
+  static const std::string STORAGE_PLAN;
+
  private:
   struct GraphInfo;
   struct DynamicRuntime;
