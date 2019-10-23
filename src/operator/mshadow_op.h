@@ -132,6 +132,24 @@ struct true_divide : public mxnet_op::tunable  {
   MSHADOW_XINLINE static float Map(DType a, DType b) {
     return static_cast<float>(a) / static_cast<float>(b);
   }
+
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
+    return static_cast<mshadow::half::half_t>(a) / b;
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, float b) {
+    return static_cast<float>(a) / b;
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static double Map(DType a, double b) {
+    return static_cast<double>(a) / b;
+  }
 };
 
 struct rtrue_divide : public mxnet_op::tunable  {
@@ -145,6 +163,24 @@ struct rtrue_divide : public mxnet_op::tunable  {
            typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static float Map(DType a, DType b) {
     return static_cast<float>(b) / static_cast<float>(a);
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
+    return b / static_cast<mshadow::half::half_t>(a);
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, float b) {
+    return b / static_cast<float>(a);
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static double Map(DType a, double b) {
+    return b / static_cast<double>(a);
   }
 };
 
