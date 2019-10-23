@@ -909,6 +909,7 @@ def test_npx_batch_dot():
     dtypes = ['float32', 'float64']
     if ctx.device_type == 'gpu':
         dtypes += ['float16']
+    eps_dict = {'float32': 1E-4, 'float64': 1E-4, 'float16': 1E-3}
     class TestBatchDot(HybridBlock):
         def __init__(self, transpose_a, transpose_b):
             super(TestBatchDot, self).__init__()
@@ -976,6 +977,7 @@ def test_npx_batch_dot():
     for hybridize in [True, False]:
         for lhs_shape, rhs_shape, transpose_a, transpose_b in configs:
             for dtype in dtypes:
+                eps = eps_dict[dtype]
                 for lhs_grad_req in ['write', 'add']:
                     for rhs_grad_req in ['write', 'add']:
                         f_batch_dot = TestBatchDot(transpose_a=transpose_a,
@@ -998,7 +1000,7 @@ def test_npx_batch_dot():
                         with mx.autograd.record():
                             out = f_batch_dot(lhs_val, rhs_val)
                         out.backward(o_grad)
-                        assert_almost_equal(out.asnumpy(), gt_out, rtol=1E-4, atol=1E-4)
+                        assert_almost_equal(out.asnumpy(), gt_out, rtol=eps, atol=eps)
                         gt_lhs_grad, gt_rhs_grad = gt_grad_batch_dot_numpy(lhs_val.asnumpy(),
                                                               rhs_val.asnumpy(),
                                                               o_grad.asnumpy(),
@@ -1008,8 +1010,8 @@ def test_npx_batch_dot():
                                                               rhs_req=rhs_grad_req,
                                                               init_lhs_grad=init_lhs_grad.asnumpy(),
                                                               init_rhs_grad=init_rhs_grad.asnumpy())
-                        assert_almost_equal(lhs_val.grad.asnumpy(), gt_lhs_grad, rtol=1E-4, atol=1E-4)
-                        assert_almost_equal(rhs_val.grad.asnumpy(), gt_rhs_grad, rtol=1E-4, atol=1E-4)
+                        assert_almost_equal(lhs_val.grad.asnumpy(), gt_lhs_grad, rtol=eps, atol=eps)
+                        assert_almost_equal(rhs_val.grad.asnumpy(), gt_rhs_grad, rtol=eps, atol=eps)
     for lhs_shape, rhs_shape, transpose_a, transpose_b in bad_configs:
         for dtype in dtypes:
             lhs_val = mx.np.array(_np.random.uniform(-1.0, 1.0, lhs_shape), dtype=dtype)
