@@ -73,8 +73,8 @@
 namespace mxnet {
 namespace op {
 
-#define NPY_MAXDIMS 32
-#define NPY_MAXARGS 32
+#define NPY_MAXDIMS 16
+#define NPY_MAXARGS 16
 
 inline TShape get_stride(const TShape& shape) {
   int ndim = shape.ndim(), prod = 1;
