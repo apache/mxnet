@@ -173,8 +173,7 @@ struct Resource {
   void get_cudnn_dropout_desc(
       cudnnDropoutDescriptor_t* dropout_desc,
       mshadow::Stream<gpu> *stream,
-      const float dropout,
-      uint64_t seed) const;
+      const float dropout) const;
 #endif  // MXNET_USE_CUDNN == 1
 
   /*!
