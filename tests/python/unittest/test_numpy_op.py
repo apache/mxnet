@@ -3378,10 +3378,11 @@ def test_np_einsum():
                                                                     _np.dot(_np.dot(args[0], args[1]).T, _np.ones((2, 2))))),
         # broadcast bug
         ('ij, ij -> i', [(1, 4), (2, 4)], lambda *args: (_np.sum(args[1], axis=0)[None, :],
-                                                           _np.tile(args[0], [2, 1]))),
+                                                         _np.tile(args[0], [2, 1]))),
         # issue #16576
-        ('abiz,abjz->abij', [(64, 8, 128, 512), (64, 8, 128, 512)], lambda *args: (_np.matmul(_np.ones((64, 8, 128, 128)), args[1]),
-                                                                                   _np.matmul(_np.ones((64, 8, 128, 128)), args[0]))),
+        # commented due to long running time
+        # ('abiz,abjz->abij', [(64, 8, 128, 512), (64, 8, 128, 512)], lambda *args: (_np.matmul(_np.ones((64, 8, 128, 128)), args[1]),
+        #                                                                            _np.matmul(_np.ones((64, 8, 128, 128)), args[0]))),
     ]
     dtypes = ['int32', 'float32', 'float64']
     for hybridize in [False, True]:
