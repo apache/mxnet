@@ -212,7 +212,10 @@ struct MXTensor {
   MXTensor() : data_ptr(NULL) {}
 
   MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype)
-  : data_ptr(data_ptr), shape(shape), dtype(dtype) {
+  : data_ptr(data_ptr), shape(shape), dtype(dtype) {}
+
+  /*! \brief populate DLTensor fields */
+  void setDLTensor() {
     dltensor.data = data_ptr;
     dltensor.ctx.device_type = kDLCPU;
     dltensor.ctx.device_id = 0;
@@ -284,7 +287,8 @@ struct MXTensor {
   // type can only be MXDType enum types
   MXDType dtype;
 
-  /*! \brief corresponding DLTensor of this MXTensor */
+  // corresponding DLTensor repr of MXTensor
+  // easy way to reuse functions taking DLTensor
   DLTensor dltensor;
 };
 
@@ -883,6 +887,7 @@ extern "C" {
       for (int j = 0; j < indims[i]; j++) {
         inputs[i].shape.push_back(inshapes[i][j]);
       }
+      inputs[i].setDLTensor();
     }
 
     // create a vector of tensors for outputs
@@ -893,6 +898,7 @@ extern "C" {
       for (int j = 0; j < outdims[i]; j++) {
         outputs[i].shape.push_back(outshapes[i][j]);
       }
+      outputs[i].setDLTensor();
     }
 
     OpResource res(cpu_malloc, cpu_alloc);
@@ -972,6 +978,7 @@ extern "C" {
       for (int j = 0; j < indims[i]; j++) {
         inputs[i].shape.push_back(inshapes[i][j]);
       }
+      inputs[i].setDLTensor();
     }
 
     // create a vector of tensors for outputs
@@ -982,6 +989,7 @@ extern "C" {
       for (int j = 0; j < outdims[i]; j++) {
         outputs[i].shape.push_back(outshapes[i][j]);
       }
+      outputs[i].setDLTensor();
     }
     OpResource res(cpu_malloc, cpu_alloc);
     CustomStatefulOp* op_ptr = reinterpret_cast<CustomStatefulOp*>(state_op);

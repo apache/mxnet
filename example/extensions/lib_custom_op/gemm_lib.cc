@@ -61,6 +61,8 @@ MXReturnValue forward(std::map<std::string, std::string> attrs,
   if (inputs[0].dtype == kFloat32) {
     typedef float DType;
     // extract data pointers from tensors
+    // if using dltensor repr, below lines can be changed to something like
+    // DType* A = reinterpret_cast<DType*>(inputs[0].dltensor.data);
     DType* A = inputs[0].data<DType>();
     DType* B = inputs[1].data<DType>();
     DType* C = outputs[0].data<DType>();
