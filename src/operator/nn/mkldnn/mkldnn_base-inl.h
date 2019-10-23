@@ -274,6 +274,20 @@ inline static mkldnn::memory::desc GetMemDesc(const NDArray &arr, int dtype = -1
   return mkldnn::memory::desc{dims, get_mkldnn_type(dtype), mkldnn::memory::format_tag::any};
 }
 
+inline static mkldnn::memory::desc GetFCWeightDesc(const NDArray &arr, int dtype = -1) {
+  int ndim = arr.shape().ndim();
+  mkldnn::memory::dims dims(ndim);
+  dtype = (dtype == -1) ? arr.dtype() : dtype;
+  for (size_t i = 0; i < dims.size(); i++) dims[i] = arr.shape()[i];
+  auto format = mkldnn::memory::format_tag::any;
+  // for batch 256 alexnet benchmark test 
+  if (dims.size() == 2) {
+    format = mkldnn::memory::format_tag::ab;
+  }
+
+  return mkldnn::memory::desc{dims, get_mkldnn_type(dtype), format};
+}
+
 inline static mkldnn::memory::desc GetWeightDesc(const NDArray &arr,
                                                  int num_groups,
                                                  bool quantized = false) {

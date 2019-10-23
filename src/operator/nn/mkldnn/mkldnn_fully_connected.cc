@@ -37,7 +37,7 @@ mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(
     const NDArray &data, const NDArray &weight, const NDArray *bias,
     const mkldnn::memory::desc &out_md) {
   auto data_md = GetMemDesc(data);
-  auto weight_md = GetMemDesc(weight);
+  auto weight_md = GetFCWeightDesc(weight);
   auto engine = CpuEngine::Get()->get_engine();
   auto propagation =
     is_train ? mkldnn::prop_kind::forward_training : mkldnn::prop_kind::forward_scoring;
@@ -101,7 +101,7 @@ inline static mkldnn::inner_product_backward_data::primitive_desc GetFCBwdData(
     const NDArray &data, const NDArray &weight, const NDArray &output,
     mkldnn::inner_product_forward::primitive_desc fwd_pd) {
   auto data_md = GetMemDesc(data);
-  auto weight_md = GetMemDesc(weight);
+  auto weight_md = GetFCWeightDesc(weight);
   auto out_md = GetMemDesc(output);
   auto engine = CpuEngine::Get()->get_engine();
   mkldnn::inner_product_backward_data::desc desc(data_md, weight_md, out_md);
@@ -112,7 +112,7 @@ inline static mkldnn::inner_product_backward_weights::primitive_desc GetFCBwdWei
     const NDArray &data, const NDArray &weight, const NDArray *bias,
     const NDArray &output, mkldnn::inner_product_forward::primitive_desc fwd_pd) {
   auto data_md = GetMemDesc(data);
-  auto weight_md = GetMemDesc(weight);
+  auto weight_md = GetFCWeightDesc(weight);
   auto out_md = GetMemDesc(output);
   auto engine = CpuEngine::Get()->get_engine();
   if (bias) {
@@ -208,8 +208,7 @@ void MKLDNNFCForwardFullFeature(const MKLDNNFCFullParam &full_param,
   } else {
     weight_mem = weight.GetMKLDNNData();
     if (weight_mem->get_desc() != fwd->fwd_pd.weights_desc()) {
-      // TODO(rongzha1): rm following line for ut:test_contrib_rnn, need debug
-      // weight.MKLDNNDataReorderAsync(fwd->fwd_pd.weights_desc());
+      weight.MKLDNNDataReorderAsync(fwd->fwd_pd.weights_desc());
       weight_mem = GetWeights(weight, fwd->fwd_pd.weights_desc(), 1);
     }
   }
