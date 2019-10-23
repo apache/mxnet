@@ -816,7 +816,7 @@ int SimpleBindExMaster(SymbolHandle symbol_handle,
   API_END();
 }
 
-} // namespace mxnet
+}  // namespace mxnet
 
 
 /*!
@@ -893,7 +893,8 @@ int MXExecutorSimpleBindEx(SymbolHandle symbol_handle,
   return mxnet::SimpleBindExMaster(symbol_handle,
                             dev_type, dev_id,
                             num_g2c_keys, g2c_keys, g2c_dev_types, g2c_dev_ids,
-                            provided_grad_req_list_len, provided_grad_req_names, provided_grad_req_types,
+                            provided_grad_req_list_len, provided_grad_req_names,
+                            provided_grad_req_types,
                             num_provided_arg_shapes, provided_arg_shape_names,
                             provided_arg_shape_data, provided_arg_shape_idx,
                             num_provided_arg_dtypes, provided_arg_dtype_names, provided_arg_dtypes,
@@ -945,7 +946,8 @@ int MXExecutorSimpleBindEx64(SymbolHandle symbol_handle,
   return mxnet::SimpleBindExMaster(symbol_handle,
                             dev_type, dev_id,
                             num_g2c_keys, g2c_keys, g2c_dev_types, g2c_dev_ids,
-                            provided_grad_req_list_len, provided_grad_req_names, provided_grad_req_types,
+                            provided_grad_req_list_len, provided_grad_req_names,
+                            provided_grad_req_types,
                             num_provided_arg_shapes, provided_arg_shape_names,
                             provided_arg_shape_data, provided_arg_shape_idx,
                             num_provided_arg_dtypes, provided_arg_dtype_names, provided_arg_dtypes,
