@@ -1512,17 +1512,17 @@ def test_save_load():
     net2.load_parameters('tmp.params')
 
 @with_seed()
-def test_save_load_with_shared_params():
+def test_save_load_deduplicate_with_shared_params():
     class B(mx.gluon.Block):
         def __init__(self, params=None):
-            super().__init__(params=params)
+            super(B, self).__init__(params=params)
 
             with self.name_scope():
                 self.weight = self.params.get('weight', shape=(10, 10))
 
     class C(mx.gluon.Block):
         def __init__(self, b1, b2):
-            super().__init__()
+            super(C, self).__init__()
             self.b1 = b1
             self.b2 = b2
 
@@ -1530,7 +1530,7 @@ def test_save_load_with_shared_params():
     b2 = B(b1.collect_params())
     c = C(b1, b2)
     c.initialize()
-    c.save_parameters('tmp.params')
+    c.save_parameters('tmp.params', deduplicate=True)
 
     params = mx.nd.load('tmp.params')
     assert len(params) == 1  # Only a single copy of the shared parameter is saved
