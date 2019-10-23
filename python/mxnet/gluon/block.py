@@ -93,6 +93,53 @@ class _BlockScope(object):
         _BlockScope._current.value = self._old_scope
 
 
+def _gather_type_ctx_info(args):
+    """Analyze the elements inside the nested args object and find:
+        - If there exists ndarray
+        - If there exists symbol
+        - All contexts appearing in args
+
+    Parameters
+    ----------
+    args : list or NDArray or Symbol
+        Could be a nested architecture.
+
+    Returns
+    -------
+    has_symbol : bool
+        Whether the elements in args contains symbols
+    has_ndarray : bool
+        Whether the elements in args contains ndarrays
+    ctx_set : set of mxnet.context.Context
+        Contains all possible contexts of the inner ndarrays in args. Can be empty if there is no
+        ndarray inside args.
+    first_ctx : mxnet.context.Context or None
+        Context of the first appeared NDArray (for backward-compatibility)
+    """
+    if isinstance(args, NDArray):
+        return False, True, {args.context}, args.context
+    elif isinstance(args, Symbol):
+        return True, False, set(), None
+    elif isinstance(args, (list, tuple)):
+        has_symbol = False
+        has_ndarray = False
+        ctx_set = set()
+        first_ctx = None
+        for ele in args:
+            ele_has_sym, ele_has_nd, ele_ctx_set, ele_first_ctx =\
+                _gather_type_ctx_info(ele)
+            has_symbol = has_symbol or ele_has_sym
+            has_ndarray = has_ndarray or ele_has_nd
+            if first_ctx is None and ele_first_ctx is not None:
+                first_ctx = ele_first_ctx
+            ctx_set = ctx_set | ele_ctx_set
+            if has_symbol and has_ndarray:
+                break
+        return has_symbol, has_ndarray, ctx_set, first_ctx
+    else:
+        return False, False, set(), None
+
+
 def _flatten(args, inout_str):
     """Parse the arguments into a flattened list + an additional format array.
     The format array stores the structure of the original arguments to help reconstruct the inputs.
@@ -120,9 +167,11 @@ def _flatten(args, inout_str):
     if args is None:
         return [None], int(-1)
 
-    assert isinstance(args, (list, tuple)), \
-        "HybridBlock {} must be (nested) list of Symbol or NDArray, " \
-        "but got {} of type {}".format(inout_str, str(args), str(type(args)))
+    if not isinstance(args, (list, tuple)):
+        raise ValueError("When hybridized, the input of HybridBlock {}"
+                         " must be (nested) list of Symbol"
+                         " or NDArray, "
+                         "but got {} of type {}".format(inout_str, str(args), str(type(args))))
     flat = []
     fmts = []
     for i in args:
@@ -164,9 +213,10 @@ def _regroup(args, fmt):
             else:
                 return args[:fmt], args[fmt:]
 
-        assert isinstance(args, (list, tuple)), \
-            "HybridBlock output must be (nested) list of Symbol or NDArray, " \
-            "but got {} of type {}".format(args, type(args))
+        if not isinstance(args, (list, tuple)):
+            raise ValueError("When hybridized, the output of HybridBlock must be (nested)"
+                             " list of Symbol or NDArray, "
+                             "but got {} of type {}".format(args, type(args)))
         ret = []
         for i in fmt:
             res, args = _merger(args, i)
@@ -212,7 +262,7 @@ class Block(object):
         Prefix acts like a name space. All children blocks created in parent block's
         :py:meth:`name_scope` will have parent block's prefix in their name.
         Please refer to
-        `naming tutorial <https://mxnet.incubator.apache.org/api/python/docs/tutorials/packages/gluon/naming.html>`_
+        `naming tutorial </api/python/docs/tutorials/packages/gluon/blocks/naming.html>`_
         for more info on prefix and naming.
     params : ParameterDict or None
         :py:class:`ParameterDict` for sharing weights with the new :py:class:`Block`. For example,
@@ -308,7 +358,7 @@ class Block(object):
                 self.dense = nn.Dense(20)
 
         Please refer to
-        `naming tutorial <https://mxnet.incubator.apache.org/tutorials/gluon/naming.html>`_
+        `the naming tutorial </api/python/docs/tutorials/packages/gluon/blocks/naming.html>`_
         for more info on prefix and naming.
         """
         return self._scope
@@ -378,7 +428,7 @@ class Block(object):
         References
         ----------
         `Saving and Loading Gluon Models \
-        <https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html>`_
+        <https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/blocks/save_load_params.html>`_
         """
         params = self._collect_params_with_prefix()
         arg_dict = {key : val._reduce() for key, val in params.items()}
@@ -430,7 +480,7 @@ class Block(object):
         References
         ----------
         `Saving and Loading Gluon Models \
-        <https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html>`_
+        <https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/blocks/save_load_params.html>`_
         """
         if is_np_array():
             # failure may happen when loading parameters saved as NDArrays within
@@ -1003,7 +1053,7 @@ class HybridBlock(Block):
 
     def export(self, path, epoch=0, remove_amp_cast=True):
         """Export HybridBlock to json format that can be loaded by
-        `SymbolBlock.imports`, `mxnet.mod.Module` or the C++ interface.
+        `gluon.SymbolBlock.imports`, `mxnet.mod.Module` or the C++ interface.
 
         .. note:: When there are only one input, it will have name `data`. When there
                   Are more than one inputs, they will be named as `data0`, `data1`, etc.
@@ -1054,38 +1104,26 @@ class HybridBlock(Block):
     def forward(self, x, *args):
         """Defines the forward computation. Arguments can be either
         :py:class:`NDArray` or :py:class:`Symbol`."""
-        flatten_args = _flatten([x] + list(args), 'inputs')[0]
-        is_ndarray = None
-        ctx = None
-        exist_sym_nd = False
-        for ele in flatten_args:
-            if isinstance(ele, NDArray):
-                if is_ndarray is False:
-                    raise ValueError('In HybridBlock, we do not support mixed NDArrays and Symbols'
-                                     ' types for the input.\n'
-                                     'Received types are: {}.'
-                                     .format([type(ele) for ele in flatten_args]))
-                is_ndarray = True
-                exist_sym_nd = True
-                ctx = ele.context
-            elif isinstance(ele, Symbol):
-                if is_ndarray:
-                    raise ValueError('In HybridBlock, we do not support mixed NDArrays and Symbols'
-                                     ' types for the input.\n'
-                                     'Received types are: {}.'
-                                     .format([type(ele) for ele in flatten_args]))
-                is_ndarray = False
-                exist_sym_nd = True
-            else:
-                assert ele is None, 'Only support None, NDArray and Symbol as the input'
-        if not exist_sym_nd:
-            raise ValueError('There must at least one NDArray or Symbol in the input, received')
 
-        if is_ndarray:
-            with ctx:
-                if self._active:
+        has_symbol, has_ndarray, ctx_set, first_ctx = _gather_type_ctx_info([x] + list(args))
+        if has_symbol and has_ndarray:
+            raise ValueError('In HybridBlock, we do not support mixed NDArrays and Symbols'
+                             ' types for the input. Please check the type of the args.\n')
+        if not has_symbol and not has_ndarray:
+            raise ValueError('In HybridBlock, there must be one NDArray or one Symbol in the input.'
+                             ' Please check the type of the args.\n')
+        if has_ndarray:
+            ctx = first_ctx
+            if self._active:
+                if len(ctx_set) > 1:
+                    raise ValueError('Find multiple contexts in the input, '
+                                     'After hybridized, the HybridBlock only supports one input '
+                                     'context. You can print the ele.context in the '
+                                     'input arguments to inspect their contexts. '
+                                     'Find all contexts = {}'.format(ctx_set))
+                with ctx:
                     return self._call_cached_op(x, *args)
-
+            with ctx:
                 try:
                     params = {k: v.data(ctx) for k, v in self._reg_params.items()}
                 except DeferredInitializationError:
@@ -1160,8 +1198,8 @@ class SymbolBlock(HybridBlock):
     """
     @staticmethod
     def imports(symbol_file, input_names, param_file=None, ctx=None):
-        """Import model previously saved by `HybridBlock.export` or
-        `Module.save_checkpoint` as a SymbolBlock for use in Gluon.
+        """Import model previously saved by `gluon.HybridBlock.export` or
+        `Module.save_checkpoint` as a `gluon.SymbolBlock` for use in Gluon.
 
         Parameters
         ----------
@@ -1172,12 +1210,12 @@ class SymbolBlock(HybridBlock):
         param_file : str, optional
             Path to parameter file.
         ctx : Context, default None
-            The context to initialize SymbolBlock on.
+            The context to initialize `gluon.SymbolBlock` on.
 
         Returns
         -------
-        SymbolBlock
-            SymbolBlock loaded from symbol and parameter files.
+        gluon.SymbolBlock
+            `gluon.SymbolBlock` loaded from symbol and parameter files.
 
         Examples
         --------

@@ -1,6 +1,6 @@
 ---
 layout: page_api
-title: LSTM Time Serie
+title: LSTM Time Series
 is_tutorial: true
 tag: r
 permalink: /api/r/docs/tutorials/multi_dim_lstm

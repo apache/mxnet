@@ -30,7 +30,7 @@ The only instance method needed to be implemented is [forward(self, x)](https://
 In the example below, we define a new layer and implement `forward()`  method to normalize input data by fitting it into a range of [0, 1].
 
 ```python
-# Do some initial imports used throughout this tutorial 
+# Do some initial imports used throughout this tutorial
 from __future__ import print_function
 import mxnet as mx
 from mxnet import nd, gluon, autograd
@@ -53,7 +53,7 @@ The rest of methods of the `Block` class are already implemented, and majority o
 
 Looking into implementation of [existing layers](https://mxnet.apache.org/api/python/gluon/nn.html), one may find that more often a block inherits from a [HybridBlock](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/block.py#L428), instead of directly inheriting from `Block`.
 
-The reason for that is that `HybridBlock` allows to write custom layers that can be used in imperative programming as well as in symbolic programming. It is convenient to support both ways, because the imperative programming eases the debugging of the code and the symbolic one provides faster execution speed. You can learn more about the difference between symbolic vs. imperative programming from [this article](https://mxnet.apache.org/versions/master/architecture/program_model.html).
+The reason for that is that `HybridBlock` allows to write custom layers that can be used in imperative programming as well as in symbolic programming. It is convenient to support both ways, because the imperative programming eases the debugging of the code and the symbolic one provides faster execution speed. You can learn more about the difference between symbolic vs. imperative programming from this [deep learning programming paradigm](/api/architecture/program_model) article.
 
 Hybridization is a process that Apache MxNet uses to create a symbolic graph of a forward computation. This allows to increase computation performance by optimizing the computational symbolic graph. Once the symbolic graph is created, Apache MxNet caches and reuses it for subsequent computations.
 
@@ -143,7 +143,7 @@ class NormalizationHybridLayer(gluon.HybridBlock):
                                       shape=scales.shape,
                                       init=mx.init.Constant(scales.asnumpy()),
                                       differentiable=False)
-            
+
     def hybrid_forward(self, F, x, weights, scales):
         normalized_data = F.broadcast_div(F.broadcast_sub(x, F.min(x)), (F.broadcast_sub(F.max(x), F.min(x))))
         weighted_data = F.FullyConnected(normalized_data, weights, num_hidden=self.weights.shape[0], no_bias=True)
@@ -175,14 +175,14 @@ def print_params(title, net):
     """
     print(title)
     hybridlayer_params = {k: v for k, v in net.collect_params().items() if 'normalizationhybridlayer' in k }
-    
+
     for key, value in hybridlayer_params.items():
         print('{} = {}\n'.format(key, value.data()))
 
 net = gluon.nn.HybridSequential()                             # Define a Neural Network as a sequence of hybrid blocks
 with net.name_scope():                                        # Used to disambiguate saving and loading net parameters
     net.add(Dense(5))                                         # Add Dense layer with 5 neurons
-    net.add(NormalizationHybridLayer(hidden_units=5, 
+    net.add(NormalizationHybridLayer(hidden_units=5,
                                      scales = nd.array([2]))) # Add our custom layer
     net.add(Dense(1))                                         # Add Dense layer with 1 neurons
 
@@ -195,15 +195,15 @@ label = nd.random_uniform(low=-1, high=1, shape=(5, 1))
 
 mse_loss = gluon.loss.L2Loss()                                # Mean squared error between output and label
 trainer = gluon.Trainer(net.collect_params(),                 # Init trainer with Stochastic Gradient Descent (sgd) optimization method and parameters for it
-                        'sgd', 
+                        'sgd',
                         {'learning_rate': 0.1, 'momentum': 0.9 })
-                        
-with autograd.record():                                       # Autograd records computations done on NDArrays inside "with" block 
+
+with autograd.record():                                       # Autograd records computations done on NDArrays inside "with" block
     output = net(input)                                       # Run forward propogation
-    
-    print_params("=========== Parameters after forward pass ===========\n", net)    
+
+    print_params("=========== Parameters after forward pass ===========\n", net)
     loss = mse_loss(output, label)                            # Calculate MSE
-    
+
 loss.backward()                                               # Backward computes gradients and stores them as a separate array within each NDArray in .grad field
 trainer.step(input.shape[0])                                  # Trainer updates parameters of every block, using .grad field using oprimization method (sgd in this example)
                                                               # We provide batch size that is used as a divider in cost function formula
@@ -213,7 +213,7 @@ print_params("=========== Parameters after backward pass ===========\n", net)
 ```python
 =========== Parameters after forward pass ===========
 
-hybridsequential94_normalizationhybridlayer0_weights = 
+hybridsequential94_normalizationhybridlayer0_weights =
 [[-0.3983642  -0.505708   -0.02425683 -0.3133553  -0.35161012]
  [ 0.6467543   0.3918715  -0.6154656  -0.20702496 -0.4243446 ]
  [ 0.6077331   0.03922009  0.13425875  0.5729856  -0.14446527]
@@ -221,13 +221,13 @@ hybridsequential94_normalizationhybridlayer0_weights =
  [-0.39846328  0.22245121  0.13075739  0.33387476 -0.10088372]]
 <NDArray 5x5 @cpu(0)>
 
-hybridsequential94_normalizationhybridlayer0_scales = 
+hybridsequential94_normalizationhybridlayer0_scales =
 [2.]
 <NDArray 1 @cpu(0)>
 
 =========== Parameters after backward pass ===========
 
-hybridsequential94_normalizationhybridlayer0_weights = 
+hybridsequential94_normalizationhybridlayer0_weights =
 [[-0.29839832 -0.47213346  0.08348035 -0.2324698  -0.27368504]
  [ 0.76268613  0.43080837 -0.49052125 -0.11322092 -0.3339738 ]
  [ 0.48665082 -0.00144657  0.00376363  0.47501418 -0.23885089]
@@ -235,7 +235,7 @@ hybridsequential94_normalizationhybridlayer0_weights =
  [-0.44946212  0.20532274  0.07579394  0.29261002 -0.14063817]]
 <NDArray 5x5 @cpu(0)>
 
-hybridsequential94_normalizationhybridlayer0_scales = 
+hybridsequential94_normalizationhybridlayer0_scales =
 [2.]
 <NDArray 1 @cpu(0)>
 ```

@@ -20,11 +20,10 @@
 from __future__ import absolute_import
 from ..ndarray import numpy as _mx_nd_np
 
+__all__ = ["randint", "uniform", "normal", "choice", "rand"]
 
-__all__ = ["randint", "uniform", "normal", "choice"]
 
-
-def randint(low, high=None, size=None, dtype=None, **kwargs):
+def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
     """Return random integers from `low` (inclusive) to `high` (exclusive).
 
     Return random integers from the "discrete uniform" distribution of
@@ -73,7 +72,7 @@ def randint(low, high=None, size=None, dtype=None, **kwargs):
     array([[4, 0, 2, 1],
         [3, 2, 2, 0]])
     """
-    return _mx_nd_np.random.randint(low, high, size, dtype, **kwargs)
+    return _mx_nd_np.random.randint(low, high, size, dtype, ctx, out)
 
 
 def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
@@ -110,7 +109,7 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
     return _mx_nd_np.random.uniform(low, high, size=size, ctx=ctx, dtype=dtype, out=out)
 
 
-def normal(loc=0.0, scale=1.0, size=None, dtype=None, **kwargs):
+def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     """Draw random samples from a normal (Gaussian) distribution.
 
     Samples are distributed according to a normal distribution parametrized
@@ -139,7 +138,7 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, **kwargs):
     out : ndarray
         Drawn samples from the parameterized normal distribution.
     """
-    return _mx_nd_np.random.normal(loc, scale, size, dtype, **kwargs)
+    return _mx_nd_np.random.normal(loc, scale, size, dtype, ctx, out)
 
 
 def multinomial(n, pvals, size=None, **kwargs):
@@ -178,7 +177,7 @@ def multinomial(n, pvals, size=None, **kwargs):
     return _mx_nd_np.random.multinomial(n, pvals, size, **kwargs)
 
 
-def choice(a, size=None, replace=True, p=None, **kwargs):
+def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
     """Generates a random sample from a given 1-D array
 
     Parameters
@@ -230,4 +229,31 @@ def choice(a, size=None, replace=True, p=None, **kwargs):
     >>> np.random.choice(5, 3, replace=False, p=[0.1, 0, 0.3, 0.6, 0])
     array([2, 3, 0])
     """
-    return _mx_nd_np.random.choice(a, size, replace, p, **kwargs)
+    return _mx_nd_np.random.choice(a, size, replace, p, ctx, out)
+
+
+def rand(*size, **kwargs):
+    r"""Random values in a given shape.
+
+    Create an array of the given shape and populate it with random
+    samples from a uniform distribution over [0, 1).
+    Parameters
+    ----------
+    d0, d1, ..., dn : int, optional
+        The dimensions of the returned array, should be all positive.
+        If no argument is given a single Python float is returned.
+    Returns
+    -------
+    out : ndarray
+       Random values.
+    Examples
+    --------
+    >>> np.random.rand(3,2)
+    array([[ 0.14022471,  0.96360618],  #random
+           [ 0.37601032,  0.25528411],  #random
+           [ 0.49313049,  0.94909878]]) #random
+    """
+    output_shape = ()
+    for s in size:
+        output_shape += (s,)
+    return _mx_nd_np.random.uniform(0, 1, size=output_shape, **kwargs)

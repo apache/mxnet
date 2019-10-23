@@ -108,7 +108,7 @@ print(b[1].asnumpy())
 ## Handle a List of Key-Value Pairs
 
 All operations introduced so far involve a single key. KVStore also provides
-an interface for a list of key-value pairs. 
+an interface for a list of key-value pairs.
 
 For a single device:
 
@@ -166,6 +166,6 @@ When the distributed version is ready, we will update this section.
 <!-- flexibly as your choice.  -->
 
 ## Next Steps
-* [MXNet tutorials index](https://mxnet.io/api)
+* [MXNet tutorials index](/api/python/docs/tutorials/)
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

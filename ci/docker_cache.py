@@ -24,21 +24,21 @@ on an S3 bucket. This utility allows cache creation and download. After executio
 state as if the container would have been built locally already.
 """
 
-import os
-import logging
 import argparse
-import sys
+import logging
+import os
 import subprocess
-import json
+import sys
 from typing import *
+
 import build as build_util
+from docker_login import login_dockerhub, logout_dockerhub
 from util import retry
 
-DOCKERHUB_LOGIN_NUM_RETRIES = 5
-DOCKERHUB_RETRY_SECONDS = 5
 DOCKER_CACHE_NUM_RETRIES = 3
-DOCKER_CACHE_TIMEOUT_MINS = 15
+DOCKER_CACHE_TIMEOUT_MINS = 45
 PARALLEL_BUILDS = 10
+DOCKER_CACHE_RETRY_SECONDS = 5
 
 
 def build_save_containers(platforms, registry, load_cache) -> int:
@@ -111,41 +111,8 @@ def _upload_image(registry, docker_tag, image_id) -> None:
     subprocess.check_call(push_cmd)
 
 
-@retry(target_exception=subprocess.CalledProcessError, tries=DOCKERHUB_LOGIN_NUM_RETRIES,
-       delay_s=DOCKERHUB_RETRY_SECONDS)
-def _login_dockerhub():
-    """
-    Login to the Docker Hub account
-    :return: None
-    """
-    dockerhub_credentials = _get_dockerhub_credentials()
-
-    logging.info('Logging in to DockerHub')
-    # We use password-stdin instead of --password to avoid leaking passwords in case of an error.
-    # This method will produce the following output:
-    # > WARNING! Your password will be stored unencrypted in /home/jenkins_slave/.docker/config.json.
-    # > Configure a credential helper to remove this warning. See
-    # > https://docs.docker.com/engine/reference/commandline/login/#credentials-store
-    # Since we consider the restricted slaves a secure environment, that's fine. Also, using this will require
-    # third party applications which would need a review first as well.
-    p = subprocess.run(['docker', 'login', '--username', dockerhub_credentials['username'], '--password-stdin'],
-                       stdout=subprocess.PIPE, input=str.encode(dockerhub_credentials['password']))
-    logging.info(p.stdout)
-    logging.info('Successfully logged in to DockerHub')
-
-
-def _logout_dockerhub():
-    """
-    Log out of DockerHub to delete local credentials
-    :return: None
-    """
-    logging.info('Logging out of DockerHub')
-    subprocess.call(['docker', 'logout'])
-    logging.info('Successfully logged out of DockerHub')
-
-
 @retry(target_exception=subprocess.TimeoutExpired, tries=DOCKER_CACHE_NUM_RETRIES,
-       delay_s=DOCKERHUB_RETRY_SECONDS)
+       delay_s=DOCKER_CACHE_RETRY_SECONDS)
 def load_docker_cache(registry, docker_tag) -> None:
     """
     Load the precompiled docker cache from the registry
@@ -187,37 +154,6 @@ def delete_local_docker_cache(docker_tag):
         logging.debug('Error during local cache deletion %s', error)
 
 
-def _get_dockerhub_credentials():  # pragma: no cover
-    import boto3
-    import botocore
-    secret_name = os.environ['DOCKERHUB_SECRET_NAME']
-    endpoint_url = os.environ['DOCKERHUB_SECRET_ENDPOINT_URL']
-    region_name = os.environ['DOCKERHUB_SECRET_ENDPOINT_REGION']
-
-    session = boto3.Session()
-    client = session.client(
-        service_name='secretsmanager',
-        region_name=region_name,
-        endpoint_url=endpoint_url
-    )
-    try:
-        get_secret_value_response = client.get_secret_value(
-            SecretId=secret_name
-        )
-    except botocore.exceptions.ClientError as client_error:
-        if client_error.response['Error']['Code'] == 'ResourceNotFoundException':
-            logging.exception("The requested secret %s was not found", secret_name)
-        elif client_error.response['Error']['Code'] == 'InvalidRequestException':
-            logging.exception("The request was invalid due to:")
-        elif client_error.response['Error']['Code'] == 'InvalidParameterException':
-            logging.exception("The request had invalid params:")
-        raise
-    else:
-        secret = get_secret_value_response['SecretString']
-        secret_dict = json.loads(secret)
-        return secret_dict
-
-
 def main() -> int:
     """
     Utility to create and publish the Docker cache to Docker Hub
@@ -248,11 +184,16 @@ def main() -> int:
     args = parser.parse_args()
 
     platforms = build_util.get_platforms()
+
+    secret_name = os.environ['DOCKERHUB_SECRET_NAME']
+    endpoint_url = os.environ['DOCKERHUB_SECRET_ENDPOINT_URL']
+    region_name = os.environ['DOCKERHUB_SECRET_ENDPOINT_REGION']
+
     try:
-        _login_dockerhub()
+        login_dockerhub(secret_name, endpoint_url, region_name)
         return build_save_containers(platforms=platforms, registry=args.docker_registry, load_cache=True)
     finally:
-        _logout_dockerhub()
+        logout_dockerhub()
 
 
 if __name__ == '__main__':

@@ -382,6 +382,7 @@ class TBlob {
       case mshadow::kInt32: return DLDataType{kDLInt, 32, 1};
       case mshadow::kInt8: return DLDataType{kDLInt, 8, 1};
       case mshadow::kInt64: return DLDataType{kDLInt, 64, 1};
+      case mshadow::kBool: return DLDataType{kDLUInt, 1, 1};
       default: {
         LOG(FATAL) << "Unknown type_flag=" << type_flag;
         return DLDataType();

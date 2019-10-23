@@ -23,10 +23,10 @@ from . import _internal as _npi
 from ..ndarray import NDArray
 
 
-__all__ = ['randint', 'uniform', 'normal', "choice"]
+__all__ = ['randint', 'uniform', 'normal', "choice", "rand"]
 
 
-def randint(low, high=None, size=None, dtype=None, **kwargs):
+def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
     """Return random integers from `low` (inclusive) to `high` (exclusive).
 
     Return random integers from the "discrete uniform" distribution of
@@ -75,14 +75,12 @@ def randint(low, high=None, size=None, dtype=None, **kwargs):
     array([[4, 0, 2, 1],
         [3, 2, 2, 0]])
     """
-    ctx = kwargs.pop('ctx', None)
-    out = kwargs.pop('out', None)
     if dtype is None:
         dtype = 'int'
     if ctx is None:
         ctx = current_context()
     if size is None:
-        size = 1
+        size = ()
     if high is None:
         high = low
         low = 0
@@ -114,6 +112,8 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
         Data type of output samples. Default is 'float32'
     ctx : Context, optional
         Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
 
     Returns
     -------
@@ -126,8 +126,6 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
         dtype = 'float32'
     if ctx is None:
         ctx = current_context()
-    if out is not None:
-        size = out.shape
     if size == ():
         size = None
     if input_type == (True, True):
@@ -144,7 +142,7 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
                             ctx=ctx, dtype=dtype, out=out)
 
 
-def normal(loc=0.0, scale=1.0, size=None, dtype=None, **kwargs):
+def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     """Draw random samples from a normal (Gaussian) distribution.
 
     Samples are distributed according to a normal distribution parametrized
@@ -165,6 +163,8 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, **kwargs):
         Data type of output samples. Default is 'float32'
     ctx : Context, optional
         Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
 
     Returns
     -------
@@ -173,14 +173,10 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, **kwargs):
     """
     from ...numpy import ndarray as np_ndarray
     input_type = (isinstance(loc, np_ndarray), isinstance(scale, np_ndarray))
-    ctx = kwargs.pop('ctx', None)
-    out = kwargs.pop('out', None)
     if dtype is None:
         dtype = 'float32'
     if ctx is None:
         ctx = current_context()
-    if out is not None:
-        size = out.shape
     if size == ():
         size = None
     if input_type == (True, True):
@@ -249,7 +245,7 @@ def multinomial(n, pvals, size=None):
         return _npi.multinomial(n=n, pvals=pvals, size=size)
 
 
-def choice(a, size=None, replace=True, p=None, **kwargs):
+def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
     """Generates a random sample from a given 1-D array
 
     Parameters
@@ -302,10 +298,8 @@ def choice(a, size=None, replace=True, p=None, **kwargs):
     array([2, 3, 0])
     """
     from ...numpy import ndarray as np_ndarray
-    ctx = kwargs.pop('ctx', None)
     if ctx is None:
         ctx = current_context()
-    out = kwargs.pop('out', None)
     if size == ():
         size = None
     if isinstance(a, np_ndarray):
@@ -323,3 +317,30 @@ def choice(a, size=None, replace=True, p=None, **kwargs):
             return _npi.choice(a=a, size=size, replace=replace, ctx=ctx, weighted=False, out=out)
         else:
             return _npi.choice(p, a=a, size=size, replace=replace, ctx=ctx, weighted=True, out=out)
+
+
+def rand(*size, **kwargs):
+    r"""Random values in a given shape.
+
+    Create an array of the given shape and populate it with random
+    samples from a uniform distribution over [0, 1).
+    Parameters
+    ----------
+    d0, d1, ..., dn : int, optional
+        The dimensions of the returned array, should be all positive.
+        If no argument is given a single Python float is returned.
+    Returns
+    -------
+    out : ndarray
+       Random values.
+    Examples
+    --------
+    >>> np.random.rand(3,2)
+    array([[ 0.14022471,  0.96360618],  #random
+           [ 0.37601032,  0.25528411],  #random
+           [ 0.49313049,  0.94909878]]) #random
+    """
+    output_shape = ()
+    for s in size:
+        output_shape += (s,)
+    return uniform(0, 1, size=output_shape, **kwargs)

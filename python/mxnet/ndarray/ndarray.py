@@ -69,6 +69,7 @@ _DTYPE_NP_TO_MX = {
     np.int32: 4,
     np.int8: 5,
     np.int64: 6,
+    np.bool_: 7,
 }
 
 _DTYPE_MX_TO_NP = {
@@ -80,6 +81,7 @@ _DTYPE_MX_TO_NP = {
     4: np.int32,
     5: np.int8,
     6: np.int64,
+    7: np.bool_,
 }
 
 _STORAGE_TYPE_STR_TO_ID = {
@@ -735,6 +737,19 @@ fixed-size items.
             squeeze_axes = tuple([ax for ax in squeeze_axes if ax < len(value_nd.shape)])
             value_nd = value_nd.squeeze(axis=tuple(squeeze_axes))
 
+        # handle the cases like the following
+        # a = nd.zeros((3, 3)), b = nd.ones((1, 1, 1, 1, 3)), a[0] = b
+        # b cannot broadcast directly to a[0].shape unless its leading 1-size axes are trimmed
+        if value_nd.ndim > len(bcast_shape):
+            squeeze_axes = []
+            for i in range(value_nd.ndim - len(bcast_shape)):
+                if value_nd.shape[i] == 1:
+                    squeeze_axes.append(i)
+                else:
+                    break
+            if squeeze_axes:
+                value_nd = value_nd.squeeze(squeeze_axes)
+
         if value_nd.shape != bcast_shape:
             if value_nd.size == 0:
                 value_nd = value_nd.reshape(bcast_shape)
@@ -1048,7 +1063,10 @@ fixed-size items.
 
         The ``ax_len`` is used to convert `slice` objects to integer arrays.
         """
-        idx_dtype = 'int32'
+        if sys.version_info[0] > 2 and _int64_enabled():
+            idx_dtype = 'int64'
+        else:
+            idx_dtype = 'int32'
         if isinstance(idx, NDArray):
             if idx.dtype != idx_dtype:
                 idx = idx.astype(idx_dtype)
@@ -2995,6 +3013,10 @@ def get_indexing_dispatch_code(key):
 
     for idx in key:
         if isinstance(idx, (NDArray, np.ndarray, list, tuple)):
+            if getattr(idx, 'dtype', None) == np.bool_:
+                raise TypeError('ndarray indexing does not support boolean ndarray'
+                                ' in a tuple of indices. Only single boolean ndarray'
+                                ' as an index is supported.')
             return _NDARRAY_ADVANCED_INDEXING
         elif sys.version_info[0] > 2 and isinstance(idx, range):
             return _NDARRAY_ADVANCED_INDEXING

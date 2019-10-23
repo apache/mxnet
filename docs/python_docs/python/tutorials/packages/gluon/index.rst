@@ -194,11 +194,15 @@ Advanced Topics
 
       Building custom operators with numpy.
 
+..
+<-- tutorial missing -->
    .. card::
       :title: Custom Loss
       :link: loss/custom-loss.html
 
       A guide to implementing custom losses.
+
+..
 
    .. card::
       :title: Gotchas using NumPy in Apache MXNet

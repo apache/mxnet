@@ -31,7 +31,7 @@ networks yet, the example shown here is an implementation of LSTM by
 using the default FeedForward model via explicitly unfolding over time.
 We will be using fixed-length input sequence for training. The code is
 adapted from the [char-rnn example for MXNet's Python
-binding](https://github.com/dmlc/mxnet/blob/master/example/rnn/char_lstm.ipynb),
+binding](https://github.com/dmlc/mxnet-notebooks/blob/master/python/tutorials/char_lstm.ipynb),
 which demonstrates how to use low-level
 [Symbolic API](@ref) to build customized neural
 network models directly.
@@ -165,7 +165,7 @@ char-lstm. To train the model, we just follow the standard high-level
 API. Firstly, we construct a LSTM symbolic architecture:
 
 Note all the parameters are defined in
-[examples/char-lstm/config.jl](https://github.com/dmlc/MXNet.jl/blob/master/examples/char-lstm/config.jl).
+[examples/char-lstm/config.jl](https://github.com/apache/incubator-mxnet/blob/master/julia/examples/char-lstm/config.jl).
 Now we load the text file and define the data provider. The data
 `input.txt` we used in this example is [a tiny Shakespeare
 dataset](https://github.com/dmlc/web-data/tree/master/mxnet/tinyshakespeare).
@@ -318,6 +318,6 @@ illustrations](http://colah.github.io/posts/2015-08-Understanding-LSTMs/),
 but could otherwise be very useful for debugging. As we can see, the
 LSTM unfolded over time is just a (very) deep neural network. The
 complete code for producing this visualization can be found in
-[examples/char-lstm/visualize.jl](https://github.com/apache/incubator-mxnet/tree/master/julia/examples/char-lstmvisualize.jl).
+[examples/char-lstm/visualize.jl](https://github.com/apache/incubator-mxnet/blob/master/julia/examples/char-lstm/visualize.jl).
 
 ![image](images/char-lstm-vis.svg)
