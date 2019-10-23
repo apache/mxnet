@@ -72,25 +72,25 @@ Data
 
    .. card::
       :title: Data Loading
-      :link: data.html
+      :link: datasets/data_gluon.html
 
       How to load data for training.
 
    .. card::
       :title: Image Augmentation
-      :link: image-augmentation.html
+      :link: image/image-augmentation.html
 
       Boost your training dataset with image augmentation.
 
    .. card::
       :title: Data Augmentation
-      :link: image/image-augmentation.html
+      :link: datasets/data_augmentation.html
 
       A guide to data augmentation.
 
    .. card::
       :title: Gluon Datasets and DataLoader
-      :link: data/datasets.html
+      :link: datasets/datasets.html
 
       A guide to loading data using the Gluon API.
 
@@ -113,7 +113,7 @@ Training
 
    .. card::
       :title: Normalization Blocks
-      :link: data/normalization/normalization.html
+      :link: training/normalization/normalization.html
 
       Understand usage of normalization layers (such as BatchNorm).
 
@@ -198,7 +198,7 @@ Advanced Topics
 <-- tutorial missing -->
    .. card::
       :title: Custom Loss
-      :link: custom-loss/custom-loss.html
+      :link: loss/custom-loss.html
 
       A guide to implementing custom losses.
 

@@ -1,4 +1,3 @@
-Options -Indexes
 DirectorySlash off
 RewriteEngine on
 RewriteOptions AllowNoSlash
@@ -30,6 +29,7 @@ ErrorDocument 404 /404.html
 # Python API
 Redirect 301 /versions/master/api/python/index.html /api/python/docs/api/index.html
 Redirect 301 /api/python/ndarray/ndarray.html /api/python/docs/api/ndarray/index.html
+
 Redirect 301 /api/python/ndarray/random.html /api/python/docs/api/ndarray/random/index.html
 Redirect 301 /api/python/ndarray/linalg.html /api/python/docs/api/ndarray/linalg/index.html
 Redirect 301 /api/python/ndarray/contrib.html /api/python/docs/api/ndarray/contrib/index.html
