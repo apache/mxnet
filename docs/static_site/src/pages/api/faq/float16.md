@@ -39,7 +39,7 @@ The float16 data type is a 16 bit floating point representation according to the
 - CUDA 9 or higher
 - cuDNN v7 or higher
 
-This tutorial also assumes understanding of how to train a network with float32 (the default). Please refer to [logistic regression tutorial](https://mxnet.apache.org/versions/master/tutorials/gluon/logistic_regression_explained.html) to get started with Apache MXNet and Gluon API. This tutorial focuses on the changes needed to switch from float32 to mixed precision and tips on achieving the best performance with mixed precision.
+This tutorial also assumes understanding of how to train a network with float32 (the default). Please refer to [logistic regression tutorial](/api/python/docs/tutorials/getting-started/logistic_regression_explained.html) to get started with Apache MXNet and Gluon API. This tutorial focuses on the changes needed to switch from float32 to mixed precision and tips on achieving the best performance with mixed precision.
 
 ## Using the Gluon API
 
@@ -47,13 +47,13 @@ This tutorial also assumes understanding of how to train a network with float32 
 
 With Gluon API, you need to take care of three things to convert a model to support computation with float16.
 
-1. Cast Gluon `Block`'s parameters and expected input type to float16 by calling the [cast]({{'/api/python/docs/api/gluon/mxnet.gluon.nn.Block.html#mxnet.gluon.nn.Block.cast'|relative_url}}) method of the `Block` representing the network.
+1. Cast Gluon `Block`'s parameters and expected input type to float16 by calling the [cast](/api/python/docs/api/gluon/block.html?cast#mxnet.gluon.Block.cast) method of the `Block` representing the network.
 
 ```python
 net.cast('float16')
 ```
 
-2. Ensure the data input to the network is of float16 type. If your `DataLoader` or `Iterator` produces output in another datatype, then you would have to cast your data. There are different ways you can do this. The easiest would be to use the [astype]({{'/api/python/docs/api/ndarray/_autogen/mxnet.ndarray.NDArray.astype.html#mxnet.ndarray.NDArray.astype'|relative_url}}) method of NDArrays.
+2. Ensure the data input to the network is of float16 type. If your `DataLoader` or `Iterator` produces output in another datatype, then you would have to cast your data. There are different ways you can do this. The easiest would be to use the [astype](/api/python/docs/api/ndarray/ndarray.html?astype#mxnet.ndarray.NDArray.astype) method of NDArrays.
 
 ```python
 data = data.astype('float16', copy=False)
@@ -98,7 +98,7 @@ net.features = pretrained_net.features
 net.cast('float16')
 ```
 
-You can check the parameters of the model by calling [summary]({{'/api/python/docs/api/gluon/mxnet.gluon.nn.Block.html#mxnet.gluon.nn.Block.summary'|relative_url}}) with some fake data. Notice the provided `dtype=np.float16` in the line below. As it was mentioned earlier, we have to provide data as float16 as well.
+You can check the parameters of the model by calling [summary](/api/python/docs/api/gluon/block.html?block%20summary#mxnet.gluon.Block.summary) with some fake data. Notice the provided `dtype=np.float16` in the line below. As it was mentioned earlier, we have to provide data as float16 as well.
 
 ```python
 net.summary(mx.nd.uniform(shape=(1, 3, 224, 224), dtype=np.float16))
