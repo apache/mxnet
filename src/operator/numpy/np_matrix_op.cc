@@ -24,7 +24,6 @@
  */
 
 #include <vector>
-#include <iostream>
 #include "./np_matrix_op-inl.h"
 #include "../nn/concat-inl.h"
 
@@ -448,17 +447,6 @@ Examples::
 .add_argument("data", "NDArray-or-Symbol[]", "List of arrays to stack")
 .add_arguments(StackParam::__FIELDS__());
 
-void dbg_print_shape(TShape &shape, const char *msg = nullptr) {
-  using namespace std;
-  if (msg)
-    cout << "dbg_print_shape: " << msg << " ";
-  else
-    cout << "dbg_print_shape: ";
-  for (int i = 0; i < shape.ndim(); ++i)
-    cout << shape[i] << " ";
-  cout << endl;
-}
-
 bool NumpyColumnStackType(const nnvm::NodeAttrs& attrs,
                      std::vector<int> *in_type,
                      std::vector<int> *out_type) {
@@ -484,7 +472,6 @@ bool NumpyColumnStackType(const nnvm::NodeAttrs& attrs,
 bool NumpyColumnStackShape(const nnvm::NodeAttrs& attrs,
                       mxnet::ShapeVector* in_attrs,
                       mxnet::ShapeVector* out_attrs) {
-  
   CHECK_EQ(out_attrs->size(), 1U);
   const NumpyColumnStackParam& param = nnvm::get<NumpyColumnStackParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), param.num_args);
