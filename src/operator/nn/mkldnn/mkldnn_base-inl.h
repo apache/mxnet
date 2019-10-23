@@ -280,7 +280,7 @@ inline static mkldnn::memory::desc GetFCWeightDesc(const NDArray &arr, int dtype
   dtype = (dtype == -1) ? arr.dtype() : dtype;
   for (size_t i = 0; i < dims.size(); i++) dims[i] = arr.shape()[i];
   auto format = mkldnn::memory::format_tag::any;
-  // for batch 256 alexnet benchmark test 
+  // for batch 256 alexnet benchmark test
   if (dims.size() == 2) {
     format = mkldnn::memory::format_tag::ab;
   }
