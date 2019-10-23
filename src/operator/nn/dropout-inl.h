@@ -253,21 +253,8 @@ class DropoutOp {
                            const TBlob &mask,
                            const TBlob &out) {
       Stream<xpu> *s = ctx.get_stream<xpu>();
-      Random<xpu, unsigned> *prnd = ctx.requested[1].get_random<xpu, unsigned>(s);
-      Tensor<xpu, 1, char> workspace =
-        ctx.requested[2].get_space_typed<xpu, 1, char>(Shape1(1 * sizeof(unsigned)), s);
-      // slice workspace
-      char *workspace_ptr = workspace.dptr_;
-      Tensor<xpu, 1, unsigned> random_number =
-        Tensor<xpu, 1, unsigned>(reinterpret_cast<unsigned *>(workspace_ptr),
-                                 Shape1(1), s);
-      prnd->GetRandInt(random_number);
-      // copy generated random int to cpu
-      unsigned data = 0;
-      CUDA_CALL(cudaMemcpy(&data, &random_number[0], sizeof(unsigned), cudaMemcpyDeviceToHost));
-      uint64_t seed_ = 17 + static_cast<uint64_t>(data) % 4096;
       // set dropout state.
-      ctx.requested[0].get_cudnn_dropout_desc(&dropout_desc_, s, 1.0f - this->pkeep_, seed_);
+      ctx.requested[0].get_cudnn_dropout_desc(&dropout_desc_, s, 1.0f - this->pkeep_);
 
       // describe input/output tensor
       int dim[4], stride[4];

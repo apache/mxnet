@@ -1360,15 +1360,16 @@ class RNNOp {
       // Create Dropout descriptors
       if (param_.p > 0) {
          ctx.requested[rnn_enum::kCuDNNDropoutDescSpace].get_cudnn_dropout_desc
-            (&dropout_desc_, s, 1.0f - param_.p, seed_);
+            (&dropout_desc_, s, 1.0f - param_.p);
       }
       // Only update the probability by passing in a null dropout_states ptr
       DType* dropout_states = NULL;
       size_t dropout_bytes = 0;
+      // use dummy seed as state is null
       CUDNN_CALL(cudnnSetDropoutDescriptor(dropout_desc_, s->dnn_handle_,
                                            param_.p,  // discard probability
                                            dropout_states, dropout_bytes,
-                                           seed_));
+                                           0));
 
       // RNN descriptors
       cudnnDataType_t dtype_with_fallback_;
@@ -1520,7 +1521,6 @@ class RNNOp {
   cudnnRNNInputMode_t input_mode_;
   cudnnDropoutDescriptor_t dropout_desc_;
   Storage::Handle reserve_space_;
-  uint64_t seed_ = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
   size_t workspace_byte_, reserve_space_byte_;
   int workspace_size_;
   std::vector<cudnnTensorDescriptor_t> x_desc_vec_, y_desc_vec_, dx_desc_vec_, dy_desc_vec_;
