@@ -116,9 +116,9 @@ inline size_t _compute_size_by_dict(const std::bitset<MAXAXIS>& indices,
 }
 
 inline int64_t _flop_count(const std::string& idx_contraction,
-                       bool inner,
-                       int num_terms,
-                       const dim_t size_dictionary[]) {
+                           bool inner,
+                           int num_terms,
+                           const dim_t size_dictionary[]) {
   size_t overall_size = _compute_size_by_dict(idx_contraction, size_dictionary);
   int op_factor = std::max(1, num_terms - 1);
   if (inner) {
@@ -128,9 +128,9 @@ inline int64_t _flop_count(const std::string& idx_contraction,
 }
 
 inline int64_t _flop_count(const std::bitset<MAXAXIS>& idx_contraction,
-                       bool inner,
-                       int num_terms,
-                       const dim_t size_dictionary[]) {
+                           bool inner,
+                           int num_terms,
+                           const dim_t size_dictionary[]) {
   size_t overall_size = _compute_size_by_dict(idx_contraction, size_dictionary);
   int op_factor = std::max(1, num_terms - 1);
   if (inner) {
