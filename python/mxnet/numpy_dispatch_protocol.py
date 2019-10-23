@@ -121,7 +121,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'var',
     'vdot',
     'vstack',
-    'column_stack',
+    # 'column_stack',
     'zeros_like',
     'linalg.norm',
     'trace',
