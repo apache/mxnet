@@ -527,7 +527,7 @@ class Block(object):
 
         if not allow_missing:
             # Shared parameters are stored only a single time as of MXNet 1.6.
-            # We thus retrieve all prefixes (à la _collect_params_with_prefix)
+            # We thus retrieve all prefixes (through _collect_params_with_prefix)
             # that a shared parameter is used with. Check that there are no
             # missing parameters that were not yet already loaded from the
             # shared version.
