@@ -1732,7 +1732,8 @@ bool NDArray::Load(dmlc::Stream *strm) {
            " Please turn on np shape semantics in Python using `with np_shape(True)`"
            " or decorator `use_np_shape` to scope the code of loading the ndarray.";
   } else {
-    CHECK(!Imperative::Get()->is_np_shape())
+    // when the flag is global on, skip the check since it would be always global on.
+    CHECK(Imperative::Get()->is_np_shape() == GlobalOn || !Imperative::Get()->is_np_shape())
         << "ndarray was not saved in np shape semantics, but being loaded in np shape semantics."
            " Please turn off np shape semantics in Python using `with np_shape(False)`"
            " to scope the code of loading the ndarray.";
