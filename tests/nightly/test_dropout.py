@@ -47,36 +47,3 @@ def _test_dropout(seed, ctx):
         result2 = dropout(data)
     # dropout on gpu should return same result with fixed seed
     assert_almost_equal(result1.asnumpy(), result2.asnumpy())
-
-@with_seed()
-@unittest.skipIf(mx.context.num_gpus() < 2,
-                 "test_dropout_with_seed_multi_gpu needs more than 1 GPU")
-def test_dropout_with_seed_multi_gpu():
-    assert mx.context.num_gpus() > 1
-    data1 = mx.nd.ones((100, 100), ctx=mx.gpu(0))
-    data2 = mx.nd.ones((100, 100), ctx=mx.gpu(1))
-
-    dropout = mx.gluon.nn.Dropout(0.5)
-
-    info = np.iinfo(np.int32)
-    seed1 = np.random.randint(info.min, info.max)
-    # use a different seed on gpu 1
-    seed2 = np.random.randint(info.min, info.max)
-
-    mx.random.seed(seed1, ctx=mx.gpu(0))
-    with mx.autograd.record():
-        result1 = dropout(data1)
-
-    mx.random.seed(seed1, ctx=mx.gpu(0))
-    with mx.autograd.record():
-        result2 = dropout(data1)
-
-    mx.random.seed(seed2, ctx=mx.gpu(1))
-    with mx.autograd.record():
-        result3 = dropout(data2)
-
-    assert_almost_equal(result1.asnumpy(), result2.asnumpy())
-    # dropout on gpu1 should return different result
-    # with different seed on gpu0
-    with assert_raises(AssertionError):
-        assert_almost_equal(result2.asnumpy(), result3.asnumpy())
