@@ -221,9 +221,11 @@ void CreateNDArray(const DataType* shape,
                    int dtype,
                    NDArrayHandle* out) {
   mxnet::TShape requested_shape = mxnet::TShape(shape, shape + ndim);
-  CHECK_LT(requested_shape.Size(), (uint32_t{1} << 31) - 1)
-           << "Size of tensor you are trying to allocate is larger than "
+  if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
+    CHECK_LT(requested_shape.Size(), (int64_t{1} << 32) - 1) <<
+              "Size of tensor you are trying to allocate is larger than "
               "2^32 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+  }
   *out = new NDArray(requested_shape,
                      Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
                      delay_alloc != 0, dtype);
@@ -637,6 +639,9 @@ int MXNDArrayGetShapeEx(NDArrayHandle handle,
                         const int **out_pdata) {
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
+  CHECK_LT(static_cast<NDArray*>(handle)->shape().Size(), (int64_t{1} << 32) - 1) <<
+                  "Size of tensor you are trying to allocate is larger than "
+                  "2^32 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
   GetShape<int>(handle, out_pdata, out_dim, ret);
   API_END();
 }
