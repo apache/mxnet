@@ -32,12 +32,12 @@ DMLC_REGISTER_PARAMETER(CachedOpConfig);
 
 constexpr uint32_t kEidNotExist = std::numeric_limits<uint32_t>::max();
 
-const std::string CachedOp::FULL = "full";
-const std::string CachedOp::FORWARD = "forward";
-const std::string CachedOp::BACKWARD = "backward";
-const std::string CachedOp::REF_COUNT = "ref_count";
-const std::string CachedOp::MEM_PLAN = "mem_plan";
-const std::string CachedOp::STORAGE_PLAN = "storage_plan";
+const char CachedOp::FULL[] = "full";
+const char CachedOp::FORWARD[] = "forward";
+const char CachedOp::BACKWARD[] = "backward";
+const char CachedOp::REF_COUNT[] = "ref_count";
+const char CachedOp::MEM_PLAN[] = "mem_plan";
+const char CachedOp::STORAGE_PLAN[] = "storage_plan";
 
 namespace {
 
