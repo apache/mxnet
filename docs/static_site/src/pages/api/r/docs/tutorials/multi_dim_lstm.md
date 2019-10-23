@@ -55,7 +55,7 @@ PM2.5 concentration levels.
 
 Load and pre-process the data
 ---------
-The first step is to load in the data and preprocess it. It is assumed that the data has been downloaded in a .csv file: data.csv from the [pollution dataset](https://archive.ics.uci.edu/ml/datasets/Beijing+PM2.5+Data)
+The first step is to load in the data and preprocess it. It is assumed that the data has been downloaded in a .csv file: data.csv from the [pollution dataset](https://archive.ics.uci.edu/ml/datasets/Beijing+PM2.5+Data).
 
  ```r
 ## Loading required packages
@@ -324,4 +324,4 @@ We also repeated the above experiments to generate the next 100 samples to 301st
 
 The above tutorial is just for demonstration purposes and has not been tuned extensively for accuracy.
 
-For more tutorials on MXNet-R, head on to [MXNet-R tutorials](https://mxnet.apache.org/tutorials/r/index.html)
+For more tutorials on MXNet-R, head on to [MXNet-R tutorials](/api/r/docs/tutorials)
