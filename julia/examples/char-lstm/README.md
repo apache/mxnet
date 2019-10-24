@@ -29,7 +29,7 @@ and `StatsBase.jl`.
 ## Training
 
 This example is adapted from the
-[example in Python binding](https://github.com/dmlc/mxnet/blob/master/example/rnn/char_lstm.ipynb) of
+[example in Python binding](https://github.com/dmlc/mxnet-notebooks/blob/master/python/tutorials/char_lstm.ipynb) of
 MXNet. The data `input.txt` can be downloaded [here](https://github.com/dmlc/web-data/tree/master/mxnet/tinyshakespeare).
 
 Modify parameters in [config.jl](config.jl) and then run [train.jl](train.jl). An example output
