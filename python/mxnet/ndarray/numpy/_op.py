@@ -3016,13 +3016,16 @@ def column_stack(tup):
     ----------
     tup : sequence of 1-D or 2-D arrays.
         Arrays to stack. All of them must have the same first dimension.
+
     Returns
-    --------
+    -------
     stacked : 2-D array
         The array formed by stacking the given arrays.
+
     See Also
     --------
     stack, hstack, vstack, concatenate
+
     Examples
     --------
     >>> a = np.array((1,2,3))

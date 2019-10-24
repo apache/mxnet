@@ -614,8 +614,8 @@ Examples::
 .add_arguments(StackParam::__FIELDS__());
 
 bool NumpyColumnStackType(const nnvm::NodeAttrs& attrs,
-                     std::vector<int> *in_type,
-                     std::vector<int> *out_type) {
+                          std::vector<int> *in_type,
+                          std::vector<int> *out_type) {
   const NumpyColumnStackParam& param = nnvm::get<NumpyColumnStackParam>(attrs.parsed);
   CHECK_EQ(in_type->size(), param.num_args);
   CHECK_EQ(out_type->size(), 1);
@@ -636,8 +636,8 @@ bool NumpyColumnStackType(const nnvm::NodeAttrs& attrs,
 }
 
 bool NumpyColumnStackShape(const nnvm::NodeAttrs& attrs,
-                      mxnet::ShapeVector* in_attrs,
-                      mxnet::ShapeVector* out_attrs) {
+                           mxnet::ShapeVector* in_attrs,
+                           mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(out_attrs->size(), 1U);
   const NumpyColumnStackParam& param = nnvm::get<NumpyColumnStackParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), param.num_args);

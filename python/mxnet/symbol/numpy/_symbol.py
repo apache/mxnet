@@ -36,11 +36,19 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot', 'histogram', 'eye',
            'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'split', 'vsplit', 'concatenate',
+<<<<<<< 48fc7288f871e8b00d0721a7681a4715c040ee76
            'stack', 'vstack', 'column_stack', 'dstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'argmin',
            'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming', 'blackman', 'flip',
            'around', 'hypot', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take',
            'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal',
            'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'shares_memory', 'may_share_memory', 'diff']
+=======
+           'stack', 'vstack', 'column_stack', 'dstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip',
+           'argmax', 'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming', 'blackman', 'flip',
+           'around', 'hypot', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take',
+           'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal',
+           'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide']
+>>>>>>> style and test fix
 
 
 def _num_outputs(sym):
@@ -3073,6 +3081,43 @@ def vstack(arrays, out=None):
 
 
 @set_module('mxnet.symbol.numpy')
+def column_stack(tup):
+    """ column_stack(*args, **kwargs)
+
+    Stack 1-D arrays as columns into a 2-D array.
+
+    Take a sequence of 1-D arrays and stack them as columns
+    to make a single 2-D array. 2-D arrays are stacked as-is,
+    just like with `hstack`.  1-D arrays are turned into 2-D columns
+    first.
+
+    Parameters
+    ----------
+    tup : sequence of 1-D or 2-D arrays.
+        Arrays to stack. All of them must have the same first dimension.
+
+    Returns
+    -------
+    stacked : 2-D array
+        The array formed by stacking the given arrays.
+
+    See Also
+    --------
+    stack, hstack, vstack, concatenate
+
+    Examples
+    --------
+    >>> a = np.array((1,2,3))
+    >>> b = np.array((2,3,4))
+    >>> np.column_stack((a,b))
+    array([[1, 2],
+        [2, 3],
+        [3, 4]])
+    """
+    return _npi.column_stack(*tup)
+
+
+@set_module('mxnet.symbol.numpy')
 def dstack(arrays):
     """
     Stack arrays in sequence depth wise (along third axis).
@@ -4589,6 +4634,7 @@ def einsum(*operands, **kwargs):
     operands = operands[1:]
     return _npi.einsum(*operands, subscripts=subscripts, out=out, optimize=int(optimize_arg))
 
+<<<<<<< 48fc7288f871e8b00d0721a7681a4715c040ee76
 
 @set_module('mxnet.symbol.numpy')
 def column_stack(tup):
@@ -4619,6 +4665,8 @@ def column_stack(tup):
            [3., 4.]])
     """
     return _npi.column_stack(*tup)
+=======
+>>>>>>> style and test fix
 
 
 @set_module('mxnet.symbol.numpy')
