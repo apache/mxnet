@@ -260,7 +260,7 @@ end
 
 function get(metric::MSE)
   # Delay copy until last possible moment
-  mse_sum = mapreduce(nda->copy(nda)[1], +, 0.0, metric.mse_sum)
+  mse_sum = mapreduce(nda->copy(nda)[1], +, metric.mse_sum)
   [(:MSE, mse_sum / metric.n_sample)]
 end
 
