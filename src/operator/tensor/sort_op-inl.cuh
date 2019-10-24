@@ -158,9 +158,9 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
 
     size_t start_keys = 0;
     size_t start_values = start_keys +
-                          sorted_keys == nullptr ? keys_bytes : 0;
+                          (sorted_keys == nullptr ? keys_bytes : 0);
     size_t start_scratch = start_values +
-                           sorted_values == nullptr ? values_bytes : 0;
+                           (sorted_values == nullptr ? values_bytes : 0);
     KDType* keys_out_ptr = sorted_keys == nullptr ?
                            reinterpret_cast<KDType *>(workspace->dptr_ + start_keys) :
                            sorted_keys->dptr_;
