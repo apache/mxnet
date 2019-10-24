@@ -3031,15 +3031,9 @@ def column_stack(tup):
     >>> a = np.array((1,2,3))
     >>> b = np.array((2,3,4))
     >>> np.column_stack((a,b))
-<<<<<<< b819cfd12fe755ff17e73907987c669c5ceefad9
     array([[1., 2.],
            [2., 3.],
            [3., 4.]])
-=======
-    array([[1, 2],
-           [2, 3],
-           [3, 4]])
->>>>>>> fix pylint and add interoperability test
     """
     return _npi.column_stack(*tup)
 
