@@ -1635,11 +1635,13 @@ void NDArray::Save(dmlc::Stream *strm) const {
     nd_cpu.WaitToRead();
     save_data = nd_cpu.data();
   } else {
+#if MXNET_USE_MKLDNN == 1
+    // For mkldnn, a copy of *this can ensure no write access pending on *this.
+    nd_cpu = this->Copy(Context::CPU());
+    nd_cpu.WaitToRead();
+#else
     this->WaitToRead();
     nd_cpu = *this;
-#if MXNET_USE_MKLDNN == 1
-    if (nd_cpu.IsMKLDNNData())
-      nd_cpu = nd_cpu.Reorder2Default();
 #endif
     save_data = nd_cpu.data();
   }
@@ -2024,15 +2026,18 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   TBlob dst(data, dshape, cpu::kDevMask, this->dtype_, 0); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
-    this->WaitToRead();
-    RunContext rctx{this->ctx(), nullptr, nullptr, false};
-    NDArray src = *this;
+    Engine::Get()->PushAsync(
+        [&](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+          RunContext ctx{this->ctx(), nullptr, nullptr, false};
+          NDArray src = *this;
 #if MXNET_USE_MKLDNN == 1
-    if (src.IsMKLDNNData())
-      src = this->Reorder2Default();
+          src = this->Reorder2Default();
 #endif
-    ndarray::Copy<cpu, cpu>(src.data(), &dst,
-                            Context::CPU(), Context::CPU(), rctx);
+          ndarray::Copy<cpu, cpu>(src.data(), &dst, Context::CPU(), Context::CPU(), ctx);
+          on_complete();
+        },
+        this->ctx(), {this->var()}, {}, FnProperty::kNormal, 0, "SyncCopyCPU2CPU");
+    this->WaitToWrite();
   } else {
 #if MXNET_USE_CUDA
     Engine::Get()->PushAsync(
