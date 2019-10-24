@@ -530,14 +530,16 @@ void TakeOpForward<gpu>(const nnvm::NodeAttrs& attrs,
                                           outputs[take_::kOut].dptr<DType>(),
                                           inputs[take_::kArr].dptr<DType>(),
                                           inputs[take_::kIdx].dptr<IType>(),
-                                          in_strides, out_strides, arrshape.ndim(), oshape.ndim(),
+					  out_strides[actual_axis-1], in_strides[actual_axis-1],
+                                          in_strides[actual_axis], arrshape.ndim(), oshape.ndim(),
                                           idxshape.ndim(), arrshape[actual_axis], actual_axis);
         } else {
           Kernel<Take<false>, gpu>::Launch(s, oshape.Size(),
                                            outputs[take_::kOut].dptr<DType>(),
                                            inputs[take_::kArr].dptr<DType>(),
                                            inputs[take_::kIdx].dptr<IType>(),
-                                           in_strides, out_strides, arrshape.ndim(), oshape.ndim(),
+					   out_strides[actual_axis-1], in_strides[actual_axis-1],
+                                           in_strides[actual_axis], arrshape.ndim(), oshape.ndim(),
                                            idxshape.ndim(), arrshape[actual_axis], actual_axis);
         }
       }
