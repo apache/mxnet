@@ -1635,11 +1635,13 @@ void NDArray::Save(dmlc::Stream *strm) const {
     nd_cpu.WaitToRead();
     save_data = nd_cpu.data();
   } else {
-    nd_cpu = *this;
 #if MXNET_USE_MKLDNN == 1
     // For mkldnn, a copy of *this can ensure no write access pending on *this.
     nd_cpu = this->Copy(Context::CPU());
     nd_cpu.WaitToRead();
+#else
+    this->WaitToRead();
+    nd_cpu = *this;
 #endif
     save_data = nd_cpu.data();
   }
