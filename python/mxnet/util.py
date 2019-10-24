@@ -60,8 +60,7 @@ def get_gpu_memory(gpu_dev_id):
 
 
 def set_np_shape(active):
-    """
-    Turns on/off NumPy shape semantics, in which `()` represents the shape of scalar tensors,
+    """Turns on/off NumPy shape semantics, in which `()` represents the shape of scalar tensors,
     and tuples with `0` elements, for example, `(0,)`, `(1, 0, 2)`, represent the shapes
     of zero-size tensors. This is turned off by default for keeping backward compatibility.
 
@@ -568,8 +567,7 @@ def use_np(func):
 
 
 def np_ufunc_legal_option(key, value):
-    """
-    Checking if ufunc arguments are legal inputs
+    """Checking if ufunc arguments are legal inputs
 
     Parameters
     ----------
