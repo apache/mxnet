@@ -532,16 +532,15 @@ const mkldnn::memory *NDArray::GetMKLDNNDataReorder(
     return GetMKLDNNExact(mem, new_desc);
   }
 
-  mkldnn::memory::desc desc1 = mem->get_desc();
-  mkldnn::memory::desc desc2 = new_desc;
+  mkldnn::memory::desc old_desc = mem->get_desc();
   // Now we need to determine if we should reorder the memory.
   // If both use the default formats, we think we don't need to reorder.
-  if ((!mxnet::IsMKLDNN(desc1)) && (!mxnet::IsMKLDNN(desc2))) {
+  if ((!mxnet::IsMKLDNN(old_desc)) && (!mxnet::IsMKLDNN(new_desc))) {
     mkldnn_mem_ptr ret(new mkldnn::memory(new_desc,
         CpuEngine::Get()->get_engine(), mem->get_data_handle()));
     stream->RegisterMem(ret);
     return ret.get();
-  } else if (same_shape(desc1, desc2)) {
+  } else if (same_shape(old_desc, new_desc)) {
     // If they have the same shape, we can reorder data directly.
     mkldnn::memory *ret = TmpMemMgr::Get()->Alloc(new_desc);
     std::unordered_map<int, mkldnn::memory> args({{MKLDNN_ARG_FROM, *mem }, {MKLDNN_ARG_TO, *ret}});
@@ -551,9 +550,9 @@ const mkldnn::memory *NDArray::GetMKLDNNDataReorder(
     // If they have different shapes, we need to reshape the array first.
     // Since this method will only be used inside an operator, we can call
     // MKLDNNDataReshape to reshape an array.
-    mxnet::TShape required_shape(desc2.data.ndims, -1);
-    for (int i = 0; i < desc2.data.ndims; i++)
-      required_shape[i] = desc2.data.dims[i];
+    mxnet::TShape required_shape(new_desc.data.ndims, -1);
+    for (int i = 0; i < new_desc.data.ndims; i++)
+      required_shape[i] = new_desc.data.dims[i];
     NDArray reshaped = MKLDNNDataReshape(required_shape);
     const mkldnn::memory *ret = reshaped.GetMKLDNNData();
     if (ret->get_desc() == new_desc) {
@@ -684,7 +683,9 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
 
 mkldnn::memory *NDArray::CreateMKLDNNData(const mkldnn::memory::desc &desc) {
   if (desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
-    LOG(FATAL) << "The size of NDArray doesn't match the requested MKLDNN memory desc ";
+    LOG(FATAL) << "The size of NDArray doesn't match the requested MKLDNN memory desc. "
+        << "MKLDNN memory requests for " << desc.get_size() << " bytes, but got "
+        << shape().Size() * GetTypeSize(dtype_) << " bytes from NDArray";
     return nullptr;
   }
   bool isDefaultFormat = IsDefaultFormat(desc);
