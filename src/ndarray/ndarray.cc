@@ -2025,14 +2025,15 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   if (this->ctx().dev_mask() == cpu::kDevMask) {
     Engine::Get()->PushAsync(
         [&](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+          RunContext ctx{this->ctx(), nullptr, nullptr, false};
           NDArray src = *this;
 #if MXNET_USE_MKLDNN == 1
           src = this->Reorder2Default();
 #endif
-          ndarray::Copy<cpu, cpu>(src.data(), &dst, Context::CPU(), Context::CPU(), rctx);
+          ndarray::Copy<cpu, cpu>(src.data(), &dst, Context::CPU(), Context::CPU(), ctx);
           on_complete();
         },
-        this->ctx(), {this->var()}, {}, FnProperty::kNormal, 0, "Reorder2Default");
+        this->ctx(), {this->var()}, {}, FnProperty::kNormal, 0, "SyncCopyCPU2CPU");
     this->WaitToWrite();
   } else {
 #if MXNET_USE_CUDA
