@@ -158,9 +158,10 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
         size = 1
         for idx in shape:
             size = size * idx
-        if size > 2**32:
-            raise Exception("[Python] Size of tensor you are trying to allocate is larger than 2^32 elements. " +
-                  "Please build with flag USE_INT64_TENSOR_SIZE=1")
+        if size > 2**31:
+            raise Exception("[_new_alloc_handle] Size of tensor you are trying to allocate is " +
+                            "larger than 2^31 elements. Please build with flag " +
+                            "USE_INT64_TENSOR_SIZE=1")
         check_call(_LIB.MXNDArrayCreateEx(
             c_array_buf(mx_uint, native_array('I', shape)),
             mx_uint(len(shape)),

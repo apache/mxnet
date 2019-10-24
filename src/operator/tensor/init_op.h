@@ -272,15 +272,22 @@ inline bool InitShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape param_shape = param.shape;
-  if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
-    CHECK_LT(param_shape.Size(), (int64_t{1} << 32) - 1) <<
-              "Size of tensor you are trying to allocate is larger than "
-              "2^32 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+  if (shape_is_known(param_shape) && !features::is_enabled(features::INT64_TENSOR_SIZE)) {
+    CHECK_LT(param_shape.Size(), (int64_t{1} << 31) - 1) <<
+              "[InitShape-input] Size of tensor you are trying to allocate is larger than "
+              "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
   }
   if (!Imperative::Get()->is_np_shape()) {
     common::ConvertToNumpyShape(&param_shape);
   }
-  if (shape_is_known((*out_attrs)[0]) && !shape_is_known(param_shape)) return true;
+  if (shape_is_known((*out_attrs)[0]) && !shape_is_known(param_shape)) {
+    if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
+      CHECK_LT(out_attrs->at(0).Size() , (int64_t{1} << 31) - 1) <<
+                "[InitShape-output] Size of tensor you are trying to allocate is larger than "
+                "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+    }
+    return true;
+  }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, param_shape);
   return shape_is_known(out_attrs->at(0));
 }
@@ -342,9 +349,9 @@ template <bool is_integer = false, typename ValueType, typename xpu>
 void Fill(mshadow::Stream<xpu> *s, const TBlob& b, const OpReqType req, ValueType val) {
   // If b is a zero-size tensor, do nothing.
   if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
-    CHECK_LT(b.Size(), (int64_t{1} << 32) - 1) <<
-              "Size of tensor you are trying to allocate is larger than "
-              "2^32 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+    CHECK_LT(b.Size(), (int64_t{1} << 31) - 1) <<
+              "[Fill] Size of tensor you are trying to allocate is larger than "
+              "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
   }
   if (b.Size() == 0) return;
   if (req != kNullOp) {
@@ -592,9 +599,9 @@ inline bool RangeShape(const nnvm::NodeAttrs& attrs,
                           * param.repeat;
   mxnet::TShape output_shape = mxnet::TShape({static_cast<nnvm::dim_t>(out_size)});
   if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
-    CHECK_LT(output_shape.Size(), (int64_t{1} << 32) - 1) <<
-              "Size of tensor you are trying to allocate is larger than "
-              "2^32 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+    CHECK_LT(output_shape.Size(), (int64_t{1} << 31) - 1) <<
+              "[RangeShape] Size of tensor you are trying to allocate is larger than "
+              "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
   }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, output_shape);
   return true;
@@ -640,8 +647,8 @@ inline bool LinspaceShape(const nnvm::NodeAttrs& attrs,
     << "Number of sequence should be non-negative, received " << param.num;
   mxnet::TShape shape = mxnet::TShape({static_cast<nnvm::dim_t>(param.num)});
   if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
-    CHECK_LT(shape.Size(), (int64_t{1} << 32) - 1) <<
-              "Size of tensor you are trying to allocate is larger than "
+    CHECK_LT(shape.Size(), (int64_t{1} << 31) - 1) <<
+              "[LinspaceShape] Size of tensor you are trying to allocate is larger than "
               "2^32 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
   }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, shape);

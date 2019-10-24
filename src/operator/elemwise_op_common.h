@@ -164,13 +164,6 @@ inline bool ElemwiseShape(const nnvm::NodeAttrs& attrs,
                           mxnet::ShapeVector *out_attrs) {
   if (n_in != -1) {
     CHECK_EQ(in_attrs->size(), static_cast<size_t>(n_in)) << " in operator " << attrs.name;
-    if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
-      for(mxnet::TShape shape : *in_attrs){
-        CHECK_LT(shape.Size(), (int64_t{1} << 32) - 1) <<
-                  "Size of tensor you are trying to allocate is larger than "
-                  "2^32 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
-      }
-    }
   }
   if (n_out != -1) {
     CHECK_EQ(out_attrs->size(), static_cast<size_t>(n_out)) << " in operator " << attrs.name;
