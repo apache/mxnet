@@ -253,6 +253,7 @@ inline size_t GetNumInputArguments(RNNParam param_) {
  *          cy_ptr: Only used in lstm mode. pointer of tensor cy  containing the cell state
  *                  for t=seq_length. cy' shape is [num_layers, batch_size, state_size]
  *          dropout: should be 0 <= dropout < 1
+ *          seed: random seed for dropout
  *          mode: Specifies the type of RNN to compute.
  */
 template <typename DType>
@@ -274,23 +275,24 @@ void RNNForwardTraining(DType* ws,
                         DType* hy_ptr,
                         DType* cy_ptr,
                         const float dropout,
+                        unsigned seed,
                         int mode) {
   switch (mode) {
     case rnn_enum::kLstm:
       LstmForwardTraining<DType>(ws, rs, state_outputs, num_layers, direction, seq_length,
                                  batch_size, input_size, state_size, x_ptr, hx_ptr, cx_ptr,
-                                 w_ptr, b_ptr, y_ptr, hy_ptr, cy_ptr, dropout);
+                                 w_ptr, b_ptr, y_ptr, hy_ptr, cy_ptr, dropout, seed);
       break;
     case rnn_enum::kGru:
       GruForwardTraining<DType>(ws, rs, state_outputs, num_layers, direction, seq_length,
                                 batch_size, input_size, state_size, x_ptr, hx_ptr,
-                                w_ptr, y_ptr, hy_ptr, dropout);
+                                w_ptr, y_ptr, hy_ptr, dropout, seed);
       break;
     case rnn_enum::kRnnTanh:
     case rnn_enum::kRnnRelu:
       VanillaRNNForwardTraining<DType>(ws, rs, state_outputs, num_layers, direction, seq_length,
                                        batch_size, input_size, state_size, x_ptr, hx_ptr,
-                                       w_ptr, y_ptr, hy_ptr, dropout, mode);
+                                       w_ptr, y_ptr, hy_ptr, dropout, seed, mode);
       break;
     default:
       LOG(FATAL) << "unknown RNN mode " << mode;
@@ -866,6 +868,11 @@ class RNNOp {
         }
         DType* reserve_space_ptr = static_cast<DType*>(reserve_cpu_space_.data().dptr_);
 
+        // get a random seed from cpu
+        Stream<cpu> *s = NewStream<cpu>(0);
+        Random<cpu, unsigned> *prnd = ctx.requested[0].get_random<cpu, unsigned>(s);
+        unsigned seed = prnd->GetRandInt();
+        seed = 17 + seed % 4096;
         RNNForwardTraining<DType>(work_cpu_space,
                                   reserve_space_ptr,
                                   param_.state_outputs,
@@ -884,6 +891,7 @@ class RNNOp {
                                   hy_ptr,
                                   cy_ptr,
                                   param_.p,
+                                  seed,
                                   param_.mode);
       } else {
 #if MXNET_USE_MKLDNN == 1

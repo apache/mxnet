@@ -180,6 +180,9 @@ static std::vector<ResourceRequest> RNNResourceEx(const NodeAttrs& attrs, const 
     }
 #endif
   }
+  if (dev_mask == kCPU) {
+    request.emplace_back(ResourceRequest::kRandom);
+  }
   return request;
 }
 
