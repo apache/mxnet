@@ -477,10 +477,12 @@ bool NumpyColumnStackShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), param.num_args);
   std::vector<mxnet::TShape> in_attrs_tmp(param.num_args);
   TShape dshape;
+  // For each array in the input, reshape to 2D if ndim < 2.
   for (int i = 0; i < param.num_args; i++) {
     if ((*in_attrs)[i].ndim() == 0) {
       in_attrs_tmp[i] = TShape(2, 1);
     } else if ((*in_attrs)[i].ndim() == 1) {
+      // Transpose 1D row into a column.
       in_attrs_tmp[i] = TShape(2, 1);
       in_attrs_tmp[i][0] = (*in_attrs)[i][0];
     } else {
@@ -498,6 +500,7 @@ bool NumpyColumnStackShape(const nnvm::NodeAttrs& attrs,
   if (dshape.ndim() == -1) {
     return false;
   }
+  // Accumulate along column axis.
   int cnt = 0, sum = 0, pos = -1;
   for (int i = 0; i < param.num_args; i++) {
     TShape tmp = in_attrs_tmp[i];
@@ -527,11 +530,11 @@ bool NumpyColumnStackShape(const nnvm::NodeAttrs& attrs,
   if (!shape_is_known(dshape)) {
     return false;
   }
-
   dshape[1] = sum;
   if (cnt == 0) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, dshape);
   } else if (cnt == 1) {
+    // Infer missing dimension if only one column dimension of the input is missing
     if (pos >= 0) {
       in_attrs_tmp[pos][1] = out_attrs->at(0)[1] - sum;
     } else {

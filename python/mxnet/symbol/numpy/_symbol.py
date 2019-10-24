@@ -3077,8 +3077,7 @@ def vstack(arrays, out=None):
 
 @set_module('mxnet.symbol.numpy')
 def column_stack(tup):
-    """ column_stack(*args, **kwargs)
-
+    """
     Stack 1-D arrays as columns into a 2-D array.
 
     Take a sequence of 1-D arrays and stack them as columns
@@ -3105,9 +3104,9 @@ def column_stack(tup):
     >>> a = np.array((1,2,3))
     >>> b = np.array((2,3,4))
     >>> np.column_stack((a,b))
-    array([[1, 2],
-           [2, 3],
-           [3, 4]])
+    array([[1., 2.],
+           [2., 3.],
+           [3., 4.]])
     """
     return _npi.column_stack(*tup)
 

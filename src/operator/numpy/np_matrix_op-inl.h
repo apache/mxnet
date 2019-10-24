@@ -97,7 +97,6 @@ void NumpyColumnStackForward(const nnvm::NodeAttrs& attrs,
   std::vector<TBlob> data(param.num_args);
   for (int i = 0; i < param.num_args; i++) {
     if (inputs[i].shape_.ndim() == 0 || inputs[i].shape_.ndim() == 1) {
-      // TShape shape = Shape2(1, inputs[i].shape_.Size());
       TShape shape = Shape2(inputs[i].shape_.Size(), 1);
       data[i] = inputs[i].reshape(shape);
     } else {
@@ -108,7 +107,6 @@ void NumpyColumnStackForward(const nnvm::NodeAttrs& attrs,
   // initialize ConcatOp
   ConcatParam cparam;
   cparam.num_args = param.num_args;
-  // cparam.dim = 0;
   cparam.dim = 1;
   MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     ConcatOp<xpu, DType> op;
