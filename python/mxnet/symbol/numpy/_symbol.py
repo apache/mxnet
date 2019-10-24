@@ -3106,8 +3106,8 @@ def column_stack(tup):
     >>> b = np.array((2,3,4))
     >>> np.column_stack((a,b))
     array([[1, 2],
-        [2, 3],
-        [3, 4]])
+           [2, 3],
+           [3, 4]])
     """
     return _npi.column_stack(*tup)
 
