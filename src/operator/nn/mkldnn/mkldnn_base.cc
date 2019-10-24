@@ -68,11 +68,16 @@ mkldnn::memory *TmpMemMgr::Alloc(const mkldnn::memory::desc &md) {
     this->curr_mem = static_cast<char *>(mem) + md.get_size();
     return ret.get();
   } else {
-    // If curr_mem has been initialized and we still reach here. It means
-    // the current allocated memory isn't enough.
+    // If curr_mem has been initialized and we still reach here, it means the current
+    // allocated memory isn't enough. But it doesn't matter for multiple invokes of a
+    // operator, as the TmpMemMgr could estimate the space at the first iteration and
+    // then re-requests abundant space from MXNet resource. MKL-DNN could allocate
+    // the space by itself. Thus, we just let it continue for estimating the maximum
+    // required space size. It will be allocated at next call.
     if (this->curr_mem && dmlc::GetEnv("MXNET_MKLDNN_DEBUG", false)) {
-      LOG(WARNING) << "Allocate " << md.get_size()
-          << " bytes with malloc directly";
+      LOG(WARNING) << "mkl-dnn debug message: The rest of the temporary space is not "
+          << "adequate for allocating " << md.get_size() << " bytes. Thus, mkl-dnn "
+          << "allocate the space by itself.";
     }
     mkldnn_mem_ptr ret(new mkldnn::memory(md, CpuEngine::Get()->get_engine()));
     MKLDNNStream::Get()->RegisterMem(ret);
