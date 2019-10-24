@@ -415,7 +415,7 @@ class EinsumOp {
   }
 };  // class EinsumOp
 
-template<int dimension, int req, bool back>
+template<int dimension, int req, bool back, typename AType>
 struct numpy_einsum{
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType* out,
@@ -441,17 +441,19 @@ struct numpy_einsum{
       }
     }
     mshadow::Shape<dimension> ridx = unravel(0, reduceshape);
+    AType sum = 0;
     do {
-      DType tmp = back ? out_grad[dot(oidx, ostride[nop]) +
-                                  dot(ridx, rstride[nop])]: (DType) 1;
+      AType tmp = back ? static_cast<AType>(out_grad[dot(oidx, ostride[nop]) +
+                                                     dot(ridx, rstride[nop])]): (AType)1;
       for (int iop = 0; iop < nop; ++iop) {
         if (iop != iop0) {
           index_t k = dot(oidx, ostride[iop]) + dot(ridx, rstride[iop]);
-          tmp = tmp * op[iop][k];
+          tmp = tmp * static_cast<AType>(op[iop][k]);
         }
       }
-      out[i] = out[i] + tmp;
+      sum = sum + tmp;
     }while (inc(&ridx, reduceshape));
+    out[i] = out[i] + static_cast<DType>(sum);
   }
 };
 
@@ -670,7 +672,7 @@ inline void NumpyEinsumProcess(const std::vector<TBlob>& inputs,
       return;
     }
     const TBlob &out_data = outputs[0];
-    MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+    MXNET_ACC_TYPE_SWITCH(out_data.type_flag_, DType, AType, {
       mxnet::common::StaticArray<DType*, NPY_MAXARGS> op;
       for (iop = 0; iop < nop; ++iop) {
         op[iop] = inputs[iop].dptr<DType>();
@@ -688,7 +690,7 @@ inline void NumpyEinsumProcess(const std::vector<TBlob>& inputs,
             ostride_arr[iop] = otmp;
             rstride_arr[iop] = rtmp;
           }
-          Kernel<numpy_einsum<dimension, req_type, 0>,
+          Kernel<numpy_einsum<dimension, req_type, 0, AType>,
                  xpu>::Launch(ctx.get_stream<xpu>(),
                               oshape.Size(),
                               out_data.dptr<DType>(),
@@ -735,7 +737,7 @@ inline void NumpyEinsumProcess(const std::vector<TBlob>& inputs,
           }
         }
       }
-      MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+      MXNET_ACC_TYPE_SWITCH(out_data.type_flag_, DType, AType, {
         mxnet::common::StaticArray<DType*, NPY_MAXARGS> op;
         for (iop = 0; iop < nop; ++iop) {
           op[iop] = inputs[iop + back].dptr<DType>();
@@ -748,7 +750,7 @@ inline void NumpyEinsumProcess(const std::vector<TBlob>& inputs,
               opstride_arr[iop] = opstride[iop].get<dimension>();
               remainstride_arr[iop] = remainstride[iop].get<dimension>();
             }
-            Kernel<numpy_einsum<dimension, req_type, 1>,
+            Kernel<numpy_einsum<dimension, req_type, 1, AType>,
                   xpu>::Launch(ctx.get_stream<xpu>(),
                                opshape[i].Size(),
                                out_data.dptr<DType>(),
