@@ -336,7 +336,7 @@ void TakeOpForward<cpu>(const nnvm::NodeAttrs& attrs,
                                           outputs[take_::kOut].dptr<DType>(),
                                           inputs[take_::kArr].dptr<DType>(),
                                           inputs[take_::kIdx].dptr<IType>(),
-					  out_strides[actual_axis-1], in_strides[actual_axis-1]
+                                          out_strides[actual_axis-1], in_strides[actual_axis-1],
                                           in_strides[actual_axis], arrshape.ndim(),
                                           oshape.ndim(), idxshape.ndim(),
                                           arrshape[actual_axis], actual_axis);
@@ -345,7 +345,7 @@ void TakeOpForward<cpu>(const nnvm::NodeAttrs& attrs,
                                            outputs[take_::kOut].dptr<DType>(),
                                            inputs[take_::kArr].dptr<DType>(),
                                            inputs[take_::kIdx].dptr<IType>(),
-					   out_strides[actual_axis-1], in_strides[actual_axis-1]
+                                           out_strides[actual_axis-1], in_strides[actual_axis-1],
                                            in_strides[actual_axis], arrshape.ndim(),
                                            oshape.ndim(), idxshape.ndim(),
                                            arrshape[actual_axis], actual_axis);
