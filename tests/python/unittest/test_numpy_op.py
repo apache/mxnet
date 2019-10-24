@@ -3558,13 +3558,12 @@ def test_np_column_stack():
     configs = [
         ((), (), ()),
         ((2), (2), (2)),
-        ((1, 3), (1, 3), (1, 3)),
         ((0), (0), (0)),
+        ((0, 3, 0), (0, 0, 0), (0, 1, 0)),
         ((2, 2), (2, 1), (2, 3)),
-        ((4, 3), (4, 4), (4, 1)),
+        ((4, 3), (4, 0), (4, 1)),
         ((2, 2, 2), (2, 4, 2), (2, 2, 2)),
-        ((0, 1, 1), (0, 1, 1), (0, 1, 1)),
-        ((2, 1), (2, 2), (2, 2))
+        ((0, 1, 1), (0, 1, 1), (0, 1, 1))
     ]
     types = ['float16', 'float32', 'float64', 'int8', 'int32', 'int64']
     for config in configs:
@@ -3597,6 +3596,7 @@ def test_np_column_stack():
                 mx_out = np.column_stack(v)
                 expected_np = _np.column_stack(v_np)
                 assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
+
 
 if __name__ == '__main__':
     import nose

@@ -81,10 +81,10 @@ void NumpyTranspose(const nnvm::NodeAttrs& attrs,
 
 template<typename xpu>
 void NumpyColumnStackForward(const nnvm::NodeAttrs& attrs,
-                        const OpContext& ctx,
-                        const std::vector<TBlob>& inputs,
-                        const std::vector<OpReqType>& req,
-                        const std::vector<TBlob>& outputs) {
+                             const OpContext& ctx,
+                             const std::vector<TBlob>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow_op;
 
@@ -119,10 +119,10 @@ void NumpyColumnStackForward(const nnvm::NodeAttrs& attrs,
 
 template<typename xpu>
 void NumpyColumnStackBackward(const nnvm::NodeAttrs& attrs,
-                         const OpContext& ctx,
-                         const std::vector<TBlob>& inputs,
-                         const std::vector<OpReqType>& req,
-                         const std::vector<TBlob>& outputs) {
+                              const OpContext& ctx,
+                              const std::vector<TBlob>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow_op;
 
