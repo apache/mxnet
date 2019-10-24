@@ -3868,7 +3868,6 @@ def test_np_column_stack():
         mx_out = np.column_stack(v)
         expected_np = _np.column_stack(v_np)
         assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
-        
 
 
 if __name__ == '__main__':
