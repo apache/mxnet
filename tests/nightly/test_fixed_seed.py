@@ -20,12 +20,10 @@ import os
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'python', 'unittest'))
 from common import with_seed
-import unittest
 
 import mxnet as mx
 import numpy as np
 from mxnet.test_utils import assert_almost_equal
-from nose.tools import assert_raises
 
 @with_seed()
 def test_dropout_with_seed():
@@ -45,5 +43,29 @@ def _test_dropout(seed, ctx):
     mx.random.seed(seed)
     with mx.autograd.record():
         result2 = dropout(data)
+    # dropout on gpu should return same result with fixed seed
+    assert_almost_equal(result1.asnumpy(), result2.asnumpy())
+
+
+@with_seed()
+def test_rnn_with_seed():
+    info = np.iinfo(np.int32)
+    seed = np.random.randint(info.min, info.max)
+    # cpu fixed seed does not work,
+    # tracked in https://github.com/apache/incubator-mxnet/issues/16604
+    #_test_rnn(seed, mx.cpu())
+    _test_rnn(seed, mx.gpu())
+
+def _test_rnn(seed, ctx):
+    data = mx.nd.ones((5, 3, 10), ctx=ctx)
+    rnn = mx.gluon.rnn.RNN(100, 3, dropout=0.5)
+    rnn.initialize(ctx=ctx)
+    mx.random.seed(seed)
+    with mx.autograd.record():
+        result1 = rnn(data)
+
+    mx.random.seed(seed)
+    with mx.autograd.record():
+        result2 = rnn(data)
     # dropout on gpu should return same result with fixed seed
     assert_almost_equal(result1.asnumpy(), result2.asnumpy())

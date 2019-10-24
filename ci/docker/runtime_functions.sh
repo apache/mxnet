@@ -1607,7 +1607,7 @@ nightly_python() {
     set -ex
     cd /work/mxnet/tests/nightly/
     export PYTHONPATH=/work/mxnet/python/
-    nosetests test_dropout.py
+    nosetests test_fixed_seed.py
     cd /work/mxnet/tests/nightly/estimator
     export PYTHONPATH=/work/mxnet/python/
     nosetests test_estimator_cnn.py
