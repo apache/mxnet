@@ -327,8 +327,8 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
     v = sorted_values;
     mshadow::Copy(*sorted_values, values, values.stream_);
   }
-  const auto key_iter = thrust::device_pointer_cast(reinterpret_cast<half*>(k->dptr_));
-  const auto value_iter = thrust::device_pointer_cast(reinterpret_cast<half*>(v->dptr_));
+  const auto key_iter = thrust::device_pointer_cast(reinterpret_cast<__half*>(k->dptr_));
+  const auto value_iter = thrust::device_pointer_cast(reinterpret_cast<__half*>(v->dptr_));
   if (is_ascend) {
     thrust::stable_sort_by_key(
       thrust::cuda::par.on(stream),
