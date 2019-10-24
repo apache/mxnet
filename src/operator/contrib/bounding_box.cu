@@ -61,7 +61,7 @@ inline index_t align(index_t x, index_t alignment) {
 }
 
 template <typename DType>
-__global__ void FilterAndPrepareAuxData_kernel(const DType* data, DType* out, DType* scores,
+__global__ void FilterAndPrepareAuxDataKernel(const DType* data, DType* out, DType* scores,
                                                index_t num_elements_per_batch,
                                                const index_t element_width,
                                                const index_t N,
@@ -102,7 +102,7 @@ void FilterAndPrepareAuxData(const Tensor<gpu, 3, DType>& data,
   const int n_threads = 512;
   index_t N = data.shape_.Size();
   const auto blocks = ceil_div(N, n_threads);
-  FilterAndPrepareAuxData_kernel<<<blocks,
+  FilterAndPrepareAuxDataKernel<<<blocks,
                                    n_threads,
                                    0,
                                    Stream<gpu>::GetStream(s)>>>(
@@ -113,7 +113,7 @@ void FilterAndPrepareAuxData(const Tensor<gpu, 3, DType>& data,
 }
 
 template <bool check_topk, bool check_score, typename DType>
-__global__ void CompactData_kernel(const index_t* indices, const DType* source,
+__global__ void CompactDataKernel(const index_t* indices, const DType* source,
                                    DType* destination, const index_t topk,
                                    const index_t element_width,
                                    const index_t num_elements_per_batch,
@@ -154,14 +154,14 @@ void CompactData(const Tensor<gpu, 1, index_t>& indices,
   index_t N = source.shape_.Size();
   const auto blocks = std::min(ceil_div(N, n_threads), max_blocks);
   if (topk > 0) {
-    CompactData_kernel<true, check_score><<<blocks, n_threads, 0,
+    CompactDataKernel<true, check_score><<<blocks, n_threads, 0,
                                             Stream<gpu>::GetStream(s)>>>(
       indices.dptr_, source.dptr_,
       destination->dptr_, topk,
       source.shape_[2], source.shape_[1],
       score_index, N);
   } else {
-    CompactData_kernel<false, check_score><<<blocks, n_threads, 0,
+    CompactDataKernel<false, check_score><<<blocks, n_threads, 0,
                                              Stream<gpu>::GetStream(s)>>>(
       indices.dptr_, source.dptr_,
       destination->dptr_, topk,
@@ -184,7 +184,7 @@ void WorkspaceForSort(const index_t num_elem,
 }
 
 template <int encode, typename DType>
-__global__ void CalculateGreedyNMSResults_kernel(const DType* data, uint32_t* result,
+__global__ void CalculateGreedyNMSResultsKernel(const DType* data, uint32_t* result,
                                                  const index_t current_start,
                                                  const index_t num_elems,
                                                  const index_t num_batches,
@@ -199,7 +199,7 @@ __global__ void CalculateGreedyNMSResults_kernel(const DType* data, uint32_t* re
                                                  const float threshold);
 
 template <typename DType>
-__global__ void ReduceNMSResultTriangle_kernel(uint32_t* nms_results,
+__global__ void ReduceNMSResultTriangleKernel(uint32_t* nms_results,
                                                DType * data,
                                                const index_t score_index,
                                                const index_t element_width,
@@ -209,7 +209,7 @@ __global__ void ReduceNMSResultTriangle_kernel(uint32_t* nms_results,
                                                const index_t topk);
 
 template <typename DType>
-__global__ void ReduceNMSResultRest_kernel(DType* data,
+__global__ void ReduceNMSResultRestKernel(DType* data,
                                            const uint32_t* nms_results,
                                            const index_t score_index,
                                            const index_t element_width,
@@ -238,7 +238,7 @@ struct NMS {
       const index_t num_blocks_per_row =  num_blocks_per_row_batch * num_batches;
       const index_t n_blocks = THRESHOLD / (sizeof(uint32_t) * 8) * num_blocks_per_row;
       if (param.in_format == box_common_enum::kCorner) {
-        CalculateGreedyNMSResults_kernel<box_common_enum::kCorner>
+        CalculateGreedyNMSResultsKernel<box_common_enum::kCorner>
           <<<n_blocks, n_threads, 0, Stream<gpu>::GetStream(s)>>>(
             data->dptr_, scratch->dptr_, current_start, n_elems, num_batches,
             num_blocks_per_row_batch, num_blocks_per_row, topk, element_width,
@@ -246,7 +246,7 @@ struct NMS {
             param.force_suppress ? -1 : param.id_index,
             param.score_index, param.overlap_thresh);
       } else {
-        CalculateGreedyNMSResults_kernel<box_common_enum::kCenter>
+        CalculateGreedyNMSResultsKernel<box_common_enum::kCenter>
           <<<n_blocks, n_threads, 0, Stream<gpu>::GetStream(s)>>>(
             data->dptr_, scratch->dptr_, current_start, n_elems, num_batches,
             num_blocks_per_row_batch, num_blocks_per_row, topk, element_width,
@@ -254,7 +254,7 @@ struct NMS {
             param.force_suppress ? -1 : param.id_index,
             param.score_index, param.overlap_thresh);
       }
-      ReduceNMSResultTriangle_kernel<<<num_batches, THRESHOLD, 0, Stream<gpu>::GetStream(s)>>>(
+      ReduceNMSResultTriangleKernel<<<num_batches, THRESHOLD, 0, Stream<gpu>::GetStream(s)>>>(
           scratch->dptr_, data->dptr_, param.score_index,
           element_width, num_batches, num_elements_per_batch,
           current_start, topk);
@@ -262,7 +262,7 @@ struct NMS {
       const index_t num_rest_blocks_per_batch = ceil_div(n_rest_elems, n_threads);
       const index_t num_rest_blocks = num_rest_blocks_per_batch * num_batches;
       if (n_rest_elems > 0) {
-        ReduceNMSResultRest_kernel<<<num_rest_blocks, n_threads, 0, Stream<gpu>::GetStream(s)>>>(
+        ReduceNMSResultRestKernel<<<num_rest_blocks, n_threads, 0, Stream<gpu>::GetStream(s)>>>(
             data->dptr_, scratch->dptr_, param.score_index, element_width,
             num_batches, num_elements_per_batch, current_start, topk,
             num_rest_blocks_per_batch);
@@ -323,7 +323,7 @@ __device__ __forceinline__ DType calculate_intersection(const DType a0, const DT
 
 template <int encode, typename DType>
 __launch_bounds__(512)
-__global__ void CalculateGreedyNMSResults_kernel(const DType* data, uint32_t* result,
+__global__ void CalculateGreedyNMSResultsKernel(const DType* data, uint32_t* result,
                                                  const index_t current_start,
                                                  const index_t num_elems,
                                                  const index_t num_batches,
@@ -410,7 +410,7 @@ __global__ void CalculateGreedyNMSResults_kernel(const DType* data, uint32_t* re
 
 template <typename DType>
 __launch_bounds__(NMS<DType>::THRESHOLD)
-__global__ void ReduceNMSResultTriangle_kernel(uint32_t* nms_results,
+__global__ void ReduceNMSResultTriangleKernel(uint32_t* nms_results,
                                                DType * data,
                                                const index_t score_index,
                                                const index_t element_width,
@@ -473,7 +473,7 @@ __global__ void ReduceNMSResultTriangle_kernel(uint32_t* nms_results,
 
 template <typename DType>
 __launch_bounds__(512)
-__global__ void ReduceNMSResultRest_kernel(DType* data,
+__global__ void ReduceNMSResultRestKernel(DType* data,
                                            const uint32_t* nms_results,
                                            const index_t score_index,
                                            const index_t element_width,
@@ -554,7 +554,7 @@ TempWorkspace<DType> GetWorkspace(const index_t num_batch,
 }
 
 template <typename DType>
-__global__ void ExtractScores_kernel(const DType* data, DType* scores,
+__global__ void ExtractScoresKernel(const DType* data, DType* scores,
                                      const index_t N, const int element_width,
                                      const int score_index) {
   const index_t tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -581,7 +581,7 @@ void CompactNMSResults(const Tensor<gpu, 3, DType>& data,
   const index_t num_batches = data.shape_[0];
   const int element_width = data.shape_[2];
   const index_t n_blocks = ceil_div(num_elements, n_threads);
-  ExtractScores_kernel<<<n_blocks, n_threads, 0, Stream<gpu>::GetStream(s)>>>(
+  ExtractScoresKernel<<<n_blocks, n_threads, 0, Stream<gpu>::GetStream(s)>>>(
       data.dptr_, scores->dptr_, num_elements, element_width, score_index);
   *indices = mshadow::expr::range<index_t>(0, num_elements);
   for (index_t i = 0; i < num_batches; ++i) {
