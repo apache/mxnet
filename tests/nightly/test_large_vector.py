@@ -64,7 +64,7 @@ def test_ndarray_random_randint():
     high = 2**34
     a = nd.random.randint(low, high, dtype=np.int64, shape=LARGE_X).asnumpy()
     assert a.shape == (LARGE_X,)
-    assert (a >= low).all()  and (a < high).all()
+    assert (a >= low).all() and (a < high).all()
 
 
 def test_ndarray_empty():
@@ -1011,11 +1011,11 @@ def test_add_n():
 def test_modulo():
     x = mx.nd.ones(LARGE_X)*6
     y = mx.nd.ones(LARGE_X)*4
-    z = (x%y)
+    z = (x % y)
     assert z[0] == 2
     assert z[-1] == 2
     x = mx.nd.ones(LARGE_X)*5
-    z = nd.modulo(x,y)
+    z = nd.modulo(x, y)
     assert z[0] == 1
     assert z[-1] == 1
 
@@ -1053,6 +1053,16 @@ def test_gather():
     # Calls gather_nd internally
     arr[idx] += 1
     assert np.sum(arr[idx] == 2) == 10
+
+
+def test_infer_shape():
+    data_1 = mx.symbol.Variable('data_1')
+    data_2 = mx.symbol.Variable('data_2')
+    add = data_1+data_2
+    # > add.infer_shape(data_1=(LARGE_X,), data_2=(LARGE_X,))
+    # OUTPUT - arg_shapes, out_shapes, aux_shapes
+    _, out_shapes, _ = add.infer_shape(data_1=(LARGE_X,), data_2=(LARGE_X,))
+    assert out_shapes == [(LARGE_X,)]
 
 
 if __name__ == '__main__':
