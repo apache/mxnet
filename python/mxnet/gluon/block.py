@@ -524,9 +524,7 @@ class Block(object):
 
         if not any('.' in i for i in loaded.keys()):
             # legacy loading
-            loaded = None
-            # We cannot `del loaded` as it is used in a generator expression
-            # below. `del loaded` would be a SyntaxError in Python 2.
+            loaded = None  # This should be changed to `del loaded` when dropping Python 2
             self.collect_params().load(
                 filename, ctx, allow_missing, ignore_extra, self.prefix,
                 cast_dtype=cast_dtype, dtype_source=dtype_source)
