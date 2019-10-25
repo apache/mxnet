@@ -150,7 +150,7 @@ void CompactData(const Tensor<gpu, 1, index_t>& indices,
                  const int score_index,
                  Stream<gpu>* s) {
   const int n_threads = 512;
-  const int max_blocks = 320;
+  const index_t max_blocks = 320;
   index_t N = source.shape_.Size();
   const auto blocks = std::min(ceil_div(N, n_threads), max_blocks);
   if (topk > 0) {
