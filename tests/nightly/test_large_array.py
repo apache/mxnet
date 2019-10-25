@@ -1678,6 +1678,24 @@ def test_gather():
     assert np.sum(arr[idx[0]] == 2) == SMALL_Y
 
 
+def test_index_array():
+    arr = mx.nd.contrib.index_array(mx.nd.ones((LARGE_X, SMALL_Y)))
+    assert arr[LARGE_X - 1, SMALL_Y - 1, 0].asscalar() == LARGE_X - 1
+    assert arr[LARGE_X - 1, SMALL_Y - 1, 1].asscalar() == SMALL_Y - 1
+
+    arr = mx.nd.contrib.index_array(mx.nd.ones((LARGE_X, SMALL_Y)), target_axis=0)
+    assert arr[0, LARGE_X - 1, SMALL_Y - 1].asscalar() == LARGE_X - 1
+    assert arr[1, LARGE_X - 1, SMALL_Y - 1].asscalar() == SMALL_Y - 1
+
+    arr = mx.nd.contrib.index_array(mx.nd.ones((1, LARGE_X, SMALL_Y, 1)), axes=(2, 1))
+    assert arr[0, LARGE_X - 1, SMALL_Y - 1, 0, 0].asscalar() == SMALL_Y - 1
+    assert arr[0, LARGE_X - 1, SMALL_Y - 1, 0, 1].asscalar() == LARGE_X - 1
+
+    arr = mx.nd.contrib.index_array(mx.nd.ones((1, LARGE_X, SMALL_Y, 1)), target_axis=0, axes=(2, 1))
+    assert arr[0, 0, LARGE_X - 1, SMALL_Y - 1, 0].asscalar() == SMALL_Y - 1
+    assert arr[1, 0, LARGE_X - 1, SMALL_Y - 1, 0].asscalar() == LARGE_X - 1
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
