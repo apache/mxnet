@@ -15,9 +15,4 @@
 # specific language governing permissions and limitations
 # under the License.
 
-<<<<<<< HEAD
-from . import umath, fromnumeric
-=======
-# coding: utf-8
-from . import multiarray
->>>>>>> infra for dispatch tvm op
+from . import umath, fromnumeric, multiarray
