@@ -296,11 +296,11 @@ inline bool SparseEmbeddingOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
   return dispatched;
 }
 
-/*! \brief name the struct Take instead of take
- * to avoid conflict with the take function in mshadow
+/*! \brief name the struct TakeNonzeroAxis for general take when
+ * axis is not zero, use TakeZeroAxisGPU or TakeZeroAxisCPU for axis zero
  */
 template<bool clip = true>
-struct Take {
+struct TakeNonzeroAxis {
   /*!
    * \brief Map function for take operator
    * \param i           global thread id
