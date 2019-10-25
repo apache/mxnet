@@ -32,7 +32,7 @@ def compute_dot(A, B):
     return C
 
 
-@defop(name="dot", target="cpu", dispatch=True, dtype=AllTypes)
+@defop(name="dot", target="cpu", dtype=AllTypes)
 def dot(dtype, fallback):
     cfg = autotvm.get_config()
     cfg.define_knob("bn", [64] if fallback else [64, 32])
