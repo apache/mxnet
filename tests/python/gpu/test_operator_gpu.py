@@ -2395,6 +2395,7 @@ def _test_bulking_in_process(seed, time_per_iteration):
 
 
 @with_seed()
+@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/16517')
 def test_bulking_operator_gpu():
     _test_bulking(_test_bulking_in_process)
 
