@@ -142,11 +142,6 @@ void NDArray::Chunk::CheckAndAllocData(const mxnet::TShape &shape, int dtype) {
   CHECK_NE(aux_shapes.size(), 0)
       << "data is expected to be allocated after aux_data";
   auto dbytes = shape.Size() * mshadow::mshadow_sizeof(dtype);
-  if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
-    CHECK_LT(shape.Size(), (int64_t{1} << 31) - 1) <<
-              "[CheckAndAllocData] Size of tensor you are trying to allocate is larger than "
-              "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
-  }
   if (shandle.size < dbytes) {
     // free storage
     Storage::Get()->Free(shandle);
@@ -1889,11 +1884,6 @@ NDArray NDArray::Copy(Context ctx) const {
 
 void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
   mxnet::TShape dshape = this->shape();
-  if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
-    CHECK_LT(size, (int64_t{1} << 31) - 1) <<
-              "[SyncCopyFromCPU] Size of tensor you are trying to allocate is larger than "
-              "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
-  }
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
   // zero-size array, no need to copy
@@ -2029,11 +2019,6 @@ void NDArray::SyncCopyFromNDArray(const NDArray& src, int i, int j) {
 
 void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   mxnet::TShape dshape = this->shape();
-  if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
-    CHECK_LT(size, (int64_t{1} << 31) - 1) <<
-              "[SyncCopyToCPU] Size of tensor you are trying to allocate is larger than "
-              "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
-  }
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
   // zero-size array, no need to copy
