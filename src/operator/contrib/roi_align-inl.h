@@ -48,6 +48,7 @@ struct ROIAlignParam : public dmlc::Parameter<ROIAlignParam> {
   float spatial_scale;
   int sample_ratio;
   bool position_sensitive;
+  bool aligned;
   DMLC_DECLARE_PARAMETER(ROIAlignParam) {
     DMLC_DECLARE_FIELD(pooled_size)
     .set_expect_ndim(2).enforce_nonzero()
@@ -61,6 +62,9 @@ struct ROIAlignParam : public dmlc::Parameter<ROIAlignParam> {
     .describe("Whether to perform position-sensitive RoI pooling. PSRoIPooling is "
     "first proposaled by R-FCN and it can reduce the input channels by ph*pw times, "
     "where (ph, pw) is the pooled_size");
+    DMLC_DECLARE_FIELD(aligned).set_default(false)
+    .describe("Center-aligned ROIAlign introduced in Detectron2. "
+    "To enable, set aligned to True.");
   }
 };
 
