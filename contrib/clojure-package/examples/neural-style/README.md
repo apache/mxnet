@@ -19,6 +19,13 @@
 
 An example of neural style transfer
 
+
+## Installation
+
+Before you run this example, make sure that you have the clojure package installed.
+In the main clojure package directory, do `lein install`. Then you can run
+`lein install` in this directory.
+
 ## Usage
 
 use the `download.sh` script to get the params file and the input and output file
