@@ -128,7 +128,8 @@ class CuDNNBatchNormOp {
         // which further indicates that we are in the backward mirroring mode,
         // and therefore update to the auxiliary states is disabled.
         // This is done by setting the `momentum` to `1` (or `factor` to `0`).
-        float factor = internal_aux_states_lock_ ? 0 : (1 - param_.momentum);
+        float factor = (dmlc::GetEnv("MXNET_BACKWARD_DO_MIRROR", 0) && internal_aux_states_lock_) ?
+            0 : (1 - param_.momentum);
         CUDNN_CALL(cudnnBatchNormalizationForwardTraining(s->dnn_handle_,
                                                           mode,
                                                           &a,
