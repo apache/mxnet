@@ -45,7 +45,8 @@ struct IndexArrayKernel {
     for (ptrdiff_t j = 0; j < n; j++) {
       int64_t upper = workspace[ptrdiff_t(2) * j];
       int64_t lower = workspace[ptrdiff_t(2) * j + ptrdiff_t(1)];
-      KERNEL_ASSIGN(out_data[ptrdiff_t(i) * index_axis_offset + j * target_axis_offset], req, (i % upper) / lower);
+      KERNEL_ASSIGN(out_data[ptrdiff_t(i) * index_axis_offset + j * target_axis_offset], req,
+                    (i % upper) / lower);
     }
   }
 };
@@ -60,7 +61,8 @@ struct IndexArrayDefaultKernel {
                                   const dim_t* shape) {
     int64_t index = i;
     for (ptrdiff_t j = ndim - 1; j >= 0; j--) {
-      KERNEL_ASSIGN(out_data[ptrdiff_t(i) * index_axis_offset + j * target_axis_offset], req, index % shape[j]);
+      KERNEL_ASSIGN(out_data[ptrdiff_t(i) * index_axis_offset + j * target_axis_offset], req, 
+                    index % shape[j]);
       index /= shape[j];
     }
   }
