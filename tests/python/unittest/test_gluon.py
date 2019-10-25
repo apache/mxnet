@@ -1540,6 +1540,17 @@ def test_save_load_deduplicate_with_shared_params():
     c = C(b1, b2)
     c.load_parameters('tmp.params')
 
+    # Test default behavior
+    c.save_parameters('tmp2.params', deduplicate=False)
+
+    params = mx.nd.load('tmp2.params')
+    assert len(params) == 2  # Only a single copy of the shared parameter is saved
+
+    b1 = B()
+    b2 = B(b1.collect_params())
+    c = C(b1, b2)
+    c.load_parameters('tmp2.params')
+
 @with_seed()
 def test_symbol_block_save_load():
     class Net(gluon.HybridBlock):
