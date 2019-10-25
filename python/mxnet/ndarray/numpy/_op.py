@@ -3018,7 +3018,7 @@ def column_stack(tup):
         Arrays to stack. All of them must have the same first dimension.
 
     Returns
-    -------
+    --------
     stacked : 2-D array
         The array formed by stacking the given arrays.
 
