@@ -142,7 +142,7 @@ __global__ void RoIAlignForwardKernel(
 
     T roi_width = roi_end_w - roi_start_w;
     T roi_height = roi_end_h - roi_start_h;
-    if (!continuous_coordinate) { // backward compatiblity
+    if (!continuous_coordinate) {  // backward compatiblity
       // Force malformed ROIs to be 1x1
       roi_width = max(roi_width, (T)1.);
       roi_height = max(roi_height, (T)1.);
@@ -284,7 +284,7 @@ __global__ void RoIAlignBackwardKernel(
 
     T roi_width = roi_end_w - roi_start_w;
     T roi_height = roi_end_h - roi_start_h;
-    if (!continuous_coordinate) { // backward compatiblity
+    if (!continuous_coordinate) {  // backward compatiblity
       // Force malformed ROIs to be 1x1
       roi_width = max(roi_width, (T)1.);
       roi_height = max(roi_height, (T)1.);

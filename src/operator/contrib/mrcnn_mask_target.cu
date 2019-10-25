@@ -120,7 +120,7 @@ __device__ void RoIAlignForward(
     const int num_rois,
     const int num_gtmasks,
     const bool continuous_coordinate,
-    T* out_data) {// (B, N, C, H, W)
+    T* out_data) {  // (B, N, C, H, W)
   // Update kernel
   for (size_t index = blockIdx.x * blockDim.x + threadIdx.x;
        index < num_el;
@@ -146,7 +146,7 @@ __device__ void RoIAlignForward(
     T roi_height = roi_end_h - roi_start_h;
 
     // Force malformed ROIs to be 1x1
-    if (!continuous_coordinate) { // backward compatiblity
+    if (!continuous_coordinate) {  // backward compatiblity
       // Force malformed ROIs to be 1x1
       roi_width = max(roi_width, (T)1.);
       roi_height = max(roi_height, (T)1.);
@@ -260,7 +260,7 @@ void MRCNNMaskTargetRun<gpu>(const MRCNNMaskTargetParam& param, const std::vecto
 
     MRCNNMaskTargetKernel<<<dimGrid, dimBlock, 0, stream>>>
     (rois.dptr_, gt_masks.dptr_, matches.dptr_, cls_targets.dptr_,
-    out_masks.dptr_, out_mask_cls.dptr_, num_el, param.aligned, 
+    out_masks.dptr_, out_mask_cls.dptr_, num_el, param.aligned,
     batch_size, param.num_classes, param.num_rois,
     num_gtmasks, gt_height, gt_width,
     param.mask_size[0], param.mask_size[1], param.sample_ratio);
