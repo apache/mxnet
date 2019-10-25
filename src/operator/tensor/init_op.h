@@ -348,6 +348,11 @@ inline bool InitStorageType(const nnvm::NodeAttrs& attrs,
 template <bool is_integer = false, typename ValueType, typename xpu>
 void Fill(mshadow::Stream<xpu> *s, const TBlob& b, const OpReqType req, ValueType val) {
   // If b is a zero-size tensor, do nothing.
+  if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
+    CHECK_LT(b.Size(), (int64_t{1} << 31) - 1) <<
+              "[Fill] Size of tensor you are trying to allocate is larger than "
+              "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+  }
   if (b.Size() == 0) return;
   if (req != kNullOp) {
     const size_t size = b.Size();
@@ -641,6 +646,11 @@ inline bool LinspaceShape(const nnvm::NodeAttrs& attrs,
   CHECK_GE(param.num, 0)
     << "Number of sequence should be non-negative, received " << param.num;
   mxnet::TShape shape = mxnet::TShape({static_cast<nnvm::dim_t>(param.num)});
+  if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
+    CHECK_LT(shape.Size(), (int64_t{1} << 31) - 1) <<
+              "[LinspaceShape] Size of tensor you are trying to allocate is larger than "
+              "2^32 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+  }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, shape);
   return true;
 }
