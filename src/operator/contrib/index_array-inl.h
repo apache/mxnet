@@ -36,7 +36,7 @@ enum IndexArrayOpResource {kTempSpace};
 
 template<int req>
 struct IndexArrayKernel {
-  MSHADOW_XINLINE static void Map(int i,
+  MSHADOW_XINLINE static void Map(index_t i,
                                   int64_t* out_data,
                                   const int n,
                                   const int64_t* workspace) {
@@ -50,7 +50,7 @@ struct IndexArrayKernel {
 
 template<int req>
 struct IndexArrayDefaultKernel {
-  MSHADOW_XINLINE static void Map(int i,
+  MSHADOW_XINLINE static void Map(index_t i,
                                   int64_t* out_data,
                                   const int ndim,
                                   const dim_t* shape) {
