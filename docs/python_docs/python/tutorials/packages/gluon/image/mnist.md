@@ -112,8 +112,8 @@ to train the MLP network we defined above.
 
 For our training, we will make use of the stochastic gradient descent (SGD) optimizer. In particular, we'll be using mini-batch SGD. Standard SGD processes train data one example at a time. In practice, this is very slow and one can speed up the process by processing examples in small batches. In this case, our batch size will be 100, which is a reasonable choice. Another parameter we select here is the learning rate, which controls the step size the optimizer takes in search of a solution. We'll pick a learning rate of 0.02, again a reasonable choice. Settings such as batch size and learning rate are what are usually referred to as hyper-parameters. What values we give them can have a great impact on training performance.
 
-We will use [Trainer](https://mxnet.io/api/python/docs/api/gluon/mxnet.gluon.Trainer.html) class to apply the
-[SGD optimizer](https://mxnet.io/api/python/docs/api/gluon-related/_autogen/mxnet.optimizer.SGD.html) on the
+We will use [Trainer](/api/python/docs/api/gluon/trainer.html) class to apply the
+[SGD optimizer](/api/python/docs/api/optimizer/index.html#mxnet.optimizer.SGD) on the
 initialized parameters.
 
 ```python

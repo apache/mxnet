@@ -18,31 +18,19 @@
  */
 
 /*!
- * \file mkldnn_flatten-inl.h
- * \brief Implement flatten operator by using mkldnn reorder primitive
- * \author Wuxun Zhang
+ * \file np_einsum_op.cu
+ * \brief GPU Implementation of numpy-compatible einsum
  */
 
-#ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_FLATTEN_INL_H_
-#define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_FLATTEN_INL_H_
-#if MXNET_USE_MKLDNN == 1
-
-#include "mkldnn_reshape-inl.h"
+#include "./np_einsum_op-inl.h"
 
 namespace mxnet {
 namespace op {
 
-class MKLDNNFlattenFwd : public MKLDNNReshapeFwd {
- public:
-  explicit MKLDNNFlattenFwd(const OpReqType &req, const NDArray &input, const NDArray &output)
-      : MKLDNNReshapeFwd(req, input, output) {}
-};
-
-void MKLDNNFlattenForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx, const NDArray &input,
-                          const OpReqType &req, const NDArray &output);
+NNVM_REGISTER_OP(_npi_einsum)
+.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", NumpyEinsumForward<gpu>);
+NNVM_REGISTER_OP(_backward_npi_einsum)
+.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", NumpyEinsumBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
-
-#endif  // MXNET_USE_MKLDNN == 1
-#endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_FLATTEN_INL_H_

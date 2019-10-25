@@ -58,6 +58,11 @@ message(STATUS "CMAKE_HOST_SYSTEM_PROCESSOR ${CMAKE_HOST_SYSTEM_PROCESSOR}")
 message(STATUS "CMAKE_SYSTEM_PROCESSOR ${CMAKE_SYSTEM_PROCESSOR}")
 
 message(STATUS "CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
+
+if(USE_TVM_OP)
+  add_definitions(-DMXNET_USE_TVM_OP=1)
+endif()
+
 if(USE_CUDA AND NOT USE_OLDCMAKECUDA)
   message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
   if(
@@ -95,6 +100,9 @@ if("$ENV{VERBOSE}" STREQUAL "1")
   message(STATUS " Verbose Makefile ACTIVATED")
   set(CMAKE_VERBOSE_MAKEFILE ON)
 endif()
+
+#Switch off modern thread local for dmlc-core, please see: https://github.com/dmlc/dmlc-core/issues/571#issuecomment-543467484
+add_definitions(-DDMLC_MODERN_THREAD_LOCAL=0)
 
 
 if(MSVC)
@@ -743,7 +751,6 @@ if(USE_DIST_KVSTORE)
 endif()
 
 if(USE_TVM_OP)
-  add_definitions(-DMXNET_USE_TVM_OP=1)
   list(APPEND mxnet_LINKER_LIBS ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm/libtvm_runtime.so)
   include(cmake/BuildTVM.cmake)
   add_subdirectory("3rdparty/tvm")

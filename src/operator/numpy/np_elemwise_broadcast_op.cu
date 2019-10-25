@@ -27,6 +27,7 @@
 
 namespace mxnet {
 namespace op {
+
 NNVM_REGISTER_OP(_npi_add)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, op::mshadow_op::plus>);
 
