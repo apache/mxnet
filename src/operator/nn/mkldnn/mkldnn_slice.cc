@@ -90,8 +90,9 @@ MKLDNNSliceFwd &GetSliceForward(const SliceParam &param, const bool is_train,
   return it->second;
 }
 
-void MKLDNNSlice(const SliceParam &param, const OpContext& ctx,
+void MKLDNNSlice(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
                  const NDArray &in, OpReqType req, const NDArray &out) {
+  const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
   MKLDNNSliceFwd &fwd = GetSliceForward(param, ctx.is_train, in, out);
   auto in_mem = in.GetMKLDNNData();
   auto out_md = out.GetMKLDNNData()->get_desc();

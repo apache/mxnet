@@ -166,12 +166,6 @@ void MKLDNNFCFlattenData(const FullyConnectedParam &param,
                          mkldnn::memory::desc *out_md) {
   const mxnet::TShape ishape = in_data->shape();
   const mxnet::TShape oshape = out_data.shape();
-
-  // If the input data is a view of an MKLDNN array, we should create a new
-  // NDArray with reordered data.
-  if (in_data->IsMKLDNNData() && in_data->IsView())
-    *in_data = in_data->Reorder2Default();
-
   if (ishape.ndim() != 2) {
     if (!param.flatten) {
       *in_data = in_data->MKLDNNDataReshape(Shape2(ishape.ProdShape(0, ishape.ndim()-1),

@@ -394,17 +394,11 @@ void BatchNormComputeExCPU(const nnvm::NodeAttrs &attrs,
                            const std::vector<NDArray> &outputs) {
   CHECK_EQ(inputs.size(), 5U);
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
-
   if (SupportMKLDNNBN(inputs[0], param)) {
-    std::vector<NDArray> in_data(inputs.begin(), inputs.begin() + batchnorm::kInMovingMean);
-    std::vector<NDArray> aux_states(inputs.begin() + batchnorm::kInMovingMean, inputs.end());
-
-    if (inputs[0].dtype() == mshadow::kFloat32) {
       MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-      MKLDNNBatchNormForward<float>(ctx, param, in_data, req, outputs, aux_states);
+      MKLDNNRun(MKLDNNBatchNormForward<float>, attrs, ctx, inputs, req, outputs);
       MKLDNN_OPCHECK_RUN(BatchNormCompute<cpu>, attrs, ctx, inputs, req, outputs);
       return;
-    }
   }
   FallBackCompute(BatchNormCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
@@ -414,33 +408,12 @@ void BatchNormGradComputeExCPU(const nnvm::NodeAttrs &attrs,
                                const std::vector<NDArray> &inputs,
                                const std::vector<OpReqType> &req,
                                const std::vector<NDArray> &outputs) {
-  CHECK_EQ(inputs.size(), 8U);
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
-
-  mxnet::TShape shape = inputs[0].shape();
-
   if (SupportMKLDNNBN(inputs[0], param)) {
-    std::vector<NDArray> out_grad(1);
-    std::vector<NDArray> out_data(3);
-    std::vector<NDArray> in_data(3);
-    std::vector<NDArray> aux_states(2);
-    out_grad[0] = inputs[0];
-    out_data[batchnorm::kMean] = inputs[1];
-    out_data[batchnorm::kVar] = inputs[2];
-    in_data[batchnorm::kData] = inputs[3];
-    in_data[batchnorm::kGamma] = inputs[4];
-    in_data[batchnorm::kBeta] = inputs[5];
-    aux_states[batchnorm::kMovingMean] = inputs[6];
-    aux_states[batchnorm::kMovingVar] = inputs[7];
-    const std::vector<NDArray> &in_grad = outputs;
-
-    if (inputs[0].dtype() == mshadow::kFloat32) {
       MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-      MKLDNNBatchNormBackward<float>(ctx, param, out_grad, in_data,
-                                     out_data, req, in_grad, aux_states);
+      MKLDNNRun(MKLDNNBatchNormBackward<float>, attrs, ctx, inputs, req, outputs);
       MKLDNN_OPCHECK_RUN(BatchNormGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
       return;
-    }
   }
   FallBackCompute(BatchNormGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }

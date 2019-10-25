@@ -76,12 +76,7 @@ void MKLDNNSoftmaxForward(const nnvm::NodeAttrs& attrs,
   CHECK_NE(req, kAddTo);
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
   int axis = CheckAxis(param.axis, in_data.shape().ndim());
-  NDArray data = in_data;
-  if (in_data.IsView() && in_data.IsMKLDNNData()) {
-    data = in_data.Reorder2Default();
-  }
-
-  auto data_mem = data.GetMKLDNNData();
+  auto data_mem = in_data.GetMKLDNNData();
   auto pd = GetSoftmaxFwdPd(ctx.is_train, axis, *data_mem);
   auto out_mem = CreateMKLDNNMem(out_data, pd.dst_desc(), req);
   MKLDNNStream *stream = MKLDNNStream::Get();
@@ -94,4 +89,3 @@ void MKLDNNSoftmaxForward(const nnvm::NodeAttrs& attrs,
 }   // namespace op
 }   // namespace mxnet
 #endif
-

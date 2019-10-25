@@ -208,13 +208,11 @@ static void CopyEx(const nnvm::NodeAttrs& attrs,
   const auto in_stype = inputs[0].storage_type();
   const auto out_stype = outputs[0].storage_type();
   if (inputs[0].IsMKLDNNData()) {
-    MKLDNNCopy(attrs, ctx, inputs[0], req[0], outputs[0]);
+    MKLDNNRun(MKLDNNCopy, attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   } else if (in_stype == kDefaultStorage && out_stype == kDefaultStorage) {
-    // This happens if inputs are supposed to be in MKLDNN format
-    // but MKLDNN doesn't support the data type or the shape. We're
-    // forced to convert it to the default format.
-    FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
+    if (req[0] != kNullOp && req[0] != kWriteInplace)
+      FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
 #endif  // MXNET_USE_MKLDNN == 1

@@ -95,7 +95,7 @@ static void LeakyReLUComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), expected);
   if (SupportMKLDNNLeakyRelu(param, inputs[0])) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    MKLDNNLeakyReluForward(attrs, ctx, inputs[0], req[0], outputs[0]);
+    MKLDNNRun(MKLDNNLeakyReluForward, attrs, ctx, inputs[0], req[0], outputs[0]);
     MKLDNN_OPCHECK_RUN(LeakyReLUCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
@@ -111,7 +111,7 @@ void LeakyReLUGradComputeExCPU(const nnvm::NodeAttrs& attrs,
   if (SupportMKLDNNLeakyRelu(param, inputs[0])) {
     std::vector<NDArray> in_data{inputs[0], inputs[1]};
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    MKLDNNLeakyReluBackward(attrs, ctx, in_data, req[0], outputs[0]);
+    MKLDNNRun(MKLDNNLeakyReluBackward, attrs, ctx, in_data, req, outputs);
     MKLDNN_OPCHECK_RUN(LeakyReLUGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }

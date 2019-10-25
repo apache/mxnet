@@ -46,8 +46,8 @@ void MKLDNNSum(const mkldnn::memory &arr1,
   if (input_pds[0] != output_pd) {
     auto tmp_memory1 = TmpMemMgr::Get()->Alloc(output_pd);
     auto tmp_memory2 = TmpMemMgr::Get()->Alloc(output_pd);
-    mxnet::MKLDNNCopy(arr1, tmp_memory1);
-    mxnet::MKLDNNCopy(arr2, tmp_memory2);
+    MKLDNNMemoryCopy(arr1, tmp_memory1);
+    MKLDNNMemoryCopy(arr2, tmp_memory2);
     input_pds[0] = tmp_memory1->get_desc();
     input_pds[1] = tmp_memory2->get_desc();
     in_mem1 = tmp_memory1;
@@ -98,37 +98,30 @@ static MKLDNNSumFwd &GetSumForward(
 }
 
 void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                      const std::vector<NDArray> &inputs, const OpReqType &req,
-                      const NDArray &out_data) {
+                      const std::vector<NDArray> &inputs, const std::vector<OpReqType> &req,
+                      const std::vector<NDArray> &outputs) {
   TmpMemMgr::Get()->Init(ctx.requested[0]);
   const int num_inputs = inputs.size();
+  const NDArray &out_data = outputs[0];
   std::vector<mkldnn::memory::desc> data_md;
   std::vector<const mkldnn::memory *> data_mem;
   std::vector<float> scales(num_inputs, 1);
-  std::vector<NDArray> in_bufs(num_inputs);
 
   data_md.reserve(num_inputs);
   data_mem.reserve(num_inputs);
 
   for (int i = 0; i < num_inputs; ++i) {
-    const mkldnn::memory *in_mem;
-    if (inputs[i].IsMKLDNNData() && inputs[i].IsView()) {
-      in_bufs[i] = inputs[i].Reorder2Default();
-      in_mem = in_bufs[i].GetMKLDNNData();
-    } else {
-      in_bufs[i] = inputs[i];
-      in_mem = inputs[i].GetMKLDNNData();
-    }
+    const mkldnn::memory *in_mem = inputs[i].GetMKLDNNData();
     mkldnn::memory::desc tmp_md = in_mem->get_desc();
     data_md.push_back(tmp_md);
     data_mem.push_back(in_mem);
   }
 
-  MKLDNNSumFwd &fwd = GetSumForward(scales, in_bufs, data_md);
+  MKLDNNSumFwd &fwd = GetSumForward(scales, inputs, data_md);
   mxnet::mkldnn_output_t out_mem = CreateMKLDNNMem(out_data,
                                                    fwd.fwd_pd.dst_desc(),
-                                                   req,
-                                                   &in_bufs[0]);
+                                                   req[0],
+                                                   &inputs[0]);
   mkldnn_args_map_t net_args;
   net_args.insert({MKLDNN_ARG_DST, *out_mem.second});
   for (int i = 0; i < num_inputs; ++i) {

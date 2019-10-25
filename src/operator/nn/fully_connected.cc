@@ -102,7 +102,7 @@ void FullyConnectedComputeExCPU(const nnvm::NodeAttrs& attrs,
       common::ContainsOnlyStorage(outputs, kDefaultStorage)) {
     if (SupportMKLDNNFC(inputs[0])) {
       MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-      MKLDNNFCForward(attrs, ctx, inputs, req, outputs);
+      MKLDNNRun(MKLDNNFCForward, attrs, ctx, inputs, req, outputs);
       MKLDNN_OPCHECK_RUN(FullyConnectedCompute<cpu>, attrs, ctx, inputs, req,
                          outputs);
     } else {
@@ -152,7 +152,7 @@ void FullyConnectedGradComputeExCPU(const nnvm::NodeAttrs& attrs,
   bool mkldnn_fc_backward_enable = false;
   if (mkldnn_fc_backward_enable && SupportMKLDNNFC(inputs[0])) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    MKLDNNFCBackward(attrs, ctx, inputs, req, outputs);
+    MKLDNNRun(MKLDNNFCBackward, attrs, ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(FullyConnectedGradCompute<cpu>, attrs, ctx, inputs, req,
                        outputs);
     return;

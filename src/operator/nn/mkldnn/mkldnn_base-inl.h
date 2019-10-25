@@ -442,7 +442,7 @@ enum OutDataOp {
 };
 
 typedef std::pair<OutDataOp, mkldnn::memory *> mkldnn_output_t;
-void MKLDNNCopy(const mkldnn::memory &mem, const mkldnn::memory* this_mem);
+void MKLDNNMemoryCopy(const mkldnn::memory &mem, const mkldnn::memory* this_mem);
 
 /*
  * Here we want to get MKLDNN memory whose desc is exactly the same as
@@ -683,6 +683,19 @@ void MKLDNNRun(mxnet::FComputeEx fn,
                const std::vector<mxnet::NDArray> &inputs_,
                const std::vector<mxnet::OpReqType> &req,
                const std::vector<mxnet::NDArray> &outputs_);
+
+using FComputeExUnary = std::function<void (const nnvm::NodeAttrs& attrs,
+                                       const OpContext& ctx,
+                                       const NDArray& input,
+                                       const OpReqType& req,
+                                       const NDArray& output)>;
+
+void MKLDNNRun(FComputeExUnary fn,
+               const nnvm::NodeAttrs &attrs,
+               const mxnet::OpContext &ctx,
+               const mxnet::NDArray &inputs_,
+               const mxnet::OpReqType &req,
+               const mxnet::NDArray &outputs_);
 
 }  // namespace mxnet
 #endif
