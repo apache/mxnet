@@ -54,15 +54,23 @@ void IndexArrayForwardCPU(const nnvm::NodeAttrs &attrs,
         ctx.requested[0].get_space_typed<cpu, 1, int64_t>(Shape1(2 * naxes), stream);
 
     IndexArrayBuildSelectedAxesWorkspace(axes, index_products, workspace.dptr_, ndim);
+    
+    // Assumes param.target_axis is -1 or 0.
+    const ptrdiff_t index_axis_offset = param.target_axis == -1 ? naxes : 1;
+    const ptrdiff_t target_axis_offset = param.target_axis == -1 ? 1: in_data.Size();
 
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
       Kernel<IndexArrayKernel<req_type>, cpu>::Launch(stream, in_data.Size(),
-          out_data.dptr<int64_t>(), naxes, workspace.dptr_);
+          out_data.dptr<int64_t>(), naxes, index_axis_offset, target_axis_offset, workspace.dptr_);
     });
   } else {
+    // Assumes param.target_axis is -1 or 0.
+    const ptrdiff_t index_axis_offset = param.target_axis == -1 ? ndim : 1;
+    const ptrdiff_t target_axis_offset = param.target_axis == -1 ? 1: in_data.Size();
+
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
       Kernel<IndexArrayDefaultKernel<req_type>, cpu>::Launch(stream, in_data.Size(),
-          out_data.dptr<int64_t>(), ndim, inshape.data());
+          out_data.dptr<int64_t>(), ndim, index_axis_offset, target_axis_offset, inshape.data());
     });
   }
 }
@@ -80,6 +88,11 @@ Additionally, when the parameter `axes` is specified, `idx` will be a
 :math:`(d_1, d_2, ..., d_n, m)` array where `m` is the length of `axes`, and the following
 equality will hold: :math:`idx[i_1, i_2, ..., i_n, j] = i_{axes[j]}`.
 
+The `target_axis` parameter can be used to move the index axis to the front of the shape.
+For instance, if `target_axis` is set to 0, the `index_array` of
+:math:`(d_1, d_2, ..., d_n)` will be a :math:`(n, d_1, d_2, ..., d_n)` array `idx`, where
+:math:`idx[:, i_1, i_2, ..., i_n] = [i_1, i_2, ..., i_n]`.
+
 Examples::
 
     x = mx.nd.ones((3, 2))
@@ -92,6 +105,15 @@ Examples::
 
                                     [[2 0]
                                      [2 1]]]
+
+    mx.nd.contrib.index_array(x, target_axis=0) = [[[0 0]
+                                                    [1 1]
+                                                    [2 2]]
+                                                  
+                                                   [[0 1]
+                                                    [0 1]
+                                                    [0 1]]]
+
 
     x = mx.nd.ones((3, 2, 2))
 
@@ -115,6 +137,24 @@ Examples::
                                                   [[1 2]
                                                    [1 2]]]]
 
+    mx.nd.contrib.index_array(x, axes=(1, 0), target_axis=0) = [[[[0 0]
+                                                                  [1 1]]
+                                                               
+                                                                 [[0 0]
+                                                                  [1 1]]
+                                                               
+                                                                 [[0 0]
+                                                                  [1 1]]]
+                                                               
+                                                               
+                                                                [[[0 0]
+                                                                  [0 0]]
+                                                               
+                                                                 [[1 1]
+                                                                  [1 1]]
+                                                               
+                                                                 [[2 2]
+                                                                  [2 2]]]]
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -133,18 +173,22 @@ Examples::
   const IndexArrayParam &param = nnvm::get<IndexArrayParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), 1U);
   CHECK_EQ(out_shape->size(), 1U);
+  CHECK((param.target_axis == 0) || (param.target_axis == -1));
+
   const mxnet::TShape &inshape = (*in_shape)[index_array_enum::kIn];
   if (!mxnet::ndim_is_known(inshape)) return false;
 
   mxnet::TShape oshape = mxnet::TShape(inshape.ndim() + 1, 0);
 
+  const int target_axis = (param.target_axis + inshape.ndim() + 1) % (inshape.ndim() + 1);
+
   for (int i = 0; i < inshape.ndim(); i++) {
-    oshape[i] = inshape[i];
+    oshape[i + (target_axis <= i)] = inshape[i];
   }
   if (param.axes.has_value()) {
-    oshape[inshape.ndim()] = param.axes.value().ndim();
+    oshape[target_axis] = param.axes.value().ndim();
   } else {
-    oshape[inshape.ndim()] = inshape.ndim();
+    oshape[target_axis] = inshape.ndim();
   }
 
   SHAPE_ASSIGN_CHECK(*out_shape, 0, oshape);

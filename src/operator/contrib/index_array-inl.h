@@ -39,11 +39,13 @@ struct IndexArrayKernel {
   MSHADOW_XINLINE static void Map(index_t i,
                                   int64_t* out_data,
                                   const int n,
+                                  const ptrdiff_t index_axis_offset,
+                                  const ptrdiff_t target_axis_offset,
                                   const int64_t* workspace) {
     for (ptrdiff_t j = 0; j < n; j++) {
       int64_t upper = workspace[ptrdiff_t(2) * j];
       int64_t lower = workspace[ptrdiff_t(2) * j + ptrdiff_t(1)];
-      KERNEL_ASSIGN(out_data[ptrdiff_t(i) * ptrdiff_t(n) + j], req, (i % upper) / lower);
+      KERNEL_ASSIGN(out_data[ptrdiff_t(i) * index_axis_offset + j * target_axis_offset], req, (i % upper) / lower);
     }
   }
 };
@@ -53,10 +55,12 @@ struct IndexArrayDefaultKernel {
   MSHADOW_XINLINE static void Map(index_t i,
                                   int64_t* out_data,
                                   const int ndim,
+                                  const ptrdiff_t index_axis_offset,
+                                  const ptrdiff_t target_axis_offset,
                                   const dim_t* shape) {
     int64_t index = i;
     for (ptrdiff_t j = ndim - 1; j >= 0; j--) {
-      KERNEL_ASSIGN(out_data[ptrdiff_t(i) * ptrdiff_t(ndim) + j], req, index % shape[j]);
+      KERNEL_ASSIGN(out_data[ptrdiff_t(i) * index_axis_offset + j * target_axis_offset], req, index % shape[j]);
       index /= shape[j];
     }
   }
@@ -91,9 +95,12 @@ inline void IndexArrayBuildSelectedAxesWorkspace(const mxnet::Tuple<int> &axes,
 
 struct IndexArrayParam : public dmlc::Parameter<IndexArrayParam> {
   dmlc::optional<mxnet::Tuple<int>> axes;
+  int target_axis;
   DMLC_DECLARE_PARAMETER(IndexArrayParam) {
     DMLC_DECLARE_FIELD(axes).set_default(dmlc::optional<mxnet::Tuple<int>>())
       .describe("The axes to include in the index array. Supports negative values.");
+    DMLC_DECLARE_FIELD(target_axis).set_default(-1)
+      .describe("The axis to write the indices to. Currently only supports -1 (last axis) and 0 (first axis).");
   }
 };  // struct IndexArrayParam
 
