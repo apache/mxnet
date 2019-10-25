@@ -70,7 +70,7 @@ void IndexArrayForwardGPU(const nnvm::NodeAttrs &attrs,
         ctx.requested[0].get_space_typed<gpu, 1, dim_t>(Shape1(ndim), s);
 
     CUDA_CALL(cudaMemcpyAsync(workspace.dptr_, inshape.data(), sizeof(dim_t) * ndim,
-                              cudaMemcpyHostToDevice, stream));
+        cudaMemcpyHostToDevice, mshadow::Stream<gpu>::GetStream(stream)));
 
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
       Kernel<IndexArrayDefaultKernel<req_type>, gpu>::Launch(s, in_data.Size(),
