@@ -51,9 +51,7 @@ def _test_dropout(seed, ctx):
 def test_rnn_with_seed():
     info = np.iinfo(np.int32)
     seed = np.random.randint(info.min, info.max)
-    # cpu fixed seed does not work,
-    # tracked in https://github.com/apache/incubator-mxnet/issues/16604
-    #_test_rnn(seed, mx.cpu())
+    _test_rnn(seed, mx.cpu())
     _test_rnn(seed, mx.gpu())
 
 def _test_rnn(seed, ctx):
