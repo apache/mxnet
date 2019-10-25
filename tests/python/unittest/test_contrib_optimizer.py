@@ -16,11 +16,13 @@
 # under the License.
 
 import itertools
-
 import numpy as np
-
 import mxnet as mx
 from mxnet.test_utils import *
+
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(curr_path, '../unittest'))
+from common import with_seed
 
 
 # * GroupAdaGrad
@@ -94,102 +96,142 @@ def test_group_adagrad():
                 g_stype='row_sparse',
                 compare_states=False)
 
+
+@with_seed()
 def test_adamw():
-    shape = (3, 4)
-    weight = mx.nd.random.uniform(shape=shape)
-    weight_ref = weight.copy()
-    grad = mx.nd.random.uniform(shape=shape)
-    m = mx.nd.random.uniform(shape=shape)
-    v = mx.nd.random.uniform(shape=shape)
-    rescale_grad = mx.nd.array([10])
-    eta, lr, wd, epsilon = 1, 1, 0, 1e-8
-    beta1, beta2 = 0.9, 0.999
-    kwargs = {'eta': eta, 'lr': lr, 'wd': wd, 'epsilon': epsilon,
-              'beta1': beta1, 'beta2': beta2}
+    def get_refs(m, v, weight, grad_rescale, beta1, beta2, lr, eta, wd, epsilon, clip_grad=-1):
+        if clip_grad >= 0:
+            grad_rescale = mx.nd.clip(grad_rescale, -clip_grad, clip_grad)
 
-    # update is skipped for rescale = nan scalar
-    mx.nd.contrib.adamw_update(weight, grad, m, v,
-                               np.nan, out=weight, **kwargs)
-    # weight remains unchanged
-    mx.test_utils.assert_almost_equal(weight_ref.asnumpy(), weight.asnumpy())
+        mean_ref = beta1*m + (1-beta1)*grad_rescale
+        v_ref = beta2*v + (1-beta2)*(grad_rescale**2)
+        weight_ref = weight - eta * (lr * mean_ref / (v_ref.sqrt() + epsilon) + weight * wd)
+        return mean_ref, v_ref, weight_ref
 
-    # update is skipped for rescale = 0
-    mx.nd.contrib.adamw_update(weight, grad, m, v,
-                               rescale_grad * 0, out=weight, **kwargs)
-    # weight remains unchanged
-    mx.test_utils.assert_almost_equal(weight_ref.asnumpy(), weight.asnumpy())
+    def run_adamw_test(nElem=1, aggregate=False):
+        aggregate = aggregate or nElem > 1
+        rescale_factor = 10
+        eta, lr, wd, epsilon = 1, 1, 0.1, 1e-8
+        beta1, beta2 = 0.9, 0.999
+        clip_gradient = np.random.uniform(rescale_factor, rescale_factor)
+        weight, grad, m, v, etas, lrs, wds, weight_ref = [], [], [], [], [], [], [], []
+        for i in range(nElem):
+            shape = (np.random.randint(3, high=10), np.random.randint(3, high=10))
+            weight.append(mx.nd.random.uniform(shape=shape))
+            grad.append(mx.nd.random.uniform(-1.0, 1.0, shape=shape))
+            m.append(mx.nd.random.uniform(shape=shape))
+            v.append(mx.nd.random.uniform(shape=shape))
+            etas.append(eta - 1 / np.random.uniform(9, 10))
+            lrs.append(lr - 1 / np.random.uniform(9, 10))
+            wds.append(wd - 1 / np.random.uniform(95, 105))
+            weight_ref.append(weight[i].copy())
 
-    # update is skipped for rescale = nan
-    mx.nd.contrib.adamw_update(weight, grad, m, v,
-                               rescale_grad * np.nan, out=weight, **kwargs)
-    # weight remains unchanged
-    mx.test_utils.assert_almost_equal(weight_ref.asnumpy(), weight.asnumpy())
+        if aggregate:
+            kwargs = {'etas': etas, 'lrs': lrs, 'wds': wds}
+        else:
+            kwargs = {'eta': etas[0], 'lr': lrs[0], 'wd': wds[0]}
 
-    # update is skipped for rescale = inf
-    mx.nd.contrib.adamw_update(weight, grad, m, v,
-                               rescale_grad * np.inf, out=weight, **kwargs)
-    # weight remains unchanged
-    mx.test_utils.assert_almost_equal(weight_ref.asnumpy(), weight.asnumpy())
+        kwargs.update([('epsilon', epsilon), ('beta1', beta1), ('beta2', beta2), ('clip_gradient', clip_gradient)])
 
-    # multi-precision update is skipped for rescale = nan
-    weight_fp16 = weight.astype('float16')
-    grad_fp16 = grad.astype('float16')
-    weight_fp16_ref = weight_fp16.copy()
-    mx.nd.contrib.mp_adamw_update(weight_fp16, grad_fp16, m, v, weight,
-                                  rescale_grad * np.nan, out=weight_fp16, **kwargs)
-    mx.test_utils.assert_almost_equal(weight_ref.asnumpy(), weight.asnumpy())
-    mx.test_utils.assert_almost_equal(weight_fp16_ref.asnumpy(), weight_fp16.asnumpy())
+        # Test 1: Update is skipped for rescale = nan scalar
+        rescale_grad = mx.nd.array([rescale_factor])
+        tested_grad = [rescale_grad * 0, rescale_grad * np.nan, rescale_grad * np.inf]
+        tested_rescaled_grad = [np.nan]
+        tested_rescaled_grad.extend(tested_grad)
 
-    # multi-precision update is skipped for rescale = nan scalar
-    mx.nd.contrib.mp_adamw_update(weight_fp16, grad_fp16, m, v, weight,
-                                  np.nan, out=weight_fp16, **kwargs)
-    mx.test_utils.assert_almost_equal(weight_ref.asnumpy(), weight.asnumpy())
-    mx.test_utils.assert_almost_equal(weight_fp16_ref.asnumpy(), weight_fp16.asnumpy())
+        for rescaled_grad in tested_rescaled_grad:
+            if aggregate:
+                mx.nd.contrib.multi_adamw_update(weight, grad, m, v,
+                                                 rescaled_grad, out=weight, **kwargs)
+            else:
+                mx.nd.contrib.adamw_update(weight[0], grad[0], m[0], v[0],
+                                           rescaled_grad, out=weight[0], **kwargs)
 
-    # multi-precision update is skipped for rescale = inf
-    mx.nd.contrib.mp_adamw_update(weight_fp16, grad_fp16, m, v, weight,
-                                  rescale_grad * np.inf, out=weight_fp16, **kwargs)
-    mx.test_utils.assert_almost_equal(weight_ref.asnumpy(), weight.asnumpy())
-    mx.test_utils.assert_almost_equal(weight_fp16_ref.asnumpy(), weight_fp16.asnumpy())
+            # weights should remain unchanged
+            for j in range(nElem):
+                assert_almost_equal(weight_ref[j], weight[j])
 
-    # multi-precision update is skipped for rescale = 0
-    mx.nd.contrib.mp_adamw_update(weight_fp16, grad_fp16, m, v, weight,
-                                  rescale_grad * 0, out=weight_fp16, **kwargs)
-    mx.test_utils.assert_almost_equal(weight_ref.asnumpy(), weight.asnumpy())
-    mx.test_utils.assert_almost_equal(weight_fp16_ref.asnumpy(), weight_fp16.asnumpy())
 
-    # reference normal update
-    grad_rescale = rescale_grad * grad
-    m_ref = beta1*m + (1-beta1)*grad_rescale
-    v_ref = beta2*v + (1-beta2)*(grad_rescale**2)
-    weight_ref = weight - eta * (1 * m_ref / (v_ref.sqrt() + epsilon) + weight * wd)
-    m_test = m.copy()
-    v_test = v.copy()
-    weight_test = weight.copy()
-    # op normal update
-    mx.nd.contrib.adamw_update(weight_test, grad, m_test, v_test,
-                               rescale_grad, out=weight_test, **kwargs)
-    mx.test_utils.assert_almost_equal(weight_ref.asnumpy(), weight_test.asnumpy())
-    mx.test_utils.assert_almost_equal(m_ref.asnumpy(), m_test.asnumpy())
-    mx.test_utils.assert_almost_equal(v_ref.asnumpy(), v_test.asnumpy())
+        # Test 2: Same as Test 1 for multi-precision update
+        weight_fp16, grad_fp16, weight_fp16_refs = [], [], []
+        for i in range(nElem):
+            weight_fp16.append(weight[i].astype('float16'))
+            grad_fp16.append(grad[i].astype('float16'))
+            weight_fp16_refs.append(weight_fp16[i].copy())
 
-    # reference normal multi-precision update
-    m_fp32 = m.copy()
-    v_fp32 = v.copy()
-    weight_fp32 = weight.copy()
-    grad_rescale = rescale_grad * grad_fp16.astype('float32')
-    m_ref = beta1*m_fp32 + (1-beta1)*grad_rescale
-    v_ref = beta2*v_fp32 + (1-beta2)*(grad_rescale**2)
-    weight_ref = weight - eta * (1 * m_ref / (v_ref.sqrt() + epsilon) + weight * wd)
-    weight_fp16_ref = weight_ref.astype('float16')
-    # op normal multi-precision update
-    mx.nd.contrib.mp_adamw_update(weight_fp16, grad_fp16, m_fp32, v_fp32, weight_fp32,
-                                  rescale_grad, out=weight_fp16, **kwargs)
-    mx.test_utils.assert_almost_equal(m_ref.asnumpy(), m_fp32.asnumpy())
-    mx.test_utils.assert_almost_equal(v_ref.asnumpy(), v_fp32.asnumpy())
-    mx.test_utils.assert_almost_equal(weight_ref.asnumpy(), weight_fp32.asnumpy())
-    mx.test_utils.assert_almost_equal(weight_fp16_ref.asnumpy(), weight_fp16.asnumpy())
+        for rescaled_grad in tested_grad:
+            if aggregate:
+                mx.nd.contrib.multi_mp_adamw_update(weight_fp16, grad_fp16, m, v, weight,
+                                                    rescaled_grad, out=weight_fp16, **kwargs)
+            else:
+                mx.nd.contrib.mp_adamw_update(weight_fp16[0], grad_fp16[0], m[0], v[0], weight[0],
+                                              rescaled_grad, out=weight_fp16[0], **kwargs)
 
+            # weights should remain unchanged
+            for i in range(nElem):
+                assert_almost_equal(weight_ref[i], weight[i])
+                assert_almost_equal(weight_fp16_refs[i], weight_fp16[i])
+
+
+        # Test 3: Reference normal update
+        grad_rescale, weight_test, m_refs, v_refs, weight_refs = [], [], [], [], []
+        for i in range(nElem):
+            grad_rescale.append(rescale_grad * grad[i])
+            m_ref, v_ref, weight_ref = get_refs(m[i], v[i], weight[i], grad_rescale[i], beta1, beta2, lrs[i], etas[i], wds[i], epsilon, clip_gradient)
+            m_refs.append(m_ref)
+            v_refs.append(v_ref)
+            weight_refs.append(weight_ref)
+            weight_test.append(weight[i].copy())
+
+        # op normal update
+        if aggregate:
+            mx.nd.contrib.multi_adamw_update(weight_test, grad, m, v,
+                                             rescale_grad, out=weight_test, **kwargs)
+        else:
+            mx.nd.contrib.adamw_update(weight_test[0], grad[0], m[0], v[0],
+                                       rescale_grad, out=weight_test[0], **kwargs)
+
+        # Compare results
+        atol = 1e-4 if aggregate else 1e-5
+        rtol = 1e-4 if aggregate else None
+        for i in range(nElem):
+            assert_almost_equal(weight_refs[i], weight_test[i], rtol=rtol, atol=atol)
+            assert_almost_equal(m_refs[i], m[i], rtol=rtol, atol=atol)
+            assert_almost_equal(v_refs[i], v[i], atol=atol)
+
+
+        # Test 4: Reference normal multi-precision update
+        grad_rescale, m_refs, v_refs, weight_refs, weight_fp16_refs = [], [], [], [], []
+        for i in range(nElem):
+            grad_rescale.append(rescale_grad * grad_fp16[i].astype('float32'))
+            m_ref, v_ref, weight_ref = get_refs(m[i], v[i], weight[i], grad_rescale[i], beta1, beta2, lrs[i], etas[i], wds[i], epsilon, clip_gradient)
+            m_refs.append(m_ref)
+            v_refs.append(v_ref)
+            weight_refs.append(weight_ref)
+            weight_fp16_refs.append(weight_ref.astype('float16'))
+
+        # op normal multi-precision update
+        if aggregate:
+            mx.nd.contrib.multi_mp_adamw_update(weight_fp16, grad_fp16, m, v, weight,
+                                                rescale_grad, out=weight_fp16, **kwargs)
+        else:
+            mx.nd.contrib.mp_adamw_update(weight_fp16[0], grad_fp16[0], m[0], v[0], weight[0],
+                                          rescale_grad, out=weight_fp16[0], **kwargs)
+
+        # Compare results
+        for i in range(nElem):
+            assert_almost_equal(m_refs[i], m[i], rtol=rtol, atol=atol)
+            assert_almost_equal(v_refs[i], v[i], atol=atol)
+            assert_almost_equal(weight_refs[i], weight[i], rtol=rtol, atol=atol)
+            assert_almost_equal(weight_fp16_refs[i], weight_fp16[i], rtol=1e-3, atol=atol)
+
+    # Testing aggregated Adam update for one element
+    run_adamw_test(1, aggregate=True)
+
+    # Testing Adam update, if nElem = 0, OR
+    #         aggregated Adam update, if nElem > 0
+    for nElem in range(6):
+        run_adamw_test(nElem+1)
 
 if __name__ == '__main__':
     import nose

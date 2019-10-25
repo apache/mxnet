@@ -97,3 +97,6 @@ __version__ = base.__version__
 # checks the __version__ attr of MXNet, which is not set on kvstore server due to the
 # fact that kvstore-server module is imported before the __version__ attr is set.
 from . import kvstore_server
+
+from . import numpy_op_signature
+from . import numpy_dispatch_protocol

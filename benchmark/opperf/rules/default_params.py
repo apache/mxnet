@@ -25,6 +25,10 @@ MX_OP_MODULE = sys.modules["mxnet.ndarray.op"]
 
 """Default Input Tensor shapes to use for benchmarking"""
 
+# For operators like concat, ElementWiseSum, squeeze, stack
+# argument data is passed as variable arg (*args)
+DEFAULT_ARGS = [(1024, 1024)]
+
 # For Unary operators like abs, arccos, arcsin etc..
 DEFAULT_DATA = [(1024, 1024), (10000, 1), (10000, 100)]
 
@@ -93,10 +97,11 @@ DEFAULT_LAZY_UPDATE = [0,1]
 # Hence below we append 4d to mark the difference.
 # For depth_to_space, dimension 3 needs to be a multiple of 'block' and 1 should be a multiple of `block^2`
 DEFAULT_DATA_4d = [(1, 4, 2, 4), (10,25,10,100)]
-DEFAULT_DIM_1 = [0, 1, 2, 3]
-DEFAULT_DIM_2 = [1, 2, 3, 0]
 DEFAULT_BLOCK_SIZE = [2, 5]
 
+# For swapaxis operator
+DEFAULT_DIM_1 = [0]
+DEFAULT_DIM_2 = [1]
 
 # Default Inputs. MXNet Op Param Name to Default Input mapping
 DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
@@ -146,7 +151,8 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "data_4d": DEFAULT_DATA_4d,
                    "dim1": DEFAULT_DIM_1,
                    "dim2": DEFAULT_DIM_2,
-                   "block_size": DEFAULT_BLOCK_SIZE}
+                   "block_size": DEFAULT_BLOCK_SIZE,
+                   "args": DEFAULT_ARGS}
 
 
 # These are names of MXNet operator parameters that is of type NDArray.
@@ -157,4 +163,5 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
 PARAMS_OF_TYPE_NDARRAY = ["lhs", "rhs", "data", "base", "exp", "sample",
                           "mu", "sigma", "lam", "alpha", "beta", "gamma", "k", "p",
                           "low", "high", "weight", "bias", "moving_mean", "moving_var",
-                          "weight", "weight32", "grad", "mean", "var", "mom", "n", "d", "v", "z", "g", "delta"]
+                          "weight", "weight32", "grad", "mean", "var", "mom", "n", "d",
+                          "v", "z", "g", "delta", "args"]

@@ -676,6 +676,7 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
                                    'from ..base import _Null'],
                         'ndarray': ['from ._internal import NDArrayBase',
                                     'from ..base import _Null']}
+        module_file.write('# coding: utf-8')
         module_file.write('# File content is auto-generated. Do not modify.' + os.linesep)
         module_file.write('# pylint: skip-file' + os.linesep)
         module_file.write(os.linesep.join(dependencies[module_name.split('.')[1]]))

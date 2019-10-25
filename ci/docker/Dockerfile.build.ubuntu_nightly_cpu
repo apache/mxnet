@@ -29,6 +29,7 @@ COPY install/deb_ubuntu_ccache.sh /work/
 RUN /work/deb_ubuntu_ccache.sh
 
 COPY install/ubuntu_python.sh /work/
+COPY install/requirements /work/
 RUN /work/ubuntu_python.sh
 
 COPY install/ubuntu_scala.sh /work/
@@ -55,7 +56,7 @@ COPY install/ubuntu_onnx.sh /work/
 RUN /work/ubuntu_onnx.sh
 
 COPY install/ubuntu_docs.sh /work/
-COPY install/docs_requirements /work/
+COPY install/requirements /work/
 RUN /work/ubuntu_docs.sh
 
 COPY install/ubuntu_nightly_tests.sh /work/

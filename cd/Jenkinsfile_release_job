@@ -1,0 +1,134 @@
+// -*- mode: groovy -*-
+
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+//
+// Jenkins pipeline
+// See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
+
+// This job executes a "generic" (CD) release job.
+// The pipeline to be executed is defined by the "RELEASE_JOB_TYPE" pipeline parameter.
+// This is the path (relative to the CD directory) to a directory containing the following file groovy script
+// `Jenkins_pipeline.groovy`. 
+// See `cd` directory README for more details.
+
+// timeout of each step in minutes
+max_time = 180
+
+pipeline {
+  agent {
+    label 'restricted-utility'
+  }
+
+  parameters {
+    // Release parameters
+    string(defaultValue: "Generic release job", description: "Optional Job name", name: "RELEASE_JOB_NAME")
+    string(defaultValue: "master", description: "Git Commit to Build", name: "COMMIT_ID")
+
+    // Using string instead of choice parameter to keep the changes to the parameters minimal to avoid
+    // any disruption caused by different COMMIT_ID values chaning the job parameter configuration on 
+    // Jenkins.
+    string(defaultValue: "mxnet_lib/static", description: "Pipeline to build", name: "RELEASE_JOB_TYPE")
+    string(defaultValue: "cpu,mkl,cu90,cu90mkl,cu92,cu92mkl,cu100,cu100mkl,cu101,cu101mkl", description: "Comma separated list of variants", name: "MXNET_VARIANTS")
+    booleanParam(defaultValue: false, description: 'Whether this is a release build or not', name: "RELEASE_BUILD")
+  }
+
+  stages {
+    stage("Init") {
+      steps {
+        script {
+          cd_utils = load('cd/Jenkinsfile_utils.groovy')
+          ci_utils = load('ci/Jenkinsfile_utils.groovy')
+          ci_utils.assign_node_labels(
+            utility: 'restricted-utility',
+            linux_cpu: 'restricted-mxnetlinux-cpu',
+            linux_gpu: 'restricted-mxnetlinux-gpu',
+            linux_gpu_p3: 'restricted-mxnetlinux-gpu-p3',
+            windows_cpu: 'restricted-mxnetwindows-cpu',
+            windows_gpu: 'restricted-mxnetwindows-gpu'
+          )
+
+          // Skip Jenkins state update jobs
+          if (env.RELEASE_JOB_TYPE == cd_utils.STATE_UPDATE) {
+            echo """\
+            |Job Type: ${env.RELEASE_JOB_TYPE}
+            |Commit Id: ${env.GIT_COMMIT}""".stripMargin()
+          } else {
+            echo """\
+            |Job Name: ${env.RELEASE_JOB_NAME}
+            |Job Type: ${env.RELEASE_JOB_TYPE}
+            |Release Build: ${params.RELEASE_BUILD}
+            |Commit Id: ${env.GIT_COMMIT}
+            |Branch: ${env.GIT_BRANCH}
+            |Variants: ${env.MXNET_VARIANTS}""".stripMargin()
+          }
+        }
+      }
+    }
+    stage("Release Job") {
+      steps {
+        script {
+          // Skip builds for state update job
+          if (env.RELEASE_JOB_TYPE == cd_utils.STATE_UPDATE) {
+            currentBuild.result = "SUCCESS"
+            return
+          }
+
+          // Add new job types here
+          def valid_job_types = [
+            "mxnet_lib/static",
+            "mxnet_lib/dynamic", 
+            "python/pypi",
+            "python/docker"
+          ]
+          
+          // Convert mxnet variants to a list
+          def mxnet_variants = params.MXNET_VARIANTS.trim().split(',').inject([]) { list, item ->
+            list << item.trim()
+          }.findAll { item -> ! (item == null || item.isEmpty()) }
+
+          // Exit successfully if there are no variants to build
+          if (mxnet_variants.size() == 0) {
+            error "No variants to build..."
+          }
+
+          // Only execute from allowed release job types
+          if (! (valid_job_types.contains(params.RELEASE_JOB_TYPE))) {
+            error "Unknown release job type '${params.RELEASE_JOB_TYPE}'"
+          }
+
+          // Load script for the supplied job type
+          def custom_steps = load("cd/${params.RELEASE_JOB_TYPE}/Jenkins_pipeline.groovy")
+
+          // Extract the pipelines for the variants
+          def pipelines = [:]
+          
+          for (variant in mxnet_variants) {
+            pipelines << ["${variant}": custom_steps.get_pipeline(variant)]
+          }
+
+          // Execute them in parallel
+          // The build result will be set to:
+          //  - SUCCESS if all pipelines succeed
+          //  - UNSTABLE if some (but not all) pipelines fail
+          //  - FAILURE if all pipelines fail
+          cd_utils.error_checked_parallel(pipelines)
+        }
+      }
+    }
+  }
+}

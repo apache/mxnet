@@ -311,6 +311,7 @@ enum TypeFlag {
   kInt32 = 4,
   kInt8  = 5,
   kInt64 = 6,
+  kBool = 7,
 };
 
 template<typename DType>
@@ -409,6 +410,11 @@ struct DataType<int32_t> {
 template<>
 struct DataType<int64_t> {
   static const int kFlag = kInt64;
+  static const int kLanes = 1;
+};
+template<>
+struct DataType<bool> {
+  static const int kFlag = kBool;
   static const int kLanes = 1;
 };
 
@@ -644,6 +650,30 @@ template<>
 MSHADOW_XINLINE int64_t MinValue<int64_t>(void) {
   return LLONG_MIN;
 }
+/*! \brief minimum value of bool */
+template<>
+MSHADOW_XINLINE bool MinValue<bool>(void) {
+  return false;
+}
+
+/*!
+ * \brief negative infinity of certain types
+ * \tparam DType data type
+ */
+template<typename DType>
+MSHADOW_XINLINE DType NegInfValue(void) {
+  return MinValue<DType>();
+}
+/*! \brief negative infinity value of float */
+template<>
+MSHADOW_XINLINE float NegInfValue<float>(void) {
+  return -HUGE_VALF;
+}
+/*! \brief negative infinity value of double */
+template<>
+MSHADOW_XINLINE double NegInfValue<double>(void) {
+  return -HUGE_VAL;
+}
 
 /*!
  * \brief maximum value of certain types
@@ -686,6 +716,31 @@ template<>
 MSHADOW_XINLINE int64_t MaxValue<int64_t>(void) {
   return LLONG_MAX;
 }
+/*! \brief maximum value of bool */
+template<>
+MSHADOW_XINLINE bool MaxValue<bool>(void) {
+  return true;
+}
+
+/*!
+ * \brief positive infinity of certain types
+ * \tparam DType data type
+ */
+template<typename DType>
+MSHADOW_XINLINE DType PosInfValue(void) {
+  return MaxValue<DType>();
+}
+/*! \brief positive infinity value of float */
+template<>
+MSHADOW_XINLINE float PosInfValue<float>(void) {
+  return HUGE_VALF;
+}
+/*! \brief positive infinity value of double */
+template<>
+MSHADOW_XINLINE double PosInfValue<double>(void) {
+  return HUGE_VAL;
+}
+
 }  // namespace limits
 
 /*! \brief sum reducer */
@@ -793,7 +848,7 @@ struct maximum {
    */
   template<typename DType>
   MSHADOW_XINLINE static void SetInitValue(DType &initv) { // NOLINT(*)
-    initv = limits::MinValue<DType>();
+    initv = limits::NegInfValue<DType>();
   }
   /*!
    *\brief set the initial value during reduction
@@ -849,7 +904,7 @@ struct minimum {
    */
   template<typename DType>
   MSHADOW_XINLINE static void SetInitValue(DType &initv) { // NOLINT(*)
-    initv = limits::MaxValue<DType>();
+    initv = limits::PosInfValue<DType>();
   }
   /*!
    *\brief set the initial value during reduction
@@ -1099,10 +1154,64 @@ struct minimum {
     LOG(FATAL) << "Unknown type enum " << type;     \
   }
 
+#define MSHADOW_TYPE_SWITCH_WITH_BOOL(type, DType, ...)       \
+  switch (type) {                                             \
+  case mshadow::kFloat32:                                     \
+    {                                                         \
+      typedef float DType;                                    \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kFloat64:                                     \
+    {                                                         \
+      typedef double DType;                                   \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kFloat16:                                     \
+    {                                                         \
+      typedef mshadow::half::half_t DType;                    \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kUint8:                                       \
+    {                                                         \
+      typedef uint8_t DType;                                  \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kInt8:                                        \
+    {                                                         \
+      typedef int8_t DType;                                   \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kInt32:                                       \
+    {                                                         \
+      typedef int32_t DType;                                  \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kInt64:                                       \
+    {                                                         \
+      typedef int64_t DType;                                  \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kBool:                                        \
+    {                                                         \
+      typedef bool DType;                                     \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  default:                                                    \
+    LOG(FATAL) << "Unknown type enum " << type;               \
+  }
+
 /*! \brief get data type size from type enum */
 inline size_t mshadow_sizeof(int type) {
   int size = 0;
-  MSHADOW_TYPE_SWITCH(type, DType, size = sizeof(DType););
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(type, DType, size = sizeof(DType););
   return size;
 }
 

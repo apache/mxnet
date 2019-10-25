@@ -62,4 +62,5 @@ nav:
     - Symbolic API: api/symbolic-node.md
     - Neural Networks Factory: api/nn-factory.md
     - Executor: api/executor.md
+    - Key-Value Store: api/kvstore.md
     - Network Visualization: api/visualize.md

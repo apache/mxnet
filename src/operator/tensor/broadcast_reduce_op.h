@@ -26,6 +26,7 @@
 #define MXNET_OPERATOR_TENSOR_BROADCAST_REDUCE_OP_H_
 
 #include <mxnet/operator_util.h>
+#include <string>
 #include <vector>
 #include <utility>
 #include <algorithm>
@@ -615,7 +616,7 @@ void ReduceAxesComputeImpl(const OpContext& ctx,
   mxnet::TShape src_shape, dst_shape;
   BroadcastReduceShapeCompact(inputs[0].shape_, small, &src_shape, &dst_shape);
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
       const TBlob in_data = inputs[0].reshape(src_shape);
       const TBlob out_data = outputs[0].reshape(dst_shape);
@@ -1265,7 +1266,7 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
   bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
   if (!safe_acc && inputs[0].type_flag_ == mshadow::kFloat16) {
     common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for LpNorm with float16 inputs. "
-                    "See https://mxnet.incubator.apache.org/versions/master/faq/env_var.html "
+                    "See https://mxnet.apache.org/api/faq/env_var "
                     "for more details.");
   }
   if (param.ord == 1) {
@@ -1578,6 +1579,20 @@ void PickOpBackward(const nnvm::NodeAttrs& attrs,
       }
     });
   });
+}
+
+inline std::string get_reduce_axes_description(const std::string& op_name, int line) {
+  std::string doc = R"code(Computes the __op__ of array elements over given axes.
+
+Defined in )code";
+  doc += std::string(__FILE__) + std::string(":L") + std::to_string(line);
+  size_t pos = 0;
+  std::string holder("__op__");
+  while ((pos = doc.find(holder, pos)) != std::string::npos) {
+    doc.replace(pos, holder.length(), op_name);
+    pos += op_name.length();
+  }
+  return doc;
 }
 
 #define MXNET_OPERATOR_REGISTER_REDUCE_AXIS(name)               \

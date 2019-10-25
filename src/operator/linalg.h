@@ -54,6 +54,7 @@ using namespace mshadow;
 // CPU/GPU-versions of BLAS3 function "gemm". Please refer to the BLAS3-documentation
 // for further information about the function and its parameters.
 // Note that this is C = gemm(A,B,C), so C is input and output parameter.
+// C = alpha * A * B + beta * C
 template<typename xpu, typename DType>
 void linalg_gemm(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DType>& B,
                  const Tensor<xpu, 2, DType>& C, DType alpha, DType beta,
@@ -190,6 +191,27 @@ template<typename xpu, typename DType>
 int linalg_syevd_workspace_query(const Tensor<xpu, 2, DType>& A,
                                  const Tensor<xpu, 1, DType>& L,
                                  Stream<xpu> *s = 0);
+
+//////////////////////////////// GESVD ////////////////////////////////////////////
+
+// CPU/GPU-versions of LAPACK function "gesvd". Please refer to the
+// LAPACK documentation for further details.
+// Note: V is input and output parameter (it overwrites A)
+
+template<typename xpu, typename DType>
+void linalg_gesvd(const Tensor<xpu, 2, DType>& UT,
+                  const Tensor<xpu, 1, DType>& L,
+                  const Tensor<xpu, 2, DType>& V,
+                  const Tensor<xpu, 1, DType>& work,
+                  Stream<xpu>* s = 0);
+
+// This function determines the amount of workspace needed for linalg_gesvd
+// which is returned as number of elements of type DType.
+template<typename xpu, typename DType>
+int linalg_gesvd_workspace_query(const Tensor<xpu, 2, DType>& UT,
+                                 const Tensor<xpu, 1, DType>& L,
+                                 const Tensor<xpu, 2, DType>& V,
+                                 Stream<xpu>* s = 0);
 
 //////////////////////////////// GETRF ////////////////////////////////////////////
 

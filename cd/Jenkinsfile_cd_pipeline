@@ -1,0 +1,89 @@
+// -*- mode: groovy -*-
+
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+//
+// Jenkins pipeline
+// See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
+
+// MXNet Continuous Delivery Pipeline
+// Orchestrates the release of the different artifact by calling downstream release jobs.
+
+pipeline {
+  agent {
+    label 'restricted-utility'
+  }
+  options {
+    // Because each pass of the CD pipeline
+    // updates Jenkins' state of the release job
+    // to avoid crazy issues, we don't allow concurrent builds.
+    disableConcurrentBuilds()  
+  }
+
+  parameters {
+    // Release parameters
+    string(defaultValue: "cpu,mkl,cu90,cu90mkl,cu92,cu92mkl,cu100,cu100mkl,cu101,cu101mkl", description: "Comma separated list of variants", name: "MXNET_VARIANTS")
+    booleanParam(defaultValue: false, description: 'Whether this is a release build or not', name: "RELEASE_BUILD")
+  }
+
+  stages {
+    stage("Init") {
+      steps {
+        script {
+          cd_utils = load('cd/Jenkinsfile_utils.groovy')
+          
+          // Update release job state in Jenkins
+          cd_utils.update_release_job_state()
+        }
+      }
+    }
+
+    stage("MXNet Release") {
+      steps {
+        script {
+          cd_utils.error_checked_parallel([
+
+            "Static libmxnet based release": {
+              stage("Build") {
+                cd_utils.trigger_release_job("Build static libmxnet", "mxnet_lib/static", params.MXNET_VARIANTS)    
+              }
+              stage("Releases") {
+                cd_utils.error_checked_parallel([
+                  "PyPI Release": {
+                    echo "Building PyPI Release"
+                    cd_utils.trigger_release_job("Release PyPI Packages", "python/pypi", params.MXNET_VARIANTS)
+                  },
+                  "Python Docker Release": {
+                    echo "Building Python Docker Release"
+                    cd_utils.trigger_release_job("Release Python Docker Images", "python/docker", params.MXNET_VARIANTS)
+                  }
+                ])
+              }
+            },
+
+            "Dynamic libmxnet based release": {
+              stage("Build") {
+                cd_utils.trigger_release_job("Build dynamic libmxnet", "mxnet_lib/dynamic", params.MXNET_VARIANTS)    
+              }
+            }
+            
+          ])
+        }
+      }
+    }
+  }
+}

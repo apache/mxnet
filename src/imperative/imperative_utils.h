@@ -59,6 +59,7 @@ struct EngineOprSeg {
 };
 
 using MemoryPlanVector = std::vector<MemoryPlanInfo>;
+using CachedOpMonCallback = std::function<void(const char*, const char*, void*)>;
 
 inline Context GetContext(const nnvm::NodeAttrs& attrs,
                 const std::vector<NDArray*>& inputs,
@@ -813,6 +814,7 @@ inline MemoryPlanVector PlanMemory(
     nnvm::Graph* p_g,
     nnvm::StorageVector&& storage,
     const std::vector<uint32_t>& ref_count,
+    const std::string& storage_plan,
     const std::pair<uint32_t, uint32_t>& node_range = {0, 0},
     const std::pair<uint32_t, uint32_t>& entry_range = {0, 0},
     bool detect_inplace_addto = false) {
@@ -830,6 +832,7 @@ inline MemoryPlanVector PlanMemory(
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
   const auto& shapes = g.GetAttr<mxnet::ShapeVector>("shape");
   const auto& storage_inplace = g.GetAttr<std::vector<int> >("storage_inplace_index");
+  g.attrs[storage_plan] = std::make_shared<any>(storage_inplace);
   const auto& storage_ids = g.GetAttr<StorageVector>("storage_id");
   uint32_t entry_start = entry_range.first;
   uint32_t entry_end =
@@ -1056,7 +1059,9 @@ void RunGraph(const bool retain_graph,
               std::vector<OpStatePtr> *p_states,
               const DispatchModeVector &dispatch_modes,
               bool recording,
-              mxnet::ShapeVector *shapes = nullptr);
+              mxnet::ShapeVector *shapes = nullptr,
+              const CachedOpMonCallback& callback = nullptr,
+              const bool monitor_all_ = false);
 
 void NaiveRunGraph(const bool retain_graph,
                    const Context& default_ctx,
@@ -1068,7 +1073,9 @@ void NaiveRunGraph(const bool retain_graph,
                    std::vector<OpStatePtr> *p_states,
                    const DispatchModeVector &dispatch_modes,
                    bool recording,
-                   mxnet::ShapeVector *shapes);
+                   mxnet::ShapeVector *shapes,
+                   const CachedOpMonCallback& callback = nullptr,
+                   const bool monitor_all_ = false);
 
 }  // namespace imperative
 }  // namespace mxnet
