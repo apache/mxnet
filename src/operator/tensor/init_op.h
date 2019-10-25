@@ -646,11 +646,6 @@ inline bool LinspaceShape(const nnvm::NodeAttrs& attrs,
   CHECK_GE(param.num, 0)
     << "Number of sequence should be non-negative, received " << param.num;
   mxnet::TShape shape = mxnet::TShape({static_cast<nnvm::dim_t>(param.num)});
-  if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
-    CHECK_LT(shape.Size(), (int64_t{1} << 31) - 1) <<
-              "[LinspaceShape] Size of tensor you are trying to allocate is larger than "
-              "2^32 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
-  }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, shape);
   return true;
 }
