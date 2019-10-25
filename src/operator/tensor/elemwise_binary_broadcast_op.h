@@ -701,7 +701,7 @@ void BinaryBroadcastBackwardUseIn(const nnvm::NodeAttrs& attrs,
     [](const NodeAttrs& attrs) {                                      \
       return std::vector<std::string>{"lhs", "rhs"};                  \
     })                                                                \
-  .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)   \
+  .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)       \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                   \
     [](const NodeAttrs& attrs){                                       \

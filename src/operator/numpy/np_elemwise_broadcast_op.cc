@@ -23,8 +23,7 @@
  * \brief CPU Implementation of basic functions for elementwise numpy binary broadcast operator.
  */
 
-#include "../tensor/elemwise_binary_broadcast_op.h"
-#include "../tensor/elemwise_binary_scalar_op.h"
+#include "./np_elemwise_broadcast_op.h"
 
 namespace mxnet {
 namespace op {
@@ -55,6 +54,38 @@ bool NumpyBinaryScalarType(const nnvm::NodeAttrs& attrs,
   .add_argument("data", "NDArray-or-Symbol", "source input")        \
   .add_argument("scalar", "float", "scalar input")
 
+bool NumpyBinaryMixedPrecisionType(const nnvm::NodeAttrs& attrs,
+                                   std::vector<int>* in_attrs,
+                                   std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const int ltype = in_attrs->at(0);
+  const int rtype = in_attrs->at(1);
+  if (ltype != -1 && rtype != -1 && (ltype != rtype)) {
+    // Only when both input types are known and not the same, we enter the mixed-precision mode
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, common::np_binary_out_type(ltype, rtype));
+  } else {
+    return ElemwiseType<2, 1>(attrs, in_attrs, out_attrs);
+  }
+  return true;
+}
+
+#define MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_PRECISION(name)                \
+  NNVM_REGISTER_OP(name)                                                       \
+  .set_num_inputs(2)                                                           \
+  .set_num_outputs(1)                                                          \
+  .set_attr<nnvm::FListInputNames>("FListInputNames",                          \
+    [](const NodeAttrs& attrs) {                                               \
+      return std::vector<std::string>{"lhs", "rhs"};                           \
+    })                                                                         \
+  .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)           \
+  .set_attr<nnvm::FInferType>("FInferType", NumpyBinaryMixedPrecisionType)     \
+  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                            \
+    [](const NodeAttrs& attrs){                                                \
+      return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};                \
+    })                                                                         \
+  .add_argument("lhs", "NDArray-or-Symbol", "First input to the function")     \
+  .add_argument("rhs", "NDArray-or-Symbol", "Second input to the function")
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_add)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::plus>)
@@ -64,9 +95,27 @@ MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_subtract)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::minus>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_broadcast_sub"});
 
-MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_multiply)
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::mul>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_mul"});
+MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_PRECISION(_npi_multiply)
+.set_attr<FCompute>(
+  "FCompute<cpu>",
+  MixedBinaryBroadcastCompute<cpu, op::mshadow_op::mul, op::mshadow_op::mixed_mul,
+                              op::mshadow_op::mixed_mul>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_broadcast_mul"});
+
+NNVM_REGISTER_OP(_backward_npi_broadcast_mul)
+.set_num_inputs(3)
+.set_num_outputs(2)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::pair<int, int> >{{0, 1}};
+  })
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<FCompute>("FCompute<cpu>", MixedBinaryBackwardUseIn<cpu, mshadow_op::right,
+                                                              mshadow_op::left>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_mod)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::mod>)

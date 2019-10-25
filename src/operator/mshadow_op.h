@@ -190,6 +190,14 @@ MXNET_BINARY_MATH_OP_NC(right, b);
 
 MXNET_BINARY_MATH_OP_NC(mul, a * b);
 
+struct mixed_mul {
+  template<typename DType,
+           typename std::enable_if<!std::is_pointer<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static DType Map(bool a, DType b) {
+    return static_cast<DType>(a) * b;
+  }
+};
+
 MXNET_BINARY_MATH_OP_NC(div, a / b);
 
 MXNET_BINARY_MATH_OP_NC(plus, a + b);

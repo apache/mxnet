@@ -22,6 +22,7 @@
  * \file np_elemwise_broadcast_op.cu
  * \brief GPU Implementation of basic functions for elementwise binary broadcast operator.
  */
+#include "./np_elemwise_broadcast_op.h"
 #include "../tensor/elemwise_binary_broadcast_op.h"
 #include "../tensor/elemwise_binary_scalar_op.h"
 
@@ -35,7 +36,14 @@ NNVM_REGISTER_OP(_npi_subtract)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, op::mshadow_op::minus>);
 
 NNVM_REGISTER_OP(_npi_multiply)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, op::mshadow_op::mul>);
+.set_attr<FCompute>(
+  "FCompute<gpu>",
+  MixedBinaryBroadcastCompute<gpu, op::mshadow_op::mul, op::mshadow_op::mixed_mul,
+                              op::mshadow_op::mixed_mul>);
+
+NNVM_REGISTER_OP(_backward_npi_broadcast_mul)
+.set_attr<FCompute>("FCompute<gpu>", MixedBinaryBackwardUseIn<gpu, mshadow_op::right,
+                                                              mshadow_op::left>);
 
 NNVM_REGISTER_OP(_npi_mod)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::mod>);
