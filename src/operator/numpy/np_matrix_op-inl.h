@@ -65,8 +65,9 @@ struct NumpyReshapeParam : public dmlc::Parameter<NumpyReshapeParam> {
         .set_default("C")
         .describe("Read the elements of a using this index order, and place the elements into"
                   " the reshaped array using this index order. 'C' means to read/write the elements"
-                  " using C-like index order, with the last axis index changing fastest, back to the"
-                  " first axis index changing slowest. Note that currently only C-like order is"
+                  " using C-like index order, with the last axis index changing fastest,"
+                  " back to the first axis index changing slowest."
+                  " Note that currently only C-like order is"
                   " supported");
   }
 };
@@ -96,8 +97,9 @@ struct NumpyXReshapeParam : public dmlc::Parameter<NumpyXReshapeParam> {
         .set_default("C")
         .describe("Read the elements of a using this index order, and place the elements into"
                   " the reshaped array using this index order. 'C' means to read/write the elements"
-                  " using C-like index order, with the last axis index changing fastest, back to the"
-                  " first axis index changing slowest. Note that currently only C-like order is"
+                  " using C-like index order, with the last axis index changing fastest,"
+                  " back to the first axis index changing slowest."
+                  " Note that currently only C-like order is"
                   " supported");
   }
 };
