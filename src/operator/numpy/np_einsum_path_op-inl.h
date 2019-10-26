@@ -80,7 +80,7 @@ struct Contraction {
 };
 
 struct Alternative {
-  int cost[2];
+  int64_t cost[2];
   std::vector<int> positions;
   SetVector new_input_sets;
 };
@@ -115,28 +115,28 @@ inline size_t _compute_size_by_dict(const std::bitset<MAXAXIS>& indices,
   return ret;
 }
 
-inline int _flop_count(const std::string& idx_contraction,
-                       bool inner,
-                       int num_terms,
-                       const dim_t size_dictionary[]) {
+inline int64_t _flop_count(const std::string& idx_contraction,
+                           bool inner,
+                           int num_terms,
+                           const dim_t size_dictionary[]) {
   size_t overall_size = _compute_size_by_dict(idx_contraction, size_dictionary);
   int op_factor = std::max(1, num_terms - 1);
   if (inner) {
     ++op_factor;
   }
-  return overall_size * op_factor;
+  return static_cast<int64_t>(overall_size) * op_factor;
 }
 
-inline int _flop_count(const std::bitset<MAXAXIS>& idx_contraction,
-                       bool inner,
-                       int num_terms,
-                       const dim_t size_dictionary[]) {
+inline int64_t _flop_count(const std::bitset<MAXAXIS>& idx_contraction,
+                           bool inner,
+                           int num_terms,
+                           const dim_t size_dictionary[]) {
   size_t overall_size = _compute_size_by_dict(idx_contraction, size_dictionary);
   int op_factor = std::max(1, num_terms - 1);
   if (inner) {
     ++op_factor;
   }
-  return overall_size * op_factor;
+  return static_cast<int64_t>(overall_size) * op_factor;
 }
 
 inline Contraction _find_contraction(const std::vector<int>& positions,
@@ -164,16 +164,16 @@ inline int _parse_possible_contraction(const std::vector<int>& positions,
                                        const SetVector& input_sets,
                                        const std::bitset<MAXAXIS>& output_set,
                                        const dim_t idx_dict[],
-                                       int memory_limit,
-                                       int path_cost,
-                                       int naive_cost,
+                                       size_t memory_limit,
+                                       int64_t path_cost,
+                                       int64_t naive_cost,
                                        Alternative* ret) {
   // Find the contraction
   Contraction contract = _find_contraction(positions, input_sets, output_set);
 
   // Sieve the results based on memory_limit
   size_t new_size = _compute_size_by_dict(contract.new_result, idx_dict);
-  if (new_size > static_cast<size_t>(memory_limit)) {
+  if (new_size > memory_limit) {
     return -1;
   }
 
@@ -182,10 +182,10 @@ inline int _parse_possible_contraction(const std::vector<int>& positions,
   for (auto p : positions) {
     old_sizes += _compute_size_by_dict(input_sets[p], idx_dict);
   }
-  int remove_size = old_sizes - new_size;
+  int64_t remove_size = static_cast<int64_t>(old_sizes) - static_cast<int64_t>(new_size);
 
-  int cost = _flop_count(contract.idx_contract, contract.idx_removed.any(),
-                            positions.size(), idx_dict);
+  int64_t cost = _flop_count(contract.idx_contract, contract.idx_removed.any(),
+                             positions.size(), idx_dict);
   ret->cost[0] = -remove_size;
   ret->cost[1] = cost;
 
@@ -206,7 +206,7 @@ inline void _update_other_results(std::vector<Alternative>* results,
   int bx = best_con[0], by = best_con[1];
   size_t size = results->size();
 
-  for (int i = size - 1; i >= 0; --i) {
+  for (int i = static_cast<int>(size) - 1; i >= 0; --i) {
     int x = results->at(i).positions[0], y = results->at(i).positions[1];
 
     // Ignore results involving tensors just contracted
@@ -233,9 +233,9 @@ inline void _update_other_results(std::vector<Alternative>* results,
 inline std::vector<std::vector<int> > _greedy_path(const SetVector* input_sets,
                                                    const std::bitset<MAXAXIS>& output_set,
                                                    const dim_t idx_dict[],
-                                                   int memory_limit) {
-  size_t isize = input_sets->size();
-  size_t iteration_num = isize;
+                                                   size_t memory_limit) {
+  int isize = static_cast<int>(input_sets->size());
+  int iteration_num = isize;
   // Handle trivial cases that leaked through
   if (isize == 1) {
     return std::vector<std::vector<int> >{std::vector<int>{0}};
@@ -245,23 +245,23 @@ inline std::vector<std::vector<int> > _greedy_path(const SetVector* input_sets,
 
   // Build up a naive cost
   std::vector<int> range(isize);
-  for (size_t i = 0; i < isize; ++i) {
+  for (int i = 0; i < isize; ++i) {
     range[i] = i;
   }
   Contraction contract = _find_contraction(range, *input_sets, output_set);
-  int naive_cost = _flop_count(contract.idx_contract, contract.idx_removed.any(),
-                                  isize, idx_dict);
+  int64_t naive_cost = _flop_count(contract.idx_contract, contract.idx_removed.any(),
+                                   isize, idx_dict);
 
   // Initially iterate over all pairs
   std::vector<Alternative> known_contractions;
   Alternative best;
-  int path_cost = 0;
+  int64_t path_cost = 0;
   std::vector<std::vector<int> > ret;
 
-  for (size_t iteration = 0; iteration + 1 < iteration_num; ++iteration) {
+  for (int iteration = 0; iteration + 1 < iteration_num; ++iteration) {
     if (iteration == 0) {
-      for (int x = 0; x < static_cast<int>(isize); ++x) {
-        for (int y = x + 1; y < static_cast<int>(isize); ++y) {
+      for (int x = 0; x < isize; ++x) {
+        for (int y = x + 1; y < isize; ++y) {
           if (!((input_sets->at(x) & input_sets->at(y)).any())) {
             continue;
           }
@@ -280,7 +280,7 @@ inline std::vector<std::vector<int> > _greedy_path(const SetVector* input_sets,
         }
       }
     } else {
-      for (int x = 0; x < static_cast<int>(isize) - 1; ++x) {
+      for (int x = 0; x < isize - 1; ++x) {
         int y = isize - 1;
         if (!((input_sets->at(x) & input_sets->at(y)).any())) {
             continue;
@@ -303,8 +303,8 @@ inline std::vector<std::vector<int> > _greedy_path(const SetVector* input_sets,
     // If we do not have a inner contraction, rescan pairs including outer products
     if (known_contractions.size() == 0) {
       // Then check the outer productsj
-      for (int x = 0; x < static_cast<int>(isize); ++x) {
-        for (int y = x + 1; y < static_cast<int>(isize); ++y) {
+      for (int x = 0; x < isize; ++x) {
+        for (int y = x + 1; y < isize; ++y) {
           Alternative alternative;
           int result = _parse_possible_contraction(std::vector<int>{x, y},
                                                    *input_sets,
@@ -323,7 +323,7 @@ inline std::vector<std::vector<int> > _greedy_path(const SetVector* input_sets,
       // If we still did not find any remaining contractions, default back to einsum like behavior
       if (known_contractions.size() == 0) {
         std::vector<int> range(isize);
-        for (size_t i = 0; i < isize; ++i) {
+        for (int i = 0; i < isize; ++i) {
           range[i] = i;
         }
         ret.push_back(range);
@@ -332,17 +332,17 @@ inline std::vector<std::vector<int> > _greedy_path(const SetVector* input_sets,
     }
 
     // Sort based on first index
-    int best_cost[2], idx = -1;
-    size_t size = known_contractions.size();
-    for (size_t i = 0; i < size; ++i) {
+    int64_t best_cost[2];
+    int idx = -1, size = static_cast<int>(known_contractions.size());
+    for (int i = 0; i < size; ++i) {
       auto x = known_contractions[i];
       if (idx == -1) {
         best_cost[0] = x.cost[0];
         best_cost[1] = x.cost[1];
         idx = i;
       } else if (x.cost[0] < best_cost[0] ||
-               (x.cost[0] == best_cost[0] &&
-               x.cost[1] < best_cost[1])) {
+                 (x.cost[0] == best_cost[0] &&
+                  x.cost[1] < best_cost[1])) {
         best_cost[0] = x.cost[0];
         best_cost[1] = x.cost[1];
         idx = i;
@@ -356,7 +356,7 @@ inline std::vector<std::vector<int> > _greedy_path(const SetVector* input_sets,
     // Next iteration only compute contractions with the new tensor
     // All other contractions have been accounted for
     input_sets = &best.new_input_sets;
-    isize = input_sets->size();
+    isize = static_cast<int>(input_sets->size());
 
     // Update path and total cost
     ret.push_back(best.positions);
@@ -708,9 +708,9 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
 
   // Build a few useful list and sets
   std::vector<std::string> input_list = split(parsed_subscripts[0], ",");
-  size_t isize = input_list.size();
+  int isize = static_cast<int>(input_list.size());
   SetVector input_sets;
-  for (int i = 0; i < static_cast<int>(isize); ++i) {
+  for (int i = 0; i < isize; ++i) {
     input_sets.push_back(str2set(input_list[i]));
   }
   std::bitset<MAXAXIS> output_set = str2set(parsed_subscripts[1]);
@@ -721,7 +721,7 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
   dim_t dimension_dict[MAXAXIS];
   SetVector broadcast_indices(isize);
   memset(dimension_dict, -1, sizeof(dimension_dict));
-  for (size_t i = 0; i < isize; ++i) {
+  for (int i = 0; i < isize; ++i) {
     const std::string& term = input_list[i];
     const TShape& sh = operands[i].shape_;
     CHECK_EQ(sh.ndim(), term.length())
@@ -756,8 +756,8 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
 
   // Compute size of each input array plus the output array
   std::vector<size_t> size_list(isize + 1);
-  size_t max_size = -1, memory_arg;
-  for (size_t i = 0; i < isize; ++i) {
+  size_t max_size = 0, memory_arg;
+  for (int i = 0; i < isize; ++i) {
     size_list[i] = _compute_size_by_dict(input_list[i], dimension_dict);
     max_size = std::max(max_size, size_list[i]);
   }
@@ -778,7 +778,7 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
   std::vector<std::vector<int> > path;
   if (optimize == false) {
     path.push_back(std::vector<int>());
-    for (size_t i = 0; i < isize; ++i) {
+    for (int i = 0; i < isize; ++i) {
       path[0].push_back(i);
     }
   } else {
@@ -801,7 +801,7 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
     Contraction contract = _find_contraction(contract_inds, input_sets, output_set);
     input_sets = contract.remaining;
 
-    int cost = _flop_count(contract.idx_contract,
+    int64_t cost = _flop_count(contract.idx_contract,
                            contract.idx_removed.any(),
                            contract_inds.size(),
                            dimension_dict);
@@ -847,9 +847,9 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
                          a < b);
                 });
     }
-    size_t len_idx_result = idx_result.length();
+    int len_idx_result = static_cast<int>(idx_result.length());
     ret[i].oshape = TShape(len_idx_result, -1);
-    for (size_t j = 0; j < len_idx_result; ++j) {
+    for (int j = 0; j < len_idx_result; ++j) {
       ret[i].oshape[j] = dimension_dict[static_cast<int>(idx_result[j])];
     }
 
@@ -867,18 +867,18 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
       std::vector<int> left_pos, right_pos;
       left_pos.reserve(MAXAXIS);
       right_pos.reserve(MAXAXIS);
-      size_t tmp[MAXAXIS] = {0};
-      size_t length_left_input = tmp_inputs[0].length();
-      size_t length_right_input = tmp_inputs[1].length();
-      for (size_t j = 0; j < length_right_input; ++j) {
+      int tmp[MAXAXIS] = {0};
+      int length_left_input = static_cast<int>(tmp_inputs[0].length());
+      int length_right_input = static_cast<int>(tmp_inputs[1].length());
+      for (int j = 0; j < length_right_input; ++j) {
         if (contract.idx_removed.test(static_cast<int>(tmp_inputs[1][j]))) {
           tmp[static_cast<int>(tmp_inputs[1][j])] = j;
         }
       }
-      for (size_t j = 0; j < length_left_input; ++j) {
+      for (int j = 0; j < length_left_input; ++j) {
         if (contract.idx_removed.test(static_cast<int>(tmp_inputs[0][j]))) {
-          left_pos.push_back(static_cast<int>(j));
-          right_pos.push_back(static_cast<int>(tmp[static_cast<int>(tmp_inputs[0][j])]));
+          left_pos.push_back(j);
+          right_pos.push_back(tmp[static_cast<int>(tmp_inputs[0][j])]);
         }
       }
       // Calculate left_pos and right_pos
@@ -887,11 +887,11 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
       // Calculate do_einsum
       ret[i].do_einsum = (tensor_result != idx_result);
       // Calculate tshape
-      CHECK_EQ(tensor_result.length(), len_idx_result)
+      CHECK_EQ(static_cast<int>(tensor_result.length()), len_idx_result)
         << "tensordot produces dim " << tensor_result.length()
         << ", while einsum produces dim " << len_idx_result << ".";
       ret[i].tshape = TShape(len_idx_result, -1);
-      for (size_t j = 0; j < len_idx_result; ++j) {
+      for (int j = 0; j < len_idx_result; ++j) {
         ret[i].tshape[j] = dimension_dict[static_cast<int>(tensor_result[j])];
       }
       // Calculate blas2einsum_str
