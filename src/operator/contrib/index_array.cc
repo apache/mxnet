@@ -202,6 +202,10 @@ Examples::
   TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt64);
   return out_attrs->at(0) != -1;
 })
+.set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",
+  [](const NodeAttrs& attrs) {
+    return std::vector<uint32_t>(1, 0);
+  })
 .set_attr<FCompute>("FCompute<cpu>", IndexArrayForwardCPU)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
