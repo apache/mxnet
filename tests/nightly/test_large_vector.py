@@ -64,7 +64,7 @@ def test_ndarray_random_randint():
     high = 2**34
     a = nd.random.randint(low, high, dtype=np.int64, shape=LARGE_X).asnumpy()
     assert a.shape == (LARGE_X,)
-    assert (a >= low).all()  and (a < high).all()
+    assert (a >= low).all() and (a < high).all()
 
 
 def test_ndarray_empty():
@@ -710,6 +710,39 @@ def test_full():
     assert a[-1] == 3
 
 
+def test_regression():
+    shape = (LARGE_X, )
+
+    def check_regression(symbol, forward, shape):
+        # init executor
+        data_s = mx.symbol.Variable('data')
+        label_s = mx.symbol.Variable('label')
+        out_s = symbol(data=data_s, label=label_s)
+        exe = out_s.simple_bind(ctx=mx.cpu(0), data=shape, label=shape)
+
+        arg_map = dict(zip(out_s.list_arguments(), exe.arg_arrays))
+
+        # init data
+        data = mx.random.uniform(-1, -1, shape)
+        arg_map["data"][:] = data
+        atol = 1e-5
+        density = 0.5
+        stype = 'default'
+        label = arg_map["label"]
+        label[:] = rand_ndarray(shape, stype, density=density)
+        exe.forward(is_train=True)
+        exe.backward()
+        np_out = forward(data.asnumpy())
+        assert_almost_equal(exe.outputs[0].asnumpy(), np_out, atol=atol)
+
+    check_regression(mx.symbol.LogisticRegressionOutput,
+                     lambda x: 1.0 / (1.0 + np.exp(-x)),
+                     shape)
+    check_regression(mx.symbol.LinearRegressionOutput,
+                     lambda x: x,
+                     shape)
+
+
 def test_sign():
     a = mx.nd.random.normal(-1, 1, shape=LARGE_X)
     mx_res = mx.nd.sign(a)
@@ -978,11 +1011,11 @@ def test_add_n():
 def test_modulo():
     x = mx.nd.ones(LARGE_X)*6
     y = mx.nd.ones(LARGE_X)*4
-    z = (x%y)
+    z = (x % y)
     assert z[0] == 2
     assert z[-1] == 2
     x = mx.nd.ones(LARGE_X)*5
-    z = nd.modulo(x,y)
+    z = nd.modulo(x, y)
     assert z[0] == 1
     assert z[-1] == 1
 
@@ -1020,6 +1053,16 @@ def test_gather():
     # Calls gather_nd internally
     arr[idx] += 1
     assert np.sum(arr[idx] == 2) == 10
+
+
+def test_infer_shape():
+    data_1 = mx.symbol.Variable('data_1')
+    data_2 = mx.symbol.Variable('data_2')
+    add = data_1+data_2
+    # > add.infer_shape(data_1=(LARGE_X,), data_2=(LARGE_X,))
+    # OUTPUT - arg_shapes, out_shapes, aux_shapes
+    _, out_shapes, _ = add.infer_shape(data_1=(LARGE_X,), data_2=(LARGE_X,))
+    assert out_shapes == [(LARGE_X,)]
 
 
 if __name__ == '__main__':
