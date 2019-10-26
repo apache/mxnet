@@ -99,14 +99,14 @@ ctx = [mx.gpu(i) for i in range(num_gpus)] if num_gpus > 0 else [mx.cpu()]
 batch_size = per_device_batch_size * max(num_gpus, 1)
 ```
 
-Now we will apply data augmentations on training images. This makes minor alterations on the training images, and our model will consider them as distinct images. This can be very useful for fine-tuning on a relatively small dataset, and it will help improve the model. We can use the Gluon [DataSet API](https://mxnet.apache.org/tutorials/gluon/datasets.html), [DataLoader API](https://mxnet.apache.org/tutorials/gluon/datasets.html), and [Transform API](https://mxnet.apache.org/tutorials/gluon/data_augmentation.html) to load the images and apply the following data augmentations:
+Now we will apply data augmentations on training images. This makes minor alterations on the training images, and our model will consider them as distinct images. This can be very useful for fine-tuning on a relatively small dataset, and it will help improve the model. We can use the Gluon [DataSet API](/api/python/docs/api/gluon/data/index.html#mxnet.gluon.data.Dataset), [DataLoader API](/api/python/docs/api/gluon/data/index.html#mxnet.gluon.data.DataLoader), and [Transform API](/api/python/docs/api/gluon/data/index.html#mxnet.gluon.data.Dataset.transform) to load the images and apply the following data augmentations:
 1. Randomly crop the image and resize it to 224x224
 2. Randomly flip the image horizontally
 3. Randomly jitter color and add noise
 4. Transpose the data from `[height, width, num_channels]` to `[num_channels, height, width]`, and map values from [0, 255] to [0, 1]
 5. Normalize with the mean and standard deviation from the ImageNet dataset.
 
-For validation and inference, we only need to apply step 1, 4, and 5. We also need to save the mean and standard deviation values for [inference using C++](https://mxnet.apache.org/versions/master/tutorials/c++/mxnet_cpp_inference_tutorial.html).
+For validation and inference, we only need to apply step 1, 4, and 5. We also need to save the mean and standard deviation values for [inference using C++](/api/cpp/docs/tutorials/cpp_inference).
 
 ```python
 jitter_param = 0.4
