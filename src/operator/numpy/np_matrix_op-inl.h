@@ -82,14 +82,14 @@ struct NumpyXReshapeParam : public dmlc::Parameter<NumpyXReshapeParam> {
                   " If an integer, then the result will be a 1-D array of that length."
                   " One shape dimension can be -1. In this case, the value is inferred"
                   " from the length of the array and remaining dimensions."
-                  " -2 to -6 are used for data manipulation"
-                  " -2 copy this dimension from the input to the output shape"
-                  " -3 will skip current dimension if and only if the current dim size is one"
-                  " -4 copy all remain of the input dimensions to the output shape"
+                  " -2 to -6 are used for data manipulation."
+                  " -2 copy this dimension from the input to the output shape."
+                  " -3 will skip current dimension if and only if the current dim size is one."
+                  " -4 copy all remain of the input dimensions to the output shape."
                   " -5 use the product of two consecutive dimensions of the input"
-                  " shape as the output"
+                  " shape as the output."
                   " -6 split one dimension of the input into two dimensions passed"
-                  " subsequent to -6 in the new shape");
+                  " subsequent to -6 in the new shape.");
     DMLC_DECLARE_FIELD(reverse)
         .set_default(false)
         .describe("If true then the special values are inferred from right to left");

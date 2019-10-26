@@ -237,7 +237,7 @@ bool NumpyXReshapeInferShape(const mxnet::TShape& src,
         // copy all remaining dims from source
         while (src_inx < src.ndim()) {
           known_dim_size_prod *= src[src_inx];
-          const int dn = src[src_inx++];
+          const dim_t dn = src[src_inx++];
           output_shape_vector.push_back(dn);
         }
       } else if (proposed_dim == -5) {
@@ -260,7 +260,7 @@ bool NumpyXReshapeInferShape(const mxnet::TShape& src,
         // read the left dim and then the right dim (either can be -1)
         CHECK_LT(i + 2, target.ndim());
         CHECK_LT(src_inx, src.ndim());
-        const int d0 = src[src_inx++];
+        const dim_t d0 = src[src_inx++];
         dim_t d1 = target[++i];
         dim_t d2 = target[++i];
         CHECK(d1 != -1 || d2 != -1) << "Split dims cannot both be -1.";
