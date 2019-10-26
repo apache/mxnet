@@ -288,3 +288,7 @@ def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
             return _npi.choice(a=a, size=size, replace=replace, ctx=ctx, weighted=False, out=out)
         else:
             return _npi.choice(p, a=a, size=size, replace=replace, ctx=ctx, weighted=True, out=out)
+
+
+def _bernoulli(probs=None, logits=None, size=None, dtype=None, ctx=None, out=None):
+    pass
