@@ -394,7 +394,7 @@ struct NumpyEinsumParam: public dmlc::Parameter<NumpyEinsumParam> {
       .set_default("")
       .describe("Specifies the subscripts for summation as comma separated list"
       " of subscript labels. An implicit (classical Einstein summation) calculation"
-      " is performed unless the explicit indicator ‘->’ is included as well as"
+      " is performed unless the explicit indicator '->' is included as well as"
       " subscript labels of the precise output form.");
     DMLC_DECLARE_FIELD(optimize)
       .set_default(0);
