@@ -107,7 +107,8 @@ struct IndexArrayParam : public dmlc::Parameter<IndexArrayParam> {
     DMLC_DECLARE_FIELD(axes).set_default(dmlc::optional<mxnet::Tuple<int>>())
       .describe("The axes to include in the index array. Supports negative values.");
     DMLC_DECLARE_FIELD(target_axis).set_default(-1)
-      .describe("The axis to write the indices to. Currently only supports -1 (last axis) and 0 (first axis).");
+      .describe("The axis to write the indices to. Currently only supports -1 (last axis) and 0 "
+                "(first axis).");
     DMLC_DECLARE_FIELD(dtype)
       .add_enum("int32", mshadow::kInt32)
       .add_enum("int64", mshadow::kInt64)
