@@ -188,7 +188,7 @@ bool NumpyReshapeShape(const nnvm::NodeAttrs& attrs,
 bool NumpyXReshapeInferShape(const mxnet::TShape& src,
                              const mxnet::TShape& target,
                              mxnet::TShape* output,
-                             std::string default_error_msg="") {
+                             const std::string &default_error_msg) {
   bool target_shape_is_known = true;
   dim_t target_size = 1;
   for (int i = 0; i < target.ndim(); ++i) {
@@ -323,11 +323,10 @@ bool NumpyXReshapeShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape output_shape;
   bool success;
   std::stringstream ss;
-  std::string err_msg;
   ss << "Cannot reshape array of shape" << in_attrs->at(0)
      << "into shape " << param.newshape
      << ", reverse = " << param.reverse;
-  ss >> err_msg;
+  std::string err_msg = ss.str();
   if (!param.reverse) {
     success = NumpyXReshapeInferShape(in_attrs->at(0),
                                       param.newshape, &output_shape, err_msg);
