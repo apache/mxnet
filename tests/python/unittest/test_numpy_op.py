@@ -24,6 +24,7 @@ import numpy as _np
 import platform
 import mxnet as mx
 import scipy.stats as ss
+from nose.tools import assert_raises
 from mxnet import np, npx
 from mxnet.gluon import HybridBlock
 from mxnet.base import MXNetError
@@ -34,6 +35,7 @@ import random
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
 from mxnet.numpy_op_signature import _get_builtin_op
 from mxnet.test_utils import is_op_runnable, has_tvm_ops
+from mxnet.operator import get_all_registered_operators
 
 
 @with_seed()
@@ -899,6 +901,124 @@ def test_npx_slice():
             expected_grad = _np.zeros(shape)
             expected_grad[basic_index] = 1
             assert same(a.grad.asnumpy(), expected_grad)
+
+@with_seed()
+@use_np
+def test_npx_batch_dot():
+    ctx = mx.context.current_context()
+    dtypes = ['float32', 'float64']
+    if ctx.device_type == 'gpu':
+        dtypes += ['float16']
+    eps_dict = {'float32': 1E-4, 'float64': 1E-4, 'float16': 1E-3}
+    class TestBatchDot(HybridBlock):
+        def __init__(self, transpose_a, transpose_b):
+            super(TestBatchDot, self).__init__()
+            self._transpose_a = transpose_a
+            self._transpose_b = transpose_b
+
+        def hybrid_forward(self, F, lhs, rhs):
+            return F.npx.batch_dot(lhs, rhs,
+                                   transpose_a=self._transpose_a,
+                                   transpose_b=self._transpose_b)
+
+    def batch_dot_numpy(lhs, rhs, transpose_a, transpose_b):
+        assert lhs.ndim == rhs.ndim >= 3
+        if transpose_a:
+            lhs = lhs.swapaxes(-1, -2)
+        if transpose_b:
+            rhs = rhs.swapaxes(-1, -2)
+        return _np.matmul(lhs, rhs)
+
+    def gt_grad_batch_dot_numpy(lhs, rhs, ograd, transpose_a, transpose_b, lhs_req, rhs_req,
+                                init_lhs_grad, init_rhs_grad):
+
+        if transpose_a and transpose_b:
+            # Gradient of z = dot(x.T, y.T)
+            # dx = dot(dz, y).T = dot(y.T, dz.T)
+            # dy = dot(x, dz).T = dot(dz.T, x.T)
+            lhs_grad = batch_dot_numpy(rhs, ograd, transpose_a=True, transpose_b=True)
+            rhs_grad = batch_dot_numpy(ograd, lhs, transpose_a=True, transpose_b=True)
+        elif not transpose_a and transpose_b:
+            # Gradient of z = dot(x, y.T)
+            # dx = dot(dz, y)
+            # dy = dot(x.T, dz).T = dot(dz.T, x)
+            lhs_grad = batch_dot_numpy(ograd, rhs, transpose_a=False, transpose_b=False)
+            rhs_grad = batch_dot_numpy(ograd, lhs, transpose_a=True, transpose_b=False)
+        elif transpose_a and not transpose_b:
+            # Gradient of z = dot(x.T, y)
+            # dx = dot(dz, y.T).T = dot(y, dz.T)
+            # dy = dot(x, dz)
+            lhs_grad = batch_dot_numpy(rhs, ograd, transpose_a=False, transpose_b=True)
+            rhs_grad = batch_dot_numpy(lhs, ograd, transpose_a=False, transpose_b=False)
+        else:
+            # Gradient of z = dot(x, y)
+            # dx = dot(dz, y.T)
+            # dy = dot(x.T, dz)
+            lhs_grad = batch_dot_numpy(ograd, rhs, transpose_a=False, transpose_b=True)
+            rhs_grad = batch_dot_numpy(lhs, ograd, transpose_a=True, transpose_b=False)
+        if lhs_req == 'add':
+            lhs_grad += init_lhs_grad
+        if rhs_req == 'add':
+            rhs_grad += init_rhs_grad
+        return lhs_grad, rhs_grad
+
+
+    configs = [
+        ((2, 3, 0), (2, 4, 0), False, True),
+        ((2, 4, 3), (2, 4, 3), True, False),
+        ((0, 3, 0), (0, 0, 2), False, False),
+        ((3, 2, 3, 2), (3, 2, 2, 3), True, True),
+        ((3, 1, 5, 2), (3, 1, 2, 1), False, False)
+    ]
+    bad_configs = [
+        ((5, 3, 2), (5, 1, 3), False, False),
+        ((2, 5, 3, 1), (2, 4, 3, 1), True, False)
+    ]
+    for hybridize in [True, False]:
+        for lhs_shape, rhs_shape, transpose_a, transpose_b in configs:
+            for dtype in dtypes:
+                eps = eps_dict[dtype]
+                for lhs_grad_req in ['write', 'add']:
+                    for rhs_grad_req in ['write', 'add']:
+                        f_batch_dot = TestBatchDot(transpose_a=transpose_a,
+                                                   transpose_b=transpose_b)
+                        if hybridize:
+                            f_batch_dot.hybridize()
+                        lhs_val = mx.np.array(_np.random.uniform(-1.0, 1.0, lhs_shape), dtype=dtype)
+                        rhs_val = mx.np.array(_np.random.uniform(-1.0, 1.0, rhs_shape), dtype=dtype)
+                        lhs_val.attach_grad(grad_req=lhs_grad_req)
+                        rhs_val.attach_grad(grad_req=rhs_grad_req)
+                        gt_out = batch_dot_numpy(lhs_val.asnumpy(), rhs_val.asnumpy(),
+                                                 transpose_a, transpose_b)
+                        init_lhs_grad = mx.np.random.uniform(-1.0, 1.0, lhs_shape, dtype=dtype)
+                        init_rhs_grad = mx.np.random.uniform(-1.0, 1.0, rhs_shape, dtype=dtype)
+                        o_grad = mx.np.random.uniform(-1.0, 1.0, gt_out.shape, dtype=dtype)
+                        if lhs_grad_req == 'add':
+                            lhs_val.grad[:] = init_lhs_grad
+                        if rhs_grad_req == 'add':
+                            rhs_val.grad[:] = init_rhs_grad
+                        with mx.autograd.record():
+                            out = f_batch_dot(lhs_val, rhs_val)
+                        out.backward(o_grad)
+                        assert_almost_equal(out.asnumpy(), gt_out, rtol=eps, atol=eps)
+                        gt_lhs_grad, gt_rhs_grad = gt_grad_batch_dot_numpy(lhs_val.asnumpy(),
+                                                              rhs_val.asnumpy(),
+                                                              o_grad.asnumpy(),
+                                                              transpose_a=transpose_a,
+                                                              transpose_b=transpose_b,
+                                                              lhs_req=lhs_grad_req,
+                                                              rhs_req=rhs_grad_req,
+                                                              init_lhs_grad=init_lhs_grad.asnumpy(),
+                                                              init_rhs_grad=init_rhs_grad.asnumpy())
+                        assert_almost_equal(lhs_val.grad.asnumpy(), gt_lhs_grad, rtol=eps, atol=eps)
+                        assert_almost_equal(rhs_val.grad.asnumpy(), gt_rhs_grad, rtol=eps, atol=eps)
+    for lhs_shape, rhs_shape, transpose_a, transpose_b in bad_configs:
+        for dtype in dtypes:
+            lhs_val = mx.np.array(_np.random.uniform(-1.0, 1.0, lhs_shape), dtype=dtype)
+            rhs_val = mx.np.array(_np.random.uniform(-1.0, 1.0, rhs_shape), dtype=dtype)
+            assert_raises(MXNetError, lambda: mx.npx.batch_dot(lhs_val, rhs_val,
+                                                               transpose_a=transpose_a,
+                                                               transpose_b=transpose_b))
 
 
 @with_seed()
@@ -3164,10 +3284,15 @@ def test_np_take():
 def test_np_builtin_op_signature():
     import inspect
     from mxnet import _numpy_op_doc
-    for op_name in dir(_numpy_op_doc):
+    builtin_np_op_names = [name for name in get_all_registered_operators() if name.startswith('_np_')]
+    for op_name in builtin_np_op_names:
+        _op_from_doc = getattr(_numpy_op_doc, op_name, None)
+        assert _op_from_doc is not None, "Failed to find documentation for operator {}. " \
+                                         "Please add the documentation in _numpy_op_doc.py for this operator."\
+            .format(op_name)
         op = _get_builtin_op(op_name)
-        if op is not None:
-            assert str(op.__signature__) == str(inspect.signature(getattr(_numpy_op_doc, op_name)))
+        assert op is not None
+        assert str(op.__signature__) == str(inspect.signature(_op_from_doc))
 
 
 @with_seed()

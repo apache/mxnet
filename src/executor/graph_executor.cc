@@ -1627,16 +1627,16 @@ static nnvm::Graph InferForwardAttrs(nnvm::Graph g,
 
 static bool SubgraphBackendCheck(const op::SubgraphBackendPtr& backend,
                                  const Context& default_ctx,
-                                 bool verbose = false) {
+                                 int verbose = 1) {
   if (backend->HasAttr("enable") && (backend->GetAttr<bool>("enable") != true)) {
-    if (verbose) {
+    if (verbose > 1) {
       LOG(INFO) << "Subgraph backend " << backend->GetName()
                 << " isn't activated.";
     }
     return false;
   }
   if (backend->HasAttr("context") && backend->GetAttr<Context>("context") != default_ctx) {
-    if (verbose) {
+    if (verbose > 1) {
       LOG(INFO) << "Subgraph backend " << backend->GetName()
                 << " isn't activated as context mismatch.";
     }
@@ -1647,7 +1647,7 @@ static bool SubgraphBackendCheck(const op::SubgraphBackendPtr& backend,
 
 static bool SubgraphPropertyCheck(const std::string& backend_name,
                                   const op::SubgraphPropertyPtr& prop, bool need_grad,
-                                  bool verbose = false) {
+                                  int verbose = 1) {
   auto full_name =
       prop->HasAttr("property_name") ? prop->GetAttr<std::string>("property_name") : std::string();
   if (prop->HasAttr("disable") && prop->GetAttr<bool>("disable") == true) {
@@ -1657,7 +1657,7 @@ static bool SubgraphPropertyCheck(const std::string& backend_name,
   }
   if (prop->HasAttr("inference_only") && prop->GetAttr<bool>("inference_only") == true) {
     if (need_grad) {
-      if (verbose) {
+      if (verbose > 1) {
         LOG(INFO) << "skip partitioning graph with subgraph property " << full_name
                   << " from backend " << backend_name << " as it requires `grad_req=null`.";
       }
@@ -1699,7 +1699,7 @@ static nnvm::Symbol BuildSubgraph(
     const std::unordered_map<std::string, int>& arg_stype_map, const Context& default_ctx,
     const std::map<std::string, Context>& ctx_map, std::vector<Context>* in_arg_ctxes,
     std::vector<Context>* arg_grad_ctxes, std::vector<OpReqType>* grad_req_types,
-    std::vector<Context>* aux_state_ctxes, bool verbose = false) {
+    std::vector<Context>* aux_state_ctxes, int verbose = 1) {
   // setup map for in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes and grad_req_types
   std::unordered_map<std::string, Context> in_arg_ctx_map;
   std::unordered_map<std::string, Context> arg_grad_ctx_map;
@@ -1794,7 +1794,7 @@ static nnvm::Symbol BuildSubgraph(const nnvm::Symbol& src, const op::SubgraphBac
                                   std::vector<NDArray>* in_args,
                                   std::vector<NDArray>* arg_grad_store,
                                   std::vector<OpReqType>* grad_req_type,
-                                  std::vector<NDArray>* aux_states, bool verbose = false) {
+                                  std::vector<NDArray>* aux_states, int verbose = 1) {
   // setup map for in_args, arg_grad_store, grad_req_type and aux_states
   std::unordered_map<std::string, NDArray> in_args_map;
   std::unordered_map<std::string, NDArray> arg_grad_store_map;
@@ -1929,11 +1929,11 @@ Executor *Executor::SimpleBind(nnvm::Symbol symbol,
   auto exec = new exec::GraphExecutor();
   bool init = false;
   if (!exec->subgraph_property().empty()) {
-    static bool verbose = dmlc::GetEnv("MXNET_SUBGRAPH_VERBOSE", false);
+    static int verbose = dmlc::GetEnv("MXNET_SUBGRAPH_VERBOSE", 1);
     const auto& backend_name = exec->subgraph_property();
     const auto& backend = op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(backend_name);
     if (exec::SubgraphBackendCheck(backend, default_ctx, verbose)) {
-      LOG(INFO) << "Subgraph backend " << backend_name << " is activated.";
+      if (verbose) LOG(INFO) << "Subgraph backend " << backend_name << " is activated.";
       std::vector<Context> tmp_in_arg_ctxes = in_arg_ctxes;
       std::vector<Context> tmp_arg_grad_ctxes = arg_grad_ctxes;
       std::vector<Context> tmp_aux_state_ctxes = aux_state_ctxes;
@@ -2001,7 +2001,7 @@ Executor *Executor::Bind(nnvm::Symbol symbol,
                          const std::vector<NDArray> &aux_states,
                          Executor* shared_exec) {
   auto exec = new exec::GraphExecutor();
-  static bool verbose = dmlc::GetEnv("MXNET_SUBGRAPH_VERBOSE", false);
+  static int verbose = dmlc::GetEnv("MXNET_SUBGRAPH_VERBOSE", 1);
   std::vector<NDArray> tmp_in_args = in_args;
   std::vector<NDArray> tmp_arg_grad_store = arg_grad_store;
   std::vector<OpReqType> tmp_grad_req_type = grad_req_type;
@@ -2011,7 +2011,7 @@ Executor *Executor::Bind(nnvm::Symbol symbol,
     const auto& backend_name = exec->subgraph_property();
     const auto& backend = op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(backend_name);
     if (exec::SubgraphBackendCheck(backend, default_ctx, verbose)) {
-      LOG(INFO) << "Subgraph backend " << backend_name << " is activated.";
+      if (verbose) LOG(INFO) << "Subgraph backend " << backend_name << " is activated.";
       symbol = exec::BuildSubgraph(symbol, backend, default_ctx, group2ctx, &tmp_in_args,
                                    &tmp_arg_grad_store, &tmp_grad_req_type, &tmp_aux_states,
                                    verbose);
