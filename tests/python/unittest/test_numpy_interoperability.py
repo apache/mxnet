@@ -258,6 +258,7 @@ def _add_workload_einsum():
     size_dict = dict(zip(chars, sizes))
 
     configs = [
+        # test_einsum_broadcast
         ('ij...,j...->ij...', [(2, 3, 4), (3,)]),
         ('ij...,...j->ij...', [(2, 3, 4), (3,)]),
         ('ij...,j->ij...', [(2, 3, 4), (3,)]),
@@ -310,6 +311,39 @@ def _add_workload_einsum():
         ('abjk,kl,jl,ab->ab', [(1, 1, 5, 4), (4, 6), (5, 6), (7, 7)]),
         ('obk,ijk->ioj', [(2, 4, 8), (2, 4, 8)]),
     ]
+    # check_einsum_sums
+    configs.extend([('i->', [(i,)]) for i in range(1, 17)])
+    configs.extend([('...i->...', [(2, 3, i,)]) for i in range(1, 17)])
+    configs.extend([('i...->...', [(2, i,)]) for i in range(1, 17)])
+    configs.extend([('i...->...', [(2, 3, i,)]) for i in range(1, 17)])
+    configs.extend([('ii', [(i, i,)]) for i in range(1, 17)])
+    configs.extend([('..., ...', [(3, i,), (2, 3, i,)]) for i in range(1, 17)])
+    configs.extend([('...i, ...i', [(2, 3, i,), (i,)]) for i in range(1, 17)])
+    configs.extend([('i..., i...', [(i, 3, 2,), (i,)]) for i in range(1, 11)])
+    configs.extend([('i, j', [(3,), (i,)]) for i in range(1, 17)])
+    configs.extend([('ij, j', [(4, i), (i,)]) for i in range(1, 17)])
+    configs.extend([('ji, j', [(i, 4), (i,)]) for i in range(1, 17)])
+    configs.extend([('ij, jk', [(4, i), (i, 6)]) for i in range(1, 8)])
+    configs.extend([
+        ('ij,jk,kl', [(3, 4), (4, 5), (5, 6)]),
+        ('ijk, jil -> kl', [(3, 4, 5), (4, 3, 2)]),
+        ('i, i, i -> i', [(8,), (8,), (8,)]),
+        (',i->', [(), (9,)]),
+        ('i,->', [(9,), ()]),
+    ])
+    configs.extend([('...,...', [(n,), (n,)]) for n in range(1, 25)])
+    configs.extend([('i,i', [(n,), (n,)]) for n in range(1, 25)])
+    configs.extend([('i,->i', [(n,), ()]) for n in range(1, 25)])
+    configs.extend([(',i->i', [(), (n,)]) for n in range(1, 25)])
+    configs.extend([('i,->', [(n,), ()]) for n in range(1, 25)])
+    configs.extend([(',i->', [(), (n,)]) for n in range(1, 25)])
+    configs.extend([('...,...', [(n - 1,), (n - 1,)]) for n in range(1, 25)])
+    configs.extend([('i,i', [(n - 1,), (n - 1,)]) for n in range(1, 25)])
+    configs.extend([('i,->i', [(n - 1,), ()]) for n in range(1, 25)])
+    configs.extend([(',i->i', [(), (n - 1,)]) for n in range(1, 25)])
+    configs.extend([('i,->', [(n - 1,), ()]) for n in range(1, 25)])
+    configs.extend([(',i->', [(), (n - 1,)]) for n in range(1, 25)])
+
     for optimize in [False, True]:
         for config in configs:
             subscripts, args = config
