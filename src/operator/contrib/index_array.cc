@@ -48,29 +48,38 @@ void IndexArrayForwardCPU(const nnvm::NodeAttrs &attrs,
     const mxnet::Tuple<int>& axes = param.axes.value();
     const int naxes = axes.ndim();
 
-    std::vector<int64_t> index_products = IndexArrayComputeIndexProducts(inshape);
+    MXNET_IDX_TYPE_SWITCH(param.dtype, DType, {
+      std::vector<DType> index_products = IndexArrayComputeIndexProducts<DType>(inshape);
 
-    Tensor<cpu, 1, int64_t> workspace =
-        ctx.requested[0].get_space_typed<cpu, 1, int64_t>(Shape1(2 * naxes), stream);
+      Tensor<cpu, 1, DType> workspace =
+          ctx.requested[0].get_space_typed<cpu, 1, DType>(Shape1(2 * naxes), stream);
 
-    IndexArrayBuildSelectedAxesWorkspace(axes, index_products, workspace.dptr_, ndim);
-    
-    // Assumes param.target_axis is -1 or 0.
-    const ptrdiff_t index_axis_offset = param.target_axis == -1 ? naxes : 1;
-    const ptrdiff_t target_axis_offset = param.target_axis == -1 ? 1: in_data.Size();
+      IndexArrayBuildSelectedAxesWorkspace(axes, index_products, workspace.dptr_, ndim);
 
-    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-      Kernel<IndexArrayKernel<req_type>, cpu>::Launch(stream, in_data.Size(),
-          out_data.dptr<int64_t>(), naxes, index_axis_offset, target_axis_offset, workspace.dptr_);
+      // Assumes param.target_axis is -1 or 0.
+      const ptrdiff_t index_axis_offset = param.target_axis == -1 ? naxes : 1;
+      const ptrdiff_t target_axis_offset = param.target_axis == -1 ? 1 : in_data.Size();
+
+      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+        Kernel<IndexArrayKernel<req_type>, cpu>::Launch(stream, in_data.Size(),
+                                                        out_data.dptr<DType>(), naxes,
+                                                        index_axis_offset, target_axis_offset,
+                                                        workspace.dptr_);
+      });
     });
   } else {
     // Assumes param.target_axis is -1 or 0.
     const ptrdiff_t index_axis_offset = param.target_axis == -1 ? ndim : 1;
     const ptrdiff_t target_axis_offset = param.target_axis == -1 ? 1: in_data.Size();
 
-    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-      Kernel<IndexArrayDefaultKernel<req_type>, cpu>::Launch(stream, in_data.Size(),
-          out_data.dptr<int64_t>(), ndim, index_axis_offset, target_axis_offset, inshape.data());
+    MXNET_IDX_TYPE_SWITCH(param.dtype, DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+        Kernel<IndexArrayDefaultKernel<req_type>, cpu>::Launch(stream, in_data.Size(),
+                                                               out_data.dptr<DType>(), ndim,
+                                                               index_axis_offset,
+                                                               target_axis_offset,
+                                                               inshape.data());
+      });
     });
   }
 }
@@ -197,9 +206,10 @@ Examples::
 .set_attr<nnvm::FInferType>("FInferType", [](const nnvm::NodeAttrs &attrs,
                                              std::vector<int> *in_attrs,
                                              std::vector<int> *out_attrs) {
+  const IndexArrayParam &param = nnvm::get<IndexArrayParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt64);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype);
   return out_attrs->at(0) != -1;
 })
 .set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",
