@@ -676,7 +676,12 @@ void MKLDNNRnnOp::Init(const OpContext &ctx,
       "Layer vector's size has a different value than the number of fusion.";
   if (dst_.size() < num_fusion - 1) {
     int data_dtype = outputs[rnn_enum::kOut].dtype();
-    for (auto fwd = fwd_inf_vec_.begin(); fwd < fwd_inf_vec_.end() - 1; ++fwd)
+    // Here we need `fwd_inf_vec_.size() - 1` spaces for the intermediate results of the multiple
+    // fused layers. And for the result of the last fused layer, `outputs[rnn_enum::kOut]` could
+    // provide the space. Hence, `forward_inf_vec_.back()` is excluded when allocates the spaces
+    // for intermediate results.
+    for (std::vector<MKLDNNRnnForward>::const_iterator fwd = fwd_inf_vec_.begin();
+        fwd != fwd_inf_vec_.end() - 1; ++fwd)
       dst_.push_back(mgr_.Alloc(
         {fwd->GetParam().dst_dims, get_mkldnn_type(data_dtype), format_tag::tnc}));
   }

@@ -205,7 +205,7 @@ mkldnn::eltwise_backward::primitive_desc GetActBwdDescImpl(
 }
 
 const inline mkldnn::eltwise_backward &MKLDNNActBackward::GetBwd() const {
-  return *bwd;
+  return *bwd_prim_;
 }
 
 static inline MKLDNNActBackward &GetActBackward(const MKLDNNActParam &param,
@@ -261,7 +261,7 @@ void MKLDNNActivationBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx
       GetActBackward(param_, ctx, in_buffer, out_buffer, *input_mem);
   MKLDNNStream *stream = MKLDNNStream::Get();
   mkldnn_output_t diff_src_memory =
-      CreateMKLDNNMem(in_grad, bwd.pd.diff_src_desc(), req);
+      CreateMKLDNNMem(in_grad, bwd.bwd_pd.diff_src_desc(), req);
   mkldnn_args_map_t args = {
     { MKLDNN_ARG_SRC, *input_mem },
     { MKLDNN_ARG_DIFF_DST, *diff_dst_memory },
@@ -305,7 +305,7 @@ void MKLDNNLeakyReluBackward(const nnvm::NodeAttrs& attrs,
       GetActBackward(param_, ctx, in_buffer, out_buffer, *input_mem);
   MKLDNNStream *stream = MKLDNNStream::Get();
   mkldnn_output_t diff_src_memory =
-      CreateMKLDNNMem(output, bwd.pd.diff_src_desc(), req);
+      CreateMKLDNNMem(output, bwd.bwd_pd.diff_src_desc(), req);
   mkldnn_args_map_t args = {
     { MKLDNN_ARG_SRC, *input_mem },
     { MKLDNN_ARG_DIFF_DST, *diff_dst_memory },
