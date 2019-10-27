@@ -24,7 +24,7 @@ __all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial"]
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
-    """Return random integers from `low` (inclusive) to `high` (exclusive).
+    r"""Return random integers from `low` (inclusive) to `high` (exclusive).
 
     Return random integers from the "discrete uniform" distribution of
     the specified dtype in the "half-open" interval [`low`, `high`). If
@@ -76,7 +76,7 @@ def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
 
 
 def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
-    """Draw samples from a uniform distribution.
+    r"""Draw samples from a uniform distribution.
 
     Samples are uniformly distributed over the half-open interval
     ``[low, high)`` (includes low, but excludes high).  In other words,
@@ -132,7 +132,7 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
 
 
 def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
-    """Draw random samples from a normal (Gaussian) distribution.
+    r"""Draw random samples from a normal (Gaussian) distribution.
 
     Samples are distributed according to a normal distribution parametrized
     by *loc* (mean) and *scale* (standard deviation).
@@ -200,7 +200,7 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
 
 
 def multinomial(n, pvals, size=None, **kwargs):
-    """
+    r"""
     Draw samples from a multinomial distribution.
     The multinomial distribution is a multivariate generalisation of the binomial distribution.
     Take an experiment with one of ``p`` possible outcomes. An example of such an experiment is throwing a dice,
@@ -242,7 +242,7 @@ def multinomial(n, pvals, size=None, **kwargs):
 
 
 def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
-    """Generates a random sample from a given 1-D array
+    r"""Generates a random sample from a given 1-D array
 
     Parameters
     -----------

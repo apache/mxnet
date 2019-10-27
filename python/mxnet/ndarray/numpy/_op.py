@@ -4907,5 +4907,5 @@ def nonzero(a):
     >>> (a > 3).nonzero()
     (array([1, 1, 1, 2, 2, 2], dtype=int64), array([0, 1, 2, 0, 1, 2], dtype=int64))
     """
-    indices = _npi.nonzero(a).transpose()
-    return tuple([indices[i] for i in range(len(indices))])
+    out = _npi.nonzero(a).transpose()
+    return tuple([out[i] for i in range(len(out))])
