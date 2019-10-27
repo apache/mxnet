@@ -20,6 +20,7 @@
 """ctypes library of mxnet and helper functions."""
 from __future__ import absolute_import
 
+import re
 import atexit
 import ctypes
 import os
@@ -853,3 +854,5 @@ def _init_np_op_module(root_module_name, np_module_name, mx_module_name, make_op
 
         if hasattr(_np_op_doc, name):
             function.__doc__ = getattr(_np_op_doc, name).__doc__
+        else:
+            function.__doc__ = re.sub('NDArray', 'ndarray', function.__doc__)

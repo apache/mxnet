@@ -383,6 +383,22 @@ def _add_workload_argmax():
     OpArgMngr.add_workload('argmax', np.array([True, False, True, False, False]))
 
 
+def _add_workload_argmin():
+    OpArgMngr.add_workload('argmin', np.random.uniform(size=(4, 5, 6, 7, 8)), 0)
+    OpArgMngr.add_workload('argmin', np.random.uniform(size=(4, 5, 6, 7, 8)), 1)
+    OpArgMngr.add_workload('argmin', np.random.uniform(size=(4, 5, 6, 7, 8)), 2)
+    OpArgMngr.add_workload('argmin', np.random.uniform(size=(4, 5, 6, 7, 8)), 3)
+    OpArgMngr.add_workload('argmin', np.random.uniform(size=(4, 5, 6, 7, 8)), 4)
+    # OpArgMngr.add_workload('argmin', np.array([0, 1, 2, 3, np.nan]))
+    # OpArgMngr.add_workload('argmin', np.array([0, 1, 2, np.nan, 3]))
+    # OpArgMngr.add_workload('argmin', np.array([np.nan, 0, 1, 2, 3]))
+    # OpArgMngr.add_workload('argmin', np.array([np.nan, 0, np.nan, 2, 3]))
+    OpArgMngr.add_workload('argmin', np.array([False, False, False, False, True]))
+    OpArgMngr.add_workload('argmin', np.array([False, False, False, True, False]))
+    OpArgMngr.add_workload('argmin', np.array([True, False, False, False, False]))
+    OpArgMngr.add_workload('argmin', np.array([True, False, True, False, False]))
+
+
 def _add_workload_around():
     OpArgMngr.add_workload('around', np.array([1.56, 72.54, 6.35, 3.25]), decimals=1)
 
@@ -1059,6 +1075,16 @@ def _add_workload_less_equal(array_pool):
     # OpArgMngr.add_workload('less_equal', np.array([np.nan]), np.array([np.nan]))
 
 
+def _add_workload_nonzero():
+    OpArgMngr.add_workload('nonzero', np.random.randint(0, 2))
+    OpArgMngr.add_workload('nonzero', np.random.randint(0, 2, size=()))
+    OpArgMngr.add_workload('nonzero', np.random.randint(0, 2, size=(0, 1, 2)))
+    OpArgMngr.add_workload('nonzero', np.random.randint(0, 2, size=(0, 1, 0)))
+    OpArgMngr.add_workload('nonzero', np.random.randint(0, 2, size=(2, 3, 4)))
+    OpArgMngr.add_workload('nonzero', np.array([False, False, False], dtype=np.bool_))
+    OpArgMngr.add_workload('nonzero', np.array([True, False, False], dtype=np.bool_))
+
+
 @use_np
 def _prepare_workloads():
     array_pool = {
@@ -1067,6 +1093,7 @@ def _prepare_workloads():
         '1x1x0': np.array([[[]]])
     }
 
+    _add_workload_argmin()
     _add_workload_argmax()
     _add_workload_around()
     _add_workload_broadcast_arrays(array_pool)
@@ -1083,6 +1110,7 @@ def _prepare_workloads():
     _add_workload_max(array_pool)
     _add_workload_min(array_pool)
     _add_workload_mean(array_pool)
+    _add_workload_nonzero()
     _add_workload_ones_like(array_pool)
     _add_workload_prod(array_pool)
     _add_workload_repeat(array_pool)

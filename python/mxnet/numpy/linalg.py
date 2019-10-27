@@ -54,10 +54,35 @@ def norm(x, ord=None, axis=None, keepdims=False):
     n : float or ndarray
         Norm of the matrix or vector(s).
 
+    Notes
+    -----
+    This operator differs from NumPy in the aspect that it always returns a
+    zero-dim tensor for the cases where Python float values are expected
+    in NumPy.
+
     References
     ----------
     .. [1] G. H. Golub and C. F. Van Loan, *Matrix Computations*,
            Baltimore, MD, Johns Hopkins University Press, 1985, pg. 15
+
+    Examples
+    --------
+    >>> from numpy import linalg as LA
+    >>> a = np.arange(9) - 4
+    >>> a
+    array([-4., -3., -2., -1.,  0.,  1.,  2.,  3.,  4.])
+    >>> b = a.reshape((3, 3))
+    >>> b
+    array([[-4., -3., -2.],
+           [-1.,  0.,  1.],
+           [ 2.,  3.,  4.]])
+    >>> LA.norm(a)
+    array(7.745967)
+    >>>
+    >>> LA.norm(b)
+    array(7.745967)
+    >>> LA.norm(b, 'fro')
+    array(7.745967)
     """
     return _mx_nd_np.linalg.norm(x, ord, axis, keepdims)
 
