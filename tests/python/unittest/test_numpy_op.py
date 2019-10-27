@@ -2490,16 +2490,17 @@ def test_np_choice():
     #     test_sample_without_replacement(np.random.choice, num_classes, shape, 10 ** 5, weight)
 
     # Test hypridize mode:
-    for hybridize in [True, False]:
-        for replace in [True, False]:
-            test_choice = TestUniformChoice(num_classes // 2, replace)
-            test_choice_weighted = TestWeightedChoice(num_classes // 2, replace)
-            if hybridize:
-                test_choice.hybridize()
-                test_choice_weighted.hybridize()
-            weight = np.array(_np.random.dirichlet([1.0] * num_classes))
-            test_indexing_mode(test_choice, num_classes, num_classes // 2, replace, None)
-            test_indexing_mode(test_choice_weighted, num_classes, num_classes // 2, replace, weight)
+    for wtype in ['float16', 'float32', 'float64']:
+        for hybridize in [True, False]:
+            for replace in [True, False]:
+                test_choice = TestUniformChoice(num_classes // 2, replace)
+                test_choice_weighted = TestWeightedChoice(num_classes // 2, replace)
+                if hybridize:
+                    test_choice.hybridize()
+                    test_choice_weighted.hybridize()
+                weight = np.array(_np.random.dirichlet([1.0] * num_classes)).astype(wtype)
+                test_indexing_mode(test_choice, num_classes, num_classes // 2, replace, None)
+                test_indexing_mode(test_choice_weighted, num_classes, num_classes // 2, replace, weight)
 
 
 @with_seed()
