@@ -71,23 +71,16 @@ def norm(x, ord=None, axis=None, keepdims=False):
     >>> a = np.arange(9) - 4
     >>> a
     array([-4., -3., -2., -1.,  0.,  1.,  2.,  3.,  4.])
-    >>>
     >>> b = a.reshape((3, 3))
     >>> b
     array([[-4., -3., -2.],
            [-1.,  0.,  1.],
            [ 2.,  3.,  4.]])
-    >>>
-    >>>
-    >>>
-    >>>
-    >>>
     >>> LA.norm(a)
     array(7.745967)
     >>>
     >>> LA.norm(b)
     array(7.745967)
-    >>>
     >>> LA.norm(b, 'fro')
     array(7.745967)
     """
