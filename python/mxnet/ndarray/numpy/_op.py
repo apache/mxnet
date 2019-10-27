@@ -3275,17 +3275,17 @@ def argmin(a, axis=None, out=None):
     >>> a
     array([[10., 11., 12.],
            [13., 14., 15.]])
-    >>> np.argmax(a)
+    >>> np.argmin(a)
     array(0.)
     >>> np.argmin(a, axis=0)
     array([0., 0., 0.])
-    >>> np.argmax(a, axis=1)
+    >>> np.argmin(a, axis=1)
     array([0., 0.])
 
     >>> b = np.arange(6)
     >>> b[2] = 0
     >>> b
-    array([0., 5., 2., 3., 4., 5.])
+    array([0., 1., 0., 3., 4., 5.])
     >>> np.argmax(b)  # Only the first occurrence is returned.
     array(0.)
 

@@ -5139,27 +5139,27 @@ def argmax(a, axis=None, out=None):
     array([[10., 11., 12.],
            [13., 14., 15.]])
     >>> np.argmax(a)
-    array(0.)
-    >>> np.argmin(a, axis=0)
-    array([0., 0., 0.])
+    array(5.)
+    >>> np.argmax(a, axis=0)
+    array([1., 1., 1.])
     >>> np.argmax(a, axis=1)
-    array([0., 0.])
+    array([2., 2.])
 
     >>> b = np.arange(6)
-    >>> b[2] = 0
+    >>> b[1] = 5
     >>> b
     array([0., 5., 2., 3., 4., 5.])
     >>> np.argmax(b)  # Only the first occurrence is returned.
-    array(0.)
+    array(1.)
 
     Specify ``out`` ndarray:
 
     >>> a = np.arange(6).reshape(2,3) + 10
     >>> b = np.zeros((2,))
-    >>> np.argmin(a, axis=1, out=b)
-    array([0., 0.])
+    >>> np.argmax(a, axis=1, out=b)
+    array([2., 2.])
     >>> b
-    array([0., 0.])
+    array([2., 2.])
     """
     return _mx_nd_np.argmax(a, axis, out)
 
@@ -5207,28 +5207,28 @@ def argmin(a, axis=None, out=None):
     >>> a
     array([[10., 11., 12.],
            [13., 14., 15.]])
-    >>> np.argmax(a)
-    array(5.)
-    >>> np.argmax(a, axis=0)
-    array([1., 1., 1.])
-    >>> np.argmax(a, axis=1)
-    array([2., 2.])
+    >>> np.argmin(a)
+    array(0.)
+    >>> np.argmin(a, axis=0)
+    array([0., 0., 0.])
+    >>> np.argmin(a, axis=1)
+    array([0., 0.])
 
     >>> b = np.arange(6)
-    >>> b[1] = 5
+    >>> b[2] = 0
     >>> b
-    array([0., 5., 2., 3., 4., 5.])
+    array([0., 1., 0., 3., 4., 5.])
     >>> np.argmax(b)  # Only the first occurrence is returned.
-    array(1.)
+    array(0.)
 
     Specify ``out`` ndarray:
 
     >>> a = np.arange(6).reshape(2,3) + 10
     >>> b = np.zeros((2,))
-    >>> np.argmax(a, axis=1, out=b)
-    array([2., 2.])
+    >>> np.argmin(a, axis=1, out=b)
+    array([0., 0.])
     >>> b
-    array([2., 2.])
+    array([0., 0.])
     """
     return _mx_nd_np.argmin(a, axis, out)
 
@@ -6899,5 +6899,4 @@ def nonzero(a):
     >>> (a > 3).nonzero()
     (array([1, 1, 1, 2, 2, 2], dtype=int64), array([0, 1, 2, 0, 1, 2], dtype=int64))
     """
-    out = _npi.nonzero(a).transpose()
-    return tuple([out[i] for i in range(len(out))])
+    return _mx_nd_np.nonzero(a)
