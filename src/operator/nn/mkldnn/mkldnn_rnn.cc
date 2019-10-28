@@ -618,6 +618,9 @@ void MKLDNNRnnOp::Init(const OpContext &ctx,
   using memory = mkldnn::memory;
   using format_tag = mkldnn::memory::format_tag;
 
+  // In the `autograd.record()` context, RNNOp is required to run into
+  // `forward_training` mode.
+  const bool is_training = (ctx.is_train || ctx.need_grad);
   const size_t num_fusion = full_param_.layer_params.size();
   if (fwd_inf_vec_.size() < num_fusion) {
     size_t buffer_size = 0;  // Element number, instead of bytes, in the buffer
@@ -635,7 +638,7 @@ void MKLDNNRnnOp::Init(const OpContext &ctx,
     mgr_.Init(buffer_size, ctx.run_ctx.ctx, inputs[rnn_enum::kParams].dtype());
   }
 
-  if (ctx.is_train && fwd_trn_vec_.size() < num_fusion) {
+  if (is_training && fwd_trn_vec_.size() < num_fusion) {
     for (auto& layer_param : full_param_.layer_params) {
       fwd_trn_vec_.emplace_back(layer_param,
           true, inputs[rnn_enum::kData], inputs[rnn_enum::kParams]);
@@ -659,13 +662,13 @@ void MKLDNNRnnOp::Init(const OpContext &ctx,
     size_t layer_weights_bytes = single_w_bytes * directions;
     size_t layer_bias_bytes = single_b_bytes * directions;  // Naive MXNet has double bias
 
-    if (!fwd_layer.IsInitialized() || ctx.is_train)
+    if (!fwd_layer.IsInitialized() || is_training)
       fwd_layer.SetWeightsMem(&(this->mgr_), weights_ptr, bias_ptr, dtype);
     weights_ptr += layer_weights_bytes;
     bias_ptr += layer_bias_bytes;
   }
 
-  if (ctx.is_train) {
+  if (is_training) {
     CHECK_EQ(fwd_trn_vec_.size(), fwd_inf_vec_.size()) <<
       "Layers' configurations of forward inference and forward training are disparate.";
     for (size_t lyr = 0; lyr < fwd_inf_vec_.size(); ++lyr)
@@ -898,6 +901,9 @@ void MKLDNNRnnOp::Forward(const OpContext &ctx,
                           const std::vector<NDArray> &inputs,
                           const std::vector<OpReqType> &req,
                           const std::vector<NDArray> &outputs) {
+  // In the `autograd.record()` context, RNNOp is required to run into
+  // forward_training mode.
+  const bool is_training = (ctx.is_train || ctx.need_grad);
   // check output requests
   if (kAddTo == req[rnn_enum::kOut])
     LOG(FATAL) << "Currently, `add` operation is not supported by RNNs.";
@@ -922,7 +928,7 @@ void MKLDNNRnnOp::Forward(const OpContext &ctx,
     weights_version_ = inputs[rnn_enum::kParams].version();
   }
 
-  if (!initialized_ || ctx.is_train || fwd_trn_vec_.size() == 0) {
+  if (!initialized_ || is_training || fwd_trn_vec_.size() == 0) {
     Init(ctx, inputs, req, outputs);
   }
 
@@ -952,7 +958,7 @@ void MKLDNNRnnOp::Forward(const OpContext &ctx,
   if (fwd_inf_vec_.size() == 1) {
     fwd_inf_vec_.front().SetNewDataMem(src, src_state, src_state_cell,
         dst, dst_state, dst_state_cell, data_dtype);
-    if (ctx.is_train) {
+    if (is_training) {
       fwd_trn_vec_.front().FetchData(fwd_inf_vec_.front());
     }
   } else {
@@ -964,7 +970,7 @@ void MKLDNNRnnOp::Forward(const OpContext &ctx,
     // results in this->xxx, used as the source input of the next layer.
     fwd_inf_vec_.front().SetNewDataMem(src, src_state, src_state_cell,
         this->dst_.front()->get_data_handle(), dst_state, dst_state_cell, data_dtype);
-    if (ctx.is_train) {
+    if (is_training) {
       fwd_trn_vec_.front().FetchData(fwd_inf_vec_.front());
     }
     // 1st_lyr -> dst_handle -> next_lyr -> dst_handle -> next_lyr -> ...
@@ -976,7 +982,7 @@ void MKLDNNRnnOp::Forward(const OpContext &ctx,
       fwd_inf_vec_.at(lyr).SetNewDataMem(this->dst_.at(lyr - 1)->get_data_handle(),
           src_state, src_state_cell,
           this->dst_.at(lyr)->get_data_handle(), dst_state, dst_state_cell, data_dtype);
-      if (ctx.is_train) {
+      if (is_training) {
         fwd_trn_vec_.at(lyr).FetchData(fwd_inf_vec_.at(lyr));
       }
     }
@@ -987,11 +993,11 @@ void MKLDNNRnnOp::Forward(const OpContext &ctx,
     if (dst_state_cell) dst_state_cell += cell_bytes;
     fwd_inf_vec_.back().SetNewDataMem(this->dst_.back()->get_data_handle(),
         src_state, src_state_cell, dst, dst_state, dst_state_cell, data_dtype);
-    if (ctx.is_train) {
+    if (is_training) {
       fwd_trn_vec_.back().FetchData(fwd_inf_vec_.back());
     }
   }
-  if (ctx.is_train) {
+  if (is_training) {
     for (auto& trn_lyr : fwd_trn_vec_) RegisterMKLDNNRnn(trn_lyr);
   } else {
     for (auto& inf_lyr : fwd_inf_vec_) RegisterMKLDNNRnn(inf_lyr);
@@ -1092,7 +1098,7 @@ void MKLDNNRnnOp::Backward(const OpContext& ctx,
         dy, dhy, dcy, data_dtype);
 
     for (std::vector<MKLDNNRnnBackward>::const_reverse_iterator bwd = bwd_vec_.rbegin();
-        bwd < bwd_vec_.rend(); ++bwd) {
+        bwd != bwd_vec_.rend(); ++bwd) {
       RegisterMKLDNNRnn(*bwd);
     }
   }
