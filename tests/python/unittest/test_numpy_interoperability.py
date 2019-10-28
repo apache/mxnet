@@ -1234,6 +1234,8 @@ def check_interoperability(op_list):
     for name in op_list:
         if name in _TVM_OPS and not is_op_runnable():
             continue
+        if name in ['shares_memory', 'may_share_memory']:  # skip list
+            continue
         print('Dispatch test:', name)
         workloads = OpArgMngr.get_workloads(name)
         assert workloads is not None, 'Workloads for operator `{}` has not been ' \
@@ -1241,6 +1243,19 @@ def check_interoperability(op_list):
                                       'the official NumPy.'.format(name)
         for workload in workloads:
             _check_interoperability_helper(name, *workload['args'], **workload['kwargs'])
+
+
+@with_seed()
+@use_np
+@with_array_function_protocol
+def test_np_memory_array_function():
+    ops = [_np.shares_memory, _np.may_share_memory]
+    for op in ops:
+        data_mx = np.zeros([13, 21, 23, 22], dtype=np.float32)
+        data_np = _np.zeros([13, 21, 23, 22], dtype=np.float32)
+        assert op(data_mx[0,:,:,:], data_mx[1,:,:,:]) == op(data_np[0,:,:,:], data_np[1,:,:,:])
+        assert op(data_mx[0,0,0,2:5], data_mx[0,0,0,4:7]) == op(data_np[0,0,0,2:5], data_np[0,0,0,4:7])
+        assert op(data_mx, np.ones((5, 0))) == op(data_np, _np.ones((5, 0)))
 
 
 @with_seed()

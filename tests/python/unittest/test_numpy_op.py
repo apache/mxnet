@@ -3515,7 +3515,7 @@ def test_np_einsum():
             for config in configs:
                 for optimize in [False, True]:
                     rtol = 1e-2 if dtype == 'float16' else 1e-3
-                    atol = 1e-4 if dtype == 'float16' else 1e-5 
+                    atol = 1e-4 if dtype == 'float16' else 1e-5
                     (subscripts, operands, get_grad) = config
                     test_einsum = TestEinsum(subscripts, optimize)
                     if hybridize:
@@ -3556,7 +3556,7 @@ def test_np_einsum():
             for config in configs:
                 (subscripts, operands) = config
                 rtol = 1e-2 if dtype == 'float16' else 1e-3
-                atol = 1e-4 if dtype == 'float16' else 1e-5 
+                atol = 1e-4 if dtype == 'float16' else 1e-5
                 grad = []
                 x_np = []
                 for shape in operands:
@@ -3739,6 +3739,29 @@ def test_npx_reshape():
                 npx_out = npx.reshape(a, newshape, reverse=reverse)
                 expected_out = _np.reshape(a.asnumpy(), expected_ret_shape)
                 assert_almost_equal(npx_out.asnumpy(), expected_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@use_np
+def test_np_share_memory():
+    ops = [np.shares_memory, np.may_share_memory]
+    # reshape not support boolean types
+    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
+    for op in ops:
+        for dt in dtypes:
+            x = np.zeros([13, 21, 23, 22], dtype=dt)
+            assert not op(x[0,:,:,:], x[1,:,:,:])
+            assert not op(x[2,:,:,:], x[3,:,:,:])
+            assert not op(x[2:5,0,0,0], x[3:4,0,0,0])
+            assert not op(x[2:5,0,0,0], x[4:7,0,0,0])
+            assert op(x[0,0,0,2:5], x[0,0,0,3:4])
+            assert op(x[0,6,0,2:5], x[0,6,0,4:7])
+            assert not op(x[0,5,0,2:5], x[0,6,0,4:7])
+
+            for adt in dtypes:
+                assert not op(x, np.ones((5, 0), dtype=adt))
+                assert not op(np.ones((5, 0), dtype=adt), x)
+                assert not op(np.ones((5, 0), dtype=dt), np.ones((0, 3, 0), dtype=adt))
 
 
 if __name__ == '__main__':
