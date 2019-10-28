@@ -743,12 +743,6 @@ ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
 ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
 
 
-from .runtime import Features
-if Features().is_enabled("TVM_OP"):
-    _LIB_TVM_OP = libinfo.find_lib_path("libtvmop")
-    check_call(_LIB.MXLoadTVMOp(c_str(_LIB_TVM_OP[0])))
-
-
 _NP_OP_PREFIX = '_np_'
 _NP_OP_SUBMODULE_LIST = ['_random_', '_linalg_']
 
