@@ -1415,10 +1415,10 @@ def test_trigonometric_ops():
         assert_correctness_of_trigonometric_ops(y, expected_output)
 
     def check_arccosh():
-        x = create_input_for_trigonometric_ops([1, np.pi/2, 3*np.pi/4, np.pi])
+        x = create_input_for_trigonometric_ops([1, np.pi/2, 3*np.pi/4, np.pi, 5*np.pi/4])
         y = nd.arccosh(x)
         # expected ouput for indices=(0, 1, -3, -2, -1) after applying arccosh()
-        expected_output = [0, np.arccosh(np.pi/2), np.arccosh(3*np.pi/4), np.arccosh(np.pi)]
+        expected_output = [0, np.arccosh(np.pi/2), np.arccosh(3*np.pi/4), np.arccosh(np.pi), np.arccosh(5*np.pi/4)]
         assert_correctness_of_trigonometric_ops(y, expected_output)
 
     def check_arctanh():

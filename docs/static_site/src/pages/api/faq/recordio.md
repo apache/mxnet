@@ -38,7 +38,6 @@ We provide two tools for creating a RecordIO dataset.
 * [im2rec.py](https://github.com/apache/incubator-mxnet/blob/master/tools/im2rec.py) - implements the tool using the Python API.
 
 Both provide the same output: a RecordIO dataset.
-You may want to also review the [example using real-world data with im2rec.py.](https://mxnet.apache.org/tutorials/basic/data.html#loading-data-using-image-iterators)
 
 ### Prerequisites
 

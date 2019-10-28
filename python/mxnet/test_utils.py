@@ -1935,8 +1935,7 @@ def same_array(array1, array2):
 
 @contextmanager
 def discard_stderr():
-    """
-    Discards error output of a routine if invoked as:
+    """Discards error output of a routine if invoked as:
 
     with discard_stderr():
         ...
@@ -2324,7 +2323,8 @@ class EnvManager(object):
 
 def collapse_sum_like(a, shape):
     """Given `a` as a numpy ndarray, perform reduce_sum on `a` over the axes that do not
-    exist in `shape`. Note that an ndarray with `shape` must be broadcastable to `a`."""
+    exist in `shape`. Note that an ndarray with `shape` must be broadcastable to `a`.
+    """
     assert len(a.shape) >= len(shape)
     if np.prod(shape) == 0 or a.size == 0:
         return np.zeros(shape, dtype=a.dtype)
@@ -2349,7 +2349,8 @@ _features = Features()
 
 def has_tvm_ops():
     """Returns True if MXNet is compiled with TVM generated operators. If current ctx
-    is GPU, it only returns True for CUDA compute capability > 52 where FP16 is supported."""
+    is GPU, it only returns True for CUDA compute capability > 52 where FP16 is supported.
+    """
     built_with_tvm_op = _features.is_enabled("TVM_OP")
     ctx = current_context()
     if ctx.device_type == 'gpu':
@@ -2367,7 +2368,8 @@ def has_tvm_ops():
 def is_op_runnable():
     """Returns True for all CPU tests. Returns True for GPU tests that are either of the following.
     1. Built with USE_TVM_OP=0.
-    2. Built with USE_TVM_OP=1, but with compute capability >= 53."""
+    2. Built with USE_TVM_OP=1, but with compute capability >= 53.
+    """
     ctx = current_context()
     if ctx.device_type == 'gpu':
         if not _features.is_enabled("TVM_OP"):
