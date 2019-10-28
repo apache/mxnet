@@ -161,8 +161,11 @@ static void MKLDNNQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs, cons
   std::vector<mkldnn::memory::desc> in_desc;
   in_desc.push_back(dataA_mem->get_desc());
   in_desc.push_back(dataB_mem->get_desc());
-  auto output_desc = dataA_mem->get_desc();
-  output_desc.data.data_type = static_cast<mkldnn_data_type_t>(output_data_type);
+  const auto in_shape = in_data[quantized_elemwise_add_enum::kDataA].shape();
+  mkldnn::memory::dims i_dims(in_shape.begin(), in_shape.end());
+  auto output_desc = mkldnn::memory::desc(i_dims,
+                                          output_data_type,
+                                          mkldnn::memory::format_tag::any);
   mkldnn::sum::primitive_desc pdesc(output_desc, scales, in_desc, engine);
   auto mem = CreateMKLDNNMem(out_data[quantized_elemwise_add_enum::kOut],
                              pdesc.dst_desc(),
