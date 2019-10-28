@@ -276,7 +276,7 @@ int MXAutogradSetIsRecording(int is_recording, int* prev) {
   API_END();
 }
 
-int MXIsNumpyShape(int* curr) {
+int MXIsNumpyShape(bool* curr) {
   API_BEGIN();
   *curr = Imperative::Get()->is_np_shape();
   API_END();

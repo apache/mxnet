@@ -1616,13 +1616,12 @@ void NDArray::Save(dmlc::Stream *strm) const {
     nd_cpu.WaitToRead();
     save_data = nd_cpu.data();
   } else {
-#if MXNET_USE_MKLDNN == 1
-    // For mkldnn, a copy of *this can ensure no write access pending on *this.
-    nd_cpu = this->Copy(Context::CPU());
-    nd_cpu.WaitToRead();
-#else
     this->WaitToRead();
     nd_cpu = *this;
+#if MXNET_USE_MKLDNN == 1
+    if (nd_cpu.IsMKLDNNData()) {
+      nd_cpu = nd_cpu.Reorder2Default();
+    }
 #endif
     save_data = nd_cpu.data();
   }
@@ -1715,8 +1714,7 @@ bool NDArray::Load(dmlc::Stream *strm) {
            " Please turn on np shape semantics in Python using `with np_shape(True)`"
            " or decorator `use_np_shape` to scope the code of loading the ndarray.";
   } else {
-    // when the flag is global on, skip the check since it would be always global on.
-    CHECK(Imperative::Get()->is_np_shape() == GlobalOn || !Imperative::Get()->is_np_shape())
+    CHECK(!Imperative::Get()->is_np_shape())
         << "ndarray was not saved in np shape semantics, but being loaded in np shape semantics."
            " Please turn off np shape semantics in Python using `with np_shape(False)`"
            " to scope the code of loading the ndarray.";
@@ -2007,18 +2005,16 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   TBlob dst(data, dshape, cpu::kDevMask, this->dtype_, 0); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
-    Engine::Get()->PushAsync(
-        [&](RunContext rctx, Engine::CallbackOnComplete on_complete) {
-          RunContext ctx{this->ctx(), nullptr, nullptr, false};
-          NDArray src = *this;
+    this->WaitToRead();
+    RunContext rctx{this->ctx(), nullptr, nullptr, false};
+    NDArray src = *this;
 #if MXNET_USE_MKLDNN == 1
-          src = this->Reorder2Default();
+    if (src.IsMKLDNNData()) {
+      src = this->Reorder2Default();
+    }
 #endif
-          ndarray::Copy<cpu, cpu>(src.data(), &dst, Context::CPU(), Context::CPU(), ctx);
-          on_complete();
-        },
-        this->ctx(), {this->var()}, {}, FnProperty::kNormal, 0, "SyncCopyCPU2CPU");
-    this->WaitToWrite();
+    ndarray::Copy<cpu, cpu>(src.data(), &dst,
+                            Context::CPU(), Context::CPU(), rctx);
   } else {
 #if MXNET_USE_CUDA
     Engine::Get()->PushAsync(

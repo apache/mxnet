@@ -108,14 +108,12 @@ class Imperative {
       is_recording_ = is_recording;
       return old;
   }
-  /*! \brief return current numpy compatibility status,
-   *  GlobalOn(2), ThreadLocalOn(1), Off(0).
-   * */
-  int is_np_shape() const {
+  /*! \brief whether numpy compatibility is on. */
+  bool is_np_shape() const {
     if (is_np_shape_global_) {
-      return 2;
+      return true;
     }
-    return is_np_shape_thread_local_ ? 1 : 0;
+    return is_np_shape_thread_local_;
   }
   /*! \brief specify numpy compatibility off, thread local on or global on. */
   bool set_is_np_shape(int is_np_shape) {

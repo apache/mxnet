@@ -207,7 +207,8 @@ def pause(profile_process='worker'):
 
 
 def resume(profile_process='worker'):
-    """Resume paused profiling.
+    """
+    Resume paused profiling.
 
     Parameters
     ----------
