@@ -94,6 +94,9 @@ class MSHADOW_ALIGNED(8) complex64 {
   MSHADOW_XINLINE explicit operator half::half_t() const {
     return static_cast<half::half_t>(static_cast<float>(*this));
   }
+  MSHADOW_XINLINE explicit operator bool() const {
+    return static_cast<bool>(static_cast<float>(*this));
+  }
 
 #if MSHADOW_CUDA_COMPLEX
   MSHADOW_XINLINE explicit complex64(const cuFloatComplex& value) {
@@ -230,6 +233,9 @@ class MSHADOW_ALIGNED(16) complex128 {
   }
   MSHADOW_XINLINE explicit operator half::half_t() const {
     return static_cast<half::half_t>(static_cast<double>(*this));
+  }
+  MSHADOW_XINLINE explicit operator bool() const {
+    return static_cast<bool>(static_cast<double>(*this));
   }
 
 #if MSHADOW_CUDA_COMPLEX
