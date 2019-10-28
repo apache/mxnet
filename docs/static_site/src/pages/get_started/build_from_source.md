@@ -50,7 +50,7 @@ Building from source follows this general two-step flow of building the shared l
             * [non-Intel CPUs](#recommended-for-Systems-with-non-Intel-CPUs)
 2. [Install the language API binding(s)](#installing-mxnet-language-bindings) you would like to use for MXNet.
 MXNet's newest and most popular API is Gluon. Gluon is built into the Python binding. If Python isn't your preference, you still have more options. MXNet supports several other language APIs:
-    - [Python (includes Gluon)]({{'/api/python/index'|relative_url}})
+    - [Python (includes Gluon)]({{'/api/python/docs/api/index.html'|relative_url}})
     - [C++]({{'/api/cpp'|relative_url}})
     - [Clojure]({{'/api/clojure'|relative_url}})
     - [Java]({{'/api/java'|relative_url}})

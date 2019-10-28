@@ -674,7 +674,8 @@ class Constant(Parameter):
     """
     def __init__(self, name, value):
         if not isinstance(value, ndarray.NDArray):
-            value = ndarray.array(value)
+            array_fn = _mx_np.array if is_np_array() else ndarray.array
+            value = array_fn(value)
         self.value = value
 
         class Init(initializer.Initializer):

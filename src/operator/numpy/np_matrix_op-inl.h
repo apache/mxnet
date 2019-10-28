@@ -27,6 +27,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <string>
 #include "../tensor/matrix_op-inl.h"
 #include "../nn/concat-inl.h"
 #include "../../common/utils.h"
@@ -48,6 +49,58 @@ struct NumpyVstackParam : public dmlc::Parameter<NumpyVstackParam> {
   DMLC_DECLARE_PARAMETER(NumpyVstackParam) {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
     .describe("Number of inputs to be vstacked.");
+  }
+};
+
+struct NumpyReshapeParam : public dmlc::Parameter<NumpyReshapeParam> {
+  mxnet::TShape newshape;
+  std::string order;
+  DMLC_DECLARE_PARAMETER(NumpyReshapeParam) {
+    DMLC_DECLARE_FIELD(newshape)
+        .describe("The new shape should be compatible with the original shape."
+                  " If an integer, then the result will be a 1-D array of that length."
+                  " One shape dimension can be -1. In this case, the value is inferred"
+                  " from the length of the array and remaining dimensions.");
+    DMLC_DECLARE_FIELD(order)
+        .set_default("C")
+        .describe("Read the elements of a using this index order, and place the elements into"
+                  " the reshaped array using this index order. 'C' means to read/write the elements"
+                  " using C-like index order, with the last axis index changing fastest,"
+                  " back to the first axis index changing slowest."
+                  " Note that currently only C-like order is"
+                  " supported");
+  }
+};
+
+struct NumpyXReshapeParam : public dmlc::Parameter<NumpyXReshapeParam> {
+  mxnet::TShape newshape;
+  bool reverse;
+  std::string order;
+  DMLC_DECLARE_PARAMETER(NumpyXReshapeParam) {
+    DMLC_DECLARE_FIELD(newshape)
+        .describe("The new shape should be compatible with the original shape."
+                  " If an integer, then the result will be a 1-D array of that length."
+                  " One shape dimension can be -1. In this case, the value is inferred"
+                  " from the length of the array and remaining dimensions."
+                  " -2 to -6 are used for data manipulation."
+                  " -2 copy this dimension from the input to the output shape."
+                  " -3 will skip current dimension if and only if the current dim size is one."
+                  " -4 copy all remain of the input dimensions to the output shape."
+                  " -5 use the product of two consecutive dimensions of the input"
+                  " shape as the output."
+                  " -6 split one dimension of the input into two dimensions passed"
+                  " subsequent to -6 in the new shape.");
+    DMLC_DECLARE_FIELD(reverse)
+        .set_default(false)
+        .describe("If true then the special values are inferred from right to left");
+    DMLC_DECLARE_FIELD(order)
+        .set_default("C")
+        .describe("Read the elements of a using this index order, and place the elements into"
+                  " the reshaped array using this index order. 'C' means to read/write the elements"
+                  " using C-like index order, with the last axis index changing fastest,"
+                  " back to the first axis index changing slowest."
+                  " Note that currently only C-like order is"
+                  " supported");
   }
 };
 
@@ -731,7 +784,6 @@ inline void HSplitOpBackward(const nnvm::NodeAttrs &attrs,
   }
   SplitOpBackwardImpl<xpu>(attrs, ctx, inputs, req, outputs, real_axis);
 }
-
 }  // namespace op
 }  // namespace mxnet
 

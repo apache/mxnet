@@ -258,6 +258,7 @@ def _add_workload_einsum():
     size_dict = dict(zip(chars, sizes))
 
     configs = [
+        # test_einsum_broadcast
         ('ij...,j...->ij...', [(2, 3, 4), (3,)]),
         ('ij...,...j->ij...', [(2, 3, 4), (3,)]),
         ('ij...,j->ij...', [(2, 3, 4), (3,)]),
@@ -310,6 +311,39 @@ def _add_workload_einsum():
         ('abjk,kl,jl,ab->ab', [(1, 1, 5, 4), (4, 6), (5, 6), (7, 7)]),
         ('obk,ijk->ioj', [(2, 4, 8), (2, 4, 8)]),
     ]
+    # check_einsum_sums
+    configs.extend([('i->', [(i,)]) for i in range(1, 17)])
+    configs.extend([('...i->...', [(2, 3, i,)]) for i in range(1, 17)])
+    configs.extend([('i...->...', [(2, i,)]) for i in range(1, 17)])
+    configs.extend([('i...->...', [(2, 3, i,)]) for i in range(1, 17)])
+    configs.extend([('ii', [(i, i,)]) for i in range(1, 17)])
+    configs.extend([('..., ...', [(3, i,), (2, 3, i,)]) for i in range(1, 17)])
+    configs.extend([('...i, ...i', [(2, 3, i,), (i,)]) for i in range(1, 17)])
+    configs.extend([('i..., i...', [(i, 3, 2,), (i,)]) for i in range(1, 11)])
+    configs.extend([('i, j', [(3,), (i,)]) for i in range(1, 17)])
+    configs.extend([('ij, j', [(4, i), (i,)]) for i in range(1, 17)])
+    configs.extend([('ji, j', [(i, 4), (i,)]) for i in range(1, 17)])
+    configs.extend([('ij, jk', [(4, i), (i, 6)]) for i in range(1, 8)])
+    configs.extend([
+        ('ij,jk,kl', [(3, 4), (4, 5), (5, 6)]),
+        ('ijk, jil -> kl', [(3, 4, 5), (4, 3, 2)]),
+        ('i, i, i -> i', [(8,), (8,), (8,)]),
+        (',i->', [(), (9,)]),
+        ('i,->', [(9,), ()]),
+    ])
+    configs.extend([('...,...', [(n,), (n,)]) for n in range(1, 25)])
+    configs.extend([('i,i', [(n,), (n,)]) for n in range(1, 25)])
+    configs.extend([('i,->i', [(n,), ()]) for n in range(1, 25)])
+    configs.extend([(',i->i', [(), (n,)]) for n in range(1, 25)])
+    configs.extend([('i,->', [(n,), ()]) for n in range(1, 25)])
+    configs.extend([(',i->', [(), (n,)]) for n in range(1, 25)])
+    configs.extend([('...,...', [(n - 1,), (n - 1,)]) for n in range(1, 25)])
+    configs.extend([('i,i', [(n - 1,), (n - 1,)]) for n in range(1, 25)])
+    configs.extend([('i,->i', [(n - 1,), ()]) for n in range(1, 25)])
+    configs.extend([(',i->i', [(), (n - 1,)]) for n in range(1, 25)])
+    configs.extend([('i,->', [(n - 1,), ()]) for n in range(1, 25)])
+    configs.extend([(',i->', [(), (n - 1,)]) for n in range(1, 25)])
+
     for optimize in [False, True]:
         for config in configs:
             subscripts, args = config
@@ -347,6 +381,22 @@ def _add_workload_argmax():
     OpArgMngr.add_workload('argmax', np.array([False, False, False, True, False]))
     OpArgMngr.add_workload('argmax', np.array([True, False, False, False, False]))
     OpArgMngr.add_workload('argmax', np.array([True, False, True, False, False]))
+
+
+def _add_workload_argmin():
+    OpArgMngr.add_workload('argmin', np.random.uniform(size=(4, 5, 6, 7, 8)), 0)
+    OpArgMngr.add_workload('argmin', np.random.uniform(size=(4, 5, 6, 7, 8)), 1)
+    OpArgMngr.add_workload('argmin', np.random.uniform(size=(4, 5, 6, 7, 8)), 2)
+    OpArgMngr.add_workload('argmin', np.random.uniform(size=(4, 5, 6, 7, 8)), 3)
+    OpArgMngr.add_workload('argmin', np.random.uniform(size=(4, 5, 6, 7, 8)), 4)
+    # OpArgMngr.add_workload('argmin', np.array([0, 1, 2, 3, np.nan]))
+    # OpArgMngr.add_workload('argmin', np.array([0, 1, 2, np.nan, 3]))
+    # OpArgMngr.add_workload('argmin', np.array([np.nan, 0, 1, 2, 3]))
+    # OpArgMngr.add_workload('argmin', np.array([np.nan, 0, np.nan, 2, 3]))
+    OpArgMngr.add_workload('argmin', np.array([False, False, False, False, True]))
+    OpArgMngr.add_workload('argmin', np.array([False, False, False, True, False]))
+    OpArgMngr.add_workload('argmin', np.array([True, False, False, False, False]))
+    OpArgMngr.add_workload('argmin', np.array([True, False, True, False, False]))
 
 
 def _add_workload_around():
@@ -1025,6 +1075,16 @@ def _add_workload_less_equal(array_pool):
     # OpArgMngr.add_workload('less_equal', np.array([np.nan]), np.array([np.nan]))
 
 
+def _add_workload_nonzero():
+    OpArgMngr.add_workload('nonzero', np.random.randint(0, 2))
+    OpArgMngr.add_workload('nonzero', np.random.randint(0, 2, size=()))
+    OpArgMngr.add_workload('nonzero', np.random.randint(0, 2, size=(0, 1, 2)))
+    OpArgMngr.add_workload('nonzero', np.random.randint(0, 2, size=(0, 1, 0)))
+    OpArgMngr.add_workload('nonzero', np.random.randint(0, 2, size=(2, 3, 4)))
+    OpArgMngr.add_workload('nonzero', np.array([False, False, False], dtype=np.bool_))
+    OpArgMngr.add_workload('nonzero', np.array([True, False, False], dtype=np.bool_))
+
+
 @use_np
 def _prepare_workloads():
     array_pool = {
@@ -1033,6 +1093,7 @@ def _prepare_workloads():
         '1x1x0': np.array([[[]]])
     }
 
+    _add_workload_argmin()
     _add_workload_argmax()
     _add_workload_around()
     _add_workload_broadcast_arrays(array_pool)
@@ -1049,6 +1110,7 @@ def _prepare_workloads():
     _add_workload_max(array_pool)
     _add_workload_min(array_pool)
     _add_workload_mean(array_pool)
+    _add_workload_nonzero()
     _add_workload_ones_like(array_pool)
     _add_workload_prod(array_pool)
     _add_workload_repeat(array_pool)

@@ -156,6 +156,29 @@ def test_np_loss_ndarray():
     assert_almost_equal(L, _np.array([1.06346405,  0.04858733]), use_broadcast=False)
 
 
+@with_seed()
+@use_np
+def test_np_get_constant():
+    const_arr = _np.random.uniform(0, 100, size=(10, 10)).astype(_np.float32)
+
+    class Foo(gluon.HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super(Foo, self).__init__(prefix=prefix, params=params)
+            self.weight = self.params.get_constant('const', const_arr)
+
+        def hybrid_forward(self, F, x, weight):
+            return x + weight.astype(np.float32)
+
+    x = np.random.uniform(size=const_arr.shape, dtype=const_arr.dtype)
+    for hybridize in [False, True]:
+        foo = Foo()
+        if hybridize:
+            foo.hybridize()
+        foo.initialize()
+        out = foo(x)
+        assert_almost_equal(out.asnumpy(), (x.asnumpy() + const_arr), atol=1e-5, rtol=1e-4, use_broadcast=False)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

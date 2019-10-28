@@ -717,7 +717,7 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
   using namespace sg;
 
   const SubgraphPropertyPtr& subg_prop = g.GetAttr<SubgraphPropertyPtr>("subgraph_property");
-  if (verbose) {
+  if (verbose > 1) {
     const std::string& prop_name = subg_prop->HasAttr("property_name")
                                        ? subg_prop->GetAttr<std::string>("property_name")
                                        : "partition graph";
