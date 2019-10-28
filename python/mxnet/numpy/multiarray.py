@@ -577,7 +577,7 @@ class ndarray(NDArray):
             if not isinstance(key, tuple) or len(key) != 0:
                 raise IndexError('scalar tensor can only accept `()` as index')
             if isinstance(value, numeric_types):
-                self.full(value)
+                self._full(value)
             elif isinstance(value, ndarray) and value.size == 1:
                 if value.shape != self.shape:
                     value = value.reshape(self.shape)
@@ -1993,10 +1993,12 @@ def array(object, dtype=None, ctx=None):
     """
     if ctx is None:
         ctx = current_context()
-    if isinstance(object, ndarray):
+    if isinstance(object, (ndarray, _np.ndarray)):
         dtype = object.dtype if dtype is None else dtype
     else:
         dtype = _np.float32 if dtype is None else dtype
+        if hasattr(object, "dtype"):
+            dtype = object.dtype
         if not isinstance(object, (ndarray, _np.ndarray)):
             try:
                 object = _np.array(object, dtype=dtype)
