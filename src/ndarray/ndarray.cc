@@ -543,7 +543,7 @@ const mkldnn::memory *NDArray::GetMKLDNNDataReorder(
   } else if (same_shape(old_desc, new_desc)) {
     // If they have the same shape, we can reorder data directly.
     mkldnn::memory *ret = TmpMemMgr::Get()->Alloc(new_desc);
-    std::unordered_map<int, mkldnn::memory> args({{MKLDNN_ARG_FROM, *mem }, {MKLDNN_ARG_TO, *ret}});
+    std::unordered_map<int, mkldnn::memory> args({{MKLDNN_ARG_FROM, *mem}, {MKLDNN_ARG_TO, *ret}});
     stream->RegisterPrimArgs(mkldnn::reorder(*mem, *ret), args);
     return ret;
   } else {
