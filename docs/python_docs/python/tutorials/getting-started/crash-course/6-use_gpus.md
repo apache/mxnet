@@ -99,7 +99,7 @@ net(x)
 
 Finally, we show how to use multiple GPUs to jointly train a neural network through data parallelism. Let's assume there are *n* GPUs. We split each data batch into *n* parts, and then each GPU will run the forward and backward passes using one part of the data.
 
-Let's first copy the data definitions and the transform function from the [previous tutorial](predict.md).
+Let's first copy the data definitions and the transform function from the [previous tutorial](5-predict.html).
 
 ```{.python .input}
 batch_size = 256

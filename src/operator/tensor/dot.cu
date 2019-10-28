@@ -38,8 +38,5 @@ NNVM_REGISTER_OP(_backward_dot)
 NNVM_REGISTER_OP(batch_dot)
 .set_attr<FCompute>("FCompute<gpu>", BatchDotForward_<gpu>);
 
-NNVM_REGISTER_OP(_backward_batch_dot)
-.set_attr<FCompute>("FCompute<gpu>", BatchDotBackward_<gpu>);
-
 }  // namespace op
 }  // namespace mxnet

@@ -98,7 +98,7 @@ Those can be extended with [LAPACK (Linear Algebra Package)](https://github.com/
 
 MXNet supports multiple mathematical backends for computations on the CPU:
 * [Apple Accelerate](https://developer.apple.com/documentation/accelerate)
-* [ATLAS](https://math-atlas.sourceforge.net/)
+* [ATLAS](http://math-atlas.sourceforge.net/)
 * [MKL](https://software.intel.com/en-us/intel-mkl) (MKL, MKLML)
 * [MKL-DNN](https://github.com/intel/mkl-dnn)
 * [OpenBLAS](https://www.openblas.net/)

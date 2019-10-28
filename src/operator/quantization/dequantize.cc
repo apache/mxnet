@@ -43,8 +43,6 @@ bool DequantizeStorageType(const nnvm::NodeAttrs& attrs,
   }
 #endif
   (*out_attrs)[0] = kDefaultStorage;
-  (*out_attrs)[1] = kDefaultStorage;
-  (*out_attrs)[2] = kDefaultStorage;
   return true;
 }
 
