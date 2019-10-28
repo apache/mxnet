@@ -249,7 +249,12 @@ void AddInputsOnlyCompatible(const Graph &g,
       if (!added.count(to_add[i][j])) {
         bool make_cycle = false;
         const auto& node = to_add[i][j];
-        DFSVisit(heads, [&make_cycle, &node](const nnvm::NodePtr& n) {
+        std::vector<nnvm::NodeEntry> _heads;
+        std::copy_if(heads.begin(), heads.end(), std::back_inserter(_heads),
+                     [&node](const nnvm::NodeEntry& n) {
+                       return n.node.get() != node;
+                     });
+        DFSVisit(_heads, [&make_cycle, &node](const nnvm::NodePtr& n) {
           if (n.get() == node)
             make_cycle = true;
         });
