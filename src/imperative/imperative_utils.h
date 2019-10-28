@@ -484,10 +484,10 @@ inline void PushFComputeEx(const FComputeEx& fn,
         CreateDefaultInputs(inputs, &inputs_fallback);
         fn(attrs, opctx, inputs_fallback, req, outputs);
       } else {
-#endif
         fn(attrs, opctx, inputs, req, outputs);
-#if MXNET_USE_MKLDNN == 1
       }
+#else
+      fn(attrs, opctx, inputs, req, outputs);
 #endif
       if (ctx.dev_mask() == gpu::kDevMask && exec_type == ExecType::kSync && !rctx.is_bulk) {
         rctx.get_stream<gpu>()->Wait();
@@ -548,10 +548,10 @@ inline void PushOperator(const OpStatePtr& state,
         CreateDefaultInputs(inputs, &inputs_fallback);
         fcompute_ex(state, opctx, inputs_fallback, req, outputs);
       } else {
-#endif
         fcompute_ex(state, opctx, inputs, req, outputs);
-#if MXNET_USE_MKLDNN == 1
       }
+#else
+      fcompute_ex(state, opctx, inputs, req, outputs);
 #endif
       if (ctx.dev_mask() == gpu::kDevMask && exec_type == ExecType::kSync
           && rctx.get_stream<gpu>() && !rctx.is_bulk) {
