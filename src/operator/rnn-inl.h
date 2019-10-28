@@ -181,7 +181,7 @@ inline int GetRnnBiasSize(int num_layer,
  *  - wh[1...Ngates] * h[t] time by time(sz: NxHxNgates)
  *  - output -> h[t](, c[t] additionally with Lstm) time by time(sz: NxH(x2))
  *  - intermediate y[1...T] as next layer's inputs(sz: TxNxHxD)
- */ 
+ */
 inline size_t GetRNNWorkspaceSize(int seq_length,
                                   int batch_size,
                                   int hidden_size,
@@ -420,6 +420,7 @@ class RNNOp {
     this->param_ = param;
     this->ctx_ = ctx;
 
+    if (ctx_.dev_type == kGPU) {
 #if MXNET_USE_CUDNN == 1
     init_cudnn_ = false;
     dtype_ = mshadow::DataType<DType>::kCudnnFlag;
@@ -503,6 +504,7 @@ class RNNOp {
       LOG(FATAL) << "RNN on GPU is only available for cuDNN at the moment.";
     }
 #endif  // MXNET_USE_CUDNN == 1
+    }
 
     if (ctx_.dev_type == kCPU) {
       this->init_space_ = false;
@@ -521,6 +523,7 @@ class RNNOp {
   }
 
   ~RNNOp() {
+    if (ctx_.dev_type == kGPU) {
 #if MXNET_USE_CUDNN == 1
     CUDNN_CALL(cudnnDestroyTensorDescriptor(hx_desc_));
     CUDNN_CALL(cudnnDestroyTensorDescriptor(cx_desc_));
@@ -555,6 +558,7 @@ class RNNOp {
     CUDNN_CALL(cudnnDestroyRNNDataDescriptor(dy_data_desc_));
 #endif  // MXNET_USE_CUDNN_GE_7200
 #endif  // MXNET_USE_CUDNN
+    }
   }
 
   void Forward(const OpContext &ctx, const std::vector<TBlob> &in_data,

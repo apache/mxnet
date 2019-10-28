@@ -20,6 +20,7 @@
 $env:MXNET_LIBRARY_PATH=join-path $pwd.Path windows_package\lib\libmxnet.dll
 $env:PYTHONPATH=join-path $pwd.Path windows_package\python
 $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+$env:MXNET_SUBGRAPH_VERBOSE=0
 $env:MXNET_HOME=[io.path]::combine($PSScriptRoot, 'mxnet_home')
 
 C:\Python37\Scripts\pip install -r tests\requirements.txt

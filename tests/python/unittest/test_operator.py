@@ -2964,6 +2964,7 @@ def test_big_transpose():
     assert_allclose(x_np, z.asnumpy().astype('uint8'))
 
 
+@with_seed()
 def test_larger_transpose():
     x = mx.nd.random.normal(shape=(50,51))
     y = mx.nd.transpose(x)
@@ -3324,9 +3325,9 @@ def test_batch_dot():
                         agrad_npy = np.empty((batch_size, m, k), dtype=data_type)
                         bgrad_npy = np.empty((batch_size, k, n), dtype=data_type)
                         a_init_grad_npy = np.random.normal(size=(batch_size, m, k))
-                        a_init_grad_npy = a_npy.astype(data_type)
+                        a_init_grad_npy = a_init_grad_npy.astype(data_type)
                         b_init_grad_npy = np.random.normal(size=(batch_size, k, n))
-                        b_init_grad_npy = b_npy.astype(data_type)
+                        b_init_grad_npy = b_init_grad_npy.astype(data_type)
                         for i in range(batch_size):
                             c_npy[i, :, :] = np.dot(a_npy[i, :, :], b_npy[i, :, :])
                             bgrad_npy[i, :, :] = np.dot(a_npy[i, :, :].T, ograd_npy[i, :, :])

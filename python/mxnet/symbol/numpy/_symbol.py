@@ -36,7 +36,7 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot', 'histogram', 'eye',
            'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'split', 'vsplit', 'concatenate',
-           'stack', 'vstack', 'dstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax',
+           'stack', 'vstack', 'dstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'argmin',
            'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming', 'blackman', 'flip',
            'around', 'hypot', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take',
            'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal',
@@ -385,13 +385,10 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute argmax_channel')
 
-    def argmin(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`argmin`.
-
-        The arguments are the same as for :py:func:`argmin`, with
-        this array as data.
-        """
-        raise NotImplementedError
+    def argmin(self, axis=None, out=None):  # pylint: disable=arguments-differ
+        """Return indices of the minimum values along the given axis.
+        Refer to `mxnet.numpy.argmax` for full documentation."""
+        return argmin(self, axis, out)
 
     def clip(self, min=None, max=None, out=None):  # pylint: disable=arguments-differ
         """Return an array whose values are limited to [min, max].
@@ -3187,8 +3184,6 @@ def swapaxes(a, axis1, axis2):
 @set_module('mxnet.symbol.numpy')
 def argmax(a, axis=None, out=None):
     r"""
-    argmax(a, axis=None, out=None)
-
     Returns the indices of the maximum values along an axis.
 
     Parameters
@@ -3224,6 +3219,46 @@ def argmax(a, axis=None, out=None):
 
     """
     return _npi.argmax(a, axis=axis, keepdims=False, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def argmin(a, axis=None, out=None):
+    r"""
+    Returns the indices of the minimum values along an axis.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input array. Only support dtype `float16`, `float32`, and `float64`.
+    axis : int, optional
+        By default, the index is into the flattened array, otherwise
+        along the specified axis.
+    out : _Symbol or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    index_array : _Symbol of indices whose dtype is same as the input ndarray.
+        Array of indices into the array. It has the same shape as `a.shape`
+        with the dimension along `axis` removed.
+
+    Notes
+    -----
+    In case of multiple occurrences of the minimum values, the indices
+    corresponding to the first occurrence are returned.
+
+    This function differs from the original `numpy.argmin
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.argmin.html>`_ in
+    the following aspects:
+
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - Output has dtype that is same as the input ndarray.
+    - ``out`` param: cannot perform auto broadcasting. ``out`` symbol's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` symnbol's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+
+    """
+    return _npi.argmin(a, axis=axis, keepdims=False, out=out)
 
 
 @set_module('mxnet.symbol.numpy')
