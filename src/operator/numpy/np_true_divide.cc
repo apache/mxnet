@@ -28,25 +28,10 @@
 namespace mxnet {
 namespace op {
 
-inline int GetFloatWithHigherPrecision(int ltype, int rtype) {
-  if (ltype == mshadow::kFloat64 || rtype == mshadow::kFloat64) {
-    // if any type is a float64, return float64, since nothing is more
-    // precise than float64
-    return mshadow::kFloat64;
-  } else if (ltype == mshadow::kFloat16 || rtype == mshadow::kFloat16) {
-    // if any type is a float16, return the other one, since nothing is less
-    // precise than float16, so the other one will be the choice.
-    return (ltype == mshadow::kFloat16) ? rtype : ltype;
-  }
-  // now the only case left is when both inputs are float32, naturally we want
-  // to return float32
-  return mshadow::kFloat32;
-}
-
 int TrueDivideOutType(int ltype, int rtype) {
   if (common::is_float(ltype) && common::is_float(rtype)) {
     // If both inputs are float, return the one with the higher precision
-    return GetFloatWithHigherPrecision(ltype, rtype);
+    return common::more_precise_type(ltype, rtype);
   } else if (common::is_float(ltype) || common::is_float(rtype)) {
     // If only one of the inputs is float, return that float type
     return (common::is_float(ltype)) ? ltype : rtype;
@@ -62,6 +47,7 @@ bool TrueDivideType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), static_cast<size_t>(num_inputs));
   CHECK_GT(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
+
   for (const int dtype : *in_attrs) {
     if (dtype == -1) return false;
   }
