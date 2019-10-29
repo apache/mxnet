@@ -93,6 +93,7 @@ def _add_workload_copy():
 
 def _add_workload_expand_dims():
     OpArgMngr.add_workload('expand_dims', np.random.uniform(size=(4, 1)), -1)
+    OpArgMngr.add_workload('expand_dims', np.random.uniform(size=(4, 1)) > 0.5, -1)
     for axis in range(-5, 4):
         OpArgMngr.add_workload('expand_dims', np.empty((2, 3, 4, 5)), axis)
 
@@ -852,8 +853,8 @@ def _add_workload_remainder():
     # test_float_remainder_corner_cases
     # Check remainder magnitude.
     for ct in _FLOAT_DTYPES:
-        b = _np.array(1.0)
-        a = np.array(_np.nextafter(_np.array(0.0), -b), dtype=ct)
+        b = _np.array(1.0, dtype=ct)
+        a = np.array(_np.nextafter(_np.array(0.0, dtype=ct), -b), dtype=ct)
         b = np.array(b, dtype=ct)
         OpArgMngr.add_workload('remainder', a, b)
         OpArgMngr.add_workload('remainder', -a, -b)
