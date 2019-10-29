@@ -121,6 +121,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'vstack',
     'zeros_like',
     'linalg.norm',
+    'linalg.cholesky',
     'trace',
     'tril',
     'meshgrid',

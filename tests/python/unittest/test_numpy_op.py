@@ -2669,7 +2669,7 @@ def test_np_linalg_svd():
                 check_svd(UT, L, V, data_np)
 
 
-@with_seed(54)
+@with_seed()
 @use_np
 def test_np_linalg_cholesky():
     class TestCholesky(HybridBlock):
@@ -2708,23 +2708,35 @@ def test_np_linalg_cholesky():
         (1, 1),
         (5, 5),
         (6, 6),
-        #(0, 0),
         (6, 6, 6),
         (2, 3, 4, 4),
-        #(3, 3, 0, 0),
     ]
     dtypes = ['float32', 'float64']
     for hybridize, dtype, shape in itertools.product([True, False], dtypes, shapes):
-        atol = 1. if dtype is np.float32 else 1e-3
-        rtol = 1. if dtype is np.float32 else 1e-2
+        atol = rtol = 1e-2
 
         test_cholesky = TestCholesky()
         if hybridize:
             test_cholesky.hybridize()
         
+        # Numerical issue:
+        # When backpropagating through Cholesky decomposition, we need to compute the inverse
+        # of L according to dA = 0.5 * L**(-T) * copyLTU(L**T * dL) * L**(-1) where A = LL^T.
+        # The inverse is calculated by "trsm" method in CBLAS. When the data type is float32,
+        # this causes numerical instability. It happens when the matrix is ill-conditioned.
+        # In this example, the issue occurs frequently if the symmetric positive definite input
+        # matrix A is constructed by A = LL^T + \epsilon * I. A proper way of testing such
+        # operators involving numerically unstable operations is to use well-conditioned random
+        # matrices as input. Here we test Cholesky decomposition for FP32 and FP64 separately.
+        # See rocBLAS:
+        # https://github.com/ROCmSoftwarePlatform/rocBLAS/wiki/9.Numerical-Stability-in-TRSM
+
         # generate symmetric PD matrices
         data_np_l = _np.random.uniform(-10., 10., shape)
-        data_np_l_flat = _np.tril(data_np_l.reshape((-1, shape[-2], shape[-1])))
+        if dtype == 'float32':
+            data_np_l_flat = data_np_l.reshape((-1, shape[-2], shape[-1]))
+        else:
+            data_np_l_flat = _np.tril(data_np_l.reshape((-1, shape[-2], shape[-1])))
         for i in range(data_np_l_flat.shape[0]):
             for j in range(data_np_l_flat.shape[-1]):
                 if data_np_l_flat[i, j, j] < 0:
@@ -2733,7 +2745,8 @@ def test_np_linalg_cholesky():
                     data_np_l_flat[i, j, j] = 2
         data_np = _np.matmul(data_np_l_flat, data_np_l_flat.swapaxes(-1, -2))
         data_np = data_np.reshape(shape)
-
+        # When dtype is np.FP32, truncation from FP64 to FP32 could also be a source of
+        # instability since the ground-truth gradient is computed using FP64 data.
         data = np.array(data_np, dtype=dtype)
         data.attach_grad()
         with mx.autograd.record():
