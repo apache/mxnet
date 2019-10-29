@@ -422,87 +422,87 @@ class RNNOp {
 
     if (ctx_.dev_type == kGPU) {
 #if MXNET_USE_CUDNN == 1
-    init_cudnn_ = false;
-    dtype_ = mshadow::DataType<DType>::kCudnnFlag;
-    // TensorCore algos only allowed on fp16-I/O convolutions if permitted by the global policy.
-    // No tests in place for fp16 RNNs, so leave TensorCore disabled for now.
-    cudnn_tensor_core_ = false;
-    // When fp16 RNN tests are introduced, we can enable TensorCore as follows:
-    // cudnn_tensor_core =
-    //     mshadow::DataType<DType>::kFlag == mshadow::kFloat16 && GetEnvAllowTensorCore();
-    // Defaults
-    input_mode_ = CUDNN_LINEAR_INPUT;  // Don't support this yet
-    // RNN Mode
-    switch (param_.mode) {
-      case rnn_enum::kRnnRelu:
-        mode_ = CUDNN_RNN_RELU;
-        break;
-      case rnn_enum::kRnnTanh:
-        mode_ = CUDNN_RNN_TANH;
-        break;
-      case rnn_enum::kLstm:
-        mode_ = CUDNN_LSTM;
-        break;
-      case rnn_enum::kGru:
-        mode_ = CUDNN_GRU;
-        break;
-      default:
-        LOG(FATAL) << "Not implmented";
-    }
+      init_cudnn_ = false;
+      dtype_ = mshadow::DataType<DType>::kCudnnFlag;
+      // TensorCore algos only allowed on fp16-I/O convolutions if permitted by the global policy.
+      // No tests in place for fp16 RNNs, so leave TensorCore disabled for now.
+      cudnn_tensor_core_ = false;
+      // When fp16 RNN tests are introduced, we can enable TensorCore as follows:
+      // cudnn_tensor_core =
+      //     mshadow::DataType<DType>::kFlag == mshadow::kFloat16 && GetEnvAllowTensorCore();
+      // Defaults
+      input_mode_ = CUDNN_LINEAR_INPUT;  // Don't support this yet
+      // RNN Mode
+      switch (param_.mode) {
+        case rnn_enum::kRnnRelu:
+          mode_ = CUDNN_RNN_RELU;
+          break;
+        case rnn_enum::kRnnTanh:
+          mode_ = CUDNN_RNN_TANH;
+          break;
+        case rnn_enum::kLstm:
+          mode_ = CUDNN_LSTM;
+          break;
+        case rnn_enum::kGru:
+          mode_ = CUDNN_GRU;
+          break;
+        default:
+          LOG(FATAL) << "Not implmented";
+      }
 #if MXNET_USE_CUDNN_GE_7200
-    if (param_.projection_size.has_value()) {
-      CHECK_EQ(param_.mode, rnn_enum::kLstm)
-        << "Projection is only supported for LSTM.";
-      CHECK_GE(param_.state_size, param_.projection_size.value())
-        << "State size must be larger than projection size.";
-    }
+      if (param_.projection_size.has_value()) {
+        CHECK_EQ(param_.mode, rnn_enum::kLstm)
+          << "Projection is only supported for LSTM.";
+        CHECK_GE(param_.state_size, param_.projection_size.value())
+          << "State size must be larger than projection size.";
+      }
 #else
-    CHECK(!param_.projection_size.has_value())
-      << "Projection is only supported for LSTM with CuDNN version later than 7.1.1.";
+      CHECK(!param_.projection_size.has_value())
+        << "Projection is only supported for LSTM with CuDNN version later than 7.1.1.";
 #endif  // MXNET_USE_CUDNN_GE_7200
 #if MXNET_USE_CUDNN_GE_7200
-    if (param_.lstm_state_clip_min.has_value()
-        || param_.lstm_state_clip_max.has_value()) {
-      CHECK_EQ(param_.mode, rnn_enum::kLstm)
-        << "State clipping is only supported for LSTM.";
-      CHECK(param_.lstm_state_clip_min.has_value() && param_.lstm_state_clip_max.has_value())
-        << "lstm_state_clip_min and lstm_state_clip_max must be specified together.";
-      CHECK_GE(param_.lstm_state_clip_max.value(), param_.lstm_state_clip_min.value())
-        << "lstm_state_clip_max must be greater or equal to lstm_state_clip_min";
-    }
+      if (param_.lstm_state_clip_min.has_value()
+          || param_.lstm_state_clip_max.has_value()) {
+        CHECK_EQ(param_.mode, rnn_enum::kLstm)
+          << "State clipping is only supported for LSTM.";
+        CHECK(param_.lstm_state_clip_min.has_value() && param_.lstm_state_clip_max.has_value())
+          << "lstm_state_clip_min and lstm_state_clip_max must be specified together.";
+        CHECK_GE(param_.lstm_state_clip_max.value(), param_.lstm_state_clip_min.value())
+          << "lstm_state_clip_max must be greater or equal to lstm_state_clip_min";
+      }
 #else
-    CHECK(!param_.lstm_state_clip_min.has_value()
-          && !param_.lstm_state_clip_max.has_value())
-      << "State clipping is only supported for LSTM with CuDNN version later than 7.2.1.";
+      CHECK(!param_.lstm_state_clip_min.has_value()
+            && !param_.lstm_state_clip_max.has_value())
+        << "State clipping is only supported for LSTM with CuDNN version later than 7.2.1.";
 #endif  // MXNET_USE_CUDNN_GE_7200
-    // RNN Direction
-    direction_ = param_.bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL;
-    // Create descriptors
-    CUDNN_CALL(cudnnCreateTensorDescriptor(&hx_desc_));
-    CUDNN_CALL(cudnnCreateTensorDescriptor(&cx_desc_));
-    CUDNN_CALL(cudnnCreateTensorDescriptor(&hy_desc_));
-    CUDNN_CALL(cudnnCreateTensorDescriptor(&cy_desc_));
-    CUDNN_CALL(cudnnCreateTensorDescriptor(&dhx_desc_));
-    CUDNN_CALL(cudnnCreateTensorDescriptor(&dcx_desc_));
-    CUDNN_CALL(cudnnCreateTensorDescriptor(&dhy_desc_));
-    CUDNN_CALL(cudnnCreateTensorDescriptor(&dcy_desc_));
+      // RNN Direction
+      direction_ = param_.bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL;
+      // Create descriptors
+      CUDNN_CALL(cudnnCreateTensorDescriptor(&hx_desc_));
+      CUDNN_CALL(cudnnCreateTensorDescriptor(&cx_desc_));
+      CUDNN_CALL(cudnnCreateTensorDescriptor(&hy_desc_));
+      CUDNN_CALL(cudnnCreateTensorDescriptor(&cy_desc_));
+      CUDNN_CALL(cudnnCreateTensorDescriptor(&dhx_desc_));
+      CUDNN_CALL(cudnnCreateTensorDescriptor(&dcx_desc_));
+      CUDNN_CALL(cudnnCreateTensorDescriptor(&dhy_desc_));
+      CUDNN_CALL(cudnnCreateTensorDescriptor(&dcy_desc_));
 
-    CUDNN_CALL(cudnnCreateFilterDescriptor(&w_desc_));
-    CUDNN_CALL(cudnnCreateFilterDescriptor(&dw_desc_));
+      CUDNN_CALL(cudnnCreateFilterDescriptor(&w_desc_));
+      CUDNN_CALL(cudnnCreateFilterDescriptor(&dw_desc_));
 
-    CUDNN_CALL(cudnnCreateRNNDescriptor(&rnn_desc_));
-    CUDNN_CALL(cudnnCreateDropoutDescriptor(&dropout_desc_));
+      CUDNN_CALL(cudnnCreateRNNDescriptor(&rnn_desc_));
+      CUDNN_CALL(cudnnCreateDropoutDescriptor(&dropout_desc_));
 
 #if MXNET_USE_CUDNN_GE_7200
-    CUDNN_CALL(cudnnCreateRNNDataDescriptor(&x_data_desc_));
-    CUDNN_CALL(cudnnCreateRNNDataDescriptor(&y_data_desc_));
-    CUDNN_CALL(cudnnCreateRNNDataDescriptor(&dx_data_desc_));
-    CUDNN_CALL(cudnnCreateRNNDataDescriptor(&dy_data_desc_));
+      CUDNN_CALL(cudnnCreateRNNDataDescriptor(&x_data_desc_));
+      CUDNN_CALL(cudnnCreateRNNDataDescriptor(&y_data_desc_));
+      CUDNN_CALL(cudnnCreateRNNDataDescriptor(&dx_data_desc_));
+      CUDNN_CALL(cudnnCreateRNNDataDescriptor(&dy_data_desc_));
 #endif  // MXNET_USE_CUDNN_GE_7200
 #else
-    if (ctx_.dev_type == kGPU) {
-      LOG(FATAL) << "RNN on GPU is only available for cuDNN at the moment.";
-    }
+      if (ctx_.dev_type == kGPU) {
+        LOG(FATAL) << "RNN on GPU is only available for cuDNN at the moment.";
+      }
 #endif  // MXNET_USE_CUDNN == 1
     }
 
@@ -854,7 +854,7 @@ class RNNOp {
       }
       DType* work_cpu_space = static_cast<DType*>(temp_cpu_space_.data().dptr_);
 
-      if (ctx.is_train) {
+      if (ctx.is_train || ctx.need_grad) {
         // allocate reserve space
 
         const size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
