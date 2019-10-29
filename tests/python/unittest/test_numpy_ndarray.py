@@ -96,13 +96,12 @@ def test_np_array_creation():
         for src in objects:
             mx_arr = np.array(src, dtype=dtype)
             assert mx_arr.ctx == mx.current_context()
-            np_dtype = _np.float32 if dtype is None else dtype
-            if dtype is None and isinstance(src, _np.ndarray):
-                np_dtype = src.dtype
+            if dtype is None:
+                dtype = src.dtype if isinstance(src, _np.ndarray) else _np.float32
             if isinstance(src, mx.nd.NDArray):
-                np_arr = _np.array(src.asnumpy(), dtype=np_dtype)
+                np_arr = _np.array(src.asnumpy(), dtype=dtype)
             else:
-                np_arr = _np.array(src, dtype=np_dtype)
+                np_arr = _np.array(src, dtype=dtype)
             assert mx_arr.dtype == np_arr.dtype
             assert same(mx_arr.asnumpy(), np_arr)
 
