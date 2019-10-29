@@ -425,6 +425,74 @@ def test_nag():
                 continue
             compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype, rtol=1e-3, atol=1e-4)
 
+
+# LAMB optimizer
+class PyLAMB(mx.optimizer.Optimizer):
+    """
+	Python reference implementation of LAMB optimizer.
+    """
+    def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-6,
+                 lower_bound=1e-3, upper_bound=10.0, bias_correction=False, **kwargs):
+        super(PyLAMB, self).__init__(learning_rate=learning_rate, **kwargs)
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.epsilon = epsilon
+        self.lower_bound = lower_bound
+        self.upper_bound = upper_bound
+        self.bias_correction = bias_correction
+
+    def create_state(self, index, weight):
+        stype = weight.stype
+        return (mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype, stype=stype),
+                mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype, stype=stype))
+
+    def update(self, index, weight, grad, state):
+        self._update_count(index)
+        lr = self._get_lr(index)
+        wd = self._get_wd(index)
+        t = self._index_update_count[index]
+
+        grad *= self.rescale_grad
+        if self.clip_gradient is not None:
+            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+
+        mean, var = state
+        mean[:] = self.beta1 * mean + (1. - self.beta1) * grad
+        var[:] = self.beta2 * var + (1. - self.beta2) * mx.nd.square(grad)
+
+        r1 = weight.norm()
+        if not self.bias_correction:
+            r1 = mx.nd.minimum(mx.nd.maximum(r1, self.lower_bound), self.upper_bound)
+            g = mean / (mx.nd.sqrt(var) + self.epsilon) + wd * weight
+
+        else:
+            mean_hat = mean / (1. - mx.nd.power(self.beta1, t))
+            var_hat = var / (1. - mx.nd.power(self.beta2, t))
+            g = mean_hat / mx.nd.sqrt(var_hat + self.epsilon) + wd * weight
+
+        r2 = g.norm()
+
+        # calculate lamb_trust_ratio
+        r = 1. if r1 == 0. or r2 == 0. else r1 / r2
+        lr *= r
+
+        # update weight
+        weight[:] -= lr * g
+
+@with_seed()
+def test_lamb():
+    opt1 = PyLAMB
+    opt2 = mx.optimizer.LAMB
+    shape = (3, 4, 5)
+    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
+    rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
+    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
+    bc_options = [{}, {'bias_correction': False}, {'bias_correction': True}]
+    for params in itertools.product(cg_options, rg_options, wd_options, bc_options):
+        kwarg = {k: v for param in params for k, v in param.items()}
+        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, np.float32)
+
+
 #SGLD
 class PySGLD(mx.optimizer.Optimizer):
     """python reference implementation of SGLD"""
