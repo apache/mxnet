@@ -15,4 +15,4 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from . import umath, fromnumeric
+from . import umath, fromnumeric, multiarray

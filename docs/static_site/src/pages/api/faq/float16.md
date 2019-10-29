@@ -133,7 +133,7 @@ if dtype == 'float16':
 output = mx.sym.SoftmaxOutput(data=net_out, name='softmax')
 ```
 
-If you would like to train ResNet50 model on ImageNet using float16 precision, you can find the full script [here](https://github.com/apache/incubator-mxnet/tree/master/example/image-classificatiIfon/train_imagenet.py)
+If you would like to train ResNet50 model on ImageNet using float16 precision, you can find the full script [here](https://github.com/apache/incubator-mxnet/blob/master/docs/static_site/src/pages/api/faq/float16.md)
 
 If you don't have ImageNet dataset at your disposal, you can still run the script above using synthetic float16 data by providing the following command:
 

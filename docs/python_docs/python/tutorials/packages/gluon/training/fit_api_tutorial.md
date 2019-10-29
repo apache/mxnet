@@ -252,7 +252,7 @@ with warnings.catch_warnings():
     Epoch 2, loss 0.3229 <!--notebook-skip-line-->
 ```
 
-You can load the saved model, by using the `load_parameters` API in Gluon. For more details refer to the [Loading model parameters from file tutorial](../blocks/save_load_params.html#saving-model-parameters-to-file)
+You can load the saved model, by using the `load_parameters` API in Gluon. For more details refer to the [Loading model parameters from file tutorial](/api/python/docs/tutorials/packages/gluon/blocks/save_load_params.html#saving-model-parameters-to-file)
 
 
 ```python

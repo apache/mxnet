@@ -15,24 +15,23 @@
 # specific language governing permissions and limitations
 # under the License.
 
-name: mxnet-docs
-channels:
-- conda-forge
-dependencies:
-- conda>=4.6.13
-- pip
-- python
-- jupyter
-- sphinx
-- matplotlib
-- notebook
-- pip:
-  - nbconvert==5.6.1
-  - nbsphinx==0.4.3
-  - recommonmark==0.6.0
-  - notedown==1.5.1
-  - pypandoc==1.4
-  - breathe==4.13.1
-  - mock==3.0.5
-  - awscli==1.16.266
-  - autodocsumm==0.1.11
+# coding: utf-8
+"""Init tvm ops."""
+from .runtime import Features
+
+if Features().is_enabled("TVM_OP"):
+    import json
+
+    from ._ctypes.space import _set_tvm_op_config
+    from .base import check_call, _LIB, c_str
+    from .space import ConfigSpaces
+    from .libinfo import find_lib_path, find_conf_path
+
+    _LIB_TVM_OP = find_lib_path("libtvmop")
+    check_call(_LIB.MXLoadTVMOp(c_str(_LIB_TVM_OP[0])))
+
+    # op sch config
+    _CONF_TVM_OP = find_conf_path("tvmop")
+    with open(_CONF_TVM_OP[0], "r") as f:
+        ret = ConfigSpaces.from_json_dict(json.load(f))
+    _set_tvm_op_config(ret)
