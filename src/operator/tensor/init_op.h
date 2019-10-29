@@ -359,27 +359,47 @@ void Fill(mshadow::Stream<xpu> *s, const TBlob& b, const OpReqType req, ValueTyp
     if (val == 0) {
       if (req != kAddTo) {
         if (b.dev_mask() == cpu::kDevMask && size < 50000) {
-          MSHADOW_TYPE_SWITCH_WITH_BOOL(b.type_flag_, DType, {
+          MSHADOW_TYPE_SWITCH_WITH_COMPLEX_BOOL(b.type_flag_, DType, {
             memset(b.dptr_, 0, size * sizeof(DType));
           });
         } else {
-          // Optimize common use-case of filling with ones
-          MSHADOW_TYPE_SWITCH_WITH_BOOL(b.type_flag_, DType, {
-            MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-              mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::set_to_int<0>, Req>, xpu>::Launch(
-                s, b.Size(), b.dptr<DType>());
+          if (b.type_flag_ == mshadow::kComplex64 || b.type_flag_ == mshadow::kComplex128) {
+            // For complex value
+            MSHADOW_COMPLEX_TYPE_SWITCH(b.type_flag_, DType, {
+              MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+                mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::set_to_complex<0>, Req>, xpu>
+                  ::Launch(s, b.Size(), b.dptr<DType>());
+              });
             });
-          });
+          } else {
+            // Optimize common use-case of filling with ones
+            MSHADOW_TYPE_SWITCH_WITH_BOOL(b.type_flag_, DType, {
+              MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+                mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::set_to_int<0>, Req>, xpu>
+                  ::Launch(s, b.Size(), b.dptr<DType>());
+              });
+            });
+          }
         }
       }
     } else if (is_integer && val == 1) {
-      // Optimize common use-case of filling with ones
-      MSHADOW_TYPE_SWITCH_WITH_BOOL(b.type_flag_, DType, {
-        MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-          mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::set_one, Req>, xpu>::Launch(
-            s, b.Size(), b.dptr<DType>());
+      if (b.type_flag_ == mshadow::kComplex64 || b.type_flag_ == mshadow::kComplex128) {
+        // For complex value
+        MSHADOW_COMPLEX_TYPE_SWITCH(b.type_flag_, DType, {
+          MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+            mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::set_to_complex<1>, Req>, xpu>
+              ::Launch(s, b.Size(), b.dptr<DType>());
+          });
         });
-      });
+      } else {
+        // Optimize common use-case of filling with ones
+        MSHADOW_TYPE_SWITCH_WITH_BOOL(b.type_flag_, DType, {
+          MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+            mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::set_one, Req>, xpu>
+              ::Launch(s, b.Size(), b.dptr<DType>());
+          });
+        });
+      }
     } else {
       // Generic fill kernel from variable
       MSHADOW_TYPE_SWITCH_WITH_BOOL(b.type_flag_, DType, {

@@ -383,6 +383,8 @@ class TBlob {
       case mshadow::kInt8: return DLDataType{kDLInt, 8, 1};
       case mshadow::kInt64: return DLDataType{kDLInt, 64, 1};
       case mshadow::kBool: return DLDataType{kDLUInt, 1, 1};
+      case mshadow::kComplex64: return DLDataType{kDLFloat, 32, 2};
+      case mshadow::kComplex128: return DLDataType{kDLFloat, 64, 2};
       default: {
         LOG(FATAL) << "Unknown type_flag=" << type_flag;
         return DLDataType();
@@ -391,7 +393,14 @@ class TBlob {
   }
   static int DLDataTypeTransform(DLDataType dldata_type) {
     if (dldata_type.lanes != 1) {
-      LOG(FATAL) << "Unsupported DLDataType whose lanes != 1";
+      if (dldata_type.lanes == 2 && dldata_type.code == kDLFloat) {
+        switch (dldata_type.bits) {
+          case 32: return mshadow::kComplex64;
+          case 64: return mshadow::kComplex128;
+        }
+      } else {
+        LOG(FATAL) << "Unsupported DLDataType whose lanes != 1";
+      }
     }
     switch (dldata_type.code) {
       case kDLFloat:

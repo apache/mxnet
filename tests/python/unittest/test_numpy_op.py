@@ -3764,6 +3764,60 @@ def test_np_share_memory():
                 assert not op(np.ones((5, 0), dtype=dt), np.ones((0, 3, 0), dtype=adt))
 
 
+import unittest
+@unittest.skipIf('gpu' not in str(mx.current_context()), "fft only implemented for GPU for now")
+@with_seed()
+@use_np
+def test_np_fft():
+    def np_fft_backward(ograd, n, axis=-1):
+        igrad = _np.fft.ifft(ograd)
+        if n > igrad.shape[axis]:
+            padding = [(0,0) for i in range(len(igrad.shape))]
+            padding[-1] = (0, n - igrad.shape[-1])
+            igrad = _np.pad(igrad, tuple(padding), 'constant', constant_values=(0,0))
+        else:
+            igrad = _np.take(igrad, [i for i in range(n)], axis=axis)
+        return igrad
+
+    class TestFFT(HybridBlock):
+        def __init__(self, n, batch_size=128):
+            super(TestFFT, self).__init__()
+            self.n = n
+            self.batch_size = batch_size
+
+        def hybrid_forward(self, F, a):
+            return F.np.fft(a, n = self.n, batch_size=self.batch_size)
+
+    shapes = [tuple(random.randrange(1, 5) for i in range(random.randrange(1, 5))) for j in range(5)]
+    for hybridize in [True, False]:
+        for shape in shapes:
+            n = random.randint(1, 2*shape[-1])
+            batch_size = random.randint(1,128)
+            test_np_fft = TestFFT(n=n, batch_size=batch_size)
+            if hybridize:
+                test_np_fft.hybridize()
+            for itype in [_np.float16, _np.float32, _np.float64, _np.int8, _np.int32, _np.int64, _np.complex64, _np.complex128]:
+                rtol, atol = 1e-3, 1e-5
+                x = rand_ndarray(shape).astype(itype).as_np_ndarray()
+                x.attach_grad()
+                np_out = _np.fft.fft(x.asnumpy(), n=n)
+                with mx.autograd.record():
+                    mx_out = test_np_fft(x)
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy().real, np_out.real, rtol=rtol, atol=atol)
+                assert_almost_equal(mx_out.asnumpy().imag, np_out.imag, rtol=rtol, atol=atol)
+
+                mx_out.backward()
+                np_backward = np_fft_backward(_np.ones(np_out.shape, dtype=itype), n=shape[-1])
+                assert x.grad.shape == np_backward.shape
+                assert_almost_equal(x.grad.asnumpy(), np_backward.real, rtol=rtol, atol=atol)
+                
+                mx_out = np.fft(x, n=n, batch_size=batch_size)
+                np_out = _np.fft.fft(x.asnumpy(), n=n)
+                assert_almost_equal(mx_out.asnumpy().real, np_out.real, rtol=rtol, atol=atol)
+                assert_almost_equal(mx_out.asnumpy().imag, np_out.imag, rtol=rtol, atol=atol)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

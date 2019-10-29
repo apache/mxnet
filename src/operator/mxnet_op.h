@@ -1025,6 +1025,23 @@ struct set_to_int : public tunable {
 };
 
 /*!
+ * \brief Set to immediate complex value kernel
+ * \tparam val complex immediate
+ */
+template<int val>
+struct set_to_complex {
+  // mxnet_op version (when used directly with Kernel<>::Launch()) */
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, DType *out) {
+    out[i] = DType(val);
+  }
+  // mshadow_op version (when used with op_with_req<>)
+  MSHADOW_XINLINE static int Map() {
+    return val;
+  }
+};
+
+/*!
  * \brief Special-case kernel shortcut for setting to zero and one
  */
 using set_zero = set_to_int<0>;
