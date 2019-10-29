@@ -811,7 +811,7 @@ build_ubuntu_gpu_cuda101_cudnn7() {
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
-
+    make test -j$(nproc)
     make cython PYTHON=python2
     make cython PYTHON=python3
 }
@@ -1355,6 +1355,10 @@ integrationtest_ubuntu_cpu_asan() {
 integrationtest_ubuntu_gpu_cpp_package() {
     set -ex
     cpp-package/tests/ci_test.sh
+    export PYTHONPATH=./python/
+    python3 -c "import mxnet as mx; mx.test_utils.download_model(\"imagenet1k-resnet-18\"); mx.test_utils.download_model(\"imagenet1k-resnet-152\"); mx.test_utils.download_model(\"imagenet1k-resnet-50\");"
+    build/tests/mxnet_unit_tests --gtest_filter="ThreadSafety.*"
+    build/tests/mxnet_unit_tests --gtest_filter="ThreadSafety.*" --thread-safety-with-cpu
 }
 
 integrationtest_ubuntu_cpu_dist_kvstore() {
