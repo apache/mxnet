@@ -622,6 +622,7 @@ DMLCCORE:
 
 lib/libtvm_runtime.so:
 	echo "Compile TVM"
+	@mkdir -p $(@D)
 	[ -e $(LLVM_PATH)/bin/llvm-config ] || sh $(ROOTDIR)/contrib/tvmop/prepare_tvm.sh; \
 	cd $(TVM_PATH)/build; \
 	cmake -DUSE_LLVM="$(LLVM_PATH)/bin/llvm-config" \
@@ -632,12 +633,13 @@ lib/libtvm_runtime.so:
 	ls $(ROOTDIR)/lib; \
 	cd $(ROOTDIR)
 
-TVM_OP_COMPILE_OPTIONS = -o $(ROOTDIR)/lib/libtvmop.so
+TVM_OP_COMPILE_OPTIONS = -o $(ROOTDIR)/lib/libtvmop.so --config $(ROOTDIR)/lib/tvmop.conf
 ifneq ($(CUDA_ARCH),)
 	TVM_OP_COMPILE_OPTIONS += --cuda-arch "$(CUDA_ARCH)"
 endif
 lib/libtvmop.so: lib/libtvm_runtime.so $(wildcard contrib/tvmop/*/*.py contrib/tvmop/*.py)
 	echo "Compile TVM operators"
+	@mkdir -p $(@D)
 	PYTHONPATH=$(TVM_PATH)/python:$(TVM_PATH)/topi/python:$(ROOTDIR)/contrib \
 		LD_LIBRARY_PATH=$(ROOTDIR)/lib \
 	    python3 $(ROOTDIR)/contrib/tvmop/compile.py $(TVM_OP_COMPILE_OPTIONS)

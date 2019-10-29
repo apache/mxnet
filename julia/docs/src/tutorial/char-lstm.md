@@ -38,7 +38,7 @@ network models directly.
 
 The most important code snippets of this example is shown and explained
 here. To see and run the complete code, please refer to the
-[examples/char-lstm](https://github.com/dmlc/MXNet.jl/tree/master/examples/char-lstm)
+[examples/char-lstm](https://github.com/apache/incubator-mxnet/blob/master/julia/docs/src/tutorial/char-lstm.md)
 directory. You will need to install
 [Iterators.jl](https://github.com/JuliaLang/Iterators.jl) and
 [StatsBase.jl](https://github.com/JuliaStats/StatsBase.jl) to run this
