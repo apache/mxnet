@@ -30,5 +30,8 @@ namespace op {
 NNVM_REGISTER_OP(_npi_argmax)
 .set_attr<FCompute>("FCompute<gpu>", SearchAxisCompute<gpu, mshadow::red::maximum>);
 
+NNVM_REGISTER_OP(_npi_argmin)
+.set_attr<FCompute>("FCompute<gpu>", SearchAxisCompute<gpu, mshadow::red::minimum>);
+
 }  // namespace op
 }  // namespace mxnet

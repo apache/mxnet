@@ -1351,17 +1351,17 @@ def test_rounding_ops():
 
 
 def create_input_for_trigonometric_ops(vals):
-    # Creates large vector input of size(LARGE_X*10, SMALL_Y/10) from vals using tile operator
+    # Creates large vector input of size(LARGE_X*10, SMALL_Y/10) from vals using broadcast_to operator
     inp = nd.array(vals).reshape(1, 5)
     inp = nd.broadcast_to(inp, (LARGE_X*10, SMALL_Y//10))
     return inp
 
 
-def assert_correctness_of_trigonometric_ops(output, expected_vals):
+def assert_correctness_of_trigonometric_ops(output, expected_vals, atol=1e-3):
     # checks verifies 5 values at positions(0, 1, -3, -2, -1) of the input vector
     output_idx_to_inspect = [0, 1, -3, -2, -1]
     for i in range(len(output_idx_to_inspect)):
-        assert np.abs(output[1][output_idx_to_inspect[i]].asnumpy()-expected_vals[i]) <= 1e-3
+        assert np.abs(output[1][output_idx_to_inspect[i]].asnumpy()-expected_vals[i]) <= atol
 
 
 def test_trigonometric_ops():

@@ -36,7 +36,7 @@ To run the tutorial you will need to have installed the following python modules
 - matplotlib
 
 We recommend that you have first followed this tutorial:
-- [Inference using an ONNX model on MXNet Gluon](https://mxnet.apache.org/tutorials/onnx/inference_on_onnx_model.html)
+- [Inference using an ONNX model on MXNet Gluon](/api/python/docs/tutorials/packages/onnx/inference_on_onnx_model.html)
 
 
 ```python

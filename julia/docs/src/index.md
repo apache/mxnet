@@ -55,18 +55,6 @@ Depth = 2
 ## API Documentation
 
 ```@contents
-Pages = [
-  "api/context.md",
-  "api/ndarray.md",
-  "api/symbolic-node.md",
-  "api/model.md",
-  "api/initializers.md",
-  "api/optimizers.md",
-  "api/callbacks.md",
-  "api/metric.md",
-  "api/io.md",
-  "api/nn-factory.md",
-  "api/executor.md",
-  "api/visualize.md",
-]
+Pages = api_pages
+Depth = 2
 ```
