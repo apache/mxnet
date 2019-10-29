@@ -1085,6 +1085,29 @@ def _add_workload_nonzero():
     OpArgMngr.add_workload('nonzero', np.array([True, False, False], dtype=np.bool_))
 
 
+def _add_workload_diff():
+    x = np.array([1, 4, 6, 7, 12])
+    OpArgMngr.add_workload('diff', x)
+    OpArgMngr.add_workload('diff', x, 2)
+    OpArgMngr.add_workload('diff', x, 3)
+    OpArgMngr.add_workload('diff', np.array([1.1, 2.2, 3.0, -0.2, -0.1]))
+    x = np.zeros((10, 20, 30))
+    x[:, 1::2, :] = 1
+    OpArgMngr.add_workload('diff', x)
+    OpArgMngr.add_workload('diff', x, axis=-1)
+    OpArgMngr.add_workload('diff', x, axis=0)
+    OpArgMngr.add_workload('diff', x, axis=1)
+    OpArgMngr.add_workload('diff', x, axis=-2)
+    x = 20 * np.random.uniform(size=(10,20,30))
+    OpArgMngr.add_workload('diff', x)
+    OpArgMngr.add_workload('diff', x, n=2)
+    OpArgMngr.add_workload('diff', x, axis=0)
+    OpArgMngr.add_workload('diff', x, n=2, axis=0)
+    x = np.array([list(range(3))])
+    for n in range(1, 5):
+        OpArgMngr.add_workload('diff', x, n=n)
+
+
 @use_np
 def _prepare_workloads():
     array_pool = {
@@ -1190,6 +1213,7 @@ def _prepare_workloads():
     _add_workload_greater_equal(array_pool)
     _add_workload_less(array_pool)
     _add_workload_less_equal(array_pool)
+    _add_workload_diff()
 
 
 _prepare_workloads()
