@@ -21,7 +21,7 @@ from __future__ import absolute_import
 from . import _op as _mx_nd_np
 from . import _internal as _npi
 
-__all__ = ['norm', 'svd']
+__all__ = ['norm', 'svd', 'cholesky']
 
 
 def norm(x, ord=None, axis=None, keepdims=False):
@@ -141,3 +141,7 @@ def svd(a):
     array(0.)
     """
     return tuple(_npi.svd(a))
+
+
+def cholesky(a):
+    return _npi.cholesky(a)

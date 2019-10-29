@@ -20,7 +20,7 @@
 from __future__ import absolute_import
 from ..ndarray import numpy as _mx_nd_np
 
-__all__ = ['norm', 'svd']
+__all__ = ['norm', 'svd', 'cholesky']
 
 
 def norm(x, ord=None, axis=None, keepdims=False):
@@ -134,3 +134,7 @@ def svd(a):
     array(0.)
     """
     return _mx_nd_np.linalg.svd(a)
+
+
+def cholesky(a):
+    return _mx_nd_np.linalg.cholesky(a)

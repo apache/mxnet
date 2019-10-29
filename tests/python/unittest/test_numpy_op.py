@@ -2669,6 +2669,87 @@ def test_np_linalg_svd():
                 check_svd(UT, L, V, data_np)
 
 
+@with_seed(54)
+@use_np
+def test_np_linalg_cholesky():
+    class TestCholesky(HybridBlock):
+        def __init__(self):
+            super(TestCholesky, self).__init__()
+
+        def hybrid_forward(self, F, data):
+            return F.np.linalg.cholesky(data)
+
+    def get_grad(L):
+        # shape of m is [batch, n, n]
+        def copyltu(m):
+            eye = _np.array([_np.eye(m.shape[-1]) for i in range(m.shape[0])])
+            lower = _np.tril(m) - eye * m
+            lower_mask = _np.tril(_np.ones_like(m))
+            ret = lower_mask * m + lower.swapaxes(-1, -2)
+            return ret
+
+        shape = L.shape
+        L = L.reshape(-1, shape[-2], shape[-1])
+        dL = _np.ones_like(L)
+        L_inv = _np.linalg.inv(L)
+        L_inv_T = L_inv.swapaxes(-1, -2)
+        L_T = L.swapaxes(-1, -2)
+        sym_L_inv = 0.5 * (L_inv + L_inv_T)
+        dA = 0.5 * _np.matmul(_np.matmul(L_inv_T, copyltu(_np.matmul(L_T, dL))), L_inv)
+        return dA.reshape(shape)
+
+    def check_cholesky(L, data_np):
+        assert L.shape == data_np.shape
+        L_expected = _np.linalg.cholesky(data_np)
+        assert L.shape == L_expected.shape
+        assert_almost_equal(L.asnumpy(), L_expected, rtol=rtol, atol=atol)
+
+    shapes = [
+        (1, 1),
+        (5, 5),
+        (6, 6),
+        #(0, 0),
+        (6, 6, 6),
+        (2, 3, 4, 4),
+        #(3, 3, 0, 0),
+    ]
+    dtypes = ['float32', 'float64']
+    for hybridize, dtype, shape in itertools.product([True, False], dtypes, shapes):
+        atol = 1. if dtype is np.float32 else 1e-3
+        rtol = 1. if dtype is np.float32 else 1e-2
+
+        test_cholesky = TestCholesky()
+        if hybridize:
+            test_cholesky.hybridize()
+        
+        # generate symmetric PD matrices
+        data_np_l = _np.random.uniform(-10., 10., shape)
+        data_np_l_flat = _np.tril(data_np_l.reshape((-1, shape[-2], shape[-1])))
+        for i in range(data_np_l_flat.shape[0]):
+            for j in range(data_np_l_flat.shape[-1]):
+                if data_np_l_flat[i, j, j] < 0:
+                    data_np_l_flat[i, j, j] = -data_np_l_flat[i, j, j]
+                elif data_np_l_flat[i, j, j] == 0:
+                    data_np_l_flat[i, j, j] = 2
+        data_np = _np.matmul(data_np_l_flat, data_np_l_flat.swapaxes(-1, -2))
+        data_np = data_np.reshape(shape)
+
+        data = np.array(data_np, dtype=dtype)
+        data.attach_grad()
+        with mx.autograd.record():
+            L = test_cholesky(data)
+
+        # check cholesky validity
+        check_cholesky(L, data_np)
+        # check backward
+        mx.autograd.backward(L)
+        backward_expected = get_grad(L.asnumpy())
+        assert_almost_equal(data.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+        # check imperative once again
+        L = np.linalg.cholesky(data)
+        check_cholesky(L, data_np)
+
+
 @with_seed()
 @use_np
 def test_np_vstack():

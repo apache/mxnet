@@ -22,7 +22,7 @@ from . import _symbol
 from . import _op as _mx_sym_np
 from . import _internal as _npi
 
-__all__ = ['norm', 'svd']
+__all__ = ['norm', 'svd', 'cholesky']
 
 
 def norm(x, ord=None, axis=None, keepdims=False):
@@ -128,3 +128,7 @@ def svd(a):
      - Does not support complex input.
     """
     return _npi.svd(a)
+
+
+def cholesky(a):
+    return _npi.cholesky(a)

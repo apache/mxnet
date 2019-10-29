@@ -187,6 +187,7 @@ NNVM_REGISTER_OP(_backward_linalg_gemm2)
 
 NNVM_REGISTER_OP(_linalg_potrf)
 .add_alias("linalg_potrf")
+.add_alias("_npi_cholesky")
 .describe(R"code(Performs Cholesky factorization of a symmetric positive-definite matrix.
 Input is a tensor *A* of dimension *n >= 2*.
 
