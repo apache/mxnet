@@ -147,7 +147,8 @@ void FullyConnectedGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                     const std::vector<NDArray> &inputs,
                                     const std::vector<OpReqType> &req,
                                     const std::vector<NDArray> &outputs) {
-  if (SupportMKLDNNFC(inputs[0])) {
+  bool mkldnn_fc_backward_enable = false;
+  if (SupportMKLDNNFC(inputs[0]) && mkldnn_fc_backward_enable) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
     MKLDNNFCBackward(attrs, ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(FullyConnectedGradCompute<cpu>, attrs, ctx, inputs, req,
