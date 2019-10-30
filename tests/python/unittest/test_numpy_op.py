@@ -4113,6 +4113,42 @@ def test_np_column_stack():
         assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
 
 
+@with_seed()
+@use_np
+def test_np_resize():
+    class TestResize(HybridBlock):
+        def __init__(self, new_shape):
+            super(TestResize, self).__init__()
+            self._new_shape = new_shape
+
+        def hybrid_forward(self, F, x, *args, **kwargs):
+            print(self._new_shape)
+            return F.np.resize(x, self._new_shape)
+
+    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64, np.bool_]
+    shape_config = [
+        [(), (2, 3)],
+        [(2, 3), (2,)],
+        [(2, 3), 2],
+        [(2, 0, 1), (2, 2)],
+        [(2, 0, 1), (3, 4, 5)],
+        [((1,)), ()],
+    ]
+    flags = [True, False]
+    for dtype, shape_pair, hybridize in itertools.product(dtypes, shape_config, flags):
+        a = np.random.uniform(low=0, high=100, size=shape_pair[0], dtype='float64').astype(dtype)
+        test = TestResize(shape_pair[1])
+        if hybridize:
+            test.hybridize()
+        ret = test(a)
+        expected_ret = _np.resize(a.asnumpy(), shape_pair[1])
+        assert_almost_equal(ret.asnumpy(), expected_ret, atol=1e-5, rtol=1e-5, use_broadcast=False)
+
+        # check imperative again
+        ret = np.resize(a, shape_pair[1])
+        assert_almost_equal(ret.asnumpy(), expected_ret, atol=1e-5, rtol=1e-5, use_broadcast=False)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
