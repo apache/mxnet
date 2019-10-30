@@ -52,6 +52,14 @@ struct NumpyVstackParam : public dmlc::Parameter<NumpyVstackParam> {
   }
 };
 
+struct NumpyColumnStackParam : public dmlc::Parameter<NumpyColumnStackParam> {
+  int num_args;
+  DMLC_DECLARE_PARAMETER(NumpyColumnStackParam) {
+    DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
+    .describe("Number of inputs to be column stacked");
+  }
+};
+
 struct NumpyReshapeParam : public dmlc::Parameter<NumpyReshapeParam> {
   mxnet::TShape newshape;
   std::string order;
@@ -101,14 +109,6 @@ struct NumpyXReshapeParam : public dmlc::Parameter<NumpyXReshapeParam> {
                   " back to the first axis index changing slowest."
                   " Note that currently only C-like order is"
                   " supported");
-
-struct NumpyColumnStackParam : public dmlc::Parameter<NumpyColumnStackParam> {
-  int num_args;
-  DMLC_DECLARE_PARAMETER(NumpyColumnStackParam) {
-    DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
-    .describe("Number of inputs to be column stacked");
-  }
-};
 
 template<typename xpu>
 void NumpyTranspose(const nnvm::NodeAttrs& attrs,
