@@ -1284,7 +1284,7 @@ MXNET_DLL int MXCreateCachedOpEX(SymbolHandle handle,
                                  const char** keys,
                                  const char** vals,
                                  CachedOpHandle *out,
-                                 bool thread_safe = false);
+                                 bool thread_safe DEFAULT(false));
 
 /*!
  * \brief free cached operator
@@ -1294,7 +1294,7 @@ MXNET_DLL int MXFreeCachedOp(CachedOpHandle handle);
 /*!
  * \brief free cached operator
  */
-MXNET_DLL int MXFreeCachedOpEX(CachedOpHandle handle, bool thread_safe = false);
+MXNET_DLL int MXFreeCachedOpEX(CachedOpHandle handle, bool thread_safe DEFAULT(false));
 
 /*!
  * \brief invoke cached operator
@@ -1314,7 +1314,7 @@ MXNET_DLL int MXInvokeCachedOpEX(CachedOpHandle handle,
                                  int *num_outputs,
                                  NDArrayHandle **outputs,
                                  const int** out_stypes,
-                                 bool thread_safe = false);
+                                 bool thread_safe DEFAULT(false));
 
 /*!
  * \brief invoke a cached op
