@@ -127,7 +127,10 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'tril',
     'meshgrid',
     'outer',
-    'einsum'
+    'einsum',
+    'shares_memory',
+    'may_share_memory',
+    'diff',
 ]
 
 

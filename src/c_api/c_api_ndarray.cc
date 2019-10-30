@@ -54,7 +54,13 @@ void SetNDInputsOutputs(const nnvm::Op* op,
   ndinputs->clear();
   ndinputs->reserve(num_inputs);
   for (int i = 0; i < num_inputs; ++i) {
-    ndinputs->emplace_back(reinterpret_cast<NDArray*>(inputs[i]));
+    NDArray* inp = reinterpret_cast<NDArray*>(inputs[i]);
+    if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
+      CHECK_LT(inp->shape().Size(), (int64_t{1} << 31) - 1) <<
+                "[SetNDInputsOutputs] Size of tensor you are trying to allocate is larger than "
+                "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+    }
+    ndinputs->emplace_back(inp);
   }
 
   ndoutputs->clear();

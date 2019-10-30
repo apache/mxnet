@@ -55,7 +55,8 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'add', 'subtrac
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming',
            'blackman', 'flip', 'around', 'arctan2', 'hypot', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril',
            'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
-           'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero']
+           'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero', 'shares_memory',
+           'may_share_memory', 'diff']
 
 # Return code for dispatching indexing function call
 _NDARRAY_UNSUPPORTED_INDEXING = -1
@@ -1330,7 +1331,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`take`, with
         this array as data.
         """
-        take(self, indices, axis, mode=mode)
+        return take(self, indices, axis, mode=mode)
 
     def one_hot(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`one_hot`.
@@ -6900,3 +6901,126 @@ def nonzero(a):
     (array([1, 1, 1, 2, 2, 2], dtype=int64), array([0, 1, 2, 0, 1, 2], dtype=int64))
     """
     return _mx_nd_np.nonzero(a)
+
+
+@set_module('mxnet.numpy')
+def shares_memory(a, b, max_work=None):
+    """
+    Determine if two arrays share memory
+
+    Parameters
+    ----------
+    a, b : ndarray
+        Input arrays
+
+    Returns
+    -------
+    out : bool
+
+    See Also
+    --------
+    may_share_memory
+
+    Examples
+    --------
+    >>> np.may_share_memory(np.array([1,2]), np.array([5,8,9]))
+    False
+
+    This function differs from the original `numpy.shares_memory
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.shares_memory.html>`_ in
+    the following way(s):
+
+    - Does not support `max_work`, it is a dummy argument
+    - Actually it is same as `may_share_memory` in MXNet DeepNumPy
+    """
+    return _mx_nd_np.shares_memory(a, b, max_work)
+
+
+@set_module('mxnet.numpy')
+def may_share_memory(a, b, max_work=None):
+    """
+    Determine if two arrays might share memory
+
+    A return of True does not necessarily mean that the two arrays
+    share any element.  It just means that they *might*.
+
+    Only the memory bounds of a and b are checked by default.
+
+    Parameters
+    ----------
+    a, b : ndarray
+        Input arrays
+
+    Returns
+    -------
+    out : bool
+
+    See Also
+    --------
+    shares_memory
+
+    Examples
+    --------
+    >>> np.may_share_memory(np.array([1,2]), np.array([5,8,9]))
+    False
+    >>> x = np.zeros([3, 4])
+    >>> np.may_share_memory(x[:,0], x[:,1])
+    True
+
+    This function differs from the original `numpy.may_share_memory
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.may_share_memory.html>`_ in
+    the following way(s):
+
+    - Does not support `max_work`, it is a dummy argument
+    - Actually it is same as `shares_memory` in MXNet DeepNumPy
+    """
+    return _mx_nd_np.may_share_memory(a, b, max_work)
+
+
+def diff(a, n=1, axis=-1, prepend=None, append=None):
+    r"""
+    numpy.diff(a, n=1, axis=-1, prepend=<no value>, append=<no value>)
+
+    Calculate the n-th discrete difference along the given axis.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array
+    n : int, optional
+        The number of times values are differenced. If zero, the input is returned as-is.
+    axis : int, optional
+        The axis along which the difference is taken, default is the last axis.
+    prepend, append : ndarray, optional
+        Not supported yet
+
+    Returns
+    -------
+    diff : ndarray
+        The n-th differences.
+        The shape of the output is the same as a except along axis where the dimension is smaller by n.
+        The type of the output is the same as the type of the difference between any two elements of a.
+        This is the same as the type of a in most cases.
+
+    Examples
+    --------
+    >>> x = np.array([1, 2, 4, 7, 0])
+    >>> np.diff(x)
+    array([ 1,  2,  3, -7])
+    >>> np.diff(x, n=2)
+    array([  1,   1, -10])
+
+    >>> x = np.array([[1, 3, 6, 10], [0, 5, 6, 8]])
+    >>> np.diff(x)
+    array([[2, 3, 4],
+        [5, 1, 2]])
+    >>> np.diff(x, axis=0)
+    array([[-1,  2,  0, -2]])
+
+    Notes
+    -----
+    Optional inputs `prepend` and `append` are not supported yet
+    """
+    if (prepend or append):
+        raise NotImplementedError('prepend and append options are not supported yet')
+    return _mx_nd_np.diff(a, n=n, axis=axis)
