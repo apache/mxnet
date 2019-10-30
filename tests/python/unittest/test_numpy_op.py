@@ -2703,8 +2703,14 @@ def test_np_linalg_cholesky():
 
     def check_cholesky(L, data_np):
         assert L.shape == data_np.shape
-        if len(data_np.shape) >= 2: # prevent numpy from going crazy
+        # catch error if numpy throws rank < 2
+        try:
             L_expected = _np.linalg.cholesky(data_np)
+        except Exception as e:
+            print(data_np)
+            print(data_np.shape)
+            print(e)
+        else:
             assert L.shape == L_expected.shape
             assert_almost_equal(L.asnumpy(), L_expected, rtol=rtol, atol=atol)
 
