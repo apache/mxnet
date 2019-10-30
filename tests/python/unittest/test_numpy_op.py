@@ -2703,9 +2703,10 @@ def test_np_linalg_cholesky():
 
     def check_cholesky(L, data_np):
         assert L.shape == data_np.shape
-        L_expected = _np.linalg.cholesky(data_np)
-        assert L.shape == L_expected.shape
-        assert_almost_equal(L.asnumpy(), L_expected, rtol=rtol, atol=atol)
+        if len(data_np.shape) >= 2: # prevent numpy from going crazy
+            L_expected = _np.linalg.cholesky(data_np)
+            assert L.shape == L_expected.shape
+            assert_almost_equal(L.asnumpy(), L_expected, rtol=rtol, atol=atol)
 
     shapes = [
         (0, 0),
@@ -2739,7 +2740,7 @@ def test_np_linalg_cholesky():
 
         # generate symmetric PD matrices
         if 0 in shape:
-            data_np = np.zeros(shape)
+            data_np = np.ones(shape)
         else:
             data_np_l = _np.random.uniform(-10., 10., shape)
             if dtype == 'float32':
@@ -2754,6 +2755,7 @@ def test_np_linalg_cholesky():
                         data_np_l_flat[i, j, j] = 2
             data_np = _np.matmul(data_np_l_flat, data_np_l_flat.swapaxes(-1, -2))
             data_np = data_np.reshape(shape)
+
         # When dtype is np.FP32, truncation from FP64 to FP32 could also be a source of
         # instability since the ground-truth gradient is computed using FP64 data.
         data = np.array(data_np, dtype=dtype)
