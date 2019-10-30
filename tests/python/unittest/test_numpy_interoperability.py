@@ -247,8 +247,8 @@ def _add_workload_linalg_cholesky():
     
     # test_0_size
     for dtype in dtypes:
-        # a = np.zeros((0, 1, 1)) # GPU CUSolver does not allow empty array for cholesky decomposition
-        # OpArgMngr.add_workload('linalg.cholesky', np.array(a, dtype=dtype))
+        a = np.zeros((0, 1, 1))
+        OpArgMngr.add_workload('linalg.cholesky', np.array(a, dtype=dtype))
         a = np.zeros((1, 0, 0))
         OpArgMngr.add_workload('linalg.cholesky', np.array(a, dtype=dtype))
 
