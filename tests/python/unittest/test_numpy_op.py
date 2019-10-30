@@ -2390,6 +2390,16 @@ def test_np_cumsum():
                         np_out = _np.cumsum(x.asnumpy(), axis=axis, dtype=otype)
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
+    for shape in shapes:
+        for axis in [None] + [i for i in range(0, len(shape))]:
+            for otype in [None, _np.int32, _np.int64]:
+                for itype in [_np.bool, _np.int8, _np.int32, _np.int64]:
+                    x = rand_ndarray(shape).astype(itype).as_np_ndarray()
+                    np_out = _np.cumsum(x.asnumpy(), axis=axis, dtype=otype)
+                    mx_out = np.cumsum(x, axis=axis, dtype=otype)
+                    assert mx_out.shape == np_out.shape
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
 
 @with_seed()
 @use_np
