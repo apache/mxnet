@@ -190,10 +190,11 @@ def run(net, train_dataloader, test_dataloader, num_epochs, ctx, lr):
     trainer = mx.gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': lr})
     # Define loss and evaluation metrics
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
-    acc = mx.metric.Accuracy()
+    metrics = mx.metric.CompositeEvalMetric()
+    metrics.add([mx.metric.Accuracy(), mx.metric.Loss()])
 
     # Define estimator
-    est = estimator.Estimator(net=net, loss=loss, metrics=acc,
+    est = estimator.Estimator(net=net, loss=loss, metrics=metrics,
                               trainer=trainer, context=ctx)
     # Begin training
     est.fit(train_data=train_dataloader, val_data=test_dataloader,

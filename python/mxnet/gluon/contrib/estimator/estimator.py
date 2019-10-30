@@ -31,7 +31,7 @@ from ...trainer import Trainer
 from ...utils import split_and_load
 from .... import autograd
 from ....context import Context, cpu, gpu, num_gpus
-from ....metric import EvalMetric, Accuracy
+from ....metric import EvalMetric, Accuracy, CompositeEvalMetric
 from ....metric import Loss as metric_loss
 
 __all__ = ['Estimator']
@@ -85,7 +85,9 @@ class Estimator(object):
         return loss
 
     def _check_metrics(self, metrics):
-        if isinstance(metrics, EvalMetric):
+        if isinstance(metrics, CompositeEvalMetric):
+            metrics = metrics.metrics
+        elif isinstance(metrics, EvalMetric):
             metrics = [metrics]
         else:
             metrics = metrics or []
