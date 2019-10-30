@@ -707,7 +707,7 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
             Context(), forward_attrs.attrs, inputs, ex_outputs, req,
             DispatchMode::kFComputeEx, mxnet::OpStatePtr());
         Engine::Get()->WaitForAll();
-        // TODO: Need to fix op, should work for the whole vector
+        // TODO(unassigned): Need to fix op, should work for the whole vector
         if (forward_attrs.attrs.op->name == "LRN") {
           AssertEqual(outputs, ex_outputs, 1e-5, 1e-8, true);
         }
@@ -746,7 +746,7 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
           Context(), forward_attrs.attrs, inputs, ex_outputs, req,
           DispatchMode::kFComputeEx, mxnet::OpStatePtr());
       Engine::Get()->WaitForAll();
-      // TODO: Need to fix op, should work for the whole vector
+      // TODO(unassigned): Need to fix op, should work for the whole vector
       if (forward_attrs.attrs.op->name == "LRN") {
         AssertEqual(outputs, ex_outputs, 1e-5, 1e-8, true);
       }
@@ -800,7 +800,7 @@ void TestOpExBNBackward(const OpAttrs &forward_attrs,
         Context(), backwards_attrs.attrs, backwards_input, backwards_ex_outputs,
         backwards_req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
     Engine::Get()->WaitForAll();
-    // TODO: Need to fix op, should work for the whole vector
+    // TODO(unassigned): Need to fix op, should work for the whole vector
     AssertEqual(backwards_outputs, backwards_ex_outputs, 1e-5, 1e-8, true);
   }
 }
