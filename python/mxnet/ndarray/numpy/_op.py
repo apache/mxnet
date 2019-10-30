@@ -40,7 +40,6 @@ __all__ = ['zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide', 'mo
            'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal',
            'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero', 'shares_memory', 'may_share_memory', 'diff']
 
-
 @set_module('mxnet.ndarray.numpy')
 def zeros(shape, dtype=_np.float32, order='C', ctx=None):
     """Return a new array of given shape and type, filled with zeros.
@@ -3012,10 +3011,6 @@ def column_stack(tup):
     to make a single 2-D array. 2-D arrays are stacked as-is,
     just like with `hstack`.  1-D arrays are turned into 2-D columns
     first.
-    Parameters
-    ----------
-    tup : sequence of 1-D or 2-D arrays.
-        Arrays to stack. All of them must have the same first dimension.
 
     Returns
     --------
