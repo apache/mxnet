@@ -18,20 +18,17 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
- * \file np_broadcast_reduce_op_index.cu
- * \brief GPU Implementation of broadcast and reduce functions based on index.
+ * Copyright (c) 2019 by Contributors
+ * \file np_memory_op.cu
  */
-#include "./np_broadcast_reduce_op.h"
+
+#include "./np_memory_op.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_argmax)
-.set_attr<FCompute>("FCompute<gpu>", SearchAxisCompute<gpu, mshadow::red::maximum>);
-
-NNVM_REGISTER_OP(_npi_argmin)
-.set_attr<FCompute>("FCompute<gpu>", SearchAxisCompute<gpu, mshadow::red::minimum>);
+NNVM_REGISTER_OP(_npi_share_memory)
+.set_attr<FCompute>("FCompute<gpu>", NumpyShareMemoryCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

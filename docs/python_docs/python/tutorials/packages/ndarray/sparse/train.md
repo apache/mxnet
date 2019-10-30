@@ -240,8 +240,8 @@ The function you will explore is: *y = x<sub>1</sub>  +  2x<sub>2</sub> + ... 10
 
 ### Preparing the Data
 
-In MXNet, both [mx.io.LibSVMIter](https://mxnet.apache.org/versions/master/api/python/io/io.html#mxnet.io.LibSVMIter)
-and [mx.io.NDArrayIter](https://mxnet.apache.org/versions/master/api/python/io/io.html#mxnet.io.NDArrayIter)
+In MXNet, both [mx.io.LibSVMIter](/api/python/docs/api/mxnet/io/index.html#mxnet.io.LibSVMIter)
+and [mx.io.NDArrayIter](/api/python/docs/api/mxnet/io/index.html#mxnet.io.NDArrayIter)
 support loading sparse data in CSR format. In this example, we'll use the `NDArrayIter`.
 
 You may see some warnings from SciPy. You don't need to worry about those for this example.

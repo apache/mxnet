@@ -525,6 +525,32 @@ MXNET_DLL int MXGetVersion(int *out);
  */
 #if MXNET_USE_TVM_OP
 MXNET_DLL int MXLoadTVMOp(const char *libpath);
+
+struct OtherOptionEntity {
+  int val;
+};
+
+struct OtherOptionSpace {
+  OtherOptionEntity* entities;
+  int entities_size;
+};
+
+struct ConfigSpace {
+  int entity_map_size;
+  char** entity_map_key;
+  OtherOptionEntity* entity_map_val;
+  int space_map_size;
+  char** space_map_key;
+  OtherOptionSpace* space_map_val;
+};
+
+typedef struct ConfigSpaces {
+  int spaces_size;
+  char** spaces_key;
+  ConfigSpace* spaces_val;
+} ConfigSpaces;
+
+MXNET_DLL int MXLoadTVMConfig(ConfigSpaces config);
 #endif  // MXNET_USE_TVM_OP
 
 
@@ -570,12 +596,12 @@ MXNET_DLL int MXNDArrayCreate(const uint32_t *shape,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayCreateEx(const uint32_t *shape,
-                              uint32_t ndim,
-                              int dev_type,
-                              int dev_id,
-                              int delay_alloc,
-                              int dtype,
-                              NDArrayHandle *out);
+                                uint32_t ndim,
+                                int dev_type,
+                                int dev_id,
+                                int delay_alloc,
+                                int dtype,
+                                NDArrayHandle *out);
 
 MXNET_DLL int MXNDArrayCreateEx64(const int64_t *shape,
                                   int ndim,

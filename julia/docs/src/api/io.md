@@ -54,7 +54,7 @@ end
 By default, `eachbatch` simply returns the provider itself, so the iterator interface
 is implemented on the provider type itself. But the extra layer of abstraction allows us to
 implement a data provider easily via a Julia `Task` coroutine. See the
-data provider defined in [the char-lstm example](tutorial/char-lstm) for an example of using coroutine to define data
+data provider defined in [the char-lstm example](/api/julia/docs/api/tutorial/char-lstm/) for an example of using coroutine to define data
 providers.
 
 The detailed interface functions for the iterator API is listed below:

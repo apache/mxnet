@@ -86,7 +86,7 @@ inline void BooleanMaskForward<gpu>(const nnvm::NodeAttrs& attrs,
   size_t input_size = data.shape().Size();
   size_t col_size = input_size / idx.shape()[0];
   // Do the copy
-  MSHADOW_TYPE_SWITCH(out.dtype(), DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(out.dtype(), DType, {
     if (valid_num > 0) {
       mxnet_op::Kernel<BooleanMaskForwardKernel, gpu>::Launch(
         s, input_size, out.data().dptr<DType>(), data.data().dptr<DType>(), prefix_sum, col_size);

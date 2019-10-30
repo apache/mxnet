@@ -19,7 +19,7 @@ use strict;
 use warnings;
 use AI::MXNet qw(mx);
 use AI::MXNet::TestUtils qw(almost_equal same rand_ndarray randint zip);
-use Test::More tests => 251;
+use Test::More tests => 261;
 use PDL;
 use File::Temp qw(tempdir);
 use IO::File;
@@ -217,6 +217,22 @@ sub test_histogram
     ok(same($bins->aspdl, pdl([10, 20, 30, 60])));
 }
 
+sub test_array_overload
+{
+    # array conversions are largely calls to mx->nd->split(), but have
+    # special cases around dimensions of length 0 and 1.
+    is_deeply([ @{ mx->nd->array(zeros(7, 0)) } ], []);
+    is_deeply(mx->nd->zeros([3, 7])->[0]->shape, [ 7 ]);
+    is_deeply(mx->nd->zeros([2, 7])->[0]->shape, [ 7 ]);
+    is_deeply(mx->nd->zeros([1, 7])->[0]->shape, [ 7 ]);
+    is_deeply(mx->nd->zeros([3, 7, 11])->[0]->shape, [7, 11]);
+    is_deeply(mx->nd->zeros([2, 7, 11])->[0]->shape, [7, 11]);
+    is_deeply(mx->nd->zeros([1, 7, 11])->[0]->shape, [7, 11]);
+    is_deeply(mx->nd->zeros([3, 7, 11, 13])->[0]->shape, [7, 11, 13]);
+    is_deeply(mx->nd->zeros([2, 7, 11, 13])->[0]->shape, [7, 11, 13]);
+    is_deeply(mx->nd->zeros([1, 7, 11, 13])->[0]->shape, [7, 11, 13]);
+}
+
 test_ndarray_slice();
 test_ndarray_reshape();
 test_moveaxis();
@@ -226,3 +242,4 @@ test_linalg_gemm2();
 test_image_to_tensor();
 test_buffer_load();
 test_histogram();
+test_array_overload();

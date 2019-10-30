@@ -15,30 +15,23 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Util functions for the numpy module."""
+# coding: utf-8
+"""Init tvm ops."""
+from .runtime import Features
 
+if Features().is_enabled("TVM_OP"):
+    import json
 
-from __future__ import absolute_import
+    from ._ctypes.space import _set_tvm_op_config
+    from .base import check_call, _LIB, c_str
+    from .space import ConfigSpaces
+    from .libinfo import find_lib_path, find_conf_path
 
-import numpy as onp
+    _LIB_TVM_OP = find_lib_path("libtvmop")
+    check_call(_LIB.MXLoadTVMOp(c_str(_LIB_TVM_OP[0])))
 
-__all__ = ['float16', 'float32', 'float64', 'uint8', 'int32', 'int8', 'int64',
-           'bool', 'bool_', 'pi', 'inf', 'nan', 'PZERO', 'NZERO', 'newaxis']
-
-float16 = onp.float16
-float32 = onp.float32
-float64 = onp.float64
-uint8 = onp.uint8
-int32 = onp.int32
-int8 = onp.int8
-int64 = onp.int64
-bool_ = onp.bool_
-bool = onp.bool
-
-pi = onp.pi
-inf = onp.inf
-nan = onp.nan
-PZERO = onp.PZERO
-NZERO = onp.NZERO
-
-newaxis = None
+    # op sch config
+    _CONF_TVM_OP = find_conf_path("tvmop")
+    with open(_CONF_TVM_OP[0], "r") as f:
+        ret = ConfigSpaces.from_json_dict(json.load(f))
+    _set_tvm_op_config(ret)

@@ -39,7 +39,7 @@ from ..base import NDArrayHandle, ExecutorHandle, SymbolHandle
 from ..base import check_call, MXNetError, NotImplementedForSymbol
 from ..context import Context, current_context
 from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP, _GRAD_REQ_MAP
-from ..ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID, _int64_enabled
+from ..ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID, _int64_enabled, _SIGNED_INT32_UPPER_LIMIT
 from ..ndarray import _ndarray_cls
 from ..executor import Executor
 from . import _internal
@@ -1237,6 +1237,11 @@ class Symbol(SymbolBase):
                 ctypes.byref(aux_shape_data),
                 ctypes.byref(complete)))
         else:
+            for size in sdata:
+                if size > _SIGNED_INT32_UPPER_LIMIT:
+                    raise Exception("[_infer_shape_impl] Size of tensor you are trying to " +
+                                    "allocate is larger than 2^31 elements. Please build " +
+                                    "with flag USE_INT64_TENSOR_SIZE=1")
             arg_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()
             out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()
             aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()

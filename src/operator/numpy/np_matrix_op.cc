@@ -34,6 +34,9 @@ DMLC_REGISTER_PARAMETER(NumpyTransposeParam);
 DMLC_REGISTER_PARAMETER(NumpyRollParam);
 DMLC_REGISTER_PARAMETER(NumpyMoveaxisParam);
 DMLC_REGISTER_PARAMETER(NumpyRot90Param);
+DMLC_REGISTER_PARAMETER(NumpyReshapeParam);
+DMLC_REGISTER_PARAMETER(NumpyXReshapeParam);
+
 
 bool NumpyTransposeShape(const nnvm::NodeAttrs& attrs,
                          mxnet::ShapeVector *in_attrs,
@@ -126,26 +129,6 @@ NNVM_REGISTER_OP(_np_transpose)
 .add_argument("a", "NDArray-or-Symbol", "Source input")
 .add_arguments(NumpyTransposeParam::__FIELDS__());
 
-struct NumpyReshapeParam : public dmlc::Parameter<NumpyReshapeParam> {
-  mxnet::TShape newshape;
-  std::string order;
-  DMLC_DECLARE_PARAMETER(NumpyReshapeParam) {
-      DMLC_DECLARE_FIELD(newshape)
-          .describe("The new shape should be compatible with the original shape."
-                    " If an integer, then the result will be a 1-D array of that length."
-                    " One shape dimension can be -1. In this case, the value is inferred"
-                    " from the length of the array and remaining dimensions.");
-      DMLC_DECLARE_FIELD(order)
-      .set_default("C")
-      .describe("Read the elements of a using this index order, and place the elements into"
-                " the reshaped array using this index order. 'C' means to read/write the elements"
-                " using C-like index order, with the last axis index changing fastest, back to the"
-                " first axis index changing slowest. Note that currently only C-like order is"
-                " supported");
-  }
-};
-
-DMLC_REGISTER_PARAMETER(NumpyReshapeParam);
 
 bool NumpyReshapeInferShape(const mxnet::TShape& src, mxnet::TShape* dst) {
   if (shape_is_known(src) && shape_is_known(*dst)) {
@@ -202,6 +185,164 @@ bool NumpyReshapeShape(const nnvm::NodeAttrs& attrs,
   return success;
 }
 
+bool NumpyXReshapeInferShape(const mxnet::TShape& src,
+                             const mxnet::TShape& target,
+                             mxnet::TShape* output,
+                             const std::string &default_error_msg) {
+  bool target_shape_is_known = true;
+  dim_t target_size = 1;
+  for (int i = 0; i < target.ndim(); ++i) {
+    if (target[i] < 0) {
+      target_shape_is_known = false;
+      target_size  = -1;
+      break;
+    } else {
+      target_size *= target[i];
+    }
+  }
+  if (shape_is_known(src) && target_shape_is_known) {
+    CHECK_EQ(src.Size(), target_size) << default_error_msg;
+    *output = TShape(target.begin(), target.end());
+    return true;
+  } else if (!shape_is_known(src) || target.ndim() == -1) {
+    return false;
+  } else {
+    int unknown_axis = -1;
+    dim_t known_dim_size_prod = 1;
+    std::vector<dim_t> output_shape_vector;
+    int src_inx = 0;
+    for (int i = 0; i < target.ndim(); ++i) {
+      dim_t proposed_dim = target[i];
+      CHECK(proposed_dim >= -6)
+        << "Dimension size must be greater than -6, received " << proposed_dim;
+      if (proposed_dim == -1) {
+        // infer the known dimension
+        CHECK_LT(unknown_axis, 0)
+          << "One and only one dim can be inferred";
+        unknown_axis = output_shape_vector.size();
+        output_shape_vector.push_back(-1);
+        src_inx++;
+      } else if (proposed_dim == -2) {
+        // copy the dimension from src to output
+        CHECK_LT(src_inx, src.ndim())
+          << "Unmatching dimension of proposed new shape";
+        known_dim_size_prod *= src[src_inx];
+        output_shape_vector.push_back(src[src_inx++]);
+      } else if (proposed_dim == -3) {
+        // skip the source dimension if and only if it is one
+        CHECK_EQ(src[src_inx], 1)
+          <<"-3 index should only be used to skip dimension size 1";
+        src_inx++;
+      } else if (proposed_dim == -4) {
+        // copy all remaining dims from source
+        while (src_inx < src.ndim()) {
+          known_dim_size_prod *= src[src_inx];
+          const dim_t dn = src[src_inx++];
+          output_shape_vector.push_back(dn);
+        }
+      } else if (proposed_dim == -5) {
+        // merge two dims from source
+        CHECK_LT(src_inx, src.ndim()-1)
+          <<"Not enough dimensions left for the product";
+        const dim_t d1 = src[src_inx++];
+        const dim_t d2 = src[src_inx++];
+        if (!mxnet::dim_size_is_known(d1) || !mxnet::dim_size_is_known(d2)) {
+          CHECK_LT(unknown_axis, 0)
+            << "One and only one dim can be inferred";
+          unknown_axis = output_shape_vector.size();
+          output_shape_vector.push_back(-1);
+        } else {
+          known_dim_size_prod *= d1*d2;
+          output_shape_vector.push_back(d1 * d2);
+        }
+      } else if (proposed_dim == -6) {
+        // split the source dim s into two dims
+        // read the left dim and then the right dim (either can be -1)
+        CHECK_LT(i + 2, target.ndim());
+        CHECK_LT(src_inx, src.ndim());
+        const dim_t d0 = src[src_inx++];
+        dim_t d1 = target[++i];
+        dim_t d2 = target[++i];
+        CHECK(d1 != -1 || d2 != -1) << "Split dims cannot both be -1.";
+        if (d1 == -1 && d0 >= 0) d1 = d0 / d2;  // d0 must be known to do this
+        if (d2 == -1 && d0 >= 0) d2 = d0 / d1;  // d0 must be known to do this
+        CHECK(d1 * d2 == static_cast<dim_t>(d0) || static_cast<dim_t>(d0) == dim_t(-1))
+          <<"Split dims " << d1 << ", " << d2 << " do not divide original dim " << d0;
+        if (d1 == -1) {
+          CHECK_LT(unknown_axis, 0)
+            << "One and only one dim can be inferred";
+          unknown_axis = output_shape_vector.size();
+        } else if (d2 == -1) {
+          CHECK_LT(unknown_axis, 0)
+            << "One and only one dim can be inferred";
+          unknown_axis = output_shape_vector.size() + 1;
+        }
+        known_dim_size_prod *= d0 == -1 ? 1 : d0;
+        output_shape_vector.push_back(d1);
+        output_shape_vector.push_back(d2);
+      } else {
+        // greater than 0, new shape
+        known_dim_size_prod *= proposed_dim;
+        output_shape_vector.push_back(proposed_dim);
+        src_inx++;
+      }
+    }
+
+    if (unknown_axis > -1) {
+      // if the input in zero size tensor, the output must be of known shape of zero size
+      CHECK_NE(known_dim_size_prod, 0) << default_error_msg;
+      CHECK(src.Size() % known_dim_size_prod == 0) << default_error_msg;
+      output_shape_vector[unknown_axis] = src.Size() / known_dim_size_prod;
+    }
+
+    *output = mxnet::TShape(output_shape_vector.begin(), output_shape_vector.end());
+    CHECK_EQ((*output).Size(), src.Size()) << default_error_msg;
+    return true;
+  }
+}
+
+bool NumpyXReshapeShape(const nnvm::NodeAttrs& attrs,
+                       mxnet::ShapeVector* in_attrs,
+                       mxnet::ShapeVector* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U) << "Input: [data]";
+  CHECK_EQ(out_attrs->size(), 1U);
+  const NumpyXReshapeParam& param = nnvm::get<NumpyXReshapeParam>(attrs.parsed);
+  // sanity check
+  bool has_unknown_dim_size = false;
+  for (int i = 0; i < param.newshape.ndim(); ++i) {
+    if (param.newshape[i] < 0) {
+      CHECK_GE(param.newshape[i], -6)
+        << "Dimension size must be greater than or equal to -6";
+      if (param.newshape[i] == -1) {
+        CHECK(!has_unknown_dim_size) << "Can only specify one unknown dimension";
+        has_unknown_dim_size = true;
+      }
+    }
+  }
+
+  mxnet::TShape output_shape;
+  bool success;
+  std::stringstream ss;
+  ss << "Cannot reshape array of shape " << in_attrs->at(0)
+     << " into shape " << param.newshape
+     << " , reverse = " << param.reverse;
+  std::string err_msg = ss.str();
+  if (!param.reverse) {
+    success = NumpyXReshapeInferShape(in_attrs->at(0),
+                                      param.newshape, &output_shape, err_msg);
+  } else {
+    mxnet::TShape rev_in_shape = in_attrs->at(0);
+    mxnet::TShape rev_newshape = param.newshape;
+    std::reverse(rev_in_shape.begin(), rev_in_shape.end());
+    std::reverse(rev_newshape.begin(), rev_newshape.end());
+    success = NumpyXReshapeInferShape(rev_in_shape,
+                                      rev_newshape, &output_shape, err_msg);
+    std::reverse(output_shape.begin(), output_shape.end());
+  }
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, output_shape);
+  return success;
+}
+
 NNVM_REGISTER_OP(_np_reshape)
 .describe(R"code()code" ADD_FILELINE)
 .add_alias("_npi_reshape")
@@ -226,6 +367,31 @@ NNVM_REGISTER_OP(_np_reshape)
   })
 .add_argument("a", "NDArray-or-Symbol", "Array to be reshaped.")
 .add_arguments(NumpyReshapeParam::__FIELDS__());
+
+
+NNVM_REGISTER_OP(_npx_reshape)
+.describe(R"code()code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<NumpyXReshapeParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyXReshapeShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_reshape"})
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::pair<int, int> >{{0, 0}};
+  })
+.set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
+  [](const NodeAttrs& attrs){
+    return std::vector<bool>{true};
+  })
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"a"};
+  })
+.add_argument("a", "NDArray-or-Symbol", "Array to be reshaped.")
+.add_arguments(NumpyXReshapeParam::__FIELDS__());
 
 bool NumpySqueezeShape(const nnvm::NodeAttrs& attrs,
                        mxnet::ShapeVector *in_attrs,

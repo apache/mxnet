@@ -58,6 +58,7 @@ _STORAGE_TYPE_UNDEFINED = -1
 _STORAGE_TYPE_DEFAULT = 0
 _STORAGE_TYPE_ROW_SPARSE = 1
 _STORAGE_TYPE_CSR = 2
+_SIGNED_INT32_UPPER_LIMIT = (2**31 - 1)
 
 # pylint: disable= no-member
 _DTYPE_NP_TO_MX = {
@@ -155,6 +156,15 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
             ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
             ctypes.byref(hdl)))
     else:
+        # When shape is larger than unit32 then there is an overflow error at python end itself.
+        # It needs to be caught here since the call doesn't even reach backend.
+        size = 1
+        for idx in shape:
+            size = size * idx
+        if size > _SIGNED_INT32_UPPER_LIMIT:
+            raise Exception("[_new_alloc_handle] Size of tensor you are trying to allocate is " +
+                            "larger than 2^31 elements. Please build with flag " +
+                            "USE_INT64_TENSOR_SIZE=1")
         check_call(_LIB.MXNDArrayCreateEx(
             c_array_buf(mx_uint, native_array('I', shape)),
             mx_uint(len(shape)),

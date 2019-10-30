@@ -2173,7 +2173,7 @@ def test_np_swapaxes():
 
 @with_seed()
 @use_np
-def test_np_argmax():
+def test_np_argmin_argmax():
     workloads = [
         ((), 0, False),
         ((), -1, False),
@@ -2188,48 +2188,51 @@ def test_np_argmax():
         ((5, 0, 3), 1, True),
     ]
     dtypes = ['float16', 'float32', 'float64']
+    ops = ['argmin', 'argmax']
 
-    class TestArgMax(HybridBlock):
-        def __init__(self, axis=None):
-            super(TestArgMax, self).__init__()
+    class TestArgExtreme(HybridBlock):
+        def __init__(self, op_name, axis=None):
+            super(TestArgExtreme, self).__init__()
+            self._op_name = op_name
             self._axis = axis
 
         def hybrid_forward(self, F, x):
-            return F.np.argmax(x, self._axis)
+            return getattr(x, self._op_name)(self._axis)
 
-    for shape, axis, throw_exception in workloads:
-        for dtype in dtypes:
-            a = np.random.uniform(size=shape, dtype=dtype)
-            if throw_exception:
-                # Cannot use assert_exception because sometimes the main thread
-                # proceeds to `assert False` before the exception is thrown
-                # in the worker thread. Have to use mx.nd.waitall() here
-                # to block the main thread.
-                try:
-                    np.argmax(a, axis)
-                    mx.nd.waitall()
-                    assert False
-                except mx.MXNetError:
-                    pass
-            else:
-                mx_ret = np.argmax(a, axis=axis)
-                np_ret = _np.argmax(a.asnumpy(), axis=axis)
-                assert same(mx_ret.asnumpy(), np_ret)
-
-            for hybridize in [False, True]:
-                net = TestArgMax(axis)
-                if hybridize:
-                    net.hybridize()
+    for op_name in ops:
+        for shape, axis, throw_exception in workloads:
+            for dtype in dtypes:
+                a = np.random.uniform(size=shape, dtype=dtype)
                 if throw_exception:
+                    # Cannot use assert_exception because sometimes the main thread
+                    # proceeds to `assert False` before the exception is thrown
+                    # in the worker thread. Have to use mx.nd.waitall() here
+                    # to block the main thread.
                     try:
-                        net(a)
+                        getattr(np, op_name)(a, axis)
                         mx.nd.waitall()
                         assert False
                     except mx.MXNetError:
                         pass
                 else:
-                    mx_ret = net(a)
+                    mx_ret = getattr(np, op_name)(a, axis=axis)
+                    np_ret = getattr(_np, op_name)(a.asnumpy(), axis=axis)
                     assert same(mx_ret.asnumpy(), np_ret)
+
+                for hybridize in [False, True]:
+                    net = TestArgExtreme(op_name, axis)
+                    if hybridize:
+                        net.hybridize()
+                    if throw_exception:
+                        try:
+                            net(a)
+                            mx.nd.waitall()
+                            assert False
+                        except mx.MXNetError:
+                            pass
+                    else:
+                        mx_ret = net(a)
+                        assert same(mx_ret.asnumpy(), np_ret)
 
 
 @with_seed()
@@ -2490,16 +2493,17 @@ def test_np_choice():
     #     test_sample_without_replacement(np.random.choice, num_classes, shape, 10 ** 5, weight)
 
     # Test hypridize mode:
-    for hybridize in [True, False]:
-        for replace in [True, False]:
-            test_choice = TestUniformChoice(num_classes // 2, replace)
-            test_choice_weighted = TestWeightedChoice(num_classes // 2, replace)
-            if hybridize:
-                test_choice.hybridize()
-                test_choice_weighted.hybridize()
-            weight = np.array(_np.random.dirichlet([1.0] * num_classes))
-            test_indexing_mode(test_choice, num_classes, num_classes // 2, replace, None)
-            test_indexing_mode(test_choice_weighted, num_classes, num_classes // 2, replace, weight)
+    for wtype in ['float16', 'float32', 'float64']:
+        for hybridize in [True, False]:
+            for replace in [True, False]:
+                test_choice = TestUniformChoice(num_classes // 2, replace)
+                test_choice_weighted = TestWeightedChoice(num_classes // 2, replace)
+                if hybridize:
+                    test_choice.hybridize()
+                    test_choice_weighted.hybridize()
+                weight = np.array(_np.random.dirichlet([1.0] * num_classes)).astype(wtype)
+                test_indexing_mode(test_choice, num_classes, num_classes // 2, replace, None)
+                test_indexing_mode(test_choice_weighted, num_classes, num_classes // 2, replace, weight)
 
 
 @with_seed()
@@ -3496,16 +3500,22 @@ def test_np_einsum():
                                                                     _np.dot(args[0].T, _np.dot(_np.ones((2, 2)), args[2].T)),
                                                                     _np.dot(_np.dot(args[0], args[1]).T, _np.ones((2, 2))))),
         # broadcast bug
-        (('ij, ij -> i'), [(1, 4), (2, 4)], lambda *args: (_np.sum(args[1], axis=0)[None, :],
-                                                           _np.tile(args[0], [2, 1]))),
+        ('ij, ij -> i', [(1, 4), (2, 4)], lambda *args: (_np.sum(args[1], axis=0)[None, :],
+                                                         _np.tile(args[0], [2, 1]))),
+        # issue #16576
+        # commented due to long running time
+        # ('abiz,abjz->abij', [(64, 8, 128, 512), (64, 8, 128, 512)], lambda *args: (_np.matmul(_np.ones((64, 8, 128, 128)), args[1]),
+        #                                                                            _np.matmul(_np.ones((64, 8, 128, 128)), args[0]))),
     ]
-    dtypes = ['int32', 'float16', 'float32', 'float64']
+    dtypes = ['float32', 'float64', 'int32']
+    acc_type = {'float16': 'float32', 'float32': 'float64', 'float64': 'float64',
+                'int32': 'int64'}
     for hybridize in [False, True]:
         for dtype in dtypes:
             for config in configs:
                 for optimize in [False, True]:
-                    rtol = 1e-0 if dtype == 'float16' else 1e-3
-                    atol = 1e-1 if dtype == 'float16' else 1e-5
+                    rtol = 1e-2 if dtype == 'float16' else 1e-3
+                    atol = 1e-4 if dtype == 'float16' else 1e-5
                     (subscripts, operands, get_grad) = config
                     test_einsum = TestEinsum(subscripts, optimize)
                     if hybridize:
@@ -3513,11 +3523,11 @@ def test_np_einsum():
                     x = []
                     x_np = []
                     for shape in operands:
-                        x_np.append(_np.array(_np.random.uniform(-10.0, 10.0, shape),
-                                            dtype=dtype))
-                        x.append(np.array(x_np[-1], dtype=dtype))
+                        tmp = _np.array(_np.random.uniform(-1.0, 1.0, shape), dtype=dtype)
+                        x_np.append(tmp.astype(acc_type[dtype]))
+                        x.append(np.array(tmp, dtype=dtype))
                         x[-1].attach_grad()
-                    expected_np = _np.einsum(subscripts, *x_np, optimize=optimize)
+                    expected_np = _np.einsum(subscripts, *x_np, optimize=optimize).astype(dtype)
                     with mx.autograd.record():
                         out_mx = test_einsum(*x)
                     assert out_mx.shape == expected_np.shape
@@ -3535,7 +3545,7 @@ def test_np_einsum():
                     expected_np = _np.einsum(subscripts, *x_np, optimize=optimize)
                     assert_almost_equal(out_mx.asnumpy(), expected_np, rtol=rtol, atol=atol)
                     for (iop, op) in enumerate(x):
-                        assert_almost_equal(op.grad.asnumpy(), get_grad(*x_np)[iop], rtol=rtol, atol=atol)
+                        assert_almost_equal(op.grad.asnumpy(), get_grad(*x_np)[iop].astype(dtype), rtol=rtol, atol=atol)
     configs = [
         (('ij,jk,kl->il'), [(2, 2), (2, 5), (5, 2)]),
         (('ea,fb,abcd,gc,hd->efgh'), [(5, 5), (5, 5), (5, 5, 5, 5), (5, 5), (5, 5)]),
@@ -3545,8 +3555,8 @@ def test_np_einsum():
         for dtype in dtypes:
             for config in configs:
                 (subscripts, operands) = config
-                rtol = 1e-0 if dtype == 'float16' else 1e-2
-                atol = 1e-1 if dtype == 'float16' else 1e-2
+                rtol = 1e-2 if dtype == 'float16' else 1e-3
+                atol = 1e-4 if dtype == 'float16' else 1e-5
                 grad = []
                 x_np = []
                 for shape in operands:
@@ -3560,7 +3570,8 @@ def test_np_einsum():
                     test_einsum = TestEinsum(subscripts, optimize)
                     if hybridize:
                         test_einsum.hybridize()
-                    expected_np = _np.einsum(subscripts, *x_np, optimize=optimize)
+                    expected_np = _np.einsum(subscripts, *[op.astype(acc_type[dtype]) for op in x_np],
+                                             optimize=optimize).astype(dtype)
                     with mx.autograd.record():
                         out_mx = test_einsum(*x)
                     assert out_mx.shape == expected_np.shape
@@ -3719,6 +3730,90 @@ def test_np_column_stack():
         mx_out = np.column_stack(v)
         expected_np = _np.column_stack(v_np)
         assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
+
+
+def test_npx_reshape():
+    class TestNumpyXReshape(HybridBlock):
+        def __init__(self, newshape, reverse):
+            super(TestNumpyXReshape, self).__init__()
+            self._newshape = newshape
+            self._reverse = reverse
+
+        def hybrid_forward(self, F, a, *args, **kwargs):
+            return F.npx.reshape(a, self._newshape, reverse=self._reverse)
+
+    test_cases = [
+        [(2, 3, 5, 5),  (-2, -1),         False, (2, 75)],
+        [(2, 3, 5, 5),  (-2, -2, -1),     False, (2, 3, 25)],
+        [(5, 3, 4, 5),  (-2, -1, -2),     False, (5, 15, 4)],
+        [(2, 3, 5, 4),  (-1, -2, -2),     False, (8, 3, 5)],
+        [(2, 3, 5, 5),  (-2, -2, -2, -2), False, (2, 3, 5, 5)],
+        [(2, 1, 4, 5),  (-2, -3, -2, -2), False, (2, 4, 5)],
+        [(1, 1, 4, 1),  (-3, -3, -2, -2), False, (4, 1)],
+        [(1, 1, 1, 1),  (-3, -3, -3, -3), False, ()],
+        [(2, 4, 5, 3),  (-1, 2, 2, 1),    False, (30, 2, 2, 1)],
+        [(2, 3, 5, 6),  (-4,),            False, (2, 3, 5, 6)],
+        [(2, 3, 5, 6),  (6, 1, -4),       False, (6, 1, 5, 6)],
+        [(2, 3, 5, 6),  (-5, -5),         False, (6, 30)],
+        [(2, 3, 5, 6),  (-5, -1),         False, (6, 30)],
+        [(64,),         (-6, 16, 4),      False, (16, 4)],
+        [(64,),         (-6, 16, -1),     False, (16, 4)],
+        [(64, 1, 2, 3), (-6, 16, -1, -4), False, (16, 4, 1, 2, 3)],
+        [(8, 5, 4, 6),  (-4, -1, 3, -6),  True,  (8, 5, 4, 2, 3)]
+    ]
+    for hybridize in [True, False]:
+        for shape, newshape, reverse, expected_ret_shape in test_cases:
+            for grad_req in ['write', 'add']:
+                # test gluon
+                test_reshape = TestNumpyXReshape(newshape=newshape, reverse=reverse)
+                if hybridize:
+                    test_reshape.hybridize()
+
+                a = mx.np.random.uniform(-1, 1, shape).astype(np.float32)
+                init_a_grad = mx.np.random.uniform(-1, 1, shape).astype(np.float32)
+                a.attach_grad(grad_req=grad_req)
+                if grad_req == 'add':
+                    a.grad[:] = init_a_grad
+                with mx.autograd.record():
+                    y = test_reshape(a)
+                assert y.shape == expected_ret_shape,\
+                    'y.shape={}, expected_ret_shape={}'.format(y.shape, expected_ret_shape)
+                assert_almost_equal(y.asnumpy(), a.asnumpy().reshape(expected_ret_shape), rtol=1e-3, atol=1e-5)
+
+                # test backward
+                mx.autograd.backward(y)
+                expected_grad = _np.ones(shape)
+                if grad_req == 'add':
+                    expected_grad += init_a_grad.asnumpy()
+                assert_almost_equal(a.grad.asnumpy(), expected_grad, rtol=1e-3, atol=1e-5)
+
+                # test imperative
+                npx_out = npx.reshape(a, newshape, reverse=reverse)
+                expected_out = _np.reshape(a.asnumpy(), expected_ret_shape)
+                assert_almost_equal(npx_out.asnumpy(), expected_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@use_np
+def test_np_share_memory():
+    ops = [np.shares_memory, np.may_share_memory]
+    # reshape not support boolean types
+    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
+    for op in ops:
+        for dt in dtypes:
+            x = np.zeros([13, 21, 23, 22], dtype=dt)
+            assert not op(x[0,:,:,:], x[1,:,:,:])
+            assert not op(x[2,:,:,:], x[3,:,:,:])
+            assert not op(x[2:5,0,0,0], x[3:4,0,0,0])
+            assert not op(x[2:5,0,0,0], x[4:7,0,0,0])
+            assert op(x[0,0,0,2:5], x[0,0,0,3:4])
+            assert op(x[0,6,0,2:5], x[0,6,0,4:7])
+            assert not op(x[0,5,0,2:5], x[0,6,0,4:7])
+
+            for adt in dtypes:
+                assert not op(x, np.ones((5, 0), dtype=adt))
+                assert not op(np.ones((5, 0), dtype=adt), x)
+                assert not op(np.ones((5, 0), dtype=dt), np.ones((0, 3, 0), dtype=adt))
 
 
 if __name__ == '__main__':
