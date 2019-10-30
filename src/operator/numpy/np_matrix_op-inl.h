@@ -58,7 +58,7 @@ struct NumpyColumnStackParam : public dmlc::Parameter<NumpyColumnStackParam> {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
     .describe("Number of inputs to be column stacked");
   }
-}
+};
 
 struct NumpyReshapeParam : public dmlc::Parameter<NumpyReshapeParam> {
   mxnet::TShape newshape;
