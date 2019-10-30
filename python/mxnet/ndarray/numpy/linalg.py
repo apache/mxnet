@@ -199,7 +199,4 @@ def cholesky(a):
     array([[16.,  4.],
            [ 4., 10.]])
     """
-    # if empty, behave the same as numpy
-    if 0 in a.shape:
-        return a
     return _npi.cholesky(a)

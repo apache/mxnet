@@ -186,7 +186,4 @@ def cholesky(a):
     array([[16.,  4.],
            [ 4., 10.]])
     """
-    # if empty, behave the same as numpy
-    if len(a.as_nd_ndarray()) == 0:
-        return a
     return _npi.cholesky(a)

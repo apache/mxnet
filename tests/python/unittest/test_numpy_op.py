@@ -2681,6 +2681,9 @@ def test_np_linalg_cholesky():
 
     def get_grad(L):
         # shape of m is [batch, n, n]
+        if 0 in L.shape:
+            return L
+
         def copyltu(m):
             eye = _np.array([_np.eye(m.shape[-1]) for i in range(m.shape[0])])
             lower = _np.tril(m) - eye * m
@@ -2705,10 +2708,13 @@ def test_np_linalg_cholesky():
         assert_almost_equal(L.asnumpy(), L_expected, rtol=rtol, atol=atol)
 
     shapes = [
+        (0, 0),
         (1, 1),
         (5, 5),
         (6, 6),
         (6, 6, 6),
+        (1, 0, 0),
+        (0, 1, 1),
         (2, 3, 4, 4),
     ]
     dtypes = ['float32', 'float64']
@@ -2732,19 +2738,22 @@ def test_np_linalg_cholesky():
         # https://github.com/ROCmSoftwarePlatform/rocBLAS/wiki/9.Numerical-Stability-in-TRSM
 
         # generate symmetric PD matrices
-        data_np_l = _np.random.uniform(-10., 10., shape)
-        if dtype == 'float32':
-            data_np_l_flat = data_np_l.reshape((-1, shape[-2], shape[-1]))
+        if 0 in shape:
+            data_np = np.zeros(shape)
         else:
-            data_np_l_flat = _np.tril(data_np_l.reshape((-1, shape[-2], shape[-1])))
-        for i in range(data_np_l_flat.shape[0]):
-            for j in range(data_np_l_flat.shape[-1]):
-                if data_np_l_flat[i, j, j] < 0:
-                    data_np_l_flat[i, j, j] = -data_np_l_flat[i, j, j]
-                elif data_np_l_flat[i, j, j] == 0:
-                    data_np_l_flat[i, j, j] = 2
-        data_np = _np.matmul(data_np_l_flat, data_np_l_flat.swapaxes(-1, -2))
-        data_np = data_np.reshape(shape)
+            data_np_l = _np.random.uniform(-10., 10., shape)
+            if dtype == 'float32':
+                data_np_l_flat = data_np_l.reshape((-1, shape[-2], shape[-1]))
+            else:
+                data_np_l_flat = _np.tril(data_np_l.reshape((-1, shape[-2], shape[-1])))
+            for i in range(data_np_l_flat.shape[0]):
+                for j in range(data_np_l_flat.shape[-1]):
+                    if data_np_l_flat[i, j, j] < 0:
+                        data_np_l_flat[i, j, j] = -data_np_l_flat[i, j, j]
+                    elif data_np_l_flat[i, j, j] == 0:
+                        data_np_l_flat[i, j, j] = 2
+            data_np = _np.matmul(data_np_l_flat, data_np_l_flat.swapaxes(-1, -2))
+            data_np = data_np.reshape(shape)
         # When dtype is np.FP32, truncation from FP64 to FP32 could also be a source of
         # instability since the ground-truth gradient is computed using FP64 data.
         data = np.array(data_np, dtype=dtype)
@@ -2754,10 +2763,11 @@ def test_np_linalg_cholesky():
 
         # check cholesky validity
         check_cholesky(L, data_np)
-        # check backward
-        mx.autograd.backward(L)
-        backward_expected = get_grad(L.asnumpy())
-        assert_almost_equal(data.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+        # check backward. backward does not support empty input
+        if 0 not in L.shape:
+            mx.autograd.backward(L)
+            backward_expected = get_grad(L.asnumpy())
+            assert_almost_equal(data.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
         # check imperative once again
         L = np.linalg.cholesky(data)
         check_cholesky(L, data_np)
