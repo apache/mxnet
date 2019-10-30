@@ -109,6 +109,8 @@ struct NumpyXReshapeParam : public dmlc::Parameter<NumpyXReshapeParam> {
                   " back to the first axis index changing slowest."
                   " Note that currently only C-like order is"
                   " supported");
+  }
+};
 
 template<typename xpu>
 void NumpyTranspose(const nnvm::NodeAttrs& attrs,
