@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2019 by Contributors
  * \file np_potrf.cc
- * \brief CPU implementation of the Cholesky Operator
+ * \brief CPU implementation placeholder of Cholesky Operator
  */
 #include <mxnet/operator_util.h>
 #include <vector>
@@ -55,6 +55,7 @@ inline bool NumpyLaCholeskyShape(const nnvm::NodeAttrs& attrs,
   return false;
 }
 
+// calls forward and backward implemented in la_op
 NNVM_REGISTER_OP(_npi_cholesky)
 .describe(R"code()code" ADD_FILELINE)
 .set_num_inputs(1)

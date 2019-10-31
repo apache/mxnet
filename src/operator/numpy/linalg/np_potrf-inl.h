@@ -18,16 +18,16 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
- * \file np_gesvd-inl.h
- * \brief Function definition of the SVD Operator.
+ * Copyright (c) 2019 by Contributors
+ * \file np_potrf-inl.h
+ * \brief Placeholder for Cholesky implementation in la_op
  */
-#ifndef MXNET_OPERATOR_NUMPY_LINALG_NP_CHOLESKY_INL_H_
-#define MXNET_OPERATOR_NUMPY_LINALG_NP_CHOLESKY_INL_H_
+#ifndef MXNET_OPERATOR_NUMPY_LINALG_NP_POTRF_INL_H_
+#define MXNET_OPERATOR_NUMPY_LINALG_NP_POTRF_INL_H_
 
 #include <mxnet/operator_util.h>
 #include <vector>
 #include "../../tensor/la_op.h"
 #include "../../tensor/la_op-inl.h"
 
-#endif  // MXNET_OPERATOR_NUMPY_LINALG_NP_CHOLESKY_INL_H_
+#endif  // MXNET_OPERATOR_NUMPY_LINALG_NP_POTRF_INL_H_

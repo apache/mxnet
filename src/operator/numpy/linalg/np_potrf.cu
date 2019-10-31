@@ -19,7 +19,7 @@
 
 /*!
  * \file np_potrf.cu
- * \brief GPU implementation of the SVD Operator
+ * \brief GPU implementation placeholder of Cholesky Operator
  */
 
 #include <mxnet/operator_util.h>

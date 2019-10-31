@@ -89,6 +89,7 @@ inline bool NumpyLaGesvdShape(const nnvm::NodeAttrs& attrs,
   return false;
 }
 
+// use backward implemented in la_op
 NNVM_REGISTER_OP(_npi_svd)
 .describe(R"code()code" ADD_FILELINE)
 .set_num_inputs(1)
