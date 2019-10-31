@@ -123,7 +123,8 @@ inline static std::vector<mkldnn::memory::format_tag> GetMKLDNNFormat(size_t num
     }
 
     std::vector<mkldnn::memory::format_tag> ret(1);
-    ret[0] = static_cast<mkldnn::memory::format_tag>(GetDefaultFormat(pd.dst_desc()));
+    // ret[0] = static_cast<mkldnn::memory::format_tag>(GetDefaultFormat(pd.dst_desc()));
+    ret[0] = mkldnn::memory::format_tag::nChw16c;
     printf("format: %d \n", static_cast<int>(ret[0]));
     return ret;
   } else if (num_dims == 5) {
@@ -151,7 +152,8 @@ inline static std::vector<mkldnn::memory::format_tag> GetMKLDNNFormat(size_t num
     }
 
     std::vector<mkldnn::memory::format_tag> ret(1);
-    ret[0] = static_cast<mkldnn::memory::format_tag>(GetDefaultFormat(pd.weights_desc()));
+    // ret[0] = static_cast<mkldnn::memory::format_tag>(GetDefaultFormat(pd.weights_desc()));
+    ret[0] = mkldnn::memory::format_tag::Goihw16g;
     printf("format: %d\n", static_cast<int>(ret[0]));
     return ret;
   } else {
@@ -364,6 +366,8 @@ inline std::vector<NDArrayAttrs> GetTestInputArrays(
 
     for (auto md : mds) {
       for (size_t dim = 0; dim < scale.size(); ++dim) {
+        if(scale[dim] == 1)
+          continue;
         // preserve if matching layout else just expand on 0 dim
         if (shape.ndim() == md.data.ndims)
           md = GetExpandedMemDesc(md, scale[dim], dim);
