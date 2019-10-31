@@ -1381,6 +1381,7 @@ integrationtest_ubuntu_gpu_cpp_package() {
 integrationtest_ubuntu_gpu_capi_cpp_package() {
     set -ex
     export PYTHONPATH=./python/
+    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
     python3 -c "import mxnet as mx; mx.test_utils.download_model(\"imagenet1k-resnet-18\"); mx.test_utils.download_model(\"imagenet1k-resnet-152\"); mx.test_utils.download_model(\"imagenet1k-resnet-50\");"
     build/tests/cpp/mxnet_unit_tests --gtest_filter="ThreadSafety.*"
     build/tests/cpp/mxnet_unit_tests --gtest_filter="ThreadSafety.*" --thread-safety-with-cpu
