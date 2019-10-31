@@ -69,7 +69,7 @@ inline void GetAttrFromForwardNode(const uint32_t nid,
                                    std::vector<AttrType>* rshape_ptr,
                                    IsNone fis_none) {
   std::vector<AttrType>& rshape = *rshape_ptr;
-  const auto& inode = idx[nid];
+  const nnvm::IndexedGraph::Node& inode = idx[nid];
   // gradient function, used to get node correspondence.
   static auto& fgrad =
       Op::GetAttr<nnvm::FGradient>("FGradient");

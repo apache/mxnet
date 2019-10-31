@@ -42,8 +42,10 @@ namespace exec {
 
 
 /*!
- * \brief Custom graph class, which will contain bi-directional nodes
- * we need to compute DFS and reverse DFS for graph partitioning.
+ * \brief Custom graph class, which contains bi-directional nodes
+ * required for traversing in both directions (from outputs to inputs
+ * and vice versa). It is a non-owning layer on top of NNVM graph, since
+ * NNVM graph enables traversing only in 1 direction (from outputs to inputs).
  */
 class BidirectionalGraph {
  public:
@@ -59,12 +61,17 @@ class BidirectionalGraph {
     nodes.reserve(num_nodes);
     nnvm2nid.reserve(num_nodes);
     outputs.reserve(idx.outputs().size());
+    // Create all the nodes in a new graph from
+    // nodes in the NNVM graph and store them
+    // in nodes array
     DFSVisit(g.outputs, [this](const nnvm::NodePtr& n) {
       Node new_node;
       new_node.nnvmptr = n.get();
       nnvm2nid[n.get()] = static_cast<uint32_t>(nodes.size());
       nodes.emplace_back(std::move(new_node));
     });
+    // Create all connections between nodes in
+    // the graph (both directions)
     for (const auto& it : nnvm2nid) {
       nnvm::Node* nnvmnode = it.first;
       uint32_t nid = it.second;
@@ -74,18 +81,33 @@ class BidirectionalGraph {
         nodes[nid].inputs.emplace_back(&nodes[input_nid]);
       }
     }
+    // Create output connections from the graph
     for (auto& e : g.outputs) {
       uint32_t nid = nnvm2nid[e.node.get()];
       outputs.emplace_back(&nodes[nid]);
     }
   }
 
+  /* \brief Get all subsets of nodes, where:
+   *  - graph constructed from nodes in each subset is a connected graph
+   *  - every node fulfills a predicate is_compatible
+   *  - if nodes u and v are part of a subset, then for each path between
+   *    u and v in the original directed graph, all nodes on those paths
+   *    are also part of the subset
+   * \param is_compatible A function taking nnvm::Node* and returning bool
+   *                      which identifies which nodes should be included in
+   *                      subsets.
+   */
   template<typename FCompatible>
   std::vector<std::unordered_set<Node*>> get_subsets(FCompatible is_compatible) {
     std::vector<std::unordered_set<Node*>> subgraphs;
     std::unordered_set<Node*> incomp_set;
     std::unordered_set<Node*> all_set(nodes.size());
     std::vector<PairSet> separation_sets;
+    // Check each node for compatibility
+    // and, if it is incompatible, mark nodes
+    // on each side of it as not possible to be
+    // in the same subset
     for (Node& node : nodes) {
       if (!is_compatible(node.nnvmptr)) {
         incomp_set.insert(&node);
@@ -112,6 +134,8 @@ class BidirectionalGraph {
     for (Node* n : incomp_set) {
       comp_set.erase(n);
     }
+    // For each node construct the map of nodes that cannot be in
+    // the same subset
     for (Node* n : comp_set) {
       for (PairSet p : separation_sets) {
         if (p.first.count(n)) {
@@ -132,6 +156,7 @@ class BidirectionalGraph {
     }
     std::unordered_set<Node*> visited;
     std::deque<Node*> stack(outputs.begin(), outputs.end());
+    // Create subsets
     while (!stack.empty()) {
       Node* vertex = stack.front();
       stack.pop_front();
@@ -153,6 +178,13 @@ class BidirectionalGraph {
   using PairVec = std::pair<std::vector<Node*>, std::vector<Node*>>;
   using IncompMap = std::unordered_map<Node*, std::unordered_set<Node*>>;
 
+  /* \brief Traverse the graph using DFS in either direction.
+   * \param heads Starting nodes for the DFS algorithm.
+   * \param reverse If true, DFS will traverse the graph from
+   *                outputs to inputs. Otherwise, it will
+   *                traverse the graph from inputs to outputs.
+   * \param fvisit Function to call on each visisted node.
+   */
   template <typename FVisit>
   void DFS(const std::vector<Node*>& heads, bool reverse, FVisit fvisit) {
     std::unordered_set<Node*> visited;
@@ -174,6 +206,15 @@ class BidirectionalGraph {
     }
   }
 
+  /* \brief Get the connected subgraph that contains the head node,
+   *        only previously unused nodes, according to the rules
+   *        from incompatibility map.
+   * \param head Node which needs to be part of the returned subgraph.
+   * \param unused_set Only nodes from this set will be considered when
+   *                   adding to the growing subgraph.
+   * \param incomp_map Map containing data on which nodes are incompatible
+   *                   to be in the same subgraph.
+   */
   std::unordered_set<Node*> naive_grow_subgraph(Node* head,
                                                 std::unordered_set<Node*>* unused_set,
                                                 IncompMap* incomp_map) {
@@ -188,6 +229,7 @@ class BidirectionalGraph {
         unused_set->erase(vertex);
         subgraph.insert(vertex);
         incomp_set.insert((*incomp_map)[vertex].begin(), (*incomp_map)[vertex].end());
+        // Traverse the grpah in both directions
         for (Node* input : vertex->inputs) {
           if (unused_set->count(input) && !incomp_set.count(input)) {
             stack.emplace_back(input);
@@ -367,6 +409,17 @@ Graph ReplaceSubgraphs(Graph&& g, const std::vector<NodeRawPtrSet>& subgraph_set
   return new_graph;
 }
 
+/* \brief Get all subsets of nodes, where:
+ *  - graph constructed from nodes in each subset is a connected graph
+ *  - every node fulfills a predicate is_compatible
+ *  - if nodes u and v are part of a subset, then for each path between
+ *    u and v in the original directed graph, all nodes on those paths
+ *    are also part of the subset
+ * \param g NNVM graph
+ * \param is_compatible A function taking nnvm::Node* and returning bool
+ *                      which identifies which nodes should be included in
+ *                      subsets.
+ */
 template<typename FCompatible>
 std::vector<NodeRawPtrSet> GetCompatibleSubsets(const Graph& g, FCompatible is_compatible) {
   BidirectionalGraph biG = BidirectionalGraph(g);
