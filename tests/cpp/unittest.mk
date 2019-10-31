@@ -36,7 +36,7 @@ endif
 .PHONY: runtest testclean
 
 gtest-all.o : $(GTEST_SRCS_)
-	$(CXX) $(CPPFLAGS) -I$(GTEST_INC) -I$(GTEST_DIR) $(CXXFLAGS) -c $(GTEST_DIR)/src/gtest-all.cc
+	$(CXX) -std=c++11 $(CPPFLAGS) -I$(GTEST_INC) -I$(GTEST_DIR) $(CXXFLAGS) -c $(GTEST_DIR)/src/gtest-all.cc
 
 gtest.a : gtest-all.o
 	$(AR) $(ARFLAGS) $@ $^
