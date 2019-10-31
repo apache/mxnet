@@ -2501,7 +2501,7 @@ def test_arange_like_dtype():
             assert v.dtype == t
 
 @with_seed()
-def check_multihead_attention_selfatt(bwd_ignore_zero_init):
+def check_multihead_attention_selfatt(bwd_ignore_zero_init, dtype):
     def convert_weight(F, q_weight, k_weight, v_weight, num_heads):
         q_weight = F.reshape(q_weight, shape=(num_heads, -1, 0), reverse=True)
         k_weight = F.reshape(k_weight, shape=(num_heads, -1, 0), reverse=True)
@@ -2518,7 +2518,6 @@ def check_multihead_attention_selfatt(bwd_ignore_zero_init):
         all_bias = F.reshape(all_bias, shape=(-1,))
         return all_bias
 
-    dtype='float16'
     batch_size = 2
     qkv_length = 7  # length of a sequence
     qkv_dim = 9     # dimension of encoding
@@ -2651,12 +2650,13 @@ def check_multihead_attention_selfatt(bwd_ignore_zero_init):
 
 def test_multihead_attention_selfatt():
     #os.environ['MXNET_EXEC_ENABLE_ADDTO'] = '0'
-    check_multihead_attention_selfatt(bwd_ignore_zero_init=False)
+    for dtype in ['float16', 'float32']:
+        check_multihead_attention_selfatt(bwd_ignore_zero_init=False, dtype=dtype)
     #os.environ['MXNET_EXEC_ENABLE_ADDTO'] = '1'
     #check_multihead_attention_selfatt(bwd_ignore_zero_init=False)
     #check_multihead_attention_selfatt(bwd_ignore_zero_init=True)
 
-def check_multihead_attention_encdec(bwd_ignore_zero_init):
+def check_multihead_attention_encdec(bwd_ignore_zero_init, dtype):
     def convert_weight(F, k_weight, v_weight, num_heads):
         k_weight = F.reshape(k_weight, shape=(num_heads, -1, 0), reverse=True)
         v_weight = F.reshape(v_weight, shape=(num_heads, -1, 0), reverse=True)
@@ -2680,16 +2680,16 @@ def check_multihead_attention_encdec(bwd_ignore_zero_init):
     qkv_units = num_heads * head_dim
 
     arg_params = {
-        'q': mx.nd.array(np.random.rand(*(batch_size, qkv_length, qkv_dim)).astype('float16') * 0.1, dtype='float16'),
-        'kv': mx.nd.array(np.random.rand(*(batch_size, qkv_length, qkv_dim)).astype('float16') * 0.1, dtype='float16'),
-        'q_weight': mx.nd.array(np.random.rand(*(qkv_units, qkv_dim)).astype('float16') * 0.1, dtype='float16'),
-        'k_weight': mx.nd.array(np.random.rand(*(qkv_units, qkv_dim)).astype('float16') * 0.1, dtype='float16'),
-        'v_weight': mx.nd.array(np.random.rand(*(qkv_units, qkv_dim)).astype('float16') * 0.1, dtype='float16'),
-        'q_bias': mx.nd.array(np.random.rand(*(qkv_units,)).astype('float16') * 0.1, dtype='float16'),
-        'k_bias': mx.nd.array(np.random.rand(*(qkv_units,)).astype('float16') * 0.1, dtype='float16'),
-        'v_bias': mx.nd.array(np.random.rand(*(qkv_units,)).astype('float16') * 0.1, dtype='float16'),
-        'out_weight': mx.nd.array(np.random.rand(*(out_dim, qkv_units)).astype('float16') * 0.1, dtype='float16'),
-        'out_bias': mx.nd.array(np.random.rand(*(out_dim,)).astype('float16') * 0.1, dtype='float16'),
+        'q': mx.nd.array(np.random.rand(*(batch_size, qkv_length, qkv_dim)).astype(dtype) * 0.1, dtype=dtype),
+        'kv': mx.nd.array(np.random.rand(*(batch_size, qkv_length, qkv_dim)).astype(dtype) * 0.1, dtype=dtype),
+        'q_weight': mx.nd.array(np.random.rand(*(qkv_units, qkv_dim)).astype(dtype) * 0.1, dtype=dtype),
+        'k_weight': mx.nd.array(np.random.rand(*(qkv_units, qkv_dim)).astype(dtype) * 0.1, dtype=dtype),
+        'v_weight': mx.nd.array(np.random.rand(*(qkv_units, qkv_dim)).astype(dtype) * 0.1, dtype=dtype),
+        'q_bias': mx.nd.array(np.random.rand(*(qkv_units,)).astype(dtype) * 0.1, dtype=dtype),
+        'k_bias': mx.nd.array(np.random.rand(*(qkv_units,)).astype(dtype) * 0.1, dtype=dtype),
+        'v_bias': mx.nd.array(np.random.rand(*(qkv_units,)).astype(dtype) * 0.1, dtype=dtype),
+        'out_weight': mx.nd.array(np.random.rand(*(out_dim, qkv_units)).astype(dtype) * 0.1, dtype=dtype),
+        'out_bias': mx.nd.array(np.random.rand(*(out_dim,)).astype(dtype) * 0.1, dtype=dtype),
         }
 
     q = mx.sym.Variable('q')
@@ -2731,27 +2731,27 @@ def check_multihead_attention_encdec(bwd_ignore_zero_init):
                                   v_bias=(qkv_units,),
                                   out_weight=(out_dim, qkv_units),
                                   out_bias=(out_dim,),
-                                  type_dict={'q': 'float16',
-                                             'kv': 'float16',
-                                             'q_weight': 'float16',
-                                             'q_bias': 'float16',
-                                             'k_weight': 'float16',
-                                             'k_bias': 'float16',
-                                             'v_weight': 'float16',
-                                             'v_bias': 'float16',
-                                             'out_weight': 'float16',
-                                             'out_bias': 'float16',
+                                  type_dict={'q': dtype,
+                                             'kv': dtype,
+                                             'q_weight': dtype,
+                                             'q_bias': dtype,
+                                             'k_weight': dtype,
+                                             'k_bias': dtype,
+                                             'v_weight': dtype,
+                                             'v_bias': dtype,
+                                             'out_weight': dtype,
+                                             'out_bias': dtype,
                                               },
                                   grad_req='write', force_rebind=True)
     output_shape = executor.outputs[0].shape
-    output_grads = np.random.rand(*output_shape).astype('float16') * 0.1
+    output_grads = np.random.rand(*output_shape).astype(dtype) * 0.1
     executor.copy_params_from(arg_params, {})
     executor.arg_dict['sonde'][:] = 0.
     executor.arg_dict['sonde'].wait_to_read()
     executor.forward(is_train=True)
     output_opti = executor.outputs[0].asnumpy()
     att_score_opti = executor.outputs[1].asnumpy()
-    executor.backward([mx.nd.array(output_grads, dtype='float16'), mx.nd.zeros(att_score_opti.shape, dtype='float16')])
+    executor.backward([mx.nd.array(output_grads, dtype=dtype), mx.nd.zeros(att_score_opti.shape, dtype=dtype)])
 
     grads_opti = {k: v.asnumpy() for k, v in executor.grad_dict.items()}
 
@@ -2796,8 +2796,8 @@ def check_multihead_attention_encdec(bwd_ignore_zero_init):
     executor = output.simple_bind(ctx=mx.gpu(0),
                                   q=(batch_size, qkv_length, qkv_dim),
                                   kv=(batch_size, qkv_length, qkv_dim),
-                                  type_dict={'q': 'float16',
-                                             'kv': 'float16'},
+                                  type_dict={'q': dtype,
+                                             'kv': dtype},
                                   grad_req='write', force_rebind=True)
     executor.copy_params_from(arg_params, {})
     executor.arg_dict['sonde'][:] = 0.
@@ -2805,7 +2805,7 @@ def check_multihead_attention_encdec(bwd_ignore_zero_init):
     executor.forward(is_train=True)
     output_orig = executor.outputs[0].asnumpy()
     att_score_orig = executor.outputs[1].asnumpy()
-    executor.backward([mx.nd.array(output_grads, dtype='float16'), mx.nd.zeros(att_score_orig.shape, dtype='float16')])
+    executor.backward([mx.nd.array(output_grads, dtype=dtype), mx.nd.zeros(att_score_orig.shape, dtype=dtype)])
     grads_orig = {k : v.asnumpy() for k, v in executor.grad_dict.items()}
     assert_allclose(att_score_orig, att_score_opti, rtol=1e-2, atol=1e-3)
     assert_allclose(output_orig, output_opti, rtol=1e-2, atol=1e-3)
@@ -2817,7 +2817,8 @@ def check_multihead_attention_encdec(bwd_ignore_zero_init):
 
 def test_multihead_attention_encdec():
     #os.environ['MXNET_EXEC_ENABLE_ADDTO'] = '0'
-    check_multihead_attention_encdec(bwd_ignore_zero_init=False)
+    for dtype in ['float16', 'float32']:
+        check_multihead_attention_encdec(bwd_ignore_zero_init=False, dtype=dtype)
     #os.environ['MXNET_EXEC_ENABLE_ADDTO'] = '1'
     #check_multihead_attention_encdec(bwd_ignore_zero_init=False)
     #check_multihead_attention_encdec(bwd_ignore_zero_init=True)
