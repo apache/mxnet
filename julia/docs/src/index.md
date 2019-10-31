@@ -29,7 +29,7 @@ include:
   state-of-the-art deep learning models.
 
 For more details, see documentation below. Please also checkout the
-[examples](https://github.com/dmlc/MXNet.jl/tree/master/examples) directory.
+[examples](https://github.com/apache/incubator-mxnet/tree/master/julia/examples) directory.
 
 ## Tutorials
 
@@ -55,18 +55,6 @@ Depth = 2
 ## API Documentation
 
 ```@contents
-Pages = [
-  "api/context.md",
-  "api/ndarray.md",
-  "api/symbolic-node.md",
-  "api/model.md",
-  "api/initializers.md",
-  "api/optimizers.md",
-  "api/callbacks.md",
-  "api/metric.md",
-  "api/io.md",
-  "api/nn-factory.md",
-  "api/executor.md",
-  "api/visualize.md",
-]
+Pages = api_pages
+Depth = 2
 ```

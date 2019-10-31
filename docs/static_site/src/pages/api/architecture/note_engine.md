@@ -387,4 +387,3 @@ We welcome your contributions.
 
 * [Squeeze the Memory Consumption of Deep Learning](note_memory)
 * [Efficient Data Loading Module for Deep Learning](note_data_loading)
-* [Survey of RNN Interface](http://mxnet.io/architecture/rnn_interface.html)

@@ -80,8 +80,13 @@ void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
   }
 
   Stream<cpu> *s = ctx.get_stream<cpu>();
-  mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(s, 1,
-    min_output_ptr, max_output_ptr, &min_data, &max_data, &min_weight, &max_weight);
+  if (data.dtype() == mshadow::kInt8) {
+    mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(
+        s, 1, min_output_ptr, max_output_ptr, &min_data, &max_data, &min_weight, &max_weight);
+  } else {
+    mxnet_op::Kernel<QuantizationRangeForS8U8MultiplicationStruct, cpu>::Launch(
+        s, 1, min_output_ptr, max_output_ptr, &min_data, &max_data, &min_weight, &max_weight);
+  }
 
   bool is_train = false;
   mkldnn::memory::desc out_md = GetMemDesc(out_data[fullc::kOut]);

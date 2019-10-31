@@ -89,7 +89,7 @@ inline bool NumpyLaGesvdShape(const nnvm::NodeAttrs& attrs,
   return false;
 }
 
-NNVM_REGISTER_OP(_np__linalg_svd)
+NNVM_REGISTER_OP(_npi_svd)
 .describe(R"code()code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(3)
@@ -102,10 +102,10 @@ NNVM_REGISTER_OP(_np__linalg_svd)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
 .set_attr<FCompute>("FCompute<cpu>", NumpyLaGesvdForward<cpu, gesvd>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_np_linalg_svd"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_npi_svd"})
 .add_argument("A", "NDArray-or-Symbol", "Input matrices to be factorized");
 
-NNVM_REGISTER_OP(_backward_np_linalg_svd)
+NNVM_REGISTER_OP(_backward_npi_svd)
 .set_num_inputs(6)
 .set_num_outputs(1)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs) {

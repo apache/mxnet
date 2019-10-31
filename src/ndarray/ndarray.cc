@@ -142,6 +142,11 @@ void NDArray::Chunk::CheckAndAllocData(const mxnet::TShape &shape, int dtype) {
   CHECK_NE(aux_shapes.size(), 0)
       << "data is expected to be allocated after aux_data";
   auto dbytes = shape.Size() * mshadow::mshadow_sizeof(dtype);
+  if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
+    CHECK_LT(shape.Size(), (int64_t{1} << 31) - 1) <<
+              "[CheckAndAllocData] Size of tensor you are trying to allocate is larger than "
+              "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+  }
   if (shandle.size < dbytes) {
     // free storage
     Storage::Get()->Free(shandle);
@@ -281,7 +286,7 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
   CHECK_EQ(storage_type(), kDefaultStorage);
   NDArray ret = this->Detach();
   size_t length = shape_.ProdShape(1, shape_.ndim());
-  MSHADOW_TYPE_SWITCH(ret.dtype(), DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(ret.dtype(), DType, {
     ret.byte_offset_ += begin * length * sizeof(DType);
   });
   ret.reuse_ = false;
@@ -647,6 +652,7 @@ const mkldnn::memory *NDArray::GetMKLDNNData() const {
     // If this is a view, we can't create a MKLDNN memory for the chunk
     // because we don't have the complete data type and shape information for
     // the chunk.
+    CheckAndAlloc();
     void *off_addr = static_cast<char *>(ptr_->shandle.dptr) + byte_offset_;
     // Create the primitive desc for the new mkldnn memory.
     mkldnn::memory::dims dims(shape().ndim());
@@ -665,6 +671,7 @@ const mkldnn::memory *NDArray::GetMKLDNNData() const {
   } else {
     // If this isn't a view, we can create a MKLDNN memory and store it in the
     // chunk.
+    CheckAndAlloc();
     ptr_->SetMKLMem(shape_, dtype_);
     MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_->GetMem());
     return ptr_->mkl_mem_->GetRaw();
@@ -1635,11 +1642,13 @@ void NDArray::Save(dmlc::Stream *strm) const {
     nd_cpu.WaitToRead();
     save_data = nd_cpu.data();
   } else {
+#if MXNET_USE_MKLDNN == 1
+    // For mkldnn, a copy of *this can ensure no write access pending on *this.
+    nd_cpu = this->Copy(Context::CPU());
+    nd_cpu.WaitToRead();
+#else
     this->WaitToRead();
     nd_cpu = *this;
-#if MXNET_USE_MKLDNN == 1
-    if (nd_cpu.IsMKLDNNData())
-      nd_cpu = nd_cpu.Reorder2Default();
 #endif
     save_data = nd_cpu.data();
   }
@@ -1732,7 +1741,8 @@ bool NDArray::Load(dmlc::Stream *strm) {
            " Please turn on np shape semantics in Python using `with np_shape(True)`"
            " or decorator `use_np_shape` to scope the code of loading the ndarray.";
   } else {
-    CHECK(!Imperative::Get()->is_np_shape())
+    // when the flag is global on, skip the check since it would be always global on.
+    CHECK(Imperative::Get()->is_np_shape() == GlobalOn || !Imperative::Get()->is_np_shape())
         << "ndarray was not saved in np shape semantics, but being loaded in np shape semantics."
            " Please turn off np shape semantics in Python using `with np_shape(False)`"
            " to scope the code of loading the ndarray.";
@@ -1819,7 +1829,13 @@ bool NDArray::Load(dmlc::Stream *strm) {
     *this = std::move(temp); return true;
   } else {
 #if MXNET_USE_CUDA
-    *this = temp.Copy(ctx); return true;
+    int device_count = -1;
+    cudaGetDeviceCount(&device_count);
+    if (device_count > 0) {
+      *this = temp.Copy(ctx); return true;
+    } else {
+      *this = std::move(temp); return true;
+    }
 #else
     *this = std::move(temp); return true;
 #endif
@@ -1873,6 +1889,11 @@ NDArray NDArray::Copy(Context ctx) const {
 
 void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
   mxnet::TShape dshape = this->shape();
+  if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
+    CHECK_LT(size, (int64_t{1} << 31) - 1) <<
+              "[SyncCopyFromCPU] Size of tensor you are trying to allocate is larger than "
+              "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+  }
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
   // zero-size array, no need to copy
@@ -2008,6 +2029,11 @@ void NDArray::SyncCopyFromNDArray(const NDArray& src, int i, int j) {
 
 void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   mxnet::TShape dshape = this->shape();
+  if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
+    CHECK_LT(size, (int64_t{1} << 31) - 1) <<
+              "[SyncCopyToCPU] Size of tensor you are trying to allocate is larger than "
+              "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+  }
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
   // zero-size array, no need to copy
@@ -2017,15 +2043,18 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   TBlob dst(data, dshape, cpu::kDevMask, this->dtype_, 0); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
-    this->WaitToRead();
-    RunContext rctx{this->ctx(), nullptr, nullptr, false};
-    NDArray src = *this;
+    Engine::Get()->PushAsync(
+        [&](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+          RunContext ctx{this->ctx(), nullptr, nullptr, false};
+          NDArray src = *this;
 #if MXNET_USE_MKLDNN == 1
-    if (src.IsMKLDNNData())
-      src = this->Reorder2Default();
+          src = this->Reorder2Default();
 #endif
-    ndarray::Copy<cpu, cpu>(src.data(), &dst,
-                            Context::CPU(), Context::CPU(), rctx);
+          ndarray::Copy<cpu, cpu>(src.data(), &dst, Context::CPU(), Context::CPU(), ctx);
+          on_complete();
+        },
+        this->ctx(), {this->var()}, {}, FnProperty::kNormal, 0, "SyncCopyCPU2CPU");
+    this->WaitToWrite();
   } else {
 #if MXNET_USE_CUDA
     Engine::Get()->PushAsync(

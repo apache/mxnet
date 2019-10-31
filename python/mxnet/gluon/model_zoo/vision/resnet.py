@@ -240,7 +240,7 @@ class ResNetV1(HybridBlock):
 
     Parameters
     ----------
-    block : HybridBlock
+    block : gluon.HybridBlock
         Class for the residual block. Options are BasicBlockV1, BottleneckV1.
     layers : list of int
         Numbers of layers in each block
@@ -295,7 +295,7 @@ class ResNetV2(HybridBlock):
 
     Parameters
     ----------
-    block : HybridBlock
+    block : gluon.HybridBlock
         Class for the residual block. Options are BasicBlockV1, BottleneckV1.
     layers : list of int
         Numbers of layers in each block

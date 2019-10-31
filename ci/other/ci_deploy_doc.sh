@@ -29,4 +29,4 @@
 set -ex
 
 aws s3 sync --delete . s3://mxnet-ci-doc/$1/$2 \
-    && echo "Doc is hosted at http://mxnet-ci-doc.s3-accelerate.dualstack.amazonaws.com/$1/$2/index.html"
+    && echo "Doc is hosted at https://mxnet-ci-doc.s3-accelerate.dualstack.amazonaws.com/$1/$2/index.html"

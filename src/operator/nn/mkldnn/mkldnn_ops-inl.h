@@ -109,9 +109,15 @@ void MKLDNNActivationForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
 void MKLDNNActivationBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                               const NDArray &out_grad, const NDArray &in_data,
                               const OpReqType &req, const NDArray &in_grad);
+void MKLDNNLeakyReluForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                            const NDArray &in_data, const OpReqType &req,
+                            const NDArray &out_data);
+void MKLDNNLeakyReluBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                             const std::vector<NDArray>& inputs, const OpReqType &req,
+                             const NDArray &output);
 
 void MKLDNNSum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
-         const mkldnn::memory &out);
+               const mkldnn::memory &out);
 
 void MKLDNNTransposeForward(const nnvm::NodeAttrs& attrs,
                             const OpContext &ctx,
@@ -125,11 +131,6 @@ void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
                           const OpReqType &req,
                           const NDArray &output);
 
-void MKLDNNFlattenForward(const nnvm::NodeAttrs &attrs,
-                          const OpContext &ctx,
-                          const NDArray &input,
-                          const OpReqType &req,
-                          const NDArray &output);
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_USE_MKLDNN == 1

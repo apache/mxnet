@@ -16,7 +16,7 @@
 <!--- under the License. -->
 
 
-# Creating custom operators with numpy
+# Custom Numpy Operators
 
 In this tutorial, we will learn how to build custom operators with numpy in python. We will go through two examples:
 - Custom operator without any `Parameter`s

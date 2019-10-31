@@ -814,6 +814,7 @@ inline MemoryPlanVector PlanMemory(
     nnvm::Graph* p_g,
     nnvm::StorageVector&& storage,
     const std::vector<uint32_t>& ref_count,
+    const std::string& storage_plan,
     const std::pair<uint32_t, uint32_t>& node_range = {0, 0},
     const std::pair<uint32_t, uint32_t>& entry_range = {0, 0},
     bool detect_inplace_addto = false) {
@@ -831,6 +832,7 @@ inline MemoryPlanVector PlanMemory(
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
   const auto& shapes = g.GetAttr<mxnet::ShapeVector>("shape");
   const auto& storage_inplace = g.GetAttr<std::vector<int> >("storage_inplace_index");
+  g.attrs[storage_plan] = std::make_shared<any>(storage_inplace);
   const auto& storage_ids = g.GetAttr<StorageVector>("storage_id");
   uint32_t entry_start = entry_range.first;
   uint32_t entry_end =

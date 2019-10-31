@@ -82,7 +82,7 @@ the digits with the help of C++ package.
 Multilayer Perceptron
 ---------------------
 If you are not familiar with multilayer perceptron, you can get some basic information
-[here](http://mxnet.io/tutorials/python/mnist.html#multilayer-perceptron). We only focus on
+[here](https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/image/mnist.html). We only focus on
 the implementation in this tutorial.
 
 Constructing multilayer perceptron model is straightforward, assume we store the hidden size

@@ -327,6 +327,8 @@ def conv_act(no_bias, data_shape, alg):
                                kernel=(3, 3), stride=(1, 1), no_bias=no_bias)
   if alg == "relu6":
     relu = mx.symbol.clip(data=conv, name='relu6', a_min=0, a_max=6)
+  elif alg == "leakyrelu":
+    relu = mx.symbol.LeakyReLU(data=conv, slope=0.25, act_type='leaky')
   else:
     relu = mx.symbol.Activation(data=conv, name=alg, act_type=alg)
   return relu, attr
@@ -339,6 +341,8 @@ def conv_act_sum(no_bias, data_shape, alg):
                                kernel=(3, 3), stride=(1, 1), no_bias=no_bias)
   if alg == "relu6":
     relu = mx.symbol.clip(data=conv, name='relu6', a_min=0, a_max=6)
+  elif alg == "leakyrelu":
+    relu = mx.symbol.LeakyReLU(data=conv, slope=0.25, act_type='leaky')
   else:
     relu = mx.symbol.Activation(data=conv, name=alg, act_type=alg)
   conv1 = mx.symbol.Convolution(data=data, weight=weight, name='conv1', num_filter=64,
@@ -379,6 +383,8 @@ def conv_bn_act(no_bias, data_shape, alg):
   bn1 = mx.symbol.BatchNorm(data=conv, name="bn1")
   if alg == "relu6":
     relu = mx.symbol.clip(data=bn1, name='relu6', a_min=0, a_max=6)
+  elif alg == "leakyrelu":
+    relu = mx.symbol.LeakyReLU(data=bn1, slope=0.25, act_type='leaky')
   else:
     relu = mx.symbol.Activation(data=bn1, name=alg, act_type=alg)
   return relu, attr
@@ -395,6 +401,8 @@ def conv_bn_sum_act(no_bias, data_shape, alg):
   sum1 = bn1 + conv1
   if alg == "relu6":
     relu = mx.symbol.clip(data=sum1, name='relu6', a_min=0, a_max=6)
+  elif alg == "leakyrelu":
+    relu = mx.symbol.LeakyReLU(data=sum1, slope=0.25, act_type='leaky')
   else:
     relu = mx.symbol.Activation(data=sum1, name=alg, act_type=alg)
   return relu, attr
@@ -693,7 +701,8 @@ def test_pos_conv_act():
               "sigmoid": True,
               "tanh": True,
               "softrelu": True,
-              "relu6": True}
+              "relu6": True,
+              "leakyrelu": True}
   for data_shape in DATA_SHAPE:
     for (alg, quantize) in act_list.items():
       net, attrs = conv_act(False, data_shape, alg)
@@ -731,7 +740,8 @@ def test_pos_conv_bn_act():
               "sigmoid": True,
               "tanh": True,
               "softrelu": True,
-              "relu6": True}
+              "relu6": True,
+              "leakyrelu": True}
   for data_shape in DATA_SHAPE:
     for (alg, quantize) in act_list.items():
       net, attrs = conv_bn_act(False, data_shape, alg)
@@ -745,7 +755,8 @@ def test_pos_conv_bn_sum_act():
               "sigmoid": True,
               "tanh": True,
               "softrelu": True,
-              "relu6": False}
+              "relu6": False,
+              "leakyrelu": True}
   for data_shape in DATA_SHAPE:
     for (alg, quantize) in act_list.items():
       net, attrs = conv_bn_sum_act(False, data_shape, alg)

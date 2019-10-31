@@ -422,6 +422,8 @@ class RNNOp {
     init_mem_ = false;
     reserve_mem_size_ = 0;
 #endif
+
+    if (ctx_.dev_type == kGPU) {
 #if MXNET_USE_CUDNN == 1
     init_cudnn_ = false;
     dtype_ = mshadow::DataType<DType>::kCudnnFlag;
@@ -505,6 +507,7 @@ class RNNOp {
       LOG(FATAL) << "RNN on GPU is only available for cuDNN at the moment.";
     }
 #endif  // MXNET_USE_CUDNN == 1
+    }
 
     if (ctx_.dev_type == kCPU) {
       this->init_space_ = false;
@@ -523,6 +526,7 @@ class RNNOp {
   }
 
   ~RNNOp() {
+    if (ctx_.dev_type == kGPU) {
 #if MXNET_USE_CUDNN == 1
     CUDNN_CALL(cudnnDestroyTensorDescriptor(hx_desc_));
     CUDNN_CALL(cudnnDestroyTensorDescriptor(cx_desc_));
@@ -537,6 +541,8 @@ class RNNOp {
     CUDNN_CALL(cudnnDestroyFilterDescriptor(dw_desc_));
     CUDNN_CALL(cudnnDestroyRNNDescriptor(rnn_desc_));
     CUDNN_CALL(cudnnDestroyDropoutDescriptor(dropout_desc_));
+    if (dgrad_sync_event_created_)
+      CUDA_CALL(cudaEventDestroy(dgrad_sync_event_));
 
     if (init_cudnn_) {
       for (size_t i = 0; i < x_desc_vec_.size(); ++i) {
@@ -555,6 +561,7 @@ class RNNOp {
     CUDNN_CALL(cudnnDestroyRNNDataDescriptor(dy_data_desc_));
 #endif  // MXNET_USE_CUDNN_GE_7200
 #endif  // MXNET_USE_CUDNN
+    }
   }
 
   void Forward(const OpContext &ctx, const std::vector<TBlob> &in_data,
@@ -1066,20 +1073,23 @@ class RNNOp {
                                       workspace_byte_,
                                       reserve_space_.dptr,
                                       reserve_space_byte_));
-    CUDNN_CALL(cudnnRNNBackwardWeightsEx(s->dnn_handle_,
-                                         rnn_desc_,
-                                         x_data_desc_,
-                                         x.dptr_,
-                                         hx_desc_,
-                                         hx.dptr_,
-                                         y_data_desc_,
-                                         y.dptr_,
-                                         temp_space.dptr_,
-                                         workspace_byte_,
-                                         dw_desc_,
-                                         dw.dptr_,
-                                         reserve_space_.dptr,
-                                         reserve_space_byte_));
+    SyncDgrad();
+    if (req[rnn_enum::kParams] != kNullOp) {
+      CUDNN_CALL(cudnnRNNBackwardWeightsEx(s->dnn_handle_,
+                                           rnn_desc_,
+                                           x_data_desc_,
+                                           x.dptr_,
+                                           hx_desc_,
+                                           hx.dptr_,
+                                           y_data_desc_,
+                                           y.dptr_,
+                                           temp_space.dptr_,
+                                           workspace_byte_,
+                                           dw_desc_,
+                                           dw.dptr_,
+                                           reserve_space_.dptr,
+                                           reserve_space_byte_));
+    }
 #else
     CUDNN_CALL(cudnnRNNBackwardData(s->dnn_handle_,
                                     rnn_desc_,
@@ -1108,21 +1118,24 @@ class RNNOp {
                                     workspace_byte_,
                                     reserve_space_.dptr,
                                     reserve_space_byte_));
-    CUDNN_CALL(cudnnRNNBackwardWeights(s->dnn_handle_,
-                                       rnn_desc_,
-                                       param_.seq_length_,
-                                       x_desc_vec_.data(),
-                                       x.dptr_,
-                                       hx_desc_,
-                                       hx.dptr_,
-                                       y_desc_vec_.data(),
-                                       y.dptr_,
-                                       temp_space.dptr_,
-                                       workspace_byte_,
-                                       dw_desc_,
-                                       dw.dptr_,
-                                       reserve_space_.dptr,
-                                       reserve_space_byte_));
+    SyncDgrad();
+    if (req[rnn_enum::kParams] != kNullOp) {
+      CUDNN_CALL(cudnnRNNBackwardWeights(s->dnn_handle_,
+                                         rnn_desc_,
+                                         param_.seq_length_,
+                                         x_desc_vec_.data(),
+                                         x.dptr_,
+                                         hx_desc_,
+                                         hx.dptr_,
+                                         y_desc_vec_.data(),
+                                         y.dptr_,
+                                         temp_space.dptr_,
+                                         workspace_byte_,
+                                         dw_desc_,
+                                         dw.dptr_,
+                                         reserve_space_.dptr,
+                                         reserve_space_byte_));
+    }
 #endif  // MXNET_USE_CUDNN_GE_7200
 #endif  // MXNET_USE_CUDNN == 1 && defined(__CUDACC__)
 
@@ -1363,20 +1376,12 @@ class RNNOp {
                                            seed_));
 
       // RNN descriptors
-      cudnnDataType_t dtype_with_fallback_;
+      // adopt pseudo-fp16 for all architectures
+      cudnnDataType_t dtype_with_fallback_ =
+        (cudnnGetVersion() >= 7500 && dtype_ == CUDNN_DATA_HALF) ? CUDNN_DATA_FLOAT
+                                                             : dtype_;
       cudnnRNNAlgo_t rnn_algo = CUDNN_RNN_ALGO_STANDARD;
-      // On arch's 50 and 52(Maxwell), the gpu doesn't support native fp16 compute.
-      // Before cuDNN 7.5.0, when running fp16, cuDNN fallback to fp32 under the hood on Maxwell.
-      // That's not the case begining from 7.5.0. Thereby adding fallback explicitly here.
-#if __CUDA_ARCH__ < 530 && CUDNN_VERSION >= 7500
-      if (dtype_ == CUDNN_DATA_HALF) {
-        dtype_with_fallback_ = CUDNN_DATA_FLOAT;
-      } else {
-        dtype_with_fallback_ = dtype_;
-      }
-#else
-        dtype_with_fallback_ = dtype_;
-#endif
+      dgrad_sync_needed_ = (rnn_algo == CUDNN_RNN_ALGO_STANDARD) && param_.bidirectional;
       CUDNN_CALL(cudnnSetRNNDescriptor_v6(s->dnn_handle_,
                                           rnn_desc_,
                                           param_.state_size,
@@ -1484,6 +1489,24 @@ class RNNOp {
     }
 #endif  // MXNET_USE_CUDNN == 1 && defined(__CUDACC__)
   }
+
+#if MXNET_USE_CUDNN == 1 && defined(__CUDACC__)
+  // cuDNN versions up to and including v7.6.4 did not sync a last dgrad kernel back to the main
+  // cudnn handle's stream (non-persistant algo, bidirectional only).  This could result in silent
+  // non-determinstic failures with very low probability, seen more often when wgrad is bypassed.
+  inline void SyncDgrad() {
+    if (CUDNN_VERSION <= 7604 && dgrad_sync_needed_) {
+      // Without blocking the CPU, create a synchronization point of all current GPU activity.  No
+      // need to call cudaStreamWaitEvent- cudaEventRecord on the legacy default stream suffices.
+      if (!dgrad_sync_event_created_) {
+        CUDA_CALL(cudaEventCreateWithFlags(&dgrad_sync_event_, cudaEventDisableTiming));
+        dgrad_sync_event_created_ = true;
+      }
+      CUDA_CALL(cudaEventRecord(dgrad_sync_event_, cudaStreamLegacy));
+    }
+  }
+#endif  // MXNET_USE_CUDNN == 1 && defined(__CUDACC__)
+
 #if MXNET_USE_CUDNN == 1
   cudnnDataType_t dtype_;
   bool init_cudnn_;
@@ -1511,6 +1534,9 @@ class RNNOp {
   bool cudnn_tensor_core_;
 
   cudnnTensorFormat_t format_;
+  cudaEvent_t dgrad_sync_event_;
+  bool dgrad_sync_event_created_ = false;
+  bool dgrad_sync_needed_ = false;
 #endif  // MXNET_USE_CUDNN
   bool init_space_, temp_init_space_;
   size_t reserve_cpu_space_size_, temp_cpu_space_size_;

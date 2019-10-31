@@ -181,6 +181,29 @@ int MXLoadTVMOp(const char *libpath) {
   tvm::runtime::TVMOpModule::Get()->Load(libpath);
   API_END();
 }
+
+int MXLoadTVMConfig(ConfigSpaces config) {
+  API_BEGIN();
+  for (int k = 0; k < config.spaces_size; ++k) {
+    tvm::runtime::TVMOpConfig& entry = ::dmlc::Registry<tvm::runtime::TVMOpConfig>::Get()
+      ->__REGISTER_OR_GET__(std::string(config.spaces_key[k]));
+    const ConfigSpace& c = config.spaces_val[k];
+    for (int i = 0; i < c.entity_map_size; ++i) {
+      entry.add_entity(std::string(c.entity_map_key[i]), c.entity_map_val[i].val);
+    }
+    for (int i = 0; i < c.space_map_size; ++i) {
+      std::string name = std::string(c.space_map_key[i]);
+      std::vector<int> entities;
+      for (int j = 0; j < c.space_map_val[i].entities_size; ++j) {
+        int val = c.space_map_val[i].entities[j].val;
+        entities.push_back(val);
+      }
+      entry.add_space(name, entities);
+    }
+  }
+  API_END();
+}
+
 #endif  // MXNET_USE_TVM_OP
 
 int MXNDArrayCreateNone(NDArrayHandle *out) {
@@ -197,7 +220,13 @@ void CreateNDArray(const DataType* shape,
                    int delay_alloc,
                    int dtype,
                    NDArrayHandle* out) {
-  *out = new NDArray(mxnet::TShape(shape, shape + ndim),
+  mxnet::TShape requested_shape = mxnet::TShape(shape, shape + ndim);
+  if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
+    CHECK_LT(requested_shape.Size(), (int64_t{1} << 31) - 1) <<
+              "[CreateNDArray] Size of tensor you are trying to allocate is larger than "
+              "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+  }
+  *out = new NDArray(requested_shape,
                      Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
                      delay_alloc != 0, dtype);
 }
@@ -585,6 +614,11 @@ inline void GetShape(NDArrayHandle handle, const dtype** out_pdata, int* out_dim
                      MXAPIThreadLocalEntry<dtype>* ret) {
   NDArray* arr = static_cast<NDArray*>(handle);
   if (!arr->is_none()) {
+    if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
+      CHECK_LT(arr->shape().Size(), (int64_t{1} << 31) - 1) <<
+                      "[Get Shape] Size of tensor you are trying to allocate is larger than "
+                      "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+    }
     mxnet::TShape s = arr->shape();
     if (!Imperative::Get()->is_np_shape()) {
       common::ConvertToLegacyShape(&s);
@@ -627,6 +661,12 @@ int MXNDArrayGetData(NDArrayHandle handle,
                      void **out_pdata) {
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
+#if MXNET_USE_MKLDNN == 1
+  if (arr->IsMKLDNNData()) {
+    arr->Reorder2DefaultAsync();
+    arr->WaitToRead();
+  }
+#endif
   if (!arr->is_none()) {
     *out_pdata = arr->data().dptr_;
   } else {

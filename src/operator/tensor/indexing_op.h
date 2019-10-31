@@ -296,11 +296,11 @@ inline bool SparseEmbeddingOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
   return dispatched;
 }
 
-/*! \brief name the struct Take instead of take
- * to avoid conflict with the take function in mshadow
+/*! \brief name the struct TakeNonzeroAxis for general take when
+ * axis is not zero, use TakeZeroAxisGPU or TakeZeroAxisCPU for axis zero
  */
 template<bool clip = true>
-struct Take {
+struct TakeNonzeroAxis {
   /*!
    * \brief Map function for take operator
    * \param i           global thread id
@@ -315,28 +315,28 @@ struct Take {
    */
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data,
-                                  const IType* idx,
-                                  const mshadow::Shape<10> in_stride,
-                                  const mshadow::Shape<10> out_stride,
+                                  const IType* idx, const int out_prev_stride,
+                                  const int in_prev_stride, const int in_stride,
                                   const int in_ndims, const int out_ndims, const int idx_ndims,
                                   const int axis_dim, const int axis) {
     // i is the global flattened index in the output
-    const int64_t out_head_index = (axis == 0) ? 0 : (i / out_stride[axis - 1]);
-    const int64_t out_rest_index = (axis == 0) ? i : (i % out_stride[axis - 1]);
-    const int64_t out_mid_index = out_rest_index / in_stride[axis];
+    const int64_t out_head_index = i / out_prev_stride;
+    const int64_t out_rest_index = i % out_prev_stride;
+    const int64_t out_mid_index = out_rest_index / in_stride;
     const int64_t out_tail_index = (axis == in_ndims - 1) ?
-                                   0 : (out_rest_index % in_stride[axis]);
+                                   0 : (out_rest_index % in_stride);
     int64_t idx_index = static_cast<int64_t>(idx[out_mid_index]);
     if (clip) {
       idx_index = (idx_index < 0) ? 0 : idx_index;
       idx_index = (idx_index > axis_dim - 1) ? (axis_dim - 1) : idx_index;
+    } else {
+      idx_index %= axis_dim;
+      idx_index += (idx_index < 0) ? axis_dim : 0;
     }
-    idx_index %= axis_dim;
-    idx_index += (idx_index < 0) ? axis_dim : 0;
     const int64_t in_tail_index = out_tail_index;
     const int64_t in_head_index = out_head_index;
-    int64_t in_src_index = in_tail_index + idx_index * in_stride[axis];
-    in_src_index += (axis == 0) ? 0 : in_head_index * in_stride[axis - 1];
+    int64_t in_src_index = in_tail_index + idx_index * in_stride;
+    in_src_index += in_head_index * in_prev_stride;
     out_data[i] = in_data[in_src_index];
   }
 };
@@ -670,9 +670,9 @@ struct TakeParam: public dmlc::Parameter<TakeParam> {
     .set_default(take_::kClip)
     .describe("Specify how out-of-bound indices bahave. Default is \"clip\"."
               " \"clip\" means clip to the range. So, if all indices mentioned are too large,"
-              " they are replaced by the index that addresses the last element along an axis. "
-              " \"wrap\" means to wrap around. "
-              " \"raise\" means to raise an error, not supported yet.");
+              " they are replaced by the index that addresses the last element along an axis."
+              " \"wrap\" means to wrap around."
+              " \"raise\" means to raise an error when index out of range.");
   }
 };
 
@@ -1030,6 +1030,10 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
       const mxnet::TShape& arrshape = outputs[0].shape_;
       const mxnet::TShape& oshape = inputs[0].shape_;
 
+      if (idxshape.Size() == 0) {
+        return;
+      }
+
       if (req[take_::kIdx] != kNullOp) {
         mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(
           s, idxshape.Size(), outputs[take_::kIdx].dptr<IType>());
@@ -1307,15 +1311,15 @@ inline bool GatherNDType(const nnvm::NodeAttrs& attrs,
 
 struct gather_nd {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, OpReqType req, int N, int M, int K,
+  MSHADOW_XINLINE static void Map(index_t i, OpReqType req, index_t N, index_t M, index_t K,
                                   const mshadow::Shape<10> strides,
                                   DType* out, const DType* data,
                                   const IType* indices) {
-    int offset = 0;
-    for (int j = 0; j < M; ++j) {
-      offset += strides[j] * static_cast<int>(indices[j*N + i]);
+    index_t offset = 0;
+    for (index_t j = 0; j < M; ++j) {
+      offset += strides[j] * static_cast<index_t>(indices[j*N + i]);
     }
-    for (int j = 0; j < K; ++j) {
+    for (index_t j = 0; j < K; ++j) {
       KERNEL_ASSIGN(out[i*K + j], req, data[offset+j]);
     }
   }

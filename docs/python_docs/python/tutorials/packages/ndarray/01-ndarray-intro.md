@@ -23,10 +23,10 @@ will introduce you to how data is handled with MXNet. You will learn the basics
 about MXNet's multi-dimensional array format, `ndarray`.
 
 This content was extracted and simplified from the gluon tutorials in
-[Dive Into Deep Learning](http://gluon.io/).
+[Dive Into Deep Learning](https://d2l.ai/).
 
 ## Prerequisites
-* [MXNet installed in a Python environment](../../../install/index.html?language=Python).
+* [MXNet installed in a Python environment](/get_started?version=master&platform=linux&language=python&environ=pip&processor=cpu).
 * Python 2.7.x or Python 3.x
 
 
@@ -78,9 +78,7 @@ print(x)
 values of any of its entries. This means that the entries can have any form of
 values, including very big ones! Typically, we'll want our matrices initialized
 and very often we want a matrix of all zeros, so we can use the `.zeros`
-function. If you're feeling experimental, try one of the several [array creation
-functions](https://mxnet.incubator.apache.org/api/{.python
-.input}/ndarray/ndarray.html#array-creation-routines).
+function.
 
 <!-- showing something
 different here (3,10) since the zeros may not produce anything different from
@@ -93,8 +91,7 @@ print(x)
 ```
 
 Similarly, `ndarray` has a function to create a matrix of all ones aptly named
-[ones](https://mxnet.incubator.apache.org/api/{.python
-.input}/ndarray.html?highlight=random_normal#mxnet.ndarray.ones).
+[ones](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.ones).
 
 ```python
 x = nd.ones((3, 4))
@@ -105,8 +102,7 @@ Often, we'll want to create arrays whose values are sampled randomly. This is
 especially common when we intend to use the array as a parameter in a neural
 network. In this snippet, we initialize with values drawn from a standard normal
 distribution with zero mean and unit variance using
-[random_normal](https://mxnet.incubator.apache.org/api/{.python
-.input}/ndarray.html?highlight=random_normal#mxnet.ndarray.random_normal).
+[random_normal](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.random_normal).
 
 <!--
 Is it that important to introduce zero mean and unit variance right now?

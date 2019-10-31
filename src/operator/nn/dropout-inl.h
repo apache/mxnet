@@ -182,10 +182,10 @@ class DropoutOp {
      * \param input_data Input data to perform the dropout on
      * \param pkeep Dropout rate (keep when the generated random number is less than this value)
      */
-    MSHADOW_XINLINE static void Map(int id,
+    MSHADOW_XINLINE static void Map(index_t id,
                                     RandGenerator<xpu, DType> gen,
-                                    const int N,
-                                    const int step,
+                                    const index_t N,
+                                    const index_t step,
                                     DType *dropout_out,
                                     DType *mask_out,
                                     const DType *input_data,
@@ -199,10 +199,10 @@ class DropoutOp {
   };
   struct BernoulliKernel {
     /*! \brief Bernoulli kernel for generating mask */
-    MSHADOW_XINLINE static void Map(int id,
+    MSHADOW_XINLINE static void Map(index_t id,
                                     RandGenerator<xpu, DType> gen,
-                                    const int N,
-                                    const int step,
+                                    const index_t N,
+                                    const index_t step,
                                     DType *mask_out,
                                     const real_t pkeep) {
       RNG_KERNEL_LOOP(xpu, DType, id, gen, N, step, {
@@ -394,7 +394,7 @@ class DropoutOp {
               mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
               mshadow::Shape<NDim> lstride = mxnet_op::calc_stride(new_lshape.get<NDim>());
               mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
-              mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, DType,
+              mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, DType, DType,
                                mshadow_op::mul>, xpu>::
               template LaunchEx(s, new_oshape.Size(), req[dropout::kOut],
               lstride, rstride, oshape,
@@ -463,7 +463,7 @@ class DropoutOp {
             mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
             mshadow::Shape<NDim> lstride = mxnet_op::calc_stride(new_lshape.get<NDim>());
             mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
-            mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, DType,
+            mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, DType, DType,
                              mshadow_op::mul>, xpu>::
             template LaunchEx(s, new_oshape.Size(), req[0], lstride, rstride, oshape,
             grad.dptr<DType>(), mask.dptr<DType>(), gdata.dptr<DType>());

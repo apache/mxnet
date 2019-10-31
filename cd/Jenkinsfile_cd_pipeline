@@ -27,6 +27,12 @@ pipeline {
   agent {
     label 'restricted-utility'
   }
+  options {
+    // Because each pass of the CD pipeline
+    // updates Jenkins' state of the release job
+    // to avoid crazy issues, we don't allow concurrent builds.
+    disableConcurrentBuilds()  
+  }
 
   parameters {
     // Release parameters
@@ -39,6 +45,9 @@ pipeline {
       steps {
         script {
           cd_utils = load('cd/Jenkinsfile_utils.groovy')
+          
+          // Update release job state in Jenkins
+          cd_utils.update_release_job_state()
         }
       }
     }
@@ -51,6 +60,18 @@ pipeline {
             "Static libmxnet based release": {
               stage("Build") {
                 cd_utils.trigger_release_job("Build static libmxnet", "mxnet_lib/static", params.MXNET_VARIANTS)    
+              }
+              stage("Releases") {
+                cd_utils.error_checked_parallel([
+                  "PyPI Release": {
+                    echo "Building PyPI Release"
+                    cd_utils.trigger_release_job("Release PyPI Packages", "python/pypi", params.MXNET_VARIANTS)
+                  },
+                  "Python Docker Release": {
+                    echo "Building Python Docker Release"
+                    cd_utils.trigger_release_job("Release Python Docker Images", "python/docker", params.MXNET_VARIANTS)
+                  }
+                ])
               }
             },
 
