@@ -26,8 +26,9 @@ import warnings
 
 import numpy as np
 
-from ....metric import EvalMetric
+from ....metric import EvalMetric, CompositeEvalMetric
 from ....metric import Loss as metric_loss
+from .utils import _check_metrics
 
 __all__ = ['TrainBegin', 'TrainEnd', 'EpochBegin', 'EpochEnd', 'BatchBegin', 'BatchEnd',
            'StoppingHandler', 'MetricHandler', 'ValidationHandler',
@@ -118,7 +119,7 @@ class MetricHandler(EpochBegin, BatchEnd):
     """
 
     def __init__(self, train_metrics):
-        self.train_metrics = train_metrics or []
+        self.train_metrics = _check_metrics(train_metrics)
         # order to be called among all callbacks
         # metrics need to be calculated before other callbacks can access them
         self.priority = -np.Inf
@@ -173,7 +174,7 @@ class ValidationHandler(TrainBegin, BatchEnd, EpochEnd):
         self.eval_fn = eval_fn
         self.epoch_period = epoch_period
         self.batch_period = batch_period
-        self.val_metrics = val_metrics
+        self.val_metrics = _check_metrics(val_metrics)
         self.current_batch = 0
         self.current_epoch = 0
         # order to be called among all callbacks
@@ -255,8 +256,8 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
                              "E.g: LoggingHandler(verbose=LoggingHandler.LOG_PER_EPOCH)"
                              % verbose)
         self.verbose = verbose
-        self.train_metrics = train_metrics or []
-        self.val_metrics = val_metrics or []
+        self.train_metrics = _check_metrics(train_metrics)
+        self.val_metrics = _check_metrics(val_metrics)
         self.batch_index = 0
         self.current_epoch = 0
         self.processed_samples = 0
@@ -637,6 +638,9 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
         if not isinstance(monitor, EvalMetric):
             raise ValueError("Please provide one of the metric objects as monitor, "
                              "You can create these objects using estimator.prepare_loss_and_metric()")
+        if isinstance(monitor, CompositeEvalMetric):
+            raise ValueError("CompositeEvalMetric is not supported for EarlyStoppingHandler, "
+                             "please specify a simple metric instead.")
         self.monitor = monitor
         self.baseline = baseline
         self.patience = patience

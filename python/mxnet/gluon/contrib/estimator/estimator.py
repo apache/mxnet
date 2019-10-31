@@ -24,6 +24,7 @@ import warnings
 
 from .event_handler import MetricHandler, ValidationHandler, LoggingHandler, StoppingHandler
 from .event_handler import TrainBegin, EpochBegin, BatchBegin, BatchEnd, EpochEnd, TrainEnd
+from .utils import _check_metrics
 from ...data import DataLoader
 from ...loss import SoftmaxCrossEntropyLoss
 from ...loss import Loss as gluon_loss
@@ -68,7 +69,7 @@ class Estimator(object):
 
         self.net = net
         self.loss = self._check_loss(loss)
-        self.train_metrics = self._check_metrics(metrics)
+        self.train_metrics = _check_metrics(metrics)
 
         self.context = self._check_context(context)
         self._initialize(initializer)
@@ -83,18 +84,6 @@ class Estimator(object):
             raise ValueError("loss must be a Loss or a list of Loss, "
                              "refer to gluon.loss.Loss:{}".format(loss))
         return loss
-
-    def _check_metrics(self, metrics):
-        if isinstance(metrics, CompositeEvalMetric):
-            metrics = metrics.metrics
-        elif isinstance(metrics, EvalMetric):
-            metrics = [metrics]
-        else:
-            metrics = metrics or []
-            if not all([isinstance(metric, EvalMetric) for metric in metrics]):
-                raise ValueError("metrics must be a Metric or a list of Metric, "
-                                 "refer to mxnet.metric.EvalMetric:{}".format(metrics))
-        return metrics
 
     def _check_context(self, context):
         # infer available context

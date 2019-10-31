@@ -191,10 +191,13 @@ def run(net, train_dataloader, test_dataloader, num_epochs, ctx, lr):
     # Define loss and evaluation metrics
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
     metrics = mx.metric.CompositeEvalMetric()
-    metrics.add([mx.metric.Accuracy(), mx.metric.Loss()])
+    acc = mx.metric.Accuracy()
+    nested_metrics = mx.metric.CompositeEvalMetric()
+    metrics.add([acc, mx.metric.Loss()])
+    nested_metrics.add([metrics, mx.metric.Accuracy()])
 
     # Define estimator
-    est = estimator.Estimator(net=net, loss=loss, metrics=metrics,
+    est = estimator.Estimator(net=net, loss=loss, metrics=nested_metrics,
                               trainer=trainer, context=ctx)
     # Begin training
     est.fit(train_data=train_dataloader, val_data=test_dataloader,
