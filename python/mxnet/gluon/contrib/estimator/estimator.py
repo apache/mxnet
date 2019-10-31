@@ -32,7 +32,7 @@ from ...trainer import Trainer
 from ...utils import split_and_load
 from .... import autograd
 from ....context import Context, cpu, gpu, num_gpus
-from ....metric import EvalMetric, Accuracy, CompositeEvalMetric
+from ....metric import Accuracy
 from ....metric import Loss as metric_loss
 
 __all__ = ['Estimator']
