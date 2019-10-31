@@ -84,8 +84,6 @@ endif
 
 ifeq ($(USE_MKLDNN), 1)
 	MKLDNNROOT = $(ROOTDIR)/3rdparty/mkldnn/build/install
-	MKLROOT = $(ROOTDIR)/3rdparty/mkldnn/build/install
-	export USE_MKLML = 1
 endif
 
 include $(TPARTYDIR)/mshadow/make/mshadow.mk
@@ -151,14 +149,9 @@ endif
 
 ifeq ($(USE_MKLDNN), 1)
 	CFLAGS += -DMXNET_USE_MKLDNN=1
-	CFLAGS += -DUSE_MKL=1
 	CFLAGS += -I$(ROOTDIR)/src/operator/nn/mkldnn/
-	ifneq ($(MKLDNNROOT), $(MKLROOT))
-		CFLAGS += -I$(MKLROOT)/include
-		LDFLAGS += -L$(MKLROOT)/lib
-	endif
 	CFLAGS += -I$(MKLDNNROOT)/include
-	LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
+	LDFLAGS += -L$(MKLDNNROOT)/lib -L$(MKLDNNROOT)/lib64 -lmkldnn -Wl,-rpath,'$${ORIGIN}'
 endif
 
 # setup opencv
@@ -604,9 +597,7 @@ lib/libmxnet.so: $(ALLX_DEP)
 	-Wl,${WHOLE_ARCH} $(filter %libnnvm.a, $^) -Wl,${NO_WHOLE_ARCH}
 ifeq ($(USE_MKLDNN), 1)
 ifeq ($(UNAME_S), Darwin)
-	install_name_tool -change '@rpath/libmklml.dylib' '@loader_path/libmklml.dylib' $@
-	install_name_tool -change '@rpath/libiomp5.dylib' '@loader_path/libiomp5.dylib' $@
-	install_name_tool -change '@rpath/libmkldnn.0.dylib' '@loader_path/libmkldnn.0.dylib' $@
+	install_name_tool -change '@rpath/libmkldnn.1.dylib' '@loader_path/libmkldnn.1.dylib' $@
 endif
 endif
 
@@ -698,10 +689,8 @@ rpkg:
 	cp src/io/image_recordio.h R-package/src
 	cp -rf lib/libmxnet.so R-package/inst/libs
 
-	if [ -e "lib/libmkldnn.so.0" ]; then \
-		cp -rf lib/libmkldnn.so.0 R-package/inst/libs; \
-		cp -rf lib/libiomp5.so R-package/inst/libs; \
-		cp -rf lib/libmklml_intel.so R-package/inst/libs; \
+	if [ -e "lib/libmkldnn.so.1" ]; then \
+		cp -rf lib/libmkldnn.so.1 R-package/inst/libs; \
 	fi
 
 	if [ -e "lib/libtvm_runtime.so" ]; then \
