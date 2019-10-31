@@ -51,7 +51,7 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'add', 'subtrac
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative',
            'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh',
            'tensordot', 'histogram', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange',
-           'split', 'vsplit', 'concatenate', 'stack', 'vstack', 'dstack', 'mean', 'maximum', 'minimum',
+           'split', 'vsplit', 'concatenate', 'stack', 'vstack', 'column_stack', 'dstack', 'mean', 'maximum', 'minimum',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming',
            'blackman', 'flip', 'around', 'arctan2', 'hypot', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril',
            'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
@@ -577,7 +577,7 @@ class ndarray(NDArray):
             if not isinstance(key, tuple) or len(key) != 0:
                 raise IndexError('scalar tensor can only accept `()` as index')
             if isinstance(value, numeric_types):
-                self.full(value)
+                self._full(value)
             elif isinstance(value, ndarray) and value.size == 1:
                 if value.shape != self.shape:
                     value = value.reshape(self.shape)
@@ -1993,15 +1993,20 @@ def array(object, dtype=None, ctx=None):
     """
     if ctx is None:
         ctx = current_context()
-    if isinstance(object, ndarray):
+    if isinstance(object, (ndarray, _np.ndarray)):
         dtype = object.dtype if dtype is None else dtype
+    elif isinstance(object, NDArray):
+        raise ValueError("If you're trying to create a mxnet.numpy.ndarray "
+                         "from mx.nd.NDArray, please use the zero-copy as_np_ndarray function.")
     else:
-        dtype = _np.float32 if dtype is None else dtype
-        if not isinstance(object, (ndarray, _np.ndarray)):
-            try:
-                object = _np.array(object, dtype=dtype)
-            except Exception as e:
-                raise TypeError('{}'.format(str(e)))
+        if dtype is None:
+            dtype = object.dtype if hasattr(object, "dtype") else _np.float32
+        try:
+            object = _np.array(object, dtype=dtype)
+        except Exception as e:
+            # printing out the error raised by official NumPy's array function
+            # for transparency on users' side
+            raise TypeError('{}'.format(str(e)))
     ret = empty(object.shape, dtype=dtype, ctx=ctx)
     if len(object.shape) == 0:
         ret[()] = object
@@ -4897,6 +4902,42 @@ def vstack(arrays, out=None):
            [4.]])
     """
     return _mx_nd_np.vstack(arrays)
+
+
+@set_module('mxnet.numpy')
+def column_stack(tup):
+    """
+    Stack 1-D arrays as columns into a 2-D array.
+
+    Take a sequence of 1-D arrays and stack them as columns
+    to make a single 2-D array. 2-D arrays are stacked as-is,
+    just like with `hstack`.  1-D arrays are turned into 2-D columns
+    first.
+
+    Parameters
+    ----------
+    tup : sequence of 1-D or 2-D arrays.
+        Arrays to stack. All of them must have the same first dimension.
+
+    Returns
+    --------
+    stacked : 2-D array
+        The array formed by stacking the given arrays.
+
+    See Also
+    --------
+    stack, hstack, vstack, concatenate
+
+    Examples
+    --------
+    >>> a = np.array((1,2,3))
+    >>> b = np.array((2,3,4))
+    >>> np.column_stack((a,b))
+    array([[1., 2.],
+           [2., 3.],
+           [3., 4.]])
+    """
+    return _mx_nd_np.column_stack(tup)
 
 
 @set_module('mxnet.numpy')

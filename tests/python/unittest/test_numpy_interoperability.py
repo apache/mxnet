@@ -93,6 +93,7 @@ def _add_workload_copy():
 
 def _add_workload_expand_dims():
     OpArgMngr.add_workload('expand_dims', np.random.uniform(size=(4, 1)), -1)
+    OpArgMngr.add_workload('expand_dims', np.random.uniform(size=(4, 1)) > 0.5, -1)
     for axis in range(-5, 4):
         OpArgMngr.add_workload('expand_dims', np.empty((2, 3, 4, 5)), axis)
 
@@ -852,8 +853,8 @@ def _add_workload_remainder():
     # test_float_remainder_corner_cases
     # Check remainder magnitude.
     for ct in _FLOAT_DTYPES:
-        b = _np.array(1.0)
-        a = np.array(_np.nextafter(_np.array(0.0), -b), dtype=ct)
+        b = _np.array(1.0, dtype=ct)
+        a = np.array(_np.nextafter(_np.array(0.0, dtype=ct), -b), dtype=ct)
         b = np.array(b, dtype=ct)
         OpArgMngr.add_workload('remainder', a, b)
         OpArgMngr.add_workload('remainder', -a, -b)
@@ -1019,6 +1020,11 @@ def _add_workload_vstack(array_pool):
     OpArgMngr.add_workload('vstack', (array_pool['4x1'], np.random.uniform(size=(5, 1))))
     OpArgMngr.add_workload('vstack', array_pool['4x1'])
     OpArgMngr.add_workload('vstack', array_pool['1x1x0'])
+
+def _add_workload_column_stack():
+    OpArgMngr.add_workload('column_stack', (np.array([1, 2, 3]), np.array([2, 3, 4])))
+    OpArgMngr.add_workload('column_stack', (np.array([[1], [2], [3]]), np.array([[2], [3], [4]])))
+    OpArgMngr.add_workload('column_stack', [np.array(_np.arange(3)) for _ in range(2)])
 
 
 def _add_workload_equal(array_pool):
@@ -1207,6 +1213,7 @@ def _prepare_workloads():
     _add_workload_logical_not(array_pool)
     _add_workload_vdot()
     _add_workload_vstack(array_pool)
+    _add_workload_column_stack()
     _add_workload_equal(array_pool)
     _add_workload_not_equal(array_pool)
     _add_workload_greater(array_pool)

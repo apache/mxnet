@@ -60,7 +60,7 @@ static void ConvolutionComputeExCPU(const nnvm::NodeAttrs& attrs,
   const ConvolutionParam& params = nnvm::get<ConvolutionParam>(attrs.parsed);
   if (SupportMKLDNNConv(params, inputs[0])) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    MKLDNNConvolutionForward(attrs, ctx, inputs, req, outputs);
+    MKLDNNRun(MKLDNNConvolutionForward, attrs, ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(ConvolutionCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
@@ -75,7 +75,7 @@ static void ConvolutionGradComputeExCPU(const nnvm::NodeAttrs& attrs,
   const ConvolutionParam& params = nnvm::get<ConvolutionParam>(attrs.parsed);
   if (SupportMKLDNNConv(params, inputs[0])) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    MKLDNNConvolutionBackward(attrs, ctx, inputs, req, outputs);
+    MKLDNNRun(MKLDNNConvolutionBackward, attrs, ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(ConvolutionGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }

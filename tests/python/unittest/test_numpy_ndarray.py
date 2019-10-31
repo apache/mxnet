@@ -18,6 +18,7 @@
 # pylint: skip-file
 from __future__ import absolute_import
 from __future__ import division
+import itertools
 import os
 import unittest
 import numpy as _np
@@ -87,6 +88,7 @@ def test_np_array_creation():
         [],
         (),
         [[1, 2], [3, 4]],
+        _np.random.randint(-10, 10, size=rand_shape_nd(3)),
         _np.random.uniform(size=rand_shape_nd(3)),
         _np.random.uniform(size=(3, 0, 4))
     ]
@@ -94,10 +96,12 @@ def test_np_array_creation():
         for src in objects:
             mx_arr = np.array(src, dtype=dtype)
             assert mx_arr.ctx == mx.current_context()
+            if dtype is None:
+                dtype = src.dtype if isinstance(src, _np.ndarray) else _np.float32
             if isinstance(src, mx.nd.NDArray):
-                np_arr = _np.array(src.asnumpy(), dtype=dtype if dtype is not None else _np.float32)
+                np_arr = _np.array(src.asnumpy(), dtype=dtype)
             else:
-                np_arr = _np.array(src, dtype=dtype if dtype is not None else _np.float32)
+                np_arr = _np.array(src, dtype=dtype)
             assert mx_arr.dtype == np_arr.dtype
             assert same(mx_arr.asnumpy(), np_arr)
 
@@ -471,9 +475,6 @@ def test_np_grad_ndarray_type():
 @with_seed()
 @use_np
 def test_np_ndarray_astype():
-    mx_data = np.array([2, 3, 4, 5], dtype=_np.int32)
-    np_data = mx_data.asnumpy()
-
     class TestAstype(HybridBlock):
         def __init__(self, dtype, copy):
             super(TestAstype, self).__init__()
@@ -483,24 +484,29 @@ def test_np_ndarray_astype():
         def hybrid_forward(self, F, x):
             return x.astype(dtype=self._dtype, copy=self._copy)
 
-    def check_astype_equal(dtype, copy, expect_zero_copy=False, hybridize=False):
-        test_astype = TestAstype(dtype, copy)
+    def check_astype_equal(itype, otype, copy, expect_zero_copy=False, hybridize=False):
+        expect_zero_copy = copy is False and itype == otype
+        mx_data = np.array([2, 3, 4, 5], dtype=itype)
+        np_data = mx_data.asnumpy()
+        test_astype = TestAstype(otype, copy)
         if hybridize:
             test_astype.hybridize()
         mx_ret = test_astype(mx_data)
         assert type(mx_ret) is np.ndarray
-        np_ret = np_data.astype(dtype=dtype, copy=copy)
+        np_ret = np_data.astype(dtype=otype, copy=copy)
         assert mx_ret.dtype == np_ret.dtype
         assert same(mx_ret.asnumpy(), np_ret)
         if expect_zero_copy and not hybridize:
             assert id(mx_ret) == id(mx_data)
             assert id(np_ret) == id(np_data)
 
-    for dtype in [np.int8, np.uint8, np.int32, np.float16, np.float32, np.float64, np.bool, np.bool_,
-                  'int8', 'uint8', 'int32', 'float16', 'float32', 'float64', 'bool']:
+    dtypes = [np.int8, np.uint8, np.int32, np.float16, np.float32, np.float64, np.bool, np.bool_,
+              'int8', 'uint8', 'int32', 'float16', 'float32', 'float64', 'bool']
+
+    for itype, otype in itertools.product(dtypes, dtypes):
         for copy in [True, False]:
             for hybridize in [True, False]:
-                check_astype_equal(dtype, copy, copy is False and mx_data.dtype == dtype, hybridize)
+                check_astype_equal(itype, otype, copy, hybridize)
 
 
 @with_seed()

@@ -692,6 +692,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
         USE_TVM_OP=1                  \
         USE_BLAS=mkl                  \
         USE_SIGNAL_HANDLER=1          \
+        USE_INTEL_PATH=/opt/intel/    \
         -j$(nproc)
 }
 
@@ -898,9 +899,9 @@ build_ubuntu_gpu_cmake_mkldnn() {
         /work/mxnet
 
     ninja -v
-    # libmkldnn.so.0 is a link file. We need an actual binary file named libmkldnn.so.0.
-    cp 3rdparty/mkldnn/src/libmkldnn.so.0 3rdparty/mkldnn/src/libmkldnn.so.0.tmp
-    mv 3rdparty/mkldnn/src/libmkldnn.so.0.tmp 3rdparty/mkldnn/src/libmkldnn.so.0
+    # libmkldnn.so.1 is a link file. We need an actual binary file named libmkldnn.so.1.
+    cp 3rdparty/mkldnn/src/libmkldnn.so.1 3rdparty/mkldnn/src/libmkldnn.so.1.tmp
+    mv 3rdparty/mkldnn/src/libmkldnn.so.1.tmp 3rdparty/mkldnn/src/libmkldnn.so.1
 }
 
 build_ubuntu_gpu_cmake() {
@@ -1376,6 +1377,10 @@ integrationtest_ubuntu_cpu_asan() {
 integrationtest_ubuntu_gpu_cpp_package() {
     set -ex
     cpp-package/tests/ci_test.sh
+    export PYTHONPATH=./python/
+    python3 -c "import mxnet as mx; mx.test_utils.download_model(\"imagenet1k-resnet-18\"); mx.test_utils.download_model(\"imagenet1k-resnet-152\"); mx.test_utils.download_model(\"imagenet1k-resnet-50\");"
+    build/tests/mxnet_unit_tests --gtest_filter="ThreadSafety.*"
+    build/tests/mxnet_unit_tests --gtest_filter="ThreadSafety.*" --thread-safety-with-cpu
 }
 
 integrationtest_ubuntu_gpu_capi_cpp_package() {
