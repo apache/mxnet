@@ -663,7 +663,7 @@ void MKLDNNRnnOp::Init(const OpContext &ctx,
     size_t layer_bias_bytes = single_b_bytes * directions;  // Naive MXNet has double bias
 
     if (!fwd_layer.IsInitialized() || is_training)
-      fwd_layer.SetWeightsMem(&(this->mgr_), weights_ptr, bias_ptr, dtype);
+      fwd_layer.SetWeightsMem(&(this->mgr_), weights_ptr, bias_ptr, is_training, dtype);
     weights_ptr += layer_weights_bytes;
     bias_ptr += layer_bias_bytes;
   }
