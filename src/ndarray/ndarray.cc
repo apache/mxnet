@@ -460,7 +460,7 @@ void NDArray::Chunk::MKLDNNDataReorder(const mkldnn::memory::desc &md) {
 
   // This may be called in MKLDNN operators. We can't use MKLDNNStream here.
   mkldnn::reorder(*old_mem, *new_mem).execute(s, *old_mem, *new_mem);
-
+  s.wait();
   CHECK(shandle.size >= md.get_size());
   CheckAndAlloc(md.get_size());
   // TODO(zhengda) We need to avoid memory copy here.
