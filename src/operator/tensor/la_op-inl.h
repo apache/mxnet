@@ -125,10 +125,8 @@ struct potrf {
                  Stream<xpu> *s, const nnvm::NodeAttrs& attrs) {
     const LaCholeskyParam& param = nnvm::get<LaCholeskyParam>(attrs.parsed);
     if ( A.dptr_ != B.dptr_ ) Copy(B, A, s);
-    for (int i = 0; i < A.shape_.kDimension; ++i) {
-      if (A.shape_[i] == 0) {
-        return;
-      }
+    if (A.shape_.Size() == 0U) {
+      return;
     }
     linalg_batch_potrf(B, param.lower, s);
     using namespace mxnet_op;
@@ -602,9 +600,8 @@ struct potrf_backward {
     if ( dB.dptr_ != dA.dptr_ ) {
       Copy(dA, dB, s);
     }
-    for (int i = 0; i < dA.shape_.kDimension; ++i) {
-      if (dA.shape_[i] == 0)
-        return;
+    if (dA.shape_.Size() == 0U) {
+      return;
     }
     trmm::op(B, dA, DType(1.0), !param.lower, param.lower, true, s);
     using namespace mxnet_op;

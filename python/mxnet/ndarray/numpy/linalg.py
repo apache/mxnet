@@ -165,7 +165,7 @@ def cholesky(a):
     Raises
     ------
     MXNetError
-        If the dcomposition fails, for example, if `a` is not positive-definite.
+        If the decomposition fails, for example, if `a` is not positive-definite.
 
     Notes
     -----
