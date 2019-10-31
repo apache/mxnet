@@ -366,7 +366,7 @@ inline std::vector<NDArrayAttrs> GetTestInputArrays(
 
     for (auto md : mds) {
       for (size_t dim = 0; dim < scale.size(); ++dim) {
-        if(scale[dim] == 1)
+        if (scale[dim] == 1)
           continue;
         // preserve if matching layout else just expand on 0 dim
         if (shape.ndim() == md.data.ndims)
@@ -511,8 +511,11 @@ inline std::vector<NDArrayAttrs> GetTestOutputArrays(
     if (scale.size() > md.data.ndims)
       continue;
 
-    for (int dim = 0; dim < scale.size(); dim++)
+    for (int dim = 0; dim < scale.size(); dim++) {
+      if (scale[dim])
+        continue;
       md = GetExpandedMemDesc(md, scale[dim]);
+    }
 
     // Type 2, 3.
     arr = NDArray(shape, Context());
