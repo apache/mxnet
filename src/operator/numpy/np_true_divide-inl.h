@@ -105,6 +105,8 @@ void TrueDivideElemwiseCompute(const nnvm::NodeAttrs &attrs,
         });
       }
     } else {
+      // TODO(haojin2): No mixed-precision true_divide on windows temporarily due to CI issues.
+#ifndef _WIN32
       // Case when types of the 2 input tensors are different
       if (common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
         // both lhs and rhs are float types, output type is the more precise one
@@ -135,6 +137,9 @@ void TrueDivideElemwiseCompute(const nnvm::NodeAttrs &attrs,
         // lhs is integer type, rhs is integer type, output type should be float
         LOG(ERROR) << "not implemented yet...";
       }
+#else
+      LOG(ERROR) << "mixed precision true_divide is not supported on windows yet...";
+#endif
     }
   });
 }
@@ -184,6 +189,8 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
           });
         }
       } else {
+        // TODO(haojin2): No mixed-precision true_divide on windows temporarily due to CI issues.
+#ifndef _WIN32
         if (common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
           // lhs and rhs have different float types, the output is the more precise one
           LOG(ERROR) << "not implemented yet...";
@@ -216,6 +223,9 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
           // lhs and rhs have different integer types, the output is float type
           LOG(ERROR) << "not implemented yet...";
         }
+#else
+        LOG(ERROR) << "mixed precision true_divide is not supported on windows yet...";
+#endif
       }
     });
   }

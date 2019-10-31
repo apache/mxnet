@@ -39,6 +39,8 @@ void MixedBinaryElemwiseCompute(const nnvm::NodeAttrs& attrs,
                                 const std::vector<TBlob>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<TBlob>& outputs) {
+  // TODO(haojin2): No mixed-precision multiply on windows temporarily due to CI issues.
+#ifndef _WIN32
   using namespace mshadow;
   using namespace mxnet_op;
   CHECK_EQ(inputs.size(), 2U);
@@ -68,6 +70,9 @@ void MixedBinaryElemwiseCompute(const nnvm::NodeAttrs& attrs,
       }
     });
   });
+#else
+  LOG(ERROR) << "mixed precision multiply is not supported on windows yet...";
+#endif
 }
 
 template<typename xpu, typename OP, typename LOP, typename ROP>
@@ -97,6 +102,8 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
     return;
   }
 
+  // TODO(haojin2): No mixed-precision multiply on windows temporarily due to CI issues.
+#ifndef _WIN32
   CHECK((lhs.type_flag_ == mshadow::kBool) || (rhs.type_flag_ == mshadow::kBool))
     << "now supports bool with another type only";
 
@@ -122,6 +129,9 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
       });
     });
   }
+#else
+  LOG(ERROR) << "mixed precision multiply is not supported on windows yet...";
+#endif
 }
 
 template<typename xpu, typename LOP, typename ROP>
