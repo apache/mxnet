@@ -442,7 +442,7 @@ def test_np_sum():
             for axis in ([i for i in range(in_data_dim)] + [(), None]):
                 for itype in ['float16', 'float32', 'float64', 'int8', 'int32', 'int64', 'bool']:
                     for dtype in ['float16', 'float32', 'float64', 'int8', 'int32', 'int64']:
-                        if (is_int(dtype) and not is_int(itype))\
+                        if (is_int(dtype) and not is_int(itype)) or (is_windows and is_int(itype))\
                                 or (itype == 'bool' and\
                                     (dtype not in ('float32', 'float64', 'int32', 'int64') or is_windows)):
                             continue

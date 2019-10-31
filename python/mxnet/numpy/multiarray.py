@@ -1996,13 +1996,16 @@ def array(object, dtype=None, ctx=None):
     if isinstance(object, (ndarray, _np.ndarray)):
         dtype = object.dtype if dtype is None else dtype
     elif isinstance(object, NDArray):
-        raise ValueError("")
+        raise ValueError("If you're trying to create a mxnet.numpy.ndarray "
+                         "from mx.nd.NDArray, please use the zero-copy as_np_ndarray function.")
     else:
         if dtype is None:
             dtype = object.dtype if hasattr(object, "dtype") else _np.float32
         try:
             object = _np.array(object, dtype=dtype)
         except Exception as e:
+            # printing out the error raised by official NumPy's array function
+            # for transparency on users' side
             raise TypeError('{}'.format(str(e)))
     ret = empty(object.shape, dtype=dtype, ctx=ctx)
     if len(object.shape) == 0:
