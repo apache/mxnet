@@ -228,7 +228,11 @@ class Estimator(object):
                  val_data,
                  val_metrics,
                  batch_axis=0):
-        """Evaluate model on validation data
+        """Evaluate model on validation data.
+
+        This function calls :py:func:`evaluate_batch` on each of the batches from the
+        validation data loader. Thus, for custom use cases, it's possible to inherit the
+        estimator class and override :py:func:`evaluate_batch`.
 
         Parameters
         ----------
@@ -283,6 +287,10 @@ class Estimator(object):
         """Trains the model with a given :py:class:`DataLoader` for a specified
         number of epochs or batches. The batch size is inferred from the
         data loader's batch_size.
+
+        This function calls :py:func:`fit_batch` on each of the batches from the
+        training data loader. Thus, for custom use cases, it's possible to inherit the
+        estimator class and override :py:func:`fit_batch`.
 
         Parameters
         ----------
