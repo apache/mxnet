@@ -533,8 +533,7 @@ void MKLDNNRnnForward::SetWeightsMem(MKLDNNRnnMemMgr* mgr, void *w_ptr, void *b_
   // their gradients. Then, forward training primitives could fetch them from the scope
   // of forward inference. And from there, we don't need to reorder the plain memory to
   // the optimal rnn-packed memory for forward inference.
-  if (!is_train)
-    ReorderWeights();
+  ReorderWeights();
 
   // Process bias
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
@@ -550,11 +549,10 @@ void MKLDNNRnnForward::SetWeightsMem(MKLDNNRnnMemMgr* mgr, void *w_ptr, void *b_
   });
 
   // insert weights into net_args
-  if (!is_train) {
-    EmplaceNetArgs(&this->net_args_, MKLDNN_ARG_WEIGHTS_LAYER, this->weights_layer_);
-    EmplaceNetArgs(&this->net_args_, MKLDNN_ARG_WEIGHTS_ITER,  this->weights_iter_);
-    EmplaceNetArgs(&this->net_args_, MKLDNN_ARG_BIAS,          this->bias_);
-  }
+  EmplaceNetArgs(&this->net_args_, MKLDNN_ARG_WEIGHTS_LAYER, this->weights_layer_);
+  EmplaceNetArgs(&this->net_args_, MKLDNN_ARG_WEIGHTS_ITER,  this->weights_iter_);
+  EmplaceNetArgs(&this->net_args_, MKLDNN_ARG_BIAS,          this->bias_);
+
   initialized_ = true;
 }
 
