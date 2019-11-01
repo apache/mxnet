@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=wildcard-import, unused-argument
+# pylint: disable=wildcard-import, unused-argument, too-many-ancestors
 """Gluon EventHandlers for Estimators"""
 
 import logging
@@ -34,33 +34,47 @@ __all__ = ['TrainBegin', 'TrainEnd', 'EpochBegin', 'EpochEnd', 'BatchBegin', 'Ba
            'StoppingHandler', 'MetricHandler', 'ValidationHandler',
            'LoggingHandler', 'CheckpointHandler', 'EarlyStoppingHandler']
 
+class EventHandler(object):
+    pass
 
-class TrainBegin(object):
+
+def _check_event_handlers(handlers):
+    if isinstance(handlers, EventHandler):
+        handlers = [handlers]
+    else:
+        handlers = handlers or []
+        if not all([isinstance(handler, EventHandler) for handler in handlers]):
+            raise ValueError("handlers must be an EventHandler or a list of EventHandler, "
+                             "got: {}".format(handlers))
+    return handlers
+
+
+class TrainBegin(EventHandler):
     def train_begin(self, estimator, *args, **kwargs):
         pass
 
 
-class TrainEnd(object):
+class TrainEnd(EventHandler):
     def train_end(self, estimator, *args, **kwargs):
         pass
 
 
-class EpochBegin(object):
+class EpochBegin(EventHandler):
     def epoch_begin(self, estimator, *args, **kwargs):
         pass
 
 
-class EpochEnd(object):
+class EpochEnd(EventHandler):
     def epoch_end(self, estimator, *args, **kwargs):
         return False
 
 
-class BatchBegin(object):
+class BatchBegin(EventHandler):
     def batch_begin(self, estimator, *args, **kwargs):
         pass
 
 
-class BatchEnd(object):
+class BatchEnd(EventHandler):
     def batch_end(self, estimator, *args, **kwargs):
         return False
 
@@ -393,8 +407,8 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
         self.model_prefix = model_prefix
         self.save_best = save_best
         if self.save_best and not isinstance(self.monitor, EvalMetric):
-            raise ValueError("To save best model only, please provide one of the metric objects as monitor, "
-                             "You can get these objects using estimator.prepare_loss_and_metric()")
+            raise ValueError("To save best model only, please provide one of the metric objects "
+                             "from estimator.train_metrics and estimator.val_metrics as monitor.")
         self.epoch_period = epoch_period
         self.batch_period = batch_period
         self.current_batch = 0
@@ -487,10 +501,10 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
             monitor_name, monitor_value = self.monitor.get()
             # check if monitor exists in train stats
             if np.isnan(monitor_value):
-                warnings.warn(RuntimeWarning('Skipping save best because %s is not updated, make sure you '
-                                             'pass one of the metric objects as monitor, '
-                                             'you can use estimator.prepare_loss_and_metrics to'
-                                             'create all metric objects', monitor_name))
+                warnings.warn(RuntimeWarning(
+                    'Skipping save best because %s is not updated, make sure you pass one of the '
+                    'metric objects estimator.train_metrics and estimator.val_metrics as monitor',
+                    monitor_name))
             else:
                 if self.monitor_op(monitor_value, self.best):
                     prefix = self.model_prefix + '-best'
@@ -636,8 +650,9 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
         super(EarlyStoppingHandler, self).__init__()
 
         if not isinstance(monitor, EvalMetric):
-            raise ValueError("Please provide one of the metric objects as monitor, "
-                             "You can create these objects using estimator.prepare_loss_and_metric()")
+            raise ValueError(
+                "Please provide one of the metric objects from estimator.train_metrics and "
+                "estimator.val_metrics as monitor.")
         if isinstance(monitor, CompositeEvalMetric):
             raise ValueError("CompositeEvalMetric is not supported for EarlyStoppingHandler, "
                              "please specify a simple metric instead.")
@@ -693,9 +708,9 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
     def epoch_end(self, estimator, *args, **kwargs):
         monitor_name, monitor_value = self.monitor.get()
         if np.isnan(monitor_value):
-            warnings.warn(RuntimeWarning('%s is not updated, make sure you pass one of the metric objects'
-                                         'as monitor, you can use estimator.prepare_loss_and_metrics to'
-                                         'create all metric objects', monitor_name))
+            warnings.warn(RuntimeWarning(
+                '%s is not updated, make sure you pass one of the metric objects from'
+                'estimator.train_metrics and estimator.val_metrics as monitor.', monitor_name))
         else:
             if self.monitor_op(monitor_value - self.min_delta, self.best):
                 self.best = monitor_value
