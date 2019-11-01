@@ -105,3 +105,4 @@ def evaluate_model(model, ratings, negs, K, batch_size, ctx, logger=None):
             logger.info('evaluating test data {} / {}'.format(index, len(ratings)))
 
     return hits, ndcgs
+

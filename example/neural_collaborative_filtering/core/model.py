@@ -104,3 +104,4 @@ def get_model(model_type='neumf', factor_size_mlp=128, factor_size_gmf=64,
     net = mx.symbol.LogisticRegressionOutput(data=net, label=y_label, name='sigmoid_final')
 
     return net
+

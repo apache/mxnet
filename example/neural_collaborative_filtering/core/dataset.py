@@ -24,6 +24,9 @@ class NCFTestData(object):
     def __init__(self, path):
         '''
         Constructor
+        path: converted data root
+        testRatings: converted test ratings data
+        testNegatives: negative samples for evaluation dataset
         '''
         self.testRatings = self.load_rating_file_as_list(path + "/test-ratings.csv")
         self.testNegatives = self.load_negative_file(path + "/test-negative.csv")
@@ -55,6 +58,11 @@ class NCFTestData(object):
 
 class NCFTrainData(mx.gluon.data.Dataset):
     def __init__(self, train_fname, nb_neg):
+        '''
+        Constructor
+        train_fname: converted data root
+        nb_neg: number of negative samples per positive sample while training
+        '''
         self._load_train_matrix(train_fname)
         self.nb_neg = nb_neg
 
@@ -102,3 +110,4 @@ def load_test_negs(fname):
         return list(tmp)
     negs = map(process_line, open(fname, 'r'))
     return list(negs)
+
