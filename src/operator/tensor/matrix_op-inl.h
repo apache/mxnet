@@ -347,11 +347,11 @@ void TransposeImpl(RunContext ctx,
       mshadow::Tensor<xpu, 2, DType> out = ret.FlatTo2D<xpu, DType>(s);
 
       if (axes[0] == 1 && axes[1] == 0) {
-if (ctx.get_ctx().dev_mask() == cpu::kDevMask) {
+//if (ctx.get_ctx().dev_mask() == cpu::kDevMask) {
           Transpose2D<DType,xpu>(in.dptr_, out.dptr_, in.shape_[0], in.shape_[1]);
-      } else {
-         out = in.T();
-        }
+  //    } else {
+    //     out = in.T();
+      //  }
       } else {
         Copy(out, in, s);
       }
