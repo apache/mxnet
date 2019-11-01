@@ -151,7 +151,7 @@ void BackwardInterleavedMatMulSelfAttQKGPU(const nnvm::NodeAttrs& attrs,
     const int32_t lead_dim       = attn_batches * 3 * head_dim;
     const int32_t batch_stride   = 3 * head_dim;
     const float scale            = 1.0 / sqrt(static_cast<float>(head_dim));
-    const float beta = (req[0] == kAddTo ? 1.f : 0.f;
+    const float beta = req[0] == kAddTo ? 1.f : 0.f;
 
     if (req[0] == kNullOp)
       return;
