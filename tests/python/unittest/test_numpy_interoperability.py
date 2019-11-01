@@ -1156,6 +1156,18 @@ def _add_workload_diff():
         OpArgMngr.add_workload('diff', x, n=n)
 
 
+def _add_workload_resize():
+    OpArgMngr.add_workload('resize', np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=np.int32), (5, 1))
+    OpArgMngr.add_workload('resize', np.eye(3), 3)
+    OpArgMngr.add_workload('resize', np.ones(1), ())
+    OpArgMngr.add_workload('resize', np.ones(()), (1,))
+    OpArgMngr.add_workload('resize', np.eye(3), (3, 2, 1))
+    OpArgMngr.add_workload('resize', np.eye(3), (2, 3, 3))
+    OpArgMngr.add_workload('resize', np.ones(10), 15)
+    OpArgMngr.add_workload('resize', np.zeros((10, 0)), (0, 10))
+    OpArgMngr.add_workload('resize', np.zeros((10, 0)), (0, 100))
+
+
 @use_np
 def _prepare_workloads():
     array_pool = {
@@ -1265,6 +1277,7 @@ def _prepare_workloads():
     _add_workload_less(array_pool)
     _add_workload_less_equal(array_pool)
     _add_workload_diff()
+    _add_workload_resize()
 
 
 _prepare_workloads()

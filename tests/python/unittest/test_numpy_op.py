@@ -4122,7 +4122,6 @@ def test_np_resize():
             self._new_shape = new_shape
 
         def hybrid_forward(self, F, x, *args, **kwargs):
-            print(self._new_shape)
             return F.np.resize(x, self._new_shape)
 
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64, np.bool_]

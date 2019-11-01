@@ -134,6 +134,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'shares_memory',
     'may_share_memory',
     'diff',
+    'resize',
 ]
 
 
