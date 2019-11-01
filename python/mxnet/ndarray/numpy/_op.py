@@ -2940,7 +2940,7 @@ def concatenate(seq, axis=0, out=None):
 
 
 @set_module('mxnet.ndarray.numpy')
-def append(arr, values, axis=None):
+def append(arr, values, axis=None):  # pylint: disable=redefined-outer-name
     """
     Append values to the end of an array.
 
@@ -5070,7 +5070,7 @@ def may_share_memory(a, b, max_work=None):
     return _npi.share_memory(a, b).item()
 
 
-def diff(a, n=1, axis=-1, prepend=None, append=None):
+def diff(a, n=1, axis=-1, prepend=None, append=None):  # pylint: disable=redefined-outer-name
     r"""
     numpy.diff(a, n=1, axis=-1, prepend=<no value>, append=<no value>)
 
