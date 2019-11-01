@@ -18,6 +18,7 @@
 import copy
 import sys
 import os
+import logging
 import re
 import json
 import mxnet as mx
