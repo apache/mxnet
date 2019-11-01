@@ -187,3 +187,4 @@ NNVM_REGISTER_OP(Embedding)
 });
 }  // namespace op
 }  // namespace mxnet
+
