@@ -66,15 +66,21 @@ bool NodeEqual(const Node* n, const Node* m) {
   // though this may reject Node pairs that are in fact functionally the same.
   if (n->attrs.dict != m->attrs.dict) return false;
 
-  // If an op is marked explicitly as having deterministic output
-  static auto& deterministic_output =
-    Op::GetAttr<THasDeterministicOutput>("THasDeterministicOutput");
-  if (deterministic_output.get(n->op(), false)) return true;
+  // Ops that mutate inputs cannot be optimized out
+  static auto& fmutate_inputs = Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
+  if (fmutate_inputs.get(n->op(), nullptr) != nullptr) return false;
 
   // Stateful ops cannot be be equal to each other
   static auto& fstateful = Op::GetAttr<FCreateOpState>("FCreateOpState");
   if (fstateful.get(n->op(), nullptr) != nullptr)
     return false;
+
+  // Check to see if the user has explicitly set THasDeterministicOutput to override the
+  // subsequent determination of Node equality based on resource use.
+  static auto& deterministic_output =
+      Op::GetAttr<THasDeterministicOutput>("THasDeterministicOutput");
+  if (deterministic_output.contains(n->op()))
+    return deterministic_output[n->op()];
 
   // Ops that require resource could ask for
   // random resource, so need to be explicitly marked
@@ -83,10 +89,6 @@ bool NodeEqual(const Node* n, const Node* m) {
   static auto& resource_request_ex = Op::GetAttr<FResourceRequestEx>("FResourceRequestEx");
   if (resource_request.get(n->op(), nullptr) != nullptr) return false;
   if (resource_request_ex.get(n->op(), nullptr) != nullptr) return false;
-
-  // Ops that mutate inputs cannot be optimized out
-  static auto& fmutate_inputs = Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
-  if (fmutate_inputs.get(n->op(), nullptr) != nullptr) return false;
 
   return true;
 }
