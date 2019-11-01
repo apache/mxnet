@@ -262,6 +262,7 @@ __global__ void reduce_lines_kernel(const int N, const int M, const bool addto,
 }
 
 template<typename Reducer, int ndim, typename AType, typename DType, typename OType, typename OP>
+__launch_bounds__(kMaxThreadsPerBlock)
 __global__ void reduce_kernel_M1(const int N, const bool addto,
                                 const DType* __restrict big, OType *small, const Shape<ndim> bshape,
                                 const Shape<ndim> sshape) {
@@ -277,6 +278,7 @@ __global__ void reduce_kernel_M1(const int N, const bool addto,
 }
 
 template<typename Reducer, int ndim, typename DType, typename OP1, typename OP2>
+__launch_bounds__(kMaxThreadsPerBlock)
 __global__ void reduce_kernel_M1(const int N, const bool addto,
                                  const DType* __restrict big,
                                  const DType* __restrict lhs,
