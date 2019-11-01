@@ -119,8 +119,10 @@ void QuantizedEmbeddingOpForward(const nnvm::NodeAttrs& attrs,
           << inputs[quantized_embedding::kWeight].ndim()
           << " dimensional input is given instead";
   mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
-  EmbeddingOpForwardDnsImpl<cpu>(s, inputs[quantized_embedding::kData], inputs[quantized_embedding::kWeight],
-                                 req[quantized_embedding::kOut], outputs[quantized_embedding::kOut]);
+  EmbeddingOpForwardDnsImpl<cpu>(s, inputs[quantized_embedding::kData],
+                                 inputs[quantized_embedding::kWeight],
+                                 req[quantized_embedding::kOut],
+                                 outputs[quantized_embedding::kOut]);
   float min_weight = inputs[quantized_embedding::kWeightMin].dptr<float>()[0];
   float max_weight = inputs[quantized_embedding::kWeightMax].dptr<float>()[0];
   outputs[quantized_embedding::kOutMin].dptr<float>()[0] = min_weight;
