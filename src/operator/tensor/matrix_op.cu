@@ -141,7 +141,7 @@ void SliceDimTwoCsrImpl<gpu>(const mxnet::TShape &begin, const mxnet::TShape &en
 //namespace mshadow {
 //namespace cuda {
 template<typename DType,typename gpu>
-MSHADOW_XINLINE void Transpose2D(const DType *in, DType *out, index_t row, index_t col) {
+__global__ void Transpose2D_gpu(const DType *in, DType *out, index_t row, index_t col) {
 
     index_t a=0;
 }//

@@ -261,8 +261,11 @@ struct TransposeParam : public dmlc::Parameter<TransposeParam> {
     return this->axes == other.axes;
   }
 };
-template<typename DType, typename xpu>
+template<typename DType, typename cpu>
 MSHADOW_XINLINE void Transpose2D(const DType *in, DType *out, index_t row, index_t col);
+
+template<typename DType, typename gpu>
+__global__ void Transpose2D_gpu(const DType *in, DType *out, index_t row, index_t col);
 /*!
  * \brief This function performs transpose operation on a 2D matrix by utilizing the L1 cache
  * \param in  input tensor
@@ -347,11 +350,12 @@ void TransposeImpl(RunContext ctx,
       mshadow::Tensor<xpu, 2, DType> out = ret.FlatTo2D<xpu, DType>(s);
 
       if (axes[0] == 1 && axes[1] == 0) {
-//if (ctx.get_ctx().dev_mask() == cpu::kDevMask) {
-          Transpose2D<DType,xpu>(in.dptr_, out.dptr_, in.shape_[0], in.shape_[1]);
-  //    } else {
-    //     out = in.T();
-      //  }
+if (ctx.get_ctx().dev_mask() == cpu::kDevMask) {
+          Transpose2D<DType,cpu>(in.dptr_, out.dptr_, in.shape_[0], in.shape_[1]);
+     } else {
+        //out = in.T();
+        Transpose2D_gpu<DType,gpu>(in.dptr_, out.dptr_, in.shape_[0], in.shape_[1]);
+       }
       } else {
         Copy(out, in, s);
       }
