@@ -83,6 +83,25 @@ def _add_workload_concatenate(array_pool):
     OpArgMngr.add_workload('concatenate', (a0.T, a1.T, a2.T), axis=0)
     out = np.empty(4, np.float32)
     OpArgMngr.add_workload('concatenate', (np.array([1, 2]), np.array([3, 4])), out=out)
+    OpArgMngr.add_workload('concatenate', [array_pool['4x1'], array_pool['4x1']], axis=None)
+    OpArgMngr.add_workload('concatenate', (np.arange(4).reshape((2, 2)), np.arange(4).reshape((2, 2))), axis=None)
+    OpArgMngr.add_workload('concatenate', (a23, a13), axis=None)
+
+
+def _add_workload_append():
+    def get_new_shape(shape, axis):
+        shape_lst = list(shape)
+        if axis is not None:
+            shape_lst[axis] = _np.random.randint(0, 3)
+        return tuple(shape_lst)
+
+    for shape in [(0, 0), (2, 3), (2, 1, 3)]:
+        for axis in [0, 1, None]:
+            a = np.random.uniform(-1.0, 1.0, size=get_new_shape(shape, axis))
+            b = np.random.uniform(-1.0, 1.0, size=get_new_shape(shape, axis))
+            OpArgMngr.add_workload('append', a, b, axis=axis)
+
+    OpArgMngr.add_workload('append', np.array([]), np.array([]))
 
 
 def _add_workload_copy():
@@ -1125,6 +1144,7 @@ def _prepare_workloads():
     _add_workload_argmin()
     _add_workload_argmax()
     _add_workload_around()
+    _add_workload_append()
     _add_workload_broadcast_arrays(array_pool)
     _add_workload_broadcast_to()
     _add_workload_clip()
