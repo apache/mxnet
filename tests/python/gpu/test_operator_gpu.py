@@ -2500,6 +2500,12 @@ def test_multihead_attention_selfatt():
     #os.environ['MXNET_EXEC_ENABLE_ADDTO'] = '0'
     for dtype in ['float16', 'float32']:
         check_multihead_attention_selfatt(bwd_ignore_zero_init=False, dtype=dtype)
+    try:
+        os.environ['MXNET_EXEC_ENABLE_ADDTO'] = '0'
+        check_multihead_attention_selfatt(bwd_ignore_zero_init=True)
+    except:
+        error_found = True
+    assert error_found
     #os.environ['MXNET_EXEC_ENABLE_ADDTO'] = '1'
     #check_multihead_attention_selfatt(bwd_ignore_zero_init=False)
     #check_multihead_attention_selfatt(bwd_ignore_zero_init=True)
@@ -2667,9 +2673,13 @@ def test_multihead_attention_encdec():
     #os.environ['MXNET_EXEC_ENABLE_ADDTO'] = '0'
     for dtype in ['float16', 'float32']:
         check_multihead_attention_encdec(bwd_ignore_zero_init=False, dtype=dtype)
-    #os.environ['MXNET_EXEC_ENABLE_ADDTO'] = '1'
-    #check_multihead_attention_encdec(bwd_ignore_zero_init=False)
-    #check_multihead_attention_encdec(bwd_ignore_zero_init=True)
+    error_found = False
+    try:
+        os.environ['MXNET_EXEC_ENABLE_ADDTO'] = '0'
+        check_multihead_attention_encdec(bwd_ignore_zero_init=True)
+    except:
+        error_found = True
+    assert error_found
 
 if __name__ == '__main__':
     import nose
