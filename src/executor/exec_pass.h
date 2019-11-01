@@ -34,9 +34,33 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <utility>
+#include <tuple>
 
 namespace mxnet {
 namespace exec {
+
+template <typename Attr>
+using FAccessSubgraphAttr = std::function<std::tuple<const nnvm::NodePtr,
+                                          std::vector<Attr>,
+                                          std::vector<Attr>>
+                              (const NodeAttrs& attrs)>;
+
+using FAccessSubgraphShape = FAccessSubgraphAttr<mxnet::TShape>;
+using FAccessSubgraphType = FAccessSubgraphAttr<int>;
+using FAccessSubgraphStorageType = FAccessSubgraphAttr<int>;
+
+template <typename Attr>
+using FProvideSubgraphAttr = std::function<void (const NodeAttrs& attrs,
+                                                 const std::vector<nnvm::NodePtr> &nodes,
+                                                 const std::vector<std::vector<Attr>> &in_attrs,
+                                                 const std::vector<std::vector<Attr>> &out_attrs)>;
+using FProvideSubgraphShape = FProvideSubgraphAttr<mxnet::TShape>;
+using FProvideSubgraphType = FProvideSubgraphAttr<int>;
+using FProvideSubgraphStorageType = FProvideSubgraphAttr<int>;
+
+using TIsFusion = bool;
+using TIsFusionHelper = bool;
 
 /*! \brief reuse graph definition */
 using nnvm::Graph;
@@ -178,6 +202,24 @@ Graph DetectInplaceAddTo(Graph g);
  * \return graph with common expressions eliminated
  */
 Graph EliminateCommonExpr(Graph && g);
+
+/*!
+ * \brief Fuse pointwise operations in the forward pass.
+ *
+ * \param g input graph (needs to be entire graph, not just forward part)
+ *
+ * \return graph with fused pointwise operations in the forward pass
+ */
+Graph FusePointwiseForward(Graph&& g);
+
+/*!
+ * \brief Fuse pointwise operations in the backward pass.
+ *
+ * \param g input graph (needs to be entire graph, not just forward part)
+ *
+ * \return graph with fused pointwise operations in the backward pass
+ */
+Graph FusePointwiseBackward(Graph&& g);
 
 /*!
  * \brief Infer shapes in the graph given the information.
