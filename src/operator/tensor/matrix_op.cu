@@ -138,6 +138,36 @@ void SliceDimTwoCsrImpl<gpu>(const mxnet::TShape &begin, const mxnet::TShape &en
 }
 
 
+namespace mshadow {
+namespace cuda {
+template<typename DType,typename gpu>
+MSHADOW_XINLINE void Transpose2D(const DType *in, DType *out, index_t width, index_t height) {
+
+    index_t a=0;
+}//
+//  index_t TILE_DIM = 32;
+//  index_t BLOCK_ROWS = 8;
+//  __shared__ DType tile[TILE_DIM][TILE_DIM + 1];
+//
+//  index_t x = blockIdx.x * TILE_DIM + threadIdx.x;
+//  index_t y = blockIdx.y * TILE_DIM + threadIdx.y;
+//  index_t width = gridDim.x * TILE_DIM;
+//
+//  for (index_t j = 0; j < TILE_DIM; j += BLOCK_ROWS)
+//     tile[threadIdx.y+j][threadIdx.x] = in[(y+j)*width + x];
+//
+//  __syncthreads();
+//
+//  x = blockIdx.y * TILE_DIM + threadIdx.x;  // transpose block offset
+//  y = blockIdx.x * TILE_DIM + threadIdx.y;
+//
+//  for (index_t j = 0; j < TILE_DIM; j += BLOCK_ROWS)
+//     out[(y+j)*height + x] = tile[threadIdx.x][threadIdx.y + j];
+//}
+}  // namespace cuda
+}  // namespace mshadow
+//
+
 NNVM_REGISTER_OP(Reshape)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 

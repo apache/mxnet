@@ -305,6 +305,49 @@ inline static bool TransposeStorageType(const nnvm::NodeAttrs& attrs,
 }
 #endif
 
+/*!
+   * \brief This function performs transpose operation on a 2D matrix by utilizing the L1 cache
+   * \param in  input tensor
+   * \param out output tensor
+   * \param row shape of dim 0 of input
+   * \param col shape of dim 1 of input
+   */
+  template<typename DType, typename cpu>
+  MSHADOW_XINLINE void Transpose2D(const DType *in, DType *out, index_t row, index_t col) {
+    // ensure cache line hits and prevent cache miss for any configuration
+    // L1 cache size to be utilized = 32kb = 2^15
+    // Largest size of a single unit of any dtype <= 8 byte = 2^3
+    // Number of elements - (2^15/2^3) = 2^12
+    // Block-size - 2^6 v 2^6 (64 v 64)
+
+    // But we could leverage unrolling of for loops (for parallelization)
+    // Block-size - 2^5 v 2^5 (32 v 32) with potential 4 pragma for loop unrolled
+    // blocksize * blocksize * num_threads = cache_size / dtype_size
+    // Instead of explicit unroll, let compiler figure out optimal unroll factor
+    index_t blocksize = 32;
+
+    // collapse 2 parallelizes 2 for loops
+    // inner 2 for loops aren't parallelized to prevent cache miss
+
+    // Microsoft Visual C++ compiler does not support omp collapse
+    #ifdef _MSC_VER
+      #pragma omp parallel for
+    #else
+      #pragma omp parallel for collapse(2)
+    #endif  // _MSC_VER
+
+    for (index_t i = 0; i < row; i += blocksize) {
+      for (index_t j = 0; j < col; j += blocksize) {
+        // transpose the block
+        for (index_t a = j; (a < blocksize + j) && (a < col); ++a) {
+          for (index_t b = i; (b < blocksize + i) && (b < row); ++b) {
+            out[a * row + b] = in[b * col + a];
+          }
+        }
+      }
+    }
+  }
+
 NNVM_REGISTER_OP(transpose)
 .describe(R"code(Permutes the dimensions of an array.
 Examples::
