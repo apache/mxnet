@@ -348,7 +348,6 @@ def test_default_handlers():
     logging = LoggingHandler(train_metrics=train_metrics, val_metrics=val_metrics)
     with warnings.catch_warnings(record=True) as w:
         est.fit(train_data=train_data, epochs=num_epochs, event_handlers=[logging])
-        assert 'You are training with the' in str(w[-1].message)
         # provide metric handler by default
         assert 'MetricHandler' in str(w[-1].message)
 
