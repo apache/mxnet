@@ -34,6 +34,8 @@ from mxnet.test_utils import random_sample, rand_shape_nd, random_arrays
 from mxnet import runtime
 from numpy.testing import assert_allclose, assert_array_equal, assert_array_almost_equal
 import mxnet.autograd
+from mxnet.base import integer_types
+from mxnet.ndarray.ndarray import py_slice
 
 
 def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=[np.float32]):
@@ -1419,6 +1421,13 @@ def test_ndarray_indexing():
                 raise e
             assert same(np_array, mx_array.asnumpy())
 
+        def _is_basic_index(index):
+            if isinstance(index, (integer_types, py_slice)):
+                return True
+            if isinstance(index, tuple) and all(isinstance(i, (integer_types, py_slice)) for i in index):
+                return True
+            return False
+
         np_index = index
         if isinstance(index, mx.nd.NDArray):
             np_index = index.asnumpy()
@@ -1446,12 +1455,19 @@ def test_ndarray_indexing():
             # test value is an numeric_type
             assert_same(np_array, np_index, mx_array, index, np.random.randint(low=-10000, high=0))
             if len(indexed_array_shape) > 1:
+                np_value = np.random.randint(low=-10000, high=0, size=(indexed_array_shape[-1],))
                 # test NDArray with broadcast
-                assert_same(np_array, np_index, mx_array, index,
-                            mx.nd.random.uniform(low=-10000, high=0, shape=(indexed_array_shape[-1],)))
+                assert_same(np_array, np_index, mx_array, index, mx.nd.array(np_value))
                 # test numpy array with broadcast
-                assert_same(np_array, np_index, mx_array, index,
-                            np.random.randint(low=-10000, high=0, size=(indexed_array_shape[-1],)))
+                assert_same(np_array, np_index, mx_array, index, np_value)
+
+                # test value shape are expanded to be longer than index array's shape
+                # this is currently only supported in basic indexing
+                if _is_basic_index(index):
+                    expanded_value_shape = (1, 1, 1) + np_value.shape
+                    assert_same(np_array, np_index, mx_array, index, np.array(np_value.reshape(expanded_value_shape)))
+                    assert_same(np_array, np_index, mx_array, index, np_value.reshape(expanded_value_shape))
+
                 # test list with broadcast
                 assert_same(np_array, np_index, mx_array, index,
                             [np.random.randint(low=-10000, high=0)] * indexed_array_shape[-1])
@@ -2017,6 +2033,22 @@ def test_large_int_rounding():
 
     a = mx.nd.array([large_integer], dtype='int32').trunc()
     assert np.all(a == large_integer)
+
+
+def test_load_saved_gpu_array_when_no_gpus_are_present():
+    # State obtained with mx.nd.arange(1, ctx=mx.gpu()).__getstate__()
+    # State needs to be exported manually, as running above command will only
+    # work if a gpu is present.
+    ndarray_state = {
+        'handle':
+        bytearray(
+            b'\xc9\xfa\x93\xf9\x00\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+        )
+    }
+    array = mx.nd.arange(1)
+    # Test that MXNDArrayLoadFromRawBytes works even if we have built with Cuda
+    # but there are no GPUs
+    array.__setstate__(ndarray_state)
 
 
 if __name__ == '__main__':

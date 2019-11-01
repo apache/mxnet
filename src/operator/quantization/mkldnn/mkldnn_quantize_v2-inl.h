@@ -47,8 +47,8 @@ class SgMKLDNNQuantizeOperator {
   QuantizeV2Param param_;
   float cached_data_min_{0.f};
   float cached_data_max_{0.f};
-  std::shared_ptr<mkldnn::memory> i_mem_;
-  std::shared_ptr<mkldnn::memory> o_mem_;
+  mkldnn::memory::desc o_desc_;
+  mkldnn_args_map_t args_;
   std::shared_ptr<mkldnn::reorder> fwd_pd_;
 };
 
@@ -127,36 +127,30 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
       cached_data_max_ = data_max;
       float real_range = MaxAbs(data_min, data_max);
       float scale = quantized_range / real_range;
-      primitive_attr attr;
+      mkldnn::primitive_attr attr;
       const int mask = 0;
       std::vector<float> scales = {scale};
       attr.set_output_scales(mask, scales);
-      attr.set_int_output_round_mode(round_nearest);
       mkldnn::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
-      auto i_mpd = i_mem->get_primitive_desc();
-      auto i_desc = i_mpd.desc();
-      mkldnn::memory::format i_fmt = static_cast<mkldnn::memory::format>(i_desc.data.format);
-      if (i_fmt == mkldnn::memory::format::nchw || i_fmt == mkldnn::memory::format::nChw8c ||
-          i_fmt == mkldnn_nChw16c) {
-        i_fmt = mkldnn::memory::format::nhwc;
-      }
+      auto i_desc = i_mem->get_desc();
       size_t i_ndim = in_buffer.shape().ndim();
-      mkldnn::memory::dims i_dims = mkldnn::memory::dims(i_ndim);
-      for (size_t i = 0; i < i_ndim; i++) {
-        i_dims[i] = static_cast<int>(in_buffer.shape()[i]);
+      if (i_ndim == 4) {
+        mkldnn::memory::format_tag o_fmt = mkldnn::memory::format_tag::nhwc;
+        mkldnn::memory::dims o_dims(i_desc.data.dims, i_desc.data.dims + i_desc.data.ndims);
+        o_desc_ = mkldnn::memory::desc(o_dims, get_mkldnn_type(out_type), o_fmt);
+      } else {
+        o_desc_ = i_desc;
+        o_desc_.data.data_type = get_mkldnn_type_t(out_type);
       }
-      auto o_desc = mkldnn::memory::desc(i_dims, get_mkldnn_type(out_type), i_fmt);
-      auto o_mpd = memory::primitive_desc(o_desc, cpu_engine);
-      auto reorder_pd = reorder::primitive_desc(i_mpd, o_mpd, attr);
-      i_mem_ = std::make_shared<mkldnn::memory>(i_mpd, nullptr);
-      o_mem_ = std::make_shared<mkldnn::memory>(o_mpd, nullptr);
-      fwd_pd_ = std::make_shared<mkldnn::reorder>(reorder_pd, *i_mem_, *o_mem_);
+      auto reorder_pd =
+          mkldnn::reorder::primitive_desc(cpu_engine, i_desc, cpu_engine, o_desc_, attr);
+      fwd_pd_ = std::make_shared<mkldnn::reorder>(reorder_pd);
       initalized_ = true;
     }
-    auto o_mem = CreateMKLDNNMem(outputs[0], o_mem_->get_primitive_desc(), req[0]);
-    i_mem_->set_data_handle(i_mem->get_data_handle());
-    o_mem_->set_data_handle(o_mem.second->get_data_handle());
-    MKLDNNStream::Get()->RegisterPrim(*fwd_pd_);
+    auto o_mem = CreateMKLDNNMem(outputs[0], o_desc_, req[0]);
+    args_[MKLDNN_ARG_FROM] = *i_mem;
+    args_[MKLDNN_ARG_TO] = *o_mem.second;
+    MKLDNNStream::Get()->RegisterPrimArgs(*fwd_pd_, args_);
     CommitOutput(outputs[0], o_mem);
     MKLDNNStream::Get()->Submit();
   }

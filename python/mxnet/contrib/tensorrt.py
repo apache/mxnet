@@ -42,6 +42,8 @@ def init_tensorrt_params(sym, arg_params, aux_params):
     :param aux_params: aux_params
     :return arg_params, aux_params: remaining params that are not in TensorRT nodes
     """
+    arg_params = arg_params.copy()
+    aux_params = aux_params.copy()
     for s in sym.get_internals():
         new_params_names = ""
         tensorrt_params = {}

@@ -1,5 +1,4 @@
-#!/usr/bin/env bash
-
+# -*- mode: dockerfile -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,10 +15,25 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Python MXNet Dockerfile
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+# NOTE: Assumes 'ci' directory is root of the context when building
 
-set -ex
-wget -q --no-check-certificate -O /tmp/mklml.tgz https://github.com/intel/mkl-dnn/releases/download/v0.21/mklml_lnx_2019.0.5.20190502.tgz
-tar -zxf /tmp/mklml.tgz && cp -rf mklml_*/* /usr/local/ && rm -rf mklml_*
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+# Install test dependencies
+RUN pip install nose
+
+ARG USER_ID=1001
+ARG GROUP_ID=1001
+
+COPY ./docker/install/ubuntu_adduser.sh /work/ubuntu_adduser.sh
+COPY ./docker/install/requirements /work/requirements
+
+RUN mkdir -p /work
+RUN /work/ubuntu_adduser.sh
+RUN pip install -r /work/requirements
+
+WORKDIR /work/mxnet

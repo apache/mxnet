@@ -31,8 +31,7 @@ from . import optimizer as opt
 from .profiler import set_kvstore_handle
 
 def _ctype_key_value(keys, vals):
-    """
-    Returns ctype arrays for the key-value args, and the whether string keys are used.
+    """Returns ctype arrays for the key-value args, and the whether string keys are used.
     For internal use only.
     """
     if isinstance(keys, (tuple, list)):
@@ -66,9 +65,7 @@ def _ctype_key_value(keys, vals):
         return (c_keys, c_handle_array(vals), use_str_keys)
 
 def _ctype_dict(param_dict):
-    """
-    Returns ctype arrays for keys and values(converted to strings) in a dictionary
-    """
+    """Returns ctype arrays for keys and values(converted to strings) in a dictionary"""
     assert(isinstance(param_dict, dict)), \
         "unexpected type for param_dict: " + str(type(param_dict))
     c_keys = c_array(ctypes.c_char_p, [c_str(k) for k in param_dict.keys()])

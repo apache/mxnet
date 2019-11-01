@@ -27,6 +27,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <string>
 #include "../tensor/matrix_op-inl.h"
 #include "../nn/concat-inl.h"
 #include "../../common/utils.h"
@@ -51,6 +52,66 @@ struct NumpyVstackParam : public dmlc::Parameter<NumpyVstackParam> {
   }
 };
 
+struct NumpyColumnStackParam : public dmlc::Parameter<NumpyColumnStackParam> {
+  int num_args;
+  DMLC_DECLARE_PARAMETER(NumpyColumnStackParam) {
+    DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
+    .describe("Number of inputs to be column stacked");
+  }
+};
+
+struct NumpyReshapeParam : public dmlc::Parameter<NumpyReshapeParam> {
+  mxnet::TShape newshape;
+  std::string order;
+  DMLC_DECLARE_PARAMETER(NumpyReshapeParam) {
+    DMLC_DECLARE_FIELD(newshape)
+        .describe("The new shape should be compatible with the original shape."
+                  " If an integer, then the result will be a 1-D array of that length."
+                  " One shape dimension can be -1. In this case, the value is inferred"
+                  " from the length of the array and remaining dimensions.");
+    DMLC_DECLARE_FIELD(order)
+        .set_default("C")
+        .describe("Read the elements of a using this index order, and place the elements into"
+                  " the reshaped array using this index order. 'C' means to read/write the elements"
+                  " using C-like index order, with the last axis index changing fastest,"
+                  " back to the first axis index changing slowest."
+                  " Note that currently only C-like order is"
+                  " supported");
+  }
+};
+
+struct NumpyXReshapeParam : public dmlc::Parameter<NumpyXReshapeParam> {
+  mxnet::TShape newshape;
+  bool reverse;
+  std::string order;
+  DMLC_DECLARE_PARAMETER(NumpyXReshapeParam) {
+    DMLC_DECLARE_FIELD(newshape)
+        .describe("The new shape should be compatible with the original shape."
+                  " If an integer, then the result will be a 1-D array of that length."
+                  " One shape dimension can be -1. In this case, the value is inferred"
+                  " from the length of the array and remaining dimensions."
+                  " -2 to -6 are used for data manipulation."
+                  " -2 copy this dimension from the input to the output shape."
+                  " -3 will skip current dimension if and only if the current dim size is one."
+                  " -4 copy all remain of the input dimensions to the output shape."
+                  " -5 use the product of two consecutive dimensions of the input"
+                  " shape as the output."
+                  " -6 split one dimension of the input into two dimensions passed"
+                  " subsequent to -6 in the new shape.");
+    DMLC_DECLARE_FIELD(reverse)
+        .set_default(false)
+        .describe("If true then the special values are inferred from right to left");
+    DMLC_DECLARE_FIELD(order)
+        .set_default("C")
+        .describe("Read the elements of a using this index order, and place the elements into"
+                  " the reshaped array using this index order. 'C' means to read/write the elements"
+                  " using C-like index order, with the last axis index changing fastest,"
+                  " back to the first axis index changing slowest."
+                  " Note that currently only C-like order is"
+                  " supported");
+  }
+};
+
 template<typename xpu>
 void NumpyTranspose(const nnvm::NodeAttrs& attrs,
                     const OpContext& ctx,
@@ -69,6 +130,78 @@ void NumpyTranspose(const nnvm::NodeAttrs& attrs,
     }
     TransposeImpl<xpu>(ctx.run_ctx, inputs[0], outputs[0], axes);
   }
+}
+
+template<typename xpu>
+void NumpyColumnStackForward(const nnvm::NodeAttrs& attrs,
+                             const OpContext& ctx,
+                             const std::vector<TBlob>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow_op;
+
+  const NumpyColumnStackParam& param = nnvm::get<NumpyColumnStackParam>(attrs.parsed);
+  CHECK_EQ(inputs.size(), param.num_args);
+  CHECK_EQ(outputs.size(), 1);
+  CHECK_EQ(req.size(), 1);
+
+  // reshape if necessary
+  std::vector<TBlob> data(param.num_args);
+  for (int i = 0; i < param.num_args; i++) {
+    if (inputs[i].shape_.ndim() == 0 || inputs[i].shape_.ndim() == 1) {
+      TShape shape = Shape2(inputs[i].shape_.Size(), 1);
+      data[i] = inputs[i].reshape(shape);
+    } else {
+      data[i] = inputs[i];
+    }
+  }
+
+  // initialize ConcatOp
+  ConcatParam cparam;
+  cparam.num_args = param.num_args;
+  cparam.dim = 1;
+  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    ConcatOp<xpu, DType> op;
+    op.Init(cparam);
+    op.Forward(ctx, data, req, outputs);
+  });
+}
+
+template<typename xpu>
+void NumpyColumnStackBackward(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<TBlob>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow_op;
+
+  const NumpyColumnStackParam& param = nnvm::get<NumpyColumnStackParam>(attrs.parsed);
+  CHECK_EQ(inputs.size(), 1);
+  CHECK_EQ(outputs.size(), param.num_args);
+  CHECK_EQ(req.size(), param.num_args);
+
+  // reshape if necessary
+  std::vector<TBlob> data(param.num_args);
+  for (int i = 0; i < param.num_args; i++) {
+    if (outputs[i].shape_.ndim() == 0 || outputs[i].shape_.ndim() == 1) {
+      TShape shape = Shape2(outputs[i].shape_.Size(), 1);
+      data[i] = outputs[i].reshape(shape);
+    } else {
+      data[i] = outputs[i];
+    }
+  }
+
+  // initialize ConcatOp
+  ConcatParam cparam;
+  cparam.num_args = param.num_args;
+  cparam.dim = 1;
+  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    ConcatOp<xpu, DType> op;
+    op.Init(cparam);
+    op.Backward(ctx, inputs[0], req, data);
+  });
 }
 
 template<typename xpu>
@@ -731,7 +864,6 @@ inline void HSplitOpBackward(const nnvm::NodeAttrs &attrs,
   }
   SplitOpBackwardImpl<xpu>(attrs, ctx, inputs, req, outputs, real_axis);
 }
-
 }  // namespace op
 }  // namespace mxnet
 

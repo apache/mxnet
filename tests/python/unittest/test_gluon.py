@@ -529,6 +529,50 @@ def test_hybrid_block_none_args():
     assert_raises(ValueError, lambda: foo1(mx.nd.ones((10,)), mx.nd.ones((10,))))
 
 
+@with_seed()
+def test_hybrid_block_hybrid_no_hybrid():
+    class FooHybrid(gluon.HybridBlock):
+        def hybrid_forward(self, F, a, b):
+            if isinstance(a, (list, tuple)):
+                a = sum(a)
+            if isinstance(b, (list, tuple)):
+                b = sum(b)
+            return a + b
+
+    class Foo(gluon.Block):
+        def forward(self, a, b):
+            if isinstance(a, (list, tuple)):
+                a = sum(a)
+            if isinstance(b, (list, tuple)):
+                b = sum(b)
+            return a + b
+    # When hybridize is not called, HybridBlock acts the same as Block
+    foo_hybrid = FooHybrid()
+    foo = Foo()
+    for a, b in [(mx.nd.ones((10,)), 1),
+                 (mx.nd.ones((20,)), 2),
+                 ([mx.nd.ones((10,)), mx.nd.ones((10,))],
+                  [mx.nd.ones((10)), mx.nd.ones((10,)), mx.nd.ones((10,))]),
+                 ([mx.nd.ones((10,)), mx.nd.ones((10,))], 3)]:
+        hybrid_block_out = foo_hybrid(a, b)
+        block_out = foo(a, b)
+        assert_almost_equal(hybrid_block_out.asnumpy(), block_out.asnumpy())
+    # When hybridize is called, we need to make sure that the model raises for the unsupported cases
+    # 1. Scalar values in the input
+    # 2. No mixing of sym/ndarray
+    # 3. No mixing of cpu ndarray and gpu ndarray  (Tested in gpu/test_gluon_gpu.py)
+    # 4. Allow mixing of cpu_pinned and cpu
+    foo_hybrid = FooHybrid()
+    foo_hybrid.hybridize()
+    assert_raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,)), 1))
+    foo_hybrid = FooHybrid()
+    foo_hybrid.hybridize()
+    assert_raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,)), mx.sym.var('a')))
+    foo_hybrid = FooHybrid()
+    foo_hybrid.hybridize()
+    assert_raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,), ctx=mx.cpu(1)),
+                                                 mx.nd.ones((10,), ctx=mx.cpu(2))))
+
 
 @with_seed()
 def check_layer_forward(layer, dshape):
@@ -1466,6 +1510,46 @@ def test_save_load():
     net.save_parameters('tmp.params')
     net2 = Network()
     net2.load_parameters('tmp.params')
+
+@with_seed()
+def test_save_load_deduplicate_with_shared_params():
+    class B(mx.gluon.Block):
+        def __init__(self, params=None):
+            super(B, self).__init__(params=params)
+
+            with self.name_scope():
+                self.weight = self.params.get('weight', shape=(10, 10))
+
+    class C(mx.gluon.Block):
+        def __init__(self, b1, b2):
+            super(C, self).__init__()
+            self.b1 = b1
+            self.b2 = b2
+
+    b1 = B()
+    b2 = B(b1.collect_params())
+    c = C(b1, b2)
+    c.initialize()
+    c.save_parameters('tmp.params', deduplicate=True)
+
+    params = mx.nd.load('tmp.params')
+    assert len(params) == 1  # Only a single copy of the shared parameter is saved
+
+    b1 = B()
+    b2 = B(b1.collect_params())
+    c = C(b1, b2)
+    c.load_parameters('tmp.params')
+
+    # Test default behavior
+    c.save_parameters('tmp2.params', deduplicate=False)
+
+    params = mx.nd.load('tmp2.params')
+    assert len(params) == 2  # Only a single copy of the shared parameter is saved
+
+    b1 = B()
+    b2 = B(b1.collect_params())
+    c = C(b1, b2)
+    c.load_parameters('tmp2.params')
 
 @with_seed()
 def test_symbol_block_save_load():

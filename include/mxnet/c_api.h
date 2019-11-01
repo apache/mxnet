@@ -525,6 +525,32 @@ MXNET_DLL int MXGetVersion(int *out);
  */
 #if MXNET_USE_TVM_OP
 MXNET_DLL int MXLoadTVMOp(const char *libpath);
+
+struct OtherOptionEntity {
+  int val;
+};
+
+struct OtherOptionSpace {
+  OtherOptionEntity* entities;
+  int entities_size;
+};
+
+struct ConfigSpace {
+  int entity_map_size;
+  char** entity_map_key;
+  OtherOptionEntity* entity_map_val;
+  int space_map_size;
+  char** space_map_key;
+  OtherOptionSpace* space_map_val;
+};
+
+typedef struct ConfigSpaces {
+  int spaces_size;
+  char** spaces_key;
+  ConfigSpace* spaces_val;
+} ConfigSpaces;
+
+MXNET_DLL int MXLoadTVMConfig(ConfigSpaces config);
 #endif  // MXNET_USE_TVM_OP
 
 
@@ -570,12 +596,12 @@ MXNET_DLL int MXNDArrayCreate(const uint32_t *shape,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayCreateEx(const uint32_t *shape,
-                              uint32_t ndim,
-                              int dev_type,
-                              int dev_id,
-                              int delay_alloc,
-                              int dtype,
-                              NDArrayHandle *out);
+                                uint32_t ndim,
+                                int dev_type,
+                                int dev_id,
+                                int delay_alloc,
+                                int dtype,
+                                NDArrayHandle *out);
 
 MXNET_DLL int MXNDArrayCreateEx64(const int64_t *shape,
                                   int ndim,
@@ -1170,7 +1196,7 @@ MXNET_DLL int MXAutogradIsTraining(bool* curr);
  * \param curr returns the current status
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXIsNumpyShape(bool* curr);
+MXNET_DLL int MXIsNumpyShape(int* curr);
 /*!
  * \brief set numpy compatibility switch
  * \param is_np_shape 1 when numpy shape semantics is thread local on,
@@ -2255,6 +2281,44 @@ MXNET_DLL int MXExecutorSimpleBindEx(SymbolHandle symbol_handle,
                                      NDArrayHandle** aux_states,
                                      ExecutorHandle shared_exec_handle,
                                      ExecutorHandle* out);
+
+
+MXNET_DLL int MXExecutorSimpleBindEx64(SymbolHandle symbol_handle,
+                                     int dev_type,
+                                     int dev_id,
+                                     const uint32_t num_g2c_keys,
+                                     const char** g2c_keys,
+                                     const int* g2c_dev_types,
+                                     const int* g2c_dev_ids,
+                                     const uint32_t provided_grad_req_list_len,
+                                     const char** provided_grad_req_names,
+                                     const char** provided_grad_req_types,
+                                     const uint32_t num_provided_arg_shapes,
+                                     const char** provided_arg_shape_names,
+                                     const int64_t* provided_arg_shape_data,
+                                     const uint32_t* provided_arg_shape_idx,
+                                     const uint32_t num_provided_arg_dtypes,
+                                     const char** provided_arg_dtype_names,
+                                     const int* provided_arg_dtypes,
+                                     const uint32_t num_provided_arg_stypes,
+                                     const char** provided_arg_stype_names,
+                                     const int* provided_arg_stypes,
+                                     const uint32_t num_shared_arg_names,
+                                     const char** shared_arg_name_list,
+                                     int* shared_buffer_len,
+                                     const char** shared_buffer_name_list,
+                                     NDArrayHandle* shared_buffer_handle_list,
+                                     const char*** updated_shared_buffer_name_list,
+                                     NDArrayHandle** updated_shared_buffer_handle_list,
+                                     uint32_t* num_in_args,
+                                     NDArrayHandle** in_args,
+                                     NDArrayHandle** arg_grads,
+                                     uint32_t* num_aux_states,
+                                     NDArrayHandle** aux_states,
+                                     ExecutorHandle shared_exec_handle,
+                                     ExecutorHandle* out);
+
+
 /*!
  * \brief DEPRECATED. Use MXExecutorReshapeEx instead.
  * Return a new executor with the same symbol and shared memory,

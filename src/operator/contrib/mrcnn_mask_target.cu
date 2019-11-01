@@ -196,15 +196,16 @@ __global__ void MRCNNMaskTargetKernel(const DType *rois,
                                       int num_gtmasks,
                                       int gt_height,
                                       int gt_width,
-                                      int mask_size,
+                                      int mask_size_h,
+                                      int mask_size_w,
                                       int sample_ratio) {
   // computing sampled_masks
   RoIAlignForward(gt_masks, rois, matches, total_out_el,
-                  num_classes, gt_height, gt_width, mask_size, mask_size,
+                  num_classes, gt_height, gt_width, mask_size_h, mask_size_w,
                   sample_ratio, num_rois, num_gtmasks, sampled_masks);
   // computing mask_cls
   int num_masks = batch_size * num_rois * num_classes;
-  int mask_vol = mask_size * mask_size;
+  int mask_vol = mask_size_h * mask_size_w;
   for (int mask_idx = blockIdx.x; mask_idx < num_masks; mask_idx += gridDim.x) {
     int cls_idx = mask_idx % num_classes;
     int roi_idx = (mask_idx / num_classes) % num_rois;
@@ -252,7 +253,8 @@ void MRCNNMaskTargetRun<gpu>(const MRCNNMaskTargetParam& param, const std::vecto
     (rois.dptr_, gt_masks.dptr_, matches.dptr_, cls_targets.dptr_,
     out_masks.dptr_, out_mask_cls.dptr_,
     num_el, batch_size, param.num_classes, param.num_rois,
-    num_gtmasks, gt_height, gt_width, param.mask_size, param.sample_ratio);
+    num_gtmasks, gt_height, gt_width,
+    param.mask_size[0], param.mask_size[1], param.sample_ratio);
     MSHADOW_CUDA_POST_KERNEL_CHECK(MRCNNMaskTargetKernel);
   });
 }

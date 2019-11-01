@@ -24,6 +24,7 @@ use AI::MXNet::TestUtils qw(zip assert enumerate same rand_shape_2d rand_shape_3
     rand_sparse_ndarray random_arrays almost_equal rand_ndarray randint allclose dies_ok);
 use AI::MXNet::Base qw(pones pzeros pdl product rand_sparse);
 $ENV{MXNET_STORAGE_FALLBACK_LOG_VERBOSE} = 0;
+$ENV{MXNET_SUBGRAPH_VERBOSE} = 0;
 
 
 sub sparse_nd_ones

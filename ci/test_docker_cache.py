@@ -88,7 +88,7 @@ class TestDockerCache(unittest.TestCase):
         base = os.path.split(os.path.realpath(__file__))[0]
         os.chdir(base)
 
-        docker_cache._login_dockerhub = MagicMock()  # Override login
+        docker_cache.login_dockerhub = MagicMock()  # Override login
 
         # Stop in case previous execution was dirty
         try:
@@ -135,7 +135,7 @@ class TestDockerCache(unittest.TestCase):
                 """
         platform = 'test_full_cache'
         docker_tag = build_util.get_docker_tag(platform=platform, registry=DOCKER_REGISTRY_PATH)
-        dockerfile_path = os.path.join(DOCKERFILE_DIR, 'Dockerfile.' + platform)
+        dockerfile_path = os.path.join(DOCKERFILE_DIR, 'Dockerfile.build.' + platform)
         try:
             with open(dockerfile_path, 'w') as dockerfile_handle:
                 dockerfile_handle.write(dockerfile_content)
@@ -144,13 +144,25 @@ class TestDockerCache(unittest.TestCase):
             docker_cache.delete_local_docker_cache(docker_tag=docker_tag)
 
             def warm_up_lambda_func():
-                build_util.build_docker(docker_binary='docker', platform=platform, registry=DOCKER_REGISTRY_PATH)
+                build_util.build_docker(
+                    docker_binary='docker',
+                    platform=platform,
+                    registry=DOCKER_REGISTRY_PATH,
+                    num_retries=3,
+                    no_cache=False
+                )
             _assert_docker_build(lambda_func=warm_up_lambda_func, expected_cache_hit_count=0,
                                  expected_cache_miss_count=4)
 
             # Assert local cache is properly primed
             def primed_cache_lambda_func():
-                build_util.build_docker(docker_binary='docker', platform=platform, registry=DOCKER_REGISTRY_PATH)
+                build_util.build_docker(
+                    docker_binary='docker',
+                    platform=platform,
+                    registry=DOCKER_REGISTRY_PATH,
+                    num_retries=3,
+                    no_cache=False
+                )
             _assert_docker_build(lambda_func=primed_cache_lambda_func, expected_cache_hit_count=4,
                                  expected_cache_miss_count=0)
 
@@ -168,8 +180,6 @@ class TestDockerCache(unittest.TestCase):
             # Delete dockerfile
             os.remove(dockerfile_path)
             docker_cache.delete_local_docker_cache(docker_tag=docker_tag)
-
-
 
     def test_partial_cache(self):
         """
@@ -196,7 +206,7 @@ class TestDockerCache(unittest.TestCase):
                 """
         platform = 'test_partial_cache'
         docker_tag = build_util.get_docker_tag(platform=platform, registry=DOCKER_REGISTRY_PATH)
-        dockerfile_path = os.path.join(DOCKERFILE_DIR, 'Dockerfile.' + platform)
+        dockerfile_path = os.path.join(DOCKERFILE_DIR, 'Dockerfile.build.' + platform)
         try:
             # Write initial Dockerfile
             with open(dockerfile_path, 'w') as dockerfile_handle:
@@ -206,13 +216,25 @@ class TestDockerCache(unittest.TestCase):
             docker_cache.delete_local_docker_cache(docker_tag=docker_tag)
 
             def warm_up_lambda_func():
-                build_util.build_docker(docker_binary='docker', platform=platform, registry=DOCKER_REGISTRY_PATH)
+                build_util.build_docker(
+                    docker_binary='docker',
+                    platform=platform,
+                    registry=DOCKER_REGISTRY_PATH,
+                    num_retries=3,
+                    no_cache=False
+                )
             _assert_docker_build(lambda_func=warm_up_lambda_func, expected_cache_hit_count=0,
                                  expected_cache_miss_count=4)
 
             # Assert local cache is properly primed
             def primed_cache_lambda_func():
-                build_util.build_docker(docker_binary='docker', platform=platform, registry=DOCKER_REGISTRY_PATH)
+                build_util.build_docker(
+                    docker_binary='docker',
+                    platform=platform,
+                    registry=DOCKER_REGISTRY_PATH,
+                    num_retries=3,
+                    no_cache=False
+                )
             _assert_docker_build(lambda_func=primed_cache_lambda_func, expected_cache_hit_count=4,
                                  expected_cache_miss_count=0)
 
