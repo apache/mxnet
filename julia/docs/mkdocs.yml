@@ -16,7 +16,7 @@
 # under the License.
 
 site_name: MXNet.jl
-repo_url:  https://github.com/dmlc/MXNet.jl
+repo_url:  https://github.com/apache/incubator-mxnet/tree/master/julia#mxnet
 
 theme: material
 
