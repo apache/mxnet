@@ -537,6 +537,7 @@ inline bool InferStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
 }
 
 NNVM_REGISTER_OP(Custom)
+.add_alias("_npi_Custom")
 .describe(R"code(Apply a custom operator implemented in a frontend language (like Python).
 
 Custom operators should override required methods like `forward` and `backward`.
