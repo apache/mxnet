@@ -160,7 +160,7 @@ NNVM_REGISTER_OP(_contrib_quantized_embedding)
 
 NNVM_REGISTER_OP(Embedding)
 .set_attr<FQuantizable>("FQuantizable", [](const NodeAttrs& attrs) {
-    return QuantizeType::kMust;
+    return QuantizeType::kSupport;
 })
 .set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
     EmbeddingParam param;
