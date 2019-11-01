@@ -25,7 +25,7 @@
 #include <cub/cub.cuh>
 #include "./matrix_op-inl.h"
 #include "./elemwise_unary_op.h"
-
+#include <mshadow/cuda/tensor_gpu-inl.cuh>
 
 namespace mxnet {
 namespace op {
@@ -141,17 +141,17 @@ void SliceDimTwoCsrImpl<gpu>(const mxnet::TShape &begin, const mxnet::TShape &en
 namespace mshadow {
 namespace cuda {
 template<typename DType>
-__global void Transpose2DKernel(const DType *in, DType *out, index_t row, index_t col) {
- index_t TILE_DIM = 32;
- index_t BLOCK_ROWS = 8;
+__global__ void Transpose2DKernel(const DType *in, DType *out, index_t row, index_t col) {
+ const index_t TILE_DIM = 32;
+ const index_t BLOCK_ROWS = 8;
  __shared__ DType tile[TILE_DIM][TILE_DIM + 1];
 
  index_t x = blockIdx.x * TILE_DIM + threadIdx.x;
  index_t y = blockIdx.y * TILE_DIM + threadIdx.y;
- index_t width = gridDim.x * TILE_DIM;
+ //index_t width = gridDim.x * TILE_DIM;
 
  for (index_t j = 0; j < TILE_DIM; j += BLOCK_ROWS)
-    tile[threadIdx.y+j][threadIdx.x] = in[(y+j)*width + x];
+    tile[threadIdx.y+j][threadIdx.x] = in[(y+j)*col + x];
 
  __syncthreads();
 
@@ -159,7 +159,7 @@ __global void Transpose2DKernel(const DType *in, DType *out, index_t row, index_
  y = blockIdx.x * TILE_DIM + threadIdx.y;
 
  for (index_t j = 0; j < TILE_DIM; j += BLOCK_ROWS)
-    out[(y+j)*height + x] = tile[threadIdx.x][threadIdx.y + j];
+    out[(y+j)*row+ x] = tile[threadIdx.x][threadIdx.y + j];
 }
 }  // namespace cuda
 }  // namespace mshadow
@@ -169,8 +169,8 @@ template<typename DType,typename gpu>
 inline void Transpose2D(const DType *in, DType *out, index_t row, index_t col) {
   using namespace mshadow::cuda;
   dim3 grid(32);
-  dim3 block(8)
-  Transpose2DKernel<<<grid,block>>>(in.dptr_, out.dptr_, row, col);
+  dim3 block(8);
+  Transpose2DKernel<DType><<<grid,block>>>(in, out, row, col);
   MSHADOW_CUDA_POST_KERNEL_CHECK(Transpose2DKernel);
 }
 
