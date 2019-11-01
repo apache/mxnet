@@ -104,6 +104,7 @@ References:
     .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
         return std::vector<ResourceRequest>{ResourceRequest::Type::kTempSpace};
     })
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
     .add_argument(
       "lda", "NDArray-or-Symbol",
       "Shape (N, K) The intensity for each of the K processes, for each sample"

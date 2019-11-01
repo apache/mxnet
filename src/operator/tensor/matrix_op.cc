@@ -223,6 +223,7 @@ If the argument `reverse` is set to 1, then the special values are inferred from
   [](const NodeAttrs& attrs){
     return std::vector<bool>{true};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .add_argument("data", "NDArray-or-Symbol", "Input data to reshape.")
 .add_arguments(ReshapeParam::__FIELDS__());
 
@@ -314,6 +315,7 @@ Example::
   [](const NodeAttrs& attrs){
     return std::vector<bool>{true};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .add_argument("data", "NDArray-or-Symbol", "Input array.");
 
 #if MXNET_USE_MKLDNN == 1
@@ -518,6 +520,7 @@ Example::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FInferStorageType>("FInferStorageType", SliceForwardInferStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice"})
 .set_attr<FCompute>("FCompute<cpu>", SliceOpForward<cpu>)
@@ -923,6 +926,7 @@ Examples::
 [](const NodeAttrs& attrs) {
   return std::vector<ResourceRequest> {ResourceRequest::kTempSpace};
 })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", ReverseOpForward<cpu>)
@@ -1077,6 +1081,7 @@ Example::
   [](const NodeAttrs& n) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"space_to_depth"})
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(DepthToSpaceParam::__FIELDS__());
@@ -1131,6 +1136,7 @@ Example::
   [](const NodeAttrs& n) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"depth_to_space"})
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(DepthToSpaceParam::__FIELDS__());
@@ -1218,6 +1224,7 @@ Example::
   [](const NodeAttrs& n) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_split_v2_backward"})
 .add_argument("data", "NDArray-or-Symbol", "The input")
 .add_arguments(SplitParam::__FIELDS__());

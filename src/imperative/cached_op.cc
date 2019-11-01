@@ -77,6 +77,10 @@ void CreateFullGraph(const nnvm::Symbol& sym,
     }
   }
 
+  bool do_elim_common_expr = dmlc::GetEnv("MXNET_ELIMINATE_COMMON_EXPR", true);
+  if (do_elim_common_expr)
+    *fwd_graph = exec::EliminateCommonExpr(std::move(*fwd_graph));
+
   // construct backward graph
   {
     ograd_entries->reserve(fwd_graph->outputs.size());
@@ -262,7 +266,7 @@ CachedOp::CachedOp(
 
   auto grad_graph = nnvm::Graph();
   std::unordered_map<uint32_t, uint32_t> fwd_input_to_grad_output;
-  CreateFullGraph(sym, &fwd_graph_, &grad_graph, &full_graph_,
+  CreateFullGraph(sym.Copy(), &fwd_graph_, &grad_graph, &full_graph_,
                   &ograd_entries_, &fwd_input_to_grad_output);
 
   {

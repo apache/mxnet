@@ -75,6 +75,7 @@ NNVM_REGISTER_OP(_backward_SoftmaxActivation)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr_parser(ParamParser<SoftmaxActivationParam>)
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxActivationGradCompute<cpu>);
 
