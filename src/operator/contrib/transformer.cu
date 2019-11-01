@@ -510,7 +510,7 @@ void BackwardInterleavedMatMulEncDecValAttGPU(const nnvm::NodeAttrs& attrs,
     const float alpha               = 1.f;
 
     if (req[0] != kNullOp) {
-      if (req[0] == kWriteTo {
+      if (req[0] == kWriteTo) {
         cudaMemsetAsync(keys_values_grads, 0, outputs[0].shape_.Size() * sizeof(DType),
                         mshadow::Stream<gpu>::GetStream(s));
       }
