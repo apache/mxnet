@@ -584,7 +584,7 @@ def quantize_model_mkldnn(sym, arg_params, aux_params,
                           data_names=('data',), label_names=('softmax_label',),
                           ctx=cpu(), excluded_sym_names=None, excluded_op_names=None,
                           calib_mode='entropy', calib_data=None, num_calib_examples=None,
-                          quantized_dtype='int8', quantize_mode='smart' ,logger=logging):
+                          quantized_dtype='int8', quantize_mode='smart', logger=logging):
     """User-level API for generating a fusion + quantized model from a FP32 model
     w/ or w/o calibration with Intel MKL-DNN.
     The backend quantized operators are only enabled for Linux systems. Please do not run
