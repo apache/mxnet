@@ -22,6 +22,7 @@
 #include "./imperative_utils.h"
 #include "../executor/exec_pass.h"
 #include "./cached_op_threadsafe.h"
+#include "../profiler/profiler.h"
 #include "../operator/operator_common.h"
 #include "../operator/subgraph/common.h"
 
@@ -47,6 +48,7 @@ struct CachedOpThreadSafe::CachedOpThreadSafeState {
     context = context_;
     info.fwd_graph = fwd_graph_;
 
+    size_t max_nodes = info.fwd_graph.indexed_graph().num_nodes();
     size_t max_entries = info.fwd_graph.indexed_graph().num_node_entries();
     info.fwd_graph.attrs["context"] =
         std::make_shared<dmlc::any>(std::vector<Context>(
@@ -56,6 +58,9 @@ struct CachedOpThreadSafe::CachedOpThreadSafeState {
     arrays.resize(max_entries);
     array_reqs.resize(max_entries);
     dynamic_entries.resize(max_entries, false);
+    op_states.resize(max_nodes);
+    execs.resize(max_nodes);
+    opr_segs.resize(max_nodes);
   }
 
   std::mutex mutex;
@@ -68,6 +73,9 @@ struct CachedOpThreadSafe::CachedOpThreadSafeState {
   std::vector<NDArray*> arrays;
   std::vector<NDArray*> arrays_with_in_out;
   std::vector<OpReqType> array_reqs;
+  std::vector<std::shared_ptr<exec::OpExecutor> > execs;
+  std::vector<imperative::EngineOprSeg> opr_segs;
+  std::vector<OpStatePtr> op_states;
 
   std::vector<bool> dynamic_entries;
   std::multimap<size_t, NDArray> fwd_reuse_pool;
@@ -93,13 +101,17 @@ OpStatePtr CachedOpThreadSafe::GetCachedOpThreadSafeState(
 
 CachedOpThreadSafe::CachedOpThreadSafe(const nnvm::Symbol& sym,
                                        const std::vector<std::pair<std::string,
-                                                                   std::string> >& flags) {
+                                       std::string> >& flags) {
   using namespace nnvm;
   using namespace imperative;
   static const std::vector<const Op *> zero_ops{Op::Get("zeros_like"),
                                                 Op::Get("_zeros")};
   static const auto _copy_op = Op::Get("_copy");
   config_.Init(flags);
+
+  if (config_.static_shape) {
+      CHECK(config_.static_alloc) << "static_alloc must be True when static_shape is True";
+  }
 
   // construct forward graph
   {
@@ -217,6 +229,260 @@ bool CachedOpThreadSafe::SetForwardGraph(GraphInfo *info,
   return false;
 }
 
+void CachedOpThreadSafe::StaticAllocMemory(const OpStatePtr& state_ptr) {
+    using namespace nnvm;
+    using namespace imperative;
+
+    auto& state = state_ptr.get_state<CachedOpThreadSafeState>();
+    const auto& default_ctx = state.context;
+    nnvm::Graph& g = state.info.fwd_graph;
+    const auto& idx = g.indexed_graph();
+    const auto& storage_plan = g.GetAttr<std::vector<int> >("forward_storage_plan");
+    const auto& mem_plan = g.GetAttr<MemoryPlanVector>("forward_mem_plan");
+    std::vector<int> addto_entry;
+    if (g.attrs.count("addto_entry")) {
+      addto_entry = g.GetAttr<std::vector<int>>("addto_entry");
+    }
+    size_t start_eid = 0;
+    size_t end_eid = idx.num_node_entries();
+
+    state.fwd_alloc = false;
+
+    for (size_t i = start_eid; i < state.buff.size(); ++i) {
+      state.buff[i] = NDArray();
+      state.arrays[i] = &state.buff[i];
+      state.array_reqs[i] = kNullOp;
+      state.dynamic_entries[i] = false;
+    }
+
+    for (auto i : idx.input_nodes()) {
+      auto eid = idx.entry_id(i, 0);
+      if (eid >= start_eid)
+        state.dynamic_entries[eid] = true;
+    }
+
+    for (auto i : idx.outputs()) {
+      auto eid = idx.entry_id(i);
+      if (eid >= start_eid) state.dynamic_entries[eid] = true;
+    }
+
+    for (size_t i = start_eid; i < end_eid; ++i) {
+      if (addto_entry.size() && addto_entry[i]) {
+        state.array_reqs[i] = kAddTo;
+      } else if (storage_plan[i] >= 0) {
+        state.array_reqs[i] = kWriteInplace;
+      } else if (storage_plan[i] == -2) {
+        state.array_reqs[i] = kNullOp;
+      } else {
+        state.array_reqs[i] = kWriteTo;
+      }
+    }
+
+    auto& reuse_pool = state.fwd_reuse_pool;
+    reuse_pool = imperative::AllocateMemory(
+        g, idx, default_ctx, start_eid, end_eid, mem_plan, state.arrays,
+        &state.array_reqs, std::move(reuse_pool));
+
+    state.fwd_alloc = true;
+}
+
+void CachedOpThreadSafe::StaticInitExec(const OpStatePtr &state_ptr) {
+  using namespace nnvm;
+  using namespace imperative;
+
+  auto &state = state_ptr.get_state<CachedOpThreadSafeState>();
+  const auto &default_ctx = state.context;
+  nnvm::Graph &g = state.info.fwd_graph;
+  const auto &idx = g.indexed_graph();
+  size_t start_nid = 0;
+  size_t end_nid = idx.num_nodes();
+  std::vector<int> skip_plus_node;
+  if (g.attrs.count("skip_plus_node")) {
+    skip_plus_node = g.GetAttr<std::vector<int> >("skip_plus_node");
+  }
+
+
+  state.fwd_exec_init = false;
+
+  for (size_t i = start_nid; i < state.execs.size(); ++i) {
+    state.execs[i].reset();
+    state.opr_segs[i] = EngineOprSeg();
+  }
+
+  if (!config_.static_shape) {
+    for (size_t i = start_nid; i < end_nid; ++i) {
+      state.opr_segs[i].next_nid = i + 1;
+      state.opr_segs[i].skip = skip_plus_node.size() && skip_plus_node[i];
+    }
+  } else {
+    for (size_t i = start_nid; i < state.execs.size(); ++i) {
+      exec::CreateOpExecs(g, &state.execs, &state.op_states, i);
+    }
+    exec::AttachOpResources(g, state.execs, start_nid, end_nid);
+
+    for (size_t i = start_nid; i < end_nid; ++i) {
+      bool skip = idx[i].source->is_variable();
+      for (size_t j = 0; !skip && j < idx[i].inputs.size(); ++j) {
+        skip = state.dynamic_entries[idx.entry_id(idx[i].inputs[j])];
+      }
+      for (size_t j = 0; !skip && j < idx[i].source->num_outputs(); ++j) {
+        skip = state.dynamic_entries[idx.entry_id(i, j)];
+      }
+      if (skip)
+        continue;
+      SetupOpExec(g, i, state.execs[i], state.arrays, state.array_reqs);
+    }
+
+    CreateEngineOpSeg(idx, default_ctx, start_nid, end_nid, 0,
+                      state.execs, skip_plus_node, &state.opr_segs);
+  }
+  state.fwd_exec_init = true;
+}
+
+void CachedOpThreadSafe::StaticRunOps(
+    const Context &default_ctx, const nnvm::Graph &g,
+    const OpStatePtr &state_ptr, const std::vector<NDArray *> &state_arrays,
+    size_t start_nid, size_t end_nid) {
+  static auto &createop = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
+
+  bool profiling =
+      profiler::Profiler::Get()->GetState() == profiler::Profiler::kRunning;
+  auto &state = state_ptr.get_state<CachedOpThreadSafeState>();
+  const auto& idx = g.indexed_graph();
+  const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
+  const auto& op_execs = state.execs;
+
+  std::vector<NDArray *> ndinputs, ndoutputs;
+  mxnet::ShapeVector arg_shapes;
+  nnvm::DTypeVector arg_dtypes;
+  std::vector<OpReqType> req;
+
+  for (size_t i = start_nid; config_.static_shape && i < end_nid; ++i) {
+    if (op_execs[i]) op_execs[i]->op_ctx.is_train = false;
+  }
+
+  for (size_t i = start_nid; i < end_nid; i = state.opr_segs[i].next_nid) {
+    const auto &opr_seg = state.opr_segs[i];
+    if (opr_seg.skip)
+      continue;
+    if (opr_seg.opr != nullptr) {
+      Engine::Get()->Push(opr_seg.opr.get(), default_ctx, 0, profiling);
+    } else {
+      const nnvm::IndexedGraph::Node &node = idx[i];
+      if (node.source->is_variable())
+        continue;
+      auto num_outputs = node.source->num_outputs();
+      ndinputs.clear();
+      ndinputs.reserve(node.inputs.size());
+      for (const auto &j : node.inputs) {
+        ndinputs.emplace_back(state_arrays[idx.entry_id(j)]);
+        CHECK(!ndinputs.back()->is_none());
+      }
+      ndoutputs.clear();
+      ndoutputs.reserve(num_outputs);
+      req.clear();
+      req.reserve(num_outputs);
+      for (size_t j = 0; j < num_outputs; ++j) {
+        size_t eid = idx.entry_id(i, j);
+        ndoutputs.emplace_back(state_arrays[eid]);
+        req.push_back(state.array_reqs[eid]);
+        CHECK(req.back() == kNullOp || !ndoutputs.back()->is_none());
+      }
+      const DispatchMode dispatch_mode = dispatch_modes[i];
+
+      if (createop.count(node.source->op())) {
+        arg_shapes.clear();
+        arg_dtypes.clear();
+        arg_shapes.reserve(ndinputs.size());
+        arg_dtypes.reserve(ndinputs.size());
+        for (auto &ndinput : ndinputs) {
+          arg_shapes.emplace_back(ndinput->shape());
+          arg_dtypes.emplace_back(ndinput->dtype());
+        }
+        if (!config_.static_shape) {
+          state.op_states[i] = createop[node.source->op()](
+              node.source->attrs, default_ctx, arg_shapes, arg_dtypes);
+        }
+        Imperative::Get()->InvokeOp(default_ctx, node.source->attrs, ndinputs,
+                                    ndoutputs, req, dispatch_mode,
+                                    state.op_states[i]);
+      } else {
+        Imperative::Get()->InvokeOp(default_ctx, node.source->attrs, ndinputs,
+                                    ndoutputs, req, dispatch_mode);
+      }
+    }
+  }
+}
+
+OpStatePtr CachedOpThreadSafe::StaticForward(const Context &default_ctx,
+                                             const std::vector<NDArray *> &inputs,
+                                             const std::vector<NDArray *> &outputs) {
+  using namespace nnvm;
+  using namespace imperative;
+
+  auto state_ptr = GetCachedOpThreadSafeState(default_ctx);
+  auto &state = state_ptr.get_state<CachedOpThreadSafeState>();
+  std::lock_guard<std::mutex> lock(state.mutex);
+
+  bool match = SetForwardGraph(&state.info, inputs);
+
+  nnvm::Graph &g = state.info.fwd_graph;
+  const auto &idx = g.indexed_graph();
+
+  if (!state.fwd_alloc || !match) {
+    StaticAllocMemory(state_ptr);
+  }
+
+  state.arrays_with_in_out = state.arrays;
+  auto &arrays = state.arrays_with_in_out;
+
+  if (config_.static_shape) {
+    for (auto i : config_.param_indices) {
+      auto nid = idx.input_nodes()[i];
+      if (!arrays[idx.entry_id(nid, 0)]->IsSame(*inputs[i])) {
+        match = false;
+        auto ptr = &state.buff[idx.entry_id(nid, 0)];
+        CHECK_EQ(arrays[idx.entry_id(nid, 0)], ptr);
+        *arrays[idx.entry_id(nid, 0)] = *inputs[i];
+        state.dynamic_entries[idx.entry_id(nid, 0)] = false;
+      }
+    }
+    for (auto i : config_.data_indices) {
+      auto eid = idx.entry_id(idx.input_nodes()[i], 0);
+      arrays[eid] = inputs[i];
+    }
+  } else {
+    for (size_t i = 0; i < num_inputs(); ++i) {
+      auto nid = idx.input_nodes()[i];
+      arrays[idx.entry_id(nid, 0)] = inputs[i];
+    }
+  }
+
+  if (!state.fwd_exec_init || !match) {
+    StaticInitExec(state_ptr);
+  }
+
+  const auto &dtypes = g.GetAttr<DTypeVector>("dtype");
+  const auto &shapes = g.GetAttr<mxnet::ShapeVector>("shape");
+  const auto &stypes = g.GetAttr<StorageTypeVector>("storage_type");
+
+  for (size_t i = 0; i < outputs.size(); ++i) {
+    auto eid = idx.entry_id(idx.outputs()[i]);
+    // An input and output may share the same array.
+    if (!arrays[eid]->is_none())
+      *outputs[i] = arrays[eid]->Detach();
+    arrays[eid] = outputs[i];
+    if (!outputs[i]->is_none())
+      continue;
+    *outputs[i] = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
+                          shapes[eid], default_ctx, true, dtypes[eid]);
+  }
+
+  StaticRunOps(default_ctx, g, state_ptr, arrays, 0, idx.num_nodes());
+
+  return OpStatePtr();
+}
+
 OpStatePtr CachedOpThreadSafe::DynamicForward(const Context& default_ctx,
                                               const std::vector<NDArray*>& inputs,
                                               const std::vector<NDArray*>& outputs) {
@@ -308,7 +574,11 @@ OpStatePtr CachedOpThreadSafe::Forward(const std::shared_ptr<CachedOpThreadSafe>
 
   OpStatePtr op_state;
   try {
-    op_state = DynamicForward(default_ctx, inputs, outputs);
+    if (config_.static_alloc) {
+      op_state = StaticForward(default_ctx, inputs, outputs);
+    } else {
+      op_state = DynamicForward(default_ctx, inputs, outputs);
+    }
   } catch (const dmlc::Error& e) {
     throw e;
   }

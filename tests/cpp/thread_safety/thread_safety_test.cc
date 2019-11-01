@@ -179,6 +179,8 @@ void run_inference(const std::string& model,
                  " static_alloc: " + std::to_string(static_alloc) +
                  " static_shape: " + std::to_string(static_shape);
     auto out = mxnet::cpp::Symbol::Load(model + "-symbol.json");
+    std::string static_alloc_str = static_alloc ? "true" : "false";
+    std::string static_shape_str = static_shape ? "true" : "false";
 
     // Prepare context
 #if MXNET_USE_CUDA == 1
@@ -221,7 +223,8 @@ void run_inference(const std::string& model,
     }
 
     // Prepare data_indices, param_indices and get_expected_results
-    std::vector<std::string> flag_keys{"data_indices", "param_indices"};
+    std::vector<std::string> flag_keys{"data_indices", "param_indices",
+                                       "static_alloc", "static_shape"};
     std::string param_indices = "[";
     std::vector<std::vector<mxnet::NDArray*>> result_expected(num_inf_per_thread);
     int num_inputs = out.ListInputs().size();
@@ -230,7 +233,7 @@ void run_inference(const std::string& model,
       param_indices += std::string(", ");
     }
     param_indices += "]";
-    std::vector<std::string> flag_vals{"[0]", param_indices};
+    std::vector<std::string> flag_vals{"[0]", param_indices, static_alloc_str, static_shape_str};
     std::vector<std::vector<std::vector<NDArrayHandle>>> arr_handles(num_inf_per_thread);
     for (size_t i = 0; i < num_inf_per_thread; ++i) {
       arr_handles[i].resize(num_threads);
@@ -464,6 +467,14 @@ TEST(ThreadSafety, CachedOpFullModel) {
     run_inference(model, 4, true, 20);
     run_inference(model, 4, false, 20);
     run_inference(model, 8, true, 20);
+    // static_alloc = true
+    run_inference(model, 2, true, 20, true);
+    run_inference(model, 4, true, 5, true);
+    run_inference(model, 4, true, 20, true);
+    run_inference(model, 8, true, 20, true);
+    // static_alloc = true, static_shape = true
+    run_inference(model, 4, true, 20, true, true);
+    run_inference(model, 8, true, 20, true, true);
   }
 }
 #endif

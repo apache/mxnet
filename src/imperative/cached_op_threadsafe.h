@@ -42,7 +42,18 @@ struct CachedOpThreadSafeConfig
   mxnet::Tuple<uint32_t> data_indices;
   // param_indices indicates which of the indices from the arguments are params
   mxnet::Tuple<uint32_t> param_indices;
+  bool static_alloc;
+  bool static_shape;
   DMLC_DECLARE_PARAMETER(CachedOpThreadSafeConfig) {
+    DMLC_DECLARE_FIELD(static_alloc)
+    .set_default(false)
+    .describe("Statically allocate memory to improve speed. "
+              "Memory usage may increase.");
+    DMLC_DECLARE_FIELD(static_shape)
+    .set_default(false)
+    .describe("Optimize for invariant input shapes between iterations. "
+              "Must also set static_alloc to True. "
+              "Change of input shapes is still allowed but slower.");
     DMLC_DECLARE_FIELD(data_indices)
         .set_default(mxnet::Tuple<uint32_t>())
         .describe("Position of argument variables.");
@@ -105,11 +116,20 @@ class CachedOpThreadSafe {
   OpStatePtr DynamicForward(const Context& default_ctx,
                             const std::vector<NDArray*>& inputs,
                             const std::vector<NDArray*>& outputs);
+  OpStatePtr StaticForward(const Context& default_ctx,
+                           const std::vector<NDArray*>& inputs,
+                           const std::vector<NDArray*>& outputs);
+  void StaticRunOps(const Context &default_ctx, const nnvm::Graph &g,
+                    const OpStatePtr &state_ptr,
+                    const std::vector<NDArray *> &state_arrays,
+                    size_t start_nid, size_t end_nid);
+  void StaticInitExec(const OpStatePtr &state_ptr);
+  void StaticAllocMemory(const OpStatePtr& state_ptr);
 
-    CachedOpThreadSafeConfig config_;
-    nnvm::Graph fwd_graph_;
-    std::mutex mutex_;
-    std::unordered_map<Context, std::vector<OpStatePtr> > cached_op_states_;
+  CachedOpThreadSafeConfig config_;
+  nnvm::Graph fwd_graph_;
+  std::mutex mutex_;
+  std::unordered_map<Context, std::vector<OpStatePtr>> cached_op_states_;
 };
 
 using CachedOpThreadSafePtr = std::shared_ptr<CachedOpThreadSafe>;
