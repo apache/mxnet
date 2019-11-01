@@ -51,7 +51,7 @@ void BackwardInterleavedMatMulParamParser(nnvm::NodeAttrs* attrs) {
     LOG(FATAL) << "in '" << attrs->name
                << "' bwd_ignore_zero_init only works with MXNET_EXEC_ENABLE_ADDTO set to 1";
   }
-  attrs->parsed = std::move(param_);
+  attrs->parsed = param_;
 }
 
 static bool InterleavedMatMulSelfAttQKShape(const NodeAttrs& attrs,
