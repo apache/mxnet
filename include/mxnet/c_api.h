@@ -111,6 +111,11 @@ typedef void (*EngineFuncParamDeleter)(void*);
 typedef void (*ExecutorMonitorCallback)(const char*,
                                         NDArrayHandle,
                                         void*);
+/*! \brief Monitor callback called at operator level for cached op */
+typedef void (*CachedOpMonitorCallback)(const char*,
+                                        const char*,
+                                        NDArrayHandle);
+
 
 struct NativeOpInfo {
   void (*forward)(int, float**, int*, unsigned**, int*, void*);
@@ -520,6 +525,32 @@ MXNET_DLL int MXGetVersion(int *out);
  */
 #if MXNET_USE_TVM_OP
 MXNET_DLL int MXLoadTVMOp(const char *libpath);
+
+struct OtherOptionEntity {
+  int val;
+};
+
+struct OtherOptionSpace {
+  OtherOptionEntity* entities;
+  int entities_size;
+};
+
+struct ConfigSpace {
+  int entity_map_size;
+  char** entity_map_key;
+  OtherOptionEntity* entity_map_val;
+  int space_map_size;
+  char** space_map_key;
+  OtherOptionSpace* space_map_val;
+};
+
+typedef struct ConfigSpaces {
+  int spaces_size;
+  char** spaces_key;
+  ConfigSpace* spaces_val;
+} ConfigSpaces;
+
+MXNET_DLL int MXLoadTVMConfig(ConfigSpaces config);
 #endif  // MXNET_USE_TVM_OP
 
 
@@ -565,12 +596,12 @@ MXNET_DLL int MXNDArrayCreate(const uint32_t *shape,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayCreateEx(const uint32_t *shape,
-                              uint32_t ndim,
-                              int dev_type,
-                              int dev_id,
-                              int delay_alloc,
-                              int dtype,
-                              NDArrayHandle *out);
+                                uint32_t ndim,
+                                int dev_type,
+                                int dev_id,
+                                int delay_alloc,
+                                int dtype,
+                                NDArrayHandle *out);
 
 MXNET_DLL int MXNDArrayCreateEx64(const int64_t *shape,
                                   int ndim,
@@ -670,12 +701,6 @@ MXNET_DLL int MXNDArrayLoad(const char* fname,
                             uint32_t *out_name_size,
                             const char*** out_names);
 
-MXNET_DLL int MXNDArrayLoad64(const char* fname,
-                              int64_t *out_size,
-                              NDArrayHandle** out_arr,
-                              int64_t *out_name_size,
-                              const char*** out_names);
-
 /*!
  * \brief Load list / dictionary of narrays from file content loaded into memory.
  * This will load a list of ndarrays in a similar
@@ -696,13 +721,6 @@ MXNET_DLL int MXNDArrayLoadFromBuffer(const void *ndarray_buffer,
                                       NDArrayHandle** out_arr,
                                       uint32_t *out_name_size,
                                       const char*** out_names);
-
-MXNET_DLL int MXNDArrayLoadFromBuffer64(const void *ndarray_buffer,
-                                        size_t size,
-                                        int64_t *out_size,
-                                        NDArrayHandle** out_arr,
-                                        int64_t *out_name_size,
-                                        const char*** out_names);
 
 /*!
  * \brief Perform a synchronize copy from a continugous CPU memory region.
@@ -1178,10 +1196,11 @@ MXNET_DLL int MXAutogradIsTraining(bool* curr);
  * \param curr returns the current status
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXIsNumpyShape(bool* curr);
+MXNET_DLL int MXIsNumpyShape(int* curr);
 /*!
  * \brief set numpy compatibility switch
- * \param is_np_shape 1 when numpy shape semantics is on, 0 when off
+ * \param is_np_shape 1 when numpy shape semantics is thread local on,
+ *        2 when numpy shape semantics is global on and 0 when off
  * \param prev returns the previous status before this set
  * \return 0 when success, -1 when failure happens
  */
@@ -1283,6 +1302,13 @@ MXNET_DLL int MXInvokeCachedOpEx(CachedOpHandle handle,
                                  int *num_outputs,
                                  NDArrayHandle **outputs,
                                  const int** out_stypes);
+
+/*!
+ * \brief cached op set monitor callback
+ */
+MXNET_DLL int MXCachedOpRegisterOpHook(NDArrayHandle handle,
+                                       CachedOpMonitorCallback callback,
+                                       bool monitor_all);
 
 //--------------------------------------------
 // Part 3: symbolic configuration generation
@@ -2255,6 +2281,44 @@ MXNET_DLL int MXExecutorSimpleBindEx(SymbolHandle symbol_handle,
                                      NDArrayHandle** aux_states,
                                      ExecutorHandle shared_exec_handle,
                                      ExecutorHandle* out);
+
+
+MXNET_DLL int MXExecutorSimpleBindEx64(SymbolHandle symbol_handle,
+                                     int dev_type,
+                                     int dev_id,
+                                     const uint32_t num_g2c_keys,
+                                     const char** g2c_keys,
+                                     const int* g2c_dev_types,
+                                     const int* g2c_dev_ids,
+                                     const uint32_t provided_grad_req_list_len,
+                                     const char** provided_grad_req_names,
+                                     const char** provided_grad_req_types,
+                                     const uint32_t num_provided_arg_shapes,
+                                     const char** provided_arg_shape_names,
+                                     const int64_t* provided_arg_shape_data,
+                                     const uint32_t* provided_arg_shape_idx,
+                                     const uint32_t num_provided_arg_dtypes,
+                                     const char** provided_arg_dtype_names,
+                                     const int* provided_arg_dtypes,
+                                     const uint32_t num_provided_arg_stypes,
+                                     const char** provided_arg_stype_names,
+                                     const int* provided_arg_stypes,
+                                     const uint32_t num_shared_arg_names,
+                                     const char** shared_arg_name_list,
+                                     int* shared_buffer_len,
+                                     const char** shared_buffer_name_list,
+                                     NDArrayHandle* shared_buffer_handle_list,
+                                     const char*** updated_shared_buffer_name_list,
+                                     NDArrayHandle** updated_shared_buffer_handle_list,
+                                     uint32_t* num_in_args,
+                                     NDArrayHandle** in_args,
+                                     NDArrayHandle** arg_grads,
+                                     uint32_t* num_aux_states,
+                                     NDArrayHandle** aux_states,
+                                     ExecutorHandle shared_exec_handle,
+                                     ExecutorHandle* out);
+
+
 /*!
  * \brief DEPRECATED. Use MXExecutorReshapeEx instead.
  * Return a new executor with the same symbol and shared memory,
@@ -2648,6 +2712,48 @@ MXNET_DLL int MXKVStorePullRowSparseEx(KVStoreHandle handle,
                                        NDArrayHandle* vals,
                                        const NDArrayHandle* row_ids,
                                        int priority);
+
+/*!
+ * \brief push and pull a list of (key, value) pairs from the kvstore
+ * \param handle handle to the kvstore
+ * \param vnum the number of key-value pairs corresponding to vkeys
+ * \param vkeys the list of keys for the values to be pushed
+ * \param onum the number of key-value pairs corresponding to okeys
+ * \param okeys the list of keys for the values to be pulled
+ * \param vals the list of values
+ * \param outs the list of outputs
+ * \param priority the priority of the action
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStorePushPull(KVStoreHandle handle,
+                                mx_uint vnum,
+                                const int* vkeys,
+                                mx_uint onum,
+                                const int* okeys,
+                                NDArrayHandle* vals,
+                                NDArrayHandle* outs,
+                                int priority);
+/*!
+ * \brief push and pull a list of (key, value) pairs from the kvstore,
+ * where each key is a string
+ * \param handle handle to the kvstore
+ * \param vnum the number of key-value pairs corresponding to vkeys
+ * \param vkeys the list of keys for the values to be pushed
+ * \param onum the number of key-value pairs corresponding to okeys
+ * \param okeys the list of keys for the values to be pulled
+ * \param vals the list of values
+ * \param outs the list of outputs
+ * \param priority the priority of the action
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStorePushPullEx(KVStoreHandle handle,
+                                  mx_uint vnum,
+                                  const char** vkeys,
+                                  mx_uint onum,
+                                  const char** okeys,
+                                  NDArrayHandle* vals,
+                                  NDArrayHandle* outs,
+                                  int priority);
 
 /*!
  * \brief user-defined updater for the kvstore

@@ -31,8 +31,7 @@ from . import optimizer as opt
 from .profiler import set_kvstore_handle
 
 def _ctype_key_value(keys, vals):
-    """
-    Returns ctype arrays for the key-value args, and the whether string keys are used.
+    """Returns ctype arrays for the key-value args, and the whether string keys are used.
     For internal use only.
     """
     if isinstance(keys, (tuple, list)):
@@ -66,9 +65,7 @@ def _ctype_key_value(keys, vals):
         return (c_keys, c_handle_array(vals), use_str_keys)
 
 def _ctype_dict(param_dict):
-    """
-    Returns ctype arrays for keys and values(converted to strings) in a dictionary
-    """
+    """Returns ctype arrays for keys and values(converted to strings) in a dictionary"""
     assert(isinstance(param_dict, dict)), \
         "unexpected type for param_dict: " + str(type(param_dict))
     c_keys = c_array(ctypes.c_char_p, [c_str(k) for k in param_dict.keys()])
@@ -310,6 +307,87 @@ class KVStore(object):
             check_call(_LIB.MXKVStorePullWithSparse(self.handle, mx_uint(len(ckeys)), ckeys,
                                                     cvals, ctypes.c_int(priority),
                                                     ctypes.c_bool(ignore_sparse)))
+
+    def pushpull(self, key, value, out=None, priority=0):
+        """ Performs push and pull a single value or a sequence of values from the store.
+
+        This function is coalesced form of push and pull operations. This function returns
+        immediately after adding an operator to the engine. Subsequent attempts to read
+        from the `out` variable will be blocked until the pull operation completes.
+
+        `value` is pushed to the kvstore server for the specified keys and the updated
+        values are pulled from the server to `out`. If `out` is not specified the pulled
+        values are written to `value`. The returned values are guaranteed to be the latest
+        values in the store.
+
+        pushpull with `RowSparseNDArray` is not supported for dist kvstore.
+
+        Parameters
+        ----------
+        key : str, int, or sequence of str or int
+            Keys.
+
+        value : NDArray, RowSparseNDArray, list of NDArray or RowSparseNDArray,
+                or list of list of NDArray or RowSparseNDArray
+            Values corresponding to the keys.
+
+        out: NDArray or list of NDArray or list of list of NDArray
+            Values corresponding to the keys.
+
+        priority : int, optional
+            The priority of the pull operation.
+            Higher priority pull operations are likely to be executed before
+            other pull actions.
+
+        Examples
+        --------
+        >>> # push a single key-value pair
+        >>> kv.pushpull('3', mx.nd.ones(shape)*8, out=a)
+        >>> print a.asnumpy()
+        [[ 8.  8.  8.]
+        [ 8.  8.  8.]]
+
+        >>> # aggregate the value and the push
+        >>> gpus = [mx.gpu(i) for i in range(4)]
+        >>> b = [mx.nd.ones(shape, gpu) for gpu in gpus]
+        >>> kv.pushpull('3', b, out=a)
+        >>> print a.asnumpy()
+        [[ 4.  4.  4.]
+        [ 4.  4.  4.]]
+
+        >>> # push a list of keys.
+        >>> # single device
+        >>> keys = ['4', '5', '6']
+        >>> b = [mx.nd.zeros(shape)]*len(keys)
+        >>> kv.push(keys, [mx.nd.ones(shape)]*len(keys), out=b)
+        >>> print b[1].asnumpy()
+        [[ 1.  1.  1.]
+        [ 1.  1.  1.]]
+
+        >>> # multiple devices:
+        >>> keys = ['7', '8', '9']
+        >>> b = [[mx.nd.ones(shape, gpu) for gpu in gpus]] * len(keys)
+        >>> kv.pushpull(keys, b)
+        >>> print b[1][1].asnumpy()
+        [[ 4.  4.  4.]
+        [ 4.  4.  4.]]
+        """
+
+        cvkeys, cvals, use_str_keys = _ctype_key_value(key, value)
+        if out is not None:
+            cokeys, couts, _ = _ctype_key_value(key, out)
+        else:
+            cokeys = cvkeys
+            couts = cvals
+
+        if use_str_keys:
+            check_call(_LIB.MXKVStorePushPullEx(
+                self.handle, mx_uint(len(cvkeys)), cvkeys, mx_uint(len(cokeys)), cokeys,
+                cvals, couts, ctypes.c_int(priority)))
+        else:
+            check_call(_LIB.MXKVStorePushPull(
+                self.handle, mx_uint(len(cvkeys)), cvkeys, mx_uint(len(cokeys)), cokeys,
+                cvals, couts, ctypes.c_int(priority)))
 
     def row_sparse_pull(self, key, out=None, priority=0, row_ids=None):
         """ Pulls a single RowSparseNDArray value or a sequence of RowSparseNDArray values \

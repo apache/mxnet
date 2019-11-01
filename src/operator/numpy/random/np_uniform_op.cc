@@ -43,6 +43,12 @@ NNVM_REGISTER_OP(_npi_uniform)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
+    const NumpyUniformParam& param = nnvm::get<NumpyUniformParam>(attrs.parsed);
+    int num_inputs = 2;
+    if (param.low.has_value()) num_inputs -= 1;
+    if (param.high.has_value()) num_inputs -= 1;
+    if (num_inputs == 0) return std::vector<std::string>();
+    if (num_inputs == 1) return std::vector<std::string>{"input1"};
     return std::vector<std::string>{"input1", "input2"};
   })
 .set_attr_parser(ParamParser<NumpyUniformParam>)

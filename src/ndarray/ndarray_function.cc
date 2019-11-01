@@ -36,14 +36,19 @@ template<>
 void Copy<cpu, cpu>(const TBlob &from, TBlob *to,
                     Context from_ctx, Context to_ctx,
                     RunContext ctx) {
-  MSHADOW_TYPE_SWITCH(to->type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(to->type_flag_, DType, {
     if (to->type_flag_ == from.type_flag_) {
+      if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
+        CHECK_LT(from.Size(), (int64_t{1} << 31) - 1) <<
+                  "Size of tensor you are trying to allocate is larger than "
+                  "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+      }
       const index_t size = static_cast<index_t>(from.Size());
       CHECK_EQ(size, to->Size()) << "copying size mismatch, from: " << size * sizeof(DType)
                << " bytes, to: " << to->Size() * sizeof(DType) << " bytes.";
       common::ParallelCopy(to->dptr<DType>(), from.dptr<DType>(), size);
     } else {
-      MSHADOW_TYPE_SWITCH(from.type_flag_, SrcDType, {
+      MSHADOW_TYPE_SWITCH_WITH_BOOL(from.type_flag_, SrcDType, {
           to->FlatTo1D<cpu, DType>() =
               mshadow::expr::tcast<DType>(from.FlatTo1D<cpu, SrcDType>());
       })

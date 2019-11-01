@@ -176,7 +176,7 @@ end
 
 function forward(self::Executor; is_train::Bool = false, kwargs...)
   for (k,v) in kwargs
-    @assert(k ∈ self.arg_dict, "Unknown argument $k")
+    @assert(k ∈ keys(self.arg_dict), "Unknown argument $k")
     @assert(isa(v, NDArray), "Keyword argument $k must be an NDArray")
     copy!(self.arg_dict[k], v)
   end
@@ -245,7 +245,7 @@ Total 11 TempSpace resource requested
 ```
 """
 Base.print(io::IO, x::Executor) = print(io, debug_str(x))
-Base.print(x::Executor)         = print(STDOUT, x)
+Base.print(x::Executor)         = print(stdout, x)
 
 function debug_str(x::Executor)
   s_ref = Ref{Cstring}(C_NULL)

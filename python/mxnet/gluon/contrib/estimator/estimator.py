@@ -24,6 +24,7 @@ import warnings
 
 from .event_handler import MetricHandler, ValidationHandler, LoggingHandler, StoppingHandler
 from .event_handler import TrainBegin, EpochBegin, BatchBegin, BatchEnd, EpochEnd, TrainEnd
+from .utils import _check_metrics
 from ...data import DataLoader
 from ...loss import SoftmaxCrossEntropyLoss
 from ...loss import Loss as gluon_loss
@@ -31,7 +32,7 @@ from ...trainer import Trainer
 from ...utils import split_and_load
 from .... import autograd
 from ....context import Context, cpu, gpu, num_gpus
-from ....metric import EvalMetric, Accuracy
+from ....metric import Accuracy
 from ....metric import Loss as metric_loss
 
 __all__ = ['Estimator']
@@ -45,7 +46,7 @@ class Estimator(object):
 
     Parameters
     ----------
-    net : Block
+    net : gluon.Block
         The model used for training.
     loss : gluon.loss.Loss or list of gluon.loss.Loss
         Loss(objective functions) to calculate during training.
@@ -68,7 +69,7 @@ class Estimator(object):
 
         self.net = net
         self.loss = self._check_loss(loss)
-        self.train_metrics = self._check_metrics(metrics)
+        self.train_metrics = _check_metrics(metrics)
 
         self.context = self._check_context(context)
         self._initialize(initializer)
@@ -83,16 +84,6 @@ class Estimator(object):
             raise ValueError("loss must be a Loss or a list of Loss, "
                              "refer to gluon.loss.Loss:{}".format(loss))
         return loss
-
-    def _check_metrics(self, metrics):
-        if isinstance(metrics, EvalMetric):
-            metrics = [metrics]
-        else:
-            metrics = metrics or []
-            if not all([isinstance(metric, EvalMetric) for metric in metrics]):
-                raise ValueError("metrics must be a Metric or a list of Metric, "
-                                 "refer to mxnet.metric.EvalMetric:{}".format(metrics))
-        return metrics
 
     def _check_context(self, context):
         # infer available context
@@ -180,8 +171,10 @@ class Estimator(object):
         Based on loss functions and training metrics in estimator
         Create metric wrappers to record loss values,
         Create copies of train loss/metric objects to record validation values
-        Returns train_metrics and val_metrics
 
+        Returns
+        -------
+        train_metrics, val_metrics
         """
         if any(not hasattr(self, attribute) for attribute in
                ['train_metrics', 'val_metrics']):
@@ -199,21 +192,50 @@ class Estimator(object):
                 self.val_metrics.append(val_metric)
         return self.train_metrics, self.val_metrics
 
+    def evaluate_batch(self,
+                       val_batch,
+                       val_metrics,
+                       batch_axis=0):
+        """Evaluate model on a batch of validation data.
+
+        Parameters
+        ----------
+        val_batch : tuple
+            Data and label of a batch from the validation data loader.
+        val_metrics : EvalMetric or list of EvalMetrics
+            Metrics to update validation result.
+        batch_axis : int, default 0
+            Batch axis to split the validation data into devices.
+        """
+        data, label = self._get_data_and_label(val_batch, self.context, batch_axis)
+        pred = [self.net(x) for x in data]
+        loss = [self.loss[0](y_hat, y) for y_hat, y in zip(pred, label)]
+        # update metrics
+        for metric in val_metrics:
+            if isinstance(metric, metric_loss):
+                metric.update(0, loss)
+            else:
+                metric.update(label, pred)
+
     def evaluate(self,
                  val_data,
                  val_metrics,
                  batch_axis=0):
-        """Evaluate model on validation data
+        """Evaluate model on validation data.
 
-         Parameters
-         ----------
-         val_data : DataLoader
-             Validation data loader with data and labels.
-         val_metrics : EvalMetric or list of EvalMetrics
-             Metrics to update validation result.
-         batch_axis : int, default 0
-             Batch axis to split the validation data into devices.
-         """
+        This function calls :py:func:`evaluate_batch` on each of the batches from the
+        validation data loader. Thus, for custom use cases, it's possible to inherit the
+        estimator class and override :py:func:`evaluate_batch`.
+
+        Parameters
+        ----------
+        val_data : DataLoader
+            Validation data loader with data and labels.
+        val_metrics : EvalMetric or list of EvalMetrics
+            Metrics to update validation result.
+        batch_axis : int, default 0
+            Batch axis to split the validation data into devices.
+        """
         if not isinstance(val_data, DataLoader):
             raise ValueError("Estimator only support input as Gluon DataLoader. Alternatively, you "
                              "can transform your DataIter or any NDArray into Gluon DataLoader. "
@@ -223,15 +245,44 @@ class Estimator(object):
             metric.reset()
 
         for _, batch in enumerate(val_data):
-            data, label = self._get_data_and_label(batch, self.context, batch_axis)
+            self.evaluate_batch(batch, val_metrics, batch_axis)
+
+    def fit_batch(self, train_batch,
+                  batch_axis=0):
+        """Trains the model on a batch of training data.
+
+        Parameters
+        ----------
+        train_batch : tuple
+            Data and label of a batch from the training data loader.
+        batch_axis : int, default 0
+            Batch axis to split the training data into devices.
+
+        Returns
+        -------
+        data: List of NDArray
+            Sharded data from the batch.
+        label: List of NDArray
+            Sharded label from the batch.
+        pred: List of NDArray
+            Prediction of each of the shareded batch.
+        loss: List of NDArray
+            Loss of each of the shareded batch.
+        """
+        data, label = self._get_data_and_label(train_batch, self.context, batch_axis)
+
+        batch_size = train_batch[0].shape[batch_axis]
+
+        with autograd.record():
             pred = [self.net(x) for x in data]
             loss = [self.loss[0](y_hat, y) for y_hat, y in zip(pred, label)]
-            # update metrics
-            for metric in val_metrics:
-                if isinstance(metric, metric_loss):
-                    metric.update(0, loss)
-                else:
-                    metric.update(label, pred)
+
+        for l in loss:
+            l.backward()
+
+        self.trainer.step(batch_size)
+
+        return data, label, pred, loss
 
     def fit(self, train_data,
             val_data=None,
@@ -242,6 +293,10 @@ class Estimator(object):
         """Trains the model with a given :py:class:`DataLoader` for a specified
         number of epochs or batches. The batch size is inferred from the
         data loader's batch_size.
+
+        This function calls :py:func:`fit_batch` on each of the batches from the
+        training data loader. Thus, for custom use cases, it's possible to inherit the
+        estimator class and override :py:func:`fit_batch`.
 
         Parameters
         ----------
@@ -293,22 +348,12 @@ class Estimator(object):
                 handler.epoch_begin(estimator_ref)
 
             for i, batch in enumerate(train_data):
-                data, label = self._get_data_and_label(batch, self.context, batch_axis)
-
-                batch_size = batch[0].shape[0]
-
                 # batch begin
                 for handler in batch_begin:
                     handler.batch_begin(estimator_ref, batch=batch)
 
-                with autograd.record():
-                    pred = [self.net(x) for x in data]
-                    loss = [self.loss[0](y_hat, y) for y_hat, y in zip(pred, label)]
+                _, label, pred, loss = self.fit_batch(batch, batch_axis)
 
-                for l in loss:
-                    l.backward()
-
-                self.trainer.step(batch_size)
                 # batch end
 
                 batch_end_result = []

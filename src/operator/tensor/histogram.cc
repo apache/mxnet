@@ -123,6 +123,7 @@ void HistogramForwardImpl<cpu>(const OpContext& ctx,
 DMLC_REGISTER_PARAMETER(HistogramParam);
 
 NNVM_REGISTER_OP(_histogram)
+.add_alias("_npi_histogram")
 .describe(R"code(This operators implements the histogram function.
 
 Example::

@@ -111,7 +111,7 @@ NNVM_REGISTER_OP(_npi_tensordot)
 .set_attr<nnvm::FInferType>("FInferType", mxnet::op::ElemwiseType<2, 1>)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+    return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
   })
 .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", TensordotOpForward<cpu>)
@@ -127,7 +127,7 @@ NNVM_REGISTER_OP(_backward_npi_tensordot)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+    return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
   })
 .set_attr<FCompute>("FCompute<cpu>", TensordotOpBackward<cpu>);
 
@@ -212,7 +212,7 @@ NNVM_REGISTER_OP(_npi_tensordot_int_axes)
 .set_attr<nnvm::FInferType>("FInferType", mxnet::op::ElemwiseType<2, 1>)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+    return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
   })
 .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", TensordotIntAxesOpForward<cpu>)
@@ -229,7 +229,7 @@ NNVM_REGISTER_OP(_backward_npi_tensordot_int_axes)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+    return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
   })
 .set_attr<FCompute>("FCompute<cpu>", TensordotIntAxesOpBackward<cpu>);
 

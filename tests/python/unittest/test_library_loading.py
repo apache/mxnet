@@ -22,12 +22,13 @@ import platform
 import unittest
 import mxnet as mx
 from mxnet.base import MXNetError
-from mxnet.test_utils import download
+from mxnet.test_utils import download, is_cd_run
 
 def check_platform():
     return platform.machine() not in ['x86_64', 'AMD64']
 
 @unittest.skipIf(check_platform(), "not all machine types supported")
+@unittest.skipIf(is_cd_run(), "continuous delivery run - ignoring test")
 def test_library_loading():
     if (os.name=='posix'):
         lib = 'libsample_lib.so'

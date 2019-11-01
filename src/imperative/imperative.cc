@@ -25,11 +25,11 @@ namespace mxnet {
 #if DMLC_CXX11_THREAD_LOCAL
 thread_local bool Imperative::is_train_ = false;
 thread_local bool Imperative::is_recording_ = false;
-thread_local bool Imperative::is_np_shape_ = false;
+thread_local bool Imperative::is_np_shape_thread_local_ = false;
 #else
 MX_THREAD_LOCAL bool Imperative::is_train_ = false;
 MX_THREAD_LOCAL bool Imperative::is_recording_ = false;
-MX_THREAD_LOCAL bool Imperative::is_np_shape_ = false;
+MX_THREAD_LOCAL bool Imperative::is_np_shape_thread_local_ = false;
 #endif
 
 Imperative* Imperative::Get() {

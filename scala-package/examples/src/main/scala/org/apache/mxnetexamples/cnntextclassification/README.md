@@ -24,7 +24,7 @@ Please contribute to improve the dev accuracy of the model.
 ## Setup
 
 Please configure your maven project using our latest release. An tutorial to do that can be found here:
-[IntelliJ IDE (or alternative IDE) project setup](http://mxnet.incubator.apache.org/tutorials/scala/mxnet_scala_on_intellij.html)
+[IntelliJ IDE (or alternative IDE) project setup](https://mxnet.apache.org/api/scala/docs/tutorials/mxnet_scala_on_intellij)
 
 ### Download the training files
 ```$xslt

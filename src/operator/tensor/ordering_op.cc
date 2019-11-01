@@ -35,7 +35,10 @@ DMLC_REGISTER_PARAMETER(ArgSortParam);
 
 NNVM_REGISTER_OP(topk)
 .add_alias("_npx_topk")
-.describe(R"code(Returns the top *k* elements in an input array along the given axis.
+.describe(R"code(Returns the indices of the top *k* elements in an input array along the given
+ axis (by default).
+ If ret_type is set to 'value' returns the value of top *k* elements (instead of indices).
+ In case of ret_type = 'both', both value and index would be returned.
  The returned elements will be sorted.
 
 Examples::
