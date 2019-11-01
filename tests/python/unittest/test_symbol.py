@@ -16,6 +16,7 @@
 # under the License.
 
 import copy
+import sys
 import os
 import re
 import json
