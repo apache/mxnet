@@ -474,9 +474,15 @@ class CustomOp(object):
         if req == 'null':
             return
         elif req in ('write', 'inplace'):
-            dst[()] = src
+            if is_np_array():
+                dst[()] = src
+            else:
+                dst[:] = src
         elif req == 'add':
-            dst[()] += src
+            if is_np_array():
+                dst[()] += src
+            else:
+                dst[:] += src
 
 
 class CustomOpProp(object):
@@ -986,13 +992,13 @@ def register(reg_name):
                             tensors = [[] for i in range(5)]
                             for i in range(num_ndarray):
                                 if tags[i] == 1 or tags[i] == 4:
-                                    tensors[tags[i]].append(create_ndarray_fn(cast(ndarraies[i],
-                                                                              NDArrayHandle),
-                                                                              writable=True))
+                                    tensors[tags[i]].append(
+                                        create_ndarray_fn(cast(ndarraies[i], NDArrayHandle), writable=True)
+                                    )
                                 else:
-                                    tensors[tags[i]].append(create_ndarray_fn(cast(ndarraies[i],
-                                                                              NDArrayHandle),
-                                                                              writable=False))
+                                    tensors[tags[i]].append(
+                                        create_ndarray_fn(cast(ndarraies[i], NDArrayHandle), writable=False)
+                                    )
                             reqs = [req_enum[reqs[i]] for i in range(len(tensors[1]))]
                             with ctx:
                                 op.forward(is_train=is_train, req=reqs,
@@ -1022,15 +1028,15 @@ def register(reg_name):
                                     # be set to default
                                     stype = _STORAGE_TYPE_DEFAULT
                                 if tags[i] == 2 or tags[i] == 4:
-                                    tensors[tags[i]].append(create_ndarray_fn(cast(ndarraies[i],
-                                                                              NDArrayHandle),
-                                                                              writable=True,
-                                                                              stype=stype))
+                                    tensors[tags[i]].append(
+                                        create_ndarray_fn(cast(ndarraies[i], NDArrayHandle),
+                                                          writable=True, stype=stype)
+                                    )
                                 else:
-                                    tensors[tags[i]].append(create_ndarray_fn(cast(ndarraies[i],
-                                                                                   NDArrayHandle),
-                                                                              writable=False,
-                                                                              stype=stype))
+                                    tensors[tags[i]].append(
+                                        create_ndarray_fn(cast(ndarraies[i], NDArrayHandle),
+                                                          writable=False, stype=stype)
+                                    )
                             reqs = [req_enum[reqs[i]] for i in range(len(tensors[2]))]
                             with ctx:
                                 op.backward(req=reqs,
