@@ -152,6 +152,7 @@ Example::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<mxnet::FInferShape>("FInferShape", HistogramOpShape)
 .set_attr<nnvm::FInferType>("FInferType", HistogramOpType)
 .set_attr<FCompute>("FCompute<cpu>", HistogramOpForward<cpu>)

@@ -35,6 +35,7 @@ MXNET_OPERATOR_REGISTER_MINMAX_REDUCE(max)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_max"});
 
 MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_max)
@@ -49,6 +50,7 @@ MXNET_OPERATOR_REGISTER_MINMAX_REDUCE(min)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_min"});
 
 MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_min)
