@@ -61,11 +61,6 @@ OpStatePtr Imperative::InvokeOp(
   FCompute fn = common::GetFCompute<FCompute>(op, "FCompute", ctx);
   FComputeEx fn_ex = common::GetFCompute<FComputeEx>(op, "FComputeEx", ctx);
 
-  //huhanpeng
-  // std::cout << "src/imperative/imperative.cc:InvokeOp - " << attrs.name
-  //           << " op->name: " << op->name
-  //           << std::endl << std::flush;
-
   // FComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx
   CHECK(dispatch_mode != DispatchMode::kUndefined);
   bool dispatch_fcompex = dispatch_mode == DispatchMode::kFComputeEx;

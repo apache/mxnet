@@ -1176,7 +1176,6 @@ void GraphExecutor::InitCachedOps() {
     const auto& inode = idx[nid];
     if (inode.source->is_variable()) continue;
     // op_nodes_[nid].opr_name = inode.source->op()->name.c_str();
-    // huhanpeng
     op_nodes_[nid].opr_name = inode.source->attrs.name.c_str();
     if (skip_plus_node.at(nid)) {
       op_nodes_[nid].skip_exec_node = true; continue;
@@ -1560,7 +1559,6 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
               std::inserter(use_vars, use_vars.end()));
     ret.exec_list.push_back(exec);
     // opr_names += inode.source->op()->name + ",";
-    // huhanpeng
     opr_names += inode.source->attrs.name + ",";
   }
 

@@ -588,9 +588,6 @@ void CachedOp::StaticInitExec(
   using namespace nnvm;
   using namespace imperative;
 
-  // std::cout << "src/imperative/cached_op.cc:StaticInitExec" 
-  //           << std::endl << std::flush;
-
   auto& state = state_ptr.get_state<CachedOpState>();
   const auto& default_ctx = state.context;
   nnvm::Graph& g = keep_fwd ? state.info.full_graph : state.info.fwd_graph;
@@ -630,12 +627,6 @@ void CachedOp::StaticInitExec(
       for (size_t j = 0; !skip && j < idx[i].source->num_outputs(); ++j) {
         skip = state.dynamic_entries[idx.entry_id(i, j)];
       }
-      
-      // std::cout << "src/imperative/cached_op.cc:StaticInitExec"
-      //           << " op:" << idx[i].source->attrs.name
-      //           << " skip:" << skip
-      //           << std::endl << std::flush;
-        
       if (skip) continue;
       SetupOpExec(g, i, state.execs[i], state.arrays, state.array_reqs);
     }
@@ -695,19 +686,9 @@ void CachedOp::StaticRunOps(
     const auto& opr_seg = state.opr_segs[i];
     if (opr_seg.skip) continue;
     if (opr_seg.opr != nullptr) {
-      const nnvm::IndexedGraph::Node& node = idx[i];
-      // std::cout << "src/imperative/cached_op:StaticRunOps: diretly call Push " 
-      //           << " node.source->attrs:" << node.source->attrs.name
-      //           << std::endl << std::flush;
-
       Engine::Get()->Push(opr_seg.opr.get(), default_ctx, 0, profiling);
     } else {
       const nnvm::IndexedGraph::Node& node = idx[i];
-
-      // std::cout << "src/imperative/cached_op:StaticRunOps: run InvokeOp" 
-      //           << " node.source->attrs:" << node.source->attrs.name
-      //           << std::endl << std::flush;
-
       if (node.source->is_variable()) continue;
       auto num_outputs = node.source->num_outputs();
       ndinputs.clear();
@@ -824,18 +805,6 @@ OpStatePtr CachedOp::StaticForward(
     *outputs[i] = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
                           shapes[eid], default_ctx, true, dtypes[eid]);
   }
-
-  //huhanpeng: here
-  // const auto& opr_seg = state.opr_segs[0];
-  // if (opr_seg.opr != nullptr) {
-  //   auto temp = static_cast<ThreadedOpr*>(opr_seg.opr)
-  //   std::cout << "src/imperative/cached_op.cc: StaticForward: " 
-  //             << temp->opr_name << std::endl << std::flush;
-  // } else {
-  //   std::cout << "src/imperative/cached_op.cc: StaticForward: " 
-  //             << "opr_seg.opr nullptr" << std::endl << std::flush;
-  // }
-
 
   StaticRunOps(default_ctx, g, state_ptr, arrays, 0, idx.num_nodes());
 
