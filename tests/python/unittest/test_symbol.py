@@ -443,10 +443,10 @@ def test_eliminate_common_expr():
                 for grad_req in ['write', 'add']:
                     type_dict = {inp : dtype for inp in inputs}
                     os.environ[env_var_name] = '0'
-                    orig_exec = sym.simple_bind(ctx=mx.gpu(0), grad_req=grad_req,
+                    orig_exec = sym.simple_bind(ctx=mx.cpu(0), grad_req=grad_req,
                                                 type_dict=type_dict, **shapes)
                     os.environ[env_var_name] = '1'
-                    cse_exec = sym.simple_bind(ctx=mx.gpu(0), grad_req=grad_req,
+                    cse_exec = sym.simple_bind(ctx=mx.cpu(0), grad_req=grad_req,
                                                type_dict=type_dict, **shapes)
                     fwd_orig = orig_exec.forward(is_train=True, **data)
                     out_grads = [mx.nd.ones_like(arr) for arr in fwd_orig]
