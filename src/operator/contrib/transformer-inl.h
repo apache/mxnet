@@ -40,14 +40,8 @@ struct InterleavedMatMulParam : public dmlc::Parameter<InterleavedMatMulParam> {
   DMLC_DECLARE_PARAMETER(InterleavedMatMulParam) {
     DMLC_DECLARE_FIELD(heads)
     .describe("Set number of heads");
-    DMLC_DECLARE_FIELD(bwd_ignore_zero_init)
-    .describe("Make backward pass ignore AddTo and not init to 0. "
-              " /!\\ Only enable with MXNET_EXEC_ENABLE_ADDTO fonctionality")
-    .set_default(false);
   }
 };
-
-void BackwardInterleavedMatMulParamParser(nnvm::NodeAttrs* attrs);
 
 template<typename xpu>
 static void DivSqrtDimForward_(const nnvm::NodeAttrs& attrs,

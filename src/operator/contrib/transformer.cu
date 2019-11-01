@@ -145,12 +145,12 @@ void BackwardInterleavedMatMulSelfAttQKGPU(const nnvm::NodeAttrs& attrs,
     const int32_t lead_dim       = attn_batches * 3 * head_dim;
     const int32_t batch_stride   = 3 * head_dim;
     const float scale            = 1.0 / sqrt(static_cast<float>(head_dim));
-    const float beta = ((req[0] == kAddTo) && !params.bwd_ignore_zero_init) ? 1.f : 0.f;
+    const float beta = (req[0] == kAddTo ? 1.f : 0.f;
 
     if (req[0] == kNullOp)
       return;
 
-    if (req[0] == kWriteTo && !params.bwd_ignore_zero_init) {
+    if (req[0] == kWriteTo) {
       cudaMemsetAsync(queries_keys_values_grads, 0, outputs[0].shape_.Size() * sizeof(DType),
                       mshadow::Stream<gpu>::GetStream(s));
     }
@@ -263,11 +263,11 @@ void BackwardInterleavedMatMulSelfAttValAttGPU(const nnvm::NodeAttrs& attrs,
     const int32_t batch_stride   = 3 * head_dim;
     const float alpha            = 1.f;
     if (req[0] != kNullOp) {
-      if (req[0] == kWriteTo && !params.bwd_ignore_zero_init) {
+      if (req[0] == kWriteTo) {
         cudaMemsetAsync(queries_keys_values_grads, 0, outputs[0].shape_.Size() * sizeof(DType),
                         mshadow::Stream<gpu>::GetStream(s));
       }
-      const float beta = ((req[0] == kAddTo) && !params.bwd_ignore_zero_init) ? 1.f : 0.f;
+      const float beta = req[0] == kAddTo ? 1.f : 0.f;
       gemm_switch_fp32accum(s,
                             false,
                             true,
@@ -411,11 +411,11 @@ void BackwardInterleavedMatMulEncDecQKGPU(const nnvm::NodeAttrs& attrs,
                             attn_batches);
     }
     if (req[1] != kNullOp) {
-      if (req[1] == kWriteTo && !params.bwd_ignore_zero_init) {
+      if (req[1] == kWriteTo) {
         cudaMemsetAsync(keys_values_grads, 0, outputs[1].shape_.Size() * sizeof(DType),
                         mshadow::Stream<gpu>::GetStream(s));
       }
-      const float beta = ((req[1] == kAddTo) && !params.bwd_ignore_zero_init) ? 1.f : 0.f;
+      const float beta = req[1] == kAddTo ? 1.f : 0.f;
       gemm_switch_fp32accum(s,
                             false,
                             true,
@@ -510,11 +510,11 @@ void BackwardInterleavedMatMulEncDecValAttGPU(const nnvm::NodeAttrs& attrs,
     const float alpha               = 1.f;
 
     if (req[0] != kNullOp) {
-      if (req[0] == kWriteTo && !params.bwd_ignore_zero_init) {
+      if (req[0] == kWriteTo {
         cudaMemsetAsync(keys_values_grads, 0, outputs[0].shape_.Size() * sizeof(DType),
                         mshadow::Stream<gpu>::GetStream(s));
       }
-      const float beta = ((req[0] == kAddTo) && !params.bwd_ignore_zero_init) ? 1.f : 0.f;
+      const float beta = req[0] == kAddTo ? 1.f : 0.f;
       gemm_switch_fp32accum(s,
                             false,
                             true,

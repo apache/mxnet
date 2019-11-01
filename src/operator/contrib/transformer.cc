@@ -31,29 +31,6 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(InterleavedMatMulParam);
 
-void BackwardInterleavedMatMulParamParser(nnvm::NodeAttrs* attrs) {
-  InterleavedMatMulParam param_;
-  try {
-    param_.Init(attrs->dict);
-  } catch (const dmlc::ParamError& e) {
-    std::ostringstream os;
-    os << e.what();
-    os << ", in operator " << attrs->op->name << "("
-       << "name=\"" << attrs->name << "\"";
-    for (const auto& k : attrs->dict) {
-      os << ", " << k.first << "=\"" << k.second << "\"";
-    }
-    os << ")";
-    throw dmlc::ParamError(os.str());
-  }
-
-  if (param_.bwd_ignore_zero_init && !dmlc::GetEnv("MXNET_EXEC_ENABLE_ADDTO", false)) {
-    LOG(FATAL) << "in '" << attrs->name
-               << "' bwd_ignore_zero_init only works with MXNET_EXEC_ENABLE_ADDTO set to 1";
-  }
-  attrs->parsed = param_;
-}
-
 static bool InterleavedMatMulSelfAttQKShape(const NodeAttrs& attrs,
                                             mxnet::ShapeVector* in_shape,
                                             mxnet::ShapeVector* out_shape) {
@@ -184,7 +161,7 @@ NNVM_REGISTER_OP(_backward_interleaved_matmul_selfatt_qk)
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr_parser(BackwardInterleavedMatMulParamParser);
+.set_attr_parser(ParamParser<InterleavedMatMulParam>);
 
 NNVM_REGISTER_OP(_contrib_interleaved_matmul_selfatt_valatt)
 .describe(R"code(Compute the matrix multiplication between the projections of
@@ -229,7 +206,7 @@ NNVM_REGISTER_OP(_backward_interleaved_matmul_selfatt_valatt)
 .set_num_inputs(3)
 .set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr_parser(BackwardInterleavedMatMulParamParser);
+.set_attr_parser(ParamParser<InterleavedMatMulParam>);
 
 NNVM_REGISTER_OP(_contrib_interleaved_matmul_encdec_qk)
 .describe(R"code(Compute the matrix multiplication between the projections of
@@ -273,7 +250,7 @@ NNVM_REGISTER_OP(_backward_interleaved_matmul_encdec_qk)
 .set_num_inputs(3)
 .set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr_parser(BackwardInterleavedMatMulParamParser);
+.set_attr_parser(ParamParser<InterleavedMatMulParam>);
 
 NNVM_REGISTER_OP(_contrib_interleaved_matmul_encdec_valatt)
 .describe(R"code(Compute the matrix multiplication between the projections of
@@ -319,7 +296,7 @@ NNVM_REGISTER_OP(_backward_interleaved_matmul_encdec_valatt)
 .set_num_inputs(3)
 .set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr_parser(BackwardInterleavedMatMulParamParser);
+.set_attr_parser(ParamParser<InterleavedMatMulParam>);
 
 
 // relu
