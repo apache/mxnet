@@ -250,6 +250,29 @@ def _add_workload_linalg_norm():
         OpArgMngr.add_workload('linalg.norm', np.array([[1, 0, 1], [0, 1, 1]], dtype=dt), 'fro')
 
 
+def _add_workload_linalg_cholesky():
+    shapes = [(1, 1), (2, 2), (3, 3), (50, 50), (3, 10, 10)]
+    dtypes = (np.float32, np.float64)
+
+    for shape, dtype in itertools.product(shapes, dtypes):
+        _np.random.seed(1)
+        a = _np.random.randn(*shape)
+
+        t = list(range(len(shape)))
+        t[-2:] = -1, -2
+
+        a = _np.matmul(a.transpose(t).conj(), a)
+
+        OpArgMngr.add_workload('linalg.cholesky', np.array(a, dtype=dtype))
+    
+    # test_0_size
+    for dtype in dtypes:
+        a = np.zeros((0, 1, 1))
+        OpArgMngr.add_workload('linalg.cholesky', np.array(a, dtype=dtype))
+        a = np.zeros((1, 0, 0))
+        OpArgMngr.add_workload('linalg.cholesky', np.array(a, dtype=dtype))
+
+
 def _add_workload_trace():
     OpArgMngr.add_workload('trace', np.random.uniform(size=(4, 1)))
     OpArgMngr.add_workload('trace', np.random.uniform(size=(3, 2)))
@@ -1180,6 +1203,7 @@ def _prepare_workloads():
     _add_workload_var(array_pool)
     _add_workload_zeros_like(array_pool)
     _add_workload_linalg_norm()
+    _add_workload_linalg_cholesky()
     _add_workload_trace()
     _add_workload_tril()
     _add_workload_outer()
