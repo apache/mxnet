@@ -2349,7 +2349,7 @@ def test_arange_like_dtype():
             assert v.dtype == t
 
 @with_seed()
-def check_multihead_attention_selfatt(bwd_ignore_zero_init, dtype):
+def check_multihead_attention_selfatt(dtype):
     def convert_weight(F, q_weight, k_weight, v_weight, num_heads):
         q_weight = F.reshape(q_weight, shape=(num_heads, -1, 0), reverse=True)
         k_weight = F.reshape(k_weight, shape=(num_heads, -1, 0), reverse=True)
@@ -2402,10 +2402,10 @@ def check_multihead_attention_selfatt(bwd_ignore_zero_init, dtype):
     qkv_proj = mx.sym.FullyConnected(qkv, weight=qkv_weight, bias=qkv_bias, flatten=False,
                                      num_hidden=qkv_units * 3, no_bias=False)
     att_score = mx.sym.contrib.interleaved_matmul_selfatt_qk(
-            qkv_proj, heads=num_heads, bwd_ignore_zero_init=bwd_ignore_zero_init)
+            qkv_proj, heads=num_heads)
     att_score = att_score + sonde
     weighted_value = mx.sym.contrib.interleaved_matmul_selfatt_valatt(
-            qkv_proj, att_score, heads=num_heads, bwd_ignore_zero_init=bwd_ignore_zero_init)
+            qkv_proj, att_score, heads=num_heads)
     output = mx.sym.FullyConnected(weighted_value, weight=out_weight, bias=out_bias, flatten=False,
                                    num_hidden=out_dim, no_bias=False)
     output = mx.sym.transpose(output, axes=(1, 0, 2))
@@ -2497,20 +2497,10 @@ def check_multihead_attention_selfatt(bwd_ignore_zero_init, dtype):
         assert_allclose(grads_orig[k], grads_opti[k], rtol=1e-2, atol=1e-3)
 
 def test_multihead_attention_selfatt():
-    #os.environ['MXNET_EXEC_ENABLE_ADDTO'] = '0'
     for dtype in ['float16', 'float32']:
-        check_multihead_attention_selfatt(bwd_ignore_zero_init=False, dtype=dtype)
-    try:
-        os.environ['MXNET_EXEC_ENABLE_ADDTO'] = '0'
-        check_multihead_attention_selfatt(bwd_ignore_zero_init=True)
-    except:
-        error_found = True
-    assert error_found
-    #os.environ['MXNET_EXEC_ENABLE_ADDTO'] = '1'
-    #check_multihead_attention_selfatt(bwd_ignore_zero_init=False)
-    #check_multihead_attention_selfatt(bwd_ignore_zero_init=True)
+        check_multihead_attention_selfatt(dtype=dtype)
 
-def check_multihead_attention_encdec(bwd_ignore_zero_init, dtype):
+def check_multihead_attention_encdec(dtype):
     def convert_weight(F, k_weight, v_weight, num_heads):
         k_weight = F.reshape(k_weight, shape=(num_heads, -1, 0), reverse=True)
         v_weight = F.reshape(v_weight, shape=(num_heads, -1, 0), reverse=True)
@@ -2566,10 +2556,10 @@ def check_multihead_attention_encdec(bwd_ignore_zero_init, dtype):
     q_proj = mx.sym.FullyConnected(q, weight=q_weight, bias=q_bias, flatten=False,
                                    num_hidden=qkv_units, no_bias=False)
     att_score = mx.sym.contrib.interleaved_matmul_encdec_qk(
-            q_proj, kv_proj, heads=num_heads, bwd_ignore_zero_init=bwd_ignore_zero_init)
+            q_proj, kv_proj, heads=num_heads) 
     att_score = att_score + sonde
     weighted_value = mx.sym.contrib.interleaved_matmul_encdec_valatt(
-            kv_proj, att_score, heads=num_heads, bwd_ignore_zero_init=bwd_ignore_zero_init)
+            kv_proj, att_score, heads=num_heads)
     output = mx.sym.FullyConnected(weighted_value, weight=out_weight, bias=out_bias, flatten=False,
                                    num_hidden=out_dim, no_bias=False)
     output = mx.sym.transpose(output, axes=(1, 0, 2))
@@ -2670,16 +2660,8 @@ def check_multihead_attention_encdec(bwd_ignore_zero_init, dtype):
         assert_allclose(grads_orig[k], grads_opti[k], rtol=1e-2, atol=1e-3)
 
 def test_multihead_attention_encdec():
-    #os.environ['MXNET_EXEC_ENABLE_ADDTO'] = '0'
     for dtype in ['float16', 'float32']:
-        check_multihead_attention_encdec(bwd_ignore_zero_init=False, dtype=dtype)
-    error_found = False
-    try:
-        os.environ['MXNET_EXEC_ENABLE_ADDTO'] = '0'
-        check_multihead_attention_encdec(bwd_ignore_zero_init=True)
-    except:
-        error_found = True
-    assert error_found
+        check_multihead_attention_encdec(dtype=dtype)
 
 if __name__ == '__main__':
     import nose
