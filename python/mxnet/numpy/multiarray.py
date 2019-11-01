@@ -49,7 +49,7 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'add', 'subtrac
            'mod', 'remainder', 'power', 'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10',
            'sqrt', 'cbrt', 'abs', 'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative',
-           'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh',
+           'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'append',
            'tensordot', 'histogram', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange',
            'split', 'vsplit', 'concatenate', 'stack', 'vstack', 'column_stack', 'dstack', 'mean', 'maximum', 'minimum',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming',
@@ -4803,8 +4803,51 @@ def concatenate(seq, axis=0, out=None):
     >>> np.concatenate((a, b.T), axis=1)
     array([[1., 2., 5.],
            [3., 4., 6.]])
+
+    >>> np.concatenate((a, b), axis=None)
+    array([1., 2., 3., 4., 5., 6.])
     """
     return _mx_nd_np.concatenate(seq, axis=axis, out=out)
+
+
+@set_module('mxnet.numpy')
+def append(arr, values, axis=None):  # pylint: disable=redefined-outer-name
+    """
+    Append values to the end of an array.
+
+    Parameters
+    ----------
+    arr : ndarray
+        Values are appended to a copy of this array.
+    values : ndarray
+        These values are appended to a copy of `arr`.  It must be of the
+        correct shape (the same shape as `arr`, excluding `axis`).  If
+        `axis` is not specified, `values` can be any shape and will be
+        flattened before use.
+    axis : int, optional
+        The axis along which `values` are appended.  If `axis` is not
+        given, both `arr` and `values` are flattened before use.
+
+    Returns
+    -------
+    append : ndarray
+        A copy of `arr` with `values` appended to `axis`.  Note that
+        `append` does not occur in-place: a new array is allocated and
+        filled.  If `axis` is None, `out` is a flattened array.
+
+    Examples
+    --------
+    >>> np.append(np.array([1, 2, 3]), np.array([[4, 5, 6],[7, 8, 9]]))
+    array([1., 2., 3., 4., 5., 6., 7., 8., 9.])
+
+    When `axis` is specified, `values` must have the correct shape.
+
+    >>> np.append(np.array([[1, 2, 3], [4, 5, 6]]), np.array([[7, 8, 9]]), axis=0)
+    array([[1., 2., 3.],
+           [4., 5., 6.],
+           [7., 8., 9.]])
+    """
+    return _mx_nd_np.append(arr, values, axis=axis)
 
 
 @set_module('mxnet.numpy')
@@ -7018,7 +7061,7 @@ def may_share_memory(a, b, max_work=None):
     return _mx_nd_np.may_share_memory(a, b, max_work)
 
 
-def diff(a, n=1, axis=-1, prepend=None, append=None):
+def diff(a, n=1, axis=-1, prepend=None, append=None):  # pylint: disable=redefined-outer-name
     r"""
     numpy.diff(a, n=1, axis=-1, prepend=<no value>, append=<no value>)
 
