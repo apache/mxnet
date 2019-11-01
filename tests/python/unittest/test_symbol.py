@@ -417,6 +417,9 @@ def test_gen_atomic_symbol_multiple_outputs():
 
 
 def test_eliminate_common_expr():
+    if not sys.platform.startswith('linux'):
+        logging.info("Bypass the CSE test on non-Linux OS as setting env variables during test does not work on Windows")
+        return
     def set_back_env_var(var_name, old_env_var):
         if old_env_var is None:
             os.environ.pop(var_name)
