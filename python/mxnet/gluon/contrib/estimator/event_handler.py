@@ -256,14 +256,16 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
         super(LoggingHandler, self).__init__()
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
-        stream_handler = logging.StreamHandler()
-        self.logger.addHandler(stream_handler)
+        self._added_logging_handlers = [logging.StreamHandler()]
         # save logger to file only if file name or location is specified
         if file_name or file_location:
             file_name = file_name or 'estimator_log'
             file_location = file_location or './'
             file_handler = logging.FileHandler(os.path.join(file_location, file_name), mode=filemode)
-            self.logger.addHandler(file_handler)
+            self._added_logging_handlers.append(file_handler)
+        for handler in self._added_logging_handlers:
+            self.logger.addHandler(handler)
+
         if verbose not in [self.LOG_PER_EPOCH, self.LOG_PER_BATCH]:
             raise ValueError("verbose level must be either LOG_PER_EPOCH or "
                              "LOG_PER_BATCH, received %s. "
@@ -278,6 +280,12 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
         # logging handler need to be called at last to make sure all states are updated
         # it will also shut down logging at train end
         self.priority = np.Inf
+
+    def __del__(self):
+        for handler in self._added_logging_handlers:
+            handler.flush()
+            self.logger.removeHandler(handler)
+            handler.close()
 
     def train_begin(self, estimator, *args, **kwargs):
         self.train_start = time.time()
