@@ -3119,6 +3119,21 @@ def test_squeeze_consistency():
         shape = (np.random.randint(1, 10), np.random.randint(1, 10), 1)
         block(mx.nd.ones(shape))
 
+def test_shared_parameters_with_non_default_initializer():
+    class MyBlock(gluon.HybridBlock):
+        def __init__(self, **kwargs):
+            super(MyBlock, self).__init__(**kwargs)
+
+            with self.name_scope():
+                self.param = self.params.get("param", shape=(1, ), init=mx.init.Constant(-10.0))
+
+    bl = MyBlock()
+    bl2 = MyBlock(params=bl.collect_params())
+    assert bl.param is bl2.param
+    bl3 = MyBlock()
+    assert bl.param is not bl3.param
+    assert bl.param.init == bl3.param.init
+
 @with_seed()
 def test_reqs_switching_training_inference():
     class Foo(gluon.HybridBlock):
