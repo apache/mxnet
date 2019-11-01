@@ -36,23 +36,10 @@ namespace op {
 inline bool NumpyLaCholeskyShape(const nnvm::NodeAttrs& attrs,
                                  mxnet::ShapeVector* in_attrs,
                                  mxnet::ShapeVector* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
   const mxnet::TShape& in_shape = (*in_attrs)[0];
-  const mxnet::TShape& out_shape = (*out_attrs)[0];
   CHECK_GE(in_shape.ndim(), 2)
     << "Array must be at least two-dimensional";
-  if (in_shape.ndim() >= 2) {
-    // Forward shape inference.
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_shape);
-    return true;
-  }
-  if (out_shape.ndim() >= 2) {
-    // Backward shape inference.
-    SHAPE_ASSIGN_CHECK(*in_attrs, 0, out_shape);
-    return true;
-  }
-  return false;
+  return ElemwiseShape<1, 1>(attrs, in_attrs, out_attrs);
 }
 
 // calls forward and backward implemented in la_op

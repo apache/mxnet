@@ -124,10 +124,10 @@ struct potrf {
   static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DType>& B,
                  Stream<xpu> *s, const nnvm::NodeAttrs& attrs) {
     const LaCholeskyParam& param = nnvm::get<LaCholeskyParam>(attrs.parsed);
-    if ( A.dptr_ != B.dptr_ ) Copy(B, A, s);
     if (A.shape_.Size() == 0U) {
       return;
     }
+    if ( A.dptr_ != B.dptr_ ) Copy(B, A, s);
     linalg_batch_potrf(B, param.lower, s);
     using namespace mxnet_op;
     Kernel<ZeroTriangular, xpu>::Launch(s, B.MSize(), B.size(1)*B.stride_, B.stride_,
@@ -597,11 +597,11 @@ struct potrf_backward {
     // The function also handles the case when B is upper triangular by appropriate
     // transpositions.
     const LaCholeskyParam& param = nnvm::get<LaCholeskyParam>(attrs.parsed);
-    if ( dB.dptr_ != dA.dptr_ ) {
-      Copy(dA, dB, s);
-    }
     if (dA.shape_.Size() == 0U) {
       return;
+    }
+    if ( dB.dptr_ != dA.dptr_ ) {
+      Copy(dA, dB, s);
     }
     trmm::op(B, dA, DType(1.0), !param.lower, param.lower, true, s);
     using namespace mxnet_op;
