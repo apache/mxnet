@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,9 +15,20 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+# coding: utf-8
+# pylint: disable=wildcard-import, unused-variable
+"""Gluon Estimator Utility Functions"""
 
-set -ex
-wget -q --no-check-certificate -O /tmp/mklml.tgz https://github.com/intel/mkl-dnn/releases/download/v0.21/mklml_lnx_2019.0.5.20190502.tgz
-tar -zxf /tmp/mklml.tgz && cp -rf mklml_*/* /usr/local/ && rm -rf mklml_*
+from ....metric import EvalMetric, CompositeEvalMetric
+
+def _check_metrics(metrics):
+    if isinstance(metrics, CompositeEvalMetric):
+        metrics = [m for metric in metrics.metrics for m in _check_metrics(metric)]
+    elif isinstance(metrics, EvalMetric):
+        metrics = [metrics]
+    else:
+        metrics = metrics or []
+        if not all([isinstance(metric, EvalMetric) for metric in metrics]):
+            raise ValueError("metrics must be a Metric or a list of Metric, "
+                             "refer to mxnet.metric.EvalMetric:{}".format(metrics))
+    return metrics

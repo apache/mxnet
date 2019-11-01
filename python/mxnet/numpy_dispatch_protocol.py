@@ -121,6 +121,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'var',
     'vdot',
     'vstack',
+    'column_stack',
     'zeros_like',
     'linalg.norm',
     'trace',
@@ -130,6 +131,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'einsum',
     'shares_memory',
     'may_share_memory',
+    'diff',
 ]
 
 

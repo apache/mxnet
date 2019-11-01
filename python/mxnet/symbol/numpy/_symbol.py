@@ -36,11 +36,11 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot', 'histogram', 'eye',
            'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'split', 'vsplit', 'concatenate',
-           'stack', 'vstack', 'dstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'argmin',
-           'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming', 'blackman', 'flip',
+           'stack', 'vstack', 'column_stack', 'dstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax',
+           'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming', 'blackman', 'flip',
            'around', 'hypot', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take',
            'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal',
-           'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'shares_memory', 'may_share_memory']
+           'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'shares_memory', 'may_share_memory', 'diff']
 
 
 def _num_outputs(sym):
@@ -3073,6 +3073,42 @@ def vstack(arrays, out=None):
 
 
 @set_module('mxnet.symbol.numpy')
+def column_stack(tup):
+    """
+    Stack 1-D arrays as columns into a 2-D array.
+
+    Take a sequence of 1-D arrays and stack them as columns
+    to make a single 2-D array. 2-D arrays are stacked as-is,
+    just like with `hstack`.  1-D arrays are turned into 2-D columns
+    first.
+
+    Parameters
+    ----------
+    tup : sequence of 1-D or 2-D arrays.
+        Arrays to stack. All of them must have the same first dimension.
+
+    Returns
+    -------
+    stacked : 2-D array
+        The array formed by stacking the given arrays.
+
+    See Also
+    --------
+    stack, hstack, vstack, concatenate
+
+    Examples
+    --------
+    >>> a = np.array((1,2,3))
+    >>> b = np.array((2,3,4))
+    >>> np.column_stack((a,b))
+    array([[1., 2.],
+           [2., 3.],
+           [3., 4.]])
+    """
+    return _npi.column_stack(*tup)
+
+
+@set_module('mxnet.symbol.numpy')
 def dstack(arrays):
     """
     Stack arrays in sequence depth wise (along third axis).
@@ -4627,6 +4663,55 @@ def may_share_memory(a, b, max_work=None):
     out : _Symbol
     """
     return _npi.share_memory(a, b)
+
+
+def diff(a, n=1, axis=-1, prepend=None, append=None):
+    r"""
+    numpy.diff(a, n=1, axis=-1, prepend=<no value>, append=<no value>)
+
+    Calculate the n-th discrete difference along the given axis.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array
+    n : int, optional
+        The number of times values are differenced. If zero, the input is returned as-is.
+    axis : int, optional
+        The axis along which the difference is taken, default is the last axis.
+    prepend, append : ndarray, optional
+        Not supported yet
+
+    Returns
+    -------
+    diff : ndarray
+        The n-th differences.
+        The shape of the output is the same as a except along axis where the dimension is smaller by n.
+        The type of the output is the same as the type of the difference between any two elements of a.
+        This is the same as the type of a in most cases.
+
+    Examples
+    --------
+    >>> x = np.array([1, 2, 4, 7, 0])
+    >>> np.diff(x)
+    array([ 1,  2,  3, -7])
+    >>> np.diff(x, n=2)
+    array([  1,   1, -10])
+
+    >>> x = np.array([[1, 3, 6, 10], [0, 5, 6, 8]])
+    >>> np.diff(x)
+    array([[2, 3, 4],
+        [5, 1, 2]])
+    >>> np.diff(x, axis=0)
+    array([[-1,  2,  0, -2]])
+
+    Notes
+    -----
+    Optional inputs `prepend` and `append` are not supported yet
+    """
+    if (prepend or append):
+        raise NotImplementedError('prepend and append options are not supported yet')
+    return _npi.diff(a, n=n, axis=axis)
 
 
 _set_np_symbol_class(_Symbol)

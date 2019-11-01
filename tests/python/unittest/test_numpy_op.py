@@ -442,7 +442,7 @@ def test_np_sum():
             for axis in ([i for i in range(in_data_dim)] + [(), None]):
                 for itype in ['float16', 'float32', 'float64', 'int8', 'int32', 'int64', 'bool']:
                     for dtype in ['float16', 'float32', 'float64', 'int8', 'int32', 'int64']:
-                        if (is_int(dtype) and not is_int(itype))\
+                        if (is_int(dtype) and not is_int(itype)) or (is_windows and is_int(itype))\
                                 or (itype == 'bool' and\
                                     (dtype not in ('float32', 'float64', 'int32', 'int64') or is_windows)):
                             continue
@@ -2390,6 +2390,16 @@ def test_np_cumsum():
                         np_out = _np.cumsum(x.asnumpy(), axis=axis, dtype=otype)
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
+    for shape in shapes:
+        for axis in [None] + [i for i in range(0, len(shape))]:
+            for otype in [None, _np.int32, _np.int64]:
+                for itype in [_np.bool, _np.int8, _np.int32, _np.int64]:
+                    x = rand_ndarray(shape).astype(itype).as_np_ndarray()
+                    np_out = _np.cumsum(x.asnumpy(), axis=axis, dtype=otype)
+                    mx_out = np.cumsum(x, axis=axis, dtype=otype)
+                    assert mx_out.shape == np_out.shape
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
 
 @with_seed()
 @use_np
@@ -3680,6 +3690,58 @@ def test_np_true_divide():
 
 @with_seed()
 @use_np
+def test_np_column_stack():
+    class TestColumnStack(HybridBlock):
+        def __init__(self):
+            super(TestColumnStack, self).__init__()
+
+        def hybrid_forward(self, F, a, *args):
+            return F.np.column_stack([a] + list(args))
+
+    def g(data):
+        return _np.ones_like(data)
+
+    configs = [
+        ((), (), ()),
+        ((2), (2), (2)),
+        ((0), (0), (0)),
+        ((0, 3, 0), (0, 0, 0), (0, 1, 0)),
+        ((2, 2), (2, 1), (2, 3)),
+        ((4, 3), (4, 0), (4, 1)),
+        ((2, 2, 2), (2, 4, 2), (2, 2, 2)),
+        ((0, 1, 1), (0, 1, 1), (0, 1, 1))
+    ]
+    types = ['float16', 'float32', 'float64', 'int8', 'int32', 'int64']
+    for config, hybridize, dtype in itertools.product(configs, [True, False], types):
+        test_column_stack = TestColumnStack()
+        if hybridize:
+            test_column_stack.hybridize()
+        rtol = 1e-3
+        atol = 1e-5
+        v = []
+        v_np = []
+        for i in range(3):
+            v_np.append(_np.array(_np.random.uniform(-10.0, 10.0, config[i]), dtype=dtype))
+            v.append(mx.nd.array(v_np[i]).as_np_ndarray())
+            v[i].attach_grad()
+        expected_np = _np.column_stack(v_np)
+        with mx.autograd.record():
+            mx_out = test_column_stack(*v)
+        assert mx_out.shape == expected_np.shape
+        assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
+
+        # Test gradient
+        mx_out.backward()
+        for i in range(3):
+            expected_grad = g(v_np[i])
+            assert_almost_equal(v[i].grad.asnumpy(), expected_grad, rtol=rtol, atol=atol)
+
+        # Test imperative once again
+        mx_out = np.column_stack(v)
+        expected_np = _np.column_stack(v_np)
+        assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
+
+
 def test_npx_reshape():
     class TestNumpyXReshape(HybridBlock):
         def __init__(self, newshape, reverse):
@@ -3762,6 +3824,112 @@ def test_np_share_memory():
                 assert not op(x, np.ones((5, 0), dtype=adt))
                 assert not op(np.ones((5, 0), dtype=adt), x)
                 assert not op(np.ones((5, 0), dtype=dt), np.ones((0, 3, 0), dtype=adt))
+
+
+@with_seed()
+@use_np
+def test_np_diff():
+    def np_diff_backward(ograd, n, axis):
+        res = ograd
+        for i in range(n):
+            res = _np.negative(_np.diff(res, n=1, axis=axis, prepend=0, append=0))
+        return res
+
+    class TestDiff(HybridBlock):
+        def __init__(self, n=1, axis=-1):
+            super(TestDiff, self).__init__()
+            self._n = n
+            self._axis = axis
+
+        def hybrid_forward(self, F, a):
+            return F.np.diff(a, n=self._n, axis=self._axis)
+
+    shapes = [tuple(random.randrange(10) for i in range(random.randrange(6))) for j in range(5)]
+    for hybridize in [True, False]:
+        for shape in shapes:
+            for axis in [i for i in range(-len(shape), len(shape))]:
+                for n in [i for i in range(0, shape[axis]+1)]:
+                    test_np_diff = TestDiff(n=n, axis=axis)
+                    if hybridize:
+                        test_np_diff.hybridize()
+                    for itype in [_np.float16, _np.float32, _np.float64]:
+                        # note the tolerance shall be scaled by the input n
+                        if itype == _np.float16:
+                            rtol = atol = 1e-2*len(shape)*n
+                        else:
+                            rtol = atol = 1e-5*len(shape)*n
+                        x = rand_ndarray(shape).astype(itype).as_np_ndarray()
+                        x.attach_grad()
+                        np_out = _np.diff(x.asnumpy(), n=n, axis=axis)
+                        with mx.autograd.record():
+                            mx_out = test_np_diff(x)
+                        assert mx_out.shape == np_out.shape
+                        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+                        mx_out.backward()
+                        if (np_out.size == 0):
+                            np_backward = _np.zeros(shape)
+                        else:                    
+                            np_backward = np_diff_backward(_np.ones(np_out.shape, dtype=itype), n=n, axis=axis)
+                        assert x.grad.shape == np_backward.shape
+                        assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
+
+                        mx_out = np.diff(x, n=n, axis=axis)
+                        np_out = _np.diff(x.asnumpy(), n=n, axis=axis)
+                        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+
+@with_seed()
+@use_np
+def test_np_column_stack():
+    class TestColumnStack(HybridBlock):
+        def __init__(self):
+            super(TestColumnStack, self).__init__()
+
+        def hybrid_forward(self, F, a, *args):
+            return F.np.column_stack([a] + list(args))
+
+    def g(data):
+        return _np.ones_like(data)
+
+    configs = [
+        ((), (), ()),
+        ((2), (2), (2)),
+        ((0), (0), (0)),
+        ((0, 3, 0), (0, 0, 0), (0, 1, 0)),
+        ((2, 2), (2, 1), (2, 3)),
+        ((4, 3), (4, 0), (4, 1)),
+        ((2, 2, 2), (2, 4, 2), (2, 2, 2)),
+        ((0, 1, 1), (0, 1, 1), (0, 1, 1))
+    ]
+    types = ['float16', 'float32', 'float64', 'int8', 'int32', 'int64']
+    for config, hybridize, dtype in itertools.product(configs, [True, False], types):
+        test_column_stack = TestColumnStack()
+        if hybridize:
+            test_column_stack.hybridize()
+        rtol = 1e-3
+        atol = 1e-5
+        v = []
+        v_np = []
+        for i in range(3):
+            v_np.append(_np.array(_np.random.uniform(-10.0, 10.0, config[i]), dtype=dtype))
+            v.append(mx.nd.array(v_np[i]).as_np_ndarray())
+            v[i].attach_grad()
+        expected_np = _np.column_stack(v_np)
+        with mx.autograd.record():
+            mx_out = test_column_stack(*v)
+        assert mx_out.shape == expected_np.shape
+        assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
+
+        # Test gradient
+        mx_out.backward()
+        for i in range(3):
+            expected_grad = g(v_np[i])
+            assert_almost_equal(v[i].grad.asnumpy(), expected_grad, rtol=rtol, atol=atol)
+
+        # Test imperative once again
+        mx_out = np.column_stack(v)
+        expected_np = _np.column_stack(v_np)
+        assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
 
 
 if __name__ == '__main__':

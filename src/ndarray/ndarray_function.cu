@@ -76,7 +76,7 @@ void Copy<gpu, gpu>(const TBlob &from, TBlob *to,
                       from.FlatTo1D<gpu, DType>(s),
                       s);
       } else {
-        MSHADOW_TYPE_SWITCH(from.type_flag_, SrcDType, {
+        MSHADOW_TYPE_SWITCH_WITH_BOOL(from.type_flag_, SrcDType, {
           to->FlatTo1D<gpu, DType>(s) =
             mshadow::expr::tcast<DType>(from.FlatTo1D<gpu, SrcDType>(s));
         })
