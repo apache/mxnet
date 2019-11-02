@@ -55,10 +55,10 @@ inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
     return shape_is_known(lhs);
   }
   mxnet::TShape out(std::max(lhs.ndim(), rhs.ndim()), -1);
-  const int bl = out.ndim() - lhs.ndim();
-  const int br = out.ndim() - rhs.ndim();
-  for (int i = 0; i < out.ndim(); ++i) {
-    int l = 1, r = 1;
+  const dim_t bl = out.ndim() - lhs.ndim();
+  const dim_t br = out.ndim() - rhs.ndim();
+  for (dim_t i = 0; i < out.ndim(); ++i) {
+    dim_t l = 1, r = 1;
     if (i >= bl) l = lhs[i-bl];
     if (i >= br) r = rhs[i-br];
     if (!mxnet::dim_size_is_known(l) || !mxnet::dim_size_is_known(r)) continue;
