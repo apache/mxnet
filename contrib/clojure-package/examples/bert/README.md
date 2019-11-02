@@ -105,6 +105,13 @@ It will fine tune the base bert model for use in a classification task for 3 epo
 
 ### Setup Guide
 
+
+## Installation
+
+Before you run this example, make sure that you have the clojure package installed.
+In the main clojure package directory, do `lein install`. Then you can run
+`lein install` in this directory.
+
 #### Step 1: Download the model
 
 For this tutorial, you can get the model and vocabulary by running following bash file. This script will use `wget` to download these artifacts from AWS S3.
