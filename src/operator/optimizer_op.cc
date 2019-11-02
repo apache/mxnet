@@ -998,5 +998,43 @@ NNVM_REGISTER_OP(lamb_update_phase2)
 .add_argument("r2", "NDArray-or-Symbol", "r2")
 .add_arguments(LambUpdatePhaseTwoParam::__FIELDS__());
 
+NNVM_REGISTER_OP(mp_lamb_update_phase1)
+.describe("Updater function for multi-precision lamb optimizer phase 1")
+.set_num_inputs(5)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<LambUpdatePhaseOneParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<5, 1>)
+.set_attr<nnvm::FInferType>("FInferType", MPLambPhaseOneType<2, 1, 5>)
+.set_attr<FCompute>("FCompute<cpu>", MPLambUpdatePhaseOne<cpu>)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    return std::vector<uint32_t>{2, 3};
+  })
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("grad", "NDArray-or-Symbol", "Gradient")
+.add_argument("mean", "NDArray-or-Symbol", "Moving mean")
+.add_argument("var", "NDArray-or-Symbol", "Moving variance")
+.add_argument("weight32", "NDArray-or-Symbol", "Weight32")
+.add_arguments(LambUpdatePhaseOneParam::__FIELDS__());
+
+NNVM_REGISTER_OP(mp_lamb_update_phase2)
+.describe("Updater function for multi-precision lamb optimizer phase 2")
+.set_num_inputs(5)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<LambUpdatePhaseTwoParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", MPLambUpdatePhaseTwoShape)
+.set_attr<nnvm::FInferType>("FInferType", MP_InferType<1, 1, 5>)
+.set_attr<FCompute>("FCompute<cpu>", MPLambUpdatePhaseTwo<cpu>)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    return std::vector<uint32_t>{4};
+  })
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("g", "NDArray-or-Symbol", "Output of mp_lamb_update_phase 1")
+.add_argument("r1", "NDArray-or-Symbol", "r1")
+.add_argument("r2", "NDArray-or-Symbol", "r2")
+.add_argument("weight32", "NDArray-or-Symbol", "Weight32")
+.add_arguments(LambUpdatePhaseTwoParam::__FIELDS__());
+
 }  // namespace op
 }  // namespace mxnet

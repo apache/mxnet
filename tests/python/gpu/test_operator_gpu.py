@@ -423,6 +423,65 @@ def test_preloaded_multi_sgd():
                 shapes = [np.random.randint(1, maxdim + 1, size=maxndim) for i in range(nparam)]
                 check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights)
 
+
+def check_multi_lamb(dtype, shapes, use_master_weights):
+    def _flatten_list(nested_list):
+        return [item for sublist in nested_list for item in sublist]
+    weights_arr = [np.random.rand(*shape).astype(dtype) * 100. for shape in shapes]
+    grads_arr = [np.random.rand(*shape).astype(dtype) * 100. for shape in shapes]
+    means_arr = [np.random.rand(*shape).astype(dtype) * 100. for shape in shapes]
+    variences_arr = [np.random.rand(*shape).astype(dtype) * 100. for shape in shapes]
+    rescale_grad = (np.random.random() + 1.0)
+    mx_w = _make_ndarrays(weights_arr)
+    mx_g = _make_ndarrays(grads_arr)
+    mx_m = _make_ndarrays(means_arr)
+    mx_v = _make_ndarrays(variences_arr)
+    mx_p_w = _make_ndarrays(weights_arr)
+    mx_p_g = _make_ndarrays(grads_arr)
+    lrs = list((np.random.random(size=len(shapes)).astype('float32') + 0.1) / 100.)
+    mx_lrs = mx.nd.array(lrs, dtype='float32', ctx=mx.gpu(0))
+    wds = list((np.random.random(size=len(shapes)).astype('float32') + 0.1) / 1000.)
+    mx_wds = mx.nd.array(wds, dtype='float32', ctx=mx.gpu(0))
+
+    if use_master_weights:
+        weights32_arr = [arr.astype('float32') for arr in weights_arr]
+        mx_w32 = _make_ndarrays(weights32_arr)
+        mx_p_w32 = _make_ndarrays(weights32_arr)
+
+    mx.nd.multi_mp_lamb_update(
+                             *_flatten_list(zip(mx_w, mx_g, mx_m, mx_v, mx_w32)),
+                             num_weights=len(shapes), lrs=lrs, wds=wds,
+                             rescale_grad=rescale_grad, out=mx_w)
+
+    def _assert_all_almost_equal(lhs_list, rhs_list, rtol, atol):
+        for i, (lhs, rhs) in enumerate(zip(lhs_list, rhs_list)):
+            assert_almost_equal(lhs.asnumpy(), rhs.asnumpy(), rtol=rtol, atol=atol)
+    if dtype == 'float16':
+        rtol = 1e-3
+        atol = 1e-2
+    else:
+        rtol = 1e-5
+        atol = 1e-6
+    _assert_all_almost_equal(mx_p_w, mx_w, rtol, atol)
+    if use_master_weights:
+        _assert_all_almost_equal(mx_p_w32, mx_w32, 1e-5, 1e-6)
+
+
+@with_seed
+def test_multi_lamb():
+    dtypes = ['float16', 'float32']
+    min_nparam = 5
+    max_nparam = 10
+    maxdim = 6
+    maxndim = 4
+    for dtype in dtypes:
+        use_master_weights_list = [False,] if dtype == 'float32' else [True, False]
+        for use_master_weights in use_master_weights_list:
+            nparam = np.random.randint(min_nparam + 1, max_nparam + 1)
+            shapes = [np.random.randint(1, maxdim + 1, size=maxndim) for i in range(nparam)]
+            check_multi_LAMB(dtype, shapes, use_master_weights)
+
+
 @with_seed()
 def test_batchnorm_with_type():
   ctx_list_v1_2D = [
