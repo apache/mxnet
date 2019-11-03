@@ -904,7 +904,11 @@ class ParameterDict(object):
             return
 
         for arr in arrays.values():
-            mx.nd.reset_arrays(*arr, num_arrays=len(arr))
+            if is_np_array():
+                for ele in arr:
+                    ele[:] = 0
+            else:
+                mx.nd.reset_arrays(*arr, num_arrays=len(arr))
 
     def reset_ctx(self, ctx):
         """Re-assign all Parameters to other contexts.
