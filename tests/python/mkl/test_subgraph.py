@@ -330,7 +330,7 @@ def conv_act(no_bias, data_shape, alg):
   elif alg == "leakyrelu":
     relu = mx.symbol.LeakyReLU(data=conv, slope=0.25, act_type='leaky')
   elif alg == "gelu":
-    relu = mx.symbol.LeakyReLU(data=conv, slope=0.25, act_type='gelu')
+    relu = mx.symbol.LeakyReLU(data=conv, act_type='gelu')
   else:
     relu = mx.symbol.Activation(data=conv, name=alg, act_type=alg)
   return relu, attr
