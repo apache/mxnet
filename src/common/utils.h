@@ -842,7 +842,7 @@ inline bool is_float(const int dtype) {
   return dtype == mshadow::kFloat32 || dtype == mshadow::kFloat64 || dtype == mshadow::kFloat16;
 }
 
-inline int more_precise_type(const int type1, const int type2) {
+inline int get_more_precise_type(const int type1, const int type2) {
   if (type1 == type2) return type1;
   if (is_float(type1) && is_float(type2)) {
     if (type1 == mshadow::kFloat64 || type2 == mshadow::kFloat64) {
@@ -870,12 +870,12 @@ inline int more_precise_type(const int type1, const int type2) {
   return mshadow::kInt8;
 }
 
-inline int np_binary_out_type(const int type1, const int type2) {
+inline int np_binary_out_infer_type(const int type1, const int type2) {
   if ((type1 == mshadow::kUint8 && type2 == mshadow::kInt8) ||
       (type1 == mshadow::kInt8 && type2 == mshadow::kUint8)) {
     return mshadow::kInt32;
   }
-  return more_precise_type(type1, type2);
+  return get_more_precise_type(type1, type2);
 }
 
 }  // namespace common
