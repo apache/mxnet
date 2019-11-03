@@ -842,6 +842,42 @@ inline bool is_float(const int dtype) {
   return dtype == mshadow::kFloat32 || dtype == mshadow::kFloat64 || dtype == mshadow::kFloat16;
 }
 
+inline int more_precise_type(const int type1, const int type2) {
+  if (type1 == type2) return type1;
+  if (is_float(type1) && is_float(type2)) {
+    if (type1 == mshadow::kFloat64 || type2 == mshadow::kFloat64) {
+      return mshadow::kFloat64;
+    }
+    if (type1 == mshadow::kFloat32 || type2 == mshadow::kFloat32) {
+      return mshadow::kFloat32;
+    }
+    return mshadow::kFloat16;
+  } else if (is_float(type1) || is_float(type2)) {
+    return is_float(type1) ? type1 : type2;
+  }
+  if (type1 == mshadow::kInt64 || type2 == mshadow::kInt64) {
+    return mshadow::kInt64;
+  }
+  if (type1 == mshadow::kInt32 || type2 == mshadow::kInt32) {
+    return mshadow::kInt32;
+  }
+  CHECK(!((type1 == mshadow::kUint8 && type2 == mshadow::kInt8) ||
+          (type1 == mshadow::kInt8 && type2 == mshadow::kUint8)))
+    << "1 is UInt8 and 1 is Int8 should not get here";
+  if (type1 == mshadow::kUint8 || type2 == mshadow::kUint8) {
+    return mshadow::kUint8;
+  }
+  return mshadow::kInt8;
+}
+
+inline int np_binary_out_type(const int type1, const int type2) {
+  if ((type1 == mshadow::kUint8 && type2 == mshadow::kInt8) ||
+      (type1 == mshadow::kInt8 && type2 == mshadow::kUint8)) {
+    return mshadow::kInt32;
+  }
+  return more_precise_type(type1, type2);
+}
+
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_UTILS_H_
