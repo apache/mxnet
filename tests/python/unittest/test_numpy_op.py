@@ -1940,7 +1940,7 @@ def test_np_concat():
 
                     with mx.autograd.record():
                         y = test_concat(a, b, c, d)
-                    
+
                     assert y.shape == expected_ret.shape
                     assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3, atol=1e-5)
 
@@ -2933,7 +2933,7 @@ def test_np_linalg_cholesky():
         test_cholesky = TestCholesky()
         if hybridize:
             test_cholesky.hybridize()
-        
+
         # Numerical issue:
         # When backpropagating through Cholesky decomposition, we need to compute the inverse
         # of L according to dA = 0.5 * L**(-T) * copyLTU(L**T * dL) * L**(-1) where A = LL^T.
@@ -3847,12 +3847,14 @@ def test_np_true_divide():
         [(2, 3, 1), (1, 4)],
         [(2, 1, 4, 1), (3, 1, 5)],
     ]
-    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
+    dtypes = [np.bool, np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
+    itypes = [np.bool, np.int8, np.uint8, np.int32, np.int64]
+    ftypes = [np.float16, np.float32, np.float64]
     for shape_pair, dtype in itertools.product(shapes, dtypes):
         a = np.random.uniform(3, 50, size=shape_pair[0]).astype(dtype)
         b = np.random.uniform(3, 50, size=shape_pair[-1]).astype(dtype)
         out_mx = a / b
-        if _np.issubdtype(dtype, _np.integer):
+        if _np.issubdtype(dtype, _np.integer) or (dtype is np.bool):
             assert out_mx.dtype == np.float32
         else:
             assert out_mx.dtype == dtype
@@ -3866,6 +3868,20 @@ def test_np_true_divide():
 
         out_mx = val / a
         out_np = _np.true_divide(val, a.asnumpy())
+        assert_almost_equal(out_mx.asnumpy(), out_np, rtol=1e-3, atol=1e-3, use_broadcast=False)
+
+    for shape_pair, itype, ftype in itertools.product(shapes, itypes, ftypes):
+        i_ = np.random.uniform(3, 50, size=shape_pair[0]).astype(itype)
+        f_ = np.random.uniform(3, 50, size=shape_pair[-1]).astype(ftype)
+
+        out_mx = i_ / f_
+        assert out_mx.dtype == ftype
+        out_np = _np.true_divide(i_.asnumpy(), f_.asnumpy())
+        assert_almost_equal(out_mx.asnumpy(), out_np, rtol=1e-3, atol=1e-3, use_broadcast=False)
+
+        out_mx = f_ / i_
+        assert out_mx.dtype == ftype
+        out_np = _np.true_divide(f_.asnumpy(), i_.asnumpy())
         assert_almost_equal(out_mx.asnumpy(), out_np, rtol=1e-3, atol=1e-3, use_broadcast=False)
 
 
