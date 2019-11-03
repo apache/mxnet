@@ -221,7 +221,7 @@ def main():
 
     parser.add_argument("--vcvars",
         help="vcvars batch file location, typically inside vs studio install dir",
-        default=KNOWN_VCVARS['VS 2015'],
+        default=KNOWN_VCVARS['VS 2017'],
         type=str)
 
     parser.add_argument("--arch",
