@@ -15,5 +15,33 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from . import umath, fromnumeric, multiarray
-from .umath import register
+from .core import *  # pylint: disable=wildcard-import
+from . import operator as _op
+from ...opdef import defop
+from ...utils import AllTypes
+
+unary_cpu_attrs = {
+    'target': 'cpu',
+    'dtype': AllTypes + ['bool'],
+    'ndim': [1],
+    'req': ['kWriteTo', 'kAddTo'],
+    'attrs': ['req']
+}
+
+unary_gpu_attrs = {
+    'target': 'gpu',
+    'dtype': ["float32", "float64", "uint8", "int8", "int32", "int64", "bool"],
+    'ndim': [1],
+    'req': ['kWriteTo', 'kAddTo'],
+    'attrs': ['req']
+}
+
+
+@defop(name="abs_cpu", **unary_cpu_attrs)
+def abs_cpu(dtype, ndim, req):
+    return unary_cpu(_op.abs, dtype, ndim, req)
+
+
+@defop(name="abs_gpu", **unary_gpu_attrs)
+def abs_gpu(dtype, ndim, req):
+    return unary_gpu(_op.abs, dtype, ndim, req)

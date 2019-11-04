@@ -15,5 +15,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from . import umath, fromnumeric, multiarray
-from .umath import register
+import tvm
+
+__all__ = ['abs']
+
+
+def abs(a):
+    return tvm.abs(a)

@@ -21,6 +21,14 @@
  * \file np_elemwise_unary_op_basic.cc
  * \brief CPU Implementation of numpy elementwise unary function.
  */
+
+#if MXNET_USE_TVM_OP
+#include <tvm/runtime/c_runtime_api.h>
+#include <tvm/runtime/packed_func.h>
+#include "../tvmop/op_module.h"
+#include "../tvmop/op_util.h"
+#endif  // MXNET_USE_TVM_OP
+
 #include <mxnet/base.h>
 #include "../tensor/elemwise_unary_op.h"
 
@@ -125,6 +133,65 @@ Example::
 )code")
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_reciprocal"});
 
+#if MXNET_USE_TVM_OP
+template<const char* func>
+void TVMUnaryCompute(const nnvm::NodeAttrs& attrs,
+                     const mxnet::OpContext& ctx,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  if (outputs[0].shape_.Size() == 0U) return;  // skip zero-size tensor
+  // prepare tblobs and TVMArgs
+  std::vector<TBlob> tblobs = {inputs[0], outputs[0], outputs[0]};
+  std::vector<int> type_codes;
+  std::vector<TVMValue> values;
+
+  const size_t num_args = 3;
+  type_codes.resize(num_args);
+  values.resize(num_args);
+  for (size_t i = 0; i < num_args; ++i) {
+    tblobs[i] = tblobs[i].reshape(mxnet::TShape(1, tblobs[i].Size()));
+    type_codes[i] = kArrayHandle;
+    values[i].v_handle = const_cast<DLTensor*>(&(tblobs[i].dltensor()));
+  }
+
+  std::string funcname = std::string(func);
+  MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+    funcname += set_req(req_type);
+  });
+
+  tvm::runtime::TVMArgs tvm_args(&values[0], &type_codes[0], num_args);
+  tvm::runtime::TVMOpModule::Get()->CallEx(funcname, ctx, tblobs, tvm_args);
+}
+
+#define MXNET_OPERATOR_REGISTER_NUMPY_TVM_UNARY(name)                         \
+  NNVM_REGISTER_OP(name)                                                      \
+  .set_num_inputs(1)                                                          \
+  .set_num_outputs(1)                                                         \
+  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)           \
+  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                           \
+    [](const NodeAttrs& attrs){                                               \
+      return std::vector<std::pair<int, int> >{{0, 0}};                       \
+    })                                                                        \
+  .set_attr<nnvm::FListInputNames>("FListInputNames",                         \
+    [](const NodeAttrs& attrs) {                                              \
+      return std::vector<std::string>{"x"};                                   \
+    })                                                                        \
+  .add_argument("x", "NDArray-or-Symbol", "The input array.")
+
+static constexpr char func_abs_cpu[] = "abs_cpu";
+static constexpr char func_abs_gpu[] = "abs_gpu";
+
+MXNET_OPERATOR_REGISTER_NUMPY_TVM_UNARY(_npi_absolute)
+.add_alias("_npi_abs")
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+#if MXNET_USE_CUDA
+.set_attr<FCompute>("FCompute<gpu>", TVMUnaryCompute<func_abs_gpu>)
+#endif  // MXNET_USE_CUDA
+.set_attr<FCompute>("FCompute<cpu>", TVMUnaryCompute<func_abs_cpu>);
+#else  // MXNET_USE_TVM_OP
 // abs
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_absolute, "x", mshadow_op::abs)
 .add_alias("_npi_abs")
@@ -133,6 +200,7 @@ Example::
    absolute([-2, 0, 3]) = [2, 0, 3]
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_abs"});
+#endif  // MXNET_USE_TVM_OP
 
 // sign
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_sign, "x", mshadow_op::sign)

@@ -16,7 +16,7 @@
 # under the License.
 
 import tvm
-from .. import defop, AllTypes
+from ... import defop, AllTypes
 
 _bin_logic_op_map = {
     'equal': lambda a, b, *idx: a[idx] == b[idx],
