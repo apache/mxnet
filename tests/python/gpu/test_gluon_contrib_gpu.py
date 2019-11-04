@@ -57,6 +57,33 @@ def test_DeformableConvolution():
         y = net(x)
         y.backward()
 
+def test_ModulatedDeformableConvolution():
+    """test of the deformable convolution layer with possible combinations of arguments,
+    currently this layer only supports gpu
+    """
+    net = nn.HybridSequential()
+    net.add(
+        DeformableConvolution(10, kernel_size=(3, 3), strides=1, padding=0),
+        DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',
+                               offset_use_bias=False, use_bias=False),
+        DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',
+                               offset_use_bias=False),
+        DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',
+                               use_bias=False),
+        DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, offset_use_bias=False, use_bias=False),
+        DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, offset_use_bias=False),
+        DeformableConvolution(12, kernel_size=(3, 2), strides=1, padding=0, use_bias=False),
+        DeformableConvolution(12, kernel_size=(3, 2), strides=1, padding=0, use_bias=False, num_deformable_group=4),
+    )
+
+    ctx = mx.gpu()
+    net.initialize(force_reinit=True, ctx=ctx)
+    net.hybridize()
+
+    x = mx.nd.random.uniform(shape=(8, 5, 30, 31), ctx=ctx)
+    with mx.autograd.record():
+        y = net(x)
+        y.backward()
 
 if __name__ == '__main__':
     import nose
