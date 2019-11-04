@@ -903,11 +903,12 @@ class ParameterDict(object):
         if len(arrays) == 0:
             return
 
-        for arr in arrays.values():
-            if is_np_array():
+        if is_np_array():
+            for arr in arrays.values():
                 for ele in arr:
-                    ele[:] = 0
-            else:
+                    ele[()] = 0
+        else:
+            for arr in arrays.values():
                 mx.nd.reset_arrays(*arr, num_arrays=len(arr))
 
     def reset_ctx(self, ctx):
