@@ -19,9 +19,10 @@
 
 from __future__ import absolute_import
 from .. import random as _mx_rand
+from ..ndarray import numpy_extension as _mx_nd_npx
 
 
-__all__ = ['seed']
+__all__ = ['seed', 'bernoulli']
 
 
 def seed(seed, ctx='all'):  # pylint: disable=redefined-outer-name
@@ -72,3 +73,10 @@ def seed(seed, ctx='all'):  # pylint: disable=redefined-outer-name
     array(0.9894903, ctx=gpu(0))
     """
     _mx_rand.seed(seed_state=seed, ctx=ctx)
+
+
+def bernoulli(probs=None, logits=None, size=None, dtype=None, ctx=None, out=None):
+    """
+    Sampling from bernoulli distribution.
+    """
+    return _mx_nd_npx.random.bernoulli(probs, logits, size, dtype, ctx, out)

@@ -257,8 +257,3 @@ def rand(*size, **kwargs):
     for s in size:
         output_shape += (s,)
     return _mx_nd_np.random.uniform(0, 1, size=output_shape, **kwargs)
-
-
-def _bernoulli(probs=None, logits=None, size=None, dtype=None, ctx=None, out=None):
-    pass
-
