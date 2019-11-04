@@ -243,6 +243,7 @@ List of Contributors
 * [Shoubhik Bhattacharya](https://github.com/shoubhik)
 * [Rohit Srivastava](https://github.com/access2rohit)
 * [Caner Turkmen](https://github.com/canerturkmen)
+* [Hanpeng Hu](https://github.com/joapolarbear)
 
 Label Bot
 ---------
