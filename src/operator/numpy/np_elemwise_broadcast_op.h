@@ -20,12 +20,13 @@
 /*!
  *  Copyright (c) 2019 by Contributors
  * \file np_elemwise_binary_op.h
- * \brief 
+ * \brief Function definition of elemwise and broadcast operators
  */
 #ifndef MXNET_OPERATOR_NUMPY_NP_ELEMWISE_BROADCAST_OP_H_
 #define MXNET_OPERATOR_NUMPY_NP_ELEMWISE_BROADCAST_OP_H_
 
 #include <vector>
+#include <string>
 
 #include "../tensor/elemwise_binary_broadcast_op.h"
 #include "../tensor/elemwise_binary_scalar_op.h"
@@ -33,9 +34,16 @@
 namespace mxnet {
 namespace op {
 
+inline void PrintErrorMessage(const std::string& name, const int dtype1, const int dtype2) {
+  LOG(FATAL) << "Operator " << name << " does not support combination of "
+             << common::dtype_string(dtype1) << " with " << common::dtype_string(dtype2)
+             << " yet...";
+}
+
 #ifndef _WIN32
 template<typename xpu, typename OP>
-void MixedAllRealBinaryElemwiseCompute(const OpContext& ctx,
+void MixedAllRealBinaryElemwiseCompute(const std::string& op_name,
+                                       const OpContext& ctx,
                                        const TBlob& lhs,
                                        const TBlob& rhs,
                                        const TBlob& out,
@@ -61,7 +69,7 @@ void MixedAllRealBinaryElemwiseCompute(const OpContext& ctx,
               lhs.dptr<float>());
           });
         } else {
-          LOG(ERROR) << "Should not reach here!";
+          PrintErrorMessage(op_name, lhs.type_flag_, rhs.type_flag_);
         }
         break;
       }
@@ -80,13 +88,13 @@ void MixedAllRealBinaryElemwiseCompute(const OpContext& ctx,
               lhs.dptr<double>());
           });
         } else {
-          LOG(ERROR) << "Should not reach here!";
+          PrintErrorMessage(op_name, lhs.type_flag_, rhs.type_flag_);
         }
         break;
       }
       default:
       {
-        LOG(ERROR) << "Not supported case of ...";
+        PrintErrorMessage(op_name, lhs.type_flag_, rhs.type_flag_);
         break;
       }
     }
@@ -137,9 +145,9 @@ void MixedBinaryElemwiseCompute(const nnvm::NodeAttrs& attrs,
 
   if (common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
     if (lhs.type_flag_ == out.type_flag_) {
-      MixedAllRealBinaryElemwiseCompute<xpu, ROP>(ctx, lhs, rhs, out, req[0]);
+      MixedAllRealBinaryElemwiseCompute<xpu, ROP>(attrs.op->name, ctx, lhs, rhs, out, req[0]);
     } else {
-      MixedAllRealBinaryElemwiseCompute<xpu, LOP>(ctx, rhs, lhs, out, req[0]);
+      MixedAllRealBinaryElemwiseCompute<xpu, LOP>(attrs.op->name, ctx, rhs, lhs, out, req[0]);
     }
   } else if (common::is_float(lhs.type_flag_) || common::is_float(rhs.type_flag_)) {
     if (lhs.type_flag_ == out.type_flag_) {
@@ -148,12 +156,13 @@ void MixedBinaryElemwiseCompute(const nnvm::NodeAttrs& attrs,
       MixedIntRealBinaryElemwiseCompute<xpu, LOP>(ctx, rhs, lhs, out, req[0]);
     }
   } else {
-    LOG(ERROR) << "not implemented yet...";
+    PrintErrorMessage(attrs.op->name, lhs.type_flag_, rhs.type_flag_);
   }
 }
 
 template<typename xpu, typename OP>
-void MixedAllRealBinaryBroadcastCompute(const OpContext& ctx,
+void MixedAllRealBinaryBroadcastCompute(const std::string& op_name,
+                                        const OpContext& ctx,
                                         const TBlob& lhs,
                                         const TBlob& rhs,
                                         const TBlob& out,
@@ -180,7 +189,7 @@ void MixedAllRealBinaryBroadcastCompute(const OpContext& ctx,
           template LaunchEx(s, new_oshape.Size(), req, rstride, lstride, oshape,
           rhs.dptr<mshadow::half::half_t>(), lhs.dptr<float>(), out.dptr<float>());
         } else {
-          LOG(ERROR) << "Should not reach here!";
+          PrintErrorMessage(op_name, lhs.type_flag_, rhs.type_flag_);
         }
         break;
       }
@@ -195,13 +204,13 @@ void MixedAllRealBinaryBroadcastCompute(const OpContext& ctx,
           template LaunchEx(s, new_oshape.Size(), req, rstride, lstride, oshape,
           rhs.dptr<float>(), lhs.dptr<double>(), out.dptr<double>());
         } else {
-          LOG(ERROR) << "Should not reach here!";
+          PrintErrorMessage(op_name, lhs.type_flag_, rhs.type_flag_);
         }
         break;
       }
       default:
       {
-        LOG(ERROR) << "Not supported case of ...";
+        PrintErrorMessage(op_name, lhs.type_flag_, rhs.type_flag_);
         break;
       }
     }
@@ -242,10 +251,10 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
     if (common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
       if (lhs.type_flag_ == out.type_flag_) {
         MixedAllRealBinaryBroadcastCompute<xpu, ROP>(
-          ctx, lhs, rhs, out, req[0], ndim, new_oshape, new_lshape, new_rshape);
+          attrs.op->name, ctx, lhs, rhs, out, req[0], ndim, new_oshape, new_lshape, new_rshape);
       } else {
         MixedAllRealBinaryBroadcastCompute<xpu, LOP>(
-          ctx, rhs, lhs, out, req[0], ndim, new_oshape, new_rshape, new_lshape);
+          attrs.op->name, ctx, rhs, lhs, out, req[0], ndim, new_oshape, new_rshape, new_lshape);
       }
     } else if (common::is_float(lhs.type_flag_) || common::is_float(rhs.type_flag_)) {
       CHECK(lhs.type_flag_ == out.type_flag_ || rhs.type_flag_ == out.type_flag_)
@@ -273,7 +282,7 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
         }
       });
     } else {
-      LOG(ERROR) << "not implemented yet...";
+      PrintErrorMessage(attrs.op->name, lhs.type_flag_, rhs.type_flag_);
     }
   }
 #else
@@ -303,7 +312,7 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
         attrs, ctx, {temp_tblob.reshape(lhs.shape_), rhs}, req, outputs);
     }
   } else {
-    LOG(ERROR) << "not implemented yet...";
+    PrintErrorMessage(attrs.op->name, lhs.type_flag_, rhs.type_flag_);
   }
 #endif
 }
@@ -324,7 +333,7 @@ void MixedBinaryBackwardUseIn(const nnvm::NodeAttrs& attrs,
     return;
   }
 
-  LOG(ERROR) << "Binary operation with mixed input data types does not support backward yet...";
+  PrintErrorMessage(attrs.op->name, lhs.type_flag_, rhs.type_flag_);
 }
 
 }  // namespace op
