@@ -99,11 +99,13 @@ class ElemwiseBinaryOp : public OpBase {
     return a1.var() == a2.var();
   }
 
+ public:
   /*! \brief Minimum of three */
   static MSHADOW_XINLINE size_t minthree(const size_t a, const size_t b, const size_t c) {
     return a < b ? (a < c ? a : c) : (b < c ? b : c);
   }
 
+ private:
   template<typename xpu, typename LOP, typename ROP, typename DType>
   static void BackwardUseNone_(const nnvm::NodeAttrs &attrs,
                                const OpContext &ctx,
