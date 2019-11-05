@@ -507,6 +507,8 @@ OpStatePtr CachedOpThreadSafe::DynamicForward(const Context& default_ctx,
   auto &states = runtime.op_states;
 
   // Allocate entries
+  // This buff is thread local and used to store intermediate
+  // nodes in the graph
   buff.resize(idx.num_node_entries());
   states.resize(idx.num_nodes());
   std::vector<NDArray *> arrays;
@@ -559,6 +561,12 @@ OpStatePtr CachedOpThreadSafe::DynamicForward(const Context& default_ctx,
 OpStatePtr CachedOpThreadSafe::Forward(const std::shared_ptr<CachedOpThreadSafe>& op_ptr,
                                        const std::vector<NDArray*>& inputs,
                                        const std::vector<NDArray*>& outputs) {
+  // Acquiring lock on the mutex in forward
+  // Without this there are issues with static_forward,
+  // specifically with static_shape=True and dynamic_forward.
+  // Adding the lock here for safety,
+  // The perf hit would be acceptable because this involves just pushing
+  // ops to engine and not actual execution
   std::lock_guard<std::mutex> lock(mutex_);
   CHECK_EQ(inputs.size(), num_inputs());
   Context default_ctx = inputs[0]->ctx();

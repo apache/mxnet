@@ -63,6 +63,8 @@ struct CachedOpThreadSafeConfig
   }
 };
 
+// Thread local buff to store internal states of the graph
+// Used in dynamic_forward
 #if DMLC_CXX11_THREAD_LOCAL
     static thread_local std::vector<NDArray> buff;
 #else

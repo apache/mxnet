@@ -340,8 +340,8 @@ void run_inference(const std::string& model,
 }
 
 /**
- * This test will help ensure we don't crash during engine shutdown.
- * The crash happens during a static destructor call, so this test may pass and then cause a test-run process crash.
+ * Verifying engine thread safety by pushing ops from multiple threads to the
+ * dependency engine
  */
 TEST(ThreadSafety, Engine) {
   int num_threads = 20;
