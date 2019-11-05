@@ -57,11 +57,24 @@ cd incubator-mxnet
 
 ### Build MXNet with MKL-DNN
 
+To achieve better performance, the Intel OpenMP and llvm OpenMP are recommended as below instruction. Otherwise, default GNU OpenMP will be used and you may get the sub-optimal performance. If you don't have the full [MKL](https://software.intel.com/en-us/intel-mkl) library installation, you might use OpenBLAS as the blas library, by setting USE_BLAS=openblas.
+
 ```
+# build with llvm OpenMP and Intel MKL/openblas
+mkdir build && cd build
+cmake -DUSE_CUDA=OFF -DUSE_MKL_IF_AVAILABLE=ON -DUSE_MKLDNN=ON -DUSE_OPENMP=ON -DUSE_OPENCV=ON ..
+make -j $(nproc)
+```
+
+```
+# build with Intel MKL and Intel OpenMP
 make -j $(nproc) USE_OPENCV=1 USE_MKLDNN=1 USE_BLAS=mkl USE_INTEL_PATH=/opt/intel
 ```
 
-If you don't have the full [MKL](https://software.intel.com/en-us/intel-mkl) library installation, you might use OpenBLAS as the blas library, by setting USE_BLAS=openblas.
+```
+# build with openblas and GNU OpenMP(sub-optimal performance)
+make -j $(nproc) USE_OPENCV=1 USE_MKLDNN=1 USE_BLAS=openblas
+```
 
 <h2 id="2">MacOS</h2>
 

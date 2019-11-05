@@ -34,6 +34,7 @@ MXNET_OPERATOR_REGISTER_REDUCE(prod)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{ "_backward_prod" });
 
 MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_prod)
@@ -49,6 +50,7 @@ MXNET_OPERATOR_REGISTER_REDUCE(nanprod)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{ "_backward_nanprod" });
 
 MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_nanprod)
