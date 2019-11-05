@@ -213,9 +213,12 @@ def test_FullyConnected():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     b = nd.ones(shape=(SMALL_Y, SMALL_Y))
     c = nd.ones(shape=(b.shape[0],))
+
+    # w/o bias
     res = nd.FullyConnected(a, b, num_hidden=b.shape[0], no_bias=True)
     assert np.sum(res[-1].asnumpy() == a.shape[1]) == b.shape[0]
 
+    # w/ bias
     res = nd.FullyConnected(a, b, c, num_hidden=b.shape[0], no_bias=False)
     assert np.sum(res[-1].asnumpy() == a.shape[1] + 1) == b.shape[0]
 
@@ -818,6 +821,7 @@ def test_batchnorm():
         nd.waitall()
         return mean, stdvar
 
+    # Here use 4D input to cover mkldnn BN and non-mkldnn BN
     shape = (3, 3, LARGE_X, SMALL_Y)
     axis = 1  # default
     eps = 1e-3
@@ -997,6 +1001,9 @@ def test_flatten():
     for dtype in test_dtypes:
         a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=dtype).reshape((LARGE_X//2, 2, SMALL_Y))
         b = nd.flatten(a)
+        # Here we removed the value asserts due to different precision of `int64` and `float32`.
+        # For `float32`, it will lose some precision when `LARGE_X` is too large, that is `LARGE_X-1`
+        # and `LARGE_X-2` can not represent the accurate value in the current situation.
         assert b.shape == (LARGE_X//2, SMALL_Y*2)
 
 
