@@ -88,7 +88,7 @@ OpStatePtr CachedOpThreadSafe::GetCachedOpThreadSafeState(
 
   for (const auto& i : cached_op_states_[ctx]) {
     // only create one state per device when not using static memory
-    if (i.unique()) {
+    if (!config_.static_alloc || i.unique()) {
       return i;
     }
   }
