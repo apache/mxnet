@@ -70,7 +70,24 @@ bool NumpyBinaryMixedPrecisionType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-#ifdef _WIN32
+#ifndef _WIN32
+#define MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_PRECISION(name)                \
+  NNVM_REGISTER_OP(name)                                                       \
+  .set_num_inputs(2)                                                           \
+  .set_num_outputs(1)                                                          \
+  .set_attr<nnvm::FListInputNames>("FListInputNames",                          \
+    [](const NodeAttrs& attrs) {                                               \
+      return std::vector<std::string>{"lhs", "rhs"};                           \
+    })                                                                         \
+  .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)           \
+  .set_attr<nnvm::FInferType>("FInferType", NumpyBinaryMixedPrecisionType)     \
+  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                            \
+    [](const NodeAttrs& attrs){                                                \
+      return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};                \
+    })                                                                         \
+  .add_argument("lhs", "NDArray-or-Symbol", "First input to the function")     \
+  .add_argument("rhs", "NDArray-or-Symbol", "Second input to the function")
+#else
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_PRECISION(name)                \
   NNVM_REGISTER_OP(name)                                                       \
   .set_num_inputs(2)                                                           \
@@ -91,36 +108,18 @@ bool NumpyBinaryMixedPrecisionType(const nnvm::NodeAttrs& attrs,
   })                                                                           \
   .add_argument("lhs", "NDArray-or-Symbol", "First input to the function")     \
   .add_argument("rhs", "NDArray-or-Symbol", "Second input to the function")
-#else
-#define MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_PRECISION(name)                \
-  NNVM_REGISTER_OP(name)                                                       \
-  .set_num_inputs(2)                                                           \
-  .set_num_outputs(1)                                                          \
-  .set_attr<nnvm::FListInputNames>("FListInputNames",                          \
-    [](const NodeAttrs& attrs) {                                               \
-      return std::vector<std::string>{"lhs", "rhs"};                           \
-    })                                                                         \
-  .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)           \
-  .set_attr<nnvm::FInferType>("FInferType", NumpyBinaryMixedPrecisionType)     \
-  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                            \
-    [](const NodeAttrs& attrs){                                                \
-      return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};                \
-    })                                                                         \
-  .add_argument("lhs", "NDArray-or-Symbol", "First input to the function")     \
-  .add_argument("rhs", "NDArray-or-Symbol", "Second input to the function")
 #endif
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_PRECISION(_npi_add)
 #ifndef _WIN32
 .set_attr<FCompute>(
   "FCompute<cpu>",
-  MixedBinaryBroadcastCompute<cpu, op::mshadow_op::plus, op::mshadow_op::mixed_plus,
-                              op::mshadow_op::mixed_plus>)
+  NumpyBinaryBroadcastComputeWithBool<cpu, op::mshadow_op::plus, op::mshadow_op::mixed_plus,
+                                      op::mshadow_op::mixed_plus>)
 #else
 .set_attr<FCompute>(
   "FCompute<cpu>",
-  MixedBinaryBroadcastCompute<cpu, op::mshadow_op::plus, op::mshadow_op::plus,
-                              op::mshadow_op::plus>)
+  NumpyBinaryBroadcastComputeWithBool<cpu, op::mshadow_op::plus>)
 #endif
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_broadcast_add"});
 
@@ -128,13 +127,12 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_PRECISION(_npi_subtract)
 #ifndef _WIN32
 .set_attr<FCompute>(
   "FCompute<cpu>",
-  MixedBinaryBroadcastCompute<cpu, op::mshadow_op::minus, op::mshadow_op::mixed_minus,
+  NumpyBinaryBroadcastCompute<cpu, op::mshadow_op::minus, op::mshadow_op::mixed_minus,
                               op::mshadow_op::mixed_rminus>)
 #else
 .set_attr<FCompute>(
   "FCompute<cpu>",
-  MixedBinaryBroadcastCompute<cpu, op::mshadow_op::minus, op::mshadow_op::minus,
-                              op::mshadow_op::minus>)
+  NumpyBinaryBroadcastCompute<cpu, op::mshadow_op::minus>)
 #endif
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_broadcast_sub"});
 
@@ -142,13 +140,12 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_PRECISION(_npi_multiply)
 #ifndef _WIN32
 .set_attr<FCompute>(
   "FCompute<cpu>",
-  MixedBinaryBroadcastCompute<cpu, op::mshadow_op::mul, op::mshadow_op::mixed_mul,
-                              op::mshadow_op::mixed_mul>)
+  NumpyBinaryBroadcastComputeWithBool<cpu, op::mshadow_op::mul, op::mshadow_op::mixed_mul,
+                                      op::mshadow_op::mixed_mul>)
 #else
 .set_attr<FCompute>(
   "FCompute<cpu>",
-  MixedBinaryBroadcastCompute<cpu, op::mshadow_op::mul, op::mshadow_op::mul,
-                              op::mshadow_op::mul>)
+  NumpyBinaryBroadcastComputeWithBool<cpu, op::mshadow_op::mul>)
 #endif
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_mul"});
 

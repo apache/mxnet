@@ -97,6 +97,18 @@ using std::is_integral;
     } \
   }
 
+#define MXNET_BINARY_MATH_OP_NC_WITH_BOOL(name, expr) \
+  struct name : public mxnet_op::tunable  { \
+    template<typename DType, \
+             typename std::enable_if<!std::is_same<DType, bool>::value, int>::type = 0> \
+    MSHADOW_XINLINE static DType Map(DType a, DType b) { \
+      return (expr); \
+    } \
+    MSHADOW_XINLINE static bool Map(bool a, bool b) { \
+      return (expr); \
+    } \
+  }
+
 #define MXNET_BINARY_LOGIC_OP_NC(name, expr) \
   struct name : public mxnet_op::tunable  { \
     template<typename DType> \
@@ -192,8 +204,6 @@ MXNET_BINARY_MATH_OP_NC(left, a);
 
 MXNET_BINARY_MATH_OP_NC(right, b);
 
-MXNET_BINARY_MATH_OP_NC(mul, a * b);
-
 #ifndef _WIN32
 struct mixed_plus {
   template<typename DType,
@@ -288,11 +298,13 @@ struct mixed_mul {
 };
 #endif
 
-MXNET_BINARY_MATH_OP_NC(div, a / b);
+MXNET_BINARY_MATH_OP_NC_WITH_BOOL(mul, a * b);
 
-MXNET_BINARY_MATH_OP_NC(plus, a + b);
+MXNET_BINARY_MATH_OP_NC_WITH_BOOL(div, a / b);
 
-MXNET_BINARY_MATH_OP_NC(minus, a - b);
+MXNET_BINARY_MATH_OP_NC_WITH_BOOL(plus, a + b);
+
+MXNET_BINARY_MATH_OP_NC_WITH_BOOL(minus, a - b);
 
 MXNET_UNARY_MATH_OP(negation, -a);
 
