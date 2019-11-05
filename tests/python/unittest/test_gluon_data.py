@@ -165,11 +165,11 @@ def test_multi_worker():
 
 @with_seed()
 def test_multi_worker_shape():
-    batch_size = 1024
-    shape = (batch_size+1, 11, 12)
-
-    data = ArrayDataset(np.ones(shape))
     for thread_pool in [True, False]:
+        batch_size = 1024
+        shape = (batch_size+1, 11, 12)
+
+        data = ArrayDataset(np.ones(shape))
         loader = gluon.data.DataLoader(
             data, batch_size=batch_size, num_workers=5, last_batch='keep', thread_pool=thread_pool)
         for batch in loader:
