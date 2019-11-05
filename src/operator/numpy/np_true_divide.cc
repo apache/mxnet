@@ -31,7 +31,7 @@ namespace op {
 int TrueDivideOutType(int ltype, int rtype) {
   if (common::is_float(ltype) && common::is_float(rtype)) {
     // If both inputs are float, return the one with the higher precision
-    return common::more_precise_type(ltype, rtype);
+    return common::get_more_precise_type(ltype, rtype);
   } else if (common::is_float(ltype) || common::is_float(rtype)) {
     // If only one of the inputs is float, return that float type
     return (common::is_float(ltype)) ? ltype : rtype;

@@ -522,6 +522,14 @@ def add(x1, x2, out=None, **kwargs):
     -------
     add : ndarray or scalar
         The sum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars.
+
+    Notes
+    -----
+    This operator now supports automatic type promotion. The resulting type will be determined
+    according to the following rules:
+        * If both inputs are of floating number types, the output is the more precise type.
+        * If only one of the inputs is floating number type, the result is that type.
+        * If both inputs are of integer types (including boolean), not supported yet.
     """
     return _ufunc_helper(x1, x2, _npi.add, _np.add, _npi.add_scalar, None, out)
 
@@ -548,6 +556,14 @@ def subtract(x1, x2, out=None, **kwargs):
     -------
     subtract : ndarray or scalar
         The difference of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars.
+
+    Notes
+    -----
+    This operator now supports automatic type promotion. The resulting type will be determined
+    according to the following rules:
+        * If both inputs are of floating number types, the output is the more precise type.
+        * If only one of the inputs is floating number type, the result is that type.
+        * If both inputs are of integer types (including boolean), not supported yet.
     """
     return _ufunc_helper(x1, x2, _npi.subtract, _np.subtract, _npi.subtract_scalar,
                          _npi.rsubtract_scalar, out)
@@ -575,6 +591,14 @@ def multiply(x1, x2, out=None, **kwargs):
     out : ndarray or scalar
         The multiplication of x1 and x2, element-wise. This is a scalar if both x1 and x2
         are scalars.
+
+    Notes
+    -----
+    This operator now supports automatic type promotion. The resulting type will be determined
+    according to the following rules:
+        * If both inputs are of floating number types, the output is the more precise type.
+        * If only one of the inputs is floating number type, the result is that type.
+        * If both inputs are of integer types (including boolean), not supported yet.
     """
     return _ufunc_helper(x1, x2, _npi.multiply, _np.multiply, _npi.multiply_scalar, None, out)
 
@@ -602,6 +626,14 @@ def divide(x1, x2, out=None, **kwargs):
     -------
     out : ndarray or scalar
         This is a scalar if both x1 and x2 are scalars.
+
+    Notes
+    -----
+    This operator now supports automatic type promotion. The resulting type will be determined
+    according to the following rules:
+        * If both inputs are of floating number types, the output is the more precise type.
+        * If only one of the inputs is floating number type, the result is that type.
+        * If both inputs are of integer types (including boolean), the output is of float32 type.
     """
     return _ufunc_helper(x1, x2, _npi.true_divide, _np.divide, _npi.true_divide_scalar,
                          _npi.rtrue_divide_scalar, out)
@@ -632,6 +664,14 @@ def true_divide(x1, x2, out=None):
     -------
     out : ndarray or scalar
         This is a scalar if both x1 and x2 are scalars.
+
+    Notes
+    -----
+    This operator now supports automatic type promotion. The resulting type will be determined
+    according to the following rules:
+        * If both inputs are of floating number types, the output is the more precise type.
+        * If only one of the inputs is floating number type, the result is that type.
+        * If both inputs are of integer types (including boolean), the output is of float32 type.
     """
     return _ufunc_helper(x1, x2, _npi.true_divide, _np.divide, _npi.true_divide_scalar,
                          _npi.rtrue_divide_scalar, out)
