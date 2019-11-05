@@ -193,16 +193,6 @@ mkldnn::eltwise_backward::primitive_desc GetActBwdDescImpl(
   auto cpu_engine = CpuEngine::Get()->get_engine();
   auto alg = param.alg;
 
-  MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DType, AccRealX, {
-    mkldnn::eltwise_forward::desc fw_desc(mkldnn::prop_kind::forward_training,
-                                          alg, data_md, param.slope);
-    mkldnn::eltwise_forward::primitive_desc fw_pdesc(fw_desc, cpu_engine);
-    mkldnn::eltwise_backward::desc bw_desc(alg, diff_md, data_md, param.slope);
-    mkldnn::eltwise_backward::primitive_desc bw_pdesc(bw_desc, cpu_engine,
-                                                      fw_pdesc);
-    return bw_pdesc;
-  });
-  LOG(FATAL) << "Unsupported data type for MKLDNN activation";
   mkldnn::eltwise_forward::desc fw_desc(mkldnn::prop_kind::forward_training,
                                         alg, data_md, param.slope);
   mkldnn::eltwise_forward::primitive_desc fw_pdesc(fw_desc, cpu_engine);

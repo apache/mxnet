@@ -184,18 +184,19 @@ static void AMPCastExCPU(const nnvm::NodeAttrs& attrs,
   if (data.IsView() && data.IsMKLDNNData())
     data = data.Reorder2Default();
   const auto i_mem = data.GetMKLDNNData();
-  auto i_mpd = i_mem->get_primitive_desc();
-  auto i_desc = i_mpd.desc();
-  const mkldnn::memory::format i_fmt = static_cast<mkldnn::memory::format>(i_desc.data.format);
   const size_t i_ndim = data.shape().ndim();
   mkldnn::memory::dims i_dims = mkldnn::memory::dims(i_ndim);
   for (size_t i = 0; i < i_ndim; i++) {
     i_dims[i] = static_cast<int>(data.shape()[i]);
   }
-  const auto o_desc = mkldnn::memory::desc(i_dims, get_mkldnn_type(outputs[0].dtype()), i_fmt);
-  const auto o_mpd = memory::primitive_desc(o_desc, cpu_engine);
-  const auto out_mem = CreateMKLDNNMem(outputs[0], o_mpd, req[0]);
-  MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(*i_mem, *out_mem.second));
+  const auto o_desc =
+      mkldnn::memory::desc(i_dims, get_mkldnn_type(outputs[0].dtype()),
+                           static_cast<mkldnn::memory::format_tag>(GetDefaultFormat(i_ndim)));
+  const auto out_mem = CreateMKLDNNMem(outputs[0], o_desc, req[0]);
+  mkldnn_args_map_t reorder_args;
+  reorder_args[MKLDNN_ARG_SRC] = *i_mem;
+  reorder_args[MKLDNN_ARG_DST] = *out_mem.second;
+  MKLDNNStream::Get()->RegisterPrimArgs(mkldnn::reorder(*i_mem, *out_mem.second), reorder_args);
   MKLDNNStream::Get()->Submit();
 }
 
@@ -220,20 +221,22 @@ static void AMPMultiCastExCPU(const nnvm::NodeAttrs& attrs, const OpContext& ctx
       continue;
     }
     auto data = inputs[i];
-    if (data.IsView() && data.IsMKLDNNData()) data = data.Reorder2Default();
+    if (data.IsView() && data.IsMKLDNNData())
+      data = data.Reorder2Default();
     const auto i_mem = data.GetMKLDNNData();
-    auto i_mpd = i_mem->get_primitive_desc();
-    auto i_desc = i_mpd.desc();
-    const mkldnn::memory::format i_fmt = static_cast<mkldnn::memory::format>(i_desc.data.format);
     const size_t i_ndim = data.shape().ndim();
     mkldnn::memory::dims i_dims = mkldnn::memory::dims(i_ndim);
-    for (size_t i = 0; i < i_ndim; i++) {
-      i_dims[i] = static_cast<int>(data.shape()[i]);
+    for (size_t j = 0; j < i_ndim; j++) {
+      i_dims[j] = static_cast<int>(data.shape()[j]);
     }
-    const auto o_desc = mkldnn::memory::desc(i_dims, get_mkldnn_type(outputs[i].dtype()), i_fmt);
-    const auto o_mpd = memory::primitive_desc(o_desc, cpu_engine);
-    const auto out_mem = CreateMKLDNNMem(outputs[i], o_mpd, req[0]);
-    MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(*i_mem, *out_mem.second));
+    const auto o_desc =
+        mkldnn::memory::desc(i_dims, get_mkldnn_type(outputs[i].dtype()),
+                             static_cast<mkldnn::memory::format_tag>(GetDefaultFormat(i_ndim)));
+    const auto out_mem = CreateMKLDNNMem(outputs[i], o_desc, req[i]);
+    mkldnn_args_map_t reorder_args;
+    reorder_args[MKLDNN_ARG_SRC] = *i_mem;
+    reorder_args[MKLDNN_ARG_DST] = *out_mem.second;
+    MKLDNNStream::Get()->RegisterPrimArgs(mkldnn::reorder(*i_mem, *out_mem.second), reorder_args);
   }
   MKLDNNStream::Get()->Submit();
 }

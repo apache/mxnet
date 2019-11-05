@@ -98,7 +98,7 @@ struct data_type_enum<float> {
 
 template <>
 struct data_type_enum<mshadow::bfloat::bf16_t> {
-  enum { type = mkldnn::memory::data_type::bf16 };
+  enum { type = static_cast<unsigned int>(mkldnn::memory::data_type::bf16) };
 };
 
 template <>
@@ -263,7 +263,7 @@ static inline int get_mxnet_type(mkldnn_data_type_t dtype) {
     case mkldnn::memory::data_type::u8:
       return mshadow::kUint8;
     default:
-      LOG(FATAL) << "unknown MKLDNN type: " << mkldnn_dtype;
+      LOG(FATAL) << "unknown MKLDNN type";
       return mshadow::kFloat32;
   }
 }
