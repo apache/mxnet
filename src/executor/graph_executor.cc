@@ -331,6 +331,9 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
 
   nnvm::Graph g;
   g.outputs = symbol.outputs;
+  bool do_elim_common_expr = dmlc::GetEnv("MXNET_ELIMINATE_COMMON_EXPR", true);
+  if (do_elim_common_expr)
+    g = exec::EliminateCommonExpr(std::move(g));
   need_grad_ = false;
   for (OpReqType req : grad_req_types) {
     if (req != kNullOp) need_grad_ = true;

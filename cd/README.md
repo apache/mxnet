@@ -46,12 +46,12 @@ Currently, 10 variants are supported:
 
 ### CD Pipeline Job
 
-The [CD pipeline job](Jenkinsfile_cd_pipeline) take three parameters:
+The [CD pipeline job](Jenkinsfile_cd_pipeline) take two parameters:
 
  * **RELEASE_BUILD**: Flags the run as a *release build*. The underlying jobs can then use this environment variable to disambiguate between nightly and release builds. Defaults to *false*.
  * **MXNET_VARIANTS**: A comma separated list of variants to build. Defaults to *all* variants.
 
-This job defines and executes the CD pipeline. For example, first publish the MXNet library, then, in parallel, execute the python and maven releases. Every step of the pipeline executes a trigger for a release job](Jenkinsfile_release_job).
+This job defines and executes the CD pipeline. For example, first publish the MXNet library, then, in parallel, execute the python and maven releases. Every step of the pipeline executes a trigger for a [release job](Jenkinsfile_release_job).
 
 ### Release Job
 
@@ -195,4 +195,4 @@ def test(mxnet_variant) {
 
 Examples:
 
-Both the [statically linked libmxnet](mxnet_lib/static/Jenkins_pipeline.groovy) and [dynamically linked libmxnet](mxnet_lib/dynamic/Jenkins_pipeline.groovy) pipelines have long running compilation and testing stages that **do not** require specialized/expensive hardware (e.g. GPUs). Therefore, as mush as possible, it is important to run each stage in on its own node, and design the pipeline to spend the least amount of time possible on expensive hardware. E.g. for GPU builds, only run GPU tests on GPU instances, all other stages can be executed on CPU nodes.
+Both the [statically linked libmxnet](mxnet_lib/static/Jenkins_pipeline.groovy) and [dynamically linked libmxnet](mxnet_lib/dynamic/Jenkins_pipeline.groovy) pipelines have long running compilation and testing stages that **do not** require specialized/expensive hardware (e.g. GPUs). Therefore, as much as possible, it is important to run each stage in on its own node, and design the pipeline to spend the least amount of time possible on expensive hardware. E.g. for GPU builds, only run GPU tests on GPU instances, all other stages can be executed on CPU nodes.

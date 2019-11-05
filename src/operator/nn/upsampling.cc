@@ -195,6 +195,7 @@ Example::
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   }
 })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", UpSamplingCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", UpSamplingGrad{"_backward_UpSampling"})
 .set_attr<std::string>("key_var_num_args", "num_args")

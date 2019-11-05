@@ -195,6 +195,15 @@ void AttachOpResources(const Graph& g,
 Graph DetectInplaceAddTo(Graph g);
 
 /*!
+ * \brief Eliminate common expressions in the graph.
+ *
+ * \param g input forward graph
+ *
+ * \return graph with common expressions eliminated
+ */
+Graph EliminateCommonExpr(Graph && g);
+
+/*!
  * \brief Fuse pointwise operations in the forward pass.
  *
  * \param g input graph (needs to be entire graph, not just forward part)
