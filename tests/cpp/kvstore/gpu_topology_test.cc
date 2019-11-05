@@ -23,6 +23,8 @@
  * \brief gpu topology tests
 */
 
+#if MXNET_USE_CUDA
+
 #include <gtest/gtest.h>
 #include <mxnet/base.h>
 #include <mxnet/kvstore.h>
@@ -670,3 +672,5 @@ TEST(GpuTopology, TestKernighanLin2) {
            << " not equal neither: " << 0
            << " nor: "               << P.size() << ".";
 }
+
+#endif  // MXNET_USE_CUDA

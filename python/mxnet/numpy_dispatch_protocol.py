@@ -86,6 +86,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'argmin',
     'argmax',
     'around',
+    'append',
     'broadcast_arrays',
     'broadcast_to',
     'clip',
@@ -121,8 +122,10 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'var',
     'vdot',
     'vstack',
+    'column_stack',
     'zeros_like',
     'linalg.norm',
+    'linalg.cholesky',
     'trace',
     'tril',
     'meshgrid',
@@ -131,6 +134,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'shares_memory',
     'may_share_memory',
     'diff',
+    'resize',
 ]
 
 

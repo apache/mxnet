@@ -178,7 +178,7 @@ def test_requantize_int32_to_int8():
                                                                           max_range.asscalar(),
                                                                           min_calib_range=min_calib_range,
                                                                           max_calib_range=max_calib_range)
-        assert_almost_equal(qdata_int8.asnumpy(), qdata_int8_np)
+        assert_almost_equal(qdata_int8.asnumpy(), qdata_int8_np, atol = 1)
         assert_almost_equal(min_output.asnumpy(), np.array([min_output_np]))
         assert_almost_equal(max_output.asnumpy(), np.array([max_output_np]))
 
@@ -407,7 +407,7 @@ def test_quantized_pooling():
 def test_quantized_fc():
     def check_quantized_fc(data_shape, num_hidden, no_bias, qdtype, flatten=True):
         if is_test_for_native_cpu():
-            hasMKL = False;
+            hasMKL = False
             for key in os.environ.keys():
                 if operator.eq(key, "BUILD_TAG"):
                     if os.environ['BUILD_TAG'].find("MKL") != -1:
@@ -617,12 +617,11 @@ def test_quantized_bn():
         # qdtype = uint8
         if qdtype == 'uint8':
             data_low = 0.0
-            data_high = 127.0
+            data_high = 255.0
         else:
             data_low = -127.0
             data_high = 127.0
-        # output type = int8
-        quantized_range = 127.0
+
         # run fp32 bn
         data_sym = mx.sym.Variable(name='data', shape=data_shape, dtype='float32')
         bn_fp32 = mx.sym.BatchNorm(data=data_sym, name='bn', use_global_stats=True, fix_gamma=False)
@@ -653,12 +652,12 @@ def test_quantized_bn():
 
         calib_data = NDArrayIter(data=data, batch_size=data_shape[0])
         calib_data = DummyIter(calib_data)
-        # quantize bn with quantized_type = int8: MKLDNN BN only support int8 output
         qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=bn_fp32,
                                                                              arg_params=arg_params,
                                                                              aux_params=bn_fp32_exe.aux_dict,
                                                                              ctx=mx.current_context(),
-                                                                             quantized_dtype='int8',
+                                                                             quantized_dtype=qdtype,
+                                                                             quantize_mode='full',
                                                                              calib_mode='naive',
                                                                              calib_data=calib_data,
                                                                              num_calib_examples=20)
@@ -670,7 +669,7 @@ def test_quantized_bn():
         mod.forward(batch, is_train=False)
         output_int8_to_fp32 = mod.get_outputs()[0]
 
-        assert_almost_equal(output.asnumpy(), output_int8_to_fp32.asnumpy(), rtol=1e-1, atol=4)
+        assert_almost_equal(output.asnumpy(), output_int8_to_fp32.asnumpy(), rtol=1e-1, atol=8)
 
     for qdtype in ['int8', 'uint8']:
       check_quantized_bn((32, 512, 4, 4), qdtype)

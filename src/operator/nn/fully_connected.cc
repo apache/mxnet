@@ -147,7 +147,10 @@ void FullyConnectedGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                     const std::vector<NDArray> &inputs,
                                     const std::vector<OpReqType> &req,
                                     const std::vector<NDArray> &outputs) {
-  if (SupportMKLDNNFC(inputs[0])) {
+  // TODO(rongzha1): disable due to flakiness in cpp test IMPERATIVE.FullyConnectedOp
+  // Will be fixed when we decide to enable the backward of FC.
+  bool mkldnn_fc_backward_enable = false;
+  if (mkldnn_fc_backward_enable && SupportMKLDNNFC(inputs[0])) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
     MKLDNNFCBackward(attrs, ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(FullyConnectedGradCompute<cpu>, attrs, ctx, inputs, req,
@@ -311,6 +314,7 @@ If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 #endif
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<mxnet::FInferShape>("FInferShape", FullyConnectedShape)
 .set_attr<nnvm::FInferType>("FInferType", FullyConnectedType)
 .set_attr<FCompute>("FCompute<cpu>", FullyConnectedCompute<cpu>)

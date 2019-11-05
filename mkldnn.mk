@@ -21,15 +21,9 @@ ifeq ($(USE_MKLDNN), 1)
 	MXNET_LIBDIR = $(ROOTDIR)/lib
 	MXNET_INCLDIR = $(ROOTDIR)/include
 ifeq ($(UNAME_S), Darwin)
-	OMP_LIBFILE = $(MKLDNNROOT)/lib/libiomp5.dylib
-	MKLML_LIBFILE = $(MKLDNNROOT)/lib/libmklml.dylib
-	MKLDNN_LIBFILE = $(MKLDNNROOT)/lib/libmkldnn.0.dylib
-	MKLDNN_LIB64FILE = $(MKLDNNROOT)/lib64/libmkldnn.0.dylib
+	MKLDNN_LIBFILE = $(MKLDNNROOT)/lib/libmkldnn.1.dylib
 else
-	OMP_LIBFILE = $(MKLDNNROOT)/lib/libiomp5.so
-	MKLML_LIBFILE = $(MKLDNNROOT)/lib/libmklml_intel.so
-	MKLDNN_LIBFILE = $(MKLDNNROOT)/lib/libmkldnn.so.0
-	MKLDNN_LIB64FILE = $(MKLDNNROOT)/lib64/libmkldnn.so.0
+	MKLDNN_LIBFILE = $(MKLDNNROOT)/lib/libmkldnn.so.1
 endif
 endif
 
@@ -38,22 +32,16 @@ endif
 mkldnn_build: $(MKLDNN_LIBFILE)
 
 $(MKLDNN_LIBFILE):
-	mkdir -p $(MKLDNNROOT)
-	cd $(MKLDNN_SUBMODDIR) && rm -rf external && cd scripts && ./prepare_mkl.sh && cd .. && cp -a external/*/* $(MKLDNNROOT)/.
-	cmake $(MKLDNN_SUBMODDIR) -DCMAKE_INSTALL_PREFIX=$(MKLDNNROOT) -B$(MKLDNN_BUILDDIR) -DARCH_OPT_FLAGS="-mtune=generic" -DWITH_TEST=OFF -DWITH_EXAMPLE=OFF
+	mkdir -p $(MKLDNNROOT)/lib
+	cmake $(MKLDNN_SUBMODDIR) -DCMAKE_INSTALL_PREFIX=$(MKLDNNROOT) -DCMAKE_INSTALL_LIBDIR=lib -B$(MKLDNN_BUILDDIR) -DMKLDNN_ARCH_OPT_FLAGS="" -DMKLDNN_BUILD_TESTS=OFF -DMKLDNN_BUILD_EXAMPLES=OFF -DMKLDNN_ENABLE_JIT_PROFILING=OFF
 	$(MAKE) -C $(MKLDNN_BUILDDIR) VERBOSE=1
 	$(MAKE) -C $(MKLDNN_BUILDDIR) install
-	if [ -f "$(MKLDNN_LIB64FILE)" ]; then \
-		mv $(MKLDNNROOT)/lib64/libmkldnn* $(MKLDNNROOT)/lib/; \
-	fi
 	mkdir -p $(MXNET_LIBDIR)
-	cp $(OMP_LIBFILE) $(MXNET_LIBDIR)
-	cp $(MKLML_LIBFILE) $(MXNET_LIBDIR)
 	cp $(MKLDNN_LIBFILE) $(MXNET_LIBDIR)
 	cp $(MKLDNN_BUILDDIR)/include/mkldnn_version.h $(MXNET_INCLDIR)/mkldnn/.
+
 mkldnn_clean:
 	$(RM) -r 3rdparty/mkldnn/build
-	$(RM) -r $(MKLDNNROOT)
 
 ifeq ($(USE_MKLDNN), 1)
 mkldnn: mkldnn_build

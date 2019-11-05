@@ -21,6 +21,13 @@ This shows examples of how to use the pretrained models. MXNet comes with a numb
 https://mxnet.apache.org/model_zoo/index.html
 
 
+## Installation
+
+Before you run this example, make sure that you have the clojure package installed.
+In the main clojure package directory, do `lein install`. Then you can run
+`lein install` in this directory.
+
+
 ## Predict Image from pretrained models
 
 From the example on https://mxnet.apache.org/tutorials/python/predict_image.html

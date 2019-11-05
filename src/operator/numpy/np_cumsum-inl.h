@@ -98,7 +98,7 @@ void CumsumForwardImpl(const OpContext& ctx,
   }
 
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(in.type_flag_, IType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(in.type_flag_, IType, {
     MSHADOW_TYPE_SWITCH(out.type_flag_, OType, {
       Kernel<cumsum_forward, xpu>::Launch(
         s, out.Size() / middle, out.dptr<OType>(),
@@ -157,7 +157,7 @@ void CumsumBackwardImpl(const OpContext& ctx,
     }
   }
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(igrad.type_flag_, IType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(igrad.type_flag_, IType, {
     MSHADOW_TYPE_SWITCH(ograd.type_flag_, OType, {
       Kernel<cumsum_backward, xpu>::Launch(
         s, igrad.Size() / middle, igrad.dptr<IType>(),

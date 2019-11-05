@@ -113,6 +113,7 @@ NNVM_REGISTER_OP(_npi_tensordot)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", TensordotOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", mxnet::op::ElemwiseGradUseIn{"_backward_npi_tensordot"})
 .add_argument("a", "NDArray-or-Symbol", "First input")
@@ -213,6 +214,7 @@ NNVM_REGISTER_OP(_npi_tensordot_int_axes)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", TensordotIntAxesOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   mxnet::op::ElemwiseGradUseIn{"_backward_npi_tensordot_int_axes"})

@@ -124,6 +124,9 @@ struct potrf {
   static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DType>& B,
                  Stream<xpu> *s, const nnvm::NodeAttrs& attrs) {
     const LaCholeskyParam& param = nnvm::get<LaCholeskyParam>(attrs.parsed);
+    if (A.shape_.Size() == 0U) {
+      return;
+    }
     if ( A.dptr_ != B.dptr_ ) Copy(B, A, s);
     linalg_batch_potrf(B, param.lower, s);
     using namespace mxnet_op;
@@ -587,13 +590,16 @@ struct potrf_backward {
                  const Tensor<xpu, 3, DType>& dA,
                  Stream<xpu>* s, const nnvm::NodeAttrs& attrs) {
     // Backward of B = potrf(A).
-    //   dA = 0.5 * B**T * copyLTU(B**T * dB) * B**(-1)
+    //   dA = 0.5 * B**(-T) * copyLTU(B**T * dB) * B**(-1)
     // Here, copyLTU(M) creates a symmetric matrix from the square matrix M
     // by setting the upper triangle to be equal to the lower triangle, leaving
     // lower triangle and diagonal unchanged.
     // The function also handles the case when B is upper triangular by appropriate
     // transpositions.
     const LaCholeskyParam& param = nnvm::get<LaCholeskyParam>(attrs.parsed);
+    if (dA.shape_.Size() == 0U) {
+      return;
+    }
     if ( dB.dptr_ != dA.dptr_ ) {
       Copy(dA, dB, s);
     }

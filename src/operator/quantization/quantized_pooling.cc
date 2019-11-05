@@ -98,7 +98,7 @@ bool QuantizedPoolingType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_type->size(), 3U);
   CHECK_EQ(out_type->size(), 3U);
   if (param.pool_type == pool_enum::kMaxPooling || param.pool_type == pool_enum::kAvgPooling) {
-#if MXNET_USE_MKLDNN  == 1
+#if MXNET_USE_MKLDNN == 1
     TYPE_ASSIGN_CHECK(*out_type, 0, (*in_type)[0]);
 #else
     TYPE_ASSIGN_CHECK(*in_type, 0, mshadow::kInt8);
