@@ -354,8 +354,6 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
       float quantized_out_range;
       float output_scale;
       if (mkldnn_param.with_sum) {
-        auto quantized_sum_range =
-            (inputs[in_sum].dtype() == mshadow::kInt8) ? kInt8Range : kUint8Range;
         sum_in_scale = GetQuantizeScale(inputs[in_sum].dtype(), cached_sum_min_, cached_sum_max_);
       }
       if (post_requantize_) {
