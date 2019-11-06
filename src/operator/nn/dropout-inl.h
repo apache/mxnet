@@ -187,16 +187,46 @@ class DropoutOp {
                                     const index_t N,
                                     const index_t step,
                                     DType *dropout_out,
-                                    DType *mask_out,
+                                    uint8_t *mask_out,
                                     const DType *input_data,
                                     const real_t pkeep) {
       RNG_KERNEL_LOOP(xpu, DType, id, gen, N, step, {
         const real_t rand_num = static_cast<real_t>(genImpl.uniform());
-        mask_out[i] = mshadow_op::threshold_eq::Map<real_t>(rand_num, pkeep) * (1.0f / pkeep);
-        dropout_out[i] = input_data[i] * mask_out[i];
-      });
+        // mask_out is set per bit position
+        // therefore bitwise shift need to be performed here
+        auto maskIdx = i / 8;
+        auto maskOffset = i % 8;
+        bool maskVal = mshadow_op::threshold_eq::Map<real_t>(rand_num, pkeep);
+        if (maskVal) {
+          // set bit
+          mask_out[maskIdx] |= 1U << maskOffset;
+        } else {
+          // clear bit
+          mask_out[maskIdx] &= ~(1U << maskOffset);
+        }
+
+        // TODO (lnyuan): seems we can set dropout to zero if maskVal is False
+        // however doing this would break one unit test when pkeep is 0, expecting nan
+        // not sure why
+        dropout_out[i] = maskVal * input_data[i] * (1.0f / pkeep);
+      })
     }
   };
+
+  struct DropoutBackwardKernel {
+    MSHADOW_XINLINE static void Map(index_t i,
+                                    OpReqType req,
+                                    DType *igrad,
+                                    DType *ograd,
+                                    const uint8_t *mask,
+                                    const real_t pkeep) {
+      auto maskIdx = i / 8;
+      uint8_t maskOffset = i % 8;
+      bool maskVal = (mask[maskIdx] >> maskOffset) & 1U;
+      KERNEL_ASSIGN(igrad[i], req, maskVal * ograd[i] * (1 / pkeep));
+    }
+  };
+
   struct BernoulliKernel {
     /*! \brief Bernoulli kernel for generating mask */
     MSHADOW_XINLINE static void Map(index_t id,
@@ -282,7 +312,7 @@ class DropoutOp {
       CUDNN_CALL(cudnnDropoutGetReserveSpaceSize(x_desc_, &dropout_reserve_byte_));
       // cudnn uses bits to record the positions that are dropped, so reserve bytes is always
       // 1/8 of input size.
-      CHECK_GE(mask.Size() * sizeof(DType), dropout_reserve_byte_) <<
+      CHECK_GE(mask.Size() * sizeof(uint8_t), dropout_reserve_byte_) <<
         "The size of the mask space is smaller than the required cudnn reserved space.";
       CUDNN_CALL(cudnnDropoutForward(s->dnn_handle_,
                                      dropout_desc_,
@@ -290,7 +320,7 @@ class DropoutOp {
                                      in.dptr<DType>(),
                                      y_desc_,
                                      out.dptr<DType>(),
-                                     mask.dptr<DType>(),
+                                     mask.dptr<uint8_t>(),
                                      dropout_reserve_byte_));
   }
 
@@ -328,7 +358,7 @@ class DropoutOp {
                                       out_grad.dptr<DType>(),
                                       dx_desc_,
                                       in_grad.dptr<DType>(),
-                                      mask.dptr<DType>(),
+                                      mask.dptr<uint8_t>(),
                                       dropout_reserve_byte_));
   }
 #endif  // MXNET_USE_CUDNN_DROPOUT && defined(__CUDACC__)
@@ -367,7 +397,7 @@ class DropoutOp {
           CHECK(req[dropout::kOut] != kAddTo);
           LaunchRNG<DropoutKernel, xpu>(s, pgen, out.Size(),
                                         out.dptr<DType>(),
-                                        mask.dptr<DType>(),
+                                        mask.dptr<uint8_t>(),
                                         in.dptr<DType>(),
                                         this->pkeep_);
           return;
@@ -426,6 +456,7 @@ class DropoutOp {
       const TBlob &gdata = in_grad[dropout::kData];
       const TBlob &grad = out_grad[dropout::kOut];
       const TBlob &mask = out_data[dropout::kMask];
+
       if (this->axes_.ndim() == 0) {
 #if MXNET_USE_MKL_DROPOUT
         if (MKLAvailable()) {
@@ -440,11 +471,12 @@ class DropoutOp {
         }
 #endif  // MXNET_USE_CUDNN_DROPOUT && defined(__CUDACC__)
         // standard case for dropout
-        CHECK_EQ(grad.Size(), mask.Size());
+        CHECK_LE(grad.Size(), mask.Size() * 8);
+
         MXNET_ASSIGN_REQ_SWITCH(req[dropout::kData], Req, {
-          mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::mul, Req>, xpu>::Launch(
-            s, gdata.Size(), gdata.dptr<DType>(), grad.dptr<DType>(), mask.dptr<DType>());
-        });
+          mxnet_op::Kernel<DropoutBackwardKernel, xpu>::Launch(
+            s, gdata.Size(), Req, gdata.dptr<DType>(), grad.dptr<DType>(), mask.dptr<uint8_t>(), pkeep_);
+        })
         return;
       } else {
         // broardcast mul
