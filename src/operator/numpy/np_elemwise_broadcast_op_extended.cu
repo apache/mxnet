@@ -31,6 +31,9 @@ namespace op {
 NNVM_REGISTER_OP(_npi_copysign)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::copysign>);
 
+NNVM_REGISTER_OP(_npi_gcd)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastIntCompute<gpu, mshadow_op::gcd>);
+
 NNVM_REGISTER_OP(_npi_lcm)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastIntCompute<gpu, mshadow_op::lcm>);
 
@@ -78,6 +81,9 @@ NNVM_REGISTER_OP(_npi_rarctan2_scalar)
 
 NNVM_REGISTER_OP(_backward_npi_rarctan2_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::rarctan2_grad>);
+
+NNVM_REGISTER_OP(_npi_gcd_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::ComputeInt<gpu, mshadow_op::gcd>);
 
 NNVM_REGISTER_OP(_npi_lcm_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::ComputeInt<gpu, mshadow_op::lcm>);

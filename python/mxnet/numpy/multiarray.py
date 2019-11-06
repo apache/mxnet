@@ -54,9 +54,9 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'add', 'subtrac
            'tensordot', 'histogram', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange',
            'split', 'vsplit', 'concatenate', 'stack', 'vstack', 'column_stack', 'dstack', 'mean', 'maximum', 'minimum',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming',
-           'blackman', 'flip', 'around', 'arctan2', 'hypot', 'bitwise_xor', 'rad2deg', 'deg2rad', 'unique', 'lcm',
-           'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
-           'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero', 'shares_memory',
+           'blackman', 'flip', 'around', 'arctan2', 'hypot', 'bitwise_xor', 'rad2deg', 'deg2rad', 'unique',
+           'gcd', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal',
+           'greater', 'less', 'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero', 'shares_memory',
            'may_share_memory', 'diff', 'resize', 'nan_to_num']
 
 # Return code for dispatching indexing function call
@@ -2711,6 +2711,44 @@ def power(x1, x2, out=None, **kwargs):
            [ 0.,  1.,  8., 27., 16.,  5.]])
     """
     return _mx_nd_np.power(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+@wrap_np_binary_func
+def gcd(x1, x2, out=None, **kwargs):
+    """
+    Returns the greatest common divisor of ``|x1|`` and ``|x2|``
+
+    Parameters
+    ----------
+    x1, x2 : ndarrays or scalar values
+        The arrays for computing greatest common divisor. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which may be the shape of
+        one or the other).
+
+    out : ndarray or None, optional
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        The greatest common divisor of the absolute value of the inputs
+        This is a scalar if both `x1` and `x2` are scalars.
+
+    See Also
+    --------
+    gcd : The lowest common multiple
+
+    Examples
+    --------
+    >>> np.gcd(12, 20)
+    4
+    >>> np.gcd(np.arange(6, dtype=int), 20)
+    array([20,  1,  2,  1,  4,  5], dtype=int64)
+    """
+    return _mx_nd_np.gcd(x1, x2, out=out)
 
 
 @set_module('mxnet.numpy')
