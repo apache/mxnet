@@ -350,16 +350,13 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
       // Collect scale.
       size_t channel = cached_weight_.shape()[0];
       float sum_in_scale = 1.0;
-      float out_range;
-      float quantized_out_range;
       float output_scale;
       if (mkldnn_param.with_sum) {
         sum_in_scale = GetQuantizeScale(inputs[in_sum].dtype(), cached_sum_min_, cached_sum_max_);
       }
       if (post_requantize_) {
-        quantized_out_range = IsOutputUInt8(param_) ? kUint8Range : kInt8Range;
-        out_range = MaxAbs(cached_output_min_, cached_output_max_);
-        output_scale = quantized_out_range / out_range;
+        output_scale = GetQuantizeScale(IsOutputUInt8(param_) ? mshadow::kUint8 : mshadow::kInt8,
+                                        cached_output_min_, cached_output_max_);
         full_conv_param.requantize_scales.resize(weight_channelwise_scale ? channel : 1);
         for (size_t c = 0; c < full_conv_param.requantize_scales.size(); c++) {
           full_conv_param.requantize_scales[c] = output_scale / data_scale_ / weight_scales_[c];
