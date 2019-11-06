@@ -877,14 +877,14 @@ def test_float64_fallback():
     ex.outputs[0].wait_to_read()
 
 
-def helper_test_quantized_conv_bias_overflow(weight_min, weight_max):
+def helper_test_quantized_conv_bias_overflow(data_min, data_max, weight_min, weight_max):
   data_shape = (1, 32, 2, 2)
   data = mx.symbol.Variable('data', shape=data_shape, dtype='float32')
   weight = mx.symbol.Variable('weight', dtype='float32')
   bias = mx.symbol.Variable('bias', dtype='float32')
   sym = mx.symbol.Convolution(data=data, weight=weight, bias=bias, name='conv', num_filter=64,
                                kernel=(1, 1), stride=(1, 1))
-  data_nd = mx.random.uniform(-1, +1, shape=data_shape, ctx=mx.cpu())
+  data_nd = mx.random.uniform(data_min, data_max, shape=data_shape, ctx=mx.cpu())
   weight_nd = mx.random.uniform(weight_min, weight_max, shape=[64, 32, 1, 1], ctx=mx.cpu())
   bias_nd = mx.random.uniform(-1, +1, shape=[64], ctx=mx.cpu())
   arg_params = {
@@ -923,8 +923,13 @@ def helper_test_quantized_conv_bias_overflow(weight_min, weight_max):
 
 @with_seed()
 def test_quantized_conv_bias_overflow():
-    helper_test_quantized_conv_bias_overflow(0, 0)
-    helper_test_quantized_conv_bias_overflow(-1e-6, +1e-6)
+    helper_test_quantized_conv_bias_overflow(-1, 1, 0, 0)
+    helper_test_quantized_conv_bias_overflow(-1, 1, -1e-6, +1e-6)
+    helper_test_quantized_conv_bias_overflow(0, 0, 1, 1)
+    helper_test_quantized_conv_bias_overflow(-1e-6, +1e-6, -1, 1)
+    helper_test_quantized_conv_bias_overflow(-1e-6, +1e-6, -1e-6, +1e-6)
+    helper_test_quantized_conv_bias_overflow(0, 0, 0, 0)
+
 
 if __name__ == "__main__":
   import nose
