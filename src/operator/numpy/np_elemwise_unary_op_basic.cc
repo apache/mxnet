@@ -198,8 +198,8 @@ void TVMUnaryBackwardUseOneCompute(const nnvm::NodeAttrs& attrs,
                                    const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
-  CHECK_EQ(inputs[0].type_flag_, outputs[0].type_flag_);
-  CHECK_EQ(common::is_float(inputs[0].type_flag_)) << "Backward only supports float types!";
+  CHECK(inputs[0].type_flag_ == outputs[0].type_flag_);
+  CHECK(common::is_float(inputs[0].type_flag_)) << "Backward only supports float types!";
   if (outputs[0].shape_.Size() == 0U) return;  // skip zero-size tensor
   // prepare tblobs and TVMArgs
   std::vector<TBlob> tblobs = {inputs[0], inputs[1], outputs[0], outputs[0]};
@@ -290,11 +290,11 @@ MXNET_OPERATOR_REGISTER_NUMPY_TVM_UNARY(_npi_deg2rad)
 .set_attr<FCompute>("FCompute<cpu>", TVMUnaryCompute<func_deg2rad_cpu, false>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_tvm_backward_deg2rad"});
 
-MXNET_OPERATOR_REGISTER_NUMPY_TVM_UNARY_BACKWARD_USE_ONE(_tvm_backward_deg2rad)
+MXNET_OPERATOR_REGISTER_NUMPY_TVM_UNARY_BACKWARD_USE_NONE(_tvm_backward_deg2rad)
 #if MXNET_USE_CUDA
 .set_attr<FCompute>("FCompute<gpu>", TVMUnaryCompute<func_deg2rad_gpu, true>)
 #endif  // MXNET_USE_CUDA
-.set_attr<FCompute>("FCompute<cpu>", TVMUnaryCompute<func_deg2rad_cpu, true>)
+.set_attr<FCompute>("FCompute<cpu>", TVMUnaryCompute<func_deg2rad_cpu, true>);
 
 static constexpr char func_rad2deg_cpu[] = "rad2deg_cpu";
 static constexpr char func_rad2deg_gpu[] = "rad2deg_gpu";
@@ -307,11 +307,11 @@ MXNET_OPERATOR_REGISTER_NUMPY_TVM_UNARY(_npi_rad2deg)
 .set_attr<FCompute>("FCompute<cpu>", TVMUnaryCompute<func_rad2deg_cpu, false>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_tvm_backward_rad2deg"});
 
-MXNET_OPERATOR_REGISTER_NUMPY_TVM_UNARY_BACKWARD_USE_ONE(_tvm_backward_rad2deg)
+MXNET_OPERATOR_REGISTER_NUMPY_TVM_UNARY_BACKWARD_USE_NONE(_tvm_backward_rad2deg)
 #if MXNET_USE_CUDA
 .set_attr<FCompute>("FCompute<gpu>", TVMUnaryCompute<func_rad2deg_gpu, true>)
 #endif  // MXNET_USE_CUDA
-.set_attr<FCompute>("FCompute<cpu>", TVMUnaryCompute<func_rad2deg_cpu, true>)
+.set_attr<FCompute>("FCompute<cpu>", TVMUnaryCompute<func_rad2deg_cpu, true>);
 
 #else  // MXNET_USE_TVM_OP
 
