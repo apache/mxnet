@@ -60,7 +60,7 @@ inline mxnet::TShape UnfoldShapeImpl(const mxnet::TShape& ishape, const int k,
   CHECK_LE(k, elems_target_dim) << "kernel size " << k << "must be less than or equal"
                              " to the number of elements in the target dimension";
 
-  int num_windows = elems_target_dim - k + 1; // TODO: stride
+  int num_windows = (elems_target_dim - k) / stride + 1;
 
   auto o_ndim = ishape.ndim() + 1;
   mxnet::TShape oshape(o_ndim, -1);
@@ -116,13 +116,13 @@ struct unfold {
   MSHADOW_XINLINE static void Map(index_t idx, DType* out, const DType* in,
                                   mshadow::Shape<4> oshape,
                                   mshadow::Shape<3> ishape,
-                                  index_t kernel_size, index_t stride) {
+                                  index_t stride) {
     using namespace mxnet_op;
     
     auto cloc = unravel(idx, oshape);
     auto num_slice = cloc[1];
     auto num_element = cloc[3];
-    auto ipos = num_slice + num_element;
+    auto ipos = (num_slice * stride) + num_element;
     auto j = ravel(Shape3(cloc[0], ipos, cloc[2]), ishape);
 
     KERNEL_ASSIGN(out[idx], req, in[j]);
@@ -168,7 +168,7 @@ void UnfoldOpForward(const nnvm::NodeAttrs& attrs,
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         Kernel<unfold<req_type>, xpu>::Launch(s, out_data.Size(), out_data.dptr<DType>(),
                               in_data.dptr<DType>(), Shape4(leading, obody, trailing, param.kernel_size),
-                              Shape3(leading, ibody, trailing), param.kernel_size, param.stride);
+                              Shape3(leading, ibody, trailing), param.stride);
       });
   });
 }
