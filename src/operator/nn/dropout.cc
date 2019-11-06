@@ -118,14 +118,24 @@ Example::
   if (!mxnet::ndim_is_known(dshape)) return false;
   out_shape->clear();
   out_shape->push_back(dshape);
-  for (int i = 0; i < param.axes.ndim(); ++i) {
-    dshape[param.axes[i]] = 1;
+  if (param.axes.ndim() > 0) {
+    // TODO (lnyuan): support specifying axes
+    LOG(FATAL) << "not supported yet";
+    /*
+    for (int i = 0; i < param.axes.ndim(); ++i) {
+      dshape[param.axes[i]] = 1;
+    }
+    out_shape->push_back(dshape); */
+  } else {
+    mxnet::TShape mshape(1, static_cast<dim_t>(ceil(static_cast<double>(dshape.Size()) / 8)));
+    out_shape->push_back(mshape);
   }
-  out_shape->push_back(dshape);
+
   return true;
 })
 .set_attr<nnvm::FInferType>("FInferType", [](const nnvm::NodeAttrs& attrs,
       std::vector<int> *in_type, std::vector<int> *out_type) {
+  using namespace mshadow;
   CHECK_EQ(in_type->size(), 1U);
   int dtype = in_type->at(0);
 
@@ -134,9 +144,9 @@ Example::
     return false;
   }
 
-  size_t nout = 2;
   out_type->clear();
-  for (size_t i = 0; i < nout; ++i) out_type->push_back(dtype);
+  out_type->push_back(dtype); // data type for output
+  out_type->push_back(kUint8); // data type for mask
   return true;
 })
 .set_attr<FCreateOpState>("FCreateOpState", CreateDropoutState)
