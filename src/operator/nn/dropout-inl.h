@@ -402,6 +402,8 @@ class DropoutOp {
                                         this->pkeep_);
           return;
         } else {
+          // TODO (lnyuan) : support axes param
+          LOG(FATAL) << "param axes is not yet supported in this PR";
           RandGenerator<xpu, DType> *pgen = ctx.requested[0].get_parallel_random<xpu, DType>();
           CHECK_NOTNULL(pgen);
           // initialize the mask
