@@ -17,8 +17,22 @@
 
 import tvm
 
-__all__ = ['abs']
+__all__ = ['abs', 'sign']
 
 
 def abs(a):
     return tvm.abs(a)
+
+
+# todo(hgt312): handle unsign?
+def sign(a):
+    dtype = a.dtype
+    return tvm.if_then_else(
+               a > tvm.const(0, dtype),
+               tvm.const(1, dtype),
+               tvm.if_then_else(
+                   a < tvm.const(0, dtype),
+                   tvm.const(-1, dtype),
+                   tvm.const(0, dtype)
+               )
+           )

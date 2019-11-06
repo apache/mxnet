@@ -19,7 +19,7 @@ import tvm
 from ...opdef import defop
 from ...utils import assign_by_req
 
-__all__ = ['unary_cpu', 'unary_gpu']
+__all__ = ['unary_cpu', 'unary_gpu', 'unary_backward_useone_cpu', 'unary_backward_useone_gpu']
 
 
 def compute_unary(op, dtype, ndim, req):
@@ -42,3 +42,26 @@ def unary_gpu(op, dtype, ndim, req):
     s[new].bind(bx, tvm.thread_axis('blockIdx.x'))
     s[new].bind(tx, tvm.thread_axis('threadIdx.x'))
     return s, [x, old, new]
+
+
+def compute_unary_backward_useone(op, dtype, ndim, req):
+    ograd = tvm.placeholder([tvm.var() for _ in range(ndim)], dtype=dtype, name='ograd')
+    used = tvm.placeholder([tvm.var() for _ in range(ndim)], dtype=dtype, name='used')
+    igrad = tvm.compute([tvm.var() for _ in range(ndim)], lambda *idx: op(used[idx]) * ograd[idx], name='igrad')
+    old, new = assign_by_req(igrad, req)
+    s = tvm.create_schedule(new.op)
+    s[igrad].compute_inline()
+    return s, ograd, used, old, new
+
+
+def unary_backward_useone_cpu(op, dtype, ndim, req):
+    s, ograd, used, old, new = compute_unary_backward_useone(op, dtype, ndim, req)
+    return s, [ograd, used, old, new]
+
+
+def unary_backward_useone_gpu(op, dtype, ndim, req):
+    s, ograd, used, old, new = compute_unary_backward_useone(op, dtype, ndim, req)
+    bx, tx = s[new].split(new.op.axis[0], factor=64)
+    s[new].bind(bx, tvm.thread_axis('blockIdx.x'))
+    s[new].bind(tx, tvm.thread_axis('threadIdx.x'))
+    return s, [ograd, used, old, new]

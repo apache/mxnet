@@ -17,6 +17,10 @@
  * under the License.
  */
 
+#ifndef MXNET_OPERATOR_TVMOP_OP_UTIL_H_
+#define MXNET_OPERATOR_TVMOP_OP_UTIL_H_
+
+#if MXNET_USE_TVM_OP
 #include <mxnet/base.h>
 #include <string>
 
@@ -31,3 +35,6 @@ inline std::string set_req(OpReqType req) {
 
 }  // namespace op
 }  // namespace mxnet
+
+#endif  // MXNET_USE_TVM_OP
+#endif  // MXNET_OPERATOR_TVMOP_OP_UTIL_H_

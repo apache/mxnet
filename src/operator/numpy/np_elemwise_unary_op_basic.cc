@@ -30,6 +30,7 @@
 #endif  // MXNET_USE_TVM_OP
 
 #include <mxnet/base.h>
+#include "../../common/utils.h"
 #include "../tensor/elemwise_unary_op.h"
 
 namespace mxnet {
@@ -134,7 +135,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_reciprocal"});
 
 #if MXNET_USE_TVM_OP
-template<const char* func>
+template<const char* func, bool backward>
 void TVMUnaryCompute(const nnvm::NodeAttrs& attrs,
                      const mxnet::OpContext& ctx,
                      const std::vector<TBlob>& inputs,
@@ -142,6 +143,10 @@ void TVMUnaryCompute(const nnvm::NodeAttrs& attrs,
                      const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
+  if (backward) {
+    CHECK_EQ(inputs[0].type_flag_, outputs[0].type_flag_);
+    CHECK_EQ(common::is_float(inputs[0].type_flag_)) << "Backward only supports float types!";
+  }
   if (outputs[0].shape_.Size() == 0U) return;  // skip zero-size tensor
   // prepare tblobs and TVMArgs
   std::vector<TBlob> tblobs = {inputs[0], outputs[0], outputs[0]};
@@ -149,6 +154,40 @@ void TVMUnaryCompute(const nnvm::NodeAttrs& attrs,
   std::vector<TVMValue> values;
 
   const size_t num_args = 3;
+  type_codes.resize(num_args);
+  values.resize(num_args);
+  for (size_t i = 0; i < num_args; ++i) {
+    tblobs[i] = tblobs[i].reshape(mxnet::TShape(1, tblobs[i].Size()));
+    type_codes[i] = kArrayHandle;
+    values[i].v_handle = const_cast<DLTensor*>(&(tblobs[i].dltensor()));
+  }
+
+  std::string funcname = std::string(func);
+  MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+    funcname += set_req(req_type);
+  });
+
+  tvm::runtime::TVMArgs tvm_args(&values[0], &type_codes[0], num_args);
+  tvm::runtime::TVMOpModule::Get()->CallEx(funcname, ctx, tblobs, tvm_args);
+}
+
+template<const char* func>
+void TVMUnaryBackwardUseOneCompute(const nnvm::NodeAttrs& attrs,
+                                   const mxnet::OpContext& ctx,
+                                   const std::vector<TBlob>& inputs,
+                                   const std::vector<OpReqType>& req,
+                                   const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(inputs[0].type_flag_, outputs[0].type_flag_);
+  CHECK_EQ(common::is_float(inputs[0].type_flag_)) << "Backward only supports float types!";
+  if (outputs[0].shape_.Size() == 0U) return;  // skip zero-size tensor
+  // prepare tblobs and TVMArgs
+  std::vector<TBlob> tblobs = {inputs[0], inputs[1], outputs[0], outputs[0]};
+  std::vector<int> type_codes;
+  std::vector<TVMValue> values;
+
+  const size_t num_args = 4;
   type_codes.resize(num_args);
   values.resize(num_args);
   for (size_t i = 0; i < num_args; ++i) {
@@ -181,16 +220,45 @@ void TVMUnaryCompute(const nnvm::NodeAttrs& attrs,
     })                                                                        \
   .add_argument("x", "NDArray-or-Symbol", "The input array.")
 
+#define MXNET_OPERATOR_REGISTER_NUMPY_TVM_UNARY_BACKWARD_USE_NONE(name)       \
+  NNVM_REGISTER_OP(name)                                                      \
+  .set_num_inputs(1)                                                          \
+  .set_num_outputs(1)                                                         \
+  .set_attr<nnvm::TIsBackward>("TIsBackward", true)                           \
+  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                           \
+    [](const NodeAttrs& attrs){                                               \
+      return std::vector<std::pair<int, int> >{{0, 0}};                       \
+    })
+
+#define MXNET_OPERATOR_REGISTER_NUMPY_TVM_UNARY_BACKWARD_USE_ONE(name)        \
+  NNVM_REGISTER_OP(name)                                                      \
+  .set_num_inputs(2)                                                          \
+  .set_num_outputs(1)                                                         \
+  .set_attr<nnvm::TIsBackward>("TIsBackward", true)                           \
+  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                           \
+    [](const NodeAttrs& attrs){                                               \
+      return std::vector<std::pair<int, int> >{{0, 0}};                       \
+    })
+
 static constexpr char func_abs_cpu[] = "abs_cpu";
 static constexpr char func_abs_gpu[] = "abs_gpu";
+static constexpr char func_backward_abs_cpu[] = "backward_abs_cpu";
+static constexpr char func_backward_abs_gpu[] = "backward_abs_gpu";
 
 MXNET_OPERATOR_REGISTER_NUMPY_TVM_UNARY(_npi_absolute)
 .add_alias("_npi_abs")
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 #if MXNET_USE_CUDA
-.set_attr<FCompute>("FCompute<gpu>", TVMUnaryCompute<func_abs_gpu>)
+.set_attr<FCompute>("FCompute<gpu>", TVMUnaryCompute<func_abs_gpu, false>)
 #endif  // MXNET_USE_CUDA
-.set_attr<FCompute>("FCompute<cpu>", TVMUnaryCompute<func_abs_cpu>);
+.set_attr<FCompute>("FCompute<cpu>", TVMUnaryCompute<func_abs_cpu, false>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_tvm_backward_abs"});
+
+MXNET_OPERATOR_REGISTER_NUMPY_TVM_UNARY_BACKWARD_USE_ONE(_tvm_backward_abs)
+#if MXNET_USE_CUDA
+.set_attr<FCompute>("FCompute<gpu>", TVMUnaryBackwardUseOneCompute<func_backward_abs_gpu>)
+#endif  // MXNET_USE_CUDA
+.set_attr<FCompute>("FCompute<cpu>", TVMUnaryBackwardUseOneCompute<func_backward_abs_cpu>);
 #else  // MXNET_USE_TVM_OP
 // abs
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_absolute, "x", mshadow_op::abs)

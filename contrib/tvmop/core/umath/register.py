@@ -18,30 +18,37 @@
 from .core import *  # pylint: disable=wildcard-import
 from . import operator as _op
 from ...opdef import defop
-from ...utils import AllTypes
+from ...utils import AllTypes, RealTypes
 
-unary_cpu_attrs = {
-    'target': 'cpu',
+unary_forward_attrs = {
     'dtype': AllTypes + ['bool'],
     'ndim': [1],
     'req': ['kWriteTo', 'kAddTo'],
     'attrs': ['req']
 }
 
-unary_gpu_attrs = {
-    'target': 'gpu',
-    'dtype': ["float32", "float64", "uint8", "int8", "int32", "int64", "bool"],
+unary_backward_attrs = {
+    'dtype': RealTypes,
     'ndim': [1],
     'req': ['kWriteTo', 'kAddTo'],
     'attrs': ['req']
 }
 
-
-@defop(name="abs_cpu", **unary_cpu_attrs)
+@defop(name="abs_cpu", target="cpu", **unary_forward_attrs)
 def abs_cpu(dtype, ndim, req):
     return unary_cpu(_op.abs, dtype, ndim, req)
 
 
-@defop(name="abs_gpu", **unary_gpu_attrs)
+@defop(name="abs_gpu", target="gpu", **unary_forward_attrs)
 def abs_gpu(dtype, ndim, req):
     return unary_gpu(_op.abs, dtype, ndim, req)
+
+
+@defop(name="backward_abs_cpu", target="cpu", **unary_backward_attrs)
+def backward_abs_cpu(dtype, ndim, req):
+    return unary_backward_useone_cpu(_op.sign, dtype, ndim, req)
+
+
+@defop(name="backward_abs_gpu", target="gpu", **unary_backward_attrs)
+def backward_abs_gpu(dtype, ndim, req):
+    return unary_backward_useone_gpu(_op.sign, dtype, ndim, req)
