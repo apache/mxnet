@@ -15,9 +15,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import math
+
 import tvm
 
-__all__ = ['abs', 'sign']
+from ...utils import acc_type_resolver
+
+__all__ = ['abs', 'sign', 'deg2rad', 'rad2deg']
 
 
 def abs(a):
@@ -36,3 +40,13 @@ def sign(a):
                    tvm.const(0, dtype)
                )
            )
+
+
+def deg2rad(a):
+    otype = acc_type_resolver[a.dtype]
+    return a.astype(otype) * tvm.const(math.pi, otype) / tvm.const(180, otype)
+
+
+def rad2deg(a):
+    otype = acc_type_resolver[a.dtype]
+    return a.astype(otype) / tvm.const(math.pi, otype) * tvm.const(180, otype)

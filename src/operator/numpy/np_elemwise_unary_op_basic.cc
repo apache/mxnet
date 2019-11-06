@@ -36,6 +36,25 @@
 namespace mxnet {
 namespace op {
 
+inline bool NumpyUnaryAccType(const nnvm::NodeAttrs& attrs,
+                              std::vector<int>* in_attrs,
+                              std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  if (common::is_float(in_attrs->at(0))) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+    TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+  } else if (in_attrs->at(0) == mshadow::kInt8 ||
+             in_attrs->at(0) == mshadow::kUint8 ||
+             in_attrs->at(0) == mshadow::kBool) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kFloat16);
+  } else if (in_attrs->at(0) == mshadow::kInt32 ||
+             in_attrs->at(0) == mshadow::kInt64) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kFloat64);
+  }
+  return out_attrs->at(0) != -1;
+}
+
 MXNET_OPERATOR_REGISTER_UNARY(_npx_relu)
 .describe(R"code(Computes rectified linear activation.
 .. math::
@@ -144,8 +163,8 @@ void TVMUnaryCompute(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   if (backward) {
-    CHECK_EQ(inputs[0].type_flag_, outputs[0].type_flag_);
-    CHECK_EQ(common::is_float(inputs[0].type_flag_)) << "Backward only supports float types!";
+    CHECK(inputs[0].type_flag_ == outputs[0].type_flag_);
+    CHECK(common::is_float(inputs[0].type_flag_)) << "Backward only supports float types!";
   }
   if (outputs[0].shape_.Size() == 0U) return;  // skip zero-size tensor
   // prepare tblobs and TVMArgs
@@ -259,8 +278,43 @@ MXNET_OPERATOR_REGISTER_NUMPY_TVM_UNARY_BACKWARD_USE_ONE(_tvm_backward_abs)
 .set_attr<FCompute>("FCompute<gpu>", TVMUnaryBackwardUseOneCompute<func_backward_abs_gpu>)
 #endif  // MXNET_USE_CUDA
 .set_attr<FCompute>("FCompute<cpu>", TVMUnaryBackwardUseOneCompute<func_backward_abs_cpu>);
+
+static constexpr char func_deg2rad_cpu[] = "deg2rad_cpu";
+static constexpr char func_deg2rad_gpu[] = "deg2rad_gpu";
+
+MXNET_OPERATOR_REGISTER_NUMPY_TVM_UNARY(_npi_deg2rad)
+.set_attr<nnvm::FInferType>("FInferType", NumpyUnaryAccType)
+#if MXNET_USE_CUDA
+.set_attr<FCompute>("FCompute<gpu>", TVMUnaryCompute<func_deg2rad_gpu, false>)
+#endif  // MXNET_USE_CUDA
+.set_attr<FCompute>("FCompute<cpu>", TVMUnaryCompute<func_deg2rad_cpu, false>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_tvm_backward_deg2rad"});
+
+MXNET_OPERATOR_REGISTER_NUMPY_TVM_UNARY_BACKWARD_USE_ONE(_tvm_backward_deg2rad)
+#if MXNET_USE_CUDA
+.set_attr<FCompute>("FCompute<gpu>", TVMUnaryCompute<func_deg2rad_gpu, true>)
+#endif  // MXNET_USE_CUDA
+.set_attr<FCompute>("FCompute<cpu>", TVMUnaryCompute<func_deg2rad_cpu, true>)
+
+static constexpr char func_rad2deg_cpu[] = "rad2deg_cpu";
+static constexpr char func_rad2deg_gpu[] = "rad2deg_gpu";
+
+MXNET_OPERATOR_REGISTER_NUMPY_TVM_UNARY(_npi_rad2deg)
+.set_attr<nnvm::FInferType>("FInferType", NumpyUnaryAccType)
+#if MXNET_USE_CUDA
+.set_attr<FCompute>("FCompute<gpu>", TVMUnaryCompute<func_rad2deg_gpu, false>)
+#endif  // MXNET_USE_CUDA
+.set_attr<FCompute>("FCompute<cpu>", TVMUnaryCompute<func_rad2deg_cpu, false>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_tvm_backward_rad2deg"});
+
+MXNET_OPERATOR_REGISTER_NUMPY_TVM_UNARY_BACKWARD_USE_ONE(_tvm_backward_rad2deg)
+#if MXNET_USE_CUDA
+.set_attr<FCompute>("FCompute<gpu>", TVMUnaryCompute<func_rad2deg_gpu, true>)
+#endif  // MXNET_USE_CUDA
+.set_attr<FCompute>("FCompute<cpu>", TVMUnaryCompute<func_rad2deg_cpu, true>)
+
 #else  // MXNET_USE_TVM_OP
-// abs
+
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_absolute, "x", mshadow_op::abs)
 .add_alias("_npi_abs")
 .describe(R"code(Returns element-wise absolute value of the input.

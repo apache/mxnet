@@ -34,6 +34,8 @@ unary_backward_attrs = {
     'attrs': ['req']
 }
 
+
+# abs
 @defop(name="abs_cpu", target="cpu", **unary_forward_attrs)
 def abs_cpu(dtype, ndim, req):
     return unary_cpu(_op.abs, dtype, ndim, req)
@@ -52,3 +54,25 @@ def backward_abs_cpu(dtype, ndim, req):
 @defop(name="backward_abs_gpu", target="gpu", **unary_backward_attrs)
 def backward_abs_gpu(dtype, ndim, req):
     return unary_backward_useone_gpu(_op.sign, dtype, ndim, req)
+
+
+# deg2rad, its backward function is the same as forward.
+@defop(name="deg2rad_cpu", target="cpu", **unary_forward_attrs)
+def deg2rad_cpu(dtype, ndim, req):
+    return unary_cpu(_op.deg2rad, dtype, ndim, req)
+
+
+@defop(name="deg2rad_gpu", target="gpu", **unary_forward_attrs)
+def deg2rad_gpu(dtype, ndim, req):
+    return unary_gpu(_op.deg2rad, dtype, ndim, req)
+
+
+# rad2deg, its backward function is the same as forward.
+@defop(name="rad2deg_cpu", target="cpu", **unary_forward_attrs)
+def rad2deg_cpu(dtype, ndim, req):
+    return unary_cpu(_op.rad2deg, dtype, ndim, req)
+
+
+@defop(name="rad2deg_gpu", target="gpu", **unary_forward_attrs)
+def rad2deg_gpu(dtype, ndim, req):
+    return unary_gpu(_op.rad2deg, dtype, ndim, req)
