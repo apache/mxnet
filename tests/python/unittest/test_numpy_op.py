@@ -3016,11 +3016,11 @@ def test_np_linalg_inv():
             assert_almost_equal(A_inv.asnumpy(), A_expected, rtol=rtol, atol=atol)
 
     shapes = [
-        (1, 1),
-        (2, 2),
-        (3, 3),
         (0, 0),
-        (5, 5),
+        (4, 4),
+        (2, 2),
+        (1, 1),
+        (2, 1, 1),
         (0, 1, 1),
         (6, 1, 1),
         (2, 3, 3, 3),
@@ -3028,6 +3028,7 @@ def test_np_linalg_inv():
         (0, 5, 3, 3),
         (5, 0, 0, 0),
         (3, 3, 0, 0),
+        (3, 5, 5),
     ]
     dtypes = ['float32', 'float64']
     for hybridize, dtype, shape in itertools.product([True, False], dtypes, shapes):
