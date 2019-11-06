@@ -59,6 +59,8 @@ struct NumpyBernoulliParam : public dmlc::Parameter<NumpyBernoulliParam> {
         "Context of output, in format [cpu|gpu|cpu_pinned](n)."
         " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
+        .add_enum("uint8", mshadow::kUint8)
+        .add_enum("int32", mshadow::kInt32)
         .add_enum("float32", mshadow::kFloat32)
         .add_enum("float64", mshadow::kFloat64)
         .add_enum("float16", mshadow::kFloat16)
@@ -143,6 +145,7 @@ void NumpyBernoulliForward(const nnvm::NodeAttrs &attrs,
   Tensor<xpu, 1, float> indicator_device = workspace.Slice(output_len, output_len + 1);
   float indicator_host = 1.0;
   float *indicator_device_ptr = indicator_device.dptr_;
+  Kernel<set_zero, xpu>::Launch(s, 1, indicator_device_ptr);
   prnd->SampleUniform(&uniform_tensor, 0.0, 1.0);
   if (param.prob.has_value()) {
     // scalar prob input

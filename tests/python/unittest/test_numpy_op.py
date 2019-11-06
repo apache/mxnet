@@ -2296,6 +2296,26 @@ def test_np_clip():
 
 @with_seed()
 @use_np
+def test_npx_bernoulli():
+    shapes = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
+    dtypes = ['float16', 'float32', 'float64', 'int32']
+    epsilon = 1e-4
+    for shape, dtype in itertools.product(shapes, dtypes):
+        prob = np.random.uniform(size=shape)
+        logit = np.log(prob) - np.log(1 - prob)
+        expected_shape = shape
+        if not isinstance(shape, tuple):
+            expected_shape = () if shape is None else (shape,)
+        out_prob = npx.random.bernoulli(prob=prob, size=shape, dtype=dtype)
+        assert out_prob.shape == expected_shape
+        assert int((out_prob == 0).sum() + (out_prob == 1).sum()) == out_prob.size
+        out_logit = npx.random.bernoulli(logit=logit, size=shape, dtype=dtype)
+        assert out_logit.shape == expected_shape
+        assert int((out_logit == 0).sum() + (out_logit == 1).sum()) == out_logit.size
+
+
+@with_seed()
+@use_np
 def test_np_random():
     shapes = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
     dtypes = ['float16', 'float32', 'float64']
