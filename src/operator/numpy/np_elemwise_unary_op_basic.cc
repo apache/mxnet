@@ -288,7 +288,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_TVM_UNARY(_npi_deg2rad)
 .set_attr<FCompute>("FCompute<gpu>", TVMUnaryCompute<func_deg2rad_gpu, false>)
 #endif  // MXNET_USE_CUDA
 .set_attr<FCompute>("FCompute<cpu>", TVMUnaryCompute<func_deg2rad_cpu, false>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_tvm_backward_deg2rad"});
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_tvm_backward_deg2rad"});
 
 MXNET_OPERATOR_REGISTER_NUMPY_TVM_UNARY_BACKWARD_USE_NONE(_tvm_backward_deg2rad)
 #if MXNET_USE_CUDA
@@ -305,7 +305,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_TVM_UNARY(_npi_rad2deg)
 .set_attr<FCompute>("FCompute<gpu>", TVMUnaryCompute<func_rad2deg_gpu, false>)
 #endif  // MXNET_USE_CUDA
 .set_attr<FCompute>("FCompute<cpu>", TVMUnaryCompute<func_rad2deg_cpu, false>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_tvm_backward_rad2deg"});
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_tvm_backward_rad2deg"});
 
 MXNET_OPERATOR_REGISTER_NUMPY_TVM_UNARY_BACKWARD_USE_NONE(_tvm_backward_rad2deg)
 #if MXNET_USE_CUDA

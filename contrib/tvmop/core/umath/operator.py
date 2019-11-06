@@ -21,11 +21,18 @@ import tvm
 
 from ...utils import acc_type_resolver
 
-__all__ = ['abs', 'sign', 'deg2rad', 'rad2deg']
+__all__ = ['abs_cpu', 'abs_gpu', 'sign', 'deg2rad', 'rad2deg']
 
 
-def abs(a):
+def abs_cpu(a):
     return tvm.abs(a)
+
+
+def abs_gpu(a):
+    if a.dtype == "float16":
+        return tvm.abs(a.astype("float32")).astype("float16")
+    else:
+        return tvm.abs(a)
 
 
 # todo(hgt312): handle unsign?

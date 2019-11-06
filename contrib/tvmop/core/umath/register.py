@@ -38,12 +38,12 @@ unary_backward_attrs = {
 # abs
 @defop(name="abs_cpu", target="cpu", **unary_forward_attrs)
 def abs_cpu(dtype, ndim, req):
-    return unary_cpu(_op.abs, dtype, ndim, req)
+    return unary_cpu(_op.abs_cpu, dtype, ndim, req)
 
 
 @defop(name="abs_gpu", target="gpu", **unary_forward_attrs)
 def abs_gpu(dtype, ndim, req):
-    return unary_gpu(_op.abs, dtype, ndim, req)
+    return unary_gpu(_op.abs_gpu, dtype, ndim, req)
 
 
 @defop(name="backward_abs_cpu", target="cpu", **unary_backward_attrs)
