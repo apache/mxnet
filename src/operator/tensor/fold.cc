@@ -47,8 +47,8 @@ This operation flattens each sliding kernel_size-sized block within the spatial 
   return std::vector<std::string>{"data"};
 })
 .set_attr<mxnet::FInferShape>("FInferShape", UnfoldOpShape)
-//.set_attr<nnvm::FInferType>("FInferType", GatherNDType)
-//.set_attr<FCompute>("FCompute<cpu>", GatherNDForward<cpu>)
+.set_attr<nnvm::FInferType>("FInferType", UnfoldOpType)
+.set_attr<FCompute>("FCompute<cpu>", UnfoldOpForward<cpu>)
 /*.set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     auto p = nnvm::Node::Create();

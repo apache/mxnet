@@ -36,7 +36,7 @@ namespace op {
 struct UnfoldParam : public dmlc::Parameter<UnfoldParam> {
   int kernel_size;
   int dim;
-  int stride;
+  uint32_t stride;
   DMLC_DECLARE_PARAMETER(UnfoldParam) {
     DMLC_DECLARE_FIELD(kernel_size)
       .set_lower_bound(1)
@@ -55,12 +55,12 @@ inline mxnet::TShape UnfoldShapeImpl(const mxnet::TShape& ishape, const int k,
                             const int32_t dim, const int32_t stride) {
   int32_t axis = CheckAxis(dim, ishape.ndim());
 
-  auto num_target_dim = ishape[axis];
+  auto elems_target_dim = ishape[axis];
 
-  CHECK_LE(k, num_target_dim) << "kernel size " << k << "must be less than or equal"
+  CHECK_LE(k, elems_target_dim) << "kernel size " << k << "must be less than or equal"
                              " to the number of elements in the target dimension";
 
-  int num_windows = num_target_dim / k;
+  int num_windows = elems_target_dim - k + 1; // TODO: stride
 
   auto o_ndim = ishape.ndim() + 1;
   mxnet::TShape oshape(o_ndim, -1);
@@ -72,6 +72,17 @@ inline mxnet::TShape UnfoldShapeImpl(const mxnet::TShape& ishape, const int k,
   oshape[o_ndim - 1] = k;
   oshape[axis] = num_windows;
   return oshape;
+}
+
+inline bool UnfoldOpType(const nnvm::NodeAttrs& attrs,
+                       std::vector<int> *in_attrs,
+                       std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
+  return (*out_attrs)[0] != -1;
 }
 
 inline bool UnfoldOpShape(const nnvm::NodeAttrs& attrs,
@@ -97,6 +108,69 @@ inline bool UnfoldOpShape(const nnvm::NodeAttrs& attrs,
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
 
   return shape_is_known(out_attrs->at(0));
+}
+
+template<int req>
+struct unfold {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t idx, DType* out, const DType* in,
+                                  mshadow::Shape<4> oshape,
+                                  mshadow::Shape<3> ishape,
+                                  index_t kernel_size, index_t stride) {
+    using namespace mxnet_op;
+    
+    auto cloc = unravel(idx, oshape);
+    auto num_slice = cloc[1];
+    auto num_element = cloc[3];
+    auto ipos = num_slice + num_element;
+    auto j = ravel(Shape3(cloc[0], ipos, cloc[2]), ishape);
+
+    KERNEL_ASSIGN(out[idx], req, in[j]);
+  }
+};
+
+template<typename xpu>
+void UnfoldOpForward(const nnvm::NodeAttrs& attrs,
+                   const OpContext& ctx,
+                   const std::vector<TBlob>& inputs,
+                   const std::vector<OpReqType>& req,
+                   const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  CHECK_EQ(req[0], kWriteTo);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob& in_data = inputs[0];
+  const TBlob& out_data = outputs[0];
+  const mxnet::TShape& ishape = inputs[0].shape_;
+  const mxnet::TShape& oshape = outputs[0].shape_;
+  const UnfoldParam& param = nnvm::get<UnfoldParam>(attrs.parsed);
+
+  uint32_t idim = ishape.ndim();
+  uint32_t tdim = CheckAxis(param.dim, ishape.ndim());
+
+  index_t leading = 1,
+          trailing = 1,
+          ibody = ishape[tdim],
+          obody = oshape[tdim];
+
+  for (uint32_t i = 0; i < tdim; ++i) {
+      leading *= ishape[i];
+  }
+
+  for (uint32_t i = tdim + 1; i < idim; ++i) {
+      trailing *= ishape[i];
+  }
+
+  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+        Kernel<unfold<req_type>, xpu>::Launch(s, out_data.Size(), out_data.dptr<DType>(),
+                              in_data.dptr<DType>(), Shape4(leading, obody, trailing, param.kernel_size),
+                              Shape3(leading, ibody, trailing), param.kernel_size, param.stride);
+      });
+  });
 }
 
 }  // namespace op
