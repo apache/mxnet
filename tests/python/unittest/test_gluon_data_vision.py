@@ -224,10 +224,38 @@ def test_transformer():
         transforms.RandomHue(0.1),
         transforms.RandomLighting(0.1),
         transforms.ToTensor(),
+        transforms.RandomRotation([-10., 10.]),
         transforms.Normalize([0, 0, 0], [1, 1, 1])])
 
     transform(mx.nd.ones((245, 480, 3), dtype='uint8')).wait_to_read()
 
+
+@with_seed()
+def test_rotate():
+    assertRaises(ValueError, transforms.Rotate, -100.)
+    assertRaises(ValueError, transforms.Rotate, 100.)
+    transformer = transforms.Rotate(10.)
+    assertRaises(TypeError, transformer, mx.nd.ones((3, 30, 60), dtype='uint8'))
+    single_image = mx.nd.ones((3, 30, 60), dtype='float32')
+    single_output = transformer(single_image)
+    assert same(single_output.shape, (3, 30, 60))
+    batch_image = mx.nd.ones((3, 3, 30, 60), dtype='float32')
+    batch_output = transformer(batch_image)
+    assert same(batch_output.shape, (3, 3, 30, 60))
+
+
+@with_seed()
+def test_random_rotation():
+    assertRaises(ValueError, transforms.RandomRotation, [-100., 100.])
+    assertRaises(ValueError, transforms.RandomRotation, [100., -100])
+    transformer = transforms.RandomRotation([-10, 10.])
+    assertRaises(TypeError, transformer, mx.nd.ones((3, 30, 60), dtype='uint8'))
+    single_image = mx.nd.ones((3, 30, 60), dtype='float32')
+    single_output = transformer(single_image)
+    assert same(single_output.shape, (3, 30, 60))
+    batch_image = mx.nd.ones((3, 3, 30, 60), dtype='float32')
+    batch_output = transformer(batch_image)
+    assert same(batch_output.shape, (3, 3, 30, 60))
 
 
 if __name__ == '__main__':

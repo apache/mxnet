@@ -27,7 +27,11 @@ import random
 import logging
 import json
 import warnings
+
+from numbers import Number
+
 import numpy as np
+
 from .. import numpy as _mx_np  # pylint: disable=reimported
 
 
@@ -610,6 +614,148 @@ def random_size_crop(src, size, area, ratio, interp=2, **kwargs):
 
     # fall back to center_crop
     return center_crop(src, size, interp)
+
+
+def imrotate(src, rotation_degrees, zoom_in=False, zoom_out=False):
+    """Rotates the input image(s) of a specific rotation degree.
+
+    Parameters
+    ----------
+    src : NDArray
+        Input image (format CHW) or batch of images (format NCHW),
+        in both case is required a float32 data type.
+    rotation_degrees: scalar or NDArray
+        Wanted rotation in degrees. In case of `src` being a single image
+        a scalar is needed, otherwise a mono-dimensional vector of angles
+        or a scalar.
+    zoom_in: bool
+        If True input image(s) will be zoomed in a way so that no padding
+        will be shown in the output result.
+    zoom_out: bool
+        If True input image(s) will be zoomed in a way so that the whole
+        original image will be contained in the output result.
+    Returns
+    -------
+    NDArray
+        An `NDArray` containing the rotated image(s).
+    """
+    if zoom_in and zoom_out:
+        raise ValueError("`zoom_in` and `zoom_out` cannot be both True")
+    if src.dtype is not np.float32:
+        raise TypeError("Only `float32` images are supported by this function")
+    # handles the case in which a single image is passed to this function
+    expanded = False
+    if src.ndim == 3:
+        expanded = True
+        src = src.expand_dims(axis=0)
+        if not isinstance(rotation_degrees, Number):
+            raise TypeError("When a single image is passed the rotation angle is "
+                            "required to be a scalar.")
+    elif src.ndim != 4:
+        raise ValueError("Only 3D and 4D are supported by this function")
+
+    # when a scalar is passed we wrap it into an array
+    if isinstance(rotation_degrees, Number):
+        rotation_degrees = nd.array([rotation_degrees] * len(src),
+                                    ctx=src.context)
+
+    if ((rotation_degrees < -90).sum().asscalar() > 0.0 or
+            (rotation_degrees > 90).sum().asscalar() > 0.0):
+        raise ValueError("Rotation angles should be between -90 and 90 degrees")
+
+    if len(src) != len(rotation_degrees):
+        raise ValueError(
+            "The number of images must be equal to the number of rotation angles"
+        )
+
+    rotation_degrees = rotation_degrees.as_in_context(src.context)
+    rotation_rad = np.pi * rotation_degrees / 180
+    # reshape the rotations angle in order to be broadcasted
+    # over the `src` tensor
+    rotation_rad = rotation_rad.expand_dims(axis=1).expand_dims(axis=2)
+    _, _, h, w = src.shape
+
+    # Generate a grid centered at the center of the image
+    hscale = (float(h - 1) / 2)
+    wscale = (float(w - 1) / 2)
+    h_matrix = (
+        nd.repeat(nd.arange(h, ctx=src.context).astype('float32').reshape(h, 1), w, axis=1) - hscale
+    ).expand_dims(axis=0)
+    w_matrix = (
+        nd.repeat(nd.arange(w, ctx=src.context).astype('float32').reshape(1, w), h, axis=0) - wscale
+    ).expand_dims(axis=0)
+    # perform rotation on the grid
+    c_alpha = nd.cos(rotation_rad)
+    s_alpha = nd.sin(rotation_rad)
+    w_matrix_rot = w_matrix * c_alpha - h_matrix * s_alpha
+    h_matrix_rot = w_matrix * s_alpha + h_matrix * c_alpha
+    # NOTE: grid normalization must be performed after the rotation
+    #       to keep the aspec ratio
+    w_matrix_rot = w_matrix_rot / wscale
+    h_matrix_rot = h_matrix_rot / hscale
+
+    h, w = nd.array([h], ctx=src.context), nd.array([w], ctx=src.context)
+    # compute the scale factor in case `zoom_in` or `zoom_out` are True
+    if zoom_in or zoom_out:
+        if h < w:
+            roth = nd.sqrt(h * h + w * w) * nd.sin(nd.arctan(h / w) + nd.abs(rotation_rad))
+        else:
+            roth = nd.sqrt(h * h + w * w) * nd.cos(nd.arctan(h / w) - nd.abs(rotation_rad))
+        if zoom_in:
+            globalscale = min(h, w) / roth
+        else:
+            globalscale = roth / min(h, w)
+        globalscale = globalscale.expand_dims(axis=3)
+    else:
+        globalscale = 1
+    grid = nd.concat(w_matrix_rot.expand_dims(axis=1),
+                     h_matrix_rot.expand_dims(axis=1), dim=1)
+    grid = grid * globalscale
+    rot_img = nd.BilinearSampler(src, grid)
+    if expanded:
+        return rot_img[0]
+    return rot_img
+
+
+def random_rotate(src, angle_limits, zoom_in=False,
+                  zoom_out=False, rotate_with_proba=1.0):
+    """Random rotates `src` by an angle included in angle limits.
+
+    Parameters
+    ----------
+    src : NDArray
+        Input image (format CHW) or batch of images (format NCHW),
+        in both case is required a float32 data type.
+    angle_limits: tuple
+        Tuple of 2 elements containing the upper and lower limit
+        for rotation angles in degree.
+    zoom_in: bool
+        If True input image(s) will be zoomed in a way so that no padding
+        will be shown in the output result.
+    zoom_out: bool
+        If True input image(s) will be zoomed in a way so that the whole
+        original image will be contained in the output result.
+    rotate_with_proba: float in [0., 1]
+        Probability of rotating the image.
+    Returns
+    -------
+    NDArray
+        An `NDArray` containing the rotated image(s).
+    """
+    if rotate_with_proba < 0 or rotate_with_proba > 1:
+        raise ValueError('Probability of rotating the image should be between 0 and 1')
+    if np.random.random() > rotate_with_proba:
+        return src
+    if src.ndim == 3:
+        rotation_degrees = np.random.uniform(*angle_limits)
+    else:
+        n = src.shape[0]
+        rotation_degrees = nd.array(np.random.uniform(
+            *angle_limits,
+            size=n
+        ))
+    return imrotate(src, rotation_degrees,
+                    zoom_in=zoom_in, zoom_out=zoom_out)
 
 
 class Augmenter(object):

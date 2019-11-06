@@ -19,6 +19,8 @@
 # pylint: disable= arguments-differ
 "Image transforms."
 
+import numpy as np
+
 from ...block import Block, HybridBlock
 from ...nn import Sequential, HybridSequential
 from .... import image
@@ -195,6 +197,78 @@ class Normalize(HybridBlock):
         if is_np_array():
             F = F.npx
         return F.image.normalize(x, self._mean, self._std)
+
+
+class Rotate(Block):
+    """Rotate the input image by a given angle. Keeps the original image shape.
+
+    Parameters
+    ----------
+    rotation_degrees : float32
+        Desired rotation angle in degrees, in range (-90, 90).
+    zoom_in : bool
+        Zoom in image so that no padding is present in final output.
+    zoom_out : bool
+        Zoom out image so that the entire original image is present in final output.
+
+
+    Inputs:
+        - **data**: input tensor with (C x H x W) or (N x C x H x W) shape.
+
+    Outputs:
+        - **out**: output tensor with (C x H x W) or (N x C x H x W) shape.
+    """
+    def __init__(self, rotation_degrees, zoom_in=False, zoom_out=False):
+        super(Rotate, self).__init__()
+        if (rotation_degrees < -90 or rotation_degrees > 90):
+            raise ValueError("Rotation angle should be between -90 and 90 degrees")
+        self._args = (rotation_degrees, zoom_in, zoom_out)
+
+    def forward(self, x):
+        if x.dtype is not np.float32:
+            raise TypeError("This transformation only supports float32. "
+                            "Consider calling it after ToTensor")
+        return image.imrotate(x, *self._args)
+
+
+class RandomRotation(Block):
+    """Random rotate the input image by a random angle.
+       Keeps the original image shape and aspect ratio.
+
+    Parameters
+    ----------
+    angle_limits: tuple
+        Tuple of 2 elements containing the upper and lower limit
+        for rotation angles in degree.
+    zoom_in : bool
+        Zoom in image so that no padding is present in final output.
+    zoom_out : bool
+        Zoom out image so that the entire original image is present in final output.
+    rotate_with_proba : float32
+
+
+    Inputs:
+        - **data**: input tensor with (C x H x W) or (N x C x H x W) shape.
+
+    Outputs:
+        - **out**: output tensor with (C x H x W) or (N x C x H x W) shape.
+    """
+    def __init__(self, angle_limits, zoom_in=False, zoom_out=False, rotate_with_proba=1.0):
+        super(RandomRotation, self).__init__()
+        lower, upper = angle_limits
+        if any(i < -90 for i in angle_limits) or any(i > 90 for i in angle_limits):
+            raise ValueError("rotation angles should be between -90 and 90 degrees")
+        if lower >= upper:
+            raise ValueError("`angle_limits` must be an ordered tuple")
+        if rotate_with_proba < 0 or rotate_with_proba > 1:
+            raise ValueError("Probability of rotating the image should be between 0 and 1")
+        self._args = (angle_limits, zoom_in, zoom_out, rotate_with_proba)
+
+    def forward(self, x):
+        if x.dtype is not np.float32:
+            raise TypeError("This transformation only supports float32. "
+                            "Consider calling it after ToTensor")
+        return image.random_rotate(x, *self._args)
 
 
 class RandomResizedCrop(Block):
