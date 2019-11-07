@@ -2308,10 +2308,10 @@ def test_npx_bernoulli():
             expected_shape = () if shape is None else (shape,)
         out_prob = npx.random.bernoulli(prob=prob, size=shape, dtype=dtype)
         assert out_prob.shape == expected_shape
-        assert int((out_prob == 0).sum() + (out_prob == 1).sum()) == out_prob.size
+        assert int((out_prob.asnumpy() == 0).sum() + (out_prob.asnumpy() == 1).sum()) == out_prob.size
         out_logit = npx.random.bernoulli(logit=logit, size=shape, dtype=dtype)
         assert out_logit.shape == expected_shape
-        assert int((out_logit == 0).sum() + (out_logit == 1).sum()) == out_logit.size
+        assert int((out_logit.asnumpy() == 0).sum() + (out_logit.asnumpy() == 1).sum()) == out_logit.size
 
 
 @with_seed()
