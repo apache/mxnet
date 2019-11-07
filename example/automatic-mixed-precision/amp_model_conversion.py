@@ -58,30 +58,31 @@ if __name__ == '__main__':
                        'imagenet1k-resnext-101-64x4d',
                        'imagenet11k-place365ch-resnet-152',
                        'imagenet11k-place365ch-resnet-50']
-    gluon_models = ['faster_rcnn_fpn_resnet50_v1b_coco',
+    # Faster RCNN and Mask RCNN commented because of model loading issues
+    # https://github.com/dmlc/gluon-cv/issues/1034
+    gluon_models = [#'faster_rcnn_fpn_resnet50_v1b_coco',
                     'mobilenetv2_0.75',
-                    'ssd_512_resnet50_v1_voc_int8',
                     'cifar_resnet56_v1',
                     'mobilenet0.25',
                     'mobilenet1.0',
-                    'mask_rcnn_fpn_resnet50_v1b_coco',
+                    #'mask_rcnn_fpn_resnet50_v1b_coco',
                     'simple_pose_resnet152_v1b',
                     'ssd_512_resnet50_v1_voc',
-                    'faster_rcnn_resnet50_v1b_voc',
+                    #'faster_rcnn_resnet50_v1b_voc',
                     'cifar_resnet20_v1',
                     'yolo3_darknet53_voc',
                     'resnet101_v1c',
                     'simple_pose_resnet18_v1b',
-                    'mask_rcnn_resnet50_v1b_coco',
+                    #'mask_rcnn_resnet50_v1b_coco',
                     'ssd_512_mobilenet1.0_coco',
                     'vgg19_bn',
-                    'faster_rcnn_resnet50_v1b_coco',
+                    #'faster_rcnn_resnet50_v1b_coco',
                     'cifar_resnet110_v1',
                     'yolo3_mobilenet1.0_voc',
                     'cifar_resnext29_16x64d',
                     'resnet34_v1',
                     'densenet121',
-                    'mask_rcnn_fpn_resnet101_v1d_coco',
+                    #'mask_rcnn_fpn_resnet101_v1d_coco',
                     'vgg13_bn',
                     'vgg19',
                     'resnet152_v1d',
@@ -102,7 +103,7 @@ if __name__ == '__main__':
                     'se_resnext101_32x4d',
                     'fcn_resnet101_voc',
                     'resnet152_v2',
-                    'mask_rcnn_resnet101_v1d_coco',
+                    #'mask_rcnn_resnet101_v1d_coco',
                     'squeezenet1.1',
                     'mobilenet0.5',
                     'resnet34_v2',
@@ -113,7 +114,7 @@ if __name__ == '__main__':
                     'ssd_512_resnet101_v2_voc',
                     'resnet50_v1d_0.37',
                     'mobilenetv2_0.5',
-                    'faster_rcnn_fpn_bn_resnet50_v1b_coco',
+                    #'faster_rcnn_fpn_bn_resnet50_v1b_coco',
                     'resnet50_v1c',
                     'densenet161',
                     'simple_pose_resnet50_v1b',
@@ -127,18 +128,16 @@ if __name__ == '__main__':
                     'resnet101_v1d_0.73',
                     'squeezenet1.0',
                     'resnet50_v1b',
-                    'faster_rcnn_resnet101_v1d_coco',
+                    #'faster_rcnn_resnet101_v1d_coco',
                     'ssd_512_mobilenet1.0_voc',
                     'cifar_wideresnet40_8',
                     'cifar_wideresnet16_10',
                     'cifar_resnet110_v2',
                     'resnet101_v1s',
-                    'ssd_512_mobilenet1.0_voc_int8',
                     'mobilenetv2_0.25',
                     'resnet152_v1c',
                     'se_resnext101_64x4d',
-                    'mobilenet1.0_int8',
-                    'faster_rcnn_fpn_resnet101_v1d_coco',
+                    #'faster_rcnn_fpn_resnet101_v1d_coco',
                     'resnet50_v1d',
                     'densenet169',
                     'resnet34_v1b',
@@ -158,7 +157,6 @@ if __name__ == '__main__':
                     'vgg16_bn',
                     'mobilenetv2_1.0',
                     'resnet50_v1d_0.48',
-                    'resnet50_v1_int8',
                     'resnet50_v1d_0.11',
                     'fcn_resnet101_ade',
                     'simple_pose_resnet152_v1d',
@@ -166,6 +164,23 @@ if __name__ == '__main__':
                     'fcn_resnet101_coco']
     # TODO(anisub): add support for other models from gluoncv
     # Not supported today mostly because of broken net.forward calls
+    segmentation_models = ['deeplab_resnet50_ade',
+                           'psp_resnet101_voc',
+                           'deeplab_resnet152_voc',
+                           'deeplab_resnet101_ade',
+                           'deeplab_resnet152_coco',
+                           'psp_resnet101_ade',
+                           'deeplab_resnet101_coco',
+                           'psp_resnet101_citys',
+                           'psp_resnet50_ade',
+                           'psp_resnet101_coco',
+                           'deeplab_resnet101_voc']
+    calib_ssd_models = ["ssd_512_vgg16_atrous_voc",
+                        "ssd_300_vgg16_atrous_voc",
+                        "ssd_300_vgg16_atrous_coco"]
+    calib_inception_models = ["inceptionv3"]
+    gluon_models = gluon_models + segmentation_models + \
+                   calib_ssd_models + calib_inception_models
     models = symbolic_models + gluon_models
 
     parser = argparse.ArgumentParser(description='Convert a provided FP32 model to a mixed precision model')
@@ -207,14 +222,23 @@ if __name__ == '__main__':
     else:
         assert args.model in gluon_models, "Please choose one of the available gluon models: {} \
                                             If you want to use symbolic model instead, remove --use-gluon-model when running the script".format(gluon_models)
+        shape = None
+        if args.model in segmentation_models:
+            shape = (1, 3, 480, 480)
+        elif args.model in calib_ssd_models:
+            shape = (1, 3, 512, 544)
+        elif args.model in calib_inception_models:
+            shape = (1, 3, 299, 299)
+        else:
+            shape = (1, 3, 224, 224)
         net = gluoncv.model_zoo.get_model(args.model, pretrained=True)
         net.hybridize()
-        result_before1 = net.forward(mx.nd.zeros((1, 3, 224, 224)))
+        result_before1 = net.forward(mx.nd.random.uniform(shape=shape))
         net.export("{}".format(args.model))
         net = amp.convert_hybrid_block(net, cast_optional_params=args.cast_optional_params)
         net.export("{}-amp".format(args.model), remove_amp_cast=False)
         if args.run_dummy_inference:
             logger.info("Running inference on the mixed precision model with dummy inputs, batch size: 1")
-            result_after = net.forward(mx.nd.zeros((1, 3, 224, 224), dtype=np.float32, ctx=mx.gpu(0)))
-            result_after = net.forward(mx.nd.zeros((1, 3, 224, 224), dtype=np.float32, ctx=mx.gpu(0)))
+            result_after = net.forward(mx.nd.random.uniform(shape=shape, dtype=np.float32, ctx=mx.gpu(0)))
+            result_after = net.forward(mx.nd.random.uniform(shape=shape, dtype=np.float32, ctx=mx.gpu(0)))
             logger.info("Inference run successfully")
