@@ -1482,7 +1482,6 @@ def test_np_unary_funcs():
         assertRaises(NotImplementedError, getattr(np, func), mx_test_data,  order='mxnet')
 
     funcs = {
-        'absolute' : (lambda x: -1. * (x < 0) + (x > 0), -1.0, 1.0),
         'cbrt' : (lambda x: 1. / (3. * _np.cbrt(x) ** 2), -1.0, 1.0),
         'ceil' : (None, -10.0, 10.0),
         'exp' : (lambda x: _np.exp(x), -1.0, 1.0),
@@ -1519,6 +1518,8 @@ def test_np_unary_funcs():
     if has_tvm_ops():
         funcs['rad2deg'] = (lambda x: 180. / _np.pi * _np.ones(x.shape), -1.0, 1.0)
         funcs['deg2rad'] = (lambda x: _np.pi / 180. * _np.ones(x.shape), -1.0, 1.0)
+    if is_op_runnable():
+        funcs['absolute'] = (lambda x: -1. * (x < 0) + (x > 0), -1.0, 1.0)
     ndim = random.choice([2, 3, 4])
     shape = random.choice([rand_shape_nd(ndim, dim=3), (1, 0, 2)])
     for shape in [rand_shape_nd(ndim, dim=3), (1, 0, 2)]:
@@ -4128,7 +4129,7 @@ def test_np_diff():
                         mx_out.backward()
                         if (np_out.size == 0):
                             np_backward = _np.zeros(shape)
-                        else:                    
+                        else:
                             np_backward = np_diff_backward(_np.ones(np_out.shape, dtype=itype), n=n, axis=axis)
                         assert x.grad.shape == np_backward.shape
                         assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
