@@ -422,6 +422,12 @@ OpStatePtr CachedOpThreadSafe::StaticForward(const Context &default_ctx,
 
   auto state_ptr = GetCachedOpThreadSafeState(default_ctx);
   auto &state = state_ptr.get_state<CachedOpThreadSafeState>();
+
+  // Need to lock the mutex on the state, this allows
+  // for multi context push of ops to dependency engine.
+  // Required to lock for the whole function since static
+  // alloc allocates memory, and executors once and reuses the alloced memory
+  // and executors for multiple forward invokes of the same op.
   std::lock_guard<std::mutex> lock(state.mutex);
 
   bool match = SetForwardGraph(&state.info, inputs);
@@ -495,6 +501,10 @@ OpStatePtr CachedOpThreadSafe::DynamicForward(const Context& default_ctx,
   auto &runtime = op_state.get_state<DynamicRuntime>();
   {
     auto &state = state_ptr.get_state<CachedOpThreadSafeState>();
+    // Need to lock the mutex on the state, this allows
+    // for multi context push of ops to dependency engine.
+    // SetForwardGraph runs infer passes on graphs as well
+    // as the planmemory pass.
     std::lock_guard<std::mutex> lock(state.mutex);
     SetForwardGraph(&state.info, inputs);
     runtime.info.fwd_graph = state.info.fwd_graph;
@@ -567,6 +577,10 @@ OpStatePtr CachedOpThreadSafe::Forward(const std::shared_ptr<CachedOpThreadSafe>
   // Adding the lock here for safety,
   // The perf hit would be acceptable because this involves just pushing
   // ops to engine and not actual execution
+  // We are putting this lock here because without this there is a hang
+  // in the accept4 call in CUDA lib.
+  // TODO(anirudh2290): Investigate this issue more as it also prevents parallel
+  // push of ops for different contexts
   std::lock_guard<std::mutex> lock(mutex_);
   CHECK_EQ(inputs.size(), num_inputs());
   Context default_ctx = inputs[0]->ctx();
