@@ -188,6 +188,69 @@ namespace common {
 /*! \brief common utils for cuda */
 namespace cuda {
 /*!
+ * \brief Converts between C++ datatypes and enums/constants needed by cuBLAS.
+ */
+template<typename DType>
+struct CublasType;
+
+// With CUDA v8, cuBLAS adopted use of cudaDataType_t instead of its own
+// datatype cublasDataType_t.  The older cudaDataType_t values could be
+// included below, but since this class was introduced to support the cuBLAS v8
+// call cublasGemmEx(), burdening the class with the legacy type values
+// was not needed.
+
+template<>
+struct CublasType<float> {
+  static const int kFlag = mshadow::kFloat32;
+#if CUDA_VERSION >= 8000
+  static const cudaDataType_t kCudaFlag = CUDA_R_32F;
+#endif
+  typedef float ScaleType;
+  static const float one;
+  static const float zero;
+};
+template<>
+struct CublasType<double> {
+  static const int kFlag = mshadow::kFloat64;
+#if CUDA_VERSION >= 8000
+  static const cudaDataType_t kCudaFlag = CUDA_R_64F;
+#endif
+  typedef double ScaleType;
+  static const double one;
+  static const double zero;
+};
+template<>
+struct CublasType<mshadow::half::half_t> {
+  static const int kFlag = mshadow::kFloat16;
+#if CUDA_VERSION >= 8000
+  static const cudaDataType_t kCudaFlag = CUDA_R_16F;
+#endif
+  typedef float ScaleType;
+  static const mshadow::half::half_t one;
+  static const mshadow::half::half_t zero;
+};
+template<>
+struct CublasType<uint8_t> {
+  static const int kFlag = mshadow::kUint8;
+#if CUDA_VERSION >= 8000
+  static const cudaDataType_t kCudaFlag = CUDA_R_8I;
+#endif
+  typedef uint8_t ScaleType;
+  static const uint8_t one = 1;
+  static const uint8_t zero = 0;
+};
+template<>
+struct CublasType<int32_t> {
+  static const int kFlag = mshadow::kInt32;
+#if CUDA_VERSION >= 8000
+  static const cudaDataType_t kCudaFlag = CUDA_R_32I;
+#endif
+  typedef int32_t ScaleType;
+  static const int32_t one = 1;
+  static const int32_t zero = 0;
+};
+
+/*!
  * \brief Get string representation of cuBLAS errors.
  * \param error The error.
  * \return String representation.
@@ -217,6 +280,17 @@ inline const char* CublasGetErrorString(cublasStatus_t error) {
   }
   return "Unknown cuBLAS status";
 }
+
+#if CUDA_VERSION >= 8000
+/*!
+ * \brief Create the proper constant for indicating cuBLAS transposition, if desired.
+ * \param transpose Whether transposition should be performed.
+ * \return the yes/no transposition-indicating constant.
+ */
+inline cublasOperation_t CublasTransposeOp(bool transpose) {
+  return transpose ? CUBLAS_OP_T : CUBLAS_OP_N;
+}
+#endif
 
 /*!
  * \brief Get string representation of cuSOLVER errors.
