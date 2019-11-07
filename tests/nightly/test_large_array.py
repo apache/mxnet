@@ -279,6 +279,7 @@ def test_slice_assign():
 def test_expand_dims():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     res = nd.expand_dims(a, axis=1)
+    res.wait_to_read()
     assert a[0][0][0] == 1
     assert res.shape == (a.shape[0], 1, a.shape[1])
 
@@ -636,14 +637,14 @@ def testSoftmaxOutput():
                   args_grad=None)
     ex.forward(is_train=False)
     softmax_out = ex.outputs[0][0].asnumpy()
-    expected_softmax_out = (1/SMALL_Y)*mx.nd.ones((SMALL_Y)).asnumpy()
+    expected_softmax_out = (1 / SMALL_Y) * mx.nd.ones((SMALL_Y)).asnumpy()
     assert np.isclose(softmax_out, expected_softmax_out).all()
 
     ex = sym.bind(ctx=default_context(), args={'x': x_nd, 'label': label_nd},
                   args_grad={'x': grad_x})
     ex.forward(is_train=True)
     softmax_out = ex.outputs[0][0].asnumpy()
-    expected_softmax_out = (1/SMALL_Y)*mx.nd.ones((SMALL_Y)).asnumpy()
+    expected_softmax_out = (1 / SMALL_Y) * mx.nd.ones((SMALL_Y)).asnumpy()
     assert np.isclose(softmax_out, expected_softmax_out).all()
 
     ex.backward(is_train=True)
@@ -801,28 +802,27 @@ def test_activation():
 # in future, we could test if mean, var of output
 # matches target output's mean, var
 def test_batchnorm():
-    def get_ref_mean_var(data, running_mean, running_var, eps, use_global_status=True):
+    def get_np_mean_var(data, running_mean, running_var, eps, use_global_status=True):
         if not use_global_status:
             # train mode, calculate the real mean and var
-            mean = nd.mean(data, axis=1, exclude=1)
-            mean_broad = nd.expand_dims(mean, axis=0)
-            mean_broad = nd.expand_dims(mean_broad, axis=2)
-            mean_broad = nd.expand_dims(mean_broad, axis=3)
-            mean_broad = nd.broadcast_like(mean_broad, data)
-            var = nd.multiply(data - mean_broad, data - mean_broad)
-            var = nd.mean(var, axis=1, exclude=1)
+            mean = np.mean(data, axis=(0, 2, 3))
+            mean_broad = np.expand_dims(mean, axis=0)
+            mean_broad = np.expand_dims(mean_broad, axis=2)
+            mean_broad = np.expand_dims(mean_broad, axis=3)
+            mean_broad = np.broadcast_to(mean_broad, data.shape)
+            var = np.square(data - mean_broad)
+            var = np.mean(var, axis=(0, 2, 3))
         else:
             # inference mode, use running_mean and running_var instead
-            mean = nd.full((data.shape[1],), running_mean)
-            var = nd.full((data.shape[1],), running_var)
-        
+            mean = np.full((data.shape[1],), running_mean)
+            var = np.full((data.shape[1],), running_var)
+
         # calculate the inverse of standard variance
-        stdvar = 1. / nd.sqrt(var + eps)
-        nd.waitall()
-        return mean, stdvar
+        invstdvar = 1. / np.sqrt(var + eps)
+        return mean, invstdvar
 
     # Here use 4D input to cover mkldnn BN and non-mkldnn BN
-    shape = (3, 3, LARGE_X, SMALL_Y)
+    shape = (1, 2, LARGE_X, SMALL_Y)
     axis = 1  # default
     eps = 1e-3
 
@@ -836,11 +836,12 @@ def test_batchnorm():
     output = mx.nd.BatchNorm(data, bn_gamma, bn_beta,
                              bn_running_mean, bn_running_var, output_mean_var=True)
     assert output[0].shape == shape
-    mean, stdvar = output[1], output[2]
+    mean, invstdvar = output[1], output[2]
 
-    ref_mean, ref_stdvar = get_ref_mean_var(data, bn_running_mean, bn_running_var, eps)
-    assert_almost_equal(mean.asnumpy(), ref_mean.asnumpy())
-    assert_almost_equal(stdvar.asnumpy(), ref_stdvar.asnumpy())
+    np_mean, np_invstdvar = get_np_mean_var(data.asnumpy(), bn_running_mean.asnumpy(), bn_running_var.asnumpy(),
+                                            eps, use_global_status=True)
+    assert_almost_equal(mean.asnumpy(), np_mean)
+    assert_almost_equal(invstdvar.asnumpy(), np_invstdvar)
 
 
 def test_elemwise_add():
@@ -1005,21 +1006,7 @@ def test_flatten():
         # For `float32`, it will lose some precision when `LARGE_X` is too large, that is `LARGE_X-1`
         # and `LARGE_X-2` can not represent the accurate value in the current situation.
         assert b.shape == (LARGE_X//2, SMALL_Y*2)
-
-
-def test_concat():
-    a = nd.array(np.ones((SMALL_Y, LARGE_X)))
-    b = nd.array(np.zeros((SMALL_Y, LARGE_X)))
-    c = nd.concat(a, b, dim=0)
-    assert c.shape == (b.shape[0]*2, LARGE_X)
-
-def test_expand_dims():
-    a = nd.array(np.ones((SMALL_Y, LARGE_X)))
-    b = nd.expand_dims(a, axis=1)
-    nd.waitall()
-    ref_out = np.expand_dims(a.asnumpy(), axis=1)
-    assert b.shape == (SMALL_Y, 1, LARGE_X)
-    assert_almost_equal(b.asnumpy(), ref_out, rtol=1e-10)
+        assert_almost_equal(b[-1,-1].asnumpy(), a[-1,-1,-1].asnumpy(), rtol=1e-8)
 
 
 def test_concat():
@@ -1027,9 +1014,9 @@ def test_concat():
     b = nd.array(np.zeros((SMALL_Y, LARGE_X)))
     for axis in [0, 1]:
         c = nd.concat(a, b, dim=axis)
+        c.wait_to_read()
         assert c.shape[axis] == b.shape[axis] * 2
         assert c.shape[1-axis] == b.shape[1-axis]
-
 
 def test_stack():
     a = nd.array(np.ones((SMALL_Y, LARGE_X)))
