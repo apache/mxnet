@@ -64,7 +64,8 @@ if __name__ == '__main__':
                     'squeezenet1.0',
                     'mobilenet1.0',
                     'mobilenetv2_1.0',
-                    'inceptionv3']
+                    'inceptionv3',
+                    'ssd_512_resnet50_v1_voc']
     models = symbolic_models + gluon_models
 
     parser = argparse.ArgumentParser(description='Convert a provided FP32 model to a mixed precision model')
