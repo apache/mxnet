@@ -32,6 +32,9 @@
 namespace mxnet {
 namespace op {
 
+using mshadow::red::limits::MaxValue;
+using mshadow::red::limits::MinValue;
+
 static const float kUint8Range = 255.5;
 static const float kInt8Range = 127.5;
 static const size_t kInt32Range = 0x7fffffff;
@@ -80,8 +83,6 @@ MSHADOW_XINLINE float MinAbs(T a, T b) {
 
 template<typename T>
 MSHADOW_XINLINE T FloatToQuantized(float input, float min_range, float max_range) {
-  using mshadow::red::limits::MinValue;
-  using mshadow::red::limits::MaxValue;
   float real_range = MaxAbs(min_range, max_range);
   float quantized_range = MinAbs(MaxValue<T>(), MinValue<T>());
   float scale = quantized_range / real_range;
@@ -90,8 +91,6 @@ MSHADOW_XINLINE T FloatToQuantized(float input, float min_range, float max_range
 
 template <typename T>
 MSHADOW_XINLINE float QuantizedToFloat(T input, float min_range, float max_range) {
-  using mshadow::red::limits::MinValue;
-  using mshadow::red::limits::MaxValue;
   float quantized_range = MinAbs(MinValue<T>(), MaxValue<T>());
   float real_range = MaxAbs(min_range, max_range);
   float scale = real_range / quantized_range;
@@ -129,8 +128,6 @@ MSHADOW_XINLINE void RequantizeManyInNewRange(size_t count, T2* output, const T1
  */
 template<typename T>
 MSHADOW_XINLINE float FloatForOneQuantizedLevel(float range_min, float range_max, bool all_sign) {
-  using mshadow::red::limits::MinValue;
-  using mshadow::red::limits::MaxValue;
   float range_data = MaxAbs(range_min, range_max);
   float range_T = all_sign ? MinAbs(MinValue<T>(), MaxValue<T>()) : MaxValue<T>();
   return range_data / range_T;
@@ -140,8 +137,6 @@ template <typename TA, typename TB, typename TC>
 MSHADOW_XINLINE void QuantizationRangeForMultiplication(float min_a, float max_a, float min_b,
                                                         float max_b, float *min_c, float *max_c,
                                                         bool all_sign) {
-  using mshadow::red::limits::MaxValue;
-  using mshadow::red::limits::MinValue;
   const float a_float_for_one_quant_level = FloatForOneQuantizedLevel<TA>(min_a, max_a, all_sign);
   const float b_float_for_one_quant_level = FloatForOneQuantizedLevel<TB>(min_b, max_b, all_sign);
   const float range_c =
@@ -213,6 +208,13 @@ static mshadow::TypeFlag GetQuantizeOutputType(const Param &param) {
     LOG(FATAL) << "Unsupported out_type in params: " <<param.out_type;
   }
   return out_type;
+}
+
+static inline float GetQuantizeScale(const int dtype, const float data_min, const float data_max) {
+  const float real_data_range = MaxAbs(data_min, data_max);
+  const auto quantized_data_range = (dtype == mshadow::kInt8) ? kInt8Range : kUint8Range;
+  // If real_data_range == 0, to avoid `inf` in scale, use a large number here, which is MAX_INT.
+  return real_data_range ? quantized_data_range / real_data_range : MaxValue<int32_t>();
 }
 
 }  // namespace op
