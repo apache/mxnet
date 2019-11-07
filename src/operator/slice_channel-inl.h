@@ -178,7 +178,9 @@ class SliceChannelProp : public OperatorProperty {
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
     std::string node_name = "slice_channel_node";
-    return ElemwiseAttrHelper<int, type_is_none, type_assign, true, type_string, 1>(node_name, in_type, out_type, -1);
+    return ElemwiseAttrHelper<int, type_is_none,
+                              type_assign, true,
+                              type_string, 1>(node_name, in_type, out_type, -1);
   }
 
   bool InferShape(mxnet::ShapeVector *in_shape,

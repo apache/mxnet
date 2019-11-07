@@ -167,7 +167,10 @@ inline bool ElemwiseAttr(const nnvm::NodeAttrs& attrs,
                          std::vector<AttrType> *in_attrs,
                          std::vector<AttrType> *out_attrs,
                          const AttrType& none) {
-  return ElemwiseAttrHelper<AttrType, is_none, assign, reverse_infer, attr_string, n_in, n_out>(attrs.name, in_attrs, out_attrs, none);
+  return ElemwiseAttrHelper<AttrType, is_none,
+                            assign, reverse_infer,
+                            attr_string, n_in,
+                            n_out>(attrs.name, in_attrs, out_attrs, none);
 }
 
 template<index_t n_in, index_t n_out>
