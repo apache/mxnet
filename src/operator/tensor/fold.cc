@@ -49,25 +49,17 @@ This operation flattens each sliding kernel_size-sized block within the spatial 
 .set_attr<mxnet::FInferShape>("FInferShape", UnfoldOpShape)
 .set_attr<nnvm::FInferType>("FInferType", UnfoldOpType)
 .set_attr<FCompute>("FCompute<cpu>", UnfoldOpForward<cpu>)
-/*.set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    auto p = nnvm::Node::Create();
-    p->attrs.op = nnvm::Op::Get("_backward_gather_nd");
-    p->attrs.name = n->attrs.name + "_backward";
-    p->inputs.push_back(ograds[0]);
-    p->inputs.push_back(n->inputs[1]);
-    p->control_deps.emplace_back(n);
-    auto zero = MakeNode("zeros_like", n->attrs.name + "_backward_indices",
-                         {n->inputs[1]}, nullptr, &n);
-
-    std::vector<nnvm::NodeEntry> ret;
-    ret.emplace_back(p);
-    ret.emplace_back(zero);
-    return ret;
-  })
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)*/
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_unfold"})
 .add_argument("data", "NDArray-or-Symbol", "data")
 .add_arguments(UnfoldParam::__FIELDS__());
+
+
+NNVM_REGISTER_OP(_backward_unfold)
+.set_attr_parser(ParamParser<UnfoldParam>)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", UnfoldOpBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

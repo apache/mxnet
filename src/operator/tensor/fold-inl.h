@@ -129,6 +129,30 @@ struct unfold {
   }
 };
 
+template<int req>
+struct unfold_backward {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t idx, DType* out, const DType* in,
+                                  mshadow::Shape<3> oshape,
+                                  mshadow::Shape<4> ishape,
+                                  index_t stride, index_t kernel_size) {
+    using namespace mxnet_op;
+    
+    auto cloc = unravel(idx, oshape);
+    auto sum = 0;
+
+    for (auto e=0; e < kernel_size; e++) {
+        auto p = (cloc[1] - e) / stride;
+        if (p < ishape[1]) {
+          auto j = ravel(Shape4(cloc[0], p, cloc[2], e), ishape);
+          sum += in[j];
+      }
+    }
+    
+    KERNEL_ASSIGN(out[idx], req, sum);
+  }
+};
+
 template<typename xpu>
 void UnfoldOpForward(const nnvm::NodeAttrs& attrs,
                    const OpContext& ctx,
@@ -169,6 +193,50 @@ void UnfoldOpForward(const nnvm::NodeAttrs& attrs,
         Kernel<unfold<req_type>, xpu>::Launch(s, out_data.Size(), out_data.dptr<DType>(),
                               in_data.dptr<DType>(), Shape4(leading, obody, trailing, param.kernel_size),
                               Shape3(leading, ibody, trailing), param.stride);
+      });
+  });
+}
+
+template<typename xpu>
+void UnfoldOpBackward(const nnvm::NodeAttrs& attrs,
+                   const OpContext& ctx,
+                   const std::vector<TBlob>& inputs,
+                   const std::vector<OpReqType>& req,
+                   const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  CHECK_EQ(req[0], kWriteTo);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob& in_data = inputs[0];
+  const TBlob& out_data = outputs[0];
+  const mxnet::TShape& ishape = inputs[0].shape_;
+  const mxnet::TShape& oshape = outputs[0].shape_;
+  const UnfoldParam& param = nnvm::get<UnfoldParam>(attrs.parsed);
+
+  uint32_t odim = oshape.ndim();
+  uint32_t tdim = CheckAxis(param.dim, oshape.ndim());
+
+  index_t leading = 1,
+          trailing = 1,
+          ibody = ishape[tdim],
+          obody = oshape[tdim];
+
+  for (uint32_t i = 0; i < tdim; ++i) {
+      leading *= oshape[i];
+  }
+
+  for (uint32_t i = tdim + 1; i < odim; ++i) {
+      trailing *= oshape[i];
+  }
+
+  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+        Kernel<unfold_backward<req_type>, xpu>::Launch(s, out_data.Size(), out_data.dptr<DType>(),
+                              in_data.dptr<DType>(), Shape3(leading, obody, trailing),
+                              Shape4(leading, ibody, trailing, param.kernel_size), param.stride, param.kernel_size);
       });
   });
 }
