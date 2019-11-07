@@ -34,16 +34,16 @@ namespace mxnet {
 namespace op {
 
 struct UnfoldParam : public dmlc::Parameter<UnfoldParam> {
-  int kernel_size;
   int dim;
+  int kernel_size;
   uint32_t stride;
   DMLC_DECLARE_PARAMETER(UnfoldParam) {
-    DMLC_DECLARE_FIELD(kernel_size)
-      .set_lower_bound(1)
-      .describe("Size of each unfolded block");
     DMLC_DECLARE_FIELD(dim)
       .set_default(-1)
       .describe("Dimension to unfold");
+    DMLC_DECLARE_FIELD(kernel_size)
+      .set_lower_bound(1)
+      .describe("Size of each unfolded block");
     DMLC_DECLARE_FIELD(stride)
       .set_lower_bound(1)
       .set_default(1)
@@ -57,7 +57,7 @@ inline mxnet::TShape UnfoldShapeImpl(const mxnet::TShape& ishape, const int k,
 
   auto elems_target_dim = ishape[axis];
 
-  CHECK_LE(k, elems_target_dim) << "kernel size " << k << "must be less than or equal"
+  CHECK_LE(k, elems_target_dim) << "kernel size " << k << " must be less than or equal"
                              " to the number of elements in the target dimension";
 
   int num_windows = (elems_target_dim - k) / stride + 1;
