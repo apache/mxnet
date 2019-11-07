@@ -31,12 +31,11 @@ namespace op {
 DMLC_REGISTER_PARAMETER(UnfoldParam);
 
 NNVM_REGISTER_OP(unfold)
-.describe(R"code(Extracts sliding local blocks from a batched input tensor.
+.describe(R"code(Returns a new tensor with ``kernel_size``-sized slices from the input along dimension ``dim``. Step between the slices is given by ``stride``.
 
-Consider an batched input tensor of shape (N, C, *), where N is the batch dimension, C is the channel dimension, and * represent arbitrary spatial dimensions.
-This operation flattens each sliding kernel_size-sized block within the spatial dimensions of input into a column (i.e., last dimension) of a 3-D output tensor of shape (N, C \times \prod(\text{kernel\_size}), L)(N,C×∏(kernel_size),L) , where C \times \prod(\text{kernel\_size})C×∏(kernel_size) is the total number of values within each block (a block has \prod(\text{kernel\_size})∏(kernel_size) spatial locations each containing a CC -channeled vector), and LL is the total number of such blocks:
+The size of dimension ``dim`` in the output will be ``(input.shape[dim] - kernel_size) / stride + 1``. 
 
-(text copied from https://pytorch.org/docs/stable/nn.html?highlight=unfold#torch.nn.functional.unfold)
+Rest of the dimensions will be copied and an additional dimension with size ``kernel_size`` will be appended in the returned tensor.
 
 )code")
 .set_num_outputs(1)
