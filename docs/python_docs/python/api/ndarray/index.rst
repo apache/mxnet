@@ -65,7 +65,7 @@ Tutorials
 
    .. card::
       :title: NDArray Guide
-      :link: ../../guide/packages/ndarray/
+      :link: ../../tutorials/packages/ndarray/
 
       The NDArray guide. Start here!
 
