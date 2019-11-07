@@ -165,7 +165,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
           size_t weight_size = weight.shape().Size();
 #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
           for (index_t i = 0; i < static_cast<index_t>(weight_size); ++i) {
-            quantized_weight_ptr[i] = weight_ptr[i] * weight_rescale;
+            quantized_weight_ptr[i] = std::round(weight_ptr[i] * weight_rescale);
           }
           weight_scale *= weight_rescale;
           weight = *cached_weight_;
@@ -177,7 +177,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
         size_t bias_size = bias.shape().Size();
         #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
         for (index_t i = 0; i < static_cast<index_t>(bias_size); ++i) {
-          quantized_bias_ptr[i] = bias_ptr[i] * bias_int32_rescale;
+          quantized_bias_ptr[i] = std::round(bias_ptr[i] * bias_int32_rescale);
         }
       }
 
