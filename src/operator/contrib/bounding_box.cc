@@ -34,6 +34,7 @@ DMLC_REGISTER_PARAMETER(BoxOverlapParam);
 DMLC_REGISTER_PARAMETER(BipartiteMatchingParam);
 DMLC_REGISTER_PARAMETER(BoxDecodeParam);
 
+
 NNVM_REGISTER_OP(_contrib_box_nms)
 .add_alias("_contrib_box_non_maximum_suppression")
 .describe(R"code(Apply non-maximum suppression to input.
