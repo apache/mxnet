@@ -134,8 +134,7 @@ class LeakyReLUOp : public Operator {
             mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
             mshadow::Shape<NDim> lstride = mxnet_op::calc_stride(new_lshape.get<NDim>());
             mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
-            mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, DType, DType,
-                                                               mshadow_op::xelu>, xpu>::
+            mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, mshadow_op::xelu>, xpu>::
             template LaunchEx(s, new_oshape.Size(), req[leakyrelu::kOut], lstride, rstride, oshape,
             in_data[leakyrelu::kData].dptr<DType>(), in_data[leakyrelu::kGamma].dptr<DType>(),
             out_data[leakyrelu::kOut].dptr<DType>());
