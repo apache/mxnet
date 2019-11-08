@@ -406,11 +406,6 @@ class Estimator(object):
         event_handlers.extend(added_default_handlers)
 
         if mixing_handlers:
-            msg = "The following default event handlers are added: {}.".format(
-                ", ".join([type(h).__name__ for h in added_default_handlers]))
-            warnings.warn(msg)
-
-
             # check if all handlers have the same set of references to metrics
             known_metrics = set(self.train_metrics + self.val_metrics)
             for handler in event_handlers:
