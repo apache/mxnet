@@ -296,6 +296,10 @@ if(USE_MKLDNN)
   list(APPEND mxnet_LINKER_LIBS mkldnn)
 endif()
 
+if(USE_CPP_PACKAGE)
+    add_definitions(-DMXNET_USE_CPP_PACKAGE=1)
+endif()
+
 # Allow Cuda compiles outside of src tree to find things in 'src' and 'include'
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -824,7 +828,6 @@ if(MSVC AND USE_MXNET_LIB_NAMING)
   set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
 endif()
 
-add_subdirectory(tests)
 
 include(GNUInstallDirs)
 install(TARGETS ${MXNET_INSTALL_TARGETS}
@@ -886,6 +889,7 @@ endif()
 if(BUILD_CPP_EXAMPLES)
   add_subdirectory(example/image-classification/predict-cpp)
 endif()
+add_subdirectory(tests)
 
 # ---[ Linter target
 if(MSVC)

@@ -811,10 +811,31 @@ build_ubuntu_gpu_cuda101_cudnn7() {
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
-
     make cython PYTHON=python2
     make cython PYTHON=python3
 }
+
+build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
+    set -ex
+    build_ccache_wrappers
+    make \
+        DEV=1                                     \
+        USE_BLAS=openblas                         \
+        USE_MKLDNN=1                              \
+        USE_CUDA=1                                \
+        USE_CUDA_PATH=/usr/local/cuda             \
+        USE_CUDNN=1                               \
+        USE_TVM_OP=0                              \
+        USE_CPP_PACKAGE=1                         \
+        USE_DIST_KVSTORE=1                        \
+        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
+        USE_SIGNAL_HANDLER=1                      \
+        -j$(nproc)
+    make test USE_CPP_PACKAGE=1 -j$(nproc)
+    make cython PYTHON=python2
+    make cython PYTHON=python3
+}
+
 
 build_ubuntu_gpu_cuda101_cudnn7_no_tvm_op() {
     set -ex
@@ -1203,6 +1224,8 @@ unittest_ubuntu_cpugpu_perl() {
 
 unittest_cpp() {
     set -ex
+    export PYTHONPATH=./python/
+    python3 -c "import mxnet as mx; mx.test_utils.download_model(\"imagenet1k-resnet-18\"); mx.test_utils.download_model(\"imagenet1k-resnet-152\"); mx.test_utils.download_model(\"imagenet1k-resnet-50\");"
     build/tests/mxnet_unit_tests
 }
 
@@ -1349,6 +1372,15 @@ integrationtest_ubuntu_cpu_asan() {
 integrationtest_ubuntu_gpu_cpp_package() {
     set -ex
     cpp-package/tests/ci_test.sh
+}
+
+integrationtest_ubuntu_gpu_capi_cpp_package() {
+    set -ex
+    export PYTHONPATH=./python/
+    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
+    python3 -c "import mxnet as mx; mx.test_utils.download_model(\"imagenet1k-resnet-18\"); mx.test_utils.download_model(\"imagenet1k-resnet-152\"); mx.test_utils.download_model(\"imagenet1k-resnet-50\");"
+    build/tests/cpp/mxnet_unit_tests --gtest_filter="ThreadSafety.*"
+    build/tests/cpp/mxnet_unit_tests --gtest_filter="ThreadSafety.*" --thread-safety-with-cpu
 }
 
 integrationtest_ubuntu_cpu_dist_kvstore() {

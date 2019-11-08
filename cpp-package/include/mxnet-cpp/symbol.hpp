@@ -151,6 +151,18 @@ inline std::vector<std::string> Symbol::ListArguments() const {
   }
   return ret;
 }
+
+inline std::vector<std::string> Symbol::ListInputs() const {
+  std::vector<std::string> ret;
+  mx_uint size;
+  const char **sarr;
+  NNSymbolListInputNames(GetHandle(), 0, &size, &sarr);
+  for (mx_uint i = 0; i < size; ++i) {
+    ret.push_back(std::string(sarr[i]));
+  }
+  return ret;
+}
+
 inline std::vector<std::string> Symbol::ListOutputs() const {
   std::vector<std::string> ret;
   mx_uint size;

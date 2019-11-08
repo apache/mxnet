@@ -1274,10 +1274,28 @@ MXNET_DLL int MXCreateCachedOpEx(SymbolHandle handle,
                                  const char** keys,
                                  const char** vals,
                                  CachedOpHandle *out);
+
+/*!
+ * \brief create cached operator, allows to choose thread_safe version
+ * of cachedop
+ */
+MXNET_DLL int MXCreateCachedOpEX(SymbolHandle handle,
+                                 int num_flags,
+                                 const char** keys,
+                                 const char** vals,
+                                 CachedOpHandle *out,
+                                 bool thread_safe DEFAULT(false));
+
 /*!
  * \brief free cached operator
  */
 MXNET_DLL int MXFreeCachedOp(CachedOpHandle handle);
+
+/*!
+ * \brief free cached operator
+ */
+MXNET_DLL int MXFreeCachedOpEX(CachedOpHandle handle, bool thread_safe DEFAULT(false));
+
 /*!
  * \brief invoke cached operator
  */
@@ -1286,6 +1304,18 @@ MXNET_DLL int MXInvokeCachedOp(CachedOpHandle handle,
                                NDArrayHandle *inputs,
                                int *num_outputs,
                                NDArrayHandle **outputs);
+
+/*!
+ * \brief invoke cached operator, allows to choose thread_safe version
+ */
+MXNET_DLL int MXInvokeCachedOpEX(CachedOpHandle handle,
+                                 int num_inputs,
+                                 NDArrayHandle *inputs,
+                                 int *num_outputs,
+                                 NDArrayHandle **outputs,
+                                 const int** out_stypes,
+                                 bool thread_safe DEFAULT(false));
+
 /*!
  * \brief invoke a cached op
  * \param handle the handle to the cached op
