@@ -23,9 +23,10 @@
  * \brief CPU implementation of unfold operator
  * \author Istvan Fehervari
 */
-#ifndef MXNET_OPERATOR_NN_FOLD_INL_H_
-#define MXNET_OPERATOR_NN_FOLD_INL_H_
+#ifndef MXNET_OPERATOR_TENSOR_FOLD_INL_H_
+#define MXNET_OPERATOR_TENSOR_FOLD_INL_H_
 #include <dmlc/parameter.h>
+#include <vector>
 #include <mxnet/operator.h>
 #include "../operator_common.h"
 #include "./broadcast_reduce_op.h"
@@ -118,7 +119,7 @@ struct unfold {
                                   mshadow::Shape<3> ishape,
                                   index_t stride) {
     using namespace mxnet_op;
-    
+
     auto cloc = unravel(idx, oshape);
     auto num_slice = cloc[1];
     auto num_element = cloc[3];
@@ -137,7 +138,7 @@ struct unfold_backward {
                                   mshadow::Shape<4> ishape,
                                   index_t stride, index_t kernel_size) {
     using namespace mxnet_op;
-    
+
     auto cloc = unravel(idx, oshape);
     auto sum = 0;
 
@@ -148,7 +149,7 @@ struct unfold_backward {
           sum += in[j];
       }
     }
-    
+
     KERNEL_ASSIGN(out[idx], req, sum);
   }
 };
@@ -191,8 +192,8 @@ void UnfoldOpForward(const nnvm::NodeAttrs& attrs,
   MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         Kernel<unfold<req_type>, xpu>::Launch(s, out_data.Size(), out_data.dptr<DType>(),
-                              in_data.dptr<DType>(), Shape4(leading, obody, trailing, param.kernel_size),
-                              Shape3(leading, ibody, trailing), param.stride);
+                              in_data.dptr<DType>(), Shape4(leading, obody, trailing,
+                              param.kernel_size), Shape3(leading, ibody, trailing), param.stride);
       });
   });
 }
@@ -236,7 +237,8 @@ void UnfoldOpBackward(const nnvm::NodeAttrs& attrs,
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         Kernel<unfold_backward<req_type>, xpu>::Launch(s, out_data.Size(), out_data.dptr<DType>(),
                               in_data.dptr<DType>(), Shape3(leading, obody, trailing),
-                              Shape4(leading, ibody, trailing, param.kernel_size), param.stride, param.kernel_size);
+                              Shape4(leading, ibody, trailing, param.kernel_size),
+                              param.stride, param.kernel_size);
       });
   });
 }
@@ -244,4 +246,4 @@ void UnfoldOpBackward(const nnvm::NodeAttrs& attrs,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_NN_FOLD_INL_H_
+#endif  // MXNET_OPERATOR_TENSOR_FOLD_INL_H_
