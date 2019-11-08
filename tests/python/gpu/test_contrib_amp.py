@@ -475,6 +475,15 @@ def test_fp16_casting():
     exe = final_res.simple_bind(ctx=mx.gpu(), data=(1, 2), data2=(1, 2))
     assert exe.arg_arrays[0].dtype == np.float16
 
+    # Check for symbol which has slice channel
+    data = mx.sym.var("data")
+    data2 = mx.sym.var("data2")
+    data._set_attr(__dtype__="-1")
+    data2._set_attr(__dtype__="-1")
+    concat_res = mx.sym.concat(data, data2)
+    out = mx.sym.split(concat_res, axis=1, num_outputs=2)
+    final_res = amp.convert_symbol(out)
+
 
 if __name__ == '__main__':
     import nose
