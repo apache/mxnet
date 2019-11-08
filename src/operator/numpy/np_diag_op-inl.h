@@ -18,38 +18,37 @@
  */
 
 /*!
-* \file diag_op-inl.h
-* \brief Function definition of the numpy-compatible diag op
-*/
+ * \file diag_op-inl.h
+ * \brief Function definition of the numpy-compatible diag op
+ */
 
-#ifndef MXNET_OPERATOR_TENSOR_DIAG_OP_INL_H_
-#define MXNET_OPERATOR_TENSOR_DIAG_OP_INL_H_
+#ifndef MXNET_OPERATOR_NUMPY_NP_DIAG_OP_INL_H_
+#define MXNET_OPERATOR_NUMPY_NP_DIAG_OP_INL_H_
 
-#include <dmlc/parameter.h>
-#include <vector>
-#include <algorithm>
-#include <utility>
+#include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
 #include "../operator_common.h"
-#include "../elemwise_op_common.h"
 #include "../tensor/broadcast_reduce_op.h"
+#include <algorithm>
+#include <dmlc/parameter.h>
+#include <utility>
+#include <vector>
 
 namespace mxnet {
 namespace op {
 
 struct NumpyDiagParam : public dmlc::Parameter<NumpyDiagParam> {
-    int k;
-    DMLC_DECLARE_PARAMETER(NumpyDiagParam) {
-        DMLC_DECLARE_FIELD(k)
-          .set_default(0)
-          .describe("Diagonal in question. The default is 0. "
-                    "Use k>0 for diagonals above the main diagonal, "
-                    "and k<0 for diagonals below the main diagonal. ");
-    }
+  int k;
+  DMLC_DECLARE_PARAMETER(NumpyDiagParam) {
+    DMLC_DECLARE_FIELD(k).set_default(0).describe(
+        "Diagonal in question. The default is 0. "
+        "Use k>0 for diagonals above the main diagonal, "
+        "and k<0 for diagonals below the main diagonal. ");
+  }
 };
 
-inline mxnet::TShape NumpyDiagShapeImpl(const mxnet::TShape& ishape, const int k) {
-
+inline mxnet::TShape NumpyDiagShapeImpl(const mxnet::TShape &ishape,
+                                        const int k) {
   CHECK_LE(ishape.ndim(), 2) << "Input must be 1- or 2-d";
 
   if (ishape.ndim() == 1) {
@@ -65,44 +64,41 @@ inline mxnet::TShape NumpyDiagShapeImpl(const mxnet::TShape& ishape, const int k
   } else if (k < 0) {
     h += k;
   }
-  long long int a= 0;
+  dim_t a = 0;
   auto s = std::max(std::min(h, w), a);
   // s is the length of diagonal with k as the offset
 
-
   int32_t n_dim = ishape.ndim() - 1;
   mxnet::TShape oshape(n_dim, -1);
-
   oshape[n_dim - 1] = s;
   return oshape;
 }
 
-inline bool NumpyDiagOpShape(const nnvm::NodeAttrs& attrs,
-                             mxnet::ShapeVector* in_attrs,
-                             mxnet::ShapeVector* out_attrs) {
-    CHECK_EQ(in_attrs->size(), 1U);
-    CHECK_EQ(out_attrs->size(), 1U);
+inline bool NumpyDiagOpShape(const nnvm::NodeAttrs &attrs,
+                             mxnet::ShapeVector *in_attrs,
+                             mxnet::ShapeVector *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
 
-    const mxnet::TShape& ishape = (*in_attrs)[0];
-    if (!mxnet::ndim_is_known(ishape)) {
-      return false;
-    }
+  const mxnet::TShape &ishape = (*in_attrs)[0];
+  if (!mxnet::ndim_is_known(ishape)) {
+    return false;
+  }
 
-    const NumpyDiagParam& param = nnvm::get<NumpyDiagParam>(attrs.parsed);
+  const NumpyDiagParam &param = nnvm::get<NumpyDiagParam>(attrs.parsed);
+  mxnet::TShape oshape = NumpyDiagShapeImpl(ishape, param.k);
 
-    mxnet::TShape oshape = NumpyDiagShapeImpl(ishape,param.k);
+  if (shape_is_none(oshape)) {
+    LOG(FATAL) << "Diagonal does not exist.";
+  }
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
 
-    if (shape_is_none(oshape)) {
-      LOG(FATAL) << "Diagonal does not exist.";
-    }
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
-
-    return shape_is_known(out_attrs->at(0));
+  return shape_is_known(out_attrs->at(0));
 }
 
-inline bool NumpyDiagOpType(const nnvm::NodeAttrs& attrs,
-                       std::vector<int> *in_attrs,
-                       std::vector<int> *out_attrs) {
+inline bool NumpyDiagOpType(const nnvm::NodeAttrs &attrs,
+                            std::vector<int> *in_attrs,
+                            std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
 
@@ -111,10 +107,9 @@ inline bool NumpyDiagOpType(const nnvm::NodeAttrs& attrs,
   return (*out_attrs)[0] != -1;
 }
 
-template<int ndim, int req, bool back>
-struct diag {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(index_t i, DType* out, const DType* a,
+template <int ndim, int req, bool back> struct diag {
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
                                   index_t stride, index_t offset) {
     using namespace mxnet_op;
     index_t j = offset + stride * i;
@@ -127,10 +122,9 @@ struct diag {
   }
 };
 
-template<int req, bool back>
-struct diag_gen {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(index_t i, DType* out, const DType* a,
+template <int req, bool back> struct diag_gen {
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
                                   mshadow::Shape<2> oshape, int k) {
     using namespace mxnet_op;
 
@@ -148,25 +142,18 @@ struct diag_gen {
   }
 };
 
-template<typename xpu, bool back>
-void NumpyDiagOpProcess(const TBlob& in_data,
-                   const TBlob& out_data,
-                   const mxnet::TShape& ishape,
-                   const mxnet::TShape& oshape,
-                   index_t dsize,
-                   const NumpyDiagParam& param,
-                   mxnet_op::Stream<xpu> *s,
-                   const std::vector<OpReqType>& req) {
+template <typename xpu, bool back>
+void NumpyDiagOpProcess(const TBlob &in_data, const TBlob &out_data,
+                        const mxnet::TShape &ishape,
+                        const mxnet::TShape &oshape, index_t dsize,
+                        const NumpyDiagParam &param, mxnet_op::Stream<xpu> *s,
+                        const std::vector<OpReqType> &req) {
   using namespace mxnet_op;
   using namespace mshadow;
   if (ishape.ndim() > 1) {
-
-
-    index_t stride1 = ishape[1],
-            stride2 = 1;
+    index_t stride1 = ishape[1], stride2 = 1;
     // stride1 + stride2 is the stride for
     // iterating over the diagonal in question
-
 
     // the extra index offset introduced by k
     index_t offset;
@@ -185,27 +172,27 @@ void NumpyDiagOpProcess(const TBlob& in_data,
           out_data.FlatTo1D<xpu, DType>(s) = 0;
         }
 
-        Kernel<diag<2, req_type, back>, xpu>::Launch(s, dsize, out_data.dptr<DType>(),
-                in_data.dptr<DType>(),stride1 + stride2, offset);
+        Kernel<diag<2, req_type, back>, xpu>::Launch(
+            s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
+            stride1 + stride2, offset);
       });
     });
   } else {
     MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-        Kernel<diag_gen<req_type, back>, xpu>::Launch(s, dsize, out_data.dptr<DType>(),
-                            in_data.dptr<DType>(), Shape2(oshape[0], oshape[1]),
-                            param.k);
+        Kernel<diag_gen<req_type, back>, xpu>::Launch(
+            s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
+            Shape2(oshape[0], oshape[1]), param.k);
       });
     });
   }
 }
 
-template<typename xpu>
-void NumpyDiagOpForward(const nnvm::NodeAttrs& attrs,
-                   const OpContext& ctx,
-                   const std::vector<TBlob>& inputs,
-                   const std::vector<OpReqType>& req,
-                   const std::vector<TBlob>& outputs) {
+template <typename xpu>
+void NumpyDiagOpForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
+                        const std::vector<TBlob> &inputs,
+                        const std::vector<OpReqType> &req,
+                        const std::vector<TBlob> &outputs) {
   using namespace mxnet_op;
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 1U);
@@ -213,38 +200,38 @@ void NumpyDiagOpForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req.size(), 1U);
   CHECK_EQ(req[0], kWriteTo);
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  const TBlob& in_data = inputs[0];
-  const TBlob& out_data = outputs[0];
-  const mxnet::TShape& ishape = inputs[0].shape_;
-  const mxnet::TShape& oshape = outputs[0].shape_;
-  const NumpyDiagParam& param = nnvm::get<NumpyDiagParam>(attrs.parsed);
+  const TBlob &in_data = inputs[0];
+  const TBlob &out_data = outputs[0];
+  const mxnet::TShape &ishape = inputs[0].shape_;
+  const mxnet::TShape &oshape = outputs[0].shape_;
+  const NumpyDiagParam &param = nnvm::get<NumpyDiagParam>(attrs.parsed);
 
-  NumpyDiagOpProcess<xpu, false>(in_data, out_data, ishape, oshape, out_data.Size(), param, s, req);
+  NumpyDiagOpProcess<xpu, false>(in_data, out_data, ishape, oshape,
+                                 out_data.Size(), param, s, req);
 }
 
-template<typename xpu>
-void NumpyDiagOpBackward(const nnvm::NodeAttrs& attrs,
-                  const OpContext& ctx,
-                  const std::vector<TBlob>& inputs,
-                  const std::vector<OpReqType>& req,
-                  const std::vector<TBlob>& outputs) {
+template <typename xpu>
+void NumpyDiagOpBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
+                         const std::vector<TBlob> &inputs,
+                         const std::vector<OpReqType> &req,
+                         const std::vector<TBlob> &outputs) {
   using namespace mxnet_op;
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   Stream<xpu> *s = ctx.get_stream<xpu>();
 
-  const TBlob& in_data = inputs[0];
-  const TBlob& out_data = outputs[0];
-  const mxnet::TShape& ishape = inputs[0].shape_;
-  const mxnet::TShape& oshape = outputs[0].shape_;
-  const NumpyDiagParam& param = nnvm::get<NumpyDiagParam>(attrs.parsed);
+  const TBlob &in_data = inputs[0];
+  const TBlob &out_data = outputs[0];
+  const mxnet::TShape &ishape = inputs[0].shape_;
+  const mxnet::TShape &oshape = outputs[0].shape_;
+  const NumpyDiagParam &param = nnvm::get<NumpyDiagParam>(attrs.parsed);
 
-  NumpyDiagOpProcess<xpu, true>(in_data, out_data, oshape, ishape, in_data.Size(), param, s, req);
+  NumpyDiagOpProcess<xpu, true>(in_data, out_data, oshape, ishape,
+                                in_data.Size(), param, s, req);
 }
 
+} // namespace op
+} // namespace mxnet
 
-}  // namespace op
-}  // namespace mxnet
-
-#endif  // MXNET_OPERATOR_TENSOR_DIAG_OP_INL_H_
+#endif // MXNET_OPERATOR_NUMPY_NP_DIAG_OP_INL_H_

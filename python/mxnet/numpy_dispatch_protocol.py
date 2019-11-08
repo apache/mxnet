@@ -93,6 +93,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'concatenate',
     'copy',
     'cumsum',
+    'diag',
     'dot',
     'expand_dims',
     'fix',

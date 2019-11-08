@@ -56,6 +56,35 @@ class OpArgMngr(object):
     def get_workloads(name):
         return OpArgMngr._args.get(name, None)
 
+def _add_workload_diag():
+
+    def get_mat(n):
+        data = _np.arange(n)
+        data = _np.add.outer(data, data)
+        return data
+
+    A = np.array([[1, 2], [3, 4], [5, 6]])
+    vals = (100 * np.arange(5)).astype('l')
+    vals_c = (100 * np.array(get_mat(5)) + 1).astype('l')
+    vals_f = _np.array((100 * get_mat(5) + 1), order = 'F', dtype = 'l')
+    vals_f = np.array(vals_f)
+
+    OpArgMngr.add_workload('diag', A, k= 2)
+    OpArgMngr.add_workload('diag', A, k= 1)
+    OpArgMngr.add_workload('diag', A, k= 0)
+    OpArgMngr.add_workload('diag', A, k= -1)
+    OpArgMngr.add_workload('diag', A, k= -2)
+    OpArgMngr.add_workload('diag', A, k= -3)
+    OpArgMngr.add_workload('diag', vals, k= 0)
+    OpArgMngr.add_workload('diag', vals, k= 2)
+    OpArgMngr.add_workload('diag', vals, k= -2)
+    OpArgMngr.add_workload('diag', vals_c, k= 0)
+    OpArgMngr.add_workload('diag', vals_c, k= 2)
+    OpArgMngr.add_workload('diag', vals_c, k= -2)
+    OpArgMngr.add_workload('diag', vals_f, k= 0)
+    OpArgMngr.add_workload('diag', vals_f, k= 2)
+    OpArgMngr.add_workload('diag', vals_f, k= -2)
+
 
 def _add_workload_concatenate(array_pool):
     OpArgMngr.add_workload('concatenate', [array_pool['4x1'], array_pool['4x1']])
@@ -89,6 +118,7 @@ def _add_workload_concatenate(array_pool):
 
 
 def _add_workload_append():
+
     def get_new_shape(shape, axis):
         shape_lst = list(shape)
         if axis is not None:
@@ -1192,6 +1222,7 @@ def _prepare_workloads():
     _add_workload_copy()
     _add_workload_cumsum()
     _add_workload_ravel()
+    _add_workload_diag()
     _add_workload_dot()
     _add_workload_expand_dims()
     _add_workload_fix()

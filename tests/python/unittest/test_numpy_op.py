@@ -4487,45 +4487,41 @@ def test_np_resize():
         ret = np.resize(a, shape_pair[1])
         assert_almost_equal(ret.asnumpy(), expected_ret, atol=1e-5, rtol=1e-5, use_broadcast=False)
 
+
 @with_seed()
 @use_np
 def test_np_diag():
     class TestDiag(HybridBlock):
-        def __init__(self, k = 0):
+        def __init__(self, k=0):
             super(TestDiag, self).__init__()
-            self._k  = k
+            self._k = k
             # necessary initializations
 
         def hybrid_forward(self, F, a):
-            return F.np.diag(a, k = self._k)
-
-    shapes = [(2,),5 , (1,5), (2,2), (2,5), (3,3), (4,3)] # test_shapes, remember to include zero-dim shape and zero-size shapes
-    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64] # remember to include all meaningful data types for the operator
+            return F.np.diag(a, k=self._k)
+            
+    shapes = [(2,), 5, (1, 5), (2, 2), (2, 5), (3, 3), (4, 3)]
+    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
     range_k = 6
     for hybridize, shape, dtype, in itertools.product([False, True], shapes, dtypes):
-        # More for-loops for iterating through all other arguments
-        # rtol atol values are for reference, may vary for different ops
         rtol = 1e-2 if dtype == np.float16 else 1e-3
         atol = 1e-4 if dtype == np.float16 else 1e-5
-
         for k in range(-range_k, range_k):
             test_diag = TestDiag(k)
             if hybridize:
                 test_diag.hybridize()
 
-            # here the low and high could vary for different ops
             x = np.random.uniform(-1.0, 1.0, size=shape).astype(dtype)
             x.attach_grad()
 
             np_out = _np.diag(x.asnumpy(), k)
             with mx.autograd.record():
                 mx_out = test_diag(x)
-
             assert mx_out.shape == np_out.shape
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
-
+            
+            # check backward function 
             mx_out.backward()
-            # Code to get reference backward value
             np_backward = 0
             if type(shape) == int:
                 np_backward = np.ones(shape)
@@ -4533,17 +4529,13 @@ def test_np_diag():
                 np_backward = np.ones(shape[0])
             else:
                 np_backward = np.zeros(shape)
-
                 h = shape[0]
                 w = shape[1]
-
-                if k>0:
+                if k > 0:
                     w -= k
                 else:
                     h += k
-
-                s = min(w,h)
-
+                s = min(w, h)
                 if s > 0:
                     if k >= 0:
                         for i in range(s):
@@ -4551,7 +4543,6 @@ def test_np_diag():
                     else:
                         for i in range(s):
                             np_backward[-k+i][0+i] = 1
-
             assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
 
             # Test imperative once again
