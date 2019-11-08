@@ -39,7 +39,7 @@ double OperatorTuneBase::tuning_weight_scale_ = 0.0;
  */
 #define IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(__typ$) \
   template<> bool OperatorTune<__typ$>::initialized_ = false; \
-  template<> __typ$* OperatorTune<__typ$>::data_set_ = nullptr; \
+  template<> std::unique_ptr<__typ$[]> OperatorTune<__typ$>::data_set_ = nullptr; \
   template<> volatile tune::TuningMode OperatorTuneByType<__typ$>::tuning_mode_ = tune::kAuto; \
   template<> volatile int OperatorTune<__typ$>::volatile_int_ = 9;  /* arbitrary number */ \
   template<> std::unordered_set<std::string> OperatorTune<__typ$>::operator_names_({}); \
