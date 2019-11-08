@@ -26,8 +26,8 @@
 #ifndef MXNET_OPERATOR_TENSOR_FOLD_INL_H_
 #define MXNET_OPERATOR_TENSOR_FOLD_INL_H_
 #include <dmlc/parameter.h>
-#include <vector>
 #include <mxnet/operator.h>
+#include <vector>
 #include "../operator_common.h"
 #include "./broadcast_reduce_op.h"
 
