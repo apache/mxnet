@@ -243,8 +243,7 @@ class Estimator(object):
         for _, batch in enumerate(val_data):
             self.evaluate_batch(batch, val_metrics, batch_axis)
 
-    def fit_batch(self, train_batch,
-                  batch_axis=0):
+    def fit_batch(self, train_batch, batch_axis=0):
         """Trains the model on a batch of training data.
 
         Parameters
@@ -257,13 +256,15 @@ class Estimator(object):
         Returns
         -------
         data: List of NDArray
-            Sharded data from the batch.
+            Sharded data from the batch. Data is sharded with
+            `gluon.split_and_load`.
         label: List of NDArray
-            Sharded label from the batch.
+            Sharded label from the batch. Labels are sharded with
+            `gluon.split_and_load`.
         pred: List of NDArray
-            Prediction of each of the shareded batch.
+            Prediction on each of the sharded inputs.
         loss: List of NDArray
-            Loss of each of the shareded batch.
+            Loss on each of the sharded inputs.
         """
         data, label = self._get_data_and_label(train_batch, self.context, batch_axis)
 
