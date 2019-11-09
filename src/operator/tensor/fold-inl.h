@@ -140,17 +140,17 @@ struct unfold_backward {
     using namespace mxnet_op;
 
     auto cloc = unravel(idx, oshape);
-    auto sum = 0;
+    DType summed = 0.0;
 
-    for (auto e=0; e < kernel_size; e++) {
+    for (index_t e=0; e < kernel_size; e++) {
         auto p = (cloc[1] - e) / stride;
         if (p < ishape[1]) {
-          auto j = ravel(Shape4(cloc[0], p, cloc[2], e), ishape);
-          sum += in[j];
+          index_t j = ravel(Shape4(cloc[0], p, cloc[2], e), ishape);
+          summed += in[j];
       }
     }
 
-    KERNEL_ASSIGN(out[idx], req, sum);
+    KERNEL_ASSIGN(out[idx], req, summed);
   }
 };
 
