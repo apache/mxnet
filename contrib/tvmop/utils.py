@@ -20,7 +20,7 @@ import tvm
 
 AllTypes = ["float32", "float64", "float16", "uint8", "int8", "int32", "int64"]
 RealTypes = ["float32", "float64", "float16"]
-acc_type_resolver = {
+more_precise_type = {
     'float32': 'float32',
     'float64': 'float64',
     'float16': 'float16',
@@ -60,3 +60,8 @@ def reduce_axes(X, axes, reducer, atype=None):
                                                    if atype else X[get_index(idx, ridx)],
                                                    axis=ridx), name='ret')
     return ret
+
+
+# TODO(hgt312): more (5) kinds of infertype
+def unary_result_type(itype, type=0):
+    return more_precise_type[itype]

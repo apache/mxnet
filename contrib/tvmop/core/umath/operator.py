@@ -19,7 +19,7 @@ import math
 
 import tvm
 
-from ...utils import acc_type_resolver
+from ...utils import unary_result_type
 
 __all__ = ['abs_cpu', 'abs_gpu', 'sign', 'deg2rad', 'rad2deg']
 
@@ -35,7 +35,7 @@ def abs_gpu(a):
         return tvm.abs(a)
 
 
-# todo(hgt312): handle unsign?
+# TODO(hgt312): handle unsign?
 def sign(a):
     dtype = a.dtype
     return tvm.if_then_else(
@@ -50,10 +50,10 @@ def sign(a):
 
 
 def deg2rad(a):
-    otype = acc_type_resolver[a.dtype]
+    otype = unary_result_type(a.dtype)
     return a.astype(otype) * tvm.const(math.pi, otype) / tvm.const(180, otype)
 
 
 def rad2deg(a):
-    otype = acc_type_resolver[a.dtype]
+    otype = unary_result_type(a.dtype)
     return a.astype(otype) / tvm.const(math.pi, otype) * tvm.const(180, otype)
