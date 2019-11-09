@@ -7147,7 +7147,7 @@ def test_unfold():
             self_size = x.shape[d]
             self_stride = x.strides[d]
             if d == dim:
-                new_size[d] = (self_size - size) / step + 1
+                new_size[d] = (self_size - size) // step + 1
                 new_stride[d] = step * self_stride
             else:
                 new_size[d] = self_size
@@ -7172,11 +7172,12 @@ def test_unfold():
             output = mx.nd.unfold(data, dim, kernel, stride)
             output_np = np_unfold(data_np, dim, kernel, stride)
 
-            assert assert_almost_equal(output, output_np)
+            assert_almost_equal(output.asnumpy(), output_np)
 
             # Check gradient
-            unfold_sym = mx.sym.diag(data=mx.sym.Variable('data'), dim=dim, kernel_size=kernel, stride=stride)
-            check_numeric_gradient(unfold_sym, [data_np])
+            if dtype in (np.float16, np.float32, np.float64):
+                unfold_sym = mx.sym.unfold(data=mx.sym.Variable('data'), dim=dim, kernel_size=kernel, stride=stride)
+                check_numeric_gradient(unfold_sym, [data_np])
 
 
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/11290")
