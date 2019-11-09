@@ -178,8 +178,8 @@ inline bool TwoparamsDistOpShape(const nnvm::NodeAttrs &attrs,
 
 template <typename DistParam>
 inline bool UnaryDistOpShape(const nnvm::NodeAttrs &attrs,
-                                 std::vector<TShape> *in_attrs,
-                                 std::vector<TShape> *out_attrs) {
+                             std::vector<TShape> *in_attrs,
+                             std::vector<TShape> *out_attrs) {
   const DistParam &param = nnvm::get<DistParam>(attrs.parsed);
   if (param.size.has_value()) {
     // Size declared.

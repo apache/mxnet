@@ -2296,7 +2296,7 @@ def test_np_clip():
 
 @with_seed()
 @use_np
-def test_npx_bernoulli():
+def test_npx_random_bernoulli():
     shapes = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
     dtypes = ['float16', 'float32', 'float64', 'int32']
     epsilon = 1e-4

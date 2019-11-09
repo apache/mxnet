@@ -203,6 +203,4 @@ void NumpyBernoulliForward(const nnvm::NodeAttrs &attrs,
 }  // namespace op
 }  // namespace mxnet
 
-
-
 #endif  // MXNET_OPERATOR_NUMPY_RANDOM_NP_BERNOULLI_OP_H_
