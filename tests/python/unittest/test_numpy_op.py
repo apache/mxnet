@@ -1572,8 +1572,8 @@ def test_np_binary_funcs():
                                             rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
                         if rgrads is None:
                             assert_almost_equal(mx_test_x2.grad.asnumpy(),
-                                               collapse_sum_like(rgrad(y.asnumpy(), np_test_x2, np_test_x1), mx_test_x2.shape),
-                                               rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
+                                                collapse_sum_like(rgrad(y.asnumpy(), np_test_x2, np_test_x1), mx_test_x2.shape),
+                                                rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
                         else:
                             assert_almost_equal(mx_test_x2.grad.asnumpy(),
                                                 collapse_sum_like(rgrad(y.asnumpy(), np_test_x1, np_test_x2), mx_test_x2.shape),
@@ -1594,7 +1594,6 @@ def test_np_binary_funcs():
                 assertRaises(NotImplementedError, getattr(np, func), mx_test_x1, mx_test_x2,  order='C')
                 assertRaises(NotImplementedError, getattr(np, func), mx_test_x1, mx_test_x2,  order='mxnet')
 
-
     funcs = {
         'add': (-1.0, 1.0, [lambda y, x1, x2: _np.ones(y.shape)], None),
         'subtract':
@@ -1603,7 +1602,7 @@ def test_np_binary_funcs():
         'multiply': (-1.0, 1.0, [lambda y, x1, x2: _np.broadcast_to(x2, y.shape)],
                                 [lambda y, x1, x2: _np.broadcast_to(x1, y.shape)]),
         'divide': (0.1, 1.0, [lambda y, x1, x2: _np.ones(y.shape) / x2],
-                               [lambda y, x1, x2: -x1 / (x2 * x2)]),
+                   [lambda y, x1, x2: -x1 / (x2 * x2)]),
         'mod': (1.0, 10.0,
                 [lambda y, x1, x2: _np.ones(y.shape),
                  lambda y, x1, x2: _np.zeros(y.shape)],

@@ -126,7 +126,7 @@ NNVM_REGISTER_OP(_npi_rtrue_divide_scalar)
   })
 #endif
 .set_attr<FCompute>("FCompute<cpu>", TrueDivideScalarCompute<cpu, mshadow_op::rtrue_divide>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_rdiv_scalar"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_rdiv_scalar"})
 .add_argument("data", "NDArray-or-Symbol", "source input")
 .add_argument("scalar", "float", "scalar input");
 
