@@ -463,6 +463,9 @@ struct inverse {
                  const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
     // Since inverse(A) = trans(inverse(trans(A))), so we don't need to transpose
     // A even if we are using the col-major version of getrf and getri routines.
+    if (B.shape_.Size() == 0U) {
+      return;
+    }
     linalg_batch_inverse(A, B, ctx);
   }
 };
@@ -882,6 +885,9 @@ struct inverse_backward {
                  const Tensor<xpu, 3, DType>& dB,
                  const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
     // Backward of A = inverse(B)
+    if (dB.shape_.Size() == 0U) {
+      return;
+    }
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 3, DType> temp = ctx.requested[0]
       .get_space_typed<xpu, 3, DType>(A.shape_, s);
