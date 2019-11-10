@@ -281,15 +281,60 @@ def test_np_ndarray_binary_element_wise_ops():
             '<=': _np.less_equal
         })
 
-    def _get_grad_funcs(op, scalar=None, reverse=False):
-        if op == '/':
+    def _get_grad_func(op, scalar=None, reverse=False):
+        if op == '+':
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (collapse_sum_like(ograd, x1.shape),
+                                                   collapse_sum_like(ograd, x2.shape))
+            elif not reverse:
+                return lambda ograd, x1, x2, out: ograd
+            else:
+                return lambda ograd, x1, x2, out: ograd
+        elif op == '-':
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (collapse_sum_like(ograd, x1.shape),
+                                                   -collapse_sum_like(ograd, x2.shape))
+            elif not reverse:
+                return lambda ograd, x1, x2, out: ograd
+            else:
+                return lambda ograd, x1, x2, out: -ograd
+        elif op == '*':
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (collapse_sum_like(ograd * x2, x1.shape),
+                                                   collapse_sum_like(ograd * x1, x2.shape))
+            elif not reverse:
+                return lambda ograd, x1, x2, out: ograd * x2
+            else:
+                return lambda ograd, x1, x2, out: ograd * x1
+        elif op == '/':
             if scalar is None:
                 return lambda ograd, x1, x2, out: (collapse_sum_like(ograd / x2, x1.shape),
                                                    collapse_sum_like(-x1 * ograd / (x2 * x2), x2.shape))
             elif not reverse:
-                return lambda ograd, x1, x2, out: ograd / scalar
+                return lambda ograd, x1, x2, out: ograd / x2
             else:
-                return lambda ograd, x1, x2, out: -scalar * ograd / (x2 * x2)
+                return lambda ograd, x1, x2, out: -x1 * ograd / (x2 * x2)
+        elif op == 'mod':
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (collapse_sum_like(ograd, x1.shape),
+                                                   collapse_sum_like(-ograd * _np.floor(x1 / x2), x2.shape))
+            elif not reverse:
+                return lambda ograd, x1, x2, out: ograd
+            else:
+                return lambda ograd, x1, x2, out: -ograd * _np.floor(x1 / x2)
+        elif op == 'pow':
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (collapse_sum_like(ograd * x2 * _np.power(x1, x2 - 1), x1.shape),
+                                                   collapse_sum_like(ograd * out * _np.log(x1), x2.shape))
+            elif not reverse:
+                return lambda ograd, x1, x2, out: ograd * x2 * _np.power(x1, x2 - 1)
+            else:
+                return lambda ograd, x1, x2, out: ograd * out * _np.log(x1)
+        elif op in ('==', '!=', '<', '<=', '>', '>='):
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (_np.zeros_like(x1), _np.zeros_like(x2))
+            else:
+                return lambda ograd, x1, x2, out: _np.zeros_like(ograd)
         return None
 
     def get_np_ret(x1, x2, op):
@@ -395,17 +440,10 @@ def test_np_ndarray_binary_element_wise_ops():
             scalar = mx_input1
             reverse = True
 
-        grad_func = _get_grad_funcs(op, scalar, reverse)
+        grad_func = _get_grad_func(op, scalar, reverse)
         np_out = get_np_ret(np_input1, np_input2, op)
         ograd = _np.ones_like(np_out)
         for hybridize in [True, False]:
-            print('=======================')
-            print(hybridize)
-            print(op)
-            print(scalar)
-            print(reverse)
-            print(shape1)
-            print(shape2)
             if scalar is None:
                 get_mx_ret_np = TestBinaryElementWiseOp(op)
                 get_mx_ret_classic = TestBinaryElementWiseOp(op)
