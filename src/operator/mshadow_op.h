@@ -52,6 +52,7 @@ const float SELU_ALPHA = 1.6732632423543772848170429916717;
 const float SELU_LAMBDA = 1.0507009873554804934193349852946;
 const float SQRT_2 = 1.4142135623730950488016887242096;
 using std::isnan;
+using std::isinf;
 #endif
 using std::enable_if;
 using std::is_unsigned;
@@ -1011,6 +1012,30 @@ namespace isnan_typed {
     return (val.half_ & 0x7fff) > 0x7c00;
   }
 };  // namespace isnan_typed
+
+namespace isinf_typed {
+  template<typename DType>
+  MSHADOW_XINLINE bool IsInf(volatile DType val) {
+    return false;
+  }
+  template<>
+  MSHADOW_XINLINE bool IsInf(volatile float val) {
+    return isinf(val);
+  }
+  template<>
+  MSHADOW_XINLINE bool IsInf(volatile double val) {
+    return isinf(val);
+  }
+  template<>
+  MSHADOW_XINLINE bool IsInf(volatile long double val) {
+    return isinf(val);
+  }
+
+  template<>
+  MSHADOW_XINLINE bool IsInf(volatile mshadow::half::half_t val) {
+    return (val.half_ & 0x7fff) >= 0x7c00;
+  }
+};  // namespace isinf_typed
 
 MXNET_UNARY_MATH_OP_NC(relu, isnan_typed::IsNan(a) || (a > DType(0)) ? a : DType(0));
 

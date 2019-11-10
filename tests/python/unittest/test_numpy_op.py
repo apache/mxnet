@@ -4304,6 +4304,109 @@ def test_np_resize():
         assert_almost_equal(ret.asnumpy(), expected_ret, atol=1e-5, rtol=1e-5, use_broadcast=False)
 
 
+@with_seed()
+@use_np
+def test_np_nan_to_num():
+
+    def take_ele_grad(ele):
+        if _np.isinf(ele) or _np.isnan(ele):
+            return 0
+        return 1
+    def np_nan_to_num_grad(data):
+        shape = data.shape
+        arr = list(map(take_ele_grad,data.flatten()))
+        return _np.array(arr).reshape(shape)
+
+    class TestNanToNum(HybridBlock):
+        def __init__(self, copy=True, nan=0.0, posinf=None, neginf=None):
+            super(TestNanToNum, self).__init__()
+            self.copy = copy
+            self.nan = nan
+            self.posinf = posinf
+            self.neginf = neginf
+            # necessary initializations
+
+        def hybrid_forward(self, F, a):
+            return F.np.nan_to_num(a, self.copy, self.nan, self.posinf, self.neginf)
+
+    src_list = [
+        _np.nan,
+        _np.inf,
+        -_np.inf,
+        1,
+        [_np.nan],
+        [_np.inf],
+        [-_np.inf],
+        [1],
+        [1,2,3,4,-1,-2,-3,-4,0],
+        [_np.nan, _np.inf, -_np.inf],
+        [_np.nan, _np.inf, -_np.inf, -574, 0, 23425, 24234,-5],
+        [_np.nan, -1, 0, 1],
+        [[-433, 0, 456, _np.inf], [-1, -_np.inf, 0, 1]]
+    ]
+
+    dtype_list = ['float16', 'float32', 'float64']
+    # [nan, inf, -inf]
+    param_list = [[None, None, None], [0, 1000, -100], [0.0, 9999.9, -9999.9]]
+    copy_list = [True, False]
+    hybridize_list = [True, False]
+    atol, rtol = 1e-5, 1e-3
+    
+    src_dtype_comb = list(itertools.product(src_list,dtype_list))
+    # check the dtype = int case in both imperative and sympolic expression
+    src_dtype_comb.append((1,'int32'))
+    src_dtype_comb.append(([234, 0, -40],'int64'))
+
+    combinations = itertools.product(hybridize_list, src_dtype_comb, copy_list, param_list)
+
+    numpy_version = _np.version.version
+    for [hybridize, src_dtype, copy, param] in combinations:
+        src, dtype = src_dtype
+        # np.nan, np.inf, -np.int are float type
+        x1 = mx.nd.array(src, dtype=dtype).as_np_ndarray().asnumpy()
+        x2 = mx.nd.array(src, dtype=dtype).as_np_ndarray()
+        x3 = mx.nd.array(src, dtype=dtype).as_np_ndarray()
+
+        expected_grad = np_nan_to_num_grad(x1)
+        x2.attach_grad()
+        # with optional parameters or without
+        if param[0] !=None and numpy_version>="1.17":
+            test_np_nan_to_num = TestNanToNum(copy=copy, nan=param[0], posinf=param[1], neginf=param[2])
+            np_out = _np.nan_to_num(x1, copy=copy, nan=param[0], posinf=param[1], neginf=param[2])
+            mx_out = np.nan_to_num(x3, copy=copy, nan=param[0], posinf=param[1], neginf=param[2])
+        else:
+            test_np_nan_to_num = TestNanToNum(copy=copy)
+            np_out = _np.nan_to_num(x1, copy=copy)
+            mx_out = np.nan_to_num(x3, copy=copy)
+
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol, atol)
+        # check the inplace operation when copy = False
+        # if x1.shape = 0, _np.array will not actually execute copy logic
+        # only check x3 from np.nan_to_num instead of x2 from gluon 
+        if copy == False and x1.shape!=():
+            assert x1.shape == x3.asnumpy().shape
+            assert x1.dtype == x3.asnumpy().dtype
+            assert_almost_equal(x1, x3.asnumpy(), rtol=rtol, atol=atol)  
+        # gluon does not support nan_to_num when copy=False
+        # backward will check int type and if so, throw error
+        # if not this case, test gluon
+        if not (hybridize== False and copy == False) and ('float' in dtype):
+            if hybridize:
+                test_np_nan_to_num.hybridize()
+            with mx.autograd.record():
+                mx_out_gluon = test_np_nan_to_num(x2)
+            assert_almost_equal(mx_out_gluon.asnumpy(), np_out, rtol, atol)
+            mx_out_gluon.backward()
+            assert_almost_equal(x2.grad.asnumpy(), expected_grad, rtol=1e-3, atol=1e-5)
+                                        
+        # Test imperative once again
+        # if copy = False, the value of x1 and x2 has changed
+        if copy == True:            
+            np_out = _np.nan_to_num(x1)
+            mx_out = np.nan_to_num(x3)
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
