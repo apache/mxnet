@@ -2298,7 +2298,7 @@ def test_np_clip():
 @use_np
 def test_npx_random_bernoulli():
     shapes = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
-    dtypes = ['float16', 'float32', 'float64', 'int32']
+    dtypes = ['float16', 'float32', 'float64', 'int32', 'bool']
     epsilon = 1e-4
     for shape, dtype in itertools.product(shapes, dtypes):
         prob = np.random.uniform(size=shape)

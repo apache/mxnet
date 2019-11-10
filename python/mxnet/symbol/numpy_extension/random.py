@@ -33,10 +33,12 @@ def bernoulli(prob=None, logit=None, size=None, dtype=None, ctx=None, out=None):
 
     Parameters
     ----------
-    prob : float, _Symbol
+    prob : float, ndarray
         The probability of sampling '1'.
-    logit : float, _Symbol
+        Only one of prob or logit should be passed in.
+    logit : float, ndarray
         The log-odds of sampling '1'.
+        Only one of prob or logit should be passed in.
     size : int or tuple of ints, optional
         Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
         ``m * n * k`` samples are drawn.  Default is None, in which case a
@@ -76,7 +78,8 @@ def bernoulli(prob=None, logit=None, size=None, dtype=None, ctx=None, out=None):
     tensor_type_name = np_symbol
     if (prob is None) == (logit is None):
         raise ValueError(
-            "Either `prob` or `logit` must be specified, but not both.")
+            "Either `prob` or `logit` must be specified, but not both. " +
+            "Received prob={}, logit={}".format(prob, logit))
     if dtype is None:
         dtype = 'float32'
     if ctx is None:

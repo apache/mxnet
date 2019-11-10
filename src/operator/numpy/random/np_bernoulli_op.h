@@ -64,6 +64,7 @@ struct NumpyBernoulliParam : public dmlc::Parameter<NumpyBernoulliParam> {
         .add_enum("float32", mshadow::kFloat32)
         .add_enum("float64", mshadow::kFloat64)
         .add_enum("float16", mshadow::kFloat16)
+        .add_enum("bool", mshadow::kBool)
         .set_default(mshadow::kFloat32)
         .describe(
             "DType of the output in case this can't be inferred. "
@@ -77,13 +78,7 @@ inline bool NumpyBernoulliOpType(const nnvm::NodeAttrs &attrs,
                                std::vector<int> *out_attrs) {
   const NumpyBernoulliParam &param = nnvm::get<NumpyBernoulliParam>(attrs.parsed);
   int otype = param.dtype;
-  if (otype != -1) {
-    (*out_attrs)[0] = otype;
-  } else {
-    // Following torch.distributions,
-    // the default type will be float32.
-    (*out_attrs)[0] = mshadow::kFloat32;
-  }
+  (*out_attrs)[0] = otype;
   return true;
 }
 
@@ -151,7 +146,7 @@ void NumpyBernoulliForward(const nnvm::NodeAttrs &attrs,
     // scalar prob input
     CHECK_LE(param.prob.value(), 1.0) << "ValueError: expect probs >= 0 && probs <= 1";
     CHECK_GE(param.prob.value(), 0.0) << "ValueError: expect probs >= 0 && probs <= 1";
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[0].type_flag_, OType, {
       Kernel<scalar_bernoulli_kernel<OType>, xpu>::Launch(
         s, outputs[0].Size(), param.prob.value(),
         uniform_tensor.dptr_, outputs[0].dptr<OType>());
@@ -161,7 +156,7 @@ void NumpyBernoulliForward(const nnvm::NodeAttrs &attrs,
     // sigmoid(x) > u  <=> x > logit(u)
     Kernel<prob_to_logit, xpu>::Launch(s, outputs[0].Size(),
                                          uniform_tensor.dptr_);
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[0].type_flag_, OType, {
       Kernel<scalar_bernoulli_kernel<OType>, xpu>::Launch(
         s, outputs[0].Size(), param.logit.value(),
         uniform_tensor.dptr_, outputs[0].dptr<OType>());
@@ -186,7 +181,7 @@ void NumpyBernoulliForward(const nnvm::NodeAttrs &attrs,
     int ndim = FillShape(inputs[0].shape_, inputs[0].shape_, outputs[0].shape_,
                          &new_lshape, &new_lshape, &new_oshape);
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
-      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+       MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[0].type_flag_, OType, {
         BROADCAST_NDIM_SWITCH(ndim, NDim, {
           Shape<NDim> oshape = new_oshape.get<NDim>();
           Shape<NDim> stride = calc_stride(new_lshape.get<NDim>());

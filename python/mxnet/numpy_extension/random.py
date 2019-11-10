@@ -86,8 +86,10 @@ def bernoulli(prob=None, logit=None, size=None, dtype=None, ctx=None, out=None):
     ----------
     prob : float, ndarray
         The probability of sampling '1'.
+        Only one of prob or logit should be passed in.
     logit : float, ndarray
         The log-odds of sampling '1'.
+        Only one of prob or logit should be passed in.
     size : int or tuple of ints, optional
         Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
         ``m * n * k`` samples are drawn.  Default is None, in which case a
