@@ -1763,8 +1763,8 @@ def test_np_boolean_binary_funcs():
 
     for lshape, rshape in shape_pairs:
         for func in funcs:
-            x1 = np.random.uniform(size=lshape) > 0.5
-            x2 = np.random.uniform(size=rshape) > 0.5
+            x1 = np.array(_np.random.uniform(size=lshape) > 0.5)
+            x2 = np.array(_np.random.uniform(size=rshape) > 0.5)
             check_boolean_binary_func(func, x1, x2)
 
 
