@@ -41,16 +41,20 @@ inline bool NumpyUnaryAccType(const nnvm::NodeAttrs& attrs,
                               std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  if (common::is_float(in_attrs->at(0))) {
-    TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
-    TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
-  } else if (in_attrs->at(0) == mshadow::kInt8 ||
-             in_attrs->at(0) == mshadow::kUint8 ||
-             in_attrs->at(0) == mshadow::kBool) {
-    TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kFloat16);
-  } else if (in_attrs->at(0) == mshadow::kInt32 ||
-             in_attrs->at(0) == mshadow::kInt64) {
-    TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kFloat64);
+  switch (in_attrs->at(0)) {
+    case mshadow::kInt8:
+    case mshadow::kUint8:
+    case mshadow::kBool:
+      TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kFloat16);
+      break;
+    case mshadow::kInt32:
+    case mshadow::kInt64:
+      TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kFloat64);
+      break;
+    default:
+      TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+      TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+      break;
   }
   return out_attrs->at(0) != -1;
 }
