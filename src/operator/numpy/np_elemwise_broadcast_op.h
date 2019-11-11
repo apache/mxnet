@@ -34,8 +34,8 @@
 namespace mxnet {
 namespace op {
 
-inline void PrintErrorMessage(const std::string& name, const int dtype1, const int dtype2) {
-  LOG(FATAL) << "Operator " << name << " does not support combination of "
+inline void PrintErrorMessage(const std::string& op_name, const int dtype1, const int dtype2) {
+  LOG(FATAL) << "Operator " << op_name << " does not support combination of "
              << common::dtype_string(dtype1) << " with " << common::dtype_string(dtype2)
              << " yet...";
 }
@@ -218,7 +218,11 @@ void MixedAllRealBinaryBroadcastCompute(const std::string& op_name,
 }
 #endif
 
+#ifndef _WIN32
 template<typename xpu, typename OP, typename LOP, typename ROP>
+#else
+template<typename xpu, typename OP>
+#endif
 void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
                                  const OpContext& ctx,
                                  const std::vector<TBlob>& inputs,
@@ -232,13 +236,6 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
   const TBlob& lhs = inputs[0];
   const TBlob& rhs = inputs[1];
   const TBlob& out = outputs[0];
-
-  if ((out.shape_.Size() == 0U) || (req[0] == kNullOp)) return;
-
-  if (lhs.type_flag_ == rhs.type_flag_) {
-    BinaryBroadcastCompute<xpu, OP>(attrs, ctx, inputs, req, outputs);
-    return;
-  }
 
 #ifndef _WIN32
   mxnet::TShape new_lshape, new_rshape, new_oshape;
@@ -314,6 +311,72 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
   } else {
     PrintErrorMessage(attrs.op->name, lhs.type_flag_, rhs.type_flag_);
   }
+#endif
+}
+
+#ifndef _WIN32
+template<typename xpu, typename OP, typename LOP, typename ROP>
+#else
+template<typename xpu, typename OP>
+#endif
+void NumpyBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
+                                 const OpContext& ctx,
+                                 const std::vector<TBlob>& inputs,
+                                 const std::vector<OpReqType>& req,
+                                 const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+
+  const TBlob& lhs = inputs[0];
+  const TBlob& rhs = inputs[1];
+  const TBlob& out = outputs[0];
+
+  if ((out.shape_.Size() == 0U) || (req[0] == kNullOp)) return;
+
+  if (lhs.type_flag_ == rhs.type_flag_) {
+    BinaryBroadcastCompute<xpu, OP>(attrs, ctx, inputs, req, outputs);
+    return;
+  }
+
+#ifndef _WIN32
+  MixedBinaryBroadcastCompute<xpu, OP, LOP, ROP>(attrs, ctx, inputs, req, outputs);
+#else
+  MixedBinaryBroadcastCompute<xpu, OP>(attrs, ctx, inputs, req, outputs);
+#endif
+}
+
+#ifndef _WIN32
+template<typename xpu, typename OP, typename LOP, typename ROP>
+#else
+template<typename xpu, typename OP>
+#endif
+void NumpyBinaryBroadcastComputeWithBool(const nnvm::NodeAttrs& attrs,
+                                         const OpContext& ctx,
+                                         const std::vector<TBlob>& inputs,
+                                         const std::vector<OpReqType>& req,
+                                         const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+
+  const TBlob& lhs = inputs[0];
+  const TBlob& rhs = inputs[1];
+  const TBlob& out = outputs[0];
+
+  if ((out.shape_.Size() == 0U) || (req[0] == kNullOp)) return;
+
+  if (lhs.type_flag_ == rhs.type_flag_) {
+    BinaryBroadcastComputeWithBool<xpu, OP>(attrs, ctx, inputs, req, outputs);
+    return;
+  }
+
+#ifndef _WIN32
+  MixedBinaryBroadcastCompute<xpu, OP, LOP, ROP>(attrs, ctx, inputs, req, outputs);
+#else
+  MixedBinaryBroadcastCompute<xpu, OP>(attrs, ctx, inputs, req, outputs);
 #endif
 }
 

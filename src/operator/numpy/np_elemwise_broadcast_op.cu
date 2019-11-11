@@ -32,39 +32,36 @@ NNVM_REGISTER_OP(_npi_add)
 #ifndef _WIN32
 .set_attr<FCompute>(
   "FCompute<gpu>",
-  MixedBinaryBroadcastCompute<gpu, op::mshadow_op::plus, op::mshadow_op::mixed_plus,
-                              op::mshadow_op::mixed_plus>);
+  NumpyBinaryBroadcastComputeWithBool<gpu, op::mshadow_op::plus, op::mshadow_op::mixed_plus,
+                                      op::mshadow_op::mixed_plus>);
 #else
 .set_attr<FCompute>(
   "FCompute<gpu>",
-  MixedBinaryBroadcastCompute<gpu, op::mshadow_op::plus, op::mshadow_op::plus,
-                              op::mshadow_op::plus>);
+  NumpyBinaryBroadcastComputeWithBool<gpu, op::mshadow_op::plus>);
 #endif
 
 NNVM_REGISTER_OP(_npi_subtract)
 #ifndef _WIN32
 .set_attr<FCompute>(
   "FCompute<gpu>",
-  MixedBinaryBroadcastCompute<gpu, op::mshadow_op::minus, op::mshadow_op::mixed_minus,
+  NumpyBinaryBroadcastCompute<gpu, op::mshadow_op::minus, op::mshadow_op::mixed_minus,
                               op::mshadow_op::mixed_rminus>);
 #else
 .set_attr<FCompute>(
   "FCompute<gpu>",
-  MixedBinaryBroadcastCompute<gpu, op::mshadow_op::minus, op::mshadow_op::minus,
-                              op::mshadow_op::minus>);
+  NumpyBinaryBroadcastCompute<gpu, op::mshadow_op::minus>);
 #endif
 
 NNVM_REGISTER_OP(_npi_multiply)
 #ifndef _WIN32
 .set_attr<FCompute>(
   "FCompute<gpu>",
-  MixedBinaryBroadcastCompute<gpu, op::mshadow_op::mul, op::mshadow_op::mixed_mul,
-                              op::mshadow_op::mixed_mul>);
+  NumpyBinaryBroadcastComputeWithBool<gpu, op::mshadow_op::mul, op::mshadow_op::mixed_mul,
+                                      op::mshadow_op::mixed_mul>);
 #else
 .set_attr<FCompute>(
   "FCompute<gpu>",
-  MixedBinaryBroadcastCompute<gpu, op::mshadow_op::mul, op::mshadow_op::mul,
-                              op::mshadow_op::mul>);
+  NumpyBinaryBroadcastComputeWithBool<gpu, op::mshadow_op::mul>);
 #endif
 
 NNVM_REGISTER_OP(_npi_mod)

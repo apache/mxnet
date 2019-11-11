@@ -1691,6 +1691,7 @@ def test_np_mixed_precision_binary_funcs():
         'subtract': (-1.0, 1.0),
         'multiply': (-1.0, 1.0),
     }
+
     shape_pairs = [((3, 2), (3, 2)),
                    ((3, 2), (3, 1)),
                    ((3, 1), (3, 0)),
@@ -1698,6 +1699,7 @@ def test_np_mixed_precision_binary_funcs():
                    ((2, 3, 4), (3, 1)),
                    ((2, 3), ()),
                    ((), (2, 3))]
+
     itypes = [np.bool, np.int8, np.int32, np.int64]
     ftypes = [np.float16, np.float32, np.float64]
     for func, func_data in funcs.items():
@@ -1711,6 +1713,60 @@ def test_np_mixed_precision_binary_funcs():
                 if type1 == type2:
                     continue
                 check_mixed_precision_binary_func(func, low, high, lshape, rshape, type1, type2)
+
+
+@with_seed()
+@use_np
+def test_np_boolean_binary_funcs():
+    def check_boolean_binary_func(func, mx_x1, mx_x2):
+        class TestBooleanBinary(HybridBlock):
+            def __init__(self, func):
+                super(TestBooleanBinary, self).__init__()
+                self._func = func
+
+            def hybrid_forward(self, F, a, b, *args, **kwargs):
+                return getattr(F.np, self._func)(a, b)
+
+        np_x1 = mx_x1.asnumpy()
+        np_x2 = mx_x2.asnumpy()
+        np_func = getattr(_np, func)
+        mx_func = TestBooleanBinary(func)
+        for hybridize in [True, False]:
+            if hybridize:
+                mx_func.hybridize()
+            np_out = np_func(np_x1, np_x2)
+            with mx.autograd.record():
+                y = mx_func(mx_x1, mx_x2)
+            assert y.shape == np_out.shape
+            assert_almost_equal(y.asnumpy(), np_out.astype(y.dtype), rtol=1e-3, atol=1e-20,
+                                use_broadcast=False, equal_nan=True)
+
+        np_out = getattr(_np, func)(np_x1, np_x2)
+        mx_out = getattr(mx.np, func)(mx_x1, mx_x2)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out.astype(mx_out.dtype), rtol=1e-3, atol=1e-20,
+                            use_broadcast=False, equal_nan=True)
+
+
+    funcs = [
+        'add',
+        'multiply',
+        'true_divide',
+    ]
+
+    shape_pairs = [((3, 2), (3, 2)),
+                   ((3, 2), (3, 1)),
+                   ((3, 1), (3, 0)),
+                   ((0, 2), (1, 2)),
+                   ((2, 3, 4), (3, 1)),
+                   ((2, 3), ()),
+                   ((), (2, 3))]
+
+    for lshape, rshape in shape_pairs:
+        for func in funcs:
+            x1 = np.array(_np.random.uniform(size=lshape) > 0.5)
+            x2 = np.array(_np.random.uniform(size=rshape) > 0.5)
+            check_boolean_binary_func(func, x1, x2)
 
 
 @with_seed()
