@@ -133,3 +133,6 @@ set(USE_VTA_TSIM OFF)
 
 # Whether use Relay debug mode
 set(USE_RELAY_DEBUG OFF)
+
+# Use OPENMP thread pool to be compatible with MXNet
+set(USE_OPENMP ON)
