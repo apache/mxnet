@@ -1173,6 +1173,13 @@ def _add_workload_resize():
     OpArgMngr.add_workload('resize', np.zeros((10, 0)), (0, 100))
 
 
+def _add_workload_full_like():
+    OpArgMngr.add_workload('full_like', np.random.uniform(low=0, high=100, size=(1,3,4), dtype='float64'), 1)
+    OpArgMngr.add_workload('full_like', np.random.uniform(low=0, high=100, size=(9,3,1)), 2, np.int64)
+    OpArgMngr.add_workload('full_like', np.random.uniform(low=0, high=100, size=(9,3)), np.nan)
+    OpArgMngr.add_workload('full_like', np.random.uniform(low=0, high=100, size=(0,3)), 0, np.float32)
+
+
 @use_np
 def _prepare_workloads():
     array_pool = {
@@ -1284,6 +1291,7 @@ def _prepare_workloads():
     _add_workload_less_equal(array_pool)
     _add_workload_diff()
     _add_workload_resize()
+    _add_workload_full_like()
 
 
 _prepare_workloads()

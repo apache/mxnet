@@ -41,7 +41,7 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'around', 'hypot', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take',
            'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal',
            'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'shares_memory', 'may_share_memory', 'diff',
-           'resize', 'nan_to_num']
+           'resize', 'nan_to_num', 'full_like']
 
 
 def _num_outputs(sym):
@@ -4822,6 +4822,43 @@ def resize(a, new_shape):
            [0., 1., 2., 3.]])
     """
     return _npi.resize_fallback(a, new_shape=new_shape)
+
+
+@set_module('mxnet.symbol.numpy')
+def full_like(a, fill_value=0, dtype=None): # pylint: disable=too-many-arguments
+    """
+    Return a full array with the same shape and type as a given array.
+
+    Parameters
+    ----------
+    a : _Symbol
+        The shape and data-type of `a` define these same attributes of
+        the returned array.
+    fill_value : scalar
+        Fill value.
+    dtype : data-type, optional
+        Overrides the data type of the result.
+
+    Returns
+    -------
+    out : _Symbol
+        Array of `fill_value` with the same shape and type as `a`.
+
+    See Also
+    --------
+    empty_like : Return an empty array with shape and type of input.
+    ones_like : Return an array of ones with shape and type of input.
+    zeros_like : Return an array of zeros with shape and type of input.
+    full : Return a new array of given shape filled with value.
+    """
+    dtype_list = {None:'None', _np.int8:'int8', _np.uint8:'uint8', _np.int32:'int32',
+                  _np.int64:'int64', _np.float16:'float16', _np.float32:'float32',
+                  _np.float64:'float64', _np.bool_:'bool'}
+    try:
+        dtype = dtype if isinstance(dtype, str) else dtype_list[dtype]
+    except:
+        raise NotImplementedError("Do not support this dtype at this moment")
+    return _npi.full_like_fallback(a, fill_value=fill_value, dtype=dtype)
 
 
 @set_module('mxnet.symbol.numpy')
