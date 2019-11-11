@@ -364,7 +364,7 @@ inline Shape<5> ConvertLayout(const Shape<5>& src, int src_layout, int dst_layou
 template<typename Device>
 struct Stream {
   // this is only a dummy implementation for CPU
-  // for GPU, the actual implementation will be specialized in tensor_gpu-inl.h
+  // for GPU, the actual implementation will be specialized in stream_gpu-inl.h
   /*!
    * \brief wait for all the computations associated
    *  with this stream to complete
