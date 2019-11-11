@@ -18,9 +18,9 @@
 import math
 import heapq
 import random
-import numpy as np
 import logging
 import mxnet as mx
+import numpy as np
 
 def get_movielens_iter(filename, batch_size, ctx, logger):
     """Not particularly fast code to parse the text file and load into NDArrays.
@@ -35,8 +35,6 @@ def get_movielens_iter(filename, batch_size, ctx, logger):
         for line in f:
             tks = line.strip().split('\t')
             if len(tks) != 3:
-                continue
-            if (int(tks[0]) > 138000 or int(tks[1]) > 26700):
                 continue
             num_samples += 1
             user.append((tks[0]))
@@ -63,7 +61,6 @@ def predict(model, users, items, batch_size=1000, ctx=mx.cpu()):
     preds = []
     for batch in eval_iter:
         model.forward(batch)
-        mx.nd.waitall()
         outp = model.get_outputs()[0].asnumpy()
         preds += list(outp.flatten())
     return preds

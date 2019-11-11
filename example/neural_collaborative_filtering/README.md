@@ -43,7 +43,7 @@ pip install -r requirements.txt
 We provide the processed datasets on [Google Drive](https://drive.google.com/drive/folders/1qACR_Zhc2O2W0RrazzcepM2vJeh0MMdO?usp=sharing): MovieLens 20 Million (ml-20m), you can download directly or 
 run the script to prepare the datasets:
 ```
-python convert.py 
+python convert.py ./data/
 ```
 
 train-ratings.csv

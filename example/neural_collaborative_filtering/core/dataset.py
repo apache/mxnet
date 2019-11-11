@@ -14,11 +14,12 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-# 
-import scipy.sparse as sp
+#
+import os 
+import mxnet as mx
 import numpy as np
 import pandas as pd
-import mxnet as mx
+import scipy.sparse as sp
 
 class NCFTestData(object):
     def __init__(self, path):
@@ -28,8 +29,8 @@ class NCFTestData(object):
         testRatings: converted test ratings data
         testNegatives: negative samples for evaluation dataset
         '''
-        self.testRatings = self.load_rating_file_as_list(path + "/test-ratings.csv")
-        self.testNegatives = self.load_negative_file(path + "/test-negative.csv")
+        self.testRatings = self.load_rating_file_as_list(os.path.join(path, 'test-ratings.csv'))
+        self.testNegatives = self.load_negative_file(os.path.join(path ,'test-negative.csv'))
         assert len(self.testRatings) == len(self.testNegatives)
 
     def load_rating_file_as_list(self, filename):
@@ -95,19 +96,4 @@ class NCFTrainData(mx.gluon.data.Dataset):
             while (u, j) in self.mat:
                 j = mx.random.randint(0, self.nb_items).asnumpy().item()
             return u, j, np.zeros(1, dtype=np.float32).item()
-
-def load_test_ratings(fname):
-    def process_line(line):
-        tmp = map(int, line.split('\t')[0:2])
-        return list(tmp)
-    ratings = map(process_line, open(fname, 'r'))
-    return list(ratings)
-
-
-def load_test_negs(fname):
-    def process_line(line):
-        tmp = map(int, line.split('\t'))
-        return list(tmp)
-    negs = map(process_line, open(fname, 'r'))
-    return list(negs)
 
