@@ -22,7 +22,7 @@ from . import _symbol
 from . import _op as _mx_sym_np
 from . import _internal as _npi
 
-__all__ = ['norm', 'svd', 'cholesky']
+__all__ = ['norm', 'svd', 'cholesky', 'inv']
 
 
 def norm(x, ord=None, axis=None, keepdims=False):
@@ -187,3 +187,45 @@ def cholesky(a):
            [ 4., 10.]])
     """
     return _npi.cholesky(a)
+
+
+def inv(a):
+    r"""
+    Compute the (multiplicative) inverse of a matrix.
+
+    Given a square matrix `a`, return the matrix `ainv` satisfying
+    ``dot(a, ainv) = dot(ainv, a) = eye(a.shape[0])``.
+
+    Parameters
+    ----------
+    a : (..., M, M) ndarray
+        Matrix to be inverted.
+
+    Returns
+    -------
+    ainv : (..., M, M) ndarray
+        (Multiplicative) inverse of the matrix `a`.
+
+    Raises
+    ------
+    MXNetError
+        If `a` is not square or inversion fails.
+
+    Examples
+    --------
+    >>> from mxnet import np
+    >>> a = np.array([[1., 2.], [3., 4.]])
+    array([[-2. ,  1. ],
+           [ 1.5, -0.5]])
+
+    Inverses of several matrices can be computed at once:
+
+    >>> a = np.array([[[1., 2.], [3., 4.]], [[1, 3], [3, 5]]])
+    >>> np.linalg.inv(a)
+    array([[[-2.        ,  1.        ],
+            [ 1.5       , -0.5       ]],
+
+           [[-1.2500001 ,  0.75000006],
+            [ 0.75000006, -0.25000003]]])
+    """
+    return _npi.inv(a)

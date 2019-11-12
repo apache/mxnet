@@ -82,9 +82,11 @@ static inline size_t GetInSumIndex(const MKLDNNConvFusionParam &param) {
 }
 
 template <typename DType>
-static std::vector<float> GetWeightScales(const NDArray &weight, bool weight_channelwise_scale) {
+static std::vector<float> GetWeightScales(const NDArray &weight, const NDArray *bias,
+                                          const float data_scale, bool weight_channelwise_scale) {
   std::vector<float> weight_scales;
   const DType *weight_ptr = weight.data().dptr<DType>();
+  const DType *bias_ptr = bias? bias->data().dptr<DType>() : nullptr;
   size_t channel = weight.shape()[0];
 
   // TODO(Zhennan): Handle the case weight is not in dims 4.
@@ -103,9 +105,19 @@ static std::vector<float> GetWeightScales(const NDArray &weight, bool weight_cha
 
   if (weight_channelwise_scale) {
     weight_scales.resize(channel);
+#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
     for (int c = 0; c < static_cast<int>(channel); ++c) {
-      DType weight_range = MaxAbs(weight_c_min[c], weight_c_max[c]);
-      weight_scales[c] = kInt8Range / weight_range;
+      float scale = GetQuantizeScale(mshadow::kInt8, weight_c_min[c], weight_c_max[c]);
+      if (bias_ptr) {
+        // avoid overflow on bias
+        // TODO(zhennan): mkldnn has bug to handle INT_MAX in bias, so set the maximum value of bias
+        // to INT_MAX / 2.
+        float scale_max =
+            static_cast<float>(bias_ptr[c] > 0 ? MaxValue<int32_t>() : MinValue<int32_t>()) / 2 /
+            bias_ptr[c] / data_scale;
+        scale = Min(scale, scale_max);
+      }
+      weight_scales[c] = scale;
     }
   } else {
     DType total_min = weight_c_min[0];
@@ -115,8 +127,7 @@ static std::vector<float> GetWeightScales(const NDArray &weight, bool weight_cha
       if (total_max < weight_c_max[c]) total_max = weight_c_max[c];
     }
     weight_scales.resize(3);
-    DType weight_range = MaxAbs(total_min, total_max);
-    weight_scales[0] = kInt8Range / weight_range;
+    weight_scales[0] = GetQuantizeScale(mshadow::kInt8, total_min, total_max);
     weight_scales[1] = total_min;
     weight_scales[2] = total_max;
   }
@@ -331,27 +342,21 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
         post_requantize_ = true;
         weight_channelwise_scale = true;
       }
-      auto data_range = (data.dtype() == mshadow::kInt8) ? kInt8Range : kUint8Range;
-      data_scale_ = data_range / MaxAbs(cached_data_min_, cached_data_max_);
+      data_scale_ = GetQuantizeScale(data.dtype(), cached_data_min_, cached_data_max_);
       MSHADOW_REAL_TYPE_SWITCH(cached_weight_.dtype(), DType, {
-        weight_scales_ =
-            GetWeightScales<DType>(cached_weight_, weight_channelwise_scale);
+        weight_scales_ = GetWeightScales<DType>(cached_weight_, has_bias ? &cached_bias_ : nullptr,
+                                                data_scale_, weight_channelwise_scale);
       });
       // Collect scale.
       size_t channel = cached_weight_.shape()[0];
       float sum_in_scale = 1.0;
-      float out_range;
-      float quantized_out_range;
       float output_scale;
       if (mkldnn_param.with_sum) {
-        auto quantized_sum_range =
-            (inputs[in_sum].dtype() == mshadow::kInt8) ? kInt8Range : kUint8Range;
-        sum_in_scale = quantized_sum_range / MaxAbs(cached_sum_min_, cached_sum_max_);
+        sum_in_scale = GetQuantizeScale(inputs[in_sum].dtype(), cached_sum_min_, cached_sum_max_);
       }
       if (post_requantize_) {
-        quantized_out_range = IsOutputUInt8(param_) ? kUint8Range : kInt8Range;
-        out_range = MaxAbs(cached_output_min_, cached_output_max_);
-        output_scale = quantized_out_range / out_range;
+        output_scale = GetQuantizeScale(IsOutputUInt8(param_) ? mshadow::kUint8 : mshadow::kInt8,
+                                        cached_output_min_, cached_output_max_);
         full_conv_param.requantize_scales.resize(weight_channelwise_scale ? channel : 1);
         for (size_t c = 0; c < full_conv_param.requantize_scales.size(); c++) {
           full_conv_param.requantize_scales[c] = output_scale / data_scale_ / weight_scales_[c];
