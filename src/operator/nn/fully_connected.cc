@@ -34,7 +34,8 @@ namespace op {
 
 bool SupportMKLDNNFC(const NDArray& input) {
   int ndim = input.shape().ndim();
-  return input.dtype() == mshadow::kFloat32 && (ndim >= 1 && ndim <= 4) &&
+  return (input.dtype() == mshadow::kFloat32 or input.dtype() == mshadow::kBfloat16) &&
+         (ndim >= 1 && ndim <= 4) &&
          input.storage_type() == kDefaultStorage;
 }
 
@@ -149,7 +150,7 @@ void FullyConnectedGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                     const std::vector<NDArray> &outputs) {
   // TODO(rongzha1): disable due to flakiness in cpp test IMPERATIVE.FullyConnectedOp
   // Will be fixed when we decide to enable the backward of FC.
-  bool mkldnn_fc_backward_enable = false;
+  bool mkldnn_fc_backward_enable = true;
   if (mkldnn_fc_backward_enable && SupportMKLDNNFC(inputs[0])) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
     MKLDNNRun(MKLDNNFCBackward, attrs, ctx, inputs, req, outputs);
@@ -237,7 +238,7 @@ static bool BackwardFCStorageType(const nnvm::NodeAttrs& attrs,
   bool dispatched = false;
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, mxnet::kDefaultStorage)) {
     dispatched = storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                                     dispatch_mode, DispatchMode::kFCompute);
+                                     dispatch_mode, DispatchMode::kFComputeEx);
   }
   if (!dispatched && common::ContainsStorageType(*in_attrs, mxnet::kRowSparseStorage)) {
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);

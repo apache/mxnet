@@ -26,6 +26,7 @@ import numpy as np
 import mxnet as mx
 from mxnet import gluon, autograd
 from mxnet.gluon import nn
+from mxnet.contrib import amp
 
 # Parse CLI arguments
 
@@ -44,15 +45,16 @@ parser.add_argument('--log-interval', type=int, default=100, metavar='N',
                     help='how many batches to wait before logging training status')
 opt = parser.parse_args()
 
+amp.init(target_dtype='bfloat16')
 
 # define network
 
-net = nn.Sequential()
+net = nn.HybridSequential()
 with net.name_scope():
     net.add(nn.Dense(128, activation='relu'))
     net.add(nn.Dense(64, activation='relu'))
     net.add(nn.Dense(10))
-
+net.hybridize(static_alloc=True, static_shape=True)
 # data
 
 def transformer(data, label):
@@ -75,6 +77,7 @@ def test(ctx):
         data = data.as_in_context(ctx)
         label = label.as_in_context(ctx)
         output = net(data)
+        output = mx.nd.amp_cast(output, dtype='float32')
         metric.update([label], [output])
 
     return metric.get()
@@ -86,6 +89,7 @@ def train(epochs, ctx):
     # Trainer is for updating parameters with gradient.
     trainer = gluon.Trainer(net.collect_params(), 'sgd',
                             {'learning_rate': opt.lr, 'momentum': opt.momentum})
+    amp.init_trainer(trainer)
     metric = mx.metric.Accuracy()
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
@@ -100,6 +104,7 @@ def train(epochs, ctx):
             # Recorded graphs can then be differentiated with backward.
             with autograd.record():
                 output = net(data)
+                output = mx.nd.amp_cast(output, dtype='float32')
                 L = loss(output, label)
                 L.backward()
             # take a gradient step with batch_size equal to data.shape[0]

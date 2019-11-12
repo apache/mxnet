@@ -21,6 +21,7 @@
 # Functions that should be cast to lower precision
 FP16_FUNCS = [
     'Convolution',
+    'FullyConnected',
     ]
 
 # Functions that should not be casted, either because
@@ -37,7 +38,6 @@ FP16_FP32_FUNCS = [
 FP32_FUNCS = [
     'Pooling',
     'Deconvolution',
-    'FullyConnected',
     'RNN',
     'BatchNorm_v1',
     'BilinearSampler',
