@@ -35,6 +35,7 @@ if Features().is_enabled("TVM_OP"):
     try:
         _CONF_TVM_OP = find_conf_path("tvmop")
     except RuntimeError as e:
+        # config file is missing, fallback to the default schedule
         logging.warning(e)
     else:
         logging.info("TVM op config has been loaded")
