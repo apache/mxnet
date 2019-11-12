@@ -43,7 +43,7 @@ namespace op {
 namespace mshadow_op {
 
 using mshadow::isnan_typed::IsNan;
-using mshadow::isnan_typed::IsInf;
+using mshadow::isinf_typed::IsInf;
 
 #ifdef __CUDA_ARCH__
 __constant__ const float PI = 3.14159265358979323846;
