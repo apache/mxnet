@@ -35,12 +35,12 @@ Y = mx.nd.dot(X, W)
 ```
 
 ```
-{'W': 
+{'W':
  [[ 3.  4.  5.]
   [ 6.  7.  8.]]
- <NDArray 2x3 @cpu(0)>, 'X': 
+ <NDArray 2x3 @cpu(0)>, 'X':
  [[ 1.  0.]]
- <NDArray 1x2 @cpu(0)>, 'Y': 
+ <NDArray 1x2 @cpu(0)>, 'Y':
  [[ 3.  4.  5.]]
  <NDArray 1x3 @cpu(0)>}
 ```
@@ -87,7 +87,7 @@ As you can see, row 0 of ``grad_W`` contains non-zero values while row 1 of ``gr
 If you look at how ``grad_W`` is calculated, notice that since column 1 of ``X`` is filled with zeros, row 1 of ``grad_W`` is filled with zeros too.
 
 In the real world, gradients for parameters that interact with sparse inputs ususally have gradients where many row slices are completely zeros. Storing and manipulating such sparse matrices with many row slices of all zeros in the default dense structure results in wasted memory and processing on the zeros. More importantly, many gradient based optimization methods such as SGD, [AdaGrad](https://stanford.edu/~jduchi/projects/DuchiHaSi10_colt.pdf) and [Adam](https://arxiv.org/pdf/1412.6980.pdf)
-take advantage of sparse gradients and prove to be efficient and effective. 
+take advantage of sparse gradients and prove to be efficient and effective.
 **In MXNet, the ``RowSparseNDArray`` stores the matrix in ``row sparse`` format, which is designed for arrays of which most row slices are all zeros.**
 In this tutorial, we will describe what the row sparse format is and how to use RowSparseNDArray for sparse gradient updates in MXNet.
 
@@ -95,7 +95,7 @@ In this tutorial, we will describe what the row sparse format is and how to use 
 
 To complete this tutorial, we need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.apache.org/install/index.html)
+- MXNet. See the instructions for your operating system in [Setup and Installation](/get_started)
 - [Jupyter](http://jupyter.org/)
     ```
     pip install jupyter
@@ -267,10 +267,10 @@ indices = a.indices
 
 
 ```
-{'a.stype': 'row_sparse', 'data': 
+{'a.stype': 'row_sparse', 'data':
  [[ 1.  2.]
   [ 3.  4.]]
- <NDArray 2x2 @cpu(0)>, 'indices': 
+ <NDArray 2x2 @cpu(0)>, 'indices':
  [1 4]
  <NDArray 2 @cpu(0)>}
 ```
@@ -294,10 +294,10 @@ dense = rsp.tostype('default')
 
 
 ```
-{'dense': 
+{'dense':
  [[ 1.  1.]
   [ 1.  1.]]
- <NDArray 2x2 @cpu(0)>, 'rsp': 
+ <NDArray 2x2 @cpu(0)>, 'rsp':
  <RowSparseNDArray 2x2 @cpu(0)>}
 ```
 
@@ -318,10 +318,10 @@ dense = mx.nd.sparse.cast_storage(rsp, 'default')
 
 
 ```
-{'dense': 
+{'dense':
  [[ 1.  1.]
   [ 1.  1.]]
- <NDArray 2x2 @cpu(0)>, 'rsp': 
+ <NDArray 2x2 @cpu(0)>, 'rsp':
  <RowSparseNDArray 2x2 @cpu(0)>}
 ```
 
@@ -393,7 +393,7 @@ rsp_retained = mx.nd.sparse.retain(rsp, mx.nd.array([0, 1]))
         [ 0.,  0.],
         [ 3.,  4.],
         [ 5.,  6.],
-        [ 0.,  0.]], dtype=float32), 'rsp_retained': 
+        [ 0.,  0.]], dtype=float32), 'rsp_retained':
  <RowSparseNDArray 5x2 @cpu(0)>, 'rsp_retained.asnumpy()': array([[ 1.,  2.],
         [ 0.,  0.],
         [ 0.,  0.],
@@ -424,7 +424,7 @@ transpose_dot = mx.nd.sparse.dot(lhs, rhs, transpose_a=True)
 
 
 ```
-{'transpose_dot': 
+{'transpose_dot':
  <RowSparseNDArray 5x2 @cpu(0)>, 'transpose_dot.asnumpy()': array([[ 7.,  7.],
         [ 9.,  9.],
         [ 8.,  8.],
@@ -576,9 +576,9 @@ except mx.MXNetError as err:
     sys.stderr.write(str(err))
 ```
 
-## Next 
+## Next
 
-[Train a Linear Regression Model with Sparse Symbols](http://mxnet.apache.org/tutorials/sparse/train.html)
+[Train a Linear Regression Model with Sparse Symbols](/api/python/docs/tutorials/packages/ndarray/sparse/train.html)
 
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

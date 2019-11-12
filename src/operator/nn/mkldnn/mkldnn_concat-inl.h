@@ -20,7 +20,7 @@
 /*!
  * \file mkldnn_concat-inl.h
  * \brief
- * \author Wenting Jiang
+ * \author
 */
 #ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_CONCAT_INL_H_
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_CONCAT_INL_H_
@@ -40,25 +40,20 @@ class MKLDNNConcatFwd {
  public:
   mkldnn::concat::primitive_desc fwd_pd;
 
-  MKLDNNConcatFwd(int concat_dim, const std::vector<mkldnn::memory::primitive_desc> &data_md)
-      : fwd_pd(concat_dim, data_md) {
-    data.resize(data_md.size());
+  MKLDNNConcatFwd(int concat_dim, const std::vector<mkldnn::memory::desc> &data_md)
+      : fwd_pd(concat_dim, data_md, CpuEngine::Get()->get_engine()) {
+      fwd_ = std::make_shared<mkldnn::concat>(fwd_pd);
   }
-
-  void SetNewMem(const std::vector<const mkldnn::memory *> &in_data, const mkldnn::memory &output);
 
   const mkldnn::concat &GetFwd() const;
 
  private:
-  std::shared_ptr<mkldnn::concat> fwd;
-  std::vector<std::shared_ptr<mkldnn::memory>> data;
-  std::vector<mkldnn::primitive::at> data_mem;
-  std::shared_ptr<mkldnn::memory> out;
+  std::shared_ptr<mkldnn::concat> fwd_;
 };
 
 static MKLDNNConcatFwd &GetConcatForward(
     int concat_dim, const std::vector<NDArray> &in_data,
-    const std::vector<mkldnn::memory::primitive_desc> &data_md) {
+    const std::vector<mkldnn::memory::desc> &data_md) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<OpSignature, MKLDNNConcatFwd, OpHash> fwds;
 #else

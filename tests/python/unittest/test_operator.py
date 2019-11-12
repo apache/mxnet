@@ -36,6 +36,15 @@ import unittest
 import os
 
 def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req, rtol=1e-2, atol=1e-4):
+    if default_context().device_type == 'cpu':
+    # NOTE(zixuanweeei): Currently, we don't add `add` requests support on fused mkl-dnn rnn operator.
+    # We tracked this issue by https://github.com/apache/incubator-mxnet/issues/16578
+        if isinstance(grad_req, dict) and 'add' in grad_req.values():
+            print("Skip the test when requiring `add` operation against gradients on CPU context.")
+            return
+        if isinstance(grad_req, str) and grad_req == 'add':
+            print("Skip the test when requiring `add` operation against gradients on CPU context.")
+            return
     dshape = (N, T, I)
     data = mx.sym.Variable('data')
 
@@ -86,7 +95,7 @@ def test_rnn_with_new_param():
         for mode, ngates in zip(rnn_modes, ngates_):
             first_layer_size = (input_size * state_size + state_size * state_size + state_size * 2) * ngates
             rest_layer_size = (state_size * directions * state_size + state_size * state_size + state_size * 2) \
-                 * ngates * (num_layers - 1)
+                * ngates * (num_layers - 1)
             param_size = (first_layer_size + rest_layer_size) * directions
             sym = mx.sym.RNN(mode=mode, num_layers=num_layers, bidirectional=bidirectional,
                 state_outputs=False, state_size=state_size, name='rnn')
@@ -118,112 +127,133 @@ def test_rnn_with_new_param():
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_lstm_sym():
-    T, N, I, H = 5, 32, 800, 800
-    fused = mx.rnn.FusedRNNCell(H, num_layers=3, mode='lstm', get_next_state=True, prefix='')
-    stack = mx.rnn.SequentialRNNCell()
-    stack.add(mx.rnn.LSTMCell(H, prefix='l0_'))
-    stack.add(mx.rnn.LSTMCell(H, prefix='l1_'))
-    stack.add(mx.rnn.LSTMCell(H, prefix='l2_'))
+    Ts = [1, 5]
+    Ns = [1, 32]
+    Is = [32, 128, 512]
+    Hs = [32, 128, 512]
+    for T, N, I, H in itertools.product(Ts, Ns, Is, Hs):
+        fused = mx.rnn.FusedRNNCell(H, num_layers=3, mode='lstm', get_next_state=True, prefix='')
+        stack = mx.rnn.SequentialRNNCell()
+        stack.add(mx.rnn.LSTMCell(H, prefix='l0_'))
+        stack.add(mx.rnn.LSTMCell(H, prefix='l1_'))
+        stack.add(mx.rnn.LSTMCell(H, prefix='l2_'))
 
-    check_rnn_consistency(fused, stack, T, N, I, H, 'write')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'add')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'null')
+        check_rnn_consistency(fused, stack, T, N, I, H, 'write')
+        check_rnn_consistency(fused, stack, T, N, I, H, 'add')
+        check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_lstm_bidirectional():
-    T, N, I, H = 5, 20, 800, 800
-    fused = mx.rnn.FusedRNNCell(H, num_layers=2, mode='lstm',
-                                bidirectional=True, get_next_state=True, prefix='')
+    Ts = [1, 5]
+    Ns = [1, 32]
+    Is = [32, 128, 512]
+    Hs = [32, 128, 512]
+    for T, N, I, H in itertools.product(Ts, Ns, Is, Hs):
+        fused = mx.rnn.FusedRNNCell(H, num_layers=2, mode='lstm',
+                                    bidirectional=True, get_next_state=True, prefix='')
 
-    stack = mx.rnn.SequentialRNNCell()
-    stack.add(mx.rnn.BidirectionalCell(
-                mx.rnn.LSTMCell(H, prefix='l0_'),
-                mx.rnn.LSTMCell(H, prefix='r0_'),
-                output_prefix='bi_lstm_0_'))
-    stack.add(mx.rnn.BidirectionalCell(
-                mx.rnn.LSTMCell(H, prefix='l1_'),
-                mx.rnn.LSTMCell(H, prefix='r1_'),
-                output_prefix='bi_lstm_1_'))
+        stack = mx.rnn.SequentialRNNCell()
+        stack.add(mx.rnn.BidirectionalCell(
+                    mx.rnn.LSTMCell(H, prefix='l0_'),
+                    mx.rnn.LSTMCell(H, prefix='r0_'),
+                    output_prefix='bi_lstm_0_'))
+        stack.add(mx.rnn.BidirectionalCell(
+                    mx.rnn.LSTMCell(H, prefix='l1_'),
+                    mx.rnn.LSTMCell(H, prefix='r1_'),
+                    output_prefix='bi_lstm_1_'))
 
-    check_rnn_consistency(fused, stack, T, N, I, H, 'write')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'add')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'null')
-    check_rnn_consistency(fused, stack, T, N, I, H, {'data': 'add', 'parameters': 'null'})
+        check_rnn_consistency(fused, stack, T, N, I, H, 'write')
+        check_rnn_consistency(fused, stack, T, N, I, H, 'add')
+        check_rnn_consistency(fused, stack, T, N, I, H, 'null')
+        check_rnn_consistency(fused, stack, T, N, I, H, {'data': 'add', 'parameters': 'null'})
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_gru_sym():
-    T, N, I, H = 5, 32, 800, 800
-    fused = mx.rnn.FusedRNNCell(H, num_layers=3, mode='gru', get_next_state=True, prefix='')
-    stack = mx.rnn.SequentialRNNCell()
-    stack.add(mx.rnn.GRUCell(H, prefix='l0_'))
-    stack.add(mx.rnn.GRUCell(H, prefix='l1_'))
-    stack.add(mx.rnn.GRUCell(H, prefix='l2_'))
+    Ts = [1, 5]
+    Ns = [1, 32]
+    Is = [32, 128, 512]
+    Hs = [32, 128, 512]
+    for T, N, I, H in itertools.product(Ts, Ns, Is, Hs):
+        fused = mx.rnn.FusedRNNCell(H, num_layers=3, mode='gru', get_next_state=True, prefix='')
+        stack = mx.rnn.SequentialRNNCell()
+        stack.add(mx.rnn.GRUCell(H, prefix='l0_'))
+        stack.add(mx.rnn.GRUCell(H, prefix='l1_'))
+        stack.add(mx.rnn.GRUCell(H, prefix='l2_'))
 
-    check_rnn_consistency(fused, stack, T, N, I, H, 'write')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'add')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'null')
+        check_rnn_consistency(fused, stack, T, N, I, H, 'write', atol=2e-4)
+        check_rnn_consistency(fused, stack, T, N, I, H, 'add', atol=2e-4)
+        check_rnn_consistency(fused, stack, T, N, I, H, 'null', atol=2e-4)
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_gru_bidirectional():
-    T, N, I, H = 5, 20, 800, 800
+    Ts = [1, 5]
+    Ns = [1, 32]
+    Is = [32, 128, 512]
+    Hs = [32, 128, 512]
+    for T, N, I, H in itertools.product(Ts, Ns, Is, Hs):
+        fused = mx.rnn.FusedRNNCell(H, num_layers=2, mode='gru',
+                                    bidirectional=True, get_next_state=True, prefix='')
 
-    fused = mx.rnn.FusedRNNCell(H, num_layers=2, mode='gru',
-                                bidirectional=True, get_next_state=True, prefix='')
+        stack = mx.rnn.SequentialRNNCell()
+        stack.add(mx.rnn.BidirectionalCell(
+                    mx.rnn.GRUCell(H, prefix='l0_'),
+                    mx.rnn.GRUCell(H, prefix='r0_'),
+                    output_prefix='bi_gru_0_'))
 
-    stack = mx.rnn.SequentialRNNCell()
-    stack.add(mx.rnn.BidirectionalCell(
-                mx.rnn.GRUCell(H, prefix='l0_'),
-                mx.rnn.GRUCell(H, prefix='r0_'),
-                output_prefix='bi_gru_0_'))
+        stack.add(mx.rnn.BidirectionalCell(
+                    mx.rnn.GRUCell(H, prefix='l1_'),
+                    mx.rnn.GRUCell(H, prefix='r1_'),
+                    output_prefix='bi_gru_1_'))
 
-    stack.add(mx.rnn.BidirectionalCell(
-                mx.rnn.GRUCell(H, prefix='l1_'),
-                mx.rnn.GRUCell(H, prefix='r1_'),
-                output_prefix='bi_gru_1_'))
-
-    check_rnn_consistency(fused, stack, T, N, I, H, 'write')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'add')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'null')
+        check_rnn_consistency(fused, stack, T, N, I, H, 'write', atol=2e-4)
+        check_rnn_consistency(fused, stack, T, N, I, H, 'add', atol=2e-4)
+        check_rnn_consistency(fused, stack, T, N, I, H, 'null', atol=2e-4)
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_rnntanh_sym():
-    T, N, I, H = 5, 32, 800, 800
+    Ts = [1, 5]
+    Ns = [1, 32]
+    Is = [32, 128, 512]
+    Hs = [32, 128, 512]
+    for T, N, I, H in itertools.product(Ts, Ns, Is, Hs):
+        fused = mx.rnn.FusedRNNCell(H, num_layers=3, mode='rnn_tanh', get_next_state=True, prefix='')
+        stack = mx.rnn.SequentialRNNCell()
+        stack.add(mx.rnn.RNNCell(H, activation='tanh', prefix='l0_'))
+        stack.add(mx.rnn.RNNCell(H, activation='tanh', prefix='l1_'))
+        stack.add(mx.rnn.RNNCell(H, activation='tanh', prefix='l2_'))
 
-    fused = mx.rnn.FusedRNNCell(H, num_layers=3, mode='rnn_tanh', get_next_state=True, prefix='')
-    stack = mx.rnn.SequentialRNNCell()
-    stack.add(mx.rnn.RNNCell(H, activation='tanh', prefix='l0_'))
-    stack.add(mx.rnn.RNNCell(H, activation='tanh', prefix='l1_'))
-    stack.add(mx.rnn.RNNCell(H, activation='tanh', prefix='l2_'))
-
-    check_rnn_consistency(fused, stack, T, N, I, H, 'write')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'add')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'null')
+        check_rnn_consistency(fused, stack, T, N, I, H, 'write')
+        check_rnn_consistency(fused, stack, T, N, I, H, 'add')
+        check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_rnntanh_bidirectional():
-    T, N, I, H = 5, 20, 800, 800
+    Ts = [1, 5]
+    Ns = [1, 32]
+    Is = [32, 128, 512]
+    Hs = [32, 128, 512]
+    for T, N, I, H in itertools.product(Ts, Ns, Is, Hs):
+        fused = mx.rnn.FusedRNNCell(H, num_layers=2, mode='rnn_tanh',
+                                    bidirectional=True, get_next_state=True, prefix='')
 
-    fused = mx.rnn.FusedRNNCell(H, num_layers=2, mode='rnn_tanh',
-                                bidirectional=True, get_next_state=True, prefix='')
+        stack = mx.rnn.SequentialRNNCell()
+        stack.add(mx.rnn.BidirectionalCell(
+                    mx.rnn.RNNCell(H, activation='tanh', prefix='l0_'),
+                    mx.rnn.RNNCell(H, activation='tanh', prefix='r0_'),
+                    output_prefix='bi_rnntanh_0_'))
+        stack.add(mx.rnn.BidirectionalCell(
+                    mx.rnn.RNNCell(H, activation='tanh', prefix='l1_'),
+                    mx.rnn.RNNCell(H, activation='tanh', prefix='r1_'),
+                    output_prefix='bi_rnntanh_1_'))
 
-    stack = mx.rnn.SequentialRNNCell()
-    stack.add(mx.rnn.BidirectionalCell(
-                mx.rnn.RNNCell(H, activation='tanh', prefix='l0_'),
-                mx.rnn.RNNCell(H, activation='tanh', prefix='r0_'),
-                output_prefix='bi_rnntanh_0_'))
-    stack.add(mx.rnn.BidirectionalCell(
-                mx.rnn.RNNCell(H, activation='tanh', prefix='l1_'),
-                mx.rnn.RNNCell(H, activation='tanh', prefix='r1_'),
-                output_prefix='bi_rnntanh_1_'))
-
-    check_rnn_consistency(fused, stack, T, N, I, H, 'write')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'add')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'null')
+        check_rnn_consistency(fused, stack, T, N, I, H, 'write')
+        check_rnn_consistency(fused, stack, T, N, I, H, 'add')
+        check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
@@ -243,24 +273,27 @@ def test_rnnrelu_sym():
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_rnnrelu_bidirectional():
-    T, N, I, H = 5, 20, 200, 200
+    Ts = [1, 5]
+    Ns = [1, 32]
+    Is = [32, 128, 512]
+    Hs = [32, 128, 512]
+    for T, N, I, H in itertools.product(Ts, Ns, Is, Hs):
+        fused = mx.rnn.FusedRNNCell(H, num_layers=2, mode='rnn_relu',
+                                    bidirectional=True, get_next_state=True, prefix='')
 
-    fused = mx.rnn.FusedRNNCell(H, num_layers=2, mode='rnn_relu',
-                                bidirectional=True, get_next_state=True, prefix='')
+        stack = mx.rnn.SequentialRNNCell()
+        stack.add(mx.rnn.BidirectionalCell(
+                    mx.rnn.RNNCell(H, activation='relu', prefix='l0_'),
+                    mx.rnn.RNNCell(H, activation='relu', prefix='r0_'),
+                    output_prefix='bi_rnnrelu_0_'))
+        stack.add(mx.rnn.BidirectionalCell(
+                    mx.rnn.RNNCell(H, activation='relu', prefix='l1_'),
+                    mx.rnn.RNNCell(H, activation='relu', prefix='r1_'),
+                    output_prefix='bi_rnnrelu_1_'))
 
-    stack = mx.rnn.SequentialRNNCell()
-    stack.add(mx.rnn.BidirectionalCell(
-                mx.rnn.RNNCell(H, activation='relu', prefix='l0_'),
-                mx.rnn.RNNCell(H, activation='relu', prefix='r0_'),
-                output_prefix='bi_rnnrelu_0_'))
-    stack.add(mx.rnn.BidirectionalCell(
-                mx.rnn.RNNCell(H, activation='relu', prefix='l1_'),
-                mx.rnn.RNNCell(H, activation='relu', prefix='r1_'),
-                output_prefix='bi_rnnrelu_1_'))
-
-    check_rnn_consistency(fused, stack, T, N, I, H, 'write', rtol=1e-2, atol=1e-2)
-    check_rnn_consistency(fused, stack, T, N, I, H, 'add', rtol=1e-2, atol=1e-2)
-    check_rnn_consistency(fused, stack, T, N, I, H, 'null', rtol=1e-2, atol=1e-2)
+        check_rnn_consistency(fused, stack, T, N, I, H, 'write', rtol=1e-2, atol=1e-2)
+        check_rnn_consistency(fused, stack, T, N, I, H, 'add', rtol=1e-2, atol=1e-2)
+        check_rnn_consistency(fused, stack, T, N, I, H, 'null', rtol=1e-2, atol=1e-2)
 
 @with_seed()
 def test_lstm_dropout():
@@ -715,6 +748,23 @@ def test_swapaxes():
     swap_ = np.swapaxes(swap0_, 1, 2)
 
     assert_almost_equal(out, swap_)
+
+    config = [((1, 1, 2), 0, 1),
+              ((1, 1, 2), -1, -2),
+              ((4, 5, 6, 7), 1, 1),
+              ((4, 5, 6, 7), 2, 3),
+              ((4, 5, 6, 7), -2, 2),
+              ((4, 5, 6, 7), -2, -3)]
+
+    for shape, axis1, axis2 in config:
+        data_np = np.random.uniform(size=shape)
+        data_mx = mx.nd.array(data_np, dtype=data_np.dtype)
+        ret_np = np.swapaxes(data_np, axis1=axis1, axis2=axis2)
+        ret_mx = mx.symbol.SwapAxis(data, dim1=axis1, dim2=axis2)
+        exe_c = ret_mx.bind(default_context(), args=[data_mx])
+        exe_c.forward(is_train=True)
+        out = exe_c.outputs[0]
+        assert_almost_equal(out, ret_np)
 
 
 @with_seed()
@@ -2914,6 +2964,7 @@ def test_big_transpose():
     assert_allclose(x_np, z.asnumpy().astype('uint8'))
 
 
+@with_seed()
 def test_larger_transpose():
     x = mx.nd.random.normal(shape=(50,51))
     y = mx.nd.transpose(x)
@@ -3274,9 +3325,9 @@ def test_batch_dot():
                         agrad_npy = np.empty((batch_size, m, k), dtype=data_type)
                         bgrad_npy = np.empty((batch_size, k, n), dtype=data_type)
                         a_init_grad_npy = np.random.normal(size=(batch_size, m, k))
-                        a_init_grad_npy = a_npy.astype(data_type)
+                        a_init_grad_npy = a_init_grad_npy.astype(data_type)
                         b_init_grad_npy = np.random.normal(size=(batch_size, k, n))
-                        b_init_grad_npy = b_npy.astype(data_type)
+                        b_init_grad_npy = b_init_grad_npy.astype(data_type)
                         for i in range(batch_size):
                             c_npy[i, :, :] = np.dot(a_npy[i, :, :], b_npy[i, :, :])
                             bgrad_npy[i, :, :] = np.dot(a_npy[i, :, :].T, ograd_npy[i, :, :])
@@ -9242,6 +9293,62 @@ def test_sample_normal_default_shape():
     assert s.shape == (1, 1)
     s = mx.nd.sample_normal(mu=mx.nd.array([10.0]), sigma=mx.nd.array([0.5]), shape=(1,))
     assert s.shape == (1, 1)
+
+
+def test_large_tensor_disabled_err_msg():
+    LARGE_X = 4300000000
+    MEDIUM_X = 1000000000
+    SMALL_Y = 1
+    shape = (2, LARGE_X)
+
+    def check_nd_array():
+        x = np.arange(0, LARGE_X)
+        assertRaises(MXNetError, mx.nd.array, x)
+
+    def check_nd_ones():
+        assertRaises(MXNetError, mx.nd.ones, shape)
+
+    def check_nd_zeros():
+        assertRaises(MXNetError, mx.nd.zeros, shape)
+
+    def check_nd_full():
+        val = 1
+        assertRaises(Exception, mx.nd.full, shape, val)
+
+    def check_nd_arange():
+        start = 0
+        stop = LARGE_X
+        assertRaises(Exception, mx.nd.arange, start, stop)
+
+    def check_nd_random():
+        shape = (2, LARGE_X)
+        def check_random_exp():
+            lam = 4
+            assertRaises(MXNetError, mx.nd.random_exponential, lam, shape)
+
+        def check_random_gamma():
+            alpha = 9
+            beta = 0.5
+            assertRaises(MXNetError, mx.nd.random_gamma, alpha, beta, shape)
+
+        def check_random_normal():
+            loc = 0
+            scale = 1
+            assertRaises(MXNetError, mx.nd.random_normal, loc, scale, shape)
+
+        def check_random_poisson():
+            lam = 4
+            assertRaises(MXNetError, mx.nd.random_poisson, alpha, lam, shape)
+
+        def check_random_randint():
+            low = 0
+            high = 1000000
+            assertRaises(MXNetError, mx.nd.random_randint, low, high, shape)
+
+        def check_random_uniform():
+            low = 0
+            hight = 1
+            assertRaises(MXNetError, mx.nd.random_uniform, alpha, beta, shape)
 
 
 if __name__ == '__main__':

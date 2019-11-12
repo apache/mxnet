@@ -116,11 +116,8 @@ struct AddTakeGradRspDeterministicKernel {
   }
 };
 
-/*! \brief name the struct Take instead of take
- * to avoid conflict with the take function in mshadow
- */
 template<bool clip = true>
-struct TakeGPU {
+struct TakeZeroAxisGPU {
   // assume that idx have been flattened to a 1-D tensor (N,)
   // assume that out_data and in_data have been flattened to 2-D tensors, (N, M) and (K, M)
   // M is the number of columns of in_data and out_data
@@ -180,8 +177,8 @@ void EmbeddingOpForwardDnsImpl<gpu>(mshadow::Stream<gpu>* s,
       Tensor<gpu, 2, DType> wmat = weight.get<gpu, 2, DType>(s);
       Tensor<gpu, 2, DType> out = output.get_with_shape<gpu, 2, DType>(
         Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
-      Kernel<TakeGPU<true>, gpu>::Launch(s, oshape.Size(), out.dptr_, wmat.dptr_,
-                                         idx.dptr_, wmat.shape_[1], wmat.shape_[0]);
+      Kernel<TakeZeroAxisGPU<true>, gpu>::Launch(s, oshape.Size(), out.dptr_, wmat.dptr_,
+                                                 idx.dptr_, wmat.shape_[1], wmat.shape_[0]);
     });
   });
 }
@@ -502,17 +499,17 @@ void TakeOpForward<gpu>(const nnvm::NodeAttrs& attrs,
       }
       if (actual_axis == 0) {
         if (param.mode == take_::kClip) {
-          Kernel<TakeGPU<true>, gpu>::Launch(s, oshape.Size(),
-                                             outputs[take_::kOut].dptr<DType>(),
-                                             inputs[take_::kArr].dptr<DType>(),
-                                             inputs[take_::kIdx].dptr<IType>(),
-                                             oshape.Size()/idxshape.Size(), arrshape[0]);
+          Kernel<TakeZeroAxisGPU<true>, gpu>::Launch(s, oshape.Size(),
+                                                     outputs[take_::kOut].dptr<DType>(),
+                                                     inputs[take_::kArr].dptr<DType>(),
+                                                     inputs[take_::kIdx].dptr<IType>(),
+                                                     oshape.Size()/idxshape.Size(), arrshape[0]);
         } else {
-          Kernel<TakeGPU<false>, gpu>::Launch(s, oshape.Size(),
-                                              outputs[take_::kOut].dptr<DType>(),
-                                              inputs[take_::kArr].dptr<DType>(),
-                                              inputs[take_::kIdx].dptr<IType>(),
-                                              oshape.Size()/idxshape.Size(), arrshape[0]);
+          Kernel<TakeZeroAxisGPU<false>, gpu>::Launch(s, oshape.Size(),
+                                                      outputs[take_::kOut].dptr<DType>(),
+                                                      inputs[take_::kArr].dptr<DType>(),
+                                                      inputs[take_::kIdx].dptr<IType>(),
+                                                      oshape.Size()/idxshape.Size(), arrshape[0]);
         }
       } else {
         mshadow::Shape<10> in_strides;
@@ -526,19 +523,27 @@ void TakeOpForward<gpu>(const nnvm::NodeAttrs& attrs,
           out_strides[i] = stride;
         }
         if (param.mode == take_::kClip) {
-          Kernel<Take<true>, gpu>::Launch(s, oshape.Size(),
-                                          outputs[take_::kOut].dptr<DType>(),
-                                          inputs[take_::kArr].dptr<DType>(),
-                                          inputs[take_::kIdx].dptr<IType>(),
-                                          in_strides, out_strides, arrshape.ndim(), oshape.ndim(),
-                                          idxshape.ndim(), arrshape[actual_axis], actual_axis);
+          Kernel<TakeNonzeroAxis<true>, gpu>::Launch(s, oshape.Size(),
+                                                     outputs[take_::kOut].dptr<DType>(),
+                                                     inputs[take_::kArr].dptr<DType>(),
+                                                     inputs[take_::kIdx].dptr<IType>(),
+                                                     out_strides[actual_axis-1],
+                                                     in_strides[actual_axis-1],
+                                                     in_strides[actual_axis],
+                                                     arrshape.ndim(), oshape.ndim(),
+                                                     idxshape.ndim(), arrshape[actual_axis],
+                                                     actual_axis);
         } else {
-          Kernel<Take<false>, gpu>::Launch(s, oshape.Size(),
-                                           outputs[take_::kOut].dptr<DType>(),
-                                           inputs[take_::kArr].dptr<DType>(),
-                                           inputs[take_::kIdx].dptr<IType>(),
-                                           in_strides, out_strides, arrshape.ndim(), oshape.ndim(),
-                                           idxshape.ndim(), arrshape[actual_axis], actual_axis);
+          Kernel<TakeNonzeroAxis<false>, gpu>::Launch(s, oshape.Size(),
+                                                      outputs[take_::kOut].dptr<DType>(),
+                                                      inputs[take_::kArr].dptr<DType>(),
+                                                      inputs[take_::kIdx].dptr<IType>(),
+                                                      out_strides[actual_axis-1],
+                                                      in_strides[actual_axis-1],
+                                                      in_strides[actual_axis],
+                                                      arrshape.ndim(), oshape.ndim(),
+                                                      idxshape.ndim(), arrshape[actual_axis],
+                                                      actual_axis);
         }
       }
     });

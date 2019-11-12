@@ -29,7 +29,7 @@ Visualization
 References
 ----------
 
-- `mxnet.viz <../api/symbol-related/mxnet.visualization.html>`_
+- `mxnet.viz </api/python/docs/api/mxnet/visualization/index.html>`_
 
 .. toctree::
    :hidden:

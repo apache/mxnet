@@ -21,12 +21,11 @@ from __future__ import absolute_import
 from ...context import current_context
 from . import _internal as _npi
 
-
-__all__ = ['randint', 'uniform', 'normal']
+__all__ = ['randint', 'uniform', 'normal', 'rand']
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
-    """Return random integers from `low` (inclusive) to `high` (exclusive).
+    r"""Return random integers from `low` (inclusive) to `high` (exclusive).
 
     Return random integers from the "discrete uniform" distribution of
     the specified dtype in the "half-open" interval [`low`, `high`). If
@@ -86,8 +85,35 @@ def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
     return _npi.random_randint(low, high, shape=size, dtype=dtype, ctx=ctx, out=out)
 
 
+def rand(*size, **kwargs):
+    r"""Random values in a given shape.
+
+    Create an array of the given shape and populate it with random
+    samples from a uniform distribution over [0, 1).
+    Parameters
+    ----------
+    d0, d1, ..., dn : int, optional
+        The dimensions of the returned array, should be all positive.
+        If no argument is given a single Python float is returned.
+    Returns
+    -------
+    out : ndarray
+       Random values.
+    Examples
+    --------
+    >>> np.random.rand(3,2)
+    array([[ 0.14022471,  0.96360618],  #random
+           [ 0.37601032,  0.25528411],  #random
+           [ 0.49313049,  0.94909878]]) #random
+    """
+    output_shape = ()
+    for s in size:
+        output_shape += (s,)
+    return uniform(0, 1, size=output_shape, **kwargs)
+
+
 def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
-    """Draw samples from a uniform distribution.
+    r"""Draw samples from a uniform distribution.
 
     Samples are uniformly distributed over the half-open interval
     ``[low, high)`` (includes low, but excludes high).  In other words,
@@ -142,7 +168,7 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
 
 
 def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
-    """Draw random samples from a normal (Gaussian) distribution.
+    r"""Draw random samples from a normal (Gaussian) distribution.
 
     Samples are distributed according to a normal distribution parametrized
     by *loc* (mean) and *scale* (standard deviation).
@@ -191,7 +217,7 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
 
 
 def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
-    """Generates a random sample from a given 1-D array
+    r"""Generates a random sample from a given 1-D array
 
     Parameters
     -----------

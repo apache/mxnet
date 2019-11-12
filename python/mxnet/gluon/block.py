@@ -24,7 +24,7 @@ import threading
 import copy
 import warnings
 import re
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer
@@ -93,6 +93,53 @@ class _BlockScope(object):
         _BlockScope._current.value = self._old_scope
 
 
+def _gather_type_ctx_info(args):
+    """Analyze the elements inside the nested args object and find:
+        - If there exists ndarray
+        - If there exists symbol
+        - All contexts appearing in args
+
+    Parameters
+    ----------
+    args : list or NDArray or Symbol
+        Could be a nested architecture.
+
+    Returns
+    -------
+    has_symbol : bool
+        Whether the elements in args contains symbols
+    has_ndarray : bool
+        Whether the elements in args contains ndarrays
+    ctx_set : set of mxnet.context.Context
+        Contains all possible contexts of the inner ndarrays in args. Can be empty if there is no
+        ndarray inside args.
+    first_ctx : mxnet.context.Context or None
+        Context of the first appeared NDArray (for backward-compatibility)
+    """
+    if isinstance(args, NDArray):
+        return False, True, {args.context}, args.context
+    elif isinstance(args, Symbol):
+        return True, False, set(), None
+    elif isinstance(args, (list, tuple)):
+        has_symbol = False
+        has_ndarray = False
+        ctx_set = set()
+        first_ctx = None
+        for ele in args:
+            ele_has_sym, ele_has_nd, ele_ctx_set, ele_first_ctx =\
+                _gather_type_ctx_info(ele)
+            has_symbol = has_symbol or ele_has_sym
+            has_ndarray = has_ndarray or ele_has_nd
+            if first_ctx is None and ele_first_ctx is not None:
+                first_ctx = ele_first_ctx
+            ctx_set = ctx_set | ele_ctx_set
+            if has_symbol and has_ndarray:
+                break
+        return has_symbol, has_ndarray, ctx_set, first_ctx
+    else:
+        return False, False, set(), None
+
+
 def _flatten(args, inout_str):
     """Parse the arguments into a flattened list + an additional format array.
     The format array stores the structure of the original arguments to help reconstruct the inputs.
@@ -120,9 +167,11 @@ def _flatten(args, inout_str):
     if args is None:
         return [None], int(-1)
 
-    assert isinstance(args, (list, tuple)), \
-        "HybridBlock {} must be (nested) list of Symbol or NDArray, " \
-        "but got {} of type {}".format(inout_str, str(args), str(type(args)))
+    if not isinstance(args, (list, tuple)):
+        raise ValueError("When hybridized, the input of HybridBlock {}"
+                         " must be (nested) list of Symbol"
+                         " or NDArray, "
+                         "but got {} of type {}".format(inout_str, str(args), str(type(args))))
     flat = []
     fmts = []
     for i in args:
@@ -164,9 +213,10 @@ def _regroup(args, fmt):
             else:
                 return args[:fmt], args[fmt:]
 
-        assert isinstance(args, (list, tuple)), \
-            "HybridBlock output must be (nested) list of Symbol or NDArray, " \
-            "but got {} of type {}".format(args, type(args))
+        if not isinstance(args, (list, tuple)):
+            raise ValueError("When hybridized, the output of HybridBlock must be (nested)"
+                             " list of Symbol or NDArray, "
+                             "but got {} of type {}".format(args, type(args)))
         ret = []
         for i in fmt:
             res, args = _merger(args, i)
@@ -363,7 +413,7 @@ class Block(object):
             ret.update(child._collect_params_with_prefix(prefix + name))
         return ret
 
-    def save_parameters(self, filename):
+    def save_parameters(self, filename, deduplicate=False):
         """Save parameters to file.
 
         Saved parameters can only be loaded with `load_parameters`. Note that this
@@ -374,14 +424,28 @@ class Block(object):
         ----------
         filename : str
             Path to file.
+        deduplicate : bool, default False
+            If True, save shared parameters only once. Otherwise, if a Block
+            contains multiple sub-blocks that share parameters, each of the
+            shared parameters will be separately saved for every sub-block.
 
         References
         ----------
         `Saving and Loading Gluon Models \
-        <https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html>`_
+        <https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/blocks/save_load_params.html>`_
         """
         params = self._collect_params_with_prefix()
-        arg_dict = {key : val._reduce() for key, val in params.items()}
+
+        if deduplicate:
+            # Shared parameters are stored only a single time as of MXNet 1.6.
+            # Shared parameters are registered under multiple prefixes returned by
+            # _collect_params_with_prefix. We select a single one and only store
+            # it. In load_parameters it is sufficient for a shared parameter to
+            # only set it for a single prefix.
+            reverse_params = {v: k for k, v in params.items()}
+            params = {v: k for k, v in reverse_params.items()}
+
+        arg_dict = {key: val._reduce() for key, val in params.items()}
         save_fn = _mx_npx.save if is_np_array() else ndarray.save
         save_fn(filename, arg_dict)
 
@@ -430,7 +494,7 @@ class Block(object):
         References
         ----------
         `Saving and Loading Gluon Models \
-        <https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html>`_
+        <https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/blocks/save_load_params.html>`_
         """
         if is_np_array():
             # failure may happen when loading parameters saved as NDArrays within
@@ -460,15 +524,24 @@ class Block(object):
 
         if not any('.' in i for i in loaded.keys()):
             # legacy loading
-            del loaded
+            loaded = None  # This should be changed to `del loaded` when dropping Python 2
             self.collect_params().load(
                 filename, ctx, allow_missing, ignore_extra, self.prefix,
                 cast_dtype=cast_dtype, dtype_source=dtype_source)
             return
 
         if not allow_missing:
-            for name in params.keys():
-                assert name in loaded, \
+            # Shared parameters are stored only a single time as of MXNet 1.6.
+            # We thus retrieve all prefixes (through _collect_params_with_prefix)
+            # that a shared parameter is used with. Check that there are no
+            # missing parameters that were not yet already loaded from the
+            # shared version.
+            params_inv = defaultdict(list)
+            for k, v in params.items():
+                params_inv[v].append(k)
+
+            for name, param in params.items():
+                assert any(p in loaded for p in params_inv[param]), \
                     "Parameter '%s' is missing in file '%s', which contains parameters: %s. " \
                     "Set allow_missing=True to ignore missing parameters."%(
                         name, filename, _brief_print_list(loaded.keys()))
@@ -1054,38 +1127,26 @@ class HybridBlock(Block):
     def forward(self, x, *args):
         """Defines the forward computation. Arguments can be either
         :py:class:`NDArray` or :py:class:`Symbol`."""
-        flatten_args = _flatten([x] + list(args), 'inputs')[0]
-        is_ndarray = None
-        ctx = None
-        exist_sym_nd = False
-        for ele in flatten_args:
-            if isinstance(ele, NDArray):
-                if is_ndarray is False:
-                    raise ValueError('In HybridBlock, we do not support mixed NDArrays and Symbols'
-                                     ' types for the input.\n'
-                                     'Received types are: {}.'
-                                     .format([type(ele) for ele in flatten_args]))
-                is_ndarray = True
-                exist_sym_nd = True
-                ctx = ele.context
-            elif isinstance(ele, Symbol):
-                if is_ndarray:
-                    raise ValueError('In HybridBlock, we do not support mixed NDArrays and Symbols'
-                                     ' types for the input.\n'
-                                     'Received types are: {}.'
-                                     .format([type(ele) for ele in flatten_args]))
-                is_ndarray = False
-                exist_sym_nd = True
-            else:
-                assert ele is None, 'Only support None, NDArray and Symbol as the input'
-        if not exist_sym_nd:
-            raise ValueError('There must at least one NDArray or Symbol in the input, received')
 
-        if is_ndarray:
-            with ctx:
-                if self._active:
+        has_symbol, has_ndarray, ctx_set, first_ctx = _gather_type_ctx_info([x] + list(args))
+        if has_symbol and has_ndarray:
+            raise ValueError('In HybridBlock, we do not support mixed NDArrays and Symbols'
+                             ' types for the input. Please check the type of the args.\n')
+        if not has_symbol and not has_ndarray:
+            raise ValueError('In HybridBlock, there must be one NDArray or one Symbol in the input.'
+                             ' Please check the type of the args.\n')
+        if has_ndarray:
+            ctx = first_ctx
+            if self._active:
+                if len(ctx_set) > 1:
+                    raise ValueError('Find multiple contexts in the input, '
+                                     'After hybridized, the HybridBlock only supports one input '
+                                     'context. You can print the ele.context in the '
+                                     'input arguments to inspect their contexts. '
+                                     'Find all contexts = {}'.format(ctx_set))
+                with ctx:
                     return self._call_cached_op(x, *args)
-
+            with ctx:
                 try:
                     params = {k: v.data(ctx) for k, v in self._reg_params.items()}
                 except DeferredInitializationError:

@@ -80,7 +80,7 @@ void NonzeroForwardGPU(const nnvm::NodeAttrs& attrs,
     ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(temp_storage_bytes), stream);
   prefix_sum = reinterpret_cast<int32_t*>(workspace.dptr_);
   d_temp_storage = workspace.dptr_ + buffer_size;
-  MSHADOW_TYPE_SWITCH(in.dtype(), DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(in.dtype(), DType, {
     mxnet_op::Kernel<PrefixSumInit, gpu>::Launch(
       stream, in_size, prefix_sum, in.data().dptr<DType>());
   });

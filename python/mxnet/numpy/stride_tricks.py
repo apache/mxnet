@@ -46,11 +46,20 @@ def broadcast_arrays(*args):
         These arrays are copies of the original arrays unless that all the input
         arrays have the same shape, the input list of arrays are returned
         instead of a list of copies.
+
+    Examples
+    --------
+    >>> x = np.array([[1,2,3]])
+    >>> y = np.array([[4],[5]])
+    >>> np.broadcast_arrays(x, y)
+    [array([[1., 2., 3.],
+           [1., 2., 3.]]), array([[4., 4., 4.],
+           [5., 5., 5.]])]
     """
     shape = _broadcast_shape(*args)
 
     if all(array.shape == shape for array in args):
         # Common case where nothing needs to be broadcasted.
-        return args
+        return list(args)
 
     return [_mx_np_op.broadcast_to(array, shape) for array in args]

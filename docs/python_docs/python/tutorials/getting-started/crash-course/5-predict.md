@@ -21,7 +21,7 @@ A saved model can be used in multiple places, such as to continue training, to f
 
 ## Prerequisites
 
-Please run the [previous tutorial](train.md) to train the network and save its parameters to file. You will need this file to run the following steps.
+Please run the [previous tutorial](4-train.html) to train the network and save its parameters to file. You will need this file to run the following steps.
 
 ```{.python .input  n=1}
 from mxnet import nd

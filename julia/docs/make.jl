@@ -19,6 +19,39 @@ using Documenter
 using DocumenterMarkdown
 using MXNet
 
+"""
+Return all files of a submodule
+
+julia> listpages("ndarray")
+15-element Array{String,1}:
+ "ndarray.jl"
+ "ndarray/activation.jl"
+ "ndarray/arithmetic.jl"
+ "ndarray/array.jl"
+ ...
+ "ndarray/statistic.jl"
+ "ndarray/trig.jl"
+ "ndarray/type.jl"
+"""
+listpages(x) =
+  ["$x.jl"; joinpath.(x, readdir(joinpath(@__DIR__, "..", "src", x)))]
+
+const api_pages = [
+  "api/context.md",
+  "api/ndarray.md",
+  "api/symbolic-node.md",
+  "api/model.md",
+  "api/initializers.md",
+  "api/optimizers.md",
+  "api/callbacks.md",
+  "api/metric.md",
+  "api/io.md",
+  "api/nn-factory.md",
+  "api/executor.md",
+  "api/kvstore.md",
+  "api/visualize.md",
+]
+
 makedocs(
   sitename = "MXNet.jl",
   modules  = MXNet,

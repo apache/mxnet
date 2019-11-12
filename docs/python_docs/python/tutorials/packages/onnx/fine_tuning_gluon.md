@@ -31,12 +31,12 @@ In this tutorial we will:
 ## Pre-requisite
 
 To run the tutorial you will need to have installed the following python modules:
-- [MXNet > 1.1.0](http://mxnet.apache.org/install/index.html)
+- [MXNet > 1.1.0](/get_started)
 - [onnx](https://github.com/onnx/onnx)
 - matplotlib
 
 We recommend that you have first followed this tutorial:
-- [Inference using an ONNX model on MXNet Gluon](https://mxnet.apache.org/tutorials/onnx/inference_on_onnx_model.html)
+- [Inference using an ONNX model on MXNet Gluon](/api/python/docs/tutorials/packages/onnx/inference_on_onnx_model.html)
 
 
 ```python
@@ -333,7 +333,7 @@ The trainer will retrain and fine-tune the entire network. If we use `dense_laye
 
 
 ```python
-trainer = gluon.Trainer(net.collect_params(), 'sgd', 
+trainer = gluon.Trainer(net.collect_params(), 'sgd',
                         {'learning_rate': LEARNING_RATE,
                          'wd':WDECAY,
                          'momentum':MOMENTUM})
@@ -388,15 +388,15 @@ for epoch in range(5):
         loss.backward()
         trainer.step(data.shape[0])
 
-    nd.waitall() # wait at the end of the epoch    
-    new_val_accuracy = evaluate_accuracy_gluon(dataloader_test, net)    
+    nd.waitall() # wait at the end of the epoch
+    new_val_accuracy = evaluate_accuracy_gluon(dataloader_test, net)
     print("Epoch [{0}] Test Accuracy {1:.4f} ".format(epoch, new_val_accuracy))
 
     # We perform early-stopping regularization, to prevent the model from overfitting
     if val_accuracy > new_val_accuracy:
         print('Validation accuracy is decreasing, stopping training')
         break
-    val_accuracy = new_val_accuracy              
+    val_accuracy = new_val_accuracy
 ```
 
 `Epoch 4, Test Accuracy 0.8942307829856873`<!--notebook-skip-line-->

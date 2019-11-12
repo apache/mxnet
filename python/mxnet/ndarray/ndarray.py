@@ -58,6 +58,7 @@ _STORAGE_TYPE_UNDEFINED = -1
 _STORAGE_TYPE_DEFAULT = 0
 _STORAGE_TYPE_ROW_SPARSE = 1
 _STORAGE_TYPE_CSR = 2
+_SIGNED_INT32_UPPER_LIMIT = (2**31 - 1)
 
 # pylint: disable= no-member
 _DTYPE_NP_TO_MX = {
@@ -155,6 +156,15 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
             ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
             ctypes.byref(hdl)))
     else:
+        # When shape is larger than unit32 then there is an overflow error at python end itself.
+        # It needs to be caught here since the call doesn't even reach backend.
+        size = 1
+        for idx in shape:
+            size = size * idx
+        if size > _SIGNED_INT32_UPPER_LIMIT:
+            raise Exception("[_new_alloc_handle] Size of tensor you are trying to allocate is " +
+                            "larger than 2^31 elements. Please build with flag " +
+                            "USE_INT64_TENSOR_SIZE=1")
         check_call(_LIB.MXNDArrayCreateEx(
             c_array_buf(mx_uint, native_array('I', shape)),
             mx_uint(len(shape)),
@@ -737,6 +747,19 @@ fixed-size items.
             squeeze_axes = tuple([ax for ax in squeeze_axes if ax < len(value_nd.shape)])
             value_nd = value_nd.squeeze(axis=tuple(squeeze_axes))
 
+        # handle the cases like the following
+        # a = nd.zeros((3, 3)), b = nd.ones((1, 1, 1, 1, 3)), a[0] = b
+        # b cannot broadcast directly to a[0].shape unless its leading 1-size axes are trimmed
+        if value_nd.ndim > len(bcast_shape):
+            squeeze_axes = []
+            for i in range(value_nd.ndim - len(bcast_shape)):
+                if value_nd.shape[i] == 1:
+                    squeeze_axes.append(i)
+                else:
+                    break
+            if squeeze_axes:
+                value_nd = value_nd.squeeze(squeeze_axes)
+
         if value_nd.shape != bcast_shape:
             if value_nd.size == 0:
                 value_nd = value_nd.reshape(bcast_shape)
@@ -1050,7 +1073,10 @@ fixed-size items.
 
         The ``ax_len`` is used to convert `slice` objects to integer arrays.
         """
-        idx_dtype = 'int32'
+        if sys.version_info[0] > 2 and _int64_enabled():
+            idx_dtype = 'int64'
+        else:
+            idx_dtype = 'int32'
         if isinstance(idx, NDArray):
             if idx.dtype != idx_dtype:
                 idx = idx.astype(idx_dtype)
