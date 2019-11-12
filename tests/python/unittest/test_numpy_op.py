@@ -2486,6 +2486,41 @@ def test_np_clip():
 
 @with_seed()
 @use_np
+def test_npx_random_bernoulli():
+    def _test_bernoulli_exception(prob, logit):
+        output = npx.random.bernoulli(prob=prob, logit=logit).asnumpy()
+
+    shapes = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
+    dtypes = ['float16', 'float32', 'float64', 'int32', 'bool']
+    for shape, dtype in itertools.product(shapes, dtypes):
+        prob = np.random.uniform(size=shape)
+        logit = np.log(prob) - np.log(1 - prob)
+        expected_shape = shape
+        if not isinstance(shape, tuple):
+            expected_shape = () if shape is None else (shape,)
+        out_prob = npx.random.bernoulli(prob=prob, size=shape, dtype=dtype)
+        assert out_prob.shape == expected_shape
+        assert int((out_prob.asnumpy() == 0).sum() + (out_prob.asnumpy() == 1).sum()) == out_prob.size
+        out_logit = npx.random.bernoulli(logit=logit, size=shape, dtype=dtype)
+        assert out_logit.shape == expected_shape
+        assert int((out_logit.asnumpy() == 0).sum() + (out_logit.asnumpy() == 1).sum()) == out_logit.size
+        # Test Exception.
+        assertRaises(ValueError, _test_bernoulli_exception, prob, logit)
+        if prob.size > 0:
+            # larger than 1
+            assertRaises(MXNetError, _test_bernoulli_exception, prob + 2.0, None)
+            # smaller than 0
+            assertRaises(MXNetError, _test_bernoulli_exception, prob - 2.0, None)
+            # mixed case
+            low, high = (-1.0, 2.0)
+            # uniform(-1, 2)
+            scaled_prob = low + (high - low) * prob
+            if not ((scaled_prob.asnumpy() >= 0).all() and (scaled_prob.asnumpy() <= 1).all()):
+                assertRaises(MXNetError, _test_bernoulli_exception, scaled_prob, None)
+
+
+@with_seed()
+@use_np
 def test_np_random():
     shapes = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
     dtypes = ['float16', 'float32', 'float64']

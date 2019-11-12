@@ -158,6 +158,7 @@ void NumpyNormalForward(const nnvm::NodeAttrs &attrs,
   Tensor<xpu, 1, float> indicator_device = workspace.Slice(output_len, output_len + 1);
   float indicator_host = 1.0;
   float *indicator_device_ptr = indicator_device.dptr_;
+  Kernel<set_zero, xpu>::Launch(s, 1, indicator_device_ptr);
   prnd->SampleGaussian(&normal_tensor, 0.0, 1.0);
   mxnet::TShape new_lshape, new_hshape, new_oshape;
 

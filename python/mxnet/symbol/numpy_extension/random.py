@@ -15,64 +15,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Namespace for ops used in imperative programming."""
+"""Namespace for operators used in Gluon dispatched by F=symbol."""
 
 from __future__ import absolute_import
-from .. import random as _mx_rand
-from ..ndarray import numpy_extension as _mx_nd_npx
+from ...context import current_context
+from ..numpy import _internal as _npi
 
-
-__all__ = ['seed', 'bernoulli']
-
-
-def seed(seed, ctx='all'):  # pylint: disable=redefined-outer-name
-    r"""Seeds the random number generators in MXNet.
-
-    This affects the behavior of modules in MXNet that uses random number generators,
-    like the dropout operator and `ndarray`'s random sampling operators.
-
-    Parameters
-    ----------
-    seed : int
-        The random number seed.
-
-    ctx : Context
-        The device context of the generator. The default is "all" which means seeding random
-        number generators of all devices.
-
-    Notes
-    -----
-    Random number generators in MXNet are device specific.
-    `npx.random.seed(seed)` sets the state of each generator using `seed` and the
-    device id. Therefore, random numbers generated from different devices can be different
-    even if they are seeded using the same seed.
-
-    To produce identical random number sequences independent of the device id,
-    set optional `ctx` argument. This produces the same sequence of random numbers independent
-    of the device id, but the sequence can be different on different kind of devices as MXNet's
-    random number generators for CPU and GPU use different algorithms.
-
-    Example
-    -------
-    >>> from mxnet import np, npx
-    >>> npx.set_np()
-    >>> npx.random.seed(0)
-    >>> np.random.uniform()
-    array(0.5488135)
-    >>> npx.random.seed(128)
-    >>> np.random.uniform()
-    array(0.03812965)
-    >>> npx.random.seed(128)
-    >>> np.random.uniform()
-    array(0.03812965)
-    >>> npx.random.seed(128)
-    >>> np.random.uniform(ctx=npx.gpu(0))
-    array(0.9894903, ctx=gpu(0))
-    >>> npx.random.seed(128)
-    >>> np.random.uniform(ctx=npx.gpu(0))
-    array(0.9894903, ctx=gpu(0))
-    """
-    _mx_rand.seed(seed_state=seed, ctx=ctx)
+__all__ = ['bernoulli']
 
 
 def bernoulli(prob=None, logit=None, size=None, dtype=None, ctx=None, out=None):
@@ -106,7 +55,7 @@ def bernoulli(prob=None, logit=None, size=None, dtype=None, ctx=None, out=None):
 
     Returns
     -------
-    out : ndarray
+    out : _Symbol
         Drawn samples from the parameterized bernoulli distribution.
 
     Examples
@@ -125,4 +74,31 @@ def bernoulli(prob=None, logit=None, size=None, dtype=None, ctx=None, out=None):
         [1., 1., 1., 0.],
         [1., 0., 1., 0.]])
     """
-    return _mx_nd_npx.random.bernoulli(prob, logit, size, dtype, ctx, out)
+    from ..numpy import _Symbol as np_symbol
+    tensor_type_name = np_symbol
+    if (prob is None) == (logit is None):
+        raise ValueError(
+            "Either `prob` or `logit` must be specified, but not both. " +
+            "Received prob={}, logit={}".format(prob, logit))
+    if dtype is None:
+        dtype = 'float32'
+    if ctx is None:
+        ctx = current_context()
+    if size == ():
+        size = None
+    if prob is not None:
+        is_tensor = isinstance(prob, tensor_type_name)
+        if is_tensor:
+            return _npi.bernoulli(prob, prob=None, logit=None, is_logit=False,
+                                  size=size, ctx=ctx, dtype=dtype, out=out)
+        else:
+            return _npi.bernoulli(prob=prob, logit=None, is_logit=False,
+                                  size=size, ctx=ctx, dtype=dtype, out=out)
+    else:
+        is_tensor = isinstance(logit, tensor_type_name)
+        if is_tensor:
+            return _npi.bernoulli(logit, prob=None, logit=None, is_logit=True,
+                                  size=size, ctx=ctx, dtype=dtype, out=out)
+        else:
+            return _npi.bernoulli(prob=None, logit=logit, is_logit=True,
+                                  size=size, ctx=ctx, dtype=dtype, out=out)

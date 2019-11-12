@@ -19,6 +19,7 @@
 
 from . import _op
 from . import image
+from . import random
 from . import _register
 from ._op import *  # pylint: disable=wildcard-import
 
