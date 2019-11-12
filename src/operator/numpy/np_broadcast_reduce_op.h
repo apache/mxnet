@@ -52,6 +52,7 @@ struct NumpyReduceAxesParam : public dmlc::Parameter<NumpyReduceAxesParam> {
       .add_enum("int8", mshadow::kInt8)
       .add_enum("int32", mshadow::kInt32)
       .add_enum("int64", mshadow::kInt64)
+      .add_enum("bool", mshadow::kBool)
       .set_default(dmlc::optional<int>())
       .describe("The type of the returned array and of the accumulator in which the elements are "
                 "summed. The dtype of a is used by default unless a has an integer dtype of less "

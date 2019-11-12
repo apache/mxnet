@@ -245,7 +245,7 @@ void Reduce(Stream<cpu>* s, const TBlob& small, const OpReqType req,
 #ifndef _WIN32
     MXNET_ACC_TYPE_SWITCH(mshadow::DataType<DType>::kFlag, DataType, AType, {
       typedef typename std::conditional<safe_acc, AType, DataType>::type AccType;
-      MSHADOW_TYPE_SWITCH(small.type_flag_, OType, {
+      MSHADOW_TYPE_SWITCH_WITH_BOOL(small.type_flag_, OType, {
         typedef typename std::conditional<safe_acc, OType, DataType>::type OutType;
         seq_reduce_compute<Reducer, ndim, AccType, DataType, OutType, OP>(
           N, M, req == kAddTo, big.dptr<DataType>(), small.dptr<OutType>(),
@@ -255,7 +255,7 @@ void Reduce(Stream<cpu>* s, const TBlob& small, const OpReqType req,
 #else
     MXNET_REAL_ACC_TYPE_SWITCH(mshadow::DataType<DType>::kFlag, DataType, AType, {
       typedef typename std::conditional<safe_acc, AType, DataType>::type AccType;
-      MSHADOW_TYPE_SWITCH(small.type_flag_, OType, {
+      MSHADOW_TYPE_SWITCH_WITH_BOOL(small.type_flag_, OType, {
         typedef typename std::conditional<safe_acc, OType, DataType>::type OutType;
         seq_reduce_compute<Reducer, ndim, AccType, DataType, OutType, OP>(
           N, M, req == kAddTo, big.dptr<DataType>(), small.dptr<OutType>(),
