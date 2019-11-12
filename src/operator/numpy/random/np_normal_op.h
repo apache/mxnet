@@ -183,7 +183,7 @@ void NumpyNormalForward(const nnvm::NodeAttrs &attrs,
         Kernel<check_legal_scale_kernel<IType>, xpu>::Launch(
             s, inputs[0].Size(), inputs[0].dptr<IType>(), indicator_device_ptr);
       });
-      _copy<xpu>(&indicator_host, indicator_device_ptr);
+      _copy<xpu>(s, &indicator_host, indicator_device_ptr);
       CHECK_GE(indicator_host, 0.0) << "ValueError: scale < 0";
     } else {
       scalar_pos = 1;
@@ -208,7 +208,7 @@ void NumpyNormalForward(const nnvm::NodeAttrs &attrs,
       Kernel<check_legal_scale_kernel<IType>, xpu>::Launch(
           s, inputs[1].Size(), inputs[1].dptr<IType>(), indicator_device_ptr);
     });
-    _copy<xpu>(&indicator_host, indicator_device_ptr);
+    _copy<xpu>(s, &indicator_host, indicator_device_ptr);
     CHECK_GE(indicator_host, 0.0) << "ValueError: scale < 0";
     int ndim = FillShape(inputs[0].shape_, inputs[1].shape_, outputs[0].shape_,
                          &new_lshape, &new_hshape, &new_oshape);

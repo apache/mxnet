@@ -305,7 +305,8 @@ __global__ void nms_kernel(const int n_boxes, const float nms_overlap_thresh,
   }
 }
 
-void _nms(const mshadow::Tensor<gpu, 2>& boxes,
+void _nms(mshadow::Stream<gpu> *s,
+          const mshadow::Tensor<gpu, 2>& boxes,
           const float nms_overlap_thresh,
           const int rpn_post_nms_top_n,
           int *keep,
@@ -330,10 +331,12 @@ void _nms(const mshadow::Tensor<gpu, 2>& boxes,
                                   mask_dev);
   FRCNN_CUDA_CHECK(cudaPeekAtLastError());
   std::vector<uint64_t> mask_host(boxes_num * col_blocks);
-  FRCNN_CUDA_CHECK(cudaMemcpy(&mask_host[0],
-                              mask_dev,
-                              sizeof(uint64_t) * boxes_num * col_blocks,
-                              cudaMemcpyDeviceToHost));
+  cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
+  FRCNN_CUDA_CHECK(cudaMemcpyAsync(&mask_host[0],
+                                   mask_dev,
+                                   sizeof(uint64_t) * boxes_num * col_blocks,
+                                   cudaMemcpyDeviceToHost, stream));
+  FRCNN_CUDA_CHECK(cudaStreamSynchronize(stream));
 
   std::vector<uint64_t> remv(col_blocks);
   memset(&remv[0], 0, sizeof(uint64_t) * col_blocks);
@@ -456,9 +459,10 @@ class ProposalGPUOp : public Operator{
     float* workspace_proposals_ptr = NULL;
     FRCNN_CUDA_CHECK(cudaMalloc(&workspace_proposals_ptr, sizeof(float) * count * 5));
     Tensor<xpu, 2> workspace_proposals(workspace_proposals_ptr, Shape2(count, 5));
-    FRCNN_CUDA_CHECK(cudaMemcpy(workspace_proposals.dptr_,
-                                &anchors[0], sizeof(float) * anchors.size(),
-      cudaMemcpyHostToDevice));
+    cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
+    FRCNN_CUDA_CHECK(cudaMemcpyAsync(workspace_proposals.dptr_,
+                                     &anchors[0], sizeof(float) * anchors.size(),
+                                     cudaMemcpyHostToDevice, stream));
 
     // Copy proposals to a mesh grid
     dim3 dimGrid((count + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock);
@@ -471,9 +475,10 @@ class ProposalGPUOp : public Operator{
 
     // im_info is small, we want to copy them to cpu
     std::vector<float> cpu_im_info(3);
-    FRCNN_CUDA_CHECK(cudaMemcpy(&cpu_im_info[0], im_info.dptr_,
-                                sizeof(float) * cpu_im_info.size(),
-                                cudaMemcpyDeviceToHost));
+    FRCNN_CUDA_CHECK(cudaMemcpyAsync(&cpu_im_info[0], im_info.dptr_,
+                                     sizeof(float) * cpu_im_info.size(),
+                                     cudaMemcpyDeviceToHost, stream));
+    FRCNN_CUDA_CHECK(cudaStreamSynchronize(stream));
 
     // prevent padded predictions
     int real_height = static_cast<int>(cpu_im_info[0] / param_.feature_stride);
@@ -543,7 +548,7 @@ class ProposalGPUOp : public Operator{
     // perform nms
     std::vector<int> _keep(workspace_ordered_proposals.size(0));
     int out_size = 0;
-    _nms(workspace_ordered_proposals,
+    _nms(s, workspace_ordered_proposals,
          param_.threshold,
          rpn_post_nms_top_n,
          &_keep[0],
@@ -552,8 +557,8 @@ class ProposalGPUOp : public Operator{
     // copy nms result to gpu
     int* keep;
     FRCNN_CUDA_CHECK(cudaMalloc(&keep, sizeof(int) * _keep.size()));
-    FRCNN_CUDA_CHECK(cudaMemcpy(keep, &_keep[0], sizeof(int) * _keep.size(),
-                                cudaMemcpyHostToDevice));
+    FRCNN_CUDA_CHECK(cudaMemcpyAsync(keep, &_keep[0], sizeof(int) * _keep.size(),
+                                     cudaMemcpyHostToDevice, stream));
 
     // copy results after nms
     dimGrid.x = (param_.rpn_post_nms_top_n + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
