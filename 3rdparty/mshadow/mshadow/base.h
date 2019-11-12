@@ -634,7 +634,7 @@ namespace isnan_typed {
   }
   template<>
   MSHADOW_XINLINE bool IsNan(volatile mshadow::half::half_t val) {
-    return (val.half_ & 0x7fff) > 0x7c00;
+    return (val.half_ & (~MSHADOW_HALF_SIGN_BIT)) > MSHADOW_HALF_EXPONENT_BITS;
   }
 }  // namespace isnan_typed
 
@@ -660,7 +660,7 @@ namespace isinf_typed {
   }
   template<>
   MSHADOW_XINLINE bool IsInf(volatile mshadow::half::half_t val) {
-    return (val.half_ & 0x7fff) == 0x7c00;
+    return (val.half_ & (~MSHADOW_HALF_SIGN_BIT)) == MSHADOW_HALF_EXPONENT_BITS;
   }
 }  // namespace isinf_typed
 
@@ -730,7 +730,8 @@ MSHADOW_XINLINE double NegInfValue<double>(void) {
 /*! \brief negative infinity value of float16 */
 template<>
 MSHADOW_XINLINE half::half_t NegInfValue<half::half_t>(void) {
-  return half::half_t::Binary(0xfc00);
+  return half::half_t::Binary(
+      MSHADOW_HALF_SIGN_BIT | MSHADOW_HALF_EXPONENT_BITS);
 }
 
 /*!
@@ -796,7 +797,7 @@ MSHADOW_XINLINE double PosInfValue<double>(void) {
 /*! \brief positive infinity value of float16 */
 template<>
 MSHADOW_XINLINE half::half_t PosInfValue<half::half_t>(void) {
-  return half::half_t::Binary(0x7c00);
+  return half::half_t::Binary(MSHADOW_HALF_EXPONENT_BITS);
 }
 
 }  // namespace limits
