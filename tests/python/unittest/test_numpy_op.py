@@ -2312,6 +2312,11 @@ def test_npx_random_bernoulli():
         out_logit = npx.random.bernoulli(logit=logit, size=shape, dtype=dtype)
         assert out_logit.shape == expected_shape
         assert int((out_logit.asnumpy() == 0).sum() + (out_logit.asnumpy() == 1).sum()) == out_logit.size
+        # Test Exception.
+        assertRaises(ValueError, npx.random.bernoulli, prob=prob, logit=logit)
+        if prob.size > 0:
+            assertRaises(MXNetError, npx.random.bernoulli, prob=prob + 2.0)
+            assertRaises(MXNetError, npx.random.bernoulli, prob=prob - 2.0)
 
 
 @with_seed()

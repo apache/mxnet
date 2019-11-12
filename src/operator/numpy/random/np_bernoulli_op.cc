@@ -32,7 +32,6 @@ namespace op {
 DMLC_REGISTER_PARAMETER(NumpyBernoulliParam);
 
 NNVM_REGISTER_OP(_npi_bernoulli)
-.describe("Sample frmo bernoulli distribution")
 .set_num_inputs(
   [](const nnvm::NodeAttrs& attrs) {
     const NumpyBernoulliParam& param = nnvm::get<NumpyBernoulliParam>(attrs.parsed);
@@ -51,8 +50,7 @@ NNVM_REGISTER_OP(_npi_bernoulli)
     if (param.logit.has_value() || param.prob.has_value()) {
       num_inputs -= 1;
     }
-    if (num_inputs == 0) return std::vector<std::string>();
-    return std::vector<std::string>{"input1"};
+    return (num_inputs == 0) ? std::vector<std::string>() : std::vector<std::string>{"input1"};
   })
 .set_attr_parser(ParamParser<NumpyBernoulliParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", UnaryDistOpShape<NumpyBernoulliParam>)
