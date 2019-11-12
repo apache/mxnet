@@ -46,9 +46,16 @@ use constant default_numerical_threshold => 1e-6;
     b : pdl
 =cut
 
+func isNaN(PDL $a)
+{
+    # Only NaN is not greater, equal to, or less than zero.
+    return !(($a > 0) + ($a <= 0));
+}
+
 func same(PDL $a, PDL $b)
 {
-    return ($a != $b)->sum == 0;
+    my $rv = ($a != $b) - isNaN($a) * isNaN($b);
+    return $rv->sum == 0;
 }
 
 =head2 allclose

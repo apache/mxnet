@@ -44,19 +44,20 @@ from ..util import _sanity_check_params, set_module, wrap_np_unary_func, wrap_np
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
+from ..ndarray.ndarray import _storage_type
 
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide',
            'mod', 'remainder', 'power', 'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10',
            'sqrt', 'cbrt', 'abs', 'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative',
-           'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh',
+           'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'append',
            'tensordot', 'histogram', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange',
            'split', 'vsplit', 'concatenate', 'stack', 'vstack', 'column_stack', 'dstack', 'mean', 'maximum', 'minimum',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming',
            'blackman', 'flip', 'around', 'arctan2', 'hypot', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril',
            'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
            'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero', 'shares_memory',
-           'may_share_memory', 'diff']
+           'may_share_memory', 'diff', 'resize', 'nan_to_num']
 
 # Return code for dispatching indexing function call
 _NDARRAY_UNSUPPORTED_INDEXING = -1
@@ -120,6 +121,8 @@ def _reshape_view(a, *shape):
 # Have to use 0 as default value for stype since pylint does not allow
 # importing _STORAGE_TYPE_DEFAULT from ndarray.py.
 def _np_ndarray_cls(handle, writable=True, stype=0):
+    if stype == -1:
+        stype = _storage_type(handle)
     if stype != 0:
         raise ValueError('_np_ndarray_cls currently only supports default storage '
                          'type, while received stype = {}'.format(stype))
@@ -2399,6 +2402,14 @@ def add(x1, x2, out=None, **kwargs):
     add : ndarray or scalar
         The sum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars.
 
+    Notes
+    -----
+    This operator now supports automatic type promotion. The resulting type will be determined
+    according to the following rules:
+        * If both inputs are of floating number types, the output is the more precise type.
+        * If only one of the inputs is floating number type, the result is that type.
+        * If both inputs are of integer types (including boolean), not supported yet.
+
     Examples
     --------
     >>> np.add(1.0, 4.0)
@@ -2437,6 +2448,14 @@ def subtract(x1, x2, out=None, **kwargs):
     subtract : ndarray or scalar
         The difference of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars.
 
+    Notes
+    -----
+    This operator now supports automatic type promotion. The resulting type will be determined
+    according to the following rules:
+        * If both inputs are of floating number types, the output is the more precise type.
+        * If only one of the inputs is floating number type, the result is that type.
+        * If both inputs are of integer types (including boolean), not supported yet.
+
     Examples
     --------
     >>> np.subtract(1.0, 4.0)
@@ -2472,6 +2491,14 @@ def multiply(x1, x2, out=None, **kwargs):
     -------
     out : ndarray or scalar
         The difference of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars.
+
+    Notes
+    -----
+    This operator now supports automatic type promotion. The resulting type will be determined
+    according to the following rules:
+        * If both inputs are of floating number types, the output is the more precise type.
+        * If only one of the inputs is floating number type, the result is that type.
+        * If both inputs are of integer types (including boolean), not supported yet.
 
     Examples
     --------
@@ -2511,6 +2538,14 @@ def divide(x1, x2, out=None, **kwargs):
     out : ndarray or scalar
         This is a scalar if both x1 and x2 are scalars.
 
+    Notes
+    -----
+    This operator now supports automatic type promotion. The resulting type will be determined
+    according to the following rules:
+        * If both inputs are of floating number types, the output is the more precise type.
+        * If only one of the inputs is floating number type, the result is that type.
+        * If both inputs are of integer types (including boolean), the output is of float32 type.
+
     Examples
     --------
     >>> np.true_divide(x, 4)
@@ -2544,6 +2579,14 @@ def true_divide(x1, x2, out=None):
     -------
     out : ndarray or scalar
         This is a scalar if both x1 and x2 are scalars.
+
+    Notes
+    -----
+    This operator now supports automatic type promotion. The resulting type will be determined
+    according to the following rules:
+        * If both inputs are of floating number types, the output is the more precise type.
+        * If only one of the inputs is floating number type, the result is that type.
+        * If both inputs are of integer types (including boolean), the output is of float32 type.
 
     Examples
     --------
@@ -4803,8 +4846,51 @@ def concatenate(seq, axis=0, out=None):
     >>> np.concatenate((a, b.T), axis=1)
     array([[1., 2., 5.],
            [3., 4., 6.]])
+
+    >>> np.concatenate((a, b), axis=None)
+    array([1., 2., 3., 4., 5., 6.])
     """
     return _mx_nd_np.concatenate(seq, axis=axis, out=out)
+
+
+@set_module('mxnet.numpy')
+def append(arr, values, axis=None):  # pylint: disable=redefined-outer-name
+    """
+    Append values to the end of an array.
+
+    Parameters
+    ----------
+    arr : ndarray
+        Values are appended to a copy of this array.
+    values : ndarray
+        These values are appended to a copy of `arr`.  It must be of the
+        correct shape (the same shape as `arr`, excluding `axis`).  If
+        `axis` is not specified, `values` can be any shape and will be
+        flattened before use.
+    axis : int, optional
+        The axis along which `values` are appended.  If `axis` is not
+        given, both `arr` and `values` are flattened before use.
+
+    Returns
+    -------
+    append : ndarray
+        A copy of `arr` with `values` appended to `axis`.  Note that
+        `append` does not occur in-place: a new array is allocated and
+        filled.  If `axis` is None, `out` is a flattened array.
+
+    Examples
+    --------
+    >>> np.append(np.array([1, 2, 3]), np.array([[4, 5, 6],[7, 8, 9]]))
+    array([1., 2., 3., 4., 5., 6., 7., 8., 9.])
+
+    When `axis` is specified, `values` must have the correct shape.
+
+    >>> np.append(np.array([[1, 2, 3], [4, 5, 6]]), np.array([[7, 8, 9]]), axis=0)
+    array([[1., 2., 3.],
+           [4., 5., 6.],
+           [7., 8., 9.]])
+    """
+    return _mx_nd_np.append(arr, values, axis=axis)
 
 
 @set_module('mxnet.numpy')
@@ -7018,10 +7104,9 @@ def may_share_memory(a, b, max_work=None):
     return _mx_nd_np.may_share_memory(a, b, max_work)
 
 
-def diff(a, n=1, axis=-1, prepend=None, append=None):
+@set_module('mxnet.numpy')
+def diff(a, n=1, axis=-1, prepend=None, append=None):  # pylint: disable=redefined-outer-name
     r"""
-    numpy.diff(a, n=1, axis=-1, prepend=<no value>, append=<no value>)
-
     Calculate the n-th discrete difference along the given axis.
 
     Parameters
@@ -7065,3 +7150,147 @@ def diff(a, n=1, axis=-1, prepend=None, append=None):
     if (prepend or append):
         raise NotImplementedError('prepend and append options are not supported yet')
     return _mx_nd_np.diff(a, n=n, axis=axis)
+
+
+@set_module('mxnet.numpy')
+def resize(a, new_shape):
+    """
+    Return a new array with the specified shape.
+    If the new array is larger than the original array, then the new
+    array is filled with repeated copies of `a`.  Note that this behavior
+    is different from a.resize(new_shape) which fills with zeros instead
+    of repeated copies of `a`.
+
+    Parameters
+    ----------
+    a : ndarray
+        Array to be resized.
+    new_shape : int or tuple of int
+        Shape of resized array.
+
+    Returns
+    -------
+    reshaped_array : ndarray
+        The new array is formed from the data in the old array, repeated
+        if necessary to fill out the required number of elements.  The
+        data are repeated in the order that they are stored in memory.
+
+    See Also
+    --------
+    ndarray.resize : resize an array in-place.
+
+    Notes
+    -----
+    Warning: This functionality does **not** consider axes separately,
+    i.e. it does not apply interpolation/extrapolation.
+    It fills the return array with the required number of elements, taken
+    from `a` as they are laid out in memory, disregarding strides and axes.
+    (This is in case the new shape is smaller. For larger, see above.)
+    This functionality is therefore not suitable to resize images,
+    or data where each axis represents a separate and distinct entity.
+
+    Examples
+    --------
+    >>> a = np.array([[0, 1], [2, 3]])
+    >>> np.resize(a, (2, 3))
+    array([[0., 1., 2.],
+           [3., 0., 1.]])
+    >>> np.resize(a, (1, 4))
+    array([[0., 1., 2., 3.]])
+    >>> np.resize(a,(2, 4))
+    array([[0., 1., 2., 3.],
+           [0., 1., 2., 3.]])
+    """
+    return _mx_nd_np.resize(a, new_shape)
+
+
+@set_module('mxnet.numpy')
+def nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None, **kwargs):
+    """
+    Replace NaN with zero and infinity with large finite numbers (default
+    behaviour) or with the numbers defined by the user using the `nan`,
+    `posinf` and/or `neginf` keywords.
+
+    If `x` is inexact, NaN is replaced by zero or by the user defined value in
+    `nan` keyword, infinity is replaced by the largest finite floating point
+    values representable by ``x.dtype`` or by the user defined value in
+    `posinf` keyword and -infinity is replaced by the most negative finite
+    floating point values representable by ``x.dtype`` or by the user defined
+    value in `neginf` keyword.
+
+    For complex dtypes, the above is applied to each of the real and
+    imaginary components of `x` separately.
+
+    If `x` is not inexact, then no replacements are made.
+
+    Parameters
+    ----------
+    x : scalar
+        ndarray
+        Input data.
+    copy : bool, optional
+        Whether to create a copy of `x` (True) or to replace values
+        in-place (False). The in-place operation only occurs if
+        casting to an array does not require a copy.
+        Default is True.
+        Gluon does not support copy = False.
+    nan : int, float, optional
+        Value to be used to fill NaN values. If no value is passed
+        then NaN values will be replaced with 0.0.
+    posinf : int, float, optional
+        Value to be used to fill positive infinity values. If no value is
+        passed then positive infinity values will be replaced with a very
+        large number.
+    neginf : int, float, optional
+        Value to be used to fill negative infinity values. If no value is
+        passed then negative infinity values will be replaced with a very
+        small (or negative) number.
+
+        .. versionadded:: 1.13
+
+    Returns
+    -------
+    out : ndarray
+        `x`, with the non-finite values replaced. If `copy` is False, this may
+        be `x` itself.
+
+    Notes
+    -----
+    NumPy uses the IEEE Standard for Binary Floating-Point for Arithmetic
+    (IEEE 754). This means that Not a Number is not equivalent to infinity.
+
+    Examples
+    --------
+    >>> np.nan_to_num(np.inf)
+    1.7976931348623157e+308
+    >>> np.nan_to_num(-np.inf)
+    -1.7976931348623157e+308
+    >>> np.nan_to_num(np.nan)
+    0.0
+    >>> x = np.array([np.inf, -np.inf, np.nan, -128, 128])
+    >>> np.nan_to_num(x)
+    array([ 3.4028235e+38, -3.4028235e+38,  0.0000000e+00, -1.2800000e+02,
+            1.2800000e+02])
+    >>> np.nan_to_num(x, nan=-9999, posinf=33333333, neginf=33333333)
+    array([ 3.3333332e+07,  3.3333332e+07, -9.9990000e+03, -1.2800000e+02,
+            1.2800000e+02])
+    >>> y = np.array([[-1, 0, 1],[9999,234,-14222]],dtype="float64")/0
+    array([[-inf,  nan,  inf],
+        [ inf,  inf, -inf]], dtype=float64)
+    >>> np.nan_to_num(y)
+    array([[-1.79769313e+308,  0.00000000e+000,  1.79769313e+308],
+        [ 1.79769313e+308,  1.79769313e+308, -1.79769313e+308]], dtype=float64)
+    >>> np.nan_to_num(y, nan=111111, posinf=222222)
+    array([[-1.79769313e+308,  1.11111000e+005,  2.22222000e+005],
+        [ 2.22222000e+005,  2.22222000e+005, -1.79769313e+308]], dtype=float64)
+    >>> y
+    array([[-inf,  nan,  inf],
+       [ inf,  inf, -inf]], dtype=float64)
+    >>> np.nan_to_num(y, copy=False, nan=111111, posinf=222222)
+    array([[-1.79769313e+308,  1.11111000e+005,  2.22222000e+005],
+       [ 2.22222000e+005,  2.22222000e+005, -1.79769313e+308]], dtype=float64)
+    >>> y
+    array([[-1.79769313e+308,  1.11111000e+005,  2.22222000e+005],
+       [ 2.22222000e+005,  2.22222000e+005, -1.79769313e+308]], dtype=float64)
+    """
+    return _mx_nd_np.nan_to_num(x, copy=copy, nan=nan, posinf=posinf, neginf=neginf)

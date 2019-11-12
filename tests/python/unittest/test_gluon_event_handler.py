@@ -143,7 +143,8 @@ def test_logging():
         ce_loss = loss.SoftmaxCrossEntropyLoss()
         acc = mx.metric.Accuracy()
         est = estimator.Estimator(net, loss=ce_loss, metrics=acc)
-        train_metrics, val_metrics = est.prepare_loss_and_metrics()
+        train_metrics = est.train_metrics
+        val_metrics = est.val_metrics
         logging_handler = event_handler.LoggingHandler(file_name=file_name,
                                                        file_location=tmpdir,
                                                        train_metrics=train_metrics,

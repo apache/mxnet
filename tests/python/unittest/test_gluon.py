@@ -3119,6 +3119,62 @@ def test_squeeze_consistency():
         shape = (np.random.randint(1, 10), np.random.randint(1, 10), 1)
         block(mx.nd.ones(shape))
 
+def test_shared_parameters_with_non_default_initializer():
+    class MyBlock(gluon.HybridBlock):
+        def __init__(self, **kwargs):
+            super(MyBlock, self).__init__(**kwargs)
+
+            with self.name_scope():
+                self.param = self.params.get("param", shape=(1, ), init=mx.init.Constant(-10.0))
+
+    bl = MyBlock()
+    bl2 = MyBlock(params=bl.collect_params())
+    assert bl.param is bl2.param
+    bl3 = MyBlock()
+    assert bl.param is not bl3.param
+    assert bl.param.init == bl3.param.init
+
+@with_seed()
+def test_reqs_switching_training_inference():
+    class Foo(gluon.HybridBlock):
+        def __init__(self, **kwargs):
+            super(Foo, self).__init__(**kwargs)
+
+        def hybrid_forward(self, F, x):
+            y = 2 * x
+            return F.sqrt(x) + F.sqrt(y)
+
+    f = Foo()
+    f.hybridize(static_alloc=True)
+    x = mx.nd.ones(shape=(10,10))
+    x.attach_grad()
+    x2 = mx.nd.ones(shape=x.shape) * 2
+    x2.attach_grad()
+
+    # Call first in training mode
+    with mx.autograd.record():
+        y = f(x)
+    y.backward()
+
+    grad1 = x.grad.asnumpy()
+
+    # Compute the gradient with some other input
+    with mx.autograd.record():
+        y = f(x2)
+    y.backward()
+
+    # Call inference mode
+    y = f(x)
+
+    # Call training mode again
+    with mx.autograd.record():
+        y = f(x)
+    y.backward()
+
+    grad2 = x.grad.asnumpy()
+
+    mx.test_utils.assert_almost_equal(grad1, grad2)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

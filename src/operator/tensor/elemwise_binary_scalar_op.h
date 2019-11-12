@@ -256,7 +256,7 @@ class BinaryScalarOp : public UnaryOp {
     using namespace mshadow::expr;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const double alpha = nnvm::get<double>(attrs.parsed);
-    MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {
         MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
           mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
               s, inputs[0].Size(), outputs[0].dptr<bool>(), inputs[0].dptr<DType>(), DType(alpha));

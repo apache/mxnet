@@ -864,6 +864,87 @@ inline void HSplitOpBackward(const nnvm::NodeAttrs &attrs,
   }
   SplitOpBackwardImpl<xpu>(attrs, ctx, inputs, req, outputs, real_axis);
 }
+
+struct NumpyConcatenateParam : public dmlc::Parameter<NumpyConcatenateParam> {
+  int num_args;
+  dmlc::optional<int> axis;
+  DMLC_DECLARE_PARAMETER(NumpyConcatenateParam) {
+    DMLC_DECLARE_FIELD(num_args)
+    .set_lower_bound(1)
+    .describe("Number of inputs to be concated.");
+    DMLC_DECLARE_FIELD(axis)
+    .set_default(dmlc::optional<int>(0))
+    .describe("The axis along which `values` are appended.  If `axis` is not"
+              "given, both `arr` and `values` are flattened before use.");
+  }
+};
+
+template<typename xpu>
+void NumpyConcatenateForward(const nnvm::NodeAttrs& attrs,
+                             const OpContext& ctx,
+                             const std::vector<TBlob>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow_op;
+
+  const NumpyConcatenateParam& param = nnvm::get<NumpyConcatenateParam>(attrs.parsed);
+  CHECK_EQ(inputs.size(), param.num_args);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+
+  std::vector<TBlob> data(param.num_args);
+  for (int i = 0; i < param.num_args; i++) {
+    if (!param.axis.has_value()) {
+      data[i] = inputs[i].reshape(Shape1(inputs[i].shape_.Size()));
+    } else {
+      data[i] = inputs[i];
+    }
+  }
+
+  ConcatParam cparam;
+  cparam.num_args = param.num_args;
+  cparam.dim = param.axis.has_value() ? param.axis.value() : 0;
+  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    ConcatOp<xpu, DType> op;
+    op.Init(cparam);
+    op.Forward(ctx, data, req, outputs);
+  });
+}
+
+template<typename xpu>
+void NumpyConcatenateBackward(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<TBlob>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow_op;
+
+  const NumpyConcatenateParam& param = nnvm::get<NumpyConcatenateParam>(attrs.parsed);
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), param.num_args);
+  CHECK_EQ(req.size(), param.num_args);
+
+  std::vector<TBlob> data(param.num_args);
+  for (int i = 0; i < param.num_args; i++) {
+    if (!param.axis.has_value()) {
+      data[i] = outputs[i].reshape(Shape1(outputs[i].shape_.Size()));
+    } else {
+      data[i] = outputs[i];
+    }
+  }
+
+  ConcatParam cparam;
+  cparam.num_args = param.num_args;
+  cparam.dim = param.axis.has_value() ? param.axis.value() : 0;
+  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    ConcatOp<xpu, DType> op;
+    op.Init(cparam);
+    op.Backward(ctx, inputs[0], req, data);
+  });
+}
+
 }  // namespace op
 }  // namespace mxnet
 

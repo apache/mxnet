@@ -157,6 +157,7 @@ NNVM_REGISTER_OP(_contrib_boolean_mask)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FComputeEx>("FComputeEx<gpu>", BooleanMaskForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_contrib_boolean_mask)

@@ -62,18 +62,17 @@ private[mxnet] object Base {
   // The primitives currently supported for NDArray operations
   val MX_PRIMITIVES = new Group ((Double, Float))
 
+
+  /* Find the native libray either on the path or copy it from
+   * the jar in the dependency
+   * jar into a temp directory and load it
+   */
   try {
     try {
       tryLoadLibraryOS("mxnet-scala")
     } catch {
       case e: UnsatisfiedLinkError =>
-        logger.warn("MXNet Scala native library not found in path. " +
-          "Copying native library from the archive. " +
-          "Consider installing the library somewhere in the path " +
-          "(for Windows: PATH, for Linux: LD_LIBRARY_PATH), " +
-          "or specifying by Java cmd option -Djava.library.path=[lib path].")
-        logger.warn("LD_LIBRARY_PATH=" + System.getenv("LD_LIBRARY_PATH"))
-        logger.warn("java.library.path=" + System.getProperty("java.library.path"))
+        logger.info("Copying and loading native library from the jar archive")
         NativeLibraryLoader.loadLibrary("mxnet-scala")
     }
   } catch {

@@ -314,6 +314,7 @@ If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 #endif
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<mxnet::FInferShape>("FInferShape", FullyConnectedShape)
 .set_attr<nnvm::FInferType>("FInferType", FullyConnectedType)
 .set_attr<FCompute>("FCompute<cpu>", FullyConnectedCompute<cpu>)

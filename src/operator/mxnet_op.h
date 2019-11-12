@@ -471,6 +471,69 @@ struct AccType<mshadow::half::half_t> {
       {__VA_ARGS__}                                        \
     }                                                      \
     break;                                                 \
+  case mshadow::kBool:                                     \
+    {                                                      \
+      typedef bool DType;                                  \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  default:                                                 \
+    LOG(FATAL) << "Unknown type enum " << type;            \
+  }
+
+#define MXNET_INT32_INT64_TYPE_SWITCH(type, DType, ...)\
+  switch (type) {                                          \
+  case mshadow::kFloat32:                                  \
+    {                                                      \
+      typedef float DType;                                 \
+      LOG(FATAL) << "This operation only support "         \
+                    "integer types, not float32";          \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kFloat64:                                  \
+    {                                                      \
+      typedef double DType;                                \
+      LOG(FATAL) << "This operation only support "         \
+                    "integer types, not float64";          \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kFloat16:                                  \
+    {                                                      \
+      typedef mshadow::half::half_t DType;                 \
+      LOG(FATAL) << "This operation only support "         \
+                    "integer types, not float16";          \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kUint8:                                    \
+    {                                                      \
+      LOG(FATAL) << "This operation only support "         \
+                    "integer types, not uint8";            \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kInt8:                                     \
+    {                                                      \
+      LOG(FATAL) << "This operation only support "         \
+                    "integer types, not int8";             \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kInt32:                                    \
+    {                                                      \
+      typedef int32_t DType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kInt64:                                    \
+    {                                                      \
+      typedef int64_t DType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kBool:                                     \
+    {                                                      \
+      LOG(FATAL) << "This operation only support "         \
+                    "integer types, not bool";             \
+    }                                                      \
+    break;                                                 \
   default:                                                 \
     LOG(FATAL) << "Unknown type enum " << type;            \
   }
@@ -782,6 +845,62 @@ struct op_with_req {
   MSHADOW_XINLINE static void Map(index_t i, bool *out, const DType *in, const DType value) {
     KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value));
   }
+
+#ifndef _WIN32
+  /*! \brief inputs are two tensors with a half_t output tensor */
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  mshadow::half::half_t *out,
+                                  const DType *lhs,
+                                  const mshadow::half::half_t *rhs) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
+  }
+
+  /*! \brief inputs are two tensors with a float output tensor */
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i, float *out, const DType *lhs, const float *rhs) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
+  }
+
+  /*! \brief inputs are two tensors with a double output tensor */
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_same<DType, float>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i, double *out, const DType *lhs, const double *rhs) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
+  }
+
+  /*! \brief inputs are two tensors with a half_t output tensor */
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  mshadow::half::half_t *out,
+                                  const DType *lhs,
+                                  const mshadow::half::half_t value) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], value));
+  }
+
+  /*! \brief inputs are two tensors with a float output tensor */
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i, float *out, const DType *lhs, const float value) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], value));
+  }
+
+  /*! \brief inputs are two tensors with a double output tensor */
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_same<DType, float>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i, double *out, const DType *lhs, const double value) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], value));
+  }
+#endif
 
   /*! \brief inputs are two tensors with a float output tensor */
   template<typename DType,

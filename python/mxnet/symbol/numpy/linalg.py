@@ -22,7 +22,7 @@ from . import _symbol
 from . import _op as _mx_sym_np
 from . import _internal as _npi
 
-__all__ = ['norm', 'svd']
+__all__ = ['norm', 'svd', 'cholesky', 'inv']
 
 
 def norm(x, ord=None, axis=None, keepdims=False):
@@ -128,3 +128,104 @@ def svd(a):
      - Does not support complex input.
     """
     return _npi.svd(a)
+
+
+def cholesky(a):
+    r"""
+    Cholesky decomposition.
+
+    Return the Cholesky decomposition, `L * L.T`, of the square matrix `a`,
+    where `L` is lower-triangular and .T is the transpose operator. `a` must be
+    symmetric and positive-definite. Only `L` is actually returned. Complex-valued
+    input is currently not supported.
+
+    Parameters
+    ----------
+    a : (..., M, M) ndarray
+        Symmetric, positive-definite input matrix.
+
+    Returns
+    -------
+    L : (..., M, M) ndarray
+        Lower-triangular Cholesky factor of `a`.
+
+    Raises
+    ------
+    MXNetError
+        If the decomposition fails, for example, if `a` is not positive-definite.
+
+    Notes
+    -----
+    Broadcasting rules apply.
+
+    The Cholesky decomposition is often used as a fast way of solving
+
+    .. math:: A \mathbf{x} = \mathbf{b}
+
+    (when `A` is both symmetric and positive-definite).
+
+    First, we solve for :math:`\mathbf{y}` in
+
+    .. math:: L \mathbf{y} = \mathbf{b},
+
+    and then for :math:`\mathbf{x}` in
+
+    .. math:: L.T \mathbf{x} = \mathbf{y}.
+
+    Examples
+    --------
+    >>> A = np.array([[16, 4], [4, 10]])
+    >>> A
+    array([[16.,  4.],
+           [ 4., 10.]])
+    >>> L = np.linalg.cholesky(A)
+    >>> L
+    array([[4., 0.],
+           [1., 3.]])
+    >>> np.dot(L, L.T)
+    array([[16.,  4.],
+           [ 4., 10.]])
+    """
+    return _npi.cholesky(a)
+
+
+def inv(a):
+    r"""
+    Compute the (multiplicative) inverse of a matrix.
+
+    Given a square matrix `a`, return the matrix `ainv` satisfying
+    ``dot(a, ainv) = dot(ainv, a) = eye(a.shape[0])``.
+
+    Parameters
+    ----------
+    a : (..., M, M) ndarray
+        Matrix to be inverted.
+
+    Returns
+    -------
+    ainv : (..., M, M) ndarray
+        (Multiplicative) inverse of the matrix `a`.
+
+    Raises
+    ------
+    MXNetError
+        If `a` is not square or inversion fails.
+
+    Examples
+    --------
+    >>> from mxnet import np
+    >>> a = np.array([[1., 2.], [3., 4.]])
+    array([[-2. ,  1. ],
+           [ 1.5, -0.5]])
+
+    Inverses of several matrices can be computed at once:
+
+    >>> a = np.array([[[1., 2.], [3., 4.]], [[1, 3], [3, 5]]])
+    >>> np.linalg.inv(a)
+    array([[[-2.        ,  1.        ],
+            [ 1.5       , -0.5       ]],
+
+           [[-1.2500001 ,  0.75000006],
+            [ 0.75000006, -0.25000003]]])
+    """
+    return _npi.inv(a)

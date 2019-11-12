@@ -125,7 +125,8 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
         } else if ((!disable_conv_act_) && new_node.op()->name == "LeakyReLU") {
           const LeakyReLUParam &param =
               nnvm::get<LeakyReLUParam>(new_node.attrs.parsed);
-          if (param.act_type == leakyrelu::kLeakyReLU) {
+          if (param.act_type == leakyrelu::kLeakyReLU ||
+              param.act_type == leakyrelu::kGELU) {
             matched_list_.push_back(&new_node);
             // not support conv+relu+sum yet.
             status_ = kSuccess;

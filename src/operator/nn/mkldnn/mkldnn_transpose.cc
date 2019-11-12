@@ -73,7 +73,7 @@ class MKLDNNTransposeForward {
 
     mkldnn_dims_t strides;
     mkldnn_dims_t sh;
-    unsigned int total_stride = 1;
+    dim_t total_stride = 1;
     for (int i = data_ndim - 1; i >= 0; i--) {
       sh[i] = shape[i];
       strides[axes[i]] = total_stride;
