@@ -68,10 +68,7 @@ struct ResizeParam : public dmlc::Parameter<ResizeParam> {
         "INTER_AREA - resampling using pixel area relation"
         "INTER_CUBIC - a bicubic interpolation over 4x4 pixel neighborhood"
         "INTER_LANCZOS4 - a Lanczos interpolation over 8x8 pixel neighborhood"
-        "Note that the GPU version only support bilinear interpolation(1)"
-        " and the result on cpu would be slightly different from gpu."
-        "It uses opencv resize function which tend to align center on cpu"
-        "while using contrib.bilinearResize2D which aligns corner on gpu");
+        "Note that the GPU version only support bilinear interpolation(1)");
   }
 };
 // handle the keep ratio param
