@@ -27,6 +27,7 @@
 
 #if MXNET_USE_MKLDNN == 1
 #include <utility>
+#include <vector>
 #include <mkldnn.hpp>
 #include "../lrn-inl.h"
 #include "./mkldnn_base-inl.h"
