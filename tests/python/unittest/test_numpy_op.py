@@ -3100,14 +3100,22 @@ def test_np_linalg_inv():
         test_inv = TestInverse()
         if hybridize:
             test_inv.hybridize()
-        # use LU decomposition to generate invertible matrices
+        # generate well-conditioned matrices with small eigenvalues
         if 0 in shape:
             data_np = _np.ones(shape)
         else:
-            n = shape[-1]
-            L = _np.tril(_np.random.uniform(-10., 10., shape))
-            U = _np.triu(_np.random.uniform(-10., 10., shape))
-            data_np = _np.matmul(L, U)
+            n = int(np.prod(np.array(shape[:-2]))) if len(shape) > 2 else 1
+            # eigenvalues
+            D = _np.array([_np.diag(_np.random.uniform(-10., 10., shape[-1])) \
+                             for i in range(n)]).reshape(shape)
+            # orthogonal matrix through householder transformation
+            I = _np.array([_np.eye(shape[-1]) for i in range(n)]).reshape(shape)
+            v = _np.random.uniform(-10, 10,
+                    int(np.prod(np.array(shape[:-1])))).reshape(shape[:-1] + (1,))
+            v = v / _np.linalg.norm(v, axis=-2, keepdims=True)
+            v_T = _np.swapaxes(v, -1, -2)
+            U = I - 2 * _np.matmul(v, v_T)
+            data_np = _np.matmul(_np.matmul(U, D), _np.swapaxes(U, -1, -2))
         data = np.array(data_np, dtype=dtype)
         data.attach_grad()
         with mx.autograd.record():
