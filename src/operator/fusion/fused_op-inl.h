@@ -982,11 +982,9 @@ const char kernel_begin[] = R"code(
 const int tid = threadIdx.x + blockIdx.x * blockDim.x;
 for (int i = tid; i < N; i+= gridDim.x * blockDim.x) {
     int offset = i*nvec;
-
 )code";
 
-const char kernel_end[] = R"code(
-}
+const char kernel_end[] = R"code(}
 }
 )code";
 
