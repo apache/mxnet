@@ -52,8 +52,9 @@ struct FusedOpConfig : public dmlc::Parameter<FusedOpConfig> {
 };
 
 struct FusedOpEntry {
-  FusedOpEntry() : dtype(-1) {}
+  FusedOpEntry() : dtype(-1), ndim(-1) {}
   int dtype;
+  int ndim;
 };
 
 class FusedOp {
