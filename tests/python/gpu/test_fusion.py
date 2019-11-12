@@ -28,6 +28,7 @@ from common import with_seed
 def check_fused_symbol(sym, **kwargs):
     inputs = sym.list_inputs()
     shapes = {inp : kwargs[inp].shape for inp in inputs}
+    ctx = kwargs.get('ctx', mx.gpu(0))
     # Double identity so that there is always something to fuse
     test_sym = mx.sym.Group([mx.sym.identity(mx.sym.identity(s)) for s in sym])
     rtol = {'float16' : 1e-2,
@@ -43,9 +44,9 @@ def check_fused_symbol(sym, **kwargs):
         for grad_req in ['write', 'add']:
             type_dict = {inp : dtype for inp in inputs}
             os.environ["MXNET_USE_FUSION"] = "0"
-            orig_exec = test_sym.simple_bind(ctx=mx.gpu(0), grad_req=grad_req, type_dict=type_dict, **shapes)
+            orig_exec = test_sym.simple_bind(ctx=ctx, grad_req=grad_req, type_dict=type_dict, **shapes)
             os.environ["MXNET_USE_FUSION"] = "1"
-            fused_exec = test_sym.simple_bind(ctx=mx.gpu(0), grad_req=grad_req, type_dict=type_dict, **shapes)
+            fused_exec = test_sym.simple_bind(ctx=ctx, grad_req=grad_req, type_dict=type_dict, **shapes)
             fwd_orig = orig_exec.forward(is_train=True, **data)
             out_grads = [mx.nd.ones_like(arr) for arr in fwd_orig]
             orig_exec.backward(out_grads=out_grads)
@@ -217,6 +218,26 @@ def test_fusion():
     check_unary_ops()
     check_binary_ops()
     check_other_ops()
+
+@with_seed()
+def test_fusion_compiler_cache():
+    # Stresses the internal cache of CUfunctions by creating the same kernel multiple times and
+    # on multiple GPUs if available.
+    a = mx.sym.Variable('a')
+    b = mx.sym.Variable('b')
+    shape = rand_shape_2d()
+    arr1 = mx.random.uniform(shape=shape)
+    arr2 = mx.random.uniform(shape=shape)
+
+    # Invoke the same model twice, second time will exercise compile cache
+    check_fused_symbol(a+b, ctx=mx.gpu(0), a=arr1, b=arr2)
+    check_fused_symbol(a+b, ctx=mx.gpu(0), a=arr1, b=arr2)
+
+    # On multi-GPU systems, invoke the same model on other GPUs
+    num_gpus = mx.context.num_gpus()
+    if num_gpus > 1:
+        check_fused_symbol(a+b, ctx=mx.gpu(1), a=arr1, b=arr2)
+
 
 if __name__ == '__main__':
     import nose
