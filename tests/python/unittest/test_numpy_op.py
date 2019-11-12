@@ -2297,9 +2297,11 @@ def test_np_clip():
 @with_seed()
 @use_np
 def test_npx_random_bernoulli():
+    def _test_bernoulli_exception(prob, logit):
+        output = npx.random.bernoulli(prob=prob, logit=logit).asnumpy()
+
     shapes = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
     dtypes = ['float16', 'float32', 'float64', 'int32', 'bool']
-    epsilon = 1e-4
     for shape, dtype in itertools.product(shapes, dtypes):
         prob = np.random.uniform(size=shape)
         logit = np.log(prob) - np.log(1 - prob)
@@ -2313,10 +2315,18 @@ def test_npx_random_bernoulli():
         assert out_logit.shape == expected_shape
         assert int((out_logit.asnumpy() == 0).sum() + (out_logit.asnumpy() == 1).sum()) == out_logit.size
         # Test Exception.
-        assertRaises(ValueError, npx.random.bernoulli, prob=prob, logit=logit)
+        assertRaises(ValueError, _test_bernoulli_exception, prob, logit)
         if prob.size > 0:
-            assertRaises(MXNetError, npx.random.bernoulli, prob=prob + 2.0)
-            assertRaises(MXNetError, npx.random.bernoulli, prob=prob - 2.0)
+            # larger than 1
+            assertRaises(MXNetError, _test_bernoulli_exception, prob + 2.0, None)
+            # smaller than 0
+            assertRaises(MXNetError, _test_bernoulli_exception, prob - 2.0, None)
+            # mixed case
+            low, high = (-1.0, 2.0)
+            # uniform(-1, 2)
+            scaled_prob = low + (high - low) * prob
+            if not ((scaled_prob.asnumpy() >= 0).all() and (scaled_prob.asnumpy() <= 1).all()):
+                assertRaises(MXNetError, _test_bernoulli_exception, scaled_prob, None)
 
 
 @with_seed()
