@@ -349,6 +349,8 @@ MSHADOW_HALF_OPERATOR(bool, <=)
 
 #define MSHADOW_HALF_MIN mshadow::half::half_t::Binary(0xFBFF);
 #define MSHADOW_HALF_MAX mshadow::half::half_t::Binary(0x7BFF);
+#define MSHADOW_HALF_SIGN_BIT 0x8000
+#define MSHADOW_HALF_EXPONENT_BITS 0x7c00
 }  // namespace half
 }  // namespace mshadow
 #endif  // MSHADOW_HALF_H_

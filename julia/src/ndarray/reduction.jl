@@ -47,8 +47,7 @@ broadcasted(::typeof(min), x::NDArray{T}, y::NDArray{T}) where {T} =
 """
     argmax(x::NDArray; dims) -> indices
 
-Note that `NaN` is skipped during comparison.
-This is different from Julia `Base.argmax`.
+Note that `NaN` is treated as greater than all other values in `argmax`.
 
 ## Examples
 
@@ -77,8 +76,7 @@ Base.argmax(x::NDArray; dims = :) = _argmax(x, dims) .+ 1
 """
     argmin(x::NDArray; dims) -> indices
 
-Note that `NaN` is skipped during comparison.
-This is different from Julia `Base.argmin`.
+Note that `NaN` is treated as less than all other values in `argmin`.
 
 ## Examples
 
