@@ -40,15 +40,12 @@ void ResizeImplCUDA(mshadow::Stream<gpu> *s,
   int outputWidth;
   int inputHeight;
   int inputWidth;
-  mxnet::op::ImageLayout layout;
   if (std::is_same<T, Tensor<gpu, 3, DType>>::value) {
-    layout = HWC;
     outputHeight = output.size(0);
     outputWidth = output.size(1);
     inputHeight = input.size(0);
     inputWidth = input.size(1);
   } else {
-    layout = NHWC;
     outputHeight = output.size(1);
     outputWidth = output.size(2);
     inputHeight = input.size(1);
