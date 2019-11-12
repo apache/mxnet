@@ -27,7 +27,6 @@ __all__ = ['DeferredInitializationError', 'Parameter', 'Constant',
 from collections import OrderedDict, defaultdict
 import warnings
 import numpy as np
-import mxnet as mx
 
 from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer, context
@@ -896,7 +895,7 @@ class ParameterDict(object):
                 continue
             for g in p.list_grad():
                 if g.stype == 'row_sparse':
-                    mx.ndarray.zeros_like(g, out=g)
+                    ndarray.zeros_like(g, out=g)
                 else:
                     arrays[g.context].append(g)
 
@@ -909,7 +908,7 @@ class ParameterDict(object):
                     ele[()] = 0
         else:
             for arr in arrays.values():
-                mx.nd.reset_arrays(*arr, num_arrays=len(arr))
+                ndarray.reset_arrays(*arr, num_arrays=len(arr))
 
     def reset_ctx(self, ctx):
         """Re-assign all Parameters to other contexts.
