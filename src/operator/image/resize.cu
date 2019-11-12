@@ -51,10 +51,10 @@ void ResizeImplCUDA(mshadow::Stream<gpu> *s,
     inputHeight = input.size(1);
     inputWidth = input.size(2);
   }
-  const AccReal rheight = (outputHeight > 1) ? (AccReal)(inputHeight - 1)/
-                         (outputHeight - 1) : AccReal(0);
-  const AccReal rwidth = (outputWidth > 1) ? (AccReal)(inputWidth - 1)/
-                         (outputWidth - 1) : AccReal(0);
+  const AccReal rheight = cu_area_pixel_compute_scale<AccReal>(
+    inputHeight, outputHeight, false);
+  const AccReal rwidth = cu_area_pixel_compute_scale<AccReal>(
+    inputWidth, outputWidth, false);
   const int num_kernels = outputHeight * outputWidth;
   const int num_threads = getNumThreads(inputHeight * inputWidth, false);
   dim3 blocks(static_cast<int>(num_kernels / num_threads) + 1);
