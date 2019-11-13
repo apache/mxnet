@@ -34,6 +34,12 @@ def compute_where(cond_type, data_type, ndim):
 @defop(name="where_cpu", target="cpu", auto_broadcast=True, ndim=[5],
        cond_type=AllTypes+['bool'], data_type=AllTypes+['bool'])
 def where_cpu(cond_type, data_type, ndim):
+    return compute_where(cond_type, data_type, ndim)
+
+
+@defop(name="where_gpu", target="gpu", auto_broadcast=True, ndim=[5],
+       cond_type=AllTypes+['bool'], data_type=AllTypes+['bool'])
+def where_gpu(cond_type, data_type, ndim):
     s, [cond, x, y, out] = compute_where(cond_type, data_type, ndim)
     axes = [axis for axis in out.op.axis]
     fused = s[out].fuse(*axes)
@@ -41,12 +47,6 @@ def where_cpu(cond_type, data_type, ndim):
     s[out].bind(bx, tvm.thread_axis("blockIdx.x"))
     s[out].bind(tx, tvm.thread_axis("threadIdx.x"))
     return s, [cond, x, y, out]
-
-
-@defop(name="where_gpu", target="gpu", auto_broadcast=True, ndim=[5],
-       cond_type=AllTypes+['bool'], data_type=AllTypes+['bool'])
-def where_gpu(cond_type, data_type, ndim):
-    return compute_where(cond_type, data_type, ndim)
 
 
 def compute_backward_where(cond_type, data_type, ndim, reduce1st_dim, req):
