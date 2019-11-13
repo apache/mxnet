@@ -55,7 +55,7 @@ batch_size = 10
 
 ## Working with data
 
-To work with data, Apache MXNet provides [Dataset](https://mxnet.apache.org/api/python/gluon/data.html#mxnet.gluon.data.Dataset) and [DataLoader](https://mxnet.apache.org/api/python/gluon/data.html#mxnet.gluon.data.DataLoader) classes. The former is used to provide an indexed access to the data, the latter is used to shuffle and batchify the data. To learn more about working with data in Gluon, please refer to [Gluon Datasets and Dataloaders](https://mxnet.apache.org/tutorials/gluon/datasets.html) tutorial.
+To work with data, Apache MXNet provides [Dataset](https://mxnet.apache.org/api/python/gluon/data.html#mxnet.gluon.data.Dataset) and [DataLoader](https://mxnet.apache.org/api/python/gluon/data.html#mxnet.gluon.data.DataLoader) classes. The former is used to provide an indexed access to the data, the latter is used to shuffle and batchify the data. To learn more about working with data in Gluon, please refer to [Gluon Datasets and Dataloaders](/api/python/docs/api/gluon/data/index.html).
 
 Below we define training and validation datasets, which we are going to use in the tutorial.
 

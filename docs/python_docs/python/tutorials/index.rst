@@ -56,13 +56,13 @@ Packages & Modules
 
    .. card::
       :title: Symbol API
-      :link: packages/symbol/index.html
+      :link: /api/python/docs/api/symbol/index.html
 
-      How to use MXNet's Symbol API.
+      MXNet Symbol API has been depricated. API documentation is still available for reference.
 
    .. card::
       :title: Autograd API
-      :link: packages/autograd/autograd.html
+      :link: /api/python/docs/tutorials/packages/autograd/index.html
 
       How to use Automatic Differentiation with the Autograd API.
 
@@ -86,13 +86,13 @@ Performance
 
    .. card::
       :title: Compression: int8
-      :link: performance/int8.html
+      :link: performance/compression/int8.html
 
       How to use int8 in your model to boost training speed.
 
    .. card::
       :title: MKL-DNN
-      :link: performance/backend/mkl-dnn.html
+      :link: performance/backend/mkldnn/mkldnn_quantization
 
       How to get the most from your CPU by using Intel's MKL-DNN.
 

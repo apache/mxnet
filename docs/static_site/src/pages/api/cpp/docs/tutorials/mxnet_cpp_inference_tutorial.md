@@ -34,12 +34,13 @@ We will focus on the MXNet C++ API. We have slightly modified the code in [C++ I
 ## Prerequisites
 
 To complete this tutorial, you need to:
-- Complete the training part of [Gluon end to end tutorial](/api/python/docs/tutorials/getting-started/gluon_from_experiment_to_deployment.html)
-- Learn the basics about [MXNet C++ API](/api/cpp)
+- Complete the training part of [Gluon end to end tutorial](/api/python/docs/tutorials/getting-started/gluon_from_experiment_to_deployment.html).
+- Learn the basics about [MXNet C++ API](/api/cpp).
 
 
 ## Setup the MXNet C++ API
-To use the C++ API in MXNet, you need to build MXNet from source with C++ package. Please follow the [built from source guide](/get_started/ubuntu_setup.html), and [C++ Package documentation](/api/cpp)
+
+To use the C++ API in MXNet, you need to build MXNet from source with C++ package. Please follow the [built from source guide](/get_started/ubuntu_setup.html), and [C++ Package documentation](/api/cpp).
 The summary of those two documents is that you need to build MXNet from source with `USE_CPP_PACKAGE` flag set to 1. For example: `make -j USE_CPP_PACKAGE=1`.
 
 ## Load the model and run inference
