@@ -439,7 +439,7 @@ def test_np_sum():
     is_windows = sys.platform.startswith('win')
     #TODO: add back float16 as both itype and dtype after tvm side bug fixed by yizhi.
     for hybridize, initial, keepdims, axis, itype, dtype in itertools.product([False, True], \
-            [1.1], [True, False], ([i for i in range(in_data_dim)] + [(), None]), \
+            [None, 1.1], [True, False], ([i for i in range(in_data_dim)] + [(), None]), \
             ['float32', 'float64', 'int8', 'int32', 'int64', 'bool'], \
             ['float32', 'float64', 'int8', 'int32', 'int64']):
         if (is_int(dtype) and not is_int(itype))\
