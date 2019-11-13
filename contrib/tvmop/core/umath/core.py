@@ -24,7 +24,7 @@ __all__ = ['unary_cpu', 'unary_gpu', 'unary_backward_useone_cpu', 'unary_backwar
 
 def compute_unary(op, dtype, ndim, req):
     x = tvm.placeholder([tvm.var() for _ in range(ndim)], dtype=dtype, name='x')
-    y = tvm.compute([tvm.var() for _ in range(ndim)], lambda *idx: op(x[idx]), name='y')
+    y = tvm.compute(x.shape, lambda *idx: op(x[idx]), name='y')
     old, new = assign_by_req(y, req)
     s = tvm.create_schedule(new.op)
     s[y].compute_inline()
@@ -46,8 +46,8 @@ def unary_gpu(op, dtype, ndim, req):
 
 def compute_unary_backward_useone(op, dtype, ndim, req):
     ograd = tvm.placeholder([tvm.var() for _ in range(ndim)], dtype=dtype, name='ograd')
-    used = tvm.placeholder([tvm.var() for _ in range(ndim)], dtype=dtype, name='used')
-    igrad = tvm.compute([tvm.var() for _ in range(ndim)], lambda *idx: op(used[idx]) * ograd[idx], name='igrad')
+    used = tvm.placeholder(ograd.shape, dtype=dtype, name='used')
+    igrad = tvm.compute(ograd.shape, lambda *idx: op(used[idx]) * ograd[idx], name='igrad')
     old, new = assign_by_req(igrad, req)
     s = tvm.create_schedule(new.op)
     s[igrad].compute_inline()
