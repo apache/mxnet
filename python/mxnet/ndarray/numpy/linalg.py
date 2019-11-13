@@ -295,12 +295,12 @@ def slogdet(a):
     `det` may overflow or underflow. This routine is more robust against such
     issues, because it computes the logarithm of the determinant rather than
     the determinant itself.
-    
+
     Parameters
     ----------
     a : (..., M, M) ndarray
         Input array, has to be a square 2-D array.
-    
+
     Returns
     -------
     sign : (...) ndarray
@@ -310,18 +310,18 @@ def slogdet(a):
         The natural log of the absolute value of the determinant.
     If the determinant is zero, then `sign` will be 0 and `logdet` will be
     -Inf. In all cases, the determinant is equal to ``sign * np.exp(logdet)``.
-    
+
     See Also
     --------
     det
-    
+
     Notes
     -----
     Broadcasting rules apply, see the `numpy.linalg` documentation for
     details.
     The determinant is computed via LU factorization using the LAPACK
     routine z/dgetrf.
-    
+
     Examples
     --------
     The determinant of a 2-D array ``[[a, b], [c, d]]`` is ``ad - bc``:
