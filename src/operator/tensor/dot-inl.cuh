@@ -702,7 +702,8 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
                                     nnr_ptr, nnz, stream);
           // retrieve num non-zero rows
           size_t nnr = 0;
-          CUDA_CALL(cudaMemcpy(&nnr, nnr_ptr, nnr_bytes, cudaMemcpyDeviceToHost));
+          CUDA_CALL(cudaMemcpyAsync(&nnr, nnr_ptr, nnr_bytes, cudaMemcpyDeviceToHost, stream));
+          CUDA_CALL(cudaStreamSynchronize(stream));
           // allocate data
           ret->CheckAndAllocData(mshadow::Shape2(nnz, num_cols_r));
           // generate lookup table
@@ -817,8 +818,9 @@ inline void DotCsrRspRspImpl(const OpContext& ctx,
                                           num_cols_l,
                                           mshadow::Stream<gpu>::GetStream(s));
             dim_t nnr_out = 0;
-            CUDA_CALL(cudaMemcpy(&nnr_out, &row_flg_out[num_cols_l-1], sizeof(dim_t),
-                                 cudaMemcpyDeviceToHost));
+            CUDA_CALL(cudaMemcpyAsync(&nnr_out, &row_flg_out[num_cols_l-1], sizeof(dim_t),
+                                      cudaMemcpyDeviceToHost, mshadow::Stream<gpu>::GetStream(s)));
+            CUDA_CALL(cudaStreamSynchronize(mshadow::Stream<gpu>::GetStream(s)));
             if (0 == nnr_out) {
               FillZerosRspImpl(s, *ret);
               return;

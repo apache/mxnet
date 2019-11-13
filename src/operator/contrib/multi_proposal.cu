@@ -324,7 +324,8 @@ __global__ void nms_kernel(const int n_boxes, const float nms_overlap_thresh,
   }
 }
 
-void _nms(const mshadow::Tensor<gpu, 2>& boxes,
+void _nms(mshadow::Stream<gpu> *s,
+          const mshadow::Tensor<gpu, 2>& boxes,
           const float nms_overlap_thresh,
           const int rpn_post_nms_top_n,
           int *keep,
@@ -349,10 +350,13 @@ void _nms(const mshadow::Tensor<gpu, 2>& boxes,
                                   mask_dev);
   FRCNN_CUDA_CHECK(cudaPeekAtLastError());
   std::vector<uint64_t> mask_host(boxes_num * col_blocks);
-  FRCNN_CUDA_CHECK(cudaMemcpy(&mask_host[0],
-                              mask_dev,
-                              sizeof(uint64_t) * boxes_num * col_blocks,
-                              cudaMemcpyDeviceToHost));
+
+  cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
+  FRCNN_CUDA_CHECK(cudaMemcpyAsync(&mask_host[0],
+                                   mask_dev,
+                                   sizeof(uint64_t) * boxes_num * col_blocks,
+                                   cudaMemcpyDeviceToHost, stream));
+  FRCNN_CUDA_CHECK(cudaStreamSynchronize(stream));
 
   std::vector<uint64_t> remv(col_blocks);
   memset(&remv[0], 0, sizeof(uint64_t) * col_blocks);
@@ -476,8 +480,12 @@ class MultiProposalGPUOp : public Operator{
                                 sizeof(float) * num_images * count_anchors * 5));
     Tensor<xpu, 3> workspace_proposals(workspace_proposals_ptr,
                                        Shape3(num_images, count_anchors, 5));
-    FRCNN_CUDA_CHECK(cudaMemcpy(workspace_proposals.dptr_, &anchors[0],
-                                sizeof(float) * anchors.size(), cudaMemcpyHostToDevice));
+
+    cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
+
+    FRCNN_CUDA_CHECK(cudaMemcpyAsync(workspace_proposals.dptr_, &anchors[0],
+                                     sizeof(float) * anchors.size(),
+                                     cudaMemcpyHostToDevice, stream));
 
     // Copy proposals to a mesh grid
     dim3 dimGrid((count + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock);
@@ -529,50 +537,50 @@ class MultiProposalGPUOp : public Operator{
     FRCNN_CUDA_CHECK(cudaMalloc(&keep, sizeof(int) * rpn_pre_nms_top_n));
 
     for (int b = 0; b < num_images; b++) {
-        CheckLaunchParam(dimGrid, dimBlock, "CopyScore");
-        CopyScoreKernel << <dimGrid, dimBlock >> >(
-            count_anchors, workspace_proposals.dptr_ + b * count_anchors * 5,
-            score.dptr_, order.dptr_);
-        FRCNN_CUDA_CHECK(cudaPeekAtLastError());
+      CheckLaunchParam(dimGrid, dimBlock, "CopyScore");
+      CopyScoreKernel << <dimGrid, dimBlock >> >(
+          count_anchors, workspace_proposals.dptr_ + b * count_anchors * 5,
+          score.dptr_, order.dptr_);
+      FRCNN_CUDA_CHECK(cudaPeekAtLastError());
 
-        // argsort score, save order
-        thrust::stable_sort_by_key(thrust::device,
-            score.dptr_,
-            score.dptr_ + score.size(0),
-            order.dptr_,
-            thrust::greater<real_t>());
-        FRCNN_CUDA_CHECK(cudaPeekAtLastError());
+      // argsort score, save order
+      thrust::stable_sort_by_key(thrust::device,
+          score.dptr_,
+          score.dptr_ + score.size(0),
+          order.dptr_,
+          thrust::greater<real_t>());
+      FRCNN_CUDA_CHECK(cudaPeekAtLastError());
 
-        // Reorder proposals according to order
+      // Reorder proposals according to order
 
-        dimGrid.x = (rpn_pre_nms_top_n + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
-        CheckLaunchParam(dimGrid, dimBlock, "ReorderProposals");
-        ReorderProposalsKernel << <dimGrid, dimBlock >> >(
-            rpn_pre_nms_top_n, workspace_proposals.dptr_ + b * count_anchors * 5,
-            order.dptr_, workspace_ordered_proposals.dptr_);
-        FRCNN_CUDA_CHECK(cudaPeekAtLastError());
+      dimGrid.x = (rpn_pre_nms_top_n + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
+      CheckLaunchParam(dimGrid, dimBlock, "ReorderProposals");
+      ReorderProposalsKernel << <dimGrid, dimBlock >> >(
+          rpn_pre_nms_top_n, workspace_proposals.dptr_ + b * count_anchors * 5,
+          order.dptr_, workspace_ordered_proposals.dptr_);
+      FRCNN_CUDA_CHECK(cudaPeekAtLastError());
 
-        // perform nms
-        std::vector<int> _keep(workspace_ordered_proposals.size(0));
-        int out_size = 0;
-        _nms(workspace_ordered_proposals,
-            param_.threshold,
-            rpn_post_nms_top_n,
-            &_keep[0],
-            &out_size);
+      // perform nms
+      std::vector<int> _keep(workspace_ordered_proposals.size(0));
+      int out_size = 0;
+      _nms(s, workspace_ordered_proposals,
+           param_.threshold,
+           rpn_post_nms_top_n,
+           &_keep[0],
+           &out_size);
 
-        // copy nms result to gpu
-        FRCNN_CUDA_CHECK(cudaMemcpy(keep, &_keep[0], sizeof(int) * _keep.size(),
-            cudaMemcpyHostToDevice));
+      // copy nms result to gpu
+      FRCNN_CUDA_CHECK(cudaMemcpyAsync(keep, &_keep[0], sizeof(int) * _keep.size(),
+                                       cudaMemcpyHostToDevice, stream));
 
-        // copy results after nms
-        dimGrid.x = (param_.rpn_post_nms_top_n + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
-        CheckLaunchParam(dimGrid, dimBlock, "PrepareOutput");
-        PrepareOutput << <dimGrid, dimBlock >> >(
-            param_.rpn_post_nms_top_n, workspace_ordered_proposals.dptr_, keep, out_size, b,
-            out.dptr_ + b * param_.rpn_post_nms_top_n * 5,
-            out_score.dptr_ + b * param_.rpn_post_nms_top_n);
-        FRCNN_CUDA_CHECK(cudaPeekAtLastError());
+      // copy results after nms
+      dimGrid.x = (param_.rpn_post_nms_top_n + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
+      CheckLaunchParam(dimGrid, dimBlock, "PrepareOutput");
+      PrepareOutput << <dimGrid, dimBlock >> >(
+          param_.rpn_post_nms_top_n, workspace_ordered_proposals.dptr_, keep, out_size, b,
+          out.dptr_ + b * param_.rpn_post_nms_top_n * 5,
+          out_score.dptr_ + b * param_.rpn_post_nms_top_n);
+      FRCNN_CUDA_CHECK(cudaPeekAtLastError());
     }
     // free temporary memory
     FRCNN_CUDA_CHECK(cudaFree(keep));
