@@ -121,13 +121,11 @@ void TVMOpReduce(const OpContext& ctx,
   std::ostringstream func_name;
   func_name << reducer_name << "_"
             << (ctx.run_ctx.ctx.dev_type == mxnet::Context::DeviceType::kCPU ? "cpu" : "gpu")
-            << "_reduce1st_dim_" << reduce1st_dim
-            << "_req_" << (req == kWriteTo ? "kWriteTo" : "kAddTo")
-            << "_initial_" << (initial.has_value() ? "True" : "False");
+            << "reduce1st_dim_" << reduce1st_dim
+            << "req_" << (req == kWriteTo ? "kWriteTo" : "kAddTo")
+            << "initial_" << (initial.has_value() ? "True" : "False");
 
   if (initial.has_value()) {
-      LOG(WARNING) << "****initial*****:" << initial.value();
-      LOG(WARNING) << func_name.str();
       std::vector<int> type_codes;
       std::vector<TVMValue> values;
       const size_t num_args = 4; // initial scalar
@@ -151,7 +149,6 @@ void TVMOpReduce(const OpContext& ctx,
       values[3].v_handle = const_cast<DLTensor*>(&(output_tvm.dltensor()));
 
       tvm::runtime::TVMArgs tvm_args(&values[0], &type_codes[0], 4);
-      LOG(WARNING) << "**************here";
       tvm::runtime::TVMOpModule::Get()->CallEx(func_name.str(), ctx, {input_tvm, output_tvm, output_tvm}, tvm_args);
   } else {
       tvm::runtime::TVMOpModule::Get()->Call(func_name.str(), ctx, {input_tvm, output_tvm, output_tvm});
