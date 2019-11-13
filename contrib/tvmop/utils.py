@@ -22,13 +22,25 @@ AllTypes = ["float32", "float64", "float16", "uint8", "int8", "int32", "int64"]
 RealTypes = ["float32", "float64", "float16"]
 
 
-def assign_by_req(a, req, otype=None):
+def assign_by_req(a, req, initial=None, reducer=None, itype=None, otype=None):
     b = tvm.placeholder(a.shape, name='assign_by_req_b', dtype=a.dtype)
     if req == "kAddTo":
-        c = tvm.compute(a.shape, lambda *idx: a[idx].astype(otype) + b[idx]
-                                              if otype else a[idx] + b[idx])
+        if initial is not None:
+            c = tvm.compute(a.shape, lambda *idx: reducer(a[idx].astype(otype) + \
+                                                  b[idx], initial.astype(otype))
+                                                  if otype else reducer(a[idx] + b[idx], \
+                                                  initial.astype(itype).astype(a.dtype)))
+        else:
+            c = tvm.compute(a.shape, lambda *idx: a[idx].astype(otype) + b[idx]
+                                                  if otype else a[idx] + b[idx])
     else:
-        c = tvm.compute(a.shape, lambda *idx: a[idx].astype(otype) if otype else a[idx])
+        if initial is not None:
+            c = tvm.compute(a.shape, lambda *idx: reducer(a[idx], \
+                                                  initial.astype(a.dtype)).astype(otype) \
+                                                  if otype else reducer(a[idx], \
+                                                  initial.astype(itype).astype(a.dtype)))
+        else:
+            c = tvm.compute(a.shape, lambda *idx: a[idx].astype(otype) if otype else a[idx])
     return b, c
 
 
@@ -42,7 +54,7 @@ def reduce_axes(X, axes, reducer, atype=None):
             j += (val == 0)
             k += (val != 0)
         return tuple(ret)
-    
+
     ishape = X.shape
     odim = (len(ishape) + 1 - axes[0]) // 2
     oshape = [tvm.size_var() for _ in range(odim)]
