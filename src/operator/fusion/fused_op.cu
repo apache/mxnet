@@ -689,6 +689,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   std::lock_guard<std::mutex> lock(my_mutex_);
   CHECK_GE(outputs.size(), 1) << "There needs to be at least 1 output.";
 
+  std::cout << "FusedOp " << this << " forward" <<std::endl;
   std::vector<int> in_dtypes;
   std::vector<int> in_ndims;
   std::vector<int> out_dtypes;
