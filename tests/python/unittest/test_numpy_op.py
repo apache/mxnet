@@ -38,7 +38,6 @@ from mxnet.numpy_op_signature import _get_builtin_op
 from mxnet.test_utils import is_op_runnable, has_tvm_ops
 from mxnet.operator import get_all_registered_operators
 
-'''
 @with_seed()
 @use_np
 def test_np_tensordot():
@@ -416,7 +415,6 @@ def test_np_outer():
                 check_numeric_gradient(mx_sym, [a.as_nd_ndarray(), b.as_nd_ndarray()],
                                        rtol=1e-1, atol=1e-1, dtype=dtype)
 
-'''
 @with_seed()
 @use_np
 def test_np_sum():
@@ -439,12 +437,11 @@ def test_np_sum():
     acc_type = {'float16': 'float32', 'float32': 'float64', 'float64': 'float64',
                 'int8': 'int32', 'int32': 'int64', 'int64': 'int64', 'bool': 'int64'}
     is_windows = sys.platform.startswith('win')
+    #TODO: add back float16 as both itype and dtype after tvm side bug fixed by yizhi.
     for hybridize, initial, keepdims, axis, itype, dtype in itertools.product([False, True], \
             [1.1], [True, False], ([i for i in range(in_data_dim)] + [(), None]), \
-            ['int8', 'bool'], \
-            ['float16', 'float32', 'float64', 'int8', 'int32', 'int64']):
-        if initial is not None:
-            print(initial, itype, dtype)
+            ['float32', 'float64', 'int8', 'int32', 'int64', 'bool'], \
+            ['float32', 'float64', 'int8', 'int32', 'int64']):
         if (is_int(dtype) and not is_int(itype))\
                 or (itype == 'bool' and\
                     (dtype not in ('float32', 'float64', 'int32', 'int64') or is_windows)):
@@ -473,12 +470,12 @@ def test_np_sum():
         x.attach_grad()
         with mx.autograd.record():
             y = test_sum(x)
-#        assert y.shape == expected_ret.shape
-#        assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if dtype == 'float16' else 1e-3,
-#                            atol=1e-5 if dtype == 'float16' else 1e-5, use_broadcast=False)
+        assert y.shape == expected_ret.shape
+        assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if dtype == 'float16' else 1e-3,
+                            atol=1e-5 if dtype == 'float16' else 1e-5, use_broadcast=False)
 
-#        y.backward()
-#        assert same(x.grad.asnumpy(), _np.ones(shape=x.shape, dtype=x.dtype))
+        y.backward()
+        assert same(x.grad.asnumpy(), _np.ones(shape=x.shape, dtype=x.dtype))
 
         # test numeric
         if itype == 'float32' and dtype == 'float32':
@@ -489,10 +486,9 @@ def test_np_sum():
 
         # test imperative
         mx_out = np.sum(x, axis=axis, dtype=dtype, keepdims=keepdims, initial=initial)
-#        np_out = _np.sum(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims, initial=initial).astype(dtype)
-#        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
+        np_out = _np.sum(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims, initial=initial).astype(dtype)
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
-'''
 
 @with_seed()
 @use_np
