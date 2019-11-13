@@ -614,6 +614,7 @@ def test_np_mean():
     def is_int(dtype):
         return 'int' in dtype
 
+    is_windows = sys.platform.startswith('win')
     in_data_dim = random.choice([2, 3, 4])
     shape = rand_shape_nd(in_data_dim, dim=3)
     acc_type = {'float16': 'float32', 'float32': 'float64', 'float64': 'float64',
@@ -667,11 +668,20 @@ def test_np_mean():
                         test_mean.hybridize()
 
                     if itype == 'bool':
-                        x = np.random.uniform(size=shape) > 0.5
+                        x = np.array(_np.random.uniform(size=shape) > 0.5)
                     else:
                         x = np.random.uniform(-128, 127, size=shape).astype(itype)
 
                     expected_ret = _np.mean(x.asnumpy(), axis=axis, dtype=dtype, keepdims=keepdims)
+
+                    if itype == 'bool':
+                        if is_op_runnable() and (not is_windows) and dtype not in ['float16', 'int8']:  # special handling of boolean ndarray
+                            y = test_mean(x)
+                            assert y.shape == expected_ret.shape
+                            assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if dtype == 'float16' else 1e-3,
+                                                atol=1e-5 if dtype == 'float16' else 1e-5)
+                        continue
+
                     y = test_mean(x)
                     assert y.shape == expected_ret.shape
                     assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if dtype == 'float16' else 1e-3,

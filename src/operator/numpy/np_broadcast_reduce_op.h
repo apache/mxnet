@@ -222,15 +222,15 @@ void NumpyReduceAxesCompute(const nnvm::NodeAttrs& attrs,
                             const std::vector<TBlob>& inputs,
                             const std::vector<OpReqType>& req,
                             const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
   if (req[0] == kNullOp) return;
   const NumpyReduceAxesParam& param = nnvm::get<NumpyReduceAxesParam>(attrs.parsed);
   if (param.initial.has_value()) {
     LOG(FATAL) << "initial is not supported yet";
   }
+  Stream<xpu>* s = ctx.get_stream<xpu>();
   if (inputs[0].shape_.Size() == 0 && outputs[0].shape_.Size() != 0) {
     using namespace mxnet_op;
-    using namespace mshadow;
-    Stream<xpu>* s = ctx.get_stream<xpu>();
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       Kernel<set_zero, xpu>::Launch(s, outputs[0].shape_.Size(), outputs[0].dptr<DType>());
     });
@@ -247,6 +247,13 @@ void NumpyReduceAxesCompute(const nnvm::NodeAttrs& attrs,
       LOG(FATAL) << "Only reduce op: `sum` is supported for boolean ndarrays";
     }
     TVMOpReduce(ctx, inputs[0], param.axis, outputs[0], req[0], reducer_name);
+    if (normalize) {
+      using namespace mshadow::expr;
+      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+        auto out = outputs[0].FlatTo2D<xpu, OType>(s);
+        out /= scalar<OType>(inputs[0].Size()/outputs[0].Size());
+      });
+    }
     return;
   }
 #endif
