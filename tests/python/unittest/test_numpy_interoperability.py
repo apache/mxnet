@@ -56,6 +56,7 @@ class OpArgMngr(object):
     def get_workloads(name):
         return OpArgMngr._args.get(name, None)
 
+
 def _add_workload_diag():
 
     def get_mat(n):

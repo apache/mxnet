@@ -25,14 +25,14 @@
 #ifndef MXNET_OPERATOR_NUMPY_NP_DIAG_OP_INL_H_
 #define MXNET_OPERATOR_NUMPY_NP_DIAG_OP_INL_H_
 
-#include "../elemwise_op_common.h"
-#include "../mxnet_op.h"
-#include "../operator_common.h"
-#include "../tensor/broadcast_reduce_op.h"
-#include <algorithm>
 #include <dmlc/parameter.h>
+#include <algorithm>
 #include <utility>
 #include <vector>
+#include "../mxnet_op.h"
+#include "../operator_common.h"
+#include "../elemwise_op_common.h"
+#include "../tensor/broadcast_reduce_op.h"
 
 namespace mxnet {
 namespace op {
@@ -231,7 +231,7 @@ void NumpyDiagOpBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                                 in_data.Size(), param, s, req);
 }
 
-} // namespace op
-} // namespace mxnet
+}  // namespace op
+}  // namespace mxnet
 
-#endif // MXNET_OPERATOR_NUMPY_NP_DIAG_OP_INL_H_
+#endif  // MXNET_OPERATOR_NUMPY_NP_DIAG_OP_INL_H_

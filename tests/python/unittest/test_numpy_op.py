@@ -4550,6 +4550,7 @@ def test_np_diag():
             np_out = _np.diag(x.asnumpy(), k)
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
+
 @with_seed()
 @use_np
 def test_np_nan_to_num():

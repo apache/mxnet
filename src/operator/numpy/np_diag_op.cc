@@ -51,5 +51,5 @@ NNVM_REGISTER_OP(_backward_np_diag)
     .set_attr<nnvm::TIsBackward>("TIsBackward", true)
     .set_attr<FCompute>("FCompute<cpu>", NumpyDiagOpBackward<cpu>);
 
-} // namespace op
-} // namespace mxnet
+}  // namespace op
+}  // namespace mxnet

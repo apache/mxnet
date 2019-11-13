@@ -1088,6 +1088,7 @@ def _npx_reshape(a, newshape, reverse=False, order='C'):
     """
     pass
 
+
 def _np_diag(array, k = 0):
     """
     Extracts a diagonal or constructs a diagonal array.
