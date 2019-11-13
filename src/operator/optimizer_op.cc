@@ -43,7 +43,8 @@ DMLC_REGISTER_PARAMETER(FtrlParam);
 DMLC_REGISTER_PARAMETER(SignSGDParam);
 DMLC_REGISTER_PARAMETER(SignumParam);
 DMLC_REGISTER_PARAMETER(AdagradParam);
-DMLC_REGISTER_PARAMETER(LAMBParam);
+DMLC_REGISTER_PARAMETER(LambUpdatePhaseOneParam);
+DMLC_REGISTER_PARAMETER(LambUpdatePhaseTwoParam);
 
 NNVM_REGISTER_OP(signsgd_update)
 .describe(R"code(Update function for SignSGD optimizer.
@@ -922,20 +923,39 @@ Note that non-zero values for the weight decay option are not supported.
 .add_argument("history", "NDArray-or-Symbol", "History")
 .add_arguments(AdagradParam::__FIELDS__());
 
-NNVM_REGISTER_OP(lamb_update)
+NNVM_REGISTER_OP(lamb_update_phase1)
 .describe(R"code(Update function for lamb optimizer.
 )code" ADD_FILELINE)
 .set_num_inputs(4)
 .set_num_outputs(1)
-.set_attr_parser(ParamParser<LAMBParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<4,1>)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<4,1>)
-.set_attr<FCompute>("FCompute<cpu>", LAMBUpdate<cpu>)
+.set_attr_parser(ParamParser<LambUpdatePhaseOneParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<4, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<4, 1>)
+.set_attr<FCompute>("FCompute<cpu>", LambUpdatePhaseOne<cpu>)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    return std::vector<uint32_t>{2, 3};
+  })
 .add_argument("weight", "NDArray-or-Symbol", "Weight")
 .add_argument("grad", "NDArray-or-Symbol", "Gradient")
 .add_argument("mean", "NDArray-or-Symbol", "Moving mean")
 .add_argument("var", "NDArray-or-Symbol", "Moving variance")
-.add_arguments(LAMBParam::__FIELDS__());
+.add_arguments(LambUpdatePhaseOneParam::__FIELDS__());
+
+NNVM_REGISTER_OP(lamb_update_phase2)
+.describe(R"code(Update function for lamb optimizer.
+)code" ADD_FILELINE)
+.set_num_inputs(4)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<LambUpdatePhaseTwoParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", LambUpdatePhaseTwoShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<4, 1>)
+.set_attr<FCompute>("FCompute<cpu>", LambUpdatePhaseTwo<cpu>)
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("g", "NDArray-or-Symbol", "Output of lamb_update_phase 1")
+.add_argument("r1", "NDArray-or-Symbol", "r1")
+.add_argument("r2", "NDArray-or-Symbol", "r2")
+.add_arguments(LambUpdatePhaseTwoParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet
