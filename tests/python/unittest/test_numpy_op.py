@@ -614,52 +614,83 @@ def test_np_mean():
     def is_int(dtype):
         return 'int' in dtype
 
+    is_windows = sys.platform.startswith('win')
     in_data_dim = random.choice([2, 3, 4])
     shape = rand_shape_nd(in_data_dim, dim=3)
     acc_type = {'float16': 'float32', 'float32': 'float64', 'float64': 'float64',
-                'int8': 'int32', 'int32': 'int64', 'int64': 'int64'}
+                'bool': 'int64', 'int8': 'int32', 'int32': 'int64', 'int64': 'int64'}
+    ft_types = ['float16', 'float32', 'float64']
+    it_types = ['bool', 'int8', 'int32', 'int64']
     for hybridize in [False, True]:
         for keepdims in [True, False]:
             for axis in ([i for i in range(in_data_dim)] + [(), None]):
-                for itype in ['float16', 'float32', 'float64']:
-                    for dtype in ['float16', 'float32', 'float64']:
-                        if is_int(dtype) and not is_int(itype):
-                            continue
-                        # test gluon
-                        test_mean = TestMean(axis=axis, dtype=dtype, keepdims=keepdims)
-                        if hybridize:
-                            test_mean.hybridize()
-                        if is_int(itype):
-                            x = _np.random.randint(-128, 128, shape, dtype=itype)
-                            x = mx.nd.array(x, dtype=itype)
-                        else:
-                            x = mx.nd.random.uniform(-1.0, 1.0, shape=shape, dtype=itype)
-                        x = x.as_np_ndarray()
-                        x.attach_grad()
+                for itype, dtype in itertools.product(ft_types, [None] + ft_types + it_types):
+                    if dtype == 'bool':
+                        continue
+                    # test gluon
+                    test_mean = TestMean(axis=axis, dtype=dtype, keepdims=keepdims)
+                    if hybridize:
+                        test_mean.hybridize()
+                    x = np.random.uniform(-1.0, 1.0, size=shape).astype(itype)
+                    x = x.as_np_ndarray()
+                    x.attach_grad()
 
-                        expected_ret = _np.mean(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims)
-                        expected_ret = expected_ret.astype(dtype)
-                        with mx.autograd.record():
+                    expected_ret = _np.mean(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims)
+                    expected_ret = expected_ret.astype(dtype)
+                    with mx.autograd.record():
+                        y = test_mean(x)
+                    assert y.shape == expected_ret.shape
+                    assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if dtype == 'float16' else 1e-3,
+                                        atol=1e-5 if dtype == 'float16' else 1e-5)
+
+                    y.backward()
+                    N = x.size / y.size
+                    assert same(x.grad.asnumpy(), _np.ones(shape=x.shape, dtype=x.dtype) / N)
+
+                    # test numeric
+                    if itype == 'float32' and dtype == 'float32':
+                        x_sym = mx.sym.Variable("x").as_np_ndarray()
+                        mx_sym = mx.sym.np.mean(x_sym, axis=axis, dtype=dtype, keepdims=keepdims).as_nd_ndarray()
+                        check_numeric_gradient(mx_sym, [x.as_nd_ndarray()],
+                                               numeric_eps=1e-3, rtol=1e-3, atol=1e-4, dtype=_np.float32)
+
+                    # test imperative
+                    mx_out = np.mean(x, axis=axis, dtype=dtype, keepdims=keepdims)
+                    np_out = _np.mean(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims).astype(dtype)
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+                for itype, dtype in itertools.product(it_types, [None] + ft_types + it_types):
+                    if dtype == 'bool':
+                        continue
+                    # test gluon
+                    test_mean = TestMean(axis=axis, dtype=dtype, keepdims=keepdims)
+                    if hybridize:
+                        test_mean.hybridize()
+
+                    if itype == 'bool':
+                        x = np.array(_np.random.uniform(size=shape) > 0.5)
+                    else:
+                        x = np.random.uniform(-128, 127, size=shape).astype(itype)
+
+                    expected_ret = _np.mean(x.asnumpy(), axis=axis, dtype=dtype, keepdims=keepdims)
+
+                    if itype == 'bool':
+                        if is_op_runnable() and (not is_windows) and dtype not in ['float16', 'int8']:  # special handling of boolean ndarray
                             y = test_mean(x)
-                        assert y.shape == expected_ret.shape
-                        assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if dtype == 'float16' else 1e-3,
-                                            atol=1e-5 if dtype == 'float16' else 1e-5)
+                            assert y.shape == expected_ret.shape
+                            assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if dtype == 'float16' else 1e-3,
+                                                atol=1e-5 if dtype == 'float16' else 1e-5)
+                        continue
 
-                        y.backward()
-                        N = x.size / y.size
-                        assert same(x.grad.asnumpy(), _np.ones(shape=x.shape, dtype=x.dtype) / N)
+                    y = test_mean(x)
+                    assert y.shape == expected_ret.shape
+                    assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if dtype == 'float16' else 1e-3,
+                                        atol=1e-5 if dtype == 'float16' else 1e-5)
 
-                        # test numeric
-                        if itype == 'float32' and dtype == 'float32':
-                            x_sym = mx.sym.Variable("x").as_np_ndarray()
-                            mx_sym = mx.sym.np.mean(x_sym, axis=axis, dtype=dtype, keepdims=keepdims).as_nd_ndarray()
-                            check_numeric_gradient(mx_sym, [x.as_nd_ndarray()],
-                                                   numeric_eps=1e-3, rtol=1e-3, atol=1e-4, dtype=_np.float32)
-
-                        # test imperative
-                        mx_out = np.mean(x, axis=axis, dtype=dtype, keepdims=keepdims)
-                        np_out = _np.mean(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims).astype(dtype)
-                        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+                    # test imperative
+                    mx_out = np.mean(x, axis=axis, dtype=dtype, keepdims=keepdims)
+                    np_out = _np.mean(x.asnumpy(), axis=axis, dtype=dtype, keepdims=keepdims).astype(dtype)
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
 @with_seed()
