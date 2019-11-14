@@ -26,9 +26,11 @@ export mxnet_variant=${1:?"Please specify the mxnet variant"}
 # mxnet-build/3rdparty/mkldnn/build/install/include
 # The artifact repository stores this file in the dependencies
 # and CD unpacks it to a directory called cd_misc
-if [ -f "cd_misc/mkldnn_version.h" ]; then
+# Nov. 2019 Update: With v1.1, MKL-DNN is renaming to DNNL. Hence changing the prefix of file name. 
+if [ -f "cd_misc/dnnl_version.h" ]; then
   mkdir -p 3rdparty/mkldnn/build/install/include
-  cp cd_misc/mkldnn_version.h 3rdparty/mkldnn/build/install/include/.
+  cp cd_misc/dnnl_version.h 3rdparty/mkldnn/build/install/include/.
+  cp cd_misc/dnnl_config.h 3rdparty/mkldnn/build/install/include/.
 fi
 
 # Create wheel workspace
