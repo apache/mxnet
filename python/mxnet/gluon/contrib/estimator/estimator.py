@@ -328,7 +328,11 @@ class Estimator(object):
             Number of epochs to iterate on the training data.
             You can only specify one and only one type of iteration(epochs or batches).
         event_handlers : EventHandler or list of EventHandler
-            List of :py:class:`EventHandlers` to apply during training.
+            List of :py:class:`EventHandlers` to apply during training. Besides
+            the event handlers specified here, a StoppingHandler,
+            LoggingHandler and MetricHandler will be added by default if not
+            yet specified manually. If validation data is provided, a
+            ValidationHandler is also added if not already specified.
         batches : int, default None
             Number of batches to iterate on the training data.
             You can only specify one and only one type of iteration(epochs or batches).

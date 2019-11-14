@@ -408,13 +408,13 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
             else:
                 # use greater for accuracy and f1 and less otherwise
                 if 'acc' or 'f1' in self.monitor.get()[0].lower():
-                    warnings.warn("`greater` operator will be used to determine if %s has improved. "
+                    warnings.warn("`greater` operator will be used to determine if {} has improved. "
                                   "Please specify `mode='min'` to use the `less` operator. "
                                   "Specify `mode='max' to disable this warning.`"
                                   .format(self.monitor.get()[0]))
                     self.monitor_op = np.greater
                 else:
-                    warnings.warn("`less` operator will be used to determine if %s has improved. "
+                    warnings.warn("`less` operator will be used to determine if {} has improved. "
                                   "Please specify `mode='max'` to use the `greater` operator. "
                                   "Specify `mode='min' to disable this warning.`"
                                   .format(self.monitor.get()[0]))
@@ -656,13 +656,13 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
             self.monitor_op = np.greater
         else:
             if 'acc' or 'f1' in self.monitor.get()[0].lower():
-                warnings.warn("`greater` operator will be used to determine if %s has improved. "
+                warnings.warn("`greater` operator will be used to determine if {} has improved. "
                               "Please specify `mode='min'` to use the `less` operator. "
                               "Specify `mode='max' to disable this warning.`"
                               .format(self.monitor.get()[0]))
                 self.monitor_op = np.greater
             else:
-                warnings.warn("`less` operator will be used to determine if %s has improved. "
+                warnings.warn("`less` operator will be used to determine if {} has improved. "
                               "Please specify `mode='max'` to use the `greater` operator. "
                               "Specify `mode='min' to disable this warning.`"
                               .format(self.monitor.get()[0]))
