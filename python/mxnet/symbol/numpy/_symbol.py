@@ -40,7 +40,7 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming', 'blackman', 'flip',
            'around', 'hypot', 'bitwise_xor', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take',
            'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal',
-           'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'shares_memory', 'may_share_memory', 'diff',
+           'less_equal', 'hsplit', 'rot90', 'einsum', 'diagflat', 'true_divide', 'shares_memory', 'may_share_memory', 'diff',
            'resize', 'nan_to_num', 'where']
 
 
@@ -4706,6 +4706,43 @@ def einsum(*operands, **kwargs):
     subscripts = operands[0]
     operands = operands[1:]
     return _npi.einsum(*operands, subscripts=subscripts, out=out, optimize=int(optimize_arg))
+
+
+@set_module('mxnet.symbol.numpy')
+def diagflat(arr, k=0):
+    """
+    Create a two-dimensional array with the flattened input as a diagonal.
+    Parameters
+    ----------
+    arr : ndarray
+        Input data, which is flattened and set as the `k`-th
+        diagonal of the output.
+    k : int, optional
+        Diagonal to set; 0, the default, corresponds to the "main" diagonal,
+        a positive (negative) `k` giving the number of the diagonal above
+        (below) the main.
+    Returns
+    -------
+    out : ndarray
+        The 2-D output array.
+    See Also
+    --------
+    diag : MATLAB work-alike for 1-D and 2-D arrays.
+    diagonal : Return specified diagonals.
+    trace : Sum along diagonals.
+    Examples
+    --------
+    >>> np.diagflat([[1,2], [3,4]])
+    array([[1, 0, 0, 0],
+           [0, 2, 0, 0],
+           [0, 0, 3, 0],
+           [0, 0, 0, 4]])
+    >>> np.diagflat([1,2], 1)
+    array([[0, 1, 0],
+           [0, 0, 2],
+           [0, 0, 0]])
+    """
+    return _npi.diagflat(arr, k=k)
 
 
 @set_module('mxnet.symbol.numpy')
