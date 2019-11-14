@@ -418,6 +418,7 @@ def test_np_outer():
                 check_numeric_gradient(mx_sym, [a.as_nd_ndarray(), b.as_nd_ndarray()],
                                        rtol=1e-1, atol=1e-1, dtype=dtype)
 
+
 @with_seed()
 @use_np
 def test_np_matmul():
@@ -575,7 +576,7 @@ def test_np_sum():
     acc_type = {'float16': 'float32', 'float32': 'float64', 'float64': 'float64',
                 'int8': 'int32', 'int32': 'int64', 'int64': 'int64', 'bool': 'int64'}
     is_windows = sys.platform.startswith('win')
-    #TODO: add back float16 as both itype and dtype after tvm side bug fixed by yizhi.
+    #TODO: add back float16 as itype and dtype after tvm side bug fixed by @yizhi.
     for hybridize, initial, keepdims, axis, itype, dtype in itertools.product([False, True], \
             [None, 1.1], [True, False], ([i for i in range(in_data_dim)] + [(), None]), \
             ['float32', 'float64', 'int8', 'int32', 'int64', 'bool'], \
