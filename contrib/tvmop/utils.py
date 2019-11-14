@@ -26,10 +26,12 @@ def assign_by_req(a, req, initial=None, reducer=None, itype=None, otype=None):
     b = tvm.placeholder(a.shape, name='assign_by_req_b', dtype=a.dtype)
     if req == "kAddTo":
         if initial is not None:
+            #initial casted to float32 first to avoid the nvcc error of unable to convert
+            #half type to long or int char types.
             c = tvm.compute(a.shape, lambda *idx: reducer(a[idx].astype(otype) + \
                                                   b[idx], initial.astype(otype))
                                                   if otype else reducer(a[idx] + b[idx], \
-                                                  initial.astype(itype).astype(a.dtype)))
+                                                  initial.astype(itype).astype("float32").astype(a.dtype)))
         else:
             c = tvm.compute(a.shape, lambda *idx: a[idx].astype(otype) + b[idx]
                                                   if otype else a[idx] + b[idx])
@@ -38,7 +40,7 @@ def assign_by_req(a, req, initial=None, reducer=None, itype=None, otype=None):
             c = tvm.compute(a.shape, lambda *idx: reducer(a[idx], \
                                                   initial.astype(a.dtype)).astype(otype) \
                                                   if otype else reducer(a[idx], \
-                                                  initial.astype(itype).astype(a.dtype)))
+                                                  initial.astype(itype).astype("float32").astype(a.dtype)))
         else:
             c = tvm.compute(a.shape, lambda *idx: a[idx].astype(otype) if otype else a[idx])
     return b, c
@@ -59,7 +61,9 @@ def reduce_axes(X, axes, reducer, atype=None):
     odim = (len(ishape) + 1 - axes[0]) // 2
     oshape = [tvm.var() for _ in range(odim)]
     ridx = [tvm.reduce_axis((0, ishape[i])) for (i, val) in enumerate(axes) if val == 1]
-    ret = tvm.compute(oshape, lambda *idx: reducer(X[get_index(idx, ridx)].astype(atype)
+    # input casted to float32 first to avoid the nvcc error of unable to convert half tpe to
+    # long or int char types.
+    ret = tvm.compute(oshape, lambda *idx: reducer(X[get_index(idx, ridx)].astype("float32").astype(atype)
                                                    if atype else X[get_index(idx, ridx)],
                                                    axis=ridx), name='ret')
     return ret
