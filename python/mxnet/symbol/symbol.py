@@ -1003,7 +1003,8 @@ class Symbol(SymbolBase):
         else:
             str_keys = []
             for k, v in kwargs.items():
-                v = _numpy.dtype(v).type
+                # if v is None just use that to search in _DTYPE_NP_TO_MX
+                v = _numpy.dtype(v).type if v else None
                 if v in _DTYPE_NP_TO_MX:
                     str_keys.append(k)
                     sdata.append(_DTYPE_NP_TO_MX[v])

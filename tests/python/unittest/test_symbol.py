@@ -130,6 +130,95 @@ def test_symbol_infer_type():
     assert out == [np.float32]
     assert aux == []
 
+    # partial infer type with unknown dtypes
+    data = mx.sym.var("data")
+    data2 = mx.sym.var("data2")
+    out = mx.sym.elemwise_add(data, data2)
+    arg_types, out_types, aux_types = out.infer_type_partial(data=None, data2=np.float32)
+    assert arg_types == [np.float32, np.float32]
+    assert out_types == [np.float32]
+    assert aux_types == []
+
+    def check_infer_type_one_input(op):
+        data = mx.sym.var("data")
+        fft_res = op(data)
+        data3 = mx.sym.var("data3")
+        out = mx.sym.elemwise_add(data3, fft_res)
+        arg_types, out_types, aux_types = out.infer_type_partial(data=None, data3=np.float32)
+        # data should be inferred during backward inference
+        assert arg_types == [np.float32, np.float32]
+        assert out_types == [np.float32]
+        assert aux_types == []
+
+    op_list = [mx.sym.contrib.fft, mx.sym.contrib.ifft, #mx.sym.contrib.DeformableConvolution,
+               mx.sym.SequenceReverse] #mx.sym.multi_sum_sq, mx.sym.Convolution_v1,
+               #mx.sym.UpSampling]
+    for op in op_list:
+        check_infer_type_one_input(op)
+
+
+    def check_infer_type_convolution(op, deformable=False):
+        data = mx.sym.var("data")
+        weight = mx.sym.var("weight")
+        data2 = mx.sym.var("data2")
+        conv_res = op(data, weight, pad=(3, 3), num_filter=64, stride=(2, 2), no_bias=True, kernel=(7, 7))
+        out = mx.sym.elemwise_add(conv_res, data2)
+        arg_types, out_types, aux_types = out.infer_type_partial(data=None, weight=None, data2=np.float32)
+        # data and weight should be inferred during backward inference
+        if deformable:
+            assert arg_types == [np.float32, np.float32, np.float32, np.float32]
+        else:
+            assert arg_types == [np.float32, np.float32, np.float32]
+        assert out_types == [np.float32]
+        assert aux_types == []
+
+    op_list = [mx.sym.Convolution_v1, mx.sym.contrib.DeformableConvolution]
+    for op in op_list:
+        check_infer_type_convolution(op, op == mx.sym.contrib.DeformableConvolution)
+
+    def check_infer_type_two_inputs(op, upsampling=False):
+        data = mx.sym.var("data")
+        weight = mx.sym.var("weight")
+        data2 = mx.sym.var("data2")
+        conv_res = op(data, weight, pad=(3, 3), num_filter=64, stride=(2, 2), no_bias=True, kernel=(7, 7)) if not upsampling \
+                   else op(data, weight, sample_type="bilinear", num_args=2, scale=10)
+        out = mx.sym.elemwise_add(conv_res, data2)
+        arg_types, out_types, aux_types = out.infer_type_partial(data=None, weight=None, data2=np.float32)
+        # data and weight should be inferred during backward inference
+        assert arg_types == [np.float32, np.float32, np.float32]
+        assert out_types == [np.float32]
+        assert aux_types == []
+
+    def check_infer_type_upsampling(op):
+        data = mx.sym.var("data")
+        weight = mx.sym.var("weight")
+        data2 = mx.sym.var("data2")
+        upsampling_res = op(data, weight, sample_type="bilinear", num_args=2, scale=10)
+        out = mx.sym.elemwise_add(upsampling_res, data2)
+        arg_types, out_types, aux_types = out.infer_type_partial(data=None, weight=None, data2=np.float32)
+        # data and weight should be inferred during backward inference
+        assert arg_types == [np.float32, np.float32, np.float32]
+        assert out_types == [np.float32]
+        assert aux_types == []
+
+
+    check_infer_type_upsampling(mx.sym.UpSampling)
+
+
+    def check_infer_type_multi_sum_sq(op):
+        data = mx.sym.var("data")
+        weight = mx.sym.var("weight")
+        data2 = mx.sym.var("data2")
+        upsampling_res = op(data, weight, num_arrays=2)
+        out = mx.sym.elemwise_add(upsampling_res, data2)
+        arg_types, out_types, aux_types = out.infer_type_partial(data=None, weight=None, data2=np.float32)
+        # data and weight should be inferred during backward inference
+        assert arg_types == [np.float32, np.float32, np.float32]
+        assert out_types == [np.float32]
+        assert aux_types == []
+
+    check_infer_type_multi_sum_sq(mx.sym.multi_sum_sq)
+
 
 def test_symbol_infer_shape():
     num_hidden = 128

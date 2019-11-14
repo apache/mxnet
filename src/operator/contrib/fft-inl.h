@@ -33,6 +33,7 @@
 #include <utility>
 #include <iostream>
 #include "../operator_common.h"
+#include "../elemwise_op_common.h"
 #include "../mshadow_op.h"
 
 #if MXNET_USE_CUDA
@@ -256,24 +257,10 @@ class FFTProp : public OperatorProperty {
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
     CHECK_GE(in_type->size(), 1);
-    /*
-    int dtype = (*in_type)[0];
-    CHECK_NE(dtype, -1) << "First input must have specified type";
-    for (size_t i = 0; i < in_type->size(); ++i) {
-      if ((*in_type)[i] == -1) {
-        (*in_type)[i] = dtype;
-      } else {
-        UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments()[i]);
-      }
-    }
-    out_type->clear();
-    out_type->push_back(dtype);
-    return true;
-    */
     std::string node_name = "fft_node";
     return ElemwiseAttrHelper<int, type_is_none,
                               type_assign, true,
-                              type_string, 1>(node_name, in_type, out_type, -1);
+                              type_string>(node_name, in_type, out_type, -1);
   }
 
   OperatorProperty* Copy() const override {

@@ -27,6 +27,7 @@
 #include "./upsampling-inl.h"
 #include <nnvm/op_attr_types.h>
 #include "./deconvolution-inl.h"
+#include "../elemwise_op_common.h"
 
 namespace mxnet {
 namespace op {
@@ -90,18 +91,9 @@ static bool UpSamplingType(const nnvm::NodeAttrs& attrs,
                            std::vector<int> *in_type, std::vector<int> *out_type) {
   const UpSamplingParam& param = nnvm::get<UpSamplingParam>(attrs.parsed);
   CHECK_GE(in_type->size(), 1U);
-  int dtype = (*in_type)[0];
-  CHECK_NE(dtype, -1) << "First input must have specified type";
-  for (size_t i = 0; i < in_type->size(); ++i) {
-    if ((*in_type)[i] == -1) {
-      (*in_type)[i] = dtype;
-    } else {
-      UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments(param)[i]);
-    }
-  }
-  out_type->clear();
-  out_type->push_back(dtype);
-  return true;
+  return ElemwiseAttr<int, type_is_none,
+                      type_assign, true,
+                      type_string>(attrs, in_type, out_type, -1);
 }
 
 struct UpSamplingGrad {
