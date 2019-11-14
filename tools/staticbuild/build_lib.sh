@@ -34,16 +34,7 @@ $MAKE DEPS_PATH=$DEPS_PATH $PWD/3rdparty/tvm/nnvm/lib/libnnvm.a
 $MAKE DEPS_PATH=$DEPS_PATH PSLITE
 
 if [[ $VARIANT == *mkl ]]; then
-    if [[ $PLATFORM == 'linux' ]]; then
-        MKLDNN_LIBFILE='libmkldnn.so.1'
-    else
-        MKLDNN_LIBFILE='libmkldnn.1.dylib'
-    fi
     $MAKE DEPS_PATH=$DEPS_PATH mkldnn
-    if [ ! -d lib ]; then
-        mkdir lib
-    fi
-    cp 3rdparty/mkldnn/build/install/lib/$MKLDNN_LIBFILE lib
 fi
 
 >&2 echo "Now building mxnet..."
