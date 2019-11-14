@@ -434,6 +434,9 @@ inline bool DetShape(const nnvm::NodeAttrs& attrs,
     } else {
       out = mxnet::TShape(1, 1);
     }
+    if (in.Size() == 0U) {
+      out = mxnet::TShape(0, -1);
+    }
   } else {
     out = mxnet::TShape(in.begin(), in.end() - 2);
   }

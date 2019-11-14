@@ -3222,6 +3222,8 @@ def test_np_linalg_inv():
         check_inv(A_inv, data_np)
 
 
+@with_seed()
+@use_np
 def test_np_linalg_det():
     class TestDet(HybridBlock):
         def __init__(self):
@@ -3233,38 +3235,39 @@ def test_np_linalg_det():
     # test non zero size input
     tensor_shapes = [
         (5, 5),
+        (0, 2, 2),
+        (2, 0, 2, 2),
         (3, 3, 3),
         (2, 2, 2, 2, 2),
         (1, 1)
     ]
+    types = [_np.float32, _np.float64]
 
-    for hybridize in [True, False]:
-        for shape in tensor_shapes:
-            for dtype in [_np.float32, _np.float64]:
-                a_shape = (1,) + shape
-                test_det = TestDet()
-                if hybridize:
-                    test_det.hybridize()
-                a = rand_ndarray(shape=a_shape, dtype=dtype).as_np_ndarray()
-                a.attach_grad()
+    for hybridize, dtype, shape in itertools.product([True, False], types, tensor_shapes):
+        a_shape = (1,) + shape
+        test_det = TestDet()
+        if hybridize:
+            test_det.hybridize()
+        a = rand_ndarray(shape=a_shape, dtype=dtype).as_np_ndarray()
+        a.attach_grad()
 
-                np_out = _np.linalg.det(a.asnumpy())
-                with mx.autograd.record():
-                    mx_out = test_det(a)
-                assert mx_out.shape == np_out.shape
-                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-1, atol=1e-1)
-                mx_out.backward()
+        np_out = _np.linalg.det(a.asnumpy())
+        with mx.autograd.record():
+            mx_out = test_det(a)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-1, atol=1e-1)
+        #mx_out.backward()
 
-                # Test imperative once again
-                mx_out = np.linalg.det(a)
-                np_out = _np.linalg.det(a.asnumpy())
-                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-1, atol=1e-1)
+        # Test imperative once again
+        mx_out = np.linalg.det(a)
+        np_out = _np.linalg.det(a.asnumpy())
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-1, atol=1e-1)
 
-                # test numeric gradient
-                a_sym = mx.sym.Variable("a").as_np_ndarray()
-                mx_sym = mx.sym.np.linalg.det(a_sym).as_nd_ndarray()
-                check_numeric_gradient(mx_sym, [a.as_nd_ndarray()],
-                    rtol=1e-1, atol=1e-1, dtype=dtype)
+        # test numeric gradient
+        a_sym = mx.sym.Variable("a").as_np_ndarray()
+        mx_sym = mx.sym.np.linalg.det(a_sym).as_nd_ndarray()
+        check_numeric_gradient(mx_sym, [a.as_nd_ndarray()],
+            rtol=1e-1, atol=1e-1, dtype=dtype)
 
 
 @with_seed()
@@ -3281,33 +3284,35 @@ def test_np_linalg_slogdet():
     tensor_shapes = [
         (5, 5),
         (3, 3, 3),
+        (0, 2, 2),
+        (2, 0, 2, 2),
         (2, 2, 2, 2, 2),
         (1, 1)
     ]
 
-    for hybridize in [True, False]:
-        for a_shape in tensor_shapes:
-            for dtype in [_np.float32, _np.float64]:
-                test_slogdet = TestSlogdet()
-                if hybridize:
-                    test_slogdet.hybridize()
-                a = rand_ndarray(shape=a_shape, dtype=dtype).as_np_ndarray()
-                a.attach_grad()
+    types = [_np.float32, _np.float64]
 
-                np_out = _np.linalg.slogdet(a.asnumpy())
-                with mx.autograd.record():
-                    mx_out = test_slogdet(a)
-                assert mx_out[0].shape == np_out[0].shape
-                assert mx_out[1].shape == np_out[1].shape
-                assert_almost_equal(mx_out[0].asnumpy(), np_out[0], rtol = 1e-1, atol = 1e-1)
-                assert_almost_equal(mx_out[1].asnumpy(), np_out[1], rtol = 1e-1, atol = 1e-1)
-                mx_out[1].backward()
+    for hybridize, a_shape, dtype in itertools.product([True, False], tensor_shapes, types):
+        test_slogdet = TestSlogdet()
+        if hybridize:
+            test_slogdet.hybridize()
+        a = rand_ndarray(shape=a_shape, dtype=dtype).as_np_ndarray()
+        a.attach_grad()
 
-                # Test imperative once again
-                mx_out = np.linalg.slogdet(a)
-                np_out = _np.linalg.slogdet(a.asnumpy())
-                assert_almost_equal(mx_out[0].asnumpy(), np_out[0], rtol=1e-1, atol=1e-1)
-                assert_almost_equal(mx_out[1].asnumpy(), np_out[1], rtol=1e-1, atol=1e-1)
+        np_out = _np.linalg.slogdet(a.asnumpy())
+        with mx.autograd.record():
+            mx_out = test_slogdet(a)
+        assert mx_out[0].shape == np_out[0].shape
+        assert mx_out[1].shape == np_out[1].shape
+        assert_almost_equal(mx_out[0].asnumpy(), np_out[0], rtol = 1e-1, atol = 1e-1)
+        assert_almost_equal(mx_out[1].asnumpy(), np_out[1], rtol = 1e-1, atol = 1e-1)
+        mx_out[1].backward()
+
+        # Test imperative once again
+        mx_out = np.linalg.slogdet(a)
+        np_out = _np.linalg.slogdet(a.asnumpy())
+        assert_almost_equal(mx_out[0].asnumpy(), np_out[0], rtol=1e-1, atol=1e-1)
+        assert_almost_equal(mx_out[1].asnumpy(), np_out[1], rtol=1e-1, atol=1e-1)
 
 
 @with_seed()
