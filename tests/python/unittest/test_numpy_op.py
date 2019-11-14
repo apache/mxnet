@@ -4495,7 +4495,6 @@ def test_np_diag():
         def __init__(self, k=0):
             super(TestDiag, self).__init__()
             self._k = k
-            # necessary initializations
 
         def hybrid_forward(self, F, a):
             return F.np.diag(a, k=self._k)
@@ -4503,52 +4502,52 @@ def test_np_diag():
     shapes = [(2,), 5, (1, 5), (2, 2), (2, 5), (3, 3), (4, 3)]
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
     range_k = 6
-    for hybridize, shape, dtype, in itertools.product([False, True], shapes, dtypes):
+    combination = itertools.product([False, True], shapes, dtypes, list(range(-range_k, range_k)))
+    for hybridize, shape, dtype, k in combination:
         rtol = 1e-2 if dtype == np.float16 else 1e-3
         atol = 1e-4 if dtype == np.float16 else 1e-5
-        for k in range(-range_k, range_k):
-            test_diag = TestDiag(k)
-            if hybridize:
-                test_diag.hybridize()
+        test_diag = TestDiag(k)
+        if hybridize:
+            test_diag.hybridize()
 
-            x = np.random.uniform(-1.0, 1.0, size=shape).astype(dtype)
-            x.attach_grad()
+        x = np.random.uniform(-1.0, 1.0, size=shape).astype(dtype)
+        x.attach_grad()
 
-            np_out = _np.diag(x.asnumpy(), k)
-            with mx.autograd.record():
-                mx_out = test_diag(x)
-            assert mx_out.shape == np_out.shape
-            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
-            
-            # check backward function 
-            mx_out.backward()
-            np_backward = 0
-            if type(shape) == int:
-                np_backward = np.ones(shape)
-            elif len(shape) < 2:
-                np_backward = np.ones(shape[0])
+        np_out = _np.diag(x.asnumpy(), k)
+        with mx.autograd.record():
+            mx_out = test_diag(x)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+        
+        # check backward function 
+        mx_out.backward()
+        np_backward = 0
+        if type(shape) == int:
+            np_backward = np.ones(shape)
+        elif len(shape) < 2:
+            np_backward = np.ones(shape[0])
+        else:
+            np_backward = np.zeros(shape)
+            h = shape[0]
+            w = shape[1]
+            if k > 0:
+                w -= k
             else:
-                np_backward = np.zeros(shape)
-                h = shape[0]
-                w = shape[1]
-                if k > 0:
-                    w -= k
+                h += k
+            s = min(w, h)
+            if s > 0:
+                if k >= 0:
+                    for i in range(s):
+                        np_backward[0+i][k+i] = 1
                 else:
-                    h += k
-                s = min(w, h)
-                if s > 0:
-                    if k >= 0:
-                        for i in range(s):
-                            np_backward[0+i][k+i] = 1
-                    else:
-                        for i in range(s):
-                            np_backward[-k+i][0+i] = 1
-            assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
+                    for i in range(s):
+                        np_backward[-k+i][0+i] = 1
+        assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
 
-            # Test imperative once again
-            mx_out = np.diag(x, k)
-            np_out = _np.diag(x.asnumpy(), k)
-            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+        # Test imperative once again
+        mx_out = np.diag(x, k)
+        np_out = _np.diag(x.asnumpy(), k)
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
 @with_seed()
