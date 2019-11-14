@@ -41,7 +41,7 @@ def _compute(itype, otype, ndim, reducer, reduce1st_dim, req):
 
 
 @defop(name='sum_cpu', target='cpu', itype=['float16', 'float32', 'float64', 'int8', 'int32', 'int64', 'bool'],
-       otype=['float32', 'float64', 'int8', 'int32', 'int64'],
+       otype=['float16', 'float32', 'float64', 'int8', 'int32', 'int64'],
        ndim=[5], req=['kWriteTo', 'kAddTo'], reduce1st_dim=[0, 1],
        initial=[True, False], attrs=["reduce1st_dim", "req", "initial"])
 def _sum_cpu(itype, otype, ndim, reduce1st_dim, req, initial):
@@ -64,7 +64,7 @@ def _sum_cpu(itype, otype, ndim, reduce1st_dim, req, initial):
 
 
 @defop(name='sum_gpu', target='gpu', itype=['float16', 'float32', 'float64', 'int8', 'int32', 'int64', 'bool'],
-       otype=['float32', 'float64', 'int8', 'int32', 'int64'],
+       otype=['float16', 'float32', 'float64', 'int8', 'int32', 'int64'],
        ndim=[5], req=['kWriteTo', 'kAddTo'], reduce1st_dim=[0, 1],
        initial=[True, False], attrs=["reduce1st_dim", "req", "initial"])
 def _sum_gpu(itype, otype, ndim, reduce1st_dim, req, initial):
