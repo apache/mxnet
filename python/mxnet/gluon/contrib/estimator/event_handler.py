@@ -19,9 +19,7 @@
 # pylint: disable=wildcard-import, unused-argument, too-many-ancestors
 """Gluon EventHandlers for Estimators"""
 
-import logging
 import os
-import sys
 import time
 import warnings
 
@@ -412,12 +410,14 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
                 if 'acc' or 'f1' in self.monitor.get()[0].lower():
                     warnings.warn("`greater` operator will be used to determine if %s has improved. "
                                   "Please specify `mode='min'` to use the `less` operator. "
-                                  "Specify `mode='max' to disable this warning.`", self.monitor.get()[0])
+                                  "Specify `mode='max' to disable this warning.`"
+                                  .format(self.monitor.get()[0]))
                     self.monitor_op = np.greater
                 else:
                     warnings.warn("`less` operator will be used to determine if %s has improved. "
                                   "Please specify `mode='max'` to use the `greater` operator. "
-                                  "Specify `mode='min' to disable this warning.`", self.monitor.get()[0])
+                                  "Specify `mode='min' to disable this warning.`"
+                                  .format(self.monitor.get()[0]))
                     self.monitor_op = np.less
 
     def train_begin(self, estimator, *args, **kwargs):
@@ -658,12 +658,14 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
             if 'acc' or 'f1' in self.monitor.get()[0].lower():
                 warnings.warn("`greater` operator will be used to determine if %s has improved. "
                               "Please specify `mode='min'` to use the `less` operator. "
-                              "Specify `mode='max' to disable this warning.`", self.monitor.get()[0])
+                              "Specify `mode='max' to disable this warning.`"
+                              .format(self.monitor.get()[0]))
                 self.monitor_op = np.greater
             else:
                 warnings.warn("`less` operator will be used to determine if %s has improved. "
                               "Please specify `mode='max'` to use the `greater` operator. "
-                              "Specify `mode='min' to disable this warning.`", self.monitor.get()[0])
+                              "Specify `mode='min' to disable this warning.`"
+                              .format(self.monitor.get()[0]))
                 self.monitor_op = np.less
 
         if self.monitor_op == np.greater:  # pylint: disable=comparison-with-callable
