@@ -32,7 +32,7 @@ This doc attempts to do the following:
 1. Discuss the current state of thread safety in MXNet
 2. Explain how one can use C API and thread safe version of cached op, along with CPP package to achieve iultithreaded inference. This will be useful for end users as well as frontend developers of different language bindings
 3. Discuss the limitations of the above approach
-4. Future TODOs
+4. Future Work
 
 ## Current state of Thread Safety in MXNet
 
@@ -93,7 +93,7 @@ $ cd example/multi_threaded_inference
 $ make
 ```
 
-If you have built mxnet from source with cmake, please uncomment the specific lines for cmake build or set the following environment variables: `MKLDNN_BUILD_DIR (default is $(MXNET_ROOT)/3rdparty/mkldnn/build)`, `MKLDNN_INCLUDE_DIR (default is $(MXNET_ROOT)/3rdparty/mkldnn/include`, `MXNET_LIB_DIR (default is $(MXNET_ROOT)/lib`. 
+If you have built mxnet from source with cmake, please uncomment the specific lines for cmake build or set the following environment variables: `MKLDNN_BUILD_DIR (default is $(MXNET_ROOT)/3rdparty/mkldnn/build)`, `MKLDNN_INCLUDE_DIR (default is $(MXNET_ROOT)/3rdparty/mkldnn/include)`, `MXNET_LIB_DIR (default is $(MXNET_ROOT)/lib)`.
 
 ### Download the model and run multi threaded inference example
 To download a model use the `get_model.py` script. This downloads a model to run inference.
@@ -108,6 +108,12 @@ python3 get_model.py --model imagenet1k-inception-bn
 Only the supported models with `get_model.py` work with multi threaded inference.
 
 To run the multi threaded inference example:
+
+First export `LD_LIBRARY_PATH`:
+
+```bash
+$ export LD_LIBRARY_PATH=<MXNET_LIB_DIR>:$LD_LIBRARY_PATH
+```
 
 ```bash
 $ ./multi_threaded_inference [model_name] [num_threads] [is_gpu] [file_names]
@@ -321,8 +327,10 @@ The above code outputs results for different threads and cleans up the thread sa
 8. Graph rewrites with subgraph API currently not supported.
 9. Frontend API Changes to support multi threaded inference.
 10. Multi threaded inference with threaded engine with Module/Symbolic API and C Predict API are not currently supported.
-11. Exception thrown with wait_to_read in individual threads can cause issues. Calling invokes from each thread and calling WaitAll after thread joins should still work fine.
+11. Exception thrown with `wait_to_read` in individual threads can cause issues. Calling invoke from each thread and calling WaitAll after thread joins should still work fine.
 
 
+## Future Work
 
-## Future TODOs
+Future work includes Increasing model coverage and addressing most of the limitations mentioned under Current Limitations except the training use case.
+For more updates, please subscribe to discussion activity on RFC: https://github.com/apache/incubator-mxnet/issues/16431.
