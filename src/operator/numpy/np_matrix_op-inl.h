@@ -1036,7 +1036,7 @@ struct diag {
   }
 };
 
-template <int req, bool back> 
+template <int req, bool back>
 struct diag_gen {
   template <typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
