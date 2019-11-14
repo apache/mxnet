@@ -35,7 +35,7 @@ __all__ = ['shape', 'zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'div
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot', 'histogram', 'eye',
            'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'split', 'vsplit', 'concatenate', 'append',
            'stack', 'vstack', 'column_stack', 'dstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax',
-           'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming', 'blackman', 'flip',
+           'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index', 'hanning', 'hamming', 'blackman', 'flip',
            'around', 'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity',
            'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal',
            'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero', 'shares_memory', 'may_share_memory',
@@ -3826,6 +3826,44 @@ def ravel(x, order='C'):
         return _npi.reshape(x, -1)
     else:
         raise TypeError('type {} not supported'.format(str(type(x))))
+
+
+def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-name
+    """
+    Converts a flat index or array of flat indices into a tuple of coordinate arrays.
+
+    Parameters:
+    -------------
+    indices : array_like
+            An integer array whose elements are indices into the flattened version of an array of dimensions shape.
+            Before version 1.6.0, this function accepted just one index value.
+    shape : tuple of ints
+            The shape of the array to use for unraveling indices.
+
+    Returns:
+    -------------
+    unraveled_coords : ndarray
+            Each row in the ndarray has the same shape as the indices array.
+            Each column in the ndarray represents the unravelled index
+
+    Examples:
+    -------------
+    >>> np.unravel_index([22, 41, 37], (7,6))
+    ([3. 6. 6.]
+      [4. 5. 1.])
+    >>> np.unravel_index(1621, (6,7,8,9))
+    (3, 1, 4, 1)
+    """
+    if order == 'C':
+        if isinstance(indices, numeric_types):
+            return _np.unravel_index(indices, shape)
+        ret = _npi.unravel_index_fallback(indices, shape=shape)
+        ret_list = []
+        for item in ret:
+            ret_list += [item]
+        return tuple(ret_list)
+    else:
+        raise NotImplementedError('Do not support column-major (Fortran-style) order at this moment')
 
 
 @set_module('mxnet.ndarray.numpy')
