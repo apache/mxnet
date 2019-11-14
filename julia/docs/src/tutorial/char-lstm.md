@@ -31,7 +31,7 @@ networks yet, the example shown here is an implementation of LSTM by
 using the default FeedForward model via explicitly unfolding over time.
 We will be using fixed-length input sequence for training. The code is
 adapted from the [char-rnn example for MXNet's Python
-binding](https://github.com/dmlc/mxnet-notebooks/blob/master/python/tutorials/char_lstm.ipynb),
+binding](https://github.com/apache/incubator-mxnet/blob/8004a027ad6a73f8f6eae102de8d249fbdfb9a2d/example/rnn/old/char-rnn.ipynb),
 which demonstrates how to use low-level
 [Symbolic API](@ref) to build customized neural
 network models directly.

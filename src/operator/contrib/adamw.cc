@@ -119,7 +119,7 @@ the update is skipped.
 .add_arguments(AdamWParam::__FIELDS__());
 
 template<>
-void GetScaleFloat<cpu>(const TBlob &scale_blob, float *pScalef) {
+void GetScaleFloat<cpu>(mshadow::Stream<cpu> *s, const TBlob &scale_blob, float *pScalef) {
   MSHADOW_REAL_TYPE_SWITCH(scale_blob.type_flag_, DType,
     *pScalef = static_cast<float>(*scale_blob.dptr<DType>());
   )

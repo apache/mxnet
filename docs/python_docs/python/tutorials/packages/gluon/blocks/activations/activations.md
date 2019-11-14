@@ -270,7 +270,7 @@ visualize_activation(mx.gluon.nn.Swish())
 ## Next Steps
 
 Activations are just one component of neural network architectures. Here are a few MXNet resources to learn more about activation functions and how they they combine with other components of neural nets.
-* Learn how to create a Neural Network with these activation layers and other neural network layers in the [gluon crash course](http://beta.mxnet.io/guide/getting-started/crash-course/2-nn.html).
-* Check out the guide to MXNet [gluon layers and blocks](http://beta.mxnet.io/guide/packages/gluon/nn.html) to learn about the other neural network layers in implemented in MXNet and how to create custom neural networks with these layers.
-* Also check out the [guide to normalization layers](http://beta.mxnet.io/guide/packages/gluon/normalization/normalization.html) to learn about neural network layers that normalize their inputs.
-* Finally take a look at the [Custom Layer guide](http://beta.mxnet.io/guide/packages/gluon/custom_layer_beginners.html) to learn how to implement your own custom activation layer.
+* Learn how to create a Neural Network with these activation layers and other neural network layers in the [gluon crash course](/api/python/docs/tutorials/getting-started/crash-course/index.html).
+* Check out the guide to MXNet [gluon layers and blocks](/api/python/docs/tutorials/packages/gluon/blocks/nn.html) to learn about the other neural network layers in implemented in MXNet and how to create custom neural networks with these layers.
+* Also check out the [guide to normalization layers](/api/python/docs/tutorials/packages/gluon/training/normalization/index.html) to learn about neural network layers that normalize their inputs.
+* Finally take a look at the [Custom Layer guide](/api/python/docs/tutorials/extend/custom_layer.html) to learn how to implement your own custom activation layer.

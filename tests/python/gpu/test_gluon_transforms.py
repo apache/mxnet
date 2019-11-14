@@ -48,14 +48,14 @@ def test_resize_gpu():
     data_in_3d = nd.random.uniform(0, 255, (300, 300, 3))
     out_nd_3d = transforms.Resize((100, 100))(data_in_3d)
     data_in_4d_nchw = nd.moveaxis(nd.expand_dims(data_in_3d, axis=0), 3, 1)
-    data_expected_3d = (nd.moveaxis(nd.contrib.BilinearResize2D(data_in_4d_nchw, height=100, width=100), 1, 3))[0]
+    data_expected_3d = (nd.moveaxis(nd.contrib.BilinearResize2D(data_in_4d_nchw, height=100, width=100, align_corners=False), 1, 3))[0]
     assert_almost_equal(out_nd_3d.asnumpy(), data_expected_3d.asnumpy())
 
     # Test with normal case 4D input float type
     data_in_4d = nd.random.uniform(0, 255, (2, 300, 300, 3))
     out_nd_4d = transforms.Resize((100, 100))(data_in_4d)
     data_in_4d_nchw = nd.moveaxis(data_in_4d, 3, 1)
-    data_expected_4d = nd.moveaxis(nd.contrib.BilinearResize2D(data_in_4d_nchw, height=100, width=100), 1, 3)
+    data_expected_4d = nd.moveaxis(nd.contrib.BilinearResize2D(data_in_4d_nchw, height=100, width=100, align_corners=False), 1, 3)
     assert_almost_equal(out_nd_4d.asnumpy(), data_expected_4d.asnumpy())
 
     # Test invalid interp
@@ -88,17 +88,6 @@ def test_resize_gpu():
                             h1lambda*((1-w1lambda)*x[b][h1+h1p][w1][c] + \
                             w1lambda*x[b][h1+h1p][w1+w1p][c])
         return y
-
-    # Test with normal case 3D input int8 type
-    data_in_4d = nd.random.uniform(0, 255, (1, 300, 300, 3)).astype('uint8')
-    out_nd_3d = transforms.Resize((100, 100))(data_in_4d[0])
-    assert_almost_equal(out_nd_3d.asnumpy(), py_bilinear_resize_nhwc(data_in_4d.asnumpy(), 100, 100)[0], atol=1.0)
-
-    # Test with normal case 4D input int8 type
-    data_in_4d = nd.random.uniform(0, 255, (2, 300, 300, 3)).astype('uint8')
-    out_nd_4d = transforms.Resize((100, 100))(data_in_4d)
-    assert_almost_equal(out_nd_4d.asnumpy(), py_bilinear_resize_nhwc(data_in_4d.asnumpy(), 100, 100), atol=1.0)
-
 
 @with_seed()
 def test_crop_resize_gpu():

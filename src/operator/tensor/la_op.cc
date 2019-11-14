@@ -893,6 +893,7 @@ NNVM_REGISTER_OP(_backward_linalg_syevd)
 
 NNVM_REGISTER_OP(_linalg_inverse)
 .add_alias("linalg_inverse")
+.add_alias("_npi_inv")
 .describe(R"code(Compute the inverse of a matrix.
 Input is a tensor *A* of dimension *n >= 2*.
 

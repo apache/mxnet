@@ -158,6 +158,7 @@ void NumpyNormalForward(const nnvm::NodeAttrs &attrs,
   Tensor<xpu, 1, float> indicator_device = workspace.Slice(output_len, output_len + 1);
   float indicator_host = 1.0;
   float *indicator_device_ptr = indicator_device.dptr_;
+  Kernel<set_zero, xpu>::Launch(s, 1, indicator_device_ptr);
   prnd->SampleGaussian(&normal_tensor, 0.0, 1.0);
   mxnet::TShape new_lshape, new_hshape, new_oshape;
 
@@ -182,7 +183,7 @@ void NumpyNormalForward(const nnvm::NodeAttrs &attrs,
         Kernel<check_legal_scale_kernel<IType>, xpu>::Launch(
             s, inputs[0].Size(), inputs[0].dptr<IType>(), indicator_device_ptr);
       });
-      _copy<xpu>(&indicator_host, indicator_device_ptr);
+      _copy<xpu>(s, &indicator_host, indicator_device_ptr);
       CHECK_GE(indicator_host, 0.0) << "ValueError: scale < 0";
     } else {
       scalar_pos = 1;
@@ -207,7 +208,7 @@ void NumpyNormalForward(const nnvm::NodeAttrs &attrs,
       Kernel<check_legal_scale_kernel<IType>, xpu>::Launch(
           s, inputs[1].Size(), inputs[1].dptr<IType>(), indicator_device_ptr);
     });
-    _copy<xpu>(&indicator_host, indicator_device_ptr);
+    _copy<xpu>(s, &indicator_host, indicator_device_ptr);
     CHECK_GE(indicator_host, 0.0) << "ValueError: scale < 0";
     int ndim = FillShape(inputs[0].shape_, inputs[1].shape_, outputs[0].shape_,
                          &new_lshape, &new_hshape, &new_oshape);

@@ -507,7 +507,6 @@ class _MultiWorkerIter(object):
                 batch = ret.get(self._timeout)
             if self._pin_memory:
                 batch = _as_in_context(batch, context.cpu_pinned(self._pin_device_id))
-            batch = batch[0] if len(batch) == 1 else batch
             self._rcvd_idx += 1
             return batch
         except multiprocessing.context.TimeoutError:

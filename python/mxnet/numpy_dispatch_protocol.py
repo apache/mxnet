@@ -125,6 +125,8 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'column_stack',
     'zeros_like',
     'linalg.norm',
+    'linalg.cholesky',
+    'linalg.inv',
     'trace',
     'tril',
     'meshgrid',
@@ -133,6 +135,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'shares_memory',
     'may_share_memory',
     'diff',
+    'resize',
 ]
 
 

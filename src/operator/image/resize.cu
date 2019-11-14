@@ -40,24 +40,21 @@ void ResizeImplCUDA(mshadow::Stream<gpu> *s,
   int outputWidth;
   int inputHeight;
   int inputWidth;
-  mxnet::op::ImageLayout layout;
   if (std::is_same<T, Tensor<gpu, 3, DType>>::value) {
-    layout = HWC;
     outputHeight = output.size(0);
     outputWidth = output.size(1);
     inputHeight = input.size(0);
     inputWidth = input.size(1);
   } else {
-    layout = NHWC;
     outputHeight = output.size(1);
     outputWidth = output.size(2);
     inputHeight = input.size(1);
     inputWidth = input.size(2);
   }
-  const AccReal rheight = (outputHeight > 1) ? (AccReal)(inputHeight - 1)/
-                         (outputHeight - 1) : AccReal(0);
-  const AccReal rwidth = (outputWidth > 1) ? (AccReal)(inputWidth - 1)/
-                         (outputWidth - 1) : AccReal(0);
+  const AccReal rheight = cu_area_pixel_compute_scale<AccReal>(
+    inputHeight, outputHeight, false);
+  const AccReal rwidth = cu_area_pixel_compute_scale<AccReal>(
+    inputWidth, outputWidth, false);
   const int num_kernels = outputHeight * outputWidth;
   const int num_threads = getNumThreads(inputHeight * inputWidth, false);
   dim3 blocks(static_cast<int>(num_kernels / num_threads) + 1);
@@ -65,7 +62,7 @@ void ResizeImplCUDA(mshadow::Stream<gpu> *s,
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
   caffe_gpu_interp2_kernel<gpu, DType, AccReal>
   <<<blocks, threads , 0, stream>>>(
-    num_kernels, rheight, rwidth, input, output, layout);
+    num_kernels, rheight, rwidth, false, input, output);
   MSHADOW_CUDA_POST_KERNEL_CHECK(caffe_gpu_interp2_kernel);
 }
 

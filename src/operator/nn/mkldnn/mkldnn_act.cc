@@ -58,7 +58,8 @@ bool SupportMKLDNNAct(const ActivationParam& param, const NDArray &input) {
 
 bool SupportMKLDNNLeakyRelu(const LeakyReLUParam& param) {
   return param.act_type == leakyrelu::kLeakyReLU
-      || param.act_type == leakyrelu::kELU;
+      || param.act_type == leakyrelu::kELU
+      || param.act_type == leakyrelu::kGELU;
 }
 
 bool SupportMKLDNNLeakyRelu(const LeakyReLUParam& param, const NDArray &input) {
@@ -98,6 +99,8 @@ mkldnn::algorithm GetMKLDNNActAlgo(const LeakyReLUParam& param) {
       return mkldnn::algorithm::eltwise_relu;
     case leakyrelu::kELU:
       return mkldnn::algorithm::eltwise_elu;
+    case leakyrelu::kGELU:
+      return mkldnn::algorithm::eltwise_gelu;
     default:
       LOG(FATAL) << "unknown activation type for LeakyReLU: " << param.act_type;
       return mkldnn::algorithm::eltwise_relu;

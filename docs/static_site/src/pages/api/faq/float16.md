@@ -59,7 +59,7 @@ net.cast('float16')
 data = data.astype('float16', copy=False)
 ```
 
-If you are using images and DataLoader, you can also use a [Cast transform]({{'/api/python/docs/api/gluon/_autogen/mxnet.gluon.data.vision.transforms.Cast.html#mxnet.gluon.data.vision.transforms.Cast'|relative_url}}).
+If you are using images and DataLoader, you can also use a [Cast transform](/api/python/docs/api/gluon/data/vision/transforms/index.html#mxnet.gluon.data.vision.transforms.Cast).
 
 3. It is preferable to use **multi_precision mode of optimizer** when training in float16. This mode of optimizer maintains a master copy of the weights in float32 even when the training (i.e. forward and backward pass) is in float16. This helps increase precision of the weight updates and can lead to faster convergence in some scenarios.
 
@@ -67,7 +67,7 @@ If you are using images and DataLoader, you can also use a [Cast transform]({{'/
 optimizer = mx.optimizer.create('sgd', multi_precision=True, lr=0.01)
 ```
 
-You can play around with mixed precision using the image classification [example](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/image_classification.py). We suggest using the Caltech101 dataset option in that example and using a ResNet50V1 network so you can quickly see the performance improvement and how the accuracy is unaffected. Here's the starter command to run this example.
+You can play around with mixed precision using the image classification [example](https://github.com/apache/incubator-mxnet/blob/master/example/image-classification/train_imagenet.py). We suggest using the Caltech101 dataset option in that example and using a ResNet50V1 network so you can quickly see the performance improvement and how the accuracy is unaffected. Here's the starter command to run this example.
 
 ```bash
 python image_classification.py --model resnet50_v1 --dataset caltech101 --gpus 0 --num-worker 30 --dtype float16
