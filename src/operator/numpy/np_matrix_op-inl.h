@@ -1020,7 +1020,8 @@ inline bool NumpyDiagOpType(const nnvm::NodeAttrs &attrs,
   return (*out_attrs)[0] != -1;
 }
 
-template <int ndim, int req, bool back> struct diag {
+template <int ndim, int req, bool back>
+struct diag {
   template <typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
                                   index_t stride, index_t offset) {
@@ -1035,7 +1036,8 @@ template <int ndim, int req, bool back> struct diag {
   }
 };
 
-template <int req, bool back> struct diag_gen {
+template <int req, bool back> 
+struct diag_gen {
   template <typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
                                   mshadow::Shape<2> oshape, int k) {
@@ -1056,14 +1058,14 @@ template <int req, bool back> struct diag_gen {
 };
 
 template <typename xpu, bool back>
-void NumpyDiagOpProcess(const TBlob &in_data,
-                        const TBlob &out_data,
-                        const mxnet::TShape &ishape,
-                        const mxnet::TShape &oshape,
-                        index_t dsize,
-                        const NumpyDiagParam &param,
-                        mxnet_op::Stream<xpu> *s,
-                        const std::vector<OpReqType> &req) {
+void NumpyDiagOpImpl(const TBlob &in_data,
+                     const TBlob &out_data,
+                     const mxnet::TShape &ishape,
+                     const mxnet::TShape &oshape,
+                     index_t dsize,
+                     const NumpyDiagParam &param,
+                     mxnet_op::Stream<xpu> *s,
+                     const std::vector<OpReqType> &req) {
   using namespace mxnet_op;
   using namespace mshadow;
   if (ishape.ndim() > 1) {
@@ -1123,7 +1125,7 @@ void NumpyDiagOpForward(const nnvm::NodeAttrs &attrs,
   const mxnet::TShape &oshape = outputs[0].shape_;
   const NumpyDiagParam &param = nnvm::get<NumpyDiagParam>(attrs.parsed);
 
-  NumpyDiagOpProcess<xpu, false>(in_data, out_data, ishape, oshape,
+  NumpyDiagOpImpl<xpu, false>(in_data, out_data, ishape, oshape,
                                  out_data.Size(), param, s, req);
 }
 
@@ -1145,7 +1147,7 @@ void NumpyDiagOpBackward(const nnvm::NodeAttrs &attrs,
   const mxnet::TShape &oshape = outputs[0].shape_;
   const NumpyDiagParam &param = nnvm::get<NumpyDiagParam>(attrs.parsed);
 
-  NumpyDiagOpProcess<xpu, true>(in_data, out_data, oshape, ishape,
+  NumpyDiagOpImpl<xpu, true>(in_data, out_data, oshape, ishape,
                                 in_data.Size(), param, s, req);
 }
 
