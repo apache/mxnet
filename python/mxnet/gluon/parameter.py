@@ -369,10 +369,10 @@ class Parameter(object):
             if self._grad_stype != 'default':
                 raise ValueError("mxnet.numpy.zeros does not support stype = {}"
                                  .format(self._grad_stype))
-            self._grad = [_mx_np.zeros(shape=i.shape, dtype=i.dtype, ctx=i.context)
+            self._grad = [_mx_np.zeros(shape=i.shape, dtype=i.dtype, ctx=i.ctx)
                           for i in self._data]
         else:
-            self._grad = [ndarray.zeros(shape=i.shape, dtype=i.dtype, ctx=i.context,
+            self._grad = [ndarray.zeros(shape=i.shape, dtype=i.dtype, ctx=i.ctx,
                                         stype=self._grad_stype) for i in self._data]
 
         autograd.mark_variables(self._check_and_get(self._data, list),
@@ -522,7 +522,7 @@ class Parameter(object):
             raise RuntimeError("Cannot return a copy of Parameter %s via row_sparse_data() " \
                                "because its storage type is %s. Please use data() instead." \
                                %(self.name, self._stype))
-        return self._get_row_sparse(self._data, row_id.context, row_id)
+        return self._get_row_sparse(self._data, row_id.ctx, row_id)
 
     def list_row_sparse_data(self, row_id):
         """Returns copies of the 'row_sparse' parameter on all contexts, in the same order
@@ -897,7 +897,7 @@ class ParameterDict(object):
                 if g.stype == 'row_sparse':
                     ndarray.zeros_like(g, out=g)
                 else:
-                    arrays[g.context].append(g)
+                    arrays[g.ctx].append(g)
 
         if len(arrays) == 0:
             return
