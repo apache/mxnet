@@ -921,7 +921,7 @@ class ndarray(NDArray):
         elif dtype not in (_np.float32, _np.bool_):
             array_str = array_str[:-1] + ', dtype={})'.format(dtype)
 
-        context = self.context
+        context = self.ctx
         if context.device_type == 'cpu':
             return array_str
         return array_str[:-1] + ', ctx={})'.format(str(context))
@@ -929,7 +929,7 @@ class ndarray(NDArray):
     def __str__(self):
         """Returns a string representation of the array."""
         array_str = self.asnumpy().__str__()
-        context = self.context
+        context = self.ctx
         if context.device_type == 'cpu' or self.ndim == 0:
             return array_str
         return '{array} @{ctx}'.format(array=array_str, ctx=context)
@@ -994,7 +994,7 @@ class ndarray(NDArray):
         if not copy and _np.dtype(dtype) == self.dtype:
             return self
 
-        res = empty(self.shape, dtype=dtype, ctx=self.context)
+        res = empty(self.shape, dtype=dtype, ctx=self.ctx)
         self.copyto(res)
         return res
 
@@ -1051,7 +1051,8 @@ class ndarray(NDArray):
 
     def as_in_context(self, context):
         """This function has been deprecated. Please refer to ``ndarray.as_in_ctx``."""
-        warnings.warn('ndarray.context has been renamed to ndarray.ctx', DeprecationWarning)
+        warnings.warn('ndarray.as_in_context has been renamed to'
+                      ' ndarray.as_in_ctx', DeprecationWarning)
         return self.as_nd_ndarray().as_in_context(context).as_np_ndarray()
 
     def as_in_ctx(self, ctx):
@@ -1864,7 +1865,7 @@ class ndarray(NDArray):
         Currently for internal use only. Implemented for __setitem__.
         Assign to self an array of self's same shape and type, filled with value.
         """
-        return _mx_nd_np.full(self.shape, value, ctx=self.context, dtype=self.dtype, out=self)
+        return _mx_nd_np.full(self.shape, value, ctx=self.ctx, dtype=self.dtype, out=self)
 
     # pylint: disable=redefined-outer-name
     def _scatter_set_nd(self, value_nd, indices):
