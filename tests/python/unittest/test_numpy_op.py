@@ -3275,10 +3275,7 @@ def test_np_linalg_det():
     ]
     types = [_np.float32, _np.float64]
 
-    #for hybridize, dtype, shape in itertools.product([True, False], types, tensor_shapes):
-    hybridize = False
-    dtype = _np.float32
-    for shape in tensor_shapes:
+    for hybridize, dtype, shape in itertools.product([True, False], types, tensor_shapes):
         a_shape = (1,) + shape
         test_det = TestDet()
         if hybridize:
