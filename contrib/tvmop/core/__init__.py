@@ -16,4 +16,3 @@
 # under the License.
 
 from . import umath, fromnumeric, multiarray
-from .import where

@@ -4389,7 +4389,7 @@ def test_np_diff():
                         mx_out.backward()
                         if (np_out.size == 0):
                             np_backward = _np.zeros(shape)
-                        else:                    
+                        else:
                             np_backward = np_diff_backward(_np.ones(np_out.shape, dtype=itype), n=n, axis=axis)
                         assert x.grad.shape == np_backward.shape
                         assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
@@ -4535,7 +4535,7 @@ def test_np_nan_to_num():
     copy_list = [True, False]
     hybridize_list = [True, False]
     atol, rtol = 1e-5, 1e-3
-    
+
     src_dtype_comb = list(itertools.product(src_list,dtype_list))
     # check the dtype = int case in both imperative and sympolic expression
     src_dtype_comb.append((1,'int32'))
@@ -4566,11 +4566,11 @@ def test_np_nan_to_num():
         assert_almost_equal(mx_out.asnumpy(), np_out, rtol, atol)
         # check the inplace operation when copy = False
         # if x1.shape = 0, _np.array will not actually execute copy logic
-        # only check x3 from np.nan_to_num instead of x2 from gluon 
+        # only check x3 from np.nan_to_num instead of x2 from gluon
         if copy == False and x1.shape!=():
             assert x1.shape == x3.asnumpy().shape
             assert x1.dtype == x3.asnumpy().dtype
-            assert_almost_equal(x1, x3.asnumpy(), rtol=rtol, atol=atol)  
+            assert_almost_equal(x1, x3.asnumpy(), rtol=rtol, atol=atol)
         # gluon does not support nan_to_num when copy=False
         # backward will check int type and if so, throw error
         # if not this case, test gluon
@@ -4582,13 +4582,59 @@ def test_np_nan_to_num():
             assert_almost_equal(mx_out_gluon.asnumpy(), np_out, rtol, atol)
             mx_out_gluon.backward()
             assert_almost_equal(x2.grad.asnumpy(), expected_grad, rtol=1e-3, atol=1e-5)
-                                        
+
         # Test imperative once again
         # if copy = False, the value of x1 and x2 has changed
-        if copy == True:            
+        if copy == True:
             np_out = _np.nan_to_num(x1)
             mx_out = np.nan_to_num(x3)
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
+
+
+@with_seed()
+@use_np
+def test_np_where():
+    class TestWhere(HybridBlock):
+        def __init__(self):
+            super(TestWhere, self).__init__()
+
+        def hybrid_forward(self, F, cond, x, y):
+            return F.np.where(cond, x, y)
+
+    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64, np.bool]
+    shape_configs = [
+        [(), (2, 3), (4, 1, 3)],
+        [(), (4, 1, 3), (2, 3)],
+        [(2, 3), (4, 1, 3), ()],
+        [(4, 1, 3), (2, 3), ()],
+        [(2, 3), (), (4, 1, 3)],
+        [(2, 3), (2, 3), (2, 3)],
+        [(2, 3), (2, 1), (2, 3)],
+        [(2, 1), (2, 3), (2, 3)],
+        [(2, 3), (2, 3), (2, 1)]
+    ]
+    flags = [True, False]
+    for ctype, dtype, shape_pair, hybridize in itertools.product(dtypes, dtypes, shape_configs, flags):
+        cond = np.random.uniform(low=0, high=100, size=shape_pair[0], dtype='float64').astype(ctype)
+        x = np.random.uniform(low=0, high=100, size=shape_pair[1], dtype='float64').astype(dtype)
+        y = np.random.uniform(low=0, high=100, size=shape_pair[2], dtype='float64').astype(dtype)
+        cond.attach_grad()
+        x.attach_grad()
+        y.attach_grad()
+        test_mod = TestWhere()
+        if hybridize:
+            test_mod.hybridize()
+        with mx.autograd.record():
+            ret = test_mod(cond, x, y)
+        same(ret.asnumpy(), _np.where(cond.asnumpy(), x.asnumpy(), y.asnumpy()))
+        if dtype in [np.float16, np.float32, np.float64]:
+            ret.backward()
+            same(cond.grad.asnumpy(), _np.zeros(shape_pair[0], dtype=ctype))
+            same(x.grad.asnumpy(), collapse_sum_like(_np.broadcast_to(cond.asnumpy(), ret.shape), shape_pair[1]))
+
+        # check imperative again
+        ret = np.where(cond, x, y)
+        same(ret.asnumpy(), _np.where(cond.asnumpy(), x.asnumpy(), y.asnumpy()))
 
 
 if __name__ == '__main__':

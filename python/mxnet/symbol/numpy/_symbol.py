@@ -41,7 +41,7 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'around', 'hypot', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take',
            'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal',
            'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'shares_memory', 'may_share_memory', 'diff',
-           'resize', 'nan_to_num']
+           'resize', 'nan_to_num', 'where']
 
 
 def _num_outputs(sym):
@@ -4845,7 +4845,7 @@ def nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None, **kwargs):
 
     Parameters
     ----------
-    x : Symbol
+    x : _Symbol
         Input data.
     copy : bool, optional
         Whether to create a copy of `x` (True) or to replace values
@@ -4868,7 +4868,7 @@ def nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None, **kwargs):
 
     Returns
     -------
-    out : ndarray
+    out : _Symbol
         `x`, with the non-finite values replaced. If `copy` is False, this may
         be `x` itself.
 
@@ -4887,6 +4887,28 @@ def nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None, **kwargs):
     else:
         raise TypeError('type {} not supported'.format(str(type(x))))
 
+
+@set_module('mxnet.symbol.numpy')
+def where(condition, x, y):
+    """
+    Return elements chosen from `x` or `y` depending on `condition`.
+
+    Parameters
+    ----------
+    condition : _Symbol
+        Where True, yield `x`, otherwise yield `y`.
+    x, y : _Symbol
+        Values from which to choose. `x`, `y` and `condition` need to be
+        broadcastable to some shape.
+
+    Returns
+    -------
+    out : _Symbol
+        An array with elements from `x` where `condition` is True, and elements
+        from `y` elsewhere.
+
+    """
+    return _npi.where(condition, x, y, out=None)
 
 
 _set_np_symbol_class(_Symbol)
