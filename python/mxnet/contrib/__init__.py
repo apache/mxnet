@@ -27,6 +27,7 @@ from . import ndarray as nd
 from . import autograd
 from . import tensorboard
 
+from . import amp
 from . import text
 from . import onnx
 from . import io
