@@ -32,8 +32,13 @@ from mxnet.base import MXNetError
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray
 from mxnet.test_utils import check_numeric_gradient, use_np, collapse_sum_like
 from common import assertRaises, with_seed
+from mxnet.runtime import Features
 import random
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
+import itertools
+import scipy.stats as ss
+from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, retry
+from mxnet.runtime import Features
 from mxnet.numpy_op_signature import _get_builtin_op
 from mxnet.test_utils import is_op_runnable, has_tvm_ops
 from mxnet.operator import get_all_registered_operators
@@ -4589,6 +4594,87 @@ def test_np_nan_to_num():
             np_out = _np.nan_to_num(x1)
             mx_out = np.nan_to_num(x3)
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
+
+
+@with_seed()
+@use_np
+@unittest.skipUnless(has_tvm_ops(),
+                     'cumprod is only implemented with TVM.')
+def test_np_cumprod():
+    class TestCumprod(HybridBlock):
+        def __init__(self, axis):
+            super(TestCumprod, self).__init__()
+            self.axis = axis
+
+        def hybrid_forward(self, F, data):
+            return F.np.cumprod(data, axis=self.axis)
+    
+    def get_grad(data, axis):
+        isNone = False
+        if axis == None:
+            isNone = True
+            ishape = data.shape
+            data = _np.reshape(data, (-1,))
+            axis = 0
+        data = _np.swapaxes(data, -1, axis)
+        jacobi = _np.empty(data.shape + (data.shape[-1],), dtype=data.dtype)
+        r = [range(ndim) for ndim in jacobi.shape]
+        r = itertools.product(*r)
+        for idx in r:
+            j = idx[-2]
+            i = idx[-1]
+            if i < j:
+                jacobi[idx] = 0
+            else:
+                jacobi[idx] = 1
+                for k in range(i + 1):
+                    if k != j:
+                        jacobi[idx] *= data[idx[:-2] + (k,)]
+        grad = _np.sum(jacobi, axis=-1)
+        grad = _np.swapaxes(grad, -1, axis)
+        if isNone:
+            grad = _np.reshape(grad, ishape)
+        return grad
+
+    dtypes = ['int32', 'float32', 'float64']
+    for hybridize in [False, True]:
+        for dtype in dtypes:
+            for ndim in range(0, 6):
+                axes = list(range(ndim)) + [None]
+                for axis in axes:
+                    rtol = 1e-2
+                    atol = 1e-2
+                    test_cumprod = TestCumprod(axis)
+                    if hybridize:
+                        test_cumprod.hybridize()
+                    dim = 3 if axis is None else 10
+                    data_shape = rand_shape_nd(ndim, dim=dim, allow_zero_size=True)
+                    data_np = _np.array(_np.random.uniform(-1.0, 1.0, data_shape), dtype=dtype)
+                    data = np.array(data_np, dtype=dtype)
+                    data.attach_grad()
+                    expected_np = _np.cumprod(data_np, axis=axis)
+                    with mx.autograd.record():
+                        out_mx = test_cumprod(data)
+                    assert out_mx.shape == expected_np.shape
+                    assert_almost_equal(out_mx.asnumpy(), expected_np, rtol=rtol, atol=atol)
+                    out_mx.backward()
+                    backward_expected = get_grad(data_np, axis=axis)
+                    assert_almost_equal(data.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+
+                    # Test imperative once again
+                    data = np.array(data_np, dtype=dtype)
+                    out_mx = np.cumprod(data, axis=axis)
+                    assert_almost_equal(out_mx.asnumpy(), expected_np, rtol=rtol, atol=atol)
+
+                    # Test AddTo Request
+                    data = np.array(data_np, dtype=dtype)
+                    data.attach_grad()
+                    with mx.autograd.record():
+                        a = test_cumprod(data)
+                        b = test_cumprod(data)
+                    mx.autograd.backward([a, b])
+                    backward_expected = 2 * get_grad(data_np, axis=axis)
+                    assert_almost_equal(data.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
 
 
 if __name__ == '__main__':
