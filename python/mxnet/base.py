@@ -89,7 +89,9 @@ class _Py2CompatibleUnicodeFileWriter(object):
             self.unicode = str
         else:
             from functools import partial
+            # pylint: disable=undefined-variable
             self.unicode = partial(unicode, encoding="utf-8")
+            # pylint: enable=undefined-variable
 
     def write(self, value):
         self._file_handle.write(self.unicode(value))
