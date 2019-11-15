@@ -54,6 +54,8 @@ $(MKLDNN_LIBFILE):
 
 mkldnn_clean:
 	$(RM) -r 3rdparty/mkldnn/build
+	$(RM) -r include/mkldnn/dnnl_version.h
+	$(RM) -r include/mkldnn/dnnl_config.h
 
 ifeq ($(USE_MKLDNN), 1)
 mkldnn: mkldnn_build
