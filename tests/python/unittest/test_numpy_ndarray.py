@@ -27,7 +27,7 @@ from mxnet import np, npx, autograd
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, retry, use_np
 from common import with_seed, TemporaryDirectory
-from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, assert_exception, is_op_runnable, collapse_sum_like
+from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, assert_exception, collapse_sum_like
 from mxnet.ndarray.ndarray import py_slice
 from mxnet.base import integer_types
 
@@ -267,18 +267,13 @@ def test_np_ndarray_binary_element_wise_ops():
         '/': _np.divide,
         'mod': _np.mod,
         'pow': _np.power,
-
+        '==': _np.equal,
+        '!=': _np.not_equal,
+        '>': _np.greater,
+        '>=': _np.greater_equal,
+        '<': _np.less,
+        '<=': _np.less_equal,
     }
-
-    if is_op_runnable():
-        np_op_map.update({
-            '==': _np.equal,
-            '!=': _np.not_equal,
-            '>': _np.greater,
-            '>=': _np.greater_equal,
-            '<': _np.less,
-            '<=': _np.less_equal
-        })
 
     def _get_grad_func(op, scalar=None, reverse=False):
         if op == '+':
@@ -1122,8 +1117,6 @@ def test_np_multinomial():
 
 
 @with_seed()
-@unittest.skipUnless(is_op_runnable(), "Comparison ops can only run on either CPU instances, or GPU instances with"
-                                       " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
 @use_np
 def test_np_ndarray_boolean_indexing():
     def test_single_bool_index():

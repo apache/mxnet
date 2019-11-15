@@ -2380,45 +2380,6 @@ def is_cd_run():
 _features = Features()
 
 
-def has_tvm_ops():
-    """Returns True if MXNet is compiled with TVM generated operators. If current ctx
-    is GPU, it only returns True for CUDA compute capability > 52 where FP16 is supported.
-    """
-    built_with_tvm_op = _features.is_enabled("TVM_OP")
-    ctx = current_context()
-    if ctx.device_type == 'gpu':
-        try:
-            cc = get_cuda_compute_capability(ctx)
-        except:  # pylint: disable=bare-except
-            print('Failed to get CUDA compute capability for context {}. The operators '
-                  'built with USE_TVM_OP=1 will not be run in unit tests.'.format(ctx))
-            return False
-        print('Cuda arch compute capability: sm_{}'.format(str(cc)))
-        return built_with_tvm_op and cc >= 53
-    return built_with_tvm_op
-
-
-def is_op_runnable():
-    """Returns True for all CPU tests. Returns True for GPU tests that are either of the following.
-    1. Built with USE_TVM_OP=0.
-    2. Built with USE_TVM_OP=1, but with compute capability >= 53.
-    """
-    ctx = current_context()
-    if ctx.device_type == 'gpu':
-        if not _features.is_enabled("TVM_OP"):
-            return True
-        else:
-            try:
-                cc = get_cuda_compute_capability(ctx)
-            except:  # pylint: disable=bare-except
-                print('Failed to get CUDA compute capability for context {}. The operators '
-                      'built with USE_TVM_OP=1 will not be run in unit tests.'.format(ctx))
-                return False
-            print('Cuda arch compute capability: sm_{}'.format(str(cc)))
-            return cc >= 53
-    return True
-
-
 @use_np
 def check_gluon_hybridize_consistency(net_builder, data_l, numpy_func=None, test_grad=True,
                                       rtol=1E-4, atol=1E-4):
@@ -2541,3 +2502,8 @@ def new_sym_matrix_with_real_eigvals_nd(shape):
     """Generate sym matrices with real eigenvalues."""
     n = int(np.prod(shape[:-2])) if len(shape) > 2 else 1
     return np.array([new_sym_matrix_with_real_eigvals_2d(shape[-1]) for i in range(n)]).reshape(shape)
+
+
+def use_tvm_op():
+    """Returns True if MXNet is built with USE_TVM_OP=1."""
+    return _features.is_enabled("TVM_OP")

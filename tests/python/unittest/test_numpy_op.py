@@ -38,7 +38,7 @@ from common import assertRaises, with_seed
 import random
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
 from mxnet.numpy_op_signature import _get_builtin_op
-from mxnet.test_utils import is_op_runnable, has_tvm_ops
+from mxnet.test_utils import use_tvm_op
 from mxnet.operator import get_all_registered_operators
 
 
@@ -465,7 +465,7 @@ def test_np_sum():
                         expected_ret = _np.sum(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims)
                         expected_ret = expected_ret.astype(dtype)
                         if itype == 'bool':
-                            if is_op_runnable() and (not is_windows):  # special handling of boolean ndarray
+                            if not is_windows:  # special handling of boolean ndarray
                                 y = test_sum(x)
                                 assert y.dtype == expected_ret.dtype
                                 assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-4, atol=1e-5,
@@ -870,7 +870,7 @@ def test_np_mean():
                     expected_ret = _np.mean(x.asnumpy(), axis=axis, dtype=dtype, keepdims=keepdims)
 
                     if itype == 'bool':
-                        if is_op_runnable() and (not is_windows) and dtype not in ['float16', 'int8']:  # special handling of boolean ndarray
+                        if (not is_windows) and dtype not in ['float16', 'int8']:  # special handling of boolean ndarray
                             y = test_mean(x)
                             assert y.shape == expected_ret.shape
                             assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if dtype == 'float16' else 1e-3,
@@ -1903,7 +1903,7 @@ def test_np_unary_funcs():
         'arccosh' : (lambda x: 1./(x**2 - 1.)**(1./2.), 2.0, 5.0),
         'arctanh' : (lambda x: -1./(x**2 - 1.), -0.99, 0.99)
     }
-    if has_tvm_ops():
+    if use_tvm_op():
         funcs['rad2deg'] = (lambda x: 180. / _np.pi * _np.ones(x.shape), -1.0, 1.0)
         funcs['deg2rad'] = (lambda x: _np.pi / 180. * _np.ones(x.shape), -1.0, 1.0)
     ndim = random.choice([2, 3, 4])

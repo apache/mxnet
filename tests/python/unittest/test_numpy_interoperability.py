@@ -27,7 +27,6 @@ import unittest
 from mxnet import np
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import use_np
-from mxnet.test_utils import is_op_runnable
 from common import assertRaises, with_seed
 from mxnet.numpy_dispatch_protocol import with_array_function_protocol, with_array_ufunc_protocol
 from mxnet.numpy_dispatch_protocol import _NUMPY_ARRAY_FUNCTION_LIST, _NUMPY_ARRAY_UFUNC_LIST
@@ -36,14 +35,6 @@ from mxnet.numpy_dispatch_protocol import _NUMPY_ARRAY_FUNCTION_LIST, _NUMPY_ARR
 _INT_DTYPES = [np.int8, np.int32, np.int64, np.uint8]
 _FLOAT_DTYPES = [np.float16, np.float32, np.float64]
 _DTYPES = _INT_DTYPES + _FLOAT_DTYPES
-_TVM_OPS = [
-    'equal',
-    'not_equal',
-    'less',
-    'less_equal',
-    'greater',
-    'greater_equal'
-]
 
 
 class OpArgMngr(object):
@@ -1944,8 +1935,6 @@ def _check_interoperability_helper(op_name, *args, **kwargs):
         onp_op = getattr(getattr(_np, strs[0]), strs[1])
     else:
         assert False
-    if not is_op_runnable():
-        return
     out = onp_op(*args, **kwargs)
     expected_out = _get_numpy_op_output(onp_op, *args, **kwargs)
     if isinstance(out, (tuple, list)):
@@ -1963,12 +1952,7 @@ def _check_interoperability_helper(op_name, *args, **kwargs):
 
 def check_interoperability(op_list):
     for name in op_list:
-        if name in _TVM_OPS and not is_op_runnable():
-            continue
-        if name in ['shares_memory', 'may_share_memory', 'empty_like']:  # skip list
-            continue
-        if name in ['full_like', 'zeros_like', 'ones_like'] and \
-                StrictVersion(platform.python_version()) < StrictVersion('3.0.0'):
+        if name in ['shares_memory', 'may_share_memory']:  # skip list
             continue
         print('Dispatch test:', name)
         workloads = OpArgMngr.get_workloads(name)
