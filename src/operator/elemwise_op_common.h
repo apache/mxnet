@@ -209,7 +209,8 @@ inline bool ElemwiseIntType(const nnvm::NodeAttrs& attrs,
   CHECK(in_attrs->at(0) == mshadow::kInt64 ||
         in_attrs->at(0) == mshadow::kInt32 ||
         in_attrs->at(0) == mshadow::kInt8 ||
-        in_attrs->at(0) == mshadow::kUint8) << "Only supports integer types.";
+        in_attrs->at(0) == mshadow::kUint8 ||
+        in_attrs->at(0) == mshadow::kBool) << "Only supports integer types.";
   if (n_in != -1) {
     CHECK_EQ(in_attrs->size(), static_cast<size_t>(n_in)) << " in operator " << attrs.name;
   }
