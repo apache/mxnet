@@ -172,7 +172,7 @@ void NumpyBooleanAssignForwardGPU(const nnvm::NodeAttrs& attrs,
   size_t valid_num = 0;
   size_t* prefix_sum = nullptr;
   if (mask_size != 0) {
-    MSHADOW_TYPE_SWITCH(mask.type_flag_, MType, {
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(mask.type_flag_, MType, {
       prefix_sum = GetValidNumGPU<MType>(ctx, mask.dptr<MType>(), mask_size);
     });
     cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);

@@ -576,7 +576,17 @@ class ndarray(NDArray):
             raise TypeError('Cannot assign mx.nd.NDArray to mxnet.numpy.ndarray')
 
         # handle basic and advanced indexing
-        if self.ndim == 0:
+        if isinstance(key, NDArray) and getattr(key, 'dtype', None) == _np.bool_:
+            if self.shape == key.shape:
+                if isinstance(value, numeric_types):
+                    _npi.boolean_mask_assign_scalar(data=self, mask=key, value=value, out=self)
+                elif isinstance(value, NDArray):
+                    _npi.boolean_mask_assign_tensor(data=self, mask=key, value=value, out=self)
+                else:
+                    raise NotImplementedError('type %s is not supported.'%(type(value)))
+            else:
+                raise NotImplementedError('Shape not supported at this moment')
+        elif self.ndim == 0:
             if not isinstance(key, tuple) or len(key) != 0:
                 raise IndexError('scalar tensor can only accept `()` as index')
             if isinstance(value, numeric_types):

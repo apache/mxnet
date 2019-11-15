@@ -1156,12 +1156,31 @@ def test_np_ndarray_boolean_indexing():
         a_grad_np[a_np < 0.5] = 1
         assert_almost_equal(a.grad.asnumpy(), a_grad_np, rtol=1e-4, atol=1e-5, use_broadcast=False)
 
+    def test_boolean_indexing_assign():
+        shapes = [(3, 4), (3, 0), (10),()]
+        for shape in shapes:
+            test_data = np.random.uniform(size=shape)
+            mx_mask = np.around(np.random.uniform(size=shape))
+            valid_num = int(mx_mask.sum())
+            np_mask = mx_mask.asnumpy().astype(_np.bool)
+            mx_mask = mx_mask.astype(_np.bool)
+            for val in [42., np.array(42.), np.array([42.]), np.random.uniform(size=(valid_num,))]:
+                np_data = test_data.asnumpy()
+                mx_data = test_data.copy()
+                np_data[np_data>0.5] = 1
+                mx_data[mx_data>0.5] = 1
+                assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+                np_data[np_mask] = val
+                mx_data[mx_mask] = val
+                assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+
     test_single_bool_index()
     test_boolean_catch_exception()
     test_boolean_indexing_onedim()
     test_boolean_indexing_twodim()
     test_boolean_indexing_list()
     test_boolean_indexing_autograd()
+    test_boolean_indexing_assign()
 
 
 @with_seed()

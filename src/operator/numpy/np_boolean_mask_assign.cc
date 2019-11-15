@@ -175,7 +175,7 @@ void NumpyBooleanAssignForwardCPU(const nnvm::NodeAttrs& attrs,
   size_t valid_num = 0;
   size_t mask_size = mask.shape_.Size();
   std::vector<size_t> prefix_sum(mask_size + 1, 0);
-  MSHADOW_TYPE_SWITCH(mask.type_flag_, MType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(mask.type_flag_, MType, {
     valid_num = GetValidNumCPU(mask.dptr<MType>(), prefix_sum.data(), mask_size);
   });
   // If there's no True in mask, return directly
