@@ -30,6 +30,7 @@ from . import tensorboard
 from . import amp
 from . import text
 from . import onnx
+from . import svrg_optimization
 from . import io
 from . import quantization
 from . import quantization as quant
