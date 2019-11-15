@@ -1063,7 +1063,7 @@ void NumpyDiagOpImpl(const TBlob &in_data,
                      const mxnet::TShape &ishape,
                      const mxnet::TShape &oshape,
                      index_t dsize,
-                     const NumpyDiagParam &param,
+                     const int &k,
                      mxnet_op::Stream<xpu> *s,
                      const std::vector<OpReqType> &req) {
   using namespace mxnet_op;
@@ -1075,7 +1075,6 @@ void NumpyDiagOpImpl(const TBlob &in_data,
 
     // the extra index offset introduced by k
     index_t offset;
-    int k = param.k;
     if (k > 0) {
       offset = stride2 * k;
     } else if (k < 0) {
@@ -1126,7 +1125,7 @@ void NumpyDiagOpForward(const nnvm::NodeAttrs &attrs,
   const NumpyDiagParam &param = nnvm::get<NumpyDiagParam>(attrs.parsed);
 
   NumpyDiagOpImpl<xpu, false>(in_data, out_data, ishape, oshape,
-                                 out_data.Size(), param, s, req);
+                                 out_data.Size(), param.k, s, req);
 }
 
 template <typename xpu>
@@ -1148,7 +1147,7 @@ void NumpyDiagOpBackward(const nnvm::NodeAttrs &attrs,
   const NumpyDiagParam &param = nnvm::get<NumpyDiagParam>(attrs.parsed);
 
   NumpyDiagOpImpl<xpu, true>(in_data, out_data, oshape, ishape,
-                                in_data.Size(), param, s, req);
+                                in_data.Size(), param.k, s, req);
 }
 
 }  // namespace op
