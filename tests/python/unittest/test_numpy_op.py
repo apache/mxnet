@@ -4499,7 +4499,7 @@ def test_np_diag():
         def hybrid_forward(self, F, a):
             return F.np.diag(a, k=self._k)
             
-    shapes = [(2,), 5, (1, 5), (2, 2), (2, 5), (3, 3), (4, 3)]
+    shapes = [(), (2,), (1, 5), (2, 2), (2, 5), (3, 3), (4, 3)]
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
     range_k = 6
     combination = itertools.product([False, True], shapes, dtypes, list(range(-range_k, range_k)))
@@ -4521,10 +4521,9 @@ def test_np_diag():
         
         # check backward function 
         mx_out.backward()
-        np_backward = 0
-        if type(shape) == int:
-            np_backward = np.ones(shape)
-        elif len(shape) < 2:
+        if len(shape) == 0:
+            np_backward = np.array(())
+        elif len(shape) == 1:
             np_backward = np.ones(shape[0])
         else:
             np_backward = np.zeros(shape)
