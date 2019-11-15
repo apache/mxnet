@@ -27,6 +27,9 @@
 #define MXNET_OPERATOR_NUMPY_NP_WHERE_OP_INL_H_
 
 #include <mxnet/operator_util.h>
+#include <algorithm>
+#include <string>
+#include <utility>
 #include <vector>
 #include "../../common/utils.h"
 #include "../mxnet_op.h"
@@ -59,8 +62,9 @@ struct numpy_where_kernel {
 template<int ndim, bool is_left>
 struct numpy_where_backward_kernel {
   template<typename CType, typename DType>
-  MSHADOW_XINLINE static void Map(index_t base, OpReqType req, const Shape<ndim> &cstride,
-                                  const Shape<ndim> &oshape, CType *datac, DType *datao, DType *grad) {
+  MSHADOW_XINLINE static void Map(index_t base, OpReqType req,
+                                  const Shape<ndim> &cstride, const Shape<ndim> &oshape,
+                                  CType *datac, DType *datao, DType *grad) {
     Shape<ndim> coord = mxnet_op::unravel(base, oshape);
     auto cidx = static_cast<index_t>(mxnet_op::dot(coord, cstride));
     if (is_left) {
@@ -151,7 +155,8 @@ inline void NumpyWhereOpForward(const nnvm::NodeAttrs& attrs,
       mxnet_op::Kernel<numpy_where_kernel<NUMPY_WHERE_MAX_DIM>, xpu>::Launch(
         s, outputs[0].Size(), req[0],
         in_strides[0], in_strides[1], in_strides[2], oshape,
-        inputs[0].dptr<CType>(), inputs[1].dptr<DType>(), inputs[2].dptr<DType>(), outputs[0].dptr<DType>());
+        inputs[0].dptr<CType>(), inputs[1].dptr<DType>(),
+        inputs[2].dptr<DType>(), outputs[0].dptr<DType>());
     });
   });
 }
@@ -180,7 +185,8 @@ inline void NumpyWhereOpBackward(const nnvm::NodeAttrs& attrs,
   for (int j = 0; j < inputs[1].shape_.ndim(); ++j) {
     expanded_cshape[j + ndim_delta] = (inputs[1].shape_)[j];
   }
-  Shape<NUMPY_WHERE_MAX_DIM> cstride = mxnet_op::calc_stride(expanded_cshape.get<NUMPY_WHERE_MAX_DIM>());
+  Shape<NUMPY_WHERE_MAX_DIM> cstride =
+      mxnet_op::calc_stride(expanded_cshape.get<NUMPY_WHERE_MAX_DIM>());
   // get expanded lshape
   TShape expanded_lshape(NUMPY_WHERE_MAX_DIM, 1);
   ndim_delta = expanded_lshape.ndim() - outputs[0].shape_.ndim();
@@ -198,7 +204,7 @@ inline void NumpyWhereOpBackward(const nnvm::NodeAttrs& attrs,
     MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[1].type_flag_, CType, {
       Tensor<xpu, 1, char> largespace;
       Tensor<xpu, NUMPY_WHERE_MAX_DIM, DType> workspace;
-      size_t ws_size;
+      size_t ws_size = 0;
       if (!(inputs[0].shape_ != outputs[0].shape_) || !(inputs[0].shape_ != outputs[1].shape_)) {
         size_t ws_size1 = broadcast::ReduceWorkspaceSize<NUMPY_WHERE_MAX_DIM, DType>(
             s, expanded_lshape, req[0], expanded_oshape);
@@ -215,16 +221,17 @@ inline void NumpyWhereOpBackward(const nnvm::NodeAttrs& attrs,
         largespace = ctx.requested[0].get_space_typed<xpu, 1, char>(
             Shape1(inputs[0].shape_.Size() * sizeof(DType) + ws_size), s);
         workspace = Tensor<xpu, NUMPY_WHERE_MAX_DIM, DType>(
-            reinterpret_cast<DType*>(largespace.dptr_ + ws_size), expanded_oshape.get<NUMPY_WHERE_MAX_DIM>(), s);
+            reinterpret_cast<DType*>(largespace.dptr_ + ws_size),
+            expanded_oshape.get<NUMPY_WHERE_MAX_DIM>(), s);
         mxnet_op::Kernel<numpy_where_backward_kernel<NUMPY_WHERE_MAX_DIM, true>, xpu>::Launch(
           s, inputs[0].Size(), req[0], cstride, oshape,
           inputs[1].dptr<CType>(), inputs[0].dptr<DType>(), workspace.dptr_);
         if (NeedSafeAcc<true>(outputs[0].type_flag_, outputs[0].type_flag_)) {
-          ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(
-              ctx, {TBlob(workspace)}, {req[0]}, {outputs[0].reshape(expanded_lshape)}, expanded_lshape);
+          ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(ctx, {TBlob(workspace)}, {req[0]},
+              {outputs[0].reshape(expanded_lshape)}, expanded_lshape);
         } else {
-          ReduceAxesComputeImpl<xpu, mshadow_op::sum, false>(
-              ctx, {TBlob(workspace)}, {req[0]}, {outputs[0].reshape(expanded_lshape)}, expanded_lshape);
+          ReduceAxesComputeImpl<xpu, mshadow_op::sum, false>(ctx, {TBlob(workspace)}, {req[0]},
+              {outputs[0].reshape(expanded_lshape)}, expanded_lshape);
         }
       }
       // process right output
@@ -236,16 +243,17 @@ inline void NumpyWhereOpBackward(const nnvm::NodeAttrs& attrs,
         largespace = ctx.requested[0].get_space_typed<xpu, 1, char>(
             Shape1(inputs[0].shape_.Size() * sizeof(DType) + ws_size), s);
         workspace = Tensor<xpu, NUMPY_WHERE_MAX_DIM, DType>(
-            reinterpret_cast<DType*>(largespace.dptr_ + ws_size), expanded_oshape.get<NUMPY_WHERE_MAX_DIM>(), s);
+            reinterpret_cast<DType*>(largespace.dptr_ + ws_size),
+            expanded_oshape.get<NUMPY_WHERE_MAX_DIM>(), s);
         mxnet_op::Kernel<numpy_where_backward_kernel<NUMPY_WHERE_MAX_DIM, false>, xpu>::Launch(
           s, inputs[0].Size(), req[1], cstride, oshape,
           inputs[1].dptr<CType>(), inputs[0].dptr<DType>(), workspace.dptr_);
         if (NeedSafeAcc<true>(outputs[1].type_flag_, outputs[1].type_flag_)) {
-          ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(
-              ctx, {TBlob(workspace)}, {req[1]}, {outputs[1].reshape(expanded_rshape)}, expanded_rshape);
+          ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(ctx, {TBlob(workspace)}, {req[1]},
+              {outputs[1].reshape(expanded_rshape)}, expanded_rshape);
         } else {
-          ReduceAxesComputeImpl<xpu, mshadow_op::sum, false>(
-              ctx, {TBlob(workspace)}, {req[1]}, {outputs[1].reshape(expanded_rshape)}, expanded_rshape);
+          ReduceAxesComputeImpl<xpu, mshadow_op::sum, false>(ctx, {TBlob(workspace)}, {req[1]},
+              {outputs[1].reshape(expanded_rshape)}, expanded_rshape);
         }
       }
     });

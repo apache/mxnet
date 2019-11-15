@@ -5321,7 +5321,7 @@ def where(condition, x, y):
         Where True, yield `x`, otherwise yield `y`.
     x, y : ndarray
         Values from which to choose. `x`, `y` and `condition` need to be
-        broadcastable to some shape.
+        broadcastable to some shape. `x` and `y` must have the same dtype.
 
     Returns
     -------
