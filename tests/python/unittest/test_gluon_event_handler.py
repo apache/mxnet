@@ -155,6 +155,7 @@ def test_logging():
         assert logging_handler.batch_index == 0
         assert logging_handler.current_epoch == 3
         assert os.path.isfile(output_dir)
+        del est  # Clean up estimator and logger before deleting tmpdir
 
 
 def test_custom_handler():
