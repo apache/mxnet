@@ -502,8 +502,9 @@ struct det {
   static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 1, DType>& det,
                  const Tensor<xpu, 3, DType>& LU, const Tensor<xpu, 2, int>& pivot,
                  const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
-    if (A.shape_.Size() == 0U)
+    if (A.shape_.Size() == 0U) {
       return;
+    }
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 1, DType> sign = ctx.requested[0]
       .get_space_typed<xpu, 1, DType>(det.shape_, s);

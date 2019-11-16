@@ -429,13 +429,10 @@ inline bool DetShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in[ndim-2], in[ndim-1]) << "Input A's last two dimension must be equal";
   mxnet::TShape out;
   if (ndim == 2) {
-    if (Imperative::Get()->is_np_shape()) {
+    if (Imperative::Get()->is_np_shape() || in.Size() == 0U) {
       out = mxnet::TShape(0, 1);
     } else {
       out = mxnet::TShape(1, 1);
-    }
-    if (in.Size() == 0U) {
-      out = mxnet::TShape(0, -1);
     }
   } else {
     out = mxnet::TShape(in.begin(), in.end() - 2);
