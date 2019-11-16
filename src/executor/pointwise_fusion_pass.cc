@@ -43,14 +43,14 @@ void WarnFusionNotSupported() {
   static bool issued_warning = false;
   if (!issued_warning) {
     issued_warning = true;
-#if !defined(_WIN32)
+#if defined(_WIN32)
     LOG(WARNING) << "Omitting dynamic fused op creation- not enabled on Windows.  "
                  << "Unset env var MXNET_USE_FUSION=1 to quiet this message.";
 #else
     LOG(WARNING) << "Omitting dynamic fused op creation- needs MXNet lib built with "
                    << "USE_CUDA=1 and ENABLE_CUDA_RTC=1.  Unset env var MXNET_USE_FUSION=1 "
                    << "to quiet this message.";
-#endif  // !defined(_WIN32)
+#endif  // defined(_WIN32)
   }
 }
 
