@@ -127,7 +127,8 @@ void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
                           const NDArray &output) {
   // For mkldnn non-supported input, it shouldn't hold mkldnn memory, so let's simply fallback to
   // naive implement.
-  if (input.shape().ndim() > 4 || !SupportMKLDNNQuantize(input.dtype())) {
+  const int input_ndims = input.shape().ndim();
+  if ((input_ndims < 1 || input_ndims > 4) || !SupportMKLDNNQuantize(input.dtype())) {
     if (req != kWriteInplace) {
       FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, {input}, {req}, {output});
     }
