@@ -28,6 +28,52 @@
 namespace mxnet {
 namespace op {
 
+inline bool NumpyWhereOpShape(const nnvm::NodeAttrs& attrs,
+                              mxnet::ShapeVector* in_attrs,
+                              mxnet::ShapeVector* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 3U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  mxnet::TShape& operand1 = (*in_attrs)[0];
+  mxnet::TShape& operand2 = (*in_attrs)[1];
+  mxnet::TShape& operand3 = (*in_attrs)[2];
+
+  if (operand1 == operand2 && operand2 == operand3) {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, operand1);
+    return shape_is_known(out_attrs->at(0));
+  }
+  mxnet::TShape out(std::max({operand1.ndim(), operand2.ndim(), operand3.ndim()}), -1);
+  const int b1 = out.ndim() - operand1.ndim();
+  const int b2 = out.ndim() - operand2.ndim();
+  const int b3 = out.ndim() - operand3.ndim();
+  for (int i = 0; i < out.ndim(); ++i) {
+    int s1 = 1, s2 = 1, s3 = 1;
+    if (i >= b1) s1 = operand1[i-b1];
+    if (i >= b2) s2 = operand2[i-b2];
+    if (i >= b3) s3 = operand3[i-b3];
+    if (!(s1 == s2 && s2 == s3)) {
+      CHECK((s1 == 1 && s2 == 1) || (s1 == 1 && s3 == 1) || (s2 == 1 && s3 == 1) ||
+            (s1 == 1 && s2 == s3) || (s2 == 1 && s1 == s3) || (s3 == 1 && s1 == s2))
+        << "Operands could not be broadcast together.";
+      out[i] = std::max({s1, s2, s3});
+    } else {
+      out[i] = s1;
+    }
+  }
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, out);
+  return shape_is_known(out);
+}
+
+inline bool NumpyWhereOpType(const nnvm::NodeAttrs& attrs,
+                             std::vector<int>* in_attrs,
+                             std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 3U)
+    << "where operator takes 3 arguments (" << in_attrs->size() << " given)";
+  CHECK_EQ(out_attrs->size(), 1U);
+  std::vector<int> sub_in_attrs(in_attrs->begin() + 1, in_attrs->end());
+  bool flag = ElemwiseType<2, 1>(attrs, &sub_in_attrs, out_attrs);
+  return flag && (in_attrs->at(0) != -1);
+}
+
 NNVM_REGISTER_OP(_npi_where)
 .set_num_inputs(3)
 .set_num_outputs(1)

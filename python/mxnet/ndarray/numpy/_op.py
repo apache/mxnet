@@ -5311,9 +5311,14 @@ def nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None, **kwargs):
 
 
 @set_module('mxnet.ndarray.numpy')
-def where(condition, x, y):
-    """
+def where(condition, x=None, y=None):
+    """where(condition, [x, y])
     Return elements chosen from `x` or `y` depending on `condition`.
+
+    .. note::
+        When only `condition` is provided, this function is a shorthand for
+        ``np.asarray(condition).nonzero()``. The rest of this documentation
+        covers only the case where all three arguments are provided.
 
     Parameters
     ----------
@@ -5371,4 +5376,7 @@ def where(condition, x, y):
            [ 0.,  2., -1.],
            [ 0.,  3., -1.]])
     """
-    return _npi.where(condition, x, y, out=None)
+    if x is None and y is None:
+        return nonzero(condition)
+    else:
+        return _npi.where(condition, x, y, out=None)
