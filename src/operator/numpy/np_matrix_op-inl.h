@@ -1065,7 +1065,7 @@ void NumpyDiagOpImpl(const TBlob &in_data,
                      index_t dsize,
                      const int &k,
                      mxnet_op::Stream<xpu> *s,
-                     const std::vector<OpReqType> &req) {
+                     const OpReqType &req) {
   using namespace mxnet_op;
   using namespace mshadow;
   if (ishape.ndim() > 1) {
@@ -1084,8 +1084,8 @@ void NumpyDiagOpImpl(const TBlob &in_data,
     }
 
     MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
-      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-        if (back && req[0] != kAddTo && req[0] != kNullOp) {
+      MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
+        if (back && req != kAddTo && req != kNullOp) {
           out_data.FlatTo1D<xpu, DType>(s) = 0;
         }
 
@@ -1096,7 +1096,7 @@ void NumpyDiagOpImpl(const TBlob &in_data,
     });
   } else {
     MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
-      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
         Kernel<diag_gen<req_type, back>, xpu>::Launch(
             s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
             Shape2(oshape[0], oshape[1]), k);
@@ -1125,7 +1125,7 @@ void NumpyDiagOpForward(const nnvm::NodeAttrs &attrs,
   const NumpyDiagParam &param = nnvm::get<NumpyDiagParam>(attrs.parsed);
 
   NumpyDiagOpImpl<xpu, false>(in_data, out_data, ishape, oshape,
-                                 out_data.Size(), param.k, s, req);
+                              out_data.Size(), param.k, s, req[0]);
 }
 
 template <typename xpu>
@@ -1147,7 +1147,7 @@ void NumpyDiagOpBackward(const nnvm::NodeAttrs &attrs,
   const NumpyDiagParam &param = nnvm::get<NumpyDiagParam>(attrs.parsed);
 
   NumpyDiagOpImpl<xpu, true>(in_data, out_data, oshape, ishape,
-                                in_data.Size(), param.k, s, req);
+                             in_data.Size(), param.k, s, req[0]);
 }
 
 }  // namespace op

@@ -4510,7 +4510,7 @@ def test_np_diag():
         if hybridize:
             test_diag.hybridize()
 
-        x = np.random.uniform(-1.0, 1.0, size=shape).astype(dtype)
+        x = np.random.uniform(-2.0, 2.0, size=shape).astype(dtype) if len(shape) != 0 else np.array(())
         x.attach_grad()
 
         np_out = _np.diag(x.asnumpy(), k)

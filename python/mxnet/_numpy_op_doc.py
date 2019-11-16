@@ -1122,4 +1122,3 @@ def _np_diag(array, k = 0):
            [0, 0, 8]])
     """
     pass
-

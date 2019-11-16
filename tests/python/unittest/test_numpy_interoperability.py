@@ -58,7 +58,6 @@ class OpArgMngr(object):
 
 
 def _add_workload_diag():
-
     def get_mat(n):
         data = _np.arange(n)
         data = _np.add.outer(data, data)
@@ -67,7 +66,7 @@ def _add_workload_diag():
     A = np.array([[1, 2], [3, 4], [5, 6]])
     vals = (100 * np.arange(5)).astype('l')
     vals_c = (100 * np.array(get_mat(5)) + 1).astype('l')
-    vals_f = _np.array((100 * get_mat(5) + 1), order = 'F', dtype = 'l')
+    vals_f = _np.array((100 * get_mat(5) + 1), order ='F', dtype ='l')
     vals_f = np.array(vals_f)
 
     OpArgMngr.add_workload('diag', A, k= 2)
