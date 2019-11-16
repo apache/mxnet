@@ -24,6 +24,7 @@ import numpy as _np
 import platform
 import mxnet as mx
 import scipy.stats as ss
+import scipy.special as scipy_special
 from nose.tools import assert_raises
 from mxnet import np, npx
 from mxnet.gluon import HybridBlock
@@ -1649,6 +1650,7 @@ def test_np_binary_funcs():
         'power': (1.0, 2.0, [lambda y, x1, x2: _np.power(x1, x2 - 1.0) * x2],
                              [lambda y, x1, x2: _np.power(x1, x2) * _np.log(x1)]),
         'lcm': (-100, 100, [None], None, [[_np.int32]]),
+        'bitwise_xor': (-100, 100, [None], None, [[_np.int32]]),
         'maximum': (-1, 1, [lambda y, x1, x2: _np.ones(y.shape) * (x1 >= x2)],
                            [lambda y, x1, x2: _np.ones(y.shape) * (x1 < x2)]),
         'minimum': (-1, 1, [lambda y, x1, x2: _np.ones(y.shape) * (x1 <= x2)],
@@ -2548,6 +2550,59 @@ def test_npx_random_bernoulli():
             scaled_prob = low + (high - low) * prob
             if not ((scaled_prob.asnumpy() >= 0).all() and (scaled_prob.asnumpy() <= 1).all()):
                 assertRaises(MXNetError, _test_bernoulli_exception, scaled_prob, None)
+
+
+@with_seed()
+@use_np
+def test_npx_special_unary_func():
+    def check_unary_func(func, ref_grad, shape, low, high):
+        class TestUnary(HybridBlock):
+            def __init__(self, func):
+                super(TestUnary, self).__init__()
+                self._func = func
+
+            def hybrid_forward(self, F, a, *args, **kwargs):
+                return getattr(F.npx, self._func)(a)
+
+        np_func = getattr(scipy_special, func)
+        mx_func = TestUnary(func)
+        np_test_data = _np.random.uniform(low, high, shape).astype(_np.float32)
+        mx_test_data = mx.numpy.array(np_test_data)
+        for hybridize in [True, False]:
+            if hybridize:
+                mx_func.hybridize()
+            if ref_grad:
+                mx_test_data.attach_grad()
+            np_out = np_func(np_test_data)
+            with mx.autograd.record():
+                y = mx_func(mx_test_data)
+            assert y.shape == np_out.shape
+            assert_almost_equal(y.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+            if np_out.dtype == np.bool_:
+                assert y.dtype == np.bool_
+
+            if ref_grad:
+                y.backward()
+                assert_almost_equal(mx_test_data.grad.asnumpy(), ref_grad(np_test_data), rtol=1e-1, atol=1e-2, equal_nan=True)
+
+        np_out = getattr(scipy_special, func)(np_test_data)
+        mx_out = getattr(mx.npx, func)(mx_test_data)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+    import math
+    funcs = {
+        'erf' : (lambda x: 2.0 / math.sqrt(math.pi) * _np.exp(-(x ** 2)), 0.5, 0.5),
+        'erfinv' : (lambda x: 0.5 * math.sqrt(math.pi) * _np.exp(scipy_special.erfinv(x) ** 2), 0.5, 0.5),
+        'gamma' : (lambda x: scipy_special.gamma(x) * scipy_special.psi(x), 0.5, 0.5),
+        'gammaln' : (lambda x: scipy_special.psi(x), 0.5, 0.5)
+    }
+    ndim = random.choice([2, 3, 4])
+    shape = random.choice([rand_shape_nd(ndim, dim=3), (1, 0, 2)])
+    for shape in [rand_shape_nd(ndim, dim=3), (1, 0, 2)]:
+        for func, func_data in funcs.items():
+            ref_grad, low, high = func_data
+            check_unary_func(func, ref_grad, shape, low, high)
 
 
 @with_seed()
@@ -4429,7 +4484,7 @@ def test_np_diff():
                         mx_out.backward()
                         if (np_out.size == 0):
                             np_backward = _np.zeros(shape)
-                        else:                    
+                        else:
                             np_backward = np_diff_backward(_np.ones(np_out.shape, dtype=itype), n=n, axis=axis)
                         assert x.grad.shape == np_backward.shape
                         assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
@@ -4575,7 +4630,7 @@ def test_np_nan_to_num():
     copy_list = [True, False]
     hybridize_list = [True, False]
     atol, rtol = 1e-5, 1e-3
-    
+
     src_dtype_comb = list(itertools.product(src_list,dtype_list))
     # check the dtype = int case in both imperative and sympolic expression
     src_dtype_comb.append((1,'int32'))
@@ -4622,10 +4677,10 @@ def test_np_nan_to_num():
             assert_almost_equal(mx_out_gluon.asnumpy(), np_out, rtol, atol)
             mx_out_gluon.backward()
             assert_almost_equal(x2.grad.asnumpy(), expected_grad, rtol=1e-3, atol=1e-5)
-                                        
+
         # Test imperative once again
         # if copy = False, the value of x1 and x2 has changed
-        if copy == True:            
+        if copy == True:
             np_out = _np.nan_to_num(x1)
             mx_out = np.nan_to_num(x3)
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)

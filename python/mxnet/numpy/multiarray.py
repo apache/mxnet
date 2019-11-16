@@ -54,8 +54,8 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'add', 'subtrac
            'tensordot', 'histogram', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange',
            'split', 'vsplit', 'concatenate', 'stack', 'vstack', 'column_stack', 'dstack', 'mean', 'maximum', 'minimum',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming',
-           'blackman', 'flip', 'around', 'arctan2', 'hypot', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril',
-           'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
+           'blackman', 'flip', 'around', 'arctan2', 'hypot', 'bitwise_xor', 'rad2deg', 'deg2rad', 'unique', 'lcm',
+           'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
            'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero', 'shares_memory',
            'may_share_memory', 'diff', 'resize', 'nan_to_num']
 
@@ -921,7 +921,7 @@ class ndarray(NDArray):
         elif dtype not in (_np.float32, _np.bool_):
             array_str = array_str[:-1] + ', dtype={})'.format(dtype)
 
-        context = self.context
+        context = self.ctx
         if context.device_type == 'cpu':
             return array_str
         return array_str[:-1] + ', ctx={})'.format(str(context))
@@ -929,7 +929,7 @@ class ndarray(NDArray):
     def __str__(self):
         """Returns a string representation of the array."""
         array_str = self.asnumpy().__str__()
-        context = self.context
+        context = self.ctx
         if context.device_type == 'cpu' or self.ndim == 0:
             return array_str
         return '{array} @{ctx}'.format(array=array_str, ctx=context)
@@ -994,7 +994,7 @@ class ndarray(NDArray):
         if not copy and _np.dtype(dtype) == self.dtype:
             return self
 
-        res = empty(self.shape, dtype=dtype, ctx=self.context)
+        res = empty(self.shape, dtype=dtype, ctx=self.ctx)
         self.copyto(res)
         return res
 
@@ -1051,7 +1051,8 @@ class ndarray(NDArray):
 
     def as_in_context(self, context):
         """This function has been deprecated. Please refer to ``ndarray.as_in_ctx``."""
-        warnings.warn('ndarray.context has been renamed to ndarray.ctx', DeprecationWarning)
+        warnings.warn('ndarray.as_in_context has been renamed to'
+                      ' ndarray.as_in_ctx', DeprecationWarning)
         return self.as_nd_ndarray().as_in_context(context).as_np_ndarray()
 
     def as_in_ctx(self, ctx):
@@ -1864,7 +1865,7 @@ class ndarray(NDArray):
         Currently for internal use only. Implemented for __setitem__.
         Assign to self an array of self's same shape and type, filled with value.
         """
-        return _mx_nd_np.full(self.shape, value, ctx=self.context, dtype=self.dtype, out=self)
+        return _mx_nd_np.full(self.shape, value, ctx=self.ctx, dtype=self.dtype, out=self)
 
     # pylint: disable=redefined-outer-name
     def _scatter_set_nd(self, value_nd, indices):
@@ -6195,6 +6196,44 @@ def hypot(x1, x2, out=None, **kwargs):
            [ 5.,  5.,  5.]])
     """
     return _mx_nd_np.hypot(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+@wrap_np_binary_func
+def bitwise_xor(x1, x2, out=None, **kwargs):
+    r"""
+    Compute the bit-wise XOR of two arrays element-wise.
+
+    Parameters
+    ----------
+    x1, x2 : ndarray or scalar
+        Only integer and boolean types are handled. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which becomes the shape of the output).
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have a shape that the
+        inputs broadcast to. If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray
+        Result.
+
+    Examples
+    --------
+    >>> np.bitwise_xor(13, 17)
+    28
+
+    >>> np.bitwise_xor(31, 5)
+    26
+    >>> np.bitwise_xor(np.array([31,3], dtype=np.int32), 5)
+    array([26,  6])
+
+    >>> np.bitwise_xor(np.array([31,3], dtype='int32'), np.array([5,6], dtype='int32'))
+    array([26,  5])
+    >>> np.bitwise_xor(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
+    array([ True, False])
+    """
+    return _mx_nd_np.bitwise_xor(x1, x2, out=out)
 
 
 @set_module('mxnet.numpy')

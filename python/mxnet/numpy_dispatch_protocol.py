@@ -225,6 +225,7 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'ceil',
     'trunc',
     'floor',
+    'bitwise_xor',
     'logical_not',
     'equal',
     'not_equal',
