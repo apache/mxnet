@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+
 #include <sys/stat.h>
 #include <nvrtc.h>
 #include <cuda.h>
@@ -787,3 +789,5 @@ NNVM_REGISTER_OP(_FusedOp)
 .set_attr<FCompute>("FCompute<gpu>", FusedOpForwardGPU);
 
 }  // namespace mxnet
+
+#endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
