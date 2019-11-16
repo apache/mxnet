@@ -401,7 +401,8 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
       if (!is_fusion_helper.get(fwd_ptr->op(), false)) {
         GetAttrFromForwardNode(nid, idx, &rshape, &inference_finished, fis_none);
       } else {
-        GetAttrFromFusedNode<FAccessSubgraphType>(nid, idx, &rshape, &inference_finished, fis_none, infer_fusion_name);
+        GetAttrFromFusedNode<FAccessSubgraphType>(nid, idx, &rshape, &inference_finished,
+                                                  fis_none, infer_fusion_name);
       }
     } else {
       DispatchMode* dispatch_mode = nullptr;
