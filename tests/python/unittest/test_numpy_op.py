@@ -614,52 +614,83 @@ def test_np_mean():
     def is_int(dtype):
         return 'int' in dtype
 
+    is_windows = sys.platform.startswith('win')
     in_data_dim = random.choice([2, 3, 4])
     shape = rand_shape_nd(in_data_dim, dim=3)
     acc_type = {'float16': 'float32', 'float32': 'float64', 'float64': 'float64',
-                'int8': 'int32', 'int32': 'int64', 'int64': 'int64'}
+                'bool': 'int64', 'int8': 'int32', 'int32': 'int64', 'int64': 'int64'}
+    ft_types = ['float16', 'float32', 'float64']
+    it_types = ['bool', 'int8', 'int32', 'int64']
     for hybridize in [False, True]:
         for keepdims in [True, False]:
             for axis in ([i for i in range(in_data_dim)] + [(), None]):
-                for itype in ['float16', 'float32', 'float64']:
-                    for dtype in ['float16', 'float32', 'float64']:
-                        if is_int(dtype) and not is_int(itype):
-                            continue
-                        # test gluon
-                        test_mean = TestMean(axis=axis, dtype=dtype, keepdims=keepdims)
-                        if hybridize:
-                            test_mean.hybridize()
-                        if is_int(itype):
-                            x = _np.random.randint(-128, 128, shape, dtype=itype)
-                            x = mx.nd.array(x, dtype=itype)
-                        else:
-                            x = mx.nd.random.uniform(-1.0, 1.0, shape=shape, dtype=itype)
-                        x = x.as_np_ndarray()
-                        x.attach_grad()
+                for itype, dtype in itertools.product(ft_types, [None] + ft_types + it_types):
+                    if dtype == 'bool':
+                        continue
+                    # test gluon
+                    test_mean = TestMean(axis=axis, dtype=dtype, keepdims=keepdims)
+                    if hybridize:
+                        test_mean.hybridize()
+                    x = np.random.uniform(-1.0, 1.0, size=shape).astype(itype)
+                    x = x.as_np_ndarray()
+                    x.attach_grad()
 
-                        expected_ret = _np.mean(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims)
-                        expected_ret = expected_ret.astype(dtype)
-                        with mx.autograd.record():
+                    expected_ret = _np.mean(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims)
+                    expected_ret = expected_ret.astype(dtype)
+                    with mx.autograd.record():
+                        y = test_mean(x)
+                    assert y.shape == expected_ret.shape
+                    assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if dtype == 'float16' else 1e-3,
+                                        atol=1e-5 if dtype == 'float16' else 1e-5)
+
+                    y.backward()
+                    N = x.size / y.size
+                    assert same(x.grad.asnumpy(), _np.ones(shape=x.shape, dtype=x.dtype) / N)
+
+                    # test numeric
+                    if itype == 'float32' and dtype == 'float32':
+                        x_sym = mx.sym.Variable("x").as_np_ndarray()
+                        mx_sym = mx.sym.np.mean(x_sym, axis=axis, dtype=dtype, keepdims=keepdims).as_nd_ndarray()
+                        check_numeric_gradient(mx_sym, [x.as_nd_ndarray()],
+                                               numeric_eps=1e-3, rtol=1e-3, atol=1e-4, dtype=_np.float32)
+
+                    # test imperative
+                    mx_out = np.mean(x, axis=axis, dtype=dtype, keepdims=keepdims)
+                    np_out = _np.mean(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims).astype(dtype)
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+                for itype, dtype in itertools.product(it_types, [None] + ft_types + it_types):
+                    if dtype == 'bool':
+                        continue
+                    # test gluon
+                    test_mean = TestMean(axis=axis, dtype=dtype, keepdims=keepdims)
+                    if hybridize:
+                        test_mean.hybridize()
+
+                    if itype == 'bool':
+                        x = np.array(_np.random.uniform(size=shape) > 0.5)
+                    else:
+                        x = np.random.uniform(-128, 127, size=shape).astype(itype)
+
+                    expected_ret = _np.mean(x.asnumpy(), axis=axis, dtype=dtype, keepdims=keepdims)
+
+                    if itype == 'bool':
+                        if is_op_runnable() and (not is_windows) and dtype not in ['float16', 'int8']:  # special handling of boolean ndarray
                             y = test_mean(x)
-                        assert y.shape == expected_ret.shape
-                        assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if dtype == 'float16' else 1e-3,
-                                            atol=1e-5 if dtype == 'float16' else 1e-5)
+                            assert y.shape == expected_ret.shape
+                            assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if dtype == 'float16' else 1e-3,
+                                                atol=1e-5 if dtype == 'float16' else 1e-5)
+                        continue
 
-                        y.backward()
-                        N = x.size / y.size
-                        assert same(x.grad.asnumpy(), _np.ones(shape=x.shape, dtype=x.dtype) / N)
+                    y = test_mean(x)
+                    assert y.shape == expected_ret.shape
+                    assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if dtype == 'float16' else 1e-3,
+                                        atol=1e-5 if dtype == 'float16' else 1e-5)
 
-                        # test numeric
-                        if itype == 'float32' and dtype == 'float32':
-                            x_sym = mx.sym.Variable("x").as_np_ndarray()
-                            mx_sym = mx.sym.np.mean(x_sym, axis=axis, dtype=dtype, keepdims=keepdims).as_nd_ndarray()
-                            check_numeric_gradient(mx_sym, [x.as_nd_ndarray()],
-                                                   numeric_eps=1e-3, rtol=1e-3, atol=1e-4, dtype=_np.float32)
-
-                        # test imperative
-                        mx_out = np.mean(x, axis=axis, dtype=dtype, keepdims=keepdims)
-                        np_out = _np.mean(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims).astype(dtype)
-                        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+                    # test imperative
+                    mx_out = np.mean(x, axis=axis, dtype=dtype, keepdims=keepdims)
+                    np_out = _np.mean(x.asnumpy(), axis=axis, dtype=dtype, keepdims=keepdims).astype(dtype)
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
 @with_seed()
@@ -1572,8 +1603,8 @@ def test_np_binary_funcs():
                                             rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
                         if rgrads is None:
                             assert_almost_equal(mx_test_x2.grad.asnumpy(),
-                                               collapse_sum_like(rgrad(y.asnumpy(), np_test_x2, np_test_x1), mx_test_x2.shape),
-                                               rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
+                                                collapse_sum_like(rgrad(y.asnumpy(), np_test_x2, np_test_x1), mx_test_x2.shape),
+                                                rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
                         else:
                             assert_almost_equal(mx_test_x2.grad.asnumpy(),
                                                 collapse_sum_like(rgrad(y.asnumpy(), np_test_x1, np_test_x2), mx_test_x2.shape),
@@ -1594,7 +1625,6 @@ def test_np_binary_funcs():
                 assertRaises(NotImplementedError, getattr(np, func), mx_test_x1, mx_test_x2,  order='C')
                 assertRaises(NotImplementedError, getattr(np, func), mx_test_x1, mx_test_x2,  order='mxnet')
 
-
     funcs = {
         'add': (-1.0, 1.0, [lambda y, x1, x2: _np.ones(y.shape)], None),
         'subtract':
@@ -1603,7 +1633,7 @@ def test_np_binary_funcs():
         'multiply': (-1.0, 1.0, [lambda y, x1, x2: _np.broadcast_to(x2, y.shape)],
                                 [lambda y, x1, x2: _np.broadcast_to(x1, y.shape)]),
         'divide': (0.1, 1.0, [lambda y, x1, x2: _np.ones(y.shape) / x2],
-                               [lambda y, x1, x2: -x1 / (x2 * x2)]),
+                   [lambda y, x1, x2: -x1 / (x2 * x2)]),
         'mod': (1.0, 10.0,
                 [lambda y, x1, x2: _np.ones(y.shape),
                  lambda y, x1, x2: _np.zeros(y.shape)],
@@ -1648,6 +1678,125 @@ def test_np_binary_funcs():
             else:
                 low, high, lgrads, rgrads, dtypes = func_data
             check_binary_func(func, lshape, rshape, low, high, lgrads, rgrads, dtypes)
+
+
+@with_seed()
+@use_np
+def test_np_mixed_precision_binary_funcs():
+    def check_mixed_precision_binary_func(func, low, high, lshape, rshape, ltype, rtype):
+        class TestMixedBinary(HybridBlock):
+            def __init__(self, func):
+                super(TestMixedBinary, self).__init__()
+                self._func = func
+
+            def hybrid_forward(self, F, a, b, *args, **kwargs):
+                return getattr(F.np, self._func)(a, b)
+
+        np_func = getattr(_np, func)
+        mx_func = TestMixedBinary(func)
+        np_test_x1 = _np.random.uniform(low, high, lshape).astype(ltype)
+        np_test_x2 = _np.random.uniform(low, high, rshape).astype(rtype)
+        mx_test_x1 = mx.numpy.array(np_test_x1, dtype=ltype)
+        mx_test_x2 = mx.numpy.array(np_test_x2, dtype=rtype)
+        rtol = 1e-2 if ltype is np.float16 or rtype is np.float16 else 1e-3
+        atol = 1e-4 if ltype is np.float16 or rtype is np.float16 else 1e-5
+        for hybridize in [True, False]:
+            if hybridize:
+                mx_func.hybridize()
+            np_out = np_func(np_test_x1, np_test_x2)
+            with mx.autograd.record():
+                y = mx_func(mx_test_x1, mx_test_x2)
+            assert y.shape == np_out.shape
+            assert_almost_equal(y.asnumpy(), np_out.astype(y.dtype), rtol=rtol, atol=atol,
+                                use_broadcast=False, equal_nan=True)
+
+        np_out = getattr(_np, func)(np_test_x1, np_test_x2)
+        mx_out = getattr(mx.np, func)(mx_test_x1, mx_test_x2)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out.astype(mx_out.dtype), rtol=rtol, atol=atol,
+                            use_broadcast=False, equal_nan=True)
+
+    funcs = {
+        'add': (-1.0, 1.0),
+        'subtract': (-1.0, 1.0),
+        'multiply': (-1.0, 1.0),
+    }
+
+    shape_pairs = [((3, 2), (3, 2)),
+                   ((3, 2), (3, 1)),
+                   ((3, 1), (3, 0)),
+                   ((0, 2), (1, 2)),
+                   ((2, 3, 4), (3, 1)),
+                   ((2, 3), ()),
+                   ((), (2, 3))]
+
+    itypes = [np.bool, np.int8, np.int32, np.int64]
+    ftypes = [np.float16, np.float32, np.float64]
+    for func, func_data in funcs.items():
+        low, high = func_data
+        for lshape, rshape in shape_pairs:
+            for type1, type2 in itertools.product(itypes, ftypes):
+                check_mixed_precision_binary_func(func, low, high, lshape, rshape, type1, type2)
+                check_mixed_precision_binary_func(func, low, high, lshape, rshape, type2, type1)
+
+            for type1, type2 in itertools.product(ftypes, ftypes):
+                if type1 == type2:
+                    continue
+                check_mixed_precision_binary_func(func, low, high, lshape, rshape, type1, type2)
+
+
+@with_seed()
+@use_np
+def test_np_boolean_binary_funcs():
+    def check_boolean_binary_func(func, mx_x1, mx_x2):
+        class TestBooleanBinary(HybridBlock):
+            def __init__(self, func):
+                super(TestBooleanBinary, self).__init__()
+                self._func = func
+
+            def hybrid_forward(self, F, a, b, *args, **kwargs):
+                return getattr(F.np, self._func)(a, b)
+
+        np_x1 = mx_x1.asnumpy()
+        np_x2 = mx_x2.asnumpy()
+        np_func = getattr(_np, func)
+        mx_func = TestBooleanBinary(func)
+        for hybridize in [True, False]:
+            if hybridize:
+                mx_func.hybridize()
+            np_out = np_func(np_x1, np_x2)
+            with mx.autograd.record():
+                y = mx_func(mx_x1, mx_x2)
+            assert y.shape == np_out.shape
+            assert_almost_equal(y.asnumpy(), np_out.astype(y.dtype), rtol=1e-3, atol=1e-20,
+                                use_broadcast=False, equal_nan=True)
+
+        np_out = getattr(_np, func)(np_x1, np_x2)
+        mx_out = getattr(mx.np, func)(mx_x1, mx_x2)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out.astype(mx_out.dtype), rtol=1e-3, atol=1e-20,
+                            use_broadcast=False, equal_nan=True)
+
+
+    funcs = [
+        'add',
+        'multiply',
+        'true_divide',
+    ]
+
+    shape_pairs = [((3, 2), (3, 2)),
+                   ((3, 2), (3, 1)),
+                   ((3, 1), (3, 0)),
+                   ((0, 2), (1, 2)),
+                   ((2, 3, 4), (3, 1)),
+                   ((2, 3), ()),
+                   ((), (2, 3))]
+
+    for lshape, rshape in shape_pairs:
+        for func in funcs:
+            x1 = np.array(_np.random.uniform(size=lshape) > 0.5)
+            x2 = np.array(_np.random.uniform(size=rshape) > 0.5)
+            check_boolean_binary_func(func, x1, x2)
 
 
 @with_seed()

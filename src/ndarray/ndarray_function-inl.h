@@ -379,7 +379,7 @@ void EvalRandom<DEVICE, GenNegBinomialDistribution>(
 template<>
 void Eval<DEVICE>(const real_t &rhs, TBlob *ret, RunContext ctx) {
   mshadow::Stream<DEVICE> *s = ctx.get_stream<DEVICE>();
-  MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(ret->type_flag_, DType, {
     ret->FlatTo2D<DEVICE, DType>(s) = DType(rhs);
   });
 }

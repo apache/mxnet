@@ -39,7 +39,7 @@ double OperatorTuneBase::tuning_weight_scale_ = 0.0;
  */
 #define IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(__typ$) \
   template<> bool OperatorTune<__typ$>::initialized_ = false; \
-  template<> std::vector<__typ$> OperatorTune<__typ$>::data_set_ = {}; \
+  template<> std::unique_ptr<__typ$[]> OperatorTune<__typ$>::data_set_ = nullptr; \
   template<> volatile tune::TuningMode OperatorTuneByType<__typ$>::tuning_mode_ = tune::kAuto; \
   template<> volatile int OperatorTune<__typ$>::volatile_int_ = 9;  /* arbitrary number */ \
   template<> std::unordered_set<std::string> OperatorTune<__typ$>::operator_names_({}); \
@@ -314,10 +314,10 @@ IMPLEMENT_UNARY_WORKLOAD_FWD_WITH_BOOL(mxnet::op::mshadow_op::np_logical_not);  
 IMPLEMENT_UNARY_WORKLOAD_BWD(mxnet::op::mshadow_op::nt);  // NOLINT()
 IMPLEMENT_BINARY_WORKLOAD_FWD(mxnet::op::mshadow_op::clip);  // NOLINT()
 IMPLEMENT_BINARY_WORKLOAD_BWD(mxnet::op::mshadow_op::clip);  // NOLINT()
-IMPLEMENT_BINARY_WORKLOAD_FWD(mxnet::op::mshadow_op::plus);  // NOLINT()
-IMPLEMENT_BINARY_WORKLOAD_FWD(mxnet::op::mshadow_op::minus);  // NOLINT()
-IMPLEMENT_BINARY_WORKLOAD_FWD(mxnet::op::mshadow_op::mul);  // NOLINT()
-IMPLEMENT_BINARY_WORKLOAD_FWD(mxnet::op::mshadow_op::div);  // NOLINT()
+IMPLEMENT_BINARY_WORKLOAD_FWD_WITH_BOOL(mxnet::op::mshadow_op::plus);  // NOLINT()
+IMPLEMENT_BINARY_WORKLOAD_FWD_WITH_BOOL(mxnet::op::mshadow_op::minus);  // NOLINT()
+IMPLEMENT_BINARY_WORKLOAD_FWD_WITH_BOOL(mxnet::op::mshadow_op::mul);  // NOLINT()
+IMPLEMENT_BINARY_WORKLOAD_FWD_WITH_BOOL(mxnet::op::mshadow_op::div);  // NOLINT()
 IMPLEMENT_BINARY_WORKLOAD_FWD(mxnet::op::mshadow_op::true_divide);  // NOLINT()
 IMPLEMENT_BINARY_WORKLOAD_FWD(mxnet::op::mshadow_op::minus_sign);  // NOLINT()
 IMPLEMENT_BINARY_WORKLOAD_FWD(mxnet::op::mshadow_op::rminus);  // NOLINT()

@@ -27,7 +27,7 @@ from mxnet import np, npx, autograd
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, retry, use_np
 from common import with_seed, TemporaryDirectory
-from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, assert_exception, is_op_runnable
+from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, assert_exception, is_op_runnable, collapse_sum_like
 from mxnet.ndarray.ndarray import py_slice
 from mxnet.base import integer_types
 import scipy.stats as ss
@@ -281,6 +281,62 @@ def test_np_ndarray_binary_element_wise_ops():
             '<=': _np.less_equal
         })
 
+    def _get_grad_func(op, scalar=None, reverse=False):
+        if op == '+':
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (collapse_sum_like(ograd, x1.shape),
+                                                   collapse_sum_like(ograd, x2.shape))
+            elif not reverse:
+                return lambda ograd, x1, x2, out: ograd
+            else:
+                return lambda ograd, x1, x2, out: ograd
+        elif op == '-':
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (collapse_sum_like(ograd, x1.shape),
+                                                   -collapse_sum_like(ograd, x2.shape))
+            elif not reverse:
+                return lambda ograd, x1, x2, out: ograd
+            else:
+                return lambda ograd, x1, x2, out: -ograd
+        elif op == '*':
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (collapse_sum_like(ograd * x2, x1.shape),
+                                                   collapse_sum_like(ograd * x1, x2.shape))
+            elif not reverse:
+                return lambda ograd, x1, x2, out: ograd * x2
+            else:
+                return lambda ograd, x1, x2, out: ograd * x1
+        elif op == '/':
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (collapse_sum_like(ograd / x2, x1.shape),
+                                                   collapse_sum_like(-x1 * ograd / (x2 * x2), x2.shape))
+            elif not reverse:
+                return lambda ograd, x1, x2, out: ograd / x2
+            else:
+                return lambda ograd, x1, x2, out: -x1 * ograd / (x2 * x2)
+        elif op == 'mod':
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (collapse_sum_like(ograd, x1.shape),
+                                                   collapse_sum_like(-ograd * _np.floor(x1 / x2), x2.shape))
+            elif not reverse:
+                return lambda ograd, x1, x2, out: ograd
+            else:
+                return lambda ograd, x1, x2, out: -ograd * _np.floor(x1 / x2)
+        elif op == 'pow':
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (collapse_sum_like(ograd * x2 * _np.power(x1, x2 - 1), x1.shape),
+                                                   collapse_sum_like(ograd * out * _np.log(x1), x2.shape))
+            elif not reverse:
+                return lambda ograd, x1, x2, out: ograd * x2 * _np.power(x1, x2 - 1)
+            else:
+                return lambda ograd, x1, x2, out: ograd * out * _np.log(x1)
+        elif op in ('==', '!=', '<', '<=', '>', '>='):
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (_np.zeros_like(x1), _np.zeros_like(x2))
+            else:
+                return lambda ograd, x1, x2, out: _np.zeros_like(ograd)
+        return None
+
     def get_np_ret(x1, x2, op):
         return np_op_map[op](x1, x2)
 
@@ -364,13 +420,15 @@ def test_np_ndarray_binary_element_wise_ops():
             mx_input1 = abs(_np.random.uniform()) + 1
             np_input1 = mx_input1
         else:
-            mx_input1 = rand_ndarray(shape1, dtype=dtype).abs() + 1
+            mx_input1 = (rand_ndarray(shape1, dtype=dtype).abs() + 1).as_np_ndarray()
+            mx_input1.attach_grad()
             np_input1 = mx_input1.asnumpy()
         if shape2 is None:
             mx_input2 = abs(_np.random.uniform()) + 1
             np_input2 = mx_input2
         else:
-            mx_input2 = rand_ndarray(shape2, dtype=dtype).abs() + 1
+            mx_input2 = (rand_ndarray(shape2, dtype=dtype).abs() + 1).as_np_ndarray()
+            mx_input2.attach_grad()
             np_input2 = mx_input2.asnumpy()
 
         scalar = None
@@ -382,7 +440,9 @@ def test_np_ndarray_binary_element_wise_ops():
             scalar = mx_input1
             reverse = True
 
+        grad_func = _get_grad_func(op, scalar, reverse)
         np_out = get_np_ret(np_input1, np_input2, op)
+        ograd = _np.ones_like(np_out)
         for hybridize in [True, False]:
             if scalar is None:
                 get_mx_ret_np = TestBinaryElementWiseOp(op)
@@ -390,26 +450,49 @@ def test_np_ndarray_binary_element_wise_ops():
                 if hybridize:
                     get_mx_ret_np.hybridize()
                     get_mx_ret_classic.hybridize()
-                mx_out = get_mx_ret_np(mx_input1.as_np_ndarray(), mx_input2.as_np_ndarray())
+                if grad_func is None:
+                    mx_out = get_mx_ret_np(mx_input1, mx_input2)
+                else:
+                    with mx.autograd.record():
+                        mx_out = get_mx_ret_np(mx_input1, mx_input2)
+                    mx_out.backward()
                 assert type(mx_out) == np.ndarray
-                assert np_out.shape == mx_out.shape
                 if op in logic_ops:
                     assert np_out.dtype == mx_out.dtype
-                assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
+                assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5, use_broadcast=False)
+
+                if grad_func is not None:
+                    x1_grad_expected, x2_grad_expected = grad_func(ograd, np_input1, np_input2, np_out)
+                    assert_almost_equal(mx_input1.grad.asnumpy(), x1_grad_expected, atol=1e-5, rtol=1e-3,
+                                        use_broadcast=False)
+                    assert_almost_equal(mx_input2.grad.asnumpy(), x2_grad_expected, atol=1e-5, rtol=1e-3,
+                                        use_broadcast=False)
             else:
                 get_mx_ret = TestBinaryElementWiseOp(op, scalar=scalar, reverse=reverse)
                 if hybridize:
                     get_mx_ret.hybridize()
                 if reverse:
-                    mx_out = get_mx_ret(mx_input2.as_np_ndarray())
-                    assert type(mx_out) == np.ndarray
+                    mx_input = mx_input2
                 else:
-                    mx_out = get_mx_ret(mx_input1.as_np_ndarray())
-                    assert type(mx_out) == np.ndarray
-                assert np_out.shape == mx_out.shape
+                    mx_input = mx_input1
+
+                if grad_func is None:
+                    mx_out = get_mx_ret(mx_input)
+                else:
+                    with mx.autograd.record():
+                        mx_out = get_mx_ret(mx_input)
+                    mx_out.backward()
+                assert type(mx_out) == np.ndarray
+
                 if op in logic_ops:
                     assert np_out.dtype == mx_out.dtype
-                assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
+                assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5, use_broadcast=False)
+
+                # check grad
+                if grad_func is not None:
+                    x_grad_expected = grad_func(ograd, np_input1, np_input2, np_out)
+                    assert_almost_equal(mx_input.grad.asnumpy(), x_grad_expected, atol=1e-5, rtol=1e-3,
+                                        use_broadcast=False)
 
     dtypes = [_np.float32, _np.float64, None]
     ops = np_op_map.keys()
