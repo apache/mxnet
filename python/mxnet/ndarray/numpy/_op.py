@@ -36,7 +36,7 @@ __all__ = ['zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide', 'mo
            'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'split', 'vsplit', 'concatenate', 'append',
            'stack', 'vstack', 'column_stack', 'dstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax',
            'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming', 'blackman', 'flip',
-           'around', 'hypot', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take',
+           'around', 'hypot', 'bitwise_xor', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take',
            'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal',
            'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero', 'shares_memory', 'may_share_memory', 'diff', 'resize',
            'nan_to_num']
@@ -4289,6 +4289,44 @@ def hypot(x1, x2, out=None, **kwargs):
            [ 5.,  5.,  5.]])
     """
     return _ufunc_helper(x1, x2, _npi.hypot, _np.hypot, _npi.hypot_scalar, None, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+@wrap_np_binary_func
+def bitwise_xor(x1, x2, out=None, **kwargs):
+    r"""
+    Compute the bit-wise XOR of two arrays element-wise.
+
+    Parameters
+    ----------
+    x1, x2 : ndarray or scalar
+        Only integer and boolean types are handled. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which becomes the shape of the output).
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have a shape that the
+        inputs broadcast to. If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray
+        Result.
+
+    Examples
+    --------
+    >>> np.bitwise_xor(13, 17)
+    28
+
+    >>> np.bitwise_xor(31, 5)
+    26
+    >>> np.bitwise_xor(np.array([31,3], dtype='int32'), 5)
+    array([26,  6])
+
+    >>> np.bitwise_xor(np.array([31,3], dtype='int32'), np.array([5,6], dtype='int32'))
+    array([26,  5])
+    >>> np.bitwise_xor(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
+    array([ True, False])
+    """
+    return _ufunc_helper(x1, x2, _npi.bitwise_xor, _np.bitwise_xor, _npi.bitwise_xor_scalar, None, out)
 
 
 @set_module('mxnet.ndarray.numpy')

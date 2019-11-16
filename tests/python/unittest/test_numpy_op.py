@@ -1650,6 +1650,7 @@ def test_np_binary_funcs():
         'power': (1.0, 2.0, [lambda y, x1, x2: _np.power(x1, x2 - 1.0) * x2],
                              [lambda y, x1, x2: _np.power(x1, x2) * _np.log(x1)]),
         'lcm': (-100, 100, [None], None, [[_np.int32]]),
+        'bitwise_xor': (-100, 100, [None], None, [[_np.int32]]),
         'maximum': (-1, 1, [lambda y, x1, x2: _np.ones(y.shape) * (x1 >= x2)],
                            [lambda y, x1, x2: _np.ones(y.shape) * (x1 < x2)]),
         'minimum': (-1, 1, [lambda y, x1, x2: _np.ones(y.shape) * (x1 <= x2)],
@@ -4389,7 +4390,7 @@ def test_np_diff():
                         mx_out.backward()
                         if (np_out.size == 0):
                             np_backward = _np.zeros(shape)
-                        else:                    
+                        else:
                             np_backward = np_diff_backward(_np.ones(np_out.shape, dtype=itype), n=n, axis=axis)
                         assert x.grad.shape == np_backward.shape
                         assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
@@ -4535,7 +4536,7 @@ def test_np_nan_to_num():
     copy_list = [True, False]
     hybridize_list = [True, False]
     atol, rtol = 1e-5, 1e-3
-    
+
     src_dtype_comb = list(itertools.product(src_list,dtype_list))
     # check the dtype = int case in both imperative and sympolic expression
     src_dtype_comb.append((1,'int32'))
@@ -4582,10 +4583,10 @@ def test_np_nan_to_num():
             assert_almost_equal(mx_out_gluon.asnumpy(), np_out, rtol, atol)
             mx_out_gluon.backward()
             assert_almost_equal(x2.grad.asnumpy(), expected_grad, rtol=1e-3, atol=1e-5)
-                                        
+
         # Test imperative once again
         # if copy = False, the value of x1 and x2 has changed
-        if copy == True:            
+        if copy == True:
             np_out = _np.nan_to_num(x1)
             mx_out = np.nan_to_num(x3)
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
