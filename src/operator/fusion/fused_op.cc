@@ -94,12 +94,9 @@ bool FusedOp::InferShape(const nnvm::NodeAttrs &attrs,
   for (const auto& attr : *out_attrs) {
     inferred = inferred && !op::shape_is_none(attr);
   }
-
-  std::cout << "FusedOp " << this << " infershape " << inferred <<std::endl;
   if (inferred) {
     std::lock_guard<std::mutex> lock(my_mutex_);
     intermediate_shapes_.push_back({*in_attrs, *out_attrs, shapes});
-  std::cout << "FusedOp " << this << " infershape wrote and got new size: " << intermediate_shapes_.size() <<std::endl;
   }
   return inferred;
 }
