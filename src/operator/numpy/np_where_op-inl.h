@@ -84,6 +84,10 @@ inline void NumpyWhereOpForward(const nnvm::NodeAttrs& attrs,
   if (outputs[0].shape_.Size() == 0U) return;  // zero-size tensor
   CHECK_LE(outputs[0].shape_.ndim(), broadcast::MAX_DIM);
 
+  const TBlob& cond = inputs[0];
+  const TBlob& x = inputs[1];
+  const TBlob& y = inputs[2];
+  const TBlob& out = outputs[0];
   Stream<xpu> *s = ctx.get_stream<xpu>();
   std::vector<Shape<broadcast::MAX_DIM>> in_strides;
   in_strides.resize(3);
@@ -97,18 +101,18 @@ inline void NumpyWhereOpForward(const nnvm::NodeAttrs& attrs,
     in_strides[i] = mxnet_op::calc_stride(expanded_ishape.get<broadcast::MAX_DIM>());
   }
   TShape expanded_oshape(broadcast::MAX_DIM, 1);
-  const int ndim_delta = expanded_oshape.ndim() - outputs[0].shape_.ndim();
-  for (int j = 0; j < outputs[0].shape_.ndim(); ++j) {
-    expanded_oshape[j + ndim_delta] = (outputs[0].shape_)[j];
+  const int ndim_delta = expanded_oshape.ndim() - out.shape_.ndim();
+  for (int j = 0; j < out.shape_.ndim(); ++j) {
+    expanded_oshape[j + ndim_delta] = (out.shape_)[j];
   }
   Shape<broadcast::MAX_DIM> oshape = expanded_oshape.get<broadcast::MAX_DIM>();
-  MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[0].type_flag_, DType, {
-    MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, CType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(out.type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(cond.type_flag_, CType, {
       mxnet_op::Kernel<numpy_where_kernel<broadcast::MAX_DIM>, xpu>::Launch(
-        s, outputs[0].Size(), req[0],
+        s, out.Size(), req[0],
         in_strides[0], in_strides[1], in_strides[2], oshape,
-        inputs[0].dptr<CType>(), inputs[1].dptr<DType>(),
-        inputs[2].dptr<DType>(), outputs[0].dptr<DType>());
+        cond.dptr<CType>(), x.dptr<DType>(),
+        y.dptr<DType>(), out.dptr<DType>());
     });
   });
 }
@@ -123,41 +127,46 @@ inline void NumpyWhereOpBackward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 2U);
   CHECK(common::is_float(inputs[0].type_flag_)) << "Backward only supports float types!";
   if (inputs[0].shape_.Size() == 0U) return;  // zero-size tensor
+
   Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob& ograd = inputs[0];
+  const TBlob& cond = inputs[1];
+  const TBlob& dx = outputs[0];
+  const TBlob& dy = outputs[1];
   // get expanded oshape
   TShape expanded_oshape(broadcast::MAX_DIM, 1);
-  int ndim_delta = expanded_oshape.ndim() - inputs[0].shape_.ndim();
-  for (int j = 0; j < inputs[0].shape_.ndim(); ++j) {
-    expanded_oshape[j + ndim_delta] = (inputs[0].shape_)[j];
+  int ndim_delta = expanded_oshape.ndim() - ograd.shape_.ndim();
+  for (int j = 0; j < ograd.shape_.ndim(); ++j) {
+    expanded_oshape[j + ndim_delta] = (ograd.shape_)[j];
   }
   Shape<broadcast::MAX_DIM> oshape = expanded_oshape.get<broadcast::MAX_DIM>();
   // get cond stride
   TShape expanded_cshape(broadcast::MAX_DIM, 1);
-  ndim_delta = expanded_cshape.ndim() - inputs[1].shape_.ndim();
-  for (int j = 0; j < inputs[1].shape_.ndim(); ++j) {
-    expanded_cshape[j + ndim_delta] = (inputs[1].shape_)[j];
+  ndim_delta = expanded_cshape.ndim() - cond.shape_.ndim();
+  for (int j = 0; j < cond.shape_.ndim(); ++j) {
+    expanded_cshape[j + ndim_delta] = (cond.shape_)[j];
   }
   Shape<broadcast::MAX_DIM> cstride =
       mxnet_op::calc_stride(expanded_cshape.get<broadcast::MAX_DIM>());
   // get expanded lshape
   TShape expanded_lshape(broadcast::MAX_DIM, 1);
-  ndim_delta = expanded_lshape.ndim() - outputs[0].shape_.ndim();
-  for (int j = 0; j < outputs[0].shape_.ndim(); ++j) {
-    expanded_lshape[j + ndim_delta] = (outputs[0].shape_)[j];
+  ndim_delta = expanded_lshape.ndim() - dx.shape_.ndim();
+  for (int j = 0; j < dx.shape_.ndim(); ++j) {
+    expanded_lshape[j + ndim_delta] = (dx.shape_)[j];
   }
   // get expanded rshape
   TShape expanded_rshape(broadcast::MAX_DIM, 1);
-  ndim_delta = expanded_rshape.ndim() - outputs[1].shape_.ndim();
-  for (int j = 0; j < outputs[1].shape_.ndim(); ++j) {
-    expanded_rshape[j + ndim_delta] = (outputs[1].shape_)[j];
+  ndim_delta = expanded_rshape.ndim() - dy.shape_.ndim();
+  for (int j = 0; j < dy.shape_.ndim(); ++j) {
+    expanded_rshape[j + ndim_delta] = (dy.shape_)[j];
   }
 
-  MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {
-    MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[1].type_flag_, CType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(ograd.type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(cond.type_flag_, CType, {
       Tensor<xpu, 1, char> largespace;
       Tensor<xpu, broadcast::MAX_DIM, DType> workspace;
       size_t ws_size = 0;
-      if (!(inputs[0].shape_ != outputs[0].shape_) || !(inputs[0].shape_ != outputs[1].shape_)) {
+      if (!(ograd.shape_ != dx.shape_) || !(ograd.shape_ != dy.shape_)) {
         size_t ws_size1 = broadcast::ReduceWorkspaceSize<broadcast::MAX_DIM, DType>(
             s, expanded_lshape, req[0], expanded_oshape);
         size_t ws_size2 = broadcast::ReduceWorkspaceSize<broadcast::MAX_DIM, DType>(
@@ -165,47 +174,47 @@ inline void NumpyWhereOpBackward(const nnvm::NodeAttrs& attrs,
         ws_size = std::max(ws_size1, ws_size2);
       }
       // process left output
-      if (inputs[0].shape_ == outputs[0].shape_) {
+      if (ograd.shape_ == dx.shape_) {
         mxnet_op::Kernel<numpy_where_backward_kernel<broadcast::MAX_DIM, true>, xpu>::Launch(
-          s, inputs[0].Size(), req[0], cstride, oshape,
-          inputs[1].dptr<CType>(), inputs[0].dptr<DType>(), outputs[0].dptr<DType>());
+          s, ograd.Size(), req[0], cstride, oshape,
+          cond.dptr<CType>(), ograd.dptr<DType>(), dx.dptr<DType>());
       } else {
         largespace = ctx.requested[0].get_space_typed<xpu, 1, char>(
-            Shape1(inputs[0].shape_.Size() * sizeof(DType) + ws_size), s);
+            Shape1(ograd.shape_.Size() * sizeof(DType) + ws_size), s);
         workspace = Tensor<xpu, broadcast::MAX_DIM, DType>(
             reinterpret_cast<DType*>(largespace.dptr_ + ws_size),
             expanded_oshape.get<broadcast::MAX_DIM>(), s);
         mxnet_op::Kernel<numpy_where_backward_kernel<broadcast::MAX_DIM, true>, xpu>::Launch(
-          s, inputs[0].Size(), req[0], cstride, oshape,
-          inputs[1].dptr<CType>(), inputs[0].dptr<DType>(), workspace.dptr_);
-        if (NeedSafeAcc<true>(outputs[0].type_flag_, outputs[0].type_flag_)) {
+          s, ograd.Size(), req[0], cstride, oshape,
+          cond.dptr<CType>(), ograd.dptr<DType>(), workspace.dptr_);
+        if (NeedSafeAcc<true>(dx.type_flag_, dx.type_flag_)) {
           ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(ctx, {TBlob(workspace)}, {req[0]},
-              {outputs[0].reshape(expanded_lshape)}, expanded_lshape);
+              {dx.reshape(expanded_lshape)}, expanded_lshape);
         } else {
           ReduceAxesComputeImpl<xpu, mshadow_op::sum, false>(ctx, {TBlob(workspace)}, {req[0]},
-              {outputs[0].reshape(expanded_lshape)}, expanded_lshape);
+              {dx.reshape(expanded_lshape)}, expanded_lshape);
         }
       }
       // process right output
-      if (inputs[0].shape_ == outputs[1].shape_) {
+      if (ograd.shape_ == dy.shape_) {
         mxnet_op::Kernel<numpy_where_backward_kernel<broadcast::MAX_DIM, false>, xpu>::Launch(
-          s, inputs[0].Size(), req[1], cstride, oshape,
-          inputs[1].dptr<CType>(), inputs[0].dptr<DType>(), outputs[1].dptr<DType>());
+          s, ograd.Size(), req[1], cstride, oshape,
+          cond.dptr<CType>(), ograd.dptr<DType>(), dy.dptr<DType>());
       } else {
         largespace = ctx.requested[0].get_space_typed<xpu, 1, char>(
-            Shape1(inputs[0].shape_.Size() * sizeof(DType) + ws_size), s);
+            Shape1(ograd.shape_.Size() * sizeof(DType) + ws_size), s);
         workspace = Tensor<xpu, broadcast::MAX_DIM, DType>(
             reinterpret_cast<DType*>(largespace.dptr_ + ws_size),
             expanded_oshape.get<broadcast::MAX_DIM>(), s);
         mxnet_op::Kernel<numpy_where_backward_kernel<broadcast::MAX_DIM, false>, xpu>::Launch(
-          s, inputs[0].Size(), req[1], cstride, oshape,
-          inputs[1].dptr<CType>(), inputs[0].dptr<DType>(), workspace.dptr_);
-        if (NeedSafeAcc<true>(outputs[1].type_flag_, outputs[1].type_flag_)) {
+          s, ograd.Size(), req[1], cstride, oshape,
+          cond.dptr<CType>(), ograd.dptr<DType>(), workspace.dptr_);
+        if (NeedSafeAcc<true>(dy.type_flag_, dy.type_flag_)) {
           ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(ctx, {TBlob(workspace)}, {req[1]},
-              {outputs[1].reshape(expanded_rshape)}, expanded_rshape);
+              {dy.reshape(expanded_rshape)}, expanded_rshape);
         } else {
           ReduceAxesComputeImpl<xpu, mshadow_op::sum, false>(ctx, {TBlob(workspace)}, {req[1]},
-              {outputs[1].reshape(expanded_rshape)}, expanded_rshape);
+              {dy.reshape(expanded_rshape)}, expanded_rshape);
         }
       }
     });
