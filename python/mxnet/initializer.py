@@ -268,6 +268,11 @@ class Initializer(object):
             '"weight", "bias", "gamma" (1.0), and "beta" (0.0).' \
             'Please use mx.sym.Variable(init=mx.init.*) to set initialization pattern' % name)
 
+    def __eq__(self, other):
+        if not isinstance(other, Initializer):
+            return NotImplemented
+        # pylint: disable=unidiomatic-typecheck
+        return type(self) is type(other) and self._kwargs == other._kwargs
 
 # pylint: disable=invalid-name
 _register = registry.get_register_func(Initializer, 'initializer')

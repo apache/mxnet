@@ -419,6 +419,9 @@ class _DataIterWrapper(DataIter):
         # suppose there must be one label in data_example
         num_data = len(data_example)
         assert num_data > 0
+        # here reshape is to handle the 5D/6D input data
+        if len(data_example[0].shape) > 4:
+            data_example[0] = data_example[0].reshape((-1,) + data_example[0].shape[2:])
         self.provide_data = [DataDesc(name='data', shape=(data_example[0].shape))]
         self.provide_data += [DataDesc(name='data{}'.format(i), shape=x.shape) for i, x in enumerate(data_example[1:])]
         self.batch_size = data_example[0].shape[0]
@@ -428,7 +431,11 @@ class _DataIterWrapper(DataIter):
         self._iter = iter(self._data)
 
     def next(self):
-        return DataBatch(data=next(self._iter))
+        next_data = next(self._iter)
+        # here reshape is to handle the 5D/6D input data
+        if len(next_data[0].shape) > 4:
+            next_data[0] = next_data[0].reshape((-1,) + next_data[0].shape[2:])
+        return DataBatch(data=next_data)
 # pylint: enable=super-init-not-called
 
 def _as_data_iter(calib_data):
@@ -577,7 +584,7 @@ def quantize_model_mkldnn(sym, arg_params, aux_params,
                           data_names=('data',), label_names=('softmax_label',),
                           ctx=cpu(), excluded_sym_names=None, excluded_op_names=None,
                           calib_mode='entropy', calib_data=None, num_calib_examples=None,
-                          quantized_dtype='int8', logger=logging):
+                          quantized_dtype='int8', quantize_mode='smart', logger=logging):
     """User-level API for generating a fusion + quantized model from a FP32 model
     w/ or w/o calibration with Intel MKL-DNN.
     The backend quantized operators are only enabled for Linux systems. Please do not run
@@ -605,7 +612,8 @@ def quantize_model_mkldnn(sym, arg_params, aux_params,
                                                    excluded_op_names=excluded_op_names,
                                                    calib_mode=calib_mode, calib_data=calib_data,
                                                    num_calib_examples=num_calib_examples,
-                                                   quantized_dtype=quantized_dtype, logger=logger)
+                                                   quantized_dtype=quantized_dtype, quantize_mode=quantize_mode,
+                                                   logger=logger)
 
     qsym = qsym.get_backend_symbol('MKLDNN_QUANTIZE')
 
@@ -613,7 +621,7 @@ def quantize_model_mkldnn(sym, arg_params, aux_params,
 
 def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
                    excluded_sym_names=None, excluded_op_names=None, calib_mode='entropy',
-                   quantized_dtype='int8', logger=logging):
+                   quantized_dtype='int8', quantize_mode='full', logger=logging):
     """User-level API for generating a quantized model from a FP32 model w/o calibration
     and a collector for naive or entropy calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
@@ -648,6 +656,10 @@ def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
         The quantized destination type for input data. Currently support 'int8'
         , 'uint8' and 'auto'. 'auto' means automatically select output type according to calibration result.
         Default value is 'int8'.
+    quantize_mode : str
+        The mode that quantization pass to apply. Support 'full' and 'smart'.
+        'full' means quantize all operator if possible.
+        'smart' means quantization pass will smartly choice which operator should be quantized.
     logger : Object
         A logging object for printing information during the process of quantization.
     Returns
@@ -672,7 +684,8 @@ def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
                                          excluded_operators=excluded_op_names,
                                          offline_params=list(
                                              arg_params.keys()),
-                                         quantized_dtype=quantized_dtype)
+                                         quantized_dtype=quantized_dtype,
+                                         quantize_mode=quantize_mode)
 
     th_dict = {}
     collector = None
@@ -755,7 +768,7 @@ def calib_graph(qsym, arg_params, aux_params, collector,
 
     return qsym, qarg_params, aux_params
 
-def quantize_net(network, quantized_dtype='auto',
+def quantize_net(network, quantized_dtype='auto', quantize_mode='full',
                  exclude_layers=None, exclude_layers_match=None, exclude_operators=None,
                  calib_data=None, data_shapes=None, calib_mode='none',
                  num_calib_examples=None, ctx=cpu(), logger=logging):
@@ -771,6 +784,10 @@ def quantize_net(network, quantized_dtype='auto',
         The quantized destination type for input data. Currently support 'int8'
         , 'uint8' and 'auto'. 'auto' means automatically select output type according to calibration result.
         Default value is 'int8'.
+    quantize_mode : str
+        The mode that quantization pass to apply. Support 'full' and 'smart'.
+        'full' means quantize all operator if possible.
+        'smart' means quantization pass will smartly choice which operator should be quantized.
     exclude_layers : list of strings
         A list of strings representing the names of the symbols that users want to excluding
     exclude_layers_match : list of strings
@@ -872,7 +889,7 @@ def quantize_net(network, quantized_dtype='auto',
     qsym, qarg_params, aux_params, collector = quantize_graph(
         sym=symnet, arg_params=args, aux_params=auxs, ctx=ctx,
         excluded_sym_names=exclude_layers, excluded_op_names=exclude_operators,
-        calib_mode=calib_mode, quantized_dtype=quantized_dtype, logger=logger)
+        calib_mode=calib_mode, quantized_dtype=quantized_dtype, quantize_mode=quantize_mode, logger=logger)
 
     if calib_mode is not None and calib_mode != 'none':
         if not isinstance(ctx, Context):

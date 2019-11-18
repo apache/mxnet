@@ -117,7 +117,7 @@ def _gather_type_ctx_info(args):
         Context of the first appeared NDArray (for backward-compatibility)
     """
     if isinstance(args, NDArray):
-        return False, True, {args.context}, args.context
+        return False, True, {args.ctx}, args.ctx
     elif isinstance(args, Symbol):
         return True, False, set(), None
     elif isinstance(args, (list, tuple)):
@@ -1141,7 +1141,7 @@ class HybridBlock(Block):
                 if len(ctx_set) > 1:
                     raise ValueError('Find multiple contexts in the input, '
                                      'After hybridized, the HybridBlock only supports one input '
-                                     'context. You can print the ele.context in the '
+                                     'context. You can print the ele.ctx in the '
                                      'input arguments to inspect their contexts. '
                                      'Find all contexts = {}'.format(ctx_set))
                 with ctx:
@@ -1327,7 +1327,7 @@ class SymbolBlock(HybridBlock):
 
     def forward(self, x, *args):
         if isinstance(x, NDArray):
-            with x.context:
+            with x.ctx:
                 return self._call_cached_op(x, *args)
 
         assert isinstance(x, Symbol), \

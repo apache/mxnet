@@ -26,6 +26,7 @@
 #define MXNET_OPERATOR_NUMPY_RANDOM_NP_NORMAL_OP_H_
 
 #include <mxnet/operator_util.h>
+#include <cstdio>
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -78,6 +79,7 @@ inline bool NumpyNormalOpType(const nnvm::NodeAttrs &attrs,
   } else {
     (*out_attrs)[0] = mshadow::kFloat32;
   }
+  (*out_attrs)[1] = mshadow::kFloat32;
   return true;
 }
 
@@ -130,7 +132,7 @@ template <typename IType>
 struct check_legal_scale_kernel {
   MSHADOW_XINLINE static void Map(index_t i, IType *scalar, float* flag) {
     if (scalar[i] < 0) {
-      flag[0] = -1.0;
+      *flag = -1.0;
     }
   }
 };
@@ -146,21 +148,18 @@ void NumpyNormalForward(const nnvm::NodeAttrs &attrs,
   using namespace mshadow;
   using namespace mxnet_op;
   const NumpyNormalParam &param = nnvm::get<NumpyNormalParam>(attrs.parsed);
-  CHECK_EQ(outputs.size(), 1);
   Stream<xpu> *s = ctx.get_stream<xpu>();
-
   // Generate base random number.
   Random<xpu, float> *prnd = ctx.requested[0].get_random<xpu, float>(s);
-  index_t output_len = outputs[0].Size();
   Tensor<xpu, 1, float> workspace =
-      ctx.requested[1].get_space_typed<xpu, 1, float>(Shape1(output_len + 1), s);
-  Tensor<xpu, 1, float> normal_tensor = workspace.Slice(0, output_len);
-  Tensor<xpu, 1, float> indicator_device = workspace.Slice(output_len, output_len + 1);
+      ctx.requested[1].get_space_typed<xpu, 1, float>(Shape1(1), s);
+  Tensor<xpu, 1, float> normal_tensor = outputs[1].FlatTo1D<xpu, float>(s);
+  Tensor<xpu, 1, float> indicator_device = workspace;
   float indicator_host = 1.0;
   float *indicator_device_ptr = indicator_device.dptr_;
+  Kernel<set_zero, xpu>::Launch(s, 1, indicator_device_ptr);
   prnd->SampleGaussian(&normal_tensor, 0.0, 1.0);
   mxnet::TShape new_lshape, new_hshape, new_oshape;
-
   // [scalar scalar] case
   if (inputs.size() == 0U) {
     CHECK_GE(param.scale.value(), 0.0) << "ValueError: scale < 0";
@@ -182,7 +181,7 @@ void NumpyNormalForward(const nnvm::NodeAttrs &attrs,
         Kernel<check_legal_scale_kernel<IType>, xpu>::Launch(
             s, inputs[0].Size(), inputs[0].dptr<IType>(), indicator_device_ptr);
       });
-      _copy<xpu>(&indicator_host, indicator_device_ptr);
+      _copy<xpu>(s, &indicator_host, indicator_device_ptr);
       CHECK_GE(indicator_host, 0.0) << "ValueError: scale < 0";
     } else {
       scalar_pos = 1;
@@ -207,7 +206,7 @@ void NumpyNormalForward(const nnvm::NodeAttrs &attrs,
       Kernel<check_legal_scale_kernel<IType>, xpu>::Launch(
           s, inputs[1].Size(), inputs[1].dptr<IType>(), indicator_device_ptr);
     });
-    _copy<xpu>(&indicator_host, indicator_device_ptr);
+    _copy<xpu>(s, &indicator_host, indicator_device_ptr);
     CHECK_GE(indicator_host, 0.0) << "ValueError: scale < 0";
     int ndim = FillShape(inputs[0].shape_, inputs[1].shape_, outputs[0].shape_,
                          &new_lshape, &new_hshape, &new_oshape);
@@ -222,6 +221,118 @@ void NumpyNormalForward(const nnvm::NodeAttrs &attrs,
               inputs[0].dptr<IType>(), inputs[1].dptr<IType>(),
               normal_tensor.dptr_, outputs[0].dptr<OType>());
         });
+      });
+    });
+  }
+}
+
+template<typename xpu, int ndim, typename DType>
+inline void NormalReparamBackwardImpl(const OpContext& ctx,
+                                      const std::vector<TBlob>& inputs,
+                                      const std::vector<OpReqType>& req,
+                                      const std::vector<TBlob>& outputs,
+                                      const mxnet::TShape& new_lshape,
+                                      const mxnet::TShape& new_rshape,
+                                      const mxnet::TShape& new_oshape) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace broadcast;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob lgrad = outputs[0].reshape(new_lshape);
+  const TBlob rgrad = outputs[1].reshape(new_rshape);
+  const TBlob ograd = inputs[0].reshape(new_oshape);
+  // Mean
+  const TBlob lhs = inputs[2].reshape(new_lshape);
+  // Variance
+  const TBlob rhs = inputs[3].reshape(new_rshape);
+  const TBlob samples = inputs[4].reshape(new_oshape);
+  const TBlob noise = inputs[5].reshape(new_oshape);
+  size_t workspace_size_l = ReduceWorkspaceSize<ndim, DType>(
+      s, lgrad.shape_, req[0], ograd.shape_, lhs.shape_, rhs.shape_);
+  size_t workspace_size_r = ReduceWorkspaceSize<ndim, DType>(
+      s, rgrad.shape_, req[1], ograd.shape_, lhs.shape_, rhs.shape_);
+  size_t workspace_size = std::max(workspace_size_l, workspace_size_r);
+  Tensor<xpu, 1, char> workspace =
+      ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
+  Reduce<red::sum, ndim, DType, op::mshadow_op::identity>(s,
+          lgrad, req[0], workspace, ograd);
+  Reduce<red::sum, ndim, DType, op::mshadow_op::mul, op::mshadow_op::left>(
+      s, rgrad, req[1], workspace, ograd, noise, rhs);
+}
+
+template<typename xpu, int ndim, typename DType>
+inline void ScalarNormalReparamBackwardImpl(const OpContext& ctx,
+                                            const std::vector<TBlob>& inputs,
+                                            const std::vector<OpReqType>& req,
+                                            const std::vector<TBlob>& outputs,
+                                            const mxnet::TShape& new_ishape,
+                                            const mxnet::TShape& new_oshape,
+                                            const bool loc_is_tensor) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace broadcast;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob igrad = outputs[0].reshape(new_ishape);
+  // inputs: [grad_from_samples, grad_from_noise(invisible), input_tensor,
+  //          samples, noise]
+  const TBlob ograd = inputs[0].reshape(new_oshape);
+  const TBlob itensor = inputs[2].reshape(new_ishape);
+  const TBlob samples = inputs[3].reshape(new_oshape);
+  const TBlob noise = inputs[4].reshape(new_oshape);
+  size_t workspace_size =
+      ReduceWorkspaceSize<ndim, DType>(s, igrad.shape_, req[0], ograd.shape_);
+  Tensor<xpu, 1, char> workspace =
+      ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
+  if (loc_is_tensor) {
+    Reduce<red::sum, ndim, DType, op::mshadow_op::identity>(s, igrad, req[0],
+                                                            workspace, ograd);
+  } else {
+    Reduce<red::sum, ndim, DType, op::mshadow_op::mul, op::mshadow_op::left>(
+        s, igrad, req[0], workspace, ograd, noise, noise);
+  }
+}
+
+// Allow normal sampling to be differentiable,
+// using reparameterization trick described in:
+// Auto-encoding variational bayes.
+// Kingma, D. P., & Welling, M. (2013).
+template<typename xpu>
+void NormalReparamBackward(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx,
+                           const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs) {
+  // skip kernel launch for zero-size tensors
+  if (inputs[0].shape_.Size() == 0U) {
+    return;
+  }
+  // [scalar scalar] case
+  if (outputs.size() == 0U) {
+    return;
+  }
+  const NumpyNormalParam &param = nnvm::get<NumpyNormalParam>(attrs.parsed);
+  // [tensor tensor] case
+  if (inputs.size() == 6U) {
+    mxnet::TShape new_lshape, new_rshape, new_oshape;
+    int ndim = FillShape(outputs[0].shape_, outputs[1].shape_, inputs[0].shape_,
+                         &new_lshape, &new_rshape, &new_oshape);
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      BROADCAST_NDIM_SWITCH(ndim, NDim, {
+        NormalReparamBackwardImpl<xpu, NDim, DType>(
+          ctx, inputs, req, outputs, new_lshape, new_rshape, new_oshape);
+      });
+    });
+  }
+  // [tensor scalar], [scalar tensor] case
+  if (inputs.size() == 5U) {
+    mxnet::TShape new_ishape, new_oshape;
+    int ndim = FillShape(outputs[0].shape_, outputs[0].shape_, inputs[0].shape_,
+                         &new_ishape, &new_ishape, &new_oshape);
+    bool loc_is_tensor = !param.loc.has_value();
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      BROADCAST_NDIM_SWITCH(ndim, NDim, {
+        ScalarNormalReparamBackwardImpl<xpu, NDim, DType>(
+          ctx, inputs, req, outputs, new_ishape, new_oshape, loc_is_tensor);
       });
     });
   }

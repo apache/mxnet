@@ -79,7 +79,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       keys.emplace_back(i_iter->first.c_str());
       values.emplace_back(i_iter->second.c_str());
     }
-    return imperative::ParseAttrs(op, op->num_inputs, count, &keys[0], &values[0]);
+    return imperative::ParseAttrs(op, op->num_inputs, count, keys.data(), values.data());
   }
 
   /*!

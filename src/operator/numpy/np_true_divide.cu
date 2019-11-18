@@ -29,7 +29,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_true_divide)
-.set_attr<FCompute>("FCompute<gpu>", TrueDivideBroadcastCompute<gpu, mshadow_op::true_divide>);
+.set_attr<FCompute>("FCompute<gpu>", TrueDivideBroadcastCompute<gpu>);
 
 NNVM_REGISTER_OP(_npi_true_divide_scalar)
 .set_attr<FCompute>("FCompute<gpu>", TrueDivideScalarCompute<gpu, mshadow_op::true_divide>);

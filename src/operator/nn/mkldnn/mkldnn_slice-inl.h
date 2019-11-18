@@ -45,7 +45,7 @@ class MKLDNNSliceFwd {
                  const NDArray &in,
                  const NDArray &out);
   void SetNewMem(const mkldnn::memory &input, const mkldnn::memory &output);
-  const mkldnn::reorder &GetPd() const;
+  void Register();
 
  private:
   std::shared_ptr<mkldnn::memory> data_;

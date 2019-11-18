@@ -180,6 +180,23 @@ def test_np_get_constant():
         assert_almost_equal(out.asnumpy(), (x.asnumpy() + const_arr), atol=1e-5, rtol=1e-4, use_broadcast=False)
 
 
+@use_np
+def test_parameters_zero_grad():
+    for hybridize in [False, True]:
+        net = gluon.nn.HybridSequential()
+        for _ in range(5):
+            net.add(gluon.nn.Dense(10))
+        if hybridize:
+            net.hybridize()
+        net.initialize()
+        out = net(mx.np.ones((32, 8)))
+        for v in net.collect_params().values():
+            v.grad()[()] = 1
+        net.collect_params().zero_grad()
+        for v in net.collect_params().values():
+            assert_almost_equal(v.grad().asnumpy(), mx.np.zeros_like(v.grad()).asnumpy())
+
+
 @with_seed()
 @use_np
 def test_symbolic_basic_slicing():

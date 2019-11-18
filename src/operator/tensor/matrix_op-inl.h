@@ -459,6 +459,10 @@ struct ExpandDimParam : public dmlc::Parameter<ExpandDimParam> {
               "the input `NDArray`'s dimension is `ndim`, the range of "
               "the inserted axis is `[-ndim, ndim]`");
   }
+
+  bool operator==(const ExpandDimParam &other) const {
+    return this->axis == other.axis;
+  }
 };
 
 
@@ -3040,6 +3044,16 @@ struct hash<mxnet::op::ReshapeParam> {
     return ret;
   }
 };
+
+template<>
+struct hash<mxnet::op::ExpandDimParam> {
+  size_t operator()(const mxnet::op::ExpandDimParam& val) {
+    size_t ret = 0;
+    ret = dmlc::HashCombine(ret, val.axis);
+    return ret;
+  }
+};
+
 }  // namespace std
 
 #endif  // MXNET_OPERATOR_TENSOR_MATRIX_OP_INL_H_

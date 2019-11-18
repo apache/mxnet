@@ -456,10 +456,6 @@ NNVM_REGISTER_OP(_np_squeeze)
 .add_argument("a", "NDArray-or-Symbol", "data to squeeze")
 .add_arguments(SqueezeParam::__FIELDS__());
 
-bool ConcatShape(const nnvm::NodeAttrs& attrs,
-                 mxnet::ShapeVector *in_shape,
-                 mxnet::ShapeVector *out_shape);
-
 bool DStackShape(const nnvm::NodeAttrs& attrs,
                  mxnet::ShapeVector *in_shape,
                  mxnet::ShapeVector *out_shape) {
@@ -525,6 +521,84 @@ bool ConcatType(const nnvm::NodeAttrs& attrs,
                 std::vector<int> *in_type,
                 std::vector<int> *out_type);
 
+bool NumpyConcatenateType(const nnvm::NodeAttrs& attrs,
+                          std::vector<int> *in_type,
+                          std::vector<int> *out_type) {
+  const NumpyConcatenateParam& param = nnvm::get<NumpyConcatenateParam>(attrs.parsed);
+  const int num_args = param.num_args;
+  CHECK_EQ(in_type->size(), num_args);
+  CHECK_EQ(out_type->size(), 1);
+  int dtype = -1;
+  for (int i = 0; i < num_args; i++) {
+    if (dtype == -1) {
+      dtype = in_type->at(i);
+    }
+  }
+  if (dtype == -1) {
+    dtype = out_type->at(0);
+  }
+  for (int i = 0; i < num_args; i++) {
+    TYPE_ASSIGN_CHECK(*in_type, i, dtype);
+  }
+  TYPE_ASSIGN_CHECK(*out_type, 0, dtype);
+  return dtype != -1;
+}
+
+bool NumpyConcatenateShape(const nnvm::NodeAttrs& attrs,
+                           mxnet::ShapeVector *in_shape,
+                           mxnet::ShapeVector *out_shape) {
+  using namespace mshadow;
+  const NumpyConcatenateParam& param_ = nnvm::get<NumpyConcatenateParam>(attrs.parsed);
+  const int num_args = param_.num_args;
+  CHECK_EQ(in_shape->size(), num_args);
+
+  int param_axis;
+  if (!(param_.axis.has_value())) {
+    for (int i = 0 ; i < num_args ; ++i) {
+      (*in_shape)[i] = Shape1((*in_shape)[i].Size());
+    }
+    param_axis = 0;
+  } else {
+    param_axis = param_.axis.value();
+  }
+
+  mxnet::TShape dshape;
+  dim_t size = 0;
+  bool has_unknown_dim_size = false;
+  int axis = -1;
+  for (int i = 0; i < num_args; ++i) {
+    mxnet::TShape tmp = (*in_shape)[i];
+    if (tmp.ndim() > 0) {
+      axis = CheckAxis(param_axis, tmp.ndim());
+      has_unknown_dim_size = !mxnet::dim_size_is_known(tmp, axis) || has_unknown_dim_size;
+      size += tmp[axis];
+      tmp[axis] = -1;
+      shape_assign(&dshape, tmp);
+    }
+  }
+
+  mxnet::TShape tmp = (*out_shape)[0];
+  if (tmp.ndim() > 0) {
+    axis = CheckAxis(param_axis, tmp.ndim());
+    tmp[axis] = -1;
+    shape_assign(&dshape, tmp);
+  }
+
+  if (dshape.ndim() == -1) return false;
+  CHECK_NE(dshape.ndim(), 0) << "zero-dimensional arrays cannot be concatenated";
+
+  for (int i = 0; i < num_args; ++i) {
+    CHECK(shape_assign(&(*in_shape)[i], dshape))
+        << "Incompatible input shape: expected " << dshape << ", got " << (*in_shape)[i];
+  }
+
+  if (!has_unknown_dim_size) dshape[axis] = size;
+  CHECK(shape_assign(&(*out_shape)[0], dshape))
+      << "Incompatible output shape: expected " << dshape << ", got " << (*out_shape)[0];
+
+  return shape_is_known(dshape);
+}
+
 struct NumpyConcatGrad {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
@@ -535,17 +609,19 @@ struct NumpyConcatGrad {
   }
 };
 
+DMLC_REGISTER_PARAMETER(NumpyConcatenateParam);
+
 NNVM_REGISTER_OP(_npi_concatenate)
 .describe(R"code(Join a sequence of arrays along an existing axis.)code" ADD_FILELINE)
 .set_num_inputs([](const NodeAttrs& attrs) {
-  const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
+  const NumpyConcatenateParam& params = nnvm::get<NumpyConcatenateParam>(attrs.parsed);
   return params.num_args;
 })
 .set_num_outputs(1)
-.set_attr_parser(ParamParser<ConcatParam>)
+.set_attr_parser(ParamParser<NumpyConcatenateParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
-    const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
+    const NumpyConcatenateParam& params = nnvm::get<NumpyConcatenateParam>(attrs.parsed);
     std::vector<std::string> ret;
     for (int i = 0; i < params.num_args; ++i) {
       ret.push_back(std::string("data") + std::to_string(i));
@@ -557,21 +633,22 @@ NNVM_REGISTER_OP(_npi_concatenate)
     return std::vector<std::string>{"out"};
 })
 .set_attr<std::string>("key_var_num_args", "num_args")
-.set_attr<nnvm::FInferType>("FInferType", ConcatType)
-.set_attr<mxnet::FInferShape>("FInferShape", ConcatShape)
-.set_attr<FCompute>("FCompute<cpu>", ConcatCompute<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", NumpyConcatGrad{"_backward_np_concat"})
+.set_attr<nnvm::FInferType>("FInferType", NumpyConcatenateType)
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyConcatenateShape)
+.set_attr<FCompute>("FCompute<cpu>", NumpyConcatenateForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_np_concat"})
 .add_argument("data", "NDArray-or-Symbol[]", "List of arrays to concatenate")
 .add_arguments(ConcatParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_np_concat)
+.set_num_inputs(1)
 .set_num_outputs([](const NodeAttrs& attrs) {
-  const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
+  const NumpyConcatenateParam& params = nnvm::get<NumpyConcatenateParam>(attrs.parsed);
   return params.num_args;
 })
-.set_attr_parser(ParamParser<ConcatParam>)
+.set_attr_parser(ParamParser<NumpyConcatenateParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", ConcatGradCompute<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", NumpyConcatenateBackward<cpu>);
 
 NNVM_REGISTER_OP(_npi_stack)
 .describe(R"code(Join a sequence of arrays along a new axis.
@@ -612,6 +689,152 @@ Examples::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_stack"})
 .add_argument("data", "NDArray-or-Symbol[]", "List of arrays to stack")
 .add_arguments(StackParam::__FIELDS__());
+
+bool NumpyColumnStackType(const nnvm::NodeAttrs& attrs,
+                          std::vector<int> *in_type,
+                          std::vector<int> *out_type) {
+  const NumpyColumnStackParam& param = nnvm::get<NumpyColumnStackParam>(attrs.parsed);
+  CHECK_EQ(in_type->size(), param.num_args);
+  CHECK_EQ(out_type->size(), 1);
+  int dtype = -1;
+  for (int i = 0; i < param.num_args; i++) {
+    if (dtype == -1) {
+      dtype = in_type->at(i);
+    }
+  }
+  if (dtype == -1) {
+    dtype = out_type->at(0);
+  }
+  for (int i = 0; i < param.num_args; i++) {
+    TYPE_ASSIGN_CHECK(*in_type, i, dtype);
+  }
+  TYPE_ASSIGN_CHECK(*out_type, 0, dtype);
+  return dtype != -1;
+}
+
+bool NumpyColumnStackShape(const nnvm::NodeAttrs& attrs,
+                           mxnet::ShapeVector* in_attrs,
+                           mxnet::ShapeVector* out_attrs) {
+  CHECK_EQ(out_attrs->size(), 1U);
+  const NumpyColumnStackParam& param = nnvm::get<NumpyColumnStackParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), param.num_args);
+  std::vector<mxnet::TShape> in_attrs_tmp(param.num_args);
+  TShape dshape;
+  // For each array in the input, reshape to 2D if ndim < 2.
+  for (int i = 0; i < param.num_args; i++) {
+    if ((*in_attrs)[i].ndim() == 0) {
+      in_attrs_tmp[i] = TShape(2, 1);
+    } else if ((*in_attrs)[i].ndim() == 1) {
+      // Transpose 1D row into a column.
+      in_attrs_tmp[i] = TShape(2, 1);
+      in_attrs_tmp[i][0] = (*in_attrs)[i][0];
+    } else {
+      in_attrs_tmp[i] = (*in_attrs)[i];
+    }
+    TShape tmp(in_attrs_tmp[i].ndim(), -1);
+    shape_assign(&dshape, tmp);
+  }
+  TShape tmp((*out_attrs)[0].ndim(), -1);
+  shape_assign(&dshape, tmp);
+  for (int i = 0; i < param.num_args; i++) {
+    SHAPE_ASSIGN_CHECK(in_attrs_tmp, i, dshape)
+  }
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, dshape)
+  if (dshape.ndim() == -1) {
+    return false;
+  }
+  // Accumulate along column axis.
+  int cnt = 0, sum = 0, pos = -1;
+  for (int i = 0; i < param.num_args; i++) {
+    TShape tmp = in_attrs_tmp[i];
+    if (!dim_size_is_known(tmp, 1)) {
+      cnt++;
+      pos = i;
+    } else {
+      sum += tmp[1];
+    }
+    tmp[1] = -1;
+    shape_assign(&dshape, tmp);
+  }
+  tmp = out_attrs->at(0);
+  if (!dim_size_is_known(tmp, 1)) {
+    cnt++;
+    pos = -1;
+  } else {
+    sum += tmp[1];
+  }
+  tmp[1] = -1;
+  shape_assign(&dshape, tmp);
+  for (int i = 0; i < param.num_args; i++) {
+    SHAPE_ASSIGN_CHECK(in_attrs_tmp, i, dshape)
+  }
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, dshape)\
+  dshape[1] = 0;
+  if (!shape_is_known(dshape)) {
+    return false;
+  }
+  dshape[1] = sum;
+  if (cnt == 0) {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, dshape);
+  } else if (cnt == 1) {
+    // Infer missing dimension if only one column dimension of the input is missing
+    if (pos >= 0) {
+      in_attrs_tmp[pos][1] = out_attrs->at(0)[1] - sum;
+    } else {
+      out_attrs->at(0)[1] = sum;
+    }
+  } else {
+    return false;
+  }
+  for (int i = 0; i < param.num_args; i++) {
+    if (in_attrs->at(i).ndim() == 1) {
+      in_attrs->at(i)[0] = in_attrs_tmp[i][1];
+    } else if (in_attrs->at(i).ndim() >= 2) {
+      in_attrs->at(i) = in_attrs_tmp[i];
+    }
+  }
+
+  return true;
+}
+
+DMLC_REGISTER_PARAMETER(NumpyColumnStackParam);
+
+NNVM_REGISTER_OP(_npi_column_stack)
+.describe(R"code()code" ADD_FILELINE)
+.set_attr_parser(ParamParser<NumpyColumnStackParam>)
+.set_num_inputs([](const nnvm::NodeAttrs& attrs) {
+  const NumpyColumnStackParam& param = dmlc::get<NumpyColumnStackParam>(attrs.parsed);
+  return static_cast<uint32_t>(param.num_args);
+})
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const nnvm::NodeAttrs& attrs) {
+    int num_args = dmlc::get<NumpyColumnStackParam>(attrs.parsed).num_args;
+    std::vector<std::string> ret;
+    for (int i = 0; i < num_args; ++i) {
+      ret.push_back(std::string("arg") + std::to_string(i));
+    }
+    return ret;
+  })
+.set_attr<std::string>("key_var_num_args", "num_args")
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyColumnStackShape)
+.set_attr<nnvm::FInferType>("FInferType", NumpyColumnStackType)
+.set_attr<FCompute>("FCompute<cpu>", NumpyColumnStackForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_np_column_stack"})
+.add_argument("data", "NDArray-or-Symbol[]", "List of arrays to column_stack")
+.add_arguments(NumpyColumnStackParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_np_column_stack)
+.set_attr_parser(ParamParser<NumpyColumnStackParam>)
+.set_num_inputs(1)
+.set_num_outputs([](const nnvm::NodeAttrs& attrs) {
+  const NumpyColumnStackParam& param = dmlc::get<NumpyColumnStackParam>(attrs.parsed);
+  return static_cast<uint32_t>(param.num_args);
+})
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", NumpyColumnStackBackward<cpu>);
+
+DMLC_REGISTER_PARAMETER(NumpyVstackParam);
 
 bool NumpyVstackType(const nnvm::NodeAttrs& attrs,
                      std::vector<int> *in_type,
@@ -717,8 +940,6 @@ bool NumpyVstackShape(const nnvm::NodeAttrs& attrs,
 
   return true;
 }
-
-DMLC_REGISTER_PARAMETER(NumpyVstackParam);
 
 NNVM_REGISTER_OP(_npi_vstack)
 .describe(R"code()code" ADD_FILELINE)

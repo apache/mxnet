@@ -84,8 +84,6 @@ endif
 
 ifeq ($(USE_MKLDNN), 1)
 	MKLDNNROOT = $(ROOTDIR)/3rdparty/mkldnn/build/install
-	MKLROOT = $(ROOTDIR)/3rdparty/mkldnn/build/install
-	export USE_MKLML = 1
 endif
 
 include $(TPARTYDIR)/mshadow/make/mshadow.mk
@@ -151,14 +149,9 @@ endif
 
 ifeq ($(USE_MKLDNN), 1)
 	CFLAGS += -DMXNET_USE_MKLDNN=1
-	CFLAGS += -DUSE_MKL=1
 	CFLAGS += -I$(ROOTDIR)/src/operator/nn/mkldnn/
-	ifneq ($(MKLDNNROOT), $(MKLROOT))
-		CFLAGS += -I$(MKLROOT)/include
-		LDFLAGS += -L$(MKLROOT)/lib
-	endif
 	CFLAGS += -I$(MKLDNNROOT)/include
-	LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
+	LIB_DEP += $(MKLDNNROOT)/lib/libmkldnn.a
 endif
 
 # setup opencv
@@ -602,13 +595,6 @@ lib/libmxnet.so: $(ALLX_DEP)
 	@mkdir -p $(@D)
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter-out %libnnvm.a, $(filter %.o %.a, $^)) $(LDFLAGS) \
 	-Wl,${WHOLE_ARCH} $(filter %libnnvm.a, $^) -Wl,${NO_WHOLE_ARCH}
-ifeq ($(USE_MKLDNN), 1)
-ifeq ($(UNAME_S), Darwin)
-	install_name_tool -change '@rpath/libmklml.dylib' '@loader_path/libmklml.dylib' $@
-	install_name_tool -change '@rpath/libiomp5.dylib' '@loader_path/libiomp5.dylib' $@
-	install_name_tool -change '@rpath/libmkldnn.0.dylib' '@loader_path/libmkldnn.0.dylib' $@
-endif
-endif
 
 $(PS_PATH)/build/libps.a: PSLITE
 
@@ -626,7 +612,7 @@ lib/libtvm_runtime.so:
 	[ -e $(LLVM_PATH)/bin/llvm-config ] || sh $(ROOTDIR)/contrib/tvmop/prepare_tvm.sh; \
 	cd $(TVM_PATH)/build; \
 	cmake -DUSE_LLVM="$(LLVM_PATH)/bin/llvm-config" \
-		  -DUSE_SORT=OFF -DUSE_CUDA=$(TVM_USE_CUDA) -DUSE_CUDNN=OFF ..; \
+		  -DUSE_SORT=OFF -DUSE_CUDA=$(TVM_USE_CUDA) -DUSE_CUDNN=OFF -DUSE_OPENMP=ON ..; \
 	$(MAKE) VERBOSE=1; \
 	mkdir -p $(ROOTDIR)/lib; \
 	cp $(TVM_PATH)/build/libtvm_runtime.so $(ROOTDIR)/lib/libtvm_runtime.so; \
@@ -697,12 +683,6 @@ rpkg:
 	mkdir -p R-package/inst/libs
 	cp src/io/image_recordio.h R-package/src
 	cp -rf lib/libmxnet.so R-package/inst/libs
-
-	if [ -e "lib/libmkldnn.so.0" ]; then \
-		cp -rf lib/libmkldnn.so.0 R-package/inst/libs; \
-		cp -rf lib/libiomp5.so R-package/inst/libs; \
-		cp -rf lib/libmklml_intel.so R-package/inst/libs; \
-	fi
 
 	if [ -e "lib/libtvm_runtime.so" ]; then \
 		cp -rf lib/libtvm_runtime.so R-package/inst/libs; \
@@ -789,6 +769,7 @@ clean: rclean mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
+	cd $(TVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 endif
 

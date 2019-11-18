@@ -305,7 +305,9 @@ std::vector<NDArray*> Imperative::Backward(
   std::vector<NodeEntry> ograd_entries;
   ograd_entries.reserve(ograds.size());
   for (size_t i = 0; i < outputs.size(); ++i) {
-    ograd_entries.emplace_back(NodeEntry{Node::Create(), 0, 0});
+    nnvm::NodePtr np = Node::Create();
+    np->attrs.name = "_head_grad_" + std::to_string(i);
+    ograd_entries.emplace_back(NodeEntry{np, 0, 0});
     AGInfo& info = AGInfo::Create(ograd_entries.back().node);
     info.ctx = outputs[i]->ctx();
     if (ograds[i] != nullptr) {

@@ -110,5 +110,11 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_arctanh, mshadow_op::arctanh);
 NNVM_REGISTER_OP(_npi_around)
 .set_attr<FCompute>("FCompute<gpu>", AroundOpForward<gpu>);
 
+NNVM_REGISTER_OP(_npi_nan_to_num)
+.set_attr<FCompute>("FCompute<gpu>", NumpyNanToNumOpForward<gpu>);
+
+NNVM_REGISTER_OP(_npi_backward_nan_to_num)
+.set_attr<FCompute>("FCompute<gpu>", NumpyNanToNumOpBackward<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

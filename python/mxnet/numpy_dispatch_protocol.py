@@ -86,6 +86,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'argmin',
     'argmax',
     'around',
+    'append',
     'broadcast_arrays',
     'broadcast_to',
     'clip',
@@ -121,8 +122,11 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'var',
     'vdot',
     'vstack',
+    'column_stack',
     'zeros_like',
     'linalg.norm',
+    'linalg.cholesky',
+    'linalg.inv',
     'trace',
     'tril',
     'meshgrid',
@@ -130,6 +134,9 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'einsum',
     'shares_memory',
     'may_share_memory',
+    'diff',
+    'resize',
+    'where',
 ]
 
 
@@ -219,6 +226,7 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'ceil',
     'trunc',
     'floor',
+    'bitwise_xor',
     'logical_not',
     'equal',
     'not_equal',

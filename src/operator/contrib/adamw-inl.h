@@ -442,14 +442,15 @@ static inline void MultiAdamWUpdate(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename xpu>
-void GetScaleFloat(const TBlob &scale_blob, float *pScalef);
+void GetScaleFloat(mshadow::Stream<xpu> *s, const TBlob &scale_blob, float *pScalef);
 
 template<typename xpu>
-bool PrepareInputBlobs(const std::vector<TBlob> &inputs,
+bool PrepareInputBlobs(const OpContext &ctx,
+                       const std::vector<TBlob> &inputs,
                        std::vector<TBlob> *inputs_wo_scale,
                        float *pScalef) {
   const size_t num_in = inputs.size() - 1;
-  GetScaleFloat<xpu>(inputs[num_in], pScalef);
+  GetScaleFloat<xpu>(ctx.get_stream<xpu>(), inputs[num_in], pScalef);
   if (!std::isfinite(*pScalef) || *pScalef == 0)
     return false;
 
@@ -468,7 +469,7 @@ inline void MPUpdate(const nnvm::NodeAttrs& attrs,
                      const std::vector<TBlob> &outputs) {
   std::vector<TBlob> inputs_wo_scale;
   float scalef;
-  if (!PrepareInputBlobs<xpu>(inputs, &inputs_wo_scale, &scalef))
+  if (!PrepareInputBlobs<xpu>(ctx, inputs, &inputs_wo_scale, &scalef))
     return;
 
   F::Forward(attrs, ctx, inputs_wo_scale, req, outputs, scalef);
@@ -482,7 +483,7 @@ inline void multiMPUpdate(const nnvm::NodeAttrs& attrs,
                           const std::vector<TBlob> &outputs) {
   std::vector<TBlob> inputs_wo_scale;
   float scalef;
-  if (!PrepareInputBlobs<xpu>(inputs, &inputs_wo_scale, &scalef))
+  if (!PrepareInputBlobs<xpu>(ctx, inputs, &inputs_wo_scale, &scalef))
     return;
 
   if (!MP)
