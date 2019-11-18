@@ -229,7 +229,7 @@ static inline mkldnn::memory::data_type get_mkldnn_type(int dtype) {
     case mshadow::kUint8:
       return mkldnn::memory::data_type::u8;
     default:
-      LOG(FATAL) << "unknown type for MKLDNN:" << dtype;
+      LOG(FATAL) << "unknown type for MKLDNN";
       return mkldnn::memory::data_type::undef;
   }
 }

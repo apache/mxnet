@@ -123,8 +123,6 @@ void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
         ResourceRequest(ResourceRequest::kTempSpace));
     NDArray out_nd = outputs[0];
     mxnet::ndarray::ElementwiseSum<cpu>(s, rsc, inputs, &out_nd);
-    std::cout << "src/operator/tensor/elemwise_sum.cc: not fallback";
-    // FallBackCompute(ElementWiseSumCompute<cpu>, attrs, ctx, inputs, req, outputs);
 #if MXNET_USE_MKLDNN == 1
   } else if (IsMKLDNNData(inputs)) {
     MKLDNNRun(MKLDNNSumForward, attrs, ctx, inputs, req, outputs);
