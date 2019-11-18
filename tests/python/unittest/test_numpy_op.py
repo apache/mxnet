@@ -4112,7 +4112,7 @@ def test_np_einsum():
             for config in configs:
                 (subscripts, operands) = config
                 rtol = 1e-2 if dtype == 'float16' else 1e-3
-                atol = 1e-4 if dtype == 'float16' else 1e-5
+                atol = 1e-3 if dtype == 'float16' else 1e-4
                 grad = []
                 x_np = []
                 for shape in operands:
