@@ -979,7 +979,10 @@ class HybridBlock(Block):
     def _call_cached_op(self, *args):
         if self._cached_op is None:
             self._build_cache(*args)
-        assert self._cached_op, "cached op is not None"
+        assert self._cached_op, "Gluon failed to build the cache. " \
+                                "This should never happen. " \
+                                "Please submit an issue on Github" \
+                                " https://github.com/apache/incubator-mxnet."
         if self._callback:
             self._cached_op._register_op_hook(self._callback, self._monitor_all)
             if len(self._flags) >= 2 and (self._flags[1] or self._flags[0]):
@@ -1290,8 +1293,6 @@ class SymbolBlock(HybridBlock):
 
         syms, self._in_format = _flatten(inputs, "input")
         out, self._out_format = _flatten(outputs, "output")
-        out = symbol.Group(out, _check_same_symbol_type(out))
-
         input_names = set()
         for i in syms:
             assert len(i.get_internals().list_outputs()) == 1, \
@@ -1300,11 +1301,16 @@ class SymbolBlock(HybridBlock):
 
         # check if any symbol is row_sparse
         row_sparse_storage = ndarray.ndarray._STORAGE_TYPE_STR_TO_ID['row_sparse']
+
         for i in out:
             for j in i.get_internals():
                 assert(j.attr("__storage_type__") != str(row_sparse_storage)), \
                     "SymbolBlock doesn't support Parameter '%s' because its storage " \
                     "type is 'row_sparse'." % j.name
+        if len(out) > 1:
+            out = symbol.Group(out, _check_same_symbol_type(out))
+        else:
+            out = out[0]
 
         # Infer type of parameters. Without this, every parameter will be created with
         # default type i.e., fp32

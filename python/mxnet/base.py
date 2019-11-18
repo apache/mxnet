@@ -774,7 +774,7 @@ _NP_EXT_OP_SUBMODULE_LIST = ['_image_', '_random_']
 
 _NP_INTERNAL_OP_PREFIX = '_npi_'
 
-_NP_OUTPUT_IS_LIST_OPERATORS = ['npi_split']
+_NP_OUTPUT_IS_LIST_OPERATORS = {'_npi_split', '_npi_hsplit'}
 
 
 def _is_np_op(op_name):
@@ -783,10 +783,18 @@ def _is_np_op(op_name):
 
 
 def _output_is_list(op_name):
+    """ Whether the output of the operator is a list.
+
+    Parameters
+    ----------
+    op_name : Name of the operator
+
+    Returns
+    -------
+
+    """
     if _is_np_op(op_name):
-        for target_operator_name in _NP_OUTPUT_IS_LIST_OPERATORS:
-            if target_operator_name in op_name:
-                return True
+        return op_name in _NP_OUTPUT_IS_LIST_OPERATORS
     return False
 
 

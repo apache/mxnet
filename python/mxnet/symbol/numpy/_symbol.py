@@ -29,7 +29,7 @@ from ...base import py_str
 from ...util import check_call, set_module, _sanity_check_params
 from ...util import wrap_np_unary_func, wrap_np_binary_func
 from ...context import current_context
-from ..symbol import Symbol
+from ..symbol import Symbol, Group
 from .._internal import _set_np_symbol_class
 from . import _internal as _npi
 try:
@@ -51,94 +51,130 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'resize', 'nan_to_num', 'where']
 
 
-def _num_outputs(sym):
-    return len(sym.as_nd_ndarray())
-
-
 @set_module('mxnet.symbol.numpy')
 class _Symbol(Symbol):
     def __init__(self, handle):
         super(_Symbol, self).__init__(handle)
-        self._output_is_list = False
 
     def __getitem__(self, key): # pylint: disable = too-many-return-statements, inconsistent-return-statements
-        num_outputs = len(self)
-        if num_outputs == 1: # pylint: disable = too-many-nested-blocks
-            # If number of output is one and is not a list, perform ndarray basic slicing
-            if not self._output_is_list:
-                if isinstance(key, integer_types):
-                    sliced = _npi.slice(self, key, key+1)
-                    return _npi.reshape(sliced, (-3, -4))
-                elif isinstance(key, py_slice):
-                    if key.step is None or key.step != 0:
-                        start = [None] if key.start is None else key.start
-                        stop = [None] if key.stop is None else key.stop
-                        return _npi.slice(self, start, stop, key.step)
-                    else:
-                        raise ValueError("slice step cannot be zero")
-                elif isinstance(key, list):
-                    raise NotImplementedError
-                elif isinstance(key, tuple):
-                    begin = []
-                    end = []
-                    step = []
-                    new_shape = ()
-                    for index in key:
-                        if isinstance(index, py_slice):
-                            if index.step is not None and index.step == 0:
-                                raise ValueError("slice step cannot be zero")
-                            begin.append(index.start)
-                            end.append(index.stop)
-                            step.append(index.step)
-                            new_shape += (-2,)
-                        elif isinstance(index, integer_types):
+        """Return self[key].
+
+        If the symbol is a symbol list, it returns the i-th symbol or a list of symbols
+        selected by key.
+
+        Otherwise, it outputs a symbol that slice the input by the given key. Currently, this
+        function supports the following types of key:
+
+        - integer types, e.g., int, long, np.int32, np.int64
+        - slice containing integer constants, e.g., slice(0, None, None)
+        - tuple contaning the above elements, which is used for multidimensional indexing
+
+        Parameters
+        ----------
+        key : int, slice, or tuple of all previous types
+            Indexing key.
+
+        """
+        num_outputs = self.num_outputs
+        if num_outputs > 1:
+            num_outputs = self.num_outputs
+            if isinstance(key, integer_types):
+                key = int(key)
+                if key < -num_outputs or key >= num_outputs:
+                    raise IndexError('list index out of range')
+                if key < 0:
+                    key += num_outputs
+                ret_handle = SymbolHandle()
+                check_call(_LIB.MXSymbolGetOutput(self.handle, mx_uint(key),
+                                                  ctypes.byref(ret_handle)))
+                return _Symbol(handle=ret_handle)
+            elif isinstance(key, py_slice):
+                start, stop, step = key.indices(num_outputs)
+                return Group([self[i] for i in range(start, stop, step)], _Symbol)
+            else:
+                raise TypeError('indices of symbol group must be integers or slices, not {}'
+                                .format(type(key)))
+        else:
+            if isinstance(key, integer_types):
+                sliced = _npi.slice(self, [key], [key+1])
+                return _npi.reshape(sliced, (-3, -4))
+            elif isinstance(key, py_slice):
+                if key.step is None or key.step != 0:
+                    start = [None] if key.start is None else key.start
+                    stop = [None] if key.stop is None else key.stop
+                    return _npi.slice(self, start, stop, key.step)
+                else:
+                    raise ValueError("slice step cannot be zero")
+            elif isinstance(key, tuple):
+                begin = []
+                end = []
+                step = []
+                new_shape = ()
+                if len(key) == 0:
+                    return self
+                for index in key:
+                    if isinstance(index, py_slice):
+                        if index.step is not None and index.step == 0:
+                            raise ValueError("slice step cannot be zero")
+                        begin.append(index.start)
+                        end.append(index.stop)
+                        step.append(index.step)
+                        new_shape += (-2,)
+                    elif isinstance(index, integer_types):
+                        if index >= 0:
                             begin.append(index)
                             end.append(index+1)
                             step.append(1)
-                            new_shape += (-3,)
-                    new_shape += (-4,)
-                    sliced = _npi.slice(self, begin, end, step)
-                    return _npi.reshape(sliced, new_shape)
-            # perform trivial list slicing on length one list represented by flag
-            else:
-                if isinstance(key, integer_types):
-                    if key in [-1, 0]:
-                        self._output_is_list = False
-                        return self
+                        else:
+                            begin.append(index)
+                            end.append(index - 1)
+                            step.append(-1)
+                        new_shape += (-3,)
                     else:
-                        raise IndexError
-                elif isinstance(key, py_slice):
-                    if (key.start is None or key.start <= 0) and (key.stop is None or key.stop > 0):
-                        return self
-                    else:
-                        raise ValueError
-                else:
-                    raise IndexError
-        # list slicing on several nodes of outputs
-        elif num_outputs > 1:
-            if isinstance(key, py_slice):
-                start = 0 if key.start is None else key.start
-                stop = num_outputs if key.stop is None else key.stop
-                step = 1 if key.step is None else key.step
-                return Group([self[i] for i in range(start, stop, step)], _Symbol)
-            elif isinstance(key, integer_types):
-                if key >= num_outputs:
-                # Important, python determines the end by this exception
-                    raise IndexError
-                handle = SymbolHandle()
-                check_call(_LIB.MXSymbolGetOutput(
-                    self.handle, mx_uint(key), ctypes.byref(handle)))
-                return _Symbol(handle=handle)
+                        raise IndexError('Only integer, slice, or tuple of these types'
+                                         ' are supported! Received key={}'.format(key))
+                new_shape += (-4,)
+                sliced = _npi.slice(self, begin, end, step)
+                return _npi.reshape(sliced, new_shape)
             else:
-                raise NotImplementedError
-        else:
-            raise NotImplementedError
+                raise IndexError('Only integer, slice, or tuple of these types are supported! '
+                                 'Received key={}'.format(key))
 
     def __setitem__(self, key, value):
         raise NotImplementedError
 
+    def __repr__(self):
+        """Gets a string representation of the symbol."""
+        if self.num_outputs > 1:
+            name = ', '.join([str(ele_sym) for ele_sym in self])
+            return '<%s group [%s]>' % (self.__class__.__name__, name)
+        else:
+            return '<%s %s>' % (self.__class__.__name__, self.name)
+
+    @property
+    def name(self):
+        """Gets name string from the symbol, this function only works for symbols
+         that are not a list (grouped symbols).
+
+        Returns
+        -------
+        value : str
+            The name of this symbol, returns ``None`` for list symbol.
+        """
+        if self.num_outputs > 1:
+            return None
+        ret = ctypes.c_char_p()
+        success = ctypes.c_int()
+        check_call(_LIB.MXSymbolGetName(
+            self.handle, ctypes.byref(ret), ctypes.byref(success)))
+        assert success.value != 0,\
+            'Fail to infer the name of a symbol that is not a list!'
+        return py_str(ret.value)
+
     def __iter__(self):
-        return (self[i] for i in range(len(self)))
+        if self.num_outputs == 1:
+            raise TypeError("'{}' is not iterable.".format(self))
+        return iter((self[i] for i in range(self.num_outputs)))
 
     def __add__(self, other):
         """x.__add__(y) <=> x + y"""
@@ -229,6 +265,14 @@ class _Symbol(Symbol):
         return less_equal(self, other)
 
     def __len__(self):
+        if self.num_outputs == 1:
+            raise TypeError('{} is not a list and does not support len().'.format(self))
+        return self.num_outputs
+
+    @property
+    def num_outputs(self):
+        """The number of outputs of a symbol. If the symbol is not a symbollist, it returns 1.
+        Otherwise, it returns the number of elements of the list."""
         output_count = mx_uint()
         check_call(_LIB.MXSymbolGetNumOutputs(self.handle, ctypes.byref(output_count)))
         return output_count.value
@@ -971,7 +1015,6 @@ class _Symbol(Symbol):
         json_str = ctypes.c_char_p()
         check_call(_LIB.MXSymbolSaveToJSON(self.handle, ctypes.byref(json_str)))
         json_data = json.loads(py_str(json_str.value))
-        json_data["output_is_list"] = self._output_is_list
         return json.dumps(json_data)
 
 
@@ -3146,9 +3189,8 @@ def concatenate(seq, axis=0, out=None):
     array([[1., 2., 5.],
            [3., 4., 6.]])
     """
-    if len(seq) > 1:
-        return _npi.concatenate(*[seq[i] for i in range(len(seq))], dim=axis, out=out)
-    return _npi.concatenate(*seq, dim=axis, out=out)
+    return _npi.concatenate(*seq, axis=axis, out=out)
+
 
 @set_module('mxnet.symbol.numpy')
 def append(arr, values, axis=None):  # pylint: disable=redefined-outer-name
@@ -5052,65 +5094,32 @@ def where(condition, x, y):
     """
     return _npi.where(condition, x, y, out=None)
 
-def Group(symbols, create_fn=_Symbol):
-    """Creates a symbol that contains a collection of other symbols, grouped together.
-    A classic symbol (`mx.sym.Symbol`) will be returned if all the symbols in the list
-    are of that type; a numpy symbol (`mx.sym.np._Symbol`) will be returned if all the
-    symbols in the list are of that type. A type error will be raised if a list of mixed
-    classic and numpy symbols are provided.
-    Example
-    -------
-    >>> a = mx.sym.Variable('a')
-    >>> b = mx.sym.Variable('b')
-    >>> mx.sym.Group([a,b])
-    <Symbol Grouped>
-    Parameters
-    ----------
-    symbols : list
-        List of symbols to be grouped.
-    create_fn : mx.sym.Symbol or mx.sym.np._Symbol
-        Symbol class for creating the grouped symbol.
-    Returns
-    -------
-    sym : Symbol
-        A group symbol.
-     """
-    if not symbols or any(not isinstance(sym, Symbol) for sym in symbols):
-        raise TypeError('Expected a list of symbols as input')
-    handle = SymbolHandle()
-    check_call(_LIB.MXSymbolCreateGroup(
-        mx_uint(len(symbols)),
-        c_handle_array(symbols), ctypes.byref(handle)))
-    self = create_fn(handle)
-    self._output_is_list = True #pylint: disable = protected-access
-    return self
-
 
 @set_module('mxnet.symbol.numpy')
 def load_json_string(json_str):
     """
     Loads symbol from json string.
+
     Parameters
     ----------
     json_str : str
         A JSON string.
+
     Returns
     -------
     sym : Symbol
         The loaded symbol.
+
     See Also
     --------
-    Symbol.tojson : Used to save symbol into json string.
+    _Symbol.tojson : Used to save symbol into json string.
     """
     if not isinstance(json_str, string_types):
         raise TypeError('fname required to be string')
     handle = SymbolHandle()
     json_data = json.loads(json_str)
-    output_is_list = json_data["output_is_list"]
-    del json_data["output_is_list"]
     check_call(_LIB.MXSymbolCreateFromJSON(c_str(json.dumps(json_data)), ctypes.byref(handle)))
     s = _Symbol(handle)
-    s._output_is_list = output_is_list #pylint: disable = protected-access
     return s
 
 

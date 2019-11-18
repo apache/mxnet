@@ -125,6 +125,11 @@ static inline bool SupportStorageMKLDNN(int stype) {
 
 static inline bool SupportMKLDNN(int dtype, const mxnet::TShape &shape) {
   int ndim = shape.ndim();
+  bool zero_size_shape =
+      ndim == 0 || std::any_of(shape.begin(), shape.end(), [](dim_t ele){ return ele == 0; });
+  if (zero_size_shape) {
+    return false;
+  }
   return dtype == mshadow::kFloat32 && (ndim == 1 || ndim == 2 || ndim == 4);
 }
 

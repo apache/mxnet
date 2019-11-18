@@ -96,15 +96,10 @@ def _set_np_symbol_class(cls):
     _np_symbol_cls = cls
 
 
-cdef NewSymbol(SymbolHandle handle, int is_np_sym=0, int output_is_list=0):
+cdef NewSymbol(SymbolHandle handle, int is_np_sym=0):
     """Create a new symbol given handle"""
     create_symbol_fn = _np_symbol_cls if is_np_sym else _symbol_cls
     sym = create_symbol_fn(None)
-    if is_np_sym:
-        if output_is_list:
-            sym._output_is_list = True
-        else:
-            sym._output_is_list = False
     (<SymbolBase>sym).chandle = handle
     return sym
 
@@ -118,6 +113,7 @@ def _symbol_creator(handle, args, kwargs, keys, vals, name, is_np_op=0, output_i
     cdef vector[SymbolHandle] sym_args
     cdef SymbolHandle ret_handle
     cdef string cname = c_str(name)
+    cdef nn_uint nout
 
     for i in keys:
         ckeys.push_back(c_str(i))
@@ -156,4 +152,11 @@ def _symbol_creator(handle, args, kwargs, keys, vals, name, is_np_op=0, output_i
         &csym_keys[0] if csym_keys.size() != 0 else NULL,
         &sym_args[0] if sym_args.size() != 0 else NULL))
 
-    return NewSymbol(ret_handle, is_np_op, output_is_list)
+    sym = NewSymbol(ret_handle, is_np_op)
+    if is_np_op:
+        CALL(NNSymbolGetNumOutputs(ret_handle, &nout))
+        if nout > 1:
+            return list(sym)
+        elif output_is_list:
+            return [sym]
+    return sym

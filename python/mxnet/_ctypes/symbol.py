@@ -123,7 +123,7 @@ def _set_np_symbol_class(cls):
     _np_symbol_cls = cls
 
 
-def _symbol_creator(handle, args, kwargs, keys, vals, name, is_np_op, output_is_list):
+def _symbol_creator(handle, args, kwargs, keys, vals, name, is_np_op, output_is_list=False):
     sym_handle = SymbolHandle()
     check_call(_LIB.MXSymbolCreateAtomicSymbol(
         ctypes.c_void_p(handle),
@@ -138,15 +138,16 @@ def _symbol_creator(handle, args, kwargs, keys, vals, name, is_np_op, output_is_
             'Symbols either as positional or keyword arguments, not both')
     create_symbol_fn = _np_symbol_cls if is_np_op else _symbol_cls
     s = create_symbol_fn(sym_handle)
-    if is_np_op:
-        if output_is_list:
-            s._output_is_list = True
-        else:
-            s._output_is_list = False
     if args:
         s._compose(*args, name=name)
     elif kwargs:
         s._compose(name=name, **kwargs)
     else:
         s._compose(name=name)
+    if is_np_op:
+        # Determine whether the symbol is a list.
+        if s.num_outputs > 1:
+            return list(s)
+        elif output_is_list:
+            return [s]
     return s
