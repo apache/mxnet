@@ -23,17 +23,13 @@
 
 set -e
 
-echo $(pwd) > pwd.txt
-export SRC="`sed -E 's/(.*incubator\-mxnet)(.*)/\1/g' pwd.txt`"
-cd $SRC
+#bash tools/staticbuild/install_prereq.sh
+bash ci/docker/install/ubuntu_publish.sh
 
-source tools/staticbuild/install_prereq.sh
-
-cd $SRC
 cp tools/pip/MANIFEST.in python/
 cp -r tools/pip/doc python/
 
-source tools/staticbuild/build.sh $1 $2
+bash tools/staticbuild/build.sh $1 $2
 
 echo $(git rev-parse HEAD) >> python/mxnet/COMMIT_HASH
 cd python/

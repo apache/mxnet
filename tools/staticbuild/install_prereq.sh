@@ -24,6 +24,8 @@ sudo apt install -y software-properties-common
 sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
 sudo apt-get update
 sudo apt install -y \
+       curl \
+       wget \
        build-essential \
        git \
        autoconf \
