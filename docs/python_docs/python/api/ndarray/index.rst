@@ -65,7 +65,7 @@ Tutorials
 
    .. card::
       :title: NDArray Guide
-      :link: ../../guide/packages/ndarray/
+      :link: ../../tutorials/packages/ndarray/
 
       The NDArray guide. Start here!
 
@@ -78,15 +78,10 @@ NDArray API of MXNet
 
    .. card::
       :title: NDArray
-      :link: mxnet.ndarray.NDArray.html
+      :link: ndarray.html
 
       Imperative tensor operations using the NDArray API.
 
-   .. card::
-      :title: Routines
-      :link: routines.html
-
-      Manipulating multi-dimensional, fixed-size arrays.
 
 Sparse NDArray API of MXNet
 ---------------------------
@@ -94,31 +89,17 @@ Sparse NDArray API of MXNet
 .. container:: cards
 
    .. card::
-      :title: CSRNDArray
-      :link: mxnet.ndarray.sparse.CSRNDArray.html
-
-      Representing two-dimensional, fixed-size arrays in compressed sparse row format.
-
-   .. card::
-      :title: RowSparseNDArray
-      :link: mxnet.ndarray.sparse.RowSparseNDArray.html
-
-      Representing multi-dimensional, fixed-size arrays in row sparse format.
-
-   .. card::
       :title: Sparse routines
-      :link: sparse_routines.html
+      :link: sparse/index.html
 
-      Manipulating sparse arrays.
+      Representing and manipulating sparse arrays.
 
 
 
 .. toctree::
    :hidden:
    :maxdepth: 2
+   :glob:
 
-   mxnet.ndarray.NDArray
-   routines
-   mxnet.ndarray.sparse.CSRNDArray
-   mxnet.ndarray.sparse.RowSparseNDArray
-   sparse_routines
+   ndarray
+   */index

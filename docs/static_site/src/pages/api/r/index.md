@@ -26,7 +26,7 @@ tag: r
 
 # MXNet - R API
 
-See the [MXNet R Reference Manual](https://s3.amazonaws.com/mxnet-prod/docs/R/mxnet-r-reference-manual.pdf).
+See the [MXNet R Reference Manual](/api/r/docs/api/R-package/build/mxnet-r-reference-manual.pdf).
 
 MXNet supports the R programming language. The MXNet R package brings flexible and efficient GPU
 computing and state-of-art deep learning to R. It enables you to write seamless tensor/matrix computation with multiple GPUs in R. It also lets you construct and customize the state-of-art deep learning models in R,
@@ -49,4 +49,4 @@ You can perform tensor or matrix computation in R:
 ```
 ## Resources
 
-* [MXNet R Reference Manual](https://s3.amazonaws.com/mxnet-prod/docs/R/mxnet-r-reference-manual.pdf)
+* [MXNet R Reference Manual](/api/r/docs/api/R-package/build/mxnet-r-reference-manual.pdf)

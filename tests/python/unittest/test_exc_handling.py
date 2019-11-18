@@ -21,8 +21,9 @@ from mxnet import gluon
 from common import setup_module, with_seed, teardown
 from mxnet.gluon import nn
 from mxnet.base import MXNetError
-from mxnet.test_utils import assert_exception, default_context, set_default_context
+from mxnet.test_utils import assert_exception, default_context, set_default_context, use_np
 from nose.tools import assert_raises
+
 
 @with_seed()
 def test_exc_imperative():
@@ -181,6 +182,7 @@ def run_training_iteration(data):
     mx.nd.waitall()
     mx.profiler.set_state("stop")
 
+
 @with_seed()
 def test_opencv_exception():
     def check_resize():
@@ -197,6 +199,17 @@ def test_np_reshape_exception():
     assert_raises(MXNetError, lambda: a.reshape((1,)))
     assert_raises(MXNetError, lambda: mx.np.reshape(a, (1,)))
     assert_raises(MXNetError, lambda: mx.np.reshape(a, (-1, 3)))
+
+
+@with_seed()
+@use_np
+def test_np_random_incorrect_named_arguments():
+    random_ops = ['uniform', 'normal', 'randint', 'choice']
+    for op_name in random_ops:
+        op = getattr(mx.np.random, op_name, None)
+        assert op is not None
+        assert_raises(TypeError, op, shape=())
+        assert_raises(TypeError, op, shape=None)
 
 
 if __name__ == '__main__':

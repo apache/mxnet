@@ -106,7 +106,7 @@ class WikiText2(_WikiText):
     """WikiText-2 word-level dataset for language modeling, from Salesforce research.
 
     From
-    https://einstein.ai/research/the-wikitext-long-term-dependency-language-modeling-dataset
+    https://blog.einstein.ai/the-wikitext-long-term-dependency-language-modeling-dataset/
 
     License: Creative Commons Attribution-ShareAlike
 
@@ -144,7 +144,7 @@ class WikiText103(_WikiText):
     """WikiText-103 word-level dataset for language modeling, from Salesforce research.
 
     From
-    https://einstein.ai/research/the-wikitext-long-term-dependency-language-modeling-dataset
+    https://blog.einstein.ai/the-wikitext-long-term-dependency-language-modeling-dataset/
 
     License: Creative Commons Attribution-ShareAlike
 

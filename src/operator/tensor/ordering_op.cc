@@ -35,7 +35,10 @@ DMLC_REGISTER_PARAMETER(ArgSortParam);
 
 NNVM_REGISTER_OP(topk)
 .add_alias("_npx_topk")
-.describe(R"code(Returns the top *k* elements in an input array along the given axis.
+.describe(R"code(Returns the indices of the top *k* elements in an input array along the given
+ axis (by default).
+ If ret_type is set to 'value' returns the value of top *k* elements (instead of indices).
+ In case of ret_type = 'both', both value and index would be returned.
  The returned elements will be sorted.
 
 Examples::
@@ -88,6 +91,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .add_argument("data", "NDArray-or-Symbol", "The input array")
 .add_arguments(TopKParam::__FIELDS__());
 
@@ -151,6 +155,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .add_argument("data", "NDArray-or-Symbol", "The input array")
 .add_arguments(SortParam::__FIELDS__());
 
@@ -187,6 +192,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .add_argument("data", "NDArray-or-Symbol", "The input array")
 .add_arguments(ArgSortParam::__FIELDS__());
 }  // namespace op

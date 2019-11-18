@@ -318,8 +318,8 @@ void PreSelectSubgraphNodes(const nnvm::Graph& g, SubgraphSelectorV2Ptr subgraph
       for (auto node : excluded_nodes) {
         excluded_node_names += node->node->attrs.name + ", ";
       }
-      static bool verbose = dmlc::GetEnv("MXNET_SUBGRAPH_VERBOSE", false);
-      if (verbose) {
+      static int verbose = dmlc::GetEnv("MXNET_SUBGRAPH_VERBOSE", 1);
+      if (verbose > 1) {
         LOG(INFO) << "Found a cycle when BFS from node " << simple_nodes[snid]->node->attrs.name
                   << ". Excluding nodes " << excluded_node_names << "and retrying";
       }
@@ -706,9 +706,9 @@ void TopSortEntries(const nnvm::Graph& g,
 }
 
 nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
-    static bool verbose = dmlc::GetEnv("MXNET_SUBGRAPH_VERBOSE", false);
+    static int verbose = dmlc::GetEnv("MXNET_SUBGRAPH_VERBOSE", 1);
   if (!g.HasAttr("subgraph_property")) {  // treat the whole graph as a subgraph
-    if (verbose) {
+    if (verbose > 1) {
       LOG(INFO) << "The graph has no attribute of subgraph_property attached. "
                    "The original graph is returned.";
     }
@@ -717,7 +717,7 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
   using namespace sg;
 
   const SubgraphPropertyPtr& subg_prop = g.GetAttr<SubgraphPropertyPtr>("subgraph_property");
-  if (verbose) {
+  if (verbose > 1) {
     const std::string& prop_name = subg_prop->HasAttr("property_name")
                                        ? subg_prop->GetAttr<std::string>("property_name")
                                        : "partition graph";

@@ -35,7 +35,7 @@ bool BooleanMaskType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1);
   TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
   TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
-  return out_attrs->at(0) != -1;
+  return in_attrs->at(0) != -1 && in_attrs->at(1) != -1 && out_attrs->at(0) != -1;
 }
 
 bool BooleanMaskStorageType(const nnvm::NodeAttrs& attrs,
@@ -115,7 +115,7 @@ inline void BooleanMaskForward<cpu>(const nnvm::NodeAttrs& attrs,
   std::vector<int32_t> prefix_sum(idx_size, 0);
   size_t valid_num = 0;
   // Calculate prefix sum
-  MSHADOW_TYPE_SWITCH(idx.dtype(), DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(idx.dtype(), DType, {
     DType* idx_dptr = idx.data().dptr<DType>();
     for (size_t i = 0; i < idx_size; i++) {
       prefix_sum[i] = (i == 0) ? 0 : prefix_sum[i - 1];
@@ -129,7 +129,7 @@ inline void BooleanMaskForward<cpu>(const nnvm::NodeAttrs& attrs,
 
   const_cast<NDArray &>(out).Init(s);
   // do the copy
-  MSHADOW_TYPE_SWITCH(data.dtype(), DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(data.dtype(), DType, {
     size_t input_size = data.shape().Size();
     size_t col_size = input_size / idx_size;
     mshadow::Stream<cpu> *stream = ctx.get_stream<cpu>();
@@ -154,7 +154,7 @@ inline void BooleanMaskBackward<cpu>(const nnvm::NodeAttrs& attrs,
   const NDArray& idx = inputs[2];
   const NDArray& igrad_data = outputs[0];
   MSHADOW_TYPE_SWITCH(igrad_data.dtype(), DType, {
-    MSHADOW_TYPE_SWITCH(idx.dtype(), IType, {
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(idx.dtype(), IType, {
       size_t input_size = igrad_data.shape().Size();
       size_t idx_size = idx.shape()[0];
       size_t col_size = input_size / idx_size;
@@ -179,6 +179,7 @@ inline void BooleanMaskBackward<cpu>(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_boolean_mask)
+.add_alias("_npi_boolean_mask")
 .describe(R"code(
 Given an n-d NDArray data, and a 1-d NDArray index,
 the operator produces an un-predeterminable shaped n-d NDArray out,

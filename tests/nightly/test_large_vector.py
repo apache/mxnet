@@ -15,13 +15,16 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import os
+import tempfile
 import math
 import numpy as np
 import mxnet as mx
 
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, create_vector
 from mxnet import gluon, nd
-from tests.python.unittest.common import with_seed, teardown
+from tests.python.unittest.common import with_seed
+from nose.tools import with_setup
 
 # dimension constants
 LARGE_X = 4300000000
@@ -61,7 +64,7 @@ def test_ndarray_random_randint():
     high = 2**34
     a = nd.random.randint(low, high, dtype=np.int64, shape=LARGE_X).asnumpy()
     assert a.shape == (LARGE_X,)
-    assert (a >= low).all()  and (a < high).all()
+    assert (a >= low).all() and (a < high).all()
 
 
 def test_ndarray_empty():
@@ -168,7 +171,7 @@ def test_topk():
     val = nd.topk(a, k=1, axis=0, dtype=np.int64, ret_typ="value")
     assert val == (LARGE_X - 1)
 
-    
+
 def test_mean():
     a = nd.arange(-LARGE_X // 2, LARGE_X // 2 + 1, dtype=np.int64)
     b = nd.mean(a, axis=0)
@@ -505,14 +508,14 @@ def test_rpow():
 
 def test_shape():
     b = create_vector(size=LARGE_X)
-    #explicit wait_to_read()
+    # explicit wait_to_read()
     assert b[0] == 0
     assert b.shape[0] == LARGE_X
 
 
 def test_size():
     b = create_vector(size=LARGE_X)
-    #explicit wait_to_read()
+    # explicit wait_to_read()
     assert b[0] == 0
     assert b.size == LARGE_X
 
@@ -552,9 +555,9 @@ def test_ones_like():
 def test_concat():
     a = nd.ones(LARGE_X)
     b = nd.zeros(LARGE_X)
-    c = nd.concat(a,b, dim=0)
-    assert c[0][0] == 1
-    assert c[-1][-1] == 0
+    c = nd.concat(a, b, dim=0)
+    assert c[0] == 1
+    assert c[-1] == 0
     assert c.shape[0] == (2 * LARGE_X)
 
 
@@ -635,15 +638,6 @@ def test_idiv():
     assert c[-1] == 2
 
 
-def test_imod():
-    a = nd.full(LARGE_X, 3)
-    b = nd.full(LARGE_X, 2)
-    c = a
-    c %= b
-    assert c.shape == a.shape
-    assert c[0][-1] == 1
-
-
 def test_eq():
     a = nd.full(LARGE_X, 3)
     b = nd.full(LARGE_X, 3)
@@ -714,6 +708,361 @@ def test_full():
     assert a.shape[0] == LARGE_X
     assert a[LARGE_X // 2] == 3
     assert a[-1] == 3
+
+
+def test_regression():
+    shape = (LARGE_X, )
+
+    def check_regression(symbol, forward, shape):
+        # init executor
+        data_s = mx.symbol.Variable('data')
+        label_s = mx.symbol.Variable('label')
+        out_s = symbol(data=data_s, label=label_s)
+        exe = out_s.simple_bind(ctx=mx.cpu(0), data=shape, label=shape)
+
+        arg_map = dict(zip(out_s.list_arguments(), exe.arg_arrays))
+
+        # init data
+        data = mx.random.uniform(-1, -1, shape)
+        arg_map["data"][:] = data
+        atol = 1e-5
+        density = 0.5
+        stype = 'default'
+        label = arg_map["label"]
+        label[:] = rand_ndarray(shape, stype, density=density)
+        exe.forward(is_train=True)
+        exe.backward()
+        np_out = forward(data.asnumpy())
+        assert_almost_equal(exe.outputs[0].asnumpy(), np_out, atol=atol)
+
+    check_regression(mx.symbol.LogisticRegressionOutput,
+                     lambda x: 1.0 / (1.0 + np.exp(-x)),
+                     shape)
+    check_regression(mx.symbol.LinearRegressionOutput,
+                     lambda x: x,
+                     shape)
+
+
+def test_sign():
+    a = mx.nd.random.normal(-1, 1, shape=LARGE_X)
+    mx_res = mx.nd.sign(a)
+    assert_almost_equal(mx_res[-1].asnumpy(), np.sign(a[-1].asnumpy()))
+
+
+def test_logical():
+    def check_logical_and(a, b):
+        mx_res = mx.nd.logical_and(a, b)
+        assert_almost_equal(mx_res[-1].asnumpy(), np.logical_and(a[-1].asnumpy(), b[-1].asnumpy()))
+
+    def check_logical_or(a, b):
+        mx_res = mx.nd.logical_or(a, b)
+        assert_almost_equal(mx_res[-1].asnumpy(), np.logical_or(a[-1].asnumpy(), b[-1].asnumpy()))
+
+    def check_logical_not(a, b):
+        mx_res = mx.nd.logical_not(a, b)
+        assert_almost_equal(mx_res[-1].asnumpy(), np.logical_not(a[-1].asnumpy(), b[-1].asnumpy()))
+
+    def check_logical_xor(a, b):
+        mx_res = mx.nd.logical_xor(a, b)
+        assert_almost_equal(mx_res[-1].asnumpy(), np.logical_xor(a[-1].asnumpy(), b[-1].asnumpy()))
+
+    a = mx.nd.ones(LARGE_X)
+    b = mx.nd.zeros(LARGE_X)
+    check_logical_and(a, b)
+    check_logical_or(a, b)
+    check_logical_not(a, b)
+    check_logical_xor(a, b)
+
+
+def test_astype():
+    x = create_vector(size=LARGE_X//4)
+    x = nd.tile(x, 4)
+    y = x.astype('int32')
+    assert y.dtype == np.int32
+    assert y[-1] == LARGE_X//4-1
+
+
+def test_cast():
+    x = create_vector(size=LARGE_X//4)
+    x = nd.tile(x, 4)
+    y = nd.cast(x, np.int32)
+    assert y.dtype == np.int32
+    assert y[-1] == LARGE_X//4-1
+
+
+def test_repeat():
+    x = create_vector(size=LARGE_X//2)
+    y = nd.repeat(x, repeats=2, axis = 0)
+    assert y.shape[0] == LARGE_X
+    assert y[1] == 0
+    assert y[LARGE_X-1] == LARGE_X//2-1
+
+
+def create_input_for_rounding_ops():
+    # Creates an vector with values (-LARGE/2 .... -2, -1, 0, 1, 2, .... , LARGE/2-1)
+    # then divides each element by 2 i.e (-LARGE/4 .... -1, -0.5, 0, 0.5, 1, .... , LARGE/4-1)
+    inp = nd.arange(-LARGE_X//2, LARGE_X//2, dtype=np.float64)
+    inp = inp/2
+    return inp
+
+
+def assert_correctness_of_rounding_ops(output, mid, expected_vals):
+    # checks verifies 5 values at the middle positions of the input vector
+    # i.e mid-2, mid-1, mid, mid+1, mid+2
+    output_idx_to_inspect = [mid-2, mid-1, mid, mid+1, mid+2]
+    for i in range(len(output_idx_to_inspect)):
+        assert output[output_idx_to_inspect[i]] == expected_vals[i]
+
+
+def test_rounding_ops():
+    x = create_input_for_rounding_ops()
+
+    def check_ceil():
+        y = nd.ceil(x)
+        # expected ouput for middle 5 values after applying ceil()
+        expected_output = [-1, 0, 0, 1, 1]
+        assert_correctness_of_rounding_ops(y, LARGE_X//2, expected_output)
+
+    def check_fix():
+        y = nd.fix(x)
+        # expected ouput for middle 5 values after applying fix()
+        expected_output = [-1, 0, 0, 0, 1]
+        assert_correctness_of_rounding_ops(y, LARGE_X//2, expected_output)
+
+    def check_floor():
+        y = nd.floor(x)
+        # expected ouput for middle 5 values after applying floor()
+        expected_output = [-1, -1, 0, 0, 1]
+        assert_correctness_of_rounding_ops(y, LARGE_X//2, expected_output)
+
+    def check_rint():
+        y = nd.rint(x)
+        # expected ouput for middle 5 values after applying rint()
+        expected_output = [-1, -1, 0, 0, 1]
+        assert_correctness_of_rounding_ops(y, LARGE_X//2, expected_output)
+
+    def check_round():
+        y = nd.round(x)
+        # expected ouput for middle 5 values after applying round()
+        expected_output = [-1, -1, 0, 1, 1]
+        assert_correctness_of_rounding_ops(y, LARGE_X//2, expected_output)
+
+    def check_trunc():
+        y = nd.trunc(x)
+        # expected ouput for middle 5 values after applying trunc()
+        expected_output = [-1, 0, 0, 0, 1]
+        assert_correctness_of_rounding_ops(y, LARGE_X//2, expected_output)
+
+    check_ceil()
+    check_fix()
+    check_floor()
+    check_rint()
+    check_round()
+    check_trunc()
+
+
+def create_input_for_trigonometric_ops(vals):
+    # Creates large vector input of size(LARGE_X) from vals using tile operator
+    inp = nd.array(vals)
+    inp = nd.tile(inp, LARGE_X//len(vals))
+    return inp
+
+
+def assert_correctness_of_trigonometric_ops(output, expected_vals):
+    # checks verifies 5 values at positions(0, 1, -3, -2, -1) of the input vector
+    output_idx_to_inspect = [0, 1, -3, -2, -1]
+    for i in range(len(output_idx_to_inspect)):
+        assert np.abs(output[output_idx_to_inspect[i]].asnumpy()-expected_vals[i]) <= 1e-3
+
+
+def test_trigonometric_ops():
+    def check_arcsin():
+        x = create_input_for_trigonometric_ops([-1, -.707, 0, .707, 1])
+        y = nd.arcsin(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying arcsin()
+        expected_output = [-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_arccos():
+        x = create_input_for_trigonometric_ops([-1, -.707, 0, .707, 1])
+        y = nd.arccos(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying arccos()
+        expected_output = [np.pi, 3*np.pi/4, np.pi/2, np.pi/4, 0]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_arctan():
+        x = create_input_for_trigonometric_ops([-np.Inf, -1, 0, 1, np.Inf])
+        y = nd.arctan(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying arctan()
+        expected_output = [-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_sin():
+        x = create_input_for_trigonometric_ops([-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2])
+        y = nd.sin(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying sin()
+        expected_output = [-1, -.707, 0, .707, 1]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_cos():
+        x = create_input_for_trigonometric_ops([0, np.pi/4, np.pi/2, 3*np.pi/4, np.pi])
+        y = nd.cos(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying cos()
+        expected_output = [1, .707, 0, -.707, -1]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_tan():
+        x = create_input_for_trigonometric_ops([-np.pi/6, -np.pi/4, 0, np.pi/4, np.pi/6])
+        y = nd.tan(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying tan()
+        expected_output = [-.577, -1, 0, 1, .577]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_arcsinh():
+        x = create_input_for_trigonometric_ops([-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2])
+        y = nd.arcsinh(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying arcsinh()
+        expected_output = [np.arcsinh(-np.pi/2), np.arcsinh(-np.pi/4), 0, np.arcsinh(np.pi/4), np.arcsinh(np.pi/2)]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_arccosh():
+        x = create_input_for_trigonometric_ops([1, np.pi/2, 3*np.pi/4, np.pi, 5*np.pi/4])
+        y = nd.arccosh(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying arccosh()
+        expected_output = [0, np.arccosh(np.pi/2), np.arccosh(3*np.pi/4), np.arccosh(np.pi), np.arccosh(5*np.pi/4)]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_arctanh():
+        x = create_input_for_trigonometric_ops([-1/4, -1/2, 0, 1/4, 1/2])
+        y = nd.arctanh(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying arctanh()
+        expected_output = [np.arctanh(-1/4), np.arctanh(-1/2), 0, np.arctanh(1/4), np.arctanh(1/2)]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_sinh():
+        x = create_input_for_trigonometric_ops([-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2])
+        y = nd.sinh(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying sinh()
+        expected_output = [np.sinh(-np.pi/2), np.sinh(-np.pi/4), 0, np.sinh(np.pi/4), np.sinh(np.pi/2)]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_cosh():
+        x = create_input_for_trigonometric_ops([0, 1, np.pi/2, 3*np.pi/4, np.pi])
+        y = nd.cosh(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying cosh()
+        expected_output = [1, np.cosh(1), np.cosh(np.pi/2), np.cosh(3*np.pi/4), np.cosh(np.pi)]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_tanh():
+        x = create_input_for_trigonometric_ops([-1/4, -1/2, 0, 1/4, 1/2])
+        y = nd.tanh(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying tanh()
+        expected_output = [np.tanh(-1/4), np.tanh(-1/2), 0, np.tanh(1/4), np.tanh(1/2)]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_radians():
+        x = create_input_for_trigonometric_ops([0, 90, 180, 270, 360])
+        y = nd.radians(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying radians()
+        expected_output = [0, np.pi/2, np.pi, 3*np.pi/2, 2*np.pi]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_degrees():
+        x = create_input_for_trigonometric_ops([0, np.pi/2, np.pi, 3*np.pi/2, 2*np.pi])
+        y = nd.degrees(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying degrees()
+        expected_output = [0, 90, 180, 270, 360]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    check_arcsin()
+    check_arccos()
+    check_arctan()
+    check_sin()
+    check_cos()
+    check_tan()
+    check_arcsinh()
+    check_arccosh()
+    check_arctanh()
+    check_sinh()
+    check_cosh()
+    check_tanh()
+    check_radians()
+    check_degrees()
+
+
+def test_load_save():
+    x = create_vector(size=LARGE_X)
+    tmp = tempfile.mkdtemp()
+    tmpfile = os.path.join(tmp, 'large_vector')
+    nd.save(tmpfile, [x])
+    y = nd.load(tmpfile)
+    y = y[0]
+    assert x[0] == y[0]
+    assert x[-1] == y[-1]
+
+
+def test_add_n():
+    x = [nd.ones(LARGE_X)]
+    y = nd.add_n(*x)
+    assert y[0] == 1
+    assert y[-1] == 1
+
+
+def test_modulo():
+    x = mx.nd.ones(LARGE_X)*6
+    y = mx.nd.ones(LARGE_X)*4
+    z = (x % y)
+    assert z[0] == 2
+    assert z[-1] == 2
+    x = mx.nd.ones(LARGE_X)*5
+    z = nd.modulo(x, y)
+    assert z[0] == 1
+    assert z[-1] == 1
+
+
+def test_maximum():
+    x = mx.nd.ones(LARGE_X)*3
+    y = mx.nd.ones(LARGE_X)*4
+    z = nd.maximum(x, y)
+    assert z[0] == 4
+    assert z[-1] == 4
+    z = nd.maximum(x, 5)
+    assert z[0] == 5
+    assert z[-1] == 5
+
+
+def test_minimum():
+    x = mx.nd.ones(LARGE_X)*3
+    y = mx.nd.ones(LARGE_X)*2
+    z = nd.minimum(x, y)
+    assert z[0] == 2
+    assert z[-1] == 2
+    z = nd.minimum(x, 5)
+    assert z[0] == 3
+    assert z[-1] == 3
+
+
+def test_gather():
+    arr = mx.nd.ones(LARGE_X)
+    # Passing dtype=np.int64 since randomly generated indices are 
+    # very large that exceeds int32 limits.
+    idx = mx.nd.random.randint(0, LARGE_X, 10, dtype=np.int64)
+    # Calls gather_nd internally
+    tmp = arr[idx]
+    assert np.sum(tmp == 1) == 10
+    # Calls gather_nd internally
+    arr[idx] += 1
+    assert np.sum(arr[idx] == 2) == 10
+
+
+def test_infer_shape():
+    data_1 = mx.symbol.Variable('data_1')
+    data_2 = mx.symbol.Variable('data_2')
+    add = data_1+data_2
+    # > add.infer_shape(data_1=(LARGE_X,), data_2=(LARGE_X,))
+    # OUTPUT - arg_shapes, out_shapes, aux_shapes
+    _, out_shapes, _ = add.infer_shape(data_1=(LARGE_X,), data_2=(LARGE_X,))
+    assert out_shapes == [(LARGE_X,)]
 
 
 if __name__ == '__main__':

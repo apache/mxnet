@@ -33,6 +33,7 @@ from copy import deepcopy
 import warnings
 import json
 import unittest
+import random
 
 @with_seed()
 def test_parameter():
@@ -527,6 +528,50 @@ def test_hybrid_block_none_args():
     assert_almost_equal(out1.asnumpy(), out2.asnumpy())
     assert_raises(ValueError, lambda: foo1(mx.nd.ones((10,)), mx.nd.ones((10,))))
 
+
+@with_seed()
+def test_hybrid_block_hybrid_no_hybrid():
+    class FooHybrid(gluon.HybridBlock):
+        def hybrid_forward(self, F, a, b):
+            if isinstance(a, (list, tuple)):
+                a = sum(a)
+            if isinstance(b, (list, tuple)):
+                b = sum(b)
+            return a + b
+
+    class Foo(gluon.Block):
+        def forward(self, a, b):
+            if isinstance(a, (list, tuple)):
+                a = sum(a)
+            if isinstance(b, (list, tuple)):
+                b = sum(b)
+            return a + b
+    # When hybridize is not called, HybridBlock acts the same as Block
+    foo_hybrid = FooHybrid()
+    foo = Foo()
+    for a, b in [(mx.nd.ones((10,)), 1),
+                 (mx.nd.ones((20,)), 2),
+                 ([mx.nd.ones((10,)), mx.nd.ones((10,))],
+                  [mx.nd.ones((10)), mx.nd.ones((10,)), mx.nd.ones((10,))]),
+                 ([mx.nd.ones((10,)), mx.nd.ones((10,))], 3)]:
+        hybrid_block_out = foo_hybrid(a, b)
+        block_out = foo(a, b)
+        assert_almost_equal(hybrid_block_out.asnumpy(), block_out.asnumpy())
+    # When hybridize is called, we need to make sure that the model raises for the unsupported cases
+    # 1. Scalar values in the input
+    # 2. No mixing of sym/ndarray
+    # 3. No mixing of cpu ndarray and gpu ndarray  (Tested in gpu/test_gluon_gpu.py)
+    # 4. Allow mixing of cpu_pinned and cpu
+    foo_hybrid = FooHybrid()
+    foo_hybrid.hybridize()
+    assert_raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,)), 1))
+    foo_hybrid = FooHybrid()
+    foo_hybrid.hybridize()
+    assert_raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,)), mx.sym.var('a')))
+    foo_hybrid = FooHybrid()
+    foo_hybrid.hybridize()
+    assert_raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,), ctx=mx.cpu(1)),
+                                                 mx.nd.ones((10,), ctx=mx.cpu(2))))
 
 
 @with_seed()
@@ -1467,6 +1512,46 @@ def test_save_load():
     net2.load_parameters('tmp.params')
 
 @with_seed()
+def test_save_load_deduplicate_with_shared_params():
+    class B(mx.gluon.Block):
+        def __init__(self, params=None):
+            super(B, self).__init__(params=params)
+
+            with self.name_scope():
+                self.weight = self.params.get('weight', shape=(10, 10))
+
+    class C(mx.gluon.Block):
+        def __init__(self, b1, b2):
+            super(C, self).__init__()
+            self.b1 = b1
+            self.b2 = b2
+
+    b1 = B()
+    b2 = B(b1.collect_params())
+    c = C(b1, b2)
+    c.initialize()
+    c.save_parameters('tmp.params', deduplicate=True)
+
+    params = mx.nd.load('tmp.params')
+    assert len(params) == 1  # Only a single copy of the shared parameter is saved
+
+    b1 = B()
+    b2 = B(b1.collect_params())
+    c = C(b1, b2)
+    c.load_parameters('tmp.params')
+
+    # Test default behavior
+    c.save_parameters('tmp2.params', deduplicate=False)
+
+    params = mx.nd.load('tmp2.params')
+    assert len(params) == 2  # Only a single copy of the shared parameter is saved
+
+    b1 = B()
+    b2 = B(b1.collect_params())
+    c = C(b1, b2)
+    c.load_parameters('tmp2.params')
+
+@with_seed()
 def test_symbol_block_save_load():
     class Net(gluon.HybridBlock):
         def __init__(self):
@@ -1504,15 +1589,62 @@ def test_hybrid_multi_context():
 
 @with_seed()
 def test_zero_grad():
-    data = mx.nd.random.uniform(shape=(3,3))
-    net = nn.Embedding(3, 4, sparse_grad=True, prefix='test_zero_grad_')
-    net.initialize()
-    with mx.autograd.record():
-        l = net(data)
-        l.backward()
-    net.collect_params().zero_grad()
-    grad = net.collect_params()['test_zero_grad_weight'].grad()
-    assert_almost_equal(grad.asnumpy(), grad.asnumpy() * 0)
+    def _test_grad_reset(ctx, dtype='float32', sparse=False, embeddingType=None):
+        data = mx.nd.random.uniform(shape=(3,3), dtype=dtype, ctx=ctx)
+        if embeddingType is None:
+            embeddingType = dtype
+        net = nn.Embedding(3, 4, sparse_grad=sparse, prefix='test_zero_grad_', dtype=embeddingType)
+        net.initialize(ctx=ctx)
+        with mx.autograd.record():
+            l = net(data)
+            l.backward()
+        net.collect_params().zero_grad()
+        grad = net.collect_params()['test_zero_grad_weight'].grad()
+        assert_almost_equal(grad.asnumpy(), grad.asnumpy() * 0)
+
+    def _test_multi_reset(nArrays, dtype, ctx):
+        # Construct the list of non-zeros arrays with random shapes
+        arr = []
+        for _ in range(nArrays):
+            arrType = random.choice(dtype) if isinstance(dtype, list) else dtype
+            shape = ()
+            for _ in range(np.random.randint(1, 5)):
+                shape = shape + (np.random.randint(1, 10),)
+            arr.append(mx.nd.random.uniform(shape=shape, dtype=arrType, ctx=ctx))
+
+        # Reset all arrays
+        mx.nd.reset_arrays(*arr, num_arrays=len(arr))
+
+        # Check results
+        for i in range(nArrays):
+            grad = arr[i].asnumpy()
+            assert_almost_equal(grad, grad * 0)
+
+
+    # Setting context for current test
+    ctx = mx.context.current_context()
+
+    # Launching _test_multi_reset 10 times with different types & randomly chosen nArrays
+    testedTypes = ['float16', 'float32', 'float64']
+    for _ in range(10):
+        for type in [testedTypes] + testedTypes:
+            _test_multi_reset(np.random.randint(1, 50), type, ctx)
+
+    # Saving value of environment variable, if it was defined
+    envVarKey = 'MXNET_STORAGE_FALLBACK_LOG_VERBOSE'
+    envVarValue = os.environ[envVarKey] if envVarKey in os.environ else None
+    # Changing value of environment variable
+    os.environ[envVarKey] = '0'
+    for type in ['float16', 'float32', 'float64']:
+        for embType in ['float32', 'float64']:
+            for sparse in [True, False]:
+                _test_grad_reset(ctx, dtype=type, sparse=sparse, embeddingType=embType)
+
+    # Remove or restore the value of environment variable
+    if envVarValue is None:
+        del os.environ[envVarKey]
+    else:
+        os.environ[envVarKey] = envVarValue
 
 def check_hybrid_static_memory(**kwargs):
     x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
@@ -1540,7 +1672,7 @@ def check_hybrid_static_memory(**kwargs):
 
     assert_almost_equal(y1.asnumpy(), y2.asnumpy(), rtol=1e-3, atol=1e-5)
     for key in grads1:
-        assert_almost_equal(grads1[key].asnumpy(), grads2[key].asnumpy(), rtol=1e-3, atol=1e-5)
+        assert_almost_equal(grads1[key].asnumpy(), grads2[key].asnumpy(), rtol=1e-3, atol=1e-4)
 
 @with_seed()
 def test_hybrid_static_memory():
@@ -2986,6 +3118,62 @@ def test_squeeze_consistency():
         block.hybridize()
         shape = (np.random.randint(1, 10), np.random.randint(1, 10), 1)
         block(mx.nd.ones(shape))
+
+def test_shared_parameters_with_non_default_initializer():
+    class MyBlock(gluon.HybridBlock):
+        def __init__(self, **kwargs):
+            super(MyBlock, self).__init__(**kwargs)
+
+            with self.name_scope():
+                self.param = self.params.get("param", shape=(1, ), init=mx.init.Constant(-10.0))
+
+    bl = MyBlock()
+    bl2 = MyBlock(params=bl.collect_params())
+    assert bl.param is bl2.param
+    bl3 = MyBlock()
+    assert bl.param is not bl3.param
+    assert bl.param.init == bl3.param.init
+
+@with_seed()
+def test_reqs_switching_training_inference():
+    class Foo(gluon.HybridBlock):
+        def __init__(self, **kwargs):
+            super(Foo, self).__init__(**kwargs)
+
+        def hybrid_forward(self, F, x):
+            y = 2 * x
+            return F.sqrt(x) + F.sqrt(y)
+
+    f = Foo()
+    f.hybridize(static_alloc=True)
+    x = mx.nd.ones(shape=(10,10))
+    x.attach_grad()
+    x2 = mx.nd.ones(shape=x.shape) * 2
+    x2.attach_grad()
+
+    # Call first in training mode
+    with mx.autograd.record():
+        y = f(x)
+    y.backward()
+
+    grad1 = x.grad.asnumpy()
+
+    # Compute the gradient with some other input
+    with mx.autograd.record():
+        y = f(x2)
+    y.backward()
+
+    # Call inference mode
+    y = f(x)
+
+    # Call training mode again
+    with mx.autograd.record():
+        y = f(x)
+    y.backward()
+
+    grad2 = x.grad.asnumpy()
+
+    mx.test_utils.assert_almost_equal(grad1, grad2)
 
 if __name__ == '__main__':
     import nose

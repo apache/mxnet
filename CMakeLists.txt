@@ -29,8 +29,7 @@ mxnet_option(USE_SSE              "Build with x86 SSE instruction support" ON IF
 mxnet_option(USE_F16C             "Build with x86 F16C instruction support" ON) # autodetects support if ON
 mxnet_option(USE_LAPACK           "Build with lapack support" ON)
 mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
-mxnet_option(USE_MKLML_MKL        "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND (NOT APPLE) AND (NOT MSVC) )
-mxnet_option(USE_MKLDNN           "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND (NOT APPLE) AND (NOT MSVC) AND (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64") AND (NOT CMAKE_CROSSCOMPILING))
+mxnet_option(USE_MKLDNN           "Build with MKL-DNN support" ON IF USE_MKL_IF_AVAILABLE AND (NOT APPLE) AND (NOT MSVC) AND (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64") AND (NOT CMAKE_CROSSCOMPILING))
 mxnet_option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" ON IF NOT MSVC)
 mxnet_option(USE_GPERFTOOLS       "Build with GPerfTools support" OFF)
 mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   ON)
@@ -58,6 +57,11 @@ message(STATUS "CMAKE_HOST_SYSTEM_PROCESSOR ${CMAKE_HOST_SYSTEM_PROCESSOR}")
 message(STATUS "CMAKE_SYSTEM_PROCESSOR ${CMAKE_SYSTEM_PROCESSOR}")
 
 message(STATUS "CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
+
+if(USE_TVM_OP)
+  add_definitions(-DMXNET_USE_TVM_OP=1)
+endif()
+
 if(USE_CUDA AND NOT USE_OLDCMAKECUDA)
   message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
   if(
@@ -95,6 +99,9 @@ if("$ENV{VERBOSE}" STREQUAL "1")
   message(STATUS " Verbose Makefile ACTIVATED")
   set(CMAKE_VERBOSE_MAKEFILE ON)
 endif()
+
+#Switch off modern thread local for dmlc-core, please see: https://github.com/dmlc/dmlc-core/issues/571#issuecomment-543467484
+add_definitions(-DDMLC_MODERN_THREAD_LOCAL=0)
 
 
 if(MSVC)
@@ -249,25 +256,22 @@ if(ENABLE_TESTCOVERAGE)
 endif()
 
 if(USE_MKLDNN)
-  include(cmake/DownloadMKLML.cmake)
   # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
-  if(NOT MSVC)
-    set(ARCH_OPT_FLAGS "-mtune=generic")
-  else()
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /EHsc")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /EHsc /Gy")
+  if(MSVC)
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /EHsc /MT")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /EHsc /Gy /MT")
   endif()
 
-  set(WITH_TEST OFF CACHE INTERNAL "" FORCE)
-  set(WITH_EXAMPLE OFF CACHE INTERNAL "" FORCE)
-  set(ARCH_OPT_FLAGS "" CACHE INTERNAL "" FORCE)
+  set(MKLDNN_BUILD_TESTS OFF CACHE INTERNAL "" FORCE)
+  set(MKLDNN_BUILD_EXAMPLES OFF CACHE INTERNAL "" FORCE)
+  set(MKLDNN_ARCH_OPT_FLAGS "" CACHE INTERNAL "" FORCE)
+  set(MKLDNN_ENABLE_JIT_PROFILING OFF CACHE INTERNAL "" FORCE)
+  set(MKLDNN_LIBRARY_TYPE STATIC CACHE INTERNAL "" FORCE)
 
   add_subdirectory(3rdparty/mkldnn)
 
   include_directories(3rdparty/mkldnn/include)
   include_directories(${PROJECT_BINARY_DIR}/3rdparty/mkldnn/include)
-  add_definitions(-DUSE_MKL=1)
-  add_definitions(-DCUB_MKL=1)
   add_definitions(-DMXNET_USE_MKLDNN=1)
   list(APPEND mxnet_LINKER_LIBS mkldnn)
 endif()
@@ -743,7 +747,6 @@ if(USE_DIST_KVSTORE)
 endif()
 
 if(USE_TVM_OP)
-  add_definitions(-DMXNET_USE_TVM_OP=1)
   list(APPEND mxnet_LINKER_LIBS ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm/libtvm_runtime.so)
   include(cmake/BuildTVM.cmake)
   add_subdirectory("3rdparty/tvm")
@@ -756,11 +759,15 @@ if(USE_TVM_OP)
     endif()
   endif()
 
+  set(TVM_OP_COMPILE_OPTIONS "-o${CMAKE_CURRENT_BINARY_DIR}/libtvmop.so" "--config" "${CMAKE_CURRENT_BINARY_DIR}/tvmop.conf")
+  if(CUDA_ARCH_BIN)
+    set(TVM_OP_COMPILE_OPTIONS "${TVM_OP_COMPILE_OPTIONS}" "--cuda-arch" "${CUDA_ARCH_BIN}")
+  endif()
   add_custom_command(TARGET mxnet POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E env
           PYTHONPATH="${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/python:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/topi/python:${CMAKE_CURRENT_SOURCE_DIR}/contrib"
           LD_LIBRARY_PATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm:$ENV{LD_LIBRARY_PATH}
-          ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/tvmop/compile.py -o${CMAKE_CURRENT_BINARY_DIR}/libtvmop.so
+          ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/tvmop/compile.py ${TVM_OP_COMPILE_OPTIONS}
     )
 endif()
 

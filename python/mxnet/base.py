@@ -20,6 +20,7 @@
 """ctypes library of mxnet and helper functions."""
 from __future__ import absolute_import
 
+import re
 import atexit
 import ctypes
 import os
@@ -671,11 +672,12 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
         module_path = module_name.split('.')
         module_path[-1] = 'gen_' + module_path[-1]
         file_name = os.path.join(path, '..', *module_path) + '.py'
-        module_file = open(file_name, 'w')
+        module_file = open(file_name, 'w', encoding="utf-8")
         dependencies = {'symbol': ['from ._internal import SymbolBase',
                                    'from ..base import _Null'],
                         'ndarray': ['from ._internal import NDArrayBase',
                                     'from ..base import _Null']}
+        module_file.write('# coding: utf-8')
         module_file.write('# File content is auto-generated. Do not modify.' + os.linesep)
         module_file.write('# pylint: skip-file' + os.linesep)
         module_file.write(os.linesep.join(dependencies[module_name.split('.')[1]]))
@@ -741,17 +743,11 @@ ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
 ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
 
 
-from .runtime import Features
-if Features().is_enabled("TVM_OP"):
-    _LIB_TVM_OP = libinfo.find_lib_path("libtvmop")
-    check_call(_LIB.MXLoadTVMOp(c_str(_LIB_TVM_OP[0])))
-
-
 _NP_OP_PREFIX = '_np_'
 _NP_OP_SUBMODULE_LIST = ['_random_', '_linalg_']
 
 _NP_EXT_OP_PREFIX = '_npx_'
-_NP_EXT_OP_SUBMODULE_LIST = ['_image_']
+_NP_EXT_OP_SUBMODULE_LIST = ['_image_', '_random_']
 
 _NP_INTERNAL_OP_PREFIX = '_npi_'
 
@@ -852,3 +848,5 @@ def _init_np_op_module(root_module_name, np_module_name, mx_module_name, make_op
 
         if hasattr(_np_op_doc, name):
             function.__doc__ = getattr(_np_op_doc, name).__doc__
+        else:
+            function.__doc__ = re.sub('NDArray', 'ndarray', function.__doc__)

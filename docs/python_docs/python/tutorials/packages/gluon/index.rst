@@ -167,7 +167,7 @@ Training
 
    .. card::
       :title: Autograd API
-      :link: ../autograd/autograd.html
+      :link: /api/python/docs/tutorials/packages/autograd/index.html
 
       How to use Automatic Differentiation with the Autograd API.
 
@@ -178,31 +178,35 @@ Advanced Topics
 
    .. card::
       :title: Naming
-      :link: naming.html
+      :link: blocks/naming.html
 
       Best practices for the naming of things.
 
    .. card::
       :title: Custom Layers
-      :link: custom-layer.html
+      :link: blocks/custom-layer.html
 
       A guide to implementing custom layers.
 
    .. card::
       :title: Custom Operators
-      :link: https://mxnet.apache.org/versions/master/tutorials/gluon/customop.html
+      :link: ../../extend/customop.html
 
       Building custom operators with numpy.
 
+..
+<-- tutorial missing -->
    .. card::
       :title: Custom Loss
       :link: custom-loss/custom-loss.html
 
       A guide to implementing custom losses.
 
+..
+
    .. card::
       :title: Gotchas using NumPy in Apache MXNet
-      :link: https://mxnet.apache.org/versions/master/tutorials/gluon/gotchas_numpy_in_mxnet.html
+      :link: ../ndarray/gotchas_numpy_in_mxnet.html
 
       Common misconceptions when using NumPy in Apache MXNet.
 

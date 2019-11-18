@@ -92,7 +92,8 @@ pipeline {
           def valid_job_types = [
             "mxnet_lib/static",
             "mxnet_lib/dynamic", 
-            "python/pypi"
+            "python/pypi",
+            "python/docker"
           ]
           
           // Convert mxnet variants to a list

@@ -134,6 +134,12 @@ def collect_test_results_unix(original_file_name, new_file_name) {
         // Thus, we have to pick a name manually and rename the files so that they can be stored separately.
         sh 'cp ' + original_file_name + ' ' + new_file_name
         archiveArtifacts artifacts: new_file_name
+        try {
+          s3Upload(file:new_file_name, bucket:env.MXNET_CI_UNITTEST_ARTIFACT_BUCKET, path:env.JOB_NAME+"/"+env.BUILD_NUMBER+"/"+new_file_name)
+        } catch (Exception e) {
+          echo "S3 Upload failed ${e}"
+          throw new Exception("S3 upload failed", e)
+        }
     }
 }
 
@@ -143,6 +149,12 @@ def collect_test_results_windows(original_file_name, new_file_name) {
     if (fileExists(original_file_name)) {
         bat 'xcopy ' + original_file_name + ' ' + new_file_name + '*'
         archiveArtifacts artifacts: new_file_name
+        try {
+          s3Upload(file:new_file_name, bucket:env.MXNET_CI_UNITTEST_ARTIFACT_BUCKET, path:env.JOB_NAME+"/"+env.BUILD_NUMBER+"/"+new_file_name)
+        } catch (Exception e) {
+          echo "S3 Upload failed ${e}"
+          throw new Exception("S3 upload failed", e)
+        }
     }
 }
 
@@ -267,7 +279,7 @@ def main_wrapper(args) {
     update_github_commit_status('SUCCESS', 'Job succeeded')
   } catch (caughtError) {
     node(NODE_UTILITY) {
-      sh "echo caught ${caughtError}"
+      echo "caught ${caughtError}"
       err = caughtError
       currentBuild.result = "FAILURE"
       update_github_commit_status('FAILURE', 'Job failed')

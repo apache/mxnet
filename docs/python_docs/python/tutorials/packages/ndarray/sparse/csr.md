@@ -556,7 +556,7 @@ except mx.MXNetError as err:
 
 ## Next 
 
-[Train a Linear Regression Model with Sparse Symbols](http://mxnet.apache.org/tutorials/sparse/train.html)
+[Train a Linear Regression Model with Sparse Symbols](/api/python/docs/tutorials/packages/ndarray/sparse/train.html)
 
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

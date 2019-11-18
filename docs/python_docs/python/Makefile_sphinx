@@ -18,8 +18,26 @@
 # Makefile for Sphinx documentation
 #
 
+# Begin number of processors detection
+NPROCS := 1
+OS := $(shell uname)
+export NPROCS
+
+ifeq ($(NUMJOBS),)
+
+ifeq ($(OS),Linux)
+  NPROCS := $(shell grep -c ^processor /proc/cpuinfo)
+else ifeq ($(OS),Darwin)
+  NPROCS := $(shell system_profiler | awk '/Number of CPUs/ {print $$4}{next;}')
+endif # $(OS)
+
+else
+  NPROCS := $(NUMJOBS)
+endif # $(NUMJOBS)
+# End number of processors detection
+
 # You can set these variables from the command line.
-SPHINXOPTS    = -j 32 -c ../scripts
+SPHINXOPTS    = -j$(NPROCS) -c ../scripts
 SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = _build

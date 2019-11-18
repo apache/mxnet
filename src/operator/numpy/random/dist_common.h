@@ -27,7 +27,6 @@
 #ifndef MXNET_OPERATOR_NUMPY_RANDOM_DIST_COMMON_H_
 #define MXNET_OPERATOR_NUMPY_RANDOM_DIST_COMMON_H_
 
-#include <mshadow/base.h>
 #include <mxnet/operator_util.h>
 #include <algorithm>
 #include <string>
@@ -42,10 +41,10 @@ namespace mxnet {
 namespace op {
 
 template <typename xpu>
-void _copy(float *dst, float*src);
+void _copy(mshadow::Stream<xpu> *s, float *dst, float*src);
 
 template <typename xpu>
-void _copy(double *dst, double*src);
+void _copy(mshadow::Stream<xpu> *s, double *dst, double*src);
 
 
 inline int FillShape(const mxnet::TShape &lshape, const mxnet::TShape &rshape,
@@ -177,6 +176,33 @@ inline bool TwoparamsDistOpShape(const nnvm::NodeAttrs &attrs,
     SHAPE_ASSIGN_CHECK(*out_attrs, 1, out_attrs->at(0));
   }
   return true;
+}
+
+template <typename DistParam>
+inline bool UnaryDistOpShape(const nnvm::NodeAttrs &attrs,
+                             std::vector<TShape> *in_attrs,
+                             std::vector<TShape> *out_attrs) {
+  const DistParam &param = nnvm::get<DistParam>(attrs.parsed);
+  if (param.size.has_value()) {
+    // Size declared.
+    std::vector<dim_t> oshape_vec;
+    const mxnet::Tuple<int> &size = param.size.value();
+    for (int i = 0; i < size.ndim(); ++i) {
+      oshape_vec.emplace_back(size[i]);
+    }
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(oshape_vec));
+    for (size_t input_idx = 0; input_idx < in_attrs->size(); input_idx++) {
+      CheckBroadcastable((*in_attrs)[input_idx], (*out_attrs)[0]);
+    }
+  } else {
+    if (in_attrs->size() == 1U) {
+      // One param from ndarray.
+      SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0))
+    } else {
+      SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(0, -1))
+    }
+  }
+  return shape_is_known(out_attrs->at(0));
 }
 
 }  // namespace op

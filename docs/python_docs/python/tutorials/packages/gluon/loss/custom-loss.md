@@ -17,11 +17,11 @@
 
 # Custom Loss Blocks
 
-All neural networks need a loss function for training. A loss function is a quantative measure of how bad the predictions of the network are when compared to ground truth labels. Given this score, a network can improve by iteratively updating its weights to minimise this loss. Some tasks use a combination of multiple loss functions, but often you'll just use one. MXNet Gluon provides a number of the most commonly used loss functions, and you'll choose certain functions depending on your network and task. Some common task and loss function pairs include:
+All neural networks need a loss function for training. A loss function is a quantitive measure of how bad the predictions of the network are when compared to ground truth labels. Given this score, a network can improve by iteratively updating its weights to minimise this loss. Some tasks use a combination of multiple loss functions, but often you'll just use one. MXNet Gluon provides a number of the most commonly used loss functions, and you'll choose certain functions depending on your network and task. Some common task and loss function pairs include:
 
-- Regression: [L1Loss](/api/python/docs/api/gluon/_autogen/mxnet.gluon.loss.L1Loss.html), [L2Loss](/api/python/docs/api/gluon/_autogen/mxnet.gluon.loss.L2Loss.html) 
-- Classification: [SigmoidBinaryCrossEntropyLoss](/api/python/docs/api/gluon/_autogen/mxnet.gluon.loss.SigmoidBinaryCrossEntropyLoss.html), [SoftmaxBinaryCrossEntropyLoss](/api/python/docs/api/gluon/_autogen/mxnet.gluon.loss.SoftmaxBinaryCrossEntropyLoss.html) 
-- Embeddings: [HingeLoss](/api/python/docs/api/gluon/_autogen/mxnet.gluon.loss.HingeLoss.html)
+- Regression: [L1Loss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.L1Loss), [L2Loss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.L2Loss)
+- Classification: [SigmoidBinaryCrossEntropyLoss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.SigmoidBinaryCrossEntropyLoss), [SoftmaxBinaryCrossEntropyLoss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.SoftmaxBinaryCrossEntropyLoss)
+- Embeddings: [HingeLoss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.HingeLoss)
 
 However, we may sometimes want to solve problems that require customized loss functions; this tutorial shows how we can do that in Gluon. We will implement contrastive loss which is typically used in Siamese networks.
 
@@ -35,17 +35,17 @@ import random
 
 ### What is Contrastive Loss
 
-[Contrastive loss](http://yann.lecun.com/exdb/publis/pdf/hadsell-chopra-lecun-06.pdf) is a distance-based loss function. During training, pairs of images are fed into a model. If the images are similar, the loss function will return 0, otherwise 1. 
+[Contrastive loss](http://yann.lecun.com/exdb/publis/pdf/hadsell-chopra-lecun-06.pdf) is a distance-based loss function. During training, pairs of images are fed into a model. If the images are similar, the loss function will return 0, otherwise 1.
 
 <img src="images/contrastive_loss.jpeg" width="400">
 
-*Y* is a binary label indicating similarity between training images. Contrastive loss uses the Euclidean distance *D* between images and is the sum of 2 terms: 
+*Y* is a binary label indicating similarity between training images. Contrastive loss uses the Euclidean distance *D* between images and is the sum of 2 terms:
  - the loss for a pair of similar points
  - the loss for a pair of dissimilar points
 
-The loss function uses a margin *m* which is has the effect that dissimlar pairs only contribute if their loss is within a certain margin. 
+The loss function uses a margin *m* which is has the effect that dissimlar pairs only contribute if their loss is within a certain margin.
 
-In order to implement such a customized loss function in Gluon, we only need to define a new class that is inheriting from the [`Loss`](https://mxnet.apache.org/api/python/gluon/loss.html#mxnet.gluon.loss.Loss) base class. We then define the contrastive loss logic in the [`hybrid_forward`](https://mxnet.apache.org/_modules/mxnet/gluon/block.html#HybridBlock.hybrid_forward) method. This method takes the images `image1`, `image2` and the label which defines whether  `image1` and `image2` are similar (=0) or  dissimilar (=1). The input F is an `mxnet.ndarry` or an `mxnet.symbol` if we hybridize the network. Gluon's `Loss` base class is in fact a [`HybridBlock`](https://mxnet.apache.org/api/python/gluon/gluon.html#mxnet.gluon.HybridBlock). This means we can either run  imperatively or symbolically. When we hybridize our custom loss function, we can get performance speedups.
+In order to implement such a customized loss function in Gluon, we only need to define a new class that is inheriting from the [`Loss`](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.Loss) base class. We then define the contrastive loss logic in the [`hybrid_forward`](/api/python/docs/api/gluon/hybrid_block.html#mxnet.gluon.HybridBlock.hybrid_forward) method. This method takes the images `image1`, `image2` and the label which defines whether  `image1` and `image2` are similar (=0) or  dissimilar (=1). The input F is an `mxnet.ndarry` or an `mxnet.symbol` if we hybridize the network. Gluon's `Loss` base class is in fact a [`HybridBlock`](/api/python/docs/api/gluon/hybrid_block.html). This means we can either run  imperatively or symbolically. When we hybridize our custom loss function, we can get performance speedups.
 
 
 ```python
@@ -66,7 +66,7 @@ loss = ContrastiveLoss(margin=6.0)
 ```
 
 ### Define the Siamese network
-A [Siamese network](https://papers.nips.cc/paper/769-signature-verification-using-a-siamese-time-delay-neural-network.pdf) consists of 2 identical networks, that share the same weights. They are trained on pairs of images and each network processes one image. The label defines whether the pair of images is similar or not. The Siamese network learns to differentiate between two input images. 
+A [Siamese network](https://papers.nips.cc/paper/769-signature-verification-using-a-siamese-time-delay-neural-network.pdf) consists of 2 identical networks, that share the same weights. They are trained on pairs of images and each network processes one image. The label defines whether the pair of images is similar or not. The Siamese network learns to differentiate between two input images.
 
 Our network consists of 2 convolutional and max pooling layers that downsample the input image. The output is then fed through a fully connected layer with 256 hidden units and another fully connected layer with 2 hidden units.
 
@@ -84,7 +84,7 @@ class Siamese(gluon.HybridBlock):
                 self.cnn.add(gluon.nn.MaxPool2D(2, 2))
                 self.cnn.add(gluon.nn.Dense(256, activation='relu'))
                 self.cnn.add(gluon.nn.Dense(2, activation='softrelu'))
-                
+
     def hybrid_forward(self, F, input0, input1):
         out0 = self.cnn(input0)
         out1 = self.cnn(input1)
@@ -143,13 +143,13 @@ test_dataloader = gluon.data.DataLoader(test.transform(transform),
                                         shuffle=False, batch_size=1)
 ```
 
-Following code plots some examples from the test dataset. 
+Following code plots some examples from the test dataset.
 
 
 ```python
 img1, img2, label = test[0]
 print("Same: {}".format(int(label.asscalar()) == 0))
-fig, (ax0, ax1) = plt.subplots(ncols=2, figsize=(10, 5)) 
+fig, (ax0, ax1) = plt.subplots(ncols=2, figsize=(10, 5))
 ax0.imshow(img1.asnumpy()[:,:,0], cmap='gray')
 ax0.axis('off')
 ax1.imshow(img2.asnumpy()[:,:,0], cmap='gray')
@@ -191,7 +191,7 @@ for epoch in range(10):
 ```
 
 ### Test the trained Siamese network
-During inference we compute the Euclidean distance between the output vectors of the Siamese network. High distance indicates dissimilarity, low values indicate similarity.  
+During inference we compute the Euclidean distance between the output vectors of the Siamese network. High distance indicates dissimilarity, low values indicate similarity.
 
 
 ```python
@@ -224,7 +224,7 @@ Verify whether the last network layer uses the correct activation function: for 
 In our example, we computed the square root of squared distances between 2 images: `F.sqrt(distances_squared)`. If images are very similar we take the sqare root of a value close to 0, which can lead to *NaN* values. Adding a small epsilon to `distances_squared` avoids this problem.
 
 #### Shape of intermediate loss vectors
-In most cases having the wrong tensor shape will lead to an error, as soon as we compare data with labels. But in some cases, we may be able to normally run the training, but it does not converge. For instance, if we don't set `keepdims=True` in our customized loss function, the shape of the tensor changes. The example still runs fine but does not converge. 
+In most cases having the wrong tensor shape will lead to an error, as soon as we compare data with labels. But in some cases, we may be able to normally run the training, but it does not converge. For instance, if we don't set `keepdims=True` in our customized loss function, the shape of the tensor changes. The example still runs fine but does not converge.
 
 If you encounter a similar problem, then it is useful to check the tensor shape after each computation step in the loss function.
 

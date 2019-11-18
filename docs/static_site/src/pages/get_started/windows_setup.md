@@ -74,7 +74,7 @@ Install MXNet with CPU support with Python:
 pip install mxnet
 ```
 
-Now [validate your MXNet installation with Python](get_started/validate_mxnet).
+Now [validate your MXNet installation with Python](/get_started/validate_mxnet).
 
 ### Install with Intel CPUs
 
@@ -88,7 +88,7 @@ The following steps will setup MXNet with MKL. MKL-DNN can be enabled only when 
 pip install mxnet-mkl
 ```
 
-Now [validate your MXNet installation with Python](validate_mxnet).
+Now [validate your MXNet installation with Python](/get_started/validate_mxnet).
 
 ### Install with NVIDIA GPUs
 

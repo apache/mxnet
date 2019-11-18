@@ -217,7 +217,7 @@ static void CopyEx(const nnvm::NodeAttrs& attrs,
     FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
-#endif
+#endif  // MXNET_USE_MKLDNN == 1
   UnaryOp::IdentityComputeEx<cpu>(attrs, ctx, inputs, req, outputs);
 }
 
@@ -238,7 +238,7 @@ static inline bool CopyStorageType(const nnvm::NodeAttrs& attrs,
       && out_attrs->at(0) == kDefaultStorage) {
     *dispatch_mode = DispatchMode::kFComputeEx;
   }
-#endif
+#endif  // MXNET_USE_MKLDNN == 1
   return ret;
 }
 
@@ -253,7 +253,7 @@ MXNET_OPERATOR_REGISTER_UNARY(_copy)
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 .set_attr<bool>("TIsMKLDNN", true)
-#endif
+#endif  // MXNET_USE_MKLDNN == 1
 .set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
   [](const NodeAttrs& attrs){
     return std::vector<bool>{true};
@@ -275,7 +275,7 @@ NNVM_REGISTER_OP(_backward_copy)
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-})
+})  // MXNET_USE_MKLDNN == 1
 #endif
 .set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
   [](const NodeAttrs& attrs){
@@ -650,6 +650,7 @@ Example::
 DMLC_REGISTER_PARAMETER(CastParam);
 NNVM_REGISTER_OP(Cast)
 .add_alias("cast")
+.add_alias("_npi_cast")
 .add_alias("_npx_cast")
 .describe(R"code(Casts all elements of the input to a new type.
 
@@ -876,6 +877,7 @@ The storage type of ``fix`` output depends upon the input storage type:
 
 // erf
 MXNET_OPERATOR_REGISTER_UNARY(erf)
+.add_alias("_npx_erf")
 .describe(R"code(Returns element-wise gauss error function of the input.
 
 Example::
@@ -897,6 +899,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_erf)
 
 // erfinv
 MXNET_OPERATOR_REGISTER_UNARY(erfinv)
+.add_alias("_npx_erfinv")
 .describe(R"code(Returns element-wise inverse gauss error function of the input.
 
 Example::
@@ -905,7 +908,7 @@ Example::
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::erfinv>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_erfinv"});
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_erfinv"});
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_erfinv)
 .set_attr<FCompute>("FCompute<cpu>",
@@ -928,6 +931,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_gamma,
 
 // gammaln
 MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(gammaln, cpu, mshadow_op::gammaln)
+.add_alias("_npx_gammaln")
 MXNET_ADD_SPARSE_OP_ALIAS(gammaln)
 .describe(R"code(Returns element-wise log of the absolute value of the gamma function \
 of the input.

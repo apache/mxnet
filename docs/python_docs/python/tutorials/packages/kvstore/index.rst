@@ -26,16 +26,11 @@ KVStore
 
       How to use the KVStore API to use multiple GPUs when training a model.
 
-   .. card::
-      :title: Distributed Key-Value Store
-      :link: https://mxnet.apache.org/versions/master/tutorials/python/kvstore.html
-
-      How to use the KVStore API to share data across different devices.
 
 References
 -----------------
 
-- `KVStore API. <../api/gluon-related/mxnet.kvstore.html>`_
+- `KVStore API. </api/python/docs/api/kvstore/index.html>`_
 
 .. toctree::
    :hidden:

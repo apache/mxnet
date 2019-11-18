@@ -28,7 +28,7 @@ Python Documentation
 
 
 Python Tutorials
----------
+----------------
 
 .. container:: cards
 
@@ -40,7 +40,7 @@ Python Tutorials
       Guides and Tutorials for using MXNet.
 
 Python API References
----------
+---------------------
 
 .. container:: cards
 

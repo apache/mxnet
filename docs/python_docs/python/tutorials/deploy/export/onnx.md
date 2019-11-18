@@ -28,7 +28,7 @@ In this tutorial, we will learn how to use MXNet to ONNX exporter on pre-trained
 ## Prerequisites
 
 To run the tutorial you will need to have installed the following python modules:
-- [MXNet >= 1.3.0](http://mxnet.apache.org/install/index.html)
+- [MXNet >= 1.3.0](/get_started)
 - [onnx]( https://github.com/onnx/onnx#installation) v1.2.1 (follow the install guide)
 
 *Note:* MXNet-ONNX importer and exporter follows version 7 of ONNX operator set which comes with ONNX v1.2.1.
@@ -44,7 +44,7 @@ logging.basicConfig(level=logging.INFO)
 
 ## Downloading a model from the MXNet model zoo
 
-We download the pre-trained ResNet-18 [ImageNet](http://www.image-net.org/) model from the [MXNet Model Zoo](http://data.mxnet.io/models/imagenet/).
+We download the pre-trained ResNet-18 [ImageNet](http://www.image-net.org/) model from the [MXNet Model Zoo](/api/python/docs/api/gluon/model_zoo/index.html).
 We will also download synset file to match labels.
 
 ```python

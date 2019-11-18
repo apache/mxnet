@@ -62,7 +62,7 @@ core_logic: {
           //utils.docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_virtualenv', true)
           //docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_pip', true)
           //docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_docker', true)
-          utils.docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_source', true)
+          //utils.docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_source', true)
         }
       }
     },

@@ -74,6 +74,38 @@ else:
 
 ForkingPickler.register(nd.NDArray, reduce_ndarray)
 
+if sys.platform == 'darwin' or sys.platform == 'win32':
+    def rebuild_np_ndarray(*args):
+        """Rebuild ndarray from pickled shared memory"""
+        # pylint: disable=no-value-for-parameter
+        return _mx_np.ndarray(nd.ndarray._new_from_shared_mem(*args))
+
+    def reduce_np_ndarray(data):
+        """Reduce ndarray to shared memory handle"""
+        return rebuild_np_ndarray, data._to_shared_mem()
+else:
+    def rebuild_np_ndarray(pid, fd, shape, dtype):
+        """Rebuild ndarray from pickled shared memory"""
+        # pylint: disable=no-value-for-parameter
+        if sys.version_info[0] == 2:
+            fd = multiprocessing.reduction.rebuild_handle(fd)
+        else:
+            fd = fd.detach()
+        return _mx_np.ndarray(nd.ndarray._new_from_shared_mem(pid, fd, shape, dtype))
+
+    def reduce_np_ndarray(data):
+        """Reduce ndarray to shared memory handle"""
+        # keep a local ref before duplicating fd
+        data = data.as_in_context(context.Context('cpu_shared', 0))
+        pid, fd, shape, dtype = data._to_shared_mem()
+        if sys.version_info[0] == 2:
+            fd = multiprocessing.reduction.reduce_handle(fd)
+        else:
+            fd = multiprocessing.reduction.DupFd(fd)
+        return rebuild_np_ndarray, (pid, fd, shape, dtype)
+
+ForkingPickler.register(_mx_np.ndarray, reduce_np_ndarray)
+
 
 class ConnectionWrapper(object):
     """Connection wrapper for multiprocessing that supports sending
@@ -475,7 +507,6 @@ class _MultiWorkerIter(object):
                 batch = ret.get(self._timeout)
             if self._pin_memory:
                 batch = _as_in_context(batch, context.cpu_pinned(self._pin_device_id))
-            batch = batch[0] if len(batch) == 1 else batch
             self._rcvd_idx += 1
             return batch
         except multiprocessing.context.TimeoutError:

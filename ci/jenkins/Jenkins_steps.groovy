@@ -23,22 +23,24 @@
 utils = load('ci/Jenkinsfile_utils.groovy')
 
 // mxnet libraries
-mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, libsample_lib.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
-mx_lib_cython = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, libsample_lib.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so'
+mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, lib/tvmop.conf, libsample_lib.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
+mx_lib_cython = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, lib/tvmop.conf, libsample_lib.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so'
 
 // Python wheels
 mx_pip = 'build/*.whl'
 
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
-mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
-mx_cmake_lib_cython = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so'
+mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
+mx_cmake_lib_no_tvm_op = 'build/libmxnet.so, build/libmxnet.a, build/libsample_lib.so, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
+mx_cmake_lib_cython = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
-mx_cmake_lib_debug = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/libsample_lib.so, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests'
-mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
-mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, libsample_lib.so, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
-mx_tensorrt_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, lib/libnvonnxparser_runtime.so.0, lib/libnvonnxparser.so.0, lib/libonnx_proto.so, lib/libonnx.so'
-mx_lib_cpp_examples = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, libsample_lib.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a, build/cpp-package/example/*, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so'
-mx_lib_cpp_examples_cpu = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/cpp-package/example/*'
+mx_cmake_lib_debug = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libsample_lib.so, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests'
+mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
+mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, lib/tvmop.conf, libsample_lib.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
+mx_tensorrt_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, lib/libnvonnxparser_runtime.so.0, lib/libnvonnxparser.so.0, lib/libonnx_proto.so, lib/libonnx.so'
+mx_lib_cpp_examples = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, lib/tvmop.conf, libsample_lib.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a, build/cpp-package/example/*, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so'
+mx_lib_cpp_examples_no_tvm_op = 'lib/libmxnet.so, lib/libmxnet.a, libsample_lib.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a, build/cpp-package/example/*, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so'
+mx_lib_cpp_examples_cpu = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/cpp-package/example/*'
 
 // Python unittest for CPU
 // Python 2
@@ -127,6 +129,20 @@ def compile_unix_openblas_debug_cpu() {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_cmake_debug', false)
             utils.pack_lib('cpu_debug', mx_cmake_lib_debug)
+          }
+        }
+      }
+    }]
+}
+
+def compile_unix_openblas_cpu_no_tvm_op() {
+    return ['CPU: Openblas, cmake, TVM_OP OFF': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-cpu-openblas-no-tvm-op') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_cmake_no_tvm_op', false)
+            utils.pack_lib('cpu_openblas_no_tvm_op', mx_cmake_lib_no_tvm_op)
           }
         }
       }
@@ -245,6 +261,20 @@ def compile_unix_full_gpu() {
     }]
 }
 
+def compile_unix_full_gpu_no_tvm_op() {
+    return ['GPU: CUDA10.1+cuDNN7 TVM_OP OFF': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-gpu-no-tvm-op') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda101_cudnn7_no_tvm_op', false)
+            utils.pack_lib('gpu_no_tvm_op', mx_lib_cpp_examples_no_tvm_op)
+          }
+        }
+      }
+    }]
+}
+
 def compile_unix_cmake_mkldnn_gpu() {
     return ['GPU: CMake MKLDNN': {
       node(NODE_LINUX_CPU) {
@@ -267,6 +297,19 @@ def compile_unix_cmake_gpu() {
             utils.init_git()
             utils.docker_run('ubuntu_gpu_cu101', 'build_ubuntu_gpu_cmake', false)
             utils.pack_lib('cmake_gpu', mx_cmake_lib_cython)
+          }
+        }
+      }
+    }]
+}
+
+def compile_unix_cmake_gpu_no_tvm_op() {
+    return ['GPU: CMake TVM_OP OFF': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-cmake-gpu-no-tvm-op') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_gpu_cu101', 'build_ubuntu_gpu_cmake_no_tvm_op', false)
           }
         }
       }
@@ -756,6 +799,22 @@ def test_unix_python3_gpu() {
     }]
 }
 
+def test_unix_python3_gpu_no_tvm_op() {
+    return ['Python3: GPU TVM_OP OFF': {
+      node(NODE_LINUX_GPU) {
+        ws('workspace/ut-python3-gpu-no-tvm-op') {
+          try {
+            utils.unpack_and_init('gpu_no_tvm_op', mx_lib_cpp_examples_no_tvm_op)
+            python3_gpu_ut_cython('ubuntu_gpu_cu101')
+            utils.publish_test_coverage()
+          } finally {
+            utils.collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_gpu.xml')
+          }
+        }
+      }
+    }]
+}
+
 def test_unix_python3_quantize_gpu() {
     return ['Python3: Quantize GPU': {
       node(NODE_LINUX_GPU_P3) {
@@ -784,6 +843,22 @@ def test_unix_python3_debug_cpu() {
           } finally {
             utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_cpu_debug_unittest.xml')
             utils.collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python3_cpu_debug_quantization.xml')
+          }
+        }
+      }
+    }]
+}
+
+def test_unix_python3_cpu_no_tvm_op() {
+    return ['Python3: CPU TVM_OP OFF': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-python3-cpu-no-tvm-op') {
+          try {
+            utils.unpack_and_init('cpu_openblas_no_tvm_op', mx_cmake_lib_no_tvm_op)
+            python3_ut('ubuntu_cpu')
+          } finally {
+            utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_cpu_no_tvm_op_unittest.xml')
+            utils.collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python3_cpu_no_tvm_op_quantization.xml')
           }
         }
       }
@@ -1416,11 +1491,11 @@ def should_pack_website() {
       return true
     }
   } else {
-    return true 
+    return true
   }
   return false
 }
-  
+
 // Each of the docs_{lang} functions will build the docs...
 // Stashing is only needed for master for website publishing or for testing "new_"
 
@@ -1604,6 +1679,27 @@ def docs_prepare() {
 }
 
 
+def docs_prepare_beta() {
+    return ['Prepare for publication to the staging website': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+
+            unstash 'jekyll-artifacts'
+            unstash 'python-artifacts'
+
+            utils.docker_run('ubuntu_cpu_jekyll', 'build_docs_beta', false)
+
+            // archive so the publish pipeline can access the artifact
+            archiveArtifacts 'docs/_build/beta_website.tgz'
+          }
+        }
+      }
+    }]
+}
+
+
 def docs_archive() {
     return ['Archive the full website': {
       node(NODE_LINUX_CPU) {
@@ -1638,6 +1734,24 @@ def docs_publish() {
     }]
 }
 
+
+// This is for the beta website
+def docs_publish_beta() {
+    return ['Publish the beta website to staging': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            try {
+              build 'restricted-website-publish-master-beta'
+            }
+            catch (Exception e) {
+               println(e.getMessage())
+            }
+          }
+        }
+      }
+    }]
+}
 
 
 def misc_asan_cpu() {

@@ -66,6 +66,7 @@ class SgMKLDNNFCOp {
   nnvm::Symbol subgraph_sym_;
   MKLDNNFCFullParam full_param_;
   std::shared_ptr<MKLDNNFullyConnectedForward> fwd_;
+  std::shared_ptr<NDArray> cached_weight_;
   NDArray cached_bias_;
   float cached_min_data_;
   float cached_max_data_;
@@ -114,7 +115,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
   CHECK_EQ(out_data.size(), total_num_outputs);
 
   NDArray data = in_data[fullc::kData];
-  NDArray weight = in_data[fullc::kWeight];
+  NDArray weight = cached_weight_ ? *cached_weight_ : in_data[fullc::kWeight];
   NDArray output = out_data[fullc::kOut];
 
   mkldnn::memory::desc out_md = GetMemDesc(output);
@@ -143,24 +144,40 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
 
     if (mkldnn_param.quantized) {
       CHECK(data.dtype() == mshadow::kInt8 || data.dtype() == mshadow::kUint8);
-      auto data_range = (data.dtype() == mshadow::kInt8) ? kInt8Range : kUint8Range;
-      float data_scale  = data_range / MaxAbs(cached_min_data_, cached_max_data_);
-      float weight_scale = kInt8Range / MaxAbs(cached_min_weight_, cached_max_weight_);
-      float quantized_out_range = IsOutputUint8(full_param_)? kUint8Range : kInt8Range;
-
+      float data_scale  = GetQuantizeScale(data.dtype(), cached_min_data_, cached_max_data_);
+      float weight_scale = GetQuantizeScale(mshadow::kInt8, cached_min_weight_, cached_max_weight_);
       if (has_bias) {
         NDArray bias = in_data[fullc::kBias];
-        float bias_int32_rescale = data_scale * weight_scale *
-            MaxAbs(cached_min_bias_, cached_max_bias_) / kInt8Range;
-
-        cached_bias_ = NDArray(bias.storage_type(), bias.shape(),
-                               bias.ctx(), true, mshadow::kInt32);
+        float bias_scale = GetQuantizeScale(mshadow::kInt8, cached_min_bias_, cached_max_bias_);
+        float bias_int32_rescale = data_scale * weight_scale / bias_scale;
+        // TODO(zhennan): mkldnn has bug to handle INT_MAX in bias, so set the maximum value of bias
+        // to INT_MAX / 2.
+        float bias_max_rescale =
+            MaxValue<int32_t>() / 2 / MaxAbs(cached_min_bias_, cached_max_bias_) / bias_scale;
+        if (bias_int32_rescale > bias_max_rescale) {
+          // avoid overflow on bias
+          bias_int32_rescale = bias_max_rescale;
+          float weight_rescale = bias_int32_rescale * bias_scale / data_scale / weight_scale;
+          cached_weight_.reset(new NDArray(weight.storage_type(), weight.shape(), weight.ctx(),
+                                           true, mshadow::kInt8));
+          int8_t *weight_ptr = weight.data().dptr<int8_t>();
+          int8_t *quantized_weight_ptr = cached_weight_->data().dptr<int8_t>();
+          size_t weight_size = weight.shape().Size();
+#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+          for (index_t i = 0; i < static_cast<index_t>(weight_size); ++i) {
+            quantized_weight_ptr[i] = std::round(weight_ptr[i] * weight_rescale);
+          }
+          weight_scale *= weight_rescale;
+          weight = *cached_weight_;
+        }
+        cached_bias_ =
+            NDArray(bias.storage_type(), bias.shape(), bias.ctx(), true, mshadow::kInt32);
         int8_t *bias_ptr = bias.data().dptr<int8_t>();
         int32_t *quantized_bias_ptr = cached_bias_.data().dptr<int32_t>();
         size_t bias_size = bias.shape().Size();
         #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
         for (index_t i = 0; i < static_cast<index_t>(bias_size); ++i) {
-          quantized_bias_ptr[i] = bias_ptr[i] * bias_int32_rescale;
+          quantized_bias_ptr[i] = std::round(bias_ptr[i] * bias_int32_rescale);
         }
       }
 
@@ -172,14 +189,21 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
         full_param_.output_scales.resize(0);
         cached_min_output_ = mkldnn_param.min_calib_range.value();
         cached_max_output_ = mkldnn_param.max_calib_range.value();
-
-        full_param_.requantize_scales[0] = quantized_out_range /
-          MaxAbs(cached_min_output_, cached_max_output_) / data_scale / weight_scale;
+        float out_scale =
+            GetQuantizeScale(IsOutputUint8(full_param_) ? mshadow::kUint8 : mshadow::kInt8,
+                             cached_min_output_, cached_max_output_);
+        full_param_.requantize_scales[0] = out_scale / data_scale / weight_scale;
       } else {
         Stream<cpu> *s = ctx.get_stream<cpu>();
-        mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(
-          s, 1, &cached_min_output_, &cached_max_output_,
-          &min_data, &max_data, &min_weight, &max_weight);
+        if (data.dtype() == mshadow::kInt8) {
+          mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(
+              s, 1, &cached_min_output_, &cached_max_output_, &min_data, &max_data, &min_weight,
+              &max_weight);
+        } else {
+          mxnet_op::Kernel<QuantizationRangeForS8U8MultiplicationStruct, cpu>::Launch(
+              s, 1, &cached_min_output_, &cached_max_output_, &min_data, &max_data, &min_weight,
+              &max_weight);
+        }
       }
     }
 

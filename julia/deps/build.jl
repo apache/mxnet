@@ -54,7 +54,7 @@ if Sys.isunix()
   nvcc_path = Sys.which("nvcc")
   if nvcc_path ≢ nothing
     @info "Found nvcc: $nvcc_path"
-    push!(CUDAPATHS, replace(nvcc_path, "bin/nvcc", "lib64"))
+    push!(CUDAPATHS, replace(nvcc_path, "bin/nvcc" => "lib64"))
   end
 end
 

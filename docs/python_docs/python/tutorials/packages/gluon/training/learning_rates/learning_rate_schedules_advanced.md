@@ -16,7 +16,7 @@
 <!--- under the License. -->
 
 
- # Advanced Learning Rate Schedules
+# Advanced Learning Rate Schedules
 
 Given the importance of learning rate and the learning rate schedule for training neural networks, there have been a number of research papers published recently on the subject. Although many practitioners are using simple learning rate schedules such as stepwise decay, research has shown that there are other strategies that work better in most situations. We implement a number of different schedule shapes in this tutorial and introduce cyclical schedules.
 
@@ -56,7 +56,7 @@ One adjustment proposed by [Jeremy Howard, Sebastian Ruder (2018)](https://arxiv
 
 ```python
 class TriangularSchedule():
-    def __init__(self, min_lr, max_lr, cycle_length, inc_fraction=0.5):     
+    def __init__(self, min_lr, max_lr, cycle_length, inc_fraction=0.5):
         """
         min_lr: lower bound for learning rate (float)
         max_lr: upper bound for learning rate (float)
@@ -67,7 +67,7 @@ class TriangularSchedule():
         self.max_lr = max_lr
         self.cycle_length = cycle_length
         self.inc_fraction = inc_fraction
-        
+
     def __call__(self, iteration):
         if iteration <= self.cycle_length*self.inc_fraction:
             unit_cycle = iteration * 1 / (self.cycle_length * self.inc_fraction)
@@ -107,7 +107,7 @@ class CosineAnnealingSchedule():
         self.min_lr = min_lr
         self.max_lr = max_lr
         self.cycle_length = cycle_length
-        
+
     def __call__(self, iteration):
         if iteration <= self.cycle_length:
             unit_cycle = (1 + math.cos(iteration * math.pi / self.cycle_length)) / 2
@@ -153,7 +153,7 @@ class LinearWarmUp():
         # calling mx.lr_scheduler.LRScheduler effects state, so calling a copy
         self.finish_lr = copy.copy(schedule)(0)
         self.length = length
-    
+
     def __call__(self, iteration):
         if iteration <= self.length:
             return iteration * (self.finish_lr - self.start_lr)/(self.length) + self.start_lr
@@ -196,7 +196,7 @@ class LinearCoolDown():
         self.start_idx = start_idx
         self.finish_idx = start_idx + length
         self.length = length
-    
+
     def __call__(self, iteration):
         if iteration <= self.start_idx:
             return self.schedule(iteration)
@@ -239,11 +239,11 @@ class OneCycleSchedule():
             raise ValueError("Must specify finish_lr when using cooldown_length > 0.")
         if (cooldown_length == 0) and (finish_lr is not None):
             raise ValueError("Must specify cooldown_length > 0 when using finish_lr.")
-            
+
         finish_lr = finish_lr if (cooldown_length > 0) else start_lr
         schedule = TriangularSchedule(min_lr=start_lr, max_lr=max_lr, cycle_length=cycle_length)
         self.schedule = LinearCoolDown(schedule, finish_lr=finish_lr, start_idx=cycle_length, length=cooldown_length)
-        
+
     def __call__(self, iteration):
         return self.schedule(iteration)
 ```
@@ -280,7 +280,7 @@ class CyclicalSchedule():
         self.length_decay = cycle_length_decay
         self.magnitude_decay = cycle_magnitude_decay
         self.kwargs = kwargs
-    
+
     def __call__(self, iteration):
         cycle_idx = 0
         cycle_length = self.length
@@ -290,7 +290,7 @@ class CyclicalSchedule():
             cycle_idx += 1
             idx += cycle_length
         cycle_offset = iteration - idx + cycle_length
-        
+
         schedule = self.schedule_class(cycle_length=cycle_length, **self.kwargs)
         return schedule(cycle_offset) * self.magnitude_decay**cycle_idx
 ```

@@ -806,6 +806,7 @@ Examples::
   { return std::vector<std::pair<int, int>>{{0, 0}}; })
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
   { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 2, 1, 2, gelqf>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_linalg_gelqf"})
 .add_argument("A", "NDArray-or-Symbol", "Tensor of input matrices to be factorized");
@@ -875,6 +876,7 @@ Examples::
   { return std::vector<std::pair<int, int>>{{0, 0}}; })
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
   { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", LaOpForwSyevd<cpu, syevd>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_linalg_syevd"})
 .add_argument("A", "NDArray-or-Symbol", "Tensor of input matrices to be factorized");
@@ -891,6 +893,7 @@ NNVM_REGISTER_OP(_backward_linalg_syevd)
 
 NNVM_REGISTER_OP(_linalg_inverse)
 .add_alias("linalg_inverse")
+.add_alias("_npi_inv")
 .describe(R"code(Compute the inverse of a matrix.
 Input is a tensor *A* of dimension *n >= 2*.
 
@@ -925,6 +928,7 @@ Examples::
   { return std::vector<std::pair<int, int>>{{0, 0}}; })
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
   { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 2, 1, 1, inverse>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_linalg_inverse"})
 .add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix");
@@ -978,6 +982,7 @@ Examples::
 .set_attr<nnvm::FInferType>("FInferType", DetType<1>)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
   { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", LaOpDetForward<cpu, 1, det>)
 .set_attr<nnvm::FGradient>("FGradient", ReduceDetGrad<1>{"_backward_linalg_det"})
 .add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix");

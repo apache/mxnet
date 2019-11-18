@@ -61,13 +61,16 @@ extensions = [
     # 'sphinx.ext.viewcode',
     'breathe',
 #    'mxdoc'
+    'autodocsumm',
 ]
 
 doctest_global_setup = '''
 import mxnet as mx
 '''
 
-autodoc_member_order = 'bysource'
+autodoc_member_order = 'alphabetical'
+
+autodoc_default_flags = ['members', 'show-inheritance']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -180,7 +183,7 @@ html_css_files = [
 ]
 
 html_js_files = [
-
+    'autodoc.js'
 ]
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,

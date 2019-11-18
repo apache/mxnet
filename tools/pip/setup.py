@@ -41,9 +41,19 @@ exec(compile(open(libinfo_py, "rb").read(), libinfo_py, 'exec'), libinfo, libinf
 
 LIB_PATH = libinfo['find_lib_path']()
 __version__ = libinfo['__version__']
-if 'TRAVIS_TAG' not in os.environ or not os.environ['TRAVIS_TAG'].strip():
+
+# set by the CD pipeline
+is_release = os.environ.get("IS_RELEASE", "").strip()
+
+# set by the travis build pipeline
+travis_tag = os.environ.get("TRAVIS_TAG", "").strip()
+
+# nightly build tag
+if not travis_tag and not is_release:
     __version__ += 'b{0}'.format(datetime.today().strftime('%Y%m%d'))
-elif 'TRAVIS_TAG' in os.environ and os.environ['TRAVIS_TAG'].startswith('patch-'):
+
+# patch build tag
+elif travis_tag.startswith('patch-'):
     __version__ = os.environ['TRAVIS_TAG'].split('-')[1]
 
 class BinaryDistribution(Distribution):
@@ -137,19 +147,6 @@ package_data = {'mxnet': [os.path.join('mxnet', os.path.basename(LIB_PATH[0]))],
                 'dmlc_tracker': []}
 if variant.endswith('MKL'):
     if platform.system() == 'Darwin':
-        shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libmklml.dylib'), os.path.join(CURRENT_DIR, 'mxnet'))
-        shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libiomp5.dylib'), os.path.join(CURRENT_DIR, 'mxnet'))
-        shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libmkldnn.0.dylib'), os.path.join(CURRENT_DIR, 'mxnet'))
-        package_data['mxnet'].append('mxnet/libmklml.dylib')
-        package_data['mxnet'].append('mxnet/libiomp5.dylib')
-        package_data['mxnet'].append('mxnet/libmkldnn.0.dylib')
-    else:
-        shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libmklml_intel.so'), os.path.join(CURRENT_DIR, 'mxnet'))
-        shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libiomp5.so'), os.path.join(CURRENT_DIR, 'mxnet'))
-        shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libmkldnn.so.0'), os.path.join(CURRENT_DIR, 'mxnet'))
-        package_data['mxnet'].append('mxnet/libmklml_intel.so')
-        package_data['mxnet'].append('mxnet/libiomp5.so')
-        package_data['mxnet'].append('mxnet/libmkldnn.so.0')
     shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mkldnn/build/install/include'),
                     os.path.join(CURRENT_DIR, 'mxnet/include/mkldnn'))
 if platform.system() == 'Linux':

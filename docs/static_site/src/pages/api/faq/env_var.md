@@ -200,12 +200,12 @@ The following environments can be used to profile the application without changi
 
 * MXNET_PROFILER_AUTOSTART
   - Values: 0(false) or 1(true) ```(default=0)```
-	- Set to 1, MXNet starts the profiler automatically. The profiling result is stored into profile.json in the working directory.
+  - Set to 1, MXNet starts the profiler automatically. The profiling result is stored into profile.json in the working directory.
 
 * MXNET_PROFILER_MODE
   - Values: 0(false) or 1(true) ```(default=0)```
-	- If set to '0', profiler records the events of the symbolic operators.
-	- If set to '1', profiler records the events of all operators.
+  - If set to '0', profiler records the events of the symbolic operators.
+  - If set to '1', profiler records the events of all operators.
 
 ## Interface between Python and the C API
 
@@ -241,14 +241,14 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
 
 * MXNET_CUDA_ALLOW_TENSOR_CORE
   - 0(false) or 1(true) ```(default=1)```
-	- If set to '0', disallows Tensor Core use in CUDA ops.
-	- If set to '1', allows Tensor Core use in CUDA ops.
+  - If set to '0', disallows Tensor Core use in CUDA ops.
+  - If set to '1', allows Tensor Core use in CUDA ops.
   - This variable can only be set once in a session.
 
 * MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION
   - 0(false) or 1(true) ```(default=0)```
-	- If set to '0', disallows implicit type conversions to Float16 to use Tensor Cores
-	- If set to '1', allows CUDA ops like RNN and Convolution to use TensorCores even with Float32 input data by using implicit type casting to Float16. Only has an effect if `MXNET_CUDA_ALLOW_TENSOR_CORE` is `1`.
+  - If set to '0', disallows implicit type conversions to Float16 to use Tensor Cores
+  - If set to '1', allows CUDA ops like RNN and Convolution to use TensorCores even with Float32 input data by using implicit type casting to Float16. Only has an effect if `MXNET_CUDA_ALLOW_TENSOR_CORE` is `1`.
 
 * MXNET_CUDA_LIB_CHECKING
   - 0(false) or 1(true) ```(default=1)```
@@ -317,7 +317,7 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
 * MXNET_SUBGRAPH_BACKEND
   - Values: String ```(default="MKLDNN")``` if MKLDNN is avaliable, otherwise ```(default="")```
   - This variable controls the subgraph partitioning in MXNet.
-  - This variable is used to perform MKL-DNN FP32 operator fusion and quantization. Please refer to the [MKL-DNN operator list](../tutorials/mkldnn/operator_list.md) for how this variable is used and the list of fusion passes.
+  - This variable is used to perform MKL-DNN FP32 operator fusion and quantization. Please refer to the [MKL-DNN operator list](https://github.com/apache/incubator-mxnet/blob/v1.5.x/docs/tutorials/mkldnn/operator_list.md) for how this variable is used and the list of fusion passes.
   - Set ```MXNET_SUBGRAPH_BACKEND=NONE``` to disable subgraph backend.
 
 * MXNET_SAFE_ACCUMULATION
@@ -327,6 +327,21 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
     For example, when the variable is set to 1(true), if the input data type is float16, then the accumulation will be done
     with float32.
   - Model accuracies do not necessarily improve with this environment variable turned on.
+
+* MXNET_USE_FUSION
+  - Values: 0(false) or 1(true) ```(default=1)```
+  - If this variable is set, MXNet will try fusing some of the operations (pointwise operations only for now).
+  - It works in Symbolic execution as well as in Gluon models hybridized with ```static_alloc=True``` option.
+  - Only applies to MXNet that has been compiled with CUDA (```pip install mxnet-cuXX``` or built from source with ```USE_CUDA=1```) and running on GPU.
+
+* MXNET_FUSION_VERBOSE
+  - Values: 0(false) or 1(true) ```(default=0)```
+  - Only applies to MXNet that has been compiled with CUDA and when ```MXNET_USE_FUSION``` option is enabled.
+  - If this variable is set, MXNet will print the code for fused operators that it generated.
+
+* MXNET_ELIMINATE_COMMON_EXPR
+  - Values: 0(false) or 1(true) ```(default=1)```
+  - If this variable is set, MXNet will simplify the computation graph, eliminating duplicated operations on the same inputs.
 
 Settings for Minimum Memory Usage
 ---------------------------------

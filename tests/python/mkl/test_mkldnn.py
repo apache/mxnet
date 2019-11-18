@@ -28,7 +28,6 @@ from mxnet.module import Module
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.test_utils import *
-import test_mkldnn_install as install
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../unittest/'))
 from common import with_seed
@@ -161,8 +160,8 @@ def test_reshape_before_conv():
     with mx.autograd.record():
         out2 = net(x)
     out2.backward()
-    mx.test_utils.assert_almost_equal(dx1.asnumpy(), x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
-    mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-5, atol=1e-6)
+    assert_almost_equal(dx1, x.grad, rtol=1e-5, atol=1e-6)
+    assert_almost_equal(out1, out2, rtol=1e-5, atol=1e-6)
 
 
 @with_seed()
@@ -195,8 +194,8 @@ def test_slice_before_conv():
     with mx.autograd.record():
         out2 = net(x)
     out2.backward()
-    mx.test_utils.assert_almost_equal(dx1.asnumpy(), x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
-    mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-5, atol=1e-6)
+    assert_almost_equal(dx1, x.grad, rtol=1e-5, atol=1e-6)
+    assert_almost_equal(out1, out2, rtol=1e-5, atol=1e-6)
 
 
 @with_seed()
@@ -229,8 +228,8 @@ def test_slice_reshape_before_conv():
     with mx.autograd.record():
         out2 = net(x)
     out2.backward()
-    mx.test_utils.assert_almost_equal(dx1.asnumpy(), x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
-    mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-5, atol=1e-6)
+    assert_almost_equal(dx1, x.grad, rtol=1e-5, atol=1e-6)
+    assert_almost_equal(out1, out2, rtol=1e-5, atol=1e-6)
 
 
 @with_seed()
@@ -568,5 +567,74 @@ def test_weight_async_reorder():
         for output in mod.get_outputs():
             output.wait_to_read()
 
+@with_seed()
+def test_concat():
+    def ref_concat(a, b, axis):
+      return np.concatenate((a, b), axis=axis)
+
+    a_sym = mx.sym.Variable("a")
+    b_sym = mx.sym.Variable("b")
+    dshape = rand_shape_nd(4)
+    a_shape = tuple(dshape)
+    b_shape = tuple(dshape)
+
+    for axis in range(0, 4):
+      z = mx.sym.concat(a_sym, b_sym, dim=axis)
+      a = np.random.uniform(-1, 1, a_shape)
+      b = np.random.uniform(-1, 1, b_shape)
+      exe = z.simple_bind(ctx=mx.cpu(), a=a_shape, b=b_shape)
+      out = exe.forward(is_train=False, a=a, b=b)
+      ref_out = ref_concat(a, b, axis=axis)
+      out = out[0].asnumpy()
+      assert_almost_equal(out, ref_out)
+
+    def check_concat_training(stype):
+        data_shape = rand_shape_nd(4)
+        for density in [1.0, 0.5, 0.0]:
+            a_sym = mx.sym.Variable('a')
+            b_sym = mx.sym.Variable('b')
+            sym = mx.sym.concat(a_sym, b_sym, dim=1)
+            a = rand_ndarray(shape=data_shape, stype=stype, density=density)
+            b = rand_ndarray(shape=data_shape, stype=stype, density=density)
+            in_location = [a, b]
+            check_numeric_gradient(sym, in_location, numeric_eps=1e-3, rtol=1e-3, atol=5e-3)
+    stypes = ['row_sparse', 'default']
+    for stype in stypes:
+        check_concat_training(stype)
+
+@with_seed()
+def test_elemwise_add():
+    def ref_add(a, b):
+      return np.add(a, b)
+
+    a_sym = mx.sym.Variable("a")
+    b_sym = mx.sym.Variable("b")
+    dshape = rand_shape_nd(4)
+    a_shape = tuple(dshape)
+    b_shape = tuple(dshape)
+    z = mx.sym.elemwise_add(a_sym, b_sym)
+    a = np.random.uniform(-1, 1, a_shape)
+    b = np.random.uniform(-1, 1, b_shape)
+    exe = z.simple_bind(ctx=mx.cpu(), a=a_shape, b=b_shape)
+    out = exe.forward(is_train=False, a=a, b=b)
+    ref_out = ref_add(a, b)
+    out = out[0].asnumpy()
+    assert_almost_equal(out, ref_out, rtol=1e-6, atol=1e-6)
+
+    def check_elemwise_add_training(stype):
+        data_shape = rand_shape_nd(4)
+        for density in [1.0, 0.5, 0.0]:
+            a_sym = mx.sym.Variable('a')
+            b_sym = mx.sym.Variable('b')
+            sym = mx.sym.elemwise_add(a_sym, b_sym)
+            a = rand_ndarray(shape=data_shape, stype=stype, density=density)
+            b = rand_ndarray(shape=data_shape, stype=stype, density=density)
+            in_location = [a, b]
+            check_numeric_gradient(sym, in_location, numeric_eps=1e-3, rtol=1e-3, atol=5e-3)
+    stypes = ['row_sparse', 'default']
+    for stype in stypes:
+        check_elemwise_add_training(stype)
+
 if __name__ == '__main__':
-    install.test_mkldnn_install()
+    import nose
+    nose.runmodule()

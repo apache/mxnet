@@ -57,7 +57,7 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
-    MXNET_ADD_ALL_TYPES
+    MXNET_ADD_ALL_TYPES_WITH_BOOL
     .describe("Target data type.");
   }
 };
@@ -272,10 +272,22 @@ inline bool InitShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape param_shape = param.shape;
+  if (shape_is_known(param_shape) && !features::is_enabled(features::INT64_TENSOR_SIZE)) {
+    CHECK_LT(param_shape.Size(), (int64_t{1} << 31) - 1) <<
+              "[InitShape-input] Size of tensor you are trying to allocate is larger than "
+              "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+  }
   if (!Imperative::Get()->is_np_shape()) {
     common::ConvertToNumpyShape(&param_shape);
   }
-  if (shape_is_known((*out_attrs)[0]) && !shape_is_known(param_shape)) return true;
+  if (shape_is_known((*out_attrs)[0]) && !shape_is_known(param_shape)) {
+    if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
+      CHECK_LT(out_attrs->at(0).Size() , (int64_t{1} << 31) - 1) <<
+                "[InitShape-output] Size of tensor you are trying to allocate is larger than "
+                "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+    }
+    return true;
+  }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, param_shape);
   return shape_is_known(out_attrs->at(0));
 }
@@ -336,18 +348,23 @@ inline bool InitStorageType(const nnvm::NodeAttrs& attrs,
 template <bool is_integer = false, typename ValueType, typename xpu>
 void Fill(mshadow::Stream<xpu> *s, const TBlob& b, const OpReqType req, ValueType val) {
   // If b is a zero-size tensor, do nothing.
+  if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
+    CHECK_LT(b.Size(), (int64_t{1} << 31) - 1) <<
+              "[Fill] Size of tensor you are trying to allocate is larger than "
+              "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+  }
   if (b.Size() == 0) return;
   if (req != kNullOp) {
     const size_t size = b.Size();
     if (val == 0) {
       if (req != kAddTo) {
         if (b.dev_mask() == cpu::kDevMask && size < 50000) {
-          MSHADOW_TYPE_SWITCH(b.type_flag_, DType, {
+          MSHADOW_TYPE_SWITCH_WITH_BOOL(b.type_flag_, DType, {
             memset(b.dptr_, 0, size * sizeof(DType));
           });
         } else {
           // Optimize common use-case of filling with ones
-          MSHADOW_TYPE_SWITCH(b.type_flag_, DType, {
+          MSHADOW_TYPE_SWITCH_WITH_BOOL(b.type_flag_, DType, {
             MXNET_ASSIGN_REQ_SWITCH(req, Req, {
               mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::set_to_int<0>, Req>, xpu>::Launch(
                 s, b.Size(), b.dptr<DType>());
@@ -357,7 +374,7 @@ void Fill(mshadow::Stream<xpu> *s, const TBlob& b, const OpReqType req, ValueTyp
       }
     } else if (is_integer && val == 1) {
       // Optimize common use-case of filling with ones
-      MSHADOW_TYPE_SWITCH(b.type_flag_, DType, {
+      MSHADOW_TYPE_SWITCH_WITH_BOOL(b.type_flag_, DType, {
         MXNET_ASSIGN_REQ_SWITCH(req, Req, {
           mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::set_one, Req>, xpu>::Launch(
             s, b.Size(), b.dptr<DType>());
@@ -365,7 +382,7 @@ void Fill(mshadow::Stream<xpu> *s, const TBlob& b, const OpReqType req, ValueTyp
       });
     } else {
       // Generic fill kernel from variable
-      MSHADOW_TYPE_SWITCH(b.type_flag_, DType, {
+      MSHADOW_TYPE_SWITCH_WITH_BOOL(b.type_flag_, DType, {
         MXNET_ASSIGN_REQ_SWITCH(req, Req, {
           mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, Req>, xpu>::Launch(
             s, b.Size(), b.dptr<DType>(), static_cast<DType>(val));
@@ -483,6 +500,29 @@ void FillComputeZerosEx(const nnvm::NodeAttrs& attrs,
   }
 }
 
+template<typename xpu>
+inline void EyeFillImpl(const TBlob& out_data,
+                        const OpContext& ctx,
+                        const std::vector<OpReqType>& req,
+                        const nnvm::dim_t num_cols,
+                        const nnvm::dim_t N,
+                        const nnvm::dim_t k) {
+  using namespace mxnet_op;
+  const nnvm::dim_t cnnz = std::max(num_cols - std::abs(k), (nnvm::dim_t)0);
+  const nnvm::dim_t rnnz = std::max(N - std::abs(k), (nnvm::dim_t)0);
+  const nnvm::dim_t nnz = k > 0 ? std::min(cnnz, N) :
+                          std::min(rnnz, num_cols);
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+        Fill(s, out_data, req[0], static_cast<DType>(0));
+        if (nnz > 0) {
+          Kernel<eye_dns_fill<req_type>, xpu>::Launch(s, nnz, out_data.dptr<DType>(),
+            std::max(static_cast<nnvm::dim_t>(0), k), k, num_cols);
+        }
+      });
+  });
+}
 
 template<typename xpu>
 void EyeFill(const nnvm::NodeAttrs& attrs,
@@ -493,25 +533,10 @@ void EyeFill(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 0U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const EyeParam& param = nnvm::get<EyeParam>(attrs.parsed);
   const TBlob& out_data = outputs[0];
   const nnvm::dim_t num_cols = param.M > 0 ? param.M : param.N;
-
-  const nnvm::dim_t cnnz = std::max(num_cols - std::abs(param.k), (nnvm::dim_t)0);
-  const nnvm::dim_t rnnz = std::max(param.N - std::abs(param.k), (nnvm::dim_t)0);
-  const nnvm::dim_t nnz = param.k > 0 ? std::min(cnnz, param.N) :
-                                        std::min(rnnz, num_cols);
-  using namespace mxnet_op;
-  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
-    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-      Fill(s, out_data, req[0], static_cast<DType>(0));
-      if (nnz > 0) {
-        Kernel<eye_dns_fill<req_type>, xpu>::Launch(s, nnz, out_data.dptr<DType>(),
-          std::max(static_cast<nnvm::dim_t>(0), param.k), param.k, num_cols);
-      }
-    });
-  });
+  EyeFillImpl<xpu>(out_data, ctx, req, num_cols, param.N, param.k);
 }
 
 
@@ -572,7 +597,13 @@ inline bool RangeShape(const nnvm::NodeAttrs& attrs,
   }
   const double out_size = std::ceil((param.stop.value() - param.start) / param.step)
                           * param.repeat;
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape({static_cast<nnvm::dim_t>(out_size)}));
+  mxnet::TShape output_shape = mxnet::TShape({static_cast<nnvm::dim_t>(out_size)});
+  if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
+    CHECK_LT(output_shape.Size(), (int64_t{1} << 31) - 1) <<
+              "[RangeShape] Size of tensor you are trying to allocate is larger than "
+              "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+  }
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, output_shape);
   return true;
 }
 
@@ -614,7 +645,8 @@ inline bool LinspaceShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   CHECK_GE(param.num, 0)
     << "Number of sequence should be non-negative, received " << param.num;
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape({static_cast<nnvm::dim_t>(param.num)}));
+  mxnet::TShape shape = mxnet::TShape({static_cast<nnvm::dim_t>(param.num)});
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, shape);
   return true;
 }
 

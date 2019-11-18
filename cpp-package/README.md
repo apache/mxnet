@@ -55,7 +55,7 @@ In order to consume the C++ API please follow the steps below.
 
 ## Tutorial
 
-A basic tutorial can be found at <https://mxnet.apache.org/tutorials/c++/basics.html>.
+A basic tutorial can be found at <https://mxnet.apache.org/api/cpp/docs/tutorials/basics>.
 
 ## Examples
 

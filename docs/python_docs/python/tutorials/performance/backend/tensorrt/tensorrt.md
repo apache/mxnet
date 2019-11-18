@@ -39,7 +39,7 @@ nvidia-docker run -ti mxnet/tensorrt python
 
 ## Sample Models
 ### Resnet 18
-TensorRT is an inference only library, so for the purposes of this blog post we will be using a pre-trained network, in this case a Resnet 18.  Resnets are a computationally intensive model architecture that are often used as a backbone for various computer vision tasks. Resnets are also commonly used as a reference for benchmarking deep learning library performance.  In this section we'll use a pretrained Resnet 18 from the [Gluon Model Zoo](https://mxnet.apache.org/versions/master/api/python/gluon/model_zoo.html) and compare its inference speed with TensorRT using MXNet with TensorRT integration turned off as a baseline.
+TensorRT is an inference only library, so for the purposes of this blog post we will be using a pre-trained network, in this case a Resnet 18.  Resnets are a computationally intensive model architecture that are often used as a backbone for various computer vision tasks. Resnets are also commonly used as a reference for benchmarking deep learning library performance.  In this section we'll use a pretrained Resnet 18 from the [Gluon Model Zoo](/api/python/docs/api/gluon/model_zoo/index.html) and compare its inference speed with TensorRT using MXNet with TensorRT integration turned off as a baseline.
 
 ## Model Initialization
 ```python
@@ -128,7 +128,7 @@ This means that when an MXNet computation graph is constructed, it will be parse
 
 During this process MXNet will take care of passing along the input to the node and fetching the results.  MXNet will also attempt to remove any duplicated weights (parameters) during the graph initialization to keep memory usage low.  That is, if there are graph weights that are used only in the TensorRT sections of the graph, they will be removed from the MXNet set of parameters, and their memory will be freed.
 
-The examples below shows a Gluon implementation of a Wavenet before and after a TensorRT graph pass. You can see that for this network TensorRT supports a subset of the operators involved. This makes it an interesting example to visualize, as several subgraphs are extracted and replaced with special TensorRT nodes. The Resnet used as an example above would be less interesting to visualization. The entire Resnet graph is supported by TensorRT, and hence the optimized graph would be a single TensorRT node.  If your browser is unable to render svg files you can view the graphs in png format: [unoptimized](_static/tutorials/tensorrt/wavenet_unoptimized.png) and [optimized](_static/tutorials/tensorrt/wavenet_optimized.png).
+The examples below shows a Gluon implementation of a Wavenet before and after a TensorRT graph pass. You can see that for this network TensorRT supports a subset of the operators involved. This makes it an interesting example to visualize, as several subgraphs are extracted and replaced with special TensorRT nodes. The Resnet used as an example above would be less interesting to visualization. The entire Resnet graph is supported by TensorRT, and hence the optimized graph would be a single TensorRT node.  If your browser is unable to render svg files you can view the graphs in png format: [unoptimized](wavenet_unoptimized.svg) and [optimized](wavenet_optimized.svg).
 
 ## Before
 ![before](wavenet_unoptimized.svg)

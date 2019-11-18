@@ -67,7 +67,7 @@ Advanced: all of the following methods begin by normalizing certain input distri
 
 Figure 1: `BatchNorm` on NCHW data | Figure 2: `BatchNorm` on NTC data 
 - | - 
-![](./imgs/NCHW_BN.png) | ![](./imgs/NTC_BN.png)
+![](imgs/NCHW_BN.png) | ![](imgs/NTC_BN.png)
 (e.g. batch of images) using the default of `axis=1` | (e.g. batch of sequences) overriding the default with `axis=2` (or `axis=-1`)
 
 One of the most popular normalization techniques is Batch Normalization, usually called BatchNorm for short. We normalize the activations **across all samples in a batch** for each of the channels independently. See Figure 1. We calculate two batch (or local) statistics for every channel to perform the normalization: the mean and variance of the activations in that channel for all samples in a batch. And we use these to shift and scale respectively.
@@ -205,7 +205,7 @@ Remember: `LayerNorm` is intended to be used with data in NTC format so the defa
 
 Figure 3: `LayerNorm` on NCHW data | Figure 4: `LayerNorm` on NTC data 
 - | - 
-![](./imgs/NCHW_LN.png) | ![](./imgs/NTC_LN.png)
+![](imgs/NCHW_LN.png) | ![](imgs/NTC_LN.png)
 (e.g. batch of images) overriding the default with `axis=1` | (e.g. batch of sequences) using the default of `axis=-1`
 
 As an example, we'll apply `LayerNorm` to a batch of 2 samples, each with 4 time steps and 2 channels (in NTC format).
@@ -244,7 +244,7 @@ Watch out: `InstanceNorm` is better suited to convolutional networks (CNNs) than
 
 Figure 3: `InstanceNorm` on NCHW data | Figure 4: `InstanceNorm` on NTC data 
 - | - 
-![](./imgs/NCHW_IN.png) | ![](./imgs/NTC_IN.png)
+![](imgs/NCHW_IN.png) | ![](imgs/NTC_IN.png)
 (e.g. batch of images) using the default `axis=1` | (e.g. batch of sequences) overiding the default with `axis=2` (or `axis=-1` equivalently)
 
 As an example, we'll apply `InstanceNorm` to a batch of 2 samples, each with 2 channels, and both height and width of 2 (in NCHW format).

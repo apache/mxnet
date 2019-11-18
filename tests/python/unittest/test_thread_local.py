@@ -16,14 +16,16 @@
 # under the License.
 
 import threading
+import numpy as np
 import mxnet as mx
 from mxnet import context, attribute, name
 from mxnet.gluon import block
 from mxnet.context import Context
 from mxnet.attribute import AttrScope
 from mxnet.name import NameManager
-from mxnet.test_utils import set_default_context
-from mxnet.util import _NumpyArrayScope
+from mxnet.test_utils import assert_almost_equal, set_default_context
+from mxnet.util import _NumpyArrayScope, set_np_shape
+
 
 def test_context():
     ctx_list = []
@@ -197,6 +199,26 @@ def test_np_array_scope():
     thread.join()
     event.clear()
     assert status[0], "Spawned thread didn't set status correctly"
+
+
+def test_np_global_shape():
+    set_np_shape(2)
+    data = []
+
+    def f():
+        # scalar
+        data.append(mx.np.ones(shape=()))
+        # zero-dim
+        data.append(mx.np.ones(shape=(0, 1, 2)))
+    try:
+        thread = threading.Thread(target=f)
+        thread.start()
+        thread.join()
+
+        assert_almost_equal(data[0].asnumpy(), np.ones(shape=()))
+        assert_almost_equal(data[1].asnumpy(), np.ones(shape=(0, 1, 2)))
+    finally:
+        set_np_shape(0)
 
 
 if __name__ == '__main__':

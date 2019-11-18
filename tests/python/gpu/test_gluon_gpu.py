@@ -20,26 +20,17 @@ import sys
 import os
 import tempfile
 import time
-import multiprocessing as mp
-import unittest
-import random
 import mxnet as mx
+import multiprocessing as mp
+from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, rand_ndarray
 import mxnet.ndarray as nd
 import numpy as np
-import unittest
 import math
-from nose.tools import assert_raises
-from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal
-from mxnet.base import MXNetError
 from mxnet import autograd
-from numpy.testing import assert_allclose
-from mxnet.test_utils import rand_ndarray
-
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied
-from common import run_in_spawned_process
+from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, run_in_spawned_process
 from test_gluon import *
 from test_loss import *
 from test_gluon_rnn import *
@@ -60,9 +51,9 @@ def check_rnn_layer(layer):
         co, cs = layer(x, states)
 
     # atol of 1e-6 required, as exposed by seed 2124685726
-    assert_almost_equal(go.asnumpy(), co.asnumpy(), rtol=1e-2, atol=1e-6)
+    assert_almost_equal(go, co, rtol=1e-2, atol=1e-6)
     for g, c in zip(gs, cs):
-        assert_almost_equal(g.asnumpy(), c.asnumpy(), rtol=1e-2, atol=1e-6)
+        assert_almost_equal(g, c, rtol=1e-2, atol=1e-6)
 
 
 @with_seed()
@@ -79,9 +70,9 @@ def check_rnn_layer_w_rand_inputs(layer):
         states = layer.begin_state(16)
         co, cs = layer(x, states)
 
-    assert_almost_equal(go.asnumpy(), co.asnumpy(), rtol=1e-2, atol=1e-6)
+    assert_almost_equal(go, co, rtol=1e-2, atol=1e-6)
     for g, c in zip(gs, cs):
-        assert_almost_equal(g.asnumpy(), c.asnumpy(), rtol=1e-2, atol=1e-6)
+        assert_almost_equal(g, c, rtol=1e-2, atol=1e-6)
 
 
 @with_seed()
@@ -117,21 +108,19 @@ def test_lstmp():
         layer_output = lstm_layer(lstm_input.copy())
         cell_output = lstm_cell.unroll(seq_len, lstm_input.copy(), layout='TNC',
                                        merge_outputs=True)[0]
-    assert_almost_equal(layer_output.asnumpy(),
-                        cell_output.asnumpy(), rtol=rtol, atol=atol)
+
+    assert_almost_equal(layer_output, cell_output, rtol=rtol, atol=atol)
     layer_output.backward()
     cell_output.backward()
     for k, v in weights.items():
         layer_grad = layer_params['lstm0_l0_' + k].grad()
         cell_grad = cell_params['lstm0_l0_' + k].grad()
         print('checking gradient for {}'.format('lstm0_l0_' + k))
-        assert_almost_equal(layer_grad.asnumpy(), cell_grad.asnumpy(),
-                            rtol=rtol, atol=atol)
+        assert_almost_equal(layer_grad, cell_grad, rtol=rtol, atol=atol)
     check_rnn_layer_forward(gluon.rnn.LSTM(
         10, 2, projection_size=5), mx.nd.ones((8, 3, 20)), ctx=ctx)
     check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, projection_size=5, bidirectional=True), mx.nd.ones(
         (8, 3, 20)), [mx.nd.ones((4, 3, 5)), mx.nd.ones((4, 3, 10))], ctx=ctx)
-
     check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, dropout=0.5, projection_size=5), mx.nd.ones((8, 3, 20)),
                             run_only=True, ctx=ctx)
     check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, bidirectional=True, dropout=0.5, projection_size=5),
@@ -223,7 +212,8 @@ def check_layer_bidirectional(size, in_size, proj_size):
             'r0', 'r0l0')].set_data(weights[k])
 
     data = mx.random.uniform(shape=(11, 10, in_size))
-    assert_allclose(net(data).asnumpy(), ref_net(data).asnumpy())
+    mx.test_utils.assert_allclose(net(data), ref_net(data), rtol=1e-6)
+
 
 
 def check_layer_bidirectional_varseqlen(size, in_size):
@@ -336,8 +326,7 @@ def test_gluon_ctc_consistency():
         l_gpu = loss(gpu_data, gpu_label)
         l_gpu.backward()
 
-    assert_almost_equal(cpu_data.grad.asnumpy(),
-                        gpu_data.grad.asnumpy(), atol=1e-3, rtol=1e-3)
+    assert_almost_equal(cpu_data.grad, gpu_data.grad, atol=1e-3, rtol=1e-3)
 
 
 @with_seed()
@@ -351,9 +340,88 @@ def test_global_norm_clip_multi_device():
             assert norm == 5.0
         else:
             assert norm.asscalar() == 5.0
-        assert_almost_equal(x1.asnumpy(), np.ones((3, 3)) / 5)
-        assert_almost_equal(x2.asnumpy(), np.ones((4, 4)) / 5)
+        assert_almost_equal(x1, np.ones((3, 3)) / 5)
+        assert_almost_equal(x2, np.ones((4, 4)) / 5)
 
+
+def _check_batchnorm_result(input, num_devices=1, cuda=False):
+    from mxnet.gluon.utils import split_and_load
+    def _find_bn(module):
+        if isinstance(module, (mx.gluon.nn.BatchNorm, mx.gluon.contrib.nn.SyncBatchNorm)):
+            return module
+        elif isinstance(module.module, (mx.gluon.nn.BatchNorm, mx.gluon.contrib.nn.SyncBatchNorm)):
+            return module.module
+
+        raise RuntimeError('BN not found')
+
+    def _syncParameters(bn1, bn2, ctx):
+        ctx = input.context
+        bn2.gamma.set_data(bn1.gamma.data(ctx))
+        bn2.beta.set_data(bn1.beta.data(ctx))
+        bn2.running_mean.set_data(bn1.running_mean.data(ctx))
+        bn2.running_var.set_data(bn1.running_var.data(ctx))
+
+    input1 = input.copy()
+    input2 = input.copy()
+
+    if cuda:
+        input1 = input.as_in_context(mx.gpu(0))
+        ctx_list = [mx.gpu(i) for i in range(num_devices)]
+    else:
+        ctx_list = [mx.cpu(0) for _ in range(num_devices)]
+
+    nch = input.shape[1]
+    bn1 = mx.gluon.nn.BatchNorm(in_channels=nch)
+    bn2 = mx.gluon.contrib.nn.SyncBatchNorm(in_channels=nch, num_devices=num_devices)
+
+    bn1.initialize(ctx=ctx_list[0])
+    bn2.initialize(ctx=ctx_list)
+
+    # using the same values for gamma and beta
+    #_syncParameters(_find_bn(bn1), _find_bn(bn2), ctx_list[0])
+
+    input1.attach_grad()
+    inputs2 = split_and_load(input2, ctx_list, batch_axis=0)
+    for xi in inputs2:
+        xi.attach_grad()
+
+    with mx.autograd.record():
+        output1 = bn1(input1)
+        output2  = [bn2(xi) for xi in inputs2]
+        loss1 = (output1 ** 2).sum()
+        loss2 = [(output ** 2).sum() for output in output2]
+        mx.autograd.backward(loss1)
+        mx.autograd.backward(loss2)
+
+    output2 = mx.nd.concat(*[output.as_in_context(input.context) for output in output2], dim=0)
+    # assert forwarding
+    assert_almost_equal(input1, input2, atol=1e-3, rtol=1e-3)
+    assert_almost_equal(output1, output2, atol=1e-3, rtol=1e-3)
+    assert_almost_equal(_find_bn(bn1).running_mean.data(ctx_list[0]),
+                        _find_bn(bn2).running_mean.data(ctx_list[0]),
+                        atol=1e-3, rtol=1e-3)
+    assert_almost_equal(_find_bn(bn1).running_var.data(ctx_list[0]),
+                        _find_bn(bn2).running_var.data(ctx_list[0]),
+                        atol=1e-3, rtol=1e-3)
+    input2grad = mx.nd.concat(*[output.grad.as_in_context(input.context) for output in inputs2], dim=0)
+    assert_almost_equal(input1.grad, input2grad, atol=1e-3, rtol=1e-3)
+
+@with_seed()
+def test_sync_batchnorm():
+    def get_num_devices():
+        for i in range(100):
+            try:
+                mx.nd.zeros((1,), ctx=mx.gpu(i))
+            except:
+                return i
+    # no need to use SyncBN with 1 gpu
+    if get_num_devices() < 2:
+        return
+    ndev = 2
+    # check with unsync version
+    for i in range(10):
+        _check_batchnorm_result(mx.nd.random.uniform(shape=(4, 1, 4, 4)),
+                                num_devices=ndev, cuda=True)
 
 @with_seed()
 def test_symbol_block_fp16():
@@ -468,10 +536,7 @@ def _test_bulking_in_process(seed, time_per_iteration):
 
     time_per_iteration.value = (time.time() - start) / num_iterations
 
-
-@with_seed()
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/14970')
-def test_bulking():
+def _test_bulking(test_bulking_func):
     # test case format: (max_fwd_segment_size, max_bwd_segment_size, enable_bulking_in_training)
     test_cases = [(0, 0, True), (1, 1, True), (15, 15, False),
                   (15, 0, True), (0, 15, True), (15, 15, True)]
@@ -480,7 +545,8 @@ def test_bulking():
     for seg_sizes in test_cases:
         # Create shared variable to return measured time from test process
         time_per_iteration = mp.Manager().Value('d', 0.0)
-        if not run_in_spawned_process(_test_bulking_in_process,
+
+        if not run_in_spawned_process(test_bulking_func,
                                       {'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD': seg_sizes[0],
                                        'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD': seg_sizes[1],
                                        'MXNET_EXEC_BULK_EXEC_TRAIN': seg_sizes[2]},
@@ -492,8 +558,7 @@ def test_bulking():
             '\n    runtime of (fwd,bwd,enable) op seg setting ({},{},{}) =\t{:.1f} msec'.format(
                 seg_sizes[0], seg_sizes[1], seg_sizes[2], 1000.0 * times[seg_sizes])
 
-    fastest_non_bulked_time = min(
-        times[(0, 0, True)], times[(1, 1, True)], times[(15, 15, False)])
+    fastest_non_bulked_time = min(times[(0, 0, True)], times[(1, 1, True)], times[(15, 15, False)])
     slowest_half_bulked_time = max(times[(0, 15, True)], times[(15, 0, True)])
     fastest_half_bulked_time = min(times[(0, 15, True)], times[(15, 0, True)])
     fully_bulked_time = times[(15, 15, True)]
@@ -508,6 +573,26 @@ def test_bulking():
     assert fully_bulked_time < fastest_half_bulked_time, \
         'The fully-bulked exec time is slower than a half-bulked time by {} secs! {}' \
         .format(fully_bulked_time - fastest_half_bulked_time, times_str)
+
+@with_seed()
+@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/14970')
+def test_bulking_gluon_gpu():
+    _test_bulking(_test_bulking_in_process)
+
+
+@with_seed()
+def test_hybridblock_mix_ctx_raise():
+    class FooHybrid(gluon.HybridBlock):
+        def hybrid_forward(self, F, a, b):
+            if isinstance(a, (list, tuple)):
+                a = sum(a)
+            if isinstance(b, (list, tuple)):
+                b = sum(b)
+            return a + b
+    foo_hybrid = FooHybrid()
+    foo_hybrid.hybridize()
+    assert_raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,), ctx=mx.gpu()),
+                                                 mx.nd.ones((10,), ctx=mx.cpu())))
 
 
 if __name__ == '__main__':

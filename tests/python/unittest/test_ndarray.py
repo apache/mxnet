@@ -21,6 +21,7 @@ from distutils.version import LooseVersion
 from itertools import permutations, combinations_with_replacement
 import os
 import pickle as pkl
+import random
 import functools
 from nose.tools import assert_raises, raises
 from common import with_seed, assertRaises, TemporaryDirectory
@@ -31,8 +32,10 @@ from mxnet.test_utils import np_reduce
 from mxnet.test_utils import same
 from mxnet.test_utils import random_sample, rand_shape_nd, random_arrays
 from mxnet import runtime
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_array_equal, assert_array_almost_equal
 import mxnet.autograd
+from mxnet.base import integer_types
+from mxnet.ndarray.ndarray import py_slice
 
 
 def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=[np.float32]):
@@ -41,6 +44,10 @@ def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=
         assert dim
         shape = tuple(np.random.randint(1, int(1000**(1.0/dim)), size=dim))
         arg_shapes = [shape] * arg_shapes
+
+    if npuf is None:
+        npuf = uf
+
     for dtype in type_list:
         ndarray_arg = []
         numpy_arg = []
@@ -50,10 +57,7 @@ def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=
             ndarray_arg.append(narr)
             numpy_arg.append(npy)
         out1 = uf(*ndarray_arg)
-        if npuf is None:
-            out2 = uf(*numpy_arg).astype(dtype)
-        else:
-            out2 = npuf(*numpy_arg).astype(dtype)
+        out2 = npuf(*numpy_arg).astype(dtype)
 
         assert out1.shape == out2.shape
         if isinstance(out1, mx.nd.NDArray):
@@ -577,13 +581,40 @@ def test_dot():
 
 @with_seed()
 def test_reduce():
-    sample_num = 200
-    def test_reduce_inner(numpy_reduce_func, nd_reduce_func, multi_axes):
+    sample_num = 300
+    def test_reduce_inner(numpy_reduce_func, nd_reduce_func, multi_axes,
+                          allow_almost_equal=False, check_dtype=True):
+        dtypes = [(np.float16, 1),
+                  (np.float32, 5),
+                  (np.double, 6)]
         for i in range(sample_num):
+            dtype, decimal = random.choice(dtypes)
             ndim = np.random.randint(1, 6)
             shape = np.random.randint(1, 11, size=ndim)
-            dat = np.random.rand(*shape) - 0.5
+            dat = (np.random.rand(*shape) - 0.5).astype(dtype)
             keepdims = np.random.randint(0, 2)
+
+            allow_nan = np.random.randint(0, 2)
+            if allow_nan:
+                total_nans = np.random.randint(0, dat.size//10+1)
+                dat.ravel()[np.random.choice(
+                    dat.size, total_nans, replace=False)] = np.nan
+
+            allow_inf = np.random.randint(0, 2)
+            if allow_inf:
+                r = np.random.randint(0, 3)
+                total_infs = np.random.randint(0, dat.size//20+1)
+                if r == 0:
+                    total_pos_infs, total_neg_infs = total_infs, 0
+                elif r == 1:
+                    total_pos_infs, total_neg_infs = 0, total_infs
+                else:
+                    total_pos_infs = total_neg_infs = total_infs // 2
+                dat.ravel()[np.random.choice(
+                    dat.size, total_pos_infs, replace=False)] = np.inf
+                dat.ravel()[np.random.choice(
+                    dat.size, total_neg_infs, replace=False)] = -np.inf
+
             if multi_axes:
                 axis_flags = np.random.randint(0, 2, size=ndim)
                 axes = []
@@ -598,16 +629,22 @@ def test_reduce():
                 axes = np.random.randint(0, ndim)
             numpy_ret = numpy_reduce_func(dat, axis=axes, keepdims=keepdims)
 
-            ndarray_ret = nd_reduce_func(mx.nd.array(dat), axis=axes, keepdims=keepdims)
+            mx_arr = mx.nd.array(dat, dtype=dtype)
+            ndarray_ret = nd_reduce_func(mx_arr, axis=axes, keepdims=keepdims)
             if type(ndarray_ret) is mx.ndarray.NDArray:
                 ndarray_ret = ndarray_ret.asnumpy()
             assert (ndarray_ret.shape == numpy_ret.shape) or \
                    (ndarray_ret.shape == (1,) and numpy_ret.shape == ()), "nd:%s, numpy:%s" \
                                                          %(ndarray_ret.shape, numpy_ret.shape)
-            err = np.square(ndarray_ret - numpy_ret).mean()
-            assert err < 1E-4
+            if check_dtype:
+                assert ndarray_ret.dtype == numpy_ret.dtype,\
+                        (ndarray_ret.dtype, numpy_ret.dtype)
+            if allow_almost_equal:
+                assert_array_almost_equal(ndarray_ret, numpy_ret, decimal=decimal)
+            else:
+                assert_array_equal(ndarray_ret, numpy_ret)
     test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.sum),
-                      mx.nd.sum, True)
+                      mx.nd.sum, True, allow_almost_equal=True)
     test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.max),
                       mx.nd.max, True)
     test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.min),
@@ -616,10 +653,10 @@ def test_reduce():
     # Force numpy to match mxnet's float32.
     test_reduce_inner(lambda data, axis,
                              keepdims:np_reduce(np.float32(data), axis, keepdims, np.argmax),
-                      mx.nd.argmax, False)
+                      mx.nd.argmax, False, check_dtype=False)
     test_reduce_inner(lambda data, axis,
                              keepdims:np_reduce(np.float32(data), axis, keepdims, np.argmin),
-                      mx.nd.argmin, False)
+                      mx.nd.argmin, False, check_dtype=False)
 
 
 @with_seed()
@@ -1384,6 +1421,13 @@ def test_ndarray_indexing():
                 raise e
             assert same(np_array, mx_array.asnumpy())
 
+        def _is_basic_index(index):
+            if isinstance(index, (integer_types, py_slice)):
+                return True
+            if isinstance(index, tuple) and all(isinstance(i, (integer_types, py_slice)) for i in index):
+                return True
+            return False
+
         np_index = index
         if isinstance(index, mx.nd.NDArray):
             np_index = index.asnumpy()
@@ -1411,12 +1455,19 @@ def test_ndarray_indexing():
             # test value is an numeric_type
             assert_same(np_array, np_index, mx_array, index, np.random.randint(low=-10000, high=0))
             if len(indexed_array_shape) > 1:
+                np_value = np.random.randint(low=-10000, high=0, size=(indexed_array_shape[-1],))
                 # test NDArray with broadcast
-                assert_same(np_array, np_index, mx_array, index,
-                            mx.nd.random.uniform(low=-10000, high=0, shape=(indexed_array_shape[-1],)))
+                assert_same(np_array, np_index, mx_array, index, mx.nd.array(np_value))
                 # test numpy array with broadcast
-                assert_same(np_array, np_index, mx_array, index,
-                            np.random.randint(low=-10000, high=0, size=(indexed_array_shape[-1],)))
+                assert_same(np_array, np_index, mx_array, index, np_value)
+
+                # test value shape are expanded to be longer than index array's shape
+                # this is currently only supported in basic indexing
+                if _is_basic_index(index):
+                    expanded_value_shape = (1, 1, 1) + np_value.shape
+                    assert_same(np_array, np_index, mx_array, index, np.array(np_value.reshape(expanded_value_shape)))
+                    assert_same(np_array, np_index, mx_array, index, np_value.reshape(expanded_value_shape))
+
                 # test list with broadcast
                 assert_same(np_array, np_index, mx_array, index,
                             [np.random.randint(low=-10000, high=0)] * indexed_array_shape[-1])
@@ -1712,13 +1763,13 @@ def test_norm(ctx=default_context()):
                         np_arr, i, keep_dims)
                     mx_out = mx.nd.norm(mx_arr, ord=ord, axis=i, keepdims=keep_dims)
                     assert npy_out.shape == mx_out.shape
-                    mx.test_utils.assert_almost_equal(npy_out, mx_out.asnumpy())
+                    assert_almost_equal(npy_out, mx_out)
                     if (i < 3):
                         npy_out = l1norm(np_arr, (i, i + 1), keep_dims) if ord == 1 else l2norm(
                             np_arr, (i, i + 1), keep_dims)
                         mx_out = mx.nd.norm(mx_arr, ord=ord, axis=(i, i + 1), keepdims=keep_dims)
                         assert npy_out.shape == mx_out.shape
-                        mx.test_utils.assert_almost_equal(npy_out, mx_out.asnumpy())
+                        assert_almost_equal(npy_out, mx_out)
 
 
 @with_seed()
@@ -1732,7 +1783,7 @@ def test_dlpack():
     for dtype in [np.float32, np.int32]:
         for shape in [(3, 4, 5, 6), (2, 10), (15,)]:
             a = mx.nd.random.uniform(shape = shape)
-            a_np = a.asnumpy()
+            a_np = a.copy()
 
             pack = a.to_dlpack_for_read()
             b = mx.nd.from_dlpack(pack)
@@ -1750,14 +1801,10 @@ def test_dlpack():
 
             del a, pack, pack2, pack3, pack4
 
-            b_np = b.asnumpy()
-            c_np = c.asnumpy()
-            d_np = d.asnumpy()
-            e_np = e.asnumpy()
-            mx.test_utils.assert_almost_equal(a_np, b_np)
-            mx.test_utils.assert_almost_equal(a_np, c_np)
-            mx.test_utils.assert_almost_equal(a_np, d_np)
-            mx.test_utils.assert_almost_equal(a_np, e_np)
+            assert_almost_equal(a_np, b)
+            assert_almost_equal(a_np, c)
+            assert_almost_equal(a_np, d)
+            assert_almost_equal(a_np, e)
 
 @with_seed()
 def test_ndarray_is_inf():
@@ -1986,6 +2033,22 @@ def test_large_int_rounding():
 
     a = mx.nd.array([large_integer], dtype='int32').trunc()
     assert np.all(a == large_integer)
+
+
+def test_load_saved_gpu_array_when_no_gpus_are_present():
+    # State obtained with mx.nd.arange(1, ctx=mx.gpu()).__getstate__()
+    # State needs to be exported manually, as running above command will only
+    # work if a gpu is present.
+    ndarray_state = {
+        'handle':
+        bytearray(
+            b'\xc9\xfa\x93\xf9\x00\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+        )
+    }
+    array = mx.nd.arange(1)
+    # Test that MXNDArrayLoadFromRawBytes works even if we have built with Cuda
+    # but there are no GPUs
+    array.__setstate__(ndarray_state)
 
 
 if __name__ == '__main__':

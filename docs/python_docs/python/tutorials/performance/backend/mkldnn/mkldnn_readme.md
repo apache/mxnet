@@ -20,7 +20,7 @@
 A better training and inference performance is expected to be achieved on Intel-Architecture CPUs with MXNet built with [Intel MKL-DNN](https://github.com/intel/mkl-dnn) on multiple operating system, including Linux, Windows and MacOS.
 In the following sections, you will find build instructions for MXNet with Intel MKL-DNN on Linux, MacOS and Windows.
 
-Please find MKL-DNN optimized operators and other features in the [MKL-DNN operator list](../mkldnn/operator_list.md).
+Please find MKL-DNN optimized operators and other features in the [MKL-DNN operator list](https://github.com/apache/incubator-mxnet/blob/v1.5.x/docs/tutorials/mkldnn/operator_list.md).
 
 The detailed performance data collected on Intel Xeon CPU with MXNet built with Intel MKL-DNN can be found [here](https://mxnet.apache.org/api/faq/perf#intel-cpu).
 
@@ -57,11 +57,24 @@ cd incubator-mxnet
 
 ### Build MXNet with MKL-DNN
 
+To achieve better performance, the Intel OpenMP and llvm OpenMP are recommended as below instruction. Otherwise, default GNU OpenMP will be used and you may get the sub-optimal performance. If you don't have the full [MKL](https://software.intel.com/en-us/intel-mkl) library installation, you might use OpenBLAS as the blas library, by setting USE_BLAS=openblas.
+
 ```
+# build with llvm OpenMP and Intel MKL/openblas
+mkdir build && cd build
+cmake -DUSE_CUDA=OFF -DUSE_MKL_IF_AVAILABLE=ON -DUSE_MKLDNN=ON -DUSE_OPENMP=ON -DUSE_OPENCV=ON ..
+make -j $(nproc)
+```
+
+```
+# build with Intel MKL and Intel OpenMP
 make -j $(nproc) USE_OPENCV=1 USE_MKLDNN=1 USE_BLAS=mkl USE_INTEL_PATH=/opt/intel
 ```
 
-If you don't have the full [MKL](https://software.intel.com/en-us/intel-mkl) library installation, you might use OpenBLAS as the blas library, by setting USE_BLAS=openblas.
+```
+# build with openblas and GNU OpenMP(sub-optimal performance)
+make -j $(nproc) USE_OPENCV=1 USE_MKLDNN=1 USE_BLAS=openblas
+```
 
 <h2 id="2">MacOS</h2>
 

@@ -22,8 +22,6 @@
 
 def _np_ones_like(a):
     """
-    ones_like(a)
-
     Return an array of ones with the same shape and type as a given array.
 
     Parameters
@@ -36,14 +34,30 @@ def _np_ones_like(a):
     -------
     out : ndarray
         Array of ones with the same shape and type as `a`.
+
+    Examples
+    --------
+    >>> x = np.arange(6)
+    >>> x = x.reshape((2, 3))
+    >>> x
+    array([[0., 1., 2.],
+           [3., 4., 5.]])
+    >>> np.ones_like(x)
+    array([[1., 1., 1.],
+           [1., 1., 1.]])
+
+    >>> y = np.arange(3, dtype=float)
+    >>> y
+    array([0., 1., 2.], dtype=float64)
+    >>>
+    >>> np.ones_like(y)
+    array([1., 1., 1.], dtype=float64)
     """
     pass
 
 
 def _np_zeros_like(a):
     """
-    zeros_like(a)
-
     Return an array of zeros with the same shape and type as a given array.
 
     Parameters
@@ -56,14 +70,29 @@ def _np_zeros_like(a):
     -------
     out : ndarray
         Array of zeros with the same shape and type as `a`.
+
+    Examples
+    --------
+    >>> x = np.arange(6)
+    >>> x = x.reshape((2, 3))
+    >>> x
+    array([[0., 1., 2.],
+           [3., 4., 5.]])
+    >>> np.zeros_like(x)
+    array([[0., 0., 0.],
+           [0., 0., 0.]])
+    >>> y = np.arange(3, dtype=float)
+    >>> y
+    array([0., 1., 2.], dtype=float64)
+    >>>
+    >>> np.zeros_like(y)
+    array([0., 0., 0.], dtype=float64)
     """
     pass
 
 
 def _np_cumsum(a, axis=None, dtype=None, out=None):
     """
-    cumsum(a, axis=None, dtype=None, out=None)
-
     Return the cumulative sum of the elements along a given axis.
 
     Parameters
@@ -115,8 +144,6 @@ def _np_cumsum(a, axis=None, dtype=None, out=None):
 
 def _npx_nonzero(a):
     """
-    nonzero(a)
-
     Return the indices of the elements that are non-zero.
 
     Returns a ndarray with ndim is 2. Each row contains the indices 
@@ -138,8 +165,8 @@ def _npx_nonzero(a):
 
     Notes
     -----
-    This function differs from the original numpy.prod in the following aspects:
-        - Do not support python numeric.
+    This function differs from the original numpy.nonzero in the following aspects:
+        - Does not support python numeric.
         - The return value is same as numpy.transpose(numpy.nonzero(a)).
 
     Examples
@@ -164,8 +191,6 @@ def _npx_nonzero(a):
 
 def _np_repeat(a, repeats, axis=None):
     """
-    repeat(a, repeats, axis=None)
-
     Repeat elements of an array.
 
     Parameters
@@ -213,8 +238,6 @@ def _np_repeat(a, repeats, axis=None):
 
 def _np_transpose(a, axes=None):
     """
-    transpose(a, axes=None)
-
     Permute the dimensions of an array.
 
     Parameters
@@ -256,8 +279,7 @@ def _np_transpose(a, axes=None):
 
 
 def _np_dot(a, b, out=None):
-    """dot(a, b, out=None)
-
+    """
     Dot product of two arrays. Specifically,
 
     - If both `a` and `b` are 1-D arrays, it is inner product of vectors
@@ -318,10 +340,8 @@ def _np_dot(a, b, out=None):
     pass
 
 
-def _np_sum(a, axis=0, dtype=None, keepdims=None, initial=None, out=None):
+def _np_sum(a, axis=None, dtype=None, keepdims=False, initial=None, out=None):
     r"""
-    sum(a, axis=None, dtype=None, keepdims=_Null, initial=_Null, out=None)
-
     Sum of array elements over a given axis.
 
     Parameters
@@ -414,8 +434,6 @@ def _np_sum(a, axis=0, dtype=None, keepdims=None, initial=None, out=None):
 
 def _np_copy(a, out=None):
     """
-    copy(a, out=None)
-
     Return an array copy of the given object.
 
     Parameters
@@ -463,8 +481,6 @@ def _np_copy(a, out=None):
 
 def _np_reshape(a, newshape, order='C', out=None):
     """
-    reshape(a, newshape, order='C')
-
     Gives a new shape to an array without changing its data.
     This function always returns a copy of the input array if
     ``out`` is not provided.
@@ -496,80 +512,36 @@ def _np_reshape(a, newshape, order='C', out=None):
     See Also
     --------
     ndarray.reshape : Equivalent method.
-    """
-
-
-def _np__linalg_svd(a):
-    r"""
-    svd(a)
-
-    Singular Value Decomposition.
-
-    When `a` is a 2D array, it is factorized as ``ut @ np.diag(s) @ v``,
-    where `ut` and `v` are 2D orthonormal arrays and `s` is a 1D
-    array of `a`'s singular values. When `a` is higher-dimensional, SVD is
-    applied in stacked mode as explained below.
-
-    Parameters
-    ----------
-    a : (..., M, N) ndarray 
-        A real or complex array with ``a.ndim >= 2`` and ``M <= N``.
-
-    Returns
-    -------
-    ut: (..., M, M) ndarray
-        Orthonormal array(s). The first ``a.ndim - 2`` dimensions have the same
-        size as those of the input `a`.
-    s : (..., M) ndarray
-        Vector(s) with the singular values, within each vector sorted in
-        descending order. The first ``a.ndim - 2`` dimensions have the same
-        size as those of the input `a`.
-    v : (..., M, N) ndarray
-        Orthonormal array(s). The first ``a.ndim - 2`` dimensions have the same
-        size as those of the input `a`.
-
-    Notes
-    -----
-
-    The decomposition is performed using LAPACK routine ``_gesvd``.
-
-    SVD is usually described for the factorization of a 2D matrix :math:`A`.
-    The higher-dimensional case will be discussed below. In the 2D case, SVD is
-    written as :math:`A = U^T S V`, where :math:`A = a`, :math:`U^T = ut`,
-    :math:`S= \mathtt{np.diag}(s)` and :math:`V = v`. The 1D array `s`
-    contains the singular values of `a` and `ut` and `v` are orthonormal. The rows
-    of `v` are the eigenvectors of :math:`A^T A` and the columns of `ut` are
-    the eigenvectors of :math:`A A^T`. In both cases the corresponding
-    (possibly non-zero) eigenvalues are given by ``s**2``.
-
-    If `a` has more than two dimensions, then broadcasting rules apply.
-    This means that SVD is working in "stacked" mode: it iterates over 
-    all indices of the first ``a.ndim - 2`` dimensions and for each
-    combination SVD is applied to the last two indices. The matrix `a` 
-    can be reconstructed from the decomposition with either 
-    ``(ut * s[..., None, :]) @ v`` or
-    ``ut @ (s[..., None] * v)``. (The ``@`` operator denotes batch matrix multiplication)
 
     Examples
     --------
-    >>> a = np.arange(54).reshape(6, 9)
-    >>> ut, s, v = np.linalg.svd(a)
-    >>> ut.shape, s.shape, v.shape
-    ((6, 6), (6,), (6, 9))
-    >>> s = s.reshape(6, 1)
-    >>> ret = np.dot(ut, s * v)
-    >>> (ret - a > 1e-3).sum()
-    array(0.)
-    >>> (ret - a < -1e-3).sum()
-    array(0.)
+    >>> a = np.arange(6).reshape((3, 2))
+    >>> a
+    array([[0., 1.],
+           [2., 3.],
+           [4., 5.]])
+
+    >>> np.reshape(a, (2, 3)) # C-like index ordering
+    array([[0., 1., 2.],
+           [3., 4., 5.]])
+
+    >>> np.reshape(np.ravel(a), (2, 3)) # equivalent to C ravel then C reshape
+    array([[0., 1., 2.],
+           [3., 4., 5.]])
+
+    >>> a = np.array([[1,2,3], [4,5,6]])
+    >>> np.reshape(a, 6)
+    array([1., 2., 3., 4., 5., 6.])
+
+    >>> np.reshape(a, (3,-1))       # the unspecified value is inferred to be 2
+    array([[1., 2.],
+           [3., 4.],
+           [5., 6.]])
     """
-    pass
 
 
 def _np_roll(a, shift, axis=None):
     """
-    roll(a, shift, axis=None):
-
     Roll array elements along a given axis.
     
     Elements that roll beyond the last position are re-introduced at
@@ -633,8 +605,7 @@ def _np_roll(a, shift, axis=None):
 
 
 def _np_trace(a, offset=0, axis1=0, axis2=1, out=None):
-    """trace(a, offset=0, axis1=0, axis2=1, out=None)
-
+    """
     Return the sum along diagonals of the array.
     If `a` is 2-D, the sum along its diagonal with the given offset
     is returned, i.e., the sum of elements ``a[i,i+offset]`` for all i.
@@ -675,5 +646,444 @@ def _np_trace(a, offset=0, axis1=0, axis2=1, out=None):
     >>> a = np.arange(24).reshape((2, 2, 2, 3))
     >>> np.trace(a).shape
     (2, 3)
+    """
+    pass
+
+
+def _np_squeeze(a, axis=None, out=None):
+    """
+    Remove single-dimensional entries from the shape of an array.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input data.
+    axis : None or int or tuple of ints, optional
+        Selects a subset of the single-dimensional entries in the
+        shape. If an axis is selected with shape entry greater than
+        one, an error is raised.
+    out : ndarray, optional
+        Array into which the output is placed. It must have the same size
+        and dtype as the input array.
+
+    Returns
+    -------
+    squeezed : ndarray
+        The input array, but with all or a subset of the
+        dimensions of length 1 removed. It always returns a copy of `a`.
+
+    Raises
+    ------
+    MXNetError
+        If `axis` is not `None`, and an axis being squeezed is not of length 1
+
+    See Also
+    --------
+    expand_dims : The inverse operation, adding singleton dimensions
+    reshape : Insert, remove, and combine dimensions, and resize existing ones
+
+    Examples
+    --------
+    >>> x = np.array([[[0], [1], [2]]])
+    >>> x.shape
+    (1, 3, 1)
+    >>> np.squeeze(x).shape
+    (3,)
+    >>> np.squeeze(x, axis=0).shape
+    (3, 1)
+    >>> np.squeeze(x, axis=1).shape
+    Traceback (most recent call last):
+    ...
+    mxnet.base.MXNetError: cannot select an axis to squeeze out which has size=3 not equal to one
+    >>> np.squeeze(x, axis=2).shape
+    (1, 3)
+    """
+    pass
+
+
+def _np_max(a, axis=None, out=None, keepdims=False):
+    """
+    Return the maximum of an array or maximum along an axis.
+    
+    Parameters
+    ----------
+    a : ndarray
+        Input data.
+    axis : int, optional
+        Axis along which to operate.  By default, flattened input is used.
+    out : ndarray, optional
+        Alternative output array in which to place the result.  Must
+        be of the same shape and buffer length as the expected output.
+        See `doc.ufuncs` (Section "Output arguments") for more details.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the original `arr`.
+    
+    Returns
+    -------
+    max : ndarray 
+        Maximum of `a`. If `axis` is None, the result is an array of dimension 1.
+        If `axis` is given, the result is an array of dimension
+        ``a.ndim - 1``.
+    
+    See Also
+    --------
+    min :
+        The minimum value of an array along a given axis, ignoring any nan.
+    maximum :
+        Element-wise maximum of two arrays, ignoring any nan.
+    argmax :
+        Return the indices of the maximum values.
+    
+    Notes
+    -----
+    NaN in the orginal `numpy` is denoted as nan and will be ignored.
+    
+    Don't use `max` for element-wise comparison of 2 arrays; when
+    ``a.shape[0]`` is 2, ``maximum(a[0], a[1])`` is faster than
+    ``max(a, axis=0)``.
+    
+    Examples
+    --------
+    >>> a = np.arange(4).reshape((2,2))
+    >>> a
+    array([[0., 1.],
+        [2., 3.]]) 
+    >>> np.max(a)            # Maximum of the flattened array
+    array(3.)
+    >>> np.max(a, axis=0)    # Maxima along the first axis
+    array([2., 3.])
+    >>> np.max(a, axis=1)    # Maxima along the second axis
+    array([1., 3.])
+    
+    >>> b = np.arange(5, dtype=np.float32)
+    >>> b[2] = np.nan
+    >>> np.max(b)
+    array(4.)
+    """
+    pass
+
+
+def _np_min(a, axis=None, out=None, keepdims=False):
+    """
+    Return the minimum of an array or minimum along an axis.
+    
+    Parameters
+    ----------
+    a : ndarray
+        Input data.
+    axis : int, optional
+        Axis along which to operate.  By default, flattened input is used.
+    out : ndarray, optional
+        Alternative output array in which to place the result.  Must
+        be of the same shape and buffer length as the expected output.
+        See `doc.ufuncs` (Section "Output arguments") for more details.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the original `arr`.
+    
+    Returns
+    -------
+    min : ndarray
+        Minimum of `a`. If `axis` is None, the result is an array of dimension 1.
+        If `axis` is given, the result is an array of dimension
+        ``a.ndim - 1``.
+    
+    See Also
+    --------
+    max :
+        The maximum value of an array along a given axis, ignoring any nan.
+    minimum :
+        Element-wise minimum of two arrays, ignoring any nan.
+    
+    Notes
+    -----
+    NaN in the orginal `numpy` is denoted as nan and will be ignored.
+    
+    Don't use `min` for element-wise comparison of 2 arrays; when
+    ``a.shape[0]`` is 2, ``minimum(a[0], a[1])`` is faster than
+    ``min(a, axis=0)``.
+
+    Examples
+    --------
+    >>> a = np.arange(4).reshape((2,2))
+    >>> a
+    array([[0., 1.],
+        [2., 3.]])
+    >>> np.min(a)           # Minimum of the flattened array
+    array(0.)
+    >>> np.min(a, axis=0)   # Minima along the first axis
+    array([0., 1.])
+    >>> np.min(a, axis=1)   # Minima along the second axis
+    array([0., 2.])
+    >>> b = np.arange(5, dtype=np.float32)
+    >>> b[2] = np.nan
+    >>> np.min(b)
+    array(0.) # nan will be ignored
+    """    
+    pass
+
+
+def _np_prod(a, axis=None, dtype=None, out=None, keepdims=False):
+    """
+    Return the product of array elements over a given axis.
+    
+    Parameters
+    ----------
+    a : ndarray
+        Input data.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which a product is performed.
+        The default (`axis` = `None`) is perform a product over all
+        the dimensions of the input array. `axis` may be negative, in
+        which case it counts from the last to the first axis.
+        If this is a tuple of ints, a product is performed on multiple
+        axes, instead of a single axis or all the axes as before.
+    dtype : data-type, optional
+        The data-type of the returned array, as well as of the accumulator
+        in which the elements are multiplied.  By default, if `a` is of
+        integer type, `dtype` is the default platform integer. (Note: if
+        the type of `a` is unsigned, then so is `dtype`.)  Otherwise,
+        the dtype is the same as that of `a`.
+    out : ndarray, optional
+        Alternative output array in which to place the result. It must have
+        the same shape as the expected output, but the type of the
+        output values will be cast if necessary.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the original `arr`.
+    
+    Returns
+    -------
+    product_along_axis : ndarray, see `dtype` parameter above.
+        An array shaped as `a` but with the specified axis removed.
+        Returns a reference to `out` if specified.
+    
+    See Also
+    --------
+    ndarray.prod : equivalent method
+    
+    Notes
+    -----
+    Arithmetic is modular when using integer types, and no error is
+    raised on overflow.  That means that, on a 32-bit platform:
+    
+    >>> x = np.array([536870910, 536870910, 536870910, 536870910])
+    >>> np.prod(x) #random
+    array(8.307675e+34)
+    
+    Examples
+    --------
+    By default, calculate the product of all elements:
+    
+    >>> np.prod(np.array([1.,2.]))
+    array(2.)
+    
+    Even when the input array is two-dimensional:
+    
+    >>> np.prod(np.array([1.,2.,3.,4.]).reshape((2,2)))
+    array(24.)
+    
+    But we can also specify the axis over which to multiply:
+    
+    >>> np.prod(np.array([1.,2.,3.,4.]).reshape((2,2)), axis=1)
+    array([  2.,  12.])
+
+    If the type of `x` is unsigned, then the output type is
+    the unsigned platform integer:
+    
+    >>> x = np.array([1, 2, 3], dtype=np.uint8)
+    >>> np.prod(x).dtype == np.uint8
+    True
+
+    If `x` is of a signed integer type, then the output type
+    is the default platform integer:
+    
+    >>> x = np.array([1, 2, 3], dtype=np.int8)
+    >>> np.prod(x).dtype == np.int8
+    True
+    """
+    pass
+
+
+def _np_moveaxis(a, source, destination):
+    """Move axes of an array to new positions.
+    Other axes remain in their original order.
+
+    Parameters
+    ----------
+    a : ndarray
+        The array whose axes should be reordered.
+        source : int or sequence of int
+        Original positions of the axes to move. These must be unique.
+        destination : int or sequence of int
+        Destination positions for each of the original axes. These must also be
+        unique.
+
+    Returns
+    -------
+    result : ndarray
+        Array with moved axes. This array is a view of the input array.
+
+    See Also
+    --------
+        transpose: Permute the dimensions of an array.
+        swapaxes: Interchange two axes of an array.
+
+    Examples
+    --------
+    >>> x = np.zeros((3, 4, 5))
+    >>> np.moveaxis(x, 0, -1).shape
+    (4, 5, 3)
+    >>> np.moveaxis(x, -1, 0).shape
+    (5, 3, 4)
+    These all achieve the same result:
+    >>> np.transpose(x).shape
+    (5, 4, 3)
+    >>> np.swapaxes(x, 0, -1).shape
+    (5, 4, 3)
+    >>> np.moveaxis(x, [0, 1], [-1, -2]).shape
+    (5, 4, 3)
+    >>> np.moveaxis(x, [0, 1, 2], [-1, -2, -3]).shape
+    (5, 4, 3)
+    """
+    pass
+
+def _np__random_shuffle(x):
+    """
+    Modify a sequence in-place by shuffling its contents.
+
+    This function only shuffles the array along the first axis of a
+    multi-dimensional array. The order of sub-arrays is changed but
+    their contents remain the same.
+
+    Parameters
+    ----------
+    x: ndarray
+        The array or list to be shuffled.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> arr = np.arange(10)
+    >>> np.random.shuffle(arr)
+    >>> arr
+    array([5., 1., 0., 6., 7., 3., 9., 8., 4., 2.])  # random
+
+    Multi-dimensional arrays are only shuffled along the first axis:
+
+    >>> arr = np.arange(9).reshape((3, 3))
+    >>> np.random.shuffle(arr)
+    >>> arr
+    array([[6., 7., 8.], # random
+           [3., 4., 5.],
+           [0., 1., 2.]])
+    """
+    pass
+
+
+def _np_broadcast_to(array, shape, out=None):
+    """
+    Broadcast an array to a new shape.
+
+    Parameters
+    ----------
+    array : ndarray
+        The array to broadcast.
+    shape : tuple, optional, default=[]
+        The shape of the desired array.
+    out : ndarray, optional
+        The output ndarray to hold the result.
+
+    Returns
+    -------
+    out : ndarray or list of ndarrays
+
+    Raises
+    ------
+    MXNetError
+        - If the array is not compatible with the new shape according to NumPy's
+        broadcasting rules.
+        - If the shape of the output array is not consistent with the desired shape.
+
+    Examples
+    --------
+    >>> x = np.array([1, 2, 3])
+    >>> np.broadcast_to(x, (3, 3))
+    array([[1., 2., 3.],
+           [1., 2., 3.],
+           [1., 2., 3.]])
+    """
+    pass
+
+
+def _npx_reshape(a, newshape, reverse=False, order='C'):
+    """
+    Gives a new shape to an array without changing its data.
+    This function always returns a copy of the input array if
+    ``out`` is not provided.
+
+    Parameters
+    ----------
+    a : ndarray
+        Array to be reshaped.
+    newshape : int or tuple of ints
+        The new shape should be compatible with the original shape.
+        If an integer, then the result will be a 1-D array of that length.
+        One shape dimension can be -1. In this case, the value is inferred
+        from the length of the array and remaining dimensions.
+        -2 to -6 are used for data manipulation.
+
+        - -2 copy this dimension from the input to the output shape.
+        - -3 will skip current dimension if and only if the current dim size is one.
+        - -4 copy all remain of the input dimensions to the output shape.
+        - -5 use the product of two consecutive dimensions of the input
+          shape as the output.
+        - -6 split one dimension of the input into two dimensions passed
+          subsequent to -6 in the new shape.
+
+    reverse : bool, optional
+        If set to true, the special values will be inferred from right to left.
+    order : {'C'}, optional
+        Read the elements of `a` using this index order, and place the
+        elements into the reshaped array using this index order.  'C'
+        means to read / write the elements using C-like index order,
+        with the last axis index changing fastest, back to the first
+        axis index changing slowest. Other order types such as 'F'/'A'
+        may be added in the future.
+
+    Returns
+    -------
+    reshaped_array : ndarray
+        It will be always a copy of the original array. This behavior is different
+        from the official NumPy ``reshape`` operator where views of the original array may be
+        generated.
+
+    Examples
+    --------
+    >>> x = np.ones((2, 3, 8))
+    >>> npx.reshape(x, (-2, -2, 2, -1)).shape
+    (2, 3, 2, 4)
+    >>> x = np.ones((8, 3, 3, 3, 4, 4))
+    >>> npx.reshape(x, (-6, 2, -1, -4)).shape
+    (2, 4, 3, 3, 3, 4, 4)
+    >>> x = np.ones((8, 3, 3, 3, 4, 4))
+    >>> npx.reshape(x, (-5, -4)).shape
+    (24, 3, 3, 4, 4)
+    >>> x = np.ones((8, 1, 1, 1, 3))
+    >>> npx.reshape(x, (-2, -3, -3, -3, -2)).shape
+    (8, 3)
+    >>> x = np.ones((8, 3, 3, 3, 3, 8))
+    >>> npx.reshape(x, (-4, -5), reverse=True).shape
+    (8, 3, 3, 3, 24)
+    >>> x = np.ones((8, 3, 2, 4, 8))
+    >>> npx.reshape(x, (-4, -1, 2, -6), reverse=True).shape
+    (8, 3, 2, 4, 4, 2)
     """
     pass

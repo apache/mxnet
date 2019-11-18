@@ -83,7 +83,10 @@ def with_array_ufunc_protocol(func):
 
 
 _NUMPY_ARRAY_FUNCTION_LIST = [
+    'argmin',
     'argmax',
+    'around',
+    'append',
     'broadcast_arrays',
     'broadcast_to',
     'clip',
@@ -93,24 +96,46 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'dot',
     'expand_dims',
     'fix',
+    'flip',
+    'inner',
     'max',
     'mean',
     'min',
+    'nonzero',
     'ones_like',
     'prod',
+    'ravel',
     'repeat',
     'reshape',
+    'roll',
     'split',
     'squeeze',
     'stack',
     'std',
     'sum',
     'swapaxes',
+    'take',
     'tensordot',
     'tile',
     'transpose',
+    'unique',
     'var',
+    'vdot',
+    'vstack',
+    'column_stack',
     'zeros_like',
+    'linalg.norm',
+    'linalg.cholesky',
+    'linalg.inv',
+    'trace',
+    'tril',
+    'meshgrid',
+    'outer',
+    'einsum',
+    'shares_memory',
+    'may_share_memory',
+    'diff',
+    'resize',
 ]
 
 
@@ -156,11 +181,17 @@ def _register_array_function():
 
 # https://docs.scipy.org/doc/numpy/reference/ufuncs.html#available-ufuncs
 _NUMPY_ARRAY_UFUNC_LIST = [
+    'abs',
     'add',
+    'arctan2',
+    'copysign',
+    'degrees',
+    'hypot',
+    'lcm',
+    # 'ldexp',
     'subtract',
     'multiply',
-    # Uncomment divide when mxnet.numpy.true_divide is added
-    # 'divide',
+    'true_divide',
     'negative',
     'power',
     'mod',
@@ -194,6 +225,14 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'ceil',
     'trunc',
     'floor',
+    'bitwise_xor',
+    'logical_not',
+    'equal',
+    'not_equal',
+    'less',
+    'less_equal',
+    'greater',
+    'greater_equal'
 ]
 
 
@@ -214,3 +253,7 @@ def _register_array_ufunc():
             _NUMPY_ARRAY_UFUNC_DICT[op_name] = mx_np_op
         except AttributeError:
             raise AttributeError('mxnet.numpy does not have operator named {}'.format(op_name))
+
+
+_register_array_function()
+_register_array_ufunc()

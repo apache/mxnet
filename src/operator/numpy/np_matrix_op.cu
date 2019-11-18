@@ -39,10 +39,10 @@ NNVM_REGISTER_OP(_np_squeeze)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
 NNVM_REGISTER_OP(_npi_concatenate)
-.set_attr<FCompute>("FCompute<gpu>", ConcatCompute<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", NumpyConcatenateForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_np_concat)
-.set_attr<FCompute>("FCompute<gpu>", ConcatGradCompute<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", NumpyConcatenateBackward<gpu>);
 
 NNVM_REGISTER_OP(_npi_stack)
 .set_attr<FCompute>("FCompute<gpu>", StackOpForward<gpu>);
@@ -52,6 +52,18 @@ NNVM_REGISTER_OP(_npi_vstack)
 
 NNVM_REGISTER_OP(_backward_np_vstack)
 .set_attr<FCompute>("FCompute<gpu>", NumpyVstackBackward<gpu>);
+
+NNVM_REGISTER_OP(_npi_dstack)
+.set_attr<FCompute>("FCompute<gpu>", DStackCompute<gpu>);
+
+NNVM_REGISTER_OP(_backward_np_dstack)
+.set_attr<FCompute>("FCompute<gpu>", DStackGradCompute<gpu>);
+
+NNVM_REGISTER_OP(_npi_column_stack)
+.set_attr<FCompute>("FCompute<gpu>", NumpyColumnStackForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_np_column_stack)
+.set_attr<FCompute>("FCompute<gpu>", NumpyColumnStackBackward<gpu>);
 
 NNVM_REGISTER_OP(_np_roll)
 .set_attr<FCompute>("FCompute<gpu>", NumpyRollCompute<gpu>);
@@ -90,5 +102,21 @@ NNVM_REGISTER_OP(_npi_flip)
 
 NNVM_REGISTER_OP(_backward_npi_flip)
 .set_attr<FCompute>("FCompute<gpu>", NumpyFlipForward<gpu>);
+
+NNVM_REGISTER_OP(_np_moveaxis)
+.set_attr<FCompute>("FCompute<gpu>", NumpyMoveaxisCompute<gpu>);
+
+NNVM_REGISTER_OP(_npi_rot90)
+.set_attr<FCompute>("FCompute<gpu>", NumpyRot90Compute<gpu>);
+
+NNVM_REGISTER_OP(_npi_hsplit)
+.set_attr<FCompute>("FCompute<gpu>", HSplitOpForward<gpu>);
+
+NNVM_REGISTER_OP(_npi_hsplit_backward)
+.set_attr<FCompute>("FCompute<gpu>", HSplitOpBackward<gpu>);
+
+NNVM_REGISTER_OP(_npx_reshape)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

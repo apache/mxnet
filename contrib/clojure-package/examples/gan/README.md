@@ -19,6 +19,13 @@
 
 This is an example of how to do a GAN with the MNIST data
 
+## Installation
+
+Before you run this example, make sure that you have the clojure package installed.
+In the main clojure package directory, do `lein install`. Then you can run
+`lein install` in this directory.
+
+
 ## Usage
 
 Do `lein run` and the images generated will be in the `results` directory. The gout* images are the ones generated, the diff* images are the visualization of the input gradient different fed to the generator

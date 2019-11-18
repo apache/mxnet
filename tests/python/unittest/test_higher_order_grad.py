@@ -18,9 +18,16 @@
 
 import math
 import random
-from mxnet import nd, autograd
-from mxnet.test_utils import assert_almost_equal, random_arrays, rand_shape_nd
+from functools import reduce
+from operator import mul
+import random
+
+from nose.tools import ok_
+
 from common import with_seed
+import mxnet
+from mxnet import nd, autograd, gluon
+from mxnet.test_utils import assert_almost_equal, random_arrays, rand_shape_nd, same
 
 
 @with_seed()
@@ -141,6 +148,40 @@ def test_arctan():
         # Scale std_dev
         array *= random.randint(500, 10000)
         check_second_order_unary(array, arctan, grad_grad_op)
+
+
+@with_seed()
+def test_arcsinh():
+    def arcsinh(x):
+        return nd.arcsinh(x)
+
+    def grad_grad_op(x):
+        return x/nd.sqrt((nd.square(x)+1)**3)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, arcsinh, grad_grad_op)
+
+
+@with_seed()
+def test_arccosh():
+    def arccosh(x):
+        return nd.arccosh(x)
+
+    def grad_grad_op(x):
+        return x/(nd.sqrt(x-1) * nd.sqrt(x+1) * (x+1) * (x-1))
+
+    sigma = random.randint(25, 100)
+    mu = random.randint(500, 1000)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        array = array * sigma + mu
+        # Domain of arccosh 1 to infinity.
+        assert((array > 1).all())
+        check_second_order_unary(array, arccosh, grad_grad_op)
 
 
 @with_seed()
@@ -422,6 +463,142 @@ def check_nth_order_unary(x, op, grad_ops, orders, rtol=None, atol=None):
 
         assert_almost_equal(
             expected_grad, computed_grad.asnumpy(), rtol=rtol, atol=atol)
+
+
+def arange_shape_like(y):
+    shape = y.shape
+    nelems = reduce(mul, shape)
+    x = nd.arange(nelems).reshape(shape)
+    return x
+
+
+class NDArrayGenerator(object):
+    def __init__(self, dim, startdim=1):
+        self.dim = dim
+        self.curdim = startdim
+
+    def __iter__(self):
+        return self
+
+    @staticmethod
+    def gen(dimensions):
+        shape = rand_shape_nd(dimensions, 4)
+        nelems = reduce(mul, shape)
+        x = nd.arange(nelems).reshape(shape)
+        return x
+
+    def next(self):
+        return self.__next__()
+
+    def __next__(self):
+        if self.curdim > self.dim:
+            raise StopIteration
+        x = NDArrayGenerator.gen(self.curdim)
+        self.curdim += 1
+        return x
+
+
+def flatten2d_right(x):
+    s_0 = x.shape[0]
+    s_1 = reduce(mul, x.shape[1:])
+    return x.reshape((s_0, s_1))
+
+
+def flatten2d_left(x):
+    s_0 = reduce(mul, x.shape[:-1])
+    s_1 = x.shape[-1]
+    return x.reshape((s_0, s_1))
+
+
+@with_seed()
+def test_dense_backward_flatten():
+    print("2nd order gradient for Fully Connected, flatten=True")
+    for x in NDArrayGenerator(4,2):
+        hidden = random.randrange(1, 4)
+        net = gluon.nn.Sequential()
+        with net.name_scope():
+            net.add(gluon.nn.Dense(hidden, flatten=True))
+        net.initialize(mxnet.initializer.Constant(.5))
+        x.attach_grad()
+        with autograd.record():
+            y = net.forward(x)
+            o_y = arange_shape_like(y)  # head gradient of y
+            params = [p.data() for p in net.collect_params().values()]
+            w = params[0]
+            b = params[1]
+            print("Checking y ({}) = x({}) * w^T({}) + b({})".format(y.shape, x.shape, w.shape, b.shape))
+            x_grad = autograd.grad(heads=y, variables=x, head_grads=o_y,
+                                   create_graph=True, retain_graph=True)[0]
+            o_x_grad = arange_shape_like(x_grad)
+            w_grad_grad = autograd.grad(heads=x_grad, variables=w,
+                                        head_grads=o_x_grad, create_graph=False)[0]
+            w_grad = autograd.grad(heads=y, variables=w, head_grads=o_y,
+                                   create_graph=True, retain_graph=True)[0]
+            o_w_grad = arange_shape_like(w_grad)
+            x_grad_grad = autograd.grad(heads=w_grad, variables=x,
+                                        head_grads=o_w_grad, create_graph=False)[0]
+        # Expected results
+        w_grad_e = nd.dot(o_y, x, transpose_a=True)
+        w_grad_grad_e = nd.dot(o_y, o_x_grad, transpose_a=True)
+        x_grad_e = nd.dot(o_y, w)
+        x_grad_grad_e = nd.dot(o_y, o_w_grad)
+        ok_(w_grad.shape == w.shape)
+        ok_(w_grad_grad.shape == w.shape)
+        ok_(x_grad.shape == x.shape)
+        ok_(x_grad_grad.shape == x.shape)
+        w_grad_check = same(flatten2d_right(w_grad), flatten2d_right(w_grad_e))
+        w_grad_grad_check = same(flatten2d_right(w_grad_grad), flatten2d_right(w_grad_grad_e))
+        x_grad_check = same(flatten2d_right(x_grad), flatten2d_right(x_grad_e))
+        x_grad_grad_check = same(flatten2d_right(x_grad_grad), flatten2d_right(x_grad_grad_e))
+        ok_(x_grad_check)
+        ok_(w_grad_check)
+        ok_(x_grad_grad_check)
+        ok_(w_grad_grad_check)
+
+@with_seed()
+def test_dense_backward_no_flatten():
+    print("2nd order gradient for Fully Connected, flatten=False")
+    for x in NDArrayGenerator(5,3):
+        hidden = random.randrange(1, 4)
+        net = gluon.nn.Sequential()
+        with net.name_scope():
+            net.add(gluon.nn.Dense(hidden, flatten=False))
+        net.initialize(mxnet.initializer.Constant(.5))
+        x.attach_grad()
+        with autograd.record():
+            y = net.forward(x)
+            o_y = arange_shape_like(y)  # head gradient of y
+            params = [p.data() for p in net.collect_params().values()]
+            w = params[0]
+            b = params[1]
+            print("Checking y ({}) = x({}) * w^T({}) + b({})".format(y.shape, x.shape, w.shape, b.shape))
+            x_grad = autograd.grad(heads=y, variables=x, head_grads=o_y,
+                                   create_graph=True, retain_graph=True)[0]
+            o_x_grad = arange_shape_like(x_grad)
+            w_grad_grad = autograd.grad(heads=x_grad, variables=w,
+                                        head_grads=o_x_grad, create_graph=False)[0]
+            w_grad = autograd.grad(heads=y, variables=w, head_grads=o_y,
+                                   create_graph=True, retain_graph=True)[0]
+            o_w_grad = arange_shape_like(w_grad)
+            x_grad_grad = autograd.grad(heads=w_grad, variables=x,
+                                        head_grads=o_w_grad, create_graph=False)[0]
+        # Expected results
+        o_y = flatten2d_left(o_y)
+        x = flatten2d_left(x)
+        o_x_grad = flatten2d_left(o_x_grad)
+        o_w_grad = flatten2d_left(o_w_grad)
+        w_grad_e = nd.dot(o_y, x, transpose_a=True)
+        w_grad_grad_e = nd.dot(o_y, o_x_grad, transpose_a=True)
+        x_grad_e = nd.dot(o_y, w)
+        x_grad_grad_e = nd.dot(o_y, o_w_grad)
+        w_grad_check = same(flatten2d_left(w_grad), flatten2d_left(w_grad_e))
+        w_grad_grad_check = same(flatten2d_left(w_grad_grad), flatten2d_left(w_grad_grad_e))
+        x_grad_check = same(flatten2d_left(x_grad), flatten2d_left(x_grad_e))
+        x_grad_grad_check = same(flatten2d_left(x_grad_grad), flatten2d_left(x_grad_grad_e))
+        ok_(x_grad_check)
+        ok_(w_grad_check)
+        ok_(x_grad_grad_check)
+        ok_(w_grad_grad_check)
 
 
 if __name__ == '__main__':

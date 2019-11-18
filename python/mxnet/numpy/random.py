@@ -20,12 +20,11 @@
 from __future__ import absolute_import
 from ..ndarray import numpy as _mx_nd_np
 
+__all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial"]
 
-__all__ = ["randint", "uniform", "normal", "choice"]
 
-
-def randint(low, high=None, size=None, dtype=None, **kwargs):
-    """Return random integers from `low` (inclusive) to `high` (exclusive).
+def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
+    r"""Return random integers from `low` (inclusive) to `high` (exclusive).
 
     Return random integers from the "discrete uniform" distribution of
     the specified dtype in the "half-open" interval [`low`, `high`). If
@@ -73,11 +72,11 @@ def randint(low, high=None, size=None, dtype=None, **kwargs):
     array([[4, 0, 2, 1],
         [3, 2, 2, 0]])
     """
-    return _mx_nd_np.random.randint(low, high, size, dtype, **kwargs)
+    return _mx_nd_np.random.randint(low, high, size, dtype, ctx, out)
 
 
 def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
-    """Draw samples from a uniform distribution.
+    r"""Draw samples from a uniform distribution.
 
     Samples are uniformly distributed over the half-open interval
     ``[low, high)`` (includes low, but excludes high).  In other words,
@@ -96,7 +95,8 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
         Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
         ``m * n * k`` samples are drawn.  If size is ``None`` (default),
         a scalar tensor containing a single value is returned if
-        ``low`` and ``high`` are both scalars.
+        ``low`` and ``high`` are both scalars. Otherwise,
+        ``np.broadcast(low, high).size`` samples are drawn.
     dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
     ctx : Context, optional
@@ -106,12 +106,33 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
     -------
     out : ndarray
         Drawn samples from the parameterized uniform distribution.
+
+    See Also
+    --------
+    randint : Discrete uniform distribution, yielding integers.
+    rand : Convenience function that accepts dimensions as input, e.g.,
+           ``rand(2,2)`` would generate a 2-by-2 array of floats,
+           uniformly distributed over ``[0, 1)``.
+
+    Notes
+    -----
+    The probability density function of the uniform distribution is
+
+    .. math:: p(x) = \frac{1}{b - a}
+
+    anywhere within the interval ``[a, b)``, and zero elsewhere.
+
+    When ``high`` == ``low``, values of ``low`` will be returned.
+    If ``high`` < ``low``, the results are officially undefined
+    and may eventually raise an error, i.e. do not rely on this
+    function to behave when passed arguments satisfying that
+    inequality condition.
     """
     return _mx_nd_np.random.uniform(low, high, size=size, ctx=ctx, dtype=dtype, out=out)
 
 
-def normal(loc=0.0, scale=1.0, size=None, dtype=None, **kwargs):
-    """Draw random samples from a normal (Gaussian) distribution.
+def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
+    r"""Draw random samples from a normal (Gaussian) distribution.
 
     Samples are distributed according to a normal distribution parametrized
     by *loc* (mean) and *scale* (standard deviation).
@@ -126,7 +147,8 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, **kwargs):
     size : int or tuple of ints, optional
         Output shape. If the given shape is, e.g., `(m, n, k)`, then `m * n * k`
         samples are drawn. If size is `None` (default), a scalar tensor containing
-        a single value is returned if loc and scale are both scalars.
+        a single value is returned if loc and scale are both scalars. Otherwise,
+        ``np.broadcast(low, high).size`` samples are drawn.
     dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
     ctx : Context, optional
@@ -138,17 +160,53 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, **kwargs):
     -------
     out : ndarray
         Drawn samples from the parameterized normal distribution.
+
+    Notes
+    -----
+    The probability density for the Gaussian distribution is
+
+    .. math:: p(x) = \frac{1}{\sqrt{ 2 \pi \sigma^2 }}
+                     e^{ - \frac{ (x - \mu)^2 } {2 \sigma^2} },
+
+    where :math:`\mu` is the mean and :math:`\sigma` the standard
+    deviation. The square of the standard deviation, :math:`\sigma^2`,
+    is called the variance.
+
+    The function has its peak at the mean, and its "spread" increases with
+    the standard deviation (the function reaches 0.607 times its maximum at
+    :math:`x + \sigma` and :math:`x - \sigma` [2]_).  This implies that
+    `numpy.random.normal` is more likely to return samples lying close to
+    the mean, rather than those far away.
+
+    References
+    ----------
+    .. [1] Wikipedia, "Normal distribution",
+           https://en.wikipedia.org/wiki/Normal_distribution
+    .. [2] P. R. Peebles Jr., "Central Limit Theorem" in "Probability,
+           Random Variables and Random Signal Principles", 4th ed., 2001,
+           pp. 51, 51, 125.
+
+    Examples
+    --------
+    >>> mu, sigma = 0, 0.1 # mean and standard deviation
+    >>> s = np.random.normal(mu, sigma, 1000)
+
+    Verify the mean and the variance:
+
+    >>> np.abs(mu - np.mean(s)) < 0.01
+    array(True)
     """
-    return _mx_nd_np.random.normal(loc, scale, size, dtype, **kwargs)
+    return _mx_nd_np.random.normal(loc, scale, size, dtype, ctx, out)
 
 
 def multinomial(n, pvals, size=None, **kwargs):
-    """multinomial(n, pvals, size=None)
+    r"""
     Draw samples from a multinomial distribution.
     The multinomial distribution is a multivariate generalisation of the binomial distribution.
     Take an experiment with one of ``p`` possible outcomes. An example of such an experiment is throwing a dice,
     where the outcome can be 1 through 6. Each sample drawn from the distribution represents n such experiments.
     Its values, ``X_i = [X_0, X_1, ..., X_p]``, represent the number of times the outcome was ``i``.
+
     Parameters
     ----------
     n : int
@@ -158,18 +216,23 @@ def multinomial(n, pvals, size=None, **kwargs):
     size : int or tuple of ints, optional
         Output shape. If the given shape is, e.g., ``(m, n, k)``, then ``m * n * k`` samples
         are drawn. Default is None, in which case a single value is returned.
+
     Returns
     -------
     out : ndarray
         The drawn samples, of shape size, if that was provided. If not, the shape is ``(N,)``.
         In other words, each entry ``out[i,j,...,:]`` is an N-dimensional value drawn from the distribution.
+
     Examples
     --------
     Throw a dice 1000 times, and 1000 times again:
+
     >>> np.random.multinomial(1000, [1/6.]*6, size=2)
     array([[164, 161, 179, 158, 150, 188],
            [178, 162, 177, 143, 163, 177]])
+
     A loaded die is more likely to land on number 6:
+
     >>> np.random.multinomial(100, [1/7.]*5 + [2/7.])
     array([19, 14, 12, 11, 21, 23])
     >>> np.random.multinomial(100, [1.0 / 3, 2.0 / 3])
@@ -178,8 +241,8 @@ def multinomial(n, pvals, size=None, **kwargs):
     return _mx_nd_np.random.multinomial(n, pvals, size, **kwargs)
 
 
-def choice(a, size=None, replace=True, p=None, **kwargs):
-    """Generates a random sample from a given 1-D array
+def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
+    r"""Generates a random sample from a given 1-D array
 
     Parameters
     -----------
@@ -230,4 +293,31 @@ def choice(a, size=None, replace=True, p=None, **kwargs):
     >>> np.random.choice(5, 3, replace=False, p=[0.1, 0, 0.3, 0.6, 0])
     array([2, 3, 0])
     """
-    return _mx_nd_np.random.choice(a, size, replace, p, **kwargs)
+    return _mx_nd_np.random.choice(a, size, replace, p, ctx, out)
+
+
+def rand(*size, **kwargs):
+    r"""Random values in a given shape.
+
+    Create an array of the given shape and populate it with random
+    samples from a uniform distribution over [0, 1).
+    Parameters
+    ----------
+    d0, d1, ..., dn : int, optional
+        The dimensions of the returned array, should be all positive.
+        If no argument is given a single Python float is returned.
+    Returns
+    -------
+    out : ndarray
+       Random values.
+    Examples
+    --------
+    >>> np.random.rand(3,2)
+    array([[ 0.14022471,  0.96360618],  #random
+           [ 0.37601032,  0.25528411],  #random
+           [ 0.49313049,  0.94909878]]) #random
+    """
+    output_shape = ()
+    for s in size:
+        output_shape += (s,)
+    return _mx_nd_np.random.uniform(0, 1, size=output_shape, **kwargs)

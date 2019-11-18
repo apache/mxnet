@@ -35,6 +35,7 @@
 #include <string>
 #include <utility>
 #include "./operator_common.h"
+#include "./mshadow_op.h"
 
 namespace mxnet {
 namespace op {
@@ -63,7 +64,6 @@ template<typename xpu, typename DType>
 class SwapAxisOp : public Operator {
  public:
   explicit SwapAxisOp(SwapAxisParam p) {
-    CHECK_NE(p.dim1, p.dim2) << "dim1 can not be equal dim2.";
     this->param_ = p;
   }
 
@@ -130,6 +130,16 @@ class SwapAxisOp : public Operator {
         << shape_in.ndim();
 
     if (shape_in.Size() == 0U) return;
+
+    if (axis1 == axis2) {
+      if (out_req == kAddTo) {
+        mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, kAddTo>, xpu>::Launch(
+          s, data_out.Size(), data_out.dptr<DType>(), data_in.dptr<DType>());
+      } else {
+        mxnet_op::copy(s, data_out, data_in);
+      }
+      return;
+    }
 
     Shape<5> inter_shape;
 

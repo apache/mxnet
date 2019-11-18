@@ -50,7 +50,7 @@ Building from source follows this general two-step flow of building the shared l
             * [non-Intel CPUs](#recommended-for-Systems-with-non-Intel-CPUs)
 2. [Install the language API binding(s)](#installing-mxnet-language-bindings) you would like to use for MXNet.
 MXNet's newest and most popular API is Gluon. Gluon is built into the Python binding. If Python isn't your preference, you still have more options. MXNet supports several other language APIs:
-    - [Python (includes Gluon)]({{'/api/python/index'|relative_url}})
+    - [Python (includes Gluon)]({{'/api/python/docs/api/index.html'|relative_url}})
     - [C++]({{'/api/cpp'|relative_url}})
     - [Clojure]({{'/api/clojure'|relative_url}})
     - [Java]({{'/api/java'|relative_url}})
@@ -98,7 +98,7 @@ Those can be extended with [LAPACK (Linear Algebra Package)](https://github.com/
 
 MXNet supports multiple mathematical backends for computations on the CPU:
 * [Apple Accelerate](https://developer.apple.com/documentation/accelerate)
-* [ATLAS](https://math-atlas.sourceforge.net/)
+* [ATLAS](http://math-atlas.sourceforge.net/)
 * [MKL](https://software.intel.com/en-us/intel-mkl) (MKL, MKLML)
 * [MKL-DNN](https://github.com/intel/mkl-dnn)
 * [OpenBLAS](https://www.openblas.net/)
@@ -241,7 +241,7 @@ For example, you can specify using all cores on Linux as follows:
 
 ```bash
 mkdir build && cd build
-cmake -GNinja ..
+cmake -DCMAKE_BUILD_TYPE=Release -GNinja ..
 ninja -v
 ```
 
@@ -251,7 +251,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -DUSE_MKLDNN=1 -GNinja ..
+cmake -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -DUSE_MKLDNN=1 -DCMAKE_BUILD_TYPE=Release -GNinja ..
 ninja -v
 ```
 
@@ -260,7 +260,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DBLAS=open -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -GNinja ..
+cmake -DBLAS=open -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -DCMAKE_BUILD_TYPE=Release -GNinja ..
 ninja -v
 ```
 
@@ -269,7 +269,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DUSE_CUDA=0 -DUSE_MKLDNN=1 -GNinja ..
+cmake -DUSE_CUDA=0 -DUSE_MKLDNN=1 -DCMAKE_BUILD_TYPE=Release -GNinja ..
 ninja -v
 ```
 
@@ -278,7 +278,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DUSE_CUDA=0 -DBLAS=open -GNinja ..
+cmake -DUSE_CUDA=0 -DBLAS=open -DCMAKE_BUILD_TYPE=Release -GNinja ..
 ninja -v
 ```
 
@@ -288,7 +288,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DUSE_OPENCV=0 -GNinja ..
+cmake -DUSE_OPENCV=0 -DCMAKE_BUILD_TYPE=Release -GNinja ..
 ninja -v
 ```
 
@@ -296,7 +296,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DBLAS=apple -DUSE_OPENCV=0 -DUSE_OPENMP=0 -GNinja ..
+cmake -DBLAS=apple -DUSE_OPENCV=0 -DUSE_OPENMP=0 -DCMAKE_BUILD_TYPE=Release -GNinja ..
 ninja -v
 ```
 
@@ -305,7 +305,7 @@ ninja -v
 ```bash
 brew install llvm
 mkdir build && cd build
-cmake -DBLAS=apple -DUSE_OPENMP=1 -GNinja ..
+cmake -DBLAS=apple -DUSE_OPENMP=1 -DCMAKE_BUILD_TYPE=Release -GNinja ..
 ninja -v
 ```
 

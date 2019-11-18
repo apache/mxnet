@@ -71,7 +71,7 @@ operation is also known as `contrast normalization`.
 If the input data is of shape [batch, channel, spacial_dim1, spacial_dim2, ...],
 `gamma` and `beta` parameters must be vectors of shape [channel].
 
-This implementation is based on paper:
+This implementation is based on this paper [1]_
 
 .. [1] Instance Normalization: The Missing Ingredient for Fast Stylization,
    D. Ulyanov, A. Vedaldi, V. Lempitsky, 2016 (arXiv:1607.08022v2).

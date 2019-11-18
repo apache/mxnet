@@ -365,6 +365,30 @@ inline bool ContainsStorageType(const std::vector<int>& ndstypes,
   return false;
 }
 
+inline std::string dtype_string(const int dtype) {
+  switch (dtype) {
+    case mshadow::kFloat32:
+      return "float";
+    case mshadow::kFloat64:
+      return "double";
+    case mshadow::kFloat16:
+      return "half";
+    case mshadow::kUint8:
+      return "unsigned char";
+    case mshadow::kInt8:
+      return "char";
+    case mshadow::kInt32:
+      return "int";
+    case mshadow::kInt64:
+      return "long long";
+    case mshadow::kBool:
+      return "bool";
+    default:
+      LOG(FATAL) << "Unknown type enum " << dtype;
+  }
+  return "unknown";
+}
+
 /*! \brief get string representation of dispatch_mode */
 inline std::string dispatch_mode_string(const DispatchMode x) {
   switch (x) {
@@ -821,6 +845,61 @@ static inline std::string GetOutputName(const nnvm::NodeEntry& e) {
   nnvm::Symbol sym;
   sym.outputs.push_back(e);
   return sym.ListOutputNames()[0];
+}
+
+inline mxnet::TShape CanonicalizeAxes(const mxnet::TShape& src) {
+  // convert negative axes to positive values
+  const int ndim = src.ndim();
+  mxnet::TShape axes = src;
+  for (int i = 0; i < ndim; ++i) {
+    if (axes[i] < 0) {
+      axes[i] += ndim;
+    }
+    CHECK(axes[i] >= 0 && axes[i] < ndim) << "axes[" << i << "]="
+                                          << axes[i] << " exceeds the range ["
+                                          << 0 << ", " << ndim << ")";
+  }
+  return axes;
+}
+
+inline bool is_float(const int dtype) {
+  return dtype == mshadow::kFloat32 || dtype == mshadow::kFloat64 || dtype == mshadow::kFloat16;
+}
+
+inline int get_more_precise_type(const int type1, const int type2) {
+  if (type1 == type2) return type1;
+  if (is_float(type1) && is_float(type2)) {
+    if (type1 == mshadow::kFloat64 || type2 == mshadow::kFloat64) {
+      return mshadow::kFloat64;
+    }
+    if (type1 == mshadow::kFloat32 || type2 == mshadow::kFloat32) {
+      return mshadow::kFloat32;
+    }
+    return mshadow::kFloat16;
+  } else if (is_float(type1) || is_float(type2)) {
+    return is_float(type1) ? type1 : type2;
+  }
+  if (type1 == mshadow::kInt64 || type2 == mshadow::kInt64) {
+    return mshadow::kInt64;
+  }
+  if (type1 == mshadow::kInt32 || type2 == mshadow::kInt32) {
+    return mshadow::kInt32;
+  }
+  CHECK(!((type1 == mshadow::kUint8 && type2 == mshadow::kInt8) ||
+          (type1 == mshadow::kInt8 && type2 == mshadow::kUint8)))
+    << "1 is UInt8 and 1 is Int8 should not get here";
+  if (type1 == mshadow::kUint8 || type2 == mshadow::kUint8) {
+    return mshadow::kUint8;
+  }
+  return mshadow::kInt8;
+}
+
+inline int np_binary_out_infer_type(const int type1, const int type2) {
+  if ((type1 == mshadow::kUint8 && type2 == mshadow::kInt8) ||
+      (type1 == mshadow::kInt8 && type2 == mshadow::kUint8)) {
+    return mshadow::kInt32;
+  }
+  return get_more_precise_type(type1, type2);
 }
 
 }  // namespace common

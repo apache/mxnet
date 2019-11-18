@@ -56,6 +56,10 @@ nnvm::Graph Symbol2Graph(const nnvm::Symbol &s) {
   nnvm::Graph g;
   g.outputs = s.outputs;
   g.attrs["mxnet_version"] = std::make_shared<nnvm::any>(static_cast<int>(MXNET_VERSION));
+  if (Imperative::Get()->is_np_shape()) {
+    g.attrs["is_np_shape"] = std::make_shared<nnvm::any>(
+        static_cast<int>(Imperative::Get()->is_np_shape()));
+  }
   return g;
 }
 
@@ -418,6 +422,32 @@ int MXSymbolCutSubgraph(SymbolHandle sym, SymbolHandle **input_symbols,
   API_END_HANDLE_ERROR();
 }
 
+
+/*!
+ * \brief Convert shape attr in graph nodes to comply with NumPy semantics for
+ * legacy models (before 1.6.0) if global flag is_np_shape has been turned on,
+ * i.e., use -1 to indicate unknown number of dimensions and unknown dimension sizes.
+ */
+void ConvertShapeAttrToNumPyCompatible(nnvm::Graph* g) {
+  if (Imperative::Get()->is_np_shape()
+    && (!g->HasAttr("is_np_shape") || !g->GetAttr<int>("is_np_shape"))) {
+    DFSVisit(g->outputs, [](nnvm::NodePtr n) {
+      if (n->is_variable()) {
+        auto it = n->attrs.dict.find("__shape__");
+        if (it != n->attrs.dict.end()) {
+          mxnet::TShape shape;
+          std::istringstream is(it->second);
+          is >> shape;
+          common::ConvertToNumpyShape(&shape);
+          std::ostringstream os;
+          os << shape;
+          it->second = os.str();
+        }
+      }
+    });
+  }
+}
+
 int MXSymbolCreateFromFile(const char *fname, SymbolHandle *out) {
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
@@ -426,7 +456,9 @@ int MXSymbolCreateFromFile(const char *fname, SymbolHandle *out) {
   nnvm::Graph g;
   g.attrs["json"] = std::make_shared<nnvm::any>(
     std::string(std::istreambuf_iterator<char>(is), std::istreambuf_iterator<char>()));
-  s->outputs = nnvm::ApplyPass(g, "LoadLegacyJSON").outputs;
+  g = nnvm::ApplyPass(g, "LoadLegacyJSON");
+  ConvertShapeAttrToNumPyCompatible(&g);
+  s->outputs = g.outputs;
   *out = s;
   is.set_stream(nullptr);
   API_END_HANDLE_ERROR(delete s);
@@ -437,7 +469,9 @@ int MXSymbolCreateFromJSON(const char *json, SymbolHandle *out) {
   API_BEGIN();
   nnvm::Graph g;
   g.attrs["json"] = std::make_shared<nnvm::any>(std::string(json));
-  s->outputs = nnvm::ApplyPass(g, "LoadLegacyJSON").outputs;
+  g = nnvm::ApplyPass(g, "LoadLegacyJSON");
+  ConvertShapeAttrToNumPyCompatible(&g);
+  s->outputs = g.outputs;
   *out = s;
   API_END_HANDLE_ERROR(delete s);
 }

@@ -54,6 +54,7 @@ using namespace mshadow;
 // CPU/GPU-versions of BLAS3 function "gemm". Please refer to the BLAS3-documentation
 // for further information about the function and its parameters.
 // Note that this is C = gemm(A,B,C), so C is input and output parameter.
+// C = alpha * A * B + beta * C
 template<typename xpu, typename DType>
 void linalg_gemm(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DType>& B,
                  const Tensor<xpu, 2, DType>& C, DType alpha, DType beta,

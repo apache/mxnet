@@ -86,6 +86,7 @@ MXNET_OPERATOR_REGISTER_BINARY(elemwise_add)
 .set_attr<bool>("TIsMKLDNN", true)
 #endif
 .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseAddEx)
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FResourceRequest>("FResourceRequest",  /* For Sparse CSR */
                             [](const NodeAttrs& attrs) {
                             return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};})
@@ -232,6 +233,7 @@ The storage type of ``elemwise_mul`` output depends on storage types of inputs
                               [](const NodeAttrs& attrs) {
                                 return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
                               })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .add_alias("_mul").add_alias("_Mul")
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_mul"});
 

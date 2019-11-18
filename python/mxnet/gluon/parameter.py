@@ -24,7 +24,7 @@ __all__ = ['DeferredInitializationError', 'Parameter', 'Constant',
            'ParameterDict', 'tensor_types']
 
 
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 import warnings
 import numpy as np
 
@@ -369,10 +369,10 @@ class Parameter(object):
             if self._grad_stype != 'default':
                 raise ValueError("mxnet.numpy.zeros does not support stype = {}"
                                  .format(self._grad_stype))
-            self._grad = [_mx_np.zeros(shape=i.shape, dtype=i.dtype, ctx=i.context)
+            self._grad = [_mx_np.zeros(shape=i.shape, dtype=i.dtype, ctx=i.ctx)
                           for i in self._data]
         else:
-            self._grad = [ndarray.zeros(shape=i.shape, dtype=i.dtype, ctx=i.context,
+            self._grad = [ndarray.zeros(shape=i.shape, dtype=i.dtype, ctx=i.ctx,
                                         stype=self._grad_stype) for i in self._data]
 
         autograd.mark_variables(self._check_and_get(self._data, list),
@@ -522,7 +522,7 @@ class Parameter(object):
             raise RuntimeError("Cannot return a copy of Parameter %s via row_sparse_data() " \
                                "because its storage type is %s. Please use data() instead." \
                                %(self.name, self._stype))
-        return self._get_row_sparse(self._data, row_id.context, row_id)
+        return self._get_row_sparse(self._data, row_id.ctx, row_id)
 
     def list_row_sparse_data(self, row_id):
         """Returns copies of the 'row_sparse' parameter on all contexts, in the same order
@@ -673,7 +673,8 @@ class Constant(Parameter):
     """
     def __init__(self, name, value):
         if not isinstance(value, ndarray.NDArray):
-            value = ndarray.array(value)
+            array_fn = _mx_np.array if is_np_array() else ndarray.array
+            value = array_fn(value)
         self.value = value
 
         class Init(initializer.Initializer):
@@ -887,8 +888,27 @@ class ParameterDict(object):
 
     def zero_grad(self):
         """Sets all Parameters' gradient buffer to 0."""
-        for i in self.values():
-            i.zero_grad()
+        # collect gradient arrays for each ctx
+        arrays = defaultdict(list)
+        for p in self.values():
+            if p.grad_req == 'null' or p._grad is None:
+                continue
+            for g in p.list_grad():
+                if g.stype == 'row_sparse':
+                    ndarray.zeros_like(g, out=g)
+                else:
+                    arrays[g.ctx].append(g)
+
+        if len(arrays) == 0:
+            return
+
+        if is_np_array():
+            for arr in arrays.values():
+                for ele in arr:
+                    ele[()] = 0
+        else:
+            for arr in arrays.values():
+                ndarray.reset_arrays(*arr, num_arrays=len(arr))
 
     def reset_ctx(self, ctx):
         """Re-assign all Parameters to other contexts.

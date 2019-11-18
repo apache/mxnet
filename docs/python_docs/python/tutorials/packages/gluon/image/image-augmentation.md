@@ -22,19 +22,19 @@ training data sets by making a series of random changes to the training images
 to produce similar, but different, training examples. Given its popularity in
 computer vision, the `mxnet.gluon.data.vision.transforms` model provides
 multiple pre-defined image augmentation methods. In this section we will briefly
-go through this module.  
+go through this module.
 
 First, import the module required for this section.
 
-```{.python .input  n=1}
+```python
 from matplotlib import pyplot as plt
 from mxnet import image
-from mxnet.gluon import data as gdata, utils 
+from mxnet.gluon import data as gdata, utils
 ```
 
 Then read the sample $400\times 500$ image.
 
-```{.python .input  n=2}
+```python
 utils.download('https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/cat.jpg')
 img = image.imread('cat.jpg')
 plt.imshow(img.asnumpy())
@@ -43,7 +43,7 @@ plt.show()
 
 In addition, we define a function to draw a list of images.
 
-```{.python .input  n=3}
+```python
 def show_images(imgs, num_rows, num_cols, scale=2):
     figsize = (num_cols * scale, num_rows * scale)
     _, axes = plt.subplots(num_rows, num_cols, figsize=figsize)
@@ -60,7 +60,7 @@ easier for us to observe the effect of image augmentation, we next define the
 auxiliary function `apply`. This function runs the image augmentation method
 `aug` multiple times on the input image `img` and shows all results.
 
-```{.python .input  n=4}
+```python
 def apply(img, aug, num_rows=2, num_cols=4, scale=3):
     Y = [aug(img) for _ in range(num_rows * num_cols)]
     show_images(Y, num_rows, num_cols, scale)
@@ -74,7 +74,7 @@ of image augmentation. Next, we use the `transforms` module to create the
 `RandomFlipLeftRight` instance, which introduces a 50% chance that the image is
 flipped left and right.
 
-```{.python .input  n=5}
+```python
 apply(img, gdata.vision.transforms.RandomFlipLeftRight())
 ```
 
@@ -83,14 +83,12 @@ However, at least for this example image, flipping up and down does not hinder
 recognition. Next, we create a `RandomFlipTopBottom` instance for a 50% chance
 of flipping the image up and down.
 
-```{.python .input  n=6}
+```python
 apply(img, gdata.vision.transforms.RandomFlipTopBottom())
 ```
 
 In the example image we used, the cat is in the middle of the image, but this
-may not be the case for all images. In the [“Pooling
-Layer”](../chapter_convolutional-neural-networks/pooling.md) section, we
-explained that the pooling layer can reduce the sensitivity of the convolutional
+may not be the case for all images. In the [Pooling Layer](https://d2l.ai/chapter_convolutional-neural-networks/pooling.html) section of the d2l.ai book, we explain that the pooling layer can reduce the sensitivity of the convolutional
 layer to the target location. In addition, we can make objects appear at
 different positions in the image in different proportions by randomly cropping
 the image. This can also reduce the sensitivity of the model to the target

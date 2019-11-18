@@ -24,7 +24,7 @@ In this tutorial we will:
 
 ## Prerequisites
 This example assumes that the following python packages are installed:
-- [mxnet](http://mxnet.apache.org/install/index.html)
+- [mxnet](/get_started)
 - [onnx](https://github.com/onnx/onnx) (follow the install guide)
 - Pillow - A Python Image Processing package and is required for input pre-processing. It can be installed with ```pip install Pillow```.
 - matplotlib

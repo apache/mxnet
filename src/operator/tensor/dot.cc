@@ -89,6 +89,7 @@ above patterns, ``dot`` will fallback and generate output with default storage.
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", DotForward_<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", DotForwardEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_dot"})
@@ -115,13 +116,13 @@ NNVM_REGISTER_OP(batch_dot)
 .describe(R"doc(Batchwise dot product.
 
 ``batch_dot`` is used to compute dot product of ``x`` and ``y`` when ``x`` and
-``y`` are data in batch, namely 3D arrays in shape of `(batch_size, :, :)`.
+``y`` are data in batch, namely N-D (N >= 3) arrays in shape of `(B0, ..., B_i, :, :)`.
 
-For example, given ``x`` with shape `(batch_size, n, m)` and ``y`` with shape
-`(batch_size, m, k)`, the result array will have shape `(batch_size, n, k)`,
+For example, given ``x`` with shape `(B_0, ..., B_i, N, M)` and ``y`` with shape
+`(B_0, ..., B_i, M, K)`, the result array will have shape `(B_0, ..., B_i, N, K)`,
 which is computed by::
 
-   batch_dot(x,y)[i,:,:] = dot(x[i,:,:], y[i,:,:])
+   batch_dot(x,y)[b_0, ..., b_i, :, :] = dot(x[b_0, ..., b_i, :, :], y[b_0, ..., b_i, :, :])
 
 )doc" ADD_FILELINE)
 .set_num_inputs(2)
@@ -137,22 +138,75 @@ which is computed by::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", BatchDotForward_<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_batch_dot"})
+.set_attr<nnvm::FGradient>("FGradient",
+    [](const nnvm::NodePtr& n,
+       const std::vector<nnvm::NodeEntry>& ograds) {
+  const DotParam& param = nnvm::get<DotParam>(n->attrs.parsed);
+  nnvm::NodePtr lhs_grad;
+  nnvm::NodePtr rhs_grad;
+  std::string lhs_gnode_name = n->attrs.name + "_backward_lhs";
+  std::string rhs_gnode_name = n->attrs.name + "_backward_rhs";
+  if (param.transpose_a && param.transpose_b) {
+    // Gradient of z = dot(x.T, y.T)
+    // dx = dot(dz, y).T = dot(y.T, dz.T)
+    // dy = dot(x, dz).T = dot(dz.T, x.T)
+    lhs_grad = MakeNode("batch_dot", lhs_gnode_name,
+                        {n->inputs[1], ograds[0]}, &(n->attrs.dict), &n);
+    rhs_grad = MakeNode("batch_dot", rhs_gnode_name,
+                        {ograds[0], n->inputs[0]}, &(n->attrs.dict), &n);
+  } else if (!param.transpose_a && param.transpose_b) {
+    // Gradient of z = dot(x, y.T)
+    // dx = dot(dz, y)
+    // dy = dot(x.T, dz).T = dot(dz.T, x)
+    auto lhs_attrs_dict = n->attrs.dict;
+    auto rhs_attrs_dict = n->attrs.dict;
+    lhs_attrs_dict["transpose_a"] = "false";
+    lhs_attrs_dict["transpose_b"] = "false";
+    rhs_attrs_dict["transpose_a"] = "true";
+    rhs_attrs_dict["transpose_b"] = "false";
+    lhs_grad = MakeNode("batch_dot", lhs_gnode_name,
+                        {ograds[0], n->inputs[1]}, &lhs_attrs_dict, &n);
+    rhs_grad = MakeNode("batch_dot", rhs_gnode_name,
+                        {ograds[0], n->inputs[0]}, &rhs_attrs_dict, &n);
+  } else if (param.transpose_a && !param.transpose_b) {
+    // Gradient of z = dot(x.T, y)
+    // dx = dot(dz, y.T).T = dot(y, dz.T)
+    // dy = dot(x, dz)
+    auto lhs_attrs_dict = n->attrs.dict;
+    auto rhs_attrs_dict = n->attrs.dict;
+    lhs_attrs_dict["transpose_a"] = "false";
+    lhs_attrs_dict["transpose_b"] = "true";
+    rhs_attrs_dict["transpose_a"] = "false";
+    rhs_attrs_dict["transpose_b"] = "false";
+    lhs_grad = MakeNode("batch_dot", lhs_gnode_name,
+                        {n->inputs[1], ograds[0]}, &lhs_attrs_dict, &n);
+    rhs_grad = MakeNode("batch_dot", rhs_gnode_name,
+                        {n->inputs[0], ograds[0]}, &rhs_attrs_dict, &n);
+  } else {
+    // Gradient of z = dot(x, y)
+    // dx = dot(dz, y.T)
+    // dy = dot(x.T, dz)
+    auto lhs_attrs_dict = n->attrs.dict;
+    auto rhs_attrs_dict = n->attrs.dict;
+    lhs_attrs_dict["transpose_a"] = "false";
+    lhs_attrs_dict["transpose_b"] = "true";
+    rhs_attrs_dict["transpose_a"] = "true";
+    rhs_attrs_dict["transpose_b"] = "false";
+    lhs_grad = MakeNode("batch_dot", lhs_gnode_name,
+                        {ograds[0], n->inputs[1]}, &lhs_attrs_dict, &n);
+    rhs_grad = MakeNode("batch_dot", rhs_gnode_name,
+                        {n->inputs[0], ograds[0]}, &rhs_attrs_dict, &n);
+  }
+  std::vector<nnvm::NodeEntry> ret;
+  ret.emplace_back(nnvm::NodeEntry{lhs_grad, 0, 0});
+  ret.emplace_back(nnvm::NodeEntry{rhs_grad, 0, 0});
+  return ret;
+})
 .add_argument("lhs", "NDArray-or-Symbol", "The first input")
 .add_argument("rhs", "NDArray-or-Symbol", "The second input")
 .add_arguments(DotParam::__FIELDS__());
-
-NNVM_REGISTER_OP(_backward_batch_dot)
-.set_num_inputs(3)
-.set_num_outputs(2)
-.set_attr_parser(ParamParser<DotParam>)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", BatchDotBackward_<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

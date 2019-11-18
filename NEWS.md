@@ -18,6 +18,7 @@
 MXNet Change Log
 ================
 - [MXNet Change Log](#mxnet-change-log)
+  * [1.5.1](#151)
   * [1.5.0](#150)
     + [New Features](#new-features)
       - [Automatic Mixed Precision(experimental)](#automatic-mixed-precision-experimental-)
@@ -199,6 +200,29 @@ MXNet Change Log
   * [v0.7](#v07)
   * [v0.5 (initial release)](#v05--initial-release-)
 
+## 1.5.1
+Apache MXNet (incubating) 1.5.1 is a maintenance release incorporating important bug fixes and important performance improvements. All users of Apache MXNet (incubating) 1.5.0 are advised to upgrade. You can install Apache MXNet (incubating) 1.5.1 at the usual place. Please review these Release Notes to learn the bug fixes.
+
+### Bug-fixes
+* add deconv in TRT subgraph (#15666) (#16043)
+* Update TRT tutorial with new APIs (#16044)
+* Fix _copy_to on MKLDNN backend (#15637) (#15803)
+* Benchmark doc fix (#15769) (#16029)
+* remove Julia cat image for license issue (#15964) (#16026)
+* added check for empty params file and unknown param (not arg/aux) (#15917)
+* fix license issues (#15806) (#15860)
+* prevent TRT_Logger to be destroyed before TRT engine (#14898) (#15877)
+* [MXNET-1086] added sub and mul to ONNX->TensorRT conversion (#15344) (#15875)
+* handle fix_gamma in tensorrt subgraph conversion correctly (#15645) (#15874)
+* fix LinearRegressionOutput with empty label (#15620) (#15873)
+* [v1.5.x] [MKLDNN] Independent gradients requests check with respect to weights… (#15805)
+* fix dropout mask output (#15697) (#15804)
+* fix fp32 flatten issue (#15351) (#15802)
+* Clojure package remove source images (#15828)
+* changed constructor args (#15601) (#15827)
+* Add MKLDNN 4c layout to fix gluoncv se_resnext101_64x4d (#15692) (#15801)
+* Fix the bug of `MXEnginePushAsyncND` and `MXEnginePushSyncND` (#15751) (#15792)
+
 ## 1.5.0
 
 ### New Features
@@ -233,7 +257,7 @@ For more details please refer to the [design document](https://cwiki.apache.org/
 
 #### Dependency Update
 MXNet has added support for CUDA 10, CUDA 10.1, cudnn7.5, NCCL 2.4.2, and numpy 1.16.0.
-These updates are available through PyPI packages and build from source, refer to [installation guid](https://mxnet.apache.org/versions/master/install/index.html) for more details.
+These updates are available through PyPI packages and build from source, refer to [installation guide](https://mxnet.apache.org/versions/master/install/index.html) for more details.
 
 #### Gluon Fit API(experimental)
 Training a model in Gluon requires users to write the training loop. This is useful because of its imperative nature, however repeating the same code across multiple models can become tedious and repetitive with boilerplate code. 

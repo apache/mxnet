@@ -111,6 +111,7 @@ Both ``gamma`` and ``beta`` are learnable parameters.
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .add_argument("data", "NDArray-or-Symbol", "Input data")
 .add_argument("gamma", "NDArray-or-Symbol", "gamma array")
 .add_argument("beta", "NDArray-or-Symbol", "beta array")

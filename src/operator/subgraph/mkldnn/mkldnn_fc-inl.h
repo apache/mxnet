@@ -55,7 +55,7 @@ static inline mkldnn::algorithm GetMKLDNNEltwiseAlgo(const std::string op_name) 
   else
     LOG(FATAL) << "Unsupported eltwise fusion op: " << op_name;
 
-  return mkldnn::algorithm::algorithm_undef;
+  return mkldnn::algorithm::undef;
 }
 
 static inline bool IsOutputUint8(const MKLDNNFCFullParam& full_param) {

@@ -228,7 +228,7 @@ build_ubuntu_gpu_mkldnn_release() {
 # $1 -> mxnet_variant: the mxnet variant to build, e.g. cpu, cu100, cu92mkl, etc.
 build_dynamic_libmxnet() {
     set -ex
-    
+
     local mxnet_variant=${1:?"This function requires a mxnet variant as the first argument"}
 
     # relevant licenses will be placed in the licenses directory
@@ -522,6 +522,29 @@ build_ubuntu_cpu_cmake_debug() {
     popd
 }
 
+build_ubuntu_cpu_cmake_no_tvm_op() {
+    set -ex
+    pushd .
+    cd /work/build
+    build_ccache_wrappers
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DUSE_CUDA=OFF \
+        -DUSE_TVM_OP=OFF \
+        -DPython3_EXECUTABLE=/usr/bin/python3 \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_OPENMP=OFF \
+        -DUSE_OPENCV=ON \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DCMAKE_BUILD_TYPE=Release \
+        -G Ninja \
+        /work/mxnet
+
+    ninja -v
+    popd
+}
+
 build_ubuntu_cpu_cmake_asan() {
     set -ex
 
@@ -669,6 +692,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
         USE_TVM_OP=1                  \
         USE_BLAS=mkl                  \
         USE_SIGNAL_HANDLER=1          \
+        USE_INTEL_PATH=/opt/intel/    \
         -j$(nproc)
 }
 
@@ -793,6 +817,27 @@ build_ubuntu_gpu_cuda101_cudnn7() {
     make cython PYTHON=python3
 }
 
+build_ubuntu_gpu_cuda101_cudnn7_no_tvm_op() {
+    set -ex
+    build_ccache_wrappers
+    make \
+        DEV=1                                     \
+        USE_BLAS=openblas                         \
+        USE_MKLDNN=0                              \
+        USE_CUDA=1                                \
+        USE_CUDA_PATH=/usr/local/cuda             \
+        USE_CUDNN=1                               \
+        USE_TVM_OP=0                              \
+        USE_CPP_PACKAGE=1                         \
+        USE_DIST_KVSTORE=1                        \
+        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
+        USE_SIGNAL_HANDLER=1                      \
+        -j$(nproc)
+
+    make cython PYTHON=python2
+    make cython PYTHON=python3
+}
+
 build_ubuntu_amalgamation() {
     set -ex
     # Amalgamation can not be run with -j nproc
@@ -833,9 +878,6 @@ build_ubuntu_gpu_cmake_mkldnn() {
         /work/mxnet
 
     ninja -v
-    # libmkldnn.so.0 is a link file. We need an actual binary file named libmkldnn.so.0.
-    cp 3rdparty/mkldnn/src/libmkldnn.so.0 3rdparty/mkldnn/src/libmkldnn.so.0.tmp
-    mv 3rdparty/mkldnn/src/libmkldnn.so.0.tmp 3rdparty/mkldnn/src/libmkldnn.so.0
 }
 
 build_ubuntu_gpu_cmake() {
@@ -850,6 +892,33 @@ build_ubuntu_gpu_cmake() {
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
         -DUSE_TVM_OP=ON                         \
+        -DPython3_EXECUTABLE=/usr/bin/python3   \
+        -DUSE_MKL_IF_AVAILABLE=OFF              \
+        -DUSE_MKLML_MKL=OFF                     \
+        -DUSE_MKLDNN=OFF                        \
+        -DUSE_DIST_KVSTORE=ON                   \
+        -DCMAKE_BUILD_TYPE=Release              \
+        -DCUDA_ARCH_NAME=Manual                 \
+        -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+        -DBUILD_CYTHON_MODULES=1                \
+        -G Ninja                                \
+        /work/mxnet
+
+    ninja -v
+}
+
+build_ubuntu_gpu_cmake_no_tvm_op() {
+    set -ex
+    cd /work/build
+    build_ccache_wrappers
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
+        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache   \
+        -DUSE_SIGNAL_HANDLER=ON                 \
+        -DUSE_CUDA=ON                           \
+        -DUSE_CUDNN=ON                          \
+        -DUSE_TVM_OP=OFF                        \
         -DPython3_EXECUTABLE=/usr/bin/python3   \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
         -DUSE_MKLML_MKL=OFF                     \
@@ -935,6 +1004,7 @@ cd_unittest_ubuntu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
     export CD_JOB=1 # signal this is a CD run so any unecessary tests can be skipped
 
@@ -948,7 +1018,7 @@ cd_unittest_ubuntu() {
     fi
 
     $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/unittest
-    $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/quantization 
+    $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/quantization
 
     # https://github.com/apache/incubator-mxnet/issues/11801
     # if [[ ${mxnet_variant} = "cpu" ]] || [[ ${mxnet_variant} = "mkl" ]]; then
@@ -977,6 +1047,7 @@ unittest_ubuntu_python2_cpu_cython() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=1
     export MXNET_ENFORCE_CYTHON=1
     check_cython 2
@@ -990,6 +1061,7 @@ unittest_ubuntu_python2_cpu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=0
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
@@ -1001,6 +1073,7 @@ unittest_ubuntu_python3_cpu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
@@ -1011,6 +1084,7 @@ unittest_ubuntu_python3_cpu_mkldnn() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_mkl.xml --verbose tests/python/mkl
@@ -1021,6 +1095,7 @@ unittest_ubuntu_python2_gpu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
@@ -1030,6 +1105,7 @@ unittest_ubuntu_python3_gpu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=0 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
@@ -1040,6 +1116,7 @@ unittest_ubuntu_python3_gpu_cython() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=1
     export MXNET_ENFORCE_CYTHON=1
@@ -1051,6 +1128,7 @@ unittest_ubuntu_python3_gpu_nocudnn() {
     set -ex
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
     export CUDNN_OFF_TEST_ONLY=true
     export MXNET_ENABLE_CYTHON=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
@@ -1060,6 +1138,7 @@ unittest_ubuntu_tensorrt_gpu() {
     set -ex
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=0
@@ -1074,6 +1153,7 @@ unittest_ubuntu_python2_quantization_gpu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=0
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
@@ -1086,6 +1166,7 @@ unittest_ubuntu_python3_quantization_gpu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=0 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
@@ -1248,6 +1329,7 @@ integrationtest_ubuntu_gpu_python() {
     set -ex
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
     python example/image-classification/test_score.py
 }
 
@@ -1276,6 +1358,7 @@ integrationtest_ubuntu_cpu_dist_kvstore() {
     pushd .
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_USE_OPERATOR_TUNING=0
     cd tests/nightly/
     ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_step_cpu
@@ -1310,9 +1393,10 @@ integrationtest_ubuntu_gpu_dist_kvstore() {
     pushd .
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
     cd tests/nightly/
-    ../../tools/launch.py -n 7 --launcher local python dist_device_sync_kvstore.py
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=init_gpu
+    ../../tools/launch.py -n 4 --launcher local python dist_device_sync_kvstore.py
+    ../../tools/launch.py -n 4 --launcher local python dist_sync_kvstore.py --type=init_gpu
     popd
 }
 
@@ -1389,6 +1473,15 @@ nightly_test_installation() {
     # The run_test_installation_docs.sh expects the path to index.md and the first and last line numbers of the index.md file
     # First execute the test script and then call the method specified by the Jenkinsfile - ${1}
     source ./tests/jenkins/run_test_installation_docs.sh docs/install/index.md 1 1686; ${1}
+}
+
+# Runs Imagenet inference
+nightly_test_imagenet_inference() {
+    set -ex
+    echo $PWD
+    cp /work/mxnet/build/cpp-package/example/imagenet_inference /work/mxnet/cpp-package/example/inference/
+    cd /work/mxnet/cpp-package/example/inference/
+    ./unit_test_imagenet_inference.sh
 }
 
 #Runs a simple MNIST training example
@@ -1489,6 +1582,7 @@ nightly_tutorial_test_ubuntu_python3_gpu() {
     export MXNET_DOCS_BUILD_MXNET=0
     make html
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
     export PYTHONPATH=/work/mxnet/python/
     export MXNET_TUTORIAL_TEST_KERNEL=python3
     cd /work/mxnet/tests/tutorials
@@ -1502,6 +1596,7 @@ nightly_tutorial_test_ubuntu_python2_gpu() {
     export MXNET_DOCS_BUILD_MXNET=0
     make html
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
     export PYTHONPATH=/work/mxnet/python/
     export MXNET_TUTORIAL_TEST_KERNEL=python2
     cd /work/mxnet/tests/tutorials
@@ -1832,12 +1927,12 @@ build_docs() {
     popd
 }
 
-build_docs_small() {
+build_docs_beta() {
     pushd docs/_build
     tar -xzf jekyll-artifacts.tgz
     api_folder='html/api'
     mkdir -p $api_folder/python/docs && tar -xzf python-artifacts.tgz --directory $api_folder/python/docs
-    # The folder to be published is now in /docs/_build/html
+    GZIP=-9 tar -zcvf beta_website.tgz -C html .
     popd
 }
 
@@ -1884,6 +1979,50 @@ build_static_libmxnet() {
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     source tools/staticbuild/build.sh ${mxnet_variant} pip
     popd
+}
+
+# Packages libmxnet into wheel file
+cd_package_pypi() {
+    set -ex
+    pushd .
+    local mxnet_variant=${1:?"This function requires a python command as the first argument"}
+    ./cd/python/pypi/pypi_package.sh ${mxnet_variant}
+    popd
+}
+
+# Sanity checks wheel file
+cd_integration_test_pypi() {
+    set -ex
+    local python_cmd=${1:?"This function requires a python command as the first argument"}
+    local gpu_enabled=${2:-"false"}
+
+    local test_conv_params=''
+    local mnist_params=''
+
+    local pip_cmd='pip'
+
+    if [ "${gpu_enabled}" = "true" ]; then
+        mnist_params="--gpu 0"
+        test_conv_params="--gpu"
+    fi
+
+    if [ "${python_cmd}" = "python3" ]; then
+        pip_cmd='pip3'
+    fi
+
+    # install mxnet wheel package
+    ${pip_cmd} install --user ./wheel_build/dist/*.whl
+
+    # execute tests
+    ${python_cmd} /work/mxnet/tests/python/train/test_conv.py ${test_conv_params}
+    ${python_cmd} /work/mxnet/example/image-classification/train_mnist.py ${mnist_params}
+}
+
+# Publishes wheel to PyPI
+cd_pypi_publish() {
+    set -ex
+    pip3 install --user twine
+    ./cd/python/pypi/pypi_publish.py `readlink -f wheel_build/dist/*.whl`
 }
 
 build_static_scala_mkl() {

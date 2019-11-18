@@ -127,6 +127,11 @@ __global__ void RoIAlignForwardKernel(
     const T* offset_bottom_rois = bottom_rois + n * 5;
     int roi_batch_ind = offset_bottom_rois[0];
 
+    if (roi_batch_ind < 0) {
+      top_data[index] = 0.;
+      continue;
+    }
+
     // Do not using rounding; this implementation detail is critical
     T roi_start_w = offset_bottom_rois[1] * spatial_scale;
     T roi_start_h = offset_bottom_rois[2] * spatial_scale;
@@ -265,6 +270,7 @@ __global__ void RoIAlignBackwardKernel(
 
     const T* offset_bottom_rois = bottom_rois + n * 5;
     int roi_batch_ind = offset_bottom_rois[0];
+    if (roi_batch_ind < 0) continue;
 
     // Do not using rounding; this implementation detail is critical
     T roi_start_w = offset_bottom_rois[1] * spatial_scale;

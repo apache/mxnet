@@ -22,29 +22,29 @@ The goal of this tutorial is to explain some common misconceptions about using [
 
 ## Asynchronous and non-blocking nature of Apache MXNet
 
-Instead of using NumPy arrays Apache MXNet offers its own array implementation named [NDArray](https://mxnet.apache.org/api/python/ndarray/ndarray.html). `NDArray API` was intentionally designed to be similar to `NumPy`, but there are differences.
+Instead of using NumPy arrays Apache MXNet offers its own array implementation named [NDArray](/api/python/docs/api/ndarray/index.html). `NDArray API` was intentionally designed to be similar to `NumPy`, but there are differences.
 
-One key difference is in the way calculations are executed. Every `NDArray` manipulation in Apache MXNet is done in asynchronous, non-blocking way. That means, that when we write code like `c = a * b`, where both `a` and `b` are `NDArrays`, the function is pushed to the [Execution Engine](https://mxnet.apache.org/architecture/overview.html#execution-engine), which starts the calculation. The function immediately returns back, and the  user thread can continue execution, despite the fact that the calculation may not have been completed yet. 
+One key difference is in the way calculations are executed. Every `NDArray` manipulation in Apache MXNet is done in asynchronous, non-blocking way. That means, that when we write code like `c = a * b`, where both `a` and `b` are `NDArrays`, the function is pushed to the [Execution Engine](/api/architecture/overview.html#execution-engine), which starts the calculation. The function immediately returns back, and the  user thread can continue execution, despite the fact that the calculation may not have been completed yet.
 
-`Execution Engine` builds the computation graph which may reorder or combine some calculations, but it honors dependency order: if there are other manipulation with `c` done later in the code, the `Execution Engine` will start doing them once the result of `c` is available. We don't need to write callbacks to start execution of subsequent code - the `Execution Engine` is going to do it for us. 
+`Execution Engine` builds the computation graph which may reorder or combine some calculations, but it honors dependency order: if there are other manipulation with `c` done later in the code, the `Execution Engine` will start doing them once the result of `c` is available. We don't need to write callbacks to start execution of subsequent code - the `Execution Engine` is going to do it for us.
 
-To get the result of the computation we only need to access the resulting variable, and the flow of the code will be blocked until the computation results are assigned to the resulting variable. This behavior allows to increase code performance while still supporting imperative programming mode. 
+To get the result of the computation we only need to access the resulting variable, and the flow of the code will be blocked until the computation results are assigned to the resulting variable. This behavior allows to increase code performance while still supporting imperative programming mode.
 
-Refer to the [intro tutorial to NDArray](https://mxnet.apache.org/tutorials/basic/ndarray.html), if you are new to Apache MXNet and would like to learn more how to manipulate NDArrays.
+Refer to the [intro tutorial to NDArray](/api/python/docs/tutorials/packages/ndarray/index.html), if you are new to Apache MXNet and would like to learn more how to manipulate NDArrays.
 
 ## Converting NDArray to NumPy Array blocks calculation
 
-Many people are familiar with NumPy and flexible doing tensor manipulations using it. `NDArray API` offers  a convinient [.asnumpy() method](https://mxnet.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.asnumpy) to cast `nd.array` to `np.array`. However, by doing this cast and using `np.array` for calculation, we cannot use all the goodness of `Execution Engine`. All manipulations done on `np.array` are blocking. Moreover, the cast to `np.array` itself is a blocking operation (same as [.asscalar()](https://mxnet.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.asscalar), [.wait_to_read()](https://mxnet.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.wait_to_read) and [.waitall()](https://mxnet.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.waitall)). 
+Many people are familiar with NumPy and flexible doing tensor manipulations using it. `NDArray API` offers  a convinient [.asnumpy() method](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.NDArray.asnumpy) to cast `nd.array` to `np.array`. However, by doing this cast and using `np.array` for calculation, we cannot use all the goodness of `Execution Engine`. All manipulations done on `np.array` are blocking. Moreover, the cast to `np.array` itself is a blocking operation (same as [.asscalar()](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.NDArray.asscalar), [.wait_to_read()](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.NDArray.wait_to_read) and [.waitall()](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.waitall)).
 
 That means that if we have a long computation graph and, at some point, we want to cast the result to `np.array`, it may feel like the casting takes a lot of time. But what really takes this time is `Execution Engine`, which finishes all the async calculations we have pushed into it to get the final result, which then will be converted to `np.array`.
 
-Because of the blocking nature of [.asnumpy() method](https://mxnet.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.asnumpy), using it reduces the execution performance, especially if the calculations are done on GPU: Apache MXNet has to copy data from GPU to CPU to return `np.array`. 
+Because of the blocking nature of [.asnumpy() method](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.NDArray.asnumpy), using it reduces the execution performance, especially if the calculations are done on GPU: Apache MXNet has to copy data from GPU to CPU to return `np.array`.
 
 The best solution is to **make manipulations directly on NDArrays by methods provided in [NDArray API](https://mxnet.apache.org/api/python/ndarray/ndarray.html)**.
 
 ## NumPy operators vs. NDArray operators
 
-Despite the fact that [NDArray API](https://mxnet.apache.org/api/python/ndarray/ndarray.html) was specifically designed to be similar to `NumPy`, sometimes it is not easy to replace existing `NumPy` computations. The main reason is that not all operators, that are available in `NumPy`, are available in `NDArray API`. The list of currently available operators is available on [NDArray class page](http://mxnet.apache.org/api/python/ndarray/ndarray.html#the-ndarray-class).
+Despite the fact that [NDArray API](/api/python/docs/api/ndarray/index.html) was specifically designed to be similar to `NumPy`, sometimes it is not easy to replace existing `NumPy` computations. The main reason is that not all operators, that are available in `NumPy`, are available in `NDArray API`. The list of currently available operators is available on [NDArray class page](/api/python/docs/api/ndarray/ndarray.html).
 
 If a required operator is missing from `NDArray API`, there are few things you can do.
 
@@ -57,7 +57,7 @@ There are a situation, when you can assemble a higher level operator using exist
 from mxnet import nd
 import numpy as np
 
-# NumPy has full_like() operator 
+# NumPy has full_like() operator
 np_y = np.full_like(a=np.arange(6, dtype=int), fill_value=10)
 
 # NDArray doesn't have it, but we can replace it with
@@ -73,29 +73,29 @@ np.array_equal(np_y, nd_y.asnumpy())
 
 ### Find similar operator with different name and/or signature
 
-Some operators may have slightly different name, but are similar in terms of functionality. For example [nd.ravel_multi_index()](https://mxnet.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.ravel_multi_index) is similar to [np.ravel()](https://docs.scipy.org/doc/numpy-1.14.0/reference/generated/numpy.ma.ravel.html#numpy.ma.ravel). In other cases some operators may have similar names, but different signatures. For example [np.split()](https://docs.scipy.org/doc/numpy-1.14.0/reference/generated/numpy.split.html#numpy.split) and [nd.split()](https://mxnet.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.split) are similar, but the former works with indices and the latter requires the number of splits to be provided.
+Some operators may have slightly different name, but are similar in terms of functionality. For example [nd.ravel_multi_index()](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.ravel_multi_index) is similar to [np.ravel()](https://docs.scipy.org/doc/numpy-1.14.0/reference/generated/numpy.ma.ravel.html#numpy.ma.ravel). In other cases some operators may have similar names, but different signatures. For example [np.split()](https://docs.scipy.org/doc/numpy-1.14.0/reference/generated/numpy.split.html#numpy.split) and [nd.split()](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.split) are similar, but the former works with indices and the latter requires the number of splits to be provided.
 
-One particular example of different input requirements is [nd.pad()](https://mxnet.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.pad). The trick is that it can only work with 4-dimensional tensors. If your input has less dimensions, then you need to expand its number before using `nd.pad()` as it is shown in the code block below: 
+One particular example of different input requirements is [nd.pad()](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.pad). The trick is that it can only work with 4-dimensional tensors. If your input has less dimensions, then you need to expand its number before using `nd.pad()` as it is shown in the code block below:
 
 
 ```python
 def pad_array(data, max_length):
     # expand dimensions to 4, because nd.pad can work only with 4 dims
     data_expanded = data.reshape(1, 1, 1, data.shape[0])
-    
+
     # pad all 4 dimensions with constant value of 0
     data_padded = nd.pad(data_expanded,
                              mode='constant',
                              pad_width=[0, 0, 0, 0, 0, 0, 0, max_length - data.shape[0]],
                              constant_value=0)
-    
-    # remove temporary dimensions 
+
+    # remove temporary dimensions
     data_reshaped_back = data_padded.reshape(max_length)
     return data_reshaped_back
 
 pad_array(nd.array([1, 2, 3]), max_length=10)
 ```
-    
+
 `[ 1.  2.  3.  0.  0.  0.  0.  0.  0.  0.]` <!--notebook-skip-line-->
 
 
@@ -104,7 +104,7 @@ pad_array(nd.array([1, 2, 3]), max_length=10)
 
 ### Search for an operator on [Github](https://github.com/apache/incubator-mxnet/labels/Operator)
 
-Apache MXNet community is responsive to requests, and everyone is welcomed to contribute new operators. Have in mind, that there is always a lag between new operators being merged into the codebase and release of a next stable version. For example, [nd.diag()](https://github.com/apache/incubator-mxnet/pull/11643) operator was recently introduced to Apache MXNet, but on the moment of writing this tutorial, it is not in any stable release. You can always get all latest implementations by installing the [master version](https://mxnet.apache.org/install/index.html?version=master#) of Apache MXNet.
+Apache MXNet community is responsive to requests, and everyone is welcomed to contribute new operators. Have in mind, that there is always a lag between new operators being merged into the codebase and release of a next stable version. For example, [nd.diag()](https://github.com/apache/incubator-mxnet/pull/11643) operator was recently introduced to Apache MXNet, but on the moment of writing this tutorial, it is not in any stable release. You can always get all latest implementations by installing the [master version](/get_started?version=master&platform=linux&language=python&environ=pip&processor=cpu#) of Apache MXNet.
 
 ## How to minimize the impact of blocking calls
 
@@ -156,10 +156,10 @@ for data, label in train_data:
         out = net(data)
         # This call saves new loss and returns previous loss
         prev_loss = loss_buffer.new_loss(ce(out, label))
-        
+
     loss_buffer.loss.backward()
     trainer.step(data.shape[0])
-    
+
     if prev_loss is not None:
         print("Loss: {}".format(np.mean(prev_loss.asnumpy())))
 ```
