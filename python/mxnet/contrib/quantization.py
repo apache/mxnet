@@ -417,6 +417,7 @@ class _DataIterWrapper(DataIter):
         else:
             data_example = [data_example]
         # suppose there must be one label in data_example
+        # TODO(xinyu-intel): little tricky here, need to refactor.
         num_data = len(data_example)
         assert num_data > 0
         # here reshape is to handle the 5D/6D input data
@@ -424,6 +425,9 @@ class _DataIterWrapper(DataIter):
             data_example[0] = data_example[0].reshape((-1,) + data_example[0].shape[2:])
         self.provide_data = [DataDesc(name='data', shape=(data_example[0].shape))]
         self.provide_data += [DataDesc(name='data{}'.format(i), shape=x.shape) for i, x in enumerate(data_example[1:])]
+        # data0, data1, ..., label
+        if num_data >= 3:
+            self.provide_data = [DataDesc(name='data{}'.format(i), shape=x.shape) for i, x in enumerate(data_example[0:])]
         self.batch_size = data_example[0].shape[0]
         self.reset()
 
@@ -620,8 +624,9 @@ def quantize_model_mkldnn(sym, arg_params, aux_params,
     return qsym, qarg_params, aux_params
 
 def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
-                   excluded_sym_names=None, excluded_op_names=None, calib_mode='entropy',
-                   quantized_dtype='int8', quantize_mode='full', logger=logging):
+                   excluded_sym_names=None, excluded_op_names=None,
+                   calib_mode='entropy', quantized_dtype='int8', quantize_mode='full',
+                   LayerOutputCollector=None, logger=logging):
     """User-level API for generating a quantized model from a FP32 model w/o calibration
     and a collector for naive or entropy calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
@@ -700,9 +705,13 @@ def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
                                                     include_layer=calib_layer, logger=logger)
             logger.info(
                 'Create a layer output minmax collector for naive calibration')
+        elif calib_mode == 'customize' and LayerOutputCollector != None:
+            collector = LayerOutputCollector
+            logger.info(
+                'Create a customize layer output minmax collector for calibration')
         else:
             raise ValueError('unknown calibration mode %s received,'
-                             ' expected `none`, `naive`, or `entropy`' % calib_mode)
+                             ' expected `none`, `naive`, `entropy` or `customize`' % calib_mode)
         logger.info('Collector created, please use set_monitor_callback'
                     ' to collect calibration information.')
 
@@ -756,9 +765,11 @@ def calib_graph(qsym, arg_params, aux_params, collector,
                 collector.hist_dict, quantized_dtype, logger=logger)
         elif calib_mode == 'naive':
             th_dict = collector.min_max_dict
+        elif calib_mode == 'customize':
+            th_dict = collector.min_max_dict
         else:
             raise ValueError('unknown calibration mode %s received,'
-                             ' expected `none`, `naive`, or `entropy`' % calib_mode)
+                             ' expected `none`, `naive`, `entropy` or `customize`' % calib_mode)
         qsym = _calibrate_quantized_sym(qsym, th_dict)
     else:
         raise ValueError('please set calibration mode to naive or entropy.')
@@ -771,7 +782,7 @@ def calib_graph(qsym, arg_params, aux_params, collector,
 def quantize_net(network, quantized_dtype='auto', quantize_mode='full',
                  exclude_layers=None, exclude_layers_match=None, exclude_operators=None,
                  calib_data=None, data_shapes=None, calib_mode='none',
-                 num_calib_examples=None, ctx=cpu(), logger=logging):
+                 num_calib_examples=None, ctx=cpu(), LayerOutputCollector=None, logger=logging):
     """User-level API for Gluon users to generate a quantized SymbolBlock from a FP32 HybridBlock w/ or w/o calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
@@ -889,7 +900,8 @@ def quantize_net(network, quantized_dtype='auto', quantize_mode='full',
     qsym, qarg_params, aux_params, collector = quantize_graph(
         sym=symnet, arg_params=args, aux_params=auxs, ctx=ctx,
         excluded_sym_names=exclude_layers, excluded_op_names=exclude_operators,
-        calib_mode=calib_mode, quantized_dtype=quantized_dtype, quantize_mode=quantize_mode, logger=logger)
+        calib_mode=calib_mode, quantized_dtype=quantized_dtype, quantize_mode=quantize_mode,
+        LayerOutputCollector=LayerOutputCollector, logger=logger)
 
     if calib_mode is not None and calib_mode != 'none':
         if not isinstance(ctx, Context):
@@ -898,7 +910,7 @@ def quantize_net(network, quantized_dtype='auto', quantize_mode='full',
         if calib_data is None:
             raise ValueError(
                 'calib_data must be provided when calib_mode=%s' % calib_mode)
-        if calib_mode in ['naive', 'entropy']:
+        if calib_mode in ['naive', 'entropy', 'customize']:
             data_names = [pair[0] for pair in calib_data.provide_data]
             mod = Module(symbol=symnet, context=ctx,
                          data_names=data_names, label_names=None)
