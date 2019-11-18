@@ -165,3 +165,4 @@ EXTRA_OPERATORS =
 # git@github.com:dato-code/SFrame.git
 # SFRAME_PATH = $(HOME)/SFrame
 # MXNET_PLUGINS += plugin/sframe/plugin.mk
+USE_INT64_TENSOR_SIZE = 0
