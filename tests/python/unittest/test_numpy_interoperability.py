@@ -1140,6 +1140,28 @@ def _add_workload_less_equal(array_pool):
     # OpArgMngr.add_workload('less_equal', np.array([np.nan]), np.array([np.nan]))
 
 
+def _add_workload_where():
+    c = np.ones(53).astype(bool)
+    d = np.ones_like(c)
+    e = np.zeros_like(c)
+    OpArgMngr.add_workload('where', c, e, e)
+    OpArgMngr.add_workload('where', c, d, e)
+    OpArgMngr.add_workload('where', c, d, e[0])
+    OpArgMngr.add_workload('where', c, d[0], e)
+    # OpArgMngr.add_workload('where', c[::2], d[::2], e[::2])
+    # OpArgMngr.add_workload('where', c[1::2], d[1::2], e[1::2])
+    # OpArgMngr.add_workload('where', c[::3], d[::3], e[::3])
+    # OpArgMngr.add_workload('where', c[1::3], d[1::3], e[1::3])
+    # OpArgMngr.add_workload('where', c[::-2], d[::-2], e[::-2])
+    # OpArgMngr.add_workload('where', c[::-3], d[::-3], e[::-3])
+    # OpArgMngr.add_workload('where', c[1::-3], d[1::-3], e[1::-3])
+    c = np.array([True, False])
+    a = np.zeros((2, 25))
+    b = np.ones((2, 25))
+    OpArgMngr.add_workload('where', c.reshape((2, 1)), a, b)
+    OpArgMngr.add_workload('where', c, a.T, b.T)
+
+
 def _add_workload_nonzero():
     OpArgMngr.add_workload('nonzero', np.random.randint(0, 2))
     OpArgMngr.add_workload('nonzero', np.random.randint(0, 2, size=()))
@@ -1295,6 +1317,7 @@ def _prepare_workloads():
     _add_workload_greater_equal(array_pool)
     _add_workload_less(array_pool)
     _add_workload_less_equal(array_pool)
+    _add_workload_where()
     _add_workload_diff()
     _add_workload_resize()
 
