@@ -4739,6 +4739,60 @@ def test_np_where():
         same(ret.asnumpy(), _np.where(cond.asnumpy(), x.asnumpy(), y.asnumpy()))
 
 
+@with_seed()
+@use_np
+def test_np_expand_dims():
+    class TestExpandDims(HybridBlock):
+        def __init__(self, axis):
+            super(TestExpandDims, self).__init__()
+            self._axis = axis
+
+        def hybrid_forward(self, F, x):
+            return F.np.expand_dims(x, self._axis)
+
+    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64, np.bool]
+    shapes = [
+        (),
+        (0,),
+        (0, 1),
+        (3,),
+        (1, 2, 3),
+    ]
+    flags = [True, False]
+    for dtype, shape, hybridize in itertools.product(dtypes, shapes, flags):
+        ndim = len(shape)
+        for axis in range(-ndim-1, ndim+1):
+            x_np = _np.random.uniform(0, 100, size=shape).astype(dtype)
+            expected = _np.expand_dims(x_np, axis)
+            for req in ['write', 'add']:
+                test_expand_dims = TestExpandDims(axis)
+                if hybridize:
+                    test_expand_dims.hybridize()
+
+                x = np.array(x_np)
+                x.attach_grad(req)
+                initial_grad = np.random.uniform(0, 10, size=x.shape).astype(x.dtype)
+                x.grad[()] = initial_grad
+                with mx.autograd.record():
+                    y = test_expand_dims(x)
+                y.backward()
+
+                assert_almost_equal(y.asnumpy(), expected, use_broadcast=False)
+                if req == 'null':
+                    assert same(x.grad.asnumpy(), initial_grad.asnumpy())
+                elif req == 'write':
+                    assert same(x.grad.asnumpy(), _np.ones_like(x.asnumpy()))
+                else:
+                    assert_almost_equal(x.grad.asnumpy(), initial_grad.asnumpy() + _np.ones_like(initial_grad.asnumpy()),
+                                        atol=1e-2 if dtype is np.float16 else 1e-4,
+                                        rtol=1e-2 if dtype is np.float16 else 1e-4,
+                                        use_broadcast=False)
+
+                # check imperative again
+                y = np.expand_dims(x, axis)
+                assert_almost_equal(y.asnumpy(), expected, use_broadcast=False)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
