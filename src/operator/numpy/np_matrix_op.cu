@@ -68,6 +68,12 @@ NNVM_REGISTER_OP(_backward_np_column_stack)
 NNVM_REGISTER_OP(_np_roll)
 .set_attr<FCompute>("FCompute<gpu>", NumpyRollCompute<gpu>);
 
+NNVM_REGISTER_OP(_npi_diagflat)
+.set_attr<FCompute>("FCompute<gpu>", NumpyDiagflatOpForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_npi_diagflat)
+.set_attr<FCompute>("FCompute<gpu>", NumpyDiagflatOpBackward<gpu>);
+
 template<>
 void NumpyFlipForwardImpl<gpu>(const OpContext& ctx,
                                const std::vector<TBlob>& inputs,

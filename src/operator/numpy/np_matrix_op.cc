@@ -1274,6 +1274,29 @@ inline bool HSplitOpShape(const nnvm::NodeAttrs& attrs,
   return SplitOpShapeImpl(attrs, in_attrs, out_attrs, real_axis);
 }
 
+DMLC_REGISTER_PARAMETER(NumpyDiagflatParam);
+NNVM_REGISTER_OP(_npi_diagflat)
+.set_attr_parser(ParamParser<NumpyDiagflatParam>)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data"};
+  })
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyDiagflatOpShape)
+.set_attr<nnvm::FInferType>("FInferType", NumpyDiagflatOpType)
+.set_attr<FCompute>("FCompute<cpu>",NumpyDiagflatOpForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient",ElemwiseGradUseNone{"_backward_npi_diagflat"})
+.add_argument("data","NDArray-or-Symbol","Input ndarray")
+.add_arguments(NumpyDiagflatParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_npi_diagflat)
+.set_attr_parser(ParamParser<NumpyDiagflatParam>)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward",true)
+.set_attr<FCompute>("FCompute<cpu>",NumpyDiagflatOpBackward<cpu>);
+
 NNVM_REGISTER_OP(_npi_hsplit)
 .set_attr_parser(ParamParser<SplitParam>)
 .set_num_inputs(1)
