@@ -17,13 +17,13 @@
  * under the License.
  */
 
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
-
 #include <tuple>
 
 #include "./fused_op.h"
 #include "../operator_common.h"
 #include "../../executor/exec_pass.h"
+
+#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
 
 namespace mxnet {
 

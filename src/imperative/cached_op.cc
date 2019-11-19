@@ -203,7 +203,7 @@ void OptimizeGraph(nnvm::Graph * full_graph, nnvm::Graph * fwd_graph, nnvm::Grap
 #else
   // Only warn user if MXNET_USE_FUSION env var is explicitly set
   if (context.dev_mask() == kGPU && !inlining && dmlc::GetEnv("MXNET_USE_FUSION", false)) {
-    WarnFusionNotSupported();
+    exec::WarnFusionNotSupported();
   }
 #endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC && !defined(_WIN32)
 

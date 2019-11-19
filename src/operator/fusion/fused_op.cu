@@ -17,7 +17,8 @@
  * under the License.
  */
 
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+// Additional use of MXNET_USE_CUDA is not needed to guard a '.cu' file.
+#if MXNET_ENABLE_CUDA_RTC
 
 #include <sys/stat.h>
 #include <nvrtc.h>
@@ -790,4 +791,4 @@ NNVM_REGISTER_OP(_FusedOp)
 
 }  // namespace mxnet
 
-#endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#endif  // MXNET_ENABLE_CUDA_RTC
