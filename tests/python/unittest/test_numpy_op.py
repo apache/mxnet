@@ -442,9 +442,9 @@ def test_np_sum():
             [None, 1.1], [True, False], ([i for i in range(in_data_dim)] + [(), None]), \
             ['float16', 'float32', 'float64', 'int8', 'int32', 'int64', 'bool'], \
             ['float16', 'float32', 'float64', 'int8', 'int32', 'int64']):
-        if (is_int(dtype) and not is_int(itype))\
-                or (itype == 'bool' and\
-                    (dtype not in ('float32', 'float64', 'int32', 'int64') or is_windows)):
+        if (is_int(dtype) and not is_int(itype)) or \
+           (itype == 'bool' and \
+            (dtype not in ('float32', 'float64', 'int32', 'int64') or is_windows)):
             continue
         if (itype == 'float16' or dtype == 'float16') and has_tvm_ops():
             continue
