@@ -312,8 +312,8 @@ inline static bool TransposeStorageType(const nnvm::NodeAttrs& attrs,
    * \param row shape of dim 0 of input
    * \param col shape of dim 1 of input
    */
-  template<typename DType, typename cpu>
-  void Transpose2D(const DType *in, DType *out, index_t row, index_t col) {
+  template<typename DType>
+  inline void Transpose2D(const DType *in, DType *out, index_t row, index_t col) {
     // ensure cache line hits and prevent cache miss for any configuration
     // L1 cache size to be utilized = 32kb = 2^15
     // Largest size of a single unit of any dtype <= 8 byte = 2^3

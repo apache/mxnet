@@ -263,7 +263,7 @@ struct TransposeParam : public dmlc::Parameter<TransposeParam> {
 };
 
 template<typename DType, typename xpu>
-void Transpose2D(const DType *in, DType *out, index_t row, index_t col);
+inline void Transpose2D(const DType *in, DType *out, index_t row, index_t col);
 
 template<typename xpu>
 void TransposeImpl(RunContext ctx,

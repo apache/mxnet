@@ -162,8 +162,7 @@ __global__ void Transpose2DKernel(const DType *in, DType *out, index_t row, inde
 }  // namespace cuda
 }  // namespace mshadow
 
-
-template<typename DType, typename gpu>
+template<typename DType>
 inline void Transpose2D(const DType *in, DType *out, index_t row, index_t col) {
   using namespace mshadow::cuda;
   dim3 grid(32);
