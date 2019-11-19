@@ -243,8 +243,9 @@ NDArray NDArray::MKLDNNDataReshape(const mxnet::TShape &shape) const {
 
 NDArray NDArray::Reshape(const mxnet::TShape &shape) const {
   CHECK(!is_none()) << "NDArray is not initialized";
-  CHECK_GE(shape_.Size(), shape.Size())
-    << "NDArray.Reshape: target shape size is larger current shape";
+  CHECK_EQ(shape_.Size(), shape.Size())
+    << "NDArray.Reshape: target shape must have the same size as "
+    << "current shape.";
   NDArray ret = this->Detach();
   // If the shape doesn't change, we can just return it now.
   if (ret.shape_ == shape)
@@ -260,9 +261,6 @@ NDArray NDArray::ReshapeWithRecord(const mxnet::TShape &shape) {
   NDArray ret = this->Reshape(shape);
   if (!Imperative::Get()->is_recording()) return ret;
 
-  CHECK_EQ(shape_.Size(), shape.Size())
-    << "NDArray.Reshape: target shape must have the same size as "
-    << "current shape when recording with autograd.";
   nnvm::NodeAttrs attrs;
   attrs.op = nnvm::Op::Get("Reshape");;
   std::ostringstream os;
