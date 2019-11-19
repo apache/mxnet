@@ -256,6 +256,13 @@ def test_fusion_reshape_executor():
     f = e.reshape(allow_up_sizing=True, **new_shape)
     out = f.forward(is_train=False, data1=data, data2=data)
     assert out[0].sum().asscalar() == 160
+    # Reshape again
+    changed_shape = (30, 5)
+    new_shape = {'data1': changed_shape, 'data2': changed_shape}
+    data = mx.nd.zeros(new_shape['data1'], ctx=mx.gpu())
+    f = e.reshape(allow_up_sizing=True, **new_shape)
+    out = f.forward(is_train=False, data1=data, data2=data)
+    assert out[0].sum().asscalar() == 150
 
 if __name__ == '__main__':
     import nose
