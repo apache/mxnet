@@ -438,14 +438,15 @@ def test_np_sum():
     acc_type = {'float16': 'float32', 'float32': 'float64', 'float64': 'float64',
                 'int8': 'int32', 'int32': 'int64', 'int64': 'int64', 'bool': 'int64'}
     is_windows = sys.platform.startswith('win')
-    #TODO: add back float16 as itype and dtype after tvm side bug fixed by @yizhi.
     for hybridize, initial, keepdims, axis, itype, dtype in itertools.product([False, True], \
             [None, 1.1], [True, False], ([i for i in range(in_data_dim)] + [(), None]), \
-            ['float32', 'float64', 'int8', 'int32', 'int64', 'bool'], \
-            ['float32', 'float64', 'int8', 'int32', 'int64']):
+            ['float16', 'float32', 'float64', 'int8', 'int32', 'int64', 'bool'], \
+            ['float16', 'float32', 'float64', 'int8', 'int32', 'int64']):
         if (is_int(dtype) and not is_int(itype))\
                 or (itype == 'bool' and\
                     (dtype not in ('float32', 'float64', 'int32', 'int64') or is_windows)):
+            continue
+        if (itype == 'float16' or dtype == 'float16') and has_tvm_ops():
             continue
         # test gluon
         test_sum = TestSum(axis=axis, dtype=dtype, keepdims=keepdims, initial=initial)
@@ -619,14 +620,15 @@ def test_np_mean():
     shape = rand_shape_nd(in_data_dim, dim=3)
     acc_type = {'float16': 'float32', 'float32': 'float64', 'float64': 'float64',
                 'bool': 'int64', 'int8': 'int32', 'int32': 'int64', 'int64': 'int64'}
-    #TODO: add back float16 as ft_type after tvm side bug fixed by @yizhi.
-    ft_types = ['float32', 'float64']
+    ft_types = ['float16', 'float32', 'float64']
     it_types = ['bool', 'int8', 'int32', 'int64']
     for hybridize in [False, True]:
         for keepdims in [True, False]:
             for axis in ([i for i in range(in_data_dim)] + [(), None]):
                 for itype, dtype in itertools.product(ft_types, [None] + ft_types + it_types):
                     if dtype == 'bool':
+                        continue
+                    if (itype == 'float16' or dtype == 'float16') and has_tvm_ops():
                         continue
                     # test gluon
                     test_mean = TestMean(axis=axis, dtype=dtype, keepdims=keepdims)
@@ -662,6 +664,8 @@ def test_np_mean():
 
                 for itype, dtype in itertools.product(it_types, [None] + ft_types + it_types):
                     if dtype == 'bool':
+                        continue
+                    if (itype == 'float16' or dtype == 'float16') and has_tvm_ops():
                         continue
                     # test gluon
                     test_mean = TestMean(axis=axis, dtype=dtype, keepdims=keepdims)
