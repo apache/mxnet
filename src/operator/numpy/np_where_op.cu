@@ -18,21 +18,21 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
- * \file np_normal_op.cu
- * \brief Operator for numpy sampling from normal distributions
+ * Copyright (c) 2017 by Contributors
+ * \file np_where_op.cu
+ * \brief GPU Implementation of numpy operator where
  */
 
-#include "./np_normal_op.h"
+#include "np_where_op-inl.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_normal)
-    .set_attr<FCompute>("FCompute<gpu>", NumpyNormalForward<gpu>);
+NNVM_REGISTER_OP(_npi_where)
+.set_attr<FCompute>("FCompute<gpu>", NumpyWhereOpForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_broadcast_normal)
-.set_attr<FCompute>("FCompute<gpu>", NormalReparamBackward<gpu>);
+NNVM_REGISTER_OP(_backward_np_where)
+.set_attr<FCompute>("FCompute<gpu>", NumpyWhereOpBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
