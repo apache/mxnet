@@ -562,6 +562,8 @@ MXNET_BINARY_MATH_OP(logical_xor, (a || b) && !(a && b) ? DType(1) : DType(0));
 
 MXNET_BINARY_MATH_OP(bitwise_xor, static_cast<int64_t>(a) ^ static_cast<int64_t>(b));
 
+MXNET_BINARY_MATH_OP(bitwise_or, static_cast<int64_t>(a) | static_cast<int64_t>(b));
+
 MXNET_UNARY_MATH_OP(square_root, math::sqrt(a));
 
 MXNET_UNARY_MATH_OP(square_root_grad, 0.5f / math::id(a));
@@ -1326,6 +1328,7 @@ struct lcm : public mxnet_op::tunable {
     return DType(0.0f);
   }
 };
+
 
 }  // namespace mshadow_op
 }  // namespace op
