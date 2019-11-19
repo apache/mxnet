@@ -7807,7 +7807,38 @@ def test_bilinear_resize_op():
         x_scale = width / shape[-1]
         y_scale = height / shape[-2]
         y = mx.nd.contrib.BilinearResize2D(x, scale_height=y_scale, scale_width=x_scale)
-        assert_almost_equal(y, py_bilinear_resize(x.asnumpy(), height, width))
+        assert_almost_equal(y.asnumpy(), py_bilinear_resize(x.asnumpy(), height, width))
+
+    def check_bilinear_resize_align_corners_op():
+        img_shape = [1, 1, 3, 2]
+        data = [64, 32, 32, 64, 50, 100]
+        target_height = 6
+        target_width = 4
+        expected_data = {}
+
+        # align_corners = False
+        expected_data[0] = [
+            64.000, 56.000, 40.000, 32.000, 56.000, 52.000, 44.000, 40.000, 40.000, 44.000, 52.000, 56.000,
+            36.500, 45.625, 63.875, 73.000, 45.500, 56.875, 79.625, 91.000, 50.000, 62.500, 87.500, 100.000
+        ]
+
+        # align_corners = True
+        expected_data[1] = [
+            64.000, 53.333, 42.667, 32.000, 51.200, 49.067, 46.933, 44.800, 38.400, 44.800, 51.200, 57.600,
+            35.600, 47.467, 59.333, 71.200, 42.800, 57.067, 71.333, 85.600, 50.000, 66.667, 83.333, 100.000
+        ]
+
+        x = np.array(data, dtype=np.float32).reshape(img_shape)
+        x_nd = mx.nd.array(x)
+        
+        y0 = np.array(expected_data[0]).reshape((1, 1, target_height, target_width))
+        y0_nd = mx.nd.contrib.BilinearResize2D(x_nd, height=target_height, width=target_width, mode='size', align_corners=False)
+        assert_almost_equal(y0, y0_nd.asnumpy(), atol=1e-3)
+
+        y1 = np.array(expected_data[1]).reshape((1, 1, target_height, target_width))
+        y1_nd = mx.nd.contrib.BilinearResize2D(x_nd, height=target_height, width=target_width, mode='size', align_corners=True)
+        assert_almost_equal(y1, y1_nd.asnumpy(), atol=1e-3)
+
     def check_bilinear_resize_modes_op(shape, scale_height=None, scale_width=None, shape_1=None, mode=None):
         x = mx.nd.random.uniform(shape=shape)
         original_h = shape[2]
@@ -7891,6 +7922,7 @@ def test_bilinear_resize_op():
     shape_1 = (2, 2, 10, 10)
     check_bilinear_resize_modes_op(shape_0, shape_1=shape_1, mode='like')
     check_bilinear_resize_modes_op(shape_1, shape_1=shape_0, mode='like')
+    check_bilinear_resize_align_corners_op()
 
 def test_multi_proposal_op():
     # paramters
@@ -9293,23 +9325,6 @@ def test_sample_normal_default_shape():
     assert s.shape == (1, 1)
     s = mx.nd.sample_normal(mu=mx.nd.array([10.0]), sigma=mx.nd.array([0.5]), shape=(1,))
     assert s.shape == (1, 1)
-
-
-def test_min_max_inf():
-    dtypes = [np.float32, np.double]
-    elem_list = [-1, 1, 0, np.inf, -np.inf]
-
-    for dtype in dtypes:
-        for a in elem_list:
-            for b in elem_list:
-                data_np = np.array([a, b], dtype=dtype)
-                data_mx = mx.nd.array(data_np, dtype=dtype)
-
-                min_data_np, max_data_np = data_np.min(), data_np.max()
-                min_data_mx, max_data_mx = data_mx.min(), data_mx.max()
-
-                assert_array_equal(min_data_np, min_data_mx.asnumpy())
-                assert_array_equal(max_data_np, max_data_mx.asnumpy())
 
 
 def test_large_tensor_disabled_err_msg():

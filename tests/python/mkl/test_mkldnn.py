@@ -28,7 +28,6 @@ from mxnet.module import Module
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.test_utils import *
-import test_mkldnn_install as install
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../unittest/'))
 from common import with_seed
@@ -637,4 +636,5 @@ def test_elemwise_add():
         check_elemwise_add_training(stype)
 
 if __name__ == '__main__':
-    install.test_mkldnn_install()
+    import nose
+    nose.runmodule()

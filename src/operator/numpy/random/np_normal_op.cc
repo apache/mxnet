@@ -40,7 +40,11 @@ NNVM_REGISTER_OP(_npi_normal)
     return num_inputs;
   }
 )
-.set_num_outputs(1)
+.set_num_outputs(2)
+.set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
+    [](const NodeAttrs& attrs) {
+  return 1;
+})
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     const NumpyNormalParam& param = nnvm::get<NumpyNormalParam>(attrs.parsed);
@@ -60,10 +64,39 @@ NNVM_REGISTER_OP(_npi_normal)
         ResourceRequest::kRandom, ResourceRequest::kTempSpace};
   })
 .set_attr<FCompute>("FCompute<cpu>", NumpyNormalForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_broadcast_normal"})
 .add_argument("input1", "NDArray-or-Symbol", "Source input")
 .add_argument("input2", "NDArray-or-Symbol", "Source input")
 .add_arguments(NumpyNormalParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_broadcast_normal)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr_parser(ParamParser<NumpyNormalParam>)
+.set_num_inputs(
+  [](const nnvm::NodeAttrs& attrs) {
+    const NumpyNormalParam& param = nnvm::get<NumpyNormalParam>(attrs.parsed);
+    int num_inputs = 6;
+    if (param.loc.has_value()) num_inputs -= 1;
+    if (param.scale.has_value()) num_inputs -= 1;
+    return num_inputs;
+  }
+)
+.set_num_outputs(
+  [](const nnvm::NodeAttrs& attrs) {
+    const NumpyNormalParam& param = nnvm::get<NumpyNormalParam>(attrs.parsed);
+    int num_outputs = 2;
+    if (param.loc.has_value()) num_outputs -= 1;
+    if (param.scale.has_value()) num_outputs -= 1;
+    return num_outputs;
+  }
+)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<FCompute>("FCompute<cpu>", NormalReparamBackward<cpu>)
+.add_arguments(NumpyNormalParam::__FIELDS__());
+
 
 }  // namespace op
 }  // namespace mxnet

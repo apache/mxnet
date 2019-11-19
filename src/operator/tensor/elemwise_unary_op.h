@@ -699,9 +699,9 @@ struct nan_to_num_forward {
                                   const DType posinf,
                                   const DType neginf) {
     DType val = in_data[i];
-    if (mshadow_op::isnan_typed::IsNan<DType>(val))  val = nan;
-    if (val > 0 && mshadow_op::isinf_typed::IsInf(val))  val = posinf;
-    if (val < 0 && mshadow_op::isinf_typed::IsInf(val))  val = neginf;
+    if (mshadow_op::IsNan<DType>(val))  val = nan;
+    if (val > 0 && mshadow_op::IsInf(val))  val = posinf;
+    if (val < 0 && mshadow_op::IsInf(val))  val = neginf;
     KERNEL_ASSIGN(out_data[i], req, val);
   }
 };
@@ -758,9 +758,9 @@ struct nan_to_num_backward {
                                   const DType* out_grad,
                                   const DType* in_data) {
     DType val = out_grad[i];
-    if (mshadow_op::isnan_typed::IsNan(in_data[i]))  val = 0;
-    if (val > 0 && mshadow_op::isinf_typed::IsInf(in_data[i]))  val = 0;
-    if (val < 0 && mshadow_op::isinf_typed::IsInf(in_data[i]))  val = 0;
+    if (mshadow_op::IsNan(in_data[i]))  val = 0;
+    if (val > 0 && mshadow_op::IsInf(in_data[i]))  val = 0;
+    if (val < 0 && mshadow_op::IsInf(in_data[i]))  val = 0;
     KERNEL_ASSIGN(in_grad[i], req, val);
   }
 };

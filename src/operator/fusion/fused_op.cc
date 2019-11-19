@@ -49,31 +49,30 @@ void FusedOpParamParser(nnvm::NodeAttrs* attrs) {
   attrs->parsed = FusedOpPtr(new FusedOp(attrs, param));
 }
 
-FusedOp::FusedOp(const nnvm::NodeAttrs* attrs, const FusedOpConfig& config) {
-  this->inputs_ = std::vector<FusedOpEntry>(config.num_inputs);
-  this->outputs_ = std::vector<FusedOpEntry>(config.num_outputs);
-  this->subgraph_ = nnvm::Graph();
-  this->subgraph_.outputs = attrs->subgraphs[0]->outputs;
-  this->initialized_ = false;
-  this->cc_major_ = -1;
-  this->cc_minor_ = -1;
+FusedOp::FusedOp(const nnvm::NodeAttrs* attrs, const FusedOpConfig& config) :
+    initialized_(false),
+    kernel_function_dev_id_(-1) {
+  inputs_ = std::vector<FusedOpEntry>(config.num_inputs);
+  outputs_ = std::vector<FusedOpEntry>(config.num_outputs);
+  subgraph_ = nnvm::Graph();
+  subgraph_.outputs = attrs->subgraphs[0]->outputs;
 }
 
 bool FusedOp::InferShape(const nnvm::NodeAttrs &attrs,
                          std::vector<mxnet::TShape> *in_attrs,
                          std::vector<mxnet::TShape> *out_attrs) {
-  this->subgraph_.attrs.erase("shape");
-  this->subgraph_.attrs.erase("shape_inputs");
+  subgraph_.attrs.erase("shape");
+  subgraph_.attrs.erase("shape_inputs");
   std::vector<mxnet::TShape> input_shapes(*in_attrs);
-  this->subgraph_ = mxnet::exec::InferShape(std::move(this->subgraph_),
-                                          std::move(input_shapes),
-                                          "__shape__");
+  subgraph_ = mxnet::exec::InferShape(std::move(subgraph_),
+                                      std::move(input_shapes),
+                                      "__shape__");
 
-  const auto& g = this->subgraph_.indexed_graph();
+  const auto& g = subgraph_.indexed_graph();
   const auto& input_nids = g.input_nodes();
 
   std::vector<mxnet::TShape> out_shapes;
-  const std::vector<mxnet::TShape> shapes = this->subgraph_.GetAttr<mxnet::ShapeVector>("shape");
+  const std::vector<mxnet::TShape> shapes = subgraph_.GetAttr<mxnet::ShapeVector>("shape");
   for (auto& e : g.outputs()) {
     out_shapes.push_back(shapes[g.entry_id(e)]);
   }
@@ -105,18 +104,18 @@ bool FusedOp::InferShape(const nnvm::NodeAttrs &attrs,
 bool FusedOp::InferType(const nnvm::NodeAttrs &attrs,
                         std::vector<int> *in_attrs,
                         std::vector<int> *out_attrs) {
-  this->subgraph_.attrs.erase("dtype");
-  this->subgraph_.attrs.erase("dtype_inputs");
+  subgraph_.attrs.erase("dtype");
+  subgraph_.attrs.erase("dtype_inputs");
   std::vector<int> input_types(*in_attrs);
-  this->subgraph_ = mxnet::exec::InferType(std::move(this->subgraph_),
-                                         std::move(input_types),
-                                         "__dtype__");
+  subgraph_ = mxnet::exec::InferType(std::move(subgraph_),
+                                     std::move(input_types),
+                                     "__dtype__");
 
-  const auto& g = this->subgraph_.indexed_graph();
+  const auto& g = subgraph_.indexed_graph();
   const auto& input_nids = g.input_nodes();
 
   std::vector<int> out_types;
-  const std::vector<int> types = this->subgraph_.GetAttr<nnvm::DTypeVector>("dtype");
+  const std::vector<int> types = subgraph_.GetAttr<nnvm::DTypeVector>("dtype");
   for (auto& e : g.outputs()) {
     out_types.push_back(types[g.entry_id(e)]);
   }
@@ -149,10 +148,9 @@ template <typename Attr>
 std::tuple<const nnvm::NodePtr,
            std::vector<Attr>,
            std::vector<Attr>>
-  FusedOp::GetAttrs(const std::string& attr_name,
-                                                                  const uint32_t node_id) {
-  const auto& g = this->subgraph_.indexed_graph();
-  const std::vector<Attr> attrs = this->subgraph_.GetAttr<std::vector<Attr>>(attr_name);
+FusedOp::GetAttrs(const std::string& attr_name, const uint32_t node_id) {
+  const auto& g = subgraph_.indexed_graph();
+  const std::vector<Attr> attrs = subgraph_.GetAttr<std::vector<Attr>>(attr_name);
   const auto& node = g[node_id];
   std::vector<Attr> inputs, outputs;
   for (const auto& e : node.inputs) {

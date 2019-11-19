@@ -118,5 +118,11 @@ NNVM_REGISTER_OP(_npi_hsplit_backward)
 NNVM_REGISTER_OP(_npx_reshape)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
+NNVM_REGISTER_OP(_np_diag)
+.set_attr<FCompute>("FCompute<gpu>", NumpyDiagOpForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_np_diag)
+.set_attr<FCompute>("FCompute<gpu>", NumpyDiagOpBackward<gpu>);
+
 }  // namespace op
 }  // namespace mxnet
