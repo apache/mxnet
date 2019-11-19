@@ -24,8 +24,8 @@
  */
 
 #if MXNET_USE_TVM_OP
-#include "../tvmop/op_module.h"
 #include <tvm/runtime/packed_func.h>
+#include "../tvmop/op_module.h"
 #include "../tvmop/op_module.h"
 #endif  // MXNET_USE_TVM_OP
 
@@ -122,7 +122,7 @@ void TVMOpReduce(const OpContext& ctx,
   if (initial.has_value()) {
       std::vector<int> type_codes;
       std::vector<TVMValue> values;
-      const size_t num_args = 4; // initial scalar
+      const size_t num_args = 4;  // initial scalar
       type_codes.resize(num_args);
       values.resize(num_args);
 
@@ -143,9 +143,11 @@ void TVMOpReduce(const OpContext& ctx,
       values[3].v_handle = const_cast<DLTensor*>(&(output_tvm.dltensor()));
 
       tvm::runtime::TVMArgs tvm_args(&values[0], &type_codes[0], 4);
-      tvm::runtime::TVMOpModule::Get()->CallEx(func_name.str(), ctx, {input_tvm, output_tvm, output_tvm}, tvm_args);
+      tvm::runtime::TVMOpModule::Get()->CallEx(func_name.str(), ctx, \
+                                               {input_tvm, output_tvm, output_tvm}, tvm_args);
   } else {
-      tvm::runtime::TVMOpModule::Get()->Call(func_name.str(), ctx, {input_tvm, output_tvm, output_tvm});
+      tvm::runtime::TVMOpModule::Get()->Call(func_name.str(), ctx, \
+                                             {input_tvm, output_tvm, output_tvm});
   }
 #else
   LOG(FATAL) << "Please add USE_TVM_OP=1 as a compile flag to enable TVM-generated kernels.";
