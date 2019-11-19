@@ -19,20 +19,20 @@
 # pylint: disable=wildcard-import, unused-argument, too-many-ancestors
 """Gluon EventHandlers for Estimators"""
 
-import logging
 import os
 import time
 import warnings
 
 import numpy as np
 
-from ....metric import EvalMetric, CompositeEvalMetric
+from ....metric import CompositeEvalMetric, EvalMetric
 from ....metric import Loss as metric_loss
 from .utils import _check_metrics
 
 __all__ = ['TrainBegin', 'TrainEnd', 'EpochBegin', 'EpochEnd', 'BatchBegin', 'BatchEnd',
            'StoppingHandler', 'MetricHandler', 'ValidationHandler',
            'LoggingHandler', 'CheckpointHandler', 'EarlyStoppingHandler']
+
 
 class EventHandler(object):
     pass
@@ -194,7 +194,6 @@ class ValidationHandler(TrainBegin, BatchEnd, EpochEnd):
         # order to be called among all callbacks
         # validation metrics need to be calculated before other callbacks can access them
         self.priority = -np.Inf
-        self.logger = logging.getLogger(__name__)
 
     def train_begin(self, estimator, *args, **kwargs):
         # reset epoch and batch counter
@@ -211,7 +210,7 @@ class ValidationHandler(TrainBegin, BatchEnd, EpochEnd):
             for monitor in self.val_metrics:
                 name, value = monitor.get()
                 msg += '%s: %.4f, ' % (name, value)
-            self.logger.info(msg.rstrip(','))
+            estimator.logger.info(msg.rstrip(','))
 
     def epoch_end(self, estimator, *args, **kwargs):
         self.current_epoch += 1
@@ -228,12 +227,6 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
 
     Parameters
     ----------
-    file_name : str
-        File name to save the logs.
-    file_location : str
-        File location to save the logs.
-    filemode : str, default 'a'
-        Logging file mode, default using append mode.
     verbose : int, default LOG_PER_EPOCH
         Limit the granularity of metrics displayed during training process.
         verbose=LOG_PER_EPOCH: display metrics every epoch
@@ -247,25 +240,10 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
     LOG_PER_EPOCH = 1
     LOG_PER_BATCH = 2
 
-    def __init__(self, file_name=None,
-                 file_location=None,
-                 filemode='a',
-                 verbose=LOG_PER_EPOCH,
+    def __init__(self, verbose=LOG_PER_EPOCH,
                  train_metrics=None,
                  val_metrics=None):
         super(LoggingHandler, self).__init__()
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.INFO)
-        self._added_logging_handlers = [logging.StreamHandler()]
-        # save logger to file only if file name or location is specified
-        if file_name or file_location:
-            file_name = file_name or 'estimator_log'
-            file_location = file_location or './'
-            file_handler = logging.FileHandler(os.path.join(file_location, file_name), mode=filemode)
-            self._added_logging_handlers.append(file_handler)
-        for handler in self._added_logging_handlers:
-            self.logger.addHandler(handler)
-
         if verbose not in [self.LOG_PER_EPOCH, self.LOG_PER_BATCH]:
             raise ValueError("verbose level must be either LOG_PER_EPOCH or "
                              "LOG_PER_BATCH, received %s. "
@@ -281,24 +259,18 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
         # it will also shut down logging at train end
         self.priority = np.Inf
 
-    def __del__(self):
-        for handler in self._added_logging_handlers:
-            handler.flush()
-            self.logger.removeHandler(handler)
-            handler.close()
-
     def train_begin(self, estimator, *args, **kwargs):
         self.train_start = time.time()
         trainer = estimator.trainer
         optimizer = trainer.optimizer.__class__.__name__
         lr = trainer.learning_rate
-        self.logger.info("Training begin: using optimizer %s "
-                         "with current learning rate %.4f ",
-                         optimizer, lr)
+        estimator.logger.info("Training begin: using optimizer %s "
+                              "with current learning rate %.4f ",
+                              optimizer, lr)
         if estimator.max_epoch:
-            self.logger.info("Train for %d epochs.", estimator.max_epoch)
+            estimator.logger.info("Train for %d epochs.", estimator.max_epoch)
         else:
-            self.logger.info("Train for %d batches.", estimator.max_batch)
+            estimator.logger.info("Train for %d batches.", estimator.max_batch)
         # reset all counters
         self.current_epoch = 0
         self.batch_index = 0
@@ -311,13 +283,7 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
         for metric in self.train_metrics + self.val_metrics:
             name, value = metric.get()
             msg += '%s: %.4f, ' % (name, value)
-        self.logger.info(msg.rstrip(', '))
-        # make a copy of handler list and remove one by one
-        # as removing handler will edit the handler list
-        for handler in self.logger.handlers[:]:
-            handler.close()
-            self.logger.removeHandler(handler)
-        logging.shutdown()
+        estimator.logger.info(msg.rstrip(', '))
 
     def batch_begin(self, estimator, *args, **kwargs):
         if self.verbose == self.LOG_PER_BATCH:
@@ -334,14 +300,14 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
                 # only log current training loss & metric after each batch
                 name, value = metric.get()
                 msg += '%s: %.4f, ' % (name, value)
-            self.logger.info(msg.rstrip(', '))
+            estimator.logger.info(msg.rstrip(', '))
         self.batch_index += 1
 
     def epoch_begin(self, estimator, *args, **kwargs):
         if self.verbose >= self.LOG_PER_EPOCH:
             self.epoch_start = time.time()
-            self.logger.info("[Epoch %d] Begin, current learning rate: %.4f",
-                             self.current_epoch, estimator.trainer.learning_rate)
+            estimator.logger.info("[Epoch %d] Begin, current learning rate: %.4f",
+                                  self.current_epoch, estimator.trainer.learning_rate)
 
     def epoch_end(self, estimator, *args, **kwargs):
         if self.verbose >= self.LOG_PER_EPOCH:
@@ -350,7 +316,7 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
             for monitor in self.train_metrics + self.val_metrics:
                 name, value = monitor.get()
                 msg += '%s: %.4f, ' % (name, value)
-            self.logger.info(msg.rstrip(', '))
+            estimator.logger.info(msg.rstrip(', '))
         self.current_epoch += 1
         self.batch_index = 0
 
@@ -424,7 +390,6 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
         self.max_checkpoints = max_checkpoints
         self.resume_from_checkpoint = resume_from_checkpoint
         self.saved_checkpoints = []
-        self.logger = logging.getLogger(__name__)
         if self.save_best:
             if mode not in ['auto', 'min', 'max']:
                 warnings.warn('ModelCheckpoint mode %s is unknown, '
@@ -443,14 +408,16 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
             else:
                 # use greater for accuracy and f1 and less otherwise
                 if 'acc' or 'f1' in self.monitor.get()[0].lower():
-                    self.logger.info("`greater` operator will be used to determine "
-                                     "if %s has improved, please use `min` for mode "
-                                     "if you want otherwise", self.monitor.get()[0])
+                    warnings.warn("`greater` operator will be used to determine if {} has improved. "
+                                  "Please specify `mode='min'` to use the `less` operator. "
+                                  "Specify `mode='max' to disable this warning.`"
+                                  .format(self.monitor.get()[0]))
                     self.monitor_op = np.greater
                 else:
-                    self.logger.info("`less` operator will be used to determine "
-                                     "if %s has improved, please use `max` for mode "
-                                     "if you want otherwise", self.monitor.get()[0])
+                    warnings.warn("`less` operator will be used to determine if {} has improved. "
+                                  "Please specify `mode='max'` to use the `greater` operator. "
+                                  "Specify `mode='min' to disable this warning.`"
+                                  .format(self.monitor.get()[0]))
                     self.monitor_op = np.less
 
     def train_begin(self, estimator, *args, **kwargs):
@@ -501,9 +468,9 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
         prefix = "%s-epoch%dbatch%d" % (self.model_prefix, save_epoch_number, save_batch_number)
         self._save_params_and_trainer(estimator, prefix)
         if self.verbose > 0:
-            self.logger.info('[Epoch %d] CheckpointHandler: trained total %d batches, '
-                             'saving model at %s with prefix: %s',
-                             self.current_epoch, self.current_batch + 1, self.model_dir, prefix)
+            estimator.logger.info('[Epoch %d] CheckpointHandler: trained total %d batches, '
+                                  'saving model at %s with prefix: %s',
+                                  self.current_epoch, self.current_batch + 1, self.model_dir, prefix)
 
         if self.save_best:
             monitor_name, monitor_value = self.monitor.get()
@@ -519,18 +486,18 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
                     self._save_params_and_trainer(estimator, prefix)
                     self.best = monitor_value
                     if self.verbose > 0:
-                        self.logger.info('[Epoch %d] CheckpointHandler: '
-                                         '%s improved from %0.5f to %0.5f, '
-                                         'updating best model at %s with prefix: %s',
-                                         self.current_epoch, monitor_name,
-                                         self.best, monitor_value, self.model_dir, prefix)
+                        estimator.logger.info('[Epoch %d] CheckpointHandler: '
+                                              '%s improved from %0.5f to %0.5f, '
+                                              'updating best model at %s with prefix: %s',
+                                              self.current_epoch, monitor_name,
+                                              self.best, monitor_value, self.model_dir, prefix)
                 else:
                     if self.verbose > 0:
-                        self.logger.info('[Epoch %d] CheckpointHandler: '
-                                         '%s did not improve from %0.5f, '
-                                         'skipping updating best model',
-                                         self.current_batch, monitor_name,
-                                         self.best)
+                        estimator.logger.info('[Epoch %d] CheckpointHandler: '
+                                              '%s did not improve from %0.5f, '
+                                              'skipping updating best model',
+                                              self.current_batch, monitor_name,
+                                              self.best)
 
     def _save_symbol(self, estimator):
         symbol_file = os.path.join(self.model_dir, self.model_prefix + '-symbol.json')
@@ -538,9 +505,11 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
             sym = estimator.net._cached_graph[1]
             sym.save(symbol_file)
         else:
-            self.logger.info("Model architecture(symbol file) is not saved, please use HybridBlock "
-                             "to construct your model, and call net.hybridize() before passing to "
-                             "Estimator in order to save model architecture as %s.", symbol_file)
+            estimator.logger.info(
+                "Model architecture(symbol file) is not saved, please use HybridBlock "
+                "to construct your model, and call net.hybridize() before passing to "
+                "Estimator in order to save model architecture as %s.",
+                symbol_file)
 
     def _save_params_and_trainer(self, estimator, file_prefix):
         param_file = os.path.join(self.model_dir, file_prefix + '.params')
@@ -579,7 +548,7 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
                 msg += "%d batches" % estimator.max_batch
             else:
                 msg += "%d epochs" % estimator.max_epoch
-            self.logger.info(msg)
+            estimator.logger.info(msg)
         else:
             msg = "CheckpointHandler: Checkpoint resumed from epoch %d batch %d, " \
                   "continue to train for " % (self.trained_epoch, self.trained_batch)
@@ -607,7 +576,7 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
             assert os.path.exists(trainer_file), "Failed to load checkpoint, %s does not exist" % trainer_file
             estimator.net.load_parameters(param_file, ctx=estimator.context)
             estimator.trainer.load_states(trainer_file)
-            self.logger.warning(msg)
+            estimator.logger.warning(msg)
 
     def _find_max_iteration(self, dir, prefix, start, end, saved_checkpoints=None):
         error_msg = "Error parsing checkpoint file, please check your " \
@@ -672,7 +641,6 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
         self.stopped_epoch = 0
         self.current_epoch = 0
         self.stop_training = False
-        self.logger = logging.getLogger(__name__)
 
         if mode not in ['auto', 'min', 'max']:
             warnings.warn('EarlyStopping mode %s is unknown, '
@@ -688,14 +656,16 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
             self.monitor_op = np.greater
         else:
             if 'acc' or 'f1' in self.monitor.get()[0].lower():
-                self.logger.info("`greater` operator is used to determine "
-                                 "if %s has improved, please use `min` for mode "
-                                 "if you want otherwise", self.monitor.get()[0])
+                warnings.warn("`greater` operator will be used to determine if {} has improved. "
+                              "Please specify `mode='min'` to use the `less` operator. "
+                              "Specify `mode='max' to disable this warning.`"
+                              .format(self.monitor.get()[0]))
                 self.monitor_op = np.greater
             else:
-                self.logger.info("`less` operator is used to determine "
-                                 "if %s has improved, please use `max` for mode "
-                                 "if you want otherwise", self.monitor.get()[0])
+                warnings.warn("`less` operator will be used to determine if {} has improved. "
+                              "Please specify `mode='max'` to use the `greater` operator. "
+                              "Specify `mode='min' to disable this warning.`"
+                              .format(self.monitor.get()[0]))
                 self.monitor_op = np.less
 
         if self.monitor_op == np.greater:  # pylint: disable=comparison-with-callable
@@ -733,5 +703,6 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
 
     def train_end(self, estimator, *args, **kwargs):
         if self.stopped_epoch > 0:
-            self.logger.info('[Epoch %d] EarlyStoppingHanlder: early stopping due to %s not improving',
-                             self.stopped_epoch, self.monitor.get()[0])
+            estimator.logger.info('[Epoch %d] EarlyStoppingHanlder: '
+                                  'early stopping due to %s not improving',
+                                  self.stopped_epoch, self.monitor.get()[0])
