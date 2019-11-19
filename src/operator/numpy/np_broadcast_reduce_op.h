@@ -258,8 +258,8 @@ void NumpyReduceAxesCompute(const nnvm::NodeAttrs& attrs,
   const NumpyReduceAxesParam& param = nnvm::get<NumpyReduceAxesParam>(attrs.parsed);
   #if !MXNET_USE_TVM_OP
   if (param.initial.has_value()) {
-    LOG(FATAL) << "Please add USE_TVM_OP=1 as a compile flag to enable TVM-generated kernels \
-        to support initial value";
+    LOG(FATAL) << "Please add USE_TVM_OP = 1 as a compile flag to enable TVM-generated kernels "
+                  "to support initial value";
   }
   #endif  // MXNET_USE_TVM_OP
   Stream<xpu>* s = ctx.get_stream<xpu>();
