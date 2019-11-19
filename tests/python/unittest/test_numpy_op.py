@@ -586,6 +586,8 @@ def test_np_sum():
             continue
         if (itype == 'float16' or dtype == 'float16') and has_tvm_ops():
             continue
+        if not (has_tvm_ops() and initial == None):
+            continue
         # test gluon
         test_sum = TestSum(axis=axis, dtype=dtype, keepdims=keepdims, initial=initial)
         if hybridize:
