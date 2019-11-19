@@ -1307,15 +1307,23 @@ def test_bilinear_resize_op():
                 {'ctx': mx.gpu(0), 'data': (2, 2, 20, 20), 'type_dict': {'data': np.float32}}]
 
     data = mx.sym.Variable('data')
-    sym = mx.sym.contrib.BilinearResize2D(data, height=10, width=5)
+    sym = mx.sym.contrib.BilinearResize2D(data, height=10, width=5, align_corners=True)
     check_consistency(sym, ctx_list)
 
-    sym = mx.sym.contrib.BilinearResize2D(data, None, scale_height=2, scale_width=0.5, mode='odd_scale')
+    sym = mx.sym.contrib.BilinearResize2D(data, height=10, width=5, align_corners=False)
+    check_consistency(sym, ctx_list)    
+
+    sym = mx.sym.contrib.BilinearResize2D(data, None, scale_height=2, scale_width=0.5, mode='odd_scale', align_corners=True)
     check_consistency(sym, ctx_list)
 
-    sym = mx.sym.contrib.BilinearResize2D(data, None, scale_height=0.5, scale_width=2, mode='to_even_up')
+    sym = mx.sym.contrib.BilinearResize2D(data, None, scale_height=2, scale_width=0.5, mode='odd_scale', align_corners=False)
     check_consistency(sym, ctx_list)
 
+    sym = mx.sym.contrib.BilinearResize2D(data, None, scale_height=0.5, scale_width=2, mode='to_even_up', align_corners=True)
+    check_consistency(sym, ctx_list)
+
+    sym = mx.sym.contrib.BilinearResize2D(data, None, scale_height=0.5, scale_width=2, mode='to_even_up', align_corners=False)
+    check_consistency(sym, ctx_list)
 
 @with_seed()
 def test_global_pooling():

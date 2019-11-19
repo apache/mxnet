@@ -89,8 +89,6 @@ private[mxnet] object NativeLibraryLoader {
     saveLibraryToTemp("libtvm_runtime.so", "/lib/native/libtvm_runtime.so", false)
     saveLibraryToTemp("libgfortran.so.3", "/lib/native/libgfortran.so.3", false)
     saveLibraryToTemp("libquadmath.so.0", "/lib/native/libquadmath.so.0", false)
-    saveLibraryToTemp("libmkldnn.so.1", "/lib/native/libmkldnn.so.1", false)
-    saveLibraryToTemp("libmkldnn.1.dylib", "/lib/native/libmkldnn.1.dylib", false)
     val tempfile: File = saveLibraryToTemp(libname, libFileInJar, true)
 
     loadLibraryFromFile(libname, tempfile)

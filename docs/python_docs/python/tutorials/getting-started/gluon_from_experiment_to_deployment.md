@@ -267,8 +267,7 @@ finetune_net.export("flower-recognition", epoch=epochs)
 MXNet provides various useful tools and interfaces for deploying your model for inference. For example, you can use [MXNet Model Server](https://github.com/awslabs/mxnet-model-server) to start a service and host your trained model easily.
 Besides that, you can also use MXNet's different language APIs to integrate your model with your existing service. We provide [Python](/api/python.html),    [Java](/api/java.html), [Scala](/api/scala.html), and [C++](/api/cpp) APIs.
 
-Here we will briefly introduce how to run inference using Module API in Python. There is more detailed explanation available in the [Predict Image Tutorial](https://mxnet.apache.org/tutorials/python/predict_image.html).
-In general, prediction consists of the following steps:
+Here we will briefly introduce how to run inference using Module API in Python. In general, prediction consists of the following steps:
 1. Load the model architecture (symbol file) and trained parameter values (params file)
 2. Load the synset file for label names
 3. Load the image and apply the same transformation we did on validation dataset during training
@@ -311,7 +310,7 @@ probability=9.798435, class=lotus
 
 ## What's next
 
-You can continue to the [next tutorial](https://mxnet.apache.org/versions/master/tutorials/c++/mxnet_cpp_inference_tutorial.html) on how to load the model we just trained and run inference using MXNet C++ API.
+You can continue to the [next tutorial](/api/cpp/docs/tutorials/cpp_inference) on how to load the model we just trained and run inference using MXNet C++ API.
 
 You can also find more ways to run inference and deploy your models here:
 1. [Java Inference examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
