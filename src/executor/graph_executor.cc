@@ -978,7 +978,7 @@ Executor* GraphExecutor::Reshape(const bool partial_shaping,
     }
   }
   auto exec = new GraphExecutor(symbol);
-  exec->Init(symbol, default_ctx, ctx_map,
+  exec->Init(symbol.Copy(), default_ctx, ctx_map,
              *in_args, *arg_grads, grad_req_types, *aux_states,
              this);
   return exec;
