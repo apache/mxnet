@@ -269,8 +269,9 @@ struct TransposeParam : public dmlc::Parameter<TransposeParam> {
    * \param row shape of dim 0 of input
    * \param col shape of dim 1 of input
    */
-  template<typename DType, typename cpu>
-  inline void Transpose2D(const DType *in, DType *out, index_t row, index_t col) {
+  template<typename DType, typename xpu>
+  inline typename std::enable_if<std::is_same<xpu, cpu>::value, void>::type
+  Transpose2D(const DType *in, DType *out, index_t row, index_t col) {
     // ensure cache line hits and prevent cache miss for any configuration
     // L1 cache size to be utilized = 32kb = 2^15
     // Largest size of a single unit of any dtype <= 8 byte = 2^3
@@ -305,41 +306,10 @@ struct TransposeParam : public dmlc::Parameter<TransposeParam> {
     }
   }
 
-namespace mshadow {
-namespace cuda {
-template<typename DType>
-__global__ void Transpose2DKernel(const DType *in, DType *out, index_t row, index_t col) {
-  const index_t TILE_DIM = 32;
-  const index_t BLOCK_ROWS = 8;
-  __shared__ DType tile[TILE_DIM][TILE_DIM + 1];
 
-  index_t x = blockIdx.x * TILE_DIM + threadIdx.x;
-  index_t y = blockIdx.y * TILE_DIM + threadIdx.y;
-
-  for (index_t j = 0; j < TILE_DIM; j += BLOCK_ROWS)
-      tile[threadIdx.y+j][threadIdx.x] = in[(y+j)*col + x];
-
-  __syncthreads();
-
-  x = blockIdx.y * TILE_DIM + threadIdx.x;  // transpose block offset
-  y = blockIdx.x * TILE_DIM + threadIdx.y;
-
-  for (index_t j = 0; j < TILE_DIM; j += BLOCK_ROWS)
-      out[(y+j)*row+ x] = tile[threadIdx.x][threadIdx.y + j];
-}
-}  // namespace cuda
-}  // namespace mshadow
-
-template<typename DType, typename gpu>
-inline void Transpose2D(const DType *in, DType *out, index_t row, index_t col) {
-  using namespace mshadow::cuda;
-  dim3 grid(32);
-  dim3 block(8);
-  Transpose2DKernel<DType><<<grid, block>>>(in, out, row, col);
-  MSHADOW_CUDA_POST_KERNEL_CHECK(Transpose2DKernel);
-}
-// template<typename DType, typename xpu>
-// inline void Transpose2D(const DType *in, DType *out, index_t row, index_t col);
+template<typename DType, typename xpu>
+inline typename std::enable_if<std::is_same<xpu, gpu>::value, void>::type
+Transpose2D(const DType *in, DType *out, index_t row, index_t col);
 
 template<typename xpu>
 void TransposeImpl(RunContext ctx,

@@ -61,8 +61,9 @@ __global__ void Transpose2DKernel(const DType *in, DType *out, index_t row, inde
 }  // namespace cuda
 }  // namespace mshadow
 
-template<typename DType>
-inline void Transpose2D(const DType *in, DType *out, index_t row, index_t col) {
+template<typename DType, typenamme xpu>
+inline typename std::enable_if<std::is_same<xpu, gpu>::value, void>::type
+Transpose2D(const DType *in, DType *out, index_t row, index_t col) {
   using namespace mshadow::cuda;
   dim3 grid(32);
   dim3 block(8);
