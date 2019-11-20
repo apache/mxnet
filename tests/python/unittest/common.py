@@ -251,7 +251,7 @@ def setup_module():
 
 try:
     from tempfile import TemporaryDirectory
-except:
+except:  # Python 2 support
     # really simple implementation of TemporaryDirectory
     class TemporaryDirectory(object):
         def __init__(self, suffix='', prefix='', dir=''):
