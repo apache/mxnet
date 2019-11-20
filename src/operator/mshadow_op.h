@@ -1329,7 +1329,6 @@ struct lcm : public mxnet_op::tunable {
   }
 };
 
-
 }  // namespace mshadow_op
 }  // namespace op
 }  // namespace mxnet
