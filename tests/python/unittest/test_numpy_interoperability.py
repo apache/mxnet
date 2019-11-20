@@ -57,6 +57,35 @@ class OpArgMngr(object):
         return OpArgMngr._args.get(name, None)
 
 
+def _add_workload_diag():
+    def get_mat(n):
+        data = _np.arange(n)
+        data = _np.add.outer(data, data)
+        return data
+
+    A = np.array([[1, 2], [3, 4], [5, 6]])
+    vals = (100 * np.arange(5)).astype('l')
+    vals_c = (100 * np.array(get_mat(5)) + 1).astype('l')
+    vals_f = _np.array((100 * get_mat(5) + 1), order='F', dtype='l')
+    vals_f = np.array(vals_f)
+
+    OpArgMngr.add_workload('diag', A, k=2)
+    OpArgMngr.add_workload('diag', A, k=1)
+    OpArgMngr.add_workload('diag', A, k=0)
+    OpArgMngr.add_workload('diag', A, k=-1)
+    OpArgMngr.add_workload('diag', A, k=-2)
+    OpArgMngr.add_workload('diag', A, k=-3)
+    OpArgMngr.add_workload('diag', vals, k=0)
+    OpArgMngr.add_workload('diag', vals, k=2)
+    OpArgMngr.add_workload('diag', vals, k=-2)
+    OpArgMngr.add_workload('diag', vals_c, k=0)
+    OpArgMngr.add_workload('diag', vals_c, k=2)
+    OpArgMngr.add_workload('diag', vals_c, k=-2)
+    OpArgMngr.add_workload('diag', vals_f, k=0)
+    OpArgMngr.add_workload('diag', vals_f, k=2)
+    OpArgMngr.add_workload('diag', vals_f, k=-2)
+
+
 def _add_workload_concatenate(array_pool):
     OpArgMngr.add_workload('concatenate', [array_pool['4x1'], array_pool['4x1']])
     OpArgMngr.add_workload('concatenate', [array_pool['4x1'], array_pool['4x1']], axis=1)
@@ -89,6 +118,7 @@ def _add_workload_concatenate(array_pool):
 
 
 def _add_workload_append():
+
     def get_new_shape(shape, axis):
         shape_lst = list(shape)
         if axis is not None:
@@ -1150,6 +1180,28 @@ def _add_workload_less_equal(array_pool):
     # OpArgMngr.add_workload('less_equal', np.array([np.nan]), np.array([np.nan]))
 
 
+def _add_workload_where():
+    c = np.ones(53).astype(bool)
+    d = np.ones_like(c)
+    e = np.zeros_like(c)
+    OpArgMngr.add_workload('where', c, e, e)
+    OpArgMngr.add_workload('where', c, d, e)
+    OpArgMngr.add_workload('where', c, d, e[0])
+    OpArgMngr.add_workload('where', c, d[0], e)
+    # OpArgMngr.add_workload('where', c[::2], d[::2], e[::2])
+    # OpArgMngr.add_workload('where', c[1::2], d[1::2], e[1::2])
+    # OpArgMngr.add_workload('where', c[::3], d[::3], e[::3])
+    # OpArgMngr.add_workload('where', c[1::3], d[1::3], e[1::3])
+    # OpArgMngr.add_workload('where', c[::-2], d[::-2], e[::-2])
+    # OpArgMngr.add_workload('where', c[::-3], d[::-3], e[::-3])
+    # OpArgMngr.add_workload('where', c[1::-3], d[1::-3], e[1::-3])
+    c = np.array([True, False])
+    a = np.zeros((2, 25))
+    b = np.ones((2, 25))
+    OpArgMngr.add_workload('where', c.reshape((2, 1)), a, b)
+    OpArgMngr.add_workload('where', c, a.T, b.T)
+
+
 def _add_workload_nonzero():
     OpArgMngr.add_workload('nonzero', np.random.randint(0, 2))
     OpArgMngr.add_workload('nonzero', np.random.randint(0, 2, size=()))
@@ -1158,6 +1210,12 @@ def _add_workload_nonzero():
     OpArgMngr.add_workload('nonzero', np.random.randint(0, 2, size=(2, 3, 4)))
     OpArgMngr.add_workload('nonzero', np.array([False, False, False], dtype=np.bool_))
     OpArgMngr.add_workload('nonzero', np.array([True, False, False], dtype=np.bool_))
+
+
+def _add_workload_shape():
+    OpArgMngr.add_workload('shape', np.random.uniform(size=()))
+    OpArgMngr.add_workload('shape', np.random.uniform(size=(0, 1)))
+    OpArgMngr.add_workload('shape', np.random.uniform(size=(2, 3)))
 
 
 def _add_workload_diff():
@@ -1214,6 +1272,7 @@ def _prepare_workloads():
     _add_workload_copy()
     _add_workload_cumsum()
     _add_workload_ravel()
+    _add_workload_diag()
     _add_workload_dot()
     _add_workload_expand_dims()
     _add_workload_fix()
@@ -1307,6 +1366,8 @@ def _prepare_workloads():
     _add_workload_greater_equal(array_pool)
     _add_workload_less(array_pool)
     _add_workload_less_equal(array_pool)
+    _add_workload_where()
+    _add_workload_shape()
     _add_workload_diff()
     _add_workload_resize()
 
@@ -1339,11 +1400,11 @@ def _check_interoperability_helper(op_name, *args, **kwargs):
     expected_out = _get_numpy_op_output(onp_op, *args, **kwargs)
     if isinstance(out, (tuple, list)):
         assert type(out) == type(expected_out)
-        for arr in out:
-            assert isinstance(arr, np.ndarray)
         for arr, expected_arr in zip(out, expected_out):
-            assert isinstance(arr, np.ndarray)
-            assert_almost_equal(arr.asnumpy(), expected_arr, rtol=1e-3, atol=1e-4, use_broadcast=False, equal_nan=True)
+            if isinstance(arr, np.ndarray):
+                assert_almost_equal(arr.asnumpy(), expected_arr, rtol=1e-3, atol=1e-4, use_broadcast=False, equal_nan=True)
+            else:
+                _np.testing.assert_equal(arr, expected_arr)
     else:
         assert isinstance(out, np.ndarray)
         assert_almost_equal(out.asnumpy(), expected_out, rtol=1e-3, atol=1e-4, use_broadcast=False, equal_nan=True)
