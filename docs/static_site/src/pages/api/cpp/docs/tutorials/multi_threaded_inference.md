@@ -38,12 +38,12 @@ This doc attempts to do the following:
 
 Examining the current state of thread safety in MXNet we can arrive to the following conclusion:
 
-1. MXNet Dependency Engine is thread safe (except for WaitToRead invoked inside a spawned thread. Please see Limitations section).
+1. MXNet Dependency Engine is thread safe (except for WaitToRead invoked inside a spawned thread. Please see Limitations section)
 2. Graph Executor which is Module/Symbolic/C Predict API backend is not thread safe
 3. Cached Op (Gluon Backend) is not thread safe
 
 The CachedOpThreadSafe and corresponding C APIs were added to address point 3 above and provide a way
-to do multi-threaded inference.
+for MXNet users to do multi-threaded inference.
 
 ```
 /*!
@@ -63,6 +63,8 @@ MXNET_DLL int MXCreateCachedOpEX(SymbolHandle handle,
 ### Prerequisites
 To complete this tutorial you need to:
 - Learn the basics about [MXNet C++ API](/api/cpp)
+- Build MXNet from source with make/cmake
+- Build the multi-threaded inference example
 
 ### Setup the MXNet C++ API
 To use the C++ API in MXNet, you need to build MXNet from source with C++ package. Please follow the [built from source guide](/get_started/ubuntu_setup.html), and [C++ Package documentation](/api/cpp)
@@ -151,7 +153,7 @@ int main(int argc, char *argv[]) {
   }
 ```
 
-The above code parses arguments, loads the image file into a ndarray with a specific shape. There arae few things that are set by default and not configurable. For example, `static_alloc` and `static_shape` are by default set to true.
+The above code parses arguments, loads the image file into a ndarray with a specific shape. There are a few things that are set by default and not configurable. For example, `static_alloc` and `static_shape` are by default set to true.
 
 
 ### Step 2: Prepare input data and load parameters, copying data to a specific context
@@ -244,8 +246,7 @@ true. When this is set to false, it will invoke CachedOp instead of CachedOpThre
     int num_output = 0;
     const int *stypes;
     int ret = MXInvokeCachedOpEx(hdl, arr_handles[num].size(), arr_handles[num].data(),
-                                 &num_output, &(cached_op_handles[num]), &stypes,
-                                 true);
+                                 &num_output, &(cached_op_handles[num]), &stypes);
     if (ret < 0) {
       LOG(FATAL) << MXGetLastError();
     }
@@ -297,11 +298,13 @@ The above code outputs results for different threads and cleans up the thread sa
 ## Current Limitations
 
 1. Only operators tested with the existing model coverage are supported. Other operators and operator types (stateful operators, custom operators are not supported. Existing model coverage is as follows (this list will keep growing as we test more models with different model types):
+
 |Models Tested|MKLDNN|CUDNN|NO-CUDNN|
 | --- | --- | --- | --- |
 | imagenet1k-resnet-18 | Yes | Yes | Yes |
 | imagenet1k-resnet-152 | Yes | Yes | Yes |
 | imagenet1k-resnet-50 | Yes | Yes | Yes |
+
 2. Only dense storage types are supported currently.
 3. Multi GPU Inference not supported currently.
 4. Instantiating multiple instances of SymbolBlockThreadSafe is not supported. Can run parallel inference only on one model per process.
@@ -309,9 +312,12 @@ The above code outputs results for different threads and cleans up the thread sa
 6. Bulking of ops is not supported.
 7. This only supports inference use cases currently, training use cases are not supported.
 8. Graph rewrites with subgraph API currently not supported.
-9. Frontend API Changes to support multi threaded inference.
+9. There is currently no frontend API support to run multi threaded inference. Users can use CreateCachedOpEX and InvokeCachedOp in combination with
+the CPP frontend to run multi-threaded inference as of today.
 10. Multi threaded inference with threaded engine with Module/Symbolic API and C Predict API are not currently supported.
 11. Exception thrown with `wait_to_read` in individual threads can cause issues. Calling invoke from each thread and calling WaitAll after thread joins should still work fine.
+12. Tested only on environments supported by CI. This means that MacOS is not supported.
+13. NaiveEngine mode is not supported.
 
 
 ## Future Work

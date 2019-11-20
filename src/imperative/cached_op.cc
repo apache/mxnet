@@ -1058,7 +1058,7 @@ void CachedOp::Backward(
  * Backward.
  */
 struct CachedOpActualState {
-    std::shared_ptr<CachedOp> op;
+  std::shared_ptr<CachedOp> op;
   OpStatePtr forward_state;
 
   explicit CachedOpActualState(std::shared_ptr<CachedOp> op) {
