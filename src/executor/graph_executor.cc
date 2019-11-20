@@ -1001,7 +1001,7 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
   // setup gradient
   nnvm::Graph g = InitFullGraph(symbol, grad_req_types);
 
-#if MXNET_USE_CUDA && !defined(_WIN32)
+#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC && !defined(_WIN32)
   if (default_ctx.dev_mask() == Context::kGPU && dmlc::GetEnv("MXNET_USE_FUSION", true)) {
     nnvm::Graph unoptimized_graph;
     common::CopyGraph(&unoptimized_graph, g, false);
@@ -1034,7 +1034,12 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
         << "Graph contains duplicate names for some of its inputs - fusion is NOT enabled!";
      }
   }
-#endif  // MXNET_USE_CUDA
+#else
+  // Only warn user if MXNET_USE_FUSION env var is explicitly set
+  if (default_ctx.dev_mask() == Context::kGPU && dmlc::GetEnv("MXNET_USE_FUSION", false)) {
+    WarnFusionNotSupported();
+  }
+#endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC && !defined(_WIN32)
 
   // create "device" and "context" attrs for the graph
   g = AssignContext(g, default_ctx, ctx_map,

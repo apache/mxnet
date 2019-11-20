@@ -167,10 +167,8 @@ void SetRefCounts(nnvm::Graph* fwd_graph, const nnvm::Graph& full_graph) {
 
 void OptimizeGraph(nnvm::Graph * full_graph, nnvm::Graph * fwd_graph, nnvm::Graph * grad_graph,
                    const Context& context, size_t num_forward_outputs, const bool inlining) {
-#if MXNET_USE_CUDA && !defined(_WIN32)
-  if (context.dev_mask() == kGPU &&
-      !inlining &&
-      dmlc::GetEnv("MXNET_USE_FUSION", true)) {
+#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC && !defined(_WIN32)
+  if (context.dev_mask() == kGPU && !inlining && dmlc::GetEnv("MXNET_USE_FUSION", true)) {
     nnvm::Graph unoptimized_graph;
     common::CopyGraph(&unoptimized_graph, *full_graph, false);
 
@@ -202,7 +200,12 @@ void OptimizeGraph(nnvm::Graph * full_graph, nnvm::Graph * fwd_graph, nnvm::Grap
         << "Graph contains duplicate names for some of its inputs - fusion is NOT enabled!";
      }
   }
-#endif  // MXNET_USE_CUDA
+#else
+  // Only warn user if MXNET_USE_FUSION env var is explicitly set
+  if (context.dev_mask() == kGPU && !inlining && dmlc::GetEnv("MXNET_USE_FUSION", false)) {
+    exec::WarnFusionNotSupported();
+  }
+#endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC && !defined(_WIN32)
 
   *fwd_graph = nnvm::Graph();
   fwd_graph->outputs = std::vector<nnvm::NodeEntry>(full_graph->outputs.begin(),
