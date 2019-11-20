@@ -29,14 +29,24 @@ FP16_FUNCS = [
 # like image transformations or optimizers) or they
 # are dtype neutral (can work in both fp16 and fp32)
 FP16_FP32_FUNCS = [
-    'BatchNorm',
+    'abs',
     '_add',
+    'BatchNorm',
+    'Concat',
+    'concat',
+    'LRN',
+    'Pooling',
+    'relu',
+    'shuffle',
+    '_shuffle',
+    'sqrt',
+    'square',
+    'tanh',
     ]
 
 # Functions that have to be cast to FP32 due to possible
 # overflows
 FP32_FUNCS = [
-    'Pooling',
     'Deconvolution',
     'RNN',
     'BatchNorm_v1',
@@ -196,7 +206,6 @@ FP32_FUNCS = [
     '_scatter_plus_scalar',
     '_scatter_set_nd',
     '_set_value',
-    '_shuffle',
     '_slice_assign',
     '_slice_assign_scalar',
     '_sparse_abs',
@@ -238,7 +247,6 @@ FP32_FUNCS = [
     '_unravel_index',
     '_zeros',
     '_zeros_without_dtype',
-    'abs',
     'adam_update',
     'all_finite',
     # 'amp_cast',
@@ -303,7 +311,6 @@ FP32_FUNCS = [
     'random_randint',
     'random_uniform',
     'ravel_multi_index',
-    'relu',
     'repeat',
     'reshape',
     'reshape_like',
@@ -324,7 +331,6 @@ FP32_FUNCS = [
     'sgd_mom_update',
     'sgd_update',
     'shape_array',
-    'shuffle',
     'sigmoid',
     'sign',
     'signsgd_update',
@@ -338,12 +344,10 @@ FP32_FUNCS = [
     'sort',
     'space_to_depth',
     'split',
-    'sqrt',
     'squeeze',
     'stop_gradient',
     'swapaxes',
     'take',
-    'tanh',
     'tile',
     'transpose',
     'trunc',
@@ -380,7 +384,6 @@ FP32_FUNCS = [
 
     # Powers
     'broadcast_power',
-    'square',
     '_sparse_square',
     'reciprocal',
     '_RDivScalar',
@@ -476,7 +479,6 @@ FP32_FUNCS = [
     'LayerNorm',
     'GroupNorm',
     'L2Normalization',
-    'LRN',
     'SoftmaxActivation',
     'LinearRegressionOutput',
     'LogisticRegressionOutput',
@@ -540,8 +542,6 @@ WIDEST_TYPE_CASTS = [
     '_mod',
     '_mul',
     '_not_equal',
-    'Concat',
-    'concat',
     'Correlation',
     'ElementWiseSum',
     '_sparse_ElementWiseSum',
