@@ -155,9 +155,9 @@ inline void get_expected_results_multiple(
     for (size_t j = 0; j < num_threads; ++j) {
       int num_output = 0;
       const int *stypes;
-      int ret4 = MXInvokeCachedOpEX(*hdl, (*arr_handles)[i][j].size(),
+      int ret4 = MXInvokeCachedOpEx(*hdl, (*arr_handles)[i][j].size(),
                                     (*arr_handles)[i][j].data(), &num_output,
-                                    &nd_ptrs[i][j], &stypes, false);
+                                    &nd_ptrs[i][j], &stypes);
       if (ret4 < 0) {
         LOG(FATAL) << MXGetLastError();
       }
@@ -298,10 +298,9 @@ void run_inference(const std::string& model,
         }
         int num_output = 0;
         const int *stypes;
-        int ret = MXInvokeCachedOpEX(
+        int ret = MXInvokeCachedOpEx(
             hdl2, arr_handles2[i][num].size(), arr_handles2[i][num].data(),
-            &num_output, &(cached_op_handles[i * num_threads + num]), &stypes,
-            true);
+            &num_output, &(cached_op_handles[i * num_threads + num]), &stypes);
         if (ret < 0) {
             LOG(FATAL) << MXGetLastError();
         }
@@ -328,12 +327,12 @@ void run_inference(const std::string& model,
       mxnet::test::AssertEqual(output_mx_arr[i], result_expected[i], 1e-2, 1e-5);
     }
     mxnet::cpp::NDArray::WaitAll();
-    int ret2 = MXFreeCachedOpEX(hdl, false);
+    int ret2 = MXFreeCachedOp(hdl);
     if (ret2 < 0) {
       LOG(FATAL) << MXGetLastError();
     }
 
-    ret2 = MXFreeCachedOpEX(hdl2, true);
+    ret2 = MXFreeCachedOp(hdl2);
     if (ret2 < 0) {
       LOG(FATAL) << MXGetLastError();
     }

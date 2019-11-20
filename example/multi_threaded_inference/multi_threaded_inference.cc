@@ -253,9 +253,8 @@ void run_inference(const std::string& model_name, const std::vector<mxnet::cpp::
     }
     int num_output = 0;
     const int *stypes;
-    int ret = MXInvokeCachedOpEX(hdl, arr_handles[num].size(), arr_handles[num].data(),
-                                 &num_output, &(cached_op_handles[num]), &stypes,
-                                 true);
+    int ret = MXInvokeCachedOpEx(hdl, arr_handles[num].size(), arr_handles[num].data(),
+                                 &num_output, &(cached_op_handles[num]), &stypes);
     if (ret < 0) {
       LOG(FATAL) << MXGetLastError();
     }
@@ -288,7 +287,7 @@ void run_inference(const std::string& model_name, const std::vector<mxnet::cpp::
     PrintOutputResult(static_cast<float *>((*output_mx_arr)[i]->data().dptr_),
                       (*output_mx_arr)[i]->shape().Size(), synset);
   }
-  int ret2 = MXFreeCachedOpEX(hdl, true);
+  int ret2 = MXFreeCachedOp(hdl);
   if (ret2 < 0) {
     LOG(FATAL) << MXGetLastError();
   }

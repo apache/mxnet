@@ -28,6 +28,7 @@
 #include <utility>
 #include <string>
 #include <unordered_map>
+#include "./cached_op.h"
 
 
 
@@ -73,7 +74,7 @@ struct CachedOpThreadSafeConfig
 
 
 
-class CachedOpThreadSafe {
+class CachedOpThreadSafe : public CachedOp {
  public:
   CachedOpThreadSafe(
       const nnvm::Symbol &sym,
@@ -89,7 +90,7 @@ class CachedOpThreadSafe {
     return fwd_graph_.indexed_graph().mutable_input_nodes();
   }
   OpStatePtr Forward(
-      const std::shared_ptr<CachedOpThreadSafe>& op_ptr,
+      const std::shared_ptr<CachedOp>& op_ptr,
       const std::vector<NDArray*>& inputs,
       const std::vector<NDArray*>& outputs);
   std::vector<std::string> ListForwardInputNames() const {
@@ -106,27 +107,15 @@ class CachedOpThreadSafe {
     return sym;
   }
 
- private:
   struct GraphInfo;
-  struct CachedOpThreadSafeState;
+ private:
   struct DynamicRuntime;
 
+  OpStatePtr GetCachedOpState(const Context& ctx);
 
-  OpStatePtr GetCachedOpThreadSafeState(const Context& ctx);
-  bool SetForwardGraph(GraphInfo* info,
-                       const std::vector<NDArray*>& inputs);
   OpStatePtr DynamicForward(const Context& default_ctx,
                             const std::vector<NDArray*>& inputs,
                             const std::vector<NDArray*>& outputs);
-  OpStatePtr StaticForward(const Context& default_ctx,
-                           const std::vector<NDArray*>& inputs,
-                           const std::vector<NDArray*>& outputs);
-  void StaticRunOps(const Context &default_ctx, const nnvm::Graph &g,
-                    const OpStatePtr &state_ptr,
-                    const std::vector<NDArray *> &state_arrays,
-                    size_t start_nid, size_t end_nid);
-  void StaticInitExec(const OpStatePtr &state_ptr);
-  void StaticAllocMemory(const OpStatePtr& state_ptr);
 
   CachedOpThreadSafeConfig config_;
   nnvm::Graph fwd_graph_;

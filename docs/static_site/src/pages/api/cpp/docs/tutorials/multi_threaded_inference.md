@@ -56,22 +56,6 @@ MXNET_DLL int MXCreateCachedOpEX(SymbolHandle handle,
                                  const char** vals,
                                  CachedOpHandle *out,
                                  bool thread_safe DEFAULT(false));
-
-/*!
- * \brief invoke cached operator, allows to choose thread_safe version
- */
-MXNET_DLL int MXInvokeCachedOpEX(CachedOpHandle handle,
-                                 int num_inputs,
-                                 NDArrayHandle *inputs,
-                                 int *num_outputs,
-                                 NDArrayHandle **outputs,
-                                 const int** out_stypes,
-                                 bool thread_safe DEFAULT(false));
-
-/*!
- * \brief free cached operator
- */
-MXNET_DLL int MXFreeCachedOpEX(CachedOpHandle handle, bool thread_safe DEFAULT(false));
 ```
 
 ## Multithreaded inference in MXNet with C API and CPP Package
@@ -259,7 +243,7 @@ true. When this is set to false, it will invoke CachedOp instead of CachedOpThre
     }
     int num_output = 0;
     const int *stypes;
-    int ret = MXInvokeCachedOpEX(hdl, arr_handles[num].size(), arr_handles[num].data(),
+    int ret = MXInvokeCachedOpEx(hdl, arr_handles[num].size(), arr_handles[num].data(),
                                  &num_output, &(cached_op_handles[num]), &stypes,
                                  true);
     if (ret < 0) {
@@ -272,8 +256,8 @@ true. When this is set to false, it will invoke CachedOp instead of CachedOpThre
 
 The above creates the lambda function taking the thread number as the argument.
 If `random_sleep` is set it will sleep for a random number (secs) generated between 0 to 5 seconds.
-Following this, it invokes `MXInvokeCachedOpEX` with the `thread_safe` as true(last parameter to 
-`MXInvokeCachedOpEX`). When this is set to false, it will invoke CachedOp instead of CachedOpThreadSafe.
+Following this, it invokes `MXInvokeCachedOpEx`(from the hdl it determines whether to invoke cached op threadsafe version or not).
+When this is set to false, it will invoke CachedOp instead of CachedOpThreadSafe.
 
 ### Step 5: Spawn multiple threads and wait for all threads to complete
 
