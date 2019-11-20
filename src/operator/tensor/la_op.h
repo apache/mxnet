@@ -901,19 +901,22 @@ void LaOpDetBackward(const nnvm::NodeAttrs& attrs,
                      const std::vector<OpReqType>& req,
                      const std::vector<TBlob>& outputs) {
   using namespace mshadow;
+  if (outputs[0].shape_.Size() == 0U) {
+    return;
+  }
   Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_EQ(inputs.size(), onum + 3);
   CHECK_EQ(outputs.size(), 1);
   MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
     std::vector<TBlob> tspace(outputs);
-    for ( int i = 0; i < onum; ++i ) {
+    for ( int i = 0; i < outputs.size(); ++i ) {
       if ( req[i] == kAddTo ) {
         tspace[i].dptr_ = ctx.requested[0]
                              .get_space_typed<xpu, 1, OType>(Shape1(outputs[i].Size()), s).dptr_;
       }
     }
     LaOpDetBackwardCaller<xpu, OType, onum, laop>::op(inputs, tspace, attrs, ctx);
-    for ( int i = 0; i < onum; ++i ) {
+    for ( int i = 0; i < outputs.size(); ++i ) {
       if ( req[i] == kAddTo ) {
         Tensor<xpu, 1, OType> out = outputs[i].FlatTo1D<xpu, OType>(s);
         out += tspace[i].FlatTo1D<xpu, OType>(s);
