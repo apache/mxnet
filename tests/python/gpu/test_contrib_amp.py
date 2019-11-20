@@ -37,22 +37,22 @@ from test_bucketing import train_model
 set_default_context(mx.gpu(0))
 
 def test_amp_coverage():
-    conditional = [item[0] for item in amp.lists.symbol.CONDITIONAL_FP32_FUNCS]
+    conditional = [item[0] for item in amp.lists.symbol_fp16.CONDITIONAL_FP32_FUNCS]
 
     # Check for duplicates
-    for a in [amp.lists.symbol.FP16_FUNCS,
-          amp.lists.symbol.FP16_FP32_FUNCS,
-          amp.lists.symbol.FP32_FUNCS,
-          amp.lists.symbol.WIDEST_TYPE_CASTS,
+    for a in [amp.lists.symbol_fp16.FP16_FUNCS,
+          amp.lists.symbol_fp16.FP16_FP32_FUNCS,
+          amp.lists.symbol_fp16.FP32_FUNCS,
+          amp.lists.symbol_fp16.WIDEST_TYPE_CASTS,
           conditional]:
         ret = [item for item, count in collections.Counter(a).items() if count > 1]
         assert ret == [], "Elements " + str(ret) + " are duplicated in the AMP lists."
 
     t = []
-    for a in [amp.lists.symbol.FP16_FUNCS,
-              amp.lists.symbol.FP16_FP32_FUNCS,
-              amp.lists.symbol.FP32_FUNCS,
-              amp.lists.symbol.WIDEST_TYPE_CASTS,
+    for a in [amp.lists.symbol_fp16.FP16_FUNCS,
+              amp.lists.symbol_fp16.FP16_FP32_FUNCS,
+              amp.lists.symbol_fp16.FP32_FUNCS,
+              amp.lists.symbol_fp16.WIDEST_TYPE_CASTS,
               conditional]:
         t += a
     ret = [item for item, count in collections.Counter(t).items() if count > 1]

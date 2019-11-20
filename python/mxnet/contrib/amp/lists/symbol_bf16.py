@@ -19,7 +19,7 @@
 """Lists of functions whitelisted/blacklisted for automatic mixed precision in symbol API."""
 
 # Functions that should be cast to lower precision
-FP16_FUNCS = [
+BF16_FUNCS = [
     'Convolution',
     'FullyConnected',
     ]
@@ -27,8 +27,8 @@ FP16_FUNCS = [
 # Functions that should not be casted, either because
 # they are irrelevant (not used in the network itself
 # like image transformations or optimizers) or they
-# are dtype neutral (can work in both fp16 and fp32)
-FP16_FP32_FUNCS = [
+# are dtype neutral (can work in both bf16 and fp32)
+BF16_FP32_FUNCS = [
     'abs',
     '_add',
     'BatchNorm',

@@ -18,8 +18,8 @@
 # coding: utf-8
 """Functions for enabling AMP (automatic mixed precision)."""
 __all__ = ['init', 'init_trainer', 'scale_loss', 'unscale', 'convert_model',
-           'convert_hybrid_block', 'list_fp16_ops', 'list_fp32_ops',
-           'list_fp16_fp32_ops', 'list_conditional_fp32_ops',
+           'convert_hybrid_block', 'list_lp16_ops', 'list_fp32_ops',
+           'list_lp16_fp32_ops', 'list_conditional_fp32_ops',
            'list_widest_type_cast', 'list_loss_output_functions',
            'convert_symbol']
 
@@ -162,7 +162,7 @@ def _wrap_symbol_functions(module, target_dtype, target_precision_ops=None,
                 getattr(module, op_name_prefix[1:-1])
 
     wrap_list = target_precision_ops if target_precision_ops is not None \
-                    else list_fp16_ops(target_dtype)
+                    else list_lp16_ops(target_dtype)
     for fun_name in wrap_list:
         try:
             fun_name, cur_module = _get_fun_to_wrap(fun_name, module, submodule_dict)
@@ -388,11 +388,11 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
          list of values of the parameter that make the operator to be casted to FP32)
     excluded_sym_names : list of strs, optional
         A list of strings that represent the names of symbols that users want to exclude
-        from being casted to FP16 or FP32.
+        from being casted to LP16 or FP32.
     data_names : list of strs, optional
         A list of strings that represent input data tensor names to the model
     cast_optional_params : bool, default False
-        Whether to cast the arg_params and aux_params that don't require to be in FP16
+        Whether to cast the arg_params and aux_params that don't require to be in LP16
         because of a cast layer following it, but will reduce the computation and memory
         overhead of the model if casted.
     """
@@ -404,7 +404,7 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
     if target_dtype_ops is not None:
         assert isinstance(target_dtype_ops, list), "target_dtype_ops should be a list of strs"
     else:
-        target_dtype_ops = list_fp16_ops(target_dtype)
+        target_dtype_ops = list_lp16_ops(target_dtype)
 
     if fp32_ops is not None:
         assert isinstance(fp32_ops, list), "fp32_ops should be a list of strs"
@@ -450,15 +450,15 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
                                  "Common ops in fp32_ops and conditional_fp32_ops {}".format(common_ops)
 
     combined_ops = set(target_dtype_ops + fp32_ops + conditional_op_names)
-    all_fp16_fp32_ops = set(list_fp16_ops(target_dtype) + list_fp32_ops(target_dtype)
-                            + list_fp16_fp32_ops(target_dtype) + original_conditional_op_names)
+    all_lp16_fp32_ops = set(list_lp16_ops(target_dtype) + list_fp32_ops(target_dtype)
+                            + list_lp16_fp32_ops(target_dtype) + original_conditional_op_names)
 
-    illegal_ops = combined_ops - all_fp16_fp32_ops
+    illegal_ops = combined_ops - all_lp16_fp32_ops
     assert not illegal_ops, '''Can only choose ops from one of the three lists
-                            for fp16_ops and fp32_ops
-                            1. amp.list_fp16_ops(target_dtype)
+                            for lp16_ops and fp32_ops
+                            1. amp.list_lp16_ops(target_dtype)
                             2. amp.list_fp32_ops(target_dtype)
-                            3. amp.list_fp16_fp32_ops(target_dtype)
+                            3. amp.list_lp16_fp32_ops(target_dtype)
                             4. amp.list_conditional_fp32_ops(target_dtype)
                             Op %s not in any of them''' % (illegal_ops)
 
@@ -550,7 +550,7 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
         A list of strings that represent the names of symbols that users want to exclude
         from being executed in lower precision.
     cast_optional_params : bool, default False
-        Whether to cast the arg_params and aux_params that don't require to be in FP16
+        Whether to cast the arg_params and aux_params that don't require to be in LP16
         because of a cast layer following it, but will reduce the computation and memory
         overhead of the model if casted.
     """
@@ -607,7 +607,7 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
     block : HybridBlock or SymbolBlock object
         FP32 HybridBlock or SymbolBlock object
     target_dtype : str or numpy
-        currently only supports fp16. The target dtype indicates to add cast layers
+        currently only supports lp16. The target dtype indicates to add cast layers
         when possible so that lower precision computation can be leveraged.
     target_precision_ops : list of strs
         Override the list of operator names casted to target_dtype.
@@ -623,7 +623,7 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
     ctx : Context
         Context on which model parameters should live
     cast_optional_params : bool, default False
-        Whether to cast the arg_params and aux_params that don't require to be in FP16
+        Whether to cast the arg_params and aux_params that don't require to be in LP16
         because of a cast layer following it, but will reduce the computation and memory
         overhead of the model if casted.
     """
@@ -709,7 +709,7 @@ def convert_bucketing_module(bucketing_mod, target_dtype="float16", target_dtype
         A list of strings that represent the names of symbols that users want to exclude
         from being executed in lower precision.
     cast_optional_params : bool, default False
-        Whether to cast the arg_params and aux_params that don't require to be in FP16
+        Whether to cast the arg_params and aux_params that don't require to be in LP16
         because of a cast layer following it, but will reduce the computation and memory
         overhead of the model if casted.
     """
@@ -744,13 +744,13 @@ def convert_bucketing_module(bucketing_mod, target_dtype="float16", target_dtype
                                            compression_params=bucketing_mod._compression_params)
     return result_mod
 
-def list_fp16_ops(target_dtype):
-    """Get the default list of FP16 ops for AMP
+def list_lp16_ops(target_dtype):
+    """Get the default list of LP16 ops for AMP
     """
     if target_dtype in ['float16', np.float16]:
         return lists.symbol_fp16.FP16_FUNCS
     elif target_dtype == bfloat16:
-        return lists.symbol_bf16.FP16_FUNCS
+        return lists.symbol_bf16.BF16_FUNCS
 
 def list_fp32_ops(target_dtype):
     """Get the default list of FP32 ops for AMP
@@ -760,13 +760,13 @@ def list_fp32_ops(target_dtype):
     elif target_dtype in [bfloat16]:
         return lists.symbol_bf16.FP32_FUNCS
 
-def list_fp16_fp32_ops(target_dtype):
-    """Get the default list of ops which run in both FP16 and FP32
+def list_lp16_fp32_ops(target_dtype):
+    """Get the default list of ops which run in both LP16 and FP32
     """
     if target_dtype in ['float16', np.float16]:
         return lists.symbol_fp16.FP16_FP32_FUNCS
     elif target_dtype in [bfloat16]:
-        return lists.symbol_bf16.FP16_FP32_FUNCS
+        return lists.symbol_bf16.BF16_FP32_FUNCS
 
 def list_conditional_fp32_ops(target_dtype):
     """Get the conditional fp32 ops list
