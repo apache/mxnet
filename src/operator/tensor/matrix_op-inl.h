@@ -262,8 +262,84 @@ struct TransposeParam : public dmlc::Parameter<TransposeParam> {
   }
 };
 
-template<typename DType, typename xpu>
-inline void Transpose2D(const DType *in, DType *out, index_t row, index_t col);
+/*!
+   * \brief This function performs transpose operation on a 2D matrix by utilizing the L1 cache
+   * \param in  input tensor
+   * \param out output tensor
+   * \param row shape of dim 0 of input
+   * \param col shape of dim 1 of input
+   */
+  template<typename DType, typename cpu>
+  inline void Transpose2D(const DType *in, DType *out, index_t row, index_t col) {
+    // ensure cache line hits and prevent cache miss for any configuration
+    // L1 cache size to be utilized = 32kb = 2^15
+    // Largest size of a single unit of any dtype <= 8 byte = 2^3
+    // Number of elements - (2^15/2^3) = 2^12
+    // Block-size - 2^6 v 2^6 (64 v 64)
+
+    // But we could leverage unrolling of for loops (for parallelization)
+    // Block-size - 2^5 v 2^5 (32 v 32) with potential 4 pragma for loop unrolled
+    // blocksize * blocksize * num_threads = cache_size / dtype_size
+    // Instead of explicit unroll, let compiler figure out optimal unroll factor
+    index_t blocksize = 32;
+
+    // collapse 2 parallelizes 2 for loops
+    // inner 2 for loops aren't parallelized to prevent cache miss
+
+    // Microsoft Visual C++ compiler does not support omp collapse
+    #ifdef _MSC_VER
+      #pragma omp parallel for
+    #else
+      #pragma omp parallel for collapse(2)
+    #endif  // _MSC_VER
+
+    for (index_t i = 0; i < row; i += blocksize) {
+      for (index_t j = 0; j < col; j += blocksize) {
+        // transpose the block
+        for (index_t a = j; (a < blocksize + j) && (a < col); ++a) {
+          for (index_t b = i; (b < blocksize + i) && (b < row); ++b) {
+            out[a * row + b] = in[b * col + a];
+          }
+        }
+      }
+    }
+  }
+
+namespace mshadow {
+namespace cuda {
+template<typename DType>
+__global__ void Transpose2DKernel(const DType *in, DType *out, index_t row, index_t col) {
+  const index_t TILE_DIM = 32;
+  const index_t BLOCK_ROWS = 8;
+  __shared__ DType tile[TILE_DIM][TILE_DIM + 1];
+
+  index_t x = blockIdx.x * TILE_DIM + threadIdx.x;
+  index_t y = blockIdx.y * TILE_DIM + threadIdx.y;
+
+  for (index_t j = 0; j < TILE_DIM; j += BLOCK_ROWS)
+      tile[threadIdx.y+j][threadIdx.x] = in[(y+j)*col + x];
+
+  __syncthreads();
+
+  x = blockIdx.y * TILE_DIM + threadIdx.x;  // transpose block offset
+  y = blockIdx.x * TILE_DIM + threadIdx.y;
+
+  for (index_t j = 0; j < TILE_DIM; j += BLOCK_ROWS)
+      out[(y+j)*row+ x] = tile[threadIdx.x][threadIdx.y + j];
+}
+}  // namespace cuda
+}  // namespace mshadow
+
+template<typename DType, typename gpu>
+inline void Transpose2D(const DType *in, DType *out, index_t row, index_t col) {
+  using namespace mshadow::cuda;
+  dim3 grid(32);
+  dim3 block(8);
+  Transpose2DKernel<DType><<<grid, block>>>(in, out, row, col);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(Transpose2DKernel);
+}
+// template<typename DType, typename xpu>
+// inline void Transpose2D(const DType *in, DType *out, index_t row, index_t col);
 
 template<typename xpu>
 void TransposeImpl(RunContext ctx,
