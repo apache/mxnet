@@ -239,9 +239,9 @@ def test_fusion_compiler_cache():
         check_fused_symbol(a+b, ctx=mx.gpu(1), a=arr1, b=arr2)
 
 @with_seed()
+@use_np
 def test_fusion_boolean_inputs():
     from mxnet.gluon import HybridBlock
-    mx.npx.set_np()
 
     class Foo(HybridBlock):
         def __init__(self, prefix=None, params=None):
@@ -256,7 +256,7 @@ def test_fusion_boolean_inputs():
     foo = Foo()
     foo.hybridize(static_alloc=True)
     out = foo(mx.np.ones((10,), ctx=mx.gpu()))
-    mx.npx.reset_np()
+    mx.nd.waitall()
 
 @with_seed()
 def test_fusion_different_dimensions():
