@@ -96,20 +96,6 @@ inline bool SupportMKLDNNPooling(const PoolingParam &param) {
          (!param.layout.has_value() || param.layout.value() == mshadow::kNCHW);
 }
 
-inline bool SupportMKLDNNPooling(const PoolingParam &param,
-                                 const mxnet::TShape &dshape) {
-  bool ret = SupportMKLDNNPooling(param);
-  if (!ret)
-    return false;
-
-  if (param.pooling_convention == pool_enum::kValid) {
-    return true;
-  } else {
-    // currently, only max-pooling is supported for full convention
-    return param.pool_type == pool_enum::kMaxPooling;
-  }
-}
-
 inline bool MKLDNNRequireWorkspace(const PoolingParam &param) {
   return param.pool_type != pool_enum::kAvgPooling;
 }
