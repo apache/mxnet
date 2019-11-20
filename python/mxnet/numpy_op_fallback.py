@@ -50,6 +50,49 @@ def register(op_name, imperative=True, symbolic=True):
 
 
 @use_np  # enforce np shape and array semantics for all the methods in this class
+class Sort(operator.CustomOp):
+    """Fallback to NumPy sort operator."""
+    def __init__(self, axis, kind):
+        super(Sort, self).__init__()
+        self._axis = axis
+        self._kind = kind
+
+    def forward(self, is_train, req, in_data, out_data, aux):
+        out = np.sort(in_data[0].asnumpy(), self._axis, self._kind)
+        self.assign(out_data[0], req[0], _mx_np.array(out, dtype=out.dtype, ctx=out_data[0].ctx))
+
+    def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+        raise NotImplementedError('Operator sort does not support gradient computation')
+
+
+@register('sort_fallback')
+class SortProp(operator.CustomOpProp):
+    """Fallback sort operator properties."""
+    def __init__(self, axis, kind):
+        super(SortProp, self).__init__(need_top_grad=True)
+        self._axis = ast.literal_eval(axis)
+        self._kind = None if kind == 'None' else kind
+
+    def list_arguments(self):
+        return ['a']
+
+    def infer_shape(self, in_shape):
+        if self._axis is None and len(in_shape[0]) == 0:
+            out_shape = (1,)
+        elif self._axis is None:
+            out_shape = (np.prod(in_shape[0]),)
+        elif self._axis > len(in_shape[0]) - 1 or self._axis < -len(in_shape[0]):
+            raise ValueError("AxisError: axis %s is out of bounds for array of "
+                             "dimension %s"%(self._axis, len(in_shape[0])))
+        else:
+            out_shape = in_shape[0]
+        return (in_shape[0],), (out_shape,), ()
+
+    def create_operator(self, ctx, in_shapes, in_dtypes):
+        return Sort(self._axis, self._kind)
+
+
+@use_np  # enforce np shape and array semantics for all the methods in this class
 class Resize(operator.CustomOp):
     """Fallback to NumPy resize operator."""
     def __init__(self, new_shape):

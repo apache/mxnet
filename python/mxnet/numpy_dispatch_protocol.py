@@ -139,6 +139,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'diff',
     'resize',
     'where',
+    'sort',
 ]
 
 

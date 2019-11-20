@@ -1242,6 +1242,16 @@ def _add_workload_resize():
     OpArgMngr.add_workload('resize', np.zeros((10, 0)), (0, 10))
     OpArgMngr.add_workload('resize', np.zeros((10, 0)), (0, 100))
 
+def _add_workload_sort():
+    OpArgMngr.add_workload('sort', np.random.uniform(0, 100), axis=None)
+    OpArgMngr.add_workload('sort', np.random.uniform(0, 100, size=()), axis=None)
+    OpArgMngr.add_workload('sort', np.random.uniform(0, 100, size=(2, 3, 4)), axis=None)
+    OpArgMngr.add_workload('sort', np.random.uniform(0, 100, size=(4, 3, 0)), axis=None)
+    OpArgMngr.add_workload('sort', np.random.randint(0, 100, size=(2, 3, 4)), axis=-1)
+    OpArgMngr.add_workload('sort', np.random.randint(0, 100, size=(4, 3, 5)), axis=-1, kind='mergesort')
+    OpArgMngr.add_workload('sort', np.random.randint(0, 100, size=(2, 3, 4)), axis=None, kind='quicksort')
+    OpArgMngr.add_workload('sort', np.random.uniform(0, 100, size=(4, 3, 0)))
+
 
 @use_np
 def _prepare_workloads():
@@ -1358,6 +1368,7 @@ def _prepare_workloads():
     _add_workload_shape()
     _add_workload_diff()
     _add_workload_resize()
+    _add_workload_sort()
 
 
 _prepare_workloads()

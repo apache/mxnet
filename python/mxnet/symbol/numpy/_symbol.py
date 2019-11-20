@@ -38,7 +38,7 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'split', 'vsplit', 'concatenate', 'append',
            'stack', 'vstack', 'column_stack', 'dstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax',
            'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming', 'blackman', 'flip',
-           'around', 'hypot', 'bitwise_xor', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take',
+           'around', 'hypot', 'bitwise_xor', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take', 'sort',
            'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal',
            'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'shares_memory', 'may_share_memory', 'diff',
            'resize', 'nan_to_num', 'where']
@@ -1078,6 +1078,97 @@ def take(a, indices, axis=None, mode='raise', out=None):
         return _npi.take(_npi.reshape(a, -1), indices, 0, mode, out)
     else:
         return _npi.take(a, indices, axis, mode, out)
+# pylint: enable=redefined-outer-name
+
+
+# pylint: disable=redefined-outer-name
+@set_module('mxnet.symbol.numpy')
+def sort(a, axis=-1, kind=None, order=None):
+    r"""
+    Return a sorted copy of an array.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Array to be sorted.
+    axis : int or None, optional
+        Axis along which to sort. If None, the array is flattened before
+        sorting. The default is -1, which sorts along the last axis.
+    kind : {'quicksort', 'mergesort', 'heapsort', 'stable'}, optional
+        Sorting algorithm. The default is 'quicksort'. Note that both 'stable'
+        and 'mergesort' use timsort or radix sort under the covers and, in general,
+        the actual implementation will vary with data type. The 'mergesort' option
+        is retained for backwards compatibility.
+    order : str or list of str, optional
+        When `a` is an array with fields defined, this argument specifies
+        which fields to compare first, second, etc.  A single field can
+        be specified as a string, and not all fields need be specified,
+        but unspecified fields will still be used, in the order in which
+        they come up in the dtype, to break ties.
+
+    Returns
+    -------
+    sorted_array : _Symbol
+        Array of the same type and shape as `a`.
+
+    See Also
+    --------
+    ndarray.sort : Method to sort an array in-place.
+    argsort : Indirect sort.
+    lexsort : Indirect stable sort on multiple keys.
+    searchsorted : Find elements in a sorted array.
+    partition : Partial sort.
+
+    Notes
+    -----
+    The various sorting algorithms are characterized by their average speed,
+    worst case performance, work space size, and whether they are stable. A
+    stable sort keeps items with the same key in the same relative
+    order. The four algorithms implemented in NumPy have the following
+    properties:
+
+    =========== ======= ============= ============ ========
+       kind      speed   worst case    work space   stable
+    =========== ======= ============= ============ ========
+    'quicksort'    1     O(n^2)            0          no
+    'heapsort'     3     O(n*log(n))       0          no
+    'mergesort'    2     O(n*log(n))      ~n/2        yes
+    'timsort'      2     O(n*log(n))      ~n/2        yes
+    =========== ======= ============= ============ ========
+
+    .. note:: The datatype determines which of 'mergesort' or 'timsort'
+       is actually used, even if 'mergesort' is specified. User selection
+       at a finer scale is not currently available.
+
+    All the sort algorithms make temporary copies of the data when
+    sorting along any but the last axis.  Consequently, sorting along
+    the last axis is faster and uses less space than sorting along
+    any other axis.
+
+    quicksort has been changed to an introsort which will switch
+    heapsort when it does not make enough progress. This makes its
+    worst case O(n*log(n)).
+
+    'stable' automatically choses the best stable sorting algorithm
+    for the data type being sorted. It, along with 'mergesort' is
+    currently mapped to timsort or radix sort depending on the
+    data type. API forward compatibility currently limits the
+    ability to select the implementation and it is hardwired for the different
+    data types.
+
+    Timsort is added for better performance on already or nearly
+    sorted data. On random data timsort is almost identical to
+    mergesort. It is now used for stable sort while quicksort is still the
+    default sort if none is chosen. For details of timsort, refer to
+    `CPython listsort.txt <https://github.com/python/cpython/blob/3.7/Objects/listsort.txt>`_.
+    'mergesort' and 'stable' are mapped to radix sort for integer data types. Radix sort is an
+    O(n) sort instead of O(n log n).
+    """
+    if order is not None:
+        raise NotImplementedError("Not support at the moment")
+    if kind is None:
+        kind = 'quicksort'
+    return _npi.sort_fallback(a, axis=axis, kind=kind)
 # pylint: enable=redefined-outer-name
 
 
