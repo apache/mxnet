@@ -128,6 +128,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'linalg.norm',
     'linalg.cholesky',
     'linalg.inv',
+    'shape',
     'trace',
     'tril',
     'meshgrid',
