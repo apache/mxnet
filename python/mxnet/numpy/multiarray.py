@@ -58,7 +58,7 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape',
            'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'append', 'argsort',
            'sort', 'tensordot', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'array_split',
            'split', 'vsplit', 'concatenate', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
-           'average', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var',
+           'average', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'insert',
            'indices', 'copysign', 'ravel', 'unravel_index', 'diag_indices_from', 'hanning', 'hamming', 'blackman',
            'flip', 'flipud', 'fliplr', 'around', 'round', 'arctan2', 'hypot',
            'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad',
@@ -8141,6 +8141,87 @@ def einsum(*operands, **kwargs):
     """
     return _mx_nd_np.einsum(*operands, **kwargs)
 
+
+@set_module('mxnet.numpy')
+def insert(arr, obj, values, axis=None):
+    """
+    Insert values along the given axis before the given indices.
+
+    Parameters
+    ----------
+    arr : ndarray
+        Input array.
+    obj : int, slice or ndarray of ints
+        Object that defines the index or indices before which `values` is
+        inserted.
+        Support for multiple insertions when `obj` is a single scalar or a
+        sequence with one element (only support int32 and int64 element).
+    values : ndarray
+        Values to insert into `arr`.
+        The type of `values` should equal to the type of `arr`.
+        `values` should be shaped so that ``arr[...,obj,...] = values``
+        is legal.
+    axis : int, optional
+        Axis along which to insert `values`.  If `axis` is None then `arr`
+        is flattened first.
+
+    Returns
+    -------
+    out : ndarray
+        A copy of `arr` with `values` inserted.  Note that `insert`
+        does not occur in-place: a new array is returned. If
+        `axis` is None, `out` is a flattened array.
+
+    Notes
+    -----
+    Note that for higher dimensional inserts `obj=0` behaves very different
+    from `obj=[0]` just like `arr[:,0,:] = values` is different from
+    `arr[:,[0],:] = values`.
+
+    Examples
+    --------
+    >>> a = np.array([[1, 1], [2, 2], [3, 3]])
+    >>> a
+    array([[1., 1.],
+           [2., 2.],
+           [3., 3.]])
+    >>> np.insert(a, 1, np.array(5))
+    array([1., 5., 1., 2., 2., 3., 3.])
+    >>> np.insert(a, 1, np.array(5), axis=1)
+    array([[1., 5., 1.],
+           [2., 5., 2.],
+           [3., 5., 3.]])
+
+    Difference between sequence and scalars:
+
+    >>> np.insert(a, np.array([1], dtype=np.int32), np.array([[1],[2],[3]]), axis=1)
+    array([[1., 1., 1.],
+           [2., 2., 2.],
+           [3., 3., 3.]])
+    >>> np.insert(a, 1, np.array([1, 2, 3]), axis=1)
+    array([[1., 1., 1.],
+           [2., 2., 2.],
+           [3., 3., 3.]])
+
+    >>> b = a.flatten()
+    >>> b
+    array([1., 1., 2., 2., 3., 3.])
+    >>> np.insert(b, np.array([2, 2], dtype=np.int64), np.array([5, 6]))
+    array([1., 1., 5., 6., 2., 2., 3., 3.])
+
+    >>> np.insert(b, slice(2, 4), np.array([5, 6]))
+    array([1., 1., 5., 2., 6., 2., 3., 3.])
+
+    >>> np.insert(b, np.array([2, 2], dtype=np.int32), np.array([7.13, False]))
+    array([1.  , 1.  , 7.13, 0.  , 2.  , 2.  , 3.  , 3.  ])
+
+    >>> x = np.arange(8).reshape(2, 4)
+    >>> idx = np.array([1, 3], dtype=np.int32)
+    >>> np.insert(x, idx, np.array([999]), axis=1)
+    array([[  0., 999.,   1.,   2., 999.,   3.],
+           [  4., 999.,   5.,   6., 999.,   7.]])
+    """
+    return _mx_nd_np.insert(arr, obj, values, axis=axis)
 
 @set_module('mxnet.numpy')
 def nonzero(a):

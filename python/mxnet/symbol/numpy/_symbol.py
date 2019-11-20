@@ -40,7 +40,7 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'emp
            'delete', 'add', 'broadcast_to', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'arctan2',
            'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p', 'matmul',
-           'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram',
+           'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram', 'insert',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'sort', 'tensordot', 'eye', 'linspace',
            'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'vsplit', 'concatenate', 'append',
            'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
@@ -3049,6 +3049,102 @@ def ceil(x, out=None, **kwargs):
     array(4.)
     """
     return _unary_func_helper(x, _npi.ceil, _np.ceil, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def insert(arr, obj, values, axis=None):
+    """
+    Insert values along the given axis before the given indices.
+
+    Parameters
+    ----------
+    arr : ndarray
+        Input array.
+    obj : int, slice or ndarray of ints
+        Object that defines the index or indices before which `values` is
+        inserted.
+        Support for multiple insertions when `obj` is a single scalar or a
+        sequence with one element (only support int32 and int64 element).
+    values : ndarray
+        Values to insert into `arr`.
+        The type of `values` should equal to the type of `arr`.
+        `values` should be shaped so that ``arr[...,obj,...] = values``
+        is legal.
+    axis : int, optional
+        Axis along which to insert `values`.  If `axis` is None then `arr`
+        is flattened first.
+
+    Returns
+    -------
+    out : ndarray
+        A copy of `arr` with `values` inserted.  Note that `insert`
+        does not occur in-place: a new array is returned. If
+        `axis` is None, `out` is a flattened array.
+
+    Notes
+    -----
+    Note that for higher dimensional inserts `obj=0` behaves very different
+    from `obj=[0]` just like `arr[:,0,:] = values` is different from
+    `arr[:,[0],:] = values`.
+
+    Examples
+    --------
+    >>> a = np.array([[1, 1], [2, 2], [3, 3]])
+    >>> a
+    array([[1., 1.],
+           [2., 2.],
+           [3., 3.]])
+    >>> np.insert(a, 1, np.array(5))
+    array([1., 5., 1., 2., 2., 3., 3.])
+    >>> np.insert(a, 1, np.array(5), axis=1)
+    array([[1., 5., 1.],
+           [2., 5., 2.],
+           [3., 5., 3.]])
+
+    Difference between sequence and scalars:
+
+    >>> np.insert(a, np.array([1], dtype=np.int32), np.array([[1],[2],[3]]), axis=1)
+    array([[1., 1., 1.],
+           [2., 2., 2.],
+           [3., 3., 3.]])
+    >>> np.insert(a, 1, np.array([1, 2, 3]), axis=1)
+    array([[1., 1., 1.],
+           [2., 2., 2.],
+           [3., 3., 3.]])
+
+    >>> b = a.flatten()
+    >>> b
+    array([1., 1., 2., 2., 3., 3.])
+    >>> np.insert(b, np.array([2, 2], dtype=np.int64), np.array([5, 6]))
+    array([1., 1., 5., 6., 2., 2., 3., 3.])
+
+    >>> np.insert(b, slice(2, 4), np.array([5, 6]))
+    array([1., 1., 5., 2., 6., 2., 3., 3.])
+
+    >>> np.insert(b, np.array([2, 2], dtype=np.int32), np.array([7.13, False]))
+    array([1.  , 1.  , 7.13, 0.  , 2.  , 2.  , 3.  , 3.  ])
+
+    >>> x = np.arange(8).reshape(2, 4)
+    >>> idx = np.array([1, 3], dtype=np.int32)
+    >>> np.insert(x, idx, np.array([999]), axis=1)
+    array([[  0., 999.,   1.,   2., 999.,   3.],
+           [  4., 999.,   5.,   6., 999.,   7.]])
+    """
+    if not isinstance(arr, ndarray): # pylint: disable= undefined-variable
+        raise TypeError("'arr' can not support type {}".format(str(type(arr))))
+    if not isinstance(values, ndarray): # pylint: disable= undefined-variable
+        raise TypeError("'values' can not support type {}".format(str(type(values))))
+    if isinstance(obj, slice):
+        start = 0 if obj.start is None else obj.start
+        stop = obj.stop
+        step = 1 if obj.step is None else obj.step
+        return _npi.insert(arr, values, start=start, stop=stop, step=step, axis=axis)
+    elif isinstance(obj, integer_types):
+        return _npi.insert(arr, values, int_ind=obj, axis=axis)
+    elif isinstance(obj, Symbol):
+        return _npi.insert(arr, values, obj, axis=axis)
+    else:
+        raise TypeError("'obj' can not support type {}".format(str(type(obj))))
 
 
 @set_module('mxnet.symbol.numpy')

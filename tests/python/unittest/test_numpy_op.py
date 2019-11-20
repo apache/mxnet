@@ -2628,6 +2628,108 @@ def test_np_arange():
 
 @with_seed()
 @use_np
+def test_np_insert():
+    class TestInsert(HybridBlock):
+        def __init__(self, obj, axis=None):
+            super(TestInsert, self).__init__()
+            self._obj = obj
+            self._axis = axis
+            
+        def hybrid_forward(self, F, a, b):
+            return F.np.insert(a, self._obj, b, axis=self._axis)
+    
+    def GetSize(tp):
+        res = 1
+        for x in tp:
+            res = res * x
+        return res
+
+    def GetNdim(tp):
+        return len(tp)
+
+    A = (3, 2)
+    B = (2)
+    C = (2, 2)
+    D = (2, 3)
+    E = (1)
+    F = (3, 1)
+    G = (3, 2)
+    H = (5, 2, 3, 4)
+    config = []
+    # test scale index
+    for idx in range(-1 * GetSize(A), GetSize(A) + 1):
+        config.append(tuple([A, idx, B, None]))
+        config.append(tuple([A, idx, E, None]))
+    for idx in range(-1 * A[0], A[0] + 1):
+        config.append(tuple([A, idx, C, 0]))
+        config.append(tuple([A, idx, E, 0]))
+        config.append(tuple([A, idx, F, 0]))
+    for idx in range(-1 * A[1], A[1] + 1):
+        config.append(tuple([A, idx, D, 1]))
+        config.append(tuple([A, idx, E, 1]))
+        config.append(tuple([A, idx, F, 1]))
+    # test tuple of indices with size = 1
+    for idx in range(-1 * GetSize(A), GetSize(A) + 1):
+        config.append(tuple([A, [idx], B, None]))
+        config.append(tuple([A, [idx], E, None]))
+    for idx in range(-1 * A[0], A[0] + 1):
+        config.append(tuple([A, [idx], C, 0]))
+        config.append(tuple([A, [idx], E, 0]))
+        config.append(tuple([A, [idx], F, 0]))
+    for idx in range(-1 * A[1], A[1] + 1):
+        config.append(tuple([A, [idx], G, 1]))
+        config.append(tuple([A, [idx], E, 1]))
+        config.append(tuple([A, [idx], F, 1]))
+    # test tuple of indices with size > 1
+    for ax in range(-1 * GetNdim(A), GetNdim(A)):
+        idx = _np.random.randint(-1 * A[ax], A[ax] + 1, size = (3)).tolist()
+        config.append(tuple([A, idx, F, ax]))
+        config.append(tuple([A, slice(0, 3), F, ax]))
+    # test multidimensional array and unequal dimensions case
+    config.append(tuple([H, 0, D, 3]))
+    config.append(tuple([H, [1], E, 2]))
+    idx = _np.random.randint(-1 * H[3], H[3] + 1, size = (3)).tolist()
+    config.append(tuple([H, idx, E, 3]))
+    # test slice
+    for st in range(-5, 5):
+        for ed in range(-5,5):
+            for stp in [-1, 1, 2]:
+                config.append(tuple([A, slice(st, ed, stp), F, 1]))
+    
+    for arr_shape, obj, val_shape, axis in config:
+        for objtype in ['int32', 'int64']:
+            if type(obj) == list:
+                obj_mxnp = np.array(obj, dtype=objtype)
+                obj_onp = _np.array(obj, dtype=objtype)
+            elif type(obj) == slice:
+                obj_mxnp = obj
+                obj_onp = obj
+            else:
+                obj_mxnp = (_np.int32(obj) if objtype == 'int32' else _np.int64(obj)) 
+                obj_onp = (_np.int32(obj) if objtype == 'int32' else _np.int64(obj)) 
+            test_insert = TestInsert(obj=obj_mxnp, axis=axis)
+
+            a = mx.nd.random.uniform(-1.0, 1.0, shape=arr_shape).as_np_ndarray()
+            a.attach_grad()
+            b = mx.nd.random.uniform(-1.0, 1.0, shape=val_shape).as_np_ndarray()
+            b.attach_grad()
+            expected_ret = _np.insert(a.asnumpy(), obj_onp, b.asnumpy(), axis=axis)
+
+            with mx.autograd.record():
+                y = test_insert(a, b)
+            
+            assert y.shape == expected_ret.shape
+            assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3, atol=1e-5)
+
+            #test imperative
+            mx_out = np.insert(a, obj_mxnp, b, axis=axis)
+            np_out = _np.insert(a.asnumpy(), obj_onp, b.asnumpy(), axis=axis)
+                
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@use_np
 def test_np_split():
     class TestSplit(HybridBlock):
         def __init__(self, indices_or_sections, axis=None):

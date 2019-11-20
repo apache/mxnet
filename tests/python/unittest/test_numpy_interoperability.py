@@ -1252,6 +1252,18 @@ def _add_workload_inner():
         OpArgMngr.add_workload('inner', b, a)
 
 
+def _add_workload_insert():
+    a = np.arange(10)
+    for dt in [np.int32, np.int64]:
+        OpArgMngr.add_workload('insert', a, 0, np.array([0]))
+        OpArgMngr.add_workload('insert', a, np.array([], dtype=dt), np.array([]))
+        OpArgMngr.add_workload('insert', a, np.array([0, 1], dtype=dt), np.array([1, 2]))
+        OpArgMngr.add_workload('insert', a, slice(1, 2), np.array([1, 2]))
+        OpArgMngr.add_workload('insert', a, slice(1, -2, -1), np.array([]))
+        OpArgMngr.add_workload('insert', np.array([0, 1, 2]), np.array([1, 1, 1], dtype=dt), np.array([3, 4, 5]))
+    OpArgMngr.add_workload('insert', np.array(1), 0, np.array([0]))
+
+
 def _add_workload_hypot():
     OpArgMngr.add_workload('hypot', np.array(1), np.array(1))
     OpArgMngr.add_workload('hypot', np.array(0), np.array(0))
@@ -2003,6 +2015,7 @@ def _prepare_workloads():
     _add_workload_degrees()
     _add_workload_true_divide()
     _add_workload_inner()
+    _add_workload_insert()
     _add_workload_hypot()
     _add_workload_lcm()
     _add_workload_bitwise_and()
