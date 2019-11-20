@@ -173,7 +173,7 @@ void NumpyBernoulliForward(const nnvm::NodeAttrs &attrs,
         Kernel<check_legal_prob_kernel<IType>, xpu>::Launch(
             s, inputs[0].Size(), inputs[0].dptr<IType>(), indicator_device_ptr);
       });
-      _copy<xpu>(&indicator_host, indicator_device_ptr);
+      _copy<xpu>(s, &indicator_host, indicator_device_ptr);
       CHECK_GE(indicator_host, 0.0)
           << "ValueError: expect probs >= 0 && probs <= 1";
     }
