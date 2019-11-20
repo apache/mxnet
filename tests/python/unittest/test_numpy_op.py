@@ -760,6 +760,26 @@ def test_np_moment():
 
 @with_seed()
 @use_np
+def test_np_shape():
+    shapes = [
+        (),
+        (0, 1),
+        (2, 3),
+        (2, 3, 4),
+    ]
+
+    for shape in shapes:
+        mx_a = np.random.uniform(size=shape)
+        np_a = _np.random.uniform(size=shape)
+
+        mx_shape = np.shape(mx_a)
+        np_shape = _np.shape(np_a)
+
+        assert mx_shape == np_shape
+
+
+@with_seed()
+@use_np
 def test_np_linspace():
     configs = [
         (0.0, 1.0, 10),
@@ -4112,7 +4132,7 @@ def test_np_einsum():
             for config in configs:
                 (subscripts, operands) = config
                 rtol = 1e-2 if dtype == 'float16' else 1e-3
-                atol = 1e-4 if dtype == 'float16' else 1e-5
+                atol = 1e-3 if dtype == 'float16' else 1e-4
                 grad = []
                 x_np = []
                 for shape in operands:
@@ -4539,7 +4559,7 @@ def test_np_diag():
 
         def hybrid_forward(self, F, a):
             return F.np.diag(a, k=self._k)
-            
+
     shapes = [(), (2,), (1, 5), (2, 2), (2, 5), (3, 3), (4, 3)]
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
     range_k = 6
@@ -4559,8 +4579,8 @@ def test_np_diag():
             mx_out = test_diag(x)
         assert mx_out.shape == np_out.shape
         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
-        
-        # check backward function 
+
+        # check backward function
         mx_out.backward()
         if len(shape) == 0:
             np_backward = np.array(())
@@ -4593,7 +4613,6 @@ def test_np_diag():
 @with_seed()
 @use_np
 def test_np_nan_to_num():
-
     def take_ele_grad(ele):
         if _np.isinf(ele) or _np.isnan(ele):
             return 0
