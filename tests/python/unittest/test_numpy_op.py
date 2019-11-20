@@ -3381,7 +3381,7 @@ def test_np_linalg_det():
     # test non zero size input
     tensor_shapes = [
         (2, 0, 2, 2),
-        (5, 5),
+        (4, 4),
         (0, 2, 2, 2),
         (3, 3, 3),
         (0, 2, 2),
