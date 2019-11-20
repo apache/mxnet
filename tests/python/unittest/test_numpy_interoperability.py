@@ -1230,7 +1230,6 @@ def _add_workload_diagflat():
     OpArgMngr.add_workload('diagflat', vals_f, k=-2)
 
 
-
 def _add_workload_shape():
     OpArgMngr.add_workload('shape', np.random.uniform(size=()))
     OpArgMngr.add_workload('shape', np.random.uniform(size=(0, 1)))

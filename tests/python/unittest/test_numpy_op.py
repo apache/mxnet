@@ -4164,6 +4164,7 @@ def test_np_einsum():
                 for (iop, op) in enumerate(grad[0]):
                     assert_almost_equal(grad[0][iop], grad[1][iop], rtol=rtol, atol=atol)
 
+
 @with_seed()
 @use_np
 def test_np_diagflat():
