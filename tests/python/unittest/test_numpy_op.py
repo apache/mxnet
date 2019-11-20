@@ -3467,13 +3467,6 @@ def test_np_linalg_slogdet():
         assert_almost_equal(mx_out[0].asnumpy(), np_out[0], rtol=1e-1, atol=1e-1)
         assert_almost_equal(mx_out[1].asnumpy(), np_out[1], rtol=1e-1, atol=1e-1)
 
-        # test numeric gradient
-        a_sym = mx.sym.Variable("a").as_np_ndarray()
-        mx_sym = mx.sym.np.linalg.det(a_sym).as_nd_ndarray()
-        if 0 not in a_shape and grad_req != 'null':
-            check_numeric_gradient(mx_sym, [a.as_nd_ndarray()],
-                                    rtol=1e-1, atol=1e-1, dtype=dtype)
-
 
 @with_seed()
 @use_np
