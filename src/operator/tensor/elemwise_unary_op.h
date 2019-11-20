@@ -453,8 +453,8 @@ void CastCompute(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 1, DstDType> out = outputs[0].FlatTo1D<xpu, DstDType>(s);
     MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, SrcDType, {
       Tensor<xpu, 1, SrcDType> data = inputs[0].FlatTo1D<xpu, SrcDType>(s);
-      if (outputs[0].type_flag_ != inputs[0].type_flag_ ||
-          req[0] != kWriteInplace) {
+      if ((outputs[0].type_flag_ != inputs[0].type_flag_ ||
+          req[0] != kWriteInplace) && outputs[0].Size() != 0) {
         Assign(out, req[0], tcast<DstDType>(data));
       }
     });

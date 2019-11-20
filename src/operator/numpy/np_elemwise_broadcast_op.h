@@ -25,6 +25,7 @@
 #ifndef MXNET_OPERATOR_NUMPY_NP_ELEMWISE_BROADCAST_OP_H_
 #define MXNET_OPERATOR_NUMPY_NP_ELEMWISE_BROADCAST_OP_H_
 
+#include <algorithm>
 #include <vector>
 #include <string>
 
@@ -381,11 +382,13 @@ void NumpyBinaryBroadcastComputeWithBool(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename xpu, typename LOP, typename ROP>
-void MixedBinaryBackwardUseIn(const nnvm::NodeAttrs& attrs,
+void NumpyBinaryBackwardUseIn(const nnvm::NodeAttrs& attrs,
                               const OpContext& ctx,
                               const std::vector<TBlob>& inputs,
                               const std::vector<OpReqType>& req,
                               const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
   CHECK_EQ(inputs.size(), 3U);
   CHECK_EQ(outputs.size(), 2U);
 
@@ -396,7 +399,104 @@ void MixedBinaryBackwardUseIn(const nnvm::NodeAttrs& attrs,
     return;
   }
 
-  PrintErrorMessage(attrs.op->name, lhs.type_flag_, rhs.type_flag_);
+  const TBlob& ograd = inputs[0];
+  const TBlob& lgrad = outputs[0];
+  const TBlob& rgrad = outputs[1];
+
+  if (common::is_float(lhs.type_flag_) || common::is_float(rhs.type_flag_)) {
+    // If any of the inputs is a float, it's the same type as the output
+    // So 2 of the 3 tensors have the same data type
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    mxnet::TShape new_lshape, new_rshape, new_oshape;
+    using namespace broadcast;
+    const bool need_bc = BinaryBroadcastShapeCompact(lgrad.shape_, rgrad.shape_, ograd.shape_,
+                                                     &new_lshape, &new_rshape, &new_oshape) != 0;
+
+    // Prepare all the temporary memory
+    size_t workspace_size_l = 0, workspace_size_r = 0;
+    TBlob temp_tblob;  // The TBlob for casted input data
+    TBlob temp_igrad;  // The TBlob for casted grad results
+    size_t tensor_size = (lgrad.type_flag_ != ograd.type_flag_) ? lgrad.Size() : rgrad.Size();
+    Tensor<xpu, 1, char> workspace;
+
+    MSHADOW_TYPE_SWITCH(ograd.type_flag_, OType, {
+      BROADCAST_NDIM_SWITCH(new_oshape.ndim(), ndim, {
+        workspace_size_l = ReduceWorkspaceSize<ndim, OType>(
+          s, new_lshape, req[0], new_oshape, new_lshape, new_rshape);
+        workspace_size_r = ReduceWorkspaceSize<ndim, OType>(
+          s, new_rshape, req[1], new_oshape, new_lshape, new_rshape);
+      });
+      size_t workspace_size = std::max(workspace_size_l, workspace_size_r);
+      size_t cast_tensor_size = tensor_size * sizeof(OType);
+      // Allocate the temporary memories now
+      Tensor<xpu, 1, char> temp_space =
+        ctx.requested[0].get_space_typed<xpu, 1, char>(
+          Shape1(workspace_size + cast_tensor_size * 2), s);
+      // Tensor for temp_tblob
+      Tensor<xpu, 1, OType> temp_tblob_tensor(
+                              reinterpret_cast<OType*>(temp_space.dptr_),
+                              Shape1(tensor_size), s);
+      // Tensor for temp_igrad
+      Tensor<xpu, 1, OType> temp_igrad_tensor(
+                              reinterpret_cast<OType*>(temp_space.dptr_) + tensor_size,
+                              Shape1(tensor_size), s);
+      temp_tblob =
+        TBlob(temp_tblob_tensor)
+          .reshape(((lgrad.type_flag_ != ograd.type_flag_) ? lhs.shape_ : rhs.shape_));
+      temp_igrad =
+        TBlob(temp_igrad_tensor)
+          .reshape(((lgrad.type_flag_ != ograd.type_flag_) ? lhs.shape_ : rhs.shape_));
+      if (temp_igrad.Size() != 0) {
+        Kernel<set_zero, xpu>::Launch(s, temp_igrad.Size(), temp_igrad.dptr<OType>());
+      }
+      workspace =
+        Tensor<xpu, 1, char>(temp_space.dptr_ + 2 * cast_tensor_size, Shape1(workspace_size), s);
+    });
+    // Cast the input that does not have consistent type to temp_tblob
+    CastCompute<xpu>(
+      attrs, ctx, {((lgrad.type_flag_ != ograd.type_flag_) ? lhs : rhs)}, {kWriteTo}, {temp_tblob});
+    if (!need_bc) {
+      if (lhs.type_flag_ != ograd.type_flag_) {
+        ElemwiseBinaryOp::BackwardUseIn<xpu, LOP, ROP>(
+          attrs, ctx, {ograd, temp_tblob, rhs}, {kWriteTo, req[1]}, {temp_igrad, rgrad});
+      } else {
+        ElemwiseBinaryOp::BackwardUseIn<xpu, LOP, ROP>(
+          attrs, ctx, {ograd, lhs, temp_tblob}, {req[0], kWriteTo}, {lgrad, temp_igrad});
+      }
+    } else {
+      if (lhs.type_flag_ != ograd.type_flag_) {
+        MSHADOW_TYPE_SWITCH(ograd.type_flag_, DType, {
+          BROADCAST_NDIM_SWITCH(new_oshape.ndim(), NDim, {
+            BinaryBroadcastBackwardUseInImplWithWorkspace<xpu, NDim, DType, LOP, ROP>(
+              ctx, {ograd, temp_tblob, rhs}, {kWriteTo, req[1]}, {temp_igrad, rgrad},
+              workspace, new_lshape, new_rshape, new_oshape);
+          });
+        });
+      } else {
+        MSHADOW_TYPE_SWITCH(ograd.type_flag_, DType, {
+          BROADCAST_NDIM_SWITCH(new_oshape.ndim(), NDim, {
+            BinaryBroadcastBackwardUseInImplWithWorkspace<xpu, NDim, DType, LOP, ROP>(
+              ctx, {ograd, lhs, temp_tblob}, {req[0], kWriteTo}, {lgrad, temp_igrad},
+              workspace, new_lshape, new_rshape, new_oshape);
+          });
+        });
+      }
+    }
+
+    // If both inputs are floating numbers, cast the igrad to the input that has
+    // the different data type
+    if (common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
+      if (lhs.type_flag_ != ograd.type_flag_) {
+        CastCompute<xpu>(attrs, ctx, {temp_igrad}, {req[0]}, {lgrad});
+      } else {
+        CastCompute<xpu>(attrs, ctx, {temp_igrad}, {req[1]}, {rgrad});
+      }
+    }
+  } else {
+    // Case where both inputs are integer types, should not even do
+    // backward computation for this case.
+    PrintErrorMessage(attrs.op->name, lhs.type_flag_, rhs.type_flag_);
+  }
 }
 
 }  // namespace op
