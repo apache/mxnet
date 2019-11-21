@@ -269,6 +269,7 @@ def test_fusion_boolean_inputs_debug_tvm():
 
         def hybrid_forward(self, F, valid_length):
             mask = (F.np.ones((10,)) < valid_length)
+            return mask
 
     mx.npx.waitall()
     foo = Foo()
