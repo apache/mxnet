@@ -24,6 +24,19 @@
  */
 #include <mxnet/base.h>
 
+namespace mshadow {
+const char* TypeFlagStrings[] = {
+  "kFloat32",
+  "kFloat64",
+  "kFloat16",
+  "kUint8",
+  "kInt32",
+  "kInt8",
+  "kInt64",
+  "kBool",
+};
+}
+
 namespace mxnet {
 
 #define UNUSED(x) (void)(x)

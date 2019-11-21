@@ -85,6 +85,18 @@
  */
 #define PROFILER_MESSAGE_FUNCNAME (__FUNCTION__)
 
+/*!
+ * \brief get string from a type_flag (int)
+ */
+#define MSHADOW_TYPE_TO_STRING(type_flag) ::mshadow::TypeFlagStrings[type_flag]
+
+namespace mshadow {
+/*
+ * \brief array mapping mshadow types defined in dmlc/base.h to strings
+*/
+extern const char* TypeFlagStrings[];
+}
+
 /*! \brief namespace of mxnet */
 namespace mxnet {
 /*! \brief mxnet cpu */

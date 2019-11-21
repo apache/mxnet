@@ -214,7 +214,8 @@ class TBlob {
       << "TBlob.get: device type do not match specified type";
     CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
       << "TBlob.get_with_shape: data type do not match specified type."
-      << "Expected: " << type_flag_ << " v.s. given " << mshadow::DataType<DType>::kFlag;
+      << "Expected: " << MSHADOW_TYPE_TO_STRING(type_flag_)
+      << " v.s. given " << MSHADOW_TYPE_TO_STRING(mshadow::DataType<DType>::kFlag);
     return mshadow::Tensor<Device, 2, DType>(static_cast<DType*>(dptr_),
                                              shape_.FlatTo2D(),
                                              stream);
@@ -254,7 +255,8 @@ class TBlob {
   inline DType* dptr() const {
     CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
       << "TBlob.get_with_shape: data type do not match specified type."
-      << "Expected: " << type_flag_ << " v.s. given " << mshadow::DataType<DType>::kFlag;
+      << "Expected: " << MSHADOW_TYPE_TO_STRING(type_flag_)
+      << " v.s. given " << MSHADOW_TYPE_TO_STRING(mshadow::DataType<DType>::kFlag);
     return static_cast<DType*>(dptr_);
   }
   /*! \brief device mask of the corresponding device */
