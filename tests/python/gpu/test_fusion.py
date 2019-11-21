@@ -238,29 +238,9 @@ def test_fusion_compiler_cache():
     if num_gpus > 1:
         check_fused_symbol(a+b, ctx=mx.gpu(1), a=arr1, b=arr2)
 
-# @with_seed()
-# @use_np
-# def test_fusion_boolean_inputs():
-    # from mxnet.gluon import HybridBlock
-
-    # class Foo(HybridBlock):
-        # def __init__(self, prefix=None, params=None):
-            # super(Foo, self).__init__(prefix=prefix, params=params)
-
-        # def hybrid_forward(self, F, valid_length):
-            # mask = (F.np.ones((10,)) < valid_length).astype(np.float32)
-            # mask2 = (F.np.ones((10,)) < valid_length).astype(np.float32)
-            # mask = mask * F.np.expand_dims(mask2, axis=-1)
-            # return mask
-
-    # foo = Foo()
-    # foo.hybridize(static_alloc=True)
-    # out = foo(mx.np.ones((10,), ctx=mx.gpu()))
-    # mx.nd.waitall()
-
 @with_seed()
 @use_np
-def test_fusion_boolean_inputs_debug_tvm():
+def test_fusion_boolean_inputs():
     from mxnet.gluon import HybridBlock
 
     class Foo(HybridBlock):
@@ -268,13 +248,14 @@ def test_fusion_boolean_inputs_debug_tvm():
             super(Foo, self).__init__(prefix=prefix, params=params)
 
         def hybrid_forward(self, F, valid_length):
-            mask = (F.np.ones((10,)) < valid_length)
+            mask = valid_length.astype(np.float32)
+            mask2 = valid_length.astype(np.float32)
+            mask = mask * F.np.expand_dims(mask2, axis=-1)
             return mask
 
-    mx.npx.waitall()
     foo = Foo()
     foo.hybridize(static_alloc=True)
-    out = foo(mx.np.ones((10,), ctx=mx.gpu()))
+    out = foo(mx.np.ones((10,), ctx=mx.gpu(), dtype=np.bool))
     mx.npx.waitall()
 
 @with_seed()
