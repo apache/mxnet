@@ -1153,9 +1153,10 @@ void NumpyDiagOpBackward(const nnvm::NodeAttrs &attrs,
 struct NumpyDiagflatParam : public dmlc::Parameter<NumpyDiagflatParam> {
   int k;
   DMLC_DECLARE_PARAMETER(NumpyDiagflatParam) {
-    DMLC_DECLARE_FIELD(k).set_default(0).describe("Diagonal in question. The default is 0. "
-          "Use k>0 for diagonals above the main diagonal, "
-          "and k<0 for diagonals below the main diagonal. ");
+    DMLC_DECLARE_FIELD(k).set_default(0)
+      .describe("Diagonal in question. The default is 0. "
+                "Use k>0 for diagonals above the main diagonal, "
+                "and k<0 for diagonals below the main diagonal. ");
   }
 };
 
@@ -1165,10 +1166,10 @@ inline mxnet::TShape NumpyDiagflatShapeImpl(const mxnet::TShape& ishape, const i
     return mxnet::TShape({s, s});
   }
 
-  if ( ishape.ndim() >= 2 ) {
+  if (ishape.ndim() >= 2) {
     auto s = 1;
-    for ( int i = 0; i < ishape.ndim(); i++ ) {
-      if ( ishape[i] >= 2 ) {
+    for (int i = 0; i < ishape.ndim(); i++) {
+      if (ishape[i] >= 2) {
         s = s * ishape[i];
       }
     }
@@ -1179,8 +1180,8 @@ inline mxnet::TShape NumpyDiagflatShapeImpl(const mxnet::TShape& ishape, const i
 }
 
 inline bool NumpyDiagflatOpShape(const nnvm::NodeAttrs& attrs,
-                        mxnet::ShapeVector* in_attrs,
-                        mxnet::ShapeVector* out_attrs) {
+                                 mxnet::ShapeVector* in_attrs,
+                                 mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
 
@@ -1190,8 +1191,7 @@ inline bool NumpyDiagflatOpShape(const nnvm::NodeAttrs& attrs,
   }
   const NumpyDiagflatParam& param = nnvm::get<NumpyDiagflatParam>(attrs.parsed);
 
-  mxnet::TShape oshape = NumpyDiagflatShapeImpl(ishape,
-                                         param.k);
+  mxnet::TShape oshape = NumpyDiagflatShapeImpl(ishape, param.k);
 
   if (shape_is_none(oshape)) {
     LOG(FATAL) << "Diagonal does not exist.";
@@ -1202,8 +1202,8 @@ inline bool NumpyDiagflatOpShape(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool NumpyDiagflatOpType(const nnvm::NodeAttrs& attrs,
-                       std::vector<int> *in_attrs,
-                       std::vector<int> *out_attrs) {
+                                std::vector<int> *in_attrs,
+                                std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
 
@@ -1214,33 +1214,30 @@ inline bool NumpyDiagflatOpType(const nnvm::NodeAttrs& attrs,
 
 template<typename xpu, bool back>
 void NumpyDiagflatOpImpl(const TBlob& in_data,
-                           const TBlob& out_data,
-                           const mxnet::TShape& ishape,
-                           const mxnet::TShape& oshape,
-                           index_t dsize,
-                           const NumpyDiagflatParam& param,
-                           mxnet_op::Stream<xpu> *s,
-                           const std::vector<OpReqType>& req) {
+                         const TBlob& out_data,
+                         const mxnet::TShape& ishape,
+                         const mxnet::TShape& oshape,
+                         index_t dsize,
+                         const NumpyDiagflatParam& param,
+                         mxnet_op::Stream<xpu> *s,
+                         const std::vector<OpReqType>& req) {
   using namespace mxnet_op;
   using namespace mshadow;
   MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-      Kernel<diag_gen<req_type, back>, xpu>::Launch(s,
-                                                    dsize,
-                                                    out_data.dptr<DType>(),
-                                                    in_data.dptr<DType>(),
-                                                    Shape2(oshape[0], oshape[1]),
-                                                    param.k);
+      Kernel<diag_gen<req_type, back>, xpu>::Launch(
+        s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
+        Shape2(oshape[0], oshape[1]), param.k);
     });
   });
 }
 
 template<typename xpu>
 void NumpyDiagflatOpForward(const nnvm::NodeAttrs& attrs,
-                             const OpContext& ctx,
-                             const std::vector<TBlob>& inputs,
-                             const std::vector<OpReqType>& req,
-                             const std::vector<TBlob>& outputs) {
+                            const OpContext& ctx,
+                            const std::vector<TBlob>& inputs,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 1U);
@@ -1260,10 +1257,10 @@ void NumpyDiagflatOpForward(const nnvm::NodeAttrs& attrs,
 
 template<typename xpu>
 void NumpyDiagflatOpBackward(const nnvm::NodeAttrs& attrs,
-                    const OpContext& ctx,
-                    const std::vector<TBlob>& inputs,
-                    const std::vector<OpReqType>& req,
-                    const std::vector<TBlob>& outputs) {
+                             const OpContext& ctx,
+                             const std::vector<TBlob>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 1U);
@@ -1277,7 +1274,7 @@ void NumpyDiagflatOpBackward(const nnvm::NodeAttrs& attrs,
   const NumpyDiagflatParam& param = nnvm::get<NumpyDiagflatParam>(attrs.parsed);
 
   NumpyDiagflatOpImpl<xpu, true>(in_data, out_data, oshape,
-                                ishape, in_data.Size(), param, s, req);
+                                 ishape, in_data.Size(), param, s, req);
 }
 
 }  // namespace op
