@@ -77,7 +77,7 @@ def test_amp_coverage():
 
     if ret1 != set():
         warnings.warn("Operators " + str(ret1) + " do not exist in AMP lists (in "
-                       "python/mxnet/contrib/amp/lists/symbol.py) - please add them. "
+                       "python/mxnet/contrib/amp/lists/symbol_fp16.py) - please add them. "
                        """Please follow these guidelines for choosing a proper list:
                        - if your operator is not to be used in a computational graph
                          (e.g. image manipulation operators, optimizers) or does not have

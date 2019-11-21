@@ -163,8 +163,16 @@ Graph ReducePrecision(Graph &&src) {
       std::string, std::unordered_map<std::string, std::vector<std::string>>>>(
       "conditional_fp32_ops");
 
-  CHECK(target_dtype == mshadow::kFloat16)
-      << "Only float16 target_dtype is supported yet";
+  CHECK(target_dtype == mshadow::kFloat16 || target_dtype == mshadow::kBfloat16)
+      << "Only float16 and bfloat16 target_dtype is supported yet," << target_dtype;
+
+  std::string target_dtype_str = "float32";
+  if (target_dtype == mshadow::kFloat16) {
+    target_dtype_str = "float16";
+  } else if (target_dtype == mshadow::kBfloat16)
+  {
+    target_dtype_str = "bfloat16";
+  }
 
   // Additional data structures to share common cast node inputs among different nodes
   std::unordered_map<Node *, ObjectPtr> mirror_map;
@@ -209,7 +217,7 @@ Graph ReducePrecision(Graph &&src) {
           ObjectPtr mirror_node = mirror_map.at(node_entry.node.get());
           NodeEntry mirror_entry = NodeEntry{mirror_node, node_entry.index, node_entry.version};
           std::string suffix = GetSuffix(node_entry, mirror_map);
-          AddCastNode(node_entry, suffix, mirror_entry, "float16",
+          AddCastNode(node_entry, suffix, mirror_entry, target_dtype_str,
                       &mirror_target_dtype_map, new_node);
         }
       }

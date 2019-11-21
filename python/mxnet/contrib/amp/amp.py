@@ -46,6 +46,14 @@ from .loss_scaler import LossScaler
 
 bfloat16 = np.dtype([('bfloat16', np.uint16)])
 
+# create a hook for numpy.dtype
+origin_dtype = np.dtype
+def numpy_dtype(obj, align=False, copy=False):
+    if type(obj) == str and obj == 'bfloat16':
+       return origin_dtype(bfloat16)
+    return origin_dtype(obj, align, copy)
+np.dtype = numpy_dtype
+
 def _cast_symbol_NDArray(s, dtype):
     float_types_gpu = (np.float16, np.float32)
     float_types_cpu = (bfloat16, np.float32)
@@ -373,7 +381,7 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
     sym : Symbol
         FP32 neural network symbol
     target_dtype : str or numpy, optional defaults to float16
-        currently only supports float16. The target dtype indicates to add cast layers
+        currently only supports float16 and bfloat16. The target dtype indicates to add cast layers
         when possible so that lower precision computation can be leveraged.
     target_dtype_ops : list of strs, optional
         Override the list of operator names casted to the target_dtype.
@@ -398,8 +406,11 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
     """
     assert isinstance(sym, Symbol), "First argument to convert_symbol should be Symbol"
 
-    assert target_dtype in ['float16'], \
-               "Only target_dtype float16 is supported currently"
+    assert target_dtype in ['float16','bfloat16'], \
+               "Only target_dtype float16 and bfloat16 are supported currently"
+
+    if target_dtype == 'bfloat16':
+        target_dtype = bfloat16
 
     if target_dtype_ops is not None:
         assert isinstance(target_dtype_ops, list), "target_dtype_ops should be a list of strs"
@@ -463,7 +474,10 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
                             Op %s not in any of them''' % (illegal_ops)
 
     widest_dtype_ops = list_widest_type_cast(target_dtype)
-    target_dtype = _DTYPE_NP_TO_MX[np.dtype(target_dtype).type]
+    if target_dtype == bfloat16:
+        target_dtype = _DTYPE_NP_TO_MX[bfloat16]
+    else:
+        target_dtype = _DTYPE_NP_TO_MX[np.dtype(target_dtype).type]
 
     # Prepare a data_names list based on list_inputs if its not provided
     # Add all names in list for the nodes in the symbol which don't have
@@ -487,7 +501,6 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
         str_keys.append(k)
         sdata.append(0)
     keys = c_str_array(str_keys)
-
     out = SymbolHandle()
     check_call(_LIB.MXReducePrecisionSymbol(sym.handle,
                                             ctypes.byref(out),
@@ -529,7 +542,7 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
     aux_params : dict
         Dictionary of name to `NDArray`.
     target_dtype : str
-        Currently only supports float16. The target dtype indicates to add cast layers
+        Currently only supports float16 and bfloat 16. The target dtype indicates to add cast layers
         when possible so that lower precision computation can be leveraged.
     target_dtype_ops : list of strs
         Override the list of operator names casted to target_dtype.
@@ -560,9 +573,8 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
             raise ValueError('excluded_sym_names must be a list of strings representing'
                              ' the names of the symbols that should not be casted,'
                              ' while received type %s' % str(type(excluded_sym_names)))
-
-    if target_dtype != "float16":
-        raise ValueError("Only target_dtype float16 is supported currently")
+    assert target_dtype in ['float16','bfloat16'], \
+               "Only target_dtype float16 and bfloat16 are supported currently"
 
     assert isinstance(sym, Symbol), "First argument to convert_model should be Symbol"
     assert isinstance(arg_params, dict), "Second argument to convert_model should be a dict of name to ndarray"
@@ -572,7 +584,6 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
 
     # Only pass non params as data_names, param types can be inferred
     data_names = list(set(sym.list_inputs()) - set(param_names))
-
     sym = convert_symbol(sym, target_dtype, target_dtype_ops,
                          fp32_ops, conditional_fp32_ops,
                          excluded_sym_names, data_names,
@@ -584,13 +595,19 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
         if sym_name in attr_dict and "__dtype__" in attr_dict[sym_name]:
             if attr_dict[sym_name]["__dtype__"] != "-1":
                 typ = _DTYPE_MX_TO_NP[int(attr_dict[sym_name]["__dtype__"])]
-                arg_params[sym_name] = arg_params[sym_name].astype(typ)
+                if typ == bfloat16:
+                    arg_params[sym_name] = _cast_symbol_NDArray(arg_params[sym_name], 'bfloat16')
+                else:
+                    arg_params[sym_name] = arg_params[sym_name].astype(typ)
 
     for sym_name in sym.list_auxiliary_states():
         if sym_name in attr_dict and "__dtype__" in attr_dict[sym_name]:
             if attr_dict[sym_name]["__dtype__"] != "-1":
                 typ = _DTYPE_MX_TO_NP[int(attr_dict[sym_name]["__dtype__"])]
-                aux_params[sym_name] = aux_params[sym_name].astype(typ)
+                if typ == bfloat16:
+                    aux_params[sym_name] = _cast_symbol_NDArray(aux_params[sym_name], 'bfloat16')
+                else:
+                    aux_params[sym_name] = aux_params[sym_name].astype(typ)
 
     # Return the converted symbol and casted params
     return sym, arg_params, aux_params
@@ -607,7 +624,7 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
     block : HybridBlock or SymbolBlock object
         FP32 HybridBlock or SymbolBlock object
     target_dtype : str or numpy
-        currently only supports lp16. The target dtype indicates to add cast layers
+        currently only supports float16 and bfloat16. The target dtype indicates to add cast layers
         when possible so that lower precision computation can be leveraged.
     target_precision_ops : list of strs
         Override the list of operator names casted to target_dtype.
@@ -657,14 +674,20 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
             if name in attr_dict and "__dtype__" in attr_dict[name]:
                 if attr_dict[name]["__dtype__"] != "-1":
                     typ = _DTYPE_MX_TO_NP[int(attr_dict[name]["__dtype__"])]
-                    arg_dict['arg:%s'%name] = arg_dict['arg:%s'%name].astype(typ)
+                    if typ == bfloat16:
+                        arg_dict['arg:%s' % name] = _cast_symbol_NDArray(arg_dict['arg:%s' % name], 'bfloat16')
+                    else:
+                        arg_dict['arg:%s'%name] = arg_dict['arg:%s'%name].astype(typ)
         else:
             assert name in aux_names
             arg_dict['aux:%s'%name] = param._reduce()
             if name in attr_dict and "__dtype__" in attr_dict[name]:
                 if attr_dict[name]["__dtype__"] != "-1":
                     typ = _DTYPE_MX_TO_NP[int(attr_dict[name]["__dtype__"])]
-                    arg_dict['aux:%s'%name] = arg_dict['aux:%s'%name].astype(typ)
+                    if typ == bfloat16:
+                        arg_dict['aux:%s' % name] = _cast_symbol_NDArray(arg_dict['aux:%s' % name], 'bfloat16')
+                    else:
+                        arg_dict['aux:%s'%name] = arg_dict['aux:%s'%name].astype(typ)
 
     # Create a symbolblock and cast the params to the dtypes based
     # on the dtype information from the converted_symbol
