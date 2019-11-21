@@ -76,6 +76,7 @@ If not, exception will be raised with given error message.
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
 .set_attr<FCompute>("FCompute<cpu>", ConstraintCheckForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("input", "NDArray-or-Symbol", "Input boolean array")
 .add_arguments(ConstraintCheckParam::__FIELDS__());
 
