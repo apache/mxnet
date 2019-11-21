@@ -2671,6 +2671,45 @@ def test_np_normal_grad():
 
 @with_seed()
 @use_np
+def test_npx_sample_n():
+    def shape_formatter(s):
+        if s is None:
+            return ()
+        if isinstance(s, tuple):
+            return s
+        # scalar case
+        return (s,)
+
+    class TestSampleN(HybridBlock):
+        def __init__(self, shape, op_name):
+            super(TestSampleN, self).__init__()
+            self._shape = shape
+            self._op_name = op_name
+
+        def hybrid_forward(self, F, param1, param2):
+            op = getattr(F.npx.random, self._op_name, None)
+            assert op is not None
+            # return param1 + param2 + op(batch_shape=self._shape)
+            return op(param1, param2, batch_shape=self._shape)
+
+    batch_shapes = [(10,), (2, 3), 6, (), None]
+    event_shapes = [(), (2,), (2,2)]
+    dtypes = ['float16', 'float32', 'float64']
+    op_names = ['uniform_n', 'normal_n']
+    
+    for bshape, eshape, dtype, op in itertools.product(batch_shapes, event_shapes, dtypes, op_names):
+        for hybridize in [True, False]:
+            net = TestSampleN(bshape, op)
+            if hybridize:
+                net.hybridize()
+            expected_shape = (shape_formatter(bshape) +
+                              shape_formatter(eshape))
+            out = net(np.ones(shape=eshape), np.ones(shape=eshape))
+            assert out.shape == expected_shape
+
+
+@with_seed()
+@use_np
 def test_np_random():
     shapes = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
     dtypes = ['float16', 'float32', 'float64']
