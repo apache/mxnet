@@ -94,6 +94,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'copy',
     'cumsum',
     'diag',
+    'diagflat',
     'dot',
     'expand_dims',
     'fix',
