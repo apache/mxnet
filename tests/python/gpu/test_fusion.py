@@ -172,7 +172,7 @@ def check_binary_ops():
     check_fused_symbol(3-a, a=arr1)
     check_fused_symbol(a*b, a=arr1, b=arr2)
     check_fused_symbol(a*3, a=arr1)
-    check_fused_symbol(a/b, a=arr1, b=arr2)
+    check_fused_symbol(a/(b+1), a=arr1, b=arr2)
     check_fused_symbol(a/3, a=arr1)
     check_fused_symbol(3/a, a=arr1)
     check_fused_symbol(a**b, a=arr1, b=arr2)
