@@ -64,10 +64,6 @@ NNVM_REGISTER_OP(_npi_multiply)
   NumpyBinaryBroadcastComputeWithBool<gpu, op::mshadow_op::mul>);
 #endif
 
-NNVM_REGISTER_OP(_backward_npi_broadcast_mul)
-.set_attr<FCompute>("FCompute<gpu>", NumpyBinaryBackwardUseIn<gpu, mshadow_op::right,
-                                                              mshadow_op::left>);
-
 NNVM_REGISTER_OP(_npi_mod)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::mod>);
 

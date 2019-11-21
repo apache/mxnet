@@ -672,32 +672,6 @@ BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
                                const std::vector<TBlob>& outputs);
 
 template<typename xpu, int ndim, typename DType, typename LOP, typename ROP>
-void BinaryBroadcastBackwardUseInImplWithWorkspace(const OpContext& ctx,
-                                                   const std::vector<TBlob>& inputs,
-                                                   const std::vector<OpReqType>& req,
-                                                   const std::vector<TBlob>& outputs,
-                                                   const mshadow::Tensor<xpu, 1, char>& workspace,
-                                                   const mxnet::TShape& new_lshape,
-                                                   const mxnet::TShape& new_rshape,
-                                                   const mxnet::TShape& new_oshape) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  using namespace broadcast;
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  const TBlob lgrad = outputs[0].reshape(new_lshape);
-  const TBlob rgrad = outputs[1].reshape(new_rshape);
-  const TBlob ograd = inputs[0].reshape(new_oshape);
-  const TBlob lhs = inputs[1].reshape(new_lshape);
-  const TBlob rhs = inputs[2].reshape(new_rshape);
-  if (ograd.Size() != 0) {
-    Reduce<red::sum, ndim, DType, op::mshadow_op::mul, LOP>(s, lgrad, req[0], workspace,
-      ograd, lhs, rhs);
-    Reduce<red::sum, ndim, DType, op::mshadow_op::mul, ROP>(s, rgrad, req[1], workspace,
-      ograd, lhs, rhs);
-  }
-}
-
-template<typename xpu, int ndim, typename DType, typename LOP, typename ROP>
 inline void BinaryBroadcastBackwardUseInImpl(const OpContext& ctx,
                                              const std::vector<TBlob>& inputs,
                                              const std::vector<OpReqType>& req,
