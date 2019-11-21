@@ -367,6 +367,8 @@ static void ExpandDimEx(const nnvm::NodeAttrs& attrs,
                         const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
+  // skip zero-size tensor
+  if (inputs[0].shape().Size() == 0U) return;
   // If inputs are supposed to be in MKLDNN format and
   // MKLDNN support the data type or the shape. Then convert
   // it to the output format and shape

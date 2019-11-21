@@ -46,7 +46,7 @@ from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 from ..ndarray.ndarray import _storage_type
 
-__all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide',
+__all__ = ['ndarray', 'empty', 'array', 'shape', 'zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide',
            'mod', 'remainder', 'power', 'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10',
            'sqrt', 'cbrt', 'abs', 'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative',
@@ -67,7 +67,7 @@ _NDARRAY_ADVANCED_INDEXING = 1
 
 # This function is copied from ndarray.py since pylint
 # keeps giving false alarm error of undefined-all-variable
-def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
+def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):  # pylint: disable=redefined-outer-name
     """Return a new handle with specified shape and context.
 
     Empty handle is only used to hold results.
@@ -89,7 +89,7 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
     return hdl
 
 
-def _reshape_view(a, *shape):
+def _reshape_view(a, *shape):  # pylint: disable=redefined-outer-name
     """Returns a **view** of this array with a new shape without altering any data.
 
     Parameters
@@ -462,7 +462,7 @@ class ndarray(NDArray):
         """
         # handling possible boolean indexing first
         ndim = self.ndim
-        shape = self.shape
+        shape = self.shape  # pylint: disable=redefined-outer-name
 
         if isinstance(key, list):
             try:
@@ -804,7 +804,7 @@ class ndarray(NDArray):
 
     def __len__(self):
         """Number of elements along the first axis."""
-        shape = self.shape
+        shape = self.shape  # pylint: disable=redefined-outer-name
         if len(shape) == 0:
             raise TypeError('len() of unsized object')
         return self.shape[0]
@@ -1165,7 +1165,7 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute reshape_like')
 
-    def reshape_view(self, *shape, **kwargs):
+    def reshape_view(self, *shape, **kwargs):  # pylint: disable=redefined-outer-name
         """Returns a **view** of this array with a new shape without altering any data.
         Inheritated from NDArray.reshape.
         """
@@ -1519,13 +1519,15 @@ class ndarray(NDArray):
         """Returns the average of the array elements along given axis."""
         return mean(self, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
-    def std(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=arguments-differ
+    # pylint: disable=too-many-arguments, arguments-differ
+    def std(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
         """Returns the standard deviation of the array elements along given axis."""
         return std(self, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
 
-    def var(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=arguments-differ
+    def var(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
         """Returns the variance of the array elements, along given axis."""
         return var(self, axis=axis, dtype=dtype, out=out, ddof=ddof, keepdims=keepdims)
+    # pylint: enable=too-many-arguments, arguments-differ
 
     def cumsum(self, axis=None, dtype=None, out=None):
         """Return the cumulative sum of the elements along the given axis."""
@@ -1854,7 +1856,7 @@ class ndarray(NDArray):
         """Remove single-dimensional entries from the shape of a."""
         return _mx_np_op.squeeze(self, axis=axis)
 
-    def broadcast_to(self, shape):
+    def broadcast_to(self, shape):  # pylint: disable=redefined-outer-name
         return _mx_np_op.broadcast_to(self, shape)
 
     def broadcast_like(self, other):
@@ -1916,7 +1918,7 @@ class ndarray(NDArray):
 
 
 @set_module('mxnet.numpy')
-def empty(shape, dtype=_np.float32, order='C', ctx=None):
+def empty(shape, dtype=_np.float32, order='C', ctx=None):  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, without initializing entries.
 
     Parameters
@@ -2020,7 +2022,41 @@ def array(object, dtype=None, ctx=None):
 
 
 @set_module('mxnet.numpy')
-def zeros(shape, dtype=_np.float32, order='C', ctx=None):
+def shape(a):
+    """
+    Return the shape of an array.
+
+    Parameters
+    ----------
+    a : array_like
+        Input array.
+
+    Returns
+    -------
+    shape : tuple of ints
+        The elements of the shape tuple give the lengths of the
+        corresponding array dimensions.
+
+    See Also
+    --------
+    ndarray.shape : Equivalent array method.
+
+    Examples
+    --------
+    >>> np.shape(np.eye(3))
+    (3, 3)
+    >>> np.shape([[1, 2]])
+    (1, 2)
+    >>> np.shape([0])
+    (1,)
+    >>> np.shape(0)
+    ()
+    """
+    return _mx_nd_np.shape(a)
+
+
+@set_module('mxnet.numpy')
+def zeros(shape, dtype=_np.float32, order='C', ctx=None):  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -2061,7 +2097,7 @@ def zeros(shape, dtype=_np.float32, order='C', ctx=None):
 
 
 @set_module('mxnet.numpy')
-def ones(shape, dtype=_np.float32, order='C', ctx=None):
+def ones(shape, dtype=_np.float32, order='C', ctx=None):  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, filled with ones.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -2106,8 +2142,9 @@ def ones(shape, dtype=_np.float32, order='C', ctx=None):
     return _mx_nd_np.ones(shape, dtype, order, ctx)
 
 
+# pylint: disable=too-many-arguments, redefined-outer-name
 @set_module('mxnet.numpy')
-def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylint: disable=too-many-arguments
+def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):
     """
     Return a new array of given shape and type, filled with `fill_value`.
 
@@ -2160,6 +2197,7 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
            [2, 2]], dtype=int32)
     """
     return _mx_nd_np.full(shape, fill_value, order=order, ctx=ctx, dtype=dtype, out=out)
+# pylint: enable=too-many-arguments, redefined-outer-name
 
 
 @set_module('mxnet.numpy')
@@ -4224,7 +4262,7 @@ def tensordot(a, b, axes=2):
 
 
 @set_module('mxnet.numpy')
-def histogram(a, bins=10, range=None, normed=None, weights=None, density=None):  # pylint-disable=too-many-arguments
+def histogram(a, bins=10, range=None, normed=None, weights=None, density=None):  # pylint: disable=too-many-arguments
     """
     Compute the histogram of a set of data.
 
@@ -4383,6 +4421,7 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
     return _mx_nd_np.linspace(start, stop, num, endpoint, retstep, dtype, axis, ctx)
 
 
+# pylint: disable=too-many-arguments
 @set_module('mxnet.numpy')
 def logspace(start, stop, num=50, endpoint=True, base=10.0, dtype=None, axis=0, ctx=None):
     r"""Return numbers spaced evenly on a log scale.
@@ -4457,6 +4496,7 @@ def logspace(start, stop, num=50, endpoint=True, base=10.0, dtype=None, axis=0, 
     array([ 100.     ,  215.44347,  464.15887, 1000.     ], ctx=gpu(0))
     """
     return _mx_nd_np.logspace(start, stop, num, endpoint, base, dtype, axis, ctx=ctx)
+# pylint: enable=too-many-arguments
 
 
 @set_module('mxnet.numpy')
@@ -5421,8 +5461,9 @@ def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable
     return _npi.mean(a, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
 
 
+
 @set_module('mxnet.numpy')
-def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
+def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=too-many-arguments
     """
     Compute the standard deviation along the specified axis.
     Returns the standard deviation, a measure of the spread of a distribution,
@@ -5489,7 +5530,7 @@ def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
 
 
 @set_module('mxnet.numpy')
-def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
+def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=too-many-arguments
     """
     Compute the variance along the specified axis.
     Returns the variance of the array elements, a measure of the spread of a
