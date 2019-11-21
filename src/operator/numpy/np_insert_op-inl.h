@@ -347,7 +347,7 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
 
     const NumpyInsertParam& param = nnvm::get<NumpyInsertParam>(attrs.parsed);
     CHECK_EQ(inputs.size(),
-            (param.stop.has_value() || param.int_ind.has_value()) ? 2U : 3U);
+            (param.step.has_value() || param.int_ind.has_value()) ? 2U : 3U);
     CHECK_EQ(outputs.size(), 1U);
     CHECK_EQ(req.size(), 1U);
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -385,17 +385,25 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
     // get and check indices from slice or sequence of ints
     if (inputs.size() == 3U) {
         indices_len = inputs[insert_::kObj].shape_.Size();
-    } else if (param.stop.has_value()) {
+    } else if (param.step.has_value()) {
         step = param.step.value();
         CHECK_NE(step, 0) << "'step' can not equal to 0.";
-        stop = param.stop.value();
-        stop += (stop < 0) ? N : 0;
-        stop = (stop < 0) ? ((step < 0) ? -1 : 0) : stop;
-        stop = (stop >= N) ? ((step < 0) ? N - 1 : N) : stop;
-        start = param.start.value();
-        start += (start < 0) ? N : 0;
-        start = (start < 0) ? ((step < 0) ? -1 : 0) : start;
-        start = (start >= N) ? ((step < 0) ? N - 1 : N) : start;
+        if (param.stop.has_value()) {
+          stop = param.stop.value();
+          stop += (stop < 0) ? N : 0;
+          stop = (stop < 0) ? ((step < 0) ? -1 : 0) : stop;
+          stop = (stop >= N) ? ((step < 0) ? N - 1 : N) : stop;
+        } else {
+          stop = (step > 0) ? N : -1;
+        }
+        if (param.start.has_value()) {
+          start = param.start.value();
+          start += (start < 0) ? N : 0;
+          start = (start < 0) ? ((step < 0) ? -1 : 0) : start;
+          start = (start >= N) ? ((step < 0) ? N - 1 : N) : start;
+        } else {
+          start = (step > 0) ? 0 : N - 1;
+        }
         int seq_cnt = 0;
         if (step > 0 && stop >= start) {
             seq_cnt = (stop - start + step - 1) / step;
@@ -451,7 +459,7 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
     } else if (indices_len == 1) {
         numnew = values.shape_[axis];
         newshape[axis] += numnew;
-        if (param.start.has_value()) {
+        if (param.step.has_value()) {
             index = start;
             CHECK(index >= -1 * N && index <= N)
                 << "Index should be in the range of [-r, r-1] where r is the dim size in 'axis'";
@@ -530,7 +538,7 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
     } else if (indices_len == 1) {
       MSHADOW_TYPE_SWITCH(outputs[insert_::kOut].type_flag_, DType, {
         MXNET_ASSIGN_REQ_SWITCH(req[insert_::kOut], req_type, {
-          if (param.stop.has_value()) {
+          if (param.step.has_value()) {
             Kernel<InsertSingleIndexForward<req_type>, xpu>::Launch(s, outshape.Size(),
                                             outputs[insert_::kOut].dptr<DType>(),
                                             values.dptr<DType>(), arr.dptr<DType>(),
@@ -589,7 +597,7 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
           Tensor<xpu, 1, int> order(order_ptr, Shape1(indices_len), s);
           int num_bits = common::ilog2ui(static_cast<unsigned int>(indices_len) - 1);
 
-          if (param.stop.has_value()) {
+          if (param.step.has_value()) {
             Kernel<SliceToIndices, xpu>::Launch(s, indices_len,
                                         indices_ptr, N,
                                         start, step);

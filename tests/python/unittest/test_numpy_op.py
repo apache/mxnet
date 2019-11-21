@@ -2691,9 +2691,9 @@ def test_np_insert():
     idx = _np.random.randint(-1 * H[3], H[3] + 1, size = (3)).tolist()
     config.append(tuple([H, idx, E, 3]))
     # test slice
-    for st in range(-5, 5):
-        for ed in range(-5,5):
-            for stp in [-1, 1, 2]:
+    for st in [-5, -3, -1, 0, 1, 3, 5, None]:
+        for ed in [-5, -3, -1, 0, 1, 3, 5, None]:
+            for stp in [-1, 1, 2, None]:
                 config.append(tuple([A, slice(st, ed, stp), F, 1]))
     
     for arr_shape, obj, val_shape, axis in config:

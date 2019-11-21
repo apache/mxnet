@@ -3135,7 +3135,7 @@ def insert(arr, obj, values, axis=None):
     if not isinstance(values, ndarray): # pylint: disable= undefined-variable
         raise TypeError("'values' can not support type {}".format(str(type(values))))
     if isinstance(obj, slice):
-        start = 0 if obj.start is None else obj.start
+        start = obj.start
         stop = obj.stop
         step = 1 if obj.step is None else obj.step
         return _npi.insert(arr, values, start=start, stop=stop, step=step, axis=axis)

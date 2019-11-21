@@ -35,7 +35,7 @@ bool NumpyInsertType(const nnvm::NodeAttrs& attrs,
                            std::vector<int> *in_type,
                            std::vector<int> *out_type) {
   const NumpyInsertParam& param = nnvm::get<NumpyInsertParam>(attrs.parsed);
-  int insize = (param.stop.has_value() || param.int_ind.has_value()) ? 2 : 3;
+  int insize = (param.step.has_value() || param.int_ind.has_value()) ? 2 : 3;
   CHECK_EQ(in_type->size(), insize);
   CHECK_EQ(out_type->size(), 1U);
   if (insize == 3) {
@@ -56,7 +56,7 @@ bool NumpyInsertShape(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   const NumpyInsertParam& param = nnvm::get<NumpyInsertParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(),
-    (param.stop.has_value() || param.int_ind.has_value()) ? 2U : 3U);
+    (param.step.has_value() || param.int_ind.has_value()) ? 2U : 3U);
   mxnet::TShape &arrshape = (*in_shape)[insert_::kArr];
   mxnet::TShape &valshape = (*in_shape)[insert_::kValues];
   mxnet::TShape &objShape = (*in_shape)[insert_::kObj];
@@ -88,16 +88,25 @@ bool NumpyInsertShape(const nnvm::NodeAttrs& attrs,
   int N = arrshape[axis];
   if (in_shape->size() == 3U) {
     seq_cnt = objShape.Size();
-  } else if (param.stop.has_value()) {
+  } else if (param.step.has_value()) {
     int step = param.step.value();
-    int stop = param.stop.value();
-    stop += (stop < 0) ? N : 0;
-    stop = (stop < 0) ? ((step < 0) ? -1 : 0) : stop;
-    stop = (stop >= N) ? ((step < 0) ? N - 1 : N) : stop;
-    int start = param.start.value();
-    start += (start < 0) ? N : 0;
-    start = (start < 0) ? ((step < 0) ? -1 : 0) : start;
-    start = (start >= N) ? ((step < 0) ? N - 1 : N) : start;
+    int stop, start;
+    if (param.stop.has_value()) {
+      stop = param.stop.value();
+      stop += (stop < 0) ? N : 0;
+      stop = (stop < 0) ? ((step < 0) ? -1 : 0) : stop;
+      stop = (stop >= N) ? ((step < 0) ? N - 1 : N) : stop;
+    } else {
+      stop = (step > 0) ? N : -1;
+    }
+    if (param.start.has_value()) {
+      start = param.start.value();
+      start += (start < 0) ? N : 0;
+      start = (start < 0) ? ((step < 0) ? -1 : 0) : start;
+      start = (start >= N) ? ((step < 0) ? N - 1 : N) : start;
+    } else {
+      start = (step > 0) ? 0 : N - 1;
+    }
     seq_cnt = 0;
     if (step > 0 && stop >= start) {
       seq_cnt = (stop - start + step - 1) / step;
@@ -140,13 +149,13 @@ NNVM_REGISTER_OP(_npi_insert)
 .set_attr_parser(ParamParser<NumpyInsertParam>)
 .set_num_inputs([](const NodeAttrs& attrs) {
     const NumpyInsertParam& params = nnvm::get<NumpyInsertParam>(attrs.parsed);
-    return (params.stop.has_value() || params.int_ind.has_value()) ? 2U : 3U;
+    return (params.step.has_value() || params.int_ind.has_value()) ? 2U : 3U;
 })
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     const NumpyInsertParam& params = nnvm::get<NumpyInsertParam>(attrs.parsed);
-    return (params.stop.has_value() || params.int_ind.has_value()) ?
+    return (params.step.has_value() || params.int_ind.has_value()) ?
             std::vector<std::string>{"arr", "values"} :
             std::vector<std::string>{"arr", "values", "obj"};
 })
