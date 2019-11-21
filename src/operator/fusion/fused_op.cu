@@ -17,6 +17,9 @@
  * under the License.
  */
 
+// Additional use of MXNET_USE_CUDA is not needed to guard a '.cu' file.
+#if MXNET_ENABLE_CUDA_RTC
+
 #include <sys/stat.h>
 #include <nvrtc.h>
 #include <cuda.h>
@@ -787,3 +790,5 @@ NNVM_REGISTER_OP(_FusedOp)
 .set_attr<FCompute>("FCompute<gpu>", FusedOpForwardGPU);
 
 }  // namespace mxnet
+
+#endif  // MXNET_ENABLE_CUDA_RTC
