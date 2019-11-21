@@ -1699,7 +1699,7 @@ def test_np_mixed_precision_binary_funcs():
         mx_test_x1 = mx.numpy.array(np_test_x1, dtype=ltype)
         mx_test_x2 = mx.numpy.array(np_test_x2, dtype=rtype)
         rtol = 1e-2 if ltype is np.float16 or rtype is np.float16 else 1e-3
-        atol = 1e-4 if ltype is np.float16 or rtype is np.float16 else 1e-5
+        atol = 1e-3 if ltype is np.float16 or rtype is np.float16 else 1e-5
         for hybridize in [True, False]:
             if hybridize:
                 mx_func.hybridize()
