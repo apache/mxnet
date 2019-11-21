@@ -48,7 +48,7 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full_like',
            'blackman', 'flip', 'around', 'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
            'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
            'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'shares_memory',
-           'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where']
+           'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where', 'bincount']
 
 
 @set_module('mxnet.symbol.numpy')
@@ -5418,6 +5418,40 @@ def load_json(json_str):
     handle = SymbolHandle()
     check_call(_LIB.MXSymbolCreateFromJSON(c_str(json_str), ctypes.byref(handle)))
     return _Symbol(handle)
+
+
+@set_module('mxnet.symbol.numpy')
+def bincount(x, weights=None, minlength=0):
+    """
+    Count number of occurrences of each value in array of non-negative ints.
+
+    Parameters
+    ----------
+    x : _Symbol
+        input data
+    weights: _Symbol
+        input weigths same shape as x. (Optional)
+    minlength: int
+        A minimum number of bins for the output. (Optional)
+
+    Returns
+    --------
+    out : _Symbol
+        the result of binning the input data. The length of out is equal to amax(x)+1.
+
+    Raises:
+    --------
+    Value Error
+        If the input is not 1-dimensional, or contains elements with negative values,
+        or if minlength is negative
+    TypeError
+        If the type of the input is float or complex.
+    """
+    if minlength < 0:
+        raise ValueError("Minlength value should greater than 0")
+    if weights is None:
+        return _npi.bincount(x, minlength=minlength, has_weights=False)
+    return _npi.bincount(x, weights=weights, minlength=minlength, has_weights=True)
 
 
 _set_np_symbol_class(_Symbol)

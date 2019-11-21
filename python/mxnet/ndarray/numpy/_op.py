@@ -40,7 +40,7 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'blackman', 'flip', 'around', 'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
            'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
            'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero', 'shares_memory',
-           'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where']
+           'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where', 'bincount']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5864,3 +5864,60 @@ def where(condition, x=None, y=None):
         return nonzero(condition)
     else:
         return _npi.where(condition, x, y, out=None)
+
+
+@set_module('mxnet.ndarray.numpy')
+def bincount(x, weights=None, minlength=0):
+    """
+    Count number of occurrences of each value in array of non-negative ints.
+
+    Parameters
+    ----------
+    x : ndarray
+        input array, 1 dimension, nonnegative ints.
+    weights: ndarray
+        input weigths same shape as x. (Optional)
+    minlength: int
+        A minimum number of bins for the output. (Optional)
+
+    Returns
+    --------
+    out : ndarray
+        the result of binning the input array. The length of out is equal to amax(x)+1.
+
+    Raises
+    --------
+    Value Error
+        If the input is not 1-dimensional, or contains elements with negative values,
+        or if minlength is negative
+    TypeError
+        If the type of the input is float or complex.
+
+    Examples
+    --------
+    >>> np.bincount(np.arange(5))
+    array([1, 1, 1, 1, 1])
+    >>> np.bincount(np.array([0, 1, 1, 3, 2, 1, 7]))
+    array([1, 3, 1, 1, 0, 0, 0, 1])
+
+    >>> x = np.array([0, 1, 1, 3, 2, 1, 7, 23])
+    >>> np.bincount(x).size == np.amax(x)+1
+    True
+
+    >>> np.bincount(np.arange(5, dtype=float))
+    Traceback (most recent call last):
+    File "<stdin>", line 1, in <module>
+    TypeError: array cannot be safely cast to required type
+
+    >>> w = np.array([0.3, 0.5, 0.2, 0.7, 1., -0.6]) # weights
+    >>> x = np.array([0, 1, 1, 2, 2, 2])
+    >>> np.bincount(x,  weights=w)
+    array([ 0.3,  0.7,  1.1])
+    """
+    if not isinstance(x, NDArray):
+        raise TypeError("Input data should be NDarray")
+    if minlength < 0:
+        raise ValueError("Minlength value should greater than 0")
+    if weights is None:
+        return _npi.bincount(x, minlength=minlength, has_weights=False)
+    return _npi.bincount(x, weights=weights, minlength=minlength, has_weights=True)
