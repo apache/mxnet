@@ -845,6 +845,16 @@ def _add_workload_lcm():
     OpArgMngr.add_workload('lcm', np.array([12, 120], dtype=np.uint8), np.array([20, 200], dtype=np.uint8))
     OpArgMngr.add_workload('lcm', np.array(195225786*2, dtype=np.int32), np.array(195225786*5, dtype=np.int32))
 
+def _add_workload_bitwise_or():
+    OpArgMngr.add_workload('bitwise_or', np.array([False, False, True, True], dtype=np.bool),
+                           np.array([False, True, False, True], dtype=np.bool))
+    for dtype in [np.int8, np.int32, np.int64]:
+        zeros = np.array([0], dtype=dtype)
+        ones = np.array([-1], dtype=dtype)
+        OpArgMngr.add_workload('bitwise_or', zeros, zeros)
+        OpArgMngr.add_workload('bitwise_or', ones, zeros)
+        OpArgMngr.add_workload('bitwise_or', zeros, ones)
+        OpArgMngr.add_workload('bitwise_or', ones, ones)
 
 def _add_workload_bitwise_xor():
     OpArgMngr.add_workload('bitwise_xor', np.array([False, False, True, True], dtype=np.bool),
@@ -1337,6 +1347,7 @@ def _prepare_workloads():
     _add_workload_hypot()
     _add_workload_lcm()
     _add_workload_bitwise_xor()
+    _add_workload_bitwise_or()
     _add_workload_ldexp()
     _add_workload_subtract(array_pool)
     _add_workload_multiply(array_pool)

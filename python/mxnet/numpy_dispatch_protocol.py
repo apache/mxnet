@@ -230,6 +230,7 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'trunc',
     'floor',
     'bitwise_xor',
+    'bitwise_or',
     'logical_not',
     'equal',
     'not_equal',
