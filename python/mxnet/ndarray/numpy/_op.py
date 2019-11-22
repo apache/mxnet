@@ -28,7 +28,7 @@ from ...context import current_context
 from . import _internal as _npi
 from ..ndarray import NDArray
 
-__all__ = ['zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power',
+__all__ = ['shape', 'zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power',
            'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs',
            'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2',
            'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
@@ -36,14 +36,47 @@ __all__ = ['zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide', 'mo
            'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'split', 'vsplit', 'concatenate', 'append',
            'stack', 'vstack', 'column_stack', 'dstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax',
            'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming', 'blackman', 'flip',
-           'around', 'hypot', 'bitwise_xor', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take',
-           'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal',
-           'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero', 'shares_memory', 'may_share_memory', 'diff', 'resize',
-           'nan_to_num', 'where']
+           'around', 'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity',
+           'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal',
+           'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero', 'shares_memory', 'may_share_memory',
+           'diff', 'resize', 'nan_to_num', 'where']
+
+@set_module('mxnet.ndarray.numpy')
+def shape(a):
+    """
+    Return the shape of an array.
+
+    Parameters
+    ----------
+    a : array_like
+        Input array.
+
+    Returns
+    -------
+    shape : tuple of ints
+        The elements of the shape tuple give the lengths of the
+        corresponding array dimensions.
+
+    See Also
+    --------
+    ndarray.shape : Equivalent array method.
+
+    Examples
+    --------
+    >>> np.shape(np.eye(3))
+    (3, 3)
+    >>> np.shape([[1, 2]])
+    (1, 2)
+    >>> np.shape([0])
+    (1,)
+    >>> np.shape(0)
+    ()
+    """
+    return a.shape
 
 
 @set_module('mxnet.ndarray.numpy')
-def zeros(shape, dtype=_np.float32, order='C', ctx=None):
+def zeros(shape, dtype=_np.float32, order='C', ctx=None):  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -77,7 +110,7 @@ def zeros(shape, dtype=_np.float32, order='C', ctx=None):
 
 
 @set_module('mxnet.ndarray.numpy')
-def ones(shape, dtype=_np.float32, order='C', ctx=None):
+def ones(shape, dtype=_np.float32, order='C', ctx=None):  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, filled with ones.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -110,8 +143,9 @@ def ones(shape, dtype=_np.float32, order='C', ctx=None):
     return _npi.ones(shape=shape, ctx=ctx, dtype=dtype)
 
 
+# pylint: disable=too-many-arguments, redefined-outer-name
 @set_module('mxnet.ndarray.numpy')
-def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylint: disable=too-many-arguments
+def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):
     """
     Return a new array of given shape and type, filled with `fill_value`.
     Parameters
@@ -163,6 +197,7 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
         ctx = current_context()
     dtype = _np.float32 if dtype is None else dtype
     return _npi.full(shape=shape, value=fill_value, ctx=ctx, dtype=dtype, out=out)
+# pylint: enable=too-many-arguments, redefined-outer-name
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4327,6 +4362,44 @@ def bitwise_xor(x1, x2, out=None, **kwargs):
     array([ True, False])
     """
     return _ufunc_helper(x1, x2, _npi.bitwise_xor, _np.bitwise_xor, _npi.bitwise_xor_scalar, None, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+@wrap_np_binary_func
+def bitwise_or(x1, x2, out=None, **kwargs):
+    r"""
+    Compute the bit-wise OR of two arrays element-wise.
+
+    Parameters
+    ----------
+    x1, x2 : ndarray or scalar
+        Only integer and boolean types are handled. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which becomes the shape of the output).
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have a shape that the
+        inputs broadcast to. If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray
+        Result.
+
+    Examples
+    --------
+    >>> np.bitwise_or(13, 17)
+    29
+
+    >>> np.bitwise_or(31, 5)
+    31
+    >>> np.bitwise_or(np.array([31,3], dtype='int32'), 5)
+    array([31,  7])
+
+    >>> np.bitwise_or(np.array([31,3], dtype='int32'), np.array([5,6], dtype='int32'))
+    array([31,  7])
+    >>> np.bitwise_or(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
+    array([ True, True])
+    """
+    return _ufunc_helper(x1, x2, _npi.bitwise_or, _np.bitwise_or, _npi.bitwise_or_scalar, None, out)
 
 
 @set_module('mxnet.ndarray.numpy')
