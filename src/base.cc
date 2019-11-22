@@ -25,7 +25,7 @@
 #include <mxnet/base.h>
 
 namespace mshadow {
-const char* TypeFlagStrings[] = {
+const std::array<std::string, 8> TypeFlagStrings = {
   "kFloat32",
   "kFloat64",
   "kFloat16",
@@ -35,7 +35,7 @@ const char* TypeFlagStrings[] = {
   "kInt64",
   "kBool",
 };
-}
+}  // namespace mshadow
 
 namespace mxnet {
 

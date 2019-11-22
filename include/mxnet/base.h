@@ -88,14 +88,17 @@
 /*!
  * \brief get string from a type_flag (int)
  */
-#define MSHADOW_TYPE_TO_STRING(type_flag) ::mshadow::TypeFlagStrings[type_flag]
+#define MSHADOW_TYPE_TO_STRING(type_flag)                                                \
+((type_flag >= 0 && static_cast<size_t>(type_flag) < ::mshadow::TypeFlagStrings.size())  \
+  ? ::mshadow::TypeFlagStrings[type_flag]                                                \
+  : "Unknown Type")
 
 namespace mshadow {
 /*
  * \brief array mapping mshadow types defined in dmlc/base.h to strings
 */
-extern const char* TypeFlagStrings[];
-}
+extern const std::array<std::string, 8> TypeFlagStrings;
+}  // namespace mshadow
 
 /*! \brief namespace of mxnet */
 namespace mxnet {
