@@ -42,7 +42,7 @@ bool NumpyInsertType(const nnvm::NodeAttrs& attrs,
     CHECK_NE((*in_type)[2], -1) << "Index type must be set for insert operator\n";
     CHECK(((*in_type)[2] == mshadow::DataType<int64_t>::kFlag)
           || ((*in_type)[2] == mshadow::DataType<int32_t>::kFlag))
-          << "Index type only support int32 or int64.\n";
+      << "Index type only support int32 or int64.\n";
   }
   TYPE_ASSIGN_CHECK(*out_type, 0, (*in_type)[0]);
   TYPE_ASSIGN_CHECK(*out_type, 0, (*in_type)[1]);
@@ -62,7 +62,7 @@ bool NumpyInsertShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape &objShape = (*in_shape)[insert_::kObj];
   if (in_shape->size() == 3U) {
     CHECK_LE(objShape.ndim(), 1)
-        << "index array argument obj to insert must be one dimensional or scale.\n";
+      << "index array argument obj to insert must be one dimensional or scale.\n";
   }
 
   out_shape->clear();
@@ -117,7 +117,9 @@ bool NumpyInsertShape(const nnvm::NodeAttrs& attrs,
 
   mxnet::TShape newshape(arrshape);
   mxnet::TShape val_newshape(arrshape.ndim(), -1);
-  int numnew;
+  int numnew = 0;  // amount of new column insert to 'arr' in 'axis'
+  // modify values's ndim to arr's ndim, for broadcast easily later
+  // e.g. value shape: (2,) arr shape: (3, 2) => value shape: (1, 2)
   for (int i = valshape.ndim() - 1, j = arrshape.ndim() - 1; i >= 0 || j >= 0; --i, --j) {
     if (i >= 0 && j >= 0) {
       val_newshape[j] = valshape[i];

@@ -8223,6 +8223,7 @@ def insert(arr, obj, values, axis=None):
     """
     return _mx_nd_np.insert(arr, obj, values, axis=axis)
 
+
 @set_module('mxnet.numpy')
 def nonzero(a):
     """
