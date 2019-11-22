@@ -1461,13 +1461,13 @@ class PearsonCorrelation(EvalMetric):
             self.reset_micro()
 
     def reset_micro(self):
-        self.sse_p = 0
-        self.mean_p = 0
-        self.sse_l = 0
-        self.mean_l = 0
-        self.pred_nums = 0
-        self.label_nums = 0
-        self.conv = 0
+        self._sse_p = 0
+        self._mean_p = 0
+        self._sse_l = 0
+        self._mean_l = 0
+        self._pred_nums = 0
+        self._label_nums = 0
+        self._conv = 0
 
     def reset(self):
         self.num_inst = 0
@@ -1488,7 +1488,7 @@ class PearsonCorrelation(EvalMetric):
         return count, mean, m_2
 
     def update_cov(self, label, pred):
-        self.conv = self.conv + numpy.sum((label - self.mean_l) * (pred - self.mean_p))
+        self._conv = self._conv + numpy.sum((label - self._mean_l) * (pred - self._mean_p))
 
     def update(self, labels, preds):
         """Updates the internal evaluation result.
@@ -1514,12 +1514,11 @@ class PearsonCorrelation(EvalMetric):
             else:
                 self.global_num_inst += 1
                 self.num_inst += 1
-                self.label_nums, self.mean_l, self.sse_l = \
-                    self.update_variance(label, self.label_nums, self.mean_l, self.sse_l)
+                self._label_nums, self._mean_l, self._sse_l = \
+                    self.update_variance(label, self._label_nums, self._mean_l, self._sse_l)
                 self.update_cov(label, pred)
-                self.pred_nums, self.mean_p, self.sse_p = \
-                    self.update_variance(pred, self.pred_nums, self.mean_p, self.sse_p)
-
+                self._pred_nums, self._mean_p, self._sse_p = \
+                    self.update_variance(pred, self._pred_nums, self._mean_p, self._sse_p)
 
     def get(self):
         if self.num_inst == 0:
@@ -1527,12 +1526,9 @@ class PearsonCorrelation(EvalMetric):
         if self.average == 'macro':
             return (self.name, self.sum_metric / self.num_inst)
         else:
-            n = self.label_nums
-            pearsonr = self.conv / ((n-1) * numpy.sqrt(self.sse_p / (n - 1)) * numpy.sqrt(self.sse_l / (n - 1)))
+            n = self._label_nums
+            pearsonr = self._conv / ((n-1) * numpy.sqrt(self._sse_p / (n - 1)) * numpy.sqrt(self._sse_l / (n - 1)))
             return (self.name, pearsonr)
-
-
-
 
 @register
 class PCC(EvalMetric):

@@ -17,6 +17,7 @@
 
 import mxnet as mx
 import numpy as np
+import scipy
 import json
 import math
 from common import with_seed
