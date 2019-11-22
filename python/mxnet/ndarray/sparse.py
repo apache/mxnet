@@ -98,8 +98,8 @@ def _new_alloc_handle(stype, shape, ctx, delay_alloc, dtype, aux_types, aux_shap
         ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
         num_aux,
         c_array_buf(ctypes.c_int, native_array('i', aux_type_ids)),
-        c_array_buf(mx_uint, native_array('I', aux_shape_lens)),
-        c_array_buf(mx_uint, native_array('I', aux_shapes)),
+        c_array_buf(mx_int64, native_array('q', aux_shape_lens)),
+        c_array_buf(mx_int64, native_array('q', aux_shapes)),
         ctypes.byref(hdl)))
     return hdl
 
