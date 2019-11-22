@@ -172,7 +172,7 @@ def check_binary_ops():
     check_fused_symbol(3-a, a=arr1)
     check_fused_symbol(a*b, a=arr1, b=arr2)
     check_fused_symbol(a*3, a=arr1)
-    check_fused_symbol(a/b, a=arr1, b=arr2)
+    check_fused_symbol(a/(b+1), a=arr1, b=arr2)
     check_fused_symbol(a/3, a=arr1)
     check_fused_symbol(3/a, a=arr1)
     check_fused_symbol(a**b, a=arr1, b=arr2)
@@ -238,6 +238,31 @@ def test_fusion_compiler_cache():
     if num_gpus > 1:
         check_fused_symbol(a+b, ctx=mx.gpu(1), a=arr1, b=arr2)
 
+
+@with_seed()
+def test_fusion_reshape_executor():
+    a = mx.sym.Variable("data1")
+    b = mx.sym.Variable("data2")
+    c = a + b + 1
+    sym = mx.sym.relu(c)
+    orig_shape = (10,10)
+    e = sym.simple_bind(ctx=mx.gpu(), data1=orig_shape, data2=orig_shape)
+    data = mx.nd.zeros(orig_shape, ctx=mx.gpu())
+    out = e.forward(is_train=False)
+    assert out[0].sum().asscalar() == 100
+    changed_shape = (80, 2)
+    new_shape = {'data1': changed_shape, 'data2': changed_shape}
+    data = mx.nd.zeros(new_shape['data1'], ctx=mx.gpu())
+    f = e.reshape(allow_up_sizing=True, **new_shape)
+    out = f.forward(is_train=False, data1=data, data2=data)
+    assert out[0].sum().asscalar() == 160
+    # Reshape again
+    changed_shape = (30, 5)
+    new_shape = {'data1': changed_shape, 'data2': changed_shape}
+    data = mx.nd.zeros(new_shape['data1'], ctx=mx.gpu())
+    f = e.reshape(allow_up_sizing=True, **new_shape)
+    out = f.forward(is_train=False, data1=data, data2=data)
+    assert out[0].sum().asscalar() == 150
 
 if __name__ == '__main__':
     import nose

@@ -24,7 +24,7 @@
 #include <map>
 #include <vector>
 
-#if MXNET_USE_CUDA
+#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
 
 namespace mxnet {
 
@@ -992,6 +992,6 @@ const char kernel_end[] = R"code(}
 
 }  // namespace mxnet
 
-#endif  // MXNET_USE_CUDA
+#endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
 
 #endif  // MXNET_OPERATOR_FUSION_FUSED_OP_INL_H_
