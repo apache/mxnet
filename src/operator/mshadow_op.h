@@ -619,6 +619,12 @@ MXNET_BINARY_LOGIC_OP_NC(np_equal, a == b ? true : false);
 
 MXNET_BINARY_LOGIC_OP_NC(np_not_equal, a != b ? true : false);
 
+MXNET_BINARY_LOGIC_OP_NC(np_logical_and, a && b ? true : false);
+
+MXNET_BINARY_LOGIC_OP_NC(np_logical_or, a || b ? true : false);
+
+MXNET_BINARY_LOGIC_OP_NC(np_logical_xor, (a || b) && !(a && b) ? true : false);
+
 MXNET_BINARY_MATH_OP(logical_and, a && b ? DType(1) : DType(0));
 
 MXNET_BINARY_MATH_OP(logical_or, a || b ? DType(1) : DType(0));

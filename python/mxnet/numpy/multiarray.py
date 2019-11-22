@@ -67,6 +67,7 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'insert',
            'indices', 'copysign', 'ravel', 'unravel_index', 'diag_indices_from', 'hanning', 'hamming', 'blackman',
            'flip', 'flipud', 'fliplr', 'around', 'round', 'round_', 'arctan2', 'hypot',
+           'logical_and', 'logical_or', 'logical_xor',
            'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad',
            'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'kron',
            'equal', 'not_equal', 'interp',
@@ -77,7 +78,6 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'pad', 'cumsum', 'rollaxis', 'diag', 'diagonal']
 
 __all__ += fallback.__all__
-
 
 # Return code for dispatching indexing function call
 _NDARRAY_UNSUPPORTED_INDEXING = -1
