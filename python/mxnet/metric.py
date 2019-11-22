@@ -1479,13 +1479,13 @@ class PearsonCorrelation(EvalMetric):
 
     def update_variance(self, new_values, *aggregate):
         #Welford's online algorithm for variance update
-        (count, mean, m_2) = aggregate
+        count, mean, m_2 = aggregate
         count += len(new_values)
         delta = new_values - mean
         mean += numpy.sum(delta / count)
         delta_2 = new_values - mean
         m_2 += numpy.sum(delta * delta_2)
-        return (count, mean, m_2)
+        return count, mean, m_2
 
     def update_cov(self, label, pred):
         self.conv = self.conv + numpy.sum((label - self.mean_l) * (pred - self.mean_p))
