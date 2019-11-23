@@ -4935,6 +4935,7 @@ class DLDataType(ctypes.Structure):
         "bool": (1, 1, 1),
         "uint32": (1, 32, 1),
         "uint64": (1, 64, 1),
+        'float16': (2, 16, 1),
         "float32": (2, 32, 1),
         "float64": (2, 64, 1),
     }
