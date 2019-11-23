@@ -605,3 +605,26 @@ def multi_mp_adamw_update(weights, grads, mean, var, weights32, rescale_grad, lr
                                                     etas=etas,
                                                     name=name,
                                                     **kwargs)
+
+def multi_lamb_update(weights, grads, mean, var, temp_g,
+                      out=None, name=None, num_tensors=0, **kwargs):
+     if not num_tensors:
+         num_tensors = len(weights)
+     temp_list = _flatten_list(zip(weights, grads, mean, var, temp_g))
+     return ndarray._internal._multi_lamb_update(*temp_list,
+                                                  out=out,
+                                                  num_tensors=num_tensors,
+                                                  name=name,
+                                                  **kwargs)
+ 
+def multi_mp_lamb_update(weights, grads, mean, var, temp_g, weights32,
+                         out=None, name=None, num_tensors=0, **kwargs):
+     if not num_tensors:
+         num_tensors = len(weights)
+     temp_list = _flatten_list(zip(weights, grads, mean, var, temp_g, weights32))
+     return ndarray._internal._multi_mp_lamb_update(*temp_list,
+                                                     out=out,
+                                                     num_tensors=num_tensors,
+                                                     name=name,
+                                                     **kwargs)
+    

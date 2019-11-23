@@ -407,6 +407,277 @@ def check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights):
         _assert_all_almost_equal(mx_p_w32, mx_w32, 1e-5, 1e-6)
 
 @with_seed()
+def test_lamb():
+    min_nparam = 40
+    max_nparam = 50
+    mindim = 50000
+    maxdim = 100000
+
+    min_nparam = 1
+    max_nparam = 2
+    mindim = 5
+    maxdim = 6
+
+    maxndim = 1
+
+    dtypes = ['float16','float32', 'float64']
+    for ctx in [mx.cpu(0), mx.gpu(0)]:
+        print('testing',ctx)
+        MixPrecision=False
+        for dtype in dtypes:
+            print(dtype)
+            nparam = np.random.randint(min_nparam + 1, max_nparam + 1)
+            shapes = [np.random.randint(mindim, maxdim + 1, size=maxndim) for i in range(nparam)]
+            lowTol = (dtype == 'float16')
+            tol1 = 1e-2 if lowTol else 1e-3
+            tol2 = 1e-5 if lowTol else 1e-6
+            check_lamb(dtype, MixPrecision, shapes, ctx, tol1, tol2)
+            #test_performance_lamb(dtype, MixPrecision, shapes, ctx, 10000)
+
+        #check Mix Precision...... Generates in fp16 cast to fp32 for ref
+        #print('Mix Precision')
+        dtype='float16'
+        nparam = np.random.randint(min_nparam + 1, max_nparam + 1)
+        shapes = [np.random.randint(1, maxdim + 1, size=maxndim) for i in range(nparam)]
+        MixPrecision=True
+        tol1 = 1e-2
+        tol2 = 1e-2
+        check_lamb(dtype, MixPrecision, shapes, ctx, tol1, tol2)
+        #test_performance_lamb(dtype, MixPrecision, shapes, ctx, 1000)'''
+
+def check_lamb(dtype, MixPrecision, shapes, ctx, tol1, tol2):
+    def get_ref(weights, grads, mean, var,
+                lr, beta1, beta2,
+                epsilon, wd, rescale_grad, 
+                index_update_count,
+                lower_bound, upper_bound,
+                clip_gradient,
+                bias_correction):
+        
+        grad_rescaled = grads * rescale_grad
+        if clip_gradient >= 0:
+            grad_rescaled = mx.nd.clip(grad_rescaled, -clip_gradient, clip_gradient)
+        
+        mean[:] = beta1 * mean + (1. - beta1) * grad_rescaled
+        var[:] = beta2 * var + (1. - beta2) * mx.nd.square(grad_rescaled)
+
+        r1 = weights.norm()
+        
+        if lower_bound:
+            r1 = mx.nd.maximum(r1, lower_bound)
+        if upper_bound:
+            r1 = mx.nd.minimum(r1, upper_bound)
+            
+        #print("R1 ",r1)
+               
+        if bias_correction:
+            mean_hat = mean / (1. - mx.nd.power(beta1, index_update_count))
+            var_hat = var / (1. - mx.nd.power(beta2, index_update_count))
+        else:
+            mean_hat = mean
+            var_hat = var
+            
+        g = mean_hat / mx.nd.sqrt(var_hat) + epsilon + wd * weights
+        r2 = g.norm()
+        #print("R2 ",r2)
+
+        # calculate lamb_trust_ratio
+        r = 1. if r1 == 0. or r2 == 0. else r1 / r2
+        lr *= r
+
+        # update weight
+        weights[:] -= (lr * g)
+        return weights, mean, var
+
+    weights, grads, mean, var, temp_g = [], [], [], [], []
+    weights_fp32 = []
+    weights_ref, mean_ref, grads_ref, var_ref = [], [], [], []
+    MPType = dtype
+    if MixPrecision:
+        MPType = 'float32'
+    for i,shape in enumerate(shapes):
+        grads.append(mx.nd.random.uniform(-1.0, 1.0, shape=shape, ctx=ctx, dtype=dtype))
+        if MixPrecision:
+            weights_fp32.append(mx.nd.random.uniform(shape=shape, ctx=ctx, dtype=MPType))
+            weights.append(weights_fp32[i].astype(dtype).copy())
+            weights_ref.append(weights_fp32[i].copy())
+            grads_ref.append(grads[i].astype(MPType).copy())
+        else:
+            weights.append(mx.nd.random.uniform(shape=shape, ctx=ctx, dtype=dtype))
+            weights_ref.append(weights[i].copy())
+            grads_ref.append(grads[i].copy())
+        mean.append(mx.nd.random.uniform(shape=shape, ctx=ctx, dtype=MPType))
+        mean_ref.append(mean[i].copy())
+        var.append(mx.nd.random.uniform(shape=shape, ctx=ctx, dtype=MPType))
+        var_ref.append(var[i].copy())
+        temp_g.append(mx.nd.zeros(shape=shape, ctx=ctx, dtype=MPType))
+    
+    num_weights=len(weights)
+    
+    learning_rate=0.01 #0.001
+    beta1=0.9
+    beta2=0.999
+    epsilon=1e-6
+    wd=0.2
+    rescale_grad=0.9
+    index_update_count=10
+    lower_bound=1e-3
+    upper_bound=10.0
+    clip_gradient=-1.0
+    bias_correction=True
+    
+    #print("call kernel")
+    if(MixPrecision):
+        mx.nd.contrib.multi_mp_lamb_update(weights, grads, mean, var, temp_g, weights_fp32,
+                                            learning_rate=learning_rate, 
+                                            beta1=beta1, beta2=beta2,
+                                            epsilon=epsilon, wd=wd,
+                                            rescale_grad=rescale_grad,
+                                            step=index_update_count,
+                                            lower_bound=lower_bound, upper_bound=upper_bound,
+                                            clip_gradient=clip_gradient,
+                                            bias_correction=bias_correction,
+                                            out=weights)
+    else:
+        mx.nd.contrib.multi_lamb_update(weights, grads, mean, var, temp_g,
+                                        learning_rate=learning_rate, 
+                                        beta1=beta1, beta2=beta2,
+                                        epsilon=epsilon, wd=wd,
+                                        rescale_grad=rescale_grad,
+                                        step=index_update_count,
+                                        lower_bound=lower_bound, upper_bound=upper_bound,
+                                        clip_gradient=clip_gradient,
+                                        bias_correction=bias_correction,
+                                        out=weights)
+
+    #print(weights)
+    #print(weights_fp32)
+        
+    # Reference model from gluon-nlp
+    #print("\n --------- REF --------- \n")
+    weights_out = []
+    for i in range(num_weights):
+        w, m, v = get_ref(weights_ref[i], grads_ref[i], 
+                    mean_ref[i], var_ref[i],  
+                    learning_rate, beta1, beta2, 
+                    epsilon, wd, rescale_grad, 
+                    index_update_count,
+                    lower_bound, upper_bound,
+                    clip_gradient,
+                    bias_correction)
+        if MixPrecision:
+            assert_almost_equal(weights_fp32[i], weights_fp32[i], atol=tol1, rtol=tol2)
+        else:
+            assert_almost_equal(w, weights[i], atol=tol1, rtol=tol2)
+        assert_almost_equal(m, mean[i], atol=tol1, rtol=tol2)
+        assert_almost_equal(v, var[i], atol=tol1, rtol=tol2)
+        weights_out.append(w)
+        #mean_ref.append(m)
+        #var_ref.append(v)
+    #print(weights_out)
+    
+    #MXNET_TEST_SEED=1390109320
+
+def test_performance_lamb(dtype, MixPrecision, shapes, ctx, niters):
+    def get_ref(weights, grads, mean, var,
+                lr, beta1, beta2,
+                epsilon, wd, rescale_grad, 
+                index_update_count,
+                lower_bound, upper_bound,
+                clip_gradient,
+                bias_correction):
+        
+        grad_rescaled = grads * rescale_grad
+        if clip_gradient >= 0:
+            grad_rescaled = mx.nd.clip(grad_rescaled, -clip_gradient, clip_gradient)
+        
+        mean[:] = beta1 * mean + (1. - beta1) * grad_rescaled
+        var[:] = beta2 * var + (1. - beta2) * mx.nd.square(grad_rescaled)
+
+        r1 = weights.norm()
+        if lower_bound:
+            r1 = mx.nd.maximum(r1, lower_bound)
+        if upper_bound:
+            r1 = mx.nd.minimum(r1, upper_bound)
+               
+        if bias_correction:
+            mean_hat = mean / (1. - mx.nd.power(beta1, index_update_count))
+            var_hat = var / (1. - mx.nd.power(beta2, index_update_count))
+        else:
+            mean_hat = mean
+            var_hat = var
+            
+        g = mean_hat / (mx.nd.sqrt(var_hat) + epsilon) + wd * weights
+        r2 = g.norm()
+
+        # calculate lamb_trust_ratio
+        r = 1. if r1 == 0. or r2 == 0. else r1 / r2
+        lr *= r
+
+        # update weight
+        weights[:] -= lr * g
+        return weights, mean, var
+
+    weights, grads, mean, var, temp_g = [], [], [], [], []
+    weights_copy, mean_copy, var_copy = [], [], []
+    for i,shape in enumerate(shapes):
+        weights.append(mx.nd.random.uniform(shape=shape, ctx=ctx, dtype=dtype))
+        weights_copy.append(weights[i].copy())
+        grads.append(mx.nd.random.uniform(-1.0, 1.0, shape=shape, ctx=ctx, dtype=dtype))
+        mean.append(mx.nd.random.uniform(shape=shape, ctx=ctx, dtype=dtype))
+        mean_copy.append(mean[i].copy())
+        var.append(mx.nd.random.uniform(shape=shape, ctx=ctx, dtype=dtype))
+        var_copy.append(var[i].copy())
+        temp_g.append(mx.nd.zeros(shape=shape, ctx=ctx, dtype=dtype))
+    
+    num_weights=len(weights)
+    
+    learning_rate=0.001
+    beta1=0.9
+    beta2=0.999
+    epsilon=1e-6
+    wd=0.0
+    rescale_grad=1.0
+    index_update_count=10
+    lower_bound=1e-3
+    upper_bound=10.0
+    clip_gradient=-1.0
+    bias_correction=False #problematic
+    
+    totaltime=0.0
+    for i in range(niters):
+        start = time.time()
+        mx.nd.contrib.multi_lamb_update(weights, grads, mean, var, temp_g,
+                                        learning_rate=learning_rate, beta1=beta1, beta2=beta2,
+                                        epsilon=epsilon, wd=wd,
+                                        rescale_grad=rescale_grad,
+                                        step=index_update_count,
+                                        lower_bound=lower_bound, upper_bound=upper_bound,
+                                        clip_gradient=clip_gradient,
+                                        bias_correction=bias_correction,
+                                        out=weights)
+        end = time.time()
+        totaltime+= (end - start)*1000
+    print("Average time Operator",totaltime/niters,"ms after",niters,"iterations")
+    
+    # Reference model from gluon-nlp
+    '''totaltime_ref=0.0
+    for i in range(niters):
+        for i in range(num_weights):
+            start = time.time()
+            w, m, v = get_ref(weights_copy[i], grads[i], 
+                        mean_copy[i], var_copy[i],  
+                        learning_rate, beta1, beta2, 
+                        epsilon, wd, rescale_grad, 
+                        index_update_count,
+                        lower_bound, upper_bound,
+                        clip_grad,
+                        bias_correction)
+            end = time.time()
+            totaltime_ref+= (end - start)*1000
+    print("Ref Average time Ref",totaltime_ref/niters,"ms after",niters,"iterations")'''
+
+@with_seed()
 def test_preloaded_multi_sgd():
     dtypes = ['float16', 'float32']
     momentums = [None, 0.9]
