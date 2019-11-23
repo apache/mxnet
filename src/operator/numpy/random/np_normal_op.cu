@@ -29,10 +29,13 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_normal)
-    .set_attr<FCompute>("FCompute<gpu>", NumpyNormalForward<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", NumpyNormalForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_broadcast_normal)
 .set_attr<FCompute>("FCompute<gpu>", NormalReparamBackward<gpu>);
+
+NNVM_REGISTER_OP(_npi_normal_n)
+.set_attr<FCompute>("FCompute<gpu>", NumpyNormalForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
