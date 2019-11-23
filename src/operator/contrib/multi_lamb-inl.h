@@ -292,16 +292,9 @@ inline void multiLAMB(const nnvm::NodeAttrs& attrs,
       Shape1(kernel_params.count), s);
     
     MultiSumSqRun<xpu>(weights, kernel_params.count, r1.dptr_, s);
-
     call_kernel1<MPDType, DType>(s, kernel_params, param);
-
-    cudaError err = cudaPeekAtLastError(); \
-    CHECK_EQ(err, cudaSuccess) << "Name: MultiLAMB_step1_kernel ErrStr:" << cudaGetErrorString(err);
-
     MultiSumSqRun<xpu>(temp_g, kernel_params.count, r2.dptr_, s);
-
     call_kernel2<MPDType, DType>(s, kernel_params, param, r1.dptr_, r2.dptr_, req[0]);
-    
   });
 }
 
