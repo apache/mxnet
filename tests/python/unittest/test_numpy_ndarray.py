@@ -917,6 +917,8 @@ def test_np_ndarray_indexing():
         range(3, 0, -1),
         (range(4,), [1]),
         (1, 1, slice(None), 1),
+        (1, 1, slice(None, 3), 1),
+        (1, 1, slice(None, 8, 3), 1),
     ]
     for index in index_list:
         test_getitem(np_array, index)
