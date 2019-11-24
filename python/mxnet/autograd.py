@@ -360,6 +360,8 @@ def get_symbol(x):
     Symbol
         The retrieved Symbol.
     """
+    assert isinstance(x, NDArray), \
+       "get_symbol: Invalid argument type, expecting %s, got %s"%(NDArray, type(x))
     hdl = SymbolHandle()
     check_call(_LIB.MXAutogradGetSymbol(x.handle, ctypes.byref(hdl)))
     return Symbol(hdl)
