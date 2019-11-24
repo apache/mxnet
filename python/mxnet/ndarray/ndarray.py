@@ -844,10 +844,10 @@ fixed-size items.
     # pylint: disable=invalid-name
     @staticmethod
     def _basic_indexing_slice_is_contiguous(slc_key, shape):
-        """Whether indexing with the given key results in a contiguous array. If any key sliced
+        """Whether indexing with the given key results in a contiguous array.
 
         The rule is: From right to left, if in an axis, a slice produces a
-        proper subset, no later axis can produce a proper subset.
+        proper subset, the later slice must have <=1 elements.
 
         The ``slc_key`` sequence must have the same length as ``shape`` and
         only contain `slice` objects.
@@ -856,10 +856,10 @@ fixed-size items.
         is_subset = False
         total_sliced_elements = np.prod([_get_slice_len_for(slc, n)
                                          for slc, n in zip(slc_key, shape)])
-        if total_sliced_elements == 0 or total_sliced_elements == 1:
+        if total_sliced_elements in (0, 1):
             return True
         for idx, n in zip(reversed(slc_key), reversed(shape)):
-            start, stop, step = idx.indices(n)
+            _, _, step = idx.indices(n)
             num_elements = _get_slice_len_for(idx, n)
             if num_elements == 0:
                 return True
@@ -895,7 +895,7 @@ fixed-size items.
         for slc, n in zip(slc_key, shape):
             flat_begin *= n
             flat_end *= n
-            begin, end, step = slc.indices(n)
+            begin, _, _ = slc.indices(n)
             num_elements = _get_slice_len_for(slc, n)
             if num_elements == 0:
                 return 0, 0
@@ -3131,7 +3131,7 @@ def _get_dim_size(start, stop, step):
 def _get_slice_len_for(slc, seq_length):
     """Given a python slice object and the length of the sequence, calculate the number of elements
      in the slice.
-    
+
     Parameters
     ----------
     slc : py_slice

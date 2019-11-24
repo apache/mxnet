@@ -125,9 +125,8 @@ static inline bool SupportStorageMKLDNN(int stype) {
 
 static inline bool SupportMKLDNN(int dtype, const mxnet::TShape &shape) {
   int ndim = shape.ndim();
-  bool zero_size_shape =
-      ndim == 0 || std::any_of(shape.begin(), shape.end(), [](dim_t ele){ return ele == 0; });
-  if (zero_size_shape) {
+  if (ndim == 0 || shape.Size() == 0) {
+    // MKLDNN currently does not support 0-dim Tensor and 0-size Tensor
     return false;
   }
   return dtype == mshadow::kFloat32 && (ndim == 1 || ndim == 2 || ndim == 4);

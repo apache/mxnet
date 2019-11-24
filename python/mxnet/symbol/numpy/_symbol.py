@@ -24,7 +24,7 @@ import json
 import numpy as _np
 from . import _op as _mx_np_op
 from ...base import _LIB, SymbolHandle, numeric_types, mx_uint, integer_types, string_types
-from ...base import c_str, c_handle_array
+from ...base import c_str
 from ...base import py_str
 from ...util import check_call, set_module, _sanity_check_params
 from ...util import wrap_np_unary_func, wrap_np_binary_func

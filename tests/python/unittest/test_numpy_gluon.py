@@ -24,7 +24,7 @@ from uuid import uuid4
 import numpy as _np
 import mxnet as mx
 from mxnet import gluon, autograd, np
-from mxnet.test_utils import use_np, assert_almost_equal
+from mxnet.test_utils import use_np, assert_almost_equal, check_gluon_hybridize_consistency
 from common import with_seed
 import random
 
@@ -199,82 +199,6 @@ def test_parameters_zero_grad():
             assert_almost_equal(v.grad().asnumpy(), mx.np.zeros_like(v.grad()).asnumpy())
 
 
-def check_hybridize_consistency(net_builder, data_l, numpy_func=None, test_grad=True,
-                                rtol=1E-4, atol=1E-4):
-    """Check whether a HybridBlock has consistent output between the hybridized
-     v.s. non-hybridized versions
-
-    The network should not contain any random number generators.
-
-    Parameters
-    ----------
-    net_builder : function
-        The builder of the HybridBlock that we are going to check the consistency.
-        Inside the implementation, we will call net_builder() to construct the hybrid block.
-        Also, the net_builder will need to support specifying the params
-    data_l : list of mx.np.ndarray
-        List of input ndarrays.
-    numpy_func : function, optional
-        The ground truth numpy function that has the same functionality as net_cls(). Default None.
-    test_grad : bool, optional
-        Whether to test the consistency of the gradient
-    rtol : float, optional
-        The relative error tolerance, default 1E-4.
-    atol : float, optional
-        The absolute error tolerance, default 1E-4.
-    """
-    class _NumpyParamDictInit(mx.init.Initializer):
-        """Initializes parameters with the catched numpy dictionary
-        """
-        def __init__(self, np_params):
-            super(_NumpyParamDictInit, self).__init__()
-            self._np_params = np_params
-
-        def _init_weight(self, name, arr):
-            arr[()] = self._np_params[name]
-    saved_out_np = None
-    saved_grad_np_l = None
-    params_init = None
-    use_autograd_flags = [False, True] if test_grad else [False]
-    for hybridize in [False, True]:
-        for use_autograd in use_autograd_flags:
-            net = net_builder(prefix='net_')
-            if params_init is None:
-                net.initialize()
-            else:
-                net.initialize(params_init)
-            if hybridize:
-                net.hybridize()
-            in_data_l = [ele.copy() for ele in data_l]
-            if use_autograd:
-                for ele in in_data_l:
-                    ele.attach_grad()
-                with mx.autograd.record():
-                    out = net(*in_data_l)
-                out.backward(out)
-            else:
-                out = net(*in_data_l)
-            if params_init is None:
-                np_params = {k: v.data().asnumpy() for k, v in net.collect_params().items()}
-                params_init = _NumpyParamDictInit(np_params)
-            if saved_out_np is None:
-                saved_out_np = out.asnumpy()
-            else:
-                # Check for correctness
-                assert_almost_equal(out.asnumpy(), saved_out_np, rtol=rtol, atol=atol)
-            if use_autograd:
-                if saved_grad_np_l is None:
-                    saved_grad_np_l = [ele.grad.asnumpy() for ele in in_data_l]
-                else:
-                    # Check for correctness
-                    for data, saved_grad_np in zip(in_data_l, saved_grad_np_l):
-                        assert_almost_equal(data.grad.asnumpy(), saved_grad_np,
-                                            rtol=rtol, atol=atol)
-    if numpy_func is not None:
-        numpy_out = numpy_func(*[ele.asnumpy() for ele in data_l])
-        assert_almost_equal(saved_out_np, numpy_out, rtol=rtol, atol=atol)
-
-
 def check_gluon_save_load(net_builder, data_l):
     """Verify the consistency between the loaded network and the original network.
 
@@ -359,9 +283,9 @@ def test_symbolic_basic_slicing():
         return tuple(index)
 
     shapes = [
-        (4, 6, 8, 9),
+        (4, 6, 8, 5),
         (1, 1, 1, 6),
-        (5, 6, 7),
+        (5, 6, 4),
         (5, 6),
         (10,),
         (100, 0, 10, 0, 0),
@@ -373,7 +297,7 @@ def test_symbolic_basic_slicing():
         cache = set()
         x = mx.np.random.normal(0, 1, shape)
         y = mx.np.random.normal(0, 1, shape)
-        for _ in range(1000):
+        for _ in range(200):
             index1 = random_slice_index(shape)
             index2 = random_slice_index(x.asnumpy()[index1].shape)
             if (hashable_index(index1), hashable_index(index2)) in cache:
@@ -389,11 +313,11 @@ def test_symbolic_basic_slicing():
                 def hybrid_forward(self, F, x, y):
                     return (x[()][index1] + y[()][index1])[index2]
 
-            check_hybridize_consistency(TestSlicingSingleSymbol1, [x, y],
-                                        numpy_func=lambda a, b: a[()][index1] + b[()][index1])
-            check_hybridize_consistency(TestSlicingSingleSymbol2, [x, y],
-                                        numpy_func=lambda a, b:
-                                        (a[()][index1] + b[()][index1])[index2])
+            check_gluon_hybridize_consistency(TestSlicingSingleSymbol1, [x, y],
+                                              numpy_func=lambda a, b: a[()][index1] + b[()][index1])
+            check_gluon_hybridize_consistency(TestSlicingSingleSymbol2, [x, y],
+                                              numpy_func=lambda a, b:
+                                              (a[()][index1] + b[()][index1])[index2])
         # Test for split/hsplit/vsplit
         class TestSlicingWithSplit(gluon.HybridBlock):
             def hybrid_forward(self, F, x):
@@ -428,19 +352,19 @@ def test_symbolic_basic_slicing():
                 return x
 
         if len(shape) > 2 and shape[2] > 2:
-            check_hybridize_consistency(
+            check_gluon_hybridize_consistency(
                 TestSlicingWithSplit, [x],
                 numpy_func=lambda a: _np.concatenate(_np.split(a, shape[2], axis=2)[1:-1],
                                                      axis=2))
         if len(shape) == 3 and shape[0] > 0 and shape[1] > 0 and shape[2] > 0:
-            check_hybridize_consistency(TestSlicingWithSplit2, [x, y])
+            check_gluon_hybridize_consistency(TestSlicingWithSplit2, [x, y])
 
         if len(shape) > 1 and shape[1] > 2:
-            check_hybridize_consistency(
+            check_gluon_hybridize_consistency(
                 TestSlicingWithHSplit, [x],
                 numpy_func=lambda a: _np.concatenate(_np.hsplit(a, shape[1])[1:-1], axis=1))
         if len(shape) > 1 and shape[0] > 2:
-            check_hybridize_consistency(
+            check_gluon_hybridize_consistency(
                 TestSlicingWithVSplit, [x],
                 numpy_func=lambda a: _np.concatenate(_np.vsplit(a, shape[0])[1:-1], axis=0))
 
@@ -472,7 +396,7 @@ def test_net_symbol_save_load():
             x = F.np.split(x, 1)
             x = x[0]
             return self.layer1(x[:, -1, :]) + self.layer2(y[:, -1, :])
-    check_gluon_save_load(Case1, [mx.np.random.normal(0, 1, (10, 5, 8)),
+    check_gluon_save_load(Case2, [mx.np.random.normal(0, 1, (10, 5, 8)),
                                   mx.np.random.normal(0, 1, (10, 5, 8))])
 
 
