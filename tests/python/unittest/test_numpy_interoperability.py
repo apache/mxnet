@@ -308,6 +308,16 @@ def _add_workload_linalg_inv():
     OpArgMngr.add_workload('linalg.inv', np.array(_np.ones((0, 1, 1)), dtype=np.float64))
 
 
+def _add_workload_linalg_det():
+    OpArgMngr.add_workload('linalg.det', np.array(_np.ones((2, 2)), dtype=np.float32))
+    OpArgMngr.add_workload('linalg.det', np.array(_np.ones((0, 1, 1)), dtype=np.float64))
+
+
+def _add_workload_linalg_slogdet():
+    OpArgMngr.add_workload('linalg.slogdet', np.array(_np.ones((2, 2)), dtype=np.float32))
+    OpArgMngr.add_workload('linalg.slogdet', np.array(_np.ones((0, 1, 1)), dtype=np.float64))
+
+
 def _add_workload_trace():
     OpArgMngr.add_workload('trace', np.random.uniform(size=(4, 1)))
     OpArgMngr.add_workload('trace', np.random.uniform(size=(3, 2)))
@@ -1332,6 +1342,8 @@ def _prepare_workloads():
     _add_workload_linalg_norm()
     _add_workload_linalg_cholesky()
     _add_workload_linalg_inv()
+    _add_workload_linalg_det()
+    _add_workload_linalg_slogdet()
     _add_workload_trace()
     _add_workload_tril()
     _add_workload_outer()
