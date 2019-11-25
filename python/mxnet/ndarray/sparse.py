@@ -88,7 +88,7 @@ def _new_alloc_handle(stype, shape, ctx, delay_alloc, dtype, aux_types, aux_shap
     aux_shape_lens = [len(aux_shape) for aux_shape in aux_shapes]
     aux_shapes = py_sum(aux_shapes, ())
     num_aux = mx_uint(len(aux_types))
-    if sys.version_info[0] > 2 and _int64_enabled():
+    if _int64_enabled():
         check_call(_LIB.MXNDArrayCreateSparseEx64(
             ctypes.c_int(int(_STORAGE_TYPE_STR_TO_ID[stype])),
             c_array_buf(mx_int64, native_array('q', shape)),

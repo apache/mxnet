@@ -953,7 +953,7 @@ void CreateSparseNDArray(int storage_type,
                          int dtype,
                          uint32_t num_aux,
                          int *aux_type,
-                         index_t *aux_ndims,
+                         uint32_t *aux_ndims,
                          const DType *aux_shape,
                          NDArrayHandle *out) {
   std::vector<int> aux_types;
@@ -987,7 +987,7 @@ int MXNDArrayCreateSparseEx(int storage_type,
                             const uint32_t *aux_shape,
                             NDArrayHandle *out) {
   API_BEGIN();
-  CreateSparseNDArray<uint32_t>(storage_type, shape, ndim, dev_type, dev_id, delay_alloc, dtype, num_aux, aux_type, aux_ndims, aux_shape, out)
+  CreateSparseNDArray<uint32_t>(storage_type, shape, ndim, dev_type, dev_id, delay_alloc, dtype, num_aux, aux_type, aux_ndims, aux_shape, out);
   API_END();
 }
 
@@ -1001,11 +1001,11 @@ int MXNDArrayCreateSparseEx64(int storage_type,
                             int dtype,
                             uint32_t num_aux,
                             int *aux_type,
-                            index_t *aux_ndims,
+                            uint32_t *aux_ndims,
                             const int64_t *aux_shape,
                             NDArrayHandle *out) {
   API_BEGIN();
-  CreateSparseNDArray<int64_t>(storage_type, shape, ndim, dev_type, dev_id, delay_alloc, dtype, num_aux, aux_type, aux_ndims, aux_shape, out)
+  CreateSparseNDArray<int64_t>(storage_type, shape, ndim, dev_type, dev_id, delay_alloc, dtype, num_aux, aux_type, aux_ndims, aux_shape, out);
   API_END();
 }
 
