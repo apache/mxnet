@@ -3414,6 +3414,106 @@ def test_np_linalg_inv():
 
 @with_seed()
 @use_np
+def test_np_linalg_det():
+    class TestDet(HybridBlock):
+        def __init__(self):
+            super(TestDet, self).__init__()
+
+        def hybrid_forward(self, F, a):
+            return F.np.linalg.det(a)
+
+    # test non zero size input
+    tensor_shapes = [
+        (2, 0, 2, 2),
+        (4, 4),
+        (0, 2, 2, 2),
+        (3, 3, 3),
+        (0, 2, 2),
+        (2, 2, 2, 2, 2),
+        (1, 1),
+    ]
+    types = [_np.float32, _np.float64]
+    grad_reqs = ['write', 'add', 'null']
+
+    for hybridize, dtype, shape, grad_req in itertools.product([True, False], types, tensor_shapes, grad_reqs):
+        a_shape = (1,) + shape
+        test_det = TestDet()
+        if hybridize:
+            test_det.hybridize()
+        a = rand_ndarray(shape=a_shape, dtype=dtype).as_np_ndarray()
+        a.attach_grad(grad_req)
+        np_out = _np.linalg.det(a.asnumpy())
+        with mx.autograd.record():
+            mx_out = test_det(a)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-1, atol=1e-1)
+        if grad_req != 'null':
+            print(shape, grad_req)
+            mx_out.backward()
+
+        # Test imperative once again
+        mx_out = np.linalg.det(a)
+        np_out = _np.linalg.det(a.asnumpy())
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-1, atol=1e-1)
+
+        # test numeric gradient
+        a_sym = mx.sym.Variable("a").as_np_ndarray()
+        mx_sym = mx.sym.np.linalg.det(a_sym).as_nd_ndarray()
+        if 0 not in shape and grad_req != 'null':
+            check_numeric_gradient(mx_sym, [a.as_nd_ndarray()],
+                                    rtol=1e-1, atol=1e-1, dtype=dtype)
+
+
+@with_seed()
+@use_np
+def test_np_linalg_slogdet():
+    class TestSlogdet(HybridBlock):
+        def __init__(self):
+            super(TestSlogdet, self).__init__()
+
+        def hybrid_forward(self, F, a):
+            return F.np.linalg.slogdet(a)
+
+    # test non zero size input
+    tensor_shapes = [
+        (2, 0, 2, 2),
+        (5, 5),
+        (0, 2, 2, 2),
+        (3, 3, 3),
+        (0, 3, 3),
+        (2, 2, 2, 2, 2),
+        (1, 1),
+    ]
+
+    types = [_np.float32, _np.float64]
+    grad_reqs = ['write', 'add', 'null']
+
+    for hybridize, a_shape, dtype, grad_req in itertools.product([True, False], tensor_shapes, types, grad_reqs):
+        test_slogdet = TestSlogdet()
+        if hybridize:
+            test_slogdet.hybridize()
+        a = rand_ndarray(shape=a_shape, dtype=dtype).as_np_ndarray()
+        a.attach_grad(grad_req)
+
+        np_out = _np.linalg.slogdet(a.asnumpy())
+        with mx.autograd.record():
+            mx_out = test_slogdet(a)
+        assert mx_out[0].shape == np_out[0].shape
+        assert mx_out[1].shape == np_out[1].shape
+        assert_almost_equal(mx_out[0].asnumpy(), np_out[0], rtol=1e-1, atol=1e-1)
+        assert_almost_equal(mx_out[1].asnumpy(), np_out[1], rtol=1e-1, atol=1e-1)
+        if grad_req != 'null':
+            mx_out[1].backward()
+
+        # Test imperative once again
+        mx_out = np.linalg.slogdet(a)
+        np_out = _np.linalg.slogdet(a.asnumpy())
+        assert_almost_equal(mx_out[0].asnumpy(), np_out[0], rtol=1e-1, atol=1e-1)
+        assert_almost_equal(mx_out[1].asnumpy(), np_out[1], rtol=1e-1, atol=1e-1)
+
+
+@with_seed()
+@use_np
 def test_np_vstack():
     class TestVstack(HybridBlock):
         def __init__(self):
