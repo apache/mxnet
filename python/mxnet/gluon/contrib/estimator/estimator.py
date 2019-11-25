@@ -24,7 +24,7 @@ import logging
 import sys
 import warnings
 
-from .event_handler import MetricHandler, ValidationHandler, LoggingHandler, StoppingHandler
+from .event_handler import MetricHandler, ValidationHandler, LoggingHandler, StoppingHandler, GradientUpdateHandler
 from .event_handler import TrainBegin, EpochBegin, BatchBegin, BatchEnd, EpochEnd, TrainEnd
 from .event_handler import _check_event_handlers
 from .utils import _check_metrics, _suggest_metric_for_loss, _check_handler_metric_ref
@@ -302,12 +302,10 @@ class Estimator(object):
 
         with autograd.record():
             pred = [self.net(x) for x in data]
-            loss = [self.loss(y_hat, y) for y_hat, y in zip(pred, label)]
+            loss = [self.loss(y_hat, y) / batch_size for y_hat, y in zip(pred, label)]
 
         for l in loss:
             l.backward()
-
-        self.trainer.step(batch_size)
 
         return data, label, pred, loss
 
@@ -413,6 +411,9 @@ class Estimator(object):
 
         # no need to add to default handler check as StoppingHandler does not use metrics
         added_default_handlers.append(StoppingHandler(self.max_epoch, self.max_batch))
+
+        if not any(isinstance(handler, GradientUpdateHandler) for handler in event_handlers):
+            added_default_handlers.append(GradientUpdateHandler())
 
         if not any(isinstance(handler, MetricHandler) for handler in event_handlers):
             added_default_handlers.append(MetricHandler(train_metrics=self.train_metrics))

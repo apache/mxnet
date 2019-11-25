@@ -31,7 +31,7 @@ from .utils import _check_metrics
 
 __all__ = ['TrainBegin', 'TrainEnd', 'EpochBegin', 'EpochEnd', 'BatchBegin', 'BatchEnd',
            'StoppingHandler', 'MetricHandler', 'ValidationHandler',
-           'LoggingHandler', 'CheckpointHandler', 'EarlyStoppingHandler']
+           'LoggingHandler', 'CheckpointHandler', 'EarlyStoppingHandler', 'GradientUpdateHandler']
 
 
 class EventHandler(object):
@@ -130,13 +130,15 @@ class MetricHandler(EpochBegin, BatchEnd):
     ----------
     train_metrics : List of EvalMetrics
         Training metrics to be updated at batch end.
+    priority : scalar
+        Priority level of the MetricHandler
     """
 
-    def __init__(self, train_metrics):
+    def __init__(self, train_metrics, priority=-1000):
         self.train_metrics = _check_metrics(train_metrics)
         # order to be called among all callbacks
         # metrics need to be calculated before other callbacks can access them
-        self.priority = -np.Inf
+        self.priority = priority
 
     def epoch_begin(self, estimator, *args, **kwargs):
         for metric in self.train_metrics:
@@ -176,6 +178,8 @@ class ValidationHandler(TrainBegin, BatchEnd, EpochEnd):
     batch_period : int, default None
         How often to run validation at batch end, by default
         :py:class:`ValidationHandler` does not validate at batch end.
+    priority: scalar, default -1000
+        Priority level of the ValidataionHandler
     """
 
     def __init__(self,
@@ -183,7 +187,8 @@ class ValidationHandler(TrainBegin, BatchEnd, EpochEnd):
                  eval_fn,
                  val_metrics=None,
                  epoch_period=1,
-                 batch_period=None):
+                 batch_period=None,
+                 priority=-1000):
         self.val_data = val_data
         self.eval_fn = eval_fn
         self.epoch_period = epoch_period
@@ -193,7 +198,7 @@ class ValidationHandler(TrainBegin, BatchEnd, EpochEnd):
         self.current_epoch = 0
         # order to be called among all callbacks
         # validation metrics need to be calculated before other callbacks can access them
-        self.priority = -np.Inf
+        self.priority = priority
 
     def train_begin(self, estimator, *args, **kwargs):
         # reset epoch and batch counter
@@ -235,11 +240,14 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
         Training metrics to be logged, logged at batch end, epoch end, train end.
     val_metrics : list of EvalMetrics
         Validation metrics to be logged, logged at epoch end, train end.
+    priority : scalar, default np.Inf
+        Priority level of the LoggingHandler
     """
 
     def __init__(self, log_interval='epoch',
                  train_metrics=None,
-                 val_metrics=None):
+                 val_metrics=None,
+                 priority=np.Inf):
         super(LoggingHandler, self).__init__()
         if not isinstance(log_interval, int) and log_interval != 'epoch':
             raise ValueError("log_interval must be either an integer or string 'epoch'")
@@ -250,7 +258,7 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
         self.processed_samples = 0
         # logging handler need to be called at last to make sure all states are updated
         # it will also shut down logging at train end
-        self.priority = np.Inf
+        self.priority = priority
         self.log_interval = log_interval
 
     def train_begin(self, estimator, *args, **kwargs):
@@ -704,3 +712,21 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
             estimator.logger.info('[Epoch %d] EarlyStoppingHanlder: '
                                   'early stopping due to %s not improving',
                                   self.stopped_epoch, self.monitor.get()[0])
+
+class GradientUpdateHandler(BatchEnd):
+    """Gradient Update Handler that apply gradients on network weights
+
+    :py:class:`GradientUpdateHandler` takes the priority level. It updates weight parameters
+    at the end of each batch
+
+    Parameters
+    ----------
+    priority : scalar, default -np.Inf
+        priority level of the gradient update handler. It should be executed before all other handlers.
+    ----------
+    """
+    def __init__(self, priority=-np.Inf):
+        self.priority = priority
+
+    def batch_end(self, estimator, *args, **kwargs):
+        estimator.trainer.step(1)
