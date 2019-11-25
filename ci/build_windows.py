@@ -54,7 +54,7 @@ CMAKE_FLAGS = {
     'WIN_CPU': (
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
-        '-DUSE_NVRTC=OFF '
+        '-DENABLE_CUDA_RTC=OFF '
         '-DUSE_OPENCV=ON '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=open '
@@ -67,7 +67,7 @@ CMAKE_FLAGS = {
     , 'WIN_CPU_MKLDNN': (
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
-        '-DUSE_NVRTC=OFF '
+        '-DENABLE_CUDA_RTC=OFF '
         '-DUSE_OPENCV=ON '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=open '
@@ -80,7 +80,7 @@ CMAKE_FLAGS = {
     , 'WIN_CPU_MKLDNN_MKL': (
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
-        '-DUSE_NVRTC=OFF '
+        '-DENABLE_CUDA_RTC=OFF '
         '-DUSE_OPENCV=ON '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=mkl '
@@ -93,7 +93,7 @@ CMAKE_FLAGS = {
     , 'WIN_CPU_MKL': (
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
-        '-DUSE_NVRTC=OFF '
+        '-DENABLE_CUDA_RTC=OFF '
         '-DUSE_OPENCV=ON '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=mkl '
@@ -106,7 +106,7 @@ CMAKE_FLAGS = {
     , 'WIN_GPU': (
         '-DUSE_CUDA=ON '
         '-DUSE_CUDNN=ON '
-        '-DUSE_NVRTC=ON '
+        '-DENABLE_CUDA_RTC=ON '
         '-DUSE_OPENCV=ON  '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=open '
@@ -122,7 +122,7 @@ CMAKE_FLAGS = {
     , 'WIN_GPU_MKLDNN': (
         '-DUSE_CUDA=ON '
         '-DUSE_CUDNN=ON '
-        '-DUSE_NVRTC=ON '
+        '-DENABLE_CUDA_RTC=ON '
         '-DUSE_OPENCV=ON '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=open '
