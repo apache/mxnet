@@ -26,14 +26,16 @@ before_script:
   - export PYTHONPATH=./python/
   - export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
   - export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-  - python --version
+  - python3 --version
+  - pip3 install pytest --upgrade
+  - pip3 freeze
 
 #make:
 #  stage: build_and_test
 #  image: $BASE_TEMPORARY_IMAGE
 #  script:
 #    - make DEV=1 USE_CPP_PACKAGE=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 -j$(nproc)
-#    - pytest tests/python/unittest/test_binary.py
+#    - python3 -m pytest tests/python/unittest/test_binary.py
 
 cmake_32bit:
   stage: build_and_test
@@ -44,7 +46,7 @@ cmake_32bit:
     - cmake -DBINARY_WORD_TYPE=uint32 -DUSE_CUDA=OFF -DUSE_MKL_IF_AVAILABLE=OFF -GNinja ..
     - cd ..
     - cmake --build build
-    - pytest tests/binary
+    - python3 -m pytest tests/binary
 
 #cmake_64bit:
 #  stage: build_and_test
@@ -55,7 +57,7 @@ cmake_32bit:
 #    - cmake -DBINARY_WORD_TYPE=uint64 -DUSE_CUDA=OFF -DUSE_MKL_IF_AVAILABLE=OFF -GNinja ..
 #    - cd ..
 #    - cmake --build build
-#    - pytest tests/binary
+#    - python3 -m pytest tests/binary
 
 tag_image:
   stage: tag
