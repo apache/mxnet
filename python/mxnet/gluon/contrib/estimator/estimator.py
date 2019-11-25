@@ -60,8 +60,8 @@ class Estimator(object):
     context : Context or list of Context
         Device(s) to run the training on.
     evaluation_loss: gluon.loss.loss
-        Loss (objective) function to calculate during evaluation. If set evaluation_loss None, it will 
-        use the same loss function as self.loss
+        Loss (objective) function to calculate during evaluation. If set evaluation_loss
+        None, it will use the same loss function as self.loss
 
     """
 
