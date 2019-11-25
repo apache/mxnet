@@ -642,13 +642,18 @@ def test_np_ndarray_indexing():
             )
         np_indexed_array = np_array[np_index]
         mx_np_array = np.array(np_array, dtype=np_array.dtype)
-        try:
-            mx_indexed_array = mx_np_array[index]
-        except Exception as e:
-            print('Failed with index = {}'.format(index))
-            raise e
-        mx_indexed_array = mx_indexed_array.asnumpy()
-        assert same(np_indexed_array, mx_indexed_array), 'Failed with index = {}'.format(index)
+        for autograd in [True, False]:
+            try:
+                if autograd:
+                    with mx.autograd.record():
+                        mx_indexed_array = mx_np_array[index]
+                else:
+                    mx_indexed_array = mx_np_array[index]
+            except Exception as e:
+                print('Failed with index = {}'.format(index))
+                raise e
+            mx_indexed_array = mx_indexed_array.asnumpy()
+            assert same(np_indexed_array, mx_indexed_array), 'Failed with index = {}'.format(index)
 
     def test_setitem(np_array, index):
         def assert_same(np_array, np_index, mx_array, mx_index, mx_value, np_value=None):
@@ -768,6 +773,7 @@ def test_np_ndarray_indexing():
         np_int(slice(1, 5), np.int32),
         np_int(slice(1, 5), np.int64),
         slice(1, 5, 2),
+        slice(1, 2, 2),
         np_int(slice(1, 5, 2), np.int32),
         np_int(slice(1, 5, 2), np.int64),
         slice(7, 0, -1),
