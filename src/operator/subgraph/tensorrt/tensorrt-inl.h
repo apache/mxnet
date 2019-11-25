@@ -51,10 +51,14 @@ struct TRTParam {
 };
 
 struct TRTEngineParam {
-  TRTEngineParam(nvinfer1::ICudaEngine* trt_engine,
-                 nvonnxparser::IParser* _parser,
-                 const std::unordered_map<std::string, uint32_t> input_map,
-                 const std::unordered_map<std::string, uint32_t> output_map) {
+  TRTEngineParam(onnx_to_tensorrt::unique_ptr<nvinfer1::ICudaEngine> _trt_engine,
+                 onnx_to_tensorrt::unique_ptr<nvonnxparser::IParser> _trt_parser,
+                 std::unique_ptr<onnx_to_tensorrt::TRT_Logger> _trt_logger,
+                 const std::unordered_map<std::string, uint32_t>& input_map,
+                 const std::unordered_map<std::string, uint32_t>& output_map) {
+    trt_engine = std::move(_trt_engine);
+    trt_logger = std::move(_trt_logger);
+    trt_parser = std::move(_trt_parser);
     binding_order = std::make_shared<std::vector<std::pair<uint32_t, bool> > >();
     bindings = std::make_shared<std::vector<void*> >();
     binding_order->reserve(trt_engine->getNbBindings());
@@ -67,16 +71,13 @@ struct TRTEngineParam {
         binding_order->emplace_back(output_map.at(binding_name), false);
       }
     }
-    trt_executor = trt_engine->createExecutionContext();
-    trt_parser = _parser;
+    trt_executor = onnx_to_tensorrt::InferObject(trt_engine->createExecutionContext());
   }
 
-  ~TRTEngineParam() {
-    trt_parser->destroy();
-    trt_executor->destroy();
-  }
-  nvinfer1::IExecutionContext* trt_executor;
-  nvonnxparser::IParser* trt_parser;
+  onnx_to_tensorrt::unique_ptr<nvinfer1::ICudaEngine> trt_engine;
+  onnx_to_tensorrt::unique_ptr<nvinfer1::IExecutionContext> trt_executor;
+  onnx_to_tensorrt::unique_ptr<nvonnxparser::IParser> trt_parser;
+  std::unique_ptr<onnx_to_tensorrt::TRT_Logger> trt_logger;
   std::shared_ptr<std::vector<std::pair<uint32_t, bool> > > binding_order;
   std::shared_ptr<std::vector<void*> > bindings;
 };
@@ -88,6 +89,7 @@ class TensorrtSelector : public SubgraphSelector {
     "clip",
     "Concat",
     "Convolution",
+    "Deconvolution",
     "Dropout",
     "elemwise_add",
     "elemwise_sub",
@@ -104,6 +106,7 @@ class TensorrtSelector : public SubgraphSelector {
   const std::unordered_set<std::string> withWeightsOps = {
     "BatchNorm",
     "Convolution",
+    "Deconvolution",
     "FullyConnected"
   };
 

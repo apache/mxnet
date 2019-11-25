@@ -22,7 +22,10 @@
             [org.apache.clojure-mxnet.ndarray :as ndarray]
             [clojure.java.io :as io]
             [clojure.java.shell :refer [sh]]
-            [clojure.test :refer :all]))
+            [clojure.test :refer :all]
+            [test-helper]))
+
+(test-helper/load-test-images)
 
 (def model-dir "data/")
 (def model-path-prefix (str model-dir "resnet-18/resnet-18"))

@@ -28,8 +28,6 @@
 #include "../operator_common.h"
 #include "mxnet/op_attr_types.h"
 
-
-
 namespace mxnet {
 namespace op {
 
@@ -163,6 +161,9 @@ Example::
 #endif
     }
     request.emplace_back(ResourceRequest::kParallelRandom);
+#if MXNET_USE_MKL_DROPOUT
+    request.emplace_back(ResourceRequest::kTempSpace);
+#endif
     return request;
   })
 .add_argument("data", "NDArray-or-Symbol", "Input array to which dropout will be applied.")

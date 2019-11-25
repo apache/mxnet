@@ -19,7 +19,7 @@
  */
 
 /* Installation page display functions for install selector */
-var versionSelect   = defaultVersion = 'v1.4.1';
+var versionSelect   = defaultVersion = 'v1.5.0';
 var platformSelect    = 'Linux';
 var languageSelect  = 'Python';
 var processorSelect = 'CPU';

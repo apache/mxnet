@@ -17,11 +17,17 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# Run this from the main Clojure project directory with 2 arguments
-# old-version and new-version
-# Ex: scripts/update_version 1.5.1-SNAPSHOT 1.5.1-SNAPSHOT
-
 set -evx
-echo "Replacing  $2  with  $2  in the directory  $PWD "
-find ./ -type f -exec sed -i '' -e "s/$1/$2/g" {} \;
-echo "Done! Check the changed files"
+
+MXNET_ROOT=$(cd "$(dirname $0)/.."; pwd)
+
+image_path=$MXNET_ROOT/test/test-images
+
+if [ ! -d "$image_path" ]; then
+    mkdir -p "$image_path"
+fi
+
+if [ ! -f "$image_path/kitten.jpg" ]; then
+    wget https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/resnet152/kitten.jpg -P $image_path
+    wget https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg -P $image_path
+fi

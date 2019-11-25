@@ -48,23 +48,6 @@ using std::endl;
 
 namespace onnx_to_tensorrt {
 
-struct InferDeleter {
-  template<typename T>
-    void operator()(T* obj) const {
-      if ( obj ) {
-        obj->destroy();
-      }
-    }
-};
-
-template<typename T>
-inline std::shared_ptr<T> InferObject(T* obj) {
-  if ( !obj ) {
-    throw std::runtime_error("Failed to create object");
-  }
-  return std::shared_ptr<T>(obj, InferDeleter());
-}
-
 std::string onnx_ir_version_string(int64_t ir_version = onnx::IR_VERSION) {
   int onnx_ir_major = ir_version / 1000000;
   int onnx_ir_minor = ir_version % 1000000 / 10000;
@@ -83,7 +66,9 @@ void PrintVersion() {
     << NV_TENSORRT_PATCH << endl;
 }
 
-std::tuple<nvinfer1::ICudaEngine*, nvonnxparser::IParser*> onnxToTrtCtx(
+std::tuple<unique_ptr<nvinfer1::ICudaEngine>,
+           unique_ptr<nvonnxparser::IParser>,
+           std::unique_ptr<TRT_Logger> > onnxToTrtCtx(
         const std::string& onnx_model,
         int32_t max_batch_size,
         size_t max_workspace_size,
@@ -91,10 +76,10 @@ std::tuple<nvinfer1::ICudaEngine*, nvonnxparser::IParser*> onnxToTrtCtx(
         bool debug_builder) {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-  TRT_Logger trt_logger(verbosity);
-  auto trt_builder = InferObject(nvinfer1::createInferBuilder(trt_logger));
-  auto trt_network = InferObject(trt_builder->createNetwork());
-  auto trt_parser  = nvonnxparser::createParser(trt_network.get(), trt_logger);
+  auto trt_logger = std::unique_ptr<TRT_Logger>(new TRT_Logger(verbosity));
+  auto trt_builder = nvinfer1::createInferBuilder(*trt_logger);
+  auto trt_network = trt_builder->createNetwork();
+  auto trt_parser  = InferObject(nvonnxparser::createParser(trt_network, *trt_logger));
   ::ONNX_NAMESPACE::ModelProto parsed_model;
   // We check for a valid parse, but the main effect is the side effect
   // of populating parsed_model
@@ -139,8 +124,10 @@ std::tuple<nvinfer1::ICudaEngine*, nvonnxparser::IParser*> onnxToTrtCtx(
   trt_builder->setMaxBatchSize(max_batch_size);
   trt_builder->setMaxWorkspaceSize(max_workspace_size);
   trt_builder->setDebugSync(debug_builder);
-  nvinfer1::ICudaEngine* trt_engine = trt_builder->buildCudaEngine(*trt_network.get());
-  return std::make_tuple(trt_engine, trt_parser);
+  auto trt_engine = InferObject(trt_builder->buildCudaEngine(*trt_network));
+  trt_builder->destroy();
+  trt_network->destroy();
+  return std::make_tuple(std::move(trt_engine), std::move(trt_parser), std::move(trt_logger));
 }
 
 }  // namespace onnx_to_tensorrt

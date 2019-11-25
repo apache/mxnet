@@ -21,7 +21,7 @@ This tutorial shows how to train a character-level language model with a multila
 
 There are many documents that explain LSTM concepts. If you aren't familiar with LSTM, refer to the following before you proceed:
 - Christopher Olah's [Understanding LSTM blog post](http://colah.github.io/posts/2015-08-Understanding-LSTMs/)
-- [Training a LSTM char-rnn in Julia to Generate Random Sentences](http://dmlc.ml/mxnet/2015/11/15/char-lstm-in-julia.html)
+- [Training a LSTM char-rnn in Julia to Generate Random Sentences](https://mxnet.incubator.apache.org/versions/master/api/julia/site/tutorial/char-lstm/)
 - [Bucketing in MXNet in Python](https://github.com/dmlc/mxnet-notebooks/blob/master/python/tutorials/char_lstm.ipynb)
 - [Bucketing in MXNet](http://mxnet.io/faq/bucketing.html)
 

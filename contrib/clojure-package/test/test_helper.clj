@@ -1,4 +1,3 @@
-;;
 ;; Licensed to the Apache Software Foundation (ASF) under one or more
 ;; contributor license agreements.  See the NOTICE file distributed with
 ;; this work for additional information regarding copyright ownership.
@@ -15,10 +14,13 @@
 ;; limitations under the License.
 ;;
 
-(defproject cnn-text-classification "0.1.0-SNAPSHOT"
-  :description "CNN text classification with MXNet"
-  :plugins [[lein-cljfmt "0.5.7"]]
-  :dependencies [[org.clojure/clojure "1.9.0"]
-                 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.5.1-SNAPSHOT"]]
-  :pedantic? :skip
-  :main cnn-text-classification.classifier)
+
+(ns test-helper
+  (:require [clojure.java.io :as io]
+            [clojure.java.shell :refer [sh]]))
+
+(def data-dir "test/test-images/")
+
+(defn load-test-images []
+  (when-not (.exists (io/file (str data-dir "Pug-Cookie.jpg")))
+    (sh "./scripts/get_test_images.sh")))

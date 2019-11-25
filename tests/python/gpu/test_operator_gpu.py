@@ -1130,6 +1130,20 @@ def test_pooling_full_2d():
 
 
 @with_seed()
+def test_flatten_slice_after_conv():
+    ctx_list = []
+
+    data = mx.sym.Variable('conv_data')
+    conv = mx.symbol.Convolution(data=data, name='conv', num_filter=16, kernel=(3,3), stride=(1,1))
+    flatten = mx.symbol.flatten(data=conv)
+    slice_sym = mx.symbol.slice(data=flatten, begin=0, end=1)
+
+    ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (2, 16, 16, 16), 'type_dict': {'conv_data': np.float32}},
+                {'ctx': mx.cpu(0), 'conv_data': (2, 16, 16, 16), 'type_dict': {'conv_data': np.float32}}]
+    check_consistency(slice_sym, ctx_list)
+
+
+@with_seed()
 def test_global_pooling():
     def test_1d_pooling(pool_type, p_value=2):
         data = (2, 3, 20)

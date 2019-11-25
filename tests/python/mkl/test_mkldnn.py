@@ -233,6 +233,26 @@ def test_slice_reshape_before_conv():
     mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-5, atol=1e-6)
 
 
+@with_seed()
+def test_flatten_slice_after_conv():
+    data = mx.symbol.Variable('data')
+    weight = mx.symbol.Variable('weight')
+    bias = mx.symbol.Variable('bias')
+    conv1= mx.symbol.Convolution(data = data, weight=weight, bias=bias, name='conv1', num_filter=64, kernel=(3,3), stride=(1,1))
+    flatten1 = mx.symbol.flatten(data = conv1)
+    slice1 = mx.symbol.slice(data = flatten1, begin=0, end=1)
+
+    shape = (2, 16, 16, 16)
+    val = np.random.rand(2, 16, 16, 16).astype(np.float32)
+    exe = slice1.simple_bind(Context.default_ctx, data=shape)
+    exe.arg_arrays[0][:] = val
+    exe.arg_arrays[1][:] = np.random.normal(size=exe.arg_arrays[1].shape)
+    exe.arg_arrays[2][:] = np.random.normal(size=exe.arg_arrays[2].shape)
+    p = exe.forward(is_train=False)
+    p[0].wait_to_read()
+    print(p[0])
+
+
 def test_mkldnn_sum_inplace_with_cpu_layout():
 
     x_shape = (32, 3, 224, 224)

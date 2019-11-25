@@ -46,9 +46,10 @@ Hence, in this utility, we will build the functionality to allow users and devel
 
 ## Prerequisites
 
-This utility uses MXNet profiler under the hood to fetch compute and memory metrics. Hence, you need to build MXNet with `USE_PROFILER=1` flag.
+Provided you have MXNet installed (any version >= 1.5.1), all you need to use opperf utility is to add path to your cloned MXNet repository to the PYTHONPATH.
 
-Make sure to build the flavor of MXNet, for example - with/without MKL, with CUDA 9 or 10.1 etc., on which you would like to measure operator performance. Finally, you need to add path to your cloned MXNet repository to the PYTHONPATH.
+Note: 
+To install MXNet, refer [Installing MXNet page](https://mxnet.incubator.apache.org/versions/master/install/index.html)
 
 ```
 export PYTHONPATH=$PYTHONPATH:/path/to/incubator-mxnet/
@@ -76,7 +77,7 @@ For example, you want to run benchmarks for all NDArray Broadcast Binary Operato
 
 ```
 #!/usr/bin/python
-from benchmark.opperf.tensor_operations.binary_broadcast_operators import run_mx_binary_broadcast_operators_benchmarks
+from benchmark.opperf.nd_operations.binary_operators import run_mx_binary_broadcast_operators_benchmarks
 
 # Run all Binary Broadcast operations benchmarks with default input values
 print(run_mx_binary_broadcast_operators_benchmarks())
@@ -137,7 +138,7 @@ from mxnet import nd
 
 from benchmark.opperf.utils.benchmark_utils import run_performance_test
 
-add_res = run_performance_test([nd.add, nd.sub], run_backward=True, dtype='float32', ctx=mx.cpu(),
+add_res = run_performance_test([nd.add, nd.subtract], run_backward=True, dtype='float32', ctx=mx.cpu(),
                                inputs=[{"lhs": (1024, 1024),
                                         "rhs": (1024, 1024)}],
                                warmup=10, runs=25)

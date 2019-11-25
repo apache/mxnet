@@ -31,6 +31,7 @@
 #include <mxnet/base.h>
 #include <nnvm/graph.h>
 #include <nnvm/pass_functions.h>
+#include <operator/nn/deconvolution-inl.h>
 
 #include "../../../common/utils.h"
 #include "../../../ndarray/ndarray_function.h"
@@ -54,7 +55,7 @@ namespace nnvm_to_onnx {
 
 std::string ConvertNnvmGraphToOnnx(
     const nnvm::Graph& g,
-    const std::unordered_map<std::string, NDArray>* const params_map) {
+    std::unordered_map<std::string, NDArray>* params_map) {
 
   static std::atomic_ulong subgraph_count = { 0 };
 
@@ -88,8 +89,21 @@ std::string ConvertNnvmGraphToOnnx(
   auto placeholder_shapes = GetPlaceholderShapes(shape_inputs, ig);
   auto placeholder_dtypes = GetPlaceholderDTypes(dtype_inputs, ig);
   auto output_lookup = GetOutputLookup(ig);
-  uint32_t current_input = 0;
 
+  for (uint32_t node_idx = 0; node_idx < ig.num_nodes(); ++node_idx) {
+      const IndexedGraph::Node& node = ig[node_idx];
+      const nnvm::Node* source = node.source;
+      // If this is a op
+      if (!source->is_variable()) {
+        auto mightNeedPreprocessNode = preprocess_map.find(source->op()->name);
+        // if this op is defined in preprocess_map
+        if (mightNeedPreprocessNode != preprocess_map.end()) {
+          mightNeedPreprocessNode->second(source->attrs, source->inputs, params_map);
+        }
+      }
+  }
+
+  uint32_t current_input = 0;
   // Can't do a foreach over IndexedGraph since it doesn't implement begin(), etc.
   for (uint32_t node_idx = 0; node_idx < ig.num_nodes(); ++node_idx) {
     const IndexedGraph::Node& node = ig[node_idx];
@@ -157,20 +171,25 @@ std::string ConvertNnvmGraphToOnnx(
   return serialized_onnx_graph;
 }
 
-void ConvertConvolution(NodeProto* node_proto, const NodeAttrs& attrs,
-                        const nnvm::IndexedGraph& /*ig*/,
-                        const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
-  const auto& conv_param = nnvm::get<op::ConvolutionParam>(attrs.parsed);
+template <class ConvDeconvParam>
+void ConvDeconvConvertHelper(NodeProto* node_proto, const NodeAttrs& attrs,
+                             const nnvm::IndexedGraph& /*ig*/,
+                             const array_view<IndexedGraph::NodeEntry>& /*input*/,
+                             const ConvDeconvParam& param,
+                             ConvDeconvType type) {
+  if (type == ConvDeconvType::Convolution) {
+    node_proto->set_op_type("Conv");
+  } else {
+    node_proto->set_op_type("ConvTranspose");
+  }
 
-  node_proto->set_op_type("Conv");
-
-  const mxnet::TShape kernel = conv_param.kernel;
-  const mxnet::TShape stride = conv_param.stride;
-  const mxnet::TShape dilate = conv_param.dilate;
-  const mxnet::TShape pad = conv_param.pad;
-  const uint32_t num_group = conv_param.num_group;
+  const mxnet::TShape kernel = param.kernel;
+  const mxnet::TShape stride = param.stride;
+  const mxnet::TShape dilate = param.dilate;
+  const mxnet::TShape pad = param.pad;
+  const uint32_t num_group = param.num_group;
   // const bool no_bias = conv_param.no_bias;
-  const dmlc::optional<int> layout = conv_param.layout;
+  const dmlc::optional<int> layout = param.layout;
 
   // dilations
   AttributeProto* const dilations = node_proto->add_attribute();
@@ -213,7 +232,23 @@ void ConvertConvolution(NodeProto* node_proto, const NodeAttrs& attrs,
   for (const dim_t kval : stride) {
     strides->add_ints(static_cast<int64>(kval));
   }
+}
+
+void ConvertConvolution(NodeProto* node_proto, const NodeAttrs& attrs,
+                        const nnvm::IndexedGraph& ig,
+                        const array_view<IndexedGraph::NodeEntry>& inputs) {
+  const auto& conv_param = nnvm::get<op::ConvolutionParam>(attrs.parsed);
+  ConvDeconvConvertHelper(node_proto, attrs, ig, inputs, conv_param,
+      ConvDeconvType::Convolution);
 }  // end ConvertConvolution
+
+void ConvertDeconvolution(NodeProto* node_proto, const NodeAttrs& attrs,
+                          const nnvm::IndexedGraph& ig,
+                          const array_view<IndexedGraph::NodeEntry>& inputs) {
+  const auto& deconv_param = nnvm::get<op::DeconvolutionParam>(attrs.parsed);
+  ConvDeconvConvertHelper(node_proto, attrs, ig, inputs, deconv_param,
+      ConvDeconvType::Deconvolution);
+}  // end ConvertDeconvolution
 
 void ConvertPooling(NodeProto* node_proto, const NodeAttrs& attrs,
                     const nnvm::IndexedGraph& /*ig*/,
@@ -391,6 +426,18 @@ void ConvertElementwiseAdd(NodeProto* node_proto, const NodeAttrs& /*attrs*/,
                            const nnvm::IndexedGraph& /*ig*/,
                            const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
   node_proto->set_op_type("Add");
+}
+
+void ConvertElementwiseSub(NodeProto* node_proto, const NodeAttrs& /*attrs*/,
+                           const nnvm::IndexedGraph& /*ig*/,
+                           const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
+  node_proto->set_op_type("Sub");
+}
+
+void ConvertElementwiseMul(NodeProto* node_proto, const NodeAttrs& /*attrs*/,
+                           const nnvm::IndexedGraph& /*ig*/,
+                           const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
+  node_proto->set_op_type("Mul");
 }
 
 void ConvertConcatenate(NodeProto* node_proto, const NodeAttrs& attrs,
@@ -628,6 +675,18 @@ void ConvertDropout(NodeProto* node_proto, const NodeAttrs& attrs,
                     const nnvm::IndexedGraph& /*ig*/,
                     const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
   node_proto->set_op_type("Dropout");
+}
+
+void PreprocessBatchNorm(const NodeAttrs &attrs,
+                         const std::vector<nnvm::NodeEntry> &inputs,
+                         std::unordered_map<std::string, NDArray> *params_map) {
+  const auto& param = nnvm::get<op::BatchNormParam>(attrs.parsed);
+  if (param.fix_gamma) {
+    // if mxnet is specify fix_gamma, we will need to preprocess the params map
+    // to convert the gamma associate with this batch norm layer to 1.
+    std::string gammaNodeName = inputs[batchnorm::kGamma].node->attrs.name;
+    (*params_map)[gammaNodeName] = 1.0f;
+  }
 }
 
 }  // namespace nnvm_to_onnx

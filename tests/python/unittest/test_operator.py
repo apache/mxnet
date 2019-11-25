@@ -1906,6 +1906,90 @@ def test_depthwise_convolution():
                             for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
                                 np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-3)
 
+
+@with_seed()
+def test_convolution_independent_gradients():
+    # NOTE(zixuanweeei): Flaky test tracked by https://github.com/apache/incubator-mxnet/issues/15603.
+    # GPU context will be enabled after figuring out the possible issue tracked at
+    # https://github.com/apache/incubator-mxnet/issues/15638.
+    ctx = mx.cpu()
+    atol = 1.0e-3
+    rtol = 1.0e-3
+    reqs = ["null", "write", "add"]
+    var_names = ["x", "w", "b"]
+    dims = [1, 2]
+    num_bases = [1, 16, 64]
+    kernel_xs = [3, 5]
+    stride_xs = [1, 2]
+    pad_xs = [0, 1]
+    in_sizes = [7, 32]
+    no_biases = [True, False]
+    for dim, num_base, kernel_x, stride_x, pad_x , in_size, no_bias in \
+            itertools.product(dims, num_bases, kernel_xs, stride_xs, pad_xs, in_sizes, no_biases):
+        # Prepare params shape
+        kernel = (kernel_x,) * dim
+        stride = (stride_x,) * dim
+        pad = (pad_x,) * dim
+        num_filter = num_base
+        x_shape = (2, num_base) + (in_size,) * dim
+        w_shape = (num_filter, num_base) + kernel
+
+        # Symbols definition
+        x = mx.sym.Variable('x')
+        w = mx.sym.Variable('w')
+        b = mx.sym.Variable('b') if not no_bias else None
+        conv = mx.sym.Convolution(x, w, b, num_filter=num_filter, 
+            kernel=kernel, stride=stride, pad=pad, no_bias=no_bias)
+        
+        for req_kind in reqs:
+            # Binding args for conv with possible dependent gradients
+            base_args = {
+                'x': mx.nd.random.normal(shape=x_shape, ctx=ctx),
+                'w': mx.nd.random.normal(shape=w_shape, ctx=ctx),
+                'b': mx.nd.random.normal(shape=(num_filter, ), ctx=ctx) if not no_bias else None}
+            args1 = copy.deepcopy(base_args)
+            grad1 = {
+                'x': mx.nd.zeros(shape=x_shape, ctx=ctx),
+                'w': mx.nd.zeros(shape=w_shape, ctx=ctx),
+                'b': mx.nd.zeros(shape=(num_filter, ), ctx=ctx) if not no_bias else None}
+
+            grad_req1 = [req_kind] * 3
+            grad_req1 = dict(zip(var_names, grad_req1))
+
+            exe1 = conv.bind(ctx, args1, args_grad=grad1, grad_req=grad_req1)
+            exe1.forward(is_train=True)
+            exe1.backward(exe1.outputs[0])
+            
+            for x_req, w_req, b_req in itertools.product(reqs, repeat=3):
+                # Binding args for conv with independent gradients
+                args2 = copy.deepcopy(base_args)    # Deepcopy the same params of `exe1`
+                grad2 = {
+                    'x': mx.nd.zeros(shape=x_shape, ctx=ctx),
+                    'w': mx.nd.zeros(shape=w_shape, ctx=ctx),
+                    'b': mx.nd.zeros(shape=(num_filter, ), ctx=ctx) if not no_bias else None}
+                grad_req2 = {"x": x_req, "w": w_req, "b": b_req}
+                exe2 = conv.bind(ctx, args2, args_grad=grad2, grad_req=grad_req2)
+                    
+                exe2.forward(is_train=True)
+                np.testing.assert_allclose(exe1.outputs[0].asnumpy(),
+                    exe2.outputs[0].asnumpy(), rtol=rtol, atol=atol)
+                
+                exe2.backward(exe2.outputs[0])
+                for var_name in var_names:
+                    if var_name == "b" and no_bias:
+                        continue
+                    if grad_req2[var_name] == "null":
+                        exe2_var_grad = grad2[var_name].asnumpy()
+                        np.testing.assert_allclose(exe2_var_grad,
+                            np.zeros_like(exe2_var_grad), rtol=rtol, atol=atol)
+                    if grad_req2[var_name] != grad_req1[var_name]:
+                        continue
+                    np.testing.assert_allclose(args1[var_name].asnumpy(),
+                        args2[var_name].asnumpy(), rtol=rtol, atol=atol)
+                    np.testing.assert_allclose(grad1[var_name].asnumpy(),
+                        grad2[var_name].asnumpy(), rtol=rtol, atol=atol)
+
+
 def gen_broadcast_data(idx):
     # Manually set test cases
     binary_op_data_shape = np.array(

@@ -17,7 +17,7 @@
 
 # End to End Neural Art
 
-Please refer to this [blog](http://dmlc.ml/mxnet/2016/06/20/end-to-end-neural-style.html) for details of how it is implemented.
+Please refer to this [blog](https://thomasdelteil.github.io/NeuralStyleTransfer_MXNet/) for details of how it is implemented.
 
 ## How to use
 

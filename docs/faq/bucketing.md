@@ -50,7 +50,7 @@ This approach works with variable length sequences. For more complicated models 
 
 ## Variable-length Sequence Training for Sherlock Holmes
 
-We use the [Sherlock Holmes language model example](https://github.com/dmlc/mxnet/tree/master/example/rnn) for this example. If you are not familiar with this example, see [this tutorial (in Julia)](http://dmlc.ml/mxnet/2015/11/15/char-lstm-in-julia.html) first.
+We use the [Sherlock Holmes language model example](https://github.com/dmlc/mxnet/tree/master/example/rnn) for this example. If you are not familiar with this example, see [this tutorial (in Julia)](https://mxnet.incubator.apache.org/versions/master/api/julia/site/tutorial/char-lstm/) first.
 
 In this example, we use a simple architecture
 consisting of a word-embedding layer
