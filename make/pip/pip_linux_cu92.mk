@@ -89,7 +89,7 @@ USE_OPERATOR_TUNING = 1
 USE_LIBJPEG_TURBO = 1
 
 # whether use MKL-DNN library
-USE_MKLDNN = 0
+USE_MKLDNN = 1
 
 
 # MKL ML Library for Intel CPU/Xeon Phi

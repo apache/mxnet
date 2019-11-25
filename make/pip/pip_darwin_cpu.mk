@@ -88,7 +88,7 @@ USE_LIBJPEG_TURBO = 1
 # Please refer to MKL_README.md for details
 
 # whether use MKL-DNN library
-USE_MKLDNN = 0
+USE_MKLDNN = 1
 
 # MKL ML Library folder, need to be root for /usr/local
 # Change to User Home directory for standard user
