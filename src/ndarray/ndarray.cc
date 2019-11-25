@@ -249,7 +249,7 @@ NDArray NDArray::Reshape(const mxnet::TShape &shape) const {
         << "current shape.";
   } else {
     CHECK_GE(shape_.Size(), shape.Size())
-        << "NDArray.Reshape: target shape size is larger current shape";
+        << "NDArray.Reshape: target shape size is larger than the current shape";
   }
   NDArray ret = this->Detach();
   // If the shape doesn't change, we can just return it now.
