@@ -35,6 +35,9 @@ _np_ufunc_default_kwargs = {
     'subok': True,
 }
 
+_set_np_shape_logged = False
+_set_np_array_logged = False
+
 
 def makedirs(d):
     """Create directories recursively if they don't exist. os.makedirs(exist_ok=True) is not
@@ -87,13 +90,16 @@ def set_np_shape(active):
     >>> print(mx.is_np_shape())
     True
     """
+    global _set_np_shape_logged
     if active:
-        import logging
-        logging.info('NumPy-shape semantics has been activated in your code. '
-                     'This is required for creating and manipulating scalar and zero-size '
-                     'tensors, which were not supported in MXNet before, as in the official '
-                     'NumPy library. Please DO NOT manually deactivate this semantics while '
-                     'using `mxnet.numpy` and `mxnet.numpy_extension` modules.')
+        if not _set_np_shape_logged:
+            import logging
+            logging.info('NumPy-shape semantics has been activated in your code. '
+                         'This is required for creating and manipulating scalar and zero-size '
+                         'tensors, which were not supported in MXNet before, as in the official '
+                         'NumPy library. Please DO NOT manually deactivate this semantics while '
+                         'using `mxnet.numpy` and `mxnet.numpy_extension` modules.')
+            _set_np_shape_logged = True
     elif is_np_array():
         raise ValueError('Deactivating NumPy shape semantics while NumPy array semantics is still'
                          ' active is not allowed. Please consider calling `npx.reset_np()` to'
@@ -678,11 +684,14 @@ def _set_np_array(active):
     -------
         A bool value indicating the previous state of NumPy array semantics.
     """
+    global _set_np_array_logged
     if active:
-        import logging
-        logging.info('NumPy array semantics has been activated in your code. This allows you'
-                     ' to use operators from MXNet NumPy and NumPy Extension modules as well'
-                     ' as MXNet NumPy `ndarray`s.')
+        if not _set_np_array_logged:
+            import logging
+            logging.info('NumPy array semantics has been activated in your code. This allows you'
+                         ' to use operators from MXNet NumPy and NumPy Extension modules as well'
+                         ' as MXNet NumPy `ndarray`s.')
+            _set_np_array_logged = True
     cur_state = is_np_array()
     _NumpyArrayScope._current.value = _NumpyArrayScope(active)
     return cur_state
