@@ -57,6 +57,8 @@ class Estimator(object):
         Trainer to apply optimizer on network parameters.
     context : Context or list of Context
         Device(s) to run the training on.
+    evaluation_loss: gluon.loss.loss
+        Loss (objective) function to calculate during evaluation.
     """
 
     def __init__(self, net,
@@ -72,7 +74,7 @@ class Estimator(object):
         self._train_metrics = _check_metrics(metrics)
         self._add_default_training_metrics()
         self._add_validation_metrics()
-        self.evaluation_loss = None
+        self.evaluation_loss = self.loss
         if evaluation_loss is not None:
             self.evaluation_loss = self._check_loss(evaluation_loss)
 
@@ -209,10 +211,7 @@ class Estimator(object):
         """
         data, label = self._get_data_and_label(val_batch, self.context, batch_axis)
         pred = [self.net(x) for x in data]
-        if self.evaluation_loss is not None:
-            loss = [self.evaluation_loss(y_hat, y) for y_hat, y in zip(pred, label)]
-        else:
-            loss = [self.loss(y_hat, y) for y_hat, y in zip(pred, label)]
+        loss = [self.loss(y_hat, y) for y_hat, y in zip(pred, label)]
         # update metrics
         for metric in val_metrics:
             if isinstance(metric, metric_loss):
