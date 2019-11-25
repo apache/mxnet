@@ -1077,34 +1077,70 @@ def test_npx_batch_dot():
 @use_np
 def test_npi_boolean_assign():
     class TestBooleanAssignScalar(HybridBlock):
-        def __init__(self, val):
+        def __init__(self, val, start_axis):
             super(TestBooleanAssignScalar, self).__init__()
             self._val = val
+            self._start_axis = start_axis
 
         def hybrid_forward(self, F, a, mask):
-            return F.np._internal.boolean_mask_assign_scalar(a, mask, self._val, out=a)
+            return F.np._internal.boolean_mask_assign_scalar(a, mask, self._val, start_axis=self._start_axis, out=a)
 
     class TestBooleanAssignTensor(HybridBlock):
-        def __init__(self):
+        def __init__(self, start_axis):
             super(TestBooleanAssignTensor, self).__init__()
+            self._start_axis = start_axis
 
         def hybrid_forward(self, F, a, mask, value):
-            return F.np._internal.boolean_mask_assign_tensor(a, mask, value, out=a)
+            return F.np._internal.boolean_mask_assign_tensor(a, mask, value, start_axis=self._start_axis, out=a)
 
-    shapes = [(3, 4), (3, 0), ()]
+    configs = [
+        ((3, 4), (3, 4), 0),
+        ((3, 0), (3, 0), 0),
+        ((), (), 0),
+        ((2, 3, 4, 5), (2, 3), 0),
+        ((2, 3, 4, 5), (3, 4), 1),
+        ((2, 3, 4, 5), (4, 5), 2),
+    ]
+
     for hybridize in [False]:
-        for shape in shapes:
-            test_data = np.random.uniform(size=shape)
-            mx_mask = np.around(np.random.uniform(size=shape))
+        for config in configs:
+            print(config)
+            dshape, mshape, start_axis = config
+            test_data = np.random.uniform(size=dshape)
+            mx_mask = np.around(np.random.uniform(size=mshape))
             valid_num = int(mx_mask.sum())
             np_mask = mx_mask.asnumpy().astype(_np.bool)
-            for val in [42., np.array(42.), np.array([42.]), np.random.uniform(size=(valid_num,))]:
-                test_block = TestBooleanAssignScalar(val) if isinstance(val, float) else TestBooleanAssignTensor()
+            vshape = []
+            for i in range(len(dshape)):
+                if i < start_axis:
+                    vshape.append(dshape[i])
+                elif i == start_axis:
+                    vshape.append(valid_num)
+                elif i >= start_axis + len(mshape):
+                    vshape.append(dshape[i])
+            vshape = tuple(vshape)
+            for val in [42.0, np.array(42.), np.array([42.]), np.random.uniform(size=vshape)]:
+                test_block = TestBooleanAssignScalar(val, start_axis) if isinstance(val, float) else TestBooleanAssignTensor(start_axis)
                 if hybridize:
                     test_block.hybridize()
                 np_data = test_data.asnumpy()
                 mx_data = test_data.copy()
-                np_data[np_mask] = val
+                trailing_axis = len(np_data.shape) - len(np_mask.shape) - start_axis
+                if start_axis == 0:
+                    if trailing_axis == 0:
+                        np_data[np_mask] = val
+                    elif trailing_axis == 1:
+                        np_data[np_mask, :] = val
+                    elif trailing_axis == 2:
+                        np_data[np_mask, :, :] = val
+                elif start_axis == 1:
+                    if trailing_axis == 0:
+                        np_data[:, np_mask] = val
+                    elif trailing_axis == 1:
+                        np_data[:, np_mask, :] = val
+                elif start_axis == 2:
+                    if trailing_axis == 0:
+                        np_data[:, :, np_mask] = val
                 mx_data = test_block(mx_data, mx_mask) if isinstance(val, float) else test_block(mx_data, mx_mask, val)
                 assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
