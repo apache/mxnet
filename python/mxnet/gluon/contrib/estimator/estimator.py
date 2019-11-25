@@ -234,7 +234,7 @@ class Estimator(object):
         """
         data, label = self._get_data_and_label(val_batch, self.context, batch_axis)
         pred = [self.net(x) for x in data]
-        loss = [self.loss(y_hat, y) for y_hat, y in zip(pred, label)]
+        loss = [self.evaluation_loss(y_hat, y) for y_hat, y in zip(pred, label)]
         # update metrics
         for metric in val_metrics:
             if isinstance(metric, metric_loss):
