@@ -44,7 +44,7 @@ struct MultiLAMB_step1_kernel {
                                   const bool bias_correction, 
                                   const float rescale_grad) {
     using namespace mshadow_op;
-    for (size_t index = 0; index < kernel_params.count; ++index) {
+    for (size_t index = 0; index < kernel_params.ntensors; ++index) {
       if ((size_t)i < kernel_params.sizes[index]) {
         MPDType w = has_mixed_precision ? kernel_params.weights32[index][i]:
                                           MPDType(kernel_params.weights[index][i]);
@@ -84,7 +84,7 @@ struct MultiLAMB_step2_kernel {
                                   const float lower_bound, 
                                   const float upper_bound,
                                   const OpReqType req) {
-    for (size_t index = 0; index < kernel_params.count; ++index) {
+    for (size_t index = 0; index < kernel_params.ntensors; ++index) {
       if ((size_t)i < kernel_params.sizes[index]) {
         MPDType w = has_mixed_precision ? kernel_params.weights32[index][i]:
                                             MPDType(kernel_params.weights[index][i]);
@@ -115,7 +115,9 @@ struct MultiLAMB_step2_kernel {
 template<typename MPDType, typename DType>
 void call_kernel1(Stream<cpu>* s,
                   const MultiLAMBKernelParam<DType, MPDType>& kernel_params,
-                  const MultiLAMBParam &param){
+                  const MultiLAMBParam &param,
+                  int* block_to_tensor, 
+                  int* block_to_chunk){
   Kernel<MultiLAMB_step1_kernel<MPDType, !std::is_same<DType, MPDType>::value>, cpu>::  
                                  Launch(s, kernel_params.max_size,
                                  kernel_params,
@@ -134,6 +136,8 @@ void call_kernel2(Stream<cpu>* s,
                   const MultiLAMBKernelParam<DType, MPDType>& kernel_params,
                   const MultiLAMBParam &param,
                   float* r1, float* r2,
+                  int* block_to_tensor, 
+                  int* block_to_chunk,
                   const OpReqType req){
 
   Kernel<MultiLAMB_step2_kernel<MPDType, !std::is_same<DType, MPDType>::value>, cpu>::  

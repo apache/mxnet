@@ -408,28 +408,22 @@ def check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights):
 
 @with_seed()
 def test_lamb():
-    min_nparam = 40
+    min_nparam = 49
     max_nparam = 50
-    mindim = 50000
-    maxdim = 100000
-
-    min_nparam = 1
-    max_nparam = 2
-    mindim = 5
-    maxdim = 6
-
+    mindim = 99999
+    maxdim = 100000    
     maxndim = 1
 
     dtypes = ['float16','float32', 'float64']
     for ctx in [mx.cpu(0), mx.gpu(0)]:
-        print('testing',ctx)
+        #print('testing',ctx)
         MixPrecision=False
         for dtype in dtypes:
-            print(dtype)
+            #print(dtype)
             nparam = np.random.randint(min_nparam + 1, max_nparam + 1)
-            shapes = [np.random.randint(mindim, maxdim + 1, size=maxndim) for i in range(nparam)]
+            shapes = [np.random.randint(mindim + 1, maxdim + 1, size=maxndim) for i in range(nparam)]
             lowTol = (dtype == 'float16')
-            tol1 = 1e-2 if lowTol else 1e-3
+            tol1 = 1e-3 if lowTol else 1e-3
             tol2 = 1e-5 if lowTol else 1e-6
             check_lamb(dtype, MixPrecision, shapes, ctx, tol1, tol2)
             #test_performance_lamb(dtype, MixPrecision, shapes, ctx, 10000)
@@ -438,12 +432,12 @@ def test_lamb():
         #print('Mix Precision')
         dtype='float16'
         nparam = np.random.randint(min_nparam + 1, max_nparam + 1)
-        shapes = [np.random.randint(1, maxdim + 1, size=maxndim) for i in range(nparam)]
+        shapes = [np.random.randint(mindim + 1, maxdim + 1, size=maxndim) for i in range(nparam)]
         MixPrecision=True
-        tol1 = 1e-2
-        tol2 = 1e-2
+        tol1 = 1e-3
+        tol2 = 1e-5
         check_lamb(dtype, MixPrecision, shapes, ctx, tol1, tol2)
-        #test_performance_lamb(dtype, MixPrecision, shapes, ctx, 1000)'''
+        #test_performance_lamb(dtype, MixPrecision, shapes, ctx, 10000)
 
 def check_lamb(dtype, MixPrecision, shapes, ctx, tol1, tol2):
     def get_ref(weights, grads, mean, var,
@@ -467,9 +461,7 @@ def check_lamb(dtype, MixPrecision, shapes, ctx, tol1, tol2):
             r1 = mx.nd.maximum(r1, lower_bound)
         if upper_bound:
             r1 = mx.nd.minimum(r1, upper_bound)
-            
-        #print("R1 ",r1)
-               
+                 
         if bias_correction:
             mean_hat = mean / (1. - mx.nd.power(beta1, index_update_count))
             var_hat = var / (1. - mx.nd.power(beta2, index_update_count))
@@ -477,9 +469,8 @@ def check_lamb(dtype, MixPrecision, shapes, ctx, tol1, tol2):
             mean_hat = mean
             var_hat = var
             
-        g = mean_hat / mx.nd.sqrt(var_hat) + epsilon + wd * weights
+        g = mean_hat / (mx.nd.sqrt(var_hat) + epsilon) + wd * weights
         r2 = g.norm()
-        #print("R2 ",r2)
 
         # calculate lamb_trust_ratio
         r = 1. if r1 == 0. or r2 == 0. else r1 / r2
@@ -526,7 +517,6 @@ def check_lamb(dtype, MixPrecision, shapes, ctx, tol1, tol2):
     clip_gradient=-1.0
     bias_correction=True
     
-    #print("call kernel")
     if(MixPrecision):
         mx.nd.contrib.multi_mp_lamb_update(weights, grads, mean, var, temp_g, weights_fp32,
                                             learning_rate=learning_rate, 
@@ -549,13 +539,8 @@ def check_lamb(dtype, MixPrecision, shapes, ctx, tol1, tol2):
                                         clip_gradient=clip_gradient,
                                         bias_correction=bias_correction,
                                         out=weights)
-
-    #print(weights)
-    #print(weights_fp32)
         
     # Reference model from gluon-nlp
-    #print("\n --------- REF --------- \n")
-    weights_out = []
     for i in range(num_weights):
         w, m, v = get_ref(weights_ref[i], grads_ref[i], 
                     mean_ref[i], var_ref[i],  
@@ -571,14 +556,8 @@ def check_lamb(dtype, MixPrecision, shapes, ctx, tol1, tol2):
             assert_almost_equal(w, weights[i], atol=tol1, rtol=tol2)
         assert_almost_equal(m, mean[i], atol=tol1, rtol=tol2)
         assert_almost_equal(v, var[i], atol=tol1, rtol=tol2)
-        weights_out.append(w)
-        #mean_ref.append(m)
-        #var_ref.append(v)
-    #print(weights_out)
-    
-    #MXNET_TEST_SEED=1390109320
 
-def test_performance_lamb(dtype, MixPrecision, shapes, ctx, niters):
+'''def test_performance_lamb(dtype, MixPrecision, shapes, ctx, niters):
     def get_ref(weights, grads, mean, var,
                 lr, beta1, beta2,
                 epsilon, wd, rescale_grad, 
@@ -595,6 +574,7 @@ def test_performance_lamb(dtype, MixPrecision, shapes, ctx, niters):
         var[:] = beta2 * var + (1. - beta2) * mx.nd.square(grad_rescaled)
 
         r1 = weights.norm()
+        
         if lower_bound:
             r1 = mx.nd.maximum(r1, lower_bound)
         if upper_bound:
@@ -615,7 +595,7 @@ def test_performance_lamb(dtype, MixPrecision, shapes, ctx, niters):
         lr *= r
 
         # update weight
-        weights[:] -= lr * g
+        weights[:] -= (lr * g)
         return weights, mean, var
 
     weights, grads, mean, var, temp_g = [], [], [], [], []
@@ -642,7 +622,7 @@ def test_performance_lamb(dtype, MixPrecision, shapes, ctx, niters):
     lower_bound=1e-3
     upper_bound=10.0
     clip_gradient=-1.0
-    bias_correction=False #problematic
+    bias_correction=False
     
     totaltime=0.0
     for i in range(niters):
@@ -656,25 +636,28 @@ def test_performance_lamb(dtype, MixPrecision, shapes, ctx, niters):
                                         clip_gradient=clip_gradient,
                                         bias_correction=bias_correction,
                                         out=weights)
+        mxnet.ndarray.waitall()
         end = time.time()
         totaltime+= (end - start)*1000
     print("Average time Operator",totaltime/niters,"ms after",niters,"iterations")
     
     # Reference model from gluon-nlp
-    '''totaltime_ref=0.0
+    totaltime_ref=0.0
     for i in range(niters):
+        start = time.time()
         for i in range(num_weights):
-            start = time.time()
+            
             w, m, v = get_ref(weights_copy[i], grads[i], 
                         mean_copy[i], var_copy[i],  
                         learning_rate, beta1, beta2, 
                         epsilon, wd, rescale_grad, 
                         index_update_count,
                         lower_bound, upper_bound,
-                        clip_grad,
+                        clip_gradient,
                         bias_correction)
-            end = time.time()
-            totaltime_ref+= (end - start)*1000
+        mxnet.ndarray.waitall()
+        end = time.time()
+        totaltime_ref+= (end - start)*1000
     print("Ref Average time Ref",totaltime_ref/niters,"ms after",niters,"iterations")'''
 
 @with_seed()

@@ -179,11 +179,10 @@ class LAMB_single_precision {
 template<typename DType, typename MPDType>
 struct MultiLAMBKernelParam {
   static const int N = 50;
-  size_t count;
+  size_t ntensors;
   size_t max_size;
   size_t total_size;
   size_t sizes[N];
-  size_t init_positions[N];
   DType* weights[N];
   DType* grads[N];
   MPDType* mean[N];
@@ -191,6 +190,10 @@ struct MultiLAMBKernelParam {
   MPDType* temp_g[N];
   MPDType* weights32[N];
   DType* out_data[N];
+  
+  // gpu
+  int chunk_size = 4096;
+  int nchunks;
 };
 
 template<typename xpu,
@@ -206,15 +209,15 @@ void FillMultiLAMBKernelParam(const nnvm::NodeAttrs& attrs,
   const ParamType& p = nnvm::get<ParamType>(attrs.parsed);
   mxnet_op::Stream<xpu>* s = ctx.get_stream<xpu>();
 
-  multi_param->count = p.num_tensors;
+  multi_param->ntensors = p.num_tensors;
   multi_param->total_size = 0;
   multi_param->max_size = 0;
+  multi_param->nchunks = 0;
     
   constexpr bool isSame = std::is_same<DType, MPDType>::value;
-  for (size_t i = 0; i < multi_param->count; ++i) {
+  for (size_t i = 0; i < multi_param->ntensors; ++i) {
     const auto idx = i * input_stride;
     multi_param->sizes[i] = inputs[idx].shape_.Size();
-    multi_param->init_positions[i] = multi_param->total_size;
     multi_param->total_size += multi_param->sizes[i];
     if (multi_param->max_size < multi_param->sizes[i])
       multi_param->max_size = multi_param->sizes[i];
@@ -228,20 +231,16 @@ void FillMultiLAMBKernelParam(const nnvm::NodeAttrs& attrs,
     // is 32-bit master copy of the weights
     if (!isSame)
       multi_param->weights32[i] = inputs[idx + input_stride - 1].FlatTo2D<xpu, MPDType>(s).dptr_;
-
     multi_param->out_data[i] = outputs[i].FlatTo2D<xpu, DType>(s).dptr_;
+    multi_param->nchunks += (multi_param->sizes[i] + multi_param->chunk_size - 1)/multi_param->chunk_size;
   }
 }
 
 using namespace mxnet_op;
 template<typename MPDType, typename DType>
-void call_kernel1(Stream<cpu>* s, 
-                 const MultiLAMBKernelParam<DType, MPDType>& kernel_params,
-                 const MultiLAMBParam &param);
+void call_kernel1(Stream<cpu>* s);
 template<typename MPDType, typename DType>
-void call_kernel1(Stream<gpu>* s,
-                  const MultiLAMBKernelParam<DType, MPDType>& kernel_params,
-                  const MultiLAMBParam &param);
+void call_kernel1(Stream<gpu>* s);
 
 template<typename MPDType, typename DType>
 void call_kernel2(Stream<cpu>* s);
@@ -266,17 +265,18 @@ inline void multiLAMB(const nnvm::NodeAttrs& attrs,
       
     // create vector of TBlob with all the weights contiguous
     std::vector<TBlob> weights;
-    for (size_t index = 0; index < kernel_params.count; ++index) {
+    for (size_t index = 0; index < kernel_params.ntensors; ++index) {
         weights.emplace_back(inputs[index*input_stride]);
     }
     // create vector of TBlob with all the temp_g contiguous
     std::vector<TBlob> temp_g;
-    for (size_t index = 0; index < kernel_params.count; ++index) {
+    for (size_t index = 0; index < kernel_params.ntensors; ++index) {
         temp_g.emplace_back(inputs[index*input_stride+input_stride-1]);
     }
       
     // Calculate amount of temporary storage
-    size_t workspace_size = 2 * kernel_params.count * sizeof(float);
+    size_t workspace_size = 2 * kernel_params.ntensors * sizeof(float) +
+        2 * kernel_params.nchunks * sizeof(int);
     
       // Request temporary storage
     Tensor<xpu, 1, char> workspace =
@@ -286,15 +286,23 @@ inline void multiLAMB(const nnvm::NodeAttrs& attrs,
     // Create tensors
     size_t pos_wspace = 0;
     Tensor<xpu, 1, float> r1(reinterpret_cast<float*>(&workspace[pos_wspace]),
-      Shape1(kernel_params.count), s);
-    pos_wspace += kernel_params.count * sizeof(float);
+      Shape1(kernel_params.ntensors), s);
+    pos_wspace += kernel_params.ntensors * sizeof(float);
     Tensor<xpu, 1, float> r2(reinterpret_cast<float*>(&workspace[pos_wspace]),
-      Shape1(kernel_params.count), s);
+      Shape1(kernel_params.ntensors), s);
+    pos_wspace += kernel_params.ntensors * sizeof(float);
+    Tensor<xpu, 1, int> block_to_tensor(reinterpret_cast<int*>(&workspace[pos_wspace]),
+      Shape1(kernel_params.nchunks), s);
+    pos_wspace += kernel_params.nchunks * sizeof(int);
+    Tensor<xpu, 1, int> block_to_chunk(reinterpret_cast<int*>(&workspace[pos_wspace]),
+      Shape1(kernel_params.nchunks), s);
     
-    MultiSumSqRun<xpu>(weights, kernel_params.count, r1.dptr_, s);
-    call_kernel1<MPDType, DType>(s, kernel_params, param);
-    MultiSumSqRun<xpu>(temp_g, kernel_params.count, r2.dptr_, s);
-    call_kernel2<MPDType, DType>(s, kernel_params, param, r1.dptr_, r2.dptr_, req[0]);
+    MultiSumSqRun<xpu>(weights, kernel_params.ntensors, r1.dptr_, s);
+    call_kernel1<MPDType, DType>(s, kernel_params, param, block_to_tensor.dptr_, block_to_chunk.dptr_);
+    MultiSumSqRun<xpu>(temp_g, kernel_params.ntensors, r2.dptr_, s);
+    call_kernel2<MPDType, DType>(s, kernel_params, param, r1.dptr_, r2.dptr_, 
+                                 block_to_tensor.dptr_, block_to_chunk.dptr_,
+                                 req[0]);
   });
 }
 

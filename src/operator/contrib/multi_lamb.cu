@@ -35,40 +35,65 @@ namespace op {
 template<bool has_mixed_precision, typename MPDType, typename DType>
 __global__ void kernel_step1(const MultiLAMBKernelParam<DType, MPDType> kernel_params,
                              const float learning_rate, 
-                             const float beta1, const float beta2, 
+                             const float beta1, const float beta2,
+                             const MPDType beta3, const MPDType beta4,
+                             const MPDType biascorrection1, 
+                             const MPDType biascorrection2,
                              const float epsilon,
                              const float wd,
                              const int step,
                              const float clip_gradient,
                              const bool bias_correction, 
-                             const float rescale_grad) {
-
-  const size_t tensorID = blockIdx.x;
-  const size_t posTensor = threadIdx.x;
+                             const float rescale_grad,
+                             int* block_to_tensor,
+                             int* block_to_chunk) {
+  const int tensorID = block_to_tensor[blockIdx.x];
+  const int chunckID = block_to_chunk[blockIdx.x];
+  const int startPos = chunckID * kernel_params.chunk_size + threadIdx.x;
+  const int stopPos = chunckID * kernel_params.chunk_size + kernel_params.chunk_size;
+    
+  MPDType r_weight[ILP_LAMB];
+  MPDType r_grad[ILP_LAMB];
+  MPDType r_mean[ILP_LAMB];
+  MPDType r_var[ILP_LAMB];
+  MPDType r_g[ILP_LAMB];
   
-  for(size_t i=posTensor; i<kernel_params.sizes[tensorID]; i+= blockDim.x){
-    MPDType w = has_mixed_precision ? kernel_params.weights32[tensorID][i]:
-                                      MPDType(kernel_params.weights[tensorID][i]);
-    MPDType scaled_grad = static_cast<MPDType>(kernel_params.grads[tensorID][i])*rescale_grad;
-    if (clip_gradient >= 0.0f)
-      scaled_grad = max(min(scaled_grad, clip_gradient), -clip_gradient);
-
-    MPDType mean = static_cast<MPDType>(beta1) * kernel_params.mean[tensorID][i] + 
-      (static_cast<MPDType>(1.0f) - static_cast<MPDType>(beta1)) * scaled_grad;
-    MPDType var = static_cast<MPDType>(beta2) * kernel_params.var[tensorID][i] + 
-      (static_cast<MPDType>(1.0f) - static_cast<MPDType>(beta2)) * scaled_grad * scaled_grad;
-    kernel_params.mean[tensorID][i]=mean;
-    kernel_params.var[tensorID][i]=var;
-
-    MPDType g;
-    if(bias_correction){
-      MPDType mean_hat = mean / (static_cast<MPDType>(1.0f) - pow(static_cast<MPDType>(beta1), static_cast<MPDType>(step)));
-      MPDType var_hat = var / (static_cast<MPDType>(1.0f) - pow(static_cast<MPDType>(beta2), static_cast<MPDType>(step)));
-      g = mean_hat / (sqrt(var_hat) + epsilon) + wd * w;
-    }else{
-      g = mean / (sqrt(var) + epsilon) + wd * w;
-    }
-    kernel_params.temp_g[tensorID][i]=g;
+  for(size_t i=startPos; i<stopPos && i<kernel_params.sizes[tensorID]; i+= blockDim.x*ILP_LAMB){
+#pragma unroll
+      for(int ii = 0; ii < ILP_LAMB; ii++){
+          int load_pos = i + ii*blockDim.x;
+          if(load_pos < stopPos && load_pos < kernel_params.sizes[tensorID]){
+              r_weight[ii] = has_mixed_precision ? kernel_params.weights32[tensorID][load_pos]:
+                                                   static_cast<MPDType>(kernel_params.weights[tensorID][load_pos]);
+              r_grad[ii] = static_cast<MPDType>(kernel_params.grads[tensorID][load_pos]);
+              r_mean[ii] = kernel_params.mean[tensorID][load_pos];
+              r_var[ii] = kernel_params.var[tensorID][load_pos];
+          }else{
+              r_weight[ii] = static_cast<MPDType>(0);
+              r_grad[ii] = static_cast<MPDType>(0);
+              r_mean[ii] = static_cast<MPDType>(0);
+              r_var[ii] = static_cast<MPDType>(0);
+          }
+      }
+#pragma unroll
+      for(int ii = 0; ii < ILP_LAMB; ii++){
+          r_grad[ii] = r_grad[ii] * rescale_grad;
+          if (clip_gradient >= 0.0f)
+              r_grad[ii] = max(min(r_grad[ii], clip_gradient), -clip_gradient);
+          r_mean[ii] = static_cast<MPDType>(beta1) * r_mean[ii] + beta3 * r_grad[ii];
+          r_var[ii] = static_cast<MPDType>(beta2) * r_var[ii] + beta4 * r_grad[ii] * r_grad[ii];
+          r_g[ii] = (r_mean[ii] / biascorrection1) / (sqrtf(r_var[ii] / biascorrection2) + epsilon) 
+                    + wd * r_weight[ii];
+       }
+#pragma unroll
+      for(int ii = 0; ii < ILP_LAMB; ii++){
+          int store_pos = i + ii*blockDim.x;
+          if(store_pos < stopPos && store_pos < kernel_params.sizes[tensorID]){
+              kernel_params.mean[tensorID][store_pos] = r_mean[ii];
+              kernel_params.var[tensorID][store_pos] = r_var[ii];
+              kernel_params.temp_g[tensorID][store_pos] = r_g[ii];
+          }
+      }
   }
 }
     
@@ -79,32 +104,50 @@ __global__ void kernel_step2(const MultiLAMBKernelParam<DType, MPDType> kernel_p
                              const float learning_rate,
                              const float lower_bound, 
                              const float upper_bound,
+                             int* block_to_tensor,
+                             int* block_to_chunk,
                              const OpReqType req) {
-
-  const size_t tensorID = blockIdx.x;
-  const size_t posTensor = threadIdx.x;
+  const int tensorID = block_to_tensor[blockIdx.x];
+  const int chunckID = block_to_chunk[blockIdx.x];
+  const int startPos = chunckID * kernel_params.chunk_size + threadIdx.x;
+  const int stopPos = chunckID * kernel_params.chunk_size + kernel_params.chunk_size;
   
-  for(size_t i=posTensor; i<kernel_params.sizes[tensorID]; i+= blockDim.x){
-    MPDType w = has_mixed_precision ? kernel_params.weights32[tensorID][i]:
-                                      MPDType(kernel_params.weights[tensorID][i]);
-    float r1 = sqrt(sumSqWeigths[tensorID]);
-    float r2 = sqrt(sumSqtemp_g[tensorID]);
-      
-    r1 = min(max(r1, lower_bound), upper_bound);
-      
-    // calculate lamb_trust_ratio
-    MPDType r;
-    if (r1 == 0.0f || r2 == 0.0f)
-      r = 1.0f;
-    else
-      r = r1/r2;
-    MPDType lr_adjusted = learning_rate * r;
-    w -= lr_adjusted * kernel_params.temp_g[tensorID][i];
-
-    // update weights
-    if (has_mixed_precision)
-      kernel_params.weights32[tensorID][i] = w;
-    KERNEL_ASSIGN(kernel_params.out_data[tensorID][i], req, w);
+  MPDType r1 = sqrtf(sumSqWeigths[tensorID]);
+  MPDType r2 = sqrtf(sumSqtemp_g[tensorID]);
+  r1 = min(max(r1, lower_bound), upper_bound);
+  MPDType lr_adjusted;
+  if (r1 == 0.0f || r2 == 0.0f)
+      lr_adjusted = learning_rate;
+  else
+      lr_adjusted = learning_rate * r1/r2;
+  
+  MPDType r_weight[ILP_LAMB];
+  MPDType r_g[ILP_LAMB];
+  
+  for(size_t i=startPos; i<stopPos && i<kernel_params.sizes[tensorID]; i+= blockDim.x*ILP_LAMB){
+#pragma unroll
+      for(int ii = 0; ii < ILP_LAMB; ii++){
+          int load_pos = i + ii*blockDim.x;
+          if(load_pos < stopPos&& load_pos < kernel_params.sizes[tensorID]){
+              r_weight[ii] = has_mixed_precision ? kernel_params.weights32[tensorID][load_pos]:
+                                                   static_cast<MPDType>(kernel_params.weights[tensorID][load_pos]);
+              r_g[ii] = kernel_params.temp_g[tensorID][load_pos];
+          }
+      }
+#pragma unroll
+      for(int ii = 0; ii < ILP_LAMB; ii++){
+          r_weight[ii] -= lr_adjusted * r_g[ii];
+          
+      }
+#pragma unroll
+      for(int ii = 0; ii < ILP_LAMB; ii++){
+          int store_pos = i + ii*blockDim.x;
+          if(store_pos < stopPos && store_pos < kernel_params.sizes[tensorID]){
+              if (has_mixed_precision)
+                  kernel_params.weights32[tensorID][store_pos] = r_weight[ii];
+              KERNEL_ASSIGN(kernel_params.out_data[tensorID][store_pos], req, r_weight[ii]);
+          }
+      }
   }
 }
 
@@ -123,7 +166,7 @@ struct MultiLAMB_step1_kernelg {
                                   const bool bias_correction, 
                                   const float rescale_grad) {
     using namespace mshadow_op;
-    for (size_t index = 0; index < kernel_params.count; ++index) {
+    for (size_t index = 0; index < kernel_params.ntensors; ++index) {
       if ((size_t)i < kernel_params.sizes[index]) {
         MPDType w = has_mixed_precision ? kernel_params.weights32[index][i]:
                                           MPDType(kernel_params.weights[index][i]);
@@ -163,7 +206,7 @@ struct MultiLAMB_step2_kernelg {
                                   const float lower_bound, 
                                   const float upper_bound,
                                   const OpReqType req) {
-    for (size_t index = 0; index < kernel_params.count; ++index) {
+    for (size_t index = 0; index < kernel_params.ntensors; ++index) {
       if ((size_t)i < kernel_params.sizes[index]) {
         MPDType w = has_mixed_precision ? kernel_params.weights32[index][i]:
                                             MPDType(kernel_params.weights[index][i]);
@@ -192,34 +235,79 @@ struct MultiLAMB_step2_kernelg {
   }
 };
     
+
+    
+template<typename MPDType>
+struct map_tensors_chunks {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, 
+                                  const MultiLAMBKernelParam<DType, MPDType>& kernel_params,
+                                  int* block_to_tensor,
+                                  int* block_to_chunk) {
+    int chunkID=0;
+    for (int index = 0; index < kernel_params.ntensors; ++index) {
+      int current_chunk=0;
+      for (int j = 0; j < kernel_params.sizes[index]; j+=kernel_params.chunk_size) {
+          block_to_tensor[chunkID] = index;
+          block_to_chunk[chunkID]= current_chunk;
+          current_chunk++;
+          chunkID++;
+      }
+    }  
+  }
+};
+    
     
   
 template<typename MPDType, typename DType>
 void call_kernel1(Stream<gpu>* s,
                   const MultiLAMBKernelParam<DType, MPDType>& kernel_params,
-                  const MultiLAMBParam &param){
+                  const MultiLAMBParam &param,
+                  int* block_to_tensor,
+                  int* block_to_chunk){
   
-  size_t nblocks = kernel_params.count;
+  int nblocks = kernel_params.nchunks;
+  Kernel<map_tensors_chunks<MPDType>, gpu>::
+                        Launch(s, 1,
+                               kernel_params,
+                               block_to_tensor,
+                               block_to_chunk);
+  
   bool has_mixed_precision = !std::is_same<DType, MPDType>::value;
+  MPDType beta3 = 1.0 - param.beta1;
+  MPDType beta4 = 1.0 - param.beta2;
+    
+  MPDType bias_correction1 = 1.0 - std::pow(param.beta1,param.step);
+  MPDType bias_correction2 = 1.0f - std::pow(param.beta2,param.step);
+  
   if(has_mixed_precision)
     kernel_step1<true><<<nblocks, BLOCK_SIZE_LAMB, 0, Stream<gpu>::GetStream(s)>>>(
                       kernel_params,
                       param.learning_rate,
                       param.beta1, param.beta2,
+                      beta3, beta4,
+                      bias_correction1,
+                      bias_correction2,
                       param.epsilon, param.wd,
                       param.step, param.clip_gradient,
                       param.bias_correction,
-                      param.rescale_grad);
+                      param.rescale_grad,
+                      block_to_tensor,
+                      block_to_chunk);
   else
     kernel_step1<false><<<nblocks, BLOCK_SIZE_LAMB, 0, Stream<gpu>::GetStream(s)>>>(
                       kernel_params,
                       param.learning_rate,
                       param.beta1, param.beta2,
+                      beta3, beta4,
+                      bias_correction1,
+                      bias_correction2,
                       param.epsilon, param.wd,
                       param.step, param.clip_gradient,
                       param.bias_correction,
-                      param.rescale_grad);
-    
+                      param.rescale_grad,
+                      block_to_tensor,
+                      block_to_chunk);
   /*Kernel<MultiLAMB_step1_kernelg<MPDType, !std::is_same<DType, MPDType>::value>, gpu>::  
                                   Launch(s, kernel_params.max_size,
                                   kernel_params,
@@ -238,9 +326,11 @@ void call_kernel2(Stream<gpu>* s,
                   const MultiLAMBKernelParam<DType, MPDType>& kernel_params,
                   const MultiLAMBParam &param,
                   float* r1, float* r2,
+                  int* block_to_tensor,
+                  int* block_to_chunk,
                   const OpReqType req){
 
-  size_t nblocks = kernel_params.count;
+  size_t nblocks = kernel_params.nchunks;
   bool has_mixed_precision = !std::is_same<DType, MPDType>::value;
   if(has_mixed_precision)
     kernel_step2<true><<<nblocks, BLOCK_SIZE_LAMB, 0, Stream<gpu>::GetStream(s)>>>(
@@ -248,6 +338,8 @@ void call_kernel2(Stream<gpu>* s,
                       r1, r2,
                       param.learning_rate,
                       param.lower_bound, param.upper_bound,
+                      block_to_tensor,
+                      block_to_chunk,
                       req);
   else
     kernel_step2<false><<<nblocks, BLOCK_SIZE_LAMB, 0, Stream<gpu>::GetStream(s)>>>(
@@ -255,6 +347,8 @@ void call_kernel2(Stream<gpu>* s,
                       r1, r2,
                       param.learning_rate,
                       param.lower_bound, param.upper_bound,
+                      block_to_tensor,
+                      block_to_chunk,
                       req);
 
   /*Kernel<MultiLAMB_step2_kernelg<MPDType, !std::is_same<DType, MPDType>::value>, gpu>::  

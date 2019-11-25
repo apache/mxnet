@@ -726,7 +726,6 @@ class PyLAMB(mx.optimizer.Optimizer):
         self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
-        print('USING WD',wd,'\n\n')
         index_update_count = self._index_update_count[index]
 
         grad *= self.rescale_grad
@@ -784,14 +783,13 @@ def test_lamb():
     cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
     rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
     wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
-    #wd_options = [{'wd': 0.00}]
     bias_options = [{'bias_correction': False}, {'bias_correction': True}]
     for dtype in [np.float16, np.float32, np.float64]:
         for cg_option in cg_options:
             for rg_option in rg_options:
                 for wd_option in wd_options:
                     for bias_option in bias_options:
-                        print(dtype,cg_option,rg_option,wd_option,bias_option)
+                        #print(dtype,cg_option,rg_option,wd_option,bias_option)
                         kwarg = {}
                         kwarg.update(cg_option)
                         kwarg.update(rg_option)
@@ -800,7 +798,7 @@ def test_lamb():
                         if (dtype == np.float16):
                             kwarg.update({'multi_precision': True})
                         atol = 1e-2 if dtype == np.float16 else 1e-3
-                        rtol = 1e-2 if dtype == np.float16 else 1e-5
+                        rtol = 1e-4 if dtype == np.float16 else 1e-5
                         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype, rtol=rtol, atol=atol)
 
 
