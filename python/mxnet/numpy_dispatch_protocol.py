@@ -121,6 +121,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'tile',
     'transpose',
     'unique',
+    'unravel_index',
     'var',
     'vdot',
     'vstack',
