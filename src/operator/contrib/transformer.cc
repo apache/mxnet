@@ -122,6 +122,99 @@ static bool InterleavedMatMulEncDecValAttShape(const NodeAttrs& attrs,
   return true;
 }
 
+void strided_batch_sgemm(bool transA, bool transB,
+                         index_t m, index_t n, index_t k,
+                         float alpha, const float *a, index_t lda,
+                         index_t strideA, const float *b, index_t ldb,
+                         index_t strideB, float beta, float *c, index_t ldc,
+                         index_t strideC, int32_t batchCount) {
+#if (MSHADOW_USE_MKL && INTEL_MKL_VERSION >= 20160000)
+  const int GROUP_SIZE = 1;
+  MKL_INT p_m[GROUP_SIZE] = {m};
+  MKL_INT p_n[GROUP_SIZE] = {n};
+  MKL_INT p_k[GROUP_SIZE] = {k};
+  MKL_INT p_lda[GROUP_SIZE] = {lda};
+  MKL_INT p_ldb[GROUP_SIZE] = {ldb};
+  MKL_INT p_ldc[GROUP_SIZE] = {ldc};
+
+  float p_alpha[GROUP_SIZE] = {alpha};
+  float p_beta[GROUP_SIZE] = {beta};
+
+  CBLAS_TRANSPOSE cblas_a_trans = transA ? CblasTrans : CblasNoTrans;
+  CBLAS_TRANSPOSE cblas_b_trans = transB ? CblasTrans : CblasNoTrans;
+
+  MKL_INT p_group_sizeb[GROUP_SIZE] = {batchCount};
+  CBLAS_TRANSPOSE p_transa[GROUP_SIZE] = {cblas_a_trans};
+  CBLAS_TRANSPOSE p_transb[GROUP_SIZE] = {cblas_b_trans};
+
+  std::vector<const float*> pp_A(batchCount, nullptr);
+  std::vector<const float*> pp_B(batchCount, nullptr);
+  std::vector<float*> pp_C(batchCount, nullptr);
+
+  for (int i = 0; i < batchCount; i++) {
+    pp_A[i] = a + i * strideA;
+    pp_B[i] = b + i * strideB;
+    pp_C[i] = c + i * strideC;
+  }
+
+  cblas_sgemm_batch(CblasRowMajor, p_transa, p_transb,
+                    p_m, p_n, p_k, p_alpha, pp_A.data(), p_lda, pp_B.data(),
+                    p_ldb, p_beta, pp_C.data(), p_ldc, GROUP_SIZE, p_group_sizeb);
+#else
+    for (int i = 0; i < batchCount; ++i) {
+      cblas_sgemm(CblasRowMajor, transa, transb, m, n, k, alpha,
+           pp_A[i], lda, pp_B[i], ldb, beta, pp_C[i], ldc);
+    }
+#endif
+}
+
+void InterleavedMatMulSelfAttQKCPU(const nnvm::NodeAttrs& attrs,
+                                   const OpContext &ctx,
+                                   const std::vector<TBlob> &inputs,
+                                   const std::vector<OpReqType> &req,
+                                   const std::vector<TBlob> &outputs) {
+  const auto& params = nnvm::get<InterleavedMatMulParam>(attrs.parsed);
+
+  if (req[0] == kNullOp)
+    return;
+
+  CHECK_EQ(inputs[0].type_flag_, mshadow::kFloat32)
+    << "Only FP32 is supported on CPU at the moment";
+
+  mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
+  const float* queries_keys_values = inputs[0].FlatTo2D<cpu, float>(s).dptr_;
+  float* output = outputs[0].FlatTo2D<cpu, float>(s).dptr_;
+
+  const index_t qkv_seq_len    = inputs[0].shape_[0];
+  const index_t sequences      = inputs[0].shape_[1];
+  const index_t output_lin_dim = inputs[0].shape_[2];
+  const index_t embed_dim      = output_lin_dim / 3;
+  const index_t head_dim       = embed_dim / params.heads;
+  const index_t attn_batches   = params.heads * sequences;
+  const index_t lead_dim       = attn_batches * 3 * head_dim;
+  const index_t batch_stride   = 3 * head_dim;
+  const float beta             = req[0] == kAddTo ? 1.f : 0.f;
+  const float scale            = 1.0 / sqrt(static_cast<float>(head_dim));
+
+  strided_batch_sgemm(false,
+                      true,
+                      qkv_seq_len,
+                      qkv_seq_len,
+                      head_dim,
+                      scale,
+                      queries_keys_values + head_dim,
+                      lead_dim,
+                      batch_stride,
+                      queries_keys_values,
+                      lead_dim,
+                      batch_stride,
+                      beta,
+                      output,
+                      qkv_seq_len,
+                      qkv_seq_len * qkv_seq_len,
+                      attn_batches);
+}
+
 NNVM_REGISTER_OP(_contrib_interleaved_matmul_selfatt_qk)
 .describe(R"code(Compute the matrix multiplication between the projections of
 queries and keys in multihead attention use as self attention.
@@ -152,6 +245,7 @@ This Op is GPU only
 })
 .set_attr<mxnet::FInferShape>("FInferShape", InterleavedMatMulSelfAttQKShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FCompute>("FCompute<cpu>", InterleavedMatMulSelfAttQKCPU)
 .set_attr<nnvm::FGradient>("FGradient",
   ElemwiseGradUseIn{"_backward_interleaved_matmul_selfatt_qk"})
 .add_argument("queries_keys_values", "NDArray-or-Symbol", "Interleaved queries, keys and values")
