@@ -3414,6 +3414,97 @@ def test_np_linalg_inv():
 
 @with_seed()
 @use_np
+def test_np_linalg_solve():
+    class TestSolve(HybridBlock):
+        def __init__(self):
+            super(TestSolve, self).__init__()
+        
+        def hybrid_forward(self, F, a, b):
+            return F.np.linalg.solve(a, b)
+
+    def check_solve(x, a_np, b_np):
+        try:
+            x_expected = _np.linalg.solve(a_np, b_np)
+        except Exception as e:
+            print("a:", a_np)
+            print("a shape:", a_np.shape)
+            print("b", b_np)
+            print("b shape:", b_np.shape)
+            print(e)
+        else:
+            assert x.shape == x_expected.shape
+            assert_almost_equal(x.asnumpy(), x_expected, rtol=rtol, atol=atol)
+
+    def get_grad_b(A, X):
+        dX = _np.ones_like(X)
+        A_inv = _np.linalg.inv(A)
+        A_inv_trans = _np.swapaxes(A_inv, -1, -2)
+        return _np.matmul(A_inv_trans, dX)
+
+    shapes = [
+        (0, 0),
+        (1, 1),
+        (3, 3),
+        (20, 20),
+        (3, 20, 20),
+        (1, 0, 0),
+        (0, 1, 1),
+        (0, 5, 3, 3),
+        (5, 0, 0, 0),
+        (2, 3, 10, 10)
+    ]
+    nrhs = (-1, 0, 1, 2, 5)
+    dtypes = ['float32', 'float64']
+    for hybridize, shape, dtype, nrh in itertools.product([False, True], shapes, dtypes, nrhs):
+        rtol = 1e-3 
+        atol = 1e-5
+        test_solve = TestSolve()
+        if hybridize:
+            test_solve.hybridize()
+
+        if 0 in shape:
+            a = _np.ones(shape)
+            b = _np.ones(shape)
+        else:
+            shape_a = shape
+            a = _np.random.rand(*shape_a)
+            shape_b = list(shape_a)
+            if nrh == -1:
+                shape_b[-1] = 1
+                x = _np.random.rand(*shape_b)
+                b = _np.matmul(a, x)
+                shape_b.pop()
+                b = b.reshape(shape_b)
+            else :
+                shape_b[-1] = nrh
+                x = _np.random.rand(*shape_b)
+                b = _np.matmul(a, x)
+        a = np.array(a, dtype=dtype)
+        b = np.array(b, dtype=dtype)
+        a.attach_grad()
+        b.attach_grad()
+        with mx.autograd.record():
+            mx_out = test_solve(a, b)
+        # check solve validity
+        assert mx_out.shape == b.shape
+        check_solve(mx_out, a, b)
+
+        # check backward. backward does not support empty input
+        if 0 not in mx_out.shape:
+            if nrh != -1:
+                mx.autograd.backward(mx_out)
+                b_backward_expected = get_grad_b(a.asnumpy(), mx_out.asnumpy())
+                a_backward_expected = -_np.matmul(b_backward_expected, _np.swapaxes(mx_out, -1, -2).asnumpy())
+                assert_almost_equal(a.grad.asnumpy(), a_backward_expected, rtol=rtol, atol=atol)
+                assert_almost_equal(b.grad.asnumpy(), b_backward_expected, rtol=rtol, atol=atol)
+
+        # check imperative once again
+        mx_out = np.linalg.solve(a, b)
+        check_solve(mx_out, a, b)
+
+
+@with_seed()
+@use_np
 def test_np_linalg_det():
     class TestDet(HybridBlock):
         def __init__(self):

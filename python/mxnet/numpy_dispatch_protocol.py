@@ -130,6 +130,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'linalg.norm',
     'linalg.cholesky',
     'linalg.inv',
+    'linalg.solve',
     'shape',
     'trace',
     'tril',
