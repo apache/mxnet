@@ -731,9 +731,11 @@ class GradientUpdateHandler(BatchEnd):
 
     def batch_end(self, estimator, *args, **kwargs):
         loss = kwargs['loss']
-        batch_size = 1
-        if isinstance(loss, list) and len(loss) > 0:
-            loss = loss[0]
+        batch_size = 0
         if isinstance(loss, ndarray.ndarray.NDArray):
-            batch_size = loss.shape[estimator.batch_axis]
+            loss = [loss]
+        if isinstance(loss, list) and len(loss) > 0:
+            for l in loss:
+                batch_size += l.shape[estimator.batch_axis]
+                
         estimator.trainer.step(batch_size)
