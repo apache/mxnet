@@ -2109,6 +2109,60 @@ def test_npx_sigmoid():
 
 @with_seed()
 @use_np
+def test_np_atleast_nd():
+    class TestAtleastND(HybridBlock):
+        def __init__(self, n):
+            super(TestAtleastND, self).__init__()
+            self._n = n
+
+        def hybrid_forward(self, F, *arys):
+            if self._n == 1:
+                return F.np.atleast_1d(*arys)
+            elif self._n == 2:
+                return F.np.atleast_2d(*arys)
+            elif self._n == 3:
+                return F.np.atleast_3d(*arys)
+
+    tensor_shapes = [
+        ((), (2,), (3, 4, 5)),
+        ((2, 3, 4, 5), ())
+    ]
+    flags = [True, False]
+    ns = [1, 2, 3]
+    dtypes = ['int32', 'int64', 'float16', 'float32', 'float64']
+    funcs = {
+        "numpy": {1: lambda *ts: _np.atleast_1d(*ts),
+                  2: lambda *ts: _np.atleast_2d(*ts),
+                  3: lambda *ts: _np.atleast_3d(*ts)},
+        "mxnet": {1: lambda *ts: np.atleast_1d(*ts),
+                  2: lambda *ts: np.atleast_2d(*ts),
+                  3: lambda *ts: np.atleast_3d(*ts)}
+    }
+    for hybridize, n, tensor_shape, dtype in \
+        itertools.product(flags, ns, tensor_shapes, dtypes):
+        test_atleast_nd = TestAtleastND(n)
+        if hybridize:
+            test_atleast_nd.hybridize()
+        if dtype in ['int32', 'int64']:
+            tensors = list(map(lambda s: np.random.randint(-1, 1, size=s, dtype=dtype), tensor_shape))
+        else:
+            tensors = list(map(lambda s: np.random.uniform(-1.0, 1.0, size=s, dtype=dtype), tensor_shape))
+        tensors_np = [t.asnumpy() for t in tensors]
+        mx_out = test_atleast_nd(*tensors)
+        np_out = funcs["numpy"][n](*tensors_np)
+        for i in range(len(tensors)):
+            assert mx_out[i].shape == np_out[i].shape
+            same(mx_out[i].asnumpy(), np_out[i])
+
+        mx_out = funcs["mxnet"][n](*tensors)
+        np_out = funcs["numpy"][n](*tensors_np)
+        for i in range(len(tensors)):
+            assert mx_out[i].shape == np_out[i].shape
+            same(mx_out[i].asnumpy(), np_out[i])
+
+
+@with_seed()
+@use_np
 def test_np_arange():
     configs = [
         (1, 10, 2),
