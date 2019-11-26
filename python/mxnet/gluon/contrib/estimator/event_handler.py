@@ -28,6 +28,7 @@ import numpy as np
 from ....metric import CompositeEvalMetric, EvalMetric
 from ....metric import Loss as metric_loss
 from .utils import _check_metrics
+from .... import ndarray
 
 __all__ = ['TrainBegin', 'TrainEnd', 'EpochBegin', 'EpochEnd', 'BatchBegin', 'BatchEnd',
            'StoppingHandler', 'MetricHandler', 'ValidationHandler',
@@ -729,4 +730,10 @@ class GradientUpdateHandler(BatchEnd):
         self.priority = priority
 
     def batch_end(self, estimator, *args, **kwargs):
-        estimator.trainer.step(1)
+        loss = kwargs['loss']
+        batch_size = 1
+        if isinstance(loss, list) and len(loss) > 0:
+            loss = loss[0]
+        if isinstance(loss, ndarray.ndarray.NDArray):
+            batch_size = loss.shape[estimator.batch_axis]
+        estimator.trainer.step(batch_size)

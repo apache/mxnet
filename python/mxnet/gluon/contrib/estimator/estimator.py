@@ -302,7 +302,7 @@ class Estimator(object):
 
         with autograd.record():
             pred = [self.net(x) for x in data]
-            loss = [self.loss(y_hat, y) / batch_size for y_hat, y in zip(pred, label)]
+            loss = [self.loss(y_hat, y) for y_hat, y in zip(pred, label)]
 
         for l in loss:
             l.backward()
@@ -358,6 +358,7 @@ class Estimator(object):
 
         self.max_epoch = epochs
         self.max_batch = batches
+        self.batch_axis = batch_axis
 
         # provide default handlers
         event_handlers = self._prepare_default_handlers(val_data, event_handlers)

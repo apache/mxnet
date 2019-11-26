@@ -334,36 +334,36 @@ def test_default_handlers():
     train_acc = mx.metric.RMSE()
     loss = gluon.loss.L2Loss()
 
-    gradient_update = GradientUpdateHandler()
     est = Estimator(net=net,
                     loss=loss,
                     metrics=train_acc,
                     trainer=trainer,
                     context=ctx)
-    # no handler except gradient update handler (all default handlers), no warning
+    # no handler(all default handlers), no warning
     with warnings.catch_warnings(record=True) as w:
-        est.fit(train_data=train_data, epochs=num_epochs, event_handlers=[gradient_update])
+        est.fit(train_data=train_data, epochs=num_epochs)
 
     # handler with prepared loss and metrics
     # use mix of default and user defined handlers
     train_metrics = est.train_metrics
     val_metrics = est.val_metrics
     logging = LoggingHandler(train_metrics=train_metrics, val_metrics=val_metrics)
-    est.fit(train_data=train_data, epochs=num_epochs, event_handlers=[logging, gradient_update])
+    est.fit(train_data=train_data, epochs=num_epochs, event_handlers=[logging])
 
     # handler with all user defined metrics
     # use mix of default and user defined handlers
     metric = MetricHandler(train_metrics=[train_acc])
     logging = LoggingHandler(train_metrics=[train_acc])
-    est.fit(train_data=train_data, epochs=num_epochs, event_handlers=[metric, logging, gradient_update])
+    est.fit(train_data=train_data, epochs=num_epochs, event_handlers=[metric, logging])
 
     # handler with mixed metrics, some handler use metrics prepared by estimator
     # some handler use metrics user prepared
     logging = LoggingHandler(train_metrics=train_metrics, val_metrics=[mx.metric.RMSE("val acc")])
     with assert_raises(ValueError):
-        est.fit(train_data=train_data, epochs=num_epochs, event_handlers=[logging, gradient_update])
+        est.fit(train_data=train_data, epochs=num_epochs, event_handlers=[logging])
 
     # test handler order
+    gradient_update = GradientUpdateHandler()
     train_metrics = est.train_metrics
     val_metrics = est.val_metrics
     early_stopping = EarlyStoppingHandler(monitor=val_metrics[0])
