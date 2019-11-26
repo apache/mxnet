@@ -52,9 +52,6 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
 
 @set_module('mxnet.symbol.numpy')
 class _Symbol(Symbol):
-    def __init__(self, handle):
-        super(_Symbol, self).__init__(handle)
-
     def __getitem__(self, key): # pylint: disable = too-many-return-statements, inconsistent-return-statements
         """Return self[key].
 
@@ -5101,9 +5098,34 @@ def load(fname):
     _Symbol.save : Used to save symbol into file.
     """
     if not isinstance(fname, string_types):
-        raise TypeError('fname need to be string')
+        raise TypeError('fname needs to be string')
     handle = SymbolHandle()
     check_call(_LIB.MXSymbolCreateFromFile(c_str(fname), ctypes.byref(handle)))
+    return _Symbol(handle)
+
+
+@set_module('mxnet.symbol.numpy')
+def load_json(json_str):
+    """Loads symbol from json string.
+
+    Parameters
+    ----------
+    json_str : str
+        A JSON string.
+
+    Returns
+    -------
+    sym : Symbol
+        The loaded symbol.
+
+    See Also
+    --------
+    _Symbol.tojson : Used to save symbol into json string.
+    """
+    if not isinstance(json_str, string_types):
+        raise TypeError('json_str needs to be string')
+    handle = SymbolHandle()
+    check_call(_LIB.MXSymbolCreateFromJSON(c_str(json_str), ctypes.byref(handle)))
     return _Symbol(handle)
 
 
