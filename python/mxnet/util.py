@@ -35,6 +35,9 @@ _np_ufunc_default_kwargs = {
     'subok': True,
 }
 
+_set_np_shape_logged = False
+_set_np_array_logged = False
+
 
 def makedirs(d):
     """Create directories recursively if they don't exist. os.makedirs(exist_ok=True) is not
@@ -60,8 +63,7 @@ def get_gpu_memory(gpu_dev_id):
 
 
 def set_np_shape(active):
-    """
-    Turns on/off NumPy shape semantics, in which `()` represents the shape of scalar tensors,
+    """Turns on/off NumPy shape semantics, in which `()` represents the shape of scalar tensors,
     and tuples with `0` elements, for example, `(0,)`, `(1, 0, 2)`, represent the shapes
     of zero-size tensors. This is turned off by default for keeping backward compatibility.
 
@@ -88,13 +90,16 @@ def set_np_shape(active):
     >>> print(mx.is_np_shape())
     True
     """
+    global _set_np_shape_logged
     if active:
-        import logging
-        logging.info('NumPy-shape semantics has been activated in your code. '
-                     'This is required for creating and manipulating scalar and zero-size '
-                     'tensors, which were not supported in MXNet before, as in the official '
-                     'NumPy library. Please DO NOT manually deactivate this semantics while '
-                     'using `mxnet.numpy` and `mxnet.numpy_extension` modules.')
+        if not _set_np_shape_logged:
+            import logging
+            logging.info('NumPy-shape semantics has been activated in your code. '
+                         'This is required for creating and manipulating scalar and zero-size '
+                         'tensors, which were not supported in MXNet before, as in the official '
+                         'NumPy library. Please DO NOT manually deactivate this semantics while '
+                         'using `mxnet.numpy` and `mxnet.numpy_extension` modules.')
+            _set_np_shape_logged = True
     elif is_np_array():
         raise ValueError('Deactivating NumPy shape semantics while NumPy array semantics is still'
                          ' active is not allowed. Please consider calling `npx.reset_np()` to'
@@ -568,8 +573,7 @@ def use_np(func):
 
 
 def np_ufunc_legal_option(key, value):
-    """
-    Checking if ufunc arguments are legal inputs
+    """Checking if ufunc arguments are legal inputs
 
     Parameters
     ----------
@@ -680,11 +684,14 @@ def _set_np_array(active):
     -------
         A bool value indicating the previous state of NumPy array semantics.
     """
+    global _set_np_array_logged
     if active:
-        import logging
-        logging.info('NumPy array semantics has been activated in your code. This allows you'
-                     ' to use operators from MXNet NumPy and NumPy Extension modules as well'
-                     ' as MXNet NumPy `ndarray`s.')
+        if not _set_np_array_logged:
+            import logging
+            logging.info('NumPy array semantics has been activated in your code. This allows you'
+                         ' to use operators from MXNet NumPy and NumPy Extension modules as well'
+                         ' as MXNet NumPy `ndarray`s.')
+            _set_np_array_logged = True
     cur_state = is_np_array()
     _NumpyArrayScope._current.value = _NumpyArrayScope(active)
     return cur_state
@@ -692,15 +699,76 @@ def _set_np_array(active):
 
 def set_np(shape=True, array=True):
     """Setting NumPy shape and array semantics at the same time.
-    It is required to keep NumPy shape semantics active when activating NumPy array semantics.
+    It is required to keep NumPy shape semantics active while activating NumPy array semantics.
     Deactivating NumPy shape semantics while NumPy array semantics is still active is not allowed.
+    It is highly recommended to set these two flags to `True` at the same time to fully enable
+    NumPy-like behaviors. Please refer to the Examples section for a better understanding.
 
     Parameters
     ----------
     shape : bool
         A boolean value indicating whether the NumPy-shape semantics should be turned on or off.
+        When this flag is set to `True`, zero-size and zero-dim shapes are all valid shapes in
+        shape inference process, instead of treated as unknown shapes in legacy mode.
     array : bool
         A boolean value indicating whether the NumPy-array semantics should be turned on or off.
+        When this flag is set to `True`, it enables Gluon code flow to use or generate `mxnet.numpy.ndarray`s
+        instead of `mxnet.ndarray.NDArray`. For example, a `Block` would create parameters of type
+        `mxnet.numpy.ndarray`.
+
+    Examples
+    --------
+    >>> import mxnet as mx
+
+    Creating zero-dim ndarray in legacy mode would fail at shape inference.
+
+    >>> mx.nd.ones(shape=())
+    mxnet.base.MXNetError: Operator _ones inferring shapes failed.
+
+    >>> mx.nd.ones(shape=(2, 0, 3))
+    mxnet.base.MXNetError: Operator _ones inferring shapes failed.
+
+    In legacy mode, Gluon layers would create parameters and outputs of type `mx.nd.NDArray`.
+
+    >>> from mxnet.gluon import nn
+    >>> dense = nn.Dense(2)
+    >>> dense.initialize()
+    >>> dense(mx.nd.ones(shape=(3, 2)))
+    [[0.01983214 0.07832371]
+     [0.01983214 0.07832371]
+     [0.01983214 0.07832371]]
+    <NDArray 3x2 @cpu(0)>
+
+    >>> [p.data() for p in dense.collect_params().values()]
+    [
+    [[0.0068339  0.01299825]
+     [0.0301265  0.04819721]]
+    <NDArray 2x2 @cpu(0)>,
+    [0. 0.]
+    <NDArray 2 @cpu(0)>]
+
+    When the `shape` flag is `True`, both shape inferences are successful.
+
+    >>> from mxnet import np, npx
+    >>> npx.set_np()  # this is required to activate NumPy-like behaviors
+
+    >>> np.ones(shape=())
+    array(1.)
+    >>> np.ones(shape=(2, 0, 3))
+    array([], shape=(2, 0, 3))
+
+    When the `array` flag is `True`, Gluon layers would create parameters and outputs of type `mx.np.ndarray`.
+
+    >>> dense = nn.Dense(2)
+    >>> dense.initialize()
+    >>> dense(np.ones(shape=(3, 2)))
+    array([[0.01983214, 0.07832371],
+           [0.01983214, 0.07832371],
+           [0.01983214, 0.07832371]])
+
+    >>> [p.data() for p in dense.collect_params().values()]
+    [array([[0.0068339 , 0.01299825],
+           [0.0301265 , 0.04819721]]), array([0., 0.])]
     """
     if not shape and array:
         raise ValueError('NumPy Shape semantics is required in using NumPy array semantics.')

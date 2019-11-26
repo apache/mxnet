@@ -23,7 +23,7 @@ import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
-from common import with_seed
+from common import with_seed, assert_raises_cudnn_not_satisfied
 import unittest
 
 def test_box_nms_op():
@@ -359,7 +359,7 @@ def test_op_mrcnn_mask_target():
 
     num_rois = 2
     num_classes = 4
-    mask_size = 3
+    mask_size = (3, 3)
     ctx = mx.gpu(0)
     # (B, N, 4)
     rois = mx.nd.array([[[2.3, 4.3, 2.2, 3.3],
@@ -408,6 +408,42 @@ def test_op_mrcnn_mask_target():
 
     assert_almost_equal(mask_targets.asnumpy(), gt_mask_targets.asnumpy())
     assert_almost_equal(mask_cls.asnumpy(), gt_mask_cls.asnumpy())
+
+@with_seed()
+def test_modulated_deformable_convolution():
+    for num_batch in [1, 2]:
+        for num_channel_data, num_deformable_group in itertools.product([4, 8], [1, 2]):
+            for input_height, input_width in itertools.product([5, 6], [5, 6]):
+                for dilate in [(1, 1), (2, 2)]:
+                    for grad_nodes in [['im_data'], ['offset_data'], ['weight']]:
+                        output_height = input_height
+                        output_width = input_width
+                        im_data = np.random.rand(num_batch, num_channel_data, input_height, input_width)
+                        offset_data = \
+                            np.random.rand(num_batch, num_deformable_group * 3 * 3 * 2, output_height, output_width)\
+                            * 0.8 + 0.1
+                        mask_data = np.random.rand(num_batch, num_deformable_group * 3 * 3, output_height, output_width)
+                        mask_data = 0.5 * (1 + np.tanh(0.5 * mask_data)) # sigmoid
+                        weight = np.random.normal(0, 0.001, (num_channel_data, num_channel_data, 3, 3))
+                        bias = np.zeros(num_channel_data)
+
+                        im_data_var = mx.symbol.Variable(name="im_data")
+                        offset_data_var = mx.symbol.Variable(name="offset_data")
+                        mask_data_var = mx.symbol.Variable(name="mask_data")
+                        weight_var = mx.symbol.Variable(name="weight")
+                        bias_var = mx.symbol.Variable(name="bias")
+                        op = mx.sym.contrib.ModulatedDeformableConvolution(name='test_op', data=im_data_var,
+                                                                           offset=offset_data_var, mask=mask_data_var,
+                                                                           weight=weight_var, bias=bias_var,
+                                                                           num_filter=num_channel_data, pad=dilate,
+                                                                           kernel=(3, 3), stride=(1, 1), dilate=dilate,
+                                                                           num_deformable_group=num_deformable_group)
+                        if grad_nodes[0] == 'offset_data':
+                            # wider tolerance needed for coordinate differential
+                            rtol, atol = 1.0, 1e-2
+                        else:
+                            rtol, atol = 0.05, 1e-3
+
 
 if __name__ == '__main__':
     import nose

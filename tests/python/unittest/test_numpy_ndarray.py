@@ -18,6 +18,7 @@
 # pylint: skip-file
 from __future__ import absolute_import
 from __future__ import division
+import itertools
 import os
 import unittest
 import numpy as _np
@@ -26,7 +27,7 @@ from mxnet import np, npx, autograd
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, retry, use_np
 from common import with_seed, TemporaryDirectory
-from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, assert_exception, is_op_runnable
+from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, assert_exception, is_op_runnable, collapse_sum_like
 from mxnet.ndarray.ndarray import py_slice
 from mxnet.base import integer_types
 import scipy.stats as ss
@@ -87,6 +88,7 @@ def test_np_array_creation():
         [],
         (),
         [[1, 2], [3, 4]],
+        _np.random.randint(-10, 10, size=rand_shape_nd(3)),
         _np.random.uniform(size=rand_shape_nd(3)),
         _np.random.uniform(size=(3, 0, 4))
     ]
@@ -94,10 +96,12 @@ def test_np_array_creation():
         for src in objects:
             mx_arr = np.array(src, dtype=dtype)
             assert mx_arr.ctx == mx.current_context()
+            if dtype is None:
+                dtype = src.dtype if isinstance(src, _np.ndarray) else _np.float32
             if isinstance(src, mx.nd.NDArray):
-                np_arr = _np.array(src.asnumpy(), dtype=dtype if dtype is not None else _np.float32)
+                np_arr = _np.array(src.asnumpy(), dtype=dtype)
             else:
-                np_arr = _np.array(src, dtype=dtype if dtype is not None else _np.float32)
+                np_arr = _np.array(src, dtype=dtype)
             assert mx_arr.dtype == np_arr.dtype
             assert same(mx_arr.asnumpy(), np_arr)
 
@@ -277,6 +281,62 @@ def test_np_ndarray_binary_element_wise_ops():
             '<=': _np.less_equal
         })
 
+    def _get_grad_func(op, scalar=None, reverse=False):
+        if op == '+':
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (collapse_sum_like(ograd, x1.shape),
+                                                   collapse_sum_like(ograd, x2.shape))
+            elif not reverse:
+                return lambda ograd, x1, x2, out: ograd
+            else:
+                return lambda ograd, x1, x2, out: ograd
+        elif op == '-':
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (collapse_sum_like(ograd, x1.shape),
+                                                   -collapse_sum_like(ograd, x2.shape))
+            elif not reverse:
+                return lambda ograd, x1, x2, out: ograd
+            else:
+                return lambda ograd, x1, x2, out: -ograd
+        elif op == '*':
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (collapse_sum_like(ograd * x2, x1.shape),
+                                                   collapse_sum_like(ograd * x1, x2.shape))
+            elif not reverse:
+                return lambda ograd, x1, x2, out: ograd * x2
+            else:
+                return lambda ograd, x1, x2, out: ograd * x1
+        elif op == '/':
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (collapse_sum_like(ograd / x2, x1.shape),
+                                                   collapse_sum_like(-x1 * ograd / (x2 * x2), x2.shape))
+            elif not reverse:
+                return lambda ograd, x1, x2, out: ograd / x2
+            else:
+                return lambda ograd, x1, x2, out: -x1 * ograd / (x2 * x2)
+        elif op == 'mod':
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (collapse_sum_like(ograd, x1.shape),
+                                                   collapse_sum_like(-ograd * _np.floor(x1 / x2), x2.shape))
+            elif not reverse:
+                return lambda ograd, x1, x2, out: ograd
+            else:
+                return lambda ograd, x1, x2, out: -ograd * _np.floor(x1 / x2)
+        elif op == 'pow':
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (collapse_sum_like(ograd * x2 * _np.power(x1, x2 - 1), x1.shape),
+                                                   collapse_sum_like(ograd * out * _np.log(x1), x2.shape))
+            elif not reverse:
+                return lambda ograd, x1, x2, out: ograd * x2 * _np.power(x1, x2 - 1)
+            else:
+                return lambda ograd, x1, x2, out: ograd * out * _np.log(x1)
+        elif op in ('==', '!=', '<', '<=', '>', '>='):
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (_np.zeros_like(x1), _np.zeros_like(x2))
+            else:
+                return lambda ograd, x1, x2, out: _np.zeros_like(ograd)
+        return None
+
     def get_np_ret(x1, x2, op):
         return np_op_map[op](x1, x2)
 
@@ -360,13 +420,15 @@ def test_np_ndarray_binary_element_wise_ops():
             mx_input1 = abs(_np.random.uniform()) + 1
             np_input1 = mx_input1
         else:
-            mx_input1 = rand_ndarray(shape1, dtype=dtype).abs() + 1
+            mx_input1 = (rand_ndarray(shape1, dtype=dtype).abs() + 1).as_np_ndarray()
+            mx_input1.attach_grad()
             np_input1 = mx_input1.asnumpy()
         if shape2 is None:
             mx_input2 = abs(_np.random.uniform()) + 1
             np_input2 = mx_input2
         else:
-            mx_input2 = rand_ndarray(shape2, dtype=dtype).abs() + 1
+            mx_input2 = (rand_ndarray(shape2, dtype=dtype).abs() + 1).as_np_ndarray()
+            mx_input2.attach_grad()
             np_input2 = mx_input2.asnumpy()
 
         scalar = None
@@ -378,7 +440,9 @@ def test_np_ndarray_binary_element_wise_ops():
             scalar = mx_input1
             reverse = True
 
+        grad_func = _get_grad_func(op, scalar, reverse)
         np_out = get_np_ret(np_input1, np_input2, op)
+        ograd = _np.ones_like(np_out)
         for hybridize in [True, False]:
             if scalar is None:
                 get_mx_ret_np = TestBinaryElementWiseOp(op)
@@ -386,26 +450,49 @@ def test_np_ndarray_binary_element_wise_ops():
                 if hybridize:
                     get_mx_ret_np.hybridize()
                     get_mx_ret_classic.hybridize()
-                mx_out = get_mx_ret_np(mx_input1.as_np_ndarray(), mx_input2.as_np_ndarray())
+                if grad_func is None:
+                    mx_out = get_mx_ret_np(mx_input1, mx_input2)
+                else:
+                    with mx.autograd.record():
+                        mx_out = get_mx_ret_np(mx_input1, mx_input2)
+                    mx_out.backward()
                 assert type(mx_out) == np.ndarray
-                assert np_out.shape == mx_out.shape
                 if op in logic_ops:
                     assert np_out.dtype == mx_out.dtype
-                assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
+                assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5, use_broadcast=False)
+
+                if grad_func is not None:
+                    x1_grad_expected, x2_grad_expected = grad_func(ograd, np_input1, np_input2, np_out)
+                    assert_almost_equal(mx_input1.grad.asnumpy(), x1_grad_expected, atol=1e-5, rtol=1e-3,
+                                        use_broadcast=False)
+                    assert_almost_equal(mx_input2.grad.asnumpy(), x2_grad_expected, atol=1e-5, rtol=1e-3,
+                                        use_broadcast=False)
             else:
                 get_mx_ret = TestBinaryElementWiseOp(op, scalar=scalar, reverse=reverse)
                 if hybridize:
                     get_mx_ret.hybridize()
                 if reverse:
-                    mx_out = get_mx_ret(mx_input2.as_np_ndarray())
-                    assert type(mx_out) == np.ndarray
+                    mx_input = mx_input2
                 else:
-                    mx_out = get_mx_ret(mx_input1.as_np_ndarray())
-                    assert type(mx_out) == np.ndarray
-                assert np_out.shape == mx_out.shape
+                    mx_input = mx_input1
+
+                if grad_func is None:
+                    mx_out = get_mx_ret(mx_input)
+                else:
+                    with mx.autograd.record():
+                        mx_out = get_mx_ret(mx_input)
+                    mx_out.backward()
+                assert type(mx_out) == np.ndarray
+
                 if op in logic_ops:
                     assert np_out.dtype == mx_out.dtype
-                assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
+                assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5, use_broadcast=False)
+
+                # check grad
+                if grad_func is not None:
+                    x_grad_expected = grad_func(ograd, np_input1, np_input2, np_out)
+                    assert_almost_equal(mx_input.grad.asnumpy(), x_grad_expected, atol=1e-5, rtol=1e-3,
+                                        use_broadcast=False)
 
     dtypes = [_np.float32, _np.float64, None]
     ops = np_op_map.keys()
@@ -471,9 +558,6 @@ def test_np_grad_ndarray_type():
 @with_seed()
 @use_np
 def test_np_ndarray_astype():
-    mx_data = np.array([2, 3, 4, 5], dtype=_np.int32)
-    np_data = mx_data.asnumpy()
-
     class TestAstype(HybridBlock):
         def __init__(self, dtype, copy):
             super(TestAstype, self).__init__()
@@ -483,24 +567,29 @@ def test_np_ndarray_astype():
         def hybrid_forward(self, F, x):
             return x.astype(dtype=self._dtype, copy=self._copy)
 
-    def check_astype_equal(dtype, copy, expect_zero_copy=False, hybridize=False):
-        test_astype = TestAstype(dtype, copy)
+    def check_astype_equal(itype, otype, copy, expect_zero_copy=False, hybridize=False):
+        expect_zero_copy = copy is False and itype == otype
+        mx_data = np.array([2, 3, 4, 5], dtype=itype)
+        np_data = mx_data.asnumpy()
+        test_astype = TestAstype(otype, copy)
         if hybridize:
             test_astype.hybridize()
         mx_ret = test_astype(mx_data)
         assert type(mx_ret) is np.ndarray
-        np_ret = np_data.astype(dtype=dtype, copy=copy)
+        np_ret = np_data.astype(dtype=otype, copy=copy)
         assert mx_ret.dtype == np_ret.dtype
         assert same(mx_ret.asnumpy(), np_ret)
         if expect_zero_copy and not hybridize:
             assert id(mx_ret) == id(mx_data)
             assert id(np_ret) == id(np_data)
 
-    for dtype in [np.int8, np.uint8, np.int32, np.float16, np.float32, np.float64, np.bool, np.bool_,
-                  'int8', 'uint8', 'int32', 'float16', 'float32', 'float64', 'bool']:
+    dtypes = [np.int8, np.uint8, np.int32, np.float16, np.float32, np.float64, np.bool, np.bool_,
+              'int8', 'uint8', 'int32', 'float16', 'float32', 'float64', 'bool']
+
+    for itype, otype in itertools.product(dtypes, dtypes):
         for copy in [True, False]:
             for hybridize in [True, False]:
-                check_astype_equal(dtype, copy, copy is False and mx_data.dtype == dtype, hybridize)
+                check_astype_equal(itype, otype, copy, hybridize)
 
 
 @with_seed()
@@ -883,40 +972,6 @@ def test_np_save_load_ndarrays():
         for k, v in arr_dict_loaded.items():
             assert k in arr_dict
             assert _np.array_equal(v.asnumpy(), arr_dict[k].asnumpy())
-
-
-@retry(5)
-@with_seed()
-@use_np
-def test_np_uniform():
-    types = [None, "float32", "float64"]
-    ctx = mx.context.current_context()
-    samples = 1000000
-    # Generation test
-    trials = 8
-    num_buckets = 5
-    for dtype in types:
-        for low, high in [(-100.0, -98.0), (99.0, 101.0)]:
-            scale = high - low
-            buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.uniform.ppf(x, loc=low, scale=scale), num_buckets)
-            buckets = np.array(buckets, dtype=dtype).tolist()
-            probs = [(buckets[i][1] - buckets[i][0])/scale for i in range(num_buckets)]
-            generator_mx_np = lambda x: mx.np.random.uniform(low, high, size=x, ctx=ctx, dtype=dtype).asnumpy()
-            verify_generator(generator=generator_mx_np, buckets=buckets, probs=probs, nsamples=samples, nrepeat=trials)
-
-    # Broadcasting test
-    params = [
-        (1.0, mx.np.ones((4,4)) + 2.0),
-        (mx.np.zeros((4,4)) + 1, 2.0),
-        (mx.np.zeros((1,4)), mx.np.ones((4,4)) + mx.np.array([1, 2, 3, 4])),
-        (mx.np.array([1, 2, 3, 4]), mx.np.ones((2,4,4)) * 5)
-    ]
-    for dtype in types:
-        for low, high in params:
-            expect_mean = (low + high) / 2
-            expanded_size = (samples,) + expect_mean.shape
-            uniform_samples = mx.np.random.uniform(low, high, size=expanded_size, dtype=dtype)
-            mx.test_utils.assert_almost_equal(uniform_samples.asnumpy().mean(0), expect_mean.asnumpy(), rtol=0.20, atol=1e-1)
 
 
 @retry(5)

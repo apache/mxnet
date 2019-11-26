@@ -63,6 +63,7 @@ void NonzeroForwardGPU(const nnvm::NodeAttrs& attrs,
   }
   int32_t valid_num = 0;
   Stream<gpu>* stream = ctx.get_stream<gpu>();
+  cudaStream_t cuda_stream = Stream<gpu>::GetStream(stream);
   int32_t* prefix_sum = nullptr;
   void* d_temp_storage = nullptr;
   size_t temp_storage_bytes = 0;
@@ -72,7 +73,7 @@ void NonzeroForwardGPU(const nnvm::NodeAttrs& attrs,
                                 prefix_sum,
                                 prefix_sum,
                                 in_size,
-                                Stream<gpu>::GetStream(stream));
+                                cuda_stream);
   size_t buffer_size = in_size * sizeof(int32_t);
   temp_storage_bytes += buffer_size;
   // Allocate memory on GPU and allocate pointer
@@ -80,7 +81,7 @@ void NonzeroForwardGPU(const nnvm::NodeAttrs& attrs,
     ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(temp_storage_bytes), stream);
   prefix_sum = reinterpret_cast<int32_t*>(workspace.dptr_);
   d_temp_storage = workspace.dptr_ + buffer_size;
-  MSHADOW_TYPE_SWITCH(in.dtype(), DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(in.dtype(), DType, {
     mxnet_op::Kernel<PrefixSumInit, gpu>::Launch(
       stream, in_size, prefix_sum, in.data().dptr<DType>());
   });
@@ -90,17 +91,18 @@ void NonzeroForwardGPU(const nnvm::NodeAttrs& attrs,
                                 prefix_sum,
                                 prefix_sum,
                                 in_size,
-                                Stream<gpu>::GetStream(stream));
-  CUDA_CALL(cudaMemcpy(&valid_num, &prefix_sum[in_size - 1], sizeof(int32_t),
-                       cudaMemcpyDeviceToHost));
+                                cuda_stream);
+  CUDA_CALL(cudaMemcpyAsync(&valid_num, &prefix_sum[in_size - 1], sizeof(int32_t),
+                            cudaMemcpyDeviceToHost, cuda_stream));
+  CUDA_CALL(cudaStreamSynchronize(cuda_stream));
   // 0-dim
   if (0 == in.shape().ndim()) {
     mxnet::TShape s(2, 1);
     if (valid_num) {
       const_cast<NDArray &>(out).Init(s);
       int64_t temp = 0;
-      CUDA_CALL(cudaMemcpy(out.data().dptr<int64_t>(), &temp, sizeof(int64_t),
-                           cudaMemcpyHostToDevice));
+      CUDA_CALL(cudaMemcpyAsync(out.data().dptr<int64_t>(), &temp, sizeof(int64_t),
+                                cudaMemcpyHostToDevice, cuda_stream));
     } else {
       s[0] = 0;
       const_cast<NDArray &>(out).Init(s);

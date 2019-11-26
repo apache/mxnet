@@ -30,7 +30,6 @@ licenses = 'licenses/*'
 
 // libmxnet dependencies
 mx_deps = ''
-mx_mkldnn_deps = 'lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so'
 
 // library type
 // either static or dynamic - depending on how it links to its dependencies

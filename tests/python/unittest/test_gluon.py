@@ -868,11 +868,13 @@ def test_sync_batchnorm():
 
     cfgs = [(1, False)]
     num_gpus = mx.context.num_gpus()
+    batch_size = 24
     for i in range(1, num_gpus + 1):
-        cfgs.append((i, True))
+        if batch_size % i == 0:
+            cfgs.append((i, True))
     for ndev, cuda in cfgs:
         # check with unsync version
-        for shape in [(24, 2), (24, 3, 4), (24, 4, 4, 4), (24, 5, 6, 4, 4)]:
+        for shape in [(batch_size, 2), (batch_size, 3, 4), (batch_size, 4, 4, 4), (batch_size, 5, 6, 4, 4)]:
             print(str((ndev, cuda, shape)))
             for i in range(10):
                 _check_batchnorm_result(mx.nd.random.uniform(shape=shape,
@@ -1512,6 +1514,46 @@ def test_save_load():
     net2.load_parameters('tmp.params')
 
 @with_seed()
+def test_save_load_deduplicate_with_shared_params():
+    class B(mx.gluon.Block):
+        def __init__(self, params=None):
+            super(B, self).__init__(params=params)
+
+            with self.name_scope():
+                self.weight = self.params.get('weight', shape=(10, 10))
+
+    class C(mx.gluon.Block):
+        def __init__(self, b1, b2):
+            super(C, self).__init__()
+            self.b1 = b1
+            self.b2 = b2
+
+    b1 = B()
+    b2 = B(b1.collect_params())
+    c = C(b1, b2)
+    c.initialize()
+    c.save_parameters('tmp.params', deduplicate=True)
+
+    params = mx.nd.load('tmp.params')
+    assert len(params) == 1  # Only a single copy of the shared parameter is saved
+
+    b1 = B()
+    b2 = B(b1.collect_params())
+    c = C(b1, b2)
+    c.load_parameters('tmp.params')
+
+    # Test default behavior
+    c.save_parameters('tmp2.params', deduplicate=False)
+
+    params = mx.nd.load('tmp2.params')
+    assert len(params) == 2  # Only a single copy of the shared parameter is saved
+
+    b1 = B()
+    b2 = B(b1.collect_params())
+    c = C(b1, b2)
+    c.load_parameters('tmp2.params')
+
+@with_seed()
 def test_symbol_block_save_load():
     class Net(gluon.HybridBlock):
         def __init__(self):
@@ -1632,7 +1674,7 @@ def check_hybrid_static_memory(**kwargs):
 
     assert_almost_equal(y1.asnumpy(), y2.asnumpy(), rtol=1e-3, atol=1e-5)
     for key in grads1:
-        assert_almost_equal(grads1[key].asnumpy(), grads2[key].asnumpy(), rtol=1e-3, atol=1e-5)
+        assert_almost_equal(grads1[key].asnumpy(), grads2[key].asnumpy(), rtol=1e-3, atol=1e-4)
 
 @with_seed()
 def test_hybrid_static_memory():
@@ -3078,6 +3120,62 @@ def test_squeeze_consistency():
         block.hybridize()
         shape = (np.random.randint(1, 10), np.random.randint(1, 10), 1)
         block(mx.nd.ones(shape))
+
+def test_shared_parameters_with_non_default_initializer():
+    class MyBlock(gluon.HybridBlock):
+        def __init__(self, **kwargs):
+            super(MyBlock, self).__init__(**kwargs)
+
+            with self.name_scope():
+                self.param = self.params.get("param", shape=(1, ), init=mx.init.Constant(-10.0))
+
+    bl = MyBlock()
+    bl2 = MyBlock(params=bl.collect_params())
+    assert bl.param is bl2.param
+    bl3 = MyBlock()
+    assert bl.param is not bl3.param
+    assert bl.param.init == bl3.param.init
+
+@with_seed()
+def test_reqs_switching_training_inference():
+    class Foo(gluon.HybridBlock):
+        def __init__(self, **kwargs):
+            super(Foo, self).__init__(**kwargs)
+
+        def hybrid_forward(self, F, x):
+            y = 2 * x
+            return F.sqrt(x) + F.sqrt(y)
+
+    f = Foo()
+    f.hybridize(static_alloc=True)
+    x = mx.nd.ones(shape=(10,10))
+    x.attach_grad()
+    x2 = mx.nd.ones(shape=x.shape) * 2
+    x2.attach_grad()
+
+    # Call first in training mode
+    with mx.autograd.record():
+        y = f(x)
+    y.backward()
+
+    grad1 = x.grad.asnumpy()
+
+    # Compute the gradient with some other input
+    with mx.autograd.record():
+        y = f(x2)
+    y.backward()
+
+    # Call inference mode
+    y = f(x)
+
+    # Call training mode again
+    with mx.autograd.record():
+        y = f(x)
+    y.backward()
+
+    grad2 = x.grad.asnumpy()
+
+    mx.test_utils.assert_almost_equal(grad1, grad2)
 
 if __name__ == '__main__':
     import nose

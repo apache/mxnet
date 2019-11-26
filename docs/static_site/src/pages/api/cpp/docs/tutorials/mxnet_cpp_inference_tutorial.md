@@ -28,23 +28,24 @@ tag: cpp
 
 ## Overview
 MXNet provides various useful tools and interfaces for deploying your model for inference. For example, you can use [MXNet Model Server](https://github.com/awslabs/mxnet-model-server) to start a service and host your trained model easily.
-Besides that, you can also use MXNet's different language APIs to integrate your model with your existing service. We provide [Python]({{'/api/python/docs/api/symbol-related/mxnet.module'|relative_url}}),    [Java]({{'/api/java/docs/api'|relative_url}}), [Scala]({{'/api/scala/docs/api'|relative_url}}), and [C++]({{'/api/cpp/docs/api'|relative_url}}) APIs.
-We will focus on the MXNet C++ API. We have slightly modified the code in [C++ Inference Example](https://github.com/apache/incubator-mxnet/tree/master/example/inference) for our use case.
+Besides that, you can also use MXNet's different language APIs to integrate your model with your existing service. We provide [Python](/api/python/docs/api/), [Java](/api/java/docs/api/#package), [Scala](/api/scala/docs/api), and [C++](/api/cpp/docs/api/) APIs.
+We will focus on the MXNet C++ API. We have slightly modified the code in [C++ Inference Example](https://github.com/apache/incubator-mxnet/tree/master/cpp-package/example/inference) for our use case.
 
 ## Prerequisites
 
-To complete this tutorial, you need:
-- Complete the training part of [Gluon end to end tutorial]({{'api/python/docs/tutorials/packages/gluon/image-augmentation.html'|relative_url}})
-- Learn the basics about [MXNet C++ API]({{'/api/cpp'|relative_url}})
+To complete this tutorial, you need to:
+- Complete the training part of [Gluon end to end tutorial](/api/python/docs/tutorials/getting-started/gluon_from_experiment_to_deployment.html).
+- Learn the basics about [MXNet C++ API](/api/cpp).
 
 
 ## Setup the MXNet C++ API
-To use the C++ API in MXNet, you need to build MXNet from source with C++ package. Please follow the [built from source guide]({{'/get_started/ubuntu_setup.html'|relative_url}}), and [C++ Package documentation]({{'/api/cpp'|relative_url}})
+
+To use the C++ API in MXNet, you need to build MXNet from source with C++ package. Please follow the [built from source guide](/get_started/ubuntu_setup.html), and [C++ Package documentation](/api/cpp).
 The summary of those two documents is that you need to build MXNet from source with `USE_CPP_PACKAGE` flag set to 1. For example: `make -j USE_CPP_PACKAGE=1`.
 
 ## Load the model and run inference
 
-After you complete [the previous tutorial]({{'/api/python/docs/tutorials/packages/gluon/gluon_from_experiment_to_deployment.html'|relative_url}}), you will get the following output files:
+After you complete [the previous tutorial](/api/python/docs/tutorials/getting-started/gluon_from_experiment_to_deployment.html), you will get the following output files:
 1. Model Architecture stored in `flower-recognition-symbol.json`
 2. Model parameter values stored in `flower-recognition-0040.params` (`0040` is for 40 epochs we ran)
 3. Label names stored in `synset.txt`
@@ -105,7 +106,7 @@ class Predictor {
 
 ### Load the model, synset file, and normalization values
 
-In the Predictor constructor, you need to provide paths to saved json and param files. After that, add the following methods `LoadModel` and `LoadParameters` to load the network and its parameters. This part is the same as [the example](https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/inception_inference.cpp).
+In the Predictor constructor, you need to provide paths to saved json and param files. After that, add the following methods `LoadModel` and `LoadParameters` to load the network and its parameters. This part is the same as [the example](https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/imagenet_inference.cpp).
 
 Next, we need to load synset file, and normalization values. We have made the following change since our synset file contains flower names and we used both mean and standard deviation for image normalization.
 
@@ -280,12 +281,12 @@ Then it will predict your image:
 
 Now you can explore more ways to run inference and deploy your models:
 1. [Java Inference examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
-2. [Scala Inference examples]({{'/api/scala/docs/tutorials'|relative_url}})
-3. [ONNX model inference examples]({{'/api/python/docs/tutorials/deploy/index.html'|relative_url}})
+2. [Scala Inference examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/infer)
+3. [ONNX model inference examples](/api/python/docs/tutorials/packages/onnx/inference_on_onnx_model.html)
 4. [MXNet Model Server Examples](https://github.com/awslabs/mxnet-model-server/tree/master/examples)
 
 ## References
 
-1. [Gluon end to end tutorial]({{'/api/python/docs/tutorials/packages/gluon/gluon_from_experiment_to_deployment.html'|relative_url}})
+1. [Gluon end to end tutorial](/api/python/docs/tutorials/getting-started/gluon_from_experiment_to_deployment.html)
 2. [Gluon C++ inference example](https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/)
 3. [Gluon C++ package](https://github.com/apache/incubator-mxnet/tree/master/cpp-package)

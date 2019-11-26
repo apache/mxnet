@@ -24,7 +24,7 @@ import threading
 import copy
 import warnings
 import re
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer
@@ -117,7 +117,7 @@ def _gather_type_ctx_info(args):
         Context of the first appeared NDArray (for backward-compatibility)
     """
     if isinstance(args, NDArray):
-        return False, True, {args.context}, args.context
+        return False, True, {args.ctx}, args.ctx
     elif isinstance(args, Symbol):
         return True, False, set(), None
     elif isinstance(args, (list, tuple)):
@@ -413,7 +413,7 @@ class Block(object):
             ret.update(child._collect_params_with_prefix(prefix + name))
         return ret
 
-    def save_parameters(self, filename):
+    def save_parameters(self, filename, deduplicate=False):
         """Save parameters to file.
 
         Saved parameters can only be loaded with `load_parameters`. Note that this
@@ -424,6 +424,10 @@ class Block(object):
         ----------
         filename : str
             Path to file.
+        deduplicate : bool, default False
+            If True, save shared parameters only once. Otherwise, if a Block
+            contains multiple sub-blocks that share parameters, each of the
+            shared parameters will be separately saved for every sub-block.
 
         References
         ----------
@@ -431,7 +435,17 @@ class Block(object):
         <https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/blocks/save_load_params.html>`_
         """
         params = self._collect_params_with_prefix()
-        arg_dict = {key : val._reduce() for key, val in params.items()}
+
+        if deduplicate:
+            # Shared parameters are stored only a single time as of MXNet 1.6.
+            # Shared parameters are registered under multiple prefixes returned by
+            # _collect_params_with_prefix. We select a single one and only store
+            # it. In load_parameters it is sufficient for a shared parameter to
+            # only set it for a single prefix.
+            reverse_params = {v: k for k, v in params.items()}
+            params = {v: k for k, v in reverse_params.items()}
+
+        arg_dict = {key: val._reduce() for key, val in params.items()}
         save_fn = _mx_npx.save if is_np_array() else ndarray.save
         save_fn(filename, arg_dict)
 
@@ -510,15 +524,24 @@ class Block(object):
 
         if not any('.' in i for i in loaded.keys()):
             # legacy loading
-            del loaded
+            loaded = None  # This should be changed to `del loaded` when dropping Python 2
             self.collect_params().load(
                 filename, ctx, allow_missing, ignore_extra, self.prefix,
                 cast_dtype=cast_dtype, dtype_source=dtype_source)
             return
 
         if not allow_missing:
-            for name in params.keys():
-                assert name in loaded, \
+            # Shared parameters are stored only a single time as of MXNet 1.6.
+            # We thus retrieve all prefixes (through _collect_params_with_prefix)
+            # that a shared parameter is used with. Check that there are no
+            # missing parameters that were not yet already loaded from the
+            # shared version.
+            params_inv = defaultdict(list)
+            for k, v in params.items():
+                params_inv[v].append(k)
+
+            for name, param in params.items():
+                assert any(p in loaded for p in params_inv[param]), \
                     "Parameter '%s' is missing in file '%s', which contains parameters: %s. " \
                     "Set allow_missing=True to ignore missing parameters."%(
                         name, filename, _brief_print_list(loaded.keys()))
@@ -1118,7 +1141,7 @@ class HybridBlock(Block):
                 if len(ctx_set) > 1:
                     raise ValueError('Find multiple contexts in the input, '
                                      'After hybridized, the HybridBlock only supports one input '
-                                     'context. You can print the ele.context in the '
+                                     'context. You can print the ele.ctx in the '
                                      'input arguments to inspect their contexts. '
                                      'Find all contexts = {}'.format(ctx_set))
                 with ctx:
@@ -1301,7 +1324,7 @@ class SymbolBlock(HybridBlock):
 
     def forward(self, x, *args):
         if isinstance(x, NDArray):
-            with x.context:
+            with x.ctx:
                 return self._call_cached_op(x, *args)
 
         assert isinstance(x, Symbol), \

@@ -205,7 +205,7 @@ void IdentityCompute(const nnvm::NodeAttrs& attrs,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   const TBlob& out_data = outputs[0];
   int n = out_data.shape_[0];
-  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(out_data.type_flag_, DType, {
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
       Kernel<identity<req_type>, xpu>::Launch(
           s, out_data.Size(), out_data.dptr<DType>(), n);

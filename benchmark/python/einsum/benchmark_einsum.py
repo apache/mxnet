@@ -48,6 +48,15 @@ def test_np_einsum():
     cost = measure_cost(500, np.einsum, *args, optimize=True)
     print("Greedy einsum: {} ms".format(cost * 1000))
 
+    print("RNN Use Case:")
+    a = np.random.uniform(0, 1, size=(64, 128, 512))
+    b = np.random.uniform(0, 1, size=(128, 512, 2, 2))
+    args = ['bij, ijkl->bkl', a, b]
+    cost = measure_cost(2, np.einsum, *args, optimize=True)
+    print('Greedy einsum: {} ms'.format(cost * 1000))
+    cost = measure_cost(2, np.einsum, *args)
+    print('Basic einsum: {} ms'.format(cost * 1000))
+
     print('Inner Product:')
     a = np.ones(6000000)
     b = np.ones(6000000)

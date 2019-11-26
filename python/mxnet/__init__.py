@@ -88,6 +88,7 @@ from . import gluon
 
 # Dynamic library module should be done after ndarray and symbol are initialized
 from . import library
+from . import tvmop
 
 __version__ = base.__version__
 
@@ -101,3 +102,4 @@ from . import kvstore_server
 
 from . import numpy_op_signature
 from . import numpy_dispatch_protocol
+from . import numpy_op_fallback

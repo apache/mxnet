@@ -58,8 +58,8 @@ struct AllCloseParam : public dmlc::Parameter<AllCloseParam> {
       .describe("Absolute tolerance.");
     DMLC_DECLARE_FIELD(equal_nan)
       .set_default(true)
-      .describe("Whether to compare NaN’s as equal. If True, NaN’s in A will be considered equal "
-                "to NaN’s in B in the output array.");
+      .describe("Whether to compare NaN's as equal. If True, NaN's in A will be considered equal "
+                "to NaN's in B in the output array.");
   }
 };
 
@@ -84,7 +84,7 @@ inline bool AllCloseType(const nnvm::NodeAttrs& attrs,
   return (*out_attrs)[0] != -1;
 }
 
-using namespace mshadow_op::isnan_typed;
+using mshadow::isnan_typed::IsNan;
 
 template<int req>
 struct allclose_forward {

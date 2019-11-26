@@ -26,9 +26,7 @@ import collections
 from .base import _LIB, check_call
 
 class Feature(ctypes.Structure):
-    """
-    Compile time feature description, member fields: `name` and `enabled`.
-    """
+    """Compile time feature description, member fields: `name` and `enabled`."""
     _fields_ = [
         ("_name", ctypes.c_char_p),
         ("_enabled", ctypes.c_bool)
@@ -36,16 +34,12 @@ class Feature(ctypes.Structure):
 
     @property
     def name(self):
-        """
-        Feature name.
-        """
+        """Feature name."""
         return self._name.decode()
 
     @property
     def enabled(self):
-        """
-        True if MXNet was compiled with the given compile-time feature.
-        """
+        """True if MXNet was compiled with the given compile-time feature."""
         return self._enabled
 
     def __repr__(self):
@@ -55,8 +49,7 @@ class Feature(ctypes.Structure):
             return "✖ {}".format(self.name)
 
 def feature_list():
-    """
-    Check the library for compile-time features. The list of features are maintained in libinfo.h and libinfo.cc
+    """Check the library for compile-time features. The list of features are maintained in libinfo.h and libinfo.cc
 
     Returns
     -------
@@ -70,9 +63,7 @@ def feature_list():
     return features
 
 class Features(collections.OrderedDict):
-    """
-    OrderedDict of name to Feature
-    """
+    """OrderedDict of name to Feature"""
     instance = None
     def __new__(cls):
         if cls.instance is None:
@@ -84,8 +75,7 @@ class Features(collections.OrderedDict):
         return str(list(self.values()))
 
     def is_enabled(self, feature_name):
-        """
-        Check for a particular feature by name
+        """Check for a particular feature by name
 
         Parameters
         ----------

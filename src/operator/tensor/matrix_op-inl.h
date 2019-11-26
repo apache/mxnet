@@ -420,11 +420,9 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape& shp = (*in_attrs)[0];
   mxnet::TShape& out_shp = (*out_attrs)[0];
   CHECK_LE(shp.ndim(), 6) << "Transpose support at most 6 dimensions";
-  CHECK_NE(shp.ndim(), 0) << "Number of dimensions cannot be 0";
-  CHECK_NE(out_shp.ndim(), 0) << "Number of dimensions cannot be 0";
   if (shp.ndim() == -1 && out_shp.ndim() == -1)
     return false;  // none of the shapes is known
-  if (out_shp.ndim() > 0 && shp.ndim() > 0)
+  if (out_shp.ndim() >= 0 && shp.ndim() >= 0)
     CHECK_EQ(out_shp.ndim(), shp.ndim());
   mxnet::TShape get(std::max(shp.ndim(), out_shp.ndim()), -1);
   mxnet::TShape ret(std::max(shp.ndim(), out_shp.ndim()), -1);
@@ -458,6 +456,10 @@ struct ExpandDimParam : public dmlc::Parameter<ExpandDimParam> {
     .describe("Position where new axis is to be inserted. Suppose that "
               "the input `NDArray`'s dimension is `ndim`, the range of "
               "the inserted axis is `[-ndim, ndim]`");
+  }
+
+  bool operator==(const ExpandDimParam &other) const {
+    return this->axis == other.axis;
   }
 };
 
@@ -3040,6 +3042,16 @@ struct hash<mxnet::op::ReshapeParam> {
     return ret;
   }
 };
+
+template<>
+struct hash<mxnet::op::ExpandDimParam> {
+  size_t operator()(const mxnet::op::ExpandDimParam& val) {
+    size_t ret = 0;
+    ret = dmlc::HashCombine(ret, val.axis);
+    return ret;
+  }
+};
+
 }  // namespace std
 
 #endif  // MXNET_OPERATOR_TENSOR_MATRIX_OP_INL_H_

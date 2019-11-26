@@ -31,13 +31,26 @@
 namespace mxnet {
 namespace op {
 
+static mkldnn::softmax_forward::primitive_desc GetSoftmaxFwdPd(
+                                bool is_train, const int axis,
+                                const mkldnn::memory &input_mem) {
+  mkldnn::memory::desc data_md = input_mem.get_desc();
+  auto cpu_engine = CpuEngine::Get()->get_engine();
+  auto prop = is_train ? mkldnn::prop_kind::forward_training
+                       : mkldnn::prop_kind::forward_scoring;
+  auto desc = mkldnn::softmax_forward::desc(prop, data_md, axis);
+  return mkldnn::softmax_forward::primitive_desc(desc, cpu_engine);
+}
+
+
 bool SupportMKLDNNSoftmax(const SoftmaxParam &param,
                           const NDArray &data,
                           const NDArray &output) {
+  // MKLDNN does not support temperature argument in their softmax function
+  // now. Need update this once they start to support it.
   const int ndim = data.shape().ndim();
   const int in_dtype = data.dtype();
   const int out_dtype = output.dtype();
-
   const int axis = CheckAxis(param.axis, ndim);
   // MKLDNN does not support temperature argument in their softmax function
   // now. Need update this once they start to support it.
@@ -48,21 +61,12 @@ bool SupportMKLDNNSoftmax(const SoftmaxParam &param,
       axis != (ndim - 1)) {
     return false;
   }
+
   // only supports ndim = 1, 2, 3, 4 for now
   return (ndim >= 1 && ndim <= 4);
 }
 
-static mkldnn::softmax_forward::primitive_desc GetSoftmaxFwdPd(const int axis,
-                                                               const bool is_train,
-                                                               const mkldnn::memory &input) {
-  auto data_md = input.get_primitive_desc().desc();
-  auto prop = is_train ? mkldnn::prop_kind::forward_training : mkldnn::prop_kind::forward_scoring;
-  auto desc = mkldnn::softmax_forward::desc(prop, data_md, axis);
-  auto pd = mkldnn::softmax_forward::primitive_desc(desc, CpuEngine::Get()->get_engine());
-  return pd;
-}
-
-void MKLDNNSoftmaxForward(const nnvm::NodeAttrs &attrs,
+void MKLDNNSoftmaxForward(const nnvm::NodeAttrs& attrs,
                           const OpContext &ctx,
                           const NDArray &in_data,
                           const OpReqType &req,
@@ -71,21 +75,23 @@ void MKLDNNSoftmaxForward(const nnvm::NodeAttrs &attrs,
   // same as the FCompute path, softmax only supports kWriteTo and kWriteInplace for now.
   CHECK_NE(req, kAddTo);
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
-  const int axis = CheckAxis(param.axis, in_data.shape().ndim());
-
+  int axis = CheckAxis(param.axis, in_data.shape().ndim());
   NDArray data = in_data;
   if (in_data.IsView() && in_data.IsMKLDNNData()) {
     data = in_data.Reorder2Default();
   }
 
   auto data_mem = data.GetMKLDNNData();
-  auto pd = GetSoftmaxFwdPd(axis, ctx.is_train, *data_mem);
-  auto out_mem = CreateMKLDNNMem(out_data, pd.dst_primitive_desc(), req);
+  auto pd = GetSoftmaxFwdPd(ctx.is_train, axis, *data_mem);
+  auto out_mem = CreateMKLDNNMem(out_data, pd.dst_desc(), req);
   MKLDNNStream *stream = MKLDNNStream::Get();
-  stream->RegisterPrim(mkldnn::softmax_forward(pd, *data_mem, *out_mem.second));
+  stream->RegisterPrimArgs(pd,
+                           {{MKLDNN_ARG_SRC, *data_mem}, {MKLDNN_ARG_DST, *out_mem.second}});
   CommitOutput(out_data, out_mem);
   stream->Submit();
 }
+
 }   // namespace op
 }   // namespace mxnet
 #endif
+

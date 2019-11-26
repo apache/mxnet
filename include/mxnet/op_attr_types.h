@@ -218,6 +218,17 @@ using FCreateOpState = std::function<OpStatePtr (const NodeAttrs& attrs,
                                                  Context ctx,
                                                  const mxnet::ShapeVector& in_shape,
                                                  const std::vector<int>& in_type)>;
+
+/*!
+ * \brief Whether the operator always produces the same
+ *        output given the same input.
+ *        This enables certain optimizations
+ *        like common expression elimination.
+ *
+ * \note Register under "THasDeterministicOutput"
+ */
+using THasDeterministicOutput = bool;
+
 /*!
  * \brief Execution mode of this operator.
  */

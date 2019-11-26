@@ -245,7 +245,7 @@ Total 11 TempSpace resource requested
 ```
 """
 Base.print(io::IO, x::Executor) = print(io, debug_str(x))
-Base.print(x::Executor)         = print(STDOUT, x)
+Base.print(x::Executor)         = print(stdout, x)
 
 function debug_str(x::Executor)
   s_ref = Ref{Cstring}(C_NULL)

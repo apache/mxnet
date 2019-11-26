@@ -58,6 +58,7 @@ _STORAGE_TYPE_UNDEFINED = -1
 _STORAGE_TYPE_DEFAULT = 0
 _STORAGE_TYPE_ROW_SPARSE = 1
 _STORAGE_TYPE_CSR = 2
+_SIGNED_INT32_UPPER_LIMIT = (2**31 - 1)
 
 # pylint: disable= no-member
 _DTYPE_NP_TO_MX = {
@@ -155,6 +156,15 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
             ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
             ctypes.byref(hdl)))
     else:
+        # When shape is larger than unit32 then there is an overflow error at python end itself.
+        # It needs to be caught here since the call doesn't even reach backend.
+        size = 1
+        for idx in shape:
+            size = size * idx
+        if size > _SIGNED_INT32_UPPER_LIMIT:
+            raise Exception("[_new_alloc_handle] Size of tensor you are trying to allocate is " +
+                            "larger than 2^31 elements. Please build with flag " +
+                            "USE_INT64_TENSOR_SIZE=1")
         check_call(_LIB.MXNDArrayCreateEx(
             c_array_buf(mx_uint, native_array('I', shape)),
             mx_uint(len(shape)),
@@ -235,7 +245,7 @@ fixed-size items.
         shape_info = 'x'.join(['%d' % x for x in self.shape])
         return '\n%s\n<%s %s @%s>' % (str(self.asnumpy()),
                                       self.__class__.__name__,
-                                      shape_info, self.context)
+                                      shape_info, self.ctx)
 
     def __reduce__(self):
         return NDArray, (None,), self.__getstate__()
@@ -719,14 +729,14 @@ fixed-size items.
         `squeeze_axes`: a sequence of axes to squeeze in the value array.
         """
         if isinstance(value, numeric_types):
-            value_nd = full(bcast_shape, value, ctx=self.context, dtype=self.dtype)
+            value_nd = full(bcast_shape, value, ctx=self.ctx, dtype=self.dtype)
         elif type(value) == self.__class__:  # pylint: disable=unidiomatic-typecheck
-            value_nd = value.as_in_context(self.context)
+            value_nd = value.as_in_context(self.ctx)
             if value_nd.dtype != self.dtype:
                 value_nd = value_nd.astype(self.dtype)
         else:
             try:
-                value_nd = array(value, ctx=self.context, dtype=self.dtype)
+                value_nd = array(value, ctx=self.ctx, dtype=self.dtype)
             except:
                 raise TypeError('{} does not support assignment with non-array-like '
                                 'object {} of type {}'.format(self.__class__, value, type(value)))
@@ -1210,7 +1220,7 @@ fixed-size items.
 
         shape_nd_permut = tuple(self.shape[ax] for ax in axs_nd_permut)
         converted_idcs_short = [
-            self._advanced_index_to_array(idx, ax_len, self.context)
+            self._advanced_index_to_array(idx, ax_len, self.ctx)
             for idx, ax_len in zip(idcs_permut_short, shape_nd_permut)
         ]
         bcast_idcs_permut_short = self._broadcast_advanced_indices(
@@ -1219,7 +1229,7 @@ fixed-size items.
 
         # Get the ndim of advanced indexing subspace
         converted_advanced_idcs = [
-            self._advanced_index_to_array(idx, ax_len, self.context)
+            self._advanced_index_to_array(idx, ax_len, self.ctx)
             for idx, ax_len in zip(adv_idcs_nd, [self.shape[ax] for ax in adv_axs_nd])
         ]
         bcast_advanced_shape = _broadcast_shapes(converted_advanced_idcs)
@@ -2424,6 +2434,23 @@ fixed-size items.
         return Context(Context.devtype2str[dev_typeid.value], dev_id.value)
 
     @property
+    def ctx(self):
+        """Device context of the array. Has the same meaning as context.
+
+        Examples
+        --------
+        >>> x = mx.nd.array([1, 2, 3, 4])
+        >>> x.ctx
+        cpu(0)
+        >>> type(x.ctx)
+        <class 'mxnet.context.Context'>
+        >>> y = mx.nd.zeros((2,3), mx.gpu(0))
+        >>> y.ctx
+        gpu(0)
+        """
+        return self.context
+
+    @property
     def dtype(self):
         """Data-type of the array's elements.
 
@@ -2570,7 +2597,7 @@ fixed-size items.
         if not copy and np.dtype(dtype) == self.dtype:
             return self
 
-        res = empty(self.shape, ctx=self.context, dtype=dtype)
+        res = empty(self.shape, ctx=self.ctx, dtype=dtype)
         self.copyto(res)
         return res
 
@@ -2636,7 +2663,7 @@ fixed-size items.
         array([[ 1.,  1.,  1.],
                [ 1.,  1.,  1.]], dtype=float32)
         """
-        return self.copyto(self.context)
+        return self.copyto(self.ctx)
 
     def slice_assign_scalar(self, value, begin, end, step):
         """
@@ -2894,7 +2921,7 @@ fixed-size items.
         """
         This is added as an NDArray class method in order to support polymorphism in NDArray and numpy.ndarray indexing
         """
-        return _internal._full(self.shape, value=value, ctx=self.context, dtype=self.dtype, out=self)
+        return _internal._full(self.shape, value=value, ctx=self.ctx, dtype=self.dtype, out=self)
 
     def _scatter_set_nd(self, value_nd, indices):
         """
@@ -4532,7 +4559,7 @@ def concatenate(arrays, axis=0, always_copy=True):
         assert shape_rest2 == arr.shape[axis+1:]
         assert dtype == arr.dtype
     ret_shape = shape_rest1 + (shape_axis,) + shape_rest2
-    ret = empty(ret_shape, ctx=arrays[0].context, dtype=dtype)
+    ret = empty(ret_shape, ctx=arrays[0].ctx, dtype=dtype)
 
     idx = 0
     begin = [0 for _ in ret_shape]
@@ -4925,6 +4952,7 @@ class DLDataType(ctypes.Structure):
         "bool": (1, 1, 1),
         "uint32": (1, 32, 1),
         "uint64": (1, 64, 1),
+        'float16': (2, 16, 1),
         "float32": (2, 32, 1),
         "float64": (2, 64, 1),
     }

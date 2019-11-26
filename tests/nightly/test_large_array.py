@@ -212,8 +212,15 @@ def test_dot():
 def test_FullyConnected():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     b = nd.ones(shape=(SMALL_Y, SMALL_Y))
-    res = nd.FullyConnected(a, b, num_hidden=b.shape[1], no_bias=True)
-    assert np.sum(res[-1].asnumpy() == SMALL_Y) == b.shape[1]
+    c = nd.ones(shape=(b.shape[0],))
+
+    # w/o bias
+    res = nd.FullyConnected(a, b, num_hidden=b.shape[0], no_bias=True)
+    assert np.sum(res[-1].asnumpy() == a.shape[1]) == b.shape[0]
+
+    # w/ bias
+    res = nd.FullyConnected(a, b, c, num_hidden=b.shape[0], no_bias=False)
+    assert np.sum(res[-1].asnumpy() == a.shape[1] + 1) == b.shape[0]
 
 
 def test_broadcast():
@@ -272,6 +279,7 @@ def test_slice_assign():
 def test_expand_dims():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     res = nd.expand_dims(a, axis=1)
+    res.wait_to_read()
     assert a[0][0][0] == 1
     assert res.shape == (a.shape[0], 1, a.shape[1])
 
@@ -401,10 +409,14 @@ def test_unravel_index():
 
 
 def test_transpose():
-    b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
-    t = b.T
-    assert np.sum(t[:, -1].asnumpy() == (LARGE_X - 1)) == b.shape[1]
-    assert t.shape == (SMALL_Y, LARGE_X)
+    test_dtypes = [np.float32, np.int64]
+    for dtype in test_dtypes:
+        b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=dtype)
+        t = b.T
+        assert t.shape == (SMALL_Y, LARGE_X)
+        ref_out = np.transpose(b.asnumpy())
+        assert_almost_equal(t.asnumpy(), ref_out, rtol=1e-10)
+        
 
 
 def test_swapaxes():
@@ -423,9 +435,10 @@ def test_flip():
 
 def test_softmax():
     input_data = mx.nd.ones((SMALL_Y, LARGE_X))
-    true_output = np.full((SMALL_Y, LARGE_X), (1 / SMALL_Y))
-    output = nd.softmax(input_data, axis=0)
-    assert_almost_equal(output.asnumpy(), true_output, rtol=1e-5, atol=1e-5)
+    for axis in [0, 1]:
+        true_output = np.full((SMALL_Y, LARGE_X), (1 / input_data.shape[axis]))
+        output = nd.softmax(input_data, axis=axis)
+        assert_almost_equal(output.asnumpy(), true_output, rtol=1e-5, atol=1e-5)
 
 
 def test_argsort():
@@ -619,12 +632,19 @@ def testSoftmaxOutput():
 
     sym = mx.sym.SoftmaxOutput(data=x, label=label, ignore_label=0,
                                use_ignore=False)
+
+    ex = sym.bind(ctx=default_context(), args={'x': x_nd, 'label': label_nd},
+                  args_grad=None)
+    ex.forward(is_train=False)
+    softmax_out = ex.outputs[0][0].asnumpy()
+    expected_softmax_out = (1 / SMALL_Y) * mx.nd.ones((SMALL_Y)).asnumpy()
+    assert np.isclose(softmax_out, expected_softmax_out).all()
+
     ex = sym.bind(ctx=default_context(), args={'x': x_nd, 'label': label_nd},
                   args_grad={'x': grad_x})
-
     ex.forward(is_train=True)
     softmax_out = ex.outputs[0][0].asnumpy()
-    expected_softmax_out = (1/SMALL_Y)*mx.nd.ones((SMALL_Y)).asnumpy()
+    expected_softmax_out = (1 / SMALL_Y) * mx.nd.ones((SMALL_Y)).asnumpy()
     assert np.isclose(softmax_out, expected_softmax_out).all()
 
     ex.backward(is_train=True)
@@ -782,8 +802,29 @@ def test_activation():
 # in future, we could test if mean, var of output
 # matches target output's mean, var
 def test_batchnorm():
-    shape = (LARGE_X, SMALL_Y)
+    def get_np_mean_var(data, running_mean, running_var, eps, use_global_status=True):
+        if not use_global_status:
+            # train mode, calculate the real mean and var
+            mean = np.mean(data, axis=(0, 2, 3))
+            mean_broad = np.expand_dims(mean, axis=0)
+            mean_broad = np.expand_dims(mean_broad, axis=2)
+            mean_broad = np.expand_dims(mean_broad, axis=3)
+            mean_broad = np.broadcast_to(mean_broad, data.shape)
+            var = np.square(data - mean_broad)
+            var = np.mean(var, axis=(0, 2, 3))
+        else:
+            # inference mode, use running_mean and running_var instead
+            mean = np.full((data.shape[1],), running_mean)
+            var = np.full((data.shape[1],), running_var)
+
+        # calculate the inverse of standard variance
+        invstdvar = 1. / np.sqrt(var + eps)
+        return mean, invstdvar
+
+    # Here use 4D input to cover mkldnn BN and non-mkldnn BN
+    shape = (1, 2, LARGE_X, SMALL_Y)
     axis = 1  # default
+    eps = 1e-3
 
     nch = shape[axis]
     data = mx.nd.ones(shape=shape)
@@ -793,15 +834,27 @@ def test_batchnorm():
     bn_running_var = mx.nd.ones(nch)
 
     output = mx.nd.BatchNorm(data, bn_gamma, bn_beta,
-                             bn_running_mean, bn_running_var)
-    assert output.shape == shape
+                             bn_running_mean, bn_running_var, output_mean_var=True)
+    assert output[0].shape == shape
+    mean, invstdvar = output[1], output[2]
+
+    np_mean, np_invstdvar = get_np_mean_var(data.asnumpy(), bn_running_mean.asnumpy(), bn_running_var.asnumpy(),
+                                            eps, use_global_status=True)
+    assert_almost_equal(mean.asnumpy(), np_mean)
+    assert_almost_equal(invstdvar.asnumpy(), np_invstdvar)
+
+
+def test_elemwise_add():
+    a = nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = nd.ones(shape=(LARGE_X, SMALL_Y))
+    res = nd.elemwise_add(a, b)
+    assert np.sum(res[-1].asnumpy() == 2) == a.shape[1]
 
 
 def test_add():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     b = nd.ones(shape=(LARGE_X, SMALL_Y))
-    c = b
-    c = c.__add__(a)
+    c = b.__add__(a)
     assert c[0][-1] == 2
     assert c.shape == a.shape
 
@@ -809,8 +862,7 @@ def test_add():
 def test_sub():
     a = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = nd.ones(shape=(LARGE_X, SMALL_Y))
-    c = b
-    c = c.__sub__(a)
+    c = b.__sub__(a)
     assert c[0][-1] == -2
     assert c.shape == a.shape
 
@@ -818,16 +870,14 @@ def test_sub():
 def test_rsub():
     a = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = nd.ones(shape=(LARGE_X, SMALL_Y))
-    c = b
-    c = c.__rsub__(a)
+    c = b.__rsub__(a)
     assert c[0][-1] == 2
     assert c.shape == a.shape
 
 
 def test_neg():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
-    c = a
-    c = c.__neg__()
+    c = a.__neg__()
     assert c[0][-1] == -1
     assert c.shape == a.shape
 
@@ -835,8 +885,7 @@ def test_neg():
 def test_mul():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
-    c = b
-    c = c.__mul__(a)
+    c = b.__mul__(a)
     assert c[0][-1] == 6
     assert c.shape == a.shape
 
@@ -844,17 +893,17 @@ def test_mul():
 def test_div():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
-    c = b
-    c = c.__div__(a)
+    c = b.__div__(a)
+    mx_divide = nd.divide(b, a)
     assert c[0][-1] == 3/2
+    assert mx_divide[0][-1] == c[0][-1]
     assert c.shape == a.shape
 
 
 def test_rdiv():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
-    c = b
-    c = c.__rdiv__(a)
+    c = b.__rdiv__(a)
     assert c[0][-1] == 2/3
     assert c.shape == a.shape
 
@@ -862,8 +911,7 @@ def test_rdiv():
 def test_mod():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
-    c = b
-    c = c.__mod__(a)
+    c = b.__mod__(a)
     assert c[0][-1] == 1
     assert c.shape == a.shape
 
@@ -871,8 +919,7 @@ def test_mod():
 def test_rmod():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
-    c = b
-    c = c.__rmod__(a)
+    c = b.__rmod__(a)
     assert c[0][-1] == 2
     assert c.shape == a.shape
 
@@ -880,8 +927,7 @@ def test_rmod():
 def test_imod():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
-    c = b
-    c = c.__imod__(a)
+    c = b.__imod__(a)
     assert c[0][-1] == 1
     assert c.shape == a.shape
 
@@ -889,8 +935,7 @@ def test_imod():
 def test_pow():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
-    c = b
-    c = c.__pow__(a)
+    c = b.__pow__(a)
     assert c[0][-1] == 9
     assert c.shape == a.shape
 
@@ -898,8 +943,7 @@ def test_pow():
 def test_rpow():
     a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
     b = 3*nd.ones(shape=(LARGE_X, SMALL_Y))
-    c = b
-    c = c.__rpow__(a)
+    c = b.__rpow__(a)
     assert c[0][-1] == 8
     assert c.shape == a.shape
 
@@ -954,19 +998,25 @@ def test_reshape_like():
 
 
 def test_flatten():
-    a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y).reshape((LARGE_X//2, 2, SMALL_Y))
-    b = nd.flatten(a)
-    assert b[-1][-1] == (LARGE_X-1)
-    assert b[-1][0] == (LARGE_X-2)
-    assert b.shape == (LARGE_X//2, SMALL_Y*2)
+    test_dtypes = [np.float32, np.int64]
+    for dtype in test_dtypes:
+        a = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y, dtype=dtype).reshape((LARGE_X//2, 2, SMALL_Y))
+        b = nd.flatten(a)
+        # Here we removed the value asserts due to different precision of `int64` and `float32`.
+        # For `float32`, it will lose some precision when `LARGE_X` is too large, that is `LARGE_X-1`
+        # and `LARGE_X-2` can not represent the accurate value in the current situation.
+        assert b.shape == (LARGE_X//2, SMALL_Y*2)
+        assert_almost_equal(b[-1,-1].asnumpy(), a[-1,-1,-1].asnumpy(), rtol=1e-8)
 
 
 def test_concat():
     a = nd.array(np.ones((SMALL_Y, LARGE_X)))
     b = nd.array(np.zeros((SMALL_Y, LARGE_X)))
-    c = nd.concat(a, b, dim=0)
-    assert c.shape == (b.shape[0]*2, LARGE_X)
-
+    for axis in [0, 1]:
+        c = nd.concat(a, b, dim=axis)
+        c.wait_to_read()
+        assert c.shape[axis] == b.shape[axis] * 2
+        assert c.shape[1-axis] == b.shape[1-axis]
 
 def test_stack():
     a = nd.array(np.ones((SMALL_Y, LARGE_X)))
@@ -1081,8 +1131,7 @@ def test_log_softmax():
 def test_iadd():
     a = nd.array(np.ones((SMALL_Y, LARGE_X)))
     b = nd.array(np.ones((SMALL_Y, LARGE_X)))
-    c = b
-    c += a
+    c = b + a
     assert c.shape == a.shape
     assert c[0][-1] == 2
 
@@ -1090,8 +1139,7 @@ def test_iadd():
 def test_isub():
     a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
     b = nd.array(np.ones((SMALL_Y, LARGE_X)))
-    c = a
-    c -= b
+    c = a - b
     assert c.shape == a.shape
     assert c[0][-1] == 2
 
@@ -1099,8 +1147,7 @@ def test_isub():
 def test_imul():
     a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 3)))
     b = nd.array(np.ones((SMALL_Y, LARGE_X)))
-    c = b
-    c *= a
+    c = b * a
     assert c.shape == a.shape
     assert c[0][-1] == 3
 
@@ -1108,8 +1155,7 @@ def test_imul():
 def test_idiv():
     a = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 4)))
     b = nd.array(np.array(np.full((SMALL_Y, LARGE_X), 2)))
-    c = a
-    c /= b
+    c = a / b
     assert c.shape == a.shape
     assert c[0][-1] == 2
 
@@ -1199,6 +1245,76 @@ def test_full():
     assert a.shape == (SMALL_Y, LARGE_X)
     assert a[SMALL_Y//2][LARGE_X//2] == 3
     assert a[-1][-1] == 3
+
+
+def test_sign():
+    a = mx.nd.random.normal(-1,1, shape=(LARGE_X, SMALL_Y))
+    mx_res = mx.nd.sign(a)
+    assert_almost_equal(mx_res[-1][-1].asnumpy(), np.sign(a[-1][-1].asnumpy()))
+
+
+def test_logical():
+    def test_logical_and(a, b):
+        mx_res = mx.nd.logical_and(a, b)
+        assert_almost_equal(mx_res[-1][-1].asnumpy(), np.logical_and(a[-1][-1].asnumpy(), b[-1][-1].asnumpy()))
+
+    def test_logical_or(a, b):
+        mx_res = mx.nd.logical_or(a, b)
+        assert_almost_equal(mx_res[-1][-1].asnumpy(), np.logical_or(a[-1][-1].asnumpy(), b[-1][-1].asnumpy()))
+
+    def test_logical_not(a, b):
+        mx_res = mx.nd.logical_not(a, b)
+        assert_almost_equal(mx_res[-1][-1].asnumpy(), np.logical_not(a[-1][-1].asnumpy(), b[-1][-1].asnumpy()))
+
+    def test_logical_xor(a, b):
+        mx_res = mx.nd.logical_xor(a, b)
+        assert_almost_equal(mx_res[-1][-1].asnumpy(), np.logical_xor(a[-1][-1].asnumpy(), b[-1][-1].asnumpy()))
+
+    a = mx.nd.ones((LARGE_X, SMALL_Y))
+    b = mx.nd.zeros((LARGE_X, SMALL_Y))
+    test_logical_and(a, b)
+    test_logical_or(a, b)
+    test_logical_not(a, b)
+    test_logical_xor(a, b)
+
+
+def test_regression():
+    shape = (LARGE_X, SMALL_Y)
+
+    def check_regression(symbol, forward, backward, shape):
+        # init executor
+        data_s = mx.symbol.Variable('data')
+        label_s = mx.symbol.Variable('label')
+        out_s = symbol(data=data_s, label=label_s)
+        grad_req = {'data': 'write', 'label': 'null'}
+        exe = out_s.simple_bind(ctx=default_context(), data=shape, label=shape, grad_req=grad_req)
+
+        arg_map = dict(zip(out_s.list_arguments(), exe.arg_arrays))
+        grad_map = dict(zip(out_s.list_arguments(), exe.grad_arrays))
+
+        # init data
+        data = mx.random.uniform(-1, -1, shape)
+        arg_map["data"][:] = data
+        atol = 1e-5
+        density = 0.5
+        stype = 'default'
+        label = arg_map["label"]
+        label[:] = rand_ndarray(shape, stype, density=density)
+        exe.forward(is_train=True)
+        exe.backward()
+        np_out = forward(data.asnumpy())
+        out_grad = backward(np_out, label.asnumpy().reshape(np_out.shape)) / shape[1]
+        assert_almost_equal(exe.outputs[0].asnumpy(), np_out, atol=atol)
+        assert_almost_equal(grad_map["data"].asnumpy(), out_grad, atol=atol)
+
+    check_regression(mx.symbol.LogisticRegressionOutput,
+                     lambda x: 1.0 / (1.0 + np.exp(-x)),
+                     lambda x, y: x - y,
+                     shape)
+    check_regression(mx.symbol.LinearRegressionOutput,
+                     lambda x: x,
+                     lambda x, y: x - y,
+                     shape)
 
 
 def test_astype():
@@ -1295,17 +1411,17 @@ def test_rounding_ops():
 
 
 def create_input_for_trigonometric_ops(vals):
-    # Creates large vector input of size(LARGE_X*10, SMALL_Y/10) from vals using tile operator
+    # Creates large vector input of size(LARGE_X*10, SMALL_Y/10) from vals using broadcast_to operator
     inp = nd.array(vals).reshape(1, 5)
     inp = nd.broadcast_to(inp, (LARGE_X*10, SMALL_Y//10))
     return inp
 
 
-def assert_correctness_of_trigonometric_ops(output, expected_vals):
+def assert_correctness_of_trigonometric_ops(output, expected_vals, atol=1e-3):
     # checks verifies 5 values at positions(0, 1, -3, -2, -1) of the input vector
     output_idx_to_inspect = [0, 1, -3, -2, -1]
     for i in range(len(output_idx_to_inspect)):
-        assert np.abs(output[1][output_idx_to_inspect[i]].asnumpy()-expected_vals[i]) <= 1e-3
+        assert np.abs(output[1][output_idx_to_inspect[i]].asnumpy()-expected_vals[i]) <= atol
 
 
 def test_trigonometric_ops():
@@ -1351,6 +1467,48 @@ def test_trigonometric_ops():
         expected_output = [-.577, -1, 0, 1, .577]
         assert_correctness_of_trigonometric_ops(y, expected_output)
 
+    def check_arcsinh():
+        x = create_input_for_trigonometric_ops([-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2])
+        y = nd.arcsinh(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying arcsinh()
+        expected_output = [np.arcsinh(-np.pi/2), np.arcsinh(-np.pi/4), 0, np.arcsinh(np.pi/4), np.arcsinh(np.pi/2)]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_arccosh():
+        x = create_input_for_trigonometric_ops([1, np.pi/2, 3*np.pi/4, np.pi, 5*np.pi/4])
+        y = nd.arccosh(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying arccosh()
+        expected_output = [0, np.arccosh(np.pi/2), np.arccosh(3*np.pi/4), np.arccosh(np.pi), np.arccosh(5*np.pi/4)]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_arctanh():
+        x = create_input_for_trigonometric_ops([-1/4, -1/2, 0, 1/4, 1/2])
+        y = nd.arctanh(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying arctanh()
+        expected_output = [np.arctanh(-1/4), np.arctanh(-1/2), 0, np.arctanh(1/4), np.arctanh(1/2)]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_sinh():
+        x = create_input_for_trigonometric_ops([-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2])
+        y = nd.sinh(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying sinh()
+        expected_output = [np.sinh(-np.pi/2), np.sinh(-np.pi/4), 0, np.sinh(np.pi/4), np.sinh(np.pi/2)]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_cosh():
+        x = create_input_for_trigonometric_ops([0, 1, np.pi/2, 3*np.pi/4, np.pi])
+        y = nd.cosh(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying cosh()
+        expected_output = [1, np.cosh(1), np.cosh(np.pi/2), np.cosh(3*np.pi/4), np.cosh(np.pi)]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
+    def check_tanh():
+        x = create_input_for_trigonometric_ops([-1/4, -1/2, 0, 1/4, 1/2])
+        y = nd.tanh(x)
+        # expected ouput for indices=(0, 1, -3, -2, -1) after applying tanh()
+        expected_output = [np.tanh(-1/4), np.tanh(-1/2), 0, np.tanh(1/4), np.tanh(1/2)]
+        assert_correctness_of_trigonometric_ops(y, expected_output)
+
     def check_radians():
         x = create_input_for_trigonometric_ops([0, 90, 180, 270, 360])
         y = nd.radians(x)
@@ -1371,6 +1529,12 @@ def test_trigonometric_ops():
     check_sin()
     check_cos()
     check_tan()
+    check_arcsinh()
+    check_arccosh()
+    check_arctanh()
+    check_sinh()
+    check_cosh()
+    check_tanh()
     check_radians()
     check_degrees()
 

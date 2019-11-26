@@ -35,23 +35,25 @@ namespace mxnet {
 namespace op {
 
 class MKLDNNReshapeFwd {
- public:
-  MKLDNNReshapeFwd(const OpReqType &req, const NDArray &input, const NDArray &output);
-  int GetWorkspaceSize();
-  void SetNewMem(const NDArray &input, const NDArray &output, void *workspace = nullptr);
-  void Execute(const NDArray &input, const NDArray &output, void *workspace = nullptr);
-
- private:
-  std::shared_ptr<mkldnn::memory> data_;
+ protected:
   std::shared_ptr<mkldnn::memory> out_;
   std::shared_ptr<mkldnn::memory> temp_;
   std::vector<mkldnn::primitive> prims_;
+
+ public:
+  MKLDNNReshapeFwd(const OpReqType &req,
+                   const NDArray &input,
+                   const NDArray &output);
+  int GetWorkspaceSize();
+  void Execute(const NDArray &input,
+               const NDArray &output,
+               const OpReqType &req,
+               void* workspace = nullptr);
 };
 
 typedef OpSignature MKLDNNReshapeSignature;
 MKLDNNReshapeFwd &GetReshapeForward(const OpReqType &req, const NDArray &input,
                                     const NDArray &output);
-
 }  // namespace op
 }  // namespace mxnet
 

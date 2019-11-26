@@ -31,7 +31,9 @@
 #include <vector>
 #include "op_module.h"
 
-using namespace tvm::runtime;
+namespace dmlc {
+  DMLC_REGISTRY_ENABLE(::tvm::runtime::TVMOpConfig);
+}  // namespace dmlc
 
 namespace tvm {
 namespace runtime {
@@ -137,6 +139,14 @@ void TVMOpModule::CallEx(const std::string &func_name,
 #endif
 }
 
+const TVMOpConfig& GetOpConfig(const std::string& name) {
+  const TVMOpConfig* ret = ::dmlc::Registry<TVMOpConfig>::Get()->Find(name);
+  CHECK(ret != NULL)
+    << "op " << name << "does not exist.";
+  return *ret;
+}
+
 }  // namespace runtime
 }  // namespace tvm
+
 #endif  // MXNET_USE_TVM_OP

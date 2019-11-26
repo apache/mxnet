@@ -19,14 +19,5 @@
 
 ```@autodocs
 Modules = [MXNet.mx]
-Pages = [
-  "symbolic-node.jl",
-  "symbolic-node/arithmetic.jl",
-  "symbolic-node/array.jl",
-  "symbolic-node/autodiff.jl",
-  "symbolic-node/io.jl",
-  "symbolic-node/op.jl",
-  "symbolic-node/show.jl",
-  "symbolic-node/type.jl",
-]
+Pages = listpages("symbolic-node")
 ```

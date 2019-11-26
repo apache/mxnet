@@ -140,6 +140,13 @@ class CachedOp {
   void RegisterOpHook(const CachedOp::CachedOpMonCallback& callback,
                       bool monitor_all = false);
 
+  static const char FULL[];
+  static const char FORWARD[];
+  static const char BACKWARD[];
+  static const char REF_COUNT[];
+  static const char MEM_PLAN[];
+  static const char STORAGE_PLAN[];
+
  private:
   struct GraphInfo;
   struct DynamicRuntime;
@@ -198,13 +205,11 @@ class CachedOp {
 
   CachedOpConfig config_;
   nnvm::Graph fwd_graph_;
-  nnvm::Graph grad_graph_;
   nnvm::Graph full_graph_;
   bool inlining_;
   bool dynamic_shape_checked_;
   std::vector<nnvm::NodeEntry> ograd_entries_;
   std::vector<uint32_t> bwd_in_dep_, bwd_out_dep_, bwd_ograd_dep_;
-  std::unordered_map<uint32_t, uint32_t> fwd_input_to_grad_output_;
   std::vector<bool> save_inputs_, save_outputs_;
   std::vector<OpReqType> bwd_output_reqs_;
 

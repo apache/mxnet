@@ -2777,9 +2777,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxDumpProfile
 // Numpy
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxIsNumpyShape
   (JNIEnv *env, jobject obj, jobject compatibleRef) {
-  bool isNumpyShape;
+  int isNumpyShape;
   int ret = MXIsNumpyShape(&isNumpyShape);
-  SetIntField(env, compatibleRef, static_cast<int>(isNumpyShape));
+  SetIntField(env, compatibleRef, isNumpyShape);
   return ret;
 }
 

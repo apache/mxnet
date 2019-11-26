@@ -64,7 +64,7 @@ Note that _MXNet_ treats all CPUs on a single machine as a single device.
 So whether you specify `cpu(0)` or `cpu()`, _MXNet_ will use all CPU cores on the machine.
 
 ### Scoring results
-The following table shows performance of [MXNet-1.2.0.rc1](https://github.com/apache/incubator-mxnet/releases/download/1.2.0.rc1/apache-mxnet-src-1.2.0.rc1-incubating.tar.gz),
+The following table shows performance of MXNet-1.2.0.rc1,
 namely number of images that can be predicted per second.
 We used [example/image-classification/benchmark_score.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/benchmark_score.py)
 to measure the performance on different AWS EC2 machines.
@@ -151,7 +151,7 @@ and V100 (EC2 p3.2xlarge).
 
 Based on
 [example/image-classification/benchmark_score.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/benchmark_score.py)
-and  [MXNet-1.2.0.rc1](https://github.com/apache/incubator-mxnet/releases/download/1.2.0.rc1/apache-mxnet-src-1.2.0.rc1-incubating.tar.gz), with cuDNN 7.0.5
+and  MXNet-1.2.0.rc1, with cuDNN 7.0.5
 
 - K80 (single GPU)
 
@@ -214,7 +214,7 @@ Below is the performance result on V100 using float 16.
 
 Based on
 [example/image-classification/train_imagenet.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/train_imagenet.py)
-and  [MXNet-1.2.0.rc1](https://github.com/apache/incubator-mxnet/releases/download/1.2.0.rc1/apache-mxnet-src-1.2.0.rc1-incubating.tar.gz), with CUDNN 7.0.5. The benchmark script is available at
+and  MXNet-1.2.0.rc1, with CUDNN 7.0.5. The benchmark script is available at
 [here](https://github.com/mli/mxnet-benchmark/blob/master/run_vary_batch.sh),
 where the batch size for Alexnet is increased by 16x.
 

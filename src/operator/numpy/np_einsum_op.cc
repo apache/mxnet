@@ -305,6 +305,17 @@ bool NumpyEinsumShape(const nnvm::NodeAttrs& attrs,
     oshape[i] = dimension_dict[static_cast<int>(output_str[i])];
   }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  size_t lim = static_cast<size_t>(std::numeric_limits<index_t>::max());
+  for (int i = 0; i < num_args; ++i) {
+    CHECK_LE(in_attrs->at(i).Size(), lim)
+      << "Size of operand " << i
+      << " exceeds the maximum index."
+      << " Try setting `USE_INT64_TENSOR_SIZE`.";
+  }
+  CHECK_LE(oshape.Size(), lim)
+    << "Size of output"
+    << " exceeds the maximum index."
+    << " Try setting `USE_INT64_TENSOR_SIZE`.";
   return shape_is_known(oshape);
 }
 

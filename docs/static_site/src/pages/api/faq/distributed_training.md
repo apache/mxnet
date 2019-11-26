@@ -91,7 +91,7 @@ In the case of distributed training though, we would need to divide the dataset 
 
 Typically, this split of data for each worker happens through the data iterator,
 on passing the number of parts and the index of parts to iterate over.
-Some iterators in MXNet that support this feature are [mxnet.io.MNISTIterator]({{'//api/mxnet/io/index.html#mxnet.io.MNISTIter'|relative_url}}) and [mxnet.io.ImageRecordIter]({{'/api/mxnet/io/index.html#mxnet.io.ImageRecordIter'|relative_url}}).
+Some iterators in MXNet that support this feature are [mxnet.io.MNISTIterator](/api/python/docs/api/mxnet/io/index.html?MNISTIter#mxnet.io.MNISTIter) and [mxnet.io.ImageRecordIter](api/python/docs/api/mxnet/io/index.html?imagerecorditer#mxnet.io.ImageRecordIter).
 If you are using a different iterator, you can look at how the above iterators implement this.
 We can use the kvstore object to get the number of workers (`kv.num_workers`) and rank of the current worker (`kv.rank`).
 These can be passed as arguments to the iterator.
@@ -101,7 +101,7 @@ to see an example usage.
 ### Updating weights
 KVStore server supports two modes, one which aggregates the gradients and updates the weights using those gradients, and second where the server only aggregates gradients. In the latter case, when a worker process pulls from kvstore, it gets the aggregated gradients. The worker then uses these gradients and applies the weights locally.
 
-When using Gluon there is an option to choose between these modes by passing `update_on_kvstore` variable when you create the [Trainer]({{'/api/python/docs/api/gluon/mxnet.gluon.Trainer.html'|relative_url}}) object like this:
+When using Gluon there is an option to choose between these modes by passing `update_on_kvstore` variable when you create the [Trainer](/api/python/docs/api/gluon/trainer.html) object like this:
 
 ```
 trainer = gluon.Trainer(net.collect_params(), optimizer='sgd',
@@ -190,7 +190,7 @@ git clone --recursive https://github.com/apache/incubator-mxnet
 ```
 
 #### Example
-Let us consider training a VGG11 model on the CIFAR10 dataset using [example/gluon/image_classification.py](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/image_classification.py).
+Let us consider training a VGG11 model on the CIFAR10 dataset using [example/gluon/image_classification.py](https://github.com/apache/incubator-mxnet/blob/master/tools/launch.py).
 ```
 cd example/gluon/
 ```

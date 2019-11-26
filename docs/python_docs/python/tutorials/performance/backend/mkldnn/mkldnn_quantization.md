@@ -23,7 +23,7 @@ If you are not familiar with Apache/MXNet quantization flow, please reference [q
 
 ## Installation and Prerequisites
 
-Installing MXNet with MKLDNN backend is an easy and essential process. You can follow [How to build and install MXNet with MKL-DNN backend](https://mxnet.apache.org/tutorials/mkldnn/MKLDNN_README.html) to build and install MXNet from source. Also, you can install the release or nightly version via PyPi and pip directly by running:
+Installing MXNet with MKLDNN backend is an easy and essential process. You can follow [How to build and install MXNet with MKL-DNN backend](/api/python/docs/tutorials/performance/backend/mkldnn/mkldnn_readme.html) to build and install MXNet from source. Also, you can install the release or nightly version via PyPi and pip directly by running:
 
 ```
 # release version
@@ -38,7 +38,7 @@ A quantization script [imagenet_gen_qsym_mkldnn.py](https://github.com/apache/in
 
 ## Integrate Quantization Flow to Your Project
 
-Quantization flow works for both symbolic and Gluon models. If you're using Gluon, you can first refer [Saving and Loading Gluon Models](https://mxnet.apache.org/versions/master/tutorials/gluon/save_load_params.html) to hybridize your computation graph and export it as a symbol before running quantization.
+Quantization flow works for both symbolic and Gluon models. If you're using Gluon, you can first refer [Saving and Loading Gluon Models](/api/python/docs/tutorials/packages/gluon/blocks/save_load_params.html) to hybridize your computation graph and export it as a symbol before running quantization.
 
 In general, the quantization flow includes 4 steps. The user can get the acceptable accuracy from step 1 to 3 with minimum effort. Most of thing in this stage is out-of-box and the data scientists and researchers only need to focus on how to represent data and layers in their model. After a quantized model is generated, you may want to deploy it online and the performance will be the next key point. Thus, step 4, calibration, can improve the performance a lot by reducing lots of runtime calculation.
 

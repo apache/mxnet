@@ -45,9 +45,10 @@ bool SupportMKLDNNTranspose(const TransposeParam& param,
 typedef ParamOpSign<TransposeParam> MKLDNNTransposeSignature;
 
 class MKLDNNTransposeForward {
+ public:
   std::shared_ptr<mkldnn::memory> data_;
   std::shared_ptr<mkldnn::memory> out_;
-  std::shared_ptr<mkldnn::memory::primitive_desc> dst_pd_;
+  std::shared_ptr<mkldnn::memory::desc> dst_md_;
   std::shared_ptr<mkldnn::reorder> transpose_;
 
  public:
@@ -67,38 +68,23 @@ class MKLDNNTransposeForward {
 
     auto engine = CpuEngine::Get()->get_engine();
     auto in_mem = data.GetMKLDNNData();
-    auto src_pd = in_mem->get_primitive_desc();
-    data_ = std::make_shared<mkldnn::memory>(src_pd, nullptr);
+    auto src_md = in_mem->get_desc();
+    data_ = std::make_shared<mkldnn::memory>(src_md, engine, nullptr);
 
-    // destination
-    // Not all formats are well defined with a certain name in MKL-DNN.
-    // For example, transpose(NCHW, (0, 2, 1, 3)) -> NHCW, which is not explicitly defined in
-    // MKL-DNN. To support general transposing, we need create destination format from scratch.
-    mkldnn_memory_desc_t dst_fmt;
-    dst_fmt.primitive_kind = mkldnn_memory;
-    dst_fmt.ndims = data_ndim;
-    dst_fmt.data_type = mkldnn_f32;
-    dst_fmt.format = mkldnn_blocked;
-
-    for (int i = 0; i < data_ndim; i++)
-      dst_fmt.dims[i] = shape[i];
-
-    unsigned int total_stride = 1;
+    mkldnn_dims_t strides;
+    mkldnn_dims_t sh;
+    dim_t total_stride = 1;
     for (int i = data_ndim - 1; i >= 0; i--) {
-      dst_fmt.layout_desc.blocking.padding_dims[i] = shape[i];
-      dst_fmt.layout_desc.blocking.block_dims[i] = 1;
-      dst_fmt.layout_desc.blocking.offset_padding_to_data[i]= 0;
-      // strides[0]: stride between the first elements of adjacent blocks.
-      dst_fmt.layout_desc.blocking.strides[0][axes[i]] = total_stride;
-      // strides[1]: strides between elements in the same block.
-      dst_fmt.layout_desc.blocking.strides[1][axes[i]] = 1;
-
+      sh[i] = shape[i];
+      strides[axes[i]] = total_stride;
       total_stride *= shape[axes[i]];
     }
 
-    dst_fmt.layout_desc.blocking.offset_padding = 0;
-    dst_pd_ = std::make_shared<mkldnn::memory::primitive_desc>(dst_fmt, engine);
-    out_ = std::make_shared<mkldnn::memory>(*dst_pd_, nullptr);
+    mkldnn_memory_desc_t dst_fmt;
+    mkldnn_memory_desc_init_by_strides(&dst_fmt, data_ndim, sh, mkldnn_f32, strides);
+
+    dst_md_ = std::make_shared<mkldnn::memory::desc>(dst_fmt);
+    out_ = std::make_shared<mkldnn::memory>(*dst_md_, engine, nullptr);
 
     transpose_ = std::make_shared<mkldnn::reorder>(*data_, *out_);
   }
@@ -120,6 +106,14 @@ class MKLDNNTransposeForward {
 
   const mkldnn::reorder &GetFwd() const {
     return *transpose_;
+  }
+
+  void Execute() const {
+    auto stream = MKLDNNStream::Get();
+    mkldnn_args_map_t net_args;
+    net_args.insert({{MKLDNN_ARG_FROM, *(data_)}, {MKLDNN_ARG_TO, *(out_)}});
+    stream->RegisterPrimArgs(*transpose_, net_args);
+    stream->Submit();
   }
 };
 
@@ -150,13 +144,11 @@ void MKLDNNTransposeForward(const nnvm::NodeAttrs& attrs,
                             const NDArray &output) {
   const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
 
-  auto stream = MKLDNNStream::Get();
   auto fwd = GetTransposeForward(param, data);
-
   fwd.SetNewMem(data, output);
-  stream->RegisterPrim(fwd.GetFwd());
-  stream->Submit();
+  fwd.Execute();
 }
 }  // namespace op
 }  // namespace mxnet
 #endif
+

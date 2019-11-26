@@ -203,7 +203,7 @@ inline static bool ConcatForwardInferStorageType(const nnvm::NodeAttrs& attrs,
     dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
-#endif
+#endif  // MXNET_USE_MKLDNN == 1
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
     dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
@@ -214,7 +214,7 @@ inline static bool ConcatForwardInferStorageType(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_MKLDNN == 1
   if (!MKLDNNEnvSet())
     *dispatch_mode = DispatchMode::kFComputeFallback;
-#endif
+#endif  // MXNET_USE_MKLDNN == 1
   return dispatched;
 }
 
@@ -232,12 +232,12 @@ inline static bool BackwardConcatStorageType(const nnvm::NodeAttrs& attrs,
       && param.dim > 0)
     wanted_mode = DispatchMode::kFComputeEx;
   else
-#endif
+#endif  // MXNET_USE_MKLDNN == 1
     wanted_mode = DispatchMode::kFCompute;
 #if MXNET_USE_MKLDNN == 1
   if (!MKLDNNEnvSet())
     wanted_mode = DispatchMode::kFComputeFallback;
-#endif
+#endif  // MXNET_USE_MKLDNN == 1
   return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                              dispatch_mode, wanted_mode);
 }
@@ -249,12 +249,12 @@ bool SupportMKLDNNConcat(const std::vector<NDArray> &arrs) {
     // DO not support zero-size tensors.
     if (arr.shape().Size() == 0) return false;
     int ndim = arr.shape().ndim();
-    const int mkldnn_ndims = arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims;
+    const int mkldnn_ndims = arr.GetMKLDNNData()->get_desc().data.ndims;
     if (!(ndim == 2 || ndim == 4) || ndim != mkldnn_ndims) return false;
   }
   return true;
 }
-#endif
+#endif  // MXNET_USE_MKLDNN == 1
 static void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
                                const OpContext& op_ctx,
                                const std::vector<NDArray>& inputs,
@@ -274,7 +274,7 @@ static void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
     MKLDNN_OPCHECK_RUN(ConcatCompute<cpu>, attrs, op_ctx, inputs, req, outputs);
   } else if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
     FallBackCompute(ConcatCompute<cpu>, attrs, op_ctx, inputs, req, outputs);
-#endif
+#endif  // MXNET_USE_MKLDNN == 1
   } else {
     LogUnimplementedOp(attrs, op_ctx, inputs, req, outputs);
   }
@@ -294,7 +294,7 @@ static void ConcatGradComputeExCPU(const nnvm::NodeAttrs& attrs,
   }
   FallBackCompute(ConcatGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
-#endif
+#endif  // MXNET_USE_MKLDNN == 1
 
 struct ConcatGrad {
   const char *op_name;
@@ -306,7 +306,7 @@ struct ConcatGrad {
     for (size_t i = 0; i < n->inputs.size(); i++) {
       heads.push_back(n->inputs[i]);
     }
-#endif
+#endif  // MXNET_USE_MKLDNN == 1
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }
 };
@@ -385,8 +385,9 @@ Example::
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<bool>("TIsMKLDNN", true)
-#endif
+#endif  // MXNET_USE_MKLDNN == 1
 CONCAT_FORWARD_ATTRS
 .set_attr<mxnet::FInferShape>("FInferShape", ConcatShape)
 .add_argument("data", "NDArray-or-Symbol[]", "List of arrays to concatenate")
@@ -402,13 +403,13 @@ NNVM_REGISTER_OP(_backward_Concat)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
-#endif
+#endif  // MXNET_USE_MKLDNN == 1
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FInferStorageType>("FInferStorageType", BackwardConcatStorageType)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ConcatGradComputeExCPU)
-#endif
+#endif  // MXNET_USE_MKLDNN == 1
 .set_attr<FCompute>("FCompute<cpu>", ConcatGradCompute<cpu>);
 
 // _rnn_param_concat is a custom concat op with specialized infer_shape,
@@ -420,8 +421,9 @@ NNVM_REGISTER_OP(_rnn_param_concat)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
-#endif
+#endif  // MXNET_USE_MKLDNN == 1
 CONCAT_FORWARD_ATTRS
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<mxnet::FInferShape>("FInferShape", RNNParamConcatShape)
 .add_argument("data", "NDArray-or-Symbol[]", "List of arrays to concatenate")
 .add_arguments(ConcatParam::__FIELDS__());
