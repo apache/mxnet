@@ -2756,6 +2756,81 @@ def test_np_swapaxes():
 
 @with_seed()
 @use_np
+def test_np_delete():
+    class TestDelete(HybridBlock):
+        def __init__(self, obj, axis=None):
+            super(TestDelete, self).__init__()
+            self._obj = obj
+            self._axis = axis
+
+        def hybrid_forward(self, F, a):
+            return F.np.delete(a, self._obj, axis=self._axis)
+    
+    def GetSize(shp):
+        if len(shp) == 0:
+            return 0
+        else:
+            res = 1
+            shp_list = list(shp)
+            for x in shp:
+                res *= x
+            return res
+
+    def GetDimSize(shp, axis):
+        if axis is None:
+            return GetSize(shp)
+        shp_list = list(shp)
+        return shp_list[axis]
+
+    shape = [(), (0, ), (1, ), (2, 3), (2, 1, 4, 5)]
+    config = []
+    for shp in shape:
+        for ax in range(-1 * len(shp), len(shp), 2):
+            #test slice
+            for st in [-5, -2, 0, 2, 5, None]:
+                for ed in [-5, -2, 0, 2, 5, None]:
+                    for stp in [-5, -2, 2, 5, None]:
+                        config.append(tuple([shp, slice(st, ed, stp), None]))
+                        config.append(tuple([shp, slice(st, ed, stp), ax]))
+            #test iteger
+            for idx in range(-1 * GetDimSize(shp, ax), GetDimSize(shp, ax)):
+                config.append(tuple([shp, idx, ax]))
+            #test ndarray indices
+            idx =  _np.random.randint(-1 * shp[ax], shp[ax] + 1, size = (4)).tolist()
+            config.append(tuple([shp, idx, ax]))
+
+    for arr_shape, obj, axis in config:
+        for objtype in ['int32', 'int64']:
+            if type(obj) == list:
+                obj_mxnp = np.array(obj, dtype=objtype)
+                obj_onp = _np.array(obj, dtype=objtype)
+            elif type(obj) == slice:
+                obj_mxnp = obj
+                obj_onp = obj
+            else:
+                obj_mxnp = (_np.int32(obj) if objtype == 'int32' else _np.int64(obj)) 
+                obj_onp = (_np.int32(obj) if objtype == 'int32' else _np.int64(obj)) 
+            test_delete = TestDelete(obj=obj_mxnp, axis=axis)
+
+            a = mx.nd.random.uniform(-1.0, 1.0, shape=arr_shape).as_np_ndarray()
+            a.attach_grad()
+            expected_ret = _np.delete(a.asnumpy(), obj_onp, axis=axis)
+
+            with mx.autograd.record():
+                y = test_delete(a)
+
+            assert y.shape == expected_ret.shape
+            assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3, atol=1e-5)
+
+            #test imperative
+            mx_out = np.delete(a, obj_mxnp, axis=axis)
+            np_out = _np.delete(a.asnumpy(), obj_onp, axis=axis)
+
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@use_np
 def test_np_argmin_argmax():
     workloads = [
         ((), 0, False),

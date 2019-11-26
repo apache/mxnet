@@ -125,6 +125,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'transpose',
     'unique',
     'unravel_index',
+    'delete',
     'var',
     'vdot',
     'vstack',
