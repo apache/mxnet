@@ -41,6 +41,8 @@ apt-get install -y \
     libopencv-dev \
     libturbojpeg \
     libzmq3-dev \
+    libtinfo-dev \
+    libxml2-dev \
     ninja-build \
     software-properties-common \
     sudo \
