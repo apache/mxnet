@@ -32,6 +32,9 @@ NNVM_REGISTER_OP(_np_sum)
 NNVM_REGISTER_OP(_backward_np_sum)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseNone<gpu>);
 
+NNVM_REGISTER_OP(_npi_quantile)
+.set_attr<FCompute>("FCompute<gpu>", NumpyQuantileForward<gpu>);
+
 NNVM_REGISTER_OP(_np_max)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesNoDTypeCompute<gpu, mshadow::red::maximum>);
 

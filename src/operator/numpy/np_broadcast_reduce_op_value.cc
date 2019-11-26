@@ -35,6 +35,7 @@ namespace op {
 DMLC_REGISTER_PARAMETER(NumpyReduceAxesParam);
 DMLC_REGISTER_PARAMETER(NumpyReduceAxesNoDTypeParam);
 DMLC_REGISTER_PARAMETER(NumpyMomentsParam);
+DMLC_REGISTER_PARAMETER(NumpyQuantileParam);
 
 inline bool NumpySumType(const nnvm::NodeAttrs& attrs,
                          std::vector<int> *in_attrs,
@@ -147,6 +148,44 @@ NNVM_REGISTER_OP(_backward_np_sum)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_num_inputs(1)
 .set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesBackwardUseNone<cpu>);
+
+inline bool NumpyQuantileType(const nnvm::NodeAttrs& attrs,
+                              std::vector<int> *in_attrs,
+                              std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  auto q_type = in_attrs->at(1);
+  CHECK(q_type == mshadow::kFloat16 ||
+        q_type == mshadow::kFloat32 ||
+        q_type == mshadow::kFloat64) << "q should be float type.";
+
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+  return in_attrs->at(0) != -1 && in_attrs->at(1) != -1 &&
+         out_attrs->at(0) != -1;
+}
+
+NNVM_REGISTER_OP(_npi_quantile)
+.describe(R"code()code" ADD_FILELINE)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<NumpyQuantileParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyQuantileShape)
+.set_attr<nnvm::FInferType>("FInferType", NumpyQuantileType)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"a", "q"};
+  })
+.add_argument("a", "NDArray-or-Symbol", "The input")
+.add_argument("q", "NDArray-or-Symbol", "Quantile")
+.add_arguments(NumpyQuantileParam::__FIELDS__())
+.set_attr<FCompute>("FCompute<cpu>", NumpyQuantileForward<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace, ResourceRequest::kTempSpace};
+  })
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 inline bool NumpyReduceAxesNoDTypeType(const nnvm::NodeAttrs& attrs,
                          std::vector<int> *in_attrs,

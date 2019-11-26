@@ -274,7 +274,7 @@ inline void SetDependency(const nnvm::NodeAttrs& attrs,
         LOG(FATAL) << "resource type not yet supported";
       }
     }
-    CHECK_LE(ntmp, 1) << "Only support 1 temp space request";
+    CHECK_LE(ntmp, 2) << "Only support 1 temp space request";
   }
 
   // append extra resource requests for storage fallback

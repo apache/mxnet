@@ -601,6 +601,49 @@ def test_np_max_min():
 
 @with_seed()
 @use_np
+def test_np_quantile():
+    class TestQuantile(HybridBlock):
+        def __init__(self, axis=None, interpolation='linear', keepdims=False):
+            super(TestQuantile, self).__init__()
+            self._axis = axis
+            self._interpolation = interpolation
+            self._keepdims = keepdims
+
+        def hybrid_forward(self, F, a, q):
+            return F.np.quantile(a, q, axis=self._axis, interpolation=self._interpolation, keepdims=self._keepdims)
+
+    flags = [True, False]
+    interpolation_options = ['linear', 'lower', 'higher', 'nearest', 'midpoint']
+    dtypes = ['float16', 'float32', 'float64']
+    qtypes = ['float32', 'float64']
+    tensor_shapes = [
+        ((2, 3), (), None),
+        ((2, 3, 4, 5), (), 3),
+        ((2, 3, 4), (3,), (0, 2)),
+        ((2, 3, 4), (3,), 1)
+    ]
+    for hybridize, keepdims, (a_shape, q_shape, axis), interpolation, dtype in \
+        itertools.product(flags, flags, tensor_shapes, interpolation_options, dtypes):
+        atol = 3e-4 if dtype == 'float16' else 1e-4
+        rtol = 3e-2 if dtype == 'float16' else 1e-2
+        test_quantile = TestQuantile(axis=axis, interpolation=interpolation, keepdims=keepdims)
+        if hybridize:
+            test_quantile.hybridize()
+        a = np.random.uniform(-1.0, 1.0, size=a_shape, dtype=dtype)
+        qtype = random.choice(qtypes)
+        q = np.random.uniform(0, 1.0, size=q_shape, dtype=qtype)
+        np_out = _np.quantile(a.asnumpy(), q.asnumpy(), axis=axis, interpolation=interpolation, keepdims=keepdims)
+        mx_out = test_quantile(a, q)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
+
+        mx_out = np.quantile(a, q, axis=axis, interpolation=interpolation, keepdims=keepdims)
+        np_out = _np.quantile(a.asnumpy(), q.asnumpy(), axis=axis, interpolation=interpolation, keepdims=keepdims)
+        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
+
+
+@with_seed()
+@use_np
 def test_np_mean():
     class TestMean(HybridBlock):
         def __init__(self, axis=None, dtype=None, keepdims=False):
