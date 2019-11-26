@@ -169,11 +169,11 @@ void IM2REC::im2rec(const std::string & image_lst, const std::string & root,
   std::vector<unsigned char> encode_buf;
   std::vector<int> encode_params;
   if (encoding == std::string(".png")) {
-    encode_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
+    encode_params.push_back(cv::IMWRITE_PNG_COMPRESSION);
     encode_params.push_back(quality);
     LOG(INFO) << "PNG encoding compression: " << quality;
   } else {
-    encode_params.push_back(CV_IMWRITE_JPEG_QUALITY);
+    encode_params.push_back(cv::IMWRITE_JPEG_QUALITY);
     encode_params.push_back(quality);
     LOG(INFO) << "JPEG encoding quality: " << quality;
   }
