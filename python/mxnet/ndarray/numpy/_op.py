@@ -2776,7 +2776,7 @@ def split(ary, indices_or_sections, axis=0):
         raise ValueError('indices_or_sections must be either int, or tuple / list / set of ints')
     ret = _npi.split(ary, indices, axis, False)
     assert isinstance(ret, list), 'Output of split should be list,' \
-                                  ' get a return type {}'.format(type(ret))
+                                  ' got a return type {}'.format(type(ret))
     return ret
 # pylint: enable=redefined-outer-name
 
