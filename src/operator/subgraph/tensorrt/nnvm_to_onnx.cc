@@ -519,18 +519,21 @@ void ConvertConstant(
   auto size = shape.Size();
 
   if (dtype == TensorProto_DataType_FLOAT) {
-      std::vector<float> constants(size);
-      nd.SyncCopyToCPU(constants.data(), size);
-      for (const auto& constant : constants) {
-          initializer_proto->add_float_data(constant);
-      }
+    std::shared_ptr<float[]> shared_data_ptr(new float[size]);
+    float* const data_ptr = shared_data_ptr.get();
+    nd.SyncCopyToCPU(static_cast<void*>(data_ptr), size);
+
+    for (size_t blob_idx = 0; blob_idx < size; ++blob_idx) {
+      initializer_proto->add_float_data(data_ptr[blob_idx]);
+    }
   } else if (dtype == TensorProto_DataType_FLOAT16) {
-      std::vector<uint16_t> constants(size);
-      nd.SyncCopyToCPU(constants.data(), size);
-      for (const auto& constant : constants) {
-          initializer_proto->add_int32_data(
-                  reinterpret_cast<int32_t&>(constant));
-      }
+    std::shared_ptr<uint16_t[]> shared_data_ptr(new uint16_t[size]);
+    uint16_t* const data_ptr = shared_data_ptr.get();
+    nd.SyncCopyToCPU(static_cast<void*>(data_ptr), size);
+    for (size_t blob_idx = 0; blob_idx < size; ++blob_idx) {
+      initializer_proto->add_int32_data(
+          reinterpret_cast<int32_t*>(data_ptr)[blob_idx]);
+    }
   } else {
     LOG(FATAL) << "dtype not supported for variables: " << node_name;
   }
