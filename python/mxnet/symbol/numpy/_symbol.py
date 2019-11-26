@@ -20,7 +20,6 @@
 
 from __future__ import absolute_import
 import ctypes
-import json
 import numpy as _np
 from . import _op as _mx_np_op
 from ...base import _LIB, SymbolHandle, numeric_types, mx_uint, integer_types, string_types
