@@ -1649,6 +1649,7 @@ def test_np_binary_funcs():
         'power': (1.0, 2.0, [lambda y, x1, x2: _np.power(x1, x2 - 1.0) * x2],
                              [lambda y, x1, x2: _np.power(x1, x2) * _np.log(x1)]),
         'lcm': (-100, 100, [None], None, [[_np.int32]]),
+        'bitwise_xor': (-100, 100, [None], None, [[_np.int32]]),
         'maximum': (-1, 1, [lambda y, x1, x2: _np.ones(y.shape) * (x1 >= x2)],
                            [lambda y, x1, x2: _np.ones(y.shape) * (x1 < x2)]),
         'minimum': (-1, 1, [lambda y, x1, x2: _np.ones(y.shape) * (x1 <= x2)],
@@ -1683,7 +1684,9 @@ def test_np_binary_funcs():
 @with_seed()
 @use_np
 def test_np_mixed_precision_binary_funcs():
-    def check_mixed_precision_binary_func(func, low, high, lshape, rshape, ltype, rtype):
+    itypes = [np.bool, np.int8, np.int32, np.int64]
+    ftypes = [np.float16, np.float32, np.float64]
+    def check_mixed_precision_binary_func(func, low, high, lshape, rshape, lgrad, rgrad, ltype, rtype):
         class TestMixedBinary(HybridBlock):
             def __init__(self, func):
                 super(TestMixedBinary, self).__init__()
@@ -1717,13 +1720,15 @@ def test_np_mixed_precision_binary_funcs():
                             use_broadcast=False, equal_nan=True)
 
     funcs = {
-        'add': (-1.0, 1.0),
-        'subtract': (-1.0, 1.0),
-        'multiply': (-1.0, 1.0),
+        'add': (-1.0, 1.0, None, None),
+        'subtract': (-1.0, 1.0, None, None),
+        'multiply': (-1.0, 1.0, lambda y, x1, x2: _np.broadcast_to(x2, y.shape),
+                                lambda y, x1, x2: _np.broadcast_to(x1, y.shape))
     }
 
     shape_pairs = [((3, 2), (3, 2)),
                    ((3, 2), (3, 1)),
+                   ((3, 0), (3, 0)),
                    ((3, 1), (3, 0)),
                    ((0, 2), (1, 2)),
                    ((2, 3, 4), (3, 1)),
@@ -1733,16 +1738,16 @@ def test_np_mixed_precision_binary_funcs():
     itypes = [np.bool, np.int8, np.int32, np.int64]
     ftypes = [np.float16, np.float32, np.float64]
     for func, func_data in funcs.items():
-        low, high = func_data
+        low, high, lgrad, rgrad = func_data
         for lshape, rshape in shape_pairs:
             for type1, type2 in itertools.product(itypes, ftypes):
-                check_mixed_precision_binary_func(func, low, high, lshape, rshape, type1, type2)
-                check_mixed_precision_binary_func(func, low, high, lshape, rshape, type2, type1)
+                check_mixed_precision_binary_func(func, low, high, lshape, rshape, lgrad, rgrad, type1, type2)
+                check_mixed_precision_binary_func(func, low, high, lshape, rshape, lgrad, rgrad, type2, type1)
 
             for type1, type2 in itertools.product(ftypes, ftypes):
                 if type1 == type2:
                     continue
-                check_mixed_precision_binary_func(func, low, high, lshape, rshape, type1, type2)
+                check_mixed_precision_binary_func(func, low, high, lshape, rshape, lgrad, rgrad, type1, type2)
 
 
 @with_seed()
@@ -4102,7 +4107,7 @@ def test_np_diff():
                         mx_out.backward()
                         if (np_out.size == 0):
                             np_backward = _np.zeros(shape)
-                        else:                    
+                        else:
                             np_backward = np_diff_backward(_np.ones(np_out.shape, dtype=itype), n=n, axis=axis)
                         assert x.grad.shape == np_backward.shape
                         assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
