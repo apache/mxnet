@@ -172,7 +172,7 @@ def check_binary_ops():
     check_fused_symbol(3-a, a=arr1)
     check_fused_symbol(a*b, a=arr1, b=arr2)
     check_fused_symbol(a*3, a=arr1)
-    check_fused_symbol(a/b, a=arr1, b=arr2)
+    check_fused_symbol(a/(b+1), a=arr1, b=arr2)
     check_fused_symbol(a/3, a=arr1)
     check_fused_symbol(3/a, a=arr1)
     check_fused_symbol(a**b, a=arr1, b=arr2)
@@ -238,6 +238,49 @@ def test_fusion_compiler_cache():
     if num_gpus > 1:
         check_fused_symbol(a+b, ctx=mx.gpu(1), a=arr1, b=arr2)
 
+@with_seed()
+@use_np
+def test_fusion_boolean_inputs():
+    from mxnet.gluon import HybridBlock
+
+    class Foo(HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super(Foo, self).__init__(prefix=prefix, params=params)
+
+        def hybrid_forward(self, F, valid_length):
+            mask = valid_length.astype(np.float32)
+            mask2 = valid_length.astype(np.float32)
+            mask = mask * F.np.expand_dims(mask2, axis=-1)
+            return mask
+
+    foo = Foo()
+    foo.hybridize(static_alloc=True)
+    out = foo(mx.np.ones((10,), ctx=mx.gpu(), dtype=np.bool))
+    mx.npx.waitall()
+
+@with_seed()
+def test_fusion_different_dimensions():
+    from mxnet.gluon import HybridBlock
+
+    class Foo(HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super(Foo, self).__init__(prefix=prefix, params=params)
+
+        def hybrid_forward(self, F, x):
+            mask2 = x.astype(np.float32)
+            mask = F.expand_dims(mask2, axis=-1)
+            return mask
+
+    foo = Foo()
+    foo.hybridize(static_alloc=True)
+    # Pass 1-D data
+    out = foo(mx.nd.ones((10,), ctx=mx.gpu()))
+    assert np.all(out.asnumpy() == np.ones((10,1)))
+    assert out.shape == (10,1)
+    # Pass 2-D data
+    out = foo(mx.nd.ones((10,10), ctx=mx.gpu()))
+    assert np.all(out.asnumpy() == np.ones((10,10)))
+    assert out.shape == (10,10,1)
 
 @with_seed()
 def test_fusion_reshape_executor():

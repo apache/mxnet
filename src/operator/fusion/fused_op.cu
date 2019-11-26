@@ -53,6 +53,8 @@ inline std::string mshadowTypeToString(int type) {
       return "int";
     case mshadow::kInt64:
       return "long long";
+    case mshadow::kBool:
+      return "bool";
     default:
       LOG(FATAL) << "Unknown type enum " << type;
   }
@@ -75,6 +77,8 @@ inline int mshadowTypeToVectorLength(int type) {
       return 1;
     case mshadow::kInt64:
       return 1;
+    case mshadow::kBool:
+      return 4 / sizeof(bool);
     default:
       LOG(FATAL) << "Unknown type enum " << type;
   }
@@ -159,7 +163,7 @@ void AddPointerAndShape(const TBlob& data,
                         std::vector<std::vector<int>>* shapes,
                         mshadow::Stream<gpu> * s) {
   using namespace mshadow;
-  MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(data.type_flag_, DType, {
     Tensor<gpu, 1, DType> tensor = data.FlatTo1D<gpu, DType>(s);
     ptrs->push_back(tensor.dptr_);
     AddShape(data.shape_, shapes);
@@ -650,7 +654,9 @@ void FusedOp::CheckShapesAndTypes(const std::vector<TBlob> &inputs,
     in_ndims->push_back(blob.ndim());
     in_shapes.push_back(blob.shape_);
     initialized_ = initialized_ && blob.type_flag_ == inputs_[counter].dtype;
+    initialized_ = initialized_ && blob.ndim() == inputs_[counter].ndim;
     inputs_[counter].dtype = blob.type_flag_;
+    inputs_[counter].ndim = blob.ndim();
     *nvec = max(*nvec, mshadowTypeToVectorLength(blob.type_flag_));
   }
 
@@ -660,7 +666,9 @@ void FusedOp::CheckShapesAndTypes(const std::vector<TBlob> &inputs,
     out_ndims->push_back(blob.ndim());
     out_shapes.push_back(blob.shape_);
     initialized_ = initialized_ && blob.type_flag_ == outputs_[counter].dtype;
+    initialized_ = initialized_ && blob.ndim() == outputs_[counter].ndim;
     outputs_[counter].dtype = blob.type_flag_;
+    outputs_[counter].ndim = blob.ndim();
     *nvec = max(*nvec, mshadowTypeToVectorLength(blob.type_flag_));
   }
 
