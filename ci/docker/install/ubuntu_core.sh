@@ -42,6 +42,8 @@ apt-get install -y \
     libturbojpeg \
     libzmq3-dev \
     libtinfo-dev \
+    zlib1g-dev \
+    libedit-dev \
     libxml2-dev \
     ninja-build \
     software-properties-common \
