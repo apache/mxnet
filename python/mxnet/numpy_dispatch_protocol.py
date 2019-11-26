@@ -125,6 +125,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'column_stack',
     'zeros_like',
     'linalg.norm',
+    'shape',
     'trace',
     'tril',
     'meshgrid',

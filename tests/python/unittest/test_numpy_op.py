@@ -756,6 +756,25 @@ def test_np_moment():
                                 np_out = getattr(_np, name)(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims, ddof=ddof).astype(dtype)
                                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol, use_broadcast=False, equal_nan=True)
 
+@with_seed()
+@use_np
+def test_np_shape():
+    shapes = [
+        (),
+        (0, 1),
+        (2, 3),
+        (2, 3, 4),
+    ]
+
+    for shape in shapes:
+        mx_a = np.random.uniform(size=shape)
+        np_a = _np.random.uniform(size=shape)
+
+        mx_shape = np.shape(mx_a)
+        np_shape = _np.shape(np_a)
+
+        assert mx_shape == np_shape
+
 
 @with_seed()
 @use_np
