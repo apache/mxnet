@@ -363,7 +363,6 @@ def test_default_handlers():
         est.fit(train_data=train_data, epochs=num_epochs, event_handlers=[logging])
 
     # test handler order
-    gradient_update = GradientUpdateHandler()
     train_metrics = est.train_metrics
     val_metrics = est.val_metrics
     early_stopping = EarlyStoppingHandler(monitor=val_metrics[0])
