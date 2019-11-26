@@ -83,13 +83,15 @@ def test_validation():
     ctx = mx.cpu()
     loss = gluon.loss.L2Loss()
     acc = mx.metric.Accuracy()
+    evaluation_loss = gluon.loss.L1Loss()
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     est = Estimator(net=net,
                     loss=loss,
                     metrics=acc,
                     trainer=trainer,
-                    context=ctx)
+                    context=ctx,
+                    evaluation_loss=evaluation_loss)
     # Input dataloader
     est.fit(train_data=dataloader,
             val_data=dataloader,

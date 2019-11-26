@@ -37,12 +37,11 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot', 'histogram', 'eye',
            'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'split', 'vsplit', 'concatenate', 'append',
            'stack', 'vstack', 'column_stack', 'dstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax',
-           'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming', 'blackman', 'flip',
-           'around', 'hypot', 'bitwise_xor', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take',
-           'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal',
-           'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'shares_memory', 'may_share_memory', 'diff',
-           'resize', 'nan_to_num', 'where']
-
+           'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index', 'hanning', 'hamming', 'blackman',
+           'flip', 'around', 'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril',
+           'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
+           'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'shares_memory',
+           'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where']
 
 def _num_outputs(sym):
     return len(sym.as_nd_ndarray())
@@ -3658,6 +3657,38 @@ def ravel(x, order='C'):
         raise TypeError('type {} not supported'.format(str(type(x))))
 
 
+def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-name
+    """
+    Converts a flat index or array of flat indices into a tuple of coordinate arrays.
+
+    Parameters:
+    -------------
+    indices : array_like
+            An integer array whose elements are indices into the flattened version of an array of dimensions shape.
+            Before version 1.6.0, this function accepted just one index value.
+    shape : tuple of ints
+            The shape of the array to use for unraveling indices.
+
+    Returns:
+    -------------
+    unraveled_coords : ndarray
+            Each row in the ndarray has the same shape as the indices array.
+            Each column in the ndarray represents the unravelled index
+
+    Examples:
+    -------------
+    >>> np.unravel_index([22, 41, 37], (7,6))
+    ([3. 6. 6.]
+      [4. 5. 1.])
+    >>> np.unravel_index(1621, (6,7,8,9))
+    (3, 1, 4, 1)
+    """
+    if order == 'C':
+        return _npi.unravel_index_fallback(indices, shape=shape)
+    else:
+        raise NotImplementedError('Don not support column-major (Fortran-style) order at this moment')
+
+
 @set_module('mxnet.symbol.numpy')
 def hanning(M, dtype=_np.float32, ctx=None):
     r"""Return the Hanning window.
@@ -4101,6 +4132,30 @@ def bitwise_xor(x1, x2, out=None, **kwargs):
         Result.
     """
     return _ufunc_helper(x1, x2, _npi.bitwise_xor, _np.bitwise_xor, _npi.bitwise_xor_scalar, None, out)
+
+
+@set_module('mxnet.symbol.numpy')
+@wrap_np_binary_func
+def bitwise_or(x1, x2, out=None, **kwargs):
+    r"""
+    Compute the bit-wise OR of two arrays element-wise.
+
+    Parameters
+    ----------
+    x1, x2 : _Symbol or scalar
+        Only integer and boolean types are handled. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which becomes the shape of the output).
+    out : _Symbol or None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : _Symbol or scalar
+        Result.
+    """
+    return _ufunc_helper(x1, x2, _npi.bitwise_or, _np.bitwise_or, _npi.bitwise_or_scalar, None, out)
 
 
 @set_module('mxnet.symbol.numpy')

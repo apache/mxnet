@@ -563,6 +563,7 @@ void ShapeComputeCPU(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(shape_array)
+.add_alias("_npx_shape_array")
 .describe(R"code(Returns a 1D int64 array containing the shape of data.
 
 Example::

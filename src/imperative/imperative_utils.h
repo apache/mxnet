@@ -830,7 +830,7 @@ inline std::vector<Context> PlaceDevice(const nnvm::IndexedGraph& idx) {
 }
 
 
-inline MemoryPlanVector PlanMemory(
+inline MemoryPlanVector MXPlanMemory(
     nnvm::Graph* p_g,
     nnvm::StorageVector&& storage,
     const std::vector<uint32_t>& ref_count,
