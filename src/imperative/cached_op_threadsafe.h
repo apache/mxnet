@@ -127,7 +127,7 @@ class CachedOpThreadSafe {
   std::unordered_map<Context, std::vector<OpStatePtr>> cached_op_states_;
 };
 
- using CachedOpThreadSafePtr = std::shared_ptr<CachedOpThreadSafe>;
+using CachedOpThreadSafePtr = std::shared_ptr<CachedOpThreadSafe>;
 
 }  // namespace mxnet
 #endif  // MXNET_IMPERATIVE_CACHED_OP_THREADSAFE_H_

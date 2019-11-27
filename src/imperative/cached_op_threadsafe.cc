@@ -609,7 +609,7 @@ struct CachedOpThreadSafeActualState {
     this->op = op;
   }
 };
-  
+
   OpStatePtr CreateCachedOpThreadSafeState(const NodeAttrs& attrs,
                                            Context ctx,
                                            const mxnet::ShapeVector& in_shapes,
