@@ -132,7 +132,7 @@ class MetricHandler(EpochBegin, BatchEnd):
         Training metrics to be updated at batch end.
     priority : scalar
         Priority level of the MetricHandler. Priority level is sorted in ascending
-        order. The lower the number is, the higher priority level it is.
+        order. The lower the number is, the higher priority level the handler is.
     """
 
     def __init__(self, train_metrics, priority=-1000):
@@ -181,7 +181,8 @@ class ValidationHandler(TrainBegin, BatchEnd, EpochEnd):
         :py:class:`ValidationHandler` does not validate at batch end.
     priority: scalar, default -1000
         Priority level of the ValidationHandler. Priority level is sorted in
-        ascending order. The lower the number is, the higher priority level it is.
+        ascending order. The lower the number is, the higher priority level the
+        handler is.
     """
 
     def __init__(self,
@@ -244,7 +245,8 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
         Validation metrics to be logged, logged at epoch end, train end.
     priority : scalar, default np.Inf
         Priority level of the LoggingHandler. Priority level is sorted in
-        ascending order. The lower the number is, the higher priority level it is.
+        ascending order. The lower the number is, the higher priority level the
+        handler is.
     """
 
     def __init__(self, log_interval='epoch',
@@ -726,7 +728,7 @@ class GradientUpdateHandler(BatchEnd):
     ----------
     priority : scalar, default -2000
         priority level of the gradient update handler. Priority level is sorted in ascending
-        order. The lower the number is, the higher priority level it is.
+        order. The lower the number is, the higher priority level the handler is.
     ----------
     """
     def __init__(self, priority=-2000):
