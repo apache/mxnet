@@ -27,57 +27,57 @@
 #include "../operator/subgraph/common.h"
 
 namespace mxnet {
-  DMLC_REGISTER_PARAMETER(CachedOpThreadSafeConfig);
+DMLC_REGISTER_PARAMETER(CachedOpThreadSafeConfig);
 
-  constexpr uint32_t kEidNotExist = std::numeric_limits<uint32_t>::max();
+constexpr uint32_t kEidNotExist = std::numeric_limits<uint32_t>::max();
 
-  struct CachedOpThreadSafe::GraphInfo {
-    nnvm::Graph fwd_graph;
-  };
+struct CachedOpThreadSafe::GraphInfo {
+  nnvm::Graph fwd_graph;
+};
 
-  struct CachedOpThreadSafe::DynamicRuntime {
-    GraphInfo info;
-    std::vector<OpStatePtr> op_states;
-  };
+struct CachedOpThreadSafe::DynamicRuntime {
+  GraphInfo info;
+  std::vector<OpStatePtr> op_states;
+};
 
-  struct CachedOpThreadSafe::CachedOpThreadSafeState {
-    CachedOpThreadSafeState(const Context &context_,
-                            const nnvm::Graph &fwd_graph_) {
-      context = context_;
-      info.fwd_graph = fwd_graph_;
+struct CachedOpThreadSafe::CachedOpThreadSafeState {
+  CachedOpThreadSafeState(const Context &context_,
+                          const nnvm::Graph &fwd_graph_) {
+    context = context_;
+    info.fwd_graph = fwd_graph_;
 
-      size_t max_nodes = info.fwd_graph.indexed_graph().num_nodes();
-      size_t max_entries = info.fwd_graph.indexed_graph().num_node_entries();
-      info.fwd_graph.attrs["context"] =
-        std::make_shared<dmlc::any>(std::vector<Context>(
-                       info.fwd_graph.indexed_graph().num_nodes(), context));
+    size_t max_nodes = info.fwd_graph.indexed_graph().num_nodes();
+    size_t max_entries = info.fwd_graph.indexed_graph().num_node_entries();
+    info.fwd_graph.attrs["context"] =
+      std::make_shared<dmlc::any>(std::vector<Context>(
+                     info.fwd_graph.indexed_graph().num_nodes(), context));
 
-      buff.resize(max_entries);
-      arrays.resize(max_entries);
-      array_reqs.resize(max_entries);
-      dynamic_entries.resize(max_entries, false);
-      op_states.resize(max_nodes);
-      execs.resize(max_nodes);
-      opr_segs.resize(max_nodes);
-    }
+    buff.resize(max_entries);
+    arrays.resize(max_entries);
+    array_reqs.resize(max_entries);
+    dynamic_entries.resize(max_entries, false);
+    op_states.resize(max_nodes);
+    execs.resize(max_nodes);
+    opr_segs.resize(max_nodes);
+  }
 
-    std::mutex mutex;
-    Context context;
-    GraphInfo info;
-    bool fwd_alloc = false;
-    bool fwd_exec_init = false;
+  std::mutex mutex;
+  Context context;
+  GraphInfo info;
+  bool fwd_alloc = false;
+  bool fwd_exec_init = false;
 
-    std::vector<NDArray> buff;
-    std::vector<NDArray*> arrays;
-    std::vector<NDArray*> arrays_with_in_out;
-    std::vector<OpReqType> array_reqs;
-    std::vector<std::shared_ptr<exec::OpExecutor> > execs;
-    std::vector<imperative::EngineOprSeg> opr_segs;
-    std::vector<OpStatePtr> op_states;
+  std::vector<NDArray> buff;
+  std::vector<NDArray*> arrays;
+  std::vector<NDArray*> arrays_with_in_out;
+  std::vector<OpReqType> array_reqs;
+  std::vector<std::shared_ptr<exec::OpExecutor> > execs;
+  std::vector<imperative::EngineOprSeg> opr_segs;
+  std::vector<OpStatePtr> op_states;
 
-    std::vector<bool> dynamic_entries;
-    std::multimap<size_t, NDArray> fwd_reuse_pool;
-  };
+  std::vector<bool> dynamic_entries;
+  std::multimap<size_t, NDArray> fwd_reuse_pool;
+};
 
   OpStatePtr CachedOpThreadSafe::GetCachedOpThreadSafeState(
                                  const Context& ctx) {
@@ -146,20 +146,20 @@ namespace mxnet {
     }
 
     // Set param indices
-   {
-     const auto& indexed_graph = fwd_graph_.indexed_graph();
-     if (config_.data_indices.ndim() || config_.param_indices.ndim()) {
-       CHECK_EQ(config_.data_indices.ndim() + config_.param_indices.ndim(),
-                indexed_graph.input_nodes().size());
-     } else {
-       std::vector<uint32_t> tmp;
-       tmp.reserve(indexed_graph.input_nodes().size());
-       for (size_t i = 0; i < indexed_graph.input_nodes().size(); ++i) {
-         tmp.emplace_back(i);
-       }
-       config_.data_indices.assign(tmp.begin(), tmp.end());
-     }
-   }
+    {
+      const auto& indexed_graph = fwd_graph_.indexed_graph();
+      if (config_.data_indices.ndim() || config_.param_indices.ndim()) {
+        CHECK_EQ(config_.data_indices.ndim() + config_.param_indices.ndim(),
+                 indexed_graph.input_nodes().size());
+      } else {
+        std::vector<uint32_t> tmp;
+        tmp.reserve(indexed_graph.input_nodes().size());
+        for (size_t i = 0; i < indexed_graph.input_nodes().size(); ++i) {
+          tmp.emplace_back(i);
+        }
+        config_.data_indices.assign(tmp.begin(), tmp.end());
+      }
+    }
   }
 
   bool CachedOpThreadSafe::SetForwardGraph(GraphInfo *info,
@@ -601,14 +601,15 @@ namespace mxnet {
     return op_state;
   }
 
-  struct CachedOpThreadSafeActualState {
-    std::shared_ptr<CachedOpThreadSafe> op;
-    OpStatePtr forward_state;
+struct CachedOpThreadSafeActualState {
+  std::shared_ptr<CachedOpThreadSafe> op;
+  OpStatePtr forward_state;
 
-    explicit CachedOpThreadSafeActualState(std::shared_ptr<CachedOpThreadSafe> op) {
-      this->op = op;
-    }
-  };
+  explicit CachedOpThreadSafeActualState(std::shared_ptr<CachedOpThreadSafe> op) {
+    this->op = op;
+  }
+};
+  
   OpStatePtr CreateCachedOpThreadSafeState(const NodeAttrs& attrs,
                                            Context ctx,
                                            const mxnet::ShapeVector& in_shapes,
