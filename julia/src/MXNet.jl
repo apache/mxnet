@@ -64,6 +64,20 @@ export NDArray,
        broadcast_axis,
        broadcast_axes
 
+# autograd.jl
+export attach_grad!,
+       backward!,
+       getgrad,
+       is_recording,
+       is_training,
+       mark_variables,
+       pause,
+       predict_mode,
+       record,
+       symbol,
+       train_mode,
+       @custom
+
 # executor.jl
 export Executor,
        bind,

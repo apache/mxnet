@@ -69,6 +69,7 @@ function __init__()
   _get_libmx_op_names()
   _populate_iter_creator_cache!()
   _get_lib_version!()
+  _init_customfunc()
 
   atexit() do
     # notify libmxnet we are shutting down
