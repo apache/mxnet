@@ -36,7 +36,8 @@ try:
 except ImportError:
     from builtins import slice as py_slice
 
-__all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'arctan2',
+__all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full_like',
+           'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'arctan2',
            'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
@@ -1092,6 +1093,135 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
         ctx = current_context()
     dtype = _np.float32 if dtype is None else dtype
     return _npi.full(shape=shape, value=fill_value, ctx=ctx, dtype=dtype, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def full_like(a, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylint: disable=too-many-arguments
+    """
+    Return a full array with the same shape and type as a given array.
+
+    Parameters
+    ----------
+    a : _Symbol
+        The shape and data-type of `a` define these same attributes of
+        the returned array.
+    fill_value : scalar
+        Fill value.
+    dtype : data-type, optional
+        Overrides the data type of the result.
+        Temporarily do not support boolean type.
+    order : {'C'}, optional
+        Whether to store multidimensional data in C- or Fortran-contiguous
+        (row- or column-wise) order in memory. Currently only supports C order.
+    ctx: to specify the device, e.g. the i-th GPU.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : _Symbol
+          Array `fill_value` with the same shape and type as `a`.
+
+    See Also
+    --------
+    empty_like : Return an empty array with shape and type of input.
+    ones_like : Return an array of ones with shape and type of input.
+    zeros_like : Return an array of zeros with shape and type of input.
+    full : Return a new array of given shape filled with value.
+    """
+    if order != 'C':
+        raise NotImplementedError
+    if ctx is None:
+        ctx = current_context()
+    return _npi.full_like(a, fill_value=fill_value, ctx=ctx, dtype=dtype, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def zeros_like(a, dtype=None, order='C', ctx=None, out=None):  # pylint: disable=too-many-arguments
+    """
+    Return an array of zeros with the same shape and type as a given array.
+
+    Parameters
+    ----------
+    a : _Symbol
+        The shape and data-type of `a` define these same attributes of
+        the returned array.
+    fill_value : scalar
+        Fill value.
+    dtype : data-type, optional
+        Overrides the data type of the result.
+        Temporarily do not support boolean type.
+    order : {'C'}, optional
+        Whether to store multidimensional data in C- or Fortran-contiguous
+        (row- or column-wise) order in memory. Currently only supports C order.
+    ctx: to specify the device, e.g. the i-th GPU.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : _Symbol
+        Array of zeros with the same shape and type as `a`.
+
+    See Also
+    --------
+    empty_like : Return an empty array with shape and type of input.
+    ones_like : Return an array of ones with shape and type of input.
+    zeros_like : Return an array of zeros with shape and type of input.
+    zeros : Return a new array of given shape filled with zeros.
+    """
+    if order != 'C':
+        raise NotImplementedError
+    if ctx is None:
+        ctx = current_context()
+    return _npi.full_like(a, fill_value=0, ctx=ctx, dtype=dtype, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def ones_like(a, dtype=None, order='C', ctx=None, out=None):  # pylint: disable=too-many-arguments
+    """
+    Return an array of ones with the same shape and type as a given array.
+
+    Parameters
+    ----------
+    a : _Symbol
+        The shape and data-type of `a` define these same attributes of
+        the returned array.
+    fill_value : scalar
+        Fill value.
+    dtype : data-type, optional
+        Overrides the data type of the result.
+        Temporarily do not support boolean type.
+    order : {'C'}, optional
+        Whether to store multidimensional data in C- or Fortran-contiguous
+        (row- or column-wise) order in memory. Currently only supports C order.
+    ctx: to specify the device, e.g. the i-th GPU.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : _Symbol
+          Array of ones with the same shape and type as `a`.
+
+    See Also
+    --------
+    empty_like : Return an empty array with shape and type of input.
+    ones_like : Return an array of ones with shape and type of input.
+    zeros_like : Return an array of zeros with shape and type of input.
+    zeros : Return a new array of given shape filled with zeros.
+    """
+    if order != 'C':
+        raise NotImplementedError
+    if ctx is None:
+        ctx = current_context()
+    return _npi.full_like(a, fill_value=1, ctx=ctx, dtype=dtype, out=out)
 
 
 @set_module('mxnet.symbol.numpy')

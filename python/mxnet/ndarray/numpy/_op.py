@@ -28,7 +28,8 @@ from ...context import current_context
 from . import _internal as _npi
 from ..ndarray import NDArray
 
-__all__ = ['shape', 'zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power',
+__all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like',
+           'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power',
            'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs',
            'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2',
            'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
@@ -145,7 +146,119 @@ def ones(shape, dtype=_np.float32, order='C', ctx=None):  # pylint: disable=rede
 
 # pylint: disable=too-many-arguments, redefined-outer-name
 @set_module('mxnet.ndarray.numpy')
-def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):
+def zeros_like(a, dtype=None, order='C', ctx=None, out=None):
+    """
+    Return an array of zeros with the same shape and type as a given array.
+
+    Parameters
+    ----------
+    a : ndarray
+        The shape and data-type of `a` define these same attributes of
+        the returned array.
+    dtype : data-type, optional
+        Overrides the data type of the result.
+        Temporarily do not support boolean type.
+    order : {'C'}, optional
+        Whether to store multidimensional data in C- or Fortran-contiguous
+        (row- or column-wise) order in memory. Currently only supports C order.
+    ctx: to specify the device, e.g. the i-th GPU.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray
+          Array of zeros with the same shape and type as a.
+
+    See Also
+    --------
+    empty_like : Return an empty array with shape and type of input.
+    ones_like : Return an array of ones with shape and type of input.
+    zeros_like : Return an array of zeros with shape and type of input.
+    full : Return a new array of given shape filled with value.
+
+    Examples
+    --------
+    >>> x = np.arange(6)
+    >>> x = x.reshape((2, 3))
+    >>> x
+    array([[0., 1., 2.],
+           [3., 4., 5.]])
+    >>> np.zeros_like(x)
+    array([[0., 0., 0.],
+           [0., 0., 0.]])
+    >>> np.zeros_like(x, int)
+    array([[0, 0, 0],
+           [0, 0, 0]], dtype=int64)
+    >>> y = np.arange(3, dtype=float)
+    >>> y
+    array([0., 1., 2.], dtype=float64)
+    >>> np.zeros_like(y)
+    array([0., 0., 0.], dtype=float64)
+    """
+    return _npi.full_like(a, fill_value=0, dtype=dtype, ctx=None, out=None)
+
+
+@set_module('mxnet.ndarray.numpy')
+def ones_like(a, dtype=None, order='C', ctx=None, out=None):
+    """
+    Return an array of ones with the same shape and type as a given array.
+
+    Parameters
+    ----------
+    a : ndarray
+        The shape and data-type of `a` define these same attributes of
+        the returned array.
+    dtype : data-type, optional
+        Overrides the data type of the result.
+        Temporarily do not support boolean type.
+    order : {'C'}, optional
+        Whether to store multidimensional data in C- or Fortran-contiguous
+        (row- or column-wise) order in memory. Currently only supports C order.
+    ctx: to specify the device, e.g. the i-th GPU.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray
+        Array of ones with the same shape and type as a.
+
+    See Also
+    --------
+    empty_like : Return an empty array with shape and type of input.
+    zeros_like : Return an array of zeros with shape and type of input.
+    full_like : Return a new array with shape of input filled with value.
+    ones : Return a new array setting values to one.
+
+    Examples
+    --------
+    >>> x = np.arange(6)
+    >>> x = x.reshape((2, 3))
+    >>> x
+    array([[0., 1., 2.],
+           [3., 4., 5.]])
+    >>> np.ones_like(x)
+    array([[1., 1., 1.],
+           [1., 1., 1.]])
+    >>> np.ones_like(x, int)
+    array([[1, 1, 1],
+           [1, 1, 1]], dtype=int64)
+    >>> y = np.arange(3, dtype=float)
+    >>> y
+    array([0., 1., 2.], dtype=float64)
+    >>> np.ones_like(y)
+    array([1., 1., 1.], dtype=float64)
+    """
+    return _npi.full_like(a, fill_value=1, dtype=dtype, ctx=None, out=None)
+
+
+@set_module('mxnet.ndarray.numpy')
+def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylint: disable=too-many-arguments
     """
     Return a new array of given shape and type, filled with `fill_value`.
     Parameters
@@ -198,6 +311,64 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):
     dtype = _np.float32 if dtype is None else dtype
     return _npi.full(shape=shape, value=fill_value, ctx=ctx, dtype=dtype, out=out)
 # pylint: enable=too-many-arguments, redefined-outer-name
+
+
+@set_module('mxnet.ndarray.numpy')
+def full_like(a, fill_value, dtype=None, order='C', ctx=None, out=None): # pylint: disable=too-many-arguments
+    """
+    Return a full array with the same shape and type as a given array.
+
+    Parameters
+    ----------
+    a : ndarray
+        The shape and data-type of `a` define these same attributes of
+        the returned array.
+    fill_value : scalar
+        Fill value.
+    dtype : data-type, optional
+        Overrides the data type of the result.
+        Temporarily do not support boolean type.
+    order : {'C'}, optional
+        Whether to store multidimensional data in C- or Fortran-contiguous
+        (row- or column-wise) order in memory. Currently only supports C order.
+    ctx: to specify the device, e.g. the i-th GPU.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray
+        Array of `fill_value` with the same shape and type as `a`.
+
+    See Also
+    --------
+    empty_like : Return an empty array with shape and type of input.
+    ones_like : Return an array of ones with shape and type of input.
+    zeros_like : Return an array of zeros with shape and type of input.
+    full : Return a new array of given shape filled with value.
+
+    Examples
+    --------
+    >>> x = np.arange(6, dtype=int)
+    >>> np.full_like(x, 1)
+    array([1, 1, 1, 1, 1, 1], dtype=int64)
+    >>> np.full_like(x, 0.1)
+    array([0, 0, 0, 0, 0, 0], dtype=int64)
+    >>> np.full_like(x, 0.1, dtype=np.float64)
+    array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1], dtype=float64)
+    >>> np.full_like(x, np.nan, dtype=np.double)
+    array([nan, nan, nan, nan, nan, nan], dtype=float64)
+    >>> y = np.arange(6, dtype=np.float32)
+    >>> np.full_like(y, 0.1)
+    array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
+    """
+    if order != 'C':
+        raise NotImplementedError
+    if ctx is None:
+        ctx = current_context()
+    return _npi.full_like(a, fill_value=fill_value, dtype=dtype, ctx=ctx, out=out)
 
 
 @set_module('mxnet.ndarray.numpy')
