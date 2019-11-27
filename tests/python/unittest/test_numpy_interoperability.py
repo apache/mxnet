@@ -57,6 +57,15 @@ class OpArgMngr(object):
         return OpArgMngr._args.get(name, None)
 
 
+def _add_workload_unravel_index():
+    OpArgMngr.add_workload('unravel_index', indices=np.array([2],dtype=_np.int64), shape=(2, 2))
+    OpArgMngr.add_workload('unravel_index', np.array([(2*3 + 1)*6 + 4], dtype=_np.int64), (4, 3, 6))
+    OpArgMngr.add_workload('unravel_index', np.array([22, 41, 37], dtype=_np.int32), (7, 6))
+    OpArgMngr.add_workload('unravel_index', np.array([1621],dtype=_np.uint8), (6, 7, 8, 9))
+    OpArgMngr.add_workload('unravel_index', np.array([],dtype=_np.int64), (10, 3, 5))
+    OpArgMngr.add_workload('unravel_index', np.array([3], dtype=_np.int32), (2,2))
+
+
 def _add_workload_diag():
     def get_mat(n):
         data = _np.arange(n)
@@ -1310,6 +1319,7 @@ def _prepare_workloads():
     _add_workload_copy()
     _add_workload_cumsum()
     _add_workload_ravel()
+    _add_workload_unravel_index()
     _add_workload_diag()
     _add_workload_diagflat()
     _add_workload_dot()

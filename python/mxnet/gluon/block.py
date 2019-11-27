@@ -27,7 +27,7 @@ import re
 from collections import OrderedDict, defaultdict
 
 from ..base import mx_real_t, MXNetError
-from .. import symbol, ndarray, initializer
+from .. import symbol, ndarray, initializer, np_symbol
 from ..symbol import Symbol
 from ..ndarray import NDArray
 from .. import name as _name
@@ -979,7 +979,10 @@ class HybridBlock(Block):
     def _call_cached_op(self, *args):
         if self._cached_op is None:
             self._build_cache(*args)
-        assert self._cached_op, "cached op is not None"
+        assert self._cached_op, "Gluon failed to build the cache. " \
+                                "This should never happen. " \
+                                "Please submit an issue on Github" \
+                                " https://github.com/apache/incubator-mxnet."
         if self._callback:
             self._cached_op._register_op_hook(self._callback, self._monitor_all)
             if len(self._flags) >= 2 and (self._flags[1] or self._flags[0]):
@@ -1253,7 +1256,10 @@ class SymbolBlock(HybridBlock):
         ...     'net1-symbol.json', ['data'], 'net1-0001.params')
         >>> out2 = net2(x)
         """
-        sym = symbol.load(symbol_file)
+        if is_np_array():
+            sym = np_symbol.load(symbol_file)
+        else:
+            sym = symbol.load(symbol_file)
         if isinstance(input_names, str):
             input_names = [input_names]
         if param_file is None:
@@ -1261,7 +1267,7 @@ class SymbolBlock(HybridBlock):
             inputs = [symbol.var(i, dtype=mx_real_t) for i in input_names]
         else:
             # Do not specify type, rely on saved params type instead
-            inputs = [symbol.var(i) for i in input_names]
+            inputs = [symbol.var(i).as_np_ndarray() if is_np_array() else symbol.var(i) for i in input_names]
         ret = SymbolBlock(sym, inputs)
         if param_file is not None:
             ret.collect_params().load(param_file, ctx=ctx, cast_dtype=True, dtype_source='saved')
@@ -1287,8 +1293,6 @@ class SymbolBlock(HybridBlock):
 
         syms, self._in_format = _flatten(inputs, "input")
         out, self._out_format = _flatten(outputs, "output")
-        out = symbol.Group(out, _check_same_symbol_type(out))
-
         input_names = set()
         for i in syms:
             assert len(i.get_internals().list_outputs()) == 1, \
@@ -1297,11 +1301,16 @@ class SymbolBlock(HybridBlock):
 
         # check if any symbol is row_sparse
         row_sparse_storage = ndarray.ndarray._STORAGE_TYPE_STR_TO_ID['row_sparse']
+
         for i in out:
             for j in i.get_internals():
                 assert(j.attr("__storage_type__") != str(row_sparse_storage)), \
                     "SymbolBlock doesn't support Parameter '%s' because its storage " \
                     "type is 'row_sparse'." % j.name
+        if len(out) > 1:
+            out = symbol.Group(out, _check_same_symbol_type(out))
+        else:
+            out = out[0]
 
         # Infer type of parameters. Without this, every parameter will be created with
         # default type i.e., fp32
