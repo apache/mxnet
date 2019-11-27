@@ -724,7 +724,7 @@ class GradientUpdateHandler(BatchEnd):
 
     Parameters
     ----------
-    priority : scalar, default -np.Inf
+    priority : scalar, default -2000
         priority level of the gradient update handler. Priority level is sorted in ascending
         order. The lower the number is, the higher priority level it is.
     ----------
