@@ -847,26 +847,32 @@ fixed-size items.
         """Whether indexing with the given key results in a contiguous array.
 
         The rule is: From right to left, if in an axis, a slice produces a
-        proper subset, no later axis can produce a proper subset or use
-        a step different from 1.
+        proper subset, the later slice must have <=1 elements.
 
         The ``slc_key`` sequence must have the same length as ``shape`` and
         only contain `slice` objects.
         """
         assert len(slc_key) == len(shape)
-        subset = False
+        is_subset = False
+        total_sliced_elements = np.prod([_get_slice_len(slc, n)
+                                         for slc, n in zip(slc_key, shape)])
+        if total_sliced_elements in (0, 1):
+            return True
         for idx, n in zip(reversed(slc_key), reversed(shape)):
-            start, stop, step = idx.indices(n)
-            if step > 0:
-                num = int(np.ceil(max(stop - start, 0) / step))
-            else:
-                num = int(np.ceil(min(stop - start, 0) / step))
-
-            if num != 1 and (subset or step != 1):
+            _, _, step = idx.indices(n)
+            num_elements = _get_slice_len(idx, n)
+            if num_elements == 0:
+                return True
+            elif num_elements > 1 and (step > 1 or step < 0):
+                # We do not support the case of reverse slicing of multiple elements and
+                # forward slicing of #elements > 1 and step > 1
                 return False
-            if num != n:
-                subset = True
-
+            elif is_subset:
+                if num_elements > 1:
+                    return False
+            else:
+                if num_elements < n:
+                    is_subset = True
         return True
     # pylint: enable=invalid-name
 
@@ -875,14 +881,9 @@ fixed-size items.
         """Return the shape after slicing with the given key."""
         assert len(slc_key) == len(shape)
         sliced_shape = []
-        for idx, n in zip(slc_key, shape):
-            start, stop, step = idx.indices(n)
-            if step > 0:
-                num = int(np.ceil(max(stop - start, 0) / step))
-            else:
-                num = int(np.ceil(min(stop - start, 0) / step))
-            sliced_shape.append(num)
-
+        for slc, n in zip(slc_key, shape):
+            num_elements = _get_slice_len(slc, n)
+            sliced_shape.append(num_elements)
         return tuple(sliced_shape)
 
     # pylint: disable=invalid-name
@@ -890,15 +891,17 @@ fixed-size items.
     def _basic_indexing_contiguous_flat_begin_end(slc_key, shape):
         """Return the flat indices of begin and end for contiguous slicing."""
         assert len(slc_key) == len(shape)
-        begin, end, _ = slc_key[0].indices(shape[0])
-        flat_begin, flat_end = begin, end - 1
-        for idx, n in zip(slc_key[1:], shape[1:]):
+        flat_begin, flat_end = 0, 0
+        for slc, n in zip(slc_key, shape):
             flat_begin *= n
             flat_end *= n
-            begin, end, _ = idx.indices(n)
-            flat_begin += begin
-            flat_end += end - 1
-
+            begin, _, _ = slc.indices(n)
+            num_elements = _get_slice_len(slc, n)
+            if num_elements == 0:
+                return 0, 0
+            else:
+                flat_begin += begin
+                flat_end += begin + num_elements - 1
         return flat_begin, flat_end + 1
     # pylint: enable=invalid-name
 
@@ -1062,7 +1065,7 @@ fixed-size items.
         for ax in new_axes:  # pylint: disable=invalid-name
             final_shape.insert(ax, 1)
 
-        if final_shape == []:
+        if len(final_shape) == 0:
             # Override for single element indexing
             final_shape = [1]
         return sliced.reshape(final_shape)
@@ -3106,6 +3109,26 @@ def _get_dim_size(start, stop, step):
         assert stop < start
         dim_size = (start - stop - 1) // (-step) + 1
     return dim_size
+
+
+def _get_slice_len(slc, seq_length):
+    """Given a python slice object and the length of the sequence, calculate the number of elements
+     in the slice.
+
+    Parameters
+    ----------
+    slc : py_slice
+        The slice object
+    seq_length : int
+        The length of the object you are going to apply the slice on
+
+    Returns
+    -------
+    ret : int
+        Total number of elements in the slice
+    """
+    start, stop, step = slc.indices(seq_length)
+    return max(0, (stop - start + (step - (1 if step > 0 else -1))) // step)
 
 
 def _get_broadcast_shape(shape1, shape2):
