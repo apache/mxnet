@@ -233,7 +233,7 @@ bool NumpyXReshapeInferShape(const mxnet::TShape& src,
       } else if (proposed_dim == -3) {
         // skip the source dimension if and only if it is one
         CHECK_EQ(src[src_inx], 1)
-          <<"-3 index should only be used to skip dimension size 1";
+          << "-3 index should only be used to skip dimension size 1";
         src_inx++;
       } else if (proposed_dim == -4) {
         // copy all remaining dims from source
@@ -347,7 +347,6 @@ bool NumpyXReshapeShape(const nnvm::NodeAttrs& attrs,
 
 NNVM_REGISTER_OP(_np_reshape)
 .describe(R"code()code" ADD_FILELINE)
-.add_alias("_npi_reshape")
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyReshapeParam>)
@@ -373,6 +372,7 @@ NNVM_REGISTER_OP(_np_reshape)
 
 NNVM_REGISTER_OP(_npx_reshape)
 .describe(R"code()code" ADD_FILELINE)
+.add_alias("_npi_reshape")
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyXReshapeParam>)
