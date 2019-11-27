@@ -37,6 +37,7 @@
 #include "../common/exec_utils.h"
 #include "../imperative/imperative_utils.h"
 #include "../imperative/cached_op.h"
+#include "../imperative/cached_op_threadsafe.h"
 
 using namespace mxnet;
 
@@ -188,11 +189,45 @@ int MXCreateCachedOpEx(SymbolHandle handle,
   API_END();
 }
 
+int MXCreateCachedOpEX(SymbolHandle handle,
+		       int num_flags,
+		       const char** keys,
+		       const char** vals,
+		       CachedOpHandle *out,
+		       bool thread_safe) {
+  nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(handle);
+  API_BEGIN();
+  std::vector<std::pair<std::string, std::string> > flags;
+  for (int i = 0; i < num_flags; ++i) {
+    flags.emplace_back(keys[i], vals[i]);
+  }
+  if (!thread_safe) {
+    *out = new CachedOpPtr(new CachedOp(*sym, flags));
+  } else {
+    *out = new CachedOpThreadSafePtr(new CachedOpThreadSafe(*sym, flags));
+  }
+  API_END();
+}
+
 int MXFreeCachedOp(CachedOpHandle handle) {
   CachedOpPtr* g = static_cast<CachedOpPtr*>(handle);
   API_BEGIN();
   delete g;
   API_END();
+}
+
+int MXFreeCachedOpEX(CachedOpHandle handle, bool thread_safe) {
+  if (!thread_safe) {
+    CachedOpPtr *g = static_cast<CachedOpPtr *>(handle);
+    API_BEGIN();
+    delete g;
+    API_END();
+  } else {
+    CachedOpThreadSafePtr *g = static_cast<CachedOpThreadSafePtr*>(handle);
+    API_BEGIN();
+    delete g;
+    API_END();
+  }
 }
 
 int MXInvokeCachedOp(CachedOpHandle handle,
@@ -238,6 +273,49 @@ int MXInvokeCachedOp(CachedOpHandle handle,
   API_END();
 }
 
+int MXInvokeCachedOpThreadSafe(CachedOpHandle handle,
+			       int num_inputs,
+			       NDArrayHandle *inputs,
+			       int *num_outputs,
+			       NDArrayHandle **outputs) {
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
+  API_BEGIN();
+  CachedOpThreadSafePtr op = *static_cast<CachedOpThreadSafePtr *>(handle);
+  std::vector<NDArray*> ndinputs;
+  ndinputs.reserve(num_inputs);
+  for (int i = 0; i < num_inputs; ++i) {
+    ndinputs.push_back(reinterpret_cast<NDArray*>(inputs[i]));
+  }
+  std::vector<NDArray *> ndoutputs;
+  ndoutputs.reserve(op->num_outputs());
+  if (*outputs == nullptr) {
+    *num_outputs = op->num_outputs();
+    for (int i = 0; i < *num_outputs; ++i) {
+      ndoutputs.push_back(new NDArray());
+    }
+  } else {
+    CHECK_EQ(*num_outputs, op->num_outputs())
+      << "CachedOpThreadSafe expects " << op->num_outputs()
+      << " outputs, but " << *num_outputs << " was given.";
+    for (int i = 0; i < *num_outputs; ++i) {
+      ndoutputs.push_back(reinterpret_cast<NDArray *>((*outputs)[i]));
+    }
+  }
+
+  op->Forward(op, ndinputs, ndoutputs);
+
+  if (*outputs == nullptr) {
+    ret->ret_handles.clear();
+    ret->ret_handles.reserve(*num_outputs);
+    for (int i = 0; i < *num_outputs; ++i) {
+      ret->ret_handles.push_back(ndoutputs[i]);
+    }
+    *outputs = dmlc::BeginPtr(ret->ret_handles);
+  }
+
+  API_END();
+}
+
 int MXInvokeCachedOpEx(CachedOpHandle handle,
                        int num_inputs,
                        NDArrayHandle *inputs,
@@ -246,6 +324,32 @@ int MXInvokeCachedOpEx(CachedOpHandle handle,
                        const int **out_stypes) {  // outputs storage types
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   int err = MXInvokeCachedOp(handle, num_inputs, inputs, num_outputs, outputs);
+  if (err != 0) return err;
+  API_BEGIN();
+  NDArray** out_array = reinterpret_cast<NDArray**>(*outputs);
+  ret->out_types.clear();
+  ret->out_types.reserve(*num_outputs);
+  for (int i = 0; i < *num_outputs; ++i) {
+    ret->out_types.emplace_back(out_array[i]->storage_type());
+  }
+  *out_stypes = dmlc::BeginPtr(ret->out_types);
+  API_END();
+}
+
+int MXInvokeCachedOpEX(CachedOpHandle handle,
+		       int num_inputs,
+		       NDArrayHandle *inputs,
+		       int *num_outputs,
+		       NDArrayHandle **outputs,
+		       const int **out_stypes,  // outputs storage types
+		       bool thread_safe) {
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
+  int err = 0;
+  if (!thread_safe) {
+    err = MXInvokeCachedOp(handle, num_inputs, inputs, num_outputs, outputs);
+  } else {
+    err = MXInvokeCachedOpThreadSafe(handle, num_inputs, inputs, num_outputs, outputs);
+  }
   if (err != 0) return err;
   API_BEGIN();
   NDArray** out_array = reinterpret_cast<NDArray**>(*outputs);
