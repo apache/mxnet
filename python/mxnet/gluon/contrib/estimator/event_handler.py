@@ -131,7 +131,8 @@ class MetricHandler(EpochBegin, BatchEnd):
     train_metrics : List of EvalMetrics
         Training metrics to be updated at batch end.
     priority : scalar
-        Priority level of the MetricHandler
+        Priority level of the MetricHandler. Priority level is sorted in ascending
+        order. The lower the number is, the higher priority level it is.
     """
 
     def __init__(self, train_metrics, priority=-1000):
@@ -179,7 +180,8 @@ class ValidationHandler(TrainBegin, BatchEnd, EpochEnd):
         How often to run validation at batch end, by default
         :py:class:`ValidationHandler` does not validate at batch end.
     priority: scalar, default -1000
-        Priority level of the ValidataionHandler
+        Priority level of the ValidationHandler. Priority level is sorted in
+        ascending order. The lower the number is, the higher priority level it is.
     """
 
     def __init__(self,
@@ -241,7 +243,8 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
     val_metrics : list of EvalMetrics
         Validation metrics to be logged, logged at epoch end, train end.
     priority : scalar, default np.Inf
-        Priority level of the LoggingHandler
+        Priority level of the LoggingHandler. Priority level is sorted in
+        ascending order. The lower the number is, the higher priority level it is.
     """
 
     def __init__(self, log_interval='epoch',
@@ -722,10 +725,11 @@ class GradientUpdateHandler(BatchEnd):
     Parameters
     ----------
     priority : scalar, default -np.Inf
-        priority level of the gradient update handler. It should be executed before all other handlers.
+        priority level of the gradient update handler. Priority level is sorted in ascending
+        order. The lower the number is, the higher priority level it is.
     ----------
     """
-    def __init__(self, priority=-np.Inf):
+    def __init__(self, priority=-2000):
         self.priority = priority
 
     def batch_end(self, estimator, *args, **kwargs):
