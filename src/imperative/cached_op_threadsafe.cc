@@ -220,7 +220,7 @@
      storage[idx.entry_id(idx.outputs()[i])] = exec::kExternalStorageID;
    }
  
-   auto mem_plan = PlanMemory(&g, std::move(storage),
+   auto mem_plan = MXPlanMemory(&g, std::move(storage),
                               g.GetAttr<std::vector<uint32_t>>("forward_ref_count"),
                               "forward_storage_plan");
    g.attrs["forward_mem_plan"] =
