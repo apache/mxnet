@@ -446,8 +446,8 @@ def test_np_sum():
            (itype == 'bool' and \
             (dtype not in ('float32', 'float64', 'int32', 'int64') or is_windows)):
             continue
-        if (itype == 'float16' or dtype == 'float16') and has_tvm_ops():
-            continue
+        # if (itype == 'float16' or dtype == 'float16') and has_tvm_ops():
+        #    continue
         if not (has_tvm_ops() and initial == None):
             continue
         # test gluon
