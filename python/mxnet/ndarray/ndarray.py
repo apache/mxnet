@@ -854,13 +854,13 @@ fixed-size items.
         """
         assert len(slc_key) == len(shape)
         is_subset = False
-        total_sliced_elements = np.prod([_get_slice_len_for(slc, n)
+        total_sliced_elements = np.prod([_get_slice_len(slc, n)
                                          for slc, n in zip(slc_key, shape)])
         if total_sliced_elements in (0, 1):
             return True
         for idx, n in zip(reversed(slc_key), reversed(shape)):
             _, _, step = idx.indices(n)
-            num_elements = _get_slice_len_for(idx, n)
+            num_elements = _get_slice_len(idx, n)
             if num_elements == 0:
                 return True
             elif num_elements > 1 and (step > 1 or step < 0):
@@ -882,7 +882,7 @@ fixed-size items.
         assert len(slc_key) == len(shape)
         sliced_shape = []
         for slc, n in zip(slc_key, shape):
-            num_elements = _get_slice_len_for(slc, n)
+            num_elements = _get_slice_len(slc, n)
             sliced_shape.append(num_elements)
         return tuple(sliced_shape)
 
@@ -896,7 +896,7 @@ fixed-size items.
             flat_begin *= n
             flat_end *= n
             begin, _, _ = slc.indices(n)
-            num_elements = _get_slice_len_for(slc, n)
+            num_elements = _get_slice_len(slc, n)
             if num_elements == 0:
                 return 0, 0
             else:
@@ -3128,7 +3128,7 @@ def _get_dim_size(start, stop, step):
     return dim_size
 
 
-def _get_slice_len_for(slc, seq_length):
+def _get_slice_len(slc, seq_length):
     """Given a python slice object and the length of the sequence, calculate the number of elements
      in the slice.
 

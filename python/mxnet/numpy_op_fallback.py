@@ -80,3 +80,37 @@ class ResizeProp(operator.CustomOpProp):
 
     def create_operator(self, ctx, in_shapes, in_dtypes):
         return Resize(self._new_shape)
+
+
+@use_np
+class Unravel_index(operator.CustomOp):
+    """Fallback to NumPy Unravel_index operator."""
+    def __init__(self, shape):
+        super(Unravel_index, self).__init__()
+        self._shape = shape
+
+    def forward(self, is_train, req, in_data, out_data, aux):
+        out = np.unravel_index(in_data[0].asnumpy(), self._shape)
+        self.assign(out_data[0], req[0], _mx_np.array(out, dtype=out[0].dtype, ctx=out_data[0].ctx))
+
+    def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+        raise NotImplementedError('Operator Unravel_index does not support gradient computation')
+
+
+@register('unravel_index_fallback')
+class Unravel_indexProp(operator.CustomOpProp):
+    """Fallback unravel_index operator properties."""
+    def __init__(self, shape):
+        super(Unravel_indexProp, self).__init__(need_top_grad=True)
+        self._shape = ast.literal_eval(shape)
+
+    def list_arguments(self):
+        return ['indices']
+
+    def infer_shape(self, in_shape):
+        dim_list = (1,) if np.isscalar(self._shape) else (len(self._shape),)
+        out_shape = dim_list + tuple(in_shape[0])
+        return (in_shape[0],), (out_shape,), ()
+
+    def create_operator(self, ctx, in_shapes, in_dtypes):
+        return Unravel_index(self._shape)

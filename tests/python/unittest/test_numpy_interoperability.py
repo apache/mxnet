@@ -57,6 +57,15 @@ class OpArgMngr(object):
         return OpArgMngr._args.get(name, None)
 
 
+def _add_workload_unravel_index():
+    OpArgMngr.add_workload('unravel_index', indices=np.array([2],dtype=_np.int64), shape=(2, 2))
+    OpArgMngr.add_workload('unravel_index', np.array([(2*3 + 1)*6 + 4], dtype=_np.int64), (4, 3, 6))
+    OpArgMngr.add_workload('unravel_index', np.array([22, 41, 37], dtype=_np.int32), (7, 6))
+    OpArgMngr.add_workload('unravel_index', np.array([1621],dtype=_np.uint8), (6, 7, 8, 9))
+    OpArgMngr.add_workload('unravel_index', np.array([],dtype=_np.int64), (10, 3, 5))
+    OpArgMngr.add_workload('unravel_index', np.array([3], dtype=_np.int32), (2,2))
+
+
 def _add_workload_diag():
     def get_mat(n):
         data = _np.arange(n)
@@ -306,6 +315,16 @@ def _add_workload_linalg_cholesky():
 def _add_workload_linalg_inv():
     OpArgMngr.add_workload('linalg.inv', np.array(_np.ones((0, 0)), dtype=np.float32))
     OpArgMngr.add_workload('linalg.inv', np.array(_np.ones((0, 1, 1)), dtype=np.float64))
+
+
+def _add_workload_linalg_det():
+    OpArgMngr.add_workload('linalg.det', np.array(_np.ones((2, 2)), dtype=np.float32))
+    OpArgMngr.add_workload('linalg.det', np.array(_np.ones((0, 1, 1)), dtype=np.float64))
+
+
+def _add_workload_linalg_slogdet():
+    OpArgMngr.add_workload('linalg.slogdet', np.array(_np.ones((2, 2)), dtype=np.float32))
+    OpArgMngr.add_workload('linalg.slogdet', np.array(_np.ones((0, 1, 1)), dtype=np.float64))
 
 
 def _add_workload_trace():
@@ -1300,6 +1319,7 @@ def _prepare_workloads():
     _add_workload_copy()
     _add_workload_cumsum()
     _add_workload_ravel()
+    _add_workload_unravel_index()
     _add_workload_diag()
     _add_workload_diagflat()
     _add_workload_dot()
@@ -1332,6 +1352,8 @@ def _prepare_workloads():
     _add_workload_linalg_norm()
     _add_workload_linalg_cholesky()
     _add_workload_linalg_inv()
+    _add_workload_linalg_det()
+    _add_workload_linalg_slogdet()
     _add_workload_trace()
     _add_workload_tril()
     _add_workload_outer()
