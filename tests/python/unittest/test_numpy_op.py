@@ -2125,7 +2125,7 @@ def test_np_atleast_nd():
 
     tensor_shapes = [
         ((), (2,), (3, 4, 5)),
-        ((2, 3, 4, 5), ())
+        ((2, 3, 4, 5), (), (2, 3))
     ]
     flags = [True, False]
     ns = [1, 2, 3]
