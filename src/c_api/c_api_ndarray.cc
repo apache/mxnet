@@ -190,11 +190,11 @@ int MXCreateCachedOpEx(SymbolHandle handle,
 }
 
 int MXCreateCachedOpEX(SymbolHandle handle,
-		       int num_flags,
-		       const char** keys,
-		       const char** vals,
-		       CachedOpHandle *out,
-		       bool thread_safe) {
+                       int num_flags,
+                       const char** keys,
+                       const char** vals,
+                       CachedOpHandle *out,
+                       bool thread_safe) {
   nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(handle);
   API_BEGIN();
   std::vector<std::pair<std::string, std::string> > flags;
@@ -274,10 +274,10 @@ int MXInvokeCachedOp(CachedOpHandle handle,
 }
 
 int MXInvokeCachedOpThreadSafe(CachedOpHandle handle,
-			       int num_inputs,
-			       NDArrayHandle *inputs,
-			       int *num_outputs,
-			       NDArrayHandle **outputs) {
+                               int num_inputs,
+                               NDArrayHandle *inputs,
+                               int *num_outputs,
+                               NDArrayHandle **outputs) {
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   CachedOpThreadSafePtr op = *static_cast<CachedOpThreadSafePtr *>(handle);
@@ -337,12 +337,12 @@ int MXInvokeCachedOpEx(CachedOpHandle handle,
 }
 
 int MXInvokeCachedOpEX(CachedOpHandle handle,
-		       int num_inputs,
-		       NDArrayHandle *inputs,
-		       int *num_outputs,
-		       NDArrayHandle **outputs,
-		       const int **out_stypes,  // outputs storage types
-		       bool thread_safe) {
+                       int num_inputs,
+                       NDArrayHandle *inputs,
+                       int *num_outputs,
+                       NDArrayHandle **outputs,
+                       const int **out_stypes,  // outputs storage types
+                       bool thread_safe) {
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   int err = 0;
   if (!thread_safe) {
