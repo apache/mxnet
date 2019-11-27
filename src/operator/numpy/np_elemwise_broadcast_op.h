@@ -46,7 +46,7 @@ inline bool NumpyBinaryScalarType(const nnvm::NodeAttrs& attrs,
 
 inline void PrintErrorMessage(const std::string& op_name, const int dtype1, const int dtype2) {
   LOG(FATAL) << "Operator " << op_name << " does not support combination of "
-             << common::dtype_string(dtype1) << " with " << common::dtype_string(dtype2)
+             << mshadow::dtype_string(dtype1) << " with " << mshadow::dtype_string(dtype2)
              << " yet...";
 }
 
