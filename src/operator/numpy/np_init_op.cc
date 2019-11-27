@@ -160,7 +160,7 @@ NNVM_REGISTER_OP(_np_atleast_##N##d)                                      \
 .set_attr<mxnet::FInferShape>("FInferShape", AtleastNDShape<N>)           \
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)                \
 .set_attr<FCompute>("FCompute<cpu>", AtleastNDCompute<cpu>)               \
-.add_argument("arys", "NDArray-or-Symbol[]", "List of eimsum operands")   \
+.add_argument("arys", "NDArray-or-Symbol[]", "List of input arrays")      \
 .add_arguments(AtleastNDParam::__FIELDS__())                              \
 
 NNVM_REGISTER_ATLEAST_ND(1);
