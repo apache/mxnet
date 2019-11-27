@@ -19,8 +19,11 @@
 
 from __future__ import absolute_import
 from ..ndarray import numpy as _mx_nd_np
+from .fallback_linalg import *
+from . import fallback_linalg
 
 __all__ = ['norm', 'svd', 'cholesky', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve']
+__all__ += fallback_linalg.__all__
 
 
 def norm(x, ord=None, axis=None, keepdims=False):
