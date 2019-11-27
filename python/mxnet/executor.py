@@ -359,7 +359,8 @@ class Executor(object):
             if name in self.arg_dict:
                 dst = self.arg_dict[name]
                 if dst.dtype == np.dtype([('bfloat16', np.uint16)]):
-                    dst = ndarray.amp_cast(array, dtype=dst.dtype)
+                    cast_array = ndarray.amp_cast(array, dtype=dst.dtype)
+                    cast_array.copyto(dst)
                 else:
                     array.astype(dst.dtype).copyto(dst)
             elif not allow_extra_params:
@@ -372,7 +373,8 @@ class Executor(object):
             if name in self.aux_dict:
                 dst = self.aux_dict[name]
                 if dst.dtype == np.dtype([('bfloat16', np.uint16)]):
-                    dst = ndarray.amp_cast(array, dtype=dst.dtype)
+                    cast_array = ndarray.amp_cast(array, dtype=dst.dtype)
+                    cast_array.copyto(dst)
                 else:
                     array.astype(dst.dtype).copyto(dst)
             elif not allow_extra_params:
