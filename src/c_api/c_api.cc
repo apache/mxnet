@@ -987,7 +987,9 @@ int MXNDArrayCreateSparseEx(int storage_type,
                             const uint32_t *aux_shape,
                             NDArrayHandle *out) {
   API_BEGIN();
-  CreateSparseNDArray<uint32_t>(storage_type, shape, ndim, dev_type, dev_id, delay_alloc, dtype, num_aux, aux_type, aux_ndims, aux_shape, out);
+  CreateSparseNDArray<uint32_t>(storage_type, shape, ndim, dev_type, dev_id,
+                                delay_alloc, dtype, num_aux, aux_type,
+                                aux_ndims, aux_shape, out);
   API_END();
 }
 
@@ -1005,7 +1007,9 @@ int MXNDArrayCreateSparseEx64(int storage_type,
                             const int64_t *aux_shape,
                             NDArrayHandle *out) {
   API_BEGIN();
-  CreateSparseNDArray<int64_t>(storage_type, shape, ndim, dev_type, dev_id, delay_alloc, dtype, num_aux, aux_type, aux_ndims, aux_shape, out);
+  CreateSparseNDArray<int64_t>(storage_type, shape, ndim, dev_type, dev_id,
+                               delay_alloc, dtype, num_aux, aux_type,
+                               aux_ndims, aux_shape, out);
   API_END();
 }
 
