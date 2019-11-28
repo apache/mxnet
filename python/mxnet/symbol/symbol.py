@@ -97,7 +97,7 @@ class Symbol(SymbolBase):
         >>> out
         <Symbol Grouped>
         >>> for i in out:
-        ...     i
+        ...     print(i)
         ...
         <Symbol d>
         <Symbol _plus0>

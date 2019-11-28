@@ -115,6 +115,7 @@ information on the definition and the algorithm.
 .set_attr<FInferStorageType>("FInferStorageType", CTCLossOpStorageType)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
   { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", CTCLossOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_ctc_loss"})
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")

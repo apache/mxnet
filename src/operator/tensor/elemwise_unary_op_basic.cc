@@ -565,6 +565,7 @@ void ShapeComputeCPU(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(shape_array)
+.add_alias("_npx_shape_array")
 .describe(R"code(Returns a 1D int64 array containing the shape of data.
 
 Example::
@@ -877,6 +878,7 @@ The storage type of ``fix`` output depends upon the input storage type:
 
 // erf
 MXNET_OPERATOR_REGISTER_UNARY(erf)
+.add_alias("_npx_erf")
 .describe(R"code(Returns element-wise gauss error function of the input.
 
 Example::
@@ -898,6 +900,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_erf)
 
 // erfinv
 MXNET_OPERATOR_REGISTER_UNARY(erfinv)
+.add_alias("_npx_erfinv")
 .describe(R"code(Returns element-wise inverse gauss error function of the input.
 
 Example::
@@ -906,7 +909,7 @@ Example::
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::erfinv>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_erfinv"});
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_erfinv"});
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_erfinv)
 .set_attr<FCompute>("FCompute<cpu>",
@@ -929,6 +932,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_gamma,
 
 // gammaln
 MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(gammaln, cpu, mshadow_op::gammaln)
+.add_alias("_npx_gammaln")
 MXNET_ADD_SPARSE_OP_ALIAS(gammaln)
 .describe(R"code(Returns element-wise log of the absolute value of the gamma function \
 of the input.

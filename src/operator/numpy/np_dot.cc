@@ -131,6 +131,7 @@ NNVM_REGISTER_OP(_np_dot)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", NumpyDotForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_np_dot"})
 .add_argument("a", "NDArray-or-Symbol", "First input")

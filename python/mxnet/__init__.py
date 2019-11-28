@@ -38,6 +38,7 @@ from . import numpy_extension as npx
 from . import name
 # use mx.sym as short for symbol
 from . import symbol as sym
+from .symbol.numpy import _symbol as np_symbol
 from . import symbol
 from . import symbol_doc
 from . import io
@@ -101,3 +102,4 @@ from . import kvstore_server
 
 from . import numpy_op_signature
 from . import numpy_dispatch_protocol
+from . import numpy_op_fallback

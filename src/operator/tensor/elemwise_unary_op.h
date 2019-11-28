@@ -34,6 +34,7 @@
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
 #include "../elemwise_op_common.h"
+#include "../../common/utils.h"
 #include "../../ndarray/ndarray_function.h"
 
 #if MSHADOW_USE_MKL == 1
@@ -453,8 +454,8 @@ void CastCompute(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 1, DstDType> out = outputs[0].FlatTo1D<xpu, DstDType>(s);
     MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, SrcDType, {
       Tensor<xpu, 1, SrcDType> data = inputs[0].FlatTo1D<xpu, SrcDType>(s);
-      if (outputs[0].type_flag_ != inputs[0].type_flag_ ||
-          req[0] != kWriteInplace) {
+      if ((outputs[0].type_flag_ != inputs[0].type_flag_ ||
+          req[0] != kWriteInplace) && outputs[0].Size() != 0) {
         Assign(out, req[0], tcast<DstDType>(data));
       }
     });
@@ -658,6 +659,134 @@ void AroundOpForward(const nnvm::NodeAttrs& attrs,
       });
     });
   }
+}
+
+struct NumpyNanToNumParam : public dmlc::Parameter<NumpyNanToNumParam> {
+  bool copy;
+  double nan;
+  dmlc::optional<double> posinf, neginf;
+  DMLC_DECLARE_PARAMETER(NumpyNanToNumParam) {
+    DMLC_DECLARE_FIELD(copy)
+    .set_default(true)
+    .describe("Whether to create a copy of `x` (True) or to replace values"
+              "in-place (False). The in-place operation only occurs if"
+              "casting to an array does not require a copy."
+              "Default is True.");
+    DMLC_DECLARE_FIELD(nan)
+    .set_default(0.0)
+    .describe("Value to be used to fill NaN values. If no value is passed"
+              "then NaN values will be replaced with 0.0.");
+    DMLC_DECLARE_FIELD(posinf)
+    .set_default(dmlc::optional<double>())
+    .describe("Value to be used to fill positive infinity values."
+              "If no value is passed then positive infinity values will be"
+              "replaced with a very large number.");
+    DMLC_DECLARE_FIELD(neginf)
+    .set_default(dmlc::optional<double>())
+    .describe("Value to be used to fill negative infinity values."
+              "If no value is passed then negative infinity values"
+              "will be replaced with a very small (or negative) number.");
+  }
+};
+
+template<int req>
+struct nan_to_num_forward {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i,
+                                  DType* out_data,
+                                  const DType* in_data,
+                                  const DType nan,
+                                  const DType posinf,
+                                  const DType neginf) {
+    DType val = in_data[i];
+    if (mshadow_op::IsNan<DType>(val))  val = nan;
+    if (val > 0 && mshadow_op::IsInf(val))  val = posinf;
+    if (val < 0 && mshadow_op::IsInf(val))  val = neginf;
+    KERNEL_ASSIGN(out_data[i], req, val);
+  }
+};
+
+template<typename xpu>
+void NumpyNanToNumOpForward(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<TBlob>& inputs,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<TBlob>& outputs) {
+  using namespace mxnet;
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob& in_data = inputs[0];
+  const TBlob& out_data = outputs[0];
+  const NumpyNanToNumParam& param = nnvm::get<NumpyNanToNumParam>(attrs.parsed);
+  using namespace mxnet_op;
+
+  if (!common::is_float(in_data.type_flag_) && req[0] == kWriteInplace) return;
+  if (!common::is_float(in_data.type_flag_)) {
+    copy(s, out_data, in_data);
+    return;
+  }
+
+  MSHADOW_REAL_TYPE_SWITCH(out_data.type_flag_, DType, {
+    DType defaultnan = static_cast<DType>(param.nan);
+    DType posinf;
+    DType neginf;
+    if (param.posinf.has_value()) {
+      posinf = static_cast<DType>(param.posinf.value());
+    } else {
+      posinf = mshadow::red::limits::MaxValue<DType>();
+    }
+    if (param.neginf.has_value()) {
+      neginf = static_cast<DType>(param.neginf.value());
+    } else {
+      neginf = mshadow::red::limits::MinValue<DType>();
+    }
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      Kernel<nan_to_num_forward<req_type>, xpu>::Launch(
+          s, out_data.Size(), out_data.dptr<DType>(), in_data.dptr<DType>(),
+          defaultnan, posinf, neginf);
+    });
+  });
+}
+
+template<int req>
+struct nan_to_num_backward {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i,
+                                  DType* in_grad,
+                                  const DType* out_grad,
+                                  const DType* in_data) {
+    DType val = out_grad[i];
+    if (mshadow_op::IsNan(in_data[i]))  val = 0;
+    if (val > 0 && mshadow_op::IsInf(in_data[i]))  val = 0;
+    if (val < 0 && mshadow_op::IsInf(in_data[i]))  val = 0;
+    KERNEL_ASSIGN(in_grad[i], req, val);
+  }
+};
+
+template<typename xpu>
+void NumpyNanToNumOpBackward(const nnvm::NodeAttrs& attrs,
+                             const OpContext& ctx,
+                             const std::vector<TBlob>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_NE(req[0], kWriteInplace);
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob& out_grad = inputs[0];
+  const TBlob& in_data = inputs[1];
+  const TBlob& in_grad = outputs[0];
+  CHECK_EQ(common::is_float(in_data.type_flag_), true);
+  using namespace mxnet_op;
+  MSHADOW_TYPE_SWITCH(out_grad.type_flag_, DType, {
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      Kernel<nan_to_num_backward<req_type>, xpu>::Launch(
+          s, in_grad.Size(), in_grad.dptr<DType>(), out_grad.dptr<DType>(),
+          in_data.dptr<DType>());
+    });
+  });
 }
 
 /*! \brief Unary compute */

@@ -127,7 +127,7 @@ mkldnn::algorithm GetMKLDNNPoolAlgo(const PoolingParam &param) {
   }
 }
 
-static inline int GetPaddingSizeFull(int x, int padl, int padr, int k, int s) {
+static inline int GetPaddingSizeFull(dim_t x, int padl, int padr, int k, int s) {
   if ((x + padl + padr - k) % s != 0) {
     return (padr + s - ((x + padl + padr - k) % s));
   } else {

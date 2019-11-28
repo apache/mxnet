@@ -26,6 +26,7 @@
 #include <nnvm/graph.h>
 #include <nnvm/pass_functions.h>
 #include <vector>
+#include <set>
 #include <algorithm>
 
 #include "./exec_pass.h"
@@ -49,7 +50,7 @@ static const std::string GetDefaultSubgraphBackend() {
 #endif
 }
 
-GraphExecutor::GraphExecutor() {
+GraphExecutor::GraphExecutor(const nnvm::Symbol& symbol) {
   log_verbose_ = dmlc::GetEnv("MXNET_EXEC_VERBOSE_LOGGING", false);
   need_grad_ = false;
   is_dynamic_ = false;
@@ -59,6 +60,7 @@ GraphExecutor::GraphExecutor() {
     LOG(INFO) << "MXNET_SUBGRAPH_BACKEND=NONE is detected, subgraph backend is not in use";
   }
   engine_ref_ = Engine::_GetSharedRef();
+  symbol_ = symbol.Copy();
 }
 
 GraphExecutor::~GraphExecutor() {
@@ -330,6 +332,9 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
 
   nnvm::Graph g;
   g.outputs = symbol.outputs;
+  bool do_elim_common_expr = dmlc::GetEnv("MXNET_ELIMINATE_COMMON_EXPR", true);
+  if (do_elim_common_expr)
+    g = exec::EliminateCommonExpr(std::move(g));
   need_grad_ = false;
   for (OpReqType req : grad_req_types) {
     if (req != kNullOp) need_grad_ = true;
@@ -337,6 +342,7 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
   if (!need_grad_) return g;
   for (size_t i = 0; i < g.outputs.size(); ++i) {
     NodeEntry ngrad(nnvm::Node::Create(), 0, 0);
+    ngrad.node->attrs.name = "_head_grad_" + std::to_string(i);
     head_grad_entry_.emplace_back(AttrHint(ngrad, g.outputs[i]));
     head_grad_map_[ngrad.node.get()] = i;
   }
@@ -359,8 +365,6 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
     if (type == "FullyConnected") return false;
     if (type == "Concat") return false;
     if (type == "SoftmaxOutput") return false;
-    if (type == "BatchNorm") return false;
-    if (type == "CuDNNBatchNorm") return false;
     return true;
   };
 
@@ -377,6 +381,7 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
   for (const auto &e : g_grad.outputs) {
     g.outputs.push_back(e);
   }
+
   return g;
 }
 
@@ -796,6 +801,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
                          const nnvm::NodeEntryMap<NDArray>& feed_dict) {
   nnvm::Graph g = InitGraph(symbol, default_ctx, ctx_map, in_arg_ctxes, arg_grad_ctxes,
                             aux_state_ctxes, grad_req_types);
+
   // The following code of shape and dtype inferences and argument
   // initialization is for simple_bind only. Regular bind operation
   // should do this differently.
@@ -883,10 +889,9 @@ Executor* GraphExecutor::Reshape(const bool partial_shaping,
                                  std::vector<NDArray>* arg_grads,
                                  std::vector<NDArray>* aux_states) {
   nnvm::Graph g;
-  g.outputs = std::vector<nnvm::NodeEntry>(graph_.outputs.begin(),
-    graph_.outputs.begin() + num_forward_outputs_);
   nnvm::Symbol symbol;
-  symbol.outputs = g.outputs;
+  symbol.outputs = symbol_.outputs;
+  g.outputs = symbol_.outputs;
   const nnvm::IndexedGraph& idx = g.indexed_graph();
   mxnet::ShapeVector arg_shapes(idx.input_nodes().size(), mxnet::TShape());
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
@@ -970,12 +975,13 @@ Executor* GraphExecutor::Reshape(const bool partial_shaping,
       }
     }
   }
-  auto exec = new GraphExecutor();
-  exec->Init(symbol, default_ctx, ctx_map,
+  auto exec = new GraphExecutor(symbol);
+  exec->Init(symbol.Copy(), default_ctx, ctx_map,
              *in_args, *arg_grads, grad_req_types, *aux_states,
              this);
   return exec;
 }
+
 /*!
  * \brief This function is triggered by both simple_bind
  * and bind flows.
@@ -992,6 +998,46 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
                                const std::vector<OpReqType>& grad_req_types) {
   // setup gradient
   nnvm::Graph g = InitFullGraph(symbol, grad_req_types);
+
+#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC && !defined(_WIN32)
+  if (default_ctx.dev_mask() == Context::kGPU && dmlc::GetEnv("MXNET_USE_FUSION", true)) {
+    nnvm::Graph unoptimized_graph;
+    common::CopyGraph(&unoptimized_graph, g, false);
+
+    if (common::CheckForInputNameDuplicates(unoptimized_graph.indexed_graph())) {
+      g.attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs_);
+      g = FusePointwiseForward(std::move(g));
+      g.attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs_);
+      g = FusePointwiseBackward(std::move(g));
+      // Check the topological order of inputs
+      const auto &original_inputs = unoptimized_graph.indexed_graph().input_nodes();
+      const auto &new_inputs = g.indexed_graph().input_nodes();
+      if (original_inputs.size() != new_inputs.size()) {
+        LOG(WARNING)
+          << "Number of inputs after fusion does not match original number of inputs. "
+          << "This is most probably a bug. Disabling fusion for this run.";
+        g = unoptimized_graph;
+      } else {
+        for (size_t i = 0; i < new_inputs.size(); ++i) {
+          if (unoptimized_graph.indexed_graph()[original_inputs[i]].source->attrs.name !=
+              g.indexed_graph()[new_inputs[i]].source->attrs.name) {
+            LOG(WARNING) << "Disabling fusion due to altered topological order of inputs.";
+            g = unoptimized_graph;
+            break;
+          }
+        }
+      }
+    } else {
+      LOG(WARNING)
+        << "Graph contains duplicate names for some of its inputs - fusion is NOT enabled!";
+     }
+  }
+#else
+  // Only warn user if MXNET_USE_FUSION env var is explicitly set
+  if (default_ctx.dev_mask() == Context::kGPU && dmlc::GetEnv("MXNET_USE_FUSION", false)) {
+    WarnFusionNotSupported();
+  }
+#endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC && !defined(_WIN32)
 
   // create "device" and "context" attrs for the graph
   g = AssignContext(g, default_ctx, ctx_map,
@@ -1926,7 +1972,7 @@ Executor *Executor::SimpleBind(nnvm::Symbol symbol,
                                std::vector<NDArray>* aux_states,
                                std::unordered_map<std::string, NDArray>* shared_buffer,
                                Executor* shared_exec) {
-  auto exec = new exec::GraphExecutor();
+  auto exec = new exec::GraphExecutor(symbol);
   bool init = false;
   if (!exec->subgraph_property().empty()) {
     static int verbose = dmlc::GetEnv("MXNET_SUBGRAPH_VERBOSE", 1);
@@ -1946,7 +1992,9 @@ Executor *Executor::SimpleBind(nnvm::Symbol symbol,
       symbol = exec::BuildSubgraph(symbol, backend, arg_shape_map, arg_dtype_map, arg_stype_map,
                                    default_ctx, group2ctx, &tmp_in_arg_ctxes, &tmp_arg_grad_ctxes,
                                    &tmp_grad_req_types, &tmp_aux_state_ctxes, verbose);
-      exec->Init(symbol, default_ctx, group2ctx, tmp_in_arg_ctxes, tmp_arg_grad_ctxes,
+      // Subgraph cannot be recreated from unoptimized symbol
+      exec = new exec::GraphExecutor(symbol);
+      exec->Init(symbol.Copy(), default_ctx, group2ctx, tmp_in_arg_ctxes, tmp_arg_grad_ctxes,
                  tmp_aux_state_ctxes, arg_shape_map, arg_dtype_map, arg_stype_map,
                  tmp_grad_req_types, shared_arg_names, &tmp_in_args, &tmp_arg_grads,
                  &tmp_aux_states, shared_buffer, shared_exec);
@@ -1985,7 +2033,7 @@ Executor *Executor::SimpleBind(nnvm::Symbol symbol,
   }
   if (!init) {
     // init without subgraph
-    exec->Init(symbol, default_ctx, group2ctx, in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes,
+    exec->Init(symbol.Copy(), default_ctx, group2ctx, in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes,
                arg_shape_map, arg_dtype_map, arg_stype_map, grad_req_types, shared_arg_names,
                in_args, arg_grads, aux_states, shared_buffer, shared_exec);
   }
@@ -2000,7 +2048,7 @@ Executor *Executor::Bind(nnvm::Symbol symbol,
                          const std::vector<OpReqType> &grad_req_type,
                          const std::vector<NDArray> &aux_states,
                          Executor* shared_exec) {
-  auto exec = new exec::GraphExecutor();
+  auto exec = new exec::GraphExecutor(symbol);
   static int verbose = dmlc::GetEnv("MXNET_SUBGRAPH_VERBOSE", 1);
   std::vector<NDArray> tmp_in_args = in_args;
   std::vector<NDArray> tmp_arg_grad_store = arg_grad_store;
@@ -2015,10 +2063,12 @@ Executor *Executor::Bind(nnvm::Symbol symbol,
       symbol = exec::BuildSubgraph(symbol, backend, default_ctx, group2ctx, &tmp_in_args,
                                    &tmp_arg_grad_store, &tmp_grad_req_type, &tmp_aux_states,
                                    verbose);
+      // Subgraph cannot be recreated from unoptimized symbol
+      exec = new exec::GraphExecutor(symbol);
     }
   }
-  exec->Init(symbol, default_ctx, group2ctx, tmp_in_args, tmp_arg_grad_store, tmp_grad_req_type,
-             tmp_aux_states, reinterpret_cast<Executor*>(shared_exec));
+  exec->Init(symbol.Copy(), default_ctx, group2ctx, tmp_in_args, tmp_arg_grad_store,
+             tmp_grad_req_type, tmp_aux_states, reinterpret_cast<Executor*>(shared_exec));
   return exec;
 }
 }  // namespace mxnet

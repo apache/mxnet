@@ -20,13 +20,24 @@ ifeq ($(USE_MKLDNN), 1)
 	MKLDNN_BUILDDIR = $(MKLDNN_SUBMODDIR)/build
 	MXNET_LIBDIR = $(ROOTDIR)/lib
 	MXNET_INCLDIR = $(ROOTDIR)/include
-ifeq ($(UNAME_S), Darwin)
-	MKLDNN_LIBFILE = $(MKLDNNROOT)/lib/libmkldnn.1.dylib
-	MKLDNN_LIB64FILE = $(MKLDNNROOT)/lib64/libmkldnn.1.dylib
-else
-	MKLDNN_LIBFILE = $(MKLDNNROOT)/lib/libmkldnn.so.1
-	MKLDNN_LIB64FILE = $(MKLDNNROOT)/lib64/libmkldnn.so.1
+	MKLDNN_LIBFILE = $(MKLDNNROOT)/lib/libdnnl.a
 endif
+
+mkldnn_FLAGS  = -DCMAKE_INSTALL_PREFIX=$(MKLDNNROOT)
+mkldnn_FLAGS += -DCMAKE_INSTALL_LIBDIR=lib
+mkldnn_FLAGS += -B$(MKLDNN_BUILDDIR)
+mkldnn_FLAGS += -DMKLDNN_ARCH_OPT_FLAGS=""
+mkldnn_FLAGS += -DMKLDNN_BUILD_TESTS=OFF
+mkldnn_FLAGS += -DMKLDNN_BUILD_EXAMPLES=OFF
+mkldnn_FLAGS += -DMKLDNN_ENABLE_JIT_PROFILING=OFF
+mkldnn_FLAGS += -DMKLDNN_LIBRARY_TYPE=STATIC
+
+ifneq ($(USE_OPENMP), 1)
+	mkldnn_FLAGS += -DMKLDNN_CPU_RUNTIME=SEQ
+endif
+
+ifeq ($(DEBUG), 1)
+	mkldnn_FLAGS += -DCMAKE_BUILD_TYPE=Debug
 endif
 
 .PHONY: mkldnn mkldnn_clean
@@ -35,20 +46,16 @@ mkldnn_build: $(MKLDNN_LIBFILE)
 
 $(MKLDNN_LIBFILE):
 	mkdir -p $(MKLDNNROOT)/lib
-	cmake $(MKLDNN_SUBMODDIR) -DCMAKE_INSTALL_PREFIX=$(MKLDNNROOT) -B$(MKLDNN_BUILDDIR) -DMKLDNN_ARCH_OPT_FLAGS="" -DMKLDNN_BUILD_TESTS=OFF -DMKLDNN_BUILD_EXAMPLES=OFF -DMKLDNN_ENABLE_JIT_PROFILING=OFF
+	cmake $(MKLDNN_SUBMODDIR) $(mkldnn_FLAGS)
 	$(MAKE) -C $(MKLDNN_BUILDDIR) VERBOSE=1
 	$(MAKE) -C $(MKLDNN_BUILDDIR) install
-	mkdir -p $(MXNET_LIBDIR)
-	if [ -f "$(MKLDNN_LIB64FILE)" ]; then \
-		cp $(MKLDNNROOT)/lib64/libmkldnn* $(MXNET_LIBDIR); \
-		cp $(MKLDNNROOT)/lib64/libmkldnn* $(MKLDNNROOT)/lib/; \
-	else \
-		cp $(MKLDNNROOT)/lib/libmkldnn* $(MXNET_LIBDIR); \
-	fi
-	cp $(MKLDNN_BUILDDIR)/include/mkldnn_version.h $(MXNET_INCLDIR)/mkldnn/.
+	cp $(MKLDNN_BUILDDIR)/include/dnnl_version.h $(MXNET_INCLDIR)/mkldnn/.
+	cp $(MKLDNN_BUILDDIR)/include/dnnl_config.h $(MXNET_INCLDIR)/mkldnn/.
 
 mkldnn_clean:
 	$(RM) -r 3rdparty/mkldnn/build
+	$(RM) -r include/mkldnn/dnnl_version.h
+	$(RM) -r include/mkldnn/dnnl_config.h
 
 ifeq ($(USE_MKLDNN), 1)
 mkldnn: mkldnn_build

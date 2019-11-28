@@ -385,6 +385,7 @@ Example::
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<bool>("TIsMKLDNN", true)
 #endif  // MXNET_USE_MKLDNN == 1
 CONCAT_FORWARD_ATTRS
@@ -422,6 +423,7 @@ NNVM_REGISTER_OP(_rnn_param_concat)
 })
 #endif  // MXNET_USE_MKLDNN == 1
 CONCAT_FORWARD_ATTRS
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<mxnet::FInferShape>("FInferShape", RNNParamConcatShape)
 .add_argument("data", "NDArray-or-Symbol[]", "List of arrays to concatenate")
 .add_arguments(ConcatParam::__FIELDS__());

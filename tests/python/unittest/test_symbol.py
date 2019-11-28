@@ -16,7 +16,9 @@
 # under the License.
 
 import copy
+import sys
 import os
+import logging
 import re
 import json
 import mxnet as mx
@@ -391,7 +393,6 @@ def test_children_same_name():
     for c in b.get_children():
         pass
 
-
 def test_transpose_nullop():
     for dim in range(1, 7):
         a = mx.sym.Variable('a')
@@ -412,10 +413,95 @@ def test_gen_atomic_symbol_multiple_outputs():
     p = mx.sym.Variable('param')
     h0 = mx.sym.Variable('h0')
     h1 = mx.sym.Variable('h1')
-    s = mx.sym.RNN(data, p, h0, h1, state_size=10, num_layers=2, 
+    s = mx.sym.RNN(data, p, h0, h1, state_size=10, num_layers=2,
                    bidirectional=True, state_outputs=True, mode='lstm')
     atomic_sym = s._gen_atomic_symbol()
 
+
+def test_eliminate_common_expr():
+    if not sys.platform.startswith('linux'):
+        logging.info("Bypass the CSE test on non-Linux OS as setting env variables during test does not work on Windows")
+        return
+    def set_back_env_var(var_name, old_env_var):
+        if old_env_var is None:
+            os.environ.pop(var_name)
+        else:
+            os.environ[var_name] = old_env_var
+
+    # helper function to test a single model
+    def check_cse_on_symbol(sym, expected_savings, check_data, **kwargs):
+        inputs = sym.list_inputs()
+        shapes = {inp : kwargs[inp].shape for inp in inputs}
+        rtol = {'float16' : 1e-2,
+                'float32' : 1.5e-6,
+                'float64' : 1.5e-6,
+                }
+        atol = {'float16' : 1e-3,
+                'float32' : 1e-7,
+                'float64' : 1e-7,
+                }
+        env_var_name = 'MXNET_ELIMINATE_COMMON_EXPR'
+        old_env_var = os.environ.get(env_var_name, None)
+        try:
+            for dtype in ['float16', 'float32', 'float64']:
+                data = {inp : kwargs[inp].astype(dtype) for inp in inputs}
+                for grad_req in ['write', 'add']:
+                    type_dict = {inp : dtype for inp in inputs}
+                    os.environ[env_var_name] = '0'
+                    orig_exec = sym.simple_bind(ctx=mx.cpu(0), grad_req=grad_req,
+                                                type_dict=type_dict, **shapes)
+                    os.environ[env_var_name] = '1'
+                    cse_exec = sym.simple_bind(ctx=mx.cpu(0), grad_req=grad_req,
+                                               type_dict=type_dict, **shapes)
+                    fwd_orig = orig_exec.forward(is_train=True, **data)
+                    out_grads = [mx.nd.ones_like(arr) for arr in fwd_orig]
+                    orig_exec.backward(out_grads=out_grads)
+                    fwd_cse = cse_exec.forward(is_train=True, **data)
+                    cse_exec.backward(out_grads=out_grads)
+                    if check_data:
+                        for orig, cse in zip(fwd_orig, fwd_cse):
+                            np.testing.assert_allclose(orig.asnumpy(), cse.asnumpy(),
+                                                       rtol=rtol[dtype], atol=atol[dtype])
+                        for orig, cse in zip(orig_exec.grad_arrays, cse_exec.grad_arrays):
+                            if orig is None and cse is None:
+                                continue
+                            assert orig is not None
+                            assert cse is not None
+                            np.testing.assert_allclose(orig.asnumpy(), cse.asnumpy(),
+                                                       rtol=rtol[dtype], atol=atol[dtype])
+                    orig_sym_internals = orig_exec.get_optimized_symbol().get_internals()
+                    cse_sym_internals = cse_exec.get_optimized_symbol().get_internals()
+                    # test that the graph has been simplified as expected
+                    assert (len(cse_sym_internals) + expected_savings) == len(orig_sym_internals)
+        finally:
+            set_back_env_var(env_var_name, old_env_var)
+
+    a = mx.sym.Variable('a')
+    b = mx.sym.Variable('b')
+    c = mx.sym.Variable('c')
+    shape = rand_shape_nd(2)
+    arr1 = mx.random.uniform(shape=shape)
+    arr2 = mx.random.uniform(shape=shape)
+    arr3 = mx.random.uniform(shape=shape)
+
+    check_cse_on_symbol((a+5) + (a+5), expected_savings=1, check_data=True, a=arr1, b=arr2)
+    check_cse_on_symbol((a+1) + (a+2), expected_savings=0, check_data=True, a=arr1, b=arr2)
+    check_cse_on_symbol((1+a) + (a+1), expected_savings=1, check_data=True, a=arr1, b=arr2)
+    check_cse_on_symbol((a+b) + (a+b), expected_savings=1, check_data=True, a=arr1, b=arr2)
+    check_cse_on_symbol(((a+b)+c) +((a+b)+c), expected_savings=2, check_data=True,
+                                                                  a=arr1, b=arr2, c=arr3)
+    d = a + 1
+
+    # a*d node gets eliminated, but then a copy is inserted to isolate the outputs, so no net gain.
+    check_cse_on_symbol(mx.sym.Group([a*d, a*d]), expected_savings=0, check_data=True, a=arr1)
+
+    # a*d node gets eliminated, then the duplicated add-of-b, but then a copy is added for net of 1.
+    check_cse_on_symbol(mx.sym.Group([a*d+b, a*d+b]), expected_savings=1, check_data=True,
+                                                                          a=arr1, b=arr2)
+
+    # dropout uses a resource that precludes any optimization
+    check_cse_on_symbol(mx.sym.Dropout(a) +
+                        mx.sym.Dropout(a), expected_savings=0, check_data=False, a=arr1)
 
 def test_load_save_symbol():
     batch_size = 10
@@ -456,6 +542,21 @@ def test_load_save_symbol():
                     assert out_shapes[0] == (batch_size, num_hdidden)  # output
                     assert len(aux_shapes) == 0
 
+def test_infershape_happens_for_all_ops_in_graph():
+    v = mx.sym.Variable('V')
+    s = mx.sym.transpose(v)
+    x = mx.sym.Variable('x')
+    s2 = x + v
+    s3 = s + s2
+    with discard_stderr():
+        try:
+            # This should throw an exception as you cannot add arrays
+            # with shapes [2,3] and [3,2]
+            e = s3.simple_bind(ctx=mx.cpu(), x=(2,3), grad_req='null')
+        except:
+            return
+
+    assert False
 
 if __name__ == '__main__':
     import nose

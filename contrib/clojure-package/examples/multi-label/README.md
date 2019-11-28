@@ -21,6 +21,15 @@ This is a quick example of doing multi-label classification.
 It involves using a proxy to implement the DataIter to make a custom
 data iterator for MNIST
 
+
+## Installation
+
+Before you run this example, make sure that you have the clojure package installed.
+In the main clojure package directory, do `lein install`. Then you can run
+`lein install` in this directory.
+
+## Usage
+
 To run
 `lein run`. This will execute the cpu version.
 

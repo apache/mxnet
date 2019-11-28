@@ -25,7 +25,6 @@
 #ifndef MXNET_OPERATOR_NUMPY_RANDOM_NP_UNIFORM_OP_H_
 #define MXNET_OPERATOR_NUMPY_RANDOM_NP_UNIFORM_OP_H_
 
-#include <mshadow/base.h>
 #include <mxnet/operator_util.h>
 #include <algorithm>
 #include <string>

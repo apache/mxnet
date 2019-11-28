@@ -23,6 +23,17 @@ There is an example of the high level training api fit and also how to use multi
 
 To see more examples of how to use different parts of the module api look at the module example
 
+An example of using the profiler.
+
+## Installation
+
+Before you run this example, make sure that you have the clojure package installed.
+In the main clojure package directory, do `lein install`. Then you can run
+`lein install` in this directory.
+
+
+## Usage
+
 To run the example you must do
 
 * `lein install` in the root of the main project directory

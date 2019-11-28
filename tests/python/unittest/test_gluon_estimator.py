@@ -83,20 +83,23 @@ def test_validation():
     ctx = mx.cpu()
     loss = gluon.loss.L2Loss()
     acc = mx.metric.Accuracy()
+    evaluation_loss = gluon.loss.L1Loss()
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     est = Estimator(net=net,
                     loss=loss,
                     metrics=acc,
                     trainer=trainer,
-                    context=ctx)
+                    context=ctx,
+                    evaluation_loss=evaluation_loss)
     # Input dataloader
     est.fit(train_data=dataloader,
             val_data=dataloader,
             epochs=num_epochs)
 
     # using validation handler
-    train_metrics, val_metrics = est.prepare_loss_and_metrics()
+    train_metrics = est.train_metrics
+    val_metrics = est.val_metrics
     validation_handler = ValidationHandler(val_data=dataloader, eval_fn=est.evaluate,
                                            val_metrics=val_metrics)
 
@@ -222,7 +225,6 @@ def test_metric():
                     loss=loss,
                     trainer=trainer,
                     context=ctx)
-    est.prepare_loss_and_metrics()
     assert isinstance(est.train_metrics[0], mx.metric.Accuracy)
 
 
@@ -343,13 +345,10 @@ def test_default_handlers():
 
     # handler with prepared loss and metrics
     # use mix of default and user defined handlers
-    train_metrics, val_metrics = est.prepare_loss_and_metrics()
+    train_metrics = est.train_metrics
+    val_metrics = est.val_metrics
     logging = LoggingHandler(train_metrics=train_metrics, val_metrics=val_metrics)
-    with warnings.catch_warnings(record=True) as w:
-        est.fit(train_data=train_data, epochs=num_epochs, event_handlers=[logging])
-        assert 'You are training with the' in str(w[-1].message)
-        # provide metric handler by default
-        assert 'MetricHandler' in str(w[-1].message)
+    est.fit(train_data=train_data, epochs=num_epochs, event_handlers=[logging])
 
     # handler with all user defined metrics
     # use mix of default and user defined handlers
@@ -364,7 +363,8 @@ def test_default_handlers():
         est.fit(train_data=train_data, epochs=num_epochs, event_handlers=[logging])
 
     # test handler order
-    train_metrics, val_metrics = est.prepare_loss_and_metrics()
+    train_metrics = est.train_metrics
+    val_metrics = est.val_metrics
     early_stopping = EarlyStoppingHandler(monitor=val_metrics[0])
     handlers = est._prepare_default_handlers(val_data=None, event_handlers=[early_stopping])
     assert len(handlers) == 4

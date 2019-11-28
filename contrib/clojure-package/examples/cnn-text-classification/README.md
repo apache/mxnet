@@ -26,6 +26,13 @@ and `rt-polarity.pos` must be put in a directory. For example, `data/mr-data/rt-
 You also must download the glove word embeddings. The suggested one to use is the smaller 50 dimension one
 `glove.6B.50d.txt` which is contained in the download file here: [GloVe](https://nlp.stanford.edu/projects/glove/)
 
+
+## Installation
+
+Before you run this example, make sure that you have the clojure package installed.
+In the main clojure package directory, do `lein install`. Then you can run
+`lein install` in this directory.
+
 ## Usage
 
 You can run through the repl with

@@ -394,8 +394,7 @@ class DropoutOp {
               mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
               mshadow::Shape<NDim> lstride = mxnet_op::calc_stride(new_lshape.get<NDim>());
               mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
-              mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, DType, DType,
-                               mshadow_op::mul>, xpu>::
+              mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, mshadow_op::mul>, xpu>::
               template LaunchEx(s, new_oshape.Size(), req[dropout::kOut],
               lstride, rstride, oshape,
               in.dptr<DType>(),
@@ -463,8 +462,7 @@ class DropoutOp {
             mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
             mshadow::Shape<NDim> lstride = mxnet_op::calc_stride(new_lshape.get<NDim>());
             mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
-            mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, DType, DType,
-                             mshadow_op::mul>, xpu>::
+            mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, mshadow_op::mul>, xpu>::
             template LaunchEx(s, new_oshape.Size(), req[0], lstride, rstride, oshape,
             grad.dptr<DType>(), mask.dptr<DType>(), gdata.dptr<DType>());
           });

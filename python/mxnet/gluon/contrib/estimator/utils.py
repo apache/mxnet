@@ -19,7 +19,8 @@
 # pylint: disable=wildcard-import, unused-variable
 """Gluon Estimator Utility Functions"""
 
-from ....metric import EvalMetric, CompositeEvalMetric
+from ...loss import SoftmaxCrossEntropyLoss
+from ....metric import Accuracy, EvalMetric, CompositeEvalMetric
 
 def _check_metrics(metrics):
     if isinstance(metrics, CompositeEvalMetric):
@@ -30,5 +31,31 @@ def _check_metrics(metrics):
         metrics = metrics or []
         if not all([isinstance(metric, EvalMetric) for metric in metrics]):
             raise ValueError("metrics must be a Metric or a list of Metric, "
-                             "refer to mxnet.metric.EvalMetric:{}".format(metrics))
+                             "refer to mxnet.metric.EvalMetric: {}".format(metrics))
     return metrics
+
+def _check_handler_metric_ref(handler, known_metrics):
+    for attribute in dir(handler):
+        if any(keyword in attribute for keyword in ['metric' or 'monitor']):
+            reference = getattr(handler, attribute)
+            if not reference:
+                continue
+            elif isinstance(reference, list):
+                for metric in reference:
+                    _check_metric_known(handler, metric, known_metrics)
+            else:
+                _check_metric_known(handler, reference, known_metrics)
+
+def _check_metric_known(handler, metric, known_metrics):
+    if metric not in known_metrics:
+        raise ValueError(
+            'Event handler {} refers to a metric instance {} outside of '
+            'the known training and validation metrics. Please use the metrics from '
+            'estimator.train_metrics and estimator.val_metrics '
+            'instead.'.format(type(handler).__name__,
+                              metric))
+
+def _suggest_metric_for_loss(loss):
+    if isinstance(loss, SoftmaxCrossEntropyLoss):
+        return Accuracy()
+    return None

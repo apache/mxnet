@@ -34,6 +34,7 @@ DMLC_REGISTER_PARAMETER(BoxOverlapParam);
 DMLC_REGISTER_PARAMETER(BipartiteMatchingParam);
 DMLC_REGISTER_PARAMETER(BoxDecodeParam);
 
+
 NNVM_REGISTER_OP(_contrib_box_nms)
 .add_alias("_contrib_box_non_maximum_suppression")
 .describe(R"code(Apply non-maximum suppression to input.
@@ -102,6 +103,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", BoxNMSForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_contrib_box_nms"})
 .add_argument("data", "NDArray-or-Symbol", "The input")
@@ -186,6 +188,7 @@ NNVM_REGISTER_OP(_contrib_bipartite_matching)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<mxnet::FInferShape>("FInferShape", MatchingShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 2>)
 .set_attr<FCompute>("FCompute<cpu>", BipartiteMatchingForward<cpu>)

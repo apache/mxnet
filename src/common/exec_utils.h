@@ -621,6 +621,25 @@ inline nnvm::Graph AssignContext(nnvm::Graph g,
   return g;
 }
 
+/*!
+ * \brief Copy the graph, optionally leaving original Variable nodes.
+ *
+ * \param dst destination graph
+ * \param src source graph being copied
+ * \param copy_variable whether to copy or reuse Variable nodes from the
+ *                      source graph
+ */
+void CopyGraph(nnvm::Graph *dst, const nnvm::Graph &src, bool copy_variables);
+
+/*!
+ * \brief Check whether graph contains any duplicated names in its inputs.
+ *
+ * \param idx Indexed graph being checked
+ *
+ * \return true if there are no duplicates, false otherwise
+ */
+bool CheckForInputNameDuplicates(const nnvm::IndexedGraph &idx);
+
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_EXEC_UTILS_H_

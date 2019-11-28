@@ -86,6 +86,8 @@ mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(
   };
 
   if (bias) {
+    if ((*bias).shape().ndim() != 1)
+      LOG(FATAL) << "Unexpected shape for bias " << (*bias).shape();
     auto bias_md = GetMemDesc(*bias);
     mkldnn::inner_product_forward::desc desc(propagation,
         data_md, weight_md, bias_md, out_md);

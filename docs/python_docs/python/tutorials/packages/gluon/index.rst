@@ -167,7 +167,7 @@ Training
 
    .. card::
       :title: Autograd API
-      :link: ../autograd/autograd.html
+      :link: /api/python/docs/tutorials/packages/autograd/index.html
 
       How to use Automatic Differentiation with the Autograd API.
 

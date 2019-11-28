@@ -293,10 +293,9 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
 NDArray NDArray::SliceWithRecord(index_t begin, index_t end) {
   NDArray ret = this->Slice(begin, end);
   if (!Imperative::Get()->is_recording()) return ret;
-  // fake a slice_axis op
+  // fake a slice op
   nnvm::NodeAttrs attrs;
-  attrs.op = nnvm::Op::Get("slice_axis");
-  attrs.dict.insert({"axis", "0"});
+  attrs.op = nnvm::Op::Get("slice");
   attrs.dict.insert({"begin", std::to_string(begin)});
   attrs.dict.insert({"end", std::to_string(end)});
   attrs.op->attr_parser(&attrs);
@@ -1623,13 +1622,11 @@ void NDArray::Save(dmlc::Stream *strm) const {
     nd_cpu.WaitToRead();
     save_data = nd_cpu.data();
   } else {
-#if MXNET_USE_MKLDNN == 1
-    // For mkldnn, a copy of *this can ensure no write access pending on *this.
-    nd_cpu = this->Copy(Context::CPU());
-    nd_cpu.WaitToRead();
-#else
     this->WaitToRead();
     nd_cpu = *this;
+#if MXNET_USE_MKLDNN == 1
+    if (nd_cpu.IsMKLDNNData())
+      nd_cpu = nd_cpu.Reorder2Default();
 #endif
     save_data = nd_cpu.data();
   }
@@ -2024,18 +2021,15 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   TBlob dst(data, dshape, cpu::kDevMask, this->dtype_, 0); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
-    Engine::Get()->PushAsync(
-        [&](RunContext rctx, Engine::CallbackOnComplete on_complete) {
-          RunContext ctx{this->ctx(), nullptr, nullptr, false};
-          NDArray src = *this;
+    this->WaitToRead();
+    RunContext rctx{this->ctx(), nullptr, nullptr, false};
+    NDArray src = *this;
 #if MXNET_USE_MKLDNN == 1
-          src = this->Reorder2Default();
+    if (src.IsMKLDNNData())
+      src = this->Reorder2Default();
 #endif
-          ndarray::Copy<cpu, cpu>(src.data(), &dst, Context::CPU(), Context::CPU(), ctx);
-          on_complete();
-        },
-        this->ctx(), {this->var()}, {}, FnProperty::kNormal, 0, "SyncCopyCPU2CPU");
-    this->WaitToWrite();
+    ndarray::Copy<cpu, cpu>(src.data(), &dst,
+                            Context::CPU(), Context::CPU(), rctx);
   } else {
 #if MXNET_USE_CUDA
     Engine::Get()->PushAsync(
