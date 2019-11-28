@@ -53,6 +53,8 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_ceil, mshadow_op::ceil);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_floor, mshadow_op::floor);
 
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_bitwise_not, mshadow_op::bitwise_not);
+
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_trunc, mshadow_op::trunc);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_fix, mshadow_op::fix);

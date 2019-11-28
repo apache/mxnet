@@ -169,6 +169,16 @@ Example::
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
+// bitwise_not
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_bitwise_not, "x", mshadow_op::bitwise_not)
+.describe(R"code(Compute bit-wise inversion, or bit-wise NOT, element-wise.
+Computes the bit-wise NOT of the underlying binary representation of
+the integers in the input arrays.
+Example::
+   bitwise_not(np.array([13], dtype=np.int8)) = array([-14], dtype=int8)
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
 // trunc
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_trunc, "x", mshadow_op::trunc)
 .describe(R"code(Return the truncated value of the input, element-wise.
