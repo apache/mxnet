@@ -59,10 +59,12 @@ struct MultiLAMB_step1_kernel {
 
         MPDType g;
         if (bias_correction) {
-          MPDType mean_hat = mean / (static_cast<MPDType>(1.0f) - power::Map(static_cast<MPDType>(beta1), 
-                                                  static_cast<MPDType>(kernel_params.step_count[index])));
-          MPDType var_hat = var / (static_cast<MPDType>(1.0f) - power::Map(static_cast<MPDType>(beta2), 
-                                                static_cast<MPDType>(kernel_params.step_count[index])));
+          MPDType mean_hat = mean / (static_cast<MPDType>(1.0f) -
+                                    power::Map(static_cast<MPDType>(beta1),
+                                    static_cast<MPDType>(kernel_params.step_count[index])));
+          MPDType var_hat = var / (static_cast<MPDType>(1.0f) -
+                                  power::Map(static_cast<MPDType>(beta2),
+                                  static_cast<MPDType>(kernel_params.step_count[index])));
           g = mean_hat / (sqrt(var_hat) + epsilon) + wd * w;
         } else {
           g = mean / (sqrt(var) + epsilon) + wd * w;

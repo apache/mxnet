@@ -64,7 +64,8 @@ __global__ void kernel_step1(const MultiLAMBKernelParam<DType, MPDType> kernel_p
   MPDType r_var[ILP_LAMB];
   MPDType r_g[ILP_LAMB];
 
-  for (size_t i=startPos; i < stopPos && i < kernel_params.sizes[tensorID]; i+= blockDim.x*ILP_LAMB) {
+  for (size_t i=startPos; i < stopPos && i < kernel_params.sizes[tensorID];
+                                                  i+= blockDim.x*ILP_LAMB) {
 #pragma unroll
       for (int ii = 0; ii < ILP_LAMB; ii++) {
           int load_pos = i + ii*blockDim.x;
@@ -131,7 +132,8 @@ __global__ void kernel_step2(const MultiLAMBKernelParam<DType, MPDType> kernel_p
   MPDType r_weight[ILP_LAMB];
   MPDType r_g[ILP_LAMB];
 
-  for (size_t i=startPos; i < stopPos && i < kernel_params.sizes[tensorID]; i+= blockDim.x*ILP_LAMB) {
+  for (size_t i=startPos; i < stopPos && i < kernel_params.sizes[tensorID];
+                                                  i+= blockDim.x*ILP_LAMB) {
 #pragma unroll
       for (int ii = 0; ii < ILP_LAMB; ii++) {
           int load_pos = i + ii*blockDim.x;
@@ -164,9 +166,9 @@ void call_kernel1(Stream<gpu>* s,
                   int* block_to_tensor,
                   int* block_to_chunk) {
   int nblocks = kernel_params.nchunks;
-  int* host_block2tensor = (int*)malloc(kernel_params.nchunks*sizeof(int));
-  int* host_block2chunk = (int*)malloc(kernel_params.nchunks*sizeof(int));
-  int chunkID=0;
+  int* host_block2tensor = reinterpret_cast<int*>(malloc(kernel_params.nchunks*sizeof(int)));
+  int* host_block2chunk = reinterpret_cast<int*>(malloc(kernel_params.nchunks*sizeof(int)));
+  int chunkID = 0;
   for (size_t index = 0; index < kernel_params.ntensors; ++index) {
     int current_chunk = 0;
     for (size_t j = 0; j < kernel_params.sizes[index]; j+=kernel_params.chunk_size) {
@@ -180,7 +182,7 @@ void call_kernel1(Stream<gpu>* s,
                   cudaMemcpyHostToDevice, Stream<gpu>::GetStream(s));
   cudaMemcpyAsync(block_to_chunk, host_block2chunk, kernel_params.nchunks*sizeof(int),
                   cudaMemcpyHostToDevice, Stream<gpu>::GetStream(s));
-  
+
   bool has_mixed_precision = !std::is_same<DType, MPDType>::value;
   MPDType beta3 = 1.0 - param.beta1;
   MPDType beta4 = 1.0 - param.beta2;
