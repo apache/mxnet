@@ -619,7 +619,7 @@ lib/libtvm_runtime.so:
 	ls $(ROOTDIR)/lib; \
 	cd $(ROOTDIR)
 
-TVM_OP_COMPILE_OPTIONS = -o $(ROOTDIR)/lib/libtvmop.so --config $(ROOTDIR)/lib/tvmop.conf
+TVM_OP_COMPILE_OPTIONS = -o $(ROOTDIR)/lib --config $(ROOTDIR)/lib/tvmop.conf
 ifneq ($(CUDA_ARCH),)
 	TVM_OP_COMPILE_OPTIONS += --cuda-arch "$(CUDA_ARCH)"
 endif
