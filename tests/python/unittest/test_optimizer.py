@@ -762,13 +762,13 @@ def test_adam():
                                           dtype, w_stype='default', g_stype='row_sparse',
                                           rtol=1e-4, atol=2e-5)
 
-# multiLAMB
-class Py_multiLAMB(mx.optimizer.Optimizer):
+# MultiLAMB
+class PyMultiLAMB(mx.optimizer.Optimizer):
     """python reference implemenation of lamb"""
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-6,
                  lower_bound=1e-3, upper_bound=10.0, bias_correction=False, 
                  multi_precision=False, clip_gradient=-1, **kwargs):
-        super(Py_multiLAMB, self).__init__(learning_rate=learning_rate, **kwargs)
+        super(PyMultiLAMB, self).__init__(learning_rate=learning_rate, **kwargs)
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
@@ -819,8 +819,8 @@ class Py_multiLAMB(mx.optimizer.Optimizer):
 
 @with_seed()
 def test_multilamb():
-    opt1 = Py_multiLAMB
-    opt2 = mx.optimizer.multiLAMB
+    opt1 = PyMultiLAMB
+    opt2 = mx.optimizer.MultiLAMB
     #set_default_context(mx.gpu(0))
     
     # shapes as Bert-large

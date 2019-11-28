@@ -42,7 +42,7 @@ from ..util import is_np_array
 
 __all__ = [
     'AdaDelta', 'AdaGrad', 'Adam', 'Adamax', 'DCASGD', 'FTML', 'Ftrl', 'LARS', 'LBSGD',
-    'multiLAMB', 'NAG', 'NDabs', 'Nadam', 'Optimizer', 'RMSProp', 'SGD', 'SGLD', 'Signum', 'LAMB',
+    'MultiLAMB', 'NAG', 'NDabs', 'Nadam', 'Optimizer', 'RMSProp', 'SGD', 'SGLD', 'Signum', 'LAMB',
     'Test', 'Updater', 'ccSGD', 'create', 'get_updater', 'register'
 ]
 
@@ -1053,19 +1053,19 @@ class LARS(Optimizer):
                           multi_precision=use_multi_precision)
 
 @register
-class multiLAMB(Optimizer):
+class MultiLAMB(Optimizer):
     """multiLAMB optimizer.
     """
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-6,
-                    lower_bound=1e-3, upper_bound=10.0, bias_correction=False, **kwargs):
-        super(multiLAMB, self).__init__(learning_rate=learning_rate, **kwargs)
+                 lower_bound=1e-3, upper_bound=10.0, bias_correction=False, **kwargs):
+        super(MultiLAMB, self).__init__(learning_rate=learning_rate, **kwargs)
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
         self.bias_correction = bias_correction
-        self.aggregate_num = max(1,min(50,int(os.getenv('MXNET_OPTIMIZER_AGGREGATION_SIZE',"50"))))
+        self.aggregate_num = max(1, min(50, int(os.getenv('MXNET_OPTIMIZER_AGGREGATION_SIZE', "50"))))
 
     def create_state(self, index, weight):
         stype = weight.stype
@@ -1076,7 +1076,7 @@ class multiLAMB(Optimizer):
 
     def _update_impl(self, index, weights, grads, states, multi_precision=False):
         step_count = []
-        if not isinstance(index,(tuple, list)):
+        if not isinstance(index, (tuple, list)):
             weights = [weights]
             grads = [grads]
             states = [states]
@@ -1092,7 +1092,7 @@ class multiLAMB(Optimizer):
                 step_count.append(self._index_update_count[i])
             lr = self._get_lr(index[0])
             wd = self._get_wd(index[0])
-        
+
         kwargs = {'learning_rate': lr, 'beta1': self.beta1, 'beta2': self.beta2,
                   'epsilon': self.epsilon, 'wd': wd,
                   'lower_bound': self.lower_bound, 'upper_bound': self.upper_bound,
@@ -1117,9 +1117,9 @@ class multiLAMB(Optimizer):
             else:
                 mean_var_g = list(zip(*states[sidx:eidx]))[1]
                 temp = list(zip(*mean_var_g))
-                mean=temp[0]
-                var=temp[1]
-                temp_g=temp[2]
+                mean = temp[0]
+                var = temp[1]
+                temp_g = temp[2]
                 multi_mp_lamb_update(weights[sidx:eidx],
                                      grads[sidx:eidx],
                                      mean, var, temp_g,
