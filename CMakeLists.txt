@@ -30,6 +30,7 @@ mxnet_option(USE_F16C             "Build with x86 F16C instruction support" ON) 
 mxnet_option(USE_LAPACK           "Build with lapack support" ON)
 mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 mxnet_option(USE_MKLDNN           "Build with MKL-DNN support" ON IF USE_MKL_IF_AVAILABLE AND (NOT APPLE) AND (NOT MSVC) AND (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64") AND (NOT CMAKE_CROSSCOMPILING))
+mxnet_option(USE_INTGEMM          "Build with x86 intgemm library for low-precision multiplication" ON IF (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64") AND (NOT CMAKE_CROSSCOMPILING))
 mxnet_option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" ON IF NOT MSVC)
 mxnet_option(USE_GPERFTOOLS       "Build with GPerfTools support" OFF)
 mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   ON)
@@ -274,6 +275,14 @@ if(USE_MKLDNN)
   include_directories(${PROJECT_BINARY_DIR}/3rdparty/mkldnn/include)
   add_definitions(-DMXNET_USE_MKLDNN=1)
   list(APPEND mxnet_LINKER_LIBS dnnl)
+endif()
+
+if(USE_INTGEMM)
+  message(STATUS "Using intgemm")
+  add_subdirectory(3rdparty/intgemm)
+  include_directories(3rdparty/intgemm)
+  #intgemm generates a config header based on AVX512 support in the compiler.
+  include_directories(${CMAKE_CURRENT_BINARY_DIR}/3rdparty/intgemm)
 endif()
 
 # Allow Cuda compiles outside of src tree to find things in 'src' and 'include'
@@ -521,6 +530,10 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/mshadow/cmake)
 endif()
 FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h" "include/*.h")
 FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
+
+if (USE_INTGEMM)
+  list(APPEND SOURCE "3rdparty/intgemm/intgemm.cc")
+endif()
 
 # add nnvm to source
 FILE(GLOB_RECURSE NNVMSOURCE
