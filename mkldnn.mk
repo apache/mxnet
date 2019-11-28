@@ -20,7 +20,7 @@ ifeq ($(USE_MKLDNN), 1)
 	MKLDNN_BUILDDIR = $(MKLDNN_SUBMODDIR)/build
 	MXNET_LIBDIR = $(ROOTDIR)/lib
 	MXNET_INCLDIR = $(ROOTDIR)/include
-	MKLDNN_LIBFILE = $(MKLDNNROOT)/lib/libmkldnn.a
+	MKLDNN_LIBFILE = $(MKLDNNROOT)/lib/libdnnl.a
 endif
 
 mkldnn_FLAGS  = -DCMAKE_INSTALL_PREFIX=$(MKLDNNROOT)
@@ -49,10 +49,13 @@ $(MKLDNN_LIBFILE):
 	cmake $(MKLDNN_SUBMODDIR) $(mkldnn_FLAGS)
 	$(MAKE) -C $(MKLDNN_BUILDDIR) VERBOSE=1
 	$(MAKE) -C $(MKLDNN_BUILDDIR) install
-	cp $(MKLDNN_BUILDDIR)/include/mkldnn_version.h $(MXNET_INCLDIR)/mkldnn/.
+	cp $(MKLDNN_BUILDDIR)/include/dnnl_version.h $(MXNET_INCLDIR)/mkldnn/.
+	cp $(MKLDNN_BUILDDIR)/include/dnnl_config.h $(MXNET_INCLDIR)/mkldnn/.
 
 mkldnn_clean:
 	$(RM) -r 3rdparty/mkldnn/build
+	$(RM) -r include/mkldnn/dnnl_version.h
+	$(RM) -r include/mkldnn/dnnl_config.h
 
 ifeq ($(USE_MKLDNN), 1)
 mkldnn: mkldnn_build

@@ -80,7 +80,7 @@ USE_NCCL = 1
 
 # whether use cuda runtime compiling for writing kernels in native language (i.e. Python)
 USE_NVTX=1
-USE_NVRTC = 1
+ENABLE_CUDA_RTC = 1
 
 # use openmp for parallelization
 USE_OPENMP = 1

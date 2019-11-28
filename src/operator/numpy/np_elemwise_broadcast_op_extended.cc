@@ -118,6 +118,24 @@ NNVM_REGISTER_OP(_npi_bitwise_xor)
 .add_argument("lhs", "NDArray-or-Symbol", "First input to the function")
 .add_argument("rhs", "NDArray-or-Symbol", "Second input to the function");
 
+NNVM_REGISTER_OP(_npi_bitwise_or)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+[](const NodeAttrs& attrs) {
+     return std::vector<std::string>{"lhs", "rhs"};
+})
+.set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseIntType<2, 1>)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+[](const NodeAttrs& attrs){
+     return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};
+})
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastIntCompute<cpu, mshadow_op::bitwise_or>)
+.add_argument("lhs", "NDArray-or-Symbol", "First input to the function")
+.add_argument("rhs", "NDArray-or-Symbol", "Second input to the function");
+
 NNVM_REGISTER_OP(_npi_bitwise_xor_scalar)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -134,6 +152,23 @@ NNVM_REGISTER_OP(_npi_bitwise_xor_scalar)
 .add_argument("data", "NDArray-or-Symbol", "source input")
 .add_argument("scalar", "int", "scalar input")
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::ComputeInt<cpu, mshadow_op::bitwise_xor>);
+
+NNVM_REGISTER_OP(_npi_bitwise_or_scalar)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser([](NodeAttrs* attrs) {
+    attrs->parsed = std::stod(attrs->dict["scalar"]);
+  })
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseIntType<1, 1>)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 0}};
+  })
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.add_argument("data", "NDArray-or-Symbol", "source input")
+.add_argument("scalar", "int", "scalar input")
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::ComputeInt<cpu, mshadow_op::bitwise_or>);
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_copysign_scalar)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::copysign>)

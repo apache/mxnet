@@ -184,7 +184,7 @@ cdef class CachedOp:
                                            _ctypes.c_int(monitor_all)))
 
 
-def _imperative_invoke(handle, ndargs, keys, vals, out, is_np_op=0):
+def _imperative_invoke(handle, ndargs, keys, vals, out, is_np_op=0, output_is_list=0):
     """cython implementation of imperative invoke wrapper"""
     cdef unsigned long long ihandle = handle
     cdef OpHandle chandle = <OpHandle>ihandle
@@ -235,7 +235,7 @@ def _imperative_invoke(handle, ndargs, keys, vals, out, is_np_op=0):
 
     if original_output is not None:
         return original_output
-    if num_output == 1:
+    if num_output == 1 and not output_is_list:
         return NewArray(p_output_vars[0], p_output_stypes[0], is_np_op)
     else:
         return [NewArray(p_output_vars[i], p_output_stypes[i], is_np_op) for i in range(num_output)]
