@@ -115,6 +115,7 @@ inline bool SupportMKLDNNPooling(const PoolingParam &param,
   } else {
     if (param.pool_type == pool_enum::kAvgPooling) {
       CHECK_EQ(dshape.ndim(), 4);
+      // mkldnn works differently when padding is asymmetric, so let's skip this case.
       if (param.pad[0] == GetPaddingSizeFull(dshape[2], param.pad[0], param.pad[0], param.kernel[0],
                                              param.stride[0]) &&
           param.pad[1] == GetPaddingSizeFull(dshape[3], param.pad[1], param.pad[1], param.kernel[1],
