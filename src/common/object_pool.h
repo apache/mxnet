@@ -134,7 +134,7 @@ template <typename T>
 ObjectPool<T>::~ObjectPool() {
   for (auto i : allocated_) {
 #ifdef _MSC_VER
-	  _aligned_free(i);
+    _aligned_free(i);
 #else
     free(i);
 #endif
