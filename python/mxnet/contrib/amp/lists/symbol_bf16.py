@@ -44,6 +44,11 @@ BF16_FP32_FUNCS = [
     'tanh',
     ]
 
+# Functions that when running with Bfloat16, the params that still need float32.
+BF16_USE_FP32_PARAMS = {
+    'BatchNorm': ["", "gamma", "beta", "moving_mean", "moving_var"]
+}
+
 # Functions that have to be cast to FP32 due to possible
 # overflows
 FP32_FUNCS = [

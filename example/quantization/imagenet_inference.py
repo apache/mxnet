@@ -23,6 +23,7 @@ import numpy as np
 import mxnet as mx
 from mxnet import nd
 from mxnet.contrib.quantization import *
+from mxnet.contrib import amp
 
 
 def download_dataset(dataset_url, dataset_dir, logger=None):
@@ -121,6 +122,24 @@ def benchmark_score(symbol_file, ctx, batch_size, num_batches, data_layer_type, 
              data_shapes=[dshape])
     mod.init_params(initializer=mx.init.Xavier(magnitude=2.))
 
+    if args.low_precision:
+        if args.ctx == 'gpu':
+            assert args.low_precision == 'float16', "Not supported low-precision options for GPU."
+        elif args.ctx == 'cpu':
+            assert args.low_precision == 'bfloat16', "Not supported low-precision options for CPU."
+        arg_params, aux_params = mod.get_params()
+        sym, arg_params, aux_params = amp.convert_model(sym,
+                                                        arg_params,
+                                                        aux_params,
+                                                        target_dtype=args.low_precision,
+                                                        cast_optional_params=True)
+        mod = mx.mod.Module(symbol=sym, context=ctx)
+        mod.bind(for_training=False,
+                 inputs_need_grad=False,
+                 data_shapes=[dshape],
+                 label_shapes=[['softmax_label', (batch_size,)]])
+        mod.set_params(arg_params, aux_params)
+
     # get data
     if data_layer_type == "float32":
         data = [mx.random.uniform(-1.0, 1.0, shape=shape, ctx=ctx, dtype=data_layer_type)
@@ -167,9 +186,12 @@ if __name__ == '__main__':
                         help='shuffling seed, see'
                              ' https://mxnet.apache.org/api/python/io/io.html?highlight=imager#mxnet.io.ImageRecordIter'
                              ' for more details')
-    parser.add_argument('--data-layer-type', type=str, default="float32",
+    parser.add_argument('--data-layer-type', type=str, default='float32',
                         choices=['float32', 'int8', 'uint8'],
                         help='data type for data layer')
+    parser.add_argument('--low-precision', type=str, default='',
+                        choices=['', 'float16', 'bfloat16'],
+                        help='enable low precision')
 
     args = parser.parse_args()
 
@@ -236,6 +258,17 @@ if __name__ == '__main__':
         # loading model
         sym, arg_params, aux_params = load_model(symbol_file, param_file, logger)
 
+        if args.low_precision:
+            if args.ctx == 'gpu':
+                assert args.low_precision == 'float16', "Not supported low-precision options for GPU."
+            elif args.ctx == 'cpu':
+                assert args.low_precision == 'bfloat16', "Not supported low-precision options for CPU."
+            sym, arg_params, aux_params = amp.convert_model(sym,
+                                                            arg_params,
+                                                            aux_params,
+                                                            target_dtype=args.low_precision,
+                                                            cast_optional_params=True)
+            sym.save('bf161.json', remove_amp_cast=False)
         # make sure that fp32 inference works on the same images as calibrated quantized model
         logger.info('Skipping the first %d batches' % args.num_skipped_batches)
         data = advance_data_iter(data, args.num_skipped_batches)

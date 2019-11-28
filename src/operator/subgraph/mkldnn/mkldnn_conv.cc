@@ -46,13 +46,13 @@ static void UpdateConvWeightBias(NDArray *weight, NDArray *bias, bool no_bias,
   NDArray update_weight = NDArray(weight->storage_type(), weight->shape(),
                                   weight->ctx(), true, weight->dtype());
   NDArray update_bias = NDArray(beta.storage_type(), beta.shape(), beta.ctx(),
-                                true, beta.dtype());
+                                true, weight->dtype());
   const DType *weight_ptr = weight->data().dptr<DType>();
   const DType *bias_ptr = no_bias ? nullptr : bias->data().dptr<DType>();
-  const DType *gamma_ptr = gamma.data().dptr<DType>();
-  const DType *beta_ptr = beta.data().dptr<DType>();
-  const DType *mean_ptr = mean.data().dptr<DType>();
-  const DType *var_ptr = variance.data().dptr<DType>();
+  const float *gamma_ptr = gamma.data().dptr<float>();
+  const float *beta_ptr = beta.data().dptr<float>();
+  const float *mean_ptr = mean.data().dptr<float>();
+  const float *var_ptr = variance.data().dptr<float>();
   DType *update_weight_ptr = update_weight.data().dptr<DType>();
   DType *update_bias_ptr = update_bias.data().dptr<DType>();
   size_t channel = gamma.shape()[0];
@@ -61,16 +61,17 @@ static void UpdateConvWeightBias(NDArray *weight, NDArray *bias, bool no_bias,
   for (int c = 0; c < static_cast<int>(channel); ++c) {
     const DType *p1 = weight_ptr + c * offset;
     DType *p2 = update_weight_ptr + c * offset;
-    DType alpha = (param->fix_gamma ? static_cast<DType>(1.0f) : gamma_ptr[c]) /
-                  sqrt(var_ptr[c] + param->eps);
+    float alpha = param->fix_gamma ? 1.0f : static_cast<float>(gamma_ptr[c] /
+                  sqrt(var_ptr[c] + param->eps));
 
     if (bias_ptr)
-      update_bias_ptr[c] = beta_ptr[c] + alpha * (bias_ptr[c] - mean_ptr[c]);
+      update_bias_ptr[c] =
+          static_cast<DType>(beta_ptr[c] + alpha * (static_cast<float>(bias_ptr[c]) - mean_ptr[c]));
     else
-      update_bias_ptr[c] = beta_ptr[c] - alpha * mean_ptr[c];
+      update_bias_ptr[c] = static_cast<DType>(beta_ptr[c] - alpha * mean_ptr[c]);
 
     for (size_t k = 0; k < offset; ++k) {
-      p2[k] = p1[k] * alpha;
+      p2[k] = static_cast<DType>(static_cast<float>(p1[k]) * alpha);
     }
   }
   *weight = update_weight;
@@ -224,10 +225,7 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
 
     // Update weight and bias after bn fusion.
     if (mkldnn_param.with_bn) {
-      CHECK_EQ(inputs[in_weight].dtype(), inputs[in_gamma].dtype());
-      CHECK_EQ(inputs[in_weight].dtype(), inputs[in_beta].dtype());
-      CHECK_EQ(inputs[in_weight].dtype(), inputs[in_var].dtype());
-      MSHADOW_REAL_TYPE_SWITCH(inputs[in_weight].dtype(), DType, {
+      MKLDNN_REAL_TYPE_SWITCH(inputs[in_weight].dtype(), DType, {
         UpdateConvWeightBias<DType>(&cached_weight_, &cached_bias_,
                                     conv_param.no_bias, inputs[in_gamma],
                                     inputs[in_beta], inputs[in_mean],
@@ -248,10 +246,11 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
         post_requantize_ = true;
         weight_channelwise_scale = true;
       }
-      data_scale_ = GetQuantizeScale(data.dtype(), cached_data_min_, cached_data_max_);
-      MSHADOW_REAL_TYPE_SWITCH(cached_weight_.dtype(), DType, {
-        weight_scales_ = GetWeightScales<DType>(cached_weight_, has_bias ? &cached_bias_ : nullptr,
-                                                data_scale_, weight_channelwise_scale);
+      auto data_range = (data.dtype() == mshadow::kInt8) ? kInt8Range : kUint8Range;
+      data_scale_ = data_range / MaxAbs(cached_data_min_, cached_data_max_);
+      MKLDNN_REAL_TYPE_SWITCH(cached_weight_.dtype(), DType, {
+        weight_scales_ =
+            GetWeightScales<DType>(cached_weight_, weight_channelwise_scale);
       });
       // Collect scale.
       size_t channel = cached_weight_.shape()[0];

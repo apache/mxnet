@@ -660,6 +660,11 @@ const mkldnn::memory *NDArray::GetMKLDNNData() const {
         new mkldnn::memory(data_md, CpuEngine::Get()->get_engine(), off_addr));
     MKLDNNStream::Get()->RegisterMem(ret);
     return ret.get();
+  } else if (ptr_->mkl_mem_) {
+    // This is default MKLDNN memory
+    CHECK(!is_view);
+    MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_->GetMem());
+    return ptr_->mkl_mem_->GetRaw();
   } else {
     // If this isn't a view, we can create a MKLDNN memory and store it in the
     // chunk.

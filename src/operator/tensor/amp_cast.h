@@ -85,7 +85,7 @@ inline bool AMPMultiCastType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), param.num_outputs);
   CHECK_EQ(out_attrs->size(), param.num_outputs);
   bool ret = true;
-  int widest_type = kFloat32;
+  int widest_type = param.cast_narrow ? kFloat32 : (*in_attrs)[0];
   for (int i = 0; i < param.num_outputs; ++i) {
     if (!param.cast_narrow && ((*in_attrs)[i] == kFloat32 || (*out_attrs)[i] == kFloat32)) {
       widest_type = kFloat32;

@@ -107,8 +107,8 @@ def test_amp_conversion():
         res_converted = amp.convert_symbol(res, target_dtype="bfloat16",
                                            target_dtype_ops=["FullyConnected"],
                                            fp32_ops=["sin"])
-        x_bf16 = mx.sym.amp_cast(x, dtype="bfloat16")
-        y_bf16 = mx.sym.amp_cast(y, dtype="bfloat16")
+        x_bf16 = mx.sym.amp_cast(x, dtype=bfloat16)
+        y_bf16 = mx.sym.amp_cast(y, dtype=bfloat16)
         amp_casted_siny = mx.sym.sin(mx.sym.amp_cast(y_bf16, dtype="float32"))
         z = mx.sym.FullyConnected(x_bf16, y_bf16, num_hidden=10, no_bias=True)
         outs = mx.sym.amp_multicast(z, amp_casted_siny, num_outputs=2)
@@ -173,8 +173,8 @@ def test_amp_conversion():
 
         inputs2 = {}
         inputs2['data'] = mx.nd.ones((1, 3, 224, 224))
-        inputs2['fc1_weight'] = mx.nd.amp_cast(inputs['fc1_weight'], dtype="bfloat16")
-        inputs2['fc1_bias'] = mx.nd.amp_cast(inputs['fc1_bias'], dtype="bfloat16")
+        inputs2['fc1_weight'] = mx.nd.amp_cast(inputs['fc1_weight'], dtype=bfloat16)
+        inputs2['fc1_bias'] = mx.nd.amp_cast(inputs['fc1_bias'], dtype=bfloat16)
 
         # Test with a real world model, tweak inputs for convert_symbol
         converted_sym = amp.convert_symbol(sym, target_dtype="bfloat16",
@@ -193,14 +193,14 @@ def test_amp_conversion():
             if converted_args[i] in arg_params:
                 arg_dtype = exe.arg_arrays[i].dtype
                 if arg_dtype == bfloat16:
-                    arg_params[converted_args[i]] = mx.nd.amp_cast(arg_params[converted_args[i]], dtype="bfloat16")
+                    arg_params[converted_args[i]] = mx.nd.amp_cast(arg_params[converted_args[i]], dtype=bfloat16)
                 else:
                     arg_params[converted_args[i]] = arg_params[converted_args[i]].astype(arg_dtype)
         for i, key in enumerate(exe.aux_arrays):
             aux_dtype = exe.aux_arrays[i].dtype
             if converted_auxs[i] in aux_params:
                 if arg_dtype == bfloat16:
-                    aux_params[converted_auxs[i]] = mx.nd.amp_cast(aux_params[converted_auxs[i]], dtype="bfloat16")
+                    aux_params[converted_auxs[i]] = mx.nd.amp_cast(aux_params[converted_auxs[i]], dtype=bfloat16)
                 else:
                     aux_params[converted_auxs[i]] = aux_params[converted_auxs[i]].astype(aux_dtype)
 
@@ -208,8 +208,8 @@ def test_amp_conversion():
         exe.forward(is_train=False, **inputs2)
         exe.outputs[0].wait_to_read()
 
-        inputs['fc1_weight'] = mx.nd.amp_cast(inputs['fc1_weight'], dtype="bfloat16")
-        inputs['fc1_bias'] = mx.nd.amp_cast(inputs['fc1_bias'], dtype="bfloat16")
+        inputs['fc1_weight'] = mx.nd.amp_cast(inputs['fc1_weight'], dtype=bfloat16)
+        inputs['fc1_bias'] = mx.nd.amp_cast(inputs['fc1_bias'], dtype=bfloat16)
         exe2.forward(is_train=False, **inputs)
         exe2.outputs[0].wait_to_read()
 
@@ -428,9 +428,9 @@ def test_module_backward_compatibility():
 @with_seed()
 def test_bf16_casting():
     data = mx.sym.var("data")
-    out1 = mx.sym.amp_cast(data, dtype="bfloat16")
+    out1 = mx.sym.amp_cast(data, dtype=bfloat16)
     out2 = mx.sym.amp_cast(data, dtype="float32")
-    out3 = mx.sym.amp_cast(data, dtype="bfloat16")
+    out3 = mx.sym.amp_cast(data, dtype=bfloat16)
     # When two ops from data, with different dtypes,
     # data should be float32
     res = mx.sym.Group([out1, out2])
@@ -447,7 +447,7 @@ def test_bf16_casting():
 
     # AMP Multicast test where one node is float32, another is bfloat16
     data = mx.sym.var("data", dtype="float32")
-    data2 = mx.sym.var("data2", dtype="bfloat16")
+    data2 = mx.sym.var("data2", dtype=bfloat16)
     out4 = mx.sym.amp_multicast(data, data2, num_outputs=2)
     final_res = amp.convert_symbol(out4, target_dtype="bfloat16", cast_optional_params=True)
     exe = final_res.simple_bind(ctx=mx.cpu(), data2=(1, 2), data=(1, 2))
@@ -456,8 +456,8 @@ def test_bf16_casting():
     # AMP Multicast test where two non input nodes are bfloat16,
     # and one input node is float32
     data = mx.sym.var("data", dtype="float32")
-    data2 = mx.sym.var("data2", dtype="bfloat16")
-    data3 = mx.sym.var("data3", dtype="bfloat16")
+    data2 = mx.sym.var("data2", dtype=bfloat16)
+    data3 = mx.sym.var("data3", dtype=bfloat16)
     out5 = mx.sym.amp_multicast(data,
                                 mx.sym.elemwise_add(data2, data3),
                                 num_outputs=2)
@@ -468,7 +468,7 @@ def test_bf16_casting():
 
     # AMP Multicast test where three input nodes one bf16, one fp32
     # one unknown
-    data = mx.sym.var("data", dtype="bfloat16")
+    data = mx.sym.var("data", dtype=bfloat16)
     data2 = mx.sym.var("data2", dtype="float32")
     data3 = mx.sym.var("data3")
     out6 = mx.sym.amp_multicast(data, data2, data3, num_outputs=3)
@@ -480,9 +480,9 @@ def test_bf16_casting():
 
     # Input node to amp_multicast and amp_cast, if dtypes conflict
     # and input node is already bf16, it should still be bf16
-    data = mx.sym.var("data", dtype="bfloat16")
+    data = mx.sym.var("data", dtype=bfloat16)
     data2 = mx.sym.var("data2", dtype="float32")
-    out7 = mx.sym.Group([mx.sym.amp_multicast(data, data2, num_outputs=2), mx.sym.amp_cast(data, dtype="bfloat16")])
+    out7 = mx.sym.Group([mx.sym.amp_multicast(data, data2, num_outputs=2), mx.sym.amp_cast(data, dtype=bfloat16)])
     final_res = amp.convert_symbol(out7, target_dtype_ops=[], target_dtype="bfloat16",
                                    fp32_ops=[], cast_optional_params=True)
     exe = final_res.simple_bind(ctx=mx.cpu(), data=(1, 2), data2=(1, 2))
@@ -491,8 +491,8 @@ def test_bf16_casting():
     # Input node to amp_multicast and amp_cast, if dtypes conflict
     # and input node is already fp32, it should be changed to bf16
     data = mx.sym.var("data", dtype="float32")
-    data2 = mx.sym.var("data2", dtype="bfloat16")
-    out8 = mx.sym.Group([mx.sym.amp_multicast(data, data2, num_outputs=2), mx.sym.amp_cast(data, dtype="bfloat16")])
+    data2 = mx.sym.var("data2", dtype=bfloat16)
+    out8 = mx.sym.Group([mx.sym.amp_multicast(data, data2, num_outputs=2), mx.sym.amp_cast(data, dtype=bfloat16)])
     final_res = amp.convert_symbol(out8, target_dtype_ops=[], target_dtype="bfloat16",
                                    fp32_ops=[], cast_optional_params=True)
     exe = final_res.simple_bind(ctx=mx.cpu(), data=(1, 2), data2=(1, 2))

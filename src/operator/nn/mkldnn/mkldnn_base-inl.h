@@ -60,6 +60,24 @@
 #include "mxnet/op_attr_types.h"
 #include "mxnet/resource.h"
 
+#define MKLDNN_REAL_TYPE_SWITCH(type, DType, ...)   \
+  switch (type) {                                   \
+  case mshadow::kFloat32:                           \
+    {                                               \
+      typedef float DType;                          \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  case mshadow::kBfloat16:                          \
+    {                                               \
+      typedef mshadow::bfloat::bf16_t DType;        \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  default:                                          \
+    LOG(FATAL) << "Unknown type enum " << type;     \
+  }
+
 namespace mxnet {
 
 // =====  CpuEngine =======================================
@@ -229,7 +247,7 @@ static inline mkldnn::memory::data_type get_mkldnn_type(int dtype) {
     case mshadow::kUint8:
       return mkldnn::memory::data_type::u8;
     default:
-      LOG(FATAL) << "unknown type for MKLDNN";
+      LOG(FATAL) << "unknown type for MKLDNN :" << static_cast<int>(dtype);
       return mkldnn::memory::data_type::undef;
   }
 }

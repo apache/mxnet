@@ -174,24 +174,24 @@ void MKLDNNBatchNormForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     CHECK_EQ(beta.storage_type(), mxnet::kDefaultStorage);
 
     const mkldnn::memory &weight_mem = fwd.GetWeight();
-    DType* weight_buf = reinterpret_cast<DType *>(weight_mem.get_data_handle());
+    float* weight_buf = reinterpret_cast<float *>(weight_mem.get_data_handle());
 
     nnvm::dim_t channels_ = data.shape()[1];
-    CHECK(weight_mem.get_desc().get_size() == channels_ * sizeof(DType) * 2);
-    DType* weight_ptr = gamma.data().dptr<DType>();
-    DType* bias_ptr = beta.data().dptr<DType>();
+    CHECK(weight_mem.get_desc().get_size() == channels_ * sizeof(float) * 2);
+    float* weight_ptr = gamma.data().dptr<float>();
+    float* bias_ptr = beta.data().dptr<float>();
     if (!param.fix_gamma) {
       memcpy(weight_buf, weight_ptr, sizeof(weight_buf[0]) * channels_);
       memcpy(&weight_buf[channels_], bias_ptr, sizeof(weight_buf[0]) * channels_);
     } else if (IsBNWriting(req[batchnorm::kGamma])) {
       for (int i = 0; i < channels_; i++) {
-        weight_buf[i] = static_cast<DType>(1.0f);
-        weight_ptr[i] = static_cast<DType>(1.0f);
+        weight_buf[i] = 1.0f;
+        weight_ptr[i] = 1.0f;
         weight_buf[channels_ + i] = bias_ptr[i];  // bias
       }
     } else {
       for (int i = 0; i < channels_; i++) {
-        weight_buf[i] = static_cast<DType>(1.0f);
+        weight_buf[i] = 1.0f;
         weight_buf[channels_ + i] = bias_ptr[i];  // bias
       }
     }
@@ -202,10 +202,10 @@ void MKLDNNBatchNormForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     net_args[MKLDNN_ARG_DST] = *out_mem;
 
     if (!ctx.is_train || param.use_global_stats) {
-      DType* omean    = outputs[batchnorm::kMean].data().dptr<DType>();
-      DType* ovar     = outputs[batchnorm::kVar].data().dptr<DType>();
-      DType* inmean   = aux_states[batchnorm::kMovingMean].data().dptr<DType>();
-      DType* invar    = aux_states[batchnorm::kMovingVar].data().dptr<DType>();
+      float* omean    = out_data[batchnorm::kMean].data().dptr<float>();
+      float* ovar     = out_data[batchnorm::kVar].data().dptr<float>();
+      float* inmean   = aux_states[batchnorm::kMovingMean].data().dptr<float>();
+      float* invar    = aux_states[batchnorm::kMovingVar].data().dptr<float>();
       // to align with origin implmentation: batch_norm.cc: L164
       for (int i = 0; i < channels_; i++) {
         omean[i] = inmean[i];
@@ -223,7 +223,7 @@ void MKLDNNBatchNormForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       MKLDNNStream::Get()->RegisterPrimArgs(fwd.GetFwd(), net_args);
       MKLDNNStream::Get()->Submit();
 
-      DType* ovar = outVar.data().dptr<DType>();
+      float* ovar = outVar.data().dptr<float>();
       for (int i = 0; i < channels_; i++) {
         ovar[i] = VARIANCE_TO_INVSTD(ovar[i], param.eps);
       }

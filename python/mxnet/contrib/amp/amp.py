@@ -20,7 +20,7 @@
 __all__ = ['init', 'init_trainer', 'scale_loss', 'unscale', 'convert_model',
            'convert_hybrid_block', 'list_lp16_ops', 'list_fp32_ops',
            'list_lp16_fp32_ops', 'list_conditional_fp32_ops',
-           'list_widest_type_cast', 'list_loss_output_functions',
+           'list_widest_type_cast', 'list_loss_output_functions', 'list_lp16_use_fp32_params',
            'convert_symbol']
 
 from types import MethodType
@@ -45,14 +45,6 @@ from ... import optimizer as opt
 from .loss_scaler import LossScaler
 
 bfloat16 = np.dtype([('bfloat16', np.uint16)])
-
-# create a hook for numpy.dtype
-origin_dtype = np.dtype
-def numpy_dtype(obj, align=False, copy=False):
-    if type(obj) == str and obj == 'bfloat16':
-       return origin_dtype(bfloat16)
-    return origin_dtype(obj, align, copy)
-np.dtype = numpy_dtype
 
 def _cast_symbol_NDArray(s, dtype):
     float_types_gpu = (np.float16, np.float32)
@@ -89,22 +81,39 @@ def _get_fun_to_wrap(name, module, submodule_dict):
 
 def _wrap_symbol_functions(module, target_dtype, target_precision_ops=None,
                            conditional_fp32_ops=None, fp32_ops=None):
-    def _ndarray_wrapper(f, target_dtype, cond_arg=None):
+    def _ndarray_wrapper(f, target_dtype, fp32_param=None, cond_arg=None):
         def _new_fun(*args, **kwargs):
             if cond_arg is not None:
                 if (cond_arg[0] not in kwargs or
                         kwargs[cond_arg[0]] not in cond_arg[1]):
                     return f(*args, **kwargs)
-            new_args = list(map(lambda x: _cast_symbol_NDArray(x, target_dtype), args))
+            if fp32_param:
+                new_args = []
+                for i, x in enumerate(args):
+                    if fp32_param[i]:
+                        new_args.append(x)
+                    else:
+                        new_args.append(_cast_symbol_NDArray(x, target_dtype))
+            else:
+                new_args = list(map(lambda x: _cast_symbol_NDArray(x, target_dtype), args))
             args = tuple(new_args)
-            kwargs = {k: _cast_symbol_NDArray(v, target_dtype) for k, v in kwargs.items()}
+            if fp32_param:
+                new_kwargs = {}
+                for k, v in kwargs.items():
+                    if k in fp32_param:
+                        new_kwargs[k] = v
+                    else:
+                        new_kwargs[k] = _cast_symbol_NDArray(v, target_dtype)
+                    kwargs = new_kwargs
+            else:
+                kwargs = {k: _cast_symbol_NDArray(v, target_dtype) for k, v in kwargs.items()}
             return f(*args, **kwargs)
         _new_fun.__name__ = f.__name__
         _new_fun.__module__ = f.__module__
         _new_fun.__doc__ = f.__doc__
         return _new_fun
 
-    def _symbol_wrapper(f, target_dtype, cond_arg=None):
+    def _symbol_wrapper(f, target_dtype, fp32_param=None, cond_arg=None):
         def _new_fun(*args, **kwargs):
             if cond_arg is not None:
                 if (cond_arg[0] not in kwargs or
@@ -113,8 +122,17 @@ def _wrap_symbol_functions(module, target_dtype, target_precision_ops=None,
             sym = f(*args, **kwargs)
             inputs = sym.get_children()
             aux = sym.list_auxiliary_states()
-            inputs = list(map(lambda x: _cast_symbol_NDArray(x, target_dtype)
-                              if x.name not in aux else x, inputs))
+            if fp32_param:
+                new_inputs = []
+                for i, x in enumerate(inputs):
+                    if (x.name in aux) or fp32_param[i]:
+                        new_inputs.append(x)
+                    else:
+                        new_inputs.append(_cast_symbol_NDArray(x, target_dtype))
+                inputs = new_inputs
+            else:
+                inputs = list(map(lambda x: _cast_symbol_NDArray(x, target_dtype)
+                                if x.name not in aux else x, inputs))
             atomic_sym = sym._gen_atomic_symbol()
             wrapped_sym = atomic_sym(*inputs)
             wrapped_sym._set_attr(name=sym.name)
@@ -168,16 +186,17 @@ def _wrap_symbol_functions(module, target_dtype, target_precision_ops=None,
     for op_name_prefix in base._OP_NAME_PREFIX_LIST:
         submodule_dict[op_name_prefix] =\
                 getattr(module, op_name_prefix[1:-1])
-
+    fp32_param_list = list_lp16_use_fp32_params(target_dtype)
     wrap_list = target_precision_ops if target_precision_ops is not None \
                     else list_lp16_ops(target_dtype)
     for fun_name in wrap_list:
         try:
             fun_name, cur_module = _get_fun_to_wrap(fun_name, module, submodule_dict)
             f_to_wrap = getattr(cur_module, fun_name)
-            setattr(cur_module, fun_name, _wrapper(f_to_wrap, target_dtype))
+            fp32_param = fp32_param_list[fun_name] if (fp32_param_list and fun_name in fp32_param_list) else None
+            setattr(cur_module, fun_name, _wrapper(f_to_wrap, target_dtype, fp32_param=fp32_param))
             if cur_module == module:
-                setattr(module.op, fun_name, _wrapper(f_to_wrap, target_dtype))
+                setattr(module.op, fun_name, _wrapper(f_to_wrap, target_dtype, fp32_param=fp32_param))
         except AttributeError:
             raise
 
@@ -198,9 +217,9 @@ def _wrap_symbol_functions(module, target_dtype, target_precision_ops=None,
         try:
             fun_name, cur_module = _get_fun_to_wrap(fun_name, module, submodule_dict)
             f_to_wrap = getattr(cur_module, fun_name)
-            setattr(cur_module, fun_name, _wrapper(f_to_wrap, np.float32, (arg, arg_values)))
+            setattr(cur_module, fun_name, _wrapper(f_to_wrap, np.float32, cond_arg=(arg, arg_values)))
             if cur_module == module:
-                setattr(module.op, fun_name, _wrapper(f_to_wrap, np.float32, (arg, arg_values)))
+                setattr(module.op, fun_name, _wrapper(f_to_wrap, np.float32, cond_arg=(arg, arg_values)))
         except AttributeError:
             raise
 
@@ -596,7 +615,7 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
             if attr_dict[sym_name]["__dtype__"] != "-1":
                 typ = _DTYPE_MX_TO_NP[int(attr_dict[sym_name]["__dtype__"])]
                 if typ == bfloat16:
-                    arg_params[sym_name] = _cast_symbol_NDArray(arg_params[sym_name], 'bfloat16')
+                    arg_params[sym_name] = _cast_symbol_NDArray(arg_params[sym_name], bfloat16)
                 else:
                     arg_params[sym_name] = arg_params[sym_name].astype(typ)
 
@@ -605,7 +624,7 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
             if attr_dict[sym_name]["__dtype__"] != "-1":
                 typ = _DTYPE_MX_TO_NP[int(attr_dict[sym_name]["__dtype__"])]
                 if typ == bfloat16:
-                    aux_params[sym_name] = _cast_symbol_NDArray(aux_params[sym_name], 'bfloat16')
+                    aux_params[sym_name] = _cast_symbol_NDArray(aux_params[sym_name], bfloat16)
                 else:
                     aux_params[sym_name] = aux_params[sym_name].astype(typ)
 
@@ -675,7 +694,7 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
                 if attr_dict[name]["__dtype__"] != "-1":
                     typ = _DTYPE_MX_TO_NP[int(attr_dict[name]["__dtype__"])]
                     if typ == bfloat16:
-                        arg_dict['arg:%s' % name] = _cast_symbol_NDArray(arg_dict['arg:%s' % name], 'bfloat16')
+                        arg_dict['arg:%s' % name] = _cast_symbol_NDArray(arg_dict['arg:%s' % name], bfloat16)
                     else:
                         arg_dict['arg:%s'%name] = arg_dict['arg:%s'%name].astype(typ)
         else:
@@ -814,3 +833,12 @@ def list_loss_output_functions(target_dtype):
         return lists.symbol_fp16.LOSS_OUTPUT_FUNCTIONS
     elif target_dtype in [bfloat16]:
         return lists.symbol_bf16.LOSS_OUTPUT_FUNCTIONS
+
+def list_lp16_use_fp32_params(target_dtype):
+    """ Get the params restrict for LP16
+
+    """
+    if target_dtype in ['float16', np.float16]:
+        return None
+    elif target_dtype in [bfloat16]:
+        return lists.symbol_bf16.BF16_USE_FP32_PARAMS
