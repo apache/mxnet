@@ -617,7 +617,7 @@ def multi_lamb_update(weights, grads, mean, var, temp_g, step_count,
                                                 step_count=step_count,
                                                 name=name,
                                                 **kwargs)
- 
+
 def multi_mp_lamb_update(weights, grads, mean, var, temp_g, weights32, step_count,
                          out=None, name=None, num_tensors=0, **kwargs):
     if not num_tensors:
@@ -629,4 +629,3 @@ def multi_mp_lamb_update(weights, grads, mean, var, temp_g, weights32, step_coun
                                                    step_count=step_count,
                                                    name=name,
                                                    **kwargs)
-
