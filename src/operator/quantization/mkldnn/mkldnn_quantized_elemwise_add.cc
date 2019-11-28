@@ -217,7 +217,8 @@ static void MKLDNNQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs, cons
   auto output_desc = mkldnn::memory::desc(i_dims,
                                           output_data_type,
                                           mkldnn::memory::format_tag::any);
-  MKLDNNQuantizedElemwiseAddFwd &fwd = GetQuantizedElemwiseAddForward(output_desc, scales, in_data, out_data, in_desc);
+  MKLDNNQuantizedElemwiseAddFwd &fwd = GetQuantizedElemwiseAddForward(output_desc, scales,
+                                                                      in_data, out_data, in_desc);
   auto mem = CreateMKLDNNMem(out_data[quantized_elemwise_add_enum::kOut],
                              fwd.fwd_pd.dst_desc(),
                              req[0],
