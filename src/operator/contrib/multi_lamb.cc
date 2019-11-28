@@ -39,7 +39,6 @@ struct MultiLAMB_step1_kernel {
                                   const float beta1, const float beta2, 
                                   const float epsilon,
                                   const float wd,
-                                  const int step,
                                   const float clip_gradient,
                                   const bool bias_correction, 
                                   const float rescale_grad) {
@@ -50,7 +49,7 @@ struct MultiLAMB_step1_kernel {
                                           MPDType(kernel_params.weights[index][i]);
         MPDType scaled_grad = static_cast<MPDType>(kernel_params.grads[index][i])*rescale_grad;
         if (clip_gradient >= 0.0f)
-        scaled_grad = mshadow_op::clip::Map(scaled_grad, static_cast<MPDType>(clip_gradient));
+            scaled_grad = mshadow_op::clip::Map(scaled_grad, static_cast<MPDType>(clip_gradient));
   
         MPDType mean = static_cast<MPDType>(beta1) * kernel_params.mean[index][i] + 
           (static_cast<MPDType>(1.0f) - static_cast<MPDType>(beta1)) * scaled_grad;
@@ -61,8 +60,8 @@ struct MultiLAMB_step1_kernel {
   
         MPDType g;
         if(bias_correction){
-          MPDType mean_hat = mean / (static_cast<MPDType>(1.0f) - power::Map(static_cast<MPDType>(beta1), static_cast<MPDType>(step)));
-          MPDType var_hat = var / (static_cast<MPDType>(1.0f) - power::Map(static_cast<MPDType>(beta2), static_cast<MPDType>(step)));
+          MPDType mean_hat = mean / (static_cast<MPDType>(1.0f) - power::Map(static_cast<MPDType>(beta1), static_cast<MPDType>(kernel_params.step_count[index])));
+          MPDType var_hat = var / (static_cast<MPDType>(1.0f) - power::Map(static_cast<MPDType>(beta2), static_cast<MPDType>(kernel_params.step_count[index])));
           g = mean_hat / (sqrt(var_hat) + epsilon) + wd * w;
         }else{
           g = mean / (sqrt(var) + epsilon) + wd * w;
@@ -90,9 +89,8 @@ struct MultiLAMB_step2_kernel {
                                             MPDType(kernel_params.weights[index][i]);
         float r1 = sqrt(sumSqWeigths[index]);
         float r2 = sqrt(sumSqtemp_g[index]);
-      
         r1 = std::min(std::max(r1, lower_bound), upper_bound);
-      
+        
         // calculate lamb_trust_ratio
         MPDType r;
         if (r1 == 0.0f || r2 == 0.0f)
@@ -125,7 +123,6 @@ void call_kernel1(Stream<cpu>* s,
                                  param.beta1, param.beta2,
                                  param.epsilon,
                                  param.wd,
-                                 param.step,
                                  param.clip_gradient,
                                  param.bias_correction,
                                  param.rescale_grad);

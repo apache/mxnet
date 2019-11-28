@@ -55,12 +55,12 @@ struct MultiLAMBParam : public dmlc::Parameter<MultiLAMBParam> {
   float epsilon;
   float wd;
   float rescale_grad;
-  int step;
   float lower_bound;
   float upper_bound;
   float clip_gradient;
   bool bias_correction;
   int num_tensors;
+  mxnet::Tuple<int> step_count;
   
   DMLC_DECLARE_PARAMETER(MultiLAMBParam) {
     DMLC_DECLARE_FIELD(learning_rate)
@@ -83,8 +83,6 @@ struct MultiLAMBParam : public dmlc::Parameter<MultiLAMBParam> {
     DMLC_DECLARE_FIELD(rescale_grad)
     .set_default(1.0f)
     .describe("Gradient rescaling factor");
-    DMLC_DECLARE_FIELD(step)
-    .describe("Index_update_count");
     DMLC_DECLARE_FIELD(lower_bound)
     .set_default(1e-3f)
     .describe("Lower limit of norm of weight.");
@@ -99,6 +97,8 @@ struct MultiLAMBParam : public dmlc::Parameter<MultiLAMBParam> {
     DMLC_DECLARE_FIELD(bias_correction)
     .set_default(false)
     .describe("Whether to use bias correction.");
+    DMLC_DECLARE_FIELD(step_count)
+    .describe("Step count for each tensor");
     DMLC_DECLARE_FIELD(num_tensors)
     .set_default(1)
     .describe("Number of tensors");
@@ -116,6 +116,11 @@ inline bool MultiLAMB_InferShape(const nnvm::NodeAttrs& attrs,
   bool all_inferred = true;
   auto& input_shapes = *in_attrs;
   auto& output_shapes = *out_attrs;
+    
+  CHECK_EQ(param.step_count.ndim(), param.num_tensors)
+    << "Number of step counts is inconsistent with num_weights."
+    << "Expected number of step counts: "
+    << param.num_tensors << ", and got " << param.step_count.ndim();
 
   // Weights, gradients, mean and variance
   for (int i = 0; i < param.num_tensors; ++i) {
@@ -126,8 +131,6 @@ inline bool MultiLAMB_InferShape(const nnvm::NodeAttrs& attrs,
     }
     all_inferred = all_inferred && ElemwiseShape<input_stride, 1>(attrs, &input_vec, &output_vec);
   }
-
-  SHAPE_ASSIGN_CHECK(*in_attrs, param.num_tensors*input_stride, mxnet::TShape());
   return all_inferred;
 }
 
@@ -190,9 +193,10 @@ struct MultiLAMBKernelParam {
   MPDType* temp_g[N];
   MPDType* weights32[N];
   DType* out_data[N];
+  int step_count[N];
   
   // gpu
-  int chunk_size = 4096;
+  int chunk_size = 65536;
   int nchunks;
 };
 
@@ -234,6 +238,7 @@ void FillMultiLAMBKernelParam(const nnvm::NodeAttrs& attrs,
     multi_param->out_data[i] = outputs[i].FlatTo2D<xpu, DType>(s).dptr_;
     multi_param->nchunks += (multi_param->sizes[i] + multi_param->chunk_size - 1)/multi_param->chunk_size;
   }
+  memcpy(multi_param->step_count, p.step_count.begin(), multi_param->ntensors * sizeof(int));
 }
 
 using namespace mxnet_op;
@@ -271,7 +276,7 @@ inline void multiLAMB(const nnvm::NodeAttrs& attrs,
     // create vector of TBlob with all the temp_g contiguous
     std::vector<TBlob> temp_g;
     for (size_t index = 0; index < kernel_params.ntensors; ++index) {
-        temp_g.emplace_back(inputs[index*input_stride+input_stride-1]);
+        temp_g.emplace_back(inputs[index*input_stride+4]);
     }
       
     // Calculate amount of temporary storage

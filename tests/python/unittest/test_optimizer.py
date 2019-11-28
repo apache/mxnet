@@ -689,13 +689,13 @@ def test_adam():
                                           dtype, w_stype='default', g_stype='row_sparse',
                                           rtol=1e-4, atol=2e-5)
 
-# LAMB
-class PyLAMB(mx.optimizer.Optimizer):
+# multiLAMB
+class Py_multiLAMB(mx.optimizer.Optimizer):
     """python reference implemenation of lamb"""
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-6,
                  lower_bound=1e-3, upper_bound=10.0, bias_correction=False, 
                  multi_precision=False, clip_gradient=-1, **kwargs):
-        super(PyLAMB, self).__init__(learning_rate=learning_rate, **kwargs)
+        super(Py_multiLAMB, self).__init__(learning_rate=learning_rate, **kwargs)
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
@@ -704,52 +704,32 @@ class PyLAMB(mx.optimizer.Optimizer):
         self.bias_correction = bias_correction
         self.multi_precision = multi_precision
         self.clip_gradient = clip_gradient
-        
-    def create_state_multi_precision(self, index, weight):
-        weight_master_copy = None
-        if self.multi_precision and weight.dtype == np.float16:
-            weight_master_copy = weight.astype(np.float32)
-            return (self.create_state(index, weight_master_copy), weight_master_copy)
-        else:
-            return self.create_state(index, weight)
          
     def create_state(self, index, weight):
-        stype = weight.stype
-        return (mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype, stype=stype),
-                mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype, stype=stype),
-                mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype, stype=stype))
+        return (mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype),
+                mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype),
+                mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype))
 
-    def update_multi_precision(self, index, weight, grad, state):
-        self.update(index, weight, grad, state)
-        
     def update(self, index, weight, grad, state):
         self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
         index_update_count = self._index_update_count[index]
-
+        
         grad *= self.rescale_grad
         if self.clip_gradient >= 0:
             grad = mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient)
 
-        if self.multi_precision:
-            mean, var, temp_g = state[0]
-            weight32 = state[1]
-        else:
-            mean, var, temp_g = state
-            
+        mean, var, temp_g = state
         mean[:] = self.beta1 * mean + (1. - self.beta1) * grad.astype(mean.dtype)
         var[:] = self.beta2 * var + (1. - self.beta2) * mx.nd.square(grad.astype(mean.dtype))
 
-        if self.multi_precision:
-            r1 = weight32.norm()
-        else:
-            r1 = weight.norm()
+        r1 = weight.norm()
         if self.lower_bound:
             r1 = mx.nd.maximum(r1, self.lower_bound)
         if self.upper_bound:
             r1 = mx.nd.minimum(r1, self.upper_bound)
-            
+        
         if self.bias_correction:
             mean_hat = mean / (1. - mx.nd.power(self.beta1, index_update_count))
             var_hat = var / (1. - mx.nd.power(self.beta2, index_update_count))
@@ -757,39 +737,44 @@ class PyLAMB(mx.optimizer.Optimizer):
             mean_hat = mean
             var_hat = var
         
-        if self.multi_precision:
-            temp_g[:] = mean_hat / (mx.nd.sqrt(var_hat) + self.epsilon) + wd * weight32
-        else:
-            temp_g[:] = mean_hat / (mx.nd.sqrt(var_hat) + self.epsilon) + wd * weight
+        temp_g[:] = mean_hat / (mx.nd.sqrt(var_hat) + self.epsilon) + wd * weight
         r2 = temp_g.norm()
-
         # calculate lamb_trust_ratio
         r = 1. if r1 == 0. or r2 == 0. else r1 / r2
         lr *= r
-
-        # update weight
-        if self.multi_precision:
-            weight32[:] -= lr * temp_g
-            tmp = weight32.astype(weight.dtype)
-            tmp.copyto(weight)
-        else:
-            weight[:] -= lr * temp_g
+        weight[:] -= lr * temp_g
 
 @with_seed()
-def test_lamb():
-    opt1 = PyLAMB
-    opt2 = mx.optimizer.LAMB
-    shape = (3, 40, 50)
+def test_multilamb():
+    opt1 = Py_multiLAMB
+    opt2 = mx.optimizer.multiLAMB
+    #set_default_context(mx.gpu(0))
+    
+    # shapes as Bert-large
+    dims_x = [1024, 4096, 1024, 1024]
+    dims_y = [1, 1, 1024, 4096]
+    dims_occurrences = [9, 1, 4, 2]
+    nlayers = 4 # 24
+    extra_dims_x=[30522, 512, 30522]
+    extra_dims_y=[1, 1024, 1024]
+    shapes=[]
+    for l in range(nlayers):
+        for i, (dx,dy) in enumerate(zip(dims_x, dims_y)):
+            for j in range(dims_occurrences[i]):
+                shapes.append((dx,dy))
+    for dx,dy in zip(extra_dims_x, extra_dims_y):
+        shapes.append((dx,dy))
+
     cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
     rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
     wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
     bias_options = [{'bias_correction': False}, {'bias_correction': True}]
+    
     for dtype in [np.float16, np.float32, np.float64]:
         for cg_option in cg_options:
             for rg_option in rg_options:
                 for wd_option in wd_options:
                     for bias_option in bias_options:
-                        #print(dtype,cg_option,rg_option,wd_option,bias_option)
                         kwarg = {}
                         kwarg.update(cg_option)
                         kwarg.update(rg_option)
@@ -797,10 +782,10 @@ def test_lamb():
                         kwarg.update(bias_option)
                         if (dtype == np.float16):
                             kwarg.update({'multi_precision': True})
-                        atol = 1e-2 if dtype == np.float16 else 1e-3
-                        rtol = 1e-4 if dtype == np.float16 else 1e-5
-                        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype, rtol=rtol, atol=atol)
-
+                        atol = 1e-3
+                        rtol = 1e-6
+                        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shapes, dtype, 
+                                          rtol=rtol, atol=atol, ntensors=len(shapes))
 
 # AdaMax
 class PyAdamax(mx.optimizer.Optimizer):

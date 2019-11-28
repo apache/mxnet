@@ -41,7 +41,7 @@ from ..random import normal
 from ..util import is_np_array
 
 __all__ = [
-    'AdaDelta', 'AdaGrad', 'Adam', 'Adamax', 'DCASGD', 'FTML', 'Ftrl', 'LAMB', 'LARS', 
+    'AdaDelta', 'AdaGrad', 'Adam', 'Adamax', 'DCASGD', 'FTML', 'Ftrl', 'multiLAMB', 'LARS', 
     'LBSGD', 'NAG', 'NDabs', 'Nadam', 'Optimizer', 'RMSProp', 'SGD', 'SGLD', 'Signum',
     'Test', 'Updater', 'ccSGD', 'create', 'get_updater', 'register'
 ]
@@ -1053,12 +1053,12 @@ class LARS(Optimizer):
                           multi_precision=use_multi_precision)
 
 @register
-class LAMB(Optimizer):
-    """LAMB optimizer.
+class multiLAMB(Optimizer):
+    """multiLAMB optimizer.
     """
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-6,
                     lower_bound=1e-3, upper_bound=10.0, bias_correction=False, **kwargs):
-        super(LAMB, self).__init__(learning_rate=learning_rate, **kwargs)
+        super(multiLAMB, self).__init__(learning_rate=learning_rate, **kwargs)
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
@@ -1066,18 +1066,6 @@ class LAMB(Optimizer):
         self.upper_bound = upper_bound
         self.bias_correction = bias_correction
         self.aggregate_num = max(1,min(50,int(os.getenv('MXNET_OPTIMIZER_AGGREGATION_SIZE',"50"))))
-
-    def create_state_multi_precision(self, index, weight):
-        weight_master_copy = None
-        if self.multi_precision and weight.dtype == numpy.float16:
-            weight_master_copy = weight.astype(numpy.float32)
-            return (self.create_state(index, weight_master_copy), weight_master_copy)
-        if weight.dtype == numpy.float16 and not self.multi_precision:
-            warnings.warn("Accumulating with float16 in optimizer can lead to "
-                          "poor accuracy or slow convergence. "
-                          "Consider using multi_precision=True option of the "
-                          "LAMB optimizer")
-        return self.create_state(index, weight)
 
     def create_state(self, index, weight):
         stype = weight.stype
@@ -1087,41 +1075,47 @@ class LAMB(Optimizer):
                 zeros(weight.shape, weight.context, dtype=dtype, stype=stype)) # temp_g
 
     def _update_impl(self, index, weights, grads, states, multi_precision=False):
-        if not isinstance(weights, (tuple, list)):
+        step_count = []
+        if not isinstance(index,(tuple, list)):
             weights = [weights]
             grads = [grads]
             states = [states]
-        for weight, grad in zip(weights, grads):
-            assert(isinstance(weight, NDArray))
-            assert(isinstance(grad, NDArray))
-
-        self._update_count(index)
-        lr = self._get_lr(index)
-        wd = self._get_wd(index)
-        step = self._index_update_count[index]
-
+            self._update_count(index)
+            step_count.append(self._index_update_count[index])
+            lr = self._get_lr(index)
+            wd = self._get_wd(index)
+        else:
+            for i, (weight, grad) in enumerate(zip(weights, grads)):
+                assert(isinstance(weight, NDArray))
+                assert(isinstance(grad, NDArray))
+                self._update_count(i)
+                step_count.append(self._index_update_count[i])
+            lr = self._get_lr(index[0])
+            wd = self._get_wd(index[0])
+        
         kwargs = {'learning_rate': lr, 'beta1': self.beta1, 'beta2': self.beta2,
                   'epsilon': self.epsilon, 'wd': wd,
                   'lower_bound': self.lower_bound, 'upper_bound': self.upper_bound,
-                  'bias_correction': self.bias_correction, 'step': step,
+                  'bias_correction': self.bias_correction,
                   'rescale_grad': self.rescale_grad}
 
         if self.clip_gradient:
             kwargs['clip_gradient'] = self.clip_gradient
 
-        current_index = 0
-        while current_index < len(weights):
-            sidx = current_index
-            eidx = min(current_index + self.aggregate_num, len(weights))
+        updated_tensors = 0
+        while updated_tensors < len(weights):
+            sidx = updated_tensors
+            eidx = min(updated_tensors + self.aggregate_num, len(weights))
             if not multi_precision:
                 mean, var, temp_g = list(zip(*states[sidx:eidx]))
                 multi_lamb_update(weights[sidx:eidx],
                                   grads[sidx:eidx],
                                   mean, var, temp_g,
                                   out=weights[sidx:eidx],
+                                  step_count=step_count[sidx:eidx],
                                   **kwargs)
             else:
-                mean_var_g = list(zip(*states[sidx:eidx]))[0]
+                mean_var_g = list(zip(*states[sidx:eidx]))[1]
                 temp = list(zip(*mean_var_g))
                 mean=temp[0]
                 var=temp[1]
@@ -1129,11 +1123,12 @@ class LAMB(Optimizer):
                 multi_mp_lamb_update(weights[sidx:eidx],
                                      grads[sidx:eidx],
                                      mean, var, temp_g,
-                                     list(zip(*states[sidx:eidx]))[1],
+                                     list(zip(*states[sidx:eidx]))[0],
                                      out=weights[sidx:eidx],
+                                     step_count=step_count[sidx:eidx],
                                      **kwargs)
 
-            current_index += self.aggregate_num
+            updated_tensors += self.aggregate_num
 
     def update(self, index, weight, grad, state):
         self._update_impl(index, weight, grad, state, multi_precision=False)
