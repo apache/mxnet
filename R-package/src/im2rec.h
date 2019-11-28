@@ -23,6 +23,14 @@
  * \brief Export module that takes charge of code generation and document
  *  Generation for functions exported from R-side
  */
+#include <opencv2/core/version.hpp>
+#if CV_VERSION_MAJOR >= 4
+
+#define CV_IMWRITE_PNG_COMPRESSION cv::IMWRITE_PNG_COMPRESSION
+#define CV_IMWRITE_JPEG_QUALITY cv::IMWRITE_JPEG_QUALITY
+
+#endif  // CV_VERSION_MAJOR >= 4
+
 
 #ifndef MXNET_RCPP_IM2REC_H_
 #define MXNET_RCPP_IM2REC_H_
