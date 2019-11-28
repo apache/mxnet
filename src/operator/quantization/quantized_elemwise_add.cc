@@ -127,7 +127,6 @@ and max thresholds representing the threholds for quantizing the float32 output 
 
 // TODO(zhangrong): need extra condition check if there's benefited if it's switched on
 // Since it's not compute-intensive.
-#if 0
 NNVM_REGISTER_OP(elemwise_add)
 .set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
   nnvm::NodePtr node = nnvm::Node::Create();
@@ -139,7 +138,6 @@ NNVM_REGISTER_OP(elemwise_add)
   }
   return node;
 });
-#endif
 
 }  // namespace op
 }  // namespace mxnet
