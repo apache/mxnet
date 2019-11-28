@@ -35,12 +35,12 @@ struct MultiLAMB_step1_kernel {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i,
                                   const MultiLAMBKernelParam<DType, MPDType>& kernel_params,
-                                  const float learning_rate, 
-                                  const float beta1, const float beta2, 
+                                  const float learning_rate,
+                                  const float beta1, const float beta2,
                                   const float epsilon,
                                   const float wd,
                                   const float clip_gradient,
-                                  const bool bias_correction, 
+                                  const bool bias_correction,
                                   const float rescale_grad) {
     using namespace mshadow_op;
     for (size_t index = 0; index < kernel_params.ntensors; ++index) {
@@ -50,23 +50,24 @@ struct MultiLAMB_step1_kernel {
         MPDType scaled_grad = static_cast<MPDType>(kernel_params.grads[index][i])*rescale_grad;
         if (clip_gradient >= 0.0f)
             scaled_grad = mshadow_op::clip::Map(scaled_grad, static_cast<MPDType>(clip_gradient));
-  
-        MPDType mean = static_cast<MPDType>(beta1) * kernel_params.mean[index][i] + 
+        MPDType mean = static_cast<MPDType>(beta1) * kernel_params.mean[index][i] +
           (static_cast<MPDType>(1.0f) - static_cast<MPDType>(beta1)) * scaled_grad;
-        MPDType var = static_cast<MPDType>(beta2) * kernel_params.var[index][i] + 
+        MPDType var = static_cast<MPDType>(beta2) * kernel_params.var[index][i] +
           (static_cast<MPDType>(1.0f) - static_cast<MPDType>(beta2)) * scaled_grad * scaled_grad;
-        kernel_params.mean[index][i]=mean;
-        kernel_params.var[index][i]=var;
-  
+        kernel_params.mean[index][i] = mean;
+        kernel_params.var[index][i] = var;
+
         MPDType g;
-        if(bias_correction){
-          MPDType mean_hat = mean / (static_cast<MPDType>(1.0f) - power::Map(static_cast<MPDType>(beta1), static_cast<MPDType>(kernel_params.step_count[index])));
-          MPDType var_hat = var / (static_cast<MPDType>(1.0f) - power::Map(static_cast<MPDType>(beta2), static_cast<MPDType>(kernel_params.step_count[index])));
+        if (bias_correction) {
+          MPDType mean_hat = mean / (static_cast<MPDType>(1.0f) - power::Map(static_cast<MPDType>(beta1), 
+                                                  static_cast<MPDType>(kernel_params.step_count[index])));
+          MPDType var_hat = var / (static_cast<MPDType>(1.0f) - power::Map(static_cast<MPDType>(beta2), 
+                                                static_cast<MPDType>(kernel_params.step_count[index])));
           g = mean_hat / (sqrt(var_hat) + epsilon) + wd * w;
-        }else{
+        } else {
           g = mean / (sqrt(var) + epsilon) + wd * w;
         }
-        kernel_params.temp_g[index][i]=g;
+        kernel_params.temp_g[index][i] = g;
       }
     }
   }
@@ -75,12 +76,12 @@ struct MultiLAMB_step1_kernel {
 template<typename MPDType, bool has_mixed_precision>
 struct MultiLAMB_step2_kernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, 
+  MSHADOW_XINLINE static void Map(int i,
                                   const MultiLAMBKernelParam<DType, MPDType>& kernel_params,
                                   const float* sumSqWeigths,
                                   const float* sumSqtemp_g,
                                   const float learning_rate,
-                                  const float lower_bound, 
+                                  const float lower_bound,
                                   const float upper_bound,
                                   const OpReqType req) {
     for (size_t index = 0; index < kernel_params.ntensors; ++index) {
@@ -90,14 +91,14 @@ struct MultiLAMB_step2_kernel {
         float r1 = sqrt(sumSqWeigths[index]);
         float r2 = sqrt(sumSqtemp_g[index]);
         r1 = std::min(std::max(r1, lower_bound), upper_bound);
-        
+
         // calculate lamb_trust_ratio
         MPDType r;
         if (r1 == 0.0f || r2 == 0.0f)
           r = 1.0f;
         else
           r = r1/r2;
-          
+
         MPDType lr_adjusted = learning_rate * r;
         w -= lr_adjusted * kernel_params.temp_g[index][i];
 
@@ -114,9 +115,9 @@ template<typename MPDType, typename DType>
 void call_kernel1(Stream<cpu>* s,
                   const MultiLAMBKernelParam<DType, MPDType>& kernel_params,
                   const MultiLAMBParam &param,
-                  int* block_to_tensor, 
-                  int* block_to_chunk){
-  Kernel<MultiLAMB_step1_kernel<MPDType, !std::is_same<DType, MPDType>::value>, cpu>::  
+                  int* block_to_tensor,
+                  int* block_to_chunk) {
+  Kernel<MultiLAMB_step1_kernel<MPDType, !std::is_same<DType, MPDType>::value>, cpu>::
                                  Launch(s, kernel_params.max_size,
                                  kernel_params,
                                  param.learning_rate,
@@ -133,11 +134,10 @@ void call_kernel2(Stream<cpu>* s,
                   const MultiLAMBKernelParam<DType, MPDType>& kernel_params,
                   const MultiLAMBParam &param,
                   float* r1, float* r2,
-                  int* block_to_tensor, 
+                  int* block_to_tensor,
                   int* block_to_chunk,
-                  const OpReqType req){
-
-  Kernel<MultiLAMB_step2_kernel<MPDType, !std::is_same<DType, MPDType>::value>, cpu>::  
+                  const OpReqType req) {
+  Kernel<MultiLAMB_step2_kernel<MPDType, !std::is_same<DType, MPDType>::value>, cpu>::
                                  Launch(s, kernel_params.max_size,
                                  kernel_params,
                                  r1, r2,
@@ -158,7 +158,7 @@ std::vector<std::string> LAMBParamToVector(uint32_t num_args, const char *pName[
 
   return ret;
 }
-    
+
 inline uint32_t num_tensors(const nnvm::NodeAttrs& attrs) {
   return static_cast<uint32_t>(dmlc::get<MultiLAMBParam>(attrs.parsed).num_tensors);
 }
@@ -238,6 +238,6 @@ NNVM_REGISTER_OP(_multi_mp_lamb_update)
 .set_attr<FCompute>("FCompute<cpu>", multiLAMBUpdate<cpu, true>)
 .add_argument("data", "NDArray-or-Symbol[]", "data")
 .add_arguments(MultiLAMBParam::__FIELDS__());
-    
+
 }  // namespace op
 }  // namespace mxnet
