@@ -89,11 +89,42 @@ class MKLDNNPoolingBwd {
   const mkldnn::pooling_backward::primitive_desc &GetPd();
 };
 
+inline int GetPaddingSizeFull(dim_t x, int padl, int padr, int k, int s) {
+  if ((x + padl + padr - k) % s != 0) {
+    return (padr + s - ((x + padl + padr - k) % s));
+  } else {
+    return padr;
+  }
+}
+
 inline bool SupportMKLDNNPooling(const PoolingParam &param) {
   return param.kernel.ndim() == 2 &&
          (param.pool_type == pool_enum::kMaxPooling ||
           param.pool_type == pool_enum::kAvgPooling) &&
          (!param.layout.has_value() || param.layout.value() == mshadow::kNCHW);
+}
+
+inline bool SupportMKLDNNPooling(const PoolingParam &param,
+                                 const mxnet::TShape &dshape) {
+  bool ret = SupportMKLDNNPooling(param);
+  if (!ret)
+    return false;
+
+  if (param.pooling_convention == pool_enum::kValid) {
+    return true;
+  } else {
+    if (param.pool_type == pool_enum::kAvgPooling) {
+      CHECK_EQ(dshape.ndim(), 4);
+      if (param.pad[0] == GetPaddingSizeFull(dshape[2], param.pad[0], param.pad[0], param.kernel[0],
+                                             param.stride[0]) &&
+          param.pad[1] == GetPaddingSizeFull(dshape[3], param.pad[1], param.pad[1], param.kernel[1],
+                                             param.stride[1])) {
+        return true;
+      }
+      return false;
+    }
+    return param.pool_type == pool_enum::kMaxPooling;
+  }
 }
 
 inline bool MKLDNNRequireWorkspace(const PoolingParam &param) {

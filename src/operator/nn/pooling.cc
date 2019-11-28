@@ -278,7 +278,8 @@ void PoolingComputeExCPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     return;
   }
 
-  if (SupportMKLDNN(inputs[0])) {
+  if (SupportMKLDNN(inputs[0])
+      && SupportMKLDNNPooling(param, inputs[0].shape())) {
     if (MKLDNNRequireWorkspace(param)) {
       CHECK_GT(outputs.size(), 1U);
       workspace = &outputs[1];
@@ -304,7 +305,8 @@ void PoolingGradComputeExCPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   }
 
 
-  if (SupportMKLDNN(inputs[0])) {
+  if (SupportMKLDNN(inputs[0])
+      && SupportMKLDNNPooling(param, inputs[0].shape())) {
     const NDArray &out_grad = inputs[0];
     const NDArray *workspace = nullptr;
     const NDArray *in_data = nullptr;
