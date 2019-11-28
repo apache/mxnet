@@ -2672,6 +2672,45 @@ def test_np_normal_grad():
 
 @with_seed()
 @use_np
+def test_npx_sample_n():
+    def shape_formatter(s):
+        if s is None:
+            return ()
+        if isinstance(s, tuple):
+            return s
+        # scalar case
+        return (s,)
+
+    class TestSampleN(HybridBlock):
+        def __init__(self, shape, op_name):
+            super(TestSampleN, self).__init__()
+            self._shape = shape
+            self._op_name = op_name
+
+        def hybrid_forward(self, F, param1, param2):
+            op = getattr(F.npx.random, self._op_name, None)
+            assert op is not None
+            # return param1 + param2 + op(batch_shape=self._shape)
+            return op(param1, param2, batch_shape=self._shape)
+
+    batch_shapes = [(10,), (2, 3), 6, (), None]
+    event_shapes = [(), (2,), (2,2)]
+    dtypes = ['float16', 'float32', 'float64']
+    op_names = ['uniform_n', 'normal_n']
+    
+    for bshape, eshape, dtype, op in itertools.product(batch_shapes, event_shapes, dtypes, op_names):
+        for hybridize in [True, False]:
+            net = TestSampleN(bshape, op)
+            if hybridize:
+                net.hybridize()
+            expected_shape = (shape_formatter(bshape) +
+                              shape_formatter(eshape))
+            out = net(np.ones(shape=eshape), np.ones(shape=eshape))
+            assert out.shape == expected_shape
+
+
+@with_seed()
+@use_np
 def test_np_random():
     shapes = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
     dtypes = ['float16', 'float32', 'float64']
@@ -3371,6 +3410,106 @@ def test_np_linalg_inv():
         # check imperative once again
         A_inv = np.linalg.inv(data)
         check_inv(A_inv, data_np)
+
+
+@with_seed()
+@use_np
+def test_np_linalg_det():
+    class TestDet(HybridBlock):
+        def __init__(self):
+            super(TestDet, self).__init__()
+
+        def hybrid_forward(self, F, a):
+            return F.np.linalg.det(a)
+
+    # test non zero size input
+    tensor_shapes = [
+        (2, 0, 2, 2),
+        (4, 4),
+        (0, 2, 2, 2),
+        (3, 3, 3),
+        (0, 2, 2),
+        (2, 2, 2, 2, 2),
+        (1, 1),
+    ]
+    types = [_np.float32, _np.float64]
+    grad_reqs = ['write', 'add', 'null']
+
+    for hybridize, dtype, shape, grad_req in itertools.product([True, False], types, tensor_shapes, grad_reqs):
+        a_shape = (1,) + shape
+        test_det = TestDet()
+        if hybridize:
+            test_det.hybridize()
+        a = rand_ndarray(shape=a_shape, dtype=dtype).as_np_ndarray()
+        a.attach_grad(grad_req)
+        np_out = _np.linalg.det(a.asnumpy())
+        with mx.autograd.record():
+            mx_out = test_det(a)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-1, atol=1e-1)
+        if grad_req != 'null':
+            print(shape, grad_req)
+            mx_out.backward()
+
+        # Test imperative once again
+        mx_out = np.linalg.det(a)
+        np_out = _np.linalg.det(a.asnumpy())
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-1, atol=1e-1)
+
+        # test numeric gradient
+        a_sym = mx.sym.Variable("a").as_np_ndarray()
+        mx_sym = mx.sym.np.linalg.det(a_sym).as_nd_ndarray()
+        if 0 not in shape and grad_req != 'null':
+            check_numeric_gradient(mx_sym, [a.as_nd_ndarray()],
+                                    rtol=1e-1, atol=1e-1, dtype=dtype)
+
+
+@with_seed()
+@use_np
+def test_np_linalg_slogdet():
+    class TestSlogdet(HybridBlock):
+        def __init__(self):
+            super(TestSlogdet, self).__init__()
+
+        def hybrid_forward(self, F, a):
+            return F.np.linalg.slogdet(a)
+
+    # test non zero size input
+    tensor_shapes = [
+        (2, 0, 2, 2),
+        (5, 5),
+        (0, 2, 2, 2),
+        (3, 3, 3),
+        (0, 3, 3),
+        (2, 2, 2, 2, 2),
+        (1, 1),
+    ]
+
+    types = [_np.float32, _np.float64]
+    grad_reqs = ['write', 'add', 'null']
+
+    for hybridize, a_shape, dtype, grad_req in itertools.product([True, False], tensor_shapes, types, grad_reqs):
+        test_slogdet = TestSlogdet()
+        if hybridize:
+            test_slogdet.hybridize()
+        a = rand_ndarray(shape=a_shape, dtype=dtype).as_np_ndarray()
+        a.attach_grad(grad_req)
+
+        np_out = _np.linalg.slogdet(a.asnumpy())
+        with mx.autograd.record():
+            mx_out = test_slogdet(a)
+        assert mx_out[0].shape == np_out[0].shape
+        assert mx_out[1].shape == np_out[1].shape
+        assert_almost_equal(mx_out[0].asnumpy(), np_out[0], rtol=1e-1, atol=1e-1)
+        assert_almost_equal(mx_out[1].asnumpy(), np_out[1], rtol=1e-1, atol=1e-1)
+        if grad_req != 'null':
+            mx_out[1].backward()
+
+        # Test imperative once again
+        mx_out = np.linalg.slogdet(a)
+        np_out = _np.linalg.slogdet(a.asnumpy())
+        assert_almost_equal(mx_out[0].asnumpy(), np_out[0], rtol=1e-1, atol=1e-1)
+        assert_almost_equal(mx_out[1].asnumpy(), np_out[1], rtol=1e-1, atol=1e-1)
 
 
 @with_seed()
@@ -4857,6 +4996,58 @@ def test_np_expand_dims():
                 # check imperative again
                 y = np.expand_dims(x, axis)
                 assert_almost_equal(y.asnumpy(), expected, use_broadcast=False)
+
+
+@with_seed()
+@use_np
+def test_np_unravel_index():
+    class TestUnravel_index(HybridBlock):
+        def __init__(self, shape, order='C') :
+            super(TestUnravel_index, self).__init__()
+            self._shape = shape
+            self._order = order
+             
+        def hybrid_forward(self, F, a):
+            return F.np.unravel_index(a, self._shape, self._order)
+     
+    in_shapes = [
+        2, 5,
+        (), (1,), (4,),
+        (2, 2), (2, 4), (3, 5),
+        (2, 2, 2), (2, 3, 2), (2, 3, 4),
+    ]
+    unravel_shapes = [
+        10, (15,),
+        (3, 4), (4, 5),
+        (2,3,4)
+    ]
+    dtypes = [np.uint8, np.int8, np.int32, np.int64] 
+    for hybridize, ishape, dtype, rshape in itertools.product([False, True], in_shapes, dtypes, unravel_shapes):
+        rtol = 1e-2 if dtype == np.float16 else 1e-3
+        atol = 1e-4 if dtype == np.float16 else 1e-5
+        test_unravel_index = TestUnravel_index(rshape)
+        if hybridize:
+            test_unravel_index.hybridize()
+        if type(ishape) == int and hybridize:
+            x = np.array([ishape], dtype=dtype)
+            np_out = _np.unravel_index(x.asnumpy(), rshape)
+        else:
+            x = np.random.uniform(0, 8, size=ishape).astype(dtype)
+            np_out = _np.unravel_index(x.asnumpy(), rshape)
+        mx_out = test_unravel_index(x)
+        assert len(mx_out) == len(np_out)
+        for elem_mx, elem_np in zip(mx_out, np_out):
+            assert elem_mx.asnumpy().shape == elem_np.shape
+            assert_almost_equal(elem_mx.asnumpy(), elem_np, rtol=rtol, atol=atol)
+        # no backward function for unravel_index operator
+ 
+        # Test imperative once again
+        mx_out = np.unravel_index(x, rshape)
+        np_out = _np.unravel_index(x.asnumpy(), rshape)
+        assert len(mx_out) == len(np_out)
+        for elem_mx, elem_np in zip(mx_out, np_out):
+            assert elem_mx.asnumpy().shape == elem_np.shape
+            assert_almost_equal(elem_mx.asnumpy(), elem_np, rtol=rtol, atol=atol)
 
 
 if __name__ == '__main__':

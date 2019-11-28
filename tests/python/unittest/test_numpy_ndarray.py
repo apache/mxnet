@@ -642,13 +642,18 @@ def test_np_ndarray_indexing():
             )
         np_indexed_array = np_array[np_index]
         mx_np_array = np.array(np_array, dtype=np_array.dtype)
-        try:
-            mx_indexed_array = mx_np_array[index]
-        except Exception as e:
-            print('Failed with index = {}'.format(index))
-            raise e
-        mx_indexed_array = mx_indexed_array.asnumpy()
-        assert same(np_indexed_array, mx_indexed_array), 'Failed with index = {}'.format(index)
+        for autograd in [True, False]:
+            try:
+                if autograd:
+                    with mx.autograd.record():
+                        mx_indexed_array = mx_np_array[index]
+                else:
+                    mx_indexed_array = mx_np_array[index]
+            except Exception as e:
+                print('Failed with index = {}'.format(index))
+                raise e
+            mx_indexed_array = mx_indexed_array.asnumpy()
+            assert same(np_indexed_array, mx_indexed_array), 'Failed with index = {}'.format(index)
 
     def test_setitem(np_array, index):
         def assert_same(np_array, np_index, mx_array, mx_index, mx_value, np_value=None):
@@ -768,6 +773,7 @@ def test_np_ndarray_indexing():
         np_int(slice(1, 5), np.int32),
         np_int(slice(1, 5), np.int64),
         slice(1, 5, 2),
+        slice(1, 2, 2),
         np_int(slice(1, 5, 2), np.int32),
         np_int(slice(1, 5, 2), np.int64),
         slice(7, 0, -1),
@@ -972,40 +978,6 @@ def test_np_save_load_ndarrays():
         for k, v in arr_dict_loaded.items():
             assert k in arr_dict
             assert _np.array_equal(v.asnumpy(), arr_dict[k].asnumpy())
-
-
-@retry(5)
-@with_seed()
-@use_np
-def test_np_uniform():
-    types = [None, "float32", "float64"]
-    ctx = mx.context.current_context()
-    samples = 1000000
-    # Generation test
-    trials = 8
-    num_buckets = 5
-    for dtype in types:
-        for low, high in [(-100.0, -98.0), (99.0, 101.0)]:
-            scale = high - low
-            buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.uniform.ppf(x, loc=low, scale=scale), num_buckets)
-            buckets = np.array(buckets, dtype=dtype).tolist()
-            probs = [(buckets[i][1] - buckets[i][0])/scale for i in range(num_buckets)]
-            generator_mx_np = lambda x: mx.np.random.uniform(low, high, size=x, ctx=ctx, dtype=dtype).asnumpy()
-            verify_generator(generator=generator_mx_np, buckets=buckets, probs=probs, nsamples=samples, nrepeat=trials)
-
-    # Broadcasting test
-    params = [
-        (1.0, mx.np.ones((4,4)) + 2.0),
-        (mx.np.zeros((4,4)) + 1, 2.0),
-        (mx.np.zeros((1,4)), mx.np.ones((4,4)) + mx.np.array([1, 2, 3, 4])),
-        (mx.np.array([1, 2, 3, 4]), mx.np.ones((2,4,4)) * 5)
-    ]
-    for dtype in types:
-        for low, high in params:
-            expect_mean = (low + high) / 2
-            expanded_size = (samples,) + expect_mean.shape
-            uniform_samples = mx.np.random.uniform(low, high, size=expanded_size, dtype=dtype)
-            mx.test_utils.assert_almost_equal(uniform_samples.asnumpy().mean(0), expect_mean.asnumpy(), rtol=0.20, atol=1e-1)
 
 
 @retry(5)

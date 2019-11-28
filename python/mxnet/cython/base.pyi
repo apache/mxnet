@@ -68,6 +68,8 @@ cdef extern from "nnvm/c_api.h":
                     const char ***arg_descriptions,
                     const char **return_type);
     int NNSymbolFree(SymbolHandle symbol);
+    int NNSymbolGetNumOutputs(SymbolHandle sym,
+                              nn_uint* output_count);
     int NNSymbolCompose(SymbolHandle sym,
                         const char* name,
                         nn_uint num_args,
