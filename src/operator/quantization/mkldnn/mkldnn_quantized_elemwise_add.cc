@@ -65,9 +65,11 @@ static MKLDNNQuantizedElemwiseAddFwd &GetQuantizedElemwiseAddForward(
     const std::vector<NDArray> &in_data, const std::vector<NDArray> &out_data,
     const std::vector<mkldnn::memory::desc> &data_md) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<OpSignature, MKLDNNQuantizedElemwiseAddFwd, OpHash> fwds;
+  static thread_local std::unordered_map<OpSignature,
+              MKLDNNQuantizedElemwiseAddFwd, OpHash> fwds;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<OpSignature, MKLDNNQuantizedElemwiseAddFwd, OpHash> fwds;
+  static MX_THREAD_LOCAL std::unordered_map<OpSignature,
+              MKLDNNQuantizedElemwiseAddFwd, OpHash> fwds;
 #endif
   OpSignature key;
   key.AddSign(in_data);
