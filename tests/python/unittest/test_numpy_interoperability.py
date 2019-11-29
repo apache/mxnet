@@ -1224,12 +1224,21 @@ def _add_workload_logical_not(array_pool):
     OpArgMngr.add_workload('logical_not', array_pool['4x1'])
     OpArgMngr.add_workload('logical_not', np.array([True, False, True, False], dtype=np.bool))
 
+
 def _add_workload_bitwise_not():
     for dtype in [np.int8, np.int32, np.int64]:
         zeros = np.array([0], dtype=dtype)
         ones = np.array([-1], dtype=dtype)
         OpArgMngr.add_workload('bitwise_not', zeros)
         OpArgMngr.add_workload('bitwise_not', ones)
+
+
+def _add_workload_invert():
+    for dtype in [np.int8, np.int32, np.int64]:
+        zeros = np.array([0], dtype=dtype)
+        ones = np.array([-1], dtype=dtype)
+        OpArgMngr.add_workload('invert', zeros)
+        OpArgMngr.add_workload('invert', ones)
 
 
 def _add_workload_vdot():
@@ -1516,6 +1525,7 @@ def _prepare_workloads():
     _add_workload_floor(array_pool)
     _add_workload_logical_not(array_pool)
     _add_workload_bitwise_not()
+    _add_workload_invert()
     _add_workload_vdot()
     _add_workload_vstack(array_pool)
     _add_workload_column_stack()
