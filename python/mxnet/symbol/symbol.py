@@ -1366,7 +1366,7 @@ class Symbol(SymbolBase):
         else:
             check_call(_LIB.MXSymbolSaveToFile(self.handle, c_str(fname)))
 
-    def tojson(self):
+    def tojson(self, remove_amp_cast=True):
         """Saves symbol to a JSON string.
 
         See Also
@@ -1374,7 +1374,12 @@ class Symbol(SymbolBase):
         symbol.load_json : Used to load symbol from JSON string.
         """
         json_str = ctypes.c_char_p()
-        check_call(_LIB.MXSymbolSaveToJSON(self.handle, ctypes.byref(json_str)))
+        if remove_amp_cast:
+            handle = SymbolHandle()
+            check_call(_LIB.MXSymbolRemoveAmpCast(self.handle, ctypes.byref(handle)))
+            check_call(_LIB.MXSymbolSaveToJSON(handle, ctypes.byref(json_str)))
+        else:
+            check_call(_LIB.MXSymbolSaveToJSON(self.handle, ctypes.byref(json_str)))
         return py_str(json_str.value)
 
     @staticmethod
