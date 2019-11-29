@@ -86,6 +86,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'argmin',
     'argmax',
     'around',
+    'argsort',
     'append',
     'broadcast_arrays',
     'broadcast_to',
