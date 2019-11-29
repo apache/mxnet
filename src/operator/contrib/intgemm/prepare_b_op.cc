@@ -21,12 +21,70 @@
  * \file prepare_b_op.cc
  * \brief Converts B matrices to intgemm's representation.
  */
-#include "./prepare_b_op-inl.h"
+
+#include <mxnet/operator_util.h>
+#include <vector>
+#include "../../mshadow_op.h"
+#include "../../mxnet_op.h"
+#include "../../operator_common.h"
+#include "../../tensor/init_op.h"
+
 #include "../../../../3rdparty/intgemm/aligned.h"
 #include "../../../../3rdparty/intgemm/intgemm.h"
 
 namespace mxnet {
 namespace op {
+
+struct PrepareBParam : public dmlc::Parameter<PrepareBParam> {
+  float multiplier;
+  DMLC_DECLARE_PARAMETER(PrepareBParam) {
+    DMLC_DECLARE_FIELD(multiplier)
+      .describe("Multiply floats by this constant before casting to int8.  Typically you would set this to 127.0 / max absolute value in B.");
+  }
+};
+
+inline bool PrepareBOpShape(const nnvm::NodeAttrs& attrs,
+                             mxnet::ShapeVector* in_attrs,
+                             mxnet::ShapeVector* out_attrs) {
+  // One in, one out.
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+  SHAPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+
+  const mxnet::TShape &shape = in_attrs->front();
+  if (mxnet::ndim_is_known(shape)) {
+    CHECK_GE(shape.ndim(), 2) << "Matrices have at least two dimensions.";
+  }
+  return !mxnet::op::shape_is_none(out_attrs->at(0));
+}
+
+inline bool PrepareBOpType(const nnvm::NodeAttrs& attrs,
+                            std::vector<int>* in_attrs,
+                            std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  // This routine converts from float to int8.
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt8);
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, mshadow::kFloat32);
+  return true;
+}
+
+inline bool PrepareBOpStorageType(const nnvm::NodeAttrs& attrs,
+                                   const int dev_mask,
+                                   DispatchMode* dispatch_mode,
+                                   std::vector<int>* in_attrs,
+                                   std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  // Dense storage only.
+  return storage_type_assign(&out_attrs->front(), kDefaultStorage, dispatch_mode, DispatchMode::kFCompute) &&
+    storage_type_assign(&in_attrs->front(), kDefaultStorage, dispatch_mode, DispatchMode::kFCompute);
+}
+
+
 
 DMLC_REGISTER_PARAMETER(PrepareBParam);
 
@@ -39,11 +97,8 @@ void PrepareBOpForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out.type_flag_, mshadow::kInt8);
   CHECK(in.CheckContiguous());
   CHECK(out.CheckContiguous());
-  int B_cols = 1;
-  for (int s = 0; s < in.shape_.ndim() - 1; ++s) {
-    B_cols *= in.shape_[s];
-  }
-  int inner = in.shape_[in.shape_.ndim() - 1];
+  size_t B_cols = in.shape_.ProdShape(0, in.shape_.ndim() - 1);
+  size_t inner = in.shape_[in.shape_.ndim() - 1];
   CHECK_EQ(inner % ::intgemm::Int8::kBTileRow, 0) << "intgemm requires the inner dimension be a multiple of " << ::intgemm::Int8::kBTileRow;
   CHECK_EQ(B_cols % ::intgemm::Int8::kBTileCol, 0) << "intgemm requires B have a multiple of " << ::intgemm::Int8::kBTileCol << " columns inthe equation C = AB.";
  
@@ -52,8 +107,8 @@ void PrepareBOpForward(const nnvm::NodeAttrs& attrs,
   const PrepareBParam& param = nnvm::get<PrepareBParam>(attrs.parsed);
   // TODO: eliminate transpose here by making a PrepareBColumnMajor.
   intgemm::AlignedVector<float> B_transpose(inner * B_cols);
-  for (int i = 0; i < inner; ++i) {
-    for (int j = 0; j < B_cols; ++j) {
+  for (size_t i = 0; i < inner; ++i) {
+    for (size_t j = 0; j < B_cols; ++j) {
       B_transpose[i * B_cols + j] = B[i + inner * j];
     }
   }
