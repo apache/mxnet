@@ -19,11 +19,14 @@
 from __future__ import absolute_import
 from __future__ import division
 
+import os
+from uuid import uuid4
 import numpy as _np
 import mxnet as mx
 from mxnet import gluon, autograd, np
-from mxnet.test_utils import use_np, assert_almost_equal
+from mxnet.test_utils import use_np, assert_almost_equal, check_gluon_hybridize_consistency
 from common import with_seed
+import random
 
 
 @with_seed()
@@ -194,6 +197,208 @@ def test_parameters_zero_grad():
         net.collect_params().zero_grad()
         for v in net.collect_params().values():
             assert_almost_equal(v.grad().asnumpy(), mx.np.zeros_like(v.grad()).asnumpy())
+
+
+def check_gluon_save_load(net_builder, data_l):
+    """Verify the consistency between the loaded network and the original network.
+
+    Known limitations: Currently it only supports loading
+
+    Parameters
+    ----------
+    net_builder : function
+        The builder of the HybridBlock.
+    data_l : list of numpy.ndarray
+        List of the input data that we will use to verify the correctness of the loaded network.
+
+    """
+    net = net_builder()
+    net.hybridize()
+    net.initialize()
+    out = net(*data_l)
+    out_np = out.asnumpy()
+    prefix = str(uuid4())
+    net.export(prefix)
+    input_names = 'data' if len(data_l) == 1 else ['data{}'.format(i) for i in range(len(data_l))]
+    net_imported = gluon.SymbolBlock.imports('{}-symbol.json'.format(prefix),
+                                             input_names, param_file='{}-0000.params'.format(prefix))
+    # Clean up the directory
+    os.remove('{}-symbol.json'.format(prefix))
+    os.remove('{}-0000.params'.format(prefix))
+    loaded_out = net_imported(*data_l).asnumpy()
+    assert_almost_equal(out_np, loaded_out)
+
+
+def hashable_index(tuple_idx):
+    """Return an hashable representation of a tuple of slice object
+
+    We add this because the slice object in python is not hashable.
+
+    Parameters
+    ----------
+    tuple_idx : tuple
+        A tuple of slice/int objects
+
+    Returns
+    -------
+    ret : tuple
+        A hashable representation of the slice data
+    """
+    l = []
+    for ele in tuple_idx:
+        if isinstance(ele, slice):
+            l.append(ele.__reduce__())
+        else:
+            l.append(ele)
+    return tuple(l)
+
+
+@with_seed()
+@use_np
+def test_symbolic_basic_slicing():
+    def random_slice_index(shape):
+        index = []
+        step_switch = random.randint(-1, 1)
+        for i in range(len(shape)):
+            if shape[i] == 0:
+                index.append(slice(None))
+                continue
+            r = random.randint(0, 5)
+            if r < 2:
+                index.append(random.randint(1 - shape[i], shape[i] - 1))
+                continue
+            elif r < 3:
+                index.append(slice(None))
+                continue
+            s = random.randint(0, shape[i] - 1)
+            e = random.randint(s + 1, shape[i])
+            if step_switch == 1:
+                index.append(slice(s, e, 1))
+            elif step_switch == -1:
+                e -= 1
+                s -= 1
+                index.append(slice(e, s, -1))
+            else:
+                index.append(slice(s, e, 2))
+        return tuple(index)
+
+    shapes = [
+        (4, 6, 8, 5),
+        (1, 1, 1, 6),
+        (5, 6, 4),
+        (5, 6),
+        (10,),
+        (100, 0, 10, 0, 0),
+        (100, 0, 0),
+        (0, 0, 0),
+        (),
+    ]
+    for shape in shapes:
+        cache = set()
+        x = mx.np.random.normal(0, 1, shape)
+        y = mx.np.random.normal(0, 1, shape)
+        for _ in range(200):
+            index1 = random_slice_index(shape)
+            index2 = random_slice_index(x.asnumpy()[index1].shape)
+            if (hashable_index(index1), hashable_index(index2)) in cache:
+                continue
+            cache.add((hashable_index(index1), hashable_index(index2)))
+            # Test basic slicing on a single symbol
+            class TestSlicingSingleSymbol1(gluon.HybridBlock):
+                def hybrid_forward(self, F, x, y):
+                    return x[()][index1] + y[()][index1]
+
+            # Test basic slicing on a single symbol
+            class TestSlicingSingleSymbol2(gluon.HybridBlock):
+                def hybrid_forward(self, F, x, y):
+                    return (x[()][index1] + y[()][index1])[index2]
+
+            check_gluon_hybridize_consistency(TestSlicingSingleSymbol1, [x, y],
+                                              numpy_func=lambda a, b: a[()][index1] + b[()][index1])
+            check_gluon_hybridize_consistency(TestSlicingSingleSymbol2, [x, y],
+                                              numpy_func=lambda a, b:
+                                              (a[()][index1] + b[()][index1])[index2])
+        # Test for split/hsplit/vsplit
+        class TestSlicingWithSplit(gluon.HybridBlock):
+            def hybrid_forward(self, F, x):
+                x = F.np.split(x, shape[2], axis=2)
+                x = x[1:-1]
+                x = F.np.concatenate(x, axis=2)
+                return x
+
+        class TestSlicingWithSplit2(gluon.HybridBlock):
+            def __init__(self, prefix=None, params=None):
+                super(TestSlicingWithSplit2, self).__init__(prefix=prefix, params=params)
+                with self.name_scope():
+                    self.layer = gluon.nn.Dense(16, flatten=False, params=params)
+
+            def hybrid_forward(self, F, x, y):
+                x = F.np.split(x, 1)
+                x = x[0]
+                return self.layer(x[:, -1, :] + y[:, -1, :])
+
+        class TestSlicingWithHSplit(gluon.HybridBlock):
+            def hybrid_forward(self, F, x):
+                x = F.np.hsplit(x, shape[1])
+                x = x[1:-1]
+                x = F.np.concatenate(x, axis=1)
+                return x
+
+        class TestSlicingWithVSplit(gluon.HybridBlock):
+            def hybrid_forward(self, F, x):
+                x = F.np.vsplit(x, shape[0])
+                x = x[1:-1]
+                x = F.np.concatenate(x, axis=0)
+                return x
+
+        if len(shape) > 2 and shape[2] > 2:
+            check_gluon_hybridize_consistency(
+                TestSlicingWithSplit, [x],
+                numpy_func=lambda a: _np.concatenate(_np.split(a, shape[2], axis=2)[1:-1],
+                                                     axis=2))
+        if len(shape) == 3 and shape[0] > 0 and shape[1] > 0 and shape[2] > 0:
+            check_gluon_hybridize_consistency(TestSlicingWithSplit2, [x, y])
+
+        if len(shape) > 1 and shape[1] > 2:
+            check_gluon_hybridize_consistency(
+                TestSlicingWithHSplit, [x],
+                numpy_func=lambda a: _np.concatenate(_np.hsplit(a, shape[1])[1:-1], axis=1))
+        if len(shape) > 1 and shape[0] > 2:
+            check_gluon_hybridize_consistency(
+                TestSlicingWithVSplit, [x],
+                numpy_func=lambda a: _np.concatenate(_np.vsplit(a, shape[0])[1:-1], axis=0))
+
+
+@with_seed()
+@use_np
+def test_net_symbol_save_load():
+    class Case1(gluon.HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super(Case1, self).__init__(prefix=prefix, params=params)
+            with self.name_scope():
+                self.layer = gluon.nn.Dense(64, flatten=False, params=params)
+
+        def hybrid_forward(self, F, x, y):
+            x = F.np.split(x, 1)
+            x = x[0]
+            return self.layer(x[:, -1, :] + y[:, -1, :])
+    check_gluon_save_load(Case1, [mx.np.random.normal(0, 1, (10, 5, 8, 6)),
+                                  mx.np.random.normal(0, 1, (10, 5, 8, 6))])
+
+    class Case2(gluon.HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super(Case2, self).__init__(prefix=prefix, params=params)
+            with self.name_scope():
+                self.layer1 = gluon.nn.Dense(64, flatten=False, params=params)
+                self.layer2 = gluon.nn.Dense(64, flatten=False, params=params)
+
+        def hybrid_forward(self, F, x, y):
+            x = F.np.split(x, 1)
+            x = x[0]
+            return self.layer1(x[:, -1, :]) + self.layer2(y[:, -1, :])
+    check_gluon_save_load(Case2, [mx.np.random.normal(0, 1, (10, 5, 8)),
+                                  mx.np.random.normal(0, 1, (10, 5, 8))])
+
 
 
 if __name__ == '__main__':
