@@ -51,8 +51,8 @@ RUN /work/ubuntu_cudnn.sh
 
 # Special case because the CPP-Package requires the CUDA runtime libs
 # and not only stubs (which are provided by the base image)
-COPY install/ubuntu_nvidia.sh /work/
-RUN /work/ubuntu_nvidia.sh
+#COPY install/ubuntu_nvidia.sh /work/
+#RUN /work/ubuntu_nvidia.sh
 
 # Keep this at the end since this command is not cachable
 ARG USER_ID=0
