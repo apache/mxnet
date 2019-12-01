@@ -22,7 +22,7 @@ __all__ = ['Dataset', 'SimpleDataset', 'ArrayDataset',
            'RecordFileDataset']
 
 import os
-
+import itertools
 from ... import recordio, ndarray
 
 
