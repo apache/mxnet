@@ -360,6 +360,14 @@ def test_dataset_take():
         total += sample
     assert total == expected_total
 
+def test_dataset_flatten():
+    length = 100
+    a = mx.gluon.data.SimpleDataset([i for i in range(length)])
+    b = mx.gluon.data.SimpleDataset([[4 * i + j for j in range(4)] for i in range(length // 4)])
+    b = b.flatten()
+    assert len(a) == length
+    assert a == b
+    
 def test_dataloader_scope():
     """
     Bug: Gluon DataLoader terminates the process pool early while

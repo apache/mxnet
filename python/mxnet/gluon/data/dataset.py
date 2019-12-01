@@ -184,6 +184,19 @@ class Dataset(object):
             The transformed dataset.
         """
         return self.transform(_TransformFirstClosure(fn), lazy)
+    
+    def flatten(self):
+    """Returns a new dataset with samples flattened.
+
+    It is usefull to call after transform() when your transformer function 'fn' transform
+    each sample into multipul samples.
+
+    Returns
+    -------
+    Dataset
+        The result dataset.
+    """
+    return SimpleDataset(list(itertools.chain.from_iterable(self)))
 
 
 class SimpleDataset(Dataset):
