@@ -190,6 +190,7 @@ class Dataset(object):
 
     It is usefull to call after transform() when your transformer function 'fn' transform
     each sample into multipul samples.
+    Note that the items in dataset should be iterable, e.g., list.
 
     Returns
     -------
