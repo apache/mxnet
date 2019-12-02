@@ -22,6 +22,7 @@
  * \brief Converts B matrices to intgemm's representation.
  */
 
+#include "prepare_op-common.h"
 #include <mxnet/operator_util.h>
 #include <vector>
 #include "../../mshadow_op.h"
@@ -35,61 +36,18 @@
 namespace mxnet {
 namespace op {
 
-struct PrepareBParam : public dmlc::Parameter<PrepareBParam> {
-  float multiplier;
-  DMLC_DECLARE_PARAMETER(PrepareBParam) {
-    DMLC_DECLARE_FIELD(multiplier)
-      .describe("Multiply floats by this constant before casting to int8.  Typically you would set this to 127.0 / max absolute value in B.");
-  }
-};
-DMLC_REGISTER_PARAMETER(PrepareBParam);
+void PrepareBOpForwardCPU(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const std::vector<TBlob>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  CHECK_EQ(req[0], kWriteTo) << "intgemm only overwrites";
 
-inline bool PrepareBOpShape(const nnvm::NodeAttrs& attrs,
-                             mxnet::ShapeVector* in_attrs,
-                             mxnet::ShapeVector* out_attrs) {
-  // One in, one out.
-  CHECK_EQ(in_attrs->size(), 1U);
-  CHECK_EQ(out_attrs->size(), 1U);
-
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
-  SHAPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
-
-  const mxnet::TShape &shape = in_attrs->front();
-  if (mxnet::ndim_is_known(shape)) {
-    CHECK_GE(shape.ndim(), 2) << "Matrices have at least two dimensions.";
-  }
-  return !mxnet::op::shape_is_none(out_attrs->at(0));
-}
-
-inline bool PrepareBOpType(const nnvm::NodeAttrs& attrs,
-                            std::vector<int>* in_attrs,
-                            std::vector<int>* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1U);
-  CHECK_EQ(out_attrs->size(), 1U);
-
-  // This routine converts from float to int8.
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt8);
-  TYPE_ASSIGN_CHECK(*in_attrs, 0, mshadow::kFloat32);
-  return true;
-}
-
-inline bool PrepareBOpStorageType(const nnvm::NodeAttrs& attrs,
-                                   const int dev_mask,
-                                   DispatchMode* dispatch_mode,
-                                   std::vector<int>* in_attrs,
-                                   std::vector<int>* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1U);
-  CHECK_EQ(out_attrs->size(), 1U);
-  // Dense storage only.
-  return storage_type_assign(&out_attrs->front(), kDefaultStorage, dispatch_mode, DispatchMode::kFCompute) &&
-    storage_type_assign(&in_attrs->front(), kDefaultStorage, dispatch_mode, DispatchMode::kFCompute);
-}
-
-namespace {
-void PrepareBOpForward(const nnvm::NodeAttrs& attrs,
-                       const OpContext& ctx,
-                       const TBlob& in,
-                       const TBlob& out) {
+  const TBlob &in = inputs.front();
+  const TBlob &out = outputs.front();
   CHECK_EQ(in.type_flag_, mshadow::kFloat32);
   CHECK_EQ(out.type_flag_, mshadow::kInt8);
   CHECK(in.CheckContiguous());
@@ -101,7 +59,6 @@ void PrepareBOpForward(const nnvm::NodeAttrs& attrs,
 
   const float *B = in.dptr<float>();
   int8_t *quantB = out.dptr<int8_t>();
-  const PrepareBParam& param = nnvm::get<PrepareBParam>(attrs.parsed);
   // TODO: eliminate transpose here by making a PrepareBColumnMajor.
   intgemm::AlignedVector<float> B_transpose(inner * B_cols);
   for (size_t i = 0; i < inner; ++i) {
@@ -109,34 +66,8 @@ void PrepareBOpForward(const nnvm::NodeAttrs& attrs,
       B_transpose[i * B_cols + j] = B[i + inner * j];
     }
   }
+  const PrepareParam& param = nnvm::get<PrepareParam>(attrs.parsed);
   ::intgemm::Int8::PrepareB(B_transpose.begin(), quantB, param.multiplier, inner, B_cols);
-}
-} // namespace
-
-void PrepareBOpForwardExCPU(const nnvm::NodeAttrs& attrs,
-                          const OpContext& ctx,
-                          const std::vector<NDArray>& inputs,
-                          const std::vector<OpReqType>& req,
-                          const std::vector<NDArray>& outputs) {
-  CHECK_EQ(inputs.size(), 1U);
-  CHECK_EQ(outputs.size(), 1U);
-  CHECK_EQ(req.size(), 1U);
-  CHECK_EQ(req[0], kWriteTo) << "intgemm only overwrites";
-  CHECK_EQ(inputs[0].storage_type(), kDefaultStorage);
-  CHECK_EQ(outputs[0].storage_type(), kDefaultStorage);
-  PrepareBOpForward(attrs, ctx, inputs[0].data(), outputs[0].data());
-}
-
-void PrepareBOpForwardCPU(const nnvm::NodeAttrs& attrs,
-                          const OpContext& ctx,
-                          const std::vector<TBlob>& inputs,
-                          const std::vector<OpReqType>& req,
-                          const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 1U);
-  CHECK_EQ(outputs.size(), 1U);
-  CHECK_EQ(req.size(), 1U);
-  CHECK_EQ(req[0], kWriteTo) << "intgemm only overwrites";
-  PrepareBOpForward(attrs, ctx, inputs[0], outputs[0]);
 }
 
 NNVM_REGISTER_OP(_contrib_intgemm_prepareb)
@@ -146,24 +77,23 @@ The float32 values are multiplied by the provided multiplier before casting to i
 
 The internal representation of B is CPU dependent: AVX512BW, AVX2, and SSSE3 have different formats.
 )code" ADD_FILELINE)
-.set_attr_parser(ParamParser<PrepareBParam>)
+.set_attr_parser(ParamParser<PrepareParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"B"};
   })
-.set_attr<mxnet::FInferShape>("FInferShape", PrepareBOpShape)
-.set_attr<nnvm::FInferType>("FInferType", PrepareBOpType)
-.set_attr<FInferStorageType>("FInferStorageType", PrepareBOpStorageType)
+.set_attr<mxnet::FInferShape>("FInferShape", PrepareOpShape)
+.set_attr<nnvm::FInferType>("FInferType", PrepareOpType)
+.set_attr<FInferStorageType>("FInferStorageType", PrepareOpStorageType)
 .set_attr<FCompute>("FCompute<cpu>", PrepareBOpForwardCPU)
-.set_attr<FComputeEx>("FComputeEx<cpu>", PrepareBOpForwardExCPU)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
 .add_argument("B", "NDArray-or-Symbol", "Parameter matrix to be prepared for multiplication.")
-.add_arguments(PrepareBParam::__FIELDS__());
+.add_arguments(PrepareParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

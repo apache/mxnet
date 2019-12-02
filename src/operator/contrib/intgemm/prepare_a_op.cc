@@ -24,6 +24,7 @@
  * The only difference from Quantize/QuantizeV2 is that it bans -128.
  */
 
+#include "prepare_op-common.h"
 #include <mxnet/operator_util.h>
 #include <vector>
 #include "../../mshadow_op.h"
@@ -35,53 +36,6 @@
 
 namespace mxnet {
 namespace op {
-
-struct PrepareAParam : public dmlc::Parameter<PrepareAParam> {
-  float multiplier;
-  DMLC_DECLARE_PARAMETER(PrepareAParam) {
-    DMLC_DECLARE_FIELD(multiplier)
-      .describe("Multiply floats by this constant before casting to int8.  Typically you would set this to 127.0 / max absolute value in A.");
-  }
-};
-DMLC_REGISTER_PARAMETER(PrepareAParam);
-
-inline bool PrepareAOpShape(const nnvm::NodeAttrs& attrs,
-                             mxnet::ShapeVector* in_attrs,
-                             mxnet::ShapeVector* out_attrs) {
-  // One in, one out.
-  CHECK_EQ(in_attrs->size(), 1U);
-  CHECK_EQ(out_attrs->size(), 1U);
-
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
-  SHAPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
-
-  return shape_is_known(out_attrs->at(0));
-}
-
-inline bool PrepareAOpType(const nnvm::NodeAttrs& attrs,
-                            std::vector<int>* in_attrs,
-                            std::vector<int>* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1U);
-  CHECK_EQ(out_attrs->size(), 1U);
-
-  // This routine converts from float to int8.
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt8);
-  TYPE_ASSIGN_CHECK(*in_attrs, 0, mshadow::kFloat32);
-  return true;
-}
-
-inline bool PrepareAOpStorageType(const nnvm::NodeAttrs& attrs,
-                                   const int dev_mask,
-                                   DispatchMode* dispatch_mode,
-                                   std::vector<int>* in_attrs,
-                                   std::vector<int>* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1U);
-  CHECK_EQ(out_attrs->size(), 1U);
-  // Dense storage only.
-  return storage_type_assign(&out_attrs->front(), kDefaultStorage, dispatch_mode, DispatchMode::kFCompute) &&
-    storage_type_assign(&in_attrs->front(), kDefaultStorage, dispatch_mode, DispatchMode::kFCompute);
-}
-
 
 void PrepareAOpForwardCPU(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
@@ -103,7 +57,7 @@ void PrepareAOpForwardCPU(const nnvm::NodeAttrs& attrs,
 
   const float *A = in.dptr<float>();
   int8_t *quantA = out.dptr<int8_t>();
-  const PrepareAParam& param = nnvm::get<PrepareAParam>(attrs.parsed);
+  const PrepareParam& param = nnvm::get<PrepareParam>(attrs.parsed);
   ::intgemm::Int8::Quantize(A, quantA, param.multiplier, size);
 }
 
@@ -114,23 +68,23 @@ It it suitable for preparing an A matrix for use by intgemm's C=AB operation.
 
 The float32 values are multiplied by the provided multiplier before casting to int8.  Typically this is 127.0 / maxabsolute(A).
 )code" ADD_FILELINE)
-.set_attr_parser(ParamParser<PrepareAParam>)
+.set_attr_parser(ParamParser<PrepareParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"A"};
   })
-.set_attr<mxnet::FInferShape>("FInferShape", PrepareAOpShape)
-.set_attr<nnvm::FInferType>("FInferType", PrepareAOpType)
-.set_attr<FInferStorageType>("FInferStorageType", PrepareAOpStorageType)
+.set_attr<mxnet::FInferShape>("FInferShape", PrepareOpShape)
+.set_attr<nnvm::FInferType>("FInferType", PrepareOpType)
+.set_attr<FInferStorageType>("FInferStorageType", PrepareOpStorageType)
 .set_attr<FCompute>("FCompute<cpu>", PrepareAOpForwardCPU)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
 .add_argument("A", "NDArray-or-Symbol", "Activation matrix to be prepared for multiplication.")
-.add_arguments(PrepareAParam::__FIELDS__());
+.add_arguments(PrepareParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet
