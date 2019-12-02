@@ -1266,59 +1266,46 @@ class LAMB(Optimizer):
         return (zeros(weight.shape, weight.context, dtype=numpy.float32, stype=stype),
                 zeros(weight.shape, weight.context, dtype=numpy.float32, stype=stype))
 
-    def _update_impl(self, indices, weights, grads, states, multi_precision=False):
-        aggregate = True
-        if not isinstance(indices, (tuple, list)):
-            indices = [indices]
-            weights = [weights]
-            grads = [grads]
-            states = [states]
-        for weight, grad in zip(weights, grads):
-            assert(isinstance(weight, NDArray))
-            assert(isinstance(grad, NDArray))
-            aggregate = (aggregate and
-                         weight.stype == 'default' and
-                         grad.stype == 'default')
-        self._update_count(indices)
-        lrs = self._get_lrs(indices)
-        wds = self._get_wds(indices)
-        for idx in indices:
-            t = self._index_update_count[idx]
+    def _update_impl(self, index, weight, grad, state, multi_precision=False):
+        assert(isinstance(weight, NDArray))
+        assert(isinstance(grad, NDArray))
+        self._update_count(index)
+        lr = self._get_lr(index)
+        wd = self._get_wd(index)
+        t = self._index_update_count[index]
 
-            kwargs = {'beta1': self.beta1, 'beta2': self.beta2, 'epsilon': self.epsilon,
-                      'bias_correction': self.bias_correction, 't': t,
-                      'rescale_grad': self.rescale_grad}
+        kwargs = {'beta1': self.beta1, 'beta2': self.beta2, 'epsilon': self.epsilon,
+                  'bias_correction': self.bias_correction, 't': t,
+                  'rescale_grad': self.rescale_grad}
 
-            if self.clip_gradient:
-                kwargs['clip_gradient'] = self.clip_gradient
+        if self.clip_gradient:
+            kwargs['clip_gradient'] = self.clip_gradient
 
-            if multi_precision:
-                for weight, grad, state, lr, wd in zip(weights, grads, states, lrs, wds):
-                    mean, var = state[1]
-                    weight32 = state[0]
-                    g = mp_lamb_update_phase1(weight, grad, mean, var, weight32, wd=wd, **kwargs)
+        if multi_precision:
+            mean, var = state[1]
+            weight32 = state[0]
+            g = mp_lamb_update_phase1(weight, grad, mean, var, weight32, wd=wd, **kwargs)
 
-                    kwargs = {}
-                    if self.lower_bound:
-                        kwargs['lower_bound'] = self.lower_bound
-                    if self.upper_bound:
-                        kwargs['upper_bound'] = self.upper_bound
-                    r_1 = weight32.norm()
-                    r_2 = g.norm()
-                    mp_lamb_update_phase2(weight, g, r_1, r_2, weight32, lr=lr, out=weight, **kwargs)
-            else:
-                for weight, grad, state, lr, wd in zip(weights, grads, states, lrs, wds):
-                    mean, var = state
-                    g = lamb_update_phase1(weight, grad, mean, var, wd=wd, **kwargs)
+            kwargs = {}
+            if self.lower_bound:
+                kwargs['lower_bound'] = self.lower_bound
+            if self.upper_bound:
+                kwargs['upper_bound'] = self.upper_bound
+            r_1 = weight32.norm()
+            r_2 = g.norm()
+            mp_lamb_update_phase2(weight, g, r_1, r_2, weight32, lr=lr, out=weight, **kwargs)
+        else:
+            mean, var = state
+            g = lamb_update_phase1(weight, grad, mean, var, wd=wd, **kwargs)
 
-                    kwargs = {}
-                    if self.lower_bound:
-                        kwargs['lower_bound'] = self.lower_bound
-                    if self.upper_bound:
-                        kwargs['upper_bound'] = self.upper_bound
-                    r_1 = weight.norm()
-                    r_2 = g.norm()
-                    lamb_update_phase2(weight, g, r_1, r_2, lr=lr, out=weight, **kwargs)
+            kwargs = {}
+            if self.lower_bound:
+                kwargs['lower_bound'] = self.lower_bound
+            if self.upper_bound:
+                kwargs['upper_bound'] = self.upper_bound
+            r_1 = weight.norm()
+            r_2 = g.norm()
+            lamb_update_phase2(weight, g, r_1, r_2, lr=lr, out=weight, **kwargs)
 
     def update(self, index, weight, grad, state):
         self._update_impl(index, weight, grad, state, multi_precision=False)
