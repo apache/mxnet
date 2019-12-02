@@ -3414,6 +3414,109 @@ def test_np_linalg_inv():
 
 @with_seed()
 @use_np
+def test_np_linalg_tensorinv():
+    class TestTensorinv(HybridBlock):
+        def __init__(self, ind=2):
+            super(TestTensorinv, self).__init__()
+            self._ind = ind
+        
+        def hybrid_forward(self, F, a):
+            return F.np.linalg.tensorinv(a, ind=self._ind)
+
+    def check_tensorinv(inv_a, a_np, ind):
+        try:
+            inv_a_expected = _np.linalg.tensorinv(a_np, ind=ind)
+        except Exception as e:
+            print(a_np)
+            print(a_np.shape)
+            print(e)
+        else:
+            assert inv_a.shape == inv_a_expected.shape
+            assert_almost_equal(inv_a.asnumpy(), inv_a_expected, rtol=rtol, atol=atol)
+
+    def newInvertibleMatrix(shape):
+        # generate well-conditioned matrices with small eigenvalues
+        n = int(np.prod(np.array(shape[:-2]))) if len(shape) > 2 else 1
+        # eigenvalues
+        D = _np.array([_np.diag(_np.random.uniform(-10., 10., shape[-1])) \
+                        for i in range(n)]).reshape(shape)
+        # orthogonal matrix through householder transformation
+        I = _np.array([_np.eye(shape[-1]) for i in range(n)]).reshape(shape)
+        v = _np.random.uniform(-10, 10,
+            int(np.prod(np.array(shape[:-1])))).reshape(shape[:-1] + (1,))
+        v = v / _np.linalg.norm(v, axis=-2, keepdims=True)
+        v_T = _np.swapaxes(v, -1, -2)
+        U = I - 2 * _np.matmul(v, v_T)
+        return _np.matmul(_np.matmul(U, D), _np.swapaxes(U, -1, -2))
+
+    def get_grad_A(A, ind):
+        inv_A = _np.linalg.tensorinv(A, ind)
+        d_inv_A = _np.ones_like(inv_A)
+        axes1 = len(A.shape) - ind
+        axes2 = ind
+        inv_A_trans_axes = tuple(_np.arange(len(A.shape)))[axes1:] + tuple(_np.arange(len(A.shape)))[:axes1]
+        inv_A_trans = _np.transpose(inv_A, inv_A_trans_axes)
+        temp_tensor = -_np.tensordot(inv_A_trans, d_inv_A, axes = axes1)
+        return _np.tensordot(temp_tensor, inv_A_trans, axes = axes2)
+
+    shapes = [
+        (1, 1, 1),
+        (1, 2, 2),
+        (1, 6, 2, 3),
+        (1, 20, 4, 5),
+        (1, 24, 3, 8),
+        (1, 30, 5, 6),
+        (2, 1, 1),
+        (2, 1, 1, 1),
+        (2, 2, 10, 4, 5),
+        (2, 4, 6, 3, 8),
+        (2, 5, 8, 4, 10),
+        (2, 12, 5, 3, 4, 5),
+        (3, 1, 1, 1),
+        (3, 2, 3, 4, 24),
+        (3, 3, 4, 5, 2, 3, 10),
+        (3, 2, 4, 10, 40, 2)
+    ]
+    dtypes = ['float32', 'float64']
+    for hybridize, shape, dtype, in itertools.product([False, True], shapes, dtypes):
+        rtol = 1e-3 
+        atol = 1e-5
+        ind = shape[0]
+        test_tensorinv = TestTensorinv(ind=ind)
+        if hybridize:
+            test_tensorinv.hybridize()
+
+        prod_front = 1
+        prod_back = 1
+        for k in shape[1:ind + 1]:
+            prod_front *= k
+        for k in shape[1 + ind:]:
+            prod_back *= k
+        a_shape = (prod_back, prod_front)
+        a = newInvertibleMatrix(a_shape)
+        a_shape = shape[1:]
+        inv_a_shape = shape[(1 + ind):] + shape[1:(ind + 1)]
+        a = np.array(a.reshape(a_shape), dtype=dtype)
+        a.attach_grad()
+        with mx.autograd.record():
+            mx_out = test_tensorinv(a)
+        # check tensorinv validity
+        assert mx_out.shape == inv_a_shape
+        check_tensorinv(mx_out, a, ind)
+
+        # check tensorinv backward
+        if 0 not in mx_out.shape:
+            mx.autograd.backward(mx_out)
+            grad_A_expected = get_grad_A(a.asnumpy(), ind)
+            assert_almost_equal(a.grad.asnumpy(), grad_A_expected, rtol=rtol, atol=atol)
+
+        # check imperative once again
+        mx_out = np.linalg.tensorinv(a, ind)
+        check_tensorinv(mx_out, a, ind)
+
+
+@with_seed()
+@use_np
 def test_np_linalg_det():
     class TestDet(HybridBlock):
         def __init__(self):
