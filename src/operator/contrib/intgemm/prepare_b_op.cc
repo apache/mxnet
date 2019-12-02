@@ -98,7 +98,7 @@ void PrepareBOpForward(const nnvm::NodeAttrs& attrs,
   size_t inner = in.shape_[in.shape_.ndim() - 1];
   CHECK_EQ(inner % ::intgemm::Int8::kBTileRow, 0) << "intgemm requires the inner dimension be a multiple of " << ::intgemm::Int8::kBTileRow;
   CHECK_EQ(B_cols % ::intgemm::Int8::kBTileCol, 0) << "intgemm requires B have a multiple of " << ::intgemm::Int8::kBTileCol << " columns inthe equation C = AB.";
- 
+
   const float *B = in.dptr<float>();
   int8_t *quantB = out.dptr<int8_t>();
   const PrepareBParam& param = nnvm::get<PrepareBParam>(attrs.parsed);

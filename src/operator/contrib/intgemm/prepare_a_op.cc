@@ -19,8 +19,8 @@
 
 /*!
  * \file prepare_a_op.cc
- * \brief Converts A matrices (typically activations) to intgemm's 
- * representation for A in C=AB.  This just quantizes to int8 and bans -128.  
+ * \brief Converts A matrices (typically activations) to intgemm's
+ * representation for A in C=AB.  This just quantizes to int8 and bans -128.
  * The only difference from Quantize/QuantizeV2 is that it bans -128.
  */
 
@@ -100,7 +100,7 @@ void PrepareAOpForwardCPU(const nnvm::NodeAttrs& attrs,
   CHECK(out.CheckContiguous());
   size_t size = in.shape_.Size();
   CHECK_EQ(size % 16, 0) << "intgemm PrepareA requires the size be a multiple of 16.";
- 
+
   const float *A = in.dptr<float>();
   int8_t *quantA = out.dptr<int8_t>();
   const PrepareAParam& param = nnvm::get<PrepareAParam>(attrs.parsed);

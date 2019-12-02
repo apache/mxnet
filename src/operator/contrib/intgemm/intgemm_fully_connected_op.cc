@@ -214,7 +214,7 @@ void IntgemmFullyConnectedOpForwardCPU(const nnvm::NodeAttrs& attrs,
     A_quant = A.dptr<int8_t>();
   }
   const int8_t *B_quant = B.dptr<int8_t>();
-  
+
   if (bias) {
     if (C.type_flag_ == mshadow::kFloat32) {
       ::intgemm::callbacks::UnquantizeAndAddBiasAndWrite cb(out_float_multiplier, inputs[2].dptr<float>(), C.dptr<float>());

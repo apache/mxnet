@@ -88,7 +88,7 @@ void MaxAbsoluteOpForwardCPU(const nnvm::NodeAttrs& attrs,
   CHECK(out.CheckContiguous());
   size_t size = in.shape_.Size();
   CHECK_EQ(size % (512 / 8 / sizeof(float)), 0) << "The total size of the input must be a multiple of 16.";
- 
+
   const float *data = in.dptr<float>();
   *out.dptr<float>() = ::intgemm::MaxAbsolute(data, data + size);
 }
