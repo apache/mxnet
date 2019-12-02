@@ -321,13 +321,13 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
         self.batch_index += 1
 
     def epoch_begin(self, estimator, *args, **kwargs):
-        if self.verbose >= self.LOG_PER_EPOCH:
+        if self.verbose in [self.LOG_PER_EPOCH, self.LOG_PER_BATCH, self.LOG_PER_INTERVAL]:
             self.epoch_start = time.time()
             estimator.logger.info("[Epoch %d] Begin, current learning rate: %.4f",
                                   self.current_epoch, estimator.trainer.learning_rate)
 
     def epoch_end(self, estimator, *args, **kwargs):
-        if self.verbose >= self.LOG_PER_EPOCH:
+        if self.verbose in [self.LOG_PER_EPOCH, self.LOG_PER_BATCH, self.LOG_PER_INTERVAL]:
             epoch_time = time.time() - self.epoch_start
             msg = '[Epoch %d] Finished in %.3fs, ' % (self.current_epoch, epoch_time)
             for monitor in self.train_metrics + self.val_metrics:
