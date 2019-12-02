@@ -362,6 +362,31 @@ def _add_workload_linalg_det():
     OpArgMngr.add_workload('linalg.det', np.array(_np.ones((0, 1, 1)), dtype=np.float64))
 
 
+def _add_workload_linalg_tensorinv():
+    shapes = [
+        (1, 20, 4, 5),
+        (2, 2, 10, 4, 5),
+        (2, 12, 5, 3, 4, 5),
+        (3, 2, 3, 4, 24)
+    ]
+    dtypes = (np.float32, np.float64)
+    for dtype, shape in itertools.product(dtypes, shapes):
+        ind = shape[0]
+        prod_front = 1
+        prod_back = 1
+        for k in shape[1:ind + 1]:
+            prod_front *= k
+        for k in shape[1 + ind:]:
+            prod_back *= k
+        a_shape = (prod_back, prod_front)
+        a = _np.random.randn(*a_shape)
+        if prod_back == prod_front:
+            if _np.allclose(_np.dot(a, _np.linalg.inv(a)), _np.eye(prod_front)):
+                a_shape = shape[1:]
+                a = a.reshape(a_shape)
+                OpArgMngr.add_workload('linalg.tensorinv', np.array(a, dtype=dtype), ind)
+
+
 def _add_workload_linalg_slogdet():
     OpArgMngr.add_workload('linalg.slogdet', np.array(_np.ones((2, 2)), dtype=np.float32))
     OpArgMngr.add_workload('linalg.slogdet', np.array(_np.ones((0, 1, 1)), dtype=np.float64))
@@ -1415,6 +1440,7 @@ def _prepare_workloads():
     _add_workload_linalg_inv()
     _add_workload_linalg_solve()
     _add_workload_linalg_det()
+    _add_workload_linalg_tensorinv()
     _add_workload_linalg_slogdet()
     _add_workload_trace()
     _add_workload_tril()

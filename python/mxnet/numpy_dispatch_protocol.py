@@ -133,6 +133,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'linalg.cholesky',
     'linalg.inv',
     'linalg.solve',
+    'linalg.tensorinv',
     'shape',
     'trace',
     'tril',
