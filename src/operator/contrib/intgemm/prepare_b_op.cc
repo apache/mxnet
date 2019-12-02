@@ -42,6 +42,7 @@ struct PrepareBParam : public dmlc::Parameter<PrepareBParam> {
       .describe("Multiply floats by this constant before casting to int8.  Typically you would set this to 127.0 / max absolute value in B.");
   }
 };
+DMLC_REGISTER_PARAMETER(PrepareBParam);
 
 inline bool PrepareBOpShape(const nnvm::NodeAttrs& attrs,
                              mxnet::ShapeVector* in_attrs,
@@ -83,10 +84,6 @@ inline bool PrepareBOpStorageType(const nnvm::NodeAttrs& attrs,
   return storage_type_assign(&out_attrs->front(), kDefaultStorage, dispatch_mode, DispatchMode::kFCompute) &&
     storage_type_assign(&in_attrs->front(), kDefaultStorage, dispatch_mode, DispatchMode::kFCompute);
 }
-
-
-
-DMLC_REGISTER_PARAMETER(PrepareBParam);
 
 namespace {
 void PrepareBOpForward(const nnvm::NodeAttrs& attrs,
