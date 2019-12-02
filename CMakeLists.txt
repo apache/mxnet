@@ -769,7 +769,7 @@ if(USE_TVM_OP)
           LD_LIBRARY_PATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm:$ENV{LD_LIBRARY_PATH}
           ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/tvmop/compile.py ${TVM_OP_COMPILE_OPTIONS}
     COMMAND ${CMAKE_COMMAND} -E env
-          $(CXX) $(ROOTDIR)/lib/libtvmop.o -L$(ROOTDIR)/lib -ltvm_runtime -shared -fPIC -o $(ROOTDIR)/lib/libtvmop.so
+          ${CXX} ${CMAKE_CURRENT_BINARY_DIR}/libtvmop.o -L${CMAKE_CURRENT_BINARY_DIR} -ltvm_runtime -shared -fPIC -o ${CMAKE_CURRENT_BINARY_DIR}/libtvmop.so
     )
 endif()
 
