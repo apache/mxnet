@@ -29,11 +29,16 @@ from mxnet.gluon.contrib.estimator.event_handler import *
 from nose.tools import assert_raises
 
 
-def _get_test_network():
-    net = nn.Sequential()
+def _get_test_network(params=None):
+    net = nn.Sequential(params=params)
     net.add(nn.Dense(4, activation='relu', flatten=False))
     return net
 
+def _get_test_network_with_namescope(params=None):
+    net = nn.Sequential(params=params)
+    with net.name_scope():
+        net.add(nn.Dense(4, activation='relu', flatten=False))
+    return net
 
 def _get_test_data():
     batch_size = 4
@@ -371,3 +376,69 @@ def test_default_handlers():
     assert isinstance(handlers[0], GradientUpdateHandler)
     assert isinstance(handlers[1], MetricHandler)
     assert isinstance(handlers[4], LoggingHandler)
+
+def test_eval_net():
+    ''' test estimator with a different evaluation net '''
+    ''' test weight sharing of sequential networks without namescope '''
+    net = _get_test_network()
+    eval_net = _get_test_network(params=net.collect_params())
+    dataloader, dataiter = _get_test_data()
+    num_epochs = 1
+    ctx = mx.cpu()
+    loss = gluon.loss.L2Loss()
+    evaluation_loss = gluon.loss.L2Loss()
+    acc = mx.metric.Accuracy()
+    net.initialize(ctx=ctx)
+    trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
+    est = Estimator(net=net,
+                    loss=loss,
+                    metrics=acc,
+                    trainer=trainer,
+                    context=ctx,
+                    evaluation_loss=evaluation_loss,
+                    eval_net=eval_net)
+
+    with assert_raises(RuntimeError):
+        est.fit(train_data=dataloader,
+                val_data=dataloader,
+                epochs=num_epochs)
+
+    ''' test weight sharing of sequential networks with namescope '''
+    net = _get_test_network_with_namescope()
+    eval_net = _get_test_network_with_namescope(params=net.collect_params())
+    net.initialize(ctx=ctx)
+    trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
+    est = Estimator(net=net,
+                    loss=loss,
+                    metrics=acc,
+                    trainer=trainer,
+                    context=ctx,
+                    evaluation_loss=evaluation_loss,
+                    eval_net=eval_net)
+
+    est.fit(train_data=dataloader,
+            val_data=dataloader,
+            epochs=num_epochs)
+
+    ''' test weight sharing of two resnets '''
+    net = gluon.model_zoo.vision.resnet18_v1(pretrained=False, ctx=ctx)
+    net.output = gluon.nn.Dense(10)
+    eval_net = gluon.model_zoo.vision.resnet18_v1(pretrained=False, ctx=ctx)
+    eval_net.output = gluon.nn.Dense(10, params=net.collect_params())
+    dataset = gluon.data.ArrayDataset(mx.nd.zeros((10, 3, 224, 224)), mx.nd.zeros((10, 10)))
+    dataloader = gluon.data.DataLoader(dataset=dataset, batch_size=5)
+    net.initialize(ctx=ctx)
+    eval_net.initialize(ctx=ctx)
+    trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
+    est = Estimator(net=net,
+                    loss=loss,
+                    metrics=acc,
+                    trainer=trainer,
+                    context=ctx,
+                    evaluation_loss=evaluation_loss,
+                    eval_net=eval_net)
+
+    est.fit(train_data=dataloader,
+            val_data=dataloader,
+            epochs=num_epochs)
+>>>>>>> Include eval_net the validation model in the estimator api
