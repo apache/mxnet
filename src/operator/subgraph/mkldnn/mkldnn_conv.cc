@@ -278,7 +278,7 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
                                                   CpuEngine::Get()->get_engine(),
                                                   out_mkl_mem->get_data_handle()));
         MKLDNNStream::Get()->RegisterMem(tmp_mem);
-        mxnet::MKLDNNCopy(*in_mkl_mem, tmp_mem.get());
+        MKLDNNMemoryCopy(*in_mkl_mem, tmp_mem.get());
         output = NDArray(tmp_mem);
       }
     }
@@ -416,7 +416,7 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
       mkldnn_mem_ptr new_out_mem(new mkldnn::memory(data_md, CpuEngine::Get()->get_engine(),
                                                     output_mem->get_data_handle()));
       MKLDNNStream::Get()->RegisterMem(new_out_mem);
-      mxnet::MKLDNNCopy(*tmp_out_mem, new_out_mem.get());
+      MKLDNNMemoryCopy(*tmp_out_mem, new_out_mem.get());
       output = NDArray(new_out_mem);
     }
   }
