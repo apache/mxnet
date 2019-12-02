@@ -872,7 +872,6 @@ def test_quantize_model_with_forward():
         def check_qsym_forward(qsym, qarg_params, qaux_params, data_shape, label_shape=None):
             if label_shape is None:
                 mod = mx.mod.Module(symbol=qsym, label_names=None, context=mx.current_context())
-                qsym.save('debug.json')
                 mod.bind(for_training=False,
                          data_shapes=[('data', data_shape)])
             else:
