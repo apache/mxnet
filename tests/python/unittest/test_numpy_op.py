@@ -1304,7 +1304,9 @@ def test_np_transpose():
         if axes is None or axes == ():
             return _np.transpose(ograd, axes)
         np_axes = _np.array(list(axes))
-        return _np.transpose(ograd, tuple(list(_np.argsort(np_axes))))
+        transpose_axes = _np.zeros_like(np_axes)
+        transpose_axes[np_axes] = _np.arange(len(np_axes))
+        return _np.transpose(ograd, tuple(list(transpose_axes)))
 
     class TestTranspose(HybridBlock):
         def __init__(self, axes=None):
@@ -1313,44 +1315,54 @@ def test_np_transpose():
 
         def hybrid_forward(self, F, a):
             return F.np.transpose(a, self.axes)
+    test_workloads = [[(), [()]],
+                      [(0, 2), [(0, 1), (1, 0)]],
+                      [(8, 2, 3), [(2, 0, 1), (0, 2, 1), (0, 1, 2), (2, 1, 0), (-1, 1, 0)]],
+                      [(8, 2, 16), [(0, 2, 1), (2, 0, 1), (0, 1, 2), (2, 1, 0), (-1, -2, -3)]],
+                      [(8, 3, 4, 8), [(0, 2, 3, 1), (1, 2, 3, 0), (0, 3, 2, 1)]],
+                      [(8, 3, 2, 3, 8), [(0, 1, 3, 2, 4), (0, 1, 2, 3, 4), (4, 0, 1, 2, 3)]],
+                      [(3, 4, 3, 4, 3, 2), [(0, 1, 3, 2, 4, 5), (2, 3, 4, 1, 0, 5)]]]
 
     for hybridize in [True, False]:
-        for dtype in [_np.int32, _np.float32]:
-            for ndim in range(7):
-                shape = rand_shape_nd(ndim, dim=5, allow_zero_size=True)
-                axeses = [None]
-                if ndim == 0:
-                    axeses += [()]
-                else:
-                    axes = [i for i in range(ndim)]
-                    axeses.append(tuple(axes))
-                    random.shuffle(axes)
-                    axeses.append(tuple(axes))
-                    axeses.append([i - len(axes) for i in axes])
-                for axes in axeses:
-                    test_trans = TestTranspose(axes)
-                    if hybridize:
-                        test_trans.hybridize()
-                    x = rand_ndarray(shape).as_np_ndarray()
-                    x = x.astype(dtype)
-                    x.attach_grad()
-                    np_out = _np.transpose(x.asnumpy(), axes)
-                    with mx.autograd.record():
-                        mx_out = test_trans(x)
-                    assert mx_out.shape == np_out.shape
-                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
-                    mx_out.backward()
-                    np_backward = np_transpose_grad(np_out.shape, dtype, axes)
-                    assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5, use_broadcast=False)
-
-                    mx_out = x.transpose(axes)
-                    np_out = x.asnumpy().transpose(axes)
-                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
-
-                    if isinstance(axes, (list, tuple)):
-                        mx_out = x.transpose(*axes)
-                        np_out = x.asnumpy().transpose(*axes)
+        for dtype in [_np.float32, _np.float16, _np.int32]:
+            for data_shape, axes_workload in test_workloads:
+                for axes in axes_workload:
+                    for grad_req in ['write', 'add']:
+                        test_trans = TestTranspose(axes)
+                        if hybridize:
+                            test_trans.hybridize()
+                        x = np.random.normal(0, 1, data_shape).astype(dtype)
+                        x = x.astype(dtype)
+                        x.attach_grad(grad_req=grad_req)
+                        if grad_req == 'add':
+                            x.grad[()] = np.random.normal(0, 1, x.grad.shape).astype(x.grad.dtype)
+                            x_grad_np = x.grad.asnumpy()
+                        np_out = _np.transpose(x.asnumpy(), axes)
+                        with mx.autograd.record():
+                            mx_out = test_trans(x)
+                        assert mx_out.shape == np_out.shape
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
+                        mx_out.backward()
+                        np_backward = np_transpose_grad(np_out.shape, dtype, axes)
+                        if grad_req == 'add':
+                            assert_almost_equal(x.grad.asnumpy(), np_backward + x_grad_np,
+                                                rtol=1e-3, atol=1e-5, use_broadcast=False)
+                        else:
+                            assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5, use_broadcast=False)
+
+                        mx_out = x.transpose(axes)
+                        np_out = x.asnumpy().transpose(axes)
+                        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
+
+                        if isinstance(axes, (list, tuple)):
+                            mx_out = x.transpose(*axes)
+                            np_out = x.asnumpy().transpose(*axes)
+                            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
+    # Test for error raising
+    dat = np.random.normal(0, 1, (3, 4, 5), dtype=np.float32)
+    assert_raises(MXNetError, lambda: dat.transpose((0, 0, 1)))
+    assert_raises(MXNetError, lambda: dat.transpose((0, 1, 3)))
+
 
 
 @with_seed()
