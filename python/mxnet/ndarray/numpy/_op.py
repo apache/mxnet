@@ -21,7 +21,7 @@
 
 from __future__ import absolute_import
 import numpy as _np
-from ...base import numeric_types
+from ...base import numeric_types, integer_types
 from ...util import _sanity_check_params, set_module
 from ...util import wrap_np_unary_func, wrap_np_binary_func
 from ...context import current_context
@@ -2763,9 +2763,8 @@ def split(ary, indices_or_sections, axis=0):
         If `indices_or_sections` is given as an integer, but
         a split does not result in equal division.
     """
-    indices = []
     axis_size = ary.shape[axis]
-    if isinstance(indices_or_sections, int):
+    if isinstance(indices_or_sections, integer_types):
         sections = indices_or_sections
         if axis_size % sections:
             raise ValueError('array split does not result in an equal division')
@@ -2774,10 +2773,10 @@ def split(ary, indices_or_sections, axis=0):
     elif isinstance(indices_or_sections, (list, set, tuple)):
         indices = [0] + list(indices_or_sections)
     else:
-        raise ValueError('indices_or_sections must either int, or tuple / list / set of ints')
+        raise ValueError('indices_or_sections must be either int, or tuple / list / set of ints')
     ret = _npi.split(ary, indices, axis, False)
-    if not isinstance(ret, list):
-        return [ret]
+    assert isinstance(ret, list), 'Output of split should be list,' \
+                                  ' got a return type {}'.format(type(ret))
     return ret
 # pylint: enable=redefined-outer-name
 
@@ -2875,12 +2874,11 @@ def hsplit(ary, indices_or_sections):
     >>> np.hsplit(x, [2, 2])
     [array([0., 1.]), array([], dtype=float32), array([2., 3.])]
     """
-    indices = []
     axis = 1
-    if (len(ary.shape) == 1):
+    if len(ary.shape) == 1:
         axis = 0
     axis_size = ary.shape[axis]
-    if isinstance(indices_or_sections, int):
+    if isinstance(indices_or_sections, integer_types):
         sections = indices_or_sections
         if axis_size % sections:
             raise ValueError('array hsplit does not result in an equal division')
@@ -2891,8 +2889,6 @@ def hsplit(ary, indices_or_sections):
     else:
         raise ValueError('indices_or_sections must either int or tuple of ints')
     ret = _npi.hsplit(ary, indices, axis, False)
-    if not isinstance(ret, list):
-        raise NotImplementedError('single output from hsplit is not supported yet...')
     return ret
 # pylint: enable=redefined-outer-name
 

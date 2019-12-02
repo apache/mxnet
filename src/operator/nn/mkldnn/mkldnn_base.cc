@@ -85,7 +85,7 @@ mkldnn::memory *TmpMemMgr::Alloc(const mkldnn::memory::desc &md) {
   }
 }
 
-void MKLDNNCopy(const mkldnn::memory &mem, const mkldnn::memory* this_mem) {
+void MKLDNNMemoryCopy(const mkldnn::memory &mem, const mkldnn::memory* this_mem) {
   MKLDNNStream *stream = MKLDNNStream::Get();
   mkldnn::memory::desc from_desc = mem.get_desc();
   mkldnn::memory::desc this_desc = this_mem->get_desc();
@@ -227,7 +227,7 @@ void CommitOutput(const NDArray &arr, const mkldnn_output_t &res) {
     auto mem = arr.GetMKLDNNData(res.second->get_desc());
     if (mem == nullptr) {
       auto tmp_memory = TmpMemMgr::Get()->Alloc(target_pd);
-      MKLDNNCopy(*res_memory, tmp_memory);
+      MKLDNNMemoryCopy(*res_memory, tmp_memory);
       res_memory = tmp_memory;
       mem = arr.GetMKLDNNData();
     }
@@ -603,6 +603,21 @@ void MKLDNNRun(mxnet::FComputeEx fn,
     fn(attrs, ctx, mkldnn_inputs, req, outputs);
   } else {
     fn(attrs, ctx, inputs, req, outputs);
+  }
+}
+
+void MKLDNNRun(FComputeExUnary fn,
+               const nnvm::NodeAttrs &attrs,
+               const mxnet::OpContext &ctx,
+               const mxnet::NDArray &input,
+               const mxnet::OpReqType &req,
+               const mxnet::NDArray &output) {
+  auto mkldnn_input = input;
+  if (input.IsView() && input.IsMKLDNNData()) {
+    mkldnn_input = input.Reorder2Default();
+    fn(attrs, ctx, mkldnn_input, req, output);
+  } else {
+    fn(attrs, ctx, input, req, output);
   }
 }
 

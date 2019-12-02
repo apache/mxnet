@@ -104,7 +104,7 @@ cdef NewSymbol(SymbolHandle handle, int is_np_sym=0):
     return sym
 
 
-def _symbol_creator(handle, args, kwargs, keys, vals, name, is_np_op=0):
+def _symbol_creator(handle, args, kwargs, keys, vals, name, is_np_op=0, output_is_list=0):
     cdef unsigned long long ihandle = handle
     cdef OpHandle chandle = <OpHandle>ihandle
     cdef vector[string] ckeys
@@ -113,6 +113,7 @@ def _symbol_creator(handle, args, kwargs, keys, vals, name, is_np_op=0):
     cdef vector[SymbolHandle] sym_args
     cdef SymbolHandle ret_handle
     cdef string cname = c_str(name)
+    cdef nn_uint nout
 
     for i in keys:
         ckeys.push_back(c_str(i))
@@ -151,4 +152,11 @@ def _symbol_creator(handle, args, kwargs, keys, vals, name, is_np_op=0):
         &csym_keys[0] if csym_keys.size() != 0 else NULL,
         &sym_args[0] if sym_args.size() != 0 else NULL))
 
-    return NewSymbol(ret_handle, is_np_op)
+    sym = NewSymbol(ret_handle, is_np_op)
+    if is_np_op:
+        CALL(NNSymbolGetNumOutputs(ret_handle, &nout))
+        if nout > 1:
+            return list(sym)
+        elif output_is_list:
+            return [sym]
+    return sym
