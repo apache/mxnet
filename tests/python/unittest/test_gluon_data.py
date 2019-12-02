@@ -369,9 +369,8 @@ def test_dataset_flatten():
     for (i, tmp) in enumerate(zip(a, c)):
         assert tmp[0] == tmp[1]
 
-    fn = lambda a : [a + i for i in range(4)]
     d = mx.gluon.data.SimpleDataset([4 * i for i in range(length // 4)])
-    d = d.transform(fn, lazy=True)
+    d = d.transform(lambda f: [f + i for i in range(4)], lazy=True)
     d = d.flatten()
     for (i, tmp) in enumerate(zip(a, d)):
         assert tmp[0] == tmp[1]
