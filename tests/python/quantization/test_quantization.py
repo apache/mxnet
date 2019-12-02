@@ -872,6 +872,7 @@ def test_quantize_model_with_forward():
         def check_qsym_forward(qsym, qarg_params, qaux_params, data_shape, label_shape=None):
             if label_shape is None:
                 mod = mx.mod.Module(symbol=qsym, label_names=None, context=mx.current_context())
+                qsym.save('debug.json')
                 mod.bind(for_training=False,
                          data_shapes=[('data', data_shape)])
             else:
@@ -957,6 +958,8 @@ def test_quantize_model_with_forward():
                         excluded_sym_names = excluded_names
                     else:
                         excluded_sym_names = excluded_names + optional_names
+            if name == 'sym4':
+                excluded_op_names += ['elemwise_add']
 
             qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=s,
                                                                              arg_params=arg_params,
