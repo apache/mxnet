@@ -184,7 +184,7 @@ class Dataset(object):
             The transformed dataset.
         """
         return self.transform(_TransformFirstClosure(fn), lazy)
-    
+
     def flatten(self):
         """Returns a new dataset with samples flattened.
 
