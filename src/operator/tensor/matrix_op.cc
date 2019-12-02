@@ -118,7 +118,7 @@ static void ReshapeComputeExCPU(const nnvm::NodeAttrs& attrs,
   // If inputs are supposed to be in MKLDNN format and
   // MKLDNN support the data type or the shape. Then convert
   // it to the output format and shape
-  MKLDNNReshapeForward(attrs, ctx, inputs[0], req[0], outputs[0]);
+  MKLDNNRun(MKLDNNReshapeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
 }
 
 inline static bool ReshapeStorageType(const nnvm::NodeAttrs& attrs,
@@ -211,7 +211,7 @@ static void FlattenEx(const nnvm::NodeAttrs& attrs,
   // If inputs are supposed to be in MKLDNN format and
   // MKLDNN support the data type or the shape. Then convert
   // it to the output format and shape
-  MKLDNNReshapeForward(attrs, ctx, inputs[0], req[0], outputs[0]);
+  MKLDNNRun(MKLDNNReshapeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
 }
 
 static inline bool FlattenStorageType(const nnvm::NodeAttrs& attrs,
@@ -367,10 +367,12 @@ static void ExpandDimEx(const nnvm::NodeAttrs& attrs,
                         const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
+  // skip zero-size tensor
+  if (inputs[0].shape().Size() == 0U) return;
   // If inputs are supposed to be in MKLDNN format and
   // MKLDNN support the data type or the shape. Then convert
   // it to the output format and shape
-  MKLDNNReshapeForward(attrs, ctx, inputs[0], req[0], outputs[0]);
+  MKLDNNRun(MKLDNNReshapeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
 }
 
 inline static bool ExpandDimStorageType(const nnvm::NodeAttrs& attrs,
@@ -430,7 +432,7 @@ void SliceExCPU(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_MKLDNN == 1
   } else if (in_stype == kDefaultStorage) {
     if (SupportMKLDNN(inputs[0])) {
-      MKLDNNSlice(param, ctx, inputs[0], req[0], outputs[0]);
+      MKLDNNRun(MKLDNNSlice, attrs, ctx, inputs[0], req[0], outputs[0]);
     } else {
       FallBackCompute(SliceOpForward<cpu>, attrs, ctx, inputs, req, outputs);
     }

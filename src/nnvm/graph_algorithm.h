@@ -42,7 +42,7 @@ namespace pass {
  * \param path the output path of nodes.
  * \return the total reward of best path.
  */
-inline uint32_t FindBestPath(
+inline uint32_t MXFindBestPath(
     const IndexedGraph& graph,
     const std::vector<uint32_t>& node_reward,
     std::vector<uint32_t>* path) {
@@ -89,7 +89,7 @@ inline uint32_t FindBestPath(
  * \param color the color index of each of the node.
  * \return the total number of colors.
  */
-inline uint32_t ColorNodeGroup(
+inline uint32_t MXColorNodeGroup(
     const IndexedGraph &graph,
     std::vector<uint32_t> node_importance,
     uint32_t max_ncolor,
@@ -105,7 +105,7 @@ inline uint32_t ColorNodeGroup(
   // All the nodes in the path cannot run in parallel.
   for (cindex = 0; cindex < max_ncolor - 1; ++cindex) {
     std::vector<uint32_t> path;
-    uint32_t reward = FindBestPath(graph, node_importance, &path);
+    uint32_t reward = MXFindBestPath(graph, node_importance, &path);
     if (reward == 0) break;
     for (uint32_t nid : path) {
       if (node_importance[nid] != 0) {

@@ -21,29 +21,62 @@
 
 from __future__ import absolute_import
 import numpy as _np
-from ...base import numeric_types
+from ...base import numeric_types, integer_types
 from ...util import _sanity_check_params, set_module
 from ...util import wrap_np_unary_func, wrap_np_binary_func
 from ...context import current_context
 from . import _internal as _npi
 from ..ndarray import NDArray
 
-__all__ = ['zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power',
+__all__ = ['shape', 'zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power',
            'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs',
            'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2',
            'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot', 'histogram', 'eye',
            'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'split', 'vsplit', 'concatenate', 'append',
            'stack', 'vstack', 'column_stack', 'dstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax',
-           'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming', 'blackman', 'flip',
-           'around', 'hypot', 'bitwise_xor', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take',
-           'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal',
-           'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero', 'shares_memory', 'may_share_memory', 'diff', 'resize',
-           'nan_to_num', 'where']
+           'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index', 'hanning', 'hamming', 'blackman',
+           'flip', 'around', 'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril',
+           'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
+           'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero', 'shares_memory',
+           'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where']
+
+@set_module('mxnet.ndarray.numpy')
+def shape(a):
+    """
+    Return the shape of an array.
+
+    Parameters
+    ----------
+    a : array_like
+        Input array.
+
+    Returns
+    -------
+    shape : tuple of ints
+        The elements of the shape tuple give the lengths of the
+        corresponding array dimensions.
+
+    See Also
+    --------
+    ndarray.shape : Equivalent array method.
+
+    Examples
+    --------
+    >>> np.shape(np.eye(3))
+    (3, 3)
+    >>> np.shape([[1, 2]])
+    (1, 2)
+    >>> np.shape([0])
+    (1,)
+    >>> np.shape(0)
+    ()
+    """
+    return a.shape
 
 
 @set_module('mxnet.ndarray.numpy')
-def zeros(shape, dtype=_np.float32, order='C', ctx=None):
+def zeros(shape, dtype=_np.float32, order='C', ctx=None):  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -77,7 +110,7 @@ def zeros(shape, dtype=_np.float32, order='C', ctx=None):
 
 
 @set_module('mxnet.ndarray.numpy')
-def ones(shape, dtype=_np.float32, order='C', ctx=None):
+def ones(shape, dtype=_np.float32, order='C', ctx=None):  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, filled with ones.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -110,8 +143,9 @@ def ones(shape, dtype=_np.float32, order='C', ctx=None):
     return _npi.ones(shape=shape, ctx=ctx, dtype=dtype)
 
 
+# pylint: disable=too-many-arguments, redefined-outer-name
 @set_module('mxnet.ndarray.numpy')
-def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylint: disable=too-many-arguments
+def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):
     """
     Return a new array of given shape and type, filled with `fill_value`.
     Parameters
@@ -163,6 +197,7 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
         ctx = current_context()
     dtype = _np.float32 if dtype is None else dtype
     return _npi.full(shape=shape, value=fill_value, ctx=ctx, dtype=dtype, out=out)
+# pylint: enable=too-many-arguments, redefined-outer-name
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2728,9 +2763,8 @@ def split(ary, indices_or_sections, axis=0):
         If `indices_or_sections` is given as an integer, but
         a split does not result in equal division.
     """
-    indices = []
     axis_size = ary.shape[axis]
-    if isinstance(indices_or_sections, int):
+    if isinstance(indices_or_sections, integer_types):
         sections = indices_or_sections
         if axis_size % sections:
             raise ValueError('array split does not result in an equal division')
@@ -2739,10 +2773,10 @@ def split(ary, indices_or_sections, axis=0):
     elif isinstance(indices_or_sections, (list, set, tuple)):
         indices = [0] + list(indices_or_sections)
     else:
-        raise ValueError('indices_or_sections must either int, or tuple / list / set of ints')
+        raise ValueError('indices_or_sections must be either int, or tuple / list / set of ints')
     ret = _npi.split(ary, indices, axis, False)
-    if not isinstance(ret, list):
-        return [ret]
+    assert isinstance(ret, list), 'Output of split should be list,' \
+                                  ' got a return type {}'.format(type(ret))
     return ret
 # pylint: enable=redefined-outer-name
 
@@ -2840,12 +2874,11 @@ def hsplit(ary, indices_or_sections):
     >>> np.hsplit(x, [2, 2])
     [array([0., 1.]), array([], dtype=float32), array([2., 3.])]
     """
-    indices = []
     axis = 1
-    if (len(ary.shape) == 1):
+    if len(ary.shape) == 1:
         axis = 0
     axis_size = ary.shape[axis]
-    if isinstance(indices_or_sections, int):
+    if isinstance(indices_or_sections, integer_types):
         sections = indices_or_sections
         if axis_size % sections:
             raise ValueError('array hsplit does not result in an equal division')
@@ -2856,8 +2889,6 @@ def hsplit(ary, indices_or_sections):
     else:
         raise ValueError('indices_or_sections must either int or tuple of ints')
     ret = _npi.hsplit(ary, indices, axis, False)
-    if not isinstance(ret, list):
-        raise NotImplementedError('single output from hsplit is not supported yet...')
     return ret
 # pylint: enable=redefined-outer-name
 
@@ -3793,6 +3824,44 @@ def ravel(x, order='C'):
         raise TypeError('type {} not supported'.format(str(type(x))))
 
 
+def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-name
+    """
+    Converts a flat index or array of flat indices into a tuple of coordinate arrays.
+
+    Parameters:
+    -------------
+    indices : array_like
+            An integer array whose elements are indices into the flattened version of an array of dimensions shape.
+            Before version 1.6.0, this function accepted just one index value.
+    shape : tuple of ints
+            The shape of the array to use for unraveling indices.
+
+    Returns:
+    -------------
+    unraveled_coords : ndarray
+            Each row in the ndarray has the same shape as the indices array.
+            Each column in the ndarray represents the unravelled index
+
+    Examples:
+    -------------
+    >>> np.unravel_index([22, 41, 37], (7,6))
+    ([3. 6. 6.]
+      [4. 5. 1.])
+    >>> np.unravel_index(1621, (6,7,8,9))
+    (3, 1, 4, 1)
+    """
+    if order == 'C':
+        if isinstance(indices, numeric_types):
+            return _np.unravel_index(indices, shape)
+        ret = _npi.unravel_index_fallback(indices, shape=shape)
+        ret_list = []
+        for item in ret:
+            ret_list += [item]
+        return tuple(ret_list)
+    else:
+        raise NotImplementedError('Do not support column-major (Fortran-style) order at this moment')
+
+
 @set_module('mxnet.ndarray.numpy')
 def hanning(M, dtype=_np.float32, ctx=None):
     r"""Return the Hanning window.
@@ -4327,6 +4396,44 @@ def bitwise_xor(x1, x2, out=None, **kwargs):
     array([ True, False])
     """
     return _ufunc_helper(x1, x2, _npi.bitwise_xor, _np.bitwise_xor, _npi.bitwise_xor_scalar, None, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+@wrap_np_binary_func
+def bitwise_or(x1, x2, out=None, **kwargs):
+    r"""
+    Compute the bit-wise OR of two arrays element-wise.
+
+    Parameters
+    ----------
+    x1, x2 : ndarray or scalar
+        Only integer and boolean types are handled. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which becomes the shape of the output).
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have a shape that the
+        inputs broadcast to. If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray
+        Result.
+
+    Examples
+    --------
+    >>> np.bitwise_or(13, 17)
+    29
+
+    >>> np.bitwise_or(31, 5)
+    31
+    >>> np.bitwise_or(np.array([31,3], dtype='int32'), 5)
+    array([31,  7])
+
+    >>> np.bitwise_or(np.array([31,3], dtype='int32'), np.array([5,6], dtype='int32'))
+    array([31,  7])
+    >>> np.bitwise_or(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
+    array([ True, True])
+    """
+    return _ufunc_helper(x1, x2, _npi.bitwise_or, _np.bitwise_or, _npi.bitwise_or_scalar, None, out)
 
 
 @set_module('mxnet.ndarray.numpy')
