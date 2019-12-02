@@ -189,13 +189,13 @@ class Dataset(object):
         """Returns a new dataset with samples flattened.
 
         It is usefull to call after transform() when your transformer function 'fn' transform
-        each sample into multipul samples.
-        Note that the items in dataset should be iterable, e.g., list.
+        each sample into multiple samples.
+        Note that the items in dataset must be iterable, e.g., list.
 
         Returns
         -------
         Dataset
-            The result dataset.
+            The flattened dataset.
         """
         return SimpleDataset(list(itertools.chain.from_iterable(self)))
 
