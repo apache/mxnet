@@ -293,11 +293,11 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
         estimator.logger.info(msg.rstrip(', '))
 
     def batch_begin(self, estimator, *args, **kwargs):
-        if self.verbose >= self.LOG_PER_BATCH:
+        if self.verbose in [self.LOG_PER_BATCH, self.LOG_PER_INTERVAL]:
             self.batch_start = time.time()
 
     def batch_end(self, estimator, *args, **kwargs):
-        if self.verbose >= self.LOG_PER_BATCH:
+        if self.verbose in [self.LOG_PER_BATCH, self.LOG_PER_INTERVAL]:
             batch_time = time.time() - self.batch_start
             msg = '[Epoch %d][Batch %d]' % (self.current_epoch, self.batch_index)
             self.processed_samples += kwargs['batch'][0].shape[0]
