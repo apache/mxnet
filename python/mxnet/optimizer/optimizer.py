@@ -1275,10 +1275,9 @@ class LAMB(Optimizer):
             lr = self._get_lr(index)
             wd = self._get_wd(index)
             t = self._index_update_count[index]
-
             kwargs = {'beta1': self.beta1, 'beta2': self.beta2, 'epsilon': self.epsilon,
-                    'bias_correction': self.bias_correction, 't': t,
-                    'rescale_grad': self.rescale_grad}
+                      'bias_correction': self.bias_correction, 't': t,
+                      'rescale_grad': self.rescale_grad}
             mean, var = state
             if self.clip_gradient:
                 kwargs['clip_gradient'] = self.clip_gradient
@@ -1356,7 +1355,7 @@ class LAMB(Optimizer):
         else:
             use_multi_precision = self.multi_precision and weight[0].dtype == numpy.float16
             self._multi_tensor_update_impl(index, weight, grad, state,
-                multi_precision=use_multi_precision)
+                                           multi_precision=use_multi_precision)
 
 # pylint: enable=line-too-long
 @register

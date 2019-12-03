@@ -609,7 +609,7 @@ def multi_mp_adamw_update(weights, grads, mean, var, weights32, rescale_grad, lr
 def multi_lamb_update(weights, grads, mean, var, step_count,
                       out=None, num_tensors=0, **kwargs):
     """Given a list of gradients, update weights, mean and variance of multiple tensors
-    following LAMB Optimer implementation.
+    following LAMB Optimizer implementation.
 
     Parameters
     ----------
@@ -640,7 +640,7 @@ def multi_lamb_update(weights, grads, mean, var, step_count,
 def multi_mp_lamb_update(weights, grads, mean, var, weights32, step_count,
                          out=None, num_tensors=0, **kwargs):
     """Given a list of gradients, update weights, mean and variance of multiple tensors
-    following LAMB Optimer implementation. It uses Mixed-Precision..
+    following LAMB Optimizer implementation, and using Mixed-Precision.
 
     Parameters
     ----------
