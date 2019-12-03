@@ -55,7 +55,7 @@ void PrepareWeightOpForwardCPU(const nnvm::NodeAttrs& attrs,
   size_t B_cols = in.shape_.ProdShape(0, in.shape_.ndim() - 1);
   size_t inner = in.shape_[in.shape_.ndim() - 1];
   CHECK_EQ(inner % ::intgemm::Int8::kBTileRow, 0) << "intgemm requires the inner dimension be a multiple of " << ::intgemm::Int8::kBTileRow;
-  CHECK_EQ(B_cols % ::intgemm::Int8::kBTileCol, 0) << "intgemm requires B have a multiple of " << ::intgemm::Int8::kBTileCol << " columns inthe equation C = AB.";
+  CHECK_EQ(B_cols % ::intgemm::Int8::kBTileCol, 0) << "intgemm requires the output dimension (the product of all but the last dimension of the weight matrix) to be a multiple of " << ::intgemm::Int8::kBTileCol << ".";
 
   const float *B = in.dptr<float>();
   int8_t *quantB = out.dptr<int8_t>();
