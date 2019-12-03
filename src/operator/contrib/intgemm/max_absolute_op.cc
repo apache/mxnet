@@ -34,10 +34,6 @@
 namespace mxnet {
 namespace op {
 
-/*struct MaxAbsoluteParam : public dmlc::Parameter<MaxAbsoluteParam> {
-};
-DMLC_REGISTER_PARAMETER(MaxAbsoluteParam);*/
-
 inline bool MaxAbsoluteOpShape(const nnvm::NodeAttrs& attrs,
                              mxnet::ShapeVector* in_attrs,
                              mxnet::ShapeVector* out_attrs) {
