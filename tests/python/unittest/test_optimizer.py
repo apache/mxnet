@@ -780,7 +780,6 @@ class PyMultiLAMB(mx.optimizer.Optimizer):
          
     def create_state(self, index, weight):
         return (mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype),
-                mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype),
                 mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype))
 
     def update(self, index, weight, grad, state):
@@ -793,7 +792,7 @@ class PyMultiLAMB(mx.optimizer.Optimizer):
         if self.clip_gradient >= 0:
             grad = mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient)
 
-        mean, var, temp_g = state
+        mean, var = state
         mean[:] = self.beta1 * mean + (1. - self.beta1) * grad.astype(mean.dtype)
         var[:] = self.beta2 * var + (1. - self.beta2) * mx.nd.square(grad.astype(mean.dtype))
 
@@ -810,7 +809,7 @@ class PyMultiLAMB(mx.optimizer.Optimizer):
             mean_hat = mean
             var_hat = var
         
-        temp_g[:] = mean_hat / (mx.nd.sqrt(var_hat) + self.epsilon) + wd * weight
+        temp_g = mean_hat / (mx.nd.sqrt(var_hat) + self.epsilon) + wd * weight
         r2 = temp_g.norm()
         # calculate lamb_trust_ratio
         r = 1. if r1 == 0. or r2 == 0. else r1 / r2
@@ -853,6 +852,8 @@ def test_multilamb():
                         kwarg.update(rg_option)
                         kwarg.update(wd_option)
                         kwarg.update(bias_option)
+                        print(dtype)
+                        print(kwarg)
                         if (dtype == np.float16):
                             kwarg.update({'multi_precision': True})
                         atol = 1e-3

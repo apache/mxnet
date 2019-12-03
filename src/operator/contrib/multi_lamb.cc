@@ -20,7 +20,7 @@
 /*!
  *  Copyright (c) 2019 by Contributors
  * \file multi_lamb.cc
- * \brief vectorized LAMB coefficient computed from sums of squared weights and grads
+ * \brief multi-tensor LAMB optimizer
  * \author Moises Hernandez
  */
 
@@ -41,7 +41,8 @@ struct MultiLAMB_step1_kernel {
                                   const float wd,
                                   const float clip_gradient,
                                   const bool bias_correction,
-                                  const float rescale_grad) {
+                                  const float rescale_grad,
+                                  float* temp_g) {
     using namespace mshadow_op;
     for (size_t index = 0; index < kernel_params.ntensors; ++index) {
       if ((size_t)i < kernel_params.sizes[index]) {
@@ -69,7 +70,7 @@ struct MultiLAMB_step1_kernel {
         } else {
           g = mean / (sqrt(var) + epsilon) + wd * w;
         }
-        kernel_params.temp_g[index][i] = g;
+        temp_g[kernel_params.tensor2temp_g[index]+i] = g;
       }
     }
   }
@@ -82,6 +83,7 @@ struct MultiLAMB_step2_kernel {
                                   const MultiLAMBKernelParam<DType, MPDType>& kernel_params,
                                   const float* sumSqWeigths,
                                   const float* sumSqtemp_g,
+                                  const float* temp_g,
                                   const float learning_rate,
                                   const float lower_bound,
                                   const float upper_bound,
@@ -92,7 +94,10 @@ struct MultiLAMB_step2_kernel {
                                             MPDType(kernel_params.weights[index][i]);
         float r1 = sqrt(sumSqWeigths[index]);
         float r2 = sqrt(sumSqtemp_g[index]);
-        r1 = std::min(std::max(r1, lower_bound), upper_bound);
+        if(lower_bound >= 0)
+          r1 = std::max(r1, lower_bound);
+        if(upper_bound >= 0)
+          r1 = std::min(r1, upper_bound);
 
         // calculate lamb_trust_ratio
         MPDType r;
@@ -102,7 +107,7 @@ struct MultiLAMB_step2_kernel {
           r = r1/r2;
 
         MPDType lr_adjusted = learning_rate * r;
-        w -= lr_adjusted * kernel_params.temp_g[index][i];
+        w -= lr_adjusted * temp_g[kernel_params.tensor2temp_g[index]+i];
 
         // update weights
         if (has_mixed_precision)
@@ -117,6 +122,7 @@ template<typename MPDType, typename DType>
 void call_kernel1(Stream<cpu>* s,
                   const MultiLAMBKernelParam<DType, MPDType>& kernel_params,
                   const MultiLAMBParam &param,
+                  float* temp_g,
                   int* block_to_tensor,
                   int* block_to_chunk) {
   Kernel<MultiLAMB_step1_kernel<MPDType, !std::is_same<DType, MPDType>::value>, cpu>::
@@ -128,7 +134,8 @@ void call_kernel1(Stream<cpu>* s,
                                  param.wd,
                                  param.clip_gradient,
                                  param.bias_correction,
-                                 param.rescale_grad);
+                                 param.rescale_grad,
+                                 temp_g);
 }
 
 template<typename MPDType, typename DType>
@@ -136,6 +143,7 @@ void call_kernel2(Stream<cpu>* s,
                   const MultiLAMBKernelParam<DType, MPDType>& kernel_params,
                   const MultiLAMBParam &param,
                   float* r1, float* r2,
+                  float* temp_g,
                   int* block_to_tensor,
                   int* block_to_chunk,
                   const OpReqType req) {
@@ -143,6 +151,7 @@ void call_kernel2(Stream<cpu>* s,
                                  Launch(s, kernel_params.max_size,
                                  kernel_params,
                                  r1, r2,
+                                 temp_g,
                                  param.learning_rate,
                                  param.lower_bound, param.upper_bound,
                                  req);
@@ -169,20 +178,20 @@ NNVM_REGISTER_OP(_multi_lamb_update)
 .describe(R"code(Compute the LAMB coefficients of multiple weights and grads"
 )code" ADD_FILELINE)
 .set_num_inputs([](const nnvm::NodeAttrs& attrs) {
-    return num_tensors(attrs) * 5;
+    return num_tensors(attrs) * 4;
   })
 .set_num_outputs([](const nnvm::NodeAttrs& attrs) {
     return num_tensors(attrs);
   })
 .set_attr_parser(ParamParser<MultiLAMBParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", MultiLAMB_InferShape<MultiLAMBParam, 5>)
+.set_attr<mxnet::FInferShape>("FInferShape", MultiLAMB_InferShape<MultiLAMBParam, 4>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<-1, -1>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
-    const char *paramName[] = {"weight_", "grad_", "mean_", "var_", "temp_g"};
+    const char *paramName[] = {"weight_", "grad_", "mean_", "var_"};
     return LAMBParamToVector(num_tensors(attrs), paramName, sizeof(paramName)/sizeof(paramName[0]));
   })
-// mutable: mean, var, temp_g,
+// mutable: mean, var
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
     std::vector<uint32_t> ret;
@@ -190,7 +199,6 @@ NNVM_REGISTER_OP(_multi_lamb_update)
     for (size_t i = 0; i < iMax; ++i) {
       ret.push_back(i * 5 + 2);
       ret.push_back(i * 5 + 3);
-      ret.push_back(i * 5 + 4);
     }
     return ret;
   })
@@ -207,29 +215,28 @@ NNVM_REGISTER_OP(_multi_mp_lamb_update)
 .describe(R"code(Compute the LAMB coefficients of multiple weights and grads with Mix Precision"
 )code" ADD_FILELINE)
 .set_num_inputs([](const nnvm::NodeAttrs& attrs) {
-    return num_tensors(attrs) * 6;
+    return num_tensors(attrs) * 5;
   })
 .set_num_outputs([](const nnvm::NodeAttrs& attrs) {
     return num_tensors(attrs);
   })
 .set_attr_parser(ParamParser<MultiLAMBParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", MultiLAMB_InferShape<MultiLAMBParam, 6>)
-.set_attr<nnvm::FInferType>("FInferType", MP_MultiLAMB_InferType<MultiLAMBParam, 6>)
+.set_attr<mxnet::FInferShape>("FInferShape", MultiLAMB_InferShape<MultiLAMBParam, 5>)
+.set_attr<nnvm::FInferType>("FInferType", MP_MultiLAMB_InferType<MultiLAMBParam, 5>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
-    const char *paramName[] = {"weight_", "grad_", "mean_", "var_", "temp_g", "weight32_"};
+    const char *paramName[] = {"weight_", "grad_", "mean_", "var_", "weight32_"};
     return LAMBParamToVector(num_tensors(attrs), paramName, sizeof(paramName)/sizeof(paramName[0]));
   })
-// mutable: mean, var, temp_g, weights32
+// mutable: mean, var, weights32
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
     std::vector<uint32_t> ret;
     const auto iMax = num_tensors(attrs);
     for (size_t i = 0; i < iMax; ++i) {
-      ret.push_back(i * 6 + 2);
-      ret.push_back(i * 6 + 3);
-      ret.push_back(i * 6 + 4);
-      ret.push_back(i * 6 + 5);
+      ret.push_back(i * 5 + 2);
+      ret.push_back(i * 5 + 3);
+      ret.push_back(i * 5 + 4);
     }
     return ret;
   })

@@ -1071,8 +1071,7 @@ class MultiLAMB(Optimizer):
         stype = weight.stype
         dtype = weight.dtype
         return (zeros(weight.shape, weight.context, dtype=dtype, stype=stype), # mean
-                zeros(weight.shape, weight.context, dtype=dtype, stype=stype), # variance
-                zeros(weight.shape, weight.context, dtype=dtype, stype=stype)) # temp_g
+                zeros(weight.shape, weight.context, dtype=dtype, stype=stype)) # variance
 
     def _update_impl(self, index, weights, grads, states, multi_precision=False):
         step_count = []
@@ -1107,22 +1106,21 @@ class MultiLAMB(Optimizer):
             sidx = updated_tensors
             eidx = min(updated_tensors + self.aggregate_num, len(weights))
             if not multi_precision:
-                mean, var, temp_g = list(zip(*states[sidx:eidx]))
+                mean, var = list(zip(*states[sidx:eidx]))
                 multi_lamb_update(weights[sidx:eidx],
                                   grads[sidx:eidx],
-                                  mean, var, temp_g,
+                                  mean, var,
                                   out=weights[sidx:eidx],
                                   step_count=step_count[sidx:eidx],
                                   **kwargs)
             else:
-                mean_var_g = list(zip(*states[sidx:eidx]))[1]
-                temp = list(zip(*mean_var_g))
+                mean_var = list(zip(*states[sidx:eidx]))[1]
+                temp = list(zip(*mean_var))
                 mean = temp[0]
                 var = temp[1]
-                temp_g = temp[2]
                 multi_mp_lamb_update(weights[sidx:eidx],
                                      grads[sidx:eidx],
-                                     mean, var, temp_g,
+                                     mean, var,
                                      list(zip(*states[sidx:eidx]))[0],
                                      out=weights[sidx:eidx],
                                      step_count=step_count[sidx:eidx],

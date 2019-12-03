@@ -20,7 +20,7 @@
 /*!
  *  Copyright (c) 2019 by Contributors
  * \file multi_lamb-inl.h
- * \brief vectorized lars coefficient computed from sums of squared weights and grads
+ * \brief multi-tensor LAMB optimizer
  * \author Moises Hernandez
  */
 #ifndef MXNET_OPERATOR_CONTRIB_MULTI_LAMB_INL_H_
@@ -84,18 +84,18 @@ struct MultiLAMBParam : public dmlc::Parameter<MultiLAMBParam> {
     .set_default(1.0f)
     .describe("Gradient rescaling factor");
     DMLC_DECLARE_FIELD(lower_bound)
-    .set_default(1e-3f)
-    .describe("Lower limit of norm of weight.");
+    .set_default(-1.0f)
+    .describe("Lower limit of norm of weight. If lower_bound <= 0, Lower limit is not set");
     DMLC_DECLARE_FIELD(upper_bound)
-    .set_default(10.0f)
-    .describe("Upper limit of norm of weight.");
+    .set_default(-1.0f)
+    .describe("Upper limit of norm of weight. If upper_bound <= 0, Upper limit is not set");
     DMLC_DECLARE_FIELD(clip_gradient)
     .set_default(-1.0f)
     .describe("Clip gradient to the range of [-clip_gradient, clip_gradient] "
               "If clip_gradient <= 0, gradient clipping is turned off. "
               "grad = max(min(grad, clip_gradient), -clip_gradient).");
     DMLC_DECLARE_FIELD(bias_correction)
-    .set_default(false)
+    .set_default(true)
     .describe("Whether to use bias correction.");
     DMLC_DECLARE_FIELD(step_count)
     .describe("Step count for each tensor");
@@ -157,11 +157,10 @@ inline bool MP_MultiLAMB_InferType(const nnvm::NodeAttrs& attrs,
             ElemwiseType<2, 1>(attrs, &input_vec, &output_vec);
   }
 
-  // mean, var, temp_g, weights32 (master copies of weights)
+  // mean, var, weights32 (master copies of weights)
   for (int i = 0; i < param.num_tensors; ++i) {
     TYPE_ASSIGN_CHECK(input_types, input_stride * i + 2, mshadow::kFloat32);
     TYPE_ASSIGN_CHECK(input_types, input_stride * i + 3, mshadow::kFloat32);
-    TYPE_ASSIGN_CHECK(input_types, input_stride * i + 4, mshadow::kFloat32);
     TYPE_ASSIGN_CHECK(input_types, input_stride * i + input_stride - 1, mshadow::kFloat32);
   }
   return all_inferred;
@@ -186,11 +185,11 @@ struct MultiLAMBKernelParam {
   size_t max_size;
   size_t total_size;
   size_t sizes[N];
+  size_t tensor2temp_g[N];
   DType* weights[N];
   DType* grads[N];
   MPDType* mean[N];
   MPDType* var[N];
-  MPDType* temp_g[N];
   MPDType* weights32[N];
   DType* out_data[N];
   int step_count[N];
@@ -218,10 +217,11 @@ void FillMultiLAMBKernelParam(const nnvm::NodeAttrs& attrs,
   multi_param->max_size = 0;
   multi_param->nchunks = 0;
 
-  constexpr bool isSame = std::is_same<DType, MPDType>::value;
+  constexpr bool is_same = std::is_same<DType, MPDType>::value;
   for (size_t i = 0; i < multi_param->ntensors; ++i) {
     const auto idx = i * input_stride;
     multi_param->sizes[i] = inputs[idx].shape_.Size();
+    multi_param->tensor2temp_g[i] = multi_param->total_size;
     multi_param->total_size += multi_param->sizes[i];
     if (multi_param->max_size < multi_param->sizes[i])
       multi_param->max_size = multi_param->sizes[i];
@@ -230,10 +230,10 @@ void FillMultiLAMBKernelParam(const nnvm::NodeAttrs& attrs,
     multi_param->grads[i] = inputs[idx + 1].FlatTo2D<xpu, DType>(s).dptr_;
     multi_param->mean[i] = inputs[idx + 2].FlatTo2D<xpu, MPDType>(s).dptr_;
     multi_param->var[i]  = inputs[idx + 3].FlatTo2D<xpu, MPDType>(s).dptr_;
-    multi_param->temp_g[i]  = inputs[idx + 4].FlatTo2D<xpu, MPDType>(s).dptr_;
+
     // if mixed precision, then the last input in a set
     // is 32-bit master copy of the weights
-    if (!isSame)
+    if (!is_same)
       multi_param->weights32[i] = inputs[idx + input_stride - 1].FlatTo2D<xpu, MPDType>(s).dptr_;
     multi_param->out_data[i] = outputs[i].FlatTo2D<xpu, DType>(s).dptr_;
     multi_param->nchunks += (multi_param->sizes[i] + multi_param->chunk_size - 1)
@@ -273,14 +273,10 @@ inline void multiLAMB(const nnvm::NodeAttrs& attrs,
     for (size_t index = 0; index < kernel_params.ntensors; ++index) {
         weights.emplace_back(inputs[index*input_stride]);
     }
-    // create vector of TBlob with all the temp_g contiguous
-    std::vector<TBlob> temp_g;
-    for (size_t index = 0; index < kernel_params.ntensors; ++index) {
-        temp_g.emplace_back(inputs[index*input_stride+4]);
-    }
 
     // Calculate amount of temporary storage
-    size_t workspace_size = 2 * kernel_params.ntensors * sizeof(float) +
+    size_t workspace_size = kernel_params.total_size * sizeof(float) +
+        2 * kernel_params.ntensors * sizeof(float) +
         2 * kernel_params.nchunks * sizeof(int);
 
       // Request temporary storage
@@ -290,6 +286,16 @@ inline void multiLAMB(const nnvm::NodeAttrs& attrs,
 
     // Create tensors
     size_t pos_wspace = 0;
+    Tensor<xpu, 1, float> temp_g(reinterpret_cast<float*>(&workspace[pos_wspace]),
+      Shape1(kernel_params.total_size), s);
+    // create vector of TBlob with all the temp_g contiguous
+    std::vector<TBlob> temp_g_tblobs;
+    for (size_t index = 0; index < kernel_params.ntensors; ++index) {
+        TBlob temp(temp_g);
+        temp_g_tblobs.emplace_back(temp);
+    }
+
+    pos_wspace += kernel_params.total_size * sizeof(float);
     Tensor<xpu, 1, float> r1(reinterpret_cast<float*>(&workspace[pos_wspace]),
       Shape1(kernel_params.ntensors), s);
     pos_wspace += kernel_params.ntensors * sizeof(float);
@@ -303,10 +309,12 @@ inline void multiLAMB(const nnvm::NodeAttrs& attrs,
       Shape1(kernel_params.nchunks), s);
 
     MultiSumSqRun<xpu>(weights, kernel_params.ntensors, r1.dptr_, s);
-    call_kernel1<MPDType, DType>(s, kernel_params, param, block_to_tensor.dptr_,
-                                  block_to_chunk.dptr_);
-    MultiSumSqRun<xpu>(temp_g, kernel_params.ntensors, r2.dptr_, s);
+    call_kernel1<MPDType, DType>(s, kernel_params, param, temp_g.dptr_,
+                                 block_to_tensor.dptr_,
+                                 block_to_chunk.dptr_);
+    MultiSumSqRun<xpu>(temp_g_tblobs, kernel_params.ntensors, r2.dptr_, s);
     call_kernel2<MPDType, DType>(s, kernel_params, param, r1.dptr_, r2.dptr_,
+                                 temp_g.dptr_,
                                  block_to_tensor.dptr_, block_to_chunk.dptr_,
                                  req[0]);
   });
@@ -319,10 +327,10 @@ inline void multiLAMBUpdate(const nnvm::NodeAttrs& attrs,
                             const std::vector<OpReqType> &req,
                             const std::vector<TBlob> &outputs) {
   if (!MP) {
-    multiLAMB<xpu, LAMB_type_identity, 5>
+    multiLAMB<xpu, LAMB_type_identity, 4>
       (attrs, ctx, inputs, req, outputs);
   } else {
-    multiLAMB<xpu, LAMB_single_precision, 6>
+    multiLAMB<xpu, LAMB_single_precision, 5>
       (attrs, ctx, inputs, req, outputs);
   }
 }
