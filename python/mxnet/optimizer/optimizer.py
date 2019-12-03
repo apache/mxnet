@@ -42,7 +42,7 @@ from ..util import is_np_array
 
 __all__ = [
     'AdaDelta', 'AdaGrad', 'Adam', 'Adamax', 'DCASGD', 'FTML', 'Ftrl', 'LARS', 'LBSGD',
-    'MultiLAMB', 'NAG', 'NDabs', 'Nadam', 'Optimizer', 'RMSProp', 'SGD', 'SGLD', 'Signum', 'LAMB',
+    'NAG', 'NDabs', 'Nadam', 'Optimizer', 'RMSProp', 'SGD', 'SGLD', 'Signum', 'LAMB',
     'Test', 'Updater', 'ccSGD', 'create', 'get_updater', 'register'
 ]
 
@@ -1052,97 +1052,6 @@ class LARS(Optimizer):
         self._update_impl(index, weight, grad, state,
                           multi_precision=use_multi_precision)
 
-@register
-class MultiLAMB(Optimizer):
-    """multiLAMB optimizer.
-    """
-    def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-6,
-                 lower_bound=None, upper_bound=None, bias_correction=True, **kwargs):
-        super(MultiLAMB, self).__init__(learning_rate=learning_rate, **kwargs)
-        self.beta1 = beta1
-        self.beta2 = beta2
-        self.epsilon = epsilon
-        self.lower_bound = lower_bound
-        self.upper_bound = upper_bound
-        self.bias_correction = bias_correction
-        self.aggregate_num = max(1, min(50, int(os.getenv('MXNET_OPTIMIZER_AGGREGATION_SIZE', "50"))))
-
-    def create_state(self, index, weight):
-        stype = weight.stype
-        dtype = weight.dtype
-        return (zeros(weight.shape, weight.context, dtype=dtype, stype=stype), # mean
-                zeros(weight.shape, weight.context, dtype=dtype, stype=stype)) # variance
-
-    def _update_impl(self, index, weights, grads, states, multi_precision=False):
-        step_count = []
-        if not isinstance(index, (tuple, list)):
-            weights = [weights]
-            grads = [grads]
-            states = [states]
-            self._update_count(index)
-            step_count.append(self._index_update_count[index])
-            lr = self._get_lr(index)
-            wd = self._get_wd(index)
-        else:
-            for i, (weight, grad) in enumerate(zip(weights, grads)):
-                assert(isinstance(weight, NDArray))
-                assert(isinstance(grad, NDArray))
-                self._update_count(i)
-                step_count.append(self._index_update_count[i])
-            lr = self._get_lr(index[0])
-            wd = self._get_wd(index[0])
-
-        kwargs = {'learning_rate': lr, 'beta1': self.beta1, 'beta2': self.beta2,
-                  'epsilon': self.epsilon, 'wd': wd,
-                  'bias_correction': self.bias_correction,
-                  'rescale_grad': self.rescale_grad}
-
-        if self.lower_bound:
-            kwargs['lower_bound'] = self.lower_bound
-        if self.upper_bound:
-            kwargs['upper_bound'] = self.upper_bound
-
-        if self.clip_gradient:
-            kwargs['clip_gradient'] = self.clip_gradient
-
-        updated_tensors = 0
-        while updated_tensors < len(weights):
-            sidx = updated_tensors
-            eidx = min(updated_tensors + self.aggregate_num, len(weights))
-            if not multi_precision:
-                mean, var = list(zip(*states[sidx:eidx]))
-                multi_lamb_update(weights[sidx:eidx],
-                                  grads[sidx:eidx],
-                                  mean, var,
-                                  out=weights[sidx:eidx],
-                                  step_count=step_count[sidx:eidx],
-                                  **kwargs)
-            else:
-                mean_var = list(zip(*states[sidx:eidx]))[1]
-                temp = list(zip(*mean_var))
-                mean = temp[0]
-                var = temp[1]
-                multi_mp_lamb_update(weights[sidx:eidx],
-                                     grads[sidx:eidx],
-                                     mean, var,
-                                     list(zip(*states[sidx:eidx]))[0],
-                                     out=weights[sidx:eidx],
-                                     step_count=step_count[sidx:eidx],
-                                     **kwargs)
-
-            updated_tensors += self.aggregate_num
-
-    def update(self, index, weight, grad, state):
-        self._update_impl(index, weight, grad, state, multi_precision=False)
-
-    def update_multi_precision(self, index, weight, grad, state):
-        if not isinstance(index, (tuple, list)):
-            use_multi_precision = self.multi_precision and weight.dtype == numpy.float16
-        else:
-            use_multi_precision = self.multi_precision and weight[0].dtype == numpy.float16
-        self._update_impl(index, weight, grad, state,
-                          multi_precision=use_multi_precision)
-
 #
 @register
 class LBSGD(Optimizer):
@@ -1350,7 +1259,7 @@ class LAMB(Optimizer):
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
         self.bias_correction = bias_correction
-
+        self.aggregate_num = max(1, min(50, int(os.getenv('MXNET_OPTIMIZER_AGGREGATION_SIZE', "50"))))
 
     def create_state(self, index, weight):
         stype = weight.stype
@@ -1359,30 +1268,95 @@ class LAMB(Optimizer):
                 zeros(weight.shape, weight.context, dtype=dtype, stype=stype))
 
     def update(self, index, weight, grad, state):
-        assert(isinstance(weight, NDArray))
-        assert(isinstance(grad, NDArray))
-        self._update_count(index)
-        lr = self._get_lr(index)
-        wd = self._get_wd(index)
-        t = self._index_update_count[index]
+        if self.aggregate_num <= 1 or not isinstance(index, (tuple, list)):
+            assert(isinstance(weight, NDArray))
+            assert(isinstance(grad, NDArray))
+            self._update_count(index)
+            lr = self._get_lr(index)
+            wd = self._get_wd(index)
+            t = self._index_update_count[index]
 
-        kwargs = {'beta1': self.beta1, 'beta2': self.beta2, 'epsilon': self.epsilon,
-                  'bias_correction': self.bias_correction, 't': t,
+            kwargs = {'beta1': self.beta1, 'beta2': self.beta2, 'epsilon': self.epsilon,
+                    'bias_correction': self.bias_correction, 't': t,
+                    'rescale_grad': self.rescale_grad}
+            mean, var = state
+            if self.clip_gradient:
+                kwargs['clip_gradient'] = self.clip_gradient
+            g = lamb_update_phase1(weight, grad, mean, var, wd=wd, **kwargs)
+
+            kwargs = {}
+            if self.lower_bound:
+                kwargs['lower_bound'] = self.lower_bound
+            if self.upper_bound:
+                kwargs['upper_bound'] = self.upper_bound
+            r_1 = weight.norm()
+            r_2 = g.norm()
+            lamb_update_phase2(weight, g, r_1, r_2, lr=lr, out=weight, **kwargs)
+        else:
+            self._multi_tensor_update_impl(index, weight, grad, state, multi_precision=False)
+
+    def _multi_tensor_update_impl(self, index, weights, grads, states, multi_precision=False):
+        step_count = []
+        for i, (weight, grad) in enumerate(zip(weights, grads)):
+            assert(isinstance(weight, NDArray))
+            assert(isinstance(grad, NDArray))
+            self._update_count(i)
+            step_count.append(self._index_update_count[i])
+        lr = self._get_lr(index[0])
+        wd = self._get_wd(index[0])
+
+        kwargs = {'learning_rate': lr, 'beta1': self.beta1, 'beta2': self.beta2,
+                  'epsilon': self.epsilon, 'wd': wd,
+                  'bias_correction': self.bias_correction,
                   'rescale_grad': self.rescale_grad}
-        mean, var = state
         if self.clip_gradient:
             kwargs['clip_gradient'] = self.clip_gradient
-        g = lamb_update_phase1(weight, grad, mean, var, wd=wd, **kwargs)
-
-        kwargs = {}
         if self.lower_bound:
             kwargs['lower_bound'] = self.lower_bound
         if self.upper_bound:
             kwargs['upper_bound'] = self.upper_bound
-        r_1 = weight.norm()
-        r_2 = g.norm()
-        lamb_update_phase2(weight, g, r_1, r_2, lr=lr, out=weight, **kwargs)
+        updated_tensors = 0
+        while updated_tensors < len(weights):
+            sidx = updated_tensors
+            eidx = min(updated_tensors + self.aggregate_num, len(weights))
+            if not multi_precision:
+                mean, var = list(zip(*states[sidx:eidx]))
+                multi_lamb_update(weights[sidx:eidx],
+                                  grads[sidx:eidx],
+                                  mean, var,
+                                  out=weights[sidx:eidx],
+                                  step_count=step_count[sidx:eidx],
+                                  **kwargs)
+            else:
+                mean_var = list(zip(*states[sidx:eidx]))[1]
+                temp = list(zip(*mean_var))
+                mean = temp[0]
+                var = temp[1]
+                multi_mp_lamb_update(weights[sidx:eidx],
+                                     grads[sidx:eidx],
+                                     mean, var,
+                                     list(zip(*states[sidx:eidx]))[0],
+                                     out=weights[sidx:eidx],
+                                     step_count=step_count[sidx:eidx],
+                                     **kwargs)
 
+            updated_tensors += self.aggregate_num
+
+    def update_multi_precision(self, index, weight, grad, state):
+        if self.aggregate_num <= 1 or not isinstance(index, (tuple, list)):
+            if self.multi_precision and weight.dtype == numpy.float16:
+                # Wrapper for mixed precision
+                weight_master_copy = state[0]
+                original_state = state[1]
+                grad32 = grad.astype(numpy.float32)
+                self.update(index, weight_master_copy, grad32, original_state)
+                cast(weight_master_copy, dtype=weight.dtype, out=weight)
+            else:
+                self.update(index, weight, grad, state)
+        else:
+            use_multi_precision = self.multi_precision and weight[0].dtype == numpy.float16
+            self._multi_tensor_update_impl(index, weight, grad, state,
+                multi_precision=use_multi_precision)
 
 # pylint: enable=line-too-long
 @register

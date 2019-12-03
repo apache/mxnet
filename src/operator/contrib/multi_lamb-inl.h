@@ -291,11 +291,11 @@ inline void multiLAMB(const nnvm::NodeAttrs& attrs,
     // create vector of TBlob with all the temp_g contiguous
     std::vector<TBlob> temp_g_tblobs;
     for (size_t index = 0; index < kernel_params.ntensors; ++index) {
-	Tensor<xpu, 1, float> aux(reinterpret_cast<float*>(&workspace[pos_wspace]),
-	  Shape1(kernel_params.sizes[index]), s);
-        TBlob newtblob(aux);
-        temp_g_tblobs.emplace_back(newtblob);
-	pos_wspace += kernel_params.sizes[index] * sizeof(float);
+      Tensor<xpu, 1, float> aux(reinterpret_cast<float*>(&workspace[pos_wspace]),
+        Shape1(kernel_params.sizes[index]), s);
+      TBlob newtblob(aux);
+      temp_g_tblobs.emplace_back(newtblob);
+      pos_wspace += kernel_params.sizes[index] * sizeof(float);
     }
     Tensor<xpu, 1, float> r1(reinterpret_cast<float*>(&workspace[pos_wspace]),
       Shape1(kernel_params.ntensors), s);

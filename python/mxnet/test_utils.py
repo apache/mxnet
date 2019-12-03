@@ -2288,7 +2288,7 @@ def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='defa
             compare_ndarray_tuple(state1, state2, rtol=rtol, atol=atol)
         assert_almost_equal(w1, w2, rtol=rtol, atol=atol)
     else:
-        # test multi-tensor: Opt1 single-tensor, Opt2 multi-tensor
+        # test multi-tensor: Opt1 single-tensor reference, Opt2 multi-tensor
         from copy import deepcopy
         if not isinstance(shape, list):
             w1 = [mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype) for i in range(ntensors)]
