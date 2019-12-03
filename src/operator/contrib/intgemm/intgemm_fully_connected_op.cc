@@ -238,11 +238,15 @@ void IntgemmFullyConnectedOpForwardCPU(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_intgemm_fully_connected)
-.describe(R"code(This operator converts quantizes float32 to int8 while also banning -128.
+.describe(R"code(Multiply matrices using 8-bit integers.
 
-It it suitable for preparing an A matrix for use by intgemm's C=AB operation.
+The data argument can be either float32 or prepared using intgemm_preparea.
 
-The float32 values are multiplied by the provided multiplier before casting to int8.  Typically this is 127.0 / maxabsolute(A).
+The weight argument must be prepared using intgemm_prepareb.
+
+If out_type is float32, then a scaling factor is applied before bias.  Typically this is 1/the scaling factor you provided to prepareb/the scaling factor you provided to preparea (if data is quantized).
+
+The out_type can be int32 or float32.  Bias must have the same type.
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<IntgemmFullyConnectedParam>)
 .set_num_inputs([](const NodeAttrs& attrs) {
@@ -253,13 +257,12 @@ The float32 values are multiplied by the provided multiplier before casting to i
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     const IntgemmFullyConnectedParam& params = nnvm::get<IntgemmFullyConnectedParam>(attrs.parsed);
-    return params.no_bias ? std::vector<std::string>{"A", "weight", "scaling"} : std::vector<std::string>{"A", "weight", "scaling", "bias"};
+    return params.no_bias ? std::vector<std::string>{"data", "weight", "scaling"} : std::vector<std::string>{"data", "weight", "scaling", "bias"};
   })
 .set_attr<mxnet::FInferShape>("FInferShape", IntgemmFullyConnectedOpShape)
 .set_attr<nnvm::FInferType>("FInferType", IntgemmFullyConnectedOpType)
-//.set_attr<FInferStorageType>("FInferStorageType", IntgemmFullyConnectedOpStorageType)
 .set_attr<FCompute>("FCompute<cpu>", IntgemmFullyConnectedOpForwardCPU)
-.add_argument("A", "NDArray-or-Symbol", "First (A) argument to multiplication. Tensor of float32 (quantized on the fly) or int8 from intgemm_preparea. If you use a different quantizer, be sure to ban -128. The last dimension must be a multiple of 64.")
+.add_argument("data", "NDArray-or-Symbol", "First (A) argument to multiplication. Tensor of float32 (quantized on the fly) or int8 from intgemm_preparea. If you use a different quantizer, be sure to ban -128. The last dimension must be a multiple of 64.")
 .add_argument("weight", "NDArray-or-Symbol", "Second (B) argument to multiplication. Tensor of int8 from intgemm_prepareb. The last dimension must be a multiple of 64.  The product of non-last dimensions must be a multiple of 8.")
 .add_argument("scaling", "NDArray-or-Symbol", "Scaling factor to apply if output type is float32.")
 .add_argument("bias", "NDArray-or-Symbol", "Bias term.")
