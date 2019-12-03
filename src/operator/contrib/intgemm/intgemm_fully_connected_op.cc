@@ -240,11 +240,11 @@ void IntgemmFullyConnectedOpForwardCPU(const nnvm::NodeAttrs& attrs,
 NNVM_REGISTER_OP(_contrib_intgemm_fully_connected)
 .describe(R"code(Multiply matrices using 8-bit integers.
 
-The data argument can be either float32 or prepared using intgemm_preparea.
+The data argument can be either float32 or prepared using intgemm_prepare_data.
 
-The weight argument must be prepared using intgemm_prepareb.
+The weight argument must be prepared using intgemm_prepare_weight.
 
-If out_type is float32, then a scaling factor is applied before bias.  Typically this is 1/the scaling factor you provided to prepareb/the scaling factor you provided to preparea (if data is quantized).
+If out_type is float32, then a scaling factor is applied before bias.  Typically this is 1/the scaling factor you provided to prepare_weight/the scaling factor you provided to prepare_data (if data is quantized).
 
 The out_type can be int32 or float32.  Bias must have the same type.
 )code" ADD_FILELINE)
@@ -262,8 +262,8 @@ The out_type can be int32 or float32.  Bias must have the same type.
 .set_attr<mxnet::FInferShape>("FInferShape", IntgemmFullyConnectedOpShape)
 .set_attr<nnvm::FInferType>("FInferType", IntgemmFullyConnectedOpType)
 .set_attr<FCompute>("FCompute<cpu>", IntgemmFullyConnectedOpForwardCPU)
-.add_argument("data", "NDArray-or-Symbol", "First (A) argument to multiplication. Tensor of float32 (quantized on the fly) or int8 from intgemm_preparea. If you use a different quantizer, be sure to ban -128. The last dimension must be a multiple of 64.")
-.add_argument("weight", "NDArray-or-Symbol", "Second (B) argument to multiplication. Tensor of int8 from intgemm_prepareb. The last dimension must be a multiple of 64.  The product of non-last dimensions must be a multiple of 8.")
+.add_argument("data", "NDArray-or-Symbol", "First argument to multiplication. Tensor of float32 (quantized on the fly) or int8 from intgemm_prepare_data. If you use a different quantizer, be sure to ban -128. The last dimension must be a multiple of 64.")
+.add_argument("weight", "NDArray-or-Symbol", "Second argument to multiplication. Tensor of int8 from intgemm_prepare_weight. The last dimension must be a multiple of 64.  The product of non-last dimensions must be a multiple of 8.")
 .add_argument("scaling", "NDArray-or-Symbol", "Scaling factor to apply if output type is float32.")
 .add_argument("bias", "NDArray-or-Symbol", "Bias term.")
 // TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,
