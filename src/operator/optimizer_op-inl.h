@@ -1775,8 +1775,9 @@ struct MPLambUpdatePhaseOneKernel {
     float* mean_data, float* var_data, const DType* weight_data,
     const DType* grad_data, const float* weight32_data,
     const float clip_gradient, const float rescale_grad,
-    const float beta1, const float beta2, const float wd,
-    const float epsilon, const float t,
+    const float beta1_t, const float beta1,
+    const float beta2_t, const float beta2,
+    const float wd, const float epsilon, const int t,
     bool bias_correction, const OpReqType req) {
     using namespace mshadow_op;
 
@@ -1791,8 +1792,8 @@ struct MPLambUpdatePhaseOneKernel {
     float g = mean_data[i] / (square_root::Map(var_data[i]) + epsilon) + wd * weight32_data[i];
 
     if (bias_correction) {
-      float mean_hat = mean_data[i] / (1. - power::Map(beta1, t));
-      float var_hat = var_data[i] / (1 - power::Map(beta2, t));
+      float mean_hat = mean_data[i] / (1. - beta1_t);
+      float var_hat = var_data[i] / (1 - beta2_t);
       g = mean_hat / (square_root::Map(var_hat) + epsilon) + wd * weight32_data[i];
     }
     KERNEL_ASSIGN(out_data[i], req, g);
@@ -1809,6 +1810,8 @@ inline void MPLambUpdatePhaseOne(const nnvm::NodeAttrs& attrs,
   const LambUpdatePhaseOneParam& param = nnvm::get<LambUpdatePhaseOneParam>(attrs.parsed);
   Stream<xpu>* s = ctx.get_stream<xpu>();
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    float beta1_t = std::pow(param.beta1, param.t);
+    float beta2_t = std::pow(param.beta2, param.t);
     Tensor<xpu, 2, DType> weight = inputs[0].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> grad = inputs[1].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, float> mean = inputs[2].FlatTo2D<xpu, float>(s);
@@ -1818,7 +1821,7 @@ inline void MPLambUpdatePhaseOne(const nnvm::NodeAttrs& attrs,
 
   Kernel<MPLambUpdatePhaseOneKernel, xpu>::Launch(s, weight.shape_.Size(),
     out.dptr_, mean.dptr_, var.dptr_, weight.dptr_, grad.dptr_, weight32.dptr_,
-    param.clip_gradient, param.rescale_grad, param.beta1, param.beta2,
+    param.clip_gradient, param.rescale_grad, beta1_t, param.beta1, beta2_t, param.beta2,
     param.wd, param.epsilon, param.t, param.bias_correction, req[0]);
   });
 }
