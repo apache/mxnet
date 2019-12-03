@@ -112,7 +112,7 @@ void TakeWeightOpForwardCPU(const nnvm::NodeAttrs& attrs,
   ::intgemm::Int8::SelectColumnsB(weight.dptr<int8_t>(), out.dptr<int8_t>(), inner, index, index + B_cols);
 }
 
-NNVM_REGISTER_OP(_contrib_intgemm_take_weight_op)
+NNVM_REGISTER_OP(_contrib_intgemm_take_weight)
 .describe(R"code(Index a weight matrix stored in intgemm's weight format.
 The indices select the outputs of matrix multiplication, not the inner dot product dimension.
 )code" ADD_FILELINE)
