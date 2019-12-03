@@ -72,21 +72,21 @@ Data
 
    .. card::
       :title: Data Loading
-      :link: data.html
+      :link: data/data.html
 
       How to load data for training.
 
    .. card::
-      :title: Image Augmentation
-      :link: image-augmentation.html
-
-      Boost your training dataset with image augmentation.
-
-   .. card::
       :title: Data Augmentation
-      :link: image/image-augmentation.html
+      :link: data/data_augmentation.md
 
       A guide to data augmentation.
+
+   .. card::
+      :title: Image Augmentation
+      :link: image/image-augmentation.html
+
+      Boost your training dataset with image augmentation.
 
    .. card::
       :title: Gluon Datasets and DataLoader
@@ -194,19 +194,15 @@ Advanced Topics
 
       Building custom operators with numpy.
 
-..
-<-- tutorial missing -->
    .. card::
       :title: Custom Loss
-      :link: custom-loss/custom-loss.html
+      :link: loss/custom-loss.md
 
       A guide to implementing custom losses.
 
-..
-
    .. card::
       :title: Gotchas using NumPy in Apache MXNet
-      :link: ../ndarray/gotchas_numpy_in_mxnet.html
+      :link: ndarray/gotchas_numpy_in_mxnet.md
 
       Common misconceptions when using NumPy in Apache MXNet.
 
