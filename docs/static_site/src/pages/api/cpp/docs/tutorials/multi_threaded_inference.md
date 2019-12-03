@@ -317,8 +317,6 @@ the CPP frontend to run multi-threaded inference as of today.
 10. Multi threaded inference with threaded engine with Module/Symbolic API and C Predict API are not currently supported.
 11. Exception thrown with `wait_to_read` in individual threads can cause issues. Calling invoke from each thread and calling WaitAll after thread joins should still work fine.
 12. Tested only on environments supported by CI. This means that MacOS is not supported.
-13. NaiveEngine mode is not supported.
-
 
 ## Future Work
 
