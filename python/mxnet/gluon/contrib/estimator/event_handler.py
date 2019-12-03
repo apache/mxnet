@@ -241,17 +241,16 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
     """
 
     LOG_PER_EPOCH = 1
-    LOG_PER_BATCH = 2
-    LOG_PER_INTERVAL = 3
+    LOG_PER_INTERVAL = 2
 
     def __init__(self, verbose=LOG_PER_EPOCH,
                  train_metrics=None,
                  val_metrics=None,
                  log_interval=1):
         super(LoggingHandler, self).__init__()
-        if verbose not in [self.LOG_PER_EPOCH, self.LOG_PER_BATCH, self.LOG_PER_INTERVAL]:
+        if verbose not in [self.LOG_PER_EPOCH, self.LOG_PER_INTERVAL]:
             raise ValueError("verbose level must be either LOG_PER_EPOCH or "
-                             "LOG_PER_BATCH, received %s. "
+                             "LOG_PER_INTERVAL, received %s. "
                              "E.g: LoggingHandler(verbose=LoggingHandler.LOG_PER_EPOCH)"
                              % verbose)
         self.verbose = verbose
@@ -293,41 +292,34 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
         estimator.logger.info(msg.rstrip(', '))
 
     def batch_begin(self, estimator, *args, **kwargs):
-        if self.verbose in [self.LOG_PER_BATCH, self.LOG_PER_INTERVAL]:
+        if self.verbose == self.LOG_PER_INTERVAL:
             self.batch_start = time.time()
 
     def batch_end(self, estimator, *args, **kwargs):
-        if self.verbose in [self.LOG_PER_BATCH, self.LOG_PER_INTERVAL]:
+        if self.verbose == self.LOG_PER_INTERVAL:
             batch_time = time.time() - self.batch_start
             msg = '[Epoch %d][Batch %d]' % (self.current_epoch, self.batch_index)
             self.processed_samples += kwargs['batch'][0].shape[0]
             msg += '[Samples %s] ' % (self.processed_samples)
             self.log_interval_time += batch_time
-
-        if self.verbose == self.LOG_PER_BATCH:
-            msg += 'time/batch: %.3fs ' % batch_time
-            for metric in self.train_metrics:
-                # only log current training loss & metric after each batch
-                name, value = metric.get()
-                msg += '%s: %.4f, ' % (name, value)
-            estimator.logger.info(msg.rstrip(', '))
-        elif self.verbose == self.LOG_PER_INTERVAL and self.batch_index % self.log_interval == 0:
-            msg += 'time/interval: %.3fs ' % self.log_interval_time
-            self.log_interval_time = 0
-            for monitor in self.train_metrics + self.val_metrics:
-                name, value = monitor.get()
-                msg += '%s: %.4f, ' % (name, value)
-            estimator.logger.info(msg.rstrip(', '))
+            if self.batch_index % self.log_interval == 0:
+                msg += 'time/interval: %.3fs ' % self.log_interval_time
+                self.log_interval_time = 0
+                for metric in self.train_metrics:
+                    # only log current training loss & metric after each interval
+                    name, value = metric.get()
+                    msg += '%s: %.4f, ' % (name, value)
+                estimator.logger.info(msg.rstrip(', '))
         self.batch_index += 1
 
     def epoch_begin(self, estimator, *args, **kwargs):
-        if self.verbose in [self.LOG_PER_EPOCH, self.LOG_PER_BATCH, self.LOG_PER_INTERVAL]:
+        if self.verbose in [self.LOG_PER_EPOCH, self.LOG_PER_INTERVAL]:
             self.epoch_start = time.time()
             estimator.logger.info("[Epoch %d] Begin, current learning rate: %.4f",
                                   self.current_epoch, estimator.trainer.learning_rate)
 
     def epoch_end(self, estimator, *args, **kwargs):
-        if self.verbose in [self.LOG_PER_EPOCH, self.LOG_PER_BATCH, self.LOG_PER_INTERVAL]:
+        if self.verbose in [self.LOG_PER_EPOCH, self.LOG_PER_INTERVAL]:
             epoch_time = time.time() - self.epoch_start
             msg = '[Epoch %d] Finished in %.3fs, ' % (self.current_epoch, epoch_time)
             for monitor in self.train_metrics + self.val_metrics:
