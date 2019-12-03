@@ -88,11 +88,10 @@ The internal representation of B is CPU dependent: AVX512BW, AVX2, and SSSE3 hav
 .set_attr<nnvm::FInferType>("FInferType", PrepareOpType)
 .set_attr<FInferStorageType>("FInferStorageType", PrepareOpStorageType)
 .set_attr<FCompute>("FCompute<cpu>", PrepareBOpForwardCPU)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::pair<int, int> >{{0, 0}};
-  })
 .add_argument("B", "NDArray-or-Symbol", "Parameter matrix to be prepared for multiplication.")
+// TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,
+// will be reverted after the improvement of CachedOP is done.
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_arguments(PrepareParam::__FIELDS__());
 
 }  // namespace op

@@ -56,17 +56,15 @@ struct IntgemmFullyConnectedParam : public dmlc::Parameter<IntgemmFullyConnected
     .add_enum("int32", mshadow::kInt32)
     .set_default(mshadow::kFloat32)
     .describe("Output data type.");
-    DMLC_DECLARE_FIELD(out_float_multiplier)
-    .describe("If the out_type is float32, unquantize by multiplying by this number.  Typically 1.0/preparea.multiplier/prepareb.multiplier.  If you pass A in as float32, then A will be quantized using preparea.multiplier = 127.0/max(abs(A)) and out_float_multiplier will be adjusted accordingly.");
   }
 };
 DMLC_REGISTER_PARAMETER(IntgemmFullyConnectedParam);
 
 namespace {
 template<class T> void IntgemmFullyConnectedSanity(const nnvm::NodeAttrs& attrs, T* in, T* out) {
-  // 2-3 parameters: A, B, and optional bias
+  // 3-4 parameters: A, B, scaling, and optional bias
   const IntgemmFullyConnectedParam& param = nnvm::get<IntgemmFullyConnectedParam>(attrs.parsed);
-  CHECK_EQ(in->size(), param.no_bias ? 2U : 3U);
+  CHECK_EQ(in->size(), param.no_bias ? 3U : 4U);
   CHECK_EQ(out->size(), 1U);
 }
 } // namespace
@@ -81,9 +79,9 @@ inline bool IntgemmFullyConnectedOpShape(const nnvm::NodeAttrs& attrs,
   // The rest is copied from FullyConnected.
   using namespace mshadow;
   if (!param.no_bias) {
-    CHECK_EQ(in_shape->size(), 3U) << "Input:[data, weight, bias]";
+    CHECK_EQ(in_shape->size(), 4U) << "Input:[data, weight, scaling_factor, bias]";
   } else {
-    CHECK_EQ(in_shape->size(), 2U) << "Input:[data, weight]";
+    CHECK_EQ(in_shape->size(), 3U) << "Input:[data, weight, scaling_factor]";
   }
   CHECK_EQ(out_shape->size(), 1U);
   mxnet::TShape dshape = (*in_shape)[0];
@@ -98,10 +96,11 @@ inline bool IntgemmFullyConnectedOpShape(const nnvm::NodeAttrs& attrs,
     num_input = dshape.ProdShape(1, dshape.ndim());
   }
   SHAPE_ASSIGN_CHECK(*in_shape, 1, Shape2(param.num_hidden, num_input));
+  SHAPE_ASSIGN_CHECK(*in_shape, 2, mxnet::TShape(1, 1));
   if (!param.no_bias) {
-    if (!shape_assign(&(*in_shape)[2], Shape1(param.num_hidden)) &&
-        !shape_assign(&(*in_shape)[2], Shape2(param.num_hidden, 1))) {
-      LOG(FATAL) << "Unexpected shape for bias " << (*in_shape)[2];
+    if (!shape_assign(&(*in_shape)[3], Shape1(param.num_hidden)) &&
+        !shape_assign(&(*in_shape)[3], Shape2(param.num_hidden, 1))) {
+      LOG(FATAL) << "Unexpected shape for bias " << (*in_shape)[3];
     }
   }
 
@@ -127,11 +126,13 @@ bool IntgemmFullyConnectedOpType(const nnvm::NodeAttrs& attrs,
 
   // Match the configuration for output.
   TYPE_ASSIGN_CHECK(*out_attrs, 0, param.out_type);
-  if (in_attrs->size() == 3) {
+  if (!param.no_bias) {
     // Bias has same type as output.
-    TYPE_ASSIGN_CHECK(*in_attrs, 2, (*out_attrs)[0]);
-    TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[2]);
+    TYPE_ASSIGN_CHECK(*in_attrs, 3, (*out_attrs)[0]);
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[3]);
   }
+  // Scaling is float32.
+  TYPE_ASSIGN_CHECK(*in_attrs, 2, mshadow::kFloat32);
   // Users have to prepare B.
   TYPE_ASSIGN_CHECK(*in_attrs, 1, mshadow::kInt8);
   // A can be a float (in which case it is automatically quantized) or int8.
@@ -166,7 +167,7 @@ void IntgemmFullyConnectedOpForwardCPU(const nnvm::NodeAttrs& attrs,
   IntgemmFullyConnectedSanity(attrs, &inputs, &outputs);
   const IntgemmFullyConnectedParam& param = nnvm::get<IntgemmFullyConnectedParam>(attrs.parsed);
   CHECK_EQ(req.size(), 1U);
-  CHECK_EQ(req[0], kWriteTo) << "intgemm only overwrites";
+  CHECK_EQ(req[0], kWriteTo) << "TODO: doing more than overwriting for intgemm.  Note: kWriteInplace = " << kWriteInplace << " kWriteTo = " << kWriteTo;
 
   const TBlob &A = inputs[0], &B = inputs[1], &C = outputs[0];
 
@@ -185,16 +186,16 @@ void IntgemmFullyConnectedOpForwardCPU(const nnvm::NodeAttrs& attrs,
 
   CHECK_EQ(C.shape_.Size(), A_rows * B_cols);
 
-  bool bias = (inputs.size() == 3);
+  bool bias = !param.no_bias;
   if (bias) {
-    CHECK_EQ(inputs[2].type_flag_, mshadow::kFloat32);
+    CHECK_EQ(inputs[3].type_flag_, mshadow::kFloat32);
     CHECK_EQ(C.type_flag_, mshadow::kFloat32);
-    CHECK_EQ(inputs[2].shape_.Size(), param.num_hidden);
+    CHECK_EQ(inputs[3].shape_.Size(), param.num_hidden);
   }
   CHECK_EQ(inner % ::intgemm::Int8::kBTileRow, 0) << "intgemm requires the inner dimension be a multiple of " << ::intgemm::Int8::kBTileRow;
   CHECK_EQ(B_cols % ::intgemm::Int8::kBTileCol, 0) << "intgemm requires B have a multiple of " << ::intgemm::Int8::kBTileCol << " columns inthe equation C = AB.";
 
-  float out_float_multiplier = param.out_float_multiplier;
+  float out_float_multiplier = *inputs[2].dptr<float>();
 
   int8_t *A_quant;
   // TODO report this memory consumption?
@@ -217,11 +218,11 @@ void IntgemmFullyConnectedOpForwardCPU(const nnvm::NodeAttrs& attrs,
 
   if (bias) {
     if (C.type_flag_ == mshadow::kFloat32) {
-      ::intgemm::callbacks::UnquantizeAndAddBiasAndWrite cb(out_float_multiplier, inputs[2].dptr<float>(), C.dptr<float>());
+      ::intgemm::callbacks::UnquantizeAndAddBiasAndWrite cb(out_float_multiplier, inputs[3].dptr<float>(), C.dptr<float>());
       ::intgemm::Int8::Multiply(A_quant, B_quant, A_rows, inner, B_cols, cb);
     } else {
       // int32
-      ::intgemm::callbacks::AddBiasAndWrite cb(inputs[2].dptr<int32_t>(), C.dptr<int32_t>());
+      ::intgemm::callbacks::AddBiasAndWrite cb(inputs[3].dptr<int32_t>(), C.dptr<int32_t>());
       ::intgemm::Int8::Multiply(A_quant, B_quant, A_rows, inner, B_cols, cb);
     }
   } else {
@@ -246,24 +247,25 @@ The float32 values are multiplied by the provided multiplier before casting to i
 .set_attr_parser(ParamParser<IntgemmFullyConnectedParam>)
 .set_num_inputs([](const NodeAttrs& attrs) {
   const IntgemmFullyConnectedParam& params = nnvm::get<IntgemmFullyConnectedParam>(attrs.parsed);
-  return params.no_bias ? 2 : 3;
+  return params.no_bias ? 3 : 4;
 })
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"A", "B"};
+    const IntgemmFullyConnectedParam& params = nnvm::get<IntgemmFullyConnectedParam>(attrs.parsed);
+    return params.no_bias ? std::vector<std::string>{"A", "weight", "scaling"} : std::vector<std::string>{"A", "weight", "scaling", "bias"};
   })
 .set_attr<mxnet::FInferShape>("FInferShape", IntgemmFullyConnectedOpShape)
 .set_attr<nnvm::FInferType>("FInferType", IntgemmFullyConnectedOpType)
 //.set_attr<FInferStorageType>("FInferStorageType", IntgemmFullyConnectedOpStorageType)
 .set_attr<FCompute>("FCompute<cpu>", IntgemmFullyConnectedOpForwardCPU)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::pair<int, int> >{{0, 0}};
-  })
-.add_argument("data", "NDArray-or-Symbol", "First (A) argument to multiplication. Tensor of float32 (quantized on the fly) or int8 from intgemm_preparea. If you use a different quantizer, be sure to ban -128. The last dimension must be a multiple of 64.")
+.add_argument("A", "NDArray-or-Symbol", "First (A) argument to multiplication. Tensor of float32 (quantized on the fly) or int8 from intgemm_preparea. If you use a different quantizer, be sure to ban -128. The last dimension must be a multiple of 64.")
 .add_argument("weight", "NDArray-or-Symbol", "Second (B) argument to multiplication. Tensor of int8 from intgemm_prepareb. The last dimension must be a multiple of 64.  The product of non-last dimensions must be a multiple of 8.")
+.add_argument("scaling", "NDArray-or-Symbol", "Scaling factor to apply if output type is float32.")
 .add_argument("bias", "NDArray-or-Symbol", "Bias term.")
+// TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,
+// will be reverted after the improvement of CachedOP is done.
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_arguments(IntgemmFullyConnectedParam::__FIELDS__());
 
 }  // namespace op
