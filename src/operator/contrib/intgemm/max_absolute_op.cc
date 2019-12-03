@@ -69,14 +69,13 @@ inline bool MaxAbsoluteOpStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 void MaxAbsoluteOpForwardCPU(const nnvm::NodeAttrs& attrs,
-                          const OpContext& ctx,
-                          const std::vector<TBlob>& inputs,
-                          const std::vector<OpReqType>& req,
-                          const std::vector<TBlob>& outputs) {
+                             const OpContext& ctx,
+                             const std::vector<TBlob>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  CHECK_EQ(req[0], kWriteTo) << "TODO request types other than write";
   const TBlob &in = inputs.front(), &out = outputs.front();
   CHECK_EQ(in.type_flag_, mshadow::kFloat32);
   CHECK_EQ(out.type_flag_, mshadow::kFloat32);
@@ -86,7 +85,7 @@ void MaxAbsoluteOpForwardCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(size % (512 / 8 / sizeof(float)), 0) << "The total size of the input must be a multiple of 16.";
 
   const float *data = in.dptr<float>();
-  *out.dptr<float>() = ::intgemm::MaxAbsolute(data, data + size);
+  KERNEL_ASSIGN(*out.dptr<float>(), req[0], ::intgemm::MaxAbsolute(data, data + size));
 }
 
 NNVM_REGISTER_OP(_contrib_intgemm_maxabsolute)
@@ -109,7 +108,6 @@ mxnet.nd.contrib.intgemm_maxabsolute(arr) == arr.abs().max()
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
 .add_argument("data", "NDArray-or-Symbol", "Tensor to compute maximum absolute value of");
-//.add_arguments(MaxAbsoluteParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet
