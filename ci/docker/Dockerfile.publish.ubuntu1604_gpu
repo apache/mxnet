@@ -40,5 +40,8 @@ RUN /work/ubuntu_adduser.sh
 
 COPY runtime_functions.sh /work/
 
+# fix the missing libcuda.so.1
+RUN ln -s /usr/local/cuda/lib64/stubs/libcuda.so /usr/local/cuda/lib64/stubs/libcuda.so.1
+
 WORKDIR /work/mxnet
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib:/usr/local/cuda/lib64/stubs
