@@ -607,7 +607,27 @@ def multi_mp_adamw_update(weights, grads, mean, var, weights32, rescale_grad, lr
                                                     **kwargs)
 
 def multi_lamb_update(weights, grads, mean, var, step_count,
-                      out=None, name=None, num_tensors=0, **kwargs):
+                      out=None, num_tensors=0, **kwargs):
+    """Given a list of gradients, update weights, mean and variance of multiple tensors
+    following LAMB Optimer implementation.
+
+    Parameters
+    ----------
+    weights : List of NDArrays containing the input weights of multiple tensors
+
+    grads : List of NDArrays containing input gradients
+
+    mean : List of NDArrays containing mean of multiple tensors to be updated
+
+    var : List of NDArrays containing variance of multiple tensors to be updated
+
+    step_count : List of scalars with the number of update step for each tensor
+
+    out: List of NDArrays where the updated weights will be stored
+
+    num_tensors : Number of NDArrays/tensors in the list
+    """
+
     if not num_tensors:
         num_tensors = len(weights)
     temp_list = _flatten_list(zip(weights, grads, mean, var))
@@ -615,11 +635,32 @@ def multi_lamb_update(weights, grads, mean, var, step_count,
                                                 out=out,
                                                 num_tensors=num_tensors,
                                                 step_count=step_count,
-                                                name=name,
                                                 **kwargs)
 
 def multi_mp_lamb_update(weights, grads, mean, var, weights32, step_count,
-                         out=None, name=None, num_tensors=0, **kwargs):
+                         out=None, num_tensors=0, **kwargs):
+    """Given a list of gradients, update weights, mean and variance of multiple tensors
+    following LAMB Optimer implementation. It uses Mixed-Precision..
+
+    Parameters
+    ----------
+    weights : List of NDArrays containing the input weights of multiple tensors
+
+    grads : List of NDArrays containing input gradients
+
+    mean : List of NDArrays containing mean of multiple tensors to be updated
+
+    var : List of NDArrays containing variance of multiple tensors to be updated
+
+    weights32 : Master copy of weights in FP32
+
+    step_count : List of scalars with the number of update step for each tensor
+
+    out: List of NDArrays where the updated weights will be stored
+
+    num_tensors : Number of NDArrays/tensors in the list
+    """
+
     if not num_tensors:
         num_tensors = len(weights)
     temp_list = _flatten_list(zip(weights, grads, mean, var, weights32))
@@ -627,5 +668,4 @@ def multi_mp_lamb_update(weights, grads, mean, var, weights32, step_count,
                                                    out=out,
                                                    num_tensors=num_tensors,
                                                    step_count=step_count,
-                                                   name=name,
                                                    **kwargs)

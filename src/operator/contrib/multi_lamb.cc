@@ -197,8 +197,8 @@ NNVM_REGISTER_OP(_multi_lamb_update)
     std::vector<uint32_t> ret;
     const auto iMax = num_tensors(attrs);
     for (size_t i = 0; i < iMax; ++i) {
-      ret.push_back(i * 5 + 2);
-      ret.push_back(i * 5 + 3);
+      ret.push_back(i * 4 + 2);
+      ret.push_back(i * 4 + 3);
     }
     return ret;
   })

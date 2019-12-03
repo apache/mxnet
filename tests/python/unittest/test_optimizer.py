@@ -766,7 +766,7 @@ def test_adam():
 class PyMultiLAMB(mx.optimizer.Optimizer):
     """python reference implemenation of lamb"""
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-6,
-                 lower_bound=1e-3, upper_bound=10.0, bias_correction=False, 
+                 lower_bound=None, upper_bound=None, bias_correction=True,
                  multi_precision=False, clip_gradient=-1, **kwargs):
         super(PyMultiLAMB, self).__init__(learning_rate=learning_rate, **kwargs)
         self.beta1 = beta1
@@ -852,8 +852,6 @@ def test_multilamb():
                         kwarg.update(rg_option)
                         kwarg.update(wd_option)
                         kwarg.update(bias_option)
-                        print(dtype)
-                        print(kwarg)
                         if (dtype == np.float16):
                             kwarg.update({'multi_precision': True})
                         atol = 1e-3

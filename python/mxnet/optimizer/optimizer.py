@@ -1094,9 +1094,13 @@ class MultiLAMB(Optimizer):
 
         kwargs = {'learning_rate': lr, 'beta1': self.beta1, 'beta2': self.beta2,
                   'epsilon': self.epsilon, 'wd': wd,
-                  'lower_bound': self.lower_bound, 'upper_bound': self.upper_bound,
                   'bias_correction': self.bias_correction,
                   'rescale_grad': self.rescale_grad}
+
+        if self.lower_bound:
+            kwargs['lower_bound'] = self.lower_bound
+        if self.upper_bound:
+            kwargs['upper_bound'] = self.upper_bound
 
         if self.clip_gradient:
             kwargs['clip_gradient'] = self.clip_gradient
