@@ -1057,7 +1057,7 @@ class MultiLAMB(Optimizer):
     """multiLAMB optimizer.
     """
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-6,
-                 lower_bound=1e-3, upper_bound=10.0, bias_correction=False, **kwargs):
+                 lower_bound=None, upper_bound=None, bias_correction=True, **kwargs):
         super(MultiLAMB, self).__init__(learning_rate=learning_rate, **kwargs)
         self.beta1 = beta1
         self.beta2 = beta2

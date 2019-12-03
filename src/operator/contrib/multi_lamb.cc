@@ -94,9 +94,9 @@ struct MultiLAMB_step2_kernel {
                                             MPDType(kernel_params.weights[index][i]);
         float r1 = sqrt(sumSqWeigths[index]);
         float r2 = sqrt(sumSqtemp_g[index]);
-        if(lower_bound >= 0)
+        if (lower_bound >= 0)
           r1 = std::max(r1, lower_bound);
-        if(upper_bound >= 0)
+        if (upper_bound >= 0)
           r1 = std::min(r1, upper_bound);
 
         // calculate lamb_trust_ratio

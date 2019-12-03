@@ -123,10 +123,10 @@ __global__ void kernel_step2(const MultiLAMBKernelParam<DType, MPDType> kernel_p
 
   MPDType r1 = sqrtf(sumSqWeigths[tensorID]);
   MPDType r2 = sqrtf(sumSqtemp_g[tensorID]);
-  if(lower_bound >= 0)
-    r1 = max(r1, lower_bound);
-  if(upper_bound >= 0)
-          r1 = min(r1, upper_bound);
+  if (lower_bound >= 0)
+      r1 = max(r1, lower_bound);
+  if (upper_bound >= 0)
+      r1 = min(r1, upper_bound);
 
   MPDType lr_adjusted;
   if (r1 == 0.0f || r2 == 0.0f)
