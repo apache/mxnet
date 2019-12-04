@@ -22,13 +22,19 @@ from __future__ import absolute_import
 import ctypes
 import numpy as _np
 from . import _op as _mx_np_op
-from ...base import _LIB, SymbolHandle, numeric_types, mx_uint
+from ...base import _LIB, SymbolHandle, numeric_types, mx_uint, integer_types, string_types
+from ...base import c_str
+from ...base import py_str
 from ...util import check_call, set_module, _sanity_check_params
 from ...util import wrap_np_unary_func, wrap_np_binary_func
 from ...context import current_context
-from ..symbol import Symbol
+from ..symbol import Symbol, Group
 from .._internal import _set_np_symbol_class
 from . import _internal as _npi
+try:
+    from __builtin__ import slice as py_slice
+except ImportError:
+    from builtins import slice as py_slice
 
 __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'arctan2',
            'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
@@ -37,38 +43,136 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot', 'histogram', 'eye',
            'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'split', 'vsplit', 'concatenate', 'append',
            'stack', 'vstack', 'column_stack', 'dstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax',
-           'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'hanning', 'hamming', 'blackman', 'flip',
-           'around', 'hypot', 'bitwise_xor', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take',
-           'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal',
-           'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'shares_memory', 'may_share_memory', 'diff',
-           'resize', 'nan_to_num', 'where']
-
-
-def _num_outputs(sym):
-    return len(sym.as_nd_ndarray())
+           'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index', 'hanning', 'hamming', 'blackman',
+           'flip', 'around', 'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril',
+           'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
+           'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'shares_memory',
+           'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where']
 
 
 @set_module('mxnet.symbol.numpy')
 class _Symbol(Symbol):
-    def __getitem__(self, key):
-        num_outputs = _num_outputs(self)
-        if num_outputs == 1:
-            raise NotImplementedError
-        if not isinstance(key, int):
-            raise NotImplementedError
-        if key >= num_outputs:
-            # Important, python determines the end by this exception
-            raise IndexError
-        handle = SymbolHandle()
-        check_call(_LIB.MXSymbolGetOutput(
-            self.handle, mx_uint(key), ctypes.byref(handle)))
-        return _Symbol(handle=handle)
+    def __getitem__(self, key): # pylint: disable = too-many-return-statements, inconsistent-return-statements
+        """Return self[key].
+
+        If the symbol is a symbol list, it returns the i-th symbol or a list of symbols
+        selected by key.
+
+        Otherwise, it outputs a symbol that slice the input by the given key. Currently, this
+        function supports the following types of key:
+
+        - integer types, e.g., int, long, np.int32, np.int64
+        - slice containing integer constants, e.g., slice(0, None, None)
+        - tuple contaning the above elements, which is used for multidimensional indexing
+
+        Parameters
+        ----------
+        key : int, slice, or tuple of all previous types
+            Indexing key.
+
+        """
+        num_outputs = self.num_outputs
+        if num_outputs > 1:
+            num_outputs = self.num_outputs
+            if isinstance(key, integer_types):
+                key = int(key)
+                if key < -num_outputs or key >= num_outputs:
+                    raise IndexError('list index out of range')
+                if key < 0:
+                    key += num_outputs
+                ret_handle = SymbolHandle()
+                check_call(_LIB.MXSymbolGetOutput(self.handle, mx_uint(key),
+                                                  ctypes.byref(ret_handle)))
+                return _Symbol(handle=ret_handle)
+            elif isinstance(key, py_slice):
+                start, stop, step = key.indices(num_outputs)
+                return Group([self[i] for i in range(start, stop, step)], _Symbol)
+            else:
+                raise TypeError('indices of symbol group must be integers or slices, not {}'
+                                .format(type(key)))
+        else:
+            if isinstance(key, integer_types):
+                sliced = _npi.slice(self, [key], [key+1])
+                return _npi.reshape(sliced, (-3, -4))
+            elif isinstance(key, py_slice):
+                if key.step is None or key.step != 0:
+                    start = [None] if key.start is None else key.start
+                    stop = [None] if key.stop is None else key.stop
+                    return _npi.slice(self, start, stop, key.step)
+                else:
+                    raise ValueError("slice step cannot be zero")
+            elif isinstance(key, tuple):
+                begin = []
+                end = []
+                step = []
+                new_shape = ()
+                if len(key) == 0:
+                    return self
+                for index in key:
+                    if isinstance(index, py_slice):
+                        if index.step is not None and index.step == 0:
+                            raise ValueError("slice step cannot be zero")
+                        begin.append(index.start)
+                        end.append(index.stop)
+                        step.append(index.step)
+                        new_shape += (-2,)
+                    elif isinstance(index, integer_types):
+                        if index >= 0:
+                            begin.append(index)
+                            end.append(index+1)
+                            step.append(1)
+                        else:
+                            begin.append(index)
+                            end.append(index - 1)
+                            step.append(-1)
+                        new_shape += (-3,)
+                    else:
+                        raise IndexError('Only integer, slice, or tuple of these types'
+                                         ' are supported! Received key={}'.format(key))
+                new_shape += (-4,)
+                sliced = _npi.slice(self, begin, end, step)
+                return _npi.reshape(sliced, new_shape)
+            else:
+                raise IndexError('Only integer, slice, or tuple of these types are supported! '
+                                 'Received key={}'.format(key))
 
     def __setitem__(self, key, value):
         raise NotImplementedError
 
+    def __repr__(self):
+        """Gets a string representation of the symbol."""
+        if self.num_outputs > 1:
+            name = ', '.join([str(ele_sym) for ele_sym in self])
+            return '<%s group [%s]>' % (self.__class__.__name__, name)
+        else:
+            return '<%s %s>' % (self.__class__.__name__, self.name)
+
+    @property
+    def name(self):
+        """Gets name string from the symbol, this function only works for symbols
+         that are not a list (grouped symbols).
+
+        Returns
+        -------
+        value : str
+            The name of this symbol, returns ``None`` for list symbol.
+        """
+        if self.num_outputs > 1:
+            raise AttributeError('This is a Group Symbol that contains {} elements and'
+                                 ' does not have a name. Use str(sym) to print the name of '
+                                 'all the elements instead.'.format(self.num_outputs))
+        ret = ctypes.c_char_p()
+        success = ctypes.c_int()
+        check_call(_LIB.MXSymbolGetName(
+            self.handle, ctypes.byref(ret), ctypes.byref(success)))
+        assert success.value != 0,\
+            'Fail to infer the name of a symbol that is not a list!'
+        return py_str(ret.value)
+
     def __iter__(self):
-        raise AttributeError('_Symbol object has no attribute __iter__')
+        if self.num_outputs == 1:
+            raise TypeError("'{}' is not iterable.".format(self))
+        return iter((self[i] for i in range(self.num_outputs)))
 
     def __add__(self, other):
         """x.__add__(y) <=> x + y"""
@@ -159,7 +263,17 @@ class _Symbol(Symbol):
         return less_equal(self, other)
 
     def __len__(self):
-        raise NotImplementedError
+        if self.num_outputs == 1:
+            raise TypeError('{} is not a list and does not support len().'.format(self))
+        return self.num_outputs
+
+    @property
+    def num_outputs(self):
+        """The number of outputs of a symbol. If the symbol is not a symbollist, it returns 1.
+        Otherwise, it returns the number of elements of the list."""
+        output_count = mx_uint()
+        check_call(_LIB.MXSymbolGetNumOutputs(self.handle, ctypes.byref(output_count)))
+        return output_count.value
 
     def as_nd_ndarray(self):
         """Convert _Symbol to mxnet.symbol.Symbol to use its convenience fluent methods."""
@@ -3658,6 +3772,38 @@ def ravel(x, order='C'):
         raise TypeError('type {} not supported'.format(str(type(x))))
 
 
+def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-name
+    """
+    Converts a flat index or array of flat indices into a tuple of coordinate arrays.
+
+    Parameters:
+    -------------
+    indices : array_like
+            An integer array whose elements are indices into the flattened version of an array of dimensions shape.
+            Before version 1.6.0, this function accepted just one index value.
+    shape : tuple of ints
+            The shape of the array to use for unraveling indices.
+
+    Returns:
+    -------------
+    unraveled_coords : ndarray
+            Each row in the ndarray has the same shape as the indices array.
+            Each column in the ndarray represents the unravelled index
+
+    Examples:
+    -------------
+    >>> np.unravel_index([22, 41, 37], (7,6))
+    ([3. 6. 6.]
+      [4. 5. 1.])
+    >>> np.unravel_index(1621, (6,7,8,9))
+    (3, 1, 4, 1)
+    """
+    if order == 'C':
+        return _npi.unravel_index_fallback(indices, shape=shape)
+    else:
+        raise NotImplementedError('Don not support column-major (Fortran-style) order at this moment')
+
+
 @set_module('mxnet.symbol.numpy')
 def hanning(M, dtype=_np.float32, ctx=None):
     r"""Return the Hanning window.
@@ -4101,6 +4247,30 @@ def bitwise_xor(x1, x2, out=None, **kwargs):
         Result.
     """
     return _ufunc_helper(x1, x2, _npi.bitwise_xor, _np.bitwise_xor, _npi.bitwise_xor_scalar, None, out)
+
+
+@set_module('mxnet.symbol.numpy')
+@wrap_np_binary_func
+def bitwise_or(x1, x2, out=None, **kwargs):
+    r"""
+    Compute the bit-wise OR of two arrays element-wise.
+
+    Parameters
+    ----------
+    x1, x2 : _Symbol or scalar
+        Only integer and boolean types are handled. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which becomes the shape of the output).
+    out : _Symbol or None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : _Symbol or scalar
+        Result.
+    """
+    return _ufunc_helper(x1, x2, _npi.bitwise_or, _np.bitwise_or, _npi.bitwise_or_scalar, None, out)
 
 
 @set_module('mxnet.symbol.numpy')
@@ -4932,6 +5102,63 @@ def where(condition, x, y):
 
     """
     return _npi.where(condition, x, y, out=None)
+
+
+@set_module('mxnet.symbol.numpy')
+def load(fname):
+    """Loads symbol from a JSON file.
+    You can also use pickle to do the job if you only work on python.
+    The advantage of load/save is the file is language agnostic.
+    This means the file saved using save can be loaded by other language binding of mxnet.
+    You also get the benefit being able to directly load/save from cloud storage(S3, HDFS).
+
+    Parameters
+    ----------
+    fname : str
+        The name of the file, examples:
+        - `s3://my-bucket/path/my-s3-symbol`
+        - `hdfs://my-bucket/path/my-hdfs-symbol`
+        - `/path-to/my-local-symbol`
+
+    Returns
+    -------
+    sym : _Symbol
+        The loaded symbol.
+
+    See Also
+    --------
+    _Symbol.save : Used to save symbol into file.
+    """
+    if not isinstance(fname, string_types):
+        raise TypeError('fname needs to be string')
+    handle = SymbolHandle()
+    check_call(_LIB.MXSymbolCreateFromFile(c_str(fname), ctypes.byref(handle)))
+    return _Symbol(handle)
+
+
+@set_module('mxnet.symbol.numpy')
+def load_json(json_str):
+    """Loads symbol from json string.
+
+    Parameters
+    ----------
+    json_str : str
+        A JSON string.
+
+    Returns
+    -------
+    sym : Symbol
+        The loaded symbol.
+
+    See Also
+    --------
+    _Symbol.tojson : Used to save symbol into json string.
+    """
+    if not isinstance(json_str, string_types):
+        raise TypeError('json_str needs to be string')
+    handle = SymbolHandle()
+    check_call(_LIB.MXSymbolCreateFromJSON(c_str(json_str), ctypes.byref(handle)))
+    return _Symbol(handle)
 
 
 _set_np_symbol_class(_Symbol)

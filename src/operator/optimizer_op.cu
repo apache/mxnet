@@ -277,5 +277,12 @@ NNVM_REGISTER_OP(ftrl_update)
 NNVM_REGISTER_OP(_sparse_adagrad_update)
 .set_attr<FComputeEx>("FComputeEx<gpu>", AdagradUpdateEx<gpu>);
 
+NNVM_REGISTER_OP(lamb_update_phase1)
+.set_attr<FCompute>("FCompute<gpu>", LambUpdatePhaseOne<gpu>);
+
+NNVM_REGISTER_OP(lamb_update_phase2)
+.set_attr<FCompute>("FCompute<gpu>", LambUpdatePhaseTwo<gpu>);
+
+
 }  // namespace op
 }  // namespace mxnet
