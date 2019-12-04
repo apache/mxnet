@@ -95,6 +95,10 @@ CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 # use old thread local implementation in DMLC-CORE
 CFLAGS += -DDMLC_MODERN_THREAD_LOCAL=0
 
+ifneq ($(USE_X86_ARCH), NONE)
+	CFLAGS += -march=$(USE_X86_ARCH)
+endif
+
 ifeq ($(DEV), 1)
 	CFLAGS += -g -Werror
 	NVCCFLAGS += -Werror cross-execution-space-call
