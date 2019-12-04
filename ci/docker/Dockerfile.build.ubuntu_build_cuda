@@ -62,4 +62,11 @@ RUN /work/ubuntu_adduser.sh
 
 COPY runtime_functions.sh /work/
 
+# hot fix on CI due to nvidia-docker problem
+# tracked at: https://github.com/NVIDIA/nvidia-docker/issues/1143
+# please revert this commit if nvidia-docker is fixed
+RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64/libcublas10_10.2.1.243-1_amd64.deb
+RUN sudo dpkg -i libcublas10_10.2.1.243-1_amd64.deb
+RUN sudo apt-get -y install -f
+
 WORKDIR /work/mxnet
