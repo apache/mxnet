@@ -376,6 +376,12 @@ inline nnvm::NodePtr MakeNode(
   if (p->op()->attr_parser != nullptr) {
     p->op()->attr_parser(&(p->attrs));
   }
+  if (inputs != nullptr) {
+    CHECK_EQ(p->num_inputs(), p->inputs.size())
+      << "Number of inputs to operator " << op_name << " (" << p->num_inputs()
+      << ") does not match the actual number of inputs provided to operator "
+      << name << " (" << p->inputs.size() << ").";
+  }
   return p;
 }
 
