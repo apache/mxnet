@@ -67,6 +67,8 @@ option(USE_ASAN "Enable Clang/GCC ASAN sanitizers." OFF)
 option(ENABLE_TESTCOVERAGE "Enable compilation with test coverage metric output" OFF)
 option(USE_INT64_TENSOR_SIZE "Use int64_t to represent the total number of elements in a tensor" OFF)
 option(BUILD_CYTHON_MODULES "Build cython modules." OFF)
+cmake_dependent_option(USE_SPLIT_ARCH_DLL "Build a separate DLL for each Cuda arch (Windows only)." ON "MSVC" OFF)
+
 
 message(STATUS "CMAKE_CROSSCOMPILING ${CMAKE_CROSSCOMPILING}")
 message(STATUS "CMAKE_HOST_SYSTEM_PROCESSOR ${CMAKE_HOST_SYSTEM_PROCESSOR}")
@@ -100,6 +102,7 @@ endif()
 
 if(MSVC)
   set(SYSTEM_ARCHITECTURE x86_64)
+  enable_language(ASM_MASM)
 else()
   execute_process(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE SYSTEM_ARCHITECTURE)
 endif()
@@ -192,9 +195,11 @@ else()
     add_definitions(-DDMLC_USE_CXX11=1)
     add_definitions(-DDMLC_USE_CXX14=1)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+    set(CMAKE_CUDA_STANDARD 14)
   elseif(SUPPORT_CXX11)
     add_definitions(-DDMLC_USE_CXX11=1)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+    set(CMAKE_CUDA_STANDARD 11)
   elseif(SUPPORT_CXX0X)
     add_definitions(-DDMLC_USE_CXX11=1)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
@@ -678,30 +683,66 @@ if(UNIX)
   target_link_libraries(mxnet_static PUBLIC ${CMAKE_DL_LIBS})
   target_compile_options(sample_lib PUBLIC -shared)
   set_target_properties(mxnet_static PROPERTIES OUTPUT_NAME mxnet)
-else()
-  add_library(mxnet SHARED ${SOURCE})
+elseif(MSVC)
   target_compile_options(sample_lib PUBLIC /LD)
   set_target_properties(sample_lib PROPERTIES PREFIX "lib")
+
+  if(USE_CUDA)
+    if(FIRST_CUDA AND MSVC)
+      if(USE_SPLIT_ARCH_DLL)
+        add_executable(gen_warp tools/windowsbuild/gen_warp.cpp)
+        add_library(mxnet SHARED tools/windowsbuild/warp_dll.cpp ${CMAKE_BINARY_DIR}/warp_gen_cpp.cpp
+                    ${CMAKE_BINARY_DIR}/warp_gen.asm)
+        target_link_libraries(mxnet PRIVATE cudart Shlwapi)
+        list(GET cuda_arch 0 mxnet_first_arch)
+        foreach(arch ${cuda_arch})
+          add_library(mxnet_${arch} SHARED ${SOURCE})
+          target_compile_options(
+            mxnet_${arch}
+            PRIVATE
+            "$<$<COMPILE_LANGUAGE:CUDA>:--gpu-architecture=compute_${arch}>"
+          )
+          target_compile_options(
+            mxnet_${arch}
+            PRIVATE
+            "$<$<COMPILE_LANGUAGE:CUDA>:--gpu-code=sm_${arch},compute_${arch}>"
+          )
+          target_compile_options(
+            mxnet_${arch} 
+            PRIVATE "$<$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MTd -Gy /bigobj>")
+          target_compile_options(
+            mxnet_${arch}
+            PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
+        endforeach()
+
+        add_custom_command(
+          OUTPUT ${CMAKE_BINARY_DIR}/warp_gen_cpp.cpp ${CMAKE_BINARY_DIR}/warp_gen.asm
+          COMMAND gen_warp $<TARGET_FILE:mxnet_${mxnet_first_arch}> WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/ DEPENDS $<TARGET_FILE:mxnet_${mxnet_first_arch}>)
+      else(USE_SPLIT_ARCH_DLL)
+        string(REPLACE ";" " " NVCC_FLAGS_ARCH "${NVCC_FLAGS_ARCH}")
+        set(CMAKE_CUDA_FLAGS "${NVCC_FLAGS_ARCH}")
+        add_library(mxnet SHARED ${SOURCE})
+        target_compile_options(
+            mxnet 
+            PRIVATE "$<$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MTd -Gy /bigobj>")
+        target_compile_options(
+            mxnet
+            PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
+
+      endif(USE_SPLIT_ARCH_DLL)
+    else()
+      add_library(mxnet SHARED ${SOURCE})
+    endif()
+  else()
+    add_library(mxnet SHARED ${SOURCE})
+  endif()
+
 endif()
 
-if(USE_CUDA AND MSVC)
-  target_compile_options(mxnet PUBLIC "$<$<CONFIG:DEBUG>:-Xcompiler=-MTd -Gy>")
-  target_compile_options(mxnet PUBLIC "$<$<CONFIG:RELEASE>:-Xcompiler=-MT -Gy>")
-endif()
 if(USE_DIST_KVSTORE)
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/ps-lite/CMakeLists.txt)
     add_subdirectory("3rdparty/ps-lite")
     list(APPEND pslite_LINKER_LIBS pslite protobuf)
-    target_link_libraries(mxnet PUBLIC debug ${pslite_LINKER_LIBS_DEBUG})
-    target_link_libraries(mxnet PUBLIC optimized ${pslite_LINKER_LIBS_RELEASE})
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-      list(APPEND mxnet_LINKER_LIBS ${pslite_LINKER_LIBS_DEBUG})
-    else()
-      list(APPEND mxnet_LINKER_LIBS ${pslite_LINKER_LIBS_RELEASE})
-    endif()
-    target_link_libraries(mxnet PUBLIC debug ${pslite_LINKER_LIBS_DEBUG})
-    target_link_libraries(mxnet PUBLIC optimized ${pslite_LINKER_LIBS_RELEASE})
-
   else()
     set(pslite_LINKER_LIBS protobuf zmq-static)
   endif()
@@ -735,13 +776,24 @@ if(USE_TVM_OP)
     )
 endif()
 
-target_link_libraries(mxnet PUBLIC ${mxnet_LINKER_LIBS})
-
 if(USE_PLUGINS_WARPCTC)
-  target_link_libraries(mxnet PUBLIC debug ${WARPCTC_LIB_DEBUG})
-  target_link_libraries(mxnet PUBLIC optimized ${WARPCTC_LIB_RELEASE})
+  list(APPEND mxnet_LINKER_LIBS ${WARPCTC_LIB})
 endif()
 
+if(MSVC)
+  if(FIRST_CUDA AND USE_SPLIT_ARCH_DLL)
+    foreach(arch ${cuda_arch})
+      target_link_libraries(mxnet_${arch} PUBLIC ${mxnet_LINKER_LIBS})
+      target_link_libraries(mxnet_${arch} PUBLIC dmlc)
+    endforeach()
+  else()
+    target_link_libraries(mxnet PUBLIC ${mxnet_LINKER_LIBS})
+    target_link_libraries(mxnet PUBLIC dmlc)
+  endif()
+else()
+  target_link_libraries(mxnet PUBLIC ${mxnet_LINKER_LIBS})
+  target_link_libraries(mxnet PUBLIC dmlc)
+endif()
 
 if(USE_OPENCV AND OpenCV_VERSION_MAJOR GREATER 2)
   add_executable(im2rec "tools/im2rec.cc")
@@ -761,7 +813,6 @@ else()
     is required for im2rec, im2rec will not be available")
 endif()
 
-target_link_libraries(mxnet PUBLIC dmlc)
 
 if(MSVC AND USE_MXNET_LIB_NAMING)
   set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
