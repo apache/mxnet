@@ -82,17 +82,16 @@ size_t UniqueImplGPU(NDArray *workspace, mshadow::Stream<gpu> *s,
 #else
   thrust::sort(thrust::cuda::par.on(stream),
                dptr, dptr + size, thrust::greater<IType>());
-  CUDA_CALL(cudaMemcpyAsync(sort_output_ptr, dptr, sort_output_bytes,
-                            cudaMemcpyDeviceToDevice, stream));
+  CUDA_CALL(cudaMemcpy(sort_output_ptr, dptr, sort_output_bytes,
+                       cudaMemcpyDeviceToDevice));
 #endif
   // execute unique kernel
   cub::DeviceSelect::Unique(temp_storage, unique_temp_bytes, sort_output_ptr, dptr,
                             num_selected_ptr, size, stream);
   // retrieve num selected unique values
   size_t num_selected_out = 0;
-  CUDA_CALL(cudaMemcpyAsync(&num_selected_out, num_selected_ptr, num_selected_bytes,
-                            cudaMemcpyDeviceToHost, stream));
-  CUDA_CALL(cudaStreamSynchronize(stream));
+  CUDA_CALL(cudaMemcpy(&num_selected_out, num_selected_ptr, num_selected_bytes,
+     cudaMemcpyDeviceToHost));
   return num_selected_out;
 }
 

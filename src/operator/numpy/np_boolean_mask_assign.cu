@@ -113,7 +113,6 @@ size_t* GetValidNumGPU(const OpContext &ctx, const DType *idx, const size_t idx_
   void* d_temp_storage = nullptr;
   size_t temp_storage_bytes = 0;
   Stream<gpu>* s = ctx.get_stream<gpu>();
-  cudaStream_t stream = Stream<gpu>::GetStream(s);
 
   // Calculate total temporary memory size
   cub::DeviceScan::ExclusiveSum(d_temp_storage,
@@ -121,7 +120,7 @@ size_t* GetValidNumGPU(const OpContext &ctx, const DType *idx, const size_t idx_
                                 prefix_sum,
                                 prefix_sum,
                                 idx_size + 1,
-                                stream);
+                                Stream<gpu>::GetStream(s));
   size_t buffer_size = (idx_size + 1) * sizeof(size_t);
   temp_storage_bytes += buffer_size;
   // Allocate memory on GPU and allocate pointer
@@ -145,7 +144,7 @@ size_t* GetValidNumGPU(const OpContext &ctx, const DType *idx, const size_t idx_
                                 prefix_sum,
                                 prefix_sum,
                                 idx_size + 1,
-                                stream);
+                                Stream<gpu>::GetStream(s));
 
   return prefix_sum;
 }
@@ -175,10 +174,8 @@ void NumpyBooleanAssignForwardGPU(const nnvm::NodeAttrs& attrs,
     MSHADOW_TYPE_SWITCH(mask.type_flag_, MType, {
       prefix_sum = GetValidNumGPU<MType>(ctx, mask.dptr<MType>(), mask_size);
     });
-    cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
-    CUDA_CALL(cudaMemcpyAsync(&valid_num, &prefix_sum[mask_size], sizeof(size_t),
-                              cudaMemcpyDeviceToHost, stream));
-    CUDA_CALL(cudaStreamSynchronize(stream));
+    CUDA_CALL(cudaMemcpy(&valid_num, &prefix_sum[mask_size], sizeof(size_t),
+                        cudaMemcpyDeviceToHost));
   }
   // If there's no True in mask, return directly
   if (valid_num == 0) return;

@@ -115,9 +115,8 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<gpu> *s,
                                       num_rows,
                                       mshadow::Stream<gpu>::GetStream(s));
         nnvm::dim_t nnr_out = 0;
-        CUDA_CALL(cudaMemcpyAsync(&nnr_out, &common_row_table[num_rows-1], sizeof(nnvm::dim_t),
-                                  cudaMemcpyDeviceToHost, mshadow::Stream<gpu>::GetStream(s)));
-        CUDA_CALL(cudaStreamSynchronize(mshadow::Stream<gpu>::GetStream(s)))
+        CUDA_CALL(cudaMemcpy(&nnr_out, &common_row_table[num_rows-1], sizeof(nnvm::dim_t),
+                              cudaMemcpyDeviceToHost));
         output.CheckAndAlloc({mshadow::Shape1(nnr_out)});
         Kernel<FillRspRowIdxKernel, gpu>::Launch(
           s, num_rows, output.aux_data(kIdx).dptr<IType>(), common_row_table, num_rows);

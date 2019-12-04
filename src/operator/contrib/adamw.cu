@@ -29,13 +29,11 @@ namespace mxnet {
 namespace op {
 
 template<>
-void GetScaleFloat<gpu>(mshadow::Stream<gpu> *s, const TBlob &scale_blob, float *pScalef) {
+void GetScaleFloat<gpu>(const TBlob &scale_blob, float *pScalef) {
   MSHADOW_REAL_TYPE_SWITCH(scale_blob.type_flag_, DType, {
     DType scale = 0;
-    cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
-    CUDA_CALL(cudaMemcpyAsync(&scale, scale_blob.dptr<DType>(), sizeof(DType),
-                              cudaMemcpyDeviceToHost, stream));
-    CUDA_CALL(cudaStreamSynchronize(stream));
+    CUDA_CALL(cudaMemcpy(&scale, scale_blob.dptr<DType>(), sizeof(DType),
+                         cudaMemcpyDeviceToHost));
     *pScalef = static_cast<float>(scale);
   })
 }

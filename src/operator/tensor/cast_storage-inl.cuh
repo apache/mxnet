@@ -162,9 +162,7 @@ void CastStorageDnsRspGPUImpl_(const OpContext& ctx,
 
   // Get total number of non-zero rows from device
   dim_t nnr = 0;
-  CUDA_CALL(cudaMemcpyAsync(&nnr, &row_flg[num_rows - 1], sizeof(dim_t),
-                            cudaMemcpyDeviceToHost, mshadow::Stream<gpu>::GetStream(s)));
-  CUDA_CALL(cudaStreamSynchronize(mshadow::Stream<gpu>::GetStream(s)));
+  CUDA_CALL(cudaMemcpy(&nnr, &row_flg[num_rows - 1], sizeof(dim_t), cudaMemcpyDeviceToHost));
 
   // Allocate rsp tensor row index array and fill
   rsp->CheckAndAllocAuxData(rowsparse::kIdx, Shape1(nnr));
@@ -557,9 +555,7 @@ inline void CastStorageDnsCsrImpl(const OpContext& ctx,
 
         // Receive total number of nnz values from device
         IType nnz = 0;
-        CUDA_CALL(cudaMemcpyAsync(&nnz, &(indptr[num_rows]), sizeof(IType), cudaMemcpyDeviceToHost,
-                                  mshadow::Stream<gpu>::GetStream(s)));
-        CUDA_CALL(cudaStreamSynchronize(mshadow::Stream<gpu>::GetStream(s)));
+        CUDA_CALL(cudaMemcpy(&nnz, &(indptr[num_rows]), sizeof(IType), cudaMemcpyDeviceToHost));
 
         // Allocate column index array and data array of the csr matrix
         csr->CheckAndAllocAuxData(csr::kIdx, Shape1(static_cast<dim_t>(nnz)));

@@ -97,7 +97,6 @@ void NumpyUniqueGPUNoneAxisImpl(const NumpyUniqueParam& param,
                                 const std::vector<NDArray> &outputs) {
   MXNET_NO_FLOAT16_TYPE_SWITCH(outputs[0].dtype(), DType, {
     mshadow::Stream<gpu> *stream = ctx.get_stream<gpu>();
-    cudaStream_t cuda_stream = mshadow::Stream<gpu>::GetStream(stream);
     auto policy = thrust::cuda::par.on(stream->stream_);
 
     DType* input_data = inputs[0].data().dptr<DType>();
@@ -121,9 +120,8 @@ void NumpyUniqueGPUNoneAxisImpl(const NumpyUniqueParam& param,
     thrust::device_vector<int32_t> prefix_sum(input_size, 0);
     thrust::inclusive_scan(policy, mask.begin(), mask.end(), prefix_sum.begin());
     int32_t valid_num = 0;
-    CUDA_CALL(cudaMemcpyAsync(&valid_num, thrust::raw_pointer_cast(&prefix_sum[input_size - 1]),
-                              sizeof(int32_t), cudaMemcpyDeviceToHost, cuda_stream));
-    CUDA_CALL(cudaStreamSynchronize(cuda_stream));
+    CUDA_CALL(cudaMemcpy(&valid_num, thrust::raw_pointer_cast(&prefix_sum[input_size - 1]),
+                          sizeof(int32_t), cudaMemcpyDeviceToHost));
     // set the output shape forcefully
     mxnet::TShape s(1, valid_num);
     const_cast<NDArray &>(outputs[0]).Init(s);
@@ -182,7 +180,6 @@ void NumpyUniqueGPUImpl(const NumpyUniqueParam& param,
     using namespace mshadow;
     using namespace mshadow::expr;
     Stream<gpu> *stream = ctx.get_stream<gpu>();
-    cudaStream_t cuda_stream = Stream<gpu>::GetStream(stream);
     auto policy = thrust::cuda::par.on(stream->stream_);
     const index_t actual_axis =
         param.axis.value() + ((param.axis.value() < 0) ? inputs[0].shape().ndim() : 0);
@@ -217,9 +214,8 @@ void NumpyUniqueGPUImpl(const NumpyUniqueParam& param,
     thrust::device_vector<int32_t> prefix_sum(temp_shape[0], 0);
     thrust::inclusive_scan(policy, mask.begin(), mask.end(), prefix_sum.begin());
     int32_t valid_num = 0;
-    CUDA_CALL(cudaMemcpyAsync(&valid_num, thrust::raw_pointer_cast(&prefix_sum[temp_shape[0] - 1]),
-                              sizeof(int32_t), cudaMemcpyDeviceToHost, cuda_stream));
-    CUDA_CALL(cudaStreamSynchronize(cuda_stream));
+    CUDA_CALL(cudaMemcpy(&valid_num, thrust::raw_pointer_cast(&prefix_sum[temp_shape[0] - 1]),
+                          sizeof(int32_t), cudaMemcpyDeviceToHost));
     // store the temp output data, reuse the space of 'input_tensor'
     Tensor<gpu, 3, DType> temp_tensor(workspace.dptr_,
         Shape3(valid_num, temp_shape[1], temp_shape[2]), stream);
@@ -286,12 +282,11 @@ void NumpyUniqueGPUForward(const nnvm::NodeAttrs& attrs,
     CHECK(!param.axis.has_value() || param.axis.value() == -1 || param.axis.value() == 0)
       << "Axis can only be -1 or 0 for scalor tensor";
     Stream<gpu> *s = ctx.get_stream<gpu>();
-    cudaStream_t stream = Stream<gpu>::GetStream(s);
     mxnet::TShape shape_1(1, 1);
     const_cast<NDArray &>(outputs[0]).Init(shape_1);
     MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
-      CUDA_CALL(cudaMemcpyAsync(outputs[0].data().dptr<DType>(), inputs[0].data().dptr<DType>(),
-                                sizeof(DType), cudaMemcpyDeviceToDevice, stream));
+      CUDA_CALL(cudaMemcpy(outputs[0].data().dptr<DType>(), inputs[0].data().dptr<DType>(),
+                           sizeof(DType), cudaMemcpyDeviceToDevice));
     });
     int output_flag = 0;
     if (param.return_index) {

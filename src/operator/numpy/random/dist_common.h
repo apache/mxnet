@@ -41,10 +41,10 @@ namespace mxnet {
 namespace op {
 
 template <typename xpu>
-void _copy(mshadow::Stream<xpu> *s, float *dst, float*src);
+void _copy(float *dst, float*src);
 
 template <typename xpu>
-void _copy(mshadow::Stream<xpu> *s, double *dst, double*src);
+void _copy(double *dst, double*src);
 
 
 inline int FillShape(const mxnet::TShape &lshape, const mxnet::TShape &rshape,
