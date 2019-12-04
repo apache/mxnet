@@ -51,8 +51,10 @@ class Estimator(object):
         The model used for training.
     loss : gluon.loss.Loss
         Loss (objective) function to calculate during training.
-    metrics : EvalMetric or list of EvalMetric
-        Metrics for evaluating models.
+    train_metrics : EvalMetric or list of EvalMetric
+        Training metrics for evaluating models on training dataset.
+    val_metrics : EvalMetric or list of EvalMetric
+        Validation metrics for evaluating models on validation dataset.
     initializer : Initializer
         Initializer to initialize the network.
     trainer : Trainer
@@ -105,7 +107,8 @@ class Estimator(object):
 
     def __init__(self, net,
                  loss,
-                 metrics=None,
+                 train_metrics=None,
+                 val_metrics=None,
                  initializer=None,
                  trainer=None,
                  context=None,
@@ -113,7 +116,8 @@ class Estimator(object):
                  eval_net=None):
         self.net = net
         self.loss = self._check_loss(loss)
-        self._train_metrics = _check_metrics(metrics)
+        self._train_metrics = _check_metrics(train_metrics)
+        self._val_metrics = _check_metrics(val_metrics)
         self._add_default_training_metrics()
         self._add_validation_metrics()
         self.evaluation_loss = self.loss
@@ -226,13 +230,17 @@ class Estimator(object):
             self._train_metrics.append(metric_loss(loss_name))
 
         for metric in self._train_metrics:
-            metric.name = "training " + metric.name
+            metric.name = 'training ' + metric.name
 
     def _add_validation_metrics(self):
-        self._val_metrics = [copy.deepcopy(metric) for metric in self._train_metrics]
+        if not self._val_metrics:
+            self._val_metrics = [copy.deepcopy(metric) for metric in self._train_metrics]
 
         for metric in self._val_metrics:
-            metric.name = "validation " + metric.name
+            if 'training' in metric.name:
+                metric.name = metric.name.replace('training', 'validation')
+            else:
+                metric.name = 'validation ' + metric.name
 
     @property
     def train_metrics(self):
@@ -260,17 +268,13 @@ class Estimator(object):
         data, label = self._get_data_and_label(val_batch, self.context, batch_axis)
         pred = [self.eval_net(x) for x in data]
         loss = [self.evaluation_loss(y_hat, y) for y_hat, y in zip(pred, label)]
-        # update metrics
-        for metric in val_metrics:
-            if isinstance(metric, metric_loss):
-                metric.update(0, loss)
-            else:
-                metric.update(label, pred)
+
+        return data, label, pred, loss
 
     def evaluate(self,
                  val_data,
-                 val_metrics,
-                 batch_axis=0):
+                 batch_axis=0,
+                 event_handlers=None):
         """Evaluate model on validation data.
 
         This function calls :py:func:`evaluate_batch` on each of the batches from the
@@ -281,21 +285,42 @@ class Estimator(object):
         ----------
         val_data : DataLoader
             Validation data loader with data and labels.
-        val_metrics : EvalMetric or list of EvalMetrics
-            Metrics to update validation result.
         batch_axis : int, default 0
             Batch axis to split the validation data into devices.
+        event_handlers : EventHandler or list of EventHandler
+            List of :py:class:`EventHandlers` to apply during validation. Besides
+            event handlers specified here, a default MetricHandler and a LoggingHandler
+            will be added if not specified explicitly.
         """
         if not isinstance(val_data, DataLoader):
             raise ValueError("Estimator only support input as Gluon DataLoader. Alternatively, you "
                              "can transform your DataIter or any NDArray into Gluon DataLoader. "
                              "Refer to gluon.data.DataLoader")
 
-        for metric in val_metrics:
+        for metric in self.val_metrics:
             metric.reset()
 
+        event_handlers = self._prepare_default_validation_handlers(event_handlers)
+
+        _, epoch_begin, batch_begin, batch_end, \
+        epoch_end, _ = self._categorize_handlers(event_handlers)
+
+        estimator_ref = self
+
+        for handler in epoch_begin:
+            handler.epoch_begin(estimator_ref)
+
         for _, batch in enumerate(val_data):
-            self.evaluate_batch(batch, val_metrics, batch_axis)
+            for handler in batch_begin:
+                handler.batch_begin(estimator_ref, batch=batch)
+
+            _, label, pred, loss = self.evaluate_batch(batch, self.val_metrics, batch_axis)
+
+            for handler in batch_end:
+                handler.batch_end(estimator_ref, batch=batch, pred=pred, label=label, loss=loss)
+
+        for handler in epoch_end:
+            handler.epoch_end(estimator_ref)
 
     def fit_batch(self, train_batch, batch_axis=0):
         """Trains the model on a batch of training data.
@@ -441,7 +466,7 @@ class Estimator(object):
             added_default_handlers.append(GradientUpdateHandler())
 
         if not any(isinstance(handler, MetricHandler) for handler in event_handlers):
-            added_default_handlers.append(MetricHandler(train_metrics=self.train_metrics))
+            added_default_handlers.append(MetricHandler(metrics=self.train_metrics))
 
         if not any(isinstance(handler, ValidationHandler) for handler in event_handlers):
             # no validation handler
@@ -456,8 +481,7 @@ class Estimator(object):
                 val_metrics = []
 
         if not any(isinstance(handler, LoggingHandler) for handler in event_handlers):
-            added_default_handlers.append(LoggingHandler(train_metrics=self.train_metrics,
-                                                         val_metrics=val_metrics))
+            added_default_handlers.append(LoggingHandler(metrics=self.train_metrics))
 
         # if there is a mix of user defined event handlers and default event handlers
         # they should have the same set of metrics
@@ -468,6 +492,29 @@ class Estimator(object):
         if mixing_handlers:
             # check if all handlers have the same set of references to metrics
             known_metrics = set(self.train_metrics + self.val_metrics)
+            for handler in event_handlers:
+                _check_handler_metric_ref(handler, known_metrics)
+
+        event_handlers.sort(key=lambda handler: getattr(handler, 'priority', 0))
+        return event_handlers
+
+    def _prepare_default_validation_handlers(self, event_handlers):
+        event_handlers = _check_event_handlers(event_handlers)
+        added_default_handlers = []
+
+        # add default logging handler and metric handler for validation
+        if not any(isinstance(handler, MetricHandler) for handler in event_handlers):
+            added_default_handlers.append(MetricHandler(metrics=self.val_metrics))
+
+        if not any(isinstance(handler, LoggingHandler) for handler in event_handlers):
+            added_default_handlers.append(LoggingHandler(metrics=self.val_metrics))
+
+        mixing_handlers = event_handlers and added_default_handlers
+        event_handlers.extend(added_default_handlers)
+
+        # check if all handlers refer to well-defined validation metrics
+        if mixing_handlers:
+            known_metrics = set(self.val_metrics)
             for handler in event_handlers:
                 _check_handler_metric_ref(handler, known_metrics)
 

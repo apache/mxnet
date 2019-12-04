@@ -128,28 +128,28 @@ class MetricHandler(EpochBegin, BatchEnd):
 
     Parameters
     ----------
-    train_metrics : List of EvalMetrics
-        Training metrics to be updated at batch end.
+    metrics : List of EvalMetrics
+        Metrics to be updated at batch end.
     priority : scalar
         Priority level of the MetricHandler. Priority level is sorted in ascending
         order. The lower the number is, the higher priority level the handler is.
     """
 
-    def __init__(self, train_metrics, priority=-1000):
-        self.train_metrics = _check_metrics(train_metrics)
+    def __init__(self, metrics):
+        self.metrics = _check_metrics(metrics)
         # order to be called among all callbacks
         # metrics need to be calculated before other callbacks can access them
         self.priority = priority
 
     def epoch_begin(self, estimator, *args, **kwargs):
-        for metric in self.train_metrics:
+        for metric in self.metrics:
             metric.reset()
 
     def batch_end(self, estimator, *args, **kwargs):
         pred = kwargs['pred']
         label = kwargs['label']
         loss = kwargs['loss']
-        for metric in self.train_metrics:
+        for metric in self.metrics:
             if isinstance(metric, metric_loss):
                 # metric wrapper for loss values
                 metric.update(0, loss)
@@ -211,20 +211,12 @@ class ValidationHandler(TrainBegin, BatchEnd, EpochEnd):
     def batch_end(self, estimator, *args, **kwargs):
         self.current_batch += 1
         if self.batch_period and self.current_batch % self.batch_period == 0:
-            self.eval_fn(val_data=self.val_data,
-                         val_metrics=self.val_metrics)
-            msg = '[Epoch %d] ValidationHandler: %d batches reached, ' \
-                  % (self.current_epoch, self.current_batch)
-            for monitor in self.val_metrics:
-                name, value = monitor.get()
-                msg += '%s: %.4f, ' % (name, value)
-            estimator.logger.info(msg.rstrip(','))
+            self.eval_fn(val_data=self.val_data)
 
     def epoch_end(self, estimator, *args, **kwargs):
         self.current_epoch += 1
         if self.epoch_period and self.current_epoch % self.epoch_period == 0:
-            self.eval_fn(val_data=self.val_data,
-                         val_metrics=self.val_metrics)
+            self.eval_fn(val_data=self.val_data)
 
 
 class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, BatchEnd):
@@ -239,10 +231,8 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
         Logging interval during training.
         log_interval='epoch': display metrics every epoch
         log_interval=integer k: display metrics every interval of k batches
-    train_metrics : list of EvalMetrics
-        Training metrics to be logged, logged at batch end, epoch end, train end.
-    val_metrics : list of EvalMetrics
-        Validation metrics to be logged, logged at epoch end, train end.
+    metrics : list of EvalMetrics
+        Metrics to be logged, logged at batch end, epoch end, train end.
     priority : scalar, default np.Inf
         Priority level of the LoggingHandler. Priority level is sorted in
         ascending order. The lower the number is, the higher priority level the
@@ -250,14 +240,12 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
     """
 
     def __init__(self, log_interval='epoch',
-                 train_metrics=None,
-                 val_metrics=None,
+                 metrics=None,
                  priority=np.Inf):
         super(LoggingHandler, self).__init__()
         if not isinstance(log_interval, int) and log_interval != 'epoch':
             raise ValueError("log_interval must be either an integer or string 'epoch'")
-        self.train_metrics = _check_metrics(train_metrics)
-        self.val_metrics = _check_metrics(val_metrics)
+        self.metrics = _check_metrics(metrics)
         self.batch_index = 0
         self.current_epoch = 0
         self.processed_samples = 0
@@ -288,7 +276,7 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
         train_time = time.time() - self.train_start
         msg = 'Train finished using total %ds with %d epochs. ' % (train_time, self.current_epoch)
         # log every result in train stats including train/validation loss & metrics
-        for metric in self.train_metrics + self.val_metrics:
+        for metric in self.metrics:
             name, value = metric.get()
             msg += '%s: %.4f, ' % (name, value)
         estimator.logger.info(msg.rstrip(', '))
@@ -307,7 +295,7 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
             if self.batch_index % self.log_interval == 0:
                 msg += 'time/interval: %.3fs ' % self.log_interval_time
                 self.log_interval_time = 0
-                for metric in self.train_metrics:
+                for metric in self.metrics:
                     # only log current training loss & metric after each interval
                     name, value = metric.get()
                     msg += '%s: %.4f, ' % (name, value)
@@ -316,15 +304,22 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
 
     def epoch_begin(self, estimator, *args, **kwargs):
         if isinstance(self.log_interval, int) or self.log_interval == 'epoch':
+            is_training = False
+            for metric in self.metrics:
+                if 'training' in metric.name:
+                    is_training = True
             self.epoch_start = time.time()
-            estimator.logger.info("[Epoch %d] Begin, current learning rate: %.4f",
-                                  self.current_epoch, estimator.trainer.learning_rate)
+            if is_training:
+                estimator.logger.info("[Epoch %d] Begin, current learning rate: %.4f",
+                                      self.current_epoch, estimator.trainer.learning_rate)
+            else:
+                estimator.logger.info("Validation Begin")
 
     def epoch_end(self, estimator, *args, **kwargs):
         if isinstance(self.log_interval, int) or self.log_interval == 'epoch':
             epoch_time = time.time() - self.epoch_start
             msg = '[Epoch %d] Finished in %.3fs, ' % (self.current_epoch, epoch_time)
-            for monitor in self.train_metrics + self.val_metrics:
+            for monitor in self.metrics:
                 name, value = monitor.get()
                 msg += '%s: %.4f, ' % (name, value)
             estimator.logger.info(msg.rstrip(', '))
