@@ -227,9 +227,11 @@ static __device__ T reduce(Op op, DeviceTensor tensor, int plane) {
 
 namespace {
   constexpr int inference_forward_threads = 512;
+  constexpr int shmem_elements = 1536;
 }  // namespace
 
-template <typename DType, typename AType, typename LType>
+template <typename DType, typename AType, typename LType, bool small_num_channels>
+__launch_bounds__(inference_forward_threads)
 __global__ void BatchNormalizationUpdateOutputInferenceKernel2(
   const DType* input,
   DType* output,
@@ -246,38 +248,57 @@ __global__ void BatchNormalizationUpdateOutputInferenceKernel2(
   const AType epsilon,
   const uint32_t flags) {
   constexpr int nvec = sizeof(LType) / sizeof(DType);
-  __shared__ union scratch {
-    LType aligned[inference_forward_threads];
-    DType separate[nvec * inference_forward_threads];
+  __shared__ AType saved_invstd[shmem_elements];
+  __shared__ AType saved_mean[shmem_elements];
+  __shared__ AType saved_weight[shmem_elements];
+  __shared__ AType saved_bias[shmem_elements];
+  union scratch {
+    LType aligned;
+    DType separate[nvec];
 
-    scratch() {}
-    ~scratch() {}
+    __device__ inline scratch() {}
+    __device__ inline ~scratch() {}
   } scratch;
+
+  if (small_num_channels) {
+    for (int i = threadIdx.x; i < num_channels; i += blockDim.x) {
+      saved_invstd[i] = variance_to_invstd(runningVar[i], epsilon);
+      saved_mean[i] = runningMean[i];
+      saved_weight[i] = (weight != nullptr && (flags & FIX_GAMMA_FLAG) == 0)
+                        ? weight[i]
+                        : 1;
+      saved_bias[i] = (bias != nullptr) ? bias[i] : 0;
+    }
+    __syncthreads();
+  }
 
   const index_t tid = threadIdx.x + blockIdx.x * blockDim.x;
   const index_t stride = blockDim.x * gridDim.x;
   const LType* input_aligned = reinterpret_cast<const LType*>(input);
   LType* output_aligned = reinterpret_cast<LType*>(output);
-  DType* my_scratch = scratch.separate + nvec * threadIdx.x;
   for (index_t i = tid; i < size / nvec; i += stride) {
-    scratch.aligned[threadIdx.x] = input_aligned[i];
+    scratch.aligned = input_aligned[i];
 #pragma unroll
     for (int j = 0; j < nvec; ++j) {
       const index_t my_channel = ((nvec * i + j) / inner_size) % num_channels;
-      AType current_input = static_cast<AType>(my_scratch[j]);
+      AType current_input = static_cast<AType>(scratch.separate[j]);
 
-      AType invstd = variance_to_invstd(runningVar[my_channel], epsilon);
-      AType mean = static_cast<AType>(runningMean[my_channel]);
-      AType gamma = (weight != nullptr && (flags & FIX_GAMMA_FLAG) == 0)
-                    ? static_cast<AType>(weight[my_channel])
-                    : 1;
-      AType beta = (bias != nullptr) ? static_cast<AType>(bias[my_channel])
-                                     : 0;
+      AType invstd = small_num_channels ? saved_invstd[my_channel]
+                                        : variance_to_invstd(runningVar[my_channel], epsilon);
+      AType mean = small_num_channels ? saved_mean[my_channel]
+                                      : runningMean[my_channel];
+      AType gamma = small_num_channels ? saved_weight[my_channel]
+                                       : ((weight != nullptr && (flags & FIX_GAMMA_FLAG) == 0)
+                                          ? weight[my_channel]
+                                          : 1);
+      AType beta = small_num_channels ? saved_bias[my_channel]
+                                      : ((bias != nullptr) ? bias[my_channel]
+                                                           : 0);
       current_input = gamma * (current_input - mean) * invstd + beta;
-      my_scratch[j] = current_input;
+      scratch.separate[j] = current_input;
     }
 
-    output_aligned[i] = scratch.aligned[threadIdx.x];
+    output_aligned[i] = scratch.aligned;
   }
 
   if (tid < num_channels) {
@@ -603,15 +624,27 @@ static void BatchNormalizationUpdateOutput(mshadow::Stream<gpu> *s,
       index_t size = input.InnerSize() * input.OuterSize() * input.ChannelCount();
       index_t aligned_size = ((size + nvec - 1) / nvec) * nvec;
       index_t blocks = (size + nvec * inference_forward_threads - 1) / (nvec * inference_forward_threads);
-      BatchNormalizationUpdateOutputInferenceKernel2<DType, AccReal, double>
-        <<<blocks, inference_forward_threads, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
-        input.dptr_, output.dptr_,
-        aligned_size, input.OuterSize(),
-        input.ChannelCount(), input.InnerSize(),
-        runningMean.dptr_, runningVar.dptr_,
-        saveMean.dptr_, saveInvStd.dptr_,
-        gamma_ptr, bias_ptr,
-        eps, flags);
+      if (input.ChannelCount() < shmem_elements) {
+        BatchNormalizationUpdateOutputInferenceKernel2<DType, AccReal, double, true>
+          <<<blocks, inference_forward_threads, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
+          input.dptr_, output.dptr_,
+          aligned_size, input.OuterSize(),
+          input.ChannelCount(), input.InnerSize(),
+          runningMean.dptr_, runningVar.dptr_,
+          saveMean.dptr_, saveInvStd.dptr_,
+          gamma_ptr, bias_ptr,
+          eps, flags);
+      } else {
+        BatchNormalizationUpdateOutputInferenceKernel2<DType, AccReal, double, false>
+          <<<blocks, inference_forward_threads, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
+          input.dptr_, output.dptr_,
+          aligned_size, input.OuterSize(),
+          input.ChannelCount(), input.InnerSize(),
+          runningMean.dptr_, runningVar.dptr_,
+          saveMean.dptr_, saveInvStd.dptr_,
+          gamma_ptr, bias_ptr,
+          eps, flags);
+      }
     } else {
     if (param.axis == -1 ||
         param.axis == in_data[batchnorm::kData].shape_.ndim() - 1) {
