@@ -40,14 +40,14 @@ namespace op {
 namespace cuda {
 
 /*!
- * \brief The `transpose_pseudo2D` based on chosen vectorized types. It transpose an array of
+ * \brief The `transpose_pseudo2D` based on chosen vectorized types. It transposes an array of
  *    shape (k, m, n) to (k, n, m)
  * \param out Pointer to output memory.
  * \param inp Pointer to input memory.
  * \param m First of tensor dimensions.
  * \param n Second of tensor dimensions.
  * \param nIterY The number of iterations in the y-dim of the thread to cover all rows. (1-->m)
- * \param nIterZ The number of iterations in the z-dim of the thread to cover all rows. (1-->m)
+ * \param nIterZ The number of iterations in the z-dim of the thread to cover all rows. (1-->k)
  * \tparam DType Data type
  * \tparam CType The type to load the data.
  * \tparam TSR the vectorized ratio.
