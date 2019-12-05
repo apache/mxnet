@@ -232,7 +232,7 @@ namespace {
 
 template <typename DType, typename AType, typename LType, bool small_num_channels>
 __launch_bounds__(inference_forward_threads)
-__global__ void BatchNormalizationUpdateOutputInferenceKernel2(
+__global__ void BatchNormalizationUpdateOutputInferenceKernel(
   const DType* input,
   DType* output,
   const index_t size,
@@ -301,53 +301,14 @@ __global__ void BatchNormalizationUpdateOutputInferenceKernel2(
     }
 
     output_aligned[i] = scratch.aligned;
-  }
 
-  if (tid < num_channels) {
-    saveMean[tid] = runningMean[tid];
-    saveInvStd[tid] = variance_to_invstd(runningVar[tid], epsilon);
-    if ((flags & WRITE_GAMMA_FLAG) != 0 && (flags & FIX_GAMMA_FLAG) != 0
-        && weight != nullptr) {
-      weight[tid] = 1;
-    }
-  }
-}
-
-template <typename DType, typename AccReal, typename DeviceTensor>
-__global__ void BatchNormalizationUpdateOutputInferenceKernel(
-  DeviceTensor input,
-  DeviceTensor output,
-  AccReal* runningMean,
-  AccReal* runningVar,
-  AccReal* saveMean,
-  AccReal* saveInvStd,
-  AccReal* weight,
-  AccReal* bias,
-  const AccReal epsilon,
-  const uint32_t flags) {
-  int plane = blockIdx.x;
-
-  AccReal invstd = variance_to_invstd(runningVar[plane], epsilon);
-  AccReal mean = static_cast<AccReal>(runningMean[plane]);
-  AccReal gamma = (weight != nullptr && (flags & FIX_GAMMA_FLAG) == 0)
-                  ? static_cast<AccReal>(weight[plane])
-                  : 1;
-  AccReal beta = (bias != nullptr) ? static_cast<AccReal>(bias[plane])
-                                   : 0;
-  if (threadIdx.x == 0) {
-    saveMean[plane] = runningMean[plane];
-    saveInvStd[plane] = variance_to_invstd(runningVar[plane], epsilon);
-    if ((flags & WRITE_GAMMA_FLAG) != 0 && (flags & FIX_GAMMA_FLAG) != 0
-        && weight != nullptr) {
-      weight[plane] = AccReal(1);
-    }
-  }
-  // Write normalized and update the output
-  for (int batch = 0, nbatch = input.OuterSize(); batch < nbatch; ++batch) {
-    for (int x = threadIdx.x, nx = input.InnerSize(); x < nx; x += blockDim.x) {
-      const DType inp = input.get_ref(batch, plane, x);
-      output.get_ref(batch, plane, x) =
-        ScalarConvert<AccReal, DType>::to(gamma * (inp - mean) * invstd + beta);
+    if (i < num_channels) {
+      saveMean[i] = runningMean[i];
+      saveInvStd[i] = variance_to_invstd(runningVar[i], epsilon);
+      if ((flags & WRITE_GAMMA_FLAG) != 0 && (flags & FIX_GAMMA_FLAG) != 0
+          && weight != nullptr) {
+        weight[i] = 1;
+      }
     }
   }
 }
@@ -621,54 +582,30 @@ static void BatchNormalizationUpdateOutput(mshadow::Stream<gpu> *s,
     AccReal* gamma_ptr = weight.numElements() == 0 ?
                          weight.dptr_ :
                          nullptr;
-    if (dmlc::GetEnv("BN_DEBUG", 0)) {
-      int nvec = sizeof(double) / sizeof(DType);
-      index_t size = input.InnerSize() * input.OuterSize() * input.ChannelCount();
-      index_t aligned_size = ((size + nvec - 1) / nvec) * nvec;
-      index_t blocks = (size + nvec * inference_forward_threads - 1) / (nvec * inference_forward_threads);
-      if (input.ChannelCount() < shmem_elements) {
-        BatchNormalizationUpdateOutputInferenceKernel2<DType, AccReal, double, true>
-          <<<blocks, inference_forward_threads, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
-          input.dptr_, output.dptr_,
-          aligned_size, input.OuterSize(),
-          input.ChannelCount(), input.InnerSize(),
-          runningMean.dptr_, runningVar.dptr_,
-          saveMean.dptr_, saveInvStd.dptr_,
-          gamma_ptr, bias_ptr,
-          eps, flags);
-      } else {
-        BatchNormalizationUpdateOutputInferenceKernel2<DType, AccReal, double, false>
-          <<<blocks, inference_forward_threads, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
-          input.dptr_, output.dptr_,
-          aligned_size, input.OuterSize(),
-          input.ChannelCount(), input.InnerSize(),
-          runningMean.dptr_, runningVar.dptr_,
-          saveMean.dptr_, saveInvStd.dptr_,
-          gamma_ptr, bias_ptr,
-          eps, flags);
-      }
+    int nvec = sizeof(double) / sizeof(DType);
+    index_t size = input.InnerSize() * input.OuterSize() * input.ChannelCount();
+    index_t aligned_size = ((size + nvec - 1) / nvec) * nvec;
+    index_t blocks = std::min((size + nvec * inference_forward_threads - 1) / (nvec * inference_forward_threads), static_cast<index_t>(512));
+    if (input.ChannelCount() < shmem_elements) {
+      BatchNormalizationUpdateOutputInferenceKernel<DType, AccReal, double, true>
+        <<<blocks, inference_forward_threads, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
+        input.dptr_, output.dptr_,
+        aligned_size, input.OuterSize(),
+        input.ChannelCount(), input.InnerSize(),
+        runningMean.dptr_, runningVar.dptr_,
+        saveMean.dptr_, saveInvStd.dptr_,
+        gamma_ptr, bias_ptr,
+        eps, flags);
     } else {
-    if (param.axis == -1 ||
-        param.axis == in_data[batchnorm::kData].shape_.ndim() - 1) {
-      std::cout << "NHWC BN" << std::endl;
-      dim3 blocks(input.ChannelCount());
-      dim3 threads(batchnorm::cuda::getNumThreads(input.InnerSize(), false));
-      BatchNormalizationUpdateOutputInferenceKernel<DType, AccReal,
-        batchnorm::BNTensor3<DType>>
-        <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
-        input, output, runningMean.dptr_, runningVar.dptr_, saveMean.dptr_,
-          saveInvStd.dptr_, gamma_ptr, bias_ptr,
-          static_cast<AccReal>(eps), flags);
-    } else {
-      dim3 blocks(input.ChannelCount());
-      dim3 threads(batchnorm::cuda::getNumThreads(input.InnerSize(), false));
-      BatchNormalizationUpdateOutputInferenceKernel<DType, AccReal,
-        batchnorm::BNTensor3<DType>>
-        <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
-        input, output, runningMean.dptr_, runningVar.dptr_, saveMean.dptr_,
-          saveInvStd.dptr_, gamma_ptr, bias_ptr,
-          static_cast<AccReal>(eps), flags);
-    }
+      BatchNormalizationUpdateOutputInferenceKernel<DType, AccReal, double, false>
+        <<<blocks, inference_forward_threads, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
+        input.dptr_, output.dptr_,
+        aligned_size, input.OuterSize(),
+        input.ChannelCount(), input.InnerSize(),
+        runningMean.dptr_, runningVar.dptr_,
+        saveMean.dptr_, saveInvStd.dptr_,
+        gamma_ptr, bias_ptr,
+        eps, flags);
     }
   } else {
     dim3 blocks(input.ChannelCount());
