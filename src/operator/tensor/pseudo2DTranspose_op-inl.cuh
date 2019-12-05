@@ -50,13 +50,13 @@ namespace cuda {
  * \param nIterZ The number of iterations in the z-dim of the thread to cover all rows. (1-->k)
  * \tparam DType Data type
  * \tparam CType The type to load the data.
- * \tparam TSR the vectorized ratio.
  * \tparam is_addto Whether to perform out += transpose(data) or out = transpose(data)
  */
-template <typename DType, typename CType, int TSR, bool is_addto>
+template <typename DType, typename CType, bool is_addto>
 __global__ void transpose_pseudo2D(DType* out, DType* inp,
                                    const index_t m, const index_t n,
                                    const index_t nIterY, const index_t nIterZ) {
+  const index_t TSR = sizeof(CType) / sizeof(DType);
   const index_t chunked_n = n/TSR;
   const index_t chunked_m = m/TSR;
 
@@ -142,77 +142,24 @@ inline void call_transpose_pseudo2D(index_t cTypeSize,
                                     DType* d_outPtr, DType* d_inpPtr,
                                     const index_t m, const index_t n,
                                     const index_t nIterY, const index_t nIterZ) {
-  index_t dTypeSize = sizeof(DType);
-  switch (dTypeSize) {
-   case (1): {
-    switch (cTypeSize) {
-     case (1):
-      cuda::transpose_pseudo2D<DType, uint8_t, 1, is_addto><<<grid, block, 0, stream>>>
+  switch (cTypeSize) {
+    case (1):
+      cuda::transpose_pseudo2D<DType, uint8_t, is_addto><<<grid, block, 0, stream>>>
                               (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
       break;
-     case (2):
-      cuda::transpose_pseudo2D<DType, uint16_t, 2, is_addto><<<grid, block, 0, stream>>>
+    case (2):
+      cuda::transpose_pseudo2D<DType, uint16_t, is_addto><<<grid, block, 0, stream>>>
                               (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
       break;
-     case (4):
-      cuda::transpose_pseudo2D<DType, uint32_t, 4, is_addto><<<grid, block, 0, stream>>>
+    case (4):
+      cuda::transpose_pseudo2D<DType, uint32_t, is_addto><<<grid, block, 0, stream>>>
                               (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
       break;
-     case (8):
-      // case guarded against in function getBestCopyTypeSize
-      LOG(FATAL) << "cuda::transpose_pseudo2D<uint8_t, uint64_t> would take too much shared memory";
-     default:
+    case (8):
+      cuda::transpose_pseudo2D<DType, uint64_t, is_addto><<<grid, block, 0, stream>>>
+                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
+    default:
       LOG(FATAL) << "Unsupported type combination";
-    }
-    break;
-   }
-   case (2): {
-    switch (cTypeSize) {
-     case (2):
-      cuda::transpose_pseudo2D<DType, uint16_t, 1, is_addto><<<grid, block, 0, stream>>>
-                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
-      break;
-     case (4):
-      cuda::transpose_pseudo2D<DType, uint32_t, 2, is_addto><<<grid, block, 0, stream>>>
-                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
-      break;
-     case (8):
-      cuda::transpose_pseudo2D<DType, uint64_t, 4, is_addto><<<grid, block, 0, stream>>>
-                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
-      break;
-     default:
-      LOG(FATAL) << "Unsupported type combination";
-    }
-    break;
-   }
-   case (4): {
-    switch (cTypeSize) {
-     case (4):
-      cuda::transpose_pseudo2D<DType, uint32_t, 1, is_addto><<<grid, block, 0, stream>>>
-                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
-      break;
-     case (8):
-      cuda::transpose_pseudo2D<DType, uint64_t, 2, is_addto><<<grid, block, 0, stream>>>
-                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
-      break;
-     default:
-      LOG(FATAL) << "Unsupported type combination";
-    }
-    break;
-   }
-   case (8): {
-    switch (cTypeSize) {
-     case (8):
-      cuda::transpose_pseudo2D<DType, uint64_t, 1, is_addto><<<grid, block, 0, stream>>>
-                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
-      break;
-     default:
-      LOG(FATAL) << "Unsupported type combination";
-    }
-    break;
-   }
-   default:
-    LOG(FATAL) << "Unsupported type combination";
   }
   auto cuErr = cudaPeekAtLastError();
   CHECK_EQ(cuErr, cudaSuccess) << "TransposePseudo2D kernel failure: "
