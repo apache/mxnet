@@ -609,8 +609,7 @@ class _BinaryClassificationMetrics(object):
         self.global_true_negatives = 0
 
     def update_binary_stats(self, label, pred):
-        """
-        Update various binary classification counts for a single (label, pred)
+        """Update various binary classification counts for a single (label, pred)
         pair.
 
         Parameters
