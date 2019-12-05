@@ -128,13 +128,13 @@ void NumpyTranspose(const nnvm::NodeAttrs& attrs,
   CHECK(req[0] == kWriteTo || req[0] == kAddTo)
       << "Transpose only supports kWriteTo, kNullOp and kAddTo";
   mxnet::TShape axes;
-  if (param.axes.ndim() == 0) {
+  if (ndim_is_known(param.axes)) {
+    axes = common::CanonicalizeAxes(param.axes);
+  } else {
     axes = mxnet::TShape(inputs[0].ndim(), -1);
     for (int i = 0; i < axes.ndim(); ++i) {
       axes[i] = axes.ndim() - 1 - i;
     }
-  } else {
-    axes = common::CanonicalizeAxes(param.axes);
   }
   if (req[0] == kAddTo) {
     TransposeImpl<xpu, true>(ctx.run_ctx, inputs[0], outputs[0], axes);
