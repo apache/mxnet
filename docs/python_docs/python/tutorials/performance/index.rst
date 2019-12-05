@@ -38,7 +38,7 @@ Essential
 
    .. card::
       :title: Tuning NumPy Operations
-      :link: /api/python/docs/tutorials/packages/ndarray/gotchas_numpy_in_mxnet.html
+      :link: ../packages/ndarray/gotchas_numpy_in_mxnet.html
       Gotchas using NumPy in MXNet.
 
 Compression
@@ -111,7 +111,7 @@ Distributed Training
 
    .. card::
       :title: Data Parallelism in MXNet
-      :link: https://mxnet.apache.org/versions/master/faq/multi_devices.html
+      :link: /api/faq/multi_devices.html
 
       An overview of distributed training strategies.
 
