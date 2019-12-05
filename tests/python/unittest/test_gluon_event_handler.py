@@ -222,13 +222,11 @@ def test_logging_interval():
     ce_loss = loss.SoftmaxCrossEntropyLoss()
     acc = mx.metric.Accuracy()
     net.initialize(ctx=ctx)
-    trainer = mx.gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     logging = LoggingHandler(verbose=LoggingHandler.LOG_PER_INTERVAL,
                              train_metrics=[acc], log_interval=log_interval)
     est = estimator.Estimator(net=net,
                               loss=ce_loss,
                               metrics=acc,
-                              trainer=trainer,
                               context=ctx)
 
     est.fit(train_data=dataloader,
@@ -251,13 +249,11 @@ def test_logging_interval():
     sys.stdout = mystdout = StringIO()
     acc = mx.metric.Accuracy()
     log_interval = 5
-    trainer = mx.gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     logging = LoggingHandler(verbose=LoggingHandler.LOG_PER_INTERVAL,
                              train_metrics=[acc], log_interval=log_interval)
     est = estimator.Estimator(net=net,
                               loss=ce_loss,
                               metrics=acc,
-                              trainer=trainer,
                               context=ctx)
     est.fit(train_data=dataloader,
             epochs=num_epochs,
