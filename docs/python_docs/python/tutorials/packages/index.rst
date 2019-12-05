@@ -46,7 +46,7 @@ Shared APIs
 
    .. card::
       :title: Symbol API
-      :link: /api/python/docs/api/symbol/index.html
+      :link: ../../api/symbol/ 
 
       MXNet Symbol API has been depricated. API documentation is still available for reference.
 
