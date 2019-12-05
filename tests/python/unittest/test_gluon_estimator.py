@@ -20,7 +20,6 @@
 import sys
 import unittest
 import warnings
-import re
 
 import mxnet as mx
 from mxnet import gluon
@@ -28,7 +27,7 @@ from mxnet.gluon import nn
 from mxnet.gluon.contrib.estimator import *
 from mxnet.gluon.contrib.estimator.event_handler import *
 from nose.tools import assert_raises
-from io import StringIO
+
 
 def _get_test_network():
     net = nn.Sequential()
@@ -36,10 +35,10 @@ def _get_test_network():
     return net
 
 
-def _get_test_data(in_size=10):
+def _get_test_data():
     batch_size = 4
-    in_data = mx.nd.random.uniform(shape=(in_size, 3))
-    out_data = mx.nd.random.uniform(shape=(in_size, 4))
+    in_data = mx.nd.random.uniform(shape=(10, 3))
+    out_data = mx.nd.random.uniform(shape=(10, 4))
     # Input dataloader
     dataset = gluon.data.dataset.ArrayDataset(in_data, out_data)
     dataloader = gluon.data.DataLoader(dataset, batch_size=batch_size)
@@ -372,68 +371,3 @@ def test_default_handlers():
     assert isinstance(handlers[0], MetricHandler)
     assert isinstance(handlers[3], LoggingHandler)
 
-def test_logging_interval():
-    ''' test different options for logging handler '''
-    ''' test case #1: log interval is 1 '''
-    batch_size = 4
-    data_size = 50
-    old_stdout = sys.stdout
-    sys.stdout = mystdout = StringIO()
-    log_interval = 1
-    net = _get_test_network()
-    dataloader, dataiter = _get_test_data(in_size=data_size)
-    num_epochs = 1
-    ctx = mx.cpu()
-    loss = gluon.loss.L2Loss()
-    acc = mx.metric.Accuracy()
-    net.initialize(ctx=ctx)
-    trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
-    logging = LoggingHandler(verbose=LoggingHandler.LOG_PER_INTERVAL,
-                             train_metrics=[acc], log_interval=log_interval)
-    est = Estimator(net=net,
-                    loss=loss,
-                    metrics=acc,
-                    trainer=trainer,
-                    context=ctx)
-
-    est.fit(train_data=dataloader,
-            epochs=num_epochs,
-            event_handlers=[logging])
-
-    sys.stdout = old_stdout
-    log_info_list = mystdout.getvalue().splitlines()
-    info_len = 0
-    for info in log_info_list:
-        match = re.match(
-            '(\[Epoch \d+\]\[Batch \d+\]\[Samples \d+\] time\/interval: \d+.\d+s' +
-            ' training accuracy: \d+.\d+)', info)
-        if match:
-            info_len += 1
-
-    assert(info_len == int(data_size/batch_size/log_interval) + 1)
-    ''' test case #2: log interval is 5 '''
-    old_stdout = sys.stdout
-    sys.stdout = mystdout = StringIO()
-    acc = mx.metric.Accuracy()
-    log_interval = 5
-    trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
-    logging = LoggingHandler(verbose=LoggingHandler.LOG_PER_INTERVAL,
-                             train_metrics=[acc], log_interval=log_interval)
-    est = Estimator(net=net,
-                    loss=loss,
-                    metrics=acc,
-                    trainer=trainer,
-                    context=ctx)
-    est.fit(train_data=dataloader,
-            epochs=num_epochs,
-            event_handlers=[logging])
-    sys.stdout = old_stdout
-    log_info_list = mystdout.getvalue().splitlines()
-    info_len = 0
-    for info in log_info_list:
-        match = re.match(
-            '(\[Epoch \d+\]\[Batch \d+\]\[Samples \d+\] time\/interval: \d+.\d+s' +
-            ' training accuracy: \d+.\d+)', info)
-        if match:
-            info_len += 1
-    assert(info_len == int(data_size/batch_size/log_interval) + 1)
