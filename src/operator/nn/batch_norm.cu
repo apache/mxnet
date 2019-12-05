@@ -278,9 +278,11 @@ __global__ void BatchNormalizationUpdateOutputInferenceKernel2(
   LType* output_aligned = reinterpret_cast<LType*>(output);
   for (index_t i = tid; i < size / nvec; i += stride) {
     scratch.aligned = input_aligned[i];
+      const index_t my_channel_base = (nvec * i) % (inner_size * num_channels);
 #pragma unroll
     for (int j = 0; j < nvec; ++j) {
-      const index_t my_channel = ((nvec * i + j) / inner_size) % num_channels;
+      index_t my_channel = (my_channel_base + j) / inner_size;
+      if (my_channel >= num_channels) my_channel = my_channel % num_channels;
       AType current_input = static_cast<AType>(scratch.separate[j]);
 
       AType invstd = small_num_channels ? saved_invstd[my_channel]
@@ -616,9 +618,9 @@ static void BatchNormalizationUpdateOutput(mshadow::Stream<gpu> *s,
 
   if ((flags & IS_TRAINING_FLAG) == 0 || (flags & USE_GLOBAL_STATS_FLAG) != 0) {
     AccReal* bias_ptr = bias.numElements() > 0 ? bias.dptr_ : nullptr;
-    AccReal* gamma_ptr = ((flags & FIX_GAMMA_FLAG) == 0) && weight.numElements() == 0 ?
-                        weight.dptr_ :
-                        nullptr;
+    AccReal* gamma_ptr = weight.numElements() == 0 ?
+                         weight.dptr_ :
+                         nullptr;
     if (dmlc::GetEnv("BN_DEBUG", 0)) {
       int nvec = sizeof(double) / sizeof(DType);
       index_t size = input.InnerSize() * input.OuterSize() * input.ChannelCount();
