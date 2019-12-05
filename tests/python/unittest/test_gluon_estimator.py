@@ -370,4 +370,3 @@ def test_default_handlers():
     assert len(handlers) == 4
     assert isinstance(handlers[0], MetricHandler)
     assert isinstance(handlers[3], LoggingHandler)
-
