@@ -305,6 +305,7 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
     def epoch_begin(self, estimator, *args, **kwargs):
         if isinstance(self.log_interval, int) or self.log_interval == 'epoch':
             is_training = False
+            # use the name hack defined in __init__() of estimator class
             for metric in self.metrics:
                 if 'training' in metric.name:
                     is_training = True

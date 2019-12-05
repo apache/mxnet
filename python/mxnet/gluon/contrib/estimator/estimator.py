@@ -230,6 +230,8 @@ class Estimator(object):
             self._train_metrics.append(metric_loss(loss_name))
 
         for metric in self._train_metrics:
+            # add training prefix to the metric name
+            # it is useful for event handlers to distinguish them from validation metrics
             metric.name = 'training ' + metric.name
 
     def _add_validation_metrics(self):
@@ -237,6 +239,8 @@ class Estimator(object):
             self._val_metrics = [copy.deepcopy(metric) for metric in self._train_metrics]
 
         for metric in self._val_metrics:
+            # add validation prefix to the metric name
+            # it is useful for event handlers to distinguish them from training metrics
             if 'training' in metric.name:
                 metric.name = metric.name.replace('training', 'validation')
             else:
