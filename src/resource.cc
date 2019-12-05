@@ -54,7 +54,7 @@ struct SpaceAllocator {
     host_handle.dptr = nullptr;
     host_handle.size = 0;
   }
-
+joe fail build
   inline void ReleaseAll() {
     Storage::Get()->DirectFree(handle);
     handle.dptr = nullptr;
