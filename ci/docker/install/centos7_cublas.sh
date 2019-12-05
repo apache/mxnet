@@ -1,4 +1,5 @@
-# -*- mode: dockerfile -*-
+#!/usr/bin/env bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,33 +16,12 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-# Dockerfile to build and run MXNet on CentOS 7 for GPU
 
-FROM nvidia/cuda:10.1-devel-centos7
+# build and install are separated so changes to build don't invalidate
+# the whole docker cache for the image
 
-WORKDIR /work/deps
+set -ex
 
-COPY install/centos7_core.sh /work/
-RUN /work/centos7_core.sh
-COPY install/centos7_ccache.sh /work/
-RUN /work/centos7_ccache.sh
-COPY install/centos7_python.sh /work/
-RUN /work/centos7_python.sh
-
-ENV CUDNN_VERSION=7.6.0.64
-COPY install/centos7_cudnn.sh /work/
-RUN /work/centos7_cudnn.sh
-
-# hotfix nvidia-docker image come with wrong version of libcublas
-COPY install/centos7_cublas.sh /work/
-RUN /work/centos7_cublas.sh
-
-ARG USER_ID=0
-COPY install/centos7_adduser.sh /work/
-RUN /work/centos7_adduser.sh
-
-ENV PYTHONPATH=./python/
-WORKDIR /work/mxnet
-
-COPY runtime_functions.sh /work/
+# fix nvidia docker image come with wrong version of libcublas
+yum -y downgrade libcublas-devel-10.2.1.243-1.x86_64
+yum -y downgrade libcublas10-10.2.1.243-1.x86_64
