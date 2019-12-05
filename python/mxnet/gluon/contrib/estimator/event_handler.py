@@ -227,19 +227,19 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
 
     Parameters
     ----------
-    train_metrics : list of EvalMetrics
-        Training metrics to be logged, logged at batch end, epoch end, train end.
-    val_metrics : list of EvalMetrics
-        Validation metrics to be logged, logged at epoch end, train end.
     log_interval: int or str, default 'epoch'
         Logging interval during training.
         log_interval='epoch': display metrics every epoch
         log_interval=integer k: display metrics every interval of k batches
+    train_metrics : list of EvalMetrics
+        Training metrics to be logged, logged at batch end, epoch end, train end.
+    val_metrics : list of EvalMetrics
+        Validation metrics to be logged, logged at epoch end, train end.
     """
 
-    def __init__(self, train_metrics=None,
-                 val_metrics=None,
-                 log_interval='epoch'):
+    def __init__(self, log_interval='epoch',
+                 train_metrics=None,
+                 val_metrics=None):
         super(LoggingHandler, self).__init__()
         if not isinstance(log_interval, int) and log_interval != 'epoch':
             raise ValueError("log_interval must be either an integer or string 'epoch'")
