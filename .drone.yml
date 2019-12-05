@@ -1,0 +1,37 @@
+---
+kind: pipeline
+type: docker
+name: mxnet-build
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: submodules
+  image: alpine/git
+  commands:
+  - git submodule update --recursive --remote
+
+- name: build
+  image: gcc
+  commands:
+  - make DEV=1 USE_LAPACK=1 USE_LAPACK_PATH=/usr/lib64/liblapack.so USE_BLAS=openblas USE_SIGNAL_HANDLER=1 -j$(nproc)
+  - make test
+
+
+trigger:
+  branch:
+  - master
+  ref:
+  - refs/heads/master
+  - refs/heads/**
+  - refs/pull/*/head
+  event:
+  - push
+  - pull_request
+  - tag
+  - promote
+  - rollback
+
+
