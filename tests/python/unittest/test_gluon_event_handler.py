@@ -54,7 +54,7 @@ def test_checkpoint_handler():
         net = _get_test_network()
         ce_loss = loss.SoftmaxCrossEntropyLoss()
         acc = mx.metric.Accuracy()
-        est = estimator.Estimator(net, loss=ce_loss, metrics=acc)
+        est = estimator.Estimator(net, loss=ce_loss, train_metrics=acc)
         checkpoint_handler = event_handler.CheckpointHandler(model_dir=tmpdir,
                                                              model_prefix=model_prefix,
                                                              monitor=acc,
@@ -72,7 +72,7 @@ def test_checkpoint_handler():
         file_path = os.path.join(tmpdir, model_prefix)
         net = _get_test_network(nn.HybridSequential())
         net.hybridize()
-        est = estimator.Estimator(net, loss=ce_loss, metrics=acc)
+        est = estimator.Estimator(net, loss=ce_loss, train_metrics=acc)
         checkpoint_handler = event_handler.CheckpointHandler(model_dir=tmpdir,
                                                              model_prefix=model_prefix,
                                                              epoch_period=None,
@@ -100,7 +100,7 @@ def test_resume_checkpoint():
         net = _get_test_network()
         ce_loss = loss.SoftmaxCrossEntropyLoss()
         acc = mx.metric.Accuracy()
-        est = estimator.Estimator(net, loss=ce_loss, metrics=acc)
+        est = estimator.Estimator(net, loss=ce_loss, train_metrics=acc)
         checkpoint_handler = event_handler.CheckpointHandler(model_dir=tmpdir,
                                                              model_prefix=model_prefix,
                                                              monitor=acc,
@@ -125,7 +125,7 @@ def test_early_stopping():
     net = _get_test_network()
     ce_loss = loss.SoftmaxCrossEntropyLoss()
     acc = mx.metric.Accuracy()
-    est = estimator.Estimator(net, loss=ce_loss, metrics=acc)
+    est = estimator.Estimator(net, loss=ce_loss, train_metrics=acc)
     early_stopping = event_handler.EarlyStoppingHandler(monitor=acc,
                                                         patience=0,
                                                         mode='min')
@@ -149,14 +149,13 @@ def test_logging():
         net = _get_test_network()
         ce_loss = loss.SoftmaxCrossEntropyLoss()
         acc = mx.metric.Accuracy()
-        est = estimator.Estimator(net, loss=ce_loss, metrics=acc)
+        est = estimator.Estimator(net, loss=ce_loss, train_metrics=acc)
 
         est.logger.addHandler(logging.FileHandler(output_dir))
 
         train_metrics = est.train_metrics
         val_metrics = est.val_metrics
-        logging_handler = event_handler.LoggingHandler(train_metrics=train_metrics,
-                                                       val_metrics=val_metrics)
+        logging_handler = event_handler.LoggingHandler(metrics=train_metrics)
         est.fit(test_data, event_handlers=[logging_handler], epochs=3)
         assert logging_handler.batch_index == 0
         assert logging_handler.current_epoch == 3
@@ -197,7 +196,7 @@ def test_custom_handler():
     net = _get_test_network()
     ce_loss = loss.SoftmaxCrossEntropyLoss()
     acc = mx.metric.Accuracy()
-    est = estimator.Estimator(net, loss=ce_loss, metrics=acc)
+    est = estimator.Estimator(net, loss=ce_loss, train_metrics=acc)
     custom_handler = CustomStopHandler(3, 2)
     est.fit(test_data, event_handlers=[custom_handler], epochs=3)
     assert custom_handler.num_batch == 3
