@@ -35,3 +35,8 @@ trigger:
   - rollback
 
 
+---
+kind: signature
+hmac: ed758e32ecd2c2a6b8d3afa8b0f4bf25e19bec843f160b1a39262918dcf4db7a
+
+...
