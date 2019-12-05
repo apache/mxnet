@@ -72,13 +72,13 @@ Data
 
    .. card::
       :title: Data Loading
-      :link: data/data.html
+      :link: gdata/data.html
 
       How to load data for training.
 
    .. card::
       :title: Data Augmentation
-      :link: data/data_augmentation.md
+      :link: gdata/data_augmentation.md
 
       A guide to data augmentation.
 
@@ -90,7 +90,7 @@ Data
 
    .. card::
       :title: Gluon Datasets and DataLoader
-      :link: data/datasets.html
+      :link: gdata/datasets.html
 
       A guide to loading data using the Gluon API.
 
@@ -167,7 +167,7 @@ Training
 
    .. card::
       :title: Autograd API
-      :link: /api/python/docs/tutorials/packages/autograd/index.html
+      :link: ../autograd/index.html
 
       How to use Automatic Differentiation with the Autograd API.
 
