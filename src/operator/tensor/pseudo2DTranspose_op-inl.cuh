@@ -56,12 +56,14 @@ template <typename DType, typename CType, bool is_addto>
 __global__ void transpose_pseudo2D(DType* out, DType* inp,
                                    const index_t m, const index_t n,
                                    const index_t nIterY, const index_t nIterZ) {
-  const index_t TSR = sizeof(CType)/sizeof(DType);  // TypeSizeRatio
+  // Calculate the TypeSizeRatio
+  const index_t TSR = sizeof(CType) / sizeof(DType) > 0 ? sizeof(CType) / sizeof(DType) : 1;
   const index_t chunked_n = n/TSR;
   const index_t chunked_m = m/TSR;
 
-  __shared__ CType c_shm[1024*TSR];
-  DType* d_shm = reinterpret_cast<DType*>(c_shm);
+  extern __shared__ char buf[];
+  DType* d_shm = reinterpret_cast<DType*>(buf);
+  CType* c_shm = reinterpret_cast<CType*>(buf);
 
   CType* cInp = reinterpret_cast<CType*>(inp);
   CType* cOut = reinterpret_cast<CType*>(out);
@@ -142,24 +144,26 @@ inline void call_transpose_pseudo2D(index_t cTypeSize,
                                     DType* d_outPtr, DType* d_inpPtr,
                                     const index_t m, const index_t n,
                                     const index_t nIterY, const index_t nIterZ) {
+  const int nshared = 1024 * cTypeSize / sizeof(DType) * cTypeSize;
   switch (cTypeSize) {
     case (1):
-      cuda::transpose_pseudo2D<DType, uint8_t, is_addto><<<grid, block, 0, stream>>>
+      cuda::transpose_pseudo2D<DType, uint8_t, is_addto><<<grid, block, nshared, stream>>>
                               (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
       break;
     case (2):
-      cuda::transpose_pseudo2D<DType, uint16_t, is_addto><<<grid, block, 0, stream>>>
+      cuda::transpose_pseudo2D<DType, uint16_t, is_addto><<<grid, block, nshared, stream>>>
                               (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
       break;
     case (4):
-      cuda::transpose_pseudo2D<DType, uint32_t, is_addto><<<grid, block, 0, stream>>>
+      cuda::transpose_pseudo2D<DType, uint32_t, is_addto><<<grid, block, nshared, stream>>>
                               (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
       break;
     case (8):
-      cuda::transpose_pseudo2D<DType, uint64_t, is_addto><<<grid, block, 0, stream>>>
+      cuda::transpose_pseudo2D<DType, uint64_t, is_addto><<<grid, block, nshared, stream>>>
                               (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
+      break;
     default:
-      LOG(FATAL) << "Unsupported type combination";
+      LOG(FATAL) << "Unsupported type combination. " << "Copy type size = " << cTypeSize;
   }
   auto cuErr = cudaPeekAtLastError();
   CHECK_EQ(cuErr, cudaSuccess) << "TransposePseudo2D kernel failure: "
