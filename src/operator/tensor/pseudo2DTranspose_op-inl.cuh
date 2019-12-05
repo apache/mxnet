@@ -56,7 +56,7 @@ template <typename DType, typename CType, bool is_addto>
 __global__ void transpose_pseudo2D(DType* out, DType* inp,
                                    const index_t m, const index_t n,
                                    const index_t nIterY, const index_t nIterZ) {
-  const index_t TSR = sizeof(CType) / sizeof(DType);
+  const index_t TSR = sizeof(CType)/sizeof(DType);  // TypeSizeRatio
   const index_t chunked_n = n/TSR;
   const index_t chunked_m = m/TSR;
 
