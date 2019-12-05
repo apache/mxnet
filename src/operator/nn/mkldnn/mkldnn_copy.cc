@@ -33,22 +33,17 @@ namespace op {
 void MKLDNNCopy(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                 const NDArray &in_data, const OpReqType &req,
                 const NDArray &out_data) {
+  if (req == kNullOp || req == kWriteInplace) return;
   TmpMemMgr::Get()->Init(ctx.requested[0]);
-
-  // If the input data is a view of an MKLDNN array, we should create a new
-  // NDArray with reordered data.
-  NDArray data = in_data;
-  if (data.IsMKLDNNData() && data.IsView())
-    data = data.Reorder2Default();
-  auto in_mem = data.GetMKLDNNData();
+  auto in_mem = in_data.GetMKLDNNData();
   if (req == kAddTo) {
     TmpMemMgr::Get()->Init(ctx.requested[0]);
     // We should try and force the input memory has the same format
     // as the input output. If not, we'll have to reorder memory.
     auto out_mem = out_data.GetMKLDNNData();
-    in_mem = data.GetMKLDNNData(out_mem ->get_desc());
+    in_mem = in_data.GetMKLDNNData(out_mem ->get_desc());
     if (in_mem == nullptr)
-      in_mem = data.GetMKLDNNDataReorder(out_mem->get_desc());
+      in_mem = in_data.GetMKLDNNDataReorder(out_mem->get_desc());
     MKLDNNSum(*out_mem, *in_mem, *out_mem);
   } else {
     const_cast<NDArray &>(out_data).CopyFrom(*in_mem);
