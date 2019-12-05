@@ -23,6 +23,7 @@
  * \brief Export module that takes charge of code generation and document
  *  Generation for functions exported from R-side
  */
+
 #ifndef MXNET_RCPP_IM2REC_H_
 #define MXNET_RCPP_IM2REC_H_
 
