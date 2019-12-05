@@ -154,6 +154,22 @@ def test_ndarray_setitem():
         assert x.shape == trivial_shape
         assert same(x.asnumpy(), x_np)
 
+    # test https://github.com/apache/incubator-mxnet/issues/16647
+    dst = mx.nd.zeros((1, 3, 1))  # destination array
+    src = [1, 2, 3]
+    dst[0, :len(src), 0] = src
+    assert same(dst.asnumpy(), np.array([1, 2, 3], dtype=dst.dtype).reshape(dst.shape))
+
+    dst = mx.nd.zeros((1, 3, 1))  # destination array
+    src = [1, 2, 3]
+    dst[0, :len(src), 0] = mx.nd.array(src)
+    assert same(dst.asnumpy(), np.array([1, 2, 3], dtype=dst.dtype).reshape(dst.shape))
+
+    dst = mx.nd.zeros((1, 3, 1))  # destination array
+    src = [1, 2]
+    dst[0, :len(src), 0] = src
+    assert same(dst.asnumpy(), np.array([1, 2, 0], dtype=dst.dtype).reshape(dst.shape))
+
 
 @with_seed()
 def test_ndarray_elementwise():
