@@ -44,9 +44,30 @@
 
 using namespace mxnet;
 
+namespace {
+
 /*! \brief inverse standard deviation <-> variance */
-#define VARIANCE_TO_INVSTD(__var$,    __eps$)   (1.0/sqrt((__var$) + DType(__eps$)))
-#define INVSTD_TO_VARIANCE(__invstd$, __eps$)   ((1.0 / ((__invstd$) * (__invstd$))) - (__eps$))
+template <typename DType, typename AccReal>
+MSHADOW_XINLINE AccReal variance_to_invstd(DType var, AccReal eps) {
+  return rsqrtf(static_cast<AccReal>(var) + eps);
+}
+
+template <>
+MSHADOW_XINLINE double variance_to_invstd(double var, double eps) {
+  return rsqrt(var + eps);
+}
+
+template <typename AccReal>
+MSHADOW_XINLINE AccReal invstd_to_variance(AccReal invstd, AccReal eps) {
+  return 1.0f / (invstd * invstd) - eps;
+}
+
+template <>
+MSHADOW_XINLINE double invstd_to_variance(double invstd, double eps) {
+  return 1.0 / (invstd * invstd) - eps;
+}
+
+}  // namespace
 
 namespace mxnet {
 namespace op {
@@ -204,32 +225,94 @@ static __device__ T reduce(Op op, DeviceTensor tensor, int plane) {
   return shared[0];
 }
 
-template <typename DType, typename AccReal, typename DeviceTensor1, typename DeviceTensor>
+namespace {
+  constexpr int inference_forward_threads = 512;
+}  // namespace
+
+template <typename DType, typename AType, typename LType>
+__global__ void BatchNormalizationUpdateOutputInferenceKernel2(
+  const DType* input,
+  DType* output,
+  const index_t size,
+  const index_t outer_size,
+  const index_t num_channels,
+  const index_t inner_size,
+  const AType* runningMean,
+  const AType* runningVar,
+  AType* saveMean,
+  AType* saveInvStd,
+  AType* weight,
+  AType* bias,
+  const AType epsilon,
+  const uint32_t flags) {
+  constexpr int nvec = sizeof(LType) / sizeof(DType);
+  __shared__ union {
+    LType aligned[inference_forward_threads];
+    DType separate[nvec * inference_forward_threads];
+  } scratch;
+
+  const index_t tid = threadIdx.x + blockIdx.x * blockDim.x;
+  const index_t stride = blockDim.x * gridDim.x;
+  const LType* input_aligned = reinterpret_cast<const LType*>(input);
+  LType* output_aligned = reinterpret_cast<LType*>(output);
+  DType* my_scratch = scratch.separate + nvec * threadIdx.x;
+  for (index_t i = tid; i < size / nvec; i += stride) {
+    scratch.aligned[threadIdx.x] = input_aligned[i];
+#pragma unroll
+    for (int j = 0; j < nvec; ++j) {
+      const index_t my_channel = ((nvec * i + j) / inner_size) % num_channels;
+      AType current_input = static_cast<AType>(my_scratch[j]);
+
+      AType invstd = variance_to_invstd(runningVar[my_channel], epsilon);
+      AType mean = static_cast<AType>(runningMean[my_channel]);
+      AType gamma = (weight != nullptr && (flags & FIX_GAMMA_FLAG) == 0)
+                    ? static_cast<AType>(weight[my_channel])
+                    : 1;
+      AType beta = (bias != nullptr) ? static_cast<AType>(bias[my_channel])
+                                     : 0;
+      current_input = gamma * (current_input - mean) * invstd + beta;
+      my_scratch[j] = current_input;
+    }
+
+    output_aligned[i] = scratch.aligned[threadIdx.x];
+  }
+
+  if (tid < num_channels) {
+    saveMean[tid] = runningMean[tid];
+    saveInvStd[tid] = variance_to_invstd(runningVar[tid], epsilon);
+    if ((flags & WRITE_GAMMA_FLAG) != 0 && (flags & FIX_GAMMA_FLAG) != 0
+        && weight != nullptr) {
+      weight[tid] = 1;
+    }
+  }
+}
+
+template <typename DType, typename AccReal, typename DeviceTensor>
 __global__ void BatchNormalizationUpdateOutputInferenceKernel(
   DeviceTensor input,
   DeviceTensor output,
-  DeviceTensor1 runningMean,
-  DeviceTensor1 runningVar,
-  DeviceTensor1 saveMean,
-  DeviceTensor1 saveInvStd,
-  DeviceTensor1 weight,
-  DeviceTensor1 bias,
-  const DType epsilon,
+  AccReal* runningMean,
+  AccReal* runningVar,
+  AccReal* saveMean,
+  AccReal* saveInvStd,
+  AccReal* weight,
+  AccReal* bias,
+  const AccReal epsilon,
   const uint32_t flags) {
   int plane = blockIdx.x;
 
-  AccReal invstd = VARIANCE_TO_INVSTD(runningVar[plane], epsilon);
-  AccReal mean = ScalarConvert<DType, AccReal>::to(runningMean[plane]);
-  AccReal gamma = ((flags & FIX_GAMMA_FLAG) == 0 && weight.numElements() > 0)
-                  ? ScalarConvert<DType, AccReal>::to(weight[plane])
-                  : ScalarConvert<int, AccReal>::to(1);
-  AccReal beta = bias.numElements() > 0 ? ScalarConvert<DType, AccReal>::to(bias[plane])
-                                        : ScalarConvert<int, AccReal>::to(0);
+  AccReal invstd = variance_to_invstd(runningVar[plane], epsilon);
+  AccReal mean = static_cast<AccReal>(runningMean[plane]);
+  AccReal gamma = (weight != nullptr && (flags & FIX_GAMMA_FLAG) == 0)
+                  ? static_cast<AccReal>(weight[plane])
+                  : 1;
+  AccReal beta = (bias != nullptr) ? static_cast<AccReal>(bias[plane])
+                                   : 0;
   if (threadIdx.x == 0) {
     saveMean[plane] = runningMean[plane];
-    saveInvStd[plane] = VARIANCE_TO_INVSTD(runningVar[plane], epsilon);
+    saveInvStd[plane] = variance_to_invstd(runningVar[plane], epsilon);
     if ((flags & WRITE_GAMMA_FLAG) != 0 && (flags & FIX_GAMMA_FLAG) != 0
-        && weight.numElements() > 0) {
+        && weight != nullptr) {
       weight[plane] = AccReal(1);
     }
   }
@@ -318,7 +401,7 @@ static __global__ void BatchNormalizationBackwardKernel(
   CUDATensors<DeviceTensor1> tensors,
   const uint32_t flags,
   const AccReal momentum,
-  const double eps) {
+  const AccReal eps) {
   int plane = blockIdx.x;
   int N = gradOutput.OuterSize() * gradOutput.InnerSize();
 
@@ -331,7 +414,7 @@ static __global__ void BatchNormalizationBackwardKernel(
     invstd = tensors.saveInvStd[plane];
   } else {
     mean = ScalarConvert<DType, AccReal>::to(tensors.runningMean[plane]);
-    invstd = VARIANCE_TO_INVSTD(tensors.runningVar[plane], eps);
+    invstd = variance_to_invstd(tensors.runningVar[plane], eps);
   }
 
   const AccReal weightVal = ((flags & FIX_GAMMA_FLAG) == 0 && tensors.weight.numElements() > 0) ?
@@ -352,7 +435,7 @@ static __global__ void BatchNormalizationBackwardKernel(
   const AccReal gradScale = invstd * weightVal;
 
   if (threadIdx.x == 0 && is_train_and_not_global_stats) {
-    const AccReal localVariance = INVSTD_TO_VARIANCE(tensors.saveInvStd[plane], eps);
+    const AccReal localVariance = invstd_to_variance(tensors.saveInvStd[plane], eps);
     const AccReal localMean = tensors.saveMean[plane];
 
     // update running averages
@@ -508,13 +591,44 @@ static void BatchNormalizationUpdateOutput(mshadow::Stream<gpu> *s,
   DCHECK_GT(weight.numElements(), 0);
 
   if ((flags & IS_TRAINING_FLAG) == 0 || (flags & USE_GLOBAL_STATS_FLAG) != 0) {
-    dim3 blocks(input.ChannelCount());
-    dim3 threads(batchnorm::cuda::getNumThreads(input.InnerSize(), false));
-    BatchNormalizationUpdateOutputInferenceKernel<DType, AccReal, DeviceTensor1,
-      batchnorm::BNTensor3<DType>>
-      <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
-      input, output, runningMean, runningVar, saveMean,
-        saveInvStd, weight, bias, eps, flags);
+    AccReal* bias_ptr = bias.numElements() > 0 ? bias.dptr_ : nullptr;
+    AccReal* gamma_ptr = ((flags & FIX_GAMMA_FLAG) == 0) && weight.numElements() == 0 ?
+                        weight.dptr_ :
+                        nullptr;
+    if (dmlc::GetEnv("BN_DEBUG", 0)) {
+      int nvec = sizeof(double) / sizeof(DType);
+      index_t size = input.InnerSize() * input.OuterSize() * input.ChannelCount();
+      index_t blocks = (size + nvec * inference_forward_threads - 1) / (nvec * inference_forward_threads);
+      BatchNormalizationUpdateOutputInferenceKernel2<DType, AccReal, double>
+        <<<blocks, inference_forward_threads, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
+        input.dptr_, output.dptr_,
+        size, input.OuterSize(),
+        input.ChannelCount(), input.InnerSize(),
+        runningMean.dptr_, runningVar.dptr_,
+        saveMean.dptr_, saveInvStd.dptr_,
+        gamma_ptr, bias_ptr,
+        eps, flags);
+    } else {
+    if (param.axis == -1 ||
+        param.axis == input.shape_.ndim() - 1) {
+      std::cout << "NHWC BN" << std::endl;
+      dim3 blocks(input.ChannelCount());
+      dim3 threads(batchnorm::cuda::getNumThreads(input.InnerSize(), false));
+      BatchNormalizationUpdateOutputInferenceKernel<DType, AccReal,
+        batchnorm::BNTensor3<DType>>
+        <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
+        input, output, runningMean.dptr_, runningVar.dptr_, saveMean.dptr_,
+          saveInvStd.dptr_, gamma_ptr, bias_ptr, eps, flags);
+    } else {
+      dim3 blocks(input.ChannelCount());
+      dim3 threads(batchnorm::cuda::getNumThreads(input.InnerSize(), false));
+      BatchNormalizationUpdateOutputInferenceKernel<DType, AccReal, DeviceTensor1,
+        batchnorm::BNTensor3<DType>>
+        <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
+        input, output, runningMean, runningVar, saveMean,
+          saveInvStd, gamma_ptr, bias_ptr, eps, flags);
+    }
+    }
   } else {
     dim3 blocks(input.ChannelCount());
     dim3 threads(batchnorm::cuda::getNumThreads(input.InnerSize(), false));
