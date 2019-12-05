@@ -113,7 +113,8 @@ class Estimator(object):
                  trainer=None,
                  context=None,
                  evaluation_loss=None,
-                 eval_net=None):
+                 eval_net=None,
+                 estimator_model=None):
         self.net = net
         self.loss = self._check_loss(loss)
         self._train_metrics = _check_metrics(train_metrics)
@@ -133,6 +134,7 @@ class Estimator(object):
         self.context = self._check_context(context)
         self._initialize(initializer)
         self.trainer = self._check_trainer(trainer)
+        self.estimator_model = estimator_model
 
     def _check_loss(self, loss):
         if not isinstance(loss, gluon_loss):
@@ -300,6 +302,7 @@ class Estimator(object):
 
         for metric in self.val_metrics:
             metric.reset()
+        estimator_ref = self
 
         event_handlers = self._prepare_default_validation_handlers(event_handlers)
 
@@ -315,7 +318,12 @@ class Estimator(object):
             for handler in batch_begin:
                 handler.batch_begin(estimator_ref, batch=batch)
 
-            _, label, pred, loss = self.evaluate_batch(batch, batch_axis)
+            if self.estimator_model is None:
+                _, label, pred, loss = self.evaluate_batch(batch, val_metrics, batch_axis)
+            else:
+                _, label, pred, loss =
+                self.estimator_model.evaluate_batch(estimator_ref,
+                                                    batch, val_metrics, batch_axis)
 
             for handler in batch_end:
                 handler.batch_end(estimator_ref, batch=batch, pred=pred, label=label, loss=loss)
@@ -432,8 +440,11 @@ class Estimator(object):
                 for handler in batch_begin:
                     handler.batch_begin(estimator_ref, batch=batch)
 
-                _, label, pred, loss = self.fit_batch(batch, batch_axis)
-
+                if self.estimator_model is None:
+                    _, label, pred, loss = self.fit_batch(batch, batch_axis)
+                else:
+                    _, label, pred, loss = self.estimator_model.fit_batch(estimator_ref,
+                        batch, batch_axis)
                 # batch end
 
                 batch_end_result = []
