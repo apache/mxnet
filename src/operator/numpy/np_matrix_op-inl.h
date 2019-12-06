@@ -1151,11 +1151,11 @@ void NumpyDiagOpBackward(const nnvm::NodeAttrs &attrs,
 }
 
 struct NumpyDiagonalParam : public dmlc::Parameter<NumpyDiagonalParam> {
-  int k;
+  int offset;
   int32_t axis1;
   int32_t axis2;
   DMLC_DECLARE_PARAMETER(NumpyDiagonalParam) {
-    DMLC_DECLARE_FIELD(k)
+    DMLC_DECLARE_FIELD(offset)
       .set_default(0)
       .describe("Diagonal in question. The default is 0. "
                 "Use k>0 for diagonals above the main diagonal, "
@@ -1173,7 +1173,7 @@ struct NumpyDiagonalParam : public dmlc::Parameter<NumpyDiagonalParam> {
 };
 
 inline mxnet::TShape NumpyDiagonalShapeImpl(const mxnet::TShape& ishape, const int k,
-                            const int32_t axis1, const int32_t axis2) {
+                                            const int32_t axis1, const int32_t axis2) {
   int32_t x1 = CheckAxis(axis1, ishape.ndim());
   int32_t x2 = CheckAxis(axis2, ishape.ndim());
 
@@ -1217,7 +1217,7 @@ inline bool NumpyDiagonalOpShape(const nnvm::NodeAttrs& attrs,
     }
 
     const NumpyDiagonalParam& param = nnvm::get<NumpyDiagonalParam>(attrs.parsed);
-    mxnet::TShape oshape = NumpyDiagonalShapeImpl(ishape, param.k, param.axis1,
+    mxnet::TShape oshape = NumpyDiagonalShapeImpl(ishape, param.offset, param.axis1,
                                          param.axis2);
     if (shape_is_none(oshape)) {
       LOG(FATAL) << "Diagonal does not exist.";
@@ -1296,7 +1296,7 @@ void NumpyDiagonalOpImpl(const TBlob& in_data,
 
   if (x1 == maxx) std::swap(stride1, stride2);
   index_t offset;
-  int k = param.k;
+  int k = param.offset;
   if (k > 0) {
     offset = stride2 * k;
   } else if (k < 0) {
@@ -1316,8 +1316,8 @@ void NumpyDiagonalOpImpl(const TBlob& in_data,
           stride1 + stride2, offset, oshape[odim - 1]);
       } else {
         Kernel<diag_n<3, req_type, back>, xpu>::Launch(s, dsize, out_data.dptr<DType>(),
-          in_data.dptr<DType>(), Shape3(oleading, obody, otrailing), Shape3(ileading, ibody, itrailing),
-          stride1 + stride2, offset, oshape[odim - 1]);
+          in_data.dptr<DType>(), Shape3(oleading, obody, otrailing),
+          Shape3(ileading, ibody, itrailing), stride1 + stride2, offset, oshape[odim - 1]);
       }
     });
   });
@@ -1342,7 +1342,8 @@ void NumpyDiagonalOpForward(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape& oshape = outputs[0].shape_;
   const NumpyDiagonalParam& param = nnvm::get<NumpyDiagonalParam>(attrs.parsed);
 
-  NumpyDiagonalOpImpl<xpu, false>(in_data, out_data, ishape, oshape, out_data.Size(), param, s, req);
+  NumpyDiagonalOpImpl<xpu, false>(in_data, out_data, ishape, oshape,
+                                  out_data.Size(), param, s, req);
 }
 
 template<typename xpu>
@@ -1363,7 +1364,8 @@ void NumpyDiagonalOpBackward(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape& oshape = outputs[0].shape_;
   const NumpyDiagonalParam& param = nnvm::get<NumpyDiagonalParam>(attrs.parsed);
 
-  NumpyDiagonalOpImpl<xpu, true>(in_data, out_data, oshape, ishape, in_data.Size(), param, s, req);
+  NumpyDiagonalOpImpl<xpu, true>(in_data, out_data, oshape, ishape,
+                                 in_data.Size(), param, s, req);
 }
 
 struct NumpyDiagflatParam : public dmlc::Parameter<NumpyDiagflatParam> {

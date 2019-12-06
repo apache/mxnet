@@ -1327,7 +1327,7 @@ NNVM_REGISTER_OP(_backward_np_diag)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", NumpyDiagOpBackward<cpu>);
 
-NNVM_REGISTER_OP(_npi_diagonal)
+NNVM_REGISTER_OP(_np_diagonal)
 .set_attr_parser(ParamParser<NumpyDiagonalParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -1338,11 +1338,11 @@ NNVM_REGISTER_OP(_npi_diagonal)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyDiagonalOpShape)
 .set_attr<nnvm::FInferType>("FInferType", NumpyDiagonalOpType)
 .set_attr<FCompute>("FCompute<cpu>", NumpyDiagonalOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_npi_diagonal"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_np_diagonal"})
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(NumpyDiagonalParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_backward_npi_diagonal)
+NNVM_REGISTER_OP(_backward_np_diagonal)
 .set_attr_parser(ParamParser<NumpyDiagonalParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)

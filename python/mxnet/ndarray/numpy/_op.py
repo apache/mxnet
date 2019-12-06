@@ -39,7 +39,7 @@ __all__ = ['shape', 'zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'div
            'flip', 'around', 'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril',
            'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
            'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero', 'shares_memory',
-           'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where', 'diagonal']
+           'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where']
 
 @set_module('mxnet.ndarray.numpy')
 def shape(a):
@@ -5525,56 +5525,3 @@ def where(condition, x=None, y=None):
         return nonzero(condition)
     else:
         return _npi.where(condition, x, y, out=None)
-
-
-@set_module('mxnet.ndarray.numpy')
-def diagonal(a, offset=0, axis1=0, axis2=1):
-    """
-    If a is 2-D, returns the diagonal of a with the given offset, i.e., the collection of elements of
-    the form a[i, i+offset]. If a has more than two dimensions, then the axes specified by axis1 and
-    axis2 are used to determine the 2-D sub-array whose diagonal is returned. The shape of the
-    resulting array can be determined by removing axis1 and axis2 and appending an index to the
-    right equal to the size of the resulting diagonals.
-
-    Parameters
-    ----------
-    a : Symbol
-        Input data from which diagonal are taken.
-    offset: int, Optional
-        Offset of the diagonal from the main diagonal
-    axis1: int, Optional
-        Axis to be used as the first axis of the 2-D sub-arrays
-    axis2: int, Optional
-        Axis to be used as the second axis of the 2-D sub-arrays
-
-    Returns
-    -------
-    out : Symbol
-        Output result
-
-    Raises
-    -------
-    ValueError:  If the dimension of a is less than 2.
-
-    Examples
-    --------
-    >>> a = np.arange(4).reshape(2,2)
-    >>> a
-    array([[0, 1],
-        [2, 3]])
-    >>> np.diagonal(a)
-    array([0, 3])
-    >>> np.diagonal(a, 1)
-    array([1])
-
-    >>> a = np.arange(8).reshape(2,2,2)
-    >>>a
-    array([[[0, 1],
-            [2, 3]],
-            [[4, 5],
-            [6, 7]]])
-    >>> np.diagonal(a, 0, 0, 1)
-    array([[0, 6],
-            [1, 7]])
-    """
-    return _npi.diagonal(a, k=offset, axis1=axis1, axis2=axis2)
