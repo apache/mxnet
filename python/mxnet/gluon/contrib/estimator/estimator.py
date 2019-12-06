@@ -134,7 +134,7 @@ class Estimator(object):
         self.context = self._check_context(context)
         self._initialize(initializer)
         self.trainer = self._check_trainer(trainer)
-        self.estimator_model = estimator_model
+        self.estimator_model = self._check_estimator_model(estimator_model)
 
     def _check_loss(self, loss):
         if not isinstance(loss, gluon_loss):
@@ -174,6 +174,15 @@ class Estimator(object):
             else:
                 context = [cpu()]
         return context
+
+    def _check_estimator_model(self, estimator_model):
+        # check whether the estimator model contains fit_batch() and evaluate_batch() methods
+        if estimator_model is not None:
+            model_fit = getattr(estimator_model, 'fit_batch', None)
+            model_evaluate = getattr(estimator_model, 'evaluate_batch', None)
+            if not callable(model_fit) or not callable(model_evaluate):
+                raise ValueError('Customized Estimator Model must contain fit_batch()'
+                                 ' and evaluate_batch() methods')
 
     def _initialize(self, initializer):
         # initialize the network
@@ -444,7 +453,7 @@ class Estimator(object):
                     _, label, pred, loss = self.fit_batch(batch, batch_axis)
                 else:
                     _, label, pred, loss = self.estimator_model.fit_batch(estimator_ref,
-                        batch, batch_axis)
+                                                                          batch, batch_axis)
                 # batch end
 
                 batch_end_result = []
