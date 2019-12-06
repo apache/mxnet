@@ -256,7 +256,6 @@ class Estimator(object):
 
     def evaluate_batch(self,
                        val_batch,
-                       val_metrics,
                        batch_axis=0):
         """Evaluate model on a batch of validation data.
 
@@ -264,8 +263,6 @@ class Estimator(object):
         ----------
         val_batch : tuple
             Data and label of a batch from the validation data loader.
-        val_metrics : EvalMetric or list of EvalMetrics
-            Metrics to update validation result.
         batch_axis : int, default 0
             Batch axis to split the validation data into devices.
         """
@@ -318,7 +315,7 @@ class Estimator(object):
             for handler in batch_begin:
                 handler.batch_begin(estimator_ref, batch=batch)
 
-            _, label, pred, loss = self.evaluate_batch(batch, self.val_metrics, batch_axis)
+            _, label, pred, loss = self.evaluate_batch(batch, batch_axis)
 
             for handler in batch_end:
                 handler.batch_end(estimator_ref, batch=batch, pred=pred, label=label, loss=loss)
@@ -475,14 +472,9 @@ class Estimator(object):
         if not any(isinstance(handler, ValidationHandler) for handler in event_handlers):
             # no validation handler
             if val_data:
-                val_metrics = self.val_metrics
                 # add default validation handler if validation data found
                 added_default_handlers.append(ValidationHandler(val_data=val_data,
-                                                                eval_fn=self.evaluate,
-                                                                val_metrics=val_metrics))
-            else:
-                # set validation metrics to None if no validation data and no validation handler
-                val_metrics = []
+                                                                eval_fn=self.evaluate))
 
         if not any(isinstance(handler, LoggingHandler) for handler in event_handlers):
             added_default_handlers.append(LoggingHandler(metrics=self.train_metrics))

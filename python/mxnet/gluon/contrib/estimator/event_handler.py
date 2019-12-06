@@ -171,8 +171,6 @@ class ValidationHandler(TrainBegin, BatchEnd, EpochEnd):
     eval_fn : function
         A function defines how to run evaluation and
         calculate loss and metrics.
-    val_metrics : List of EvalMetrics
-        Validation metrics to be updated.
     epoch_period : int, default 1
         How often to run validation at epoch end, by default
         :py:class:`ValidationHandler` validate every epoch.
@@ -188,7 +186,6 @@ class ValidationHandler(TrainBegin, BatchEnd, EpochEnd):
     def __init__(self,
                  val_data,
                  eval_fn,
-                 val_metrics=None,
                  epoch_period=1,
                  batch_period=None,
                  priority=-1000):
@@ -196,7 +193,6 @@ class ValidationHandler(TrainBegin, BatchEnd, EpochEnd):
         self.eval_fn = eval_fn
         self.epoch_period = epoch_period
         self.batch_period = batch_period
-        self.val_metrics = _check_metrics(val_metrics)
         self.current_batch = 0
         self.current_epoch = 0
         # order to be called among all callbacks

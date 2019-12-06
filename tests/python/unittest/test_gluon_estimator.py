@@ -105,8 +105,7 @@ def test_validation():
     # using validation handler
     train_metrics = est.train_metrics
     val_metrics = est.val_metrics
-    validation_handler = ValidationHandler(val_data=dataloader, eval_fn=est.evaluate,
-                                           val_metrics=val_metrics)
+    validation_handler = ValidationHandler(val_data=dataloader, eval_fn=est.evaluate)
 
     with assert_raises(ValueError):
         est.fit(train_data=dataiter,
