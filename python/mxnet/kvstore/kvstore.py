@@ -72,25 +72,39 @@ class KVStore(AbstractKVStore):
     def __del__(self):
         check_call(_LIB.MXKVStoreFree(self.handle))
 
-    def broadcast(self, key, value, out=None):
-        """ Broadcast the value NDArray at rank 0 to all ranks
+    def broadcast(self, key, value, out, priority=0):
+        """ Broadcast the `value` NDArray at rank 0 to all ranks,
+        and store the result in `out`
 
         Parameters
         ----------
         key : str, int, or sequence of str or int
             Keys.
 
-        value : NDArray, list of NDArray, or list of list of NDArray
-            Values corresponding to the keys.
+        value : NDArray, or list of NDArray
+            Values corresponding to the keys to broadcast
 
-        out : optional NDArray, list of NDArray, or list of list of NDArray
-            Values corresponding to the keys.
+        out : NDArray, list of NDArray, or list of list of NDArray
+            Values corresponding to the keys to store the result
+
+        priority : int, optional
+            The priority of the operation.
+            Higher priority operations are likely to be executed before other actions.
+
+        Examples
+        --------
+        >>> # broadcast a single key-value pair
+        >>> shape = (2,3)
+        >>> kv = mx.kv.create('local')
+        >>> a = mx.nd.zeros(shape)
+        >>> kv.broadcast('3', mx.nd.ones(shape)*2, out=a)
+        >>> print a.asnumpy()
+        [[ 2.  2.  2.]
+        [ 2.  2.  2.]]
+
         """
         self.init(key, value)
-        if out is None:
-            self.pull(key, out=value)
-        else:
-            self.pull(key, out=out)
+        self.pull(key, out=out, priority=priority)
 
     def init(self, key, value):
         """ Initializes a single or a sequence of key-value pairs into the store.
@@ -309,27 +323,25 @@ class KVStore(AbstractKVStore):
         key : str, int, or sequence of str or int
             Keys.
 
-        value : NDArray, RowSparseNDArray, list of NDArray or RowSparseNDArray,
-                or list of list of NDArray or RowSparseNDArray
+        value : NDArray, list of NDArray, or list of list of NDArray
             Values corresponding to the keys.
 
         out: NDArray or list of NDArray or list of list of NDArray
             Values corresponding to the keys.
 
         priority : int, optional
-            The priority of the pull operation.
-            Higher priority pull operations are likely to be executed before
-            other pull actions.
+            The priority of the operation.
+            Higher priority operations are likely to be executed before other actions.
 
         Examples
         --------
-        >>> # push a single key-value pair
+        >>> # pushpull a single key-value pair
         >>> kv.pushpull('3', mx.nd.ones(shape)*8, out=a)
         >>> print a.asnumpy()
         [[ 8.  8.  8.]
         [ 8.  8.  8.]]
 
-        >>> # aggregate the value and the push
+        >>> # aggregate the value and then pushpull
         >>> gpus = [mx.gpu(i) for i in range(4)]
         >>> b = [mx.nd.ones(shape, gpu) for gpu in gpus]
         >>> kv.pushpull('3', b, out=a)
@@ -337,11 +349,11 @@ class KVStore(AbstractKVStore):
         [[ 4.  4.  4.]
         [ 4.  4.  4.]]
 
-        >>> # push a list of keys.
+        >>> # pushpull a list of keys.
         >>> # single device
         >>> keys = ['4', '5', '6']
         >>> b = [mx.nd.zeros(shape)]*len(keys)
-        >>> kv.push(keys, [mx.nd.ones(shape)]*len(keys), out=b)
+        >>> kv.pushpull(keys, [mx.nd.ones(shape)]*len(keys), out=b)
         >>> print b[1].asnumpy()
         [[ 1.  1.  1.]
         [ 1.  1.  1.]]
@@ -353,6 +365,7 @@ class KVStore(AbstractKVStore):
         >>> print b[1][1].asnumpy()
         [[ 4.  4.  4.]
         [ 4.  4.  4.]]
+
         """
         cvkeys, cvals, use_str_keys = _ctype_key_value(key, value)
         if out is not None:

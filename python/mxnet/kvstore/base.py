@@ -77,20 +77,24 @@ def _ctype_dict(param_dict):
 class AbstractKVStore(object):
     """An abstract key-value store interface for data parallel training."""
 
-    def broadcast(self, key, value, out=None):
-        """ Broadcast the value NDArray at rank 0 to all ranks' out. If out is None,
-        the result is stored in `value`.
+    def broadcast(self, key, value, out):
+        """ Broadcast the `value` NDArray at rank 0 to all ranks,
+        and store the result in `out`
 
         Parameters
         ----------
         key : str, int, or sequence of str or int
             Keys.
 
-        value : NDArray, list of NDArray, or list of list of NDArray
-            Values corresponding to the keys.
+        value : NDArray, or list of NDArray
+            Values corresponding to the keys to broadcast
 
-        out : optional NDArray, list of NDArray, or list of list of NDArray
-            Values corresponding to the keys.
+        out : NDArray, list of NDArray, or list of list of NDArray
+            Values corresponding to the keys to store the result
+
+        priority : int, optional
+            The priority of the operation.
+            Higher priority operations are likely to be executed before other actions.
         """
         raise NotImplementedError()
 
@@ -115,9 +119,9 @@ class AbstractKVStore(object):
             Values corresponding to the keys.
 
         priority : int, optional
-            The priority of the pull operation.
-            Higher priority pull operations are likely to be executed before
-            other pull actions.
+            The priority of the operation.
+            Higher priority operations are likely to be executed before
+            other actions.
         """
         raise NotImplementedError()
 
