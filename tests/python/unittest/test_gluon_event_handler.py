@@ -218,15 +218,12 @@ def test_logging_interval():
     net = _get_test_network()
     dataloader = _get_test_data(in_size=data_size)
     num_epochs = 1
-    ctx = mx.cpu()
     ce_loss = loss.SoftmaxCrossEntropyLoss()
     acc = mx.metric.Accuracy()
-    net.initialize(ctx=ctx)
     logging = LoggingHandler(train_metrics=[acc], log_interval=log_interval)
     est = estimator.Estimator(net=net,
                               loss=ce_loss,
-                              metrics=acc,
-                              context=ctx)
+                              metrics=acc)
 
     est.fit(train_data=dataloader,
             epochs=num_epochs,
@@ -251,8 +248,7 @@ def test_logging_interval():
     logging = LoggingHandler(train_metrics=[acc], log_interval=log_interval)
     est = estimator.Estimator(net=net,
                               loss=ce_loss,
-                              metrics=acc,
-                              context=ctx)
+                              metrics=acc)
     est.fit(train_data=dataloader,
             epochs=num_epochs,
             event_handlers=[logging])
