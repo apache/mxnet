@@ -91,7 +91,98 @@ def _get_kvstore_server_command_type(command):
     assert (command in command_types), "Unknown command type to send to server"
     return command_types[command]
 
-class KVStore(object):
+class AbstractKVStore(object):
+    """An abstract key-value store interface for data parallel training."""
+
+    def broadcast(self, key, value):
+        """ Broadcast the value NDArray at rank 0 to all ranks
+
+        Parameters
+        ----------
+        key : str, int, or sequence of str or int
+            Keys.
+
+        value : NDArray, list of NDArray, or list of list of NDArray
+            Values corresponding to the keys.
+        """
+        raise NotImplementedError()
+
+    def pushpull(self, key, value, out=None, priority=0):
+        """ Performs push and pull a single value or a sequence of values from the store.
+
+        This function is coalesced form of push and pull operations.
+
+        `value` is pushed to the kvstore server for the specified keys and the updated
+        values are pulled from the server to `out`. If `out` is not specified the pulled
+        values are written to `value`.
+
+        Parameters
+        ----------
+        key : str, int, or sequence of str or int
+            Keys.
+
+        value : NDArray, list of NDArray, or list of list of NDArray
+            Values corresponding to the keys.
+
+        out: NDArray or list of NDArray or list of list of NDArray
+            Values corresponding to the keys.
+
+        priority : int, optional
+            The priority of the pull operation.
+            Higher priority pull operations are likely to be executed before
+            other pull actions.
+        """
+        raise NotImplementedError()
+
+    def set_optimizer(self, optimizer):
+        """ Registers an optimizer with the kvstore.
+
+        When using a single machine, this function updates the local optimizer.
+        If using multiple machines and this operation is invoked from a worker node,
+        it will serialized the optimizer with pickle and send it to all servers.
+        The function returns after all servers have been updated.
+
+        Parameters
+        ----------
+        optimizer : Optimizer
+            The new optimizer for the store
+        """
+        raise NotImplementedError()
+
+    @property
+    def type(self):
+        """ Returns the type of this kvstore.
+
+        Returns
+        -------
+        type : str
+            the string type
+        """
+        raise NotImplementedError()
+
+    @property
+    def rank(self):
+        """ Returns the rank of this worker node.
+
+        Returns
+        -------
+        rank : int
+            The rank of this node, which is in range [0, num_workers())
+        """
+        raise NotImplementedError()
+
+    @property
+    def num_workers(self):
+        """Returns the number of worker nodes.
+
+        Returns
+        -------
+        size :int
+            The number of worker nodes.
+        """
+        raise NotImplementedError()
+
+class KVStore(AbstractKVStore):
     """A key-value store for synchronization of values, over multiple devices."""
     def __init__(self, handle):
         """Initializes a new KVStore.
@@ -109,6 +200,20 @@ class KVStore(object):
 
     def __del__(self):
         check_call(_LIB.MXKVStoreFree(self.handle))
+
+    def broadcast(self, key, value):
+        """ Broadcast the value NDArray at rank 0 to all ranks
+
+        Parameters
+        ----------
+        key : str, int, or sequence of str or int
+            Keys.
+
+        value : NDArray, list of NDArray, or list of list of NDArray
+            Values corresponding to the keys.
+        """
+        self.init(key, value)
+        self.pull(key, value)
 
     def init(self, key, value):
         """ Initializes a single or a sequence of key-value pairs into the store.
@@ -372,7 +477,6 @@ class KVStore(object):
         [[ 4.  4.  4.]
         [ 4.  4.  4.]]
         """
-
         cvkeys, cvals, use_str_keys = _ctype_key_value(key, value)
         if out is not None:
             cokeys, couts, _ = _ctype_key_value(key, out)
