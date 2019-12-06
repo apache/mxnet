@@ -22,13 +22,15 @@ from __future__ import absolute_import
 from array import array
 import ctypes
 import pickle
-from .ndarray import NDArray
-from .ndarray import _ndarray_cls
-from .base import _LIB, c_str_array, c_handle_array, c_array, c_array_buf, c_str
-from .base import check_call, string_types, mx_uint, py_str
-from .base import NDArrayHandle, KVStoreHandle
-from . import optimizer as opt
-from .profiler import set_kvstore_handle
+from ..ndarray import NDArray
+from ..ndarray import _ndarray_cls
+from ..base import _LIB, c_str_array, c_handle_array, c_array, c_array_buf, c_str
+from ..base import check_call, string_types, mx_uint, py_str
+from ..base import NDArrayHandle, KVStoreHandle
+from .. import optimizer as opt
+from ..profiler import set_kvstore_handle
+
+__all__ = ['KVStore', 'create']
 
 def _ctype_key_value(keys, vals):
     """Returns ctype arrays for the key-value args, and the whether string keys are used.
