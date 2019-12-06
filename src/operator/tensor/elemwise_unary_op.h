@@ -262,11 +262,8 @@ class UnaryOp : public OpBase {
     MXNET_INT_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
         if (inputs[0].Size() != 0) {
-          // printf("input: %d, %d\n", inputs[0][0], inputs[0][1]);
           mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
             s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>());
-          printf("input: %d, %d\n", inputs[0].dptr<DType>()[0], *(inputs[0].dptr<DType>() + 1));
-          printf("output: %d, %d\n", outputs[0].dptr<DType>()[0], *(outputs[0].dptr<DType>() + 1));
         }
       });
     });

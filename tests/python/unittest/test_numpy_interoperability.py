@@ -1226,7 +1226,7 @@ def _add_workload_logical_not(array_pool):
 
 
 def _add_workload_bitwise_not():
-    OpArgMngr.add_workload('bitwise_not', np.array([True, False], dtype=np.bool))
+    OpArgMngr.add_workload('bitwise_not', np.array([True, False, True, False], dtype=np.bool))
     for dtype in [np.int8, np.int32, np.int64]:
         zeros = np.array([0], dtype=dtype)
         ones = np.array([-1], dtype=dtype)
@@ -1235,7 +1235,7 @@ def _add_workload_bitwise_not():
 
 
 def _add_workload_invert():
-    #OpArgMngr.add_workload('invert', np.array([True, False, True, False], dtype=np.bool))
+    OpArgMngr.add_workload('invert', np.array([True, False, True, False], dtype=np.bool))
     for dtype in [np.int8, np.int32, np.int64]:
         zeros = np.array([0], dtype=dtype)
         ones = np.array([-1], dtype=dtype)
