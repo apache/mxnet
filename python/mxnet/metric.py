@@ -689,8 +689,7 @@ class _BinaryClassificationMetrics(object):
             return 0.
 
     def matthewscc(self, use_global=False):
-        """Calculate the Matthew's Correlation Coefficent
-        """
+        """Calculate the Matthew's Correlation Coefficent"""
         if use_global:
             if not self.global_total_examples:
                 return 0.
