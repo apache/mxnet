@@ -1667,7 +1667,7 @@ def test_np_binary_funcs():
                       [lambda y, x1, x2: -_np.floor(x1 / x2),
                        lambda y, x1, x2: _np.zeros(y.shape)],
                       [[_np.float16, _np.float32, _np.float64], [_np.int32]]),
-        'power': (1.0, 2.0, [lambda y, x1, x2: _np.power(x1, x2 - 1.0) * x2],
+        'power': (1.0, 3.0, [lambda y, x1, x2: _np.power(x1, x2 - 1.0) * x2],
                              [lambda y, x1, x2: _np.power(x1, x2) * _np.log(x1)]),
         'lcm': (-100, 100, [None], None, [[_np.int32]]),
         'bitwise_xor': (-100, 100, [None], None, [[_np.int32]]),
@@ -1728,12 +1728,32 @@ def test_np_mixed_precision_binary_funcs():
         for hybridize in [True, False]:
             if hybridize:
                 mx_func.hybridize()
+            if lgrad:
+                mx_test_x1.attach_grad()
+                mx_test_x2.attach_grad()
             np_out = np_func(np_test_x1, np_test_x2)
             with mx.autograd.record():
                 y = mx_func(mx_test_x1, mx_test_x2)
             assert y.shape == np_out.shape
             assert_almost_equal(y.asnumpy(), np_out.astype(y.dtype), rtol=rtol, atol=atol,
                                 use_broadcast=False, equal_nan=True)
+
+            if lgrad:
+                y.backward()
+                if ltype not in itypes:
+                    assert_almost_equal(mx_test_x1.grad.asnumpy(),
+                                        collapse_sum_like(lgrad(y.asnumpy(), np_test_x1, np_test_x2), mx_test_x1.shape),
+                                        rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
+                if rtype not in itypes:
+                    if rgrad is None:
+                        assert_almost_equal(mx_test_x2.grad.asnumpy(),
+                                            collapse_sum_like(rgrad(y.asnumpy(), np_test_x2, np_test_x1), mx_test_x2.shape),
+                                            rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
+                    else:
+                        assert_almost_equal(mx_test_x2.grad.asnumpy(),
+                                            collapse_sum_like(rgrad(y.asnumpy(), np_test_x1, np_test_x2), mx_test_x2.shape),
+                                            rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
+
 
         np_out = getattr(_np, func)(np_test_x1, np_test_x2)
         mx_out = getattr(mx.np, func)(mx_test_x1, mx_test_x2)
@@ -1745,7 +1765,9 @@ def test_np_mixed_precision_binary_funcs():
         'add': (-1.0, 1.0, None, None),
         'subtract': (-1.0, 1.0, None, None),
         'multiply': (-1.0, 1.0, lambda y, x1, x2: _np.broadcast_to(x2, y.shape),
-                                lambda y, x1, x2: _np.broadcast_to(x1, y.shape))
+                                lambda y, x1, x2: _np.broadcast_to(x1, y.shape)),
+        'power': (1.0, 3.0, lambda y, x1, x2: _np.power(x1, x2 - 1.0) * x2,
+                            lambda y, x1, x2: _np.power(x1, x2) * _np.log(x1)),
     }
 
     shape_pairs = [((3, 2), (3, 2)),

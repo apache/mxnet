@@ -72,7 +72,20 @@ NNVM_REGISTER_OP(_npi_mod)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::mod>);
 
 NNVM_REGISTER_OP(_npi_power)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::power>);
+#ifndef _WIN32
+.set_attr<FCompute>(
+  "FCompute<gpu>",
+  NumpyBinaryBroadcastComputeWithBool<gpu, op::mshadow_op::power, op::mshadow_op::mixed_power,
+                                      op::mshadow_op::mixed_rpower>);
+#else
+.set_attr<FCompute>(
+  "FCompute<gpu>",
+  NumpyBinaryBroadcastComputeWithBool<gpu, op::mshadow_op::power>);
+#endif
+
+NNVM_REGISTER_OP(_backward_npi_broadcast_power)
+.set_attr<FCompute>("FCompute<gpu>", NumpyBinaryBackwardUseIn<gpu, mshadow_op::power_grad,
+                                                              mshadow_op::power_rgrad>);
 
 NNVM_REGISTER_OP(_npi_add_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, op::mshadow_op::plus>);
