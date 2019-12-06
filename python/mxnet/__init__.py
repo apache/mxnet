@@ -63,8 +63,6 @@ from . import visualization as viz
 from . import callback
 # from . import misc
 from . import lr_scheduler
-# use mx.kv as short for kvstore
-from .kvstore import kvstore as kv
 # Runtime compile module
 from . import rtc
 # Attribute scope to add attributes to symbolic graphs
@@ -90,17 +88,18 @@ from . import test_utils
 from . import rnn
 from . import gluon
 
-# Dynamic library module should be done after ndarray and symbol are initialized
-from . import library
-from . import tvmop
-
+# use mx.kv as short for kvstore
 # Dist kvstore module which launches a separate process when role is set to "server".
 # This should be done after other modules are initialized.
 # Otherwise this may result in errors when unpickling custom LR scheduler/optimizers.
 # For example, the LRScheduler in gluoncv depends on a specific version of MXNet, and
 # checks the __version__ attr of MXNet, which is not set on kvstore server due to the
 # fact that kvstore-server module is imported before the __version__ attr is set.
-from .kvstore import kvstore_server
+from . import kvstore as kv
+
+# Dynamic library module should be done after ndarray and symbol are initialized
+from . import library
+from . import tvmop
 
 from . import numpy_op_signature
 from . import numpy_dispatch_protocol
