@@ -198,6 +198,13 @@ def _test_shuffle(data, labels=None):
         assert np.array_equal(batch.data[0].asnumpy(), batch_list[idx_list[i]])
         i += 1
 
+# fixes the issue https://github.com/apache/incubator-mxnet/issues/15535
+def _test_corner_case():
+    data = np.arange(10)
+    data_iter = mx.io.NDArrayIter(data=data, batch_size=25, shuffle=False, last_batch_handle='pad')
+    expect = np.concatenate((np.tile(data, 2), np.arange(5)))
+    assert np.array_equal(data_iter.next().data[0].asnumpy(), expect)
+
 
 def test_NDArrayIter():
     dtype_list = ['NDArray', 'ndarray']
@@ -220,6 +227,7 @@ def test_NDArrayIter():
             _test_shuffle({'data1': data, 'data2': data})
             _test_shuffle(data, [])
             _test_shuffle(data)
+    _test_corner_case()
 
 
 def test_NDArrayIter_h5py():

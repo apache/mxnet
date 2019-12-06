@@ -748,7 +748,15 @@ class NDArrayIter(DataIter):
             self.cursor + self.batch_size > self.num_data:
             pad = self.batch_size - self.num_data + self.cursor
             first_data = self._getdata(data_source, start=self.cursor)
-            second_data = self._getdata(data_source, end=pad)
+            if pad > self.num_data:
+                while True:
+                    if pad <= self.num_data:
+                        break
+                    second_data = self._getdata(data_source, end=self.num_data)
+                    pad -= self.num_data
+                second_data = self._concat(second_data, self._getdata(data_source, end=pad))
+            else:
+                second_data = self._getdata(data_source, end=pad)
             return self._concat(first_data, second_data)
         # normal case
         else:
