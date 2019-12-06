@@ -153,8 +153,7 @@ class EvalMetric(object):
         self.global_sum_metric = 0.0
 
     def reset_local(self):
-        """Resets the local portion of the internal evaluation results
-        to initial state."""
+        """Resets the local portion of the internal evaluation results to initial state."""
         self.num_inst = 0
         self.sum_metric = 0.0
 
@@ -372,8 +371,7 @@ class CompositeEvalMetric(EvalMetric):
             pass
 
     def reset_local(self):
-        """Resets the local portion of the internal evaluation results
-        to initial state."""
+        """Resets the local portion of the internal evaluation results to initial state."""
         try:
             for metric in self.metrics:
                 metric.reset_local()
@@ -592,8 +590,8 @@ class TopKAccuracy(EvalMetric):
 
 
 class _BinaryClassificationMetrics(object):
-    """Private container class for classification metric statistics. 
-    
+    """Private container class for classification metric statistics.
+
     True/false positive and true/false negative counts are sufficient statistics for various classification metrics.
     This class provides the machinery to track those statistics across mini-batches of
     (label, prediction) pairs.
@@ -1654,8 +1652,7 @@ class PCC(EvalMetric):
         self.reset_local()
 
     def reset_local(self):
-        """Resets the local portion of the internal evaluation results
-        to initial state."""
+        """Resets the local portion of the internal evaluation results to initial state."""
         self.num_inst = 0.
         self.lcm = numpy.zeros((self.k, self.k))
 
