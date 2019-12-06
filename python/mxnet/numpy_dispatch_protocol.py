@@ -234,6 +234,7 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'negative',
     'power',
     'mod',
+    'matmul',
     'absolute',
     'rint',
     'sign',
