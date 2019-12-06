@@ -28,6 +28,9 @@ import platform
 if platform.system() == 'Linux':
     sys.argv.append('--universal')
     sys.argv.append('--plat-name=manylinux1_x86_64')
+if platform.system() == 'Windows':
+    sys.argv.append('--universal')
+    sys.argv.append('--plat-name=win_amd64')
 
 from setuptools import setup, find_packages
 from setuptools.dist import Distribution
@@ -56,6 +59,7 @@ if not travis_tag and not is_release:
 elif travis_tag.startswith('patch-'):
     __version__ = os.environ['TRAVIS_TAG'].split('-')[1]
 
+
 class BinaryDistribution(Distribution):
     def has_ext_modules(self):
         return platform.system() == 'Darwin'
@@ -75,10 +79,6 @@ shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/dmlc-core/tracke
                 os.path.join(CURRENT_DIR, 'dmlc_tracker'))
 shutil.copy(LIB_PATH[0], os.path.join(CURRENT_DIR, 'mxnet'))
 
-# copy license and notice
-shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/licenses'),
-            os.path.join(CURRENT_DIR, 'mxnet/licenses'))
-
 # copy tools to mxnet package
 shutil.rmtree(os.path.join(CURRENT_DIR, 'mxnet/tools'), ignore_errors=True)
 os.mkdir(os.path.join(CURRENT_DIR, 'mxnet/tools'))
@@ -87,8 +87,10 @@ shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/tools/im2rec.py'), os.path.jo
 shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/tools/kill-mxnet.py'), os.path.join(CURRENT_DIR, 'mxnet/tools'))
 shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/tools/parse_log.py'), os.path.join(CURRENT_DIR, 'mxnet/tools'))
 shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/tools/diagnose.py'), os.path.join(CURRENT_DIR, 'mxnet/tools'))
-shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/tools/caffe_converter'), os.path.join(CURRENT_DIR, 'mxnet/tools/caffe_converter'))
-shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/tools/bandwidth'), os.path.join(CURRENT_DIR, 'mxnet/tools/bandwidth'))
+shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/tools/caffe_converter'),
+                os.path.join(CURRENT_DIR, 'mxnet/tools/caffe_converter'))
+shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/tools/bandwidth'),
+                os.path.join(CURRENT_DIR, 'mxnet/tools/bandwidth'))
 
 # copy headers to mxnet package
 shutil.rmtree(os.path.join(CURRENT_DIR, 'mxnet/include'), ignore_errors=True)
@@ -118,6 +120,7 @@ with open('doc/{0}_ADDITIONAL.md'.format(variant)) as variant_doc:
 
 # pypi only supports rst, so use pandoc to convert
 import pypandoc
+
 if platform.system() == 'Darwin':
     pypandoc.download_pandoc()
 long_description = pypandoc.convert_text(long_description, 'rst', 'md')
@@ -126,7 +129,9 @@ libraries = []
 if variant == 'CPU':
     libraries.append('openblas')
 else:
-    if variant.startswith('CU100'):
+    if variant.startswith('CU101'):
+        libraries.append('CUDA-10.1')
+    elif variant.startswith('CU100'):
         libraries.append('CUDA-10.0')
     elif variant.startswith('CU92'):
         libraries.append('CUDA-9.2')
@@ -147,21 +152,60 @@ package_data = {'mxnet': [os.path.join('mxnet', os.path.basename(LIB_PATH[0]))],
                 'dmlc_tracker': []}
 if variant.endswith('MKL'):
     if platform.system() == 'Darwin':
+        shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libmkldnn.1.dylib'), os.path.join(CURRENT_DIR, 'mxnet'))
+        package_data['mxnet'].append('mxnet/libmkldnn.1.dylib')
         shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mkldnn/build/install/include'),
-                    os.path.join(CURRENT_DIR, 'mxnet/include/mkldnn'))
+                        os.path.join(CURRENT_DIR, 'mxnet/include/mkldnn'))
+    elif platform.system() == 'Windows':
+        shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/build/3rdparty/mkldnn/src/mkldnn.dll'),
+                    os.path.join(CURRENT_DIR, 'mxnet'))
+        package_data['mxnet'].append(os.path.abspath('mxnet/mkldnn.dll'))
+        shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/include/mkldnn'),
+                        os.path.join(CURRENT_DIR, 'mxnet/include/mkldnn'))
+    else:
+        shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libmkldnn.so.1'), os.path.join(CURRENT_DIR, 'mxnet'))
+        package_data['mxnet'].append('mxnet/libmkldnn.so.1')
+        shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mkldnn/build/install/include'),
+                        os.path.join(CURRENT_DIR, 'mxnet/include/mkldnn'))
+
 if platform.system() == 'Linux':
     shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libgfortran.so.3'), os.path.join(CURRENT_DIR, 'mxnet'))
     package_data['mxnet'].append('mxnet/libgfortran.so.3')
     shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libquadmath.so.0'), os.path.join(CURRENT_DIR, 'mxnet'))
     package_data['mxnet'].append('mxnet/libquadmath.so.0')
+elif platform.system() == 'Windows':
+    package_data['mxnet'].append(os.path.abspath(os.path.join('mxnet', os.path.basename(LIB_PATH[0]))))
+    package_data['mxnet'].append(os.path.abspath(os.path.join('mxnet', 'libmxnet.lib')))
+    for root, dirs, files in os.walk('win_third/openblas'):
+        for file in files:
+            shutil.copy(os.path.join(root, file), os.path.join(CURRENT_DIR, 'mxnet'))
+            package_data['mxnet'].append(os.path.abspath(os.path.join('mxnet', file)))
+    if variant != 'CPU':
+        variant_cudnn = variant
+        if variant.endswith("MKL"):
+            variant_cudnn = variant[:-3]
+        if variant_cudnn != "":
+            for root, dirs, files in os.walk('win_third/cudnn/{0}'.format(variant_cudnn)):
+                for file in files:
+                    shutil.copy(os.path.join(root, file), os.path.join(CURRENT_DIR, 'mxnet'))
+                    package_data['mxnet'].append(os.path.abspath(os.path.join('mxnet', file)))
 
 # Copy licenses and notice
-for f in os.listdir('mxnet/licenses'):
-  package_data['mxnet'].append('mxnet/licenses/{}'.format(f))
+os.mkdir(os.path.join(CURRENT_DIR, 'mxnet/licenses'))
+shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/NOTICE'), os.path.join(CURRENT_DIR, 'mxnet/licenses'))
+shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/LICENSE'), os.path.join(CURRENT_DIR, 'mxnet/licenses'))
+shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/DISCLAIMER'), os.path.join(CURRENT_DIR, 'mxnet/licenses'))
+shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/tools/dependencies/LICENSE.binary.dependencies'),
+            os.path.join(CURRENT_DIR, 'mxnet/licenses'))
+package_data['mxnet'].append('mxnet/licenses/NOTICE')
+package_data['mxnet'].append('mxnet/licenses/LICENSE')
+package_data['mxnet'].append('mxnet/licenses/DISCLAIMER')
+package_data['mxnet'].append('mxnet/licenses/LICENSE.binary.dependencies')
 
 from mxnet.base import _generate_op_module_signature
 from mxnet.ndarray.register import _generate_ndarray_function_code
 from mxnet.symbol.register import _generate_symbol_function_code
+
 _generate_op_module_signature('mxnet', 'symbol', _generate_symbol_function_code)
 _generate_op_module_signature('mxnet', 'ndarray', _generate_ndarray_function_code)
 
@@ -176,7 +220,7 @@ setup(name=package_name,
       install_requires=DEPENDENCIES,
       distclass=BinaryDistribution,
       license='Apache 2.0',
-      classifiers=[ # https://pypi.org/pypi?%3Aaction=list_classifiers
+      classifiers=[  # https://pypi.org/pypi?%3Aaction=list_classifiers
           'Development Status :: 5 - Production/Stable',
           'Intended Audience :: Developers',
           'Intended Audience :: Education',
