@@ -81,7 +81,7 @@ for (x in labels) {
 def toDeploy = [:]
 for (x in labels) {
   def label = x // Required due to language
-  toDeploy["Scala Deploy ${label}"] = wrapStep(nodeMap['cpu'], "deploy-scala-${label}") {
+  toDeploy["Scala Deploy ${label}"] = wrapStep(nodeMap[label], "deploy-scala-${label}") {
     withEnv(["MAVEN_PUBLISH_OS_TYPE=${scalaOSMap[label]}", "mxnet_variant=${scalaVariantMap[label]}"]) {
       utils.unpack_and_init("scala_${label}", mx_scala_pub, false)
       utils.docker_run("publish.ubuntu1604_${label}", 'publish_scala_deploy', label == 'gpu' ? true : false, '500m', 'MAVEN_PUBLISH_OS_TYPE MAVEN_PUBLISH_SECRET_ENDPOINT_URL MAVEN_PUBLISH_SECRET_NAME_CREDENTIALS MAVEN_PUBLISH_SECRET_NAME_GPG DOCKERHUB_SECRET_ENDPOINT_REGION mxnet_variant')
