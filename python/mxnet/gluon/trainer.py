@@ -150,9 +150,10 @@ class Trainer(object):
                 else:
                     param_arrays = param._check_and_get(param._data, list)
                     idx = self._param2idx[param.name]
-                    self._kvstore.init(idx, param_arrays[0])
-                    if param._stype == 'default':
-                        self._kvstore.pull(idx, param_arrays, priority=-idx)
+                    if param._stype != 'default':
+                        self._kvstore.init(idx, param_arrays[0])
+                    else:
+                        self._kvstore.broadcast(idx, param_arrays[0], param_arrays)
 
         self._params_to_init = params_to_init
 
@@ -358,10 +359,22 @@ class Trainer(object):
             for i, param in enumerate(self._params):
                 if param.grad_req != 'null':
 
-                    self._kvstore.push(i, param.list_grad(), priority=-i)
-                    if not self._update_on_kvstore:
-                        self._kvstore.pull(i, param.list_grad(), priority=-i,
-                                           ignore_sparse=self._distributed)
+                    push_list = param.list_grad()
+                    # sparse gradients, call push and pull separately
+                    if push_list[0].stype != 'default':
+                        self._kvstore.push(i, push_list, priority=-i)
+                        if param._stype == 'default':
+                            if self._update_on_kvstore:
+                                pull_list = param.list_data()
+                            else:
+                                pull_list = param.list_grad()
+                            self._kvstore.pull(i, pull_list, priority=-i,
+                                               ignore_sparse=self._distributed)
+                    else:
+                        # allreduce dense gradients if not update_on_kvstore,
+                        # otherwise push dense gradients, pull dense weights
+                        pull_list = param.list_data() if self._update_on_kvstore else param.list_grad()
+                        self._kvstore.pushpull(i, push_list, out=pull_list, priority=-i)
 
     def update(self, batch_size, ignore_stale_grad=False):
         """Makes one step of parameter update.
@@ -416,10 +429,6 @@ class Trainer(object):
                             %(param.name, str(data.context)))
 
             if self._kvstore and self._update_on_kvstore:
-                if param._stype == 'default':
-                    # 'row_sparse' parameters are not pulled immediately - they're pulled
-                    # in `Block.forward`
-                    self._kvstore.pull(i, param.list_data(), priority=-i)
                 continue
 
             for upd, arr, grad in zip(updates, param.list_data(), param.list_grad()):

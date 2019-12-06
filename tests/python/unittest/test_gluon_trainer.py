@@ -120,7 +120,8 @@ def test_trainer_save_load():
 
 @with_seed()
 def test_trainer_sparse_save_load():
-    x = gluon.Parameter('x', shape=(10, 1), lr_mult=1.0, stype='row_sparse')
+    x = gluon.Parameter('x', shape=(10, 1), lr_mult=1.0,
+                        stype='row_sparse', grad_stype='row_sparse')
     x.initialize(ctx=[mx.cpu(0)], init='zeros')
     trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 0.1})
     all_rows = mx.nd.arange(0, 10, ctx=mx.cpu(0))
@@ -236,7 +237,7 @@ def test_trainer_sparse_kv():
             # the updated parameter should be based on the loaded checkpoint
             mx.nd.waitall()
             updated_w = x.data(mx.cpu(0)) if stype == 'default' else x.row_sparse_data(all_rows)
-            assert (updated_w == -0.2).asnumpy().all()
+            assert (updated_w == -0.2).asnumpy().all(), updated_w
         except Exception as err:
             assert isinstance(err, expected)
 

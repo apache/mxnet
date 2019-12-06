@@ -94,8 +94,9 @@ def _get_kvstore_server_command_type(command):
 class AbstractKVStore(object):
     """An abstract key-value store interface for data parallel training."""
 
-    def broadcast(self, key, value):
-        """ Broadcast the value NDArray at rank 0 to all ranks
+    def broadcast(self, key, value, out=None):
+        """ Broadcast the value NDArray at rank 0 to all ranks' out. If out is None,
+        the result is stored in `value`.
 
         Parameters
         ----------
@@ -103,6 +104,9 @@ class AbstractKVStore(object):
             Keys.
 
         value : NDArray, list of NDArray, or list of list of NDArray
+            Values corresponding to the keys.
+
+        out : optional NDArray, list of NDArray, or list of list of NDArray
             Values corresponding to the keys.
         """
         raise NotImplementedError()
@@ -146,6 +150,30 @@ class AbstractKVStore(object):
         ----------
         optimizer : Optimizer
             The new optimizer for the store
+        """
+        raise NotImplementedError()
+
+    def save_optimizer_states(self, fname, dump_optimizer=False):
+        """Saves the optimizer (updater) state to a file. This is often used when checkpointing
+        the model during training.
+
+        Parameters
+        ----------
+        fname : str
+            Path to the output states file.
+        dump_optimizer : bool, default False
+            Whether to also save the optimizer itself. This would also save optimizer
+            information such as learning rate and weight decay schedules.
+        """
+        raise NotImplementedError()
+
+    def load_optimizer_states(self, fname):
+        """Loads the optimizer (updater) state from the file.
+
+        Parameters
+        ----------
+        fname : str
+            Path to input states file.
         """
         raise NotImplementedError()
 
@@ -201,7 +229,7 @@ class KVStore(AbstractKVStore):
     def __del__(self):
         check_call(_LIB.MXKVStoreFree(self.handle))
 
-    def broadcast(self, key, value):
+    def broadcast(self, key, value, out=None):
         """ Broadcast the value NDArray at rank 0 to all ranks
 
         Parameters
@@ -211,9 +239,15 @@ class KVStore(AbstractKVStore):
 
         value : NDArray, list of NDArray, or list of list of NDArray
             Values corresponding to the keys.
+
+        out : optional NDArray, list of NDArray, or list of list of NDArray
+            Values corresponding to the keys.
         """
         self.init(key, value)
-        self.pull(key, value)
+        if out is None:
+            self.pull(key, out=value)
+        else:
+            self.pull(key, out=out)
 
     def init(self, key, value):
         """ Initializes a single or a sequence of key-value pairs into the store.
