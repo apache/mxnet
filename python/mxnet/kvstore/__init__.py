@@ -20,4 +20,5 @@
 # coding: utf-8
 """Key-value store for distributed communication"""
 from .kvstore import *
+from .base import *
 from .kvstore_server import *

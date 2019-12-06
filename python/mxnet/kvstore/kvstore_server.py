@@ -23,7 +23,7 @@ import sys
 import pickle
 import logging
 from ..base import _LIB, check_call
-from .kvstore import create
+from .base import create
 
 __all__ = ['KVStoreServer']
 
