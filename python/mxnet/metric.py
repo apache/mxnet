@@ -592,8 +592,9 @@ class TopKAccuracy(EvalMetric):
 
 
 class _BinaryClassificationMetrics(object):
-    """Private container class for classification metric statistics. True/false positive and
-     true/false negative counts are sufficient statistics for various classification metrics.
+    """Private container class for classification metric statistics. 
+    
+    True/false positive and true/false negative counts are sufficient statistics for various classification metrics.
     This class provides the machinery to track those statistics across mini-batches of
     (label, prediction) pairs.
     """
@@ -609,8 +610,7 @@ class _BinaryClassificationMetrics(object):
         self.global_true_negatives = 0
 
     def update_binary_stats(self, label, pred):
-        """Update various binary classification counts for a single (label, pred)
-        pair.
+        """Update various binary classification counts for a single (label, pred) pair.
 
         Parameters
         ----------
