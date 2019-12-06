@@ -27,6 +27,10 @@ __all__ = ['BatchProcessor']
 
 class BatchProcessor(object):
     """BatchProcessor Class for plug and play fit_batch & evaluate_batch
+    During training or validation, data are divided into minibatches for processing. This
+    class aims at providing hooks of training or validating on a minibatch of data. User
+    may provide customized fit_batch() and evaluate_batch() methods by inheriting from
+    this class.
 
     :py:class:`BatchProcessor` can be used to replace fit_batch() and evaluate_batch()
     in the base estimator class
