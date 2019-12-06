@@ -95,6 +95,23 @@ def _add_workload_diag():
     OpArgMngr.add_workload('diag', vals_f, k=-2)
 
 
+def _add_workload_diagonal():
+    A = np.arange(12).reshape((3, 4))
+    B = np.arange(8).reshape((2,2,2))
+
+    OpArgMngr.add_workload('diagonal', A)
+    OpArgMngr.add_workload('diagonal', A, offset=0)
+    OpArgMngr.add_workload('diagonal', A, offset=-1)
+    OpArgMngr.add_workload('diagonal', A, offset=1)
+    OpArgMngr.add_workload('diagonal', B, offset=0)
+    OpArgMngr.add_workload('diagonal', B, offset=1)
+    OpArgMngr.add_workload('diagonal', B, offset=-1)
+    OpArgMngr.add_workload('diagonal', B, 0, 1, 2)
+    OpArgMngr.add_workload('diagonal', B, 0, 0, 1)
+    OpArgMngr.add_workload('diagonal', B, offset=1, axis1=0, axis2=2)
+    OpArgMngr.add_workload('diagonal', B, 0, 2, 1)
+
+
 def _add_workload_concatenate(array_pool):
     OpArgMngr.add_workload('concatenate', [array_pool['4x1'], array_pool['4x1']])
     OpArgMngr.add_workload('concatenate', [array_pool['4x1'], array_pool['4x1']], axis=1)
@@ -1321,6 +1338,7 @@ def _prepare_workloads():
     _add_workload_ravel()
     _add_workload_unravel_index()
     _add_workload_diag()
+    _add_workload_diagonal()
     _add_workload_diagflat()
     _add_workload_dot()
     _add_workload_expand_dims()
