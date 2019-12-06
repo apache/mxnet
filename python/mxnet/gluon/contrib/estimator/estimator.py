@@ -32,7 +32,6 @@ from ...data import DataLoader
 from ...loss import Loss as gluon_loss
 from ...trainer import Trainer
 from ...utils import split_and_load
-from .... import autograd
 from ....context import Context, cpu, gpu, num_gpus
 from ....metric import Loss as metric_loss
 from .batch_processor import BatchProcessor
