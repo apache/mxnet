@@ -16,16 +16,16 @@
 # under the License.
 
 all:
-	g++ -shared -fPIC mylib.cc -o mylib.so -I ../../include/mxnet
+	g++ -std=c++11 -shared -fPIC init_lib.cc -o libinit_lib.so -I ../../../include/mxnet
 
 test:
-	g++ -std=c++11 -O3 -o libtest libtest.cc -ldl -I ../../include/mxnet
+	g++ -std=c++11 -O3 -o libtest libtest.cc -ldl -I ../../../include/mxnet
 
 windows:
-	cl /LD mylib.cc
+	cl /LD init_lib.cc
 
 win_test:
 	cl libtest.cc
 
 clean:
-	rm -rf mylib.so libtest
+	rm -rf *.so libtest
