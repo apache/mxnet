@@ -85,7 +85,7 @@ mshadow::Shape<ndim> BroadcastKernelShape(mshadow::Shape<ndim> in_shape,
    */
   mshadow::Shape<ndim>out_shape(in_shape);
   *size = 1;
-  for (int i = 0; i < N - 2; ++i) {
+  for (size_t i = 0; i < N - 2; ++i) {
     out_shape[i] = std::max(in_shape[i], broadcast_shape[i]);
     *size *= out_shape[i];
   }
@@ -115,21 +115,21 @@ struct NDMatmul {
                                   const size_t ndim){
     // i is the global flatten index in the output
     mshadow::Shape<10> out_idx;  // position in output's shape
-    for (int j = 0; j < ndim; ++j) {
+    for (size_t j = 0; j < ndim; ++j) {
       const int64_t head = i / out_stride[j];
       const int64_t mid = head % out_shape[j];
       out_idx[j] = mid;
     }
     mshadow::Shape<10> a_idx(out_idx);  // data block position in a's shape
     size_t a_pos = 0;
-    for (int j = 0; j < ndim - 2; ++j) {
+    for (size_t j = 0; j < ndim - 2; ++j) {
       a_idx[j] = (a_shape[j] == 1) ? 0 : a_idx[j];  // broadcast
       a_pos += a_idx[j] * a_stride[j];
     }
     a_pos += out_idx[ndim - 2] * a_stride[ndim - 2];
     mshadow::Shape<10> b_idx(out_idx);  // data block position in b's shape
     size_t b_pos = 0;
-    for (int j = 0; j < ndim - 2; ++j) {
+    for (size_t j = 0; j < ndim - 2; ++j) {
       b_idx[j] = (b_shape[j] == 1) ? 0 : b_idx[j];  // broadcast
       b_pos += b_idx[j] * b_stride[j];
     }
@@ -153,7 +153,6 @@ struct TransposeLastTwoAxes {
   MSHADOW_XINLINE static void Map(int i, DType* out, const DType* in,
                                   const size_t in_row, const size_t in_col) {
     // i is the global position in flattened output
-    const size_t out_row = in_col;
     const size_t out_col = in_row;
     const size_t last = i % (in_row * in_col);
     const size_t base = i - last;
@@ -224,7 +223,7 @@ void NumpyMatmulForward(const nnvm::NodeAttrs& attrs,
       if (a_shape.ndim() == 1) {
         ndim += 1;
         std::vector<size_t> newshape(ndim);
-        for (int i = 0; i < ndim - 2; ++i) {
+        for (size_t i = 0; i < ndim - 2; ++i) {
           newshape[i] = out_shape[i];
         }
         newshape[ndim - 2] = 1;
@@ -285,7 +284,7 @@ void NumpyMatmulBackward(const nnvm::NodeAttrs& attrs,
         a_shape.assign(temp_shape.begin(), temp_shape.end());
         ndim += 1;
         std::vector<size_t> newshape(ndim);
-        for (int i = 0; i < ndim - 2; ++i) {
+        for (size_t i = 0; i < ndim - 2; ++i) {
           newshape[i] = out_shape[i];
         }
         newshape[ndim - 2] = 1;

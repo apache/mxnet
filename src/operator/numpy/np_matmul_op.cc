@@ -78,7 +78,7 @@ inline bool NumpyMatmulShape(const nnvm::NodeAttrs& attrs,
     SHAPE_ASSIGN_CHECK(*in_attrs, 1, tmp_shape);
 
     mxnet::TShape out_shape(a_ndim - 1, -1);
-    for (int i = 0; i < a_ndim - 1; ++i) {
+    for (size_t i = 0; i < a_ndim - 1; ++i) {
       out_shape[i] = a_shape[i];
     }
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, out_shape);
@@ -95,7 +95,7 @@ inline bool NumpyMatmulShape(const nnvm::NodeAttrs& attrs,
     SHAPE_ASSIGN_CHECK(*in_attrs, 0, tmp_shape);
 
     mxnet::TShape out_shape(b_ndim - 1, -1);
-    for (int i = 0; i < b_ndim - 2; ++i) {
+    for (size_t i = 0; i < b_ndim - 2; ++i) {
       out_shape[i] = b_shape[i];
     }
     out_shape[b_ndim - 2] = b_shape[b_ndim - 1];
