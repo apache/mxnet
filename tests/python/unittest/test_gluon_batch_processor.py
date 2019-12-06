@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-''' Unit tests for Gluon Estimator Model '''
+''' Unit tests for Gluon Batch Processor '''
 
 import sys
 import unittest
@@ -26,7 +26,7 @@ from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.gluon.contrib.estimator import *
 from mxnet.gluon.contrib.estimator.event_handler import *
-from mxnet.gluon.contrib.estimator.estimator_model import EstimatorModel
+from mxnet.gluon.contrib.estimator.batch_processor import BatchProcessor
 from nose.tools import assert_raises
 
 def _get_test_network():
@@ -45,7 +45,7 @@ def _get_test_data():
     dataiter = mx.io.NDArrayIter(data=in_data, label=out_data, batch_size=batch_size)
     return dataloader, dataiter
 
-def test_estimator_model_fit():
+def test_batch_processor_fit():
     ''' test estimator with different train data types '''
     net = _get_test_network()
     dataloader, dataiter = _get_test_data()
@@ -54,14 +54,14 @@ def test_estimator_model_fit():
     loss = gluon.loss.L2Loss()
     acc = mx.metric.Accuracy()
     net.initialize(ctx=ctx)
-    model = EstimatorModel()
+    processor = BatchProcessor()
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     est = Estimator(net=net,
                     loss=loss,
                     metrics=acc,
                     trainer=trainer,
                     context=ctx,
-                    estimator_model=model)
+                    batch_processor=processor)
 
     est.fit(train_data=dataloader,
             epochs=num_epochs)
@@ -76,7 +76,7 @@ def test_estimator_model_fit():
                 epochs=num_epochs)
 
 
-def test_estimator_model_validation():
+def test_batch_processor_validation():
     ''' test different validation data types'''
     net = _get_test_network()
     dataloader, dataiter = _get_test_data()
@@ -86,7 +86,7 @@ def test_estimator_model_validation():
     acc = mx.metric.Accuracy()
     evaluation_loss = gluon.loss.L1Loss()
     net.initialize(ctx=ctx)
-    model = EstimatorModel()
+    processor = BatchProcessor()
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     est = Estimator(net=net,
                     loss=loss,
@@ -94,7 +94,7 @@ def test_estimator_model_validation():
                     trainer=trainer,
                     context=ctx,
                     evaluation_loss=evaluation_loss,
-                    estimator_model=model)
+                    batch_processor=processor)
     # Input dataloader
     est.fit(train_data=dataloader,
             val_data=dataloader,

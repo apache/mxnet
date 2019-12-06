@@ -17,20 +17,18 @@
 
 # coding: utf-8
 # pylint: disable=wildcard-import, unused-argument, too-many-ancestors
-"""Gluon EstimatorModels for Estimators"""
-
-import warnings
+"""Gluon Batch Processor for Estimators"""
 
 from ...utils import split_and_load
 from ....metric import Loss as metric_loss
 from .... import autograd
 
-__all__ = ['EstimatorModel']
+__all__ = ['BatchProcessor']
 
-class EstimatorModel(object):
-    """EstimatorModel Class for plug and play fit_batch & evaluate_batch
+class BatchProcessor(object):
+    """BatchProcessor Class for plug and play fit_batch & evaluate_batch
 
-    :py:class:`EstimatorModel` can be used to replace fit_batch() and evaluate_batch()
+    :py:class:`BatchProcessor` can be used to replace fit_batch() and evaluate_batch()
     in the base estimator class
     """
     def __init__(self):
@@ -45,9 +43,8 @@ class EstimatorModel(object):
 
     def evaluate_batch(self, estimator,
                        val_batch,
-                       val_metrics,
                        batch_axis=0):
-        """Evaluate estimator model on a batch of validation data.
+        """Evaluate the estimator model on a batch of validation data.
 
         Parameters
         ----------
@@ -55,8 +52,6 @@ class EstimatorModel(object):
             Reference to the estimator
         val_batch : tuple
             Data and label of a batch from the validation data loader.
-        val_metrics : EvalMetric or list of EvalMetrics
-            Metrics to update validation result.
         batch_axis : int, default 0
             Batch axis to split the validation data into devices.
         """
@@ -64,12 +59,7 @@ class EstimatorModel(object):
         pred = [estimator.net(x) for x in data]
         loss = [estimator.evaluation_loss(y_hat, y) for y_hat, y in zip(pred, label)]
 
-        for metric in val_metrics:
-            if isinstance(metric, metric_loss):
-                metric.update(0, loss)
-            else:
-                metric.update(label, pred)
-
+        return data, label, pred, loss
 
     def fit_batch(self, estimator,
                   train_batch,
@@ -99,7 +89,7 @@ class EstimatorModel(object):
             Loss on each of the sharded inputs.
         """
         data, label = self._get_data_and_label(train_batch, estimator.context, batch_axis)
-        
+
         batch_size = train_batch[0].shape[batch_axis]
         with autograd.record():
             pred = [estimator.net(x) for x in data]
@@ -108,5 +98,4 @@ class EstimatorModel(object):
         for l in loss:
             l.backward()
 
-        estimator.trainer.step(batch_size)
         return data, label, pred, loss
