@@ -65,7 +65,7 @@ def test_sync_push_pull():
             scale = my_rank + 1
             num = (nworker + 1) * nworker * rate * num_gpus / 2 * (i + 1) + 1
 
-            arr = [mx.nd.ones(shape, ctx=mx.cpu(j)) * scale for j in range(num_gpus)]
+            arr = [mx.nd.ones(shape, ctx=mx.gpu(j)) * scale for j in range(num_gpus)]
             val = mx.nd.zeros(shape)
             kv.push('9', arr)
             kv.pull('9', out=val)
@@ -73,7 +73,7 @@ def test_sync_push_pull():
             kv.pushpull('10', arr, out=val)
             check_diff_to_scalar(val, num)
 
-            big_arr = [mx.nd.ones(big_shape, ctx=mx.cpu(j)) * scale for j in range(num_gpus)]
+            big_arr = [mx.nd.ones(big_shape, ctx=mx.gpu(j)) * scale for j in range(num_gpus)]
             big_val = mx.nd.zeros(big_shape)
             kv.push('99', big_arr)
             kv.pull('99', out=big_val)
