@@ -21,7 +21,7 @@
  *  Copyright (c) 2019 by Contributors
  * \file multi_sum_sq.cc
  * \brief vectorized sum or squared over multiple arrays operators
- * \author Clement Fuji Tsang, Andrei Ivanov
+ * \author Clement Fuji Tsang, Andrei Ivanov, Moises Hernandez
  */
 
 #include "./multi_sum_sq-inl.h"
@@ -52,6 +52,10 @@ NNVM_REGISTER_OP(multi_sum_sq)
     return ret;
   })
 .set_attr<FCompute>("FCompute<cpu>", MultiSumSq<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .add_argument("data", "NDArray-or-Symbol[]", "Arrays")
 .add_arguments(MultiSumSqParam::__FIELDS__());
 
@@ -74,9 +78,9 @@ inline void CalcSumSq(const std::vector<TBlob> &inputs, int nInputs,
 
 template<>
 void MultiSumSqRun<cpu>(const std::vector<TBlob> &inputs, int nInputs,
-                        float *out_ptr, mshadow::Stream<cpu> *s) {
+                        float *out_ptr, const OpContext &ctx) {
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType,
-    CalcSumSq<DType>(inputs, nInputs, out_ptr, s);
+    CalcSumSq<DType>(inputs, nInputs, out_ptr, ctx.get_stream<cpu>());
   )
 }
 
