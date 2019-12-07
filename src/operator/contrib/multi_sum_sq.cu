@@ -105,7 +105,7 @@ __global__ void MultiSumSqKernel(int chunk_size,
   }
   const float final = reduce_block_into_lanes(vals, val);
 
-  if (threadIdx.x == 0){
+  if (threadIdx.x == 0) {
     block_reductions[(start_tensor_id + tensor_loc) * param.max_chunks_per_tensor +
                     param.block_to_chunk[blockIdx.x]] = final;
   }
@@ -118,12 +118,12 @@ __global__ void GlobalReductionKernel(MultiSumSqKernelParam<DType> param,
   __shared__ float vals[512];
   float* reductions_this_tensor = block_reductions + blockIdx.x * param.max_chunks_per_tensor;
   float val = 0;
-  for(int i = threadIdx.x; i < param.max_chunks_per_tensor; i += blockDim.x)
+  for (int i = threadIdx.x; i < param.max_chunks_per_tensor; i += blockDim.x)
     val += reductions_this_tensor[i];
 
   float final = reduce_block_into_lanes(vals, val);
 
-  if(threadIdx.x == 0)
+  if (threadIdx.x == 0)
     output[blockIdx.x] = final;
 }
 
@@ -141,7 +141,7 @@ void MultiSumSqRun<gpu>(const std::vector<TBlob> &inputs, int nInputs,
     // find max num of chunks in tensors
     for (int t = 0; t < nInputs; t++) {
       int chunks_this_tensor = (inputs[t].shape_.Size() + chunk_size - 1) / chunk_size;
-      if(chunks_this_tensor > param.max_chunks_per_tensor)
+      if (chunks_this_tensor > param.max_chunks_per_tensor)
         param.max_chunks_per_tensor = chunks_this_tensor;
     }
      // temporary storage for the reduction of each block
@@ -151,7 +151,9 @@ void MultiSumSqRun<gpu>(const std::vector<TBlob> &inputs, int nInputs,
       Shape1(workspace_size), s);
     Tensor<gpu, 1, float> block_reductions(reinterpret_cast<float*>(&workspace[0]),
       Shape1(nInputs * param.max_chunks_per_tensor), s);
-    CUDA_CALL(cudaMemsetAsync(block_reductions.dptr_, 0, nInputs * param.max_chunks_per_tensor* sizeof(float), stream));
+    CUDA_CALL(cudaMemsetAsync(block_reductions.dptr_, 0,
+                              nInputs * param.max_chunks_per_tensor* sizeof(float),
+                              stream));
 
     int loc_block_info = 0;   // position in param.block_to_tensor and param.block_to_chunck
     int loc_tensor_info = 0;  // position in param.sizes and param.addresses
