@@ -40,7 +40,7 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
-           'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot', 'histogram', 'eye',
+           'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'tensordot', 'histogram', 'eye',
            'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'split', 'vsplit', 'concatenate', 'append',
            'stack', 'vstack', 'column_stack', 'dstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax',
            'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index', 'hanning', 'hamming', 'blackman',
@@ -484,13 +484,13 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute topk')
 
-    def argsort(self, *args, **kwargs):
+    def argsort(self, axis=-1, kind=None, order=None):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`argsort`.
 
         The arguments are the same as for :py:func:`argsort`, with
         this array as data.
         """
-        raise NotImplementedError
+        raise argsort(self, axis=axis, kind=kind, order=order)
 
     def argmax_channel(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argmax_channel`.
@@ -1323,6 +1323,45 @@ def lcm(x1, x2, out=None, **kwargs):
     gcd : The greatest common divisor
     """
     return _ufunc_helper(x1, x2, _npi.lcm, _np.lcm, _npi.lcm_scalar, None, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def argsort(a, axis=-1, kind=None, order=None):
+    """
+    Returns the indices that would sort an array.
+    Perform an indirect sort along the given axis using the algorithm specified
+    by the `kind` keyword. It returns an array of indices of the same shape as
+    `a` that index data along the given axis in sorted order.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Array to sort.
+    axis : int or None, optional
+        Axis along which to sort.  The default is -1 (the last axis). If None,
+        the flattened array is used.
+    kind : string, optional
+        This argument can take any string, but it does not have any effect on the
+        final result.
+    order : str or list of str, optional
+        Not supported yet, will raise NotImplementedError if not None.
+
+    Returns
+    -------
+    index_array : _Symbol, int
+        Array of indices that sort `a` along the specified `axis`.
+        If `a` is one-dimensional, ``a[index_array]`` yields a sorted `a`.
+        More generally, ``np.take_along_axis(a, index_array, axis=axis)``
+        always yields the sorted `a`, irrespective of dimensionality.
+
+    Notes
+    -----
+    This operator does not support different sorting algorithms.
+    """
+    if order is not None:
+        raise NotImplementedError("order is not supported yet...")
+
+    return _npi.argsort(data=a, axis=axis, is_ascend=True, dtype='int64')
 
 
 @set_module('mxnet.symbol.numpy')

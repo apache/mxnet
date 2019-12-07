@@ -1181,6 +1181,41 @@ def test_np_reshape():
 
 @with_seed()
 @use_np
+def test_np_argsort():
+    class TestArgsort(HybridBlock):
+        def __init__(self, axis):
+            super(TestArgsort, self).__init__()
+            self._axis = axis
+
+        def hybrid_forward(self, F, x):
+            return F.np.argsort(x, axis=self._axis)
+
+    shapes = [
+        (),
+        (2, 3),
+        (1, 0, 2),
+    ]
+
+    for shape in shapes:
+        data = np.random.uniform(size=shape)
+        np_data = data.asnumpy()
+
+        for axis in [None] + [i for i in range(-len(shape), len(shape))]:
+            np_out = _np.argsort(np_data, axis)
+
+            test_argsort = TestArgsort(axis)
+            for hybrid in [False, True]:
+                if hybrid:
+                    test_argsort.hybridize()
+                mx_out = test_argsort(data)
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-5, atol=1e-6, use_broadcast=False)
+
+            mx_out = np.argsort(data, axis)
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-5, atol=1e-6, use_broadcast=False)
+
+
+@with_seed()
+@use_np
 def test_np_squeeze():
     config = [((), None),
               ((), -1),
