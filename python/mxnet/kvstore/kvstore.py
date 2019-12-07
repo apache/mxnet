@@ -75,7 +75,9 @@ class KVStore(KVStoreBase):
 
     def broadcast(self, key, value, out, priority=0):
         """ Broadcast the `value` NDArray at rank 0 to all ranks,
-        and store the result in `out`
+        and store the result in `out`.
+
+        Note that the native KVStore does not support broadcasting the same key more than once.
 
         Parameters
         ----------

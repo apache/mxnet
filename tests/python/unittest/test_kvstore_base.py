@@ -1,0 +1,156 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+# pylint: skip-file
+import mxnet as mx
+import numpy as np
+import unittest
+from mxnet.test_utils import rand_ndarray, assert_almost_equal
+from common import setup_module, with_seed, assertRaises, teardown
+from mxnet.base import py_str, MXNetError
+
+shape = (4, 4)
+keys = [5, 7, 11]
+str_keys = ['b', 'c', 'd']
+
+def check_diff_to_scalar(A, x):
+    """ assert A == x"""
+    assert(np.sum(np.abs((A - x).asnumpy())) == 0), (A, x)
+
+def init_kv(name='device'):
+    return mx.kv.create(name)
+
+@with_seed()
+def test_broadcast_single_kv_pair():
+    """single key-value pair push & pull"""
+    def check_single_kv_pair(kv, key):
+        # single output
+        ones = mx.nd.ones(shape)
+        out = mx.nd.empty(shape)
+        kv.broadcast(key, ones, out)
+        check_diff_to_scalar(out, 1)
+        # list output
+        out_list = [mx.nd.empty(shape)] * 3
+        key_list = key + key
+        kv.broadcast(key_list, ones, out_list)
+        for o in out_list:
+            check_diff_to_scalar(o, 1)
+
+    check_single_kv_pair(init_kv(), 3)
+    check_single_kv_pair(init_kv(), 'a')
+
+@with_seed()
+def test_broadcast_list_kv_pair():
+    """list key-value pair push & pull"""
+    def check_list_kv_pair(kv, key):
+        ones = [mx.nd.ones(shape)] * len(key)
+        out = [mx.nd.empty(shape)] * len(key)
+        kv.broadcast(key, ones, out)
+        for o in out:
+            check_diff_to_scalar(o, 1)
+        out_list = [[mx.nd.empty(shape)] * 2 for _ in range(len(key))]
+        key_list = [k + k for k in key]
+        kv.broadcast(key_list, ones, out_list)
+        for o in out_list:
+            for oo in o:
+                check_diff_to_scalar(oo, 1)
+
+    check_list_kv_pair(init_kv(), keys)
+    check_list_kv_pair(init_kv(), str_keys)
+
+@with_seed()
+def test_pushpull_single_kv_pair():
+    """aggregate value on muliple devices"""
+    def check_aggregator(kv, key, key_list):
+        num_keys = len(key_list)
+        kv.broadcast(key, mx.nd.zeros(shape), out=mx.nd.empty(shape))
+        kv.broadcast(key_list, [mx.nd.zeros(shape)] * num_keys,
+                     out=[mx.nd.empty(shape)] * num_keys)
+        # devices
+        num_devs = 4
+        devs = [mx.Context('cpu', i) for i in range(num_devs)]
+
+        # single
+        vals = [mx.nd.ones(shape, d) for d in devs]
+        outs = [mx.nd.empty(shape, d) for d in devs]
+
+        kv.pushpull(key, vals, out=outs)
+        for out in outs:
+            check_diff_to_scalar(out, num_devs)
+
+        # inplace
+        kv.pushpull(key, vals)
+        for val in vals:
+            check_diff_to_scalar(val, num_devs)
+
+        # list
+        vals = [[mx.nd.ones(shape, d)*2.0 for d in devs]] * num_keys
+        outs = [[mx.nd.empty(shape, d) for d in devs]] * num_keys
+        kv.pushpull(key_list, vals, out=outs)
+        for out in outs:
+            for o in out:
+                check_diff_to_scalar(o, num_devs * 2.0)
+
+        # inplace
+        kv.pushpull(key_list, vals)
+        for val in vals:
+            for v in val:
+                check_diff_to_scalar(v, num_devs * 2.0)
+
+    check_aggregator(init_kv(), 3, keys)
+    check_aggregator(init_kv(), 'a', str_keys)
+
+@with_seed()
+def test_pushpull_list_kv_pair():
+    """aggregate value on muliple devices"""
+    def check_aggregator(kv, key, key_list):
+        num_keys = len(key_list)
+        kv.broadcast(key, mx.nd.zeros(shape), out=mx.nd.empty(shape))
+        kv.broadcast(key_list, [mx.nd.zeros(shape)] * num_keys,
+                     out=[mx.nd.empty(shape)] * num_keys)
+        # devices
+        num_devs = 4
+        devs = [mx.Context('cpu', i) for i in range(num_devs)]
+
+        # single
+        vals = [mx.nd.ones(shape, d) for d in devs]
+        outs = [mx.nd.empty(shape, d) for d in devs]
+
+        kv.pushpull(key, vals, out=outs)
+        for out in outs:
+            check_diff_to_scalar(out, num_devs)
+
+        # list
+        vals = [[mx.nd.ones(shape, d)*2.0 for d in devs]] * num_keys
+        outs = [[mx.nd.empty(shape, d) for d in devs]] * num_keys
+        kv.pushpull(key_list, vals, out=outs)
+        for out in outs:
+            for o in out:
+                check_diff_to_scalar(o, num_devs * 2.0)
+
+    check_aggregator(init_kv(), 3, keys)
+    check_aggregator(init_kv(), 'a', str_keys)
+
+@with_seed()
+def test_get_type_device():
+    kvtype = 'device'
+    kv = mx.kv.create(kvtype)
+    assert kv.type == kvtype
+
+if __name__ == '__main__':
+    import nose
+    nose.runmodule()
