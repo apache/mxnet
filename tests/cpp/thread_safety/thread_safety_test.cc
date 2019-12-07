@@ -252,21 +252,6 @@ void run_inference(const std::string& model,
 
     // Create thread safe cahced op
     CachedOpHandle hdl2 = CachedOpHandle();
-    std::vector<const char *> flag_key_cstrs, flag_val_cstrs;
-    flag_key_cstrs.reserve(flag_keys.size());
-    for (size_t i = 0; i < flag_keys.size(); ++i) {
-      flag_key_cstrs.emplace_back(flag_keys[i].c_str());
-    }
-    for (size_t i = 0; i < flag_vals.size(); ++i) {
-      flag_val_cstrs.emplace_back(flag_vals[i].c_str());
-    }
-
-    int ret1 = MXCreateCachedOpEX(out.GetHandle(), flag_keys.size(),
-                                  flag_key_cstrs.data(), flag_val_cstrs.data(),
-                                  &hdl2, true);
-    if (ret1 < 0) {
-      LOG(FATAL) << MXGetLastError();
-    }
 
 
     // Prepare data structures and lambda to run in different threads
@@ -289,12 +274,38 @@ void run_inference(const std::string& model,
         }
     }
     std::vector<mxnet::NDArray> data(num_inf_per_thread * num_threads);
+    std::mutex mutex_;
     auto func = [&](int num) {
+      std::vector<const char *> flag_key_cstrs, flag_val_cstrs;
+      flag_key_cstrs.reserve(flag_keys.size());
+      for (size_t i = 0; i < flag_keys.size(); ++i) {
+        flag_key_cstrs.emplace_back(flag_keys[i].c_str());
+      }
+      for (size_t i = 0; i < flag_vals.size(); ++i) {
+        flag_val_cstrs.emplace_back(flag_vals[i].c_str());
+      }
+
+      /*
+      {
+      std::lock_guard<std::mutex> lock{mutex_};
+      */
+      if (hdl2 == nullptr) {
+        int ret1 = MXCreateCachedOpEX(out.GetHandle(), flag_keys.size(),
+                                      flag_key_cstrs.data(),
+                                      flag_val_cstrs.data(), &hdl2, true);
+        if (ret1 < 0) {
+          LOG(FATAL) << MXGetLastError();
+        }
+      }
+      /*
+      }
+      */
+
       unsigned next = num;
       for (size_t i = 0; i < num_inf_per_thread; ++i) {
         if (random_sleep) {
-            int sleep_time = rand_r(&next) % 5;
-            std::this_thread::sleep_for(std::chrono::seconds(sleep_time));
+          int sleep_time = rand_r(&next) % 5;
+          std::this_thread::sleep_for(std::chrono::seconds(sleep_time));
         }
         int num_output = 0;
         const int *stypes;
@@ -302,7 +313,7 @@ void run_inference(const std::string& model,
             hdl2, arr_handles2[i][num].size(), arr_handles2[i][num].data(),
             &num_output, &(cached_op_handles[i * num_threads + num]), &stypes);
         if (ret < 0) {
-            LOG(FATAL) << MXGetLastError();
+          LOG(FATAL) << MXGetLastError();
         }
         mxnet::cpp::NDArray::WaitAll();
         output_mx_arr[i][num] = static_cast<mxnet::NDArray *>(
@@ -337,6 +348,361 @@ void run_inference(const std::string& model,
       LOG(FATAL) << MXGetLastError();
     }
 }
+
+void run_inference_unsupported(const std::string& model,
+                   int num_inf_per_thread = 1, bool random_sleep = false,
+                   int num_threads = 1, bool static_alloc = false,
+                   bool static_shape = false) {
+    // Load model
+    LOG(INFO) << "Running inference for " + model +
+                 " num_threads: " + std::to_string(num_threads) +
+                 " num_inf_per_thread: " + std::to_string(num_inf_per_thread) +
+                 " random_sleep: " + std::to_string(random_sleep) +
+                 " static_alloc: " + std::to_string(static_alloc) +
+                 " static_shape: " + std::to_string(static_shape);
+    auto out = mxnet::cpp::Symbol::Load(model + "-symbol.json");
+    std::string static_alloc_str = static_alloc ? "true" : "false";
+    std::string static_shape_str = static_shape ? "true" : "false";
+
+    // Prepare context
+#if MXNET_USE_CUDA == 1
+    Context backend_ctx;
+    mxnet::cpp::Context ctx = mxnet::cpp::Context::gpu(0);
+    if (!mxnet::test::thread_safety_force_cpu) {
+      backend_ctx = Context::GPU(0);
+      ctx = mxnet::cpp::Context::gpu(0);
+    } else {
+      backend_ctx = Context::CPU();
+      ctx = mxnet::cpp::Context::cpu();
+    }
+#else
+    Context backend_ctx = Context::CPU(0);
+    mxnet::cpp::Context ctx = mxnet::cpp::Context::cpu(0);
+#endif
+
+    // Prepare input data and parameters
+    std::vector<std::vector<mxnet::cpp::NDArray>> data_arr(num_inf_per_thread);
+    std::vector<std::vector<mxnet::cpp::NDArray>> softmax_arr(num_inf_per_thread);
+    std::vector<mxnet::cpp::NDArray> params;
+    mxnet::cpp::Shape data_shape = mxnet::cpp::Shape(1, 3, 224, 224);
+    mxnet::cpp::Shape softmax_shape = mxnet::cpp::Shape(1);
+    for (size_t i = 0; i < num_inf_per_thread; ++i) {
+     prepare_input_data(data_shape, ctx, num_threads, &(data_arr[i]), true);
+     prepare_input_data(softmax_shape, ctx, num_threads, &(softmax_arr[i]));
+    }
+    std::map<std::string, mxnet::cpp::NDArray> parameters;
+    mxnet::cpp::NDArray::Load(model + "-0000.params", 0, &parameters);
+
+    for (std::string name : out.ListInputs()) {
+        if (name == "arg:data") {
+            continue;
+        }
+        if (parameters.find("arg:" + name) != parameters.end()) {
+            params.push_back(parameters["arg:" + name].Copy(ctx));
+        } else if (parameters.find("aux:" + name) != parameters.end()) {
+            params.push_back(parameters["aux:" + name].Copy(ctx));
+        }
+    }
+
+    // Prepare data_indices, param_indices and get_expected_results
+    std::vector<std::string> flag_keys{"data_indices", "param_indices",
+                                       "static_alloc", "static_shape"};
+    std::string param_indices = "[";
+    std::vector<std::vector<mxnet::NDArray*>> result_expected(num_inf_per_thread);
+    int num_inputs = out.ListInputs().size();
+    for (size_t i = 1; i < num_inputs; ++i) {
+      param_indices += std::to_string(i);
+      param_indices += std::string(", ");
+    }
+    param_indices += "]";
+    std::vector<std::string> flag_vals{"[0]", param_indices, static_alloc_str, static_shape_str};
+    std::vector<std::vector<std::vector<NDArrayHandle>>> arr_handles(num_inf_per_thread);
+    for (size_t i = 0; i < num_inf_per_thread; ++i) {
+      arr_handles[i].resize(num_threads);
+      for (size_t j = 0; j < num_threads; ++j) {
+        arr_handles[i][j].push_back(data_arr[i][j].GetHandle());
+        for (size_t k = 1; k < num_inputs - 1; k++) {
+          arr_handles[i][j].push_back(params[k - 1].GetHandle());
+        }
+        arr_handles[i][j].push_back(softmax_arr[i][j].GetHandle());
+      }
+    }
+    CachedOpHandle hdl = CachedOpHandle();
+    get_expected_results_multiple(out, flag_keys, flag_vals, &arr_handles,
+                                  num_threads, &result_expected, &hdl);
+
+
+    // Create thread safe cahced op
+    CachedOpHandle hdl2 = CachedOpHandle();
+
+
+    // Prepare data structures and lambda to run in different threads
+    std::vector<NDArrayHandle *> cached_op_handles(num_threads * num_inf_per_thread);
+    std::vector<std::vector<mxnet::NDArray*>> output_mx_arr(num_inf_per_thread);
+    for (size_t i = 0; i < num_inf_per_thread; i++) {
+        output_mx_arr[i].resize(num_threads);
+    }
+
+    std::vector<std::vector<std::vector<NDArrayHandle>>> arr_handles2(num_inf_per_thread);
+    for (size_t i = 0; i < num_inf_per_thread; ++i) {
+        arr_handles2[i].resize(num_threads);
+        for (size_t j = 0; j < num_threads; ++j) {
+            arr_handles2[i][j].reserve(num_inputs);
+            arr_handles2[i][j].emplace_back(data_arr[i][j].GetHandle());
+            for (size_t k = 1; k < num_inputs - 1; ++k) {
+                arr_handles2[i][j].emplace_back(params[k - 1].GetHandle());
+            }
+            arr_handles2[i][j].emplace_back(softmax_arr[i][j].GetHandle());
+        }
+    }
+    std::vector<mxnet::NDArray> data(num_inf_per_thread * num_threads);
+    std::mutex mutex_;
+    auto func = [&](int num) {
+      std::vector<const char *> flag_key_cstrs, flag_val_cstrs;
+      flag_key_cstrs.reserve(flag_keys.size());
+      for (size_t i = 0; i < flag_keys.size(); ++i) {
+        flag_key_cstrs.emplace_back(flag_keys[i].c_str());
+      }
+      for (size_t i = 0; i < flag_vals.size(); ++i) {
+        flag_val_cstrs.emplace_back(flag_vals[i].c_str());
+      }
+
+      if (hdl2 == nullptr) {
+        int ret1 = MXCreateCachedOpEX(out.GetHandle(), flag_keys.size(),
+                                      flag_key_cstrs.data(),
+                                      flag_val_cstrs.data(), &hdl2, false);
+        if (ret1 < 0) {
+          LOG(FATAL) << MXGetLastError();
+        }
+      }
+
+      unsigned next = num;
+      for (size_t i = 0; i < num_inf_per_thread; ++i) {
+        if (random_sleep) {
+          int sleep_time = rand_r(&next) % 5;
+          std::this_thread::sleep_for(std::chrono::seconds(sleep_time));
+        }
+        int num_output = 0;
+        const int *stypes;
+        int ret = MXInvokeCachedOpEx(
+            hdl2, arr_handles2[i][num].size(), arr_handles2[i][num].data(),
+            &num_output, &(cached_op_handles[i * num_threads + num]), &stypes);
+        if (ret < 0) {
+          LOG(FATAL) << MXGetLastError();
+        }
+        mxnet::cpp::NDArray::WaitAll();
+        output_mx_arr[i][num] = static_cast<mxnet::NDArray *>(
+            *cached_op_handles[i * num_threads + num]);
+      }
+    };
+
+    // Spawn multiple threads, join and wait for all threads to complete
+    std::vector<std::thread> worker_threads(num_threads);
+    int count = 0;
+    for (auto &&i : worker_threads) {
+      i = std::thread(func, count);
+      count++;
+    }
+
+    for (auto &&i : worker_threads) {
+      i.join();
+    }
+
+    mxnet::cpp::NDArray::WaitAll();
+    for (size_t i = 0; i < num_inf_per_thread; i++) {
+      mxnet::test::AssertEqual(output_mx_arr[i], result_expected[i], 1e-2, 1e-5);
+    }
+    mxnet::cpp::NDArray::WaitAll();
+    int ret2 = MXFreeCachedOp(hdl);
+    if (ret2 < 0) {
+      LOG(FATAL) << MXGetLastError();
+    }
+
+    ret2 = MXFreeCachedOp(hdl2);
+    if (ret2 < 0) {
+      LOG(FATAL) << MXGetLastError();
+    }
+}
+
+void run_inference_unsupported_workaround(const std::string& model,
+                   int num_inf_per_thread = 1, bool random_sleep = false,
+                   int num_threads = 1, bool static_alloc = false,
+                   bool static_shape = false) {
+    // Load model
+    LOG(INFO) << "Running inference for " + model +
+                 " num_threads: " + std::to_string(num_threads) +
+                 " num_inf_per_thread: " + std::to_string(num_inf_per_thread) +
+                 " random_sleep: " + std::to_string(random_sleep) +
+                 " static_alloc: " + std::to_string(static_alloc) +
+                 " static_shape: " + std::to_string(static_shape);
+    auto out = mxnet::cpp::Symbol::Load(model + "-symbol.json");
+    std::string static_alloc_str = static_alloc ? "true" : "false";
+    std::string static_shape_str = static_shape ? "true" : "false";
+
+    // Prepare context
+#if MXNET_USE_CUDA == 1
+    Context backend_ctx;
+    mxnet::cpp::Context ctx = mxnet::cpp::Context::gpu(0);
+    if (!mxnet::test::thread_safety_force_cpu) {
+      backend_ctx = Context::GPU(0);
+      ctx = mxnet::cpp::Context::gpu(0);
+    } else {
+      backend_ctx = Context::CPU();
+      ctx = mxnet::cpp::Context::cpu();
+    }
+#else
+    Context backend_ctx = Context::CPU(0);
+    mxnet::cpp::Context ctx = mxnet::cpp::Context::cpu(0);
+#endif
+
+    // Prepare input data and parameters
+    std::vector<std::vector<mxnet::cpp::NDArray>> data_arr(num_inf_per_thread);
+    std::vector<std::vector<mxnet::cpp::NDArray>> softmax_arr(num_inf_per_thread);
+    std::vector<mxnet::cpp::NDArray> params;
+    mxnet::cpp::Shape data_shape = mxnet::cpp::Shape(1, 3, 224, 224);
+    mxnet::cpp::Shape softmax_shape = mxnet::cpp::Shape(1);
+    for (size_t i = 0; i < num_inf_per_thread; ++i) {
+     prepare_input_data(data_shape, ctx, num_threads, &(data_arr[i]), true);
+     prepare_input_data(softmax_shape, ctx, num_threads, &(softmax_arr[i]));
+    }
+    std::map<std::string, mxnet::cpp::NDArray> parameters;
+    mxnet::cpp::NDArray::Load(model + "-0000.params", 0, &parameters);
+
+    for (std::string name : out.ListInputs()) {
+        if (name == "arg:data") {
+            continue;
+        }
+        if (parameters.find("arg:" + name) != parameters.end()) {
+            params.push_back(parameters["arg:" + name].Copy(ctx));
+        } else if (parameters.find("aux:" + name) != parameters.end()) {
+            params.push_back(parameters["aux:" + name].Copy(ctx));
+        }
+    }
+
+    // Prepare data_indices, param_indices and get_expected_results
+    std::vector<std::string> flag_keys{"data_indices", "param_indices",
+                                       "static_alloc", "static_shape"};
+    std::string param_indices = "[";
+    std::vector<std::vector<mxnet::NDArray*>> result_expected(num_inf_per_thread);
+    int num_inputs = out.ListInputs().size();
+    for (size_t i = 1; i < num_inputs; ++i) {
+      param_indices += std::to_string(i);
+      param_indices += std::string(", ");
+    }
+    param_indices += "]";
+    std::vector<std::string> flag_vals{"[0]", param_indices, static_alloc_str, static_shape_str};
+    std::vector<std::vector<std::vector<NDArrayHandle>>> arr_handles(num_inf_per_thread);
+    for (size_t i = 0; i < num_inf_per_thread; ++i) {
+      arr_handles[i].resize(num_threads);
+      for (size_t j = 0; j < num_threads; ++j) {
+        arr_handles[i][j].push_back(data_arr[i][j].GetHandle());
+        for (size_t k = 1; k < num_inputs - 1; k++) {
+          arr_handles[i][j].push_back(params[k - 1].GetHandle());
+        }
+        arr_handles[i][j].push_back(softmax_arr[i][j].GetHandle());
+      }
+    }
+    CachedOpHandle hdl = CachedOpHandle();
+    get_expected_results_multiple(out, flag_keys, flag_vals, &arr_handles,
+                                  num_threads, &result_expected, &hdl);
+
+
+    // Create thread safe cahced op
+    CachedOpHandle hdl2 = CachedOpHandle();
+
+
+    // Prepare data structures and lambda to run in different threads
+    std::vector<NDArrayHandle *> cached_op_handles(num_threads * num_inf_per_thread);
+    std::vector<std::vector<mxnet::NDArray*>> output_mx_arr(num_inf_per_thread);
+    for (size_t i = 0; i < num_inf_per_thread; i++) {
+        output_mx_arr[i].resize(num_threads);
+    }
+
+    std::vector<std::vector<std::vector<NDArrayHandle>>> arr_handles2(num_inf_per_thread);
+    for (size_t i = 0; i < num_inf_per_thread; ++i) {
+        arr_handles2[i].resize(num_threads);
+        for (size_t j = 0; j < num_threads; ++j) {
+            arr_handles2[i][j].reserve(num_inputs);
+            arr_handles2[i][j].emplace_back(data_arr[i][j].GetHandle());
+            for (size_t k = 1; k < num_inputs - 1; ++k) {
+                arr_handles2[i][j].emplace_back(params[k - 1].GetHandle());
+            }
+            arr_handles2[i][j].emplace_back(softmax_arr[i][j].GetHandle());
+        }
+    }
+    std::vector<mxnet::NDArray> data(num_inf_per_thread * num_threads);
+    std::mutex mutex_;
+    auto func = [&](int num) {
+      std::vector<const char *> flag_key_cstrs, flag_val_cstrs;
+      flag_key_cstrs.reserve(flag_keys.size());
+      for (size_t i = 0; i < flag_keys.size(); ++i) {
+        flag_key_cstrs.emplace_back(flag_keys[i].c_str());
+      }
+      for (size_t i = 0; i < flag_vals.size(); ++i) {
+        flag_val_cstrs.emplace_back(flag_vals[i].c_str());
+      }
+
+      {
+      std::lock_guard<std::mutex> lock{mutex_};
+      if (hdl2 == nullptr) {
+        int ret1 = MXCreateCachedOpEX(out.GetHandle(), flag_keys.size(),
+                                      flag_key_cstrs.data(),
+                                      flag_val_cstrs.data(), &hdl2, true);
+        if (ret1 < 0) {
+          LOG(FATAL) << MXGetLastError();
+        }
+      }
+      }
+
+      unsigned next = num;
+      for (size_t i = 0; i < num_inf_per_thread; ++i) {
+        if (random_sleep) {
+          int sleep_time = rand_r(&next) % 5;
+          std::this_thread::sleep_for(std::chrono::seconds(sleep_time));
+        }
+        int num_output = 0;
+        const int *stypes;
+        int ret = MXInvokeCachedOpEx(
+            hdl2, arr_handles2[i][num].size(), arr_handles2[i][num].data(),
+            &num_output, &(cached_op_handles[i * num_threads + num]), &stypes);
+        if (ret < 0) {
+          LOG(FATAL) << MXGetLastError();
+        }
+        mxnet::cpp::NDArray::WaitAll();
+        output_mx_arr[i][num] = static_cast<mxnet::NDArray *>(
+            *cached_op_handles[i * num_threads + num]);
+      }
+    };
+
+    // Spawn multiple threads, join and wait for all threads to complete
+    std::vector<std::thread> worker_threads(num_threads);
+    int count = 0;
+    for (auto &&i : worker_threads) {
+      i = std::thread(func, count);
+      count++;
+    }
+
+    for (auto &&i : worker_threads) {
+      i.join();
+    }
+
+    mxnet::cpp::NDArray::WaitAll();
+    for (size_t i = 0; i < num_inf_per_thread; i++) {
+      mxnet::test::AssertEqual(output_mx_arr[i], result_expected[i], 1e-2, 1e-5);
+    }
+    mxnet::cpp::NDArray::WaitAll();
+    int ret2 = MXFreeCachedOp(hdl);
+    if (ret2 < 0) {
+      LOG(FATAL) << MXGetLastError();
+    }
+
+    ret2 = MXFreeCachedOp(hdl2);
+    if (ret2 < 0) {
+      LOG(FATAL) << MXGetLastError();
+    }
+}
+
+
 
 /**
  * Verifying engine thread safety by pushing ops from multiple threads to the
@@ -460,20 +826,24 @@ TEST(ThreadSafety, CachedOpFullModel) {
   std::vector<std::string> models_list = {
       "imagenet1k-resnet-18", "imagenet1k-resnet-152", "imagenet1k-resnet-50"};
   for (const auto &model : models_list) {
-    run_inference(model, 1, true, 20);
-    run_inference(model, 2, true, 20);
-    run_inference(model, 4, true, 5);
-    run_inference(model, 4, true, 20);
-    run_inference(model, 4, false, 20);
-    run_inference(model, 8, true, 20);
+    run_inference_unsupported(model, 1, true, 20);
+    run_inference_unsupported(model, 2, true, 20);
+    run_inference_unsupported(model, 4, true, 5);
+    run_inference_unsupported(model, 4, true, 20);
+    run_inference_unsupported(model, 4, false, 20);
+    run_inference_unsupported(model, 8, true, 20);
     // static_alloc = true
-    run_inference(model, 2, true, 20, true);
-    run_inference(model, 4, true, 5, true);
-    run_inference(model, 4, true, 20, true);
-    run_inference(model, 8, true, 20, true);
+    run_inference_unsupported(model, 2, true, 20, true);
+    run_inference_unsupported(model, 4, true, 5, true);
+    run_inference_unsupported(model, 4, true, 20, true);
+    run_inference_unsupported(model, 8, true, 20, true);
     // static_alloc = true, static_shape = true
-    run_inference(model, 4, true, 20, true, true);
-    run_inference(model, 8, true, 20, true, true);
+    run_inference_unsupported(model, 4, true, 20, true, true);
+    run_inference_unsupported(model, 8, true, 20, true, true);
+    // the below line may hang
+    //run_inference_unsupported(model, 32, false, 20);
+    // the below line won't hang, its a workaround for the above usecase
+    //run_inference_unsupported_workaround(model, 32, false, 20);
   }
 }
 #endif
