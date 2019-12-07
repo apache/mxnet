@@ -110,7 +110,7 @@ def test_gluon_trainer_type():
                                        kvstore=kv, update_on_kvstore=update_on_kv)
             trainer._init_kvstore()
             assert trainer._kv_initialized
-            if trainer._update_on_kvstore is not None:
+            if update_on_kv is not None:
                 assert trainer._update_on_kvstore is update_on_kv
         except ValueError:
             assert update_on_kv is False
