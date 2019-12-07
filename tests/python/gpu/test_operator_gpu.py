@@ -312,16 +312,14 @@ def check_fast_lars(w_dtype, g_dtype, shapes, ctx, tol1, tol2):
 
 def check_multi_sum_sq(dtype, shapes, ctx, tol1, tol2):
     values_arr = [np.random.rand(*shape).astype(dtype) * 10. for shape in shapes]
-
     mx_vals = _make_ndarrays(values_arr, ctx=ctx)
     sum_sq = mx.nd.multi_sum_sq(*mx_vals, num_arrays=len(shapes))
     sum_sq2 = mx.nd.multi_sum_sq(*mx_vals, num_arrays=len(shapes))
     # checks that operator is deterministic
-    assert_almost_equal(sum_sq.asnumpy(), sum_sq2.asnumpy(), atol=1e-9, rtol=1e-9)
+    assert np.array_equal(sum_sq.asnumpy(), sum_sq2.asnumpy())
 
     ref_sum_sq = mx.nd.array([(v.astype('float32') ** 2).sum() for v in values_arr],
                              dtype='float32', ctx=ctx)
-
     assert_almost_equal(ref_sum_sq.asnumpy(), sum_sq.asnumpy(), atol=tol1, rtol=tol1)
 
 @with_seed()
