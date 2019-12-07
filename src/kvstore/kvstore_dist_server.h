@@ -364,21 +364,26 @@ class KVStoreDistServer {
       if (log_verbose_)  {
         LOG(INFO) << "sent response to " << update_buf->request.size() << " workers";
       }
-      for (const auto& req : update_buf->request) {
-        /**
-         * Request can be for either push, pull or pushpull
-         * If pull flag is set, respond immediately with the updated values
-         * Otherwise, only send the notification
-         */
-        if (req.pull) {
+      /**
+       * Request can be for either push, pull or pushpull
+       * If pull flag is set, respond immediately with the updated values
+       * Otherwise, only send the notification
+       */
+      if (update_buf->request[0].pull) {
+        if (has_multi_precision_copy(type)) CopyFromTo(stored, store_[key]);
+        stored.WaitToRead();
+        for (const auto& req : update_buf->request) {
           DefaultStorageResponse(type, key, req, req_data, server);
-        } else {
+        }
+        update_buf->request.clear();
+      } else {
+        for (const auto& req : update_buf->request) {
           server->Response(req);
         }
+        update_buf->request.clear();
+        if (has_multi_precision_copy(type)) CopyFromTo(stored, store_[key]);
+        stored.WaitToRead();
       }
-      update_buf->request.clear();
-      if (has_multi_precision_copy(type)) CopyFromTo(stored, store_[key]);
-      stored.WaitToRead();
     } else {
       update_buf->merged.WaitToRead();
     }
