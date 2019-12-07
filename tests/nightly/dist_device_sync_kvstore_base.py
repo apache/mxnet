@@ -41,49 +41,42 @@ init_test_keys_big = [str(i) for i in range(300,400)]
 init_test_keys_device = [str(i) for i in range(400,500)]
 init_test_keys_device_big = [str(i) for i in range(500,600)]
 
-rate = 2
 shape = (2, 3)
 big_shape = (1200, 1200)        # bigger than MXNET_KVSTORE_BIGARRAY_BOUND
 
 kv = mx.kv.create(args.name)
-
-def init_kv():
-    # init kv dns keys
-    kv.init(keys, [mx.nd.ones(shape)] * len(keys))
-    kv.init('99', mx.nd.ones(big_shape))
-    # worker info
-    my_rank = kv.rank
-    nworker = kv.num_workers
-    # init updater on servers
-    kv.set_optimizer(mx.optimizer.create('test', rescale_grad=rate))
-    return kv, my_rank, nworker
+my_rank = kv.rank
+my_num_workers = kv.num_workers
 
 def test_push_pull():
-    kv, my_rank, nworker = init_kv()
     num_gpus = 2
-    def check_default_keys(kv, my_rank, nworker, nrepeat=3, offset=0):
-        # checks pull after push in loop, because behavior during
-        # consecutive pushes doesn't offer any guarantees
-        for i in range(offset, nrepeat):
+    def check_default_keys(nrepeat=3):
+        # init kv dns keys
+        kv.broadcast(keys, [mx.nd.ones(shape, ctx=mx.gpu())] * len(keys), out=[mx.nd.ones(shape, ctx=mx.gpu())] * len(keys))
+        kv.broadcast('3', mx.nd.ones(shape, ctx=mx.gpu()), out=mx.nd.ones(shape, ctx=mx.gpu()))
+        kv.broadcast('99', mx.nd.ones(big_shape, ctx=mx.gpu()), out=mx.nd.ones(big_shape, ctx=mx.gpu()))
+        for i in range(nrepeat):
             scale = my_rank + 1
-            num = (nworker + 1) * nworker * rate * num_gpus / 2 * (i + 1) + 1
+            num = (my_num_workers + 1) * my_num_workers * num_gpus / 2
 
-            arr = [mx.nd.ones(shape, ctx=mx.gpu(j)) * scale for j in range(num_gpus)]
+            arrs = [mx.nd.ones(shape, ctx=mx.gpu(j)) * scale for j in range(num_gpus)]
             # inplace
-            kv.pushpull('3', arr)
-            check_diff_to_scalar(arr, num)
+            kv.pushpull('3', arrs)
+            for arr in arrs:
+                check_diff_to_scalar(arr, num)
 
-            big_arr = [mx.nd.ones(big_shape, ctx=mx.gpu(j)) * scale for j in range(num_gpus)]
+            big_arrs = [mx.nd.ones(big_shape, ctx=mx.gpu(j)) * scale for j in range(num_gpus)]
             # inplace
-            kv.pushpull('99', big_arr)
-            check_diff_to_scalar(big_arr, num)
+            kv.pushpull('99', big_arrs)
+            for big_arr in big_arrs:
+                check_diff_to_scalar(big_arr, num)
 
-    check_default_keys(kv, my_rank, nworker, nrepeat=3, offset=3)
+    check_default_keys(nrepeat=3)
     print('worker ' + str(my_rank) + ' is done')
 
 def test_broadcast():
     def check_broadcast(kv, cur_keys, cur_shape, device=False):
-        ctx = mx.gpu(0) if device else mx.cpu()
+        ctx = mx.gpu(my_rank) if device else mx.cpu(my_rank)
         val = [mx.nd.zeros(cur_shape, ctx) for i in cur_keys]
         for i in range(len(cur_keys)):
             expected = i
@@ -93,7 +86,6 @@ def test_broadcast():
     check_broadcast(kv, init_test_keys_big, big_shape)
     check_broadcast(kv, init_test_keys_device, shape, device=True)
     check_broadcast(kv, init_test_keys_device_big, big_shape, device=True)
-    my_rank = kv.rank
     print('worker ' + str(my_rank) + ' is initialized')
 
 def test_type():

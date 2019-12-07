@@ -100,7 +100,7 @@ class Horovod(KVStoreBase):
             value = value[0]
         result = self.handle.broadcast(value, root_rank=0, name=key, priority=priority)
         if isinstance(out, list):
-            for o in output:
+            for o in out:
                 result.copyto(o)
         else:
             result.copyto(out)
@@ -185,15 +185,34 @@ class Horovod(KVStoreBase):
             The priority of the operation.
             Higher priority operations are likely to be executed before other actions.
         """
-        if out is None:
-            self.handle.allreduce_(value, average=False, name=key, priority=priority)
-        else:
-            result = self.handle.allreduce(value, average=False, name=key, priority=priority)
+        value = value[0] if isinstance(value, list) and len(value) == 1 else value
+        if isinstance(value, list):
+            # naive reduction
+            ctx = value[0].context
+            reduced_value = sum([v.as_in_context(ctx) for v in value])
+            # inplace
+            if out is None:
+                result = self.handle.allreduce_(reduced_value, average=False, name=None, priority=priority)
+                out = value
+            else:
+                result = self.handle.allreduce(value, average=False, name=None, priority=priority)
             if isinstance(out, list):
-                for o in output:
+                for o in out:
                     result.copyto(o)
             else:
                 result.copyto(out)
+        else:
+            # inplace
+            if out is None:
+                result = self.handle.allreduce_(reduced_value, average=False, name=None, priority=priority)
+                result.wait_to_read()
+            else:
+                result = self.handle.allreduce(value, average=False, name=None, priority=priority)
+                if isinstance(out, list):
+                    for o in output:
+                        result.copyto(o)
+                else:
+                    result.copyto(out)
 
     def set_optimizer(self, optimizer):
         """ Registers an optimizer with the kvstore.
