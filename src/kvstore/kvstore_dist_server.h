@@ -371,6 +371,7 @@ class KVStoreDistServer {
          * Otherwise, only send the notification
          */
         if (req.pull) {
+          stored.WaitToRead();
           DefaultStorageResponse(type, key, req, req_data, server);
         } else {
           server->Response(req);

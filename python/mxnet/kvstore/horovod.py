@@ -32,7 +32,6 @@ from .base import _ctype_key_value, _ctype_dict, KVStoreBase
 
 __all__ = ['Horovod']
 
-
 @KVStoreBase.register
 class Horovod(KVStoreBase):
     """Horovod backend for MXNet KVStore interface."""
@@ -45,6 +44,7 @@ class Horovod(KVStoreBase):
         except ImportError as err:
             print('Did not find horovod library. Please install horovod first')
             raise err
+        self.handle.init()
 
     def broadcast(self, key, value, out, priority=0):
         """ Broadcast the value NDArray at rank 0 to all ranks' out. If out is None,
@@ -78,7 +78,7 @@ class Horovod(KVStoreBase):
             for k, v in zip(key, value):
                 self._broadcast(k, v, out, priority=priority)
         else:
-            self._broadcast(k, v, out, priority=priority)
+            self._broadcast(key, value, out, priority=priority)
 
     def _broadcast(self, key, value, out, priority=0):
         """ Broadcast the value NDArray at rank 0 to all ranks' out. If out is None,
@@ -95,6 +95,9 @@ class Horovod(KVStoreBase):
         out : NDArray, list of NDArray
             Values corresponding to the keys.
         """
+        if isinstance(value, list):
+            assert len(value) == 1
+            value = value[0]
         result = self.handle.broadcast(value, root_rank=0, name=key, priority=priority)
         if isinstance(out, list):
             for o in output:

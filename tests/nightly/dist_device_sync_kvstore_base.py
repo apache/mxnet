@@ -23,6 +23,12 @@ import mxnet as mx
 import numpy as np
 import numpy.random as rnd
 import time
+import argparse
+
+# parser
+parser = argparse.ArgumentParser(description='kvstore test')
+parser.add_argument('--name', type=str, default='dist_device_sync')
+args = parser.parse_args()
 
 def check_diff_to_scalar(A, x, rank=None):
     """ assert A == x"""
@@ -39,7 +45,7 @@ rate = 2
 shape = (2, 3)
 big_shape = (1200, 1200)        # bigger than MXNET_KVSTORE_BIGARRAY_BOUND
 
-kv = mx.kv.create('dist_device_sync')
+kv = mx.kv.create(args.name)
 
 def init_kv():
     # init kv dns keys
@@ -52,7 +58,7 @@ def init_kv():
     kv.set_optimizer(mx.optimizer.create('test', rescale_grad=rate))
     return kv, my_rank, nworker
 
-def test_sync_push_pull():
+def test_push_pull():
     kv, my_rank, nworker = init_kv()
     num_gpus = 2
     def check_default_keys(kv, my_rank, nworker, nrepeat=3, offset=0):
@@ -75,7 +81,7 @@ def test_sync_push_pull():
     check_default_keys(kv, my_rank, nworker, nrepeat=3, offset=3)
     print('worker ' + str(my_rank) + ' is done')
 
-def test_sync_broadcast():
+def test_broadcast():
     def check_broadcast(kv, cur_keys, cur_shape, device=False):
         ctx = mx.gpu(0) if device else mx.cpu()
         val = [mx.nd.zeros(cur_shape, ctx) for i in cur_keys]
@@ -90,6 +96,10 @@ def test_sync_broadcast():
     my_rank = kv.rank
     print('worker ' + str(my_rank) + ' is initialized')
 
+def test_type():
+    assert kv.type == args.name
+
 if __name__ == "__main__":
-    test_sync_broadcast()
-    test_sync_push_pull()
+    test_type()
+    test_broadcast()
+    test_push_pull()
