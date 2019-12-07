@@ -81,14 +81,14 @@ class KVStore(KVStoreBase):
 
         Parameters
         ----------
-        key : str, int, or sequence of str or int
-            Keys.
+        key : str, or int
+            The key.
 
-        value : NDArray, or list of NDArray
-            Values corresponding to the keys to broadcast
+        value : NDArray
+            The value corresponding to the key to broadcast
 
-        out : NDArray, list of NDArray, or list of list of NDArray
-            Values corresponding to the keys to store the result
+        out : NDArray, list of NDArray
+            Values corresponding to the key to store the result
 
         priority : int, optional
             The priority of the operation.

@@ -77,20 +77,33 @@ def _ctype_dict(param_dict):
 class KVStoreBase(object):
     """An abstract key-value store interface for data parallel training."""
 
+    def declare_tensor(self, key, value):
+        """ Declare the shape and data type of the tensor for a specific key.
+
+        Parameters
+        ----------
+        key : str or int
+            The key.
+
+        value : NDArray
+            The value corresponding to the key to broadcast
+        """
+        raise NotImplementedError()
+
     def broadcast(self, key, value, out):
         """ Broadcast the `value` NDArray at rank 0 to all ranks,
         and store the result in `out`
 
         Parameters
         ----------
-        key : str, int, or sequence of str or int
-            Keys.
+        key : str or int
+            The key.
 
-        value : NDArray, or list of NDArray
-            Values corresponding to the keys to broadcast
+        value : NDArray
+            The value corresponding to the key to broadcast
 
-        out : NDArray, list of NDArray, or list of list of NDArray
-            Values corresponding to the keys to store the result
+        out : NDArray, or list of NDArray
+            Values corresponding to the key to store the result
 
         priority : int, optional
             The priority of the operation.
@@ -103,25 +116,24 @@ class KVStoreBase(object):
 
         This function is coalesced form of push and pull operations.
 
-        `value` is pushed to the kvstore server for the specified keys and the updated
-        values are pulled from the server to `out`. If `out` is not specified the pulled
-        values are written to `value`.
+        `value` is pushed to the kvstore server for summation with the specified keys,
+        and the results are pulled from the server to `out`. If `out` is not specified
+        the pulled values are written to `value`.
 
         Parameters
         ----------
-        key : str, int, or sequence of str or int
-            Keys.
+        key : str or int
+            The key.
 
-        value : NDArray, list of NDArray, or list of list of NDArray
+        value : NDArray, or list of NDArray
             Values corresponding to the keys.
 
-        out: NDArray or list of NDArray or list of list of NDArray
-            Values corresponding to the keys.
+        out: NDArray, or list of NDArray
+            Values corresponding to the key.
 
         priority : int, optional
             The priority of the operation.
-            Higher priority operations are likely to be executed before
-            other actions.
+            Higher priority operations are likely to be executed before other actions.
         """
         raise NotImplementedError()
 

@@ -52,20 +52,20 @@ class Horovod(KVStoreBase):
 
         Parameters
         ----------
-        key : str, int, or sequence of str or int
-            Keys.
+        key : str, or int
+            The keys.
 
-        value : NDArray, list of NDArray, or list of list of NDArray
-            Values corresponding to the keys.
+        value : NDArray, or list of NDArray
+            Values corresponding to the key.
 
-        out : NDArray, list of NDArray, or list of list of NDArray
+        out : NDArray, or lise of NDArray
             Values corresponding to the keys.
 
         Examples
         --------
         >>> # broadcast a single key-value pair
         >>> shape = (2,3)
-        >>> kv = mx.kv.create('local')
+        >>> kv = mx.kv.create('horovod')
         >>> a = mx.nd.zeros(shape)
         >>> kv.broadcast('3', mx.nd.ones(shape)*2, out=a)
         >>> print a.asnumpy()
@@ -73,32 +73,14 @@ class Horovod(KVStoreBase):
         [ 2.  2.  2.]]
 
         """
-        if isinstance(key, list):
-            assert len(key) == len(value)
-            for k, v in zip(key, value):
-                self._broadcast(k, v, out, priority=priority)
-        else:
-            self._broadcast(key, value, out, priority=priority)
-
-    def _broadcast(self, key, value, out, priority=0):
-        """ Broadcast the value NDArray at rank 0 to all ranks' out. If out is None,
-        the result is stored in `value`.
-
-        Parameters
-        ----------
-        key : str or int
-            Keys.
-
-        value : NDArray, list of NDArray
-            Values corresponding to the keys.
-
-        out : NDArray, list of NDArray
-            Values corresponding to the keys.
-        """
-        if isinstance(value, list):
-            assert len(value) == 1
-            value = value[0]
+        # the most common operation operates on one NDArray as `value`, one
+        # NDArray as `out`.
+        # unpack the list if it contains just one NDArray
+        value = value[0] if isinstance(value, list) and len(value) == 1 else value
+        assert isinstance(key, (str, int))
+        assert isinstance(value, NDArray)
         result = self.handle.broadcast(value, root_rank=0, name=key, priority=priority)
+        #result[0].wait_to_read()
         if isinstance(out, list):
             for o in out:
                 result.copyto(o)
@@ -107,27 +89,24 @@ class Horovod(KVStoreBase):
 
 
     def pushpull(self, key, value, out=None, priority=0):
-        """ Performs push and pull a single value or a sequence of values from the store.
+        """ Performs push and pull a single value from the store.
 
-        This function is coalesced form of push and pull operations. This function returns
-        immediately after adding an operator to the engine. Subsequent attempts to read
-        from the `out` variable will be blocked until the pull operation completes.
+        This function is coalesced form of push and pull operations.
 
-        `value` is pushed to the kvstore server for the specified keys and the updated
+        `value` is pushed to the kvstore server for the specified keys and the aggregated
         values are pulled from the server to `out`. If `out` is not specified the pulled
-        values are written to `value`. The returned values are guaranteed to be the latest
-        values in the store.
+        values are written to `value`.
 
         Parameters
         ----------
-        key : str, int, or sequence of str or int
-            Keys.
+        key : str, or int
+            The key.
 
-        value : NDArray, list of NDArray, or list of list of NDArray
-            Values corresponding to the keys.
+        value : NDArray, or list of NDArray
+            Values corresponding to the key.
 
-        out: NDArray or list of NDArray or list of list of NDArray
-            Values corresponding to the keys.
+        out: NDArray, or list of NDArray
+            Values corresponding to the key.
 
         priority : int, optional
             The priority of the operation.
@@ -151,63 +130,35 @@ class Horovod(KVStoreBase):
         [ 1.  1.  1.]]
 
         """
-        if isinstance(key, list):
-            assert len(key) == len(value)
-            for k, v in zip(key, value):
-                self._pushpull(key, value, out=out, priority=priority)
-        else:
-            self._pushpull(key, value, out=out, priority=priority)
-
-    def _pushpull(self, key, value, out=None, priority=0):
-        """ Performs push and pull a single value or a sequence of values from the store.
-
-        This function is coalesced form of push and pull operations. This function returns
-        immediately after adding an operator to the engine. Subsequent attempts to read
-        from the `out` variable will be blocked until the pull operation completes.
-
-        `value` is pushed to the kvstore server for the specified keys and the updated
-        values are pulled from the server to `out`. If `out` is not specified the pulled
-        values are written to `value`. The returned values are guaranteed to be the latest
-        values in the store.
-
-        Parameters
-        ----------
-        key : str, or int
-            Keys.
-
-        value : NDArray, list of NDArray
-            Values corresponding to the keys.
-
-        out: NDArray or list of NDArray
-            Values corresponding to the keys.
-
-        priority : int, optional
-            The priority of the operation.
-            Higher priority operations are likely to be executed before other actions.
-        """
+        # the most common operation operates on one NDArray as `value`, and
+        # `out` is set to None, for inplace pushpull.
+        # unpack the list if it contains just one NDArray
         value = value[0] if isinstance(value, list) and len(value) == 1 else value
         if isinstance(value, list):
-            # naive reduction
+            # reduce the list of NDArrays with a naive reduction
             ctx = value[0].context
             reduced_value = sum([v.as_in_context(ctx) for v in value])
             # inplace
             if out is None:
-                result = self.handle.allreduce_(reduced_value, average=False, name=None, priority=priority)
+                result = self.handle.allreduce_(reduced_value, average=False, name=key, priority=priority)
                 out = value
             else:
-                result = self.handle.allreduce(value, average=False, name=None, priority=priority)
+                result = self.handle.allreduce(value, average=False, name=key, priority=priority)
+            #result.wait_to_read()
             if isinstance(out, list):
                 for o in out:
                     result.copyto(o)
             else:
                 result.copyto(out)
         else:
+            assert isinstance(value, NDArray)
             # inplace
             if out is None:
                 result = self.handle.allreduce_(reduced_value, average=False, name=None, priority=priority)
-                result.wait_to_read()
+                #result.wait_to_read()
             else:
                 result = self.handle.allreduce(value, average=False, name=None, priority=priority)
+                #result.wait_to_read()
                 if isinstance(out, list):
                     for o in output:
                         result.copyto(o)

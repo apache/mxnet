@@ -52,9 +52,8 @@ def test_push_pull():
     num_gpus = 2
     def check_default_keys(nrepeat=3):
         # init kv dns keys
-        kv.broadcast(keys, [mx.nd.ones(shape, ctx=mx.gpu())] * len(keys), out=[mx.nd.ones(shape, ctx=mx.gpu())] * len(keys))
-        kv.broadcast('3', mx.nd.ones(shape, ctx=mx.gpu()), out=mx.nd.ones(shape, ctx=mx.gpu()))
-        kv.broadcast('99', mx.nd.ones(big_shape, ctx=mx.gpu()), out=mx.nd.ones(big_shape, ctx=mx.gpu()))
+        kv.broadcast('3', mx.nd.ones(shape, ctx=mx.gpu()), mx.nd.ones(shape, ctx=mx.gpu()))
+        kv.broadcast('99', mx.nd.ones(big_shape, ctx=mx.gpu()), mx.nd.ones(big_shape, ctx=mx.gpu()))
         for i in range(nrepeat):
             scale = my_rank + 1
             num = (my_num_workers + 1) * my_num_workers * num_gpus / 2
