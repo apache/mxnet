@@ -29,7 +29,7 @@ from ..base import check_call, string_types, mx_uint, py_str
 from ..base import NDArrayHandle, KVStoreHandle
 from .. import optimizer as opt
 from ..profiler import set_kvstore_handle
-from .base import _ctype_key_value, _ctype_dict, AbstractKVStore
+from .base import _ctype_key_value, _ctype_dict, KVStoreBase
 
 __all__ = ['KVStore']
 
@@ -53,8 +53,9 @@ def _get_kvstore_server_command_type(command):
     return command_types[command]
 
 
-class KVStore(AbstractKVStore):
+class KVStore(KVStoreBase):
     """A key-value store for synchronization of values, over multiple devices."""
+
     def __init__(self, handle):
         """Initializes a new KVStore.
 

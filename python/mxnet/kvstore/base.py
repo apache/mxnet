@@ -74,7 +74,7 @@ def _ctype_dict(param_dict):
     c_vals = c_array(ctypes.c_char_p, [c_str(str(v)) for v in param_dict.values()])
     return (c_keys, c_vals)
 
-class AbstractKVStore(object):
+class KVStoreBase(object):
     """An abstract key-value store interface for data parallel training."""
 
     def broadcast(self, key, value, out):
@@ -135,7 +135,7 @@ class AbstractKVStore(object):
 
         Parameters
         ----------
-        optimizer : Optimizer
+        optimizer : KVStoreBase
             The new optimizer for the store
         """
         raise NotImplementedError()
@@ -197,6 +197,34 @@ class AbstractKVStore(object):
         """
         raise NotImplementedError()
 
+    kv_registry = {}
+
+    @staticmethod
+    def register(klass):
+        """Registers a new KVStore.
+        Once a kvstore is registered, we can create an instance of this
+        kvstore with `create` later.
+
+        Examples
+        --------
+        >>> @mx.kvstore.KVStoreBase.register
+        ... class MyKVStore(mx.kvstore.KVStoreBase):
+        ...     pass
+        >>> kv = mx.kv.create('MyKVStore')
+        >>> print(type(kv))
+        <class '__main__.MyKVStore'>
+        """
+        assert(isinstance(klass, type))
+        name = klass.__name__.lower()
+        if name in KVStoreBase.kv_registry:
+            warnings.warn('WARNING: New kvstore %s.%s is overriding '
+                          'existing kvstore %s.%s' %
+                          (klass.__module__, klass.__name__,
+                           KVStoreBase.kv_registry[name].__module__,
+                           KVStoreBase.kv_registry[name].__name__))
+        KVStoreBase.kv_registry[name] = klass
+        return klass
+
 def create(name='local'):
     """Creates a new KVStore.
 
@@ -225,19 +253,25 @@ def create(name='local'):
 
     Parameters
     ----------
-    name : {'local', 'device', 'nccl', 'dist_sync', 'dist_device_sync', 'dist_async'}
+    name : {'local', 'device', 'nccl', 'dist_sync', 'dist_device_sync', 'dist_async', 'horovod'}
         The type of KVStore.
     Returns
     -------
-    kv : KVStore
+    kv : KVStoreBase
         The created KVStore.
     """
     if not isinstance(name, string_types):
         raise TypeError('name must be a string')
-    handle = KVStoreHandle()
-    check_call(_LIB.MXKVStoreCreate(c_str(name),
-                                    ctypes.byref(handle)))
-    from .kvstore import KVStore
-    kv = KVStore(handle)
-    set_kvstore_handle(kv.handle)
-    return kv
+    name = name.lower()
+    # first lookup the registry
+    if name in KVStoreBase.kv_registry:
+        return KVStoreBase.kv_registry[name]()
+    else:
+        # fall back to the native kvstore implementation
+        handle = KVStoreHandle()
+        check_call(_LIB.MXKVStoreCreate(c_str(name),
+                                        ctypes.byref(handle)))
+        from .kvstore import KVStore
+        kv = KVStore(handle)
+        set_kvstore_handle(kv.handle)
+        return kv

@@ -28,12 +28,13 @@ from ..base import _LIB, c_str_array, c_handle_array, c_array, c_array_buf, c_st
 from ..base import check_call, string_types, mx_uint, py_str
 from ..base import NDArrayHandle
 from .. import optimizer as opt
-from .base import _ctype_key_value, _ctype_dict, AbstractKVStore
+from .base import _ctype_key_value, _ctype_dict, KVStoreBase
 
 __all__ = ['Horovod']
 
 
-class Horovod(AbstractKVStore):
+@KVStoreBase.register
+class Horovod(KVStoreBase):
     """Horovod backend for MXNet KVStore interface."""
 
     def __init__(self):
