@@ -112,7 +112,7 @@ def _create_kvstore(kvstore, num_device, arg_params):
                                arg_params.values())
                 if max_size > 1024 * 1024 * 16:
                     update_on_kvstore = False
-    elif: isinstance(kvstore, kvs.KVStoreBase):
+    elif isinstance(kvstore, kvs.KVStoreBase):
         return (kvstore, False)
     else:
         raise TypeError('kvstore must be KVStore, str or None')

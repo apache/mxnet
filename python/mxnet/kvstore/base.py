@@ -30,7 +30,7 @@ from ..base import NDArrayHandle, KVStoreHandle
 from .. import optimizer as opt
 from ..profiler import set_kvstore_handle
 
-__all__ = ['create']
+__all__ = ['create', 'KVStoreBase']
 
 def _ctype_key_value(keys, vals):
     """Returns ctype arrays for the key-value args, and the whether string keys are used.
