@@ -26,6 +26,11 @@ from common import setup_module, with_seed, assertRaises
 from copy import deepcopy
 from nose.tools import raises, assert_raises
 
+def dict_equ(a, b):
+    assert set(a) == set(b)
+    for k in a:
+        assert (a[k].asnumpy() == b[k].asnumpy()).all()
+
 @with_seed()
 @raises(RuntimeError)
 def test_multi_trainer():
@@ -42,11 +47,7 @@ def test_multi_trainer():
     trainer1 = gluon.Trainer([x], 'sgd')
 
 @with_seed()
-def test_trainer_custom_kv():
-    def dict_equ(a, b):
-        assert set(a) == set(b)
-        for k in a:
-            assert (a[k].asnumpy() == b[k].asnumpy()).all()
+def test_trainer_with_teststore():
     x = gluon.Parameter('x', shape=(10,))
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
     kv = mx.kv.create('teststore')
@@ -62,10 +63,6 @@ def test_trainer_custom_kv():
 
 @with_seed()
 def test_trainer():
-    def dict_equ(a, b):
-        assert set(a) == set(b)
-        for k in a:
-            assert (a[k].asnumpy() == b[k].asnumpy()).all()
     x = gluon.Parameter('x', shape=(10,))
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
     trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'momentum': 0.5})
