@@ -23,6 +23,7 @@ __all__ = ['Trainer']
 from .. import optimizer as opt
 from ..model import _create_kvstore, _create_sparse_kvstore
 from .parameter import ParameterDict, Parameter
+from ..kvstore import KVStore
 
 class Trainer(object):
     """Applies an `Optimizer` on a set of Parameters. Trainer should
@@ -216,6 +217,10 @@ class Trainer(object):
                     raise ValueError("Cannot set update_on_kvstore=False on dist kvstore "
                                      "when sparse gradients are present.")
                 update_on_kvstore = config['update_on_kvstore']
+            # raise err if a custom kvstore is used for sparse training
+            if not isinstance(kvstore, KVStore):
+                raise ValueError("Cannot use {} for multi-device training with sparse gradients"
+                                 .format(type(kvstore)))
 
         else:
             # Training with dense weight and dense gradients.
@@ -232,6 +237,13 @@ class Trainer(object):
                                      "when training in async mode.")
             if config['update_on_kvstore'] is not None:
                 update_on_kvstore = config['update_on_kvstore']
+            # raise err if update_on_kvstore is set to True with custom kvstore
+            if not isinstance(kvstore, KVStore):
+                if config['update_on_kvstore']:
+                    raise ValueError("Please set update_on_kvstore=False "
+                                     "when training with {}".format(type(kvstore)))
+                else:
+                    update_on_kvstore = False
 
         # set grad compression and optimizers
         if kvstore:

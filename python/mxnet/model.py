@@ -98,6 +98,8 @@ def _create_kvstore(kvstore, num_device, arg_params):
     elif isinstance(kvstore, kvs.KVStore):
         kv = kvstore
     elif isinstance(kvstore, str):
+        if kvstore in kvs.KVStoreBase.kv_registry:
+            return (kvs.create(kvstore), False)
         # create kvstore using the string type
         if num_device == 1 and 'dist' not in kvstore:
             # no need to use kv for single device and single machine
@@ -110,6 +112,8 @@ def _create_kvstore(kvstore, num_device, arg_params):
                                arg_params.values())
                 if max_size > 1024 * 1024 * 16:
                     update_on_kvstore = False
+    elif: isinstance(kvstore, kvs.KVStoreBase):
+        return (kvstore, False)
     else:
         raise TypeError('kvstore must be KVStore, str or None')
 
