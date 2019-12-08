@@ -3173,7 +3173,6 @@ def test_np_repeat():
 @with_seed()
 @use_np
 def test_np_linalg_norm():
-    @use_np
     class TestLinalgNorm(HybridBlock):
         def __init__(self, ord=None, axis=None, keepdims=False):
             super(TestLinalgNorm, self).__init__()
@@ -3184,21 +3183,89 @@ def test_np_linalg_norm():
         def hybrid_forward(self, F, x):
             return F.np.linalg.norm(x, ord=self._ord, axis=self._axis, keepdims=self._keepdims)
 
-    a = np.arange(5 * 6 * 7 * 8).reshape((5, 6, 7, 8))
-    ords = [None, 'fro']
-    axes = [None, (0, 2), (1, 0), (1, 2)]
-    for ord in ords:
-        for axis in axes:
-            if ord == 'fro' and axis is None and a.ndim > 2:
-                continue
-            for keepdims in [False, True]:
-                for hybridize in [False, True]:
+    configs = [
+        ((3,), None, None),
+        ((2, 3), 2, 1),
+        ((2, 3, 4), 1, 1),
+        ((2, 3, 4), -1, 2),
+        ((2, 3, 4), -2, 1),
+        ((2, 3, 4), 4, 1),
+        ((2, 3, 0, 4), -2, 1),
+        ((2, 3, 4), -3.2, 2),
+        ((2, 3, 4), 4.3, 2),
+        ((2, 3, 4), 'inf', 1),
+        ((2, 3, 4), '-inf', (1, 0)),
+        ((2, 3, 4), 5, 0),
+        ((2, 3), None, None),
+        ((2, 3, 4), 'fro', (0, 2)),
+        ((2, 0, 4), 'fro', (0, 2)),
+        ((2, 3, 4), None, (0, 2)),
+        ((2, 3, 4), 1, (0, 2)),
+        ((2, 3, 4), -1, (0, 2)),
+        ((2, 3, 4), 'inf', (0, 2)),
+        ((2, 3, 4), '-inf', (0, 2)),
+        ((2, 3, 4, 5), 2, (2, 3)),
+        ((4, 4, 4, 4), -2, (0, 2)),
+        ((2, 3, 4), 'nuc', (0, 2)),
+    ]
+
+    def spectral_norm_grad(data):
+        with mx.autograd.record():
+            UT, S, V = np.linalg.svd(data)
+            norm = np.max(np.abs(S), axis=2)
+        norm.backward()
+        return data.grad.asnumpy()
+
+    for config in configs:
+        shape, ord, axis = config[0], config[1], config[2]
+        for keepdims in [True, True]:
+            for hybridize in [False, True]:
+                # numpy is flaky under float16, also gesvd does not support fp16
+                for itype in [ 'float32', 'float64']:
                     net = TestLinalgNorm(ord, axis, keepdims)
+                    rtol = 1e-2
+                    atol = 1e-2
                     if hybridize:
                         net.hybridize()
-                    mx_ret = net(a)
-                    np_ret = _np.linalg.norm(a.asnumpy(), ord=ord, axis=axis, keepdims=keepdims)
-                    assert_almost_equal(mx_ret.asnumpy(), np_ret, atol=1e-5, rtol=1e-4)
+                    a = mx.nd.random.uniform(-10.0, 10.0, shape=shape, dtype=itype).as_np_ndarray()
+                    a.attach_grad()
+                    with mx.autograd.record():
+                        mx_ret = net(a)
+                    if ord == 'inf':
+                        np_ret = _np.linalg.norm(a.asnumpy(), ord=_np.inf, axis=axis, keepdims=keepdims)
+                    elif ord == '-inf':
+                        np_ret = _np.linalg.norm(a.asnumpy(), ord=-_np.inf, axis=axis, keepdims=keepdims)
+                    else:
+                        np_ret = _np.linalg.norm(a.asnumpy(), ord=ord, axis=axis, keepdims=keepdims)
+
+                    assert_almost_equal(mx_ret.asnumpy(), np_ret, rtol=rtol, atol=atol)
+                    mx_ret.backward()
+
+                    if ord == 4:
+                        backward_expected = _np.sign(a.asnumpy()) * _np.power(_np.abs(a.asnumpy()) / np_ret, ord - 1)
+                        assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+
+                    if ord == 2 and not isinstance(axis, tuple):
+                        backward_expected = _np.divide(a.asnumpy(), np_ret)
+                        assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+
+                    elif ord == 2 and isinstance(axis, tuple) and list(axis) == shape[-2:]:
+                        backward_expected = spectral_norm_grad(a)
+                        assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+
+                    if ord == 'fro':
+                        backward_expected = _np.divide(a.asnumpy(), np_ret)
+                        assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+
+                    # Test imperative once again
+                    if ord == 'inf':
+                        np_ret = _np.linalg.norm(a.asnumpy(), ord=_np.inf, axis=axis, keepdims=keepdims)
+                    elif ord == '-inf':
+                        np_ret = _np.linalg.norm(a.asnumpy(), ord=-_np.inf, axis=axis, keepdims=keepdims)
+                    else:
+                        np_ret = _np.linalg.norm(a.asnumpy(), ord=ord, axis=axis, keepdims=keepdims)
+                    mx_ret = np.linalg.norm(a, ord=ord, axis=axis, keepdims=keepdims)
+                    assert_almost_equal(mx_ret.asnumpy(), np_ret, rtol=rtol, atol=atol)
 
 
 @with_seed()
