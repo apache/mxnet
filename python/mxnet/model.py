@@ -99,6 +99,8 @@ def _create_kvstore(kvstore, num_device, arg_params):
         kv = kvstore
     elif isinstance(kvstore, str):
         if kvstore in kvs.KVStoreBase.kv_registry:
+            # we do not assume all custom kvstore supports
+            # updates on kvstore with optimizers
             return (kvs.create(kvstore), False)
         # create kvstore using the string type
         if num_device == 1 and 'dist' not in kvstore:
@@ -113,6 +115,8 @@ def _create_kvstore(kvstore, num_device, arg_params):
                 if max_size > 1024 * 1024 * 16:
                     update_on_kvstore = False
     elif isinstance(kvstore, kvs.KVStoreBase):
+        # we do not assume all custom kvstore supports
+        # updates on kvstore with optimizers
         return (kvstore, False)
     else:
         raise TypeError('kvstore must be KVStore, str or None')

@@ -339,7 +339,7 @@ class TestStore(KVStoreBase):
         type : str
             the string type
         """
-        return 'testkvstore'
+        return 'teststore'
 
     @property
     def rank(self):
