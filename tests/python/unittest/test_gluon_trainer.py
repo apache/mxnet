@@ -60,6 +60,10 @@ def test_trainer_with_teststore():
 
     assert trainer._update_on_kvstore == False
     assert (x.data(mx.cpu(1)).asnumpy() == -2).all()
+    # Expect exceptions if update_on_kvstore is set to True,
+    # because TestStore does not support that
+    invalid_trainer = gluon.Trainer([x], 'sgd', kvstore=kv, update_on_kvstore=True)
+    assert_raises(ValueError, invalid_trainer._init_kvstore)
 
 @with_seed()
 def test_trainer():
