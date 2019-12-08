@@ -42,6 +42,25 @@ def test_multi_trainer():
     trainer1 = gluon.Trainer([x], 'sgd')
 
 @with_seed()
+def test_trainer_custom_kv():
+    def dict_equ(a, b):
+        assert set(a) == set(b)
+        for k in a:
+            assert (a[k].asnumpy() == b[k].asnumpy()).all()
+    x = gluon.Parameter('x', shape=(10,))
+    x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
+    kv = mx.kv.create('teststore')
+    trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'momentum': 0.5}, kvstore=kv)
+    with mx.autograd.record():
+        for w in x.list_data():
+            y = w + 1
+            y.backward()
+    trainer.step(1)
+
+    assert trainer._update_on_kvstore == False
+    assert (x.data(mx.cpu(1)).asnumpy() == -2).all()
+
+@with_seed()
 def test_trainer():
     def dict_equ(a, b):
         assert set(a) == set(b)
