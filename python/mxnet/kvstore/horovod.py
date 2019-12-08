@@ -161,20 +161,25 @@ class Horovod(KVStoreBase):
                 else:
                     result.copyto(out)
 
-    def set_optimizer(self, optimizer):
-        """ Registers an optimizer with the kvstore.
-
-        When using a single machine, this function updates the local optimizer.
-        If using multiple machines and this operation is invoked from a worker node,
-        it will serialized the optimizer with pickle and send it to all servers.
-        The function returns after all servers have been updated.
+    @staticmethod
+    def query_capability(capability):
+        """Queries if the KVStore type supports certain capability, such as optimizer algorithm,
+        gradient compression, sparsity, etc.
 
         Parameters
         ----------
-        optimizer : Optimizer
-            The new optimizer for the store
+        capability: str
+            The capability to query
+
+        Returns
+        -------
+        result : bool
+            Whether the capability is supported or not.
         """
-        raise NotImplementedError()
+        if capability == KVStoreBase.OPTIMIZER:
+            return False
+        else:
+            raise ValueError('Unknown capability: {}'.format(capability))
 
     @property
     def type(self):
@@ -219,27 +224,3 @@ class Horovod(KVStoreBase):
             The number of worker nodes.
         """
         return self.handle.size()
-
-    def save_optimizer_states(self, fname, dump_optimizer=False):
-        """Saves the optimizer (updater) state to a file. This is often used when checkpointing
-        the model during training.
-
-        Parameters
-        ----------
-        fname : str
-            Path to the output states file.
-        dump_optimizer : bool, default False
-            Whether to also save the optimizer itself. This would also save optimizer
-            information such as learning rate and weight decay schedules.
-        """
-        raise NotImplementedError()
-
-    def load_optimizer_states(self, fname):
-        """Loads the optimizer (updater) state from the file.
-
-        Parameters
-        ----------
-        fname : str
-            Path to input states file.
-        """
-        raise NotImplementedError()

@@ -237,13 +237,12 @@ class Trainer(object):
                                      "when training in async mode.")
             if config['update_on_kvstore'] is not None:
                 update_on_kvstore = config['update_on_kvstore']
-            # raise err if update_on_kvstore is set to True with custom kvstore
-            if not isinstance(kvstore, KVStore):
+            # raise err if update_on_kvstore is set to True with kvstores that do not support optimizers
+            if update_on_kvstore and not type(kvstore).query_capacity(KVStoreBase.OPTIMIZER):
                 if config['update_on_kvstore']:
                     raise ValueError("Please set update_on_kvstore=False "
                                      "when training with {}".format(type(kvstore)))
-                else:
-                    update_on_kvstore = False
+                update_on_kvstore = False
 
         # set grad compression and optimizers
         if kvstore:

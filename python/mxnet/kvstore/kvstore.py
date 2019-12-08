@@ -109,6 +109,26 @@ class KVStore(KVStoreBase):
         self.init(key, value)
         self.pull(key, out=out, priority=priority)
 
+    @staticmethod
+    def query_capability(capability):
+        """Queries if the KVStore type supports certain capability, such as optimizer algorithm,
+        gradient compression, sparsity, etc.
+
+        Parameters
+        ----------
+        capability: str
+            The capability to query
+
+        Returns
+        -------
+        result : bool
+            Whether the capability is supported or not.
+        """
+        if capability == KVStoreBase.OPTIMIZER:
+            return True
+        else:
+            raise ValueError('Unknown capability: {}'.format(capability))
+
     def init(self, key, value):
         """ Initializes a single or a sequence of key-value pairs into the store.
 

@@ -77,19 +77,6 @@ def _ctype_dict(param_dict):
 class KVStoreBase(object):
     """An abstract key-value store interface for data parallel training."""
 
-    def declare_tensor(self, key, value):
-        """ Declare the shape and data type of the tensor for a specific key.
-
-        Parameters
-        ----------
-        key : str or int
-            The key.
-
-        value : NDArray
-            The value corresponding to the key to broadcast
-        """
-        raise NotImplementedError()
-
     def broadcast(self, key, value, out):
         """ Broadcast the `value` NDArray at rank 0 to all ranks,
         and store the result in `out`
@@ -149,6 +136,25 @@ class KVStoreBase(object):
         ----------
         optimizer : KVStoreBase
             The new optimizer for the store
+        """
+        raise NotImplementedError()
+
+    OPTIMIZER = 'optimizer'
+
+    @staticmethod
+    def query_capability(capability):
+        """Queries if the KVStore type supports certain capability, such as optimizer algorithm,
+        gradient compression, sparsity, etc.
+
+        Parameters
+        ----------
+        capability: str
+            The capability to query
+
+        Returns
+        -------
+        result : bool
+            Whether the capability is supported or not.
         """
         raise NotImplementedError()
 
