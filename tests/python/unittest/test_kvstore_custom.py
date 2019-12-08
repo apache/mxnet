@@ -50,8 +50,9 @@ def test_broadcast_single_kv_pair():
         for o in out_list:
             check_diff_to_scalar(o, 1)
 
-    check_single_kv_pair(init_kv(), 3)
-    check_single_kv_pair(init_kv(), 'a')
+    for name in ['device', 'teststore']:
+        check_single_kv_pair(init_kv(name), 3)
+        check_single_kv_pair(init_kv(name), 'a')
 
 @with_seed()
 def test_broadcast_list_kv_pair():
@@ -75,11 +76,8 @@ def test_broadcast_list_kv_pair():
 @with_seed()
 def test_pushpull_single_kv_pair():
     """aggregate value on muliple devices"""
-    def check_aggregator(kv, key, key_list):
-        num_keys = len(key_list)
+    def check_aggregator(kv, key, key_list=None):
         kv.broadcast(key, mx.nd.zeros(shape), out=mx.nd.empty(shape))
-        kv.broadcast(key_list, [mx.nd.zeros(shape)] * num_keys,
-                     out=[mx.nd.empty(shape)] * num_keys)
         # devices
         num_devs = 4
         devs = [mx.Context('cpu', i) for i in range(num_devs)]
@@ -98,6 +96,11 @@ def test_pushpull_single_kv_pair():
             check_diff_to_scalar(val, num_devs)
 
         # list
+        if key_list is None:
+            return
+        num_keys = len(key_list)
+        kv.broadcast(key_list, [mx.nd.zeros(shape)] * num_keys,
+                     out=[mx.nd.empty(shape)] * num_keys)
         vals = [[mx.nd.ones(shape, d)*2.0 for d in devs]] * num_keys
         outs = [[mx.nd.empty(shape, d) for d in devs]] * num_keys
         kv.pushpull(key_list, vals, out=outs)
@@ -111,17 +114,16 @@ def test_pushpull_single_kv_pair():
             for v in val:
                 check_diff_to_scalar(v, num_devs * 2.0)
 
-    check_aggregator(init_kv(), 3, keys)
-    check_aggregator(init_kv(), 'a', str_keys)
+    check_aggregator(init_kv('device'), 3, keys)
+    check_aggregator(init_kv('device'), 'a', str_keys)
+    check_aggregator(init_kv('teststore'), 3)
+    check_aggregator(init_kv('teststore'), 'a')
 
 @with_seed()
 def test_pushpull_list_kv_pair():
     """aggregate value on muliple devices"""
-    def check_aggregator(kv, key, key_list):
-        num_keys = len(key_list)
+    def check_aggregator(kv, key, key_list=None):
         kv.broadcast(key, mx.nd.zeros(shape), out=mx.nd.empty(shape))
-        kv.broadcast(key_list, [mx.nd.zeros(shape)] * num_keys,
-                     out=[mx.nd.empty(shape)] * num_keys)
         # devices
         num_devs = 4
         devs = [mx.Context('cpu', i) for i in range(num_devs)]
@@ -135,6 +137,11 @@ def test_pushpull_list_kv_pair():
             check_diff_to_scalar(out, num_devs)
 
         # list
+        if key_list is None:
+            return
+        num_keys = len(key_list)
+        kv.broadcast(key_list, [mx.nd.zeros(shape)] * num_keys,
+                     out=[mx.nd.empty(shape)] * num_keys)
         vals = [[mx.nd.ones(shape, d)*2.0 for d in devs]] * num_keys
         outs = [[mx.nd.empty(shape, d) for d in devs]] * num_keys
         kv.pushpull(key_list, vals, out=outs)
@@ -142,8 +149,10 @@ def test_pushpull_list_kv_pair():
             for o in out:
                 check_diff_to_scalar(o, num_devs * 2.0)
 
-    check_aggregator(init_kv(), 3, keys)
-    check_aggregator(init_kv(), 'a', str_keys)
+    check_aggregator(init_kv('device'), 3, keys)
+    check_aggregator(init_kv('device'), 'a', str_keys)
+    check_aggregator(init_kv('teststore'), 3)
+    check_aggregator(init_kv('teststore'), 'a')
 
 @with_seed()
 def test_get_type_device():
