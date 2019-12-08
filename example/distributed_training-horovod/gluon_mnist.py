@@ -51,6 +51,8 @@ if not args.no_cuda:
 logging.basicConfig(level=logging.INFO)
 logging.info(args)
 
+# Initialize Horovod
+kvstore = mx.kv.create('horovod')
 
 # Function to get mnist iterator given a rank
 def get_mnist_iterator(rank):
@@ -72,8 +74,8 @@ def get_mnist_iterator(rank):
         batch_size=batch_size,
         shuffle=True,
         flat=False,
-        num_parts=hvd.size(),
-        part_index=hvd.rank()
+        num_parts=kvstore.num_workers,
+        part_index=kvstore.rank
     )
 
     val_iter = mx.io.MNISTIter(
@@ -114,15 +116,12 @@ def evaluate(model, data_iter, context):
     return metric.get()
 
 
-# Initialize Horovod
-hvd.init()
-
 # Horovod: pin context to local rank
 context = mx.cpu(hvd.local_rank()) if args.no_cuda else mx.gpu(hvd.local_rank())
-num_workers = hvd.size()
+num_workers = kvstore.num_workers
 
 # Load training and validation data
-train_data, val_data = get_mnist_iterator(hvd.rank())
+train_data, val_data = get_mnist_iterator(kvstore.rank)
 
 # Build model
 model = conv_nets()
@@ -131,7 +130,7 @@ model.hybridize()
 
 # Create optimizer
 optimizer_params = {'momentum': args.momentum,
-                    'learning_rate': args.lr * hvd.size()}
+                    'learning_rate': args.lr * num_workers}
 opt = mx.optimizer.create('sgd', **optimizer_params)
 
 # Initialize parameters
@@ -141,11 +140,12 @@ model.initialize(initializer, ctx=context)
 
 # Horovod: fetch and broadcast parameters
 params = model.collect_params()
+# TODO(haibin): this is not necessary
 if params is not None:
     hvd.broadcast_parameters(params, root_rank=0)
 
 # Horovod: create DistributedTrainer, a subclass of gluon.Trainer
-trainer = hvd.DistributedTrainer(params, opt)
+trainer = mx.gluon.Trainer(params, opt, kvstore=kvstore)
 
 # Create loss function and train metric
 loss_fn = gluon.loss.SoftmaxCrossEntropyLoss()
@@ -171,19 +171,19 @@ for epoch in range(args.epochs):
             logging.info('[Epoch %d Batch %d] Training: %s=%f' %
                          (epoch, nbatch, name, acc))
 
-    if hvd.rank() == 0:
+    if kvstore.rank == 0:
         elapsed = time.time() - tic
-        speed = nbatch * args.batch_size * hvd.size() / elapsed
+        speed = nbatch * args.batch_size * num_workers / elapsed
         logging.info('Epoch[%d]\tSpeed=%.2f samples/s\tTime cost=%f',
                      epoch, speed, elapsed)
 
     # Evaluate model accuracy
     _, train_acc = metric.get()
     name, val_acc = evaluate(model, val_data, context)
-    if hvd.rank() == 0:
+    if kvstore.rank == 0:
         logging.info('Epoch[%d]\tTrain: %s=%f\tValidation: %s=%f', epoch, name,
                      train_acc, name, val_acc)
 
-    if hvd.rank() == 0 and epoch == args.epochs - 1:
+    if kvstore.rank == 0 and epoch == args.epochs - 1:
         assert val_acc > 0.96, "Achieved accuracy (%f) is lower than expected\
                                 (0.96)" % val_acc
