@@ -80,7 +80,7 @@ def test_broadcast():
         for i in range(len(cur_keys)):
             expected = i
             kv.broadcast(cur_keys[i], [mx.nd.ones(cur_shape, ctx) * i], out=val[i])
-            check_diff_to_scalar(val[i], expected)
+            check_diff_to_scalar(val[i], expected, my_rank)
     check_broadcast(kv, init_test_keys, shape)
     check_broadcast(kv, init_test_keys_big, big_shape)
     check_broadcast(kv, init_test_keys_device, shape, device=True)

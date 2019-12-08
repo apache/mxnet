@@ -79,8 +79,7 @@ class Horovod(KVStoreBase):
         value = value[0] if isinstance(value, list) and len(value) == 1 else value
         assert isinstance(key, (str, int))
         assert isinstance(value, NDArray)
-        result = self.handle.broadcast(value, root_rank=0, name=key, priority=priority)
-        #result[0].wait_to_read()
+        result = self.handle.broadcast(value, root_rank=0, name=str(key), priority=priority)
         if isinstance(out, list):
             for o in out:
                 result.copyto(o)
@@ -140,11 +139,10 @@ class Horovod(KVStoreBase):
             reduced_value = sum([v.as_in_context(ctx) for v in value])
             # inplace
             if out is None:
-                result = self.handle.allreduce_(reduced_value, average=False, name=key, priority=priority)
+                result = self.handle.allreduce_(reduced_value, average=False, name=str(key), priority=priority)
                 out = value
             else:
-                result = self.handle.allreduce(value, average=False, name=key, priority=priority)
-            #result.wait_to_read()
+                result = self.handle.allreduce(value, average=False, name=str(key), priority=priority)
             if isinstance(out, list):
                 for o in out:
                     result.copyto(o)
@@ -154,10 +152,9 @@ class Horovod(KVStoreBase):
             assert isinstance(value, NDArray)
             # inplace
             if out is None:
-                result = self.handle.allreduce_(value, average=False, name=None, priority=priority)
+                result = self.handle.allreduce_(value, average=False, name=str(key), priority=priority)
             else:
-                result = self.handle.allreduce(value, average=False, name=None, priority=priority)
-                #result.wait_to_read()
+                result = self.handle.allreduce(value, average=False, name=str(key), priority=priority)
                 if isinstance(out, list):
                     for o in output:
                         result.copyto(o)
