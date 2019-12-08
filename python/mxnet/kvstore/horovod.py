@@ -80,11 +80,10 @@ class Horovod(KVStoreBase):
         assert isinstance(key, (str, int))
         assert isinstance(value, NDArray)
         result = self.handle.broadcast(value, root_rank=0, name=str(key), priority=priority)
-        if isinstance(out, list):
-            for o in out:
-                result.copyto(o)
-        else:
-            result.copyto(out)
+        # result.wait_to_read()
+        out = out if isinstance(out, list) else [out]
+        for o in out:
+            result.copyto(o)
 
 
     def pushpull(self, key, value, out=None, priority=0):
@@ -140,29 +139,29 @@ class Horovod(KVStoreBase):
             # inplace
             if out is None:
                 result = self.handle.allreduce_(reduced_value, average=False, name=str(key), priority=priority)
+                # result.wait_to_read()
                 out = value
             else:
                 result = self.handle.allreduce(value, average=False, name=str(key), priority=priority)
-            if isinstance(out, list):
-                for o in out:
-                    result.copyto(o)
-            else:
-                result.copyto(out)
+                # result.wait_to_read()
+            out = out if isinstance(out, list) else [out]
+            for o in out:
+                result.copyto(o)
         else:
             assert isinstance(value, NDArray)
             # inplace
             if out is None:
                 result = self.handle.allreduce_(value, average=False, name=str(key), priority=priority)
+                # result.wait_to_read()
             else:
                 result = self.handle.allreduce(value, average=False, name=str(key), priority=priority)
-                if isinstance(out, list):
-                    for o in output:
-                        result.copyto(o)
-                else:
-                    result.copyto(out)
+                # result.wait_to_read()
+                out = out if isinstance(out, list) else [out]
+                for o in out:
+                    result.copyto(o)
 
     @staticmethod
-    def query_capability(capability):
+    def is_capable(capability):
         """Queries if the KVStore type supports certain capability, such as optimizer algorithm,
         gradient compression, sparsity, etc.
 

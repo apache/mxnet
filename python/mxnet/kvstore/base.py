@@ -142,7 +142,7 @@ class KVStoreBase(object):
     OPTIMIZER = 'optimizer'
 
     @staticmethod
-    def query_capability(capability):
+    def is_capable(capability):
         """Queries if the KVStore type supports certain capability, such as optimizer algorithm,
         gradient compression, sparsity, etc.
 
@@ -242,6 +242,126 @@ class KVStoreBase(object):
                            KVStoreBase.kv_registry[name].__name__))
         KVStoreBase.kv_registry[name] = klass
         return klass
+
+@KVStoreBase.register
+class TestStore(KVStoreBase):
+    """A key-value store for testing."""
+
+    def broadcast(self, key, value, out):
+        """ Broadcast the `value` NDArray at rank 0 to all ranks,
+        and store the result in `out`
+
+        Parameters
+        ----------
+        key : str or int
+            The key.
+
+        value : NDArray
+            The value corresponding to the key to broadcast
+
+        out : NDArray, or list of NDArray
+            Values corresponding to the key to store the result
+
+        priority : int, optional
+            The priority of the operation.
+            Higher priority operations are likely to be executed before other actions.
+        """
+        out = out if isinstance(out, list) else [out]
+        for o in out:
+            o[:] = value
+
+    def pushpull(self, key, value, out=None, priority=0):
+        """ Performs push and pull a single value or a sequence of values from the store.
+
+        This function is coalesced form of push and pull operations.
+
+        `value` is pushed to the kvstore server for summation with the specified keys,
+        and the results are pulled from the server to `out`. If `out` is not specified
+        the pulled values are written to `value`.
+
+        Parameters
+        ----------
+        key : str or int
+            The key.
+
+        value : NDArray, or list of NDArray
+            Values corresponding to the keys.
+
+        out: NDArray, or list of NDArray
+            Values corresponding to the key.
+
+        priority : int, optional
+            The priority of the operation.
+            Higher priority operations are likely to be executed before other actions.
+        """
+        ctx = value[0].context
+        if isinstance(value, NDArray):
+            if out is not None:
+                out = out if isinstance(out, list) else [out]
+                for o in out:
+                    o[:] = value
+        else:
+            reduced_value = sum([val.as_in_context(ctx) for val in value])
+            if out is None:
+                for v in value:
+                    v[:] = reduced_value
+            else:
+                out = out if isinstance(out, list) else [out]
+                for o in out:
+                    o[:] = reduced_value
+
+    @staticmethod
+    def is_capable(capability):
+        """Queries if the KVStore type supports certain capability, such as optimizer algorithm,
+        gradient compression, sparsity, etc.
+
+        Parameters
+        ----------
+        capability: str
+            The capability to query
+
+        Returns
+        -------
+        result : bool
+            Whether the capability is supported or not.
+        """
+        if capability.lower() == KVStoreBase.OPTIMIZER:
+            return False
+        else:
+            raise ValueError('Unknown capability: {}'.format(capability))
+
+    @property
+    def type(self):
+        """ Returns the type of this kvstore.
+
+        Returns
+        -------
+        type : str
+            the string type
+        """
+        return 'testkvstore'
+
+    @property
+    def rank(self):
+        """ Returns the rank of this worker node.
+
+        Returns
+        -------
+        rank : int
+            The rank of this node, which is in range [0, num_workers())
+        """
+        return 0
+
+    @property
+    def num_workers(self):
+        """Returns the number of worker nodes.
+
+        Returns
+        -------
+        size :int
+            The number of worker nodes.
+        """
+        return 1
 
 def create(name='local'):
     """Creates a new KVStore.

@@ -110,7 +110,7 @@ class KVStore(KVStoreBase):
         self.pull(key, out=out, priority=priority)
 
     @staticmethod
-    def query_capability(capability):
+    def is_capable(capability):
         """Queries if the KVStore type supports certain capability, such as optimizer algorithm,
         gradient compression, sparsity, etc.
 
@@ -124,7 +124,7 @@ class KVStore(KVStoreBase):
         result : bool
             Whether the capability is supported or not.
         """
-        if capability == KVStoreBase.OPTIMIZER:
+        if capability.lower() == KVStoreBase.OPTIMIZER:
             return True
         else:
             raise ValueError('Unknown capability: {}'.format(capability))

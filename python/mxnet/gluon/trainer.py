@@ -238,7 +238,7 @@ class Trainer(object):
             if config['update_on_kvstore'] is not None:
                 update_on_kvstore = config['update_on_kvstore']
             # raise err if update_on_kvstore is set to True with kvstores that do not support optimizers
-            if update_on_kvstore and not type(kvstore).query_capacity(KVStoreBase.OPTIMIZER):
+            if update_on_kvstore and not type(kvstore).is_capable('optimizer'):
                 if config['update_on_kvstore']:
                     raise ValueError("Please set update_on_kvstore=False "
                                      "when training with {}".format(type(kvstore)))

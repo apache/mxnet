@@ -283,6 +283,26 @@ def test_get_type():
     kvtype = 'local_allreduce_cpu'
     kv = mx.kv.create(kvtype)
     assert kv.type == kvtype
+    kvtype = 'teststore'
+    kv = mx.kv.create(kvtype)
+    assert kv.type == kvtype
+
+@with_seed()
+def test_custom_store():
+    kv = mx.kv.create('teststore')
+    out = mx.nd.empty((1,))
+    kv.broadcast(1, mx.nd.ones((1,)), out=out)
+    check_diff_to_scalar(out, 1)
+    assert type(kv).is_capable('optimizer') == False
+    kv.broadcast(1, mx.nd.ones((1,)), out=out)
+    check_diff_to_scalar(out, 1)
+    arr_list = [mx.nd.empty((1,))] * 2
+    kv.pushpull(1, [mx.nd.ones((1,))] * 2, out=arr_list)
+    for arr in arr_list:
+        check_diff_to_scalar(arr, 2)
+    kv.pushpull(1, arr_list)
+    for arr in arr_list:
+        check_diff_to_scalar(arr, 4)
 
 @with_seed()
 def test_invalid_pull():
