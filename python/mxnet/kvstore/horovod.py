@@ -154,8 +154,7 @@ class Horovod(KVStoreBase):
             assert isinstance(value, NDArray)
             # inplace
             if out is None:
-                result = self.handle.allreduce_(reduced_value, average=False, name=None, priority=priority)
-                #result.wait_to_read()
+                result = self.handle.allreduce_(value, average=False, name=None, priority=priority)
             else:
                 result = self.handle.allreduce(value, average=False, name=None, priority=priority)
                 #result.wait_to_read()
@@ -190,6 +189,17 @@ class Horovod(KVStoreBase):
             the string type
         """
         return 'horovod'
+
+    @property
+    def local_rank(self):
+        """ Returns the local rank of this worker on the node.
+
+        Returns
+        -------
+        rank : int
+            The local rank of this node, which is in range [0, num_workers_on_current_node())
+        """
+        return self.handle.local_rank()
 
     @property
     def rank(self):
