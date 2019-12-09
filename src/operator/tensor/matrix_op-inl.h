@@ -353,8 +353,8 @@ void TransposeImpl(RunContext ctx,
         mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, kAddTo>, xpu>::Launch(
             s, ret.Size(), out.dptr_, in.dptr_);
       }
-      return;
     });
+    return;
   }
   // Handle the general transpose case
   MSHADOW_TYPE_SWITCH(ret.type_flag_, DType, {
