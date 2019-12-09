@@ -3184,11 +3184,6 @@ def delete(arr, obj, axis=None):
         A copy of `arr` with the elements specified by `obj` removed. Note
         that `delete` does not occur in-place. If `axis` is None, `out` is
         a flattened array.
-
-    See Also
-    --------
-    insert : Insert elements into an array.
-    append : Append elements at the end of an array.
     """
     if not isinstance(arr, Symbol):
         raise TypeError("'arr' can not support type {}".format(str(type(arr))))

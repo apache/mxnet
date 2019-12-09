@@ -8,9 +8,11 @@
 
 #include <vector>
 #include <memory>
+#include <algorithm>
 #include "../../common/utils.h"
 #include "../tensor/sort_op.h"
 #include "../operator_common.h"
+#include "../mxnet_op.h"
 #include "../tensor/broadcast_reduce_op.h"
 #ifdef __CUDACC__
 #include <thrust/device_ptr.h>
@@ -55,25 +57,10 @@ enum DeleteOpInputs {kArr, kObj};
 enum DeleteOpOutputs {kOut};
 }  // namespace delete_
 
-template<int req>
-struct Copy {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data) {
-    KERNEL_ASSIGN(out_data[i], req, in_data[i]);
-  }
-};
-
 struct SliceToIndices {
   template<typename IType>
   MSHADOW_XINLINE static void Map(int i, IType* indices, int start, int step) {
     indices[i] = start + i * step;
-  }
-};
-
-struct ObjToIndices {
-  template<typename IType>
-  MSHADOW_XINLINE static void Map(int i, IType* indices, const IType* obj) {
-    indices[i] = obj[i];
   }
 };
 
@@ -88,7 +75,7 @@ struct IsDeleteCal {
   template<typename IType>
   MSHADOW_XINLINE static void Map(int i, int N, bool* is_delete, const IType* indices) {
     if ((static_cast<int64_t>(indices[i]) >= 0) &&
-      (static_cast<int64_t>(indices[i]) < N)) {
+        (static_cast<int64_t>(indices[i]) < N)) {
       is_delete[static_cast<int64_t>(indices[i])] = true;
     }
   }
@@ -101,7 +88,7 @@ struct OutPosCal {
   MSHADOW_XINLINE static void Map(int i, int64_t* out_pos, const bool* is_delete) {
     if (!is_delete[i]) {
       int cnt = 0;
-      for ( int j = 0; j < i; ++j) {
+      for (int j = 0; j < i; ++j) {
         if (!is_delete[j]) {
           cnt++;
         }
@@ -176,10 +163,10 @@ struct DeleteImpl {
 
 template<typename xpu>
 void NumpyDeleteCompute(const nnvm::NodeAttrs& attrs,
-                           const OpContext &ctx,
-                           const std::vector<NDArray> &inputs,
-                           const std::vector<OpReqType> &req,
-                           const std::vector<NDArray> &outputs) {
+                        const OpContext &ctx,
+                        const std::vector<NDArray> &inputs,
+                        const std::vector<OpReqType> &req,
+                        const std::vector<NDArray> &outputs) {
   using namespace mshadow;
   using namespace mxnet_op;
 
@@ -204,14 +191,7 @@ void NumpyDeleteCompute(const nnvm::NodeAttrs& attrs,
 
   if (ndim == 0) {
     const_cast<NDArray &>(outputs[delete_::kOut]).Init(arr.shape());
-    MSHADOW_TYPE_SWITCH(outputs[delete_::kOut].dtype(), DType, {
-      MXNET_ASSIGN_REQ_SWITCH(req[delete_::kOut], req_type, {
-        Kernel<Copy<req_type>, xpu>::Launch(
-            s, outputs[delete_::kOut].shape().Size(),
-            outputs[delete_::kOut].data().dptr<DType>(),
-            inputs[delete_::kArr].data().dptr<DType>());
-      });
-    });
+    mxnet_op::copy(s, outputs[delete_::kOut].data(), inputs[delete_::kArr].data());
     return;
   }
 
@@ -248,14 +228,7 @@ void NumpyDeleteCompute(const nnvm::NodeAttrs& attrs,
     }
     if (numtodel == 0) {
       const_cast<NDArray &>(outputs[delete_::kOut]).Init(arr.shape());
-      MSHADOW_TYPE_SWITCH(outputs[delete_::kOut].dtype(), DType, {
-        MXNET_ASSIGN_REQ_SWITCH(req[delete_::kOut], req_type, {
-          Kernel<Copy<req_type>, xpu>::Launch(
-                s, outputs[delete_::kOut].shape().Size(),
-                outputs[delete_::kOut].data().dptr<DType>(),
-                inputs[delete_::kArr].data().dptr<DType>());
-        });
-      });
+      mxnet_op::copy(s, outputs[delete_::kOut].data(), inputs[delete_::kArr].data());
       return;
     }
     newshape[axis] -= numtodel;
@@ -274,9 +247,9 @@ void NumpyDeleteCompute(const nnvm::NodeAttrs& attrs,
     numtodel = inputs[delete_::kObj].shape().Size();
   }
 
-  MSHADOW_TYPE_SWITCH((inputs.size() == 2U) ?
-                       inputs[delete_::kObj].dtype() :
-                       mshadow::DataType<int64_t>::kFlag, IType, {
+  MSHADOW_TYPE_SWITCH(((inputs.size() == 2U) ?
+                        inputs[delete_::kObj].dtype() :
+                        mshadow::DataType<int64_t>::kFlag), IType, {
     size_t temp_mem_size = sizeof(int64_t) * arr.shape()[axis] +
                            sizeof(IType) * numtodel +
                            sizeof(bool) * arr.shape()[axis];
@@ -286,27 +259,27 @@ void NumpyDeleteCompute(const nnvm::NodeAttrs& attrs,
     IType* indices_ptr = reinterpret_cast<IType*>
                          (temp_mem.dptr_ + sizeof(int64_t) * arr.shape()[axis]);
     bool* is_delete_ptr = reinterpret_cast<bool*>
-                          (temp_mem.dptr_ + sizeof(int64_t) * arr.shape()[axis]
-                          + sizeof(IType) * numtodel);
+                          (temp_mem.dptr_ + sizeof(int64_t) * arr.shape()[axis] +
+                           sizeof(IType) * numtodel);
     if (param.step.has_value()) {
       Kernel<SliceToIndices, xpu>::Launch(s, numtodel,
                                           indices_ptr, start, step);
     } else if (param.int_ind.has_value()) {
       Kernel<AssignNum<IType>, xpu>::Launch(s, numtodel, indices_ptr, index);
     } else {
-      Kernel<ObjToIndices, xpu>::Launch(s, numtodel, indices_ptr,
-                                        inputs[delete_::kObj].data().dptr<IType>());
+      mxnet_op::copy(s,
+        TBlob(indices_ptr, inputs[delete_::kObj].shape(), inputs[delete_::kObj].data().dev_mask()),
+        inputs[delete_::kObj].data());
     }
-    Kernel<AssignNum<bool>, xpu>::Launch(s, arr.shape()[axis], is_delete_ptr, false);
+    mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(s, arr.shape()[axis], is_delete_ptr);
     Kernel<IsDeleteCal, xpu>::Launch(s, numtodel, N, is_delete_ptr, indices_ptr);
     Kernel<OutPosCal, xpu>::Launch(s, arr.shape()[axis], out_pos_ptr, is_delete_ptr);
     if (inputs.size() == 2U) {
-      IType* input_obj = inputs[delete_::kObj].data().dptr<IType>();
-      #ifndef __CUDACC__
-        std::vector<bool>vec_is_delete(is_delete_ptr, is_delete_ptr + arr.shape()[axis]);
-      #else
+      #ifdef __CUDACC__
         thrust::device_ptr<bool>is_delete_dev(is_delete_ptr);
         thrust::device_vector<bool>vec_is_delete(is_delete_dev, is_delete_dev + arr.shape()[axis]);
+      #else
+        std::vector<bool>vec_is_delete(is_delete_ptr, is_delete_ptr + arr.shape()[axis]);
       #endif
       numtodel = 0;
       for (int i = 0; i < arr.shape()[axis]; ++i) {
@@ -322,13 +295,13 @@ void NumpyDeleteCompute(const nnvm::NodeAttrs& attrs,
     mshadow::Shape<10> k_arrshape = GetKernelShape<10>(arr.shape());
     MSHADOW_TYPE_SWITCH(outputs[delete_::kOut].dtype(), DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[delete_::kOut], req_type, {
-        Kernel<DeleteImpl<req_type>, xpu>::Launch(s, arr.shape().Size(),
-                                                  outputs[delete_::kOut].data().dptr<DType>(),
-                                                  arr.data().dptr<DType>(),
-                                                  is_delete_ptr, out_pos_ptr,
-                                                  k_arrshape,
-                                                  arr_strides, out_strides,
-                                                  newshape.ndim(), axis);
+        Kernel<DeleteImpl<req_type>, xpu>::Launch(
+          s, arr.shape().Size(),
+          outputs[delete_::kOut].data().dptr<DType>(),
+          arr.data().dptr<DType>(),
+          is_delete_ptr, out_pos_ptr,
+          k_arrshape, arr_strides, out_strides,
+          newshape.ndim(), axis);
       });
     });
   });

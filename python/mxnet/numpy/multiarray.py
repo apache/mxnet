@@ -5872,11 +5872,6 @@ def delete(arr, obj, axis=None):
         that `delete` does not occur in-place. If `axis` is None, `out` is
         a flattened array.
 
-    See Also
-    --------
-    insert : Insert elements into an array.
-    append : Append elements at the end of an array.
-
     Examples
     --------
     >>> arr = np.array([[1,2,3,4], [5,6,7,8], [9,10,11,12]])
