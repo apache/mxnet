@@ -245,7 +245,7 @@ class KVStoreBase(object):
 class TestStore(KVStoreBase):
     """A key-value store for testing."""
 
-    def broadcast(self, key, value, out):
+    def broadcast(self, key, value, out, priority=0):
         """ Broadcast the `value` NDArray at rank 0 to all ranks,
         and store the result in `out`
 

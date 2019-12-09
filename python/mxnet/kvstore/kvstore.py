@@ -19,16 +19,13 @@
 """ Key value store interface of MXNet for parameter synchronization."""
 from __future__ import absolute_import
 
-from array import array
-import ctypes
 import pickle
 from ..ndarray import NDArray
 from ..ndarray import _ndarray_cls
-from ..base import _LIB, c_str_array, c_handle_array, c_array, c_array_buf, c_str
-from ..base import check_call, string_types, mx_uint, py_str
+from ..base import _LIB, c_str
+from ..base import check_call, mx_uint, py_str
 from ..base import NDArrayHandle, KVStoreHandle
 from .. import optimizer as opt
-from ..profiler import set_kvstore_handle
 from .base import _ctype_key_value, _ctype_dict, KVStoreBase
 
 __all__ = ['KVStore']
