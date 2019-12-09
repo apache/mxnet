@@ -47,27 +47,26 @@ struct MultiSumSqKernelParam {
 };
 
 template<typename DType>
-__device__ __forceinline__ DType reduce_block_into_lanes(DType* x,
-                                                         DType val) {
+__device__ __forceinline__ DType ReduceBlockIntoLanes(DType* x,
+                                                      DType val) {
   int tid = threadIdx.x;
-  int blockSize = blockDim.x;
+  int block_size = blockDim.x;
 
-  if (blockSize >= 64) {
+  if (block_size >= 64) {
     x[tid] = val;
     __syncthreads();
   }
 
   #pragma unroll
-  for (int i = (blockSize >> 1); i >= 64; i >>= 1) {
+  for (int i = (block_size >> 1); i >= 64; i >>= 1) {
     if (tid < i)
       x[tid] = x[tid] + x[tid+i];
     __syncthreads();
   }
 
   DType final;
-
   if (tid < 32) {
-    if (blockSize >= 64)
+    if (block_size >= 64)
       final = x[tid] + x[tid+32];
     else
       final = val;
@@ -88,22 +87,22 @@ __global__ void MultiSumSqKernel(int chunk_size,
   const int chunk_len = param.block_to_chunk[blockIdx.x] * chunk_size;
   const int n = param.sizes[tensor_loc] - chunk_len;
   const DType* x = param.addresses[tensor_loc] + chunk_len;
-  const auto iMax = n <= chunk_size? n : chunk_size;
+  const auto i_max = n <= chunk_size ? n : chunk_size;
   __shared__ float vals[512];
 
   // Non-divergent exit condition for __syncthreads, not necessary here
   float val = 0;
   for (int i_start = 0;
-       i_start < iMax;
+       i_start < i_max;
        i_start += blockDim.x * ILP) {
     int i = i_start + threadIdx.x;
 #pragma unroll
-    for (int ii = 0; ii < ILP && i < iMax; ++ii, i += blockDim.x) {
+    for (int ii = 0; ii < ILP && i < i_max; ++ii, i += blockDim.x) {
       const auto incoming_val = static_cast<float>(x[i]);
       val += incoming_val * incoming_val;
     }
   }
-  const float final = reduce_block_into_lanes(vals, val);
+  const float final = ReduceBlockIntoLanes(vals, val);
 
   if (threadIdx.x == 0) {
     block_reductions[(start_tensor_id + tensor_loc) * param.max_chunks_per_tensor +
@@ -121,14 +120,14 @@ __global__ void GlobalReductionKernel(MultiSumSqKernelParam<DType> param,
   for (int i = threadIdx.x; i < param.max_chunks_per_tensor; i += blockDim.x)
     val += reductions_this_tensor[i];
 
-  float final = reduce_block_into_lanes(vals, val);
+  float final = ReduceBlockIntoLanes(vals, val);
 
   if (threadIdx.x == 0)
     output[blockIdx.x] = final;
 }
 
 template<>
-void MultiSumSqRun<gpu>(const std::vector<TBlob> &inputs, int nInputs,
+void MultiSumSqRun<gpu>(const std::vector<TBlob> &inputs, int n_inputs,
                         float *out_ptr, const OpContext &ctx) {
   const int chunk_size = 32768;
   const int block_size = 512;
@@ -139,26 +138,26 @@ void MultiSumSqRun<gpu>(const std::vector<TBlob> &inputs, int nInputs,
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     MultiSumSqKernelParam<DType> param;
     // find max num of chunks in tensors
-    for (int t = 0; t < nInputs; t++) {
+    for (int t = 0; t < n_inputs; t++) {
       int chunks_this_tensor = (inputs[t].shape_.Size() + chunk_size - 1) / chunk_size;
       if (chunks_this_tensor > param.max_chunks_per_tensor)
         param.max_chunks_per_tensor = chunks_this_tensor;
     }
      // temporary storage for the reduction of each block
-    size_t workspace_size = nInputs * param.max_chunks_per_tensor * sizeof(float);
+    size_t workspace_size = n_inputs * param.max_chunks_per_tensor * sizeof(float);
     Tensor<gpu, 1, char> workspace =
-    ctx.requested[multi_sum_sq::kTempSpace].get_space_typed<gpu, 1, char>(
-      Shape1(workspace_size), s);
+      ctx.requested[multi_sum_sq::kTempSpace].get_space_typed<gpu, 1, char>(
+        Shape1(workspace_size), s);
     Tensor<gpu, 1, float> block_reductions(reinterpret_cast<float*>(&workspace[0]),
-      Shape1(nInputs * param.max_chunks_per_tensor), s);
+      Shape1(n_inputs * param.max_chunks_per_tensor), s);
     CUDA_CALL(cudaMemsetAsync(block_reductions.dptr_, 0,
-                              nInputs * param.max_chunks_per_tensor* sizeof(float),
+                              n_inputs * param.max_chunks_per_tensor* sizeof(float),
                               stream));
 
     int loc_block_info = 0;   // position in param.block_to_tensor and param.block_to_chunck
     int loc_tensor_info = 0;  // position in param.sizes and param.addresses
     int start_tensor_id = 0;
-    for (int t = 0; t < nInputs; t++, loc_tensor_info++) {  // array index in inputs
+    for (int t = 0; t < n_inputs; t++, loc_tensor_info++) {  // array index in inputs
       param.sizes[loc_tensor_info] = inputs[t].shape_.Size();
       param.addresses[loc_tensor_info] = inputs[t].FlatTo2D<gpu, DType>(s).dptr_;
       const int chunks_this_tensor = (inputs[t].shape_.Size() - 1) / chunk_size;
@@ -170,7 +169,7 @@ void MultiSumSqRun<gpu>(const std::vector<TBlob> &inputs, int nInputs,
         const bool last_curr_chunk = chunk == chunks_this_tensor;
         const bool tensors_full = last_curr_chunk && loc_tensor_info == (ARRAY_LIMIT-1);
         const bool blocks_full = (loc_block_info == BLOCK_LIMIT);
-        const bool last_chunk = last_curr_chunk && t == nInputs - 1;
+        const bool last_chunk = last_curr_chunk && t == n_inputs - 1;
         if (!(tensors_full || blocks_full || last_chunk))
           continue;
         MultiSumSqKernel<<<loc_block_info, block_size, 0, stream>>>
@@ -190,7 +189,7 @@ void MultiSumSqRun<gpu>(const std::vector<TBlob> &inputs, int nInputs,
       }
     }
     // Global reduction
-    GlobalReductionKernel<<<nInputs, block_size, 0, stream>>>
+    GlobalReductionKernel<<<n_inputs, block_size, 0, stream>>>
       (param, block_reductions.dptr_, out_ptr);
   });
 }

@@ -271,6 +271,36 @@ def test_fft():
 def _make_ndarrays(input_list, ctx=mx.gpu(0)):
     return [mx.nd.array(arr, dtype=arr.dtype, ctx=ctx) for arr in input_list]
 
+def check_multi_sum_sq(dtype, shapes, ctx, tol1, tol2):
+    values_arr = [np.random.rand(*shape).astype(dtype) * 10. for shape in shapes]
+    mx_vals = _make_ndarrays(values_arr, ctx=ctx)
+    sum_sq = mx.nd.multi_sum_sq(*mx_vals, num_arrays=len(shapes))
+    sum_sq2 = mx.nd.multi_sum_sq(*mx_vals, num_arrays=len(shapes))
+    # checks that operator is deterministic
+    assert np.array_equal(sum_sq.asnumpy(), sum_sq2.asnumpy())
+
+    ref_sum_sq = mx.nd.array([(v.astype('float32') ** 2).sum() for v in values_arr],
+                             dtype='float32', ctx=ctx)
+    assert_almost_equal(ref_sum_sq.asnumpy(), sum_sq.asnumpy(), atol=tol1, rtol=tol1)
+
+@with_seed()
+def test_multi_sum_sq():
+    min_nparam = 390
+    max_nparam = 400
+    min_dim = 50000
+    max_dim = 3200000
+    max_ndim = 1
+
+    dtypes = ['float16','float32', 'float64']
+    for ctx in [mx.gpu(0)]:
+        for dtype in dtypes:
+            nparam = np.random.randint(min_nparam + 1, max_nparam + 1)
+            shapes = [np.random.randint(min_dim, max_dim + 1, size=max_ndim) for i in range(nparam)]
+            low_tol = ctx == mx.cpu(0) and ('float16'in [dtype])
+            tol1 = 1e-3 if low_tol else 1e-5
+            tol2 = 1e-6 if low_tol else 1e-7
+            check_multi_sum_sq(dtype, shapes, ctx, tol1, tol2)
+
 def check_fast_lars(w_dtype, g_dtype, shapes, ctx, tol1, tol2):
     weights_arr = [np.random.rand(*shape).astype(w_dtype) * 10. for shape in shapes]
     grads_arr = [np.random.rand(*shape).astype(g_dtype) for shape in shapes]
@@ -309,36 +339,6 @@ def check_fast_lars(w_dtype, g_dtype, shapes, ctx, tol1, tol2):
         else:
             ref_new_lrs[i] = lrs[i]
     assert_almost_equal(ref_new_lrs.asnumpy(), mx_new_lrs.asnumpy(), atol=tol2, rtol=tol2)
-
-def check_multi_sum_sq(dtype, shapes, ctx, tol1, tol2):
-    values_arr = [np.random.rand(*shape).astype(dtype) * 10. for shape in shapes]
-    mx_vals = _make_ndarrays(values_arr, ctx=ctx)
-    sum_sq = mx.nd.multi_sum_sq(*mx_vals, num_arrays=len(shapes))
-    sum_sq2 = mx.nd.multi_sum_sq(*mx_vals, num_arrays=len(shapes))
-    # checks that operator is deterministic
-    assert np.array_equal(sum_sq.asnumpy(), sum_sq2.asnumpy())
-
-    ref_sum_sq = mx.nd.array([(v.astype('float32') ** 2).sum() for v in values_arr],
-                             dtype='float32', ctx=ctx)
-    assert_almost_equal(ref_sum_sq.asnumpy(), sum_sq.asnumpy(), atol=tol1, rtol=tol1)
-
-@with_seed()
-def test_multi_sum_sq():
-    min_nparam = 390
-    max_nparam = 400
-    mindim = 50000
-    maxdim = 3200000
-    maxndim = 1
-
-    dtypes = ['float16','float32', 'float64']
-    for ctx in [mx.gpu(0)]:
-        for dtype in dtypes:
-            nparam = np.random.randint(min_nparam + 1, max_nparam + 1)
-            shapes = [np.random.randint(mindim, maxdim + 1, size=maxndim) for i in range(nparam)]
-            lowTol = ctx == mx.cpu(0) and ('float16'in [dtype])
-            tol1 = 1e-3 if lowTol else 1e-5
-            tol2 = 1e-6 if lowTol else 1e-7
-            check_multi_sum_sq(dtype, shapes, ctx, tol1, tol2)
 
 @with_seed()
 def test_fast_lars():
