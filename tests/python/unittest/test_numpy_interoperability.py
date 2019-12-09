@@ -319,6 +319,27 @@ def _add_workload_linalg_inv():
     OpArgMngr.add_workload('linalg.inv', np.array(_np.ones((0, 1, 1)), dtype=np.float64))
 
 
+def _add_workload_linalg_solve():
+    shapes = [(0,0), (1,1), (5,5), (20,20), (3,5,5), (3,0,0), (2,20,20), (0,20,20), (2,3,20,20)]
+    nrhs = (0, 1, 2, 10)
+    dtypes = (np.float32, np.float64)
+    for dtype, shape in itertools.product(dtypes, shapes):
+        a = _np.random.rand(*shape)
+        shape_b = list(shape)
+        shape_b[-1] = 1
+        x = _np.random.rand(*shape_b)
+        b = _np.matmul(a, x)
+        shape_b.pop()
+        b = b.reshape(shape_b)
+        OpArgMngr.add_workload('linalg.solve', np.array(a, dtype=dtype), np.array(b, dtype=dtype))
+        for nrh in nrhs:
+            shape_b = list(shape)
+            shape_b[-1] = nrh
+            x = _np.random.rand(*shape_b)
+            b = _np.matmul(a, x)
+            OpArgMngr.add_workload('linalg.solve', np.array(a, dtype=dtype), np.array(b, dtype=dtype))
+
+
 def _add_workload_linalg_det():
     OpArgMngr.add_workload('linalg.det', np.array(_np.ones((2, 2)), dtype=np.float32))
     OpArgMngr.add_workload('linalg.det', np.array(_np.ones((0, 1, 1)), dtype=np.float64))
@@ -1374,6 +1395,7 @@ def _prepare_workloads():
     _add_workload_linalg_norm()
     _add_workload_linalg_cholesky()
     _add_workload_linalg_inv()
+    _add_workload_linalg_solve()
     _add_workload_linalg_det()
     _add_workload_linalg_slogdet()
     _add_workload_trace()
