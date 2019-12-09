@@ -367,6 +367,7 @@ def test_default_handlers():
     val_metrics = est.val_metrics
     early_stopping = EarlyStoppingHandler(monitor=val_metrics[0])
     handlers = est._prepare_default_handlers(val_data=None, event_handlers=[early_stopping])
-    assert len(handlers) == 4
-    assert isinstance(handlers[0], MetricHandler)
-    assert isinstance(handlers[3], LoggingHandler)
+    assert len(handlers) == 5
+    assert isinstance(handlers[0], GradientUpdateHandler)
+    assert isinstance(handlers[1], MetricHandler)
+    assert isinstance(handlers[4], LoggingHandler)
