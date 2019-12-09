@@ -27,7 +27,6 @@ from .base import MXNetError
 from .util import is_np_shape, set_np_shape, np_shape, use_np_shape
 from .util import is_np_array, np_array, use_np_array, use_np
 from . import base
-from . import library
 from . import contrib
 from . import ndarray
 from . import ndarray as nd
@@ -88,6 +87,8 @@ from . import rnn
 
 from . import gluon
 
+# Dynamic library module should be done after ndarray and symbol are initialized
+from . import library
 from . import tvmop
 
 __version__ = base.__version__

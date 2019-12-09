@@ -50,7 +50,7 @@ __all__ = ['ndarray', 'empty', 'array', 'shape', 'zeros', 'ones', 'full', 'add',
            'mod', 'remainder', 'power', 'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10',
            'sqrt', 'cbrt', 'abs', 'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative',
-           'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'append',
+           'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'append', 'argsort',
            'tensordot', 'histogram', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange',
            'split', 'vsplit', 'concatenate', 'stack', 'vstack', 'column_stack', 'dstack', 'mean', 'maximum', 'minimum',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index',
@@ -1369,13 +1369,13 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute topk')
 
-    def argsort(self, *args, **kwargs):
+    def argsort(self, axis=-1, kind=None, order=None):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`argsort`.
 
         The arguments are the same as for :py:func:`argsort`, with
         this array as data.
         """
-        raise NotImplementedError
+        raise argsort(self, axis=axis, kind=kind, order=order)
 
     def argmax_channel(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argmax_channel`.
@@ -4198,6 +4198,79 @@ def arctanh(x, out=None, **kwargs):
     0.0
     """
     return _mx_nd_np.arctanh(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def argsort(a, axis=-1, kind=None, order=None):
+    """
+    Returns the indices that would sort an array.
+    Perform an indirect sort along the given axis using the algorithm specified
+    by the `kind` keyword. It returns an array of indices of the same shape as
+    `a` that index data along the given axis in sorted order.
+
+    Parameters
+    ----------
+    a : ndarray
+        Array to sort.
+    axis : int or None, optional
+        Axis along which to sort.  The default is -1 (the last axis). If None,
+        the flattened array is used.
+    kind : string, optional
+        This argument can take any string, but it does not have any effect on the
+        final result.
+    order : str or list of str, optional
+        Not supported yet, will raise NotImplementedError if not None.
+
+    Returns
+    -------
+    index_array : ndarray, int
+        Array of indices that sort `a` along the specified `axis`.
+        If `a` is one-dimensional, ``a[index_array]`` yields a sorted `a`.
+        More generally, ``np.take_along_axis(a, index_array, axis=axis)``
+        always yields the sorted `a`, irrespective of dimensionality.
+
+    Notes
+    -----
+    This operator does not support different sorting algorithms.
+
+    Examples
+    --------
+    One dimensional array:
+
+    >>> x = np.array([3, 1, 2])
+    >>> np.argsort(x)
+    array([1, 2, 0])
+
+    Two-dimensional array:
+
+    >>> x = np.array([[0, 3], [2, 2]])
+    >>> x
+    array([[0, 3],
+           [2, 2]])
+    >>> ind = np.argsort(x, axis=0)  # sorts along first axis (down)
+    >>> ind
+    array([[0, 1],
+           [1, 0]])
+    >>> np.take_along_axis(x, ind, axis=0)  # same as np.sort(x, axis=0)
+    array([[0, 2],
+           [2, 3]])
+    >>> ind = np.argsort(x, axis=1)  # sorts along last axis (across)
+    >>> ind
+    array([[0, 1],
+           [0, 1]])
+    >>> np.take_along_axis(x, ind, axis=1)  # same as np.sort(x, axis=1)
+    array([[0, 3],
+           [2, 2]])
+
+    Indices of the sorted elements of a N-dimensional array:
+
+    >>> ind = np.unravel_index(np.argsort(x, axis=None), x.shape)
+    >>> ind
+    (array([0, 1, 1, 0]), array([0, 0, 1, 1]))
+    >>> x[ind]  # same as np.sort(x, axis=None)
+    array([0, 2, 2, 3])
+    """
+    return _mx_nd_np.argsort(a, axis=axis, kind=kind, order=order)
 
 
 @set_module('mxnet.numpy')

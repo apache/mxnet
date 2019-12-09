@@ -299,6 +299,52 @@ struct mixed_mul {
     return static_cast<double>(a) * b;
   }
 };
+
+struct mixed_power {
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
+    return static_cast<mshadow::half::half_t>(math::pow(a, b));
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, float b) {
+    return static_cast<float>(math::pow(a, b));
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_same<DType, float>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static double Map(DType a, double b) {
+    return static_cast<double>(math::pow(a, b));
+  }
+};
+
+struct mixed_rpower {
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
+    return static_cast<mshadow::half::half_t>(math::pow(b, a));
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, float b) {
+    return static_cast<float>(math::pow(b, a));
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_same<DType, float>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static double Map(DType a, double b) {
+    return static_cast<double>(math::pow(b, a));
+  }
+};
 #endif
 
 MXNET_BINARY_MATH_OP_NC_WITH_BOOL(mul, a * b);
