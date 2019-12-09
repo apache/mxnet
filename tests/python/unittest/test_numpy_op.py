@@ -3652,19 +3652,22 @@ def test_np_linalg_solve():
         (0, 0),
         (1, 1),
         (3, 3),
-        (20, 20),
-        (3, 20, 20),
+        (4, 4),
+        (3, 2, 2),
         (1, 0, 0),
         (0, 1, 1),
         (0, 5, 3, 3),
         (5, 0, 0, 0),
-        (2, 3, 10, 10)
+        (2, 2, 5, 5)
     ]
-    nrhs = (-1, 0, 1, 2, 5)
+    nrhs = (-1, 0, 1, 2, 3)
     dtypes = ['float32', 'float64']
     for hybridize, shape, dtype, nrh in itertools.product([False, True], shapes, dtypes, nrhs):
-        rtol = 1e-3 
+        rtol = 1e-3
         atol = 1e-5
+        if dtype == 'float32':
+            rtol = 1e-2
+            atol = 1e-4
         test_solve = TestSolve()
         if hybridize:
             test_solve.hybridize()

@@ -320,8 +320,8 @@ def _add_workload_linalg_inv():
 
 
 def _add_workload_linalg_solve():
-    shapes = [(0,0), (1,1), (5,5), (20,20), (3,5,5), (3,0,0), (2,20,20), (0,20,20), (2,3,20,20)]
-    nrhs = (0, 1, 2, 10)
+    shapes = [(0,0), (1,1), (5,5), (6,6), (3,5,5), (3,0,0), (2,5,5), (0,5,5), (2,3,4,4)]
+    nrhs = (0, 1, 2, 3)
     dtypes = (np.float32, np.float64)
     for dtype, shape in itertools.product(dtypes, shapes):
         a = _np.random.rand(*shape)
