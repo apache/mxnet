@@ -519,6 +519,9 @@ def test_quantized_fc():
 @with_seed()
 def test_quantized_embedding():
     def check_quantized_embedding(data_shape, input_dim, output_dim):
+        if is_test_for_gpu():
+            print('skipped testing test_quantized_embedding for gpu since it is not supported yet')
+            return
 
         def maxabs(a, b):
             return mx.nd.maximum(mx.nd.abs(a), mx.nd.abs(b))
