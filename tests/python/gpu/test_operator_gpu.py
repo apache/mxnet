@@ -571,7 +571,6 @@ def test_batchnorm_versions():
 
 
 @with_seed(1234)
-@unittest.skip("test_convolution_with_type")
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_convolution_with_type():
     sym1 = mx.sym.Convolution(num_filter=3, kernel=(3,3), name='conv')
