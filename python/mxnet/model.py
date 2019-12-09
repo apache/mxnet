@@ -130,7 +130,7 @@ def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names, update_o
     """Initialize kvstore"""
     for idx, param_on_devs in enumerate(param_arrays):
         name = param_names[idx]
-        if arg_params[name].stype != 'default':
+        if not update_on_kvstore or arg_params[name].stype != 'default':
             kvstore.init(name, arg_params[name])
         else:
             kvstore.broadcast(name, arg_params[name], out=param_on_devs)

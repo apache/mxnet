@@ -366,28 +366,30 @@ class Trainer(object):
         self._allreduce_grads()
 
     def _allreduce_grads(self):
-        if self._kvstore:
-            for i, param in enumerate(self._params):
-                if param.grad_req != 'null':
+        # nothing to reduce
+        if not self._kvstore:
+            return
+        for i, param in enumerate(self._params):
+            if param.grad_req != 'null':
 
-                    grad_list = param.list_grad()
-                    # sparse gradients, call push and pull separately
-                    if grad_list[0].stype != 'default':
-                        self._kvstore.push(i, grad_list, priority=-i)
-                        if param._stype == 'default':
-                            if self._update_on_kvstore:
-                                pull_list = param.list_data()
-                            else:
-                                pull_list = param.list_grad()
-                            self._kvstore.pull(i, pull_list, priority=-i,
-                                               ignore_sparse=self._distributed)
-                    else:
-                        # allreduce dense gradients if not update_on_kvstore,
-                        # otherwise push dense gradients, pull dense weights
+                grad_list = param.list_grad()
+                # sparse gradients, call push and pull separately
+                if grad_list[0].stype != 'default':
+                    self._kvstore.push(i, grad_list, priority=-i)
+                    if param._stype == 'default':
                         if self._update_on_kvstore:
-                            self._kvstore.pushpull(i, grad_list, out=param.list_data(), priority=-i)
+                            pull_list = param.list_data()
                         else:
-                            self._kvstore.pushpull(i, grad_list, priority=-i)
+                            pull_list = param.list_grad()
+                        self._kvstore.pull(i, pull_list, priority=-i,
+                                           ignore_sparse=self._distributed)
+                else:
+                    # allreduce dense gradients if not update_on_kvstore,
+                    # otherwise push dense gradients, pull dense weights
+                    if self._update_on_kvstore:
+                        self._kvstore.pushpull(i, grad_list, out=param.list_data(), priority=-i)
+                    else:
+                        self._kvstore.pushpull(i, grad_list, priority=-i)
 
     def update(self, batch_size, ignore_stale_grad=False):
         """Makes one step of parameter update.

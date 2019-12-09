@@ -21,13 +21,11 @@ from __future__ import absolute_import
 
 from array import array
 import ctypes
-import pickle
+import warnings
 from ..ndarray import NDArray
-from ..ndarray import _ndarray_cls
 from ..base import _LIB, c_str_array, c_handle_array, c_array, c_array_buf, c_str
-from ..base import check_call, string_types, mx_uint, py_str
-from ..base import NDArrayHandle, KVStoreHandle
-from .. import optimizer as opt
+from ..base import check_call, string_types
+from ..base import KVStoreHandle
 from ..profiler import set_kvstore_handle
 
 __all__ = ['create', 'KVStoreBase']
@@ -77,7 +75,7 @@ def _ctype_dict(param_dict):
 class KVStoreBase(object):
     """An abstract key-value store interface for data parallel training."""
 
-    def broadcast(self, key, value, out):
+    def broadcast(self, key, value, out, priority=0):
         """ Broadcast the `value` NDArray at rank 0 to all ranks,
         and store the result in `out`
 
@@ -362,6 +360,45 @@ class TestStore(KVStoreBase):
             The number of worker nodes.
         """
         return 1
+
+    def set_optimizer(self, optimizer):
+        """ Registers an optimizer with the kvstore.
+
+        When using a single machine, this function updates the local optimizer.
+        If using multiple machines and this operation is invoked from a worker node,
+        it will serialized the optimizer with pickle and send it to all servers.
+        The function returns after all servers have been updated.
+
+        Parameters
+        ----------
+        optimizer : KVStoreBase
+            The new optimizer for the store
+        """
+        raise NotImplementedError()
+
+    def save_optimizer_states(self, fname, dump_optimizer=False):
+        """Saves the optimizer (updater) state to a file. This is often used when checkpointing
+        the model during training.
+
+        Parameters
+        ----------
+        fname : str
+            Path to the output states file.
+        dump_optimizer : bool, default False
+            Whether to also save the optimizer itself. This would also save optimizer
+            information such as learning rate and weight decay schedules.
+        """
+        raise NotImplementedError()
+
+    def load_optimizer_states(self, fname):
+        """Loads the optimizer (updater) state from the file.
+
+        Parameters
+        ----------
+        fname : str
+            Path to input states file.
+        """
+        raise NotImplementedError()
 
 def create(name='local'):
     """Creates a new KVStore.
