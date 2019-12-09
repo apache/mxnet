@@ -160,6 +160,7 @@ Examples::
 .add_arguments(SortParam::__FIELDS__());
 
 NNVM_REGISTER_OP(argsort)
+.add_alias("_npi_argsort")
 .describe(R"code(Returns the indices that would sort an input array along the given axis.
 
 This function performs sorting along the given axis and returns an array of indices having same shape

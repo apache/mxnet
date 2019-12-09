@@ -15,17 +15,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
-all:
-	g++ -shared -fPIC mylib.cc -o mylib.so -I ../../include/mxnet
+all: subgraph_lib gemm_lib
 
-test:
-	g++ -std=c++11 -O3 -o libtest libtest.cc -ldl -I ../../include/mxnet
+gemm_lib:
+	g++ -shared -fPIC -std=c++11 gemm_lib.cc -o libgemm_lib.so -I ../../../include/mxnet
 
-windows:
-	cl /LD mylib.cc
-
-win_test:
-	cl libtest.cc
+subgraph_lib:
+	g++ -shared -fPIC -std=c++11 subgraph_lib.cc -o libsubgraph_lib.so -I ../../../include/mxnet
 
 clean:
-	rm -rf mylib.so libtest
+	rm -rf libsubgraph_lib.so libgemm_lib.so

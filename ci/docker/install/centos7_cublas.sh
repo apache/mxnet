@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env bash
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,15 +17,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# coding: utf-8
-# pylint: disable=arguments-differ
+# build and install are separated so changes to build don't invalidate
+# the whole docker cache for the image
 
-# This test checks if dynamic loading of library into MXNet is successful
+set -ex
 
-import mxnet as mx
-import os
-
-if (os.name=='posix'):
-    mx.library.load('mylib.so')
-elif (os.name=='nt'):
-    mx.library.load('mylib.dll')
+# fix nvidia docker image come with wrong version of libcublas
+yum -y downgrade libcublas-devel-10.2.1.243-1.x86_64
+yum -y downgrade libcublas10-10.2.1.243-1.x86_64

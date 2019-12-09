@@ -90,8 +90,10 @@ MSHADOW_XINLINE index_t ravel(const Shape<ndim>& coord, const Shape<ndim>& shape
 }
 
 template<int ndim>
-MSHADOW_XINLINE int diff(const Shape<ndim>& small, const Shape<ndim>& big, Shape<ndim>* dims,
-  Shape<ndim>* stride) {
+MSHADOW_XINLINE int diff(const Shape<ndim>& small,
+                         const Shape<ndim>& big,
+                         Shape<ndim>* dims,
+                         Shape<ndim>* stride) {
   int mdim = 0;
   #pragma unroll
   for (int i = 0; i < ndim; ++i) {
