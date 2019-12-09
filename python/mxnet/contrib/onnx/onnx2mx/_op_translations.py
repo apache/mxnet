@@ -334,13 +334,26 @@ def conv(attrs, inputs, proto_obj):
     no_bias = new_attrs['no_bias'] if 'no_bias' in new_attrs else 0
     bias = None if no_bias is True else inputs[2]
 
-    # Unlike ONNX, MXNet's convolution operator does not support asymmetric padding, so we first
-    # use 'Pad' operator, which supports asymmetric padding. Then use the convolution operator.
-    pad_width = (0, 0, 0, 0) + translation_utils._pad_sequence_fix(padding, kernel_dim=len(kernel))
-    pad_op = symbol.pad(inputs[0], mode='constant', pad_width=pad_width)
+    asym_pad = False
+    for i in range(0, len(padding), 2):
+        asym_pad = padding[i] != padding[i + 1]
+        if asym_pad:
+            break
 
-    conv_op = symbol.Convolution(pad_op, inputs[1], bias,
-                                 kernel=kernel, stride=stride, dilate=dilations,
+    data = inputs[0]
+    pad = []
+    if asym_pad:
+        # Unlike ONNX, MXNet's convolution operator does not support asymmetric padding, so we first
+        # use 'Pad' operator, which supports asymmetric padding. Then use the convolution operator.
+        pad_width = (0, 0, 0, 0) + translation_utils._pad_sequence_fix(padding, kernel_dim=len(kernel))
+        pad_op = symbol.pad(data, mode='constant', pad_width=pad_width)
+        data = pad_op
+    else:
+        for i in range(0, len(padding), 2):
+            pad += [padding[i]]
+
+    conv_op = symbol.Convolution(data, inputs[1], bias,
+                                 kernel=kernel, stride=stride, dilate=dilations, pad=pad,
                                  num_filter=num_filter, num_group=num_group, no_bias=no_bias)
 
     return conv_op, new_attrs, inputs
@@ -365,13 +378,26 @@ def deconv(attrs, inputs, proto_obj):
     no_bias = new_attrs['no_bias'] if 'no_bias' in new_attrs else False
     bias = None if no_bias is True else inputs[2]
 
-    # Unlike ONNX, MXNet's deconvolution operator does not support asymmetric padding, so we first
-    # use 'Pad' operator, which supports asymmetric padding. Then use the deconvolution operator.
-    pad_width = (0, 0, 0, 0) + translation_utils._pad_sequence_fix(padding, kernel_dim=len(kernel))
-    pad_op = symbol.pad(inputs[0], mode='constant', pad_width=pad_width)
+    asym_pad = False
+    for i in range(0, len(padding), 2):
+        asym_pad = padding[i] != padding[i + 1]
+        if asym_pad:
+            break
 
-    deconv_op = symbol.Deconvolution(pad_op, inputs[1], bias,
-                                     kernel=kernel, stride=stride, dilate=dilations,
+    data = inputs[0]
+    pad = []
+    if asym_pad:
+        # Unlike ONNX, MXNet's convolution operator does not support asymmetric padding, so we first
+        # use 'Pad' operator, which supports asymmetric padding. Then use the convolution operator.
+        pad_width = (0, 0, 0, 0) + translation_utils._pad_sequence_fix(padding, kernel_dim=len(kernel))
+        pad_op = symbol.pad(data, mode='constant', pad_width=pad_width)
+        data = pad_op
+    else:
+        for i in range(0, len(padding), 2):
+            pad += [padding[i]]
+
+    deconv_op = symbol.Deconvolution(data, inputs[1], bias,
+                                     kernel=kernel, stride=stride, dilate=dilations, pad=pad,
                                      num_filter=num_filter, num_group=num_group, no_bias=no_bias)
 
     return deconv_op, new_attrs, inputs
@@ -736,9 +762,17 @@ def max_roi_pooling(attrs, inputs, proto_obj):
 
 def depthtospace(attrs, inputs, proto_obj):
     """Rearranges data from depth into blocks of spatial data."""
-    new_attrs = translation_utils._fix_attribute_names(attrs, {'blocksize':'block_size'})
-
-    return "depth_to_space", new_attrs, inputs
+    if attrs['mode'] == 'CRD':
+        scale = int(attrs.get('blocksize'))
+        reshape0 = symbol.reshape(inputs[0], shape=(0, -4, -1, scale**2, 0, 0))
+        reshape1 = symbol.reshape(reshape0, shape=(0, 0, -4, scale, scale, 0, 0))
+        transpose0 = symbol.transpose(reshape1, axes=(0, 1, 4, 2, 5, 3))
+        reshape2 = symbol.reshape(transpose0, shape=(0, 0, -3, -3))
+        return reshape2, attrs, inputs
+    else:
+        new_attrs = translation_utils._fix_attribute_names(attrs, {'blocksize':'block_size'})
+        new_attrs = translation_utils._remove_attributes(new_attrs, ['mode'])
+        return "depth_to_space", new_attrs, inputs
 
 def spacetodepth(attrs, inputs, proto_obj):
     """Rearranges blocks of spatial data into depth."""
