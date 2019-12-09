@@ -38,11 +38,8 @@ NNVM_REGISTER_OP(_npi_ones)
 NNVM_REGISTER_OP(_npi_identity)
 .set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
 
-NNVM_REGISTER_OP(_np_zeros_like)
-.set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 0>);
-
-NNVM_REGISTER_OP(_np_ones_like)
-.set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 1>);
+NNVM_REGISTER_OP(_npi_full_like)
+.set_attr<FCompute>("FCompute<gpu>", FullLikeOpCompute<gpu>);
 
 NNVM_REGISTER_OP(_npi_arange)
 .set_attr<FCompute>("FCompute<gpu>", RangeCompute<gpu, RangeParam>);
