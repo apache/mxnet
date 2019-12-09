@@ -500,6 +500,17 @@ def _add_workload_around():
     OpArgMngr.add_workload('around', np.array([1.56, 72.54, 6.35, 3.25]), decimals=1)
 
 
+def _add_workload_argsort():
+    for dtype in [np.int32, np.float32]:
+        a = np.arange(101, dtype=dtype)
+        OpArgMngr.add_workload('argsort', a)
+    OpArgMngr.add_workload('argsort', np.array([[3, 2], [1, 0]]), 1)
+    OpArgMngr.add_workload('argsort', np.array([[3, 2], [1, 0]]), 0)
+    a = np.ones((3, 2, 1, 0))
+    for axis in range(-a.ndim, a.ndim):
+        OpArgMngr.add_workload('argsort', a, axis)
+
+
 def _add_workload_broadcast_arrays(array_pool):
     OpArgMngr.add_workload('broadcast_arrays', array_pool['4x1'], array_pool['1x2'])
 
@@ -1311,6 +1322,7 @@ def _prepare_workloads():
     _add_workload_argmin()
     _add_workload_argmax()
     _add_workload_around()
+    _add_workload_argsort()
     _add_workload_append()
     _add_workload_broadcast_arrays(array_pool)
     _add_workload_broadcast_to()

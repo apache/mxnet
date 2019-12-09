@@ -1077,34 +1077,70 @@ def test_npx_batch_dot():
 @use_np
 def test_npi_boolean_assign():
     class TestBooleanAssignScalar(HybridBlock):
-        def __init__(self, val):
+        def __init__(self, val, start_axis):
             super(TestBooleanAssignScalar, self).__init__()
             self._val = val
+            self._start_axis = start_axis
 
         def hybrid_forward(self, F, a, mask):
-            return F.np._internal.boolean_mask_assign_scalar(a, mask, self._val, out=a)
+            return F.np._internal.boolean_mask_assign_scalar(a, mask, self._val, start_axis=self._start_axis, out=a)
 
     class TestBooleanAssignTensor(HybridBlock):
-        def __init__(self):
+        def __init__(self, start_axis):
             super(TestBooleanAssignTensor, self).__init__()
+            self._start_axis = start_axis
 
         def hybrid_forward(self, F, a, mask, value):
-            return F.np._internal.boolean_mask_assign_tensor(a, mask, value, out=a)
+            return F.np._internal.boolean_mask_assign_tensor(a, mask, value, start_axis=self._start_axis, out=a)
 
-    shapes = [(3, 4), (3, 0), ()]
+    configs = [
+        ((3, 4), (3, 4), 0),
+        ((3, 0), (3, 0), 0),
+        ((), (), 0),
+        ((2, 3, 4, 5), (2, 3), 0),
+        ((2, 3, 4, 5), (3, 4), 1),
+        ((2, 3, 4, 5), (4, 5), 2),
+    ]
+
     for hybridize in [False]:
-        for shape in shapes:
-            test_data = np.random.uniform(size=shape)
-            mx_mask = np.around(np.random.uniform(size=shape))
+        for config in configs:
+            print(config)
+            dshape, mshape, start_axis = config
+            test_data = np.random.uniform(size=dshape)
+            mx_mask = np.around(np.random.uniform(size=mshape))
             valid_num = int(mx_mask.sum())
             np_mask = mx_mask.asnumpy().astype(_np.bool)
-            for val in [42., np.array(42.), np.array([42.]), np.random.uniform(size=(valid_num,))]:
-                test_block = TestBooleanAssignScalar(val) if isinstance(val, float) else TestBooleanAssignTensor()
+            vshape = []
+            for i in range(len(dshape)):
+                if i < start_axis:
+                    vshape.append(dshape[i])
+                elif i == start_axis:
+                    vshape.append(valid_num)
+                elif i >= start_axis + len(mshape):
+                    vshape.append(dshape[i])
+            vshape = tuple(vshape)
+            for val in [42.0, np.array(42.), np.array([42.]), np.random.uniform(size=vshape)]:
+                test_block = TestBooleanAssignScalar(val, start_axis) if isinstance(val, float) else TestBooleanAssignTensor(start_axis)
                 if hybridize:
                     test_block.hybridize()
                 np_data = test_data.asnumpy()
                 mx_data = test_data.copy()
-                np_data[np_mask] = val
+                trailing_axis = len(np_data.shape) - len(np_mask.shape) - start_axis
+                if start_axis == 0:
+                    if trailing_axis == 0:
+                        np_data[np_mask] = val
+                    elif trailing_axis == 1:
+                        np_data[np_mask, :] = val
+                    elif trailing_axis == 2:
+                        np_data[np_mask, :, :] = val
+                elif start_axis == 1:
+                    if trailing_axis == 0:
+                        np_data[:, np_mask] = val
+                    elif trailing_axis == 1:
+                        np_data[:, np_mask, :] = val
+                elif start_axis == 2:
+                    if trailing_axis == 0:
+                        np_data[:, :, np_mask] = val
                 mx_data = test_block(mx_data, mx_mask) if isinstance(val, float) else test_block(mx_data, mx_mask, val)
                 assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
@@ -1141,6 +1177,41 @@ def test_np_reshape():
             mx_out = np.reshape(x, shape2)
             np_out = _np.reshape(x.asnumpy(), shape2)
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
+
+
+@with_seed()
+@use_np
+def test_np_argsort():
+    class TestArgsort(HybridBlock):
+        def __init__(self, axis):
+            super(TestArgsort, self).__init__()
+            self._axis = axis
+
+        def hybrid_forward(self, F, x):
+            return F.np.argsort(x, axis=self._axis)
+
+    shapes = [
+        (),
+        (2, 3),
+        (1, 0, 2),
+    ]
+
+    for shape in shapes:
+        data = np.random.uniform(size=shape)
+        np_data = data.asnumpy()
+
+        for axis in [None] + [i for i in range(-len(shape), len(shape))]:
+            np_out = _np.argsort(np_data, axis)
+
+            test_argsort = TestArgsort(axis)
+            for hybrid in [False, True]:
+                if hybrid:
+                    test_argsort.hybridize()
+                mx_out = test_argsort(data)
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-5, atol=1e-6, use_broadcast=False)
+
+            mx_out = np.argsort(data, axis)
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-5, atol=1e-6, use_broadcast=False)
 
 
 @with_seed()
@@ -1667,7 +1738,7 @@ def test_np_binary_funcs():
                       [lambda y, x1, x2: -_np.floor(x1 / x2),
                        lambda y, x1, x2: _np.zeros(y.shape)],
                       [[_np.float16, _np.float32, _np.float64], [_np.int32]]),
-        'power': (1.0, 2.0, [lambda y, x1, x2: _np.power(x1, x2 - 1.0) * x2],
+        'power': (1.0, 3.0, [lambda y, x1, x2: _np.power(x1, x2 - 1.0) * x2],
                              [lambda y, x1, x2: _np.power(x1, x2) * _np.log(x1)]),
         'lcm': (-100, 100, [None], None, [[_np.int32]]),
         'bitwise_xor': (-100, 100, [None], None, [[_np.int32]]),
@@ -1728,12 +1799,32 @@ def test_np_mixed_precision_binary_funcs():
         for hybridize in [True, False]:
             if hybridize:
                 mx_func.hybridize()
+            if lgrad:
+                mx_test_x1.attach_grad()
+                mx_test_x2.attach_grad()
             np_out = np_func(np_test_x1, np_test_x2)
             with mx.autograd.record():
                 y = mx_func(mx_test_x1, mx_test_x2)
             assert y.shape == np_out.shape
             assert_almost_equal(y.asnumpy(), np_out.astype(y.dtype), rtol=rtol, atol=atol,
                                 use_broadcast=False, equal_nan=True)
+
+            if lgrad:
+                y.backward()
+                if ltype not in itypes:
+                    assert_almost_equal(mx_test_x1.grad.asnumpy(),
+                                        collapse_sum_like(lgrad(y.asnumpy(), np_test_x1, np_test_x2), mx_test_x1.shape),
+                                        rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
+                if rtype not in itypes:
+                    if rgrad is None:
+                        assert_almost_equal(mx_test_x2.grad.asnumpy(),
+                                            collapse_sum_like(rgrad(y.asnumpy(), np_test_x2, np_test_x1), mx_test_x2.shape),
+                                            rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
+                    else:
+                        assert_almost_equal(mx_test_x2.grad.asnumpy(),
+                                            collapse_sum_like(rgrad(y.asnumpy(), np_test_x1, np_test_x2), mx_test_x2.shape),
+                                            rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
+
 
         np_out = getattr(_np, func)(np_test_x1, np_test_x2)
         mx_out = getattr(mx.np, func)(mx_test_x1, mx_test_x2)
@@ -1745,7 +1836,9 @@ def test_np_mixed_precision_binary_funcs():
         'add': (-1.0, 1.0, None, None),
         'subtract': (-1.0, 1.0, None, None),
         'multiply': (-1.0, 1.0, lambda y, x1, x2: _np.broadcast_to(x2, y.shape),
-                                lambda y, x1, x2: _np.broadcast_to(x1, y.shape))
+                                lambda y, x1, x2: _np.broadcast_to(x1, y.shape)),
+        'power': (1.0, 3.0, lambda y, x1, x2: _np.power(x1, x2 - 1.0) * x2,
+                            lambda y, x1, x2: _np.power(x1, x2) * _np.log(x1)),
     }
 
     shape_pairs = [((3, 2), (3, 2)),

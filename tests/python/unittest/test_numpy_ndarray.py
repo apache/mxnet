@@ -696,26 +696,37 @@ def test_np_ndarray_indexing():
         np_indexed_array = _np.random.randint(low=-10000, high=0, size=indexed_array_shape)
         # test value is a native numpy array without broadcast
         assert_same(np_array, np_index, mx_array, index, np_indexed_array)
+        # test value is a list without broadcast
+        assert_same(np_array, np_index, mx_array, index, np_indexed_array.tolist())
         # test value is a mxnet numpy array without broadcast
         assert_same(np_array, np_index, mx_array, index, np.array(np_indexed_array))
         # test value is an numeric_type
         assert_same(np_array, np_index, mx_array, index, _np.random.randint(low=-10000, high=0))
-        if len(indexed_array_shape) > 1:
-            np_value = _np.random.randint(low=-10000, high=0, size=(indexed_array_shape[-1],))
-            # test mxnet ndarray with broadcast
-            assert_same(np_array, np_index, mx_array, index, np.array(np_value))
-            # test native numpy array with broadcast
-            assert_same(np_array, np_index, mx_array, index, np_value)
 
-            # test value shape are expanded to be longer than index array's shape
-            # this is currently only supported in basic indexing
-            if _is_basic_index(index):
-                expanded_value_shape = (1, 1, 1) + np_value.shape
-                assert_same(np_array, np_index, mx_array, index, np.array(np_value.reshape(expanded_value_shape)))
-                assert_same(np_array, np_index, mx_array, index, np_value.reshape(expanded_value_shape))
-            # test list with broadcast
-            assert_same(np_array, np_index, mx_array, index,
-                        [_np.random.randint(low=-10000, high=0)] * indexed_array_shape[-1])
+        np_value = _np.random.randint(low=-10000, high=0,
+                                      size=(indexed_array_shape[-1],) if len(indexed_array_shape) > 0 else ())
+        # test mxnet ndarray with broadcast
+        assert_same(np_array, np_index, mx_array, index, np.array(np_value))
+        # test native numpy array with broadcast
+        assert_same(np_array, np_index, mx_array, index, np_value)
+        # test python list with broadcast
+        assert_same(np_array, np_index, mx_array, index, np_value.tolist())
+
+        # test value shape are expanded to be longer than index array's shape
+        # this is currently only supported in basic indexing
+        if _is_basic_index(index):
+            expanded_value_shape = (1, 1) + np_value.shape
+            assert_same(np_array, np_index, mx_array, index, np.array(np_value.reshape(expanded_value_shape)))
+            assert_same(np_array, np_index, mx_array, index, np_value.reshape(expanded_value_shape))
+            if len(expanded_value_shape) <= np_array[index].ndim:
+                # NumPy does not allow value.ndim > np_array[index].ndim when value is a python list.
+                # It may be a bug of NumPy.
+                assert_same(np_array, np_index, mx_array, index, np_value.reshape(expanded_value_shape).tolist())
+
+        # test list with broadcast
+        assert_same(np_array, np_index, mx_array, index,
+                    [_np.random.randint(low=-10000, high=0)] * indexed_array_shape[-1] if len(indexed_array_shape) > 0
+                    else _np.random.randint(low=-10000, high=0))
 
     def test_getitem_autograd(np_array, index):
         """
@@ -905,6 +916,9 @@ def test_np_ndarray_indexing():
         range(4),
         range(3, 0, -1),
         (range(4,), [1]),
+        (1, 1, slice(None), 1),
+        (1, 1, slice(None, 3), 1),
+        (1, 1, slice(None, 8, 3), 1),
     ]
     for index in index_list:
         test_getitem(np_array, index)
@@ -925,8 +939,8 @@ def test_np_ndarray_indexing():
 
     # test zero-size tensors get and setitem
     shapes_indices = [
-                        ((0), [slice(None, None, None)]),
-                        ((3, 0), [2, (slice(None, None, None)), (slice(None, None, None), None)]),
+        ((0), [slice(None, None, None)]),
+        ((3, 0), [2, (slice(None, None, None)), (slice(None, None, None), None)]),
     ]
     for shape, indices in shapes_indices:
         np_array = _np.zeros(shape)
@@ -1164,11 +1178,14 @@ def test_np_ndarray_pickle():
     a = np.random.uniform(size=(4, 5))
     a_copy = a.copy()
     import pickle
-    with open("np_ndarray_pickle_test_file", 'wb') as f:
-        pickle.dump(a_copy, f)
-    with open("np_ndarray_pickle_test_file", 'rb') as f:
-        a_load = pickle.load(f)
-    same(a.asnumpy(), a_load.asnumpy())
+
+    with TemporaryDirectory() as work_dir:
+        fname = os.path.join(work_dir, 'np_ndarray_pickle_test_file')
+        with open(fname, 'wb') as f:
+            pickle.dump(a_copy, f)
+        with open(fname, 'rb') as f:
+            a_load = pickle.load(f)
+        same(a.asnumpy(), a_load.asnumpy())
 
 
 if __name__ == '__main__':
