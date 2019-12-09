@@ -518,6 +518,52 @@ def test_quantized_fc():
         check_quantized_fc((256, 111, 2, 2), 800, True, qdtype)
 
 @with_seed()
+def test_quantized_embedding():
+    def check_quantized_embedding(data_shape, input_dim, output_dim):
+        if is_test_for_gpu():
+            print('skipped testing test_quantized_embedding for gpu since it is not supported yet')
+            return
+
+        def maxabs(a, b):
+            return mx.nd.maximum(mx.nd.abs(a), mx.nd.abs(b))
+
+        data0 = mx.sym.Variable(name='data', shape=data_shape, dtype='int32')
+        embedding_fp32 = mx.sym.Embedding(data=data0, input_dim=input_dim, output_dim=output_dim)
+        arg_shapes, _, _ = embedding_fp32.infer_shape(data=data_shape)
+        arg_names = embedding_fp32.list_arguments()
+        embedding_fp32_exe = embedding_fp32.simple_bind(ctx=mx.current_context(), grad_req='null')
+        int8_range = 127.0
+        data = mx.nd.random.uniform(low=0, high=input_dim,
+                                      shape=arg_shapes[0]).astype('int32')
+        weight = mx.nd.random.uniform(low=-int8_range, high=int8_range,
+                                      shape=arg_shapes[1]).astype('int32')
+        embedding_fp32_exe.arg_dict[arg_names[0]][:] = data
+        embedding_fp32_exe.arg_dict[arg_names[1]][:] = weight
+
+        weight_min = mx.nd.min(weight).astype('float32')
+        weight_max = mx.nd.max(weight).astype('float32')
+        weight_range = maxabs(weight_min, weight_max)
+
+        output = embedding_fp32_exe.forward()[0]
+
+        embedding_int8 = mx.sym.contrib.quantized_embedding(data=data0, input_dim=input_dim, output_dim=output_dim)
+        qarg_names = embedding_int8.list_arguments()
+        type_dict = {qarg_names[1]: 'int8'}
+        embedding_int8_exe = embedding_int8.simple_bind(ctx=mx.current_context(), type_dict=type_dict, grad_req='null')
+        embedding_int8_exe.arg_dict[qarg_names[0]][:] = embedding_fp32_exe.arg_dict[arg_names[0]]
+        embedding_int8_exe.arg_dict[qarg_names[1]][:] = embedding_fp32_exe.arg_dict[arg_names[1]].astype('int8')
+        embedding_int8_exe.arg_dict[qarg_names[2]][:] = -weight_range
+        embedding_int8_exe.arg_dict[qarg_names[3]][:] = weight_range
+        qoutput, min_range, max_range = embedding_int8_exe.forward()
+
+        assert_almost_equal(output.asnumpy(), qoutput.asnumpy())
+
+    check_quantized_embedding((1,), 1000, 256)
+    check_quantized_embedding((1,), 1024, 512)
+    check_quantized_embedding((32,), 1000, 256)
+    check_quantized_embedding((32,), 1024, 512)
+
+@with_seed()
 def test_quantized_flatten():
     def check_quantized_flatten(shape, qdtype):
         if qdtype == 'uint8':
