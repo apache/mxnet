@@ -47,7 +47,7 @@ from test_subgraph_op import *
 from test_gluon_gpu import _test_bulking
 from test_contrib_operator import test_multibox_target_op
 from test_tvm_op import *
-from test_library_loading import *
+from test_extensions import *
 from test_contrib_optimizer import test_adamw
 
 set_default_context(mx.gpu(0))

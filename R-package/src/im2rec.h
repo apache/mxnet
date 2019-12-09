@@ -29,6 +29,12 @@
 
 #include <Rcpp.h>
 #include <string>
+#include <opencv2/core/version.hpp>
+#if CV_VERSION_MAJOR >= 4
+#include <opencv2/opencv.hpp>
+#define CV_IMWRITE_PNG_COMPRESSION cv::IMWRITE_PNG_COMPRESSION
+#define CV_IMWRITE_JPEG_QUALITY cv::IMWRITE_JPEG_QUALITY
+#endif  // CV_VERSION_MAJOR >= 4
 
 namespace mxnet {
 namespace R {

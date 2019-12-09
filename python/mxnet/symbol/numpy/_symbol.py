@@ -40,7 +40,7 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
-           'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot', 'histogram', 'eye',
+           'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'tensordot', 'histogram', 'eye',
            'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'split', 'vsplit', 'concatenate', 'append',
            'stack', 'vstack', 'column_stack', 'dstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax',
            'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index', 'hanning', 'hamming', 'blackman',
@@ -484,13 +484,13 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute topk')
 
-    def argsort(self, *args, **kwargs):
+    def argsort(self, axis=-1, kind=None, order=None):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`argsort`.
 
         The arguments are the same as for :py:func:`argsort`, with
         this array as data.
         """
-        raise NotImplementedError
+        raise argsort(self, axis=axis, kind=kind, order=order)
 
     def argmax_channel(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argmax_channel`.
@@ -1028,7 +1028,7 @@ def ones(shape, dtype=_np.float32, order='C', ctx=None):
 
     Returns
     -------
-    out : ndarray
+    out : _Symbol
         Array of ones with the given shape, dtype, and ctx.
     """
     if order != 'C':
@@ -1270,7 +1270,7 @@ def divide(x1, x2, out=None, **kwargs):
                          _npi.rtrue_divide_scalar, out)
 
 
-@set_module('mxnet.ndarray.numpy')
+@set_module('mxnet.symbol.numpy')
 def true_divide(x1, x2, out=None):
     return _ufunc_helper(x1, x2, _npi.true_divide, _np.divide, _npi.true_divide_scalar,
                          _npi.rtrue_divide_scalar, out)
@@ -1302,19 +1302,19 @@ def lcm(x1, x2, out=None, **kwargs):
 
     Parameters
     ----------
-    x1, x2 : ndarrays or scalar values
+    x1, x2 : _Symbols or scalar values
         The arrays for computing lowest common multiple. If x1.shape != x2.shape,
         they must be broadcastable to a common shape (which may be the shape of
         one or the other).
 
-    out : ndarray or None, optional
+    out : _Symbol or None, optional
         A location into which the result is stored. If provided, it must have a shape
         that the inputs broadcast to. If not provided or None, a freshly-allocated array
         is returned.
 
     Returns
     -------
-    y : ndarray or scalar
+    y : _Symbol or scalar
         The lowest common multiple of the absolute value of the inputs
         This is a scalar if both `x1` and `x2` are scalars.
 
@@ -1323,6 +1323,45 @@ def lcm(x1, x2, out=None, **kwargs):
     gcd : The greatest common divisor
     """
     return _ufunc_helper(x1, x2, _npi.lcm, _np.lcm, _npi.lcm_scalar, None, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def argsort(a, axis=-1, kind=None, order=None):
+    """
+    Returns the indices that would sort an array.
+    Perform an indirect sort along the given axis using the algorithm specified
+    by the `kind` keyword. It returns an array of indices of the same shape as
+    `a` that index data along the given axis in sorted order.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Array to sort.
+    axis : int or None, optional
+        Axis along which to sort.  The default is -1 (the last axis). If None,
+        the flattened array is used.
+    kind : string, optional
+        This argument can take any string, but it does not have any effect on the
+        final result.
+    order : str or list of str, optional
+        Not supported yet, will raise NotImplementedError if not None.
+
+    Returns
+    -------
+    index_array : _Symbol, int
+        Array of indices that sort `a` along the specified `axis`.
+        If `a` is one-dimensional, ``a[index_array]`` yields a sorted `a`.
+        More generally, ``np.take_along_axis(a, index_array, axis=axis)``
+        always yields the sorted `a`, irrespective of dimensionality.
+
+    Notes
+    -----
+    This operator does not support different sorting algorithms.
+    """
+    if order is not None:
+        raise NotImplementedError("order is not supported yet...")
+
+    return _npi.argsort(data=a, axis=axis, is_ascend=True, dtype='int64')
 
 
 @set_module('mxnet.symbol.numpy')
@@ -1447,7 +1486,7 @@ def eye(N, M=None, k=0, dtype=_np.float32, **kwargs):
 
     Returns
     -------
-    I : ndarray of shape (N,M)
+    I : _Symbol of shape (N,M)
         An array where all elements are equal to zero,
         except for the k-th diagonal, whose values are equal to one.
     """
@@ -1778,7 +1817,7 @@ def cosh(x, out=None, **kwargs):
     ----------
     x : _Symbol or scalar
         Input array or scalar.
-    out : ndarray or None
+    out : _Symbol or None
         Dummy parameter to keep the consistency with the ndarray counterpart.
 
     Returns
@@ -2290,7 +2329,7 @@ def log2(x, out=None, **kwargs):
     ----------
     x : _Symbol
         Input values.
-    out : ndarray or None
+    out : _Symbol or None
         A location into which the result is stored.
         If provided, it must have the same shape and type as the input.
         If not provided or None, a freshly-allocated array is returned.
@@ -2876,7 +2915,7 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
 
     Returns
     -------
-    arange : ndarray
+    arange : _Symbol
         Array of evenly spaced values.
 
         For floating point arguments, the length of the result is
@@ -2907,7 +2946,7 @@ def split(ary, indices_or_sections, axis=0):
 
     Parameters
     ----------
-    ary : ndarray
+    ary : _Symbol
         Array to be divided into sub-arrays.
     indices_or_sections : int or 1-D python tuple, list or set.
         If `indices_or_sections` is an integer, N, the array will be divided
@@ -2926,7 +2965,7 @@ def split(ary, indices_or_sections, axis=0):
 
     Returns
     -------
-    sub-arrays : list of ndarrays
+    sub-arrays : _Symbol
         A list of sub-arrays.
 
     Raises
@@ -2948,7 +2987,7 @@ def split(ary, indices_or_sections, axis=0):
 
 
 # pylint: disable=redefined-outer-name
-@set_module('mxnet.ndarray.numpy')
+@set_module('mxnet.symbol.numpy')
 def hsplit(ary, indices_or_sections):
     """Split an array into multiple sub-arrays horizontally (column-wise).
 
@@ -3110,7 +3149,7 @@ def concatenate(seq, axis=0, out=None):
 
     Parameters
     ----------
-    a1, a2, ... : sequence of array_like
+    a1, a2, ... : sequence of _Symbols
         The arrays must have the same shape, except in the dimension
         corresponding to `axis` (the first, by default).
     axis : int, optional
@@ -3123,7 +3162,7 @@ def concatenate(seq, axis=0, out=None):
 
     Returns
     -------
-    res : ndarray
+    res : _Symbol
         The concatenated array.
 
     Examples
@@ -3152,9 +3191,9 @@ def append(arr, values, axis=None):  # pylint: disable=redefined-outer-name
 
     Parameters
     ----------
-    arr : ndarray
+    arr : _Symbol
         Values are appended to a copy of this array.
-    values : ndarray
+    values : _Symbol
         These values are appended to a copy of `arr`.  It must be of the
         correct shape (the same shape as `arr`, excluding `axis`).  If
         `axis` is not specified, `values` can be any shape and will be
@@ -3165,7 +3204,7 @@ def append(arr, values, axis=None):  # pylint: disable=redefined-outer-name
 
     Returns
     -------
-    append : ndarray
+    append : _Symbol
         A copy of `arr` with `values` appended to `axis`.  Note that
         `append` does not occur in-place: a new array is allocated and
         filled.  If `axis` is None, `out` is a flattened array.
@@ -3192,16 +3231,16 @@ def stack(arrays, axis=0, out=None):
         For example, if `axis=0` it will be the first dimension and if `axis=-1` it will be the last dimension.
     Parameters
     ----------
-    arrays : sequence of array_like
+    arrays : sequence of _Symbols
         Each array must have the same shape.
     axis : int, optional
         The axis in the result array along which the input arrays are stacked.
-    out : ndarray, optional
+    out : _Symbol, optional
         If provided, the destination to place the result. The shape must be correct,
         matching that of what stack would have returned if no out argument were specified.
     Returns
     -------
-    stacked : ndarray
+    stacked : _Symbol
         The stacked array has one more dimension than the input arrays."""
     def get_list(arrays):
         if not hasattr(arrays, '__getitem__') and hasattr(arrays, '__iter__'):
@@ -3744,7 +3783,7 @@ def ravel(x, order='C'):
 
     Parameters
     ----------
-    x : ndarray
+    x : _Symbol
         Input array.  The elements in `x` are read in row-major, C-style order and
         packed as a 1-D array.
     order : `C`, optional
@@ -3752,7 +3791,7 @@ def ravel(x, order='C'):
 
     Returns
     -------
-    y : ndarray
+    y : _Symbol
         y is an array of the same subtype as `x`, with shape ``(x.size,)``.
         Note that matrices are special cased for backward compatibility, if `x`
         is a matrix, then y is a 1-D ndarray.
@@ -3778,7 +3817,7 @@ def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-
 
     Parameters:
     -------------
-    indices : array_like
+    indices : _Symbol
             An integer array whose elements are indices into the flattened version of an array of dimensions shape.
             Before version 1.6.0, this function accepted just one index value.
     shape : tuple of ints
@@ -3786,7 +3825,7 @@ def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-
 
     Returns:
     -------------
-    unraveled_coords : ndarray
+    unraveled_coords : _Symbol
             Each row in the ndarray has the same shape as the indices array.
             Each column in the ndarray represents the unravelled index
 
@@ -4434,16 +4473,16 @@ def outer(a, b):
 
     Parameters
     ----------
-    a : (M,) ndarray
+    a : (M,) _Symbol
         First input vector.  Input is flattened if
         not already 1-dimensional.
-    b : (N,) ndarray
+    b : (N,) _Symbol
         Second input vector.  Input is flattened if
         not already 1-dimensional.
 
     Returns
     -------
-    out : (M, N) ndarray
+    out : (M, N) _Symbol
         ``out[i, j] = a[i] * b[j]``
 
     See also
@@ -4924,18 +4963,18 @@ def diff(a, n=1, axis=-1, prepend=None, append=None):  # pylint: disable=redefin
 
     Parameters
     ----------
-    a : ndarray
+    a : _Symbol
         Input array
     n : int, optional
         The number of times values are differenced. If zero, the input is returned as-is.
     axis : int, optional
         The axis along which the difference is taken, default is the last axis.
-    prepend, append : ndarray, optional
+    prepend, append : _Symbol, optional
         Not supported yet
 
     Returns
     -------
-    diff : ndarray
+    diff : _Symbol
         The n-th differences.
         The shape of the output is the same as a except along axis where the dimension is smaller by n.
         The type of the output is the same as the type of the difference between any two elements of a.
