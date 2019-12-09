@@ -312,7 +312,7 @@ MSHADOW_XINLINE void Transpose2D(const DType *in, DType *out, index_t row, index
   }
 }
 
-inline bool isIdentityTranspose(const TShape& axes) {
+inline bool IsIdentityTranspose(const TShape& axes) {
   for (dim_t i = 0; i < axes.ndim(); i++) {
     if (axes[i] != i) return false;
   }
@@ -342,7 +342,7 @@ void TransposeImpl(RunContext ctx,
   }
 #endif
   // Special handle the identity case
-  if (isIdentityTranspose(axes)) {
+  if (IsIdentityTranspose(axes)) {
     MSHADOW_TYPE_SWITCH(ret.type_flag_, DType, {
       Tensor<xpu, 1, DType> in = src.get_with_shape<xpu, 1, DType>(mshadow::Shape1(src.Size()), s);
       Tensor<xpu, 1, DType> out = ret.get_with_shape<xpu, 1, DType>(mshadow::Shape1(ret.Size()), s);
@@ -365,7 +365,9 @@ void TransposeImpl(RunContext ctx,
       if (ctx.get_ctx().dev_mask() == cpu::kDevMask) {
         Transpose2D<DType, is_addto>(in.dptr_, out.dptr_, in.shape_[0], in.shape_[1]);
       } else {
-        LOG(FATAL) << "Not Implemented. We should never reach here. Report an issue in Github.";
+        LOG(FATAL) << "Not Implemented. We should never reach here because the 2D case "
+                      "in GPU has been covered by transpose_pseudo2D."
+                      " Report an issue in Github.";
       }
       break;
      }

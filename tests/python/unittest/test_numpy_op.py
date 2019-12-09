@@ -1316,6 +1316,7 @@ def test_np_transpose():
         def hybrid_forward(self, F, a):
             return F.np.transpose(a, self.axes)
     test_workloads = [[(), [(), None]],
+                      [(2,), [(0,), None]],
                       [(0, 2), [(0, 1), (1, 0)]],
                       [(5, 10), [(0, 1), (1, 0), None]],
                       [(8, 2, 3), [(2, 0, 1), (0, 2, 1), (0, 1, 2), (2, 1, 0), (-1, 1, 0), None]],
