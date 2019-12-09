@@ -113,6 +113,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'reshape',
     'roll',
     'split',
+    'array_split',
     'squeeze',
     'stack',
     'std',
