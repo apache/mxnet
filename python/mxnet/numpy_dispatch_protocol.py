@@ -142,6 +142,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'diff',
     'resize',
     'where',
+    'full_like',
 ]
 
 
@@ -239,7 +240,7 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'less',
     'less_equal',
     'greater',
-    'greater_equal'
+    'greater_equal',
 ]
 
 

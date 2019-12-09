@@ -18,6 +18,8 @@
 # pylint: skip-file
 from __future__ import absolute_import
 from __future__ import division
+from distutils.version import StrictVersion
+import platform
 import itertools
 import numpy as _np
 from mxnet import np
@@ -776,9 +778,17 @@ def _add_workload_var(array_pool):
 
 def _add_workload_zeros_like(array_pool):
     OpArgMngr.add_workload('zeros_like', array_pool['4x1'])
-    OpArgMngr.add_workload('zeros_like', np.random.uniform(size=(3, 3)).astype(np.float64))
-    OpArgMngr.add_workload('zeros_like', np.random.uniform(size=(3, 3)).astype(np.float32))
-    OpArgMngr.add_workload('zeros_like', np.random.randint(2, size = (3, 3)))
+    OpArgMngr.add_workload('zeros_like', np.random.uniform(size=(3, 3)).astype(np.float64), np.int64)
+    OpArgMngr.add_workload('zeros_like', np.random.uniform(size=(3, 3)).astype(np.float32), np.float64)
+    OpArgMngr.add_workload('zeros_like', np.random.randint(2, size = (3, 3)), int)
+
+
+def _add_workload_full_like(array_pool):
+    OpArgMngr.add_workload('full_like', array_pool['4x1'], 1)
+    OpArgMngr.add_workload('full_like', np.random.uniform(low=0, high=100, size=(1,3,4), dtype='float64'), 1)
+    OpArgMngr.add_workload('full_like', np.random.uniform(low=0, high=100, size=(9,3,1)), 2, np.int64)
+    OpArgMngr.add_workload('full_like', np.random.uniform(low=0, high=100, size=(9,3)), np.nan)
+    OpArgMngr.add_workload('full_like', np.random.uniform(low=0, high=100, size=(2,0)), 0, np.float32)
 
 
 def _add_workload_outer():
@@ -1432,6 +1442,7 @@ def _prepare_workloads():
     _add_workload_shape()
     _add_workload_diff()
     _add_workload_resize()
+    _add_workload_full_like(array_pool)
 
 
 _prepare_workloads()
@@ -1477,6 +1488,9 @@ def check_interoperability(op_list):
         if name in _TVM_OPS and not is_op_runnable():
             continue
         if name in ['shares_memory', 'may_share_memory']:  # skip list
+            continue
+        if name in ['full_like', 'zeros_like', 'ones_like'] and \
+                StrictVersion(platform.python_version()) < StrictVersion('3.0.0'):
             continue
         print('Dispatch test:', name)
         workloads = OpArgMngr.get_workloads(name)
