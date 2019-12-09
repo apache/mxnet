@@ -20,6 +20,7 @@
 from __future__ import absolute_import
 
 import pickle
+import ctypes
 from ..ndarray import NDArray
 from ..ndarray import _ndarray_cls
 from ..base import _LIB, c_str
