@@ -249,6 +249,7 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
         # it will also shut down logging at train end
         self.priority = priority
         self.log_interval = log_interval
+        self.log_interval_time = 0
 
     def train_begin(self, estimator, *args, **kwargs):
         self.train_start = time.time()

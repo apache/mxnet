@@ -464,6 +464,6 @@ def test_val_handlers():
         est.fit(train_data=train_data, epochs=num_epochs)
         est.evaluate(val_data=val_data)
 
-    logging = LoggingHandler(verbose=LoggingHandler.LOG_PER_BATCH, metrics=est.val_metrics)
+    logging = LoggingHandler(log_interval=1, metrics=est.val_metrics)
     est.evaluate(val_data=val_data, event_handlers=[logging])
 
