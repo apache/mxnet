@@ -283,11 +283,12 @@ static void TransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
     return;
   }
   const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
-  CHECK_EQ(req[0], kWriteTo) << "Transpose does not support kWriteInplace and kAddTo";
+  CHECK(req[0] == kWriteTo || req[0] == kAddTo) <<
+      "Transpose only supports kNullOp, kWriteTo and kAddTo";
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
 
-  if (SupportMKLDNNTranspose(param, inputs[0])) {
+  if (SupportMKLDNNTranspose(param, inputs[0]) && req[0] == kWriteTo) {
     MKLDNNTransposeForward(attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   }
