@@ -395,11 +395,9 @@ void BatchNormComputeExCPU(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(inputs.size(), 5U);
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
   if (SupportMKLDNNBN(inputs[0], param)) {
-    std::vector<NDArray> in_data(inputs.begin(), inputs.begin() + batchnorm::kInMovingMean);
-    std::vector<NDArray> aux_states(inputs.begin() + batchnorm::kInMovingMean, inputs.end());
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNN_REAL_TYPE_SWITCH(inputs[0].dtype(), DTYPE, {
-        MKLDNNBatchNormForward<DTYPE>(ctx, param, in_data, req, outputs, aux_states);
+        MKLDNNRun(MKLDNNBatchNormForward<DTYPE>, attrs, ctx, inputs, req, outputs);
       });
     MKLDNN_OPCHECK_RUN(BatchNormCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;

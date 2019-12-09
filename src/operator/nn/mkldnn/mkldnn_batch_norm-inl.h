@@ -202,8 +202,8 @@ void MKLDNNBatchNormForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     net_args[MKLDNN_ARG_DST] = *out_mem;
 
     if (!ctx.is_train || param.use_global_stats) {
-      float* omean    = out_data[batchnorm::kMean].data().dptr<float>();
-      float* ovar     = out_data[batchnorm::kVar].data().dptr<float>();
+      float* omean    = outputs[batchnorm::kMean].data().dptr<float>();
+      float* ovar     = outputs[batchnorm::kVar].data().dptr<float>();
       float* inmean   = aux_states[batchnorm::kMovingMean].data().dptr<float>();
       float* invar    = aux_states[batchnorm::kMovingVar].data().dptr<float>();
       // to align with origin implmentation: batch_norm.cc: L164

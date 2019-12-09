@@ -249,8 +249,8 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
       auto data_range = (data.dtype() == mshadow::kInt8) ? kInt8Range : kUint8Range;
       data_scale_ = data_range / MaxAbs(cached_data_min_, cached_data_max_);
       MKLDNN_REAL_TYPE_SWITCH(cached_weight_.dtype(), DType, {
-        weight_scales_ =
-            GetWeightScales<DType>(cached_weight_, weight_channelwise_scale);
+        weight_scales_ = GetWeightScales<DType>(cached_weight_, has_bias ? &cached_bias_ : nullptr,
+                                                data_scale_, weight_channelwise_scale);
       });
       // Collect scale.
       size_t channel = cached_weight_.shape()[0];
