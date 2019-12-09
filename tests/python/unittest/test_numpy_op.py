@@ -602,6 +602,119 @@ def test_np_max_min():
 
 @with_seed()
 @use_np
+def test_np_average():
+    class TestAverage(HybridBlock):
+        def __init__(self, axis=None, returned=False):
+            super(TestAverage, self).__init__()
+            # necessary initializations
+            self._axis = axis
+            self._returned = returned
+             
+        def hybrid_forward(self, F, a, weights):
+            return F.np.average(a, weights=weights, axis=self._axis, returned=self._returned)
+    
+    def avg_backward(a, w, avg, axes, init_a_grad=None, init_w_grad=None):
+        # avg = sum(a * w) / sum(w)
+        if axes is not None and not isinstance(axes, tuple) and axes < 0:
+            axes += a.ndim
+        if w is None:
+            a_grad = _np.ones(shape=a.shape, dtype=a.dtype)/(a.size/avg.size)
+            if init_a_grad is not None:
+                a_grad += init_a_grad.asnumpy()
+            return [a_grad, None]
+        onedim = a.ndim != w.ndim
+        if onedim:
+            new_shape = [a.shape[i] if i == axes else 1 for i in range(a.ndim)]
+            w = w.reshape(new_shape)
+            w = _np.broadcast_to(w, a.shape)
+       
+        # partial a = w / sum(w)
+        # partial w = (a*sum(w) - sum(a*w)) / (sum(w) * sum(w))
+        scl = _np.sum(w, axis=axes, keepdims=True)
+        a_grad = _np.divide(w, scl)
+        w_grad = _np.divide(a*scl-_np.sum(a*w, axis=axes, keepdims=True), scl*scl)
+        
+        if onedim:
+            axis = list(range(a.ndim))
+            axis.remove(axes)
+            w_grad = _np.sum(w_grad, axis=tuple(axis))
+        if init_a_grad is not None:
+            a_grad += init_a_grad.asnumpy()
+        if init_w_grad is not None:
+            w_grad += init_w_grad.asnumpy()
+        return [a_grad, w_grad]
+
+    tensor_shapes = [
+        ((3, 5), (3, 5), None),  # (a_shape, w_shape, axes)
+        ((4, 5, 6), (4, 5, 6), (0, 2)),
+        ((3,), (3,), 0),
+        ((2, 3), (3,), 1),
+        ((2, 3, 4), (2,), 0),
+        ((2, 3, 4), (3,), 1),
+        ((2, 3, 4), (4,), -1),
+        ((2, 3, 4, 5), (5,), 3)
+    ]
+
+    flags = [True, False]
+    dtypes = ['float32', 'float64']
+    reqs = ['null', 'add', 'write']
+    for hybridize, returned, (a_shape, w_shape, axes), dtype, is_weighted, req_a in \
+        itertools.product(flags, flags, tensor_shapes, dtypes, flags, reqs):
+        if req_a == 'null' and not is_weighted:
+            continue
+        rtol, atol = 1e-3, 1e-4
+        test_average = TestAverage(axes, returned)
+        if hybridize:
+            test_average.hybridize()
+        a = np.random.uniform(-1.0, 1.0, size=a_shape, dtype=dtype)
+        a.attach_grad(req_a)
+        init_a_grad = np.random.uniform(-1.0, 1.0, size=a_shape, dtype=dtype) if req_a == 'add' else None
+        init_w_grad = None
+        req_w = req_a
+        w, np_w = None, None
+        if is_weighted:
+            w = np.random.uniform(-1.0, 1.0, size=w_shape, dtype=dtype)
+            if req_a == 'null':
+                req_w = random.choice(['add', 'write'])
+            w.attach_grad(req_w)
+            if req_w == 'add':
+                init_w_grad = np.random.uniform(-1.0, 1.0, size=w_shape, dtype=dtype)
+            np_w = w.asnumpy()
+        np_out = _np.average(a.asnumpy(), axis=axes, weights=np_w, returned=returned)
+        with mx.autograd.record():
+            mx_out = test_average(a, w)
+        if returned:
+            np_out, np_sum_of_weights = np_out
+            mx_out, mx_sum_of_weights = mx_out
+            assert_almost_equal(mx_sum_of_weights.asnumpy(), np_sum_of_weights, rtol=rtol, atol=atol)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out.astype(dtype), rtol=rtol, atol=atol)
+        if req_a == 'add':
+            a.grad[:] = init_a_grad
+        if is_weighted and req_w == 'add':
+            w.grad[:] = init_w_grad
+        mx_out.backward()
+        # Code to get reference backward value
+        a_grad, w_grad = avg_backward(a.asnumpy(), np_w, np_out, axes, init_a_grad, init_w_grad)
+        if is_weighted:
+            assert_almost_equal(w.grad.asnumpy(), w_grad, rtol=rtol*10, atol=atol*10)
+        if req_a == 'null':
+            assert a.grad is None
+        else:
+            assert_almost_equal(a.grad.asnumpy(), a_grad, rtol=rtol, atol=atol)
+        
+        # Test imperative once again
+        np_out = _np.average(a.asnumpy(), weights=np_w, axis=axes, returned=returned)
+        mx_out = np.average(a, weights=w, axis=axes, returned=returned)
+        if returned:
+            np_out, np_sum_of_weights = np_out
+            mx_out, mx_sum_of_weights = mx_out
+            assert_almost_equal(mx_sum_of_weights.asnumpy(), np_sum_of_weights, rtol=rtol, atol=atol)
+        assert_almost_equal(mx_out.asnumpy(), np_out.astype(dtype), rtol=rtol, atol=atol)
+
+
+@with_seed()
+@use_np
 def test_np_mean():
     class TestMean(HybridBlock):
         def __init__(self, axis=None, dtype=None, keepdims=False):
