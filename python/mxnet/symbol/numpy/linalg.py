@@ -340,6 +340,7 @@ def slogdet(a):
     """
     return _npi.slogdet(a)
 
+
 def solve(a, b):
     r"""
     Solve a linear matrix equation, or system of linear scalar equations.
