@@ -958,6 +958,8 @@ def test_quantize_model_with_forward():
                         excluded_sym_names = excluded_names
                     else:
                         excluded_sym_names = excluded_names + optional_names
+            if name == 'sym4':
+                excluded_op_names += ['elemwise_add']
 
             qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=s,
                                                                              arg_params=arg_params,
