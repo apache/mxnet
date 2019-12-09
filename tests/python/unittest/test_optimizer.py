@@ -452,20 +452,11 @@ class PyLAMB(mx.optimizer.Optimizer):
         lr = self._get_lr(index)
         wd = self._get_wd(index)
         t = self._index_update_count[index]
-        use_multi_precision = self.multi_precision
-
-        if use_multi_precision:
-            mp_weight = weight
-            grad = array(grad, ctx=grad.context, dtype=np.float32)
-            weight = state[0]
-            mean, var = state[1]
-        else:
-            mean, var = state
+        mean, var = state
         grad *= self.rescale_grad
         if self.clip_gradient is not None:
             grad = mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient)
 
-        
         mean[:] = self.beta1 * mean + (1. - self.beta1) * grad
         var[:] = self.beta2 * var + (1. - self.beta2) * mx.nd.square(grad)
 
@@ -488,12 +479,6 @@ class PyLAMB(mx.optimizer.Optimizer):
         lr *= r
         # update weight
         weight[:] -= lr * g
-        if use_multi_precision:
-            tmp = weight.astype(mp_weight.dtype)
-            tmp.copyto(weight)
-
-    def update_multi_precision(self, index, weight, grad, state):
-        self.update(index, weight, grad, state)
 
 
 @with_seed()
