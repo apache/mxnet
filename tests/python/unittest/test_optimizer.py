@@ -524,7 +524,6 @@ class PySGLD(mx.optimizer.Optimizer):
 
 
 @with_seed()
-@unittest.skip("test_sgld")
 def test_sgld():
     opt1 = PySGLD
     opt2 = mx.optimizer.SGLD

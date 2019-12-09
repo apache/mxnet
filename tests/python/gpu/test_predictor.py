@@ -17,7 +17,6 @@
 
 from __future__ import print_function
 import sys, os
-import unittest
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, "../../../amalgamation/python/"))
 from mxnet_predict import Predictor, load_ndarray_file
@@ -96,7 +95,6 @@ def compare_module_cpredict(result_sym, result_arg_params, result_aux_params, mo
 
 
 @with_seed()
-@unittest.skip("skip test_predictor_amp")
 def test_predictor_amp():
     dir_path = os.path.dirname(os.path.realpath(__file__))
     model_path = os.path.join(dir_path, 'model')
