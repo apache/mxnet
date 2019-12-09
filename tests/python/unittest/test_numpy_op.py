@@ -532,7 +532,7 @@ def test_np_max_min():
             elif axis == 2:
                 temp[:,:,index,:] = 1
                 return temp
-            elif axis == 3:
+            elif (axis == 3 or axis == -1):
                 temp[:,:,:,index] = 1
                 return temp
             elif not axis:
@@ -550,7 +550,7 @@ def test_np_max_min():
     for func in ['max', 'min']:
         for hybridize in [False, True]:
             for keepdims in [True, False]:
-                for axis in ([i for i in range(in_data_dim)] + [(), None]):
+                for axis in ([i for i in range(in_data_dim)] + [(), None] + [-1]):
                     for itype in ['float16', 'float32', 'float64', 'int']:
                         # test gluon
                         if func == 'max':
