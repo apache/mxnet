@@ -102,7 +102,8 @@ endif()
 
 #Switch off modern thread local for dmlc-core, please see: https://github.com/dmlc/dmlc-core/issues/571#issuecomment-543467484
 add_definitions(-DDMLC_MODERN_THREAD_LOCAL=0)
-
+# disable stack trace in exception by default.
+add_definitions(-DDMLC_LOG_STACK_TRACE_SIZE=0)
 
 if(MSVC)
   add_definitions(-DWIN32_LEAN_AND_MEAN)
@@ -240,7 +241,7 @@ if(USE_TENSORRT)
 endif()
 
 # please note that when you enable this, you might run into an linker not being able to work properly due to large code injection.
-# you can find more information here https://github.com/apache/incubator-mxnet/issues/15971 
+# you can find more information here https://github.com/apache/incubator-mxnet/issues/15971
 if(ENABLE_TESTCOVERAGE)
   message(STATUS "Compiling with test coverage support enabled. This will result in additional files being written to your source directory!")
   find_program( GCOV_PATH gcov )
