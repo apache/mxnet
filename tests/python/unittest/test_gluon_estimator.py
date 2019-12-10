@@ -391,7 +391,7 @@ def test_eval_net():
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     est = Estimator(net=net,
                     loss=loss,
-                    metrics=acc,
+                    train_metrics=acc,
                     trainer=trainer,
                     context=ctx,
                     evaluation_loss=evaluation_loss,
@@ -409,7 +409,7 @@ def test_eval_net():
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     est = Estimator(net=net,
                     loss=loss,
-                    metrics=acc,
+                    train_metrics=acc,
                     trainer=trainer,
                     context=ctx,
                     evaluation_loss=evaluation_loss,
@@ -431,7 +431,7 @@ def test_eval_net():
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     est = Estimator(net=net,
                     loss=loss,
-                    metrics=acc,
+                    train_metrics=acc,
                     trainer=trainer,
                     context=ctx,
                     evaluation_loss=evaluation_loss,

@@ -135,7 +135,7 @@ class MetricHandler(EpochBegin, BatchEnd):
         order. The lower the number is, the higher priority level the handler is.
     """
 
-    def __init__(self, metrics):
+    def __init__(self, metrics, priority=-1000):
         self.metrics = _check_metrics(metrics)
         # order to be called among all callbacks
         # metrics need to be calculated before other callbacks can access them
