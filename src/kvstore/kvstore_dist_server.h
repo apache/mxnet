@@ -371,7 +371,7 @@ class KVStoreDistServer {
        */
       bool has_pull = false;
       for (const auto& req : update_buf->request) {
-        has_pull = has_pull || update_buf->request[0].pull;
+        has_pull = has_pull || req.pull;
       }
       if (has_pull) {
         // if there is a pull request, perform WaitToRead() once before DefaultStorageResponse
