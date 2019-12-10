@@ -5158,6 +5158,85 @@ def test_np_diag():
         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
+
+@with_seed()
+@use_np
+def test_np_diagonal():
+    class TestDiagonal(HybridBlock):
+        def __init__(self, k=0, axis1=0, axis2=1):
+            super(TestDiagonal, self).__init__()
+            self._k = k
+            self._axis1 = axis1
+            self._axis2 = axis2
+
+        def hybrid_forward(self, F, a):
+            return F.np.diagonal(a, self._k, self._axis1, self._axis2)
+
+    configs = [
+        [(1, 5), (0, 1)], [(2, 2),(0, 1)],
+        [(2, 5), (0, 1)], [(5, 5), (0, 1)],
+        [(2, 2, 2), (0, 1)], [(2, 4, 4), (0, 2)],
+        [(3, 3, 3), (1, 2)], [(4, 8, 8), (1, 2)],
+        [(4, 4, 4, 4), (1, 2)], [(5, 6, 7, 8), (2, 3)],
+        [(6, 7, 8, 9, 10), (3, 4)]
+    ]
+    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
+    offsets = [0, 2, 4, 6]
+    combination = itertools.product([False, True], configs, dtypes, offsets)
+    for hybridize, config, dtype, k in combination:
+        rtol = 1e-2 if dtype == np.float16 else 1e-3
+        atol = 1e-4 if dtype == np.float16 else 1e-5
+        shape = config[0]
+        axis = config[1]
+        axis1 = axis[0]
+        axis2 = axis[1]
+        x = np.random.uniform(-5.0, 5.0, size=shape).astype(dtype)
+        x.attach_grad()
+        test_diagonal = TestDiagonal(k, axis1, axis2)
+        if hybridize:
+            test_diagonal.hybridize()
+        np_out = _np.diagonal(x.asnumpy(), offset=k, axis1=axis[0], axis2=axis[1])
+        with mx.autograd.record():
+            mx_out = test_diagonal(x)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+        # check backward function
+        mx_out.backward()
+        size_out = np_out.size
+        shape_out = np_out.shape
+        ndim = len(shape)
+        h = shape[axis1]
+        w = shape[axis2]
+        np_backward_slice = _np.zeros((h, w))
+        np_backward = _np.zeros(shape)
+        if k > 0:
+            w -= k
+        else:
+            h += k
+        s = min(w, h)
+        if s > 0:
+            if k >= 0:
+                for i in range(s):
+                    np_backward_slice[0+i][k+i] = 1
+            else:
+                for i in range(s):
+                    np_backward_slice[-k+i][0+i] = 1
+            ileading = int(size_out/s)
+            array_temp = _np.array([np_backward_slice for i in range(ileading)])
+            array_temp = array_temp.reshape(shape_out[:-1] + (shape[axis1], shape[axis2]))
+            axis_idx = [i for i in range(ndim-2)]
+            axis_idx[axis1:axis1] = [ndim - 2]
+            axis_idx[axis2:axis2] = [ndim - 1] 
+            np_backward = _np.transpose(array_temp, tuple(axis_idx))
+        assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
+
+        # Test imperative once again
+        mx_out = np.diagonal(x, k, axis[0], axis[1])
+        np_out = _np.diagonal(x.asnumpy(), offset=k, axis1=axis[0], axis2=axis[1])
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+
 @with_seed()
 @use_np
 def test_np_nan_to_num():
