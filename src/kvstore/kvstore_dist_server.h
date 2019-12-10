@@ -369,14 +369,22 @@ class KVStoreDistServer {
        * If pull flag is set, respond immediately with the updated values
        * Otherwise, only send the notification
        */
-      if (update_buf->request[0].pull) {
+      bool has_pull = false;
+      for (const auto& req : update_buf->request) {
+        has_pull = has_pull || update_buf->request[0].pull;
+      }
+      if (has_pull) {
+        // if there is a pull request, perform WaitToRead() once before DefaultStorageResponse
         if (has_multi_precision_copy(type)) CopyFromTo(stored, store_[key]);
         stored.WaitToRead();
         for (const auto& req : update_buf->request) {
-          DefaultStorageResponse(type, key, req, req_data, server);
+          if (req.pull) {
+            DefaultStorageResponse(type, key, req, req_data, server);
+          }
         }
         update_buf->request.clear();
       } else {
+        // otherwise, send response directly
         for (const auto& req : update_buf->request) {
           server->Response(req);
         }
