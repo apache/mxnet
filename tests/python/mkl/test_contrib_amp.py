@@ -111,8 +111,7 @@ def test_amp_conversion():
         y_bf16 = mx.sym.amp_cast(y, dtype=bfloat16)
         amp_casted_siny = mx.sym.sin(mx.sym.amp_cast(y_bf16, dtype="float32"))
         z = mx.sym.FullyConnected(x_bf16, y_bf16, num_hidden=10, no_bias=True)
-        outs = mx.sym.amp_multicast(z, amp_casted_siny, num_outputs=2)
-        res_expected = outs[0] + outs[1]
+        res_expected = z + amp_casted_siny
         assert same_symbol_structure(res_converted, res_expected), \
             "convert_symbol generating wrong computation graph"
 
@@ -380,6 +379,45 @@ def test_amp_accuracy():
     check_amp_convert_fc_accuracy(data_shape=(1024, 32), num_hidden=1000, cast_optional_params=False)
     check_amp_convert_fc_accuracy(data_shape=(40, 32), num_hidden=10, cast_optional_params=True)
 
+def test_operator_accuracy():
+    def check_bf16_conv_accuracy(data_shape, kernel, num_filter, pad, stride, no_bias, cast_optional_params):
+        Batch = collections.namedtuple('Batch',['data'])
+        data = mx.sym.Variable(name='data')
+        data_low = 0.0
+        data_high = 100.0
+        conv2d = mx.sym.Convolution(data=data, kernel=kernel, num_filter=num_filter, pad=pad, stride=stride,
+                                    no_bias=no_bias, cudnn_off=False, name='conv2d')
+        conv_exe_fp32 = mx.mod.Module(symbol=conv2d, label_names=None, context=mx.cpu())
+        conv_exe_fp32.bind(data_shapes=[('data', data_shape)])
+        conv_exe_fp32.init_params()
+        data_fp32 = mx.nd.random.uniform(low=data_low, high=data_high, shape=data_shape).astype('float32')
+        conv_exe_fp32.forward(Batch([data_fp32]), is_train=False)
+        arg_params, aux_params = conv_exe_fp32.get_params()
+        output_fp32 = conv_exe_fp32.get_outputs()[0]
+
+        data2 = mx.sym.amp_cast(data, dtype=bfloat16)
+        data_bf16 = mx.nd.amp_cast(data_fp32, dtype=bfloat16)
+        arg_params_bf16 = dict()
+        for k, v in arg_params.items():
+            arg_params_bf16[k] = mx.nd.amp_cast(v, dtype=bfloat16)
+        aux_params_bf16 = dict()
+        for k, v in aux_params.items():
+            aux_params_bf16[k] = mx.nd.amp_cast(v, dtype=bfloat16)
+        conv2d_bf16 = mx.sym.Convolution(data=data2, kernel=kernel, num_filter=num_filter, pad=pad, stride=stride,
+                                    no_bias=no_bias, cudnn_off=False, name='conv2d')
+        conv_exe_bf16 = mx.mod.Module(symbol=conv2d_bf16, label_names=None, context=mx.cpu())
+        conv_exe_bf16.bind(data_shapes=[('data', data_shape)])
+        conv_exe_bf16.set_params(arg_params=arg_params_bf16, aux_params=aux_params_bf16)
+        conv_exe_bf16.forward(Batch([data_bf16]), is_train=False)
+        output_bf16 = conv_exe_bf16.get_outputs()[0]
+        output_bf16_2_fp32 = mx.nd.amp_cast(output_bf16, dtype="float32")
+
+        assert_almost_equal(output_bf16_2_fp32, output_fp32, rtol=1e-1, atol = 2e-1)
+
+    check_bf16_conv_accuracy(data_shape=(3, 4, 28, 28), kernel=(3, 3), num_filter=128, pad=(1, 1), stride=(1, 1), no_bias=True, cast_optional_params=False)
+    check_bf16_conv_accuracy(data_shape=(512, 10, 28, 28), kernel=(1, 1), num_filter=16, pad=(0, 0), stride=(1, 1), no_bias=True, cast_optional_params=True)
+    check_bf16_conv_accuracy(data_shape=(128, 56, 14, 14), kernel=(3, 3), num_filter=28, pad=(1, 1), stride=(1, 1), no_bias=False, cast_optional_params=False)
+    check_bf16_conv_accuracy(data_shape=(128, 56, 14, 14), kernel=(3, 3), num_filter=28, pad=(1, 1), stride=(1, 1), no_bias=False, cast_optional_params=True)
 
 @with_seed()
 def test_module_backward_compatibility():
