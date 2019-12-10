@@ -47,7 +47,7 @@ The following tutorials will help you learn how to use backend tools to boost pe
 
   .. card::
      :title: MXNet Operator Profiler
-     :link: profilder.html
+     :link: profiler.html
 
      Use the profiler to monitor the performance of individual operators
 ..

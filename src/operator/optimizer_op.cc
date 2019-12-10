@@ -947,7 +947,7 @@ Link to paper: https://arxiv.org/pdf/1904.00962.pdf
          var_hat = var / (1 - beta2^t);
          g = mean_hat / (var_hat^(1/2) + epsilon) + wd * weight;
     else
-         g = mean / (var_data^(1/2) + epsilon) + wd * weight_data[i];
+         g = mean / (var_data^(1/2) + epsilon) + wd * weight;
     \end{gather*}
 
 )code" ADD_FILELINE)
@@ -1000,6 +1000,94 @@ Link to paper: https://arxiv.org/pdf/1904.00962.pdf
 .add_argument("g", "NDArray-or-Symbol", "Output of lamb_update_phase 1")
 .add_argument("r1", "NDArray-or-Symbol", "r1")
 .add_argument("r2", "NDArray-or-Symbol", "r2")
+.add_arguments(LambUpdatePhaseTwoParam::__FIELDS__());
+
+NNVM_REGISTER_OP(mp_lamb_update_phase1)
+.describe(R"code(Mixed Precision version of Phase I of lamb update 
+it performs the following operations and returns g:.
+
+          Link to paper: https://arxiv.org/pdf/1904.00962.pdf
+
+          .. math::
+              \begin{gather*}
+              grad32 = grad(float16) * rescale_grad
+              if (grad < -clip_gradient)
+              then
+                   grad = -clip_gradient
+              if (grad > clip_gradient)
+              then
+                   grad = clip_gradient
+
+              mean = beta1 * mean + (1 - beta1) * grad;
+              variance = beta2 * variance + (1. - beta2) * grad ^ 2;
+
+              if (bias_correction)
+              then
+                   mean_hat = mean / (1. - beta1^t);
+                   var_hat = var / (1 - beta2^t);
+                   g = mean_hat / (var_hat^(1/2) + epsilon) + wd * weight32;
+              else
+                   g = mean / (var_data^(1/2) + epsilon) + wd * weight32;
+              \end{gather*}
+
+          )code" ADD_FILELINE)
+.set_num_inputs(5)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<LambUpdatePhaseOneParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<5, 1>)
+.set_attr<nnvm::FInferType>("FInferType", MPLambPhaseOneType<2, 1, 5>)
+.set_attr<FCompute>("FCompute<cpu>", MPLambUpdatePhaseOne<cpu>)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    return std::vector<uint32_t>{2, 3};
+  })
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("grad", "NDArray-or-Symbol", "Gradient")
+.add_argument("mean", "NDArray-or-Symbol", "Moving mean")
+.add_argument("var", "NDArray-or-Symbol", "Moving variance")
+.add_argument("weight32", "NDArray-or-Symbol", "Weight32")
+.add_arguments(LambUpdatePhaseOneParam::__FIELDS__());
+
+NNVM_REGISTER_OP(mp_lamb_update_phase2)
+.describe(R"code(Mixed Precision version Phase II of lamb update 
+it performs the following operations and updates grad.
+
+          Link to paper: https://arxiv.org/pdf/1904.00962.pdf
+
+          .. math::
+              \begin{gather*}
+              if (lower_bound >= 0)
+              then
+                   r1 = max(r1, lower_bound)
+              if (upper_bound >= 0)
+              then
+                   r1 = max(r1, upper_bound)
+
+              if (r1 == 0 or r2 == 0)
+              then
+                   lr = lr
+              else
+                   lr = lr * (r1/r2)
+              weight32 = weight32 - lr * g
+              weight(float16) = weight32
+              \end{gather*}
+
+          )code" ADD_FILELINE)
+.set_num_inputs(5)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<LambUpdatePhaseTwoParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", MPLambUpdatePhaseTwoShape)
+.set_attr<nnvm::FInferType>("FInferType", MP_InferType<1, 1, 5>)
+.set_attr<FCompute>("FCompute<cpu>", MPLambUpdatePhaseTwo<cpu>)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    return std::vector<uint32_t>{4};
+  })
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("g", "NDArray-or-Symbol", "Output of mp_lamb_update_phase 1")
+.add_argument("r1", "NDArray-or-Symbol", "r1")
+.add_argument("r2", "NDArray-or-Symbol", "r2")
+.add_argument("weight32", "NDArray-or-Symbol", "Weight32")
 .add_arguments(LambUpdatePhaseTwoParam::__FIELDS__());
 
 }  // namespace op

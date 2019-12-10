@@ -18,40 +18,26 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
- * \file np_init_op.cu
- * \brief GPU Implementation of numpy init op
+ * \file np_solve.cu
+ * \brief GPU implementation of the Solve Operator
  */
 
-#include "../tensor/init_op.h"
-#include "./np_init_op.h"
+#include <mxnet/operator_util.h>
+#include <vector>
+#include "./np_solve-inl.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_zeros)
-.set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 0>);
+#if MXNET_USE_CUSOLVER == 1
 
-NNVM_REGISTER_OP(_npi_ones)
-.set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 1>);
+NNVM_REGISTER_OP(_npi_solve)
+.set_attr<FCompute>("FCompute<gpu>", LaOpForwardSolve<gpu, 2, 2, 2, 1, solve>);
 
-NNVM_REGISTER_OP(_npi_identity)
-.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
+NNVM_REGISTER_OP(_backward_npi_solve)
+.set_attr<FCompute>("FCompute<gpu>", LaOpBackwardSolve<gpu, 2, 2, 4, 2, solve_backward>);
 
-NNVM_REGISTER_OP(_npi_full_like)
-.set_attr<FCompute>("FCompute<gpu>", FullLikeOpCompute<gpu>);
-
-NNVM_REGISTER_OP(_npi_arange)
-.set_attr<FCompute>("FCompute<gpu>", RangeCompute<gpu, RangeParam>);
-
-NNVM_REGISTER_OP(_npi_eye)
-.set_attr<FCompute>("FCompute<gpu>", NumpyEyeFill<gpu>);
-
-NNVM_REGISTER_OP(_npi_indices)
-.set_attr<FCompute>("FCompute<gpu>", IndicesCompute<gpu>);
-
-NNVM_REGISTER_OP(_npi_logspace)
-.set_attr<FCompute>("FCompute<gpu>", LogspaceCompute<gpu>);
+#endif
 
 }  // namespace op
 }  // namespace mxnet
