@@ -441,4 +441,4 @@ def test_eval_net():
     est.fit(train_data=dataloader,
             val_data=dataloader,
             epochs=num_epochs)
->>>>>>> Include eval_net the validation model in the estimator api
+
