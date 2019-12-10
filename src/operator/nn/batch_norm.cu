@@ -579,9 +579,7 @@ static void BatchNormalizationUpdateOutput(mshadow::Stream<gpu> *s,
 
   if ((flags & IS_TRAINING_FLAG) == 0 || (flags & USE_GLOBAL_STATS_FLAG) != 0) {
     AccReal* bias_ptr = bias.numElements() > 0 ? bias.dptr_ : nullptr;
-    AccReal* gamma_ptr = weight.numElements() == 0 ?
-                         weight.dptr_ :
-                         nullptr;
+    AccReal* gamma_ptr = weight.numElements() > 0 ? weight.dptr_ : nullptr;
     int nvec = sizeof(double) / sizeof(DType);
     index_t size = input.InnerSize() * input.OuterSize() * input.ChannelCount();
     index_t aligned_size = ((size + nvec - 1) / nvec) * nvec;
