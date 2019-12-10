@@ -59,9 +59,29 @@ class Estimator(object):
         Trainer to apply optimizer on network parameters.
     context : Context or list of Context
         Device(s) to run the training on.
-    evaluation_loss: gluon.loss.loss
-        Loss (objective) function to calculate during evaluation. If set evaluation_loss
+    evaluation_loss : gluon.loss.loss
+        Loss (objective) function to calculate during validation. If set evaluation_loss
         None, it will use the same loss function as self.loss
+    eval_net : gluon.Block
+        The model used for validation. The validation model does not necessarily belong to
+        the same model class as the training model. But the two models typically share the
+        same architecture. Therefore the validation model can reuse parameters of the
+        training model.
+
+        The code example of consruction of eval_net sharing the same network parameters as
+        the training net is given below:
+
+        >>> net = _get_train_network()
+        >>> eval_net = _get_test_network(params=net.collect_params())
+        >>> net.initialize(ctx=ctx)
+        >>> est = Estimator(net, loss, eval_net=eval_net)
+
+        Proper namespace match is required for weight sharing between two networks. Most networks
+        inheriting :py:class:`Block` can share their parameters correctly. An exception is
+        Sequential networks that Block scope must be specified for correct weight sharing. For
+        the  naming in mxnet Gluon API, please refer to the site
+        (https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/blocks/naming.html)
+        for future information.
 
     """
 
@@ -89,7 +109,8 @@ class Estimator(object):
                  initializer=None,
                  trainer=None,
                  context=None,
-                 evaluation_loss=None):
+                 evaluation_loss=None,
+                 eval_net=None):
         self.net = net
         self.loss = self._check_loss(loss)
         self._train_metrics = _check_metrics(metrics)
@@ -98,6 +119,9 @@ class Estimator(object):
         self.evaluation_loss = self.loss
         if evaluation_loss is not None:
             self.evaluation_loss = self._check_loss(evaluation_loss)
+        self.eval_net = self.net
+        if eval_net is not None:
+            self.eval_net = eval_net
 
         self.logger = logging.Logger(name='Estimator', level=logging.INFO)
         self.logger.addHandler(logging.StreamHandler(sys.stdout))
@@ -234,7 +258,7 @@ class Estimator(object):
             Batch axis to split the validation data into devices.
         """
         data, label = self._get_data_and_label(val_batch, self.context, batch_axis)
-        pred = [self.net(x) for x in data]
+        pred = [self.eval_net(x) for x in data]
         loss = [self.evaluation_loss(y_hat, y) for y_hat, y in zip(pred, label)]
         # update metrics
         for metric in val_metrics:
