@@ -585,6 +585,25 @@ class CustomOp {
 };
 
 /*!
+ * \brief An abstract class for subgraph property
+ */
+class CustomSubgraphProperty {
+  typedef CustomSubgraphProperty* (*SubgraphPropertyCreateFn)(void);
+  
+ public:
+ CustomSubgraphProperty() : name("ERROR") {}
+ CustomSubgraphProperty(const char* prop_name) : name(prop_name) {}
+  CustomSubgraphProperty& setCreateFn(SubgraphPropertyCreateFn fn) {
+    createFn = fn;
+    return *this;
+  }
+  virtual CustomSubgraphProperty* Create();
+ private:
+  const char* name;
+  SubgraphPropertyCreateFn createFn;
+};
+
+/*!
  * \brief Registry class to registers things (ops, properties)
  *        Singleton class
  */
@@ -640,9 +659,21 @@ class Registry {
 #define MX_REGISTER_NAME_(Name) MXNet ## _CustomOp ## _
 #define MX_REGISTER_DEF_(Name) CustomOp MX_REGISTER_NAME_(Name)
 
+#define MX_REGISTER_PROP_NAME_(Name) MXNet ## _CustomSubProp ## _
+#define MX_REGISTER_PROP_DEF_(Name) CustomSubgraphProperty MX_REGISTER_PROP_NAME_(Name)
+
 /*! \brief assign a var to a value */
 #define REGISTER_OP(Name) MX_STR_CONCAT(MX_REGISTER_DEF_(Name), __COUNTER__) = \
     Registry<CustomOp>::get()->add(MX_TOSTRING(Name))
+
+#define REGISTER_SUBGRAPH_PROPERTY(Name,SubgraphProperty) \
+  MX_STR_CONCAT(MX_REGISTER_PROP_DEF_(Name), __COUNTER__) = \
+    Registry<CustomSubgraphProperty>::get()->add(MX_TOSTRING(Name)).setCreateFn(SubgraphProperty);
+
+//Registry<CustomOp>::get()->add(MX_TOSTRING(Name))
+
+//Registry<CustomSubgraphProperty>::get()->add(MX_TOSTRING(Name))
+//, &SubgraphProp)
 
 /* -------------- BELOW ARE CTYPE FUNCTIONS PROTOTYPES --------------- */
 
