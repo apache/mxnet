@@ -24,7 +24,7 @@ import logging
 import sys
 import warnings
 
-from .event_handler import MetricHandler, ValidationHandler, LoggingHandler, StoppingHandler
+from .event_handler import MetricHandler, ValidationHandler, LoggingHandler, StoppingHandler, GradientUpdateHandler
 from .event_handler import TrainBegin, EpochBegin, BatchBegin, BatchEnd, EpochEnd, TrainEnd
 from .event_handler import _check_event_handlers
 from .utils import _check_metrics, _suggest_metric_for_loss, _check_handler_metric_ref
@@ -307,8 +307,6 @@ class Estimator(object):
         for l in loss:
             l.backward()
 
-        self.trainer.step(batch_size)
-
         return data, label, pred, loss
 
     def fit(self, train_data,
@@ -360,6 +358,7 @@ class Estimator(object):
 
         self.max_epoch = epochs
         self.max_batch = batches
+        self.batch_axis = batch_axis
 
         # provide default handlers
         event_handlers = self._prepare_default_handlers(val_data, event_handlers)
@@ -413,6 +412,9 @@ class Estimator(object):
 
         # no need to add to default handler check as StoppingHandler does not use metrics
         added_default_handlers.append(StoppingHandler(self.max_epoch, self.max_batch))
+
+        if not any(isinstance(handler, GradientUpdateHandler) for handler in event_handlers):
+            added_default_handlers.append(GradientUpdateHandler())
 
         if not any(isinstance(handler, MetricHandler) for handler in event_handlers):
             added_default_handlers.append(MetricHandler(train_metrics=self.train_metrics))

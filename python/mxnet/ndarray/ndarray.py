@@ -905,6 +905,17 @@ fixed-size items.
         return flat_begin, flat_end + 1
     # pylint: enable=invalid-name
 
+    @staticmethod
+    def _drop_int_axes(indexed_shape, int_axes):
+        """drop the axis of indexed_shape corresponding to int axes"""
+        bcast_shape = []
+        for i, size in enumerate(indexed_shape):
+            if i not in int_axes:
+                bcast_shape.append(size)
+        if not bcast_shape:
+            bcast_shape = [1]
+        return tuple(bcast_shape)
+
     def _set_nd_basic_indexing(self, key, value):
         """This function indexes ``self`` with a tuple of ``slice`` objects only."""
         for idx in key:
@@ -946,14 +957,10 @@ fixed-size items.
             if type(value) == self.__class__:  # pylint: disable=unidiomatic-typecheck
                 if value.handle is not self.handle:
                     # Need to do this before `broadcast_to`.
-                    tmp_shape = _shape_for_bcast(
-                        value.shape, target_ndim=self.ndim, new_axes=int_axes
-                    )
-                    value = value.reshape(tmp_shape)
-
-                    if value.shape != self.shape:
-                        value = value.broadcast_to(self.shape)
-                    value.copyto(self)
+                    bcast_shape = self._drop_int_axes(indexed_shape, int_axes)
+                    value_nd = self._prepare_value_nd(value, bcast_shape=bcast_shape, squeeze_axes=new_axes)
+                    value_nd = value_nd.reshape(indexed_shape)
+                    value_nd.copyto(self)
 
             elif isinstance(value, numeric_types):
                 self._full(value)
@@ -969,9 +976,10 @@ fixed-size items.
 
             else:
                 # Other array-like
-                value_nd = self._prepare_value_nd(
-                    value, bcast_shape=self.shape
-                )
+                # drop the axis of indexed_shape corresponding to int axes
+                bcast_shape = self._drop_int_axes(indexed_shape, int_axes)
+                value_nd = self._prepare_value_nd(value, bcast_shape=bcast_shape, squeeze_axes=new_axes)
+                value_nd = value_nd.reshape(indexed_shape)
                 value_nd.copyto(self)
 
         elif isinstance(value, numeric_types):
@@ -979,16 +987,8 @@ fixed-size items.
 
         else:
             # drop the axis of indexed_shape corresponding to int axes
-            bcast_shape = []
-            for i, size in enumerate(indexed_shape):
-                if i not in int_axes:
-                    bcast_shape.append(size)
-            if bcast_shape == []:
-                bcast_shape = [1]
-            bcast_shape = tuple(bcast_shape)
-            value_nd = self._prepare_value_nd(
-                value, bcast_shape=bcast_shape, squeeze_axes=new_axes
-            )
+            bcast_shape = self._drop_int_axes(indexed_shape, int_axes)
+            value_nd = self._prepare_value_nd(value, bcast_shape=bcast_shape, squeeze_axes=new_axes)
             value_nd = value_nd.reshape(indexed_shape)
             self.slice_assign(value_nd, begin, end, step)
 
