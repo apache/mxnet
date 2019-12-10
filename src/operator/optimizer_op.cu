@@ -283,6 +283,11 @@ NNVM_REGISTER_OP(lamb_update_phase1)
 NNVM_REGISTER_OP(lamb_update_phase2)
 .set_attr<FCompute>("FCompute<gpu>", LambUpdatePhaseTwo<gpu>);
 
+NNVM_REGISTER_OP(mp_lamb_update_phase1)
+.set_attr<FCompute>("FCompute<gpu>", MPLambUpdatePhaseOne<gpu>);
+
+NNVM_REGISTER_OP(mp_lamb_update_phase2)
+.set_attr<FCompute>("FCompute<gpu>", MPLambUpdatePhaseTwo<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
