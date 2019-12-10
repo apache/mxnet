@@ -190,7 +190,7 @@ cd incubator-mxnet
 # http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64/
 
 # Build PyPi package
-tools/staticbuild/build.sh cu100mkl pip
+tools/staticbuild/build.sh cu100mkl
 
 # Wait for 10 - 30 mins, you will find libmxnet.so under the incubator-mxnet/lib
 
@@ -279,7 +279,7 @@ sudo apt-get install -y git \
 2. Build PyPi package
 ```
 # Update the dependency under tools/dependencies, then
-tools/staticbuild/build.sh mkl pip
+tools/staticbuild/build.sh mkl
 
 # Wait for 10 - 30 mins, you will find libmxnet.so under the incubator-mxnet/lib
 
@@ -328,7 +328,7 @@ sudo apt-get install -y git \
 2. Build PyPi package
 ```
 # Update the dependency under tools/dependencies, then
-tools/staticbuild/build.sh mkl pip
+tools/staticbuild/build.sh mkl
 
 # Wait for 10 - 30 mins, you will find libmxnet.so under the incubator-mxnet/lib
 
