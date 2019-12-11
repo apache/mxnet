@@ -96,7 +96,7 @@ CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 CFLAGS += -DDMLC_MODERN_THREAD_LOCAL=0
 
 ifeq ($(DEV), 1)
-	CFLAGS += -g -Werror
+	CFLAGS += -g -Werror -D_GLIBCXX_ASSERTIONS
 	NVCCFLAGS += -Werror cross-execution-space-call
 endif
 
