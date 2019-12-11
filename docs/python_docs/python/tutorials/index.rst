@@ -92,7 +92,7 @@ Performance
 
    .. card::
       :title: MKL-DNN
-      :link: performance/backend/mkldnn/mkldnn_quantization
+      :link: performance/backend/mkldnn/index.html
 
       How to get the most from your CPU by using Intel's MKL-DNN.
 

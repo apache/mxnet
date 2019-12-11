@@ -58,6 +58,12 @@ enum EmbeddingOpOutputs {kOut};
 enum EmbeddingOpResource {kTempSpace};
 }  // namespace embedding
 
+namespace quantized_embedding {
+enum QuantizedEmbeddingOpInputs {kData, kWeight, kWeightMin, kWeightMax};
+enum QuantizedEmbeddingOpOutputs {kOut, kOutMin, kOutMax};
+enum QuantizedEmbeddingOpResource {kTempSpace};
+}  // namespace quantized_embedding
+
 
 struct SparseEmbeddingParam: public dmlc::Parameter<SparseEmbeddingParam> {
   int input_dim;

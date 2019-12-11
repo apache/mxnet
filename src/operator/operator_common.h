@@ -607,6 +607,11 @@ class OpSignature {
     eles.push_back(val);
   }
 
+  void AddSign(float val) {
+    hash = dmlc::HashCombine(hash, val);
+    eles.push_back(val);
+  }
+
   bool operator==(const OpSignature &sign) const {
     if (hash != sign.hash)
       return false;

@@ -22,7 +22,7 @@ set -ex
 # MAVEN_PUBLISH_OS_TYPE: linux-x86_64-cpu|linux-x86_64-gpu|osx-x86_64-cpu
 # export MAVEN_PUBLISH_OS_TYPE=linux-x86_64-cpu
 
-source tools/staticbuild/build.sh $mxnet_variant maven
+source tools/staticbuild/build.sh $mxnet_variant
 
 set -ex
 
