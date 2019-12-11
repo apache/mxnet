@@ -23,6 +23,8 @@
 // To avoid confusion, please note:
 // ci_utils is loaded by the originating Jenkins job, e.g. jenkins/Jenkinsfile_release_job
 
+// NOTE: the following variables are referenced in the mxnet_lib_pipeline jenkins file imported bellow
+
 // libmxnet location
 libmxnet = 'lib/libmxnet.so'
 
