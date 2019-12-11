@@ -10,7 +10,7 @@ assignees: ''
 (A clear and concise description of what the bug is.)
 
 ### Error Message
-(Paste the complete error message, including stack trace.)
+(Paste the complete error message. Please also include stack trace by setting environment variable `DMLC_LOG_STACK_TRACE_DEPTH=10` before running your script.)
 
 ## To Reproduce
 (If you developed your own code, please provide a short script that reproduces the error. For existing examples, please provide link.)
