@@ -41,6 +41,7 @@ OpenMP *OpenMP::Get() {
 OpenMP::OpenMP()
   : omp_num_threads_set_in_environment_(is_env_set("OMP_NUM_THREADS")) {
 #ifdef _OPENMP
+  initialize_process();
   const int max = dmlc::GetEnv("MXNET_OMP_MAX_THREADS", INT_MIN);
   if (max != INT_MIN) {
     omp_thread_max_ = max;
@@ -58,6 +59,12 @@ OpenMP::OpenMP()
 #else
   enabled_ = false;
   omp_thread_max_ = 1;
+#endif
+}
+
+void OpenMP:: initialize_process() {
+#ifdef _OPENMP
+  omp_get_num_procs();  // will force OpenMP to be initialized
 #endif
 }
 

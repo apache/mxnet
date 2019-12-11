@@ -249,7 +249,7 @@ if(USE_TENSORRT)
 endif()
 
 # please note that when you enable this, you might run into an linker not being able to work properly due to large code injection.
-# you can find more information here https://github.com/apache/incubator-mxnet/issues/15971 
+# you can find more information here https://github.com/apache/incubator-mxnet/issues/15971
 if(ENABLE_TESTCOVERAGE)
   message(STATUS "Compiling with test coverage support enabled. This will result in additional files being written to your source directory!")
   find_program( GCOV_PATH gcov )
@@ -445,6 +445,15 @@ endif()
 
 # ---[ OpenMP
 if(USE_OPENMP)
+
+  function(load_omp)
+    # Intel/llvm OpenMP: https://github.com/llvm-mirror/openmp
+    set(OPENMP_STANDALONE_BUILD TRUE)
+    set(LIBOMP_ENABLE_SHARED TRUE)
+    set(CMAKE_BUILD_TYPE Release)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp)
+  endfunction()
+
   find_package(OpenMP REQUIRED)
   # This should build on Windows, but there's some problem and I don't have a Windows box, so
   # could a Windows user please fix?
@@ -452,11 +461,7 @@ if(USE_OPENMP)
      AND SYSTEM_ARCHITECTURE STREQUAL "x86_64"
      AND NOT MSVC
      AND NOT CMAKE_CROSSCOMPILING)
-
-    # Intel/llvm OpenMP: https://github.com/llvm-mirror/openmp
-    set(OPENMP_STANDALONE_BUILD TRUE)
-    set(LIBOMP_ENABLE_SHARED TRUE)
-    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp)
+    load_omp()
     list(REMOVE_ITEM mxnet_LINKER_LIBS iomp5)
     list(APPEND mxnet_LINKER_LIBS omp)
     if(UNIX)
