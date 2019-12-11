@@ -20,7 +20,6 @@
 """Gluon Batch Processor for Estimators"""
 
 from ...utils import split_and_load
-from ....metric import Loss as metric_loss
 from .... import autograd
 
 __all__ = ['BatchProcessor']
@@ -96,7 +95,6 @@ class BatchProcessor(object):
         """
         data, label = self._get_data_and_label(train_batch, estimator.context, batch_axis)
 
-        batch_size = train_batch[0].shape[batch_axis]
         with autograd.record():
             pred = [estimator.net(x) for x in data]
             loss = [estimator.loss(y_hat, y) for y_hat, y in zip(pred, label)]
