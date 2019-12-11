@@ -58,7 +58,7 @@ def test_batch_processor_fit():
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     est = Estimator(net=net,
                     loss=loss,
-                    metrics=acc,
+                    train_metrics=acc,
                     trainer=trainer,
                     context=ctx,
                     batch_processor=processor)
@@ -90,7 +90,7 @@ def test_batch_processor_validation():
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     est = Estimator(net=net,
                     loss=loss,
-                    metrics=acc,
+                    train_metrics=acc,
                     trainer=trainer,
                     context=ctx,
                     evaluation_loss=evaluation_loss,

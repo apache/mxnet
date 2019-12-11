@@ -313,7 +313,7 @@ class Estimator(object):
             for handler in batch_begin:
                 handler.batch_begin(estimator_ref, batch=batch)
 
-            _, label, pred, loss =
+            _, label, pred, loss = \
             self.batch_processor.evaluate_batch(estimator_ref, batch,
                                                 batch_axis)
 
