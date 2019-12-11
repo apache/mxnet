@@ -32,7 +32,7 @@ fi
 
 mnist_data_path="$data_path/mnist.zip"
 if [ ! -f "$mnist_data_path" ]; then
-  curl -o $data_path http://data.mxnet.io/mxnet/data/mnist.zip
+  curl -L -o $mnist_data_path http://data.mxnet.io/mxnet/data/mnist.zip
   cd $data_path
   unzip -u mnist.zip
 fi
