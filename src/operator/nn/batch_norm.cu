@@ -254,7 +254,7 @@ __global__ void BatchNormalizationUpdateOutputInferenceKernel(
   __shared__ AType saved_bias[shmem_elements];
   union scratch {
     LType aligned;
-    DType separate[nvec];
+    DType separate[nvec];  // NOLINT(*)
 
     __device__ inline scratch() {}
     __device__ inline ~scratch() {}
@@ -583,7 +583,9 @@ static void BatchNormalizationUpdateOutput(mshadow::Stream<gpu> *s,
     int nvec = sizeof(double) / sizeof(DType);
     index_t size = input.InnerSize() * input.OuterSize() * input.ChannelCount();
     index_t aligned_size = ((size + nvec - 1) / nvec) * nvec;
-    index_t blocks = std::min((size + nvec * inference_forward_threads - 1) / (nvec * inference_forward_threads), static_cast<index_t>(512));
+    index_t blocks = std::min((size + nvec * inference_forward_threads - 1) /
+                              (nvec * inference_forward_threads),
+                              static_cast<index_t>(512));
     if (input.ChannelCount() < shmem_elements) {
       BatchNormalizationUpdateOutputInferenceKernel<DType, AccReal, double, true>
         <<<blocks, inference_forward_threads, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
