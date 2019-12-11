@@ -32,9 +32,9 @@ from ...data import DataLoader
 from ...loss import Loss as gluon_loss
 from ...trainer import Trainer
 from ...utils import split_and_load
-from .... import autograd
 from ....context import Context, cpu, gpu, num_gpus
 from ....metric import Loss as metric_loss
+from .batch_processor import BatchProcessor
 
 __all__ = ['Estimator']
 
@@ -84,7 +84,8 @@ class Estimator(object):
         the  naming in mxnet Gluon API, please refer to the site
         (https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/blocks/naming.html)
         for future information.
-
+    batch_processor: BatchProcessor
+        BatchProcessor provides customized fit_batch() and evaluate_batch() methods
     """
 
     logger = None
@@ -113,7 +114,8 @@ class Estimator(object):
                  trainer=None,
                  context=None,
                  evaluation_loss=None,
-                 eval_net=None):
+                 eval_net=None,
+                 batch_processor=None):
         self.net = net
         self.loss = self._check_loss(loss)
         self._train_metrics = _check_metrics(train_metrics)
@@ -133,6 +135,7 @@ class Estimator(object):
         self.context = self._check_context(context)
         self._initialize(initializer)
         self.trainer = self._check_trainer(trainer)
+        self.batch_processor = self._check_batch_processor(batch_processor)
 
     def _check_loss(self, loss):
         if not isinstance(loss, gluon_loss):
@@ -172,6 +175,18 @@ class Estimator(object):
             else:
                 context = [cpu()]
         return context
+
+    def _check_batch_processor(self, batch_processor):
+        # check whether the batch processor contains fit_batch() and evaluate_batch() methods
+        if batch_processor is not None:
+            model_fit = getattr(batch_processor, 'fit_batch', None)
+            model_evaluate = getattr(batch_processor, 'evaluate_batch', None)
+            if not callable(model_fit) or not callable(model_evaluate):
+                raise ValueError('Customized Batch Processor must contain fit_batch()'
+                                 ' and evaluate_batch() methods')
+        else:
+            batch_processor = BatchProcessor()
+        return batch_processor
 
     def _initialize(self, initializer):
         # initialize the network
@@ -254,24 +269,6 @@ class Estimator(object):
     def val_metrics(self):
         return self._val_metrics
 
-    def evaluate_batch(self,
-                       val_batch,
-                       batch_axis=0):
-        """Evaluate model on a batch of validation data.
-
-        Parameters
-        ----------
-        val_batch : tuple
-            Data and label of a batch from the validation data loader.
-        batch_axis : int, default 0
-            Batch axis to split the validation data into devices.
-        """
-        data, label = self._get_data_and_label(val_batch, self.context, batch_axis)
-        pred = [self.eval_net(x) for x in data]
-        loss = [self.evaluation_loss(y_hat, y) for y_hat, y in zip(pred, label)]
-
-        return data, label, pred, loss
-
     def evaluate(self,
                  val_data,
                  batch_axis=0,
@@ -300,6 +297,7 @@ class Estimator(object):
 
         for metric in self.val_metrics:
             metric.reset()
+        estimator_ref = self
 
         event_handlers = self._prepare_default_validation_handlers(event_handlers)
 
@@ -315,49 +313,15 @@ class Estimator(object):
             for handler in batch_begin:
                 handler.batch_begin(estimator_ref, batch=batch)
 
-            _, label, pred, loss = self.evaluate_batch(batch, batch_axis)
+            _, label, pred, loss = \
+            self.batch_processor.evaluate_batch(estimator_ref, batch,
+                                                batch_axis)
 
             for handler in batch_end:
                 handler.batch_end(estimator_ref, batch=batch, pred=pred, label=label, loss=loss)
 
         for handler in epoch_end:
             handler.epoch_end(estimator_ref)
-
-    def fit_batch(self, train_batch, batch_axis=0):
-        """Trains the model on a batch of training data.
-
-        Parameters
-        ----------
-        train_batch : tuple
-            Data and label of a batch from the training data loader.
-        batch_axis : int, default 0
-            Batch axis to split the training data into devices.
-
-        Returns
-        -------
-        data: List of NDArray
-            Sharded data from the batch. Data is sharded with
-            `gluon.split_and_load`.
-        label: List of NDArray
-            Sharded label from the batch. Labels are sharded with
-            `gluon.split_and_load`.
-        pred: List of NDArray
-            Prediction on each of the sharded inputs.
-        loss: List of NDArray
-            Loss on each of the sharded inputs.
-        """
-        data, label = self._get_data_and_label(train_batch, self.context, batch_axis)
-
-        batch_size = train_batch[0].shape[batch_axis]
-
-        with autograd.record():
-            pred = [self.net(x) for x in data]
-            loss = [self.loss(y_hat, y) for y_hat, y in zip(pred, label)]
-
-        for l in loss:
-            l.backward()
-
-        return data, label, pred, loss
 
     def fit(self, train_data,
             val_data=None,
@@ -432,8 +396,8 @@ class Estimator(object):
                 for handler in batch_begin:
                     handler.batch_begin(estimator_ref, batch=batch)
 
-                _, label, pred, loss = self.fit_batch(batch, batch_axis)
-
+                _, label, pred, loss = self.batch_processor.fit_batch(estimator_ref,
+                                                                      batch, batch_axis)
                 # batch end
 
                 batch_end_result = []
