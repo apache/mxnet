@@ -51,11 +51,11 @@ assert sample[1].shape == (1, )
 print(sample)
 ```
 
-    (
-     [ 0.4375872   0.29753461  0.89177299]
-     <NDArray 3 @cpu(0)>,
-     [ 0.83261985]
-     <NDArray 1 @cpu(0)>)
+(
+[ 0.4375872   0.29753461  0.89177299]
+<NDArray 3 @cpu(0)>,
+[ 0.83261985]
+<NDArray 1 @cpu(0)>)
 
 
 We get a tuple of a data sample and its corresponding label, which makes sense because we passed the data `X` and the labels `y` in that order when we instantiated the [`ArrayDataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=arraydataset#mxnet.gluon.data.ArrayDataset). We don't usually retrieve individual samples from [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset) objects though (unless we're quality checking the output samples). Instead we use a [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader).
