@@ -197,7 +197,7 @@ def run(net, train_dataloader, test_dataloader, num_epochs, ctx, lr):
     nested_metrics.add([metrics, mx.metric.Accuracy()])
 
     # Define estimator
-    est = estimator.Estimator(net=net, loss=loss, metrics=nested_metrics,
+    est = estimator.Estimator(net=net, loss=loss, train_metrics=nested_metrics,
                               trainer=trainer, context=ctx)
     # Begin training
     est.fit(train_data=train_dataloader, val_data=test_dataloader,
