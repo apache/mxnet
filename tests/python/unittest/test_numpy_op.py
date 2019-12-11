@@ -3820,11 +3820,7 @@ def test_np_linalg_solve():
     nrhs = (-1, 0, 1, 2, 3)
     dtypes = ['float32', 'float64']
     for hybridize, shape, dtype, nrh in itertools.product([False, True], shapes, dtypes, nrhs):
-        rtol = 1e-3
-        atol = 1e-5
-        if dtype == 'float32':
-            rtol = 1e-2
-            atol = 1e-4
+        rtol, atol =1e-2, 1e-4
         test_solve = TestSolve()
         if hybridize:
             test_solve.hybridize()
