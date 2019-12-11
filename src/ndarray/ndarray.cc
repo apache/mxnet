@@ -1200,8 +1200,11 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority, bool is_op
     // skip to copy to itself
     return;
   }
+  CHECK(from.dtype() == to.dtype())
+      << "operands dtype mismatch "
+      << "from.dtype = " << from.dtype() << " to.dtype=" << to.dtype();
   CHECK(from.shape() == to.shape())
-      << "operands shape mismatch"
+      << "operands shape mismatch "
       << "from.shape = " << from.shape() << " to.shape=" << to.shape();
   CHECK(!mxnet::op::shape_is_none(from.shape()))
       << "source operands have undefined shape";
