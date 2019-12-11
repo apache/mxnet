@@ -111,7 +111,15 @@ CustomSubgraphProperty* CreateMySubgraphProperty() {
   return inst;
 }
 
-REGISTER_SUBGRAPH_PROPERTY(myProp,CreateMySubgraphProperty);
+MXReturnValue mySupportedOps(const char *json,
+			     const char *data_names[],
+			     const MXTensor *data,
+			     const int num_data,
+			     int *ids) {
+  return MX_SUCCESS;
+}
+
+REGISTER_PARTITIONER(myProp,mySupportedOps);
 
 MXReturnValue initialize(int version) {
   if (version >= 10400) {

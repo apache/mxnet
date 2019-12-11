@@ -584,23 +584,29 @@ class CustomOp {
   createOpState_t create_opstate;
 };
 
+/*! \brief Custom Subgraph Create function template */
+typedef MXReturnValue (*SubgraphCreateFn_t)(const char*,
+			     const char*[],
+			     const MXTensor*,
+			     const int,
+			     int*);
+
 /*!
  * \brief An abstract class for subgraph property
  */
 class CustomSubgraphProperty {
-  typedef CustomSubgraphProperty* (*SubgraphPropertyCreateFn)(void);
-  
  public:
  CustomSubgraphProperty() : name("ERROR") {}
  CustomSubgraphProperty(const char* prop_name) : name(prop_name) {}
-  CustomSubgraphProperty& setCreateFn(SubgraphPropertyCreateFn fn) {
+  CustomSubgraphProperty& setSubgraphFn(SubgraphCreateFn_t fn) {
     createFn = fn;
     return *this;
   }
-  virtual CustomSubgraphProperty* Create();
- private:
+
+  /*! \brief subgraph property name */
   const char* name;
-  SubgraphPropertyCreateFn createFn;
+  /*! \brief subgraph create function */
+  SubgraphCreateFn_t createFn;
 };
 
 /*!
@@ -666,14 +672,9 @@ class Registry {
 #define REGISTER_OP(Name) MX_STR_CONCAT(MX_REGISTER_DEF_(Name), __COUNTER__) = \
     Registry<CustomOp>::get()->add(MX_TOSTRING(Name))
 
-#define REGISTER_SUBGRAPH_PROPERTY(Name,SubgraphProperty) \
+#define REGISTER_PARTITIONER(Name,SubgraphFn) \
   MX_STR_CONCAT(MX_REGISTER_PROP_DEF_(Name), __COUNTER__) = \
-    Registry<CustomSubgraphProperty>::get()->add(MX_TOSTRING(Name)).setCreateFn(SubgraphProperty);
-
-//Registry<CustomOp>::get()->add(MX_TOSTRING(Name))
-
-//Registry<CustomSubgraphProperty>::get()->add(MX_TOSTRING(Name))
-//, &SubgraphProp)
+    Registry<CustomSubgraphProperty>::get()->add(MX_TOSTRING(Name)).setSubgraphFn(SubgraphFn);
 
 /* -------------- BELOW ARE CTYPE FUNCTIONS PROTOTYPES --------------- */
 
@@ -731,6 +732,12 @@ typedef int (*opCallCreateOpState_t)(createOpState_t, const char* const*, const 
 typedef int (*opCallFStatefulComp_t)(bool, void*, const int64_t**, int*, void**, int*, int,
                                      const int64_t**, int*, void**, int*, int,
                                      xpu_malloc_t, void*);
+
+#define MXLIB_PARTREGSIZE_STR "_partRegSize"
+typedef int (*partRegSize_t)(void);
+
+#define MXLIB_PARTREGGET_STR "_partRegGet"
+typedef int (*partRegGet_t)(int, const char**, SubgraphCreateFn_t*);
 
 #define MXLIB_INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int);
@@ -1028,6 +1035,28 @@ extern "C" {
       return op_ptr->Forward(inputs, outputs, res);
     }
     return op_ptr->Backward(inputs, outputs, res);
+  }
+
+  /*! \brief returns number of partitioners registered in this library */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) int __cdecl
+#else
+  int
+#endif
+  _partRegSize() {
+    return Registry<CustomSubgraphProperty>::get()->size();
+  }
+
+  /*! \brief returns operator registration at specified index */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) void __cdecl
+#else
+  void
+#endif
+  _partRegGet(int idx, const char** name, SubgraphCreateFn_t* createFn) {
+    CustomSubgraphProperty prop = Registry<CustomSubgraphProperty>::get()->get(idx);
+    *name = prop.name;
+    *createFn = prop.createFn;
   }
 
   /*!

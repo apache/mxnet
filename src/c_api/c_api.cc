@@ -682,6 +682,34 @@ int MXLoadLib(const char *path) {
     }
     regOp.add_argument("data", "NDArray[]", "Source inputs");
   }
+
+  // get number of operators registered in the library
+  partRegSize_t partRegSize = get_func<partRegSize_t>(lib, const_cast<char*>(MXLIB_PARTREGSIZE_STR));
+  int numParts = partRegSize();
+  LOG(INFO) << "Found " << numParts << " partitioners in library";
+
+  /*
+   * Get all custom operators implementation from custom library
+   * loop and register each operator in the library to NNVM
+   */
+  partRegGet_t partRegGet = get_func<partRegGet_t>(lib, const_cast<char*>(MXLIB_PARTREGGET_STR));
+  for (int i = 0; i < numParts; i++) {
+    const char* name;
+    // function pointers holding implementation from custom library
+    SubgraphCreateFn_t subgraphCreateFn_fp = nullptr;
+
+    // get custom operator implemenation from the dynamic library
+    partRegGet(i, &name, &subgraphCreateFn_fp);
+
+    // validate custom operator functions from the dynamic library
+    CHECK(subgraphCreateFn_fp != nullptr) << "Error loading '" << name
+                            << "' custom partitioner, subgraphCreateFn function was not set.";
+
+    LOG(INFO) << "\tPartitioner[" << i << "] " << name;
+    std::string name_str(name);
+
+  }
+  
   API_END();
 }
 
