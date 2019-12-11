@@ -688,6 +688,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
 
     make  \
         DEV=1                         \
+        DEBUG=1                       \
         USE_CPP_PACKAGE=1             \
         USE_TVM_OP=1                  \
         USE_BLAS=mkl                  \
@@ -768,6 +769,7 @@ build_ubuntu_gpu_mkldnn() {
 
     make  \
         DEV=1                                     \
+        DEBUG=1                                   \
         USE_CPP_PACKAGE=1                         \
         USE_BLAS=openblas                         \
         USE_CUDA=1                                \
