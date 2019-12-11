@@ -120,7 +120,7 @@ class PReLU(HybridBlock):
     ----------
     alpha_initializer : Initializer
         Initializer for the `embeddings` matrix.
-    in_channels : int
+    in_channels : int, default 1
         Number of channels (alpha parameters) to learn. Can either be 1
         or `n` where `n` is the size of the second dimension of the input
         tensor.
