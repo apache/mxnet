@@ -1318,9 +1318,9 @@ class LAMB(Optimizer):
                 kwargs['upper_bound'] = self.upper_bound
 
             step_count = []
-            for i, (we, gr) in enumerate(zip(weight, grad)):
-                assert(isinstance(we, NDArray))
-                assert(isinstance(gr, NDArray))
+            for i, (w_i, g_i) in enumerate(zip(weight, grad)):
+                assert(isinstance(w_i, NDArray))
+                assert(isinstance(g_i, NDArray))
                 self._update_count(i)
                 step_count.append(self._index_update_count[i])
             lr = self._get_lr(index[0])
