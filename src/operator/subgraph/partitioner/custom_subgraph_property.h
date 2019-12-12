@@ -20,6 +20,10 @@
 #ifndef MXNET_OPERATOR_SUBGRAPH_CUSTOM_SUBGRAPH_PROPERTY_H_
 #define MXNET_OPERATOR_SUBGRAPH_CUSTOM_SUBGRAPH_PROPERTY_H_
 
+#include <string>
+#include "../common.h"
+#include "../subgraph_property.h"
+
 namespace mxnet {
   namespace op {
 
@@ -69,7 +73,8 @@ namespace mxnet {
       }
     };
 
-    MXNET_REGISTER_SUBGRAPH_PROPERTY(customProp, CustomSubgraphProperty);
+    MXNET_REGISTER_SUBGRAPH_BACKEND(customBackend);
+    MXNET_REGISTER_SUBGRAPH_PROPERTY(customBackend, CustomSubgraphProperty);
 
   }  // namespace op
 }  // namespace mxnet

@@ -53,6 +53,7 @@
 #include "../operator/operator_common.h"
 #include "../operator/tensor/matrix_op-inl.h"
 #include "../operator/tvmop/op_module.h"
+#include "../operator/subgraph/partitioner/custom_subgraph_property.h"
 #include "../common/utils.h"
 #include "nnvm/pass_functions.h"
 
