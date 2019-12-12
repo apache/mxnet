@@ -20,46 +20,10 @@ Data Tutorials
 
 These tutorials will help you learn how to load and use datasets with the Gluon API.
 
-Data Tutorials
+Gluon Data Tutorials
 ---------------------
 
-.. container:: cards
-
-   .. card::
-      :title: MNIST
-      :link: mnist.html
-
-      How to create a convolutional neural network for handwritten digit recognition.
-
-   .. card::
-      :title: Image Recognition with Pretrained Models
-      :link: pre-trained_models.html
-
-      How to use pretrained models to recognize what is in an image.
-
-Advanced Image Tutorials
----------------------
-
-.. container:: cards
-
-   .. card::
-      :title: Image similarity search with InfoGAN
-      :link: https://mxnet.apache.org/versions/master/tutorials/gluon/info_gan.html
-
-      Implementing an InfoGAN based on the MXNet Gluon.
-
-GluonCV Toolkit Tutorials
--------------------------
-
-These tutorials link to the MXNet GluonCV Toolkit website.
-
-.. container:: cards
-
-   .. card::
-      :title: Data Loading
-      :link: data.html
-
-      How to load data for training.
+These tutorials demonstrate how to use the Gluon data API.
 
    .. card::
       :title: Data Augmentation
