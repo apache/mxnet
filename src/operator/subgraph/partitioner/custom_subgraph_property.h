@@ -32,7 +32,7 @@ namespace op {
  */
 class CustomContainOpSelector: public SubgraphSelector {
  public:
-  explicit CustomContainOpSelector() {}
+  CustomContainOpSelector() {}
   virtual bool Select(const nnvm::Node &n) {
     return false;
   }
@@ -64,14 +64,10 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   }
   // override CreateSubgraphSelector
   virtual SubgraphSelectorPtr CreateSubgraphSelector() const {
-    return std::make_shared<CustomContainOpSelector>();                                 
+    return std::make_shared<CustomContainOpSelector>();
   }
 };
-
-MXNET_REGISTER_SUBGRAPH_BACKEND(customBackend);
-MXNET_REGISTER_SUBGRAPH_PROPERTY(customBackend, CustomSubgraphProperty);
-
 }  // namespace op
 }  // namespace mxnet
 
-#endif // MXNET_OPERATOR_SUBGRAPH_PARTITIONER_CUSTOM_SUBGRAPH_PROPERTY_H_
+#endif  // MXNET_OPERATOR_SUBGRAPH_PARTITIONER_CUSTOM_SUBGRAPH_PROPERTY_H_

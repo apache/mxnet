@@ -41,5 +41,5 @@ c = a + b
 d = mx.sym.exp(c)
 sym = mx.sym.log(d)
 
-part_sym = sym.optimize_for("customBackend")
+part_sym = sym.optimize_for("myProp")
         
