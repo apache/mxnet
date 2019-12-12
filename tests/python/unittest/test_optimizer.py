@@ -509,15 +509,15 @@ def test_multilamb():
     dims_y = [1, 1, 1024, 4096]
     dims_occurrences = [9, 1, 4, 2]
     nlayers = 4 # 24
-    extra_dims_x=[30522, 512, 30522]
-    extra_dims_y=[1, 1024, 1024]
+    # extra_dims_x=[30522, 512, 30522]
+    # extra_dims_y=[1, 1024, 1024]
     shapes=[]
     for l in range(nlayers):
         for i, (dx,dy) in enumerate(zip(dims_x, dims_y)):
             for j in range(dims_occurrences[i]):
                 shapes.append((dx,dy))
-    for dx,dy in zip(extra_dims_x, extra_dims_y):
-        shapes.append((dx,dy))
+    # for dx,dy in zip(extra_dims_x, extra_dims_y):
+    #    shapes.append((dx,dy))
 
     cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
     rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
