@@ -67,6 +67,15 @@ class FeatureSet {
 #if __AVX2__
     feature_bits.set(CPU_AVX2);
 #endif
+#if __AVX512F__
+    feature_bits.set(CPU_AVX512F);
+#endif
+#if __AVX512BW__
+    feature_bits.set(CPU_AVX512BW);
+#endif
+#if __AVX512VNNI__
+    feature_bits.set(CPU_AVX512VNNI);
+#endif
 
     // CPU
     feature_bits.set(OPENMP, MXNET_USE_OPENMP);
@@ -144,6 +153,9 @@ const std::vector<std::string> EnumNames::names = {
   "CPU_SSE4A",
   "CPU_AVX",
   "CPU_AVX2",
+  "CPU_AVX512F",
+  "CPU_AVX512BW",
+  "CPU_AVX512VNNI",
   "OPENMP",
   "SSE",
   "F16C",

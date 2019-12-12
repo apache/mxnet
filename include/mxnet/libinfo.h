@@ -154,7 +154,9 @@ enum : unsigned {
   CPU_SSE4A,  // AMD extensions to SSE4
   CPU_AVX,
   CPU_AVX2,
-
+  CPU_AVX512F,
+  CPU_AVX512BW,
+  CPU_AVX512VNNI,
 
   // Multiprocessing / CPU / System
   OPENMP,
