@@ -530,7 +530,7 @@ typedef MXReturnValue (*inferShape_t)(std::map<std::string, std::string>,
                                       std::vector<std::vector<unsigned int> >&,
                                       std::vector<std::vector<unsigned int> >&);
 typedef MXReturnValue (*mutateInputs_t)(std::map<std::string, std::string>,
-					std::vector<int>&);
+                                        std::vector<int>&);
 typedef MXReturnValue (*createOpState_t)(std::map<std::string, std::string>,
                                       CustomStatefulOp**);
 
@@ -606,7 +606,7 @@ class CustomPartitioner {
     op_name = sg_name;
     return *this;
   }
-  
+
   /*! \brief partitioner  name */
   const char* name;
   /*! \brief supported ops function */

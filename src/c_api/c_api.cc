@@ -684,7 +684,8 @@ int MXLoadLib(const char *path) {
   }
 
   // get number of partitioners registered in the library
-  partRegSize_t partRegSize = get_func<partRegSize_t>(lib, const_cast<char*>(MXLIB_PARTREGSIZE_STR));
+  partRegSize_t partRegSize = get_func<partRegSize_t>(lib,
+                                                      const_cast<char*>(MXLIB_PARTREGSIZE_STR));
   int numParts = partRegSize();
   LOG(INFO) << "Found " << numParts << " partitioners in library";
 
