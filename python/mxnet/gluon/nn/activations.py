@@ -120,7 +120,10 @@ class PReLU(HybridBlock):
     ----------
     alpha_initializer : Initializer
         Initializer for the `embeddings` matrix.
-
+    in_channels : int, default 1
+        Number of channels (alpha parameters) to learn. Can either be 1
+        or `n` where `n` is the size of the second dimension of the input
+        tensor.
 
     Inputs:
         - **data**: input tensor with arbitrary shape.
@@ -128,10 +131,12 @@ class PReLU(HybridBlock):
     Outputs:
         - **out**: output tensor with the same shape as `data`.
     """
-    def __init__(self, alpha_initializer=initializer.Constant(0.25), **kwargs):
+    def __init__(self, alpha_initializer=initializer.Constant(0.25),
+                 in_channels=1, **kwargs):
         super(PReLU, self).__init__(**kwargs)
         with self.name_scope():
-            self.alpha = self.params.get('alpha', shape=(1,), init=alpha_initializer)
+            self.alpha = self.params.get('alpha', shape=(in_channels,),
+                                         init=alpha_initializer)
 
     def hybrid_forward(self, F, x, alpha):
         return F.LeakyReLU(x, gamma=alpha, act_type='prelu', name='fwd')
