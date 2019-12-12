@@ -17,66 +17,61 @@
  * under the License.
  */
 
-#ifndef MXNET_OPERATOR_SUBGRAPH_CUSTOM_SUBGRAPH_PROPERTY_H_
-#define MXNET_OPERATOR_SUBGRAPH_CUSTOM_SUBGRAPH_PROPERTY_H_
+#ifndef MXNET_OPERATOR_SUBGRAPH_PARTITIONER_CUSTOM_SUBGRAPH_PROPERTY_H_
+#define MXNET_OPERATOR_SUBGRAPH_PARTITIONER_CUSTOM_SUBGRAPH_PROPERTY_H_
 
 #include <string>
 #include "../common.h"
 #include "../subgraph_property.h"
 
 namespace mxnet {
-  namespace op {
+namespace op {
 
-    /*
-     * This selects nodes for a subgraph
-     */
-    class CustomContainOpSelector: public SubgraphSelector {
-    public:
-      explicit CustomContainOpSelector() {}
+/*
+ * This selects nodes for a subgraph
+ */
+class CustomContainOpSelector: public SubgraphSelector {
+ public:
+  explicit CustomContainOpSelector() {}
+  virtual bool Select(const nnvm::Node &n) {
+    return false;
+  }
+  virtual bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) {
+    return false;
+  }
+  virtual bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) {
+    return false;
+  }
+};
 
-      virtual bool Select(const nnvm::Node &n) {
-        return false;
-      }
+/*
+ * This subgraph property finds a subgraph
+ */
+class  CustomSubgraphProperty: public SubgraphProperty {
+ public:
+  // create custom subgraph property
+  static SubgraphPropertyPtr Create() {
+    return std::make_shared<CustomSubgraphProperty>();
+  }
+  // override CreateSubgraphNode
+  virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
+                                           const int subgraph_id = 0) const {
+    nnvm::NodePtr n = nnvm::Node::Create();
+    n->attrs.op = Op::Get("_op");
+    n->attrs.name = "_op" + std::to_string(subgraph_id);
+    n->attrs.subgraphs.push_back(std::make_shared<nnvm::Symbol>(sym));
+    return n;
+  }
+  // override CreateSubgraphSelector
+  virtual SubgraphSelectorPtr CreateSubgraphSelector() const {
+    return std::make_shared<CustomContainOpSelector>();                                 
+  }
+};
 
-      virtual bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) {
-        return false;
-      }
+MXNET_REGISTER_SUBGRAPH_BACKEND(customBackend);
+MXNET_REGISTER_SUBGRAPH_PROPERTY(customBackend, CustomSubgraphProperty);
 
-      virtual bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) {
-        return false;
-      }
-    };
-
-    /*
-     * This subgraph property finds a subgraph
-     */
-    class  CustomSubgraphProperty: public SubgraphProperty {
-    public:
-      // create custom subgraph property
-      static SubgraphPropertyPtr Create() {
-        return std::make_shared<CustomSubgraphProperty>();
-      }
-
-      // override CreateSubgraphNode
-      virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
-                                               const int subgraph_id = 0) const {
-        nnvm::NodePtr n = nnvm::Node::Create();
-        n->attrs.op = Op::Get("_op");
-        n->attrs.name = "_op" + std::to_string(subgraph_id);
-        n->attrs.subgraphs.push_back(std::make_shared<nnvm::Symbol>(sym));
-        return n;
-      }
-
-      // override CreateSubgraphSelector
-      virtual SubgraphSelectorPtr CreateSubgraphSelector() const {
-        return std::make_shared<CustomContainOpSelector>();                                 
-      }
-    };
-
-    MXNET_REGISTER_SUBGRAPH_BACKEND(customBackend);
-    MXNET_REGISTER_SUBGRAPH_PROPERTY(customBackend, CustomSubgraphProperty);
-
-  }  // namespace op
+}  // namespace op
 }  // namespace mxnet
 
-#endif
+#endif // MXNET_OPERATOR_SUBGRAPH_PARTITIONER_CUSTOM_SUBGRAPH_PROPERTY_H_
