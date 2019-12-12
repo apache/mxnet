@@ -236,12 +236,9 @@ def _add_workload_transpose():
 
 def _add_workload_linalg_norm():
     OpArgMngr.add_workload('linalg.norm', np.random.uniform(size=(4, 1)))
-    for dt in ["double", "float32", "int64"]:
+    for dt in ["float64", "float32"]:
         OpArgMngr.add_workload('linalg.norm', np.array([], dtype=dt))
         OpArgMngr.add_workload('linalg.norm', np.array([np.array([]), np.array([])], dtype=dt))
-        # numerical error exceed the tolerance
-        if dt == "int64":
-            continue
         for v in ([1, 2, 3, 4], [-1, -2, -3, -4], [-1, 2, -3, 4]):
             OpArgMngr.add_workload('linalg.norm', np.array(v, dtype=dt))
         A = np.array([[1, 2, 3], [4, 5, 6]], dtype=dt)
@@ -268,9 +265,9 @@ def _add_workload_linalg_norm():
                         OpArgMngr.add_workload('linalg.norm', np.take(B[:], np.array(k), axis=k_index))
                     else:
                         OpArgMngr.add_workload('linalg.norm', np.take(B[:], np.array(k), axis=k_index).T)
-        A = np.arange(1, 25, dtype=dt).reshape(2, 3, 4)
-        OpArgMngr.add_workload('linalg.norm', A, ord=None, axis=None)
-        OpArgMngr.add_workload('linalg.norm', A, ord=None,axis=None, keepdims=True)
+        # A = np.arange(1, 25, dtype=dt).reshape(2, 3, 4)
+        # OpArgMngr.add_workload('linalg.norm', A, ord=None, axis=None)
+        # OpArgMngr.add_workload('linalg.norm', A, ord=None, axis=None, keepdims=True)
         for k in range(A.ndim):
             OpArgMngr.add_workload('linalg.norm', A, axis=k)
             OpArgMngr.add_workload('linalg.norm', A, axis=k, keepdims=True)
@@ -281,10 +278,17 @@ def _add_workload_linalg_norm():
         A = np.array([[1, 3], [5, 7]], dtype=dt)
         OpArgMngr.add_workload('linalg.norm', A)
         OpArgMngr.add_workload('linalg.norm', A, 'fro')
+
+        if dt == "float64":
+            OpArgMngr.add_workload('linalg.norm', A, 2)
+            OpArgMngr.add_workload('linalg.norm', A, -2)
+            OpArgMngr.add_workload('linalg.norm', A, 'nuc')
+            # OpArgMngr.add_workload('linalg.norm', A, 1)
+            # OpArgMngr.add_workload('linalg.norm', A, -1)
         A = (1 / 10) * np.array([[1, 2, 3], [6, 0, 5], [3, 2, 1]], dtype=dt)
         OpArgMngr.add_workload('linalg.norm', A)
         OpArgMngr.add_workload('linalg.norm', A, 'fro')
-    for dt in [np.float16, np.float32, np.float64]:
+    for dt in [np.float32, np.float64]:
         OpArgMngr.add_workload('linalg.norm', np.array([[1, 0, 1], [0, 1, 1]], dtype=dt))
         OpArgMngr.add_workload('linalg.norm', np.array([[1, 0, 1], [0, 1, 1]], dtype=dt), 'fro')
 

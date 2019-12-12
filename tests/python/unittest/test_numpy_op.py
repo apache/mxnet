@@ -3192,21 +3192,22 @@ def test_np_linalg_norm():
         ((2, 3, 4), 4, 1),
         ((2, 3, 0, 4), -2, 1),
         ((2, 3, 4), -3.2, 2),
-        ((2, 3, 4), 4.3, 2),
         ((2, 3, 4), 'inf', 1),
         ((2, 3, 4), '-inf', (1, 0)),
-        ((2, 3, 4), 5, 0),
+        ((2, 3), None, (0, 1)),
+        ((3, 2, 3), None, (1, 2)),
         ((2, 3), None, None),
         ((2, 3, 4), 'fro', (0, 2)),
         ((2, 0, 4), 'fro', (0, 2)),
         ((2, 3, 4), None, (0, 2)),
-        ((2, 3, 4), 1, (0, 2)),
-        ((2, 3, 4), -1, (0, 2)),
+        ((2, 3, 4), 1, (2, 1)),
+        ((2, 3, 4), -1, (0, 1)),
         ((2, 3, 4), 'inf', (0, 2)),
         ((2, 3, 4), '-inf', (0, 2)),
         ((2, 3, 4, 5), 2, (2, 3)),
         ((4, 4, 4, 4), -2, (0, 2)),
         ((2, 3, 4), 'nuc', (0, 2)),
+        ((2, 2), 'nuc', None),
     ]
 
     def spectral_norm_grad(data):
@@ -3218,7 +3219,7 @@ def test_np_linalg_norm():
 
     for config in configs:
         shape, ord, axis = config[0], config[1], config[2]
-        for keepdims in [True, True]:
+        for keepdims in [False, True]:
             for hybridize in [False, True]:
                 # numpy is flaky under float16, also gesvd does not support fp16
                 for itype in [ 'float32', 'float64']:
@@ -3238,24 +3239,39 @@ def test_np_linalg_norm():
                     else:
                         np_ret = _np.linalg.norm(a.asnumpy(), ord=ord, axis=axis, keepdims=keepdims)
 
+                    assert np_ret.shape == mx_ret.shape
                     assert_almost_equal(mx_ret.asnumpy(), np_ret, rtol=rtol, atol=atol)
                     mx_ret.backward()
+
+                    grad_axis = axis
+                    if axis is None and len(shape) >= 2:
+                        grad_axis = (len(shape) - 2, len(shape) - 1)
+                    elif axis is None:
+                        grad_axis = shape[-1]
+
+                    if not keepdims and isinstance(grad_axis, tuple):
+                        for i in range(len(grad_axis)): 
+                            np_ret = _np.expand_dims(np_ret, axis=grad_axis[i])
+                    elif not keepdims:
+                        np_ret = _np.expand_dims(np_ret, axis=grad_axis)
 
                     if ord == 4:
                         backward_expected = _np.sign(a.asnumpy()) * _np.power(_np.abs(a.asnumpy()) / np_ret, ord - 1)
                         assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
 
-                    if ord == 2 and not isinstance(axis, tuple):
+                    if ord == 2 and not isinstance(grad_axis, tuple):
                         backward_expected = _np.divide(a.asnumpy(), np_ret)
                         assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
 
-                    elif ord == 2 and isinstance(axis, tuple) and list(axis) == shape[-2:]:
+                    elif ord == 2 and isinstance(grad_axis, tuple) and list(grad_axis) == shape[-2:]:
                         backward_expected = spectral_norm_grad(a)
                         assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
 
                     if ord == 'fro':
                         backward_expected = _np.divide(a.asnumpy(), np_ret)
                         assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+
+                    assert a.grad.shape == a.shape
 
                     # Test imperative once again
                     if ord == 'inf':

@@ -28,13 +28,13 @@
 namespace mxnet {
 namespace op {
 
-DMLC_REGISTER_PARAMETER(NumpyLpNormParam);
+DMLC_REGISTER_PARAMETER(NumpyNormParam);
 
 inline bool NumpyLpNormShape(const nnvm::NodeAttrs& attrs,
                              mxnet::ShapeVector *in_attrs,
                              mxnet::ShapeVector *out_attrs) {
   if (!shape_is_known((*in_attrs)[0])) return false;
-  const NumpyLpNormParam& param = nnvm::get<NumpyLpNormParam>(attrs.parsed);
+  const NumpyNormParam& param = nnvm::get<NumpyNormParam>(attrs.parsed);
   const int ndim = (*in_attrs)[0].ndim();
   if ((!param.axis.has_value() && param.flag != 0 && ndim > 2) ||
       (param.axis.has_value() && param.axis.value().ndim() > 2))
@@ -52,19 +52,22 @@ inline bool NumpyLpNormShape(const nnvm::NodeAttrs& attrs,
       LOG(FATAL) << "Invalid norm order for inputs.";
     }
   }
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0,
-                     ReduceAxesShapeImpl((*in_attrs)[0], param.axis, param.keepdims, false));
+  if (!param.keepdims && (*in_attrs)[0].ndim() == 1) {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(0, -1));
+  }
+  else {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0,
+                       ReduceAxesShapeImpl((*in_attrs)[0], param.axis, param.keepdims, false));
+  }
   return true;
 }
 
 inline bool NumpyMatrixNormShape(const nnvm::NodeAttrs& attrs,
                                    mxnet::ShapeVector *in_attrs,
                                    mxnet::ShapeVector *out_attrs) {
-  const NumpyLpNormParam& param = nnvm::get<NumpyLpNormParam>(attrs.parsed);
+  const NumpyNormParam& param = nnvm::get<NumpyNormParam>(attrs.parsed);
   const int ndim = (*in_attrs)[0].ndim();
-  auto shape = (*in_attrs)[0];
-  std::swap(shape[param.axis.value()[1]], shape[shape.ndim() - 1]);
-  std::swap(shape[param.axis.value()[0]], shape[shape.ndim() - 2]);
+  auto shape = swapMatDims((*in_attrs)[0], param.axis.value());
   if (param.axis.value().ndim() == 2) {
     int batch_dim = 1;
     int row_dim = (*in_attrs)[0][param.axis.value()[0]];
@@ -94,22 +97,22 @@ inline bool NumpyMatrixNormShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-inline bool NumpyNormShape(const nnvm::NodeAttrs& attrs,
-                           mxnet::ShapeVector *in_attrs,
-                           mxnet::ShapeVector *out_attrs) {
+bool NumpyNormShape(const nnvm::NodeAttrs& attrs,
+                    mxnet::ShapeVector *in_attrs,
+                    mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 4U); // reduced, UT, S, V
-  const NumpyLpNormParam& param = nnvm::get<NumpyLpNormParam>(attrs.parsed);
+  const NumpyNormParam& param = nnvm::get<NumpyNormParam>(attrs.parsed);
   if (!param.axis.has_value()) {
     if ((*in_attrs)[0].ndim() >= 2) {
       TShape axis(2, 0);
       axis[0] = (*in_attrs)[0].ndim() - 2;
       axis[1] = (*in_attrs)[0].ndim() - 1;
-      const_cast<NumpyLpNormParam&>(param).axis = axis;
+      const_cast<NumpyNormParam&>(param).axis = axis;
       return NumpyMatrixNormShape(attrs, in_attrs, out_attrs);
     } else {
       TShape axis(1, (*in_attrs)[0].ndim() - 1);
-      const_cast<NumpyLpNormParam&>(param).axis = axis;
+      const_cast<NumpyNormParam&>(param).axis = axis;
       SHAPE_ASSIGN_CHECK(*out_attrs, 1, TShape({ 0, 0, 0 })); // UT
       SHAPE_ASSIGN_CHECK(*out_attrs, 2, TShape({ 0, 0 })); // L
       SHAPE_ASSIGN_CHECK(*out_attrs, 3, TShape({ 0, 0, 0 })); // V
@@ -122,7 +125,7 @@ inline bool NumpyNormShape(const nnvm::NodeAttrs& attrs,
                   (*in_attrs)[0].ndim() + param.axis.value()[i] :
                   param.axis.value()[i];
     }
-    const_cast<NumpyLpNormParam&>(param).axis = axis;
+    const_cast<NumpyNormParam&>(param).axis = axis;
     if (param.axis.value().ndim() == 2) {
       return NumpyMatrixNormShape(attrs, in_attrs, out_attrs);
     } else {
@@ -161,7 +164,7 @@ NNVM_REGISTER_OP(_npi_norm)
 .set_num_outputs(4)
 .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
   [](const NodeAttrs& attrs) { return 1; })
-.set_attr_parser(ParamParser<NumpyLpNormParam>)
+.set_attr_parser(ParamParser<NumpyNormParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyNormShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 4>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_npi_norm"})
@@ -174,7 +177,7 @@ NNVM_REGISTER_OP(_npi_norm)
 
 NNVM_REGISTER_OP(_backward_npi_norm)
 .set_num_outputs(1)
-.set_attr_parser(ParamParser<NumpyLpNormParam>)
+.set_attr_parser(ParamParser<NumpyNormParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
