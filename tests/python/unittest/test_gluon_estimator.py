@@ -88,7 +88,7 @@ def test_validation():
     ctx = mx.cpu()
     loss = gluon.loss.L2Loss()
     acc = mx.metric.Accuracy()
-    evaluation_loss = gluon.loss.L1Loss()
+    val_loss = gluon.loss.L1Loss()
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     est = Estimator(net=net,
@@ -96,7 +96,7 @@ def test_validation():
                     train_metrics=acc,
                     trainer=trainer,
                     context=ctx,
-                    evaluation_loss=evaluation_loss)
+                    val_loss=val_loss)
     # Input dataloader
     est.fit(train_data=dataloader,
             val_data=dataloader,
@@ -376,16 +376,16 @@ def test_default_handlers():
     assert isinstance(handlers[1], MetricHandler)
     assert isinstance(handlers[4], LoggingHandler)
 
-def test_eval_net():
-    ''' test estimator with a different evaluation net '''
+def test_val_net():
+    ''' test estimator with different training and validation networks '''
     ''' test weight sharing of sequential networks without namescope '''
     net = _get_test_network()
-    eval_net = _get_test_network(params=net.collect_params())
+    val_net = _get_test_network(params=net.collect_params())
     dataloader, dataiter = _get_test_data()
     num_epochs = 1
     ctx = mx.cpu()
     loss = gluon.loss.L2Loss()
-    evaluation_loss = gluon.loss.L2Loss()
+    val_loss = gluon.loss.L2Loss()
     acc = mx.metric.Accuracy()
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
@@ -394,8 +394,8 @@ def test_eval_net():
                     train_metrics=acc,
                     trainer=trainer,
                     context=ctx,
-                    evaluation_loss=evaluation_loss,
-                    eval_net=eval_net)
+                    val_loss=val_loss,
+                    val_net=val_net)
 
     with assert_raises(RuntimeError):
         est.fit(train_data=dataloader,
@@ -404,7 +404,7 @@ def test_eval_net():
 
     ''' test weight sharing of sequential networks with namescope '''
     net = _get_test_network_with_namescope()
-    eval_net = _get_test_network_with_namescope(params=net.collect_params())
+    val_net = _get_test_network_with_namescope(params=net.collect_params())
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     est = Estimator(net=net,
@@ -412,8 +412,8 @@ def test_eval_net():
                     train_metrics=acc,
                     trainer=trainer,
                     context=ctx,
-                    evaluation_loss=evaluation_loss,
-                    eval_net=eval_net)
+                    val_loss=val_loss,
+                    val_net=val_net)
 
     est.fit(train_data=dataloader,
             val_data=dataloader,
@@ -422,20 +422,20 @@ def test_eval_net():
     ''' test weight sharing of two resnets '''
     net = gluon.model_zoo.vision.resnet18_v1(pretrained=False, ctx=ctx)
     net.output = gluon.nn.Dense(10)
-    eval_net = gluon.model_zoo.vision.resnet18_v1(pretrained=False, ctx=ctx)
-    eval_net.output = gluon.nn.Dense(10, params=net.collect_params())
+    val_net = gluon.model_zoo.vision.resnet18_v1(pretrained=False, ctx=ctx)
+    val_net.output = gluon.nn.Dense(10, params=net.collect_params())
     dataset = gluon.data.ArrayDataset(mx.nd.zeros((10, 3, 224, 224)), mx.nd.zeros((10, 10)))
     dataloader = gluon.data.DataLoader(dataset=dataset, batch_size=5)
     net.initialize(ctx=ctx)
-    eval_net.initialize(ctx=ctx)
+    val_net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     est = Estimator(net=net,
                     loss=loss,
                     train_metrics=acc,
                     trainer=trainer,
                     context=ctx,
-                    evaluation_loss=evaluation_loss,
-                    eval_net=eval_net)
+                    val_loss=val_loss,
+                    val_net=val_net)
 
     est.fit(train_data=dataloader,
             val_data=dataloader,
