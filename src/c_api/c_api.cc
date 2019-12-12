@@ -700,7 +700,7 @@ int MXLoadLib(const char *path) {
     supportedOps_t supportedOps_fp = nullptr;
     // name of subgraph op
     const char* op_name = nullptr;
-    
+
     // get custom partitioner implemenation from the dynamic library
     partRegGet(i, &name, &supportedOps_fp, &op_name);
 
@@ -713,7 +713,6 @@ int MXLoadLib(const char *path) {
     LOG(INFO) << "\tPartitioner[" << i << "] " << name << " subgraphOp: '" << op_name << "'";
     std::string name_str(name);
   }
-  
   API_END();
 }
 
