@@ -20,14 +20,9 @@ Data Tutorials
 
 These tutorials will help you learn how to load and use datasets with the Gluon API.
 
-Gluon Data Tutorials
----------------------
-
-These tutorials demonstrate how to use the Gluon data API.
-
    .. card::
       :title: Data Augmentation
-      :link: data_augmentation.md
+      :link: data_augmentation.html
 
       A guide to data augmentation.
 

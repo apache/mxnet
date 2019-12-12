@@ -72,7 +72,7 @@ Data
 
    .. card::
       :title: Data Augmentation
-      :link: data/data_augmentation.md
+      :link: data/data_augmentation.html
 
       A guide to data augmentation.
 
