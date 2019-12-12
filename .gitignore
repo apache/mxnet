@@ -140,6 +140,9 @@ lib/
 bin/
 model/
 
+# tvm
+!contrib/tvmop/lib/
+
 # VTune
 ./r0*hs
 

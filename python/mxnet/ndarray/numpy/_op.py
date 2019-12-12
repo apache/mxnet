@@ -38,9 +38,9 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'stack', 'vstack', 'column_stack', 'dstack', 'average', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip',
            'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index', 'hanning', 'hamming',
            'blackman', 'flip', 'around', 'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
-           'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
-           'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero', 'shares_memory',
-           'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where']
+           'tril', 'identity', 'take', 'polyval', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater',
+           'less', 'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero',
+           'shares_memory', 'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -550,6 +550,60 @@ def take(a, indices, axis=None, mode='raise', out=None):
     else:
         return _npi.take(a, indices, axis, mode, out)
 # pylint: enable=redefined-outer-name
+
+
+def polyval(p, x):
+    """
+    Evaluate a polynomial at specific values.
+
+    If p is of length N, this function returns the value:
+
+    p[0]*x**(N-1) + p[1]*x**(N-2) + ... + p[N-2]*x + p[N-1]
+    If x is a sequence, then p(x) is returned for each element of x.
+    If x is another polynomial then the composite polynomial p(x(t)) is returned.
+
+    Parameters
+    ----------
+    p : ndarray
+        1D array of polynomial coefficients (including coefficients equal to zero)
+        from highest degree to the constant term.
+    x : ndarray
+        An array of numbers, at which to evaluate p.
+
+    Returns
+    -------
+    values : ndarray
+        Result array of polynomials
+
+    Notes
+    -----
+    This function differs from the original `numpy.polyval
+    <https://numpy.org/devdocs/reference/generated/numpy.polyval.html>`_ in
+    the following way(s):
+    - Does not support poly1d.
+    - X should be ndarray type even if it contains only one element.
+    - Does not support float16
+
+    Examples
+    --------
+    >>> p = np.array([3, 0, 1])
+    array([3., 0., 1.])
+    >>> x = np.array([5])
+    array([5.])
+    >>> np.polyval(p, x)  # 3 * 5**2 + 0 * 5**1 + 1
+    array([76.])
+    >>> x = np.array([5, 4])
+    array([5., 4.])
+    >>> np.polyval(p, x)
+    array([76., 49.])
+    """
+    from ...numpy import ndarray
+    if isinstance(p, ndarray) and isinstance(x, ndarray):
+        return _npi.polyval(p, x)
+    elif not isinstance(p, ndarray) and not isinstance(x, ndarray):
+        return _np.polyval(p, x)
+    else:
+        raise TypeError('type not supported')
 
 
 #pylint: disable= too-many-arguments, no-member, protected-access
