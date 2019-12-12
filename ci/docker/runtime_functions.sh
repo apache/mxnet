@@ -1002,7 +1002,7 @@ sanity_check() {
 cd_unittest_ubuntu() {
     set -ex
     export PYTHONPATH=./python/
-    export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
@@ -1977,7 +1977,7 @@ build_static_libmxnet() {
     set -ex
     pushd .
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
-    source tools/staticbuild/build.sh ${mxnet_variant} pip
+    source tools/staticbuild/build.sh ${mxnet_variant}
     popd
 }
 

@@ -452,6 +452,7 @@ def test_preloaded_multi_sgd():
                 shapes = [np.random.randint(1, maxdim + 1, size=maxndim) for i in range(nparam)]
                 check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights)
 
+
 @with_seed()
 def test_batchnorm_with_type():
   ctx_list_v1_2D = [

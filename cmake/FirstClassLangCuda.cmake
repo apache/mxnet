@@ -23,34 +23,6 @@ if(USE_CXX14_IF_AVAILABLE)
   check_cxx_compiler_flag("-std=c++14"   SUPPORT_CXX14)
 endif()
 
-################################################################################################
-# Short command for cuDNN detection. Believe it soon will be a part of CUDA toolkit distribution.
-# That's why not FindcuDNN.cmake file, but just the macro
-# Usage:
-#   detect_cuDNN()
-function(detect_cuDNN)
-  set(CUDNN_ROOT "" CACHE PATH "CUDNN root folder")
-
-  find_path(CUDNN_INCLUDE cudnn.h
-            PATHS ${CUDNN_ROOT} $ENV{CUDNN_ROOT}
-            DOC "Path to cuDNN include directory." )
-
-
-  find_library(CUDNN_LIBRARY NAMES libcudnn.so cudnn.lib # libcudnn_static.a
-                             PATHS ${CUDNN_ROOT} $ENV{CUDNN_ROOT} ${CUDNN_INCLUDE}
-                             PATH_SUFFIXES lib lib/x64
-                             DOC "Path to cuDNN library.")
-
-  if(CUDNN_INCLUDE AND CUDNN_LIBRARY)
-    set(HAVE_CUDNN  TRUE PARENT_SCOPE)
-    set(CUDNN_FOUND TRUE PARENT_SCOPE)
-
-    mark_as_advanced(CUDNN_INCLUDE CUDNN_LIBRARY CUDNN_ROOT)
-    message(STATUS "Found cuDNN (include: ${CUDNN_INCLUDE}, library: ${CUDNN_LIBRARY})")
-  endif()
-endfunction()
-
-
 
 ################################################################################################
 # A function for automatic detection of GPUs installed  (if autodetection is enabled)
