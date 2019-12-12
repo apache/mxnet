@@ -285,10 +285,10 @@ def check_multi_sum_sq(dtype, shapes, ctx, tol1, tol2):
 
 @with_seed()
 def test_multi_sum_sq():
-    min_nparam = 390
-    max_nparam = 400
+    min_nparam = 100
+    max_nparam = 120
     min_dim = 50000
-    max_dim = 3200000
+    max_dim = 100000
     max_ndim = 1
 
     dtypes = ['float16','float32', 'float64']
