@@ -33,10 +33,6 @@ ENV CUDNN_VERSION=7.6.0.64
 COPY install/centos7_cudnn.sh /work/
 RUN /work/centos7_cudnn.sh
 
-# hotfix nvidia-docker image come with wrong version of libcublas
-COPY install/centos7_cublas.sh /work/
-RUN /work/centos7_cublas.sh
-
 ARG USER_ID=0
 COPY install/centos7_adduser.sh /work/
 RUN /work/centos7_adduser.sh

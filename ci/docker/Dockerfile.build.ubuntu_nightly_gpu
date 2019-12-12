@@ -72,10 +72,6 @@ ENV CUDNN_VERSION=7.6.0.64
 COPY install/ubuntu_cudnn.sh /work/
 RUN /work/ubuntu_cudnn.sh
 
-# hotfix nvidia-docker image come with wrong version of libcublas
-COPY install/ubuntu_cublas.sh /work/
-RUN /work/ubuntu_cublas.sh
-
 ARG USER_ID=0
 ARG GROUP_ID=0
 COPY install/ubuntu_adduser.sh /work/

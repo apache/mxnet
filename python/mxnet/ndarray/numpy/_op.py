@@ -28,18 +28,20 @@ from ...context import current_context
 from . import _internal as _npi
 from ..ndarray import NDArray
 
-__all__ = ['shape', 'zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power',
+__all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like',
+           'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power',
            'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs',
            'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2',
            'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
-           'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot', 'histogram', 'eye',
+           'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'tensordot', 'histogram', 'eye',
            'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'split', 'vsplit', 'concatenate', 'append',
-           'stack', 'vstack', 'column_stack', 'dstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax',
-           'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index', 'hanning', 'hamming', 'blackman',
-           'flip', 'around', 'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril',
-           'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
+           'stack', 'vstack', 'column_stack', 'dstack', 'average', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip',
+           'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index', 'hanning', 'hamming',
+           'blackman', 'flip', 'around', 'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
+           'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
            'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero', 'shares_memory',
            'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where']
+
 
 @set_module('mxnet.ndarray.numpy')
 def shape(a):
@@ -145,7 +147,119 @@ def ones(shape, dtype=_np.float32, order='C', ctx=None):  # pylint: disable=rede
 
 # pylint: disable=too-many-arguments, redefined-outer-name
 @set_module('mxnet.ndarray.numpy')
-def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):
+def zeros_like(a, dtype=None, order='C', ctx=None, out=None):
+    """
+    Return an array of zeros with the same shape and type as a given array.
+
+    Parameters
+    ----------
+    a : ndarray
+        The shape and data-type of `a` define these same attributes of
+        the returned array.
+    dtype : data-type, optional
+        Overrides the data type of the result.
+        Temporarily do not support boolean type.
+    order : {'C'}, optional
+        Whether to store multidimensional data in C- or Fortran-contiguous
+        (row- or column-wise) order in memory. Currently only supports C order.
+    ctx: to specify the device, e.g. the i-th GPU.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray
+          Array of zeros with the same shape and type as a.
+
+    See Also
+    --------
+    empty_like : Return an empty array with shape and type of input.
+    ones_like : Return an array of ones with shape and type of input.
+    zeros_like : Return an array of zeros with shape and type of input.
+    full : Return a new array of given shape filled with value.
+
+    Examples
+    --------
+    >>> x = np.arange(6)
+    >>> x = x.reshape((2, 3))
+    >>> x
+    array([[0., 1., 2.],
+           [3., 4., 5.]])
+    >>> np.zeros_like(x)
+    array([[0., 0., 0.],
+           [0., 0., 0.]])
+    >>> np.zeros_like(x, int)
+    array([[0, 0, 0],
+           [0, 0, 0]], dtype=int64)
+    >>> y = np.arange(3, dtype=float)
+    >>> y
+    array([0., 1., 2.], dtype=float64)
+    >>> np.zeros_like(y)
+    array([0., 0., 0.], dtype=float64)
+    """
+    return _npi.full_like(a, fill_value=0, dtype=dtype, ctx=None, out=None)
+
+
+@set_module('mxnet.ndarray.numpy')
+def ones_like(a, dtype=None, order='C', ctx=None, out=None):
+    """
+    Return an array of ones with the same shape and type as a given array.
+
+    Parameters
+    ----------
+    a : ndarray
+        The shape and data-type of `a` define these same attributes of
+        the returned array.
+    dtype : data-type, optional
+        Overrides the data type of the result.
+        Temporarily do not support boolean type.
+    order : {'C'}, optional
+        Whether to store multidimensional data in C- or Fortran-contiguous
+        (row- or column-wise) order in memory. Currently only supports C order.
+    ctx: to specify the device, e.g. the i-th GPU.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray
+        Array of ones with the same shape and type as a.
+
+    See Also
+    --------
+    empty_like : Return an empty array with shape and type of input.
+    zeros_like : Return an array of zeros with shape and type of input.
+    full_like : Return a new array with shape of input filled with value.
+    ones : Return a new array setting values to one.
+
+    Examples
+    --------
+    >>> x = np.arange(6)
+    >>> x = x.reshape((2, 3))
+    >>> x
+    array([[0., 1., 2.],
+           [3., 4., 5.]])
+    >>> np.ones_like(x)
+    array([[1., 1., 1.],
+           [1., 1., 1.]])
+    >>> np.ones_like(x, int)
+    array([[1, 1, 1],
+           [1, 1, 1]], dtype=int64)
+    >>> y = np.arange(3, dtype=float)
+    >>> y
+    array([0., 1., 2.], dtype=float64)
+    >>> np.ones_like(y)
+    array([1., 1., 1.], dtype=float64)
+    """
+    return _npi.full_like(a, fill_value=1, dtype=dtype, ctx=None, out=None)
+
+
+@set_module('mxnet.ndarray.numpy')
+def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylint: disable=too-many-arguments
     """
     Return a new array of given shape and type, filled with `fill_value`.
     Parameters
@@ -198,6 +312,64 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):
     dtype = _np.float32 if dtype is None else dtype
     return _npi.full(shape=shape, value=fill_value, ctx=ctx, dtype=dtype, out=out)
 # pylint: enable=too-many-arguments, redefined-outer-name
+
+
+@set_module('mxnet.ndarray.numpy')
+def full_like(a, fill_value, dtype=None, order='C', ctx=None, out=None): # pylint: disable=too-many-arguments
+    """
+    Return a full array with the same shape and type as a given array.
+
+    Parameters
+    ----------
+    a : ndarray
+        The shape and data-type of `a` define these same attributes of
+        the returned array.
+    fill_value : scalar
+        Fill value.
+    dtype : data-type, optional
+        Overrides the data type of the result.
+        Temporarily do not support boolean type.
+    order : {'C'}, optional
+        Whether to store multidimensional data in C- or Fortran-contiguous
+        (row- or column-wise) order in memory. Currently only supports C order.
+    ctx: to specify the device, e.g. the i-th GPU.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray
+        Array of `fill_value` with the same shape and type as `a`.
+
+    See Also
+    --------
+    empty_like : Return an empty array with shape and type of input.
+    ones_like : Return an array of ones with shape and type of input.
+    zeros_like : Return an array of zeros with shape and type of input.
+    full : Return a new array of given shape filled with value.
+
+    Examples
+    --------
+    >>> x = np.arange(6, dtype=int)
+    >>> np.full_like(x, 1)
+    array([1, 1, 1, 1, 1, 1], dtype=int64)
+    >>> np.full_like(x, 0.1)
+    array([0, 0, 0, 0, 0, 0], dtype=int64)
+    >>> np.full_like(x, 0.1, dtype=np.float64)
+    array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1], dtype=float64)
+    >>> np.full_like(x, np.nan, dtype=np.double)
+    array([nan, nan, nan, nan, nan, nan], dtype=float64)
+    >>> y = np.arange(6, dtype=np.float32)
+    >>> np.full_like(y, 0.1)
+    array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
+    """
+    if order != 'C':
+        raise NotImplementedError
+    if ctx is None:
+        ctx = current_context()
+    return _npi.full_like(a, fill_value=fill_value, dtype=dtype, ctx=ctx, out=out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -794,6 +966,82 @@ def power(x1, x2, out=None, **kwargs):
         This is a scalar if both x1 and x2 are scalars.
     """
     return _ufunc_helper(x1, x2, _npi.power, _np.power, _npi.power_scalar, _npi.rpower_scalar, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def argsort(a, axis=-1, kind=None, order=None):
+    """
+    Returns the indices that would sort an array.
+    Perform an indirect sort along the given axis using the algorithm specified
+    by the `kind` keyword. It returns an array of indices of the same shape as
+    `a` that index data along the given axis in sorted order.
+
+    Parameters
+    ----------
+    a : ndarray
+        Array to sort.
+    axis : int or None, optional
+        Axis along which to sort.  The default is -1 (the last axis). If None,
+        the flattened array is used.
+    kind : string, optional
+        This argument can take any string, but it does not have any effect on the
+        final result.
+    order : str or list of str, optional
+        Not supported yet, will raise NotImplementedError if not None.
+
+    Returns
+    -------
+    index_array : ndarray, int
+        Array of indices that sort `a` along the specified `axis`.
+        If `a` is one-dimensional, ``a[index_array]`` yields a sorted `a`.
+        More generally, ``np.take_along_axis(a, index_array, axis=axis)``
+        always yields the sorted `a`, irrespective of dimensionality.
+
+    Notes
+    -----
+    This operator does not support different sorting algorithms.
+
+    Examples
+    --------
+    One dimensional array:
+
+    >>> x = np.array([3, 1, 2])
+    >>> np.argsort(x)
+    array([1, 2, 0])
+
+    Two-dimensional array:
+
+    >>> x = np.array([[0, 3], [2, 2]])
+    >>> x
+    array([[0, 3],
+           [2, 2]])
+    >>> ind = np.argsort(x, axis=0)  # sorts along first axis (down)
+    >>> ind
+    array([[0, 1],
+           [1, 0]])
+    >>> np.take_along_axis(x, ind, axis=0)  # same as np.sort(x, axis=0)
+    array([[0, 2],
+           [2, 3]])
+    >>> ind = np.argsort(x, axis=1)  # sorts along last axis (across)
+    >>> ind
+    array([[0, 1],
+           [0, 1]])
+    >>> np.take_along_axis(x, ind, axis=1)  # same as np.sort(x, axis=1)
+    array([[0, 3],
+           [2, 2]])
+
+    Indices of the sorted elements of a N-dimensional array:
+
+    >>> ind = np.unravel_index(np.argsort(x, axis=None), x.shape)
+    >>> ind
+    (array([0, 1, 1, 0]), array([0, 0, 1, 1]))
+    >>> x[ind]  # same as np.sort(x, axis=None)
+    array([0, 2, 2, 3])
+    """
+    if order is not None:
+        raise NotImplementedError("order not supported here")
+
+    return _npi.argsort(data=a, axis=axis, is_ascend=True, dtype='int64')
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -3457,6 +3705,97 @@ def argmin(a, axis=None, out=None):
     array([0., 0.])
     """
     return _npi.argmin(a, axis=axis, keepdims=False, out=out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def average(a, axis=None, weights=None, returned=False, out=None):
+    """
+    Compute the weighted average along the specified axis.
+
+    Parameters
+    --------
+    a : ndarray
+        Array containing data to be averaged.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which to average a.
+        The default, axis=None, will average over
+        all of the elements of the input array.
+        If axis is negative it counts from the last to the first axis.
+        New in version 1.7.0.
+        If axis is a tuple of ints, averaging is
+        performed on all of the axes specified in the tuple
+        instead of a single axis or all the axes as before.
+    weights : ndarray, optional
+        An array of weights associated with the values in a, must be the same dtype with a.
+        Each value in a contributes to the average according to its associated weight.
+        The weights array can either be 1-D (in which case its length must be
+        the size of a along the given axis) or of the same shape as a.
+        If weights=None, then all data in a are assumed to have a weight equal to one.
+        The 1-D calculation is: avg = sum(a * weights) / sum(weights)
+        The only constraint on weights is that sum(weights) must not be 0.
+    returned : bool, optional
+        Default is False.
+        If True, the tuple (average, sum_of_weights) is returned,
+        otherwise only the average is returned.
+        If weights=None, sum_of_weights is equivalent to
+        the number of elements over which the average is taken.
+    out : ndarray, optional
+        If provided, the calculation is done into this array.
+
+    Returns
+    --------
+    retval, [sum_of_weights] : ndarray
+        Return the average along the specified axis.
+        When returned is True, return a tuple with the average as the first element
+        and the sum of the weights as the second element. sum_of_weights is of the same type as retval.
+        If a is integral, the result dtype will be float32, otherwise it will be the same as dtype of a.
+
+    Raises
+    --------
+        MXNetError
+        - When all weights along axis sum to zero.
+        - When the length of 1D weights is not the same as the shape of a along axis.
+        - When given 1D weights, the axis is not specified or is not int.
+        - When the shape of weights and a differ, but weights are not 1D.
+
+    See also
+    --------
+        mean
+
+    Notes
+    --------
+    This function differs from the original `numpy.average`
+    <https://numpy.org/devdocs/reference/generated/numpy.average.html>`_ in
+    the following way(s):
+
+    - Does not guarantee the same behavior with numpy when given float16 dtype and overflow happens
+    - Does not support complex dtype
+    - The dtypes of a and weights must be the same
+    - Integral a results in float32 returned dtype, not float64
+
+    Examples
+    --------
+    >>> data = np.arange(1, 5)
+    >>> data
+    array([1., 2., 3., 4.])
+    >>> np.average(data)
+    array(2.5)
+    >>> np.average(np.arange(1, 11), weights=np.arange(10, 0, -1))
+    array(4.)
+    >>> data = np.arange(6).reshape((3,2))
+    >>> data
+    array([[0., 1.],
+           [2., 3.],
+           [4., 5.]])
+    >>> weights = np.array([0.25, 0.75])
+    array([0.25, 0.75])
+    >>> np.average(data, axis=1, weights=weights)
+    array([0.75, 2.75, 4.75])
+    """
+    if weights is None:
+        return _npi.average(a, axis=axis, weights=None, returned=returned, weighted=False, out=out)
+    else:
+        return _npi.average(a, axis=axis, weights=weights, returned=returned, out=out)
 
 
 @set_module('mxnet.ndarray.numpy')
