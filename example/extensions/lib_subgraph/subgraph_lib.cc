@@ -102,15 +102,6 @@ REGISTER_OP(_custom_subgraph_op)
 .setInferShape(inferShape)
 .setCreateOpState(createOpState);
 
-class mySubgraphProperty : public CustomSubgraphProperty {
-
-};
-
-CustomSubgraphProperty* CreateMySubgraphProperty() {
-  CustomSubgraphProperty *inst = new mySubgraphProperty();
-  return inst;
-}
-
 MXReturnValue mySupportedOps(const char *json,
 			     const char *data_names[],
 			     const MXTensor *data,
@@ -119,7 +110,9 @@ MXReturnValue mySupportedOps(const char *json,
   return MX_SUCCESS;
 }
 
-REGISTER_PARTITIONER(myProp,mySupportedOps);
+REGISTER_PARTITIONER(myProp)
+.setSupportedOps(mySupportedOps)
+.setSubgraphOp("_custom_subgraph_op");
 
 MXReturnValue initialize(int version) {
   if (version >= 10400) {

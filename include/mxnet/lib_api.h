@@ -530,7 +530,7 @@ typedef MXReturnValue (*inferShape_t)(std::map<std::string, std::string>,
                                       std::vector<std::vector<unsigned int> >&,
                                       std::vector<std::vector<unsigned int> >&);
 typedef MXReturnValue (*mutateInputs_t)(std::map<std::string, std::string>,
-                                      std::vector<int>&);
+					std::vector<int>&);
 typedef MXReturnValue (*createOpState_t)(std::map<std::string, std::string>,
                                       CustomStatefulOp**);
 
@@ -585,28 +585,34 @@ class CustomOp {
 };
 
 /*! \brief Custom Subgraph Create function template */
-typedef MXReturnValue (*SubgraphCreateFn_t)(const char*,
-			     const char*[],
-			     const MXTensor*,
-			     const int,
-			     int*);
+typedef MXReturnValue (*supportedOps_t)(const char*,
+                                        const char*[],
+                                        const MXTensor*,
+                                        const int,
+                                        int*);
 
 /*!
  * \brief An abstract class for subgraph property
  */
-class CustomSubgraphProperty {
+class CustomPartitioner {
  public:
- CustomSubgraphProperty() : name("ERROR") {}
- CustomSubgraphProperty(const char* prop_name) : name(prop_name) {}
-  CustomSubgraphProperty& setSubgraphFn(SubgraphCreateFn_t fn) {
-    createFn = fn;
+  CustomPartitioner() : name("ERROR") {}
+  explicit CustomPartitioner(const char* prop_name) : name(prop_name) {}
+  CustomPartitioner& setSupportedOps(supportedOps_t fn) {
+    supportedOps = fn;
     return *this;
   }
-
-  /*! \brief subgraph property name */
+  CustomPartitioner& setSubgraphOp(const char* sg_name) {
+    op_name = sg_name;
+    return *this;
+  }
+  
+  /*! \brief partitioner  name */
   const char* name;
-  /*! \brief subgraph create function */
-  SubgraphCreateFn_t createFn;
+  /*! \brief supported ops function */
+  supportedOps_t supportedOps;
+  /*! \brief subgraph operator name */
+  const char* op_name;
 };
 
 /*!
@@ -666,15 +672,15 @@ class Registry {
 #define MX_REGISTER_DEF_(Name) CustomOp MX_REGISTER_NAME_(Name)
 
 #define MX_REGISTER_PROP_NAME_(Name) MXNet ## _CustomSubProp ## _
-#define MX_REGISTER_PROP_DEF_(Name) CustomSubgraphProperty MX_REGISTER_PROP_NAME_(Name)
+#define MX_REGISTER_PROP_DEF_(Name) CustomPartitioner MX_REGISTER_PROP_NAME_(Name)
 
 /*! \brief assign a var to a value */
 #define REGISTER_OP(Name) MX_STR_CONCAT(MX_REGISTER_DEF_(Name), __COUNTER__) = \
     Registry<CustomOp>::get()->add(MX_TOSTRING(Name))
 
-#define REGISTER_PARTITIONER(Name,SubgraphFn) \
+#define REGISTER_PARTITIONER(Name) \
   MX_STR_CONCAT(MX_REGISTER_PROP_DEF_(Name), __COUNTER__) = \
-    Registry<CustomSubgraphProperty>::get()->add(MX_TOSTRING(Name)).setSubgraphFn(SubgraphFn);
+    Registry<CustomPartitioner>::get()->add(MX_TOSTRING(Name))
 
 /* -------------- BELOW ARE CTYPE FUNCTIONS PROTOTYPES --------------- */
 
@@ -737,7 +743,7 @@ typedef int (*opCallFStatefulComp_t)(bool, void*, const int64_t**, int*, void**,
 typedef int (*partRegSize_t)(void);
 
 #define MXLIB_PARTREGGET_STR "_partRegGet"
-typedef int (*partRegGet_t)(int, const char**, SubgraphCreateFn_t*);
+typedef int (*partRegGet_t)(int, const char**, supportedOps_t*, const char**);
 
 #define MXLIB_INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int);
@@ -1044,19 +1050,20 @@ extern "C" {
   int
 #endif
   _partRegSize() {
-    return Registry<CustomSubgraphProperty>::get()->size();
+    return Registry<CustomPartitioner>::get()->size();
   }
 
-  /*! \brief returns operator registration at specified index */
+  /*! \brief returns partitioner registration at specified index */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) void __cdecl
 #else
   void
 #endif
-  _partRegGet(int idx, const char** name, SubgraphCreateFn_t* createFn) {
-    CustomSubgraphProperty prop = Registry<CustomSubgraphProperty>::get()->get(idx);
-    *name = prop.name;
-    *createFn = prop.createFn;
+  _partRegGet(int idx, const char** name, supportedOps_t* fn, const char** op_name) {
+    CustomPartitioner part = Registry<CustomPartitioner>::get()->get(idx);
+    *name = part.name;
+    *fn = part.supportedOps;
+    *op_name = part.op_name;
   }
 
   /*!
