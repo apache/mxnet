@@ -28,7 +28,6 @@ option(USE_OPENMP "Build with Openmp support" ON)
 cmake_dependent_option(USE_CUDNN "Build with cudnn support" ON "USE_CUDA" OFF) # one could set CUDNN_ROOT for search path
 cmake_dependent_option(USE_SSE "Build with x86 SSE instruction support" ON "NOT ARM" OFF)
 option(USE_F16C "Build with x86 F16C instruction support" ON) # autodetects support if ON
-option(USE_X86_ARCH         "Build with x86 options for -march" OFF)
 option(USE_LAPACK "Build with lapack support" ON)
 option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 if(USE_MKL_IF_AVAILABLE AND (NOT APPLE) AND (NOT MSVC) AND (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64") AND (NOT CMAKE_CROSSCOMPILING))
@@ -67,6 +66,8 @@ message(STATUS "CMAKE_HOST_SYSTEM_PROCESSOR ${CMAKE_HOST_SYSTEM_PROCESSOR}")
 message(STATUS "CMAKE_SYSTEM_PROCESSOR ${CMAKE_SYSTEM_PROCESSOR}")
 
 message(STATUS "CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
+
+set(USE_X86_ARCH "NONE" CACHE STRING "Build with x86 options for -march")
 
 if(USE_TVM_OP)
   add_definitions(-DMXNET_USE_TVM_OP=1)
@@ -158,7 +159,7 @@ else(MSVC)
   else()
     add_definitions(-DMSHADOW_USE_F16C=0)
   endif()
-  if(USE_X86_ARCH)
+  if(NOT USE_X86_ARCH STREQUAL "NONE")
     check_cxx_compiler_flag("-march=${USE_X86_ARCH}" SUPPORT_X86_ARCH)
   else()
     set(SUPPORT_X86_ARCH FALSE)

@@ -95,6 +95,10 @@ CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 # use old thread local implementation in DMLC-CORE
 CFLAGS += -DDMLC_MODERN_THREAD_LOCAL=0
 
+ifndef USE_X86_ARCH
+	USE_X86_ARCH=NONE
+endif
+
 ifneq ($(USE_X86_ARCH), NONE)
 	CFLAGS += -march=$(USE_X86_ARCH)
 endif
