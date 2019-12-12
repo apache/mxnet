@@ -100,7 +100,7 @@ ifndef USE_X86_ARCH
 endif
 
 ifneq ($(USE_X86_ARCH), NONE)
-	CFLAGS += -march=$(USE_X86_ARCH)
+	CFLAGS += -march=$(USE_X86_ARCH) -mtune=$(USE_X86_ARCH)
 endif
 
 ifeq ($(DEV), 1)

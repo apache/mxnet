@@ -36,7 +36,7 @@ ifndef USE_X86_ARCH
 endif
 
 ifneq ($(USE_X86_ARCH), NONE)
-	mkldnn_FLAGS += -DMKLDNN_ARCH_OPT_FLAGS=-march=$(USE_X86_ARCH)
+	mkldnn_FLAGS += -DMKLDNN_ARCH_OPT_FLAGS="-march=$(USE_X86_ARCH) -mtune=$(USE_X86_ARCH)"
 endif
 
 ifneq ($(USE_OPENMP), 1)

@@ -163,7 +163,8 @@ endif
 # For cross compilation, please check support for F16C on target device and turn off if necessary.
 USE_F16C =
 
-# -march option for x86, see https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html
+# -march and -mtune option for x86, see https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html
+#  eg. USE_X86_ARCH=native will enable -march=native and -mtune=native
 USE_X86_ARCH = NONE
 
 #----------------------------
