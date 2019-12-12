@@ -312,12 +312,9 @@ struct BLASEngine<cpu, float> {
   CBLAS_TRANSPOSE p_transa[GROUP_SIZE] = {cblas_a_trans};
   CBLAS_TRANSPOSE p_transb[GROUP_SIZE] = {cblas_b_trans};
 
-  std::vector<const float*> pp_A;
-  std::vector<const float*> pp_B;
-  std::vector<float*> pp_C;
-  pp_A.reserve(batch_count);
-  pp_B.reserve(batch_count);
-  pp_C.reserve(batch_count);
+  std::vector<const float*> pp_A(batch_count, nullptr);
+  std::vector<const float*> pp_B(batch_count, nullptr);
+  std::vector<float*> pp_C(batch_count, nullptr);
 
   auto m_k = m * k;
   auto k_n = k * n;

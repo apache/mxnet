@@ -95,6 +95,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'copy',
     'cumsum',
     'diag',
+    'diagonal',
     'diagflat',
     'dot',
     'expand_dims',
@@ -131,6 +132,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'linalg.norm',
     'linalg.cholesky',
     'linalg.inv',
+    'linalg.solve',
     'shape',
     'trace',
     'tril',
@@ -142,6 +144,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'diff',
     'resize',
     'where',
+    'full_like',
 ]
 
 
@@ -239,7 +242,7 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'less',
     'less_equal',
     'greater',
-    'greater_equal'
+    'greater_equal',
 ]
 
 

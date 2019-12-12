@@ -20,77 +20,6 @@
 """Doc placeholder for numpy ops with prefix _np."""
 
 
-def _np_ones_like(a):
-    """
-    Return an array of ones with the same shape and type as a given array.
-
-    Parameters
-    ----------
-    a : ndarray
-        The shape and data-type of `a` define these same attributes of
-        the returned array.
-
-    Returns
-    -------
-    out : ndarray
-        Array of ones with the same shape and type as `a`.
-
-    Examples
-    --------
-    >>> x = np.arange(6)
-    >>> x = x.reshape((2, 3))
-    >>> x
-    array([[0., 1., 2.],
-           [3., 4., 5.]])
-    >>> np.ones_like(x)
-    array([[1., 1., 1.],
-           [1., 1., 1.]])
-
-    >>> y = np.arange(3, dtype=float)
-    >>> y
-    array([0., 1., 2.], dtype=float64)
-    >>>
-    >>> np.ones_like(y)
-    array([1., 1., 1.], dtype=float64)
-    """
-    pass
-
-
-def _np_zeros_like(a):
-    """
-    Return an array of zeros with the same shape and type as a given array.
-
-    Parameters
-    ----------
-    a : ndarray
-        The shape and data-type of `a` define these same attributes of
-        the returned array.
-
-    Returns
-    -------
-    out : ndarray
-        Array of zeros with the same shape and type as `a`.
-
-    Examples
-    --------
-    >>> x = np.arange(6)
-    >>> x = x.reshape((2, 3))
-    >>> x
-    array([[0., 1., 2.],
-           [3., 4., 5.]])
-    >>> np.zeros_like(x)
-    array([[0., 0., 0.],
-           [0., 0., 0.]])
-    >>> y = np.arange(3, dtype=float)
-    >>> y
-    array([0., 1., 2.], dtype=float64)
-    >>>
-    >>> np.zeros_like(y)
-    array([0., 0., 0.], dtype=float64)
-    """
-    pass
-
-
 def _np_cumsum(a, axis=None, dtype=None, out=None):
     """
     Return the cumulative sum of the elements along a given axis.
@@ -1120,6 +1049,58 @@ def _np_diag(array, k=0):
     array([[0, 0, 0],
            [0, 4, 0],
            [0, 0, 8]])
+    """
+    pass
+
+
+def _np_diagonal(a, offset=0, axis1=0, axis2=1):
+    """
+    If a is 2-D, returns the diagonal of a with the given offset, i.e., the collection of elements of
+    the form a[i, i+offset]. If a has more than two dimensions, then the axes specified by axis1 and
+    axis2 are used to determine the 2-D sub-array whose diagonal is returned. The shape of the
+    resulting array can be determined by removing axis1 and axis2 and appending an index to the
+    right equal to the size of the resulting diagonals.
+
+    Parameters
+    ----------
+    a : Symbol
+        Input data from which diagonal are taken.
+    offset: int, Optional
+        Offset of the diagonal from the main diagonal
+    axis1: int, Optional
+        Axis to be used as the first axis of the 2-D sub-arrays
+    axis2: int, Optional
+        Axis to be used as the second axis of the 2-D sub-arrays
+
+    Returns
+    -------
+    out : Symbol
+        Output result
+
+    Raises
+    -------
+    ValueError:  If the dimension of a is less than 2.
+
+    Examples
+    --------
+    >>> a = np.arange(4).reshape(2,2)
+    >>> a
+    array([[0, 1],
+        [2, 3]])
+    >>> np.diagonal(a)
+    array([0, 3])
+    >>> np.diagonal(a, 1)
+    array([1])
+
+    >>> a = np.arange(8).reshape(2,2,2)
+    >>>a
+    array([[[0, 1],
+            [2, 3]],
+            [[4, 5],
+            [6, 7]]])
+    >>> np.diagonal(a, 0, 0, 1)
+    array([[0, 6],
+            [1, 7]])
     """
     pass
 

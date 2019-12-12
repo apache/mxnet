@@ -46,13 +46,13 @@ Shared APIs
 
    .. card::
       :title: Symbol API
-      :link: symbol/index.html
+      :link: ../../api/symbol/
 
-      How to use MXNet's Symbol API.
+      MXNet Symbol API has been depricated. API documentation is still available for reference.
 
    .. card::
       :title: Autograd API
-      :link: autograd/autograd.html
+      :link: autograd/index.html
 
       How to use Automatic Differentiation with the Autograd API.
 

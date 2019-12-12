@@ -80,6 +80,39 @@ struct InitOpWithoutDTypeParam : public dmlc::Parameter<InitOpWithoutDTypeParam>
   }
 };
 
+struct FullLikeOpParam : public dmlc::Parameter<FullLikeOpParam> {
+  double fill_value;
+  std::string ctx;
+  dmlc::optional<int> dtype;
+  DMLC_DECLARE_PARAMETER(FullLikeOpParam) {
+    DMLC_DECLARE_FIELD(fill_value)
+    .describe("Value with which to fill newly created tensor");
+    DMLC_DECLARE_FIELD(ctx)
+    .set_default("")
+    .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
+              "Only used for imperative calls.");
+    DMLC_DECLARE_FIELD(dtype).set_default(dmlc::optional<int>())
+    MXNET_ADD_ALL_TYPES
+    .describe("Target data type.");
+  }
+};
+
+/*! \brief Infer type of FullLikeOpCompute*/
+template<typename ParamType>
+inline bool FullLikeOpType(const nnvm::NodeAttrs& attrs,
+                           std::vector<int> *in_attrs,
+                           std::vector<int> *out_attrs) {
+  const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  if (param.dtype.has_value()) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype.value());
+  } else {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+  }
+  return out_attrs->at(0) != -1;;
+}
+
 struct EyeParam : public dmlc::Parameter<EyeParam> {
   nnvm::dim_t N;
   nnvm::dim_t M;
@@ -400,6 +433,19 @@ void FillCompute(const nnvm::NodeAttrs& attrs,
                  const std::vector<OpReqType>& req,
                  const std::vector<TBlob>& outputs) {
   Fill<true>(ctx.get_stream<xpu>(), outputs[0], req[0], value);
+}
+
+/*! \brief Fill output with a scalar integer value */
+template<typename xpu>
+void FullLikeOpCompute(const nnvm::NodeAttrs& attrs,
+                       const OpContext& ctx,
+                       const std::vector<TBlob>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  const auto& param = nnvm::get<FullLikeOpParam>(attrs.parsed);
+  Fill<false>(ctx.get_stream<xpu>(), outputs[0], req[0], param.fill_value);
 }
 
 /*! \brief Fill output with an arbitrary value */
