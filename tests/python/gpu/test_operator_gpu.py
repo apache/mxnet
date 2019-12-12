@@ -47,7 +47,7 @@ from test_subgraph_op import *
 from test_gluon_gpu import _test_bulking
 from test_contrib_operator import test_multibox_target_op
 from test_tvm_op import *
-from test_library_loading import *
+from test_extensions import *
 from test_contrib_optimizer import test_adamw
 
 set_default_context(mx.gpu(0))
@@ -421,6 +421,7 @@ def test_preloaded_multi_sgd():
                 nparam = np.random.randint(min_nparam + 1, max_nparam + 1)
                 shapes = [np.random.randint(1, maxdim + 1, size=maxndim) for i in range(nparam)]
                 check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights)
+
 
 @with_seed()
 def test_batchnorm_with_type():

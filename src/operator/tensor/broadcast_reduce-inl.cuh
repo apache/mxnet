@@ -368,9 +368,10 @@ static inline uint64_t calc_num_load(const int X, const int Y, const int* stride
 }
 
 template<int ndim, typename DType>
-ReduceImplConfig<ndim> ConfigureReduceImpl(const mxnet::TShape& small, const mxnet::TShape& big, const mxnet::TShape* lhs,
-  const mxnet::TShape* rhs) {
-
+ReduceImplConfig<ndim> ConfigureReduceImpl(const mxnet::TShape& small,
+                                           const mxnet::TShape& big,
+                                           const mxnet::TShape* lhs,
+                                           const mxnet::TShape* rhs) {
   ReduceImplConfig<ndim> config;
 
   diff(small.get<ndim>(), big.get<ndim>(), &config.rshape, &config.rstride);

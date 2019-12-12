@@ -18,6 +18,8 @@
 # pylint: skip-file
 from __future__ import absolute_import
 from __future__ import division
+from distutils.version import StrictVersion
+import platform
 import itertools
 import numpy as _np
 from mxnet import np
@@ -93,6 +95,23 @@ def _add_workload_diag():
     OpArgMngr.add_workload('diag', vals_f, k=0)
     OpArgMngr.add_workload('diag', vals_f, k=2)
     OpArgMngr.add_workload('diag', vals_f, k=-2)
+
+
+def _add_workload_diagonal():
+    A = np.arange(12).reshape((3, 4))
+    B = np.arange(8).reshape((2,2,2))
+
+    OpArgMngr.add_workload('diagonal', A)
+    OpArgMngr.add_workload('diagonal', A, offset=0)
+    OpArgMngr.add_workload('diagonal', A, offset=-1)
+    OpArgMngr.add_workload('diagonal', A, offset=1)
+    OpArgMngr.add_workload('diagonal', B, offset=0)
+    OpArgMngr.add_workload('diagonal', B, offset=1)
+    OpArgMngr.add_workload('diagonal', B, offset=-1)
+    OpArgMngr.add_workload('diagonal', B, 0, 1, 2)
+    OpArgMngr.add_workload('diagonal', B, 0, 0, 1)
+    OpArgMngr.add_workload('diagonal', B, offset=1, axis1=0, axis2=2)
+    OpArgMngr.add_workload('diagonal', B, 0, 2, 1)
 
 
 def _add_workload_concatenate(array_pool):
@@ -317,6 +336,27 @@ def _add_workload_linalg_inv():
     OpArgMngr.add_workload('linalg.inv', np.array(_np.ones((0, 1, 1)), dtype=np.float64))
 
 
+def _add_workload_linalg_solve():
+    shapes = [(0,0), (1,1), (5,5), (6,6), (3,5,5), (3,0,0), (2,5,5), (0,5,5), (2,3,4,4)]
+    nrhs = (0, 1, 2, 3)
+    dtypes = (np.float32, np.float64)
+    for dtype, shape in itertools.product(dtypes, shapes):
+        a = _np.random.rand(*shape)
+        shape_b = list(shape)
+        shape_b[-1] = 1
+        x = _np.random.rand(*shape_b)
+        b = _np.matmul(a, x)
+        shape_b.pop()
+        b = b.reshape(shape_b)
+        OpArgMngr.add_workload('linalg.solve', np.array(a, dtype=dtype), np.array(b, dtype=dtype))
+        for nrh in nrhs:
+            shape_b = list(shape)
+            shape_b[-1] = nrh
+            x = _np.random.rand(*shape_b)
+            b = _np.matmul(a, x)
+            OpArgMngr.add_workload('linalg.solve', np.array(a, dtype=dtype), np.array(b, dtype=dtype))
+
+
 def _add_workload_linalg_det():
     OpArgMngr.add_workload('linalg.det', np.array(_np.ones((2, 2)), dtype=np.float32))
     OpArgMngr.add_workload('linalg.det', np.array(_np.ones((0, 1, 1)), dtype=np.float64))
@@ -498,6 +538,17 @@ def _add_workload_argmin():
 
 def _add_workload_around():
     OpArgMngr.add_workload('around', np.array([1.56, 72.54, 6.35, 3.25]), decimals=1)
+
+
+def _add_workload_argsort():
+    for dtype in [np.int32, np.float32]:
+        a = np.arange(101, dtype=dtype)
+        OpArgMngr.add_workload('argsort', a)
+    OpArgMngr.add_workload('argsort', np.array([[3, 2], [1, 0]]), 1)
+    OpArgMngr.add_workload('argsort', np.array([[3, 2], [1, 0]]), 0)
+    a = np.ones((3, 2, 1, 0))
+    for axis in range(-a.ndim, a.ndim):
+        OpArgMngr.add_workload('argsort', a, axis)
 
 
 def _add_workload_broadcast_arrays(array_pool):
@@ -765,9 +816,17 @@ def _add_workload_var(array_pool):
 
 def _add_workload_zeros_like(array_pool):
     OpArgMngr.add_workload('zeros_like', array_pool['4x1'])
-    OpArgMngr.add_workload('zeros_like', np.random.uniform(size=(3, 3)).astype(np.float64))
-    OpArgMngr.add_workload('zeros_like', np.random.uniform(size=(3, 3)).astype(np.float32))
-    OpArgMngr.add_workload('zeros_like', np.random.randint(2, size = (3, 3)))
+    OpArgMngr.add_workload('zeros_like', np.random.uniform(size=(3, 3)).astype(np.float64), np.int64)
+    OpArgMngr.add_workload('zeros_like', np.random.uniform(size=(3, 3)).astype(np.float32), np.float64)
+    OpArgMngr.add_workload('zeros_like', np.random.randint(2, size = (3, 3)), int)
+
+
+def _add_workload_full_like(array_pool):
+    OpArgMngr.add_workload('full_like', array_pool['4x1'], 1)
+    OpArgMngr.add_workload('full_like', np.random.uniform(low=0, high=100, size=(1,3,4), dtype='float64'), 1)
+    OpArgMngr.add_workload('full_like', np.random.uniform(low=0, high=100, size=(9,3,1)), 2, np.int64)
+    OpArgMngr.add_workload('full_like', np.random.uniform(low=0, high=100, size=(9,3)), np.nan)
+    OpArgMngr.add_workload('full_like', np.random.uniform(low=0, high=100, size=(2,0)), 0, np.float32)
 
 
 def _add_workload_outer():
@@ -1311,6 +1370,7 @@ def _prepare_workloads():
     _add_workload_argmin()
     _add_workload_argmax()
     _add_workload_around()
+    _add_workload_argsort()
     _add_workload_append()
     _add_workload_broadcast_arrays(array_pool)
     _add_workload_broadcast_to()
@@ -1321,6 +1381,7 @@ def _prepare_workloads():
     _add_workload_ravel()
     _add_workload_unravel_index()
     _add_workload_diag()
+    _add_workload_diagonal()
     _add_workload_diagflat()
     _add_workload_dot()
     _add_workload_expand_dims()
@@ -1352,6 +1413,7 @@ def _prepare_workloads():
     _add_workload_linalg_norm()
     _add_workload_linalg_cholesky()
     _add_workload_linalg_inv()
+    _add_workload_linalg_solve()
     _add_workload_linalg_det()
     _add_workload_linalg_slogdet()
     _add_workload_trace()
@@ -1420,6 +1482,7 @@ def _prepare_workloads():
     _add_workload_shape()
     _add_workload_diff()
     _add_workload_resize()
+    _add_workload_full_like(array_pool)
 
 
 _prepare_workloads()
@@ -1465,6 +1528,9 @@ def check_interoperability(op_list):
         if name in _TVM_OPS and not is_op_runnable():
             continue
         if name in ['shares_memory', 'may_share_memory']:  # skip list
+            continue
+        if name in ['full_like', 'zeros_like', 'ones_like'] and \
+                StrictVersion(platform.python_version()) < StrictVersion('3.0.0'):
             continue
         print('Dispatch test:', name)
         workloads = OpArgMngr.get_workloads(name)

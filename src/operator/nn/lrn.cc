@@ -110,11 +110,10 @@ void LRNComputeExCPU(const nnvm::NodeAttrs &attrs,
                      const std::vector<NDArray> &inputs,
                      const std::vector<OpReqType> &req,
                      const std::vector<NDArray> &outputs) {
-  const LRNParam &param = nnvm::get<LRNParam>(attrs.parsed);
   if (SupportMKLDNN(inputs[0])) {
     // We only need to test one output array.
     MKLDNN_OPCHECK_INIT(false, 1, inputs, outputs);
-    MKLDNNLRNForward(ctx, param, inputs[0], req[0], outputs[0]);
+    MKLDNNRun(MKLDNNLRNForward, attrs, ctx, inputs[0], req[0], outputs[0]);
     MKLDNN_OPCHECK_RUN(LRNCompute<cpu>, attrs, ctx, inputs, req, outputs);
     // Copy outputs[1] from opcheck reference as backward check needs it.
     MKLDNN_OPCHECK_COPY_RESULT(outputs, std::vector<size_t>{1});
@@ -128,14 +127,9 @@ void LRNGradComputeExCPU(const nnvm::NodeAttrs &attrs,
                          const std::vector<NDArray> &inputs,
                          const std::vector<OpReqType> &req,
                          const std::vector<NDArray> &outputs) {
-  const LRNParam &param = nnvm::get<LRNParam>(attrs.parsed);
-  const NDArray &out_grad = inputs[0];
-  const NDArray &in_data = inputs[1];
-  const NDArray &in_grad = outputs[0];
-
   if (SupportMKLDNN(inputs[0])) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    MKLDNNLRNBackward(ctx, param, out_grad, in_data, req[0], in_grad);
+    MKLDNNRun(MKLDNNLRNBackward, attrs, ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(LRNGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }

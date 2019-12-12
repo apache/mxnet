@@ -69,13 +69,16 @@ The following are the cases for large tensor usage where you must specify `dtype
 
 
 * _randint():_
+
 ```python
 low_large_value = 2*32*
 *high_large_value = 2*34
 # dtype is explicitly specified since default type is int32 for randint
 a = nd.random.randint(low_large_value, high_large_value, dtype=np.int64)
 ```
+
 * _ravel_multi_index()_ and _unravel_index()_:
+
 ```python
 x1, y1 = rand_coord_2d((LARGE_X - 100), LARGE_X, 10, SMALL_Y)
 x2, y2 = rand_coord_2d((LARGE_X - 200), LARGE_X, 9, SMALL_Y)
@@ -87,9 +90,11 @@ idx = mx.nd.ravel_multi_index(mx.nd.array(indices_2d, dtype=np.int64),
 indices_2d = mx.nd.unravel_index(mx.nd.array(idx_numpy, dtype=np.int64),
                                   shape=(LARGE_X, SMALL_Y))
 ```
+
 * _argsort()_ and _topk()_
 
 They both return indices which are specified by `dtype=np.int64`.
+
 ```python
 b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
 # argsort
@@ -97,9 +102,11 @@ s = nd.argsort(b, axis=0, is_ascend=False, dtype=np.int64)
 # topk
 k = nd.topk(b, k=10, axis=0, dtype=np.int64)
 ```
+
 * _index_copy()_
 
 Again whenever we are passing indices as arguments and using large tensor, the `dtype` of indices must be `int64`.
+
 ```python
 x = mx.nd.zeros((LARGE_X, SMALL_Y))
 t = mx.nd.arange(1, SMALL_Y + 1).reshape((1, SMALL_Y))
@@ -107,9 +114,11 @@ t = mx.nd.arange(1, SMALL_Y + 1).reshape((1, SMALL_Y))
 index = mx.nd.array([LARGE_X - 1], dtype="int64")
 x = mx.nd.contrib.index_copy(x, index, t)
 ```
+
 * _one_hot()_
 
 Here again array is used as indices that act as location of bits inside the large vector that need to be activated.
+
 ```python
 # a is the index array here whose dtype should be int64.
 a = nd.array([1, (VLARGE_X - 1)], dtype=np.int64)
@@ -142,6 +151,7 @@ Not supported:
 Randint operator is flaky: https://github.com/apache/incubator-mxnet/issues/16172
 dgemm operations using BLAS libraries currently don’t support int64.
 linspace() is not supported.
+
 ```python
 a = mx.sym.Variable('a')
 b = mx.sym.Variable('b')
@@ -156,7 +166,9 @@ Traceback (most recent call last):
     py_array('i', provided_arg_shape_data)),
 OverflowError: signed integer is greater than maximum}
 ```
+
 Symbolic reshape is not supported. Please see the following example.
+
 ```python
 a = mx.sym.Variable('a')
 b = mx.sym.Variable('b')
@@ -174,6 +186,7 @@ OverflowError: signed integer is greater than maximum
 
 ## Working DGL Example(dgl.ai)
 The following is a sample running code for DGL which works with int64 but not with int32.
+
 ```python
 import mxnet as mx
 from mxnet import gluon

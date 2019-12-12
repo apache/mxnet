@@ -446,17 +446,17 @@ class PyLAMB(mx.optimizer.Optimizer):
         return (mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype, stype=stype),
                 mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype, stype=stype))
 
+
     def update(self, index, weight, grad, state):
         self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
         t = self._index_update_count[index]
-
+        mean, var = state
         grad *= self.rescale_grad
         if self.clip_gradient is not None:
             grad = mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient)
 
-        mean, var = state
         mean[:] = self.beta1 * mean + (1. - self.beta1) * grad
         var[:] = self.beta2 * var + (1. - self.beta2) * mx.nd.square(grad)
 
@@ -472,12 +472,14 @@ class PyLAMB(mx.optimizer.Optimizer):
             var_hat = var / (1. - mx.nd.power(self.beta2, t))
 
         g = mean_hat / (mx.nd.sqrt(var_hat) + self.epsilon) + wd * weight
+
         r2 = g.norm()
         # calculate lamb_trust_ratio
         r = 1. if r1 == 0. or r2 == 0. else r1 / r2
         lr *= r
         # update weight
         weight[:] -= lr * g
+
 
 @with_seed()
 def test_lamb():
@@ -492,13 +494,15 @@ def test_lamb():
     ub_options = [{}, {'upper_bound': None}, {'upper_bound': 10}]
     for params in itertools.product(cg_options, rg_options, wd_options, bc_options, lb_options, ub_options):
         kwarg = {k: v for param in params for k, v in param.items()}
+        kwarg['multi_precision'] = False
         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, np.float32)
+        kwarg['multi_precision'] = True
+        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, np.float16, rtol=1e-3, atol=1e-3)
 
 @with_seed()
 def test_multilamb():
     opt1 = PyLAMB
     opt2 = mx.optimizer.LAMB
-    #set_default_context(mx.gpu(0))
 
     # shapes as Bert-large
     dims_x = [1024, 4096, 1024, 1024]
