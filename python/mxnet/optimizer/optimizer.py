@@ -1272,7 +1272,7 @@ class LAMB(Optimizer):
         kwargs = {'beta1': self.beta1, 'beta2': self.beta2, 'epsilon': self.epsilon,
                   'bias_correction': self.bias_correction,
                   'rescale_grad': self.rescale_grad}
-        
+
         if self.aggregate_num <= 1 or not isinstance(index, (tuple, list)):
             assert(isinstance(weight, NDArray))
             assert(isinstance(grad, NDArray))
@@ -1283,12 +1283,12 @@ class LAMB(Optimizer):
             kwargs['t'] = t
             if self.clip_gradient:
                 kwargs['clip_gradient'] = self.clip_gradient
-                
+
             if multi_precision:
                 mean, var = state[1]
                 weight32 = state[0]
                 g = mp_lamb_update_phase1(weight, grad, mean, var, weight32, wd=wd, **kwargs)
-                
+
                 kwargs = {}
                 if self.lower_bound:
                     kwargs['lower_bound'] = self.lower_bound
@@ -1300,7 +1300,7 @@ class LAMB(Optimizer):
             else:
                 mean, var = state
                 g = lamb_update_phase1(weight, grad, mean, var, wd=wd, **kwargs)
-                
+
                 kwargs = {}
                 if self.lower_bound:
                     kwargs['lower_bound'] = self.lower_bound
@@ -1316,11 +1316,11 @@ class LAMB(Optimizer):
                 kwargs['lower_bound'] = self.lower_bound
             if self.upper_bound:
                 kwargs['upper_bound'] = self.upper_bound
-                
+
             step_count = []
-            for i, (w, g) in enumerate(zip(weight, grad)):
-                assert(isinstance(w, NDArray))
-                assert(isinstance(g, NDArray))
+            for i, (we, gr) in enumerate(zip(weight, grad)):
+                assert(isinstance(we, NDArray))
+                assert(isinstance(gr, NDArray))
                 self._update_count(i)
                 step_count.append(self._index_update_count[i])
             lr = self._get_lr(index[0])
