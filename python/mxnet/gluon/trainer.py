@@ -71,8 +71,11 @@ class Trainer(object):
     """
     def __init__(self, params, optimizer, optimizer_params=None, kvstore='device',
                  compression_params=None, update_on_kvstore=None):
-        if isinstance(params, (dict, ParameterDict)):
-            params = list(params.values())
+        param_list = []
+        if isinstance(params, mx.gluon.ParameterDict):
+            for key in sorted(list(params.keys())):
+                param_list.append(params[key])
+        params = param_list
         if not isinstance(params, (list, tuple)):
             raise ValueError(
                 "First argument must be a list or dict of Parameters, " \
