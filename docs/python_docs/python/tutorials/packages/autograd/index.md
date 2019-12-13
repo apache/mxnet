@@ -217,7 +217,7 @@ def f(x):
 
 We can plot the resultant function for $x$ between 0 and 1, and we should recognise certain functions in segments of $x$. Starting with a quadratic curve from 0 to 1/2, we have a cubic curve from 1/2 to 2/3, a quartic from 2/3 to 3/4 and finally a flatline.
 
-![control-flow](//_static/autogluon_images/autograd_control_flow.png)
+![control-flow](//_static/autograd_images/autograd_control_flow.png)
 
 Using `autograd`, let's now find the gradient of this arbritrary function. We don't have a vectorized function in this case, because of the control flow, so let's also create a function to calculate the gradient using `autograd`.
 
