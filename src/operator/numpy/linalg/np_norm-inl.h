@@ -400,15 +400,34 @@ void NumpyMatrixNormCompute(const nnvm::NodeAttrs& attrs,
   }
 
   if (param.flag == 1) { // Frobenius norm
-    ReduceAxesComputeImpl<xpu, mshadow_op::nrm2, false, false, mshadow_op::identity>(
+    return ReduceAxesComputeImpl<xpu, mshadow_op::nrm2, false, false, mshadow_op::identity>(
       ctx, inputs, req, outputs, reduced_shape);
-    return;
+  }
+
+  TShape mat_axis = param.axis.value();
+
+  if (param.ord == 1 || param.ord == -1) {  // column norms
+    TShape sum_shape = inputs[0].shape_;
+    sum_shape[mat_axis[1]] = 1;
+    MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      TBlob temp = TBlob(ctx.requested[0].get_space_typed<xpu, 1, DType>(
+                    Shape1(sum_shape.Size()), s));
+      std::vector<TBlob> sum_output({ temp.reshape(sum_shape) });
+      ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, false, mshadow_op::abs>(
+        ctx, inputs, req, sum_output, sum_shape);
+      if (param.ord == 1) {
+        return ReduceAxesComputeImpl<xpu, mshadow::red::maximum, false, false, mshadow_op::identity>(
+          ctx, sum_output, req, outputs, reduced_shape);
+      } else {
+        return ReduceAxesComputeImpl<xpu, mshadow::red::minimum, false, false, mshadow_op::identity>(
+          ctx, sum_output, req, outputs, reduced_shape);
+      }
+    });
   }
 
   // spectral norms
   TShape old_shape = inputs[0].shape_;
   TShape svd_in_shape = inputs[0].shape_;
-  TShape mat_axis = param.axis.value();
   TShape axes(old_shape.ndim(), 1);
   for (int i = 0; i < old_shape.ndim(); ++i) {
     axes[i] = i;

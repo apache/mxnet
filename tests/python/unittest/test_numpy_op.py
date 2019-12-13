@@ -3325,7 +3325,9 @@ def test_np_linalg_norm():
         ((2, 3, 4), 'inf', 1),
         ((2, 3, 4), '-inf', (1, 0)),
         ((2, 3), None, (0, 1)),
+        ((2, 3), 1, None),
         ((3, 2, 3), None, (1, 2)),
+        ((3, 2, 3), 2, (1, 2)),
         ((2, 3), None, None),
         ((2, 3, 4), 'fro', (0, 2)),
         ((2, 0, 4), 'fro', (0, 2)),
@@ -3341,8 +3343,8 @@ def test_np_linalg_norm():
 
     def spectral_norm_grad(data):
         with mx.autograd.record():
-            UT, S, V = np.linalg.svdt(data)
-            norm = np.max(np.abs(S), axis=2)
+            UT, S, V = np.linalg.svd(data)
+            norm = np.max(np.abs(S), axis=-1)
         norm.backward()
         return data.grad.asnumpy()
 
@@ -3377,7 +3379,7 @@ def test_np_linalg_norm():
                     if axis is None and len(shape) >= 2:
                         grad_axis = (len(shape) - 2, len(shape) - 1)
                     elif axis is None:
-                        grad_axis = shape[-1]
+                        grad_axis = len(shape) - 1
 
                     if not keepdims and isinstance(grad_axis, tuple):
                         for i in range(len(grad_axis)): 
@@ -3392,8 +3394,7 @@ def test_np_linalg_norm():
                     if ord == 2 and not isinstance(grad_axis, tuple):
                         backward_expected = _np.divide(a.asnumpy(), np_ret)
                         assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
-
-                    elif ord == 2 and isinstance(grad_axis, tuple) and list(grad_axis) == shape[-2:]:
+                    elif ord == 2 and isinstance(grad_axis, tuple):
                         backward_expected = spectral_norm_grad(a)
                         assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
 

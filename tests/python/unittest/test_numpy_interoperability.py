@@ -301,11 +301,11 @@ def _add_workload_linalg_norm():
         OpArgMngr.add_workload('linalg.norm', A, 2)
         OpArgMngr.add_workload('linalg.norm', A, -2)
         OpArgMngr.add_workload('linalg.norm', A, 'nuc')
-        # OpArgMngr.add_workload('linalg.norm', A, 1)
-        # OpArgMngr.add_workload('linalg.norm', A, -1)
         A = (1 / 10) * np.array([[1, 2, 3], [6, 0, 5], [3, 2, 1]], dtype=dt)
         OpArgMngr.add_workload('linalg.norm', A)
         OpArgMngr.add_workload('linalg.norm', A, 'fro')
+        # OpArgMngr.add_workload('linalg.norm', A, 1)
+        # OpArgMngr.add_workload('linalg.norm', A, -1)
     for dt in [np.float32, np.float64]:
         OpArgMngr.add_workload('linalg.norm', np.array([[1, 0, 1], [0, 1, 1]], dtype=dt))
         OpArgMngr.add_workload('linalg.norm', np.array([[1, 0, 1], [0, 1, 1]], dtype=dt), 'fro')
