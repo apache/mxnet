@@ -208,6 +208,19 @@ The following modified ReLU Activation functions are supported:
 NNVM_REGISTER_OP(_backward_LeakyReLU)
 .set_num_outputs([](const NodeAttrs& attrs) {
   const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(attrs.parsed);
+  if (param.act_type == leakyrelu::kPReLU) {
+    // forward has 2 inputs and 1 output
+    return 2 + 2 * 1;
+  } else if (param.act_type == leakyrelu::kRReLU) {
+    // forward has 1 input and 2 outputs
+    return 1 + 2 * 2;
+  } else {
+    // forward has 1 input and 1 output
+    return 1 + 2 * 1;
+  }
+})
+.set_num_outputs([](const NodeAttrs& attrs) {
+  const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(attrs.parsed);
   return param.act_type == leakyrelu::kPReLU ? 2 : 1;
 })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
