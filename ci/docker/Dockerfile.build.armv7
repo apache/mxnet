@@ -18,7 +18,10 @@
 #
 # Dockerfile to build MXNet for Android ARMv7
 
-FROM mxnetcipinned/dockcross-linux-armv7:11262018
+# The container is pinned for preventing CI failures on updates, swap below to use 
+# the upstream container
+#FROM dockcross/linux-armv7
+FROM mxnetci/dockcross-linux-armv7-pinned
 
 ENV ARCH armv7l
 ENV HOSTCC gcc
