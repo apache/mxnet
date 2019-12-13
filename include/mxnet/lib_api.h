@@ -745,6 +745,10 @@ typedef int (*partRegSize_t)(void);
 #define MXLIB_PARTREGGET_STR "_partRegGet"
 typedef int (*partRegGet_t)(int, const char**, supportedOps_t*, const char**);
 
+#define MXLIB_PARTCALLSUPPORTEDOPS_STR "_partCallSupportedOps"
+typedef int (*partCallSupportedOps_t)(supportedOps_t, const char*, const char*[],
+                                      const MXTensor*, const int, int *);
+
 #define MXLIB_INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int);
 
@@ -1064,6 +1068,20 @@ extern "C" {
     *name = part.name;
     *fn = part.supportedOps;
     *op_name = part.op_name;
+  }
+
+  /*! \brief returns status of calling parse attributes function for operator from library */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) int __cdecl
+#else
+  int
+#endif
+  _partCallSupportedOps(supportedOps_t supportedOps, const char *json,
+                      const char *data_names[],
+                      const MXTensor *data,
+                      const int num_data,
+                      int *ids) {
+    return supportedOps(json, data_names, data, num_data, ids);
   }
 
   /*!

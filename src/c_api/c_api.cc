@@ -143,6 +143,9 @@ int MXLoadLib(const char *path) {
   opCallFStatefulComp_t callFStatefulComp =
     get_func<opCallFStatefulComp_t>(lib, const_cast<char*>(MXLIB_OPCALLFSTATEFULCOMP_STR));
 
+  partCallSupportedOps_t callSupportedOps =
+    get_func<partCallSupportedOps_t>(lib, const_cast<char*>(MXLIB_PARTCALLSUPPORTEDOPS_STR));
+
   // get number of operators registered in the library
   opRegSize_t opRegSize = get_func<opRegSize_t>(lib, const_cast<char*>(MXLIB_OPREGSIZE_STR));
   int numOps = opRegSize();
@@ -715,14 +718,12 @@ int MXLoadLib(const char *path) {
     LOG(INFO) << "\tPartitioner[" << i << "] " << name << " subgraphOp: '" << op_name << "'";
     std::string name_str(name);
 
-    auto createProp = [=]() {
-      return static_cast<std::shared_ptr<mxnet::op::SubgraphProperty> >(std::make_shared<mxnet::op::CustomSubgraphProperty>());
-    };
-
-    //MXNET_REGISTER_SUBGRAPH_BACKEND(customBackend);
+    // MXNET_REGISTER_SUBGRAPH_BACKEND(customBackend);
     mxnet::op::SubgraphBackendRegistry::Get()->__REGISTER_BACKEND__(name);
-    //MXNET_REGISTER_SUBGRAPH_PROPERTY(customBackend, CustomSubgraphProperty);
-    mxnet::op::SubgraphBackendRegistry::Get()->__REGISTER_PROPERTY__(name, createProp);
+    // MXNET_REGISTER_SUBGRAPH_PROPERTY(customBackend, CustomSubgraphProperty);
+    mxnet::op::SubgraphBackendRegistry::Get()->__REGISTER_CUSTOM_PROPERTY__(name,
+                            std::make_shared<mxnet::op::CustomSubgraphProperty>(
+                                              callSupportedOps, supportedOps_fp));
   }
   API_END();
 }

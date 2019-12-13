@@ -23,6 +23,7 @@
 #include <string>
 #include "../common.h"
 #include "../subgraph_property.h"
+#include "../../include/mxnet/lib_api.h"
 
 namespace mxnet {
 namespace op {
@@ -49,9 +50,30 @@ class CustomContainOpSelector: public SubgraphSelector {
  */
 class  CustomSubgraphProperty: public SubgraphProperty {
  public:
+  CustomSubgraphProperty() {
+    supportedOps_ = nullptr;
+  }
+  CustomSubgraphProperty(partCallSupportedOps_t callSupportedOps, supportedOps_t supportedOps) {
+    callSupportedOps_ = callSupportedOps;
+    supportedOps_ = supportedOps;
+  }
   // create custom subgraph property
   static SubgraphPropertyPtr Create() {
     return std::make_shared<CustomSubgraphProperty>();
+  }
+  void PrePartition(const nnvm::Graph& g,
+    const std::vector<std::pair<std::string, std::string>>& options_map) {
+    std::cout << "PrePartition" << std::endl;
+    if (supportedOps_ == nullptr)
+      std::cout << "supportedOps_ is null" << std::endl;
+    else {
+      char* json = "test";
+      const char **data_names;
+      MXTensor *data;
+      int num_data;
+      int *ids;
+      int retval = callSupportedOps_(supportedOps_, json, data_names, data, num_data, ids);
+    }
   }
   // override CreateSubgraphNode
   virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
@@ -66,6 +88,9 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   virtual SubgraphSelectorPtr CreateSubgraphSelector() const {
     return std::make_shared<CustomContainOpSelector>();
   }
+
+  partCallSupportedOps_t callSupportedOps_;
+  supportedOps_t supportedOps_;
 };
 }  // namespace op
 }  // namespace mxnet

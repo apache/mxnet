@@ -107,6 +107,7 @@ MXReturnValue mySupportedOps(const char *json,
 			     const MXTensor *data,
 			     const int num_data,
 			     int *ids) {
+  std::cout << "in mySupportedOps" << std::endl;
   return MX_SUCCESS;
 }
 

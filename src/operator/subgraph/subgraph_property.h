@@ -520,6 +520,15 @@ class SubgraphBackendRegistry {
     return SubgraphPropertyEntry(prop);
   }
 
+  SubgraphPropertyEntry __REGISTER_CUSTOM_PROPERTY__(const std::string& name,
+                                                     SubgraphPropertyPtr cprop) {
+    auto it = backend_map_.find(name);
+    CHECK(it != backend_map_.end())
+        << "Subgraph backend " << name << " is not found in SubgraphBackendRegistry";
+    auto prop = it->second->RegisterSubgraphProperty(cprop);
+    return SubgraphPropertyEntry(prop);
+  }
+
   SubgraphBackendRegistry() = default;
   SubgraphBackendRegistry(const SubgraphBackendRegistry&) = delete;
   SubgraphBackendRegistry(SubgraphBackendRegistry&&) = delete;
