@@ -223,6 +223,12 @@ The following environments can be used to profile the application without changi
 If cython modules are used, `mx.nd._internal.NDArrayBase` must be `mxnet._cy3.ndarray.NDArrayBase` for python 3 or `mxnet._cy2.ndarray.NDArrayBase` for python 2.
 If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
 
+## Logging
+
+* DMLC_LOG_STACK_TRACE_DEPTH
+  - Values: Int ```(default=0)```
+  - The depth of stack trace information to log when exception happens.
+
 ## Other Environment Variables
 
 * MXNET_GPU_WORKER_NSTREAMS
