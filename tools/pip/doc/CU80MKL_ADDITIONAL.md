@@ -15,9 +15,13 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
+**CUDA 8.0 package for MXNet is no longer maintained for new releases.**
+
 Prerequisites
 -------------
 This package supports Linux and Windows platforms. You may also want to check:
+- [mxnet-cu102](https://pypi.python.org/pypi/mxnet-cu102/) with CUDA-10.2 support.
+- [mxnet-cu102mkl](https://pypi.python.org/pypi/mxnet-cu102mkl/) with CUDA-10.2 support and MKLDNN support.
 - [mxnet-cu101](https://pypi.python.org/pypi/mxnet-cu101mkl/) with CUDA-10.1 support.
 - [mxnet-cu101mkl](https://pypi.python.org/pypi/mxnet-cu101mkl/) with CUDA-10.1 support and MKLDNN support.
 - [mxnet-cu100](https://pypi.python.org/pypi/mxnet-cu100mkl/) with CUDA-10.0 support.

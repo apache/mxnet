@@ -18,7 +18,9 @@
 Prerequisites
 -------------
 This package supports Linux and Windows platforms. You may also want to check:
+- [mxnet-cu102](https://pypi.python.org/pypi/mxnet-cu102/) with CUDA-10.2 support.
 - [mxnet-cu101](https://pypi.python.org/pypi/mxnet-cu101/) with CUDA-10.1 support.
+- [mxnet-cu101mkl](https://pypi.python.org/pypi/mxnet-cu101mkl/) with CUDA-10.1 and MKLDNN support.
 - [mxnet-cu100](https://pypi.python.org/pypi/mxnet-cu100/) with CUDA-10.0 support.
 - [mxnet-cu100mkl](https://pypi.python.org/pypi/mxnet-cu100mkl/) with CUDA-10.0 support and MKLDNN support.
 - [mxnet-cu92](https://pypi.python.org/pypi/mxnet-cu92/) with CUDA-9.2 support.
@@ -40,5 +42,5 @@ Installation
 ------------
 To install:
 ```bash
-pip install mxnet-cu101mkl
+pip install mxnet-cu102mkl
 ```
