@@ -75,7 +75,7 @@ def test_push_pull():
 
 def test_broadcast():
     def check_broadcast(kv, cur_keys, cur_shape, device=False):
-        ctx = mx.gpu(my_rank) if device else mx.cpu(my_rank)
+        ctx = mx.gpu(0) if device else mx.cpu(0)
         val = [mx.nd.zeros(cur_shape, ctx) for i in cur_keys]
         for i in range(len(cur_keys)):
             expected = i
