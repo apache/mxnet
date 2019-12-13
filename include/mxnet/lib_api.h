@@ -585,9 +585,7 @@ class CustomOp {
 };
 
 /*! \brief Custom Subgraph Create function template */
-typedef MXReturnValue (*supportedOps_t)(const char*,
-                                        const char*[],
-                                        const MXTensor*,
+typedef MXReturnValue (*supportedOps_t)(std::string,
                                         const int,
                                         int*);
 
@@ -746,8 +744,7 @@ typedef int (*partRegSize_t)(void);
 typedef int (*partRegGet_t)(int, const char**, supportedOps_t*, const char**);
 
 #define MXLIB_PARTCALLSUPPORTEDOPS_STR "_partCallSupportedOps"
-typedef int (*partCallSupportedOps_t)(supportedOps_t, const char*, const char*[],
-                                      const MXTensor*, const int, int *);
+typedef int (*partCallSupportedOps_t)(supportedOps_t, const char*, const int, int *);
 
 #define MXLIB_INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int);
@@ -1077,11 +1074,10 @@ extern "C" {
   int
 #endif
   _partCallSupportedOps(supportedOps_t supportedOps, const char *json,
-                      const char *data_names[],
-                      const MXTensor *data,
-                      const int num_data,
+                      const int num_ids,
                       int *ids) {
-    return supportedOps(json, data_names, data, num_data, ids);
+    std::string subgraph_json(json);
+    return supportedOps(subgraph_json, num_ids, ids);
   }
 
   /*!

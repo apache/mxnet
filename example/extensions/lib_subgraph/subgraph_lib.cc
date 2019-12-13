@@ -102,12 +102,14 @@ REGISTER_OP(_custom_subgraph_op)
 .setInferShape(inferShape)
 .setCreateOpState(createOpState);
 
-MXReturnValue mySupportedOps(const char *json,
-			     const char *data_names[],
-			     const MXTensor *data,
-			     const int num_data,
+MXReturnValue mySupportedOps(std::string json,
+			     const int num_ids,
 			     int *ids) {
   std::cout << "in mySupportedOps" << std::endl;
+  std::cout << "num_ids : " << num_ids << std::endl;
+  std::cout << "json: " << std::endl;
+  std::cout << json << std::endl;
+  
   return MX_SUCCESS;
 }
 

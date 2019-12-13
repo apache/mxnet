@@ -21,10 +21,12 @@
 #define MXNET_OPERATOR_SUBGRAPH_PARTITIONER_CUSTOM_SUBGRAPH_PROPERTY_H_
 
 #include <string>
+#include <utility>
+#include <vector>
 #include "../common.h"
 #include "../subgraph_property.h"
 #include "../../include/mxnet/lib_api.h"
-
+#include <nnvm/pass_functions.h>
 namespace mxnet {
 namespace op {
 
@@ -64,15 +66,20 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   void PrePartition(const nnvm::Graph& g,
     const std::vector<std::pair<std::string, std::string>>& options_map) {
     std::cout << "PrePartition" << std::endl;
-    if (supportedOps_ == nullptr)
+    std::string subgraph_json = nnvm::pass::SaveJSON(g);
+    int num_ids = 0;
+    DFSVisit(g.outputs, [&](const nnvm::NodePtr& nptr) {
+        nnvm::Node *node = nptr.get();
+        // increment count for number of nodes in model
+        num_ids++;
+      });
+    std::vector<int> supportedOps(num_ids,0);
+    if (supportedOps_ == nullptr) {
       std::cout << "supportedOps_ is null" << std::endl;
-    else {
-      char* json = "test";
-      const char **data_names;
-      MXTensor *data;
-      int num_data;
-      int *ids;
-      int retval = callSupportedOps_(supportedOps_, json, data_names, data, num_data, ids);
+    } else {
+      const char* json = subgraph_json.c_str();
+      int *ids = supportedOps.data();
+      int retval = callSupportedOps_(supportedOps_, json, num_ids, ids);
     }
   }
   // override CreateSubgraphNode
