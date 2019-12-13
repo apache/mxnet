@@ -72,7 +72,7 @@ class Trainer(object):
     def __init__(self, params, optimizer, optimizer_params=None, kvstore='device',
                  compression_params=None, update_on_kvstore=None):
         param_list = []
-        if isinstance(params, (dict, mx.gluon.ParameterDict)):
+        if isinstance(params, (dict, ParameterDict)):
             for key in sorted(list(params.keys())):
                 param_list.append(params[key])
         params = param_list
