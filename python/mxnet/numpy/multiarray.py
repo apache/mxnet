@@ -50,9 +50,9 @@ __all__ = ['ndarray', 'empty', 'array', 'shape', 'zeros', 'zeros_like', 'ones', 
            'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power',
            'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10',
            'sqrt', 'cbrt', 'abs', 'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
-           'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative',
+           'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'histogram',
            'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'append', 'argsort',
-           'tensordot', 'histogram', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange',
+           'tensordot', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'array_split',
            'split', 'vsplit', 'concatenate', 'stack', 'vstack', 'column_stack', 'dstack', 'average', 'mean',
            'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign',
            'ravel', 'unravel_index', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'arctan2', 'hypot',
@@ -4839,6 +4839,58 @@ def split(ary, indices_or_sections, axis=0):
     [array([0., 1., 2.]), array([3., 4.]), array([5.]), array([6., 7.]), array([])]
     """
     return _mx_nd_np.split(ary, indices_or_sections, axis=axis)
+
+
+@set_module('mxnet.numpy')
+def array_split(ary, indices_or_sections, axis=0):
+    """Split an array into multiple sub-arrays.
+
+    If `indices_or_sections` is an integer, N, the array will be divided
+    into N equal arrays along `axis`.  If such a split is not possible,
+    an array of length l that should be split into n sections, it returns
+    l % n sub-arrays of size l//n + 1 and the rest of size l//n.
+
+    If `indices_or_sections` is a 1-D array of sorted integers, the entries
+        indicate where along `axis` the array is split.  For example,
+        ``[2, 3]`` would, for ``axis=0``, result in
+          - ary[:2]
+          - ary[2:3]
+          - ary[3:]
+    If an index exceeds the dimension of the array along `axis`,
+    an empty sub-array is returned correspondingly.
+
+    Parameters
+    ----------
+    ary : ndarray
+        Array to be divided into sub-arrays.
+    indices_or_sections : int or 1-D Python tuple, list or set.
+        Param used to determine the number and size of the subarray.
+    axis : int, optional
+        The axis along which to split, default is 0.
+
+    Returns
+    -------
+    sub-arrays : list of ndarrays
+        A list of sub-arrays.
+
+    Examples
+    --------
+    >>> x = np.arange(9.0)
+    >>> np.array_split(x, 3)
+    [array([0., 1., 2.]), array([3., 4., 5.]), array([6., 7., 8.])]
+
+    >>> np.array_split(x, [3, 5, 6, 8])
+    [array([0., 1., 2.]), array([3., 4.]), array([5.]), array([6., 7.]), array([])]
+
+    >>> x = np.arange(8.0)
+    >>> np.array_split(x, 3)
+    [array([0.,  1.,  2.]), array([3.,  4.,  5.]), array([6.,  7.])]
+
+    >>> x = np.arange(7.0)
+    >>> np.array_split(x, 3)
+    [array([0.,  1.,  2.]), array([3.,  4.]), array([5.,  6.])]
+    """
+    return _mx_nd_np.array_split(ary, indices_or_sections, axis=axis)
 
 
 @set_module('mxnet.numpy')
