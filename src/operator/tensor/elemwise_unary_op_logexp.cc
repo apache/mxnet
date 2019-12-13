@@ -209,23 +209,21 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log1p,
     // f(x) = y = log(1+x)
     // f'(x) = 1/(1+x)
     // f''(x) = -1/(1+x)^2
+    auto dldy = n->inputs[0];
+    auto x = n->inputs[1];
     auto dydx_mul_dldy = nnvm::NodeEntry{n};  // f'(x) * head_grads
-    auto dydx = MakeNode("elemwise_div", n->attrs.name + "_backward_dydx",
-                         {dydx_mul_dldy, n->inputs[0]}, nullptr, &n);
+    auto op = mxnet::util::NodeOpGen{n};
 
-    auto d2ydx2_mid = MakeNode("elemwise_mul", n->attrs.name + "_backward_d2ydx2_mid",
-                         {dydx_mul_dldy, dydx_mul_dldy}, nullptr, &n);
-    auto d2ydx2_neg_mid = MakeNode("negative", n->attrs.name + "_backward_d2ydx2_neg_mid",
-                         {nnvm::NodeEntry{d2ydx2_mid}}, nullptr, &n);
-    auto d2ydx2_mul_dldy = MakeNode("elemwise_div", n->attrs.name + "_backward_d2ydx2",
-                         {nnvm::NodeEntry{d2ydx2_neg_mid}, n->inputs[0]}, nullptr, &n);
+    auto dydx = op.div(dydx_mul_dldy, dldy);
+
+    auto d2ydx2_mid = op.mul(dydx_mul_dldy, dydx_mul_dldy);
+    auto d2ydx2_neg_mid = op.negative(d2ydx2_mid);
+    auto d2ydx2 = op.div(d2ydx2_neg_mid, dldy);
 
     std::vector<nnvm::NodeEntry> ret;
 
-    ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
-                             {ograds[0], nnvm::NodeEntry{dydx}}, nullptr, &n));
-    ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_inp",
-                             {ograds[0], nnvm::NodeEntry{d2ydx2_mul_dldy}}, nullptr, &n));
+    ret.emplace_back(op.mul(ograds[0], dydx));
+    ret.emplace_back(op.mul(ograds[0], d2ydx2));
     return ret;
   });
 
@@ -253,22 +251,22 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_expm1, unary_bwd<msh
     // f(x) = y = exp(x) - 1
     // f'(x) = exp(x)
     // f''(x) = exp(x)
+    auto dldy = n->inputs[0];
+    auto x = n->inputs[1];
     auto dydx_mul_dldy = nnvm::NodeEntry{n};  // f'(x) * head_grads
-    auto dydx = MakeNode("elemwise_div", n->attrs.name + "_backward_dydx",
-                         {dydx_mul_dldy, n->inputs[0]}, nullptr, &n);
+    auto op = mxnet::util::NodeOpGen{n};
+
+    auto dydx = op.div(dydx_mul_dldy, dldy);
 
     auto exp_x = MakeNode("exp", n->attrs.name + "_backward_exp_grad",
                          {n->inputs[1]}, nullptr, &n);
-    auto d2ydx2_mul_dldy = MakeNode("elemwise_mul", n->attrs.name + "_backward_d2ydx2",
-                         {nnvm::NodeEntry{exp_x}, n->inputs[0]}, nullptr, &n);
+    auto d2ydx2_mul_dldy = op.mul(nnvm::NodeEntry{exp_x}, dldy);
 
     std::vector<nnvm::NodeEntry> ret;
 
 
-    ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
-                             {ograds[0], nnvm::NodeEntry{dydx}}, nullptr, &n));
-    ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_inp",
-                             {ograds[0], nnvm::NodeEntry{d2ydx2_mul_dldy}}, nullptr, &n));
+    ret.emplace_back(op.mul(ograds[0], dydx));
+    ret.emplace_back(op.mul(ograds[0], d2ydx2_mul_dldy));
     return ret;
   });
 
