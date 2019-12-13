@@ -138,6 +138,8 @@ def norm(x, ord=None, axis=None, keepdims=False):
     >>> np.linalg.norm(m[0, :, :]), np.linalg.norm(m[1, :, :])
     (array(3.7416573), array(11.224973))
     """
+    if axis is None and ord is None:
+        return _npi.norm(x, ord=2, axis=None, keepdims=keepdims, flag=-2)
     if axis is None or isinstance(axis, (int, tuple)):  # pylint: disable=too-many-nested-blocks
         if axis is not None:
             if isinstance(axis, int):

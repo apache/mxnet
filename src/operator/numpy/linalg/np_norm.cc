@@ -104,6 +104,15 @@ bool NumpyNormShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 4U); // reduced, UT, S, V
   const NumpyNormParam& param = nnvm::get<NumpyNormParam>(attrs.parsed);
   if (!param.axis.has_value()) {
+    if (param.flag == -2) {
+      int ndim = param.keepdims ? (*in_attrs)[0].ndim() : 0;
+      int sz = param.keepdims ? 1 : -1;
+      SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(ndim, sz));
+      SHAPE_ASSIGN_CHECK(*out_attrs, 1, TShape({ 0, 0, 0 })); // UT
+      SHAPE_ASSIGN_CHECK(*out_attrs, 2, TShape({ 0, 0 })); // L
+      SHAPE_ASSIGN_CHECK(*out_attrs, 3, TShape({ 0, 0, 0 })); // V
+      return true;
+    }
     if ((*in_attrs)[0].ndim() >= 2) {
       TShape axis(2, 0);
       axis[0] = (*in_attrs)[0].ndim() - 2;

@@ -284,9 +284,9 @@ def _add_workload_linalg_norm():
                         OpArgMngr.add_workload('linalg.norm', np.take(B[:], np.array(k), axis=k_index))
                     else:
                         OpArgMngr.add_workload('linalg.norm', np.take(B[:], np.array(k), axis=k_index).T)
-        # A = np.arange(1, 25, dtype=dt).reshape(2, 3, 4)
-        # OpArgMngr.add_workload('linalg.norm', A, ord=None, axis=None)
-        # OpArgMngr.add_workload('linalg.norm', A, ord=None, axis=None, keepdims=True)
+        A = np.arange(1, 25, dtype=dt).reshape(2, 3, 4)
+        OpArgMngr.add_workload('linalg.norm', A, ord=None, axis=None)
+        OpArgMngr.add_workload('linalg.norm', A, ord=None, axis=None, keepdims=True)
         for k in range(A.ndim):
             OpArgMngr.add_workload('linalg.norm', A, axis=k)
             OpArgMngr.add_workload('linalg.norm', A, axis=k, keepdims=True)
@@ -298,12 +298,11 @@ def _add_workload_linalg_norm():
         OpArgMngr.add_workload('linalg.norm', A)
         OpArgMngr.add_workload('linalg.norm', A, 'fro')
 
-        if dt == "float64":
-            OpArgMngr.add_workload('linalg.norm', A, 2)
-            OpArgMngr.add_workload('linalg.norm', A, -2)
-            OpArgMngr.add_workload('linalg.norm', A, 'nuc')
-            # OpArgMngr.add_workload('linalg.norm', A, 1)
-            # OpArgMngr.add_workload('linalg.norm', A, -1)
+        OpArgMngr.add_workload('linalg.norm', A, 2)
+        OpArgMngr.add_workload('linalg.norm', A, -2)
+        OpArgMngr.add_workload('linalg.norm', A, 'nuc')
+        # OpArgMngr.add_workload('linalg.norm', A, 1)
+        # OpArgMngr.add_workload('linalg.norm', A, -1)
         A = (1 / 10) * np.array([[1, 2, 3], [6, 0, 5], [3, 2, 1]], dtype=dt)
         OpArgMngr.add_workload('linalg.norm', A)
         OpArgMngr.add_workload('linalg.norm', A, 'fro')

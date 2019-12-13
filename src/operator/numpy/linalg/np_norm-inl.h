@@ -434,9 +434,11 @@ void NumpyMatrixNormCompute(const nnvm::NodeAttrs& attrs,
   }
 
   MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    TBlob workspace = TBlob(ctx.requested[0].get_space_typed<xpu, 1, DType>(
-                        Shape1(svd_in_shape.ProdShape(0, svd_in_shape.ndim())), s));
-    workspace = workspace.reshape(svd_in_shape);
+    size_t space = int(double(svd_in_shape.Size()) / 16 + 0.5) * 16;
+    TBlob temp = TBlob(ctx.requested[0].get_space_typed<xpu, 1, DType>(
+                        Shape1(space), s));
+    TBlob workspace(reinterpret_cast<DType*>(temp.dptr_), svd_in_shape,
+                     temp.dev_mask(), temp.dev_id());
     TransposeImpl<xpu>(ctx.run_ctx, inputs[0], workspace, axes);
     Tensor<xpu, 3, DType> svd_input =
       workspace.get_with_shape<xpu, 3, DType>(Shape3(batch_dim, row_dim, col_dim), s);
@@ -447,8 +449,8 @@ void NumpyMatrixNormCompute(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 3, DType> V =
       outputs[3].get_with_shape<xpu, 3, DType>(Shape3(batch_dim, row_dim, col_dim), s);
     gesvd::op(svd_input, UT, L, V, ctx, attrs);
-    TBlob workspace0(reinterpret_cast<DType*>(workspace.dptr_), L_trans,
-                     workspace.dev_mask(), workspace.dev_id());
+    TBlob workspace0(reinterpret_cast<DType*>(temp.dptr_), L_trans,
+                     temp.dev_mask(), temp.dev_id());
     TransposeImpl<xpu>(ctx.run_ctx, TBlob(L).reshape(L_shape), workspace0, reduce_axes);
     std::vector<TBlob> eigen({ workspace0 });
     if (param.flag == 2) { // nuclear norm
@@ -637,6 +639,45 @@ void NumpyNormCompute(const nnvm::NodeAttrs& attrs,
     return;
   }
   const NumpyNormParam& param = nnvm::get<NumpyNormParam>(attrs.parsed);
+
+  if (param.flag == -2) {  // flattened L2 norm
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    if (grad) {
+      std::vector<TBlob> flat_inputs({
+        inputs[0].reshape(TShape(1, 1)),
+        inputs[4].reshape(TShape(1, outputs[0].shape_.Size())),
+        inputs[5].reshape(TShape(1, 1))
+      });
+      MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      if (req[0] == kAddTo) {
+        TBlob workspace = TBlob(ctx.requested[0].get_space_typed<xpu, 1, DType>(
+                            Shape1(outputs[0].shape_.Size()), s));
+        std::vector<TBlob> temp({ workspace });
+        ReduceAxesBackwardUseInOutImpl<xpu, mshadow_op::div, false>(
+          ctx, TShape(1, 1), flat_inputs, req, temp);
+        Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
+        out += workspace.FlatTo1D<xpu, DType>(s);
+      } else {
+        std::vector<TBlob> flat_outputs({
+          outputs[0].reshape(TShape(1, outputs[0].shape_.Size()))
+        });
+        ReduceAxesBackwardUseInOutImpl<xpu, mshadow_op::div, false>(
+          ctx, TShape(1, 1), flat_inputs, req, flat_outputs);
+      }
+    });
+    } else {
+      std::vector<TBlob> flat_inputs({
+        inputs[0].reshape(TShape(1, inputs[0].shape_.Size()))
+      });
+      std::vector<TBlob> flat_outputs({
+        outputs[0].reshape(TShape(1, 1))
+      });
+      ReduceAxesComputeImpl<xpu, mshadow_op::nrm2, false, false, mshadow_op::identity>(
+        ctx, flat_inputs, req, flat_outputs, TShape(1, 1));
+    }
+    return;
+  }
+
   if (grad) { // need to infer shape again in backward
     std::vector<TShape> in_attrs({
       inputs.size() == 9 ? inputs[4].shape_ : inputs[1].shape_

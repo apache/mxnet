@@ -3312,6 +3312,8 @@ def test_np_linalg_norm():
             return F.np.linalg.norm(x, ord=self._ord, axis=self._axis, keepdims=self._keepdims)
 
     configs = [
+        ((2, 3, 4, 5), 2, (2, 3)),
+        ((2, 3, 4), None, None),
         ((3,), None, None),
         ((2, 3), 2, 1),
         ((2, 3, 4), 1, 1),
@@ -3332,7 +3334,6 @@ def test_np_linalg_norm():
         ((2, 3, 4), -1, (0, 1)),
         ((2, 3, 4), 'inf', (0, 2)),
         ((2, 3, 4), '-inf', (0, 2)),
-        ((2, 3, 4, 5), 2, (2, 3)),
         ((4, 4, 4, 4), -2, (0, 2)),
         ((2, 3, 4), 'nuc', (0, 2)),
         ((2, 2), 'nuc', None),
@@ -3340,7 +3341,7 @@ def test_np_linalg_norm():
 
     def spectral_norm_grad(data):
         with mx.autograd.record():
-            UT, S, V = np.linalg.svd(data)
+            UT, S, V = np.linalg.svdt(data)
             norm = np.max(np.abs(S), axis=2)
         norm.backward()
         return data.grad.asnumpy()
@@ -3350,7 +3351,7 @@ def test_np_linalg_norm():
         for keepdims in [False, True]:
             for hybridize in [False, True]:
                 # numpy is flaky under float16, also gesvd does not support fp16
-                for itype in [ 'float32', 'float64']:
+                for itype in [ 'float64', 'float32' ]:
                     net = TestLinalgNorm(ord, axis, keepdims)
                     rtol = 1e-2
                     atol = 1e-2
@@ -3369,6 +3370,7 @@ def test_np_linalg_norm():
 
                     assert np_ret.shape == mx_ret.shape
                     assert_almost_equal(mx_ret.asnumpy(), np_ret, rtol=rtol, atol=atol)
+                    
                     mx_ret.backward()
 
                     grad_axis = axis
