@@ -694,8 +694,8 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   }
 
   test("maximum") {
-    val data1 = Symbol.Variable("data")
-    val data2 = Symbol.Variable("data")
+    val data1 = Symbol.Variable("data1")
+    val data2 = Symbol.Variable("data2")
     val shape = Shape(3, 4)
     val dataTmp1 = Random.uniform(0, 100, shape)
     val dataTmp2 = Random.uniform(0, 100, shape)
@@ -712,8 +712,8 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   }
 
   test("minimum") {
-    val data1 = Symbol.Variable("data")
-    val data2 = Symbol.Variable("data")
+    val data1 = Symbol.Variable("data1")
+    val data2 = Symbol.Variable("data2")
     val shape = Shape(3, 4)
     val dataTmp1 = Random.uniform(0, 100, shape)
     val dataTmp2 = Random.uniform(0, 100, shape)

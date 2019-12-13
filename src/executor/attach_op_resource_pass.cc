@@ -82,12 +82,12 @@ void AttachOpResources(
             requested.push_back(ResourceManager::Get()->Request(ctx, req));
             break;
           }
-#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
+#if MXNET_USE_CUDNN == 1
           case ResourceRequest::kCuDNNDropoutDesc: {
             requested.push_back(ResourceManager::Get()->Request(ctx, req));
             break;
           }
-#endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
+#endif  // MXNET_USE_CUDNN == 1
           default:
             LOG(FATAL) << "resource type " << req.type << " is not yet supported";
         }

@@ -33,7 +33,10 @@
 #include "../../nn/mkldnn/mkldnn_base-inl.h"
 #include "../../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../../nn/mkldnn/mkldnn_fully_connected-inl.h"
+#include "../../nn/mkldnn/mkldnn_act-inl.h"
+#include "../../tensor/matrix_op-inl.h"
 #include "../../quantization/quantization_utils.h"
+#include "mkldnn_fc-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -63,6 +66,7 @@ class SgMKLDNNFCOp {
   nnvm::Symbol subgraph_sym_;
   MKLDNNFCFullParam full_param_;
   std::shared_ptr<MKLDNNFullyConnectedForward> fwd_;
+  std::shared_ptr<NDArray> cached_weight_;
   NDArray cached_bias_;
   float cached_min_data_;
   float cached_max_data_;
@@ -111,7 +115,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
   CHECK_EQ(out_data.size(), total_num_outputs);
 
   NDArray data = in_data[fullc::kData];
-  NDArray weight = in_data[fullc::kWeight];
+  NDArray weight = cached_weight_ ? *cached_weight_ : in_data[fullc::kWeight];
   NDArray output = out_data[fullc::kOut];
 
   mkldnn::memory::desc out_md = GetMemDesc(output);
@@ -140,24 +144,40 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
 
     if (mkldnn_param.quantized) {
       CHECK(data.dtype() == mshadow::kInt8 || data.dtype() == mshadow::kUint8);
-      auto data_range = (data.dtype() == mshadow::kInt8) ? kInt8Range : kUint8Range;
-      float data_scale  = data_range / MaxAbs(cached_min_data_, cached_max_data_);
-      float weight_scale = kInt8Range / MaxAbs(cached_min_weight_, cached_max_weight_);
-      float quantized_out_range = mkldnn_param.with_relu ? kUint8Range : kInt8Range;
-
+      float data_scale  = GetQuantizeScale(data.dtype(), cached_min_data_, cached_max_data_);
+      float weight_scale = GetQuantizeScale(mshadow::kInt8, cached_min_weight_, cached_max_weight_);
       if (has_bias) {
         NDArray bias = in_data[fullc::kBias];
-        float bias_int32_rescale = data_scale * weight_scale *
-            MaxAbs(cached_min_bias_, cached_max_bias_) / kInt8Range;
-
-        cached_bias_ = NDArray(bias.storage_type(), bias.shape(),
-                               bias.ctx(), true, mshadow::kInt32);
+        float bias_scale = GetQuantizeScale(mshadow::kInt8, cached_min_bias_, cached_max_bias_);
+        float bias_int32_rescale = data_scale * weight_scale / bias_scale;
+        // TODO(zhennan): mkldnn has bug to handle INT_MAX in bias, so set the maximum value of bias
+        // to INT_MAX / 2.
+        float bias_max_rescale =
+            MaxValue<int32_t>() / 2 / MaxAbs(cached_min_bias_, cached_max_bias_) / bias_scale;
+        if (bias_int32_rescale > bias_max_rescale) {
+          // avoid overflow on bias
+          bias_int32_rescale = bias_max_rescale;
+          float weight_rescale = bias_int32_rescale * bias_scale / data_scale / weight_scale;
+          cached_weight_.reset(new NDArray(weight.storage_type(), weight.shape(), weight.ctx(),
+                                           true, mshadow::kInt8));
+          int8_t *weight_ptr = weight.data().dptr<int8_t>();
+          int8_t *quantized_weight_ptr = cached_weight_->data().dptr<int8_t>();
+          size_t weight_size = weight.shape().Size();
+#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+          for (index_t i = 0; i < static_cast<index_t>(weight_size); ++i) {
+            quantized_weight_ptr[i] = std::round(weight_ptr[i] * weight_rescale);
+          }
+          weight_scale *= weight_rescale;
+          weight = *cached_weight_;
+        }
+        cached_bias_ =
+            NDArray(bias.storage_type(), bias.shape(), bias.ctx(), true, mshadow::kInt32);
         int8_t *bias_ptr = bias.data().dptr<int8_t>();
         int32_t *quantized_bias_ptr = cached_bias_.data().dptr<int32_t>();
         size_t bias_size = bias.shape().Size();
         #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
         for (index_t i = 0; i < static_cast<index_t>(bias_size); ++i) {
-          quantized_bias_ptr[i] = bias_ptr[i] * bias_int32_rescale;
+          quantized_bias_ptr[i] = std::round(bias_ptr[i] * bias_int32_rescale);
         }
       }
 
@@ -169,14 +189,21 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
         full_param_.output_scales.resize(0);
         cached_min_output_ = mkldnn_param.min_calib_range.value();
         cached_max_output_ = mkldnn_param.max_calib_range.value();
-
-        full_param_.requantize_scales[0] = quantized_out_range /
-          MaxAbs(cached_min_output_, cached_max_output_) / data_scale / weight_scale;
+        float out_scale =
+            GetQuantizeScale(IsOutputUint8(full_param_) ? mshadow::kUint8 : mshadow::kInt8,
+                             cached_min_output_, cached_max_output_);
+        full_param_.requantize_scales[0] = out_scale / data_scale / weight_scale;
       } else {
         Stream<cpu> *s = ctx.get_stream<cpu>();
-        mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(
-          s, 1, &cached_min_output_, &cached_max_output_,
-          &min_data, &max_data, &min_weight, &max_weight);
+        if (data.dtype() == mshadow::kInt8) {
+          mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(
+              s, 1, &cached_min_output_, &cached_max_output_, &min_data, &max_data, &min_weight,
+              &max_weight);
+        } else {
+          mxnet_op::Kernel<QuantizationRangeForS8U8MultiplicationStruct, cpu>::Launch(
+              s, 1, &cached_min_output_, &cached_max_output_, &min_data, &max_data, &min_weight,
+              &max_weight);
+        }
       }
     }
 
@@ -185,16 +212,13 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
     initialized_ = true;
   }
   std::vector<NDArray> new_inputs;
-  std::vector<OpReqType> new_req;
   if (has_bias) {
     new_inputs = {data, weight, cached_bias_};
-    new_req = {req[fullc::kData], req[fullc::kWeight], req[fullc::kBias]};
   } else {
     new_inputs = {data, weight};
-    new_req = {req[fullc::kData], req[fullc::kWeight]};
   }
 
-  MKLDNNFCForwardFullFeature(full_param_, ctx, fwd_.get(), new_inputs, new_req, out_data);
+  MKLDNNFCForwardFullFeature(full_param_, ctx, fwd_.get(), new_inputs, req, out_data);
 
   if (mkldnn_param.quantized && !mkldnn_param.enable_float_output) {
     float *min_output_ptr = out_data[quantized_fullc::kOutMin].data().dptr<float>();
@@ -205,6 +229,13 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
 }
 
 static void SgMKLDNNFCParamParser(nnvm::NodeAttrs *attrs) {
+  // For backward compatible, with_relu->with_eltwise
+  auto legacy = attrs->dict.find("with_relu");
+  if (legacy != attrs->dict.end()) {
+    attrs->dict["with_eltwise"] = attrs->dict["with_relu"];
+    attrs->dict.erase(legacy);
+  }
+
   MKLDNNFCFullParam full_param;
   try {
     full_param.mkldnn_param.Init(attrs->dict);
@@ -222,10 +253,21 @@ static void SgMKLDNNFCParamParser(nnvm::NodeAttrs *attrs) {
   auto subgraph_sym = attrs->subgraphs[0];
   DFSVisit(subgraph_sym->outputs, [&](const nnvm::NodePtr &node) {
     if (node->is_variable()) return;
-    auto &node_name = node->op()->name;
-    if (node_name == "FullyConnected") {
+    auto &op_name = node->op()->name;
+    if (op_name == "FullyConnected") {
       full_param.default_param =
           nnvm::get<FullyConnectedParam>(node->attrs.parsed);
+    } else if (SupportMKLDNNFCEltwiseFusion(op_name)) {
+      if (op_name == "Activation") {
+        const ActivationParam act_param = nnvm::get<ActivationParam>(node->attrs.parsed);
+        full_param.eltwise_param.alg = GetMKLDNNActAlgo(act_param);
+      } else if (op_name == "clip") {
+        const ClipParam clip_param = nnvm::get<ClipParam>(node->attrs.parsed);
+        full_param.eltwise_param.alg = mkldnn::algorithm::eltwise_bounded_relu;
+        full_param.eltwise_param.alpha = clip_param.a_max;
+      } else {
+        full_param.eltwise_param.alg = GetMKLDNNEltwiseAlgo(op_name);
+      }
     }
   });
   attrs->parsed = std::move(full_param);
@@ -326,7 +368,7 @@ static bool SgMKLDNNFCInferType(const nnvm::NodeAttrs &attrs,
     } else {
       if (full_param.mkldnn_param.min_calib_range.has_value() &&
           full_param.mkldnn_param.max_calib_range.has_value()) {
-        if (full_param.mkldnn_param.with_relu) {
+        if (IsOutputUint8(full_param)) {
           TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kUint8);
         } else {
           TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kInt8);
@@ -439,6 +481,9 @@ NNVM_REGISTER_OP(_sg_mkldnn_fully_connected)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
                                DefaultSubgraphOpMutableInputs)
 .set_attr<std::string>("key_var_num_args", "num_args")
+.set_attr<FQuantizable>("FQuantizable", [](const NodeAttrs& attrs) {
+    return QuantizeType::kMust;
+})
 .set_attr<FQuantizedOp>("FQuantizedOp", SgMKLDNNFCQuantizedOp)
 .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; });
 

@@ -94,39 +94,8 @@ void ConvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
   int dtype = inputs[conv::kData].type_flag_;
 
-#if CUDNN_MAJOR < 5
-  if (param.layout.value() != kNCW &&
-      param.layout.value() != kNCHW &&
-      param.layout.value() != kNCDHW) {
-    // Need CuDNN > 5.0 for layout support. use MXNet implementation
-    MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-      ConvolutionOp<gpu, DType> op;
-      op.Init(param);
-      op.Forward(ctx, inputs, req, outputs);
-    })
-    return;
-  }
-#endif
-
-#if MXNET_USE_CUDNN == 0 || CUDNN_MAJOR < 7
-  if (param.num_filter == param.num_group &&
-      param.layout.value() == mshadow::kNCHW &&
-      param.num_filter == inputs[conv::kData].shape_[1] &&
-      param.kernel.ndim() == 2 &&
-      param.dilate == mshadow::Shape2(1, 1) &&
-      dtype == mshadow::kFloat32) {
-    mxnet::ShapeVector in_shape(inputs.size());
-    mxnet::ShapeVector out_shape(1, outputs[0].shape_);
-    for (size_t i = 0; i < in_shape.size(); i++)
-      in_shape[i] = inputs[i].shape_;
-    DepthwiseConvolutionOp<float> op;
-    op.Init(param, in_shape, out_shape);
-    op.Forward(ctx, inputs, req, outputs);
-    return;
-  }
-#endif
-
 #if MXNET_USE_CUDNN == 1
+  STATIC_ASSERT_CUDNN_VERSION_GE(7000);
   // On fp16-I/O instances, use fp32 compute (i.e. pseudo-fp16).
   int compute_type = (dtype == mshadow::kFloat16) ? mshadow::kFloat32 : dtype;
 
@@ -154,6 +123,22 @@ void ConvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
     }
   })
 #else
+  if (param.num_filter == param.num_group &&
+      param.layout.value() == mshadow::kNCHW &&
+      param.num_filter == inputs[conv::kData].shape_[1] &&
+      param.kernel.ndim() == 2 &&
+      param.dilate == mshadow::Shape2(1, 1) &&
+      dtype == mshadow::kFloat32) {
+    mxnet::ShapeVector in_shape(inputs.size());
+    mxnet::ShapeVector out_shape(1, outputs[0].shape_);
+    for (size_t i = 0; i < in_shape.size(); i++)
+      in_shape[i] = inputs[i].shape_;
+    DepthwiseConvolutionOp<float> op;
+    op.Init(param, in_shape, out_shape);
+    op.Forward(ctx, inputs, req, outputs);
+    return;
+  }
+
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     ConvolutionOp<gpu, DType> op;
     op.Init(param);
@@ -174,39 +159,8 @@ void ConvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
   const std::vector<TBlob> &in_grad = outputs;
   int dtype = out_grad.type_flag_;
 
-#if CUDNN_MAJOR < 5
-  if (param.layout.value() != kNCW &&
-      param.layout.value() != kNCHW &&
-      param.layout.value() != kNCDHW) {
-    // Need CuDNN > 5.0 for layout support. use MXNet implementation
-    MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-      ConvolutionOp<gpu, DType> op;
-      op.Init(param);
-      op.Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
-    })
-    return;
-  }
-#endif
-#if MXNET_USE_CUDNN == 0 || CUDNN_MAJOR < 7
-  if (param.num_filter == param.num_group &&
-      param.layout.value() == mshadow::kNCHW &&
-      param.num_filter == in_data[conv::kData].shape_[1] &&
-      param.kernel.ndim() == 2 &&
-      param.dilate == mshadow::Shape2(1, 1) &&
-      dtype == mshadow::kFloat32) {
-    // The first element stores out grad.
-    mxnet::ShapeVector in_shape(in_data.size());
-    mxnet::ShapeVector out_shape(1, out_grad.shape_);
-    for (size_t i = 0; i < in_shape.size(); i++)
-      in_shape[i] = in_data[i].shape_;
-    DepthwiseConvolutionOp<float> op;
-    op.Init(param, in_shape, out_shape);
-    op.Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
-    return;
-  }
-#endif
-
 #if MXNET_USE_CUDNN == 1
+  STATIC_ASSERT_CUDNN_VERSION_GE(7000);
   // On fp16-I/O instances, use fp32 compute (i.e. pseudo-fp16).
   int compute_type = (dtype == mshadow::kFloat16) ? mshadow::kFloat32 : dtype;
 
@@ -234,6 +188,23 @@ void ConvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
     }
   })
 #else
+  if (param.num_filter == param.num_group &&
+      param.layout.value() == mshadow::kNCHW &&
+      param.num_filter == in_data[conv::kData].shape_[1] &&
+      param.kernel.ndim() == 2 &&
+      param.dilate == mshadow::Shape2(1, 1) &&
+      dtype == mshadow::kFloat32) {
+    // The first element stores out grad.
+    mxnet::ShapeVector in_shape(in_data.size());
+    mxnet::ShapeVector out_shape(1, out_grad.shape_);
+    for (size_t i = 0; i < in_shape.size(); i++)
+      in_shape[i] = in_data[i].shape_;
+    DepthwiseConvolutionOp<float> op;
+    op.Init(param, in_shape, out_shape);
+    op.Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
+    return;
+  }
+
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     ConvolutionOp<gpu, DType> op;
     op.Init(param);

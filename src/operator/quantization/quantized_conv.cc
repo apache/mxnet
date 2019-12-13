@@ -180,6 +180,9 @@ and max thresholds representing the threholds for quantizing the float32 output 
 .add_arguments(ConvolutionParam::__FIELDS__());
 
 NNVM_REGISTER_OP(Convolution)
+.set_attr<FQuantizable>("FQuantizable", [](const NodeAttrs& attrs) {
+    return QuantizeType::kMust;
+})
 .set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
     nnvm::NodePtr node = nnvm::Node::Create();
     node->attrs.op = Op::Get("_contrib_quantized_conv");

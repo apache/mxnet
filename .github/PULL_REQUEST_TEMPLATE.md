@@ -14,8 +14,8 @@ Please feel free to remove inapplicable items for your PR.
 - For user-facing API changes, API doc string has been updated. 
 - For new C++ functions in header files, their functionalities and arguments are documented. 
 - For new examples, README.md is added to explain the what the example does, the source of the dataset, expected performance on test set and reference to the original paper if applicable
-- Check the API doc at http://mxnet-ci-doc.s3-accelerate.dualstack.amazonaws.com/PR-$PR_ID/$BUILD_ID/index.html
-- [ ] To the my best knowledge, examples are either not affected by this change, or have been fixed to be compatible with this change
+- Check the API doc at https://mxnet-ci-doc.s3-accelerate.dualstack.amazonaws.com/PR-$PR_ID/$BUILD_ID/index.html
+- [ ] To the best of my knowledge, examples are either not affected by this change, or have been fixed to be compatible with this change
 
 ### Changes ###
 - [ ] Feature1, tests, (and when applicable, API doc)

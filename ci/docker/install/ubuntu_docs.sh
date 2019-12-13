@@ -28,7 +28,9 @@ apt-get install -y \
     doxygen \
     pandoc
 
-pip3 install -r /work/docs_requirements
-pip2 install -r /work/docs_requirements
+# Can probably delete these and docs_requirements
+wget -q https://repo.anaconda.com/miniconda/Miniconda2-latest-Linux-x86_64.sh
+chmod +x Miniconda2-latest-Linux-x86_64.sh
+./Miniconda2-latest-Linux-x86_64.sh -b -p /work/miniconda
 
 echo 'Dependency installation complete.'

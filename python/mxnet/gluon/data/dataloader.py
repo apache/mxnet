@@ -18,11 +18,13 @@
 # coding: utf-8
 # pylint: disable=ungrouped-imports
 """Dataset generator."""
+from __future__ import absolute_import
 __all__ = ['DataLoader']
 
 import pickle
 import io
 import sys
+import signal
 import multiprocessing
 import multiprocessing.queues
 from multiprocessing.reduction import ForkingPickler
@@ -37,6 +39,8 @@ except ImportError:
 
 from . import sampler as _sampler
 from ... import nd, context
+from ...util import is_np_shape, is_np_array, set_np
+from ... import numpy as _mx_np  # pylint: disable=reimported
 
 if sys.platform == 'darwin' or sys.platform == 'win32':
     def rebuild_ndarray(*args):
@@ -69,6 +73,38 @@ else:
         return rebuild_ndarray, (pid, fd, shape, dtype)
 
 ForkingPickler.register(nd.NDArray, reduce_ndarray)
+
+if sys.platform == 'darwin' or sys.platform == 'win32':
+    def rebuild_np_ndarray(*args):
+        """Rebuild ndarray from pickled shared memory"""
+        # pylint: disable=no-value-for-parameter
+        return _mx_np.ndarray(nd.ndarray._new_from_shared_mem(*args))
+
+    def reduce_np_ndarray(data):
+        """Reduce ndarray to shared memory handle"""
+        return rebuild_np_ndarray, data._to_shared_mem()
+else:
+    def rebuild_np_ndarray(pid, fd, shape, dtype):
+        """Rebuild ndarray from pickled shared memory"""
+        # pylint: disable=no-value-for-parameter
+        if sys.version_info[0] == 2:
+            fd = multiprocessing.reduction.rebuild_handle(fd)
+        else:
+            fd = fd.detach()
+        return _mx_np.ndarray(nd.ndarray._new_from_shared_mem(pid, fd, shape, dtype))
+
+    def reduce_np_ndarray(data):
+        """Reduce ndarray to shared memory handle"""
+        # keep a local ref before duplicating fd
+        data = data.as_in_context(context.Context('cpu_shared', 0))
+        pid, fd, shape, dtype = data._to_shared_mem()
+        if sys.version_info[0] == 2:
+            fd = multiprocessing.reduction.reduce_handle(fd)
+        else:
+            fd = multiprocessing.reduction.DupFd(fd)
+        return rebuild_np_ndarray, (pid, fd, shape, dtype)
+
+ForkingPickler.register(_mx_np.ndarray, reduce_np_ndarray)
 
 
 class ConnectionWrapper(object):
@@ -124,30 +160,37 @@ class SimpleQueue(multiprocessing.queues.SimpleQueue):
         self._send = self._writer.send
         self._recv = self._reader.recv
 
+
 def default_batchify_fn(data):
     """Collate data into batch."""
     if isinstance(data[0], nd.NDArray):
-        return nd.stack(*data)
+        return _mx_np.stack(data) if is_np_array() else nd.stack(*data)
     elif isinstance(data[0], tuple):
         data = zip(*data)
         return [default_batchify_fn(i) for i in data]
     else:
         data = np.asarray(data)
-        return nd.array(data, dtype=data.dtype)
+        array_fn = _mx_np.array if is_np_array() else nd.array
+        return array_fn(data, dtype=data.dtype)
 
 
 def default_mp_batchify_fn(data):
     """Collate data into batch. Use shared memory for stacking."""
     if isinstance(data[0], nd.NDArray):
-        out = nd.empty((len(data),) + data[0].shape, dtype=data[0].dtype,
+        empty_fn = _mx_np.empty if is_np_array() else nd.empty
+        out = empty_fn((len(data),) + data[0].shape, dtype=data[0].dtype,
                        ctx=context.Context('cpu_shared', 0))
-        return nd.stack(*data, out=out)
+        if is_np_array():
+            return _mx_np.stack(data, out=out)
+        else:
+            return nd.stack(*data, out=out)
     elif isinstance(data[0], tuple):
         data = zip(*data)
         return [default_mp_batchify_fn(i) for i in data]
     else:
         data = np.asarray(data)
-        return nd.array(data, dtype=data.dtype,
+        array_fn = _mx_np.array if is_np_array() else nd.array
+        return array_fn(data, dtype=data.dtype,
                         ctx=context.Context('cpu_shared', 0))
 
 
@@ -382,14 +425,21 @@ class DataLoaderV1(object):
     def __len__(self):
         return len(self._batch_sampler)
 
+
+def _thread_worker_initializer(active_shape, active_array):
+    """Initializer for ThreadPool."""
+    set_np(shape=active_shape, array=active_array)
+
+
 _worker_dataset = None
-def _worker_initializer(dataset):
+def _worker_initializer(dataset, active_shape, active_array):
     """Initialier for processing pool."""
     # global dataset is per-process based and only available in worker processes
     # this is only necessary to handle MXIndexedRecordIO because otherwise dataset
     # can be passed as argument
     global _worker_dataset
     _worker_dataset = dataset
+    set_np(shape=active_shape, array=active_array)
 
 def _worker_fn(samples, batchify_fn, dataset=None):
     """Function for processing data in worker process."""
@@ -409,7 +459,8 @@ def _thread_worker_fn(samples, batchify_fn, dataset):
 class _MultiWorkerIter(object):
     """Internal multi-worker iterator for DataLoader."""
     def __init__(self, worker_pool, batchify_fn, batch_sampler, pin_memory=False,
-                 pin_device_id=0, worker_fn=_worker_fn, prefetch=0, dataset=None, data_loader=None):
+                 pin_device_id=0, worker_fn=_worker_fn, prefetch=0, dataset=None,
+                 data_loader=None, timeout=120):
         self._worker_pool = worker_pool
         self._batchify_fn = batchify_fn
         self._batch_sampler = batch_sampler
@@ -422,6 +473,7 @@ class _MultiWorkerIter(object):
         self._pin_device_id = pin_device_id
         self._dataset = dataset
         self._data_loader = data_loader
+        self._timeout = timeout
         # pre-fetch
         for _ in range(prefetch):
             self._push_next()
@@ -448,12 +500,28 @@ class _MultiWorkerIter(object):
         assert self._rcvd_idx < self._sent_idx, "rcvd_idx must be smaller than sent_idx"
         assert self._rcvd_idx in self._data_buffer, "fatal error with _push_next, rcvd_idx missing"
         ret = self._data_buffer.pop(self._rcvd_idx)
-        batch = pickle.loads(ret.get()) if self._dataset is None else ret.get()
-        if self._pin_memory:
-            batch = _as_in_context(batch, context.cpu_pinned(self._pin_device_id))
-        batch = batch[0] if len(batch) == 1 else batch
-        self._rcvd_idx += 1
-        return batch
+        try:
+            if self._dataset is None:
+                batch = pickle.loads(ret.get(self._timeout))
+            else:
+                batch = ret.get(self._timeout)
+            if self._pin_memory:
+                batch = _as_in_context(batch, context.cpu_pinned(self._pin_device_id))
+            self._rcvd_idx += 1
+            return batch
+        except multiprocessing.context.TimeoutError:
+            msg = '''Worker timed out after {} seconds. This might be caused by \n
+            - Slow transform. Please increase timeout to allow slower data loading in each worker.
+            '''.format(self._timeout)
+            if not isinstance(self._worker_pool, multiprocessing.pool.ThreadPool):
+                msg += '''- Insufficient shared_memory if `timeout` is large enough.
+            Please consider reduce `num_workers` or increase shared_memory in system.
+            '''
+            print(msg)
+            raise
+        except Exception:
+            self._worker_pool.terminate()
+            raise
 
     def next(self):
         return self.__next__()
@@ -520,16 +588,22 @@ class DataLoader(object):
         If ``True``, use threading pool instead of multiprocessing pool. Using threadpool
         can avoid shared memory usage. If `DataLoader` is more IO bounded or GIL is not a killing
         problem, threadpool version may achieve better performance than multiprocessing.
-
+    timeout : int, default is 120
+        The timeout in seconds for each worker to fetch a batch data. Only modify this number
+        unless you are experiencing timeout and you know it's due to slow data loading.
+        Sometimes full `shared_memory` will cause all workers to hang and causes timeout. In these
+        cases please reduce `num_workers` or increase system `shared_memory` size instead.
     """
     def __init__(self, dataset, batch_size=None, shuffle=False, sampler=None,
                  last_batch=None, batch_sampler=None, batchify_fn=None,
                  num_workers=0, pin_memory=False, pin_device_id=0,
-                 prefetch=None, thread_pool=False):
+                 prefetch=None, thread_pool=False, timeout=120):
         self._dataset = dataset
         self._pin_memory = pin_memory
         self._pin_device_id = pin_device_id
         self._thread_pool = thread_pool
+        self._timeout = timeout
+        assert timeout > 0, "timeout must be positive, given {}".format(timeout)
 
         if batch_sampler is None:
             if batch_size is None:
@@ -556,10 +630,17 @@ class DataLoader(object):
         self._prefetch = max(0, int(prefetch) if prefetch is not None else 2 * self._num_workers)
         if self._num_workers > 0:
             if self._thread_pool:
-                self._worker_pool = ThreadPool(self._num_workers)
+                self._worker_pool = ThreadPool(self._num_workers,
+                                               initializer=_thread_worker_initializer,
+                                               initargs=(is_np_shape(), is_np_array()))
             else:
+                # set ignore keyboard interupt signal before forking processes
+                original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
                 self._worker_pool = multiprocessing.Pool(
-                    self._num_workers, initializer=_worker_initializer, initargs=[self._dataset])
+                    self._num_workers, initializer=_worker_initializer,
+                    initargs=[self._dataset, is_np_shape(), is_np_array()])
+                # resume keyboard interupt signal in main process
+                signal.signal(signal.SIGINT, original_sigint_handler)
         if batchify_fn is None:
             if num_workers > 0:
                 self._batchify_fn = default_mp_batchify_fn
@@ -584,7 +665,7 @@ class DataLoader(object):
                                 worker_fn=_thread_worker_fn if self._thread_pool else _worker_fn,
                                 prefetch=self._prefetch,
                                 dataset=self._dataset if self._thread_pool else None,
-                                data_loader=self)
+                                data_loader=self, timeout=self._timeout)
 
     def __len__(self):
         return len(self._batch_sampler)

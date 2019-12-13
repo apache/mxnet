@@ -82,6 +82,7 @@ NNVM_REGISTER_OP(_ones)
 .add_arguments(InitOpParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_full)
+.add_alias("_npi_full")
   .describe("fill target with a scalar value")
   .set_num_inputs(0)
   .set_num_outputs(1)
@@ -102,6 +103,7 @@ NNVM_REGISTER_OP(_arange)
 .add_arguments(RangeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_contrib_arange_like)
+.add_alias("_npx_arange_like")
 .describe(R"code(Return an array with evenly spaced values. If axis is not given, the output will 
 have the same shape as the input array. Otherwise, the output will be a 1-D array with size of 
 the specified axis in input shape.
@@ -129,14 +131,16 @@ Examples::
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<RangeLikeParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", RangeLikeShape)
-.set_attr<nnvm::FInferType>("FInferType", InitType<RangeLikeParam, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",
     [](const NodeAttrs& attrs) { return std::vector<uint32_t>(1, 0); })
 .set_attr<FCompute>("FCompute<cpu>", RangeCompute<cpu, RangeLikeParam>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_argument("data", "NDArray-or-Symbol", "The input");
+.add_argument("data", "NDArray-or-Symbol", "The input")
+.add_arguments(RangeLikeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_linspace)
+.add_alias("_npi_linspace")
 .describe("Return evenly spaced numbers over a specified interval. Similar to Numpy")
 .set_num_inputs(0)
 .set_num_outputs(1)

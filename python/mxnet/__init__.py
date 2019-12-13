@@ -25,13 +25,19 @@ from .context import Context, current_context, cpu, gpu, cpu_pinned
 from . import engine
 from .base import MXNetError
 from .util import is_np_shape, set_np_shape, np_shape, use_np_shape
+from .util import is_np_array, np_array, use_np_array, use_np
 from . import base
 from . import contrib
 from . import ndarray
 from . import ndarray as nd
+from . import numpy
+from . import numpy_extension
+from . import numpy as np
+from . import numpy_extension as npx
 from . import name
 # use mx.sym as short for symbol
 from . import symbol as sym
+from .symbol.numpy import _symbol as np_symbol
 from . import symbol
 from . import symbol_doc
 from . import io
@@ -81,6 +87,10 @@ from . import rnn
 
 from . import gluon
 
+# Dynamic library module should be done after ndarray and symbol are initialized
+from . import library
+from . import tvmop
+
 __version__ = base.__version__
 
 # Dist kvstore module which launches a separate process when role is set to "server".
@@ -90,3 +100,7 @@ __version__ = base.__version__
 # checks the __version__ attr of MXNet, which is not set on kvstore server due to the
 # fact that kvstore-server module is imported before the __version__ attr is set.
 from . import kvstore_server
+
+from . import numpy_op_signature
+from . import numpy_dispatch_protocol
+from . import numpy_op_fallback

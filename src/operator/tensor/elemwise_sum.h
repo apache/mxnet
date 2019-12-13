@@ -39,15 +39,15 @@ namespace op {
 
 struct Sum {
   template<typename DType>
-  MSHADOW_XINLINE static DType sum(int i, const DType* a) {
+  MSHADOW_XINLINE static DType sum(index_t i, const DType* a) {
     return a[i];
   }
   template<typename DType, typename... DTypes>
-  MSHADOW_XINLINE static DType sum(int i, const DType* a, const DTypes... b) {
+  MSHADOW_XINLINE static DType sum(index_t i, const DType* a, const DTypes... b) {
     return a[i] + sum(i, b...);
   }
   template<typename DType, typename... DTypes>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const OpReqType req, const DType* in0,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out, const OpReqType req, const DType* in0,
     const DTypes... ins) {
     KERNEL_ASSIGN(out[i], req, sum(i, in0, ins...));
   }
@@ -64,7 +64,7 @@ void ElementWiseSumCompute_(const nnvm::NodeAttrs& attrs,
   size_t size = in_data.size();
   Stream<xpu> *s = ctx.get_stream<xpu>();
   DType* out_dptr = out_data[0].dptr<DType>();
-  int out_size = static_cast<int>((out_data[0].Size() + DataType<DType>::kLanes - 1)
+  index_t out_size = static_cast<index_t>((out_data[0].Size() + DataType<DType>::kLanes - 1)
                                   /DataType<DType>::kLanes);
   switch (size) {
     case 2: {

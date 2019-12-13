@@ -31,6 +31,7 @@ import bz2
 import zipfile
 import json
 from contextlib import contextmanager
+from collections import OrderedDict
 import numpy as np
 import numpy.testing as npt
 import numpy.random as rnd
@@ -48,6 +49,10 @@ from .context import Context, current_context
 from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from .ndarray import array
 from .symbol import Symbol
+from .symbol.numpy import _Symbol as np_symbol
+from .util import use_np  # pylint: disable=unused-import
+from .runtime import Features
+from .numpy_extension import get_cuda_compute_capability
 
 
 def default_context():
@@ -89,7 +94,8 @@ def get_etol(etol=None):
 
 def random_arrays(*shapes):
     """Generate some random numpy arrays."""
-    arrays = [np.random.randn(*s).astype(default_dtype())
+    arrays = [np.array(np.random.randn(), dtype=default_dtype())
+              if len(s) == 0 else np.random.randn(*s).astype(default_dtype())
               for s in shapes]
     if len(arrays) == 1:
         return arrays[0]
@@ -102,6 +108,16 @@ def random_sample(population, k):
     population_copy = population[:]
     np.random.shuffle(population_copy)
     return population_copy[0:k]
+
+
+def _sorted_items(d):
+    """Return (key, value) pairs of dict 'd' in a deterministic order (sorted by key)."""
+    return sorted(d.items(), key=lambda t: t[0])
+
+
+def _sorted_dict(d):
+    """Return ordered dictionary containing items ordered by their keys."""
+    return OrderedDict(_sorted_items(d))
 
 
 def _validate_csr_generation_inputs(num_rows, num_cols, density,
@@ -212,11 +228,11 @@ def _get_powerlaw_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
                 return mx.nd.array(output_arr).tostype("csr")
         col_max = col_max * 2
 
-    if unused_nnz > 0: # pylint: disable=no-else-raise
+    if unused_nnz > 0:
         raise ValueError("not supported for this density: %s"
                          " for this shape (%s,%s)" % (density, num_rows, num_cols))
-    else:
-        return mx.nd.array(output_arr).tostype("csr")
+
+    return mx.nd.array(output_arr).tostype("csr")
 
 
 def assign_each(the_input, function):
@@ -258,6 +274,17 @@ def assign_each2(input1, input2, function):
             it_out.iternext()
 
     return output
+
+# For testing Large Tensors having total size > 2^32 elements
+def create_2d_tensor(rows, columns, dtype=np.int64):
+    a = mx.nd.arange(0, rows, dtype=dtype).reshape(rows, 1)
+    b = mx.nd.broadcast_to(a, shape=(a.shape[0], columns))
+    return b
+
+# For testing Large Vectors having total size > 2^32 elements
+def create_vector(size, dtype=np.int64):
+    a = mx.nd.arange(0, size, dtype=dtype)
+    return a
 
 def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=None,
                         data_init=None, rsp_indices=None, modifier_func=None,
@@ -408,16 +435,20 @@ def create_sparse_array_zd(shape, stype, density, data_init=None,
                                density=density,
                                shuffle_csr_indices=shuffle_csr_indices)
 
-def rand_shape_2d(dim0=10, dim1=10):
-    return rnd.randint(1, dim0 + 1), rnd.randint(1, dim1 + 1)
+
+def rand_shape_2d(dim0=10, dim1=10, allow_zero_size=False):
+    low = 0 if allow_zero_size else 1
+    return rnd.randint(low, dim0 + 1), rnd.randint(low, dim1 + 1)
 
 
-def rand_shape_3d(dim0=10, dim1=10, dim2=10):
-    return rnd.randint(1, dim0 + 1), rnd.randint(1, dim1 + 1), rnd.randint(1, dim2 + 1)
+def rand_shape_3d(dim0=10, dim1=10, dim2=10, allow_zero_size=False):
+    low = 0 if allow_zero_size else 1
+    return rnd.randint(low, dim0 + 1), rnd.randint(low, dim1 + 1), rnd.randint(low, dim2 + 1)
 
 
-def rand_shape_nd(num_dim, dim=10):
-    return tuple(rnd.randint(1, dim+1, size=num_dim))
+def rand_shape_nd(num_dim, dim=10, allow_zero_size=False):
+    low = 0 if allow_zero_size else 1
+    return tuple(rnd.randint(low, dim+1, size=num_dim))
 
 
 def rand_coord_2d(x_low, x_high, y_low, y_high):
@@ -462,9 +493,10 @@ def find_max_violation(a, b, rtol=None, atol=None):
     """Finds and returns the location of maximum violation."""
     rtol = get_rtol(rtol)
     atol = get_atol(atol)
-    diff = np.abs(a-b)
+    # 'smart' absdiff that considers inf's as equals (to match np.allclose)
+    absdiff = np.where(np.equal(a, b), 0, np.abs(a-b))
     tol = atol + rtol*np.abs(b)
-    violation = diff/(tol+1e-20)
+    violation = absdiff/(tol+1e-20)
     loc = np.argmax(violation)
     idx = np.unravel_index(loc, violation.shape)
     return idx, np.max(violation)
@@ -480,34 +512,124 @@ def same(a, b):
     """
     return np.array_equal(a, b)
 
-def almost_equal(a, b, rtol=None, atol=None, equal_nan=False):
+
+def checkShapes(a, b):
+    if a.shape != b.shape:
+        msg = npt.build_err_msg([a, b],
+                                err_msg="a.shape = {} and b.shape = {} are not equal"
+                                .format(str(a.shape), str(b.shape)))
+        raise AssertionError(msg)
+
+
+def almost_equal(a, b, rtol=None, atol=None, equal_nan=False, use_broadcast=True):
     """Test if two numpy arrays are almost equal."""
     # pylint: disable=unexpected-keyword-arg
+    if not use_broadcast:
+        checkShapes(a, b)
+
     return np.allclose(a, b, rtol=get_rtol(rtol), atol=get_atol(atol), equal_nan=equal_nan)
     # pylint: enable=unexpected-keyword-arg
 
-def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=False):
+
+def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=False,
+                        use_broadcast=True, mismatches=(10, 10)):
     """Test that two numpy arrays are almost equal. Raise exception message if not.
 
     Parameters
     ----------
-    a : np.ndarray
-    b : np.ndarray
-    threshold : None or float
-        The checking threshold. Default threshold will be used if set to ``None``.
+    a : np.ndarray or mx.nd.array
+    b : np.ndarray or mx.nd.array
+    rtol : None or float
+        The relative threshold. Default threshold will be used if set to ``None``.
+    atol : None or float
+        The absolute threshold. Default threshold will be used if set to ``None``.
+    names : tuple of names, optional
+        The names used in error message when an exception occurs
+    equal_nan : boolean, optional
+        The flag determining how to treat NAN values in comparison
+    mismatches : tuple of mismatches
+        Maximum number of mismatches to be printed (mismatches[0]) and determine (mismatches[1])
     """
+    if not use_broadcast:
+        checkShapes(a, b)
+
     rtol = get_rtol(rtol)
     atol = get_atol(atol)
-    if almost_equal(a, b, rtol, atol, equal_nan=equal_nan):
-        return
+    use_np_allclose = isinstance(a, np.ndarray) and isinstance(b, np.ndarray)
+    if not use_np_allclose:
+        if not (hasattr(a, 'context') and hasattr(b, 'context') and a.context == b.context and a.dtype == b.dtype):
+            use_np_allclose = True
+            if isinstance(a, mx.nd.NDArray):
+                a = a.asnumpy()
+            if isinstance(b, mx.nd.NDArray):
+                b = b.asnumpy()
+
+    if use_np_allclose:
+        if hasattr(a, 'dtype') and a.dtype == np.bool_ and hasattr(b, 'dtype') and b.dtype == np.bool_:
+            np.testing.assert_equal(a, b)
+            return
+        if almost_equal(a, b, rtol, atol, equal_nan=equal_nan):
+            return
+    else:
+        output = mx.nd.contrib.allclose(a, b, rtol, atol, equal_nan)
+        if output.asnumpy() == 1:
+            return
+
+        a = a.asnumpy()
+        b = b.asnumpy()
+
+    def locationError(a, b, index, names, maxError=False):
+        """Create element mismatch comment
+
+        Parameters
+        ----------
+        a, b : compared np.ndarray's
+        index : tuple of coordinate arrays
+            Location of violation
+        names : tuple of names
+            The names of compared arrays.
+        maxError: boolean, optional
+            Flag indicating that maximum error is reporting.
+        """
+        maximum = "maximum " if maxError else ""
+        return "Location of %serror: %s, %s=%.8f, %s=%.8f" \
+               % (maximum, str(index), names[0], a[index], names[1], b[index])
+
     index, rel = find_max_violation(a, b, rtol, atol)
+    indexErr = index
+    relErr = rel
+
+    print('\n*** Maximum errors for vector of size {}:  rtol={}, atol={}\n'.format(a.size, rtol, atol))
+    aTmp = a.copy()
+    bTmp = b.copy()
+    i = 1
+    while i <= a.size:
+        if i <= mismatches[0]:
+            print("%3d: Error %f  %s" %(i, rel, locationError(a, b, index, names)))
+
+        aTmp[index] = bTmp[index] = 0
+        if almost_equal(aTmp, bTmp, rtol, atol, equal_nan=equal_nan):
+            break
+
+        i += 1
+        if i <= mismatches[1] or mismatches[1] <= 0:
+            index, rel = find_max_violation(aTmp, bTmp, rtol, atol)
+        else:
+            break
+
+    mismatchDegree = "at least " if mismatches[1] > 0 and i > mismatches[1] else ""
+    errMsg = "Error %f exceeds tolerance rtol=%e, atol=%e (mismatch %s%f%%).\n%s" % \
+             (relErr, rtol, atol, mismatchDegree, 100*i/a.size, \
+             locationError(a, b, indexErr, names, maxError=True))
     np.set_printoptions(threshold=4, suppress=True)
-    msg = npt.build_err_msg([a, b],
-                            err_msg="Error %f exceeds tolerance rtol=%f, atol=%f. "
-                                    " Location of maximum error:%s, a=%f, b=%f"
-                            % (rel, rtol, atol, str(index), a[index], b[index]),
-                            names=names)
+    msg = npt.build_err_msg([a, b], err_msg=errMsg)
+
     raise AssertionError(msg)
+
+
+def assert_allclose(a, b, rtol=1e-07, atol=0, equal_nan=True):
+    assert_almost_equal(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
+
 
 def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None, names=('a', 'b'), equal_nan=False):
     """Test that two numpy arrays are almost equal within given error rate. Raise exception message if not.
@@ -529,7 +651,6 @@ def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None, names=('
         equals = np.isclose(a, b, rtol=rtol, atol=atol)
         err = 1 - np.count_nonzero(equals) / equals.size
         if err > etol:
-            #if True:
             index, rel = find_max_violation(a, b, rtol, atol)
             np.set_printoptions(threshold=4, suppress=True)
             msg = npt.build_err_msg([a, b],
@@ -659,7 +780,7 @@ def simple_forward(sym, ctx=None, is_train=False, **inputs):
 
 
 def _parse_location(sym, location, ctx, dtype=default_dtype()):
-    """Parses the given location to a dictionary.
+    """Parses the given location to a ordered dictionary.
 
     Arguments of the provided op `sym` are used as dictionary keys
     and elements of `location` are used as values.
@@ -715,7 +836,7 @@ def _parse_location(sym, location, ctx, dtype=default_dtype()):
         location = {k: v for k, v in zip(sym.list_arguments(), location)}
     location = {k: mx.nd.array(v, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype) \
                if isinstance(v, np.ndarray) else v for k, v in location.items()}
-    return location
+    return _sorted_dict(location)
 
 
 def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
@@ -829,7 +950,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
             continue
         stype = executor.arg_dict[k].stype
         old_value = v.copy()
-        for i in range(np.prod(v.shape)):
+        for i in range(int(np.prod(v.shape))):
             # inplace update
             v.ravel()[i] += eps/2.0
             executor.arg_dict[k][:] = as_stype(v, stype, dtype=dtype)
@@ -941,7 +1062,12 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     input_shape = {k: v.shape for k, v in location.items()}
     _, out_shape, _ = sym.infer_shape(**input_shape)
     proj = mx.sym.Variable("__random_proj")
+    is_np_sym = bool(isinstance(sym, np_symbol))
+    if is_np_sym:  # convert to np symbol for using element-wise multiplication
+        proj = proj.as_np_ndarray()
     out = sym * proj
+    if is_np_sym:  # convert to classic symbol so that make_loss can be used
+        out = out.as_nd_ndarray()
     out = mx.sym.make_loss(out)
 
     location = dict(list(location.items()) +
@@ -1062,7 +1188,10 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
 
     executor = sym.bind(ctx=ctx, args=location, args_grad=args_grad_data, aux_states=aux_states)
     for g in executor.grad_arrays:
-        g[:] = 0
+        if g.ndim == 0:
+            g[()] = 0
+        else:
+            g[:] = 0
 
     executor.forward(is_train=False)
 
@@ -1144,7 +1273,8 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     if isinstance(expected, (list, tuple)):
         expected = {k:v for k, v in zip(sym.list_arguments(), expected)}
 
-    args_grad_npy = {k:np.random.normal(size=v.shape) for k, v in expected.items()}
+    # Dirty the output buffer deterministically, for reproducibility.
+    args_grad_npy = {k:np.random.normal(size=v.shape) for k, v in _sorted_items(expected)}
     args_grad_data = {}
     for k, v in args_grad_npy.items():
         nd = mx.nd.array(v, ctx=ctx, dtype=expected[k].dtype if dtype == "asnumpy" else dtype)
@@ -1280,6 +1410,15 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
     else:
         raise ValueError('typ can only be "whole" or "forward".')
 
+
+def get_tolerance(rtol, ctx):
+    if 'atol' in ctx:
+        return ctx['atol']
+    if 'atol_mult' in ctx:
+        return ctx['atol_mult'] * rtol
+    return rtol
+
+
 def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                       arg_params=None, aux_params=None, tol=None,
                       raise_on_err=True, ground_truth=None, equal_nan=False,
@@ -1398,19 +1537,22 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
     for i, exe in enumerate(exe_list):
         if i == max_idx:
             continue
+
+        rtol = tol[dtypes[i]]
+        atol = get_tolerance(rtol, ctx_list[i])
         for name, arr in zip(output_names, exe.outputs):
-            gtarr = gt[name].astype(dtypes[i]).asnumpy()
-            arr = arr.asnumpy()
+            # Previously, the cast was to dtypes[i], but symbol may be mixed-precision,
+            # so casting the ground truth to the actual output type seems more correct.
+            gtarr = gt[name].astype(arr.dtype)
             try:
-                assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]],
-                                    equal_nan=equal_nan)
+                assert_almost_equal(arr, gtarr, rtol=rtol, atol=atol, equal_nan=equal_nan)
             except AssertionError as e:
                 print('Predict Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                 traceback.print_exc()
-                if raise_on_err: # pylint: disable=no-else-raise
+                if raise_on_err:
                     raise e
-                else:
-                    print(str(e))
+
+                print(str(e))
 
     # train
     if grad_req != 'null':
@@ -1421,23 +1563,27 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
         for i, exe in enumerate(exe_list):
             if i == max_idx:
                 continue
+
+            rtol = tol[dtypes[i]]
+            atol = get_tolerance(rtol, ctx_list[i])
             curr = zip(output_names + arg_names, exe.outputs + exe.grad_arrays)
             for name, arr in curr:
                 if gt[name] is None:
                     assert arr is None
                     continue
-                gtarr = gt[name].astype(dtypes[i]).asnumpy()
-                arr = arr.asnumpy()
+
+                # Previous cast was to dtypes[i], but symbol may be mixed-precision,
+                # so casting the ground truth to the actual output type seems more correct.
+                gtarr = gt[name].astype(arr.dtype)
                 try:
-                    assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]],
-                                        equal_nan=equal_nan)
+                    assert_almost_equal(arr, gtarr, rtol=rtol, atol=atol, equal_nan=equal_nan)
                 except AssertionError as e:
                     print('Train Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                     traceback.print_exc()
-                    if raise_on_err: # pylint: disable=no-else-raise
+                    if raise_on_err:
                         raise e
-                    else:
-                        print(str(e))
+
+                    print(str(e))
 
     return gt
 
@@ -1514,11 +1660,11 @@ def download(url, fname=None, dirname=None, overwrite=False, retries=5):
                 break
         except Exception as e:
             retries -= 1
-            if retries <= 0: # pylint: disable=no-else-raise
+            if retries <= 0:
                 raise e
-            else:
-                print("download failed, retrying, {} attempt{} left"
-                      .format(retries, 's' if retries > 1 else ''))
+
+            print("download failed, retrying, {} attempt{} left"
+                  .format(retries, 's' if retries > 1 else ''))
     logging.info("downloaded %s into %s successfully", url, fname)
     return fname
 
@@ -1661,7 +1807,7 @@ def get_mnist_iterator(batch_size, input_shape, num_parts=1, part_index=0):
     """
 
     get_mnist_ubyte()
-    flat = False if len(input_shape) == 3 else True # pylint: disable=simplifiable-if-expression
+    flat = len(input_shape) != 3
 
     train_dataiter = mx.io.MNISTIter(
         image="data/train-images-idx3-ubyte",
@@ -1789,8 +1935,7 @@ def same_array(array1, array2):
 
 @contextmanager
 def discard_stderr():
-    """
-    Discards error output of a routine if invoked as:
+    """Discards error output of a routine if invoked as:
 
     with discard_stderr():
         ...
@@ -2101,12 +2246,14 @@ def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, suc
 
 def compare_ndarray_tuple(t1, t2, rtol=None, atol=None):
     """Compare ndarray tuple."""
-    if t1 is not None and t2 is not None:
-        if isinstance(t1, tuple):
-            for s1, s2 in zip(t1, t2):
-                compare_ndarray_tuple(s1, s2, rtol, atol)
-        else:
-            assert_almost_equal(t1.asnumpy(), t2.asnumpy(), rtol=rtol, atol=atol)
+    if t1 is None or t2 is None:
+        return
+
+    if isinstance(t1, tuple):
+        for s1, s2 in zip(t1, t2):
+            compare_ndarray_tuple(s1, s2, rtol, atol)
+    else:
+        assert_almost_equal(t1, t2, rtol=rtol, atol=atol)
 
 
 def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='default',
@@ -2138,7 +2285,7 @@ def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='defa
     opt2.update_multi_precision(0, w2, g2, state2)
     if compare_states:
         compare_ndarray_tuple(state1, state2, rtol=rtol, atol=atol)
-    assert_almost_equal(w1.asnumpy(), w2.asnumpy(), rtol=rtol, atol=atol)
+    assert_almost_equal(w1, w2, rtol=rtol, atol=atol)
 
 
 def same_symbol_structure(sym1, sym2):
@@ -2172,3 +2319,146 @@ class EnvManager(object):
             os.environ[self._key] = self._prev_val
         else:
             del os.environ[self._key]
+
+
+def collapse_sum_like(a, shape):
+    """Given `a` as a numpy ndarray, perform reduce_sum on `a` over the axes that do not
+    exist in `shape`. Note that an ndarray with `shape` must be broadcastable to `a`.
+    """
+    assert len(a.shape) >= len(shape)
+    if np.prod(shape) == 0 or a.size == 0:
+        return np.zeros(shape, dtype=a.dtype)
+    axes = []
+    ndim_diff = len(a.shape) - len(shape)
+    for i in range(ndim_diff):
+        axes.append(i)
+    for i, s in enumerate(shape):
+        if s != a.shape[i+ndim_diff]:
+            assert s == 1
+            axes.append(i+ndim_diff)
+    return np.sum(a, axis=tuple(axes)).reshape(shape)
+
+
+def is_cd_run():
+    """Checks if the test is running as part of a Continuous Delivery run"""
+    return os.environ.get("CD_JOB", 0) == "1"
+
+
+_features = Features()
+
+
+def has_tvm_ops():
+    """Returns True if MXNet is compiled with TVM generated operators. If current ctx
+    is GPU, it only returns True for CUDA compute capability > 52 where FP16 is supported.
+    """
+    built_with_tvm_op = _features.is_enabled("TVM_OP")
+    ctx = current_context()
+    if ctx.device_type == 'gpu':
+        try:
+            cc = get_cuda_compute_capability(ctx)
+        except:  # pylint: disable=bare-except
+            print('Failed to get CUDA compute capability for context {}. The operators '
+                  'built with USE_TVM_OP=1 will not be run in unit tests.'.format(ctx))
+            return False
+        print('Cuda arch compute capability: sm_{}'.format(str(cc)))
+        return built_with_tvm_op and cc >= 53
+    return built_with_tvm_op
+
+
+def is_op_runnable():
+    """Returns True for all CPU tests. Returns True for GPU tests that are either of the following.
+    1. Built with USE_TVM_OP=0.
+    2. Built with USE_TVM_OP=1, but with compute capability >= 53.
+    """
+    ctx = current_context()
+    if ctx.device_type == 'gpu':
+        if not _features.is_enabled("TVM_OP"):
+            return True
+        else:
+            try:
+                cc = get_cuda_compute_capability(ctx)
+            except:  # pylint: disable=bare-except
+                print('Failed to get CUDA compute capability for context {}. The operators '
+                      'built with USE_TVM_OP=1 will not be run in unit tests.'.format(ctx))
+                return False
+            print('Cuda arch compute capability: sm_{}'.format(str(cc)))
+            return cc >= 53
+    return True
+
+
+@use_np
+def check_gluon_hybridize_consistency(net_builder, data_l, numpy_func=None, test_grad=True,
+                                      rtol=1E-4, atol=1E-4):
+    """Check whether a HybridBlock has consistent output between the hybridized
+     v.s. non-hybridized versions
+
+    The network should not contain any random number generators.
+
+    Parameters
+    ----------
+    net_builder : function
+        The builder of the HybridBlock that we are going to check the consistency.
+        Inside the implementation, we will call net_builder() to construct the hybrid block.
+        Also, the net_builder will need to support specifying the params
+    data_l : list of mx.np.ndarray
+        List of input ndarrays.
+    numpy_func : function, optional
+        The ground truth numpy function that has the same functionality as net_builder().
+        Default None.
+    test_grad : bool, optional
+        Whether to test the consistency of the gradient. Default True.
+    rtol : float, optional
+        The relative error tolerance, default 1E-4. Default 1E-4.
+    atol : float, optional
+        The absolute error tolerance, default 1E-4. Default 1E-4.
+    """
+    class _NumpyParamDictInit(mx.init.Initializer):
+        """Initializes parameters with the cached numpy ndarrays dictionary
+        """
+        def __init__(self, np_params):
+            super(_NumpyParamDictInit, self).__init__()
+            self._np_params = np_params
+
+        def _init_weight(self, name, arr):
+            arr[()] = self._np_params[name]
+    saved_out_np = None
+    saved_grad_np_l = None
+    params_init = None
+    use_autograd_flags = [False, True] if test_grad else [False]
+    for hybridize in [False, True]:
+        for use_autograd in use_autograd_flags:
+            net = net_builder(prefix='net_')
+            if params_init is None:
+                net.initialize()
+            else:
+                net.initialize(params_init)
+            if hybridize:
+                net.hybridize()
+            in_data_l = [ele.copy() for ele in data_l]
+            if use_autograd:
+                for ele in in_data_l:
+                    ele.attach_grad()
+                with mx.autograd.record():
+                    out = net(*in_data_l)
+                out.backward(out)
+            else:
+                out = net(*in_data_l)
+            if params_init is None:
+                np_params = {k: v.data().asnumpy() for k, v in net.collect_params().items()}
+                params_init = _NumpyParamDictInit(np_params)
+            if saved_out_np is None:
+                saved_out_np = out.asnumpy()
+            else:
+                # Check for correctness
+                assert_almost_equal(out.asnumpy(), saved_out_np, rtol=rtol, atol=atol)
+            if use_autograd:
+                if saved_grad_np_l is None:
+                    saved_grad_np_l = [ele.grad.asnumpy() for ele in in_data_l]
+                else:
+                    # Check for correctness
+                    for data, saved_grad_np in zip(in_data_l, saved_grad_np_l):
+                        assert_almost_equal(data.grad.asnumpy(), saved_grad_np,
+                                            rtol=rtol, atol=atol)
+    if numpy_func is not None:
+        numpy_out = numpy_func(*[ele.asnumpy() for ele in data_l])
+        assert_almost_equal(saved_out_np, numpy_out, rtol=rtol, atol=atol)

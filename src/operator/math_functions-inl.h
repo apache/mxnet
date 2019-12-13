@@ -35,19 +35,24 @@ namespace op {
 namespace math {
 
 // Wrappers for math.h unary and binary functions
-// - For DType != double: math::name(a) does computation in float
+// - For DType == float: math::name(a) does computation in float
 //   and returns float
-// - For DType == double: math::name(a) does computation in double
+// - For DType == double or DType == integer: math::name(a) does computation in double
 //   and returns double
 
 #define MXNET_UNARY_MATH_FUNC(name) \
-template<typename DType> MSHADOW_XINLINE \
-float name(DType a) { \
-  return ::name##f(static_cast<float>(a)); \
+MSHADOW_XINLINE \
+float name(float a) { \
+  return ::name##f(a); \
 } \
 MSHADOW_XINLINE \
 double name(double a) { \
   return ::name(a); \
+} \
+template<typename DType> MSHADOW_XINLINE \
+typename std::enable_if<std::is_integral<DType>::value, double>::type \
+name(DType a) { \
+  return ::name(static_cast<double>(a)); \
 }
 
 #define MXNET_BINARY_MATH_FUNC(name) \
@@ -119,6 +124,8 @@ MXNET_UNARY_MATH_FUNC(lgamma)
 MXNET_BINARY_MATH_FUNC(hypot)
 
 MXNET_BINARY_MATH_FUNC(pow)
+
+MXNET_BINARY_MATH_FUNC(atan2)
 
 template<typename DType> MSHADOW_XINLINE
 float id(DType a) {

@@ -3,7 +3,7 @@ This is a simple predictor which shows how to use the MXNet C Predict API for im
 
 ## Prerequisites
 
-* OpenCV for image processing: `USE_OPENCV` is set to true by default when [building from source](https://mxnet.incubator.apache.org/install/build_from_source.html)
+* OpenCV for image processing: `USE_OPENCV` is set to true by default when [building from source](https://mxnet.apache.org/install/build_from_source.html)
 
 ## How to Use this Example
 

@@ -55,7 +55,7 @@ $ sudo make install
 ```
 
 #### Building MXNet from source with warp-ctc integration
-In order to build MXNet from source, you need to follow [instructions here](http://mxnet.incubator.apache.org/install/index.html). After choosing your system configuration, Python environment, and "Build from Source" options, before running `make` in step 4, you need to enable warp-ctc integration by uncommenting the following lines in `make/config.mk` in `incubator-mxnet` directory:
+In order to build MXNet from source, you need to follow [instructions here](https://mxnet.apache.org/install/index.html). After choosing your system configuration, Python environment, and "Build from Source" options, before running `make` in step 4, you need to enable warp-ctc integration by uncommenting the following lines in `make/config.mk` in `incubator-mxnet` directory:
 ```
 WARPCTC_PATH = $(HOME)/warp-ctc
 MXNET_PLUGINS += plugin/warpctc/warpctc.mk

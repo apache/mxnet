@@ -15,7 +15,17 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-# v1.5.0 (#TBD)
+# v1.6.0
+
+* Add an abstract type `AbstractMXError` as the parent type for all MXNet-related
+  API errors. (#16235)
+
+* Porting more `context` functions from Python.
+    * `num_gpus()` (#16236)
+    * `gpu_memory_info()` (#16324)
+
+
+# v1.5.0
 
 * Following material from `mx` module got exported (#TBD):
     * `NDArray`

@@ -197,6 +197,9 @@ def predict_mode():
 def mark_variables(variables, gradients, grad_reqs='write'):
     """Mark NDArrays as variables to compute gradient for autograd.
 
+    This is equivalent to the function .attach_grad() in a variable, but with this
+    call we can set the gradient to any value.
+
     Parameters
     ----------
     variables: NDArray or list of NDArray
@@ -357,6 +360,8 @@ def get_symbol(x):
     Symbol
         The retrieved Symbol.
     """
+    assert isinstance(x, NDArray), \
+       "get_symbol: Invalid argument type, expecting %s, got %s"%(NDArray, type(x))
     hdl = SymbolHandle()
     check_call(_LIB.MXAutogradGetSymbol(x.handle, ctypes.byref(hdl)))
     return Symbol(hdl)

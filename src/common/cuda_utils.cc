@@ -18,88 +18,73 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
+ * Copyright (c) 2017 by Contributors
  * \file cuda_utils.cc
- * \brief CUDA debugging utilities.
+ * \brief Common CUDA utilities.
  */
 
 #include <mxnet/base.h>
+#include <mshadow/base.h>
+
+#include <algorithm>
+
 #include "cuda_utils.h"
 
-#if MXNET_USE_CUDA == 1
+#if MXNET_USE_CUDA
 
 namespace mxnet {
 namespace common {
 namespace cuda {
 
-// The oldest version of cuda used in upstream MXNet CI testing, both for unix and windows.
-// Users that have rebuilt MXNet against older versions will we advised with a warning to upgrade
-// their systems to match the CI level.  Minimally, users should rerun the CI locally.
-#if defined(_MSC_VER)
-#define MXNET_CI_OLDEST_CUDA_VERSION  9020
-#else
-#define MXNET_CI_OLDEST_CUDA_VERSION 10000
-#endif
-
-// Dynamic init here will emit a warning if runtime and compile-time cuda lib versions mismatch.
-// Also if the user has recompiled their source to a version no longer tested by upstream CI.
-bool cuda_version_check_performed = []() {
-  // Don't bother with checks if there are no GPUs visible (e.g. with CUDA_VISIBLE_DEVICES="")
-  if (dmlc::GetEnv("MXNET_CUDA_VERSION_CHECKING", true) && Context::GetGPUCount() > 0) {
-    // Not currently performing a runtime check of linked-against vs. compiled-against
-    // cuda runtime library, as major.minor must match for libmxnet.so to even load, per:
-    // https://docs.nvidia.com/deploy/cuda-compatibility/#binary-compatibility
-    if (CUDA_VERSION < MXNET_CI_OLDEST_CUDA_VERSION)
-      LOG(WARNING) << "Upgrade advisory: this mxnet has been built against cuda library version "
-                   << CUDA_VERSION << ", which is older than the oldest version tested by CI ("
-                   << MXNET_CI_OLDEST_CUDA_VERSION << ").  "
-                   << "Set MXNET_CUDA_VERSION_CHECKING=0 to quiet this warning.";
+namespace {
+  bool IsPower2(size_t N) {
+    return ((N & (N - 1)) == 0) && N != 0;
   }
-  return true;
-}();
+
+  size_t RoundToPower2(size_t N) {
+    size_t ret = 1;
+    size_t copyN = N;
+    while (N >= 2) {
+      ret *= 2;
+      N /= 2;
+    }
+    if (ret < copyN) {
+      ret *= 2;
+    }
+    return ret;
+  }
+}  // namespace
+
+int get_load_type(size_t N) {
+  using namespace mshadow;
+  if (N % 8 == 0) {
+    return kFloat64;
+  } else if (N % 4 == 0) {
+    return kFloat32;
+  } else if (N % 2 == 0) {
+    return kFloat16;
+  } else {
+    return kUint8;
+  }
+}
+
+int get_rows_per_block(size_t row_size, int num_threads_per_block) {
+  const int warp_size = 32;
+  CHECK(IsPower2(num_threads_per_block))
+    << "Number of threads in a block must be power of 2 to use get_rows_per_block function";
+  // How many read instructions should 1 thread at least do
+  const int read_instructions = 2;
+  const int desired_num_threads_per_row = (row_size + read_instructions - 1) / read_instructions;
+  int desired_num_warps_per_row = (desired_num_threads_per_row + warp_size - 1) / warp_size;
+  int actual_num_warps_per_row = std::min(desired_num_warps_per_row,
+                                          num_threads_per_block / warp_size);
+  // actual number of warps needs to be power of 2
+  actual_num_warps_per_row = RoundToPower2(actual_num_warps_per_row);
+  return num_threads_per_block / (warp_size * actual_num_warps_per_row);
+}
 
 }  // namespace cuda
 }  // namespace common
 }  // namespace mxnet
 
 #endif  // MXNET_USE_CUDA
-
-#if MXNET_USE_CUDNN == 1
-
-namespace mxnet {
-namespace common {
-namespace cudnn {
-
-// The oldest version of CUDNN used in upstream MXNet CI testing, both for unix and windows.
-// Users that have rebuilt MXNet against older versions will we advised with a warning to upgrade
-// their systems to match the CI level.  Minimally, users should rerun the CI locally.
-#if defined(_MSC_VER)
-#define MXNET_CI_OLDEST_CUDNN_VERSION 7600
-#else
-#define MXNET_CI_OLDEST_CUDNN_VERSION 7600
-#endif
-
-// Dynamic init here will emit a warning if runtime and compile-time cudnn lib versions mismatch.
-// Also if the user has recompiled their source to a version no longer tested by upstream CI.
-bool cudnn_version_check_performed = []() {
-  // Don't bother with checks if there are no GPUs visible (e.g. with CUDA_VISIBLE_DEVICES="")
-  if (dmlc::GetEnv("MXNET_CUDNN_VERSION_CHECKING", true) && Context::GetGPUCount() > 0) {
-    size_t linkedAgainstCudnnVersion = cudnnGetVersion();
-    if (linkedAgainstCudnnVersion != CUDNN_VERSION)
-      LOG(WARNING) << "cuDNN library mismatch: linked-against version " << linkedAgainstCudnnVersion
-                   << " != compiled-against version " << CUDNN_VERSION << ".  "
-                   << "Set MXNET_CUDNN_VERSION_CHECKING=0 to quiet this warning.";
-    if (CUDNN_VERSION < MXNET_CI_OLDEST_CUDNN_VERSION)
-      LOG(WARNING) << "Upgrade advisory: this mxnet has been built against cuDNN library version "
-                   <<  CUDNN_VERSION << ", which is older than the oldest version tested by CI ("
-                   << MXNET_CI_OLDEST_CUDNN_VERSION << ").  "
-                   << "Set MXNET_CUDNN_VERSION_CHECKING=0 to quiet this warning.";
-  }
-  return true;
-}();
-
-}  // namespace cudnn
-}  // namespace common
-}  // namespace mxnet
-
-#endif  // MXNET_USE_CUDNN

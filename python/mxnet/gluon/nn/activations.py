@@ -22,6 +22,7 @@ __all__ = ['Activation', 'LeakyReLU', 'PReLU', 'ELU', 'SELU', 'Swish', 'GELU']
 
 from ... import initializer
 from ..block import HybridBlock
+from ...util import is_np_array
 
 
 class Activation(HybridBlock):
@@ -48,7 +49,8 @@ class Activation(HybridBlock):
         return self._act_type
 
     def hybrid_forward(self, F, x):
-        return F.Activation(x, act_type=self._act_type, name='fwd')
+        act = F.npx.activation if is_np_array() else F.Activation
+        return act(x, act_type=self._act_type, name='fwd')
 
     def __repr__(self):
         s = '{name}({_act_type})'
@@ -88,7 +90,8 @@ class LeakyReLU(HybridBlock):
         self._alpha = alpha
 
     def hybrid_forward(self, F, x):
-        return F.LeakyReLU(x, act_type='leaky', slope=self._alpha, name='fwd')
+        leaky_relu = F.npx.leaky_relu if is_np_array() else F.LeakyReLU
+        return leaky_relu(x, act_type='leaky', slope=self._alpha, name='fwd')
 
     def __repr__(self):
         s = '{name}({alpha})'
@@ -117,7 +120,10 @@ class PReLU(HybridBlock):
     ----------
     alpha_initializer : Initializer
         Initializer for the `embeddings` matrix.
-
+    in_channels : int, default 1
+        Number of channels (alpha parameters) to learn. Can either be 1
+        or `n` where `n` is the size of the second dimension of the input
+        tensor.
 
     Inputs:
         - **data**: input tensor with arbitrary shape.
@@ -125,10 +131,12 @@ class PReLU(HybridBlock):
     Outputs:
         - **out**: output tensor with the same shape as `data`.
     """
-    def __init__(self, alpha_initializer=initializer.Constant(0.25), **kwargs):
+    def __init__(self, alpha_initializer=initializer.Constant(0.25),
+                 in_channels=1, **kwargs):
         super(PReLU, self).__init__(**kwargs)
         with self.name_scope():
-            self.alpha = self.params.get('alpha', shape=(1,), init=alpha_initializer)
+            self.alpha = self.params.get('alpha', shape=(in_channels,),
+                                         init=alpha_initializer)
 
     def hybrid_forward(self, F, x, alpha):
         return F.LeakyReLU(x, gamma=alpha, act_type='prelu', name='fwd')

@@ -94,6 +94,7 @@ inline bool CropShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+template<typename xpu>
 inline void CropImpl(int x,
                       int y,
                       int width,
@@ -106,7 +107,7 @@ inline void CropImpl(int x,
   const TBlob& data = inputs[0];
   const TBlob& out = outputs[0];
   MXNET_NDIM_SWITCH(data.ndim(), ndim, {
-    Stream<cpu>* s = ctx.get_stream<cpu>();
+    Stream<xpu>* s = ctx.get_stream<xpu>();
     common::StaticArray<index_t, ndim> begin = {0}, step = {1};
     if (ndim == 3) {
       begin[0] = y;
@@ -118,7 +119,10 @@ inline void CropImpl(int x,
     MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
         size_t num_threads = out.shape_.FlatTo2D()[0];
-        mxnet_op::Kernel<slice_forward<ndim, Req, cpu>, cpu>::Launch(s, num_threads,
+        if (std::is_same<xpu, gpu>::value) {
+          num_threads *= out.shape_.get<ndim>()[ndim - 1];
+        }
+        mxnet_op::Kernel<slice_forward<ndim, Req, xpu>, xpu>::Launch(s, num_threads,
           out.dptr<DType>(), data.dptr<DType>(),
           data.shape_.get<ndim>(), out.shape_.get<ndim>(), begin, step);
       })
@@ -126,6 +130,7 @@ inline void CropImpl(int x,
   })
 }
 
+template<typename xpu>
 inline void CropBackwardImpl(int x,
                       int y,
                       int width,
@@ -138,7 +143,7 @@ inline void CropBackwardImpl(int x,
   if (req[0] == kNullOp) return;
   const TBlob& output_grad = inputs[0];
   const TBlob& input_grad = outputs[0];
-  Stream<cpu>* s = ctx.get_stream<cpu>();
+  Stream<xpu>* s = ctx.get_stream<xpu>();
   if (req[0] == kWriteTo) {
     Fill(s, input_grad, req[0], 0);
   } else if (req[0] == kWriteInplace) {
@@ -156,7 +161,10 @@ inline void CropBackwardImpl(int x,
     MSHADOW_TYPE_SWITCH(output_grad.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
         size_t num_threads = output_grad.shape_.FlatTo2D()[0];
-        mxnet_op::Kernel<slice_assign<ndim, Req, cpu>, cpu>::Launch(s, num_threads,
+        if (std::is_same<xpu, gpu>::value) {
+          num_threads *= output_grad.shape_.get<ndim>()[ndim - 1];
+        }
+        mxnet_op::Kernel<slice_assign<ndim, Req, xpu>, xpu>::Launch(s, num_threads,
           input_grad.dptr<DType>(), output_grad.dptr<DType>(),
           input_grad.shape_.get<ndim>(), output_grad.shape_.get<ndim>(), begin, step);
       })
@@ -164,6 +172,7 @@ inline void CropBackwardImpl(int x,
   })
 }
 
+template<typename xpu>
 inline void CropOpForward(const nnvm::NodeAttrs &attrs,
                    const OpContext &ctx,
                    const std::vector<TBlob> &inputs,
@@ -171,9 +180,10 @@ inline void CropOpForward(const nnvm::NodeAttrs &attrs,
                    const std::vector<TBlob> &outputs) {
   CHECK_EQ(outputs.size(), 1U);
   const CropParam& param = nnvm::get<CropParam>(attrs.parsed);
-  CropImpl(param.x, param.y, param.width, param.height, inputs, outputs, ctx, req);
+  CropImpl<xpu>(param.x, param.y, param.width, param.height, inputs, outputs, ctx, req);
 }
 
+template<typename xpu>
 inline void CropOpBackward(const nnvm::NodeAttrs &attrs,
                    const OpContext &ctx,
                    const std::vector<TBlob> &inputs,
@@ -181,7 +191,7 @@ inline void CropOpBackward(const nnvm::NodeAttrs &attrs,
                    const std::vector<TBlob> &outputs) {
   CHECK_EQ(outputs.size(), 1U);
   const CropParam& param = nnvm::get<CropParam>(attrs.parsed);
-  CropBackwardImpl(param.x, param.y, param.width, param.height, inputs, outputs, ctx, req);
+  CropBackwardImpl<xpu>(param.x, param.y, param.width, param.height, inputs, outputs, ctx, req);
 }
 }  // namespace image
 }  // namespace op

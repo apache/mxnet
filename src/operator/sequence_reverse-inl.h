@@ -67,30 +67,30 @@ struct SequenceReverseParam : public dmlc::Parameter<SequenceReverseParam> {
 template <OpReqType req>
 struct ReverseKernel {
   template <typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(const int i, DType *const out_data,
+  MSHADOW_XINLINE static void Map(const index_t i, DType *const out_data,
                                   const DType *const in_data,
                                   const index_t max_seq_len,
                                   const index_t batch_size,
                                   const index_t other_dim, const index_t numel,
                                   const IType *const indices) {
     const index_t batch = i / (max_seq_len * other_dim);
-    const int id = (i / other_dim) % max_seq_len;
+    const index_t id = (i / other_dim) % max_seq_len;
     const index_t j = i % other_dim;
     const index_t num_seq =
         indices ? static_cast<index_t>(indices[batch]) : max_seq_len;
     const index_t padded_periods = max_seq_len - num_seq;
     // padded part
-    if (padded_periods > 0 && id < static_cast<int>(padded_periods)) {
-      const int padded_in_offset =
+    if (padded_periods > 0 && id < padded_periods) {
+      const index_t padded_in_offset =
           (id + num_seq) * batch_size * other_dim + batch * other_dim;
 
       KERNEL_ASSIGN(out_data[padded_in_offset + j], req,
                     in_data[padded_in_offset + j]);
     }
     // unpadded part
-    if (id < static_cast<int>(num_seq)) {
-      const int in_offset = id * batch_size * other_dim + batch * other_dim;
-      const int out_offset =
+    if (id < num_seq) {
+      const index_t in_offset = id * batch_size * other_dim + batch * other_dim;
+      const index_t out_offset =
           numel - (id + 1 + padded_periods) * batch_size * other_dim +
           batch * other_dim;
 

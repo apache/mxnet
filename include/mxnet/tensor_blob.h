@@ -55,7 +55,7 @@ class NDArray;
  * \brief tensor blob class that can be used to hold tensor of any dimension,
  *  any device and any data type,
  *  This is a weak type that can be used to transfer data through interface
- *  TBlob itself do not involve any arithmentic operations,
+ *  TBlob itself doesn't involve any arithmetic operations,
  *  but it can be converted to tensor of fixed dimension for further operations
  *
  *  Like tensor, this data structure is like a pointer class and do not
@@ -149,6 +149,13 @@ class TBlob {
     *this = src;
   }
   /*!
+   * \brief constructor from TBlob (copy constructor)
+   * \param src source TBlob
+   */
+  TBlob(const TBlob &src): dptr_(src.dptr_), shape_(src.shape_), type_flag_(src.type_flag_) {
+    this->SetDLTensor(src.dev_mask(), src.dev_id());
+  }
+  /*!
    * \brief assignment from tensor
    * \param src source tensor
    * \tparam Device which device the tensor is on
@@ -162,6 +169,18 @@ class TBlob {
     shape_ = src.shape_;
     type_flag_ = mshadow::DataType<DType>::kFlag;
     SetDLTensor(Device::kDevMask, -1);
+    return *this;
+  }
+  /*!
+   * \brief assignment from TBlob (copy assignment)
+   * \param src source TBlob
+   * \return reference of self
+   */
+  inline TBlob &operator=(const TBlob &src) {
+    dptr_ = src.dptr_;
+    shape_ = src.shape_;
+    type_flag_ = src.type_flag_;
+    SetDLTensor(src.dev_mask(), src.dev_id());
     return *this;
   }
   /*!
@@ -363,6 +382,7 @@ class TBlob {
       case mshadow::kInt32: return DLDataType{kDLInt, 32, 1};
       case mshadow::kInt8: return DLDataType{kDLInt, 8, 1};
       case mshadow::kInt64: return DLDataType{kDLInt, 64, 1};
+      case mshadow::kBool: return DLDataType{kDLUInt, 1, 1};
       default: {
         LOG(FATAL) << "Unknown type_flag=" << type_flag;
         return DLDataType();

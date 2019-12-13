@@ -234,8 +234,6 @@ python quantization.py
 After quantization, INT8 models will be saved in `model/` dictionary.  Use the following command to launch inference.
 
 ```
-# USE MKLDNN AS SUBGRAPH BACKEND
-export MXNET_SUBGRAPH_BACKEND=MKLDNN
 
 # Launch FP32 Inference on VOC dataset
 python evaluate.py --cpu --num-batch 10 --batch-size 224 --deploy --prefix=./model/ssd_

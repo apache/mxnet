@@ -100,5 +100,8 @@ MXNET_REGISTER_OP_PROPERTY(_contrib_MultiBoxPrior, MultiBoxPriorProp)
 .add_arguments(MultiBoxPriorParam::__FIELDS__())
 .describe("Generate prior(anchor) boxes from data, sizes and ratios.");
 
+NNVM_REGISTER_OP(_contrib_MultiBoxPrior)
+.add_alias("_npx_multibox_prior");
+
 }  // namespace op
 }  // namespace mxnet

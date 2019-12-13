@@ -1,6 +1,3 @@
-[submodule "3rdparty/mshadow"]
-	path = 3rdparty/mshadow
-	url = https://github.com/dmlc/mshadow.git
 [submodule "3rdparty/dmlc-core"]
 	path = 3rdparty/dmlc-core
 	url = https://github.com/dmlc/dmlc-core.git
@@ -22,7 +19,7 @@
 	branch = master
 [submodule "3rdparty/tvm"]
 	path = 3rdparty/tvm
-	url = https://github.com/dmlc/tvm
+	url = https://github.com/apache/incubator-tvm.git
 [submodule "3rdparty/onnx-tensorrt"]
 	path = 3rdparty/onnx-tensorrt
 	url = https://github.com/onnx/onnx-tensorrt.git

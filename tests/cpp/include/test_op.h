@@ -153,9 +153,9 @@ struct OpInfo {
   /*! \brief The operator data */
   std::shared_ptr< OperatorExecutor > executor_;
   /*! \brief The operator prop class */
-  std::shared_ptr<OperatorProp>                         prop_;
+  std::shared_ptr<OperatorProp> prop_;
   /*! \brief The input type(s) */
-  std::vector<int>                                      in_type_;
+  std::vector<int> in_type_;
 };
 
 /*! \brief Pair of op info objects, generally for validating ops against each other */

@@ -131,7 +131,7 @@ inline bool TRTInferType(const nnvm::NodeAttrs& attrs,
     auto it_params = params_map.find(node->attrs.name);
     auto it_inputs = inputs_to_idx.find(node->attrs.name);
     if (it_params != params_map.end()) {
-      types[eid] = it_params->second.dtype();
+      types[eid] = -1;
     } else if (it_inputs != inputs_to_idx.end()) {
       types[eid] = in_types->at(it_inputs->second);
     } else {
@@ -272,7 +272,7 @@ OpStatePtr TRTCreateState(const nnvm::NodeAttrs& attrs, Context ctx,
               << " instead of: " << max_batch_size;
     max_batch_size = in_shape[0][0];
   }
-  const auto& params_map = node_param.params_map;
+  std::unordered_map<std::string, NDArray> params_map = node_param.params_map;
   const auto& inputs_to_idx = node_param.inputs_to_idx;
   const auto& outputs_to_idx = node_param.outputs_to_idx;
   const auto& idx_g = graph.indexed_graph();
@@ -312,7 +312,9 @@ OpStatePtr TRTCreateState(const nnvm::NodeAttrs& attrs, Context ctx,
   graph.attrs["shape"]        = std::make_shared<nnvm::any>(std::move(shapes));
   auto onnx_graph = op::nnvm_to_onnx::ConvertNnvmGraphToOnnx(graph, &params_map);
   auto trt_tuple = ::onnx_to_tensorrt::onnxToTrtCtx(onnx_graph, max_batch_size, 1 << 30);
-  return OpStatePtr::Create<TRTEngineParam>(std::get<0>(trt_tuple), std::get<1>(trt_tuple),
+  return OpStatePtr::Create<TRTEngineParam>(std::move(std::get<0>(trt_tuple)),
+                                            std::move(std::get<1>(trt_tuple)),
+                                            std::move(std::get<2>(trt_tuple)),
                                             inputs_to_idx, outputs_to_idx);
 }
 
@@ -328,6 +330,8 @@ NNVM_REGISTER_OP(_TensorRT)
     .set_attr<nnvm::FListOutputNames>("FListOutputNames", DefaultSubgraphOpListOutputs)
     .set_attr<FCreateOpState>("FCreateOpState", TRTCreateState)
     .set_attr<FInferStorageType>("FInferStorageType", TRTInferStorageType);
+
+MXNET_REGISTER_SUBGRAPH_BACKEND(TensorRT);
 
 MXNET_REGISTER_SUBGRAPH_PROPERTY(TensorRT, TensorrtProperty);
 }  // namespace op

@@ -56,6 +56,9 @@ inline std::priority_queue<pi>
     const AggregateStats::StatData& data = iter.second;
     double value = 0;
     switch (static_cast<AggregateStats::SortBy>(sort_by)) {
+      case AggregateStats::SortBy::Total:
+        value = data.total_aggregate_;
+        break;
       case AggregateStats::SortBy::Avg:
         if (data.type_ == AggregateStats::StatData::kCounter)
           value = (data.max_aggregate_ - data.min_aggregate_) / 2;

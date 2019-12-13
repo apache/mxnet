@@ -122,6 +122,7 @@ void ShuffleForwardCPU(const nnvm::NodeAttrs& attrs,
 
 NNVM_REGISTER_OP(_shuffle)
 .add_alias("shuffle")
+.add_alias("_np__random_shuffle")
 .describe(R"code(Randomly shuffle the elements.
 
 This shuffles the array along the first axis.

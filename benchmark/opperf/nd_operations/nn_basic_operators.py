@@ -29,12 +29,13 @@ from benchmark.opperf.rules.default_params import MX_OP_MODULE
 """
 
 
-def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
+def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
     # FullyConnnected operator benchmarks
     fc_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "FullyConnected")],
                                             run_backward=True,
                                             dtype=dtype,
                                             ctx=ctx,
+                                            profiler=profiler,
                                             inputs=[{"data": (32, 3, 256, 256),
                                                      "num_hidden": 64,
                                                      "weight": (64, 3 * 256 * 256),
@@ -53,6 +54,7 @@ def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, 
                                                  run_backward=True,
                                                  dtype=dtype,
                                                  ctx=ctx,
+                                                 profiler=profiler,
                                                  inputs=[{"data": (32, 3, 256, 256),
                                                           "p": 0.5,
                                                           "mode": "always"},
@@ -66,6 +68,7 @@ def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, 
                                                    run_backward=True,
                                                    dtype=dtype,
                                                    ctx=ctx,
+                                                   profiler=profiler,
                                                    inputs=[{"data": (32, 3, 256, 256),
                                                             "gamma": (3,),
                                                             "beta": (3,),

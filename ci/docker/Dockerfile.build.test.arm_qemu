@@ -24,6 +24,7 @@ WORKDIR /work
 
 RUN apt-get update
 COPY install/ubuntu_python.sh /work/
+COPY install/requirements /work/
 RUN /work/ubuntu_python.sh
 
 COPY install/ubuntu_arm_qemu.sh /work

@@ -39,7 +39,7 @@
 #include "../random/sampler.h"
 #include "../tensor/elemwise_binary_broadcast_op.h"
 
-#if defined(USE_MKL) && defined(_OPENMP) && !defined(__CUDACC__)
+#if (MSHADOW_USE_MKL == 1) && defined(_OPENMP) && !defined(__CUDACC__)
 #define MXNET_USE_MKL_DROPOUT 1
 #endif
 
@@ -130,11 +130,18 @@ class DropoutOp {
     DType *dataptr = data.dptr_;
     auto maskptr = reinterpret_cast<int *>(mask.dptr_);
     int count = mask.shape_[0] * mask.shape_[1];
+    if (sizeof(DType) > sizeof(int)) {
+      // allocating new buffer to avoiding memory overlapping between `mask.dptr_` and `maskptr`
+      Tensor<xpu, 1, int> temp = ctx.requested[1].get_space_typed<xpu, 1, int>(Shape1(count), s);
+      maskptr = temp.dptr_;
+    }
     BernoulliGenerate(*pgen, count, this->pkeep_, maskptr);
     const float pk_1 = 1.0f / this->pkeep_;
 #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
     for (int i = 0; i < count; ++i) {
-      outptr[i] = dataptr[i] * maskptr[i] * pk_1;
+      const DType maskVal = static_cast<DType>(maskptr[i]) * pk_1;
+      outptr[i] = dataptr[i] * maskVal;
+      mask.dptr_[i] = maskVal;
     }
   }
 
@@ -149,12 +156,11 @@ class DropoutOp {
     Tensor<xpu, 2, DType> gdata = in_grad[dropout::kData].FlatTo2D<xpu, DType>(s);
     DType *ingradptr = gdata.dptr_;
     const DType *outgradptr = grad.dptr_;
-    auto maskptr = reinterpret_cast<int *>(mask.dptr_);
-    int count = mask.shape_[0] * mask.shape_[1];
-    const float pk_1 = 1.0f / this->pkeep_;
+    const DType *maskptr = mask.dptr_;
+    const int count = mask.shape_[0] * mask.shape_[1];
 #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
     for (int i = 0; i < count; ++i) {
-      ingradptr[i] = outgradptr[i] * maskptr[i] * pk_1;
+      ingradptr[i] = outgradptr[i] * maskptr[i];
     }
   }
 
@@ -176,10 +182,10 @@ class DropoutOp {
      * \param input_data Input data to perform the dropout on
      * \param pkeep Dropout rate (keep when the generated random number is less than this value)
      */
-    MSHADOW_XINLINE static void Map(int id,
+    MSHADOW_XINLINE static void Map(index_t id,
                                     RandGenerator<xpu, DType> gen,
-                                    const int N,
-                                    const int step,
+                                    const index_t N,
+                                    const index_t step,
                                     DType *dropout_out,
                                     DType *mask_out,
                                     const DType *input_data,
@@ -193,10 +199,10 @@ class DropoutOp {
   };
   struct BernoulliKernel {
     /*! \brief Bernoulli kernel for generating mask */
-    MSHADOW_XINLINE static void Map(int id,
+    MSHADOW_XINLINE static void Map(index_t id,
                                     RandGenerator<xpu, DType> gen,
-                                    const int N,
-                                    const int step,
+                                    const index_t N,
+                                    const index_t step,
                                     DType *mask_out,
                                     const real_t pkeep) {
       RNG_KERNEL_LOOP(xpu, DType, id, gen, N, step, {
@@ -388,8 +394,7 @@ class DropoutOp {
               mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
               mshadow::Shape<NDim> lstride = mxnet_op::calc_stride(new_lshape.get<NDim>());
               mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
-              mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, DType,
-                               mshadow_op::mul>, xpu>::
+              mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, mshadow_op::mul>, xpu>::
               template LaunchEx(s, new_oshape.Size(), req[dropout::kOut],
               lstride, rstride, oshape,
               in.dptr<DType>(),
@@ -457,8 +462,7 @@ class DropoutOp {
             mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
             mshadow::Shape<NDim> lstride = mxnet_op::calc_stride(new_lshape.get<NDim>());
             mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
-            mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, DType,
-                             mshadow_op::mul>, xpu>::
+            mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, mshadow_op::mul>, xpu>::
             template LaunchEx(s, new_oshape.Size(), req[0], lstride, rstride, oshape,
             grad.dptr<DType>(), mask.dptr<DType>(), gdata.dptr<DType>());
           });
@@ -529,5 +533,4 @@ void DropoutGradCompute(const OpStatePtr& state,
 }  // namespace op
 }  // namespace mxnet
 
-#undef MXNET_USE_MKL_DROPOUT
 #endif  // MXNET_OPERATOR_NN_DROPOUT_INL_H_

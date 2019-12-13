@@ -34,7 +34,7 @@
 
 namespace mxnet {
 namespace op {
-#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 4
+#if MXNET_USE_CUDNN == 1
 namespace cudnnbatchnorm {
 enum CuDNNBatchNormOpInputs {kData, kGamma, kBeta};
 enum CuDNNBatchNormOpOutputs {kOut, kMean, kInvVar};
@@ -44,6 +44,8 @@ enum CuDNNBatchNormOpAuxiliary {kMovingMean, kMovingInvVar};
 #if defined(__CUDACC__)
 template<typename DType>
 class CuDNNBatchNormOp {
+  STATIC_ASSERT_CUDNN_VERSION_GE(5000);
+
  public:
   CuDNNBatchNormOp() {
     using namespace mshadow;
@@ -53,6 +55,7 @@ class CuDNNBatchNormOp {
     dtype_param_ = (dtype_ == CUDNN_DATA_HALF) ? kFloat32 : DataType<DType>::kFlag;
     CUDNN_CALL(cudnnCreateTensorDescriptor(&io_desc_));
     CUDNN_CALL(cudnnCreateTensorDescriptor(&mean_desc_));
+    internal_aux_states_lock_ = false;
   }
 
   void Init(const BatchNormParam &param) {
@@ -120,6 +123,13 @@ class CuDNNBatchNormOp {
         Tensor<gpu, 1, DTypeParam> save_inv_var =
           out_data[cudnnbatchnorm::kInvVar]
           .get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+        // If the lock on the auxiliary states is set,
+        // then this implies that the preceding call is also a `Forward()` call,
+        // which further indicates that we are in the backward mirroring mode,
+        // and therefore update to the auxiliary states is disabled.
+        // This is done by setting the `momentum` to `1` (or `factor` to `0`).
+        float factor = (dmlc::GetEnv("MXNET_BACKWARD_DO_MIRROR", 0) && internal_aux_states_lock_) ?
+            0 : (1 - param_.momentum);
         CUDNN_CALL(cudnnBatchNormalizationForwardTraining(s->dnn_handle_,
                                                           mode,
                                                           &a,
@@ -131,7 +141,7 @@ class CuDNNBatchNormOp {
                                                           mean_desc_,
                                                           gamma.dptr_,
                                                           beta.dptr_,
-                                                          1 - param_.momentum,
+                                                          factor,
                                                           moving_mean.dptr_,
                                                           moving_inv_var.dptr_,
                                                           param_.eps,
@@ -154,6 +164,10 @@ class CuDNNBatchNormOp {
                                                            param_.eps));
       }
     })
+    // Set the lock on the auxiliary states.
+    // If the next call to the operator is a `Forward()` call,
+    // then `momentum` will be set to `1` and hence auxiliary states will not be updated.
+    internal_aux_states_lock_ = true;
   }
 
   void Backward(const OpContext &ctx,
@@ -182,7 +196,6 @@ class CuDNNBatchNormOp {
 
     const bool global_stats = !ctx.is_train || param_.use_global_stats;
 
-#if CUDNN_VERSION >= 4007
 #if CUDNN_VERSION >= 7002
     auto mode = CUDNN_BATCHNORM_SPATIAL_PERSISTENT;
 #else
@@ -229,45 +242,9 @@ class CuDNNBatchNormOp {
         global_stats ? nullptr : save_inv_var.dptr_));
       if (param_.fix_gamma) dgamma = 0.f;
     })
-#else  // CUDNN_VERSION < 4007
-    MSHADOW_REAL_TYPE_SWITCH(dtype_param_, DTypeParam, {
-      Tensor<gpu, 1, DTypeParam> gamma =
-        in_gamma.get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
-      Tensor<gpu, 1, DTypeParam> dbeta =
-        in_grad[cudnnbatchnorm::kBeta].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
-      Tensor<gpu, 1, DTypeParam> dgamma =
-        in_grad[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
-      Tensor<gpu, 1, DTypeParam> save_mean =
-        out_mean.get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
-      Tensor<gpu, 1, DTypeParam> save_inv_var =
-        out_var.get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
-
-      typename DataType<DType>::ScaleType a = 1.0f;
-      typename DataType<DType>::ScaleType b = 0.0f;
-      typename DataType<DType>::ScaleType b_add = 1.0f;
-      CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
-
-      if (param_.fix_gamma) gamma = 1.f;
-      CUDNN_CALL(cudnnBatchNormalizationBackward(s->dnn_handle_,
-                                                 CUDNN_BATCHNORM_SPATIAL,
-                                                 &a,
-                                                 &b,
-                                                 io_desc_,
-                                                 x.dptr_,
-                                                 io_desc_,
-                                                 dy.dptr_,
-                                                 io_desc_,
-                                                 dx.dptr_,
-                                                 mean_desc_,
-                                                 gamma.dptr_,
-                                                 dgamma.dptr_,
-                                                 dbeta.dptr_,
-                                                 param_.eps,
-                                                 global_stats ? nullptr : save_mean.dptr_,
-                                                 global_stats ? nullptr : save_inv_var.dptr_));
-      if (param_.fix_gamma) dgamma = 0.f;
-    })
-#endif
+    // Release the lock on the auxiliary states, so that the next forward pass
+    // will be able to update the auxiliary states normally.
+    internal_aux_states_lock_ = false;
   }
 
  private:
@@ -300,10 +277,11 @@ class CuDNNBatchNormOp {
   cudnnTensorDescriptor_t io_desc_, mean_desc_;
   mshadow::Shape<4> shape_;
   BatchNormParam param_;
+  bool internal_aux_states_lock_;
 };
 #endif  // defined(__CUDACC__)
 
-#endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 4
+#endif  // MXNET_USE_CUDNN == 1
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_NN_CUDNN_CUDNN_BATCH_NORM_INL_H_

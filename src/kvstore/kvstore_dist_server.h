@@ -344,7 +344,8 @@ class KVStoreDistServer {
   }
 
   inline void ApplyUpdates(const DataHandleType type, const int key,
-                           UpdateBuf *update_buf, ps::KVServer<char>* server) {
+                           const ps::KVPairs<char>& req_data, UpdateBuf *update_buf,
+                           ps::KVServer<char>* server) {
     if (!sync_mode_ || update_buf->request.size() == (size_t) ps::NumWorkers()) {
       // let the main thread to execute updater_, which is necessary for python
       auto& stored = has_multi_precision_copy(type) ? store_realt_[key] : store_[key];
@@ -363,12 +364,34 @@ class KVStoreDistServer {
       if (log_verbose_)  {
         LOG(INFO) << "sent response to " << update_buf->request.size() << " workers";
       }
+      /**
+       * Request can be for either push, pull or pushpull
+       * If pull flag is set, respond immediately with the updated values
+       * Otherwise, only send the notification
+       */
+      bool has_pull = false;
       for (const auto& req : update_buf->request) {
-        server->Response(req);
+        has_pull = has_pull || req.pull;
       }
-      update_buf->request.clear();
-      if (has_multi_precision_copy(type)) CopyFromTo(stored, store_[key]);
-      stored.WaitToRead();
+      if (has_pull) {
+        // if there is a pull request, perform WaitToRead() once before DefaultStorageResponse
+        if (has_multi_precision_copy(type)) CopyFromTo(stored, store_[key]);
+        stored.WaitToRead();
+        for (const auto& req : update_buf->request) {
+          if (req.pull) {
+            DefaultStorageResponse(type, key, req, req_data, server);
+          }
+        }
+        update_buf->request.clear();
+      } else {
+        // otherwise, send response directly
+        for (const auto& req : update_buf->request) {
+          server->Response(req);
+        }
+        update_buf->request.clear();
+        if (has_multi_precision_copy(type)) CopyFromTo(stored, store_[key]);
+        stored.WaitToRead();
+      }
     } else {
       update_buf->merged.WaitToRead();
     }
@@ -532,7 +555,7 @@ class KVStoreDistServer {
                                        true, merged_dtype);
             }  // else nothing to aggregate
             updates.request.push_back(req_meta);
-            ApplyUpdates(type, master_key, &updates, server);
+            ApplyUpdates(type, master_key, req_data, &updates, server);
           } else {
             server->Response(req_meta);
           }
@@ -570,7 +593,7 @@ class KVStoreDistServer {
             AccumulateRowSparseGrads(type, recved, &updates);
           }
           updates.request.push_back(req_meta);
-          ApplyUpdates(type, master_key, &updates, server);
+          ApplyUpdates(type, master_key, req_data, &updates, server);
         }
       }
     } else {
@@ -649,7 +672,7 @@ class KVStoreDistServer {
           merged.merged += decomp_buf;
         }
         merged.request.push_back(req_meta);
-        ApplyUpdates(type, key, &merged, server);
+        ApplyUpdates(type, key, req_data, &merged, server);
       } else {
         // async push
         gradient_compression_->Dequantize(recved, &decomp_buf, 0);
@@ -732,7 +755,7 @@ class KVStoreDistServer {
           }
         }
         updates.request.push_back(req_meta);
-        ApplyUpdates(type, key, &updates, server);
+        ApplyUpdates(type, key, req_data, &updates, server);
       }
     } else {
       DefaultStorageResponse(type, key, req_meta, req_data, server);

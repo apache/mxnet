@@ -59,6 +59,7 @@ struct EngineOprSeg {
 };
 
 using MemoryPlanVector = std::vector<MemoryPlanInfo>;
+using CachedOpMonCallback = std::function<void(const char*, const char*, void*)>;
 
 inline Context GetContext(const nnvm::NodeAttrs& attrs,
                 const std::vector<NDArray*>& inputs,
@@ -104,7 +105,7 @@ inline void SetShapeType(const Context& ctx,
   static auto& infershape = nnvm::Op::GetAttr<mxnet::FInferShape>("FInferShape");
   static auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
   static auto& inferstorage = nnvm::Op::GetAttr<FInferStorageType>("FInferStorageType");
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   // infer shape
   mxnet::ShapeVector& in_shapes  = ret->arg_shapes;
   in_shapes.clear();
@@ -263,12 +264,12 @@ inline void SetDependency(const nnvm::NodeAttrs& attrs,
         requested.push_back(ResourceManager::Get()->Request(ctx, req));
         write_vars.push_back(requested.back().var);
         break;
-#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
+#if MXNET_USE_CUDNN == 1
        case ResourceRequest::kCuDNNDropoutDesc:
         requested.push_back(ResourceManager::Get()->Request(ctx, req));
         write_vars.push_back(requested.back().var);
         break;
-#endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
+#endif  // MXNET_USE_CUDNN == 1
        default:
         LOG(FATAL) << "resource type not yet supported";
       }
@@ -419,7 +420,14 @@ inline void PushFCompute(const FCompute& fn,
       // mapping from index in input_blobs to index in pre_temp_dst
       std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
 #if MXNET_USE_MKLDNN == 1
-      InvalidateOutputs(outputs, req);
+      if (exec_type != ExecType::kCrossDeviceCopy) {
+        // kCrossDeviceCopy is used for `_copy_to` operator, which doesn't compute immediately in
+        // its FCcomputeEx, but AsyncPush the copy operation to engine.
+        // So for the case that A is holding mkldnn memory, and then copy A to B, and then copy B
+        // back to A, we shouldn't invalidate outputs for copying B back to A, because at this time,
+        // copying A to B may not happen, and will corrupt A's memory.
+        InvalidateOutputs(outputs, req);
+      }
 #endif
       std::vector<OpReqType> tmp_req = req;
       // setup blobs
@@ -461,9 +469,26 @@ inline void PushFComputeEx(const FComputeEx& fn,
   const auto& run = [=](RunContext rctx) {
       OpContext opctx{need_grad, is_train, rctx, engine::CallbackOnComplete(), requested};
 #if MXNET_USE_MKLDNN == 1
-      InvalidateOutputs(outputs, req);
-#endif
+      if (exec_type != ExecType::kCrossDeviceCopy) {
+        // kCrossDeviceCopy is used for `_copy_to` operator, which doesn't compute immediately in
+        // its FCcomputeEx, but AsyncPush the copy operation to engine.
+        // So for the case that A is holding mkldnn memory, and then copy A to B, and then copy B
+        // back to A, we shouldn't invalidate outputs for copying B back to A, because at this time,
+        // copying A to B may not happen, and will corrupt A's memory.
+        InvalidateOutputs(outputs, req);
+      }
+      // add for mkldnn OP + no mkldnn OP
+      const auto is_mkldnn = Op::GetAttr<bool>("TIsMKLDNN");
+      if (!is_mkldnn.get(attrs.op, false)) {
+        std::vector<NDArray> inputs_fallback;
+        CreateDefaultInputs(inputs, &inputs_fallback);
+        fn(attrs, opctx, inputs_fallback, req, outputs);
+      } else {
+        fn(attrs, opctx, inputs, req, outputs);
+      }
+#else
       fn(attrs, opctx, inputs, req, outputs);
+#endif
       if (ctx.dev_mask() == gpu::kDevMask && exec_type == ExecType::kSync && !rctx.is_bulk) {
         rctx.get_stream<gpu>()->Wait();
       }
@@ -508,9 +533,26 @@ inline void PushOperator(const OpStatePtr& state,
                           engine::CallbackOnComplete on_complete) {
       OpContext opctx{need_grad, is_train, rctx, on_complete, requested};
 #if MXNET_USE_MKLDNN == 1
-      InvalidateOutputs(outputs, req);
-#endif
+      if (exec_type != ExecType::kCrossDeviceCopy) {
+        // kCrossDeviceCopy is used for `_copy_to` operator, which doesn't compute immediately in
+        // its FCcomputeEx, but AsyncPush the copy operation to engine.
+        // So for the case that A is holding mkldnn memory, and then copy A to B, and then copy B
+        // back to A, we shouldn't invalidate outputs for copying B back to A, because at this time,
+        // copying A to B may not happen, and will corrupt A's memory.
+        InvalidateOutputs(outputs, req);
+      }
+      // add for mkldnn OP + no mkldnn OP
+      const auto is_mkldnn = Op::GetAttr<bool>("TIsMKLDNN");
+      if (!is_mkldnn.get(attrs.op, false)) {
+        std::vector<NDArray> inputs_fallback;
+        CreateDefaultInputs(inputs, &inputs_fallback);
+        fcompute_ex(state, opctx, inputs_fallback, req, outputs);
+      } else {
+        fcompute_ex(state, opctx, inputs, req, outputs);
+      }
+#else
       fcompute_ex(state, opctx, inputs, req, outputs);
+#endif
       if (ctx.dev_mask() == gpu::kDevMask && exec_type == ExecType::kSync
           && rctx.get_stream<gpu>() && !rctx.is_bulk) {
         rctx.get_stream<gpu>()->Wait();
@@ -547,7 +589,14 @@ inline void PushOperator(const OpStatePtr& state,
         // mapping from index in input_blobs to index in pre_temp_dst
         std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
 #if MXNET_USE_MKLDNN == 1
+      if (exec_type != ExecType::kCrossDeviceCopy) {
+        // kCrossDeviceCopy is used for `_copy_to` operator, which doesn't compute immediately in
+        // its FCcomputeEx, but AsyncPush the copy operation to engine.
+        // So for the case that A is holding mkldnn memory, and then copy A to B, and then copy B
+        // back to A, we shouldn't invalidate outputs for copying B back to A, because at this time,
+        // copying A to B may not happen, and will corrupt A's memory.
         InvalidateOutputs(outputs, req);
+      }
 #endif
         std::vector<OpReqType> tmp_req = req;
         // populate input blobs and output blobs
@@ -781,10 +830,11 @@ inline std::vector<Context> PlaceDevice(const nnvm::IndexedGraph& idx) {
 }
 
 
-inline MemoryPlanVector PlanMemory(
+inline MemoryPlanVector MXPlanMemory(
     nnvm::Graph* p_g,
     nnvm::StorageVector&& storage,
     const std::vector<uint32_t>& ref_count,
+    const std::string& storage_plan,
     const std::pair<uint32_t, uint32_t>& node_range = {0, 0},
     const std::pair<uint32_t, uint32_t>& entry_range = {0, 0},
     bool detect_inplace_addto = false) {
@@ -802,6 +852,7 @@ inline MemoryPlanVector PlanMemory(
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
   const auto& shapes = g.GetAttr<mxnet::ShapeVector>("shape");
   const auto& storage_inplace = g.GetAttr<std::vector<int> >("storage_inplace_index");
+  g.attrs[storage_plan] = std::make_shared<any>(storage_inplace);
   const auto& storage_ids = g.GetAttr<StorageVector>("storage_id");
   uint32_t entry_start = entry_range.first;
   uint32_t entry_end =
@@ -856,7 +907,6 @@ inline std::multimap<size_t, NDArray> AllocateMemory(
     }
     CHECK_EQ(stypes[i], kDefaultStorage);
     if (mem_plan[i].root == i) {
-      CHECK_GT(mem_plan[i].size, 0);
       auto iter = pool.lower_bound(mem_plan[i].size);
       if (iter != pool.end()) {
         *arrays[i] = iter->second.AsArray(shapes[i], dtypes[i]);
@@ -1029,7 +1079,9 @@ void RunGraph(const bool retain_graph,
               std::vector<OpStatePtr> *p_states,
               const DispatchModeVector &dispatch_modes,
               bool recording,
-              mxnet::ShapeVector *shapes = nullptr);
+              mxnet::ShapeVector *shapes = nullptr,
+              const CachedOpMonCallback& callback = nullptr,
+              const bool monitor_all_ = false);
 
 void NaiveRunGraph(const bool retain_graph,
                    const Context& default_ctx,
@@ -1041,7 +1093,9 @@ void NaiveRunGraph(const bool retain_graph,
                    std::vector<OpStatePtr> *p_states,
                    const DispatchModeVector &dispatch_modes,
                    bool recording,
-                   mxnet::ShapeVector *shapes);
+                   mxnet::ShapeVector *shapes,
+                   const CachedOpMonCallback& callback = nullptr,
+                   const bool monitor_all_ = false);
 
 }  // namespace imperative
 }  // namespace mxnet

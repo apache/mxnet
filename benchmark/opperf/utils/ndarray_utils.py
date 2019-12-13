@@ -19,10 +19,7 @@ import numpy as np
 import mxnet as mx
 import mxnet.ndarray as nd
 
-from .profiler_utils import profile
 
-
-@profile
 def nd_forward_backward_and_profile(op, runs, *args, **kwargs):
     """Helper function to run a given NDArray operator (op) for 'runs' number of times with
     given args and kwargs. Executes both forward and backward pass.
@@ -47,13 +44,15 @@ def nd_forward_backward_and_profile(op, runs, *args, **kwargs):
     """
     for _ in range(runs):
         with mx.autograd.record():
-            res = op(*args, **kwargs)
+            if not isinstance(args[0],nd.NDArray):
+                res = op(**kwargs)
+            else:
+                res = op(*args, **kwargs)
         res.backward()
         nd.waitall()
     return res
 
 
-@profile
 def nd_forward_and_profile(op, runs, *args, **kwargs):
     """Helper function to run a given NDArray operator (op) for 'runs' number of times with
     given args and kwargs. Executes ONLY forward pass.
@@ -76,7 +75,10 @@ def nd_forward_and_profile(op, runs, *args, **kwargs):
     any results from NDArray operation execution
     """
     for _ in range(runs):
-        res = op(*args, **kwargs)
+        if not isinstance(args[0],nd.NDArray):
+            res = op(**kwargs)
+        else:
+            res = op(*args, **kwargs)
         nd.waitall()
     return res
 

@@ -220,5 +220,9 @@ MXNET_REGISTER_OP_PROPERTY(_contrib_MultiBoxDetection, MultiBoxDetectionProp)
 .add_argument("loc_pred", "NDArray-or-Symbol", "Location regression predictions.")
 .add_argument("anchor", "NDArray-or-Symbol", "Multibox prior anchor boxes")
 .add_arguments(MultiBoxDetectionParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_contrib_MultiBoxDetection)
+.add_alias("_npx_multibox_detection");
+
 }  // namespace op
 }  // namespace mxnet

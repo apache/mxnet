@@ -31,6 +31,7 @@
 #include <mxnet/base.h>
 #include <nnvm/graph.h>
 #include <nnvm/pass_functions.h>
+#include <operator/nn/deconvolution-inl.h>
 
 #include "../../../common/utils.h"
 #include "../../../ndarray/ndarray_function.h"
@@ -54,7 +55,7 @@ namespace nnvm_to_onnx {
 
 std::string ConvertNnvmGraphToOnnx(
     const nnvm::Graph& g,
-    const std::unordered_map<std::string, NDArray>* const params_map) {
+    std::unordered_map<std::string, NDArray>* params_map) {
 
   static std::atomic_ulong subgraph_count = { 0 };
 
@@ -88,8 +89,21 @@ std::string ConvertNnvmGraphToOnnx(
   auto placeholder_shapes = GetPlaceholderShapes(shape_inputs, ig);
   auto placeholder_dtypes = GetPlaceholderDTypes(dtype_inputs, ig);
   auto output_lookup = GetOutputLookup(ig);
-  uint32_t current_input = 0;
 
+  for (uint32_t node_idx = 0; node_idx < ig.num_nodes(); ++node_idx) {
+      const IndexedGraph::Node& node = ig[node_idx];
+      const nnvm::Node* source = node.source;
+      // If this is a op
+      if (!source->is_variable()) {
+        auto mightNeedPreprocessNode = preprocess_map.find(source->op()->name);
+        // if this op is defined in preprocess_map
+        if (mightNeedPreprocessNode != preprocess_map.end()) {
+          mightNeedPreprocessNode->second(source->attrs, source->inputs, params_map);
+        }
+      }
+  }
+
+  uint32_t current_input = 0;
   // Can't do a foreach over IndexedGraph since it doesn't implement begin(), etc.
   for (uint32_t node_idx = 0; node_idx < ig.num_nodes(); ++node_idx) {
     const IndexedGraph::Node& node = ig[node_idx];
@@ -157,20 +171,31 @@ std::string ConvertNnvmGraphToOnnx(
   return serialized_onnx_graph;
 }
 
-void ConvertConvolution(NodeProto* node_proto, const NodeAttrs& attrs,
-                        const nnvm::IndexedGraph& /*ig*/,
-                        const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
-  const auto& conv_param = nnvm::get<op::ConvolutionParam>(attrs.parsed);
+void ConvertIdentity(NodeProto* node_proto, const NodeAttrs& attrs,
+                     const nnvm::IndexedGraph& /*ig*/,
+                     const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
+  node_proto->set_op_type("Identity");
+}
 
-  node_proto->set_op_type("Conv");
+template <class ConvDeconvParam>
+void ConvDeconvConvertHelper(NodeProto* node_proto, const NodeAttrs& attrs,
+                             const nnvm::IndexedGraph& /*ig*/,
+                             const array_view<IndexedGraph::NodeEntry>& /*input*/,
+                             const ConvDeconvParam& param,
+                             ConvDeconvType type) {
+  if (type == ConvDeconvType::Convolution) {
+    node_proto->set_op_type("Conv");
+  } else {
+    node_proto->set_op_type("ConvTranspose");
+  }
 
-  const mxnet::TShape kernel = conv_param.kernel;
-  const mxnet::TShape stride = conv_param.stride;
-  const mxnet::TShape dilate = conv_param.dilate;
-  const mxnet::TShape pad = conv_param.pad;
-  const uint32_t num_group = conv_param.num_group;
+  const mxnet::TShape kernel = param.kernel;
+  const mxnet::TShape stride = param.stride;
+  const mxnet::TShape dilate = param.dilate;
+  const mxnet::TShape pad = param.pad;
+  const uint32_t num_group = param.num_group;
   // const bool no_bias = conv_param.no_bias;
-  const dmlc::optional<int> layout = conv_param.layout;
+  const dmlc::optional<int> layout = param.layout;
 
   // dilations
   AttributeProto* const dilations = node_proto->add_attribute();
@@ -213,7 +238,23 @@ void ConvertConvolution(NodeProto* node_proto, const NodeAttrs& attrs,
   for (const dim_t kval : stride) {
     strides->add_ints(static_cast<int64>(kval));
   }
+}
+
+void ConvertConvolution(NodeProto* node_proto, const NodeAttrs& attrs,
+                        const nnvm::IndexedGraph& ig,
+                        const array_view<IndexedGraph::NodeEntry>& inputs) {
+  const auto& conv_param = nnvm::get<op::ConvolutionParam>(attrs.parsed);
+  ConvDeconvConvertHelper(node_proto, attrs, ig, inputs, conv_param,
+      ConvDeconvType::Convolution);
 }  // end ConvertConvolution
+
+void ConvertDeconvolution(NodeProto* node_proto, const NodeAttrs& attrs,
+                          const nnvm::IndexedGraph& ig,
+                          const array_view<IndexedGraph::NodeEntry>& inputs) {
+  const auto& deconv_param = nnvm::get<op::DeconvolutionParam>(attrs.parsed);
+  ConvDeconvConvertHelper(node_proto, attrs, ig, inputs, deconv_param,
+      ConvDeconvType::Deconvolution);
+}  // end ConvertDeconvolution
 
 void ConvertPooling(NodeProto* node_proto, const NodeAttrs& attrs,
                     const nnvm::IndexedGraph& /*ig*/,
@@ -227,10 +268,12 @@ void ConvertPooling(NodeProto* node_proto, const NodeAttrs& attrs,
   const bool global_pool = pooling_param.global_pool;
 
   if (global_pool) {
-    if (pool_type == 0) {
+    if (pool_type == pool_enum::kMaxPooling) {
       node_proto->set_op_type("GlobalMaxPool");
-    } else {
+    } else if (pool_type == pool_enum::kAvgPooling) {
       node_proto->set_op_type("GlobalAveragePool");
+    } else {
+      LOG(FATAL) << "Pool type of node '" << attrs.name << "' unsupported: " << attrs.name;
     }
     return;
   }
@@ -263,12 +306,29 @@ void ConvertPooling(NodeProto* node_proto, const NodeAttrs& attrs,
     strides->add_ints(static_cast<int64>(kval));
   }
 
-  if (pool_type == 0) {
+  // ceil_mode
+  AttributeProto* const ceil_mode = node_proto->add_attribute();
+  ceil_mode->set_name("ceil_mode");
+  ceil_mode->set_type(AttributeProto::INT);
+  ceil_mode->set_i(static_cast<int64>(pooling_param.pooling_convention == pool_enum::kFull));
+
+  if (pool_type == pool_enum::kMaxPooling) {
     node_proto->set_op_type("MaxPool");
-  } else {
+  } else if (pool_type == pool_enum::kAvgPooling) {
     node_proto->set_op_type("AveragePool");
-  }  // average pooling
-  // not global pooling
+  } else {
+    LOG(FATAL) << "Pool type of node '" << attrs.name << "' unsupported: " << attrs.name;
+  }
+
+  // count_include_pad
+  AttributeProto* const count_include_pad = node_proto->add_attribute();
+  count_include_pad->set_name("count_include_pad");
+  count_include_pad->set_type(AttributeProto::INT);
+  if (pooling_param.count_include_pad.has_value()) {
+    count_include_pad->set_i(pooling_param.count_include_pad.value());
+  } else {
+    count_include_pad->set_i(1);
+  }
 }  // end ConvertPooling
 
 void ConvertRelu(NodeProto* node_proto, const NodeAttrs& /*attrs*/,
@@ -519,7 +579,7 @@ void ConvertConstant(
   auto size = shape.Size();
 
   if (dtype == TensorProto_DataType_FLOAT) {
-    std::shared_ptr<float> shared_data_ptr(new float[size]);
+    std::shared_ptr<float[]> shared_data_ptr(new float[size]);
     float* const data_ptr = shared_data_ptr.get();
     nd.SyncCopyToCPU(static_cast<void*>(data_ptr), size);
 
@@ -527,7 +587,7 @@ void ConvertConstant(
       initializer_proto->add_float_data(data_ptr[blob_idx]);
     }
   } else if (dtype == TensorProto_DataType_FLOAT16) {
-    std::shared_ptr<uint16_t> shared_data_ptr(new uint16_t[size]);
+    std::shared_ptr<uint16_t[]> shared_data_ptr(new uint16_t[size]);
     uint16_t* const data_ptr = shared_data_ptr.get();
     nd.SyncCopyToCPU(static_cast<void*>(data_ptr), size);
     for (size_t blob_idx = 0; blob_idx < size; ++blob_idx) {
@@ -573,7 +633,7 @@ void ConvertOutput(
 void ConvertClip(NodeProto* node_proto, const NodeAttrs& attrs,
                  const nnvm::IndexedGraph& /*ig*/,
                  const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
-  const auto param = nnvm::get<ClipParam>(attrs.parsed);
+  const auto& param = nnvm::get<ClipParam>(attrs.parsed);
 
   node_proto->set_op_type("Clip");
 
@@ -593,7 +653,7 @@ void ConvertClip(NodeProto* node_proto, const NodeAttrs& attrs,
 void ConvertPad(NodeProto* node_proto, const NodeAttrs& attrs,
                 const nnvm::IndexedGraph& /*ig*/,
                 const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
-  const auto param = nnvm::get<PadParam>(attrs.parsed);
+  const auto& param = nnvm::get<PadParam>(attrs.parsed);
 
   node_proto->set_op_type("Pad");
 
@@ -612,7 +672,7 @@ void ConvertPad(NodeProto* node_proto, const NodeAttrs& attrs,
       mode->set_s("reflect");
       break;
     default:
-      throw dmlc::Error("Such mode of padding doesn't exist doesn't exist");
+      throw dmlc::Error("Such mode of padding doesn't exist");
   }
 
   // pads
@@ -640,6 +700,18 @@ void ConvertDropout(NodeProto* node_proto, const NodeAttrs& attrs,
                     const nnvm::IndexedGraph& /*ig*/,
                     const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
   node_proto->set_op_type("Dropout");
+}
+
+void PreprocessBatchNorm(const NodeAttrs &attrs,
+                         const std::vector<nnvm::NodeEntry> &inputs,
+                         std::unordered_map<std::string, NDArray> *params_map) {
+  const auto& param = nnvm::get<op::BatchNormParam>(attrs.parsed);
+  if (param.fix_gamma) {
+    // if mxnet is specify fix_gamma, we will need to preprocess the params map
+    // to convert the gamma associate with this batch norm layer to 1.
+    std::string gammaNodeName = inputs[batchnorm::kGamma].node->attrs.name;
+    (*params_map)[gammaNodeName] = 1.0f;
+  }
 }
 
 }  // namespace nnvm_to_onnx

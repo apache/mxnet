@@ -250,7 +250,7 @@ class Module(BaseModule):
         `(arg_params, aux_params)`
             A pair of dictionaries each mapping parameter names to NDArray values.
         """
-        assert self.binded and self.params_initialized
+        assert self.params_initialized
 
         if self._params_dirty:
             self._sync_params_from_devices()

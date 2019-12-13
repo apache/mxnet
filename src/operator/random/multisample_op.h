@@ -42,7 +42,7 @@ struct MultiSampleParam : public dmlc::Parameter<MultiSampleParam> {
   int dtype;
   DMLC_DECLARE_PARAMETER(MultiSampleParam) {
     DMLC_DECLARE_FIELD(shape)
-      .set_default(mxnet::TShape())
+      .set_default(mxnet::TShape(0, 1))
       .describe("Shape to be sampled from each random distribution.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)

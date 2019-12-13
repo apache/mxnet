@@ -18,18 +18,32 @@
 import os
 import numpy as np
 import mxnet as mx
-from common import *
-from lenet5_common import get_iters
+from ctypes.util import find_library
 
+def check_tensorrt_installation():
+    assert find_library('nvinfer') is not None, "Can't find the TensorRT shared library"
+
+def get_iters(mnist, batch_size):
+    """Get MNIST iterators."""
+    train_iter = mx.io.NDArrayIter(mnist['train_data'],
+                                   mnist['train_label'],
+                                   batch_size,
+                                   shuffle=True)
+    val_iter = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_size)
+    test_iter = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_size)
+    all_test_labels = np.array(mnist['test_label'])
+    return train_iter, val_iter, test_iter, all_test_labels
 
 def run_inference(sym, arg_params, aux_params, mnist, all_test_labels, batch_size, use_tensorrt):
     """Run inference with either MXNet or TensorRT"""
 
     data_size = (batch_size,) + mnist['test_data'].shape[1:]
     type_dict = {'data': 'float32', 'softmax_label': 'float32'}
+
     if use_tensorrt:
         _sym = sym.get_backend_symbol('TensorRT')
-        mx.contrib.tensorrt.init_tensorrt_params(_sym, arg_params, aux_params)
+        arg_params, aux_params = mx.contrib.tensorrt.init_tensorrt_params(_sym, arg_params,
+                                                                          aux_params)
     else:
         _sym = sym
     for k, v in arg_params.items():
@@ -43,10 +57,11 @@ def run_inference(sym, arg_params, aux_params, mnist, all_test_labels, batch_siz
                                 grad_req='null',
                                 force_rebind=True)
     executor.copy_params_from(arg_params, aux_params)
+
     # Get this value from all_test_labels
     # Also get classes from the dataset
     num_ex = 10000
-    all_preds = np.zeros([num_ex, 10], dtype=np.float32)
+    all_preds = np.zeros([num_ex, 10])
     test_iter = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_size)
 
     example_ct = 0
@@ -96,11 +111,10 @@ def test_tensorrt_inference():
     print("MXNet-TensorRT accuracy: %f" % trt_pct)
 
     absolute_accuracy_diff = abs(mx_pct - trt_pct)
-    epsilon = 1.01e-2
+    epsilon = 3e-2
     assert absolute_accuracy_diff < epsilon, \
         """Absolute diff. between MXNet & TensorRT accuracy (%f) exceeds threshold (%f):
            MXNet = %f, TensorRT = %f""" % (absolute_accuracy_diff, epsilon, mx_pct, trt_pct)
-
 
 if __name__ == '__main__':
     import nose

@@ -178,23 +178,23 @@ def _fix_channels(op_name, attrs, inputs, proto_obj):
     these attributes. We check the shape of weights provided to get the number.
     """
     weight_name = inputs[1].name
-    if not weight_name in proto_obj._params: # pylint: disable=no-else-raise
+    if not weight_name in proto_obj._params:
         raise ValueError("Unable to get channels/units attr from onnx graph.")
-    else:
-        wshape = proto_obj._params[weight_name].shape
-        assert len(wshape) >= 2, "Weights shape is invalid: {}".format(wshape)
 
-        if op_name == 'FullyConnected':
-            attrs['num_hidden'] = wshape[0]
-        else:
-            if op_name == 'Convolution':
-                # Weight shape for Conv and FC: (M x C x kH x kW) : M is number of
-                # feature maps/hidden  and C is number of channels
-                attrs['num_filter'] = wshape[0]
-            elif op_name == 'Deconvolution':
-                # Weight shape for DeConv : (C x M x kH x kW) : M is number of
-                # feature maps/filters and C is number of channels
-                attrs['num_filter'] = wshape[1]
+    wshape = proto_obj._params[weight_name].shape
+    assert len(wshape) >= 2, "Weights shape is invalid: {}".format(wshape)
+
+    if op_name == 'FullyConnected':
+        attrs['num_hidden'] = wshape[0]
+    else:
+        if op_name == 'Convolution':
+            # Weight shape for Conv and FC: (M x C x kH x kW) : M is number of
+            # feature maps/hidden  and C is number of channels
+            attrs['num_filter'] = wshape[0]
+        elif op_name == 'Deconvolution':
+            # Weight shape for DeConv : (C x M x kH x kW) : M is number of
+            # feature maps/filters and C is number of channels
+            attrs['num_filter'] = wshape[1]
     return attrs
 
 

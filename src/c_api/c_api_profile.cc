@@ -312,7 +312,7 @@ int MXAggregateProfileStatsPrint(const char **out_str, int reset) {
 
 int MXAggregateProfileStatsPrintEx(const char **out_str, int reset, int format, int sort_by,
                                   int ascending) {
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
     CHECK_NOTNULL(out_str);
     profiler::Profiler *profiler = profiler::Profiler::Get();

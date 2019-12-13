@@ -18,7 +18,7 @@
 
 set -ex
 
-source tools/staticbuild/build.sh $mxnet_variant pip
+source tools/staticbuild/build.sh $mxnet_variant
 
 set -ex
 
