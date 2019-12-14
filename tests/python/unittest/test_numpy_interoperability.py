@@ -181,6 +181,18 @@ def _add_workload_split():
     assertRaises(ValueError, np.split, np.arange(10), 3)
 
 
+def _add_workload_array_split():
+    a = np.arange(10)
+    b = np.array([np.arange(10), np.arange(10)])
+
+    for i in range(1, 12):
+        OpArgMngr.add_workload('array_split', a, i)
+    OpArgMngr.add_workload('array_split', b, 3, axis=0)
+    OpArgMngr.add_workload('array_split', b, [0, 1, 2], axis=0)
+    OpArgMngr.add_workload('array_split', b, 3, axis=-1)
+    OpArgMngr.add_workload('array_split', b, 3)
+
+    
 def _add_workload_squeeze():
     OpArgMngr.add_workload('squeeze', np.random.uniform(size=(4, 1)))
     OpArgMngr.add_workload('squeeze', np.random.uniform(size=(20, 10, 10, 1, 1)))
@@ -1402,6 +1414,7 @@ def _prepare_workloads():
     _add_workload_rint(array_pool)
     _add_workload_roll()
     _add_workload_split()
+    _add_workload_array_split()
     _add_workload_squeeze()
     _add_workload_stack(array_pool)
     _add_workload_std()

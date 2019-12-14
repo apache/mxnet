@@ -71,14 +71,8 @@ Data
 .. container:: cards
 
    .. card::
-      :title: Data Loading
-      :link: data/data.html
-
-      How to load data for training.
-
-   .. card::
       :title: Data Augmentation
-      :link: data/data_augmentation.md
+      :link: data/data_augmentation.html
 
       A guide to data augmentation.
 
