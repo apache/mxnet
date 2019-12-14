@@ -2239,6 +2239,63 @@ def test_np_split():
 
 @with_seed()
 @use_np
+def test_np_array_split():
+    class TestArray_split(HybridBlock):
+        def __init__(self, indices_or_sections, axis=None):
+            super(TestArray_split, self).__init__()
+            self._axis = axis
+            self._indices_or_sections = indices_or_sections
+
+        def hybrid_forward(self, F, a, *args, **kwargs):
+            return F.np.array_split(a, indices_or_sections=self._indices_or_sections,
+                              axis=self._axis)
+
+    def get_indices(axis_size):
+        if axis_size is 0:
+            axis_size = random.randint(3, 6)
+        samples = random.randint(1, axis_size - 1)
+        indices = sorted(random.sample([i for i in range(0, axis_size + 1)], samples))
+        indices = tuple(indices)
+        return indices
+
+    shapes = [(), (5, ), (10, ),
+              (2, 5), (5, 5), (10, 10),
+              (4, 4, 4), (4, 6, 9), (6, 6, 6),
+              (7, 8, 9, 10)]
+    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
+
+    combinations = itertools.product([False, True], shapes, dtypes)
+    for hybridize, shape, dtype in combinations:
+        rtol = 1e-2 if dtype == np.float16 else 1e-3
+        atol = 1e-4 if dtype == np.float16 else 1e-5
+        for axis in range(len(shape)):
+            x = np.random.uniform(-5.0, 5.0, size=shape).astype(dtype)
+            indices = get_indices(shape[axis])
+            sections = 7 if x.shape[axis] is 0 else random.randint(1,x.shape[axis])
+            for indices_or_sections in [indices, sections]:
+                # test gluon
+                test_array_split = TestArray_split(axis=axis, indices_or_sections=indices_or_sections)
+                if hybridize:
+                    test_array_split.hybridize()
+                x.attach_grad()
+                expected_ret = _np.array_split(x.asnumpy(), indices_or_sections=indices_or_sections, axis=axis)
+                with mx.autograd.record():
+                    y = test_array_split(x)
+                assert len(y) == len(expected_ret)
+                for mx_out, np_out in zip(y, expected_ret):
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+                mx.autograd.backward(y)
+                assert_almost_equal(x.grad.asnumpy(), _np.ones(x.shape), rtol=rtol, atol=atol)
+
+                # test imperative
+                mx_outs = np.array_split(x, indices_or_sections=indices_or_sections, axis=axis)
+                np_outs = _np.array_split(x.asnumpy(), indices_or_sections=indices_or_sections, axis=axis)
+                for mx_out, np_out in zip(mx_outs, np_outs):
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+
+@with_seed()
+@use_np
 def test_np_vsplit():
     class TestVsplit(HybridBlock):
         def __init__(self, indices_or_sections):
