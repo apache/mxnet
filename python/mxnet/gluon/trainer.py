@@ -75,7 +75,7 @@ class Trainer(object):
         if isinstance(params, (dict, ParameterDict)):
             for key in sorted(list(params.keys())):
                 param_list.append(params[key])
-        params = param_list
+            params = param_list
         if not isinstance(params, (list, tuple)):
             raise ValueError(
                 "First argument must be a list or dict of Parameters, " \
