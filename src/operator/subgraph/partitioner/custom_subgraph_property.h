@@ -20,10 +20,10 @@
 #ifndef MXNET_OPERATOR_SUBGRAPH_PARTITIONER_CUSTOM_SUBGRAPH_PROPERTY_H_
 #define MXNET_OPERATOR_SUBGRAPH_PARTITIONER_CUSTOM_SUBGRAPH_PROPERTY_H_
 
+#include <nnvm/pass_functions.h>
 #include <string>
 #include <utility>
 #include <vector>
-#include <nnvm/pass_functions.h>
 #include "../common.h"
 #include "../subgraph_property.h"
 #include "../../include/mxnet/lib_api.h"
@@ -35,7 +35,7 @@ namespace op {
  */
 class CustomContainOpSelector: public SubgraphSelector {
  public:
-  CustomContainOpSelector(std::vector<std::string> supportedNodes) :
+  explicit CustomContainOpSelector(std::vector<std::string> supportedNodes) :
     supportedNodes_(supportedNodes) {}
   virtual bool Select(const nnvm::Node &n) {
     return std::find(supportedNodes_.begin(), supportedNodes_.end(),
@@ -58,14 +58,14 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   CustomSubgraphProperty() {
     supportedOps_ = nullptr;
   }
- CustomSubgraphProperty(std::string subgraphProp_name,
+  CustomSubgraphProperty(std::string subgraphProp_name,
                         partCallSupportedOps_t callSupportedOps,
                         supportedOps_t supportedOps,
                         std::string op_name) :
-  subgraphProp(subgraphProp_name),
     callSupportedOps_(callSupportedOps),
     supportedOps_(supportedOps),
     subgraph_op_name(op_name) {}
+    subgraphProp(subgraphProp_name),
   // create custom subgraph property
   static SubgraphPropertyPtr Create() {
     return std::make_shared<CustomSubgraphProperty>();
