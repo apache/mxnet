@@ -64,8 +64,8 @@ class  CustomSubgraphProperty: public SubgraphProperty {
                         std::string op_name) :
     callSupportedOps_(callSupportedOps),
     supportedOps_(supportedOps),
-    subgraph_op_name(op_name) {}
-    subgraphProp(subgraphProp_name),
+      subgraph_op_name(op_name),
+      subgraphProp(subgraphProp_name) {}
   // create custom subgraph property
   static SubgraphPropertyPtr Create() {
     return std::make_shared<CustomSubgraphProperty>();
