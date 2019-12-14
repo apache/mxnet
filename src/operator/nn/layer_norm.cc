@@ -127,6 +127,7 @@ void LayerNormGradCompute<cpu>(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(LayerNorm)
+.add_alias("_npx_layer_norm")
 .describe(R"code(Layer normalization.
 
 Normalizes the channels of the input tensor by mean and variance, and applies a scale ``gamma`` as
@@ -193,6 +194,7 @@ axis to be the last item in the input shape.
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .add_argument("data", "NDArray-or-Symbol", "Input data to layer normalization")
 .add_argument("gamma", "NDArray-or-Symbol", "gamma array")
 .add_argument("beta", "NDArray-or-Symbol", "beta array")

@@ -94,7 +94,7 @@ class PythonModule(BaseModule):
     # Parameters of a module
     ################################################################################
     def get_params(self):
-        """Gets parameters, those are potentially copies of the the actual parameters used
+        """Gets parameters, those are potentially copies of the actual parameters used
         to do computation on the device. Subclass should override this method if contains
         parameters.
 

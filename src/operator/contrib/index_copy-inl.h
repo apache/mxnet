@@ -71,7 +71,7 @@ inline bool IndexCopyShape(const nnvm::NodeAttrs& attrs,
       CHECK_EQ(in_attrs->at(0)[i], in_attrs->at(2)[i]);
     }
   }
-  // The the length of the fitrst dim of copied tensor
+  // The the length of the first dim of copied tensor
   // must equal to the size of index vector
   CHECK_EQ(in_attrs->at(1)[0], in_attrs->at(2)[0]);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));

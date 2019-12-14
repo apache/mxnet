@@ -339,7 +339,7 @@ void NormalizeOpForward(const nnvm::NodeAttrs &attrs,
   std::vector<float> mean(3);
   std::vector<float> std(3);
   if (param.mean.ndim() == 1) {
-    mean[0] = mean[1] = mean[3] = param.mean[0];
+    mean[0] = mean[1] = mean[2] = param.mean[0];
   } else {
     mean[0] = param.mean[0];
     mean[1] = param.mean[1];

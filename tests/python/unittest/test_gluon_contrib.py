@@ -24,10 +24,9 @@ from mxnet.gluon import nn
 from mxnet.gluon.contrib.nn import (
     Concurrent, HybridConcurrent, Identity, SparseEmbedding, PixelShuffle1D,
     PixelShuffle2D, PixelShuffle3D)
-from mxnet.test_utils import almost_equal, default_context, assert_almost_equal
+from mxnet.test_utils import almost_equal, default_context, assert_almost_equal, assert_allclose
 from common import setup_module, with_seed, teardown
 import numpy as np
-from numpy.testing import assert_allclose
 
 
 def check_rnn_cell(cell, prefix, in_shape=(10, 50), out_shape=(10, 100), begin_state=None):
@@ -112,6 +111,7 @@ def test_conv_fill_shape():
     check_rnn_forward(cell, mx.nd.ones((8, 3, 5, 7)))
     assert cell.i2h_weight.shape[1] == 5, cell.i2h_weight.shape[1]
 
+
 @with_seed()
 def test_lstmp():
     nhid = 100
@@ -193,8 +193,7 @@ def test_concurrent():
 def test_identity():
     model = Identity()
     x = mx.nd.random.uniform(shape=(128, 33, 64))
-    mx.test_utils.assert_almost_equal(model(x).asnumpy(),
-                                      x.asnumpy())
+    assert_almost_equal(model(x), x)
 
 @with_seed()
 def test_sparse_embedding():
@@ -219,7 +218,7 @@ def test_pixelshuffle1d():
     y = layer(x)
     assert y.shape == shape_after
     assert_allclose(
-        y.asnumpy(),
+        y,
         [[[0, 3, 1, 4, 2, 5],
           [6, 9, 7, 10, 8, 11]]]
     )
@@ -242,7 +241,7 @@ def test_pixelshuffle2d():
     # - Increasing the block index adds an offset of 1
     # - Increasing the channel index adds an offset of `nx * up_x * ny * up_y`
     assert_allclose(
-        y.asnumpy(),
+        y,
         [[[[ 0,  6, 12,  1,  7, 13,  2,  8, 14],
            [18, 24, 30, 19, 25, 31, 20, 26, 32],
            [ 3,  9, 15,  4, 10, 16,  5, 11, 17],
@@ -273,7 +272,7 @@ def test_pixelshuffle3d():
     #   column index by 1, e.g. the block [[[ 0, 24]], [[48, 72]]]
     # - Increasing the block index adds an offset of 1
     assert_allclose(
-        y.asnumpy(),
+        y,
         [[[[[ 0, 24,  1, 25,  2, 26,  3, 27],
             [ 4, 28,  5, 29,  6, 30,  7, 31],
             [ 8, 32,  9, 33, 10, 34, 11, 35]],
@@ -382,19 +381,17 @@ def check_unroll(cell_type, num_states, layout):
         trainer = gluon.Trainer(params2, 'sgd', {'learning_rate' : 0.03})
         with mx.autograd.record():
             res2, states2 = layer(rnn_data, states, valid_length)
-        assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=0.001, atol=0.0001)
+        assert_almost_equal(res1, res2, rtol=0.001, atol=0.0001)
         assert len(states1) == len(states2)
         for i in range(len(states1)):
-            assert_almost_equal(states1[i].asnumpy(), states2[i].asnumpy(),
-                                rtol=0.001, atol=0.0001)
+            assert_almost_equal(states1[i], states2[i], rtol=0.001, atol=0.0001)
         res2.backward()
         trainer.step(batch_size)
 
         for key, val in params1.items():
             weight1 = val.data()
             weight2 = params2[key].data()
-            assert_almost_equal(weight1.asnumpy(), weight2.asnumpy(),
-                    rtol=0.001, atol=0.0001)
+            assert_almost_equal(weight1, weight2, rtol=0.001, atol=0.0001)
 
 
 @with_seed()
@@ -404,6 +401,36 @@ def test_contrib_unroll():
     for cell_type, num_states in cell_types:
         check_unroll(cell_type, num_states, 'TNC')
         check_unroll(cell_type, num_states, 'NTC')
+
+@with_seed()
+def test_ModulatedDeformableConvolution():
+    """test of the deformable convolution layer with possible combinations of arguments,
+    currently this layer only supports gpu
+    """
+    from mxnet.gluon.contrib.cnn import DeformableConvolution
+    net = nn.HybridSequential()
+    net.add(
+        DeformableConvolution(10, kernel_size=(3, 3), strides=1, padding=0),
+        DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',
+                               offset_use_bias=False, use_bias=False),
+        DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',
+                               offset_use_bias=False),
+        DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',
+                               use_bias=False),
+        DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, offset_use_bias=False, use_bias=False),
+        DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, offset_use_bias=False),
+        DeformableConvolution(12, kernel_size=(3, 2), strides=1, padding=0, use_bias=False),
+        DeformableConvolution(12, kernel_size=(3, 2), strides=1, padding=0, use_bias=False, num_deformable_group=4),
+    )
+
+    ctx = mx.cpu()
+
+    net.initialize(force_reinit=True, ctx=ctx)
+    net.hybridize()
+
+    x = mx.nd.random.uniform(shape=(8, 5, 30, 31), ctx=ctx)
+    with mx.autograd.record():
+        y = net(x)
 
 
 if __name__ == '__main__':

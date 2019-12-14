@@ -21,7 +21,7 @@
 # the whole docker cache for the image
 
 # Important Maintenance Instructions:
-#  Align changes with installation instructions in /docs/install/ubuntu_setup.md
+#  Align changes with installation instructions in /get_started/ubuntu_setup.md
 #  Align with R install script: /docs/install/install_mxnet_ubuntu_r.sh
 
 set -ex
@@ -41,4 +41,7 @@ apt-get install -y --allow-unauthenticated \
     libxml2-dev \
     libxt-dev \
     r-base \
-    r-base-dev
+    r-base-dev \
+    texinfo \
+    texlive \
+    texlive-fonts-extra 

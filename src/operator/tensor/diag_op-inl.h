@@ -71,7 +71,7 @@ inline mxnet::TShape DiagShapeImpl(const mxnet::TShape& ishape, const int k,
   int32_t x1 = CheckAxis(axis1, ishape.ndim());
   int32_t x2 = CheckAxis(axis2, ishape.ndim());
 
-  CHECK_NE(x1, x2) << "axis1 and axis2 cannot refer to the the same axis " << x1;
+  CHECK_NE(x1, x2) << "axis1 and axis2 cannot refer to the same axis " << x1;
 
   auto h = ishape[x1];
   auto w = ishape[x2];

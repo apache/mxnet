@@ -19,6 +19,7 @@ import sys
 import mxnet as mx
 
 os.environ['ENABLE_MKLDNN_QUANTIZATION_TEST'] = '1'
+os.environ['MXNET_SUBGRAPH_BACKEND'] = 'NONE'
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../quantization'))
 from test_quantization import *
@@ -26,3 +27,5 @@ from test_quantization import *
 if __name__ == '__main__':
     import nose
     nose.runmodule()
+    del os.environ['ENABLE_MKLDNN_QUANTIZATION_TEST']
+    del os.environ['MXNET_SUBGRAPH_BACKEND']

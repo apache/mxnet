@@ -44,9 +44,9 @@ Here is the list of command line parameters accepted by the Caffe Translator:
 - *solver-prototxt*: specifies the path to the solver prototxt to be translated.
 - *output-file*: specifies the file to write the translated output into.
 - *params-file* (optional): specifies the .caffemodel file to initialize parameters from.
-- *custom-data-layers* (optional): Specifies a comma-separated list of types of the custom data layers used in the prototxt. The translator will use [`CaffeDataIter`](https://mxnet.incubator.apache.org/faq/caffe.html#use-io-caffedataiter) to translate these layers to MXNet.
+- *custom-data-layers* (optional): Specifies a comma-separated list of types of the custom data layers used in the prototxt. The translator will use [`CaffeDataIter`](https://mxnet.apache.org/faq/caffe.html#use-io-caffedataiter) to translate these layers to MXNet.
 
-**Note:** Translated code uses [`CaffeDataIter`](https://mxnet.incubator.apache.org/faq/caffe.html#use-io-caffedataiter) to read from LMDB files. `CaffeDataIter` requires the number of examples in LMDB file to be specified as a parameter. You can provide this information before translation using a `#CaffeToMXNet` directive like shown below:
+**Note:** Translated code uses [`CaffeDataIter`](https://mxnet.apache.org/faq/caffe.html#use-io-caffedataiter) to read from LMDB files. `CaffeDataIter` requires the number of examples in LMDB file to be specified as a parameter. You can provide this information before translation using a `#CaffeToMXNet` directive like shown below:
 
 ```
   data_param {

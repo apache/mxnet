@@ -35,11 +35,11 @@
 namespace mxnet {
 namespace op {
 
-template<typename SrcType, typename DstType>
+template <typename SrcType, typename DstType>
 static void MKLDNNQuantizeComputeKer(const std::vector<NDArray>& inputs,
                                      const std::vector<NDArray>& outputs,
                                      const QuantizeParam& param,
-                                     const std::vector<OpReqType> &req) {
+                                     const std::vector<OpReqType>& req) {
   using namespace mshadow;
   using namespace mxnet_op;
   using red::limits::MaxValue;
@@ -60,38 +60,30 @@ static void MKLDNNQuantizeComputeKer(const std::vector<NDArray>& inputs,
     LOG(FATAL) << "mkldnn quantize op only supports int8 and uint8 as output type";
   }
   float scale = quantized_range / real_range;
-  primitive_attr attr;
+  mkldnn::primitive_attr attr;
   const int mask = 0;
   std::vector<float> scales = {scale};
   attr.set_output_scales(mask, scales);
-  attr.set_int_output_round_mode(round_nearest);
   mkldnn::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
-
   NDArray in_buffer = inputs[0];
-  if (inputs[0].IsView() && inputs[0].IsMKLDNNData())
-    in_buffer = inputs[0].Reorder2Default();
+  if (inputs[0].IsView() && inputs[0].IsMKLDNNData()) in_buffer = inputs[0].Reorder2Default();
 
   auto i_mem = in_buffer.GetMKLDNNData();
-  auto i_mpd = i_mem->get_primitive_desc();
-  auto i_desc = i_mpd.desc();
-  mkldnn::memory::format i_fmt = static_cast<mkldnn::memory::format>(i_desc.data.format);
-  if (i_fmt == mkldnn::memory::format::nchw ||
-      i_fmt == mkldnn::memory::format::nChw8c ||
-      i_fmt == mkldnn_nChw16c) {
-    i_fmt = mkldnn::memory::format::nhwc;
-  }
+  auto i_desc = i_mem->get_desc();
   size_t i_ndim = in_buffer.shape().ndim();
-  mkldnn::memory::dims i_dims = mkldnn::memory::dims(i_ndim);
-  for (size_t i = 0; i < i_ndim; i++) {
-    i_dims[i] = static_cast<int>(in_buffer.shape()[i]);
+  mkldnn::memory::desc o_desc;
+  if (i_ndim == 4) {
+    mkldnn::memory::format_tag o_fmt = mkldnn::memory::format_tag::nhwc;
+    mkldnn::memory::dims o_dims(i_desc.data.dims, i_desc.data.dims + i_desc.data.ndims);
+    o_desc = mkldnn::memory::desc(o_dims, get_mkldnn_type<DstType>(), o_fmt);
+  } else {
+    o_desc = i_desc;
+    o_desc.data.data_type = get_mkldnn_type_t<DstType>();
   }
-  auto o_desc = mkldnn::memory::desc(i_dims,
-                                    (mkldnn::memory::data_type)data_type_enum<DstType>::type,
-                                    i_fmt);
-  auto o_mpd = memory::primitive_desc(o_desc, cpu_engine);
-  auto reorder_pd  = reorder::primitive_desc(i_mpd, o_mpd, attr);
-  auto o_mem = CreateMKLDNNMem(outputs[0], o_mpd, req[0]);
-  MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(reorder_pd, *i_mem, *o_mem.second));
+  auto reorder_pd = mkldnn::reorder::primitive_desc(cpu_engine, i_desc, cpu_engine, o_desc, attr);
+  auto o_mem = CreateMKLDNNMem(outputs[0], o_desc, req[0]);
+  MKLDNNStream::Get()->RegisterPrimArgs(
+      mkldnn::reorder(reorder_pd), {{MKLDNN_ARG_FROM, *i_mem}, {MKLDNN_ARG_TO, *o_mem.second}});
   CommitOutput(outputs[0], o_mem);
   MKLDNNStream::Get()->Submit();
 }

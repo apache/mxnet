@@ -18,7 +18,7 @@
 #
 # Dockerfile to run MXNet on Ubuntu 14.04 for GPU
 
-FROM ubuntu:14.04
+FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu14.04
 
 WORKDIR /work/deps
 

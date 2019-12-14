@@ -47,9 +47,10 @@ Hence, in this utility, we will build the functionality to allow users and devel
 
 ## Prerequisites
 
-This utility uses MXNet profiler under the hood to fetch compute and memory metrics. Hence, you need to build MXNet with `USE_PROFILER=1` flag.
+Provided you have MXNet installed (any version >= 1.5.1), all you need to use opperf utility is to add path to your cloned MXNet repository to the PYTHONPATH.
 
-Make sure to build the flavor of MXNet, for example - with/without MKL, with CUDA 9 or 10.1 etc., on which you would like to measure operator performance. Finally, you need to add path to your cloned MXNet repository to the PYTHONPATH.
+Note: 
+To install MXNet, refer [Installing MXNet page](https://mxnet.apache.org/versions/master/install/index.html)
 
 ```
 export PYTHONPATH=$PYTHONPATH:/path/to/incubator-mxnet/
@@ -77,7 +78,7 @@ For example, you want to run benchmarks for all NDArray Broadcast Binary Operato
 
 ```
 #!/usr/bin/python
-from benchmark.opperf.tensor_operations.binary_broadcast_operators import run_mx_binary_broadcast_operators_benchmarks
+from benchmark.opperf.nd_operations.binary_operators import run_mx_binary_broadcast_operators_benchmarks
 
 # Run all Binary Broadcast operations benchmarks with default input values
 print(run_mx_binary_broadcast_operators_benchmarks())
@@ -128,7 +129,7 @@ Output for the above benchmark run, on a CPU machine, would look something like 
 
 ```
 
-## Usecase 3.1 - Run benchmarks for group of operators with same input
+## Usecase 4 - Run benchmarks for group of operators with same input
 For example, you want to run benchmarks for `nd.add`, `nd.sub` operator in MXNet, with the same set of inputs. You just run the following python script.
 
 ```
@@ -138,7 +139,7 @@ from mxnet import nd
 
 from benchmark.opperf.utils.benchmark_utils import run_performance_test
 
-add_res = run_performance_test([nd.add, nd.sub], run_backward=True, dtype='float32', ctx=mx.cpu(),
+add_res = run_performance_test([nd.add, nd.subtract], run_backward=True, dtype='float32', ctx=mx.cpu(),
                                inputs=[{"lhs": (1024, 1024),
                                         "rhs": (1024, 1024)}],
                                warmup=10, runs=25)
@@ -171,6 +172,22 @@ See the design proposal document for more details - https://cwiki.apache.org/con
 This utility queries MXNet operator registry to fetch all operators registered with MXNet, generate inputs and run benchmarks.
 However, fully automated tests are enabled only for simpler operators such as - broadcast operators, element_wise operators etc... For the purpose of readability and giving more control to the users, complex operators such as convolution (2D, 3D), Pooling, Recurrent are not fully automated but expressed as default rules.
 See `utils/op_registry_utils.py` for more details.
+
+## Use python timer
+Optionally, you could use the python time package as the profiler engine to caliberate runtime in each operator.
+To use python timer for all operators, use the argument --profiler 'python':
+```
+python incubator-mxnet/benchmark/opperf/opperf.py --profiler='python'
+```
+
+To use python timer for a specific operator, pass the argument profiler to the run_performance_test method:
+```
+add_res = run_performance_test([nd.add, nd.subtract], run_backward=True, dtype='float32', ctx=mx.cpu(),
+                               inputs=[{"lhs": (1024, 1024),
+                                        "rhs": (1024, 1024)}],
+                               warmup=10, runs=25, profiler='python')
+```
+By default, MXNet profiler is used as the profiler engine.
 
 # TODO
 

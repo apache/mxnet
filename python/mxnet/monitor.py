@@ -40,7 +40,7 @@ class Monitor(object):
     stat_func : function
         A function that computes statistics of tensors.
         Takes an `NDArray` and returns an `NDArray`. Defaults to mean
-        absolute value |x|/size(x).
+        absolute value abs(x)/size(x).
     pattern : str
         A regular expression specifying which tensors to monitor.
         Only tensors with names that match `name_pattern` will be included.

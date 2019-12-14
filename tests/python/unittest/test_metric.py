@@ -17,7 +17,9 @@
 
 import mxnet as mx
 import numpy as np
+import scipy
 import json
+import math
 from common import with_seed
 from copy import deepcopy
 
@@ -56,6 +58,21 @@ def _check_global_metric(metric, *args, **kwargs):
             label[:shape[0] // 2] = 0
         return pred, label
 
+    def _compare_metric_result(m1, m2):
+        # Compare names
+        assert m1[0] == m2[0]
+        # Compare values
+        if isinstance(m1[1], (list, tuple)):
+            assert len(m1[1]) == len(m2[1])
+            for r1, r2 in zip(m1[1], m2[1]):
+                assert r1 == r2 or \
+                       (math.isnan(r1) and
+                        math.isnan(r2))
+        else:
+            assert m1[1] == m2[1] or \
+                   (math.isnan(m1[1]) and
+                    math.isnan(m2[1]))
+
     shape = kwargs.pop('shape', (10,10))
     use_same_shape = kwargs.pop('use_same_shape', False)
     m1 = mx.metric.create(metric, *args, **kwargs)
@@ -78,7 +95,7 @@ def _check_global_metric(metric, *args, **kwargs):
     pred, label = _create_pred_label()
     m1.update([label], [pred])
     m2.update([label], [pred])
-    assert m1.get() == m2.get()
+    _compare_metric_result(m1.get(), m2.get())
 
 @with_seed()
 def test_global_metric():
@@ -247,13 +264,40 @@ def test_perplexity():
     assert perplexity == perplexity_expected
 
 def test_pearsonr():
-    pred = mx.nd.array([[0.7, 0.3], [0.1, 0.9], [1., 0]])
-    label = mx.nd.array([[0, 1], [1, 0], [1, 0]])
-    pearsonr_expected = np.corrcoef(pred.asnumpy().ravel(), label.asnumpy().ravel())[0, 1]
-    metric = mx.metric.create('pearsonr')
-    metric.update([label], [pred])
-    _, pearsonr = metric.get()
-    assert pearsonr == pearsonr_expected
+    pred1 = mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])
+    label1 = mx.nd.array([[1, 0], [0, 1], [0, 1]])
+    pearsonr_expected_np = np.corrcoef(pred1.asnumpy().ravel(), label1.asnumpy().ravel())[0, 1]
+    pearsonr_expected_scipy, _ = scipy.stats.pearsonr(pred1.asnumpy().ravel(), label1.asnumpy().ravel())
+    macro_pr = mx.metric.create('pearsonr', average='macro')
+    micro_pr = mx.metric.create('pearsonr', average='micro')
+
+    assert np.isnan(macro_pr.get()[1])
+    assert np.isnan(micro_pr.get()[1])
+
+    macro_pr.update([label1], [pred1])
+    micro_pr.update([label1], [pred1])
+
+    np.testing.assert_almost_equal(macro_pr.get()[1], pearsonr_expected_np)
+    np.testing.assert_almost_equal(macro_pr.get()[1], pearsonr_expected_scipy)
+    np.testing.assert_almost_equal(micro_pr.get()[1], pearsonr_expected_np)
+    np.testing.assert_almost_equal(micro_pr.get()[1], pearsonr_expected_scipy)
+
+    pred2 = mx.nd.array([[1, 2], [3, 2], [4, 6]])
+    label2 = mx.nd.array([[1, 0], [0, 1], [0, 1]])
+    # Note that pred12 = pred1 + pred2; label12 = label1 + label2
+    pred12 = mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6],[1, 2], [3, 2], [4, 6]])
+    label12 = mx.nd.array([[1, 0], [0, 1], [0, 1], [1, 0], [0, 1], [0, 1]])
+
+    pearsonr_expected_np = np.corrcoef(pred12.asnumpy().ravel(), label12.asnumpy().ravel())[0, 1]
+    pearsonr_expected_scipy, _ = scipy.stats.pearsonr(pred12.asnumpy().ravel(), label12.asnumpy().ravel())
+
+    macro_pr.reset()
+    micro_pr.update([label2], [pred2])
+    macro_pr.update([label12], [pred12])
+    np.testing.assert_almost_equal(macro_pr.get()[1], pearsonr_expected_np)
+    np.testing.assert_almost_equal(macro_pr.get()[1], pearsonr_expected_scipy)
+    np.testing.assert_almost_equal(micro_pr.get()[1], pearsonr_expected_np)
+    np.testing.assert_almost_equal(micro_pr.get()[1], pearsonr_expected_scipy)
 
 def cm_batch(cm):
     # generate a batch yielding a given confusion matrix
@@ -287,6 +331,13 @@ def test_pcc():
     met_pear.update(labels, [p.argmax(axis=1) for p in preds])
     _, pear = met_pear.get()
     np.testing.assert_almost_equal(pcc, pear)
+
+    # pcc should also accept pred as scalar rather than softmax vector
+    # like acc does
+    met_pcc.reset()
+    met_pcc.update(labels, [p.argmax(axis=1) for p in preds])
+    _, chk = met_pcc.get()
+    np.testing.assert_almost_equal(pcc, chk)
 
     # check multiclass case against reference implementation
     CM = [

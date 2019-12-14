@@ -36,7 +36,7 @@ The model is trained on the [Pascal VOC 2012 dataset](http://host.robots.ox.ac.u
 
 1. MXNet
 2. MXNet Scala Package
-3. [IntelliJ IDE (or alternative IDE) project setup](http://mxnet.incubator.apache.org/tutorials/scala/mxnet_scala_on_intellij.html) with the MXNet Scala Package
+3. [IntelliJ IDE (or alternative IDE) project setup](https://mxnet.apache.org/tutorials/scala/mxnet_scala_on_intellij.html) with the MXNet Scala Package
 4. wget
 
 
@@ -103,7 +103,7 @@ Class: dog
 Probabilties: 0.8226818
 (Coord:,83.82353,179.13998,206.63783,476.7875)
 ```
-the outputs come from the the input image, with top3 predictions picked.
+the outputs come from the input image, with top3 predictions picked.
 
 
 ## Infer API Details

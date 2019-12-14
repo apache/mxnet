@@ -59,7 +59,8 @@ inline bool RegressionOpShape(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape &dshape = in_attrs->at(0);
   if (!shape_is_known(dshape)) return false;
   auto &lshape = (*in_attrs)[1];
-  if (lshape.ndim() == 0) {
+  // if label is not defined, manually build the shape based on dshape
+  if (lshape.ndim() == -1) {
     // special treatment for 1D output, to allow 1D label by default.
     // Think about change convention later
     if (dshape.ndim() == 2 && dshape[1] == 1) {

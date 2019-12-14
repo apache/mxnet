@@ -26,7 +26,6 @@
 #ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_OPS_INL_H_
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_OPS_INL_H_
 
-#if MXNET_USE_MKLDNN == 1
 
 #include <mxnet/io.h>
 #include <mxnet/base.h>
@@ -36,6 +35,8 @@
 #include <dmlc/logging.h>
 #include <dmlc/optional.h>
 #include <vector>
+
+#if MXNET_USE_MKLDNN == 1
 #include <mkldnn.hpp>
 
 namespace mxnet {
@@ -71,6 +72,23 @@ void MKLDNNDeconvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &
                                  const std::vector<OpReqType>& req,
                                  const std::vector<NDArray>& outputs);
 
+/* For activation */
+void MKLDNNActivationForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                             const NDArray &in_data, const OpReqType &req,
+                             const NDArray &out_data);
+void MKLDNNActivationBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
+                              const std::vector<NDArray> &inputs,
+                              const std::vector<OpReqType> &req,
+                              const std::vector<NDArray> &outputs);
+
+void MKLDNNLeakyReluForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                            const NDArray &in_data, const OpReqType &req,
+                            const NDArray &out_data);
+void MKLDNNLeakyReluBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
+                             const std::vector<NDArray> &inputs,
+                             const std::vector<OpReqType> &req,
+                             const std::vector<NDArray> &outputs);
+
 /* For softmax */
 void MKLDNNSoftmaxForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                           const NDArray &in_data, const OpReqType &req,
@@ -83,9 +101,9 @@ void MKLDNNSoftmaxOutputForward(const nnvm::NodeAttrs& attrs, const OpContext &c
                                 const std::vector<NDArray> &out_data);
 
 /* For sum */
-void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                      const std::vector<NDArray> &inputs, const OpReqType &req,
-                      const NDArray &out_data);
+void MKLDNNSumForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
+                      const std::vector<NDArray> &inputs, const std::vector<OpReqType> &req,
+                      const std::vector<NDArray> &outputs);
 
 /* For copy */
 void MKLDNNCopy(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
@@ -102,16 +120,8 @@ void MKLDNNConcatBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                           const std::vector<OpReqType>& req,
                           const std::vector<NDArray>& outputs);
 
-/* For activation */
-void MKLDNNActivationForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                             const NDArray &in_data, const OpReqType &req,
-                             const NDArray &out_data);
-void MKLDNNActivationBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                              const NDArray &out_grad, const NDArray &in_data,
-                              const OpReqType &req, const NDArray &in_grad);
-
 void MKLDNNSum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
-         const mkldnn::memory &out);
+               const mkldnn::memory &out);
 
 void MKLDNNTransposeForward(const nnvm::NodeAttrs& attrs,
                             const OpContext &ctx,
@@ -119,14 +129,13 @@ void MKLDNNTransposeForward(const nnvm::NodeAttrs& attrs,
                             const OpReqType &req,
                             const NDArray &output);
 
-void MKLDNNReshapeForward(const nnvm::NodeAttrs &attrs,
+void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
                           const OpContext &ctx,
-                          const NDArray &data,
+                          const NDArray &input,
                           const OpReqType &req,
                           const NDArray &output);
-
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_USE_MKLDNN == 1
 
+#endif  // MXNET_USE_MKLDNN == 1
 #endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_OPS_INL_H_

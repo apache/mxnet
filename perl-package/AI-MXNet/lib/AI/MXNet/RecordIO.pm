@@ -18,6 +18,7 @@
 package AI::MXNet::RecordIO;
 use strict;
 use warnings;
+use AI::MXNet::NS;
 use AI::MXNet::Function::Parameters;
 use AI::MXNet::Types;
 use AI::MXNet::Base;

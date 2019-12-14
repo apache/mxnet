@@ -43,33 +43,26 @@ class MKLDNNPoolingFwd {
                    const int padding_t, const int padding_b,
                    const int padding_l, const int padding_r,
                    const mkldnn::algorithm alg_kind,
-                   const bool with_workspace, const bool is_train) :
-                   is_train_(is_train),
+                   const bool with_workspace, const bool is_train):
                    with_workspace_(with_workspace),
-                   alg_kind_(alg_kind),
-                   fwd_(nullptr), data_(nullptr), out_(nullptr), workspace_(nullptr) {
+                   fwd_(nullptr) {
     Init(input, output,
          kernel_h, kernel_w, stride_h, stride_w,
-         padding_t, padding_b, padding_l, padding_r);
+         padding_t, padding_b, padding_l, padding_r,
+         is_train, alg_kind);
   }
 
   ~MKLDNNPoolingFwd() {}
-  void SetNewMem(const NDArray& in_data,
-                 const NDArray& out_data,
-                 const OpReqType& req,
-                 const mxnet::NDArray *workspace = nullptr);
-  void Execute(const NDArray& out_data);
+  void Execute(const NDArray &in_data,
+               const OpReqType req,
+               const NDArray& out_data,
+               const NDArray *workspace);
 
  private:
-  bool is_train_;
   bool with_workspace_;
-  mkldnn::algorithm alg_kind_;
+
   std::shared_ptr<mkldnn::pooling_forward::primitive_desc> fwd_pd_;
   std::shared_ptr<mkldnn::pooling_forward> fwd_;
-  std::shared_ptr<mkldnn::memory> data_;
-  std::shared_ptr<mkldnn::memory> out_;
-  std::shared_ptr<mkldnn::memory> workspace_;
-  mkldnn_output_t output_mem_t_;
 
  private:
   void Init(const mxnet::NDArray &input,
@@ -77,26 +70,21 @@ class MKLDNNPoolingFwd {
             const int kernel_h, const int kernel_w,
             const int stride_h, const int stride_w,
             const int padding_t, const int padding_b,
-            const int padding_l, const int padding_r);
+            const int padding_l, const int padding_r,
+            const bool is_train, const mkldnn::algorithm alg_kind);
 };
 
 class MKLDNNPoolingBwd {
   std::shared_ptr<const mkldnn::pooling_backward> bwd;
-  std::shared_ptr<mkldnn::memory> diff_dst;
-  std::shared_ptr<mkldnn::memory> diff_src;
-  std::shared_ptr<mkldnn::memory> ws;
   bool with_workspace;
 
  public:
   const mkldnn::pooling_backward::primitive_desc pd;
 
-  MKLDNNPoolingBwd(const pooling_backward::primitive_desc &pdesc,
+  MKLDNNPoolingBwd(const mkldnn::pooling_backward::primitive_desc &pdesc,
                    bool with_ws);
 
   ~MKLDNNPoolingBwd() {}
-  void SetNewMem(const mxnet::NDArray *workspace,
-                 const mxnet::NDArray &out_grad,
-                 const mkldnn::memory *diff_src_mem);
   const mkldnn::pooling_backward &GetBwd();
   const mkldnn::pooling_backward::primitive_desc &GetPd();
 };

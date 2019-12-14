@@ -18,7 +18,7 @@
 #
 # Dockerfile to build and run MXNet on CentOS 7 for GPU
 
-FROM nvidia/cuda:10.0-devel-centos7
+FROM nvidia/cuda:10.1-devel-centos7
 
 WORKDIR /work/deps
 

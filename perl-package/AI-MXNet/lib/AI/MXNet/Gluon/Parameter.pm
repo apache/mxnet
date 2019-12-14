@@ -19,6 +19,7 @@ use strict;
 use warnings;
 use Hash::Ordered;
 package AI::MXNet::Gluon::Parameter;
+use AI::MXNet::NS;
 use AI::MXNet::Function::Parameters;
 
 =head1 NAME 
@@ -799,6 +800,8 @@ method cast(Dtype $dtype)
     });
 }
 
+__PACKAGE__->AI::MXNet::NS::register('AI::MXNet::Gluon');
+
 package AI::MXNet::Gluon::Constant;
 use strict;
 use warnings;
@@ -1322,5 +1325,7 @@ method load(
         $self->_params->get($name)->_load_init($arg_dict{$name}, $ctx);
     }
 }
+
+__PACKAGE__->AI::MXNet::NS::register('AI::MXNet::Gluon');
 
 1;

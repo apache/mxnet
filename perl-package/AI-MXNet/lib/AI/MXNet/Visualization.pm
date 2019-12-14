@@ -18,6 +18,7 @@
 package AI::MXNet::Visualization;
 use strict;
 use warnings;
+use AI::MXNet::NS;
 use AI::MXNet::Base;
 use AI::MXNet::Function::Parameters;
 use JSON::PP;

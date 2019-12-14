@@ -45,6 +45,22 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
     assert(ndones.toScalar === 1f)
   }
 
+  test("to sparse") {
+    val arr = Array(
+      Array(1f, 0f, 0f),
+      Array(0f, 3f, 0f),
+      Array(0f, 0f, 1f)
+    )
+    val nd = NDArray.toNDArray(arr)
+    assert(!nd.isSparse)
+    // row sparse
+    var ndSparse = nd.toSparse()
+    assert(ndSparse.getIndices.toArray sameElements Array(0f, 1f, 2f))
+    // csr
+    ndSparse = nd.toSparse(Some(SparseFormat.CSR))
+    assert(ndSparse.getIndptr.toArray sameElements Array(0f, 1f, 2f, 3f))
+  }
+
   test("to float 64 scalar") {
     val ndzeros = NDArray.zeros(Shape(1), dtype = DType.Float64)
     assert(ndzeros.toFloat64Scalar === 0d)

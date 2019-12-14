@@ -32,14 +32,14 @@ use base qw(Exporter);
 use List::Util qw(shuffle);
 use Data::Dumper;
 
-@AI::MXNet::Base::EXPORT = qw(product enumerate assert zip check_call build_param_doc
-                              pdl cat dog svd bisect_left pdl_shuffle as_array ascsr rand_sparse
-                              DTYPE_STR_TO_MX DTYPE_MX_TO_STR DTYPE_MX_TO_PDL
-                              DTYPE_PDL_TO_MX DTYPE_MX_TO_PERL GRAD_REQ_MAP
-                              STORAGE_TYPE_UNDEFINED STORAGE_TYPE_DEFAULT
-                              STORAGE_TYPE_ROW_SPARSE STORAGE_TYPE_CSR
-                              STORAGE_TYPE_STR_TO_ID STORAGE_TYPE_ID_TO_STR STORAGE_AUX_TYPES);
-@AI::MXNet::Base::EXPORT_OK = qw(pzeros pceil pones digitize hash array_index range);
+our @EXPORT = qw(product enumerate assert zip check_call build_param_doc
+                 pdl cat dog svd bisect_left pdl_shuffle as_array ascsr rand_sparse
+                 DTYPE_STR_TO_MX DTYPE_MX_TO_STR DTYPE_MX_TO_PDL
+                 DTYPE_PDL_TO_MX DTYPE_MX_TO_PERL GRAD_REQ_MAP
+                 STORAGE_TYPE_UNDEFINED STORAGE_TYPE_DEFAULT
+                 STORAGE_TYPE_ROW_SPARSE STORAGE_TYPE_CSR
+                 STORAGE_TYPE_STR_TO_ID STORAGE_TYPE_ID_TO_STR STORAGE_AUX_TYPES);
+our @EXPORT_OK = qw(pzeros pceil pones digitize hash array_index range);
 
 use constant DTYPE_STR_TO_MX => {
     float32 => 0,

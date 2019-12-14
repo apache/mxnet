@@ -48,7 +48,7 @@ Scheduler is responsible for scheduling the workers and parameter servers. There
 
 ### Step 1: Use a distributed key-value store:
 
-Like mentioned above, in distributed training, parameters are split into N parts and distributed across N hosts. This is done automatically by the [distributed key-value store](https://mxnet.incubator.apache.org/tutorials/python/kvstore.html). User only needs to create the distributed kv store and ask the `Trainer` to use the created store.
+Like mentioned above, in distributed training, parameters are split into N parts and distributed across N hosts. This is done automatically by the [distributed key-value store](https://mxnet.apache.org/tutorials/python/kvstore.html). User only needs to create the distributed kv store and ask the `Trainer` to use the created store.
 
 ```python
 store = mxnet.kv.create('dist')

@@ -1,8 +1,34 @@
+# Generated files
+.*html
+.buildinfo
+Gemfile.lock
+Manifest.toml
+searchindex.js
+_build/*
+_static/*
+_api/*
+build/*
+latex/*
+target/*
+site/*
+xml/*
+
+# Separate licenses, refer to LICENSE in each folder or header
+
+# Sphinx themes
+themes/*
+
+# Jekyll & other licenses in static_site/*
+clipboard.js
+
+# Includes
+_includes/*
+
+# Other
 \..*
 .*css
 \\.*
 .*ipynb
-.*html
 .*json
 .*txt
 3rdparty/*
@@ -15,7 +41,6 @@ trunk/*
 .*cfg
 .*config
 __init__.py
-build/*
 .*\\.t
 MANIFEST
 Changes

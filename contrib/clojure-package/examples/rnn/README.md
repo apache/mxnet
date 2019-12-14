@@ -20,6 +20,13 @@
 
 Demonstration of LSTM RNN trainined using Obamas text
 
+## Installation
+
+Before you run this example, make sure that you have the clojure package installed.
+In the main clojure package directory, do `lein install`. Then you can run
+`lein install` in this directory.
+
+
 ## Usage
 
 

@@ -129,6 +129,15 @@ class KVStoreLocal : public KVStore {
     PullImpl(keys, values, priority, ignore_sparse);
   }
 
+  void PushPull(const std::vector<int>& vkeys,
+                const std::vector<int>& okeys,
+                const std::vector<NDArray>& values,
+                const std::vector<NDArray*>& outs,
+                int priority) override {
+    SetKeyType(kIntKey);
+    PushPullImpl(vkeys, okeys, values, outs, priority);
+  }
+
   void PullRowSparse(const std::vector<int>& keys,
                      const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
                      int priority = 0) override {
@@ -153,6 +162,19 @@ class KVStoreLocal : public KVStore {
     std::vector<int> keys(str_keys.size());
     LookupKeys(str_keys, &keys);
     PullImpl(keys, values, priority, ignore_sparse);
+  }
+
+  void PushPull(const std::vector<std::string>& str_vkeys,
+                const std::vector<std::string>& str_okeys,
+                const std::vector<NDArray>& values,
+                const std::vector<NDArray*>& outs,
+                int priority) override {
+    SetKeyType(kStringKey);
+    std::vector<int> vkeys(str_vkeys.size());
+    std::vector<int> okeys(str_okeys.size());
+    LookupKeys(str_vkeys, &vkeys);
+    LookupKeys(str_okeys, &okeys);
+    PushPullImpl(vkeys, okeys, values, outs, priority);
   }
 
   void PullRowSparse(const std::vector<std::string>& str_keys,
@@ -269,6 +291,15 @@ class KVStoreLocal : public KVStore {
     CHECK_EQ(key_type_, key_type) << "Mixed key types are not allowed";
   }
 
+  virtual void PushPullImpl(const std::vector<int>& vkeys,
+                            const std::vector<int>& okeys,
+                            const std::vector<NDArray>& values,
+                            const std::vector<NDArray*>& outs,
+                            int priority) {
+    PushImpl(vkeys, values, priority);
+    PullImpl(okeys, outs, priority, true);
+  }
+
   /**
    * \brief group values on keys for push
    */
@@ -278,7 +309,7 @@ class KVStoreLocal : public KVStore {
                                 std::vector<std::vector<NDArray>> *grouped_vals,
                                 bool ignore_sparse) {
     // check if the storage type of a value is valid
-    auto validator = [this](const int key, const NDArray& nd, bool ignore_sparse) -> bool {
+    auto validator = [](const int key, const NDArray& nd, bool ignore_sparse) -> bool {
       CHECK(!ignore_sparse) << "Cannot ignore sparse arrays for push";
       auto stype = nd.storage_type();
       // valid NDArray
@@ -323,7 +354,7 @@ class KVStoreLocal : public KVStore {
                                    std::vector<std::vector<RSPVal>> *grouped_vals,
                                    bool ignore_sparse) {
     // check if the storage type of a value is valid
-    auto validator = [this](const int key, const RSPVal& val_rowid, bool ignore_sparse) -> bool {
+    auto validator = [](const int key, const RSPVal& val_rowid, bool ignore_sparse) -> bool {
       CHECK(!ignore_sparse) << "Cannot ignore sparse arrays in row_sparse_pull";
       auto val_stype = val_rowid.first->storage_type();
       auto rowid_stype = val_rowid.second.storage_type();

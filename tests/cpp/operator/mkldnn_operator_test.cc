@@ -458,7 +458,7 @@ void VerifyConcatResult(const std::vector<NDArray *> &in_arrs,
 }
 
 void VerifyConcatBackwardsResult(const std::vector<NDArray *> &in_arrs,
-                        const std::vector<NDArray *> &out_arrs) {
+                                 const std::vector<NDArray *> &out_arrs) {
   // in_arrs is larger array, out_arr is ammler
   int num_inputs = out_arrs.size();
   int input_size = out_arrs[0]->shape().Size();
@@ -491,7 +491,7 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
   std::vector<DispatchMode> dispatches = attrs.dispatches;
 
   TestArrayShapes tas = GetTestArrayShapes();
-  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+  std::vector<mkldnn::memory::desc> mds = tas.mds;
 
   if (attrs.requests.find(OpReqType::kWriteTo) != attrs.requests.end()) {
     std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
@@ -499,7 +499,7 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
       for (auto &dispatch : dispatches) {
         std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
         for (int i = 0; i < attrs.num_outputs; i++)
-          out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
+          out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), mds);
         for (int i = 0; i < attrs.num_inputs; i++)
           inputs[i] = &in_arr.arr;
         for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
@@ -549,7 +549,7 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
     for (auto &in_arr : in_arrs) {
       for (auto &dispatch : dispatches) {
         for (int i = 0; i < attrs.num_outputs; i++)
-          out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
+          out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), mds);
         for (size_t i = 0; i < attrs.num_inputs; i++)
           inputs[i] = &in_arr.arr;
         for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
@@ -573,14 +573,14 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
 }
 
 void TestConcatOp(const OpAttrs &attrs, VerifyFunc verify_fn,
-            bool backwards = false) {
+                  bool backwards = false) {
   std::vector<NDArray*> inputs(attrs.num_inputs);
   std::vector<NDArray*> outputs(attrs.num_outputs);
   std::vector<OpReqType> req(attrs.num_outputs);
   std::vector<DispatchMode> dispatches = attrs.dispatches;
 
   TestArrayShapes tas = GetTestArrayShapes();
-  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+  std::vector<mkldnn::memory::desc> mds = tas.mds;
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
 
@@ -611,7 +611,7 @@ void TestConcatOp(const OpAttrs &attrs, VerifyFunc verify_fn,
         scale_vector[i] = 1;
       scale_vector[dim] = scale;
       for (int i = 0; i < attrs.num_outputs; i++)
-        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
+        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), mds, scale_vector);
 
       for (int i = 0; i < attrs.num_inputs; i++)
         inputs[i] = &in_arr.arr;
@@ -678,7 +678,7 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   std::vector<OpReqType> req(forward_attrs.num_outputs);
 
   TestArrayShapes tas = GetTestArrayShapes();
-  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+  std::vector<mkldnn::memory::desc> mds = tas.mds;
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(forward_attrs.input_types, true);
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
@@ -695,9 +695,9 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
         out_arrs[i] =
-            GetTestOutputArrays(in_arr.arr.shape(), pds, {1}, forward_attrs.output_types);
+            GetTestOutputArrays(in_arr.arr.shape(), mds, {1}, forward_attrs.output_types);
         ex_out_arrs[i] =
-            GetTestOutputArrays(in_arr.arr.shape(), pds, {1}, forward_attrs.output_types);
+            GetTestOutputArrays(in_arr.arr.shape(), mds, {1}, forward_attrs.output_types);
       }
 
       for (int i = 0; i < forward_attrs.num_inputs; i++)
@@ -806,7 +806,7 @@ void TestOpExBNBackward(const OpAttrs &forward_attrs,
         Context(), backwards_attrs.attrs, backwards_input, backwards_ex_outputs,
         backwards_req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
     Engine::Get()->WaitForAll();
-    AssertEqual(backwards_outputs, backwards_ex_outputs);
+    AssertEqual(backwards_outputs, backwards_ex_outputs, 1e-4, 1e-2);
   }
 }
 
@@ -821,7 +821,7 @@ void TestOpExBN(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   std::vector<OpReqType> req(forward_attrs.num_outputs);
 
   TestArrayShapes tas = GetTestArrayShapes();
-  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+  std::vector<mkldnn::memory::desc> mds = tas.mds;
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(forward_attrs.input_types, false);
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
@@ -837,9 +837,9 @@ void TestOpExBN(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
         continue;
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
         out_arrs[i] =
-            GetTestOutputArrays(in_arr.arr.shape(), pds, {1}, true, forward_attrs.output_types);
+            GetTestOutputArrays(in_arr.arr.shape(), mds, {1}, true, forward_attrs.output_types);
         ex_out_arrs[i] =
-            GetTestOutputArrays(in_arr.arr.shape(), pds, {1}, true, forward_attrs.output_types);
+            GetTestOutputArrays(in_arr.arr.shape(), mds, {1}, true, forward_attrs.output_types);
       }
       for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
         inputs_buffer.clear();
@@ -867,11 +867,11 @@ void TestOpExBN(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
             Context(), forward_attrs.attrs, inputs2, ex_outputs, req,
             DispatchMode::kFComputeEx, mxnet::OpStatePtr());
         Engine::Get()->WaitForAll();
-        AssertEqual(outputs, ex_outputs);
+        AssertEqual(outputs, ex_outputs, 1e-04, 1e-02);
 
         if (!backwards_attrs.requests.empty()) {
           TestOpExBNBackward(forward_attrs, backwards_attrs, OpReqType::kWriteTo,
-                           inputs, outputs, in_arr, &out_arrs[0][output_i]);
+                             inputs, outputs, in_arr, &out_arrs[0][output_i]);
         }
       }
     }
@@ -900,7 +900,7 @@ void TestFullyConnectedOp(const OpAttrs &forward_attrs, const OpAttrs &backwards
   std::vector<OpReqType> back_req(backwards_attrs.num_outputs);
 
   TestArrayShapes tas = GetTestArrayShapes();
-  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+  std::vector<mkldnn::memory::desc> mds = tas.mds;
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(forward_attrs.input_types, true);
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
@@ -937,9 +937,9 @@ void TestFullyConnectedOp(const OpAttrs &forward_attrs, const OpAttrs &backwards
 
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
         out_arrs[i] =
-            GetTestOutputArrays(out_shape, pds, {1}, forward_attrs.output_types);
+            GetTestOutputArrays(out_shape, mds, {1}, forward_attrs.output_types);
         ex_out_arrs[i] =
-            GetTestOutputArrays(out_shape, pds, {1}, forward_attrs.output_types);
+            GetTestOutputArrays(out_shape, mds, {1}, forward_attrs.output_types);
       }
 
       for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
@@ -1014,7 +1014,7 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
   std::vector<DispatchMode> dispatches = forward_attrs.dispatches;
 
   TestArrayShapes tas = GetTestArrayShapes();
-  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+  std::vector<mkldnn::memory::desc> mds = tas.mds;
 
   P param;
   param.Init(forward_attrs.attrs.dict);
@@ -1050,9 +1050,9 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
     scale_vector[3] = scale;
 
     for (size_t i = 0; i < forward_attrs.num_outputs; ++i) {
-      out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds,
+      out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), mds,
                                         scale_vector, true, forward_attrs.output_types);
-      ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds,
+      ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), mds,
                                            scale_vector, true, forward_attrs.output_types);
     }
     NDArray ndkernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape(), is_deconv);
@@ -1140,7 +1140,7 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
   std::vector<DispatchMode> dispatches = forward_attrs.dispatches;
 
   TestArrayShapes tas = GetTestArrayShapes();
-  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+  std::vector<mkldnn::memory::desc> mds = tas.mds;
 
   mxnet::op::PoolingParam param;
   param.Init(forward_attrs.attrs.dict);
@@ -1160,7 +1160,7 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
     if (input_shape.ndim() != kernel.ndim() + 2)
       continue;
     // cannot pool if ndarray and mkldnn memory have different ndim
-    if (in_arr.arr.IsView() || in_arr.arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims
+    if (in_arr.arr.IsView() || in_arr.arr.GetMKLDNNData()->get_desc().data.ndims
         != in_arr.arr.shape().ndim())
       continue;
     std::vector<float> scale_vector(in_arr.arr.shape().ndim());
@@ -1173,8 +1173,8 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
             static_cast<float>(input_shape[i]);
     }
     for (int i = 0; i < forward_attrs.num_outputs; i++) {
-      out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
-      ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
+      out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), mds, scale_vector);
+      ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), mds, scale_vector);
     }
 
     for (int i = 0; i < forward_attrs.num_inputs; i++)
@@ -1353,4 +1353,4 @@ TEST(IMPERATIVE, BNOp) {
   TestOpExBN(forward_attrs, backwards_attrs);
 }
 
-#endif
+#endif  // MXNET_USE_MKLDNN == 1

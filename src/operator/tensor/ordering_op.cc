@@ -34,7 +34,11 @@ DMLC_REGISTER_PARAMETER(SortParam);
 DMLC_REGISTER_PARAMETER(ArgSortParam);
 
 NNVM_REGISTER_OP(topk)
-.describe(R"code(Returns the top *k* elements in an input array along the given axis.
+.add_alias("_npx_topk")
+.describe(R"code(Returns the indices of the top *k* elements in an input array along the given
+ axis (by default).
+ If ret_type is set to 'value' returns the value of top *k* elements (instead of indices).
+ In case of ret_type = 'both', both value and index would be returned.
  The returned elements will be sorted.
 
 Examples::
@@ -87,6 +91,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .add_argument("data", "NDArray-or-Symbol", "The input array")
 .add_arguments(TopKParam::__FIELDS__());
 
@@ -114,7 +119,7 @@ Examples::
              [ 1.,  3.]]
 
   // flattens and then sorts
-  sort(x) = [ 1.,  1.,  3.,  4.]
+  sort(x, axis=None) = [ 1.,  1.,  3.,  4.]
 
   // sorts along the first axis
   sort(x, axis=0) = [[ 1.,  1.],
@@ -150,10 +155,12 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .add_argument("data", "NDArray-or-Symbol", "The input array")
 .add_arguments(SortParam::__FIELDS__());
 
 NNVM_REGISTER_OP(argsort)
+.add_alias("_npi_argsort")
 .describe(R"code(Returns the indices that would sort an input array along the given axis.
 
 This function performs sorting along the given axis and returns an array of indices having same shape
@@ -173,7 +180,7 @@ Examples::
                         [ 0.,  1.,  0.]]
 
   // flatten and then sort
-  argsort(x) = [ 3.,  1.,  5.,  0.,  4.,  2.]
+  argsort(x, axis=None) = [ 3.,  1.,  5.,  0.,  4.,  2.]
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -186,6 +193,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .add_argument("data", "NDArray-or-Symbol", "The input array")
 .add_arguments(ArgSortParam::__FIELDS__());
 }  // namespace op

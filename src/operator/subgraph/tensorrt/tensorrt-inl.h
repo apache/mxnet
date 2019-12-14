@@ -34,6 +34,14 @@
 #include <string>
 #include <vector>
 
+#include "../../nn/activation-inl.h"
+#include "../../nn/batch_norm-inl.h"
+#include "../../nn/concat-inl.h"
+#include "../../nn/convolution-inl.h"
+#include "../../nn/deconvolution-inl.h"
+#include "../../nn/dropout-inl.h"
+#include "../../nn/fully_connected-inl.h"
+#include "../../nn/pooling-inl.h"
 #include "../common.h"
 #include "../subgraph_property.h"
 #include "nnvm_to_onnx-inl.h"
@@ -51,10 +59,14 @@ struct TRTParam {
 };
 
 struct TRTEngineParam {
-  TRTEngineParam(nvinfer1::ICudaEngine* trt_engine,
-                 nvonnxparser::IParser* _parser,
-                 const std::unordered_map<std::string, uint32_t> input_map,
-                 const std::unordered_map<std::string, uint32_t> output_map) {
+  TRTEngineParam(onnx_to_tensorrt::unique_ptr<nvinfer1::ICudaEngine> _trt_engine,
+                 onnx_to_tensorrt::unique_ptr<nvonnxparser::IParser> _trt_parser,
+                 std::unique_ptr<onnx_to_tensorrt::TRT_Logger> _trt_logger,
+                 const std::unordered_map<std::string, uint32_t>& input_map,
+                 const std::unordered_map<std::string, uint32_t>& output_map) {
+    trt_engine = std::move(_trt_engine);
+    trt_logger = std::move(_trt_logger);
+    trt_parser = std::move(_trt_parser);
     binding_order = std::make_shared<std::vector<std::pair<uint32_t, bool> > >();
     bindings = std::make_shared<std::vector<void*> >();
     binding_order->reserve(trt_engine->getNbBindings());
@@ -67,16 +79,13 @@ struct TRTEngineParam {
         binding_order->emplace_back(output_map.at(binding_name), false);
       }
     }
-    trt_executor = trt_engine->createExecutionContext();
-    trt_parser = _parser;
+    trt_executor = onnx_to_tensorrt::InferObject(trt_engine->createExecutionContext());
   }
 
-  ~TRTEngineParam() {
-    trt_parser->destroy();
-    trt_executor->destroy();
-  }
-  nvinfer1::IExecutionContext* trt_executor;
-  nvonnxparser::IParser* trt_parser;
+  onnx_to_tensorrt::unique_ptr<nvinfer1::ICudaEngine> trt_engine;
+  onnx_to_tensorrt::unique_ptr<nvinfer1::IExecutionContext> trt_executor;
+  onnx_to_tensorrt::unique_ptr<nvonnxparser::IParser> trt_parser;
+  std::unique_ptr<onnx_to_tensorrt::TRT_Logger> trt_logger;
   std::shared_ptr<std::vector<std::pair<uint32_t, bool> > > binding_order;
   std::shared_ptr<std::vector<void*> > bindings;
 };
@@ -84,17 +93,12 @@ struct TRTEngineParam {
 class TensorrtSelector : public SubgraphSelector {
  public:
   const std::unordered_set<std::string> unconditionalTRTops = {
-    "BatchNorm",
+    "_copy",
     "clip",
-    "Concat",
-    "Convolution",
-    "Dropout",
     "elemwise_add",
     "elemwise_sub",
     "elemwise_mul",
     "Flatten",
-    "FullyConnected",
-    "mean",
     "Pad",
     "relu",
     "rsqrt",
@@ -104,24 +108,120 @@ class TensorrtSelector : public SubgraphSelector {
   const std::unordered_set<std::string> withWeightsOps = {
     "BatchNorm",
     "Convolution",
+    "Deconvolution",
     "FullyConnected"
   };
 
   bool isTRTCompatible(const nnvm::Node &n) {
     const std::string op_name = n.op()->name;
-    if (op_name == "Pooling") {
-      return (n.attrs.dict.at("pool_type") == "avg" ||
-          n.attrs.dict.at("pool_type") == "max");
+    if (op_name == "FullyConnected") {
+      const auto& param = nnvm::get<FullyConnectedParam>(n.attrs.parsed);
+      return !param.no_bias;
     }
 
-    if (unconditionalTRTops.count(op_name)) {
-      return true;
+    if (op_name == "Pooling") {
+      const auto& param = nnvm::get<PoolingParam>(n.attrs.parsed);
+      if (param.layout.has_value()) {
+        if (param.layout.value() == mshadow::kNHWC) {
+          LOG(INFO) << "Warning: NHWC layout (node: " << n.attrs.name
+                    << ") is not supported by TensorRT";
+          return false;
+        } else if (param.layout.value() == mshadow::kNDHWC) {
+          LOG(INFO) << "Warning: NDHWC layout (node: " << n.attrs.name
+                    << ") is not supported by TensorRT";
+          return false;
+        }
+      }
+      if (param.pooling_convention != pool_enum::kValid && !param.global_pool)
+        return false;
+      if (param.pool_type == pool_enum::kAvgPooling) {
+        if ((!param.global_pool) &&
+            (!param.count_include_pad.has_value() || param.count_include_pad.value()))
+          return false;
+        return true;
+      } else if (param.pool_type == pool_enum::kMaxPooling) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+
+    if (op_name == "Convolution") {
+      const auto& param = nnvm::get<ConvolutionParam>(n.attrs.parsed);
+      if (!param.layout.has_value())
+        return true;
+      switch (param.layout.value()) {
+        case mshadow::kNCHW:
+        case mshadow::kNCW:
+        case mshadow::kNCDHW:
+          return true;
+        case mshadow::kNHWC:
+          LOG(INFO) << "Warning: NHWC layout (node: " << n.attrs.name
+                    << ") is not supported by TensorRT";
+          return false;
+        case mshadow::kNDHWC:
+          LOG(INFO) << "Warning: NDHWC layout (node: " << n.attrs.name
+                    << ") is not supported by TensorRT";
+          return false;
+        default:
+          LOG(INFO) << "Warning: Layout (node: " << n.attrs.name
+                    << ") is unknown (so unsupported by TensorRT)";
+          return false;
+      }
+    }
+
+    if (op_name == "Deconvolution") {
+      const auto& param = nnvm::get<DeconvolutionParam>(n.attrs.parsed);
+      if (!param.layout.has_value())
+        return true;
+      switch (param.layout.value()) {
+        case mshadow::kNCHW:
+        case mshadow::kNCW:
+        case mshadow::kNCDHW:
+          return true;
+        case mshadow::kNHWC:
+          LOG(INFO) << "Warning: NHWC layout (node: " << n.attrs.name
+                    << ") is no tsupported by TensorRT";
+          return false;
+        case mshadow::kNDHWC:
+          LOG(INFO) << "Warning: NDHWC layout (node: " << n.attrs.name
+                    << ") is not supported by TensorRT";
+          return false;
+        default:
+          LOG(INFO) << "Warning: Layout (node: " << n.attrs.name
+                    << ") is unknown (so unsupported by TensorRT)";
+          return false;
+      }
+    }
+
+    if (op_name == "Concat") {
+      const auto& param = nnvm::get<ConcatParam>(n.attrs.parsed);
+      return (param.dim != 0);
+    }
+
+    if (op_name == "Dropout") {
+      const auto& param = nnvm::get<DropoutParam>(n.attrs.parsed);
+      return param.mode == dropout::kTraining && param.axes.ndim() == 0;
     }
 
     if (op_name == "Activation") {
       return n.attrs.dict.at("act_type") == "relu" ||
         n.attrs.dict.at("act_type") == "tanh" ||
         n.attrs.dict.at("act_type") == "sigmoid";
+    }
+
+    if (op_name == "BatchNorm") {
+      const auto& param = nnvm::get<BatchNormParam>(n.attrs.parsed);
+      if (param.axis != 1) {
+        LOG(INFO) << "Warning: Only Layout NC(D)(H)W are supported by TensorRT "
+                  << "(node " << n.attrs.name << ")";
+        return false;
+      }
+      return true;
+    }
+
+    if (unconditionalTRTops.count(op_name)) {
+      return true;
     }
 
     return false;

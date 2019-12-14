@@ -3,7 +3,7 @@
 # https://help.github.com/articles/about-codeowners/ and
 # https://github.com/blog/2392-introducing-code-owners
 #
-# Anybody can add themselves or a team as additional watcher or contributor 
+# Anybody can add themselves or a team as additional watcher or contributor
 # to get notified about changes in a specific package.
 # See https://help.github.com/articles/about-teams how to setup teams.
 
@@ -23,17 +23,17 @@
 /julia/                           @iblis17
 
 # C++ base
-/src/kvstore/     @rahul003 @anirudh2290 @eric-haibin-lin
+/src/kvstore/     @rahul003 @anirudh2290 @eric-haibin-lin @apeforest
 /include/         @anirudh2290 @pllarroy @eric-haibin-lin
-/src/c_api/       @anirudh2290 @eric-haibin-lin
+/src/c_api/       @anirudh2290 @eric-haibin-lin @apeforest
 /src/common/      @anirudh2290
-/src/engine/      @anirudh2290 @eric-haibin-lin
-/src/executor/    @anirudh2290 @eric-haibin-lin
-/src/imperative/  @anirudh2290 @eric-haibin-lin
-/src/io/          @anirudh2290 @eric-haibin-lin
-/src/ndarray/     @anirudh2290 @eric-haibin-lin
-/src/nnvm/        @anirudh2290 @eric-haibin-lin
-/src/operator/    @anirudh2290 @eric-haibin-lin
+/src/engine/      @anirudh2290 @eric-haibin-lin @apeforest
+/src/executor/    @anirudh2290 @eric-haibin-lin @apeforest
+/src/imperative/  @anirudh2290 @eric-haibin-lin @apeforest
+/src/io/          @anirudh2290 @eric-haibin-lin @apeforest
+/src/ndarray/     @anirudh2290 @eric-haibin-lin @apeforest
+/src/nnvm/        @anirudh2290 @eric-haibin-lin @apeforest
+/src/operator/    @anirudh2290 @eric-haibin-lin @apeforest
 /src/profiler/    @anirudh2290 @eric-haibin-lin
 /src/storage/     @anirudh2290 @eric-haibin-lin
 /tests/cpp/       @anirudh2290
@@ -41,34 +41,39 @@
 /src/             @pllarroy
 /plugin/          @pllarroy
 
-# CMake
-CMakeLists.txt    @szha @rahul003 @pllarroy
-/cmake/           @szha @rahul003 @pllarroy
+# Build system
+CMakeLists.txt    @szha @pllarroy
+/cmake/           @szha @pllarroy
+/make/            @szha
 
 # MXNet CI
 dev_menu.py         @pllarroy
-/ci/                @pllarroy
+/ci/                @pllarroy @marcoabreu @aaronmarkham
+/ci/publish/        @szha
+/docker/            @marcoabreu
 /tests/ci_build/    @marcoabreu
 Jenkinsfile         @marcoabreu
 .travis.yml         @marcoabreu
 appveyor.yml        @marcoabreu
+
+# MXNet CD
+/cd/                @szha
 
 # Build logic
 Makefile          @szha
 prepare_mkl.sh    @szha
 
 # Docs
-/docs/            @szha @pllarroy
+/docs/            @szha @pllarroy @aaronmarkham
 
 # Submodules
 .gitmodules       @szha
 
 # Examples
-/example/         @szha @pllarroy
+/example/         @szha @pllarroy @aaronmarkham
 
 # Tools
 /tools/           @szha @pllarroy
 
 # Github templates
 /.github/         @szha
-

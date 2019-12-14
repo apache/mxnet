@@ -29,18 +29,19 @@
 #include <algorithm>
 #include <vector>
 #include "../activation-inl.h"
+#include "../../../common/cuda_utils.h"
 
 namespace mxnet {
 namespace op {
 template<typename DType>
 class CuDNNActivationOp {
+  STATIC_ASSERT_CUDNN_VERSION_GE(5000);
+
  public:
   CuDNNActivationOp() {
     dtype_ = mshadow::DataType<DType>::kCudnnFlag;
-    #if CUDNN_MAJOR >= 5
     nan_prop_ = CUDNN_NOT_PROPAGATE_NAN;
     CUDNN_CALL(cudnnCreateActivationDescriptor(&desc_));
-    #endif
     CUDNN_CALL(cudnnCreateTensorDescriptor(&shape_desc_));
   }
 
@@ -60,16 +61,12 @@ class CuDNNActivationOp {
         LOG(FATAL) << "Not implmented";
         break;
     }
-    #if CUDNN_MAJOR >= 5
     CUDNN_CALL(cudnnSetActivationDescriptor(desc_, mode_, nan_prop_, relu_ceil_));
-    #endif
   }
 
   ~CuDNNActivationOp() {
     CUDNN_CALL(cudnnDestroyTensorDescriptor(shape_desc_));
-    #if CUDNN_MAJOR >= 5
     CUDNN_CALL(cudnnDestroyActivationDescriptor(desc_));
-    #endif
   }
 
   void Forward(const OpContext &ctx, const TBlob &in_data,
@@ -109,16 +106,6 @@ class CuDNNActivationOp {
                                           data.shape_[1],
                                           data.shape_[2],
                                           data.shape_[3]));
-    #if CUDNN_MAJOR <= 4
-    CUDNN_CALL(cudnnActivationForward(s->dnn_handle_,
-                                      mode_,
-                                      &alpha,
-                                      shape_desc_,
-                                      data.dptr_,
-                                      &beta,
-                                      shape_desc_,
-                                      out.dptr_));
-    #elif CUDNN_MAJOR >= 5
     CUDNN_CALL(cudnnActivationForward(s->dnn_handle_,
                                      desc_,
                                      &alpha,
@@ -127,7 +114,6 @@ class CuDNNActivationOp {
                                      &beta,
                                      shape_desc_,
                                      out.dptr_));
-    #endif
   }
 
   // backward computation for cudnn activation operator. Note that for relu
@@ -177,20 +163,6 @@ class CuDNNActivationOp {
                                           data.shape_[1],
                                           data.shape_[2],
                                           data.shape_[3]));
-    #if CUDNN_MAJOR <= 4
-    CUDNN_CALL(cudnnActivationBackward(s->dnn_handle_,
-                                       mode_,
-                                       &alpha,
-                                       shape_desc_,
-                                       output_data.dptr_,
-                                       shape_desc_,
-                                       grad.dptr_,
-                                       shape_desc_,
-                                       data.dptr_,
-                                       &beta,
-                                       shape_desc_,
-                                       input_grad.dptr_));
-    #elif CUDNN_MAJOR >= 5
     CUDNN_CALL(cudnnActivationBackward(s->dnn_handle_,
                                        desc_,
                                        &alpha,
@@ -203,7 +175,6 @@ class CuDNNActivationOp {
                                        &beta,
                                        shape_desc_,
                                        input_grad.dptr_));
-    #endif
   }
 
  private:
@@ -211,11 +182,9 @@ class CuDNNActivationOp {
   cudnnActivationMode_t mode_;
   cudnnTensorDescriptor_t shape_desc_;
   ActivationParam param_;
-#if CUDNN_MAJOR >= 5
   cudnnActivationDescriptor_t desc_;
   cudnnNanPropagation_t nan_prop_;
   double relu_ceil_;
-#endif
 };  // class CuDNNActivationOp
 }  // namespace op
 }  // namespace mxnet

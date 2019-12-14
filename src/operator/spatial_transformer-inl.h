@@ -267,7 +267,7 @@ class SpatialTransformerProp : public OperatorProperty {
     return {ResourceRequest::kTempSpace};
   }
 
-  #if CUDNN_MAJOR >= 5
+  #if MXNET_USE_CUDNN == 1
   std::vector<ResourceRequest> BackwardResource(
       const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};

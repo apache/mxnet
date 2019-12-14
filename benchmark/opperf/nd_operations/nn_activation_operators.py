@@ -35,7 +35,7 @@ from benchmark.opperf.rules.default_params import MX_OP_MODULE
 """
 
 
-def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
+def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype)for all the activation
     operators (relu, sigmoid, softmax) in MXNet.
 
@@ -60,6 +60,7 @@ def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25
                                               run_backward=True,
                                               dtype=dtype,
                                               ctx=ctx,
+                                              profiler=profiler,
                                               inputs=[{"data": (1024, 1024), "act_type": "leaky", "slope": 0.1},
                                                       {"data": (10000, 1), "act_type": "leaky", "slope": 0.1},
                                                       {"data": (10000, 100), "act_type": "leaky", "slope": 0.1},
@@ -82,6 +83,7 @@ def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25
                                                       run_backward=True,
                                                       dtype=dtype,
                                                       ctx=ctx,
+                                                      profiler=profiler,
                                                       inputs=[{"data": (1024, 1024), "alpha": 0.25, "beta": 0.5},
                                                               {"data": (10000, 1), "alpha": 0.25, "beta": 0.5},
                                                               {"data": (10000, 100), "alpha": 0.25, "beta": 0.5}
@@ -95,6 +97,7 @@ def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25
                                                  run_backward=True,
                                                  dtype=dtype,
                                                  ctx=ctx,
+                                                 profiler=profiler,
                                                  inputs=[{"data": (1024, 1024), "axis": -1, "temperature": 0.5},
                                                          {"data": (10000, 1), "axis": -1, "temperature": 0.5},
                                                          {"data": (10000, 100), "axis": -1, "temperature": 0.5}

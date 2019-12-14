@@ -34,7 +34,7 @@
 #' @param symbol a \code{string} representing the symbol of a model.
 #' @param shape a \code{numeric} representing the input dimensions to the symbol.
 #' @param direction a \code{string} representing the direction of the graph, either TD or LR.
-#' @param type a \code{string} representing the rendering engine of the the graph, either graph or vis.
+#' @param type a \code{string} representing the rendering engine of the graph, either graph or vis.
 #' @param graph.width.px a \code{numeric} representing the size (width) of the graph. In pixels
 #' @param graph.height.px a \code{numeric} representing the size (height) of the graph. In pixels
 #'

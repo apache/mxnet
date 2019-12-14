@@ -60,7 +60,7 @@ static void ConvolutionComputeExCPU(const nnvm::NodeAttrs& attrs,
   const ConvolutionParam& params = nnvm::get<ConvolutionParam>(attrs.parsed);
   if (SupportMKLDNNConv(params, inputs[0])) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    MKLDNNConvolutionForward(attrs, ctx, inputs, req, outputs);
+    MKLDNNRun(MKLDNNConvolutionForward, attrs, ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(ConvolutionCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
@@ -75,7 +75,7 @@ static void ConvolutionGradComputeExCPU(const nnvm::NodeAttrs& attrs,
   const ConvolutionParam& params = nnvm::get<ConvolutionParam>(attrs.parsed);
   if (SupportMKLDNNConv(params, inputs[0])) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    MKLDNNConvolutionBackward(attrs, ctx, inputs, req, outputs);
+    MKLDNNRun(MKLDNNConvolutionBackward, attrs, ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(ConvolutionGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
@@ -397,6 +397,7 @@ struct ConvolutionGrad {
 };
 
 NNVM_REGISTER_OP(Convolution)
+.add_alias("_npx_convolution")
 .describe(R"code(Compute *N*-D convolution on *(N+2)*-D input.
 
 In the 2-D convolution, given input data with shape *(batch_size,
@@ -502,6 +503,7 @@ There are other options to tune the performance.
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .add_argument("data", "NDArray-or-Symbol", "Input data to the ConvolutionOp.")
 .add_argument("weight", "NDArray-or-Symbol", "Weight matrix.")
 .add_argument("bias", "NDArray-or-Symbol", "Bias parameter.")

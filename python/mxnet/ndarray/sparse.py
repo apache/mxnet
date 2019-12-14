@@ -553,8 +553,8 @@ class CSRNDArray(BaseSparseNDArray):
         indices = self.indices.asnumpy()
         indptr = self.indptr.asnumpy()
         if not spsp:
-            raise ImportError("scipy is not available. \
-                               Please check if the scipy python bindings are installed.")
+            raise ImportError("scipy could not be imported. "
+                              "Please make sure that the scipy is installed.")
         return spsp.csr_matrix((data, indices, indptr), shape=self.shape, dtype=self.dtype)
 
 # pylint: disable=abstract-method
@@ -639,10 +639,10 @@ class RowSparseNDArray(BaseSparseNDArray):
         if isinstance(key, int):
             raise Exception("__getitem__ with int key is not implemented for RowSparseNDArray yet")
         if isinstance(key, py_slice):
-            if key.step is not None or key.start is not None or key.stop is not None: # pylint: disable=no-else-raise
+            if key.step is not None or key.start is not None or key.stop is not None:
                 raise Exception('RowSparseNDArray only supports [:] for __getitem__')
-            else:
-                return self
+
+            return self
         if isinstance(key, tuple):
             raise ValueError('Multi-dimension indexing is not supported')
         raise ValueError('Undefined behaviour for {}'.format(key))
@@ -940,6 +940,9 @@ def csr_matrix(arg1, shape=None, ctx=None, dtype=None):
                     row = row.asnumpy()
                 if isinstance(col, NDArray):
                     col = col.asnumpy()
+                if not spsp:
+                    raise ImportError("scipy could not be imported. "
+                                      "Please make sure that the scipy is installed.")
                 coo = spsp.coo_matrix((data, (row, col)), shape=shape)
                 _check_shape(coo.shape, shape)
                 csr = coo.tocsr()
@@ -1102,9 +1105,9 @@ def row_sparse_array(arg1, shape=None, ctx=None, dtype=None):
     # construct a row sparse array from (D0, D1 ..) or (data, indices)
     if isinstance(arg1, tuple):
         arg_len = len(arg1)
-        if arg_len < 2: # pylint: disable=no-else-raise
+        if arg_len < 2:
             raise ValueError("Unexpected length of input tuple: " + str(arg_len))
-        elif arg_len > 2:
+        if arg_len > 2:
             # empty ndarray with shape
             _check_shape(arg1, shape)
             return empty('row_sparse', arg1, ctx=ctx, dtype=dtype)

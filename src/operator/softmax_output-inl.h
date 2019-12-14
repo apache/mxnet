@@ -117,9 +117,9 @@ class SoftmaxOutputOp : public Operator {
     CHECK_EQ(out_data.size(), 1U) << "SoftmaxOutput Output: [output]";
     Stream<xpu> *s = ctx.get_stream<xpu>();
     if (param_.multi_output) {
-      int n = in_data[softmaxout_enum::kData].size(0);
-      int k = in_data[softmaxout_enum::kData].size(1);
-      Shape<3> s3 = Shape3(n, k, static_cast<int>(in_data[softmaxout_enum::kData].Size()/n/k));
+      index_t n = in_data[softmaxout_enum::kData].size(0);
+      index_t k = in_data[softmaxout_enum::kData].size(1);
+      Shape<3> s3 = Shape3(n, k, static_cast<index_t>(in_data[softmaxout_enum::kData].Size()/n/k));
       Tensor<xpu, 3, DType> data =
           in_data[softmaxout_enum::kData].get_with_shape<xpu, 3, DType>(s3, s);
       Tensor<xpu, 3, DType> out =
@@ -131,8 +131,8 @@ class SoftmaxOutputOp : public Operator {
         Tensor<xpu, 2, DType> out = out_data[softmaxout_enum::kOut].FlatTo2D<xpu, DType>(s);
         Softmax(out, data);
       } else {
-        int n = in_data[softmaxout_enum::kData].size(0);
-        int k = in_data[softmaxout_enum::kData].Size()/n;
+        index_t n = in_data[softmaxout_enum::kData].size(0);
+        index_t k = in_data[softmaxout_enum::kData].Size()/n;
         Shape<2> s2 = Shape2(n, k);
         Tensor<xpu, 2, DType> data =
             in_data[softmaxout_enum::kData].get_with_shape<xpu, 2, DType>(s2, s);
@@ -171,9 +171,9 @@ class SoftmaxOutputOp : public Operator {
         grad = (out - label) * scalar<DType>(param_.grad_scale);
       }
     } else if (param_.multi_output) {
-      int n = out_data[softmaxout_enum::kOut].size(0);
-      int k = out_data[softmaxout_enum::kOut].size(1);
-      Shape<3> s3 = Shape3(n, k, static_cast<int>(out_data[softmaxout_enum::kOut].Size()/n/k));
+      index_t n = out_data[softmaxout_enum::kOut].size(0);
+      index_t k = out_data[softmaxout_enum::kOut].size(1);
+      Shape<3> s3 = Shape3(n, k, static_cast<index_t>(out_data[softmaxout_enum::kOut].Size()/n/k));
       Shape<2> s2 = Shape2(s3[0], s3[2]);
       Tensor<xpu, 2, DType> label =
           in_data[softmaxout_enum::kLabel].get_with_shape<xpu, 2, DType>(s2, s);
@@ -224,7 +224,7 @@ class SoftmaxOutputOp : public Operator {
 //        Tensor<xpu, 2, DType> out = out_data[softmaxout_enum::kOut].FlatTo2D<xpu, DType>(s);
 //        Tensor<xpu, 2, DType> grad = in_grad[softmaxout_enum::kData].FlatTo2D<xpu, DType>(s);
       } else {
-        int n = out_data[softmaxout_enum::kOut].size(0);
+        index_t n = out_data[softmaxout_enum::kOut].size(0);
         data_shape = Shape2(n, out_data[softmaxout_enum::kOut].Size()/n);
       }
       Tensor<xpu, 1, DType> label = in_data[softmaxout_enum::kLabel].get_with_shape<xpu, 1, DType>(

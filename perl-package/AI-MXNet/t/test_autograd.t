@@ -23,6 +23,7 @@ use AI::MXNet::TestUtils qw(same almost_equal rand_ndarray);
 use AI::MXNet::Base qw(:DEFAULT pones);
 use Test::More tests => 246;
 $ENV{MXNET_STORAGE_FALLBACK_LOG_VERBOSE} = 0;
+$ENV{MXNET_SUBGRAPH_VERBOSE} = 0;
 
 sub autograd_assert
 {

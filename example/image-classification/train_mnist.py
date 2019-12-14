@@ -16,7 +16,7 @@
 # under the License.
 
 """
-Train mnist, see more explanation at http://mxnet.io/tutorials/python/mnist.html
+Train mnist, see more explanation at https://mxnet.io/tutorials/python/mnist.html
 """
 import os
 import argparse

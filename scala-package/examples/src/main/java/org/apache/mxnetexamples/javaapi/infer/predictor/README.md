@@ -29,7 +29,7 @@ build and run pre-trained Resnet 18 model.
 
 ## Prerequisites
 
-1. Build from source with [MXNet](https://mxnet.incubator.apache.org/install/index.html)
+1. Build from source with [MXNet](https://mxnet.apache.org/install/index.html)
 2. [IntelliJ IDE (or alternative IDE) project setup](https://github.com/apache/incubator-mxnet/blob/master/docs/tutorials/java/mxnet_java_on_intellij.md) with the MXNet Java Package
 3. wget
 
@@ -75,4 +75,4 @@ Probability : 0.30337515 Class : n02123159 tiger cat
 Predict with NDArray
 Probability : 0.30337515 Class : n02123159 tiger cat
 ```
-the outputs come from the the input image, with top1 predictions picked.
+the outputs come from the input image, with top1 predictions picked.

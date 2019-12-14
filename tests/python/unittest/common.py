@@ -251,7 +251,7 @@ def setup_module():
 
 try:
     from tempfile import TemporaryDirectory
-except:
+except:  # Python 2 support
     # really simple implementation of TemporaryDirectory
     class TemporaryDirectory(object):
         def __init__(self, suffix='', prefix='', dir=''):
@@ -270,6 +270,27 @@ def teardown():
     It waits for all operations in one file to finish before carrying on the next.
     """
     mx.nd.waitall()
+
+
+def with_post_test_cleanup():
+    """
+    Helper function that cleans up memory by releasing it from memory pool
+    Required especially by large tensor tests that have memory footprints in GBs.
+    """
+    def test_helper(orig_test):
+        @make_decorator(orig_test)
+        def test_new(*args, **kwargs):
+            logger = default_logger()
+            try:
+                orig_test(*args, **kwargs)
+            except:
+                logger.info(test_msg)
+                raise
+            finally:
+                mx.nd.waitall()
+                mx.cpu().empty_cache()
+        return test_new
+    return test_helper
 
 
 def run_in_spawned_process(func, env, *args):

@@ -32,7 +32,7 @@ fi
 
 cifar_data_path="$data_path/cifar10.zip"
 if [ ! -f "$cifar_data_path" ]; then
-  wget http://data.mxnet.io/mxnet/data/cifar10.zip -P $data_path
+  curl -L -o $cifar_data_path http://data.mxnet.io/mxnet/data/cifar10.zip
   cd $data_path
   unzip -u cifar10.zip
 fi

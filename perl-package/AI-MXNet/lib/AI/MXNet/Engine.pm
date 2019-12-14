@@ -20,6 +20,7 @@ use strict;
 use warnings;
 use AI::MXNet::Function::Parameters;
 use AI::MXNet::Base;
+use AI::MXNet::NS;
 
 =head1 NAME
 

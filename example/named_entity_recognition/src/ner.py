@@ -93,6 +93,7 @@ def build_vocab(nested_list):
     """
     # Build vocabulary
     word_counts = Counter(itertools.chain(*nested_list))
+    logging.info("build_vocab: word_counts=%d" % (len(word_counts)))
 
     # Mapping from index to label
     vocabulary_inv = [x[0] for x in word_counts.most_common()]
@@ -114,6 +115,7 @@ def build_iters(data_dir, max_records, train_fraction, batch_size, buckets=None)
     :param buckets: size of each bucket in the iterators
     :return: train_iter, val_iter, word_to_index, index_to_word, pos_to_index, index_to_pos
     """
+
     # Read in data as numpy array
     df = pd.read_pickle(os.path.join(data_dir, "ner_data.pkl"))[:max_records]
 
@@ -135,12 +137,14 @@ def build_iters(data_dir, max_records, train_fraction, batch_size, buckets=None)
 
     # Split into training and testing data
     idx=int(len(indexed_tokens)*train_fraction)
+    logging.info("Preparing train/test datasets splitting at idx %d on total %d sentences using a batchsize of %d", idx, len(indexed_tokens), batch_size)
     X_token_train, X_char_train, Y_train = indexed_tokens[:idx], indexed_chars[:idx], indexed_entities[:idx]
     X_token_test, X_char_test, Y_test = indexed_tokens[idx:], indexed_chars[idx:], indexed_entities[idx:]
 
     # build iterators to feed batches to network
     train_iter = iterators.BucketNerIter(sentences=X_token_train, characters=X_char_train, label=Y_train,
                                          max_token_chars=5, batch_size=batch_size, buckets=buckets)
+    logging.info("Creating the val_iter using %d sentences", len(X_token_test))
     val_iter = iterators.BucketNerIter(sentences=X_token_test, characters=X_char_test, label=Y_test,
                                          max_token_chars=train_iter.max_token_chars, batch_size=batch_size, buckets=train_iter.buckets)
     return train_iter, val_iter, word_to_index, char_to_index, entity_to_index
@@ -205,6 +209,8 @@ def sym_gen(seq_len):
 def train(train_iter, val_iter):
     import metrics
     devs = mx.cpu() if args.gpus is None or args.gpus is '' else [mx.gpu(int(i)) for i in args.gpus.split(',')]
+    logging.info("train on device %s using optimizer %s at learningrate %f for %d epochs using %d records: lstm_state_size=%d ...",
+          devs, args.optimizer, args.lr, args.num_epochs, args.max_records, args.lstm_state_size)
     module = mx.mod.BucketingModule(sym_gen, train_iter.default_bucket_key, context=devs)
     module.fit(train_data=train_iter,
                eval_data=val_iter,
@@ -224,6 +230,8 @@ if __name__ == '__main__':
     # Build data iterators
     train_iter, val_iter, word_to_index, char_to_index, entity_to_index = build_iters(args.data_dir, args.max_records,
                                                                      args.train_fraction, args.batch_size, args.buckets)
+
+    logging.info("validation iterator: %s", val_iter)
 
     # Define the recurrent layer
     bi_cell = mx.rnn.SequentialRNNCell()

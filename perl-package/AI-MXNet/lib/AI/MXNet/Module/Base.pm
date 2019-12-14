@@ -684,7 +684,7 @@ method output_shapes() { confess("NotImplemented") }
 
 =head2 get_params
 
-    The parameters, these are potentially a copies of the the actual parameters used
+    The parameters, these are potentially a copies of the actual parameters used
     to do computation on the device.
 
     Returns

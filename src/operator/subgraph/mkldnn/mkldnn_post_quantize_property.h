@@ -20,14 +20,14 @@
 #define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_PROPERTY_H_
 #if MXNET_USE_MKLDNN == 1
 
+#include <set>
 #include <string>
 #include <vector>
-#include <set>
-#include "../common.h"
-#include "../subgraph_property.h"
 #include "../../nn/mkldnn/mkldnn_convolution-inl.h"
-#include "mkldnn_conv-inl.h"
 #include "../../quantization/requantize-inl.h"
+#include "../common.h"
+#include "mkldnn_conv-inl.h"
+#include "mkldnn_subgraph_base-inl.h"
 
 namespace mxnet {
 namespace op {

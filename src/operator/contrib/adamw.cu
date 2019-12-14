@@ -21,40 +21,36 @@
  *  Copyright (c) 2018 by Contributors
  * \file adamw.cu
  * \brief Optimizer operators
- * \author Haibin Lin
+ * \author Haibin Lin, Moises Hernandez, Andrei Ivanov
  */
 #include "./adamw-inl.h"
 
 namespace mxnet {
 namespace op {
 
-template<template <typename xpu> class F>
-inline void MPUpdateGPU(const nnvm::NodeAttrs& attrs,
-                        const OpContext &ctx,
-                        const std::vector<TBlob> &inputs,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &outputs) {
-  // copy to cpu and check NaN value
-  TBlob scale_blob = inputs[inputs.size() - 1];
+template<>
+void GetScaleFloat<gpu>(mshadow::Stream<gpu> *s, const TBlob &scale_blob, float *pScalef) {
   MSHADOW_REAL_TYPE_SWITCH(scale_blob.type_flag_, DType, {
     DType scale = 0;
-    CUDA_CALL(cudaMemcpy(&scale, scale_blob.dptr<DType>(), sizeof(DType),
-       cudaMemcpyDeviceToHost));
-    float scalef = static_cast<float>(scale);
-    if (!std::isfinite(scalef) || scalef == 0) return;
-    std::vector<TBlob> inputs_wo_scale;
-    size_t num_in = inputs.size();
-    inputs_wo_scale.reserve(num_in - 1);
-    for (size_t i = 0; i < num_in - 1; i++) inputs_wo_scale.emplace_back(inputs[i]);
-    F<gpu>::Forward(attrs, ctx, inputs_wo_scale, req, outputs, scalef);
-  });
+    cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
+    CUDA_CALL(cudaMemcpyAsync(&scale, scale_blob.dptr<DType>(), sizeof(DType),
+                              cudaMemcpyDeviceToHost, stream));
+    CUDA_CALL(cudaStreamSynchronize(stream));
+    *pScalef = static_cast<float>(scale);
+  })
 }
 
 NNVM_REGISTER_OP(_adamw_update)
-.set_attr<FCompute>("FCompute<gpu>", MPUpdateGPU<AdamWUpdate>);
+.set_attr<FCompute>("FCompute<gpu>", MPUpdate<gpu, AdamWUpdate<gpu>>);
 
 NNVM_REGISTER_OP(_mp_adamw_update)
-.set_attr<FCompute>("FCompute<gpu>", MPUpdateGPU<MPAdamWUpdate>);
+.set_attr<FCompute>("FCompute<gpu>", MPUpdate<gpu, MPAdamWUpdate<gpu>>);
+
+NNVM_REGISTER_OP(_multi_adamw_update)
+.set_attr<FCompute>("FCompute<gpu>", multiMPUpdate<gpu, false>);
+
+NNVM_REGISTER_OP(_multi_mp_adamw_update)
+.set_attr<FCompute>("FCompute<gpu>", multiMPUpdate<gpu, true>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -24,14 +24,11 @@
  * Adapted from Caffe2
 */
 #include "./roi_align-inl.h"
+#include "../mxnet_op.h"
 
 
 namespace mxnet {
 namespace op {
-
-#define CUDA_1D_KERNEL_LOOP(i, n)                                 \
-  for (size_t i = blockIdx.x * blockDim.x + threadIdx.x; i < (n); \
-       i += blockDim.x * gridDim.x)
 
 using namespace mshadow::cuda;
 
@@ -112,6 +109,7 @@ __global__ void RoIAlignForwardKernel(
     const T* bottom_data,
     const T spatial_scale,
     const bool position_sensitive,
+    const bool continuous_coordinate,
     const int channels,
     const int height,
     const int width,
@@ -120,7 +118,7 @@ __global__ void RoIAlignForwardKernel(
     const int sampling_ratio,
     const T* bottom_rois,
     T* top_data) {
-  CUDA_1D_KERNEL_LOOP(index, nthreads) {
+  CUDA_KERNEL_LOOP(index, nthreads) {
     // (n, c, ph, pw) is an element in the pooled output
     int pw = index % pooled_width;
     int ph = (index / pooled_width) % pooled_height;
@@ -130,19 +128,25 @@ __global__ void RoIAlignForwardKernel(
     const T* offset_bottom_rois = bottom_rois + n * 5;
     int roi_batch_ind = offset_bottom_rois[0];
 
-    // Do not using rounding; this implementation detail is critical
-    T roi_start_w = offset_bottom_rois[1] * spatial_scale;
-    T roi_start_h = offset_bottom_rois[2] * spatial_scale;
-    T roi_end_w = offset_bottom_rois[3] * spatial_scale;
-    T roi_end_h = offset_bottom_rois[4] * spatial_scale;
-    // T roi_start_w = round(offset_bottom_rois[1] * spatial_scale);
-    // T roi_start_h = round(offset_bottom_rois[2] * spatial_scale);
-    // T roi_end_w = round(offset_bottom_rois[3] * spatial_scale);
-    // T roi_end_h = round(offset_bottom_rois[4] * spatial_scale);
+    if (roi_batch_ind < 0) {
+      top_data[index] = 0.;
+      continue;
+    }
 
-    // Force malformed ROIs to be 1x1
-    T roi_width = max(roi_end_w - roi_start_w, (T)1.);
-    T roi_height = max(roi_end_h - roi_start_h, (T)1.);
+    // Do not using rounding; this implementation detail is critical
+    T roi_offset = continuous_coordinate ? static_cast<T>(0.5) : static_cast<T>(0);
+    T roi_start_w = offset_bottom_rois[1] * spatial_scale - roi_offset;
+    T roi_start_h = offset_bottom_rois[2] * spatial_scale - roi_offset;
+    T roi_end_w = offset_bottom_rois[3] * spatial_scale - roi_offset;
+    T roi_end_h = offset_bottom_rois[4] * spatial_scale - roi_offset;
+
+    T roi_width = roi_end_w - roi_start_w;
+    T roi_height = roi_end_h - roi_start_h;
+    if (!continuous_coordinate) {  // backward compatiblity
+      // Force malformed ROIs to be 1x1
+      roi_width = max(roi_width, (T)1.);
+      roi_height = max(roi_height, (T)1.);
+    }
     T bin_size_h = static_cast<T>(roi_height) / static_cast<T>(pooled_height);
     T bin_size_w = static_cast<T>(roi_width) / static_cast<T>(pooled_width);
 
@@ -251,6 +255,7 @@ __global__ void RoIAlignBackwardKernel(
     const int num_rois,
     const T spatial_scale,
     const bool position_sensitive,
+    const bool continuous_coordinate,
     const int channels,
     const int height,
     const int width,
@@ -259,7 +264,7 @@ __global__ void RoIAlignBackwardKernel(
     const int sampling_ratio,
     T* bottom_diff,
     const T* bottom_rois) {
-  CUDA_1D_KERNEL_LOOP(index, nthreads) {
+  CUDA_KERNEL_LOOP(index, nthreads) {
     // (n, c, ph, pw) is an element in the pooled output
     int pw = index % pooled_width;
     int ph = (index / pooled_width) % pooled_height;
@@ -268,20 +273,22 @@ __global__ void RoIAlignBackwardKernel(
 
     const T* offset_bottom_rois = bottom_rois + n * 5;
     int roi_batch_ind = offset_bottom_rois[0];
+    if (roi_batch_ind < 0) continue;
 
     // Do not using rounding; this implementation detail is critical
-    T roi_start_w = offset_bottom_rois[1] * spatial_scale;
-    T roi_start_h = offset_bottom_rois[2] * spatial_scale;
-    T roi_end_w = offset_bottom_rois[3] * spatial_scale;
-    T roi_end_h = offset_bottom_rois[4] * spatial_scale;
-    // T roi_start_w = round(offset_bottom_rois[1] * spatial_scale);
-    // T roi_start_h = round(offset_bottom_rois[2] * spatial_scale);
-    // T roi_end_w = round(offset_bottom_rois[3] * spatial_scale);
-    // T roi_end_h = round(offset_bottom_rois[4] * spatial_scale);
+    T roi_offset = continuous_coordinate ? static_cast<T>(0.5) : static_cast<T>(0);
+    T roi_start_w = offset_bottom_rois[1] * spatial_scale - roi_offset;
+    T roi_start_h = offset_bottom_rois[2] * spatial_scale - roi_offset;
+    T roi_end_w = offset_bottom_rois[3] * spatial_scale - roi_offset;
+    T roi_end_h = offset_bottom_rois[4] * spatial_scale - roi_offset;
 
-    // Force malformed ROIs to be 1x1
-    T roi_width = max(roi_end_w - roi_start_w, (T)1.);
-    T roi_height = max(roi_end_h - roi_start_h, (T)1.);
+    T roi_width = roi_end_w - roi_start_w;
+    T roi_height = roi_end_h - roi_start_h;
+    if (!continuous_coordinate) {  // backward compatiblity
+      // Force malformed ROIs to be 1x1
+      roi_width = max(roi_width, (T)1.);
+      roi_height = max(roi_height, (T)1.);
+    }
     T bin_size_h = static_cast<T>(roi_height) / static_cast<T>(pooled_height);
     T bin_size_w = static_cast<T>(roi_width) / static_cast<T>(pooled_width);
 
@@ -353,7 +360,7 @@ __global__ void RoIAlignBackwardKernel(
         }  // if
       }  // ix
     }  // iy
-  }  // CUDA_1D_KERNEL_LOOP
+  }  // CUDA_KERNEL_LOOP
 }  // RoIAlignBackward
 
 template<typename xpu>
@@ -394,6 +401,7 @@ void ROIAlignForwardCompute(const nnvm::NodeAttrs& attrs,
           bottom_data,
           param.spatial_scale,
           param.position_sensitive,
+          param.aligned,
           channels,
           height,
           width,
@@ -463,6 +471,7 @@ void ROIAlignBackwardCompute(const nnvm::NodeAttrs& attrs,
         num_rois,
         param.spatial_scale,
         param.position_sensitive,
+        param.aligned,
         channels,
         height,
         width,

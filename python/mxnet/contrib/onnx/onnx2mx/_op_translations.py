@@ -24,7 +24,7 @@ from .... import symbol
 # Method definitions for the callable objects mapped in the import_helper module
 
 def identity(attrs, inputs, proto_obj):
-    """Returns the identity function of the the input."""
+    """Returns the identity function of the input."""
     return 'identity', attrs, inputs
 
 def random_uniform(attrs, inputs, proto_obj):
@@ -779,3 +779,11 @@ def lpnormalization(attrs, inputs, proto_obj):
     axis = int(attrs.get("axis", -1))
     new_attrs.update(axis=axis)
     return 'norm', new_attrs, inputs
+
+
+def topk(attrs, inputs, proto_obj):
+    """Returns the top k elements in an input array along the given axis."""
+    new_attrs = translation_utils._add_extra_attributes(attrs,
+                                                        {'ret_typ': 'both',
+                                                         'dtype': 'int64'})
+    return 'topk', new_attrs, inputs

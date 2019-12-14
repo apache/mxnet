@@ -306,7 +306,7 @@ abstract class BaseModule {
 
   // Parameters of a module
   /**
-   * Get parameters, those are potentially copies of the the actual parameters used
+   * Get parameters, those are potentially copies of the actual parameters used
    * to do computation on the device.
    * @return `(argParams, auxParams)`, a pair of dictionary of name to value mapping.
    */

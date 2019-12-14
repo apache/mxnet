@@ -18,13 +18,12 @@
 # under the License.
 
 if [ $# -lt 1 ]; then
-    >&2 echo "Usage: build.sh <VARIANT> <TARGET>"
+    >&2 echo "Usage: build.sh <VARIANT>"
 fi
 
 export CURDIR=$PWD
 export DEPS_PATH=$PWD/staticdeps
 export VARIANT=$(echo $1 | tr '[:upper:]' '[:lower:]')
-export STATIC_BUILD_TARGET=$(echo $2 | tr '[:upper:]' '[:lower:]')
 export PLATFORM=$(uname | tr '[:upper:]' '[:lower:]')
 
 if [[ $VARIANT == darwin* ]]; then

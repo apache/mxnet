@@ -272,7 +272,7 @@ sub BUILD
         if(defined $self->activation)
         {
             $self->act(
-                AI::MXNet::Gluon::NN::Activation->new(
+                AI::MXNet::Gluon::NN->Activation(
                     activation => $self->activation,
                     prefix => $self->activation.'_'
                 )

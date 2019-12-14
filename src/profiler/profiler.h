@@ -36,22 +36,13 @@
 #include "./vtune.h"
 #include "./aggregate_stats.h"
 #include "./nvtx.h"
+#include "../common/utils.h"
 
-#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-#include <windows.h>
-#else
-#include <unistd.h>
-#include <cstdint>
-#endif
 
 namespace mxnet {
 namespace profiler {
 
-#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-inline size_t current_process_id() { return ::GetCurrentProcessId(); }
-#else
-inline size_t current_process_id() { return getpid(); }
-#endif
+
 
 /*!
  * \brief Constant-sized character array class with simple string API to avoid allocations
@@ -132,7 +123,7 @@ struct ProfileStat {
   bool enable_aggregate_ = true;
 
   /* !\brief Process id */
-  size_t process_id_ = current_process_id();
+  size_t process_id_ = common::current_process_id();
 
   /*! \brief id of thread which operation run on.
    *
@@ -1187,7 +1178,7 @@ struct ProfileOperator : public ProfileEvent {
    * \param dev_type Device type that the profiling will occur on
    * \param dev_id Device id associated with this opr
    */
-  void start(mxnet::Context::DeviceType dev_type, uint32_t dev_id) {
+  void startForDevice(mxnet::Context::DeviceType dev_type, uint32_t dev_id) {
     dev_type_ = dev_type;
     dev_id_ = dev_id;
     if (profiling_) {
@@ -1247,7 +1238,7 @@ struct ProfileOperator : public ProfileEvent {
    */
   void SendStat() override {
     Profiler::Get()->AddNewProfileStat<OprExecStat>(
-      [this](OprExecStat *stat) {}, name_.c_str(), dev_type_, dev_id_,
+      [](OprExecStat *stat) {}, name_.c_str(), dev_type_, dev_id_,
       start_time_, ProfileStat::NowInMicrosec(),
       attributes_.get());
   }
