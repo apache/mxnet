@@ -41,5 +41,8 @@ c = a + b
 d = mx.sym.exp(c)
 sym = mx.sym.log(d)
 
-part_sym = sym.optimize_for("myProp")
-        
+mysym = sym.optimize_for("myProp")
+
+exe = mysym.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
+out = exe.forward()
+print(out)

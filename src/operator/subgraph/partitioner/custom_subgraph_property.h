@@ -35,9 +35,9 @@ namespace op {
  */
 class CustomContainOpSelector: public SubgraphSelector {
  public:
-  CustomContainOpSelector() {}
+ CustomContainOpSelector(std::vector<std::string> supportedNodes) : supportedNodes_(supportedNodes) {}
   virtual bool Select(const nnvm::Node &n) {
-    return false;
+    return std::find(supportedNodes_.begin(), supportedNodes_.end(), n.attrs.name) != supportedNodes_.end();
   }
   virtual bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) {
     return false;
@@ -45,6 +45,7 @@ class CustomContainOpSelector: public SubgraphSelector {
   virtual bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) {
     return false;
   }
+  std::vector<std::string> supportedNodes_;
 };
 
 /*
@@ -55,10 +56,12 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   CustomSubgraphProperty() {
     supportedOps_ = nullptr;
   }
-  CustomSubgraphProperty(partCallSupportedOps_t callSupportedOps, supportedOps_t supportedOps) {
-    callSupportedOps_ = callSupportedOps;
-    supportedOps_ = supportedOps;
-  }
+  CustomSubgraphProperty(partCallSupportedOps_t callSupportedOps,
+                         supportedOps_t supportedOps,
+                         std::string op_name) :
+  callSupportedOps_(callSupportedOps), 
+    supportedOps_(supportedOps),
+    subgraph_op_name(op_name) {}
   // create custom subgraph property
   static SubgraphPropertyPtr Create() {
     return std::make_shared<CustomSubgraphProperty>();
@@ -73,31 +76,42 @@ class  CustomSubgraphProperty: public SubgraphProperty {
         // increment count for number of nodes in model
         num_ids++;
       });
-    std::vector<int> supportedOps(num_ids,0);
+    std::vector<int> supportedNodeIDs(num_ids,0);
     if (supportedOps_ == nullptr) {
       std::cout << "supportedOps_ is null" << std::endl;
     } else {
       const char* json = subgraph_json.c_str();
-      int *ids = supportedOps.data();
+      int *ids = supportedNodeIDs.data();
       int retval = callSupportedOps_(supportedOps_, json, num_ids, ids);
+    }
+    
+    const auto& idx = g.indexed_graph();
+    std::cout << "supportedNodes:" << std::endl;
+    for(int i=0; i<num_ids; i++) {
+      if(supportedNodeIDs[i]) {
+        supportedNodes.push_back(idx[i].source->attrs.name);
+        std::cout << idx[i].source->attrs.name << std::endl;
+      }
     }
   }
   // override CreateSubgraphNode
   virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                            const int subgraph_id = 0) const {
     nnvm::NodePtr n = nnvm::Node::Create();
-    n->attrs.op = Op::Get("_op");
+    n->attrs.op = Op::Get(subgraph_op_name);
     n->attrs.name = "_op" + std::to_string(subgraph_id);
     n->attrs.subgraphs.push_back(std::make_shared<nnvm::Symbol>(sym));
     return n;
   }
   // override CreateSubgraphSelector
   virtual SubgraphSelectorPtr CreateSubgraphSelector() const {
-    return std::make_shared<CustomContainOpSelector>();
+    return std::make_shared<CustomContainOpSelector>(supportedNodes);
   }
 
   partCallSupportedOps_t callSupportedOps_;
   supportedOps_t supportedOps_;
+  std::vector<std::string> supportedNodes;
+  std::string subgraph_op_name;
 };
 }  // namespace op
 }  // namespace mxnet

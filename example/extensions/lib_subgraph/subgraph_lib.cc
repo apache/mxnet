@@ -24,6 +24,7 @@
  */
 
 #include <iostream>
+#include <algorithm>
 #include "lib_api.h"
 
 MXReturnValue parseAttrs(std::map<std::string, std::string> attrs,
@@ -102,14 +103,29 @@ REGISTER_OP(_custom_subgraph_op)
 .setInferShape(inferShape)
 .setCreateOpState(createOpState);
 
+const std::vector<std::string> op_names({"exp","log"});
+
 MXReturnValue mySupportedOps(std::string json,
 			     const int num_ids,
 			     int *ids) {
-  std::cout << "in mySupportedOps" << std::endl;
-  std::cout << "num_ids : " << num_ids << std::endl;
-  std::cout << "json: " << std::endl;
-  std::cout << json << std::endl;
-  
+  //convert json string to json object
+  JsonParser parser;
+  JsonVal json_val = parser.parse_to_json(json);
+
+  //get nodes list
+  JsonVal nodes = json_val.map[JsonVal("nodes")];
+
+  //loop over nodes
+  for(int i=0; i<nodes.list.size(); i++) {
+    JsonVal node = nodes.list[i];
+    JsonVal op = node.map[JsonVal("op")];
+
+    //check if op is in whitelist
+    if(std::find(op_names.begin(),op_names.end(),op.str.c_str()) != op_names.end()) {
+      // found op in whitelist, set value to 1 to include op in subgraph
+      ids[i]=1;
+    }
+  }  
   return MX_SUCCESS;
 }
 
