@@ -58,10 +58,12 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   CustomSubgraphProperty() {
     supportedOps_ = nullptr;
   }
-  CustomSubgraphProperty(partCallSupportedOps_t callSupportedOps,
-                         supportedOps_t supportedOps,
-                         std::string op_name) :
-  callSupportedOps_(callSupportedOps),
+ CustomSubgraphProperty(std::string subgraphProp_name,
+                        partCallSupportedOps_t callSupportedOps,
+                        supportedOps_t supportedOps,
+                        std::string op_name) :
+  subgraphProp(subgraphProp_name),
+    callSupportedOps_(callSupportedOps),
     supportedOps_(supportedOps),
     subgraph_op_name(op_name) {}
   // create custom subgraph property
@@ -74,7 +76,6 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     std::string subgraph_json = nnvm::pass::SaveJSON(g);
     int num_ids = 0;
     DFSVisit(g.outputs, [&](const nnvm::NodePtr& nptr) {
-        nnvm::Node *node = nptr.get();
         // increment count for number of nodes in model
         num_ids++;
       });
@@ -84,7 +85,8 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     } else {
       const char* json = subgraph_json.c_str();
       int *ids = supportedNodeIDs.data();
-      int retval = callSupportedOps_(supportedOps_, json, num_ids, ids);
+      CHECK(callSupportedOps_(supportedOps_, json, num_ids, ids))
+        << "Error calling supportedOps for '" << subgraphProp << "'";
     }
 
     const auto& idx = g.indexed_graph();
@@ -114,6 +116,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   supportedOps_t supportedOps_;
   std::vector<std::string> supportedNodes;
   std::string subgraph_op_name;
+  std::string subgraphProp;
 };
 }  // namespace op
 }  // namespace mxnet

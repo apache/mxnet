@@ -723,7 +723,7 @@ int MXLoadLib(const char *path) {
     // MXNET_REGISTER_SUBGRAPH_PROPERTY(customBackend, CustomSubgraphProperty);
     mxnet::op::SubgraphBackendRegistry::Get()->__REGISTER_CUSTOM_PROPERTY__(name,
                             std::make_shared<mxnet::op::CustomSubgraphProperty>(
-                                     callSupportedOps, supportedOps_fp, op_name));
+                           name_str, callSupportedOps, supportedOps_fp, op_name));
   }
   API_END();
 }
