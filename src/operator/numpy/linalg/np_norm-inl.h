@@ -400,29 +400,34 @@ void NumpyMatrixNormCompute(const nnvm::NodeAttrs& attrs,
   }
 
   if (param.flag == 1) { // Frobenius norm
-    return ReduceAxesComputeImpl<xpu, mshadow_op::nrm2, false, false, mshadow_op::identity>(
+    ReduceAxesComputeImpl<xpu, mshadow_op::nrm2, false, false, mshadow_op::identity>(
       ctx, inputs, req, outputs, reduced_shape);
+    return;
   }
 
   TShape mat_axis = param.axis.value();
 
-  if (param.ord == 1 || param.ord == -1) {  // column norms
+  if (param.ord != 2 && param.ord != -2) {  // row norm or col norm
     TShape sum_shape = inputs[0].shape_;
-    sum_shape[mat_axis[1]] = 1;
-    MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    sum_shape[mat_axis[!(param.ord == 1 || param.ord == -1)]] = 1;
+    size_t size = int(double(sum_shape.Size()) / 16 + 0.5) * 16;
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       TBlob temp = TBlob(ctx.requested[0].get_space_typed<xpu, 1, DType>(
-                    Shape1(sum_shape.Size()), s));
-      std::vector<TBlob> sum_output({ temp.reshape(sum_shape) });
+                    Shape1(size), s));
+      temp = TBlob(reinterpret_cast<DType*>(temp.dptr_), sum_shape,
+                   temp.dev_mask(), temp.dev_id());
+      std::vector<TBlob> sum_output({temp});
       ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, false, mshadow_op::abs>(
         ctx, inputs, req, sum_output, sum_shape);
-      if (param.ord == 1) {
-        return ReduceAxesComputeImpl<xpu, mshadow::red::maximum, false, false, mshadow_op::identity>(
+      if (param.ord > 0) {
+        ReduceAxesComputeImpl<xpu, mshadow::red::maximum, false, false, mshadow_op::identity>(
           ctx, sum_output, req, outputs, reduced_shape);
       } else {
-        return ReduceAxesComputeImpl<xpu, mshadow::red::minimum, false, false, mshadow_op::identity>(
+        ReduceAxesComputeImpl<xpu, mshadow::red::minimum, false, false, mshadow_op::identity>(
           ctx, sum_output, req, outputs, reduced_shape);
       }
     });
+    return;
   }
 
   // spectral norms
@@ -472,7 +477,7 @@ void NumpyMatrixNormCompute(const nnvm::NodeAttrs& attrs,
                      temp.dev_mask(), temp.dev_id());
     TransposeImpl<xpu>(ctx.run_ctx, TBlob(L).reshape(L_shape), workspace0, reduce_axes);
     std::vector<TBlob> eigen({ workspace0 });
-    if (param.flag == 2) { // nuclear norm
+    if (param.flag == 2) {  // nuclear norm
       ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, false, mshadow_op::identity>(
         ctx, eigen, req, outputs, reduced_shape);
     } else if (dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false)) {
@@ -522,7 +527,7 @@ void NumpyMatrixNormGradCompute(const nnvm::NodeAttrs& attrs,
   std::vector<TBlob> map_outputs;
 
   if (param.flag == 1) { // frob norm
-    MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       map_inputs = std::vector<TBlob>({inputs[0], inputs[4], inputs[5]});
       if (req[0] == kAddTo) {
         TBlob workspace = TBlob(ctx.requested[0].get_space_typed<xpu, 1, DType>(
@@ -540,6 +545,16 @@ void NumpyMatrixNormGradCompute(const nnvm::NodeAttrs& attrs,
     return;
   }
 
+  TShape mat_axis = param.axis.value();
+
+  if (param.ord != 2 && param.ord != -2) {  // row norm or col norm
+    LOG(FATAL) << "Under construction.";
+    TShape sum_shape = inputs[0].shape_;
+    sum_shape[mat_axis[param.ord == 1 || param.ord == -1]] = 1;
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {});
+    return;
+  }
+
   if (!param.keepdims) {
     const_cast<std::vector<TBlob>&>(inputs)[0] = inputs[0].reshape(reduced_shape);
     const_cast<std::vector<TBlob>&>(inputs)[5] = inputs[5].reshape(reduced_shape);
@@ -551,7 +566,6 @@ void NumpyMatrixNormGradCompute(const nnvm::NodeAttrs& attrs,
 
   TShape old_shape = inputs[4].shape_;
   TShape svd_in_shape = old_shape;
-  TShape mat_axis = param.axis.value();
   TShape axes(old_shape.ndim(), 1);
   for (int i = 0; i < old_shape.ndim(); ++i) {
     axes[i] = i;
