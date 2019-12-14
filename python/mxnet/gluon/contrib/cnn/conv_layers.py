@@ -313,7 +313,7 @@ class ModulatedDeformableConvolution(HybridBlock):
                 dilation = (dilation,) * len(kernel_size)
             self._op_name = op_name
 
-            offset_channels = 27
+            offset_channels = num_deformable_group * 3 * kernel_size[0] * kernel_size[1]
             self._kwargs_offset = {
                 'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
                 'pad': padding, 'num_filter': offset_channels, 'num_group': groups,
