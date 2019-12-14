@@ -99,19 +99,63 @@ def random_seed(seed=None):
         random.seed(next_seed)
 
 
-def assert_raises_cudnn_not_satisfied(min_version):
+def _assert_raise_cuxx_version_not_satisfied(min_version, cfg):
+
+    def less_than(version_left, version_right):
+        """Compares two version strings in the format num(.[num])*"""
+        if not version_left or not version_right:
+            return False
+
+        left = version_left.split(".")
+        right = version_right.split(".")
+
+        # 0 pad shortest version - e.g. 
+        # less_than("9.1", "9.1.9") == less_than("9.1.0", "9.1.9")
+        longest = max(len(left), len(right))
+        left.extend([0] * (longest - len(left)))
+        right.extend([0] * (longest - len(right)))
+
+        # compare each of the version components
+        for l, r in zip(left, right):
+            if int(r) < int(l):
+                return False
+
+            # keep track of how many are the same
+            if int(r) == int(l):
+                longest = longest - 1
+
+        # longest = 0 mean version_left == version_right -> False
+        # longest > 0 version_left < version_right -> True
+        return longest > 0
+
     def test_helper(orig_test):
         @make_decorator(orig_test)
         def test_new(*args, **kwargs):
-            cudnn_off = os.getenv('CUDNN_OFF_TEST_ONLY') == 'true'
-            cudnn_env_version = os.getenv('CUDNN_VERSION', None if cudnn_off else '7.3.1')
-            cudnn_test_disabled = cudnn_off or cudnn_env_version < min_version
-            if not cudnn_test_disabled or mx.context.current_context().device_type == 'cpu':
+            cuxx_off = os.getenv(cfg['TEST_OFF_ENV_VAR']) == 'true'
+            cuxx_env_version = os.getenv(cfg['VERSION_ENV_VAR'], None if cuxx_off else cfg['DEFAULT_VERSION'])
+            cuxx_test_disabled = cuxx_off or less_than(cuxx_env_version, min_version)
+            if not cuxx_test_disabled or mx.context.current_context().device_type == 'cpu':
                 orig_test(*args, **kwargs)
             else:
                 assert_raises((MXNetError, RuntimeError), orig_test, *args, **kwargs)
         return test_new
     return test_helper
+
+
+def assert_raises_cudnn_not_satisfied(min_version):
+    return _assert_raise_cuxx_version_not_satisfied(min_version, {
+        'TEST_OFF_ENV_VAR': 'CUDNN_OFF_TEST_ONLY',
+        'VERSION_ENV_VAR': 'CUDNN_VERSION',
+        'DEFAULT_VERSION': '7.3.1'
+    })
+
+
+def assert_raises_cuda_not_satisfied(min_version):
+    return _assert_raise_cuxx_version_not_satisfied(min_version, {
+        'TEST_OFF_ENV_VAR': 'CUDA_OFF_TEST_ONLY',
+        'VERSION_ENV_VAR': 'CUDA_VERSION',
+        'DEFAULT_VERSION': '10.1'
+    })
 
 
 def with_seed(seed=None):
