@@ -23,10 +23,10 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <nnvm/pass_functions.h>
 #include "../common.h"
 #include "../subgraph_property.h"
 #include "../../include/mxnet/lib_api.h"
-#include <nnvm/pass_functions.h>
 namespace mxnet {
 namespace op {
 
@@ -35,9 +35,11 @@ namespace op {
  */
 class CustomContainOpSelector: public SubgraphSelector {
  public:
- CustomContainOpSelector(std::vector<std::string> supportedNodes) : supportedNodes_(supportedNodes) {}
+  CustomContainOpSelector(std::vector<std::string> supportedNodes) :
+    supportedNodes_(supportedNodes) {}
   virtual bool Select(const nnvm::Node &n) {
-    return std::find(supportedNodes_.begin(), supportedNodes_.end(), n.attrs.name) != supportedNodes_.end();
+    return std::find(supportedNodes_.begin(), supportedNodes_.end(),
+                     n.attrs.name) != supportedNodes_.end();
   }
   virtual bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) {
     return false;
@@ -59,7 +61,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   CustomSubgraphProperty(partCallSupportedOps_t callSupportedOps,
                          supportedOps_t supportedOps,
                          std::string op_name) :
-  callSupportedOps_(callSupportedOps), 
+  callSupportedOps_(callSupportedOps),
     supportedOps_(supportedOps),
     subgraph_op_name(op_name) {}
   // create custom subgraph property
@@ -76,7 +78,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
         // increment count for number of nodes in model
         num_ids++;
       });
-    std::vector<int> supportedNodeIDs(num_ids,0);
+    std::vector<int> supportedNodeIDs(num_ids, 0);
     if (supportedOps_ == nullptr) {
       std::cout << "supportedOps_ is null" << std::endl;
     } else {
@@ -84,11 +86,11 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       int *ids = supportedNodeIDs.data();
       int retval = callSupportedOps_(supportedOps_, json, num_ids, ids);
     }
-    
+
     const auto& idx = g.indexed_graph();
     std::cout << "supportedNodes:" << std::endl;
-    for(int i=0; i<num_ids; i++) {
-      if(supportedNodeIDs[i]) {
+    for (int i = 0; i < num_ids; i++) {
+      if (supportedNodeIDs[i]) {
         supportedNodes.push_back(idx[i].source->attrs.name);
         std::cout << idx[i].source->attrs.name << std::endl;
       }
