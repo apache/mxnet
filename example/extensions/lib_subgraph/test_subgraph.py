@@ -41,8 +41,15 @@ c = a + b
 d = mx.sym.exp(c)
 sym = mx.sym.log(d)
 
-mysym = sym.optimize_for("myProp")
+# with propogating shapes/types
+arg_array = [mx.nd.ones((3,2),dtype='int'), mx.nd.ones((3,2),dtype='int')]
+mysym = sym.optimize_for("myProp", arg_array)
+exe = mysym.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
+out = exe.forward()
+print(out)
 
+# without propogating shapes/types
+mysym = sym.optimize_for("myProp")
 exe = mysym.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
 out = exe.forward()
 print(out)

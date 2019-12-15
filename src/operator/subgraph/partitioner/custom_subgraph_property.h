@@ -31,7 +31,9 @@ namespace mxnet {
 namespace op {
 
 /*
- * This selects nodes for a subgraph
+ * This selects nodes for a subgraph based on node name as supplied
+ * by the supportedOps from an external library. It visits nodes via
+ * both input and output links.
  */
 class CustomContainOpSelector: public SubgraphSelector {
  public:
@@ -42,22 +44,29 @@ class CustomContainOpSelector: public SubgraphSelector {
                      n.attrs.name) != supportedNodes_.end();
   }
   virtual bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) {
-    return false;
+    return std::find(supportedNodes_.begin(), supportedNodes_.end(),
+                     new_node.attrs.name) != supportedNodes_.end();
   }
   virtual bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) {
-    return false;
+    return std::find(supportedNodes_.begin(), supportedNodes_.end(),
+                     new_node.attrs.name) != supportedNodes_.end();
   }
   std::vector<std::string> supportedNodes_;
 };
 
 /*
- * This subgraph property finds a subgraph
+ * This subgraph property finds a subgraph that only contains
+ * nodes as specified by the supportedOps from an external library.
+ * The operators in the subgraph will be executed by the operator
+ * specified by the external library too.
  */
 class  CustomSubgraphProperty: public SubgraphProperty {
  public:
-  CustomSubgraphProperty() {
-    supportedOps_ = nullptr;
-  }
+  CustomSubgraphProperty() : 
+    callSupportedOps_(nullptr),
+    supportedOps_(nullptr),
+    subgraph_op_name("error"),
+    subgraphProp("error") {}
   CustomSubgraphProperty(std::string subgraphProp_name,
                         partCallSupportedOps_t callSupportedOps,
                         supportedOps_t supportedOps,
@@ -66,35 +75,62 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     supportedOps_(supportedOps),
       subgraph_op_name(op_name),
       subgraphProp(subgraphProp_name) {}
+
   // create custom subgraph property
   static SubgraphPropertyPtr Create() {
     return std::make_shared<CustomSubgraphProperty>();
   }
+
   void PrePartition(const nnvm::Graph& g,
     const std::vector<std::pair<std::string, std::string>>& options_map) {
     std::cout << "PrePartition" << std::endl;
-    std::string subgraph_json = nnvm::pass::SaveJSON(g);
-    int num_ids = 0;
-    DFSVisit(g.outputs, [&](const nnvm::NodePtr& nptr) {
-        // increment count for number of nodes in model
-        num_ids++;
-      });
-    std::vector<int> supportedNodeIDs(num_ids, 0);
-    if (supportedOps_ == nullptr) {
-      std::cout << "supportedOps_ is null" << std::endl;
-    } else {
-      const char* json = subgraph_json.c_str();
-      int *ids = supportedNodeIDs.data();
-      CHECK(callSupportedOps_(supportedOps_, json, num_ids, ids))
-        << "Error calling supportedOps for '" << subgraphProp << "'";
+
+    // remove all graph attrs, some cannot be saved to json
+    nnvm::Graph graph = std::move(g);
+    graph.attrs.clear();
+    const nnvm::IndexedGraph& indexed_graph = graph.indexed_graph();
+
+    // set shape attrs for each node in the graph
+    if (g.HasAttr("shape")) {
+      mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
+      for (int i = 0; i<indexed_graph.num_nodes(); i++) {
+        nnvm::Node* node = const_cast<nnvm::Node*>(indexed_graph[i].source);
+        mxnet::TShape shape = shapes[i];
+        std::stringstream ss;
+        ss << shape;
+        node->attrs.dict["shape"]=ss.str();
+      }
     }
+    // set dtype attrs for each node in the graph
+    if (g.HasAttr("dtype")) {
+      std::vector<int> dtypes = g.GetAttr<std::vector<int> >("dtype");
+      for (int i = 0; i<indexed_graph.num_nodes(); i++) {
+        nnvm::Node* node = const_cast<nnvm::Node*>(indexed_graph[i].source);
+        int dtype = dtypes[i];
+        std::stringstream ss;
+        ss << dtype;
+        node->attrs.dict["dtype"]=ss.str();
+      }
+    }
+    
+    CHECK(supportedOps_ == nullptr)
+      << "supportedOps_ is null for " << subgraphProp << std::endl;
+    CHECK(callSupportedOps_ == nullptr)
+      << "callSupportedOps_ is null for " << subgraphProp << std::endl;
+    
+    std::string subgraph_json = nnvm::pass::SaveJSON(graph);
+    std::vector<int> supportedNodeIDs(indexed_graph.num_nodes(), 0);
+    const char* json = subgraph_json.c_str();
+    int *ids = supportedNodeIDs.data();
+      
+    CHECK(callSupportedOps_(supportedOps_, json, supportedNodeIDs.size(), ids))
+      << "Error calling supportedOps for '" << subgraphProp << "'";
 
     const auto& idx = g.indexed_graph();
-    std::cout << "supportedNodes:" << std::endl;
-    for (int i = 0; i < num_ids; i++) {
+    // loop and add node names for each supported node ID
+    for (int i = 0; i < supportedNodeIDs.size(); i++) {
       if (supportedNodeIDs[i]) {
         supportedNodes.push_back(idx[i].source->attrs.name);
-        std::cout << idx[i].source->attrs.name << std::endl;
       }
     }
   }

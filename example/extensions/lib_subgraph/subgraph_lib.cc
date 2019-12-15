@@ -111,7 +111,6 @@ MXReturnValue mySupportedOps(std::string json,
   //convert json string to json object
   JsonParser parser;
   JsonVal json_val = parser.parse_to_json(json);
-
   //get nodes list
   JsonVal nodes = json_val.map[JsonVal("nodes")];
 
@@ -120,8 +119,19 @@ MXReturnValue mySupportedOps(std::string json,
     JsonVal node = nodes.list[i];
     JsonVal op = node.map[JsonVal("op")];
 
+    //get shape/type if available
+    std::string shape,dtype;
+    if(node.map.find(JsonVal("attrs")) != node.map.end()) {
+      JsonVal attrs = node.map[JsonVal("attrs")];
+      if(attrs.map.find(JsonVal("shape")) != attrs.map.end()) 
+        shape = attrs.map[JsonVal("shape")].str;
+      if(attrs.map.find(JsonVal("dtype")) != attrs.map.end())
+        dtype = attrs.map[JsonVal("dtype")].str;
+    }
+
     //check if op is in whitelist
     if(std::find(op_names.begin(),op_names.end(),op.str.c_str()) != op_names.end()) {
+      std::cout << op.str << " : " << shape << " " << dtype << std::endl;
       // found op in whitelist, set value to 1 to include op in subgraph
       ids[i]=1;
     }
