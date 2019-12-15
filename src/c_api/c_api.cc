@@ -702,10 +702,10 @@ int MXLoadLib(const char *path) {
                                                   const_cast<char*>(MXLIB_PARTREGGETCOUNT_STR));
   partRegGet_t partRegGet = get_func<partRegGet_t>(lib, const_cast<char*>(MXLIB_PARTREGGET_STR));
   for (int i = 0; i < numParts; i++) {
-    int count=0;
+    int count = 0;
     const char* name;
     // get custom partitioner strategy count from the dynamic library
-    partRegGetCount(i,&count, &name);
+    partRegGetCount(i, &count, &name);
     CHECK(count > 0) << "Error loading '" << name
                      << "' custom partitioner, no strategies defined";
     std::string name_str(name);
