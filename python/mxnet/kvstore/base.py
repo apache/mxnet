@@ -105,6 +105,9 @@ class KVStoreBase(object):
         and the results are pulled from the server to `out`. If `out` is not specified
         the pulled values are written to `value`.
 
+        Note that for allreduce based approaches such as horovod, there is no notion of
+        server or store. This function performs allreduce.
+
         Parameters
         ----------
         key : str or int
@@ -182,7 +185,7 @@ class KVStoreBase(object):
 
     @property
     def type(self):
-        """ Returns the type of this kvstore.
+        """ Returns the type of this kvstore backend.
 
         Returns
         -------

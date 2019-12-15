@@ -48,7 +48,7 @@ kv = mx.kv.create(args.name)
 my_rank = kv.rank
 my_num_workers = kv.num_workers
 
-def test_push_pull():
+def test_pushpull():
     num_gpus = 2
     def check_default_keys(nrepeat=3):
         # init kv dns keys
