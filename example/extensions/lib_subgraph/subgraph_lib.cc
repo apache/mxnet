@@ -140,8 +140,7 @@ MXReturnValue mySupportedOps(std::string json,
 }
 
 REGISTER_PARTITIONER(myProp)
-.setSupportedOps(mySupportedOps)
-.setSubgraphOp("_custom_subgraph_op");
+.addStrategy("strategy1", mySupportedOps, "_custom_subgraph_op");
 
 MXReturnValue initialize(int version) {
   if (version >= 10400) {

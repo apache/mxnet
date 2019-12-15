@@ -698,32 +698,44 @@ int MXLoadLib(const char *path) {
    * Get all custom partitioners implementation from custom library
    * loop and register each partitioner in the library to NNVM
    */
+  partRegGetCount_t partRegGetCount = get_func<partRegGetCount_t>(lib,
+                                                  const_cast<char*>(MXLIB_PARTREGGETCOUNT_STR));
   partRegGet_t partRegGet = get_func<partRegGet_t>(lib, const_cast<char*>(MXLIB_PARTREGGET_STR));
   for (int i = 0; i < numParts; i++) {
+    int count=0;
     const char* name;
-    // function pointers holding implementation from custom library
-    supportedOps_t supportedOps_fp = nullptr;
-    // name of subgraph op
-    const char* op_name = nullptr;
-
-    // get custom partitioner implemenation from the dynamic library
-    partRegGet(i, &name, &supportedOps_fp, &op_name);
-
-    // validate custom partitioner functions from the dynamic library
-    CHECK(supportedOps_fp != nullptr) << "Error loading '" << name
-                            << "' custom partitioner, supportedOps function was not set.";
-    CHECK(op_name != nullptr) << "Error loading '" << name
-                            << "' custom partitioner, subgraphOp was not set.";
-
-    LOG(INFO) << "\tPartitioner[" << i << "] " << name << " subgraphOp: '" << op_name << "'";
+    // get custom partitioner strategy count from the dynamic library
+    partRegGetCount(i,&count, &name);
+    CHECK(count > 0) << "Error loading '" << name
+                     << "' custom partitioner, no strategies defined";
     std::string name_str(name);
-
+    LOG(INFO) << "\tPartitioner[" << i << "] " << name;
     // MXNET_REGISTER_SUBGRAPH_BACKEND(customBackend);
     mxnet::op::SubgraphBackendRegistry::Get()->__REGISTER_BACKEND__(name);
-    // MXNET_REGISTER_SUBGRAPH_PROPERTY(customBackend, CustomSubgraphProperty);
-    mxnet::op::SubgraphBackendRegistry::Get()->__REGISTER_CUSTOM_PROPERTY__(name,
+
+    for (int j = 0; j < count; j++) {
+      const char* strategy;
+      // function pointers holding implementation from custom library
+      supportedOps_t supportedOps_fp = nullptr;
+      // name of subgraph op
+      const char* op_name = nullptr;
+
+    // get custom partitioner strategy from the dynamic library
+      partRegGet(i, j, &strategy, &supportedOps_fp, &op_name);
+      // validate custom partitioner functions from the dynamic library
+      CHECK(supportedOps_fp != nullptr) << "Error loading '" << name
+                                        << "' custom partitioner strategy '" << strategy
+                                        << "', supportedOps function was not set.";
+      std::string strategy_str(strategy);
+      std::string op_name_str(op_name);
+      LOG(INFO) << "\t\tStrategy[" << j << "] " << strategy_str
+                << " subgraphOp: '" << op_name_str << "'";
+
+      // MXNET_REGISTER_SUBGRAPH_PROPERTY(customBackend, CustomSubgraphProperty);
+      mxnet::op::SubgraphBackendRegistry::Get()->__REGISTER_CUSTOM_PROPERTY__(name_str,
                             std::make_shared<mxnet::op::CustomSubgraphProperty>(
-                           name_str, callSupportedOps, supportedOps_fp, op_name));
+                           strategy_str, callSupportedOps, supportedOps_fp, op_name_str));
+    }
   }
   API_END();
 }

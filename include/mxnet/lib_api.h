@@ -595,22 +595,25 @@ typedef MXReturnValue (*supportedOps_t)(std::string,
 class CustomPartitioner {
  public:
   CustomPartitioner() : name("ERROR") {}
-  explicit CustomPartitioner(const char* prop_name) : name(prop_name) {}
-  CustomPartitioner& setSupportedOps(supportedOps_t fn) {
-    supportedOps = fn;
-    return *this;
-  }
-  CustomPartitioner& setSubgraphOp(const char* sg_name) {
-    op_name = sg_name;
+  explicit CustomPartitioner(const char* backend_name) :
+    name(backend_name) {}
+  CustomPartitioner& addStrategy(const char* prop_name,
+                                 supportedOps_t fn,
+                                 const char* sg_name) {
+    strategies.push_back(prop_name);
+    supportedOps.push_back(fn);
+    op_names.push_back(sg_name);
     return *this;
   }
 
   /*! \brief partitioner  name */
   const char* name;
+  /*! \brief strategy names */
+  std::vector<const char*> strategies;
   /*! \brief supported ops function */
-  supportedOps_t supportedOps;
+  std::vector<supportedOps_t> supportedOps;
   /*! \brief subgraph operator name */
-  const char* op_name;
+  std::vector<const char*> op_names;
 };
 
 /*!
@@ -740,8 +743,12 @@ typedef int (*opCallFStatefulComp_t)(bool, void*, const int64_t**, int*, void**,
 #define MXLIB_PARTREGSIZE_STR "_partRegSize"
 typedef int (*partRegSize_t)(void);
 
+#define MXLIB_PARTREGGETCOUNT_STR "_partRegGetCount"
+typedef int (*partRegGetCount_t)(int, int*, const char**);
+
 #define MXLIB_PARTREGGET_STR "_partRegGet"
-typedef int (*partRegGet_t)(int, const char**, supportedOps_t*, const char**);
+typedef int (*partRegGet_t)(int, int, const char**,
+                            supportedOps_t*, const char**);
 
 #define MXLIB_PARTCALLSUPPORTEDOPS_STR "_partCallSupportedOps"
 typedef int (*partCallSupportedOps_t)(supportedOps_t, const char*, const int, int *);
@@ -1054,17 +1061,31 @@ extern "C" {
     return Registry<CustomPartitioner>::get()->size();
   }
 
+  /* returns number of strategies registered for partitioner 
+   * at specified index */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) void __cdecl
+#else
+  void
+#endif
+  _partRegGetCount(int idx, int* count, const char** name) {
+    CustomPartitioner part = Registry<CustomPartitioner>::get()->get(idx);
+    *name = part.name;
+    *count = part.strategies.size();
+  }
+
   /*! \brief returns partitioner registration at specified index */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) void __cdecl
 #else
   void
 #endif
-  _partRegGet(int idx, const char** name, supportedOps_t* fn, const char** op_name) {
-    CustomPartitioner part = Registry<CustomPartitioner>::get()->get(idx);
-    *name = part.name;
-    *fn = part.supportedOps;
-    *op_name = part.op_name;
+  _partRegGet(int part_idx, int stg_idx, const char** strategy,
+              supportedOps_t* fn, const char** op_name) {
+    CustomPartitioner part = Registry<CustomPartitioner>::get()->get(part_idx);
+    *strategy = part.strategies[stg_idx];
+    *fn = part.supportedOps[stg_idx];
+    *op_name = part.op_names[stg_idx];
   }
 
   /*! \brief returns status of calling parse attributes function for operator from library */

@@ -62,7 +62,7 @@ class CustomContainOpSelector: public SubgraphSelector {
  */
 class  CustomSubgraphProperty: public SubgraphProperty {
  public:
-  CustomSubgraphProperty() : 
+  CustomSubgraphProperty() :
     callSupportedOps_(nullptr),
     supportedOps_(nullptr),
     subgraph_op_name("error"),
@@ -93,42 +93,42 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     // set shape attrs for each node in the graph
     if (g.HasAttr("shape")) {
       mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
-      for (int i = 0; i<indexed_graph.num_nodes(); i++) {
+      for (unsigned i = 0; i < indexed_graph.num_nodes(); i++) {
         nnvm::Node* node = const_cast<nnvm::Node*>(indexed_graph[i].source);
         mxnet::TShape shape = shapes[i];
         std::stringstream ss;
         ss << shape;
-        node->attrs.dict["shape"]=ss.str();
+        node->attrs.dict["shape"] = ss.str();
       }
     }
     // set dtype attrs for each node in the graph
     if (g.HasAttr("dtype")) {
       std::vector<int> dtypes = g.GetAttr<std::vector<int> >("dtype");
-      for (int i = 0; i<indexed_graph.num_nodes(); i++) {
+      for (unsigned i = 0; i < indexed_graph.num_nodes(); i++) {
         nnvm::Node* node = const_cast<nnvm::Node*>(indexed_graph[i].source);
         int dtype = dtypes[i];
         std::stringstream ss;
         ss << dtype;
-        node->attrs.dict["dtype"]=ss.str();
+        node->attrs.dict["dtype"] = ss.str();
       }
     }
-    
-    CHECK(supportedOps_ == nullptr)
+
+    CHECK(supportedOps_ != nullptr)
       << "supportedOps_ is null for " << subgraphProp << std::endl;
-    CHECK(callSupportedOps_ == nullptr)
+    CHECK(callSupportedOps_ != nullptr)
       << "callSupportedOps_ is null for " << subgraphProp << std::endl;
-    
+
     std::string subgraph_json = nnvm::pass::SaveJSON(graph);
     std::vector<int> supportedNodeIDs(indexed_graph.num_nodes(), 0);
     const char* json = subgraph_json.c_str();
     int *ids = supportedNodeIDs.data();
-      
+
     CHECK(callSupportedOps_(supportedOps_, json, supportedNodeIDs.size(), ids))
       << "Error calling supportedOps for '" << subgraphProp << "'";
 
     const auto& idx = g.indexed_graph();
     // loop and add node names for each supported node ID
-    for (int i = 0; i < supportedNodeIDs.size(); i++) {
+    for (unsigned i = 0; i < supportedNodeIDs.size(); i++) {
       if (supportedNodeIDs[i]) {
         supportedNodes.push_back(idx[i].source->attrs.name);
       }
