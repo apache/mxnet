@@ -394,6 +394,10 @@ CONCAT_FORWARD_ATTRS
 .add_arguments(ConcatParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_Concat)
+.set_num_inputs([](const NodeAttrs& attrs) {
+  const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
+  return 1 + params.num_args;
+})
 .set_num_outputs([](const NodeAttrs& attrs) {
   const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
   return params.num_args;
