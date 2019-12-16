@@ -30,6 +30,7 @@
 #include "../../common/utils.h"
 #include "../tensor/sort_op.h"
 #include "../operator_common.h"
+#include "../mxnet_op.h"
 
 namespace mxnet {
 namespace op {
@@ -66,18 +67,7 @@ namespace insert_ {
   enum InsertOpOutputs {kOut};
 }  // namespace insert_
 
-template<int req>
-struct InsertZeroNdimForward {
-  /*!
-   * \brief when axis is not None but arr.mdim == 0, output = values
-   */
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data) {
-    KERNEL_ASSIGN(out_data[i], req, in_data[i]);
-  }
-};
-
-template<int req>
+template<int req, int ndim>
 struct InsertSingleIndexForward {
   /*!
    * \brief insert when obj is 'scaler' or a 'slice' with only one element.
@@ -88,33 +78,28 @@ struct InsertSingleIndexForward {
    * \param in_val - input: 'value', insert to 'arr' according to 'index'.
    * \param numnew - extra dim size in 'out_data' compared with 'arr' in 'axis'.
    * \param axis - insert 'value' to 'arr' in 'axis'.
-   * \param ndim - both 'in_arr', 'in_val' and 'out_data' have same ndim before call this.
+   * \tparam ndim - both 'in_arr', 'in_val' and 'out_data' have same ndim before call this.
    * \param moveaxis - If 'obj' is a scaler, moveaxis is true;
                        If 'obj' is a slice with one element, moveaxis is false.
    */
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out_data,
                                   const DType* in_val, const DType* in_arr,
-                                  const mshadow::Shape<10> outshape,
-                                  const mshadow::Shape<10> valshape,
+                                  const mshadow::Shape<ndim> outshape,
+                                  const mshadow::Shape<ndim> valshape,
                                   const int index, const int numnew,
-                                  const mshadow::Shape<10> val_stride,
-                                  const mshadow::Shape<10> old_val_stride,
-                                  const mshadow::Shape<10> arr_stride,
-                                  const mshadow::Shape<10> out_stride,
-                                  const int ndim, const int axis,
+                                  const mshadow::Shape<ndim> val_stride,
+                                  const mshadow::Shape<ndim> old_val_stride,
+                                  const mshadow::Shape<ndim> arr_stride,
+                                  const mshadow::Shape<ndim> out_stride,
+                                  const int axis,
                                   bool moveaxis) {
     // i is the global flattened index in the output
-    mshadow::Shape<10> out_idx;  // i -> position in output's shape
-    for (int j = 0; j < ndim; ++j) {
-      const int64_t head = i / out_stride[j];
-      const int64_t mid = head % outshape[j];
-      out_idx[j] = mid;
-    }
+    mshadow::Shape<ndim> out_idx = mxnet_op::unravel(i, outshape);  // i -> position in output's shape
     int64_t dest_idx;
     if (out_idx[axis] >= index && out_idx[axis] < index + numnew) {  // from 'value'
       int idx_val = out_idx[axis] - index;
-      mshadow::Shape<10> val_idx(out_idx);  // i -> position in values's shape
+      mshadow::Shape<ndim> val_idx(out_idx);  // i -> position in values's shape
       val_idx[axis] = idx_val;
       for (int j = ndim - 1; j >= 0; --j) {
         if (valshape[j] == 1) {  // broadcast
@@ -128,23 +113,19 @@ struct InsertSingleIndexForward {
         }
         dest_idx += old_val_stride[0] * val_idx[axis];
         for (int j = axis + 1; j < ndim ; ++j) {
-          dest_idx += old_val_stride[j] *val_idx[j];
+          dest_idx += old_val_stride[j] * val_idx[j];
         }
       } else {
-        for (int j =0; j < ndim; ++j) {
-          dest_idx += val_stride[j] * val_idx[j];
-        }
+        dest_idx = mxnet_op::dot(val_stride, val_idx);
       }
       KERNEL_ASSIGN(out_data[i], req, in_val[dest_idx]);
     } else {  // from 'arr'
       int idx_arr = (out_idx[axis] < index) ?
                      out_idx[axis] : out_idx[axis] - numnew;
-      mshadow::Shape<10> arr_idx(out_idx);  // i -> position in arr's shape
+      mshadow::Shape<ndim> arr_idx(out_idx);  // i -> position in arr's shape
       arr_idx[axis] = idx_arr;
-      dest_idx = 0;
-      for (int j =0; j < ndim; ++j) {
-        dest_idx += arr_stride[j] * arr_idx[j];
-      }
+      dest_idx = mxnet_op::dot(arr_stride, arr_idx);
+
       KERNEL_ASSIGN(out_data[i], req, in_arr[dest_idx]);
     }
   }
@@ -158,29 +139,24 @@ struct InsertSingleIndexForward {
    * \param N - arr.shape_[axis]
    * \param numnew - extra dim size in 'out_data' compared with 'arr' in 'axis'.
    * \param axis - insert 'value' to 'arr' in 'axis'.
-   * \param ndim - both 'in_arr', 'in_val' and 'out_data' have same ndim before call this.
+   * \tparam ndim - both 'in_arr', 'in_val' and 'out_data' have same ndim before call this.
    * \param moveaxis - If 'obj' is a tensor with ndim == 0, regard it as a scaler and moveaxis is true;
                        If 'obj' is a tensor with  ndim > 0 but has only one element, moveaxis is false.
    */
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(int i, DType* out_data,
                                   const DType* in_val, const DType* in_arr,
-                                  const mshadow::Shape<10> outshape,
-                                  const mshadow::Shape<10> valshape,
+                                  const mshadow::Shape<ndim> outshape,
+                                  const mshadow::Shape<ndim> valshape,
                                   const int N, const IType* in_obj, const int numnew,
-                                  const mshadow::Shape<10> val_stride,
-                                  const mshadow::Shape<10> old_val_stride,
-                                  const mshadow::Shape<10> arr_stride,
-                                  const mshadow::Shape<10> out_stride,
-                                  const int ndim, const int axis,
+                                  const mshadow::Shape<ndim> val_stride,
+                                  const mshadow::Shape<ndim> old_val_stride,
+                                  const mshadow::Shape<ndim> arr_stride,
+                                  const mshadow::Shape<ndim> out_stride,
+                                  const int axis,
                                   bool moveaxis) {
     // i is the global flattened index in the output
-    mshadow::Shape<10> out_idx;  // i -> position in output's shape
-    for (int j = 0; j < ndim; ++j) {
-      const int64_t head = i / out_stride[j];
-      const int64_t mid = head % outshape[j];
-      out_idx[j] = mid;
-    }
+    mshadow::Shape<ndim> out_idx= mxnet_op::unravel(i, outshape);  // i -> position in output's shape
     int64_t dest_idx;
     IType index = in_obj[0];
     if (static_cast<int64_t>(index) < 0) {
@@ -188,7 +164,7 @@ struct InsertSingleIndexForward {
     }
     if (out_idx[axis] >= index && out_idx[axis] < index + numnew) {  // from 'value'
       int idx_val = out_idx[axis] - index;
-      mshadow::Shape<10> val_idx(out_idx);  // i -> position in values's shape
+      mshadow::Shape<ndim> val_idx(out_idx);  // i -> position in values's shape
       val_idx[axis] = idx_val;
       for (int j = ndim - 1; j >= 0; --j) {
         if (valshape[j] == 1) {  // broadcast
@@ -205,19 +181,15 @@ struct InsertSingleIndexForward {
           dest_idx += old_val_stride[j] *val_idx[j];
         }
       } else {
-        for (int j =0; j < ndim; ++j) {
-          dest_idx += val_stride[j] * val_idx[j];
-        }
+        dest_idx = mxnet_op::dot(val_stride, val_idx);
       }
       KERNEL_ASSIGN(out_data[i], req, in_val[dest_idx]);
     } else {  // from 'arr'
       int idx_arr = (out_idx[axis] < index) ? out_idx[axis] : out_idx[axis] - numnew;
-      mshadow::Shape<10> arr_idx(out_idx);  // i -> position in arr's shape
+      mshadow::Shape<ndim> arr_idx(out_idx);  // i -> position in arr's shape
       arr_idx[axis] = idx_arr;
-      dest_idx = 0;
-      for (int j =0; j < ndim; ++j) {
-        dest_idx += arr_stride[j] * arr_idx[j];
-      }
+      //dest_idx = 0;
+      dest_idx = mxnet_op::dot(arr_stride, arr_idx);
       KERNEL_ASSIGN(out_data[i], req, in_arr[dest_idx]);
     }
   }
@@ -243,7 +215,7 @@ inline mshadow::Shape<ndim> GetKernelShape(const mxnet::TShape& shape) {
   return k_shape;
 }
 
-template<int req>
+template<int req, int ndim>
 struct InsertSeqForward {
   /*!
    * \brief insert when obj is 'tensor' or 'slice' with more than one element.
@@ -255,51 +227,39 @@ struct InsertSeqForward {
    * \param is_insert - if is_insert[out_idx[axis]] is true, it's from 'values', else from 'arr'.
    * \param origin_idx - indicate the original position in 'arr' or 'values' in 'axis'. 
    * \param axis - insert 'value' to 'arr' in 'axis'.
-   * \param ndim - both 'in_arr', 'in_val' and 'out_data' have same ndim before call this.
+   * \tparam ndim - both 'in_arr', 'in_val' and 'out_data' have same ndim before call this.
    */
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out_data,
                                   const DType* in_val, const DType* in_arr,
-                                  const mshadow::Shape<10> outshape,
-                                  const mshadow::Shape<10> valshape,
+                                  const mshadow::Shape<ndim> outshape,
+                                  const mshadow::Shape<ndim> valshape,
                                   const int* is_insert,
                                   const int* origin_idx,
-                                  const mshadow::Shape<10> val_stride,
-                                  const mshadow::Shape<10> arr_stride,
-                                  const mshadow::Shape<10> out_stride,
-                                  const int ndim, const int axis) {
+                                  const mshadow::Shape<ndim> val_stride,
+                                  const mshadow::Shape<ndim> arr_stride,
+                                  const mshadow::Shape<ndim> out_stride,
+                                  const int axis) {
     // i is the global flattened index in the output
-    mshadow::Shape<10> out_idx;  // i -> position in output's shape
-    for (int j = 0; j < ndim; ++j) {
-      const int64_t head = i / out_stride[j];
-      const int64_t mid = head % outshape[j];
-      out_idx[j] = mid;
-    }
+    mshadow::Shape<ndim> out_idx = mxnet_op::unravel(i, outshape);  // i -> position in output's shape
     int64_t dest_idx;
     if (is_insert[out_idx[axis]]) {  // from 'values'
       int idx_val = origin_idx[out_idx[axis]];
-      mshadow::Shape<10> insert_idx(out_idx);  // i -> position in insert's shape
+      mshadow::Shape<ndim> insert_idx(out_idx);  // i -> position in insert's shape
       insert_idx[axis] = idx_val;
-      mshadow::Shape<10> val_idx(insert_idx);  // i -> position in values's shape
+      mshadow::Shape<ndim> val_idx(insert_idx);  // i -> position in values's shape
       for (int j = ndim - 1; j >= 0; --j) {  // broadcast
         if (valshape[j] == 1) {
           val_idx[j] = 0;
         }
       }
-      dest_idx = 0;
-      for (int j =0; j < ndim; ++j) {
-        dest_idx += val_stride[j] * val_idx[j];
-      }
+      dest_idx = mxnet_op::dot(val_idx, val_stride);
       KERNEL_ASSIGN(out_data[i], req, in_val[dest_idx]);
     } else {  // from 'arr'
       int idx_arr = origin_idx[out_idx[axis]];
-      mshadow::Shape<10> arr_idx(out_idx);  // i -> position in arr's shape
+      mshadow::Shape<ndim> arr_idx(out_idx);  // i -> position in arr's shape
       arr_idx[axis] = idx_arr;
-      dest_idx = 0;
-      for (int j =0; j < ndim; ++j) {
-        dest_idx += arr_stride[j] * arr_idx[j];
-      }
-      out_data[i] = in_arr[dest_idx];
+      dest_idx = mxnet_op::dot(arr_idx, arr_stride);
       KERNEL_ASSIGN(out_data[i], req, in_arr[dest_idx]);
     }
   }
@@ -310,7 +270,7 @@ struct SliceToIndices {
   MSHADOW_XINLINE static void Map(int i, IType* indices, int N,
                                   int start, int step) {
     indices[i] = start + i * step;
-    if (static_cast<int64_t>(indices[i]) < 0) {
+    if (indices[i] < 0) {
       indices[i] += static_cast<IType>(N);
     }
   }
@@ -321,7 +281,7 @@ struct ObjToIndices {
   MSHADOW_XINLINE static void Map(int i, IType* indices,
                                   int N, const IType* obj) {
     indices[i] = obj[i];
-    if (static_cast<int64_t>(indices[i]) < 0) {
+    if (indices[i] < 0) {
       indices[i] += static_cast<IType>(N);
     }
   }
@@ -337,12 +297,6 @@ struct IndicesModify {
   template<typename IType>
   MSHADOW_XINLINE static void Map(int i, IType* indices, const int* order) {
     indices[order[i]] += i;
-  }
-};
-
-struct AssignInsertZero {
-  MSHADOW_XINLINE static void Map(int i, int* is_insert) {
-    is_insert[i] = 0;
   }
 };
 
@@ -386,7 +340,7 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
 
   const NumpyInsertParam& param = nnvm::get<NumpyInsertParam>(attrs.parsed);
   CHECK_EQ(inputs.size(),
-          (param.step.has_value() || param.int_ind.has_value()) ? 2U : 3U);
+           (param.step.has_value() || param.int_ind.has_value()) ? 2U : 3U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -402,13 +356,7 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(inputs[insert_::kValues].shape_.ndim(), 0)
       << "'arr' is a 0-d array, 'values' can not assign to it. "
       << "alueError: assignment to 0-d array.";
-    MSHADOW_TYPE_SWITCH(outputs[insert_::kOut].type_flag_, DType, {
-      MXNET_ASSIGN_REQ_SWITCH(req[insert_::kOut], req_type, {
-        Kernel<InsertZeroNdimForward<req_type>, xpu>::Launch(  // output = value
-          s, outputs[insert_::kOut].shape_.Size(),
-          outputs[insert_::kOut].dptr<DType>(), inputs[insert_::kValues].dptr<DType>());
-      });
-    });
+    mxnet_op::copy(s, outputs[insert_::kOut], inputs[insert_::kValues]);
     return;
   } else {
     arr = inputs[insert_::kArr];
@@ -458,7 +406,8 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
   // modify values's ndim to arr's ndim, for broadcast easily later
   // e.g. value shape: (2,) arr shape: (3, 2) => value shape: (1, 2)
   for (int i = values.shape_.ndim() - 1, j = arr.shape_.ndim() - 1;
-       i >= 0 || j >= 0; --i, --j) {
+       i >= 0 || j >= 0;
+       --i, --j) {
     if (i >= 0 && j >= 0) {
       val_newshape[j] = values.shape_[i];
     } else if (i >= 0) {
@@ -513,114 +462,114 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
   }
 
   const mxnet::TShape& outshape = outputs[insert_::kOut].shape_;
-  mshadow::Shape<10> arr_strides = GetStride<10>(arr.shape_);
-  mshadow::Shape<10> val_strides = GetStride<10>(values.shape_);
-  mshadow::Shape<10> old_val_strides = GetStride<10>(old_valshape);
-  mshadow::Shape<10> out_strides = GetStride<10>(outshape);
-  mshadow::Shape<10> k_outshape = GetKernelShape<10>(outshape);
-  for (int i = 0 ; i < outshape.ndim() ; ++i) {
-    k_outshape[i] = outshape[i];
-  }
-  mshadow::Shape<10> k_valshape = GetKernelShape<10>(values.shape_);
-  for (int i = 0 ; i < values.shape_.ndim() ; ++i) {
-    k_valshape[i] = values.shape_[i];
-  }
-  MXNET_ASSIGN_REQ_SWITCH(req[insert_::kOut], req_type, {
-    MSHADOW_TYPE_SWITCH(outputs[insert_::kOut].type_flag_, DType, {
-      MSHADOW_TYPE_SWITCH((inputs.size() == 3U) ?
-                           inputs[insert_::kObj].type_flag_ :
-                           mshadow::DataType<int64_t>::kFlag, IType, {
-        if (param.int_ind.has_value()) {
-          Kernel<InsertSingleIndexForward<req_type>, xpu>::Launch(s, outshape.Size(),
-                                          outputs[insert_::kOut].dptr<DType>(),
-                                          values.dptr<DType>(), arr.dptr<DType>(),
-                                          k_outshape, k_valshape, index, numnew,
-                                          val_strides, old_val_strides, arr_strides,
-                                          out_strides, outshape.ndim(),
-                                          axis, true);
-        } else if (inputs.size() == 3U && inputs[insert_::kObj].shape_.ndim() == 0) {
-          Kernel<InsertSingleIndexForward<req_type>, xpu>::Launch(s, outshape.Size(),
-                                          outputs[insert_::kOut].dptr<DType>(),
-                                          values.dptr<DType>(), arr.dptr<DType>(),
-                                          k_outshape, k_valshape, N,
-                                          inputs[insert_::kObj].dptr<IType>(), numnew,
-                                          val_strides, old_val_strides, arr_strides,
-                                          out_strides, outshape.ndim(),
-                                          axis, true);
-        } else if (indices_len == 1) {
-          if (param.step.has_value()) {
-            Kernel<InsertSingleIndexForward<req_type>, xpu>::Launch(s, outshape.Size(),
-                                            outputs[insert_::kOut].dptr<DType>(),
-                                            values.dptr<DType>(), arr.dptr<DType>(),
-                                            k_outshape, k_valshape, start, numnew,
-                                            val_strides, old_val_strides, arr_strides, out_strides,
-                                            outshape.ndim(), axis, false);
-          } else {
-            Kernel<InsertSingleIndexForward<req_type>, xpu>::Launch(s, outshape.Size(),
-                                            outputs[insert_::kOut].dptr<DType>(),
-                                            values.dptr<DType>(), arr.dptr<DType>(),
-                                            k_outshape, k_valshape,
-                                            N, inputs[insert_::kObj].dptr<IType>(), numnew,
-                                            val_strides, old_val_strides,
-                                            arr_strides, out_strides,
-                                            outshape.ndim(), axis, false);
-          }
-        } else {
-          // broadcast check
-          for (int i = outshape.ndim() - 1; i >= 0; --i) {
-            int sz = outshape[i];
-            if (i == axis) {
-              sz = numnew;
+  MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
+    mshadow::Shape<ndim> arr_strides = mxnet_op::calc_stride(arr.shape_.get<ndim>());
+    mshadow::Shape<ndim> val_strides = mxnet_op::calc_stride(values.shape_.get<ndim>());
+    mshadow::Shape<ndim> old_val_strides = mxnet_op::calc_stride(old_valshape.get<ndim>());
+    mshadow::Shape<ndim> out_strides = mxnet_op::calc_stride(outshape.get<ndim>());
+    mshadow::Shape<ndim> k_outshape = outshape.get<ndim>();
+    mshadow::Shape<ndim> k_valshape = values.shape_.get<ndim>();
+    MXNET_ASSIGN_REQ_SWITCH(req[insert_::kOut], req_type, {
+      MSHADOW_TYPE_SWITCH(outputs[insert_::kOut].type_flag_, DType, {
+        MSHADOW_TYPE_SWITCH((inputs.size() == 3U) ?
+                            inputs[insert_::kObj].type_flag_ :
+                            mshadow::DataType<int64_t>::kFlag, IType, {
+          if (param.int_ind.has_value()) {
+            Kernel<InsertSingleIndexForward<req_type, ndim>, xpu>::Launch(
+              s, outshape.Size(),
+              outputs[insert_::kOut].dptr<DType>(),
+              values.dptr<DType>(), arr.dptr<DType>(),
+              k_outshape, k_valshape, index, numnew,
+              val_strides, old_val_strides, arr_strides,
+              out_strides,
+              axis, true);
+          } else if (inputs.size() == 3U && inputs[insert_::kObj].shape_.ndim() == 0) {
+            Kernel<InsertSingleIndexForward<req_type, ndim>, xpu>::Launch(
+              s, outshape.Size(),
+              outputs[insert_::kOut].dptr<DType>(),
+              values.dptr<DType>(), arr.dptr<DType>(),
+              k_outshape, k_valshape, N,
+              inputs[insert_::kObj].dptr<IType>(), numnew,
+              val_strides, old_val_strides, arr_strides,
+              out_strides,
+              axis, true);
+          } else if (indices_len == 1) {
+            if (param.step.has_value()) {
+              Kernel<InsertSingleIndexForward<req_type, ndim>, xpu>::Launch(
+                s, outshape.Size(),
+                outputs[insert_::kOut].dptr<DType>(),
+                values.dptr<DType>(), arr.dptr<DType>(),
+                k_outshape, k_valshape, start, numnew,
+                val_strides, old_val_strides, arr_strides, out_strides,
+                axis, false);
+            } else {
+              Kernel<InsertSingleIndexForward<req_type, ndim>, xpu>::Launch(
+                s, outshape.Size(),
+                outputs[insert_::kOut].dptr<DType>(),
+                values.dptr<DType>(), arr.dptr<DType>(),
+                k_outshape, k_valshape,
+                N, inputs[insert_::kObj].dptr<IType>(), numnew,
+                val_strides, old_val_strides,
+                arr_strides, out_strides,
+                axis, false);
             }
-            CHECK((values.shape_[i] == 1) || (values.shape_[i] == sz));
-          }
-          size_t temp_storage_bytes, temp_mem_size;
-          temp_storage_bytes = SortByKeyWorkspaceSize<IType, int, xpu>(indices_len, false, true);
-          temp_mem_size = indices_len * sizeof(IType) * 2 +
-                          indices_len * sizeof(int) +
-                          outshape[axis] * sizeof(int) * 2 +
-                          temp_storage_bytes;
-          Tensor<xpu, 1, char> temp_mem =
-                  ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(temp_mem_size), s);
-          IType* indices_ptr = reinterpret_cast<IType*>(temp_mem.dptr_);
-          IType* sorted_indices_ptr = reinterpret_cast<IType*>
-                                      (temp_mem.dptr_ + indices_len * sizeof(IType));
-          int* order_ptr = reinterpret_cast<int*>(temp_mem.dptr_ + indices_len * sizeof(IType) * 2);
-          int* is_insert = reinterpret_cast<int*>(temp_mem.dptr_ + indices_len * sizeof(IType) * 2
-                            + indices_len * sizeof(int));
-          int* origin_idx = reinterpret_cast<int*>(temp_mem.dptr_ +  indices_len * sizeof(IType) * 2
-                            + indices_len * sizeof(int) + outshape[axis] * sizeof(int));
-          Tensor<xpu, 1, char> temp_storage(temp_mem.dptr_ +  indices_len * sizeof(IType) * 2
-                            + indices_len * sizeof(int) + outshape[axis] * sizeof(int) * 2,
-                            Shape1(temp_storage_bytes), s);
-          Tensor<xpu, 1, IType> indices(indices_ptr, Shape1(indices_len), s);
-          Tensor<xpu, 1, IType> sorted_indices(sorted_indices_ptr, Shape1(indices_len), s);
-          Tensor<xpu, 1, int> order(order_ptr, Shape1(indices_len), s);
-          int num_bits = common::ilog2ui(static_cast<unsigned int>(indices_len) - 1);
-
-          if (param.step.has_value()) {
-            Kernel<SliceToIndices, xpu>::Launch(s, indices_len, indices_ptr, N, start, step);
           } else {
-            Kernel<ObjToIndices, xpu>::Launch(s, indices_len, indices_ptr, N,
-                                              inputs[insert_::kObj].dptr<IType>());
+            // broadcast check
+            for (int i = outshape.ndim() - 1; i >= 0; --i) {
+              int sz = outshape[i];
+              if (i == axis) {
+                sz = numnew;
+              }
+              CHECK((values.shape_[i] == 1) || (values.shape_[i] == sz));
+            }
+            size_t temp_storage_bytes, temp_mem_size;
+            temp_storage_bytes = SortByKeyWorkspaceSize<IType, int, xpu>(indices_len, false, true);
+            temp_mem_size = indices_len * sizeof(IType) * 2 +
+                            indices_len * sizeof(int) +
+                            outshape[axis] * sizeof(int) * 2 +
+                            temp_storage_bytes;
+            Tensor<xpu, 1, char> temp_mem =
+              ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(temp_mem_size), s);
+            IType* indices_ptr = reinterpret_cast<IType*>(temp_mem.dptr_);
+            IType* sorted_indices_ptr =
+              reinterpret_cast<IType*>(temp_mem.dptr_ + indices_len * sizeof(IType));
+            int* order_ptr = reinterpret_cast<int*>(temp_mem.dptr_ + indices_len * sizeof(IType) * 2);
+            int* is_insert = reinterpret_cast<int*>(temp_mem.dptr_ + indices_len * sizeof(IType) * 2 +
+                                                    indices_len * sizeof(int));
+            int* origin_idx = reinterpret_cast<int*>(temp_mem.dptr_ +  indices_len * sizeof(IType) * 2 +
+                                                    indices_len * sizeof(int) + outshape[axis] * sizeof(int));
+            Tensor<xpu, 1, char> temp_storage(temp_mem.dptr_ +  indices_len * sizeof(IType) * 2 +
+                                              indices_len * sizeof(int) + outshape[axis] * sizeof(int) * 2,
+                                              Shape1(temp_storage_bytes), s);
+            Tensor<xpu, 1, IType> indices(indices_ptr, Shape1(indices_len), s);
+            Tensor<xpu, 1, IType> sorted_indices(sorted_indices_ptr, Shape1(indices_len), s);
+            Tensor<xpu, 1, int> order(order_ptr, Shape1(indices_len), s);
+            int num_bits = common::ilog2ui(static_cast<unsigned int>(indices_len) - 1);
+            if (param.step.has_value()) {
+              Kernel<SliceToIndices, xpu>::Launch(s, indices_len, indices_ptr, N, start, step);
+            } else {
+              Kernel<ObjToIndices, xpu>::Launch(s, indices_len, indices_ptr, N,
+                                                inputs[insert_::kObj].dptr<IType>());
+            }
+            Kernel<AssignId, xpu>::Launch(s, indices_len, order_ptr);
+            mxnet::op::SortByKey(indices, order, true, &temp_storage, 0, num_bits, &sorted_indices);
+            Kernel<IndicesModify, xpu>::Launch(s, indices_len, indices_ptr, order_ptr);
+
+            mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(s, outshape[axis], is_insert);
+            Kernel<SetIsInsert, xpu>::Launch(s, indices_len, indices_ptr, is_insert);
+
+            Kernel<SetOriginValuesIdx, xpu>::Launch(s, indices_len, indices_ptr, origin_idx);
+            Kernel<SetOriginArrIdx, xpu>::Launch(s, outshape[axis], is_insert, origin_idx);
+
+            Kernel<InsertSeqForward<req_type, ndim>, xpu>::Launch(
+              s, outshape.Size(),
+              outputs[insert_::kOut].dptr<DType>(),
+              values.dptr<DType>(), arr.dptr<DType>(),
+              k_outshape, k_valshape, is_insert, origin_idx,
+              val_strides, arr_strides, out_strides,
+              axis);
           }
-          Kernel<AssignId, xpu>::Launch(s, indices_len, order_ptr);
-          mxnet::op::SortByKey(indices, order, true, &temp_storage, 0, num_bits, &sorted_indices);
-          Kernel<IndicesModify, xpu>::Launch(s, indices_len, indices_ptr, order_ptr);
-
-          Kernel<AssignInsertZero, xpu>::Launch(s, outshape[axis], is_insert);
-          Kernel<SetIsInsert, xpu>::Launch(s, indices_len, indices_ptr, is_insert);
-
-          Kernel<SetOriginValuesIdx, xpu>::Launch(s, indices_len, indices_ptr, origin_idx);
-          Kernel<SetOriginArrIdx, xpu>::Launch(s, outshape[axis], is_insert, origin_idx);
-
-          Kernel<InsertSeqForward<req_type>, xpu>::Launch(s, outshape.Size(),
-                                  outputs[insert_::kOut].dptr<DType>(),
-                                  values.dptr<DType>(), arr.dptr<DType>(),
-                                  k_outshape, k_valshape, is_insert, origin_idx,
-                                  val_strides, arr_strides, out_strides,
-                                  outshape.ndim(), axis);
-        }
+        });
       });
     });
   });

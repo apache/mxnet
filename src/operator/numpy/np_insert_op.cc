@@ -32,16 +32,16 @@ namespace op {
 DMLC_REGISTER_PARAMETER(NumpyInsertParam);
 
 bool NumpyInsertType(const nnvm::NodeAttrs& attrs,
-                           std::vector<int> *in_type,
-                           std::vector<int> *out_type) {
+                     std::vector<int> *in_type,
+                     std::vector<int> *out_type) {
   const NumpyInsertParam& param = nnvm::get<NumpyInsertParam>(attrs.parsed);
   int insize = (param.step.has_value() || param.int_ind.has_value()) ? 2 : 3;
   CHECK_EQ(in_type->size(), insize);
   CHECK_EQ(out_type->size(), 1U);
   if (insize == 3) {
     CHECK_NE((*in_type)[2], -1) << "Index type must be set for insert operator\n";
-    CHECK(((*in_type)[2] == mshadow::DataType<int64_t>::kFlag)
-          || ((*in_type)[2] == mshadow::DataType<int32_t>::kFlag))
+    CHECK(((*in_type)[2] == mshadow::DataType<int64_t>::kFlag) ||
+          ((*in_type)[2] == mshadow::DataType<int32_t>::kFlag))
       << "Index type only support int32 or int64.\n";
   }
   TYPE_ASSIGN_CHECK(*out_type, 0, (*in_type)[0]);
@@ -132,7 +132,7 @@ bool NumpyInsertShape(const nnvm::NodeAttrs& attrs,
   valshape.assign(val_newshape.begin(), val_newshape.end());
 
   if (param.int_ind.has_value() ||
-    (in_shape->size() == 3U && objShape.ndim() == 0)) {
+      (in_shape->size() == 3U && objShape.ndim() == 0)) {
     // because of moveaxis(values, 0, axis)
     numnew =  valshape[0];
   } else if (seq_cnt == 1) {
