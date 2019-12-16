@@ -37,21 +37,18 @@ namespace op {
  */
 class CustomContainOpSelector: public SubgraphSelector {
  public:
-  explicit CustomContainOpSelector(std::vector<std::string> supportedNodes) :
+  explicit CustomContainOpSelector(std::unordered_set<std::string> supportedNodes) :
     supportedNodes_(supportedNodes) {}
   virtual bool Select(const nnvm::Node &n) {
-    return std::find(supportedNodes_.begin(), supportedNodes_.end(),
-                     n.attrs.name) != supportedNodes_.end();
+    return supportedNodes_.count(n.attrs.name) > 0;
   }
   virtual bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) {
-    return std::find(supportedNodes_.begin(), supportedNodes_.end(),
-                     new_node.attrs.name) != supportedNodes_.end();
+    return supportedNodes_.count(new_node.attrs.name) > 0;
   }
   virtual bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) {
-    return std::find(supportedNodes_.begin(), supportedNodes_.end(),
-                     new_node.attrs.name) != supportedNodes_.end();
+    return supportedNodes_.count(new_node.attrs.name) > 0;
   }
-  std::vector<std::string> supportedNodes_;
+  std::unordered_set<std::string> supportedNodes_;
 };
 
 /*
@@ -130,7 +127,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     // loop and add node names for each supported node ID
     for (unsigned i = 0; i < supportedNodeIDs.size(); i++) {
       if (supportedNodeIDs[i]) {
-        supportedNodes.push_back(idx[i].source->attrs.name);
+        supportedNodes.insert(idx[i].source->attrs.name);
       }
     }
   }
@@ -150,7 +147,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
 
   partCallSupportedOps_t callSupportedOps_;
   supportedOps_t supportedOps_;
-  std::vector<std::string> supportedNodes;
+  std::unordered_set<std::string> supportedNodes;
   std::string subgraph_op_name;
   std::string subgraphProp;
 };
