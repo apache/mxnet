@@ -83,6 +83,8 @@ def with_array_ufunc_protocol(func):
 
 
 _NUMPY_ARRAY_FUNCTION_LIST = [
+    'all',
+    'any',
     'argmin',
     'argmax',
     'around',

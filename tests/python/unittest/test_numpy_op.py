@@ -495,6 +495,84 @@ def test_np_sum():
 
 @with_seed()
 @use_np
+def test_np_any():
+    class TestAny(HybridBlock):
+        def __init__(self, axis=None, keepdims=False) :
+            super(TestAny, self).__init__()
+            self._axis = axis
+            self._keepdims = keepdims
+             
+        def hybrid_forward(self, F, a):
+            return F.np.any(a, axis=self._axis, keepdims=self._keepdims)
+    
+    keepdims = [True, False]
+    axes = [True, False]
+    shapes = [(), (5, ), (10, ),
+              (2, 5), (5, 5), (10, 10),
+              (4, 4, 4), (4, 6, 9), (6, 6, 6),
+              (7, 8, 9, 10), (7, 9, 11, 13)]
+    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64, np.bool]
+    
+    combinations = itertools.product([False, True], shapes, dtypes, axes, keepdims)
+    for hybridize, shape, dtype, axis, keepdim in combinations:
+        ndim = len(shape)
+        samples = random.randint(0, ndim)
+        axis = None if not axis else tuple(random.sample([i for i in range(0, ndim)], samples))
+        x = np.random.normal(0, 1.0, size=shape).astype(dtype)
+        test_any = TestAny(axis=axis, keepdims=keepdim)
+        if hybridize:
+            test_any.hybridize()
+        y = test_any(x)
+        expected_ret = _np.any(x.asnumpy(), axis=axis, keepdims=keepdim)
+        assert_almost_equal(y.asnumpy(), expected_ret)
+
+        # test imperative
+        mx_outs = np.any(x, axis=axis, keepdims=keepdim)
+        np_outs = _np.any(x.asnumpy(), axis=axis, keepdims=keepdim)
+        assert_almost_equal(mx_outs.asnumpy(), np_outs)
+
+
+@with_seed()
+@use_np
+def test_np_all():
+    class TestAll(HybridBlock):
+        def __init__(self, axis=None, keepdims=False) :
+            super(TestAll, self).__init__()
+            self._axis = axis
+            self._keepdims = keepdims
+             
+        def hybrid_forward(self, F, a):
+            return F.np.all(a, axis=self._axis, keepdims=self._keepdims)
+    
+    keepdims = [True, False]
+    axes = [True, False]
+    shapes = [(), (5, ), (10, ),
+              (2, 5), (5, 5), (10, 10),
+              (4, 4, 4), (4, 6, 9), (6, 6, 6),
+              (7, 8, 9, 10), (7, 9, 11, 13)]
+    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64, np.bool]
+    
+    combinations = itertools.product([False, True], shapes, dtypes, axes, keepdims)
+    for hybridize, shape, dtype, axis, keepdim in combinations:
+        ndim = len(shape)
+        samples = random.randint(0, ndim)
+        axis = None if not axis else tuple(random.sample([i for i in range(0, ndim)], samples))
+        x = np.random.normal(0, 1.0, size=shape).astype(dtype)
+        test_all = TestAll(axis=axis, keepdims=keepdim)
+        if hybridize:
+            test_all.hybridize()
+        y = test_all(x)
+        expected_ret = _np.all(x.asnumpy(), axis=axis, keepdims=keepdim)
+        assert_almost_equal(y.asnumpy(), expected_ret)
+
+        # test imperative
+        mx_outs = np.all(x, axis=axis, keepdims=keepdim)
+        np_outs = _np.all(x.asnumpy(), axis=axis, keepdims=keepdim)
+        assert_almost_equal(mx_outs.asnumpy(), np_outs)
+
+
+@with_seed()
+@use_np
 def test_np_max_min():
     class TestMax(HybridBlock):
         def __init__(self, axis=None, keepdims=False):

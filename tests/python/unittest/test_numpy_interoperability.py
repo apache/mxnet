@@ -59,6 +59,32 @@ class OpArgMngr(object):
         return OpArgMngr._args.get(name, None)
 
 
+def _add_workload_all():
+    # check bad element in all positions
+    for i in range(256-7):
+        e = np.array([True] * 256, dtype=bool)[7::]
+        e[i] = False
+        OpArgMngr.add_workload('all', e)
+    # big array test for blocked libc loops
+    for i in list(range(9, 6000, 507)) + [7764, 90021, -10]:
+        e = np.array([True] * 100043, dtype=bool)
+        e[i] = False
+        OpArgMngr.add_workload('all', e)
+
+
+def _add_workload_any():
+    # check bad element in all positions
+    for i in range(256-7):
+        d = np.array([False] * 256, dtype=bool)[7::]
+        d[i] = True
+        OpArgMngr.add_workload('any', d)
+    # big array test for blocked libc loops
+    for i in list(range(9, 6000, 507)) + [7764, 90021, -10]:
+        d = np.array([False] * 100043, dtype=bool)
+        d[i] = True
+        OpArgMngr.add_workload('any', d)
+
+
 def _add_workload_unravel_index():
     OpArgMngr.add_workload('unravel_index', indices=np.array([2],dtype=_np.int64), shape=(2, 2))
     OpArgMngr.add_workload('unravel_index', np.array([(2*3 + 1)*6 + 4], dtype=_np.int64), (4, 3, 6))
@@ -1439,6 +1465,8 @@ def _prepare_workloads():
         '1x1x0': np.array([[[]]])
     }
 
+    _add_workload_all()
+    _add_workload_any()
     _add_workload_argmin()
     _add_workload_argmax()
     _add_workload_around()
