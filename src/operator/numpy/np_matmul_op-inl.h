@@ -29,33 +29,38 @@
 #include <vector>
 #include <algorithm>
 #include <memory>
+#include "../mxnet_op.h"
 #include "np_tensordot_op-inl.h"
 #include "np_dot-inl.h"
 
 namespace mxnet {
 namespace op {
 
-template<int ndim>
-mshadow::Shape<ndim> GetStride(mshadow::Shape<ndim> shape, size_t N) {
-  /*!
-   * \brief Calculate stride of each dim from shape 
-   */
-  mshadow::Shape<ndim>stride;
-  size_t tmp = 1;
-  for (int i = N - 1; i >= 0; --i) {
-    stride[i] = tmp;
-    tmp *= shape[i];
+static bool MatmulNeedBroadcast(const mxnet::TShape& ashape,
+                                const mxnet::TShape& bshape) {
+  bool NotNeed = true;
+  for (int i = ashape.ndim() - 3, j = bshape.ndim() - 3;
+       i >= 0 || j >=0; --i, --j) {
+    if (i >= 0 && j >= 0) {
+      NotNeed &= (ashape[i] == bshape[j]);
+    } else if (i >= 0) {
+      NotNeed &= (ashape[i] == 1);
+    } else {
+      NotNeed &= (bshape[j] == 1);
+    }
   }
-  return stride;
+  return !NotNeed;
 }
 
 template<int ndim>
-mshadow::Shape<ndim> GetKernelShape(const mxnet::TShape& shape,
-                                    size_t N, bool T = false) {
+mshadow::Shape<ndim> GetKernelShape(const mxnet::TShape& shape, size_t N) {
   /*!
-   * \brief Get mshadow::Shape from mxnet::TShape. Extra dims is filled with 1.
-   * \param N - ndim of mshape::Shape shape.
-   * \param T - If T is True, transpose the last two axis, otherwise not.
+   * \brief Get mshadow::Shape from mxnet::TShape.
+            i.e. input shape (2, 3), shape.ndim() = 2, but the ndim we want output shape
+            has is 'N' = 4, so return shape would be (1, 1, 2, 3). We put the outshape into
+            mshadow::Shape<ndim>, 'ndim' may not equal to 'N'.
+   * \tparam ndim - ndim of output's argument.
+   * \param N - true ndim of output.
    */
   mshadow::Shape<ndim>k_shape;
   for (int i = shape.ndim() - 1, j = N - 1; i >= 0 || j >= 0 ; --i, --j) {
@@ -65,113 +70,40 @@ mshadow::Shape<ndim> GetKernelShape(const mxnet::TShape& shape,
       k_shape[j] = 1;
     }
   }
-  if (T) {  // transpose the latest two axes
-    size_t t = k_shape[N - 1];
-    k_shape[N - 1] = k_shape[N - 2];
-    k_shape[N - 2] = t;
-  }
   return k_shape;
 }
 
 template<int ndim>
-mshadow::Shape<ndim> BroadcastKernelShape(mshadow::Shape<ndim> in_shape,
-                                          mshadow::Shape<ndim> broadcast_shape,
-                                          size_t N, size_t* size) {
+mshadow::Shape<ndim> GetBroadcastKernelShape(mshadow::Shape<ndim> in_shape,
+                                             mshadow::Shape<ndim> broadcast_shape,
+                                             int dimstart, int dimend) {
   /*!
-   * \brief Broadcast in_shape(ndim = N) to broadcast_shape(ndim = N) expect the last two axes.
-            Make sure that: If i < N - 2 and in_shape[i] != broadcast_shape[i], in_shape[i] == 1.
+   * \brief Broadcast in_shape to broadcast_shape in [dimstart, dimend].
+            Make sure that before use this function:
+            If in_shape[i] != broadcast_shape[i], in_shape[i] == 1.
    * \param N - ndim of both in_shape and broadcast_shape.
-   * \param size - The size of the broadcast_shape.
+   * \param dimstart start dimension
+   * \param dimend end dimension
    */
+  CHECK_GE(dimstart, 0) << "dimstart must be >= 0, while received " << dimstart;
+  CHECK_LT(dimend, ndim) << "dimend must be < " << ndim
+                         << ", while received " << dimend;
   mshadow::Shape<ndim>out_shape(in_shape);
-  *size = 1;
-  for (size_t i = 0; i < N - 2; ++i) {
+  for (int i = dimstart; i < dimend; ++i) {
     out_shape[i] = std::max(in_shape[i], broadcast_shape[i]);
-    *size *= out_shape[i];
   }
-  *size *= (out_shape[N - 2] * out_shape[N - 1]);
   return out_shape;
 }
 
 template<int req>
-struct NDMatmul {
+struct SumByShape {
   /*!
-   * \brief matmul(a, b) in both N-D(N >= 2) case.
-            It is treated as a stack of matrices residing in the last two indexes and broadcast accordingly.
+   * \brief 
    * \param out - output: insert 'value' to 'arr' according to 'index'.
    * \param a - input: the first argument.
    * \param b - input: the second argument.
    * \param ndim - ndim of a, b and output. Because of broadcast, regard their ndim as equal.  
    */
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out,
-                                  const DType* a, const DType* b,
-                                  const mshadow::Shape<10> a_stride,
-                                  const mshadow::Shape<10> b_stride,
-                                  const mshadow::Shape<10> out_stride,
-                                  const mshadow::Shape<10> a_shape,
-                                  const mshadow::Shape<10> b_shape,
-                                  const mshadow::Shape<10> out_shape,
-                                  const size_t ndim){
-    // i is the global flatten index in the output
-    mshadow::Shape<10> out_idx;  // position in output's shape
-    for (size_t j = 0; j < ndim; ++j) {
-      const int64_t head = i / out_stride[j];
-      const int64_t mid = head % out_shape[j];
-      out_idx[j] = mid;
-    }
-    mshadow::Shape<10> a_idx(out_idx);  // data block position in a's shape
-    size_t a_pos = 0;
-    for (size_t j = 0; j < ndim - 2; ++j) {
-      a_idx[j] = (a_shape[j] == 1) ? 0 : a_idx[j];  // broadcast
-      a_pos += a_idx[j] * a_stride[j];
-    }
-    a_pos += out_idx[ndim - 2] * a_stride[ndim - 2];
-    mshadow::Shape<10> b_idx(out_idx);  // data block position in b's shape
-    size_t b_pos = 0;
-    for (size_t j = 0; j < ndim - 2; ++j) {
-      b_idx[j] = (b_shape[j] == 1) ? 0 : b_idx[j];  // broadcast
-      b_pos += b_idx[j] * b_stride[j];
-    }
-    b_pos += out_idx[ndim - 1];
-    DType res = 0;
-    for (int j = 0; j < a_shape[ndim - 1]; ++j) {
-      res += a[a_pos + j] * b[b_pos + j * b_stride[ndim - 2]];
-    }
-    KERNEL_ASSIGN(out[i], req, res);
-  }
-};
-
-struct TransposeLastTwoAxes {
-  /*!
-  * \brief transpose the last two axes
-  * \example (a, b, c, d) -> (a, b, d, c)
-  * \param in_row - the second-to-last dim size of in's shape
-  * \param in_col - the last dim size of in's shape
-  */
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* in,
-                                  const size_t in_row, const size_t in_col) {
-    // i is the global position in flattened output
-    const size_t out_col = in_row;
-    const size_t last = i % (in_row * in_col);
-    const size_t base = i - last;
-    const size_t row = last / out_col;
-    const size_t col = last % out_col;
-    const size_t dest = base + col * in_col + row;
-    out[i] = in[dest];
-  }
-};
-
-template<int req>
-struct SumByShape {
-  /*!
-  * \brief 
-  * \param out - output: insert 'value' to 'arr' according to 'index'.
-  * \param a - input: the first argument.
-  * \param b - input: the second argument.
-  * \param ndim - ndim of a, b and output. Because of broadcast, regard their ndim as equal.  
-  */
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* output, DType* input,
                                   size_t in_size, size_t out_size){
@@ -186,6 +118,83 @@ struct SumByShape {
   }
 };
 
+template<typename xpu, typename DType>
+inline void MatmulImpl(const OpContext& ctx,
+                       const TBlob& input_a, const TBlob& input_b, 
+                       const OpReqType& req, const TBlob& output,
+                       Tensor<xpu, 1, char> temp_mem,
+                       const size_t ndim, const size_t batch_size,
+                       const size_t bc_size_a, const size_t bc_size_b,
+                       const mxnet::TShape& a_shape,
+                       const mxnet::TShape& b_shape,
+                       const mxnet::TShape& out_shape,
+                       const bool TA, const bool TB) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+    mshadow::Tensor<xpu, 1, DType*> workspace;
+    mshadow::Tensor<xpu, 3, DType> ans, mlhs, mrhs;
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+    if (MatmulNeedBroadcast(a_shape, b_shape)) {
+      mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> k_a_shape =
+        GetKernelShape<MXNET_SPECIAL_MAX_NDIM>(a_shape, ndim);
+      mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> k_b_shape =
+        GetKernelShape<MXNET_SPECIAL_MAX_NDIM>(b_shape, ndim);
+      mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> k_out_shape =
+        GetKernelShape<MXNET_SPECIAL_MAX_NDIM>(out_shape, ndim);
+      const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> k_a_shape_bc =
+        GetBroadcastKernelShape<MXNET_SPECIAL_MAX_NDIM>(k_a_shape, k_out_shape, 0, ndim - 2);
+      const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> k_b_shape_bc =
+        GetBroadcastKernelShape<MXNET_SPECIAL_MAX_NDIM>(k_b_shape, k_out_shape, 0, ndim - 2);
+      DType* bc_a_ptr = reinterpret_cast<DType*>(temp_mem.dptr_);
+      DType* bc_b_ptr = reinterpret_cast<DType*>(temp_mem.dptr_ + bc_size_a * sizeof(DType));
+      MSHADOW_TYPE_SWITCH_WITH_BOOL(input_a.type_flag_, IType, {
+        MSHADOW_TYPE_SWITCH_WITH_BOOL(input_b.type_flag_, OType, {
+          Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
+            s, bc_size_a, input_a.dptr<IType>(), bc_a_ptr, k_a_shape, k_a_shape_bc, OpReqType::kWriteTo, ndim);
+          Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
+            s, bc_size_b, input_b.dptr<IType>(), bc_b_ptr, k_b_shape, k_b_shape_bc, OpReqType::kWriteTo, ndim);
+        });
+      });
+      ans = mshadow::Tensor<xpu, 3, DType>(output.dptr<DType>(),
+        Shape3(batch_size, k_out_shape[ndim - 2], k_out_shape[ndim - 1]), s);
+      mlhs = mshadow::Tensor<xpu, 3, DType>(bc_a_ptr,
+        Shape3(batch_size, k_a_shape_bc[ndim - 2], k_a_shape_bc[ndim - 1]), s);
+      mrhs = mshadow::Tensor<xpu, 3, DType>(bc_b_ptr,
+        Shape3(batch_size, k_b_shape_bc[ndim - 2], k_b_shape_bc[ndim - 1]), s);
+      DType** workspace_ptr = reinterpret_cast<DType**>(temp_mem.dptr_ +
+                                                       (bc_size_a + bc_size_b) * sizeof(DType));
+      workspace = mshadow::Tensor<xpu, 1, DType*>(workspace_ptr, Shape1(3 * ans.size(0)), s);
+    } else {
+      ans = output.get_with_shape<xpu, 3, DType>(Shape3(batch_size,
+                                                        out_shape[ndim - 2],
+                                                        out_shape[ndim - 1]), s);
+      mlhs = input_a.get_with_shape<xpu, 3, DType>(Shape3(batch_size,
+                                                         (a_shape.ndim() == 1) ? 1 : a_shape[a_shape.ndim() - 2],
+                                                          a_shape[a_shape.ndim() - 1]), s);
+      mrhs = input_b.get_with_shape<xpu, 3, DType>(Shape3(batch_size,
+                                                          b_shape[b_shape.ndim() - 2],
+                                                          b_shape[b_shape.ndim() - 1]), s);
+      workspace = ctx.requested[0].get_space_typed<xpu, 1, DType*>(mshadow::Shape1(3 * ans.size(0)), s);
+    }
+    if (TA && TB) {
+      mshadow::BatchGEMM<true, true>(ans, mlhs, mrhs, (DType)1.0f,
+                                    (kAddTo == req) ? (DType)1.0f : (DType)0.0f,
+                                    workspace);
+    } else if (TA && !TB) {
+      mshadow::BatchGEMM<true, false>(ans, mlhs, mrhs, (DType)1.0f,
+                                     (kAddTo == req) ? (DType)1.0f : (DType)0.0f,
+                                     workspace);
+    } else if (!TA && TB) {
+      mshadow::BatchGEMM<false, true>(ans, mlhs, mrhs, (DType)1.0f,
+                                     (kAddTo == req) ? (DType)1.0f : (DType)0.0f,
+                                     workspace);
+    } else {
+      mshadow::BatchGEMM<false, false>(ans, mlhs, mrhs, (DType)1.0f,
+                                      (kAddTo == req) ? (DType)1.0f : (DType)0.0f,
+                                      workspace);
+    }
+}
+
 template<typename xpu>
 void NumpyMatmulForward(const nnvm::NodeAttrs& attrs,
                         const OpContext& ctx,
@@ -194,6 +203,7 @@ void NumpyMatmulForward(const nnvm::NodeAttrs& attrs,
                         const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mxnet_op;
+  if (req[0] == kNullOp) return;
 
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
@@ -201,51 +211,66 @@ void NumpyMatmulForward(const nnvm::NodeAttrs& attrs,
   const TBlob& a = inputs[0];
   const TBlob& b = inputs[1];
   const TBlob& out = outputs[0];
-  mxnet::TShape a_shape = a.shape_;
-  mxnet::TShape b_shape = b.shape_;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  CHECK_NE(a.shape_.ndim(), 0)
+    << "Multiplication by scalars is not allowed.\n";
+  CHECK_NE(b.shape_.ndim(), 0)
+    << "Multiplication by scalars is not allowed.\n";
+  CHECK_EQ(out.type_flag_, a.type_flag_)
+      << "Mstmul function only support input/output with the same type";
+  CHECK_EQ(out.type_flag_, b.type_flag_)
+      << "Matmul function only support input/output with the same type";
+  CHECK(out.type_flag_ == kFloat32 || out.type_flag_ == kFloat64 ||
+    (out.type_flag_ == kFloat16 && ctx.run_ctx.ctx.dev_mask() == mshadow::gpu::kDevMask))
+    << "Matmul only supports float32/float64 for CPU, and float16/float32/float64 for GPU";
+
+  if ((a.shape_.Size() == 0) || (b.shape_.Size() == 0)) {
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      Kernel<mxnet_op::set_zero, xpu>::Launch(s, outputs[0].shape_.Size(), outputs[0].dptr<DType>());
+    });
+    return;
+  }
+
+  mxnet::TShape a_shape = (a.shape_.ndim() == 1) ? Shape2(1, a.shape_.Size()) : a.shape_;
+  mxnet::TShape b_shape = (b.shape_.ndim() == 1) ? Shape2(b.shape_.Size(), 1) : b.shape_;
   mxnet::TShape out_shape = out.shape_;
   size_t ndim = out_shape.ndim();
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-
-  CHECK_NE(a_shape.ndim(), 0)
-    << "Multiplication by scalars is not allowed.\n";
-  CHECK_NE(b_shape.ndim(), 0)
-    << "Multiplication by scalars is not allowed.\n";
-  MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {
-    if (b_shape.ndim() <= 2) {
-      // case 1: both 1-D arrays, inner product of vectors
-      // case 2: both 2-D arrays, matrix multiplication
-      // case 3: If the second argument is 1-D.
-      // case 5(1): If the first argument is N-D(N > 2), the second argument is 2-D.
-      TensordotIntAxesImpl<xpu>(1, ctx, a, b, out, req[0]);
-    } else {
-      // Case 4: If the first argument is 1-D.
-      if (a_shape.ndim() == 1) {
-        ndim += 1;
-        std::vector<size_t> newshape(ndim);
-        for (size_t i = 0; i < ndim - 2; ++i) {
-          newshape[i] = out_shape[i];
-        }
-        newshape[ndim - 2] = 1;
-        newshape[ndim - 1] = out_shape[ndim - 2];
-        out_shape.assign(newshape.begin(), newshape.end());
-      }
-      // case 5(2): If the first argument is N-D(N > 2), the second argument is N-D(N > 2).
-      const mshadow::Shape<10> k_a_shape = GetKernelShape<10>(a_shape, ndim);
-      const mshadow::Shape<10> k_b_shape = GetKernelShape<10>(b_shape, ndim);
-      const mshadow::Shape<10> k_out_shape = GetKernelShape<10>(out_shape, ndim);
-      const mshadow::Shape<10> a_stride = GetStride<10>(k_a_shape, ndim);
-      const mshadow::Shape<10> b_stride = GetStride<10>(k_b_shape, ndim);
-      const mshadow::Shape<10> out_stride = GetStride<10>(k_out_shape, ndim);
-      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-        Kernel<NDMatmul<req_type>, xpu>::Launch(
-          s, out_shape.Size(), out.dptr<DType>(), a.dptr<DType>(),
-          b.dptr<DType>(), a_stride, b_stride, out_stride,
-          k_a_shape, k_b_shape, k_out_shape, ndim);
-      });
+  if ((a.shape_.ndim() == 1) && (b.shape_.ndim() == 1)) {
+    ndim = 2;
+    std::vector<size_t> newshape({1, 1});
+    out_shape.assign(newshape.begin(), newshape.end());
+  } else if ((a.shape_.ndim() == 1) && (b.shape_.ndim() != 1)) {
+    ndim = out_shape.ndim() + 1;
+    std::vector<size_t> newshape(ndim);
+    for (size_t i = 0; i < ndim - 2; ++i) {
+      newshape[i] = out_shape[i];
     }
+    newshape[ndim - 2] = 1;
+    newshape[ndim - 1] = out_shape[ndim - 2];
+    out_shape.assign(newshape.begin(), newshape.end());
+  } else if ((a.shape_.ndim() != 1) && (b.shape_.ndim() == 1)) {
+    ndim = out_shape.ndim() + 1;
+    std::vector<size_t> newshape(ndim);
+    for (size_t i = 0; i < ndim - 1; ++i) {
+      newshape[i] = out_shape[i];
+    }
+    newshape[ndim - 1] = 1;
+    out_shape.assign(newshape.begin(), newshape.end());
+  }
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    size_t batch_size = out_shape.ProdShape(0, ndim - 2);
+    size_t bc_size_a = batch_size * a_shape[a_shape.ndim() - 2] * a_shape[a_shape.ndim() - 1];
+    size_t bc_size_b = batch_size * b_shape[b_shape.ndim() - 2] * b_shape[b_shape.ndim() - 1];
+    size_t temp_mem_size = (bc_size_a + bc_size_b) * sizeof(DType) +
+                            3 * batch_size * sizeof(DType*);
+    Tensor<xpu, 1, char> temp_mem =
+      ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(temp_mem_size), s);
+    MatmulImpl<xpu, DType>(ctx, inputs[0], inputs[1], req[0], outputs[0], temp_mem,
+                           ndim, batch_size, bc_size_a, bc_size_b,
+                           a_shape, b_shape, out_shape, false, false);
   });
 }
+
 
 template<typename xpu>
 void NumpyMatmulBackward(const nnvm::NodeAttrs& attrs,
@@ -255,98 +280,104 @@ void NumpyMatmulBackward(const nnvm::NodeAttrs& attrs,
                         const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mxnet_op;
+  if (req[0] == kNullOp) return;
 
   CHECK_EQ(inputs.size(), 3U);
   CHECK_EQ(outputs.size(), 2U);
-
+  
   const TBlob& ograd = inputs[0];
   const TBlob& a = inputs[1];
   const TBlob& b = inputs[2];
   const TBlob& grad_a = outputs[0];
   const TBlob& grad_b = outputs[1];
-  mxnet::TShape a_shape = a.shape_;
-  mxnet::TShape b_shape = b.shape_;
-  mxnet::TShape out_shape = ograd.shape_;
-  size_t ndim = out_shape.ndim();
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
 
-  MSHADOW_REAL_TYPE_SWITCH(ograd.type_flag_, DType, {
-    if (b_shape.ndim() <= 2) {
-      // case 1: both 1-D arrays, inner product of vectors
-      // case 2: both 2-D arrays, matrix multiplication
-      // case 3: If the second argument is 1-D.
-      // case 5(1): If the first argument is N-D(N > 2), the second argument is 2-D.
-      TensordotIntAxesBackwardImpl<xpu>(1, ctx, ograd, a, b, grad_a, grad_b, req);
-    } else {
-      // Case 4: If the first argument is 1-D.
-      if (a_shape.ndim() == 1) {
-        std::vector<size_t>temp_shape({1, a_shape.Size()});
-        a_shape.assign(temp_shape.begin(), temp_shape.end());
-        ndim += 1;
-        std::vector<size_t> newshape(ndim);
-        for (size_t i = 0; i < ndim - 2; ++i) {
-          newshape[i] = out_shape[i];
-        }
-        newshape[ndim - 2] = 1;
-        newshape[ndim - 1] = out_shape[ndim - 2];
-        out_shape.assign(newshape.begin(), newshape.end());
-      }
-      // case 5(2): If the first argument is N-D(N > 2), the second argument is N-D(N > 2).
-      const mshadow::Shape<10> k_a_shape = GetKernelShape<10>(a_shape, ndim);
-      const mshadow::Shape<10> k_a_shape_T = GetKernelShape<10>(a_shape, ndim, true);
-      const mshadow::Shape<10> k_b_shape = GetKernelShape<10>(b_shape, ndim);
-      const mshadow::Shape<10> k_b_shape_T = GetKernelShape<10>(b_shape, ndim, true);
-      const mshadow::Shape<10> k_out_shape = GetKernelShape<10>(out_shape, ndim);
-      size_t bc_size_a = 1, bc_size_b = 1;
-      const mshadow::Shape<10> k_a_shape_bc =
-        BroadcastKernelShape<10>(k_a_shape, k_out_shape, ndim, &bc_size_a);
-      const mshadow::Shape<10> k_b_shape_bc =
-        BroadcastKernelShape<10>(k_b_shape, k_out_shape, ndim, &bc_size_b);
-      const mshadow::Shape<10> a_stride_T = GetStride<10>(k_a_shape_T, ndim);
-      const mshadow::Shape<10> a_stride_bc = GetStride<10>(k_a_shape_bc, ndim);
-      const mshadow::Shape<10> b_stride_T = GetStride<10>(k_b_shape_T, ndim);
-      const mshadow::Shape<10> b_stride_bc = GetStride<10>(k_b_shape_bc, ndim);
-      const mshadow::Shape<10> out_stride = GetStride<10>(k_out_shape, ndim);
+  CHECK(grad_a.type_flag_ == kFloat32 || grad_a.type_flag_ == kFloat64 ||
+    (grad_a.type_flag_ == kFloat16 && ctx.run_ctx.ctx.dev_mask() == mshadow::gpu::kDevMask))
+    << "Matmul only supports float32/float64 for CPU, and float16/float32/float64 for GPU";
+  CHECK(grad_b.type_flag_ == kFloat32 || grad_b.type_flag_ == kFloat64 ||
+    (grad_b.type_flag_ == kFloat16 && ctx.run_ctx.ctx.dev_mask() == mshadow::gpu::kDevMask))
+    << "Matmul only supports float32/float64 for CPU, and float16/float32/float64 for GPU";
+  if ((a.shape_.Size() == 0) || (b.shape_.Size() == 0 || (ograd.shape_.Size() == 0))) {
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      Kernel<mxnet_op::set_zero, xpu>::Launch(s, grad_a.shape_.Size(), grad_a.dptr<DType>());
+      Kernel<mxnet_op::set_zero, xpu>::Launch(s, grad_b.shape_.Size(), grad_b.dptr<DType>());
+    });
+    return;
+  }
 
-      size_t temp_mem_size = (a_shape.Size() + b_shape.Size() +
-                              bc_size_a + bc_size_b) * sizeof(DType);
-      Tensor<xpu, 1, char> temp_mem =
-        ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(temp_mem_size), s);
-      DType* a_T_ptr = reinterpret_cast<DType*>(temp_mem.dptr_);
-      DType* b_T_ptr = reinterpret_cast<DType*>(
-        temp_mem.dptr_ + a_shape.Size() * sizeof(DType));
-      DType* grad_a_temp = reinterpret_cast<DType*>(
-        temp_mem.dptr_ + (a_shape.Size() + b_shape.Size()) * sizeof(DType));
-      DType* grad_b_temp = reinterpret_cast<DType*>(
-        temp_mem.dptr_ + (a_shape.Size() + b_shape.Size() + bc_size_a) * sizeof(DType));
-
-      Kernel<TransposeLastTwoAxes, xpu>::Launch(
-        s, a_shape.Size(), a_T_ptr, a.dptr<DType>(),
-        static_cast<size_t>(k_a_shape[ndim - 2]),
-        static_cast<size_t>(k_a_shape[ndim - 1]));
-      Kernel<TransposeLastTwoAxes, xpu>::Launch(
-        s, b_shape.Size(), b_T_ptr, b.dptr<DType>(),
-        static_cast<size_t>(k_b_shape[ndim - 2]),
-        static_cast<size_t>(k_b_shape[ndim - 1]));
-
-      Kernel<NDMatmul<OpReqType::kWriteTo>, xpu>::Launch(
-        s, bc_size_a, grad_a_temp, ograd.dptr<DType>(),
-        b_T_ptr, out_stride, b_stride_T, a_stride_bc,
-        k_out_shape, k_b_shape_T, k_a_shape_bc, ndim);
-      Kernel<NDMatmul<OpReqType::kWriteTo>, xpu>::Launch(
-        s, bc_size_b, grad_b_temp, a_T_ptr,
-        ograd.dptr<DType>(), a_stride_T, out_stride, b_stride_bc,
-        k_a_shape_T, k_out_shape, k_b_shape_bc, ndim);
-
-      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-        Kernel<SumByShape<req_type>, xpu>::Launch(
-          s, a_shape.Size(), grad_a.dptr<DType>(), grad_a_temp,
-          bc_size_a, a_shape.Size());
-        Kernel<SumByShape<req_type>, xpu>::Launch(
-          s, b_shape.Size(), grad_b.dptr<DType>(), grad_b_temp,
-          bc_size_b, b_shape.Size());
-      });
+  mxnet::TShape a_shape = (a.shape_.ndim() == 1) ? Shape2(1, a.shape_.Size()) : a.shape_;
+  mxnet::TShape b_shape = (b.shape_.ndim() == 1) ? Shape2(b.shape_.Size(), 1) : b.shape_;
+  mxnet::TShape out_shape = ograd.shape_;
+  size_t ndim = out_shape.ndim();
+  if ((a.shape_.ndim() == 1) && (b.shape_.ndim() == 1)) {
+    ndim = 2;
+    std::vector<size_t> newshape({1, 1});
+    out_shape.assign(newshape.begin(), newshape.end());
+  } else if ((a.shape_.ndim() == 1) && (b.shape_.ndim() != 1)) {
+    ndim = out_shape.ndim() + 1;
+    std::vector<size_t> newshape(ndim);
+    for (size_t i = 0; i < ndim - 2; ++i) {
+      newshape[i] = out_shape[i];
     }
+    newshape[ndim - 2] = 1;
+    newshape[ndim - 1] = out_shape[ndim - 2];
+    out_shape.assign(newshape.begin(), newshape.end());
+  } else if ((a.shape_.ndim() != 1) && (b.shape_.ndim() == 1)) {
+    ndim = out_shape.ndim() + 1;
+    std::vector<size_t> newshape(ndim);
+    for (size_t i = 0; i < ndim - 1; ++i) {
+      newshape[i] = out_shape[i];
+    }
+    newshape[ndim - 1] = 1;
+    out_shape.assign(newshape.begin(), newshape.end());
+  }
+  std::vector<size_t> vec_grad_a_shape(ndim, -1);
+  std::vector<size_t> vec_grad_b_shape(ndim, -1);
+  for (int i = 0; i < ndim - 2; ++i) {
+    vec_grad_a_shape[i] = out_shape[i];
+    vec_grad_b_shape[i] = out_shape[i];
+  }
+  vec_grad_a_shape[ndim - 2] = a_shape[a_shape.ndim() - 2];
+  vec_grad_a_shape[ndim - 1] = a_shape[a_shape.ndim() - 1];
+  mxnet::TShape grad_a_shape = mxnet::TShape(vec_grad_a_shape.begin(), vec_grad_a_shape.end());
+  vec_grad_b_shape[ndim - 2] = b_shape[b_shape.ndim() - 2];
+  vec_grad_b_shape[ndim - 1] = b_shape[b_shape.ndim() - 1];
+  mxnet::TShape grad_b_shape = mxnet::TShape(vec_grad_b_shape.begin(), vec_grad_b_shape.end());
+  MSHADOW_REAL_TYPE_SWITCH(ograd.type_flag_, DType, {
+    size_t batch_size = out_shape.ProdShape(0, ndim - 2);
+    size_t bc_size_a = batch_size * a_shape[a_shape.ndim() - 2] * a_shape[a_shape.ndim() - 1];
+    size_t bc_size_b = batch_size * b_shape[b_shape.ndim() - 2] * b_shape[b_shape.ndim() - 1];
+    size_t bc_size_out = batch_size * out_shape[out_shape.ndim() - 2] * out_shape[out_shape.ndim() - 1];
+    size_t temp_mem_size_grada = (bc_size_out + bc_size_b) * sizeof(DType) +
+                                  3 * batch_size * sizeof(DType*);
+    size_t temp_mem_size_gradb = (bc_size_a + bc_size_out) * sizeof(DType) +
+                                  3 * batch_size * sizeof(DType*);
+    size_t temp_size_grada = bc_size_a * sizeof(DType);
+    size_t temp_size_gradb = bc_size_b * sizeof(DType);
+    size_t temp_mem_size = temp_mem_size_grada + temp_mem_size_gradb + temp_size_grada + temp_size_gradb;
+    Tensor<xpu, 1, char> temp_mem =
+      ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(temp_mem_size), s);
+    Tensor<xpu, 1, char> workspace_grada(temp_mem.dptr_, Shape1(temp_mem_size_grada), s);
+    Tensor<xpu, 1, char> workspace_gradb(workspace_grada.dptr_ + temp_mem_size_grada , Shape1(temp_mem_size_gradb), s);
+    Tensor<xpu, 1, DType> temp_grada(reinterpret_cast<DType*>(workspace_gradb.dptr_ + temp_mem_size_gradb),
+                                    Shape1(bc_size_a), s);
+    Tensor<xpu, 1, DType> temp_gradb(reinterpret_cast<DType*>(temp_grada.dptr_ + bc_size_a),
+                                    Shape1(bc_size_b), s);
+    MatmulImpl<xpu, DType>(ctx, ograd, b, kWriteTo, temp_grada, workspace_grada,
+                          ndim, batch_size, bc_size_out, bc_size_b,
+                          out_shape, b_shape, grad_a_shape, false, true);
+    MatmulImpl<xpu, DType>(ctx, a, ograd, kWriteTo, temp_gradb, workspace_gradb,
+                          ndim, batch_size, bc_size_a, bc_size_out,
+                          a_shape, out_shape, grad_b_shape, true, false);
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      Kernel<SumByShape<req_type>, xpu>::Launch(
+        s, a_shape.Size(), grad_a.dptr<DType>(), temp_grada.dptr_,
+        bc_size_a, a_shape.Size());
+      Kernel<SumByShape<req_type>, xpu>::Launch(
+        s, b_shape.Size(), grad_b.dptr<DType>(), temp_gradb.dptr_,
+        bc_size_b, b_shape.Size());
+    });
   });
 }
 

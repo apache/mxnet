@@ -67,7 +67,7 @@ inline bool NumpyMatmulShape(const nnvm::NodeAttrs& attrs,
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, tmp_shape);
   } else if (b_ndim == 1) {
     // case 3: If the second argument is 1-D, it is promoted to a matrix
-    //          by appending a 1 to its dimensions.
+    //         by appending a 1 to its dimensions.
     //         After matrix multiplication the appended 1 is removed.
     TShape tmp_shape(a_ndim, -1);
     tmp_shape[a_ndim - 1] = b_shape[0];
@@ -167,6 +167,10 @@ The behavior depends on the arguments in the following way.
 .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", NumpyMatmulForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_np_matmul"})
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .add_argument("a", "NDArray-or-Symbol", "First input")
 .add_argument("b", "NDArray-or-Symbol", "Second input");
 

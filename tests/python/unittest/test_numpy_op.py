@@ -510,7 +510,6 @@ def test_np_matmul():
                         test_matmul = TestMatmul()
                         if hybridize:
                             test_matmul.hybridize()
-
                         np_a = _np.random.uniform(-1.0, 1.0, shape_a).astype(dtype)
                         np_a[abs(np_a) < eps] = 2 * eps
                         np_b = _np.random.uniform(-1.0, 1.0, shape_b).astype(dtype)
@@ -527,8 +526,8 @@ def test_np_matmul():
                         assert_almost_equal(np_out, mx_out.asnumpy(), rtol=eps, atol=eps)
                         mx_out.backward()
                         np_backward = matmul_backward(np_a, np_b)
-                        assert_almost_equal(b.grad.asnumpy(), np_backward[1], rtol = eps, atol=eps)
                         assert_almost_equal(a.grad.asnumpy(), np_backward[0], rtol = eps, atol=eps)
+                        assert_almost_equal(b.grad.asnumpy(), np_backward[1], rtol = eps, atol=eps)
                         
                         # Test imperative once again
                         mx_out = np.matmul(a, b)
