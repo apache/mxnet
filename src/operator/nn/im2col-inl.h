@@ -87,9 +87,21 @@ void Im2colCompute(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 3, DType> col = outputs[0].get_with_shape<xpu, 3, DType>(
         Shape3(col_shape[0], col_shape[1], col_shape[2]), s);
 
-    for (index_t n = 0; n < num; ++n) {
-      im2col(s, im[n].dptr_, im_shape, col_buffer_shape,
-             param.kernel, param.pad, param.stride, param.dilate, col[n].dptr_);
+    if (req[0] == kNullOp) return;
+    if (req[0] != kAddTo) {
+      for (index_t n = 0; n < num; ++n) {
+        im2col(s, im[n].dptr_, im_shape, col_buffer_shape,
+               param.kernel, param.pad, param.stride, param.dilate, col[n].dptr_);
+      }
+    } else {
+      Tensor<xpu, 2, DType> tcol = ctx.requested[0]
+        .get_space_typed<xpu, 2, DType>(Shape2(col_shape[1], col_shape[2]), s);
+      for (index_t n = 0; n < num; ++n) {
+        im2col(s, im[n].dptr_, im_shape, col_buffer_shape,
+               param.kernel, param.pad, param.stride, param.dilate, tcol.dptr_);
+        Tensor<xpu, 2, DType> ocol = col[n];
+        ocol += tcol;
+      }
     }
   });
 }
@@ -188,7 +200,7 @@ void Col2imCompute(const nnvm::NodeAttrs& attrs,
     for (index_t n = 0; n < num; ++n) {
       col2im(s, col[n].dptr_, im_shape, col_buffer_shape,
              param.kernel, param.pad, param.stride, param.dilate,
-             im[n].dptr_, kWriteTo);
+             im[n].dptr_, req[0]);
     }
   });
 }

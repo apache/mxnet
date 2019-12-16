@@ -149,6 +149,10 @@ Only 1-D, 2-D and 3-D of spatial dimension is supported in this operator.
   TYPE_ASSIGN_CHECK(*out_type, 0, dtype);
   return true;
 })
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
 .set_attr<FCompute>("FCompute<cpu>", Im2colCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_im2col"})
 .add_argument("data", "NDArray-or-Symbol", "Input array to extract sliding blocks.")
