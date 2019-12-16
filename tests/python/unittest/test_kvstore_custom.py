@@ -178,6 +178,16 @@ def test_get_type_device():
     kv = mx.kv.create(kvtype)
     assert kv.type == kvtype
 
+@with_seed()
+def test_set_optimizer():
+    def check_unsupported_methods(kv):
+        assert not kv.is_capable('optimizer')
+        optimizer = mx.optimizer.create('sgd')
+        assertRaises(NotImplementedError, kv.set_optimizer, optimizer)
+
+    kv = mx.kv.create('teststore')
+    check_unsupported_methods(kv)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
