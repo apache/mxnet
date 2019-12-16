@@ -3537,11 +3537,28 @@ def test_np_linalg_cholesky():
             assert L.shape == L_expected.shape
             assert_almost_equal(L.asnumpy(), L_expected, rtol=rtol, atol=atol)
 
+    def newSymmetricPositiveDefineMatrix_2D(shape, ran=(0., 10.), max_cond=4):
+        while 1:
+            D = _np.diag(_np.random.uniform(ran[0], ran[1], shape[-1]))
+            I = _np.eye(shape[-1]).reshape(shape)
+            v = _np.random.uniform(-1., 1., shape[-1]).reshape(shape[:-1] + (1,))
+            v = v / _np.linalg.norm(v, axis=-2, keepdims=True)
+            v_T = _np.swapaxes(v, -1, -2)
+            U = I - 2 * _np.matmul(v, v_T)
+            a = _np.matmul(_np.matmul(U, D), _np.swapaxes(U, -1, -2))
+            if (_np.linalg.cond(a, 2) < max_cond):
+                return a
+
+    def newSymmetricPositiveDefineMatrix_nD(shape, ran=(0., 10.), max_cond=4):
+        n = int(_np.prod(shape[:-2])) if len(shape) > 2 else 1
+        return _np.array([newSymmetricPositiveDefineMatrix_2D(shape[-2:], ran, max_cond) for i in range(n)]).reshape(shape)
+
     shapes = [
         (0, 0),
         (1, 1),
         (5, 5),
         (6, 6),
+        (10, 10),
         (6, 6, 6),
         (1, 0, 0),
         (0, 1, 1),
@@ -3549,7 +3566,11 @@ def test_np_linalg_cholesky():
     ]
     dtypes = ['float32', 'float64']
     for hybridize, dtype, shape in itertools.product([True, False], dtypes, shapes):
-        atol = rtol = 1e-2
+        rtol = 1e-3
+        atol = 1e-5
+        if dtype == 'float32':
+            rtol = 1e-2
+            atol = 1e-4
 
         test_cholesky = TestCholesky()
         if hybridize:
@@ -3571,19 +3592,7 @@ def test_np_linalg_cholesky():
         if 0 in shape:
             data_np = np.ones(shape)
         else:
-            data_np_l = _np.random.uniform(-10., 10., shape)
-            if dtype == 'float32':
-                data_np_l_flat = data_np_l.reshape((-1, shape[-2], shape[-1]))
-            else:
-                data_np_l_flat = _np.tril(data_np_l.reshape((-1, shape[-2], shape[-1])))
-            for i in range(data_np_l_flat.shape[0]):
-                for j in range(data_np_l_flat.shape[-1]):
-                    if data_np_l_flat[i, j, j] < 0:
-                        data_np_l_flat[i, j, j] = -data_np_l_flat[i, j, j]
-                    elif data_np_l_flat[i, j, j] == 0:
-                        data_np_l_flat[i, j, j] = 2
-            data_np = _np.matmul(data_np_l_flat, data_np_l_flat.swapaxes(-1, -2))
-            data_np = data_np.reshape(shape)
+            data_np = newSymmetricPositiveDefineMatrix_nD(shape)
 
         # When dtype is np.FP32, truncation from FP64 to FP32 could also be a source of
         # instability since the ground-truth gradient is computed using FP64 data.
@@ -3696,7 +3705,7 @@ def test_np_linalg_solve():
     class TestSolve(HybridBlock):
         def __init__(self):
             super(TestSolve, self).__init__()
-        
+
         def hybrid_forward(self, F, a, b):
             return F.np.linalg.solve(a, b)
 
@@ -3712,6 +3721,23 @@ def test_np_linalg_solve():
         else:
             assert x.shape == x_expected.shape
             assert_almost_equal(x.asnumpy(), x_expected, rtol=rtol, atol=atol)
+
+    def newInvertibleMatrix_2D(shape, max_cond=4):
+        while 1:
+            # generate well-conditioned matrices with small eigenvalues
+            D = _np.diag(_np.random.uniform(-1.0, 1.0, shape[-1]))
+            I = _np.eye(shape[-1]).reshape(shape)
+            v = _np.random.uniform(-10., 10., shape[-1]).reshape(shape[:-1] + (1,))
+            v = v / _np.linalg.norm(v, axis=-2, keepdims=True)
+            v_T = _np.swapaxes(v, -1, -2)
+            U = I - 2 * _np.matmul(v, v_T)
+            a = _np.matmul(U, D)
+            if (_np.linalg.cond(a, 2) < max_cond):
+                return a
+
+    def newInvertibleMatrix_nD(shape, max_cond=4):
+        n = int(np.prod(np.array(shape[:-2]))) if len(shape) > 2 else 1
+        return _np.array([newInvertibleMatrix_2D(shape[-2:]) for i in range(n)]).reshape(shape)
 
     def get_grad_b(A, X):
         dX = _np.ones_like(X)
@@ -3748,18 +3774,14 @@ def test_np_linalg_solve():
             b = _np.ones(shape)
         else:
             shape_a = shape
-            a = _np.random.rand(*shape_a)
             shape_b = list(shape_a)
             if nrh == -1:
                 shape_b[-1] = 1
-                x = _np.random.rand(*shape_b)
-                b = _np.matmul(a, x)
-                shape_b.pop()
-                b = b.reshape(shape_b)
             else :
                 shape_b[-1] = nrh
-                x = _np.random.rand(*shape_b)
-                b = _np.matmul(a, x)
+            a = newInvertibleMatrix_nD(shape_a)
+            x = _np.random.randn(*shape_b)
+            b = _np.matmul(a, x)
         a = np.array(a, dtype=dtype)
         b = np.array(b, dtype=dtype)
         a.attach_grad()
@@ -3782,6 +3804,106 @@ def test_np_linalg_solve():
         # check imperative once again
         mx_out = np.linalg.solve(a, b)
         check_solve(mx_out, a, b)
+
+
+def test_np_linalg_tensorinv():
+    class TestTensorinv(HybridBlock):
+        def __init__(self, ind=2):
+            super(TestTensorinv, self).__init__()
+            self._ind = ind
+        
+        def hybrid_forward(self, F, a):
+            return F.np.linalg.tensorinv(a, ind=self._ind)
+
+    def check_tensorinv(inv_a, a_np, ind):
+        try:
+            inv_a_expected = _np.linalg.tensorinv(a_np, ind=ind)
+        except Exception as e:
+            print(a_np)
+            print(a_np.shape)
+            print(e)
+        else:
+            assert inv_a.shape == inv_a_expected.shape
+            assert_almost_equal(inv_a.asnumpy(), inv_a_expected, rtol=rtol, atol=atol)
+
+    def newInvertibleMatrix_2D(shape, max_cond=4):
+        while 1:
+            # generate well-conditioned matrices with small eigenvalues
+            D = _np.diag(_np.random.uniform(-1.0, 1.0, shape[-1]))
+            I = _np.eye(shape[-1]).reshape(shape)
+            v = _np.random.uniform(-10., 10., shape[-1]).reshape(shape[:-1] + (1,))
+            v = v / _np.linalg.norm(v, axis=-2, keepdims=True)
+            v_T = _np.swapaxes(v, -1, -2)
+            U = I - 2 * _np.matmul(v, v_T)
+            a = _np.matmul(U, D)
+            if (_np.linalg.cond(a, 2) < max_cond):
+                return a
+
+    def get_grad_A(A, ind):
+        inv_A = _np.linalg.tensorinv(A, ind)
+        d_inv_A = _np.ones_like(inv_A)
+        axes1 = len(A.shape) - ind
+        axes2 = ind
+        inv_A_trans_axes = tuple(_np.arange(len(A.shape)))[axes1:] + tuple(_np.arange(len(A.shape)))[:axes1]
+        inv_A_trans = _np.transpose(inv_A, inv_A_trans_axes)
+        temp_tensor = -_np.tensordot(inv_A_trans, d_inv_A, axes = axes1)
+        return _np.tensordot(temp_tensor, inv_A_trans, axes = axes2)
+
+    shapes = [
+        (1, 1, 1),
+        (1, 2, 2),
+        (1, 6, 2, 3),
+        (1, 10, 2, 5),
+        (1, 12, 3, 4),
+        (2, 1, 1),
+        (2, 1, 1, 1),
+        (2, 2, 5, 5, 2),
+        (2, 1, 6, 3, 2),
+        (2, 1, 8, 4, 2),
+        (2, 12, 1, 3, 4, 1),
+        (3, 1, 1, 1),
+        (3, 2, 3, 1, 6),
+        (3, 3, 2, 1, 2, 3, 1)
+    ]
+    dtypes = ['float32', 'float64']
+    for hybridize, shape, dtype, in itertools.product([False, True], shapes, dtypes):
+        rtol = 1e-3
+        atol = 1e-5
+        if dtype == 'float32':
+            rtol = 1e-2
+            atol = 1e-4
+        ind = shape[0]
+        test_tensorinv = TestTensorinv(ind=ind)
+        if hybridize:
+            test_tensorinv.hybridize()
+
+        prod_front = 1
+        prod_back = 1
+        for k in shape[1:ind + 1]:
+            prod_front *= k
+        for k in shape[1 + ind:]:
+            prod_back *= k
+        a_shape = (prod_back, prod_front)
+        a = newInvertibleMatrix_2D(a_shape)
+        a_shape = shape[1:]
+        inv_a_shape = shape[(1 + ind):] + shape[1:(ind + 1)]
+        a = np.array(a.reshape(a_shape), dtype=dtype)
+        a.attach_grad()
+        with mx.autograd.record():
+            mx_out = test_tensorinv(a)
+        # check tensorinv validity
+        assert mx_out.shape == inv_a_shape
+        check_tensorinv(mx_out, a, ind)
+
+        # check tensorinv backward
+        if 0 not in mx_out.shape:
+            mx.autograd.backward(mx_out)
+            grad_A_expected = get_grad_A(a.asnumpy(), ind)
+            assert_almost_equal(a.grad.asnumpy(), grad_A_expected, rtol=rtol, atol=atol)
+
+    # check imperative once again
+    mx_out = np.linalg.tensorinv(a, ind)
+    check_tensorinv(mx_out, a, ind)
 
 
 @with_seed()
