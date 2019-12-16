@@ -184,6 +184,8 @@ def test_set_optimizer():
         assert not kv.is_capable('optimizer')
         optimizer = mx.optimizer.create('sgd')
         assertRaises(NotImplementedError, kv.set_optimizer, optimizer)
+        assertRaises(NotImplementedError, kv.save_optimizer_states, 'test')
+        assertRaises(NotImplementedError, kv.load_optimizer_states, 'test')
 
     kv = mx.kv.create('teststore')
     check_unsupported_methods(kv)
