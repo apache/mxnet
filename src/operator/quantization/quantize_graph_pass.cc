@@ -403,7 +403,7 @@ Graph QuantizeGraph(Graph &&src) {
         NodeEntry mirror_entry = NodeEntry{
           mirror_node, e.index, e.version};
         // if input node is quantized operator, add dequantize node
-        if (quantized_node_map.count(e.node) &&
+        if (quantized_node_map.count(e.node) && e.node->op() != Op::Get("elemwise_mul") &&
             (mirror_node->op() != Op::Get("_contrib_dequantize"))) {
           // here we calculate the output number (exclude min/max, in order to
           // calculate min/max index from mirror node) based on assumption that
@@ -436,7 +436,7 @@ Graph QuantizeGraph(Graph &&src) {
 
   std::vector<NodeEntry> outputs;
   for (const auto& e : src.outputs) {
-    if (quantized_node_map.count(e.node)) {
+    if (quantized_node_map.count(e.node) && e.node->op() != Op::Get("elemwise_mul")) {
       // Only insert dequantize for those Ops supports quantize and not excluded.
       NodePtr mirror_node = mirror_map.at(e.node.get());
       NodeEntry mirror_entry = NodeEntry{mirror_node, e.index, e.version};

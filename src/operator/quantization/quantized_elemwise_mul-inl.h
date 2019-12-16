@@ -49,7 +49,7 @@ struct QuantizeElemwiseMulParam : public dmlc::Parameter<QuantizeElemwiseMulPara
 
 namespace quantized_elemwise_mul {
 enum QuantizedElemwiseMulOpInputs {kLhs, kRhs, kLhsMin, kLhsMax, kRhsMin, kRhsMax};
-enum QuantizedElemwiseMulOpOutputs {kOut, kOutMin, kOutMax};
+enum QuantizedElemwiseMulOpOutputs {kOut};
 enum QuantizedElemwiseMulOpResource {kTempSpace};
 }  // namespace quantized embedding
 
