@@ -36,15 +36,6 @@ import unittest
 import os
 
 def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req, rtol=1e-2, atol=1e-4):
-    if default_context().device_type == 'cpu':
-    # NOTE(zixuanweeei): Currently, we don't add `add` requests support on fused mkl-dnn rnn operator.
-    # We tracked this issue by https://github.com/apache/incubator-mxnet/issues/16578
-        if isinstance(grad_req, dict) and 'add' in grad_req.values():
-            print("Skip the test when requiring `add` operation against gradients on CPU context.")
-            return
-        if isinstance(grad_req, str) and grad_req == 'add':
-            print("Skip the test when requiring `add` operation against gradients on CPU context.")
-            return
     dshape = (N, T, I)
     data = mx.sym.Variable('data')
 
@@ -182,9 +173,9 @@ def test_gru_sym():
         stack.add(mx.rnn.GRUCell(H, prefix='l1_'))
         stack.add(mx.rnn.GRUCell(H, prefix='l2_'))
 
-        check_rnn_consistency(fused, stack, T, N, I, H, 'write', atol=2e-4)
-        check_rnn_consistency(fused, stack, T, N, I, H, 'add', atol=2e-4)
-        check_rnn_consistency(fused, stack, T, N, I, H, 'null', atol=2e-4)
+        check_rnn_consistency(fused, stack, T, N, I, H, 'write')
+        check_rnn_consistency(fused, stack, T, N, I, H, 'add')
+        check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
@@ -208,9 +199,9 @@ def test_gru_bidirectional():
                     mx.rnn.GRUCell(H, prefix='r1_'),
                     output_prefix='bi_gru_1_'))
 
-        check_rnn_consistency(fused, stack, T, N, I, H, 'write', atol=2e-4)
-        check_rnn_consistency(fused, stack, T, N, I, H, 'add', atol=2e-4)
-        check_rnn_consistency(fused, stack, T, N, I, H, 'null', atol=2e-4)
+        check_rnn_consistency(fused, stack, T, N, I, H, 'write')
+        check_rnn_consistency(fused, stack, T, N, I, H, 'add')
+        check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
