@@ -38,3 +38,5 @@ from . import data
 from . import model_zoo
 
 from . import contrib
+
+from . import probability
