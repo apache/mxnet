@@ -206,7 +206,7 @@ The following modified ReLU Activation functions are supported:
     });
 
 NNVM_REGISTER_OP(_backward_LeakyReLU)
-.set_num_outputs([](const NodeAttrs& attrs) {
+.set_num_inputs([](const NodeAttrs& attrs) {
   const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(attrs.parsed);
   if (param.act_type == leakyrelu::kPReLU) {
     // forward has 2 inputs and 1 output
