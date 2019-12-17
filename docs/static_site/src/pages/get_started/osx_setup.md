@@ -88,7 +88,7 @@ Install the dependencies, required for MXNet, with the following commands:
 	brew install graphviz
 	brew install openblas
 	brew tap homebrew/core
-	brew install opencv@3
+	brew install opencv
 
 	# If building with MKLDNN
 	brew install llvm

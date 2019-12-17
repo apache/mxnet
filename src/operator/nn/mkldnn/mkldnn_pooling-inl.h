@@ -89,6 +89,14 @@ class MKLDNNPoolingBwd {
   const mkldnn::pooling_backward::primitive_desc &GetPd();
 };
 
+inline int GetPaddingSizeFull(dim_t x, int padl, int padr, int k, int s) {
+  if ((x + padl + padr - k) % s != 0) {
+    return (padr + s - ((x + padl + padr - k) % s));
+  } else {
+    return padr;
+  }
+}
+
 inline bool SupportMKLDNNPooling(const PoolingParam &param) {
   return param.kernel.ndim() == 2 &&
          (param.pool_type == pool_enum::kMaxPooling ||
@@ -105,7 +113,17 @@ inline bool SupportMKLDNNPooling(const PoolingParam &param,
   if (param.pooling_convention == pool_enum::kValid) {
     return true;
   } else {
-    // currently, only max-pooling is supported for full convention
+    if (param.pool_type == pool_enum::kAvgPooling) {
+      CHECK_EQ(dshape.ndim(), 4);
+      // mkldnn works differently when padding is asymmetric, so let's skip this case.
+      if (param.pad[0] == GetPaddingSizeFull(dshape[2], param.pad[0], param.pad[0], param.kernel[0],
+                                             param.stride[0]) &&
+          param.pad[1] == GetPaddingSizeFull(dshape[3], param.pad[1], param.pad[1], param.kernel[1],
+                                             param.stride[1])) {
+        return true;
+      }
+      return false;
+    }
     return param.pool_type == pool_enum::kMaxPooling;
   }
 }

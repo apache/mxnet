@@ -274,6 +274,39 @@ def test_log10():
 
 
 @with_seed()
+def test_square():
+    def grad_grad_op(x):
+        return nd.ones_like(x) * 2
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, nd.square, grad_grad_op)
+
+
+@with_seed()
+def test_expm1():
+    def grad_grad_op(x):
+        return nd.exp(x)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, nd.expm1, grad_grad_op)
+
+
+@with_seed()
+def test_log1p():
+    def grad_grad_op(x):
+        return -1/((1+x)**2)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, nd.log1p, grad_grad_op)
+
+
+@with_seed()
 def test_reciprocal():
     def reciprocal(x):
         return nd.reciprocal(x)

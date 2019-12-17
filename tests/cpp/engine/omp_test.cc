@@ -25,6 +25,7 @@
 #if defined(unix) || defined(__unix__) || defined(__unix)
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <dmlc/logging.h>
 
 

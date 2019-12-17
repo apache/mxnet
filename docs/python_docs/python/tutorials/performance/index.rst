@@ -111,7 +111,7 @@ Distributed Training
 
    .. card::
       :title: Data Parallelism in MXNet
-      :link: /api/faq/multi_devices.html
+      :link: /api/faq/multi_device
 
       An overview of distributed training strategies.
 

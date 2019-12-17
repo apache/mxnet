@@ -2727,9 +2727,15 @@ struct SplitParam : public dmlc::Parameter<SplitParam> {
 inline mxnet::TShape GetSplitIndices(const mxnet::TShape& ishape, int axis, int sections) {
   mxnet::TShape indices(sections+1, -1);
   indices[0] = 0;
-  int64_t section_size = ishape[axis] / sections;
+  int64_t section_size_b = (int64_t) (ishape[axis] / sections);
+  int64_t section_size_a = section_size_b + 1;
+  int section_a = ishape[axis] % sections;
   for (int i = 0; i < sections; ++i) {
-    indices[i+1] = section_size * (i + 1);
+    if ( i < section_a ) {
+      indices[i+1] = section_size_a * (i + 1);
+    } else {
+      indices[i+1] = section_size_b + indices[i];
+    }
   }
   return indices;
 }
