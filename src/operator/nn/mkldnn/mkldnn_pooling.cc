@@ -127,6 +127,7 @@ mkldnn::algorithm GetMKLDNNPoolAlgo(const PoolingParam &param) {
   }
 }
 
+
 mkldnn::pooling_forward::primitive_desc GetPoolingFwdPdesc(
     const PoolingParam &param, const bool is_train, const mkldnn::memory::desc &data_md,
     const mkldnn::memory::desc &out_md) {

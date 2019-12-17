@@ -529,10 +529,6 @@ const mkldnn::memory *NDArray::GetMKLDNNData(const mkldnn::memory::desc &desc) c
 
 const mkldnn::memory *NDArray::GetMKLDNNDataReorder(
     const mkldnn::memory::desc &new_desc) const {
-  if (new_desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
-    LOG(FATAL) << "The size of NDArray doesn't match the requested MKLDNN memory desc";
-    return nullptr;
-  }
   CHECK(storage_type() == kDefaultStorage);
 
   const mkldnn::memory *mem = GetMKLDNNData();
