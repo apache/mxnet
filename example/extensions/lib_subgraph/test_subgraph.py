@@ -41,15 +41,20 @@ c = a + b
 d = mx.sym.exp(c)
 sym = mx.sym.log(d)
 
-# with propogating shapes/types
-arg_array = [mx.nd.ones((3,2),dtype='int'), mx.nd.ones((3,2),dtype='int')]
-mysym = sym.optimize_for("myProp", arg_array)
-exe = mysym.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
+#execute in MXNet 
+exe = sym.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
 out = exe.forward()
 print(out)
 
+# with propogating shapes/types
+arg_array = [mx.nd.ones((3,2)), mx.nd.ones((3,2))]
+mysym2 = sym.optimize_for("myProp", arg_array)
+exe2 = mysym2.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
+out2 = exe2.forward()
+print(out2)
+
 # without propogating shapes/types
-mysym = sym.optimize_for("myProp")
-exe = mysym.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
-out = exe.forward()
-print(out)
+mysym3 = sym.optimize_for("myProp")
+exe3 = mysym3.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
+out3 = exe3.forward()
+print(out3)
